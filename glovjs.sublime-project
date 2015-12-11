@@ -1,0 +1,17 @@
+//json5
+{
+    "folders":
+    [
+        {
+            "folder_exclude_patterns":
+            [
+                "node_modules",
+                "build",
+                "typings",
+                "vendor"
+            ],
+            "file_exclude_patterns": [],
+            "path": "."
+        }
+    ]
+}
