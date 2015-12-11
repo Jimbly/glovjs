@@ -25,6 +25,7 @@ var config = {
   client_vendor_js: ['src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
   client_css: ['src/client/**/*.css'],
+  client_static: ['src/client/**/*.png', 'src/client/**/vendor/**'],
 };
 
 gulp.task('inspect', function () {
@@ -79,6 +80,11 @@ gulp.task('client_css', function () {
     .pipe(browser_sync.reload({ stream: true }));
 });
 
+gulp.task('client_static', function () {
+  return gulp.src(config.client_static)
+    .pipe(gulp.dest('./build/client'));
+});
+
 (function () {
   var customOpts = {
     entries: ['./src/client/main.js'],
@@ -126,18 +132,19 @@ gulp.task('client_css', function () {
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
 
-gulp.task('build', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_js']);
+gulp.task('build', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_static', 'client_js']);
 
 gulp.task('bs-reload', function () {
   browser_sync.reload();
 });
 
-gulp.task('watch', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_js_watch'], function() {
+gulp.task('watch', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_static', 'client_js_watch'], function() {
   gulp.watch(config.ts_files, ['ts']);
   gulp.watch(config.js_files, ['js']);
   gulp.watch(config.all_js_files, ['jshint']);
   gulp.watch(config.client_html, ['client_html', 'bs-reload']);
   gulp.watch(config.client_css, ['client_css']);
+  gulp.watch(config.client_static, ['client_static', 'bs-reload']);
 });
 
 var deps = ['watch'];

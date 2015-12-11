@@ -8,7 +8,7 @@
                 "node_modules",
                 "build",
                 "typings",
-                "vendor"
+//                "vendor"
             ],
             "file_exclude_patterns": [],
             "path": "."

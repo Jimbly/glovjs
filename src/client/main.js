@@ -1,35 +1,44 @@
 /*jshint browser:true*/
 
+/*global TurbulenzEngine: true */
+/*global Draw2D: false */
+/*global Draw2DSprite: false */
+/*global RequestHandler: false */
+/*global TextureManager: false */
+
 TurbulenzEngine.onload = function onloadFn()
 {
   var intervalID;
   var graphicsDevice = TurbulenzEngine.createGraphicsDevice({});
   var mathDevice = TurbulenzEngine.createMathDevice({});
   var draw2D = Draw2D.create({ graphicsDevice });
+  var requestHandler = RequestHandler.create({});
+  var textureManager = TextureManager.create(graphicsDevice, requestHandler);
 
   var textures = {};
-  var loadedResources = 0;
-  var lastLoadedResources = 0;
-  function textureParams(src) {
-    return {
-      src: 'img/' + src,
-      mipmaps: true,
-      onload: function (texture) {
-        if (texture)
-        {
-          textures[src] = texture;
-          ++loadedResources;
-        }
-      }
-    };
+  function loadTexture(texname) {
+    var path = 'img/'+ texname;
+    var inst = textureManager.getInstance(path);
+    if (inst) {
+      return inst;
+    }
+    textures[texname] = textureManager.load(path, false);
+    return textureManager.getInstance(path);
   }
-  graphicsDevice.createTexture(textureParams('test.png'));
+  function createSprite(texname, params) {
+    var tex_inst = loadTexture(texname);
+    params.texture = tex_inst.getTexture();
+    var sprite = Draw2DSprite.create(params);
+    tex_inst.subscribeTextureChanged(function () {
+      sprite.setTexture(tex_inst.getTexture());
+    });
+    return sprite;
+  }
   // Viewport for Draw2D.
   var gameWidth = 1280;
   var gameHeight = 960;
   var spriteSize = 64;
-  var sprite = Draw2DSprite.create({
-    texture : textures['test.png'],
+  var sprite = createSprite('test.png', {
     width : spriteSize,
     height : spriteSize,
     x : (Math.random() * (gameWidth - spriteSize) + (spriteSize * 0.5)),
@@ -48,10 +57,6 @@ TurbulenzEngine.onload = function onloadFn()
   function tick() {
     if (!graphicsDevice.beginFrame()) {
       return;
-    }
-    if (loadedResources !== lastLoadedResources) {
-      lastLoadedResources = loadedResources;
-      sprite.setTexture(textures['test.png']);
     }
     draw2D.configure(configureParams);
     draw2D.setBackBuffer();

@@ -17,9 +17,10 @@
         </a>
       </canvas>
       <script type="text/javascript">
+        /*jshint browser: true*/
         var canvasSupported = true;
         (function() {
-          var contextNames = ["webgl", "experimental-webgl"];
+          var contextNames = ['webgl', 'experimental-webgl'];
           var context = null;
           var canvas = document.createElement('canvas');
 
@@ -37,7 +38,7 @@
           if (!context)
           {
             canvasSupported = false;
-            window.alert("Sorry, but your browser does not support WebGL or does not have it enabled.");
+            window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
           }
 
           document.body.removeChild(canvas);
@@ -50,18 +51,23 @@
     <script src="vendor/jslib/webgl/turbulenzengine.js"></script>
     <script src="vendor/jslib/webgl/graphicsdevice.js"></script>
     <script src="vendor/jslib/vmath.js"></script>
+    <script src="vendor/jslib/utilities.js"></script>
+    <script src="vendor/jslib/observer.js"></script>
+    <script src="vendor/jslib/requesthandler.js"></script>
+    <script src="vendor/jslib/texturemanager.js"></script>
     <script src="vendor/jslib/webgl/mathdevice.js"></script>
     <script src="vendor/jslib/draw2d.js"></script>
 
     <script src="main.bundle.js"></script>
 
     <script type="text/javascript">
+      /*global WebGLTurbulenzEngine*/
       // Embedded code and startup code.
       window.onload = function () {
         var appEntry = TurbulenzEngine.onload;
         var appShutdown = TurbulenzEngine.onunload;
         if (!appEntry) {
-          window.alert("TurbulenzEngine.onload has not been set");
+          window.alert('TurbulenzEngine.onload has not been set');
           return;
         }
 
@@ -84,17 +90,16 @@
             });
 
             if (!TurbulenzEngine) {
-              window.alert("Failed to init TurbulenzEngine (canvas)");
+              window.alert('Failed to init TurbulenzEngine (canvas)');
               return;
             }
 
             TurbulenzEngine.onload = appEntry;
             TurbulenzEngine.onunload = appShutdown;
-            appEntry()
+            appEntry();
           }
-        }
+        };
 
-        var previousOnBeforeUnload = window.onbeforeunload;
         window.onbeforeunload = function () {
           if (TurbulenzEngine.onunload) {
             TurbulenzEngine.onunload.call(this);
