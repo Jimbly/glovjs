@@ -8,6 +8,7 @@ class GlovInput {
     this.input_device = input_device;
     this.draw2d = draw2d;
     this.key_state = {};
+    this.pad_states = []; // One map per joystick
     this.clicks = [];
     this.last_clicks = [];
     this.mouse_x = 0;
@@ -15,6 +16,13 @@ class GlovInput {
     this.mouse_mapped = [0,0];
     this.mouse_over_captured = false;
     this.mouse_down = false;
+    this.pad_threshold = 0.25;
+
+    this.padCodes = input_device.padCodes;
+    this.padCodes.ANALOG_UP = 20;
+    this.padCodes.ANALOG_LEFT = 21;
+    this.padCodes.ANALOG_DOWN = 22;
+    this.padCodes.ANALOG_RIGHT = 23;
 
     input_device.addEventListener('keydown', keycode => this.onKeyDown(keycode));
     input_device.addEventListener('keyup', keycode => this.onKeyUp(keycode));
@@ -22,28 +30,35 @@ class GlovInput {
     input_device.addEventListener('mousedown', (mousecode, x, y) => this.onMouseDown(mousecode, x, y));
     input_device.addEventListener('mouseup', (mousecode, x, y) => this.onMouseUp(mousecode, x, y));
     input_device.addEventListener('mouseover', (x,y) => this.onMouseOver(x, y));
+
+
+    input_device.addEventListener('paddown', padcode => this.onPadDown(0, padcode));
+    input_device.addEventListener('padup', padcode => this.onPadUp(0, padcode));
+    input_device.addEventListener('padmove', (x, y, z, rx, ry, rz) => this.onPadMove(0, x, y, z, rx, ry, rz));
   }
   tick() {
     this.mouse_over_captured = false;
     this.last_clicks = this.clicks;
     this.clicks = [];
-    Object.keys(this.key_state).forEach(keycode => {
-      switch(this.key_state[keycode]) {
-        case DOWN_EDGE:
-          this.key_state[keycode] = DOWN;
-          break;
-        case UP_EDGE:
-          delete this.key_state[keycode];
-          break;
-      }
-    });
+    function tickMap(map) {
+      Object.keys(map).forEach(keycode => {
+        switch(map[keycode]) {
+          case DOWN_EDGE:
+            map[keycode] = DOWN;
+            break;
+          case UP_EDGE:
+            delete map[keycode];
+            break;
+        }
+      });
+    }
+    tickMap(this.key_state);
+    this.pad_states.forEach(tickMap);
+    // Tick the map *before* the input device update, so gamepad down_edge events do not immediately disappear
+    // Actually, already eating down_edge events for keypresses?
+    this.input_device.update();
   }
-  onKeyUp(keycode) {
-    this.key_state[keycode] = UP_EDGE;
-  }
-  onKeyDown(keycode) {
-    this.key_state[keycode] = DOWN_EDGE;
-  }
+
   onMouseDown(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_mapped
     this.mouse_down = true;
@@ -58,7 +73,6 @@ class GlovInput {
     this.mouse_y = y;
     this.draw2d.viewportMap(x, y, this.mouse_mapped);
   }
-
   isMouseOver(x, y, w, h) {
     if (this.mouse_over_captured) {
       return false;
@@ -95,19 +109,124 @@ class GlovInput {
     return this.clickHit(sprite.x - w/2, sprite.y - h/2, w, h);
   }
 
+  onKeyUp(keycode) {
+    this.key_state[keycode] = UP_EDGE;
+  }
+  onKeyDown(keycode) {
+    this.key_state[keycode] = DOWN_EDGE;
+  }
   isKeyDown(keycode) {
     return !!this.key_state[keycode];
   }
   keyDownHit(keycode) {
     if (this.key_state[keycode] === DOWN_EDGE) {
       this.key_state[keycode] = DOWN;
+      return true;
     }
+    return false;
   }
   keyUpHit(keycode) {
     if (this.key_state[keycode] === UP_EDGE) {
       delete this.key_state[keycode];
+      return true;
     }
+    return false;
   }
+
+  onPadUp(padindex, padcode) {
+    this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
+    this.pad_states[padindex][padcode] = UP_EDGE;
+  }
+  onPadDown(padindex, padcode) {
+    this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
+    this.pad_states[padindex][padcode] = DOWN_EDGE;
+  }
+  onPadMove(padindex, x, y, z, rx, ry, rz) {
+    var ps = this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
+    ps.axes.x = x;
+    ps.axes.y = y;
+    ps.axes.z = z;
+    ps.axes.rx = rx;
+    ps.axes.ry = ry;
+    ps.axes.rz = rz;
+    // Calculate virtual directional buttons
+    function check(b, c) {
+      if (b) {
+        if (ps[c] !== DOWN) {
+          ps[c] = DOWN_EDGE;
+        }
+      } else if (ps[c]) {
+        ps[c] = UP_EDGE;
+      }
+    }
+    check(x < -this.pad_threshold, this.padCodes.ANALOG_LEFT);
+    check(x > this.pad_threshold, this.padCodes.ANALOG_RIGHT);
+    check(y < -this.pad_threshold, this.padCodes.ANALOG_DOWN);
+    check(y > this.pad_threshold, this.padCodes.ANALOG_UP);
+  }
+  isPadButtonDown(padindex, padcode) {
+    if (!this.pad_states[padindex]) {
+      return false;
+    }
+    if (padcode === this.padCodes.LEFT && this.isPadButtonDown(padindex, this.padCodes.ANALOG_LEFT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.RIGHT && this.isPadButtonDown(padindex, this.padCodes.ANALOG_RIGHT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.UP && this.isPadButtonDown(padindex, this.padCodes.ANALOG_UP)) {
+      return true;
+    }
+    if (padcode === this.padCodes.DOWN && this.isPadButtonDown(padindex, this.padCodes.ANALOG_DOWN)) {
+      return true;
+    }
+    return !!this.pad_states[padindex][padcode];
+  }
+  padDownHit(padindex, padcode) {
+    if (!this.pad_states[padindex]) {
+      return false;
+    }
+    if (padcode === this.padCodes.LEFT && this.padDownHit(padindex, this.padCodes.ANALOG_LEFT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.RIGHT && this.padDownHit(padindex, this.padCodes.ANALOG_RIGHT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.UP && this.padDownHit(padindex, this.padCodes.ANALOG_UP)) {
+      return true;
+    }
+    if (padcode === this.padCodes.DOWN && this.padDownHit(padindex, this.padCodes.ANALOG_DOWN)) {
+      return true;
+    }
+    if (this.pad_states[padindex][padcode] === DOWN_EDGE) {
+      this.pad_states[padindex][padcode] = DOWN;
+      return true;
+    }
+    return false;
+  }
+  padUpHit(padindex, padcode) {
+    if (!this.pad_states[padindex]) {
+      return false;
+    }
+    if (padcode === this.padCodes.LEFT && this.padUpHit(padindex, this.padCodes.ANALOG_LEFT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.RIGHT && this.padUpHit(padindex, this.padCodes.ANALOG_RIGHT)) {
+      return true;
+    }
+    if (padcode === this.padCodes.UP && this.padUpHit(padindex, this.padCodes.ANALOG_UP)) {
+      return true;
+    }
+    if (padcode === this.padCodes.DOWN && this.padUpHit(padindex, this.padCodes.ANALOG_DOWN)) {
+      return true;
+    }
+    if (this.pad_states[padindex][padcode] === UP_EDGE) {
+      delete this.pad_states[padindex][padcode];
+      return true;
+    }
+    return false;
+  }
+
 }
 
 export function create(input_device, draw2d) {

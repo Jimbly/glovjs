@@ -45,7 +45,6 @@ TurbulenzEngine.onload = function onloadFn()
   var color_red = mathDevice.v4Build(1, 0, 0, 1);
   var color_yellow = mathDevice.v4Build(1, 1, 0, 1);
   var color_sprite = color_white;
-  var color_grey = mathDevice.v4Build(0.5, 0.5, 0.5, 1);
   var sprite = createSprite('test.png', {
     width : spriteSize,
     height : spriteSize,
@@ -58,6 +57,7 @@ TurbulenzEngine.onload = function onloadFn()
 
   // Cache keyCodes
   var keyCodes = inputDevice.keyCodes;
+  var padCodes = input.padCodes;
 
   var viewport = mathDevice.v4Build(0, 0, gameWidth, gameHeight);
   var configureParams = {
@@ -78,14 +78,14 @@ TurbulenzEngine.onload = function onloadFn()
       dx: 0,
       dy: 0,
     };
-    if (input.isKeyDown(keyCodes.LEFT) || input.isKeyDown(keyCodes.A)) {
+    if (input.isKeyDown(keyCodes.LEFT) || input.isKeyDown(keyCodes.A) || input.isPadButtonDown(0, padCodes.LEFT)) {
       character.dx = -1;
-    } else if (input.isKeyDown(keyCodes.RIGHT) || input.isKeyDown(keyCodes.D)) {
+    } else if (input.isKeyDown(keyCodes.RIGHT) || input.isKeyDown(keyCodes.D) || input.isPadButtonDown(0, padCodes.RIGHT)) {
       character.dx = 1;
     }
-    if (input.isKeyDown(keyCodes.UP) || input.isKeyDown(keyCodes.W)) {
+    if (input.isKeyDown(keyCodes.UP) || input.isKeyDown(keyCodes.W) || input.isPadButtonDown(0, padCodes.UP)) {
       character.dy = -1;
-    } else if (input.isKeyDown(keyCodes.DOWN) || input.isKeyDown(keyCodes.S)) {
+    } else if (input.isKeyDown(keyCodes.DOWN) || input.isKeyDown(keyCodes.S) || input.isPadButtonDown(0, padCodes.DOWN)) {
       character.dy = 1;
     }
 
