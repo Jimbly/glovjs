@@ -18,6 +18,10 @@ tsd query node --action install --save
 * to update: `tsd reinstall --save`
 
 TODO:
+* input
+  * click detection, maybe dragging
+  * auto-focus canvas
+* sound
 * use spine for sequencing, or leave this until later?
 
 * TypeScript is not detecting unused var in ts_mod.ts, need a tshint?

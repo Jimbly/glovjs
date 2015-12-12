@@ -1,5 +1,6 @@
 html, body {
-  background-color: white;
+  background-color: black;
+  color: white;
   margin: 0;
   padding: 0;
   width: 100%;
@@ -13,4 +14,11 @@ html, body {
 
 canvas {
   display: block; /* remove scrollbars */
+}
+
+#debug {
+  left: 0;
+  top: 0;
+  position: fixed;
+  white-space: pre-wrap;
 }

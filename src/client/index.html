@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css" href="main.css">
   </head>
   <body>
+    <div id="debug"></div>
     <div id="content">
       <canvas id="turbulenz_game_engine_canvas" moz-opaque="true" tabindex="1">
         Sorry, but your browser does not support WebGL or does not have it
@@ -16,6 +17,14 @@
           Getting a WebGL Implementation
         </a>
       </canvas>
+      <script type="text/javascript">
+        (function () {
+          var debug = document.getElementById('debug');
+          window.onerror = function (e, file, line) {
+            debug.innerText = e + '\n  at ' + file + '(' + line + ')';
+          };
+        }());
+      </script>
       <script type="text/javascript">
         /*jshint browser: true*/
         var canvasSupported = true;
@@ -50,6 +59,9 @@
     <script src="vendor/jslib/debug.js"></script>
     <script src="vendor/jslib/webgl/turbulenzengine.js"></script>
     <script src="vendor/jslib/webgl/graphicsdevice.js"></script>
+    <script src="vendor/jslib/webgl/touch.js"></script>
+    <script src="vendor/jslib/webgl/touchevent.js"></script>
+    <script src="vendor/jslib/webgl/inputdevice.js"></script>
     <script src="vendor/jslib/vmath.js"></script>
     <script src="vendor/jslib/utilities.js"></script>
     <script src="vendor/jslib/observer.js"></script>
@@ -72,10 +84,12 @@
         }
 
         var canvas = document.getElementById('turbulenz_game_engine_canvas');
+        canvas.focus();
 
         function resizeCanvas() {
           canvas.width = window.innerWidth;
           canvas.height = window.innerHeight;
+          canvas.focus();
           // may force trigger immediate draw too?
         }
         // resize the canvas to fill browser window dynamically

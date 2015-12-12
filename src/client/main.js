@@ -1,5 +1,6 @@
 /*jshint browser:true*/
 
+
 /*global TurbulenzEngine: true */
 /*global Draw2D: false */
 /*global Draw2DSprite: false */
@@ -14,6 +15,8 @@ TurbulenzEngine.onload = function onloadFn()
   var draw2D = Draw2D.create({ graphicsDevice });
   var requestHandler = RequestHandler.create({});
   var textureManager = TextureManager.create(graphicsDevice, requestHandler);
+  var inputDevice = TurbulenzEngine.createInputDevice({});
+  var input = require('./input.js').create(inputDevice, draw2D);
 
   var textures = {};
   function loadTexture(texname) {
@@ -38,15 +41,22 @@ TurbulenzEngine.onload = function onloadFn()
   var gameWidth = 1280;
   var gameHeight = 960;
   var spriteSize = 64;
+  var color_white = mathDevice.v4Build(1, 1, 1, 1);
+  var color_red =  mathDevice.v4Build(1, 0, 0, 1);
+  var color_sprite = color_white;
+  var color_grey = mathDevice.v4Build(0.5, 0.5, 0.5, 1);
   var sprite = createSprite('test.png', {
     width : spriteSize,
     height : spriteSize,
     x : (Math.random() * (gameWidth - spriteSize) + (spriteSize * 0.5)),
     y : (Math.random() * (gameHeight - spriteSize) + (spriteSize * 0.5)),
     rotation : 0,
-    color : mathDevice.v4Build(1, 1, 1, 1),
+    color : color_sprite,
     textureRectangle : mathDevice.v4Build(0, 0, spriteSize, spriteSize)
   });
+
+  // Cache keyCodes
+  var keyCodes = inputDevice.keyCodes;
 
   var viewport = mathDevice.v4Build(0, 0, gameWidth, gameHeight);
   var configureParams = {
@@ -58,12 +68,36 @@ TurbulenzEngine.onload = function onloadFn()
     if (!graphicsDevice.beginFrame()) {
       return;
     }
+    input.tick();
     draw2D.configure(configureParams);
     draw2D.setBackBuffer();
     draw2D.clear();
 
-    sprite.x = (Math.random() * (gameWidth - spriteSize) + (spriteSize * 0.5));
-    sprite.y = (Math.random() * (gameHeight - spriteSize) + (spriteSize * 0.5));
+    var character = {
+      dx: 0,
+      dy: 0,
+    };
+    if (input.isKeyDown(keyCodes.LEFT) || input.isKeyDown(keyCodes.A)) {
+      character.dx = -1;
+    } else if (input.isKeyDown(keyCodes.RIGHT) || input.isKeyDown(keyCodes.D)) {
+      character.dx = 1;
+    }
+    if (input.isKeyDown(keyCodes.UP) || input.isKeyDown(keyCodes.W)) {
+      character.dy = -1;
+    } else if (input.isKeyDown(keyCodes.DOWN) || input.isKeyDown(keyCodes.S)) {
+      character.dy = 1;
+    }
+
+    sprite.x += character.dx;
+    sprite.y += character.dy;
+    if (input.clickHitSprite(sprite)) {
+      color_sprite = color_red;
+    }
+    if (input.isMouseOverSprite(sprite)) {
+      sprite.setColor(color_grey);
+    } else {
+      sprite.setColor(color_sprite);
+    }
 
     draw2D.begin('alpha', 'deferred');
     draw2D.drawSprite(sprite);
