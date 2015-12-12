@@ -42,7 +42,8 @@ TurbulenzEngine.onload = function onloadFn()
   var gameHeight = 960;
   var spriteSize = 64;
   var color_white = mathDevice.v4Build(1, 1, 1, 1);
-  var color_red =  mathDevice.v4Build(1, 0, 0, 1);
+  var color_red = mathDevice.v4Build(1, 0, 0, 1);
+  var color_yellow = mathDevice.v4Build(1, 1, 0, 1);
   var color_sprite = color_white;
   var color_grey = mathDevice.v4Build(0.5, 0.5, 0.5, 1);
   var sprite = createSprite('test.png', {
@@ -90,12 +91,16 @@ TurbulenzEngine.onload = function onloadFn()
 
     sprite.x += character.dx;
     sprite.y += character.dy;
-    if (input.clickHitSprite(sprite)) {
-      color_sprite = color_red;
-    }
-    if (input.isMouseOverSprite(sprite)) {
-      sprite.setColor(color_grey);
+    if (input.isMouseDown() && input.isMouseOverSprite(sprite)) {
+      sprite.setColor(color_yellow);
+    } else if (input.clickHitSprite(sprite)) {
+      color_sprite = (color_sprite === color_red) ? color_white : color_red;
+      sprite.setColor(color_sprite);
+    } else if (input.isMouseOverSprite(sprite)) {
+      color_sprite[3] = 0.5;
+      sprite.setColor(color_sprite);
     } else {
+      color_sprite[3] = 1;
       sprite.setColor(color_sprite);
     }
 

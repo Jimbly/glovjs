@@ -19,7 +19,7 @@ tsd query node --action install --save
 
 TODO:
 * input
-  * click detection, maybe dragging
+  * dragging?
   * auto-focus canvas
 * sound
 * use spine for sequencing, or leave this until later?

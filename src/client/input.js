@@ -8,10 +8,13 @@ class GlovInput {
     this.input_device = input_device;
     this.draw2d = draw2d;
     this.key_state = {};
+    this.clicks = [];
+    this.last_clicks = [];
     this.mouse_x = 0;
     this.mouse_y = 0;
     this.mouse_mapped = [0,0];
     this.mouse_over_captured = false;
+    this.mouse_down = false;
 
     input_device.addEventListener('keydown', keycode => this.onKeyDown(keycode));
     input_device.addEventListener('keyup', keycode => this.onKeyUp(keycode));
@@ -22,9 +25,8 @@ class GlovInput {
   }
   tick() {
     this.mouse_over_captured = false;
-    // TODO: click logic: click got set during the last frame,
-    // need to leave it there and clear it if it was not reset on the next frame
-    this.click = null;
+    this.last_clicks = this.clicks;
+    this.clicks = [];
     Object.keys(this.key_state).forEach(keycode => {
       switch(this.key_state[keycode]) {
         case DOWN_EDGE:
@@ -44,9 +46,12 @@ class GlovInput {
   }
   onMouseDown(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_mapped
+    this.mouse_down = true;
   }
   onMouseUp(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_mapped
+    this.clicks.push(this.mouse_mapped.slice(0));
+    this.mouse_down = false;
   }
   onMouseOver(x, y) {
     this.mouse_x = x;
@@ -71,7 +76,18 @@ class GlovInput {
     const h = sprite.getHeight();
     return this.isMouseOver(sprite.x - w/2, sprite.y - h/2, w, h);
   }
+  isMouseDown() {
+    return this.mouse_down;
+  }
   clickHit(x, y, w, h) {
+    for (var ii = 0; ii < this.last_clicks.length; ++ii) {
+      var pos = this.last_clicks[ii];
+      if (pos[0] >= x && pos[0] < x + w && pos[1] >= y && pos[1] < y + h) {
+        this.last_clicks.splice(ii, 1);
+        return true;
+      }
+    }
+    return false;
   }
   clickHitSprite(sprite) {
     const w = sprite.getWidth();
