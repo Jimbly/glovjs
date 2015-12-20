@@ -1337,7 +1337,9 @@ var WebGLInputDevice = (function () {
         id.setEventHandlersCanvas();
 
         // Add window blur event listener
-        id.setEventHandlersWindow();
+        // JE: Disable this, breaks alt-tab, etc
+        //id.setEventHandlersWindow();
+        id.onFocus();
 
         // Add canvas touch event listeners
         id.setEventHandlersTouch();
