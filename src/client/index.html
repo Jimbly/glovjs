@@ -17,6 +17,21 @@
           Getting a WebGL Implementation
         </a>
       </canvas>
+      <div id="gamescreen" class="screenwrap">
+        <div id="title" class="screen vflex" style="display: none;">
+          <div class="flexcenter" style="text-align: center;">
+            <h1>Powered by Turbulenz</h1>
+          </div>
+          <div class="flexcenter" style="flex:3; text-align: center;"></div>
+        </div>
+      </div>
+      <div id="fullscreen" class="screenwrap">
+        <div id="play" class="screen vflex" style="display: none;">
+          <div class="flexcenter" style="flex:1; text-align: center;"></div>
+          <div class="hflex" id="something">...</div>
+          <div class="flexcenter" style="flex:1; text-align: center;"></div>
+        </div>
+      </div>
       <script type="text/javascript">
         (function () {
           var debug = document.getElementById('debug');
@@ -61,7 +76,9 @@
     <script src="vendor/jslib/webgl/graphicsdevice.js"></script>
     <script src="vendor/jslib/webgl/touch.js"></script>
     <script src="vendor/jslib/webgl/touchevent.js"></script>
+    <script src="vendor/jslib/webgl/sounddevice.js"></script>
     <script src="vendor/jslib/webgl/inputdevice.js"></script>
+    <script src="vendor/jslib/camera.js"></script>
     <script src="vendor/jslib/vmath.js"></script>
     <script src="vendor/jslib/utilities.js"></script>
     <script src="vendor/jslib/observer.js"></script>
@@ -97,6 +114,7 @@
           canvas.height = window.innerHeight;
           canvas.focus();
           // may force trigger immediate draw too?
+          window.need_repos = 10;
         }
         // resize the canvas to fill browser window dynamically
         window.addEventListener('resize', resizeCanvas, false);

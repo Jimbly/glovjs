@@ -5,6 +5,8 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow: hidden;
 }
 
 #content {
@@ -21,4 +23,40 @@ canvas {
   top: 0;
   position: fixed;
   white-space: pre-wrap;
+}
+
+.screen {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.screenwrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+#gamescreen,#fullscreen {
+  pointer-events: none;
+}
+
+.hflex {
+  display: flex;
+  flex-direction: row;
+}
+
+.vflex {
+  display: flex;
+  flex-direction: column;
+}
+
+.fluid {
+  flex: 1;
+}
+
+.flexcenter {
+  align-self: center;
 }

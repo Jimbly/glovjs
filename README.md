@@ -18,11 +18,13 @@ tsd query node --action install --save
 * to update: `tsd reinstall --save`
 
 TODO:
+* Merge all useful features, gulp, etc from LD34
 * input
   * dragging?
-  * auto-focus canvas
-* sound
+  * onMouseDown not firing, because isHovering is not set because of my handler changes?
+* refactor sound out into playXY
 * use spine for sequencing, or leave this until later?
+* cleaner window resize handling (have to be checking this each frame anyway?)
 
 * TypeScript is not detecting unused var in ts_mod.ts, need a tshint?
 * minify, bundle CSS
