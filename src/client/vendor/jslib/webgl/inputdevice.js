@@ -161,21 +161,21 @@ var WebGLInputDevice = (function () {
     };
 
     // Private API
-    WebGLInputDevice.prototype.sendEventToHandlers = function (eventHandlers, arg0, arg1, arg2, arg3, arg4, arg5) {
+    WebGLInputDevice.prototype.sendEventToHandlers = function (eventHandlers, arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
         var i;
         var length = eventHandlers.length;
 
         if (length) {
             for (i = 0; i < length; i += 1) {
-                eventHandlers[i](arg0, arg1, arg2, arg3, arg4, arg5);
+                eventHandlers[i](arg0, arg1, arg2, arg3, arg4, arg5, arg6);
             }
         }
     };
 
-    WebGLInputDevice.prototype.sendEventToHandlersASync = function (handlers, a0, a1, a2, a3, a4, a5) {
+    WebGLInputDevice.prototype.sendEventToHandlersASync = function (handlers, a0, a1, a2, a3, a4, a5, a6) {
         var sendEvent = WebGLInputDevice.prototype.sendEventToHandlers;
         TurbulenzEngine.setTimeout(function callSendEventToHandlersFn() {
-            sendEvent(handlers, a0, a1, a2, a3, a4, a5);
+            sendEvent(handlers, a0, a1, a2, a3, a4, a5, a6);
         }, 0);
     };
 
@@ -190,7 +190,6 @@ var WebGLInputDevice = (function () {
             var maxAxisRange = this.maxAxisRange;
             var sendEvent = this.sendEventToHandlersASync;
             var handlers = this.handlers;
-            var padButtons = this.padButtons;
             var padMap = this.padMap;
             var leftThumbX = 0;
             var leftThumbY = 0;
@@ -199,13 +198,14 @@ var WebGLInputDevice = (function () {
 
             var numGamePads = gamepads.length;
             for (var i = 0; i < numGamePads; i += 1) {
+                var padButtons = this.padButtons[i] = this.padButtons[i] || this.padButtonsInit.slice(0);
                 var gamepad = gamepads[i];
                 if (gamepad) {
                     // Update button states
                     var buttons = gamepad.buttons;
 
-                    if (this.padTimestampUpdate < gamepad.timestamp) {
-                        this.padTimestampUpdate = gamepad.timestamp;
+                    if (this.padTimestampUpdate[i] < gamepad.timestamp) {
+                        this.padTimestampUpdate[i] = gamepad.timestamp;
 
                         var numButtons = buttons.length;
                         for (var n = 0; n < numButtons; n += 1) {
@@ -219,9 +219,9 @@ var WebGLInputDevice = (function () {
                                 var padCode = padMap[n];
                                 if (padCode !== undefined) {
                                     if (value) {
-                                        sendEvent(handlers.paddown, padCode);
+                                        sendEvent(handlers.paddown, i, padCode);
                                     } else {
-                                        sendEvent(handlers.padup, padCode);
+                                        sendEvent(handlers.padup, i, padCode);
                                     }
                                 }
                             }
@@ -283,10 +283,8 @@ var WebGLInputDevice = (function () {
                             rightThumbY = (rY * normalizedMagnitude);
                         }
 
-                        sendEvent(handlers.padmove, leftThumbX, leftThumbY, buttons[6], rightThumbX, rightThumbY, buttons[7]);
+                        sendEvent(handlers.padmove, i, leftThumbX, leftThumbY, buttons[6], rightThumbX, rightThumbY, buttons[7]);
                     }
-
-                    break;
                 }
             }
         }
@@ -1238,11 +1236,12 @@ var WebGLInputDevice = (function () {
 
         id.keyCodeToUnicode = keyCodeToUnicodeTable;
 
-        id.padButtons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        id.padButtonsInit = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        id.padButtons = [];
         id.padMap = padMap;
         id.padAxisDeadZone = 0.26;
         id.maxAxisRange = 1.0;
-        id.padTimestampUpdate = 0;
+        id.padTimestampUpdate = [0, 0, 0, 0];
 
         // Pointer locking
         var requestPointerLock = (canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock);
