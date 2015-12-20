@@ -74,6 +74,12 @@
 
     <script type="text/javascript">
       /*global WebGLTurbulenzEngine*/
+      window.assert = function(exp) {
+        if (!exp) {
+          console.log(new Error().stack);
+          //alert('assertion failed');
+        }
+      };
       // Embedded code and startup code.
       window.onload = function () {
         var appEntry = TurbulenzEngine.onload;

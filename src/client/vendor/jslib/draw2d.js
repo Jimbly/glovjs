@@ -130,12 +130,18 @@ var Draw2DSprite = (function () {
 
     Draw2DSprite.prototype.setWidth = function (width) {
         width *= 0.5;
+        assert(isFinite(width)); // JE: Tracking down error
         var data = this.data;
         if (data[17] !== width) {
             // Move the origin so that the sprite gets scaled around
             // it, rather than scaled around the top left corner.
             // originX = originX * (newwidth/2) / (oldwidth/2)
+            assert(isFinite(data[23]));  // JE: Tracking down error
+            if (!isFinite(data[23])) {  // JE: Tracking down error
+              data[23] = 0;  // JE: Tracking down error
+            }  // JE: Tracking down error
             data[23] = data[23] * width / data[17];
+            assert(isFinite(data[23]));  // JE: Tracking down error
             data[17] = width;
             this._invalidate();
         }
@@ -211,9 +217,13 @@ var Draw2DSprite = (function () {
     Draw2DSprite.prototype.setOrigin = function (origin) {
         var originX = origin[0];
         var originY = origin[1];
+        assert(isFinite(originX) && isFinite(originY));  // JE: Tracking down error
+
         var data = this.data;
+        assert(isFinite(data[23]));  // JE: Tracking down error
         if (data[23] !== originX || data[24] !== originY) {
             data[23] = originX;
+            assert(isFinite(data[23]));  // JE: Tracking down error
             data[24] = originY;
             this._invalidate();
         }
@@ -436,6 +446,8 @@ var Draw2DSprite = (function () {
         var origin = params.origin;
         data[23] = (origin ? origin[0] : data[17]);
         data[24] = (origin ? origin[1] : data[18]);
+        assert(isFinite(data[23]));  // JE: Tracking down error
+        assert(isFinite(data[24]));  // JE: Tracking down error
 
         s._invalidate();
         return s;
