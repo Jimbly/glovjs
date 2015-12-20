@@ -22,10 +22,9 @@ var config = {
   ts_files: ['src/**/*.ts', '!src/client/**/*.ts'],
   js_files: ['src/**/*.js', '!src/client/**/*.js'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
-  client_vendor_js: ['src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
-  client_css: ['src/client/**/*.css'],
-  client_static: ['src/client/**/*.png', 'src/client/**/vendor/**'],
+  client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
+  client_static: ['src/client/**/*.mp3', 'src/client/**/*.wav', 'src/client/**/*.ogg', 'src/client/**/*.png', 'src/client/**/vendor/**', '!src/client/sounds/Bfxr/**'],
 };
 
 gulp.task('inspect', function () {
@@ -134,7 +133,7 @@ gulp.task('client_static', function () {
 
 gulp.task('build', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_static', 'client_js']);
 
-gulp.task('bs-reload', function () {
+gulp.task('bs-reload', ['client_static', 'client_html'], function () {
   browser_sync.reload();
 });
 
