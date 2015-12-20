@@ -17,6 +17,7 @@ class GlovInput {
     this.mouse_over_captured = false;
     this.mouse_down = false;
     this.pad_threshold = 0.25;
+    this.touch_state = [];
 
     this.padCodes = input_device.padCodes;
     this.padCodes.ANALOG_UP = 20;
@@ -32,9 +33,14 @@ class GlovInput {
     input_device.addEventListener('mouseover', (x,y) => this.onMouseOver(x, y));
 
 
-    input_device.addEventListener('paddown', padcode => this.onPadDown(0, padcode));
-    input_device.addEventListener('padup', padcode => this.onPadUp(0, padcode));
-    input_device.addEventListener('padmove', (x, y, z, rx, ry, rz) => this.onPadMove(0, x, y, z, rx, ry, rz));
+    input_device.addEventListener('paddown', (padindex, padcode) => this.onPadDown(padindex, padcode));
+    input_device.addEventListener('padup', (padindex, padcode) => this.onPadUp(padindex, padcode));
+    input_device.addEventListener('padmove', (padindex, x, y, z, rx, ry, rz) => this.onPadMove(padindex, x, y, z, rx, ry, rz));
+
+    input_device.addEventListener('touchstart', (evt) => this.onTouchChange(evt));
+    input_device.addEventListener('touchend', (evt) => this.onTouchChange(evt));
+    input_device.addEventListener('touchmove', (evt) => this.onTouchChange(evt));
+
   }
   tick() {
     this.mouse_over_captured = false;
@@ -107,6 +113,21 @@ class GlovInput {
     const w = sprite.getWidth();
     const h = sprite.getHeight();
     return this.clickHit(sprite.x - w/2, sprite.y - h/2, w, h);
+  }
+
+  onTouchChange(param) {
+    this.touch_state = param.touches || [];
+    //throw JSON.stringify(param, undefined, 2);
+  }
+  isTouchDown(x, y, w, h) {
+    var pos = [];
+    for (var ii = 0; ii < this.touch_state.length; ++ii) {
+      this.draw2d.viewportMap(this.touch_state[ii].positionX, this.touch_state[ii].positionY, pos);
+      if (pos[0] >= x && pos[0] < x + w && pos[1] >= y && pos[1] < y + h) {
+        return true;
+      }
+    }
+    return false;
   }
 
   onKeyUp(keycode) {
