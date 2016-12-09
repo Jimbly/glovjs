@@ -7,6 +7,7 @@
 /*global RequestHandler: false */
 /*global TextureManager: false */
 /*global Camera: false */
+/*global VMath: false */
 
 TurbulenzEngine.onload = function onloadFn()
 {
@@ -18,6 +19,7 @@ TurbulenzEngine.onload = function onloadFn()
   var textureManager = TextureManager.create(graphicsDevice, requestHandler);
   var inputDevice = TurbulenzEngine.createInputDevice({});
   var input = require('./input.js').create(inputDevice, draw2D);
+  var random_seed = require('random-seed');
 
   var soundDeviceParameters = {
     linearDistance : false

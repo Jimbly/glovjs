@@ -814,7 +814,7 @@ var WebGLInputDevice = (function () {
 
     // Set event handler methods
     WebGLInputDevice.prototype.setEventHandlersMouseEnter = function () {
-        if (!this.isFocused()) {
+        if (!this.isFocused() || true) { // JE: why not?  Need this.  Maybe related to my other focus changes.
             this.addInternalEventListener(window, 'mousedown', this.onMouseDown);
         }
 
@@ -826,7 +826,7 @@ var WebGLInputDevice = (function () {
     };
 
     WebGLInputDevice.prototype.setEventHandlersMouseLeave = function () {
-        if (!this.isFocused()) {
+        if (!this.isFocused() || true) { // JE: why not?  Need this.  Maybe related to my other focus changes.
             this.removeInternalEventListener(window, 'mousedown', this.onMouseDown);
         }
 
