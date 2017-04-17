@@ -1386,8 +1386,8 @@ var WebGLSoundDevice = (function () {
             sd.gainNode.connect(audioContext.destination);
 
             var listener = audioContext.listener;
-            listener.dopplerFactor = sd.dopplerFactor;
-            listener.speedOfSound = sd.speedOfSound;
+            // JE: deprecated: listener.dopplerFactor = sd.dopplerFactor;
+            // JE: deprecated: listener.speedOfSound = sd.speedOfSound;
 
             var listenerTransform, listenerVelocity;
 
@@ -1416,7 +1416,7 @@ var WebGLSoundDevice = (function () {
                 },
                 set: function setListenerVelocityFn(velocity) {
                     listenerVelocity = VMath.v3Copy(velocity, listenerVelocity);
-                    listener.setVelocity(velocity[0], velocity[1], velocity[2]);
+                    // JE: deprecated: listener.setVelocity(velocity[0], velocity[1], velocity[2]);
                 },
                 enumerable: true,
                 configurable: false

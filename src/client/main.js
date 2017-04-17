@@ -11,71 +11,33 @@
 
 TurbulenzEngine.onload = function onloadFn()
 {
-  var intervalID;
-  var graphicsDevice = TurbulenzEngine.createGraphicsDevice({});
-  var mathDevice = TurbulenzEngine.createMathDevice({});
-  var draw2D = Draw2D.create({ graphicsDevice });
-  var requestHandler = RequestHandler.create({});
-  var textureManager = TextureManager.create(graphicsDevice, requestHandler);
-  var inputDevice = TurbulenzEngine.createInputDevice({});
-  var input = require('./input.js').create(inputDevice, draw2D);
-  var random_seed = require('random-seed');
+  let intervalID;
+  const graphicsDevice = TurbulenzEngine.createGraphicsDevice({});
+  const mathDevice = TurbulenzEngine.createMathDevice({});
+  const draw2D = Draw2D.create({ graphicsDevice });
+  const requestHandler = RequestHandler.create({});
+  const textureManager = TextureManager.create(graphicsDevice, requestHandler);
+  const inputDevice = TurbulenzEngine.createInputDevice({});
+  const input = require('./input.js').create(inputDevice, draw2D);
+  const draw_list = require('./draw_list.js').create(draw2D);
+  const random_seed = require('random-seed');
 
-  var soundDeviceParameters = {
-    linearDistance : false
-  };
-  var soundDevice = TurbulenzEngine.createSoundDevice(soundDeviceParameters);
-  var camera = Camera.create(mathDevice);
-  var lookAtPosition = mathDevice.v3Build(0.0, 0.0, 0.0);
-  var worldUp = mathDevice.v3BuildYAxis();
-  var cameraPosition = mathDevice.v3Build(0.0, 0.0, 1.0);
+  const camera = Camera.create(mathDevice);
+  const lookAtPosition = mathDevice.v3Build(0.0, 0.0, 0.0);
+  const worldUp = mathDevice.v3BuildYAxis();
+  const cameraPosition = mathDevice.v3Build(0.0, 0.0, 1.0);
   camera.lookAt(lookAtPosition, worldUp, cameraPosition);
   camera.updateViewMatrix();
-  soundDevice.listenerTransform = camera.matrix;
-  var sound_source_mid = soundDevice.createSource({
-    position : mathDevice.v3Build(0, 0, 0),
-    relative : false,
-    pitch : 1.0,
-  });
+  const sound_manager = require('./sound_manager.js').create(camera.matrix);
+  sound_manager.loadSound('test');
 
-  var sounds = {};
-  function loadSound(base) {
-    var src = 'sounds/' + base;
-    // if (soundDevice.isSupported('FILEFORMAT_WAV')) {
-    src += '.wav';
-    // } else {
-    //   src += '.ogg';
-    // }
-    soundDevice.createSound({
-      src: src,
-      onload: function (sound) {
-        if (sound) {
-          sounds[base] = sound;
-        }
-      }
-    });
-  }
-  loadSound('test');
-  function playSound(source, soundname) {
-    if (!sounds[soundname]) {
-      return;
-    }
-    source._last_played = source._last_played || {};
-    let last_played_time = source._last_played[soundname] || -9e9;
-    if (global_timer - last_played_time < 45) {
-      return;
-    }
-    source.play(sounds[soundname]);
-    source._last_played[soundname] = global_timer;
-  }
-
-  var textures = {};
+  let textures = {};
   function loadTexture(texname) {
-    var path = texname;
+    let path = texname;
     if (texname.indexOf('.') !== -1) {
       path = 'img/'+ texname;
     }
-    var inst = textureManager.getInstance(path);
+    const inst = textureManager.getInstance(path);
     if (inst) {
       return inst;
     }
@@ -83,9 +45,9 @@ TurbulenzEngine.onload = function onloadFn()
     return textureManager.getInstance(path);
   }
   function createSprite(texname, params) {
-    var tex_inst = loadTexture(texname);
+    const tex_inst = loadTexture(texname);
     params.texture = tex_inst.getTexture();
-    var sprite = Draw2DSprite.create(params);
+    const sprite = Draw2DSprite.create(params);
     tex_inst.subscribeTextureChanged(function () {
       sprite.setTexture(tex_inst.getTexture());
     });
@@ -96,17 +58,17 @@ TurbulenzEngine.onload = function onloadFn()
   loadTexture('test.png');
 
   // Viewport for Draw2D.
-  var game_width = 1280;
-  var game_height = 960;
-  var color_white = mathDevice.v4Build(1, 1, 1, 1);
-  var color_red = mathDevice.v4Build(1, 0, 0, 1);
-  var color_yellow = mathDevice.v4Build(1, 1, 0, 1);
+  let game_width = 1280;
+  let game_height = 960;
+  const color_white = mathDevice.v4Build(1, 1, 1, 1);
+  const color_red = mathDevice.v4Build(1, 0, 0, 1);
+  const color_yellow = mathDevice.v4Build(1, 1, 0, 1);
 
   // Cache keyCodes
-  var keyCodes = inputDevice.keyCodes;
-  var padCodes = input.padCodes;
+  const keyCodes = inputDevice.keyCodes;
+  const padCodes = input.padCodes;
 
-  var configureParams = {
+  let configureParams = {
     scaleMode : 'scale',
     viewportRectangle : mathDevice.v4Build(0, 0, game_width, game_height)
   };
@@ -188,7 +150,7 @@ TurbulenzEngine.onload = function onloadFn()
     } else if (input.clickHitSprite(test.sprite)) {
       test.color_sprite = (test.color_sprite === color_red) ? color_white : color_red;
       test.sprite.setColor(test.color_sprite);
-      playSound(sound_source_mid, 'test');
+      sound_manager.play('test');
     } else if (input.isMouseOverSprite(test.sprite)) {
       test.color_sprite[3] = 0.5;
       test.sprite.setColor(test.color_sprite);
@@ -212,6 +174,7 @@ TurbulenzEngine.onload = function onloadFn()
     var dt = Math.min(Math.max(now - last_tick, 1), 250);
     last_tick = now;
     global_timer += dt;
+    sound_manager.tick();
     input.tick();
 
     {

@@ -101,12 +101,12 @@ class GlovInput {
     return this.mouse_down;
   }
   mousePos() {
-    return [this.mouse_x, this.mouse_y];
+    return [this.mouse_mapped[0], this.mouse_mapped[1]];
   }
   clickHit(x, y, w, h) {
     for (var ii = 0; ii < this.last_clicks.length; ++ii) {
       var pos = this.last_clicks[ii];
-      if (pos[0] >= x && pos[0] < x + w && pos[1] >= y && pos[1] < y + h) {
+      if (pos[0] >= x && (w === Infinity || pos[0] < x + w) && pos[1] >= y && (h === Infinity || pos[1] < y + h)) {
         this.last_clicks.splice(ii, 1);
         return true;
       }
