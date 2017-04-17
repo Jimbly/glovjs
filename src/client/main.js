@@ -149,18 +149,15 @@ TurbulenzEngine.onload = function onloadFn()
       test.sprite.setColor(color_yellow);
     } else if (input.clickHitSprite(test.sprite)) {
       test.color_sprite = (test.color_sprite === color_red) ? color_white : color_red;
-      test.sprite.setColor(test.color_sprite);
       sound_manager.play('test');
     } else if (input.isMouseOverSprite(test.sprite)) {
       test.color_sprite[3] = 0.5;
-      test.sprite.setColor(test.color_sprite);
     } else {
       test.color_sprite[3] = 1;
-      test.sprite.setColor(test.color_sprite);
     }
 
-    draw2D.drawSprite(test.game_bg);
-    draw2D.drawSprite(test.sprite);
+    draw_list.queue(test.game_bg, 0, 0, 1, [0, 0.72, 1, 1]);
+    draw_list.queue(test.sprite, test.sprite.x, test.sprite.y, 2, test.color_sprite);
   }
 
   game_state = titleInit;
@@ -217,11 +214,10 @@ TurbulenzEngine.onload = function onloadFn()
     draw2D.setBackBuffer();
     draw2D.clear([0, 0, 0, 1]);
 
-    draw2D.begin('alpha', 'deferred');
-
     game_state(dt);
 
-    draw2D.end();
+    draw_list.draw();
+
     graphicsDevice.endFrame();
   }
 
