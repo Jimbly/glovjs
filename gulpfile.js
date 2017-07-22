@@ -12,14 +12,11 @@ var node_inspector = require('gulp-node-inspector');
 var nodemon = require('gulp-nodemon');
 var source = require('vinyl-source-stream');
 var sourcemaps = require('gulp-sourcemaps');
-var ts = require('gulp-typescript');
-var tsify = require('tsify');
 var watchify = require('watchify');
 
 //////////////////////////////////////////////////////////////////////////
 // Server tasks
 var config = {
-  ts_files: ['src/**/*.ts', '!src/client/**/*.ts'],
   js_files: ['src/**/*.js', '!src/client/**/*.js'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
@@ -34,19 +31,6 @@ gulp.task('inspect', function () {
     webPort: '8080',
     preload: false
   }));
-});
-
-// Compile typescript sources
-gulp.task('ts', function() {
-  var ts_project = ts.createProject('tsconfig.json', {
-    sortOutput: true,
-  });
-  return ts_project.src()
-    .pipe(sourcemaps.init())
-    .pipe(ts(ts_project))
-    .js
-    .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('./build'));
 });
 
 gulp.task('js', function () {
@@ -105,7 +89,6 @@ gulp.task('client_static', function () {
   }
 
   var watched = watchify(browserify(opts));
-  watched.plugin(tsify, { noImplicitAny: true });
   watched.transform(babelify);
 
   watched.on('update', function () {
@@ -120,7 +103,6 @@ gulp.task('client_static', function () {
   });
 
   var nonwatched = browserify(opts);
-  nonwatched.plugin(tsify, { noImplicitAny: true });
   nonwatched.transform(babelify);
   nonwatched.on('log', gutil.log); // output build logs to terminal
   gulp.task('client_js', function () {
@@ -131,14 +113,13 @@ gulp.task('client_static', function () {
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
 
-gulp.task('build', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_static', 'client_js']);
+gulp.task('build', ['jshint', 'js', 'client_html', 'client_css', 'client_static', 'client_js']);
 
 gulp.task('bs-reload', ['client_static', 'client_html'], function () {
   browser_sync.reload();
 });
 
-gulp.task('watch', ['jshint', 'js', 'ts', 'client_html', 'client_css', 'client_static', 'client_js_watch'], function() {
-  gulp.watch(config.ts_files, ['ts']);
+gulp.task('watch', ['jshint', 'js', 'client_html', 'client_css', 'client_static', 'client_js_watch'], function() {
   gulp.watch(config.js_files, ['js']);
   gulp.watch(config.all_js_files, ['jshint']);
   gulp.watch(config.client_html, ['client_html', 'bs-reload']);

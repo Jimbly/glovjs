@@ -7,7 +7,6 @@
             [
                 "node_modules",
                 "build",
-                "typings",
 //                "vendor"
             ],
             "file_exclude_patterns": [],
