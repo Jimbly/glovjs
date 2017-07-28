@@ -1,3 +1,5 @@
+/*global assert: true */
+
 function cmpDrawList(a, b) {
   if (a.z !== b.z) {
     return a.z - b.z;
@@ -17,7 +19,6 @@ class GlovDrawList {
   }
 
   queue(sprite, x, y, z, color, scale, tex_rect, rotation, bucket) {
-    sprite.test = 1;
     let elem = {
       sprite,
       x, y, z,
@@ -28,33 +29,57 @@ class GlovDrawList {
       rotation: rotation || 0,
     };
     this.list.push(elem);
+    return elem;
+  }
+
+  queuefn(fn, x, y, z, bucket) {
+    let elem = {
+      fn,
+      x, y, z,
+      bucket: bucket || 'alpha',
+    };
+    this.list.push(elem);
+    return elem;
   }
 
 
   draw() {
-    let bucket = 'alpha';
-    this.draw2d.begin('alpha', 'deferred');
+    let bucket = null;
+    let tech_params = null;
+    let orig_tech_params = this.draw2d.techniqueParameters;
     this.list.sort(cmpDrawList);
     for (let ii = 0; ii < this.list.length; ++ii) {
       let elem = this.list[ii];
-      if (elem.bucket !== bucket) {
-        this.draw2d.end();
+      if (elem.bucket !== bucket || elem.tech_params !== tech_params) {
+        if (bucket) {
+          this.draw2d.end();
+        }
         bucket = elem.bucket;
+        tech_params = elem.tech_params;
+        this.draw2d.techniqueParameters = tech_params || orig_tech_params;
+        assert(bucket);
         this.draw2d.begin(bucket, 'deferred');
       }
-      let sprite = elem.sprite;
-      sprite.x = elem.x;
-      sprite.y = elem.y;
-      sprite.setScale(elem.scale);
-      sprite.setColor(elem.color);
-      sprite.rotation = elem.rotation;
-      if (elem.tex_rect) {
-        sprite.setTextureRectangle(elem.tex_rect);
+      if (elem.fn) {
+        elem.fn(elem);
+      } else {
+        let sprite = elem.sprite;
+        sprite.x = elem.x;
+        sprite.y = elem.y;
+        sprite.setScale(elem.scale);
+        sprite.setColor(elem.color);
+        sprite.rotation = elem.rotation;
+        if (elem.tex_rect) {
+          sprite.setTextureRectangle(elem.tex_rect);
+        }
+        this.draw2d.drawSprite(sprite);
       }
-      this.draw2d.drawSprite(sprite);
     }
     this.list.length = 0;
-    this.draw2d.end();
+    if (bucket) {
+      this.draw2d.end();
+      this.draw2d.techniqueParameters = orig_tech_params;
+    }
   }
 }
 

@@ -14,7 +14,10 @@ TurbulenzEngine.onload = function onloadFn()
   let intervalID;
   const graphicsDevice = TurbulenzEngine.createGraphicsDevice({});
   const mathDevice = TurbulenzEngine.createMathDevice({});
-  const draw2D = Draw2D.create({ graphicsDevice });
+  let draw2d_params = { graphicsDevice };
+  const glov_font = require('./glov_font.js');
+  glov_font.populateDraw2DParams(draw2d_params);
+  const draw2D = Draw2D.create(draw2d_params);
   const requestHandler = RequestHandler.create({});
   const textureManager = TextureManager.create(graphicsDevice, requestHandler);
   const inputDevice = TurbulenzEngine.createInputDevice({});
@@ -53,6 +56,9 @@ TurbulenzEngine.onload = function onloadFn()
     });
     return sprite;
   }
+
+  const arial32_info = require('./img/font/arial32.json');
+  const default_font = glov_font.create(draw2D, arial32_info, loadTexture('arial32.png'));
 
   // Preload
   loadTexture('test.png');
@@ -158,6 +164,58 @@ TurbulenzEngine.onload = function onloadFn()
 
     draw_list.queue(test.game_bg, 0, 0, 1, [0, 0.72, 1, 1]);
     draw_list.queue(test.sprite, test.sprite.x, test.sprite.y, 2, test.color_sprite);
+
+    let font_test_idx = 0;
+    let font_style = null;
+
+    default_font.drawSized(draw_list, glov_font.styleColored(null, 0x000000ff), test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'TEST!');
+    font_style = glov_font.style(null, {
+      color: 0xFF00FFff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'TEST2!');
+    font_style = glov_font.style(null, {
+      outline_width: 2.0,
+      outline_color: 0x800080ff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'OUTLINE');
+    font_style = glov_font.style(null, {
+      outline_width: 2.0,
+      outline_color: 0xFFFF00ff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'OUTLINE2');
+    font_style = glov_font.style(null, {
+      glow_xoffs: 3.25,
+      glow_yoffs: 3.25,
+      glow_inner: -2.5,
+      glow_outer: 5,
+      glow_color: 0x000000ff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'Drop Shadow');
+    font_style = glov_font.style(null, {
+      glow_xoffs: 0,
+      glow_yoffs: 0,
+      glow_inner: -1,
+      glow_outer: 5,
+      glow_color: 0xFFFFFFff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'Glow');
+    font_style = glov_font.style(null, {
+      outline_width: 1.0,
+      outline_color: 0x800000ff,
+      glow_xoffs: 3.25,
+      glow_yoffs: 3.25,
+      glow_inner: -2.5,
+      glow_outer: 5,
+      glow_color: 0x000000ff,
+    });
+    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+      'Both');
   }
 
   game_state = titleInit;
