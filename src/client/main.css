@@ -16,6 +16,8 @@ html, body {
 
 canvas {
   display: block; /* remove scrollbars */
+  width: 100vw;
+  height: 100vh;
 }
 
 #debug {

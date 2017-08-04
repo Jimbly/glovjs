@@ -1,124 +1,92 @@
-/*jshint browser:true*/
+/*jshint browser:true, noempty:false*/
 
 /*global $: false */
 /*global TurbulenzEngine: true */
 /*global Draw2D: false */
-/*global Draw2DSprite: false */
-/*global RequestHandler: false */
-/*global TextureManager: false */
-/*global Camera: false */
-/*global VMath: false */
+/*global math_device: false */
+/*global assert: false */
 
 TurbulenzEngine.onload = function onloadFn()
 {
-  let intervalID;
-  const graphicsDevice = TurbulenzEngine.createGraphicsDevice({});
-  const mathDevice = TurbulenzEngine.createMathDevice({});
-  let draw2d_params = { graphicsDevice };
-  const glov_font = require('./glov_font.js');
+  const graphics_device = TurbulenzEngine.createGraphicsDevice({});
+  window.math_device = window.math_device || TurbulenzEngine.createMathDevice({});
+  let draw2d_params = { graphicsDevice: graphics_device };
+  const glov_font = require('./glov/font.js');
   glov_font.populateDraw2DParams(draw2d_params);
-  const draw2D = Draw2D.create(draw2d_params);
-  const requestHandler = RequestHandler.create({});
-  const textureManager = TextureManager.create(graphicsDevice, requestHandler);
-  const inputDevice = TurbulenzEngine.createInputDevice({});
-  const input = require('./input.js').create(inputDevice, draw2D);
-  const draw_list = require('./draw_list.js').create(draw2D);
-  const random_seed = require('random-seed');
+  const draw_2d = Draw2D.create(draw2d_params);
+  const glov_sprite = require('./glov/sprite.js').create(graphics_device);
+  const glov_camera = require('./glov/camera.js').create(graphics_device, draw_2d);
+  const input_device = TurbulenzEngine.createInputDevice({});
+  const glov_input = require('./glov/input.js').create(input_device, draw_2d, glov_camera);
+  const draw_list = require('./glov/draw_list.js').create(draw_2d, glov_camera);
 
-  const camera = Camera.create(mathDevice);
-  const lookAtPosition = mathDevice.v3Build(0.0, 0.0, 0.0);
-  const worldUp = mathDevice.v3BuildYAxis();
-  const cameraPosition = mathDevice.v3Build(0.0, 0.0, 1.0);
-  camera.lookAt(lookAtPosition, worldUp, cameraPosition);
-  camera.updateViewMatrix();
-  const sound_manager = require('./sound_manager.js').create(camera.matrix);
+  draw_list.setDefaultBucket('alpha'); // or 'alpha_nearest'
+
+  const sound_manager = require('./glov/sound_manager.js').create();
   sound_manager.loadSound('test');
 
-  let textures = {};
   function loadTexture(texname) {
-    let path = texname;
-    if (texname.indexOf('.') !== -1) {
-      path = 'img/'+ texname;
-    }
-    const inst = textureManager.getInstance(path);
-    if (inst) {
-      return inst;
-    }
-    textures[texname] = textureManager.load(path, false);
-    return textureManager.getInstance(path);
+    return glov_sprite.loadTexture(texname);
   }
   function createSprite(texname, params) {
-    const tex_inst = loadTexture(texname);
-    params.texture = tex_inst.getTexture();
-    const sprite = Draw2DSprite.create(params);
-    tex_inst.subscribeTextureChanged(function () {
-      sprite.setTexture(tex_inst.getTexture());
-    });
-    return sprite;
+    return glov_sprite.createSprite(texname, params);
   }
 
   const arial32_info = require('./img/font/arial32.json');
-  const default_font = glov_font.create(draw2D, arial32_info, loadTexture('arial32.png'));
+  const font = glov_font.create(draw_list, arial32_info, loadTexture('arial32.png'));
+  const glov_ui = require('./glov/ui.js').create(glov_sprite, glov_input, font, draw_list);
 
   // Preload
   loadTexture('test.png');
 
-  // Viewport for Draw2D.
+  // Virtual viewport for our game logic
   let game_width = 1280;
   let game_height = 960;
-  const color_white = mathDevice.v4Build(1, 1, 1, 1);
-  const color_red = mathDevice.v4Build(1, 0, 0, 1);
-  const color_yellow = mathDevice.v4Build(1, 1, 0, 1);
+  glov_camera.set2DAspectFixed(game_width, game_height);
+  const color_white = math_device.v4Build(1, 1, 1, 1);
+  const color_red = math_device.v4Build(1, 0, 0, 1);
+  const color_yellow = math_device.v4Build(1, 1, 0, 1);
 
-  // Cache keyCodes
-  const keyCodes = inputDevice.keyCodes;
-  const padCodes = input.padCodes;
+  // Cache key_codes
+  const key_codes = glov_input.key_codes;
+  const pad_codes = glov_input.pad_codes;
 
-  let configureParams = {
-    scaleMode : 'scale',
-    viewportRectangle : mathDevice.v4Build(0, 0, game_width, game_height)
-  };
+  let global_timer = 0;
+  let game_state;
 
-  var global_timer = 0;
-  var game_state;
-
-  function titleInit(dt) {
-    $('.screen').hide();
-    $('#title').show();
-    game_state = title;
-    title(dt);
-  }
-
-  function title(dt) {
-    test(dt);
-    if (false && 'ready') {
-      game_state = playInit;
+  let sprites = {};
+  function initGraphics() {
+    if (sprites.white) {
+      return;
     }
-  }
-
-  function playInit(dt) {
-    $('.screen').hide();
-    $('#play').show();
-    game_state = play;
-    play(dt);
-  }
-
-  function play(dt) {
+    sprites.white = createSprite('white', {
+      width : 1,
+      height : 1,
+      x : 0,
+      y : 0,
+      rotation : 0,
+      color : [1,1,1, 1],
+      origin: [0, 0],
+      textureRectangle : math_device.v4Build(0, 0, 1, 1)
+    });
   }
 
   function test(dt) {
+    const spriteSize = 64;
     if (!test.color_sprite) {
+      // Really this should be in initGraphics to get preloading
       test.color_sprite = color_white;
-      var spriteSize = 64;
       test.sprite = createSprite('test.png', {
         width : spriteSize,
         height : spriteSize,
-        x : (Math.random() * (game_width - spriteSize) + (spriteSize * 0.5)),
-        y : (Math.random() * (game_height - spriteSize) + (spriteSize * 0.5)),
         rotation : 0,
         color : test.color_sprite,
-        textureRectangle : mathDevice.v4Build(0, 0, spriteSize, spriteSize)
+        textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
       });
+      test.character = {
+        x : (Math.random() * (game_width - spriteSize) + (spriteSize * 0.5)),
+        y : (Math.random() * (game_height - spriteSize) + (spriteSize * 0.5)),
+      };
       test.game_bg = createSprite('white', {
         width : game_width,
         height : game_height,
@@ -127,65 +95,60 @@ TurbulenzEngine.onload = function onloadFn()
         rotation : 0,
         color : [0, 0.72, 1, 1],
         origin: [0, 0],
-        textureRectangle : mathDevice.v4Build(0, 0, spriteSize, spriteSize)
+        textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
       });
     }
 
-    // test.sprite.x = (Math.random() * (game_width - spriteSize) + (spriteSize * 0.5));
-    // test.sprite.y = (Math.random() * (game_height - spriteSize) + (spriteSize * 0.5));
-
-    var character = {
-      dx: 0,
-      dy: 0,
-    };
-    if (input.isKeyDown(keyCodes.LEFT) || input.isKeyDown(keyCodes.A) || input.isPadButtonDown(0, padCodes.LEFT)) {
-      character.dx = -1;
-    } else if (input.isKeyDown(keyCodes.RIGHT) || input.isKeyDown(keyCodes.D) || input.isPadButtonDown(0, padCodes.RIGHT)) {
-      character.dx = 1;
+    test.character.dx = 0;
+    test.character.dy = 0;
+    if (glov_input.isKeyDown(key_codes.LEFT) || glov_input.isKeyDown(key_codes.A) || glov_input.isPadButtonDown(0, pad_codes.LEFT)) {
+      test.character.dx = -1;
+    } else if (glov_input.isKeyDown(key_codes.RIGHT) || glov_input.isKeyDown(key_codes.D) || glov_input.isPadButtonDown(0, pad_codes.RIGHT)) {
+      test.character.dx = 1;
     }
-    if (input.isKeyDown(keyCodes.UP) || input.isKeyDown(keyCodes.W) || input.isPadButtonDown(0, padCodes.UP)) {
-      character.dy = -1;
-    } else if (input.isKeyDown(keyCodes.DOWN) || input.isKeyDown(keyCodes.S) || input.isPadButtonDown(0, padCodes.DOWN)) {
-      character.dy = 1;
+    if (glov_input.isKeyDown(key_codes.UP) || glov_input.isKeyDown(key_codes.W) || glov_input.isPadButtonDown(0, pad_codes.UP)) {
+      test.character.dy = -1;
+    } else if (glov_input.isKeyDown(key_codes.DOWN) || glov_input.isKeyDown(key_codes.S) || glov_input.isPadButtonDown(0, pad_codes.DOWN)) {
+      test.character.dy = 1;
     }
 
-    test.sprite.x += character.dx * dt * 0.2;
-    test.sprite.y += character.dy * dt * 0.2;
-    if (input.isMouseDown() && input.isMouseOverSprite(test.sprite)) {
+    test.character.x += test.character.dx * dt * 0.2;
+    test.character.y += test.character.dy * dt * 0.2;
+    if (glov_input.isMouseDown() && glov_input.isMouseOver(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
       test.sprite.setColor(color_yellow);
-    } else if (input.clickHitSprite(test.sprite)) {
+    } else if (glov_input.clickHit(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
       test.color_sprite = (test.color_sprite === color_red) ? color_white : color_red;
       sound_manager.play('test');
-    } else if (input.isMouseOverSprite(test.sprite)) {
+    } else if (glov_input.isMouseOver(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
       test.color_sprite[3] = 0.5;
     } else {
       test.color_sprite[3] = 1;
     }
 
     draw_list.queue(test.game_bg, 0, 0, 1, [0, 0.72, 1, 1]);
-    draw_list.queue(test.sprite, test.sprite.x, test.sprite.y, 2, test.color_sprite);
+    draw_list.queue(test.sprite, test.character.x, test.character.y, 2, test.color_sprite);
 
     let font_test_idx = 0;
     let font_style = null;
 
-    default_font.drawSized(draw_list, glov_font.styleColored(null, 0x000000ff), test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(glov_font.styleColored(null, 0x000000ff), test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'TEST!');
     font_style = glov_font.style(null, {
       color: 0xFF00FFff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'TEST2!');
     font_style = glov_font.style(null, {
       outline_width: 2.0,
       outline_color: 0x800080ff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'OUTLINE');
     font_style = glov_font.style(null, {
       outline_width: 2.0,
       outline_color: 0xFFFF00ff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'OUTLINE2');
     font_style = glov_font.style(null, {
       glow_xoffs: 3.25,
@@ -194,7 +157,7 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'Drop Shadow');
     font_style = glov_font.style(null, {
       glow_xoffs: 0,
@@ -203,7 +166,7 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0xFFFFFFff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'Glow');
     font_style = glov_font.style(null, {
       outline_width: 1.0,
@@ -214,15 +177,40 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    default_font.drawSized(draw_list, font_style, test.sprite.x, test.sprite.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
       'Both');
+
+    glov_ui.buttonText(100, 100, 10, 300, 32, 'Button!');
   }
 
-  game_state = titleInit;
+  function testInit(dt) {
+    $('.screen').hide();
+    $('#title').show();
+    game_state = test;
+    test(dt);
+  }
+
+  function loading() {
+    let load_count = glov_sprite.loading() + sound_manager.loading();
+    $('#loading').text(`Loading (${load_count})...`);
+    if (!load_count) {
+      game_state = testInit;
+    }
+  }
+
+  function loadingInit() {
+    initGraphics();
+    $('.screen').hide();
+    $('#title').show();
+    game_state = loading;
+    loading();
+  }
+
+  game_state = loadingInit;
 
   var last_tick = Date.now();
   function tick() {
-    if (!graphicsDevice.beginFrame()) {
+    if (!graphics_device.beginFrame()) {
       return;
     }
     var now = Date.now();
@@ -230,29 +218,17 @@ TurbulenzEngine.onload = function onloadFn()
     last_tick = now;
     global_timer += dt;
     sound_manager.tick();
-    input.tick();
+    glov_input.tick();
 
-    {
-      let screen_width = graphicsDevice.width;
-      let screen_height = graphicsDevice.height;
-      let screen_aspect = screen_width / screen_height;
-      let view_aspect = game_width / game_height;
-      if (screen_aspect > view_aspect) {
-        let viewport_width = game_height * screen_aspect;
-        let half_diff = (viewport_width - game_width) / 2;
-        configureParams.viewportRectangle = [-half_diff, 0, game_width + half_diff, game_height];
-      } else {
-        let viewport_height = game_width / screen_aspect;
-        let half_diff = (viewport_height - game_height) / 2;
-        configureParams.viewportRectangle = [0, -half_diff, game_width, game_height + half_diff];
-      }
-      draw2D.configure(configureParams);
-    }
+    glov_camera.tick();
+    glov_camera.set2DAspectFixed(game_width, game_height);
 
     if (window.need_repos) {
       --window.need_repos;
-      var ul = draw2D.viewportUnmap(0, 0);
-      var lr = draw2D.viewportUnmap(game_width-1, game_height-1);
+      var ul = [];
+      glov_camera.virtualToPhysical(ul, [0,0]);
+      var lr = [];
+      glov_camera.virtualToPhysical(lr, [game_width-1,game_height-1]);
       var viewport = [ul[0], ul[1], lr[0], lr[1]];
       var height = viewport[3] - viewport[1];
       // default font size of 16 when at height of game_height
@@ -269,15 +245,17 @@ TurbulenzEngine.onload = function onloadFn()
       });
     }
 
-    draw2D.setBackBuffer();
-    draw2D.clear([0, 0, 0, 1]);
+    draw_2d.setBackBuffer();
+    draw_2d.clear([0, 0, 0, 1]);
 
     game_state(dt);
 
     draw_list.draw();
 
-    graphicsDevice.endFrame();
+    graphics_device.endFrame();
+    glov_input.endFrame();
   }
 
-  intervalID = TurbulenzEngine.setInterval(tick, 1000/60);
+  loadingInit();
+  TurbulenzEngine.setInterval(tick, 1000/60);
 };

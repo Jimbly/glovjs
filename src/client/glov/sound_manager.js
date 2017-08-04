@@ -1,8 +1,20 @@
 /*global TurbulenzEngine: true */
+/*global math_device: false */
+/*global Camera: false */
 
 let sounds = {};
+let num_loading = 0;
 class SoundManager {
   constructor(listenerTransform) {
+    if (!listenerTransform) {
+      const camera = Camera.create(math_device);
+      const look_at_position = math_device.v3Build(0.0, 0.0, 0.0);
+      const worldUp = math_device.v3BuildYAxis();
+      const camera_position = math_device.v3Build(0.0, 0.0, 1.0);
+      camera.lookAt(look_at_position, worldUp, camera_position);
+      camera.updateViewMatrix();
+      listenerTransform = camera.matrix;
+    }
     let soundDeviceParameters = {
       linearDistance : false
     };
@@ -42,9 +54,11 @@ class SoundManager {
     // } else {
     //   src += '.ogg';
     // }
+    ++num_loading;
     this.soundDevice.createSound({
       src: src,
       onload: function (sound) {
+        --num_loading;
         if (sound) {
           sounds[base] = sound;
           if (cb) {
@@ -81,6 +95,10 @@ class SoundManager {
       }
       this.sound_loop.play(sounds[soundname]);
     });
+  }
+
+  loading() {
+    return num_loading;
   }
 }
 

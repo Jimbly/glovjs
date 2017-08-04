@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Powered by Turbulenz</title>
-
+    <title>Powered by GLOV.js</title>
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
+    <meta name="Description" content="Something useful here for Google" />
     <script src="vendor/jquery-1.11.3.min.js"></script>
 
     <link rel="stylesheet" type="text/css" href="main.css">
@@ -18,9 +19,17 @@
         </a>
       </canvas>
       <div id="gamescreen" class="screenwrap">
+        <div id="loading" class="screen vflex" style="display: none;">
+          <div class="flexcenter" style="text-align: center;">
+            <h1>Drone Supervisor</h1>
+          </div>
+          <div class="flexcenter" style="flex:3; text-align: center;" id="loading">
+            Loading...
+          </div>
+        </div>
         <div id="title" class="screen vflex" style="display: none;">
           <div class="flexcenter" style="text-align: center;">
-            <h1>Powered by Turbulenz</h1>
+            <h1>Powered by GLOV.js</h1>
           </div>
           <div class="flexcenter" style="flex:3; text-align: center;"></div>
         </div>
@@ -94,7 +103,7 @@
       window.assert = function(exp) {
         if (!exp) {
           console.log(new Error().stack);
-          //alert('assertion failed');
+          window.alert('assertion failed');
         }
       };
       // Embedded code and startup code.
@@ -110,9 +119,15 @@
         canvas.focus();
 
         function resizeCanvas() {
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          canvas.focus();
+          var css_to_real = window.devicePixelRatio || 1;
+
+          canvas.width = Math.floor(canvas.clientWidth * css_to_real);
+          canvas.height = Math.floor(canvas.clientHeight * css_to_real);
+
+          // This used to be here, but it breaks mobile devices!
+          // Might be needed to get gamepad input though?
+          //canvas.focus();
+
           // may force trigger immediate draw too?
           window.need_repos = 10;
         }

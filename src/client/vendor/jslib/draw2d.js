@@ -558,7 +558,10 @@ var Draw2D = (function () {
         this.blend = {
             additive: 'additive',
             alpha: 'alpha',
-            opaque: 'opaque'
+            opaque: 'opaque',
+            additive_nearest: 'additive_nearest',
+            alpha_nearest: 'alpha_nearest',
+            opaque_nearest: 'opaque_nearest',
         };
         this.drawStates = {
             uninit: 0,
@@ -1814,15 +1817,15 @@ var Draw2D = (function () {
         o.drawRaw = undefined;
 
         // Load embedded default shader and techniques
-        var shader = gd.createShader({
+        var shader_def = {
             "version": 1,
             "name": "draw2D.cgfx",
             "samplers": {
                 "texture": {
                     "MinFilter": 9985/* LINEAR_MIPMAP_NEAREST */ ,
                     "MagFilter": 9729/* LINEAR */ ,
-                    "WrapS": 33071,
-                    "WrapT": 33071
+                    "WrapS": 33071 /* CLAMP_TO_EDGE */,
+                    "WrapT": 33071 /* CLAMP_TO_EDGE */,
                 },
                 "inputTexture0": {
                     "MinFilter": 9728,
@@ -1924,13 +1927,26 @@ var Draw2D = (function () {
                     "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying TZ_LOWP vec4 tz_Color;varying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR3;attribute vec4 ATTR8;\nvec4 _OUTPosition1;vec4 _OUTColor1;vec2 _OUTTexCoord01;uniform vec4 clipSpace;void main()\n{vec2 _position;_position=ATTR0.xy*clipSpace.xy+clipSpace.zw;_OUTPosition1.x=_position.x;_OUTPosition1.y=_position.y;_OUTPosition1.z=0.0;_OUTPosition1.w=1.0;_OUTColor1=ATTR3;_OUTTexCoord01=ATTR8.xy;tz_TexCoord[0].xy=ATTR8.xy;tz_Color=ATTR3;gl_Position=_OUTPosition1;}"
                 }
             }
-        });
+        };
+        var shader_def_nearest = JSON.parse(JSON.stringify(shader_def));
+        shader_def_nearest.samplers.texture = {
+          "MinFilter": 9728 /*NEAREST*/,// 9985/* LINEAR_MIPMAP_NEAREST */ ,
+          "MagFilter": 9728 /*NEAREST*/,// 9729/* LINEAR */ ,
+          "WrapS": 10497 /*REPEAT*/, // 33071 /* CLAMP_TO_EDGE */,
+          "WrapT": 10497 /*REPEAT*/, // 33071 /* CLAMP_TO_EDGE */,
+        };
+
+        var shader = gd.createShader(shader_def);
+        var shader_nearest = gd.createShader(shader_def_nearest);
 
         // Mapping from blend mode name to Technique object.
         o.blendModeTechniques = {
             additive: shader.getTechnique("additive"),
             alpha: shader.getTechnique("alpha"),
-            opaque: shader.getTechnique("opaque")
+            opaque: shader.getTechnique("opaque"),
+            additive_nearest: shader_nearest.getTechnique("additive"),
+            alpha_nearest: shader_nearest.getTechnique("alpha"),
+            opaque_nearest: shader_nearest.getTechnique("opaque"),
         };
 
         if (params.blendModes) {
