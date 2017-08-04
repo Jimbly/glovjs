@@ -131,24 +131,24 @@ TurbulenzEngine.onload = function onloadFn()
     let font_test_idx = 0;
     let font_style = null;
 
-    font.drawSized(glov_font.styleColored(null, 0x000000ff), test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(glov_font.styleColored(null, 0x000000ff), test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'TEST!');
     font_style = glov_font.style(null, {
       color: 0xFF00FFff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'TEST2!');
     font_style = glov_font.style(null, {
       outline_width: 2.0,
       outline_color: 0x800080ff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'OUTLINE');
     font_style = glov_font.style(null, {
       outline_width: 2.0,
       outline_color: 0xFFFF00ff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'OUTLINE2');
     font_style = glov_font.style(null, {
       glow_xoffs: 3.25,
@@ -157,7 +157,7 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'Drop Shadow');
     font_style = glov_font.style(null, {
       glow_xoffs: 0,
@@ -166,7 +166,7 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0xFFFFFFff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'Glow');
     font_style = glov_font.style(null, {
       outline_width: 1.0,
@@ -177,7 +177,7 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24, 24,
+    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
       'Both');
 
     glov_ui.buttonText(100, 100, 10, 300, 32, 'Button!');

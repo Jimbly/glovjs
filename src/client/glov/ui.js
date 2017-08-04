@@ -126,7 +126,7 @@ class GlovUI {
     let font_h = h * 0.70;
     /*jshint bitwise:false*/
     this.font.drawAlignedSized(glov_font.styleColored(null, 0x000000ff), x, y, z + 0.1,
-      font_h, font_h, glov_font.ALIGN.HCENTER | glov_font.ALIGN.VCENTER, w, h, text);
+      font_h, glov_font.ALIGN.HCENTER | glov_font.ALIGN.VCENTER, w, h, text);
     return shared.ret;
   }
 

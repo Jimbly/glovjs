@@ -240,14 +240,16 @@ class GlovFont {
   // General draw functions return width
   // Pass NULL for style to use default style
   // If the function takes a color, this overrides the color on the style
-  drawSizedColor(style, x, y, z, x_size, y_size, color, text) {
-    return this.drawSized(styleColored(style, color), x, y, z, x_size, y_size, text);
+  drawSizedColor(style, x, y, z, size, color, text) {
+    return this.drawSized(styleColored(style, color), x, y, z, size, text);
   }
-  drawSized(style, x, y, z, x_size, y_size, text) {
-    return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
+  drawSized(style, x, y, z, size, text) {
+    return this.drawScaled(style, x, y, z, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
 
-  drawAlignedSized(style, _x, _y, z, x_size, y_size, align, w, h, text){
+  drawAlignedSized(style, _x, _y, z, size, align, w, h, text){
+    let x_size = size;
+    let y_size = size;
     let width = this.getStringWidth(style, x_size, text);
     if (align & ALIGN.HFIT && width > w)
     {
@@ -293,19 +295,19 @@ class GlovFont {
       y = _y;
     }
 
-    return this.drawSized(style, x, y, z, x_size, y_size, text);
+    return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
   }
 
   // returns height
-  drawSizedColorWrapped(style, x, y, z, w, indent, x_size, y_size, color, text) {
-    return this.drawScaledWrapped(styleColored(style, color), x, y, z, w, indent, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
+  drawSizedColorWrapped(style, x, y, z, w, indent, size, color, text) {
+    return this.drawScaledWrapped(styleColored(style, color), x, y, z, w, indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
-  drawSizedWrapped(style, x, y, z, w, indent, x_size, y_size, text) {
-    return this.drawScaledWrapped(style, x, y, z, w, indent, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
+  drawSizedWrapped(style, x, y, z, w, indent, size, text) {
+    return this.drawScaledWrapped(style, x, y, z, w, indent, size / this.font_info.font_size, text);
   }
 
-  wrapLines(w, indent, x_size, text, word_cb /*(x, int linenum, const char *word)*/) {
-    return this.wrapLinesScaled(w, indent, x_size / this.font_info.font_size, text, word_cb);
+  wrapLines(w, indent, size, text, word_cb /*(x, int linenum, const char *word)*/) {
+    return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, word_cb);
   }
 
   infoFromChar(c)
