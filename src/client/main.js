@@ -11,6 +11,8 @@ window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
 
+const PIXELY = true;
+
 export function main()
 {
   const graphics_device = TurbulenzEngine.createGraphicsDevice({});
@@ -25,7 +27,7 @@ export function main()
   const glov_input = require('./glov/input.js').create(input_device, draw_2d, glov_camera);
   const draw_list = require('./glov/draw_list.js').create(draw_2d, glov_camera);
 
-  draw_list.setDefaultBucket('alpha_nearest'); // 'alpha' or 'alpha_nearest'
+  draw_list.setDefaultBucket(PIXELY ? 'alpha_nearest' : 'alpha');
 
   const sound_manager = require('./glov/sound_manager.js').create();
   sound_manager.loadSound('test');
@@ -37,8 +39,10 @@ export function main()
     return glov_sprite.createSprite(texname, params);
   }
 
-  const arial32_info = require('./img/font/arial32.json');
-  const font = glov_font.create(draw_list, arial32_info, loadTexture('arial32.png'));
+  const font_info_arial32 = require('./img/font/arial32.json');
+  const font_info_arial12x2 = require('./img/font/arial12x2.json');
+  const font = glov_font.create(draw_list, PIXELY ? font_info_arial12x2 : font_info_arial32,
+    loadTexture(PIXELY ? 'arial12x2.png' : 'arial32.png'));
   const glov_ui = require('./glov/ui.js').create(glov_sprite, glov_input, font, draw_list);
   glov_ui.bindSounds(sound_manager, {
     button_click: 'button_click',
@@ -145,7 +149,7 @@ export function main()
     }
 
     draw_list.queue(test.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
-    draw_list.queue(test.sprite, test.character.x, test.character.y, Z.SPRITES, test.color_sprite);
+    draw_list.queue(test.sprite, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, null, null, 0, 'alpha');
 
     let font_test_idx = 0;
 
@@ -160,7 +164,7 @@ export function main()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    glov_ui.print(font_style, test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
+    glov_ui.print(font_style, test.character.x, test.character.y + (++font_test_idx * glov_ui.font_height), Z.SPRITES,
       'Outline and Drop Shadow');
 
     if (glov_ui.buttonText({ x: 100, y: 100, text: 'Button!'})) {

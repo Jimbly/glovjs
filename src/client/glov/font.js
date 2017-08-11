@@ -1,5 +1,6 @@
 /*global assert: true */
 /*global Draw2D: false */
+/*global VMath: false */
 
 // typedef struct FontCharInfo {
 //   int c;
@@ -474,7 +475,6 @@ class GlovFont {
     let font_info = this.font_info;
     let tex = this.texture.getTexture();
     const len = text.length;
-    let padding=0;
     if (xsc === 0 || ysc === 0) {
       return 0;
     }
@@ -506,7 +506,8 @@ class GlovFont {
     if (value[2] > 0) {
       value[2] = 0;
     }
-    padding = Math.max(applied_style.outline_width*font_texel_scale*avg_scale_combined, padding);
+    let padding1 = applied_style.outline_width*font_texel_scale*avg_scale_combined;
+    let padding4 = [padding1, padding1, padding1, padding1];
 
     techParamsSet('param0', value);
     let value2 = [
@@ -518,16 +519,20 @@ class GlovFont {
     if (value2[3] > 0) {
       value2[3] = 0;
     }
-    padding = Math.max(applied_style.glow_outer*font_texel_scale*xsc + Math.abs(applied_style.glow_xoffs)*font_texel_scale*xsc, padding);
-    padding = Math.max(applied_style.glow_outer*font_texel_scale*ysc + Math.abs(applied_style.glow_yoffs)*font_texel_scale*ysc, padding);
+    padding4[0] = Math.max(applied_style.glow_outer*font_texel_scale*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding4[0]);
+    padding4[2] = Math.max(applied_style.glow_outer*font_texel_scale*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding4[2]);
+    padding4[1] = Math.max(applied_style.glow_outer*font_texel_scale*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding4[1]);
+    padding4[3] = Math.max(applied_style.glow_outer*font_texel_scale*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding4[3]);
     techParamsSet('glowParams', value2);
 
-    let padding_in_font_space = padding / avg_scale_font;
-    if (padding_in_font_space > font_info.spread) {
-      // Not enough buffer
-      let sc = font_info.spread / padding_in_font_space;
-      padding *= sc;
-      padding_in_font_space *= sc;
+    let padding_in_font_space = VMath.v4ScalarMul(padding4, 1 / avg_scale_font);
+    for (let ii = 0; ii < 4; ++ii) {
+      if (padding_in_font_space[ii] > font_info.spread) {
+        // Not enough buffer
+        let sc = font_info.spread / padding_in_font_space[ii];
+        padding4[ii] *= sc;
+        padding_in_font_space[ii] *= sc;
+      }
     }
 
     // For non-1:1 aspect ration rendering, need to scale our coordinates' padding differently in each axis
@@ -547,15 +552,15 @@ class GlovFont {
         if (char_info) {
           let tile_width = tex.width;
           let tile_height = tex.height;
-          let u0 = (char_info.x0 - padding_in_font_space) / tile_width;
-          let u1 = (char_info.x0 + char_info.w + padding_in_font_space) / tile_width;
-          let v0 = (char_info.y0 - padding_in_font_space) / tile_height;
-          let v1 = (char_info.y0 + char_info.h + padding_in_font_space) / tile_height;
+          let u0 = (char_info.x0 - padding_in_font_space[0]) / tile_width;
+          let u1 = (char_info.x0 + char_info.w + padding_in_font_space[2]) / tile_width;
+          let v0 = (char_info.y0 - padding_in_font_space[1]) / tile_height;
+          let v1 = (char_info.y0 + char_info.h + padding_in_font_space[3]) / tile_height;
 
-          let w = char_info.w * xsc + padding * 2 * rel_x_scale;
-          let h = char_info.h * ysc + padding * 2 * rel_y_scale;
+          let w = char_info.w * xsc + (padding4[0] + padding4[2]) * rel_x_scale;
+          let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
 
-          let elem = this.draw_list.queuefn(drawFontElem, x - rel_x_scale * padding, y - rel_y_scale * padding, z, this.blend_mode);
+          let elem = this.draw_list.queuefn(drawFontElem, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2], z, this.blend_mode);
           elem.tex = tex;
           elem.u0 = u0 * tile_width;
           elem.v0 = v0 * tile_height;
@@ -586,6 +591,9 @@ class GlovFont {
       this.blend_mode = 'aa_glow';
     } else {
       this.blend_mode = 'aa';
+    }
+    if (this.font_info.noFilter) {
+      this.blend_mode += '_nearest';
     }
   }
 
@@ -765,7 +773,7 @@ export function populateDraw2DParams(params) {
     'name': 'glov_font.cgfx',
     'samplers': {
       'texture': {
-        'MinFilter': 9985 /* LINEAR_MIPMAP_NEAREST */ ,
+        'MinFilter': 9729 /* LINEAR */ ,
         'MagFilter': 9729 /* LINEAR */ ,
         'WrapS': 33071,
         'WrapT': 33071
@@ -804,6 +812,8 @@ export function populateDraw2DParams(params) {
     'aa_outline',
     'aa_outline_glow',
   ];
+
+  params.blendModes = {};
   for (let ii = 0; ii < shader_types.length; ++ii) {
     let st = shader_types[ii];
     let params = ['clipSpace', 'texture', 'param0'];
@@ -827,13 +837,24 @@ export function populateDraw2DParams(params) {
       'programs': ['vp_draw2D', 'fp_' + st]
     }];
   }
-  var shader = gd.createShader(shader_params);
+  let shader = gd.createShader(shader_params);
 
-  params.blendModes = {};
   for (let ii = 0; ii < shader_types.length; ++ii) {
     let st = shader_types[ii];
     params.blendModes[st] = shader.getTechnique(st);
   }
+
+  // Same for _nearest version
+  shader_params = JSON.parse(JSON.stringify(shader_params));
+  shader_params.samplers.texture.MinFilter =
+    shader_params.samplers.texture.MagFilter = 9728;
+
+  shader = gd.createShader(shader_params);
+  for (let ii = 0; ii < shader_types.length; ++ii) {
+    let st = shader_types[ii];
+    params.blendModes[st + '_nearest'] = shader.getTechnique(st);
+  }
+
 }
 
 export function create() {
