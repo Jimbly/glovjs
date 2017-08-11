@@ -1,4 +1,5 @@
 /*global Draw2D: false */
+/*global assert: false */
 
 const UP_EDGE = 0;
 const DOWN_EDGE = 1;
@@ -20,6 +21,8 @@ class GlovInput {
     this.last_touch_state = [];
     this.touch_state = [];
     this.touch_as_mouse = true;
+
+    this.input_eaten = false;
 
     this.pad_codes = input_device.padCodes;
     this.pad_codes.ANALOG_UP = 20;
@@ -68,6 +71,15 @@ class GlovInput {
     tickMap(this.key_state);
     this.pad_states.forEach(tickMap);
     this.clicks = [];
+    this.input_eaten = false;
+  }
+
+  eatAllInput() {
+    // destroy clicks, remove all down and up edges
+    this.endFrame();
+    this.touch_state = [];
+    this.mouse_over_captured = true;
+    this.input_eaten = true;
   }
 
   onMouseDown(mousecode, x, y) {
@@ -85,13 +97,17 @@ class GlovInput {
     this.mouse_pos[1] = y;
     //this.draw2d.viewportMap(x, y, this.mouse_mapped);
   }
-  isMouseOver(x, y, w, h) {
+  isMouseOver(param) {
+    assert(typeof param.x === 'number');
+    assert(typeof param.y === 'number');
+    assert(typeof param.w === 'number');
+    assert(typeof param.h === 'number');
     if (this.mouse_over_captured) {
       return false;
     }
     this.mousePos(this.mpos);
-    if (this.mpos[0] >= x && this.mpos[0] < x + w &&
-      this.mpos[1] >= y && this.mpos[1] < y + h
+    if (this.mpos[0] >= param.x && this.mpos[0] < param.x + param.w &&
+      this.mpos[1] >= param.y && this.mpos[1] < param.y + param.h
     ) {
       this.mouse_over_captured = true;
       return true;
@@ -100,7 +116,7 @@ class GlovInput {
   }
   isMouseDown(button) {
     button = button || 0;
-    return this.mouse_down[button];
+    return !this.input_eaten && this.mouse_down[button];
   }
   // returns position mapped to current camera view
   mousePos(dst) {
@@ -108,16 +124,24 @@ class GlovInput {
     this.camera.physicalToVirtual(dst, this.mouse_pos);
     return dst;
   }
-  clickHit(x, y, w, h, button) {
-    button = button || 0;
+  clickHit(param) {
+    assert(typeof param.x === 'number');
+    assert(typeof param.y === 'number');
+    assert(typeof param.w === 'number');
+    assert(typeof param.h === 'number');
+    let button = param.button || 0;
     if (!this.clicks[button]) {
       return false;
     }
     this.mousePos(this.mpos);
     for (let ii = 0; ii < this.clicks[button].length; ++ii) {
       let pos = this.clicks[button][ii];
-      this.camera.physicalToVirtual(this.mpos, this.mouse_pos);
-      if (this.mpos[0] >= x && (w === Infinity || this.mpos[0] < x + w) && this.mpos[1] >= y && (h === Infinity || this.mpos[1] < y + h)) {
+      this.camera.physicalToVirtual(this.mpos, pos);
+      if (this.mpos[0] >= param.x &&
+        (param.w === Infinity || this.mpos[0] < param.x + param.w) &&
+        this.mpos[1] >= param.y &&
+        (param.h === Infinity || this.mpos[1] < param.y + param.h)
+      ) {
         this.clicks[button].splice(ii, 1);
         return this.mpos.slice(0);
       }
@@ -146,11 +170,20 @@ class GlovInput {
     }
     //throw JSON.stringify(param, undefined, 2);
   }
-  isTouchDown(x, y, w, h) {
+  isTouchDown(param) {
+    if (param) {
+      assert(typeof param.x === 'number');
+      assert(typeof param.y === 'number');
+      assert(typeof param.w === 'number');
+      assert(typeof param.h === 'number');
+    }
+    if (this.input_eaten) {
+      return false;
+    }
     for (var ii = 0; ii < this.touch_state.length; ++ii) {
       this.camera.physicalToVirtual(this.mpos, [this.touch_state[ii].positionX, this.touch_state[ii].positionY]);
       let pos = this.mpos;
-      if (x === undefined || pos[0] >= x && pos[0] < x + w && pos[1] >= y && pos[1] < y + h) {
+      if (!param || pos[0] >= param.x && pos[0] < param.x + param.w && pos[1] >= param.y && pos[1] < param.y + param.h) {
         return pos;
       }
     }
@@ -159,7 +192,12 @@ class GlovInput {
   isTouchDownSprite(sprite) {
     const w = sprite.getWidth();
     const h = sprite.getHeight();
-    return this.isTouchDown(sprite.x - w/2, sprite.y - h/2, w, h);
+    return this.isTouchDown({
+      x: sprite.x - w/2,
+      y: sprite.y - h/2,
+      w,
+      h,
+    });
   }
 
   onKeyUp(keycode) {
@@ -169,7 +207,7 @@ class GlovInput {
     this.key_state[keycode] = DOWN_EDGE;
   }
   isKeyDown(keycode) {
-    return !!this.key_state[keycode];
+    return !this.input_eaten && !!this.key_state[keycode];
   }
   keyDownHit(keycode) {
     if (this.key_state[keycode] === DOWN_EDGE) {
@@ -218,6 +256,9 @@ class GlovInput {
     check(y > this.pad_threshold, this.pad_codes.ANALOG_UP);
   }
   isPadButtonDown(padindex, padcode) {
+    if (this.input_eaten) {
+      return false;
+    }
     if (!this.pad_states[padindex]) {
       return false;
     }

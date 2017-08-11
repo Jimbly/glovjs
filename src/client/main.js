@@ -5,6 +5,11 @@
 /*global Draw2D: false */
 /*global math_device: false */
 /*global assert: false */
+/*global Z: false */
+
+window.Z = window.Z || {};
+Z.BACKGROUND = 0;
+Z.SPRITES = 10;
 
 TurbulenzEngine.onload = function onloadFn()
 {
@@ -20,7 +25,7 @@ TurbulenzEngine.onload = function onloadFn()
   const glov_input = require('./glov/input.js').create(input_device, draw_2d, glov_camera);
   const draw_list = require('./glov/draw_list.js').create(draw_2d, glov_camera);
 
-  draw_list.setDefaultBucket('alpha'); // or 'alpha_nearest'
+  draw_list.setDefaultBucket('alpha_nearest'); // 'alpha' or 'alpha_nearest'
 
   const sound_manager = require('./glov/sound_manager.js').create();
   sound_manager.loadSound('test');
@@ -35,6 +40,10 @@ TurbulenzEngine.onload = function onloadFn()
   const arial32_info = require('./img/font/arial32.json');
   const font = glov_font.create(draw_list, arial32_info, loadTexture('arial32.png'));
   const glov_ui = require('./glov/ui.js').create(glov_sprite, glov_input, font, draw_list);
+  glov_ui.bindSounds(sound_manager, {
+    button_click: 'button_click',
+    rollover: 'rollover',
+  });
 
   // Preload
   loadTexture('test.png');
@@ -75,7 +84,7 @@ TurbulenzEngine.onload = function onloadFn()
     const spriteSize = 64;
     if (!test.color_sprite) {
       // Really this should be in initGraphics to get preloading
-      test.color_sprite = color_white;
+      test.color_sprite = math_device.v4Copy(color_white);
       test.sprite = createSprite('test.png', {
         width : spriteSize,
         height : spriteSize,
@@ -114,61 +123,35 @@ TurbulenzEngine.onload = function onloadFn()
 
     test.character.x += test.character.dx * dt * 0.2;
     test.character.y += test.character.dy * dt * 0.2;
-    if (glov_input.isMouseDown() && glov_input.isMouseOver(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
-      test.sprite.setColor(color_yellow);
-    } else if (glov_input.clickHit(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
-      test.color_sprite = (test.color_sprite === color_red) ? color_white : color_red;
+    let bounds = {
+      x: test.character.x - spriteSize/2,
+      y: test.character.y - spriteSize/2,
+      w: spriteSize,
+      h: spriteSize,
+    };
+    if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)
+    ) {
+      math_device.v4Copy(color_yellow, test.color_sprite);
+    } else if (glov_input.clickHit(bounds)
+    ) {
+      math_device.v4Copy((test.color_sprite === color_red) ? color_white : color_red, test.color_sprite);
       sound_manager.play('test');
-    } else if (glov_input.isMouseOver(test.character.x - spriteSize/2, test.character.y - spriteSize/2, spriteSize, spriteSize)) {
+    } else if (glov_input.isMouseOver(bounds)) {
+      math_device.v4Copy(color_white, test.color_sprite);
       test.color_sprite[3] = 0.5;
     } else {
+      math_device.v4Copy(color_white, test.color_sprite);
       test.color_sprite[3] = 1;
     }
 
-    draw_list.queue(test.game_bg, 0, 0, 1, [0, 0.72, 1, 1]);
-    draw_list.queue(test.sprite, test.character.x, test.character.y, 2, test.color_sprite);
+    draw_list.queue(test.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
+    draw_list.queue(test.sprite, test.character.x, test.character.y, Z.SPRITES, test.color_sprite);
 
     let font_test_idx = 0;
-    let font_style = null;
 
-    font.drawSized(glov_font.styleColored(null, 0x000000ff), test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'TEST!');
-    font_style = glov_font.style(null, {
-      color: 0xFF00FFff,
-    });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'TEST2!');
-    font_style = glov_font.style(null, {
-      outline_width: 2.0,
-      outline_color: 0x800080ff,
-    });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'OUTLINE');
-    font_style = glov_font.style(null, {
-      outline_width: 2.0,
-      outline_color: 0xFFFF00ff,
-    });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'OUTLINE2');
-    font_style = glov_font.style(null, {
-      glow_xoffs: 3.25,
-      glow_yoffs: 3.25,
-      glow_inner: -2.5,
-      glow_outer: 5,
-      glow_color: 0x000000ff,
-    });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'Drop Shadow');
-    font_style = glov_font.style(null, {
-      glow_xoffs: 0,
-      glow_yoffs: 0,
-      glow_inner: -1,
-      glow_outer: 5,
-      glow_color: 0xFFFFFFff,
-    });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'Glow');
-    font_style = glov_font.style(null, {
+    glov_ui.print(glov_font.styleColored(null, 0x000000ff), test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
+      'TEXT!');
+    let font_style = glov_font.style(null, {
       outline_width: 1.0,
       outline_color: 0x800000ff,
       glow_xoffs: 3.25,
@@ -177,10 +160,21 @@ TurbulenzEngine.onload = function onloadFn()
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    font.drawSized(font_style, test.character.x, test.character.y + (++font_test_idx * 20), 3, 24,
-      'Both');
+    glov_ui.print(font_style, test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
+      'Outline and Drop Shadow');
 
-    glov_ui.buttonText(100, 100, 10, 300, 32, 'Button!');
+    if (glov_ui.buttonText({ x: 100, y: 100, text: 'Button!'})) {
+      glov_ui.modalDialog({
+        title: 'Modal Dialog',
+        text: 'This is a modal dialog!',
+        buttons: {
+          'OK': function () {
+            console.log('OK pushed!');
+          },
+          'Cancel': null, // no callback
+        },
+      });
+    }
   }
 
   function testInit(dt) {
@@ -217,11 +211,12 @@ TurbulenzEngine.onload = function onloadFn()
     var dt = Math.min(Math.max(now - last_tick, 1), 250);
     last_tick = now;
     global_timer += dt;
-    sound_manager.tick();
-    glov_input.tick();
 
     glov_camera.tick();
     glov_camera.set2DAspectFixed(game_width, game_height);
+    sound_manager.tick(dt);
+    glov_input.tick();
+    glov_ui.tick();
 
     if (window.need_repos) {
       --window.need_repos;

@@ -303,7 +303,7 @@ class GlovFont {
     return this.drawScaledWrapped(styleColored(style, color), x, y, z, w, indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
   drawSizedWrapped(style, x, y, z, w, indent, size, text) {
-    return this.drawScaledWrapped(style, x, y, z, w, indent, size / this.font_info.font_size, text);
+    return this.drawScaledWrapped(style, x, y, z, w, indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
 
   wrapLines(w, indent, size, text, word_cb /*(x, int linenum, const char *word)*/) {

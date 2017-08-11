@@ -503,8 +503,10 @@ var WebGLInputDevice = (function () {
         var pressedKeys = this.pressedKeys;
         var keyCodes = this.keyCodes;
 
-        event.stopPropagation();
-        event.preventDefault();
+        if (event.code !== 'F12' && event.code !== 'F5') {
+          event.stopPropagation();
+          event.preventDefault();
+        }
 
         var keyCode = event.keyCode;
         keyCode = this.keyMap[keyCode];
