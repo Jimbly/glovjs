@@ -1,4 +1,4 @@
-Javascript libGlov framework
+Javascript libGlov/GLOV.js framework
 ============================
 
 * Files can be ES6 (through Babel)
@@ -6,9 +6,12 @@ Javascript libGlov framework
 * Client automatically reloads on javascript or html change
 * Client automatically dynamically reloads CSS file changes
 
-Used SublimeText 3 packages
+Useful SublimeText 3 packages
 * SublimeLinter
 * SublimeLinter-jshint (requires `npm i -g jshint`)
+
+Notes:
+* The engine API (glov/*) is subject to change significantly, often changes with each Ludum Dare in which I use this engine ^_^
 
 TODO:
 * input
