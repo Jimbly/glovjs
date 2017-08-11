@@ -10,6 +10,8 @@ Useful SublimeText 3 packages
 * SublimeLinter
 * SublimeLinter-jshint (requires `npm i -g jshint`)
 
+Start with: `npm start` (after running `npm i` once)
+
 Notes:
 * The engine API (glov/*) is subject to change significantly, often changes with each Ludum Dare in which I use this engine ^_^
 

@@ -1,6 +1,6 @@
 {
   "name": "nextgen",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Template for a state of the art Javascript project using Turbulenz",
   "main": "server/index.js",
   "keywords": [
@@ -16,12 +16,9 @@
   },
   "scripts": {
     "start": "gulp browser-sync",
-    "debug": "gulp browser-sync --debug",
     "build": "gulp build",
     "client_js": "gulp client_js",
-    "cover": "jenkins-mocha --reporter spec build/tests/unit/*.js",
-    "lint": "jshint",
-    "test": "jenkins-mocha --no-coverage --reporter spec build/tests/unit/*.js"
+    "lint": "jshint"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
   "contributors": [
@@ -34,23 +31,19 @@
     "random-seed": "^0.3.0"
   },
   "devDependencies": {
-    "babel-preset-es2015": "^6.3.13",
-    "babelify": "^7.2.0",
-    "browser-sync": "^2.10.0",
-    "browserify": "^12.0.1",
-    "chai": "^3.4.1",
-    "gulp": "^3.9.0",
-    "gulp-babel": "^6.1.1",
-    "gulp-jshint": "^2.0.0",
-    "gulp-node-inspector": "^0.1.0",
-    "gulp-nodemon": "^2.0.4",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-util": "^3.0.7",
-    "jenkins-mocha": "^2.5.0",
-    "jshint": "^2.8.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babelify": "^7.3.0",
+    "browser-sync": "^2.18.13",
+    "browserify": "^14.4.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-jshint": "^2.0.4",
+    "gulp-nodemon": "^2.2.1",
+    "gulp-sourcemaps": "^2.6.0",
+    "gulp-util": "^3.0.8",
+    "jshint": "^2.9.5",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0",
-    "watchify": "^3.6.1",
-    "yargs": "^3.31.0"
+    "watchify": "^3.9.0"
   }
 }

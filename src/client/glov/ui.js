@@ -235,6 +235,7 @@ class GlovUI {
     this.glov_input.isMouseOver(param);
   }
 
+  // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
   modalDialog(params) {
     assert(!params.title || typeof params.title === 'string');
     assert(!params.text || typeof params.text === 'string');
@@ -249,7 +250,7 @@ class GlovUI {
     const game_width = this.camera.x1() - this.camera.x0();
     const pad = this.pad;
     const text_w = this.modal_width - pad * 2;
-    const x0 = (game_width - this.modal_width) / 2;
+    const x0 = this.camera.x0() + (game_width - this.modal_width) / 2;
     let x = x0 + pad;
     const y0 = this.modal_y0;
     let y = y0 + pad;

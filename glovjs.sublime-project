@@ -1,16 +1,15 @@
 //json5
 {
-    "folders":
-    [
-        {
-            "folder_exclude_patterns":
-            [
-                "node_modules",
-                "build",
-//                "vendor"
-            ],
-            "file_exclude_patterns": [],
-            "path": "."
-        }
-    ]
+  "folders":
+  [
+    {
+      "folder_exclude_patterns":
+      [
+        "node_modules",
+        "build",
+      ],
+      "file_exclude_patterns": ["jquery-*.min*"],
+      "path": "."
+    }
+  ]
 }

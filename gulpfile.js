@@ -8,7 +8,7 @@ var buffer = require('vinyl-buffer');
 var gulp = require('gulp');
 var gutil = require('gulp-util');
 var jshint = require('gulp-jshint');
-var node_inspector = require('gulp-node-inspector');
+// var node_inspector = require('gulp-node-inspector');
 var nodemon = require('gulp-nodemon');
 var source = require('vinyl-source-stream');
 var sourcemaps = require('gulp-sourcemaps');
@@ -24,14 +24,14 @@ var config = {
   client_static: ['src/client/**/*.mp3', 'src/client/**/*.wav', 'src/client/**/*.ogg', 'src/client/**/*.png', 'src/client/**/vendor/**', '!src/client/sounds/Bfxr/**'],
 };
 
-gulp.task('inspect', function () {
-  gulp.src([]).pipe(node_inspector({
-    debugPort: 5858,
-    webHost: '0.0.0.0',
-    webPort: '8080',
-    preload: false
-  }));
-});
+// gulp.task('inspect', function () {
+//   gulp.src([]).pipe(node_inspector({
+//     debugPort: 5858,
+//     webHost: '0.0.0.0',
+//     webPort: '8080',
+//     preload: false
+//   }));
+// });
 
 gulp.task('js', function () {
   return gulp.src(config.js_files)
@@ -70,7 +70,7 @@ gulp.task('client_static', function () {
 
 (function () {
   var customOpts = {
-    entries: ['./src/client/main.js'],
+    entries: ['./src/client/wrapper.js'],
     debug: true
   };
   var opts = _.assign({}, watchify.args, customOpts);
@@ -78,7 +78,7 @@ gulp.task('client_static', function () {
     return b.bundle()
       // log errors if they happen
       .on('error', gutil.log.bind(gutil, 'Browserify Error'))
-      .pipe(source('main.bundle.js'))
+      .pipe(source('wrapper.bundle.js'))
       // optional, remove if you don't need to buffer file contents
       .pipe(buffer())
       // optional, remove if you dont want sourcemaps

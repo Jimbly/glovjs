@@ -1,4 +1,4 @@
-/*jshint browser:true, noempty:false*/
+/*jshint noempty:false*/
 
 /*global $: false */
 /*global TurbulenzEngine: true */
@@ -11,7 +11,7 @@ window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
 
-TurbulenzEngine.onload = function onloadFn()
+export function main()
 {
   const graphics_device = TurbulenzEngine.createGraphicsDevice({});
   window.math_device = window.math_device || TurbulenzEngine.createMathDevice({});
@@ -253,4 +253,4 @@ TurbulenzEngine.onload = function onloadFn()
 
   loadingInit();
   TurbulenzEngine.setInterval(tick, 1000/60);
-};
+}
