@@ -40,9 +40,9 @@ export function main()
   }
 
   const font_info_arial32 = require('./img/font/arial32.json');
-  const font_info_arial12x2 = require('./img/font/arial12x2.json');
+  const font_info_arial12x2 = require('./img/font/04b03_8x2.json');
   const font = glov_font.create(draw_list, PIXELY ? font_info_arial12x2 : font_info_arial32,
-    loadTexture(PIXELY ? 'arial12x2.png' : 'arial32.png'));
+    loadTexture(PIXELY ? '04b03_8x2.png' : 'arial32.png'));
   const glov_ui = require('./glov/ui.js').create(glov_sprite, glov_input, font, draw_list);
   glov_ui.bindSounds(sound_manager, {
     button_click: 'button_click',
