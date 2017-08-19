@@ -1,8 +1,6 @@
 /*jshint noempty:false*/
 
 /*global $: false */
-/*global TurbulenzEngine: true */
-/*global Draw2D: false */
 /*global math_device: false */
 /*global assert: false */
 /*global Z: false */
@@ -11,51 +9,40 @@ window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
 
-const PIXELY = true;
+// Virtual viewport for our game logic
+const game_width = 1280;
+const game_height = 960;
 
-export function main()
+export function main(canvas)
 {
-  const graphics_device = TurbulenzEngine.createGraphicsDevice({});
-  window.math_device = window.math_device || TurbulenzEngine.createMathDevice({});
-  let draw2d_params = { graphicsDevice: graphics_device };
+  const glov_engine = require('./glov/engine.js');
   const glov_font = require('./glov/font.js');
-  glov_font.populateDraw2DParams(draw2d_params);
-  const draw_2d = Draw2D.create(draw2d_params);
-  const glov_sprite = require('./glov/sprite.js').create(graphics_device);
-  const glov_camera = require('./glov/camera.js').create(graphics_device, draw_2d);
-  const input_device = TurbulenzEngine.createInputDevice({});
-  const glov_input = require('./glov/input.js').create(input_device, draw_2d, glov_camera);
-  const draw_list = require('./glov/draw_list.js').create(draw_2d, glov_camera);
 
-  draw_list.setDefaultBucket(PIXELY ? 'alpha_nearest' : 'alpha');
+  glov_engine.startup({
+    canvas,
+    game_width,
+    game_height,
+    pixely: true,
+  });
 
-  const sound_manager = require('./glov/sound_manager.js').create();
-  sound_manager.loadSound('test');
+  const sound_manager = glov_engine.sound_manager;
+  // const glov_camera = glov_engine.glov_camera;
+  const glov_input = glov_engine.glov_input;
+  const glov_sprite = glov_engine.glov_sprite;
+  const glov_ui = glov_engine.glov_ui;
+  const draw_list = glov_engine.draw_list;
+  // const font = glov_engine.font;
 
-  function loadTexture(texname) {
-    return glov_sprite.loadTexture(texname);
-  }
-  function createSprite(texname, params) {
-    return glov_sprite.createSprite(texname, params);
-  }
 
-  const font_info_arial32 = require('./img/font/arial32.json');
-  const font_info_arial12x2 = require('./img/font/04b03_8x2.json');
-  const font = glov_font.create(draw_list, PIXELY ? font_info_arial12x2 : font_info_arial32,
-    loadTexture(PIXELY ? '04b03_8x2.png' : 'arial32.png'));
-  const glov_ui = require('./glov/ui.js').create(glov_sprite, glov_input, font, draw_list);
+  const loadTexture = glov_sprite.loadTexture.bind(glov_sprite);
+  const createSprite = glov_sprite.createSprite.bind(glov_sprite);
+
   glov_ui.bindSounds(sound_manager, {
     button_click: 'button_click',
     rollover: 'rollover',
   });
 
-  // Preload
-  loadTexture('test.png');
 
-  // Virtual viewport for our game logic
-  let game_width = 1280;
-  let game_height = 960;
-  glov_camera.set2DAspectFixed(game_width, game_height);
   const color_white = math_device.v4Build(1, 1, 1, 1);
   const color_red = math_device.v4Build(1, 0, 0, 1);
   const color_yellow = math_device.v4Build(1, 1, 0, 1);
@@ -64,14 +51,18 @@ export function main()
   const key_codes = glov_input.key_codes;
   const pad_codes = glov_input.pad_codes;
 
-  let global_timer = 0;
   let game_state;
 
   let sprites = {};
+  const spriteSize = 64;
   function initGraphics() {
     if (sprites.white) {
       return;
     }
+
+    sound_manager.loadSound('test');
+    loadTexture('test.png');
+
     sprites.white = createSprite('white', {
       width : 1,
       height : 1,
@@ -82,34 +73,34 @@ export function main()
       origin: [0, 0],
       textureRectangle : math_device.v4Build(0, 0, 1, 1)
     });
+
+    sprites.test = createSprite('test.png', {
+      width : spriteSize,
+      height : spriteSize,
+      rotation : 0,
+      color : [1,1,1,1],
+      textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
+    });
+
+    sprites.game_bg = createSprite('white', {
+      width : game_width,
+      height : game_height,
+      x : 0,
+      y : 0,
+      rotation : 0,
+      color : [0, 0.72, 1, 1],
+      origin: [0, 0],
+      textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
+    });
   }
 
   function test(dt) {
-    const spriteSize = 64;
     if (!test.color_sprite) {
-      // Really this should be in initGraphics to get preloading
       test.color_sprite = math_device.v4Copy(color_white);
-      test.sprite = createSprite('test.png', {
-        width : spriteSize,
-        height : spriteSize,
-        rotation : 0,
-        color : test.color_sprite,
-        textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
-      });
       test.character = {
         x : (Math.random() * (game_width - spriteSize) + (spriteSize * 0.5)),
         y : (Math.random() * (game_height - spriteSize) + (spriteSize * 0.5)),
       };
-      test.game_bg = createSprite('white', {
-        width : game_width,
-        height : game_height,
-        x : 0,
-        y : 0,
-        rotation : 0,
-        color : [0, 0.72, 1, 1],
-        origin: [0, 0],
-        textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
-      });
     }
 
     test.character.dx = 0;
@@ -148,8 +139,8 @@ export function main()
       test.color_sprite[3] = 1;
     }
 
-    draw_list.queue(test.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
-    draw_list.queue(test.sprite, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, null, null, 0, 'alpha');
+    draw_list.queue(sprites.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
+    draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, null, null, 0, 'alpha');
 
     let font_test_idx = 0;
 
@@ -206,55 +197,10 @@ export function main()
 
   game_state = loadingInit;
 
-  var last_tick = Date.now();
-  function tick() {
-    if (!graphics_device.beginFrame()) {
-      return;
-    }
-    var now = Date.now();
-    var dt = Math.min(Math.max(now - last_tick, 1), 250);
-    last_tick = now;
-    global_timer += dt;
-
-    glov_camera.tick();
-    glov_camera.set2DAspectFixed(game_width, game_height);
-    sound_manager.tick(dt);
-    glov_input.tick();
-    glov_ui.tick();
-
-    if (window.need_repos) {
-      --window.need_repos;
-      var ul = [];
-      glov_camera.virtualToPhysical(ul, [0,0]);
-      var lr = [];
-      glov_camera.virtualToPhysical(lr, [game_width-1,game_height-1]);
-      var viewport = [ul[0], ul[1], lr[0], lr[1]];
-      var height = viewport[3] - viewport[1];
-      // default font size of 16 when at height of game_height
-      var font_size = Math.min(256, Math.max(2, Math.floor(height/800 * 16)));
-      $('#gamescreen').css({
-        left: viewport[0],
-        top: viewport[1],
-        width: viewport[2] - viewport[0],
-        height: height,
-        'font-size': font_size,
-      });
-      $('#fullscreen').css({
-        'font-size': font_size,
-      });
-    }
-
-    draw_2d.setBackBuffer();
-    draw_2d.clear([0, 0, 0, 1]);
-
+  function tick(dt) {
     game_state(dt);
-
-    draw_list.draw();
-
-    graphics_device.endFrame();
-    glov_input.endFrame();
   }
 
   loadingInit();
-  TurbulenzEngine.setInterval(tick, 1000/60);
+  glov_engine.go(tick);
 }

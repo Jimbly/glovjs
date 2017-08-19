@@ -1,6 +1,3 @@
-/* global WebGLTurbulenzEngine:false */
-/* global TurbulenzEngine:true */
-
 (function () {
   var debug = document.getElementById('debug');
   window.onerror = function (e, file, line) {
@@ -43,7 +40,7 @@ window.assert = function(exp) {
 
 // Embedded code and startup code.
 window.onload = function () {
-  const main = require('./main.js');
+  const app = require('./app.js');
   let canvas = document.getElementById('turbulenz_game_engine_canvas');
   canvas.focus();
 
@@ -65,14 +62,6 @@ window.onload = function () {
   resizeCanvas();
 
   if (canvas.getContext && canvasSupported) {
-    TurbulenzEngine = WebGLTurbulenzEngine.create({
-      canvas: canvas,
-      fillParent: true
-    });
-    if (!TurbulenzEngine) {
-      window.alert('Failed to init TurbulenzEngine (canvas)');
-      return;
-    }
-    main.main(canvas);
+    app.main(canvas);
   }
 };
