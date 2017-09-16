@@ -77,7 +77,6 @@ class GlovInput {
   eatAllInput() {
     // destroy clicks, remove all down and up edges
     this.endFrame();
-    this.touch_state = [];
     this.mouse_over_captured = true;
     this.input_eaten = true;
   }

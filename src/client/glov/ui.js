@@ -1,3 +1,4 @@
+/* jshint jquery:true */
 /*global math_device: false */
 /*global assert: false */
 /*global Z: false */
@@ -7,6 +8,91 @@ Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
 
 const glov_font = require('./font.js');
+
+class GlovUIEditBox {
+  constructor(glov_ui, params) {
+    this.glov_ui = glov_ui;
+    this.x = 0;
+    this.y = 0;
+    this.z = Z.UI; // actually in DOM, so above everything!
+    this.w = glov_ui.button_width;
+    // this.h = glov_ui.button_height;
+    // this.font_height = glov_ui.font_height;
+    this.text = '';
+    this.applyParams(params);
+
+    this.elem = null;
+    this.input = null;
+    this.submitted = false;
+  }
+  applyParams(params) {
+    if (!params) {
+      return;
+    }
+    if (params.x !== undefined) {
+      this.x = params.x;
+    }
+    if (params.y !== undefined) {
+      this.y = params.y;
+    }
+    if (params.z !== undefined) {
+      this.z = params.z;
+    }
+    if (params.w !== undefined) {
+      this.w = params.w;
+    }
+    if (params.text !== undefined) {
+      this.text = params.text;
+    }
+  }
+  run(params) {
+    this.applyParams(params);
+    this.glov_ui.this_frame_edit_boxes.push(this);
+    let elem = this.glov_ui.getElem();
+    if (elem !== this.elem) {
+      if (elem) {
+        // new DOM element, initialize
+        elem.innerHtml = '';
+        let form = $('<form></form>');
+        let input = $('<input type="text">');
+        form.submit((ev) => {
+          ev.preventDefault();
+          this.submitted = true;
+        });
+        form.append(input);
+        elem.append(form);
+        input.val(this.text);
+        this.input = input;
+      } else {
+        this.input = null;
+      }
+      this.submitted = false;
+      this.elem = elem;
+    } else {
+      if (this.input) {
+        this.text = this.input.val();
+      }
+    }
+    if (elem) {
+      let pos = this.glov_ui.htmlPos(this.x, this.y);
+      elem[0].style.left = pos[0] + '%';
+      elem[0].style.top = pos[1] + '%';
+      let size = this.glov_ui.htmlSize(this.w, this.h);
+      elem[0].style.width = size[0] + '%';
+    }
+
+    if (this.submitted) {
+      return this.SUBMIT;
+    }
+  }
+  unrun() {
+    // remove from DOM or hide
+    this.elem = null;
+    this.input = null;
+  }
+}
+GlovUIEditBox.prototype.SUBMIT = 'submit';
+
 class GlovUI {
   buildRects(ws, hs) {
     let rects = [];
@@ -95,6 +181,26 @@ class GlovUI {
     this.frame_button_mouseover = false;
 
     this.modal_dialog = null;
+
+    this.this_frame_edit_boxes = [];
+    this.last_frame_edit_boxes = [];
+    this.dom_elems = [];
+    this.dom_elems_issued = 0;
+  }
+
+  getElem() {
+    if (this.modal_dialog) {
+      return null;
+    }
+    if (this.dom_elems_issued >= this.dom_elems.length) {
+      let elem = $('<div class="glovui_dynamic"></div>');
+      // TODO: Add to DOM in appropriate spot
+      $('#dynamic_text').append(elem);
+      this.dom_elems.push(elem);
+    }
+    let elem = this.dom_elems[this.dom_elems_issued];
+    this.dom_elems_issued++;
+    return elem;
   }
 
   bindSounds(sound_manager, sounds) {
@@ -303,6 +409,25 @@ class GlovUI {
     this.glov_input.eatAllInput();
   }
 
+  htmlPos(x, y) {
+    const ymin = this.camera.y0();
+    const ymax = this.camera.y1();
+    const xmin = this.camera.x0();
+    const xmax = this.camera.x1();
+    return [100 * (x - xmin) / (xmax - xmin), 100 * (y - ymin) / (ymax - ymin)];
+  }
+  htmlSize(w, h) {
+    const ymin = this.camera.y0();
+    const ymax = this.camera.y1();
+    const xmin = this.camera.x0();
+    const xmax = this.camera.x1();
+    return [100 * w / (xmax - xmin), 100 * h / (ymax - ymin)];
+  }
+
+  createEditBox(params) {
+    return new GlovUIEditBox(this, params);
+  }
+
   tick() {
     this.last_frame_button_mouseover = this.frame_button_mouseover;
     this.frame_button_mouseover = false;
@@ -311,6 +436,22 @@ class GlovUI {
     if (this.modal_dialog) {
       this.modalDialogRun(this.modal_dialog);
     }
+
+    for (let ii = 0; ii < this.last_frame_edit_boxes.length; ++ii) {
+      let edit_box = this.last_frame_edit_boxes[ii];
+      let idx = this.this_frame_edit_boxes.indexOf(edit_box);
+      if (idx === -1) {
+        edit_box.unrun();
+      }
+    }
+    this.last_frame_edit_boxes = this.this_frame_edit_boxes;
+    this.this_frame_edit_boxes = [];
+
+    while (this.dom_elems_issued < this.dom_elems.length) {
+      let elem = this.dom_elems.pop();
+      elem.remove();
+    }
+    this.dom_elems_issued = 0;
   }
 }
 

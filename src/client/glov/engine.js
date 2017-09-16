@@ -61,45 +61,44 @@ export function startup(params) {
 let app_tick = null;
 let last_tick = Date.now();
 function tick() {
-    if (!graphics_device.beginFrame()) {
-      return;
-    }
-    let now = Date.now();
-    let dt = Math.min(Math.max(now - last_tick, 1), 250);
-    last_tick = now;
-    global_timer += dt;
+  if (!graphics_device.beginFrame()) {
+    return;
+  }
+  let now = Date.now();
+  let dt = Math.min(Math.max(now - last_tick, 1), 250);
+  last_tick = now;
+  global_timer += dt;
 
-    glov_camera.tick();
-    glov_camera.set2DAspectFixed(game_width, game_height);
-    sound_manager.tick(dt);
-    glov_input.tick();
-    glov_ui.tick();
+  glov_camera.tick();
+  glov_camera.set2DAspectFixed(game_width, game_height);
+  sound_manager.tick(dt);
+  glov_input.tick();
+  glov_ui.tick();
 
-    if (window.need_repos) {
-      --window.need_repos;
-      let ul = [];
-      glov_camera.virtualToPhysical(ul, [0,0]);
-      let lr = [];
-      glov_camera.virtualToPhysical(lr, [game_width-1,game_height-1]);
-      let viewport = [ul[0], ul[1], lr[0], lr[1]];
-      let height = viewport[3] - viewport[1];
-      // default font size of 16 when at height of game_height
-      let font_size = Math.min(256, Math.max(2, Math.floor(height/800 * 16)));
-      $('#gamescreen').css({
-        left: viewport[0],
-        top: viewport[1],
-        width: viewport[2] - viewport[0],
-        height: height,
-        'font-size': font_size,
-      });
-      $('#fullscreen').css({
-        'font-size': font_size,
-      });
-    }
+  if (window.need_repos) {
+    --window.need_repos;
+    let ul = [];
+    glov_camera.virtualToPhysical(ul, [0,0]);
+    let lr = [];
+    glov_camera.virtualToPhysical(lr, [game_width-1,game_height-1]);
+    let viewport = [ul[0], ul[1], lr[0], lr[1]];
+    let height = viewport[3] - viewport[1];
+    // default font size of 16 when at height of game_height
+    let font_size = Math.min(256, Math.max(2, Math.floor(height/800 * 16)));
+    $('#gamescreen').css({
+      left: viewport[0],
+      top: viewport[1],
+      width: viewport[2] - viewport[0],
+      height: height,
+      'font-size': font_size,
+    });
+    $('#fullscreen').css({
+      'font-size': font_size,
+    });
+  }
 
-    draw_2d.setBackBuffer();
-    draw_2d.clear([0, 0, 0, 1]);
-
+  draw_2d.setBackBuffer();
+  draw_2d.clear([0, 0, 0, 1]);
 
   app_tick(dt);
 

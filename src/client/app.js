@@ -42,6 +42,11 @@ export function main(canvas)
     rollover: 'rollover',
   });
 
+  let edit_box = glov_ui.createEditBox({
+    x: 300,
+    y: 100,
+    w: 200,
+  });
 
   const color_white = math_device.v4Build(1, 1, 1, 1);
   const color_red = math_device.v4Build(1, 0, 0, 1);
@@ -170,6 +175,17 @@ export function main(canvas)
         },
       });
     }
+
+    if (edit_box.run() === edit_box.SUBMIT) {
+      glov_ui.modalDialog({
+        title: 'Modal Dialog',
+        text: `Edit box submitted with text ${edit_box.text}`,
+        buttons: {
+          'OK': null,
+        },
+      });
+    }
+    glov_ui.print(font_style, 300, 140, Z.UI, `Edit Box Text: ${edit_box.text}`);
   }
 
   function testInit(dt) {

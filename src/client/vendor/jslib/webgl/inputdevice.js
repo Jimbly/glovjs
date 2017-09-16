@@ -292,7 +292,7 @@ var WebGLInputDevice = (function () {
 
     // Cannot detect locale in canvas mode
     WebGLInputDevice.prototype.getLocale = function () {
-        return "";
+        return '';
     };
 
     // Returns the local coordinates of the event (i.e. position in
@@ -499,6 +499,9 @@ var WebGLInputDevice = (function () {
 
     // Private key event methods
     WebGLInputDevice.prototype.onKeyDown = function (event) {
+      if (event.target.tagName === 'INPUT') {
+        return;
+      }
         var keyDownHandlers = this.handlers.keydown;
         var pressedKeys = this.pressedKeys;
         var keyCodes = this.keyCodes;
@@ -538,8 +541,10 @@ var WebGLInputDevice = (function () {
         var pressedKeys = this.pressedKeys;
         var keyCodes = this.keyCodes;
 
-        event.stopPropagation();
-        event.preventDefault();
+        if (event.target.tagName !== 'INPUT') {
+          event.stopPropagation();
+          event.preventDefault();
+        }
 
         var keyCode = event.keyCode;
         keyCode = this.keyMap[keyCode];
@@ -783,6 +788,7 @@ var WebGLInputDevice = (function () {
     WebGLInputDevice.prototype.canvasOnMouseDown = function (event) {
         var mouseEnterHandlers = this.handlers.mouseenter;
 
+        this.canvas.focus();
         this.canvas.onmousedown = null;
 
         if (!this.isHovering) {
