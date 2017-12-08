@@ -38,11 +38,11 @@ export function startup(params) {
   const glov_font = require('./font.js');
   glov_font.populateDraw2DParams(draw2d_params);
   draw_2d = Draw2D.create(draw2d_params);
-  glov_sprite = require('./sprite.js').create(graphics_device);
   glov_camera = require('./camera.js').create(graphics_device, draw_2d);
   const input_device = TurbulenzEngine.createInputDevice({});
   glov_input = require('./input.js').create(input_device, draw_2d, glov_camera);
   draw_list = require('./draw_list.js').create(draw_2d, glov_camera);
+  glov_sprite = require('./sprite.js').create(graphics_device, draw_list);
 
   draw_list.setDefaultBucket(params.pixely ? 'alpha_nearest' : 'alpha');
 
@@ -51,7 +51,7 @@ export function startup(params) {
   const font_info_arial32 = require('../img/font/arial32.json');
   const font_info_arial12x2 = require('../img/font/04b03_8x2.json');
   font = glov_font.create(draw_list, params.pixely ? font_info_arial12x2 : font_info_arial32,
-    glov_sprite.loadTexture(params.pixely ? '04b03_8x2.png' : 'arial32.png'));
+    glov_sprite.loadTexture(params.pixely ? 'font/04b03_8x2.png' : 'font/arial32.png'));
   glov_ui = require('./ui.js').create(glov_sprite, glov_input, font, draw_list);
 
   glov_camera.set2DAspectFixed(game_width, game_height);

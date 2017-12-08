@@ -39,8 +39,12 @@ export const ALIGN = {
   VMASK: 3 << 2,
 
   HFIT: 1 << 4,
-  HWRAP: 1 << 5, // only for glovMarkup*, not drawAligned below, use drawWrapped below instead
+  HWRAP: 1 << 5, // only for glovMarkup*, not drawSizedAligned below, use drawSizedWrapped below instead
+
+  HVCENTER: 1 | (1 << 2), // to avoid doing bitwise ops elsewhere
+  HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
 };
+
 
 // typedef struct GlovFontStyle
 // {
@@ -104,55 +108,35 @@ function vec4ColorFromIntColor(v, c) {
   v[3] = ((c) & 0xFF) / 255;
 }
 
+function buildVec4ColorFromIntColor(c) {
+  return VMath.v4Build(
+    ((c >> 24) & 0xFF) / 255,
+    ((c >> 16) & 0xFF) / 255,
+    ((c >> 8) & 0xFF) / 255,
+    ((c) & 0xFF) / 255
+  );
+}
+
 export const glov_font_default_style = new GlovFontStyle();
 
 export function style(font_style, fields) {
-  if (!font_style) {
-    font_style = new GlovFontStyle();
-  }
-  for (let f in fields) {
-    font_style[f] = fields[f];
-  }
-  return font_style;
-}
-
-export function styleColored(font_style, color)
-{
   let ret = new GlovFontStyle();
   if (font_style) {
     for (let f in font_style) {
       ret[f] = font_style[f];
     }
   }
-  ret.color = color;
+  for (let f in fields) {
+    ret[f] = fields[f];
+  }
   return ret;
 }
 
-// TODO: use mathDevice
-var drawObjectColor = [0,0,0,0];
-var drawObjectDest = [0,0,0,0];
-var drawObjectSrc = [0,0,0,0];
-var drawObject = {
-  color: drawObjectColor,
-  rotation: 0,
-  destinationRectangle: drawObjectDest,
-  sourceRectangle: drawObjectSrc,
-  texture: null
-};
-
-let g_draw_2d;
-function drawFontElem(elem) {
-  drawObject.texture = elem.tex;
-  drawObjectDest[0] = elem.x;
-  drawObjectDest[1] = elem.y;
-  drawObjectDest[2] = elem.x + elem.w;
-  drawObjectDest[3] = elem.y + elem.h;
-  drawObjectSrc[0] = elem.u0;
-  drawObjectSrc[1] = elem.v0;
-  drawObjectSrc[2] = elem.u1;
-  drawObjectSrc[3] = elem.v1;
-  vec4ColorFromIntColor(drawObjectColor, elem.color);
-  g_draw_2d.draw(drawObject);
+export function styleColored(font_style, color)
+{
+  return style(font_style, {
+    color
+  });
 }
 
 let gd_params = null;
@@ -175,7 +159,9 @@ function createTechniqueParameters(draw_2d) {
       texture: null
   };
   tech_params.clipSpace = d2dtp.clipSpace;
-  temp_color = new Draw2D.floatArray(4);
+  if (!temp_color) {
+    temp_color = new Draw2D.floatArray(4);
+  }
 }
 
 function techParamsSet(param, value) {
@@ -222,7 +208,7 @@ class GlovFont {
     this.texture = texture;
     this.font_info = font_info;
     this.blend_mode = 'alpha';
-    this.draw_2d = g_draw_2d = draw_list.draw_2d;
+    this.draw_2d = draw_list.draw_2d;
     this.draw_list = draw_list;
     this.camera = this.draw_list.camera;
 
@@ -248,7 +234,7 @@ class GlovFont {
     return this.drawScaled(style, x, y, z, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
 
-  drawAlignedSized(style, _x, _y, z, size, align, w, h, text){
+  drawSizedAligned(style, _x, _y, z, size, align, w, h, text){
     let x_size = size;
     let y_size = size;
     let width = this.getStringWidth(style, x_size, text);
@@ -446,6 +432,10 @@ class GlovFont {
   }
 
   drawScaledWrapped(style, x, y, z, w, indent, xsc, ysc, text) {
+    if (text === null || text === undefined) {
+      text = '(null)';
+    }
+    this.applyStyle(style);
     let num_lines = this.wrapLinesScaled(w, indent, xsc, text, (xoffs, linenum, word) => {
       let y2 = y + this.font_info.font_size * ysc * linenum;
       let x2 = x + xoffs;
@@ -474,6 +464,9 @@ class GlovFont {
     let x = _x;
     let font_info = this.font_info;
     let tex = this.texture.getTexture();
+    if (text === null || text === undefined) {
+      text = '(null)';
+    }
     const len = text.length;
     if (xsc === 0 || ysc === 0) {
       return 0;
@@ -560,15 +553,10 @@ class GlovFont {
           let w = char_info.w * xsc + (padding4[0] + padding4[2]) * rel_x_scale;
           let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
 
-          let elem = this.draw_list.queuefn(drawFontElem, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2], z, this.blend_mode);
-          elem.tex = tex;
-          elem.u0 = u0 * tile_width;
-          elem.v0 = v0 * tile_height;
-          elem.u1 = u1 * tile_width;
-          elem.v1 = v1 * tile_height;
-          elem.w = w * this.camera.data[4];
-          elem.h = h * this.camera.data[5];
-          elem.color = applied_style.color;
+          let elem = this.draw_list.queueraw(
+            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2], z, w, h,
+            u0, v0, u1, v1,
+            buildVec4ColorFromIntColor(applied_style.color), 0, this.blend_mode);
           elem.tech_params = techParamsGet();
 
           x += char_info.w * xsc + x_advance;

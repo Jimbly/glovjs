@@ -3,10 +3,11 @@
 /*global TextureManager: false */
 
 class GlovSpriteManager {
-  constructor(graphicsDevice) {
+  constructor(graphicsDevice, draw_list) {
     const requestHandler = RequestHandler.create({});
     this.texture_manager = TextureManager.create(graphicsDevice, requestHandler);
     this.textures = {};
+    this.draw_list = draw_list;
   }
 
   loadTexture(texname) {
@@ -36,6 +37,8 @@ class GlovSpriteManager {
   }
 }
 
-export function create(graphicsDevice) {
-  return new GlovSpriteManager(graphicsDevice);
+export function create() {
+  let args = Array.prototype.slice.call(arguments, 0);
+  args.splice(0,0, null);
+  return new (Function.prototype.bind.apply(GlovSpriteManager, args))();
 }

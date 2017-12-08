@@ -73,6 +73,17 @@ class GlovCamera {
     }
   }
 
+  zoom(x, y, factor)
+  {
+    let  inv_factor = 1.0 / factor;
+    this.set2D(
+      x - (x - this.x0()) * inv_factor,
+      y - (y - this.y0()) * inv_factor,
+      x + (this.x1() - x) * inv_factor,
+      y + (this.y1() - y) * inv_factor);
+  }
+
+
   tick() {
     let graphics_device = this.graphics_device;
     this.screen_width = graphics_device.width;

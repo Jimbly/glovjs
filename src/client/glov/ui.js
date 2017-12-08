@@ -6,6 +6,7 @@
 window.Z = window.Z || {};
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
+Z.TOOLTIP = Z.TOOLTIP || 2000;
 
 const glov_font = require('./font.js');
 
@@ -16,9 +17,12 @@ class GlovUIEditBox {
     this.y = 0;
     this.z = Z.UI; // actually in DOM, so above everything!
     this.w = glov_ui.button_width;
+    this.type = 'text';
     // this.h = glov_ui.button_height;
     // this.font_height = glov_ui.font_height;
     this.text = '';
+    this.placeholder = '';
+    this.initial_focus = false;
     this.applyParams(params);
 
     this.elem = null;
@@ -29,20 +33,27 @@ class GlovUIEditBox {
     if (!params) {
       return;
     }
-    if (params.x !== undefined) {
-      this.x = params.x;
+    for (let f in params) {
+      this[f] = params[f];
     }
-    if (params.y !== undefined) {
-      this.y = params.y;
+  }
+  getText() {
+    return this.text;
+  }
+  setText(new_text) {
+    if (this.input) {
+      this.input.val(new_text);
     }
-    if (params.z !== undefined) {
-      this.z = params.z;
+    this.text = new_text;
+  }
+  focus() {
+    if (this.input) {
+      this.input.focus();
     }
-    if (params.w !== undefined) {
-      this.w = params.w;
-    }
-    if (params.text !== undefined) {
-      this.text = params.text;
+  }
+  unfocus() {
+    if (this.input) {
+      this.input.blur();
     }
   }
   run(params) {
@@ -52,9 +63,9 @@ class GlovUIEditBox {
     if (elem !== this.elem) {
       if (elem) {
         // new DOM element, initialize
-        elem.innerHtml = '';
+        elem.html('');
         let form = $('<form></form>');
-        let input = $('<input type="text">');
+        let input = $(`<input type="${this.type}" placeholder="${this.placeholder}">`);
         form.submit((ev) => {
           ev.preventDefault();
           this.submitted = true;
@@ -63,6 +74,9 @@ class GlovUIEditBox {
         elem.append(form);
         input.val(this.text);
         this.input = input;
+        if (this.initial_focus) {
+          input.focus();
+        }
       } else {
         this.input = null;
       }
@@ -82,6 +96,7 @@ class GlovUIEditBox {
     }
 
     if (this.submitted) {
+      this.submitted = false;
       return this.SUBMIT;
     }
   }
@@ -144,6 +159,19 @@ class GlovUI {
     return sprite;
   }
 
+  makeColorSet(color) {
+    let ret = {
+      regular: math_device.v4ScalarMul(color, 1),
+      rollover: math_device.v4ScalarMul(color, 0.8),
+      click: math_device.v4ScalarMul(color, 0.7),
+      disabled: math_device.v4ScalarMul(color, 0.4),
+    };
+    for (let field in ret) {
+      ret[field][3] = color[3];
+    }
+    return ret;
+  }
+
   constructor(glov_sprite, glov_input, font, draw_list) {
     this.glov_sprite = glov_sprite;
     this.glov_input = glov_input;
@@ -151,11 +179,8 @@ class GlovUI {
     this.draw_list = draw_list;
     this.camera = glov_input.camera;
 
-    this.color_white = math_device.v4Build(1, 1, 1, 1);
-    this.color_black = math_device.v4Build(0,0,0, 1);
-    this.color_rollover = math_device.v4Build(0.8, 0.8, 0.8, 1);
-    this.color_click = math_device.v4Build(0.7, 0.7, 0.7, 1);
-    this.color_panel = math_device.v4Build(1, 1, 1, 1);
+    this.color_button = this.makeColorSet([1,1,1,1]);
+    this.color_panel = math_device.v4Build(1, 1, 0.75, 1);
     this.color_modal_darken = math_device.v4Build(0, 0, 0, 0.75);
 
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
@@ -166,13 +191,18 @@ class GlovUI {
     sprites.white = this.glov_sprite.createSprite('white', {
       width : 1,
       height : 1,
-      x : 0,
-      y : 0,
-      rotation : 0,
-      color : [1,1,1,1],
       origin: [0, 0],
       textureRectangle : math_device.v4Build(0, 0, 1, 1)
     });
+    ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
+      let size = (key === 'hollow_circle') ? 128 : 32;
+      sprites[key] = glov_sprite.createSprite(`glov/util_${key}.png`, {
+        width : 1,
+        height : 1,
+        textureRectangle : math_device.v4Build(0, 0, size, size)
+      });
+    });
+
     this.sounds = {};
 
     this.button_mouseover = false; // for callers to poll the very last button
@@ -194,7 +224,6 @@ class GlovUI {
     }
     if (this.dom_elems_issued >= this.dom_elems.length) {
       let elem = $('<div class="glovui_dynamic"></div>');
-      // TODO: Add to DOM in appropriate spot
       $('#dynamic_text').append(elem);
       this.dom_elems.push(elem);
     }
@@ -262,20 +291,53 @@ class GlovUI {
     this.button_mouseover = true;
   }
 
+  drawTooltip(param) {
+    assert(typeof param.x === 'number');
+    assert(typeof param.y === 'number');
+    assert(typeof param.tooltip === 'string');
+
+    let tooltip_w = 400;
+    let tooltip_y0 = param.y;
+    let tooltip_pad = 8;
+    let y = tooltip_y0 + tooltip_pad;
+    y += this.font.drawSizedWrapped(this.modal_font_style,
+      param.x + tooltip_pad, y, Z.TOOLTIP+1, tooltip_w - tooltip_pad * 2, 0, this.font_height,
+      param.tooltip);
+    y += tooltip_pad;
+
+    this.panel({
+      x: param.x,
+      y: tooltip_y0,
+      z: Z.TOOLTIP,
+      w: tooltip_w,
+      h: y - tooltip_y0,
+    });
+  }
+
   buttonShared(param, key) {
-    let color = this.color_white;
+    let colors = param.colors || this.color_button;
+    let color = colors.regular;
     let ret = false;
     this.button_mouseover = false;
-    if (this.glov_input.clickHit(param)) {
+    if (param.disabled) {
+      color = colors.disabled;
+    } else if (this.glov_input.clickHit(param)) {
       this.setMouseOver(key);
-      color = this.color_click;
+      color = colors.click;
       ret = true;
       this.playUISound('button_click');
     } else if (this.glov_input.isMouseOver(param)) {
       this.setMouseOver(key);
-      color = this.glov_input.isMouseDown() ? this.color_click : this.color_rollover;
+      color = this.glov_input.isMouseDown() ? colors.click : colors.rollover;
     } else {
       this.button_mouseover = false;
+    }
+    if (this.button_mouseover && param.tooltip) {
+      this.drawTooltip({
+        x: param.x,
+        y: param.y + param.h + 2,
+        tooltip: param.tooltip,
+      });
     }
     return [ ret, color ];
   }
@@ -295,7 +357,7 @@ class GlovUI {
 
     this.drawHBox(param, this.sprites.button, color);
     /*jshint bitwise:false*/
-    this.font.drawAlignedSized(glov_font.styleColored(null, 0x000000ff), param.x, param.y, param.z + 0.1,
+    this.font.drawSizedAligned(glov_font.styleColored(null, 0x000000ff), param.x, param.y, param.z + 0.1,
       param.font_height, glov_font.ALIGN.HCENTER | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
     return ret;
   }
@@ -360,15 +422,16 @@ class GlovUI {
     let x = x0 + pad;
     const y0 = this.modal_y0;
     let y = y0 + pad;
+    let font_height = modal_dialog.font_height || this.font_height;
 
     if (modal_dialog.title) {
-      y += this.font.drawSizedWrapped(this.modal_font_style, x, y, Z.MODAL, text_w, 0, this.font_height * this.modal_title_scale,
+      y += this.font.drawSizedWrapped(this.modal_font_style, x, y, Z.MODAL, text_w, 0, font_height * this.modal_title_scale,
         modal_dialog.title);
       y += pad * 1.5;
     }
 
     if (modal_dialog.text) {
-      y += this.font.drawSizedWrapped(this.modal_font_style, x, y, Z.MODAL, text_w, 0, this.font_height,
+      y += this.font.drawSizedWrapped(this.modal_font_style, x, y, Z.MODAL, text_w, 0, font_height,
         modal_dialog.text);
       y += pad;
     }
@@ -453,6 +516,96 @@ class GlovUI {
     }
     this.dom_elems_issued = 0;
   }
+
+  drawRect(x0, y0, x1, y1, z, color) {
+    let mx = Math.min(x0, x1);
+    let my = Math.min(y0, y1);
+    let Mx = Math.max(x0, x1);
+    let My = Math.max(y0, y1);
+    this.draw_list.queue(this.sprites.white, mx, my, z, color, math_device.v2Build(Mx - mx, My - my));
+  }
+
+  _spreadTechParams(spread) {
+    // spread=0 -> 1
+    // spread=0.5 -> 2
+    // spread=0.75 -> 4
+    // spread=1 -> large enough to AA
+    spread = Math.min(Math.max(spread, 0), 0.99);
+
+    let d2dtp = this.draw_list.draw_2d.techniqueParameters;
+    let tech_params = {
+        clipSpace: d2dtp.clipSpace,
+        param0: math_device.v4Build(0,0,0,0),
+        texture: null
+    };
+
+    tech_params.param0[0] = 1 / (1 - spread);
+    tech_params.param0[1] = -0.5 * tech_params.param0[0] + 0.5;
+    return tech_params;
+  }
+
+  _drawCircleInternal(sprite, x, y, z, r, spread, tu1, tv1, tu2, tv2, color)
+  {
+    let x0 = x - r * 2 + r * 4 * tu1;
+    let x1 = x - r * 2 + r * 4 * tu2;
+    let y0 = y - r * 2 + r * 4 * tv1;
+    let y1 = y - r * 2 + r * 4 * tv2;
+    let elem = this.draw_list.queueraw(sprite._texture,
+      x0, y0, z, x1 - x0, y1 - y0,
+      tu1, tv1, tu2, tv2,
+      color, 0, 'aa');
+    elem.tech_params = this._spreadTechParams(spread);
+  }
+
+  drawCircle(x, y, z, r, spread, color)
+  {
+    this._drawCircleInternal(this.sprites.circle, x, y, z, r, spread, 0, 0, 1, 1, color);
+  }
+
+  drawHollowCircle(x, y, z, r, spread, color)
+  {
+    this._drawCircleInternal(this.sprites.hollow_circle, x, y, z, r, spread, 0, 0, 1, 1, color);
+  }
+
+  drawLine(x0, y0, x1, y1, z, w, spread, color)
+  {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let length = Math.sqrt(dx*dx + dy*dy);
+    dx /= length;
+    dy /= length;
+    let tangx = -dy * w;
+    let tangy = dx * w;
+
+    this.draw_list.queueraw4(this.sprites.line._texture,
+      x0 + tangx, y0 + tangy,
+      x0 - tangx, y0 - tangy,
+      x1 - tangx, y1 - tangy,
+      x1 + tangx, y1 + tangy,
+      z,
+      0, 0, 1, 1,
+      color, 'aa', this._spreadTechParams(spread));
+  }
+
+  drawCone(x0, y0, x1, y1, z, w0, w1, spread, color)
+  {
+    let dx = x1 - x0;
+    let dy = y1 - y0;
+    let length = Math.sqrt(dx*dx + dy*dy);
+    dx /= length;
+    dy /= length;
+    let tangx = -dy;
+    let tangy = dx;
+    this.draw_list.queueraw4(this.sprites.cone._texture,
+      x0 - tangx*w0, y0 - tangy*w0,
+      x1 - tangx*w1, y1 - tangy*w1,
+      x1 + tangx*w1, y1 + tangy*w1,
+      x0 + tangx*w0, y0 + tangy*w0,
+      z,
+      0, 0, 1, 1,
+      color, 'aa', this._spreadTechParams(spread));
+  }
+
 }
 
 

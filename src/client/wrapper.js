@@ -33,8 +33,10 @@ var canvasSupported = true;
 
 window.assert = function(exp) {
   if (!exp) {
-    console.log(new Error().stack);
+    let e = new Error();
+    console.log(e.stack);
     window.alert('assertion failed');
+    throw e;
   }
 };
 
