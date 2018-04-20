@@ -101,7 +101,69 @@ export function main(canvas)
     });
   }
 
+  function doBlurEffect(src, dest) {
+    glov_engine.effects.applyGaussianBlur({
+      source: src,
+      destination: dest,
+      blurRadius: 5,
+      blurTarget: glov_engine.getTemporaryTarget(),
+    });
+  }
+  function doDesaturateEffect(src, dest) {
+    let saturation = 0.1;
+
+    // Perf note: do not allocate these each frame for better perf
+    let xform = math_device.m43BuildIdentity();
+    let tmp = math_device.m43BuildIdentity();
+
+    math_device.m43BuildIdentity(xform);
+    if (saturation !== 1) {
+      glov_engine.effects.saturationMatrix(saturation, tmp);
+      math_device.m43Mul(xform, tmp, xform);
+    }
+    // if ((hue % (Math.PI * 2)) !== 0) {
+    //   glov_engine.effects.hueMatrix(hue, tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (contrast !== 1) {
+    //   glov_engine.effects.contrastMatrix(contrast, tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (brightness !== 0) {
+    //   glov_engine.effects.brightnessMatrix(brightness, tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (additiveRGB[0] !== 0 || additiveRGB[1] !== 0 || additiveRGB[2] !== 0) {
+    //   glov_engine.effects.additiveMatrix(additiveRGB, tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (grayscale) {
+    //   glov_engine.effects.grayScaleMatrix(tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (negative) {
+    //   glov_engine.effects.negativeMatrix(tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    // if (sepia) {
+    //   glov_engine.effects.sepiaMatrix(tmp);
+    //   math_device.m43Mul(xform, tmp, xform);
+    // }
+    glov_engine.effects.applyColorMatrix({
+      colorMatrix: xform,
+      source: src,
+      destination: dest,
+    });
+  }
+
   function test(dt) {
+
+    if (glov_ui.modal_dialog) {
+      // Testing effects
+      glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
+      glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
+    }
+
     if (!test.color_sprite) {
       test.color_sprite = math_device.v4Copy(color_white);
       test.character = {
