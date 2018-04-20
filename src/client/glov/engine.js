@@ -1,6 +1,8 @@
 /* global WebGLTurbulenzEngine:false */
 /* global TurbulenzEngine:true */
+/* global TextureEffects:true */
 /* global Draw2D: false */
+/* global math_device: false */
 /* global $: false */
 
 export let glov_camera;
@@ -14,6 +16,7 @@ export let graphics_device;
 export let draw_2d;
 export let draw_list;
 export let font;
+export let effects;
 
 let global_timer = 0;
 export function getFrameTimestamp() {
@@ -44,6 +47,11 @@ export function startup(params) {
   draw_list = require('./draw_list.js').create(draw_2d, glov_camera);
   glov_sprite = require('./sprite.js').create(graphics_device, draw_list);
 
+  effects = TextureEffects.create({
+    graphicsDevice: graphics_device,
+    mathDevice: math_device,
+  });
+
   draw_list.setDefaultBucket(params.pixely ? 'alpha_nearest' : 'alpha');
 
   sound_manager = require('./sound_manager.js').create();
@@ -55,13 +63,58 @@ export function startup(params) {
   glov_ui = require('./ui.js').create(glov_sprite, glov_input, font, draw_list);
 
   glov_camera.set2DAspectFixed(game_width, game_height);
+}
 
+let render_targets = [];
+let render_target_idx = 0;
+let frame_effects = [];
+
+function resetEffects() {
+  render_target_idx = 0;
+  frame_effects.length = 0;
+}
+
+function getTarget() {
+  if (render_target_idx >= render_targets.length) {
+    render_targets.push(draw_2d.createRenderTarget({}));
+  }
+  return render_targets[render_target_idx++];
+}
+
+function doFrameEffect(index) {
+  frame_effects[index].fn(draw_2d.getRenderTargetTexture(frame_effects[index].src), draw_2d.getRenderTarget(frame_effects[index].dest));
+  draw_2d.setRenderTarget(frame_effects[index].dest);
+}
+
+// Example effects can be found at:
+// Src:  http://biz.turbulenz.com/sample_assets/textureeffects.js.html
+// Demo: http://biz.turbulenz.com/samples#sample-modal/samplepage/sample_assets/textureeffects.canvas.release.html/samplesrc/sample_assets/textureeffects.js.html
+export function queueFrameEffect(z, fn) {
+  let src;
+  if (frame_effects.length === 0) {
+    src = getTarget();
+  } else {
+    src = frame_effects[frame_effects.length - 1].dest;
+  }
+  draw_list.queuefn(doFrameEffect.bind(this, frame_effects.length), 0, 0, z, null);
+  let dest = getTarget();
+  frame_effects.push({
+    z,
+    fn,
+    src,
+    dest,
+  });
+}
+
+export function getTemporaryTarget() {
+  return draw_2d.getRenderTarget(getTarget());
 }
 
 let app_tick = null;
 let last_tick = Date.now();
 function tick() {
   if (!graphics_device.beginFrame()) {
+    resetEffects();
     return;
   }
   let now = Date.now();
@@ -97,14 +150,25 @@ function tick() {
     });
   }
 
-  draw_2d.setBackBuffer();
-  draw_2d.clear([0, 0, 0, 1]);
-
   app_tick(dt);
 
+  if (frame_effects.length) {
+    draw_2d.setRenderTarget(frame_effects[0].src);
+  } else {
+    draw_2d.setBackBuffer();
+  }
+  draw_2d.clear([0, 0, 0, 1]);
+
   draw_list.draw();
+
+  if (frame_effects.length) {
+    draw_2d.setBackBuffer();
+    draw_2d.copyRenderTarget(frame_effects[frame_effects.length - 1].dest);
+  }
+
   graphics_device.endFrame();
   glov_input.endFrame();
+  resetEffects();
 }
 
 export function go(app_tick_in) {
