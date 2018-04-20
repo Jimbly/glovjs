@@ -755,7 +755,7 @@ var WebGLSoundSource = (function () {
         bufferNode.buffer = buffer;
         bufferNode.loop = this.looping;
         if (bufferNode.playbackRate) {
-            bufferNode.playbackRate.value = this.pitch;
+            bufferNode.playbackRate.setValueAtTime(this.pitch, 0);
         }
         bufferNode.connect(this.gainNode);
 
@@ -821,7 +821,7 @@ var WebGLSoundSource = (function () {
             pannerNode.connect(masterGainNode);
 
             var gainNode = (audioContext.createGain ? audioContext.createGain() : audioContext.createGainNode());
-            gainNode.gain.value = gain;
+            gainNode.gain.setValueAtTime(gain, 0);
             source.gainNode = gainNode;
             gainNode.connect(pannerNode);
 
@@ -891,7 +891,7 @@ var WebGLSoundSource = (function () {
                 set: function setGainFn(newGain) {
                     if (gain !== newGain) {
                         gain = newGain;
-                        this.gainNode.gain.value = newGain;
+                        this.gainNode.gain.setValueAtTime(newGain, 0);
                     }
                 },
                 enumerable: true,
@@ -1398,13 +1398,23 @@ var WebGLSoundDevice = (function () {
                 set: function setListenerTransformFn(transform) {
                     listenerTransform = VMath.m43Copy(transform, listenerTransform);
 
-                    var position0 = transform[9];
-                    var position1 = transform[10];
-                    var position2 = transform[11];
+                    // var position0 = transform[9];
+                    // var position1 = transform[10];
+                    // var position2 = transform[11];
+                    // Deprecated API
+                    // listener.setPosition(position0, position1, position2);
+                    listener.positionX.setValueAtTime(transform[9], 0);
+                    listener.positionY.setValueAtTime(transform[10], 0);
+                    listener.positionZ.setValueAtTime(transform[11], 0);
 
-                    listener.setPosition(position0, position1, position2);
-
-                    listener.setOrientation(-transform[6], -transform[7], -transform[8], transform[3], transform[4], transform[5]);
+                    // Deprecated API
+                    // listener.setOrientation(-transform[6], -transform[7], -transform[8], transform[3], transform[4], transform[5]);
+                    listener.forwardX.setValueAtTime(-transform[6], 0);
+                    listener.forwardY.setValueAtTime(-transform[7], 0);
+                    listener.forwardZ.setValueAtTime(-transform[8], 0);
+                    listener.upX.setValueAtTime(transform[3], 0);
+                    listener.upY.setValueAtTime(transform[4], 0);
+                    listener.upZ.setValueAtTime(transform[5], 0);
                 },
                 enumerable: true,
                 configurable: false
@@ -1423,7 +1433,7 @@ var WebGLSoundDevice = (function () {
             });
 
             sd.update = function soundDeviceUpdate() {
-                this.gainNode.gain.value = this.listenerGain;
+                this.gainNode.gain.setValueAtTime(this.listenerGain, 0);
 
                 var listenerPosition0 = listenerTransform[9];
                 var listenerPosition1 = listenerTransform[10];
