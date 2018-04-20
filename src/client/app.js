@@ -5,6 +5,8 @@
 /*global assert: false */
 /*global Z: false */
 
+const local_storage = require('./local_storage.js');
+local_storage.storage_prefix = 'turbulenz-playground';
 window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
@@ -74,8 +76,8 @@ export function main(canvas)
       x : 0,
       y : 0,
       rotation : 0,
-      color : [1,1,1, 1],
-      origin: [0, 0],
+      color : math_device.v4Build(1,1,1,1),
+      origin: math_device.v2Build(0, 0),
       textureRectangle : math_device.v4Build(0, 0, 1, 1)
     });
 
@@ -129,11 +131,9 @@ export function main(canvas)
       w: spriteSize,
       h: spriteSize,
     };
-    if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)
-    ) {
+    if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)) {
       math_device.v4Copy(color_yellow, test.color_sprite);
-    } else if (glov_input.clickHit(bounds)
-    ) {
+    } else if (glov_input.clickHit(bounds)) {
       math_device.v4Copy((test.color_sprite === color_red) ? color_white : color_red, test.color_sprite);
       sound_manager.play('test');
     } else if (glov_input.isMouseOver(bounds)) {

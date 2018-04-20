@@ -139,6 +139,7 @@ gulp.task('nodemon', deps, function() {
   var options = {
     script: 'build/server/index.js',
     nodeArgs: [],
+    args: ['--dev'],
     watch: ['build/server/'],
   };
   if (args.debug) {

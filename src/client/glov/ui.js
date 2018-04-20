@@ -335,7 +335,7 @@ class GlovUI {
     if (this.button_mouseover && param.tooltip) {
       this.drawTooltip({
         x: param.x,
-        y: param.y + param.h + 2,
+        y: param.tooltip_above ? param.y - this.font_height * 2 - 16 : param.y + param.h + 2,
         tooltip: param.tooltip,
       });
     }

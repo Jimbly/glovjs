@@ -105,8 +105,10 @@ class GlovInput {
       return false;
     }
     this.mousePos(this.mpos);
-    if (this.mpos[0] >= param.x && this.mpos[0] < param.x + param.w &&
-      this.mpos[1] >= param.y && this.mpos[1] < param.y + param.h
+    if (this.mpos[0] >= param.x &&
+      (param.w === Infinity || this.mpos[0] < param.x + param.w) &&
+      this.mpos[1] >= param.y &&
+      (param.h === Infinity || this.mpos[1] < param.y + param.h)
     ) {
       this.mouse_over_captured = true;
       return true;
