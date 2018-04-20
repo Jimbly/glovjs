@@ -9,6 +9,7 @@ export let glov_camera;
 export let glov_input;
 export let glov_sprite;
 export let glov_ui;
+export let glov_particles;
 export let sound_manager;
 export let game_width;
 export let game_height;
@@ -46,6 +47,7 @@ export function startup(params) {
   glov_input = require('./input.js').create(input_device, draw_2d, glov_camera);
   draw_list = require('./draw_list.js').create(draw_2d, glov_camera);
   glov_sprite = require('./sprite.js').create(graphics_device, draw_list);
+  glov_particles = require('./particles.js').create(draw_list, glov_sprite);
 
   effects = TextureEffects.create({
     graphicsDevice: graphics_device,
@@ -151,6 +153,8 @@ function tick() {
   }
 
   app_tick(dt);
+
+  glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
 
   if (frame_effects.length) {
     draw_2d.setRenderTarget(frame_effects[0].src);
