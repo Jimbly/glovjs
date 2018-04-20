@@ -76,7 +76,7 @@ class GlovDrawList {
       x: (x - this.camera.data[0]) * this.camera.data[4],
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
-      bucket: bucket || this.default_bucket,
+      bucket: (bucket === undefined) ? this.default_bucket : bucket,
     };
     this.list.push(elem);
     return elem;
@@ -145,8 +145,9 @@ class GlovDrawList {
         bucket = elem.bucket;
         tech_params = elem.tech_params;
         this.draw_2d.techniqueParameters = tech_params || orig_tech_params;
-        assert(bucket);
-        this.draw_2d.begin(bucket, 'deferred');
+        if (bucket) {
+          this.draw_2d.begin(bucket, 'deferred');
+        }
       }
       if (elem.fn) {
         elem.fn(elem);
