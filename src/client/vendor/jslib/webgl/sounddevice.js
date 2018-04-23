@@ -1398,23 +1398,26 @@ var WebGLSoundDevice = (function () {
                 set: function setListenerTransformFn(transform) {
                     listenerTransform = VMath.m43Copy(transform, listenerTransform);
 
-                    // var position0 = transform[9];
-                    // var position1 = transform[10];
-                    // var position2 = transform[11];
-                    // Deprecated API
-                    // listener.setPosition(position0, position1, position2);
-                    listener.positionX.setValueAtTime(transform[9], 0);
-                    listener.positionY.setValueAtTime(transform[10], 0);
-                    listener.positionZ.setValueAtTime(transform[11], 0);
+                    if (listener.positionX) {
+                      listener.positionX.setValueAtTime(transform[9], 0);
+                      listener.positionY.setValueAtTime(transform[10], 0);
+                      listener.positionZ.setValueAtTime(transform[11], 0);
 
-                    // Deprecated API
-                    // listener.setOrientation(-transform[6], -transform[7], -transform[8], transform[3], transform[4], transform[5]);
-                    listener.forwardX.setValueAtTime(-transform[6], 0);
-                    listener.forwardY.setValueAtTime(-transform[7], 0);
-                    listener.forwardZ.setValueAtTime(-transform[8], 0);
-                    listener.upX.setValueAtTime(transform[3], 0);
-                    listener.upY.setValueAtTime(transform[4], 0);
-                    listener.upZ.setValueAtTime(transform[5], 0);
+                      listener.forwardX.setValueAtTime(-transform[6], 0);
+                      listener.forwardY.setValueAtTime(-transform[7], 0);
+                      listener.forwardZ.setValueAtTime(-transform[8], 0);
+                      listener.upX.setValueAtTime(transform[3], 0);
+                      listener.upY.setValueAtTime(transform[4], 0);
+                      listener.upZ.setValueAtTime(transform[5], 0);
+                    } else {
+                      // Deprecated API
+                      var position0 = transform[9];
+                      var position1 = transform[10];
+                      var position2 = transform[11];
+                      listener.setPosition(position0, position1, position2);
+
+                      listener.setOrientation(-transform[6], -transform[7], -transform[8], transform[3], transform[4], transform[5]);
+                    }
                 },
                 enumerable: true,
                 configurable: false
