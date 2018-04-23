@@ -2,6 +2,21 @@
 /*global Draw2D: false */
 /*global VMath: false */
 
+/*
+
+font_style = glov_font.style(null, {
+  color: 0xFFFFFFff,
+  outline_width: 0,
+  outline_color: 0x00000000,
+  glow_xoffs: 0,
+  glow_yoffs: 0,
+  glow_inner: 0,
+  glow_outer: 0,
+  glow_color: 0x000000ff,
+});
+
+ */
+
 // typedef struct FontCharInfo {
 //   int c;
 //   float x0;
@@ -41,6 +56,7 @@ export const ALIGN = {
   HFIT: 1 << 4,
   HWRAP: 1 << 5, // only for glovMarkup*, not drawSizedAligned below, use drawSizedWrapped below instead
 
+  HCENTERFIT: 1 | (1 << 4),
   HVCENTER: 1 | (1 << 2), // to avoid doing bitwise ops elsewhere
   HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
 };
