@@ -41,7 +41,6 @@ let def_fire = {
       // Random ranges only calculated upon instantiation:
       emit_time: [0,Infinity],
       emit_initial: 10,
-      max_parts: Infinity,
     },
   },
   system_lifespan: Infinity, // must be manually killed
@@ -146,7 +145,6 @@ function normalizeEmitter(def, part_map) {
       emit_rate: normalizeValue(def.emit_rate || 10),
       emit_time: normalizeValueVec(def.emit_time || [0,Infinity], 2),
       emit_initial: normalizeValue(def.emit_initial || 1),
-      max_parts: normalizeValue(def.max_parts || Infinity),
     };
     // convert particles per second to ms per emission
     let min = def.normalized.emit_rate[0];
@@ -220,7 +218,6 @@ class ParticleSystem {
       let def = this.def.emitters[ii];
       let emitter = {
         def,
-        max_parts: instValue(def.max_parts),
         emit_time: instValueVec(def.emit_time),
         countdown: 0,
         started: false,
@@ -295,8 +292,9 @@ class ParticleSystem {
     let x = part.pos[0] - w/2;
     let y = part.pos[1] - h/2;
     let z = part.pos[2];
-    this.parent.draw_list.queueraw(def.texture.texture, x, y, z, w, h, 0, 0, 1, 1,
-      temp_color, rot, def.bucket);
+    this.parent.draw_list.queueraw4(def.texture.texture,
+      x, y, x + w, y, x + w, y + h, x, y + h, z, 0, 0, 1, 1,
+      temp_color, def.bucket, null);
 
     return false;
   }

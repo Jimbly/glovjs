@@ -160,6 +160,9 @@ export function main(canvas)
     });
   }
 
+  let do_particles = true;
+  let last_particles = 0;
+
   function test(dt) {
 
     if (glov_ui.modal_dialog) {
@@ -240,6 +243,20 @@ export function main(canvas)
           'Cancel': null, // no callback
         },
       });
+    }
+
+    if (glov_ui.buttonText({ x: 100, y: 200, text: 'Particles: ' + (do_particles ? 'ON' : 'OFF')})) {
+      do_particles = !do_particles;
+    }
+    if (do_particles) {
+      let dt = glov_engine.getFrameTimestamp() - last_particles;
+      if (dt > 1000) {
+        last_particles = glov_engine.getFrameTimestamp();
+        glov_engine.glov_particles.createSystem(particle_data.defs.explosion,
+          //[test.character.x, test.character.y, Z.PARTICLES]
+          [300 + Math.random() * 200, 300 + Math.random() * 200, Z.PARTICLES]
+        );
+      }
     }
 
     if (edit_box.run() === edit_box.SUBMIT) {
