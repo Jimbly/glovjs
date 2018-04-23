@@ -110,7 +110,8 @@ class SoundManager {
     }
   }
 
-  play(soundname) {
+  play(soundname, volume) {
+    volume = volume || 1;
     if (!this.sound_on) {
       return;
     }
@@ -123,6 +124,7 @@ class SoundManager {
     }
     let channel = this.channels[this.channel++];
     channel.play(sounds[soundname]);
+    channel.gain = volume;
     this.last_played[soundname] = this.global_timer;
     if (this.channel === this.channels.length) {
       this.channel = 0;
