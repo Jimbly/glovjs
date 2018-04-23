@@ -107,7 +107,10 @@ function normalizeParticle(def, particle_manager) {
         let e = def.color_track[ii];
         assert(typeof e.t === 'number');
         let arr = new Float32Array(5);
-        VMath.v4Copy(e.v, arr);
+        arr[0] = e.v[0];
+        arr[1] = e.v[1];
+        arr[2] = e.v[2];
+        arr[3] = e.v[3];
         arr[4] = e.t;
         norm.color_track.push(arr);
       }
@@ -119,7 +122,8 @@ function normalizeParticle(def, particle_manager) {
         let e = def.size_track[ii];
         assert(typeof e.t === 'number');
         let arr = new Float32Array(3);
-        VMath.v2Copy(e.v, arr);
+        arr[0] = e.v[0];
+        arr[1] = e.v[1];
         arr[2] = e.t;
         norm.size_track.push(arr);
       }
@@ -228,7 +232,7 @@ class ParticleSystem {
     this.tick(0);
   }
 
-  tickParticle(dt, part) {
+  tickParticle(part, dt) {
     let def = part.def;
     part.age += dt;
     let age_norm = part.age / part.lifespan;
@@ -238,8 +242,12 @@ class ParticleSystem {
 
     // Pos, vel - incrementally computed
     let dts = dt / 1000;
-    VMath.v3MulAdd(part.vel, dts, part.pos, part.pos);
-    VMath.v3MulAdd(part.accel, dts, part.vel, part.vel);
+    part.pos[0] += part.vel[0] * dts;
+    part.pos[1] += part.vel[1] * dts;
+    part.pos[2] += part.vel[2] * dts;
+    part.vel[0] += part.accel[0] * dts;
+    part.vel[1] += part.accel[1] * dts;
+    part.vel[2] += part.accel[2] * dts;
 
     // Color, size, rot - explicitly computed
     VMath.v4Copy(part.color, temp_color);
@@ -281,11 +289,14 @@ class ParticleSystem {
     let rot = part.rot + part.age * part.rot_vel;
 
     // TODO: draw using:
-    //   def.texture.texture
-    //   temp_color
-    //   temp_size
-    //   part.pos
     //   rot
+    let w = part.size[0];
+    let h = part.size[1];
+    let x = part.pos[0] - w/2;
+    let y = part.pos[1] - h/2;
+    let z = part.pos[2];
+    this.parent.draw_list.queueraw(def.texture.texture, x, y, z, w, h, 0, 0, 1, 1,
+      temp_color, rot, def.bucket);
 
     return false;
   }
@@ -297,16 +308,17 @@ class ParticleSystem {
       let part = parts[ii];
       let dt = this.kill_soft ? dt_orig * part.kill_time_accel : dt_orig;
       if (this.tickParticle(part, dt)) {
-        this.parts[ii] = this.parts[this.parts.length - 1];
-        this.parts.pop();
+        parts[ii] = parts[parts.length - 1];
+        parts.pop();
       }
     }
   }
 
   emitParticle(init_dt, emitter) {
-    let part_set = this.part_sets[emitter.part_idx];
+    let emitter_def = emitter.def;
+    let part_set = this.part_sets[emitter_def.part_idx];
     let def = part_set.def;
-    let pos = instValueVec(emitter.pos, 3);
+    let pos = instValueVec(emitter_def.pos, 3);
     VMath.v3Add(pos, this.pos, pos);
     // PERFTODO: Make the whole Particle just a data[] Float32Array
     let part = {
@@ -314,7 +326,7 @@ class ParticleSystem {
       pos,
       color: instValueVec(def.color, 4),
       size: instValueVec(def.size, 4),
-      vel: instValueVec(emitter.vel, 3),
+      vel: instValueVec(emitter_def.vel, 3),
       accel: instValueVec(def.accel, 3),
       rot: instValue(def.rot),
       rot_vel: instValue(def.rot_vel),
@@ -356,6 +368,7 @@ class ParticleSystem {
         emitter.countdown = instValue(def.emit_rate);
         this.emitParticle(remaining_dt, emitter);
       }
+      emitter.countdown -= emit_dt;
     }
   }
 
