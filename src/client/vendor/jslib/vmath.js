@@ -4421,11 +4421,11 @@ var VMath = {
         /*
         var qimaginary = q; // Use full quat directly to avoid copy
         var qw = q[3];
-        
+
         var s = (qw * qw) - VMath.v3Dot(qimaginary, qimaginary);
-        
+
         var r = VMath.v3ScalarMul(v, s);
-        
+
         s = VMath.v3Dot(qimaginary, v);
         r = VMath.v3Add(r, VMath.v3ScalarMul(qimaginary, s + s));
         r = VMath.v3Add(r, VMath.v3ScalarMul(VMath.v3Cross(qimaginary, v), qw + qw));

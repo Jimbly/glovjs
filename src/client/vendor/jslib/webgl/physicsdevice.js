@@ -1085,7 +1085,7 @@ var WebGLPhysicsTriangleArray = (function () {
 
         /*
         store pre-computed triangle information for ray tests
-        
+
         n0 n1 n2 - triangle normal
         v0 v1 v2 - triangle vertex
         u0 u1 u2 v0 v1 v2  - edge vectors

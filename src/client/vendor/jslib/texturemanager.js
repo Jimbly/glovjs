@@ -77,12 +77,12 @@ var TextureManager = (function () {
     }
     /**
     Adds external texture
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name add
-    
+
     @param {string} name Name of the texture
     @param {Texture} texture Texture
     */
@@ -103,14 +103,14 @@ var TextureManager = (function () {
 
     /**
     Get texture created from a given file or with the given name
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name get
-    
+
     @param {string} path Path or name of the texture
-    
+
     @return {Texture} object, returns the default texture if the texture is not yet loaded or the file didn't exist
     */
     TextureManager.prototype.get = function (path) {
@@ -130,16 +130,16 @@ var TextureManager = (function () {
 
     /**
     Creates texture from an image file
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name load
-    
+
     @param {string} path Path to the image file
     @param {boolean} nomipmaps True to disable mipmaps
     @param {function()} onTextureLoaded function to call once the texture is loaded
-    
+
     @return {Texture} object, returns the default Texture if the file at given path is not yet loaded
     */
     TextureManager.prototype.load = function (path, nomipmaps, onTextureLoaded) {
@@ -226,12 +226,12 @@ var TextureManager = (function () {
 
     /**
     Alias one texture to another name
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name map
-    
+
     @param {string} dst Name of the alias
     @param {string} src Name of the texture to be aliased
     */
@@ -247,12 +247,12 @@ var TextureManager = (function () {
 
     /**
     Removes a texture from the manager
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name remove
-    
+
     @param {string} path Path or name of the texture
     */
     TextureManager.prototype.remove = function (path) {
@@ -266,12 +266,12 @@ var TextureManager = (function () {
 
     /**
     Loads a textures archive
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name loadArchive
-    
+
     @param {string} path Path to the archive file
     @param {boolean} nomipmaps True to disable mipmaps
     */
@@ -397,14 +397,14 @@ var TextureManager = (function () {
 
     /**
     Check if an archive is not pending
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name isArchiveLoaded
-    
+
     @param {string} path Path or name of the archive
-    
+
     @return {boolean}
     */
     TextureManager.prototype.isArchiveLoaded = function (path) {
@@ -413,12 +413,12 @@ var TextureManager = (function () {
 
     /**
     Removes a textures archive and all the textures it references.
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name removeArchive
-    
+
     @param {string} path Path of the archive file
     */
     TextureManager.prototype.removeArchive = function (path) {
@@ -436,12 +436,12 @@ var TextureManager = (function () {
 
     /**
     Get object containing all loaded textures
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name getAll
-    
+
     @return {object}
     */
     TextureManager.prototype.getAll = function () {
@@ -450,12 +450,12 @@ var TextureManager = (function () {
 
     /**
     Get number of textures pending
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name getNumLoadingTextures
-    
+
     @return {number}
     */
     TextureManager.prototype.getNumPendingTextures = function () {
@@ -464,14 +464,14 @@ var TextureManager = (function () {
 
     /**
     Check if a texture is not pending
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name isTextureLoaded
-    
+
     @param {string} path Path or name of the texture
-    
+
     @return {boolean}
     */
     TextureManager.prototype.isTextureLoaded = function (path) {
@@ -480,14 +480,14 @@ var TextureManager = (function () {
 
     /**
     Check if a texture is missing
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name isTextureMissing
-    
+
     @param {string} path Path or name of the texture
-    
+
     @return {boolean}
     */
     TextureManager.prototype.isTextureMissing = function (path) {
@@ -496,12 +496,12 @@ var TextureManager = (function () {
 
     /**
     Set path remapping dictionary
-    
+
     @memberOf TextureManager.prototype
     @public
     @function
     @name setPathRemapping
-    
+
     @param {string} prm Path remapping dictionary
     @param {string} assetUrl Asset prefix for all assets loaded
     */
@@ -556,11 +556,11 @@ var TextureManager = (function () {
 
     TextureManager.create = /**
     @constructs Constructs a TextureManager object.
-    
+
     @param {GraphicsDevice} graphicsDevice Graphics device
     @param {Texture} dt Default texture
     @param {Element} log Logging element
-    
+
     @return {TextureManager} object, null if failed
     */
     function (graphicsDevice, requestHandler, dt, errorCallback, log) {

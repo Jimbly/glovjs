@@ -15,12 +15,12 @@ var ShaderManager = (function () {
 
     ShaderManager.create = /**
     @constructs Constructs a ShaderManager object.
-    
+
     @param {GraphicsDevice} gd Graphics device
     @param {RequestHandler} rh RequestHandler device
     @param {Shader} ds Default shader
     @param {Element} log Logging element
-    
+
     @return {ShaderManager} object, null if failed
     */
     function (gd, rh, ds, errorCallback, log) {
@@ -140,14 +140,14 @@ var ShaderManager = (function () {
 
         /**
         Creates shader from an cgfx file
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name load
-        
+
         @param {string} path Path to the cgfx file
-        
+
         @return {Shader} object, returns the default shader if the file at given path is not yet loaded
         */
         var loadShader = function loadShaderFn(path, onShaderLoaded) {
@@ -213,12 +213,12 @@ var ShaderManager = (function () {
 
         /**
         Alias one shader to another name
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name map
-        
+
         @param {string} dst Name of the alias
         @param {string} src Name of the shader to be aliased
         */
@@ -228,14 +228,14 @@ var ShaderManager = (function () {
 
         /**
         Get shader created from a given shader file or with the given name
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name get
-        
+
         @param {string} path Path or name of the shader
-        
+
         @return {Shader} object, returns the default shader if the shader is not yet loaded or the shader file didn't exist
         */
         var getShader = function getShaderFn(path) {
@@ -248,12 +248,12 @@ var ShaderManager = (function () {
 
         /**
         Removes a shader from the manager
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name remove
-        
+
         @param {string} path Path or name of the shader
         */
         var removeShader = function removeShaderFn(path) {
@@ -264,12 +264,12 @@ var ShaderManager = (function () {
 
         /**
         Reloads a shader
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name reload
-        
+
         @param {string} path Path or name of the shader
         */
         var reloadShader = function reloadShaderFn(path, callback) {
@@ -314,7 +314,7 @@ var ShaderManager = (function () {
 
         /**
         Reloads all shaders
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
@@ -330,12 +330,12 @@ var ShaderManager = (function () {
 
         /**
         Get object containing all loaded shaders
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name getAll
-        
+
         @return {object}
         */
         sm.getAll = function getAllShadersFn() {
@@ -344,12 +344,12 @@ var ShaderManager = (function () {
 
         /**
         Get number of shaders pending
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name getNumLoadingShaders
-        
+
         @return {number}
         */
         sm.getNumPendingShaders = function getNumPendingShadersFn() {
@@ -358,14 +358,14 @@ var ShaderManager = (function () {
 
         /**
         Check if a shader is not pending
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name isShaderLoaded
-        
+
         @param {string} path Path or name of the shader
-        
+
         @return {boolean}
         */
         sm.isShaderLoaded = function isShaderLoadedFn(path) {
@@ -374,14 +374,14 @@ var ShaderManager = (function () {
 
         /**
         Check if a shader is missing
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name isShaderMissing
-        
+
         @param {string} path Path or name of the shader
-        
+
         @return {boolean}
         */
         sm.isShaderMissing = function isShaderMissingFn(path) {
@@ -390,12 +390,12 @@ var ShaderManager = (function () {
 
         /**
         Set path remapping dictionary
-        
+
         @memberOf ShaderManager.prototype
         @public
         @function
         @name setPathRemapping
-        
+
         @param {string} prm Path remapping dictionary
         @param {string} assetUrl Asset prefix for all assets loaded
         */

@@ -70,13 +70,13 @@ var debug = {
         return true;
     },
     isVec2: function debugIsVec2Fn(v) {
-        return (2 === v.length);
+        return (2 <= v.length);
     },
     isVec3: function debugIsVec3Fn(v) {
-        return (3 === v.length);
+        return (3 <= v.length);
     },
     isVec4: function debugIsVec4Fn(v) {
-        return (4 === v.length);
+        return (4 <= v.length);
     },
     isAABB: function debugIsAABBFn(v) {
         return (6 === v.length);

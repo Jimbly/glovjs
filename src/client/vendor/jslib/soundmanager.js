@@ -53,7 +53,7 @@ var SoundManager = (function () {
 
     SoundManager.create = /**
     @constructs Constructs a SoundManager object.
-    
+
     @return {SoundManager} object, null if failed
     */
     function (sd, rh, ds, errorCallback, log) {
@@ -95,16 +95,16 @@ var SoundManager = (function () {
 
         /**
         Loads a sound
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name load
-        
+
         @param {string} path Path to the sound file
         @param {boolean} uncompress Uncompress the sound for faster playback
         @param {function()} onSoundLoaded function called once the sound has loaded
-        
+
         @return {Sound} object, returns the default sound if the file at given path is not yet loaded
         */
         var loadSound = function loadSoundFn(path, uncompress, onSoundLoaded) {
@@ -164,12 +164,12 @@ var SoundManager = (function () {
 
         /**
         Alias one sound to another name
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name map
-        
+
         @param {string} dst Name of the alias
         @param {string} src Name of the sound to be aliased
         */
@@ -179,14 +179,14 @@ var SoundManager = (function () {
 
         /**
         Get sound created from a given sound file or with the given name
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name get
-        
+
         @param {string} path Path or name of the sound
-        
+
         @return {Sound} object, returns the default sound if the sound is not yet loaded or the sound file didn't exist
         */
         var getSound = function getSoundFn(path) {
@@ -199,12 +199,12 @@ var SoundManager = (function () {
 
         /**
         Removes a sound from the manager
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name remove
-        
+
         @param {string} path Path or name of the sound
         */
         var removeSound = function removeSoundFn(path) {
@@ -215,12 +215,12 @@ var SoundManager = (function () {
 
         /**
         Reloads a sound
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name reload
-        
+
         @param {string} path Path or name of the sound
         */
         var reloadSound = function reloadSoundFn(path) {
@@ -265,7 +265,7 @@ var SoundManager = (function () {
 
         /**
         Reloads all sounds
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
@@ -281,12 +281,12 @@ var SoundManager = (function () {
 
         /**
         Get object containing all loaded sounds
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name getAll
-        
+
         @return {object}
         */
         sm.getAll = function getAllSoundsFn() {
@@ -295,12 +295,12 @@ var SoundManager = (function () {
 
         /**
         Get number of sounds pending
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name getNumLoadingSounds
-        
+
         @return {number}
         */
         sm.getNumPendingSounds = function getNumPendingSoundsFn() {
@@ -309,14 +309,14 @@ var SoundManager = (function () {
 
         /**
         Check if a sound is not pending
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name isSoundLoaded
-        
+
         @param {string} path Path or name of the sound
-        
+
         @return {boolean}
         */
         sm.isSoundLoaded = function isSoundLoadedFn(path) {
@@ -325,14 +325,14 @@ var SoundManager = (function () {
 
         /**
         Check if a sound is missing
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name isSoundMissing
-        
+
         @param {string} path Path or name of the sound
-        
+
         @return {boolean}
         */
         sm.isSoundMissing = function isSoundMissingFn(path) {
@@ -341,12 +341,12 @@ var SoundManager = (function () {
 
         /**
         Set path remapping dictionary
-        
+
         @memberOf SoundManager.prototype
         @public
         @function
         @name setPathRemapping
-        
+
         @param {string} prm Path remapping dictionary
         @param {string} assetUrl Asset prefix for all assets loaded
         */

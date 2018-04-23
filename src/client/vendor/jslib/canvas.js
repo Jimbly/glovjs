@@ -1674,7 +1674,7 @@ var CanvasContext = (function () {
         mipmaps    : false,
         renderable : true
         });
-        
+
         this.renderTarget = gd.createRenderTarget({
         colorTexture0 : this.renderTexture
         });

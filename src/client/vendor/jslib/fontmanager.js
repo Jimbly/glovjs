@@ -435,10 +435,10 @@ var FontManager = (function () {
 
     FontManager.create = /**
     @constructs Constructs a FontManager object.
-    
+
     @param {GraphicsDevice} gd Graphics device
     @param {RequestHandler} rh RequestHandler object
-    
+
     @return {FontManager} object, null if failed
     */
     function (gd, rh, df, errorCallback, log) {
@@ -1603,15 +1603,15 @@ var FontManager = (function () {
 
         /**
         Creates a font from an '.fnt' or '.fontdat'file and its associated image file
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name load
-        
+
         @param {string} path Path to the font file without the extension
         @param {function} onFontLoaded function to call once the font has loaded
-        
+
         @return {object} Font object if it exists, undefined otherwise
         */
         var loadFont = function loadFontFn(path, onFontLoaded) {
@@ -1803,12 +1803,12 @@ var FontManager = (function () {
 
         /**
         Alias one font to another name
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name map
-        
+
         @param {string} dst Name of the alias
         @param {string} src Name of the font to be aliased
         */
@@ -1819,12 +1819,12 @@ var FontManager = (function () {
 
         /**
         Removes a font from the manager
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name remove
-        
+
         @param {string} path Path or name of the font
         */
         var removeFont = function removeFontFn(path) {
@@ -1864,12 +1864,12 @@ var FontManager = (function () {
 
         /**
         Get object containing all loaded fonts data
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name getAll
-        
+
         @return {object}
         */
         fm.getAll = function getAllFontsFn() {
@@ -1878,12 +1878,12 @@ var FontManager = (function () {
 
         /**
         Get number of fonts pending
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name getNumLoadingFonts
-        
+
         @return {number}
         */
         fm.getNumPendingFonts = function getNumPendingFontsFn() {
@@ -1892,14 +1892,14 @@ var FontManager = (function () {
 
         /**
         Check if a font is not pending
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name isFontLoaded
-        
+
         @param {string} path Path or name of the font
-        
+
         @return {boolean}
         */
         fm.isFontLoaded = function isFontLoadedFn(path) {
@@ -1908,14 +1908,14 @@ var FontManager = (function () {
 
         /**
         Check if a font is missing
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name isFontMissing
-        
+
         @param {string} path Path or name of the font
-        
+
         @return {boolean}
         */
         fm.isFontMissing = function isFontMissingFn(path) {
@@ -1924,12 +1924,12 @@ var FontManager = (function () {
 
         /**
         Set path remapping dictionary
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name setPathRemapping
-        
+
         @param {string} prm Path remapping dictionary
         @param {string} assetUrl Asset prefix for all assets loaded
         */
@@ -1940,17 +1940,17 @@ var FontManager = (function () {
 
         /**
         Calculate text dimensions
-        
+
         @memberOf FontManager.prototype
         @public
         @function
         @name calculateTextDimensions
-        
+
         @param {string} path Name of the font
         @param {string} text Text to calculate dimensions for
         @param {number} scale Text scale
         @param {number} spacing Extra spacing between characters
-        
+
         @return {object} Width and height of the text
         */
         fm.calculateTextDimensions = function calculateTextDimensionsFn(path, text, scale, spacing) {
@@ -1976,7 +1976,7 @@ var FontManager = (function () {
 
         /**
         Destroy font manager
-        
+
         @memberOf FontManager.prototype
         @public
         @function
