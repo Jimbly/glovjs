@@ -7,9 +7,11 @@
 
 const local_storage = require('./local_storage.js');
 local_storage.storage_prefix = 'turbulenz-playground';
+const particle_data = require('./particle_data.js');
 window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
+Z.PARTICLES = 20;
 
 // Virtual viewport for our game logic
 const game_width = 1280;
@@ -61,43 +63,45 @@ export function main(canvas)
   let game_state;
 
   let sprites = {};
-  const spriteSize = 64;
+  const sprite_size = 64;
   function initGraphics() {
     if (sprites.white) {
       return;
     }
 
+    // Preload all referenced particle textures
+    for (let key in particle_data.defs) {
+      let def = particle_data.defs[key];
+      for (let part_name in def.particles) {
+        let part_def = def.particles[part_name];
+        loadTexture(part_def.texture);
+      }
+    }
+
     sound_manager.loadSound('test');
-    loadTexture('test.png');
 
-    sprites.white = createSprite('white', {
-      width : 1,
-      height : 1,
-      x : 0,
-      y : 0,
-      rotation : 0,
-      color : math_device.v4Build(1,1,1,1),
-      origin: math_device.v2Build(0, 0),
-      textureRectangle : math_device.v4Build(0, 0, 1, 1)
-    });
+    const origin_0_0 = { origin: math_device.v2Build(0, 0) };
 
-    sprites.test = createSprite('test.png', {
-      width : spriteSize,
-      height : spriteSize,
-      rotation : 0,
-      color : [1,1,1,1],
-      textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
-    });
+    function loadSprite(file, u, v, params) {
+      params = params || {};
+      return createSprite(file, {
+        width: params.width || 1,
+        height: params.height || 1,
+        rotation: params.rotation || 0,
+        color: params.color || color_white,
+        origin: params.origin || undefined,
+        textureRectangle: math_device.v4Build(0, 0, u, v),
+      });
+    }
 
-    sprites.game_bg = createSprite('white', {
+    sprites.white = loadSprite('white', 1, 1, origin_0_0);
+
+    sprites.test = loadSprite('test.png', sprite_size, sprite_size);
+
+    sprites.game_bg = loadSprite('white', 1, 1, {
       width : game_width,
       height : game_height,
-      x : 0,
-      y : 0,
-      rotation : 0,
-      color : [0, 0.72, 1, 1],
       origin: [0, 0],
-      textureRectangle : math_device.v4Build(0, 0, spriteSize, spriteSize)
     });
   }
 
@@ -167,8 +171,8 @@ export function main(canvas)
     if (!test.color_sprite) {
       test.color_sprite = math_device.v4Copy(color_white);
       test.character = {
-        x : (Math.random() * (game_width - spriteSize) + (spriteSize * 0.5)),
-        y : (Math.random() * (game_height - spriteSize) + (spriteSize * 0.5)),
+        x : (Math.random() * (game_width - sprite_size) + (sprite_size * 0.5)),
+        y : (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
       };
     }
 
@@ -188,10 +192,10 @@ export function main(canvas)
     test.character.x += test.character.dx * dt * 0.2;
     test.character.y += test.character.dy * dt * 0.2;
     let bounds = {
-      x: test.character.x - spriteSize/2,
-      y: test.character.y - spriteSize/2,
-      w: spriteSize,
-      h: spriteSize,
+      x: test.character.x - sprite_size/2,
+      y: test.character.y - sprite_size/2,
+      w: sprite_size,
+      h: sprite_size,
     };
     if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)) {
       math_device.v4Copy(color_yellow, test.color_sprite);
@@ -207,7 +211,7 @@ export function main(canvas)
     }
 
     draw_list.queue(sprites.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
-    draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, null, null, 0, 'alpha');
+    draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, [sprite_size, sprite_size], null, 0, 'alpha');
 
     let font_test_idx = 0;
 
