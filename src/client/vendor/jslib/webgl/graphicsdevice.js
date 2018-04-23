@@ -172,7 +172,7 @@ var TZWebGLTexture = (function () {
 
         var numLevels, generateMipMaps;
         if (this.mipmaps) {
-            if (data instanceof Image) {
+            if (data instanceof Image || data instanceof HTMLCanvasElement) {
                 numLevels = 1;
                 generateMipMaps = true;
             } else {
@@ -187,12 +187,14 @@ var TZWebGLTexture = (function () {
         var format = this.format;
         var internalFormat, gltype, srcStep, bufferData = null;
         var compressedTexturesExtension;
+        // JE: maybe data.src was just checking if it's an Image element?  Also skip canvas elements
+        var is_buffer = data && !data.src && !(data instanceof HTMLCanvasElement);
 
         if (format === gd.PIXELFORMAT_A8) {
             internalFormat = gl.ALPHA;
             gltype = gl.UNSIGNED_BYTE;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint8Array) {
                     bufferData = data;
                 } else {
@@ -203,7 +205,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.LUMINANCE;
             gltype = gl.UNSIGNED_BYTE;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint8Array) {
                     bufferData = data;
                 } else {
@@ -214,7 +216,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.LUMINANCE_ALPHA;
             gltype = gl.UNSIGNED_BYTE;
             srcStep = 2;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint8Array) {
                     bufferData = data;
                 } else {
@@ -225,7 +227,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.RGBA;
             gltype = gl.UNSIGNED_SHORT_5_5_5_1;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint16Array) {
                     bufferData = data;
                 } else {
@@ -236,7 +238,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.RGB;
             gltype = gl.UNSIGNED_SHORT_5_6_5;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint16Array) {
                     bufferData = data;
                 } else {
@@ -247,7 +249,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.RGBA;
             gltype = gl.UNSIGNED_SHORT_4_4_4_4;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint16Array) {
                     bufferData = data;
                 } else {
@@ -258,7 +260,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.RGBA;
             gltype = gl.UNSIGNED_BYTE;
             srcStep = 4;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint8Array) {
                     if (typeof Uint8ClampedArray !== "undefined" && data instanceof Uint8ClampedArray) {
                         bufferData = new Uint8Array(data.buffer);
@@ -273,7 +275,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.RGB;
             gltype = gl.UNSIGNED_BYTE;
             srcStep = 3;
-            if (data && !data.src) {
+            if (is_buffer) {
                 if (data instanceof Uint8Array) {
                     if (typeof Uint8ClampedArray !== "undefined" && data instanceof Uint8ClampedArray) {
                         bufferData = new Uint8Array(data.buffer);
@@ -291,7 +293,7 @@ var TZWebGLTexture = (function () {
             internalFormat = gl.DEPTH_STENCIL;
             gltype = gl.UNSIGNED_INT;
             srcStep = 1;
-            if (data && !data.src) {
+            if (is_buffer) {
                 bufferData = new Uint32Array(data);
             }
         } else if (format === gd.PIXELFORMAT_DXT1 || format === gd.PIXELFORMAT_DXT3 || format === gd.PIXELFORMAT_DXT5) {
@@ -312,7 +314,7 @@ var TZWebGLTexture = (function () {
                     return;
                 }
 
-                if (data && !data.src) {
+                if (is_buffer) {
                     if (data instanceof Uint8Array) {
                         bufferData = data;
                     } else {
@@ -791,8 +793,29 @@ var TZWebGLTexture = (function () {
                 }
             }
 
+            function isPowerOfTwo(n) {
+                return (0 === (n & (n - 1)));
+            }
+            function nextHighestPowerOfTwo(x) {
+                --x;
+                for (var i = 1; i < 32; i <<= 1) {
+                    x = x | x >> i;
+                }
+                return x + 1;
+            }
+
             var img = new Image();
             var imageLoaded = function imageLoadedFn() {
+                // JE: Auto-resize to power of two
+                if (!isPowerOfTwo(img.width) || !isPowerOfTwo(img.height)) {
+                    // Expand up the texture to the next highest power of two dimensions.
+                    var canvas = document.createElement("canvas");
+                    canvas.width = nextHighestPowerOfTwo(img.width);
+                    canvas.height = nextHighestPowerOfTwo(img.height);
+                    var ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    img = canvas;
+                }
                 tex.width = img.width;
                 tex.height = img.height;
                 tex.depth = 1;
