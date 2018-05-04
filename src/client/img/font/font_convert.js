@@ -1,5 +1,5 @@
 const fs = require('fs');
-const parser = require('../../../../../../SRCSVN/libUtil/utilParser.js');
+const parser = require('../../../../../../SRCSVN/GLOV/libUtil/utilParser.js');
 
 let file_in = process.argv.slice(-1)[0];
 console.log(`Reading ${file_in}...`);

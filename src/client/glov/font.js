@@ -231,7 +231,10 @@ class GlovFont {
     // build lookup
     this.char_infos = [];
     for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
-      this.char_infos[font_info.char_infos[ii].c] = font_info.char_infos[ii];
+      let char_info = font_info.char_infos[ii];
+      this.char_infos[font_info.char_infos[ii].c] = char_info;
+      char_info.xpad = char_info.xpad || 0;
+      char_info.yoffs = char_info.yoffs || 0;
     }
 
     this.default_style = new GlovFontStyle();
@@ -334,7 +337,7 @@ class GlovFont {
     let xsc = x_size / this.font_info.font_size;
     let x_advance = this.calcXAdvance(xsc);
     if (char_info) {
-      return char_info.w * xsc + x_advance;
+      return (char_info.w + char_info.xpad) * xsc + x_advance;
     }
     return 0;
   }
@@ -351,7 +354,7 @@ class GlovFont {
         char_info = this.infoFromChar(13);
       }
       if (char_info) {
-        ret += char_info.w * xsc + x_advance;
+        ret += (char_info.w + char_info.xpad) * xsc + x_advance;
       }
     }
     return ret;
@@ -364,7 +367,8 @@ class GlovFont {
     let word_x0 = 0;
     let x = word_x0;
     let linenum = 0;
-    let space_size = this.infoFromChar(32).w * xsc; // ' '
+    let space_info = this.infoFromChar(32); // ' '
+    let space_size = (space_info.w + space_info.xpad) * xsc;
     let hard_wrap = false;
     let x_advance = this.calcXAdvance(xsc);
 
@@ -384,7 +388,7 @@ class GlovFont {
         }
         if (char_info)
         {
-          char_w = char_info.w * xsc + x_advance;
+          char_w = (char_info.w + char_info.xpad) * xsc + x_advance;
           newx = x + char_w;
         }
       }
@@ -570,12 +574,12 @@ class GlovFont {
           let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let elem = this.draw_list.queueraw(
-            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2], z, w, h,
+            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc, z, w, h,
             u0, v0, u1, v1,
             buildVec4ColorFromIntColor(applied_style.color), 0, this.blend_mode);
           elem.tech_params = techParamsGet();
 
-          x += char_info.w * xsc + x_advance;
+          x += (char_info.w + char_info.xpad) * xsc + x_advance;
         }
       }
     }
