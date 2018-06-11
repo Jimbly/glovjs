@@ -519,7 +519,7 @@ class GlovFont {
     if (value[2] > 0) {
       value[2] = 0;
     }
-    let padding1 = applied_style.outline_width*font_texel_scale*avg_scale_combined;
+    let padding1 = Math.max(1, applied_style.outline_width*font_texel_scale*avg_scale_combined);
     let padding4 = [padding1, padding1, padding1, padding1];
 
     techParamsSet('param0', value);
