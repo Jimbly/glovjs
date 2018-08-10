@@ -6,16 +6,18 @@
 /*global Z: false */
 
 const local_storage = require('./local_storage.js');
-local_storage.storage_prefix = 'turbulenz-playground';
 const particle_data = require('./particle_data.js');
+
+local_storage.storage_prefix = 'turbulenz-playground';
 window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
 
+let app = exports;
 // Virtual viewport for our game logic
-const game_width = 1280;
-const game_height = 960;
+export const game_width = 1280;
+export const game_height = 960;
 
 export function main(canvas)
 {
@@ -282,7 +284,7 @@ export function main(canvas)
     let load_count = glov_sprite.loading() + sound_manager.loading();
     $('#loading').text(`Loading (${load_count})...`);
     if (!load_count) {
-      game_state = testInit;
+      app.game_state = testInit;
     }
   }
 
@@ -290,14 +292,14 @@ export function main(canvas)
     initGraphics();
     $('.screen').hide();
     $('#title').show();
-    game_state = loading;
+    app.game_state = loading;
     loading();
   }
 
-  game_state = loadingInit;
+  app.game_state = loadingInit;
 
   function tick(dt) {
-    game_state(dt);
+    app.game_state(dt);
   }
 
   loadingInit();
