@@ -109,54 +109,15 @@ class GlovUIEditBox {
 GlovUIEditBox.prototype.SUBMIT = 'submit';
 
 class GlovUI {
-  buildRects(ws, hs) {
-    let rects = [];
-    let total_w = 0;
-    for (let ii = 0; ii < ws.length; ++ii) {
-      total_w += ws[ii];
-    }
-    let percents_w = [];
-    for (let ii = 0; ii < ws.length; ++ii) {
-      percents_w.push(ws[ii] / total_w);
-    }
-    let total_h = 0;
-    for (let ii = 0; ii < hs.length; ++ii) {
-      total_h += hs[ii];
-    }
-    let percents_h = [];
-    for (let ii = 0; ii < hs.length; ++ii) {
-      percents_h.push(hs[ii] / total_h);
-    }
-    let y = 0;
-    for (let jj = 0; jj < hs.length; ++jj) {
-      let x = 0;
-      for (let ii = 0; ii < ws.length; ++ii) {
-        let r = math_device.v4Build(x, y, x + ws[ii], y + hs[jj]);
-        rects.push(r);
-        x += ws[ii];
-      }
-      y += hs[jj];
-    }
-    return {
-      rects,
-      percents_w,
-      percents_h,
-      total_w,
-      total_h,
-    };
-  }
-
   loadSpriteRect(filename, widths, heights) {
-    let uidata = this.buildRects(widths, heights);
-    let sprite = this.glov_sprite.createSprite(filename, {
+    return this.glov_sprite.createSprite(filename, {
       width : 1,
       height : 1,
       rotation : 0,
-      textureRectangle : math_device.v4Build(0, 0, uidata.total_w, uidata.total_h),
+      u: widths,
+      v: heights,
       origin: [0,0],
     });
-    sprite.uidata = uidata;
-    return sprite;
   }
 
   makeColorSet(color) {
@@ -192,14 +153,16 @@ class GlovUI {
       width : 1,
       height : 1,
       origin: [0, 0],
-      textureRectangle : math_device.v4Build(0, 0, 1, 1)
+      u: 1,
+      v: 1,
     });
     ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
       let size = (key === 'hollow_circle') ? 128 : 32;
       sprites[key] = glov_sprite.createSprite(`glov/util_${key}.png`, {
         width : 1,
         height : 1,
-        textureRectangle : math_device.v4Build(0, 0, size, size)
+        u: size,
+        v: size,
       });
     });
 

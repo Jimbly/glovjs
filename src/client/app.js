@@ -42,6 +42,7 @@ export function main(canvas)
 
   const loadTexture = glov_sprite.loadTexture.bind(glov_sprite);
   const createSprite = glov_sprite.createSprite.bind(glov_sprite);
+  const createAnimation = glov_sprite.createAnimation.bind(glov_sprite);
 
   glov_ui.bindSounds(sound_manager, {
     button_click: 'button_click',
@@ -92,13 +93,22 @@ export function main(canvas)
         rotation: params.rotation || 0,
         color: params.color || color_white,
         origin: params.origin || undefined,
-        textureRectangle: math_device.v4Build(0, 0, u, v),
+        u: u,
+        v: v,
       });
     }
 
     sprites.white = loadSprite('white', 1, 1, origin_0_0);
 
     sprites.test = loadSprite('test.png', sprite_size, sprite_size);
+    sprites.test_animated = loadSprite('test_sprite.png', [13, 13], [13, 13]);
+    sprites.animation = createAnimation({
+      idle: {
+        frames: [0,1,2],
+        times: 200,
+      }
+    });
+    sprites.animation.setState('idle');
 
     sprites.game_bg = loadSprite('white', 1, 1, {
       width : game_width,
@@ -216,7 +226,15 @@ export function main(canvas)
     }
 
     draw_list.queue(sprites.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
-    draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, [sprite_size, sprite_size], null, 0, 'alpha');
+    //draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, [sprite_size, sprite_size], null, 0, 'alpha');
+    sprites.test_animated.draw({
+      x: test.character.x,
+      y: test.character.y,
+      z: Z.SPRITES,
+      color: test.color_sprite,
+      size: [sprite_size, sprite_size],
+      frame: sprites.animation.getFrame(dt),
+    });
 
     let font_test_idx = 0;
 
