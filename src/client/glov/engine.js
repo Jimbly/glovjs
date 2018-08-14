@@ -24,6 +24,8 @@ export function getFrameTimestamp() {
   return global_timer;
 }
 
+export let pico8_colors;
+
 export function startup(params) {
   TurbulenzEngine = WebGLTurbulenzEngine.create({
     canvas: params.canvas,
@@ -65,6 +67,25 @@ export function startup(params) {
   glov_ui = require('./ui.js').create(glov_sprite, glov_input, font, draw_list);
 
   glov_camera.set2DAspectFixed(game_width, game_height);
+
+  pico8_colors = [
+    math_device.v4Build(0, 0, 0, 1),
+    math_device.v4Build(0.114, 0.169, 0.326, 1),
+    math_device.v4Build(0.494, 0.145, 0.326, 1),
+    math_device.v4Build(0.000, 0.529, 0.328, 1),
+    math_device.v4Build(0.671, 0.322, 0.212, 1),
+    math_device.v4Build(0.373, 0.341, 0.310, 1),
+    math_device.v4Build(0.761, 0.765, 0.780, 1),
+    math_device.v4Build(1.000, 0.945, 0.910, 1),
+    math_device.v4Build(1.000, 0.000, 0.302, 1),
+    math_device.v4Build(1.000, 0.639, 0.000, 1),
+    math_device.v4Build(1.000, 0.925, 0.153, 1),
+    math_device.v4Build(0.000, 0.894, 0.212, 1),
+    math_device.v4Build(0.161, 0.678, 1.000, 1),
+    math_device.v4Build(0.514, 0.463, 0.612, 1),
+    math_device.v4Build(1.000, 0.467, 0.659, 1),
+    math_device.v4Build(1.000, 0.800, 0.667, 1),
+  ];
 }
 
 let render_targets = [];

@@ -32,7 +32,7 @@ export function main(canvas)
   });
 
   const sound_manager = glov_engine.sound_manager;
-  // const glov_camera = glov_engine.glov_camera;
+  const glov_camera = glov_engine.glov_camera;
   const glov_input = glov_engine.glov_input;
   const glov_sprite = glov_engine.glov_sprite;
   const glov_ui = glov_engine.glov_ui;
@@ -62,8 +62,6 @@ export function main(canvas)
   // Cache key_codes
   const key_codes = glov_input.key_codes;
   const pad_codes = glov_input.pad_codes;
-
-  let game_state;
 
   let sprites = {};
   const sprite_size = 64;
@@ -177,12 +175,6 @@ export function main(canvas)
 
   function test(dt) {
 
-    if (glov_ui.modal_dialog) {
-      // Testing effects
-      glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
-      glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
-    }
-
     if (!test.color_sprite) {
       test.color_sprite = math_device.v4Copy(color_white);
       test.character = {
@@ -215,7 +207,7 @@ export function main(canvas)
     if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)) {
       math_device.v4Copy(color_yellow, test.color_sprite);
     } else if (glov_input.clickHit(bounds)) {
-      math_device.v4Copy((test.color_sprite === color_red) ? color_white : color_red, test.color_sprite);
+      math_device.v4Copy((test.color_sprite[2] === 0) ? color_white : color_red, test.color_sprite);
       sound_manager.play('test');
     } else if (glov_input.isMouseOver(bounds)) {
       math_device.v4Copy(color_white, test.color_sprite);
@@ -292,24 +284,21 @@ export function main(canvas)
   }
 
   function testInit(dt) {
-    $('.screen').hide();
-    $('#title').show();
-    game_state = test;
+    app.game_state = test;
     test(dt);
   }
 
   function loading() {
     let load_count = glov_sprite.loading() + sound_manager.loading();
-    $('#loading').text(`Loading (${load_count})...`);
+    $('#loading_text').text(`Loading (${load_count})...`);
     if (!load_count) {
+      $('.screen').hide();
       app.game_state = testInit;
     }
   }
 
   function loadingInit() {
     initGraphics();
-    $('.screen').hide();
-    $('#title').show();
     app.game_state = loading;
     loading();
   }
@@ -317,6 +306,17 @@ export function main(canvas)
   app.game_state = loadingInit;
 
   function tick(dt) {
+    if (glov_ui.modal_dialog) {
+      // Testing effects during modal dialogs
+      glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
+      glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
+    }
+    // Borders
+    glov_ui.drawRect(glov_camera.x0(), glov_camera.y0(), glov_camera.x1(), 0, Z.BORDERS, glov_engine.pico8_colors[0]);
+    glov_ui.drawRect(glov_camera.x0(), game_height, glov_camera.x1(), glov_camera.y1(), Z.BORDERS, glov_engine.pico8_colors[0]);
+    glov_ui.drawRect(glov_camera.x0(), 0, 0, game_height, Z.BORDERS, glov_engine.pico8_colors[0]);
+    glov_ui.drawRect(game_width, 0, glov_camera.x1(), game_height, Z.BORDERS, glov_engine.pico8_colors[0]);
+
     app.game_state(dt);
   }
 

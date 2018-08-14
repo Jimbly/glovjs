@@ -19,6 +19,10 @@ export function clamp(v, mn, mx) {
   return Math.min(Math.max(mn, v), mx);
 }
 
+export function lerp(a, v0, v1) {
+  return (1 - a) * v0 + a * v1;
+}
+
 const EPSILON = 0.00001;
 
 // http://local.wasp.uwa.edu.au/~pbourke/geometry/sphereline/

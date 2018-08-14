@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
     <meta name="Description" content="Something useful here for Google" />
 
+    <meta property="og:title" content="Powered by GLOV.js">
+    <meta property="og:description" content="Something short for Facebook, shows immediately under Title text">
+    <!-- works for FB, maybe Twitter, maybe not: <meta property="og:image" content="img/facebook.png"> -->
+    <meta property="og:image" content="http://www.dashingstrike.com/LudumDare/LDXX/img/facebook.png"> <!-- full path definitely works for twitter, but took a while -->
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+
     <link rel="stylesheet" type="text/css" href="main.css">
   </head>
   <body>
@@ -74,14 +82,13 @@
           <div class="flexcenter" style="flex:1; text-align: center;"></div>
         </div> -->
       </div>
-
     </div>
-    <script src="vendor/jquery-3.2.1.min.js"></script>
     <script type="text/javascript">
       /* global window */
       window.TurbulenzEngine = {};
     </script>
-
+    <!-- build:js vendor/combined.js -->
+    <script src="vendor/jquery-3.2.1.min.js"></script>
     <script src="vendor/jslib/debug.js"></script>
     <script src="vendor/jslib/webgl/turbulenzengine.js"></script>
     <script src="vendor/jslib/webgl/graphicsdevice.js"></script>
@@ -98,6 +105,7 @@
     <script src="vendor/jslib/textureeffects.js"></script>
     <script src="vendor/jslib/webgl/mathdevice.js"></script>
     <script src="vendor/jslib/draw2d.js"></script>
+    <!-- endbuild -->
 
     <script src="wrapper.bundle.js"></script>
   </body>

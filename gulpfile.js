@@ -6,8 +6,12 @@ var browserify = require('browserify');
 var browser_sync = require('browser-sync');
 var buffer = require('vinyl-buffer');
 var gulp = require('gulp');
+var gulpif = require('gulp-if');
 var gutil = require('gulp-util');
 var jshint = require('gulp-jshint');
+var lazypipe = require('lazypipe');
+var useref = require('gulp-useref');
+var uglify = require('gulp-uglify');
 // var node_inspector = require('gulp-node-inspector');
 var nodemon = require('gulp-nodemon');
 var source = require('vinyl-source-stream');
@@ -21,8 +25,11 @@ var config = {
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
-  client_static: ['src/client/**/*.mp3', 'src/client/**/*.wav', 'src/client/**/*.ogg', 'src/client/**/*.png', 'src/client/**/vendor/**', '!src/client/sounds/Bfxr/**'],
+  client_static: ['src/client/**/*.mp3', 'src/client/**/*.wav', 'src/client/**/*.ogg', 'src/client/**/*.png', '!src/client/sounds/Bfxr/**'], // 'src/client/**/vendor/**',
 };
+
+var uglify_options = { keep_fnames : true };
+//var uglify_options = { compress : false }; // do no minification
 
 // gulp.task('inspect', function () {
 //   gulp.src([]).pipe(node_inspector({
@@ -51,10 +58,14 @@ gulp.task('jshint', function () {
 // client tasks
 gulp.task('client_html', function () {
   return gulp.src(config.client_html)
-    .pipe(gulp.dest('./build/client'))
     .pipe(jshint.extract('auto'))
     .pipe(jshint())
-    .pipe(jshint.reporter('default'));
+    .pipe(jshint.reporter('default'))
+    .pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
+    .pipe(gulpif('*.js', uglify(uglify_options)))
+    .pipe(sourcemaps.write('./')) // writes .map file
+    .pipe(gulp.dest('./build/client'))
+  ;
 });
 
 gulp.task('client_css', function () {
@@ -83,7 +94,8 @@ gulp.task('client_static', function () {
       .pipe(buffer())
       // optional, remove if you dont want sourcemaps
       .pipe(sourcemaps.init({loadMaps: true})) // loads map from browserify file
-         // Add transformation tasks to the pipeline here.
+      // Add transformation tasks to the pipeline here.
+      .pipe(uglify(uglify_options))
       .pipe(sourcemaps.write('./')) // writes .map file
       .pipe(gulp.dest('./build/client/'));
   }

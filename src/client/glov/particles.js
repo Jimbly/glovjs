@@ -2,6 +2,8 @@
 // Particle System Spec
 
 if (0) {
+  /*global glov_engine:false  */
+  /*global Z:false  */
 // Definitions
 // value = number or
 // value = [base, add_max] -> generates a number in the range [base, base + add_max)
@@ -190,7 +192,7 @@ let temp_color = VMath.v4BuildZero();
 let temp_color2 = VMath.v4BuildZero();
 let temp_size = VMath.v2BuildZero();
 let temp_size2 = VMath.v2BuildZero();
-let temp_pos = VMath.v3BuildZero();
+// let temp_pos = VMath.v3BuildZero();
 
 class ParticleSystem {
   constructor(parent, def, pos) {
@@ -283,7 +285,7 @@ class ParticleSystem {
       }
     }
 
-    let rot = part.rot + part.age * part.rot_vel;
+    // TODO: let rot = part.rot + part.age * part.rot_vel;
 
     // TODO: draw using:
     //   rot
