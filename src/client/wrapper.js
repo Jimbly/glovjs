@@ -3,6 +3,9 @@
   window.onerror = function (e, file, line) {
     debug.innerText = e + '\n  at ' + file + '(' + line + ')';
   };
+  window.debugmsg = function (msg) {
+    debug.innerText += msg + '\n';
+  };
 }());
 
 var canvasSupported = true;
@@ -47,10 +50,10 @@ window.onload = function () {
   canvas.focus();
 
   function resizeCanvas() {
-    var css_to_real = window.devicePixelRatio || 1;
-
-    canvas.width = Math.floor(canvas.clientWidth * css_to_real);
-    canvas.height = Math.floor(canvas.clientHeight * css_to_real);
+    // This happens in turbulenzengine.js:resizeCanvas() already:
+    // var css_to_real = window.devicePixelRatio || 1;
+    // canvas.width = Math.floor(canvas.parentNode.clientWidth * css_to_real);
+    // canvas.height = Math.floor(canvas.parentNode.clientHeight * css_to_real);
 
     // This used to be here, but it breaks mobile devices!
     // Might be needed to get gamepad input though?

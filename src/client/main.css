@@ -16,8 +16,10 @@ html, body {
 
 canvas {
   display: block; /* remove scrollbars */
-  width: 100vw;
-  height: 100vh;
+  width: 100%; /* for mobile, deals with canvas resize for top bar */
+  height: 100%;
+  /*width: 100vw;
+  height: 100vh;*/
 }
 
 #debug {

@@ -9,7 +9,8 @@ class GlovCamera {
       scaleMode : 'scale',
       viewportRectangle : math_device.v4Build(0, 0, 100, 100)
     };
-    this.data = new Draw2D.floatArray(6); // x0, y0, x1, y1, x_scale, y_scale
+    this.data = new Draw2D.floatArray(7); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
+    this.data[6] = window.devicePixelRatio || 1; /* css_to_real */
     this.set2D(0, 0, graphics_device.width, graphics_device.height);
     this.tick();
   }
@@ -49,13 +50,13 @@ class GlovCamera {
   }
 
   physicalToVirtual(dst, src) {
-    dst[0] = src[0] / this.data[4] + this.data[0];
-    dst[1] = src[1] / this.data[5] + this.data[1];
+    dst[0] = (src[0] * this.data[6] / this.data[4] + this.data[0]);
+    dst[1] = (src[1] * this.data[6] / this.data[5] + this.data[1]);
   }
 
   virtualToPhysical(dst, src) {
-    dst[0] = (src[0] - this.data[0]) * this.data[4];
-    dst[1] = (src[1] - this.data[1]) * this.data[5];
+    dst[0] = (src[0] - this.data[0]) * this.data[4] / this.data[6];
+    dst[1] = (src[1] - this.data[1]) * this.data[5] / this.data[6];
   }
 
   // Drawing area 0,0-w,h

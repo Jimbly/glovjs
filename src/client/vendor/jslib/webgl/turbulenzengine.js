@@ -557,8 +557,12 @@ var WebGLTurbulenzEngine = (function () {
                     canvas.height = window.innerHeight;
                 } else {
                     var parentNode = canvas.parentNode;
-                    canvas.width = parentNode.clientWidth;
-                    canvas.height = parentNode.clientHeight;
+
+                    // JE: Add scale by window.devicePixelRatio to get device pixels on mobile
+                    var css_to_real = window.devicePixelRatio || 1;
+
+                    canvas.width = Math.floor(parentNode.clientWidth * css_to_real);
+                    canvas.height = Math.floor(parentNode.clientHeight * css_to_real);
                 }
             };
 
