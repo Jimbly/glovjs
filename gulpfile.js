@@ -26,6 +26,7 @@ var config = {
   client_html: ['src/client/**/*.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
   client_static: ['src/client/**/*.mp3', 'src/client/**/*.wav', 'src/client/**/*.ogg', 'src/client/**/*.png', '!src/client/sounds/Bfxr/**'], // 'src/client/**/vendor/**',
+  client_vendor: ['src/client/**/vendor/**'],
 };
 
 var uglify_options = { keep_fnames : true };
@@ -135,6 +136,7 @@ gulp.task('watch', ['jshint', 'js', 'client_html', 'client_css', 'client_static'
   gulp.watch(config.js_files, ['js']);
   gulp.watch(config.all_js_files, ['jshint']);
   gulp.watch(config.client_html, ['client_html', 'bs-reload']);
+  gulp.watch(config.client_vendor, ['client_html', 'bs-reload']);
   gulp.watch(config.client_css, ['client_css']);
   gulp.watch(config.client_static, ['client_static', 'bs-reload']);
 });
