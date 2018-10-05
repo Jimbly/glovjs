@@ -7,9 +7,9 @@ var browser_sync = require('browser-sync');
 var buffer = require('vinyl-buffer');
 var gulp = require('gulp');
 var gulpif = require('gulp-if');
-var gutil = require('gulp-util');
 var jshint = require('gulp-jshint');
 var lazypipe = require('lazypipe');
+var log = require('fancy-log');
 var useref = require('gulp-useref');
 var uglify = require('gulp-uglify');
 // var node_inspector = require('gulp-node-inspector');
@@ -90,7 +90,7 @@ gulp.task('client_static', function () {
   function dobundle(b) {
     return b.bundle()
       // log errors if they happen
-      .on('error', gutil.log.bind(gutil, 'Browserify Error'))
+      .on('error', log.error.bind(log, 'Browserify Error'))
       .pipe(source('wrapper.bundle.js'))
       // optional, remove if you don't need to buffer file contents
       .pipe(buffer())
@@ -111,14 +111,14 @@ gulp.task('client_static', function () {
     dobundle(watched)
       .pipe(browser_sync.stream({ once: true }));
   });
-  watched.on('log', gutil.log); // output build logs to terminal
+  watched.on('log', log); // output build logs to terminal
   gulp.task('client_js_watch', function () {
     return dobundle(watched);
   });
 
   var nonwatched = browserify(opts);
   nonwatched.transform(babelify, babelify_opts);
-  nonwatched.on('log', gutil.log); // output build logs to terminal
+  nonwatched.on('log', log); // output build logs to terminal
   gulp.task('client_js', function () {
     return dobundle(nonwatched);
   });
