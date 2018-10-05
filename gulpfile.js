@@ -85,6 +85,7 @@ gulp.task('client_static', function () {
     entries: ['./src/client/wrapper.js'],
     debug: true
   };
+  var babelify_opts = { global: true }; // Required because dot-prop has ES6 code in it
   var opts = _.assign({}, watchify.args, customOpts);
   function dobundle(b) {
     return b.bundle()
@@ -102,7 +103,7 @@ gulp.task('client_static', function () {
   }
 
   var watched = watchify(browserify(opts));
-  watched.transform(babelify);
+  watched.transform(babelify, babelify_opts);
 
   watched.on('update', function () {
     console.log('Task:client_js_watch::update');
@@ -116,7 +117,7 @@ gulp.task('client_static', function () {
   });
 
   var nonwatched = browserify(opts);
-  nonwatched.transform(babelify);
+  nonwatched.transform(babelify, babelify_opts);
   nonwatched.on('log', gutil.log); // output build logs to terminal
   gulp.task('client_js', function () {
     return dobundle(nonwatched);

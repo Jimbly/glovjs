@@ -5,4 +5,3 @@ npm-debug.log
 build/
 *.sublime-workspace
 Bfxr
-package-lock.json
