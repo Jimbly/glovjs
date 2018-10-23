@@ -1322,9 +1322,9 @@ var Draw2D = (function () {
         var iindex = 0;
         while (iindex < ilimit) {
           var tex_list = textures[setIndex];
-          techniqueParameters['texture'] = tex_list[0];
+          techniqueParameters['tex0'] = tex_list[0];
           if (tex_list[1]) {
-            techniqueParameters['texture1'] = tex_list[1];
+            techniqueParameters['tex1'] = tex_list[1];
           }
 
           // number of indices remaining to render.
@@ -1668,7 +1668,7 @@ var Draw2D = (function () {
       'version': 1,
       'name': 'draw2D.cgfx',
       'samplers': {
-        'texture': {
+        'tex0': {
           'MinFilter': 9985/* LINEAR_MIPMAP_NEAREST */ ,
           'MagFilter': 9729/* LINEAR */ ,
           'WrapS': 33071 /* CLAMP_TO_EDGE */,
@@ -1697,10 +1697,10 @@ var Draw2D = (function () {
         'copyFlip': {
           'type': 'float'
         },
-        'texture': {
+        'tex0': {
           'type': 'sampler2D'
         },
-        'texture1': {
+        'tex1': {
           'type': 'sampler2D'
         },
         'inputTexture0': {
@@ -1710,7 +1710,7 @@ var Draw2D = (function () {
       'techniques': {
         'alpha': [
           {
-            'parameters': ['clipSpace', 'texture'],
+            'parameters': ['clipSpace', 'tex0'],
             'semantics': ['POSITION', 'COLOR', 'TEXCOORD0'],
             'states': {
               'DepthTestEnable': false,
@@ -1724,7 +1724,7 @@ var Draw2D = (function () {
         ],
         'additive': [
           {
-            'parameters': ['clipSpace', 'texture'],
+            'parameters': ['clipSpace', 'tex0'],
             'semantics': ['POSITION', 'COLOR', 'TEXCOORD0'],
             'states': {
               'DepthTestEnable': false,
@@ -1738,7 +1738,7 @@ var Draw2D = (function () {
         ],
         'alpha_tint': [
           {
-            'parameters': ['clipSpace', 'texture', 'texture1', 'color1'],
+            'parameters': ['clipSpace', 'tex0', 'tex1', 'color1'],
             'semantics': ['POSITION', 'COLOR', 'TEXCOORD0'],
             'states': {
               'DepthTestEnable': false,
@@ -1752,7 +1752,7 @@ var Draw2D = (function () {
         ],
         'additive_tint': [
           {
-            'parameters': ['clipSpace', 'texture', 'texture1', 'color1'],
+            'parameters': ['clipSpace', 'tex0', 'tex1', 'color1'],
             'semantics': ['POSITION', 'COLOR', 'TEXCOORD0'],
             'states': {
               'DepthTestEnable': false,
@@ -1819,10 +1819,10 @@ var Draw2D = (function () {
             tz_lowp,
             'varying TZ_LOWP vec4 tz_Color;',
             'varying vec4 tz_TexCoord[1];',
-            'uniform sampler2D texture;',
+            'uniform sampler2D tex0;',
             'void main()',
             '{',
-            '  vec4 _TMP0=texture2D(texture,tz_TexCoord[0].xy);',
+            '  vec4 _TMP0=texture2D(tex0,tz_TexCoord[0].xy);',
             '  gl_FragColor=tz_Color*_TMP0;',
             '}'
           ].join('\n')
@@ -1833,13 +1833,13 @@ var Draw2D = (function () {
             tz_lowp,
             'varying TZ_LOWP vec4 tz_Color;',
             'varying vec4 tz_TexCoord[1];',
-            'uniform sampler2D texture;',
-            'uniform sampler2D texture1;',
+            'uniform sampler2D tex0;',
+            'uniform sampler2D tex1;',
             'uniform vec4 color1;',
             'void main()',
             '{',
-            '  vec4 tex0 = texture2D(texture,tz_TexCoord[0].xy);',
-            '  vec2 tex1 = texture2D(texture1,tz_TexCoord[0].xy).rg;',
+            '  vec4 tex0 = texture2D(tex0,tz_TexCoord[0].xy);',
+            '  vec2 tex1 = texture2D(tex1,tz_TexCoord[0].xy).rg;',
             '  float value = dot(tex0.rgb, vec3(0.2, 0.5, 0.3));',
             '  vec3 valueR = value * tz_Color.rgb;',
             '  vec3 valueG = value * color1.rgb;',
@@ -1880,9 +1880,9 @@ var Draw2D = (function () {
         }
       }
     };
-    shader_def.samplers.texture1 = shader_def.samplers.texture;
+    shader_def.samplers.tex1 = shader_def.samplers.tex0;
     var shader_def_nearest = JSON.parse(JSON.stringify(shader_def));
-    shader_def_nearest.samplers.texture = shader_def_nearest.samplers.texture1 = {
+    shader_def_nearest.samplers.tex0 = shader_def_nearest.samplers.tex1 = {
       'MinFilter': 9728 /*NEAREST*/,// 9985/* LINEAR_MIPMAP_NEAREST */ ,
       'MagFilter': 9728 /*NEAREST*/,// 9729/* LINEAR */ ,
       'WrapS': 10497 /*REPEAT*/, // 33071 /* CLAMP_TO_EDGE */,
@@ -1915,7 +1915,7 @@ var Draw2D = (function () {
     // Blending techniques.
     o.techniqueParameters = gd.createTechniqueParameters({
       clipSpace: o.clipSpace,
-      texture: null
+      tex0: null
     });
 
     // Current render target
