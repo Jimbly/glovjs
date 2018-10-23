@@ -64,6 +64,7 @@ gulp.task('client_html', function () {
     .pipe(jshint.reporter('default'))
     .pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
     .pipe(gulpif('*.js', uglify(uglify_options)))
+    .on('error', log.error.bind(log, 'client_html Error'))
     .pipe(sourcemaps.write('./')) // writes .map file
     .pipe(gulp.dest('./build/client'))
   ;
