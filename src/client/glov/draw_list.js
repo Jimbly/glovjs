@@ -18,7 +18,7 @@ const unit_vec4 = VMath.v4Build(1,1,1,1);
 class DrawListSprite {
   constructor() {
     // First two used by Draw2D internals
-    this._texture = null;
+    this._textures = [];
     this.data = Draw2DSpriteData.create();
     // These used by our queuing/sorting
     this.raw4 = true;
@@ -36,6 +36,7 @@ class GlovDrawList {
     this.camera = camera;
     this.list = [];
     this.default_bucket = 'alpha';
+    this.default_bucket_tint = 'alpha_tint';
     this.sprite_list = [];
     this.sprite_alloc_count = 0;
     this.color_white = math_device.v4Build(1, 1, 1, 1);
@@ -51,6 +52,7 @@ class GlovDrawList {
   // 'alpha_nearest' is useful
   setDefaultBucket(new_value) {
     this.default_bucket = new_value;
+    this.default_bucket_tint = new_value + '_tint';
   }
 
   queue(sprite, x, y, z, color, scale, tex_rect, rotation, bucket) {
@@ -66,6 +68,28 @@ class GlovDrawList {
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
+    };
+    this.list.push(elem);
+    return elem;
+  }
+
+  queueDualTint(sprite, x, y, z, color0, color1, scale, tex_rect, rotation, bucket) {
+    assert(sprite);
+    scale =  scale || unit_vec4;
+    let elem = {
+      sprite,
+      x: (x - this.camera.data[0]) * this.camera.data[4],
+      y: (y - this.camera.data[1]) * this.camera.data[5],
+      z,
+      color: color0 || this.color_white,
+      scale: math_device.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      tex_rect,
+      bucket: bucket || this.default_bucket_tint,
+      rotation: rotation || 0,
+      tech_params: {
+        clipSpace: this.draw_2d.clipSpace,
+        color1: color1 || this.color_white,
+      },
     };
     this.list.push(elem);
     return elem;
@@ -143,7 +167,7 @@ class GlovDrawList {
     data[13] = v0;
     data[14] = u1;
     data[15] = v1;
-    elem._texture = tex;
+    elem._textures = [tex];
     elem.x = data[0];
     elem.y = data[1];
     elem.z = z;
@@ -168,7 +192,7 @@ class GlovDrawList {
         tech_params = elem.tech_params;
         this.draw_2d.techniqueParameters = tech_params || orig_tech_params;
         if (bucket) {
-          this.draw_2d.begin(bucket, 'deferred');
+          this.draw_2d.begin(bucket);
         }
       }
       if (elem.fn) {

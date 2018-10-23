@@ -93,20 +93,24 @@ export function main(canvas)
         origin: params.origin || undefined,
         u: u,
         v: v,
+        layers: params.layers || 0,
       });
     }
 
     sprites.white = loadSprite('white', 1, 1, origin_0_0);
 
-    sprites.test = loadSprite('test.png', sprite_size, sprite_size);
-    sprites.test_animated = loadSprite('test_sprite.png', [13, 13], [13, 13]);
+    sprites.test_tint = loadSprite('tinted', [16, 16, 16, 16], [16, 16, 16], { layers: 2 });
     sprites.animation = createAnimation({
-      idle: {
-        frames: [0,1,2],
-        times: 200,
-      }
+      idle_left: {
+        frames: [0,1],
+        times: [200, 500],
+      },
+      idle_right: {
+        frames: [3,2],
+        times: [200, 500],
+      },
     });
-    sprites.animation.setState('idle');
+    sprites.animation.setState('idle_left');
 
     sprites.game_bg = loadSprite('white', 1, 1, {
       width : game_width,
@@ -187,8 +191,10 @@ export function main(canvas)
     test.character.dy = 0;
     if (glov_input.isKeyDown(key_codes.LEFT) || glov_input.isKeyDown(key_codes.A) || glov_input.isPadButtonDown(0, pad_codes.LEFT)) {
       test.character.dx = -1;
+      sprites.animation.setState('idle_left');
     } else if (glov_input.isKeyDown(key_codes.RIGHT) || glov_input.isKeyDown(key_codes.D) || glov_input.isPadButtonDown(0, pad_codes.RIGHT)) {
       test.character.dx = 1;
+      sprites.animation.setState('idle_right');
     }
     if (glov_input.isKeyDown(key_codes.UP) || glov_input.isKeyDown(key_codes.W) || glov_input.isPadButtonDown(0, pad_codes.UP)) {
       test.character.dy = -1;
@@ -218,12 +224,12 @@ export function main(canvas)
     }
 
     draw_list.queue(sprites.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
-    //draw_list.queue(sprites.test, test.character.x, test.character.y, Z.SPRITES, test.color_sprite, [sprite_size, sprite_size], null, 0, 'alpha');
-    sprites.test_animated.draw({
+    sprites.test_tint.drawDualTint({
       x: test.character.x,
       y: test.character.y,
       z: Z.SPRITES,
-      color: test.color_sprite,
+      color: [1, 1, 0, 1],
+      color1: [1, 0, 1, 1],
       size: [sprite_size, sprite_size],
       frame: sprites.animation.getFrame(dt),
     });

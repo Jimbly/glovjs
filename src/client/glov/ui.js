@@ -495,9 +495,8 @@ class GlovUI {
     // spread=1 -> large enough to AA
     spread = Math.min(Math.max(spread, 0), 0.99);
 
-    let d2dtp = this.draw_list.draw_2d.techniqueParameters;
     let tech_params = {
-        clipSpace: d2dtp.clipSpace,
+        clipSpace: this.draw_list.draw_2d.clipSpace,
         param0: math_device.v4Build(0,0,0,0),
         texture: null
     };
@@ -513,7 +512,7 @@ class GlovUI {
     let x1 = x - r * 2 + r * 4 * tu2;
     let y0 = y - r * 2 + r * 4 * tv1;
     let y1 = y - r * 2 + r * 4 * tv2;
-    let elem = this.draw_list.queueraw(sprite._texture,
+    let elem = this.draw_list.queueraw(sprite._textures[0],
       x0, y0, z, x1 - x0, y1 - y0,
       tu1, tv1, tu2, tv2,
       color, 0, 'aa');
@@ -540,7 +539,7 @@ class GlovUI {
     let tangx = -dy * w;
     let tangy = dx * w;
 
-    this.draw_list.queueraw4(this.sprites.line._texture,
+    this.draw_list.queueraw4(this.sprites.line._textures[0],
       x0 + tangx, y0 + tangy,
       x0 - tangx, y0 - tangy,
       x1 - tangx, y1 - tangy,
@@ -559,7 +558,7 @@ class GlovUI {
     dy /= length;
     let tangx = -dy;
     let tangy = dx;
-    this.draw_list.queueraw4(this.sprites.cone._texture,
+    this.draw_list.queueraw4(this.sprites.cone._textures[0],
       x0 - tangx*w0, y0 - tangy*w0,
       x1 - tangx*w1, y1 - tangy*w1,
       x1 + tangx*w1, y1 + tangy*w1,

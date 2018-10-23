@@ -165,16 +165,14 @@ function createTechniqueParameters(draw_2d) {
     return;
   }
 
-  let d2dtp = draw_2d.techniqueParameters;
   tech_params = {
-      clipSpace: null,
+      clipSpace: draw_2d.clipSpace,
       param0: new Draw2D.floatArray(4),
       outlineColor: new Draw2D.floatArray(4),
       glowColor: new Draw2D.floatArray(4),
       glowParams: new Draw2D.floatArray(4),
       texture: null
   };
-  tech_params.clipSpace = d2dtp.clipSpace;
   if (!temp_color) {
     temp_color = new Draw2D.floatArray(4);
   }
@@ -845,22 +843,22 @@ export function populateDraw2DParams(params) {
       'programs': ['vp_draw2D', 'fp_' + st]
     }];
   }
-  let shader = gd.createShader(shader_params);
 
+  // Same for _nearest version
+  let shader_params_nearest = JSON.parse(JSON.stringify(shader_params));
+  shader_params_nearest.samplers.texture.MinFilter =
+    shader_params_nearest.samplers.texture.MagFilter = 9728;
+
+  let shader = gd.createShader(shader_params);
   for (let ii = 0; ii < shader_types.length; ++ii) {
     let st = shader_types[ii];
     params.blendModes[st] = shader.getTechnique(st);
   }
 
-  // Same for _nearest version
-  shader_params = JSON.parse(JSON.stringify(shader_params));
-  shader_params.samplers.texture.MinFilter =
-    shader_params.samplers.texture.MagFilter = 9728;
-
-  shader = gd.createShader(shader_params);
+  let shader_nearest = gd.createShader(shader_params_nearest);
   for (let ii = 0; ii < shader_types.length; ++ii) {
     let st = shader_types[ii];
-    params.blendModes[st + '_nearest'] = shader.getTechnique(st);
+    params.blendModes[st + '_nearest'] = shader_nearest.getTechnique(st);
   }
 
 }

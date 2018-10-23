@@ -147,9 +147,31 @@ class GlovSpriteManager {
       params.bucket);
   }
 
+  drawDualTint(params) {
+    assert(this instanceof Draw2DSprite);
+    this.manager.draw_list.queueDualTint(this,
+      params.x, params.y, params.z,
+      params.color, params.color1,
+      params.size,
+      this.uidata ? this.uidata.rects[params.frame] : null,
+      params.rotation,
+      params.bucket);
+  }
+
   createSprite(texname, params) {
-    const tex_inst = this.loadTexture(texname);
-    params.texture = tex_inst.getTexture();
+    let tex_insts = [];
+    params.textures = [];
+    if (params.layers) {
+      for (let ii = 0; ii < params.layers; ++ii) {
+        const tex_inst = this.loadTexture(`${texname}_${ii}.png`);
+        tex_insts.push(tex_inst);
+        params.textures.push(tex_inst.getTexture());
+      }
+    } else {
+      const tex_inst = this.loadTexture(texname);
+      tex_insts.push(tex_inst);
+      params.textures.push(tex_inst.getTexture());
+    }
     let uidata;
     if (Array.isArray(params.u)) {
       uidata = this.buildRects(params.u, params.v);
@@ -159,13 +181,16 @@ class GlovSpriteManager {
       params.textureRectangle = math_device.v4Build(0, 0, params.u, params.v);
     }
     const sprite = Draw2DSprite.create(params);
-    tex_inst.subscribeTextureChanged(function () {
-      sprite.setTexture(tex_inst.getTexture());
+    tex_insts.forEach(function (tex_inst, idx) {
+      tex_inst.subscribeTextureChanged(function () {
+        sprite.setTexture(idx, tex_inst.getTexture());
+      });
     });
     if (uidata) {
       sprite.uidata = uidata;
     }
     sprite.draw = this.draw;
+    sprite.drawDualTint = this.drawDualTint;
     sprite.manager = this;
     return sprite;
   }
