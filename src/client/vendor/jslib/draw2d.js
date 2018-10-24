@@ -129,11 +129,13 @@ var Draw2DSprite = (function () {
       this._textures[idx] = texture || null;
 
       // re-normalise texture coordinates.
-      var data = this.data;
-      data[12] *= su;
-      data[13] *= sv;
-      data[14] *= su;
-      data[15] *= sv;
+      if (idx === 0) {
+        var data = this.data;
+        data[12] *= su;
+        data[13] *= sv;
+        data[14] *= su;
+        data[15] *= sv;
+      }
     }
   };
 
