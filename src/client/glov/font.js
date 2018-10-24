@@ -536,6 +536,9 @@ class GlovFont {
     padding4[3] = Math.max(applied_style.glow_outer*font_texel_scale*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding4[3]);
     techParamsSet('glowParams', value2);
 
+    // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
+    const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0.0001;
+
     let padding_in_font_space = VMath.v4ScalarMul(padding4, 1 / avg_scale_font);
     for (let ii = 0; ii < 4; ++ii) {
       if (padding_in_font_space[ii] > font_info.spread) {
@@ -572,7 +575,7 @@ class GlovFont {
           let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let elem = this.draw_list.queueraw(
-            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc, z, w, h,
+            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc, z + z_advance * i, w, h,
             u0, v0, u1, v1,
             buildVec4ColorFromIntColor(applied_style.color), 0, this.blend_mode);
           elem.tech_params = techParamsGet();
