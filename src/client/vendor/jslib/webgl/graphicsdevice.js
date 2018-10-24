@@ -16,7 +16,19 @@
 /*global window*/
 /*global debug*/
 "use strict";
-;
+
+function isPowerOfTwo(n) {
+  /*jshint bitwise:false*/
+  return (0 === (n & (n - 1)));
+}
+function nextHighestPowerOfTwo(x) {
+  /*jshint bitwise:false*/
+  --x;
+  for (var i = 1; i < 32; i <<= 1) {
+    x = x | x >> i;
+  }
+  return x + 1;
+}
 
 // -----------------------------------------------------------------------------
 var TZWebGLTexture = (function () {
@@ -172,7 +184,7 @@ var TZWebGLTexture = (function () {
 
         var numLevels, generateMipMaps;
         if (this.mipmaps) {
-            if (data instanceof Image || data instanceof HTMLCanvasElement) {
+            if (data instanceof Image) {
                 numLevels = 1;
                 generateMipMaps = true;
             } else {
@@ -187,8 +199,7 @@ var TZWebGLTexture = (function () {
         var format = this.format;
         var internalFormat, gltype, srcStep, bufferData = null;
         var compressedTexturesExtension;
-        // JE: maybe data.src was just checking if it's an Image element?  Also skip canvas elements
-        var is_buffer = data && !data.src && !(data instanceof HTMLCanvasElement);
+        var is_buffer = data && !data.src;
 
         if (format === gd.PIXELFORMAT_A8) {
             internalFormat = gl.ALPHA;
@@ -424,7 +435,16 @@ var TZWebGLTexture = (function () {
                         }
                         gl.texImage2D(target, n, internalFormat, w, h, 0, internalFormat, gltype, levelData);
                     } else if (data) {
-                        gl.texImage2D(target, n, internalFormat, internalFormat, gltype, data);
+                        // JE: Pad up to power of two
+                        if (!isPowerOfTwo(w) || !isPowerOfTwo(h)) {
+                          assert(n === 0);
+                          this.width = nextHighestPowerOfTwo(w);
+                          this.height = nextHighestPowerOfTwo(h);
+                          gl.texImage2D(target, n, internalFormat, this.width, this.height, 0, internalFormat, gltype, null);
+                          gl.texSubImage2D(target, n, 0, 0, internalFormat, gltype, data);
+                        } else {
+                          gl.texImage2D(target, n, internalFormat, internalFormat, gltype, data);
+                        }
                     } else {
                         if (gltype === gl.UNSIGNED_SHORT_5_6_5 || gltype === gl.UNSIGNED_SHORT_5_5_5_1 || gltype === gl.UNSIGNED_SHORT_4_4_4_4) {
                             levelData = new Uint16Array(levelSize);
@@ -793,29 +813,8 @@ var TZWebGLTexture = (function () {
                 }
             }
 
-            function isPowerOfTwo(n) {
-                return (0 === (n & (n - 1)));
-            }
-            function nextHighestPowerOfTwo(x) {
-                --x;
-                for (var i = 1; i < 32; i <<= 1) {
-                    x = x | x >> i;
-                }
-                return x + 1;
-            }
-
             var img = new Image();
             var imageLoaded = function imageLoadedFn() {
-                // JE: Auto-resize to power of two
-                if (!isPowerOfTwo(img.width) || !isPowerOfTwo(img.height)) {
-                    // Expand up the texture to the next highest power of two dimensions.
-                    var canvas = document.createElement("canvas");
-                    canvas.width = nextHighestPowerOfTwo(img.width);
-                    canvas.height = nextHighestPowerOfTwo(img.height);
-                    var ctx = canvas.getContext("2d");
-                    ctx.drawImage(img, 0, 0, img.width, img.height);
-                    img = canvas;
-                }
                 tex.width = img.width;
                 tex.height = img.height;
                 tex.depth = 1;
