@@ -1,9 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 // Particle System Spec
 
-if (0) {
-  /*global glov_engine:false  */
-  /*global Z:false  */
+/*
 // Definitions
 // value = number or
 // value = [base, add_max] -> generates a number in the range [base, base + add_max)
@@ -54,7 +52,7 @@ system.updatePos(75, 75);
 system.killSoft(); // stops emitting and speeds up particles by kill_time_accel
 system.killHard(); // immediately stops drawing
 
-}
+*/
 
 //////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -71,7 +69,7 @@ function normalizeValue(v) {
     // already an array, convert to Vec2
     return VMath.v2Build(v[0] || 0, v[1] || 0);
   } else {
-    assert(false);
+    return assert(false);
   }
 }
 
@@ -195,10 +193,10 @@ let temp_size2 = VMath.v2BuildZero();
 // let temp_pos = VMath.v3BuildZero();
 
 class ParticleSystem {
-  constructor(parent, def, pos) {
+  constructor(parent, def_in, pos) {
     assert(pos.length === 3);
     this.parent = parent;
-    this.def = normalizeDef(def, parent);
+    this.def = normalizeDef(def_in, parent);
     this.system_lifespan = instValue(this.def.system_lifespan);
     assert(this.system_lifespan > 0);
     this.age = 0;
@@ -386,7 +384,7 @@ class ParticleSystem {
       this.tickEmitter(dt, this.emitters[ii]);
     }
 
-    return (this.age >= this.system_lifespan); // kill if past lifespan
+    return this.age >= this.system_lifespan; // kill if past lifespan
   }
 }
 
@@ -413,8 +411,6 @@ class ParticleManager {
   }
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(ParticleManager, args))();
+export function create(...args) {
+  return new ParticleManager(...args);
 }

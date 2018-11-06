@@ -1,6 +1,11 @@
+/* eslint no-bitwise:off */
+/* eslint complexity:off */
+/* eslint no-shadow:off */
 /*global assert: true */
-/*global Draw2D: false */
 /*global VMath: false */
+
+const fs = require('fs');
+let VMathArrayConstructor = VMath.F32Array;
 
 /*
 
@@ -41,7 +46,6 @@ export const COLOR_MODE = {
   GRADIENT: 1,
 };
 
-/*jshint bitwise:false*/
 export const ALIGN = {
   HLEFT: 0,
   HCENTER: 1,
@@ -100,6 +104,7 @@ export const ALIGN = {
 */
 
 function GlovFontDefaultStyle() {
+  // Empty constructor
 }
 GlovFontDefaultStyle.prototype.outline_width = 0;
 GlovFontDefaultStyle.prototype.outline_color = 0x00000000;
@@ -121,7 +126,7 @@ function vec4ColorFromIntColor(v, c) {
   v[0] = ((c >> 24) & 0xFF) / 255;
   v[1] = ((c >> 16) & 0xFF) / 255;
   v[2] = ((c >> 8) & 0xFF) / 255;
-  v[3] = ((c) & 0xFF) / 255;
+  v[3] = (c & 0xFF) / 255;
 }
 
 function buildVec4ColorFromIntColor(c) {
@@ -129,7 +134,7 @@ function buildVec4ColorFromIntColor(c) {
     ((c >> 24) & 0xFF) / 255,
     ((c >> 16) & 0xFF) / 255,
     ((c >> 8) & 0xFF) / 255,
-    ((c) & 0xFF) / 255
+    (c & 0xFF) / 255
   );
 }
 
@@ -148,8 +153,7 @@ export function style(font_style, fields) {
   return ret;
 }
 
-export function styleColored(font_style, color)
-{
+export function styleColored(font_style, color) {
   return style(font_style, {
     color
   });
@@ -166,15 +170,15 @@ function createTechniqueParameters(draw_2d) {
   }
 
   tech_params = {
-      clipSpace: draw_2d.clipSpace,
-      param0: new Draw2D.floatArray(4),
-      outlineColor: new Draw2D.floatArray(4),
-      glowColor: new Draw2D.floatArray(4),
-      glowParams: new Draw2D.floatArray(4),
-      tex0: null
+    clipSpace: draw_2d.clipSpace,
+    param0: new VMathArrayConstructor(4),
+    outlineColor: new VMathArrayConstructor(4),
+    glowColor: new VMathArrayConstructor(4),
+    glowParams: new VMathArrayConstructor(4),
+    tex0: null
   };
   if (!temp_color) {
-    temp_color = new Draw2D.floatArray(4);
+    temp_color = new VMathArrayConstructor(4);
   }
 }
 
@@ -186,10 +190,10 @@ function techParamsSet(param, value) {
       // clone
       tech_params = {
         clipSpace: tech_params.clipSpace,
-        param0: new Draw2D.floatArray(tech_params.param0),
-        outlineColor: new Draw2D.floatArray(tech_params.outlineColor),
-        glowColor: new Draw2D.floatArray(tech_params.glowColor),
-        glowParams: new Draw2D.floatArray(tech_params.glowParams),
+        param0: new VMathArrayConstructor(tech_params.param0),
+        outlineColor: new VMathArrayConstructor(tech_params.outlineColor),
+        glowColor: new VMathArrayConstructor(tech_params.glowColor),
+        glowParams: new VMathArrayConstructor(tech_params.glowParams),
         tex0: tech_params.tex0,
       };
       tech_params_dirty = true;
@@ -205,7 +209,7 @@ function techParamsSet(param, value) {
     tpv[1] = value[1];
     tpv[2] = value[2];
     tpv[3] = value[3];
-    return;
+    // return;
   }
 }
 
@@ -221,7 +225,7 @@ class GlovFont {
 
     this.texture = texture;
     this.font_info = font_info;
-    this.blend_mode = 'alpha';
+    this.blend_mode = 'font_aa';
     this.draw_2d = draw_list.draw_2d;
     this.draw_list = draw_list;
     this.camera = this.draw_list.camera;
@@ -251,12 +255,11 @@ class GlovFont {
     return this.drawScaled(style, x, y, z, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
 
-  drawSizedAligned(style, _x, _y, z, size, align, w, h, text){
+  drawSizedAligned(style, _x, _y, z, size, align, w, h, text) {
     let x_size = size;
     let y_size = size;
     let width = this.getStringWidth(style, x_size, text);
-    if (align & ALIGN.HFIT && width > w)
-    {
+    if ((align & ALIGN.HFIT) && width > w) {
       let scale = w / width;
       x_size *= scale;
       width = w;
@@ -271,32 +274,33 @@ class GlovFont {
       }
     }
     let height = y_size;
-    let x, y;
+    let x;
+    let y;
     switch (align & ALIGN.HMASK) {
-    case ALIGN.HCENTER:
-      x = _x + (w  - width) / 2;
-      break;
-    case ALIGN.HRIGHT:
-      x = _x + w - width;
-      break;
-    case ALIGN.HLEFT:
-      x = _x;
-      break;
-    default:
-      x = _x;
+      case ALIGN.HCENTER:
+        x = _x + (w - width) / 2;
+        break;
+      case ALIGN.HRIGHT:
+        x = _x + w - width;
+        break;
+      case ALIGN.HLEFT:
+        x = _x;
+        break;
+      default:
+        x = _x;
     }
-    switch(align & ALIGN.VMASK) {
-    case ALIGN.VCENTER:
-      y = _y + (h - height) / 2;
-      break;
-    case ALIGN.VBOTTOM:
-      y = _y + h - height;
-      break;
-    case ALIGN.VTOP:
-      y = _y;
-      break;
-    default:
-      y = _y;
+    switch (align & ALIGN.VMASK) {
+      case ALIGN.VCENTER:
+        y = _y + (h - height) / 2;
+        break;
+      case ALIGN.VBOTTOM:
+        y = _y + h - height;
+        break;
+      case ALIGN.VTOP:
+        y = _y;
+        break;
+      default:
+        y = _y;
     }
 
     return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
@@ -304,18 +308,19 @@ class GlovFont {
 
   // returns height
   drawSizedColorWrapped(style, x, y, z, w, indent, size, color, text) {
-    return this.drawScaledWrapped(styleColored(style, color), x, y, z, w, indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
+    return this.drawScaledWrapped(styleColored(style, color), x, y, z, w,
+      indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
   drawSizedWrapped(style, x, y, z, w, indent, size, text) {
-    return this.drawScaledWrapped(style, x, y, z, w, indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
+    return this.drawScaledWrapped(style, x, y, z, w,
+      indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
   }
 
   wrapLines(w, indent, size, text, word_cb /*(x, int linenum, const char *word)*/) {
     return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, word_cb);
   }
 
-  infoFromChar(c)
-  {
+  infoFromChar(c) {
     let ret = this.char_infos[c];
     if (ret) {
       return ret;
@@ -326,7 +331,6 @@ class GlovFont {
     }
     return null;
   }
-
 
   getCharacterWidth(style, x_size, c) {
     assert(typeof c === 'number');
@@ -358,7 +362,7 @@ class GlovFont {
     return ret;
   }
 
-  wrapLinesScaled(w, indent, xsc, text, word_cb /*(x, int linenum, const char *word)*/){
+  wrapLinesScaled(w, indent, xsc, text, word_cb /* word_cb(x, int linenum, const char *word) */) {
     let len = text.length;
     let s = 0;
     let word_start = 0;
@@ -370,9 +374,8 @@ class GlovFont {
     let hard_wrap = false;
     let x_advance = this.calcXAdvance(xsc);
 
-    do
-    {
-      let c = (s < len) ? text.charCodeAt(s) : 0;
+    do {
+      let c = s < len ? text.charCodeAt(s) : 0;
       let newx = x;
       let char_w;
       if (c === 9) { // '\t') {
@@ -384,14 +387,12 @@ class GlovFont {
         if (!char_info) {
           char_info = this.infoFromChar(10);
         }
-        if (char_info)
-        {
+        if (char_info) {
           char_w = (char_info.w + char_info.xpad) * xsc + x_advance;
           newx = x + char_w;
         }
       }
-      if (newx >= w && hard_wrap)
-      {
+      if (newx >= w && hard_wrap) {
         // flush the word so far!
         if (word_cb) {
           word_cb(word_x0, linenum, text.slice(word_start, s));
@@ -405,18 +406,15 @@ class GlovFont {
       }
       if (!(c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/)) {
         s++;
-        c = (s < len) ? text.charCodeAt(s) : 0;
+        c = s < len ? text.charCodeAt(s) : 0;
       }
-      if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/)
-      {
+      if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/) {
         hard_wrap = false;
         // draw word until s
-        if (x > w)
-        {
+        if (x > w) {
           // maybe wrap
           let word_width = x - word_x0;
-          if (word_width > w)
-          {
+          if (word_width > w) {
             // not going to fit, split it up!
             hard_wrap = true;
             // recover and restart at word start
@@ -467,11 +465,12 @@ class GlovFont {
 
     // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
     //   things look almost identical, just crisper
-    let font_texel_scale = (this.font_info.font_size / 32);
+    let font_texel_scale = this.font_info.font_size / 32;
     // As a compromise, -2 bias here seems to work well
     let x_advance = xsc * font_texel_scale * Math.max(this.applied_style.outline_width - 2, 0);
     // As a compromise, there's a -3 bias in there, so it only kicks in under extreme circumstances
-    x_advance = Math.max(x_advance, xsc * font_texel_scale * Math.max(this.applied_style.glow_outer - this.applied_style.glow_xoffs - 3, 0));
+    x_advance = Math.max(x_advance, xsc * font_texel_scale *
+      Math.max(this.applied_style.glow_outer - this.applied_style.glow_xoffs - 3, 0));
     return x_advance;
   }
 
@@ -500,7 +499,7 @@ class GlovFont {
 
     // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
     //   things look almost identical, just crisper
-    let font_texel_scale = (font_info.font_size / 32);
+    let font_texel_scale = font_info.font_size / 32;
     let x_advance = this.calcXAdvance(xsc);
 
     let applied_style = this.applied_style;
@@ -511,7 +510,8 @@ class GlovFont {
     let value = [
       1 / delta_per_dest_pixel, // AA Mult and Outline Mult
       -0.5 / delta_per_dest_pixel + 0.5, // AA Add
-      -0.5 / delta_per_dest_pixel + 0.5 + applied_style.outline_width*font_texel_scale*avg_scale_combined, // Outline Add
+      // Outline Add
+      -0.5 / delta_per_dest_pixel + 0.5 + applied_style.outline_width*font_texel_scale*avg_scale_combined,
       0, // Unused
     ];
     if (value[2] > 0) {
@@ -524,16 +524,19 @@ class GlovFont {
     let value2 = [
       -applied_style.glow_xoffs * font_texel_scale / tex.width,
       -applied_style.glow_yoffs * font_texel_scale / tex.height,
-      1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale), // Glow mult
-      -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale)
+      // Glow mult
+      1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale),
+      -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) / ((applied_style.glow_outer -
+        applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale)
     ];
     if (value2[3] > 0) {
       value2[3] = 0;
     }
-    padding4[0] = Math.max(applied_style.glow_outer*font_texel_scale*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding4[0]);
-    padding4[2] = Math.max(applied_style.glow_outer*font_texel_scale*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding4[2]);
-    padding4[1] = Math.max(applied_style.glow_outer*font_texel_scale*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding4[1]);
-    padding4[3] = Math.max(applied_style.glow_outer*font_texel_scale*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding4[3]);
+    const outer_scaled = applied_style.glow_outer*font_texel_scale;
+    padding4[0] = Math.max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding4[0]);
+    padding4[2] = Math.max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding4[2]);
+    padding4[1] = Math.max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding4[1]);
+    padding4[3] = Math.max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding4[3]);
     techParamsSet('glowParams', value2);
 
     // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
@@ -575,7 +578,9 @@ class GlovFont {
           let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let elem = this.draw_list.queueraw(
-            tex, x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc, z + z_advance * i, w, h,
+            tex,
+            x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc,
+            z + z_advance * i, w, h,
             u0, v0, u1, v1,
             buildVec4ColorFromIntColor(applied_style.color), 0, this.blend_mode);
           elem.tech_params = techParamsGet();
@@ -584,7 +589,7 @@ class GlovFont {
         }
       }
     }
-    return (x - _x);
+    return x - _x;
   }
 
   determineShader() {
@@ -592,14 +597,14 @@ class GlovFont {
     let glow = this.applied_style.glow_outer > 0 && (this.applied_style.glow_color & 0xff);
     if (outline) {
       if (glow) {
-        this.blend_mode = 'aa_outline_glow';
+        this.blend_mode = 'font_aa_outline_glow';
       } else {
-        this.blend_mode = 'aa_outline';
+        this.blend_mode = 'font_aa_outline';
       }
     } else if (glow) {
-      this.blend_mode = 'aa_glow';
+      this.blend_mode = 'font_aa_glow';
     } else {
-      this.blend_mode = 'aa';
+      this.blend_mode = 'font_aa';
     }
     if (this.font_info.noFilter) {
       this.blend_mode += '_nearest';
@@ -643,231 +648,32 @@ class GlovFont {
 export function populateDraw2DParams(params) {
   assert(!gd_params);
   gd_params = params;
-  let gd = params.graphicsDevice;
 
-  // Load embedded default shader and techniques
-  let tz_lowp = [
-    '#ifdef GL_ES',
-    '#define TZ_LOWP lowp',
-    'precision mediump float;',
-    'precision mediump int;',
-    '#else',
-    '#define TZ_LOWP',
-    '#endif'
-  ].join('\n');
-  let fp_header = [
-    'varying vec4 tz_TexCoord[1];',
-    'varying TZ_LOWP vec4 tz_Color;',
-    'vec4 _ret_0;',
-    'uniform sampler2D tex0;'
-  ].join('\n');
-  let shader_params = {
-    'programs': {
-      'fp_aa': {
-        'type': 'fragment',
-        'code': [
-          tz_lowp,
-          fp_header,
-          'uniform vec4 param0;',
-          'void main()',
-          '{',
-          '  float texture0=texture2D(tex0,tz_TexCoord[0].xy).r;',
-          '  float res = clamp(texture0 * param0.x + param0.y, 0.0, 1.0);',
-          '  gl_FragColor=vec4(tz_Color.rgb, tz_Color.a * res);',
-          '}',
-        ].join('\n')
-      },
-      'fp_aa_glow': {
-        'type': 'fragment',
-        'code': [
-          tz_lowp,
-          fp_header,
-          'uniform vec4 param0;',
-          'uniform vec4 glowColor;',
-          'uniform vec4 glowParams;',
-          'void main()',
-          '{',
-          '  float texture0=texture2D(tex0,tz_TexCoord[0].xy).r;',
-          '  // Glow',
-          '  vec2 glowCoord = tz_TexCoord[0].xy + glowParams.xy;',
-          '  float textureGlow = texture2D(tex0, glowCoord).r;',
-          '  float t = clamp(textureGlow * glowParams.z + glowParams.w, 0.0, 1.0);',
-          '  vec4 outcolor = vec4(glowColor.xyz, t * glowColor.w);',
-          '  // Main body',
-          '  t = clamp(texture0 * param0.x + param0.y, 0.0, 1.0);',
-          '  gl_FragColor = mix(outcolor, tz_Color, t);',
-          '}',
-        ].join('\n')
-      },
-      'fp_aa_outline': {
-        'type': 'fragment',
-        'code': [
-          tz_lowp,
-          fp_header,
-          'uniform vec4 param0;',
-          'uniform vec4 outlineColor;',
-          'void main()',
-          '{',
-          '  float texture0=texture2D(tex0,tz_TexCoord[0].xy).r;',
-          '  // Outline',
-          '  vec4 outcolor = vec4(outlineColor.xyz, 0);',
-          '  outcolor.w = clamp(texture0 * param0.x + param0.z, 0.0, 1.0);',
-          '  outcolor.w = outcolor.w * outlineColor.w;',
-          '  // outcolor = mix(outcolor, outlineColor, outcolor.w); // Makes a blackish border',
-          '  // Main body',
-          '  float t = clamp(texture0 * param0.x + param0.y, 0.0, 1.0);',
-          '  gl_FragColor = mix(outcolor, tz_Color, t);',
-          '}',
-        ].join('\n')
-      },
-      'fp_aa_outline_glow': {
-        'type': 'fragment',
-        'code': [
-          tz_lowp,
-          fp_header,
-          'uniform vec4 param0;',
-          'uniform vec4 outlineColor;',
-          'uniform vec4 glowColor;',
-          'uniform vec4 glowParams;',
-          'void main()',
-          '{',
-          '  float texture0=texture2D(tex0,tz_TexCoord[0].xy).r;',
-          '  // Glow',
-          '  vec2 glowCoord = tz_TexCoord[0].xy + glowParams.xy;',
-          '  float textureGlow = texture2D(tex0, glowCoord).r;',
-          '  float t = clamp(textureGlow * glowParams.z + glowParams.w, 0.0, 1.0);',
-          '  vec4 outcolor = vec4(glowColor.xyz, t * glowColor.w);',
-          '  // vec4outclor = t * glowColor.xyz;',
-          '  // Outline',
-          '  t = clamp(texture0 * param0.x + param0.z, 0.0, 1.0);',
-          '  t = t * outlineColor.w;',
-          '  outcolor = mix(outcolor, outlineColor, t);',
-          '  // Main body',
-          '  t = clamp(texture0 * param0.x + param0.y, 0.0, 1.0);',
-          '  gl_FragColor = mix(outcolor, tz_Color, t);',
-          '}',
-        ].join('\n')
-      },
-      'vp_draw2D': {
-        'type': 'vertex',
-        'code': [
-          tz_lowp,
-          'varying TZ_LOWP vec4 tz_Color;',
-          'varying vec4 tz_TexCoord[1];',
-          'attribute vec4 ATTR0;',
-          'attribute vec4 ATTR3;',
-          'attribute vec4 ATTR8;',
-          'vec4 _OUTPosition1;',
-          'vec4 _OUTColor1;',
-          'vec2 _OUTTexCoord01;',
-          'uniform vec4 clipSpace;',
-          'void main()',
-          '{',
-          '  vec2 _position;',
-          '  _position=ATTR0.xy*clipSpace.xy+clipSpace.zw;',
-          '  _OUTPosition1.x=_position.x;',
-          '  _OUTPosition1.y=_position.y;',
-          '  _OUTPosition1.z=0.0;',
-          '  _OUTPosition1.w=1.0;',
-          '  _OUTColor1=ATTR3;',
-          '  _OUTTexCoord01=ATTR8.xy;',
-          '  tz_TexCoord[0].xy=ATTR8.xy;',
-          '  tz_Color=ATTR3;',
-          '  gl_Position=_OUTPosition1;',
-          '}',
-        ].join('\n')
-      }
-    },
-    'version': 1,
-    'name': 'glov_font.cgfx',
-    'samplers': {
-      'tex0': {
-        'MinFilter': 9729 /* LINEAR */ ,
-        'MagFilter': 9729 /* LINEAR */ ,
-        'WrapS': 33071,
-        'WrapT': 33071
-      },
-    },
-    parameters: {
-      clipSpace: {
-        type: 'float',
-        columns: 4
-      },
-      tex0: {
-        type: 'sampler2D'
-      },
-      param0: {
-        type: 'float',
-        columns: 4,
-      },
-      outlineColor: {
-        type: 'float',
-        columns: 4,
-      },
-      glowColor: {
-        type: 'float',
-        columns: 4,
-      },
-      glowParams: {
-        type: 'float',
-        columns: 4,
-      },
-    },
-    'techniques': {},
+  // Set up embedded default shader
+
+  if (params.shaders) {
+    // Check for name conflicts
+    assert(!params.shaders.font_aa);
+    assert(!params.shaders.font_aa_glow);
+    assert(!params.shaders.font_aa_outline);
+    assert(!params.shaders.font_aa_outline_glow);
+  } else {
+    params.shaders = {};
+  }
+  params.shaders.font_aa = {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa.fp`, 'utf8'),
   };
-  let shader_types = [
-    'aa',
-    'aa_glow',
-    'aa_outline',
-    'aa_outline_glow',
-  ];
-
-  params.blendModes = {};
-  for (let ii = 0; ii < shader_types.length; ++ii) {
-    let st = shader_types[ii];
-    let params = ['clipSpace', 'tex0', 'param0'];
-    if (st.indexOf('outline') !== -1) {
-      params.push('outlineColor');
-    }
-    if (st.indexOf('glow') !== -1) {
-      params.push('glowColor');
-      params.push('glowParams');
-    }
-    shader_params.techniques[st] = [{
-      'parameters': params,
-      'semantics': ['POSITION', 'COLOR', 'TEXCOORD0'],
-      'states': {
-        'DepthTestEnable': false,
-        'DepthMask': false,
-        'CullFaceEnable': false,
-        'BlendEnable': true,
-        'BlendFunc': [770, 771]
-      },
-      'programs': ['vp_draw2D', 'fp_' + st]
-    }];
-  }
-
-  // Same for _nearest version
-  let shader_params_nearest = JSON.parse(JSON.stringify(shader_params));
-  shader_params_nearest.samplers.tex0.MinFilter =
-    shader_params_nearest.samplers.tex0.MagFilter = 9728;
-
-  let shader = gd.createShader(shader_params);
-  for (let ii = 0; ii < shader_types.length; ++ii) {
-    let st = shader_types[ii];
-    params.blendModes[st] = shader.getTechnique(st);
-  }
-
-  let shader_nearest = gd.createShader(shader_params_nearest);
-  for (let ii = 0; ii < shader_types.length; ++ii) {
-    let st = shader_types[ii];
-    params.blendModes[st + '_nearest'] = shader_nearest.getTechnique(st);
-  }
-
+  params.shaders.font_aa_glow = {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_glow.fp`, 'utf8'),
+  };
+  params.shaders.font_aa_outline = {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline.fp`, 'utf8'),
+  };
+  params.shaders.font_aa_outline_glow = {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline_glow.fp`, 'utf8'),
+  };
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovFont, args))();
+export function create(...args) {
+  return new GlovFont(...args);
 }

@@ -1,15 +1,14 @@
-/*global math_device: false */
-/*global Draw2D: false */
+/*global VMath: false */
 
 class GlovCamera {
   constructor(graphics_device, draw_2d) {
     this.graphics_device = graphics_device;
     this.draw_2d = draw_2d;
     this.params = {
-      scaleMode : 'scale',
-      viewportRectangle : math_device.v4Build(0, 0, 100, 100)
+      scaleMode: 'scale',
+      viewportRectangle: VMath.v4Build(0, 0, 100, 100)
     };
-    this.data = new Draw2D.floatArray(7); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
+    this.data = new VMath.F32Array(7); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
     this.data[6] = window.devicePixelRatio || 1; /* css_to_real */
     this.set2D(0, 0, graphics_device.width, graphics_device.height);
     this.tick();
@@ -50,8 +49,8 @@ class GlovCamera {
   }
 
   physicalToVirtual(dst, src) {
-    dst[0] = (src[0] * this.data[6] / this.data[4] + this.data[0]);
-    dst[1] = (src[1] * this.data[6] / this.data[5] + this.data[1]);
+    dst[0] = src[0] * this.data[6] / this.data[4] + this.data[0];
+    dst[1] = src[1] * this.data[6] / this.data[5] + this.data[1];
   }
 
   virtualToPhysical(dst, src) {
@@ -64,7 +63,7 @@ class GlovCamera {
   // This may create a padding or margin on either bottom or sides of the screen
   set2DAspectFixed(w, h) {
     let inv_aspect = h / w;
-    let inv_desired_aspect = (this.screen_height / this.screen_width);
+    let inv_desired_aspect = this.screen_height / this.screen_width;
     if (inv_aspect > inv_desired_aspect) {
       let margin = (h / inv_desired_aspect - w) / 2;
       this.set2D(-margin, 0, w + margin, h);
@@ -74,9 +73,8 @@ class GlovCamera {
     }
   }
 
-  zoom(x, y, factor)
-  {
-    let  inv_factor = 1.0 / factor;
+  zoom(x, y, factor) {
+    let inv_factor = 1.0 / factor;
     this.set2D(
       x - (x - this.x0()) * inv_factor,
       y - (y - this.y0()) * inv_factor,
@@ -111,8 +109,6 @@ class GlovCamera {
   }
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovCamera, args))();
+export function create(...args) {
+  return new GlovCamera(...args);
 }

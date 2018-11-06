@@ -441,6 +441,13 @@ var TZWebGLTexture = (function () {
                           this.width = nextHighestPowerOfTwo(w);
                           this.height = nextHighestPowerOfTwo(h);
                           gl.texImage2D(target, n, internalFormat, this.width, this.height, 0, internalFormat, gltype, null);
+                          // Duplicate right and bottom pixel row by sending image 3 times
+                          if (w !== this.width) {
+                            gl.texSubImage2D(target, n, 1, 0, internalFormat, gltype, data);
+                          }
+                          if (h !== this.height) {
+                            gl.texSubImage2D(target, n, 0, 1, internalFormat, gltype, data);
+                          }
                           gl.texSubImage2D(target, n, 0, 0, internalFormat, gltype, data);
                         } else {
                           gl.texImage2D(target, n, internalFormat, internalFormat, gltype, data);

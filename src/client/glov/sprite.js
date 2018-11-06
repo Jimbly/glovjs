@@ -1,37 +1,48 @@
-/*global Draw2DSprite: false */
 /*global RequestHandler: false */
 /*global TextureManager: false */
-/*global math_device: false */
+/*global VMath: false */
 /*global assert: false */
+
+const { Draw2DSprite } = require('./tz/draw2d.js');
 
 class GlovSpriteAnimation {
   constructor(params) {
     this.frame = 0;
     this.time = 0;
     this.state = null;
-    this.data = params;
     this.anim = null;
     this.anim_idx = 0;
-    for (let key in this.data) {
-      let anim = this.data[key];
-      if (typeof anim.frames === 'number') {
-        anim.frames = [anim.frames];
-      }
-      if (typeof anim.times === 'number') {
-        let arr = new Array(anim.frames.length);
-        for (let ii = 0; ii < anim.frames.length; ++ii) {
-          arr[ii] = anim.times;
+
+    if (params instanceof GlovSpriteAnimation) {
+      this.data = params.data; // already initialized
+      this.setState(params.state);
+    } else {
+      this.data = params;
+      for (let key in this.data) {
+        let anim = this.data[key];
+        if (typeof anim.frames === 'number') {
+          anim.frames = [anim.frames];
         }
-        anim.times = arr;
-      }
-      if (anim.loop === undefined) {
-        anim.loop = true;
+        if (typeof anim.times === 'number') {
+          let arr = new Array(anim.frames.length);
+          for (let ii = 0; ii < anim.frames.length; ++ii) {
+            arr[ii] = anim.times;
+          }
+          anim.times = arr;
+        }
+        if (anim.loop === undefined) {
+          anim.loop = true;
+        }
       }
     }
   }
 
+  clone() {
+    return new GlovSpriteAnimation(this);
+  }
+
   setState(state, force) {
-    if (state === this.state && !force)  {
+    if (state === this.state && !force) {
       return;
     }
     this.state = state;
@@ -79,9 +90,15 @@ class GlovSpriteManager {
     this.texture_manager = TextureManager.create(graphicsDevice, requestHandler);
     this.textures = {};
     this.draw_list = draw_list;
+    this.color_white = VMath.v4Build(1, 1, 1, 1);
+    this.origin_0_0 = { origin: VMath.v2Build(0, 0) };
+    Draw2DSprite.prototype.draw = this.draw;
+    Draw2DSprite.prototype.drawTech = this.drawTech;
+    Draw2DSprite.prototype.drawDualTint = this.drawDualTint;
   }
 
   buildRects(ws, hs) {
+    /* eslint class-methods-use-this:off */
     let rects = [];
     let total_w = 0;
     for (let ii = 0; ii < ws.length; ++ii) {
@@ -103,7 +120,7 @@ class GlovSpriteManager {
     for (let jj = 0; jj < hs.length; ++jj) {
       let x = 0;
       for (let ii = 0; ii < ws.length; ++ii) {
-        let r = math_device.v4Build(x, y, x + ws[ii], y + hs[jj]);
+        let r = VMath.v4Build(x, y, x + ws[ii], y + hs[jj]);
         rects.push(r);
         x += ws[ii];
       }
@@ -121,7 +138,7 @@ class GlovSpriteManager {
   loadTexture(texname) {
     let path = texname;
     if (texname.indexOf('.') !== -1) {
-      path = 'img/'+ texname;
+      path = `img/${texname}`;
     }
     const inst = this.texture_manager.getInstance(path);
     if (inst) {
@@ -131,7 +148,19 @@ class GlovSpriteManager {
     return this.texture_manager.getInstance(path);
   }
 
+  preloadParticleData(particle_data) {
+    // Preload all referenced particle textures
+    for (let key in particle_data.defs) {
+      let def = particle_data.defs[key];
+      for (let part_name in def.particles) {
+        let part_def = def.particles[part_name];
+        this.loadTexture(part_def.texture);
+      }
+    }
+  }
+
   createAnimation(params) {
+    /* eslint class-methods-use-this:off */
     return new GlovSpriteAnimation(params);
   }
 
@@ -147,6 +176,22 @@ class GlovSpriteManager {
       params.bucket);
   }
 
+  drawTech(params) {
+    assert(this instanceof Draw2DSprite);
+    let elem = this.manager.draw_list.queue(this,
+      params.x, params.y, params.z, params.color,
+      params.size,
+      this.uidata ? this.uidata.rects[params.frame] : null,
+      params.rotation,
+      params.bucket);
+    if (params.tech_params) {
+      elem.tech_params = params.tech_params;
+      if (!elem.tech_params.clipSpace) {
+        elem.tech_params.clipSpace = this.manager.draw_list.draw_2d.clipSpace;
+      }
+    }
+  }
+
   drawDualTint(params) {
     assert(this instanceof Draw2DSprite);
     this.manager.draw_list.queueDualTint(this,
@@ -158,6 +203,20 @@ class GlovSpriteManager {
       params.bucket);
   }
 
+  // Convenience
+  createSpriteSimple(texname, u, v, params) {
+    params = params || {};
+    return this.createSprite(texname, {
+      width: params.width || 1,
+      height: params.height || 1,
+      rotation: params.rotation || 0,
+      color: params.color || this.color_white,
+      origin: params.origin || undefined,
+      u: u,
+      v: v,
+      layers: params.layers || 0,
+    });
+  }
   createSprite(texname, params) {
     let tex_insts = [];
     params.textures = [];
@@ -175,10 +234,10 @@ class GlovSpriteManager {
     let uidata;
     if (Array.isArray(params.u)) {
       uidata = this.buildRects(params.u, params.v);
-      params.textureRectangle = math_device.v4Build(0, 0, uidata.total_w, uidata.total_h);
+      params.textureRectangle = VMath.v4Build(0, 0, uidata.total_w, uidata.total_h);
     } else {
       // uidata = this.buildRects([params.u], [params.v]);
-      params.textureRectangle = math_device.v4Build(0, 0, params.u, params.v);
+      params.textureRectangle = VMath.v4Build(0, 0, params.u, params.v);
     }
     const sprite = Draw2DSprite.create(params);
     tex_insts.forEach(function (tex_inst, idx) {
@@ -189,8 +248,6 @@ class GlovSpriteManager {
     if (uidata) {
       sprite.uidata = uidata;
     }
-    sprite.draw = this.draw;
-    sprite.drawDualTint = this.drawDualTint;
     sprite.manager = this;
     return sprite;
   }
@@ -200,8 +257,6 @@ class GlovSpriteManager {
   }
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovSpriteManager, args))();
+export function create(...args) {
+  return new GlovSpriteManager(...args);
 }

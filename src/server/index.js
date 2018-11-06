@@ -7,5 +7,5 @@ app.use(express.static(path.join(__dirname, '../client/')));
 let port = process.env.port || 3000;
 
 app.listen(port, () => {
-  console.log('Running server at http://localhost:' + port);
+  console.log(`Running server at http://localhost:${port}`);
 });

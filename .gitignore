@@ -1,3 +1,4 @@
+data_store/
 artifacts/
 node_modules/
 ynpm-debug.log

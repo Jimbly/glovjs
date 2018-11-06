@@ -1,14 +1,75 @@
-/* jshint jquery:true */
-/*global math_device: false */
+/* eslint-env jquery */
+/* eslint no-underscore-dangle:off */
+/*global VMath: false */
 /*global assert: false */
 /*global Z: false */
 
 window.Z = window.Z || {};
+Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
 Z.TOOLTIP = Z.TOOLTIP || 2000;
 
+const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const { clone } = require('../../common/util.js');
+
+function doBlurEffect(src, dest) {
+  glov_engine.effects.applyGaussianBlur({
+    source: src,
+    destination: dest,
+    blurRadius: 5,
+    blurTarget: glov_engine.getTemporaryTarget(),
+  });
+}
+
+function doDesaturateEffect(src, dest) {
+  let saturation = 0.1;
+
+  // Perf note: do not allocate these each frame for better perf
+  let xform = VMath.m43BuildIdentity();
+  let tmp = VMath.m43BuildIdentity();
+
+  VMath.m43BuildIdentity(xform);
+  if (saturation !== 1) {
+    glov_engine.effects.saturationMatrix(saturation, tmp);
+    VMath.m43Mul(xform, tmp, xform);
+  }
+  // if ((hue % (Math.PI * 2)) !== 0) {
+  //   glov_engine.effects.hueMatrix(hue, tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (contrast !== 1) {
+  //   glov_engine.effects.contrastMatrix(contrast, tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (brightness !== 0) {
+  //   glov_engine.effects.brightnessMatrix(brightness, tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (additiveRGB[0] !== 0 || additiveRGB[1] !== 0 || additiveRGB[2] !== 0) {
+  //   glov_engine.effects.additiveMatrix(additiveRGB, tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (grayscale) {
+  //   glov_engine.effects.grayScaleMatrix(tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (negative) {
+  //   glov_engine.effects.negativeMatrix(tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  // if (sepia) {
+  //   glov_engine.effects.sepiaMatrix(tmp);
+  //   VMath.m43Mul(xform, tmp, xform);
+  // }
+  glov_engine.effects.applyColorMatrix({
+    colorMatrix: xform,
+    source: src,
+    destination: dest,
+  });
+}
+
 
 class GlovUIEditBox {
   constructor(glov_ui, params) {
@@ -89,16 +150,17 @@ class GlovUIEditBox {
     }
     if (elem) {
       let pos = this.glov_ui.htmlPos(this.x, this.y);
-      elem[0].style.left = pos[0] + '%';
-      elem[0].style.top = pos[1] + '%';
+      elem[0].style.left = `${pos[0]}%`;
+      elem[0].style.top = `${pos[1]}%`;
       let size = this.glov_ui.htmlSize(this.w, this.h);
-      elem[0].style.width = size[0] + '%';
+      elem[0].style.width = `${size[0]}%`;
     }
 
     if (this.submitted) {
       this.submitted = false;
       return this.SUBMIT;
     }
+    return null;
   }
   unrun() {
     // remove from DOM or hide
@@ -108,30 +170,20 @@ class GlovUIEditBox {
 }
 GlovUIEditBox.prototype.SUBMIT = 'submit';
 
-class GlovUI {
-  loadSpriteRect(filename, widths, heights) {
-    return this.glov_sprite.createSprite(filename, {
-      width : 1,
-      height : 1,
-      rotation : 0,
-      u: widths,
-      v: heights,
-      origin: [0,0],
-    });
+export function makeColorSet(color) {
+  let ret = {
+    regular: VMath.v4ScalarMul(color, 1),
+    rollover: VMath.v4ScalarMul(color, 0.8),
+    click: VMath.v4ScalarMul(color, 0.7),
+    disabled: VMath.v4ScalarMul(color, 0.4),
+  };
+  for (let field in ret) {
+    ret[field][3] = color[3];
   }
+  return ret;
+}
 
-  makeColorSet(color) {
-    let ret = {
-      regular: math_device.v4ScalarMul(color, 1),
-      rollover: math_device.v4ScalarMul(color, 0.8),
-      click: math_device.v4ScalarMul(color, 0.7),
-      disabled: math_device.v4ScalarMul(color, 0.4),
-    };
-    for (let field in ret) {
-      ret[field][3] = color[3];
-    }
-    return ret;
-  }
+class GlovUI {
 
   constructor(glov_sprite, glov_input, font, draw_list) {
     this.glov_sprite = glov_sprite;
@@ -139,31 +191,22 @@ class GlovUI {
     this.font = font;
     this.draw_list = draw_list;
     this.camera = glov_input.camera;
+    let key_codes = this.key_codes = glov_input.key_codes;
+    let pad_codes = this.pad_codes = glov_input.pad_codes;
 
-    this.color_button = this.makeColorSet([1,1,1,1]);
-    this.color_panel = math_device.v4Build(1, 1, 0.75, 1);
-    this.color_modal_darken = math_device.v4Build(0, 0, 0, 0.75);
+    this.color_button = makeColorSet([1,1,1,1]);
+    this.color_panel = VMath.v4Build(1, 1, 0.75, 1);
+    this.color_modal_darken = VMath.v4Build(0, 0, 0, 0.75);
 
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
     let sprites = this.sprites = {};
-    sprites.button = this.loadSpriteRect('button.png', [4, 5, 4], [13]);
-    sprites.panel = this.loadSpriteRect('panel.png', [2, 12, 2], [2, 12, 2]);
-    sprites.white = this.glov_sprite.createSprite('white', {
-      width : 1,
-      height : 1,
-      origin: [0, 0],
-      u: 1,
-      v: 1,
-    });
+    sprites.button = glov_sprite.createSpriteSimple('button.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
+    sprites.panel = glov_sprite.createSpriteSimple('panel.png', [2, 12, 2], [2, 12, 2], glov_sprite.origin_0_0);
+    sprites.white = glov_sprite.createSpriteSimple('white', 1, 1, glov_sprite.origin_0_0);
     ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
-      let size = (key === 'hollow_circle') ? 128 : 32;
-      sprites[key] = glov_sprite.createSprite(`glov/util_${key}.png`, {
-        width : 1,
-        height : 1,
-        u: size,
-        v: size,
-      });
+      let size = key === 'hollow_circle' ? 128 : 32;
+      sprites[key] = glov_sprite.createSpriteSimple(`glov/util_${key}.png`, size, size);
     });
 
     this.sounds = {};
@@ -174,11 +217,22 @@ class GlovUI {
     this.frame_button_mouseover = false;
 
     this.modal_dialog = null;
+    this.menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
 
     this.this_frame_edit_boxes = [];
     this.last_frame_edit_boxes = [];
     this.dom_elems = [];
     this.dom_elems_issued = 0;
+
+    // for modal dialogs
+    this.button_keys = {
+      ok: { key: [key_codes.SPACE, key_codes.RETURN], pad: [pad_codes.A, pad_codes.X] },
+      cancel: { key: [key_codes.ESCAPE], pad: [pad_codes.B, pad_codes.Y] },
+    };
+    this.button_keys.yes = clone(this.button_keys.ok);
+    this.button_keys.yes.key.push(key_codes.Y);
+    this.button_keys.no = clone(this.button_keys.cancel);
+    this.button_keys.no.key.push(key_codes.N);
   }
 
   getElem() {
@@ -302,7 +356,7 @@ class GlovUI {
         tooltip: param.tooltip,
       });
     }
-    return [ ret, color ];
+    return [ret, color];
   }
 
   buttonText(param) {
@@ -319,7 +373,7 @@ class GlovUI {
     let [ret, color] = this.buttonShared(param, param.text);
 
     this.drawHBox(param, this.sprites.button, color);
-    /*jshint bitwise:false*/
+    /*eslint no-bitwise:off*/
     this.font.drawSizedAligned(glov_font.styleColored(null, 0x000000ff), param.x, param.y, param.z + 0.1,
       param.font_height, glov_font.ALIGN.HCENTER | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
     return ret;
@@ -347,7 +401,11 @@ class GlovUI {
     img_scale = Math.min(img_scale, (param.h * 0.75) / img_h);
     img_w *= img_scale;
     img_h *= img_scale;
-    this.draw_list.queue(param.img, param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale, param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale, param.z + 0.1, color, [img_scale, img_scale, 1, 1], param.img_rect);
+    this.draw_list.queue(param.img,
+      param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
+      param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
+      param.z + 0.1,
+      color, [img_scale, img_scale, 1, 1], param.img_rect);
     return ret;
   }
 
@@ -388,7 +446,8 @@ class GlovUI {
     let font_height = modal_dialog.font_height || this.font_height;
 
     if (modal_dialog.title) {
-      y += this.font.drawSizedWrapped(this.modal_font_style, x, y, Z.MODAL, text_w, 0, font_height * this.modal_title_scale,
+      y += this.font.drawSizedWrapped(this.modal_font_style,
+        x, y, Z.MODAL, text_w, 0, font_height * this.modal_title_scale,
         modal_dialog.title);
       y += pad * 1.5;
     }
@@ -403,13 +462,24 @@ class GlovUI {
     x = x0 + this.modal_width - pad - button_width;
     for (let ii = keys.length - 1; ii >= 0; --ii) {
       let key = keys[ii];
+      let button_keys = this.button_keys[key.toLowerCase()];
+      let pressed = false;
+      if (button_keys) {
+        for (let jj = 0; jj < button_keys.key.length; ++jj) {
+          pressed = pressed || this.glov_input.keyDownHit(button_keys.key[jj]);
+        }
+        for (let jj = 0; jj < button_keys.pad.length; ++jj) {
+          pressed = pressed || this.glov_input.padDownHit(button_keys.pad[jj]);
+        }
+      }
       if (this.buttonText({
         x: x,
         y,
         z: Z.MODAL,
         w: button_width,
         h: this.button_height,
-        text: key})
+        text: key
+      }) || pressed
       ) {
         if (modal_dialog.buttons[key]) {
           modal_dialog.buttons[key]();
@@ -458,7 +528,6 @@ class GlovUI {
     this.last_frame_button_mouseover = this.frame_button_mouseover;
     this.frame_button_mouseover = false;
 
-
     if (this.modal_dialog) {
       this.modalDialogRun(this.modal_dialog);
     }
@@ -478,6 +547,12 @@ class GlovUI {
       elem.remove();
     }
     this.dom_elems_issued = 0;
+
+    if (this.modal_dialog || this.menu_up) {
+      // Effects during modal dialogs, may need option to disable or customize these
+      glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
+      glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
+    }
   }
 
   drawRect(x0, y0, x1, y1, z, color) {
@@ -485,7 +560,7 @@ class GlovUI {
     let my = Math.min(y0, y1);
     let Mx = Math.max(x0, x1);
     let My = Math.max(y0, y1);
-    this.draw_list.queue(this.sprites.white, mx, my, z, color, math_device.v2Build(Mx - mx, My - my));
+    this.draw_list.queue(this.sprites.white, mx, my, z, color, VMath.v2Build(Mx - mx, My - my));
   }
 
   _spreadTechParams(spread) {
@@ -496,9 +571,9 @@ class GlovUI {
     spread = Math.min(Math.max(spread, 0), 0.99);
 
     let tech_params = {
-        clipSpace: this.draw_list.draw_2d.clipSpace,
-        param0: math_device.v4Build(0,0,0,0),
-        texture: null
+      clipSpace: this.draw_list.draw_2d.clipSpace,
+      param0: VMath.v4Build(0,0,0,0),
+      texture: null
     };
 
     tech_params.param0[0] = 1 / (1 - spread);
@@ -506,8 +581,7 @@ class GlovUI {
     return tech_params;
   }
 
-  _drawCircleInternal(sprite, x, y, z, r, spread, tu1, tv1, tu2, tv2, color)
-  {
+  _drawCircleInternal(sprite, x, y, z, r, spread, tu1, tv1, tu2, tv2, color) {
     let x0 = x - r * 2 + r * 4 * tu1;
     let x1 = x - r * 2 + r * 4 * tu2;
     let y0 = y - r * 2 + r * 4 * tv1;
@@ -515,22 +589,19 @@ class GlovUI {
     let elem = this.draw_list.queueraw(sprite._textures[0],
       x0, y0, z, x1 - x0, y1 - y0,
       tu1, tv1, tu2, tv2,
-      color, 0, 'aa');
+      color, 0, 'font_aa');
     elem.tech_params = this._spreadTechParams(spread);
   }
 
-  drawCircle(x, y, z, r, spread, color)
-  {
+  drawCircle(x, y, z, r, spread, color) {
     this._drawCircleInternal(this.sprites.circle, x, y, z, r, spread, 0, 0, 1, 1, color);
   }
 
-  drawHollowCircle(x, y, z, r, spread, color)
-  {
+  drawHollowCircle(x, y, z, r, spread, color) {
     this._drawCircleInternal(this.sprites.hollow_circle, x, y, z, r, spread, 0, 0, 1, 1, color);
   }
 
-  drawLine(x0, y0, x1, y1, z, w, spread, color)
-  {
+  drawLine(x0, y0, x1, y1, z, w, spread, color) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let length = Math.sqrt(dx*dx + dy*dy);
@@ -546,11 +617,10 @@ class GlovUI {
       x1 + tangx, y1 + tangy,
       z,
       0, 0, 1, 1,
-      color, 'aa', this._spreadTechParams(spread));
+      color, 'font_aa', this._spreadTechParams(spread));
   }
 
-  drawCone(x0, y0, x1, y1, z, w0, w1, spread, color)
-  {
+  drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let length = Math.sqrt(dx*dx + dy*dy);
@@ -565,7 +635,7 @@ class GlovUI {
       x0 + tangx*w0, y0 + tangy*w0,
       z,
       0, 0, 1, 1,
-      color, 'aa', this._spreadTechParams(spread));
+      color, 'font_aa', this._spreadTechParams(spread));
   }
 
 }
@@ -583,8 +653,6 @@ GlovUI.prototype.pad = 16;
 GlovUI.prototype.panel_pixel_scale = 40;
 
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovUI, args))();
+export function create(...args) {
+  return new GlovUI(...args);
 }

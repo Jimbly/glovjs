@@ -514,7 +514,8 @@ var WebGLInputDevice = (function () {
         var keyCode = event.keyCode;
         keyCode = this.keyMap[keyCode];
 
-        if (undefined !== keyCode && (keyCodes.ESCAPE !== keyCode)) {
+        // JE: Allow ESCAPE
+        if (undefined !== keyCode /* && (keyCodes.ESCAPE !== keyCode) */) {
             // Handle left / right key locations
             //   DOM_KEY_LOCATION_STANDARD = 0x00;
             //   DOM_KEY_LOCATION_LEFT     = 0x01;
@@ -549,7 +550,8 @@ var WebGLInputDevice = (function () {
         var keyCode = event.keyCode;
         keyCode = this.keyMap[keyCode];
 
-        if (keyCode === keyCodes.ESCAPE) {
+        // JE: Allow ESCAPE
+        if (keyCode === keyCodes.ESCAPE && false) {
             this.unlockMouse();
 
             if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {

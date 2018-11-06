@@ -1,32 +1,34 @@
+/* eslint no-alert:off */
 (function () {
-  var debug = document.getElementById('debug');
+  let debug = document.getElementById('debug');
   window.onerror = function (e, file, line) {
-    debug.innerText = e + '\n  at ' + file + '(' + line + ')';
+    debug.innerText = `${e}\n  at ${file}(${line})`;
   };
   window.debugmsg = function (msg) {
-    debug.innerText += msg + '\n';
+    debug.innerText += `${msg}\n`;
   };
 }());
 
-var canvasSupported = true;
-(function() {
-  var contextNames = ['webgl', 'experimental-webgl'];
-  var context = null;
-  var canvas = document.createElement('canvas');
+let canvasSupported = true;
+(function () {
+  let contextNames = ['webgl', 'experimental-webgl'];
+  let context = null;
+  let canvas = document.createElement('canvas');
 
   document.body.appendChild(canvas);
 
-  for (var i = 0; i < contextNames.length; i += 1) {
+  for (let i = 0; i < contextNames.length; i += 1) {
     try {
       context = canvas.getContext(contextNames[i]);
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
 
     if (context) {
       break;
     }
   }
-  if (!context)
-  {
+  if (!context) {
     canvasSupported = false;
     window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
   }
@@ -34,7 +36,7 @@ var canvasSupported = true;
   document.body.removeChild(canvas);
 }());
 
-window.assert = function(exp) {
+window.assert = function (exp) {
   if (!exp) {
     let e = new Error();
     console.log(e.stack);
@@ -45,13 +47,14 @@ window.assert = function(exp) {
 
 // Embedded code and startup code.
 window.onload = function () {
+  /* eslint global-require:off */
   const app = require('./app.js');
   let canvas = document.getElementById('turbulenz_game_engine_canvas');
   canvas.focus();
 
   function resizeCanvas() {
     // This happens in turbulenzengine.js:resizeCanvas() already:
-    // var css_to_real = window.devicePixelRatio || 1;
+    // let css_to_real = window.devicePixelRatio || 1;
     // canvas.width = Math.floor(canvas.parentNode.clientWidth * css_to_real);
     // canvas.height = Math.floor(canvas.parentNode.clientHeight * css_to_real);
 

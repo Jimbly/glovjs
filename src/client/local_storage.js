@@ -2,14 +2,14 @@
 
 exports.storage_prefix = 'demo';
 
-let _local_storage_sim = {};
+let local_storage_sim = {};
 export function get(key) {
-  key = exports.storage_prefix + '_' + key;
+  key = `${exports.storage_prefix}_${key}`;
   let ret;
   try {
     ret = localStorage[key];
   } catch (e) {
-    ret = _local_storage_sim[key];
+    ret = local_storage_sim[key];
   }
   if (ret === 'undefined') {
     ret = undefined;
@@ -18,11 +18,11 @@ export function get(key) {
 }
 
 export function set(key, value) {
-  key = exports.storage_prefix + '_' + key;
+  key = `${exports.storage_prefix}_${key}`;
   try {
     localStorage[key] = value;
   } catch (e) {
-    _local_storage_sim[key] = value;
+    local_storage_sim[key] = value;
   }
 }
 
@@ -35,6 +35,7 @@ export function getJSON(key, def) {
   try {
     return JSON.parse(value);
   } catch (e) {
+    // ignore
   }
   return def;
 }

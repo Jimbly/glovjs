@@ -7,11 +7,10 @@ let data_in = fs.readFileSync(file_in, 'utf8');
 let data = parser.parserLoad(data_in);
 data.char_infos = data.CharInfo;
 delete data.CharInfo;
-let file_out = file_in.replace(/\.txt/, '.json');
+let file_out = file_in.replace(/\.txt/u, '.json');
 if (file_in === file_out) {
-  throw 'Invalid filename';
+  throw new Error('Invalid filename');
 }
 console.log(`Writing ${file_out}...`);
 fs.writeFileSync(file_out, JSON.stringify(data));
 console.log('Done.');
-

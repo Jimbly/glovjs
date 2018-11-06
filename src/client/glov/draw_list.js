@@ -1,7 +1,7 @@
 /*global assert: true */
-/*global math_device: false */
 /*global VMath: false */
-/*global Draw2DSpriteData: false */
+
+const { Draw2DSpriteData } = require('./tz/draw2d.js');
 
 function cmpDrawList(a, b) {
   if (a.z !== b.z) {
@@ -27,6 +27,8 @@ class DrawListSprite {
     this.tech_params = null;
   }
   _update() {
+    // Nothing, but gets called by draw2d
+    /* eslint class-methods-use-this:off */
   }
 }
 
@@ -39,7 +41,7 @@ class GlovDrawList {
     this.default_bucket_tint = 'alpha_tint';
     this.sprite_list = [];
     this.sprite_alloc_count = 0;
-    this.color_white = math_device.v4Build(1, 1, 1, 1);
+    this.color_white = VMath.v4Build(1, 1, 1, 1);
   }
 
   createDrawListSprite() {
@@ -49,22 +51,27 @@ class GlovDrawList {
     return this.sprite_list[this.sprite_alloc_count++];
   }
 
-  // 'alpha_nearest' is useful
-  setDefaultBucket(new_value) {
-    this.default_bucket = new_value;
-    this.default_bucket_tint = new_value + '_tint';
+  // '_nearest' is useful
+  setNearest(new_value) {
+    if (new_value) {
+      this.default_bucket = 'alpha_nearest';
+      this.default_bucket_tint = 'alpha_tint_nearest';
+    } else {
+      this.default_bucket = 'alpha';
+      this.default_bucket_tint = 'alpha_tint';
+    }
   }
 
   queue(sprite, x, y, z, color, scale, tex_rect, rotation, bucket) {
     assert(sprite);
-    scale =  scale || unit_vec4;
+    scale = scale || unit_vec4;
     let elem = {
       sprite,
       x: (x - this.camera.data[0]) * this.camera.data[4],
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
       color: color || this.color_white,
-      scale: math_device.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
@@ -75,14 +82,14 @@ class GlovDrawList {
 
   queueDualTint(sprite, x, y, z, color0, color1, scale, tex_rect, rotation, bucket) {
     assert(sprite);
-    scale =  scale || unit_vec4;
+    scale = scale || unit_vec4;
     let elem = {
       sprite,
       x: (x - this.camera.data[0]) * this.camera.data[4],
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
       color: color0 || this.color_white,
-      scale: math_device.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket_tint,
       rotation: rotation || 0,
@@ -98,16 +105,16 @@ class GlovDrawList {
   // Identical to queue, but uses integer screen coordinates, for use with
   // nearest-filtered sprites so they do not shimmer as they move by sub-pixel amounts
   queueInt(sprite, x, y, z, color, scale, tex_rect, rotation, bucket) {
-    /* jshint bitwise:false */
+    /* eslint no-bitwise:off */
     assert(sprite);
-    scale =  scale || unit_vec4;
+    scale = scale || unit_vec4;
     let elem = {
       sprite,
       x: (x - this.camera.data[0]) * this.camera.data[4] | 0,
       y: (y - this.camera.data[1]) * this.camera.data[5] | 0,
       z,
       color: color || this.color_white,
-      scale: math_device.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
@@ -122,7 +129,7 @@ class GlovDrawList {
       x: (x - this.camera.data[0]) * this.camera.data[4],
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
-      bucket: (bucket === undefined) ? this.default_bucket : bucket,
+      bucket: bucket === undefined ? this.default_bucket : bucket,
     };
     this.list.push(elem);
     return elem;
@@ -167,6 +174,7 @@ class GlovDrawList {
     data[13] = v0;
     data[14] = u1;
     data[15] = v1;
+    /* eslint no-underscore-dangle:off */
     elem._textures = [tex];
     elem.x = data[0];
     elem.y = data[1];
@@ -221,8 +229,6 @@ class GlovDrawList {
   }
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovDrawList, args))();
+export function create(...args) {
+  return new GlovDrawList(...args);
 }

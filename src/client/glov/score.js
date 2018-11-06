@@ -1,4 +1,4 @@
-/*jshint browser:true, noempty:false*/
+/* eslint callback-return:off */
 /*global $: false */
 
 const PLAYER_NAME_KEY = 'ld.player_name';
@@ -9,7 +9,8 @@ export let player_name;
 if (localStorage[PLAYER_NAME_KEY]) {
   player_name = localStorage[PLAYER_NAME_KEY];
 } else {
-  localStorage[PLAYER_NAME_KEY] = player_name = 'Anonymous ' + Math.random().toString().slice(2, 8);
+  /* eslint newline-per-chained-call:off */
+  localStorage[PLAYER_NAME_KEY] = player_name = `Anonymous ${Math.random().toString().slice(2, 8)}`;
 }
 
 let score_host = 'http://scores.dashingstrike.com';
@@ -40,17 +41,20 @@ let num_highscores = 20000;
 let score_update_time = 0;
 export let high_scores = {};
 function refreshScores(level, changed_cb) {
-  $.ajax({ url: `${score_host}/api/scoreget?key=${SCORE_KEY}.${level}&limit=${num_highscores}`, success: function (scores) {
-    let list = [];
-    scores.forEach(function (score) {
-      score.score = parseHighScore(score.score);
-      list.push(score);
-    });
-    high_scores[level] = list;
-    if (changed_cb) {
-      changed_cb();
+  $.ajax({
+    url: `${score_host}/api/scoreget?key=${SCORE_KEY}.${level}&limit=${num_highscores}`,
+    success: function (scores) {
+      let list = [];
+      scores.forEach(function (score) {
+        score.score = parseHighScore(score.score);
+        list.push(score);
+      });
+      high_scores[level] = list;
+      if (changed_cb) {
+        changed_cb();
+      }
     }
-  }});
+  });
 }
 
 
@@ -58,7 +62,7 @@ function clearScore(level, old_player_name, cb) {
   if (!old_player_name) {
     return;
   }
-  $.ajax({ url: `${score_host}/api/scoreclear?key=${SCORE_KEY}.${level}&name=${old_player_name}`, success: cb});
+  $.ajax({ url: `${score_host}/api/scoreclear?key=${SCORE_KEY}.${level}&name=${old_player_name}`, success: cb });
 }
 
 function submitScore(level, score, cb) {
@@ -66,17 +70,20 @@ function submitScore(level, score, cb) {
   if (!player_name) {
     return;
   }
-  $.ajax({ url: `${score_host}/api/scoreset?key=${SCORE_KEY}.${level}&name=${player_name}&score=${high_score}`, success: function (scores) {
-    let list = [];
-    scores.forEach(function (score) {
-      score.score = parseHighScore(score.score);
-      list.push(score);
-    });
-    high_scores[level] = list;
-    if (cb) {
-      cb();
+  $.ajax({
+    url: `${score_host}/api/scoreset?key=${SCORE_KEY}.${level}&name=${player_name}&score=${high_score}`,
+    success: function (scores) {
+      let list = [];
+      scores.forEach(function (score_it) {
+        score_it.score = parseHighScore(score_it.score);
+        list.push(score_it);
+      });
+      high_scores[level] = list;
+      if (cb) {
+        cb();
+      }
     }
-  }});
+  });
 }
 
 export function updateHighScores(changed_cb) {
@@ -116,7 +123,7 @@ export function getScore(level) {
   if (localStorage && localStorage[key]) {
     let ret = JSON.parse(localStorage[key]);
     if (!ret) {
-      return;
+      return null;
     }
     ld.local_score = ret;
     if (!ret.submitted) {

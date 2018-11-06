@@ -1,5 +1,7 @@
-/*global Draw2D: false */
+/*global VMath: false */
 /*global assert: false */
+
+let VMathArrayConstructor = VMath.F32Array;
 
 const UP_EDGE = 0;
 const DOWN_EDGE = 1;
@@ -13,8 +15,8 @@ class GlovInput {
     this.key_state = {};
     this.pad_states = []; // One map per joystick
     this.clicks = [];
-    this.mouse_pos = new Draw2D.floatArray(2);
-    this.mpos = new Draw2D.floatArray(2); // temporary, mapped to camera
+    this.mouse_pos = new VMathArrayConstructor(2);
+    this.mpos = new VMathArrayConstructor(2); // temporary, mapped to camera
     this.mouse_over_captured = false;
     this.mouse_down = [];
     this.pad_threshold = 0.25;
@@ -31,8 +33,8 @@ class GlovInput {
     this.pad_codes.ANALOG_RIGHT = 23;
     this.key_codes = input_device.keyCodes;
 
-    input_device.addEventListener('keydown', keycode => this.onKeyDown(keycode));
-    input_device.addEventListener('keyup', keycode => this.onKeyUp(keycode));
+    input_device.addEventListener('keydown', (keycode) => this.onKeyDown(keycode));
+    input_device.addEventListener('keyup', (keycode) => this.onKeyUp(keycode));
 
     input_device.addEventListener('mousedown', (mousecode, x, y) => this.onMouseDown(mousecode, x, y));
     input_device.addEventListener('mouseup', (mousecode, x, y) => this.onMouseUp(mousecode, x, y));
@@ -41,7 +43,8 @@ class GlovInput {
 
     input_device.addEventListener('paddown', (padindex, padcode) => this.onPadDown(padindex, padcode));
     input_device.addEventListener('padup', (padindex, padcode) => this.onPadUp(padindex, padcode));
-    input_device.addEventListener('padmove', (padindex, x, y, z, rx, ry, rz) => this.onPadMove(padindex, x, y, z, rx, ry, rz));
+    input_device.addEventListener('padmove',
+      (padindex, x, y, z, rx, ry, rz) => this.onPadMove(padindex, x, y, z, rx, ry, rz));
 
     input_device.addEventListener('touchstart', (evt) => this.onTouchChange(evt));
     input_device.addEventListener('touchend', (evt) => this.onTouchChange(evt));
@@ -54,17 +57,17 @@ class GlovInput {
     this.mouse_over_captured = false;
     this.input_device.update();
   }
-  endFrame()
-  {
+  endFrame() {
     function tickMap(map) {
-      Object.keys(map).forEach(keycode => {
-        switch(map[keycode]) {
+      Object.keys(map).forEach((keycode) => {
+        switch (map[keycode]) {
           case DOWN_EDGE:
             map[keycode] = DOWN;
             break;
           case UP_EDGE:
             delete map[keycode];
             break;
+          default:
         }
       });
     }
@@ -121,7 +124,7 @@ class GlovInput {
   }
   // returns position mapped to current camera view
   mousePos(dst) {
-    dst = dst || new Draw2D.floatArray(2);
+    dst = dst || new VMathArrayConstructor(2);
     this.camera.physicalToVirtual(dst, this.mouse_pos);
     return dst;
   }
@@ -181,10 +184,13 @@ class GlovInput {
     if (this.input_eaten) {
       return false;
     }
-    for (var ii = 0; ii < this.touch_state.length; ++ii) {
+    for (let ii = 0; ii < this.touch_state.length; ++ii) {
       this.camera.physicalToVirtual(this.mpos, [this.touch_state[ii].positionX, this.touch_state[ii].positionY]);
       let pos = this.mpos;
-      if (!param || pos[0] >= param.x && pos[0] < param.x + param.w && pos[1] >= param.y && pos[1] < param.y + param.h) {
+      if (!param ||
+        pos[0] >= param.x && pos[0] < param.x + param.w &&
+        pos[1] >= param.y && pos[1] < param.y + param.h
+      ) {
         return pos;
       }
     }
@@ -208,7 +214,7 @@ class GlovInput {
     this.key_state[keycode] = DOWN_EDGE;
   }
   isKeyDown(keycode) {
-    return !this.input_eaten && !!this.key_state[keycode];
+    return Boolean(!this.input_eaten && this.key_state[keycode]);
   }
   keyDownHit(keycode) {
     if (this.key_state[keycode] === DOWN_EDGE) {
@@ -234,7 +240,7 @@ class GlovInput {
     this.pad_states[padindex][padcode] = DOWN_EDGE;
   }
   onPadMove(padindex, x, y, z, rx, ry, rz) {
-    var ps = this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
+    let ps = this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
     ps.axes.x = x;
     ps.axes.y = y;
     ps.axes.z = z;
@@ -257,6 +263,16 @@ class GlovInput {
     check(y > this.pad_threshold, this.pad_codes.ANALOG_UP);
   }
   isPadButtonDown(padindex, padcode) {
+    // Handle calling without a specific pad index
+    if (padcode === undefined) {
+      for (let ii = 0; ii < this.pad_states.length; ++ii) {
+        if (this.isPadButtonDown(ii, padindex)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     if (this.input_eaten) {
       return false;
     }
@@ -275,9 +291,19 @@ class GlovInput {
     if (padcode === this.pad_codes.DOWN && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_DOWN)) {
       return true;
     }
-    return !!this.pad_states[padindex][padcode];
+    return Boolean(this.pad_states[padindex][padcode]);
   }
   padDownHit(padindex, padcode) {
+    // Handle calling without a specific pad index
+    if (padcode === undefined) {
+      for (let ii = 0; ii < this.pad_states.length; ++ii) {
+        if (this.padDownHit(ii, padindex)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     if (!this.pad_states[padindex]) {
       return false;
     }
@@ -300,6 +326,16 @@ class GlovInput {
     return false;
   }
   padUpHit(padindex, padcode) {
+    // Handle calling without a specific pad index
+    if (padcode === undefined) {
+      for (let ii = 0; ii < this.pad_states.length; ++ii) {
+        if (this.padUpHit(ii, padindex)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     if (!this.pad_states[padindex]) {
       return false;
     }
@@ -324,8 +360,6 @@ class GlovInput {
 
 }
 
-export function create() {
-  let args = Array.prototype.slice.call(arguments, 0);
-  args.splice(0,0, null);
-  return new (Function.prototype.bind.apply(GlovInput, args))();
+export function create(...args) {
+  return new GlovInput(...args);
 }

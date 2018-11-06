@@ -237,6 +237,16 @@ var VMath = {
         var a1 = a[1];
         return Math.sqrt((a0 * a0) + (a1 * a1));
     },
+    v2DistanceSq: function v2DistanceSqFn(a, b) {
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        return ((a0 * a0) + (a1 * a1));
+    },
+    v2Distance: function v2DistanceFn(a, b) {
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        return Math.sqrt((a0 * a0) + (a1 * a1));
+    },
     v2Reciprocal: function v2ReciprocalFn(a, dst) {
         if (dst === undefined) {
             dst = new VMathArrayConstructor(2);
@@ -674,6 +684,20 @@ var VMath = {
         var a0 = a[0];
         var a1 = a[1];
         var a2 = a[2];
+        return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2));
+    },
+    v3DistanceSq: function v3DistanceSqFn(a, b) {
+        debug.assert(debug.isVec3(a));
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        return ((a0 * a0) + (a1 * a1) + (a2 * a2));
+    },
+    v3Distance: function v3DistanceFn(a, b) {
+        debug.assert(debug.isVec3(a));
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
         return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2));
     },
     v3Reciprocal: function v3ReciprocalFn(a, dst) {
@@ -1211,6 +1235,24 @@ var VMath = {
         var a1 = a[1];
         var a2 = a[2];
         var a3 = a[3];
+        return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
+    },
+    v4DistanceSq: function v4DistanceSqFn(a, b) {
+        debug.assert(debug.isVec4(a));
+
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        var a3 = b[3] - a[3];
+        return ((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
+    },
+    v4Distance: function v4DistanceFn(a, b) {
+        debug.assert(debug.isVec4(a));
+
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        var a3 = b[3] - a[3];
         return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
     },
     v4Reciprocal: function v4ReciprocalFn(a, dst) {
@@ -4926,7 +4968,7 @@ if (typeof Float32Array !== "undefined") {
     VMath.FLOAT_MAX = testVector[0];
     VMathArrayConstructor = Float32Array;
 }
-VMath.arrayConstructor = VMathArrayConstructor;
+VMath.F32Array = VMath.arrayConstructor = VMathArrayConstructor;
 
 if (TurbulenzEngine.hasOwnProperty('VMath')) {
     TurbulenzEngine.VMath = VMath;

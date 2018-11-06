@@ -23,11 +23,18 @@ export function lerp(a, v0, v1) {
   return (1 - a) * v0 + a * v1;
 }
 
+export function sign(a) {
+  return a < 0 ? -1 : a > 0 ? 1 : 0;
+}
+
+export function round100(a) {
+  return Math.round(a * 100) / 100;
+}
+
 const EPSILON = 0.00001;
 
 // http://local.wasp.uwa.edu.au/~pbourke/geometry/sphereline/
-export function lineCircleIntersect(p1, p2, pCircle, radius)
-{
+export function lineCircleIntersect(p1, p2, pCircle, radius) {
   let dp = [
     p2[0] - p1[0],
     p2[1] - p1[1]

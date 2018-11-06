@@ -1,5 +1,5 @@
 /*global TurbulenzEngine: true */
-/*global math_device: false */
+/*global VMath: false */
 /*global Camera: false */
 
 const DEFAULT_FADE_RATE = 0.001;
@@ -9,16 +9,16 @@ let num_loading = 0;
 class SoundManager {
   constructor(listenerTransform) {
     if (!listenerTransform) {
-      const camera = Camera.create(math_device);
-      const look_at_position = math_device.v3Build(0.0, 0.0, 0.0);
-      const worldUp = math_device.v3BuildYAxis();
-      const camera_position = math_device.v3Build(0.0, 0.0, 1.0);
+      const camera = Camera.create(VMath);
+      const look_at_position = VMath.v3Build(0.0, 0.0, 0.0);
+      const worldUp = VMath.v3BuildYAxis();
+      const camera_position = VMath.v3Build(0.0, 0.0, 1.0);
       camera.lookAt(look_at_position, worldUp, camera_position);
       camera.updateViewMatrix();
       listenerTransform = camera.matrix;
     }
     let soundDeviceParameters = {
-      linearDistance : false
+      linearDistance: false
     };
     this.soundDevice = TurbulenzEngine.createSoundDevice(soundDeviceParameters);
     this.soundDevice.listenerTransform = listenerTransform;
@@ -30,9 +30,9 @@ class SoundManager {
     this.channels = [];
     for (let ii = 0; ii < 16; ++ii) {
       this.channels[ii] = this.soundDevice.createSource({
-        position : [0, 0, 0],
-        relative : false,
-        pitch : 1.0,
+        position: [0, 0, 0],
+        relative: false,
+        pitch: 1.0,
       });
     }
     this.channel = 0;
@@ -46,9 +46,9 @@ class SoundManager {
     for (let ii = 0; ii < 2; ++ii) {
       this.music.push({
         source: this.soundDevice.createSource({
-          position : [0, 0, 0],
-          relative : false,
-          pitch : 1.0,
+          position: [0, 0, 0],
+          relative: false,
+          pitch: 1.0,
           looping: true,
         }),
         current_volume: 0,
@@ -64,18 +64,17 @@ class SoundManager {
       }
       return;
     }
-    let src = 'sounds/' + base;
-    let self = this;
-    function tryLoad(ext) {
+    let src = `sounds/${base}`;
+    let tryLoad = (ext) => {
       ++num_loading;
-      self.soundDevice.createSound({
+      this.soundDevice.createSound({
         src: src + ext,
         onload: function (sound) {
           --num_loading;
           if (sound) {
             sounds[base] = sound;
             if (cb) {
-              cb();
+              return cb();
             }
           } else {
             // failed to load
@@ -83,9 +82,10 @@ class SoundManager {
               tryLoad('.wav');
             }
           }
+          return null;
         }
       });
-    }
+    };
     if (this.soundDevice.isSupported('FILEFORMAT_OGG') && this.auto_oggs) {
       tryLoad('.ogg');
     } else if (this.soundDevice.isSupported('FILEFORMAT_MP3') && this.auto_mp3s) {
@@ -104,9 +104,9 @@ class SoundManager {
         let delta = target - this.music[ii].current_volume;
         let fade_amt = Math.min(Math.abs(delta), max_fade);
         if (delta < 0) {
-          this.music[ii].current_volume = Math.max(target,  this.music[ii].current_volume - fade_amt);
+          this.music[ii].current_volume = Math.max(target, this.music[ii].current_volume - fade_amt);
         } else {
-          this.music[ii].current_volume = Math.min(target,  this.music[ii].current_volume + fade_amt);
+          this.music[ii].current_volume = Math.min(target, this.music[ii].current_volume + fade_amt);
         }
         this.music[ii].source.gain = this.music[ii].current_volume;
       }
@@ -116,14 +116,14 @@ class SoundManager {
   play(soundname, volume) {
     volume = volume || 1;
     if (!this.sound_on) {
-      return;
+      return null;
     }
     if (!sounds[soundname]) {
-      return;
+      return null;
     }
     let last_played_time = this.last_played[soundname] || -9e9;
     if (this.global_timer - last_played_time < 45) {
-      return;
+      return null;
     }
     let channel = this.channels[this.channel++];
     channel.play(sounds[soundname]);
@@ -158,7 +158,7 @@ class SoundManager {
         return;
       }
       // fade out previous music, if any
-      /* jshint bitwise:false */
+      /* eslint no-bitwise:off */
       if (this.music[0].current_volume) {
         if (transition & SoundManager.FADE_OUT) {
           // swap to position 1, start fadeout
@@ -181,6 +181,7 @@ class SoundManager {
   }
 
   loading() {
+    /* eslint class-methods-use-this:off */
     return num_loading;
   }
 

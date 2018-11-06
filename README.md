@@ -1,16 +1,21 @@
 Javascript libGlov/GLOV.js framework
 ============================
 
-* Files can be ES6 (through Babel)
+* Files can be ES2018 (through Babel)
 * Server automatically restarts on any relevant file change
 * Client automatically reloads on javascript or html change
 * Client automatically dynamically reloads CSS file changes
+* Client .js and vendor files all bundled and minified
+* Source maps created for debugging, even on minified builds
+* brfs supported for embedding non-.js files into source
 
 Useful SublimeText 3 packages
 * SublimeLinter
-* SublimeLinter-jshint (requires `npm i -g jshint`)
+* SublimeLinter-eslint (requires `npm i -g eslint`)
 
 Start with: `npm start` (after running `npm i` once)
+
+Build distributable files with: `npm run-script build`
 
 Notes:
 * The engine API (glov/*) is subject to change significantly, often changes with each Ludum Dare in which I use this engine ^_^
