@@ -1,3 +1,5 @@
+/* eslint no-bitwise:off */
+/* eslint no-underscore-dangle:off */
 /*global assert: true */
 /*global VMath: false */
 
@@ -26,9 +28,8 @@ class DrawListSprite {
     this.bucket = 'alpha';
     this.tech_params = null;
   }
-  _update() {
+  _update() { // eslint-disable-line class-methods-use-this
     // Nothing, but gets called by draw2d
-    /* eslint class-methods-use-this:off */
   }
 }
 
@@ -105,7 +106,6 @@ class GlovDrawList {
   // Identical to queue, but uses integer screen coordinates, for use with
   // nearest-filtered sprites so they do not shimmer as they move by sub-pixel amounts
   queueInt(sprite, x, y, z, color, scale, tex_rect, rotation, bucket) {
-    /* eslint no-bitwise:off */
     assert(sprite);
     scale = scale || unit_vec4;
     let elem = {
@@ -174,7 +174,6 @@ class GlovDrawList {
     data[13] = v0;
     data[14] = u1;
     data[15] = v1;
-    /* eslint no-underscore-dangle:off */
     elem._textures = [tex];
     elem.x = data[0];
     elem.y = data[1];

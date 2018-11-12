@@ -1,5 +1,6 @@
+/* eslint-env browser */
 /* eslint callback-return:off */
-/*global $: false */
+/* global $ */
 
 const PLAYER_NAME_KEY = 'ld.player_name';
 
@@ -9,7 +10,7 @@ export let player_name;
 if (localStorage[PLAYER_NAME_KEY]) {
   player_name = localStorage[PLAYER_NAME_KEY];
 } else {
-  /* eslint newline-per-chained-call:off */
+  // eslint-disable-next-line newline-per-chained-call
   localStorage[PLAYER_NAME_KEY] = player_name = `Anonymous ${Math.random().toString().slice(2, 8)}`;
 }
 

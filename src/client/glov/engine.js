@@ -21,7 +21,24 @@ export let draw_list;
 export let font;
 export let effects;
 export let app_state = null;
-export let pico8_colors;
+export const pico8_colors = [
+  VMath.v4Build(0, 0, 0, 1),
+  VMath.v4Build(0.114, 0.169, 0.326, 1),
+  VMath.v4Build(0.494, 0.145, 0.326, 1),
+  VMath.v4Build(0.000, 0.529, 0.328, 1),
+  VMath.v4Build(0.671, 0.322, 0.212, 1),
+  VMath.v4Build(0.373, 0.341, 0.310, 1),
+  VMath.v4Build(0.761, 0.765, 0.780, 1),
+  VMath.v4Build(1.000, 0.945, 0.910, 1),
+  VMath.v4Build(1.000, 0.000, 0.302, 1),
+  VMath.v4Build(1.000, 0.639, 0.000, 1),
+  VMath.v4Build(1.000, 0.925, 0.153, 1),
+  VMath.v4Build(0.000, 0.894, 0.212, 1),
+  VMath.v4Build(0.161, 0.678, 1.000, 1),
+  VMath.v4Build(0.514, 0.463, 0.612, 1),
+  VMath.v4Build(1.000, 0.467, 0.659, 1),
+  VMath.v4Build(1.000, 0.800, 0.667, 1),
+];
 
 let global_timer = 0;
 export function getFrameTimestamp() {
@@ -154,7 +171,7 @@ export function startup(params) {
     fillParent: true
   });
   if (!TurbulenzEngine) {
-    /* eslint no-alert:off */
+    // eslint-disable-next-line no-alert
     window.alert('Failed to init TurbulenzEngine (canvas)');
     return;
   }
@@ -163,7 +180,7 @@ export function startup(params) {
 
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
   let draw2d_params = { graphicsDevice: graphics_device, shaders: params.shaders || {} };
-  /* eslint global-require:off */
+  /* eslint-disable global-require */
   const glov_font = require('./font.js');
   glov_font.populateDraw2DParams(draw2d_params);
   draw_2d = Draw2D.create(draw2d_params);
@@ -195,25 +212,6 @@ export function startup(params) {
 
   glov_camera.set2DAspectFixed(game_width, game_height);
 
-  pico8_colors = [
-    VMath.v4Build(0, 0, 0, 1),
-    VMath.v4Build(0.114, 0.169, 0.326, 1),
-    VMath.v4Build(0.494, 0.145, 0.326, 1),
-    VMath.v4Build(0.000, 0.529, 0.328, 1),
-    VMath.v4Build(0.671, 0.322, 0.212, 1),
-    VMath.v4Build(0.373, 0.341, 0.310, 1),
-    VMath.v4Build(0.761, 0.765, 0.780, 1),
-    VMath.v4Build(1.000, 0.945, 0.910, 1),
-    VMath.v4Build(1.000, 0.000, 0.302, 1),
-    VMath.v4Build(1.000, 0.639, 0.000, 1),
-    VMath.v4Build(1.000, 0.925, 0.153, 1),
-    VMath.v4Build(0.000, 0.894, 0.212, 1),
-    VMath.v4Build(0.161, 0.678, 1.000, 1),
-    VMath.v4Build(0.514, 0.463, 0.612, 1),
-    VMath.v4Build(1.000, 0.467, 0.659, 1),
-    VMath.v4Build(1.000, 0.800, 0.667, 1),
-  ];
-
   if (params.state) {
     setState(params.state);
   }
@@ -223,6 +221,7 @@ export function startup(params) {
 
   // TODO: Use requestAnimationFrame instead?
   TurbulenzEngine.setInterval(tick, 1000/60);
+  /* eslint-enable global-require */
 }
 
 // Example effects can be found at:

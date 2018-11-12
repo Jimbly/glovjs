@@ -158,7 +158,7 @@ class SoundManager {
         return;
       }
       // fade out previous music, if any
-      /* eslint no-bitwise:off */
+      /* eslint-disable no-bitwise */
       if (this.music[0].current_volume) {
         if (transition & SoundManager.FADE_OUT) {
           // swap to position 1, start fadeout
@@ -177,11 +177,11 @@ class SoundManager {
         this.music[0].source.gain = this.music[0].current_volume = volume;
       }
       this.music[0].source.play(sounds[soundname]);
+      /* eslint-enable no-bitwise */
     });
   }
 
-  loading() {
-    /* eslint class-methods-use-this:off */
+  loading() { // eslint-disable-line class-methods-use-this
     return num_loading;
   }
 

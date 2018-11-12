@@ -47,7 +47,7 @@ window.assert = function (exp) {
 
 // Embedded code and startup code.
 window.onload = function () {
-  /* eslint global-require:off */
+  // eslint-disable-next-line global-require
   const app = require('./app.js');
   let canvas = document.getElementById('turbulenz_game_engine_canvas');
   canvas.focus();

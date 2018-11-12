@@ -1,3 +1,4 @@
+/* eslint no-invalid-this:off */
 const args = require('yargs').argv;
 const babel = require('gulp-babel');
 const babelify = require('babelify');
@@ -107,7 +108,6 @@ function babelBrfs(filename, opts) {
   }
 
   function flush(next) {
-    /* eslint no-invalid-this:off */
     let result;
     try {
       result = babel_core.transform(input, {
@@ -146,10 +146,16 @@ function babelBrfs(filename, opts) {
   const babelify_opts = {
     global: true, // Required because dot-prop has ES6 code in it
     plugins: [],
-    // plugins: [require('babel-plugin-static-fs', {}], - generates good code, but does not allow reloading/watchify
+    // plugins: [
+    //   // ['syntax-object-rest-spread', {}],
+    //   // ['transform-object-rest-spread', {}],
+    //   // ['static-fs', {}], - generates good code, but does not allow reloading/watchify
+    // ],
   };
   function dobundle(b, uglify_options) {
-    return b.bundle()
+    return b
+      //.transform(babelify, babelify_opts)
+      .bundle()
       // log errors if they happen
       .on('error', log.error.bind(log, 'Browserify Error'))
       .pipe(source('wrapper.bundle.js'))

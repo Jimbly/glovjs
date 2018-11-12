@@ -7,6 +7,11 @@ module.exports = {
     "es6": true,
     "node": true
   },
+  "globals": {
+    // Just the super-common ones, don't mask undefined variables named "status", etc
+    "window": true,
+    "document": true,
+  },
   "extends": "eslint:recommended",
   "parserOptions": {
     "ecmaVersion": 2018,

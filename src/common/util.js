@@ -23,12 +23,20 @@ export function lerp(a, v0, v1) {
   return (1 - a) * v0 + a * v1;
 }
 
+export function mix(v0, v1, a) { // GLSL semantics
+  return (1 - a) * v0 + a * v1;
+}
+
 export function sign(a) {
   return a < 0 ? -1 : a > 0 ? 1 : 0;
 }
 
 export function round100(a) {
   return Math.round(a * 100) / 100;
+}
+
+export function fract(a) {
+  return a - Math.floor(a);
 }
 
 const EPSILON = 0.00001;

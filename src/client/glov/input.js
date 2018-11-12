@@ -23,6 +23,7 @@ class GlovInput {
     this.last_touch_state = [];
     this.touch_state = [];
     this.touch_as_mouse = true;
+    this.map_analog_to_dpad = true; // user overrideable
 
     this.input_eaten = false;
 
@@ -279,19 +280,35 @@ class GlovInput {
     if (!this.pad_states[padindex]) {
       return false;
     }
-    if (padcode === this.pad_codes.LEFT && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_LEFT)) {
-      return true;
-    }
-    if (padcode === this.pad_codes.RIGHT && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_RIGHT)) {
-      return true;
-    }
-    if (padcode === this.pad_codes.UP && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_UP)) {
-      return true;
-    }
-    if (padcode === this.pad_codes.DOWN && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_DOWN)) {
-      return true;
+    if (this.map_analog_to_dpad) {
+      if (padcode === this.pad_codes.LEFT && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_LEFT)) {
+        return true;
+      }
+      if (padcode === this.pad_codes.RIGHT && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_RIGHT)) {
+        return true;
+      }
+      if (padcode === this.pad_codes.UP && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_UP)) {
+        return true;
+      }
+      if (padcode === this.pad_codes.DOWN && this.isPadButtonDown(padindex, this.pad_codes.ANALOG_DOWN)) {
+        return true;
+      }
     }
     return Boolean(this.pad_states[padindex][padcode]);
+  }
+  padGetAxes(padindex) {
+    if (padindex === undefined) {
+      let ret = { x: 0, y: 0 };
+      for (let ii = 0; ii < this.pad_states.length; ++ii) {
+        let sub = this.padGetAxes(ii);
+        ret.x += sub.x;
+        ret.y += sub.y;
+      }
+      return ret;
+    }
+    let ps = this.pad_states[padindex] = this.pad_states[padindex] || { axes: {} };
+    let axes = ps.axes;
+    return { x: axes.x || 0, y: axes.y || 0 };
   }
   padDownHit(padindex, padcode) {
     // Handle calling without a specific pad index
