@@ -1,6 +1,8 @@
+const { abs, floor, min, max, round, pow, sqrt } = Math;
+
 export function easeInOut(v, a) {
-  let va = Math.pow(v, a);
-  return va / (va + Math.pow(1 - v, a));
+  let va = pow(v, a);
+  return va / (va + pow(1 - v, a));
 }
 
 export function easeIn(v, a) {
@@ -16,7 +18,7 @@ export function clone(obj) {
 }
 
 export function clamp(v, mn, mx) {
-  return Math.min(Math.max(mn, v), mx);
+  return min(max(mn, v), mx);
 }
 
 export function lerp(a, v0, v1) {
@@ -32,11 +34,15 @@ export function sign(a) {
 }
 
 export function round100(a) {
-  return Math.round(a * 100) / 100;
+  return round(a * 100) / 100;
 }
 
 export function fract(a) {
-  return a - Math.floor(a);
+  return a - floor(a);
+}
+
+export function nearSame(a, b, tol) {
+  return abs(b - a) <= tol;
 }
 
 const EPSILON = 0.00001;
@@ -54,12 +60,12 @@ export function lineCircleIntersect(p1, p2, pCircle, radius) {
   c -= 2 * (pCircle[0] * p1[0] + pCircle[1] * p1[1]);
   c -= radius * radius;
   let bb4ac = b * b - 4 * a * c;
-  if (Math.abs(a) < EPSILON || bb4ac < 0) {
+  if (abs(a) < EPSILON || bb4ac < 0) {
     return false;
   }
 
-  let mu1 = (-b + Math.sqrt(bb4ac)) / (2 * a);
-  let mu2 = (-b - Math.sqrt(bb4ac)) / (2 * a);
+  let mu1 = (-b + sqrt(bb4ac)) / (2 * a);
+  let mu2 = (-b - sqrt(bb4ac)) / (2 * a);
   if (mu1 >= 0 && mu1 <= 1 || mu2 >= 0 && mu2 <= 1) {
     return true;
   }

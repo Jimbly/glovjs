@@ -45,13 +45,22 @@ export function getFrameTimestamp() {
   return global_timer;
 }
 
+let global_frame_index = 0;
+export function getFrameIndex() {
+  return global_frame_index;
+}
+
+let this_frame_time = 0;
+export function getFrameDt() {
+  return this_frame_time;
+}
+
 let after_loading_state = null;
 let is_loading = true;
 export function setState(new_state) {
   if (is_loading) {
     after_loading_state = new_state;
   } else {
-    glov_ui.menu_up = false;
     app_state = new_state;
   }
 }
@@ -93,8 +102,10 @@ function tick() {
   }
   let now = Date.now();
   let dt = Math.min(Math.max(now - last_tick, 1), 250);
+  this_frame_time = dt;
   last_tick = now;
   global_timer += dt;
+  ++global_frame_index;
 
   glov_camera.tick();
   glov_camera.set2DAspectFixed(game_width, game_height);
@@ -204,7 +215,7 @@ export function startup(params) {
   const font_info_arial12x2 = require('../img/font/04b03_8x2.json');
   font = glov_font.create(draw_list, params.pixely ? font_info_arial12x2 : font_info_arial32,
     glov_sprite.loadTexture(params.pixely ? 'font/04b03_8x2.png' : 'font/arial32.png'));
-  glov_ui = require('./ui.js').create(glov_sprite, glov_input, font, draw_list);
+  glov_ui = require('./ui.js').create(font, draw_list);
   glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
     button_click: 'button_click',
     rollover: 'rollover',

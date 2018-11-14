@@ -12,7 +12,17 @@ Z.TOOLTIP = Z.TOOLTIP || 2000;
 
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const glov_edit_box = require('./edit_box.js');
 const { clone } = require('../../common/util.js');
+
+let glov_input;
+let glov_sprite;
+let key_codes;
+let pad_codes;
+
+export function focuslog(...args) {
+  // console.log(`focuslog(${glov_engine.getFrameIndex()}): `, ...args);
+}
 
 function doBlurEffect(src, dest) {
   glov_engine.effects.applyGaussianBlur({
@@ -70,106 +80,6 @@ function doDesaturateEffect(src, dest) {
   });
 }
 
-
-class GlovUIEditBox {
-  constructor(glov_ui, params) {
-    this.glov_ui = glov_ui;
-    this.x = 0;
-    this.y = 0;
-    this.z = Z.UI; // actually in DOM, so above everything!
-    this.w = glov_ui.button_width;
-    this.type = 'text';
-    // this.h = glov_ui.button_height;
-    // this.font_height = glov_ui.font_height;
-    this.text = '';
-    this.placeholder = '';
-    this.initial_focus = false;
-    this.applyParams(params);
-
-    this.elem = null;
-    this.input = null;
-    this.submitted = false;
-  }
-  applyParams(params) {
-    if (!params) {
-      return;
-    }
-    for (let f in params) {
-      this[f] = params[f];
-    }
-  }
-  getText() {
-    return this.text;
-  }
-  setText(new_text) {
-    if (this.input) {
-      this.input.val(new_text);
-    }
-    this.text = new_text;
-  }
-  focus() {
-    if (this.input) {
-      this.input.focus();
-    }
-  }
-  unfocus() {
-    if (this.input) {
-      this.input.blur();
-    }
-  }
-  run(params) {
-    this.applyParams(params);
-    this.glov_ui.this_frame_edit_boxes.push(this);
-    let elem = this.glov_ui.getElem();
-    if (elem !== this.elem) {
-      if (elem) {
-        // new DOM element, initialize
-        elem.html('');
-        let form = $('<form></form>');
-        let input = $(`<input type="${this.type}" placeholder="${this.placeholder}">`);
-        form.submit((ev) => {
-          ev.preventDefault();
-          this.submitted = true;
-        });
-        form.append(input);
-        elem.append(form);
-        input.val(this.text);
-        this.input = input;
-        if (this.initial_focus) {
-          input.focus();
-        }
-      } else {
-        this.input = null;
-      }
-      this.submitted = false;
-      this.elem = elem;
-    } else {
-      if (this.input) {
-        this.text = this.input.val();
-      }
-    }
-    if (elem) {
-      let pos = this.glov_ui.htmlPos(this.x, this.y);
-      elem[0].style.left = `${pos[0]}%`;
-      elem[0].style.top = `${pos[1]}%`;
-      let size = this.glov_ui.htmlSize(this.w, this.h);
-      elem[0].style.width = `${size[0]}%`;
-    }
-
-    if (this.submitted) {
-      this.submitted = false;
-      return this.SUBMIT;
-    }
-    return null;
-  }
-  unrun() {
-    // remove from DOM or hide
-    this.elem = null;
-    this.input = null;
-  }
-}
-GlovUIEditBox.prototype.SUBMIT = 'submit';
-
 export function makeColorSet(color) {
   let ret = {
     regular: VMath.v4ScalarMul(color, 1),
@@ -185,14 +95,16 @@ export function makeColorSet(color) {
 
 class GlovUI {
 
-  constructor(glov_sprite, glov_input, font, draw_list) {
-    this.glov_sprite = glov_sprite;
-    this.glov_input = glov_input;
+  constructor(font, draw_list) {
+    glov_input = glov_engine.glov_input;
+    glov_sprite = glov_engine.glov_sprite;
+    assert(glov_input);
+    assert(glov_sprite);
     this.font = font;
     this.draw_list = draw_list;
     this.camera = glov_input.camera;
-    let key_codes = this.key_codes = glov_input.key_codes;
-    let pad_codes = this.pad_codes = glov_input.pad_codes;
+    key_codes = glov_input.key_codes;
+    pad_codes = glov_input.pad_codes;
 
     this.color_button = makeColorSet([1,1,1,1]);
     this.color_panel = VMath.v4Build(1, 1, 0.75, 1);
@@ -201,8 +113,13 @@ class GlovUI {
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
     let sprites = this.sprites = {};
-    sprites.button = glov_sprite.createSpriteSimple('button.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
-    sprites.panel = glov_sprite.createSpriteSimple('panel.png', [2, 12, 2], [2, 12, 2], glov_sprite.origin_0_0);
+    sprites.button = glov_sprite.createSpriteSimple('ui/button.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
+    sprites.panel = glov_sprite.createSpriteSimple('ui/panel.png', [3, 2, 3], [3, 10, 3], glov_sprite.origin_0_0);
+    sprites.menu_entry = glov_sprite.createSpriteSimple('ui/menu_entry.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
+    sprites.menu_selected = glov_sprite.createSpriteSimple('ui/menu_selected.png',
+      [4, 5, 4], [13], glov_sprite.origin_0_0);
+    sprites.menu_header = glov_sprite.createSpriteSimple('ui/menu_header.png',
+      [4, 5, 12], [13], glov_sprite.origin_0_0);
     sprites.white = glov_sprite.createSpriteSimple('white', 1, 1, glov_sprite.origin_0_0);
     ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
       let size = key === 'hollow_circle' ? 128 : 32;
@@ -212,11 +129,13 @@ class GlovUI {
     this.sounds = {};
 
     this.button_mouseover = false; // for callers to poll the very last button
+    this.button_focused = false; // for callers to poll the very last button
     // For tracking global mouseover state
     this.last_frame_button_mouseover = false;
     this.frame_button_mouseover = false;
 
     this.modal_dialog = null;
+    this.modal_stealing_focus = false;
     this.menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
 
     this.this_frame_edit_boxes = [];
@@ -226,7 +145,7 @@ class GlovUI {
 
     // for modal dialogs
     this.button_keys = {
-      ok: { key: [key_codes.SPACE, key_codes.RETURN], pad: [pad_codes.A, pad_codes.X] },
+      ok: { key: [], pad: [pad_codes.X] },
       cancel: { key: [key_codes.ESCAPE], pad: [pad_codes.B, pad_codes.Y] },
     };
     this.button_keys.yes = clone(this.button_keys.ok);
@@ -259,13 +178,12 @@ class GlovUI {
 
   drawHBox(coords, s, color) {
     let uidata = s.uidata;
-    let scale = coords.h;
-    let ws = [uidata.percents_w[0] * scale, 0, uidata.percents_w[2] * scale];
+    let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
     let x = coords.x;
     ws[1] = Math.max(0, coords.w - ws[0] - ws[2]);
     for (let ii = 0; ii < ws.length; ++ii) {
       let my_w = ws[ii];
-      this.draw_list.queue(s, x, coords.y, coords.z, color, [my_w, scale, 1, 1], uidata.rects[ii]);
+      this.draw_list.queue(s, x, coords.y, coords.z, color, [my_w, coords.h, 1, 1], uidata.rects[ii]);
       x += my_w;
     }
   }
@@ -273,9 +191,9 @@ class GlovUI {
   drawBox(coords, s, pixel_scale, color) {
     let uidata = s.uidata;
     let scale = pixel_scale;
-    let ws = [uidata.percents_w[0] * scale, 0, uidata.percents_w[2] * scale];
+    let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
     ws[1] = Math.max(0, coords.w - ws[0] - ws[2]);
-    let hs = [uidata.percents_h[0] * scale, 0, uidata.percents_h[2] * scale];
+    let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
     hs[1] = Math.max(0, coords.h - hs[0] - hs[2]);
     let x = coords.x;
     for (let ii = 0; ii < ws.length; ++ii) {
@@ -331,23 +249,34 @@ class GlovUI {
     });
   }
 
-  buttonShared(param, key) {
+  buttonShared(param) {
     let colors = param.colors || this.color_button;
     let color = colors.regular;
     let ret = false;
+    let key = param.key || `${param.x}_${param.y}`;
+    let focused = !param.disabled && !param.no_focus && this.focusCheck(key);
     this.button_mouseover = false;
     if (param.disabled) {
       color = colors.disabled;
-    } else if (this.glov_input.clickHit(param)) {
+    } else if (glov_input.clickHit(param)) {
       this.setMouseOver(key);
-      color = colors.click;
       ret = true;
-      this.playUISound('button_click');
-    } else if (this.glov_input.isMouseOver(param)) {
+      this.focusSteal(key);
+    } else if (glov_input.isMouseOver(param)) {
       this.setMouseOver(key);
-      color = this.glov_input.isMouseDown() ? colors.click : colors.rollover;
-    } else {
-      this.button_mouseover = false;
+      color = glov_input.isMouseDown() ? colors.click : colors.rollover;
+    }
+    this.button_focused = focused;
+    if (focused) {
+      if (glov_input.keyDownHit(key_codes.SPACE) || glov_input.keyDownHit(key_codes.RETURN) ||
+        glov_input.padDownHit(pad_codes.A)
+      ) {
+        ret = true;
+      }
+    }
+    if (ret) {
+      color = colors.click;
+      this.playUISound('button_click');
     }
     if (this.button_mouseover && param.tooltip) {
       this.drawTooltip({
@@ -356,7 +285,7 @@ class GlovUI {
         tooltip: param.tooltip,
       });
     }
-    return [ret, color];
+    return { ret, color, focused };
   }
 
   buttonText(param) {
@@ -370,12 +299,14 @@ class GlovUI {
     param.h = param.h || this.button_height;
     param.font_height = param.font_height || this.font_height;
 
-    let [ret, color] = this.buttonShared(param, param.text);
+    let { ret, color, focused } = this.buttonShared(param);
 
     this.drawHBox(param, this.sprites.button, color);
-    /*eslint no-bitwise:off*/
-    this.font.drawSizedAligned(glov_font.styleColored(null, 0x000000ff), param.x, param.y, param.z + 0.1,
-      param.font_height, glov_font.ALIGN.HCENTER | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
+    this.font.drawSizedAligned(
+      focused ? this.font_style_focused : this.font_style_normal,
+      param.x, param.y, param.z + 0.1,
+      // eslint-disable-next-line no-bitwise
+      param.font_height, glov_font.ALIGN.HCENTERFIT | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
     return ret;
   }
 
@@ -390,7 +321,7 @@ class GlovUI {
     param.h = param.h || param.w || this.button_img_size;
     //param.img_rect; null -> full image
 
-    let [ret, color] = this.buttonShared(param, param.img);
+    let { ret, color } = this.buttonShared(param);
 
     this.drawHBox(param, this.sprites.button, color);
     let img_w = param.img.getWidth();
@@ -410,7 +341,7 @@ class GlovUI {
   }
 
   print(style, x, y, z, text) {
-    this.font.drawSized(style, x, y, z, this.font_height, text);
+    return this.font.drawSized(style, x, y, z, this.font_height, text);
   }
 
   panel(param) {
@@ -420,8 +351,8 @@ class GlovUI {
     assert(typeof param.h === 'number');
     param.z = param.z || (Z.UI - 1);
     this.drawBox(param, this.sprites.panel, this.panel_pixel_scale, this.color_panel);
-    this.glov_input.clickHit(param);
-    this.glov_input.isMouseOver(param);
+    glov_input.clickHit(param);
+    glov_input.isMouseOver(param);
   }
 
   // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
@@ -459,18 +390,21 @@ class GlovUI {
     }
 
     let keys = Object.keys(modal_dialog.buttons);
-    x = x0 + this.modal_width - pad - button_width;
-    for (let ii = keys.length - 1; ii >= 0; --ii) {
+    x = x0 + this.modal_width - pad - button_width - (pad + button_width) * (keys.length - 1);
+    for (let ii = 0; ii < keys.length; ++ii) {
       let key = keys[ii];
       let button_keys = this.button_keys[key.toLowerCase()];
       let pressed = false;
       if (button_keys) {
         for (let jj = 0; jj < button_keys.key.length; ++jj) {
-          pressed = pressed || this.glov_input.keyDownHit(button_keys.key[jj]);
+          pressed = pressed || glov_input.keyDownHit(button_keys.key[jj]);
         }
         for (let jj = 0; jj < button_keys.pad.length; ++jj) {
-          pressed = pressed || this.glov_input.padDownHit(button_keys.pad[jj]);
+          pressed = pressed || glov_input.padDownHit(button_keys.pad[jj]);
         }
+      }
+      if (pressed) {
+        this.playUISound('button_click');
       }
       if (this.buttonText({
         x: x,
@@ -486,7 +420,7 @@ class GlovUI {
         }
         this.modal_dialog = null;
       }
-      x -= pad + button_width;
+      x += pad + button_width;
     }
     y += this.button_height;
     y += pad * 2;
@@ -502,7 +436,8 @@ class GlovUI {
       this.color_modal_darken,
       [game_width, this.camera.y1() - this.camera.y0(), 1, 1]);
 
-    this.glov_input.eatAllInput();
+    glov_input.eatAllInput();
+    this.modal_stealing_focus = true;
   }
 
   htmlPos(x, y) {
@@ -520,17 +455,18 @@ class GlovUI {
     return [100 * w / (xmax - xmin), 100 * h / (ymax - ymin)];
   }
 
+  // eslint-disable-next-line class-methods-use-this
   createEditBox(params) {
-    return new GlovUIEditBox(this, params);
+    return glov_edit_box.create(params);
   }
 
   tick() {
     this.last_frame_button_mouseover = this.frame_button_mouseover;
     this.frame_button_mouseover = false;
-
-    if (this.modal_dialog) {
-      this.modalDialogRun(this.modal_dialog);
-    }
+    this.focused_last_frame = this.focused_this_frame;
+    this.focused_this_frame = false;
+    this.focused_key_not = null;
+    this.modal_stealing_focus = false;
 
     for (let ii = 0; ii < this.last_frame_edit_boxes.length; ++ii) {
       let edit_box = this.last_frame_edit_boxes[ii];
@@ -553,7 +489,95 @@ class GlovUI {
       glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
       glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
     }
+    this.menu_up = false;
+
+    if (this.modal_dialog) {
+      this.modalDialogRun(this.modal_dialog);
+    }
   }
+
+  menuUp() {
+    this.menu_up = true;
+    glov_input.eatAllInput();
+  }
+
+  focusSteal(key) {
+    if (key !== this.focused_key) {
+      focuslog('focusSteal ', key);
+    }
+    this.focused_this_frame = true;
+    this.focused_key = key;
+  }
+
+  isFocusedPeek(key) {
+    return this.focused_key === key;
+  }
+  isFocused(key) {
+    if (key !== this.focused_key_prev2) {
+      this.focused_key_prev1 = this.focused_key_prev2;
+      this.focused_key_prev2 = key;
+    }
+    if (key === this.focused_key || key !== this.focused_key_not && !this.focused_this_frame &&
+      !this.focused_last_frame
+    ) {
+      if (key !== this.focused_key) {
+        focuslog('isFocused->focusSteal');
+      }
+      this.focusSteal(key);
+      return true;
+    }
+    return false;
+  }
+
+  focusNext(key) {
+    focuslog('focusNext ', key);
+    this.playUISound('rollover');
+    this.focused_key = null;
+    this.focused_last_frame = this.focused_this_frame = false;
+    this.focused_key_not = key;
+    // Eat input events so a pair of keys (e.g. SDLK_DOWN and SDLK_CONTROLLER_DOWN)
+    // don't get consumed by two separate widgets
+    glov_input.eatAllInput();
+  }
+
+  focusPrev(key) {
+    focuslog('focusPrev ', key);
+    this.playUISound('rollover');
+    if (key === this.focused_key_prev2) {
+      this.focusSteal(this.focused_key_prev1);
+    } else {
+      this.focusSteal(this.focused_key_prev2);
+    }
+    glov_input.eatAllInput();
+  }
+
+  focusCheck(key) {
+    if (this.modal_stealing_focus) {
+      // hidden by modal, etc
+      return false;
+    }
+    // Returns true even if focusing previous element, since for this frame, we are still effectively focused!
+    let focused = this.isFocused(key);
+    if (focused) {
+      if (glov_input.keyDownHit(key_codes.TAB)) {
+        if (glov_input.isKeyDown(key_codes.SHIFT)) {
+          this.focusPrev(key);
+        } else {
+          this.focusNext(key);
+          focused = false;
+        }
+      }
+      if (glov_input.padDownHit(pad_codes.RIGHT_SHOULDER)) {
+        this.focusNext(key);
+        focused = false;
+      }
+      if (glov_input.padDownHit(pad_codes.LEFT_SHOULDER)) {
+        this.focusPrev(key);
+      }
+    }
+    return focused;
+  }
+
 
   drawRect(x0, y0, x1, y1, z, color) {
     let mx = Math.min(x0, x1);
@@ -642,15 +666,22 @@ class GlovUI {
 
 
 // overrideable default parameters
-GlovUI.prototype.font_height = 24;
 GlovUI.prototype.button_height = 32;
+GlovUI.prototype.font_height = 24;
 GlovUI.prototype.button_width = 200;
 GlovUI.prototype.button_img_size = GlovUI.prototype.button_height;
 GlovUI.prototype.modal_width = 600;
 GlovUI.prototype.modal_y0 = 200;
 GlovUI.prototype.modal_title_scale = 1.2;
 GlovUI.prototype.pad = 16;
-GlovUI.prototype.panel_pixel_scale = 40;
+GlovUI.prototype.panel_pixel_scale = 32 / 13; // button_height / button pixel resolution
+
+GlovUI.prototype.font_style_focused = glov_font.style(null, {
+  color: 0x000000ff,
+  outline_width: 2,
+  outline_color: 0xFFFFFFff,
+});
+GlovUI.prototype.font_style_normal = glov_font.styleColored(null, 0x000000ff);
 
 
 export function create(...args) {

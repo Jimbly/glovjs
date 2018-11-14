@@ -1,4 +1,6 @@
 // Copyright (c) 2011-2012 Turbulenz Limited
+/* eslint indent:off,no-var:off,wrap-iife:off,no-prototype-builtins:off,
+  no-shadow:off,no-empty-function:off,yoda:off,operator-assignment:off,quotes:off */
 /*global window*/
 /*global Touch: false*/
 /*global TouchEvent: false*/
@@ -499,14 +501,14 @@ var WebGLInputDevice = (function () {
 
     // Private key event methods
     WebGLInputDevice.prototype.onKeyDown = function (event) {
-      if (event.target.tagName === 'INPUT') {
-        return;
-      }
         var keyDownHandlers = this.handlers.keydown;
         var pressedKeys = this.pressedKeys;
         var keyCodes = this.keyCodes;
 
-        if (event.code !== 'F12' && event.code !== 'F5') {
+        // Allowing events to INPUT tags to go through, so our keyboard state
+        // is kept up to date, however do not eat the events, so that the user
+        // can still type in INPUT elements.
+        if (event.code !== 'F12' && event.code !== 'F5' && event.target.tagName !== 'INPUT') {
           event.stopPropagation();
           event.preventDefault();
         }
@@ -1393,6 +1395,32 @@ WebGLInputDevice.prototype.keyCodes = {
     X: 23,
     Y: 24,
     Z: 25,
+    a: 0, // SDL name
+    b: 1, // SDL name
+    c: 2, // SDL name
+    d: 3, // SDL name
+    e: 4, // SDL name
+    f: 5, // SDL name
+    g: 6, // SDL name
+    h: 7, // SDL name
+    i: 8, // SDL name
+    j: 9, // SDL name
+    k: 10, // SDL name
+    l: 11, // SDL name
+    m: 12, // SDL name
+    n: 13, // SDL name
+    o: 14, // SDL name
+    p: 15, // SDL name
+    q: 16, // SDL name
+    r: 17, // SDL name
+    s: 18, // SDL name
+    t: 19, // SDL name
+    u: 20, // SDL name
+    v: 21, // SDL name
+    w: 22, // SDL name
+    x: 23, // SDL name
+    y: 24, // SDL name
+    z: 25, // SDL name
     NUMBER_0: 100,
     NUMBER_1: 101,
     NUMBER_2: 102,
@@ -1466,7 +1494,9 @@ WebGLInputDevice.prototype.keyCodes = {
     HOME: 634,
     END: 635,
     PAGE_UP: 636,
+    PAGEUP: 636, // SDL name
     PAGE_DOWN: 637,
+    PAGEDOWN: 637, // SDL name
     BACK: 638
 };
 
@@ -1492,6 +1522,10 @@ WebGLInputDevice.prototype.padCodes = {
     RIGHT_TRIGGER: 9,
     LEFT_SHOULDER: 10,
     RIGHT_SHOULDER: 11,
+    LEFTTRIGGER: 8, // SDL name
+    RIGHTTRIGGER: 9, // SDL name
+    LEFTSHOULDER: 10, // SDL name
+    RIGHTSHOULDER: 11, // SDL name
     LEFT_THUMB: 12,
     LEFT_THUMB_X: 13,
     LEFT_THUMB_Y: 14,

@@ -21,6 +21,7 @@ export let sprites = {};
 export function main(canvas) {
   const glov_engine = require('./glov/engine.js');
   const glov_font = require('./glov/font.js');
+  const glov_ui_test = require('./glov/ui_test.js');
 
   glov_engine.startup({
     canvas,
@@ -40,12 +41,6 @@ export function main(canvas) {
 
   const createSpriteSimple = glov_sprite.createSpriteSimple.bind(glov_sprite);
   const createAnimation = glov_sprite.createAnimation.bind(glov_sprite);
-
-  let edit_box = glov_ui.createEditBox({
-    x: 300,
-    y: 100,
-    w: 200,
-  });
 
   const color_white = VMath.v4Build(1, 1, 1, 1);
   const color_red = VMath.v4Build(1, 0, 0, 1);
@@ -87,15 +82,20 @@ export function main(canvas) {
 
   let do_particles = true;
   let last_particles = 0;
+  let do_ui_test = true;
+
 
   function test(dt) {
-
     if (!test.color_sprite) {
       test.color_sprite = VMath.v4Copy(color_white);
       test.character = {
         x: (Math.random() * (game_width - sprite_size) + (sprite_size * 0.5)),
         y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
       };
+    }
+
+    if (do_ui_test) {
+      glov_ui_test.run(100, 100);
     }
 
     test.character.dx = 0;
@@ -171,20 +171,18 @@ export function main(canvas) {
       test.character.x, test.character.y + (++font_test_idx * glov_ui.font_height), Z.SPRITES,
       'Outline and Drop Shadow');
 
-    if (glov_ui.buttonText({ x: 100, y: 100, text: 'Button!' })) {
-      glov_ui.modalDialog({
-        title: 'Modal Dialog',
-        text: 'This is a modal dialog!',
-        buttons: {
-          'OK': function () {
-            console.log('OK pushed!');
-          },
-          'Cancel': null, // no callback
-        },
-      });
+    let x = 100;
+    let y = game_height - 100 - 35 * 2;
+    if (glov_ui.buttonText({ x, y, text: `UI Test: ${do_ui_test ? 'ON' : 'OFF'}`,
+      tooltip: 'Toggles visibility of general UI tests' })
+    ) {
+      do_ui_test = !do_ui_test;
     }
+    y += 35;
 
-    if (glov_ui.buttonText({ x: 100, y: 200, text: `Particles: ${do_particles ? 'ON' : 'OFF'}` })) {
+    if (glov_ui.buttonText({ x, y, text: `Particles: ${do_particles ? 'ON' : 'OFF'}`,
+      tooltip: 'Toggles particles' })
+    ) {
       do_particles = !do_particles;
     }
     if (do_particles) {
@@ -196,17 +194,6 @@ export function main(canvas) {
         );
       }
     }
-
-    if (edit_box.run() === edit_box.SUBMIT) {
-      glov_ui.modalDialog({
-        title: 'Modal Dialog',
-        text: `Edit box submitted with text ${edit_box.text}`,
-        buttons: {
-          'OK': null,
-        },
-      });
-    }
-    glov_ui.print(font_style, 300, 140, Z.UI, `Edit Box Text: ${edit_box.text}`);
   }
 
   function testInit(dt) {

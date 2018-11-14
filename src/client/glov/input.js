@@ -25,7 +25,8 @@ class GlovInput {
     this.touch_as_mouse = true;
     this.map_analog_to_dpad = true; // user overrideable
 
-    this.input_eaten = false;
+    this.input_eaten_kb = false;
+    this.input_eaten_mouse = false;
 
     this.pad_codes = input_device.padCodes;
     this.pad_codes.ANALOG_UP = 20;
@@ -33,6 +34,9 @@ class GlovInput {
     this.pad_codes.ANALOG_DOWN = 22;
     this.pad_codes.ANALOG_RIGHT = 23;
     this.key_codes = input_device.keyCodes;
+    this.key_codes.SHIFT = 1000;
+    this.key_codes.CONTROL = 1001;
+    this.key_codes.ALT = 1002;
 
     input_device.addEventListener('keydown', (keycode) => this.onKeyDown(keycode));
     input_device.addEventListener('keyup', (keycode) => this.onKeyUp(keycode));
@@ -75,14 +79,26 @@ class GlovInput {
     tickMap(this.key_state);
     this.pad_states.forEach(tickMap);
     this.clicks = [];
-    this.input_eaten = false;
+    this.input_eaten_kb = false;
+    this.input_eaten_mouse = false;
+  }
+
+  eatAllKeyboardInput() {
+    let clicks_save = this.clicks;
+    let over_save = this.mouse_over_captured;
+    let eaten_mouse_save = this.input_eaten_mouse;
+    this.eatAllInput();
+    this.clicks = clicks_save;
+    this.mouse_over_captured = over_save;
+    this.input_eaten_mouse = eaten_mouse_save;
   }
 
   eatAllInput() {
     // destroy clicks, remove all down and up edges
     this.endFrame();
     this.mouse_over_captured = true;
-    this.input_eaten = true;
+    this.input_eaten_kb = true;
+    this.input_eaten_mouse = true;
   }
 
   onMouseDown(mousecode, x, y) {
@@ -121,7 +137,7 @@ class GlovInput {
   }
   isMouseDown(button) {
     button = button || 0;
-    return !this.input_eaten && this.mouse_down[button];
+    return !this.input_eaten_mouse && this.mouse_down[button];
   }
   // returns position mapped to current camera view
   mousePos(dst) {
@@ -182,7 +198,7 @@ class GlovInput {
       assert(typeof param.w === 'number');
       assert(typeof param.h === 'number');
     }
-    if (this.input_eaten) {
+    if (this.input_eaten_mouse) {
       return false;
     }
     for (let ii = 0; ii < this.touch_state.length; ++ii) {
@@ -214,10 +230,34 @@ class GlovInput {
   onKeyDown(keycode) {
     this.key_state[keycode] = DOWN_EDGE;
   }
+
+  doConvenienceKeys(fn, keycode) {
+    switch (keycode) {
+      case this.key_codes.SHIFT:
+        return this[fn](this.key_codes.LEFT_SHIFT) || this[fn](this.key_codes.RIGHT_SHIFT);
+      case this.key_codes.CONTROL:
+        return this[fn](this.key_codes.LEFT_CONTROL) || this[fn](this.key_codes.RIGHT_CONTROL);
+      case this.key_codes.ALT:
+        return this[fn](this.key_codes.LEFT_ALT) || this[fn](this.key_codes.RIGHT_ALT);
+      default:
+        assert(!'invalid keycode');
+    }
+    return false;
+  }
+
   isKeyDown(keycode) {
-    return Boolean(!this.input_eaten && this.key_state[keycode]);
+    if (this.input_eaten_kb) {
+      return false;
+    }
+    if (keycode >= 1000) {
+      return this.doConvenienceKeys('isKeyDown', keycode);
+    }
+    return Boolean(this.key_state[keycode]);
   }
   keyDownHit(keycode) {
+    if (keycode >= 1000) {
+      return this.doConvenienceKeys('keyDownHit', keycode);
+    }
     if (this.key_state[keycode] === DOWN_EDGE) {
       this.key_state[keycode] = DOWN;
       return true;
@@ -225,6 +265,9 @@ class GlovInput {
     return false;
   }
   keyUpHit(keycode) {
+    if (keycode >= 1000) {
+      return this.doConvenienceKeys('keyUpHit', keycode);
+    }
     if (this.key_state[keycode] === UP_EDGE) {
       delete this.key_state[keycode];
       return true;
@@ -274,7 +317,7 @@ class GlovInput {
       return false;
     }
 
-    if (this.input_eaten) {
+    if (this.input_eaten_mouse) {
       return false;
     }
     if (!this.pad_states[padindex]) {
