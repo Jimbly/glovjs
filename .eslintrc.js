@@ -3,7 +3,6 @@ let relaxed = true; // Specific things I'm relaxing for convenience, probably no
 
 module.exports = {
   "env": {
-    "browser": true,
     "es6": true,
     "node": true
   },
