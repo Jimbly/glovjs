@@ -33,13 +33,13 @@ const selbox_default_display = {
   centered: false,
   bounce: true,
   tab_stop: 0,
-  selection_highlight: null, // TODO: reference image here, somehow
+  // selection_highlight: null, // TODO: custom / better selection highlight for menus
   use_markup: false, // always false, Markup not ported
 };
 
 
 const color_gray50 = VMath.v4Build(0.313, 0.313, 0.313, 1.000);
-const color_gray80 = VMath.v4Build(0.500, 0.500, 0.500, 1.000);
+// const color_gray80 = VMath.v4Build(0.500, 0.500, 0.500, 1.000);
 const color_grayD0 = VMath.v4Build(0.816, 0.816, 0.816, 1.000);
 const color_white = VMath.v4Build(1, 1, 1, 1);
 
@@ -62,20 +62,21 @@ export class GlovMenuItem {
     this.state = params.state || null; // state to set upon selection
     this.cb = params.cb || null; // callback to call upon selection
     // TODO - cb function on value change?
-    // int *value;
-    // int valueMin, valueMax, valueInc;
-    // char **svalue;
+    this.value = null; // can be number or string
+    this.value_min = 0;
+    this.value_max = 0;
+    this.value_inc = 0;
     this.tag = params.tag || null; // for isSelected(tag)
-    // bitmask
-    // TODO
-    // this.exit = Boolean(params.exit);
-    // this.int_prompt = Boolean(params.int_prompt);
-    // this.no_sound = Boolean(params.no_sound);
-    // this.slider = Boolean(params.slider);
-    // this.no_controller_exit = Boolean(params.no_controller_exit);
-    // this.plus_minus = Boolean(params.plus_minus);
-    // this.disabled = Boolean(params.disabled);
-    // this.centered = Boolean(params.centered);
+    // was bitmask
+    this.exit = Boolean(params.exit);
+    this.prompt_int = Boolean(params.prompt_int);
+    this.prompt_string = Boolean(params.prompt_string);
+    this.no_sound = Boolean(params.no_sound);
+    this.slider = Boolean(params.slider);
+    this.no_controller_exit = Boolean(params.no_controller_exit);
+    this.plus_minus = Boolean(params.plus_minus);
+    this.disabled = Boolean(params.disabled);
+    this.centered = Boolean(params.centered);
   }
 }
 
@@ -86,7 +87,7 @@ class GlovSelectionBox {
     this.x = 0;
     this.y = 0;
     this.z = Z.UI;
-    this.w = glov_ui.button_width;
+    this.width = glov_ui.button_width;
     this.items = [];
     this.is_dropdown = false;
     this.transient_focus = false;
@@ -124,6 +125,14 @@ class GlovSelectionBox {
       }
     }
   }
+
+  isSelected(tag_or_index) {
+    if (typeof tag_or_index === 'number') {
+      return this.selected === tag_or_index;
+    }
+    return this.items[this.selected].tag === tag_or_index;
+  }
+
   getHeight() {
     let { display, entry_height } = this;
     if (this.is_dropdown) {
@@ -494,12 +503,12 @@ class GlovSelectionBox {
           }
         }
         // spriteListClipperPop();
-        if (display.selection_highlight && this.selected === i && show_selection) {
-          let grow = 0.2 * (1 - bounce_amt);
-          display.selection_highlight.DrawStretched(
-            x - grow * eff_width, y - grow * entry_height, z + 1.5,
-            eff_width * (1 + 2 * grow), entry_height * (1 + 2 * grow), 0, 0xFF);
-        }
+        // if (display.selection_highlight && this.selected === i && show_selection) {
+        //   let grow = 0.2 * (1 - bounce_amt);
+        //   display.selection_highlight.DrawStretched(
+        //     x - grow * eff_width, y - grow * entry_height, z + 1.5,
+        //     eff_width * (1 + 2 * grow), entry_height * (1 + 2 * grow), 0, 0xFF);
+        // }
         y += entry_height;
       }
       if (do_scroll) {

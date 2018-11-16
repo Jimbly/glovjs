@@ -1446,6 +1446,7 @@ WebGLInputDevice.prototype.keyCodes = {
     SPACE: 402,
     BACKSPACE: 403,
     RETURN: 404,
+    ENTER: 404, // SDL name
     GRAVE: 500,
     MINUS: 501,
     EQUALS: 502,
@@ -1515,7 +1516,9 @@ WebGLInputDevice.prototype.padCodes = {
     DOWN: 2,
     RIGHT: 3,
     A: 4,
+    SELECT: 4, // GLOV name
     B: 5,
+    CANCEL: 5, // GLOV name
     X: 6,
     Y: 7,
     LEFT_TRIGGER: 8,

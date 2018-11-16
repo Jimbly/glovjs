@@ -213,6 +213,9 @@ class GlovUI {
   }
 
   playUISound(name) {
+    if (name === 'select') {
+      name = 'button_click';
+    }
     if (this.sounds[name]) {
       this.sound_manager.play(this.sounds[name]);
     }
@@ -261,7 +264,9 @@ class GlovUI {
     } else if (glov_input.clickHit(param)) {
       this.setMouseOver(key);
       ret = true;
-      this.focusSteal(key);
+      if (!param.no_focus) {
+        this.focusSteal(key);
+      }
     } else if (glov_input.isMouseOver(param)) {
       this.setMouseOver(key);
       color = glov_input.isMouseDown() ? colors.click : colors.rollover;
@@ -498,6 +503,7 @@ class GlovUI {
 
   menuUp() {
     this.menu_up = true;
+    this.modal_stealing_focus = true;
     glov_input.eatAllInput();
   }
 

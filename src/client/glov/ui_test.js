@@ -9,6 +9,7 @@ let glov_input;
 
 let demo_menu;
 let demo_menu_up = false;
+let demo_result;
 let font_style;
 
 let inited;
@@ -33,8 +34,15 @@ function init(x, y) {
   demo_menu = glov_simple_menu.create({
     items: [
       'Option 1',
-      'Option B',
-      'Option C',
+      {
+        name: 'Option 2',
+        tag: 'opt2',
+      }, {
+        name: 'Option C',
+        cb: () => {
+          demo_result = 'Callback the third';
+        },
+      },
     ]
   });
   font_style = glov_font.style(null, {
@@ -48,12 +56,12 @@ function init(x, y) {
   });
 
   test_select1 = glov_selection_box.create({
-    items: ['Apples', 'Bananas', 'Crack'],
+    items: ['Apples', 'Bananas', 'Chameleon'],
     z: Z.UI,
     width: 200,
   });
   test_select2 = glov_selection_box.create({
-    items: ['Apples', 'Bananas', 'Crack'],
+    items: ['Apples', 'Bananas', 'Chameleon'],
     is_dropdown: true,
     z: Z.UI,
     width: 200,
@@ -68,7 +76,15 @@ export function run(x, y) {
   }
 
   if (demo_menu_up) {
-    if (demo_menu.run(120, 180, Z.MODAL)) {
+    demo_result = '';
+    demo_menu.run({ x: 120, y: 180, z: Z.MODAL });
+    if (demo_menu.isSelected()) {
+      if (demo_menu.isSelected('opt2')) {
+        demo_result = 'Selected the second option';
+      }
+      if (!demo_result) {
+        demo_result = `Menu selected: ${demo_menu.getSelectedItem().name}`;
+      }
       demo_menu_up = false;
     }
     glov_ui.menuUp();
@@ -77,15 +93,18 @@ export function run(x, y) {
 
   let pad = 8;
   let w = glov_ui.print(font_style, x + 210, y + 40, z, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
-  glov_ui.panel({ x: x + 210 - pad, y: y + 40 - pad, z: z - 1, w: w + pad * 2, h: glov_ui.font_height + pad * 2 });
+  w = Math.max(w, glov_ui.print(font_style, x + 210, y + 40 + glov_ui.font_height + pad, z,
+    `Result: ${demo_result}`));
+  glov_ui.panel({ x: x + 210 - pad, y: y + 40 - pad, z: z - 1, w: w + pad * 2, h: glov_ui.font_height * 2 + pad * 3 });
 
   if (glov_ui.buttonText({ x, y, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
+    demo_result = '';
     glov_ui.modalDialog({
       title: 'Modal Dialog',
       text: 'This is a modal dialog!',
       buttons: {
         'OK': function () {
-          console.log('OK pushed!');
+          demo_result = 'OK pushed!';
         },
         'Cancel': null, // no callback
       },

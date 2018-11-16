@@ -8,7 +8,7 @@
         "node_modules",
         "build",
       ],
-      "file_exclude_patterns": ["jquery-*.min*"],
+      "file_exclude_patterns": ["jquery-*.min*", "*.00?", "*.wav"],
       "path": "."
     }
   ]

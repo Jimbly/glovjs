@@ -82,7 +82,7 @@ export function main(canvas) {
 
   let do_particles = true;
   let last_particles = 0;
-  let do_ui_test = true;
+  let do_ui_test = false;
 
 
   function test(dt) {
