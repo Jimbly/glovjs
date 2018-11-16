@@ -17,6 +17,17 @@ export function clone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+export function merge(dest, src) {
+  for (let f in src) {
+    dest[f] = src[f];
+  }
+  return dest;
+}
+
+export function cloneShallow(src) {
+  return merge({}, src);
+}
+
 export function clamp(v, mn, mx) {
   return min(max(mn, v), mx);
 }

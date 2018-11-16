@@ -1,4 +1,5 @@
 /*global Z: false */
+const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_simple_menu = require('./simple_menu.js');
@@ -127,6 +128,11 @@ export function run(x, y) {
 
   if (glov_ui.buttonText({ x, y, text: 'Menu', tooltip: 'Shows a menu' })) {
     demo_menu_up = true;
+  }
+  y += 35;
+
+  if (glov_ui.buttonText({ x, y, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
+    assert(false);
   }
   y += 35;
 

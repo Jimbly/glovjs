@@ -84,7 +84,7 @@ export function makeColorSet(color) {
   let ret = {
     regular: VMath.v4ScalarMul(color, 1),
     rollover: VMath.v4ScalarMul(color, 0.8),
-    click: VMath.v4ScalarMul(color, 0.7),
+    down: VMath.v4ScalarMul(color, 0.7),
     disabled: VMath.v4ScalarMul(color, 0.4),
   };
   for (let field in ret) {
@@ -95,7 +95,8 @@ export function makeColorSet(color) {
 
 class GlovUI {
 
-  constructor(font, draw_list) {
+  constructor(font, draw_list, ui_sprites) {
+    ui_sprites = ui_sprites || {};
     glov_input = glov_engine.glov_input;
     glov_sprite = glov_engine.glov_sprite;
     assert(glov_input);
@@ -113,13 +114,26 @@ class GlovUI {
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
     let sprites = this.sprites = {};
-    sprites.button = glov_sprite.createSpriteSimple('ui/button.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
-    sprites.panel = glov_sprite.createSpriteSimple('ui/panel.png', [3, 2, 3], [3, 10, 3], glov_sprite.origin_0_0);
-    sprites.menu_entry = glov_sprite.createSpriteSimple('ui/menu_entry.png', [4, 5, 4], [13], glov_sprite.origin_0_0);
-    sprites.menu_selected = glov_sprite.createSpriteSimple('ui/menu_selected.png',
-      [4, 5, 4], [13], glov_sprite.origin_0_0);
-    sprites.menu_header = glov_sprite.createSpriteSimple('ui/menu_header.png',
-      [4, 5, 12], [13], glov_sprite.origin_0_0);
+    function loadUISprite(name, ws, hs, only_override) {
+      let override = ui_sprites[name];
+      if (override) {
+        sprites[name] = glov_sprite.createSpriteSimple(override[0], override[1], override[2], glov_sprite.origin_0_0);
+      } else if (!only_override) {
+        sprites[name] = glov_sprite.createSpriteSimple(`ui/${name}.png`, ws, hs, glov_sprite.origin_0_0);
+      }
+    }
+
+    loadUISprite('button', [4, 5, 4], [13]);
+    sprites.button_regular = sprites.button;
+    loadUISprite('button_rollover', [4, 5, 4], [13], true);
+    loadUISprite('button_down', [4, 5, 4], [13]);
+    loadUISprite('button_disabled', [4, 5, 4], [13]);
+    loadUISprite('panel', [3, 2, 3], [3, 10, 3]);
+    loadUISprite('menu_entry', [4, 5, 4], [13]);
+    loadUISprite('menu_selected', [4, 5, 4], [13]);
+    loadUISprite('menu_down', [4, 5, 4], [13]);
+    loadUISprite('menu_header', [4, 5, 12], [13]);
+
     sprites.white = glov_sprite.createSpriteSimple('white', 1, 1, glov_sprite.origin_0_0);
     ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
       let size = key === 'hollow_circle' ? 128 : 32;
@@ -253,14 +267,13 @@ class GlovUI {
   }
 
   buttonShared(param) {
-    let colors = param.colors || this.color_button;
-    let color = colors.regular;
+    let state = 'regular';
     let ret = false;
     let key = param.key || `${param.x}_${param.y}`;
     let focused = !param.disabled && !param.no_focus && this.focusCheck(key);
     this.button_mouseover = false;
     if (param.disabled) {
-      color = colors.disabled;
+      state = 'disabled';
     } else if (glov_input.clickHit(param)) {
       this.setMouseOver(key);
       ret = true;
@@ -269,7 +282,7 @@ class GlovUI {
       }
     } else if (glov_input.isMouseOver(param)) {
       this.setMouseOver(key);
-      color = glov_input.isMouseDown() ? colors.click : colors.rollover;
+      state = glov_input.isMouseDown() ? 'down' : 'rollover';
     }
     this.button_focused = focused;
     if (focused) {
@@ -280,7 +293,7 @@ class GlovUI {
       }
     }
     if (ret) {
-      color = colors.click;
+      state = 'down';
       this.playUISound('button_click');
     }
     if (this.button_mouseover && param.tooltip) {
@@ -290,7 +303,7 @@ class GlovUI {
         tooltip: param.tooltip,
       });
     }
-    return { ret, color, focused };
+    return { ret, state, focused };
   }
 
   buttonText(param) {
@@ -304,9 +317,18 @@ class GlovUI {
     param.h = param.h || this.button_height;
     param.font_height = param.font_height || this.font_height;
 
-    let { ret, color, focused } = this.buttonShared(param);
+    let { ret, state, focused } = this.buttonShared(param);
+    let colors = param.colors || this.color_button;
+    let color = colors[state];
+    let sprite_name = `button_${state}`;
+    let sprite = this.sprites[sprite_name];
+    if (sprite) { // specific sprite, use regular colors
+      color = colors.regular;
+    } else {
+      sprite = this.sprites.button;
+    }
 
-    this.drawHBox(param, this.sprites.button, color);
+    this.drawHBox(param, sprite, color);
     this.font.drawSizedAligned(
       focused ? this.font_style_focused : this.font_style_normal,
       param.x, param.y, param.z + 0.1,
@@ -326,7 +348,9 @@ class GlovUI {
     param.h = param.h || param.w || this.button_img_size;
     //param.img_rect; null -> full image
 
-    let { ret, color } = this.buttonShared(param);
+    let { ret, state } = this.buttonShared(param);
+    let colors = param.colors || this.color_button;
+    let color = colors[state];
 
     this.drawHBox(param, this.sprites.button, color);
     let img_w = param.img.getWidth();
@@ -524,6 +548,10 @@ class GlovUI {
     }
     this.focused_this_frame = true;
     this.focused_key = key;
+  }
+
+  focusCanvas() {
+    this.focusSteal('canvas');
   }
 
   isFocusedPeek(key) {

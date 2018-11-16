@@ -46,19 +46,10 @@ class GlovUIEditBox {
     this.text = new_text;
   }
   focus() {
-    if (this.input) {
-      this.input.focus();
-    }
     glov_ui.focusSteal(this);
   }
-  unfocus() {
-    if (this.input) {
-      this.input.blur();
-    }
-  }
-  run(params) {
-    this.applyParams(params);
 
+  updateFocus() {
     if (this.got_focus_out) {
       if (glov_ui.isFocusedPeek(this)) {
         glov_input.keyDownHit(glov_input.key_codes.TAB); // eat the TAB
@@ -82,6 +73,20 @@ class GlovUIEditBox {
     if (!focused && this.input && document.activeElement === this.input[0]) {
       this.input.blur();
     }
+
+    if (focused && glov_input.keyDownHit(glov_input.key_codes.ESCAPE)) {
+      if (this.text) {
+        this.setText('');
+      } else {
+        glov_ui.focusCanvas();
+      }
+    }
+    return focused;
+  }
+
+  run(params) {
+    this.applyParams(params);
+    let focused = this.updateFocus();
 
     glov_ui.this_frame_edit_boxes.push(this);
     let elem = glov_ui.getElem();

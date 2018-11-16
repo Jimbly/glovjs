@@ -1,3 +1,4 @@
+/* eslint complexity:off */
 /*global Z: false */
 /*global VMath: false */
 const assert = require('assert');
@@ -8,31 +9,37 @@ let glov_input;
 let glov_markup = null; // Not ported
 
 const { min, max, sin } = Math;
-const { nearSame } = require('../../common/util.js');
+const { cloneShallow, merge, nearSame } = require('../../common/util.js');
 
 let font;
 
-const selbox_font_style_default = glov_font.style({
+const selbox_font_style_default = glov_font.style(null, {
   color: 0xDFDFDFff,
 });
 
-const selbox_font_style_selected = glov_font.style({
+const selbox_font_style_selected = glov_font.style(null, {
   color: 0xFFFFFFff,
 });
 
-const selbox_font_style_disabled = glov_font.style({
+const selbox_font_style_down = glov_font.style(null, {
+  color: 0x000000ff,
+});
+
+const selbox_font_style_disabled = glov_font.style(null, {
   color: 0x808080ff,
 });
 
-const selbox_default_display = {
+export const default_display = {
   style_default: selbox_font_style_default,
   style_selected: selbox_font_style_selected,
   style_disabled: selbox_font_style_disabled,
+  style_down: selbox_font_style_down,
   no_background: false,
   no_buttons: false,
   centered: false,
   bounce: true,
   tab_stop: 0,
+  xpad: 8,
   // selection_highlight: null, // TODO: custom / better selection highlight for menus
   use_markup: false, // always false, Markup not ported
 };
@@ -92,7 +99,7 @@ class GlovSelectionBox {
     this.is_dropdown = false;
     this.transient_focus = false;
     this.disabled = false;
-    this.display = selbox_default_display;
+    this.display = cloneShallow(default_display);
     this.scroll_height = 0;
     this.font_height = glov_ui.font_height;
     this.entry_height = glov_ui.button_height;
@@ -120,6 +127,8 @@ class GlovSelectionBox {
     for (let f in params) {
       if (f === 'items') {
         this.items = params.items.map((item) => new GlovMenuItem(item));
+      } else if (f === 'display') {
+        merge(this.display, params[f]);
       } else {
         this[f] = params[f];
       }
@@ -323,6 +332,7 @@ class GlovSelectionBox {
       } else if (!this.disabled && glov_input.isMouseOver({
         x, y, w: width, h: entry_height
       })) {
+        glov_ui.setMouseOver(this);
         color0 = color_grayD0;
         // color1 = color_gray80;
       }
@@ -333,9 +343,10 @@ class GlovSelectionBox {
       // glov_ui.draw_list.queue(glov_ui.sprites.menu_header,
       //   dropdown_x, y, z + 1.5, color1, [dropdown_width, entry_height, 1, 1],
       //   glov_ui.sprites.menu_header.uidata.rects[2]);
-      font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal, x + pad, y, z + 2,
+      font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
+        x + display.xpad, y, z + 2,
         font_height, glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
-        width, entry_height,
+        width - display.xpad * 2, entry_height,
         this.items[this.selected].name);
       y += entry_height;
       yret = y + 2;
@@ -422,7 +433,14 @@ class GlovSelectionBox {
         if (this.selected === i && show_selection) {
           style = display.style_selected || selbox_font_style_selected;
           image_set = glov_ui.sprites.menu_selected;
-          if (display.bounce) {
+          if (is_mouseover && glov_input.isMouseDown()) {
+            if (glov_ui.sprites.menu_down) {
+              image_set = glov_ui.sprites.menu_down;
+            } else {
+              style = display.style_down || selbox_font_style_down;
+            }
+          }
+          if (display.bounce && !this.is_dropdown) {
             let ms = glov_engine.getFrameDt();
             if (this.selected !== old_sel) {
               bounce = true;
@@ -461,10 +479,10 @@ class GlovSelectionBox {
             did_tab = true;
             let pre = str.slice(0, tab_idx);
             let post = str.slice(tab_idx + 1);
-            let x1 = x + pad;
-            let x2 = x + pad + display.tab_stop + pad;
+            let x1 = x + display.xpad;
+            let x2 = x + display.xpad + display.tab_stop + pad;
             let w1 = display.tab_stop;
-            let w2 = eff_width - display.tab_stop - pad * 3;
+            let w2 = eff_width - display.tab_stop - display.xpad * 2 - pad;
             if (display.use_markup) {
               let md = {};
               md.align = glov_font.ALIGN.HFIT;
@@ -490,10 +508,10 @@ class GlovSelectionBox {
           // eslint-disable-next-line no-bitwise
           md.align = (item.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) | glov_font.ALIGN.VCENTER;
           md.x_size = md.y_size = font_height;
-          md.w = eff_width - pad * 2;
+          md.w = eff_width - display.xpad * 2;
           md.h = entry_height;
           md.style = style;
-          let xx = x + pad;
+          let xx = x + display.xpad;
           let zz = z + 2;
           if (display.use_markup) {
             glov_markup.print(md, xx, text_y, zz, item.name);

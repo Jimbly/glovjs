@@ -2,6 +2,7 @@
 // GlovSimpleMenu is just a GlovSelectionBox plus some logic to activate
 // callbacks/etc upon selecting of elements.
 
+/* eslint complexity:off */
 /*global VMath: false */
 
 const assert = require('assert');
@@ -201,7 +202,7 @@ class GlovSimpleMenu {
     let selected=-1;
     if (exit_index !== -1 && (
       glov_input.keyDownHit(key_codes.ESCAPE) ||
-      !(items[exit_index].no_controller_exit && glov_input.padDownHit(pad_codes.CANCEL))
+      !items[exit_index].no_controller_exit && glov_input.padDownHit(pad_codes.CANCEL)
     )) {
       this.execItem(exit_index, 1);
       selected = exit_index;
@@ -252,7 +253,7 @@ class GlovSimpleMenu {
       return false;
     }
     if (tag_or_index === undefined) {
-      return true;
+      return this.sel_box.items[this.selected].tag || true;
     }
     return this.sel_box.isSelected(tag_or_index);
   }
