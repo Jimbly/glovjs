@@ -170,6 +170,7 @@ function tick() {
     draw_2d.copyRenderTarget(frame_effects[frame_effects.length - 1].dest);
   }
 
+  glov_ui.endFrame();
   graphics_device.endFrame();
   glov_input.endFrame();
   resetEffects();

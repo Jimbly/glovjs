@@ -501,6 +501,17 @@ class GlovUI {
     }
   }
 
+  endFrame() {
+    // allow focusing the canvas, in case there's only one edit box/UI element
+    this.focusCheck('canvas');
+    if (glov_input.clickHit({
+      x: -Infinity, y: -Infinity,
+      w: Infinity, h: Infinity,
+    })) {
+      this.focusSteal('canvas');
+    }
+  }
+
   menuUp() {
     this.menu_up = true;
     this.modal_stealing_focus = true;
