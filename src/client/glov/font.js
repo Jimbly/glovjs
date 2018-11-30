@@ -327,7 +327,7 @@ class GlovFont {
     }
     if (c > 127) {
       // no char info, and non-ascii, non-control code
-      return this.char_infos[64]; //['?'];
+      return this.char_infos[63]; //['?'];
     }
     return null;
   }
