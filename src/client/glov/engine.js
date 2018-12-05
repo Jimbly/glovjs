@@ -7,6 +7,8 @@
 
 const { Draw2D } = require('./tz/draw2d.js');
 
+const local_storage = require('./local_storage.js');
+
 VMath.zero_vec = VMath.v4BuildZero();
 VMath.unit_vec = VMath.v4Build(1, 1, 1, 1);
 
@@ -43,6 +45,12 @@ export const pico8_colors = [
   VMath.v4Build(1.000, 0.800, 0.667, 1),
 ];
 
+export let postprocessing = !local_storage.get('glov_no_postprocessing');
+export function postprocessingAllow(allow) {
+  local_storage.set('glov_no_postprocessing', allow ? undefined : 1);
+  postprocessing = allow;
+}
+
 let global_timer = 0;
 export function getFrameTimestamp() {
   return global_timer;
@@ -58,8 +66,14 @@ export function getFrameDt() {
   return this_frame_time;
 }
 
+// Wall time, may contain large jumps, may be 0 or negative
+let this_frame_time_actual = 0;
+export function getFrameDtActual() {
+  return this_frame_time_actual;
+}
+
 let after_loading_state = null;
-let is_loading = true;
+export let is_loading = true;
 export function setState(new_state) {
   if (is_loading) {
     after_loading_state = new_state;
@@ -104,7 +118,8 @@ function tick() {
     return;
   }
   let now = Date.now();
-  let dt = Math.min(Math.max(now - last_tick, 1), 250);
+  this_frame_time_actual = now - last_tick;
+  let dt = Math.min(Math.max(this_frame_time_actual, 1), 250);
   this_frame_time = dt;
   last_tick = now;
   global_timer += dt;
