@@ -1,4 +1,5 @@
 // Copyright (c) 2009-2012 Turbulenz Limited
+/* eslint no-var:off, indent:off, func-name-matching:off, no-extend-native:off, quotes:off, max-len:off, yoda:off, keyword-spacing:off */
 /*global Float32Array: false*/
 /*global TurbulenzEngine: false*/
 /*global debug: false*/
