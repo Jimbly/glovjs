@@ -248,19 +248,24 @@ class GlovUI {
     assert(typeof param.y === 'number');
     assert(typeof param.tooltip === 'string');
 
-    let tooltip_w = 400;
+    let tooltip_w = param.tooltip_width || this.tooltip_width;
+    let x = param.x;
+    if (x + tooltip_w > this.camera.x1()) {
+      x = this.camera.x1() - tooltip_w;
+    }
+    let z = param.z || Z.TOOLTIP;
     let tooltip_y0 = param.y;
-    let tooltip_pad = 8;
+    let tooltip_pad = param.tooltip_pad || this.tooltip_pad;
     let y = tooltip_y0 + tooltip_pad;
     y += this.font.drawSizedWrapped(this.modal_font_style,
-      param.x + tooltip_pad, y, Z.TOOLTIP+1, tooltip_w - tooltip_pad * 2, 0, this.font_height,
+      x + tooltip_pad, y, z+1, tooltip_w - tooltip_pad * 2, 0, this.font_height,
       param.tooltip);
     y += tooltip_pad;
 
     this.panel({
-      x: param.x,
+      x,
       y: tooltip_y0,
-      z: Z.TOOLTIP,
+      z,
       w: tooltip_w,
       h: y - tooltip_y0,
     });
@@ -301,6 +306,7 @@ class GlovUI {
         x: param.x,
         y: param.tooltip_above ? param.y - this.font_height * 2 - 16 : param.y + param.h + 2,
         tooltip: param.tooltip,
+        tooltip_width: param.tooltip_width,
       });
     }
     return { ret, state, focused };
@@ -379,7 +385,8 @@ class GlovUI {
     assert(typeof param.w === 'number');
     assert(typeof param.h === 'number');
     param.z = param.z || (Z.UI - 1);
-    this.drawBox(param, this.sprites.panel, this.panel_pixel_scale, this.color_panel);
+    let color = param.color || this.color_panel;
+    this.drawBox(param, this.sprites.panel, this.panel_pixel_scale, color);
     glov_input.clickHit(param);
     glov_input.isMouseOver(param);
   }
@@ -395,7 +402,7 @@ class GlovUI {
   }
 
   modalDialogRun(modal_dialog) {
-    const button_width = this.button_width / 2;
+    const button_width = modal_dialog.button_width || this.button_width / 2;
     const game_width = this.camera.x1() - this.camera.x0();
     const pad = this.pad;
     const text_w = this.modal_width - pad * 2;
@@ -707,6 +714,19 @@ class GlovUI {
       color, 'font_aa', this._spreadTechParams(spread));
   }
 
+  scaleSizes(scale) {
+    this.button_height *= scale;
+    this.font_height *= scale;
+    this.button_width *= scale;
+    this.button_img_size *= scale;
+    this.modal_width *= scale;
+    this.modal_y0 *= scale;
+    this.modal_title_scale *= scale;
+    this.pad *= scale;
+    this.panel_pixel_scale = this.button_height / 13; // button_height / button pixel resolution
+    this.tooltip_width *= scale;
+    this.tooltip_pad *= scale;
+  }
 }
 
 
@@ -720,6 +740,8 @@ GlovUI.prototype.modal_y0 = 200;
 GlovUI.prototype.modal_title_scale = 1.2;
 GlovUI.prototype.pad = 16;
 GlovUI.prototype.panel_pixel_scale = 32 / 13; // button_height / button pixel resolution
+GlovUI.prototype.tooltip_width = 400;
+GlovUI.prototype.tooltip_pad = 8;
 
 GlovUI.prototype.font_style_focused = glov_font.style(null, {
   color: 0x000000ff,
