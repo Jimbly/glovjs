@@ -16,6 +16,7 @@ class GlovInput {
     this.pad_states = []; // One map per joystick
     this.clicks = [];
     this.mouse_pos = new VMathArrayConstructor(2);
+    this.mouse_pos_is_touch = false;
     this.mpos = new VMathArrayConstructor(2); // temporary, mapped to camera
     this.mouse_over_captured = false;
     this.mouse_down = [];
@@ -108,12 +109,13 @@ class GlovInput {
   onMouseUp(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_pos
     this.clicks[mousecode] = this.clicks[mousecode] || [];
-    this.clicks[mousecode].push(this.mouse_pos.slice(0));
+    this.clicks[mousecode].push({ pos: this.mouse_pos.slice(0), touch: false });
     this.mouse_down[mousecode] = false;
   }
   onMouseOver(x, y) {
     this.mouse_pos[0] = x;
     this.mouse_pos[1] = y;
+    this.mouse_pos_is_touch = false;
     //this.draw2d.viewportMap(x, y, this.mouse_mapped);
   }
   isMouseOver(param) {
@@ -145,6 +147,9 @@ class GlovInput {
     this.camera.physicalToVirtual(dst, this.mouse_pos);
     return dst;
   }
+  mousePosIsTouch() {
+    return this.mouse_pos_is_touch;
+  }
   clickHit(param) {
     assert(typeof param.x === 'number');
     assert(typeof param.y === 'number');
@@ -156,7 +161,8 @@ class GlovInput {
     }
     this.mousePos(this.mpos);
     for (let ii = 0; ii < this.clicks[button].length; ++ii) {
-      let pos = this.clicks[button][ii];
+      let click = this.clicks[button][ii];
+      let pos = click.pos;
       this.camera.physicalToVirtual(this.mpos, pos);
       if (this.mpos[0] >= param.x &&
         (param.w === Infinity || this.mpos[0] < param.x + param.w) &&
@@ -179,11 +185,13 @@ class GlovInput {
         this.mouse_down[0] = false;
         // update this.mouse_pos
         this.onMouseOver(this.last_touch_state[0].positionX, this.last_touch_state[0].positionY);
+        this.mouse_pos_is_touch = true;
         this.clicks[0] = this.clicks[0] || [];
-        this.clicks[0].push(this.mouse_pos.slice(0));
+        this.clicks[0].push({ pos: this.mouse_pos.slice(0), touch: true });
       } else if (this.touch_state.length === 1) {
         this.mouse_down[0] = true;
         this.onMouseOver(this.touch_state[0].positionX, this.touch_state[0].positionY);
+        this.mouse_pos_is_touch = true;
       } else if (this.touch_state.length > 1) {
         this.mouse_down[0] = false;
         // no click

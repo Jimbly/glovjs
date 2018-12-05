@@ -144,6 +144,7 @@ class GlovUI {
 
     this.button_mouseover = false; // for callers to poll the very last button
     this.button_focused = false; // for callers to poll the very last button
+    this.touch_changed_focus = false; // did a touch even this frame change focus?
     // For tracking global mouseover state
     this.last_frame_button_mouseover = false;
     this.frame_button_mouseover = false;
@@ -280,14 +281,28 @@ class GlovUI {
     if (param.disabled) {
       state = 'disabled';
     } else if (glov_input.clickHit(param)) {
-      this.setMouseOver(key);
-      ret = true;
+      if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
+        this.setMouseOver(key);
+      }
+      if (param.touch_twice && glov_input.mousePosIsTouch() && !focused) {
+        // Just focus, show tooltip
+        this.touch_changed_focus = true;
+      } else {
+        ret = true;
+      }
       if (!param.no_focus) {
         this.focusSteal(key);
+        focused = true;
       }
     } else if (glov_input.isMouseOver(param)) {
-      this.setMouseOver(key);
-      state = glov_input.isMouseDown() ? 'down' : 'rollover';
+      if (param.no_touch_mouseover && glov_input.mousePosIsTouch()) {
+        // do not set mouseover
+      } else if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
+        // do not set mouseover
+      } else {
+        this.setMouseOver(key);
+        state = glov_input.isMouseDown() ? 'down' : 'rollover';
+      }
     }
     this.button_focused = focused;
     if (focused) {
@@ -499,6 +514,7 @@ class GlovUI {
     this.focused_this_frame = false;
     this.focused_key_not = null;
     this.modal_stealing_focus = false;
+    this.touch_changed_focus = false;
 
     for (let ii = 0; ii < this.last_frame_edit_boxes.length; ++ii) {
       let edit_box = this.last_frame_edit_boxes[ii];
