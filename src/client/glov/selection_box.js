@@ -506,7 +506,8 @@ class GlovSelectionBox {
         if (!did_tab) {
           let md = {};
           // eslint-disable-next-line no-bitwise
-          md.align = (item.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) | glov_font.ALIGN.VCENTER;
+          md.align = (item.centered || display.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) |
+            glov_font.ALIGN.VCENTER;
           md.x_size = md.y_size = font_height;
           md.w = eff_width - display.xpad * 2;
           md.h = entry_height;
