@@ -12,7 +12,10 @@ function cmpDrawList(a, b) {
   if (a.y !== b.y) {
     return a.y - b.y;
   }
-  return a.x - b.x;
+  if (a.x !== b.x) {
+    return a.x - b.x;
+  }
+  return a.uid - b.uid;
 }
 
 const unit_vec4 = VMath.v4Build(1,1,1,1);
@@ -43,6 +46,7 @@ class GlovDrawList {
     this.sprite_list = [];
     this.sprite_alloc_count = 0;
     this.color_white = VMath.v4Build(1, 1, 1, 1);
+    this.uid = 0;
   }
 
   createDrawListSprite() {
@@ -76,6 +80,7 @@ class GlovDrawList {
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
+      uid: ++this.uid,
     };
     this.list.push(elem);
     return elem;
@@ -98,6 +103,7 @@ class GlovDrawList {
         clipSpace: this.draw_2d.clipSpace,
         color1: color1 || this.color_white,
       },
+      uid: ++this.uid,
     };
     this.list.push(elem);
     return elem;
@@ -118,6 +124,7 @@ class GlovDrawList {
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
+      uid: ++this.uid,
     };
     this.list.push(elem);
     return elem;
@@ -130,6 +137,7 @@ class GlovDrawList {
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
       bucket: bucket === undefined ? this.default_bucket : bucket,
+      uid: ++this.uid,
     };
     this.list.push(elem);
     return elem;
@@ -180,6 +188,7 @@ class GlovDrawList {
     elem.z = z;
     elem.bucket = bucket || this.defauilt_bucket;
     elem.tech_params = tech_params || null;
+    elem.uid = ++this.uid;
     this.list.push(elem);
     return elem;
   }
@@ -221,6 +230,7 @@ class GlovDrawList {
     }
     this.sprite_alloc_count = 0;
     this.list.length = 0;
+    this.uid = 0;
     if (bucket) {
       this.draw_2d.end();
       this.draw_2d.techniqueParameters = orig_tech_params;
