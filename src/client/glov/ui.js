@@ -451,10 +451,10 @@ class GlovUI {
         text: key
       }) || pressed
       ) {
+        this.modal_dialog = null;
         if (modal_dialog.buttons[key]) {
           modal_dialog.buttons[key]();
         }
-        this.modal_dialog = null;
       }
       x += pad + button_width;
     }
@@ -467,10 +467,6 @@ class GlovUI {
       w: this.modal_width,
       h: y - y0,
     });
-
-    this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), Z.MODAL - 2,
-      this.color_modal_darken,
-      [game_width, this.camera.y1() - this.camera.y0(), 1, 1]);
 
     glov_input.eatAllInput();
     this.modal_stealing_focus = true;
@@ -522,6 +518,9 @@ class GlovUI {
 
     if (this.modal_dialog || this.menu_up) {
       // Effects during modal dialogs, may need option to disable or customize these
+      this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), Z.MODAL - 2,
+        this.color_modal_darken,
+        [this.camera.x1() - this.camera.x0(), this.camera.y1() - this.camera.y0(), 1, 1]);
       glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
       glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
     }
