@@ -382,11 +382,22 @@ class GlovUI {
     img_scale = Math.min(img_scale, (param.h * 0.75) / img_h);
     img_w *= img_scale;
     img_h *= img_scale;
-    this.draw_list.queue(param.img,
-      param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
-      param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
-      param.z + 0.1,
-      color, [img_scale, img_scale, 1, 1], param.img_rect);
+    if (param.color1) {
+      this.draw_list.queueDualTint(param.img,
+        param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
+        param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
+        param.z + 0.1,
+        color, param.color1,
+        [img_scale, img_scale, 1, 1], param.img_rect,
+        param.rotation, param.bucket);
+    } else {
+      this.draw_list.queue(param.img,
+        param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
+        param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
+        param.z + 0.1,
+        color, [img_scale, img_scale, 1, 1], param.img_rect,
+        param.rotation, param.bucket);
+    }
     return ret;
   }
 
