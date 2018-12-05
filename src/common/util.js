@@ -24,6 +24,15 @@ export function merge(dest, src) {
   return dest;
 }
 
+export function defaults(dest, src) {
+  for (let f in src) {
+    if (!Object.prototype.hasOwnProperty.call(dest, f)) {
+      dest[f] = src[f];
+    }
+  }
+  return dest;
+}
+
 export function cloneShallow(src) {
   return merge({}, src);
 }
@@ -54,6 +63,11 @@ export function fract(a) {
 
 export function nearSame(a, b, tol) {
   return abs(b - a) <= tol;
+}
+
+export function titleCase(str) {
+  return str.split(' ').map((word) => `${word[0].toUpperCase()}${word.slice(1)}`)
+    .join(' ');
 }
 
 const EPSILON = 0.00001;
