@@ -2,10 +2,10 @@
 /*global VMath: false */
 /*global Z: false */
 
-const local_storage = require('./local_storage.js');
+const glov_local_storage = require('./glov/local_storage.js');
 const particle_data = require('./particle_data.js');
 
-local_storage.storage_prefix = 'glovjs-playground';
+glov_local_storage.storage_prefix = 'glovjs-playground';
 window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
@@ -83,6 +83,7 @@ export function main(canvas) {
   let do_particles = true;
   let last_particles = 0;
   let do_ui_test = false;
+  let do_font_test = false;
 
 
   function test(dt) {
@@ -96,6 +97,9 @@ export function main(canvas) {
 
     if (do_ui_test) {
       glov_ui_test.run(100, 100);
+    }
+    if (do_font_test) {
+      glov_ui_test.runFontTest(600, 100);
     }
 
     test.character.dx = 0;
@@ -172,7 +176,14 @@ export function main(canvas) {
       'Outline and Drop Shadow');
 
     let x = 100;
-    let y = game_height - 100 - 35 * 2;
+    let y = game_height - 100 - 35 * 3;
+    if (glov_ui.buttonText({ x, y, text: `Font Test: ${do_font_test ? 'ON' : 'OFF'}`,
+      tooltip: 'Toggles visibility of general Font tests' })
+    ) {
+      do_font_test = !do_font_test;
+    }
+    y += 35;
+
     if (glov_ui.buttonText({ x, y, text: `UI Test: ${do_ui_test ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general UI tests' })
     ) {
