@@ -7,6 +7,8 @@
 const fs = require('fs');
 let VMathArrayConstructor = VMath.F32Array;
 
+const { v4Build, v4BuildZero } = VMath;
+
 /*
 
 font_style = glov_font.style(null, {
@@ -130,7 +132,7 @@ function vec4ColorFromIntColor(v, c) {
 }
 
 function buildVec4ColorFromIntColor(c) {
-  return VMath.v4Build(
+  return v4Build(
     ((c >> 24) & 0xFF) / 255,
     ((c >> 16) & 0xFF) / 255,
     ((c >> 8) & 0xFF) / 255,
@@ -230,6 +232,12 @@ class GlovFont {
     this.draw_list = draw_list;
     this.camera = this.draw_list.camera;
 
+    // Calculate inverse scale
+    for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
+      let char_info = font_info.char_infos[ii];
+      char_info.scale = 1 / (char_info.sc || 1);
+    }
+
     // build lookup
     this.char_infos = [];
     for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
@@ -237,6 +245,10 @@ class GlovFont {
       this.char_infos[font_info.char_infos[ii].c] = char_info;
       char_info.xpad = char_info.xpad || 0;
       char_info.yoffs = char_info.yoffs || 0;
+    }
+    this.replacement_character = this.infoFromChar(0xFFFD);
+    if (!this.replacement_character) {
+      this.replacement_character = this.infoFromChar(63); // '?'
     }
 
     this.default_style = new GlovFontStyle();
@@ -327,7 +339,7 @@ class GlovFont {
     }
     if (c > 127) {
       // no char info, and non-ascii, non-control code
-      return this.char_infos[63]; //['?'];
+      return this.replacement_character;
     }
     return null;
   }
@@ -339,7 +351,7 @@ class GlovFont {
     let xsc = x_size / this.font_info.font_size;
     let x_advance = this.calcXAdvance(xsc);
     if (char_info) {
-      return (char_info.w + char_info.xpad) * xsc + x_advance;
+      return (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
     }
     return 0;
   }
@@ -356,7 +368,7 @@ class GlovFont {
         char_info = this.infoFromChar(13);
       }
       if (char_info) {
-        ret += (char_info.w + char_info.xpad) * xsc + x_advance;
+        ret += (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
       }
     }
     return ret;
@@ -370,7 +382,7 @@ class GlovFont {
     let x = word_x0;
     let linenum = 0;
     let space_info = this.infoFromChar(32); // ' '
-    let space_size = (space_info.w + space_info.xpad) * xsc;
+    let space_size = (space_info ? space_info.w + space_info.xpad : this.font_info.font_size) * xsc;
     let hard_wrap = false;
     let x_advance = this.calcXAdvance(xsc);
 
@@ -388,7 +400,7 @@ class GlovFont {
           char_info = this.infoFromChar(10);
         }
         if (char_info) {
-          char_w = (char_info.w + char_info.xpad) * xsc + x_advance;
+          char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
           newx = x + char_w;
         }
       }
@@ -505,48 +517,45 @@ class GlovFont {
 
     // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
     //   things look almost identical, just crisper
-    let font_texel_scale = font_info.font_size / 32;
     let x_advance = this.calcXAdvance(xsc);
+    let font_texel_scale = font_info.font_size / 32;
+    let tile_state = 0;
 
     let applied_style = this.applied_style;
 
     // Calculate anti-aliasing values
     let delta_per_source_pixel = 0.5 / font_info.spread;
     let delta_per_dest_pixel = delta_per_source_pixel / avg_scale_combined;
-    let value = [
+    let value = v4Build(
       1 / delta_per_dest_pixel, // AA Mult and Outline Mult
       -0.5 / delta_per_dest_pixel + 0.5, // AA Add
       // Outline Add
       -0.5 / delta_per_dest_pixel + 0.5 + applied_style.outline_width*font_texel_scale*avg_scale_combined,
       0, // Unused
-    ];
+    );
     if (value[2] > 0) {
       value[2] = 0;
     }
     let padding1 = Math.max(1, applied_style.outline_width*font_texel_scale*avg_scale_combined);
-    let padding4 = [padding1, padding1, padding1, padding1];
+    let padding4 = v4BuildZero();
+    const outer_scaled = applied_style.glow_outer*font_texel_scale;
+    padding4[0] = Math.max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
+    padding4[2] = Math.max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
+    padding4[1] = Math.max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
+    padding4[3] = Math.max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
 
     techParamsSet('param0', value);
-    let value2 = [
-      -applied_style.glow_xoffs * font_texel_scale / tex.width,
-      -applied_style.glow_yoffs * font_texel_scale / tex.height,
+    let value2 = v4Build(
+      0, // filled later
+      0, // filled later
       // Glow mult
       1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale),
       -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) / ((applied_style.glow_outer -
         applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale)
-    ];
+    );
     if (value2[3] > 0) {
       value2[3] = 0;
     }
-    const outer_scaled = applied_style.glow_outer*font_texel_scale;
-    padding4[0] = Math.max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding4[0]);
-    padding4[2] = Math.max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding4[2]);
-    padding4[1] = Math.max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding4[1]);
-    padding4[3] = Math.max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding4[3]);
-    techParamsSet('glowParams', value2);
-
-    // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
-    const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0.0001;
 
     let padding_in_font_space = VMath.v4ScalarMul(padding4, 1 / avg_scale_font);
     for (let ii = 0; ii < 4; ++ii) {
@@ -557,6 +566,10 @@ class GlovFont {
         padding_in_font_space[ii] *= sc;
       }
     }
+
+    // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
+    const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0.0001;
+
 
     // For non-1:1 aspect ration rendering, need to scale our coordinates' padding differently in each axis
     let rel_x_scale = xsc / avg_scale_font;
@@ -573,25 +586,36 @@ class GlovFont {
           char_info = this.infoFromChar(13);
         }
         if (char_info) {
+          let char_scale = char_info.scale;
+          let xsc2 = xsc * char_scale;
+          let ysc2 = ysc * char_scale;
+          let pad_scale = 1 / char_scale;
           let tile_width = tex.width;
           let tile_height = tex.height;
-          let u0 = (char_info.x0 - padding_in_font_space[0]) / tile_width;
-          let u1 = (char_info.x0 + char_info.w + padding_in_font_space[2]) / tile_width;
-          let v0 = (char_info.y0 - padding_in_font_space[1]) / tile_height;
-          let v1 = (char_info.y0 + char_info.h + padding_in_font_space[3]) / tile_height;
+          // Lazy update params here
+          if (char_scale !== tile_state) {
+            value2[0] = -applied_style.glow_xoffs * font_texel_scale * pad_scale / tile_width;
+            value2[1] = -applied_style.glow_yoffs * font_texel_scale * pad_scale / tile_height;
+            techParamsSet('glowParams', value2);
+          }
 
-          let w = char_info.w * xsc + (padding4[0] + padding4[2]) * rel_x_scale;
-          let h = char_info.h * ysc + (padding4[1] + padding4[3]) * rel_y_scale;
+          let u0 = (char_info.x0 - padding_in_font_space[0] * pad_scale) / tile_width;
+          let u1 = (char_info.x0 + char_info.w + padding_in_font_space[2] * pad_scale) / tile_width;
+          let v0 = (char_info.y0 - padding_in_font_space[1] * pad_scale) / tile_height;
+          let v1 = (char_info.y0 + char_info.h + padding_in_font_space[3] * pad_scale) / tile_height;
+
+          let w = char_info.w * xsc2 + (padding4[0] + padding4[2]) * rel_x_scale;
+          let h = char_info.h * ysc2 + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let elem = this.draw_list.queueraw(
             tex,
-            x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc,
+            x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,
             z + z_advance * i, w, h,
             u0, v0, u1, v1,
             buildVec4ColorFromIntColor(applied_style.color), 0, this.blend_mode);
           elem.tech_params = techParamsGet();
 
-          x += (char_info.w + char_info.xpad) * xsc + x_advance;
+          x += (char_info.w + char_info.xpad) * xsc2 + x_advance;
         }
       }
     }
