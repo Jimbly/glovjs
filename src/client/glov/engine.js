@@ -230,12 +230,12 @@ export function startup(params) {
 
   sound_manager = require('./sound_manager.js').create();
 
-  const font_info_arial32 = require('../img/font/arial32.json');
+  const font_info_palanquin32 = require('../img/font/palanquin32.json');
   const font_info_04b03 = require('../img/font/04b03_8x2.json');
   font = params.font ?
     glov_font.create(draw_list, params.font.info, glov_sprite.loadTexture(params.font.texture)) :
-    glov_font.create(draw_list, params.pixely ? font_info_04b03 : font_info_arial32,
-      glov_sprite.loadTexture(params.pixely ? 'font/04b03_8x2.png' : 'font/arial32.png'));
+    glov_font.create(draw_list, params.pixely ? font_info_04b03 : font_info_palanquin32,
+      glov_sprite.loadTexture(params.pixely ? 'font/04b03_8x2.png' : 'font/palanquin32.png'));
   glov_ui = require('./ui.js').create(font, draw_list, params.ui_sprites);
   glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
     button_click: 'button_click',
