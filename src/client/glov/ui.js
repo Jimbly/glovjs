@@ -9,6 +9,7 @@ Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
 Z.TOOLTIP = Z.TOOLTIP || 2000;
+Z.FPSMETER = Z.FPSMETER || 10000;
 
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
