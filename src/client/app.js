@@ -18,6 +18,19 @@ export const game_height = 960;
 
 export let sprites = {};
 
+// Persistent flags system for testing parameters
+let flags = {};
+function flagGet(key, dflt) {
+  if (flags[key] === undefined) {
+    flags[key] = glov_local_storage.getJSON(`flag_${key}`, dflt);
+  }
+  return flags[key];
+}
+function flagToggle(key) {
+  flags[key] = !flagGet(key);
+  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
+}
+
 export function main(canvas) {
   const glov_engine = require('./glov/engine.js');
   const glov_font = require('./glov/font.js');
@@ -27,7 +40,7 @@ export function main(canvas) {
     canvas,
     game_width,
     game_height,
-    pixely: true,
+    pixely: flagGet('pixely', true),
   });
 
   const sound_manager = glov_engine.sound_manager;
@@ -80,11 +93,7 @@ export function main(canvas) {
     });
   }
 
-  let do_particles = true;
   let last_particles = 0;
-  let do_ui_test = false;
-  let do_font_test = false;
-
 
   function test(dt) {
     if (!test.color_sprite) {
@@ -95,10 +104,10 @@ export function main(canvas) {
       };
     }
 
-    if (do_ui_test) {
+    if (flagGet('ui_test')) {
       glov_ui_test.run(100, 100);
     }
-    if (do_font_test) {
+    if (flagGet('font_test')) {
       glov_ui_test.runFontTest(600, 100);
     }
 
@@ -176,27 +185,47 @@ export function main(canvas) {
       'Outline and Drop Shadow');
 
     let x = 100;
-    let y = game_height - 100 - 35 * 3;
-    if (glov_ui.buttonText({ x, y, text: `Font Test: ${do_font_test ? 'ON' : 'OFF'}`,
+    let y = game_height - 100 - 35 * 5;
+    if (glov_ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') ? 'ON' : 'OFF'}`,
+      tooltip: 'Toggles pixely or regular mode (requires reload)' })
+    ) {
+      flagToggle('pixely');
+      document.location = String(document.location);
+    }
+    y += 35;
+
+    if (glov_ui.buttonText({ x, y, text: `Music: ${flagGet('music') ? 'ON' : 'OFF'}`,
+      tooltip: 'Toggles playing a looping background music track' })
+    ) {
+      flagToggle('music');
+      if (flagGet('music')) {
+        sound_manager.playMusic('music_test.mp3', 1, sound_manager.FADE_IN);
+      } else {
+        sound_manager.playMusic('music_test.mp3', 0, sound_manager.FADE_OUT);
+      }
+    }
+    y += 35;
+
+    if (glov_ui.buttonText({ x, y, text: `Font Test: ${flagGet('font_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general Font tests' })
     ) {
-      do_font_test = !do_font_test;
+      flagToggle('font_test');
     }
     y += 35;
 
-    if (glov_ui.buttonText({ x, y, text: `UI Test: ${do_ui_test ? 'ON' : 'OFF'}`,
+    if (glov_ui.buttonText({ x, y, text: `UI Test: ${flagGet('ui_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general UI tests' })
     ) {
-      do_ui_test = !do_ui_test;
+      flagToggle('ui_test');
     }
     y += 35;
 
-    if (glov_ui.buttonText({ x, y, text: `Particles: ${do_particles ? 'ON' : 'OFF'}`,
+    if (glov_ui.buttonText({ x, y, text: `Particles: ${flagGet('particles', true) ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles particles' })
     ) {
-      do_particles = !do_particles;
+      flagToggle('particles');
     }
-    if (do_particles) {
+    if (flagGet('particles')) {
       if (glov_engine.getFrameTimestamp() - last_particles > 1000) {
         last_particles = glov_engine.getFrameTimestamp();
         glov_engine.glov_particles.createSystem(particle_data.defs.explosion,
@@ -205,10 +234,21 @@ export function main(canvas) {
         );
       }
     }
+
+    // Debugging touch state on mobile
+    // const glov_camera = glov_engine.glov_camera;
+    // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera.x0(), glov_camera.y0(), Z.FPSMETER,
+    //   glov_camera.w(), 0, 22, JSON.stringify({
+    //     last_touch_state: glov_input.last_touch_state,
+    //     touch_state: glov_input.touch_state,
+    //   }, undefined, 2));
   }
 
   function testInit(dt) {
     glov_engine.setState(test);
+    if (flagGet('music')) {
+      sound_manager.playMusic('music_test.mp3');
+    }
     test(dt);
   }
 
