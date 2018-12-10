@@ -22,7 +22,7 @@ export let sprites = {};
 let flags = {};
 function flagGet(key, dflt) {
   if (flags[key] === undefined) {
-    flags[key] = glov_local_storage.getJSON(`flag_${key}`, dflt);
+    flags[key] = glov_local_storage.getJSON(`flag_${key}`, dflt) || false;
   }
   return flags[key];
 }
