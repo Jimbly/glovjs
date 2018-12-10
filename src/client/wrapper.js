@@ -50,25 +50,6 @@ window.onload = function () {
   // eslint-disable-next-line global-require
   const app = require('./app.js');
   let canvas = document.getElementById('turbulenz_game_engine_canvas');
-  canvas.focus();
-
-  function resizeCanvas() {
-    // This happens in turbulenzengine.js:resizeCanvas() already:
-    // let css_to_real = window.devicePixelRatio || 1;
-    // canvas.width = Math.floor(canvas.parentNode.clientWidth * css_to_real);
-    // canvas.height = Math.floor(canvas.parentNode.clientHeight * css_to_real);
-
-    // This used to be here, but it breaks mobile devices!
-    // Might be needed to get gamepad input though?
-    //canvas.focus();
-
-    // maybe force trigger immediate draw too?
-    window.need_repos = 10;
-  }
-  // resize the canvas to fill browser window dynamically
-  window.addEventListener('resize', resizeCanvas, false);
-  resizeCanvas();
-
   if (canvas.getContext && canvasSupported) {
     app.main(canvas);
   }

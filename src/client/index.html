@@ -25,13 +25,11 @@
           Getting a WebGL Implementation
         </a>
       </canvas>
-      <div class="screenwrap">
-        <!-- Not doing font scaling on this div, since having it resize when the JS loads is annoying -->
-        <div id="loading" class="screen vflex">
-          <div class="flexcenter" style="flex:1; text-align: center;">
-          </div>
-          <div class="flexcenter" style="text-align: center; width:100%;">
-            <div style="padding-bottom: 20px;">
+      <div id="loading" class="screenwrap vflex">
+        <div class="flexcenter" style="flex:1; text-align: center;">
+        </div>
+        <div class="flexcenter" style="text-align: center; width:100%;">
+          <div style="padding-bottom: 20px;">
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="width:80%; height=auto; max-height: 50vh;" viewBox="185.105 660.093 649.467 347.982">
 <path fill="#B24" d="M676.771,749.573c-73.581-17.35-168.904,30.63-278.952-9.283c121.689,25.056,191.414-14.407,258.189-4.329 C663.313,739.371,670.248,744.108,676.771,749.573z"/>
 <path fill="#B24" d="M761.5,834.5h-13.656l-4.958-8.709H633.595V819.3h86.556h24.725L761.5,834.5z M761.5,834.502h-13.656 l-4.958,8.709H633.595v6.491h86.556h24.725L761.5,834.502z"/>
@@ -60,30 +58,19 @@
 <polygon fill="#DDD" points="363.104,883.723 350.953,860.787 304.229,860.787 298.274,850.273 304.269,840.288 350.938,840.288 359.375,828.697 294.527,828.697 283.355,850.16 295.497,873.315 342.168,873.315 348.069,883.79 341.704,894.125 294.96,894.125 286.431,906.32 351.162,906.32"/>
 <polygon fill="#B24" points="391.623,828.697 458.875,828.697 736.479,828.697 744.417,834.5 736.479,840.292 431.229,840.307 391.623,840.307 356.405,840.307 364.839,828.697"/>
 </svg>
-            </div>
-            <h1>Powered by GLOV.js</h1>
           </div>
-          <div class="flexcenter" style="flex:1; text-align: center;" id="loading_text">
-            Loading...
-          </div>
+          <h1>Powered by GLOV.js</h1>
         </div>
-      </div>
-      <div id="gamescreen" class="screenwrap">
-<!--         <div id="title" class="screen vflex" style="display: none;">
-          <div class="flexcenter" style="text-align: center;"></div>
-          <div class="flexcenter" style="flex:3; text-align: center;"></div>
-        </div> -->
+        <div class="flexcenter" style="flex:1; text-align: center;" id="loading_text">
+          Loading...
+        </div>
       </div>
       <div id="fullscreen" class="screenwrap">
         <div id="dynamic_text"></div>
-        <!-- <div id="play" class="screen vflex" style="display: none;">
-          <div class="flexcenter" style="flex:1; text-align: center;"></div>
-          <div class="hflex" id="something">...</div>
-          <div class="flexcenter" style="flex:1; text-align: center;"></div>
-        </div> -->
       </div>
     </div>
     <script type="text/javascript">
+      /* eslint indent:off, no-multiple-empty-lines:off, no-trailing-spaces:off, eol-last:off */
       /* global window */
       window.TurbulenzEngine = {};
     </script>

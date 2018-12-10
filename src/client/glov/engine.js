@@ -94,6 +94,7 @@ let mspf_frame_count = 0;
 let show_fps = true;
 
 let do_borders = true;
+let need_repos = 0;
 
 let app_tick_functions = [];
 export function addTickFunc(cb) {
@@ -149,8 +150,8 @@ function tick() {
   glov_input.tick();
   glov_ui.tick();
 
-  if (window.need_repos) {
-    --window.need_repos;
+  if (need_repos) {
+    --need_repos;
     let ul = [];
     glov_camera.virtualToPhysical(ul, [0,0]);
     let lr = [];
@@ -159,13 +160,6 @@ function tick() {
     let height = viewport[3] - viewport[1];
     // default font size of 16 when at height of game_height
     let font_size = Math.min(256, Math.max(2, Math.floor(height/800 * 16)));
-    $('#gamescreen').css({
-      left: viewport[0],
-      top: viewport[1],
-      width: viewport[2] - viewport[0],
-      height: height,
-      'font-size': font_size,
-    });
     $('#fullscreen').css({
       'font-size': font_size,
     });
@@ -218,8 +212,10 @@ function tick() {
 
 
 export function startup(params) {
+  let canvas = params.canvas;
+  canvas.focus();
   TurbulenzEngine = WebGLTurbulenzEngine.create({
-    canvas: params.canvas,
+    canvas: canvas,
     fillParent: true
   });
   if (!TurbulenzEngine) {
@@ -265,6 +261,16 @@ export function startup(params) {
 
   glov_camera.set2DAspectFixed(game_width, game_height);
 
+  function onResize() {
+    // This used to be here, but it breaks mobile devices / edit boxes
+    //canvas.focus();
+
+    // For the next 10 frames, make sure font size is correct
+    need_repos = 10;
+  }
+  window.addEventListener('resize', onResize, false);
+  onResize();
+
   if (params.state) {
     setState(params.state);
   }
@@ -308,7 +314,7 @@ function loading() {
   let load_count = glov_sprite.loading() + sound_manager.loading();
   $('#loading_text').text(`Loading (${load_count})...`);
   if (!load_count) {
-    $('.screen').hide();
+    $('#loading').fadeOut(200);
     is_loading = false;
     app_state = after_loading_state;
   }
