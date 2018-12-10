@@ -3,6 +3,8 @@
 /*global Uint8Array*/
 /*global window*/
 "use strict";
+// Some old browsers had a broken implementation of ArrayBuffer
+// without a "slice" method
 if ((typeof ArrayBuffer !== "undefined") && (ArrayBuffer.prototype !== undefined) && (ArrayBuffer.prototype.slice === undefined)) {
     ArrayBuffer.prototype.slice = function ArrayBufferSlice(s, e) {
         var length = this.byteLength;
@@ -100,26 +102,27 @@ var SoundTARLoader = (function () {
 
         function parseHeader(header) {
             header.fileName = getString(100);
-            skip(8);
-            skip(8);
-            skip(8);
+            skip(8); //header.mode = getString(8);
+            skip(8); //header.uid = getString(8);
+            skip(8); //header.gid = getString(8);
             header.length = getNumber(getString(12));
-            skip(12);
-            skip(8);
+            skip(12); //header.lastModified = getString(12);
+            skip(8); //header.checkSum = getString(8);
             header.fileType = getString(1);
-            skip(100);
+            skip(100); //header.linkName = getString(100);
             header.ustarSignature = getString(6);
-            skip(2);
-            skip(32);
-            skip(32);
-            skip(8);
-            skip(8);
+            skip(2); //header.ustarVersion = getString(2);
+            skip(32); //header.ownerUserName = getString(32);
+            skip(32); //header.ownerGroupName = getString(32);
+            skip(8); //header.deviceMajor = getString(8);
+            skip(8); //header.deviceMinor = getString(8);
             header.fileNamePrefix = getString(155);
             offset += 12;
         }
 
         var sd = this.sd;
         var uncompress = this.uncompress;
+        var decodesound = this.decodesound;
         var onsoundload = this.onsoundload;
         var result = true;
 
@@ -142,6 +145,8 @@ var SoundTARLoader = (function () {
             parseHeader(header);
             if (0 < header.length) {
                 var fileName;
+                var data;
+
                 if (header.fileName === "././@LongLink") {
                     // name in next chunk
                     fileName = getString(256);
@@ -157,13 +162,24 @@ var SoundTARLoader = (function () {
                 }
                 if ('' === header.fileType || '0' === header.fileType) {
                     //console.log('Loading "' + fileName + '" (' + header.length + ')');
-                    this.soundsLoading += 1;
-                    sd.createSound({
-                        src: fileName,
-                        data: (sd.audioContext ? bytes.buffer.slice(offset, (offset + header.length)) : bytes.subarray(offset, (offset + header.length))),
-                        uncompress: uncompress,
-                        onload: onload
-                    });
+                    // If there is a 'decodesound' callback, allow it
+                    // to process the data before we create a sound
+                    // from it.  'decodesound' has the option of
+                    // ignoring this sound by returning 'null'.
+                    data = (sd.audioContext && (WebGLSound.prototype.forceUncompress || uncompress)) ? (bytes.buffer.slice(offset, (offset + header.length))) : (bytes.subarray(offset, (offset + header.length)));
+                    if (decodesound) {
+                        data = decodesound(fileName, data);
+                    }
+
+                    if (data) {
+                        this.soundsLoading += 1;
+                        sd.createSound({
+                            src: fileName,
+                            data: data,
+                            uncompress: uncompress,
+                            onload: onload
+                        });
+                    }
                 }
                 offset += (Math.floor((header.length + 511) / 512) * 512);
             }
@@ -186,6 +202,8 @@ var SoundTARLoader = (function () {
         loader.onload = params.onload;
         loader.onerror = params.onerror;
         loader.soundsLoading = 0;
+        loader.decodearchive = params.decodearchive;
+        loader.decodesound = params.decodesound;
 
         var src = params.src;
         if (src) {
@@ -208,10 +226,15 @@ var SoundTARLoader = (function () {
                         var xhrStatus = xhr.status;
                         var xhrStatusText = xhr.status !== 0 && xhr.statusText || 'No connection';
 
+                        // Fix for loading from file
                         if (xhrStatus === 0 && (window.location.protocol === "file:" || window.location.protocol === "chrome-extension:")) {
                             xhrStatus = 200;
                         }
 
+                        // Sometimes the browser sets status to 200 OK when the connection is closed
+                        // before the message is sent (weird!).
+                        // In order to address this we fail any completely empty responses.
+                        // Hopefully, nobody will get a valid response with no headers and no body!
                         if (xhr.getAllResponseHeaders() === "") {
                             var noBody;
                             if (xhr.responseType === "arraybuffer") {
@@ -255,8 +278,14 @@ var SoundTARLoader = (function () {
                             // processBytes returns false if any of the
                             // entries in the archive was not supported or
                             // couldn't be loaded as a sound.
-                            var archiveResult = loader.processBytes(new Uint8Array(buffer));
+                            var bytes = new Uint8Array(buffer);
+                            if (loader.decodearchive) {
+                                bytes = loader.decodearchive(bytes);
+                            }
+                            var archiveResult = loader.processBytes(bytes);
 
+                            // Wait until all sounds have been loaded (or
+                            // failed) and return the result.
                             if (loader.onload) {
                                 var callOnload = function callOnloadFn() {
                                     if (0 < loader.soundsLoading) {

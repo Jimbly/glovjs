@@ -105,6 +105,7 @@ var TGALoader = (function () {
                 return;
         }
 
+        // Skip the image ID field.
         if (header.idLength) {
             offset += header.idLength;
             if (offset > bytes.length) {
@@ -286,6 +287,7 @@ var TGALoader = (function () {
             var bytes = (((count & ~RLE_PACKETSIZE) + 1) * datasize);
 
             if (count & RLE_PACKETSIZE) {
+                // Optimized case for single-byte encoded data
                 if (datasize === 1) {
                     var r = data[src];
                     src += 1;
@@ -461,10 +463,15 @@ var TGALoader = (function () {
                         var xhrStatus = xhr.status;
                         var xhrStatusText = xhr.status !== 0 && xhr.statusText || 'No connection';
 
+                        // Fix for loading from file
                         if (xhrStatus === 0 && (window.location.protocol === "file:" || window.location.protocol === "chrome-extension:")) {
                             xhrStatus = 200;
                         }
 
+                        // Sometimes the browser sets status to 200 OK when the connection is closed
+                        // before the message is sent (weird!).
+                        // In order to address this we fail any completely empty responses.
+                        // Hopefully, nobody will get a valid response with no headers and no body!
                         if (xhr.getAllResponseHeaders() === "") {
                             var noBody;
                             if (xhr.responseType === "arraybuffer") {

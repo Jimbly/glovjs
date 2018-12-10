@@ -79,6 +79,36 @@ var NetworkLatencySimulator = (function () {
         }
     };
 
+    NetworkLatencySimulator.prototype.addWebsocket = function (websocket) {
+        var that = this;
+        var oldSend = websocket.send;
+        websocket.send = function sendFn(data) {
+            var delayedSendTo = function delayedSendToFn() {
+                if (websocket) {
+                    oldSend.call(websocket, data);
+                }
+            };
+            that.queueMessage(delayedSendTo, "send");
+        };
+
+        var oldOnMessage = websocket.onmessage;
+        websocket.onmessage = function onMessageFn(event) {
+            var delayedOnMessage = function delayedOnMessageFn() {
+                if (websocket) {
+                    oldOnMessage.call(websocket, event);
+                }
+            };
+
+            that.queueMessage(delayedOnMessage, "receive");
+        };
+
+        var oldClose = websocket.onclose;
+        websocket.onclose = function onCloseFn() {
+            that.flushQueues();
+            oldClose.call(websocket);
+        };
+    };
+
     NetworkLatencySimulator.prototype.addMultiplayerSession = function (multiplayerSession) {
         var that = this;
 
@@ -136,8 +166,7 @@ var NetworkLatencySimulator = (function () {
         var simulator = new NetworkLatencySimulator();
         simulator.queueMap = {
             send: [],
-            receive: []
-        };
+            receive: [] };
 
         simulator.behaviour = behaviour;
 
@@ -165,7 +194,7 @@ var NetworkLatencySimulator = (function () {
                 }
 
                 var property;
-                result = {};
+                result = {}; // This does not clone the prototype. See Object.create() if you want that behaviour.
                 for (property in object) {
                     if (object.hasOwnProperty(property)) {
                         result[property] = cloneData(object[property]);

@@ -76,15 +76,13 @@ var Scene = (function () {
         debug.assert(!rootNode.scene, "Root node already in a scene");
         debug.assert(!this.rootNodesMap[name], "Root node with the same name exits in the scene");
 
-        rootNode.scene = this;
+        // Need to call this method before setting scene property
+        rootNode.addedToScene(this);
 
-        // Ensure node will be added to spatial map on update
-        // In the event that there are no dirty flags set.
-        rootNode.worldExtentsUpdate = true;
+        rootNode.scene = this;
 
         this.rootNodes.push(rootNode);
         this.rootNodesMap[name] = rootNode;
-        this.addRootNodeToUpdate(rootNode, name);
     };
 
     //
@@ -126,7 +124,7 @@ var Scene = (function () {
             }
         }
 
-        delete rootNode.scene;
+        rootNode.scene = undefined;
     };
 
     //
@@ -257,6 +255,8 @@ var Scene = (function () {
                 nnp = 0;
             }
 
+            /* tslint:disable:no-bitwise */
+            // Skip plane if both points were culled by the same frustum plane
             if (0 !== (culledByPlane[np] & culledByPlane[nnp])) {
                 np += 1;
                 continue;
@@ -430,7 +430,7 @@ var Scene = (function () {
             }
         }
 
-        frustumPlanes.length = numFrustumPlanes;
+        frustumPlanes.length = numFrustumPlanes; // remove camera plane, not needed to cull nodes
 
         if (0 < numVisiblePortals) {
             var numPortalPlanes, nextArea, plane0, plane1, plane2, plane3, planes, allPointsVisible;
@@ -443,7 +443,7 @@ var Scene = (function () {
                 portal = portalItem.portal;
                 areaIndex = portalItem.area;
 
-                portalPlanes[numPortalPlanes] = portal.plane;
+                portalPlanes[numPortalPlanes] = portal.plane; // Add current plane to cull portals behind
 
                 area = areas[areaIndex];
                 portals = area.portals;
@@ -487,7 +487,7 @@ var Scene = (function () {
                     }
                 }
 
-                portalPlanes.length = numPortalPlanes;
+                portalPlanes.length = numPortalPlanes; // remove current plane, not needed to cull nodes
             } while(currentPortalIndex < numVisiblePortals);
         }
 
@@ -717,7 +717,7 @@ var Scene = (function () {
                                 numNodes -= 1;
                                 if (n < numNodes) {
                                     nodes[n] = nodes[numNodes];
-                                    n -= 1;
+                                    n -= 1; // compensate for the n += 1 on the for loop
                                 } else {
                                     break;
                                 }
@@ -787,7 +787,7 @@ var Scene = (function () {
                                     numNodes -= 1;
                                     if (n < numNodes) {
                                         nodes[n] = nodes[numNodes];
-                                        n -= 1;
+                                        n -= 1; // compensate for the n += 1 on the for loop
                                     } else {
                                         break;
                                     }
@@ -1337,6 +1337,7 @@ var Scene = (function () {
                                     numOverlappingRenderables += 1;
                                 }
                             } else {
+                                // Check if node is fully inside
                                 if (nodeExtents[0] >= minExtent0 && nodeExtents[1] >= minExtent1 && nodeExtents[2] >= minExtent2 && nodeExtents[3] <= maxExtent0 && nodeExtents[4] <= maxExtent1 && nodeExtents[5] <= maxExtent2) {
                                     if (isFullyInsidePlanesAABB(nodeExtents, portalPlanes)) {
                                         for (renderableIndex = 0; renderableIndex < numRenderables; renderableIndex += 1) {
@@ -1467,8 +1468,11 @@ var Scene = (function () {
     //
     // cloneRootNode
     //
-    Scene.prototype.cloneRootNode = function (rootNode, newInstanceName) {
+    Scene.prototype.cloneRootNode = function (rootNode, newInstanceName, newLocalTransform) {
         var newNode = rootNode.clone(newInstanceName);
+        if (newLocalTransform) {
+            rootNode.setLocalTransform(newLocalTransform);
+        }
         this.addRootNode(newNode);
         return newNode;
     };
@@ -2121,6 +2125,7 @@ var Scene = (function () {
     Scene.prototype.loadMaterial = function (graphicsDevice, textureManager, effectManager, materialName, material) {
         var materials = this.materials;
 
+        // Check materials if the materialName has already been added
         if (!materials[materialName]) {
             var effectName = material.effect || "default";
             var newMaterial = this.createMaterial(materialName, material, effectName, null, null, graphicsDevice);
@@ -2312,7 +2317,7 @@ var Scene = (function () {
     Scene.prototype.clear = function () {
         this.effects = [];
         this.effectsMap = {};
-        this.semantics = {};
+        this.semantics = {}; // TODO: null?
         this.lights = {};
         this.globalLights = [];
         this.clearRootNodes();
@@ -2674,6 +2679,7 @@ var Scene = (function () {
         var param, filename, effectType, p;
         var fileEffectMeta;
 
+        // Effect associated, load from file
         if (fileEffects) {
             var fileEffect = fileEffects[effectName];
             if (fileEffect) {
@@ -2880,6 +2886,67 @@ var Scene = (function () {
         return numUniqueVertices;
     };
 
+    Scene.prototype._remapVertices = function (vertexSources, totalNumVertices, indicesPerVertex, verticesAsIndexLists) {
+        var numVertexSources = vertexSources.length;
+        var vs;
+        for (vs = 0; vs < numVertexSources; vs += 1) {
+            var vertexSource = vertexSources[vs];
+            var thisSourceOffset = vertexSource.offset;
+            var thisSourceStride = vertexSource.stride;
+            var thisSourceData = vertexSource.data;
+
+            var newData = new Array(thisSourceStride * totalNumVertices);
+
+            // For each entry in index list
+            var vertIdx = 0;
+            var vertIdxOffset = thisSourceOffset;
+            while (vertIdx < totalNumVertices) {
+                var newVBIdx = thisSourceStride * vertIdx;
+                var oldVBIdx = thisSourceStride * verticesAsIndexLists[vertIdxOffset];
+
+                for (var attrIdx = 0; attrIdx < thisSourceStride; attrIdx += 1) {
+                    newData[newVBIdx + attrIdx] = thisSourceData[oldVBIdx + attrIdx];
+                }
+
+                vertIdx += 1;
+                vertIdxOffset += indicesPerVertex;
+            }
+
+            vertexSource.data = newData;
+            vertexSource.offset = 0;
+        }
+    };
+
+    Scene.prototype._gatherVertexData = function (vertexData, vertexSources, totalNumVertices) {
+        var numVertexSources = vertexSources.length;
+        var vertexDataCount = 0;
+        var t = 0;
+        for (t = 0; t < totalNumVertices; t += 1) {
+            var vs = 0;
+            do {
+                var vertexSource = vertexSources[vs];
+                var sourceData = vertexSource.data;
+                var stride = vertexSource.stride;
+                var index = t * stride;
+                var nextIndex = (index + stride);
+                var destStride = vertexSource.destStride;
+                do {
+                    vertexData[vertexDataCount] = sourceData[index];
+                    vertexDataCount += 1;
+                    index += 1;
+                } while(index < nextIndex);
+
+                while (stride < destStride) {
+                    vertexData[vertexDataCount] = 0;
+                    vertexDataCount += 1;
+                    destStride -= 1;
+                }
+
+                vs += 1;
+            } while(vs < numVertexSources);
+        }
+    };
+
     Scene.prototype._isSequentialIndices = function (indices, numIndices) {
         var baseIndex = indices[0];
         var n;
@@ -2889,6 +2956,37 @@ var Scene = (function () {
             }
         }
         return true;
+    };
+
+    Scene.prototype._calculateNumVertices = function (indices, numIndices) {
+        var minIndex = indices[0];
+        var maxIndex = minIndex;
+        var n;
+        for (n = 1; n < numIndices; n += 1) {
+            var index = indices[n];
+            if (minIndex > index) {
+                minIndex = index;
+            } else if (maxIndex < index) {
+                maxIndex = index;
+            }
+        }
+        return (maxIndex - minIndex + 1);
+    };
+
+    Scene.prototype._copyIndexData = function (indexBufferData, indexBufferOffset, faces, numIndices, baseIndex) {
+        var t;
+        if (baseIndex) {
+            for (t = 0; t < numIndices; t += 1) {
+                indexBufferData[indexBufferOffset] = (baseIndex + faces[t]);
+                indexBufferOffset += 1;
+            }
+        } else {
+            for (t = 0; t < numIndices; t += 1) {
+                indexBufferData[indexBufferOffset] = faces[t];
+                indexBufferOffset += 1;
+            }
+        }
+        return indexBufferOffset;
     };
 
     // try to group sequential renderables into a single draw call
@@ -2905,6 +3003,7 @@ var Scene = (function () {
             renderable = renderables[n];
             surface = renderable.surface;
 
+            // we can only trivially group rigid triangle primitives
             if (surface.primitive === triangles && renderable.geometryType === "rigid") {
                 geometry = renderable.geometry;
                 vbid = geometry.vertexBuffer.id;
@@ -3129,7 +3228,7 @@ var Scene = (function () {
 
             if (gd) {
                 // First calculate data about the vertex streams
-                var offset, stride;
+                var offset;
                 var destStride;
                 var destFormat;
                 var maxOffset = 0;
@@ -3157,6 +3256,7 @@ var Scene = (function () {
                 var fileInput;
                 for (var input in inputs) {
                     if (inputs.hasOwnProperty(input)) {
+                        // skip unknown semantics
                         if (gd['SEMANTIC_' + input] === undefined) {
                             debug.log("Unknown semantic: " + input);
                             continue;
@@ -3175,6 +3275,8 @@ var Scene = (function () {
                         destFormat = formatMap[input];
                         destStride = fileSourceStride;
 
+                        // If we got a caller preference, check for a
+                        // new stride
                         if (destFormat) {
                             if (destFormat.indexOf("4")) {
                                 destStride = 4;
@@ -3189,7 +3291,10 @@ var Scene = (function () {
                             }
                         }
 
+                        // No preferred format, make our own choice
                         if (!destFormat) {
+                            // Check for appropriate formats.  Make
+                            // assumptions based on semantic names.
                             if (input === "BLENDINDICES" || input === "BLENDINDICES0") {
                                 if (fileSourceStride === 4 && areInRange(fileSource.min, fileSource.max, isUByte4Range)) {
                                     destFormat = "UBYTE4";
@@ -3207,6 +3312,7 @@ var Scene = (function () {
                             // }
                         }
 
+                        // If we still don't have a format, revert to FLOATn
                         if (!destFormat) {
                             destFormat = "FLOAT" + fileSourceStride;
                         }
@@ -3223,24 +3329,18 @@ var Scene = (function () {
                 }
                 var indicesPerVertex = (maxOffset + 1);
 
-                if (0 < maxOffset) {
-                    var vertexSourcesCompare = function (vertexSourceA, vertexSourceB) {
-                        if (vertexSourceA.offset === vertexSourceB.offset) {
-                            var semanticA = vertexSourceA.semantic;
-                            if (typeof semanticA === 'string') {
-                                semanticA = gd['SEMANTIC_' + semanticA];
-                            }
-                            var semanticB = vertexSourceB.semantic;
-                            if (typeof semanticB === 'string') {
-                                semanticB = gd['SEMANTIC_' + semanticB];
-                            }
-                            return (semanticA - semanticB);
-                        } else {
-                            return (vertexSourceA.offset - vertexSourceB.offset);
-                        }
-                    };
-                    vertexSources.sort(vertexSourcesCompare);
-                }
+                var vertexSourcesCompare = function (vertexSourceA, vertexSourceB) {
+                    var semanticA = vertexSourceA.semantic;
+                    if (typeof semanticA === 'string') {
+                        semanticA = gd['SEMANTIC_' + semanticA];
+                    }
+                    var semanticB = vertexSourceB.semantic;
+                    if (typeof semanticB === 'string') {
+                        semanticB = gd['SEMANTIC_' + semanticB];
+                    }
+                    return (semanticA - semanticB);
+                };
+                vertexSources.sort(vertexSourcesCompare);
 
                 var numVertexSources = vertexSources.length;
                 var semanticsNames = [];
@@ -3290,81 +3390,47 @@ var Scene = (function () {
                 for (s in surfaces) {
                     if (surfaces.hasOwnProperty(s)) {
                         surface = surfaces[s];
-                        destSurface = {};
-                        shape.surfaces[s] = destSurface;
 
                         faces = surface.triangles;
-                        var primitive, vertexPerPrimitive;
+                        var primitive;
                         if (faces) {
                             primitive = gd.PRIMITIVE_TRIANGLES;
-                            vertexPerPrimitive = 3;
                         } else {
                             faces = surface.lines;
                             if (faces) {
                                 primitive = gd.PRIMITIVE_LINES;
-                                vertexPerPrimitive = 2;
                             }
                         }
-                        destSurface.primitive = primitive;
-                        destSurface.faces = faces;
 
-                        if (faces) {
-                            if (1 < indicesPerVertex) {
-                                numVertices = (surface.numPrimitives * vertexPerPrimitive);
-                                destSurface.numVertices = numVertices;
-                            } else {
-                                numVertices = (vertexSources[0].data.length / vertexSources[0].stride);
-                                if (numVertices > faces.length) {
-                                    numVertices = faces.length;
-                                }
-                                destSurface.numVertices = numVertices;
-                            }
-                        }
+                        destSurface = {
+                            first: 0,
+                            numVertices: 0,
+                            primitive: primitive,
+                            faces: faces
+                        };
+                        shape.surfaces[s] = destSurface;
                     }
                 }
 
+                var shapeSurfaces, shapeSurface;
                 if (indicesPerVertex > 1) {
                     // [ [a,b,c], [d,e,f], ... ]
                     totalNumVertices = 0;
 
                     var verticesAsIndexLists = [];
                     var verticesAsIndexListTable = {};
-                    var shapeSurfaces = shape.surfaces;
+                    shapeSurfaces = shape.surfaces;
                     for (s in shapeSurfaces) {
                         if (shapeSurfaces.hasOwnProperty(s)) {
-                            var shapeSurface = shapeSurfaces[s];
+                            shapeSurface = shapeSurfaces[s];
                             totalNumVertices = this._updateSingleIndexTables(shapeSurface, indicesPerVertex, verticesAsIndexLists, verticesAsIndexListTable, totalNumVertices);
                         }
                     }
 
                     verticesAsIndexListTable = null;
 
-                    for (vs = 0; vs < numVertexSources; vs += 1) {
-                        vertexSource = vertexSources[vs];
-                        var thisSourceOffset = vertexSource.offset;
-                        var thisSourceStride = vertexSource.stride;
-                        var thisSourceData = vertexSource.data;
-
-                        var newData = new Array(thisSourceStride * totalNumVertices);
-
-                        // For each entry in index list
-                        var vertIdx = 0;
-                        var vertIdxOffset = thisSourceOffset;
-                        while (vertIdx < totalNumVertices) {
-                            var newVBIdx = thisSourceStride * vertIdx;
-                            var oldVBIdx = thisSourceStride * verticesAsIndexLists[vertIdxOffset];
-
-                            for (var attrIdx = 0; attrIdx < thisSourceStride; attrIdx += 1) {
-                                newData[newVBIdx + attrIdx] = thisSourceData[oldVBIdx + attrIdx];
-                            }
-
-                            vertIdx += 1;
-                            vertIdxOffset += indicesPerVertex;
-                        }
-
-                        vertexSource.data = newData;
-                        vertexSource.offset = 0;
-                    }
+                    // Recreate vertex buffer data on the vertexSources
+                    this._remapVertices(vertexSources, totalNumVertices, indicesPerVertex, verticesAsIndexLists);
 
                     verticesAsIndexLists.length = 0;
                     verticesAsIndexLists = null;
@@ -3375,6 +3441,22 @@ var Scene = (function () {
                 debug.assert(indicesPerVertex === 1);
 
                 totalNumVertices = vertexSources[0].data.length / vertexSources[0].stride;
+
+                shapeSurfaces = shape.surfaces;
+                for (s in shapeSurfaces) {
+                    if (shapeSurfaces.hasOwnProperty(s)) {
+                        shapeSurface = shapeSurfaces[s];
+                        faces = shapeSurface.faces;
+
+                        if (faces) {
+                            numVertices = totalNumVertices;
+                            if (numVertices > faces.length) {
+                                numVertices = faces.length;
+                            }
+                            shapeSurface.numVertices = numVertices;
+                        }
+                    }
+                }
 
                 var vertexBufferManager = (loadParams.vertexBufferManager || this.vertexBufferManager);
                 if (!vertexBufferManager) {
@@ -3402,38 +3484,11 @@ var Scene = (function () {
 
                 baseIndex = vertexBufferAllocation.baseIndex;
 
-                var indexBufferAllocation;
-                var t, index, nextIndex;
-
                 //
                 // We no have the simple case of each index maps to one vertex so create one vertex buffer and fill in.
                 //
                 var vertexData = (useFloatArray ? new this.float32ArrayConstructor(totalNumVertices * numValuesPerVertex) : new Array(totalNumVertices * numValuesPerVertex));
-                var vertexDataCount = 0;
-                for (t = 0; t < totalNumVertices; t += 1) {
-                    vs = 0;
-                    do {
-                        vertexSource = vertexSources[vs];
-                        var sourceData = vertexSource.data;
-                        stride = vertexSource.stride;
-                        index = t * stride;
-                        nextIndex = (index + stride);
-                        destStride = vertexSource.destStride;
-                        do {
-                            vertexData[vertexDataCount] = sourceData[index];
-                            vertexDataCount += 1;
-                            index += 1;
-                        } while(index < nextIndex);
-
-                        while (stride < destStride) {
-                            vertexData[vertexDataCount] = 0;
-                            vertexDataCount += 1;
-                            destStride -= 1;
-                        }
-
-                        vs += 1;
-                    } while(vs < numVertexSources);
-                }
+                this._gatherVertexData(vertexData, vertexSources, totalNumVertices);
                 vertexBuffer.setData(vertexData, baseIndex, totalNumVertices);
 
                 if (keepVertexData && !useFloatArray && this.float32ArrayConstructor) {
@@ -3451,6 +3506,7 @@ var Scene = (function () {
                         if (faces) {
                             numIndices = faces.length;
 
+                            // Try to optimize simple quads
                             if (numIndices === 6 && totalNumVertices === 4 && destSurface.primitive === gd.PRIMITIVE_TRIANGLES) {
                                 var f0 = faces[0];
                                 if (f0 === faces[3] || f0 === faces[4] || f0 === faces[5]) {
@@ -3519,7 +3575,7 @@ var Scene = (function () {
                         shape.vertexOffset = 0;
                     }
 
-                    indexBufferAllocation = indexBufferManager.allocate(totalNumIndices, (maxIndex < 65536 ? 'USHORT' : 'UINT'));
+                    var indexBufferAllocation = indexBufferManager.allocate(totalNumIndices, (maxIndex < 65536 ? 'USHORT' : 'UINT'));
                     indexBuffer = indexBufferAllocation.indexBuffer;
                     if (!indexBuffer) {
                         return undefined;
@@ -3551,24 +3607,14 @@ var Scene = (function () {
                             // Vertices already de-indexed (1 index per vert)
                             numIndices = faces.length;
 
+                            //See if they are all sequential, in which case we don't need an index buffer
                             if (!this._isSequentialIndices(faces, numIndices)) {
                                 destSurface.indexBuffer = indexBuffer;
                                 destSurface.numIndices = numIndices;
                                 destSurface.first = (indexBufferBaseIndex + indexBufferOffset);
-                                destSurface.numVertices = totalNumVertices;
+                                destSurface.numVertices = this._calculateNumVertices(faces, numIndices);
 
-                                if (baseIndex) {
-                                    for (t = 0; t < numIndices; t += 1) {
-                                        indexBufferData[indexBufferOffset] = (baseIndex + faces[t]);
-                                        indexBufferOffset += 1;
-                                    }
-                                } else {
-                                    for (t = 0; t < numIndices; t += 1) {
-                                        indexBufferData[indexBufferOffset] = faces[t];
-                                        indexBufferOffset += 1;
-                                    }
-                                }
-
+                                indexBufferOffset = this._copyIndexData(indexBufferData, indexBufferOffset, faces, numIndices, baseIndex);
                                 if (keepVertexData) {
                                     if (maxIndex < 65536 && this.uint16ArrayConstructor) {
                                         destSurface.indexData = new this.uint16ArrayConstructor(faces);
@@ -3658,9 +3704,9 @@ var Scene = (function () {
                         center[0] = (min0 + max0) * 0.5;
                         center[1] = (min1 + max1) * 0.5;
                         center[2] = (min2 + max2) * 0.5;
-                        halfExtents[0] = (max0 - center[0]);
-                        halfExtents[1] = (max1 - center[1]);
-                        halfExtents[2] = (max2 - center[2]);
+                        halfExtents[0] = (max0 - min0) * 0.5;
+                        halfExtents[1] = (max1 - min1) * 0.5;
+                        halfExtents[2] = (max2 - min2) * 0.5;
                     } else {
                         halfExtents = (this.float32ArrayConstructor ? new this.float32ArrayConstructor(3) : new Array(3));
                         halfExtents[0] = (max0 - min0) * 0.5;
@@ -3900,8 +3946,7 @@ var Scene = (function () {
             var node = SceneNode.create({
                 name: nodeName,
                 local: this.matrix && m43Build.apply(md, this.matrix),
-                dynamic: this.dynamic || baseNode.dynamic || loadParams.dynamic
-            });
+                dynamic: this.dynamic || baseNode.dynamic || loadParams.dynamic });
 
             var effect;
 
@@ -3991,6 +4036,7 @@ var Scene = (function () {
                 }
             }
 
+            // Check for a camera on the node
             if (this.camera) {
                 if (keepCameras) {
                     node.camera = this.camera;
@@ -4086,7 +4132,8 @@ var Scene = (function () {
                     }
 
                     if (overloadedNode) {
-                        //Utilities.log("Overloaded node '" + nodePath + "'");
+                        debug.log("Overloading existing node '" + nodePath + "'");
+
                         var overloadedMatrix = overloadedNode.local;
                         if (overloadedMatrix && node.local) {
                             node.local = md.m43Mul(node.local, overloadedMatrix);
@@ -4363,7 +4410,7 @@ var Scene = (function () {
 
         if (!loadParams.append) {
             this.clearShapes();
-            this.semantics = {};
+            this.semantics = {}; // TODO: null?
         }
 
         var sceneCompleteLoadStage = function sceneCompleteLoadStageFn() {
@@ -4492,20 +4539,20 @@ var Scene = (function () {
         var planes = this.frustumPlanes;
 
         // Negate 'd' here to avoid doing it on the isVisible functions
-        planes[0] = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[0]);
-        planes[1] = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[1]);
-        planes[2] = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[2]);
-        planes[3] = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[3]);
+        planes[0] = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[0]); // left
+        planes[1] = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[1]); // right
+        planes[2] = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[2]); // top
+        planes[3] = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[3]); // bottom
 
         if (this.areas) {
             if (planes.length > 4) {
                 planes.length = 4;
             }
         } else {
-            planes[4] = planeNormalize((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), planes[4]);
+            planes[4] = planeNormalize((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), planes[4]); // far
         }
 
-        this.nearPlane = planeNormalize((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), this.nearPlane);
+        this.nearPlane = planeNormalize((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), this.nearPlane); // near
 
         return planes;
     };
@@ -4567,8 +4614,7 @@ var Scene = (function () {
                     (ax + (t * (bx - ax))),
                     (ay + (t * (by - ay))),
                     (az + (t * (bz - az))),
-                    (aw + (t * (bw - aw)))
-                ]);
+                    (aw + (t * (bw - aw)))]);
             }
 
             if (bInside) {
@@ -4709,8 +4755,7 @@ var Scene = (function () {
                             [st, p1, p3],
                             [st, p2, p0],
                             [st, p3, p2],
-                            [p2, p3, p1, p0]
-                        ];
+                            [p2, p3, p1, p0]];
                     } else {
                         halfExtents = light.halfExtents;
                         if (!light.fog) {
@@ -4741,8 +4786,7 @@ var Scene = (function () {
                             [p0, p1, p5, p4],
                             [p7, p6, p2, p3],
                             [p4, p7, p3, p0],
-                            [p1, p2, p6, p5]
-                        ];
+                            [p1, p2, p6, p5]];
                     }
 
                     lightInstance.screenExtents = calculateHullScreenExtents(polygons, lightInstance.screenExtents);
@@ -4774,8 +4818,8 @@ var Scene = (function () {
         return queryCounter;
     };
 
-    Scene.create = // Constructor function
-    function (mathDevice, staticSpatialMap, dynamicSpatialMap) {
+    // Constructor function
+    Scene.create = function (mathDevice, staticSpatialMap, dynamicSpatialMap) {
         return new Scene(mathDevice, staticSpatialMap, dynamicSpatialMap);
     };
     Scene.version = 1;
@@ -4783,7 +4827,7 @@ var Scene = (function () {
 })();
 
 // Detect correct typed arrays
-((function () {
+(function () {
     var testArray, textDescriptor;
     if (typeof Uint16Array !== "undefined") {
         testArray = new Uint16Array(4);
@@ -4806,4 +4850,4 @@ var Scene = (function () {
             Scene.prototype.float32ArrayConstructor = Float32Array;
         }
     }
-})());
+}());

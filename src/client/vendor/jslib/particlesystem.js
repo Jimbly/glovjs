@@ -1,4 +1,335 @@
+// Generated from assets/shaders/particles-copy.cgfx
+var particles_copy_cgfx = {
+    "version": 1,
+    "name": "particles-copy.cgfx",
+    "samplers": {
+        "src": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        }
+    },
+    "parameters": {
+        "src": {
+            "type": "sampler2D"
+        },
+        "dim": {
+            "type": "float",
+            "columns": 2
+        },
+        "destRect": {
+            "type": "float",
+            "columns": 4
+        }
+    },
+    "techniques": {
+        "copy": [
+            {
+                "parameters": ["destRect", "src"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_copy", "fp_copy"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_copy": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D src;void main()\n{_ret_0=texture2D(src,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}"
+        },
+        "vp_copy": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outUV1;uniform vec4 destRect;void main()\n{vec2 _xy;vec2 _wh;vec2 _TMP3;_xy=destRect.xy*2.0-1.0;_wh=(destRect.zw*2.0-1.0)-_xy;_TMP3=_xy+_wh*ATTR0.xy;_outPosition1=vec4(_TMP3.x,_TMP3.y,0.0,1.0);_outUV1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_outPosition1;}"
+        }
+    }
+};
+
+// Generated from assets/shaders/particles-packer.cgfx
+var particles_packer_cgfx = {
+    "version": 1,
+    "name": "particles-packer.cgfx",
+    "samplers": {
+        "src": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        }
+    },
+    "parameters": {
+        "src": {
+            "type": "sampler2D"
+        },
+        "dim": {
+            "type": "float",
+            "columns": 2
+        },
+        "destRect": {
+            "type": "float",
+            "columns": 4
+        },
+        "border": {
+            "type": "float"
+        }
+    },
+    "techniques": {
+        "pack": [
+            {
+                "parameters": ["dim", "destRect", "border", "src"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_pack", "fp_pack"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_pack": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D src;void main()\n{_ret_0=texture2D(src,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}"
+        },
+        "vp_pack": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outUV1;uniform vec2 dim;uniform vec4 destRect;uniform float border;void main()\n{vec2 _xy;vec2 _wh;vec2 _TMP4;_xy=destRect.xy*2.0-1.0;_wh=(destRect.zw*2.0-1.0)-_xy;_TMP4=_xy+_wh*ATTR0.xy;_outPosition1=vec4(_TMP4.x,_TMP4.y,0.0,1.0);_outUV1=ATTR0.xy+((ATTR0.xy*2.0-1.0)*border)/dim;tz_TexCoord[0].xy=_outUV1;gl_Position=_outPosition1;}"
+        }
+    }
+};
+
+// Generated from assets/shaders/particles-sort.cgfx
+var particles_sort_cgfx = {
+    "version": 1,
+    "name": "particles-sort.cgfx",
+    "samplers": {
+        "previousState": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "creationState": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "mappingTable": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "vParticleState": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "fParticleState": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "animation": {
+            "MinFilter": 9728,
+            "MagFilter": 9728,
+            "WrapS": 33071,
+            "WrapT": 33071
+        }
+    },
+    "parameters": {
+        "textureSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "invTextureSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "regionSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "invRegionSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "regionPos": {
+            "type": "float",
+            "columns": 2
+        },
+        "halfExtents": {
+            "type": "float",
+            "columns": 3
+        },
+        "center": {
+            "type": "float",
+            "columns": 3
+        },
+        "maxLifeTime": {
+            "type": "float"
+        },
+        "previousState": {
+            "type": "sampler2D"
+        },
+        "shift": {
+            "type": "float",
+            "columns": 3
+        },
+        "timeStep": {
+            "type": "float"
+        },
+        "lifeStep": {
+            "type": "float"
+        },
+        "maxSpeed": {
+            "type": "float"
+        },
+        "creationState": {
+            "type": "sampler2D"
+        },
+        "creationScale": {
+            "type": "float",
+            "columns": 2
+        },
+        "projection": {
+            "type": "float",
+            "rows": 4,
+            "columns": 4
+        },
+        "modelView": {
+            "type": "float",
+            "rows": 4,
+            "columns": 3
+        },
+        "mappingTable": {
+            "type": "sampler2D"
+        },
+        "mappingSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "invMappingSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "mappingPos": {
+            "type": "float",
+            "columns": 2
+        },
+        "vParticleState": {
+            "type": "sampler2D"
+        },
+        "fParticleState": {
+            "type": "sampler2D"
+        },
+        "PARTICLE_POS": {
+            "type": "float",
+            "columns": 2,
+            "values": [0.5, 0.5]
+        },
+        "PARTICLE_VEL": {
+            "type": "float",
+            "columns": 2,
+            "values": [1.5, 0.5]
+        },
+        "PARTICLE_LIFE": {
+            "type": "float",
+            "columns": 2,
+            "values": [2.5, 0.5]
+        },
+        "PARTICLE_ANIM": {
+            "type": "float",
+            "columns": 2,
+            "values": [2.5, 1.5]
+        },
+        "PARTICLE_DATA": {
+            "type": "float",
+            "columns": 2,
+            "values": [2.5, 2.5]
+        },
+        "animationSize": {
+            "type": "float",
+            "columns": 2
+        },
+        "animation": {
+            "type": "sampler2D"
+        },
+        "zSorted": {
+            "type": "bool"
+        },
+        "zBound": {
+            "type": "float"
+        },
+        "cpass": {
+            "type": "float"
+        },
+        "PmS": {
+            "type": "float"
+        },
+        "twoStage": {
+            "type": "float"
+        },
+        "twoStage_PmS_1": {
+            "type": "float"
+        }
+    },
+    "techniques": {
+        "prepare_sort": [
+            {
+                "parameters": ["regionSize", "invMappingSize", "mappingPos", "textureSize", "invTextureSize", "regionSize", "invRegionSize", "regionPos", "modelView", "mappingTable", "invMappingSize", "mappingPos", "fParticleState", "PARTICLE_POS", "PARTICLE_LIFE", "zBound"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_update_mapping", "fp_prepare_sort"]
+            }
+        ],
+        "sort_pass": [
+            {
+                "parameters": ["regionSize", "invMappingSize", "mappingPos", "regionSize", "invRegionSize", "mappingTable", "invMappingSize", "mappingPos", "cpass", "PmS", "twoStage", "twoStage_PmS_1"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_update_mapping", "fp_merge_sort_pass"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_merge_sort_pass": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _TMP7;float _TMP11;float _TMP12;vec2 _TMP6;vec2 _TMP5;float _TMP10;float _TMP2;float _TMP3;float _TMP4;float _TMP1;vec2 _TMP0;vec2 _p0054;vec2 _x0056;float _x0060;float _x0064;float _x0066;float _u0068;float _index0068;float _v0068;float _y0070;float _x0072;float _TMP83;float _TMP95;uniform vec2 regionSize;uniform vec2 invRegionSize;uniform sampler2D mappingTable;uniform vec2 invMappingSize;uniform vec2 mappingPos;uniform float cpass;uniform float PmS;uniform float twoStage;uniform float twoStage_PmS_1;void main()\n{vec4 _self;float _index1;float _j;float _compare;vec4 _other;_TMP0=(mappingPos+regionSize*tz_TexCoord[0].xy*vec2(3.33333343E-01,3.33333343E-01))*invMappingSize;_self=texture2D(mappingTable,_TMP0);_x0056=(tz_TexCoord[0].xy*regionSize)/vec2(3.0,3.0);_p0054=floor(_x0056);_index1=(_p0054.y*regionSize.x)/3.0+_p0054.x;_x0060=_index1/twoStage;_TMP10=floor(_x0060);_TMP1=_index1-twoStage*_TMP10;_j=floor(_TMP1);if(_j<PmS||_j>twoStage_PmS_1){_TMP2=0.0;}else{_x0064=(_j+PmS)/cpass;_x0066=_x0064/2.0;_TMP10=floor(_x0066);_TMP4=_x0064-2.0*_TMP10;if(_TMP4<1.0){_TMP3=1.0;}else{_TMP3=-1.0;}\n_TMP2=_TMP3;}\n_compare=float(_TMP2);_index0068=_index1+_compare*cpass;_y0070=regionSize.x/3.0;_x0072=_index0068/_y0070;_TMP10=floor(_x0072);_u0068=_index0068-_y0070*_TMP10;_v0068=(_index0068-_u0068)*invRegionSize.x*3.0;_TMP5=vec2(_u0068+0.5,_v0068+0.5)*invRegionSize*vec2(3.0,3.0);_TMP6=(mappingPos+regionSize*_TMP5*vec2(3.33333343E-01,3.33333343E-01))*invMappingSize;_other=texture2D(mappingTable,_TMP6);_TMP11=dot(_self.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP12=min(1.0,_TMP11);_TMP83=max(0.0,_TMP12);_TMP11=dot(_other.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP12=min(1.0,_TMP11);_TMP95=max(0.0,_TMP12);if(_TMP83*_compare<=_TMP95*_compare){_TMP7=_self;}else{_TMP7=_other;}\ngl_FragColor=_TMP7;}"
+        },
+        "vp_update_mapping": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outParticle1;vec2 _TMP0;uniform vec2 regionSize;uniform vec2 invMappingSize;uniform vec2 mappingPos;void main()\n{vec2 _TMP37;_TMP0=(mappingPos+regionSize*ATTR0.xy*vec2(3.33333343E-01,3.33333343E-01))*invMappingSize;_TMP37=_TMP0*2.0-1.0;_outPosition1=vec4(_TMP37.x,_TMP37.y,0.0,1.0);_outParticle1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_outPosition1;}"
+        },
+        "fp_prepare_sort": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;vec2 _TMP14;float _TMP16;float _TMP9;float _TMP7;float _TMP5;vec4 _TMP8;float _TMP15;vec4 _TMP6;vec4 _TMP4;vec4 _TMP2;float _TMP11;vec4 _TMP1;vec2 _TMP0;vec2 _p0061;vec2 _c0063;float _TMP70;vec2 _c0077;float _TMP86;vec2 _c0093;float _TMP102;vec2 _c0109;float _TMP118;vec2 _TMP124;vec2 _enc10125;float _TMP128;vec2 _x0135;uniform vec2 textureSize;uniform vec2 invTextureSize;uniform vec2 regionSize;uniform vec2 invRegionSize;uniform vec2 regionPos;uniform vec3 modelView[4];uniform sampler2D mappingTable;uniform vec2 invMappingSize;uniform vec2 mappingPos;uniform sampler2D fParticleState;uniform vec2 PARTICLE_POS;uniform vec2 PARTICLE_LIFE;uniform float zBound;void main()\n{vec2 _particleUV;vec3 _pos1;float _z1;_TMP0=(mappingPos+regionSize*tz_TexCoord[0].xy*vec2(3.33333343E-01,3.33333343E-01))*invMappingSize;_TMP1=texture2D(mappingTable,_TMP0);_p0061=(_TMP1.xy*255.0)*vec2(3.0,3.0)*invRegionSize;_particleUV=(regionPos+regionSize*_p0061)*invTextureSize;_c0063=(_particleUV*textureSize+PARTICLE_LIFE)*invTextureSize;_TMP2=texture2D(fParticleState,_c0063);_TMP11=dot(_TMP2.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP16=min(1.0,_TMP11);_TMP70=max(0.0,_TMP16);if(_TMP70<=0.0){_ret_0=vec4(_TMP1.x,_TMP1.y,1.0,1.0);gl_FragColor=_ret_0;return;}else{_c0077=(_particleUV*textureSize+PARTICLE_POS)*invTextureSize;_TMP4=texture2D(fParticleState,_c0077);_TMP15=dot(_TMP4,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP16=min(1.0,_TMP15);_TMP86=max(0.0,_TMP16);_TMP5=(_TMP86-0.5)*2.0;_c0093=(_particleUV*textureSize+PARTICLE_POS+vec2(0.0,1.0))*invTextureSize;_TMP6=texture2D(fParticleState,_c0093);_TMP15=dot(_TMP6,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP16=min(1.0,_TMP15);_TMP102=max(0.0,_TMP16);_TMP7=(_TMP102-0.5)*2.0;_c0109=(_particleUV*textureSize+PARTICLE_POS+vec2(0.0,2.0))*invTextureSize;_TMP8=texture2D(fParticleState,_c0109);_TMP15=dot(_TMP8,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP16=min(1.0,_TMP15);_TMP118=max(0.0,_TMP16);_TMP9=(_TMP118-0.5)*2.0;_pos1=vec3(_TMP5,_TMP7,_TMP9);_z1=_pos1.x*modelView[0].z+_pos1.y*modelView[1].z+_pos1.z*modelView[2].z;_z1=(_z1+zBound)/(2.0*zBound);if(_z1>=1.0){_TMP124=vec2(1.0,1.0);}else{_TMP16=min(1.0,_z1);_TMP128=max(0.0,_TMP16);_x0135=_TMP128*vec2(256.0,1.0);_TMP14=fract(_x0135);_enc10125=_TMP14*256.0;_enc10125.y=_enc10125.y-_enc10125.x/256.0;_TMP124=_enc10125/255.0;}\n_ret_0=vec4(_TMP1.x,_TMP1.y,_TMP124.x,_TMP124.y);gl_FragColor=_ret_0;return;}\ngl_FragColor=_ret_0;}"
+        }
+    }
+};
+
 // Copyright (c) 2013-2014 Turbulenz Limited
+/*global debug: false*/
 /*global Float32Array: false*/
 /*global Uint8Array: false*/
 /*global Uint16Array: false*/
@@ -14,6 +345,8 @@
 /*global SceneNode: false*/
 /*global DrawParameters: false*/
 "use strict";
+
+
 //
 // TextureEncode
 //
@@ -23,27 +356,27 @@
 var TextureEncode = (function () {
     function TextureEncode() {
     }
-    TextureEncode.encodeByteUnsignedFloat = // f in [0,1) map to 8bit integer value.
+    // f in [0,1) map to 8bit integer value.
     // Note: Can represent 0.5 exactly.
-    function (f) {
+    TextureEncode.encodeByteUnsignedFloat = function (f) {
         return f <= 0.0 ? 0x00 : f >= 1.0 ? 0xff : ((f * 256.0) | 0);
     };
     TextureEncode.decodeByteUnsignedFloat = function (v) {
         return (v / 256.0);
     };
 
-    TextureEncode.encodeByteSignedFloat = // f in [-1,1) map to 8bit integer value.
+    // f in [-1,1) map to 8bit integer value.
     // Note: Can represent 0.0 exactly.
-    function (f) {
+    TextureEncode.encodeByteSignedFloat = function (f) {
         return this.encodeByteUnsignedFloat((f + 1.0) * 0.5);
     };
     TextureEncode.decodeByteSignedFloat = function (v) {
         return (TextureEncode.decodeByteUnsignedFloat(v) * 2.0) - 1.0;
     };
 
-    TextureEncode.encodeHalfUnsignedFloat = // f in [0,1) map to 16bit integer value.
+    // f in [0,1) map to 16bit integer value.
     // Note: Can represent 0.5 exactly.
-    function (f) {
+    TextureEncode.encodeHalfUnsignedFloat = function (f) {
         if (f <= 0.0) {
             return 0x0000;
         } else if (f >= 1.0) {
@@ -61,18 +394,18 @@ var TextureEncode = (function () {
         return (x / 65536.0) + (y / 256.0);
     };
 
-    TextureEncode.encodeHalfSignedFloat = // f in [-1,1) map to 16bit integer value.
+    // f in [-1,1) map to 16bit integer value.
     // Note: Can represent 0.0 exactly.
-    function (f) {
+    TextureEncode.encodeHalfSignedFloat = function (f) {
         return TextureEncode.encodeHalfUnsignedFloat((f + 1.0) * 0.5);
     };
     TextureEncode.decodeHalfSignedFloat = function (v) {
         return (TextureEncode.decodeHalfUnsignedFloat(v) * 2.0) - 1.0;
     };
 
-    TextureEncode.encodeUnsignedFloat = // f in [0,1) map to 32bit integer value.
+    // f in [0,1) map to 32bit integer value.
     // Note: Can represent 0.5 exactly.
-    function (f) {
+    TextureEncode.encodeUnsignedFloat = function (f) {
         if (f <= 0.0) {
             return 0x00000000;
         } else if (f >= 1.0) {
@@ -96,18 +429,18 @@ var TextureEncode = (function () {
         return (x / 4294967296.0) + (y / 16777216.0) + (z / 65536.0) + (w / 256.0);
     };
 
-    TextureEncode.encodeSignedFloat = // f in [-1,1) map to 32bit integer value.
+    // f in [-1,1) map to 32bit integer value.
     // Note: Can represent 0.0 exactly.
-    function (f) {
+    TextureEncode.encodeSignedFloat = function (f) {
         return TextureEncode.encodeUnsignedFloat((f + 1.0) * 0.5);
     };
     TextureEncode.decodeSignedFloat = function (v) {
         return (TextureEncode.decodeUnsignedFloat(v) * 2.0) - 1.0;
     };
 
-    TextureEncode.encodeUnsignedFloat4 = // v in [0,1]*4 map to 32bit integer value.
+    // v in [0,1]*4 map to 32bit integer value.
     // Note: Cannot represent 0.5's exactly, but does encode 1.0's.
-    function (v) {
+    TextureEncode.encodeUnsignedFloat4 = function (v) {
         var x = v[0];
         var y = v[1];
         var z = v[2];
@@ -129,9 +462,9 @@ var TextureEncode = (function () {
         return dst;
     };
 
-    TextureEncode.encodeUnsignedFloat2 = // v in [0,1)*2 map to 32bit integer value.
+    // v in [0,1)*2 map to 32bit integer value.
     // Note: Can represent 0.5's exactly.
-    function (v) {
+    TextureEncode.encodeUnsignedFloat2 = function (v) {
         var x = TextureEncode.encodeHalfUnsignedFloat(v[0]);
         var y = TextureEncode.encodeHalfUnsignedFloat(v[1]);
         return (x | (y << 16));
@@ -150,9 +483,9 @@ var TextureEncode = (function () {
         return dst;
     };
 
-    TextureEncode.encodeSignedFloat2 = // v in [-1,1)*2 map to 32bit integer value.
+    // v in [-1,1)*2 map to 32bit integer value.
     // Note: Can represent 0.0's exactly.
-    function (v) {
+    TextureEncode.encodeSignedFloat2 = function (v) {
         var x = TextureEncode.encodeHalfSignedFloat(v[0]);
         var y = TextureEncode.encodeHalfSignedFloat(v[1]);
         return (x | (y << 16));
@@ -315,6 +648,8 @@ var SizeTree = (function () {
             rotate.parent = node.parent;
             node.parent = rotate;
 
+            // make node's old parent point down to rotate
+            // or set new root if appropriate.
             if (rotate.parent) {
                 rotate.parent.child[rotate.parent.child[0] === node ? 0 : 1] = rotate;
             } else {
@@ -429,13 +764,14 @@ var OnlineTexturePacker = (function () {
         }
     };
 
-    OnlineTexturePacker.costFit = // Cost of assigning (w,h) into given rectangle.
+    // Cost of assigning (w,h) into given rectangle.
     //
     // Assign costs that primarily aims to assign exactly to a given empt space.
     // Failing that, we assign a low cost for stores that waste only a very small
     // amount of space, and a low cost for stores into much larger rectangles with
     // high costs inbetween.
-    function (w, h, rect) {
+    OnlineTexturePacker.costFit = function (w, h, rect) {
+        // Exact fit (terminate early)
         if (rect.w === w && rect.h === h) {
             return null;
         } else {
@@ -465,6 +801,7 @@ var OnlineTexturePacker = (function () {
     };
 
     OnlineTexturePacker.prototype.split = function (rect, w, h) {
+        // I have no idea why this choice of branch condition works as well as it does...
         if ((rect.w - w) < (rect.h - h)) {
             this.releaseSpace(rect.bin, rect.x, rect.y + h, rect.w, rect.h - h);
             this.releaseSpace(rect.bin, rect.x + w, rect.y, rect.w - w, h);
@@ -556,7 +893,8 @@ var OnlineTexturePacker = (function () {
 //
 // MinHeap
 //
-// Min binary heap using pairs of key/value and a given comparison function return true if key1 < key2
+// Min binary heap using pairs of key/value and a given comparison
+// function return true if key1 < key2
 //
 var MinHeap = (function () {
     function MinHeap(compare) {
@@ -889,6 +1227,8 @@ var ParticleQueue = (function () {
         var i = this.find(particleID);
         var deathTime = this.heap[i] + lifeDelta;
 
+        // Prevent updates on dead particles making them
+        // even more dead (violates heap property in general).
         if (deathTime < this.time) {
             deathTime = this.time;
         }
@@ -922,6 +1262,7 @@ var ParticleQueue = (function () {
     return ParticleQueue;
 })();
 
+
 //
 // Interface for intermediate parse result of a system defined attribute.
 // (Internal to ParticleBuilder)
@@ -938,6 +1279,8 @@ var AttributeStorage;
     AttributeStorage[AttributeStorage["sNormalized"] = 1] = "sNormalized";
 })(AttributeStorage || (AttributeStorage = {}));
 
+
+
 //
 // Collects errors accumulated during parse/analysis of the input objects.
 var ParticleBuildError = (function () {
@@ -946,8 +1289,8 @@ var ParticleBuildError = (function () {
         this.uncheckedErrorCount = 0;
         this.uncheckedWarningCount = 0;
     }
-    ParticleBuildError.wrap = // print strings surrounded by "" to avoid confusing "10" with 10
-    function (x) {
+    // print strings surrounded by "" to avoid confusing "10" with 10
+    ParticleBuildError.wrap = function (x) {
         if (Types.isString(x)) {
             return '"' + x + '"';
         } else {
@@ -1032,6 +1375,19 @@ var Types = (function () {
     Types.isTypedArray = function (x) {
         return Types.arrayTypes.indexOf(Object.prototype.toString.call(x)) !== -1;
     };
+    Types.isArrayOfNumbers = function (x) {
+        if (!Types.isArray(x)) {
+            return false;
+        } else {
+            var count = x.length;
+            for (var i = 0; i < count; i += 1) {
+                if (!Types.isNumber(x[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
     Types.isArray = function (x) {
         return Types.isTypedArray(x) || Object.prototype.toString.call(x) === "[object Array]";
     };
@@ -1055,13 +1411,13 @@ var Types = (function () {
         return x === null || x === undefined;
     };
 
-    Types.copy = // Deep copy an arbitrary JSON compatible value from 'from' into 'to', returning 'to'
+    // Deep copy an arbitrary JSON compatible value from 'from' into 'to', returning 'to'
     // to is permitted to be left undefined, otherwise fields are appended/pushed into
     // to
     //
     // setting json to false, means object types will not be deep-copied to avoid
     // trying to do things like deep-copying Texture's when not copying JSON objects.
-    function (from, to, json) {
+    Types.copy = function (from, to, json) {
         if (typeof json === "undefined") { json = true; }
         if (Types.isTypedArray(from) && !to) {
             return new from.constructor(from);
@@ -1074,8 +1430,8 @@ var Types = (function () {
         }
     };
 
-    Types.copyElements = // As with copyFields, but for Arrays
-    function (from, to, json) {
+    // As with copyFields, but for Arrays
+    Types.copyElements = function (from, to, json) {
         if (typeof json === "undefined") { json = true; }
         if (!from)
             return;
@@ -1089,11 +1445,11 @@ var Types = (function () {
         return to;
     };
 
-    Types.copyFields = // Copy fields of from object, onto the to object.
+    // Copy fields of from object, onto the to object.
     // Result is an object with all the fields of to,
     // and with all the fields of from with values copied from from.
     // in a deep-copy.
-    function (from, to, json) {
+    Types.copyFields = function (from, to, json) {
         if (typeof json === "undefined") { json = true; }
         if (!from)
             return to;
@@ -1125,8 +1481,8 @@ var Types = (function () {
 var Parser = (function () {
     function Parser() {
     }
-    Parser.extraFields = // Check for any extra fields that should not be present
-    function (error, obj, x, excludes) {
+    // Check for any extra fields that should not be present
+    Parser.extraFields = function (error, obj, x, excludes) {
         for (var f in x) {
             if (x.hasOwnProperty(f) && excludes.indexOf(f) === -1) {
                 error.warning(obj + " has extra field '" + f + "'");
@@ -1134,8 +1490,8 @@ var Parser = (function () {
         }
     };
 
-    Parser.field = // Return object field if it exists, otherwise error and return null
-    function (error, obj, x, n) {
+    // Return object field if it exists, otherwise error and return null
+    Parser.field = function (error, obj, x, n) {
         if (!x.hasOwnProperty(n)) {
             error.error("No field '" + n + "' found on " + obj);
             return null;
@@ -1144,19 +1500,19 @@ var Parser = (function () {
         }
     };
 
-    Parser.stringField = // Return object field as a string, if it does not exist (or not a string), error.
-    function (error, obj, x, n) {
+    // Return object field as a string, if it does not exist (or not a string), error.
+    Parser.stringField = function (error, obj, x, n) {
         var ret = Parser.field(error, obj, x, n);
         if (x.hasOwnProperty(n) && !Types.isString(ret)) {
             error.error("Field '" + n + "' of " + obj + " is not a string (" + ParticleBuildError.wrap(ret) + ")");
             return null;
         } else {
-            return (ret);
+            return ret;
         }
     };
 
-    Parser.numberField = // Return object field as a number, if it does not exist (or not a number), error.
-    function (error, obj, x, n) {
+    // Return object field as a number, if it does not exist (or not a number), error.
+    Parser.numberField = function (error, obj, x, n) {
         var ret = Parser.field(error, obj, x, n);
         if (x.hasOwnProperty(n) && !Types.isNumber(ret)) {
             error.error("Field '" + n + "' of " + obj + " is not a number (" + ParticleBuildError.wrap(ret) + ")");
@@ -1165,12 +1521,12 @@ var Parser = (function () {
             error.error("Field '" + n + "' of " + obj + " is nan or infinite (" + ParticleBuildError.wrap(ret) + ")");
             return null;
         } else {
-            return (ret);
+            return ret;
         }
     };
 
-    Parser.checkNumber = // Check value is a number, and error otherwise.
-    function (error, obj, n, ret) {
+    // Check value is a number, and error otherwise.
+    Parser.checkNumber = function (error, obj, n, ret) {
         if (!Types.isNumber(ret)) {
             error.error(n + " of " + obj + " is not a number (" + ParticleBuildError.wrap(ret) + ")");
             return null;
@@ -1178,7 +1534,7 @@ var Parser = (function () {
             error.error(n + " of " + obj + " is nan or infinite (" + ParticleBuildError.wrap(ret) + ")");
             return null;
         } else {
-            return (ret);
+            return ret;
         }
     };
     Parser.checkNullNumber = function (error, obj, n, ret) {
@@ -1188,8 +1544,8 @@ var Parser = (function () {
         return Parser.checkNumber(error, obj, n, ret);
     };
 
-    Parser.maybeField = // Map object field via run function if it exists, otherwise return default result.
-    function (x, n, run, def) {
+    // Map object field via run function if it exists, otherwise return default result.
+    Parser.maybeField = function (x, n, run, def) {
         return (x.hasOwnProperty(n)) ? run(x[n]) : def();
     };
 
@@ -1202,10 +1558,10 @@ var Parser = (function () {
         }
     };
 
-    Parser.checkVector = // [null, 1, 2] (dim 3) => VMath.v3Build(0, 1, 2)
+    // [null, 1, 2] (dim 3) => VMath.v3Build(0, 1, 2)
     // [1, 2] (dim 3) => error
     // ["h", 2] (dim 2) => error
-    function (error, obj, n, dim, field) {
+    Parser.checkVector = function (error, obj, n, dim, field) {
         if (!Types.isArray(field) || field.length !== dim) {
             error.error("Field '" + n + "' of " + obj + " should be a Vector" + dim + " object");
             return null;
@@ -1234,9 +1590,9 @@ var Parser = (function () {
         return field;
     };
 
-    Parser.typeAttr = // Check attribute value agaisnt type, and error if not compatible.
+    // Check attribute value agaisnt type, and error if not compatible.
     // If acceptNull is true, then attribute (sub) values are permitted to be null.
-    function (error, obj, type, acceptNull, val) {
+    Parser.typeAttr = function (error, obj, type, acceptNull, val) {
         if (type === null) {
             // Cannot perform type check.
             return null;
@@ -1282,8 +1638,8 @@ var Parser = (function () {
         }
     };
 
-    Parser.defaultAttr = // return default attribute value for a type.
-    function (type, val) {
+    // return default attribute value for a type.
+    Parser.defaultAttr = function (type, val) {
         if (typeof val === "undefined") { val = null; }
         if (type === null) {
             // Can't type check.
@@ -1301,8 +1657,8 @@ var Parser = (function () {
         }
     };
 
-    Parser.parseSystem = // Parse a system definition object.
-    function (error, defn) {
+    // Parse a system definition object.
+    Parser.parseSystem = function (error, defn) {
         var attrs;
         if (!Types.isArray(defn)) {
             error.error("System definition must be an array of attribute defintions");
@@ -1352,8 +1708,8 @@ var Parser = (function () {
         return false;
     };
 
-    Parser.parseSystemAttribute = // Parse a system attribute definition.
-    function (error, defn) {
+    // Parse a system attribute definition.
+    Parser.parseSystemAttribute = function (error, defn) {
         var name = Parser.stringField(error, "system attribute", defn, "name");
         if (name !== null && name.length > 14 && name.substr(name.length - 14) === "-interpolation") {
             error.error("System attribute cannot have '-interpolation' as a suffix (" + name + ")");
@@ -1394,6 +1750,7 @@ var Parser = (function () {
         var defaultInterpolator = Parser.maybeField(defn, "default-interpolation", parseInterpolator, Parser.interpolators["linear"].bind(null));
 
         var parseMinMax = function (n) {
+            // Can't type check for null type.
             if (type === null) {
                 return null;
             }
@@ -1416,17 +1773,17 @@ var Parser = (function () {
         var compress = Parser.maybeField(defn, "compress", function (val) {
             switch (val) {
                 case "none":
-                    return AttributeCompress.cNone;
+                    return 0 /* cNone */;
                 case "half":
-                    return AttributeCompress.cHalf;
+                    return 1 /* cHalf */;
                 case "full":
-                    return AttributeCompress.cFull;
+                    return 2 /* cFull */;
                 default:
                     error.error("Unknown compression type '" + val + "' for system attribute " + printName);
                     return null;
             }
         }, function () {
-            return AttributeCompress.cFull;
+            return 2 /* cFull */;
         });
 
         // can't check for null type
@@ -1439,15 +1796,15 @@ var Parser = (function () {
                     storage = Parser.maybeField(defn, "storage", function (val) {
                         switch (val) {
                             case "direct":
-                                return AttributeStorage.sDirect;
+                                return 0 /* sDirect */;
                             case "normalized":
-                                return AttributeStorage.sNormalized;
+                                return 1 /* sNormalized */;
                             default:
                                 error.error("Unknown storage type '" + val + "' for system attribute " + printName);
                                 return null;
                         }
                     }, function () {
-                        return AttributeStorage.sNormalized;
+                        return 1 /* sNormalized */;
                     });
                     break;
                 default:
@@ -1471,8 +1828,8 @@ var Parser = (function () {
         };
     };
 
-    Parser.parseInterpolator = // Parse attribute interpolator definition
-    function (error, obj, defn) {
+    // Parse attribute interpolator definition
+    Parser.parseInterpolator = function (error, obj, defn) {
         if (Types.isString(defn)) {
             var defnString = defn;
             switch (defnString) {
@@ -1520,8 +1877,8 @@ var Parser = (function () {
         }
     };
 
-    Parser.zero = // avoid creating in loops.
-    function () {
+    // avoid creating in loops.
+    Parser.zero = function () {
         return 0;
     };
     Parser.parseParticle = function (error, defn) {
@@ -1787,19 +2144,23 @@ var Parser = (function () {
 var ParticleBuilder = (function () {
     function ParticleBuilder() {
     }
-    ParticleBuilder.buildAnimationTexture = function (graphicsDevice, width, height, data) {
-        return graphicsDevice.createTexture({
-            name: "ParticleBuilder AnimationTexture",
-            width: width,
-            height: height,
-            depth: 1,
-            format: graphicsDevice.PIXELFORMAT_R8G8B8A8,
-            mipmaps: false,
-            cubemap: false,
-            renderable: false,
-            dynamic: false,
-            data: data
-        });
+    ParticleBuilder.buildAnimationTexture = function (graphicsDevice, width, data) {
+        if (0 !== data.length) {
+            return graphicsDevice.createTexture({
+                name: "ParticleBuilder AnimationTexture",
+                width: width,
+                height: (data.length / width) >>> 2,
+                depth: 1,
+                format: graphicsDevice.PIXELFORMAT_R8G8B8A8,
+                mipmaps: false,
+                cubemap: false,
+                renderable: false,
+                dynamic: false,
+                data: data
+            });
+        }
+
+        return null;
     };
 
     ParticleBuilder.nearPow2Geq = function (x) {
@@ -1821,18 +2182,18 @@ var ParticleBuilder = (function () {
                 numVertices: 4,
                 attributes: [graphicsDevice.VERTEXFORMAT_FLOAT2],
                 dynamic: false,
-                data: [0, 0, 1, 0, 0, 1, 1, 1]
+                data: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1])
             });
             semantics = ParticleBuilder.packedTextureSemantics = graphicsDevice.createSemantics([
                 graphicsDevice.SEMANTIC_POSITION
             ]);
             parameters = ParticleBuilder.packedCopyParameters = graphicsDevice.createTechniqueParameters({
-                dim: [0, 0],
-                dst: [0, 0, 0, 0]
+                dim: new Float32Array([0, 0]),
+                dst: new Float32Array([0, 0, 0, 0])
             });
 
             // Shader embedded from assets/shaders/particles-packer.cgfx
-            var shader = graphicsDevice.createShader({ "version": 1, "name": "particles-packer.cgfx", "samplers": { "src": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 } }, "parameters": { "src": { "type": "sampler2D" }, "dim": { "type": "float", "columns": 2 }, "dst": { "type": "float", "columns": 4 }, "border": { "type": "float" } }, "techniques": { "pack": [{ "parameters": ["dim", "dst", "border", "src"], "semantics": ["POSITION"], "states": { "DepthTestEnable": false, "DepthMask": false, "CullFaceEnable": false, "BlendEnable": false }, "programs": ["vp_pack", "fp_pack"] }] }, "programs": { "fp_pack": { "type": "fragment", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D src;void main()\n{_ret_0=texture2D(src,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}" }, "vp_pack": { "type": "vertex", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outUV1;uniform vec2 dim;uniform vec4 dst;uniform float border;void main()\n{vec2 _xy;vec2 _wh;vec2 _TMP4;_xy=dst.xy*2.0-1.0;_wh=(dst.zw*2.0-1.0)-_xy;_TMP4=_xy+_wh*ATTR0.xy;_outPosition1=vec4(_TMP4.x,_TMP4.y,0.0,1.0);_outUV1=ATTR0.xy+((ATTR0.xy*2.0-1.0)*border)/dim;tz_TexCoord[0].xy=_outUV1;gl_Position=_outPosition1;}" } } });
+            var shader = graphicsDevice.createShader(particles_packer_cgfx);
             technique = ParticleBuilder.packedCopyTechnique = shader.getTechnique("pack");
         } else {
             vertices = ParticleBuilder.packedTextureVertices;
@@ -1932,7 +2293,7 @@ var ParticleBuilder = (function () {
             var dim = parameters["dim"];
             for (j = 0; j < refCount; j += 1) {
                 ref = unique[j];
-                parameters["dst"] = dsts[j];
+                parameters["destRect"] = dsts[j];
                 dim[0] = ref.texture.width;
                 dim[1] = ref.texture.height;
                 parameters["src"] = ref.texture;
@@ -1952,12 +2313,12 @@ var ParticleBuilder = (function () {
         };
     };
 
-    ParticleBuilder.compile = // alreadyParsed is a private parameter to compile.
+    // alreadyParsed is a private parameter to compile.
     //
     // When true, the input particles and systems are presumed to be pre-parsed.
     // and with particles attributes checked against the system. (relavent calls
     // made to parseSystem, parseParticle and checkAttributes)
-    function (params) {
+    ParticleBuilder.compile = function (params) {
         var graphicsDevice = params.graphicsDevice;
         var particles = params.particles;
         var system = params.system;
@@ -2019,6 +2380,7 @@ var ParticleBuilder = (function () {
             }
         }
 
+        // Can't go any further in the compile to gather more errors.
         if (sys === null) {
             throw error.fail("Build failed!");
         }
@@ -2029,6 +2391,7 @@ var ParticleBuilder = (function () {
             }
         }
 
+        // Check attribute of particles against system attributes
         if (!params.alreadyParsed) {
             for (i = 0; i < count; i += 1) {
                 if (parts[i]) {
@@ -2067,6 +2430,7 @@ var ParticleBuilder = (function () {
             }
         }
 
+        // Can't reasonably go further in the compile if any errors have occured.
         if (!error.empty(failOnWarnings)) {
             throw error.fail("Build failed!");
         }
@@ -2075,6 +2439,7 @@ var ParticleBuilder = (function () {
             ParticleBuilder.setDefaults(parts[i], sys);
         }
 
+        // Perform linear remaps of attributes.
         if (tweaks) {
             var exclude = [];
             var excludeTypes = [];
@@ -2106,6 +2471,7 @@ var ParticleBuilder = (function () {
                 }
             }
 
+            // Can't reasonably go further in the compile if any errors have occured.
             if (error.checkErrorState()) {
                 throw error.fail("Build failed!");
             }
@@ -2115,6 +2481,7 @@ var ParticleBuilder = (function () {
             }
         }
 
+        // Check for any warnings at any point during compile
         if (!error.empty(failOnWarnings)) {
             throw error.fail("Build failed!");
         }
@@ -2161,7 +2528,7 @@ var ParticleBuilder = (function () {
 
         return {
             maxLifeTime: maxLifeTime,
-            animation: ParticleBuilder.buildAnimationTexture(graphicsDevice, width, sys.length, data),
+            animation: ParticleBuilder.buildAnimationTexture(graphicsDevice, width, data),
             particle: particleDefns,
             attribute: minDelta
         };
@@ -2197,22 +2564,23 @@ var ParticleBuilder = (function () {
     ParticleBuilder.compileData = function (system, width, particles) {
         var height = 0;
         var sysCount = system.length;
-        var i;
+        var i, dims = [];
         for (i = 0; i < sysCount; i += 1) {
             var attr = system[i];
             var dim = (Types.isNumber(attr.type) ? 4 : attr.defaultValue.length);
             switch (attr.compress) {
-                case AttributeCompress.cHalf:
+                case 1 /* cHalf */:
                     // 1 -> 1, 2 -> 1, 4 -> 2
                     dim = Math.ceil(dim / 2);
                     break;
-                case AttributeCompress.cFull:
+                case 2 /* cFull */:
                     // _ -> 1
                     dim = Math.ceil(dim / 4);
                     break;
                 default:
             }
             height += dim;
+            dims.push(dim);
         }
 
         var count = width * height;
@@ -2235,7 +2603,7 @@ var ParticleBuilder = (function () {
                             data[store] = TextureEncode.encodeUnsignedFloat(value[0]);
                             break;
                         case "tFloat2":
-                            if (attr.compress !== AttributeCompress.cNone) {
+                            if (attr.compress !== 0 /* cNone */) {
                                 data[store] = TextureEncode.encodeUnsignedFloat2(value);
                             } else {
                                 data[store + (width * 0)] = TextureEncode.encodeUnsignedFloat(value[0]);
@@ -2248,9 +2616,9 @@ var ParticleBuilder = (function () {
                                 var ind = (value[0] | 0);
                                 value = uvs[ind];
                             }
-                            if (attr.compress === AttributeCompress.cFull) {
+                            if (attr.compress === 2 /* cFull */) {
                                 data[store] = TextureEncode.encodeUnsignedFloat4(value);
-                            } else if (attr.compress === AttributeCompress.cNone) {
+                            } else if (attr.compress === 0 /* cNone */) {
                                 data[store + (width * 0)] = TextureEncode.encodeUnsignedFloat(value[0]);
                                 data[store + (width * 1)] = TextureEncode.encodeUnsignedFloat(value[1]);
                                 data[store + (width * 2)] = TextureEncode.encodeUnsignedFloat(value[2]);
@@ -2263,6 +2631,7 @@ var ParticleBuilder = (function () {
                     store += 1;
                 }
             }
+            store += (dims[i] - 1) * width;
         }
         return new Uint8Array(data.buffer);
     };
@@ -2275,7 +2644,7 @@ var ParticleBuilder = (function () {
         var i;
         for (i = 0; i < sysCount; i += 1) {
             var attr = system[i];
-            if (attr.storage !== AttributeStorage.sNormalized) {
+            if (attr.storage !== 1 /* sNormalized */) {
                 continue;
             }
 
@@ -2302,7 +2671,7 @@ var ParticleBuilder = (function () {
         var i;
         for (i = 0; i < sysCount; i += 1) {
             var attr = system[i];
-            if (attr.storage !== AttributeStorage.sNormalized) {
+            if (attr.storage !== 1 /* sNormalized */) {
                 continue;
             }
 
@@ -2374,7 +2743,7 @@ var ParticleBuilder = (function () {
             if (Types.isNumber(attr.type)) {
                 // tTexture(n)
                 min = [0];
-                max = [particle.textureUVs["texture" + (attr.type)].length - 1];
+                max = [particle.textureUVs["texture" + attr.type].length - 1];
             }
 
             var dim = seq[0].attributes[attr.name].length;
@@ -2477,14 +2846,14 @@ var ParticleBuilder = (function () {
         }
     };
 
-    ParticleBuilder.interpolate = // Interpolate for value of attribute 'attr' at time 'time'
+    // Interpolate for value of attribute 'attr' at time 'time'
     // using whatever snapshots are defined before and after the given time and
     // define the attribute, using the interpolator defined on the preceeding
     // snapshot defining an interpolator.
     //
     // Assume there is at least 1 snapshot <= time defining the attribute
     // and atleast 1 snapshot <= time defining an interpolator.
-    function (snaps, attr, time) {
+    ParticleBuilder.interpolate = function (snaps, attr, time) {
         var intp = null;
         var back = [];
         var forth = [];
@@ -2514,6 +2883,7 @@ var ParticleBuilder = (function () {
         for (i = 0; i < count; i += 1) {
             var offset = offsets[i];
 
+            // assume offset <> 0
             if (offset > 0) {
                 offset -= 1;
                 if (offset < forth.length) {
@@ -2547,11 +2917,11 @@ var ParticleBuilder = (function () {
         return intp.fun(vs, ts, t);
     };
 
-    ParticleBuilder.discretize = // Discretise particle animation to have exact (interpolated) snapshots in its single sequence
+    // Discretise particle animation to have exact (interpolated) snapshots in its single sequence
     // based on fps.
     //
     // pre: animation has been flattened
-    function (system, particle) {
+    ParticleBuilder.discretize = function (system, particle) {
         var disc = [];
         var snaps = particle.animation;
         var seqLength = snaps.length;
@@ -2646,8 +3016,8 @@ var ParticleBuilder = (function () {
                 case "tFloat4":
                     break;
                 default:
-                    if (!particle.textureUVs.hasOwnProperty("texture" + (sysAttr.type))) {
-                        particle.textureUVs["texture" + (sysAttr.type)] = [[0, 0, 1, 1]];
+                    if (!particle.textureUVs.hasOwnProperty("texture" + sysAttr.type)) {
+                        particle.textureUVs["texture" + sysAttr.type] = [[0, 0, 1, 1]];
                     }
             }
         }
@@ -2691,6 +3061,7 @@ var ParticleBuilder = (function () {
     return ParticleBuilder;
 })();
 
+
 var SharedRenderContext = (function () {
     function SharedRenderContext(params) {
         this.graphicsDevice = params.graphicsDevice;
@@ -2705,18 +3076,19 @@ var SharedRenderContext = (function () {
                 numVertices: 4,
                 attributes: [graphicsDevice.VERTEXFORMAT_FLOAT2],
                 dynamic: false,
-                data: [0, 0, 1, 0, 0, 1, 1, 1]
+                data: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1])
             });
             SharedRenderContext.textureSemantics = graphicsDevice.createSemantics([
                 graphicsDevice.SEMANTIC_POSITION
             ]);
             SharedRenderContext.copyParameters = graphicsDevice.createTechniqueParameters({
-                dim: [0, 0],
-                dst: [0, 0, 0, 0]
+                src: null,
+                dim: new Float32Array([0, 0]),
+                destRect: new Float32Array([0, 0, 0, 0])
             });
 
             // Shader embedded from assets/shaders/particles-copy.cgfx
-            var shader = graphicsDevice.createShader({ "version": 1, "name": "particles-copy.cgfx", "samplers": { "src": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 } }, "parameters": { "src": { "type": "sampler2D" }, "dim": { "type": "float", "columns": 2 }, "dst": { "type": "float", "columns": 4 } }, "techniques": { "copy": [{ "parameters": ["dst", "src"], "semantics": ["POSITION"], "states": { "DepthTestEnable": false, "DepthMask": false, "CullFaceEnable": false, "BlendEnable": false }, "programs": ["vp_copy", "fp_copy"] }] }, "programs": { "fp_copy": { "type": "fragment", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D src;void main()\n{_ret_0=texture2D(src,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}" }, "vp_copy": { "type": "vertex", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outUV1;uniform vec4 dst;void main()\n{vec2 _xy;vec2 _wh;vec2 _TMP3;_xy=dst.xy*2.0-1.0;_wh=(dst.zw*2.0-1.0)-_xy;_TMP3=_xy+_wh*ATTR0.xy;_outPosition1=vec4(_TMP3.x,_TMP3.y,0.0,1.0);_outUV1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_outPosition1;}" } } });
+            var shader = graphicsDevice.createShader(particles_copy_cgfx);
             SharedRenderContext.copyTechnique = shader.getTechnique("copy");
         }
     };
@@ -2862,12 +3234,12 @@ var SharedRenderContext = (function () {
         var semantics = SharedRenderContext.textureSemantics;
 
         parameters["src"] = from.colorTexture0;
-        parameters["dst"] = [
-            0,
-            0,
-            from.colorTexture0.width / to.colorTexture0.width,
-            from.colorTexture0.height / to.colorTexture0.height
-        ];
+
+        var dst = parameters["destRect"];
+        dst[0] = 0;
+        dst[1] = 0;
+        dst[2] = from.colorTexture0.width / to.colorTexture0.width;
+        dst[3] = from.colorTexture0.height / to.colorTexture0.height;
 
         gd.beginRenderTarget(to);
         gd.setStream(vertices, semantics);
@@ -2989,6 +3361,7 @@ var ParticleGeometry = (function () {
     return ParticleGeometry;
 })();
 
+
 var DefaultParticleUpdater = (function () {
     function DefaultParticleUpdater() {
     }
@@ -3106,6 +3479,55 @@ var DefaultParticleUpdater = (function () {
         return userData;
     };
 
+    DefaultParticleUpdater.prototype.updateTransform = function (transform, outParameters) {
+        var m0 = transform[0];
+        var m1 = transform[1];
+        var m2 = transform[2];
+        var m3 = transform[3];
+        var m4 = transform[4];
+        var m5 = transform[5];
+        var m6 = transform[6];
+        var m7 = transform[7];
+        var m8 = transform[8];
+        var prevTransform = this.prevTransform;
+        if (prevTransform[0] !== m0 || prevTransform[1] !== m1 || prevTransform[2] !== m2 || prevTransform[3] !== m3 || prevTransform[4] !== m4 || prevTransform[5] !== m5 || prevTransform[6] !== m6 || prevTransform[7] !== m7 || prevTransform[8] !== m8) {
+            prevTransform[0] = m0;
+            prevTransform[1] = m1;
+            prevTransform[2] = m2;
+            prevTransform[3] = m3;
+            prevTransform[4] = m4;
+            prevTransform[5] = m5;
+            prevTransform[6] = m6;
+            prevTransform[7] = m7;
+            prevTransform[8] = m8;
+
+            var d4857 = (m4 * m8 - m5 * m7);
+            var d5638 = (m5 * m6 - m3 * m8);
+            var d3746 = (m3 * m7 - m4 * m6);
+            var det = (m0 * d4857 + m1 * d5638 + m2 * d3746);
+
+            var detrecp = 1.0 / det;
+            var d0 = (d4857 * detrecp);
+            var d1 = ((m7 * m2 - m8 * m1) * detrecp);
+            var d2 = ((m1 * m5 - m2 * m4) * detrecp);
+            var d3 = (d5638 * detrecp);
+            var d4 = ((m8 * m0 - m6 * m2) * detrecp);
+            var d5 = ((m3 * m2 - m0 * m5) * detrecp);
+            var d6 = (d3746 * detrecp);
+            var d7 = ((m6 * m1 - m7 * m0) * detrecp);
+            var d8 = ((m0 * m4 - m3 * m1) * detrecp);
+
+            var untransformedAcceleration = this.parameters["acceleration"];
+            var acceleration = outParameters["acceleration"];
+            var v0 = untransformedAcceleration[0];
+            var v1 = untransformedAcceleration[1];
+            var v2 = untransformedAcceleration[2];
+            acceleration[0] = (d0 * v0 + d3 * v1 + d6 * v2);
+            acceleration[1] = (d1 * v0 + d4 * v1 + d7 * v2);
+            acceleration[2] = (d2 * v0 + d5 * v1 + d8 * v2);
+        }
+    };
+
     DefaultParticleUpdater.prototype.update = function (parameters, dataF, dataI, tracked, numTracked) {
         var timeStep = parameters["timeStep"];
         var lifeStep = parameters["lifeStep"];
@@ -3180,16 +3602,17 @@ var DefaultParticleUpdater = (function () {
         }
     };
 
-    DefaultParticleUpdater.create = function (graphicsDevice, shaderManager) {
+    DefaultParticleUpdater.create = function (graphicsDevice, shaderManager, technique) {
         var shader = shaderManager.get("shaders/particles-default-update.cgfx");
         var ret = new DefaultParticleUpdater();
-        ret.technique = shader.getTechnique("update");
+        ret.technique = shader.getTechnique(technique || "clamped");
         ret.parameters = {
             acceleration: new Float32Array(3),
             drag: 0,
             noiseTexture: ParticleSystem.getDefaultNoiseTexture(graphicsDevice),
             randomizedAcceleration: new Float32Array(3)
         };
+        ret.prevTransform = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
         return ret;
     };
     DefaultParticleUpdater.template = {
@@ -3200,6 +3623,7 @@ var DefaultParticleUpdater = (function () {
     };
     return DefaultParticleUpdater;
 })();
+
 
 var DefaultParticleRenderer = (function () {
     function DefaultParticleRenderer() {
@@ -3246,16 +3670,9 @@ var DefaultParticleRenderer = (function () {
         }
 
         Parser.extraFields(error, "default renderer archetype", delta, [
-            "animatedRotation",
-            "animatedOrientation",
-            "animatedScale",
-            "animatedAlpha",
-            "randomizedScale",
-            "randomizedAlpha",
-            "randomizedRotation",
-            "randomizedOrientation",
-            "noiseTexture"
-        ]);
+            "animatedRotation", "animatedOrientation", "animatedScale", "animatedAlpha",
+            "randomizedScale", "randomizedAlpha", "randomizedRotation", "randomizedOrientation",
+            "noiseTexture", "fadeOutDistance"]);
 
         return {
             noiseTexture: maybe("noiseTexture", checkString, val(null)),
@@ -3265,8 +3682,9 @@ var DefaultParticleRenderer = (function () {
             randomizedAlpha: maybe("randomizedAlpha", checkNumber, val(0)),
             animatedRotation: maybe("animatedRotation", checkBoolean, val(false)),
             animatedOrientation: maybe("animatedRotation", checkBoolean, val(false)),
-            animatedScale: maybe("animatedScale   ", checkBoolean, val(false)),
-            animatedAlpha: maybe("animatedAlpha   ", checkBoolean, val(false))
+            animatedScale: maybe("animatedScale", checkBoolean, val(false)),
+            animatedAlpha: maybe("animatedAlpha", checkBoolean, val(false)),
+            fadeOutDistance: maybe("fadeOutDistance", checkNumber, val(0))
         };
     };
     DefaultParticleRenderer.prototype.applyArchetype = function (textureManager, system, archetype, textures) {
@@ -3281,6 +3699,8 @@ var DefaultParticleRenderer = (function () {
         parameters["animatedScale"] = archetype.animatedScale;
         parameters["animatedAlpha"] = archetype.animatedAlpha;
         parameters["texture"] = textures("texture0");
+        parameters["invFadeOutDistance"] = archetype.fadeOutDistance === 0 ? 0.0 : (1.0 / archetype.fadeOutDistance);
+        parameters["fadeScale"] = archetype.fadeOutDistance === 0.0 ? 0.0 : 1.0;
     };
 
     DefaultParticleRenderer.prototype.createUserDataSeed = function () {
@@ -3290,9 +3710,10 @@ var DefaultParticleRenderer = (function () {
         var ret = 0;
         if (params.facing === "velocity") {
             ret |= (1 << 30);
-        }
-        if (params.facing === "custom") {
+        } else if (params.facing === "custom") {
             ret |= (2 << 30);
+        } else if (params.facing === "velocity-billboard") {
+            ret |= (3 << 30);
         }
         ret |= (params.randomizeRotation << 29);
         ret |= (params.randomizeScale << 28);
@@ -3347,19 +3768,8 @@ var DefaultParticleRenderer = (function () {
             graphicsDevice: graphicsDevice,
             maxParticles: maxParticles,
             template: [
-                0,
-                null,
-                1,
-                null,
-                2,
-                null,
-                0,
-                null,
-                2,
-                null,
-                3,
-                null
-            ],
+                0, null, 1, null, 2, null,
+                0, null, 2, null, 3, null],
             attributes: [graphicsDevice.VERTEXFORMAT_USHORT2],
             stride: 2,
             semantics: graphicsDevice.createSemantics([graphicsDevice.SEMANTIC_POSITION]),
@@ -3385,7 +3795,9 @@ var DefaultParticleRenderer = (function () {
             animatedOrientation: false,
             animatedScale: false,
             animatedRotation: false,
-            animatedAlpha: false
+            animatedAlpha: false,
+            invFadeOutDistance: 0.0,
+            fadeScale: 0.0
         };
         return ret;
     };
@@ -3398,10 +3810,12 @@ var DefaultParticleRenderer = (function () {
         animatedRotation: false,
         animatedOrientation: false,
         animatedScale: false,
-        animatedAlpha: false
+        animatedAlpha: false,
+        fadeOutDistance: 0.0
     };
     return DefaultParticleRenderer;
 })();
+
 
 var ParticleSystem = (function () {
     function ParticleSystem() {
@@ -3438,16 +3852,8 @@ var ParticleSystem = (function () {
         }
 
         Parser.extraFields(error, "system archetype", delta, [
-            "center",
-            "halfExtents",
-            "maxSpeed",
-            "maxParticles",
-            "maxParticles",
-            "zSorted",
-            "maxSortSTeps",
-            "trackingEnabled",
-            "maxLifeTime"
-        ]);
+            "center", "halfExtents", "maxSpeed", "maxParticles", "maxParticles", "zSorted",
+            "maxSortSTeps", "trackingEnabled", "maxLifeTime"]);
 
         return {
             center: maybe("center", checkV3, VMath.v3BuildZero),
@@ -3517,8 +3923,11 @@ var ParticleSystem = (function () {
                 }
             }
         } else {
-            if (maxParticles > 66536) {
-                maxParticles = 66536;
+            // No restrictions for sorting, can make optimise use of space.
+            // Find square like texture size fitting maxParticles
+            // to aid in shared packing of textures.
+            if (maxParticles > 65536) {
+                maxParticles = 65536;
             }
             if (maxParticles <= 1) {
                 return {
@@ -3631,7 +4040,7 @@ var ParticleSystem = (function () {
             });
             ParticleSystem.createdValidWidth = newW;
             ParticleSystem.createdValidHeight = newH;
-            ParticleSystem.createdData = new Uint8Array(newW * newH * 4);
+            ParticleSystem.createdData = new Uint8Array(newW * newH * 4); // rgba
             ParticleSystem.createdData32 = new Uint32Array(ParticleSystem.createdData.buffer);
         }
     };
@@ -3650,6 +4059,9 @@ var ParticleSystem = (function () {
             // XXX requires SDK 0,27,0 :ref: polycraft benchmark.
             ParticleSystem.createdTexture.setData(ParticleSystem.createdData, 0, 0, 0, 0, usedW, usedH);
             if (numCreated === 0) {
+                // Only expand valid region if it is contained in used region.
+                // Particle states are 'square like' so this is almost always
+                // the best decision.
                 if (usedW >= validW && usedH >= validH) {
                     ParticleSystem.createdValidWidth = usedW;
                     ParticleSystem.createdValidHeight = usedH;
@@ -3683,8 +4095,6 @@ var ParticleSystem = (function () {
         ParticleSystem.numCreated = 0;
     };
 
-    ParticleSystem.prototype.constructor = function () {
-    };
     ParticleSystem.create = function (params) {
         var ret = new ParticleSystem();
         ret.graphicsDevice = params.graphicsDevice;
@@ -3807,7 +4217,7 @@ var ParticleSystem = (function () {
                 numVertices: 4,
                 attributes: [ret.graphicsDevice.VERTEXFORMAT_FLOAT2],
                 dynamic: false,
-                data: [0, 0, 1, 0, 0, 1, 1, 1]
+                data: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1])
             });
             ParticleSystem.fullTextureSemantics = ret.graphicsDevice.createSemantics([ret.graphicsDevice.SEMANTIC_POSITION]);
         }
@@ -3857,8 +4267,8 @@ var ParticleSystem = (function () {
         var uv = ctx.uvRectangle;
         var ts = VMath.v2Build(tex.width, tex.height);
         var its = VMath.v2Reciprocal(ts);
-        var rp = VMath.v2Build(uv[0] * tex.width, uv[1] * tex.height);
-        var rs = VMath.v2Build(uv[2] * tex.width, uv[3] * tex.height);
+        var rp = VMath.v2Build(Math.round(uv[0] * tex.width), Math.round(uv[1] * tex.height));
+        var rs = VMath.v2Build(Math.round(uv[2] * tex.width), Math.round(uv[3] * tex.height));
         var irs = VMath.v2Reciprocal(rs);
 
         var parameters;
@@ -4015,7 +4425,7 @@ var ParticleSystem = (function () {
         for (v = 0; v < numY; v += 1) {
             for (u = 0; u < numX; u += 1) {
                 var gpu = (v * dimy * w) + (u * dimx);
-                data[gpu + 2] = 0x0000ffff;
+                data[gpu + 2] = 0x0000ffff; // life = 0, total life <> 0 signal to create.
                 ParticleSystem.addCreated((v * particleSize[0]) + u);
             }
         }
@@ -4024,6 +4434,7 @@ var ParticleSystem = (function () {
     ParticleSystem.prototype.removeParticle = function (id) {
         this.queue.removeParticle(id);
 
+        // Remove from tracked list if tracked.
         if (this.trackingEnabled) {
             // Shuffle back anything after.
             // (TODO) See updateParticle for reason 'swap-pop' is not performed.
@@ -4049,7 +4460,7 @@ var ParticleSystem = (function () {
         var dimy = ParticleSystem.PARTICLE_DIMY;
         var w = sizeX * dimx;
         var gpu = (v * dimy * w) + (u * dimx);
-        ParticleSystem.createdData32[gpu + 2] = 0x0000ffff;
+        ParticleSystem.createdData32[gpu + 2] = 0x0000ffff; // life = 0, total life <> 0 signal to create.
     };
 
     ParticleSystem.prototype.updateParticle = function (id, params) {
@@ -4151,6 +4562,7 @@ var ParticleSystem = (function () {
         data32[gpu + (w * 2) + 2] = userData;
         ParticleSystem.addCreated(id);
 
+        // Remove from tracked list if no longer tracked on CPU.
         if (params.isTracked !== undefined && !params.isTracked) {
             // Shuffle back anything after.
             // Not the fastest of operations, but should only occur very occasionaly
@@ -4182,21 +4594,22 @@ var ParticleSystem = (function () {
         this.lastVisible = frameVisible;
     };
 
-    ParticleSystem.prototype.beginUpdate = function (deltaTime, shift) {
+    ParticleSystem.prototype.beginUpdate = function (deltaTime, shift, transform) {
         this.updateTime = deltaTime;
         this.updateShift = shift ? VMath.v3Copy(shift, this.updateShift) : VMath.v3BuildZero(this.updateShift);
+        this.updateTransform = transform ? VMath.m43Copy(transform, this.updateTransform) : VMath.m43BuildIdentity(this.updateTransform);
         this.shouldUpdate = this.hasLiveParticles;
         this.hasLiveParticles = this.queue.update(deltaTime);
     };
     ParticleSystem.prototype.endUpdate = function () {
         this.hasLiveParticles = this.hasLiveParticles || (ParticleSystem.numCreated !== 0);
         if (this.shouldUpdate || this.hasLiveParticles) {
-            this.updateParticleState(this.updateTime, this.updateShift);
+            this.updateParticleState(this.updateTime, this.updateShift, this.updateTransform);
         }
         return this.hasLiveParticles;
     };
 
-    ParticleSystem.prototype.updateParticleState = function (deltaTime, shift) {
+    ParticleSystem.prototype.updateParticleState = function (deltaTime, shift, transform) {
         ParticleSystem.dispatchCreated(this.particleSize);
 
         var updater = this.updater;
@@ -4211,12 +4624,16 @@ var ParticleSystem = (function () {
         uShift[1] = shift[1] * invHalfExtents[1];
         uShift[2] = shift[2] * invHalfExtents[2];
 
+        if (transform) {
+            updater.updateTransform(transform, parameters);
+        }
+
         var gd = this.graphicsDevice;
         var targets = this.stateContext.renderTargets;
         var tex = parameters["previousState"] = targets[this.currentState].colorTexture0;
         var scale = parameters["creationScale"];
-        scale[0] = this.particleSize[0] * ParticleSystem.PARTICLE_DIMX / ParticleSystem.createdTexture.width;
-        scale[1] = this.particleSize[1] * ParticleSystem.PARTICLE_DIMY / ParticleSystem.createdTexture.height;
+        scale[0] = 1.0 / ParticleSystem.createdTexture.width;
+        scale[1] = 1.0 / ParticleSystem.createdTexture.height;
 
         gd.setStream(ParticleSystem.fullTextureVertices, ParticleSystem.fullTextureSemantics);
         gd.beginRenderTarget(targets[1 - this.currentState]);
@@ -4234,6 +4651,10 @@ var ParticleSystem = (function () {
         if (this.trackingEnabled) {
             updater.update(this.updateParameters, this.cpuF32, this.cpuU32, this.tracked, this.numTracked);
         }
+    };
+
+    ParticleSystem.prototype.renderDebug = function () {
+        // TODO
     };
 
     ParticleSystem.prototype.queryPosition = function (id, dst) {
@@ -4287,10 +4708,6 @@ var ParticleSystem = (function () {
         gd.setTechniqueParameters(view.parameters);
         gd.draw(geom.primitive, geom.particleStride * this.maxParticles, 0);
     };
-
-    ParticleSystem.prototype.renderDebug = function () {
-        // TODO
-    };
     ParticleSystem.PARTICLE_DIMX = 3;
     ParticleSystem.PARTICLE_DIMY = 3;
 
@@ -4326,8 +4743,6 @@ var ParticleView = (function () {
         this.mergePass = 0;
         this.mergeStage = 0;
     }
-    ParticleView.prototype.constructor = function () {
-    };
     ParticleView.create = function (params) {
         var ret = new ParticleView();
         ret.graphicsDevice = params.graphicsDevice;
@@ -4376,7 +4791,7 @@ var ParticleView = (function () {
         }
 
         // Shader embedded from assets/shaders/particles-sort.cgfx
-        var shader = gd.createShader({ "version": 1, "name": "particles-sort.cgfx", "samplers": { "previousState": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 }, "creationState": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 }, "mappingTable": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 }, "vParticleState": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 }, "fParticleState": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 }, "animation": { "MinFilter": 9728, "MagFilter": 9728, "WrapS": 33071, "WrapT": 33071 } }, "parameters": { "textureSize": { "type": "float", "columns": 2 }, "invTextureSize": { "type": "float", "columns": 2 }, "regionSize": { "type": "float", "columns": 2 }, "invRegionSize": { "type": "float", "columns": 2 }, "regionPos": { "type": "float", "columns": 2 }, "halfExtents": { "type": "float", "columns": 3 }, "center": { "type": "float", "columns": 3 }, "maxLifeTime": { "type": "float" }, "previousState": { "type": "sampler2D" }, "shift": { "type": "float", "columns": 3 }, "timeStep": { "type": "float" }, "lifeStep": { "type": "float" }, "maxSpeed": { "type": "float" }, "creationState": { "type": "sampler2D" }, "creationScale": { "type": "float", "columns": 2 }, "projection": { "type": "float", "rows": 4, "columns": 4 }, "modelView": { "type": "float", "rows": 4, "columns": 3 }, "mappingTable": { "type": "sampler2D" }, "mappingSize": { "type": "float", "columns": 2 }, "invMappingSize": { "type": "float", "columns": 2 }, "mappingPos": { "type": "float", "columns": 2 }, "vParticleState": { "type": "sampler2D" }, "fParticleState": { "type": "sampler2D" }, "animationSize": { "type": "float", "columns": 2 }, "animation": { "type": "sampler2D" }, "zSorted": { "type": "bool" }, "zBound": { "type": "float" }, "cpass": { "type": "float" }, "PmS": { "type": "float" }, "twoStage": { "type": "float" }, "twoStage_PmS_1": { "type": "float" } }, "techniques": { "prepare_sort": [{ "parameters": ["regionSize", "invMappingSize", "mappingPos", "invTextureSize", "regionSize", "invRegionSize", "regionPos", "modelView", "mappingTable", "invMappingSize", "mappingPos", "fParticleState", "zBound"], "semantics": ["POSITION"], "states": { "DepthTestEnable": false, "DepthMask": false, "CullFaceEnable": false, "BlendEnable": false }, "programs": ["vp_update_mapping", "fp_prepare_sort"] }], "sort_pass": [{ "parameters": ["regionSize", "invMappingSize", "mappingPos", "regionSize", "invRegionSize", "mappingTable", "invMappingSize", "mappingPos", "cpass", "PmS", "twoStage", "twoStage_PmS_1"], "semantics": ["POSITION"], "states": { "DepthTestEnable": false, "DepthMask": false, "CullFaceEnable": false, "BlendEnable": false }, "programs": ["vp_update_mapping", "fp_merge_sort_pass"] }] }, "programs": { "fp_merge_sort_pass": { "type": "fragment", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _TMP7;float _TMP11;float _TMP12;vec2 _TMP6;vec2 _TMP5;float _TMP10;float _TMP2;float _TMP3;float _TMP4;float _TMP1;vec2 _TMP0;vec2 _p0049;vec2 _x0051;float _x0055;float _x0059;float _x0061;float _u0063;float _index0063;float _v0063;float _y0065;float _x0067;float _TMP78;float _TMP90;uniform vec2 regionSize;uniform vec2 invRegionSize;uniform sampler2D mappingTable;uniform vec2 invMappingSize;uniform vec2 mappingPos;uniform float cpass;uniform float PmS;uniform float twoStage;uniform float twoStage_PmS_1;void main()\n{vec4 _self;float _index1;float _j;float _compare;vec4 _other;_TMP0=(mappingPos+(regionSize*tz_TexCoord[0].xy)/vec2(3.0,3.0))*invMappingSize;_self=texture2D(mappingTable,_TMP0);_x0051=(tz_TexCoord[0].xy*regionSize)/vec2(3.0,3.0);_p0049=floor(_x0051);_index1=(_p0049.y*regionSize.x)/3.0+_p0049.x;_x0055=_index1/twoStage;_TMP10=floor(_x0055);_TMP1=_index1-twoStage*_TMP10;_j=floor(_TMP1);if(_j<PmS||_j>twoStage_PmS_1){_TMP2=0.0;}else{_x0059=(_j+PmS)/cpass;_x0061=_x0059/2.0;_TMP10=floor(_x0061);_TMP4=_x0059-2.0*_TMP10;if(_TMP4<1.0){_TMP3=1.0;}else{_TMP3=-1.0;}\n_TMP2=_TMP3;}\n_compare=float(_TMP2);_index0063=_index1+_compare*cpass;_y0065=regionSize.x/3.0;_x0067=_index0063/_y0065;_TMP10=floor(_x0067);_u0063=_index0063-_y0065*_TMP10;_v0063=(_index0063-_u0063)*invRegionSize.x*3.0;_TMP5=vec2(_u0063+0.5,_v0063+0.5)*invRegionSize*vec2(3.0,3.0);_TMP6=(mappingPos+(regionSize*_TMP5)/vec2(3.0,3.0))*invMappingSize;_other=texture2D(mappingTable,_TMP6);_TMP11=dot(_self.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP12=min(1.0,_TMP11);_TMP78=max(0.0,_TMP12);_TMP11=dot(_other.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP12=min(1.0,_TMP11);_TMP90=max(0.0,_TMP12);if(_TMP78*_compare<=_TMP90*_compare){_TMP7=_self;}else{_TMP7=_other;}\ngl_FragColor=_TMP7;}" }, "vp_update_mapping": { "type": "vertex", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _outPosition1;vec2 _outParticle1;vec2 _TMP0;uniform vec2 regionSize;uniform vec2 invMappingSize;uniform vec2 mappingPos;void main()\n{vec2 _TMP32;_TMP0=(mappingPos+(regionSize*ATTR0.xy)/vec2(3.0,3.0))*invMappingSize;_TMP32=_TMP0*2.0-1.0;_outPosition1=vec4(_TMP32.x,_TMP32.y,0.0,1.0);_outParticle1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_outPosition1;}" }, "fp_prepare_sort": { "type": "fragment", "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;vec2 _TMP5;float _TMP11;vec4 _TMP10;float _TMP13;float _TMP6;vec4 _TMP1;vec2 _TMP0;vec2 _p0053;vec4 _life0055;vec2 _c0057;float _TMP64;vec3 _TMP70;vec2 _uv0073;float _TMP74;float _TMP86;float _TMP92;vec2 _uv0093;float _TMP104;float _TMP110;vec2 _uv0111;float _TMP122;vec2 _TMP128;vec2 _enc10129;float _TMP132;vec2 _x0139;uniform vec2 invTextureSize;uniform vec2 regionSize;uniform vec2 invRegionSize;uniform vec2 regionPos;uniform vec3 modelView[4];uniform sampler2D mappingTable;uniform vec2 invMappingSize;uniform vec2 mappingPos;uniform sampler2D fParticleState;uniform float zBound;void main()\n{vec2 _particleUV;float _z1;_TMP0=(mappingPos+(regionSize*tz_TexCoord[0].xy)/vec2(3.0,3.0))*invMappingSize;_TMP1=texture2D(mappingTable,_TMP0);_p0053=(_TMP1.xy*255.0)*vec2(3.0,3.0)*invRegionSize;_particleUV=(regionPos+regionSize*_p0053)*invTextureSize;_c0057=_particleUV+vec2(2.5,0.5)*invTextureSize;_life0055=texture2D(fParticleState,_c0057);_TMP6=dot(_life0055.zw,vec2(3.89099121E-03,9.96093750E-01));_TMP11=min(1.0,_TMP6);_TMP64=max(0.0,_TMP11);if(_TMP64<=0.0){_ret_0=vec4(_TMP1.x,_TMP1.y,1.0,1.0);gl_FragColor=_ret_0;return;}else{_uv0073=_particleUV+vec2(0.5,0.5)*invTextureSize;_TMP10=texture2D(fParticleState,_uv0073);_TMP13=dot(_TMP10,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP11=min(1.0,_TMP13);_TMP86=max(0.0,_TMP11);_TMP74=(_TMP86-0.5)*2.0;_uv0093=_uv0073+vec2(0.0,invTextureSize.y);_TMP10=texture2D(fParticleState,_uv0093);_TMP13=dot(_TMP10,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP11=min(1.0,_TMP13);_TMP104=max(0.0,_TMP11);_TMP92=(_TMP104-0.5)*2.0;_uv0111=_uv0073+vec2(0.0,2.0*invTextureSize.y);_TMP10=texture2D(fParticleState,_uv0111);_TMP13=dot(_TMP10,vec4(5.93718141E-08,1.51991844E-05,3.89099121E-03,9.96093750E-01));_TMP11=min(1.0,_TMP13);_TMP122=max(0.0,_TMP11);_TMP110=(_TMP122-0.5)*2.0;_TMP70=vec3(_TMP74,_TMP92,_TMP110);_z1=_TMP70.x*modelView[0].z+_TMP70.y*modelView[1].z+_TMP70.z*modelView[2].z;_z1=(_z1+zBound)/(2.0*zBound);if(_z1>=1.0){_TMP128=vec2(1.0,1.0);}else{_TMP11=min(1.0,_z1);_TMP132=max(0.0,_TMP11);_x0139=_TMP132*vec2(256.0,1.0);_TMP5=fract(_x0139);_enc10129=_TMP5*256.0;_enc10129.y=_enc10129.y-_enc10129.x/256.0;_TMP128=_enc10129/255.0;}\n_ret_0=vec4(_TMP1.x,_TMP1.y,_TMP128.x,_TMP128.y);gl_FragColor=_ret_0;return;}\ngl_FragColor=_ret_0;}" } } });
+        var shader = gd.createShader(particles_sort_cgfx);
 
         ParticleView.prepareSortTechnique = shader.getTechnique("prepare_sort");
         ParticleView.mergeSortTechnique = shader.getTechnique("sort_pass");
@@ -4399,6 +4814,7 @@ var ParticleView = (function () {
         }
 
         if (this.system) {
+            debug.assert(this.system.views.indexOf(this) !== -1);
             this.system.views.splice(this.system.views.indexOf(this), 1);
             if (this.system.zSorted) {
                 if (!this.renderContextShared) {
@@ -4415,6 +4831,7 @@ var ParticleView = (function () {
             return;
         }
 
+        debug.assert(system.views.indexOf(this) === -1);
         system.views.push(this);
         if (system.zSorted) {
             ParticleView.initSorting(this.graphicsDevice);
@@ -4618,6 +5035,10 @@ var ParticleRenderable = (function () {
         }
     };
 
+    ParticleRenderable.prototype.getLocalTransform = function () {
+        return this.localTransform;
+    };
+
     ParticleRenderable.prototype.setFixedOrientation = function (fixedOrientation) {
         if (this.fixedOrientation !== fixedOrientation) {
             this.fixedOrientation = fixedOrientation;
@@ -4637,6 +5058,7 @@ var ParticleRenderable = (function () {
         var local = this.localTransform;
         var nodeWorld = node.world;
 
+        // compute actual world transform to use.
         if (this.fixedOrientation) {
             // build up target world transform
             var Lx = local[9];
@@ -4719,7 +5141,20 @@ var ParticleRenderable = (function () {
         ret.worldExtents = new Float32Array(6);
         ret.localTransform = VMath.m43BuildIdentity();
         ret.sharedRenderContext = params.sharedRenderContext;
+
+        var parameters = gd.createDrawParameters();
+        parameters.userData = { passIndex: params.passIndex };
+        parameters.setTechniqueParameters(0, null);
+        parameters.setTechniqueParameters(1, null);
+        ret.parametersIndex = 0;
+        ret.drawParameters = [parameters];
+        ret.shadowDrawParameters = ret.drawParameters;
+
         ret.setSystem(params.system);
+        if (params.baseTechniqueParametersList) {
+            ret.setBaseTechniqueParameters(params.baseTechniqueParametersList);
+        }
+
         return ret;
     };
 
@@ -4746,6 +5181,7 @@ var ParticleRenderable = (function () {
         if (!this.system) {
             this.setSystem(this.lazySystem());
         }
+
         this.system.sync(this.frameVisible);
 
         // Use an additional field on Camera to track unique instances
@@ -4775,7 +5211,7 @@ var ParticleRenderable = (function () {
         VMath.m43Mul(this.world, camera.viewMatrix, view.parameters["modelView"]);
         view.update(null, camera.projectionMatrix);
 
-        this.drawParameters[0].setTechniqueParameters(1, view.parameters);
+        this.drawParameters[0].setTechniqueParameters(this.parametersIndex + 1, view.parameters);
     };
 
     ParticleRenderable.prototype.setLazyView = function (view) {
@@ -4803,19 +5239,37 @@ var ParticleRenderable = (function () {
             this.halfExtents = system.halfExtents;
             this.worldExtentsUpdate = -1;
 
-            var parameters = this.graphicsDevice.createDrawParameters();
+            var parameters = this.drawParameters[0];
             parameters.setVertexBuffer(0, system.geometry.vertexBuffer);
             parameters.setSemantics(0, system.geometry.semantics);
             parameters.technique = system.renderer.technique;
             parameters.primitive = system.geometry.primitive;
             parameters.count = system.maxParticles * system.geometry.particleStride;
-            parameters.userData = { passIndex: this.passIndex };
-            parameters.setTechniqueParameters(0, system.renderParameters);
-            parameters.setTechniqueParameters(1, null);
-
-            this.drawParameters = [parameters];
-            this.shadowDrawParameters = this.drawParameters;
+            parameters.sortKey = renderingCommonSortKeyFn(system.renderer.technique.id, system.renderParameters['vParticleState'].id);
+            parameters.setTechniqueParameters(this.parametersIndex, system.renderParameters);
         }
+    };
+
+    ParticleRenderable.prototype.setBaseTechniqueParameters = function (baseTechniqueParameters) {
+        var parameters = this.drawParameters[0];
+
+        // clear old parameters
+        var parametersIndex = this.parametersIndex;
+        var i;
+        for (i = 0; i <= parametersIndex + 1; i += 1) {
+            parameters.setTechniqueParameters(i, null);
+        }
+
+        // set new parameters
+        i = 0;
+        if (baseTechniqueParameters) {
+            var count = baseTechniqueParameters.length;
+            for (; i < count; i += 1) {
+                parameters.setTechniqueParameters(i, baseTechniqueParameters[i]);
+            }
+        }
+        parameters.setTechniqueParameters(i, this.system ? this.system.renderParameters : null);
+        this.parametersIndex = i;
     };
 
     ParticleRenderable.resizedGeometry = function (self) {
@@ -4828,6 +5282,7 @@ var ParticleRenderable = (function () {
     ParticleRenderable.cameraId = 0;
     return ParticleRenderable;
 })();
+
 
 var DefaultParticleSynchronizer = (function () {
     function DefaultParticleSynchronizer() {
@@ -4857,9 +5312,9 @@ var DefaultParticleSynchronizer = (function () {
                 return x;
             };
         }
-        function maybe(n, x, y) {
+        var maybe = function maybeFn(n, x, y) {
             return Parser.maybeField(delta, n, x(n), y);
-        }
+        };
 
         Parser.extraFields(error, "default synchronizer archetype", delta, ["fixedTimeStep", "maxSubSteps", "trailFollow"]);
 
@@ -4898,8 +5353,9 @@ var DefaultParticleSynchronizer = (function () {
 
     DefaultParticleSynchronizer.prototype.update = function (system, timeStep) {
         var shift = this.shift;
+        var xform;
         if (this.renderable) {
-            var xform = this.renderable.world;
+            xform = this.renderable.world;
             var prev = this.previousPos;
             if (!prev) {
                 prev = this.previousPos = VMath.m43Pos(xform);
@@ -4914,7 +5370,7 @@ var DefaultParticleSynchronizer = (function () {
             VMath.v3BuildZero(shift);
         }
 
-        system.beginUpdate(timeStep, shift);
+        system.beginUpdate(timeStep, shift, xform);
 
         var emitters = this.emitters;
         var num = emitters.length;
@@ -5088,15 +5544,8 @@ var DefaultParticleEmitter = (function () {
                 }
 
                 Parser.extraFields(error, "default emitter archetype particle", delta, [
-                    "lifeTimeMin",
-                    "lifeTimeMax",
-                    "renderUserData",
-                    "updateUserData",
-                    "useAnimationLifeTime",
-                    "lifeTimeScaleMin",
-                    "lifeTimeScaleMax",
-                    "name"
-                ]);
+                    "lifeTimeMin", "lifeTimeMax", "renderUserData", "updateUserData", "useAnimationLifeTime",
+                    "lifeTimeScaleMin", "lifeTimeScaleMax", "name"]);
 
                 var name = Parser.stringField(error, "default emitter archetype particle", delta, "name");
                 if (name && !particles.hasOwnProperty(name)) {
@@ -5138,14 +5587,9 @@ var DefaultParticleEmitter = (function () {
                 }
 
                 Parser.extraFields(error, "default emitter archetype position", delta, [
-                    "position",
-                    "spherical",
-                    "normal",
-                    "radiusMin",
-                    "radiusMax",
-                    "radiusDistribution",
-                    "radiusSigma"
-                ]);
+                    "position", "spherical", "normal", "radiusMin", "radiusMax",
+                    "radiusDistribution", "radiusSigma",
+                    "box", "halfExtentsMin", "halfExtentsMax"]);
 
                 return {
                     position: maybe(delta, "position", checkVec3, VMath.v3BuildZero),
@@ -5154,7 +5598,10 @@ var DefaultParticleEmitter = (function () {
                     radiusMin: maybe(delta, "radiusMin", checkNum, val(0)),
                     radiusMax: maybe(delta, "radiusMax", checkNum, val(0)),
                     radiusDistribution: maybe(delta, "radiusDistribution", checkDist, val("uniform")),
-                    radiusSigma: maybe(delta, "radiusSigma", checkNum, val(0.25))
+                    radiusSigma: maybe(delta, "radiusSigma", checkNum, val(0.25)),
+                    box: maybe(delta, "box", checkBool, val(false)),
+                    halfExtentsMin: maybe(delta, "halfExtentsMin", checkVec3, VMath.v3BuildZero),
+                    halfExtentsMax: maybe(delta, "halfExtentsMax", checkVec3, VMath.v3BuildOne)
                 };
             }, Types.copy.bind(null, DefaultParticleEmitter.template.position)),
             // Typescript compiler infers this next field as type {} erroneously... siigh.
@@ -5175,18 +5622,9 @@ var DefaultParticleEmitter = (function () {
                 }
 
                 Parser.extraFields(error, "default emitter archetype velocity", delta, [
-                    "theta",
-                    "phi",
-                    "speedMin",
-                    "speedMax",
-                    "flatSpread",
-                    "flatSpreadAngle",
-                    "flatSpreadDistribution",
-                    "flatSpreadSigma",
-                    "conicalSpread",
-                    "conicalSpreadDistribution",
-                    "conicalSpreadSigma"
-                ]);
+                    "theta", "phi", "speedMin", "speedMax", "flatSpread", "flatSpreadAngle",
+                    "flatSpreadDistribution", "flatSpreadSigma", "conicalSpread", "conicalSpreadDistribution",
+                    "conicalSpreadSigma"]);
 
                 return {
                     theta: maybe(delta, "theta", checkNum, val(0)),
@@ -5239,6 +5677,29 @@ var DefaultParticleEmitter = (function () {
         thisParticle.lifeTimeMax = max;
     };
 
+    DefaultParticleEmitter.getMaxLifeTime = function (archetype, emitter) {
+        if (emitter.particle.useAnimationLifeTime) {
+            var particleDefn = archetype.context.particleDefns[emitter.particle.name];
+            return emitter.particle.lifeTimeScaleMax * particleDefn.lifeTime;
+        } else {
+            return emitter.particle.lifeTimeMax;
+        }
+    };
+    DefaultParticleEmitter.getBurstCountTimeout = function (archetype, emitter, timeout) {
+        var maxLifeTime = DefaultParticleEmitter.getMaxLifeTime(archetype, emitter);
+        return Math.max(0, Math.floor(emitter.emittance.rate * (timeout - maxLifeTime - emitter.emittance.delay)));
+    };
+    DefaultParticleEmitter.getBurstCount = function (emitter, activeTime) {
+        return Math.max(0, Math.floor((activeTime - emitter.emittance.delay) * emitter.emittance.rate));
+    };
+    DefaultParticleEmitter.getTotalLifeTime = function (archetype, emitter, burstCount) {
+        if (burstCount === 0) {
+            return 0;
+        } else {
+            return emitter.emittance.delay + DefaultParticleEmitter.getMaxLifeTime(archetype, emitter) + (burstCount - 1) / emitter.emittance.rate;
+        }
+    };
+
     DefaultParticleEmitter.prototype.getMaxLifeTime = function () {
         return this.particle.lifeTimeMax;
     };
@@ -5256,9 +5717,11 @@ var DefaultParticleEmitter = (function () {
 
     DefaultParticleEmitter.eventFun = function (event, emitter, system) {
         system.createParticle(event.particle);
+        debug.assert(DefaultParticleEmitter.eventPool.indexOf(event) === -1);
         DefaultParticleEmitter.eventPool.push(event);
     };
     DefaultParticleEmitter.recycleFun = function (event) {
+        debug.assert(DefaultParticleEmitter.eventPool.indexOf(event) === -1);
         DefaultParticleEmitter.eventPool.push(event);
     };
 
@@ -5310,6 +5773,15 @@ var DefaultParticleEmitter = (function () {
         var fSigmaSqr = velocity.flatSpreadSigma * velocity.flatSpreadSigma;
         var fSigmaRecip = 1 / Math.sqrt(fSigmaSqr * 2 * Math.PI);
         var fSigmaMin = fSigmaRecip * Math.exp(-1 / (2 * fSigmaSqr));
+
+        var bMinExtents = position.halfExtentsMin;
+        var bMaxExtents = position.halfExtentsMax;
+        var bVt4 = (bMaxExtents[1] - bMinExtents[1]) * bMaxExtents[0] * bMaxExtents[2];
+        var bVs4 = (bMaxExtents[0] - bMinExtents[0]) * bMinExtents[1] * bMaxExtents[2];
+        var bVr4 = (bMaxExtents[2] - bMinExtents[2]) * bMinExtents[0] * bMinExtents[1];
+        var bV = 1 / (bVt4 + bVs4 + bVr4);
+        bVt4 = bVt4 * bV;
+        bVs4 = bVt4 + (bVs4 * bV);
 
         var eventPool = DefaultParticleEmitter.eventPool;
 
@@ -5364,20 +5836,24 @@ var DefaultParticleEmitter = (function () {
                 pos[0] = position.position[0];
                 pos[1] = position.position[1];
                 pos[2] = position.position[2];
-                if (position.radiusMax !== 0) {
+                if (position.radiusMax !== 0 || position.box) {
                     rand = 0;
-                    switch (position.radiusDistribution) {
-                        case "uniform":
-                            rand = random();
-                            break;
-                        case "normal":
-                            rand = random();
-                            rand = pSigmaRecip * exp(-rand * rand / (2 * pSigmaSqr));
+                    if (!position.box) {
+                        switch (position.radiusDistribution) {
+                            case "uniform":
+                                rand = random();
+                                break;
+                            case "normal":
+                                rand = random();
+                                rand = pSigmaRecip * exp(-rand * rand / (2 * pSigmaSqr));
 
-                            // normalise to [0, 1]
-                            rand = (rand - pSigmaMin) / (pSigmaRecip - pSigmaMin);
-                            break;
+                                // normalise to [0, 1]
+                                rand = (rand - pSigmaMin) / (pSigmaRecip - pSigmaMin);
+                                break;
+                        }
                     }
+
+                    var rx, rz, tx, ty, tz, normal, nx, ny, nz, rec;
                     if (position.spherical) {
                         // uniform distribution of spherical angles in sphere.
                         theta = acos(1 - (random() * 2));
@@ -5394,22 +5870,62 @@ var DefaultParticleEmitter = (function () {
                         pos[0] += cosp * sint * rad;
                         pos[1] += cost * rad;
                         pos[2] += sinp * sint * rad;
+                    } else if (position.box) {
+                        normal = position.normal;
+                        nx = normal[0];
+                        ny = normal[1];
+                        nz = normal[2];
+                        if (nx == 0 && nz == 0) {
+                            rz = tx = 1;
+                            rx = tz = ty = 0;
+                        } else {
+                            rec = 1 / sqrt(nx * nx + nz * nz);
+                            rx = -nz * rec;
+                            rz = nx * rec;
+
+                            tx = -rz * ny;
+                            ty = (rz * nx) - (rx * nz);
+                            tz = rx * ny;
+                            rec = 1 / sqrt(tx * tx + ty * ty + tz * tz);
+                            tx *= rec;
+                            ty *= rec;
+                            tz *= rec;
+                        }
+
+                        rand = random();
+                        var bx = random() * 2 - 1;
+                        var by = random() * 2 - 1;
+                        var bz = random() * 2 - 1;
+                        if (rand < bVt4) {
+                            bx *= bMaxExtents[0];
+                            by = by * bMaxExtents[1] + ((by >= 0 ? 1 : -1) - by) * bMinExtents[1];
+                            bz *= bMaxExtents[2];
+                        } else if (rand < bVs4) {
+                            bx = bx * bMaxExtents[0] + ((bx >= 0 ? 1 : -1) - bx) * bMinExtents[0];
+                            by *= bMinExtents[1];
+                            bz *= bMaxExtents[2];
+                        } else {
+                            bx *= bMinExtents[0];
+                            by *= bMinExtents[1];
+                            bz = bz * bMaxExtents[2] + ((bz >= 0 ? 1 : -1) - bz) * bMinExtents[2];
+                        }
+                        pos[0] += (by * nx) + (bx * tx) + (bz * rx);
+                        pos[1] += (by * ny) + (bx * ty);
+                        pos[2] += (by * nz) + (bx * tz) + (bz * rz);
                     } else {
                         // Re-distribute radius for area element.
                         rand = sqrt(rand);
                         rad = position.radiusMin + rand * (position.radiusMax - position.radiusMin);
 
-                        var rx, rz;
-                        var tx, ty, tz;
-                        var normal = position.normal;
-                        var nx = normal[0];
-                        var ny = normal[1];
-                        var nz = normal[2];
+                        normal = position.normal;
+                        nx = normal[0];
+                        ny = normal[1];
+                        nz = normal[2];
                         if (nx == 0 && nz == 0) {
                             rx = tz = rad;
                             rz = tx = ty = 0;
                         } else {
-                            var rec = rad / sqrt(nx * nx + nz * nz);
+                            rec = rad / sqrt(nx * nx + nz * nz);
                             rx = -nz * rec;
                             rz = nx * rec;
 
@@ -5440,6 +5956,8 @@ var DefaultParticleEmitter = (function () {
                 sinp = sin(phi);
                 cosp = cos(phi);
 
+                // local y-axis becomes target direction after circular spread
+                // and base direction rotation.
                 if (velocity.conicalSpread !== 0) {
                     rand = 0;
                     switch (velocity.conicalSpreadDistribution) {
@@ -5497,6 +6015,7 @@ var DefaultParticleEmitter = (function () {
                             // normalise to [0,1]
                             rand = (rand - fSigmaMin) / (fSigmaRecip - fSigmaMin);
 
+                            // negate if required, bringing range to [-1, 1]
                             if (frand < 0)
                                 rand = -rand;
                             break;
@@ -5515,6 +6034,7 @@ var DefaultParticleEmitter = (function () {
                     y1 = y1n;
                 }
 
+                // rotate around (base-rotated) y-axis for direction of spread
                 if (velocity.flatSpreadAngle !== 0) {
                     d = velocity.flatSpreadAngle;
                     s = sin(d);
@@ -5578,7 +6098,7 @@ var DefaultParticleEmitter = (function () {
         var emittance = this.emittance;
         var particle = this.particle;
         var burstCount = emittance.rate * (timeout - particle.lifeTimeMax - emittance.delay);
-        this.burst(burstCount);
+        this.burst(Math.max(Math.floor(burstCount), 0));
     };
     DefaultParticleEmitter.template = {
         forceCreation: false,
@@ -5606,7 +6126,10 @@ var DefaultParticleEmitter = (function () {
             radiusMin: 0,
             radiusMax: 0,
             radiusDistribution: "uniform",
-            radiusSigma: 0.25
+            radiusSigma: 0.25,
+            box: false,
+            halfExtentsMin: [0, 0, 0],
+            halfExtentsMax: [1, 1, 1]
         },
         velocity: {
             theta: 0,
@@ -5629,6 +6152,7 @@ var DefaultParticleEmitter = (function () {
     DefaultParticleEmitter.createParticleDefns = { "#": { animationRange: [0, 1] } };
     return DefaultParticleEmitter;
 })();
+
 
 //
 // ParticleManager
@@ -5723,7 +6247,11 @@ var ParticleManager = (function () {
 
         ret.registerRenderer("opaque", DefaultParticleRenderer.parseArchetype, DefaultParticleRenderer.compressArchetype, DefaultParticleRenderer.load, DefaultParticleRenderer.create.bind(null, graphicsDevice, shaderManager, "opaque"), "default");
 
-        ret.registerUpdater("default", DefaultParticleUpdater.parseArchetype, DefaultParticleUpdater.compressArchetype, DefaultParticleUpdater.load, DefaultParticleUpdater.create.bind(null, graphicsDevice, shaderManager));
+        ret.registerUpdater("default", DefaultParticleUpdater.parseArchetype, DefaultParticleUpdater.compressArchetype, DefaultParticleUpdater.load, DefaultParticleUpdater.create.bind(null, graphicsDevice, shaderManager, "clamped"));
+
+        ret.registerUpdater("clamped", DefaultParticleUpdater.parseArchetype, DefaultParticleUpdater.compressArchetype, DefaultParticleUpdater.load, DefaultParticleUpdater.create.bind(null, graphicsDevice, shaderManager, "clamped"));
+
+        ret.registerUpdater("wrapped", DefaultParticleUpdater.parseArchetype, DefaultParticleUpdater.compressArchetype, DefaultParticleUpdater.load, DefaultParticleUpdater.create.bind(null, graphicsDevice, shaderManager, "wrapped"));
 
         ret.registerAnimationSystem("default", [
             {
@@ -5747,7 +6275,8 @@ var ParticleManager = (function () {
             {
                 name: "frame",
                 type: "texture0",
-                "default": 0
+                "default": 0,
+                compress: "half"
             }
         ]);
 
@@ -5758,11 +6287,13 @@ var ParticleManager = (function () {
 
         ret.registerSynchronizer("default", DefaultParticleSynchronizer.parseArchetype, DefaultParticleSynchronizer.compressArchetype, DefaultParticleSynchronizer.create.bind(null, {}));
 
-        ret.registerEmitter("default", DefaultParticleEmitter.parseArchetype, DefaultParticleEmitter.compressArchetype, DefaultParticleEmitter.create);
+        ret.registerEmitter("default", DefaultParticleEmitter.parseArchetype, DefaultParticleEmitter.compressArchetype, DefaultParticleEmitter.getBurstCount, DefaultParticleEmitter.getTotalLifeTime, DefaultParticleEmitter.create);
 
         ret.timerCb = function () {
             return ret.time;
         };
+
+        ret._burstScratchpad = [];
 
         return ret;
     };
@@ -5781,7 +6312,7 @@ var ParticleManager = (function () {
                     var instance = instances[i];
                     metrics.push({
                         instance: instance,
-                        allocated: (instance.system),
+                        allocated: instance.system,
                         active: instance.system && instance.system.lastTime === time
                     });
                 }
@@ -5993,11 +6524,13 @@ var ParticleManager = (function () {
         ret.name = name;
         return ret;
     };
-    ParticleManager.prototype.registerEmitter = function (name, parser, compressor, generator) {
+    ParticleManager.prototype.registerEmitter = function (name, parser, compressor, getBurstCount, getTotalLifeTime, generator) {
         this.emitters[name] = {
             parseArchetype: parser,
             compressArchetype: compressor,
             value: generator,
+            getBurstCount: getBurstCount,
+            getTotalLifeTime: getTotalLifeTime,
             pool: []
         };
     };
@@ -6039,11 +6572,26 @@ var ParticleManager = (function () {
                     onload(archetype);
                 }
             };
+
+            // prevent multiple requests for same resource as what is technically a bug
+            // in texturemanager/shadermanager etc prevents the loaded callback being
+            // called multiple times when the same resource is requested for this archetype
+            // leading to us never knowing the particle system finished loading.
+            var requested = {};
+
             textureLoad = function (path) {
+                if (requested.hasOwnProperty(path)) {
+                    return;
+                }
+                requested[path] = true;
                 requestCount += 1;
                 self.textureManager.load(path, undefined, loaded);
             };
             shaderLoad = function (path) {
+                if (requested.hasOwnProperty(path)) {
+                    return;
+                }
+                requested[path] = true;
                 requestCount += 1;
                 self.shaderManager.load(path, loaded);
             };
@@ -6076,6 +6624,10 @@ var ParticleManager = (function () {
             }
         }
 
+        // deal with artifically setting requestCount to 1 at start.
+        // if everything loaded synchronously, onload will be called here.
+        // if not, it will allow the asynchrous loading of requested assets
+        // above to invoke it when required.
         if (loaded) {
             loaded();
         }
@@ -6092,6 +6644,7 @@ var ParticleManager = (function () {
         }
 
         context = {};
+        debug.assert(this.archetypes.indexOf(archetype) === -1);
         this.archetypes.push(archetype);
 
         var textureManager = this.textureManager;
@@ -6198,7 +6751,106 @@ var ParticleManager = (function () {
         archetype.context = context;
     };
 
-    ParticleManager.prototype.createInstance = function (archetype, timeout) {
+    ParticleManager.prototype.createTimedInstance = function (archetype, lifeTime, baseTechniqueParametersList) {
+        var burstCounts = this._burstScratchpad;
+        var emitters = archetype.emitters;
+        var numEmitters = emitters.length;
+        var i, emitter, timeout = 0.0;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitter = emitters[i];
+            var emitterType = this.emitters[emitter.name];
+            burstCounts[i] = emitterType.getBurstCount(emitter, lifeTime);
+            timeout = Math.max(timeout, emitterType.getTotalLifeTime(archetype, emitter, burstCounts[i]));
+        }
+
+        var instance = this.createInstance(archetype, timeout, baseTechniqueParametersList);
+        emitters = instance.synchronizer.emitters;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitters[i].burst(burstCounts[i]);
+        }
+
+        return instance;
+    };
+
+    ParticleManager.prototype.createBurstInstance = function (archetype, burstCount, baseTechniqueParametersList) {
+        if (typeof burstCount === "undefined") { burstCount = 1; }
+        var emitters = archetype.emitters;
+        var numEmitters = emitters.length;
+        var i, emitter, timeout = 0.0;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitter = emitters[i];
+            var emitterType = this.emitters[emitter.name];
+            timeout = Math.max(timeout, emitterType.getTotalLifeTime(archetype, emitter, burstCount));
+        }
+
+        var instance = this.createInstance(archetype, timeout, baseTechniqueParametersList);
+        emitters = instance.synchronizer.emitters;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitters[i].burst(burstCount);
+        }
+
+        return instance;
+    };
+
+    ParticleManager.prototype.createMultiBurstInstance = function (archetype, burstCounts, baseTechniqueParametersList) {
+        var emitters = archetype.emitters;
+        var numEmitters = emitters.length;
+        debug.assert(burstCounts.length === numEmitters);
+
+        var i, emitter, timeout = 0.0;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitter = emitters[i];
+            var emitterType = this.emitters[emitter.name];
+            timeout = Math.max(timeout, emitterType.getTotalLifeTime(archetype, emitter, burstCounts[i]));
+        }
+
+        var instance = this.createInstance(archetype, timeout, baseTechniqueParametersList);
+        emitters = instance.synchronizer.emitters;
+        for (i = 0; i < numEmitters; i += 1) {
+            emitters[i].burst(burstCounts[i]);
+        }
+
+        return instance;
+    };
+
+    ParticleManager.prototype.createChildInstance = function (parentInstance, timeout, baseTechniqueParametersList) {
+        if (parentInstance.parent) {
+            parentInstance = parentInstance.parent;
+        }
+
+        var archetype = parentInstance.archetype;
+        var context = archetype.context;
+
+        var pool = context.instancePool;
+        var instance;
+        if (pool.length > 0) {
+            instance = pool.pop();
+        } else {
+            instance = this.createNewInstance(archetype);
+        }
+        instance.renderable.setBaseTechniqueParameters(baseTechniqueParametersList);
+
+        debug.assert(instance !== parentInstance);
+        instance.parent = parentInstance;
+        if (!parentInstance.children) {
+            parentInstance.children = [];
+        }
+        debug.assert(parentInstance.children.indexOf(instance) === -1);
+        parentInstance.children.push(instance);
+
+        timeout = (timeout === undefined ? parentInstance.timeout : timeout);
+        instance.queued = (timeout !== undefined && timeout !== Number.POSITIVE_INFINITY);
+        instance.creationTime = this.timerCb();
+        if (instance.queued) {
+            this.queue.insert(instance, timeout);
+        }
+        debug.assert(context.instances.indexOf(instance) === -1);
+        context.instances.push(instance);
+
+        return instance;
+    };
+
+    ParticleManager.prototype.createInstance = function (archetype, timeout, baseTechniqueParametersList) {
         this.initializeArchetype(archetype);
         var context = archetype.context;
 
@@ -6209,13 +6861,18 @@ var ParticleManager = (function () {
         } else {
             instance = this.createNewInstance(archetype);
         }
+
+        instance.parent = null;
+        instance.timeout = timeout;
+        instance.renderable.setBaseTechniqueParameters(baseTechniqueParametersList);
         this.buildSynchronizer(archetype, instance);
 
-        instance.queued = (timeout !== undefined);
+        instance.queued = (timeout !== undefined && timeout !== Number.POSITIVE_INFINITY);
         instance.creationTime = this.timerCb();
         if (instance.queued) {
             this.queue.insert(instance, timeout);
         }
+        debug.assert(context.instances.indexOf(instance) === -1);
         context.instances.push(instance);
 
         var emitters = instance.synchronizer.emitters;
@@ -6235,16 +6892,35 @@ var ParticleManager = (function () {
 
     ParticleManager.prototype.destroyInstance = function (instance, removedFromQueue) {
         if (typeof removedFromQueue === "undefined") { removedFromQueue = false; }
+        var children = instance.children;
+        if (children) {
+            var numChildren = children.length;
+            for (var i = 0; i < numChildren; i += 1) {
+                this.destroyInstance(children[i]);
+            }
+            instance.children.length = 0;
+        }
+
         var archetype = instance.archetype;
         var context = archetype.context;
 
         this.removeInstanceFromScene(instance);
-        this.releaseSynchronizer(instance);
+        var parent = instance.parent;
+        if (parent) {
+            children = parent.children;
+            debug.assert(children.indexOf(instance) !== -1);
+            children.splice(children.indexOf(instance), 1);
+        } else {
+            this.releaseSynchronizer(instance);
+        }
 
         var renderable = instance.renderable;
         renderable.releaseViews(this.viewPool.push.bind(this.viewPool));
         if (renderable.system) {
-            context.systemPool.push(renderable.system);
+            if (!parent) {
+                debug.assert(context.systemPool.indexOf(renderable.system) === -1);
+                context.systemPool.push(renderable.system);
+            }
             renderable.setSystem(null);
         }
         renderable.setLocalTransform(ParticleManager.m43Identity);
@@ -6252,7 +6928,9 @@ var ParticleManager = (function () {
         instance.system = null;
 
         var instances = context.instances;
+        debug.assert(instances.indexOf(instance) !== -1);
         instances.splice(instances.indexOf(instance), 1);
+        debug.assert(context.instancePool.indexOf(instance) === -1);
         context.instancePool.push(instance);
 
         if (instance.queued && !removedFromQueue) {
@@ -6262,9 +6940,7 @@ var ParticleManager = (function () {
 
     ParticleManager.prototype.addInstanceToScene = function (instance, parent) {
         var sceneNode = instance.sceneNode;
-        if (sceneNode.isInScene()) {
-            this.removeInstanceFromScene(instance);
-        }
+        this.removeInstanceFromScene(instance);
 
         if (parent) {
             parent.addChild(sceneNode);
@@ -6277,19 +6953,28 @@ var ParticleManager = (function () {
 
     ParticleManager.prototype.removeInstanceFromScene = function (instance) {
         var sceneNode = instance.sceneNode;
-        if (sceneNode.isInScene()) {
-            if (sceneNode.getRoot() === sceneNode) {
-                this.scene.removeRootNode(sceneNode);
-            } else {
-                var parent = sceneNode.getParent();
-                if (parent) {
-                    parent.removeChild(sceneNode);
-                }
-            }
+        var parent = sceneNode.parent;
+        if (parent) {
+            parent.removeChild(sceneNode);
+            return true;
+        } else if (sceneNode.scene) {
+            sceneNode.scene.removeRootNode(sceneNode);
+            return true;
+        } else {
+            return false;
         }
     };
 
     ParticleManager.prototype.getSystem = function (archetype, instance) {
+        if (instance.system) {
+            return instance.system;
+        }
+
+        var parent = instance.parent;
+        if (parent) {
+            return this.getSystem(archetype, parent);
+        }
+
         var context = archetype.context;
         var pool = context.systemPool;
         var system;
@@ -6353,7 +7038,16 @@ var ParticleManager = (function () {
 
     ParticleManager.prototype.createNewInstance = function (archetype) {
         var instance = {
-            archetype: archetype
+            archetype: archetype,
+            system: null,
+            renderable: null,
+            synchronizer: null,
+            queued: false,
+            creationTime: -1.0,
+            lazySystem: null,
+            parent: null,
+            children: null,
+            timeout: undefined
         };
         this.buildParticleSceneNode(archetype, instance);
         return instance;
@@ -6377,15 +7071,20 @@ var ParticleManager = (function () {
             var instance = instances.pop();
 
             // Partially recycle instance.
-            var parent = instance.sceneNode.getParent();
-            this.removeInstanceFromScene(instance);
+            var parent = instance.sceneNode.parent;
+            var inScene = this.removeInstanceFromScene(instance);
 
-            this.releaseSynchronizer(instance);
+            if (!instance.parent) {
+                this.releaseSynchronizer(instance);
+            }
 
             var renderable = instance.renderable;
             renderable.releaseViews(this.viewPool.push.bind(this.viewPool));
             if (renderable.system) {
-                context.systemPool.push(renderable.system);
+                if (!instance.parent) {
+                    debug.assert(context.systemPool.indexOf(renderable.system) === -1);
+                    context.systemPool.push(renderable.system);
+                }
                 renderable.setSystem(null);
             }
             instance.system = null;
@@ -6395,10 +7094,14 @@ var ParticleManager = (function () {
             var lazySystem = this.getSystem.bind(this, newArchetype, instance);
             renderable.setLazySystem(lazySystem, newArchetype.system.center, newArchetype.system.halfExtents);
 
-            this.buildSynchronizer(newArchetype, instance);
+            if (!instance.parent) {
+                this.buildSynchronizer(newArchetype, instance);
+            }
             newInstances.push(instance);
 
-            this.addInstanceToScene(instance, parent);
+            if (inScene) {
+                this.addInstanceToScene(instance, parent);
+            }
         }
     };
 
@@ -6454,6 +7157,7 @@ var ParticleManager = (function () {
             return;
         }
 
+        debug.assert(this.archetypes.indexOf(archetype) !== -1);
         this.archetypes.splice(this.archetypes.indexOf(archetype), 1);
 
         var instances = context.instances;
@@ -6464,14 +7168,20 @@ var ParticleManager = (function () {
 
             // Partially recycle instance.
             this.removeInstanceFromScene(instance);
-            this.releaseSynchronizer(instance);
+            if (!instance.parent) {
+                this.releaseSynchronizer(instance);
+            }
             var renderable = instance.renderable;
             renderable.releaseViews(this.viewPool.push.bind(this.viewPool));
-            this.queue.remove(instance);
+            if (instance.queued) {
+                this.queue.remove(instance);
+            }
             if (renderable.system) {
                 var system = renderable.system;
                 renderable.setSystem(null);
-                system.destroy();
+                if (!instance.parent) {
+                    system.destroy();
+                }
             }
         }
 
@@ -6538,10 +7248,12 @@ var ParticleManager = (function () {
             synchronizer.removeEmitter(emitter);
 
             emitter.reset();
+            debug.assert(this.emitters[emitter.name].pool.indexOf(emitter) === -1);
             this.emitters[emitter.name].pool.push(emitter);
         }
 
         synchronizer.reset();
+        debug.assert(this.synchronizers[synchronizer.name].pool.indexOf(synchronizer) === -1);
         this.synchronizers[synchronizer.name].pool.push(synchronizer);
     };
 
@@ -6594,8 +7306,8 @@ var ParticleManager = (function () {
         instance.synchronizer = synchronizer;
     };
 
-    ParticleManager.JSONreplacer = // Replace typed array with standard JS array of values for JSON serialization
-    function (key, value) {
+    // Replace typed array with standard JS array of values for JSON serialization
+    ParticleManager.JSONreplacer = function (key, value) {
         if (Types.isTypedArray(value)) {
             var vals = [];
             var i;
@@ -6780,6 +7492,7 @@ var ParticleManager = (function () {
             throw "Renderer with name " + synchronizerName + " has not been registered with manager";
         }
 
+        // delete extra name fields before parsing sub-archetypes.
         if (delta && delta.renderer) {
             delete delta.renderer.name;
         }
@@ -6989,6 +7702,7 @@ var ParticleManager = (function () {
         archetype.updater.name = updaterName;
         archetype.synchronizer.name = synchronizerName;
 
+        // add names back to original delta to avoid destroying it.
         if (delta && delta.renderer) {
             delta.renderer.name = rendererName;
         }
@@ -7006,7 +7720,7 @@ var ParticleManager = (function () {
         return archetype;
     };
 
-    ParticleManager.recordDelta = // Build an object delta of the given object from a template.
+    // Build an object delta of the given object from a template.
     // Assumption that the object has a structure matching the template exactly except
     // that objects are permitted to have extra fields
     //
@@ -7016,7 +7730,9 @@ var ParticleManager = (function () {
     //         o
     //    | Array ->
     //         let del = zipWith delta t o in
-    //         if (all (= null) del) then null else del
+    //         if (all (= null) del) then null
+    //         else if (t is floatarray) replace_null_with_default(del)
+    //         else del
     //    | Object ->
     //         let o = filter(hasField t) o in
     //         let del = filter (.!= null) $ zipFieldsWith delta t o ^ filter(!hasField t) o
@@ -7031,7 +7747,7 @@ var ParticleManager = (function () {
     // delta {xs: function () { return {x: 10, y: [20, 30] }; }, y: null}
     //       {xs: [{x: 10, y: [20, 30]}, {x: 20, y: [10, 30]}, {x: 20, y: [20, 30]}], y: "hello"}
     //     = {xs: [null, {x: 20, y: [10, null]}, {x: 20}], y: "hello"}
-    function (template, obj) {
+    ParticleManager.recordDelta = function (template, obj) {
         var allZero = true;
         var count, i, delta;
         if (Types.isNullUndefined(template)) {
@@ -7040,11 +7756,15 @@ var ParticleManager = (function () {
         } else if (Types.isArray(template)) {
             delta = [];
             count = template.length;
+            var dontStoreNulls = Types.isTypedArray(template) || Types.isArrayOfNumbers(template);
             for (i = 0; i < count; i += 1) {
-                delta.push(this.recordDelta(template[i], obj[i]));
-                if (!Types.isNullUndefined(delta[i])) {
+                var del = this.recordDelta(template[i], obj[i]);
+                if (!Types.isNullUndefined(del)) {
                     allZero = false;
+                } else if (dontStoreNulls) {
+                    del = template[i];
                 }
+                delta[i] = del;
             }
         } else if (Types.isObject(template)) {
             allZero = true;

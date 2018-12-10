@@ -29,25 +29,35 @@ var Utilities = {
     // log
     //
     log: function logFn(a, b) {
-        var console = window.console;
-        if (console) {
+        // plugin does not have a "console" object
+        // web workers do not have a "window" object
+        var consoleObj;
+
+        if (typeof console !== 'undefined') {
+            consoleObj = console;
+        }
+        if (typeof window !== 'undefined') {
+            consoleObj = window.console;
+        }
+
+        if (consoleObj) {
             switch (arguments.length) {
                 case 1:
-                    console.log(arguments[0]);
+                    consoleObj.log(arguments[0]);
                     break;
                 case 2:
-                    console.log(arguments[0], arguments[1]);
+                    consoleObj.log(arguments[0], arguments[1]);
                     break;
                 case 3:
-                    console.log(arguments[0], arguments[1], arguments[2]);
+                    consoleObj.log(arguments[0], arguments[1], arguments[2]);
                     break;
                 case 4:
-                    console.log(arguments[0], arguments[1], arguments[2], arguments[3]);
+                    consoleObj.log(arguments[0], arguments[1], arguments[2], arguments[3]);
                     break;
                 default:
                     // Note: this will fail if using printf-style string formatting
                     var args = [].splice.call(arguments, 0);
-                    console.log(args.join(' '));
+                    consoleObj.log(args.join(' '));
                     break;
             }
         }
@@ -84,6 +94,7 @@ var Utilities = {
         var url = params.url;
         var requestHandler = params.requestHandler;
         var callbackFn = params.callback;
+        var withCredentials = params.enableCORSCredentials;
 
         if (encrypted) {
             data.requestUrl = url;
@@ -106,11 +117,7 @@ var Utilities = {
                     if (requestText.length !== 0) {
                         requestText += "&";
                     }
-                    if (method === "POST") {
-                        requestText += key + "=" + data[key];
-                    } else {
-                        requestText += encodeURIComponent(key) + "=" + encodeURIComponent(data[key]);
-                    }
+                    requestText += encodeURIComponent(key) + "=" + encodeURIComponent(data[key]);
                 }
             }
         }
@@ -145,6 +152,7 @@ var Utilities = {
                             }
                         }
 
+                        // If it was a server-side verification fail then pass through the actual message
                         if (xhrStatus === 400) {
                             callbackFn(response, xhrStatus, "Verification Failed");
                         } else {
@@ -168,6 +176,11 @@ var Utilities = {
             var xhr;
             if (window.XMLHttpRequest) {
                 xhr = new window.XMLHttpRequest();
+
+                // If the XMLHTTPRequest supports CORS credentials and the params asks for them enable it
+                if (withCredentials && "withCredentials" in xhr) {
+                    xhr.withCredentials = true;
+                }
             } else if (window.ActiveXObject) {
                 xhr = new window.ActiveXObject("Microsoft.XMLHTTP");
             } else {
@@ -186,6 +199,10 @@ var Utilities = {
                     // Checking xhrStatusText when xhrStatus is 0 causes a silent error!
                     var xhrStatusText = (xhrStatus !== 0 && xhr.statusText) || "No connection or cross domain request";
 
+                    // Sometimes the browser sets status to 200 OK when the connection is closed
+                    // before the message is sent (weird!).
+                    // In order to address this we fail any completely empty responses.
+                    // Hopefully, nobody will get a valid response with no headers and no body!
                     if (xhr.getAllResponseHeaders() === "" && xhrResponseText === "" && xhrStatus === 200 && xhrStatusText === 'OK') {
                         onload('', 0);
                         return;
@@ -307,101 +324,51 @@ var MathDeviceConvert = /* tslint:enable:no-unused-variable */
     },
     aabbToArray: function aabbToJavaScriptArrayFn(aabb) {
         return [
-            aabb[0],
-            aabb[1],
-            aabb[2],
-            aabb[3],
-            aabb[4],
-            aabb[5]
-        ];
+            aabb[0], aabb[1], aabb[2],
+            aabb[3], aabb[4], aabb[5]];
     },
     arrayToAABB: function arrayToQuatFn(mathDevice, aabbArray, aabbDest) {
         return mathDevice.aabbBuild(aabbArray[0], aabbArray[1], aabbArray[2], aabbArray[3], aabbArray[4], aabbArray[5], aabbDest);
     },
     quatPosToArray: function quatPosToJavaScriptArrayFn(quatPos) {
         return [
-            quatPos[0],
-            quatPos[1],
-            quatPos[2],
-            quatPos[3],
-            quatPos[4],
-            quatPos[5],
-            quatPos[6]
-        ];
+            quatPos[0], quatPos[1], quatPos[2], quatPos[3],
+            quatPos[4], quatPos[5], quatPos[6]];
     },
     arrayToQuatPos: function arrayToQuatPosFn(mathDevice, quatPosArray, quatPosDest) {
         return mathDevice.quatPosBuild(quatPosArray[0], quatPosArray[1], quatPosArray[2], quatPosArray[3], quatPosArray[4], quatPosArray[5], quatPosArray[6], quatPosDest);
     },
     m33ToArray: function m33ToJavaScriptArrayFn(m33) {
         return [
-            m33[0],
-            m33[1],
-            m33[2],
-            m33[3],
-            m33[4],
-            m33[5],
-            m33[6],
-            m33[7],
-            m33[8]
-        ];
+            m33[0], m33[1], m33[2],
+            m33[3], m33[4], m33[5],
+            m33[6], m33[7], m33[8]];
     },
     arrayToM33: function arrayToM33Fn(mathDevice, m33Array, m33Dest) {
         return mathDevice.m33Build(m33Array[0], m33Array[1], m33Array[2], m33Array[3], m33Array[4], m33Array[5], m33Array[6], m33Array[7], m33Array[8], m33Dest);
     },
     m43ToArray: function m43ToJavaScriptArrayFn(m43) {
         return [
-            m43[0],
-            m43[1],
-            m43[2],
-            m43[3],
-            m43[4],
-            m43[5],
-            m43[6],
-            m43[7],
-            m43[8],
-            m43[9],
-            m43[10],
-            m43[11]
-        ];
+            m43[0], m43[1], m43[2],
+            m43[3], m43[4], m43[5],
+            m43[6], m43[7], m43[8],
+            m43[9], m43[10], m43[11]];
     },
     arrayToM43: function arrayToM43Fn(mathDevice, m43Array, m43Dest) {
         return mathDevice.m43Build(m43Array[0], m43Array[1], m43Array[2], m43Array[3], m43Array[4], m43Array[5], m43Array[6], m43Array[7], m43Array[8], m43Array[9], m43Array[10], m43Array[11], m43Dest);
     },
     m34ToArray: function m34ToJavaScriptArrayFn(m34) {
         return [
-            m34[0],
-            m34[1],
-            m34[2],
-            m34[3],
-            m34[4],
-            m34[5],
-            m34[6],
-            m34[7],
-            m34[8],
-            m34[9],
-            m34[10],
-            m34[11]
-        ];
+            m34[0], m34[1], m34[2], m34[3],
+            m34[4], m34[5], m34[6], m34[7],
+            m34[8], m34[9], m34[10], m34[11]];
     },
     m44ToArray: function m44ToJavaScriptArrayFn(m44) {
         return [
-            m44[0],
-            m44[1],
-            m44[2],
-            m44[3],
-            m44[4],
-            m44[5],
-            m44[6],
-            m44[7],
-            m44[8],
-            m44[9],
-            m44[10],
-            m44[11],
-            m44[12],
-            m44[13],
-            m44[14],
-            m44[15]
-        ];
+            m44[0], m44[1], m44[2], m44[3],
+            m44[4], m44[5], m44[6], m44[7],
+            m44[8], m44[9], m44[10], m44[11],
+            m44[12], m44[13], m44[14], m44[15]];
     },
     arrayToM44: function arrayToM44Fn(mathDevice, m44Array, m44Dest) {
         return mathDevice.m44Build(m44Array[0], m44Array[1], m44Array[2], m44Array[3], m44Array[4], m44Array[5], m44Array[6], m44Array[7], m44Array[8], m44Array[9], m44Array[10], m44Array[11], m44Array[12], m44Array[13], m44Array[14], m44Array[15], m44Dest);
@@ -453,10 +420,10 @@ var Reference = (function () {
         this.destroyedObserver.unsubscribe(observerFunction);
     };
 
-    Reference.create = //
+    //
     // create
     //
-    function (object) {
+    Reference.create = function (object) {
         var result = new Reference();
         result.object = object;
         result.referenceCount = 0;
@@ -593,7 +560,7 @@ JSProfiling.createArray = function JSProfilingCreateArrayFn(rootNode) {
     var array = [];
 
     if (rootNode.head) {
-        rootNode = rootNode.head;
+        rootNode = rootNode.head; // Chrome native profiler.
     }
 
     var processNode = function processNodeFn(node) {

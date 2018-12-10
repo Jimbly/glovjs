@@ -1,4 +1,5 @@
 // Copyright (c) 2009-2014 Turbulenz Limited
+
 //
 // ForwardRendering
 //
@@ -6,13 +7,8 @@ var ForwardRendering = (function () {
     function ForwardRendering() {
         /* tslint:enable:no-unused-variable */
         this.passIndex = {
-            fillZ: 0,
-            glow: 1,
-            ambient: 2,
-            shadow: 3,
-            diffuse: 4,
-            decal: 5,
-            transparent: 6
+            fillZ: 0, glow: 1, ambient: 2,
+            shadow: 3, diffuse: 4, decal: 5, transparent: 6
         };
     }
     //minPixelCount: 16,
@@ -135,6 +131,7 @@ var ForwardRendering = (function () {
                 if (0.0 < sortDistance) {
                     sortDistance *= invMaxDistance;
 
+                    // Make sure it is lower than 1.0 to avoid changing the integer part of sortKey
                     if (0.999 < sortDistance) {
                         sortDistance = 0.999;
                     }
@@ -454,7 +451,7 @@ var ForwardRendering = (function () {
         return (0 < numVisibleDrawParameters);
     };
 
-    ForwardRendering.prototype.directionalLightsUpdateVisibleRenderables = function (gd/*, scene */ ) {
+    ForwardRendering.prototype.directionalLightsUpdateVisibleRenderables = function (gd /*, scene */ ) {
         var globalDirectionalLights = this.globalDirectionalLights;
         var numGlobalDirectionalLights = globalDirectionalLights.length;
         var visibleRenderables = this.visibleRenderables;
@@ -819,8 +816,7 @@ var ForwardRendering = (function () {
         /* tslint:enable:no-string-literal */
         gd.drawArray(this.passes[this.passIndex.ambient], [
             this.globalTechniqueParameters,
-            this.ambientTechniqueParameters
-        ], -1);
+            this.ambientTechniqueParameters], -1);
     };
 
     ForwardRendering.prototype.drawShadowMaps = function (gd, globalTechniqueParameters, lightInstances, shadowMaps, minExtentsHigh) {
@@ -843,6 +839,7 @@ var ForwardRendering = (function () {
             }
             light = lightInstance.light;
 
+            // TODO: pixel count test
             if (light.shadows && !light.ambient) {
                 shadowMaps.drawShadowMap(globalCameraMatrix, minExtentsHigh, lightInstance);
             }
@@ -886,6 +883,7 @@ var ForwardRendering = (function () {
 
         var globalTechniqueParametersArray = [globalTechniqueParameters];
 
+        // ambient and emissive pass
         if (clearColor && (clearColor[0] || clearColor[1] || clearColor[2] || clearColor[3] !== 1.0)) {
             if (!ambientColor) {
                 // Need to draw everything on black to cope with the external clear color
@@ -1038,8 +1036,8 @@ var ForwardRendering = (function () {
         delete this.md;
     };
 
-    ForwardRendering.create = // Constructor function
-    function (gd, md, shaderManager, effectManager, settings) {
+    // Constructor function
+    ForwardRendering.create = function (gd, md, shaderManager, effectManager, settings) {
         var fr = new ForwardRendering();
 
         fr.md = md;
@@ -1100,22 +1098,10 @@ var ForwardRendering = (function () {
             attributes: ['FLOAT2', 'FLOAT2'],
             dynamic: false,
             data: [
-                -1.0,
-                1.0,
-                0.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                0.0,
-                0.0,
-                1.0,
-                -1.0,
-                1.0,
-                0.0
+                -1.0, 1.0, 0.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+                -1.0, -1.0, 0.0, 0.0,
+                1.0, -1.0, 1.0, 0.0
             ]
         });
 
@@ -1216,6 +1202,9 @@ var ForwardRendering = (function () {
                 ForwardRendering.createNodeRendererInfo(node, md);
             }
 
+            //
+            // glow, lightmap, and fillZ. Only if no ambient
+            //
             if (sharedMaterialTechniqueParameters.glow_map || sharedMaterialTechniqueParameters.light_map) {
                 drawParameters = drawParameters = gd.createDrawParameters();
                 drawParameters.userData = fr.sharedUserData[fr.passIndex.glow];
@@ -1317,6 +1306,9 @@ var ForwardRendering = (function () {
                 drawParameters.setTechniqueParameters(numTechniqueParameters, geometryInstanceTechniqueParameters);
             }
 
+            //
+            // Ambient Pass, which also does glow and lightmap.
+            //
             if (!meta.transparent && !meta.decal) {
                 drawParameters = gd.createDrawParameters();
                 drawParameters.userData = fr.sharedUserData[fr.passIndex.ambient];
@@ -1390,6 +1382,7 @@ var ForwardRendering = (function () {
                 drawParameters.userData = fr.sharedUserData[fr.passIndex.transparent];
                 geometryInstance.drawParameters.push(drawParameters);
             } else {
+                // If technique name starts with "glowmap" or "lightmap" it is emissive only
                 if (0 === techniqueName.indexOf("glowmap") || 0 === techniqueName.indexOf("lightmap")) {
                     geometryInstance.diffuseDrawParameters = [];
                 } else {
@@ -1419,6 +1412,9 @@ var ForwardRendering = (function () {
                 }
             }
 
+            //
+            // shadow maps
+            //
             if (fr.shadowMaps) {
                 if (this.shadowMappingUpdate && !meta.noshadows) {
                     drawParameters = gd.createDrawParameters();
@@ -1511,11 +1507,11 @@ var ForwardRendering = (function () {
             geometryInstance.renderUpdate = this.update;
         };
 
-        var forwardBlendUpdate = function forwardBlendUpdateFn(/* camera */ ) {
+        var forwardBlendUpdate = function forwardBlendUpdateFn() {
             this.techniqueParameters.world = this.node.world;
         };
 
-        var forwardBlendSkinnedUpdate = function forwardBlendSkinnedUpdateFn(/* camera */ ) {
+        var forwardBlendSkinnedUpdate = function forwardBlendSkinnedUpdateFn() {
             var techniqueParameters = this.techniqueParameters;
             techniqueParameters.world = this.node.world;
             var skinController = this.skinController;
@@ -1525,12 +1521,12 @@ var ForwardRendering = (function () {
             }
         };
 
-        var forwardSkyboxUpdate = function forwardSkyboxUpdateFn(/* camera */ ) {
+        var forwardSkyboxUpdate = function forwardSkyboxUpdateFn() {
             this.techniqueParameters.world = this.node.world;
         };
 
         /* tslint:disable:max-line-length */
-        var forwardEnvUpdate = function forwardEnvUpdateFn(/* camera */ ) {
+        var forwardEnvUpdate = function forwardEnvUpdateFn() {
             var techniqueParameters = this.techniqueParameters;
             var node = this.node;
             var worldUpdate = node.worldUpdate;
@@ -1542,7 +1538,7 @@ var ForwardRendering = (function () {
             }
         };
 
-        var forwardEnvSkinnedUpdate = function forwardEnvSkinnedUpdateFn(/* camera */ ) {
+        var forwardEnvSkinnedUpdate = function forwardEnvSkinnedUpdateFn() {
             var techniqueParameters = this.techniqueParameters;
             var node = this.node;
             var worldUpdate = node.worldUpdate;
@@ -1574,7 +1570,7 @@ var ForwardRendering = (function () {
 
                     flareSemantics = gd.createSemantics(['POSITION', 'TEXCOORD']);
 
-                    flareVertexData = new VMathArrayConstructor(6 * (3 + 2));
+                    flareVertexData = new Float32Array(6 * (3 + 2));
 
                     flareMatrix = md.m43BuildIdentity();
                 }
@@ -1893,8 +1889,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1908,8 +1903,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1929,8 +1923,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1944,8 +1937,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1965,8 +1957,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_alphatest_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1980,8 +1971,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_alphatest_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2001,8 +1991,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_alphatest_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2016,8 +2005,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_alphatest_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2037,8 +2025,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_glowmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2052,8 +2039,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_glowmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2073,8 +2059,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_glowmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2088,8 +2073,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "rxgb_normalmap_specularmap_glowmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2107,8 +2091,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2120,8 +2103,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2136,8 +2118,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "add_particle",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2155,8 +2136,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2168,8 +2148,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2184,8 +2163,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "blend_particle",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2203,8 +2181,7 @@ var ForwardRendering = (function () {
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2216,8 +2193,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2232,8 +2208,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "translucent_particle",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2248,8 +2223,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "filter",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2258,8 +2232,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "filter_skinned",
             update: forwardBlendSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2274,8 +2247,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "invfilter",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2290,8 +2262,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "invfilter_particle",
             update: forwardBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2309,8 +2280,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2328,8 +2298,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2347,8 +2316,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2360,8 +2328,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2376,8 +2343,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "skybox",
             update: forwardSkyboxUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2395,8 +2361,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2408,8 +2373,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2424,8 +2388,7 @@ var ForwardRendering = (function () {
             shaderName: "shaders/forwardrendering.cgfx",
             techniqueName: "add",
             update: forwardFlareUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2445,8 +2408,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "blinn_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2460,8 +2422,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "blinn_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2481,8 +2442,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "blinn_shadows_nocull",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2496,8 +2456,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "blinn_skinned_shadows_nocull",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2517,8 +2476,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2532,8 +2490,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2553,8 +2510,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2568,8 +2524,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2589,8 +2544,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_alphamap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2604,8 +2558,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_alphamap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2625,8 +2578,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_alphatest_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2646,8 +2598,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_alphatest_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2661,8 +2612,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_alphatest_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2682,8 +2632,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_glowmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2697,8 +2646,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_glowmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2718,8 +2666,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_glowmap_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2733,8 +2680,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "normalmap_specularmap_glowmap_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2756,8 +2702,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2769,8 +2714,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2790,8 +2734,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "flat_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2805,8 +2748,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "flat_skinned_shadows",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2826,8 +2768,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "flat_shadows_nocull",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2841,8 +2782,7 @@ var ForwardRendering = (function () {
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
             shadowShaderName: "shaders/forwardrenderingshadows.cgfx",
             shadowTechniqueName: "flat_skinned_shadows_nocull",
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2860,8 +2800,7 @@ var ForwardRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 

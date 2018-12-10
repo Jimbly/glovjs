@@ -25,6 +25,7 @@ var DDSLoader = (function () {
         this.width = header.dwWidth;
         this.height = header.dwHeight;
 
+        /*jshint bitwise: false*/
         if ((header.dwCaps2 & this.DDSF_VOLUME) && (header.dwDepth > 0)) {
             this.depth = header.dwDepth;
         } else {
@@ -203,6 +204,7 @@ var DDSLoader = (function () {
             }
         }
 
+        /*jshint bitwise: true*/
         if (bytes.length < (offset + size)) {
             this.onerror(status);
             return;
@@ -434,18 +436,8 @@ var DDSLoader = (function () {
             dwDepth: readUInt32(),
             dwMipMapCount: readUInt32(),
             dwReserved1: [
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32(),
-                readUInt32()
-            ],
+                readUInt32(), readUInt32(), readUInt32(), readUInt32(), readUInt32(), readUInt32(),
+                readUInt32(), readUInt32(), readUInt32(), readUInt32(), readUInt32()],
             ddspf: parsePixelFormatHeader(),
             dwCaps1: readUInt32(),
             dwCaps2: readUInt32(),
@@ -1456,8 +1448,8 @@ var DDSLoader = (function () {
         return dst;
     };
 
-    DDSLoader.create = // Constructor function
-    function (params) {
+    // Constructor function
+    DDSLoader.create = function (params) {
         var loader = new DDSLoader();
         loader.gd = params.gd;
         loader.onload = params.onload;
@@ -1494,10 +1486,15 @@ var DDSLoader = (function () {
                         var xhrStatus = xhr.status;
                         var xhrStatusText = xhr.status !== 0 && xhr.statusText || 'No connection';
 
+                        // Fix for loading from file
                         if (xhrStatus === 0 && (window.location.protocol === "file:" || window.location.protocol === "chrome-extension:")) {
                             xhrStatus = 200;
                         }
 
+                        // Sometimes the browser sets status to 200 OK when the connection is closed
+                        // before the message is sent (weird!).
+                        // In order to address this we fail any completely empty responses.
+                        // Hopefully, nobody will get a valid response with no headers and no body!
                         if (xhr.getAllResponseHeaders() === "") {
                             var noBody;
                             if (xhr.responseType === "arraybuffer") {
@@ -1652,11 +1649,11 @@ DDSLoader.prototype.FOURCC_A16B16G16R16 = 36;
 DDSLoader.prototype.FOURCC_L8 = 50;
 DDSLoader.prototype.FOURCC_A8L8 = 51;
 DDSLoader.prototype.FOURCC_A4L4 = 52;
-DDSLoader.prototype.FOURCC_DXT1 = 0x31545844;
-DDSLoader.prototype.FOURCC_DXT2 = 0x32545844;
-DDSLoader.prototype.FOURCC_DXT3 = 0x33545844;
-DDSLoader.prototype.FOURCC_DXT4 = 0x34545844;
-DDSLoader.prototype.FOURCC_DXT5 = 0x35545844;
+DDSLoader.prototype.FOURCC_DXT1 = 0x31545844; //(MAKEFOURCC('D','X','T','1'))
+DDSLoader.prototype.FOURCC_DXT2 = 0x32545844; //(MAKEFOURCC('D','X','T','1'))
+DDSLoader.prototype.FOURCC_DXT3 = 0x33545844; //(MAKEFOURCC('D','X','T','3'))
+DDSLoader.prototype.FOURCC_DXT4 = 0x34545844; //(MAKEFOURCC('D','X','T','3'))
+DDSLoader.prototype.FOURCC_DXT5 = 0x35545844; //(MAKEFOURCC('D','X','T','5'))
 
 DDSLoader.prototype.FOURCC_D16_LOCKABLE = 70;
 DDSLoader.prototype.FOURCC_D32 = 71;

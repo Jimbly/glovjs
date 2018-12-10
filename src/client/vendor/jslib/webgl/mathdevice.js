@@ -123,8 +123,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 (a[0] < b[0]),
-                (a[1] < b[1])
-            ];
+                (a[1] < b[1])];
         },
         v2MaskGreater: function v2MaskGreaterFn(a, b) {
             debug.assert(debug.isMathType(a));
@@ -133,8 +132,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 (a[0] > b[0]),
-                (a[1] > b[1])
-            ];
+                (a[1] > b[1])];
         },
         v2MaskGreaterEq: function v2MaskGreaterEqFn(a, b) {
             debug.assert(debug.isMathType(a));
@@ -143,8 +141,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 (a[0] >= b[0]),
-                (a[1] >= b[1])
-            ];
+                (a[1] >= b[1])];
         },
         v2MaskNot: function v2MaskNotFn(a) {
             debug.assert(debug.isMathType(a));
@@ -152,8 +149,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 !a[0],
-                !a[1]
-            ];
+                !a[1]];
         },
         v2MaskOr: function v2MaskOrFn(a, b) {
             debug.assert(debug.isMathType(a));
@@ -162,8 +158,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 (a[0] || b[0]),
-                (a[1] || b[1])
-            ];
+                (a[1] || b[1])];
         },
         v2MaskAnd: function v2MaskAndFn(a, b) {
             debug.assert(debug.isMathType(a));
@@ -172,8 +167,7 @@ debug.evaluate(function debugSetupMathDevice() {
 
             return [
                 (a[0] && b[0]),
-                (a[1] && b[1])
-            ];
+                (a[1] && b[1])];
         },
         v2Select: function v2SelectFn(m, a, b, dst) {
             debug.assert(debug.isMathType(a));
@@ -532,7 +526,7 @@ debug.evaluate(function debugSetupMathDevice() {
         v4Equal: function v4EqualFn(a, b, precision) {
             debug.assert(debug.isMathType(a));
             debug.assert(debug.isMathType(b));
-            debug.assert(debug.isNumber(precision));
+            debug.assert(undefined === precision || debug.isNumber(precision));
             return this._vmath.v4Equal(a, b, precision);
         },
         v4MaskEqual: function v4MaskEqualFn(a, b) {
@@ -944,6 +938,11 @@ debug.evaluate(function debugSetupMathDevice() {
             debug.assert(debug.isMathType(b));
             return this._vmath.m43Mul(a, b, dst);
         },
+        m43MulM33: function m43MulM33Fn(a, b, dst) {
+            debug.assert(debug.isMathType(a));
+            debug.assert(debug.isMathType(b));
+            return this._vmath.m43MulM33(a, b, dst);
+        },
         m43MulM44: function m43MulM44Fn(a, b, dst) {
             debug.assert(debug.isMathType(a));
             debug.assert(debug.isMathType(b));
@@ -1077,7 +1076,7 @@ debug.evaluate(function debugSetupMathDevice() {
         quatIsSimilar: function quatIsSimilarFn(q1, q2, precision) {
             debug.assert(debug.isMathType(q1));
             debug.assert(debug.isMathType(q2));
-            debug.assert(debug.isNumber(precision));
+            debug.assert(undefined === precision || debug.isNumber(precision));
             return this._vmath.quatIsSimilar(q1, q2, precision);
         },
         quatLength: function quatLengthFn(q) {

@@ -6,6 +6,7 @@
 /*global AABBTree: false*/
 /*global TurbulenzEngine: false*/
 "use strict";
+
 // -----------------------------------------------------------------------------
 //
 // WebGLPhysicsShape
@@ -108,6 +109,7 @@ var webGLPhysicsClone = function webGLPhysicsCloneFn(dst, src) {
 };
 
 var initShapeProperties = function initShapePropertiesFn(s, type, nomargin) {
+    // Capsule/Sphere have this defined differently.
     if (!nomargin) {
         Object.defineProperty(s, "margin", {
             get: function shapeGetMargin() {
@@ -179,6 +181,8 @@ var WebGLPhysicsPlaneShape = (function () {
         //var dot = VMath.v3Dot(ray.direction, this.normal);
         var dot = ((dir0 * n0) + (dir1 * n1) + (dir2 * n2));
 
+        // If ray is parallel to plane we assume it is not
+        // intersecting (Do not handle a coplanar ray)
         if ((dot * dot) < WebGLPhysicsConfig.COPLANAR_THRESHOLD) {
             return null;
         }
@@ -186,6 +190,7 @@ var WebGLPhysicsPlaneShape = (function () {
         //var distance = (this.distance - VMath.v3Dot(ray.origin, this.normal)) / dot;
         var distance = ((this.distance - ((o0 * n0) + (o1 * n1) + (o2 * n2))) / dot);
         if (0 <= distance && distance <= ray.maxFactor) {
+            //var normal = (dot > 0) ? VMath.v3Neg(this.normal) : VMath.v3Copy(this.normal);
             if (dot > 0) {
                 n0 = -n0;
                 n1 = -n1;
@@ -339,6 +344,9 @@ var WebGLPhysicsCapsuleShape = (function () {
                 var rootD = Math.sqrt(d);
                 distance = ((-b - rootD) * rec);
 
+                // don't need to check height yet. If ray's first intersection
+                // is front face of cylinder, then necessarigly it is not contained
+                // within the cylinder and could never hit back face first.
                 if (distance < 0) {
                     distance += (rootD * 2 * rec);
                     normalScale = -1.0;
@@ -598,6 +606,7 @@ var WebGLPhysicsBoxShape = (function () {
             }
         }
 
+        // intersect with xz faces.
         if (d1 !== 0 && ((d1 > 0 && o1 <= -h1) || (d1 < 0 && o1 >= h1))) {
             f = (d1 > 0 ? (o1 >= -h1 ? h1 : -h1) : (o1 <= h1 ? -h1 : h1));
             t = (f - o1) / d1;
@@ -611,6 +620,7 @@ var WebGLPhysicsBoxShape = (function () {
             }
         }
 
+        // intersect with xy faces.
         if (d2 !== 0 && ((d2 > 0 && o2 <= -h2) || (d2 < 0 && o2 >= h2))) {
             f = (d2 > 0 ? (o2 >= -h2 ? h2 : -h2) : (o2 <= h2 ? -h2 : h2));
             t = (f - o2) / d2;
@@ -727,6 +737,9 @@ var WebGLPhysicsCylinderShape = (function () {
             var rootD = Math.sqrt(d);
             distance = ((-b - rootD) * rec);
 
+            // don't need to check height yet. If ray's first intersection
+            // is front face of cylinder, then necessarigly it is not contained
+            // within the cylinder and could never hit back face first.
             if (distance < 0) {
                 distance += (rootD * 2 * rec);
                 normalScale = -1.0;
@@ -749,12 +762,18 @@ var WebGLPhysicsCylinderShape = (function () {
             }
         }
 
+        //Intersect cylinder caps
+        // If ray is perpendicular to caps, we assume
+        // It cannot intersect.
         if ((dir1 * dir1) >= WebGLPhysicsConfig.COPLANAR_THRESHOLD) {
             scale = ((dir1 < 0) ? -1.0 : 1.0);
             hit1 = (-scale * halfHeight);
             rec = (1 / dir1);
             distance = ((hit1 - o1) * rec);
 
+            // Similarly don't need to check radius yet. If ray's first intersection
+            // is back cap, then necesarigly it is not contained within cylinder
+            // and could never hit front cap first.
             if (distance < 0) {
                 hit1 = (scale * halfHeight);
                 distance = ((hit1 - o1) * rec);
@@ -906,6 +925,7 @@ var WebGLPhysicsConeShape = (function () {
         }
 
         if (t === undefined || (distance !== undefined && distance < t)) {
+            // conic surface is hit first in positive distance range
             if (distance >= maxFactor) {
                 return null;
             }
@@ -923,6 +943,7 @@ var WebGLPhysicsConeShape = (function () {
                 factor: distance
             };
         } else {
+            // cone cap is hit first in positive distance range
             if (t >= maxFactor) {
                 return null;
             }
@@ -1085,7 +1106,7 @@ var WebGLPhysicsTriangleArray = (function () {
 
         /*
         store pre-computed triangle information for ray tests
-
+        
         n0 n1 n2 - triangle normal
         v0 v1 v2 - triangle vertex
         u0 u1 u2 v0 v1 v2  - edge vectors
@@ -1095,6 +1116,7 @@ var WebGLPhysicsTriangleArray = (function () {
         var triangles = new Float32Array(WebGLPhysicsPrivateTriangleArray.prototype.TRIANGLE_SIZE * numTriangles);
         var spatialMap = null;
 
+        // Only use spatial map if we do not have a trivial number of triangles.
         if (numTriangles >= 8) {
             spatialMap = AABBTree.create(true);
             extents = new Float32Array(6);
@@ -1166,6 +1188,7 @@ var WebGLPhysicsTriangleArray = (function () {
             triangles[itri + 15] = negLimit;
             triangles[itri + 16] = distance;
 
+            // If building AABBTree, store node
             if (spatialMap) {
                 extents[0] = Math.min(v00, v10, v20);
                 extents[1] = Math.min(v01, v11, v21);
@@ -1221,6 +1244,8 @@ var WebGLPhysicsPrivateTriangleArray = (function () {
             //var dot = VMath.v3Dot(ray.direction, normal);
             var dot = ((dir0 * n0) + (dir1 * n1) + (dir2 * n2));
 
+            // If ray is parallel to triangle plane
+            // Assume it cannot intersect triangle
             if ((dot * dot) < WebGLPhysicsConfig.COPLANAR_THRESHOLD) {
                 return null;
             }
@@ -1236,6 +1261,7 @@ var WebGLPhysicsPrivateTriangleArray = (function () {
                 return null;
             }
 
+            // Make sure normal points correct direction for ray cast result
             if (dot > 0) {
                 //normal = VMath.v3Neg(normal);
                 n0 = -n0;
@@ -1473,6 +1499,8 @@ var WebGLPhysicsConvexHullHelpers = {
                 }
             }
 
+            // BUG in TypeScript:
+            //   http://typescript.codeplex.com/workitem/145
             if (i1 in hullVertices) {
                 break;
             }
@@ -1481,6 +1509,7 @@ var WebGLPhysicsConvexHullHelpers = {
             hullVertices[i1] = outVertexCount;
             outVertexCount += 1;
 
+            // Form triangle (fsti, i0, i1)
             if (i0 !== fsti) {
                 hullTriangles.push(fsti);
                 hullTriangles.push(i0);
@@ -1634,6 +1663,9 @@ var WebGLPhysicsConvexHullHelpers = {
 
                 var coplanar = (pEdge0 * ((edge1 * maxEdge2) - (edge2 * maxEdge1)) + pEdge1 * ((edge2 * maxEdge0) - (edge0 * maxEdge2)) + pEdge2 * ((edge0 * maxEdge1) - (edge1 * maxEdge0)));
                 if ((coplanar * coplanar) < WebGLPhysicsConfig.COPLANAR_THRESHOLD) {
+                    // Special case for coplanar pedge, maxpedge, edge
+                    //
+                    // If edges are in same direction, base on distance
                     if (((pEdge0 * maxEdge0) + (pEdge1 * maxEdge1) + (pEdge2 * maxEdge2)) >= 0) {
                         if (plsq > maxDistance || (plsq === maxDistance && t > maxProjection)) {
                             i2 = (i / 3);
@@ -1683,11 +1715,13 @@ var WebGLPhysicsConvexHullHelpers = {
                 }
             }
 
+            // append i2 vertex to hull
             if (!(i2 in hullVertices)) {
                 hullVertices[i2] = outVertexCount;
                 outVertexCount += 1;
             }
 
+            // form triangle iff no edge is closed
             if (!((i0 + ":" + i1) in closedSet || (i1 + ":" + i2) in closedSet || (i2 + ":" + i0) in closedSet)) {
                 hullTriangles.push(i0);
                 hullTriangles.push(i1);
@@ -1850,6 +1884,7 @@ var WebGLPhysicsConvexHullShape = (function () {
                 }
             }
 
+            // If no better support was found, we are at the maximum support.
             if (next !== -1) {
                 maxv = next;
                 continue;
@@ -1949,6 +1984,7 @@ var WebGLPhysicsConvexHullShape = (function () {
         c.inertia = VMath.v3Build(massRatio * (ly + lz), massRatio * (lx + lz), massRatio * (lx + ly), buffer.subarray(3, 6));
         c.collisionRadius = margin;
 
+        // Generate triangle array for ray testing
         if (points.length < 9) {
             throw "At present time, WebGL PhysicsDevice does not permit a convex hull to contain " + "less than 3 vertices";
         } else {
@@ -2199,19 +2235,19 @@ var WebGLPhysicsPrivateBody = (function () {
             z = (m1 - m3) / (4 * w);
         } else {
             if ((m0 > m4) && (m0 > m8)) {
-                s = Math.sqrt(1.0 + m0 - m4 - m8) * 2;
+                s = Math.sqrt(1.0 + m0 - m4 - m8) * 2; // S=4*qx
                 w = (m5 - m7) / s;
                 x = 0.25 * s;
                 y = (m3 + m1) / s;
                 z = (m6 + m2) / s;
             } else if (m4 > m8) {
-                s = Math.sqrt(1.0 + m4 - m0 - m8) * 2;
+                s = Math.sqrt(1.0 + m4 - m0 - m8) * 2; // S=4*qy
                 w = (m6 - m2) / s;
                 x = (m3 + m1) / s;
                 y = 0.25 * s;
                 z = (m7 + m5) / s;
             } else {
-                s = Math.sqrt(1.0 + m8 - m0 - m4) * 2;
+                s = Math.sqrt(1.0 + m8 - m0 - m4) * 2; // S=4*qz
                 w = (m1 - m3) / s;
                 x = (m6 + m2) / s;
                 y = (m7 + m5) / s;
@@ -2525,7 +2561,7 @@ var WebGLPhysicsPrivateBody = (function () {
 
     // Return false if body is (taking into account sleep delay) able to sleep.
     // used for dynamics.
-    WebGLPhysicsPrivateBody.prototype.isActive = function (/* timeStep */ ) {
+    WebGLPhysicsPrivateBody.prototype.isActive = function ( /* timeStep */ ) {
         if (!this.permitSleep) {
             return true;
         }
@@ -2601,6 +2637,7 @@ var WebGLPhysicsCollisionObject = (function () {
             set: function collisionObjectSetTransform(transform) {
                 var pr = this._private;
 
+                // can only set transform if kinematic, or else for non kinematic IF NOT in a world.
                 if (pr.kinematic || !pr.world) {
                     VMath.m43Copy(transform, pr.transform);
                     if (pr.world) {
@@ -2702,6 +2739,7 @@ var WebGLPhysicsCollisionObject = (function () {
         // static object is always 'inactive'
         s.active = kinematic;
 
+        // prepare for contact callbacks
         if (params.onPreSolveContact || params.onAddedContacts || params.onProcessedContacts || params.onRemovedContacts) {
             s.contactCallbacks = new WebGLPhysicsContactCallbacks(params, mask);
         } else {
@@ -2819,10 +2857,13 @@ var WebGLPhysicsRigidBody = (function () {
             set: function rigidBodySetActive(active) {
                 var pr = this._private;
                 if (active === pr.active) {
+                    // If already active, and in a world then allow re-settnig to true
+                    // to update wakeTimeStamp.
                     if (pr.world && active) {
                         pr.wakeTimeStamp = pr.world.timeStamp;
                     }
                 } else if (pr.world) {
+                    // If in a world, and not already active then wake the body.
                     if (active) {
                         pr.world.wakeBody(pr);
                     } else {
@@ -2977,6 +3018,7 @@ var WebGLPhysicsRigidBody = (function () {
         // Kinematic object is not subject to manipulation by continous collisions.
         r.sweepFrozen = kinematic;
 
+        // prepare for contact callbacks
         if (params.onPreSolveContact || params.onAddedContacts || params.onProcessedContacts || params.onRemovedContacts) {
             r.contactCallbacks = new WebGLPhysicsContactCallbacks(params, mask);
         } else {
@@ -3050,10 +3092,13 @@ var initConstraintProperties = function initConstraintPropertiesFn(c, params) {
         set: function constraintSetActive(active) {
             var pc = this._private;
             if (active === pc.active) {
+                // If already active, and in a world then allow re-setting to true
+                // to update wakeTimeStamp.
                 if (pc.world && active) {
                     pc.wakeTimeStamp = pc.world.timeStamp;
                 }
             } else if (pc.world) {
+                // If in a world, and not already active then wake the constraint.
                 if (active) {
                     pc.world.wakeConstraint(pc);
                 } else {
@@ -3103,6 +3148,9 @@ var WebGLPhysicsPoint2PointConstraint = (function () {
             enumerable: true
         });
 
+        // read/write with side effects
+        // In the case that bodyB is not defined, we initialise pivot so that positional
+        // error is 0.
         if (params.pivotB) {
             data[3] = params.pivotB[0];
             data[4] = params.pivotB[1];
@@ -3610,7 +3658,7 @@ var WebGLPhysicsCharacter = (function () {
                 transform[9] = position[0];
                 transform[10] = position[1];
                 transform[11] = position[2];
-                rigidBody.transform = rigidBody._private.transform;
+                rigidBody.transform = rigidBody._private.transform; //invoke setter.
                 rigidBody.active = true;
             },
             enumerable: true
@@ -3731,6 +3779,13 @@ var WebGLGJKContactSolver = (function () {
     };
 
     WebGLGJKContactSolver.prototype.reduceVertices = function (coords) {
+        // NOTE: NOT USING EPSILON
+        //
+        // To avoid necessitating carrying 4 additional
+        // boolean fields to mark coordinates as being
+        // used or for deletion, the barycentric
+        // coordinates are used to infer this property
+        // instead. so strict equality with 0 is needed.
         if (this.numVertices >= 4 && coords[3] === 0) {
             this.numVertices -= 1;
         }
@@ -3869,6 +3924,8 @@ var WebGLGJKContactSolver = (function () {
             return true;
         }
 
+        // ----------------------------------------
+        // 4 vertices, find closest point in tetrahedron
         if (numVertices === 4) {
             var outside = this.closestPointTetrahedron(coords);
             if (outside) {
@@ -3966,6 +4023,7 @@ var WebGLGJKContactSolver = (function () {
 
         coords[0] = coords[1] = coords[2] = coords[3] = 0.0;
 
+        // inclusion
         if (!sideABC && !sideACD && !sideADB && !sideBDC) {
             return false;
         }
@@ -4267,6 +4325,8 @@ var WebGLGJKContactSolver = (function () {
                 }
             }
 
+            // Additionaly check against previously inserted vertex which may have been
+            // removed and prevent endless oscillation.
             if (!inSimplex) {
                 d0 = (w0 - lastW0);
                 d1 = (w1 - lastW1);
@@ -4282,6 +4342,10 @@ var WebGLGJKContactSolver = (function () {
             //delta = VMath.v3Dot(axis, w);
             var delta = (axis0 * w0) + (axis1 * w1) + (axis2 * w2);
 
+            // Check that we are getting closer
+            // If not (within epsilon) we are very roughly at closest point
+            // and should terminate!
+            //
             if ((squaredDistance - delta) <= (squaredDistance * WebGLPhysicsConfig.GJK_FRACTIONAL_THRESHOLD)) {
                 seperated = true;
                 break;
@@ -4299,6 +4363,8 @@ var WebGLGJKContactSolver = (function () {
             simplex[index + 8] = sb2;
             this.numVertices += 1;
 
+            // If we cannot find a seperating axis
+            // Then shapes are intersecting!
             if (!this.updateClosestPoints()) {
                 seperated = false;
                 break;
@@ -4337,6 +4403,9 @@ var WebGLGJKContactSolver = (function () {
                 break;
             }
 
+            // We already have a full simplex
+            // Next iteration would add too many vertices
+            // So we must be intersecting
             if (this.numVertices === 4) {
                 break;
             }
@@ -4553,6 +4622,8 @@ var WebGLContactEPA = (function () {
                 face.distance = ((a0 * fn0) + (a1 * fn1) + (a2 * fn2)) * scale;
             }
 
+            // Epsilon based on rough experimental result.
+            // Negative epsilon 'not' a typo!
             if (forced || (face.distance >= -1e-6)) {
                 fn[0] *= scale;
                 fn[1] *= scale;
@@ -4582,6 +4653,8 @@ var WebGLContactEPA = (function () {
 
             var edge1 = (edge + 1) % 3;
 
+            // Epsilon based on rough experimental result
+            // Negative epsilon 'not' a typo!
             if ((((fn0 * w0) + (fn1 * w1) + (fn2 * w2)) - face.distance) < -1e-6) {
                 var newFace = this.buildNewFace(face.vertex[edge1], face.vertex[edge], w, false);
                 if (newFace) {
@@ -4995,6 +5068,7 @@ var WebGLPhysicsPublicContact = (function () {
     return WebGLPhysicsPublicContact;
 })();
 
+
 var WebGLPhysicsContact = {
     contactPool: [],
     contactPoolSize: 0,
@@ -5002,8 +5076,7 @@ var WebGLPhysicsContact = {
     publicContacts: [
         WebGLPhysicsPublicContact.create(),
         WebGLPhysicsPublicContact.create(),
-        WebGLPhysicsPublicContact.create()
-    ],
+        WebGLPhysicsPublicContact.create()],
     callbackContacts: [],
     allocate: function webglPhyssicsContactAllocateFn() {
         var contactPool = this.contactPool;
@@ -5023,7 +5096,7 @@ var WebGLPhysicsContact = {
         this.contactPoolSize -= 1;
         var contact = contactPool[this.contactPoolSize];
 
-        contact[51] = 1.0;
+        contact[51] = 1.0; // new contact
 
         return contact;
     },
@@ -5070,7 +5143,7 @@ var WebGLPhysicsArbiter = (function () {
         this.skipDiscreteCollisions = false;
 
         // Flags to signal processing of contact callbacks
-        this.contactFlags = 0;
+        this.contactFlags = 0; // 1 - added, 2 - processed, 4 - removed
 
         // Flag to disable contact response
         this.trigger = false;
@@ -5120,11 +5193,12 @@ var WebGLPhysicsArbiter = (function () {
         while (i < contacts.length) {
             var datad = contacts[i];
 
+            // 0.9 chosen based on rough experimental results.
             if ((!concave) && ((cn0 * datad[12]) + (cn1 * datad[13]) + (cn2 * datad[14])) < 0.9) {
                 contacts[i] = contacts[contacts.length - 1];
                 contacts.pop();
                 WebGLPhysicsContact.deallocate(datad);
-                this.contactFlags |= 4;
+                this.contactFlags |= 4; // removed
                 continue;
             }
 
@@ -5139,7 +5213,7 @@ var WebGLPhysicsArbiter = (function () {
                 contacts[i] = contacts[contacts.length - 1];
                 contacts.pop();
                 WebGLPhysicsContact.deallocate(datad);
-                this.contactFlags |= 4;
+                this.contactFlags |= 4; // removed
                 min = sep;
                 continue;
             }
@@ -5195,7 +5269,7 @@ var WebGLPhysicsArbiter = (function () {
         // contact bitangent
         data[18] = ((cn1 * ct2));
         data[19] = ((cn2 * ct0) - (cn0 * ct2));
-        data[20] = (-(cn1 * ct0));
+        data[20] = (/*(cn0 * ct1)*/ -(cn1 * ct0));
 
         data[40] = jAccN;
 
@@ -5235,7 +5309,7 @@ var WebGLPhysicsArbiter = (function () {
             }
         }
 
-        this.contactFlags |= 1;
+        this.contactFlags |= 1; // added
 
         contacts.push(data);
 
@@ -5292,6 +5366,7 @@ var WebGLPhysicsArbiter = (function () {
             var n0, n1, n2;
             var area;
 
+            // Area discarding contact 1
             if (minimum !== 1) {
                 n0 = ((ac1 * ad2) - (ac2 * ad1));
                 n1 = ((ac2 * ad0) - (ac0 * ad2));
@@ -5303,6 +5378,7 @@ var WebGLPhysicsArbiter = (function () {
                 }
             }
 
+            // Area discarding contact 2
             if (minimum !== 2) {
                 n0 = ((ab1 * ad2) - (ab2 * ad1));
                 n1 = ((ab2 * ad0) - (ab0 * ad2));
@@ -5314,6 +5390,7 @@ var WebGLPhysicsArbiter = (function () {
                 }
             }
 
+            // Area discarding contact 3
             if (minimum !== 3) {
                 n0 = ((ab1 * ac2) - (ab2 * ac1));
                 n1 = ((ab2 * ac0) - (ab0 * ac2));
@@ -5325,6 +5402,7 @@ var WebGLPhysicsArbiter = (function () {
                 }
             }
 
+            // Area discarding contact 0
             if (minimum !== 0) {
                 var bc0 = (c0 - b0);
                 var bc1 = (c1 - b1);
@@ -5348,7 +5426,7 @@ var WebGLPhysicsArbiter = (function () {
             contacts[discard] = contacts[3];
             contacts.pop();
             WebGLPhysicsContact.deallocate(data);
-            this.contactFlags |= 4;
+            this.contactFlags |= 4; // removed
         }
         /*jshint bitwise: true*/
     };
@@ -5425,7 +5503,7 @@ var WebGLPhysicsArbiter = (function () {
                 contacts[i] = contacts[contacts.length - 1];
                 contacts.pop();
                 WebGLPhysicsContact.deallocate(data);
-                this.contactFlags |= 4;
+                this.contactFlags |= 4; // removed
                 continue;
             }
 
@@ -5438,14 +5516,14 @@ var WebGLPhysicsArbiter = (function () {
                 contacts[i] = contacts[contacts.length - 1];
                 contacts.pop();
                 WebGLPhysicsContact.deallocate(data);
-                this.contactFlags |= 4;
+                this.contactFlags |= 4; // removed
                 continue;
             }
 
             i += 1;
         }
 
-        this.contactFlags |= 2;
+        this.contactFlags |= 2; // processed
 
         return (contacts.length === 0);
     };
@@ -5492,7 +5570,7 @@ var WebGLPhysicsArbiter = (function () {
         // TOOD: REMOVE the <any> casts.  objectA appears to be a
         // WebGLPhysicsCollisionObject.  Does that have a
         // 'collisionObject' property?
-        var baum = ((objectA).collisionObject || (objectB).collisionObject) ? WebGLPhysicsConfig.CONTACT_STATIC_BAUMGRAUTE : WebGLPhysicsConfig.CONTACT_BAUMGRAUTE;
+        var baum = (objectA.collisionObject || objectB.collisionObject) ? WebGLPhysicsConfig.CONTACT_STATIC_BAUMGRAUTE : WebGLPhysicsConfig.CONTACT_BAUMGRAUTE;
 
         var contacts = this.contacts;
         var i;
@@ -5580,6 +5658,7 @@ var WebGLPhysicsArbiter = (function () {
             //c.bounce = VMath.v3Dot(vel, c.normal) * this.restitution;
             var bounce = ((vel0 * n0) + (vel1 * n1) + (vel2 * n2)) * this.restitution;
 
+            // Epsilon based on experimental result
             if (bounce * bounce < 1e-2) {
                 bounce = 0;
             }
@@ -6196,6 +6275,8 @@ var WebGLPhysicsTOIEvent = (function () {
         this.eventPool[this.eventPoolSize] = toi;
         this.eventPoolSize += 1;
 
+        // Ensure that if this is a concave TOI Event, that we also
+        // deallocate the related TriangleShape that is generated.
         if (toi.concave) {
             WebGLPhysicsTriangleShape.deallocate(toi.shapeB);
             toi.concave = false;
@@ -6234,35 +6315,35 @@ var WebGLPhysicsWorld = (function () {
     };
 
     WebGLPhysicsWorld.prototype.addCollisionObject = function (collisionObject) {
-        return this._private.addBody((collisionObject)._private);
+        return this._private.addBody(collisionObject._private);
     };
 
     WebGLPhysicsWorld.prototype.removeCollisionObject = function (collisionObject) {
-        return this._private.removeBody((collisionObject)._private);
+        return this._private.removeBody(collisionObject._private);
     };
 
     WebGLPhysicsWorld.prototype.addRigidBody = function (rigidBody) {
-        return this._private.addBody((rigidBody)._private);
+        return this._private.addBody(rigidBody._private);
     };
 
     WebGLPhysicsWorld.prototype.removeRigidBody = function (rigidBody) {
-        return this._private.removeBody((rigidBody)._private);
+        return this._private.removeBody(rigidBody._private);
     };
 
     WebGLPhysicsWorld.prototype.addConstraint = function (constraint) {
-        return this._private.addConstraint((constraint)._private);
+        return this._private.addConstraint(constraint._private);
     };
 
     WebGLPhysicsWorld.prototype.removeConstraint = function (constraint) {
-        return this._private.removeConstraint((constraint)._private);
+        return this._private.removeConstraint(constraint._private);
     };
 
     WebGLPhysicsWorld.prototype.addCharacter = function (character) {
-        return this._private.addBody((character)._private.rigidBody._private);
+        return this._private.addBody(character._private.rigidBody._private);
     };
 
     WebGLPhysicsWorld.prototype.removeCharacter = function (character) {
-        return this._private.removeBody((character)._private.rigidBody._private);
+        return this._private.removeBody(character._private.rigidBody._private);
     };
 
     WebGLPhysicsWorld.prototype.wakeBody = function (body) {
@@ -6487,6 +6568,8 @@ var WebGLPrivatePhysicsWorld = (function () {
         var dot1 = (supportA[0] * n0) + (supportA[1] * n1) + (supportA[2] * n2) - nd;
         var dot2 = (supportB[0] * n0) + (supportB[1] * n1) + (supportB[2] * n2) - nd;
 
+        // If supports are on opposite side of plane, primitive definately
+        // intersects plane
         if ((dot1 * dot2) <= 0) {
             return false;
         }
@@ -6517,6 +6600,7 @@ var WebGLPrivatePhysicsWorld = (function () {
             return true;
         }
 
+        /*jshint bitwise: false*/
         if ((objectA.mask & objectB.group) === 0 || (objectB.mask & objectA.group) === 0) {
             return true;
         }
@@ -6529,6 +6613,7 @@ var WebGLPrivatePhysicsWorld = (function () {
     // owned by respective objects objectA, objectB (objectA.shape ===
     // shapeA etc)
     WebGLPrivatePhysicsWorld.prototype.narrowPhase = function (shapeA, shapeB, objectA, objectB) {
+        // Objects reused in all narrowPhase calls.
         if (this.narrowTriangle === undefined) {
             // Fake triangle shape for TRIANGLE_MESH collisions.
             this.narrowTriangle = WebGLPhysicsTriangleShape.allocate();
@@ -6595,6 +6680,7 @@ var WebGLPrivatePhysicsWorld = (function () {
         cache.shapeA = shapeA;
         cache.shapeB = shapeB;
 
+        // 'warm-start' contact solver with a guess direction of MTV
         if (arb.contacts.length !== 0) {
             //var basis = arb.contacts[0].basis;
             var data = arb.contacts[0];
@@ -6608,6 +6694,9 @@ var WebGLPrivatePhysicsWorld = (function () {
         var contact;
         var collided = false;
 
+        //
+        // Special case for triangle meshes.
+        //
         if (shapeA.type === "TRIANGLE_MESH" || shapeB.type === "TRIANGLE_MESH") {
             var meshShape, otherShape;
             var meshXForm, otherXForm;
@@ -6659,6 +6748,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                     // Prevent GC issues from object being kept in persistent array
                     triangles[i] = undefined;
 
+                    // Shortcut! Check that shape intersects plane of triangle
                     if (!this.trianglePlaneDiscard(otherShape, otherXForm, triangleArray, index, meshXForm)) {
                         contact = this.contactPairTest(cache2, objectA.transform, objectB.transform);
                         if (contact < 0) {
@@ -6691,6 +6781,7 @@ var WebGLPrivatePhysicsWorld = (function () {
         }
 
         if (collided) {
+            // New arbiter, add to object lists.
             if (fresh) {
                 this.activeArbiters.push(arb);
                 arb.active = true;
@@ -6698,6 +6789,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 objectB.arbiters.push(arb);
             }
 
+            // Wake objects if sleeping, they've just collided!
             if (objectA.permitSleep && !objectA.active) {
                 this.wakeBody(objectA);
             }
@@ -6705,6 +6797,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 this.wakeBody(objectB);
             }
 
+            // If arbiter was sleeping, then waking it
             if (!arb.active) {
                 arb.active = true;
                 this.activeArbiters.push(arb);
@@ -7073,6 +7166,8 @@ var WebGLPrivatePhysicsWorld = (function () {
             angBias += radiusB * Math.sqrt((vel2[3] * vel2[3]) + (vel2[4] * vel2[4]) + (vel2[5] * vel2[5]));
         }
 
+        // If relative velocity is small, then don't bother continuing as continuous detection is
+        // not needed. If angular bias is too large, then we must however continue.
         if (angBias < (WebGLPhysicsConfig.CONTINUOUS_ANGULAR_BULLET / timeStep)) {
             var radius = (radiusA < radiusB) ? radiusA : radiusB;
             radius *= WebGLPhysicsConfig.CONTINUOUS_LINEAR_BULLET / timeStep;
@@ -7095,6 +7190,8 @@ var WebGLPrivatePhysicsWorld = (function () {
                 seperation += negRadius;
             }
 
+            // objects intersecting!
+            // abort!
             if (seperation === undefined || seperation < WebGLPhysicsConfig.GJK_EPA_DISTANCE_THRESHOLD) {
                 if (!this.seperatingTOI(toi)) {
                     toi.distance = nextContact;
@@ -7211,6 +7308,8 @@ var WebGLPrivatePhysicsWorld = (function () {
                 seperation += negRadius;
             }
 
+            // objects intersecting!
+            // abort!
             if (seperation === undefined || seperation < WebGLPhysicsConfig.GJK_EPA_DISTANCE_THRESHOLD) {
                 if (!this.seperatingTOI(toi)) {
                     toi.distance = nextContact;
@@ -7247,6 +7346,7 @@ var WebGLPrivatePhysicsWorld = (function () {
     WebGLPrivatePhysicsWorld.prototype.performStaticTOIBase = function (slop, timeStep, events, numEvents, objectA, objectB) {
         var triangles = this.persistantTrianglesList;
 
+        // Objects used in all executions of continuous collisions.
         if (this.continuousFakeBody === undefined) {
             this.continuousFakeBody = {
                 shape: null,
@@ -7262,6 +7362,7 @@ var WebGLPrivatePhysicsWorld = (function () {
 
         var toi;
 
+        //ObjectB static/kinematic.
         if (objectB.shape.type === "TRIANGLE_MESH") {
             var triangleArray = objectB.shape.triangleArray;
             var numTriangles, k;
@@ -7391,6 +7492,7 @@ var WebGLPrivatePhysicsWorld = (function () {
             numSteps = Math.ceil(timeDelta / maxTimeStep);
             timeStep = (timeDelta / numSteps);
 
+            // cap timeStep to lower bound.
             if (timeStep < minTimeStep) {
                 timeStep = minTimeStep;
                 numSteps = Math.floor(timeDelta / timeStep);
@@ -7418,6 +7520,7 @@ var WebGLPrivatePhysicsWorld = (function () {
         // capping of sub step count. Otherwise time will just accumulate endlessly.
         this.prevTimeStamp += (timeStep * numSteps);
 
+        // cap number of substeps to upper bound.
         if (numSteps > this.maxSubSteps) {
             numSteps = this.maxSubSteps;
         }
@@ -7514,6 +7617,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 numPairs = staticMap.getOverlappingNodes(body.extents, objects, storageIndex + 1);
                 numPairs += sleepingMap.getOverlappingNodes(body.extents, objects, storageIndex + 1 + numPairs);
 
+                // only include sublist if number of pairs is non-zero.
                 if (numPairs !== 0) {
                     objects[storageIndex] = body;
                     storageIndex += 1 + numPairs;
@@ -7529,6 +7633,7 @@ var WebGLPrivatePhysicsWorld = (function () {
 
                 numPairs = sleepingMap.getOverlappingNodes(body.extents, objects, storageIndex + 1);
 
+                // only include sublist if number of pairs is non-zero.
                 if (numPairs !== 0) {
                     objects[storageIndex] = body;
                     storageIndex += 1 + numPairs;
@@ -7570,6 +7675,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                     objects[i] = undefined;
                     i += 1;
 
+                    // end of sub list.
                     if (objectA === objectB) {
                         break;
                     }
@@ -7692,7 +7798,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 }
             }
 
-            numIterations = 3;
+            numIterations = 3; //TODO: make configurable.
             limit = arbiters.length;
             for (i = 0; i < numIterations; i += 1) {
                 for (j = 0; j < limit; j += 1) {
@@ -7721,6 +7827,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 body.applyBiasVelocities(timeStep);
                 body.integratePosition(timeStep);
 
+                // If body is moving very slowly, don't bother doing any continuous
                 if (!body.isActiveVelocity(WebGLPhysicsConfig.CONTINUOUS_LINEAR_SQ / timeStep, WebGLPhysicsConfig.CONTINUOUS_ANGULAR_SQ / timeStep)) {
                     body.sweepFrozen = true;
                     body.bullet = false;
@@ -7866,6 +7973,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                     objectA = toi.objectA;
                     objectB = toi.objectB;
 
+                    // Check if tOI Event should be culled.
                     if (objectA.sweepFrozen && objectB.sweepFrozen) {
                         numEvents -= 1;
                         if (i !== numEvents) {
@@ -7878,11 +7986,14 @@ var WebGLPrivatePhysicsWorld = (function () {
                         continue;
                     }
 
+                    // Check if TOI Event is invalidated.
                     if ((toi.frozenA !== objectA.sweepFrozen) || (toi.frozenB !== objectB.sweepFrozen)) {
                         // Recompute TOI.
                         toi.frozenA = objectA.sweepFrozen;
                         toi.frozenB = objectB.sweepFrozen;
 
+                        // Check if order of objects in event need swapped
+                        // (For staticSweep objectA must be non-frozen)
                         if (toi.frozenA) {
                             toi.objectA = objectB;
                             toi.objectB = objectA;
@@ -7952,6 +8063,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                     }
                 }
 
+                // Flip objects based on id.
                 if (objectA.id > objectB.id) {
                     var tmp = objectA;
                     objectA = objectB;
@@ -8000,6 +8112,15 @@ var WebGLPrivatePhysicsWorld = (function () {
                     objectB.arbiters.push(arb);
                 }
 
+                // Since object transforms do not change. The contact point which will be computed
+                // in discrete collision detection at start of next world update, will be exactly
+                // this contact point.
+                //
+                // For that reason it is a waste to perform discrete collision detection in the next update
+                // for this pair of objects. This flag represent this fact.
+                //
+                // For active kinematic objects, the transform may change slightly due to innacuracies
+                // and so not skipping discrete may achieve a new contact point and will be beneficial.
                 if (!((objectA.kinematic && objectA.active) || (objectB.kinematic && objectB.active))) {
                     arb.skipDiscreteCollisions = true;
                 }
@@ -8091,6 +8212,7 @@ var WebGLPrivatePhysicsWorld = (function () {
 
         var ret = AABBTree.rayTest([this.staticSpatialMap, this.dynamicSpatialMap, this.sleepingSpatialMap], pRay, rayCallback);
 
+        //delete additional factor property
         if (ret !== null) {
             delete ret.factor;
         }
@@ -8118,6 +8240,9 @@ var WebGLPrivatePhysicsWorld = (function () {
             this.contactEPA = WebGLContactEPA.create();
         }
 
+        //
+        // Special case for planes
+        //
         if (shapeA.type === "PLANE" || shapeB.type === "PLANE") {
             var planeShape, otherShape;
             var planeXForm, otherXForm;
@@ -8300,6 +8425,9 @@ var WebGLPrivatePhysicsWorld = (function () {
     //
     // TODO: add type of callback?  { (rayHit: RayHit): boolean; }; ?
     WebGLPrivatePhysicsWorld.prototype.convexSweepTest = function (params, callback) {
+        //
+        // Initialise objects reused in all convexSweepTest calls.
+        //
         if (this.sweepCache === undefined) {
             this.sweepCache = {
                 axis: VMath.v3BuildZero(),
@@ -8370,6 +8498,8 @@ var WebGLPrivatePhysicsWorld = (function () {
             for (; ;) {
                 var nextContact = that.contactPairTest(cache, cpos, transform);
 
+                // objects intersecting!
+                // abort and use previous result if existing
                 if (nextContact === undefined || nextContact < WebGLPhysicsConfig.GJK_EPA_DISTANCE_THRESHOLD) {
                     if (contactDistance !== undefined || nextContact !== undefined) {
                         if (contactDistance === undefined) {
@@ -8380,6 +8510,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                     break;
                 }
 
+                // terminate if distance is increasing!!
                 if ((nextContact - previousDistance) >= 1) {
                     break;
                 }
@@ -8392,6 +8523,8 @@ var WebGLPrivatePhysicsWorld = (function () {
                 var d2 = supportB[2] - supportA[2];
                 var dot = (delta0 * d0) + (delta1 * d1) + (delta2 * d2);
 
+                // If seperating axis is perpendicular to direction of motion
+                // Then it is not possible for use to intersect with it.
                 if (dot <= WebGLPhysicsConfig.COPLANAR_THRESHOLD) {
                     break;
                 }
@@ -8408,6 +8541,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                 cpos[10] += (delta1 * gap);
                 cpos[11] += (delta2 * gap);
 
+                // Exit if distance between objects is nominal
                 if (contactDistance <= WebGLPhysicsConfig.GJK_EPA_DISTANCE_THRESHOLD) {
                     intersected = true;
                     break;
@@ -8490,7 +8624,7 @@ var WebGLPrivatePhysicsWorld = (function () {
 
             /*jshint bitwise: false*/
             // TODO: remove cast
-            var actual_object = (object)._public;
+            var actual_object = object._public;
             if (actual_object === exclude || object.shape === shape || (object.mask & group) === 0 || (object.group & mask) === 0) {
                 continue;
             }
@@ -8500,11 +8634,11 @@ var WebGLPrivatePhysicsWorld = (function () {
             var collisionShape = object.shape;
             if (collisionShape.type === "TRIANGLE_MESH") {
                 // TODO: remove cast and fix
-                var triangleArray = (collisionShape).triangleArray;
+                var triangleArray = collisionShape.triangleArray;
                 triangle.triangleArray = triangleArray;
 
                 // TODO: remove cast and fix
-                triangle.collisionRadius = (collisionShape).collisionRadius;
+                triangle.collisionRadius = collisionShape.collisionRadius;
 
                 var numTriangles;
                 if (triangleArray.spatialMap) {
@@ -8566,7 +8700,8 @@ var WebGLPrivatePhysicsWorld = (function () {
                 VMath.m43Copy(from, transform2);
                 result = staticSweep(shape, transform2, delta, collisionShape, object.transform, upperBound);
                 if (result) {
-                    if ((object).collisionObject) {
+                    // TODO: remove cast and fix
+                    if (object.collisionObject) {
                         result.collisionObject = actual_object;
                         result.body = null;
                     } else {
@@ -8581,6 +8716,8 @@ var WebGLPrivatePhysicsWorld = (function () {
                 }
             }
 
+            // Cut off on epsilon distance
+            // Based on rough experimental result
             if (upperBound < 1e-4) {
                 for (j = i; j < limit; j += 1) {
                     objects[j] = undefined;
@@ -8785,6 +8922,7 @@ var WebGLPrivatePhysicsWorld = (function () {
             bodyArbiters[bodyArbiters.indexOf(arb)] = bodyArbiters[bodyArbiters.length - 1];
             bodyArbiters.pop();
 
+            // Remove from world arbiters list
             if (arb.active) {
                 worldArbiters[worldArbiters.indexOf(arb)] = worldArbiters[worldArbiters.length - 1];
                 worldArbiters.pop();
@@ -8859,6 +8997,7 @@ var WebGLPrivatePhysicsWorld = (function () {
                         contactCallbacksA = objectA.contactCallbacks;
                         contactCallbacksB = objectB.contactCallbacks;
 
+                        /*jshint bitwise: false*/
                         if (arbiter.contactFlags & 1) {
                             if (null !== contactCallbacksA && contactCallbacksA.onAddedContacts) {
                                 contactCallbacksA.onAddedContacts(objectA._public, objectB._public, callbackContacts);
@@ -8930,10 +9069,11 @@ var WebGLPrivatePhysicsWorld = (function () {
 //
 var WebGLPhysicsDevice = (function () {
     function WebGLPhysicsDevice() {
+        this.version = WebGLPhysicsDevice.version;
         this.vendor = "Turbulenz";
         this.genObjectId = 0;
     }
-    WebGLPhysicsDevice.create = function (/* params */ ) {
+    WebGLPhysicsDevice.create = function ( /* params */ ) {
         return new WebGLPhysicsDevice();
     };
 

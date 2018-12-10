@@ -266,10 +266,10 @@ var GeometryInstance = (function () {
         }
     };
 
-    GeometryInstance.create = //
+    //
     // Constructor function
     //
-    function (geometry, surface, sharedMaterial) {
+    GeometryInstance.create = function (geometry, surface, sharedMaterial) {
         var instance = new GeometryInstance();
         var graphicsDevice = TurbulenzEngine.getGraphicsDevice();
 
@@ -303,7 +303,7 @@ var GeometryInstance = (function () {
 })();
 
 // Detect correct typed arrays
-((function () {
+(function () {
     GeometryInstance.prototype.arrayConstructor = Array;
     if (typeof Float32Array !== "undefined") {
         var testArray = new Float32Array(4);
@@ -312,4 +312,4 @@ var GeometryInstance = (function () {
             GeometryInstance.prototype.arrayConstructor = Float32Array;
         }
     }
-})());
+}());

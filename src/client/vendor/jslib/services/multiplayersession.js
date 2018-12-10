@@ -133,10 +133,10 @@ var MultiPlayerSession = (function () {
         }
     };
 
-    MultiPlayerSession.create = //
+    //
     // Constructor
     //
-    function (sessionData, createdCB, errorCB) {
+    MultiPlayerSession.create = function (sessionData, createdCB, errorCB) {
         var ms = new MultiPlayerSession();
         ms.sessionId = sessionData.sessionid;
         ms.playerId = sessionData.playerid;
@@ -164,11 +164,11 @@ var MultiPlayerSession = (function () {
                 var secondSplitIndex = message.indexOf(':', (firstSplitIndex + 1));
                 var senderID = message.slice(0, firstSplitIndex);
 
-                /*jshint bitwise:false*/
+                /* tslint:disable:no-bitwise */
                 // The |0 ensures 'messageType' is an integer
                 var messageType = (message.slice((firstSplitIndex + 1), secondSplitIndex) | 0);
 
-                /*jshint bitwise:true*/
+                /* tslint:enable:no-bitwise */
                 var messageData = message.slice(secondSplitIndex + 1);
 
                 onmessage(senderID, messageType, messageData);
@@ -221,8 +221,7 @@ var MultiPlayerSession = (function () {
                     method: 'POST',
                     data: {
                         'session': ms.sessionId,
-                        'gameSessionId': ms.gameSessionId
-                    },
+                        'gameSessionId': ms.gameSessionId },
                     callback: requestCallback,
                     requestHandler: ms.requestHandler
                 });

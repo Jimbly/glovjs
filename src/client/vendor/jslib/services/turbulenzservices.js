@@ -3,6 +3,7 @@
 
 ;
 
+
 var CustomMetricEvent = (function () {
     function CustomMetricEvent() {
     }
@@ -56,7 +57,39 @@ var ServiceRequester = (function () {
     //     neverDiscard - Never discard the request. Always queues the request
     //                    for when the service is again available. (Ignores
     //                    server preference)
-    ServiceRequester.prototype.request = function (params) {
+    ServiceRequester.prototype.request = function (params, serviceAction) {
+        // If there is a specific services domain set prefix any relative api urls
+        var servicesDomain = TurbulenzServices.servicesDomain;
+        if (servicesDomain) {
+            if (params.url.indexOf('http') !== 0) {
+                if (params.url[0] === '/') {
+                    params.url = servicesDomain + params.url;
+                } else {
+                    params.url = servicesDomain + '/' + params.url;
+                }
+            }
+            if (window.location) {
+                if (servicesDomain !== ServiceRequester.locationOrigin) {
+                    params.enableCORSCredentials = true;
+                }
+            }
+        }
+
+        // If the bridgeServices are available send to call
+        if (TurbulenzServices.bridgeServices) {
+            //TurbulenzServices.addSignature(dataSpec, url);
+            var processed = TurbulenzServices.callOnBridge(serviceAction ? serviceAction : params.url, params, function unpackResponse(response) {
+                if (params.callback) {
+                    params.callback(response, response.status);
+                }
+            });
+
+            // Processed indicates we are offline and the bridge has fully dealt with the service call
+            if (processed) {
+                return true;
+            }
+        }
+
         var discardRequestFn = function discardRequestFn() {
             if (params.callback) {
                 params.callback({ 'ok': false, 'msg': 'Service Unavailable. Discarding request' }, 503);
@@ -85,6 +118,9 @@ var ServiceRequester = (function () {
                 return false;
             }
 
+            // we check waiting so that we don't get into an infinite loop of callbacks
+            // when a service goes down, then up and then down again before the subscribed
+            // callbacks have all been called.
             if (!params.waiting) {
                 params.waiting = true;
                 serviceStatusObserver.subscribe(onServiceStatusChange);
@@ -109,12 +145,26 @@ var ServiceRequester = (function () {
 
                 // An error occurred so return false to avoid calling the success callback
                 return false;
-            } else {
-                if (oldResponseFilter) {
-                    return oldResponseFilter.call(params.requestHandler, callContext, makeRequest, responseJSON, status);
-                }
-                return true;
             }
+
+            if (status === 403) {
+                var responseObj = JSON.parse(responseJSON);
+                var statusObj = responseObj.data;
+                if (statusObj && statusObj.invalidGameSession) {
+                    if (TurbulenzServices.onGameSessionClosed) {
+                        TurbulenzServices.onGameSessionClosed();
+                    } else {
+                        Utilities.log('Game session closed');
+                    }
+                    return false;
+                }
+            }
+
+            // call the old custom error handler
+            if (oldResponseFilter) {
+                return oldResponseFilter.call(params.requestHandler, callContext, makeRequest, responseJSON, status);
+            }
+            return true;
         };
 
         Utilities.ajax(params);
@@ -122,6 +172,11 @@ var ServiceRequester = (function () {
     };
 
     ServiceRequester.create = function (serviceName, params) {
+        // If the ServiceRequest locationOrigin hasn't been set yet then set it.
+        if (typeof (ServiceRequester.locationOrigin) === undefined && typeof (window.location) !== undefined) {
+            ServiceRequester.locationOrigin = window.location.protocol + '//' + window.location.host;
+        }
+
         var serviceRequester = new ServiceRequester();
 
         if (!params) {
@@ -155,7 +210,14 @@ var TurbulenzServices = (function () {
     };
 
     TurbulenzServices.addBridgeEvents = function () {
-        var turbulenz = window.top.Turbulenz;
+        var turbulenz = window.Turbulenz;
+        if (!turbulenz) {
+            try  {
+                turbulenz = window.top.Turbulenz;
+            } catch (e) {
+            }
+            /* tslint:enable:no-empty */
+        }
         var turbulenzData = (turbulenz && turbulenz.Data) || {};
         var sessionToJoin = turbulenzData.joinMultiplayerSessionId;
         var that = this;
@@ -165,7 +227,7 @@ var TurbulenzServices = (function () {
         };
 
         var onReceiveConfig = function onReceiveConfigFn(configString) {
-            var config = JSON.parse(configString);
+            var config = (JSON.parse(configString));
 
             if (config.mode) {
                 that.mode = config.mode;
@@ -176,8 +238,20 @@ var TurbulenzServices = (function () {
             }
 
             that.bridgeServices = !!config.bridgeServices;
+
+            if (config.servicesDomain) {
+                that.servicesDomain = config.servicesDomain;
+            }
+
+            if (config.syncing) {
+                that.syncing = true;
+            }
+            if (config.offline) {
+                that.offline = true;
+            }
         };
 
+        // This should go once we have fully moved to the new system
         if (sessionToJoin) {
             this.multiplayerJoinRequestQueue.push(sessionToJoin);
         }
@@ -194,6 +268,18 @@ var TurbulenzServices = (function () {
         TurbulenzBridge.on("bridgeservices.response", function (jsondata) {
             that.routeResponse(jsondata);
         });
+        TurbulenzBridge.on("bridgeservices.sync.start", function () {
+            that.syncing = true;
+        });
+        TurbulenzBridge.on("bridgeservices.sync.end", function () {
+            that.syncing = false;
+        });
+        TurbulenzBridge.on("bridgeservices.offline.start", function () {
+            that.offline = true;
+        });
+        TurbulenzBridge.on("bridgeservices.offline.end", function () {
+            that.offline = false;
+        });
     };
 
     TurbulenzServices.callOnBridge = function (event, data, callback) {
@@ -206,7 +292,8 @@ var TurbulenzServices = (function () {
             this.responseHandlers[this.responseIndex] = callback;
             request.key = this.responseIndex;
         }
-        TurbulenzBridge.emit('bridgeservices.' + event, JSON.stringify(request));
+        var resultJSON = TurbulenzBridge.emit('bridgeservices.' + event, JSON.stringify(request));
+        return resultJSON && JSON.parse(resultJSON).fullyProcessed;
     };
 
     TurbulenzServices.addSignature = function (data, url) {
@@ -234,8 +321,9 @@ var TurbulenzServices = (function () {
     TurbulenzServices.onServiceAvailable = function (serviceName, callContext) {
     };
 
-    TurbulenzServices.createGameSession = function (requestHandler, sessionCreatedFn, errorCallbackFn) {
-        return GameSession.create(requestHandler, sessionCreatedFn, errorCallbackFn);
+    /* tslint:enable:no-empty */
+    TurbulenzServices.createGameSession = function (requestHandler, sessionCreatedFn, errorCallbackFn, options) {
+        return GameSession.create(requestHandler, sessionCreatedFn, errorCallbackFn, options);
     };
 
     TurbulenzServices.createMappingTable = function (requestHandler, gameSession, tableReceivedFn, defaultMappingSettings, errorCallbackFn) {
@@ -324,6 +412,7 @@ var TurbulenzServices = (function () {
 
         var url = '/api/v1/profiles/user';
 
+        // Can't request files from the hard disk using AJAX
         if (TurbulenzServices.available()) {
             this.getService('profiles').request({
                 url: url,
@@ -339,14 +428,20 @@ var TurbulenzServices = (function () {
                     }
                 },
                 requestHandler: requestHandler
-            });
+            }, 'profile.user');
+        } else {
+            // No Turbulenz services.  Make the error callback
+            // asynchronously.
+            TurbulenzEngine.setTimeout(function () {
+                errorCallbackFn("Error: createUserProfile: Turbulenz Services " + "unavailable");
+            }, 0.001);
         }
 
         return userProfile;
     };
 
-    TurbulenzServices.upgradeAnonymousUser = // This should only be called if UserProfile.anonymous is true.
-    function (upgradeCB) {
+    // This should only be called if UserProfile.anonymous is true.
+    TurbulenzServices.upgradeAnonymousUser = function (upgradeCB) {
         if (upgradeCB) {
             var onUpgrade = function onUpgradeFn(_signal) {
                 upgradeCB();
@@ -371,6 +466,7 @@ var TurbulenzServices = (function () {
             return;
         }
 
+        // Validation
         if (('string' !== typeof eventKey) || (0 === eventKey.length)) {
             errorCallbackFn("TurbulenzServices.sendCustomMetricEvent " + "failed: Event key must be a non-empty string", 0);
             return;
@@ -406,7 +502,7 @@ var TurbulenzServices = (function () {
             },
             requestHandler: requestHandler,
             encrypt: true
-        });
+        }, 'custommetrics.addevent');
     };
 
     TurbulenzServices.sendCustomMetricEventBatch = function (eventBatch, requestHandler, gameSession, errorCallbackFn) {
@@ -458,6 +554,7 @@ var TurbulenzServices = (function () {
                 }
             }
 
+            // Check the time value hasn't been manipulated by the developer
             if ('number' !== typeof eventTime || isNaN(eventTime) || !isFinite(eventTime)) {
                 if (errorCallbackFn) {
                     errorCallbackFn("TurbulenzServices.sendCustomMetricEventBatch failed: Event time offset is" + " corrupted", 0);
@@ -481,7 +578,7 @@ var TurbulenzServices = (function () {
             },
             requestHandler: requestHandler,
             encrypt: true
-        });
+        }, 'custommetrics.addeventbatch');
     };
 
     TurbulenzServices.getService = function (serviceName) {
@@ -565,6 +662,7 @@ var TurbulenzServices = (function () {
                             service.discardRequests = false;
                             service.serviceStatusObserver.notify(serviceRunning, service.discardRequests);
                         } else {
+                            // if discardRequests has been set
                             if (serviceData.discardRequests && !service.discardRequests) {
                                 service.discardRequests = true;
                                 onServiceUnavailableCallbacks(service);
@@ -586,12 +684,30 @@ var TurbulenzServices = (function () {
             }
         };
 
+        var params = {
+            url: serviceUrl,
+            method: 'GET',
+            callback: servicesStatusCB
+        };
+
+        var servicesDomain = TurbulenzServices.servicesDomain;
+        if (servicesDomain) {
+            if (serviceUrl.indexOf('http') !== 0) {
+                if (serviceUrl[0] === '/') {
+                    params.url = servicesDomain + serviceUrl;
+                } else {
+                    params.url = servicesDomain + '/' + serviceUrl;
+                }
+            }
+            if (window.location) {
+                if (servicesDomain !== ServiceRequester.locationOrigin) {
+                    params.enableCORSCredentials = true;
+                }
+            }
+        }
+
         pollServiceStatus = function pollServiceStatusFn() {
-            Utilities.ajax({
-                url: serviceUrl,
-                method: 'GET',
-                callback: servicesStatusCB
-            });
+            Utilities.ajax(params);
         };
 
         pollServiceStatus();
@@ -600,8 +716,10 @@ var TurbulenzServices = (function () {
         // A FIFO queue that passes events through to the handler when
         // un-paused and buffers up events while paused
         argsQueue: [],
+        /* tslint:disable:no-empty */
         handler: function nopFn() {
         },
+        /* tslint:enable:no-empty */
         context: undefined,
         paused: true,
         onEvent: function onEventFn(handler, context) {

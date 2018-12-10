@@ -1,4 +1,784 @@
-// Copyright (c) 2011-2014 Turbulenz Limited
+// Generated from assets/shaders/canvas.cgfx
+var canvas_cgfx = {
+    "version": 1,
+    "name": "canvas.cgfx",
+    "samplers": {
+        "texture": {
+            "MinFilter": 9985,
+            "MagFilter": 9729,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "pattern": {
+            "MinFilter": 9728,
+            "MagFilter": 9729,
+            "WrapS": 10497,
+            "WrapT": 10497
+        },
+        "gradient": {
+            "MinFilter": 9728,
+            "MagFilter": 9729,
+            "WrapS": 33071,
+            "WrapT": 33071
+        },
+        "image": {
+            "MinFilter": 9728,
+            "MagFilter": 9729,
+            "WrapS": 33071,
+            "WrapT": 33071
+        }
+    },
+    "parameters": {
+        "screen": {
+            "type": "float",
+            "columns": 4
+        },
+        "uvtransform": {
+            "type": "float",
+            "rows": 2,
+            "columns": 3
+        },
+        "color": {
+            "type": "float",
+            "columns": 4
+        },
+        "alpha": {
+            "type": "float"
+        },
+        "texture": {
+            "type": "sampler2D"
+        },
+        "pattern": {
+            "type": "sampler2D"
+        },
+        "gradient": {
+            "type": "sampler2D"
+        },
+        "image": {
+            "type": "sampler2D"
+        }
+    },
+    "techniques": {
+        "flat_source_atop": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 771]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_source_in": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 0]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_source_out": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 0]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_source_over": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_destination_atop": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 770]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_destination_in": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 770]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_destination_out": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 771]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_destination_over": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 1]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_lighter": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 1]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_copy": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "flat_xor": [
+            {
+                "parameters": ["screen", "color"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 771]
+                },
+                "programs": ["vp_flat", "fp_flat"]
+            }
+        ],
+        "texture_source_atop": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 771]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_source_in": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 0]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_source_out": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 0]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_source_over": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_destination_atop": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 770]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_destination_in": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 770]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_destination_out": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 771]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_destination_over": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 1]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_lighter": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 1]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_copy": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "texture_xor": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 771]
+                },
+                "programs": ["vp_texture", "fp_texture"]
+            }
+        ],
+        "pattern_source_atop": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_source_in": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 0]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_source_out": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 0]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_source_over": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_destination_atop": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 770]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_destination_in": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 770]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_destination_out": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_destination_over": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 1]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_lighter": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 1]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_copy": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "pattern_xor": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern"]
+            }
+        ],
+        "gradient_source_atop": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_source_in": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [772, 0]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_source_out": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 0]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_source_over": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_destination_atop": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 770]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_destination_in": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 770]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_destination_out": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [0, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_destination_over": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 1]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_lighter": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 1]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_copy": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "gradient_xor": [
+            {
+                "parameters": ["screen", "uvtransform", "alpha", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [773, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient"]
+            }
+        ],
+        "texture_shadow": [
+            {
+                "parameters": ["screen", "color", "texture"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture", "fp_texture_shadow"]
+            }
+        ],
+        "pattern_shadow": [
+            {
+                "parameters": ["screen", "uvtransform", "color", "pattern"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_pattern_shadow"]
+            }
+        ],
+        "gradient_shadow": [
+            {
+                "parameters": ["screen", "uvtransform", "color", "gradient"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [1, 771]
+                },
+                "programs": ["vp_texture_uvtransform", "fp_gradient_shadow"]
+            }
+        ],
+        "image": [
+            {
+                "parameters": ["image"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_image", "fp_image"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_image": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D image;void main()\n{_ret_0=texture2D(image,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}"
+        },
+        "vp_image": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nvec4 _OutPosition1;vec2 _OutUV1;void main()\n{_OutPosition1=vec4(ATTR0.x,ATTR0.y,0.0,1.0);_OutUV1=ATTR8.xy;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=_OutPosition1;}"
+        },
+        "fp_gradient_shadow": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;vec4 _TMP0;uniform vec4 color;uniform sampler2D gradient;void main()\n{_TMP0=texture2D(gradient,tz_TexCoord[0].xy);_ret_0=color*_TMP0.w;gl_FragColor=_ret_0;}"
+        },
+        "vp_texture_uvtransform": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _OutPosition1;vec2 _OutUV1;uniform vec4 screen;uniform vec3 uvtransform[2];void main()\n{vec3 _position;vec2 _TMP9;_TMP9=ATTR0.xy*screen.xy+screen.zw;_OutPosition1=vec4(_TMP9.x,_TMP9.y,0.0,1.0);_position=vec3(ATTR0.x,ATTR0.y,1.0);_OutUV1.x=dot(_position,uvtransform[0]);_OutUV1.y=dot(_position,uvtransform[1]);tz_TexCoord[0].xy=_OutUV1;gl_Position=_OutPosition1;}"
+        },
+        "fp_pattern_shadow": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;vec4 _TMP0;uniform vec4 color;uniform sampler2D pattern;void main()\n{_TMP0=texture2D(pattern,tz_TexCoord[0].xy);_ret_0=color*_TMP0.w;gl_FragColor=_ret_0;}"
+        },
+        "fp_texture_shadow": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;vec4 _TMP0;uniform vec4 color;uniform sampler2D texture;void main()\n{_TMP0=texture2D(texture,tz_TexCoord[0].xy);_ret_0=color*_TMP0.w;gl_FragColor=_ret_0;}"
+        },
+        "vp_texture": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nvec4 _OutPosition1;vec2 _OutUV1;uniform vec4 screen;void main()\n{vec2 _TMP8;_TMP8=ATTR0.xy*screen.xy+screen.zw;_OutPosition1=vec4(_TMP8.x,_TMP8.y,0.0,1.0);_OutUV1=ATTR8.xy;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=_OutPosition1;}"
+        },
+        "fp_gradient": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform float alpha;uniform sampler2D gradient;void main()\n{vec4 _fg;_fg=texture2D(gradient,tz_TexCoord[0].xy);_fg.w=_fg.w*alpha;_fg.xyz=_fg.xyz*_fg.w;gl_FragColor=_fg;}"
+        },
+        "fp_pattern": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform float alpha;uniform sampler2D pattern;void main()\n{vec4 _fg;_fg=texture2D(pattern,tz_TexCoord[0].xy);_fg.w=_fg.w*alpha;_fg.xyz=_fg.xyz*_fg.w;gl_FragColor=_fg;}"
+        },
+        "fp_texture": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _TMP0;uniform vec4 color;uniform sampler2D texture;void main()\n{vec4 _fg;_TMP0=texture2D(texture,tz_TexCoord[0].xy);_fg=_TMP0*color;_fg.xyz=_fg.xyz*_fg.w;gl_FragColor=_fg;}"
+        },
+        "fp_flat": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nuniform vec4 color;void main()\n{gl_FragColor=color;}"
+        },
+        "vp_flat": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nattribute vec4 ATTR0;\nvec4 _ret_0;uniform vec4 screen;void main()\n{vec2 _TMP8;_TMP8=ATTR0.xy*screen.xy+screen.zw;_ret_0=vec4(_TMP8.x,_TMP8.y,0.0,1.0);gl_Position=_ret_0;}"
+        }
+    }
+};
+
 ;
 
 ;
@@ -450,13 +1230,8 @@ var CanvasLinearGradient = (function () {
         var idx = (1.0 / dx);
         var idy = (1.0 / dy);
         c.matrix = [
-            idx,
-            0,
-            -x0 * idx,
-            0,
-            idy,
-            -y0 * idy
-        ];
+            idx, 0, -x0 * idx,
+            0, idy, -y0 * idy];
 
         c.numTextureStops = 0;
         c.texture = null;
@@ -554,10 +1329,10 @@ var CanvasRadialGradient = (function () {
             var abs = Math.abs;
             var pi2 = (Math.PI * 2);
 
-            /*jshint bitwise: false*/
+            /* tslint:disable:no-bitwise */
             var numSteps = Math.max(abs(dx | 0), abs(dy | 0), abs(dr | 0));
 
-            /*jshint bitwise: true*/
+            /* tslint:enable:no-bitwise */
             var dw = (1.0 / numSteps);
             var c0, c1, c2, c3;
             for (var w = 0.0; w <= 1.0; w += dw) {
@@ -603,11 +1378,12 @@ var CanvasRadialGradient = (function () {
                 for (var cr = 1; cr < r; cr += 1) {
                     dangle = (1.0 / cr);
                     for (angle = 0; angle < pi2; angle += dangle) {
-                        /*jshint bitwise: false*/
+                        /* tslint:disable:no-bitwise */
                         cx = ((x + (cr * cos(angle))) | 0);
                         cy = ((y + (cr * sin(angle))) | 0);
                         p = ((cx + (cy * width)) << 2);
 
+                        /* tslint:enable:no-bitwise */
                         if (pixelData[p + 3] === undefined) {
                             pixelData[p] = c0;
                             pixelData[p + 1] = c1;
@@ -619,11 +1395,12 @@ var CanvasRadialGradient = (function () {
 
                 dangle = (1.0 / r);
                 for (angle = 0; angle < pi2; angle += dangle) {
-                    /*jshint bitwise: false*/
+                    /* tslint:disable:no-bitwise */
                     cx = ((x + (r * cos(angle))) | 0);
                     cy = ((y + (r * sin(angle))) | 0);
                     p = ((cx + (cy * width)) << 2);
 
+                    /* tslint:enable:no-bitwise */
                     if (pixelData[p + 3] === undefined) {
                         pixelData[p] = c0;
                         pixelData[p + 1] = c1;
@@ -686,13 +1463,8 @@ var CanvasRadialGradient = (function () {
         var idy = (1.0 / height);
 
         c.matrix = [
-            idx,
-            0,
-            -minX * idx,
-            0,
-            idy,
-            -minY * idy
-        ];
+            idx, 0, -minX * idx,
+            0, idy, -minY * idy];
 
         c.numTextureStops = 0;
         c.texture = null;
@@ -737,785 +1509,7 @@ var CanvasContext = (function () {
             'round': 1,
             'miter': 1
         };
-        this.shaderDefinition = {
-            "version": 1,
-            "name": "canvas.cgfx",
-            "samplers": {
-                "texture": {
-                    "MinFilter": 9985,
-                    "MagFilter": 9729,
-                    "WrapS": 33071,
-                    "WrapT": 33071
-                },
-                "pattern": {
-                    "MinFilter": 9728,
-                    "MagFilter": 9729,
-                    "WrapS": 10497,
-                    "WrapT": 10497
-                },
-                "gradient": {
-                    "MinFilter": 9728,
-                    "MagFilter": 9729,
-                    "WrapS": 33071,
-                    "WrapT": 33071
-                },
-                "image": {
-                    "MinFilter": 9728,
-                    "MagFilter": 9729,
-                    "WrapS": 33071,
-                    "WrapT": 33071
-                }
-            },
-            "parameters": {
-                "screen": {
-                    "type": "float",
-                    "columns": 4
-                },
-                "uvtransform": {
-                    "type": "float",
-                    "rows": 2,
-                    "columns": 3
-                },
-                "color": {
-                    "type": "float",
-                    "columns": 4
-                },
-                "alpha": {
-                    "type": "float"
-                },
-                "texture": {
-                    "type": "sampler2D"
-                },
-                "pattern": {
-                    "type": "sampler2D"
-                },
-                "gradient": {
-                    "type": "sampler2D"
-                },
-                "image": {
-                    "type": "sampler2D"
-                }
-            },
-            "techniques": {
-                "flat_source_atop": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 771]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_source_in": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 0]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_source_out": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 0]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_source_over": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_destination_atop": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 770]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_destination_in": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 770]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_destination_out": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 771]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_destination_over": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 1]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_lighter": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 1]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_copy": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "flat_xor": [
-                    {
-                        "parameters": ["screen", "color"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 771]
-                        },
-                        "programs": ["vp_flat", "fp_flat"]
-                    }
-                ],
-                "texture_source_atop": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 771]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_source_in": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 0]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_source_out": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 0]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_source_over": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_destination_atop": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 770]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_destination_in": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 770]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_destination_out": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 771]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_destination_over": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 1]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_lighter": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 1]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_copy": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "texture_xor": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 771]
-                        },
-                        "programs": ["vp_texture", "fp_texture"]
-                    }
-                ],
-                "pattern_source_atop": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_source_in": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 0]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_source_out": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 0]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_source_over": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_destination_atop": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 770]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_destination_in": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 770]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_destination_out": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_destination_over": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 1]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_lighter": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 1]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_copy": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "pattern_xor": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern"]
-                    }
-                ],
-                "gradient_source_atop": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_source_in": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [772, 0]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_source_out": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 0]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_source_over": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_destination_atop": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 770]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_destination_in": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 770]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_destination_out": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [0, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_destination_over": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 1]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_lighter": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 1]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_copy": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "gradient_xor": [
-                    {
-                        "parameters": ["screen", "uvtransform", "alpha", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [773, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient"]
-                    }
-                ],
-                "texture_shadow": [
-                    {
-                        "parameters": ["screen", "color", "texture"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture", "fp_texture_shadow"]
-                    }
-                ],
-                "pattern_shadow": [
-                    {
-                        "parameters": ["screen", "uvtransform", "color", "pattern"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_pattern_shadow"]
-                    }
-                ],
-                "gradient_shadow": [
-                    {
-                        "parameters": ["screen", "uvtransform", "color", "gradient"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [1, 771]
-                        },
-                        "programs": ["vp_texture_uvtransform", "fp_gradient_shadow"]
-                    }
-                ],
-                "image": [
-                    {
-                        "parameters": ["image"],
-                        "semantics": ["POSITION", "TEXCOORD0"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_image", "fp_image"]
-                    }
-                ]
-            },
-            "programs": {
-                "fp_image": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D image;void main()\n{gl_FragColor=texture2D(image,tz_TexCoord[0].xy);}"
-                },
-                "vp_image": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nvoid main()\n{vec4 tmpvar_1;tmpvar_1.zw=vec2(0.0,1.0);tmpvar_1.x=ATTR0.x;tmpvar_1.y=ATTR0.y;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=tmpvar_1;}"
-                },
-                "fp_gradient_shadow": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D gradient;uniform vec4 color;void main()\n{gl_FragColor=(color*texture2D(gradient,tz_TexCoord[0].xy).w);}"
-                },
-                "vp_texture_uvtransform": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nuniform vec3 uvtransform[2];uniform vec4 screen;void main()\n{vec2 tmpvar_1;vec2 tmpvar_2;tmpvar_2=((ATTR0.xy*screen.xy)+screen.zw);vec4 tmpvar_3;tmpvar_3.zw=vec2(0.0,1.0);tmpvar_3.x=tmpvar_2.x;tmpvar_3.y=tmpvar_2.y;vec3 tmpvar_4;tmpvar_4.z=1.0;tmpvar_4.x=ATTR0.x;tmpvar_4.y=ATTR0.y;tmpvar_1.x=dot(tmpvar_4,uvtransform[0]);tmpvar_1.y=dot(tmpvar_4,uvtransform[1]);tz_TexCoord[0].xy=tmpvar_1;gl_Position=tmpvar_3;}"
-                },
-                "fp_pattern_shadow": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D pattern;uniform vec4 color;void main()\n{gl_FragColor=(color*texture2D(pattern,tz_TexCoord[0].xy).w);}"
-                },
-                "fp_texture_shadow": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D texture;uniform vec4 color;void main()\n{gl_FragColor=(color*texture2D(texture,tz_TexCoord[0].xy).w);}"
-                },
-                "vp_texture": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nuniform vec4 screen;void main()\n{vec2 tmpvar_1;tmpvar_1=((ATTR0.xy*screen.xy)+screen.zw);vec4 tmpvar_2;tmpvar_2.zw=vec2(0.0,1.0);tmpvar_2.x=tmpvar_1.x;tmpvar_2.y=tmpvar_1.y;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=tmpvar_2;}"
-                },
-                "fp_gradient": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D gradient;uniform float alpha;void main()\n{vec4 _fg;vec4 tmpvar_1;tmpvar_1=texture2D(gradient,tz_TexCoord[0].xy);_fg=tmpvar_1;_fg.w=(tmpvar_1.w*alpha);_fg.xyz=(tmpvar_1.xyz*_fg.w);gl_FragColor=_fg;}"
-                },
-                "fp_pattern": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D pattern;uniform float alpha;void main()\n{vec4 _fg;vec4 tmpvar_1;tmpvar_1=texture2D(pattern,tz_TexCoord[0].xy);_fg=tmpvar_1;_fg.w=(tmpvar_1.w*alpha);_fg.xyz=(tmpvar_1.xyz*_fg.w);gl_FragColor=_fg;}"
-                },
-                "fp_texture": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nuniform sampler2D texture;uniform vec4 color;void main()\n{vec4 _fg;vec4 tmpvar_1;tmpvar_1=(texture2D(texture,tz_TexCoord[0].xy)*color);_fg=tmpvar_1;_fg.xyz=(tmpvar_1.xyz*tmpvar_1.w);gl_FragColor=_fg;}"
-                },
-                "fp_flat": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nuniform vec4 color;void main()\n{gl_FragColor=color;}"
-                },
-                "vp_flat": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nattribute vec4 ATTR0;\nuniform vec4 screen;void main()\n{vec2 tmpvar_1;tmpvar_1=((ATTR0.xy*screen.xy)+screen.zw);vec4 tmpvar_2;tmpvar_2.zw=vec2(0.0,1.0);tmpvar_2.x=tmpvar_1.x;tmpvar_2.y=tmpvar_1.y;gl_Position=tmpvar_2;}"
-                }
-            }
-        };
+        this.shaderDefinition = canvas_cgfx;
         // public variables
         this.canvas = canvas;
         this.globalAlpha = 1.0;
@@ -1548,7 +1542,7 @@ var CanvasContext = (function () {
         this.width = width;
         this.height = height;
 
-        /*jshint newcap: false*/
+        /* tslint:disable:no-duplicate-variable */
         var floatArrayConstructor = this.floatArrayConstructor;
 
         this.screen = new floatArrayConstructor(4);
@@ -1566,9 +1560,11 @@ var CanvasContext = (function () {
         this.activeScreen = new floatArrayConstructor(4);
         this.activeColor = new floatArrayConstructor(4);
 
+        /* tslint:disable:no-use-before-declare */
         var shader = gd.createShader(this.shaderDefinition);
         this.shader = shader;
 
+        /* tslint:enable:no-use-before-declare */
         this.triangleStripPrimitive = gd.PRIMITIVE_TRIANGLE_STRIP;
         this.triangleFanPrimitive = gd.PRIMITIVE_TRIANGLE_FAN;
         this.trianglePrimitive = gd.PRIMITIVE_TRIANGLES;
@@ -1663,6 +1659,7 @@ var CanvasContext = (function () {
         this.patternShadowTechnique = shader.getTechnique('pattern_shadow');
         this.gradientShadowTechnique = shader.getTechnique('gradient_shadow');
 
+        /* tslint:disable:no-duplicate-variable */
         /*
         this.renderTexture = gd.createTexture({
         name       : "canvas.backbuffer",
@@ -1674,7 +1671,7 @@ var CanvasContext = (function () {
         mipmaps    : false,
         renderable : true
         });
-
+        
         this.renderTarget = gd.createRenderTarget({
         colorTexture0 : this.renderTexture
         });
@@ -1701,7 +1698,7 @@ var CanvasContext = (function () {
         this.clipExtents[3] = height;
 
         //
-        this.statesStack = [this.createStatesObject()];
+        this.statesStack = [this.createStatesObject()]; // Preallocate one state objet
         this.numStatesInStack = 0;
 
         this.defaultStates = this.createStatesObject();
@@ -1813,7 +1810,7 @@ var CanvasContext = (function () {
         return CanvasRadialGradient.create(x0, y0, r0, x1, y1, r1);
     };
 
-    CanvasContext.prototype.createPattern = function (image/*, repetition */ ) {
+    CanvasContext.prototype.createPattern = function (image /*, repetition */ ) {
         if (!image) {
             throw 'INVALID_STATE_ERR';
         }
@@ -1841,8 +1838,10 @@ var CanvasContext = (function () {
             } else {
                 this.fillFlatBuffer(rect, 4);
 
+                /* tslint:disable:no-string-literal */
                 var technique = this.flatTechniques['copy'];
 
+                /* tslint:enable:no-string-literal */
                 this.setTechniqueWithColor(technique, this.screen, this.v4Zero);
 
                 gd.draw(this.triangleStripPrimitive, 4, this.flatOffset);
@@ -1939,6 +1938,7 @@ var CanvasContext = (function () {
         if (numCurrentSubPathElements > 1) {
             var firstPoint = currentSubPath[0];
 
+            // Close current subpath if not just a single segment
             if (numCurrentSubPathElements > 2) {
                 var lastPoint = currentSubPath[numCurrentSubPathElements - 1];
                 var abs = Math.abs;
@@ -2016,8 +2016,7 @@ var CanvasContext = (function () {
                 var tinvt = (2 * t * invt);
                 currentSubPath[numCurrentSubPathElements] = [
                     ((invt2 * x1) + (tinvt * xq) + (t2 * x2)),
-                    ((invt2 * y1) + (tinvt * yq) + (t2 * y2))
-                ];
+                    ((invt2 * y1) + (tinvt * yq) + (t2 * y2))];
                 numCurrentSubPathElements += 1;
             }
         }
@@ -2091,8 +2090,7 @@ var CanvasContext = (function () {
                 var invtt = (3 * t2 * invt);
                 currentSubPath[numCurrentSubPathElements] = [
                     ((invt3 * x1) + (tinvt * xq1) + (invtt * xq2) + (t3 * x2)),
-                    ((invt3 * y1) + (tinvt * yq1) + (invtt * yq2) + (t3 * y2))
-                ];
+                    ((invt3 * y1) + (tinvt * yq1) + (invtt * yq2) + (t3 * y2))];
                 numCurrentSubPathElements += 1;
             }
         }
@@ -2423,14 +2421,16 @@ var CanvasContext = (function () {
                 return commands;
             }
 
+            // Same command, new arguments?
             if (c === 43 || c === 45 || c === 46 || (c >= 48 && c <= 57)) {
                 if (currentCommand < 0) {
                     throw "Coordinates without a command: " + path.slice(i);
                 } else {
+                    // Implicit lineTo after moveTo?
                     if (currentCommand === 77) {
-                        currentCommand = 76;
+                        currentCommand = 76; //L
                     } else if (currentCommand === 109) {
-                        currentCommand = 108;
+                        currentCommand = 108; //l
                     }
                 }
             } else {
@@ -2705,8 +2705,7 @@ var CanvasContext = (function () {
             do {
                 currentSubPath[j] = [
                     points[i],
-                    points[i + 1]
-                ];
+                    points[i + 1]];
                 i += 2;
                 j += 1;
             } while(j < endPoints);
@@ -2717,8 +2716,7 @@ var CanvasContext = (function () {
             do {
                 currentSubPath[j] = [
                     points[i] + dx,
-                    points[i + 1] + dy
-                ];
+                    points[i + 1] + dy];
                 i += 2;
                 j += 1;
             } while(j < endPoints);
@@ -3060,11 +3058,11 @@ var CanvasContext = (function () {
         }
     };
 
-    CanvasContext.prototype.drawSystemFocusRing = function (/* element */ ) {
+    CanvasContext.prototype.drawSystemFocusRing = function ( /* element */ ) {
         // TODO
     };
 
-    CanvasContext.prototype.drawCustomFocusRing = function (/* element */ ) {
+    CanvasContext.prototype.drawCustomFocusRing = function ( /* element */ ) {
         // TODO
         return false;
     };
@@ -3324,7 +3322,7 @@ var CanvasContext = (function () {
         this.activeVertexBuffer = null;
     };
 
-    CanvasContext.prototype.strokeText = function (/* text, x, y, maxWidth */ ) {
+    CanvasContext.prototype.strokeText = function ( /* text, x, y, maxWidth */ ) {
         // TODO
     };
 
@@ -3442,8 +3440,10 @@ var CanvasContext = (function () {
 
                 this.setTechniqueWithColor(technique, this.screen, color);
 
+                /* tslint:disable:no-string-literal */
                 technique['texture'] = image;
 
+                /* tslint:enable:no-string-literal */
                 gd.draw(primitive, 4);
             }
         }
@@ -3572,8 +3572,10 @@ var CanvasContext = (function () {
                 gd.setTechnique(technique);
                 this.activeTechnique = null;
 
+                /* tslint:disable:no-string-literal */
                 technique['image'] = tempImage;
 
+                /* tslint:enable:no-string-literal */
                 gd.draw(this.triangleStripPrimitive, 4);
             }
 
@@ -3626,6 +3628,7 @@ var CanvasContext = (function () {
         this.activeTechnique = null;
         this.flatOffset = 0;
 
+        /* This code is required if Object.defineProperty does not work */
         if (width !== this.width || height !== this.height) {
             this.width = width;
             this.height = height;
@@ -3877,8 +3880,7 @@ var CanvasContext = (function () {
         var m = this.matrix;
         return [
             ((x * m[0]) + (y * m[1]) + m[2]),
-            ((x * m[3]) + (y * m[4]) + m[5])
-        ];
+            ((x * m[3]) + (y * m[4]) + m[5])];
     };
 
     CanvasContext.prototype.transformRect = function (x, y, w, h, rect) {
@@ -3913,8 +3915,7 @@ var CanvasContext = (function () {
         var m = this.matrix;
         return [
             (x + m[2]),
-            (y + m[5])
-        ];
+            (y + m[5])];
     };
 
     CanvasContext.prototype.transformRectTranslate = function (x, y, w, h, rect) {
@@ -4245,12 +4246,14 @@ var CanvasContext = (function () {
                 technique.pattern = style;
             }
         } else {
+            /* tslint:disable:no-string-literal */
             if (alpha < 1.0) {
                 technique = this.flatTechniques['source-over'];
             } else {
                 technique = this.flatTechniques['copy'];
             }
 
+            /* tslint:enable:no-string-literal */
             this.setTechniqueWithColor(technique, screen, color);
         }
 
@@ -4286,7 +4289,9 @@ var CanvasContext = (function () {
                     throw "Unknown composite operation: " + globalCompositeOperation;
                 }
             } else {
+                /* tslint:disable:no-string-literal */
                 technique = this.flatTechniques['copy'];
+                /* tslint:enable:no-string-literal */
             }
 
             this.setTechniqueWithColor(technique, screen, color);
@@ -4306,7 +4311,9 @@ var CanvasContext = (function () {
                     throw "Unknown composite operation: " + globalCompositeOperation;
                 }
             } else {
+                /* tslint:disable:no-string-literal */
                 technique = this.gradientTechniques['copy'];
+                /* tslint:enable:no-string-literal */
             }
 
             this.setTechniqueWithAlpha(technique, screen, globalAlpha);
@@ -4349,9 +4356,11 @@ var CanvasContext = (function () {
 
             this.gd.setTechnique(technique);
 
+            /* tslint:disable:no-string-literal */
             technique['screen'] = screen;
             technique['alpha'] = alpha;
 
+            /* tslint:enable:no-string-literal */
             activeScreen[0] = screen[0];
             activeScreen[1] = screen[1];
             activeScreen[2] = screen[2];
@@ -4365,13 +4374,17 @@ var CanvasContext = (function () {
                 activeScreen[2] = screen[2];
                 activeScreen[3] = screen[3];
 
+                /* tslint:disable:no-string-literal */
                 technique['screen'] = screen;
+                /* tslint:enable:no-string-literal */
             }
 
             if (activeColor[3] !== alpha) {
                 activeColor[3] = alpha;
 
+                /* tslint:disable:no-string-literal */
                 technique['alpha'] = alpha;
+                /* tslint:enable:no-string-literal */
             }
         }
     };
@@ -4385,9 +4398,11 @@ var CanvasContext = (function () {
 
             this.gd.setTechnique(technique);
 
+            /* tslint:disable:no-string-literal */
             technique['screen'] = screen;
             technique['color'] = color;
 
+            /* tslint:enable:no-string-literal */
             activeScreen[0] = screen[0];
             activeScreen[1] = screen[1];
             activeScreen[2] = screen[2];
@@ -4404,7 +4419,9 @@ var CanvasContext = (function () {
                 activeScreen[2] = screen[2];
                 activeScreen[3] = screen[3];
 
+                /* tslint:disable:no-string-literal */
                 technique['screen'] = screen;
+                /* tslint:enable:no-string-literal */
             }
 
             if (activeColor[0] !== color[0] || activeColor[1] !== color[1] || activeColor[2] !== color[2] || activeColor[3] !== color[3]) {
@@ -4413,7 +4430,9 @@ var CanvasContext = (function () {
                 activeColor[2] = color[2];
                 activeColor[3] = color[3];
 
+                /* tslint:disable:no-string-literal */
                 technique['color'] = color;
+                /* tslint:enable:no-string-literal */
             }
         }
     };
@@ -4468,8 +4487,7 @@ var CanvasContext = (function () {
                     j = sin(angle);
                     points[numPoints] = [
                         ((i * m0) + (j * m1) + x),
-                        ((i * m3) + (j * m4) + y)
-                    ];
+                        ((i * m3) + (j * m4) + y)];
                     numPoints += 1;
                 }
             }
@@ -4485,8 +4503,7 @@ var CanvasContext = (function () {
                     j = sin(angle);
                     points[numPoints] = [
                         ((i * m0) + (j * m1) + x),
-                        ((i * m3) + (j * m4) + y)
-                    ];
+                        ((i * m3) + (j * m4) + y)];
                     numPoints += 1;
                 }
             }
@@ -4496,8 +4513,7 @@ var CanvasContext = (function () {
         j = sin(endAngle);
         points[numPoints] = [
             ((i * m0) + (j * m1) + x),
-            ((i * m3) + (j * m4) + y)
-        ];
+            ((i * m3) + (j * m4) + y)];
     };
 
     CanvasContext.prototype.getFlatBuffer = function (numVertices) {
@@ -4728,7 +4744,7 @@ var CanvasContext = (function () {
 
         var flag = 0;
 
-        /*jshint bitwise: false*/
+        /* tslint:disable:no-bitwise */
         var p0 = points[0];
         var p1 = points[1];
         var p0x = p0[0];
@@ -4762,6 +4778,7 @@ var CanvasContext = (function () {
             n += 1;
         } while(n < numSegments);
 
+        /* tslint:enable:no-bitwise */
         if (flag !== 0) {
             return true;
         }
@@ -4933,8 +4950,11 @@ var CanvasContext = (function () {
             var d20l = ((d20x * d20x) + (d20y * d20y));
 
             angle = (((d10x * d20y) - (d10y * d20x)) / sqrt(d10l * d20l));
+
+            /* tslint:disable:no-bitwise */
             angles[n - 2] = ((angle * 100) | 0);
 
+            /* tslint:enable:no-bitwise */
             // Increase the 100 to increase precision if caching matches too dissimilar shapes
             d10x = d20x;
             d10y = d20y;
@@ -4948,16 +4968,22 @@ var CanvasContext = (function () {
 
     CanvasContext.prototype.lowerBound = function (bin, data, length) {
         var first = 0;
+
+        /* tslint:disable:no-bitwise */
         var count = (bin.length >>> 1);
+
+        /* tslint:enable:no-bitwise */
         var step, middle, binIndex, diff;
         var n;
         var a;
 
         while (0 < count) {
+            /* tslint:disable:no-bitwise */
             step = (count >>> 1);
             middle = (first + step);
-            binIndex = ((middle << 1) + 1);
+            binIndex = ((middle << 1) + 1); // Bin elements have the data on the second slot
 
+            /* tslint:enable:no-bitwise */
             n = 0;
             a = bin[binIndex];
             for (; ;) {
@@ -4979,7 +5005,9 @@ var CanvasContext = (function () {
             }
         }
 
+        /* tslint:disable:no-bitwise */
         return (first << 1);
+        /* tslint:enable:no-bitwise */
     };
 
     CanvasContext.prototype.triangulateConcaveCached = function (points, numSegments, vertices, numVertices) {
@@ -4997,6 +5025,7 @@ var CanvasContext = (function () {
             lowerIndex = this.lowerBound(dataBin, angles, numAngles);
         }
 
+        // Check if we found an identical copy
         if (lowerIndex < 0) {
             lowerIndex = ((-lowerIndex) - 1);
             numVertices = this.expandIndices(points, vertices, numVertices, dataBin[lowerIndex]);
@@ -5053,7 +5082,7 @@ var CanvasContext = (function () {
             points.length = numSegments;
         } else {
             // Need to get a copy because this is a destructive algorithm
-            points = points.slice(0, numSegments);
+            points = points.slice(0, numSegments); // no need to copy the duplicated last point
         }
 
         // Ear cutting algorithm
@@ -5089,7 +5118,7 @@ var CanvasContext = (function () {
                 v0y = (cy - ay);
 
                 // Calculate triangle area
-                tarea = ((v1x * v0y) - (v0x * v1y));
+                tarea = ((v1x * v0y) - (v0x * v1y)); // * 0.5);
 
                 if ((totalArea * tarea) > 0) {
                     // Calculate triangle extents
@@ -5105,6 +5134,7 @@ var CanvasContext = (function () {
                     maxY = (ay > by ? ay : by);
                     maxY = (maxY > cy ? maxY : cy);
 
+                    // Compute edge functions constants
                     if (0 < tarea) {
                         ABx = (bx - ax);
                         ABy = (ay - by);
@@ -5349,7 +5379,7 @@ var CanvasContext = (function () {
             v0y = (cy - ay);
 
             // Calculate triangle area
-            tarea = ((v1x * v0y) - (v0x * v1y));
+            tarea = ((v1x * v0y) - (v0x * v1y)); // * 0.5);
 
             if ((totalArea * tarea) > 0) {
                 vertices[numVertices] = p0;
@@ -5412,7 +5442,7 @@ var CanvasContext = (function () {
         var numPoints = points.length;
         if (numPoints > 2) {
             if (this.isClosed(points[0], points[numPoints - 1])) {
-                numPoints -= 1;
+                numPoints -= 1; // Skip duplicated last point
 
                 return this.isPointInPolygon(tx, ty, points, numPoints);
             }
@@ -5421,8 +5451,8 @@ var CanvasContext = (function () {
         return false;
     };
 
-    CanvasContext.create = // Constructor function
-    function (canvas, gd, width, height) {
+    // Constructor function
+    CanvasContext.create = function (canvas, gd, width, height) {
         return new CanvasContext(canvas, gd, width, height);
     };
     CanvasContext.version = 1;
@@ -5444,7 +5474,7 @@ var Canvas = (function () {
         }
     };
 
-    Canvas.prototype.toDataURL = function (/* type */ ) {
+    Canvas.prototype.toDataURL = function ( /* type */ ) {
         if (this.width === 0 || this.height === 0) {
             return "data:,";
         }
@@ -5452,13 +5482,13 @@ var Canvas = (function () {
         //if (type.toLowerCase() === 'image/jpeg')
         var pixelData = this.context.gd.getScreenshot(true, 0, 0, this.width, this.height);
         if (pixelData) {
-            return "data:image/jpeg;base64," + (pixelData).toBase64();
+            return "data:image/jpeg;base64," + pixelData.toBase64();
         }
 
         return null;
     };
 
-    Canvas.prototype.toBlob = function (fileCallback/*, type */ ) {
+    Canvas.prototype.toBlob = function (fileCallback /*, type */ ) {
         if (fileCallback) {
             //if (type.toLowerCase() === 'image/jpeg')
             var pixelData = this.context.gd.getScreenshot(true, 0, 0, this.width, this.height);
@@ -5486,8 +5516,8 @@ var Canvas = (function () {
         this.context.setFontManager(fm);
     };
 
-    Canvas.create = // Constructor function
-    function (gd) {
+    // Constructor function
+    Canvas.create = function (gd) {
         var width = gd.width;
         var height = gd.height;
 
@@ -5503,9 +5533,9 @@ var Canvas = (function () {
                 set: function setWidth(newValue) {
                     width = newValue;
 
-                    (this).context.setWidth(newValue);
+                    this.context.setWidth(newValue);
 
-                    (this).clientWidth = newValue;
+                    this.clientWidth = newValue;
                 },
                 enumerable: true,
                 configurable: false
@@ -5518,9 +5548,9 @@ var Canvas = (function () {
                 set: function setHeight(newValue) {
                     height = newValue;
 
-                    (this).context.setHeight(newValue);
+                    this.context.setHeight(newValue);
 
-                    (this).clientHeight = newValue;
+                    this.clientHeight = newValue;
                 },
                 enumerable: true,
                 configurable: false
@@ -5540,26 +5570,27 @@ var Canvas = (function () {
 })();
 
 // Detect correct typed arrays
-((function () {
+(function () {
     CanvasContext.prototype.floatArrayConstructor = Array;
     CanvasContext.prototype.byteArrayConstructor = Array;
     CanvasContext.prototype.shortArrayConstructor = Array;
+    var textDescriptor;
     if (typeof Float32Array !== "undefined") {
-        var textDescriptor = Object.prototype.toString.call(new Float32Array(4));
+        textDescriptor = Object.prototype.toString.call(new Float32Array(4));
         if (textDescriptor === '[object Float32Array]') {
             CanvasContext.prototype.floatArrayConstructor = Float32Array;
         }
     }
     if (typeof Uint8Array !== "undefined") {
-        var textDescriptor = Object.prototype.toString.call(new Uint8Array(4));
+        textDescriptor = Object.prototype.toString.call(new Uint8Array(4));
         if (textDescriptor === '[object Uint8Array]') {
             CanvasContext.prototype.byteArrayConstructor = Uint8Array;
         }
     }
     if (typeof Uint16Array !== "undefined") {
-        var textDescriptor = Object.prototype.toString.call(new Uint16Array(4));
+        textDescriptor = Object.prototype.toString.call(new Uint16Array(4));
         if (textDescriptor === '[object Uint16Array]') {
             CanvasContext.prototype.shortArrayConstructor = Uint16Array;
         }
     }
-})());
+}());

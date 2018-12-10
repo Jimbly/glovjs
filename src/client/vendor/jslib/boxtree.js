@@ -1,48 +1,43 @@
-// Copyright (c) 2012-2014 Turbulenz Limited
-/*global Float32Array: false*/
-;
-
-;
-
-;
+// Copyright (c) 2012-2015 Turbulenz Limited
 
 //
 // BoxTreeNode
 //
 var BoxTreeNode = (function () {
-    function BoxTreeNode(extents, escapeNodeOffset, externalNode) {
+    function BoxTreeNode(minX, minY, maxX, maxY, escapeNodeOffset, externalNode) {
+        this.minX = minX;
+        this.minY = minY;
+        this.maxX = maxX;
+        this.maxY = maxY;
         this.escapeNodeOffset = escapeNodeOffset;
         this.externalNode = externalNode;
-        this.extents = extents;
     }
     BoxTreeNode.prototype.isLeaf = function () {
         return !!this.externalNode;
     };
 
-    BoxTreeNode.prototype.reset = function (minX, minY, maxX, maxY, escapeNodeOffset, externalNode) {
+    BoxTreeNode.prototype.reset = function (minX, minY, maxX, maxY, escapeNodeOffset) {
+        this.minX = minX;
+        this.minY = minY;
+        this.maxX = maxX;
+        this.maxY = maxY;
         this.escapeNodeOffset = escapeNodeOffset;
-        this.externalNode = externalNode;
-        var oldExtents = this.extents;
-        oldExtents[0] = minX;
-        oldExtents[1] = minY;
-        oldExtents[2] = maxX;
-        oldExtents[3] = maxY;
+        this.externalNode = undefined;
     };
 
     BoxTreeNode.prototype.clear = function () {
+        var maxNumber = Number.MAX_VALUE;
+        this.minX = maxNumber;
+        this.minY = maxNumber;
+        this.maxX = -maxNumber;
+        this.maxY = -maxNumber;
         this.escapeNodeOffset = 1;
         this.externalNode = undefined;
-        var oldExtents = this.extents;
-        var maxNumber = Number.MAX_VALUE;
-        oldExtents[0] = maxNumber;
-        oldExtents[1] = maxNumber;
-        oldExtents[2] = -maxNumber;
-        oldExtents[3] = -maxNumber;
     };
 
-    BoxTreeNode.create = // Constructor function
-    function (extents, escapeNodeOffset, externalNode) {
-        return new BoxTreeNode(extents, escapeNodeOffset, externalNode);
+    // Constructor function
+    BoxTreeNode.create = function (minX, minY, maxX, maxY, escapeNodeOffset, externalNode) {
+        return new BoxTreeNode(minX, minY, maxX, maxY, escapeNodeOffset, externalNode);
     };
     BoxTreeNode.version = 1;
     return BoxTreeNode;
@@ -68,12 +63,7 @@ var BoxTree = (function () {
     BoxTree.prototype.add = function (externalNode, extents) {
         var endNode = this.endNode;
         externalNode.boxTreeIndex = endNode;
-        var copyExtents = new this.arrayConstructor(4);
-        copyExtents[0] = extents[0];
-        copyExtents[1] = extents[1];
-        copyExtents[2] = extents[2];
-        copyExtents[3] = extents[3];
-        this.nodes[endNode] = BoxTreeNode.create(copyExtents, 1, externalNode);
+        this.nodes[endNode] = BoxTreeNode.create(extents[0], extents[1], extents[2], extents[3], 1, externalNode);
         this.endNode = (endNode + 1);
         this.needsRebuild = true;
         this.numAdds += 1;
@@ -131,14 +121,13 @@ var BoxTree = (function () {
             var needsRebound = this.needsRebound;
             var nodes = this.nodes;
             var node = nodes[index];
-            var nodeExtents = node.extents;
 
-            var doUpdate = (needsRebuild || needsRebound || nodeExtents[0] > min0 || nodeExtents[1] > min1 || nodeExtents[2] < max0 || nodeExtents[3] < max1);
+            var doUpdate = (needsRebuild || needsRebound || node.minX > min0 || node.minY > min1 || node.maxX < max0 || node.maxY < max1);
 
-            nodeExtents[0] = min0;
-            nodeExtents[1] = min1;
-            nodeExtents[2] = max0;
-            nodeExtents[3] = max1;
+            node.minX = min0;
+            node.minY = min1;
+            node.maxX = max0;
+            node.maxY = max1;
 
             if (doUpdate) {
                 if (!needsRebuild && 1 < nodes.length) {
@@ -150,16 +139,17 @@ var BoxTree = (function () {
                         this.endUpdate = index;
                     }
                     if (!needsRebound) {
+                        // force a rebound when things change too much
                         if ((2 * this.numUpdates) > this.numExternalNodes) {
                             this.needsRebound = true;
                         } else {
                             var parent = this.findParent(index);
-                            var parentExtents = parent.extents;
-                            if (parentExtents[0] > min0 || parentExtents[1] > min1 || parentExtents[2] < max0 || parentExtents[3] < max1) {
+                            if (parent.minX > min0 || parent.minY > min1 || parent.maxX < max0 || parent.maxY < max1) {
                                 this.needsRebound = true;
                             }
                         }
                     } else {
+                        // force a rebuild when things change too much
                         if (this.numUpdates > (3 * this.numExternalNodes)) {
                             this.needsRebuild = true;
                             this.numAdds = this.numUpdates;
@@ -217,39 +207,36 @@ var BoxTree = (function () {
                 } while(nodeIndex < currentEscapeNodeIndex);
 
                 if (topNodeIndex === currentNodeIndex) {
-                    nodeIndex = (topNodeIndex + 1);
+                    nodeIndex = (topNodeIndex + 1); // First child
                     node = nodes[nodeIndex];
 
-                    var extents = node.extents;
-                    var minX = extents[0];
-                    var minY = extents[1];
-                    var maxX = extents[2];
-                    var maxY = extents[3];
+                    var minX = node.minX;
+                    var minY = node.minY;
+                    var maxX = node.maxX;
+                    var maxY = node.maxY;
 
                     nodeIndex = (nodeIndex + node.escapeNodeOffset);
                     while (nodeIndex < currentEscapeNodeIndex) {
                         node = nodes[nodeIndex];
-                        extents = node.extents;
-                        if (minX > extents[0]) {
-                            minX = extents[0];
+                        if (minX > node.minX) {
+                            minX = node.minX;
                         }
-                        if (minY > extents[1]) {
-                            minY = extents[1];
+                        if (minY > node.minY) {
+                            minY = node.minY;
                         }
-                        if (maxX < extents[2]) {
-                            maxX = extents[2];
+                        if (maxX < node.maxX) {
+                            maxX = node.maxX;
                         }
-                        if (maxY < extents[3]) {
-                            maxY = extents[3];
+                        if (maxY < node.maxY) {
+                            maxY = node.maxY;
                         }
                         nodeIndex = (nodeIndex + node.escapeNodeOffset);
                     }
 
-                    extents = topNode.extents;
-                    extents[0] = minX;
-                    extents[1] = minY;
-                    extents[2] = maxX;
-                    extents[3] = maxY;
+                    topNode.minX = minX;
+                    topNode.minY = minY;
+                    topNode.maxX = maxX;
+                    topNode.maxY = maxY;
 
                     endUpdateNodeIndex = topNodeIndex;
 
@@ -339,35 +326,31 @@ var BoxTree = (function () {
         var numNodesLeaf = this.numNodesLeaf;
         var numNodes = nodes.length;
 
-        var getkeyXfn = function getkeyXfnFn(node) {
-            var extents = node.extents;
-            return (extents[0] + extents[2]);
-        };
+        function getkeyXfn(node) {
+            return (node.minX + node.maxX);
+        }
 
-        var getkeyYfn = function getkeyYfnFn(node) {
-            var extents = node.extents;
-            return (extents[1] + extents[3]);
-        };
+        function getkeyYfn(node) {
+            return (node.minY + node.maxY);
+        }
 
-        var getreversekeyXfn = function getreversekeyXfnFn(node) {
-            var extents = node.extents;
-            return -(extents[0] + extents[2]);
-        };
+        function getreversekeyXfn(node) {
+            return -(node.minX + node.maxX);
+        }
 
-        var getreversekeyYfn = function getreversekeyYfnFn(node) {
-            var extents = node.extents;
-            return -(extents[1] + extents[3]);
-        };
+        function getreversekeyYfn(node) {
+            return -(node.minY + node.maxY);
+        }
 
         var nthElement = this.nthElement;
         var reverse = false;
-        var axis = 0;
 
-        var sortNodesRecursive = function sortNodesRecursiveFn(nodes, startIndex, endIndex) {
+        function sortNodesRecursive(nodes, startIndex, endIndex, sortByX) {
             /* tslint:disable:no-bitwise */
             var splitNodeIndex = ((startIndex + endIndex) >> 1);
 
-            if (axis === 0) {
+            /* tslint:enable:no-bitwise */
+            if (sortByX) {
                 if (reverse) {
                     nthElement(nodes, startIndex, splitNodeIndex, endIndex, getreversekeyXfn);
                 } else {
@@ -381,77 +364,61 @@ var BoxTree = (function () {
                 }
             }
 
-            if (axis === 0) {
-                axis = 2;
-            } else if (axis === 2) {
-                axis = 1;
-            } else {
-                axis = 0;
-            }
-
             reverse = !reverse;
 
             if ((startIndex + numNodesLeaf) < splitNodeIndex) {
-                sortNodesRecursive(nodes, startIndex, splitNodeIndex);
+                sortNodesRecursive(nodes, startIndex, splitNodeIndex, !sortByX);
             }
 
             if ((splitNodeIndex + numNodesLeaf) < endIndex) {
-                sortNodesRecursive(nodes, splitNodeIndex, endIndex);
+                sortNodesRecursive(nodes, splitNodeIndex, endIndex, !sortByX);
             }
-        };
+        }
 
-        sortNodesRecursive(nodes, 0, numNodes);
+        sortNodesRecursive(nodes, 0, numNodes, true);
     };
 
     BoxTree.prototype.sortNodesHighQuality = function (nodes) {
         var numNodesLeaf = this.numNodesLeaf;
         var numNodes = nodes.length;
 
-        var getkeyXfn = function getkeyXfnFn(node) {
-            var extents = node.extents;
-            return (extents[0] + extents[2]);
-        };
+        function getkeyXfn(node) {
+            return (node.minX + node.maxX);
+        }
 
-        var getkeyYfn = function getkeyYfnFn(node) {
-            var extents = node.extents;
-            return (extents[1] + extents[3]);
-        };
+        function getkeyYfn(node) {
+            return (node.minY + node.maxY);
+        }
 
-        var getkeyXYfn = function getkeyXYfnFn(node) {
-            var extents = node.extents;
-            return (extents[0] + extents[1] + extents[2] + extents[3]);
-        };
+        function getkeyXYfn(node) {
+            return (node.minX + node.minY + node.maxX + node.maxY);
+        }
 
-        var getkeyYXfn = function getkeyYXfnFn(node) {
-            var extents = node.extents;
-            return (extents[0] - extents[1] + extents[2] - extents[3]);
-        };
+        function getkeyYXfn(node) {
+            return (node.minX - node.minY + node.maxX - node.maxY);
+        }
 
-        var getreversekeyXfn = function getreversekeyXfnFn(node) {
-            var extents = node.extents;
-            return -(extents[0] + extents[2]);
-        };
+        function getreversekeyXfn(node) {
+            return -(node.minX + node.maxX);
+        }
 
-        var getreversekeyYfn = function getreversekeyYfnFn(node) {
-            var extents = node.extents;
-            return -(extents[1] + extents[3]);
-        };
+        function getreversekeyYfn(node) {
+            return -(node.minY + node.maxY);
+        }
 
-        var getreversekeyXYfn = function getreversekeyXYfnFn(node) {
-            var extents = node.extents;
-            return -(extents[0] + extents[1] + extents[2] + extents[3]);
-        };
+        function getreversekeyXYfn(node) {
+            return -(node.minX + node.minY + node.maxX + node.maxY);
+        }
 
-        var getreversekeyYXfn = function getreversekeyYXfnFn(node) {
-            var extents = node.extents;
-            return -(extents[0] - extents[1] + extents[2] - extents[3]);
-        };
+        function getreversekeyYXfn(node) {
+            return -(node.minX - node.minY + node.maxX - node.maxY);
+        }
 
         var nthElement = this.nthElement;
         var calculateSAH = this.calculateSAH;
         var reverse = false;
 
-        var sortNodesHighQualityRecursive = function sortNodesHighQualityRecursiveFn(nodes, startIndex, endIndex) {
+        function sortNodesHighQualityRecursive(nodes, startIndex, endIndex) {
             /* tslint:disable:no-bitwise */
             var splitNodeIndex = ((startIndex + endIndex) >> 1);
 
@@ -503,35 +470,33 @@ var BoxTree = (function () {
             if ((splitNodeIndex + numNodesLeaf) < endIndex) {
                 sortNodesHighQualityRecursive(nodes, splitNodeIndex, endIndex);
             }
-        };
+        }
 
         sortNodesHighQualityRecursive(nodes, 0, numNodes);
     };
 
     BoxTree.prototype.calculateSAH = function (buildNodes, startIndex, endIndex) {
-        var buildNode, extents, minX, minY, maxX, maxY;
+        var buildNode, minX, minY, maxX, maxY;
 
         buildNode = buildNodes[startIndex];
-        extents = buildNode.extents;
-        minX = extents[0];
-        minY = extents[1];
-        maxX = extents[2];
-        maxY = extents[3];
+        minX = buildNode.minX;
+        minY = buildNode.minY;
+        maxX = buildNode.maxX;
+        maxY = buildNode.maxY;
 
         for (var n = (startIndex + 1); n < endIndex; n += 1) {
             buildNode = buildNodes[n];
-            extents = buildNode.extents;
-            if (minX > extents[0]) {
-                minX = extents[0];
+            if (minX > buildNode.minX) {
+                minX = buildNode.minX;
             }
-            if (minY > extents[1]) {
-                minY = extents[1];
+            if (minY > buildNode.minY) {
+                minY = buildNode.minY;
             }
-            if (maxX < extents[2]) {
-                maxX = extents[2];
+            if (maxX < buildNode.maxX) {
+                maxX = buildNode.maxX;
             }
-            if (maxY < extents[3]) {
-                maxY = extents[3];
+            if (maxY < buildNode.maxY) {
+                maxY = buildNode.maxY;
             }
         }
 
@@ -556,7 +521,7 @@ var BoxTree = (function () {
             return b;
         }
 
-        function insertionSortFn(nodes, first, last, getkey) {
+        function insertionSort(nodes, first, last, getkey) {
             var sorted = (first + 1);
             while (sorted !== last) {
                 var tempNode = nodes[sorted];
@@ -613,7 +578,7 @@ var BoxTree = (function () {
             }
         }
 
-        insertionSortFn(nodes, first, last, getkey);
+        insertionSort(nodes, first, last, getkey);
     };
 
     BoxTree.prototype.recursiveBuild = function (buildNodes, startIndex, endIndex, lastNodeIndex) {
@@ -621,34 +586,32 @@ var BoxTree = (function () {
         var nodeIndex = lastNodeIndex;
         lastNodeIndex += 1;
 
-        var minX, minY, maxX, maxY, extents;
+        var minX, minY, maxX, maxY;
         var buildNode, lastNode;
 
         if ((startIndex + this.numNodesLeaf) >= endIndex) {
             buildNode = buildNodes[startIndex];
-            extents = buildNode.extents;
-            minX = extents[0];
-            minY = extents[1];
-            maxX = extents[2];
-            maxY = extents[3];
+            minX = buildNode.minX;
+            minY = buildNode.minY;
+            maxX = buildNode.maxX;
+            maxY = buildNode.maxY;
 
             buildNode.externalNode.boxTreeIndex = lastNodeIndex;
             nodes[lastNodeIndex] = buildNode;
 
             for (var n = (startIndex + 1); n < endIndex; n += 1) {
                 buildNode = buildNodes[n];
-                extents = buildNode.extents;
-                if (minX > extents[0]) {
-                    minX = extents[0];
+                if (minX > buildNode.minX) {
+                    minX = buildNode.minX;
                 }
-                if (minY > extents[1]) {
-                    minY = extents[1];
+                if (minY > buildNode.minY) {
+                    minY = buildNode.minY;
                 }
-                if (maxX < extents[2]) {
-                    maxX = extents[2];
+                if (maxX < buildNode.maxX) {
+                    maxX = buildNode.maxX;
                 }
-                if (maxY < extents[3]) {
-                    maxY = extents[3];
+                if (maxY < buildNode.maxY) {
+                    maxY = buildNode.maxY;
                 }
                 lastNodeIndex += 1;
                 buildNode.externalNode.boxTreeIndex = lastNodeIndex;
@@ -660,6 +623,7 @@ var BoxTree = (function () {
             /* tslint:disable:no-bitwise */
             var splitPosIndex = ((startIndex + endIndex) >> 1);
 
+            /* tslint:enable:no-bitwise */
             if ((startIndex + 1) >= splitPosIndex) {
                 buildNode = buildNodes[startIndex];
                 buildNode.externalNode.boxTreeIndex = lastNodeIndex;
@@ -669,11 +633,10 @@ var BoxTree = (function () {
             }
 
             lastNode = nodes[lastNodeIndex];
-            extents = lastNode.extents;
-            minX = extents[0];
-            minY = extents[1];
-            maxX = extents[2];
-            maxY = extents[3];
+            minX = lastNode.minX;
+            minY = lastNode.minY;
+            maxX = lastNode.maxX;
+            maxY = lastNode.maxY;
 
             lastNodeIndex = (lastNodeIndex + lastNode.escapeNodeOffset);
 
@@ -686,18 +649,17 @@ var BoxTree = (function () {
             }
 
             lastNode = nodes[lastNodeIndex];
-            extents = lastNode.extents;
-            if (minX > extents[0]) {
-                minX = extents[0];
+            if (minX > lastNode.minX) {
+                minX = lastNode.minX;
             }
-            if (minY > extents[1]) {
-                minY = extents[1];
+            if (minY > lastNode.minY) {
+                minY = lastNode.minY;
             }
-            if (maxX < extents[2]) {
-                maxX = extents[2];
+            if (maxX < lastNode.maxX) {
+                maxX = lastNode.maxX;
             }
-            if (maxY < extents[3]) {
-                maxY = extents[3];
+            if (maxY < lastNode.maxY) {
+                maxY = lastNode.maxY;
             }
         }
 
@@ -705,13 +667,7 @@ var BoxTree = (function () {
         if (node !== undefined) {
             node.reset(minX, minY, maxX, maxY, (lastNodeIndex + lastNode.escapeNodeOffset - nodeIndex));
         } else {
-            var parentExtents = new this.arrayConstructor(4);
-            parentExtents[0] = minX;
-            parentExtents[1] = minY;
-            parentExtents[2] = maxX;
-            parentExtents[3] = maxY;
-
-            nodes[nodeIndex] = BoxTreeNode.create(parentExtents, (lastNodeIndex + lastNode.escapeNodeOffset - nodeIndex));
+            nodes[nodeIndex] = BoxTreeNode.create(minX, minY, maxX, maxY, (lastNodeIndex + lastNode.escapeNodeOffset - nodeIndex), undefined);
         }
     };
 
@@ -721,18 +677,17 @@ var BoxTree = (function () {
             var endNodeIndex = this.endNode;
             var numPlanes = planes.length;
             var numVisibleNodes = visibleNodes.length;
-            var node, extents, endChildren;
+            var node, endChildren;
             var n0, n1, p0, p1;
             var isInside, n, plane, d0, d1;
             var nodeIndex = 0;
 
             for (; ;) {
                 node = nodes[nodeIndex];
-                extents = node.extents;
-                n0 = extents[0];
-                n1 = extents[1];
-                p0 = extents[2];
-                p1 = extents[3];
+                n0 = node.minX;
+                n1 = node.minY;
+                p0 = node.maxX;
+                p1 = node.maxY;
 
                 //isInsidePlanesBox
                 isInside = true;
@@ -805,17 +760,16 @@ var BoxTree = (function () {
             var queryMaxY = queryExtents[3];
             var nodes = this.nodes;
             var endNodeIndex = this.endNode;
-            var node, extents, endChildren;
+            var node, endChildren;
             var numOverlappingNodes = 0;
             var storageIndex = (startIndex === undefined) ? overlappingNodes.length : startIndex;
             var nodeIndex = 0;
             for (; ;) {
                 node = nodes[nodeIndex];
-                extents = node.extents;
-                var minX = extents[0];
-                var minY = extents[1];
-                var maxX = extents[2];
-                var maxY = extents[3];
+                var minX = node.minX;
+                var minY = node.minY;
+                var maxX = node.maxX;
+                var maxY = node.maxY;
                 if (queryMinX <= maxX && queryMinY <= maxY && queryMaxX >= minX && queryMaxY >= minY) {
                     if (node.externalNode) {
                         overlappingNodes[storageIndex] = node.externalNode;
@@ -865,16 +819,15 @@ var BoxTree = (function () {
             var centerY = center[1];
             var nodes = this.nodes;
             var endNodeIndex = this.endNode;
-            var node, extents;
+            var node;
             var numOverlappingNodes = overlappingNodes.length;
             var nodeIndex = 0;
             for (; ;) {
                 node = nodes[nodeIndex];
-                extents = node.extents;
-                var minX = extents[0];
-                var minY = extents[1];
-                var maxX = extents[2];
-                var maxY = extents[3];
+                var minX = node.minX;
+                var minY = node.minY;
+                var maxX = node.maxX;
+                var maxY = node.maxY;
                 var totalDistance = 0, sideDistance;
                 if (centerX < minX) {
                     sideDistance = (minX - centerX);
@@ -913,7 +866,7 @@ var BoxTree = (function () {
         if (this.numExternalNodes > 0) {
             var nodes = this.nodes;
             var endNodeIndex = this.endNode;
-            var currentNode, currentExternalNode, node, extents;
+            var currentNode, currentExternalNode, node;
             var numInsertions = 0;
             var storageIndex = (startIndex === undefined) ? overlappingPairs.length : startIndex;
             var currentNodeIndex = 0, nodeIndex;
@@ -927,17 +880,15 @@ var BoxTree = (function () {
                 currentNodeIndex += 1;
                 if (currentNodeIndex < endNodeIndex) {
                     currentExternalNode = currentNode.externalNode;
-                    extents = currentNode.extents;
-                    var minX = extents[0];
-                    var minY = extents[1];
-                    var maxX = extents[2];
-                    var maxY = extents[3];
+                    var minX = currentNode.minX;
+                    var minY = currentNode.minY;
+                    var maxX = currentNode.maxX;
+                    var maxY = currentNode.maxY;
 
                     nodeIndex = currentNodeIndex;
                     for (; ;) {
                         node = nodes[nodeIndex];
-                        extents = node.extents;
-                        if (minX <= extents[2] && minY <= extents[3] && maxX >= extents[0] && maxY >= extents[1]) {
+                        if (minX <= node.maxX && minY <= node.maxY && maxX >= node.minX && maxY >= node.minY) {
                             nodeIndex += 1;
                             if (node.externalNode) {
                                 overlappingPairs[storageIndex] = currentExternalNode;
@@ -1004,12 +955,8 @@ var BoxTree = (function () {
 
         // evaluate distance factor to a node's extents from ray origin, along direction
         // use this to induce an ordering on which nodes to check.
-        var distanceExtents = function distanceExtentsFn(extents, upperBound) {
-            var min0 = extents[0];
-            var min1 = extents[1];
-            var max0 = extents[2];
-            var max1 = extents[3];
-
+        function distanceExtents(min0, min1, max0, max1, upperBound) {
+            // treat origin internal to extents as 0 distance.
             if (min0 <= o0 && o0 <= max0 && min1 <= o1 && o1 <= max1) {
                 return 0.0;
             }
@@ -1056,7 +1003,7 @@ var BoxTree = (function () {
             }
 
             return (0 <= tmin && tmin < upperBound) ? tmin : undefined;
-        };
+        }
 
         // we traverse both trees at once
         // keeping a priority list of nodes to check next.
@@ -1070,10 +1017,10 @@ var BoxTree = (function () {
 
         //if node is a leaf, intersect ray with shape
         // otherwise insert node into priority list.
-        var processNode = function processNodeFn(tree, nodeIndex, upperBound) {
+        function processNode(tree, nodeIndex, upperBound) {
             var nodes = tree.getNodes();
             var node = nodes[nodeIndex];
-            var distance = distanceExtents(node.extents, upperBound);
+            var distance = distanceExtents(node.minX, node.minY, node.maxX, node.maxY, upperBound);
             if (distance === undefined) {
                 return upperBound;
             }
@@ -1104,7 +1051,7 @@ var BoxTree = (function () {
             }
 
             return upperBound;
-        };
+        }
 
         var upperBound = ray.maxFactor;
 
@@ -1120,6 +1067,8 @@ var BoxTree = (function () {
         while (priorityList.length !== 0) {
             var nodeObj = priorityList.pop();
 
+            // A node inserted into priority list after this one may have
+            // moved the upper bound.
             if (nodeObj.distance >= upperBound) {
                 continue;
             }
@@ -1141,22 +1090,10 @@ var BoxTree = (function () {
         return minimumResult;
     };
 
-    BoxTree.create = // Constructor function
-    function (highQuality) {
+    // Constructor function
+    BoxTree.create = function (highQuality) {
         return new BoxTree(highQuality);
     };
     BoxTree.version = 1;
     return BoxTree;
 })();
-
-// Detect correct typed arrays
-((function () {
-    BoxTree.prototype.arrayConstructor = Array;
-    if (typeof Float32Array !== "undefined") {
-        var testArray = new Float32Array(4);
-        var textDescriptor = Object.prototype.toString.call(testArray);
-        if (textDescriptor === '[object Float32Array]') {
-            BoxTree.prototype.arrayConstructor = Float32Array;
-        }
-    }
-})());

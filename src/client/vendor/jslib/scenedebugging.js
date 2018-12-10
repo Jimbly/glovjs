@@ -412,8 +412,7 @@ Scene.prototype.drawLightsExtents = function sceneDrawLightsExtentsFn(gd, sm, ca
         var sem = this.getDebugSemanticsPosCol();
         var writer = gd.beginDraw(gd.PRIMITIVE_LINES, (24 * numLights), [
             gd.VERTEXFORMAT_FLOAT3,
-            gd.VERTEXFORMAT_FLOAT3
-        ], sem);
+            gd.VERTEXFORMAT_FLOAT3], sem);
         if (writer) {
             var writeBox = this.writeBox;
             var extents, color, r, g, b;
@@ -450,7 +449,7 @@ Scene.prototype.drawLightsExtents = function sceneDrawLightsExtentsFn(gd, sm, ca
 //
 // drawLightsScreenExtents
 //
-Scene.prototype.drawLightsScreenExtents = function sceneDrawLightsScreenExtentsFn(gd, sm/*, camera */ ) {
+Scene.prototype.drawLightsScreenExtents = function sceneDrawLightsScreenExtentsFn(gd, sm /*, camera */ ) {
     var visibleLights = this.visibleLights;
     var numVisibleLights = visibleLights.length;
     if (numVisibleLights > 0) {
@@ -491,8 +490,7 @@ Scene.prototype.drawLightsScreenExtents = function sceneDrawLightsScreenExtentsF
         var sem = this.getDebugSemanticsPosCol();
         var writer = gd.beginDraw(gd.PRIMITIVE_LINES, (8 * numLights), [
             gd.VERTEXFORMAT_FLOAT2,
-            gd.VERTEXFORMAT_FLOAT3
-        ], sem);
+            gd.VERTEXFORMAT_FLOAT3], sem);
         if (writer) {
             var screenExtents, minX, maxX, minY, maxY, color, r, g, b;
 
@@ -817,7 +815,7 @@ Scene.prototype.drawAnimationHierarchy = function sceneDrawAnimationHierarchyFn(
         bBound = boundsColor[2];
     }
     if (bounds) {
-        numVertices += 24;
+        numVertices += 24; // and 24 for the bounds
     }
 
     if (!numVertices) {
@@ -1057,66 +1055,26 @@ Scene.prototype.createGeoSphere = function scenecreateGeoSphereFn(radius, recurs
 
     // create 20 triangles of the icosahedron
     indices = [
-        0,
-        11,
-        5,
-        0,
-        5,
-        1,
-        0,
-        1,
-        7,
-        0,
-        7,
-        10,
-        0,
-        10,
-        11,
-        1,
-        5,
-        9,
-        5,
-        11,
-        4,
-        11,
-        10,
-        2,
-        10,
-        7,
-        6,
-        7,
-        1,
-        8,
-        3,
-        9,
-        4,
-        3,
-        4,
-        2,
-        3,
-        2,
-        6,
-        3,
-        6,
-        8,
-        3,
-        8,
-        9,
-        4,
-        9,
-        5,
-        2,
-        4,
-        11,
-        6,
-        2,
-        10,
-        8,
-        6,
-        7,
-        9,
-        8,
-        1
+        0, 11, 5,
+        0, 5, 1,
+        0, 1, 7,
+        0, 7, 10,
+        0, 10, 11,
+        1, 5, 9,
+        5, 11, 4,
+        11, 10, 2,
+        10, 7, 6,
+        7, 1, 8,
+        3, 9, 4,
+        3, 4, 2,
+        3, 2, 6,
+        3, 6, 8,
+        3, 8, 9,
+        4, 9, 5,
+        2, 4, 11,
+        6, 2, 10,
+        8, 6, 7,
+        9, 8, 1
     ];
 
     for (var i = 0; i < recursionLevel; i += 1) {
@@ -1235,6 +1193,7 @@ Scene.prototype.createCylinder = function sceneCreateCylinderFn(radius1, radius2
     if (capEnds) {
         var index = 0;
 
+        // Close bottom
         if (radius1 !== 0) {
             x = 0.0;
             y = -height;
@@ -1257,6 +1216,7 @@ Scene.prototype.createCylinder = function sceneCreateCylinderFn(radius1, radius2
             indices[indices.length] = 0;
         }
 
+        // Close top
         if (radius2 !== 0) {
             y = height;
             z = 0.0;
@@ -1324,8 +1284,7 @@ Scene.prototype.createRoundedPrimitive = function sceneCreateRoundedPrimitiveFn(
         var offsetPosition = [
             (isXPositive ? 1 : -1) * 0.5 * mSizeX,
             (isYPositive ? 1 : -1) * 0.5 * mSizeY,
-            (isZPositive ? 1 : -1) * 0.5 * mSizeZ
-        ];
+            (isZPositive ? 1 : -1) * 0.5 * mSizeZ];
 
         var deltaRingAngle = ((pi / 2) / mChamferNumSeg);
         var offsetRingAngle = isYPositive ? 0 : (pi / 2);
@@ -1576,117 +1535,45 @@ Scene.prototype.createBox = function sceneCreateBoxFn(halfExtents) {
     var zHalfExtent = halfExtents[2];
 
     var positions = [
-        -xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        -xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        -xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent,
-        xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        -yHalfExtent,
-        -zHalfExtent,
-        -xHalfExtent,
-        -yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        zHalfExtent,
-        -xHalfExtent,
-        yHalfExtent,
-        -zHalfExtent
+        -xHalfExtent, -yHalfExtent, zHalfExtent,
+        xHalfExtent, -yHalfExtent, zHalfExtent,
+        xHalfExtent, yHalfExtent, zHalfExtent,
+        -xHalfExtent, yHalfExtent, zHalfExtent,
+        -xHalfExtent, yHalfExtent, zHalfExtent,
+        xHalfExtent, yHalfExtent, zHalfExtent,
+        xHalfExtent, yHalfExtent, -zHalfExtent,
+        -xHalfExtent, yHalfExtent, -zHalfExtent,
+        -xHalfExtent, yHalfExtent, -zHalfExtent,
+        xHalfExtent, yHalfExtent, -zHalfExtent,
+        xHalfExtent, -yHalfExtent, -zHalfExtent,
+        -xHalfExtent, -yHalfExtent, -zHalfExtent,
+        -xHalfExtent, -yHalfExtent, -zHalfExtent,
+        xHalfExtent, -yHalfExtent, -zHalfExtent,
+        xHalfExtent, -yHalfExtent, zHalfExtent,
+        -xHalfExtent, -yHalfExtent, zHalfExtent,
+        xHalfExtent, -yHalfExtent, zHalfExtent,
+        xHalfExtent, -yHalfExtent, -zHalfExtent,
+        xHalfExtent, yHalfExtent, -zHalfExtent,
+        xHalfExtent, yHalfExtent, zHalfExtent,
+        -xHalfExtent, -yHalfExtent, -zHalfExtent,
+        -xHalfExtent, -yHalfExtent, zHalfExtent,
+        -xHalfExtent, yHalfExtent, zHalfExtent,
+        -xHalfExtent, yHalfExtent, -zHalfExtent
     ];
 
     var indices = [
-        2,
-        0,
-        1,
-        3,
-        0,
-        2,
-        6,
-        4,
-        5,
-        7,
-        4,
-        6,
-        10,
-        8,
-        9,
-        11,
-        8,
-        10,
-        14,
-        12,
-        13,
-        15,
-        12,
-        14,
-        18,
-        16,
-        17,
-        19,
-        16,
-        18,
-        22,
-        20,
-        21,
-        23,
-        20,
-        22
+        2, 0, 1,
+        3, 0, 2,
+        6, 4, 5,
+        7, 4, 6,
+        10, 8, 9,
+        11, 8, 10,
+        14, 12, 13,
+        15, 12, 14,
+        18, 16, 17,
+        19, 16, 18,
+        22, 20, 21,
+        23, 20, 22
     ];
 
     return {
@@ -2008,6 +1895,7 @@ Scene.prototype.drawPhysicsGeometry = function sceneDrawPhysicsGeometryFn(gd, sm
             if (!positions && triangleArray) {
                 var vertices = triangleArray.vertices;
 
+                // convert native arrays to javascript ones
                 if (!TurbulenzEngine.canvas) {
                     var numVertexComponents = vertices.length;
                     positions = [];
@@ -2422,7 +2310,7 @@ Scene.prototype.drawNodesTree = function sceneDrawNodesTreeFn(tree, gd, sm, came
             } else {
                 var endIndex = (idx + node.escapeNodeOffset);
                 level -= 1;
-                idx += 1;
+                idx += 1; // first child
                 do {
                     idx = drawNodeFn(writer, nodes, idx, level);
                 } while(idx < endIndex);
@@ -2860,21 +2748,15 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
         var vformatByte4 = gd.VERTEXFORMAT_BYTE4;
 
         var skinnedAttributes = [
-            vformatFloat4,
-            vformatFloat3,
-            vformatFloat3,
-            vformatByte4,
-            vformatFloat4,
-            vformatByte4,
-            vformatFloat4,
-            vformatByte4,
-            vformatFloat4
-        ];
+            vformatFloat4, vformatFloat3,
+            vformatFloat3, vformatByte4,
+            vformatFloat4, vformatByte4,
+            vformatFloat4, vformatByte4,
+            vformatFloat4];
         var solidAttributes = [
             vformatFloat4,
             vformatFloat3,
-            vformatFloat3
-        ];
+            vformatFloat3];
 
         var skinnedWireframeSemantics = this.skinnedWireframeSemantics;
         if (!skinnedWireframeSemantics) {
@@ -2932,11 +2814,11 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                             currentTechnique.fillColor = wireframeInfo.fillColor;
                             currentTechnique.alphaRef = wireframeInfo.alphaRef;
                         } else {
-                            currentTechnique.wireColor = md.v4Build(0, 0, 0, 1);
-                            currentTechnique.fillColor = md.v4Build(1, 1, 1, 0);
+                            currentTechnique.wireColor = md.v4Build(0, 0, 0, 1); //choose color for the wireframe lines
+                            currentTechnique.fillColor = md.v4Build(1, 1, 1, 0); //choose color for the interior of the polygon,
 
                             //leave alpha as zero to allow removing interior of polygons
-                            currentTechnique.alphaRef = 0.35;
+                            currentTechnique.alphaRef = 0.35; //set to greater than zero (e.g. 0.1) to remove interior of polygons
                         }
 
                         var wireframeBuffer = oldSurface.wireframeBuffer;
@@ -3028,6 +2910,7 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                             vData.length = dataLength * numAttributeComponents;
 
                             for (j = 0; j < dataLength; j += stepSize) {
+                                //set the indices
                                 if (indexBuffer) {
                                     if (surfacePrimitive === gd.PRIMITIVE_TRIANGLE_STRIP) {
                                         if ((j % 2) === 0) {
@@ -3055,7 +2938,7 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                                         vdIndex2 = (j + 2) * stride + positionOffset;
                                     }
                                 } else if (surfacePrimitive === gd.PRIMITIVE_TRIANGLE_FAN) {
-                                    vdIndex0 = positionOffset;
+                                    vdIndex0 = positionOffset; //0 * stride + positionOffset;
                                     vdIndex1 = (j + 1) * stride + positionOffset;
                                     vdIndex2 = (j + 2) * stride + positionOffset;
                                 } else {
@@ -3119,6 +3002,7 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                                 dstIndex += numAttributeComponents;
                             }
 
+                            //if skinned, fill the added gaps in vData
                             if (currentTechnique === technique_skinned) {
                                 var vdIndex0i, vdIndex0w, vdIndex1i, vdIndex1w, vdIndex2i, vdIndex2w;
                                 var vdValue0iw = [];
@@ -3126,6 +3010,7 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                                 var vdValue2iw = [];
                                 dstIndex = 0;
                                 for (j = 0; j < dataLength; j += stepSize) {
+                                    //set the indices
                                     if (indexBuffer) {
                                         vdIndex0i = indexBufferData[j] * stride + blendIndicesOffset;
                                         vdIndex1i = indexBufferData[j + 1] * stride + blendIndicesOffset;
@@ -3150,10 +3035,10 @@ Scene.prototype.drawWireframe = function drawWireframeFn(gd, sm, camera, wirefra
                                             vdIndex2w = (j + 2) * stride + blendWeightOffset;
                                         }
                                     } else if (surfacePrimitive === gd.PRIMITIVE_TRIANGLE_FAN) {
-                                        vdIndex0i = blendIndicesOffset;
+                                        vdIndex0i = blendIndicesOffset; //0 * stride + blendIndicesOffset;
                                         vdIndex1i = (j + 1) * stride + blendIndicesOffset;
                                         vdIndex2i = (j + 2) * stride + blendIndicesOffset;
-                                        vdIndex0w = blendWeightOffset;
+                                        vdIndex0w = blendWeightOffset; //0 * stride + blendWeightOffset;
                                         vdIndex1w = (j + 1) * stride + blendWeightOffset;
                                         vdIndex2w = (j + 2) * stride + blendWeightOffset;
                                     } else {
@@ -3345,8 +3230,7 @@ Scene.prototype.getDebugSemanticsPosCol = function getDebugSemanticsPosColFn() {
         var gd = TurbulenzEngine.getGraphicsDevice();
         debugSemantics = gd.createSemantics([
             gd.SEMANTIC_POSITION,
-            gd.SEMANTIC_COLOR
-        ]);
+            gd.SEMANTIC_COLOR]);
         this.debugSemanticsPosCol = debugSemantics;
     }
     return debugSemantics;

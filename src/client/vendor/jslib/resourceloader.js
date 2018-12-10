@@ -351,8 +351,11 @@ var ResourceLoader = (function () {
         var shapesNamePrefix = loadParams.shapesNamePrefix;
 
         function begetFn(o) {
+            /* tslint:disable:no-empty */
             var F = function () {
             };
+
+            /* tslint:enable:no-empty */
             F.prototype = o;
             return new F();
         }
@@ -521,8 +524,8 @@ var ResourceLoader = (function () {
         });
     };
 
-    ResourceLoader.create = // Constructor function
-    function () {
+    // Constructor function
+    ResourceLoader.create = function () {
         var rl = new ResourceLoader();
         rl.clear();
 

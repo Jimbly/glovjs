@@ -111,6 +111,7 @@ var CaptureGraphicsDevice = (function () {
                 lowerIndex = this._lowerBoundFloat(dataBin, data, length);
             }
 
+            // Check if we found an identical copy
             if (lowerIndex < 0) {
                 lowerIndex = ((-lowerIndex) - 1);
                 return dataBin[lowerIndex].toString();
@@ -122,6 +123,7 @@ var CaptureGraphicsDevice = (function () {
             clonedData = new Uint8Array(data.slice(0, length));
         } else if (integers) {
             if (data.BYTES_PER_ELEMENT) {
+                // must be a typed array
                 if (length < data.length) {
                     clonedData = new data.constructor(data.subarray(0, length));
                 } else {
@@ -206,6 +208,7 @@ var CaptureGraphicsDevice = (function () {
                     lowerIndex = this._lowerBoundGeneric(commandsBin, arguments, length, 1);
                 }
 
+                // Check if we found an identical copy
                 if (lowerIndex < 0) {
                     lowerIndex = ((-lowerIndex) - 1);
                     this.current.push(commandsBin[lowerIndex]);
@@ -318,6 +321,7 @@ var CaptureGraphicsDevice = (function () {
         } else {
             lowerIndex = this._lowerBoundGeneric(objectsBin, objectArray, length, 0);
 
+            // Check if we found an identical copy
             if (lowerIndex < 0) {
                 lowerIndex = ((-lowerIndex) - 1);
                 return objectsBin[lowerIndex].toString();
@@ -338,6 +342,7 @@ var CaptureGraphicsDevice = (function () {
     CaptureGraphicsDevice.prototype._cloneObject = function (object, raw) {
         var length, index, result, value;
 
+        // Check if it has an Id
         if (typeof object._id === "string") {
             return object._id;
         }
@@ -411,6 +416,7 @@ var CaptureGraphicsDevice = (function () {
     };
 
     CaptureGraphicsDevice.prototype._clone = function (object) {
+        // boolean, numbers, strings, undefined, null
         if (!object || typeof object !== "object") {
             // We are assuming that 'object' will never be a function
             return object;
@@ -542,7 +548,7 @@ var CaptureGraphicsDevice = (function () {
         while (0 < count) {
             step = (count >>> 1);
             middle = (first + step);
-            binIndex = ((middle << 1) + 1);
+            binIndex = ((middle << 1) + 1); // Bin elements have the data on the second slot
 
             a = bin[binIndex];
             n = offset;
@@ -578,7 +584,7 @@ var CaptureGraphicsDevice = (function () {
         while (0 < count) {
             step = (count >>> 1);
             middle = (first + step);
-            binIndex = ((middle << 1) + 1);
+            binIndex = ((middle << 1) + 1); // Bin elements have the data on the second slot
 
             // Simple commands only have one parameter after method
             av = bin[binIndex][1];
@@ -609,7 +615,7 @@ var CaptureGraphicsDevice = (function () {
         while (0 < count) {
             step = (count >>> 1);
             middle = (first + step);
-            binIndex = ((middle << 1) + 1);
+            binIndex = ((middle << 1) + 1); // Bin elements have the data on the second slot
 
             n = 0;
             a = bin[binIndex];
@@ -809,10 +815,10 @@ var CaptureGraphicsDevice = (function () {
         for (var n = 0; n < numDrawParameters; n += 1) {
             var drawParameters = drawParametersArray[n];
             var technique = drawParameters.technique;
-            var endTechniqueParameters = drawParameters.endTechniqueParameters;
-            var endStreams = drawParameters.endStreams;
-            var endInstances = drawParameters.endInstances;
-            var indexBuffer = drawParameters.indexBuffer;
+            var endTechniqueParameters = drawParameters._endTechniqueParameters;
+            var endStreams = drawParameters._endStreams;
+            var endInstances = drawParameters._endInstances;
+            var indexBuffer = drawParameters._indexBuffer;
             var primitive = drawParameters.primitive;
             var count = drawParameters.count;
             var firstIndex = drawParameters.firstIndex;
@@ -856,6 +862,7 @@ var CaptureGraphicsDevice = (function () {
                 }
             }
 
+            /*jshint bitwise: false*/
             if (indexBuffer) {
                 if (activeIndexBuffer !== indexBuffer) {
                     activeIndexBuffer = indexBuffer;
@@ -965,7 +972,11 @@ var CaptureGraphicsDevice = (function () {
     };
 
     CaptureGraphicsDevice.prototype.clear = function (color, depth, stencil) {
-        this._addCommand(CaptureGraphicsCommand.clear, this._clone(color), depth, stencil);
+        if (depth === undefined && stencil === undefined) {
+            this._addCommand(CaptureGraphicsCommand.clear, this._clone(color));
+        } else {
+            this._addCommand(CaptureGraphicsCommand.clear, this._clone(color), depth, stencil);
+        }
 
         this.gd.clear(color, depth, stencil);
     };
@@ -1241,6 +1252,7 @@ var CaptureGraphicsDevice = (function () {
             }
             var clonedParams = this._cloneObject(params, true);
             if (clonedParams.renderable) {
+                // special case for fullscreen renderables
                 if (clonedParams.width === this.gd.width && clonedParams.height === this.gd.height) {
                     clonedParams.width = -1;
                     clonedParams.height = -1;
@@ -1261,10 +1273,10 @@ var CaptureGraphicsDevice = (function () {
         return video;
     };
 
-    CaptureGraphicsDevice.prototype.createShader = function (params) {
+    CaptureGraphicsDevice.prototype.createShader = function (params, onload) {
         // Need to clone before calling createShader because that function modifies the input object...
         var clonedParams = this._cloneObject(params, true);
-        var shader = this.gd.createShader(params);
+        var shader = this.gd.createShader(params, onload);
         if (shader) {
             var id = this._getStringId();
             shader._id = id;
@@ -1387,6 +1399,7 @@ var CaptureGraphicsDevice = (function () {
             renderBuffer._id = id;
             var clonedParams = this._cloneObject(params, true);
 
+            // special case for fullscreen buffers
             if (clonedParams.width === this.gd.width && clonedParams.height === this.gd.height) {
                 clonedParams.width = -1;
                 clonedParams.height = -1;
@@ -1580,16 +1593,6 @@ var CaptureGraphicsDevice = (function () {
             }
             framesString += ']';
         }
-        framesString += '],"frames":[';
-
-        var frames = this.frames;
-        var numFrames = frames.length;
-        for (n = 0; n < numFrames; n += 1) {
-            if (n) {
-                framesString += ',';
-            }
-            framesString += '[' + frames[n].join(',') + ']';
-        }
         framesString += ']}';
 
         return framesString;
@@ -1606,15 +1609,15 @@ var CaptureGraphicsDevice = (function () {
                     continue;
                 }
 
-                totalSize += 4;
-                totalSize += 4;
+                totalSize += 4; // number of arrays on this bin
+                totalSize += 4; // length of each array on this bin
 
                 for (n = 0; n < binLength; n += 2) {
                     data = dataBin[n + 1];
 
-                    totalSize += 4;
+                    totalSize += 4; // id
                     if (integers) {
-                        totalSize += 4;
+                        totalSize += 4; // type
                     }
 
                     // pad element size to multiple of 4
@@ -1622,7 +1625,7 @@ var CaptureGraphicsDevice = (function () {
                 }
             }
         }
-        totalSize += 4;
+        totalSize += 4; // sentinel
         return totalSize;
     };
 
@@ -1644,7 +1647,7 @@ var CaptureGraphicsDevice = (function () {
 
                 var id, data, length, type, value, valueInt;
                 for (n = 0; n < binLength; n += 2) {
-                    ints[offset] = dataBin[n];
+                    ints[offset] = dataBin[n]; // id
                     offset += 1;
 
                     data = dataBin[n + 1];
@@ -1701,6 +1704,32 @@ var CaptureGraphicsDevice = (function () {
         totalSize += this._getDataBinSize(this.floatData, false);
         totalSize += this._getDataBinSize(this.mixedData, true);
 
+        // Frames command ids
+        totalSize += 4 + 4; // Num frames + frame command size
+
+        var frames = this.frames;
+        var numFrames = frames.length;
+
+        totalSize += (4 * numFrames);
+
+        var numCommands = this.numCommands;
+        var n;
+        if (numCommands < 256) {
+            for (n = 0; n < numFrames; n += 1) {
+                // pad element size to multiple of 4
+                totalSize += ((((1 * frames[n].length) + 3) >>> 2) << 2);
+            }
+        } else if (numCommands < 65536) {
+            for (n = 0; n < numFrames; n += 1) {
+                // pad element size to multiple of 4
+                totalSize += ((((2 * frames[n].length) + 3) >>> 2) << 2);
+            }
+        } else {
+            for (n = 0; n < numFrames; n += 1) {
+                totalSize += (4 * frames[n].length);
+            }
+        }
+
         var buffer = new ArrayBuffer(totalSize);
 
         var bytes = new Uint8Array(buffer);
@@ -1712,12 +1741,68 @@ var CaptureGraphicsDevice = (function () {
         bytes[3] = header.charCodeAt(3);
 
         var ints = new Int32Array(buffer);
-        ints[1] = 1;
+        ints[1] = 2; // version
 
         var offset = 2;
         offset = this._getDataBinBuffer(ints, offset, this.integerData, true);
         offset = this._getDataBinBuffer(ints, offset, this.floatData, false);
         offset = this._getDataBinBuffer(ints, offset, this.mixedData, true);
+
+        ints[offset] = numFrames;
+        offset += 1;
+
+        var frameCommands, numFrameCommands, f;
+        if (numCommands < 256) {
+            ints[offset] = 1;
+            offset += 1;
+
+            for (n = 0; n < numFrames; n += 1) {
+                frameCommands = frames[n];
+                numFrameCommands = frameCommands.length;
+
+                ints[offset] = numFrameCommands;
+                offset += 1;
+
+                bytes.set(frameCommands, (offset << 2));
+
+                // pad element size to multiple of 4
+                offset += ((numFrameCommands + 3) >>> 2);
+            }
+        } else if (numCommands < 65536) {
+            ints[offset] = 2;
+            offset += 1;
+
+            var words = new Uint16Array(buffer);
+            for (n = 0; n < numFrames; n += 1) {
+                frameCommands = frames[n];
+                numFrameCommands = frameCommands.length;
+
+                ints[offset] = numFrameCommands;
+                offset += 1;
+
+                words.set(frameCommands, (offset << 1));
+
+                // pad element size to multiple of 4
+                offset += ((numFrameCommands + 1) >>> 1);
+            }
+        } else {
+            ints[offset] = 4;
+            offset += 1;
+
+            for (n = 0; n < numFrames; n += 1) {
+                frameCommands = frames[n];
+                numFrameCommands = frameCommands.length;
+
+                ints[offset] = numFrameCommands;
+                offset += 1;
+
+                ints.set(frameCommands, offset);
+
+                offset += numFrameCommands;
+            }
+        }
+
+        debug.assert((offset << 2) === totalSize);
 
         return bytes;
     };
@@ -1877,6 +1962,7 @@ var PlaybackGraphicsDevice = (function () {
         this.playWidth = 0;
         this.playHeight = 0;
         this.frames = [];
+        this.commands = null;
         this.entities = [];
         this.writerData = [];
         this.numPendingResources = 0;
@@ -2101,10 +2187,12 @@ var PlaybackGraphicsDevice = (function () {
         resourcesObject.resources = {};
     };
 
-    PlaybackGraphicsDevice.prototype.addData = function (dataBuffer) {
+    PlaybackGraphicsDevice.prototype.addData = function (dataBuffer, append) {
         var ints = new Int32Array(dataBuffer);
 
-        // TODO: chech version number and endianness
+        // TODO: check endianness
+        var version = ints[1];
+
         var offset = 2;
         var binLength, length, n, id, type, byteOffset, data;
 
@@ -2172,6 +2260,7 @@ var PlaybackGraphicsDevice = (function () {
             }
         }
 
+        // Mixed
         if (offset < ints.length) {
             for (; ;) {
                 binLength = ints[offset];
@@ -2200,6 +2289,73 @@ var PlaybackGraphicsDevice = (function () {
                 }
             }
         }
+
+        if (version >= 2) {
+            var frames = this.frames;
+            var numFrames;
+            if (!append) {
+                numFrames = frames.length;
+                for (n = 0; n < numFrames; n += 1) {
+                    frames[n].length = 0;
+                    frames[n] = null;
+                }
+                frames.length = 0;
+                this.nextFrameIndex = 0;
+            }
+
+            numFrames = ints[offset];
+            offset += 1;
+
+            var commandsSize = ints[offset];
+            offset += 1;
+
+            var numFrameCommands;
+            if (commandsSize === 1) {
+                for (n = 0; n < numFrames; n += 1) {
+                    numFrameCommands = ints[offset];
+                    offset += 1;
+
+                    byteOffset = (offset << 2);
+
+                    data = new Uint8Array(dataBuffer, byteOffset, numFrameCommands);
+
+                    frames.push(data);
+
+                    // pad element size to multiple of 4
+                    offset += ((data.byteLength + 3) >>> 2);
+                }
+            } else if (commandsSize === 2) {
+                for (n = 0; n < numFrames; n += 1) {
+                    numFrameCommands = ints[offset];
+                    offset += 1;
+
+                    byteOffset = (offset << 2);
+
+                    data = new Uint16Array(dataBuffer, byteOffset, numFrameCommands);
+
+                    frames.push(data);
+
+                    // pad element size to multiple of 4
+                    offset += ((data.byteLength + 3) >>> 2);
+                }
+            } else {
+                for (n = 0; n < numFrames; n += 1) {
+                    numFrameCommands = ints[offset];
+                    offset += 1;
+
+                    byteOffset = (offset << 2);
+
+                    data = new Uint32Array(dataBuffer, byteOffset, numFrameCommands);
+
+                    frames.push(data);
+
+                    // pad element size to multiple of 4
+                    offset += ((data.byteLength + 3) >>> 2);
+                }
+            }
+        }
+
+        debug.assert(offset === ints.length);
     };
 
     PlaybackGraphicsDevice.prototype.addFrames = function (framesObject, reset) {
@@ -2229,62 +2385,50 @@ var PlaybackGraphicsDevice = (function () {
 
         var commands = framesObject.commands;
         var numCommands = commands.length;
-        var fileFrames = framesObject.frames;
-        var numFileFrames = fileFrames.length;
-        var frames = this.frames;
-        if (reset) {
-            var numFrames = frames.length;
-            for (n = 0; n < numFrames; n += 1) {
-                frames[n].length = 0;
-                frames[n] = null;
-            }
-            frames.length = 0;
-            this.nextFrameIndex = 0;
-        }
         for (n = 0; n < numCommands; n += 1) {
             var command = commands[n];
             var numArguments = command.length;
             var method = command[0];
             if (method === CaptureGraphicsCommand.setTechniqueParameters) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // TechniqueParameters
             } else if (method === CaptureGraphicsCommand.drawIndexed) {
                 // Nothing to resolve
             } else if (method === CaptureGraphicsCommand.draw) {
                 // Nothing to resolve
             } else if (method === CaptureGraphicsCommand.setIndexBuffer) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // IndexBuffer
             } else if (method === CaptureGraphicsCommand.setStream) {
-                command[1] = this._resolveEntity(command[1]);
-                command[2] = this._resolveEntity(command[2]);
+                command[1] = this._resolveEntity(command[1]); // VertexBuffer
+                command[2] = this._resolveEntity(command[2]); // Semantics
             } else if (method === CaptureGraphicsCommand.setTechnique) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // Technique
             } else if (method === CaptureGraphicsCommand.setData) {
-                command[1] = this._resolveEntity(command[1]);
-                command[4] = this._resolveEntity(command[4]);
+                command[1] = this._resolveEntity(command[1]); // Object
+                command[4] = this._resolveEntity(command[4]); // Data
             } else if (method === CaptureGraphicsCommand.setAllData) {
-                command[1] = this._resolveEntity(command[1]);
-                command[2] = this._resolveEntity(command[2]);
+                command[1] = this._resolveEntity(command[1]); // Object
+                command[2] = this._resolveEntity(command[2]); // Data
             } else if (method === CaptureGraphicsCommand.beginRenderTarget) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // RenderTarget
             } else if (method === CaptureGraphicsCommand.clear) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // Color object
             } else if (method === CaptureGraphicsCommand.endRenderTarget) {
                 // Nothing to resolve
             } else if (method === CaptureGraphicsCommand.beginEndDraw) {
-                command[3] = this._resolveEntity(command[3]);
-                command[4] = this._resolveEntity(command[4]);
-                command[5] = this._resolveEntity(command[5]);
+                command[3] = this._resolveEntity(command[3]); // Formats
+                command[4] = this._resolveEntity(command[4]); // Semantics
+                command[5] = this._resolveEntity(command[5]); // Data
             } else if (method === CaptureGraphicsCommand.setViewport) {
                 // Nothing to resolve
             } else if (method === CaptureGraphicsCommand.setScissor) {
                 // Nothing to resolve
             } else if (method === CaptureGraphicsCommand.beginOcclusionQuery) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // Query
             } else if (method === CaptureGraphicsCommand.endOcclusionQuery) {
-                command[1] = this._resolveEntity(command[1]);
+                command[1] = this._resolveEntity(command[1]); // Query
             } else if (method === CaptureGraphicsCommand.updateTextureData) {
-                command[1] = this._resolveEntity(command[1]);
-                command[2] = this._resolveEntity(command[2]);
+                command[1] = this._resolveEntity(command[1]); // Object
+                command[2] = this._resolveEntity(command[2]); // Data
             } else {
                 if (this.onerror) {
                     this.onerror('Unknown command: ' + method);
@@ -2293,19 +2437,29 @@ var PlaybackGraphicsDevice = (function () {
             }
         }
 
-        var c, cmdId;
-        for (n = 0; n < numFileFrames; n += 1) {
-            var frame = fileFrames[n];
-            numCommands = frame.length;
-            for (c = 0; c < numCommands; c += 1) {
-                cmdId = frame[c];
-                command = commands[cmdId];
-                frame[c] = command;
-            }
-            frames.push(frame);
+        if (this.commands) {
+            this.commands.length = 0;
         }
-        commands.length = 0;
-        fileFrames.length = 0;
+        this.commands = commands;
+
+        var fileFrames = framesObject.frames;
+        if (fileFrames) {
+            var numFileFrames = fileFrames.length;
+            var frames = this.frames;
+            if (reset) {
+                var numFrames = frames.length;
+                for (n = 0; n < numFrames; n += 1) {
+                    frames[n].length = 0;
+                    frames[n] = null;
+                }
+                frames.length = 0;
+                this.nextFrameIndex = 0;
+            }
+            for (n = 0; n < numFileFrames; n += 1) {
+                frames.push(fileFrames[n]);
+            }
+            fileFrames.length = 0;
+        }
 
         this.srcWidth = framesObject.width;
         this.srcHeight = framesObject.height;
@@ -2336,15 +2490,16 @@ var PlaybackGraphicsDevice = (function () {
     PlaybackGraphicsDevice.prototype.skip = function (endIndex) {
         var nextIndex = this.nextFrameIndex;
         while (nextIndex < endIndex) {
-            var frame = this.frames[nextIndex];
-            if (!frame) {
+            var frameCommands = this.frames[nextIndex];
+            if (!frameCommands) {
                 return false;
             }
 
-            var numCommands = frame.length;
+            var commands = this.commands;
+            var numCommands = frameCommands.length;
             var c, target;
             for (c = 0; c < numCommands; c += 1) {
-                var command = frame[c];
+                var command = commands[frameCommands[c]];
                 var method = command[0];
                 if (method === CaptureGraphicsCommand.setData) {
                     target = command[1];
@@ -2373,8 +2528,8 @@ var PlaybackGraphicsDevice = (function () {
             this.skip(frameIndex);
         }
 
-        var frame = this.frames[frameIndex];
-        if (!frame) {
+        var frameCommands = this.frames[frameIndex];
+        if (!frameCommands) {
             return false;
         }
 
@@ -2419,10 +2574,11 @@ var PlaybackGraphicsDevice = (function () {
         this.playWidth = width;
         this.playHeight = height;
 
-        var numCommands = frame.length;
+        var commands = this.commands;
+        var numCommands = frameCommands.length;
         var c, x, y, w, h;
         for (c = 0; c < numCommands; c += 1) {
-            var command = frame[c];
+            var command = commands[frameCommands[c]];
             var method = command[0];
             if (method === CaptureGraphicsCommand.setTechniqueParameters) {
                 gd.setTechniqueParameters(command[1]);
@@ -2498,6 +2654,7 @@ var PlaybackGraphicsDevice = (function () {
     PlaybackGraphicsDevice.prototype.destroy = function () {
         this.gd = null;
         this.frames = null;
+        this.commands = null;
         this.entities = null;
     };
 

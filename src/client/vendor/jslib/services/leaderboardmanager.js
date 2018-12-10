@@ -7,6 +7,7 @@
 //
 var LeaderboardManager = (function () {
     function LeaderboardManager() {
+        /* tslint:enable:no-unused-variable */
         this.getTypes = {
             top: 'top',
             near: 'near',
@@ -50,7 +51,7 @@ var LeaderboardManager = (function () {
             data: dataSpec,
             callback: getOverviewCallback,
             requestHandler: this.requestHandler
-        });
+        }, 'leaderboard.read');
     };
 
     LeaderboardManager.prototype.getAggregates = function (spec, callbackFn, errorCallbackFn) {
@@ -78,7 +79,7 @@ var LeaderboardManager = (function () {
             data: dataSpec,
             callback: getAggregatesCallback,
             requestHandler: this.requestHandler
-        });
+        }, 'leaderboard.aggregates');
     };
 
     LeaderboardManager.prototype.getRaw = function (key, spec, callbackFn, errorCallbackFn) {
@@ -99,7 +100,7 @@ var LeaderboardManager = (function () {
             data: spec,
             callback: getCallback,
             requestHandler: this.requestHandler
-        });
+        }, 'leaderboard.read');
         return true;
     };
 
@@ -118,6 +119,7 @@ var LeaderboardManager = (function () {
 
         var dataSpec = {};
 
+        // backwards compatibility
         if (spec.numNear) {
             dataSpec.type = this.getTypes.near;
             dataSpec.size = spec.numNear * 2 + 1;
@@ -127,6 +129,7 @@ var LeaderboardManager = (function () {
             dataSpec.size = spec.numTop;
         }
 
+        // new arguments
         if (spec.size) {
             dataSpec.size = spec.size;
         }
@@ -185,6 +188,7 @@ var LeaderboardManager = (function () {
         var sortBy = meta.sortBy;
         var bestScore = meta.bestScore;
 
+        // Avoid making an ajax query if the new score is worse than current score
         if ((bestScore && ((sortBy === 1 && score <= bestScore) || (sortBy === -1 && score >= bestScore)))) {
             TurbulenzEngine.setTimeout(function () {
                 callbackFn(key, score, false, bestScore);
@@ -228,22 +232,14 @@ var LeaderboardManager = (function () {
         };
         var url = '/api/v1/leaderboards/scores/set/' + key;
 
-        if (TurbulenzServices.bridgeServices) {
-            TurbulenzServices.addSignature(dataSpec, url);
-            dataSpec.key = key;
-            TurbulenzServices.callOnBridge('leaderboard.set', dataSpec, function unpackResponse(response) {
-                setCallback(response, response.status);
-            });
-        } else {
-            this.service.request({
-                url: url,
-                method: 'POST',
-                data: dataSpec,
-                callback: setCallback,
-                requestHandler: this.requestHandler,
-                encrypt: true
-            });
-        }
+        this.service.request({
+            url: url,
+            method: 'POST',
+            data: dataSpec,
+            callback: setCallback,
+            requestHandler: this.requestHandler,
+            encrypt: true
+        }, 'leaderboard.set');
     };
 
     // ONLY available on Local and Hub
@@ -278,7 +274,7 @@ var LeaderboardManager = (function () {
             method: 'POST',
             callback: resetCallback,
             requestHandler: this.requestHandler
-        });
+        }, 'leaderboard.removeall');
     };
 
     LeaderboardManager.create = function (requestHandler, gameSession, leaderboardMetaReceived, errorCallbackFn) {
@@ -321,18 +317,19 @@ var LeaderboardManager = (function () {
                         leaderboardMetaReceived(leaderboardManager);
                     }
                 } else {
-                    leaderboardManager.errorCallbackFn("TurbulenzServices.createLeaderboardManager error with HTTP status " + status + ": " + jsonResponse.msg, status);
+                    leaderboardManager.errorCallbackFn("TurbulenzServices.createLeaderboardManager " + "error with HTTP status " + status + ": " + jsonResponse.msg, status);
                 }
             },
             requestHandler: requestHandler,
             neverDiscard: true
-        });
+        }, 'leaderboard.meta');
 
         return leaderboardManager;
     };
     LeaderboardManager.version = 1;
     return LeaderboardManager;
 })();
+
 
 var LeaderboardResult = (function () {
     function LeaderboardResult() {
@@ -354,7 +351,10 @@ var LeaderboardResult = (function () {
             for (i = 0; i < rankingLength; i += 1) {
                 var rank = ranking[i];
 
+                // find the overlapping point where the score was requested
                 if (rank.score * sortBy < specScore * sortBy || (rank.score === specScore && rank.time >= specTime)) {
+                    // get the distance from end of the board to score requested
+                    // add 1 becuase the above/below requests are exclusive of the requested score
                     if (results.spec.type === aboveType) {
                         overlap = rankingLength - i;
                     } else {
@@ -398,6 +398,7 @@ var LeaderboardResult = (function () {
     };
 
     LeaderboardResult.prototype.viewOperationBegin = function () {
+        // lock the view object so not other page/scroll calls can be made
         if (this.viewLock) {
             return false;
         }
@@ -613,7 +614,7 @@ var LeaderboardResult = (function () {
         leaderboardResult.key = key;
 
         // patch up friendsOnly for frontend
-        spec.friendsOnly = (0 != spec.friendsonly);
+        spec.friendsOnly = (0 !== spec.friendsonly);
         delete spec.friendsonly;
 
         // store the original spec used to create the results

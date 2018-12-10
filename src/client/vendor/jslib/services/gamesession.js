@@ -1,10 +1,9 @@
 // Copyright (c) 2011-2012 Turbulenz Limited
 ;
 
-;
-
 var GameSession = (function () {
     function GameSession() {
+        /* tslint:enable:no-unused-variable */
         this.post_delay = 1000;
     }
     GameSession.prototype.setStatus = function (status) {
@@ -31,19 +30,17 @@ var GameSession = (function () {
             TurbulenzBridge.destroyedGameSession(this.gameSessionId);
             this.destroyed = true;
 
-            dataSpec = { 'gameSessionId': this.gameSessionId };
+            dataSpec = {
+                gameSessionId: this.gameSessionId
+            };
 
-            if (TurbulenzServices.bridgeServices) {
-                TurbulenzServices.callOnBridge('gamesession.destroy', dataSpec, callbackFn);
-            } else {
-                Utilities.ajax({
-                    url: '/api/v1/games/destroy-session',
-                    method: 'POST',
-                    data: dataSpec,
-                    callback: callbackFn,
-                    requestHandler: this.requestHandler
-                });
-            }
+            this.service.request({
+                url: '/api/v1/games/destroy-session',
+                method: 'POST',
+                data: dataSpec,
+                callback: callbackFn,
+                requestHandler: this.requestHandler
+            }, 'gamesession.destroy');
         } else {
             if (callbackFn) {
                 TurbulenzEngine.setTimeout(callbackFn, 0);
@@ -108,10 +105,17 @@ var GameSession = (function () {
         }
     };
 
-    GameSession.create = function (requestHandler, sessionCreatedFn, errorCallbackFn) {
+    GameSession.create = function (requestHandler, sessionCreatedFn, errorCallbackFn, options) {
         var gameSession = new GameSession();
         var gameSlug = window.gameSlug;
-        var turbulenz = window.top.Turbulenz;
+        var turbulenz = window.Turbulenz;
+        if (!turbulenz) {
+            try  {
+                turbulenz = window.top.Turbulenz;
+            } catch (e) {
+            }
+            /* tslint:enable:no-empty */
+        }
         var turbulenzData = (turbulenz && turbulenz.Data) || {};
         var mode = turbulenzData.mode || TurbulenzServices.mode;
         var createSessionURL = '/api/v1/games/create-session/' + gameSlug;
@@ -157,8 +161,9 @@ var GameSession = (function () {
 
         var gameSessionRequestCallback = function gameSessionRequestCallbackFn(jsonResponse, status) {
             if (status === 200) {
-                gameSession.mappingTable = jsonResponse.mappingTable;
-                gameSession.gameSessionId = jsonResponse.gameSessionId;
+                var response = (jsonResponse);
+                gameSession.mappingTable = response.mappingTable;
+                gameSession.gameSessionId = response.gameSessionId;
 
                 if (sessionCreatedFn) {
                     sessionCreatedFn(gameSession);
@@ -183,13 +188,21 @@ var GameSession = (function () {
             createSessionURL += '/' + mode;
         }
 
+        var dataSpec = {};
+        if (options) {
+            if (options.closeExistingSessions) {
+                dataSpec.closeExistingSessions = 1;
+            }
+        }
+
         gameSession.service.request({
             url: createSessionURL,
             method: 'POST',
+            data: dataSpec,
             callback: gameSessionRequestCallback,
             requestHandler: requestHandler,
             neverDiscard: true
-        });
+        }, 'gamesession.create');
 
         return gameSession;
     };

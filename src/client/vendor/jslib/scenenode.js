@@ -26,10 +26,13 @@ var SceneNode = (function () {
         this.dirtyWorld = false;
         this.dirtyWorldExtents = true;
         this.dirtyLocalExtents = true;
-        this.worldUpdate = 0;
+        this.worldUpdate = 0; //Counter of number of times modified.
         this.frameVisible = -1;
 
+        /* tslint:disable:no-duplicate-variable */
         var local = params.local;
+
+        /* tslint:enable:no-duplicate-variable */
         if (local) {
             if (this.arrayConstructor !== Array) {
                 var buffer = new Float32Array(12 + 12);
@@ -47,18 +50,11 @@ var SceneNode = (function () {
         this.parent = undefined;
         this.notifiedParent = false;
     }
-    SceneNode.makePath = //
+    //
     //SceneNode.makePath
     //
-    function (parentPath, childName) {
+    SceneNode.makePath = function (parentPath, childName) {
         return parentPath + "/" + childName;
-    };
-
-    SceneNode.invalidSetLocalTransform = //
-    //SceneNode.invalidSetLocalTransform
-    //
-    function () {
-        debug.abort("setLocalTransform can not be called on static nodes.");
     };
 
     //
@@ -103,6 +99,7 @@ var SceneNode = (function () {
         if (child.parent) {
             child.parent.removeChild(child);
         } else {
+            //Child was a root node
             if (child.scene) {
                 child.scene.removeRootNode(child);
             }
@@ -117,6 +114,11 @@ var SceneNode = (function () {
 
         if (this.dynamic && !child.dynamic) {
             child.setDynamic();
+        } else {
+            var scene = this.getRoot().scene;
+            if (scene) {
+                child.addedToScene(scene);
+            }
         }
     };
 
@@ -134,7 +136,7 @@ var SceneNode = (function () {
                 if (children[n] === child) {
                     var root = this.getRoot();
                     if (root.scene) {
-                        child.removedFromScene(root.scene);
+                        child.removedFromScene(root.scene); //Maybe decouple with an event.
                     }
                     children.splice(n, 1);
                     child.setParentHelper(null);
@@ -169,8 +171,7 @@ var SceneNode = (function () {
             name: newNodeName || this.name,
             local: this.local,
             dynamic: this.dynamic,
-            disabled: this.disabled
-        });
+            disabled: this.disabled });
 
         // Clone renderables
         var renderables = this.renderables;
@@ -196,8 +197,7 @@ var SceneNode = (function () {
         if (this.clonedObserver) {
             this.clonedObserver.notify({
                 oldNode: this,
-                newNode: newNode
-            });
+                newNode: newNode });
         }
 
         var childNodes = this.children;
@@ -233,9 +233,39 @@ var SceneNode = (function () {
     };
 
     //
+    //addedToScene
+    //
+    SceneNode.prototype.addedToScene = function (scene) {
+        //private function, used by the Scene
+        //Update both world transform and world extents
+        var sceneUpdated = this.updateWorldExtents();
+        if (!sceneUpdated) {
+            var worldExtents = this.worldExtents;
+            if (worldExtents) {
+                debug.assert(this.spatialIndex === undefined);
+                if (this.dynamic) {
+                    scene.dynamicSpatialMap.add(this, worldExtents);
+                } else {
+                    scene.staticSpatialMap.add(this, worldExtents);
+                    scene.staticNodesChangeCounter += 1;
+                }
+            }
+        }
+
+        var children = this.children;
+        if (children) {
+            var numChildren = children.length;
+            for (var childIndex = 0; childIndex < numChildren; childIndex += 1) {
+                children[childIndex].addedToScene(scene);
+            }
+        }
+    };
+
+    //
     //removedFromScene
     //
     SceneNode.prototype.removedFromScene = function (scene) {
+        //private function, used by the Scene too
         if (this.spatialIndex !== undefined) {
             if (this.dynamic) {
                 scene.dynamicSpatialMap.remove(this);
@@ -258,6 +288,13 @@ var SceneNode = (function () {
     //setLocalTransform
     //
     SceneNode.prototype.setLocalTransform = function (matrix) {
+        if (debug) {
+            if (!this.dynamic && this.getRoot().scene) {
+                if (TurbulenzEngine.onperformancewarning) {
+                    TurbulenzEngine.onperformancewarning("Changing local transform of static SceneNode '" + this.name + "' whilst still added to a Scene." + "If this message appears frequently, performance of your" + " game may be affected.");
+                }
+            }
+        }
         if (matrix !== this.local) {
             this.local = this.mathDevice.m43Copy(matrix, this.local);
         }
@@ -384,19 +421,22 @@ var SceneNode = (function () {
     //
     SceneNode.prototype.setDynamic = function () {
         if (!this.dynamic) {
+            var scene = this.getRoot().scene;
+
+            // getWorldExtents will clean and update the state
+            var worldExtents = this.getWorldExtents();
+
             if (this.spatialIndex !== undefined) {
-                var scene = this.getRoot().scene;
                 scene.staticSpatialMap.remove(this);
                 scene.staticNodesChangeCounter += 1;
-                delete this.spatialIndex;
             }
-            delete this.setLocalTransform;
 
-            //If there is any dirty state then its possible that even if it still has an spatialIndex it may no longer.
-            var worldExtents = this.getWorldExtents();
             if (worldExtents) {
-                this.getRoot().scene.dynamicSpatialMap.update(this, worldExtents);
+                if (scene) {
+                    scene.dynamicSpatialMap.add(this, worldExtents);
+                }
             }
+
             this.dynamic = true;
         }
 
@@ -414,28 +454,23 @@ var SceneNode = (function () {
     //
     SceneNode.prototype.setStatic = function () {
         if (this.dynamic) {
+            var scene = this.getRoot().scene;
+
+            // getWorldExtents will clean and update the state
+            var worldExtents = this.getWorldExtents();
+
             if (this.spatialIndex !== undefined) {
-                this.getRoot().scene.dynamicSpatialMap.remove(this);
-                delete this.spatialIndex;
+                scene.dynamicSpatialMap.remove(this);
             }
 
-            this.setLocalTransform = SceneNode.invalidSetLocalTransform;
-
-            //If there is any dirty state then its possible that even if it still has an spatialIndex it may no longer.
-            var worldExtents = this.getWorldExtents();
             if (worldExtents) {
-                var scene = this.getRoot().scene;
                 if (scene) {
-                    scene.staticSpatialMap.update(this, worldExtents);
+                    scene.staticSpatialMap.add(this, worldExtents);
                     scene.staticNodesChangeCounter += 1;
                 }
             }
 
-            delete this.dirtyWorldExtents;
-            delete this.worldExtentsUpdate;
-            delete this.dirtyWorld;
-            delete this.notifiedParent;
-            delete this.dynamic;
+            this.dynamic = false;
         }
 
         var children = this.children;
@@ -500,7 +535,7 @@ var SceneNode = (function () {
     //
     SceneNode.prototype.childNeedsUpdate = function () {
         //Private function
-        this.updateRequired();
+        this.updateRequired(); //propagate to the root node.
         this.childNeedsUpdateCount += 1;
     };
 
@@ -528,6 +563,7 @@ var SceneNode = (function () {
     //checkUpdateRequired
     //
     SceneNode.prototype.checkUpdateRequired = function () {
+        //private function
         if (this.notifiedParent) {
             if (!this.dirtyWorldExtents && !this.dirtyWorld && !this.childNeedsUpdateCount) {
                 this.parent.childUpdated();
@@ -546,8 +582,7 @@ var SceneNode = (function () {
     };
 
     SceneNode.updateNodes = function (mathDevice, scene, nodes, numNodes) {
-        var dynamicSpatialMap = scene.dynamicSpatialMap;
-        var node, parent, index, worldExtents;
+        var node, parent, index;
         do {
             numNodes -= 1;
             node = nodes[numNodes];
@@ -588,35 +623,8 @@ var SceneNode = (function () {
                 }
 
                 node.dirtyWorldExtents = false;
-                node.worldExtentsUpdate = true;
-            }
 
-            if (node.worldExtentsUpdate) {
-                node.worldExtentsUpdate = false;
-
-                worldExtents = node.worldExtents;
-                if (worldExtents) {
-                    if (node.dynamic) {
-                        dynamicSpatialMap.update(node, worldExtents);
-                    } else {
-                        scene.staticSpatialMap.update(node, worldExtents);
-                        scene.staticNodesChangeCounter += 1;
-
-                        //Remove things that are no longer relevant.
-                        node.setLocalTransform = SceneNode.invalidSetLocalTransform;
-                        delete node.dirtyWorldExtents;
-                        delete node.worldExtentsUpdate;
-                        delete node.dirtyWorld;
-                        delete node.notifiedParent;
-                    }
-                } else if (node.spatialIndex !== undefined) {
-                    if (node.dynamic) {
-                        dynamicSpatialMap.remove(node);
-                    } else {
-                        scene.staticSpatialMap.remove(node);
-                        scene.staticNodesChangeCounter += 1;
-                    }
-                }
+                node._updateSpatialMap(scene);
             }
 
             if (node.childNeedsUpdateCount) {
@@ -637,6 +645,25 @@ var SceneNode = (function () {
 
             node.notifiedParent = false;
         } while(0 < numNodes);
+    };
+
+    SceneNode.prototype._updateSpatialMap = function (scene) {
+        var worldExtents = this.worldExtents;
+        if (worldExtents) {
+            if (this.dynamic) {
+                scene.dynamicSpatialMap.update(this, worldExtents);
+            } else {
+                scene.staticSpatialMap.update(this, worldExtents);
+                scene.staticNodesChangeCounter += 1;
+            }
+        } else if (this.spatialIndex !== undefined) {
+            if (this.dynamic) {
+                scene.dynamicSpatialMap.remove(this);
+            } else {
+                scene.staticSpatialMap.remove(this);
+                scene.staticNodesChangeCounter += 1;
+            }
+        }
     };
 
     //
@@ -734,55 +761,57 @@ var SceneNode = (function () {
                     }
                 }
 
-                if (this.arrayConstructor !== Array) {
-                    var bufferSize = 6;
-                    if (!this.localHalfExtents) {
-                        bufferSize += 3;
-                    }
-                    if (!this.localExtentsCenter) {
-                        bufferSize += 3;
-                    }
-                    if (!this.worldExtents) {
-                        bufferSize += 6;
-                    }
+                if (localExtents0 <= localExtents3 && localExtents1 <= localExtents4 && localExtents2 <= localExtents5) {
+                    if (this.arrayConstructor !== Array) {
+                        var bufferSize = 6;
+                        if (!this.localHalfExtents) {
+                            bufferSize += 3;
+                        }
+                        if (!this.localExtentsCenter) {
+                            bufferSize += 3;
+                        }
+                        if (!this.worldExtents) {
+                            bufferSize += 6;
+                        }
 
-                    var buffer = new Float32Array(bufferSize);
-                    var bufferIndex = 0;
+                        var buffer = new Float32Array(bufferSize);
+                        var bufferIndex = 0;
 
-                    this.localExtents = localExtents = buffer.subarray(bufferIndex, (bufferIndex + 6));
-                    bufferIndex += 6;
-                    if (!this.localHalfExtents) {
-                        this.localHalfExtents = buffer.subarray(bufferIndex, (bufferIndex + 3));
-                        bufferIndex += 3;
-                    }
-                    if (!this.localExtentsCenter) {
-                        this.localExtentsCenter = buffer.subarray(bufferIndex, (bufferIndex + 3));
-                        bufferIndex += 3;
-                    }
-                    if (!this.worldExtents) {
-                        this.worldExtents = buffer.subarray(bufferIndex, (bufferIndex + 6));
+                        this.localExtents = localExtents = buffer.subarray(bufferIndex, (bufferIndex + 6));
                         bufferIndex += 6;
+                        if (!this.localHalfExtents) {
+                            this.localHalfExtents = buffer.subarray(bufferIndex, (bufferIndex + 3));
+                            bufferIndex += 3;
+                        }
+                        if (!this.localExtentsCenter) {
+                            this.localExtentsCenter = buffer.subarray(bufferIndex, (bufferIndex + 3));
+                            bufferIndex += 3;
+                        }
+                        if (!this.worldExtents) {
+                            this.worldExtents = buffer.subarray(bufferIndex, (bufferIndex + 6));
+                            bufferIndex += 6;
+                        }
+                    } else {
+                        this.localExtents = localExtents = new Array(6);
+                        if (!this.localHalfExtents) {
+                            this.localHalfExtents = new Array(3);
+                        }
+                        if (!this.localExtentsCenter) {
+                            this.localExtentsCenter = new Array(3);
+                        }
+                        if (!this.worldExtents) {
+                            this.worldExtents = new Array(6);
+                        }
                     }
-                } else {
-                    this.localExtents = localExtents = new Array(6);
-                    if (!this.localHalfExtents) {
-                        this.localHalfExtents = new Array(3);
-                    }
-                    if (!this.localExtentsCenter) {
-                        this.localExtentsCenter = new Array(3);
-                    }
-                    if (!this.worldExtents) {
-                        this.worldExtents = new Array(6);
-                    }
-                }
 
-                localExtents[0] = localExtents0;
-                localExtents[1] = localExtents1;
-                localExtents[2] = localExtents2;
-                localExtents[3] = localExtents3;
-                localExtents[4] = localExtents4;
-                localExtents[5] = localExtents5;
-                hasExtents = true;
+                    localExtents[0] = localExtents0;
+                    localExtents[1] = localExtents1;
+                    localExtents[2] = localExtents2;
+                    localExtents[3] = localExtents3;
+                    localExtents[4] = localExtents4;
+                    localExtents[5] = localExtents5;
+                    hasExtents = true;
+                }
             }
         }
         if (hasExtents) {
@@ -824,6 +853,8 @@ var SceneNode = (function () {
     //updateWorldExtents
     //
     SceneNode.prototype.updateWorldExtents = function () {
+        var sceneUpdated = false;
+
         if (this.dirtyWorld) {
             this.updateWorldTransform();
         }
@@ -847,10 +878,17 @@ var SceneNode = (function () {
             }
 
             this.dirtyWorldExtents = false;
-            this.worldExtentsUpdate = true;
+
+            var scene = this.getRoot().scene;
+            if (scene) {
+                this._updateSpatialMap(scene);
+                sceneUpdated = true;
+            }
 
             this.checkUpdateRequired();
         }
+
+        return sceneUpdated;
     };
 
     //
@@ -1352,7 +1390,7 @@ var SceneNode = (function () {
             this.lightInstances = [];
         }
 
-        delete this.scene;
+        this.scene = undefined;
 
         // Make sure there are no references to any nodes
         var nodes = SceneNode._tempDirtyNodes;
@@ -1397,10 +1435,10 @@ var SceneNode = (function () {
         this.destroyedObserver.unsubscribe(observerFunction);
     };
 
-    SceneNode.create = //
+    //
     //SceneNode.create
     //
-    function (params) {
+    SceneNode.create = function (params) {
         return new SceneNode(params);
     };
     SceneNode.version = 1;
@@ -1412,7 +1450,7 @@ var SceneNode = (function () {
 SceneNode.prototype.mathDevice = null;
 
 // Detect correct typed arrays
-((function () {
+(function () {
     SceneNode.prototype.arrayConstructor = Array;
     if (typeof Float32Array !== "undefined") {
         var testArray = new Float32Array(4);
@@ -1421,4 +1459,4 @@ SceneNode.prototype.mathDevice = null;
             SceneNode.prototype.arrayConstructor = Float32Array;
         }
     }
-})());
+}());

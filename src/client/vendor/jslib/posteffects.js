@@ -1,4 +1,5 @@
 // Copyright (c) 2009-2011 Turbulenz Limited
+
 //
 // PostEffects
 //
@@ -42,8 +43,8 @@ var PostEffects = (function () {
         }
     };
 
-    PostEffects.create = // Constructor function
-    function (gd, sm) {
+    // Constructor function
+    PostEffects.create = function (gd, sm) {
         var pe = new PostEffects();
 
         sm.load("shaders/posteffects.cgfx");

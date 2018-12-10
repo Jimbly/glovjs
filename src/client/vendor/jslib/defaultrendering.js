@@ -7,7 +7,7 @@ var DefaultRendering = (function () {
     function DefaultRendering() {
     }
     /* tslint:disable:no-empty */
-    DefaultRendering.prototype.updateShader = function (/* sm */ ) {
+    DefaultRendering.prototype.updateShader = function ( /* sm */ ) {
     };
 
     /* tslint:enable:no-empty */
@@ -184,10 +184,10 @@ var DefaultRendering = (function () {
         delete this.passes;
     };
 
-    DefaultRendering.defaultPrepareFn = //
+    //
     // defaultPrepareFn
     //
-    function (geometryInstance) {
+    DefaultRendering.defaultPrepareFn = function (geometryInstance) {
         var drawParameters = TurbulenzEngine.getGraphicsDevice().createDrawParameters();
         drawParameters.userData = {};
         geometryInstance.drawParameters = [drawParameters];
@@ -206,7 +206,7 @@ var DefaultRendering = (function () {
 
         // NOTE: the way this functions is called, 'this' is an
         // EffectPrepareObject.
-        drawParameters.technique = (this).technique;
+        drawParameters.technique = this.technique;
 
         drawParameters.setTechniqueParameters(0, sharedMaterial.techniqueParameters);
         drawParameters.setTechniqueParameters(1, techniqueParameters);
@@ -239,7 +239,7 @@ var DefaultRendering = (function () {
         techniqueParameters.worldViewProjection = rendererInfo.worldViewProjection;
         techniqueParameters.lightPosition = rendererInfo.lightPosition;
 
-        var techniqueName = (this).technique.name;
+        var techniqueName = this.technique.name;
         if (techniqueName.indexOf("flat") === -1 && techniqueName.indexOf("lambert") === -1) {
             techniqueParameters.eyePosition = rendererInfo.eyePosition;
         }
@@ -251,18 +251,18 @@ var DefaultRendering = (function () {
                 skinController.index = DefaultRendering.nextSkinID;
                 DefaultRendering.nextSkinID += 1;
             }
-            drawParameters.sortKey = -renderingCommonSortKeyFn((this).techniqueIndex, skinController.index, sharedMaterial.meta.materialIndex);
+            drawParameters.sortKey = -renderingCommonSortKeyFn(this.techniqueIndex, skinController.index, sharedMaterial.meta.materialIndex);
         } else {
-            drawParameters.sortKey = renderingCommonSortKeyFn((this).techniqueIndex, sharedMaterial.meta.materialIndex, rendererInfo.id);
+            drawParameters.sortKey = renderingCommonSortKeyFn(this.techniqueIndex, sharedMaterial.meta.materialIndex, rendererInfo.id);
         }
 
-        geometryInstance.renderUpdate = (this).update;
+        geometryInstance.renderUpdate = this.update;
     };
 
-    DefaultRendering.create = //
+    //
     // Constructor function
     //
-    function (gd, md, shaderManager, effectsManager) {
+    DefaultRendering.create = function (gd, md, shaderManager, effectsManager) {
         var dr = new DefaultRendering();
 
         dr.md = md;
@@ -459,8 +459,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "flat",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -469,8 +468,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "flat_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -485,8 +483,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "flat_nocull",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -495,8 +492,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "flat_skinned_nocull",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -511,8 +507,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "lambert",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -521,8 +516,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "lambert_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -537,8 +531,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blinn",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -547,8 +540,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blinn_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -563,8 +555,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blinn_nocull",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -573,8 +564,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blinn_skinned_nocull",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -589,8 +579,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "phong",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -599,8 +588,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "phong_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -615,8 +603,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_lines_constant",
             update: debugUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -631,8 +618,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_normals",
             update: debugUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -641,8 +627,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_normals_skinned",
             update: debugSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -657,8 +642,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_tangents",
             update: debugUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -667,8 +651,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_tangents_skinned",
             update: debugSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -683,8 +666,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_binormals",
             update: debugUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -693,8 +675,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/debug.cgfx",
             techniqueName: "debug_binormals_skinned",
             update: debugSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -709,8 +690,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -719,8 +699,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -735,8 +714,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -745,8 +723,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -761,8 +738,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_alphamap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -776,8 +752,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_alphatest",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -786,8 +761,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_alphatest_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -801,8 +775,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_alphatest",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -811,8 +784,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_alphatest_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -826,8 +798,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_glowmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -836,8 +807,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_glowmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -851,8 +821,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_glowmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -861,8 +830,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "normalmap_specularmap_glowmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -876,8 +844,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -886,8 +853,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -901,8 +867,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -911,8 +876,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -926,8 +890,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_alphatest",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -936,8 +899,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_alphatest_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -951,8 +913,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap_alphatest",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -961,8 +922,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap_alphatest_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -976,8 +936,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_glowmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -986,8 +945,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_glowmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1001,8 +959,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap_glowmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1011,8 +968,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "rxgb_normalmap_specularmap_glowmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1026,8 +982,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "add",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1036,8 +991,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "add_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1051,8 +1005,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "add_particle",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1066,8 +1019,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blend",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1076,8 +1028,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blend_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1091,8 +1042,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "blend_particle",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1106,8 +1056,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "translucent",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1116,8 +1065,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "translucent_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1131,8 +1079,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "translucent_particle",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1146,8 +1093,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "filter",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1156,8 +1102,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "filter_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1171,8 +1116,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "invfilter",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1186,8 +1130,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "invfilter_particle",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1201,8 +1144,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "glass",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1216,8 +1158,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "glass_env",
             update: defaultEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1231,8 +1172,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "modulate2",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1241,8 +1181,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "modulate2_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1256,8 +1195,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "skybox",
             update: defaultEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1271,8 +1209,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "env",
             update: defaultEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1281,8 +1218,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "env_skinned",
             update: defaultEnvSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1296,8 +1232,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "add",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1314,8 +1249,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "glowmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1324,8 +1258,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "glowmap_skinned",
             update: defaultSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1340,8 +1273,7 @@ var DefaultRendering = (function () {
             shaderName: "shaders/defaultrendering.cgfx",
             techniqueName: "lightmap",
             update: defaultUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 

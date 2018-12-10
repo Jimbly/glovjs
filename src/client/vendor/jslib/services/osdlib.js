@@ -44,8 +44,8 @@ var OSD = (function () {
         }
     };
 
-    OSD.create = // Constructor function
-    function (/* args */ ) {
+    // Constructor function
+    OSD.create = function ( /* args */ ) {
         var osdObject = new OSD();
 
         var topLevelWindow = window;

@@ -108,8 +108,7 @@ var VertexBufferManager = (function () {
         if (!vertexBuffersPool) {
             vertexBuffersPool = {
                 attributesHash: attributesHash,
-                vertexBufferData: []
-            };
+                vertexBufferData: [] };
             this.vertexBuffersPools.push(vertexBuffersPool);
         }
 
@@ -143,6 +142,7 @@ var VertexBufferManager = (function () {
                                     vertexBufferData.bucket[newBucketIndex].headChunk = chunk;
                                 }
                             } else {
+                                //Allocated whole chunk so remove it.
                                 if (previousChunk) {
                                     previousChunk.nextChunk = chunk.nextChunk;
                                 } else {
@@ -167,14 +167,12 @@ var VertexBufferManager = (function () {
                 if (vertexbuffer) {
                     vertexBufferData = {
                         vertexBuffer: vertexbuffer,
-                        bucket: this.makeBuckets()
-                    };
+                        bucket: this.makeBuckets() };
 
                     vertexBufferData.bucket[this.bucket(maxVerticesPerVertexBuffer - numVertices)].headChunk = {
                         baseIndex: numVertices,
                         length: maxVerticesPerVertexBuffer - numVertices,
-                        nextChunk: null
-                    };
+                        nextChunk: null };
 
                     vertexBuffersPool.vertexBufferData.push(vertexBufferData);
                 }
@@ -191,8 +189,7 @@ var VertexBufferManager = (function () {
             if (vertexbuffer) {
                 vertexBuffersPool.vertexBufferData.push({
                     vertexBuffer: vertexbuffer,
-                    bucket: this.makeBuckets()
-                });
+                    bucket: this.makeBuckets() });
             }
         }
 
@@ -248,6 +245,7 @@ var VertexBufferManager = (function () {
             oldBucketIndex = this.bucket(leftChunk.length);
             leftChunk.length += allocation.length + rightChunk.length;
 
+            //destroy right - before any move of left, as it previous could be the left...
             if (rightChunkPrevious) {
                 rightChunkPrevious.nextChunk = rightChunk.nextChunk;
                 if (rightChunk === leftChunkPrevious) {
@@ -313,8 +311,7 @@ var VertexBufferManager = (function () {
             bucket.headChunk = {
                 baseIndex: allocation.baseIndex,
                 length: allocation.length,
-                nextChunk: bucket.headChunk
-            };
+                nextChunk: bucket.headChunk };
         }
 
         //See if the whole thing is free and if so free the VB
@@ -366,13 +363,13 @@ var VertexBufferManager = (function () {
         this.graphicsDevice = null;
     };
 
-    VertexBufferManager.create = //
+    //
     // create
     //
-    function (graphicsDevice, dynamicVertexBuffers) {
+    VertexBufferManager.create = function (graphicsDevice, dynamicVertexBuffers) {
         var manager = new VertexBufferManager();
 
-        manager.vertexBuffersPools = [];
+        manager.vertexBuffersPools = []; //Array keyed-off attribute
         manager.debugCreatedVertexBuffers = 0;
         manager.graphicsDevice = graphicsDevice;
         manager.dynamicVertexBuffers = dynamicVertexBuffers ? true : false;

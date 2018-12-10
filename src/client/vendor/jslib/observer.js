@@ -4,6 +4,7 @@
 //
 var Observer = (function () {
     function Observer() {
+        this.subscribers = [];
     }
     Observer.prototype.subscribe = function (subscriber) {
         //Check for duplicates
@@ -29,7 +30,7 @@ var Observer = (function () {
         }
     };
 
-    Observer.prototype.unsubscribeAll = function (/* subscriber */ ) {
+    Observer.prototype.unsubscribeAll = function ( /* subscriber */ ) {
         this.subscribers.length = 0;
     };
 
@@ -40,7 +41,7 @@ var Observer = (function () {
     Observer.prototype.notify = function (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11) {
         // Note that the callbacks might unsubscribe
         var subscribers = this.subscribers;
-        var length = this.subscribers.length;
+        var length = subscribers.length;
         var index = 0;
 
         while (index < length) {
@@ -54,9 +55,7 @@ var Observer = (function () {
     };
 
     Observer.create = function () {
-        var observer = new Observer();
-        observer.subscribers = [];
-        return observer;
+        return new Observer();
     };
     return Observer;
 })();

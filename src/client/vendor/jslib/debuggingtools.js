@@ -45,7 +45,7 @@ var DebuggingTools = {
                     breakpoint.currentValue = value;
                 });
 
-                object['__defineGetter__'].call(object, propertyName, function (/* value */ ) {
+                object['__defineGetter__'].call(object, propertyName, function () {
                     if (breakpoint.breakOnRead) {
                         debugger;
                     }

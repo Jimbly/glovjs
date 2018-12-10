@@ -51,10 +51,10 @@ var TextureInstance = (function () {
         delete this.textureChangedObserver;
     };
 
-    TextureInstance.create = //
+    //
     // TextureInstance.create
     //
-    function (name, texture) {
+    TextureInstance.create = function (name, texture) {
         var textureInstance = new TextureInstance();
         textureInstance.name = name;
         textureInstance.texture = texture;
@@ -69,7 +69,6 @@ var TextureInstance = (function () {
 /**
 @class  Texture manager
 @private
-
 @since TurbulenzEngine 0.1.0
 */
 var TextureManager = (function () {
@@ -77,12 +76,12 @@ var TextureManager = (function () {
     }
     /**
     Adds external texture
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name add
-
+    
     @param {string} name Name of the texture
     @param {Texture} texture Texture
     */
@@ -103,14 +102,14 @@ var TextureManager = (function () {
 
     /**
     Get texture created from a given file or with the given name
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name get
-
+    
     @param {string} path Path or name of the texture
-
+    
     @return {Texture} object, returns the default texture if the texture is not yet loaded or the file didn't exist
     */
     TextureManager.prototype.get = function (path) {
@@ -130,16 +129,16 @@ var TextureManager = (function () {
 
     /**
     Creates texture from an image file
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name load
-
+    
     @param {string} path Path to the image file
     @param {boolean} nomipmaps True to disable mipmaps
     @param {function()} onTextureLoaded function to call once the texture is loaded
-
+    
     @return {Texture} object, returns the default Texture if the file at given path is not yet loaded
     */
     TextureManager.prototype.load = function (path, nomipmaps, onTextureLoaded) {
@@ -183,7 +182,7 @@ var TextureManager = (function () {
                         that.numLoadingTextures -= 1;
                     };
 
-                    var textureRequest = function textureRequestFn(url, onload/*, callContext */ ) {
+                    var textureRequest = function textureRequestFn(url, onload /*, callContext */ ) {
                         var texture = that.graphicsDevice.createTexture({
                             src: url,
                             mipmaps: mipmaps,
@@ -226,12 +225,12 @@ var TextureManager = (function () {
 
     /**
     Alias one texture to another name
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name map
-
+    
     @param {string} dst Name of the alias
     @param {string} src Name of the texture to be aliased
     */
@@ -247,12 +246,12 @@ var TextureManager = (function () {
 
     /**
     Removes a texture from the manager
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name remove
-
+    
     @param {string} path Path or name of the texture
     */
     TextureManager.prototype.remove = function (path) {
@@ -266,12 +265,12 @@ var TextureManager = (function () {
 
     /**
     Loads a textures archive
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name loadArchive
-
+    
     @param {string} path Path to the archive file
     @param {boolean} nomipmaps True to disable mipmaps
     */
@@ -397,14 +396,14 @@ var TextureManager = (function () {
 
     /**
     Check if an archive is not pending
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name isArchiveLoaded
-
+    
     @param {string} path Path or name of the archive
-
+    
     @return {boolean}
     */
     TextureManager.prototype.isArchiveLoaded = function (path) {
@@ -413,12 +412,12 @@ var TextureManager = (function () {
 
     /**
     Removes a textures archive and all the textures it references.
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name removeArchive
-
+    
     @param {string} path Path of the archive file
     */
     TextureManager.prototype.removeArchive = function (path) {
@@ -436,12 +435,12 @@ var TextureManager = (function () {
 
     /**
     Get object containing all loaded textures
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name getAll
-
+    
     @return {object}
     */
     TextureManager.prototype.getAll = function () {
@@ -450,12 +449,12 @@ var TextureManager = (function () {
 
     /**
     Get number of textures pending
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name getNumLoadingTextures
-
+    
     @return {number}
     */
     TextureManager.prototype.getNumPendingTextures = function () {
@@ -464,14 +463,14 @@ var TextureManager = (function () {
 
     /**
     Check if a texture is not pending
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name isTextureLoaded
-
+    
     @param {string} path Path or name of the texture
-
+    
     @return {boolean}
     */
     TextureManager.prototype.isTextureLoaded = function (path) {
@@ -480,14 +479,14 @@ var TextureManager = (function () {
 
     /**
     Check if a texture is missing
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name isTextureMissing
-
+    
     @param {string} path Path or name of the texture
-
+    
     @return {boolean}
     */
     TextureManager.prototype.isTextureMissing = function (path) {
@@ -496,12 +495,12 @@ var TextureManager = (function () {
 
     /**
     Set path remapping dictionary
-
+    
     @memberOf TextureManager.prototype
     @public
     @function
     @name setPathRemapping
-
+    
     @param {string} prm Path remapping dictionary
     @param {string} assetUrl Asset prefix for all assets loaded
     */
@@ -554,20 +553,20 @@ var TextureManager = (function () {
         this.graphicsDevice = null;
     };
 
-    TextureManager.create = /**
+    /**
     @constructs Constructs a TextureManager object.
-
+    
     @param {GraphicsDevice} graphicsDevice Graphics device
     @param {Texture} dt Default texture
     @param {Element} log Logging element
-
+    
     @return {TextureManager} object, null if failed
     */
-    function (graphicsDevice, requestHandler, dt, errorCallback, log) {
+    TextureManager.create = function (graphicsDevice, requestHandler, dt, errorCallback, log) {
         var textureManager = new TextureManager();
 
         if (!errorCallback) {
-            errorCallback = function (/* e */ ) {
+            errorCallback = function () {
             };
         }
 
@@ -587,23 +586,10 @@ var TextureManager = (function () {
                 mipmaps: true,
                 dynamic: false,
                 data: [
-                    255,
-                    20,
-                    147,
-                    255,
-                    255,
-                    0,
-                    0,
-                    255,
-                    255,
-                    255,
-                    255,
-                    255,
-                    255,
-                    20,
-                    147,
-                    255
-                ]
+                    255, 20, 147, 255,
+                    255, 0, 0, 255,
+                    255, 255, 255, 255,
+                    255, 20, 147, 255]
             });
             if (!defaultTexture) {
                 errorCallback("Default texture not created.");
@@ -697,23 +683,10 @@ var TextureManager = (function () {
             mipmaps: true,
             dynamic: false,
             data: [
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255,
-                255
-            ]
+                255, 255, 255, 255,
+                255, 255, 255, 255,
+                255, 255, 255, 255,
+                255, 255, 255, 255]
         });
 
         textureManager.addProceduralTexture({
@@ -726,23 +699,10 @@ var TextureManager = (function () {
             mipmaps: true,
             dynamic: false,
             data: [
-                0,
-                0,
-                0,
-                255,
-                0,
-                0,
-                0,
-                255,
-                0,
-                0,
-                0,
-                255,
-                0,
-                0,
-                0,
-                255
-            ]
+                0, 0, 0, 255,
+                0, 0, 0, 255,
+                0, 0, 0, 255,
+                0, 0, 0, 255]
         });
 
         textureManager.addProceduralTexture({
@@ -755,23 +715,10 @@ var TextureManager = (function () {
             mipmaps: true,
             dynamic: false,
             data: [
-                128,
-                128,
-                255,
-                255,
-                128,
-                128,
-                255,
-                255,
-                128,
-                128,
-                255,
-                255,
-                128,
-                128,
-                255,
-                255
-            ]
+                128, 128, 255, 255,
+                128, 128, 255, 255,
+                128, 128, 255, 255,
+                128, 128, 255, 255]
         });
 
         var abs = Math.abs;

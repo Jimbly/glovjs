@@ -109,6 +109,9 @@ var MappingTable = (function () {
             params.onload(mappingTable);
         };
 
+        // For testing purposes we support creation from immediate
+        // strings, but at least one of 'mappingTableURL' and
+        // 'mappingTableData' must be present.
         if (!mappingTable.mappingTableURL) {
             if (params.mappingTableData) {
                 TurbulenzEngine.setTimeout(function () {

@@ -1,11 +1,13 @@
 // Copyright (c) 2011-2012 Turbulenz Limited
-;
 
-//badges is created by Turbulenzservices.createBadges
+//
+// BadgeManager
+//
+// created by Turbulenzservices.createBadges
 var BadgeManager = (function () {
     function BadgeManager() {
     }
-    // list all badges (just queries the yaml file)
+    //
     BadgeManager.prototype.listUserBadges = function (callbackFn, errorCallbackFn) {
         var that = this;
         var cb = function cbFn(jsonResponse, status) {
@@ -14,7 +16,7 @@ var BadgeManager = (function () {
             } else if (status === 404) {
                 callbackFn(null);
             } else {
-                var errorCallback = errorCallbackFn || that.errorCallbackFn;
+                var errorCallback = errorCallbackFn || that._errorCallbackFn;
                 errorCallback("Badges.listUserBadges failed with status " + status + ": " + jsonResponse.msg, status, [callbackFn]);
             }
         };
@@ -24,26 +26,26 @@ var BadgeManager = (function () {
             method: 'GET',
             callback: cb,
             requestHandler: this.requestHandler
-        });
+        }, 'badge.read');
     };
 
     BadgeManager.prototype.awardUserBadge = function (badge_key, callbackFn, errorCallbackFn) {
-        this.addUserBadge(badge_key, null, callbackFn, errorCallbackFn);
+        this._addUserBadge(badge_key, null, callbackFn, errorCallbackFn);
     };
 
     BadgeManager.prototype.updateUserBadgeProgress = function (badge_key, current, callbackFn, errorCallbackFn) {
         var that = this;
         if (current && typeof current === 'number') {
-            this.addUserBadge(badge_key, current, callbackFn, errorCallbackFn);
+            this._addUserBadge(badge_key, current, callbackFn, errorCallbackFn);
         } else {
-            var errorCallback = errorCallbackFn || that.errorCallbackFn;
+            var errorCallback = errorCallbackFn || that._errorCallbackFn;
             errorCallback("Badges.updateUserBadgeProgress expects a numeric value for current", 400, [badge_key, current, callbackFn]);
         }
     };
 
     // add a badge to a user (gets passed a badge and a current level
     // over POST, the username is taken from the environment)
-    BadgeManager.prototype.addUserBadge = function (badge_key, current, callbackFn, errorCallbackFn) {
+    BadgeManager.prototype._addUserBadge = function (badge_key, current, callbackFn, errorCallbackFn) {
         var that = this;
         var cb = function cbFn(jsonResponse, status) {
             if (status === 200) {
@@ -52,36 +54,26 @@ var BadgeManager = (function () {
                 TurbulenzBridge.updateUserBadge(userbadge);
                 callbackFn(userbadge);
             } else {
-                var errorCallback = errorCallbackFn || that.errorCallbackFn;
-                errorCallback("Badges.addUserBadge failed with status " + status + ": " + jsonResponse.msg, status, [badge_key, current, callbackFn]);
+                var errorCallback = errorCallbackFn || that._errorCallbackFn;
+                errorCallback("Badges._addUserBadge failed with status " + status + ": " + jsonResponse.msg, status, [badge_key, current, callbackFn]);
             }
         };
 
-        var dataSpec = {};
-        dataSpec.gameSessionId = this.gameSessionId;
-        dataSpec.badge_key = badge_key;
-
         var url = '/api/v1/badges/progress/add/' + this.gameSession.gameSlug;
+        var dataSpec = {
+            gameSessionId: this.gameSessionId,
+            badge_key: badge_key,
+            current: current || undefined
+        };
 
-        if (current) {
-            dataSpec.current = current;
-        }
-
-        if (TurbulenzServices.bridgeServices) {
-            TurbulenzServices.addSignature(dataSpec, url);
-            TurbulenzServices.callOnBridge('badge.add', dataSpec, function unpackResponse(response) {
-                cb(response, response.status);
-            });
-        } else {
-            this.service.request({
-                url: url,
-                method: 'POST',
-                data: dataSpec,
-                callback: cb,
-                requestHandler: this.requestHandler,
-                encrypt: true
-            });
-        }
+        this.service.request({
+            url: url,
+            method: 'POST',
+            data: dataSpec,
+            callback: cb,
+            requestHandler: this.requestHandler,
+            encrypt: true
+        }, 'badge.add');
     };
 
     // list all badges (just queries the yaml file)
@@ -93,7 +85,7 @@ var BadgeManager = (function () {
             } else if (status === 404) {
                 callbackFn(null);
             } else {
-                var errorCallback = errorCallbackFn || that.errorCallbackFn;
+                var errorCallback = errorCallbackFn || that._errorCallbackFn;
                 errorCallback("Badges.listBadges failed with status " + status + ": " + jsonResponse.msg, status, [callbackFn]);
             }
         };
@@ -103,10 +95,10 @@ var BadgeManager = (function () {
             method: 'GET',
             callback: cb,
             requestHandler: this.requestHandler
-        });
+        }, 'badge.meta');
     };
 
-    BadgeManager.prototype.errorCallbackFn = function () {
+    BadgeManager.prototype._errorCallbackFn = function () {
         var x = Array.prototype.slice.call(arguments);
         Utilities.log('BadgeManager error: ', x);
     };

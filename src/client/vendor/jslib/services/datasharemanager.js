@@ -54,7 +54,7 @@ var DataShare = (function () {
                 throw new Error('Access must be publicReadOnly or publicReadAndWrite');
             }
         } else {
-            access = null;
+            access = null; // default value is set server-side
         }
         return access;
     };
@@ -136,6 +136,8 @@ var DataShare = (function () {
         var dataShareLeaveCallback = function dataShareLeaveCallbackFn(jsonResponse, status) {
             var errorCallback = errorCallbackFn || that.errorCallbackFn;
 
+            // 403 Forbidden - the player is not joined to the data share
+            // 404 Missing - the data share no longer exists
             if (status === 200 || status === 403 || status === 404) {
                 if (callbackFn) {
                     callbackFn();
@@ -211,6 +213,7 @@ var DataShare = (function () {
     };
 
     DataShare.prototype.checkUnauthoizedError = function (jsonResponse, status) {
+        // 403 - Forbidden
         if (status === 403 && jsonResponse.data && jsonResponse.data.reason) {
             if (jsonResponse.data.reason === 'read_only') {
                 return DataShare.notSetReason.readOnly;
@@ -447,6 +450,7 @@ var DataShareManager = (function () {
         if (!TurbulenzServices.available()) {
             debug.log("dataShareManagerCreateFn: !! TurbulenzServices not available");
 
+            // Call error callback on a timeout to get the same behaviour as the ajax call
             if (errorCallbackFn) {
                 TurbulenzEngine.setTimeout(function () {
                     errorCallbackFn('DataShareManager.create requires Turbulenz services');

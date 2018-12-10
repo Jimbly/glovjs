@@ -200,6 +200,7 @@ var WebGLInputDevice = (function () {
 
             var numGamePads = gamepads.length;
             for (var i = 0; i < numGamePads; i += 1) {
+	        // JE: Updates for multiple gamepad support here by me, I think
                 var padButtons = this.padButtons[i] = this.padButtons[i] || this.padButtonsInit.slice(0);
                 var gamepad = gamepads[i];
                 if (gamepad) {
@@ -232,7 +233,7 @@ var WebGLInputDevice = (function () {
 
                     // Update axes states
                     var axes = gamepad.axes;
-                    if (axes.length <= 4) {
+                    if (axes.length >= 4) {
                         // Axis 1 & 2
                         var lX = axes[0];
                         var lY = -axes[1];
@@ -245,6 +246,7 @@ var WebGLInputDevice = (function () {
                             lX = (lX / magnitude);
                             lY = (lY / magnitude);
 
+                            // Clip the magnitude at its max possible value
                             if (magnitude > maxAxisRange) {
                                 magnitude = maxAxisRange;
                             }
@@ -271,6 +273,7 @@ var WebGLInputDevice = (function () {
                             rX = (rX / magnitude);
                             rY = (rY / magnitude);
 
+                            // Clip the magnitude at its max possible value
                             if (magnitude > maxAxisRange) {
                                 magnitude = maxAxisRange;
                             }
@@ -287,6 +290,8 @@ var WebGLInputDevice = (function () {
 
                         sendEvent(handlers.padmove, i, leftThumbX, leftThumbY, buttons[6], rightThumbX, rightThumbY, buttons[7]);
                     }
+
+                    break;
                 }
             }
         }
@@ -294,7 +299,7 @@ var WebGLInputDevice = (function () {
 
     // Cannot detect locale in canvas mode
     WebGLInputDevice.prototype.getLocale = function () {
-        return '';
+        return "";
     };
 
     // Returns the local coordinates of the event (i.e. position in
@@ -505,7 +510,7 @@ var WebGLInputDevice = (function () {
         var pressedKeys = this.pressedKeys;
         var keyCodes = this.keyCodes;
 
-        // Allowing events to INPUT tags to go through, so our keyboard state
+        // JE: Allowing events to INPUT tags to go through, so our keyboard state
         // is kept up to date, however do not eat the events, so that the user
         // can still type in INPUT elements.
         if (event.code !== 'F12' && event.code !== 'F5' && event.target.tagName !== 'INPUT') {
@@ -556,6 +561,8 @@ var WebGLInputDevice = (function () {
         if (keyCode === keyCodes.ESCAPE && false) {
             this.unlockMouse();
 
+            // Some apps environments will not exit fullscreen automatically on ESCAPE
+            /* tslint:disable:no-string-literal */
             if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
                 if (document.webkitCancelFullScreen) {
                     document.webkitCancelFullScreen();
@@ -569,7 +576,8 @@ var WebGLInputDevice = (function () {
                     document.exitFullscreen();
                 }
             }
-        } else if (undefined !== keyCode) {
+            /* tslint:enable:no-string-literal */
+        } else {
             // Handle LEFT / RIGHT.  (See OnKeyDown)
             var keyLocation = (typeof event.location === "number" ? event.location : event.keyLocation);
             if (2 === keyLocation) {
@@ -579,6 +587,8 @@ var WebGLInputDevice = (function () {
                 pressedKeys[keyCode] = false;
                 this.sendEventToHandlers(keyUpHandlers, keyCode);
 
+                // Nasty hack for mac to deal with the missing KeyUp
+                // signals when CMD is released.  #1016.
                 if ((627 === keyCode || 628 === keyCode) && (this.macosx)) {
                     this.resetKeyStates();
                 }
@@ -587,6 +597,102 @@ var WebGLInputDevice = (function () {
     };
 
     // Private touch event methods
+    WebGLInputDevice.prototype.onPointerDown = function (event) {
+        if ("touch" !== event.pointerType) {
+            return;
+        }
+        if (event.preventManipulation) {
+            event.preventManipulation();
+        }
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+
+        var touch = this.convertPointerToTurbulenzTouch(event);
+
+        // console.log("onPointerDown: id: " + touch.identifier +
+        //             " (" + event.pointerId + ")" +
+        //             ", type: " + event.type +
+        //             ", pointerType: " + event.pointerType);
+        var e = this.createTurbulenzTouchEvent(touch);
+
+        var eventHandlers = this.handlers.touchstart;
+        this.sendEventToHandlers(eventHandlers, e);
+    };
+
+    WebGLInputDevice.prototype.onPointerMove = function (event) {
+        if ("touch" !== event.pointerType) {
+            return;
+        }
+        if (event.preventManipulation) {
+            event.preventManipulation();
+        }
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+
+        var touch = this.convertPointerToTurbulenzTouch(event);
+
+        // console.log("onPointerMove: id: " + touch.identifier +
+        //             " (" + event.pointerId + ")" +
+        //             ", type: " + event.type +
+        //             ", pointerType: " + event.pointerType);
+        var e = this.createTurbulenzTouchEvent(touch);
+
+        var eventHandlers = this.handlers.touchmove;
+        this.sendEventToHandlers(eventHandlers, e);
+    };
+
+    WebGLInputDevice.prototype.onPointerUp = function (event) {
+        if ("touch" !== event.pointerType) {
+            return;
+        }
+        if (event.preventManipulation) {
+            event.preventManipulation();
+        }
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+
+        var touch = this.convertPointerToTurbulenzTouch(event);
+
+        // console.log("onPointerUp: id: " + touch.identifier +
+        //             " (" + event.pointerId + ")" +
+        //             ", type: " + event.type +
+        //             ", pointerType: " + event.pointerType);
+        var e = this.createTurbulenzTouchEvent(touch);
+
+        var eventHandlers = this.handlers.touchend;
+        this.sendEventToHandlers(eventHandlers, e);
+
+        this.removePointerById(event.pointerId, touch.identifier);
+    };
+
+    WebGLInputDevice.prototype.onPointerCancel = function (event) {
+        if ("touch" !== event.pointerType) {
+            return;
+        }
+        if (event.preventManipulation) {
+            event.preventManipulation();
+        }
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+
+        var touch = this.convertPointerToTurbulenzTouch(event);
+
+        // console.log("onPointerCancel: id: " + touch.identifier +
+        //             " (" + event.pointerId + ")" +
+        //             ", type: " + event.type +
+        //             ", pointerType: " + event.pointerType);
+        var e = this.createTurbulenzTouchEvent(touch);
+
+        var eventHandlers = this.handlers.touchend;
+        this.sendEventToHandlers(eventHandlers, e);
+
+        this.removePointerById(event.pointerId, touch.identifier);
+    };
+
     WebGLInputDevice.prototype.onTouchStart = function (event) {
         var eventHandlers = this.handlers.touchstart;
 
@@ -658,6 +764,91 @@ var WebGLInputDevice = (function () {
         this.sendEventToHandlers(eventHandlers, event);
     };
 
+    // Return (and update) any existing Turbulenz touch object, or
+    // create a new one.
+    WebGLInputDevice.prototype.convertPointerToTurbulenzTouch = function (event) {
+        var pointerId = event.pointerId;
+        var pointerIdToTouch = this.pointerIdToTouch;
+
+        var canvasElement = this.canvas;
+        var canvasRect = canvasElement.getBoundingClientRect();
+
+        var isGameTouch = (event.target === canvasElement);
+        var positionX = event.clientX - canvasRect.left;
+        var positionY = event.clientY - canvasRect.top;
+
+        var touch = pointerIdToTouch[pointerId];
+        if (touch) {
+            touch.isGameTouch = isGameTouch;
+            touch.positionX = positionX;
+            touch.positionY = positionY;
+        } else {
+            // Search for a free ID.
+            var touches = this.touches;
+            var touchId = 0;
+
+            while (touchId < 32) {
+                if (!touches.hasOwnProperty(touchId)) {
+                    touch = {
+                        force: 0,
+                        identifier: touchId,
+                        isGameTouch: isGameTouch,
+                        positionX: positionX,
+                        positionY: positionY,
+                        radiusX: 1,
+                        radiusY: 1,
+                        rotationAngle: 0
+                    };
+
+                    this.touches[touchId] = touch;
+                    this.pointerIdToTouch[pointerId] = touch;
+                    return touch;
+                }
+
+                touchId += 1;
+            }
+
+            // If we get here, something is wrong.  We have more than
+            // 32 active touches.
+            debug.assert(false);
+        }
+
+        return touch;
+    };
+
+    WebGLInputDevice.prototype.createTurbulenzTouchEvent = function (changedTouch) {
+        var touches = [];
+        var gameTouches = [];
+
+        // var pointerIdToTouch = this.pointerIdToTouch;
+        var pointerIdToTouch = this.touches;
+
+        var pointerId;
+        var touch;
+
+        for (pointerId in pointerIdToTouch) {
+            if (pointerIdToTouch.hasOwnProperty(pointerId)) {
+                touch = pointerIdToTouch[pointerId];
+                touches.push(touch);
+
+                if (touch.isGameTouch) {
+                    gameTouches.push(touch);
+                }
+            }
+        }
+
+        return {
+            changedTouches: [changedTouch],
+            gameTouches: gameTouches,
+            touches: touches
+        };
+    };
+
+    WebGLInputDevice.prototype.removePointerById = function (eventId, touchId) {
+        delete this.pointerIdToTouch[eventId];
+        this.removeTouchById(touchId);
+    };
+
     WebGLInputDevice.prototype.convertW3TouchEventToTurbulenzTouchEvent = function (w3TouchEvent) {
         // Initialize changedTouches
         var changedTouches = this.convertW3TouchListToTurbulenzTouchList(w3TouchEvent.changedTouches);
@@ -703,8 +894,8 @@ var WebGLInputDevice = (function () {
             force: (w3Touch.force || w3Touch.webkitForce || 0),
             identifier: w3Touch.identifier,
             isGameTouch: (w3Touch.target === canvasElement),
-            positionX: (w3Touch.pageX - canvasRect.left),
-            positionY: (w3Touch.pageY - canvasRect.top),
+            positionX: (w3Touch.clientX - canvasRect.left), // JE: Was pageX not clientX in my copy
+            positionY: (w3Touch.clientY - canvasRect.top),
             radiusX: (w3Touch.radiusX || w3Touch.webkitRadiusX || 1),
             radiusY: (w3Touch.radiusY || w3Touch.webkitRadiusY || 1),
             rotationAngle: (w3Touch.rotationAngle || w3Touch.webkitRotationAngle || 0)
@@ -732,8 +923,10 @@ var WebGLInputDevice = (function () {
         var touchId;
 
         for (touchIndex = 0; touchIndex < w3TouchListLength; touchIndex += 1) {
-            touchId = w3TouchList[touchIndex].identifier;
-            this.removeTouchById(touchId);
+            if (w3TouchList[touchIndex]) {
+              touchId = w3TouchList[touchIndex].identifier;
+              this.removeTouchById(touchId);
+            }
         }
     };
 
@@ -768,7 +961,7 @@ var WebGLInputDevice = (function () {
         }
     };
 
-    WebGLInputDevice.prototype.canvasOnMouseOut = function (/* event */ ) {
+    WebGLInputDevice.prototype.canvasOnMouseOut = function ( /* event */ ) {
         var mouseLeaveHandlers = this.handlers.mouseleave;
 
         if (!this.isMouseLocked) {
@@ -792,7 +985,7 @@ var WebGLInputDevice = (function () {
     WebGLInputDevice.prototype.canvasOnMouseDown = function (event) {
         var mouseEnterHandlers = this.handlers.mouseenter;
 
-        this.canvas.focus();
+        this.canvas.focus(); // JE: Me?
         this.canvas.onmousedown = null;
 
         if (!this.isHovering) {
@@ -812,10 +1005,10 @@ var WebGLInputDevice = (function () {
     };
 
     // Window event handlers
-    WebGLInputDevice.prototype.onFullscreenChanged = function (/* event */ ) {
+    WebGLInputDevice.prototype.onFullscreenChanged = function ( /* event */ ) {
         if (this.isMouseLocked) {
             if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
-                this.ignoreNextMouseMoves = 2;
+                this.ignoreNextMouseMoves = 2; // Some browsers will send 2 mouse events with a massive delta
                 this.requestBrowserLock();
             } else {
                 // Browsers capture the escape key whilst in fullscreen
@@ -903,6 +1096,11 @@ var WebGLInputDevice = (function () {
     WebGLInputDevice.prototype.setEventHandlersTouch = function () {
         var canvas = this.canvas;
 
+        this.addInternalEventListener(canvas, "pointerdown", this.onPointerDown);
+        this.addInternalEventListener(canvas, "pointermove", this.onPointerMove);
+        this.addInternalEventListener(canvas, "pointerup", this.onPointerUp);
+        this.addInternalEventListener(canvas, "pointerout", this.onPointerUp);
+
         this.addInternalEventListener(canvas, 'touchstart', this.onTouchStart);
         this.addInternalEventListener(canvas, 'touchend', this.onTouchEnd);
         this.addInternalEventListener(canvas, 'touchenter', this.onTouchEnter);
@@ -944,6 +1142,7 @@ var WebGLInputDevice = (function () {
     };
 
     WebGLInputDevice.prototype.destroy = function () {
+        // Remove all event listeners
         if (this.isLocked()) {
             this.setEventHandlersUnlock();
         }
@@ -980,7 +1179,7 @@ var WebGLInputDevice = (function () {
         return false;
     };
 
-    WebGLInputDevice.create = function (canvas/*, params: any */ ) {
+    WebGLInputDevice.create = function (canvas /*, params: any */ ) {
         var id = new WebGLInputDevice();
 
         id.lastX = 0;
@@ -996,7 +1195,7 @@ var WebGLInputDevice = (function () {
         id.isHovering = false;
         id.isWindowFocused = false;
         id.isCursorHidden = false;
-        id.isOutsideEngine = false;
+        id.isOutsideEngine = false; // Used for determining where we are when unlocking
         id.previousCursor = '';
         id.ignoreNextMouseMoves = 0;
         id.ignoreNextBlur = false;
@@ -1069,151 +1268,153 @@ var WebGLInputDevice = (function () {
         var keyMap = {};
 
         // A-Z
-        keyMap[65] = 0;
-        keyMap[66] = 1;
-        keyMap[67] = 2;
-        keyMap[68] = 3;
-        keyMap[69] = 4;
-        keyMap[70] = 5;
-        keyMap[71] = 6;
-        keyMap[72] = 7;
-        keyMap[73] = 8;
-        keyMap[74] = 9;
-        keyMap[75] = 10;
-        keyMap[76] = 11;
-        keyMap[77] = 12;
-        keyMap[78] = 13;
-        keyMap[79] = 14;
-        keyMap[80] = 15;
-        keyMap[81] = 16;
-        keyMap[82] = 17;
-        keyMap[83] = 18;
-        keyMap[84] = 19;
-        keyMap[85] = 20;
-        keyMap[86] = 21;
-        keyMap[87] = 22;
-        keyMap[88] = 23;
-        keyMap[89] = 24;
-        keyMap[90] = 25;
+        keyMap[65] = 0; // A
+        keyMap[66] = 1; // B
+        keyMap[67] = 2; // C
+        keyMap[68] = 3; // D
+        keyMap[69] = 4; // E
+        keyMap[70] = 5; // F
+        keyMap[71] = 6; // G
+        keyMap[72] = 7; // H
+        keyMap[73] = 8; // I
+        keyMap[74] = 9; // J
+        keyMap[75] = 10; // K
+        keyMap[76] = 11; // L
+        keyMap[77] = 12; // M
+        keyMap[78] = 13; // N
+        keyMap[79] = 14; // O
+        keyMap[80] = 15; // P
+        keyMap[81] = 16; // Q
+        keyMap[82] = 17; // R
+        keyMap[83] = 18; // S
+        keyMap[84] = 19; // T
+        keyMap[85] = 20; // U
+        keyMap[86] = 21; // V
+        keyMap[87] = 22; // X
+        keyMap[88] = 23; // W
+        keyMap[89] = 24; // Y
+        keyMap[90] = 25; // Z
 
         // 0-9
-        keyMap[48] = 100;
-        keyMap[49] = 101;
-        keyMap[50] = 102;
-        keyMap[51] = 103;
-        keyMap[52] = 104;
-        keyMap[53] = 105;
-        keyMap[54] = 106;
-        keyMap[55] = 107;
-        keyMap[56] = 108;
-        keyMap[57] = 109;
+        keyMap[48] = 100; // 0
+        keyMap[49] = 101; // 1
+        keyMap[50] = 102; // 2
+        keyMap[51] = 103; // 3
+        keyMap[52] = 104; // 4
+        keyMap[53] = 105; // 5
+        keyMap[54] = 106; // 6
+        keyMap[55] = 107; // 7
+        keyMap[56] = 108; // 8
+        keyMap[57] = 109; // 9
 
         // Arrow keys
-        keyMap[37] = 200;
-        keyMap[39] = 201;
-        keyMap[38] = 202;
-        keyMap[40] = 203;
+        keyMap[37] = 200; // LEFT
+        keyMap[39] = 201; // RIGHT
+        keyMap[38] = 202; // UP
+        keyMap[40] = 203; // DOWN
 
         // Modifier keys
-        keyMap[16] = 300;
+        keyMap[16] = 300; // LEFT_SHIFT
 
         //keyMap[16] = 301; // RIGHT_SHIFT
-        keyMap[17] = 302;
+        keyMap[17] = 302; // LEFT_CONTROL
 
         //keyMap[17] = 303; // RIGHT_CONTROL
-        keyMap[18] = 304;
-        keyMap[0] = 305;
+        keyMap[18] = 304; // LEFT_ALT
+        keyMap[0] = 305; // RIGHT_ALT
 
         // Special keys
-        keyMap[27] = 400;
-        keyMap[9] = 401;
-        keyMap[32] = 402;
-        keyMap[8] = 403;
-        keyMap[13] = 404;
+        keyMap[27] = 400; // ESCAPE
+        keyMap[9] = 401; // TAB
+        keyMap[32] = 402; // SPACE
+        keyMap[8] = 403; // BACKSPACE
+        keyMap[13] = 404; // RETURN
 
         // Punctuation keys
-        keyMap[223] = 500;
-        keyMap[173] = 501;
-        keyMap[189] = 501;
-        keyMap[61] = 502;
-        keyMap[187] = 502;
-        keyMap[219] = 503;
-        keyMap[221] = 504;
-        keyMap[59] = 505;
-        keyMap[186] = 505;
-        keyMap[192] = 500;
-        keyMap[188] = 507;
-        keyMap[190] = 508;
-        keyMap[222] = 506;
+        keyMap[223] = 500; // GRAVE
+        keyMap[173] = 501; // MINUS (mozilla - gecko)
+        keyMap[189] = 501; // MINUS (ie + webkit)
+        keyMap[61] = 502; // EQUALS (mozilla - gecko)
+        keyMap[187] = 502; // EQUALS (ie + webkit)
+        keyMap[219] = 503; // LEFT_BRACKET
+        keyMap[221] = 504; // RIGHT_BRACKET
+        keyMap[59] = 505; // SEMI_COLON (mozilla - gecko)
+        keyMap[186] = 505; // SEMI_COLON (ie + webkit)
+        keyMap[192] = 500; // GRAVE
+        keyMap[188] = 507; // COMMA
+        keyMap[190] = 508; // PERIOD
+        keyMap[222] = 506; // APOSTROPHE
 
+        // if Mac OS GRAVE can sometimes come through as 0
         if (navigator.appVersion.indexOf("Mac") !== -1) {
-            keyMap[0] = 500;
+            keyMap[0] = 500; // GRAVE (mac gecko + safari 5.1)
         }
 
         // Non-standard keys
-        keyMap[112] = 600;
-        keyMap[113] = 601;
-        keyMap[114] = 602;
-        keyMap[115] = 603;
-        keyMap[116] = 604;
-        keyMap[117] = 605;
-        keyMap[118] = 606;
-        keyMap[119] = 607;
-        keyMap[120] = 608;
-        keyMap[121] = 609;
-        keyMap[122] = 610;
-        keyMap[123] = 611;
+        keyMap[112] = 600; // F1
+        keyMap[113] = 601; // F2
+        keyMap[114] = 602; // F3
+        keyMap[115] = 603; // F4
+        keyMap[116] = 604; // F5
+        keyMap[117] = 605; // F6
+        keyMap[118] = 606; // F7
+        keyMap[119] = 607; // F8
+        keyMap[120] = 608; // F9
+        keyMap[121] = 609; // F10
+        keyMap[122] = 610; // F11
+        keyMap[123] = 611; // F12
 
         //keyMap[45 : 612, // NUMPAD_0 (numlock on/off)
-        keyMap[96] = 612;
+        keyMap[96] = 612; // NUMPAD_0 (numlock on/off)
 
         //keyMap[35] = 613;, // NUMPAD_1 (numlock on/off)
-        keyMap[97] = 613;
+        keyMap[97] = 613; // NUMPAD_1 (numlock on/off)
 
         //keyMap[40] = 614; // NUMPAD_2 (numlock on/off)
-        keyMap[98] = 614;
+        keyMap[98] = 614; // NUMPAD_2 (numlock on/off)
 
         //keyMap[34] = 615; // NUMPAD_3 (numlock on/off)
-        keyMap[99] = 615;
+        keyMap[99] = 615; // NUMPAD_3 (numlock on/off)
 
         //keyMap[37] = 616;, // NUMPAD_4 (numlock on/off)
-        keyMap[100] = 616;
-        keyMap[12] = 617;
-        keyMap[101] = 617;
-        keyMap[144] = 617;
+        keyMap[100] = 616; // NUMPAD_4 (numlock on/off)
+        keyMap[12] = 617; // NUMPAD_5 (numlock on/off)
+        keyMap[101] = 617; // NUMPAD_5 (numlock on/off)
+        keyMap[144] = 617; // NUMPAD_5 (numlock on/off) and NUMPAD_NUM
 
         //keyMap[39] = 618; // NUMPAD_6 (numlock on/off)
-        keyMap[102] = 618;
+        keyMap[102] = 618; // NUMPAD_6 (numlock on/off)
 
         //keyMap[36] = 619; // NUMPAD_7 (numlock on/off)
-        keyMap[103] = 619;
+        keyMap[103] = 619; // NUMPAD_7 (numlock on/off)
 
         //keyMap[38] = 620; // NUMPAD_8 (numlock on/off)
-        keyMap[104] = 620;
+        keyMap[104] = 620; // NUMPAD_8 (numlock on/off)
 
         //keyMap[33] = 621; // NUMPAD_9 (numlock on/off)
-        keyMap[105] = 621;
+        keyMap[105] = 621; // NUMPAD_9 (numlock on/off)
 
         //keyMap[13] = 622; // NUMPAD_ENTER (numlock on/off)
-        keyMap[111] = 623;
-        keyMap[191] = 623;
-        keyMap[106] = 624;
-        keyMap[107] = 625;
-        keyMap[109] = 626;
-        keyMap[91] = 627;
-        keyMap[224] = 627;
-        keyMap[92] = 628;
-        keyMap[93] = 628;
+        keyMap[111] = 623; // NUMPAD_DIVIDE (numlock on/off)
+        keyMap[191] = 623; // NUMPAD_DIVIDE (numlock on/off), mac chrome
+        keyMap[106] = 624; // NUMPAD_MULTIPLY (numlock on/off)
+        keyMap[107] = 625; // NUMPAD_ADD (numlock on/off)
+        keyMap[109] = 626; // NUMPAD_SUBTRACT (numlock on/off)
+        keyMap[91] = 627; // LEFT_WIN
+        keyMap[224] = 627; // LEFT_WIN (mac, firefox)
+        keyMap[92] = 628; // RIGHT_WIN
+        keyMap[93] = 628; // RIGHT_WIN (mac, chrome)
 
         //: 629, // LEFT_OPTION
         //: 630, // RIGHT_OPTION
-        keyMap[20] = 631;
-        keyMap[45] = 632;
-        keyMap[46] = 633;
-        keyMap[36] = 634;
-        keyMap[35] = 635;
-        keyMap[33] = 636;
-        keyMap[34] = 637;
+        keyMap[20] = 631; // CAPS_LOCK
+        keyMap[45] = 632; // INSERT
+        keyMap[46] = 633; // DELETE
+        keyMap[36] = 634; // HOME
+        keyMap[35] = 635; // END
+        keyMap[33] = 636; // PAGE_UP
+        keyMap[34] = 637; // PAGE_DOWN
+        keyMap[220] = 220; // EXTENDED_BACKSLASH_LEFTANGLE
 
         id.keyMap = keyMap;
 
@@ -1248,29 +1449,30 @@ var WebGLInputDevice = (function () {
 
         id.keyCodeToUnicode = keyCodeToUnicodeTable;
 
-        id.padButtonsInit = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        id.padButtons = [];
+        id.padButtonsInit = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // JE
+        id.padButtons = [];  // JE
         id.padMap = padMap;
         id.padAxisDeadZone = 0.26;
         id.maxAxisRange = 1.0;
-        id.padTimestampUpdate = [0, 0, 0, 0];
+        id.padTimestampUpdate = [0, 0, 0, 0];  // JE
 
         // Pointer locking
         var requestPointerLock = (canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock);
         if (requestPointerLock) {
             var exitPointerLock = (document.exitPointerLock || document.mozExitPointerLock || document.webkitExitPointerLock);
 
-            id.onPointerLockChanged = function onPointerLockChangedFn(/* event */ ) {
+            id.onPointerLockChanged = function onPointerLockChangedFn() {
                 var pointerLockElement = (document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement);
                 if (pointerLockElement !== id.canvas) {
                     id.unlockMouse();
                 }
             };
 
-            id.onPointerLockError = function onPointerLockErrorFn(/* event */ ) {
+            id.onPointerLockError = function onPointerLockErrorFn() {
                 id.unlockMouse();
             };
 
+            // We need to set pointerlockchanged events because browsers consume the ESCAPE key without notification
             if ('mozPointerLockElement' in document) {
                 id.setEventHandlersPointerLock = function setEventHandlersPointerLockFn() {
                     // firefox changes focus when requesting lock...
@@ -1338,10 +1540,12 @@ var WebGLInputDevice = (function () {
                     }
                 };
             } else {
+                /* tslint:disable:no-empty */
                 id.requestBrowserLock = function requestBrowserLockFn() {
                 };
                 id.requestBrowserUnlock = function requestBrowserUnlockFn() {
                 };
+                /* tslint:enable:no-empty */
             }
         }
 
@@ -1360,6 +1564,8 @@ var WebGLInputDevice = (function () {
         var sysInfo = TurbulenzEngine.getSystemInfo();
         id.macosx = ("Darwin" === sysInfo.osName);
         id.webkit = (/WebKit/.test(navigator.userAgent));
+
+        id.pointerIdToTouch = {};
 
         return id;
     };
@@ -1435,6 +1641,7 @@ WebGLInputDevice.prototype.keyCodes = {
     RIGHT: 201,
     UP: 202,
     DOWN: 203,
+    EXTENDED_BACKSLASH_LEFTANGLE: 220,
     LEFT_SHIFT: 300,
     RIGHT_SHIFT: 301,
     LEFT_CONTROL: 302,

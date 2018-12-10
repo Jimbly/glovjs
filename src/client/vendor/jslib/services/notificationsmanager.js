@@ -72,6 +72,7 @@ var NotificationPromise = (function () {
     return NotificationPromise;
 })();
 
+
 //
 var NotificationsManager = (function () {
     function NotificationsManager() {
@@ -122,7 +123,7 @@ var NotificationsManager = (function () {
             throw new Error('Notification recipient is null');
         }
 
-        var params = {
+        var notifyparams = {
             token: token,
             session: this.gameSession,
             key: key,
@@ -131,7 +132,7 @@ var NotificationsManager = (function () {
             noNotification: params.noNotification
         };
 
-        TurbulenzBridge.triggerSendInstantNotification(JSON.stringify(params));
+        TurbulenzBridge.triggerSendInstantNotification(JSON.stringify(notifyparams));
 
         return promise;
     };
@@ -163,7 +164,7 @@ var NotificationsManager = (function () {
 
         this.notificationPromises[token] = promise;
 
-        var params = {
+        var notifyparams = {
             token: token,
             session: this.gameSession,
             key: key,
@@ -172,7 +173,7 @@ var NotificationsManager = (function () {
             noNotification: params.noNotification
         };
 
-        TurbulenzBridge.triggerSendDelayedNotification(JSON.stringify(params));
+        TurbulenzBridge.triggerSendDelayedNotification(JSON.stringify(notifyparams));
 
         return promise;
     };
@@ -273,7 +274,7 @@ var NotificationsManager = (function () {
                 }
             },
             requestHandler: this.requestHandler
-        });
+        }, 'notifications.usersettings');
     };
 
     NotificationsManager.prototype.requestGameNotificationKeys = function (successCallback, errorCallback) {
@@ -292,7 +293,7 @@ var NotificationsManager = (function () {
                 }
             },
             requestHandler: this.requestHandler
-        });
+        }, 'notifications.keys');
     };
 
     NotificationsManager.prototype.onInit = function () {
@@ -304,8 +305,10 @@ var NotificationsManager = (function () {
 
     NotificationsManager.create = function (requestHandler, gameSession, successCallbackFn, errorCallbackFn) {
         if (!errorCallbackFn) {
+            /* tslint:disable:no-empty */
             errorCallbackFn = function () {
             };
+            /* tslint:enable:no-empty */
         }
 
         if (!TurbulenzServices.available()) {

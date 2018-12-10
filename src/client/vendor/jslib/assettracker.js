@@ -53,8 +53,8 @@ var AssetTracker = (function () {
         }
     };
 
-    AssetTracker.create = // Constructor function
-    function (numberAssetsToLoad, displayLog) {
+    // Constructor function
+    AssetTracker.create = function (numberAssetsToLoad, displayLog) {
         var f = new AssetTracker();
 
         f.assetsLoadedCount = 0;

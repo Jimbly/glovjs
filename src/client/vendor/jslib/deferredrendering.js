@@ -58,7 +58,7 @@ var DeferredRendering = (function () {
         var passes = this.passes;
         var numPasses = this.numPasses;
         for (index = 0; index < numPasses; index += 1) {
-            passes[index] = [];
+            passes[index].length = 0;
         }
 
         var visibleRenderables = scene.getCurrentVisibleRenderables();
@@ -145,6 +145,18 @@ var DeferredRendering = (function () {
         }
     };
 
+    DeferredRendering.prototype._createLightInstanceTechniqueParameters = function (gd) {
+        var md = this.md;
+        return gd.createTechniqueParameters({
+            world: undefined,
+            worldViewTranspose: md.m43BuildIdentity(),
+            lightOrigin: md.v3BuildZero(),
+            lightColor: undefined,
+            lightExtents: undefined,
+            lightViewInverseTranspose: md.m43BuildIdentity()
+        });
+    };
+
     DeferredRendering.prototype.update = function (gd, camera, scene, currentTime) {
         scene.updateVisibleNodes(camera);
 
@@ -193,7 +205,7 @@ var DeferredRendering = (function () {
                     matrix = node.world;
                     tp = lightInstance.techniqueParameters;
                     if (!tp) {
-                        tp = gd.createTechniqueParameters();
+                        tp = this._createLightInstanceTechniqueParameters(gd);
                         lightInstance.techniqueParameters = tp;
                     }
 
@@ -242,7 +254,7 @@ var DeferredRendering = (function () {
                     matrix = node.world;
                     tp = lightInstance.techniqueParameters;
                     if (!tp) {
-                        tp = gd.createTechniqueParameters();
+                        tp = this._createLightInstanceTechniqueParameters(gd);
                         lightInstance.techniqueParameters = tp;
                     }
 
@@ -296,7 +308,7 @@ var DeferredRendering = (function () {
                     matrix = node.world;
                     tp = lightInstance.techniqueParameters;
                     if (!tp) {
-                        tp = gd.createTechniqueParameters();
+                        tp = this._createLightInstanceTechniqueParameters(gd);
                         lightInstance.techniqueParameters = tp;
                     }
 
@@ -353,7 +365,7 @@ var DeferredRendering = (function () {
                 matrix = node.world;
                 tp = lightInstance.techniqueParameters;
                 if (!tp) {
-                    tp = gd.createTechniqueParameters();
+                    tp = this._createLightInstanceTechniqueParameters(gd);
                     lightInstance.techniqueParameters = tp;
                 }
 
@@ -432,7 +444,7 @@ var DeferredRendering = (function () {
                 meta = renderable.sharedMaterial.meta;
                 if (!meta.transparent && !meta.decal && !meta.far) {
                     overlappingRenderables[numOverlappingRenderables] = renderable;
-                    renderable.getWorldExtents();
+                    renderable.getWorldExtents(); // Make sure extents are updated
                     numOverlappingRenderables += 1;
                 }
             }
@@ -654,6 +666,7 @@ var DeferredRendering = (function () {
         var globalTechniqueParameters = this.globalTechniqueParameters;
         var minPixelCount = this.minPixelCount;
 
+        // Extract albedo, specular and normals
         if (gd.beginRenderTarget(this.baseRenderTarget)) {
             gd.clear(clearColor, 1.0, 0);
 
@@ -1078,6 +1091,7 @@ var DeferredRendering = (function () {
             gd.endRenderTarget();
         }
 
+        // Mix everything together and draw decal and transparent objects
         if (gd.beginRenderTarget(this.mixRenderTarget)) {
             gd.setStream(quadVertexBuffer, quadSemantics);
 
@@ -1247,12 +1261,29 @@ var DeferredRendering = (function () {
         dr.black = md.v4BuildZero();
 
         dr.numPasses = 3;
-        dr.passIndex = { opaque: 0, decal: 1, transparent: 2 };
         dr.passes = [[], [], []];
 
-        dr.globalTechniqueParameters = gd.createTechniqueParameters();
-        dr.sharedTechniqueParameters = gd.createTechniqueParameters();
+        // Shadow pass is done externally
+        dr.passIndex = { opaque: 0, decal: 1, transparent: 2, shadow: 3 };
+        dr.sharedUserData = [{ passIndex: 0 }, { passIndex: 1 }, { passIndex: 2 }, { passIndex: 3 }];
+
+        dr.globalTechniqueParameters = gd.createTechniqueParameters({
+            viewProjection: null,
+            eyePosition: md.v3BuildZero(),
+            viewDepth: md.v4BuildZero(),
+            time: 0
+        });
+        dr.sharedTechniqueParameters = gd.createTechniqueParameters({
+            normalTexture: null,
+            depthTexture: null,
+            viewProjection: null,
+            maxDepth: 0
+        });
         dr.mixTechniqueParameters = gd.createTechniqueParameters({
+            albedoTexture: null,
+            specularTexture: null,
+            diffuseLightingTexture: null,
+            specularLightingTexture: null,
             lightingScale: 2.0
         });
 
@@ -1267,30 +1298,14 @@ var DeferredRendering = (function () {
             attributes: ['FLOAT3'],
             dynamic: false,
             data: [
-                0.0,
-                0.0,
-                0.0,
-                -1.0,
-                -1.0,
-                1.0,
-                1.0,
-                -1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                0.0,
-                0.0,
-                0.0,
-                -1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0
+                0.0, 0.0, 0.0,
+                -1.0, -1.0, 1.0,
+                1.0, -1.0, 1.0,
+                1.0, 1.0, 1.0,
+                0.0, 0.0, 0.0,
+                -1.0, 1.0, 1.0,
+                -1.0, -1.0, 1.0,
+                1.0, 1.0, 1.0
             ]
         });
 
@@ -1299,48 +1314,20 @@ var DeferredRendering = (function () {
             attributes: ['FLOAT3'],
             dynamic: false,
             data: [
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                -1.0,
-                -1.0,
-                1.0,
-                1.0,
-                -1.0,
-                1.0,
-                -1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                1.0,
-                -1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                -1.0,
-                -1.0,
-                -1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                1.0,
-                -1.0
+                1.0, 1.0, 1.0,
+                -1.0, 1.0, 1.0,
+                1.0, -1.0, 1.0,
+                -1.0, -1.0, 1.0,
+                -1.0, -1.0, -1.0,
+                -1.0, 1.0, 1.0,
+                -1.0, 1.0, -1.0,
+                1.0, 1.0, 1.0,
+                1.0, 1.0, -1.0,
+                1.0, -1.0, 1.0,
+                1.0, -1.0, -1.0,
+                -1.0, -1.0, -1.0,
+                1.0, 1.0, -1.0,
+                -1.0, 1.0, -1.0
             ]
         });
 
@@ -1349,22 +1336,10 @@ var DeferredRendering = (function () {
             attributes: ['FLOAT2', 'FLOAT2'],
             dynamic: false,
             data: [
-                -1.0,
-                1.0,
-                0.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                0.0,
-                0.0,
-                1.0,
-                -1.0,
-                1.0,
-                0.0
+                -1.0, 1.0, 0.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+                -1.0, -1.0, 0.0, 0.0,
+                1.0, -1.0, 1.0, 0.0
             ]
         });
 
@@ -1432,7 +1407,7 @@ var DeferredRendering = (function () {
             var b8 = b[8];
 
             if (dst === undefined) {
-                dst = new VMathArrayConstructor(9);
+                dst = new Float32Array(9);
             }
 
             dst[0] = (b0 * a0 + b3 * a1 + b6 * a2);
@@ -1494,17 +1469,15 @@ var DeferredRendering = (function () {
             var meta = geometryInstance.sharedMaterial.meta;
             var rendererInfo = geometryInstance.rendererInfo;
             var drawParameters = gd.createDrawParameters();
-            drawParameters.userData = {};
+            if (meta.transparent) {
+                drawParameters.userData = dr.sharedUserData[dr.passIndex.transparent];
+            } else if (meta.decal) {
+                drawParameters.userData = dr.sharedUserData[dr.passIndex.decal];
+            } else {
+                drawParameters.userData = dr.sharedUserData[dr.passIndex.opaque];
+            }
             geometryInstance.prepareDrawParameters(drawParameters);
             geometryInstance.drawParameters = [drawParameters];
-
-            if (meta.transparent) {
-                drawParameters.userData.passIndex = dr.passIndex.transparent;
-            } else if (meta.decal) {
-                drawParameters.userData.passIndex = dr.passIndex.decal;
-            } else {
-                drawParameters.userData.passIndex = dr.passIndex.opaque;
-            }
 
             if (!geometryInstance.sharedMaterial.techniqueParameters.materialColor && !geometryInstance.techniqueParameters.materialColor) {
                 geometryInstance.sharedMaterial.techniqueParameters.materialColor = v4One;
@@ -1514,7 +1487,7 @@ var DeferredRendering = (function () {
                 geometryInstance.sharedMaterial.techniqueParameters.uvTransform = identityUVTransform;
             }
 
-            drawParameters.sortKey = renderingCommonSortKeyFn(this.techniqueIndex, meta.materialIndex);
+            drawParameters.sortKey = renderingCommonSortKeyFn(this.techniqueIndex, meta.materialIndex, geometryInstance.geometry.vertexBuffer.id);
 
             //Now add common for world and skin data
             drawParameters.setTechniqueParameters(0, geometryInstance.sharedMaterial.techniqueParameters);
@@ -1523,21 +1496,24 @@ var DeferredRendering = (function () {
 
             geometryInstance.renderUpdate = this.update;
 
+            //
+            // shadows
+            //
             if (dr.shadowMaps) {
                 if (this.shadowMappingUpdate && !meta.noshadows) {
                     drawParameters = gd.createDrawParameters();
-                    drawParameters.userData = {};
+                    drawParameters.userData = dr.sharedUserData[dr.passIndex.shadow];
                     geometryInstance.prepareDrawParameters(drawParameters);
                     geometryInstance.shadowMappingDrawParameters = [drawParameters];
-
-                    drawParameters.userData.passIndex = dr.passIndex.shadow;
 
                     rendererInfo.shadowMappingUpdate = this.shadowMappingUpdate;
                     drawParameters.technique = this.shadowTechnique;
 
-                    drawParameters.sortKey = renderingCommonSortKeyFn(this.shadowTechniqueIndex, geometryInstance.geometry.vertexBuffer.id);
+                    drawParameters.sortKey = renderingCommonSortKeyFn(this.shadowTechniqueIndex, geometryInstance.geometry.vertexBuffer.id, (drawParameters.indexBuffer ? drawParameters.indexBuffer.id : 0));
 
-                    var shadowTechniqueParameters = gd.createTechniqueParameters();
+                    var shadowTechniqueParameters = gd.createTechniqueParameters({
+                        world: null
+                    });
                     geometryInstance.shadowTechniqueParameters = shadowTechniqueParameters;
                     drawParameters.setTechniqueParameters(0, shadowTechniqueParameters);
                 } else {
@@ -1546,7 +1522,9 @@ var DeferredRendering = (function () {
             }
         };
 
-        var deferredBlendUpdate = function deferredBlendUpdateFn(/* camera */ ) {
+        // This is because of a bug on tslint:
+        /* tslint:disable:no-trailing-comma */
+        var deferredBlendUpdate = function deferredBlendUpdateFn() {
             this.frameUpdated = this.frameVisible;
             var node = this.node;
             var worldUpdate = node.worldUpdate;
@@ -1556,7 +1534,8 @@ var DeferredRendering = (function () {
             }
         };
 
-        var deferredBlendSkinnedUpdate = function deferredBlendSkinnedUpdateFn(/* camera */ ) {
+        /* tslint:enable:no-trailing-comma */
+        var deferredBlendSkinnedUpdate = function deferredBlendSkinnedUpdateFn() {
             this.frameUpdated = this.frameVisible;
             var tp = this.techniqueParameters;
             var node = this.node;
@@ -1572,7 +1551,7 @@ var DeferredRendering = (function () {
             }
         };
 
-        var deferredEnvUpdate = function deferredEnvUpdateFn(/* camera */ ) {
+        var deferredEnvUpdate = function deferredEnvUpdateFn() {
             this.frameUpdated = this.frameVisible;
             var node = this.node;
             var worldUpdate = node.worldUpdate;
@@ -1585,7 +1564,7 @@ var DeferredRendering = (function () {
             }
         };
 
-        var deferredEnvSkinnedUpdate = function deferredEnvSkinnedUpdateFn(/* camera */ ) {
+        var deferredEnvSkinnedUpdate = function deferredEnvSkinnedUpdateFn() {
             this.frameUpdated = this.frameVisible;
             var tp = this.techniqueParameters;
             var node = this.node;
@@ -1729,8 +1708,7 @@ var DeferredRendering = (function () {
                 geometry.sourceVertices = [
                     v3Build.apply(md, oldTop),
                     v3Build.apply(md, oldBottom),
-                    v3Build.apply(md, oldNormal)
-                ];
+                    v3Build.apply(md, oldNormal)];
 
                 oldGeometry.reference.remove();
 
@@ -1884,7 +1862,7 @@ var DeferredRendering = (function () {
             }
         };
 
-        var deferredSkyboxUpdate = function deferredSkyboxUpdateFn(/* camera */ ) {
+        var deferredSkyboxUpdate = function deferredSkyboxUpdateFn() {
             var node = this.node;
             var worldUpdate = node.worldUpdate;
             if (this.techniqueParametersUpdated !== worldUpdate) {
@@ -1939,8 +1917,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1952,8 +1929,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1971,8 +1947,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1984,8 +1959,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2003,8 +1977,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2016,8 +1989,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2035,8 +2007,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2048,8 +2019,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2067,8 +2037,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2080,8 +2049,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2099,8 +2067,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2112,8 +2079,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2129,8 +2095,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredopaque.cgfx",
             techniqueName: "skybox",
             update: deferredSkyboxUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2148,8 +2113,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2161,8 +2125,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2177,8 +2140,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "add_particle",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(particle, effectTypeData);
 
@@ -2196,8 +2158,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2209,8 +2170,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2225,8 +2185,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "blend_particle",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(particle, effectTypeData);
 
@@ -2244,8 +2203,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2257,8 +2215,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2273,8 +2230,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "translucent_particle",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(particle, effectTypeData);
 
@@ -2289,8 +2245,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "filter",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2299,8 +2254,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "filter_skinned",
             update: deferredBlendSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2315,8 +2269,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "invfilter",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2331,8 +2284,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "invfilter_particle",
             update: deferredBlendUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(particle, effectTypeData);
 
@@ -2350,8 +2302,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2369,8 +2320,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2388,8 +2338,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2401,8 +2350,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2420,8 +2368,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2433,8 +2380,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2449,8 +2395,7 @@ var DeferredRendering = (function () {
             shaderName: "shaders/deferredtransparent.cgfx",
             techniqueName: "add",
             update: deferredFlareUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(flare, effectTypeData);
 
@@ -2468,8 +2413,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2481,8 +2425,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2500,8 +2443,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2513,8 +2455,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2532,8 +2473,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2545,8 +2485,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2564,8 +2503,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2583,8 +2521,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2596,8 +2533,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2615,8 +2551,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2628,8 +2563,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2647,8 +2581,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2660,8 +2593,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2679,8 +2611,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2692,8 +2623,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -2715,8 +2645,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "rigid",
             shadowMappingUpdate: shadowMappingUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -2728,8 +2657,7 @@ var DeferredRendering = (function () {
             shadowMappingShaderName: "shaders/shadowmapping.cgfx",
             shadowMappingTechniqueName: "skinned",
             shadowMappingUpdate: shadowMappingSkinnedUpdateFn,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 

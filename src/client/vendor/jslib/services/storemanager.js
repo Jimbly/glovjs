@@ -49,7 +49,7 @@ var StoreManager = (function () {
             callback: requestUserItemsCallback,
             requestHandler: this.requestHandler,
             encrypt: true
-        });
+        }, 'store.useritems');
     };
 
     StoreManager.prototype.getUserItems = function () {
@@ -243,7 +243,7 @@ var StoreManager = (function () {
             callback: consumeItemsCallback,
             requestHandler: this.requestHandler,
             encrypt: true
-        });
+        }, 'store.useritems-consume');
     };
 
     StoreManager.create = function (requestHandler, gameSession, storeMetaReceived, errorCallbackFn) {

@@ -97,8 +97,7 @@ var IndexBufferManager = (function () {
         if (!indexBuffersPool) {
             indexBuffersPool = {
                 format: format,
-                indexBufferData: []
-            };
+                indexBufferData: [] };
             this.indexBuffersPools.push(indexBuffersPool);
         }
 
@@ -132,6 +131,7 @@ var IndexBufferManager = (function () {
                                     indexBufferData.bucket[newBucketIndex].headChunk = chunk;
                                 }
                             } else {
+                                //Allocated whole chunk so remove it.
                                 if (previousChunk) {
                                     previousChunk.nextChunk = chunk.nextChunk;
                                 } else {
@@ -156,14 +156,12 @@ var IndexBufferManager = (function () {
                 if (indexbuffer) {
                     indexBufferData = {
                         indexBuffer: indexbuffer,
-                        bucket: this.makeBuckets()
-                    };
+                        bucket: this.makeBuckets() };
 
                     indexBufferData.bucket[this.bucket(maxIndicesPerIndexBuffer - numIndices)].headChunk = {
                         baseIndex: numIndices,
                         length: maxIndicesPerIndexBuffer - numIndices,
-                        nextChunk: null
-                    };
+                        nextChunk: null };
 
                     indexBuffersPool.indexBufferData.push(indexBufferData);
                 }
@@ -180,8 +178,7 @@ var IndexBufferManager = (function () {
             if (indexbuffer) {
                 indexBuffersPool.indexBufferData.push({
                     indexBuffer: indexbuffer,
-                    bucket: this.makeBuckets()
-                });
+                    bucket: this.makeBuckets() });
             }
         }
 
@@ -237,6 +234,7 @@ var IndexBufferManager = (function () {
             oldBucketIndex = this.bucket(leftChunk.length);
             leftChunk.length += allocation.length + rightChunk.length;
 
+            //destroy right - before any move of left, as it previous could be the left...
             if (rightChunkPrevious) {
                 rightChunkPrevious.nextChunk = rightChunk.nextChunk;
                 if (rightChunk === leftChunkPrevious) {
@@ -302,8 +300,7 @@ var IndexBufferManager = (function () {
             bucket.headChunk = {
                 baseIndex: allocation.baseIndex,
                 length: allocation.length,
-                nextChunk: bucket.headChunk
-            };
+                nextChunk: bucket.headChunk };
         }
 
         //See if the whole thing is free and if so free the VB
@@ -355,13 +352,13 @@ var IndexBufferManager = (function () {
         this.graphicsDevice = null;
     };
 
-    IndexBufferManager.create = //
+    //
     // create
     //
-    function (graphicsDevice, dynamicIndexBuffers) {
+    IndexBufferManager.create = function (graphicsDevice, dynamicIndexBuffers) {
         var manager = new IndexBufferManager();
 
-        manager.indexBuffersPools = [];
+        manager.indexBuffersPools = []; //Array keyed-off attribute
         manager.debugCreatedIndexBuffers = 0;
         manager.graphicsDevice = graphicsDevice;
         manager.dynamicIndexBuffers = dynamicIndexBuffers ? true : false;

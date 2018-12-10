@@ -14,11 +14,18 @@
 var TurbulenzBridge = (function () {
     function TurbulenzBridge() {
     }
-    TurbulenzBridge._initInstance = /**
+    /**
     * Try to find an 'EventEmitter' object on the page and cache it.
     */
-    function () {
-        var Turbulenz = window.top.Turbulenz;
+    TurbulenzBridge._initInstance = function () {
+        var Turbulenz = window.Turbulenz;
+        if (!Turbulenz) {
+            try  {
+                Turbulenz = window.top.Turbulenz;
+            } catch (e) {
+            }
+            /* tslint:enable:no-empty */
+        }
 
         if (Turbulenz && Turbulenz.Services) {
             var bridge = Turbulenz.Services.bridge;
@@ -52,22 +59,25 @@ var TurbulenzBridge = (function () {
     };
 
     TurbulenzBridge.emit = function (serviceName, request, arg) {
+        return "";
     };
 
+    /* tslint:disable:no-empty */
     TurbulenzBridge.on = function (serviceName, cb) {
     };
 
-    TurbulenzBridge.addListener = //off: function offFn() {},
-    function () {
+    //off: function offFn() {},
+    TurbulenzBridge.addListener = function () {
     };
 
     TurbulenzBridge.setListener = function (eventName, listener) {
     };
 
-    TurbulenzBridge.setOnReceiveConfig = /**
+    /* tslint:enable:no-empty */
+    /**
     * Message that passes game configuration information from the hosting site
     */
-    function (callback) {
+    TurbulenzBridge.setOnReceiveConfig = function (callback) {
         this.on('config.set', callback);
     };
 
@@ -75,12 +85,12 @@ var TurbulenzBridge = (function () {
         this.emit('config.request');
     };
 
-    TurbulenzBridge.startLoading = /**
+    /**
     * Methods to signal the beginning and end of load/save processes.
     * This will display hints to the player and helps the page
     * to prioritize resources.
     */
-    function () {
+    TurbulenzBridge.startLoading = function () {
         this.emit('status.loading.start');
     };
 
@@ -96,12 +106,12 @@ var TurbulenzBridge = (function () {
         this.emit('status.saving.stop');
     };
 
-    TurbulenzBridge.createdGameSession = /**
+    /**
     * These methods tell the gamesite the gameSession so it can
     * emit a heartbeat for the message server to detect.
     * gameSessionId - A string for identifying the current game session
     */
-    function (gameSessionId) {
+    TurbulenzBridge.createdGameSession = function (gameSessionId) {
         this.emit('game.session.created', gameSessionId);
     };
 
@@ -117,24 +127,24 @@ var TurbulenzBridge = (function () {
         this.emit('game.session.info', info);
     };
 
-    TurbulenzBridge.updateUserBadge = /**
+    /**
     * Update a userbadge. Used by the BadgeManager
     */
-    function (badge) {
+    TurbulenzBridge.updateUserBadge = function (badge) {
         this.emit('userbadge.update', badge);
     };
 
-    TurbulenzBridge.updateLeaderBoard = /**
+    /**
     * Update a leaderboard. Used by the LeaderboardManager
     */
-    function (scoreData) {
+    TurbulenzBridge.updateLeaderBoard = function (scoreData) {
         this.emit('leaderboards.update', scoreData);
     };
 
-    TurbulenzBridge.setOnMultiplayerSessionToJoin = /**
+    /**
     * Handle multiplayer join events
     */
-    function (callback) {
+    TurbulenzBridge.setOnMultiplayerSessionToJoin = function (callback) {
         this.on('multiplayer.session.join', callback);
     };
 
@@ -150,10 +160,10 @@ var TurbulenzBridge = (function () {
         this.emit('multiplayer.session.makepublic', sessionId);
     };
 
-    TurbulenzBridge.setOnBasketUpdate = /**
+    /**
     * Handle store basket events
     */
-    function (callback) {
+    TurbulenzBridge.setOnBasketUpdate = function (callback) {
         this.on('basket.site.update', callback);
     };
 
@@ -185,10 +195,10 @@ var TurbulenzBridge = (function () {
         this.on('store.meta.v2', callback);
     };
 
-    TurbulenzBridge.triggerSendInstantNotification = /**
+    /**
     * Handle in-game notification events
     */
-    function (notification) {
+    TurbulenzBridge.triggerSendInstantNotification = function (notification) {
         this.emit('notifications.ingame.sendInstant', notification);
     };
 
@@ -220,17 +230,17 @@ var TurbulenzBridge = (function () {
         this.on('notifications.ingame.receive', callback);
     };
 
-    TurbulenzBridge.changeAspectRatio = /**
+    /**
     * Methods to signal changes of the viewport's aspect ratio to the page.
     */
-    function (ratio) {
+    TurbulenzBridge.changeAspectRatio = function (ratio) {
         this.emit('change.viewport.ratio', ratio);
     };
 
-    TurbulenzBridge.setOnViewportHide = /**
+    /**
     * Methods to set callbacks to react to events happening on the page.
     */
-    function (callback) {
+    TurbulenzBridge.setOnViewportHide = function (callback) {
         this.on('change.viewport.hide', callback);
     };
 
@@ -254,12 +264,12 @@ var TurbulenzBridge = (function () {
         this.on('change.user.state', callback);
     };
 
-    TurbulenzBridge.triggerOnFullscreen = /**
+    /**
     * Methods to send trigger event-emission on the page. These
     * prompt the page to trigger the aforementioned corresponding
     * onXXXX methods.
     */
-    function () {
+    TurbulenzBridge.triggerOnFullscreen = function () {
         this.emit('trigger.viewport.fullscreen');
     };
 
@@ -275,7 +285,7 @@ var TurbulenzBridge = (function () {
         this.emit('trigger.user.state');
     };
 
-    TurbulenzBridge.queryFullscreen = /**
+    /**
     * Methods to send requests for information to the page. These
     * methods can be used to send state-queries. They take a callback
     * function and prompt the page to call it.
@@ -284,31 +294,31 @@ var TurbulenzBridge = (function () {
     * callback - a function that takes a single boolean value that
     * will be set to 'true' if the viewport is in fullscreen.
     */
-    function (callback) {
+    TurbulenzBridge.queryFullscreen = function (callback) {
         this.emit('query.viewport.fullscreen', callback);
     };
 
-    TurbulenzBridge.queryViewportVisibility = /**
+    /**
     * callback - a function that takes a single boolean value that
     * will be set to 'true' if the viewport is visible.
     */
-    function (callback) {
+    TurbulenzBridge.queryViewportVisibility = function (callback) {
         this.emit('query.viewport.visibility', callback);
     };
 
-    TurbulenzBridge.queryMenuState = /**
+    /**
     * callback - a function that takes an object-representation of
     * the current menu-state.
     */
-    function (callback) {
+    TurbulenzBridge.queryMenuState = function (callback) {
         this.emit('query.menu.state', callback);
     };
 
-    TurbulenzBridge.queryUserState = /**
+    /**
     * callback - a function that takes an object-representation of
     * the current state of the user's settings.
     */
-    function (callback) {
+    TurbulenzBridge.queryUserState = function (callback) {
         this.emit('query.user.state', callback);
     };
     TurbulenzBridge._bridge = undefined;

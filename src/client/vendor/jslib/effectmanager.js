@@ -39,6 +39,7 @@ var Effect = (function () {
             /* tslint:disable:no-string-literal */
             var materialColor = material.techniqueParameters['materialColor'];
 
+            /* tslint:enable:no-string-literal */
             if (materialColor) {
                 var length = materialColor.length;
                 var n;

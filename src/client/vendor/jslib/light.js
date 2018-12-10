@@ -44,10 +44,10 @@ var Light = (function () {
         return this.global;
     };
 
-    Light.create = //
+    //
     // Light create
     //
-    function (params) {
+    Light.create = function (params) {
         var light = new Light();
 
         var mathDevice = TurbulenzEngine.getMathDevice();
@@ -365,10 +365,10 @@ var LightInstance = (function () {
         return newInstance;
     };
 
-    LightInstance.create = //
+    //
     // Constructor function
     //
-    function (light) {
+    LightInstance.create = function (light) {
         var instance = new LightInstance();
 
         instance.node = undefined;
@@ -383,7 +383,7 @@ var LightInstance = (function () {
 })();
 
 // Detect correct typed arrays
-((function () {
+(function () {
     LightInstance.prototype.arrayConstructor = Array;
     if (typeof Float32Array !== "undefined") {
         var testArray = new Float32Array(4);
@@ -392,4 +392,4 @@ var LightInstance = (function () {
             LightInstance.prototype.arrayConstructor = Float32Array;
         }
     }
-})());
+}());

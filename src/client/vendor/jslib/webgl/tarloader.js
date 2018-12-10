@@ -74,20 +74,20 @@ var TARLoader = (function () {
 
         function parseHeader(header) {
             header.fileName = getString(100);
-            skip(8);
-            skip(8);
-            skip(8);
+            skip(8); //header.mode = getString(8);
+            skip(8); //header.uid = getString(8);
+            skip(8); //header.gid = getString(8);
             header.length = getNumber(getString(12));
-            skip(12);
-            skip(8);
+            skip(12); //header.lastModified = getString(12);
+            skip(8); //header.checkSum = getString(8);
             header.fileType = getString(1);
-            skip(100);
+            skip(100); //header.linkName = getString(100);
             header.ustarSignature = getString(6);
-            skip(2);
-            skip(32);
-            skip(32);
-            skip(8);
-            skip(8);
+            skip(2); //header.ustarVersion = getString(2);
+            skip(32); //header.ownerUserName = getString(32);
+            skip(32); //header.ownerGroupName = getString(32);
+            skip(8); //header.deviceMajor = getString(8);
+            skip(8); //header.deviceMinor = getString(8);
             header.fileNamePrefix = getString(155);
             offset += 12;
         }
@@ -145,7 +145,7 @@ var TARLoader = (function () {
         return result;
     };
 
-    TARLoader.prototype.isValidHeader = function (/* header */ ) {
+    TARLoader.prototype.isValidHeader = function ( /* header */ ) {
         return true;
     };
 
@@ -179,10 +179,15 @@ var TARLoader = (function () {
                         var xhrStatus = xhr.status;
                         var xhrStatusText = xhr.status !== 0 && xhr.statusText || 'No connection';
 
+                        // Fix for loading from file
                         if (xhrStatus === 0 && (window.location.protocol === "file:" || window.location.protocol === "chrome-extension:")) {
                             xhrStatus = 200;
                         }
 
+                        // Sometimes the browser sets status to 200 OK when the connection is closed
+                        // before the message is sent (weird!).
+                        // In order to address this we fail any completely empty responses.
+                        // Hopefully, nobody will get a valid response with no headers and no body!
                         if (xhr.getAllResponseHeaders() === "") {
                             var noBody;
                             if (xhr.responseType === "arraybuffer") {

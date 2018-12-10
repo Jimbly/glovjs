@@ -497,6 +497,7 @@ var InterpolatorController = (function () {
             }
 
             if (!jointKeys) {
+                // Completely non animated joint so use the base info
                 if (hasScale) {
                     return m43FromRTS.call(mathDevice, baseQuat, basePos, baseScale || mathDevice.v3Build(1, 1, 1));
                 } else {
@@ -513,6 +514,7 @@ var InterpolatorController = (function () {
                 var endTime = jointKeys[endFrame].time;
                 var delta = (this.currentTime - startTime) / (endTime - startTime);
 
+                // If the delta is small enough we just copy the first keyframe
                 if (delta < Animation.minKeyframeDelta) {
                     var thisKey = jointKeys[startFrame];
                     if (hasScale) {
@@ -645,8 +647,8 @@ var InterpolatorController = (function () {
         return this.hierarchy;
     };
 
-    InterpolatorController.create = // Constructor function
-    function (hierarchy) {
+    // Constructor function
+    InterpolatorController.create = function (hierarchy) {
         var i = new InterpolatorController();
         i.hierarchy = hierarchy;
 
@@ -658,9 +660,16 @@ var InterpolatorController = (function () {
         i.output = output;
         i.outputChannels = {};
         var numJoints = hierarchy.numNodes;
+        var buffer = new Float32Array(numJoints * (4 + 3));
+        var offset = 0;
         for (var j = 0; j < numJoints; j += 1) {
-            output[j] = {};
+            output[j] = {
+                rotation: buffer.subarray(offset, (offset + 4)),
+                translation: buffer.subarray((offset + 4), (offset + 4 + 3))
+            };
+            offset += (4 + 3);
         }
+
         i.rate = 1.0;
         i.currentTime = 0.0;
         i.looping = false;
@@ -754,8 +763,8 @@ var OverloadedNodeController = (function () {
         });
     };
 
-    OverloadedNodeController.create = // Constructor function
-    function (baseController) {
+    // Constructor function
+    OverloadedNodeController.create = function (baseController) {
         var c = new OverloadedNodeController();
         c.baseController = baseController;
         c.bounds = baseController.bounds;
@@ -776,8 +785,8 @@ var OverloadedNodeController = (function () {
 var ReferenceController = (function () {
     function ReferenceController() {
     }
-    ReferenceController.create = // Constructor function
-    function (baseController) {
+    // Constructor function
+    ReferenceController.create = function (baseController) {
         /*jshint proto:true*/
         var c = new ReferenceController();
 
@@ -985,8 +994,8 @@ var TransitionController = (function () {
         return this.startController.getHierarchy();
     };
 
-    TransitionController.create = // Constructor function
-    function (startController, endController, length) {
+    // Constructor function
+    TransitionController.create = function (startController, endController, length) {
         var c = new TransitionController();
 
         var md = TurbulenzEngine.getMathDevice();
@@ -1026,9 +1035,6 @@ var BlendController = (function () {
 
     BlendController.prototype.update = function () {
         var mathDevice = this.mathDevice;
-        var quatSlerp = mathDevice.quatSlerp;
-        var v3Lerp = mathDevice.v3Lerp;
-        var v3Copy = mathDevice.v3Copy;
 
         // Decide the pair of controllers we'll blend between and the delta
         var controllers = this.controllers;
@@ -1042,7 +1048,6 @@ var BlendController = (function () {
         var endController = controllers[last];
 
         startController.update();
-        endController.update();
 
         var output = this.output;
         var outputChannels = this.outputChannels;
@@ -1051,30 +1056,47 @@ var BlendController = (function () {
         var scaleOnEnd = endController.outputChannels.scale;
 
         var startOutput = startController.output;
-        var endOutput = endController.output;
 
-        // For each joint slerp between the quats and return the quat pos result
         var numJoints = startController.getHierarchy().numNodes;
-        for (var j = 0; j < numJoints; j += 1) {
-            var joint = output[j];
-            if (!joint) {
-                output[j] = joint = {};
-            }
-            var j1 = startOutput[j];
-            var j2 = endOutput[j];
+        var j, joint, j1, j2;
 
-            joint.rotation = quatSlerp.call(mathDevice, j1.rotation, j2.rotation, delta, joint.rotation);
-            joint.translation = v3Lerp.call(mathDevice, j1.translation, j2.translation, delta, joint.translation);
+        if (delta >= Animation.minKeyframeDelta || (outputScale && !scaleOnStart && scaleOnEnd)) {
+            endController.update();
 
-            if (outputScale) {
-                if (scaleOnStart) {
-                    if (scaleOnEnd) {
-                        joint.scale = v3Lerp.call(mathDevice, j1.scale, j2.scale, delta, joint.scale);
-                    } else {
-                        joint.scale = v3Copy.call(mathDevice, j1.scale, joint.scale);
+            var endOutput = endController.output;
+
+            for (j = 0; j < numJoints; j += 1) {
+                joint = output[j];
+                j1 = startOutput[j];
+                j2 = endOutput[j];
+
+                joint.rotation = mathDevice.quatSlerp(j1.rotation, j2.rotation, delta, joint.rotation);
+                joint.translation = mathDevice.v3Lerp(j1.translation, j2.translation, delta, joint.translation);
+
+                if (outputScale) {
+                    if (scaleOnStart) {
+                        if (scaleOnEnd) {
+                            joint.scale = mathDevice.v3Lerp(j1.scale, j2.scale, delta, joint.scale);
+                        } else {
+                            joint.scale = mathDevice.v3Copy(j1.scale, joint.scale);
+                        }
+                    } else if (scaleOnEnd) {
+                        joint.scale = mathDevice.v3Copy(j2.scale, joint.scale);
                     }
-                } else if (scaleOnEnd) {
-                    joint.scale = v3Copy.call(mathDevice, j2.scale, joint.scale);
+                }
+            }
+        } else {
+            for (j = 0; j < numJoints; j += 1) {
+                joint = output[j];
+                j1 = startOutput[j];
+
+                joint.rotation = mathDevice.quatCopy(j1.rotation, joint.rotation);
+                joint.translation = mathDevice.v3Copy(j1.translation, joint.translation);
+
+                if (outputScale) {
+                    if (scaleOnStart) {
+                        joint.scale = mathDevice.v3Copy(j1.scale, joint.scale);
+                    }
                 }
             }
         }
@@ -1110,15 +1132,14 @@ var BlendController = (function () {
         var boundsEnd = endController.bounds;
 
         var mathDevice = this.mathDevice;
-        var v3Add = mathDevice.v3Add;
 
-        var centerSum = v3Add.call(mathDevice, boundsStart.center, boundsEnd.center);
+        var centerSum = mathDevice.v3Add(boundsStart.center, boundsEnd.center, this.bounds.center);
         var newCenter = mathDevice.v3ScalarMul(centerSum, 0.5, centerSum);
         this.bounds.center = newCenter;
-        var newExtent = mathDevice.v3Max(boundsStart.halfExtent, boundsEnd.halfExtent);
-        var centerOffset = mathDevice.v3Sub(boundsStart.center, newCenter);
+        var newExtent = mathDevice.v3Max(boundsStart.halfExtent, boundsEnd.halfExtent, this.bounds.halfExtent);
+        var centerOffset = mathDevice.v3Sub(boundsStart.center, newCenter, this.scratchV3);
         centerOffset = mathDevice.v3Abs(centerOffset, centerOffset);
-        this.bounds.halfExtent = v3Add.call(mathDevice, newExtent, centerOffset, newExtent);
+        this.bounds.halfExtent = mathDevice.v3Add(newExtent, centerOffset, newExtent);
 
         this.dirtyBounds = false;
     };
@@ -1172,8 +1193,8 @@ var BlendController = (function () {
         return this.controllers[0].getHierarchy();
     };
 
-    BlendController.create = // Constructor function
-    function (controllers) {
+    // Constructor function
+    BlendController.create = function (controllers) {
         var c = new BlendController();
         c.outputChannels = {};
         c.controllers = [];
@@ -1192,16 +1213,34 @@ var BlendController = (function () {
         c.mathDevice = md;
         c.bounds = { center: md.v3BuildZero(), halfExtent: md.v3BuildZero() };
 
-        c.output = [];
+        var numJoints = c.getHierarchy().numNodes;
+        var output = [];
+        c.output = output;
+        var buffer = new Float32Array(numJoints * (4 + 3));
+        var offset = 0;
+        for (var j = 0; j < numJoints; j += 1) {
+            output[j] = {
+                rotation: buffer.subarray(offset, (offset + 4)),
+                translation: buffer.subarray((offset + 4), (offset + 4 + 3))
+            };
+            offset += (4 + 3);
+        }
+
         c.blendDelta = 0;
         c.dirty = true;
         c.dirtyBounds = true;
+
+        if (c.scratchV3 === null) {
+            BlendController.prototype.scratchV3 = md.v3BuildZero();
+        }
 
         return c;
     };
     BlendController.version = 1;
     return BlendController;
 })();
+
+BlendController.prototype.scratchV3 = null;
 
 // The MaskController takes joints from various controllers based on a per joint mask
 var MaskController = (function () {
@@ -1406,8 +1445,8 @@ var MaskController = (function () {
         return this.controllers[0].getHierarchy();
     };
 
-    MaskController.create = // Constructor function
-    function (controllers) {
+    // Constructor function
+    MaskController.create = function (controllers) {
         var c = new MaskController();
         c.outputChannels = {};
         c.controllers = [];
@@ -1451,6 +1490,7 @@ var PoseController = (function () {
 
     /* tslint:enable:no-empty */
     PoseController.prototype.updateBounds = function () {
+        // Update and bounds of the pose joints
         if (this.dirtyBounds) {
             // First generate ltms for the pose
             var md = this.mathDevice;
@@ -1529,8 +1569,8 @@ var PoseController = (function () {
         return this.hierarchy;
     };
 
-    PoseController.create = // Constructor function
-    function (hierarchy) {
+    // Constructor function
+    PoseController.create = function (hierarchy) {
         var mathDevice = TurbulenzEngine.getMathDevice();
 
         var c = new PoseController();
@@ -1606,6 +1646,7 @@ var NodeTransformController = (function () {
                         }
                     }
 
+                    // and recurse if we never matched this node as a child
                     if (!foundChild) {
                         nextIndex = matchJointHierarchy(nextIndex, jointNode, nodesMap, numJoints, jointNames, jointParents);
                     }
@@ -1652,6 +1693,7 @@ var NodeTransformController = (function () {
             return;
         }
 
+        // first update our input data before we try and use it
         if (this.inputController.dirty) {
             this.inputController.update();
         }
@@ -1690,8 +1732,8 @@ var NodeTransformController = (function () {
         this.dirty = false;
     };
 
-    NodeTransformController.create = // Constructor function
-    function (hierarchy, scene) {
+    // Constructor function
+    NodeTransformController.create = function (hierarchy, scene) {
         var c = new NodeTransformController();
 
         var numNodes = hierarchy.numNodes;
@@ -1737,6 +1779,7 @@ var SkinController = (function () {
             return;
         }
 
+        // first update our input data before we try and use it
         if (this.inputController.dirty) {
             this.inputController.update();
         }
@@ -1769,8 +1812,8 @@ var SkinController = (function () {
         this.dirty = false;
     };
 
-    SkinController.create = // Constructor function
-    function (md) {
+    // Constructor function
+    SkinController.create = function (md) {
         var c = new SkinController();
 
         c.md = md;
@@ -1820,6 +1863,7 @@ var GPUSkinController = (function () {
             return;
         }
 
+        // first update our input data before we try and use it
         if (this.inputController.dirty) {
             this.inputController.update();
         }
@@ -1869,8 +1913,8 @@ var GPUSkinController = (function () {
         GPUSkinController.prototype.defaultBufferSize = size;
     };
 
-    GPUSkinController.create = // Constructor function
-    function (gd, md, bufferSize) {
+    // Constructor function
+    GPUSkinController.create = function (gd, md, bufferSize) {
         var c = new GPUSkinController();
 
         c.md = md;
@@ -2067,8 +2111,8 @@ var SkinnedNode = (function () {
         return this.skinController.skeleton;
     };
 
-    SkinnedNode.create = // Constructor function
-    function (gd, md, node, skeleton, inputController, bufferSize) {
+    // Constructor function
+    SkinnedNode.create = function (gd, md, node, skeleton, inputController, bufferSize) {
         var sn = new SkinnedNode();
 
         sn.md = md;

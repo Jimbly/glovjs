@@ -24,6 +24,8 @@ var RequestHandler = (function () {
             this.onRequestTimeout(reason, callContext);
         }
 
+        // only the first request with a lost connection continues
+        // all following requests wait for a reconnection
         if (this.connected) {
             this.connectionLostTime = TurbulenzEngine.time;
             this.notifiedConnectionLost = false;
@@ -89,6 +91,11 @@ var RequestHandler = (function () {
             var sendEventToHandlers = that.sendEventToHandlers;
             var handlers = that.handlers;
 
+            // 0 Connection Lost
+            // 408 Request Timeout
+            // 429 Too Many Requests
+            // 480 Temporarily Unavailable
+            // 504 Gateway timeout
             if (status === 0 || status === 408 || status === 429 || status === 480 || status === 504) {
                 that.retryExponential(callContext, makeRequest, status);
                 return;
@@ -225,11 +232,11 @@ var RequestHandler = (function () {
         /* tslint:disable:no-empty */
         rh.onReconnected = params.onReconnected || function onReconnectedFn() {
         };
-        rh.onRequestTimeout = params.onRequestTimeout || function onRequestTimeoutFn(/* callContext */ ) {
+        rh.onRequestTimeout = params.onRequestTimeout || function onRequestTimeoutFn() {
         };
 
         /* tslint:enable:no-empty */
-        var handlers = { eventOnload: [] };
+        var handlers = ({ eventOnload: [] });
         rh.handlers = handlers;
 
         return rh;

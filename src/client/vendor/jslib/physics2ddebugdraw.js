@@ -1,6 +1,43 @@
+// Generated from assets/shaders/debugphys2d.cgfx
+var debugphys2d_cgfx = {
+    "version": 1,
+    "name": "debugphys2d.cgfx",
+    "parameters": {
+        "clipSpace": {
+            "type": "float",
+            "columns": 4
+        }
+    },
+    "techniques": {
+        "alpha": [
+            {
+                "parameters": ["clipSpace"],
+                "semantics": ["ATTR0", "ATTR3"],
+                "states": {
+                    "DepthTestEnable": false,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": true,
+                    "BlendFunc": [770, 771]
+                },
+                "programs": ["vp_draw2dlines", "fp_draw2dlines"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_draw2dlines": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying TZ_LOWP vec4 tz_Color;\nvoid main()\n{gl_FragColor=tz_Color;}"
+        },
+        "vp_draw2dlines": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying TZ_LOWP vec4 tz_Color;attribute vec4 ATTR0;attribute vec4 ATTR3;\nvec4 _outcol1;vec4 _outpos1;uniform vec4 clipSpace;void main()\n{vec2 _TMP1;_TMP1=ATTR0.xy*clipSpace.xy+clipSpace.zw;_outpos1=vec4(_TMP1.x,_TMP1.y,0.0,1.0);_outcol1=ATTR3;gl_Position=_outpos1;tz_Color=ATTR3;}"
+        }
+    }
+};
+
 // Copyright (c) 2012-2014 Turbulenz Limited
 /*global
-
 Physics2DDevice: false
 Physics2DConfig: false
 Physics2DWeldConstraint: false
@@ -11,6 +48,7 @@ Physics2DLineConstraint: false
 Physics2DPulleyConstraint: false
 */
 "use strict";
+
 //
 // Physics2D DebugDraw
 //
@@ -49,7 +87,7 @@ var Physics2DDebugDraw = (function () {
         var numVertices = this._numVertices;
         var vindex = (numVertices * 6);
         var iindex = (this._numLines * 2);
-        this._prepare(2, 1);
+        this._prepare(2, 1); // 2 vertices, 1 lines
 
         var data = this._vertexData;
         data[vindex] = x1;
@@ -132,6 +170,7 @@ var Physics2DDebugDraw = (function () {
     };
 
     Physics2DDebugDraw.prototype.drawSpiral = function (x, y, ang1, ang2, rad1, rad2, color) {
+        // Order end points so ang1 < ang2.
         if (ang1 > ang2) {
             var tmp = ang1;
             ang1 = ang2;
@@ -216,6 +255,7 @@ var Physics2DDebugDraw = (function () {
     // Only that the expressions for point on spring, and gradient at point
     // are more complex than that of a plain spiral.
     Physics2DDebugDraw.prototype.drawSpiralSpring = function (x, y, ang1, ang2, rad1, rad2, numCoils, color) {
+        // Order end points so ang1 < ang2.
         if (ang1 > ang2) {
             var tmp = ang1;
             ang1 = ang2;
@@ -357,14 +397,14 @@ var Physics2DDebugDraw = (function () {
         }
         verts.push(x2, y2);
 
-        /*jshint bitwise: false*/
+        /* tslint:disable:no-bitwise */
         var vCount = (verts.length >> 1);
 
-        /*jshint bitwise: true*/
+        /* tslint:enable:no-bitwise */
         var numVertices = this._numVertices;
         var vindex = (numVertices * 6);
         var iindex = (this._numLines * 2);
-        this._prepare(vCount, (vCount - 1));
+        this._prepare(vCount, (vCount - 1)); // N vertices, (N - 1) lines
 
         var vdata = this._vertexData;
         var idata = this._indexData;
@@ -394,7 +434,7 @@ var Physics2DDebugDraw = (function () {
         var numVertices = this._numVertices;
         var vindex = (numVertices * 6);
         var iindex = (this._numLines * 2);
-        this._prepare(4, 4);
+        this._prepare(4, 4); // vCount verts, vCount lines
 
         var vdata = this._vertexData;
         var idata = this._indexData;
@@ -443,7 +483,7 @@ var Physics2DDebugDraw = (function () {
         var numVertices = this._numVertices;
         var vindex = (numVertices * 6);
         var iindex = (this._numLines * 2);
-        this._prepare(vCount, vCount);
+        this._prepare(vCount, vCount); // vCount verts, vCount lines
 
         // We generate vertices by taking radial vector (radius, 0) of circle
         // and rotating it through angular increments.
@@ -488,8 +528,8 @@ var Physics2DDebugDraw = (function () {
 
         if (this.showBodyDetail) {
             var data = body._data;
-            this.drawCircle(data[(2)], data[(2) + 1], this.screenToPhysics2D * this.bodyPositionRadius, this.bodyDetailColor);
-            this.drawLine(data[(15)], data[(15) + 1], data[(2)], data[(2) + 1], this.bodyDetailColor);
+            this.drawCircle(data[(/*BODY_POS*/ 2)], data[(/*BODY_POS*/ 2) + 1], this.screenToPhysics2D * this.bodyPositionRadius, this.bodyDetailColor);
+            this.drawLine(data[(/*BODY_PRE_POS*/ 15)], data[(/*BODY_PRE_POS*/ 15) + 1], data[(/*BODY_POS*/ 2)], data[(/*BODY_POS*/ 2) + 1], this.bodyDetailColor);
         }
     };
 
@@ -547,30 +587,30 @@ var Physics2DDebugDraw = (function () {
                 ny = 0;
             } else {
                 var adata = arb._data;
-                nx = adata[(4)];
-                ny = adata[(4) + 1];
+                nx = adata[(/*ARB_NORMAL*/ 4)];
+                ny = adata[(/*ARB_NORMAL*/ 4) + 1];
             }
 
             var c1 = arb._contact1._data;
-            var x1 = c1[(0)];
-            var y1 = c1[(0) + 1];
+            var x1 = c1[(/*CON_POS*/ 0)];
+            var y1 = c1[(/*CON_POS*/ 0) + 1];
             this.drawCircle(x1, y1, rad, color);
 
             var jn, jt;
             if (this.showContactImpulses && !arb._contact1.virtual) {
-                jn = (c1[(11)]) * imp;
-                jt = (c1[(12)]) * imp;
+                jn = (c1[(/*CON_JNACC*/ 11)]) * imp;
+                jt = (c1[(/*CON_JTACC*/ 12)]) * imp;
                 this.drawLine(x1, y1, x1 + (nx * jn), y1 + (ny * jn), this.normalImpulseColor);
                 this.drawLine(x1, y1, x1 - (ny * jt), y1 + (nx * jt), this.frictionImpulseColor);
             }
 
             if (arb._position2Contact) {
                 var c2 = arb._contact2._data;
-                var x2 = c2[(0)];
-                var y2 = c2[(0) + 1];
+                var x2 = c2[(/*CON_POS*/ 0)];
+                var y2 = c2[(/*CON_POS*/ 0) + 1];
                 if (this.showContactImpulses && !arb._contact2.virtual) {
-                    jn = (c2[(11)]) * imp;
-                    jt = (c2[(12)]) * imp;
+                    jn = (c2[(/*CON_JNACC*/ 11)]) * imp;
+                    jt = (c2[(/*CON_JTACC*/ 12)]) * imp;
                     this.drawLine(x2, y2, x2 + (nx * jn), y2 + (ny * jn), this.normalImpulseColor);
                     this.drawLine(x2, y2, x2 - (ny * jt), y2 + (nx * jt), this.frictionImpulseColor);
                 }
@@ -591,10 +631,11 @@ var Physics2DDebugDraw = (function () {
             return;
         }
 
-        /*jshint bitwise: false*/
+        /* tslint:disable:no-bitwise */
         var color = this._colors[shape.body._type | (body.sleeping ? 4 : 0) | (shape.sensor ? 8 : 0) | (body._bullet ? 16 : 0)];
 
-        if (shape._type === (0)) {
+        /* tslint:enable:no-bitwise */
+        if (shape._type === (/*TYPE_CIRCLE*/ 0)) {
             this._drawCircleShape(shape, color);
         } else {
             this._drawPolygonShape(shape, color);
@@ -602,26 +643,26 @@ var Physics2DDebugDraw = (function () {
 
         if (this.showShapeDetail) {
             var data = shape._data;
-            this.drawRectangle(data[(0)], data[(0) + 1], data[(0) + 2], data[(0) + 3], this.shapeDetailColor);
+            this.drawRectangle(data[(/*SHAPE_AABB*/ 0)], data[(/*SHAPE_AABB*/ 0) + 1], data[(/*SHAPE_AABB*/ 0) + 2], data[(/*SHAPE_AABB*/ 0) + 3], this.shapeDetailColor);
         }
     };
 
     Physics2DDebugDraw.prototype._drawCircleShape = function (circle, color) {
         var body = circle.body._data;
         var data = circle._data;
-        var cx = data[(9)];
-        var cy = data[(9) + 1];
-        var rad = data[(6)];
+        var cx = data[(/*CIRCLE_WORLD*/ 9)];
+        var cy = data[(/*CIRCLE_WORLD*/ 9) + 1];
+        var rad = data[(/*CIRCLE_RADIUS*/ 6)];
         this.drawCircle(cx, cy, rad, color);
 
-        if (circle.body._type !== (2)) {
-            var cos = body[(5)];
-            var sin = body[(5) + 1];
+        if (circle.body._type !== (/*TYPE_STATIC*/ 2)) {
+            var cos = body[(/*BODY_AXIS*/ 5)];
+            var sin = body[(/*BODY_AXIS*/ 5) + 1];
             this.drawLine(cx + (rad * 0.333 * cos), cy + (rad * 0.333 * sin), cx + (rad * cos), cy + (rad * sin), color);
         }
 
         if (this.showShapeDetail) {
-            this.drawCircle(data[(9)], data[(9) + 1], this.screenToPhysics2D * this.circleOriginRadius, this.shapeDetailColor);
+            this.drawCircle(data[(/*CIRCLE_WORLD*/ 9)], data[(/*CIRCLE_WORLD*/ 9) + 1], this.screenToPhysics2D * this.circleOriginRadius, this.shapeDetailColor);
         }
     };
 
@@ -636,18 +677,18 @@ var Physics2DDebugDraw = (function () {
         var iindex = (this._numLines * 2);
 
         var pdata = polygon._data;
-        var pindex = (6);
+        var pindex = (/*POLY_VERTICES*/ 6);
         var limit = pdata.length;
 
-        var vCount = ((limit - pindex) / (13));
-        this._prepare(vCount, vCount);
+        var vCount = ((limit - pindex) / (/*POLY_STRIDE*/ 13));
+        this._prepare(vCount, vCount); // vCount verts and lines.
 
         var vdata = this._vertexData;
         var idata = this._indexData;
         var i;
-        for (i = 0; pindex < limit; pindex += (13), i += 1) {
-            vdata[vindex] = pdata[pindex + (2)];
-            vdata[vindex + 1] = pdata[pindex + (2) + 1];
+        for (i = 0; pindex < limit; pindex += (/*POLY_STRIDE*/ 13), i += 1) {
+            vdata[vindex] = pdata[pindex + (/*POLY_WORLD*/ 2)];
+            vdata[vindex + 1] = pdata[pindex + (/*POLY_WORLD*/ 2) + 1];
             vdata[vindex + 2] = r;
             vdata[vindex + 3] = g;
             vdata[vindex + 4] = b;
@@ -786,6 +827,7 @@ var Physics2DDebugDraw = (function () {
 
         var newSize;
 
+        // Resize buffer.
         if (count > vertexBufferParameters.numVertices) {
             newSize = this._bufferSizeAlgorithm(count);
             vertexBufferParameters.numVertices = newSize;
@@ -797,6 +839,7 @@ var Physics2DDebugDraw = (function () {
 
         count = (this._numLines * 2);
 
+        // Resize buffer.
         if (count > indexBufferParameters.numIndices) {
             newSize = this._bufferSizeAlgorithm(count);
             indexBufferParameters.numIndices = newSize;
@@ -836,15 +879,15 @@ var Physics2DDebugDraw = (function () {
         o.physics2DToScreen = 0;
         o.screenToPhysics2D = 0;
 
-        o.circleMaxError = 0.4;
-        o.curveMaxError = 0.6;
-        o.spiralMaxArc = Math.PI / 4;
+        o.circleMaxError = 0.4; //px
+        o.curveMaxError = 0.6; //px
+        o.spiralMaxArc = Math.PI / 4; // rad
         o.spiralEpsilon = 1e-5;
-        o.spiralSpringSize = 0.75;
+        o.spiralSpringSize = 0.75; // percentage of gap between spiral arms for spring.
         o._curveStack = [];
         o._curveVerts = [];
 
-        o.minSpringLength = 0.5;
+        o.minSpringLength = 0.5; // px
 
         var v4Build = function v4BuildFn(r, g, b, a) {
             var ret = new Physics2DDevice.prototype.floatArray(4);
@@ -912,55 +955,20 @@ var Physics2DDebugDraw = (function () {
 
         // (type | (sleeping << 2) | (sensor << 3) | (bullet << 4))
         var colors = o._colors = [];
-        colors[(2) + 4] = staticColor;
-        colors[(2) + 12] = staticSensorColor;
-        colors[(0)] = dynamicColor;
-        colors[(0) + 8] = dynamicSensorColor;
-        colors[(0) + 4] = sleepingDynamicColor;
-        colors[(0) + 12] = sleepingDynamicSensorColor;
-        colors[(0) + 16] = bulletColor;
-        colors[(1)] = kinematicColor;
-        colors[(1) + 8] = kinematicSensorColor;
-        colors[(1) + 4] = sleepingKinematicColor;
-        colors[(1) + 12] = sleepingKinematicSensorColor;
+        colors[(/*TYPE_STATIC*/ 2) + 4] = staticColor;
+        colors[(/*TYPE_STATIC*/ 2) + 12] = staticSensorColor;
+        colors[(/*TYPE_DYNAMIC*/ 0)] = dynamicColor;
+        colors[(/*TYPE_DYNAMIC*/ 0) + 8] = dynamicSensorColor;
+        colors[(/*TYPE_DYNAMIC*/ 0) + 4] = sleepingDynamicColor;
+        colors[(/*TYPE_DYNAMIC*/ 0) + 12] = sleepingDynamicSensorColor;
+        colors[(/*TYPE_DYNAMIC*/ 0) + 16] = bulletColor;
+        colors[(/*TYPE_KINEMATIC*/ 1)] = kinematicColor;
+        colors[(/*TYPE_KINEMATIC*/ 1) + 8] = kinematicSensorColor;
+        colors[(/*TYPE_KINEMATIC*/ 1) + 4] = sleepingKinematicColor;
+        colors[(/*TYPE_KINEMATIC*/ 1) + 12] = sleepingKinematicSensorColor;
 
-        // Load embedded default shader and techniques
-        var shader = gd.createShader({
-            "version": 1,
-            "name": "lines.cgfx",
-            "parameters": {
-                "clipSpace": {
-                    "type": "float",
-                    "columns": 4
-                }
-            },
-            "techniques": {
-                "alpha": [
-                    {
-                        "parameters": ["clipSpace"],
-                        "semantics": ["POSITION", "COLOR"],
-                        "states": {
-                            "DepthTestEnable": false,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": true,
-                            "BlendFunc": [770, 771]
-                        },
-                        "programs": ["vp_draw2dlines", "fp_draw2dlines"]
-                    }
-                ]
-            },
-            "programs": {
-                "fp_draw2dlines": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying TZ_LOWP vec4 tz_Color;\nvoid main()\n{gl_FragColor=tz_Color;}"
-                },
-                "vp_draw2dlines": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision mediump float;\nprecision mediump int;\n#else\n#define TZ_LOWP\n#endif\nvarying TZ_LOWP vec4 tz_Color;attribute vec4 ATTR3;attribute vec4 ATTR0;\nvec4 _outpos1;vec4 _outcol1;uniform vec4 clipSpace;void main()\n{vec2 _TMP1;_TMP1=ATTR0.xy*clipSpace.xy+clipSpace.zw;_outpos1=vec4(_TMP1.x,_TMP1.y,0.0,1.0);_outcol1=ATTR3;tz_Color=ATTR3;gl_Position=_outpos1;}"
-                }
-            }
-        });
+        // Generated from assets/shaders/debugphys2d.cgfx
+        var shader = gd.createShader(debugphys2d_cgfx);
 
         o._techniqueParams = gd.createTechniqueParameters({
             clipSpace: new Physics2DDevice.prototype.floatArray(4)
@@ -1015,14 +1023,14 @@ Physics2DPulleyConstraint.prototype._draw = function _pulleyDrawFn(debug) {
     var b3 = this.bodyC._data;
     var b4 = this.bodyD._data;
 
-    var x1 = (b1[(2)] + data[(19)]);
-    var y1 = (b1[(2) + 1] + data[(19) + 1]);
-    var x2 = (b2[(2)] + data[(21)]);
-    var y2 = (b2[(2) + 1] + data[(21) + 1]);
-    var x3 = (b3[(2)] + data[(23)]);
-    var y3 = (b3[(2) + 1] + data[(23) + 1]);
-    var x4 = (b4[(2)] + data[(25)]);
-    var y4 = (b4[(2) + 1] + data[(25) + 1]);
+    var x1 = (b1[(/*BODY_POS*/ 2)] + data[(/*PULLEY_RANCHOR1*/ 19)]);
+    var y1 = (b1[(/*BODY_POS*/ 2) + 1] + data[(/*PULLEY_RANCHOR1*/ 19) + 1]);
+    var x2 = (b2[(/*BODY_POS*/ 2)] + data[(/*PULLEY_RANCHOR2*/ 21)]);
+    var y2 = (b2[(/*BODY_POS*/ 2) + 1] + data[(/*PULLEY_RANCHOR2*/ 21) + 1]);
+    var x3 = (b3[(/*BODY_POS*/ 2)] + data[(/*PULLEY_RANCHOR3*/ 23)]);
+    var y3 = (b3[(/*BODY_POS*/ 2) + 1] + data[(/*PULLEY_RANCHOR3*/ 23) + 1]);
+    var x4 = (b4[(/*BODY_POS*/ 2)] + data[(/*PULLEY_RANCHOR4*/ 25)]);
+    var y4 = (b4[(/*BODY_POS*/ 2) + 1] + data[(/*PULLEY_RANCHOR4*/ 25) + 1]);
 
     var n12x = (x2 - x1);
     var n12y = (y2 - y1);
@@ -1030,7 +1038,7 @@ Physics2DPulleyConstraint.prototype._draw = function _pulleyDrawFn(debug) {
     var n34y = (y4 - y3);
     var nL12 = Math.sqrt((n12x * n12x) + (n12y * n12y));
     var nL34 = Math.sqrt((n34x * n34x) + (n34y * n34y));
-    var ratio = data[(7)];
+    var ratio = data[(/*PULLEY_RATIO*/ 7)];
     this._drawLink(debug, x1, y1, x2, y2, n12x, n12y, nL12, (nL34 * ratio), 1.0, colSA, colSB);
     this._drawLink(debug, x3, y3, x4, y4, n34x, n34y, nL34, nL12, (1 / ratio), colSC, colSD);
 
@@ -1051,11 +1059,11 @@ Physics2DPulleyConstraint.prototype._drawLink = function _drawLinkFn(debug, x1, 
         var midY = (0.5 * (y1 + y2));
 
         var data = this._data;
-        var jointMin = (data[(5)] - bias) * scale;
+        var jointMin = (data[(/*PULLEY_JOINTMIN*/ 5)] - bias) * scale;
         if (jointMin < 0) {
             jointMin = 0;
         }
-        var jointMax = (data[(6)] - bias) * scale;
+        var jointMax = (data[(/*PULLEY_JOINTMAX*/ 6)] - bias) * scale;
         if (jointMax < 0) {
             jointMax = 0;
         }
@@ -1104,15 +1112,15 @@ Physics2DLineConstraint.prototype._draw = function lineDrawFn(debug) {
     var b1 = this.bodyA._data;
     var b2 = this.bodyB._data;
 
-    var x1 = (b1[(2)] + data[(13)]);
-    var y1 = (b1[(2) + 1] + data[(13) + 1]);
-    var x2 = (b2[(2)] + data[(15)]);
-    var y2 = (b2[(2) + 1] + data[(15) + 1]);
-    var dx = data[(17)];
-    var dy = data[(17) + 1];
+    var x1 = (b1[(/*BODY_POS*/ 2)] + data[(/*LINE_RANCHOR1*/ 13)]);
+    var y1 = (b1[(/*BODY_POS*/ 2) + 1] + data[(/*LINE_RANCHOR1*/ 13) + 1]);
+    var x2 = (b2[(/*BODY_POS*/ 2)] + data[(/*LINE_RANCHOR2*/ 15)]);
+    var y2 = (b2[(/*BODY_POS*/ 2) + 1] + data[(/*LINE_RANCHOR2*/ 15) + 1]);
+    var dx = data[(/*LINE_RAXIS*/ 17)];
+    var dy = data[(/*LINE_RAXIS*/ 17) + 1];
 
-    var jointMin = data[(5)];
-    var jointMax = data[(6)];
+    var jointMin = data[(/*LINE_JOINTMIN*/ 5)];
+    var jointMax = data[(/*LINE_JOINTMAX*/ 6)];
     if (jointMin === Number.NEGATIVE_INFINITY) {
         jointMin = -1e20;
     }
@@ -1165,10 +1173,10 @@ Physics2DDistanceConstraint.prototype._draw = function distanceDrawFn(debug) {
     var b1 = this.bodyA._data;
     var b2 = this.bodyB._data;
 
-    var x1 = (b1[(2)] + data[(11)]);
-    var y1 = (b1[(2) + 1] + data[(11) + 1]);
-    var x2 = (b2[(2)] + data[(13)]);
-    var y2 = (b2[(2) + 1] + data[(13) + 1]);
+    var x1 = (b1[(/*BODY_POS*/ 2)] + data[(/*DIST_RANCHOR1*/ 11)]);
+    var y1 = (b1[(/*BODY_POS*/ 2) + 1] + data[(/*DIST_RANCHOR1*/ 11) + 1]);
+    var x2 = (b2[(/*BODY_POS*/ 2)] + data[(/*DIST_RANCHOR2*/ 13)]);
+    var y2 = (b2[(/*BODY_POS*/ 2) + 1] + data[(/*DIST_RANCHOR2*/ 13) + 1]);
 
     var nx = (x2 - x1);
     var ny = (y2 - y1);
@@ -1182,8 +1190,8 @@ Physics2DDistanceConstraint.prototype._draw = function distanceDrawFn(debug) {
         var midX = (0.5 * (x1 + x2));
         var midY = (0.5 * (y1 + y2));
 
-        var jointMin = data[(5)];
-        var jointMax = data[(6)];
+        var jointMin = data[(/*DIST_JOINTMIN*/ 5)];
+        var jointMax = data[(/*DIST_JOINTMAX*/ 6)];
         var minX1 = (midX - (nx * (jointMin * 0.5)));
         var minY1 = (midY - (ny * (jointMin * 0.5)));
         var minX2 = (midX + (nx * (jointMin * 0.5)));
@@ -1231,18 +1239,18 @@ Physics2DAngleConstraint.prototype._draw = function angleDrawFn(debug) {
     var b1 = this.bodyA._data;
     var b2 = this.bodyB._data;
 
-    var ratio = data[(7)];
+    var ratio = data[(/*ANGLE_RATIO*/ 7)];
     this._drawForBody(debug, b1, b2, ratio, -1, colSA, colSB, colA);
     this._drawForBody(debug, b2, b1, (1 / ratio), (1 / ratio), colSA, colSB, colB);
 };
 
 Physics2DAngleConstraint.prototype._drawForBody = function _drawForBodyFn(debug, b1, b2, bodyScale, limitScale, colA, colB, col) {
     var data = this._data;
-    var jointMin = data[(5)];
-    var jointMax = data[(6)];
+    var jointMin = data[(/*ANGLE_JOINTMIN*/ 5)];
+    var jointMax = data[(/*ANGLE_JOINTMAX*/ 6)];
 
-    var min = (b2[(2) + 2] * bodyScale) + (jointMin * limitScale);
-    var max = (b2[(2) + 2] * bodyScale) + (jointMax * limitScale);
+    var min = (b2[(/*BODY_POS*/ 2) + 2] * bodyScale) + (jointMin * limitScale);
+    var max = (b2[(/*BODY_POS*/ 2) + 2] * bodyScale) + (jointMax * limitScale);
     if (min > max) {
         var tmp = min;
         min = max;
@@ -1254,9 +1262,9 @@ Physics2DAngleConstraint.prototype._drawForBody = function _drawForBodyFn(debug,
     var indicatorSize = (debug.constraintAnchorRadius * debug.screenToPhysics2D);
     var numCoils = debug.constraintSpiralNumCoils;
 
-    var x = b1[(2)];
-    var y = b1[(2) + 1];
-    var rot = b1[(2) + 2];
+    var x = b1[(/*BODY_POS*/ 2)];
+    var y = b1[(/*BODY_POS*/ 2) + 1];
+    var rot = b1[(/*BODY_POS*/ 2) + 2];
 
     var dr;
     if (rot > min) {
@@ -1287,10 +1295,10 @@ Physics2DWeldConstraint.prototype._draw = function weldDrawFn(debug) {
     var b1 = this.bodyA._data;
     var b2 = this.bodyB._data;
 
-    var x1 = (b1[(2)] + data[(9)]);
-    var y1 = (b1[(2) + 1] + data[(9) + 1]);
-    var x2 = (b2[(2)] + data[(11)]);
-    var y2 = (b2[(2) + 1] + data[(11) + 1]);
+    var x1 = (b1[(/*BODY_POS*/ 2)] + data[(/*WELD_RANCHOR1*/ 9)]);
+    var y1 = (b1[(/*BODY_POS*/ 2) + 1] + data[(/*WELD_RANCHOR1*/ 9) + 1]);
+    var x2 = (b2[(/*BODY_POS*/ 2)] + data[(/*WELD_RANCHOR2*/ 11)]);
+    var y2 = (b2[(/*BODY_POS*/ 2) + 1] + data[(/*WELD_RANCHOR2*/ 11) + 1]);
 
     var rad = (debug.constraintAnchorRadius * debug.screenToPhysics2D);
     debug._drawAnchor(x1, y1, rad, colA);
@@ -1311,20 +1319,20 @@ Physics2DWeldConstraint.prototype._draw = function weldDrawFn(debug) {
         var target, min;
 
         // angle indication on bodyA
-        min = b1[(2) + 2];
-        target = (b2[(2) + 2] - data[(13)]);
+        min = b1[(/*BODY_POS*/ 2) + 2];
+        target = (b2[(/*BODY_POS*/ 2) + 2] - data[(/*WELD_PHASE*/ 13)]);
 
         var colSA = (this.sleeping ? debug.constraintErrorSleepingColorA : debug.constraintErrorColorA);
         var colSB = (this.sleeping ? debug.constraintErrorSleepingColorB : debug.constraintErrorColorB);
 
-        debug.drawSpiralSpring(b1[(2)], b1[(2) + 1], min, target, minRadius, minRadius + ((target - min) * deltaRadius), numCoils, colSB);
-        debug._drawAngleIndicator(b1[(2)], b1[(2) + 1], min, minRadius, indicatorSize, colSA);
+        debug.drawSpiralSpring(b1[(/*BODY_POS*/ 2)], b1[(/*BODY_POS*/ 2) + 1], min, target, minRadius, minRadius + ((target - min) * deltaRadius), numCoils, colSB);
+        debug._drawAngleIndicator(b1[(/*BODY_POS*/ 2)], b1[(/*BODY_POS*/ 2) + 1], min, minRadius, indicatorSize, colSA);
 
-        min = b2[(2) + 2];
-        target = (data[(13)] + b1[(2) + 2]);
+        min = b2[(/*BODY_POS*/ 2) + 2];
+        target = (data[(/*WELD_PHASE*/ 13)] + b1[(/*BODY_POS*/ 2) + 2]);
 
-        debug.drawSpiralSpring(b2[(2)], b2[(2) + 1], min, target, minRadius, minRadius + ((target - min) * deltaRadius), numCoils, colSA);
-        debug._drawAngleIndicator(b2[(2)], b2[(2) + 1], min, minRadius, indicatorSize, colSB);
+        debug.drawSpiralSpring(b2[(/*BODY_POS*/ 2)], b2[(/*BODY_POS*/ 2) + 1], min, target, minRadius, minRadius + ((target - min) * deltaRadius), numCoils, colSA);
+        debug._drawAngleIndicator(b2[(/*BODY_POS*/ 2)], b2[(/*BODY_POS*/ 2) + 1], min, minRadius, indicatorSize, colSB);
     }
 };
 
@@ -1339,10 +1347,10 @@ Physics2DPointConstraint.prototype._draw = function pointDrawFn(debug) {
     var b1 = this.bodyA._data;
     var b2 = this.bodyB._data;
 
-    var x1 = (b1[(2)] + data[(9)]);
-    var y1 = (b1[(2) + 1] + data[(9) + 1]);
-    var x2 = (b2[(2)] + data[(11)]);
-    var y2 = (b2[(2) + 1] + data[(11) + 1]);
+    var x1 = (b1[(/*BODY_POS*/ 2)] + data[(/*POINT_RANCHOR1*/ 9)]);
+    var y1 = (b1[(/*BODY_POS*/ 2) + 1] + data[(/*POINT_RANCHOR1*/ 9) + 1]);
+    var x2 = (b2[(/*BODY_POS*/ 2)] + data[(/*POINT_RANCHOR2*/ 11)]);
+    var y2 = (b2[(/*BODY_POS*/ 2) + 1] + data[(/*POINT_RANCHOR2*/ 11) + 1]);
 
     var rad = (debug.constraintAnchorRadius * debug.screenToPhysics2D);
     debug._drawAnchor(x1, y1, rad, colA);

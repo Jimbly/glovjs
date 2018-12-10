@@ -1,16 +1,67 @@
+// Generated from assets/shaders/floor.cgfx
+var floor_cgfx = {
+    "version": 1,
+    "name": "floor.cgfx",
+    "parameters": {
+        "worldViewProjection": {
+            "type": "float",
+            "rows": 4,
+            "columns": 4
+        },
+        "color": {
+            "type": "float",
+            "columns": 4
+        },
+        "fadeToColor": {
+            "type": "float",
+            "columns": 4
+        }
+    },
+    "techniques": {
+        "floor": [
+            {
+                "parameters": ["worldViewProjection", "color", "fadeToColor"],
+                "semantics": ["ATTR0"],
+                "states": {
+                    "DepthTestEnable": true,
+                    "DepthFunc": 515,
+                    "DepthMask": false,
+                    "CullFaceEnable": false,
+                    "BlendEnable": false
+                },
+                "programs": ["vp_floor", "fp_floor"]
+            }
+        ]
+    },
+    "programs": {
+        "fp_floor": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;float _TMP0;float _TMP2;float _TMP10;uniform vec4 color;uniform vec4 fadeToColor;void main()\n{_TMP0=length(tz_TexCoord[0].xy);_TMP2=min(1.0,_TMP0);_TMP10=max(0.0,_TMP2);_ret_0=color+_TMP10*(fadeToColor-color);gl_FragColor=_ret_0;}"
+        },
+        "vp_floor": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _OUTPosition1;vec2 _OUTDistance1;uniform vec4 worldViewProjection[4];void main()\n{_OUTPosition1=ATTR0.xxxx*worldViewProjection[0]+ATTR0.yyyy*worldViewProjection[2]+worldViewProjection[3];_OUTDistance1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_OUTPosition1;}"
+        }
+    }
+};
+
 // Copyright (c) 2009-2014 Turbulenz Limited
 var Floor = (function () {
     function Floor() {
     }
-    Floor.create = // Constructor function
-    function (gd, md) {
+    // Constructor function
+    Floor.create = function (gd, md) {
         var f = new Floor();
 
         var technique = null;
         var primitive = gd.PRIMITIVE_LINES;
         var vertexFormats = [gd.VERTEXFORMAT_FLOAT2];
         var semantics = gd.createSemantics([gd.SEMANTIC_POSITION]);
-        var techniqueParameters = gd.createTechniqueParameters();
+        var techniqueParameters = gd.createTechniqueParameters({
+            worldViewProjection: md.m44BuildIdentity(),
+            color: md.v4BuildZero(),
+            fadeToColor: md.v4BuildZero()
+        });
 
         var maxValue = Number.MAX_VALUE;
         var abs = Math.abs;
@@ -70,7 +121,7 @@ var Floor = (function () {
             frustumMaxX = -maxValue;
             frustumMaxZ = -maxValue;
 
-            var frustumPoints = camera.getFrustumPoints(camera.farPlane, camera.nearPlane, (this)._frustumPoints);
+            var frustumPoints = camera.getFrustumPoints(camera.farPlane, camera.nearPlane, this._frustumPoints);
             intersect(frustumPoints[0], frustumPoints[4]);
             intersect(frustumPoints[1], frustumPoints[5]);
             intersect(frustumPoints[2], frustumPoints[6]);
@@ -80,8 +131,8 @@ var Floor = (function () {
             intersect(frustumPoints[4], frustumPoints[7]);
             intersect(frustumPoints[5], frustumPoints[6]);
 
-            if ((this).numLines > 0 && frustumMinX < frustumMaxX && frustumMinZ < frustumMaxZ) {
-                var halfNumLines = ((this).numLines / 2.0);
+            if (this.numLines > 0 && frustumMinX < frustumMaxX && frustumMinZ < frustumMaxZ) {
+                var halfNumLines = (this.numLines / 2.0);
                 var farPlane = camera.farPlane;
                 var metersPerLine = floor(floor(2.0 * farPlane) / floor(halfNumLines));
                 if (metersPerLine === 0.0) {
@@ -104,8 +155,9 @@ var Floor = (function () {
 
                 techniqueParameters.worldViewProjection = md.m44Build(worldRight, worldUp, worldAt, worldPos, techniqueParameters.worldViewProjection);
 
-                techniqueParameters.color = (this).color;
-                techniqueParameters.fadeToColor = (this).fadeToColor;
+                techniqueParameters.color = md.v4Copy(this.color, techniqueParameters.color);
+
+                techniqueParameters.fadeToColor = md.v4Copy(this.fadeToColor, techniqueParameters.fadeToColor);
 
                 gd.setTechnique(technique);
 
@@ -150,53 +202,8 @@ var Floor = (function () {
             }
         };
 
-        var shaderParameters = {
-            "version": 1,
-            "name": "floor.cgfx",
-            "parameters": {
-                "worldViewProjection": {
-                    "type": "float",
-                    "rows": 4,
-                    "columns": 4
-                },
-                "color": {
-                    "type": "float",
-                    "columns": 4
-                },
-                "fadeToColor": {
-                    "type": "float",
-                    "columns": 4
-                }
-            },
-            "techniques": {
-                "floor": [
-                    {
-                        "parameters": ["worldViewProjection", "color", "fadeToColor"],
-                        "semantics": ["POSITION"],
-                        "states": {
-                            "DepthTestEnable": true,
-                            "DepthFunc": 515,
-                            "DepthMask": false,
-                            "CullFaceEnable": false,
-                            "BlendEnable": false
-                        },
-                        "programs": ["vp_floor", "fp_floor"]
-                    }
-                ]
-            },
-            "programs": {
-                "fp_floor": {
-                    "type": "fragment",
-                    "code": "#ifdef GL_ES\nprecision mediump float;precision mediump int;\n#endif\nvec4 _ret_0;float _TMP11;float _a0012;float _TMP15;float _b0020;uniform vec4 color;uniform vec4 fadeToColor;varying vec4 tz_TexCoord[1];void main()\n{_a0012=dot(tz_TexCoord[0].xy,tz_TexCoord[0].xy);_TMP11=1.0/inversesqrt(_a0012);_b0020=min(1.0,_TMP11);_TMP15=max(0.0,_b0020);_ret_0=color+_TMP15*(fadeToColor-color);gl_FragColor=_ret_0;}"
-                },
-                "vp_floor": {
-                    "type": "vertex",
-                    "code": "#ifdef GL_ES\nprecision mediump float;precision mediump int;\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;\nvec4 _OUTPosition1;vec2 _OUTDistance1;uniform vec4 worldViewProjection[4];void main()\n{_OUTPosition1=ATTR0.xxxx*worldViewProjection[0]+ATTR0.yyyy*worldViewProjection[2]+worldViewProjection[3];_OUTDistance1=ATTR0.xy;tz_TexCoord[0].xy=ATTR0.xy;gl_Position=_OUTPosition1;}"
-                }
-            }
-        };
-
-        var shader = gd.createShader(shaderParameters);
+        // Generated from assets/shaders/floor.cgfx
+        var shader = gd.createShader(floor_cgfx);
         if (shader) {
             technique = shader.getTechnique(0);
             return f;

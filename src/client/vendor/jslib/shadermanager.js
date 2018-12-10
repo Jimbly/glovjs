@@ -1,7 +1,57 @@
+// Generated from assets/shaders/default.cgfx
+var default_cgfx = {
+    "version": 1,
+    "name": "default.cgfx",
+    "samplers": {
+        "diffuse": {
+            "MinFilter": 9985,
+            "MagFilter": 9729
+        }
+    },
+    "parameters": {
+        "worldViewProjection": {
+            "type": "float",
+            "rows": 4,
+            "columns": 4
+        },
+        "diffuse": {
+            "type": "sampler2D"
+        }
+    },
+    "techniques": {
+        "textured3D": [
+            {
+                "parameters": ["worldViewProjection", "diffuse"],
+                "semantics": ["ATTR0", "ATTR8"],
+                "states": {
+                    "DepthTestEnable": true,
+                    "DepthFunc": 515,
+                    "DepthMask": true,
+                    "CullFaceEnable": true,
+                    "CullFace": 1029,
+                    "BlendEnable": false
+                },
+                "programs": ["vp", "fp"]
+            }
+        ]
+    },
+    "programs": {
+        "fp": {
+            "type": "fragment",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];\nvec4 _ret_0;uniform sampler2D diffuse;void main()\n{_ret_0=texture2D(diffuse,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}"
+        },
+        "vp": {
+            "type": "vertex",
+            "code": "#ifdef GL_ES\n#define TZ_LOWP lowp\nprecision highp float;\nprecision highp int;\n#else\n#define TZ_LOWP\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nvec4 _OUTpos1;vec2 _OUTuv1;uniform vec4 worldViewProjection[4];void main()\n{_OUTpos1=ATTR0.xxxx*worldViewProjection[0]+ATTR0.yyyy*worldViewProjection[1]+ATTR0.zzzz*worldViewProjection[2]+worldViewProjection[3];_OUTuv1=ATTR8.xy;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=_OUTpos1;}"
+        }
+    }
+};
+
 // Copyright (c) 2009-2014 Turbulenz Limited
 /*global Observer: false*/
 /*global TurbulenzEngine: false*/
 "use strict";
+
 //
 // ShaderManager
 //
@@ -13,20 +63,22 @@ var ShaderManager = (function () {
         return null;
     };
 
-    ShaderManager.create = /**
+    /**
     @constructs Constructs a ShaderManager object.
-
+    
     @param {GraphicsDevice} gd Graphics device
     @param {RequestHandler} rh RequestHandler device
     @param {Shader} ds Default shader
     @param {Element} log Logging element
-
+    
     @return {ShaderManager} object, null if failed
     */
-    function (gd, rh, ds, errorCallback, log) {
+    ShaderManager.create = function (gd, rh, ds, errorCallback, log) {
         if (!errorCallback) {
-            errorCallback = function (/* e */ ) {
+            /* tslint:disable:no-empty */
+            errorCallback = function () {
             };
+            /* tslint:enable:no-empty */
         }
 
         var defaultShaderName = "default";
@@ -35,49 +87,8 @@ var ShaderManager = (function () {
         if (ds) {
             defaultShader = ds;
         } else {
-            var shaderParams = {
-                "version": 1,
-                "name": "default.cgfx",
-                "parameters": {
-                    "worldViewProjection": {
-                        "type": "float",
-                        "rows": 4,
-                        "columns": 4
-                    },
-                    "diffuse": {
-                        "type": "sampler2D"
-                    }
-                },
-                "techniques": {
-                    "textured3D": [
-                        {
-                            "parameters": ["worldViewProjection", "diffuse"],
-                            "semantics": ["POSITION", "TEXCOORD0"],
-                            "states": {
-                                "DepthTestEnable": true,
-                                "DepthFunc": 515,
-                                "DepthMask": true,
-                                "CullFaceEnable": true,
-                                "CullFace": 1029,
-                                "BlendEnable": false
-                            },
-                            "programs": ["vp", "fp"]
-                        }
-                    ]
-                },
-                "programs": {
-                    "fp": {
-                        "type": "fragment",
-                        "code": "#ifdef GL_ES\nprecision mediump float;precision mediump int;\n#endif\nvarying vec4 tz_TexCoord[1];vec4 _ret_0;uniform sampler2D diffuse;void main()\n{_ret_0=texture2D(diffuse,tz_TexCoord[0].xy);gl_FragColor=_ret_0;}"
-                    },
-                    "vp": {
-                        "type": "vertex",
-                        "code": "#ifdef GL_ES\nprecision mediump float;precision mediump int;\n#endif\nvarying vec4 tz_TexCoord[1];attribute vec4 ATTR0;attribute vec4 ATTR8;\nvec4 _OUTpos1;vec2 _OUTuv1;uniform vec4 worldViewProjection[4];void main()\n{_OUTpos1=ATTR0.xxxx*worldViewProjection[0]+ATTR0.yyyy*worldViewProjection[1]+ATTR0.zzzz*worldViewProjection[2]+worldViewProjection[3];_OUTuv1=ATTR8.xy;tz_TexCoord[0].xy=ATTR8.xy;gl_Position=_OUTpos1;}"
-                    }
-                }
-            };
-
-            defaultShader = gd.createShader(shaderParams);
+            // Generates from assets/shaders/default.cgfx
+            defaultShader = gd.createShader(default_cgfx);
             if (!defaultShader) {
                 errorCallback("Default shader not created.");
             }
@@ -140,14 +151,14 @@ var ShaderManager = (function () {
 
         /**
         Creates shader from an cgfx file
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name load
-
+        
         @param {string} path Path to the cgfx file
-
+        
         @return {Shader} object, returns the default shader if the file at given path is not yet loaded
         */
         var loadShader = function loadShaderFn(path, onShaderLoaded) {
@@ -166,30 +177,39 @@ var ShaderManager = (function () {
                         observer.subscribe(onShaderLoaded);
                     }
 
-                    var shaderLoaded = function shaderLoadedFn(shaderText/*, status, callContext */ ) {
+                    var shaderLoaded = function shaderLoadedFn(shaderText /*, status, callContext */ ) {
+                        function shaderCreated(shader) {
+                            if (shader) {
+                                shaders[path] = shader;
+                            } else {
+                                delete shaders[path];
+                            }
+
+                            delete loadingShader[path];
+                            delete loadedObservers[path];
+                            numLoadingShaders -= 1;
+
+                            observer.notify(shader);
+                        }
+
                         if (shaderText) {
                             var shaderParameters = JSON.parse(shaderText);
                             if (doPreprocess) {
                                 preprocessShader(shaderParameters);
                             }
-                            var s = gd.createShader(shaderParameters);
-                            if (s) {
-                                shaders[path] = s;
-                            } else {
-                                delete shaders[path];
-                            }
 
-                            observer.notify(s);
-                            delete loadedObservers[path];
+                            gd.createShader(shaderParameters, shaderCreated);
                         } else {
                             if (log) {
                                 log.innerHTML += "ShaderManager.load:&nbsp;'" + path + "' failed to load<br>";
                             }
                             delete shaders[path];
-                        }
-                        delete loadingShader[path];
+                            delete loadingShader[path];
+                            delete loadedObservers[path];
+                            numLoadingShaders -= 1;
 
-                        numLoadingShaders -= 1;
+                            observer.notify(null);
+                        }
                     };
 
                     rh.request({
@@ -213,12 +233,12 @@ var ShaderManager = (function () {
 
         /**
         Alias one shader to another name
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name map
-
+        
         @param {string} dst Name of the alias
         @param {string} src Name of the shader to be aliased
         */
@@ -228,15 +248,16 @@ var ShaderManager = (function () {
 
         /**
         Get shader created from a given shader file or with the given name
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name get
-
+        
         @param {string} path Path or name of the shader
-
-        @return {Shader} object, returns the default shader if the shader is not yet loaded or the shader file didn't exist
+        
+        @return {Shader} object, returns the default shader if the shader is not yet loaded or
+        the shader file didn't exist
         */
         var getShader = function getShaderFn(path) {
             var shader = shaders[path];
@@ -248,12 +269,12 @@ var ShaderManager = (function () {
 
         /**
         Removes a shader from the manager
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name remove
-
+        
         @param {string} path Path or name of the shader
         */
         var removeShader = function removeShaderFn(path) {
@@ -264,12 +285,12 @@ var ShaderManager = (function () {
 
         /**
         Reloads a shader
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name reload
-
+        
         @param {string} path Path or name of the shader
         */
         var reloadShader = function reloadShaderFn(path, callback) {
@@ -314,7 +335,7 @@ var ShaderManager = (function () {
 
         /**
         Reloads all shaders
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
@@ -330,12 +351,12 @@ var ShaderManager = (function () {
 
         /**
         Get object containing all loaded shaders
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name getAll
-
+        
         @return {object}
         */
         sm.getAll = function getAllShadersFn() {
@@ -344,12 +365,12 @@ var ShaderManager = (function () {
 
         /**
         Get number of shaders pending
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name getNumLoadingShaders
-
+        
         @return {number}
         */
         sm.getNumPendingShaders = function getNumPendingShadersFn() {
@@ -358,14 +379,14 @@ var ShaderManager = (function () {
 
         /**
         Check if a shader is not pending
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name isShaderLoaded
-
+        
         @param {string} path Path or name of the shader
-
+        
         @return {boolean}
         */
         sm.isShaderLoaded = function isShaderLoadedFn(path) {
@@ -374,14 +395,14 @@ var ShaderManager = (function () {
 
         /**
         Check if a shader is missing
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name isShaderMissing
-
+        
         @param {string} path Path or name of the shader
-
+        
         @return {boolean}
         */
         sm.isShaderMissing = function isShaderMissingFn(path) {
@@ -390,12 +411,12 @@ var ShaderManager = (function () {
 
         /**
         Set path remapping dictionary
-
+        
         @memberOf ShaderManager.prototype
         @public
         @function
         @name setPathRemapping
-
+        
         @param {string} prm Path remapping dictionary
         @param {string} assetUrl Asset prefix for all assets loaded
         */

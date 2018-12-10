@@ -16,8 +16,8 @@ var SpatialGridNode = (function () {
         this.externalNode = undefined;
     };
 
-    SpatialGridNode.create = // Constructor function
-    function (extents, cellExtents, id, externalNode) {
+    // Constructor function
+    SpatialGridNode.create = function (extents, cellExtents, id, externalNode) {
         return new SpatialGridNode(extents, cellExtents, id, externalNode);
     };
     SpatialGridNode.version = 1;
@@ -51,6 +51,22 @@ var SpatialGrid = (function () {
         this.queryIndex = -1;
         this.queryRowPlanes = [];
         this.queryCellPlanes = [];
+
+        this.cellsPool = [];
+
+        if ((this.numCellsX * this.numCellsZ) <= 65536) {
+            if (typeof Uint16Array !== "undefined") {
+                this.intArrayConstructor = Uint16Array;
+            } else {
+                this.intArrayConstructor = Array;
+            }
+        } else {
+            if (typeof Int32Array !== "undefined") {
+                this.intArrayConstructor = Int32Array;
+            } else {
+                this.intArrayConstructor = Array;
+            }
+        }
     }
     SpatialGrid.prototype.add = function (externalNode, extents) {
         var numNodes = this.numNodes;
@@ -116,6 +132,7 @@ var SpatialGrid = (function () {
         /* tslint:disable:no-string-literal */
         var index = externalNode['spatialIndex'];
 
+        /* tslint:enable:no-string-literal */
         if (index !== undefined) {
             var cellSize = this.cellSize;
             var numCellsX = this.numCellsX;
@@ -205,9 +222,11 @@ var SpatialGrid = (function () {
                                         if (n < numNodes) {
                                             cell[n] = cell[numNodes];
                                         }
-                                        cell.length = numNodes;
                                         if (0 === numNodes) {
                                             cells[ci] = undefined;
+                                            this._releaseCell(cell);
+                                        } else {
+                                            cell.length = numNodes;
                                         }
                                         break;
                                     }
@@ -217,7 +236,7 @@ var SpatialGrid = (function () {
                             debug.assert(!oldCell, "Node missing from cell.");
 
                             if (newCell) {
-                                cells[ci] = [node];
+                                cells[ci] = this._allocateCell(node);
                             }
                         }
 
@@ -281,7 +300,7 @@ var SpatialGrid = (function () {
                 if (cell) {
                     cell.push(node);
                 } else {
-                    cells[ci] = [node];
+                    cells[ci] = this._allocateCell(node);
                 }
                 ci += 1;
             } while(ci <= ce);
@@ -307,9 +326,11 @@ var SpatialGrid = (function () {
                         if (n < numNodes) {
                             cell[n] = cell[numNodes];
                         }
-                        cell.length = numNodes;
                         if (0 === numNodes) {
                             cells[ci] = undefined;
+                            this._releaseCell(cell);
+                        } else {
+                            cell.length = numNodes;
                         }
                         found = true;
                         break;
@@ -321,6 +342,30 @@ var SpatialGrid = (function () {
 
             minRow += numCellsX;
         } while(minRow <= maxRow);
+    };
+
+    SpatialGrid.prototype._allocateCell = function (node) {
+        var cell;
+        var cellsPool = this.cellsPool;
+        if (cellsPool.length === 0) {
+            cell = [node];
+        } else {
+            cell = cellsPool.pop();
+            cell[0] = node;
+        }
+        return cell;
+    };
+
+    SpatialGrid.prototype._releaseCell = function (cell) {
+        debug.assert(cell.length === 1);
+        var cellsPool = this.cellsPool;
+        if (cellsPool.length < 32) {
+            cell[0] = null;
+            cellsPool.push(cell);
+        } else {
+            cell.length = 0;
+            cellsPool.length = 16;
+        }
     };
 
     /* tslint:disable:no-empty */
@@ -492,18 +537,14 @@ var SpatialGrid = (function () {
             var cells = this.cells;
             var numCells = cells.length;
             var pairsMap = {};
-            var c, i, j, nodeI, nodeJ, extents, pairIdBase, pairId;
+            var c, i, j, nodeI, idI, nodeJ, idJ, extents, pairId;
             for (c = 0; c < numCells; c += 1) {
                 var cell = cells[c];
                 if (cell) {
                     var numNodes = (cell.length - 1);
                     for (i = 0; i < numNodes; i += 1) {
                         nodeI = cell[i];
-
-                        /* tslint:disable:no-bitwise */
-                        pairIdBase = (nodeI.id << 16);
-
-                        /* tslint:enable:no-bitwise */
+                        idI = nodeI.id;
                         extents = nodeI.extents;
                         var minX = extents[0];
                         var minY = extents[1];
@@ -511,12 +552,18 @@ var SpatialGrid = (function () {
                         var maxX = extents[3];
                         var maxY = extents[4];
                         var maxZ = extents[5];
-                        for (j = (i + 1); j < numNodes; j += 1) {
+                        for (j = numNodes; i < j; j -= 1) {
                             nodeJ = cell[j];
+                            idJ = nodeJ.id;
 
                             /* tslint:disable:no-bitwise */
-                            pairId = (pairIdBase | nodeJ.id);
+                            if (idI < idJ) {
+                                pairId = ((idJ << 16) | idI);
+                            } else {
+                                pairId = ((idI << 16) | idJ);
+                            }
 
+                            /* tslint:enable:no-bitwise */
                             if (!pairsMap[pairId]) {
                                 extents = nodeJ.extents;
                                 if (minX <= extents[3] && minY <= extents[4] && minZ <= extents[5] && maxX >= extents[0] && maxY >= extents[1] && maxZ >= extents[2]) {
@@ -536,162 +583,260 @@ var SpatialGrid = (function () {
     };
 
     SpatialGrid.prototype.getVisibleNodes = function (planes, visibleNodes, startIndex) {
-        var numVisibleNodes = 0;
-        if (0 < this.numNodes) {
-            var numPlanes = planes.length;
-            var storageIndex = (startIndex === undefined) ? visibleNodes.length : startIndex;
-            var cells = this.cells;
-            var cellSize = this.cellSize;
-            var numCellsX = this.numCellsX;
-            var numCellsZ = this.numCellsZ;
-            var gridExtents = this.extents;
-            var minGridX = gridExtents[0];
-            var minGridY = gridExtents[1];
-            var minGridZ = gridExtents[2];
-            var maxGridX = gridExtents[3];
-            var maxGridY = gridExtents[4];
+        if (this.numNodes === 0) {
+            return 0;
+        }
 
-            //var maxGridZ = gridExtents[5];
-            var queryIndex = (this.queryIndex + 1);
-            this.queryIndex = queryIndex;
+        var cellSize = this.cellSize;
+        var gridExtents = this.extents;
+        var minGridX = gridExtents[0];
+        var minGridY = gridExtents[1];
+        var minGridZ = gridExtents[2];
+        var maxGridX = gridExtents[3];
+        var maxGridY = gridExtents[4];
+        var maxGridZ = gridExtents[5];
 
-            var queryRowPlanes = this.queryRowPlanes;
-            var queryCellPlanes = this.queryCellPlanes;
-            var numQueryRowPlanes = 0;
-            var numQueryCellPlanes = 0;
+        // clamp grid extents to planes
+        var abs = Math.abs;
+        var numPlanes = planes.length;
+        var n, isInside, plane, d0, d1, d2;
+        var invCellVolume = 1.0 / (cellSize * cellSize * cellSize);
+        var lastVolume = Math.floor((maxGridX - minGridX) * (maxGridY - minGridY) * (maxGridZ - minGridZ) * invCellVolume);
+        while (true) {
+            var extentsUpdated = false;
 
-            var isInside, n, plane, d0, d1, d2;
-            var i, j, k;
-            var minRowZ = minGridZ;
-            var maxRowZ = (minGridZ + cellSize);
-            for (j = 0; j < numCellsZ; j += 1) {
-                // Check if row is visible
-                isInside = true;
-                n = 0;
-                do {
-                    plane = planes[n];
-                    d0 = plane[0];
-                    d1 = plane[1];
-                    d2 = plane[2];
-                    if ((d0 * (d0 < 0 ? minGridX : maxGridX) + d1 * (d1 < 0 ? minGridY : maxGridY) + d2 * (d2 < 0 ? minRowZ : maxRowZ)) < plane[3]) {
-                        isInside = false;
-                        break;
+            n = 0;
+            do {
+                plane = planes[n];
+                d0 = plane[0];
+                d1 = plane[1];
+                d2 = plane[2];
+                var maxDistance = (d0 * (d0 < 0 ? minGridX : maxGridX) + d1 * (d1 < 0 ? minGridY : maxGridY) + d2 * (d2 < 0 ? minGridZ : maxGridZ) - plane[3]);
+                if (maxDistance < 0.0001) {
+                    return 0;
+                } else {
+                    if (maxDistance < abs(d0) * (maxGridX - minGridX)) {
+                        if (d0 < 0) {
+                            maxGridX = minGridX - (maxDistance / d0);
+                        } else {
+                            minGridX = maxGridX - (maxDistance / d0);
+                        }
+                        extentsUpdated = true;
                     }
-                    n += 1;
-                } while(n < numPlanes);
+                    if (maxDistance < abs(d1) * (maxGridY - minGridY)) {
+                        if (d1 < 0) {
+                            maxGridY = minGridY - (maxDistance / d1);
+                        } else {
+                            minGridY = maxGridY - (maxDistance / d1);
+                        }
+                        extentsUpdated = true;
+                    }
+                    if (maxDistance < abs(d2) * (maxGridZ - minGridZ)) {
+                        if (d2 < 0) {
+                            maxGridZ = minGridZ - (maxDistance / d2);
+                        } else {
+                            minGridZ = maxGridZ - (maxDistance / d2);
+                        }
+                        extentsUpdated = true;
+                    }
+                }
+                n += 1;
+            } while(n < numPlanes);
 
-                if (isInside) {
-                    // Remove those planes on which the row is fully inside
-                    numQueryRowPlanes = 0;
-                    n = 0;
-                    do {
-                        plane = planes[n];
+            if (extentsUpdated) {
+                var currentVolume = Math.floor((maxGridX - minGridX) * (maxGridY - minGridY) * (maxGridZ - minGridZ) * invCellVolume);
+                if (currentVolume < lastVolume) {
+                    lastVolume = currentVolume;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        var minX = Math.floor((minGridX - gridExtents[0]) / cellSize);
+        var minZ = Math.floor((minGridZ - gridExtents[2]) / cellSize);
+        var maxX = Math.ceil((maxGridX - gridExtents[0]) / cellSize);
+        var maxZ = Math.ceil((maxGridZ - gridExtents[2]) / cellSize);
+
+        // We use brute force when the number of cell checks is bigger than the number of nodes
+        if (this.numNodes < ((maxZ - minZ) * (maxX - minX))) {
+            return this._getVisibleNodesBruteForce(planes, visibleNodes, startIndex);
+        }
+
+        minGridX = ((minX * cellSize) + gridExtents[0]);
+        minGridZ = ((minZ * cellSize) + gridExtents[2]);
+
+        var numVisibleNodes = 0;
+        var storageIndex = (startIndex === undefined) ? visibleNodes.length : startIndex;
+        var cells = this.cells;
+        var numCellsX = this.numCellsX;
+
+        //var numCellsZ = this.numCellsZ;
+        var queryIndex = (this.queryIndex + 1);
+        this.queryIndex = queryIndex;
+
+        var queryRowPlanes = this.queryRowPlanes;
+        var queryCellPlanes = this.queryCellPlanes;
+        var numQueryRowPlanes = 0;
+        var numQueryCellPlanes = 0;
+
+        var i, j, k;
+        var minRowZ = minGridZ;
+        var maxRowZ = (minGridZ + cellSize);
+        for (j = minZ; j < maxZ; j += 1) {
+            // Remove those planes on which the row is fully inside
+            numQueryRowPlanes = 0;
+            n = 0;
+            do {
+                plane = planes[n];
+                d0 = plane[0];
+                d1 = plane[1];
+                d2 = plane[2];
+                if ((d0 * (d0 > 0 ? minGridX : maxGridX) + d1 * (d1 > 0 ? minGridY : maxGridY) + d2 * (d2 > 0 ? minRowZ : maxRowZ)) < plane[3]) {
+                    queryRowPlanes[numQueryRowPlanes] = plane;
+                    numQueryRowPlanes += 1;
+                }
+                n += 1;
+            } while(n < numPlanes);
+
+            var minCellX = minGridX;
+            var maxCellX = (minGridX + cellSize);
+            var cellIndex = ((j * numCellsX) + minX);
+            for (i = minX; i < maxX; i += 1, cellIndex += 1) {
+                var cell = cells[cellIndex];
+                if (cell) {
+                    // check if cell is visible
+                    isInside = true;
+                    for (n = 0; n < numQueryRowPlanes; n += 1) {
+                        plane = queryRowPlanes[n];
                         d0 = plane[0];
                         d1 = plane[1];
                         d2 = plane[2];
-                        if ((d0 * (d0 > 0 ? minGridX : maxGridX) + d1 * (d1 > 0 ? minGridY : maxGridY) + d2 * (d2 > 0 ? minRowZ : maxRowZ)) < plane[3]) {
-                            queryRowPlanes[numQueryRowPlanes] = plane;
-                            numQueryRowPlanes += 1;
+                        if ((d0 * (d0 < 0 ? minCellX : maxCellX) + d1 * (d1 < 0 ? minGridY : maxGridY) + d2 * (d2 < 0 ? minRowZ : maxRowZ)) < plane[3]) {
+                            isInside = false;
+                            break;
                         }
-                        n += 1;
-                    } while(n < numPlanes);
+                    }
 
-                    var minCellX = minGridX;
-                    var maxCellX = (minGridX + cellSize);
-                    var cellIndex = (j * numCellsX);
-                    for (i = 0; i < numCellsX; i += 1, cellIndex += 1) {
-                        var cell = cells[cellIndex];
-                        if (cell) {
-                            // check if cell is visible
-                            isInside = true;
-                            for (n = 0; n < numQueryRowPlanes; n += 1) {
-                                plane = queryRowPlanes[n];
-                                d0 = plane[0];
-                                d1 = plane[1];
-                                d2 = plane[2];
-                                if ((d0 * (d0 < 0 ? minCellX : maxCellX) + d1 * (d1 < 0 ? minGridY : maxGridY) + d2 * (d2 < 0 ? minRowZ : maxRowZ)) < plane[3]) {
-                                    isInside = false;
-                                    break;
+                    if (isInside) {
+                        var numNodes = cell.length;
+
+                        // Remove those planes on which the cell is fully inside
+                        numQueryCellPlanes = 0;
+                        for (n = 0; n < numQueryRowPlanes; n += 1) {
+                            plane = queryRowPlanes[n];
+                            d0 = plane[0];
+                            d1 = plane[1];
+                            d2 = plane[2];
+                            if ((d0 * (d0 > 0 ? minCellX : maxCellX) + d1 * (d1 > 0 ? minGridY : maxGridY) + d2 * (d2 > 0 ? minRowZ : maxRowZ)) < plane[3]) {
+                                queryCellPlanes[numQueryCellPlanes] = plane;
+                                numQueryCellPlanes += 1;
+                            }
+                        }
+
+                        var node;
+                        if (numQueryCellPlanes === 0) {
+                            for (k = 0; k < numNodes; k += 1) {
+                                // check if node is visible
+                                node = cell[k];
+                                if (node.queryIndex !== queryIndex) {
+                                    node.queryIndex = queryIndex;
+                                    visibleNodes[storageIndex] = node.externalNode;
+                                    storageIndex += 1;
+                                    numVisibleNodes += 1;
                                 }
                             }
+                        } else {
+                            for (k = 0; k < numNodes; k += 1) {
+                                // check if node is visible
+                                node = cell[k];
+                                if (node.queryIndex !== queryIndex) {
+                                    node.queryIndex = queryIndex;
 
-                            if (isInside) {
-                                var numNodes = cell.length;
+                                    var extents = node.extents;
+                                    var n0 = extents[0];
+                                    var n1 = extents[1];
+                                    var n2 = extents[2];
+                                    var p0 = extents[3];
+                                    var p1 = extents[4];
+                                    var p2 = extents[5];
 
-                                // Remove those planes on which the cell is fully inside
-                                numQueryCellPlanes = 0;
-                                for (n = 0; n < numQueryRowPlanes; n += 1) {
-                                    plane = queryRowPlanes[n];
-                                    d0 = plane[0];
-                                    d1 = plane[1];
-                                    d2 = plane[2];
-                                    if ((d0 * (d0 > 0 ? minCellX : maxCellX) + d1 * (d1 > 0 ? minGridY : maxGridY) + d2 * (d2 > 0 ? minRowZ : maxRowZ)) < plane[3]) {
-                                        queryCellPlanes[numQueryCellPlanes] = plane;
-                                        numQueryCellPlanes += 1;
-                                    }
-                                }
-
-                                var node;
-                                if (numQueryCellPlanes === 0) {
-                                    for (k = 0; k < numNodes; k += 1) {
-                                        // check if node is visible
-                                        node = cell[k];
-                                        if (node.queryIndex !== queryIndex) {
-                                            node.queryIndex = queryIndex;
-                                            visibleNodes[storageIndex] = node.externalNode;
-                                            storageIndex += 1;
-                                            numVisibleNodes += 1;
+                                    isInside = true;
+                                    n = 0;
+                                    do {
+                                        plane = queryCellPlanes[n];
+                                        d0 = plane[0];
+                                        d1 = plane[1];
+                                        d2 = plane[2];
+                                        if ((d0 * (d0 < 0 ? n0 : p0) + d1 * (d1 < 0 ? n1 : p1) + d2 * (d2 < 0 ? n2 : p2)) < plane[3]) {
+                                            isInside = false;
+                                            break;
                                         }
-                                    }
-                                } else {
-                                    for (k = 0; k < numNodes; k += 1) {
-                                        // check if node is visible
-                                        node = cell[k];
-                                        if (node.queryIndex !== queryIndex) {
-                                            node.queryIndex = queryIndex;
+                                        n += 1;
+                                    } while(n < numQueryCellPlanes);
 
-                                            var extents = node.extents;
-                                            var n0 = extents[0];
-                                            var n1 = extents[1];
-                                            var n2 = extents[2];
-                                            var p0 = extents[3];
-                                            var p1 = extents[4];
-                                            var p2 = extents[5];
-
-                                            isInside = true;
-                                            n = 0;
-                                            do {
-                                                plane = queryCellPlanes[n];
-                                                d0 = plane[0];
-                                                d1 = plane[1];
-                                                d2 = plane[2];
-                                                if ((d0 * (d0 < 0 ? n0 : p0) + d1 * (d1 < 0 ? n1 : p1) + d2 * (d2 < 0 ? n2 : p2)) < plane[3]) {
-                                                    isInside = false;
-                                                    break;
-                                                }
-                                                n += 1;
-                                            } while(n < numQueryCellPlanes);
-
-                                            if (isInside) {
-                                                visibleNodes[storageIndex] = node.externalNode;
-                                                storageIndex += 1;
-                                                numVisibleNodes += 1;
-                                            }
-                                        }
+                                    if (isInside) {
+                                        visibleNodes[storageIndex] = node.externalNode;
+                                        storageIndex += 1;
+                                        numVisibleNodes += 1;
                                     }
                                 }
                             }
                         }
-
-                        minCellX = maxCellX;
-                        maxCellX += cellSize;
                     }
                 }
 
-                minRowZ = maxRowZ;
-                maxRowZ += cellSize;
+                minCellX = maxCellX;
+                maxCellX += cellSize;
+            }
+
+            minRowZ = maxRowZ;
+            maxRowZ += cellSize;
+        }
+
+        return numVisibleNodes;
+    };
+
+    SpatialGrid.prototype._getVisibleNodesBruteForce = function (planes, visibleNodes, startIndex) {
+        var numVisibleNodes = 0;
+        var numPlanes = planes.length;
+        var storageIndex = (startIndex === undefined) ? visibleNodes.length : startIndex;
+        var nodes = this.nodes;
+        var numNodes = this.numNodes;
+        var n, p, plane, isInside, d0, d1, d2;
+        for (n = 0; n < numNodes; n += 1) {
+            var node = nodes[n];
+            var extents = node.extents;
+            var n0 = extents[0];
+            var n1 = extents[1];
+            var n2 = extents[2];
+            var p0 = extents[3];
+            var p1 = extents[4];
+            var p2 = extents[5];
+
+            isInside = true;
+            p = 0;
+            do {
+                plane = planes[p];
+                d0 = plane[0];
+                d1 = plane[1];
+                d2 = plane[2];
+                if ((d0 * (d0 < 0 ? n0 : p0) + d1 * (d1 < 0 ? n1 : p1) + d2 * (d2 < 0 ? n2 : p2)) < plane[3]) {
+                    isInside = false;
+                    break;
+                }
+                p += 1;
+            } while(p < numPlanes);
+
+            if (isInside) {
+                visibleNodes[storageIndex] = node.externalNode;
+                storageIndex += 1;
+                numVisibleNodes += 1;
             }
         }
+
         return numVisibleNodes;
     };
 
@@ -729,13 +874,9 @@ var SpatialGrid = (function () {
 ;
 
 // Detect correct typed arrays
-((function () {
+(function () {
     SpatialGrid.prototype.floatArrayConstructor = Array;
-    SpatialGrid.prototype.intArrayConstructor = Array;
     if (typeof Float32Array !== "undefined") {
         SpatialGrid.prototype.floatArrayConstructor = Float32Array;
     }
-    if (typeof Int32Array !== "undefined") {
-        SpatialGrid.prototype.intArrayConstructor = Int32Array;
-    }
-})());
+}());

@@ -10,9 +10,11 @@ var SimpleRendering = (function () {
     function SimpleRendering() {
     }
     // Methods
+    /* tslint:disable:no-empty */
     SimpleRendering.prototype.updateShader = function (sm) {
     };
 
+    /* tslint:enable:no-empty */
     SimpleRendering.prototype.sortRenderablesAndLights = function (camera, scene) {
         var index;
         var passes = this.passes;
@@ -29,7 +31,7 @@ var SimpleRendering = (function () {
         var visibleRenderables = scene.getCurrentVisibleRenderables();
         var numVisibleRenderables = visibleRenderables.length;
         if (numVisibleRenderables > 0) {
-            var renderable, meta, pass, passIndex;
+            var renderable, pass, passIndex;
             var transparent = SimpleRendering.passIndex.transparent;
             var n = 0;
             do {
@@ -78,7 +80,11 @@ var SimpleRendering = (function () {
         } else {
             this.eyePositionUpdated = false;
         }
+
+        /* tslint:disable:no-string-literal */
         this.globalTechniqueParameters['time'] = currentTime;
+
+        /* tslint:enable:no-string-literal */
         this.camera = camera;
         this.scene = scene;
     };
@@ -134,15 +140,21 @@ var SimpleRendering = (function () {
     };
 
     SimpleRendering.prototype.setGlobalLightColor = function (color) {
+        /* tslint:disable:no-string-literal */
         this.globalTechniqueParameters['lightColor'] = color;
+        /* tslint:enable:no-string-literal */
     };
 
     SimpleRendering.prototype.setAmbientColor = function (color) {
+        /* tslint:disable:no-string-literal */
         this.globalTechniqueParameters['ambientColor'] = color;
+        /* tslint:enable:no-string-literal */
     };
 
     SimpleRendering.prototype.setDefaultTexture = function (tex) {
+        /* tslint:disable:no-string-literal */
         this.globalTechniqueParameters['diffuse'] = tex;
+        /* tslint:enable:no-string-literal */
     };
 
     SimpleRendering.prototype.setWireframe = function (wireframeEnabled, wireframeInfo) {
@@ -161,10 +173,10 @@ var SimpleRendering = (function () {
         delete this.passes;
     };
 
-    SimpleRendering.simplePrepare = //
+    //
     // simplePrepare
     //
-    function (geometryInstance) {
+    SimpleRendering.simplePrepare = function (geometryInstance) {
         var drawParameters = TurbulenzEngine.getGraphicsDevice().createDrawParameters();
         drawParameters.userData = {};
         geometryInstance.drawParameters = [drawParameters];
@@ -173,7 +185,7 @@ var SimpleRendering = (function () {
         var sharedMaterial = geometryInstance.sharedMaterial;
 
         // TODO:
-        drawParameters.technique = (this).technique;
+        drawParameters.technique = this.technique;
 
         drawParameters.setTechniqueParameters(0, sharedMaterial.techniqueParameters);
         drawParameters.setTechniqueParameters(1, geometryInstance.techniqueParameters);
@@ -187,7 +199,7 @@ var SimpleRendering = (function () {
         }
 
         // TODO: any cast
-        drawParameters.sortKey = renderingCommonSortKeyFn((this).techniqueIndex, sharedMaterial.meta.materialIndex);
+        drawParameters.sortKey = renderingCommonSortKeyFn(this.techniqueIndex, sharedMaterial.meta.materialIndex);
 
         if (!geometryInstance.sharedMaterial.techniqueParameters.materialColor && !geometryInstance.techniqueParameters.materialColor) {
             geometryInstance.sharedMaterial.techniqueParameters.materialColor = SimpleRendering.v4One;
@@ -198,13 +210,13 @@ var SimpleRendering = (function () {
         }
 
         // TODO: any cast
-        geometryInstance.renderUpdate = (this).update;
+        geometryInstance.renderUpdate = this.update;
     };
 
-    SimpleRendering.create = //
+    //
     // Constructor function
     //
-    function (gd, md, shaderManager, effectsManager) {
+    SimpleRendering.create = function (gd, md, shaderManager, effectsManager) {
         var dr = new SimpleRendering();
 
         dr.md = md;
@@ -317,80 +329,80 @@ var SimpleRendering = (function () {
         };
 
         var simpleDebugNormalsUpdate = function simpleDebugNormalsUpdateFn(camera) {
-            var techniqueParameters = this.techniqueParameters;
+            var tp = this.techniqueParameters;
             var node = this.node;
             var matrix = node.world;
             var worldUpdate = node.worldUpdate;
 
-            techniqueParameters.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, techniqueParameters.worldViewProjection);
+            tp.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, tp.worldViewProjection);
             if (this.techniqueParametersUpdated !== worldUpdate) {
                 this.techniqueParametersUpdated = worldUpdate;
-                techniqueParameters.worldInverseTranspose = md.m33InverseTranspose(matrix, techniqueParameters.worldInverseTranspose);
+                tp.worldInverseTranspose = md.m33InverseTranspose(matrix, tp.worldInverseTranspose);
             }
         };
 
         var simpleDebugNormalsSkinnedUpdate = function simpleDebugNormalsSkinnedUpdateFn(camera) {
-            var techniqueParameters = this.techniqueParameters;
+            var tp = this.techniqueParameters;
             var node = this.node;
             var matrix = node.world;
             var worldUpdate = node.worldUpdate;
 
-            techniqueParameters.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, techniqueParameters.worldViewProjection);
+            tp.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, tp.worldViewProjection);
             if (this.techniqueParametersUpdated !== worldUpdate) {
                 this.techniqueParametersUpdated = worldUpdate;
-                techniqueParameters.worldInverseTranspose = md.m33InverseTranspose(matrix, techniqueParameters.worldInverseTranspose);
+                tp.worldInverseTranspose = md.m33InverseTranspose(matrix, tp.worldInverseTranspose);
             }
             var skinController = this.skinController;
             if (skinController) {
-                techniqueParameters.skinBones = skinController.output;
+                tp.skinBones = skinController.output;
                 skinController.update();
             }
         };
 
         var simpleEnvUpdate = function simpleEnvUpdateFn(camera) {
-            var techniqueParameters = this.techniqueParameters;
+            var tp = this.techniqueParameters;
             var node = this.node;
             var matrix = node.world;
             var worldUpdate = node.worldUpdate;
 
             var worldInverse;
 
-            techniqueParameters.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, techniqueParameters.worldViewProjection);
+            tp.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, tp.worldViewProjection);
 
             if (this.techniqueParametersUpdated !== worldUpdate) {
                 this.techniqueParametersUpdated = worldUpdate;
                 this.worldInverse = worldInverse = md.m43Inverse(matrix, worldInverse);
-                techniqueParameters.worldInverseTranspose = md.m33InverseTranspose(matrix, techniqueParameters.worldInverseTranspose);
+                tp.worldInverseTranspose = md.m33InverseTranspose(matrix, tp.worldInverseTranspose);
             } else {
                 worldInverse = this.worldInverse;
             }
 
-            techniqueParameters.eyePosition = md.m43TransformPoint(worldInverse, dr.eyePosition, techniqueParameters.eyePosition);
+            tp.eyePosition = md.m43TransformPoint(worldInverse, dr.eyePosition, tp.eyePosition);
         };
 
         var simpleEnvSkinnedUpdate = function simpleEnvSkinnedUpdateFn(camera) {
-            var techniqueParameters = this.techniqueParameters;
+            var tp = this.techniqueParameters;
             var node = this.node;
             var matrix = node.world;
             var worldUpdate = node.worldUpdate;
 
             var worldInverse;
 
-            techniqueParameters.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, techniqueParameters.worldViewProjection);
+            tp.worldViewProjection = md.m43MulM44(matrix, camera.viewProjectionMatrix, tp.worldViewProjection);
 
             if (this.techniqueParametersUpdated !== worldUpdate) {
                 this.techniqueParametersUpdated = worldUpdate;
                 this.worldInverse = worldInverse = md.m43Inverse(matrix, worldInverse);
-                techniqueParameters.worldInverseTranspose = md.m33InverseTranspose(matrix, techniqueParameters.worldInverseTranspose);
+                tp.worldInverseTranspose = md.m33InverseTranspose(matrix, tp.worldInverseTranspose);
             } else {
                 worldInverse = this.worldInverse;
             }
 
-            techniqueParameters.eyePosition = md.m43TransformPoint(worldInverse, dr.eyePosition, techniqueParameters.eyePosition);
+            tp.eyePosition = md.m43TransformPoint(worldInverse, dr.eyePosition, tp.eyePosition);
 
             var skinController = this.skinController;
             if (skinController) {
-                techniqueParameters.skinBones = skinController.output;
+                tp.skinBones = skinController.output;
                 skinController.update();
             }
         };
@@ -464,8 +476,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "flat",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -474,8 +485,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "flat_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -490,8 +500,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -500,8 +509,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -516,8 +524,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -526,8 +533,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -542,8 +548,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_nocull",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -552,8 +557,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned_nocull",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -568,8 +572,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -578,8 +581,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -594,8 +596,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_lines_constant",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -610,8 +611,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_normals",
             update: simpleDebugNormalsUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -620,8 +620,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_normals_skinned",
             update: simpleDebugNormalsSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -636,8 +635,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_tangents",
             update: simpleDebugNormalsUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -646,8 +644,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_tangents_skinned",
             update: simpleDebugNormalsSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -662,8 +659,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_binormals",
             update: simpleDebugNormalsUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -672,8 +668,7 @@ var SimpleRendering = (function () {
             shaderName: debugCGFX,
             techniqueName: "debug_binormals_skinned",
             update: simpleDebugNormalsSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -688,8 +683,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -698,8 +692,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -714,8 +707,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -724,8 +716,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -740,8 +731,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_alphamap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -755,8 +745,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_alphatest",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -765,8 +754,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_alphatest_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -780,8 +768,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_alphatest",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -790,8 +777,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_alphatest_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -805,8 +791,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_glowmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -815,8 +800,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_glowmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -830,8 +814,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_glowmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -840,8 +823,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_glowmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -855,8 +837,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -865,8 +846,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -880,8 +860,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -890,8 +869,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -905,8 +883,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_alphatest",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -915,8 +892,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_alphatest_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -930,8 +906,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_alphatest",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -940,8 +915,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_alphatest_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -955,8 +929,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_glowmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -965,8 +938,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_glowmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -980,8 +952,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_glowmap",
             update: simpleUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -990,8 +961,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blinn_specularmap_glowmap_skinned",
             update: simpleSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1005,8 +975,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "add",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1015,8 +984,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "add_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1030,8 +998,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "add_particle",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1045,8 +1012,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blend",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1055,8 +1021,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blend_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1070,8 +1035,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "blend_particle",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1085,8 +1049,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "translucent",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1095,8 +1058,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "translucent_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1110,8 +1072,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "translucent_particle",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1125,8 +1086,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "filter",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1135,8 +1095,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "filter_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1150,8 +1109,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "invfilter",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1165,8 +1123,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "invfilter_particle",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1180,8 +1137,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "glass",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1195,8 +1151,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "glass_env",
             update: simpleEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1210,8 +1165,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "modulate2",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1220,8 +1174,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "modulate2_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1235,8 +1188,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "skybox",
             update: simpleEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1250,8 +1202,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "env",
             update: simpleEnvUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1260,8 +1211,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "env_skinned",
             update: simpleEnvSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1275,8 +1225,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "add",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1293,8 +1242,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "glowmap",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 
@@ -1303,8 +1251,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "glowmap_skinned",
             update: simpleNoLightSkinnedUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(skinned, effectTypeData);
 
@@ -1319,8 +1266,7 @@ var SimpleRendering = (function () {
             shaderName: simpleCGFX,
             techniqueName: "lightmap",
             update: simpleNoLightUpdate,
-            loadTechniques: loadTechniques
-        };
+            loadTechniques: loadTechniques };
         effectTypeData.loadTechniques(shaderManager);
         effect.add(rigid, effectTypeData);
 

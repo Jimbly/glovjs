@@ -80,8 +80,8 @@ var MouseForces = (function () {
         }
     };
 
-    MouseForces.create = // Constructor function
-    function (gd, id, md, pd, dragExtentsMin, dragExtentsMax) {
+    // Constructor function
+    MouseForces.create = function (gd, id, md, pd, dragExtentsMin, dragExtentsMax) {
         var c = new MouseForces();
 
         c.md = md;

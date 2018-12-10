@@ -19,7 +19,7 @@ var PhysicsManager = (function () {
         physicsObject.userData = sceneNode;
 
         if (origin) {
-            physicsNode.origin = origin;
+            physicsNode.origin = this.mathsDevice.v3Build(origin[0], origin[1], origin[2]);
         }
 
         if (triangleArray) {
@@ -499,9 +499,11 @@ var PhysicsManager = (function () {
                                 }
                             } else {
                                 //TODO: add a warning that with no extents we can't calculate and origin?
-                                geometry.origin = [0, 0, 0];
+                                geometry.origin = mathsDevice.v3BuildZero();
                             }
 
+                            // Can we use a box?
+                            // TODO: do it offline
                             if (positionsData.length === 12) {
                                 min0 = posMin[0];
                                 min1 = posMin[1];
@@ -526,8 +528,7 @@ var PhysicsManager = (function () {
                                             halfExtents: [
                                                 (max0 - min0) * 0.5,
                                                 (max1 - min1) * 0.5,
-                                                (max2 - min2) * 0.5
-                                            ],
+                                                (max2 - min2) * 0.5],
                                             margin: collisionMargin
                                         });
                                     }
@@ -556,8 +557,7 @@ var PhysicsManager = (function () {
                                         halfExtents: [
                                             (max0 - min0) * 0.5,
                                             (max1 - min1) * 0.5,
-                                            (max2 - min2) * 0.5
-                                        ],
+                                            (max2 - min2) * 0.5],
                                         margin: collisionMargin
                                     });
                                 }
@@ -814,7 +814,7 @@ var PhysicsManager = (function () {
             newPhysicsObject.userData = targetSceneNode;
 
             if (physicsNode.origin) {
-                newPhysicsNode.origin = physicsNode.origin;
+                newPhysicsNode.origin = physicsNode.origin; // TODO: clone?
             }
 
             if (physicsNode.triangleArray) {
@@ -900,10 +900,10 @@ var PhysicsManager = (function () {
         }
     };
 
-    PhysicsManager.create = //
+    //
     // Constructor function
     //
-    function (mathsDevice, physicsDevice, dynamicsWorld) {
+    PhysicsManager.create = function (mathsDevice, physicsDevice, dynamicsWorld) {
         var physicsManager = new PhysicsManager();
 
         physicsManager.mathsDevice = mathsDevice;
@@ -930,7 +930,7 @@ var PhysicsManager = (function () {
 PhysicsManager.prototype.arrayConstructor = Array;
 
 // Detect correct typed arrays
-((function () {
+(function () {
     if (typeof Float32Array !== "undefined") {
         var testArray = new Float32Array(4);
         var textDescriptor = Object.prototype.toString.call(testArray);
@@ -938,4 +938,4 @@ PhysicsManager.prototype.arrayConstructor = Array;
             PhysicsManager.prototype.arrayConstructor = Float32Array;
         }
     }
-})());
+}());

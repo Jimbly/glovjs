@@ -3,9 +3,7 @@
 // Camera
 //
 var Camera = (function () {
-    function Camera() {
-        // updateProjectionMatrix(): void;
-        // updateFrustumPlanes(): void;
+    function Camera(md) {
         this.viewOffsetX = 0.0;
         this.viewOffsetY = 0.0;
         this.recipViewWindowX = 1.0 / 1.0;
@@ -15,17 +13,21 @@ var Camera = (function () {
         this.aspectRatio = 4.0 / 3.0;
         this.nearPlane = 1.0;
         this.farPlane = 1000.0;
+        this.md = md;
+        this.matrix = md.m43BuildIdentity();
+        this.viewMatrix = md.m43BuildIdentity();
+        this.updateProjectionMatrix();
+        this.viewProjectionMatrix = this.projectionMatrix.slice();
+        this.frustumPlanes = [];
+        this.updateFrustumPlanes();
     }
     Camera.prototype.lookAt = function (lookAt, up, eyePosition) {
         var md = this.md;
-        var v3Normalize = md.v3Normalize;
-        var v3Cross = md.v3Cross;
-        var zaxis = md.v3Sub(eyePosition, lookAt);
-
-        v3Normalize.call(md, zaxis, zaxis);
-        var xaxis = v3Cross.call(md, v3Normalize.call(md, up, up), zaxis);
-        v3Normalize.call(md, xaxis, xaxis);
-        var yaxis = v3Cross.call(md, zaxis, xaxis);
+        var zaxis = md.v3Sub(eyePosition, lookAt, this._tempZAxis);
+        md.v3Normalize(zaxis, zaxis);
+        var xaxis = md.v3Cross(md.v3Normalize(up, up), zaxis, this._tempXAxis);
+        md.v3Normalize(xaxis, xaxis);
+        var yaxis = md.v3Cross(zaxis, xaxis, this._tempYAxis);
         this.matrix = md.m43Build(xaxis, yaxis, zaxis, eyePosition, this.matrix);
     };
 
@@ -99,23 +101,23 @@ var Camera = (function () {
         var planes = (p || []);
 
         // Negate 'd' here to avoid doing it on the isVisible functions
-        var vec = md.v4Build((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12));
-        planes[0] = md.planeNormalize(vec, planes[0]);
+        planes[0] = md.v4Build((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[0]);
+        md.planeNormalize(planes[0], planes[0]); // left
 
-        md.v4Build((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), vec);
-        planes[1] = md.planeNormalize(vec, planes[1]);
+        planes[1] = md.v4Build((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[1]);
+        md.planeNormalize(planes[1], planes[1]); // right
 
-        md.v4Build((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), vec);
-        planes[2] = md.planeNormalize(vec, planes[2]);
+        planes[2] = md.v4Build((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[2]);
+        md.planeNormalize(planes[2], planes[2]); // top
 
-        md.v4Build((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), vec);
-        planes[3] = md.planeNormalize(vec, planes[3]);
+        planes[3] = md.v4Build((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[3]);
+        md.planeNormalize(planes[3], planes[3]); // bottom
 
-        md.v4Build((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), vec);
-        planes[4] = md.planeNormalize(vec, planes[4]);
+        planes[4] = md.v4Build((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), planes[4]);
+        md.planeNormalize(planes[4], planes[4]); // near
 
-        md.v4Build((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), vec);
-        planes[5] = md.planeNormalize(vec, planes[5]);
+        planes[5] = md.v4Build((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), planes[5]);
+        md.planeNormalize(planes[5], planes[5]); // far
 
         return planes;
     };
@@ -311,7 +313,7 @@ var Camera = (function () {
     };
 
     Camera.prototype.getFrustumExtents = function (extents, farClip, nearClip) {
-        var frustumPoints = this.getFrustumPoints(farClip, nearClip);
+        var frustumPoints = this.getFrustumPoints(farClip, nearClip, this._frustumPoints);
         var frustumPoint = frustumPoints[0];
         var min0 = frustumPoint[0];
         var min1 = frustumPoint[1];
@@ -348,21 +350,79 @@ var Camera = (function () {
         extents[5] = max2;
     };
 
-    Camera.create = // Constructor function
-    function (md) {
-        var c = new Camera();
-        c.md = md;
-        c.matrix = md.m43BuildIdentity();
-        c.viewMatrix = md.m43BuildIdentity();
-        c.updateProjectionMatrix();
-        c.viewProjectionMatrix = c.projectionMatrix.slice();
-        c.frustumPlanes = [];
-        c.updateFrustumPlanes();
-        return c;
+    Camera.prototype.clampAABBToFrustum = function (extents, threshold) {
+        var frustumPlanes = this.frustumPlanes;
+
+        var minGridX = extents[0];
+        var minGridY = extents[1];
+        var minGridZ = extents[2];
+        var maxGridX = extents[3];
+        var maxGridY = extents[4];
+        var maxGridZ = extents[5];
+
+        var abs = Math.abs;
+        var n = 0;
+        do {
+            var plane = frustumPlanes[n];
+            var d0 = plane[0];
+            var d1 = plane[1];
+            var d2 = plane[2];
+            var maxDistance = (d0 * (d0 < 0 ? minGridX : maxGridX) + d1 * (d1 < 0 ? minGridY : maxGridY) + d2 * (d2 < 0 ? minGridZ : maxGridZ) - plane[3]);
+            if (maxDistance < threshold) {
+                return false;
+            } else {
+                if (maxDistance < abs(d0) * (maxGridX - minGridX)) {
+                    if (d0 < 0) {
+                        maxGridX = minGridX - (maxDistance / d0);
+                    } else {
+                        minGridX = maxGridX - (maxDistance / d0);
+                    }
+                }
+                if (maxDistance < abs(d1) * (maxGridY - minGridY)) {
+                    if (d1 < 0) {
+                        maxGridY = minGridY - (maxDistance / d1);
+                    } else {
+                        minGridY = maxGridY - (maxDistance / d1);
+                    }
+                }
+                if (maxDistance < abs(d2) * (maxGridZ - minGridZ)) {
+                    if (d2 < 0) {
+                        maxGridZ = minGridZ - (maxDistance / d2);
+                    } else {
+                        minGridZ = maxGridZ - (maxDistance / d2);
+                    }
+                }
+            }
+            n += 1;
+        } while(n < 6);
+
+        extents[0] = minGridX;
+        extents[1] = minGridY;
+        extents[2] = minGridZ;
+        extents[3] = maxGridX;
+        extents[4] = maxGridY;
+        extents[5] = maxGridZ;
+
+        return true;
+    };
+
+    // Constructor function
+    Camera.create = function (md) {
+        if (!Camera.prototype._tempZAxis) {
+            Camera.prototype._tempZAxis = md.v3BuildZero();
+            Camera.prototype._tempYAxis = md.v3BuildZero();
+            Camera.prototype._tempXAxis = md.v3BuildZero();
+        }
+        return new Camera(md);
     };
     Camera.version = 1;
     return Camera;
 })();
+
+Camera.prototype._frustumPoints = []; // v4[]
+Camera.prototype._tempZAxis = null; // v3
+Camera.prototype._tempYAxis = null; // v3
+Camera.prototype._tempXAxis = null; // v3
 
 ;
 
@@ -456,6 +516,42 @@ var CameraController = (function () {
         }
     };
 
+    CameraController.prototype.attach = function (id) {
+        this.inputDevice = id;
+        id.addEventListener('keydown', this.onkeydown);
+        id.addEventListener('keyup', this.onkeyup);
+        id.addEventListener('mouseup', this.onmouseup);
+        id.addEventListener('mousewheel', this.onmousewheel);
+        id.addEventListener('mousemove', this.onmousemove);
+        id.addEventListener('padmove', this.onpadmove);
+        id.addEventListener('mouselocklost', this.onmouselocklost);
+        id.addEventListener('touchstart', this.ontouchstart);
+        id.addEventListener('touchend', this.ontouchend);
+        id.addEventListener('touchmove', this.ontouchmove);
+    };
+
+    CameraController.prototype.detach = function (id) {
+        id.removeEventListener('keydown', this.onkeydown);
+        id.removeEventListener('keyup', this.onkeyup);
+        id.removeEventListener('mouseup', this.onmouseup);
+        id.removeEventListener('mousewheel', this.onmousewheel);
+        id.removeEventListener('mousemove', this.onmousemove);
+        id.removeEventListener('padmove', this.onpadmove);
+        id.removeEventListener('mouselocklost', this.onmouselocklost);
+        id.removeEventListener('touchstart', this.ontouchstart);
+        id.removeEventListener('touchend', this.ontouchend);
+        id.removeEventListener('touchmove', this.ontouchmove);
+    };
+
+    CameraController.prototype.destroy = function () {
+        if (this.inputDevice) {
+            this.detach(this.inputDevice);
+            this.inputDevice = null;
+        }
+
+        this.camera = null;
+    };
+
     CameraController.create = function (gd, id, camera, log) {
         var c = new CameraController();
 
@@ -527,6 +623,12 @@ var CameraController = (function () {
                 case keyCodes.NUMPAD_7:
                     c.down = 1.0;
                     break;
+
+                case keyCodes.ESCAPE:
+                    if (id.isLocked()) {
+                        id.unlockMouse();
+                    }
+                    break;
             }
         };
 
@@ -592,7 +694,7 @@ var CameraController = (function () {
         }
 
         // Mouse handling
-        c.onmouseup = function onmouseupFn(/* button, x, y */ ) {
+        c.onmouseup = function onmouseupFn() {
             if (!id.isLocked()) {
                 id.lockMouse();
             }
@@ -608,7 +710,7 @@ var CameraController = (function () {
         };
 
         // Pad handling
-        c.onpadmove = function onpadmoveFn(lX, lY, lZ, rX, rY/*, rZ, dpadState */ ) {
+        c.onpadmove = function onpadmoveFn(lX, lY, lZ, rX, rY /*, rZ, dpadState */ ) {
             c.turn += lX * 10.0;
             c.pitch += lY * 10.0;
 
@@ -721,20 +823,6 @@ var CameraController = (function () {
                     }
                 }
             }
-        };
-
-        // Attach to an InputDevice
-        c.attach = function attachFn(id) {
-            id.addEventListener('keydown', c.onkeydown);
-            id.addEventListener('keyup', c.onkeyup);
-            id.addEventListener('mouseup', c.onmouseup);
-            id.addEventListener('mousewheel', c.onmousewheel);
-            id.addEventListener('mousemove', c.onmousemove);
-            id.addEventListener('padmove', c.onpadmove);
-            id.addEventListener('mouselocklost', c.onmouselocklost);
-            id.addEventListener('touchstart', c.ontouchstart);
-            id.addEventListener('touchend', c.ontouchend);
-            id.addEventListener('touchmove', c.ontouchmove);
         };
 
         if (id) {

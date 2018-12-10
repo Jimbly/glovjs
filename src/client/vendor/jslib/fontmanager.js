@@ -3,10 +3,13 @@
 /*global Observer: false*/
 /*global Float32Array: false*/
 "use strict";
+
+
+
+
 /**
 @class  Font
 @private
-
 @since TurbulenzEngine 0.1.0
 */
 var Font = (function () {
@@ -42,6 +45,7 @@ var Font = (function () {
         var numLines = 0;
         var linesWidth = [];
         var glyphCounts = [];
+        var glyphIndices = [];
 
         var textLength = text.length;
         var lineWidth = 0;
@@ -85,6 +89,8 @@ var Font = (function () {
                     glyphCounts[pageIdx] += 1;
                 }
             }
+
+            glyphIndices.push(c);
         }
 
         linesWidth[numLines] = lineWidth;
@@ -98,6 +104,7 @@ var Font = (function () {
             dimensions.numGlyphs = numGlyphs;
             dimensions.linesWidth = linesWidth;
             dimensions.glyphCounts = glyphCounts;
+            dimensions.glyphIndices = glyphIndices;
             return dimensions;
         }
 
@@ -106,7 +113,8 @@ var Font = (function () {
             height: height,
             numGlyphs: numGlyphs,
             linesWidth: linesWidth,
-            glyphCounts: glyphCounts
+            glyphCounts: glyphCounts,
+            glyphIndices: glyphIndices
         };
     };
 
@@ -114,22 +122,38 @@ var Font = (function () {
     /// calculateTextDimensions can optionally be passed in to avoid
     /// recalculating certain properties of the text.
     Font.prototype.generatePageTextVertices = function (text, params, pageIdx, drawCtx) {
-        var scale = (params.scale || 1.0);
-        var extraSpacing = (params.spacing ? (params.spacing * scale) : 0);
         var dimensions = params.dimensions;
         if (!dimensions) {
-            dimensions = this.calculateTextDimensions(text, scale, extraSpacing);
+            var scale = (params.scale || 1.0);
+            var extraSpacing = (params.spacing ? (params.spacing * scale) : 0);
+            dimensions = this.calculateTextDimensions(text, scale, extraSpacing, params.lineSpacing);
         }
+        return this.generatePageGlyphVertices(dimensions, params, pageIdx, drawCtx);
+    };
 
+    Font.prototype.generatePageGlyphVertices = function (dimensions, params, pageIdx, drawCtx) {
+        var scale = (params.scale || 1.0);
+        var extraSpacing = (params.spacing ? (params.spacing * scale) : 0);
+
+        var glyphIndices = dimensions.glyphIndices;
         var glyphCounts = dimensions.glyphCounts;
+        var numGlyphs = glyphCounts[pageIdx];
+        var vertices;
 
         var ctx = drawCtx || {
             vertices: null,
             vertexIndex: 0
         };
 
-        var numGlyphs = glyphCounts[pageIdx];
         if (0 === numGlyphs) {
+            // If there is a buffer on this context, recycle it for
+            // use later.
+            vertices = ctx.vertices;
+            if (vertices) {
+                this.fm.reusableArrays[numGlyphs] = vertices;
+                ctx.vertices = null;
+            }
+
             return ctx;
         }
 
@@ -144,7 +168,7 @@ var Font = (function () {
         var reusableArrays = fm.reusableArrays;
 
         var vertexIndex = 0;
-        var vertices = reusableArrays[numGlyphs];
+        vertices = reusableArrays[numGlyphs];
         if (vertices) {
             // Need to remove from cache just in case it is not
             // returned to us
@@ -163,7 +187,7 @@ var Font = (function () {
         } else if (2 === alignment) {
             x += ((rectWidth - lineWidth));
         }
-        var textLength = text.length;
+        var textLength = glyphIndices.length;
         var line = 0;
         var i;
         var glyphPageIdx;
@@ -171,7 +195,7 @@ var Font = (function () {
         var glyph;
 
         for (i = 0; i < textLength; i += 1) {
-            c = text.charCodeAt(i);
+            c = glyphIndices[i];
             if (c === 10) {
                 y += lineHeight;
                 line += 1;
@@ -234,7 +258,7 @@ var Font = (function () {
                         if (kernings) {
                             var kerning = kernings[c];
                             if (kerning && i < (textLength - 1)) {
-                                var amount = kerning[text.charCodeAt(i + 1)];
+                                var amount = kerning[glyphIndices[i + 1]];
                                 if (amount) {
                                     x += (amount * scale);
                                 }
@@ -261,16 +285,7 @@ var Font = (function () {
         if (!dimensions) {
             var scale = params.scale || 1.0;
             var extraSpacing = params.spacing ? (params.spacing * scale) : 0;
-            dimensions = this.calculateTextDimensions(text, scale, extraSpacing);
-
-            // TODO: not nice, but avoids calling
-            // calculateTextDimensions again without corrupting
-            // params.
-            var origParams = params;
-            params = {
-                dimensions: dimensions
-            };
-            (params).__proto__ = origParams;
+            dimensions = this.calculateTextDimensions(text, scale, extraSpacing, params.lineSpacing);
         }
 
         var totalNumGlyphs = dimensions.numGlyphs;
@@ -288,7 +303,7 @@ var Font = (function () {
         for (pageIdx = 0; pageIdx < numPages; pageIdx += 1) {
             numGlyphs = glyphCounts[pageIdx];
             if (numGlyphs) {
-                pageCtx = this.generatePageTextVertices(text, params, pageIdx, pageCtx);
+                pageCtx = this.generatePageGlyphVertices(dimensions, params, pageIdx, pageCtx);
                 this.drawTextVertices(pageCtx, pageIdx, true);
 
                 totalNumGlyphs -= numGlyphs;
@@ -325,7 +340,11 @@ var Font = (function () {
             if (sharedVertexBuffer) {
                 sharedVertexBuffer.destroy();
             }
-            sharedVertexBuffer = this.createVertexBuffer(numGlyphs);
+
+            // add a 32 glyph buffer to lower the chances of recreating the shared vertex buffer
+            // when the text length grows
+            var newVertexBufferNumGlyphs = Math.max(numGlyphs, 32) + 32;
+            sharedVertexBuffer = this.createVertexBuffer(newVertexBufferNumGlyphs);
             fm.sharedVertexBuffer = sharedVertexBuffer;
         }
 
@@ -334,7 +353,10 @@ var Font = (function () {
         gd.setStream(sharedVertexBuffer, fm.semantics);
 
         // Set the Texture for this page
+        /* tslint:disable:no-string-literal */
         techniqueParameters['texture'] = this.textures[pageIdx];
+
+        /* tslint:enable:no-string-literal */
         gd.setTechniqueParameters(techniqueParameters);
 
         if (4 < numVertices) {
@@ -343,7 +365,11 @@ var Font = (function () {
                 if (sharedIndexBuffer) {
                     sharedIndexBuffer.destroy();
                 }
-                sharedIndexBuffer = this.createIndexBuffer(numGlyphs);
+
+                // add a 32 glyph buffer to lower the chances of recreating the shared index buffer
+                // when the text length grows
+                var newIndexBufferNumGlyphs = Math.max(numGlyphs, 32) + 32;
+                sharedIndexBuffer = this.createIndexBuffer(newIndexBufferNumGlyphs);
                 fm.sharedIndexBuffer = sharedIndexBuffer;
             }
 
@@ -354,7 +380,10 @@ var Font = (function () {
         }
 
         if (reuseVertices) {
+            // Reclaim the vertex data buffer, and clear it from the
+            // callers context.
             fm.reusableArrays[numGlyphs] = vertices;
+            pageCtx.vertices = null;
         }
     };
 
@@ -391,19 +420,13 @@ var Font = (function () {
             numVertices: (4 * maxGlyphs),
             attributes: [gd.VERTEXFORMAT_FLOAT2, gd.VERTEXFORMAT_FLOAT2],
             dynamic: true,
-            'transient': true
-        });
+            'transient': true });
     };
     Font.version = 1;
     return Font;
 })();
 
-/**
-@class  Font manager
-@private
 
-@since TurbulenzEngine 0.1.0
-*/
 var FontManager = (function () {
     function FontManager(gd) {
         this.primitive = gd.PRIMITIVE_TRIANGLES;
@@ -433,18 +456,20 @@ var FontManager = (function () {
         return undefined;
     };
 
-    FontManager.create = /**
+    /**
     @constructs Constructs a FontManager object.
-
+    
     @param {GraphicsDevice} gd Graphics device
     @param {RequestHandler} rh RequestHandler object
-
+    
     @return {FontManager} object, null if failed
     */
-    function (gd, rh, df, errorCallback, log) {
+    FontManager.create = function (gd, rh, df, errorCallback, log) {
         if (!errorCallback) {
-            errorCallback = function (/* e */ ) {
+            /* tslint:disable:no-empty */
+            errorCallback = function () {
             };
+            /* tslint:enable:no-empty */
         }
 
         var fonts = {};
@@ -494,1030 +519,134 @@ var FontManager = (function () {
 
         var buildDefaultFontTexture = function buildDefaultFontTextureFn(gd) {
             var fontData = [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                126,
-                129,
-                165,
-                129,
-                189,
-                153,
-                129,
-                126,
-                126,
-                255,
-                219,
-                255,
-                195,
-                231,
-                255,
-                126,
-                108,
-                254,
-                254,
-                254,
-                124,
-                56,
-                16,
-                0,
-                16,
-                56,
-                124,
-                254,
-                124,
-                56,
-                16,
-                0,
-                56,
-                124,
-                56,
-                254,
-                254,
-                124,
-                56,
-                124,
-                16,
-                16,
-                56,
-                124,
-                254,
-                124,
-                56,
-                124,
-                0,
-                0,
-                24,
-                60,
-                60,
-                24,
-                0,
-                0,
-                255,
-                255,
-                231,
-                195,
-                195,
-                231,
-                255,
-                255,
-                0,
-                60,
-                102,
-                66,
-                66,
-                102,
-                60,
-                0,
-                255,
-                195,
-                153,
-                189,
-                189,
-                153,
-                195,
-                255,
-                15,
-                7,
-                15,
-                125,
-                204,
-                204,
-                204,
-                120,
-                60,
-                102,
-                102,
-                102,
-                60,
-                24,
-                126,
-                24,
-                63,
-                51,
-                63,
-                48,
-                48,
-                112,
-                240,
-                224,
-                127,
-                99,
-                127,
-                99,
-                99,
-                103,
-                230,
-                192,
-                153,
-                90,
-                60,
-                231,
-                231,
-                60,
-                90,
-                153,
-                128,
-                224,
-                248,
-                254,
-                248,
-                224,
-                128,
-                0,
-                2,
-                14,
-                62,
-                254,
-                62,
-                14,
-                2,
-                0,
-                24,
-                60,
-                126,
-                24,
-                24,
-                126,
-                60,
-                24,
-                102,
-                102,
-                102,
-                102,
-                102,
-                0,
-                102,
-                0,
-                127,
-                219,
-                219,
-                123,
-                27,
-                27,
-                27,
-                0,
-                62,
-                99,
-                56,
-                108,
-                108,
-                56,
-                204,
-                120,
-                0,
-                0,
-                0,
-                0,
-                126,
-                126,
-                126,
-                0,
-                24,
-                60,
-                126,
-                24,
-                126,
-                60,
-                24,
-                255,
-                24,
-                60,
-                126,
-                24,
-                24,
-                24,
-                24,
-                0,
-                24,
-                24,
-                24,
-                24,
-                126,
-                60,
-                24,
-                0,
-                0,
-                24,
-                12,
-                254,
-                12,
-                24,
-                0,
-                0,
-                0,
-                48,
-                96,
-                254,
-                96,
-                48,
-                0,
-                0,
-                0,
-                0,
-                192,
-                192,
-                192,
-                254,
-                0,
-                0,
-                0,
-                36,
-                102,
-                255,
-                102,
-                36,
-                0,
-                0,
-                0,
-                24,
-                60,
-                126,
-                255,
-                255,
-                0,
-                0,
-                0,
-                255,
-                255,
-                126,
-                60,
-                24,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                48,
-                120,
-                120,
-                120,
-                48,
-                0,
-                48,
-                0,
-                108,
-                108,
-                108,
-                0,
-                0,
-                0,
-                0,
-                0,
-                108,
-                108,
-                254,
-                108,
-                254,
-                108,
-                108,
-                0,
-                48,
-                124,
-                192,
-                120,
-                12,
-                248,
-                48,
-                0,
-                0,
-                198,
-                204,
-                24,
-                48,
-                102,
-                198,
-                0,
-                56,
-                108,
-                56,
-                118,
-                220,
-                204,
-                118,
-                0,
-                96,
-                96,
-                192,
-                0,
-                0,
-                0,
-                0,
-                0,
-                24,
-                48,
-                96,
-                96,
-                96,
-                48,
-                24,
-                0,
-                96,
-                48,
-                24,
-                24,
-                24,
-                48,
-                96,
-                0,
-                0,
-                102,
-                60,
-                255,
-                60,
-                102,
-                0,
-                0,
-                0,
-                48,
-                48,
-                252,
-                48,
-                48,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                48,
-                48,
-                96,
-                0,
-                0,
-                0,
-                252,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                48,
-                48,
-                0,
-                6,
-                12,
-                24,
-                48,
-                96,
-                192,
-                128,
-                0,
-                124,
-                198,
-                206,
-                222,
-                246,
-                230,
-                124,
-                0,
-                48,
-                112,
-                48,
-                48,
-                48,
-                48,
-                252,
-                0,
-                120,
-                204,
-                12,
-                56,
-                96,
-                204,
-                252,
-                0,
-                120,
-                204,
-                12,
-                56,
-                12,
-                204,
-                120,
-                0,
-                28,
-                60,
-                108,
-                204,
-                254,
-                12,
-                30,
-                0,
-                252,
-                192,
-                248,
-                12,
-                12,
-                204,
-                120,
-                0,
-                56,
-                96,
-                192,
-                248,
-                204,
-                204,
-                120,
-                0,
-                252,
-                204,
-                12,
-                24,
-                48,
-                48,
-                48,
-                0,
-                120,
-                204,
-                204,
-                120,
-                204,
-                204,
-                120,
-                0,
-                120,
-                204,
-                204,
-                124,
-                12,
-                24,
-                112,
-                0,
-                0,
-                48,
-                48,
-                0,
-                0,
-                48,
-                48,
-                0,
-                0,
-                48,
-                48,
-                0,
-                0,
-                48,
-                48,
-                96,
-                24,
-                48,
-                96,
-                192,
-                96,
-                48,
-                24,
-                0,
-                0,
-                0,
-                252,
-                0,
-                0,
-                252,
-                0,
-                0,
-                96,
-                48,
-                24,
-                12,
-                24,
-                48,
-                96,
-                0,
-                120,
-                204,
-                12,
-                24,
-                48,
-                0,
-                48,
-                0,
-                124,
-                198,
-                222,
-                222,
-                222,
-                192,
-                120,
-                0,
-                48,
-                120,
-                204,
-                204,
-                252,
-                204,
-                204,
-                0,
-                252,
-                102,
-                102,
-                124,
-                102,
-                102,
-                252,
-                0,
-                60,
-                102,
-                192,
-                192,
-                192,
-                102,
-                60,
-                0,
-                248,
-                108,
-                102,
-                102,
-                102,
-                108,
-                248,
-                0,
-                126,
-                96,
-                96,
-                120,
-                96,
-                96,
-                126,
-                0,
-                126,
-                96,
-                96,
-                120,
-                96,
-                96,
-                96,
-                0,
-                60,
-                102,
-                192,
-                192,
-                206,
-                102,
-                62,
-                0,
-                204,
-                204,
-                204,
-                252,
-                204,
-                204,
-                204,
-                0,
-                120,
-                48,
-                48,
-                48,
-                48,
-                48,
-                120,
-                0,
-                30,
-                12,
-                12,
-                12,
-                204,
-                204,
-                120,
-                0,
-                230,
-                102,
-                108,
-                120,
-                108,
-                102,
-                230,
-                0,
-                96,
-                96,
-                96,
-                96,
-                96,
-                96,
-                126,
-                0,
-                198,
-                238,
-                254,
-                254,
-                214,
-                198,
-                198,
-                0,
-                198,
-                230,
-                246,
-                222,
-                206,
-                198,
-                198,
-                0,
-                56,
-                108,
-                198,
-                198,
-                198,
-                108,
-                56,
-                0,
-                252,
-                102,
-                102,
-                124,
-                96,
-                96,
-                240,
-                0,
-                120,
-                204,
-                204,
-                204,
-                220,
-                120,
-                28,
-                0,
-                252,
-                102,
-                102,
-                124,
-                108,
-                102,
-                230,
-                0,
-                120,
-                204,
-                224,
-                112,
-                28,
-                204,
-                120,
-                0,
-                252,
-                48,
-                48,
-                48,
-                48,
-                48,
-                48,
-                0,
-                204,
-                204,
-                204,
-                204,
-                204,
-                204,
-                252,
-                0,
-                204,
-                204,
-                204,
-                204,
-                204,
-                120,
-                48,
-                0,
-                198,
-                198,
-                198,
-                214,
-                254,
-                238,
-                198,
-                0,
-                198,
-                198,
-                108,
-                56,
-                56,
-                108,
-                198,
-                0,
-                204,
-                204,
-                204,
-                120,
-                48,
-                48,
-                120,
-                0,
-                254,
-                6,
-                12,
-                24,
-                48,
-                96,
-                254,
-                0,
-                120,
-                96,
-                96,
-                96,
-                96,
-                96,
-                120,
-                0,
-                192,
-                96,
-                48,
-                24,
-                12,
-                6,
-                2,
-                0,
-                120,
-                24,
-                24,
-                24,
-                24,
-                24,
-                120,
-                0,
-                16,
-                56,
-                108,
-                198,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                255,
-                0,
-                48,
-                48,
-                24,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                120,
-                12,
-                124,
-                204,
-                118,
-                0,
-                224,
-                96,
-                96,
-                124,
-                102,
-                102,
-                220,
-                0,
-                0,
-                0,
-                120,
-                204,
-                192,
-                204,
-                120,
-                0,
-                28,
-                12,
-                12,
-                124,
-                204,
-                204,
-                118,
-                0,
-                0,
-                0,
-                120,
-                204,
-                252,
-                192,
-                120,
-                0,
-                56,
-                108,
-                96,
-                240,
-                96,
-                96,
-                240,
-                0,
-                0,
-                0,
-                118,
-                204,
-                204,
-                124,
-                12,
-                248,
-                224,
-                96,
-                108,
-                118,
-                102,
-                102,
-                230,
-                0,
-                48,
-                0,
-                112,
-                48,
-                48,
-                48,
-                120,
-                0,
-                12,
-                0,
-                12,
-                12,
-                12,
-                204,
-                204,
-                120,
-                224,
-                96,
-                102,
-                108,
-                120,
-                108,
-                230,
-                0,
-                112,
-                48,
-                48,
-                48,
-                48,
-                48,
-                120,
-                0,
-                0,
-                0,
-                204,
-                254,
-                254,
-                214,
-                198,
-                0,
-                0,
-                0,
-                248,
-                204,
-                204,
-                204,
-                204,
-                0,
-                0,
-                0,
-                120,
-                204,
-                204,
-                204,
-                120,
-                0,
-                0,
-                0,
-                220,
-                102,
-                102,
-                124,
-                96,
-                240,
-                0,
-                0,
-                118,
-                204,
-                204,
-                124,
-                12,
-                30,
-                0,
-                0,
-                220,
-                118,
-                102,
-                96,
-                240,
-                0,
-                0,
-                0,
-                124,
-                192,
-                120,
-                12,
-                248,
-                0,
-                16,
-                48,
-                124,
-                48,
-                48,
-                52,
-                24,
-                0,
-                0,
-                0,
-                204,
-                204,
-                204,
-                204,
-                118,
-                0,
-                0,
-                0,
-                204,
-                204,
-                204,
-                120,
-                48,
-                0,
-                0,
-                0,
-                198,
-                214,
-                254,
-                254,
-                108,
-                0,
-                0,
-                0,
-                198,
-                108,
-                56,
-                108,
-                198,
-                0,
-                0,
-                0,
-                204,
-                204,
-                204,
-                124,
-                12,
-                248,
-                0,
-                0,
-                252,
-                152,
-                48,
-                100,
-                252,
-                0,
-                28,
-                48,
-                48,
-                224,
-                48,
-                48,
-                28,
-                0,
-                24,
-                24,
-                24,
-                0,
-                24,
-                24,
-                24,
-                0,
-                224,
-                48,
-                48,
-                28,
-                48,
-                48,
-                224,
-                0,
-                118,
-                220,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                16,
-                56,
-                108,
-                198,
-                198,
-                254,
-                0
+                0, 0, 0, 0, 0, 0, 0, 0,
+                126, 129, 165, 129, 189, 153, 129, 126,
+                126, 255, 219, 255, 195, 231, 255, 126,
+                108, 254, 254, 254, 124, 56, 16, 0,
+                16, 56, 124, 254, 124, 56, 16, 0,
+                56, 124, 56, 254, 254, 124, 56, 124,
+                16, 16, 56, 124, 254, 124, 56, 124,
+                0, 0, 24, 60, 60, 24, 0, 0,
+                255, 255, 231, 195, 195, 231, 255, 255,
+                0, 60, 102, 66, 66, 102, 60, 0,
+                255, 195, 153, 189, 189, 153, 195, 255,
+                15, 7, 15, 125, 204, 204, 204, 120,
+                60, 102, 102, 102, 60, 24, 126, 24,
+                63, 51, 63, 48, 48, 112, 240, 224,
+                127, 99, 127, 99, 99, 103, 230, 192,
+                153, 90, 60, 231, 231, 60, 90, 153,
+                128, 224, 248, 254, 248, 224, 128, 0,
+                2, 14, 62, 254, 62, 14, 2, 0,
+                24, 60, 126, 24, 24, 126, 60, 24,
+                102, 102, 102, 102, 102, 0, 102, 0,
+                127, 219, 219, 123, 27, 27, 27, 0,
+                62, 99, 56, 108, 108, 56, 204, 120,
+                0, 0, 0, 0, 126, 126, 126, 0,
+                24, 60, 126, 24, 126, 60, 24, 255,
+                24, 60, 126, 24, 24, 24, 24, 0,
+                24, 24, 24, 24, 126, 60, 24, 0,
+                0, 24, 12, 254, 12, 24, 0, 0,
+                0, 48, 96, 254, 96, 48, 0, 0,
+                0, 0, 192, 192, 192, 254, 0, 0,
+                0, 36, 102, 255, 102, 36, 0, 0,
+                0, 24, 60, 126, 255, 255, 0, 0,
+                0, 255, 255, 126, 60, 24, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                48, 120, 120, 120, 48, 0, 48, 0,
+                108, 108, 108, 0, 0, 0, 0, 0,
+                108, 108, 254, 108, 254, 108, 108, 0,
+                48, 124, 192, 120, 12, 248, 48, 0,
+                0, 198, 204, 24, 48, 102, 198, 0,
+                56, 108, 56, 118, 220, 204, 118, 0,
+                96, 96, 192, 0, 0, 0, 0, 0,
+                24, 48, 96, 96, 96, 48, 24, 0,
+                96, 48, 24, 24, 24, 48, 96, 0,
+                0, 102, 60, 255, 60, 102, 0, 0,
+                0, 48, 48, 252, 48, 48, 0, 0,
+                0, 0, 0, 0, 0, 48, 48, 96,
+                0, 0, 0, 252, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 48, 48, 0,
+                6, 12, 24, 48, 96, 192, 128, 0,
+                124, 198, 206, 222, 246, 230, 124, 0,
+                48, 112, 48, 48, 48, 48, 252, 0,
+                120, 204, 12, 56, 96, 204, 252, 0,
+                120, 204, 12, 56, 12, 204, 120, 0,
+                28, 60, 108, 204, 254, 12, 30, 0,
+                252, 192, 248, 12, 12, 204, 120, 0,
+                56, 96, 192, 248, 204, 204, 120, 0,
+                252, 204, 12, 24, 48, 48, 48, 0,
+                120, 204, 204, 120, 204, 204, 120, 0,
+                120, 204, 204, 124, 12, 24, 112, 0,
+                0, 48, 48, 0, 0, 48, 48, 0,
+                0, 48, 48, 0, 0, 48, 48, 96,
+                24, 48, 96, 192, 96, 48, 24, 0,
+                0, 0, 252, 0, 0, 252, 0, 0,
+                96, 48, 24, 12, 24, 48, 96, 0,
+                120, 204, 12, 24, 48, 0, 48, 0,
+                124, 198, 222, 222, 222, 192, 120, 0,
+                48, 120, 204, 204, 252, 204, 204, 0,
+                252, 102, 102, 124, 102, 102, 252, 0,
+                60, 102, 192, 192, 192, 102, 60, 0,
+                248, 108, 102, 102, 102, 108, 248, 0,
+                126, 96, 96, 120, 96, 96, 126, 0,
+                126, 96, 96, 120, 96, 96, 96, 0,
+                60, 102, 192, 192, 206, 102, 62, 0,
+                204, 204, 204, 252, 204, 204, 204, 0,
+                120, 48, 48, 48, 48, 48, 120, 0,
+                30, 12, 12, 12, 204, 204, 120, 0,
+                230, 102, 108, 120, 108, 102, 230, 0,
+                96, 96, 96, 96, 96, 96, 126, 0,
+                198, 238, 254, 254, 214, 198, 198, 0,
+                198, 230, 246, 222, 206, 198, 198, 0,
+                56, 108, 198, 198, 198, 108, 56, 0,
+                252, 102, 102, 124, 96, 96, 240, 0,
+                120, 204, 204, 204, 220, 120, 28, 0,
+                252, 102, 102, 124, 108, 102, 230, 0,
+                120, 204, 224, 112, 28, 204, 120, 0,
+                252, 48, 48, 48, 48, 48, 48, 0,
+                204, 204, 204, 204, 204, 204, 252, 0,
+                204, 204, 204, 204, 204, 120, 48, 0,
+                198, 198, 198, 214, 254, 238, 198, 0,
+                198, 198, 108, 56, 56, 108, 198, 0,
+                204, 204, 204, 120, 48, 48, 120, 0,
+                254, 6, 12, 24, 48, 96, 254, 0,
+                120, 96, 96, 96, 96, 96, 120, 0,
+                192, 96, 48, 24, 12, 6, 2, 0,
+                120, 24, 24, 24, 24, 24, 120, 0,
+                16, 56, 108, 198, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 255, 0,
+                48, 48, 24, 0, 0, 0, 0, 0,
+                0, 0, 120, 12, 124, 204, 118, 0,
+                224, 96, 96, 124, 102, 102, 220, 0,
+                0, 0, 120, 204, 192, 204, 120, 0,
+                28, 12, 12, 124, 204, 204, 118, 0,
+                0, 0, 120, 204, 252, 192, 120, 0,
+                56, 108, 96, 240, 96, 96, 240, 0,
+                0, 0, 118, 204, 204, 124, 12, 248,
+                224, 96, 108, 118, 102, 102, 230, 0,
+                48, 0, 112, 48, 48, 48, 120, 0,
+                12, 0, 12, 12, 12, 204, 204, 120,
+                224, 96, 102, 108, 120, 108, 230, 0,
+                112, 48, 48, 48, 48, 48, 120, 0,
+                0, 0, 204, 254, 254, 214, 198, 0,
+                0, 0, 248, 204, 204, 204, 204, 0,
+                0, 0, 120, 204, 204, 204, 120, 0,
+                0, 0, 220, 102, 102, 124, 96, 240,
+                0, 0, 118, 204, 204, 124, 12, 30,
+                0, 0, 220, 118, 102, 96, 240, 0,
+                0, 0, 124, 192, 120, 12, 248, 0,
+                16, 48, 124, 48, 48, 52, 24, 0,
+                0, 0, 204, 204, 204, 204, 118, 0,
+                0, 0, 204, 204, 204, 120, 48, 0,
+                0, 0, 198, 214, 254, 254, 108, 0,
+                0, 0, 198, 108, 56, 108, 198, 0,
+                0, 0, 204, 204, 204, 124, 12, 248,
+                0, 0, 252, 152, 48, 100, 252, 0,
+                28, 48, 48, 224, 48, 48, 28, 0,
+                24, 24, 24, 0, 24, 24, 24, 0,
+                224, 48, 48, 28, 48, 48, 224, 0,
+                118, 220, 0, 0, 0, 0, 0, 0,
+                0, 16, 56, 108, 198, 198, 254, 0
             ];
 
             function unpack(dst, d, c) {
@@ -1587,8 +716,11 @@ var FontManager = (function () {
                 defaultFont.pageHeight = 64;
             }
         }
+
+        /* tslint:disable:no-string-literal */
         fonts["default"] = defaultFont;
 
+        /* tslint:enable:no-string-literal */
         var singlePageLoaded = function singlePageLoadedFn(font, t) {
             font.textures = [t];
             font.pageWidth = t.width;
@@ -1602,16 +734,17 @@ var FontManager = (function () {
         };
 
         /**
-        Creates a font from an '.fnt' or '.fontdat'file and its associated image file
-
+        Creates a font from an '.fnt', '.json' or '.fontdat'file
+        and its associated image file
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name load
-
+        
         @param {string} path Path to the font file without the extension
         @param {function} onFontLoaded function to call once the font has loaded
-
+        
         @return {object} Font object if it exists, undefined otherwise
         */
         var loadFont = function loadFontFn(path, onFontLoaded) {
@@ -1627,7 +760,7 @@ var FontManager = (function () {
                 return false;
             }
 
-            function requestFn(url, onload/*, callContext */ ) {
+            function requestFn(url, onload /*, callContext */ ) {
                 var font = fonts[path];
                 if (!font) {
                     pageComplete();
@@ -1778,7 +911,7 @@ var FontManager = (function () {
                     if (dot !== -1) {
                         extension = dataPath.substr(dot);
                     }
-                    if (!extension || (extension !== ".fnt" && extension !== ".fontdat")) {
+                    if (!extension || (extension !== ".fnt" && extension !== ".json" && extension !== ".fontdat")) {
                         dataPath += ".fontdat";
                     }
 
@@ -1803,12 +936,12 @@ var FontManager = (function () {
 
         /**
         Alias one font to another name
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name map
-
+        
         @param {string} dst Name of the alias
         @param {string} src Name of the font to be aliased
         */
@@ -1819,12 +952,12 @@ var FontManager = (function () {
 
         /**
         Removes a font from the manager
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name remove
-
+        
         @param {string} path Path or name of the font
         */
         var removeFont = function removeFontFn(path) {
@@ -1864,12 +997,12 @@ var FontManager = (function () {
 
         /**
         Get object containing all loaded fonts data
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name getAll
-
+        
         @return {object}
         */
         fm.getAll = function getAllFontsFn() {
@@ -1878,12 +1011,12 @@ var FontManager = (function () {
 
         /**
         Get number of fonts pending
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name getNumLoadingFonts
-
+        
         @return {number}
         */
         fm.getNumPendingFonts = function getNumPendingFontsFn() {
@@ -1892,14 +1025,14 @@ var FontManager = (function () {
 
         /**
         Check if a font is not pending
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name isFontLoaded
-
+        
         @param {string} path Path or name of the font
-
+        
         @return {boolean}
         */
         fm.isFontLoaded = function isFontLoadedFn(path) {
@@ -1908,14 +1041,14 @@ var FontManager = (function () {
 
         /**
         Check if a font is missing
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name isFontMissing
-
+        
         @param {string} path Path or name of the font
-
+        
         @return {boolean}
         */
         fm.isFontMissing = function isFontMissingFn(path) {
@@ -1924,12 +1057,12 @@ var FontManager = (function () {
 
         /**
         Set path remapping dictionary
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name setPathRemapping
-
+        
         @param {string} prm Path remapping dictionary
         @param {string} assetUrl Asset prefix for all assets loaded
         */
@@ -1940,75 +1073,89 @@ var FontManager = (function () {
 
         /**
         Calculate text dimensions
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name calculateTextDimensions
-
+        
         @param {string} path Name of the font
         @param {string} text Text to calculate dimensions for
         @param {number} scale Text scale
         @param {number} spacing Extra spacing between characters
-
+        
         @return {object} Width and height of the text
         */
-        fm.calculateTextDimensions = function calculateTextDimensionsFn(path, text, scale, spacing) {
+        fm.calculateTextDimensions = function calculateTextDimensionsFn(path, text, scale, spacing, lineSpacing, dimensions) {
             var font = fonts[path];
             if (font) {
-                return font.calculateTextDimensions(text, scale, spacing);
+                return font.calculateTextDimensions(text, scale, spacing, lineSpacing, dimensions);
             } else {
                 return {
                     width: 0,
                     height: 0,
                     numGlyphs: 0,
                     linesWidth: [],
-                    glyphCounts: []
+                    glyphCounts: [],
+                    glyphIndices: []
                 };
             }
         };
 
         fm.reuseVertices = function reuseVerticesFn(vertices) {
             /* tslint:disable:no-bitwise */
-            (this).reusableArrays[vertices.length >> 4] = vertices;
+            this.reusableArrays[vertices.length >> 4] = vertices;
             /* tslint:enable:no-bitwise */
         };
 
         /**
         Destroy font manager
-
+        
         @memberOf FontManager.prototype
         @public
         @function
         @name destroy
         */
-        fm.destroy = function fontManagerDestroyFn(/* prm */ ) {
+        fm.destroy = function fontManagerDestroyFn() {
             if (fonts) {
+                var textures;
+                var numTextures;
+                var textureIdx;
+                var texture;
+
                 var p;
                 for (p in fonts) {
                     if (fonts.hasOwnProperty(p)) {
                         var font = fonts[p];
                         if (font) {
-                            var texture = font.texture;
-                            if (texture) {
-                                texture.destroy();
-                                font.texture = null;
+                            textures = font.textures;
+                            if (textures) {
+                                numTextures = textures.length;
+
+                                for (textureIdx = 0; textureIdx < numTextures; textureIdx += 1) {
+                                    texture = textures[textureIdx];
+                                    if (texture) {
+                                        texture.destroy();
+                                        textures[textureIdx] = null;
+                                    }
+                                }
+                                font.textures = null;
                             }
                         }
                     }
                 }
                 fonts = null;
             }
-            if ((this).sharedVertexBuffer) {
-                (this).sharedVertexBuffer.destroy();
-                (this).sharedVertexBuffer = null;
+            if (this.sharedVertexBuffer) {
+                this.sharedVertexBuffer.destroy();
+                this.sharedVertexBuffer = null;
             }
-            if ((this).sharedIndexBuffer) {
-                (this).sharedIndexBuffer.destroy();
-                (this).sharedIndexBuffer = null;
+            if (this.sharedIndexBuffer) {
+                this.sharedIndexBuffer.destroy();
+                this.sharedIndexBuffer = null;
             }
-            (this).techniqueParameters = null;
-            (this).semantics = null;
+            this.techniqueParameters = null;
+            this.semantics = null;
             loadingFont = null;
             loadingPages = null;
             loadedObservers = null;

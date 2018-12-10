@@ -1,8 +1,19 @@
 // Copyright (c) 2013-2014 Turbulenz Limited
-//
-// CascadedShadowMapping
-//
-/*global renderingCommonCreateRendererInfoFn: false, Camera: false*/
+;
+
+var CascadedShadowOccluder = (function () {
+    function CascadedShadowOccluder(drawParameters, rendererInfo) {
+        this.drawParameters = drawParameters;
+        this.rendererInfo = rendererInfo;
+    }
+    CascadedShadowOccluder.prototype.clear = function () {
+        this.drawParameters = null;
+        this.rendererInfo = null;
+    };
+    return CascadedShadowOccluder;
+})();
+;
+
 var CascadedShadowSplit = (function () {
     function CascadedShadowSplit(md, x, y) {
         this.viewportX = x;
@@ -44,16 +55,20 @@ var CascadedShadowSplit = (function () {
 
         this.overlappingRenderables = [];
         this.overlappingExtents = [];
-        this.occludersDrawArray = [];
 
-        this.worldShadowProjection = md.m34BuildIdentity();
+        this.numOccluders = 0;
+        this.occluders = [];
+        this.occludersToDraw = [];
+
         this.viewShadowProjection = md.m34BuildIdentity();
-        this.shadowScaleOffset = md.v4BuildZero();
+        this.shadowOffset = md.v2BuildZero();
+
+        this.frustumPoints = [];
 
         return this;
     }
     CascadedShadowSplit.prototype.setAsDummy = function () {
-        var m = this.worldShadowProjection;
+        var m = this.viewShadowProjection;
         m[0] = 0.0;
         m[1] = 0.0;
         m[2] = 0.0;
@@ -67,32 +82,16 @@ var CascadedShadowSplit = (function () {
         m[10] = 0.0;
         m[11] = 1.0;
 
-        m = this.viewShadowProjection;
-        m[0] = 0.0;
-        m[1] = 0.0;
-        m[2] = 0.0;
-        m[3] = 1.0;
-        m[4] = 0.0;
-        m[5] = 0.0;
-        m[6] = 0.0;
-        m[7] = 1.0;
-        m[8] = 0.0;
-        m[9] = 0.0;
-        m[10] = 0.0;
-        m[11] = 1.0;
-
-        var v = this.shadowScaleOffset;
+        var v = this.shadowOffset;
         v[0] = 0.0;
         v[1] = 0.0;
-        v[2] = 0.0;
-        v[3] = 0.0;
     };
     return CascadedShadowSplit;
 })();
 ;
 
 var CascadedShadowMapping = (function () {
-    function CascadedShadowMapping(gd, md, shaderManager, size) {
+    function CascadedShadowMapping(gd, md, shaderManager, size, blurDisabled) {
         shaderManager.load("shaders/cascadedshadows.cgfx");
 
         this.gd = gd;
@@ -102,6 +101,7 @@ var CascadedShadowMapping = (function () {
         this.tempMatrix43 = md.m43BuildIdentity();
         this.tempMatrix33 = md.m33BuildIdentity();
         this.tempV3Direction = md.v3BuildZero();
+        this.tempV3Right = md.v3BuildZero();
         this.tempV3Up = md.v3BuildZero();
         this.tempV3At = md.v3BuildZero();
         this.tempV3Origin = md.v3BuildZero();
@@ -117,19 +117,14 @@ var CascadedShadowMapping = (function () {
             shadowSize: 0.0,
             invShadowSize: 0.0,
             shadowMapTexture: null,
-            shadowSplitDistances: md.v4BuildZero(),
-            worldShadowProjection0: null,
             viewShadowProjection0: null,
-            shadowScaleOffset0: null,
-            worldShadowProjection1: null,
+            shadowOffset0: null,
             viewShadowProjection1: null,
-            shadowScaleOffset1: null,
-            worldShadowProjection2: null,
+            shadowOffset1: null,
             viewShadowProjection2: null,
-            shadowScaleOffset2: null,
-            worldShadowProjection3: null,
+            shadowOffset2: null,
             viewShadowProjection3: null,
-            shadowScaleOffset3: null
+            shadowOffset3: null
         });
 
         this.quadPrimitive = gd.PRIMITIVE_TRIANGLE_STRIP;
@@ -140,22 +135,10 @@ var CascadedShadowMapping = (function () {
             attributes: ['FLOAT2', 'FLOAT2'],
             dynamic: false,
             data: [
-                -1.0,
-                1.0,
-                0.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                -1.0,
-                -1.0,
-                0.0,
-                0.0,
-                1.0,
-                -1.0,
-                1.0,
-                0.0
+                -1.0, 1.0, 0.0, 1.0,
+                1.0, 1.0, 1.0, 1.0,
+                -1.0, -1.0, 0.0, 0.0,
+                1.0, -1.0, 1.0, 0.0
             ]
         });
 
@@ -178,39 +161,60 @@ var CascadedShadowMapping = (function () {
             new CascadedShadowSplit(md, 0, 0),
             new CascadedShadowSplit(md, splitSize, 0),
             new CascadedShadowSplit(md, 0, splitSize),
-            new CascadedShadowSplit(md, splitSize, splitSize)
-        ];
+            new CascadedShadowSplit(md, splitSize, splitSize)];
 
         this.dummySplit = new CascadedShadowSplit(md, 0, 0);
         this.dummySplit.setAsDummy();
 
         this.numSplitsToRedraw = 0;
 
-        this.updateBuffers(size);
-
-        this.numMainFrustumSidePlanes = 0;
-        this.numMainFrustumPlanes = 0;
-        this.mainFrustumNearPlaneIndex = -1;
-        this.mainFrustumPlanes = [];
-        this.numSplitFrustumPlanes = 0;
-        this.splitFrustumPlanes = [];
-        this.intersectingPlanes = [];
-        this.frustumPoints = [];
-        this.visibleNodes = [];
-        this.numOccludees = 0;
-        this.occludeesExtents = [];
-        this.occludersExtents = [];
-
         var precision = gd.maxSupported("FRAGMENT_SHADER_PRECISION");
-        if (precision && precision < 16) {
+        if (blurDisabled || (precision && precision < 16)) {
             this.blurEnabled = false;
         } else {
             this.blurEnabled = true;
         }
 
+        this.updateBuffers(size);
+
+        var camera = Camera.create(md);
+        camera.parallel = true;
+        camera.aspectRatio = 1;
+        camera.viewOffsetX = 0;
+        camera.viewOffsetY = 0;
+        this.sideCamera = camera;
+        this.sideCameraNearPlane = md.v4BuildZero();
+
+        this.numMainFrustumSidePlanes = 0;
+        this.numMainFrustumPlanes = 0;
+        this.mainFrustumNearPlaneIndex = -1;
+        this.mainFrustumPlanes = [
+            new Float32Array(4),
+            new Float32Array(4),
+            new Float32Array(4),
+            new Float32Array(4),
+            new Float32Array(4),
+            new Float32Array(4),
+            new Float32Array(4)
+        ];
+        this.numSplitFrustumPlanes = 0;
+        this.splitFrustumPlanes = [];
+        this.intersectingPlanes = [];
+        this.farFrustumPoints = [];
+        this.tempFrustumPoints = [];
+        this.clampedFrustumPoints = [];
+        this.visibleNodes = [];
+        this.numOccludees = 0;
+        this.occludeesExtents = [];
+        this.occludersExtents = [];
+
         /* tslint:disable:no-string-literal */
         this.update = function _cascadedShadowsUpdateFn() {
-            this.shadowTechniqueParameters['world'] = this.node.world;
+            var node = this.node;
+            while (!node.local && node.parent) {
+                node = node.parent;
+            }
+            this.shadowTechniqueParameters['world'] = node.world;
         };
 
         this.skinnedUpdate = function _cascadedShadowsSkinnedUpdateFn() {
@@ -286,20 +290,24 @@ var CascadedShadowMapping = (function () {
             format: "D24S8"
         });
 
-        this.blurTexture = gd.createTexture({
-            width: splitSize,
-            height: splitSize,
-            format: "R8G8B8A8",
-            mipmaps: false,
-            renderable: true
-        });
-
-        if (this.depthBuffer && this.blurTexture) {
-            this.blurRenderTarget = gd.createRenderTarget({
-                colorTexture0: this.blurTexture
+        if (this.blurEnabled) {
+            this.blurTexture = gd.createTexture({
+                width: splitSize,
+                height: splitSize,
+                format: "R8G8B8A8",
+                mipmaps: false,
+                renderable: true
             });
+        }
 
-            if (this.blurRenderTarget) {
+        if (this.depthBuffer && (!this.blurEnabled || this.blurTexture)) {
+            if (this.blurEnabled) {
+                this.blurRenderTarget = gd.createRenderTarget({
+                    colorTexture0: this.blurTexture
+                });
+            }
+
+            if (!this.blurEnabled || this.blurRenderTarget) {
                 this.texture = gd.createTexture({
                     width: size,
                     height: size,
@@ -333,16 +341,110 @@ var CascadedShadowMapping = (function () {
         return false;
     };
 
-    CascadedShadowMapping.prototype.updateShadowMap = function (lightDirection, camera, scene, maxDistance) {
+    CascadedShadowMapping.prototype._addPoint = function (p, points, numPoints) {
+        // Only add point if not already present, there are few points so complexity is not an issue
+        var n;
+        for (n = 0; n < numPoints; n += 1) {
+            var op = points[n];
+            if (p[0] === op[0] && p[1] === op[1] && p[2] === op[2]) {
+                return numPoints;
+            }
+        }
+        points[numPoints] = this.md.v3Copy(p, points[numPoints]);
+        return (numPoints + 1);
+    };
+
+    CascadedShadowMapping.prototype._intersect = function (s, e, plane, points, numPoints) {
+        var sd = ((s[0] * plane[0]) + (s[1] * plane[1]) + (s[2] * plane[2]) - plane[3]);
+        if (sd >= 0) {
+            numPoints = this._addPoint(s, points, numPoints);
+        }
+        var ed = ((e[0] * plane[0]) + (e[1] * plane[1]) + (e[2] * plane[2]) - plane[3]);
+        if (ed >= 0) {
+            numPoints = this._addPoint(e, points, numPoints);
+        }
+        if ((sd * ed) < 0) {
+            var d0 = (e[0] - s[0]);
+            var d1 = (e[1] - s[1]);
+            var d2 = (e[2] - s[2]);
+            var dp = -sd / ((d0 * plane[0]) + (d1 * plane[1]) + (d2 * plane[2]));
+            d0 *= dp;
+            d1 *= dp;
+            d2 *= dp;
+            points[numPoints] = this.md.v3Build((s[0] + d0), (s[1] + d1), (s[2] + d2), points[numPoints]);
+            numPoints += 1;
+        }
+        return numPoints;
+    };
+
+    CascadedShadowMapping.prototype._intersectEnd = function (x, y, z, e, plane, points, numPoints) {
+        var sd = ((x * plane[0]) + (y * plane[1]) + (z * plane[2]) - plane[3]);
+        var ed = ((e[0] * plane[0]) + (e[1] * plane[1]) + (e[2] * plane[2]) - plane[3]);
+        if ((sd * ed) < 0) {
+            var d0 = (e[0] - x);
+            var d1 = (e[1] - y);
+            var d2 = (e[2] - z);
+            var dp = -sd / ((d0 * plane[0]) + (d1 * plane[1]) + (d2 * plane[2]));
+            d0 *= dp;
+            d1 *= dp;
+            d2 *= dp;
+            points[numPoints] = this.md.v3Build((x + d0), (y + d1), (z + d2), points[numPoints]);
+        } else {
+            points[numPoints] = this.md.v3Build(e[0], e[1], e[2], points[numPoints]);
+        }
+    };
+
+    CascadedShadowMapping.prototype._clampFrustumPoints = function (frustumPoints, floorPlane) {
+        var clampedFrustumPoints = this.clampedFrustumPoints;
+        var numPoints = 0;
+        numPoints = this._intersect(frustumPoints[0], frustumPoints[4], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[1], frustumPoints[5], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[2], frustumPoints[6], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[3], frustumPoints[7], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[4], frustumPoints[5], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[5], frustumPoints[6], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[6], frustumPoints[7], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[7], frustumPoints[4], floorPlane, clampedFrustumPoints, numPoints);
+        return numPoints;
+    };
+
+    CascadedShadowMapping.prototype._clampSideFrustumPoints = function (frustumPoints, floorPlane) {
+        var clampedFrustumPoints = this.clampedFrustumPoints;
+        var numPoints = 0;
+        numPoints = this._intersect(frustumPoints[0], frustumPoints[4], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[1], frustumPoints[5], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[2], frustumPoints[6], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[3], frustumPoints[7], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[0], frustumPoints[1], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[1], frustumPoints[2], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[2], frustumPoints[3], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[3], frustumPoints[0], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[4], frustumPoints[5], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[5], frustumPoints[6], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[6], frustumPoints[7], floorPlane, clampedFrustumPoints, numPoints);
+        numPoints = this._intersect(frustumPoints[7], frustumPoints[4], floorPlane, clampedFrustumPoints, numPoints);
+        return numPoints;
+    };
+
+    CascadedShadowMapping.prototype.updateShadowMap = function (lightDirection, camera, scene, maxDistance, floorPlane) {
         var md = this.md;
 
-        this._extractMainFrustumPlanes(camera, lightDirection, maxDistance);
+        this._extractMainFrustumPlanes(camera, lightDirection, maxDistance, floorPlane);
 
         var cameraMatrix = camera.matrix;
+        var cameraRight = md.m43Right(cameraMatrix, this.tempV3Right);
         var cameraUp = md.m43Up(cameraMatrix, this.tempV3Up);
         var cameraAt = md.m43At(cameraMatrix, this.tempV3At);
 
         var direction = md.v3Normalize(lightDirection, this.tempV3Direction);
+
+        camera.getFrustumFarPoints(camera.farPlane, this.farFrustumPoints);
+        camera.getFrustumPoints(maxDistance, camera.nearPlane, this.tempFrustumPoints);
+
+        var numClampedFrustumPoints = this._clampFrustumPoints(this.tempFrustumPoints, floorPlane);
+
+        var sideCamera = this._updateSideCamera(cameraRight, cameraUp, cameraAt, direction, this.clampedFrustumPoints, numClampedFrustumPoints);
+        var sideCameraMaxDistance = sideCamera.farPlane;
 
         var up;
         if (Math.abs(md.v3Dot(direction, cameraAt)) < Math.abs(md.v3Dot(direction, cameraUp))) {
@@ -360,27 +462,26 @@ var CascadedShadowMapping = (function () {
         var splitDistances = CascadedShadowMapping.splitDistances;
         var splits = this.splits;
         var numSplits = splits.length;
-        var splitStart = camera.nearPlane;
+        var splitStart = -sideCamera.nearPlane;
         var previousSplitPoints = [];
         var n, split, splitEnd;
-        var frustumPoints = this.frustumPoints;
         for (n = 0; n < numSplits; n += 1) {
             split = splits[n];
 
-            splitEnd = maxDistance * splitDistances[n];
+            splitEnd = sideCameraMaxDistance * splitDistances[n];
 
-            frustumPoints = camera.getFrustumPoints(splitEnd, splitStart, frustumPoints);
+            numClampedFrustumPoints = this._getSideCameraFrustumPoints(splitEnd, splitStart, direction, camera, maxDistance, floorPlane);
 
-            this._updateSplit(split, xaxis, yaxis, zaxis, cameraMatrix, frustumPoints, previousSplitPoints, scene, maxDistance);
+            this._updateSplit(split, xaxis, yaxis, zaxis, cameraMatrix, this.clampedFrustumPoints, numClampedFrustumPoints, previousSplitPoints, scene, maxDistance);
 
             splitStart = splitEnd;
 
-            if (0 === split.occludersDrawArray.length && (n + 1) < numSplits) {
-                splitEnd = (splitEnd + (maxDistance * splitDistances[n + 1])) / 2.0;
+            if (0 === split.occludersToDraw.length && (n + 1) < numSplits) {
+                splitEnd = (splitEnd + (sideCameraMaxDistance * splitDistances[n + 1])) / 2.0;
 
-                frustumPoints = camera.getFrustumPoints(splitEnd, splitStart, frustumPoints);
+                numClampedFrustumPoints = this._getSideCameraFrustumPoints(splitEnd, splitStart, direction, camera, maxDistance, floorPlane);
 
-                this._updateSplit(split, xaxis, yaxis, zaxis, cameraMatrix, frustumPoints, previousSplitPoints, scene, maxDistance);
+                this._updateSplit(split, xaxis, yaxis, zaxis, cameraMatrix, this.clampedFrustumPoints, numClampedFrustumPoints, previousSplitPoints, scene, maxDistance);
 
                 splitStart = splitEnd;
             }
@@ -396,12 +497,11 @@ var CascadedShadowMapping = (function () {
                 break;
             }
             split = splits[n];
-        } while(0 === split.occludersDrawArray.length);
+        } while(0 === split.occludersToDraw.length);
 
         /* tslint:disable:no-string-literal */
-        techniqueParameters['worldShadowProjection0'] = split.worldShadowProjection;
         techniqueParameters['viewShadowProjection0'] = split.viewShadowProjection;
-        techniqueParameters['shadowScaleOffset0'] = split.shadowScaleOffset;
+        techniqueParameters['shadowOffset0'] = split.shadowOffset;
 
         do {
             n += 1;
@@ -410,12 +510,11 @@ var CascadedShadowMapping = (function () {
                 break;
             }
             split = splits[n];
-        } while(0 === split.occludersDrawArray.length);
+        } while(0 === split.occludersToDraw.length);
 
         /* tslint:disable:no-string-literal */
-        techniqueParameters['worldShadowProjection1'] = split.worldShadowProjection;
         techniqueParameters['viewShadowProjection1'] = split.viewShadowProjection;
-        techniqueParameters['shadowScaleOffset1'] = split.shadowScaleOffset;
+        techniqueParameters['shadowOffset1'] = split.shadowOffset;
 
         do {
             n += 1;
@@ -424,12 +523,11 @@ var CascadedShadowMapping = (function () {
                 break;
             }
             split = splits[n];
-        } while(0 === split.occludersDrawArray.length);
+        } while(0 === split.occludersToDraw.length);
 
         /* tslint:disable:no-string-literal */
-        techniqueParameters['worldShadowProjection2'] = split.worldShadowProjection;
         techniqueParameters['viewShadowProjection2'] = split.viewShadowProjection;
-        techniqueParameters['shadowScaleOffset2'] = split.shadowScaleOffset;
+        techniqueParameters['shadowOffset2'] = split.shadowOffset;
 
         do {
             n += 1;
@@ -438,12 +536,11 @@ var CascadedShadowMapping = (function () {
                 break;
             }
             split = splits[n];
-        } while(0 === split.occludersDrawArray.length);
+        } while(0 === split.occludersToDraw.length);
 
         /* tslint:disable:no-string-literal */
-        techniqueParameters['worldShadowProjection3'] = split.worldShadowProjection;
         techniqueParameters['viewShadowProjection3'] = split.viewShadowProjection;
-        techniqueParameters['shadowScaleOffset3'] = split.shadowScaleOffset;
+        techniqueParameters['shadowOffset3'] = split.shadowOffset;
         /* tslint:enable:no-string-literal */
     };
 
@@ -470,7 +567,7 @@ var CascadedShadowMapping = (function () {
         return res;
     };
 
-    CascadedShadowMapping.prototype._extractMainFrustumPlanes = function (camera, lightDirection, maxDistance) {
+    CascadedShadowMapping.prototype._extractMainFrustumPlanes = function (camera, lightDirection, maxDistance, floorPlane) {
         // This is crap...
         var oldFarPlane = camera.farPlane;
         camera.farPlane = maxDistance;
@@ -504,25 +601,25 @@ var CascadedShadowMapping = (function () {
         var d2 = lightDirection[2];
 
         // Negate 'd' here to avoid doing it on the isVisible functions
-        p = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[numPlanes]);
+        p = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[numPlanes]); // left
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             planes[numPlanes] = p;
             numPlanes += 1;
         }
 
-        p = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[numPlanes]);
+        p = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[numPlanes]); // right
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             planes[numPlanes] = p;
             numPlanes += 1;
         }
 
-        p = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[numPlanes]);
+        p = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[numPlanes]); // top
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             planes[numPlanes] = p;
             numPlanes += 1;
         }
 
-        p = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[numPlanes]);
+        p = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[numPlanes]); // bottom
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             planes[numPlanes] = p;
             numPlanes += 1;
@@ -530,7 +627,7 @@ var CascadedShadowMapping = (function () {
 
         this.numMainFrustumSidePlanes = numPlanes;
 
-        p = planeNormalize((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), planes[numPlanes]);
+        p = planeNormalize((m3 + m2), (m7 + m6), (m11 + m10), -(m15 + m14), planes[numPlanes]); // near
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             this.mainFrustumNearPlaneIndex = numPlanes;
             planes[numPlanes] = p;
@@ -539,12 +636,17 @@ var CascadedShadowMapping = (function () {
             this.mainFrustumNearPlaneIndex = -1;
         }
 
-        p = planeNormalize((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), planes[numPlanes]);
+        p = planeNormalize((m3 - m2), (m7 - m6), (m11 - m10), -(m15 - m14), planes[numPlanes]); // far
         if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
             planes[numPlanes] = p;
             numPlanes += 1;
         }
 
+        p = planeNormalize(floorPlane[0], floorPlane[1], floorPlane[2], floorPlane[3], planes[numPlanes]); // floor
+        if ((d0 * p[0]) + (d1 * p[1]) + (d2 * p[2]) <= 0) {
+            planes[numPlanes] = p;
+            numPlanes += 1;
+        }
         this.numMainFrustumPlanes = numPlanes;
 
         camera.farPlane = oldFarPlane;
@@ -578,10 +680,10 @@ var CascadedShadowMapping = (function () {
         var planes = this.splitFrustumPlanes;
 
         // Negate 'd' here to avoid doing it on the isVisible functions
-        planes[0] = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[0]);
-        planes[1] = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[1]);
-        planes[2] = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[2]);
-        planes[3] = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[3]);
+        planes[0] = planeNormalize((m3 + m0), (m7 + m4), (m11 + m8), -(m15 + m12), planes[0]); // left
+        planes[1] = planeNormalize((m3 - m0), (m7 - m4), (m11 - m8), -(m15 - m12), planes[1]); // right
+        planes[2] = planeNormalize((m3 - m1), (m7 - m5), (m11 - m9), -(m15 - m13), planes[2]); // top
+        planes[3] = planeNormalize((m3 + m1), (m7 + m5), (m11 + m9), -(m15 + m13), planes[3]); // bottom
 
         var numMainFrustumPlanes = this.numMainFrustumPlanes;
         var mainFrustumPlanes = this.mainFrustumPlanes;
@@ -616,6 +718,7 @@ var CascadedShadowMapping = (function () {
             if (maxDistance < 0.001) {
                 return false;
             } else {
+                // Clamp extents to the part that is inside the plane
                 if (maxDistance < abs(d0) * (p0 - n0)) {
                     if (d0 < 0) {
                         p0 = n0 - (maxDistance / d0);
@@ -797,10 +900,22 @@ var CascadedShadowMapping = (function () {
         return maxWindowZ;
     };
 
-    CascadedShadowMapping.prototype._updateSplit = function (split, xaxis, yaxis, zaxis, mainCameraMatrix, frustumPoints, previousSplitPoints, scene, maxDistance) {
+    CascadedShadowMapping.prototype._updateSideCamera = function (cameraRight, cameraUp, cameraAt, lightDirection, frustumPoints, numFrustumPoints) {
         var md = this.md;
 
-        // Calculate split window limits
+        var yaxis;
+        if (Math.abs(md.v3Dot(lightDirection, cameraAt)) < Math.max(Math.abs(md.v3Dot(lightDirection, cameraRight)), Math.abs(md.v3Dot(lightDirection, cameraUp)))) {
+            yaxis = md.v3Neg(lightDirection, this.tempV3AxisY);
+        } else {
+            yaxis = cameraUp;
+        }
+        var xaxis = md.v3Cross(yaxis, cameraAt, this.tempV3AxisX);
+        md.v3Normalize(xaxis, xaxis);
+
+        //var yaxis = md.v3Cross(cameraAt, xaxis);
+        //var zaxis = md.v3Cross(yaxis, xaxis);
+        var zaxis = md.v3Cross(xaxis, yaxis, this.tempV3AxisZ);
+
         var r0 = -xaxis[0];
         var r1 = -xaxis[1];
         var r2 = -xaxis[2];
@@ -820,7 +935,7 @@ var CascadedShadowMapping = (function () {
         var minWindowZ = Number.MAX_VALUE;
         var maxWindowZ = -Number.MAX_VALUE;
         var n, p, dx, dy, dz;
-        for (n = 0; n < 8; n += 1) {
+        for (n = 0; n < numFrustumPoints; n += 1) {
             p = frustumPoints[n];
             dx = ((r0 * p[0]) + (r1 * p[1]) + (r2 * p[2]));
             dy = ((u0 * p[0]) + (u1 * p[1]) + (u2 * p[2]));
@@ -845,15 +960,137 @@ var CascadedShadowMapping = (function () {
             }
         }
 
+        // Calculate origin
+        var origin = this.tempV3Origin;
+        var ox = (minWindowX + maxWindowX) / 2.0;
+        var oy = (minWindowY + maxWindowY) / 2.0;
+        var oz = minWindowZ;
+        origin[0] = ox * r0 + oy * u0 + oz * a0;
+        origin[1] = ox * r1 + oy * u1 + oz * a1;
+        origin[2] = ox * r2 + oy * u2 + oz * a2;
+
+        var lightViewWindowX = (maxWindowX - minWindowX) / 2.0;
+        var lightViewWindowY = (maxWindowY - minWindowY) / 2.0;
+        var lightDepth = (maxWindowZ - minWindowZ);
+
+        // Prepare camera to get light frustum planes
+        var camera = this.sideCamera;
+        camera.matrix = md.m43Build(xaxis, yaxis, zaxis, origin, camera.matrix);
+        camera.updateViewMatrix();
+
+        var distanceScale = (1.0 / (256 * 256 * 256));
+        camera.nearPlane = (lightDepth * distanceScale);
+        camera.farPlane = (lightDepth + distanceScale);
+        camera.recipViewWindowX = 1.0 / lightViewWindowX;
+        camera.recipViewWindowY = 1.0 / lightViewWindowY;
+
+        camera.updateProjectionMatrix();
+        camera.updateViewProjectionMatrix();
+
+        var m = this.sideCamera.viewProjectionMatrix;
+        var nearPlane = this.sideCameraNearPlane;
+        this._planeNormalize((m[3] + m[2]), (m[7] + m[6]), (m[11] + m[10]), -(m[15] + m[14]), nearPlane);
+
+        return camera;
+    };
+
+    CascadedShadowMapping.prototype._getSideCameraFrustumPoints = function (endDistance, startDistance, lightDirection, mainCamera, maxDistance, floorPlane) {
+        var farFrustumPoints = this.farFrustumPoints;
+        var frustumPoints = this.tempFrustumPoints;
+        var nearPlane = this.sideCameraNearPlane;
+        var nearDistance = nearPlane[3];
+
+        var mainCameraMatrix = mainCamera.matrix;
+        var ax = -mainCameraMatrix[6];
+        var ay = -mainCameraMatrix[7];
+        var az = -mainCameraMatrix[8];
+
+        if (Math.abs((ax * lightDirection[0]) + (ay * lightDirection[1]) + (az * lightDirection[2])) > Math.SQRT1_2) {
+            // Worst case scenario, camera facing the light, change maps to overlapping regions
+            var sideCameraMaxDistance = this.sideCamera.farPlane;
+            mainCamera.getFrustumPoints(maxDistance * (endDistance / sideCameraMaxDistance), Math.max(mainCamera.nearPlane, maxDistance * (startDistance / sideCameraMaxDistance)), frustumPoints);
+        } else {
+            var x = mainCameraMatrix[9];
+            var y = mainCameraMatrix[10];
+            var z = mainCameraMatrix[11];
+
+            nearPlane[3] = nearDistance + startDistance;
+
+            this._intersectEnd(x, y, z, farFrustumPoints[0], nearPlane, frustumPoints, 0);
+            this._intersectEnd(x, y, z, farFrustumPoints[1], nearPlane, frustumPoints, 1);
+            this._intersectEnd(x, y, z, farFrustumPoints[2], nearPlane, frustumPoints, 2);
+            this._intersectEnd(x, y, z, farFrustumPoints[3], nearPlane, frustumPoints, 3);
+
+            nearPlane[3] = nearDistance + endDistance;
+
+            this._intersectEnd(x, y, z, farFrustumPoints[0], nearPlane, frustumPoints, 4);
+            this._intersectEnd(x, y, z, farFrustumPoints[1], nearPlane, frustumPoints, 5);
+            this._intersectEnd(x, y, z, farFrustumPoints[2], nearPlane, frustumPoints, 6);
+            this._intersectEnd(x, y, z, farFrustumPoints[3], nearPlane, frustumPoints, 7);
+
+            nearPlane[3] = nearDistance;
+        }
+
+        return this._clampSideFrustumPoints(frustumPoints, floorPlane);
+    };
+
+    CascadedShadowMapping.prototype._updateSplit = function (split, xaxis, yaxis, zaxis, mainCameraMatrix, frustumPoints, numFrustumPoints, previousSplitPoints, scene, maxDistance) {
+        var md = this.md;
+
+        // Calculate split window limits
+        var r0 = -xaxis[0];
+        var r1 = -xaxis[1];
+        var r2 = -xaxis[2];
+
+        var u0 = -yaxis[0];
+        var u1 = -yaxis[1];
+        var u2 = -yaxis[2];
+
+        var a0 = -zaxis[0];
+        var a1 = -zaxis[1];
+        var a2 = -zaxis[2];
+
+        var minWindowX = Number.MAX_VALUE;
+        var maxWindowX = -Number.MAX_VALUE;
+        var minWindowY = Number.MAX_VALUE;
+        var maxWindowY = -Number.MAX_VALUE;
+        var minWindowZ = Number.MAX_VALUE;
+        var maxWindowZ = -Number.MAX_VALUE;
+        var n, p, dx, dy, dz;
+        for (n = 0; n < numFrustumPoints; n += 1) {
+            p = frustumPoints[n];
+            dx = ((r0 * p[0]) + (r1 * p[1]) + (r2 * p[2]));
+            dy = ((u0 * p[0]) + (u1 * p[1]) + (u2 * p[2]));
+            dz = ((a0 * p[0]) + (a1 * p[1]) + (a2 * p[2]));
+            if (minWindowX > dx) {
+                minWindowX = Math.floor(dx);
+            }
+            if (maxWindowX < dx) {
+                maxWindowX = Math.ceil(dx);
+            }
+            if (minWindowY > dy) {
+                minWindowY = Math.floor(dy);
+            }
+            if (maxWindowY < dy) {
+                maxWindowY = Math.ceil(dy);
+            }
+            if (minWindowZ > dz) {
+                minWindowZ = Math.floor(dz);
+            }
+            if (maxWindowZ < dz) {
+                maxWindowZ = Math.ceil(dz);
+            }
+        }
+
         var sceneExtents = scene.extents;
         var minSceneWindowZ = ((a0 * (a0 > 0 ? sceneExtents[0] : sceneExtents[3])) + (a1 * (a1 > 0 ? sceneExtents[1] : sceneExtents[4])) + (a2 * (a2 > 0 ? sceneExtents[2] : sceneExtents[5])));
         if (minWindowZ > minSceneWindowZ) {
-            minWindowZ = minSceneWindowZ;
+            minWindowZ = Math.floor(minSceneWindowZ);
         }
 
         if (0 === this.numMainFrustumSidePlanes) {
             // Camera almost parallel to the split (worst case)
-            maxWindowZ = (maxWindowZ + maxDistance);
+            maxWindowZ = Math.ceil(maxWindowZ + maxDistance);
         }
 
         // Calculate origin of split
@@ -864,6 +1101,29 @@ var CascadedShadowMapping = (function () {
         origin[0] = ox * r0 + oy * u0 + oz * a0;
         origin[1] = ox * r1 + oy * u1 + oz * a1;
         origin[2] = ox * r2 + oy * u2 + oz * a2;
+        if (a0 < 0) {
+            origin[0] = Math.ceil(origin[0]);
+        } else if (a0 > 0) {
+            origin[0] = Math.floor(origin[0]);
+        } else {
+            origin[0] = Math.round(origin[0]);
+        }
+
+        if (a1 < 0) {
+            origin[1] = Math.ceil(origin[1]);
+        } else if (a1 > 0) {
+            origin[1] = Math.floor(origin[1]);
+        } else {
+            origin[1] = Math.round(origin[1]);
+        }
+
+        if (a2 < 0) {
+            origin[2] = Math.ceil(origin[2]);
+        } else if (a2 > 0) {
+            origin[2] = Math.floor(origin[2]);
+        } else {
+            origin[2] = Math.round(origin[2]);
+        }
 
         var lightViewWindowX = (maxWindowX - minWindowX) / 2.0;
         var lightViewWindowY = (maxWindowY - minWindowY) / 2.0;
@@ -901,13 +1161,11 @@ var CascadedShadowMapping = (function () {
         // Now prepare draw array
         var overlappingRenderables = split.overlappingRenderables;
         var overlappingExtents = split.overlappingExtents;
-        var occludersDrawArray = split.occludersDrawArray;
+        var occluders = split.occluders;
         var numOverlappingRenderables = split.numOverlappingRenderables;
         var numStaticOverlappingRenderables = split.numStaticOverlappingRenderables;
 
         if (frustumUpdated || numStaticOverlappingRenderables !== numOverlappingRenderables) {
-            split.needsBlur = true;
-
             if (!split.needsRedraw) {
                 split.needsRedraw = true;
                 this.numSplitsToRedraw += 1;
@@ -916,18 +1174,16 @@ var CascadedShadowMapping = (function () {
             var occludeesExtents = this.occludeesExtents;
             var occludersExtents = this.occludersExtents;
 
-            var numOccluders = this._filterOccluders(overlappingRenderables, overlappingExtents, numOverlappingRenderables, numStaticOverlappingRenderables, occludersDrawArray, occludeesExtents, occludersExtents, (scene.frameIndex - 1));
+            var numOccluders = this._filterOccluders(overlappingRenderables, overlappingExtents, numOverlappingRenderables, occluders, occludeesExtents, occludersExtents, (scene.frameIndex - 1));
 
-            numOccluders = this._updateOccludersLimits(split, viewMatrix, occludersDrawArray, occludersExtents, numOccluders);
+            numOccluders = this._updateOccludersLimits(split, viewMatrix, occluders, occludersExtents, numOccluders);
 
-            occludersDrawArray.length = numOccluders;
+            split.numOccluders = numOccluders;
 
             if (0 < numOccluders) {
                 this._updateOccludeesLimits(split, viewMatrix, occludeesExtents);
 
-                if (1 < numOccluders) {
-                    occludersDrawArray.sort(this._sortNegative);
-                }
+                split.needsBlur = true;
             }
         } else {
             split.needsRedraw = false;
@@ -948,7 +1204,7 @@ var CascadedShadowMapping = (function () {
         var maxLightDistanceY = split.maxLightDistanceY;
 
         var numPreviousSplitPoints = previousSplitPoints.length;
-        if (numPreviousSplitPoints && occludersDrawArray.length) {
+        if (numPreviousSplitPoints && split.numOccluders) {
             // Calculate previous split window compared to current one
             var roffset = viewMatrix[9];
             var uoffset = viewMatrix[10];
@@ -997,10 +1253,6 @@ var CascadedShadowMapping = (function () {
                     maxLightDistanceY = Math.min(maxLightDistanceY, previousMinWindowY);
                 }
             }
-
-            if (minLightDistanceX >= maxLightDistanceX || minLightDistanceY >= maxLightDistanceY) {
-                occludersDrawArray.length = 0;
-            }
         }
 
         if (minLightDistanceX < -lightViewWindowX) {
@@ -1036,7 +1288,7 @@ var CascadedShadowMapping = (function () {
             minimalViewWindowY = Math.max(Math.abs(maxLightDistanceY), Math.abs(minLightDistanceY));
         }
 
-        var borderPadding = (2.0 / shadowMapSize);
+        var borderPadding = ((this.blurEnabled ? 2.0 : 1.0) / shadowMapSize);
 
         minimalViewWindowX += borderPadding * minimalViewWindowX;
         if (lightViewWindowX > minimalViewWindowX) {
@@ -1065,27 +1317,29 @@ var CascadedShadowMapping = (function () {
 
         camera.updateProjectionMatrix();
         camera.updateViewProjectionMatrix();
+        camera.updateFrustumPlanes();
+
+        var occludersToDraw = split.occludersToDraw;
+        if (minLightDistanceX >= maxLightDistanceX || minLightDistanceY >= maxLightDistanceY) {
+            if (occludersToDraw.length !== 0) {
+                split.needsRedraw = true;
+            }
+            occludersToDraw.length = 0;
+        } else if (split.needsRedraw) {
+            var numOccludersToDraw = this._filterRedundantOccuders(occluders, occludersExtents, occludersToDraw, camera.frustumPlanes, (scene.frameIndex - 1), split.numOccluders);
+            occludersToDraw.length = numOccludersToDraw;
+
+            if (1 < numOccludersToDraw) {
+                occludersToDraw.sort(this._sortNegative);
+            }
+        }
+
         var shadowProjection = camera.viewProjectionMatrix;
 
         var shadowDepthScale = split.shadowDepthScale;
         var shadowDepthOffset = (shadowDepthScale ? split.shadowDepthOffset : 1.0);
 
-        var worldShadowProjection = split.worldShadowProjection;
-        worldShadowProjection[0] = shadowProjection[0];
-        worldShadowProjection[1] = shadowProjection[4];
-        worldShadowProjection[2] = shadowProjection[8];
-        worldShadowProjection[3] = shadowProjection[12];
-        worldShadowProjection[4] = shadowProjection[1];
-        worldShadowProjection[5] = shadowProjection[5];
-        worldShadowProjection[6] = shadowProjection[9];
-        worldShadowProjection[7] = shadowProjection[13];
-        worldShadowProjection[8] = viewMatrix[2] * shadowDepthScale;
-        worldShadowProjection[9] = viewMatrix[5] * shadowDepthScale;
-        worldShadowProjection[10] = viewMatrix[8] * shadowDepthScale;
-        worldShadowProjection[11] = (viewMatrix[11] * shadowDepthScale) + shadowDepthOffset;
-
         var viewToShadowProjection = md.m43MulM44(mainCameraMatrix, shadowProjection, this.tempMatrix44);
-        var viewToShadowMatrix = md.m43Mul(mainCameraMatrix, viewMatrix, this.tempMatrix43);
 
         var viewShadowProjection = split.viewShadowProjection;
         viewShadowProjection[0] = viewToShadowProjection[0];
@@ -1096,19 +1350,18 @@ var CascadedShadowMapping = (function () {
         viewShadowProjection[5] = viewToShadowProjection[5];
         viewShadowProjection[6] = viewToShadowProjection[9];
         viewShadowProjection[7] = viewToShadowProjection[13];
-        viewShadowProjection[8] = viewToShadowMatrix[2] * shadowDepthScale;
-        viewShadowProjection[9] = viewToShadowMatrix[5] * shadowDepthScale;
-        viewShadowProjection[10] = viewToShadowMatrix[8] * shadowDepthScale;
-        viewShadowProjection[11] = (viewToShadowMatrix[11] * shadowDepthScale) + shadowDepthOffset;
+        viewShadowProjection[8] = viewToShadowProjection[2] * shadowDepthScale;
+        viewShadowProjection[9] = viewToShadowProjection[6] * shadowDepthScale;
+        viewShadowProjection[10] = viewToShadowProjection[10] * shadowDepthScale;
+        viewShadowProjection[11] = (viewToShadowProjection[14] * shadowDepthScale) + shadowDepthOffset;
 
         var invSize = (1.0 / this.size);
-        var shadowScaleOffset = split.shadowScaleOffset;
-        shadowScaleOffset[1] = shadowScaleOffset[0] = 0.25;
-        shadowScaleOffset[2] = (split.viewportX * invSize) + 0.25;
-        shadowScaleOffset[3] = (split.viewportY * invSize) + 0.25;
+        var shadowOffset = split.shadowOffset;
+        shadowOffset[0] = (split.viewportX * invSize) + 0.25;
+        shadowOffset[1] = (split.viewportY * invSize) + 0.25;
 
-        if (occludersDrawArray.length) {
-            frustumPoints = split.camera.getFrustumFarPoints(split.camera.farPlane, frustumPoints);
+        if (occludersToDraw.length) {
+            frustumPoints = camera.getFrustumFarPoints(camera.farPlane, split.frustumPoints);
             for (n = 0; n < 4; n += 1) {
                 previousSplitPoints.push(frustumPoints[n]);
             }
@@ -1252,7 +1505,7 @@ var CascadedShadowMapping = (function () {
         return (a.sortKey - b.sortKey);
     };
 
-    CascadedShadowMapping.prototype._filterOccluders = function (overlappingRenderables, overlappingExtents, numOverlappingRenderables, numStaticOverlappingRenderables, occludersDrawArray, occludeesExtents, occludersExtents, frameIndex) {
+    CascadedShadowMapping.prototype._filterOccluders = function (overlappingRenderables, overlappingExtents, numOverlappingRenderables, occluders, occludeesExtents, occludersExtents, frameIndex) {
         var numOccludees = 0;
         var numOccluders = 0;
         var n, renderable, extents, rendererInfo, shadowMappingUpdate;
@@ -1264,6 +1517,7 @@ var CascadedShadowMapping = (function () {
                     rendererInfo = renderable.rendererInfo;
                     if (!rendererInfo) {
                         rendererInfo = renderingCommonCreateRendererInfoFn(renderable);
+                        rendererInfo.shadowMappingFullyVisible = -1;
                     }
 
                     shadowMappingUpdate = rendererInfo.shadowMappingUpdate;
@@ -1275,7 +1529,15 @@ var CascadedShadowMapping = (function () {
                         drawParametersArray = renderable.shadowMappingDrawParameters;
                         numDrawParameters = drawParametersArray.length;
                         for (drawParametersIndex = 0; drawParametersIndex < numDrawParameters; drawParametersIndex += 1) {
-                            occludersDrawArray[numOccluders] = drawParametersArray[drawParametersIndex];
+                            var drawParameters = drawParametersArray[drawParametersIndex];
+                            var occluder = occluders[numOccluders];
+                            if (!occluder) {
+                                occluder = new CascadedShadowOccluder(drawParameters, rendererInfo);
+                                occluders[numOccluders] = occluder;
+                            } else {
+                                occluder.drawParameters = drawParameters;
+                                occluder.rendererInfo = rendererInfo;
+                            }
                             occludersExtents[numOccluders] = extents;
                             numOccluders += 1;
                         }
@@ -1378,17 +1640,15 @@ var CascadedShadowMapping = (function () {
 
         var distanceRange = (maxLightDistance - minLightDistance);
         if (0.001 < distanceRange) {
-            var maxDepthReciprocal = (1.0 / distanceRange);
-
-            split.shadowDepthScale = -maxDepthReciprocal;
-            split.shadowDepthOffset = -minLightDistance * maxDepthReciprocal;
+            split.shadowDepthScale = 0.5;
+            split.shadowDepthOffset = 0.5;
         } else {
             split.shadowDepthScale = 0;
             split.shadowDepthOffset = 0;
         }
     };
 
-    CascadedShadowMapping.prototype._updateOccludersLimits = function (split, viewMatrix, occludersDrawArray, occludersExtents, numOccluders) {
+    CascadedShadowMapping.prototype._updateOccludersLimits = function (split, viewMatrix, occluders, occludersExtents, numOccluders) {
         var r0 = -viewMatrix[0];
         var r1 = -viewMatrix[3];
         var r2 = -viewMatrix[6];
@@ -1475,8 +1735,12 @@ var CascadedShadowMapping = (function () {
             // if we reach this code is because the occluder is out of bounds
             numOccluders -= 1;
             if (n < numOccluders) {
-                occludersDrawArray[n] = occludersDrawArray[numOccluders];
                 occludersExtents[n] = occludersExtents[numOccluders];
+
+                var discardedOccluder = occluders[n];
+                occluders[n] = occluders[numOccluders];
+                occluders[numOccluders] = discardedOccluder;
+                discardedOccluder.clear();
             } else {
                 break;
             }
@@ -1498,6 +1762,46 @@ var CascadedShadowMapping = (function () {
         split.maxLightDistanceY = maxLightDistanceY;
 
         return numOccluders;
+    };
+
+    // Filter out occluders fully included on previous splits
+    CascadedShadowMapping.prototype._filterRedundantOccuders = function (occluders, occludersExtents, occludersToDraw, frustumPlanes, frameIndex, numOccluders) {
+        var numPlanes = frustumPlanes.length;
+        var numToDraw = 0;
+        for (var n = 0; n < numOccluders; n += 1) {
+            var occluder = occluders[n];
+            var rendererInfo = occluder.rendererInfo;
+            if (rendererInfo.shadowMappingFullyVisible !== frameIndex) {
+                var extents = occludersExtents[n];
+                var n0 = extents[0];
+                var n1 = extents[1];
+                var n2 = extents[2];
+                var p0 = extents[3];
+                var p1 = extents[4];
+                var p2 = extents[5];
+
+                var i = 0;
+                do {
+                    var plane = frustumPlanes[i];
+                    var d0 = plane[0];
+                    var d1 = plane[1];
+                    var d2 = plane[2];
+                    var distance = (d0 * (d0 > 0 ? n0 : p0) + d1 * (d1 > 0 ? n1 : p1) + d2 * (d2 > 0 ? n2 : p2) - plane[3]);
+                    if (distance < -0.01) {
+                        break;
+                    }
+                    i += 1;
+                } while(i < numPlanes);
+
+                if (i >= numPlanes) {
+                    rendererInfo.shadowMappingFullyVisible = frameIndex;
+                }
+
+                occludersToDraw[numToDraw] = occluder.drawParameters;
+                numToDraw += 1;
+            }
+        }
+        return numToDraw;
     };
 
     CascadedShadowMapping.prototype.drawShadowMap = function () {
@@ -1527,7 +1831,7 @@ var CascadedShadowMapping = (function () {
             gd.clear(clearColor, 1.0, 0);
         }
 
-        var n, split, splitCamera, occludersDrawArray;
+        var n, split, splitCamera, occludersToDraw;
         for (n = 0; n < numSplits; n += 1) {
             split = splits[n];
             if (split.needsRedraw) {
@@ -1542,15 +1846,13 @@ var CascadedShadowMapping = (function () {
 
                 splitCamera = split.camera;
 
-                occludersDrawArray = split.occludersDrawArray;
-                if (occludersDrawArray.length) {
+                occludersToDraw = split.occludersToDraw;
+                if (occludersToDraw.length) {
                     /* tslint:disable:no-string-literal */
-                    gtp['viewTranspose'] = md.m43Transpose(splitCamera.viewMatrix, gtp['viewTranspose']);
-                    gtp['shadowProjectionTranspose'] = md.m44Transpose(splitCamera.projectionMatrix, gtp['shadowProjectionTranspose']);
-                    gtp['shadowDepth'] = md.v4Build(0, 0, split.shadowDepthScale, split.shadowDepthOffset, gtp['shadowDepth']);
+                    gtp['viewProjectionTranspose'] = md.m44Transpose(splitCamera.viewProjectionMatrix, gtp['viewProjectionTranspose']);
 
                     /* tslint:enable:no-string-literal */
-                    gd.drawArray(occludersDrawArray, globalTechniqueParametersArray, 0);
+                    gd.drawArray(occludersToDraw, globalTechniqueParametersArray, 0);
                 }
             }
         }
@@ -1598,6 +1900,7 @@ var CascadedShadowMapping = (function () {
             if (split.needsBlur) {
                 split.needsBlur = false;
 
+                // Horizontal
                 if (!gd.beginRenderTarget(blurRenderTarget)) {
                     break;
                 }
@@ -1616,6 +1919,7 @@ var CascadedShadowMapping = (function () {
 
                 gd.endRenderTarget();
 
+                // Vertical
                 if (!gd.beginRenderTarget(this.renderTarget)) {
                     break;
                 }
@@ -1655,6 +1959,7 @@ var CascadedShadowMapping = (function () {
         delete this.tempV3AxisX;
         delete this.tempV3At;
         delete this.tempV3Up;
+        delete this.tempV3Right;
         delete this.tempV3Direction;
         delete this.tempMatrix33;
         delete this.tempMatrix43;
@@ -1679,9 +1984,9 @@ var CascadedShadowMapping = (function () {
         delete this.gd;
     };
 
-    CascadedShadowMapping.create = // Constructor function
-    function (gd, md, shaderManager, size) {
-        return new CascadedShadowMapping(gd, md, shaderManager, size);
+    // Constructor function
+    CascadedShadowMapping.create = function (gd, md, shaderManager, size, blurDisabled) {
+        return new CascadedShadowMapping(gd, md, shaderManager, size, blurDisabled);
     };
     CascadedShadowMapping.version = 1;
 

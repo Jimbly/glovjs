@@ -41,6 +41,7 @@ var Material = (function () {
     Material.prototype.clone = function (graphicsDevice) {
         var newMaterial = Material.create(graphicsDevice);
 
+        // Copy effect info
         if (this.effect) {
             newMaterial.effect = this.effect;
         }
@@ -175,6 +176,7 @@ var Material = (function () {
             return true;
         }
 
+        // material index is based on texture names if present so use it to filter
         if (this.meta.materialIndex !== other.meta.materialIndex) {
             var atn = this.texturesNames;
             var btn = other.texturesNames;

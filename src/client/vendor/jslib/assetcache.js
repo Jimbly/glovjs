@@ -109,6 +109,7 @@ var AssetCache = (function () {
             observer.subscribe(callback);
         }
         this.onLoad(key, params, function onLoadedAssetFn(asset) {
+            // Check cacheAsset has not been replaced during loading
             if (cachedAsset.key === key) {
                 cachedAsset.cacheHit = that.hitCounter;
                 cachedAsset.asset = asset;
@@ -125,8 +126,8 @@ var AssetCache = (function () {
         });
     };
 
-    AssetCache.create = // Constructor function
-    function (cacheParams) {
+    // Constructor function
+    AssetCache.create = function (cacheParams) {
         if (!cacheParams.onLoad) {
             return null;
         }
