@@ -3,6 +3,8 @@
 
 let VMathArrayConstructor = VMath.F32Array;
 
+const glov_engine = require('./engine.js');
+
 const UP_EDGE = 0;
 const DOWN_EDGE = 1;
 const DOWN = 2;
@@ -105,6 +107,7 @@ class GlovInput {
   onMouseDown(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_pos
     this.mouse_down[mousecode] = true;
+    glov_engine.sound_manager.resume();
   }
   onMouseUp(mousecode, x, y) {
     this.onMouseOver(x, y); // update this.mouse_pos
@@ -178,7 +181,7 @@ class GlovInput {
 
   onTouchChange(param) {
     this.last_touch_state = this.touch_state;
-    this.touch_state = param.touches || [];
+    this.touch_state = (param.touches || []).filter((t) => t.force);
     if (this.touch_as_mouse) {
       if (this.last_touch_state.length === 1 && this.touch_state.length === 0) {
         // click!
