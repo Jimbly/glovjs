@@ -36,6 +36,12 @@ class GlovCamera {
   y1() {
     return this.data[3];
   }
+  w() {
+    return this.data[2] - this.data[0];
+  }
+  h() {
+    return this.data[3] - this.data[1];
+  }
   xScale() {
     return this.data[4];
   }
