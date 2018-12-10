@@ -7,6 +7,7 @@
 
 const { Draw2D } = require('./tz/draw2d.js');
 
+const glov_font = require('./font.js');
 const local_storage = require('./local_storage.js');
 
 VMath.zero_vec = VMath.v4BuildZero();
@@ -45,6 +46,11 @@ export const pico8_colors = [
   VMath.v4Build(1.000, 0.800, 0.667, 1),
 ];
 
+export let fps_style = glov_font.style({
+  outline_width: 2, outline_color: 0x00000080,
+  color: 0xFFFFFFff,
+});
+
 export let postprocessing = !local_storage.get('glov_no_postprocessing');
 export function postprocessingAllow(allow) {
   local_storage.set('glov_no_postprocessing', allow ? undefined : 1);
@@ -81,6 +87,11 @@ export function setState(new_state) {
     app_state = new_state;
   }
 }
+
+let mspf = 1000;
+let mspf_update_time = Date.now();
+let mspf_frame_count = 0;
+let show_fps = true;
 
 let do_borders = true;
 
@@ -124,6 +135,13 @@ function tick() {
   last_tick = now;
   global_timer += dt;
   ++global_frame_index;
+
+  ++mspf_frame_count;
+  if (now - mspf_update_time > 1000) {
+    mspf = (now - mspf_update_time) / mspf_frame_count;
+    mspf_frame_count = 0;
+    mspf_update_time = now;
+  }
 
   glov_camera.tick();
   glov_camera.set2DAspectFixed(game_width, game_height);
@@ -171,6 +189,10 @@ function tick() {
   if (app_state) {
     app_state(dt);
   }
+  if (show_fps) {
+    glov_camera.set2DAspectFixed(game_width, game_height);
+    font.drawSizedAligned(fps_style, glov_camera.x0(), glov_camera.y0(), Z.FPSMETER, glov_ui.font_height, glov_font.ALIGN.HRIGHT, glov_camera.w(), 0, `FPS: ${(1000 / mspf).toFixed(1)} (${mspf.toFixed(0)}ms/f)`);
+  }
 
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
 
@@ -211,7 +233,6 @@ export function startup(params) {
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
   let draw2d_params = { graphicsDevice: graphics_device, shaders: params.shaders || {} };
   /* eslint-disable global-require */
-  const glov_font = require('./font.js');
   glov_font.populateDraw2DParams(draw2d_params);
   draw_2d = Draw2D.create(draw2d_params);
   glov_camera = require('./camera.js').create(graphics_device, draw_2d);
@@ -249,6 +270,9 @@ export function startup(params) {
   }
   if (params.do_borders !== undefined) {
     do_borders = params.do_borders;
+  }
+  if (params.show_fps !== undefined) {
+    show_fps = params.show_fps;
   }
 
   // TODO: Use requestAnimationFrame instead?
