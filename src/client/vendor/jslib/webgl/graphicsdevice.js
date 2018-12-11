@@ -1,4 +1,8 @@
 // Copyright (c) 2011-2014 Turbulenz Limited
+/* eslint indent:off, no-bitwise:off, yoda:off, no-var:off, wrap-iife:off, no-shadow:off, no-underscore-dangle:off,
+  no-empty-function:off, quotes:off, strict:off, max-len:off, one-var:off, sort-vars:off,
+  on-var-declaration-per-line:off
+*/
 /*global TurbulenzEngine*/
 /*global TGALoader*/
 /*global DDSLoader*/
@@ -15,17 +19,16 @@
 /*global DataView*/
 /*global window*/
 /*global debug*/
+
 "use strict";
 
 function isPowerOfTwo(n) {
-  /*jshint bitwise:false*/
   return (0 === (n & (n - 1)));
 }
 function nextHighestPowerOfTwo(x) {
-  /*jshint bitwise:false*/
   --x;
   for (var i = 1; i < 32; i <<= 1) {
-    x = x | x >> i;
+    x |= x >> i;
   }
   return x + 1;
 }
@@ -59,8 +62,32 @@ var TZWebGLTexture = (function () {
         gd._temporaryBindTexture(target, null);
     };
 
+    TZWebGLTexture.prototype.copyTexImage = function (x, y, w, h) {
+        var gd = this._gd;
+        var gl = gd._gl;
+        var target = this._target;
+        var format = this.format;
+        var internalFormat;
+        x = x || 0;
+        y = y || 0;
+        w = w || gd.width;
+        h = h || gd.height;
+        if (format === gd.PIXELFORMAT_R8G8B8A8) {
+          internalFormat = gl.RGBA;
+        } else if (format === gd.PIXELFORMAT_R8G8B8) {
+          internalFormat = gl.RGB;
+        } else {
+          debug.assert(false, 'Unhandled format');
+        }
+        gd._temporaryBindTexture(target, this._glTexture);
+        gl.copyTexImage2D(target, 0, internalFormat, x, y, w, h, 0);
+        gd._temporaryBindTexture(target, null);
+        this.width = w;
+        this.height = h;
+    };
+
     // Internal
-    TZWebGLTexture.prototype.createGLTexture = function (data) {
+    TZWebGLTexture.prototype.createGLTexture = function (data, no_data) {
         var gd = this._gd;
         var gl = gd._gl;
 
@@ -104,7 +131,9 @@ var TZWebGLTexture = (function () {
         gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-        this.updateData(data);
+        if (!no_data) {
+          this.updateData(data);
+        }
 
         gd._temporaryBindTexture(target, null);
 
@@ -1074,7 +1103,7 @@ var TZWebGLTexture = (function () {
                 return null;
             }
 
-            var result = tex.createGLTexture(params.data);
+            var result = tex.createGLTexture(params.data, params.no_data);
             if (!result) {
                 tex = null;
             }

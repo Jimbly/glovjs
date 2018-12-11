@@ -27,14 +27,13 @@ export function focuslog(...args) {
 
 function doBlurEffect(src, dest) {
   glov_engine.effects.applyGaussianBlur({
-    source: src,
-    destination: dest,
+    source: glov_engine.captureFramebuffer(),
     blurRadius: 5,
-    blurTarget: glov_engine.getTemporaryTarget(),
+    blurTarget: glov_engine.getTemporaryTexture(),
   });
 }
 
-function doDesaturateEffect(src, dest) {
+function doDesaturateEffect() {
   let saturation = 0.1;
 
   // Perf note: do not allocate these each frame for better perf
@@ -76,8 +75,7 @@ function doDesaturateEffect(src, dest) {
   // }
   glov_engine.effects.applyColorMatrix({
     colorMatrix: xform,
-    source: src,
-    destination: dest,
+    source: glov_engine.captureFramebuffer(),
   });
 }
 
@@ -551,8 +549,8 @@ class GlovUI {
         this.color_modal_darken,
         [this.camera.x1() - this.camera.x0(), this.camera.y1() - this.camera.y0(), 1, 1]);
       if (glov_engine.postprocessing) {
-        glov_engine.queueFrameEffect(Z.MODAL - 2, doBlurEffect);
-        glov_engine.queueFrameEffect(Z.MODAL - 1, doDesaturateEffect);
+        this.draw_list.queuefn(doBlurEffect, Z.MODAL - 2);
+        this.draw_list.queuefn(doDesaturateEffect, Z.MODAL - 1);
         pp_this_frame = true;
       }
     }

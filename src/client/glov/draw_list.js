@@ -130,13 +130,13 @@ class GlovDrawList {
     return elem;
   }
 
-  queuefn(fn, x, y, z, bucket) {
+  queuefn(fn, z) {
     let elem = {
       fn,
-      x: (x - this.camera.data[0]) * this.camera.data[4],
-      y: (y - this.camera.data[1]) * this.camera.data[5],
+      x: 0,
+      y: 0,
       z,
-      bucket: bucket === undefined ? this.default_bucket : bucket,
+      bucket: null,
       uid: ++this.uid,
     };
     this.list.push(elem);
