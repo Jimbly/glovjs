@@ -14,8 +14,12 @@ Z.FPSMETER = Z.FPSMETER || 10000;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_edit_box = require('./edit_box.js');
-const { clone } = require('../../common/util.js');
+const { clone, lerp } = require('../../common/util.js');
 
+const { max, min } = Math;
+const { m43BuildIdentity, m43Mul, v2Build, v4Build, v4ScalarMul } = VMath;
+
+const MODAL_DARKEN = 0.75;
 let glov_input;
 let glov_sprite;
 let key_codes;
@@ -25,66 +29,65 @@ export function focuslog(...args) {
   // console.log(`focuslog(${glov_engine.getFrameIndex()}): `, ...args);
 }
 
-function doBlurEffect(src, dest) {
+function doBlurEffect(factor) {
   glov_engine.effects.applyGaussianBlur({
     source: glov_engine.captureFramebuffer(),
-    blurRadius: 5,
-    blurTarget: glov_engine.getTemporaryTexture(),
+    blur: lerp(factor, 0.125, 0.865),
+    // min_size: 128,
   });
 }
 
-function doDesaturateEffect() {
-  let saturation = 0.1;
+let desaturate_xform = m43BuildIdentity();
+let desaturate_tmp = m43BuildIdentity();
+function doDesaturateEffect(factor) {
+  m43BuildIdentity(desaturate_xform);
 
-  // Perf note: do not allocate these each frame for better perf
-  let xform = VMath.m43BuildIdentity();
-  let tmp = VMath.m43BuildIdentity();
+  glov_engine.effects.saturationMatrix(lerp(factor, 0.5, 0.1), desaturate_tmp);
+  m43Mul(desaturate_xform, desaturate_tmp, desaturate_xform);
 
-  VMath.m43BuildIdentity(xform);
-  if (saturation !== 1) {
-    glov_engine.effects.saturationMatrix(saturation, tmp);
-    VMath.m43Mul(xform, tmp, xform);
-  }
+  glov_engine.effects.brightnessScaleMatrix(lerp(factor, 1, 1 - MODAL_DARKEN), desaturate_tmp);
+  m43Mul(desaturate_xform, desaturate_tmp, desaturate_xform);
+
   // if ((hue % (Math.PI * 2)) !== 0) {
   //   glov_engine.effects.hueMatrix(hue, tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (contrast !== 1) {
   //   glov_engine.effects.contrastMatrix(contrast, tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (brightness !== 0) {
   //   glov_engine.effects.brightnessMatrix(brightness, tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (additiveRGB[0] !== 0 || additiveRGB[1] !== 0 || additiveRGB[2] !== 0) {
   //   glov_engine.effects.additiveMatrix(additiveRGB, tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (grayscale) {
   //   glov_engine.effects.grayScaleMatrix(tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (negative) {
   //   glov_engine.effects.negativeMatrix(tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   // if (sepia) {
   //   glov_engine.effects.sepiaMatrix(tmp);
-  //   VMath.m43Mul(xform, tmp, xform);
+  //   m43Mul(xform, tmp, xform);
   // }
   glov_engine.effects.applyColorMatrix({
-    colorMatrix: xform,
+    colorMatrix: desaturate_xform,
     source: glov_engine.captureFramebuffer(),
   });
 }
 
 export function makeColorSet(color) {
   let ret = {
-    regular: VMath.v4ScalarMul(color, 1),
-    rollover: VMath.v4ScalarMul(color, 0.8),
-    down: VMath.v4ScalarMul(color, 0.7),
-    disabled: VMath.v4ScalarMul(color, 0.4),
+    regular: v4ScalarMul(color, 1),
+    rollover: v4ScalarMul(color, 0.8),
+    down: v4ScalarMul(color, 0.7),
+    disabled: v4ScalarMul(color, 0.4),
   };
   for (let field in ret) {
     ret[field][3] = color[3];
@@ -107,8 +110,8 @@ class GlovUI {
     pad_codes = glov_input.pad_codes;
 
     this.color_button = makeColorSet([1,1,1,1]);
-    this.color_panel = VMath.v4Build(1, 1, 0.75, 1);
-    this.color_modal_darken = VMath.v4Build(0, 0, 0, 0.75);
+    this.color_panel = v4Build(1, 1, 0.75, 1);
+    this.color_modal_darken = v4Build(0, 0, 0, MODAL_DARKEN);
 
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
@@ -151,6 +154,7 @@ class GlovUI {
     this.modal_dialog = null;
     this.modal_stealing_focus = false;
     this.menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
+    this.menu_up_time = 0;
 
     this.this_frame_edit_boxes = [];
     this.last_frame_edit_boxes = [];
@@ -194,7 +198,7 @@ class GlovUI {
     let uidata = s.uidata;
     let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
     let x = coords.x;
-    ws[1] = Math.max(0, coords.w - ws[0] - ws[2]);
+    ws[1] = max(0, coords.w - ws[0] - ws[2]);
     for (let ii = 0; ii < ws.length; ++ii) {
       let my_w = ws[ii];
       this.draw_list.queue(s, x, coords.y, coords.z, color, [my_w, coords.h, 1, 1], uidata.rects[ii]);
@@ -206,9 +210,9 @@ class GlovUI {
     let uidata = s.uidata;
     let scale = pixel_scale;
     let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
-    ws[1] = Math.max(0, coords.w - ws[0] - ws[2]);
+    ws[1] = max(0, coords.w - ws[0] - ws[2]);
     let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
-    hs[1] = Math.max(0, coords.h - hs[0] - hs[2]);
+    hs[1] = max(0, coords.h - hs[0] - hs[2]);
     let x = coords.x;
     for (let ii = 0; ii < ws.length; ++ii) {
       let my_w = ws[ii];
@@ -377,8 +381,8 @@ class GlovUI {
     let img_h = param.img.getHeight();
     let img_origin = param.img.getOrigin();
     let img_scale = 1;
-    img_scale = Math.min(img_scale, (param.w * 0.75) / img_w);
-    img_scale = Math.min(img_scale, (param.h * 0.75) / img_h);
+    img_scale = min(img_scale, (param.w * 0.75) / img_w);
+    img_scale = min(img_scale, (param.h * 0.75) / img_h);
     img_w *= img_scale;
     img_h *= img_scale;
     if (param.color1) {
@@ -517,7 +521,7 @@ class GlovUI {
     return glov_edit_box.create(params);
   }
 
-  tick() {
+  tick(dt) {
     this.last_frame_button_mouseover = this.frame_button_mouseover;
     this.frame_button_mouseover = false;
     this.focused_last_frame = this.focused_this_frame;
@@ -544,15 +548,21 @@ class GlovUI {
 
     let pp_this_frame = false;
     if (this.modal_dialog || this.menu_up) {
+      this.menu_up_time += dt;
       // Effects during modal dialogs, may need option to disable or customize these
-      this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), Z.MODAL - 2,
-        this.color_modal_darken,
-        [this.camera.x1() - this.camera.x0(), this.camera.y1() - this.camera.y0(), 1, 1]);
       if (glov_engine.postprocessing) {
-        this.draw_list.queuefn(doBlurEffect, Z.MODAL - 2);
-        this.draw_list.queuefn(doDesaturateEffect, Z.MODAL - 1);
+        let factor = min(this.menu_up_time / 500, 1);
+        this.draw_list.queuefn(doBlurEffect.bind(this, factor), Z.MODAL - 2);
+        this.draw_list.queuefn(doDesaturateEffect.bind(this, factor), Z.MODAL - 1);
         pp_this_frame = true;
+      } else {
+        // Just darken
+        this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), Z.MODAL - 2,
+          this.color_modal_darken,
+          [this.camera.x1() - this.camera.x0(), this.camera.y1() - this.camera.y0(), 1, 1]);
       }
+    } else {
+      this.menu_up_time = 0;
     }
     this.menu_up = false;
 
@@ -670,11 +680,11 @@ class GlovUI {
 
 
   drawRect(x0, y0, x1, y1, z, color) {
-    let mx = Math.min(x0, x1);
-    let my = Math.min(y0, y1);
-    let Mx = Math.max(x0, x1);
-    let My = Math.max(y0, y1);
-    this.draw_list.queue(this.sprites.white, mx, my, z, color, VMath.v2Build(Mx - mx, My - my));
+    let mx = min(x0, x1);
+    let my = min(y0, y1);
+    let Mx = max(x0, x1);
+    let My = max(y0, y1);
+    this.draw_list.queue(this.sprites.white, mx, my, z, color, v2Build(Mx - mx, My - my));
   }
 
   _spreadTechParams(spread) {
@@ -682,11 +692,11 @@ class GlovUI {
     // spread=0.5 -> 2
     // spread=0.75 -> 4
     // spread=1 -> large enough to AA
-    spread = Math.min(Math.max(spread, 0), 0.99);
+    spread = min(max(spread, 0), 0.99);
 
     let tech_params = {
       clipSpace: this.draw_list.draw_2d.clipSpace,
-      param0: VMath.v4Build(0,0,0,0),
+      param0: v4Build(0,0,0,0),
       texture: null
     };
 

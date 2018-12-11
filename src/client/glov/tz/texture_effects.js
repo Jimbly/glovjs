@@ -3,6 +3,8 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const opengl = require('./opengl.js');
+const glov_engine = require('../engine.js');
 
 // Generated from assets/shaders/textureeffects.cgfx
 let textureeffects_cgfx = {
@@ -10,31 +12,39 @@ let textureeffects_cgfx = {
   'name': 'textureeffects.cgfx',
   'samplers': {
     'inputTexture0': {
-      'MinFilter': 9729,
-      'MagFilter': 9729,
-      'WrapS': 33071,
-      'WrapT': 33071
+      'MinFilter': opengl.LINEAR,
+      'MagFilter': opengl.LINEAR,
+      'WrapS': opengl.CLAMP_TO_EDGE,
+      'WrapT': opengl.CLAMP_TO_EDGE,
     },
     'inputTexture1': {
-      'MinFilter': 9729,
-      'MagFilter': 9729,
-      'WrapS': 33071,
-      'WrapT': 33071
+      'MinFilter': opengl.LINEAR,
+      'MagFilter': opengl.LINEAR,
+      'WrapS': opengl.CLAMP_TO_EDGE,
+      'WrapT': opengl.CLAMP_TO_EDGE,
     },
     'inputTexture2': {
-      'MinFilter': 9729,
-      'MagFilter': 9729,
-      'WrapS': 33071,
-      'WrapT': 33071
+      'MinFilter': opengl.LINEAR,
+      'MagFilter': opengl.LINEAR,
+      'WrapS': opengl.CLAMP_TO_EDGE,
+      'WrapT': opengl.CLAMP_TO_EDGE,
     },
     'distortTexture': {
-      'MinFilter': 9729,
-      'MagFilter': 9729,
-      'WrapS': 10497,
-      'WrapT': 10497
+      'MinFilter': opengl.LINEAR,
+      'MagFilter': opengl.LINEAR,
+      'WrapS': opengl.REPEAT,
+      'WrapT': opengl.REPEAT,
     }
   },
   'parameters': {
+    'copyUVScale': {
+      'type': 'float',
+      'columns': 2
+    },
+    'clipSpace': {
+      'type': 'float',
+      'columns': 4
+    },
     'strength': {
       'type': 'float',
       'columns': 2
@@ -97,8 +107,11 @@ let textureeffects_cgfx = {
   'techniques': {
     'distort': [
       {
-        'parameters': ['strength', 'transform', 'invTransform', 'inputTexture0', 'distortTexture'],
-        'semantics': ['ATTR0', 'ATTR8'],
+        'parameters': [
+          'clipSpace', 'copyUVScale', 'strength', 'transform',
+          'invTransform', 'inputTexture0', 'distortTexture'
+        ],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
           'DepthMask': false,
@@ -108,10 +121,23 @@ let textureeffects_cgfx = {
         'programs': ['vp_copy', 'fp_distort']
       }
     ],
+    'copy': [
+      {
+        'parameters': ['clipSpace', 'copyUVScale', 'inputTexture0'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
+        'states': {
+          'DepthTestEnable': false,
+          'DepthMask': false,
+          'CullFaceEnable': false,
+          'BlendEnable': false
+        },
+        'programs': ['vp_copy', 'fp_copy']
+      }
+    ],
     'copyColorMatrix': [
       {
-        'parameters': ['colorMatrix', 'inputTexture0'],
-        'semantics': ['ATTR0', 'ATTR8'],
+        'parameters': ['clipSpace', 'copyUVScale', 'colorMatrix', 'inputTexture0'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
           'DepthMask': false,
@@ -123,8 +149,8 @@ let textureeffects_cgfx = {
     ],
     'bloomThreshold': [
       {
-        'parameters': ['bloomThreshold', 'thresholdCutoff', 'inputTexture0'],
-        'semantics': ['ATTR0', 'ATTR8'],
+        'parameters': ['clipSpace', 'copyUVScale', 'bloomThreshold', 'thresholdCutoff', 'inputTexture0'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
           'DepthMask': false,
@@ -137,10 +163,10 @@ let textureeffects_cgfx = {
     'bloomMerge': [
       {
         'parameters': [
-          'bloomSaturation', 'originalSaturation', 'bloomIntensity', 'originalIntensity',
-          'inputTexture0', 'inputTexture1'
+          'clipSpace', 'copyUVScale', 'bloomSaturation', 'originalSaturation',
+          'bloomIntensity', 'originalIntensity', 'inputTexture0', 'inputTexture1'
         ],
-        'semantics': ['ATTR0', 'ATTR8'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
           'DepthMask': false,
@@ -152,8 +178,8 @@ let textureeffects_cgfx = {
     ],
     'gaussianBlur': [
       {
-        'parameters': ['sampleRadius', 'inputTexture0', 'Gauss'],
-        'semantics': ['ATTR0', 'ATTR8'],
+        'parameters': ['clipSpace', 'copyUVScale', 'sampleRadius', 'inputTexture0', 'Gauss'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
           'DepthMask': false,
@@ -165,13 +191,17 @@ let textureeffects_cgfx = {
     ]
   },
   'programs': {
-    'fp_gaussian_blur': {
-      'type': 'fragment',
-      'code': fs.readFileSync(`${__dirname}/../shaders/effects_gaussian_blur.fp`, 'utf8'),
-    },
     'vp_copy': {
       'type': 'vertex',
       'code': fs.readFileSync(`${__dirname}/../shaders/effects_copy.vp`, 'utf8'),
+    },
+    'fp_copy': {
+      'type': 'fragment',
+      'code': fs.readFileSync(`${__dirname}/../shaders/effects_copy.fp`, 'utf8'),
+    },
+    'fp_gaussian_blur': {
+      'type': 'fragment',
+      'code': fs.readFileSync(`${__dirname}/../shaders/effects_gaussian_blur.fp`, 'utf8'),
     },
     'fp_bloom_merge': {
       'type': 'fragment',
@@ -195,24 +225,24 @@ let textureeffects_cgfx = {
 export class TextureEffects {
   constructor(params) {
     this.graphicsDevice = params.graphicsDevice;
+    this.clipSpace = VMath.v4Build(2, 2, -1, -1);
+    this.copyUVScale = VMath.v2Build(1, 1);
 
     let gd = this.graphicsDevice;
 
     let staticVertexBufferParams = {
       numVertices: 4,
-      attributes: ['FLOAT2', 'FLOAT2'],
+      attributes: ['FLOAT2'],
       dynamic: false,
       data: [
-        -1, -1, 0, 0,
-        1, -1, 1, 0,
-        -1, 1, 0, 1,
-        1, 1, 1, 1
+        0, 0, /*0, 0,*/
+        1, 0, /*1, 0,*/
+        0, 1, /*0, 1,*/
+        1, 1, /*1, 1,*/
       ]
     };
 
     this.staticVertexBuffer = gd.createVertexBuffer(staticVertexBufferParams);
-    this.screenVertexBuffer = null;
-    this.screenVertexBufferLast = null;
 
     this.effectParams = {
       technique: null,
@@ -220,12 +250,22 @@ export class TextureEffects {
       destination: null
     };
 
-    this.quadSemantics = gd.createSemantics(['POSITION', 'TEXCOORD0']);
+    this.quadSemantics = gd.createSemantics(['POSITION'/*, 'TEXCOORD0'*/]);
     this.quadPrimitive = gd.PRIMITIVE_TRIANGLE_STRIP;
+
+    // Copy effect (for downsizing)
+    // ---------------
+    this.copyParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
+      inputTexture0: null,
+    });
 
     // Distort effect.
     // ---------------
     this.distortParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
       inputTexture0: null,
       distortTexture: null,
       strength: [0, 0],
@@ -236,6 +276,8 @@ export class TextureEffects {
     // Color matrix effect.
     // --------------------
     this.colorMatrixParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
       inputTexture0: null,
       colorMatrix: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     });
@@ -243,12 +285,16 @@ export class TextureEffects {
     // Bloom effect.
     // ------------
     this.bloomThresholdParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
       inputTexture0: null,
       bloomThreshold: 0,
       thresholdCuttoff: 0
     });
 
     this.bloomMergeParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
       inputTexture0: null,
       inputTexture1: null,
       bloomIntensity: 0,
@@ -261,6 +307,8 @@ export class TextureEffects {
     // ---------------------
     // (also used by bloom)
     this.gaussianBlurParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
       inputTexture0: null,
       sampleRadius: [1, 1]
     });
@@ -275,6 +323,7 @@ export class TextureEffects {
     this.bloomThresholdTechnique = shader.getTechnique('bloomThreshold');
     this.bloomMergeTechnique = shader.getTechnique('bloomMerge');
     this.gaussianBlurTechnique = shader.getTechnique('gaussianBlur');
+    this.copyTechnique = shader.getTechnique('copy');
   }
 
   grayScaleMatrix(dst) {
@@ -401,7 +450,7 @@ export class TextureEffects {
     return dst;
   }
 
-  brightnessMatrix(brightnessOffset, dst) {
+  brightnessAddMatrix(brightnessOffset, dst) {
     if (dst === undefined) {
       dst = VMath.m43BuildIdentity();
     }
@@ -409,6 +458,18 @@ export class TextureEffects {
     dst[0] = dst[4] = dst[8] = 1;
     dst[1] = dst[2] = dst[3] = dst[5] = dst[6] = dst[7] = 0;
     dst[9] = dst[10] = dst[11] = brightnessOffset;
+
+    return dst;
+  }
+
+  brightnessScaleMatrix(scale, dst) {
+    if (dst === undefined) {
+      dst = VMath.m43BuildIdentity();
+    }
+
+    dst[0] = dst[4] = dst[8] = scale;
+    dst[1] = dst[2] = dst[3] = dst[5] = dst[6] = dst[7] = 0;
+    dst[9] = dst[10] = dst[11] = 0;
 
     return dst;
   }
@@ -501,29 +562,45 @@ export class TextureEffects {
   }
 
   applyGaussianBlur(params) {
+    let gd = this.graphicsDevice;
     let source = params.source;
-    let blur = params.blurTarget;
+    let max_size = params.max_size || 512;
+    let min_size = params.min_size || 128;
     assert(source);
-    assert(blur);
-    assert(source !== blur);
 
+    // Quick shrink down to 512->256->128 (or other specified min/max size)
     let effectParams = this.effectParams;
-    let techparams = this.gaussianBlurParameters;
+    let techparams = this.copyParameters;
+    effectParams.technique = this.copyTechnique;
+    effectParams.params = techparams;
+    techparams.inputTexture0 = source;
+
+    let res = max_size;
+    while (res > gd.width || res > gd.height) {
+      res /= 2;
+    }
+
+    while (res > min_size) {
+      this.applyEffect(effectParams, res, res);
+      techparams.inputTexture0 = glov_engine.captureFramebuffer(res, res);
+      res /= 2;
+    }
+
+    // Do seperable blur
+    techparams = this.gaussianBlurParameters;
     effectParams.technique = this.gaussianBlurTechnique;
     effectParams.params = techparams;
 
-    let sampleRadius = (params.blurRadius || 5);
-    techparams.sampleRadius[0] = sampleRadius / source.width;
+    let sampleRadius = (params.blur || 1) / res;
+    techparams.sampleRadius[0] = sampleRadius;
     techparams.sampleRadius[1] = 0;
-    techparams.inputTexture0 = source;
-    effectParams.coord_source = source;
-    this.applyEffect(effectParams);
-    blur.copyTexImage();
+    techparams.inputTexture0 = this.copyParameters.inputTexture0;
+    this.applyEffect(effectParams, res, res);
+    let blur = glov_engine.captureFramebuffer(res, res);
 
     techparams.sampleRadius[0] = 0;
-    techparams.sampleRadius[1] = sampleRadius / source.height;
+    techparams.sampleRadius[1] = sampleRadius;
     techparams.inputTexture0 = blur;
-    effectParams.coord_source = techparams.inputTexture0;
     this.applyEffect(effectParams);
 
     return true;
@@ -555,7 +632,6 @@ export class TextureEffects {
     mout[11] = matrix[11];
 
     techparams.inputTexture0 = source;
-    effectParams.coord_source = source;
     this.applyEffect(effectParams);
 
     return true;
@@ -635,56 +711,36 @@ export class TextureEffects {
     return true;
   }
 
-  applyEffect(effect) {
+  applyEffect(effect, view_w, view_h) {
     let graphicsDevice = this.graphicsDevice;
+
+    let target_w = graphicsDevice.width;
+    let target_h = graphicsDevice.height;
+    view_w = view_w || target_w;
+    view_h = view_h || target_h;
+    let clipOffsetX = -1.0;
+    let clipOffsetY = -1.0;
+    let clipScaleX = 2.0 * view_w / target_w;
+    let clipScaleY = 2.0 * view_h / target_h;
+
+    let cs = effect.params.clipSpace;
+    cs[0] = clipScaleX;
+    cs[1] = clipScaleY;
+    cs[2] = clipOffsetX;
+    cs[3] = clipOffsetY;
+    let uvs = effect.params.copyUVScale;
+    uvs[0] = 1; // target_w / effect.coord_source.width;
+    uvs[1] = 1; // target_h / effect.coord_source.height;
 
     graphicsDevice.setTechnique(effect.technique);
     graphicsDevice.setTechniqueParameters(effect.params);
 
-    graphicsDevice.setStream(this.getScreenVertexBuffer(effect.coord_source), this.quadSemantics);
+    graphicsDevice.setStream(this.staticVertexBuffer, this.quadSemantics);
     graphicsDevice.draw(this.quadPrimitive, 4);
-  }
-
-  getScreenVertexBuffer(coord_source) {
-    assert(coord_source);
-    let gd = this.graphicsDevice;
-    let graphicsDeviceWidth = gd.width;
-    let graphicsDeviceHeight = gd.height;
-    let u1 = graphicsDeviceWidth / coord_source.width;
-    let v1 = graphicsDeviceHeight / coord_source.height;
-    let flip = !coord_source.rtbbctt;
-    if (this.screenVertexBufferLast && this.screenVertexBufferLast[0] === u1 &&
-      this.screenVertexBufferLast[1] === v1 && this.screenVertexBuffer[2] === flip) {
-      return this.screenVertexBuffer;
-    }
-    this.screenVertexBufferLast = [u1, v1, flip];
-    let staticVertexBufferParams = {
-      numVertices: 4,
-      attributes: ['FLOAT2', 'FLOAT2'],
-      dynamic: false,
-      data: [
-        -1, -1, 0, flip ? v1 : 0,
-        1, -1, u1, flip ? v1 : 0,
-        -1, 1, 0, flip ? 0 : v1,
-        1, 1, u1, flip ? 0 : v1
-      ]
-    };
-
-    if (this.screenVertexBuffer) {
-      this.screenVertexBuffer.destroy();
-      this.screenVertexBuffer = null;
-    }
-
-    this.screenVertexBuffer = gd.createVertexBuffer(staticVertexBufferParams);
-    return this.screenVertexBuffer;
   }
 
   destroy() {
     this.staticVertexBuffer.destroy();
-    if (this.screenVertexBuffer) {
-      this.screenVertexBuffer.destroy();
-      this.screenVertexBuffer = null;
-    }
 
     delete this.graphicsDevice;
   }

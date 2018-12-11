@@ -13,6 +13,7 @@ assert:false
 */
 
 const util = require('../../../common/util.js');
+const opengl = require('./opengl.js');
 
 //
 // Draw2DGroup. Wraps vertex buffer data with pairings of indices and textures
@@ -1654,18 +1655,18 @@ let additive_blend_state = {
   'BlendFunc': [770, 1]
 };
 let sampler_linear = {
-  'MinFilter': 9985/* LINEAR_MIPMAP_NEAREST */ ,
-  'MagFilter': 9729/* LINEAR */ ,
+  'MinFilter': opengl.LINEAR_MIPMAP_NEAREST,
+  'MagFilter': opengl.LINEAR,
   // clamp or wrap is arbitrary depending on application requirements
-  'WrapS': 33071 /* CLAMP_TO_EDGE */,
-  'WrapT': 33071 /* CLAMP_TO_EDGE */,
+  'WrapS': opengl.CLAMP_TO_EDGE,
+  'WrapT': opengl.CLAMP_TO_EDGE,
 };
 let sampler_nearest = {
-  'MinFilter': 9728 /*NEAREST*/,
-  'MagFilter': 9728 /*NEAREST*/,
+  'MinFilter': opengl.NEAREST,
+  'MagFilter': opengl.NEAREST,
   // clamp or wrap is arbitrary depending on application requirements
-  'WrapS': 10497 /*REPEAT*/, // 33071 /* CLAMP_TO_EDGE */,
-  'WrapT': 10497 /*REPEAT*/, // 33071 /* CLAMP_TO_EDGE */,
+  'WrapS': opengl.REPEAT, // opengl.CLAMP_TO_EDGE,
+  'WrapT': opengl.REPEAT, // opengl.CLAMP_TO_EDGE,
 };
 function addShader(shader_def, name, simple_def) {
   assert(!shader_def.techniques[name]);
@@ -1765,10 +1766,10 @@ Draw2D.create = function (params) {
     'name': 'draw2D.cgfx',
     'samplers': {
       'inputTexture0': {
-        'MinFilter': 9728 /* NEAREST */,
-        'MagFilter': 9729 /* LINEAR */,
-        'WrapS': 33071 /* CLAMP_TO_EDGE */,
-        'WrapT': 33071 /* CLAMP_TO_EDGE */,
+        'MinFilter': opengl.NEAREST,
+        'MagFilter': opengl.LINEAR,
+        'WrapS': opengl.CLAMP_TO_EDGE,
+        'WrapT': opengl.CLAMP_TO_EDGE,
       }
     },
     'parameters': {

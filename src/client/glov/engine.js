@@ -104,15 +104,30 @@ export function addTickFunc(cb) {
   app_tick_functions.push(cb);
 }
 
-let temporary_textures = [];
-let temporary_textures_idx = 0;
+let temporary_textures = {};
 
 function resetEffects() {
-  temporary_textures_idx = 0;
+  for (let key in temporary_textures) {
+    let temp = temporary_textures[key];
+    // Release unused textures
+    while (temp.list.length > temp.idx) {
+      temp.list.pop().destroy();
+    }
+    if (!temp.idx) {
+      delete temporary_textures[key];
+    } else {
+      temp.idx = 0;
+    }
+  }
 }
 
-export function getTemporaryTexture() {
-  if (temporary_textures_idx >= temporary_textures.length) {
+export function getTemporaryTexture(w, h) {
+  let key = w ? `${w}_${h}` : 'screen';
+  let temp = temporary_textures[key];
+  if (!temp) {
+    temp = temporary_textures[key] = { list: [], idx: 0 };
+  }
+  if (temp.idx >= temp.list.length) {
     let tex = graphics_device.createTexture({
       mipmaps: false,
       dynamic: true,
@@ -122,15 +137,18 @@ export function getTemporaryTexture() {
       data: null,
       no_data: true,
     });
-    tex.rtbbctt = true;
-    temporary_textures.push(tex);
+    temp.list.push(tex);
   }
-  return temporary_textures[temporary_textures_idx++];
+  return temp.list[temp.idx++];
 }
 
-export function captureFramebuffer() {
-  let tex = getTemporaryTexture();
-  tex.copyTexImage();
+export function captureFramebuffer(w, h) {
+  let tex = getTemporaryTexture(w, h);
+  if (w) {
+    tex.copyTexImage(0, 0, w, h);
+  } else {
+    tex.copyTexImage();
+  }
   return tex;
 }
 
@@ -159,7 +177,7 @@ function tick() {
   glov_camera.set2DAspectFixed(game_width, game_height);
   sound_manager.tick(dt);
   glov_input.tick();
-  glov_ui.tick();
+  glov_ui.tick(dt);
 
   if (need_repos) {
     --need_repos;

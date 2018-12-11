@@ -24,7 +24,7 @@ float _x;
 float _cut;
 _col = texture2D(inputTexture0, tz_TexCoord[0].xy);
 _luminance = dot(_col.xyz, vec3(2.12599993E-01, 7.15200007E-01, 7.22000003E-02));
-_x = float((_luminance> = bloomThreshold));
+_x = float((_luminance >= bloomThreshold));
 _a0025 = 3.14159274 * (_luminance / bloomThreshold - 0.5);
 _TMP0 = sin(_a0025);
 _x0027 = 0.5 * (1.0 + _TMP0);
