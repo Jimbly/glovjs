@@ -4,11 +4,9 @@ const assert = require('assert');
 const fs = require('fs');
 const glov_engine = require('./engine.js');
 
-const { easeOut, lerp } = require('../../common/util.js');
+const { easeOut } = require('../../common/util.js');
 const { v4Build } = VMath;
-const { abs, cos, floor, min, pow, random, sin, PI, SQRT1_2 } = Math;
-const PI_2 = PI / 2;
-const PI_4 = PI / 4;
+const { floor, min, pow, random } = Math;
 
 let draw_list;
 let glov_ui;
