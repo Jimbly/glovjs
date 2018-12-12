@@ -219,6 +219,16 @@ var VMath = {
         dst[1] = (a[1] * b[1]) + c[1];
         return dst;
     },
+    v2DistanceSq: function v2DistanceSqFn(a, b) {
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        return ((a0 * a0) + (a1 * a1));
+    },
+    v2Distance: function v2DistanceFn(a, b) {
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        return Math.sqrt((a0 * a0) + (a1 * a1));
+    },
     v2Dot: function v2DotFn(a, b) {
         return ((a[0] * b[0]) + (a[1] * b[1]));
     },
@@ -648,6 +658,20 @@ var VMath = {
         res[1] = ((a2 * b0) - (a0 * b2));
         res[2] = ((a0 * b1) - (a1 * b0));
         return res;
+    },
+    v3DistanceSq: function v3DistanceSqFn(a, b) {
+        debug.assert(debug.isVec3(a));
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        return ((a0 * a0) + (a1 * a1) + (a2 * a2));
+    },
+    v3Distance: function v3DistanceFn(a, b) {
+        debug.assert(debug.isVec3(a));
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2));
     },
     v3LengthSq: function v3LengthSqFn(a) {
         debug.assert(debug.isVec3(a));
@@ -1187,6 +1211,24 @@ var VMath = {
         var a1 = a[1];
         var a2 = a[2];
         var a3 = a[3];
+        return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
+    },
+    v4DistanceSq: function v4DistanceSqFn(a, b) {
+        debug.assert(debug.isVec4(a));
+
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        var a3 = b[3] - a[3];
+        return ((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
+    },
+    v4Distance: function v4DistanceFn(a, b) {
+        debug.assert(debug.isVec4(a));
+
+        var a0 = b[0] - a[0];
+        var a1 = b[1] - a[1];
+        var a2 = b[2] - a[2];
+        var a3 = b[3] - a[3];
         return Math.sqrt((a0 * a0) + (a1 * a1) + (a2 * a2) + (a3 * a3));
     },
     v4Reciprocal: function v4ReciprocalFn(a, dst) {
@@ -4429,11 +4471,11 @@ var VMath = {
         /*
         var qimaginary = q; // Use full quat directly to avoid copy
         var qw = q[3];
-        
+
         var s = (qw * qw) - VMath.v3Dot(qimaginary, qimaginary);
-        
+
         var r = VMath.v3ScalarMul(v, s);
-        
+
         s = VMath.v3Dot(qimaginary, v);
         r = VMath.v3Add(r, VMath.v3ScalarMul(qimaginary, s + s));
         r = VMath.v3Add(r, VMath.v3ScalarMul(VMath.v3Cross(qimaginary, v), qw + qw));
