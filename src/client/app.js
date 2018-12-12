@@ -35,6 +35,7 @@ export function main(canvas) {
   const glov_engine = require('./glov/engine.js');
   const glov_font = require('./glov/font.js');
   const glov_ui_test = require('./glov/ui_test.js');
+  const glov_transition = require('./glov/transition.js');
 
   glov_engine.startup({
     canvas,
@@ -210,6 +211,7 @@ export function main(canvas) {
       tooltip: 'Toggles visibility of general Font tests' })
     ) {
       flagToggle('font_test');
+      glov_transition.queue(Z.TRANSITION_FINAL, glov_transition.randomTransition());
     }
     y += 35;
 

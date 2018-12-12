@@ -130,7 +130,7 @@ class GlovDrawList {
     return elem;
   }
 
-  queuefn(fn, z) {
+  queuefn(z, fn) {
     let elem = {
       fn,
       x: 0,
@@ -146,7 +146,7 @@ class GlovDrawList {
   queueraw(
     tex, x, y, z, w, h,
     u0, v0, u1, v1,
-    color, rotation, bucket
+    color, rotation, bucket, tech_params
   ) {
     return this.queueraw4(tex,
       x, y,
@@ -155,7 +155,7 @@ class GlovDrawList {
       x, y + h,
       z,
       u0, v0, u1, v1,
-      color, bucket, null);
+      color, bucket, tech_params);
   }
   queueraw4(
     tex, x0, y0, x1, y1, x2, y2, x3, y3, z,

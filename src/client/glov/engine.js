@@ -8,6 +8,7 @@ const { Draw2D } = require('./tz/draw2d.js');
 const { TextureEffects } = require('./tz/texture_effects.js');
 
 const glov_font = require('./font.js');
+const glov_transition = require('./transition.js');
 const local_storage = require('./local_storage.js');
 
 VMath.zero_vec = VMath.v4BuildZero();
@@ -121,6 +122,18 @@ function resetEffects() {
   }
 }
 
+export function getTextureForCapture() {
+  return graphics_device.createTexture({
+    mipmaps: false,
+    dynamic: true,
+    src: null,
+    format: 'R8G8B8', // or maybe 'R8G8B8A8'
+    name: 'screen_temporary_tex',
+    data: null,
+    no_data: true,
+  });
+}
+
 export function getTemporaryTexture(w, h) {
   let key = w ? `${w}_${h}` : 'screen';
   let temp = temporary_textures[key];
@@ -128,15 +141,7 @@ export function getTemporaryTexture(w, h) {
     temp = temporary_textures[key] = { list: [], idx: 0 };
   }
   if (temp.idx >= temp.list.length) {
-    let tex = graphics_device.createTexture({
-      mipmaps: false,
-      dynamic: true,
-      src: null,
-      format: 'R8G8B8', // or maybe 'R8G8B8A8'
-      name: 'screen_temporary_tex',
-      data: null,
-      no_data: true,
-    });
+    let tex = getTextureForCapture();
     temp.list.push(tex);
   }
   return temp.list[temp.idx++];
@@ -219,6 +224,7 @@ function tick() {
   }
 
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
+  glov_transition.render(dt);
 
   // Above is queuing, below is actual drawing
 
@@ -252,6 +258,7 @@ export function startup(params) {
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
   let draw2d_params = { graphicsDevice: graphics_device, shaders: params.shaders || {} };
   /* eslint-disable global-require */
+  glov_transition.populateDraw2DParams(draw2d_params);
   glov_font.populateDraw2DParams(draw2d_params);
   draw_2d = Draw2D.create(draw2d_params);
   glov_camera = require('./camera.js').create(graphics_device, draw_2d);

@@ -675,33 +675,31 @@ class GlovFont {
   }
 }
 
+const shaders = {
+  font_aa: {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa.fp`, 'utf8'),
+  },
+  font_aa_glow: {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_glow.fp`, 'utf8'),
+  },
+  font_aa_outline: {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline.fp`, 'utf8'),
+  },
+  font_aa_outline_glow: {
+    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline_glow.fp`, 'utf8'),
+  },
+};
+
 export function populateDraw2DParams(params) {
   assert(!gd_params);
   gd_params = params;
 
-  // Set up embedded default shader
-
-  if (params.shaders) {
-    // Check for name conflicts
-    assert(!params.shaders.font_aa);
-    assert(!params.shaders.font_aa_glow);
-    assert(!params.shaders.font_aa_outline);
-    assert(!params.shaders.font_aa_outline_glow);
-  } else {
-    params.shaders = {};
+  // Set up embedded default shaders
+  params.shaders = params.shaders || {};
+  for (let name in shaders) {
+    assert(!params.shaders[name]);
+    params.shaders[name] = shaders[name];
   }
-  params.shaders.font_aa = {
-    fp: fs.readFileSync(`${__dirname}/shaders/font_aa.fp`, 'utf8'),
-  };
-  params.shaders.font_aa_glow = {
-    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_glow.fp`, 'utf8'),
-  };
-  params.shaders.font_aa_outline = {
-    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline.fp`, 'utf8'),
-  };
-  params.shaders.font_aa_outline_glow = {
-    fp: fs.readFileSync(`${__dirname}/shaders/font_aa_outline_glow.fp`, 'utf8'),
-  };
 }
 
 export function create(...args) {

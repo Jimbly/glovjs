@@ -1658,15 +1658,15 @@ let sampler_linear = {
   'MinFilter': opengl.LINEAR_MIPMAP_NEAREST,
   'MagFilter': opengl.LINEAR,
   // clamp or wrap is arbitrary depending on application requirements
-  'WrapS': opengl.CLAMP_TO_EDGE,
+  'WrapS': opengl.CLAMP_TO_EDGE, // opengl.REPEAT
   'WrapT': opengl.CLAMP_TO_EDGE,
 };
 let sampler_nearest = {
   'MinFilter': opengl.NEAREST,
   'MagFilter': opengl.NEAREST,
-  // clamp or wrap is arbitrary depending on application requirements
-  'WrapS': opengl.REPEAT, // opengl.CLAMP_TO_EDGE,
-  'WrapT': opengl.REPEAT, // opengl.CLAMP_TO_EDGE,
+  // clamp is required for glov_transitions
+  'WrapS': opengl.CLAMP_TO_EDGE,
+  'WrapT': opengl.CLAMP_TO_EDGE,
 };
 function addShader(shader_def, name, simple_def) {
   assert(!shader_def.techniques[name]);

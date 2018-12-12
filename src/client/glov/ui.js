@@ -9,6 +9,13 @@ Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
 Z.TOOLTIP = Z.TOOLTIP || 2000;
+Z.DEBUG = Z.DEBUG || 9800;
+
+// very high, but can still add integers
+Z.TRANSITION_FINAL = Z.TRANSITION_FINAL || 9900;
+// how much Z range can be used for rendering transitions - the capture happens at z + Z_TRANSITION_RANGE
+Z.TRANSITION_RANGE = Z.TRANSITION_RANGE || 10;
+
 Z.FPSMETER = Z.FPSMETER || 10000;
 
 const glov_engine = require('./engine.js');
@@ -552,8 +559,8 @@ class GlovUI {
       // Effects during modal dialogs, may need option to disable or customize these
       if (glov_engine.postprocessing) {
         let factor = min(this.menu_up_time / 500, 1);
-        this.draw_list.queuefn(doBlurEffect.bind(this, factor), Z.MODAL - 2);
-        this.draw_list.queuefn(doDesaturateEffect.bind(this, factor), Z.MODAL - 1);
+        this.draw_list.queuefn(Z.MODAL - 2, doBlurEffect.bind(this, factor));
+        this.draw_list.queuefn(Z.MODAL - 1, doDesaturateEffect.bind(this, factor));
         pp_this_frame = true;
       } else {
         // Just darken

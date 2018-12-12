@@ -4,9 +4,6 @@
 
 const glov_engine = require('./engine.js');
 
-window.Z = window.Z || {};
-Z.DEBUG = Z.DEBUG || 10000;
-
 const JUMP_THRESHOLD = 0.5;
 const JUMP_TIME = 0.125;
 const CLIMB_UP_SPEED = 3;
