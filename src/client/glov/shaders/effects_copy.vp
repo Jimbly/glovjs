@@ -12,5 +12,5 @@ uniform vec4 clipSpace;
 void main()
 {
   tz_TexCoord[0].xy = ATTR0.xy * copyUVScale;
-  gl_Position = vec4(ATTR0.xy * clipSpace.xy + clipSpace.zw, ATTR0.zw); // should be 0, 0?  0, 1? // donotcheckin
+  gl_Position = vec4(ATTR0.xy * clipSpace.xy + clipSpace.zw, 0, 1);
 }
