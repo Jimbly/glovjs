@@ -411,6 +411,8 @@ var WebGLInputDevice = (function () {
         if (this.isHovering && window.document.activeElement === this.canvas) {
             this.addInternalEventListener(window, 'mousedown', this.onMouseDown);
         }
+        // JE: Call onFocus when focused!
+        this.onFocus();
     };
 
     WebGLInputDevice.prototype.onFocus = function () {
@@ -424,7 +426,8 @@ var WebGLInputDevice = (function () {
             window.focus();
             canvas.focus();
 
-            this.setEventHandlersFocus();
+            // JE: Set key handlers always, not just on "focus"
+            // this.setEventHandlersFocus();
 
             canvas.oncontextmenu = function () {
                 return false;
@@ -452,7 +455,8 @@ var WebGLInputDevice = (function () {
             this.isWindowFocused = false;
 
             this.resetKeyStates();
-            this.setEventHandlersBlur();
+            // JE: Set key handlers always, not just on "focus"
+            // this.setEventHandlersBlur();
             canvas.oncontextmenu = null;
 
             this.sendEventToHandlers(blurHandlers);
@@ -1552,9 +1556,11 @@ var WebGLInputDevice = (function () {
         // Add canvas mouse event listeners
         id.setEventHandlersCanvas();
 
+        // JE: Set key handlers always, not just on "focus"
+        id.setEventHandlersFocus();
+
         // Add window blur event listener
-        // JE: Disable this, breaks alt-tab, etc
-        //id.setEventHandlersWindow();
+        id.setEventHandlersWindow();
         id.onFocus();
 
         // Add canvas touch event listeners
