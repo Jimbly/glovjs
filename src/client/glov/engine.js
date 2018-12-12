@@ -319,7 +319,7 @@ function loading() {
   let load_count = glov_sprite.loading() + sound_manager.loading();
   $('#loading_text').text(`Loading (${load_count})...`);
   if (!load_count) {
-    $('#loading').fadeOut(200);
+    $('#loading').hide();
     is_loading = false;
     app_state = after_loading_state;
   }
