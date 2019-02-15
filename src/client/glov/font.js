@@ -7,7 +7,10 @@
 const fs = require('fs');
 let VMathArrayConstructor = VMath.F32Array;
 
-const { v4Build, v4BuildZero } = VMath;
+const { clamp } = require('../../common/util.js');
+const { floor, max, round } = Math;
+
+const { v4Build, v4BuildZero, v4ScalarMul } = VMath;
 
 /*
 
@@ -158,6 +161,19 @@ export function style(font_style, fields) {
 export function styleColored(font_style, color) {
   return style(font_style, {
     color
+  });
+}
+
+function colorAlpha(color, alpha) {
+  alpha = clamp(round((color & 0xFF) * alpha), 0, 255);
+  return color & 0xFFFFFF00 | alpha;
+}
+
+export function styleAlpha(font_style, alpha) {
+  return style(font_style, {
+    color: colorAlpha((font_style || glov_font_default_style).color, alpha),
+    outline_color: colorAlpha((font_style || glov_font_default_style).outline_color, alpha),
+    glow_color: colorAlpha((font_style || glov_font_default_style).glow_color, alpha),
   });
 }
 
@@ -392,7 +408,7 @@ class GlovFont {
       let char_w;
       if (c === 9) { // '\t') {
         let tabsize = xsc * this.font_info.font_size * 4;
-        newx = (Math.floor(x / tabsize) + 1) * tabsize;
+        newx = (floor(x / tabsize) + 1) * tabsize;
         char_w = tabsize;
       } else {
         let char_info = this.infoFromChar(c);
@@ -479,10 +495,10 @@ class GlovFont {
     //   things look almost identical, just crisper
     let font_texel_scale = this.font_info.font_size / 32;
     // As a compromise, -2 bias here seems to work well
-    let x_advance = xsc * font_texel_scale * Math.max(this.applied_style.outline_width - 2, 0);
+    let x_advance = xsc * font_texel_scale * max(this.applied_style.outline_width - 2, 0);
     // As a compromise, there's a -3 bias in there, so it only kicks in under extreme circumstances
-    x_advance = Math.max(x_advance, xsc * font_texel_scale *
-      Math.max(this.applied_style.glow_outer - this.applied_style.glow_xoffs - 3, 0));
+    x_advance = max(x_advance, xsc * font_texel_scale *
+      max(this.applied_style.glow_outer - this.applied_style.glow_xoffs - 3, 0));
     return x_advance;
   }
 
@@ -536,13 +552,13 @@ class GlovFont {
     if (value[2] > 0) {
       value[2] = 0;
     }
-    let padding1 = Math.max(1, applied_style.outline_width*font_texel_scale*avg_scale_combined);
+    let padding1 = max(1, applied_style.outline_width*font_texel_scale*avg_scale_combined);
     let padding4 = v4BuildZero();
     const outer_scaled = applied_style.glow_outer*font_texel_scale;
-    padding4[0] = Math.max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-    padding4[2] = Math.max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-    padding4[1] = Math.max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
-    padding4[3] = Math.max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
+    padding4[0] = max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
+    padding4[2] = max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
+    padding4[1] = max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
+    padding4[3] = max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
 
     techParamsSet('param0', value);
     let value2 = v4Build(
@@ -557,7 +573,7 @@ class GlovFont {
       value2[3] = 0;
     }
 
-    let padding_in_font_space = VMath.v4ScalarMul(padding4, 1 / avg_scale_font);
+    let padding_in_font_space = v4ScalarMul(padding4, 1 / avg_scale_font);
     for (let ii = 0; ii < 4; ++ii) {
       if (padding_in_font_space[ii] > font_info.spread) {
         // Not enough buffer

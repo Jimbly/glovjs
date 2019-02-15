@@ -1655,7 +1655,7 @@ let additive_blend_state = {
   'BlendFunc': [770, 1]
 };
 let sampler_linear = {
-  'MinFilter': opengl.LINEAR_MIPMAP_NEAREST,
+  'MinFilter': opengl.LINEAR_MIPMAP_LINEAR,
   'MagFilter': opengl.LINEAR,
   // clamp or wrap is arbitrary depending on application requirements
   'WrapS': opengl.CLAMP_TO_EDGE, // opengl.REPEAT

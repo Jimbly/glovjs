@@ -4,8 +4,12 @@
 /*global VMath: false */
 
 const { Draw2DSpriteData } = require('./tz/draw2d.js');
+const { v2BuildZero, v4Build } = VMath;
+const { round } = Math;
 
 function cmpDrawList(a, b) {
+  // assert(isFinite(a.z));
+  // assert(isFinite(b.z));
   if (a.z !== b.z) {
     return a.z - b.z;
   }
@@ -18,7 +22,7 @@ function cmpDrawList(a, b) {
   return a.uid - b.uid;
 }
 
-const unit_vec4 = VMath.v4Build(1,1,1,1);
+const unit_vec4 = v4Build(1,1,1,1);
 
 class DrawListSprite {
   constructor() {
@@ -37,7 +41,8 @@ class DrawListSprite {
 }
 
 class GlovDrawList {
-  constructor(draw_2d, camera) {
+  constructor(graphics_device, draw_2d, camera) {
+    this.graphics_device = graphics_device;
     this.draw_2d = draw_2d;
     this.camera = camera;
     this.list = [];
@@ -45,7 +50,7 @@ class GlovDrawList {
     this.default_bucket_tint = 'alpha_tint';
     this.sprite_list = [];
     this.sprite_alloc_count = 0;
-    this.color_white = VMath.v4Build(1, 1, 1, 1);
+    this.color_white = v4Build(1, 1, 1, 1);
     this.uid = 0;
   }
 
@@ -76,7 +81,7 @@ class GlovDrawList {
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
       color: color || this.color_white,
-      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
@@ -95,7 +100,7 @@ class GlovDrawList {
       y: (y - this.camera.data[1]) * this.camera.data[5],
       z,
       color: color0 || this.color_white,
-      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket_tint,
       rotation: rotation || 0,
@@ -120,7 +125,7 @@ class GlovDrawList {
       y: (y - this.camera.data[1]) * this.camera.data[5] | 0,
       z,
       color: color || this.color_white,
-      scale: VMath.v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
+      scale: v4Build(scale[0] * this.camera.data[4], scale[1]*this.camera.data[5], 1,1),
       tex_rect,
       bucket: bucket || this.default_bucket,
       rotation: rotation || 0,
@@ -193,10 +198,31 @@ class GlovDrawList {
     return elem;
   }
 
+  clip(z_start, z_end, x, y, w, h) {
+    let xy = v2BuildZero();
+    this.camera.virtualToCanvas(xy, [x, y]);
+    let wh = v2BuildZero();
+    this.camera.virtualToCanvas(wh, [x + w, y + h]);
+    xy[0] = round(xy[0]);
+    xy[1] = round(xy[1]);
+    wh[0] = round(wh[0]) - xy[0];
+    wh[1] = round(wh[1]) - xy[1];
+    let scissor = [xy[0], this.graphics_device.height - (xy[1] + wh[1]), wh[0], wh[1]];
+    this.queuefn(z_start - 0.01, () => {
+      this.graphics_device.setScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+      this.scissor = scissor;
+    });
+    this.queuefn(z_end - 0.01, () => {
+      this.graphics_device.setScissor(0, 0, this.graphics_device.width, this.graphics_device.height);
+      this.scissor = null;
+    });
+  }
+
   draw() {
     let bucket = null;
     let tech_params = null;
     let orig_tech_params = this.draw_2d.techniqueParameters;
+    this.scissor = null;
     this.list.sort(cmpDrawList);
     for (let ii = 0; ii < this.list.length; ++ii) {
       let elem = this.list[ii];
@@ -209,6 +235,9 @@ class GlovDrawList {
         this.draw_2d.techniqueParameters = tech_params || orig_tech_params;
         if (bucket) {
           this.draw_2d.begin(bucket);
+          if (this.scissor) {
+            this.graphics_device.setScissor(this.scissor[0], this.scissor[1], this.scissor[2], this.scissor[3]);
+          }
         }
       }
       if (elem.fn) {

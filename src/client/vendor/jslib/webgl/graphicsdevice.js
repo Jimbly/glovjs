@@ -3391,6 +3391,42 @@ var TZWebGLShader = (function () {
         }
     };
 
+    // JE: Allow per-texture samplers
+    // JE: Convenience for creating samplers
+    TZWebGLShader.createSampler = function (gd, fileSampler) {
+        var gl = gd._gl;
+        var defaultSampler = gd.DEFAULT_SAMPLER;
+        var maxAnisotropy = gd._maxAnisotropy;
+
+        var samplerMaxAnisotropy = fileSampler.MaxAnisotropy;
+        if (samplerMaxAnisotropy) {
+            if (samplerMaxAnisotropy > maxAnisotropy) {
+                samplerMaxAnisotropy = maxAnisotropy;
+            }
+        } else {
+            samplerMaxAnisotropy = defaultSampler.maxAnisotropy;
+        }
+
+        var sampler = {
+            minFilter: (fileSampler.MinFilter || defaultSampler.minFilter),
+            magFilter: (fileSampler.MagFilter || defaultSampler.magFilter),
+            wrapS: (fileSampler.WrapS || defaultSampler.wrapS),
+            wrapT: (fileSampler.WrapT || defaultSampler.wrapT),
+            wrapR: (fileSampler.WrapR || defaultSampler.wrapR),
+            maxAnisotropy: samplerMaxAnisotropy
+        };
+        if (sampler.wrapS === 0x2900) {
+            sampler.wrapS = gl.CLAMP_TO_EDGE;
+        }
+        if (sampler.wrapT === 0x2900) {
+            sampler.wrapT = gl.CLAMP_TO_EDGE;
+        }
+        if (sampler.wrapR === 0x2900) {
+            sampler.wrapR = gl.CLAMP_TO_EDGE;
+        }
+        return gd._createSampler(sampler);
+    };
+
     TZWebGLShader.create = function (gd, params, onload) {
         var gl = gd._gl;
 
@@ -3444,41 +3480,10 @@ var TZWebGLShader = (function () {
         shader._linkedPrograms = linkedPrograms;
 
         // Samplers
-        var defaultSampler = gd.DEFAULT_SAMPLER;
-        var maxAnisotropy = gd._maxAnisotropy;
-
         shader._samplers = {};
         for (p in samplers) {
             if (samplers.hasOwnProperty(p)) {
-                var fileSampler = samplers[p];
-
-                var samplerMaxAnisotropy = fileSampler.MaxAnisotropy;
-                if (samplerMaxAnisotropy) {
-                    if (samplerMaxAnisotropy > maxAnisotropy) {
-                        samplerMaxAnisotropy = maxAnisotropy;
-                    }
-                } else {
-                    samplerMaxAnisotropy = defaultSampler.maxAnisotropy;
-                }
-
-                var sampler = {
-                    minFilter: (fileSampler.MinFilter || defaultSampler.minFilter),
-                    magFilter: (fileSampler.MagFilter || defaultSampler.magFilter),
-                    wrapS: (fileSampler.WrapS || defaultSampler.wrapS),
-                    wrapT: (fileSampler.WrapT || defaultSampler.wrapT),
-                    wrapR: (fileSampler.WrapR || defaultSampler.wrapR),
-                    maxAnisotropy: samplerMaxAnisotropy
-                };
-                if (sampler.wrapS === 0x2900) {
-                    sampler.wrapS = gl.CLAMP_TO_EDGE;
-                }
-                if (sampler.wrapT === 0x2900) {
-                    sampler.wrapT = gl.CLAMP_TO_EDGE;
-                }
-                if (sampler.wrapR === 0x2900) {
-                    sampler.wrapR = gl.CLAMP_TO_EDGE;
-                }
-                shader._samplers[p] = gd._createSampler(sampler);
+                shader._samplers[p] = TZWebGLShader.createSampler(gd, samplers[p]);
             }
         }
 
@@ -6034,7 +6039,9 @@ var WebGLGraphicsDevice = (function () {
         if (texture) {
             var gltarget = texture._target;
             var globject = texture._glTexture;
-            if (oldglobject !== globject || oldgltarget !== gltarget) {
+            // JE: Allow per-texture samplers
+            var desired_sampler = texture.override_sampler || sampler;
+            if (oldglobject !== globject || oldgltarget !== gltarget || texture._sampler !== desired_sampler) {
                 textureUnit.target = gltarget;
                 textureUnit.texture = globject;
 
@@ -6049,10 +6056,11 @@ var WebGLGraphicsDevice = (function () {
 
                 gl.bindTexture(gltarget, globject);
 
-                if (texture._sampler !== sampler) {
-                    texture._sampler = sampler;
+                // JE: Allow per-texture samplers
+                if (texture._sampler !== desired_sampler) {
+                    texture._sampler = desired_sampler;
 
-                    this.setSampler(sampler, gltarget);
+                    this.setSampler(desired_sampler, gltarget);
                 }
 
                 if (debug) {

@@ -131,17 +131,20 @@ class GlovSpriteManager {
     };
   }
 
-  loadTexture(texname) {
+  loadTexture(texname, sampler) {
     let path = texname;
     if (texname.indexOf('.') !== -1) {
       path = `img/${texname}`;
     }
-    const inst = this.texture_manager.getInstance(path);
-    if (inst) {
-      return inst;
+    let inst = this.texture_manager.getInstance(path);
+    if (!inst) {
+      this.textures[texname] = this.texture_manager.load(path, false);
+      inst = this.texture_manager.getInstance(path);
     }
-    this.textures[texname] = this.texture_manager.load(path, false);
-    return this.texture_manager.getInstance(path);
+    if (sampler) {
+      inst.setOverrideSampler(sampler);
+    }
+    return inst;
   }
 
   preloadParticleData(particle_data) {
@@ -210,6 +213,7 @@ class GlovSpriteManager {
       u: u,
       v: v,
       layers: params.layers || 0,
+      sampler: params.sampler || undefined,
     });
   }
   createSprite(texname, params) {
@@ -217,12 +221,12 @@ class GlovSpriteManager {
     params.textures = [];
     if (params.layers) {
       for (let ii = 0; ii < params.layers; ++ii) {
-        const tex_inst = this.loadTexture(`${texname}_${ii}.png`);
+        const tex_inst = this.loadTexture(`${texname}_${ii}.png`, params.sampler);
         tex_insts.push(tex_inst);
         params.textures.push(tex_inst.getTexture());
       }
     } else {
-      const tex_inst = this.loadTexture(texname);
+      const tex_inst = this.loadTexture(texname, params.sampler);
       tex_insts.push(tex_inst);
       params.textures.push(tex_inst.getTexture());
     }

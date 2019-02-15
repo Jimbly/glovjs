@@ -1,9 +1,12 @@
 /* global WebGLTurbulenzEngine:false */
+/* global TZWebGLShader:false */
 /* global TurbulenzEngine:true */
 /* global VMath: false */
 /* global $:false */
 /* global Z:false */
 
+const assert = require('assert');
+const opengl = require('./tz/opengl.js');
 const { Draw2D } = require('./tz/draw2d.js');
 const { TextureEffects } = require('./tz/texture_effects.js');
 
@@ -120,6 +123,45 @@ function resetEffects() {
       temp.idx = 0;
     }
   }
+}
+
+
+function glFilterValue(name) {
+  switch (name) {
+    case 'nearest':
+      return opengl.NEAREST;
+    case 'linear':
+      return opengl.LINEAR;
+    case 'mipmap':
+      return opengl.LINEAR_MIPMAP_LINEAR;
+    default:
+      assert(!name); // otherwise unhandled
+      return undefined; //eslint-disable-line consistent-return
+  }
+}
+
+function glWrapValue(name) {
+  switch (name) {
+    case 'clamp':
+      return opengl.CLAMP_TO_EDGE;
+    case 'wrap':
+      return opengl.REPEAT;
+    default:
+      assert(!name); // otherwise unhandled
+      return undefined; //eslint-disable-line consistent-return
+  }
+}
+
+export function createSampler(params) {
+  let gl_params = {
+    MaxAnisotropy: params.max_anisotropy,
+    MinFilter: glFilterValue(params.filter_min),
+    MagFilter: glFilterValue(params.filter_min),
+    WrapS: glWrapValue(params.wrap_s),
+    WrapT: glWrapValue(params.wrap_t),
+    WrapR: glWrapValue(params.wrap_r),
+  };
+  return TZWebGLShader.createSampler(graphics_device, gl_params);
 }
 
 export function getTextureForCapture() {
@@ -264,7 +306,7 @@ export function startup(params) {
   glov_camera = require('./camera.js').create(graphics_device, draw_2d);
   const input_device = TurbulenzEngine.createInputDevice({});
   glov_input = require('./input.js').create(input_device, draw_2d, glov_camera);
-  draw_list = require('./draw_list.js').create(draw_2d, glov_camera);
+  draw_list = require('./draw_list.js').create(graphics_device, draw_2d, glov_camera);
   glov_sprite = require('./sprite.js').create(graphics_device, draw_list);
   glov_particles = require('./particles.js').create(draw_list, glov_sprite);
 

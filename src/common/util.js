@@ -57,6 +57,10 @@ export function round100(a) {
   return round(a * 100) / 100;
 }
 
+export function round1000(a) {
+  return round(a * 1000) / 1000;
+}
+
 export function fract(a) {
   return a - floor(a);
 }

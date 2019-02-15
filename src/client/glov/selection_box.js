@@ -103,6 +103,7 @@ class GlovSelectionBox {
     this.scroll_height = 0;
     this.font_height = glov_ui.font_height;
     this.entry_height = glov_ui.button_height;
+    this.auto_reset = true;
     this.applyParams(params);
 
     // Run-time state
@@ -161,8 +162,18 @@ class GlovSelectionBox {
 
   run(params) {
     this.applyParams(params);
-    let { x, y, z, width, font_height, entry_height } = this;
+    let { x, y, z, width, font_height, entry_height, auto_reset } = this;
     let { key_codes, pad_codes } = glov_input;
+
+    if (auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
+      // Reset, select first non-disabled entry
+      for (let ii = 0; ii < this.items.length; ++ii) {
+        if (!this.items[ii].disabled) {
+          this.selected = ii;
+          break;
+        }
+      }
+    }
 
     let y0 = y;
     let yret;

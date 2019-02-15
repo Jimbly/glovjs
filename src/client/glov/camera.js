@@ -63,9 +63,16 @@ class GlovCamera {
     dst[1] = src[1] * this.data[6] / this.data[5] + this.data[1];
   }
 
+  // To get to coordinates used by mouse events
   virtualToPhysical(dst, src) {
     dst[0] = (src[0] - this.data[0]) * this.data[4] / this.data[6];
     dst[1] = (src[1] - this.data[1]) * this.data[5] / this.data[6];
+  }
+
+  // To get to coordinates used by OpenGL / canvas
+  virtualToCanvas(dst, src) {
+    dst[0] = (src[0] - this.data[0]) * this.data[4];
+    dst[1] = (src[1] - this.data[1]) * this.data[5];
   }
 
   // Drawing area 0,0-w,h

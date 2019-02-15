@@ -21,7 +21,7 @@ Z.FPSMETER = Z.FPSMETER || 10000;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_edit_box = require('./edit_box.js');
-const { clone, lerp } = require('../../common/util.js');
+const { clone, lerp, merge } = require('../../common/util.js');
 
 const { max, min } = Math;
 const { m43BuildIdentity, m43Mul, v2Build, v4Build, v4ScalarMul } = VMath;
@@ -32,27 +32,43 @@ let glov_sprite;
 let key_codes;
 let pad_codes;
 
+const menu_fade_params_default = {
+  blur: [0.125, 0.865],
+  saturation: [0.5, 0.1],
+  brightness: [1, 1 - MODAL_DARKEN],
+  fallback_darken: v4Build(0, 0, 0, MODAL_DARKEN),
+  z: Z.MODAL,
+};
+
 export function focuslog(...args) {
   // console.log(`focuslog(${glov_engine.getFrameIndex()}): `, ...args);
 }
 
-function doBlurEffect(factor) {
-  glov_engine.effects.applyGaussianBlur({
-    source: glov_engine.captureFramebuffer(),
-    blur: lerp(factor, 0.125, 0.865),
-    // min_size: 128,
-  });
+function doBlurEffect(factor, params) {
+  factor = lerp(factor, params.blur[0], params.blur[1]);
+  if (factor) {
+    glov_engine.effects.applyGaussianBlur({
+      source: glov_engine.captureFramebuffer(),
+      blur: factor,
+      // min_size: 128,
+    });
+  }
 }
 
 let desaturate_xform = m43BuildIdentity();
 let desaturate_tmp = m43BuildIdentity();
-function doDesaturateEffect(factor) {
+function doDesaturateEffect(factor, params) {
+  let saturation = lerp(factor, params.saturation[0], params.saturation[1]);
+  let brightness = lerp(factor, params.brightness[0], params.brightness[1]);
+  if (saturation === 1 && brightness === 1) {
+    return;
+  }
   m43BuildIdentity(desaturate_xform);
 
-  glov_engine.effects.saturationMatrix(lerp(factor, 0.5, 0.1), desaturate_tmp);
+  glov_engine.effects.saturationMatrix(saturation, desaturate_tmp);
   m43Mul(desaturate_xform, desaturate_tmp, desaturate_xform);
 
-  glov_engine.effects.brightnessScaleMatrix(lerp(factor, 1, 1 - MODAL_DARKEN), desaturate_tmp);
+  glov_engine.effects.brightnessScaleMatrix(brightness, desaturate_tmp);
   m43Mul(desaturate_xform, desaturate_tmp, desaturate_xform);
 
   // if ((hue % (Math.PI * 2)) !== 0) {
@@ -118,7 +134,6 @@ class GlovUI {
 
     this.color_button = makeColorSet([1,1,1,1]);
     this.color_panel = v4Build(1, 1, 0.75, 1);
-    this.color_modal_darken = v4Build(0, 0, 0, MODAL_DARKEN);
 
     this.modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
@@ -161,6 +176,7 @@ class GlovUI {
     this.modal_dialog = null;
     this.modal_stealing_focus = false;
     this.menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
+    this.menu_fade_params = merge({}, menu_fade_params_default);
     this.menu_up_time = 0;
 
     this.this_frame_edit_boxes = [];
@@ -282,6 +298,7 @@ class GlovUI {
     });
   }
 
+  // eslint-disable-next-line complexity
   buttonShared(param) {
     let state = 'regular';
     let ret = false;
@@ -555,17 +572,22 @@ class GlovUI {
 
     let pp_this_frame = false;
     if (this.modal_dialog || this.menu_up) {
+      let params = this.menu_fade_params;
+      if (!this.menu_up) {
+        // Modals get defaults
+        params = menu_fade_params_default;
+      }
       this.menu_up_time += dt;
-      // Effects during modal dialogs, may need option to disable or customize these
+      // Effects during modal dialogs
       if (glov_engine.postprocessing) {
         let factor = min(this.menu_up_time / 500, 1);
-        this.draw_list.queuefn(Z.MODAL - 2, doBlurEffect.bind(this, factor));
-        this.draw_list.queuefn(Z.MODAL - 1, doDesaturateEffect.bind(this, factor));
+        this.draw_list.queuefn(params.z - 2, doBlurEffect.bind(this, factor, params));
+        this.draw_list.queuefn(params.z - 1, doDesaturateEffect.bind(this, factor, params));
         pp_this_frame = true;
       } else {
         // Just darken
-        this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), Z.MODAL - 2,
-          this.color_modal_darken,
+        this.draw_list.queue(this.sprites.white, this.camera.x0(), this.camera.y0(), params.z - 2,
+          params.fallback_darken,
           [this.camera.x1() - this.camera.x0(), this.camera.y1() - this.camera.y0(), 1, 1]);
       }
     } else {
@@ -588,8 +610,6 @@ class GlovUI {
   }
 
   endFrame() {
-    // allow focusing the canvas, in case there's only one edit box/UI element
-    this.focusCheck('canvas');
     if (glov_input.clickHit({
       x: -Infinity, y: -Infinity,
       w: Infinity, h: Infinity,
@@ -598,7 +618,11 @@ class GlovUI {
     }
   }
 
-  menuUp() {
+  menuUp(params) {
+    merge(this.menu_fade_params, menu_fade_params_default);
+    if (params) {
+      merge(this.menu_fade_params, params);
+    }
     this.menu_up = true;
     this.modal_stealing_focus = true;
     glov_input.eatAllInput();

@@ -28,6 +28,10 @@ class GlovSimpleMenu {
     this.selected = -1; // actually selected/acted on, not just current highlight, like this.sel_box.selected
   }
 
+  focus() {
+    glov_ui.focusSteal(this.sel_box);
+  }
+
   execItem(index, delta) {
     let { items } = this.sel_box;
     assert(index >= 0 && index < items.length);
