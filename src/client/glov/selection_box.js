@@ -474,7 +474,7 @@ class GlovSelectionBox {
         let bounce_amt = 0;
         if (bounce) {
           bounce_amt = sin(this.bounce_time * 20 / SELBOX_BOUNCE_TIME / 10);
-          yoffs = -4*bounce_amt;
+          yoffs = -4 * bounce_amt * entry_height / 32;
         }
         if (!display.no_buttons) {
           glov_ui.drawHBox({ x, y: y + yoffs, z: z + 1, w: eff_width, h: entry_height },

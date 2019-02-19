@@ -1,5 +1,9 @@
 /*global VMath: false */
 
+const glov_engine = require('./engine.js');
+
+const { round } = Math;
+
 class GlovCamera {
   constructor(graphics_device, draw_2d) {
     this.graphics_device = graphics_device;
@@ -8,7 +12,7 @@ class GlovCamera {
       scaleMode: 'scale',
       viewportRectangle: VMath.v4Build(0, 0, 100, 100)
     };
-    this.data = new VMath.F32Array(7); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
+    this.data = new VMath.F32Array(9); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
     this.data[6] = window.devicePixelRatio || 1; /* css_to_real */
     this.set2D(0, 0, graphics_device.width, graphics_device.height);
     this.tick();
@@ -54,19 +58,60 @@ class GlovCamera {
   }
 
   reapply() {
-    this.data[4] = this.screen_width / (this.data[2] - this.data[0]);
-    this.data[5] = this.screen_height / (this.data[3] - this.data[1]);
+    if (this.render_width) {
+      this.data[4] = this.render_width / (this.data[2] - this.data[0]);
+      this.data[5] = this.render_height / (this.data[3] - this.data[1]);
+      this.data[7] = (this.data[2] - this.data[0]) / this.render_viewport_w;
+      this.data[8] = (this.data[3] - this.data[1]) / this.render_viewport_h;
+    } else {
+      this.data[4] = this.screen_width / (this.data[2] - this.data[0]);
+      this.data[5] = this.screen_height / (this.data[3] - this.data[1]);
+    }
+  }
+
+  htmlPos(x, y) {
+    if (this.render_width) {
+      return [
+        100 * (((x - this.data[0]) / this.data[7] + this.render_offset_x) / this.screen_width),
+        100 * (((y - this.data[1]) / this.data[8] + this.render_offset_y) / this.screen_height),
+      ];
+    } else {
+      return [
+        100 * (x - this.data[0]) / (this.data[2] - this.data[0]),
+        100 * (y - this.data[1]) / (this.data[3] - this.data[1]),
+      ];
+    }
+  }
+  htmlSize(w, h) {
+    if (this.render_width) {
+      return [
+        100 * w / this.data[7] / this.screen_width,
+        100 * h / this.data[8] / this.screen_height,
+      ];
+    } else {
+      return [100 * w / (this.data[2] - this.data[0]), 100 * h / (this.data[3] - this.data[1])];
+    }
   }
 
   physicalToVirtual(dst, src) {
-    dst[0] = src[0] * this.data[6] / this.data[4] + this.data[0];
-    dst[1] = src[1] * this.data[6] / this.data[5] + this.data[1];
+    if (this.render_width) {
+      dst[0] = (src[0] * this.data[6] - this.render_offset_x) * this.data[7] + this.data[0];
+      dst[1] = (src[1] * this.data[6] - this.render_offset_y) * this.data[8] + this.data[1];
+    } else {
+      dst[0] = src[0] * this.data[6] / this.data[4] + this.data[0];
+      dst[1] = src[1] * this.data[6] / this.data[5] + this.data[1];
+    }
   }
 
   // To get to coordinates used by mouse events
   virtualToPhysical(dst, src) {
-    dst[0] = (src[0] - this.data[0]) * this.data[4] / this.data[6];
-    dst[1] = (src[1] - this.data[1]) * this.data[5] / this.data[6];
+    if (this.render_width) {
+      dst[0] = (this.render_offset_x + (src[0] - this.data[0]) / this.data[7]) / this.data[6];
+      dst[1] = (this.render_offset_y + (src[1] - this.data[1]) / this.data[8]) / this.data[6];
+    } else {
+      dst[0] = (src[0] - this.data[0]) * this.data[4] / this.data[6];
+      dst[1] = (src[1] - this.data[1]) * this.data[5] / this.data[6];
+    }
   }
 
   // To get to coordinates used by OpenGL / canvas
@@ -80,7 +125,12 @@ class GlovCamera {
   // This may create a padding or margin on either bottom or sides of the screen
   set2DAspectFixed(w, h) {
     let inv_aspect = h / w;
-    let inv_desired_aspect = this.screen_height / this.screen_width;
+    let inv_desired_aspect;
+    if (this.render_width) {
+      inv_desired_aspect = this.render_height / this.render_width;
+    } else {
+      inv_desired_aspect = this.screen_height / this.screen_width;
+    }
     if (inv_aspect > inv_desired_aspect) {
       let margin = (h / inv_desired_aspect - w) / 2;
       this.set2D(-margin, 0, w + margin, h);
@@ -104,10 +154,38 @@ class GlovCamera {
     let graphics_device = this.graphics_device;
     this.screen_width = graphics_device.width;
     this.screen_height = graphics_device.height;
-    this.reapply();
+    if (glov_engine.render_width) {
+      this.render_width = glov_engine.render_width;
+      this.render_height = glov_engine.render_height;
+      // Find an offset so this rendered viewport is centered while preserving aspect ratio, just like set2DAspectFixed
+      let inv_aspect = this.render_height / this.render_width;
+      let inv_desired_aspect = this.screen_height / this.screen_width;
+      if (inv_aspect > inv_desired_aspect) {
+        let margin = (this.render_height / inv_desired_aspect - this.render_width) / 2 *
+          this.screen_height / this.render_height;
+        this.render_offset_x = round(margin);
+        this.render_offset_y = 0;
+        this.render_viewport_w = round(this.screen_width - margin * 2);
+        this.render_viewport_h = this.screen_height;
+      } else {
+        let margin = (this.render_width * inv_desired_aspect - this.render_height) / 2 *
+          this.screen_width / this.render_width;
+        this.render_offset_x = 0;
+        this.render_offset_y = round(margin);
+        this.render_viewport_w = this.screen_width;
+        this.render_viewport_h = round(this.screen_height - margin * 2);
+      }
+      this.params.viewportRectangle[2] = this.render_width;
+      this.params.viewportRectangle[3] = this.render_height;
+    } else {
+      this.render_width = this.render_height = 0;
+      this.render_offset_x = 0;
+      this.render_offset_y = 0;
+      this.params.viewportRectangle[2] = this.screen_width;
+      this.params.viewportRectangle[3] = this.screen_height;
+    }
 
-    this.params.viewportRectangle[2] = this.screen_width;
-    this.params.viewportRectangle[3] = this.screen_height;
+    this.reapply();
 
     // let screen_width = graphics_device.width;
     // let screen_height = graphics_device.height;

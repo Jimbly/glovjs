@@ -127,10 +127,10 @@ class GlovUIEditBox {
       }
     }
     if (elem) {
-      let pos = glov_ui.htmlPos(this.x, this.y);
+      let pos = glov_engine.glov_camera.htmlPos(this.x, this.y);
       elem[0].style.left = `${pos[0]}%`;
       elem[0].style.top = `${pos[1]}%`;
-      let size = glov_ui.htmlSize(this.w, this.h);
+      let size = glov_engine.glov_camera.htmlSize(this.w, this.h);
       elem[0].style.width = `${size[0]}%`;
     }
 

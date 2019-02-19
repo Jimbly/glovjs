@@ -4,6 +4,7 @@
 /*global VMath: false */
 
 const { Draw2DSpriteData } = require('./tz/draw2d.js');
+const glov_engine = require('./engine.js');
 const { v2BuildZero, v4Build } = VMath;
 const { round } = Math;
 
@@ -61,7 +62,6 @@ class GlovDrawList {
     return this.sprite_list[this.sprite_alloc_count++];
   }
 
-  // '_nearest' is useful
   setNearest(new_value) {
     if (new_value) {
       this.default_bucket = 'alpha_nearest';
@@ -207,13 +207,16 @@ class GlovDrawList {
     xy[1] = round(xy[1]);
     wh[0] = round(wh[0]) - xy[0];
     wh[1] = round(wh[1]) - xy[1];
-    let scissor = [xy[0], this.graphics_device.height - (xy[1] + wh[1]), wh[0], wh[1]];
+
+    let gd_w = glov_engine.render_width || this.graphics_device.width;
+    let gd_h = glov_engine.render_height || this.graphics_device.height;
+    let scissor = [xy[0], gd_h - (xy[1] + wh[1]), wh[0], wh[1]];
     this.queuefn(z_start - 0.01, () => {
       this.graphics_device.setScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
       this.scissor = scissor;
     });
     this.queuefn(z_end - 0.01, () => {
-      this.graphics_device.setScissor(0, 0, this.graphics_device.width, this.graphics_device.height);
+      this.graphics_device.setScissor(0, 0, gd_w, gd_h);
       this.scissor = null;
     });
   }

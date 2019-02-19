@@ -5,7 +5,7 @@ const glov_font = require('./font.js');
 const glov_simple_menu = require('./simple_menu.js');
 const glov_selection_box = require('./selection_box.js');
 
-const { random } = Math;
+const { ceil, random } = Math;
 
 let glov_ui;
 let glov_input;
@@ -20,19 +20,19 @@ let edit_box1;
 let edit_box2;
 let test_select1;
 let test_select2;
-function init(x, y) {
+function init(x, y, column_width) {
   glov_ui = glov_engine.glov_ui;
   glov_input = glov_engine.glov_input;
 
   edit_box1 = glov_ui.createEditBox({
-    x: x + 210,
+    x: x + column_width,
     y: y,
-    w: 200,
+    w: column_width - 8,
   });
   edit_box2 = glov_ui.createEditBox({
-    x: x + 210 + 210,
+    x: x + column_width + column_width,
     y: y,
-    w: 200,
+    w: column_width - 8,
   });
   demo_menu = glov_simple_menu.create({
     items: [
@@ -61,26 +61,28 @@ function init(x, y) {
   test_select1 = glov_selection_box.create({
     items: ['Apples', 'Bananas', 'Chameleon'],
     z: Z.UI,
-    width: 200,
+    width: column_width - 8,
   });
   test_select2 = glov_selection_box.create({
     items: ['Apples', 'Bananas', 'Chameleon'],
     is_dropdown: true,
     z: Z.UI,
-    width: 200,
+    width: column_width - 8,
   });
 }
 
-export function run(x, y) {
-  let z = Z.UI;
-  if (inited !== `${x}_${y}`) {
-    init(x, y);
-    inited = `${x}_${y}`;
+export function run(x, y, z) {
+  z = z || Z.UI;
+  let line_height = glov_engine.glov_ui.button_height + 2;
+  let column_width = glov_engine.glov_ui.button_width + 8;
+  if (inited !== `${x}_${y}_${column_width}`) {
+    init(x, y, column_width);
+    inited = `${x}_${y}_${column_width}`;
   }
 
   if (demo_menu_up) {
     demo_result = '';
-    demo_menu.run({ x: 120, y: 180, z: Z.MODAL });
+    demo_menu.run({ x: x + glov_ui.button_width, y: y + line_height, z: Z.MODAL });
     if (demo_menu.isSelected()) {
       if (demo_menu.isSelected('opt2')) {
         demo_result = 'Selected the second option';
@@ -95,12 +97,13 @@ export function run(x, y) {
   }
 
   let pad = 8;
-  let w = glov_ui.print(font_style, x + 210, y + 40, z, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
-  w = Math.max(w, glov_ui.print(font_style, x + 210, y + 40 + glov_ui.font_height + pad, z,
+  let w = glov_ui.print(font_style, x + column_width + 4, y + 40, z, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
+  w = Math.max(w, glov_ui.print(font_style, x + column_width, y + 40 + glov_ui.font_height + pad, z,
     `Result: ${demo_result}`));
-  glov_ui.panel({ x: x + 210 - pad, y: y + 40 - pad, z: z - 1, w: w + pad * 2, h: glov_ui.font_height * 2 + pad * 3 });
+  glov_ui.panel({ x: x + column_width + 4 - pad, y: y + 40 - pad, z: z - 1,
+    w: w + pad * 2, h: glov_ui.font_height * 2 + pad * 3 });
 
-  if (glov_ui.buttonText({ x, y, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
+  if (glov_ui.buttonText({ x, y, z, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
     demo_result = '';
     glov_ui.modalDialog({
       title: 'Modal Dialog',
@@ -113,7 +116,7 @@ export function run(x, y) {
       },
     });
   }
-  y += 35;
+  y += line_height;
 
   if (edit_box1.run() === edit_box1.SUBMIT) {
     glov_ui.modalDialog({
@@ -128,18 +131,18 @@ export function run(x, y) {
     edit_box2.setText('');
   }
 
-  if (glov_ui.buttonText({ x, y, text: 'Menu', tooltip: 'Shows a menu' })) {
+  if (glov_ui.buttonText({ x, y, z, text: 'Menu', tooltip: 'Shows a menu' })) {
     demo_menu_up = true;
   }
-  y += 35;
+  y += line_height;
 
-  if (glov_ui.buttonText({ x, y, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
+  if (glov_ui.buttonText({ x, y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
   }
-  y += 35;
+  y += line_height;
 
-  y += test_select1.run({ x, y });
-  y += test_select2.run({ x, y });
+  y += test_select1.run({ x, y, z });
+  y += test_select2.run({ x, y, z });
 }
 
 export function runFontTest(x, y) {
@@ -150,14 +153,14 @@ export function runFontTest(x, y) {
   let z = Z.UI;
   let font = glov_engine.font;
 
-  let font_size = 60;
+  let font_size = glov_engine.glov_ui.font_height * 2;
   font.drawSized(null, x, y, z, font_size, `Default ${font_size} ${random().toFixed(7)}`);
   y += font_size;
   font.drawSized(null, x, y, z, font_size / 2, `Default ${font_size / 2} Lorem ipsum dolor sit amet`);
-  y += font_size / 2;
+  y += ceil(font_size / 2);
   font.drawSized(null, x, y, z, font_size / 4,
     `Default ${font_size / 4} The quick brown fox jumped over the lazy dog rutabaga Alfalfa`);
-  y += font_size / 4;
+  y += ceil(font_size / 4);
 
   const font_style_outline = {
     outline_width: 1, outline_color: COLOR_RED,
@@ -197,7 +200,7 @@ export function runFontTest(x, y) {
     glow_xoffs: 0.25, glow_yoffs: 0.25, glow_inner: 0, glow_outer: 5, glow_color: 0x7F7F7Fff,
     color: COLOR_WHITE
   };
-  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, 400, 0,
+  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, glov_ui.button_width * 2, 0,
     'ALIGN.HFIT The quick brown fox jumps over the lazy dog');
   y += font_size2;
   font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, 140, 0,

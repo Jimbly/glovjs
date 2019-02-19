@@ -45,7 +45,7 @@ class GlovTransition {
 function transitionCapture(trans) {
   assert(!trans.capture);
   trans.capture = glov_engine.getTextureForCapture();
-  trans.capture.copyTexImage();
+  glov_engine.captureFramebuffer(trans.capture);
 }
 
 export function queue(z, fn) {
@@ -274,12 +274,13 @@ function transitionPixelateCapture() {
   if (!transition_pixelate_texture) {
     transition_pixelate_texture = glov_engine.getTextureForCapture();
   }
-  transition_pixelate_texture.copyTexImage();
+  glov_engine.captureFramebuffer(transition_pixelate_texture);
 }
 
 function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
   //ms_since_start %= time;
-  let gd = glov_engine.graphics_device;
+  let viewport = glov_engine.graphics_device.getViewport();
+  let gd_width = viewport[2] - viewport[0];
   let progress = min(ms_since_start / time, 1);
   glov_camera.set2DNormalized();
 
@@ -293,7 +294,7 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
   let partial_progress = (progress > 0.5 ? 1 - progress : progress) * 2;
   // Use power of two scalings, but then scale relative to a 1024px virtual screen, so the biggest
   //  pixel is about the same percentage of the screen regardless of resolution.
-  let pixel_scale = pow(2, floor(partial_progress * 8.9)) / 1024 * gd.width * render_scale;
+  let pixel_scale = pow(2, floor(partial_progress * 8.9)) / 1024 * gd_width * render_scale;
 
   let param0 = v4Build(tex.width / pixel_scale, tex.height / pixel_scale,
     pixel_scale / tex.width, pixel_scale / tex.height);

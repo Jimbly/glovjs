@@ -23,7 +23,7 @@ const glov_font = require('./font.js');
 const glov_edit_box = require('./edit_box.js');
 const { clone, lerp, merge } = require('../../common/util.js');
 
-const { max, min } = Math;
+const { max, min, round } = Math;
 const { m43BuildIdentity, m43Mul, v2Build, v4Build, v4ScalarMul } = VMath;
 
 const MODAL_DARKEN = 0.75;
@@ -455,11 +455,11 @@ class GlovUI {
   }
 
   modalDialogRun(modal_dialog) {
-    const button_width = modal_dialog.button_width || this.button_width / 2;
+    const button_width = modal_dialog.button_width || round(this.button_width / 2);
     const game_width = this.camera.x1() - this.camera.x0();
     const pad = this.pad;
     const text_w = this.modal_width - pad * 2;
-    const x0 = this.camera.x0() + (game_width - this.modal_width) / 2;
+    const x0 = this.camera.x0() + round((game_width - this.modal_width) / 2);
     let x = x0 + pad;
     const y0 = this.modal_y0;
     let y = y0 + pad;
@@ -469,7 +469,7 @@ class GlovUI {
       y += this.font.drawSizedWrapped(this.modal_font_style,
         x, y, Z.MODAL, text_w, 0, font_height * this.modal_title_scale,
         modal_dialog.title);
-      y += pad * 1.5;
+      y += round(pad * 1.5);
     }
 
     if (modal_dialog.text) {
@@ -523,21 +523,6 @@ class GlovUI {
 
     glov_input.eatAllInput();
     this.modal_stealing_focus = true;
-  }
-
-  htmlPos(x, y) {
-    const ymin = this.camera.y0();
-    const ymax = this.camera.y1();
-    const xmin = this.camera.x0();
-    const xmax = this.camera.x1();
-    return [100 * (x - xmin) / (xmax - xmin), 100 * (y - ymin) / (ymax - ymin)];
-  }
-  htmlSize(w, h) {
-    const ymin = this.camera.y0();
-    const ymax = this.camera.y1();
-    const xmin = this.camera.x0();
-    const xmax = this.camera.x1();
-    return [100 * w / (xmax - xmin), 100 * h / (ymax - ymin)];
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -794,17 +779,17 @@ class GlovUI {
   }
 
   scaleSizes(scale) {
-    this.button_height *= scale;
-    this.font_height *= scale;
-    this.button_width *= scale;
-    this.button_img_size *= scale;
-    this.modal_width *= scale;
-    this.modal_y0 *= scale;
-    this.modal_title_scale *= scale;
-    this.pad *= scale;
+    this.button_height = round(GlovUI.prototype.button_height * scale);
+    this.font_height = round(GlovUI.prototype.font_height * scale);
+    this.button_width = round(GlovUI.prototype.button_width * scale);
+    this.button_img_size = round(GlovUI.prototype.button_img_size * scale);
+    this.modal_width = round(GlovUI.prototype.modal_width * scale);
+    this.modal_y0 = round(GlovUI.prototype.modal_y0 * scale);
+    this.modal_title_scale = round(GlovUI.prototype.modal_title_scale * scale);
+    this.pad = round(GlovUI.prototype.pad * scale);
+    this.tooltip_width = round(GlovUI.prototype.tooltip_width * scale);
+    this.tooltip_pad = round(GlovUI.prototype.tooltip_pad * scale);
     this.panel_pixel_scale = this.button_height / 13; // button_height / button pixel resolution
-    this.tooltip_width *= scale;
-    this.tooltip_pad *= scale;
   }
 }
 

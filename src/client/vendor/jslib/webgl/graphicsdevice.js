@@ -5269,6 +5269,11 @@ var WebGLGraphicsDevice = (function () {
         }
     };
 
+    // JE: Add getViewport accessor
+    WebGLGraphicsDevice.prototype.getViewport = function () {
+      return this._state.viewportBox;
+    };
+
     WebGLGraphicsDevice.prototype.setViewport = function (x, y, w, h) {
         var currentBox = this._state.viewportBox;
         if (currentBox[0] !== x || currentBox[1] !== y || currentBox[2] !== w || currentBox[3] !== h) {

@@ -307,6 +307,9 @@ class GlovFont {
     switch (align & ALIGN.HMASK) {
       case ALIGN.HCENTER:
         x = _x + (w - width) / 2;
+        if (this.font_info.noFilter) {
+          x |= 0; // ensure integral
+        }
         break;
       case ALIGN.HRIGHT:
         x = _x + w - width;
@@ -320,6 +323,9 @@ class GlovFont {
     switch (align & ALIGN.VMASK) {
       case ALIGN.VCENTER:
         y = _y + (h - height) / 2;
+        if (this.font_info.noFilter) {
+          y |= 0; // ensure integral
+        }
         break;
       case ALIGN.VBOTTOM:
         y = _y + h - height;

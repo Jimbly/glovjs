@@ -664,8 +664,9 @@ Draw2D.prototype.update = function () {
   let width = this.width;
   let height = this.height;
 
-  let graphicsDeviceWidth = graphicsDevice.width;
-  let graphicsDeviceHeight = graphicsDevice.height;
+  let gd_viewport = graphicsDevice.getViewport();
+  let graphicsDeviceWidth = gd_viewport[2] - gd_viewport[0];
+  let graphicsDeviceHeight = gd_viewport[3] - gd_viewport[1];
 
   if (width !== graphicsDeviceWidth || height !== graphicsDeviceHeight || this.forceUpdate) {
     let viewWidth, viewHeight, viewX, viewY;

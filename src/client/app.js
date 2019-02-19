@@ -10,11 +10,12 @@ window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
+Z.UI_TEST = 200;
 
 // let app = exports;
 // Virtual viewport for our game logic
-export const game_width = 1280;
-export const game_height = 960;
+export const game_width = 320;
+export const game_height = 240;
 
 export let sprites = {};
 
@@ -30,6 +31,10 @@ function flagToggle(key) {
   flags[key] = !flagGet(key);
   glov_local_storage.setJSON(`flag_${key}`, flags[key]);
 }
+function flagSet(key, value) {
+  flags[key] = value;
+  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
+}
 
 export function main(canvas) {
   const glov_engine = require('./glov/engine.js');
@@ -41,7 +46,7 @@ export function main(canvas) {
     canvas,
     game_width,
     game_height,
-    pixely: flagGet('pixely', true),
+    pixely: flagGet('pixely', 'strict'),
   });
 
   const sound_manager = glov_engine.sound_manager;
@@ -52,6 +57,9 @@ export function main(canvas) {
   const draw_list = glov_engine.draw_list;
   // const font = glov_engine.font;
 
+  // Perfect sizes for pixely modes
+  glov_ui.scaleSizes(13 / 32);
+  glov_ui.font_height = 8;
 
   const createSpriteSimple = glov_sprite.createSpriteSimple.bind(glov_sprite);
   const createAnimation = glov_sprite.createAnimation.bind(glov_sprite);
@@ -106,10 +114,12 @@ export function main(canvas) {
     }
 
     if (flagGet('ui_test')) {
-      glov_ui_test.run(100, 100);
+      // let clip_test = 30;
+      // draw_list.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
+      glov_ui_test.run(10, 10, Z.UI_TEST);
     }
     if (flagGet('font_test')) {
-      glov_ui_test.runFontTest(600, 100);
+      glov_ui_test.runFontTest(105, 85);
     }
 
     test.character.dx = 0;
@@ -135,8 +145,8 @@ export function main(canvas) {
       test.character.dy = 1;
     }
 
-    test.character.x += test.character.dx * dt * 0.2;
-    test.character.y += test.character.dy * dt * 0.2;
+    test.character.x += test.character.dx * dt * 0.05;
+    test.character.y += test.character.dy * dt * 0.05;
     let bounds = {
       x: test.character.x - sprite_size/2,
       y: test.character.y - sprite_size/2,
@@ -185,15 +195,22 @@ export function main(canvas) {
       test.character.x, test.character.y + (++font_test_idx * glov_ui.font_height), Z.SPRITES,
       'Outline and Drop Shadow');
 
-    let x = 100;
-    let y = game_height - 100 - 35 * 5;
-    if (glov_ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') ? 'ON' : 'OFF'}`,
+    let x = glov_ui.button_height;
+    let button_spacing = glov_ui.button_height + 2;
+    let y = game_height - 10 - button_spacing * 5;
+    if (glov_ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
       tooltip: 'Toggles pixely or regular mode (requires reload)' })
     ) {
-      flagToggle('pixely');
+      if (flagGet('pixely') === 'strict') {
+        flagSet('pixely', false);
+      } else if (flagGet('pixely') === 'on') {
+        flagSet('pixely', 'strict');
+      } else {
+        flagSet('pixely', 'on');
+      }
       document.location = String(document.location);
     }
-    y += 35;
+    y += button_spacing;
 
     if (glov_ui.buttonText({ x, y, text: `Music: ${flagGet('music') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles playing a looping background music track' })
@@ -205,7 +222,7 @@ export function main(canvas) {
         sound_manager.playMusic('music_test.mp3', 0, sound_manager.FADE_OUT);
       }
     }
-    y += 35;
+    y += button_spacing;
 
     if (glov_ui.buttonText({ x, y, text: `Font Test: ${flagGet('font_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general Font tests' })
@@ -213,14 +230,14 @@ export function main(canvas) {
       flagToggle('font_test');
       glov_transition.queue(Z.TRANSITION_FINAL, glov_transition.randomTransition());
     }
-    y += 35;
+    y += button_spacing;
 
     if (glov_ui.buttonText({ x, y, text: `UI Test: ${flagGet('ui_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general UI tests' })
     ) {
       flagToggle('ui_test');
     }
-    y += 35;
+    y += button_spacing;
 
     if (glov_ui.buttonText({ x, y, text: `Particles: ${flagGet('particles', true) ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles particles' })
@@ -232,7 +249,7 @@ export function main(canvas) {
         last_particles = glov_engine.getFrameTimestamp();
         glov_engine.glov_particles.createSystem(particle_data.defs.explosion,
           //[test.character.x, test.character.y, Z.PARTICLES]
-          [300 + Math.random() * 200, 300 + Math.random() * 200, Z.PARTICLES]
+          [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
       }
     }

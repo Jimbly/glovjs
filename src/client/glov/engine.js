@@ -25,6 +25,8 @@ export let glov_particles;
 export let sound_manager;
 export let game_width;
 export let game_height;
+export let render_width;
+export let render_height;
 export let graphics_device;
 export let draw_2d;
 export let draw_list;
@@ -189,8 +191,14 @@ export function getTemporaryTexture(w, h) {
   return temp.list[temp.idx++];
 }
 
-export function captureFramebuffer(w, h) {
-  let tex = getTemporaryTexture(w, h);
+export function captureFramebuffer(tex, w, h) {
+  if (!w && render_width) {
+    w = render_width;
+    h = render_height;
+  }
+  if (!tex) {
+    tex = getTemporaryTexture(w, h);
+  }
   if (w) {
     tex.copyTexImage(0, 0, w, h);
   } else {
@@ -199,6 +207,7 @@ export function captureFramebuffer(w, h) {
   return tex;
 }
 
+let copy_nearest_sampler;
 let last_tick = Date.now();
 function tick() {
   if (!graphics_device.beginFrame()) {
@@ -270,12 +279,35 @@ function tick() {
 
   // Above is queuing, below is actual drawing
 
+  if (render_width) {
+    graphics_device.setViewport(0, 0, render_width, render_height);
+  }
+
   draw_2d.setBackBuffer();
   draw_2d.clear([0, 0, 0, 1]);
 
   draw_list.draw();
 
   glov_ui.endFrame();
+
+  if (render_width) {
+    let source = captureFramebuffer();
+    if (!copy_nearest_sampler) {
+      copy_nearest_sampler = createSampler({
+        filter_min: 'nearest',
+        filter_max: 'nearest',
+        wrap_s: 'clamp',
+        wrap_t: 'clamp',
+      });
+    }
+    source.override_sampler = copy_nearest_sampler;
+    graphics_device.clear([0, 0, 0, 1]);
+    graphics_device.setViewport(glov_camera.render_offset_x, glov_camera.render_offset_y,
+      glov_camera.render_viewport_w, glov_camera.render_viewport_h);
+    graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
+    effects.applyCopy({ source });
+  }
+
   graphics_device.endFrame();
   glov_input.endFrame();
   resetEffects();
@@ -296,6 +328,13 @@ export function startup(params) {
   }
   game_width = params.game_width || 1280;
   game_height = params.game_height || 960;
+  if (params.pixely === 'strict') {
+    render_width = game_width;
+    render_height = game_height;
+  } else {
+    render_width = undefined;
+    render_height = undefined;
+  }
 
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
   let draw2d_params = { graphicsDevice: graphics_device, shaders: params.shaders || {} };
@@ -314,16 +353,22 @@ export function startup(params) {
     graphicsDevice: graphics_device,
   });
 
-  draw_list.setNearest(params.pixely);
+  draw_list.setNearest(Boolean(params.pixely));
 
   sound_manager = require('./sound_manager.js').create();
 
   const font_info_palanquin32 = require('../img/font/palanquin32.json');
-  const font_info_04b03 = require('../img/font/04b03_8x2.json');
-  font = params.font ?
-    glov_font.create(draw_list, params.font.info, glov_sprite.loadTexture(params.font.texture)) :
-    glov_font.create(draw_list, params.pixely ? font_info_04b03 : font_info_palanquin32,
-      glov_sprite.loadTexture(params.pixely ? 'font/04b03_8x2.png' : 'font/palanquin32.png'));
+  const font_info_04b03x2 = require('../img/font/04b03_8x2.json');
+  const font_info_04b03x1 = require('../img/font/04b03_8x1.json');
+  if (params.font) {
+    font = glov_font.create(draw_list, params.font.info, glov_sprite.loadTexture(params.font.texture));
+  } else if (params.pixely === 'strict') {
+    font = glov_font.create(draw_list, font_info_04b03x1, glov_sprite.loadTexture('font/04b03_8x1.png'));
+  } else if (params.pixely) {
+    font = glov_font.create(draw_list, font_info_04b03x2, glov_sprite.loadTexture('font/04b03_8x2.png'));
+  } else {
+    font = glov_font.create(draw_list, font_info_palanquin32, glov_sprite.loadTexture('font/palanquin32.png'));
+  }
   glov_ui = require('./ui.js').create(font, draw_list, params.ui_sprites);
   glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
     button_click: 'button_click',
