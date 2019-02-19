@@ -47,6 +47,7 @@ export function main(canvas) {
     game_width,
     game_height,
     pixely: flagGet('pixely', 'strict'),
+    viewport_postprocess: true,
   });
 
   const sound_manager = glov_engine.sound_manager;

@@ -134,6 +134,19 @@ let textureeffects_cgfx = {
         'programs': ['vp_copy', 'fp_copy']
       }
     ],
+    'pixelyExpand': [
+      {
+        'parameters': ['clipSpace', 'copyUVScale', 'inputTexture0'],
+        'semantics': ['ATTR0'/*, 'ATTR8'*/],
+        'states': {
+          'DepthTestEnable': false,
+          'DepthMask': false,
+          'CullFaceEnable': false,
+          'BlendEnable': false
+        },
+        'programs': ['vp_copy', 'fp_pixely_expand']
+      }
+    ],
     'copyColorMatrix': [
       {
         'parameters': ['clipSpace', 'copyUVScale', 'colorMatrix', 'inputTexture0'],
@@ -198,6 +211,10 @@ let textureeffects_cgfx = {
     'fp_copy': {
       'type': 'fragment',
       'code': fs.readFileSync(`${__dirname}/../shaders/effects_copy.fp`, 'utf8'),
+    },
+    'fp_pixely_expand': {
+      'type': 'fragment',
+      'code': fs.readFileSync(`${__dirname}/../shaders/pixely_expand.fp`, 'utf8'),
     },
     'fp_gaussian_blur': {
       'type': 'fragment',
@@ -324,6 +341,7 @@ export class TextureEffects {
     this.bloomMergeTechnique = shader.getTechnique('bloomMerge');
     this.gaussianBlurTechnique = shader.getTechnique('gaussianBlur');
     this.copyTechnique = shader.getTechnique('copy');
+    this.pixelyExpandTechnique = shader.getTechnique('pixelyExpand');
   }
 
   grayScaleMatrix(dst) {
@@ -566,6 +584,17 @@ export class TextureEffects {
     let effectParams = this.effectParams;
     let techparams = this.copyParameters;
     effectParams.technique = this.copyTechnique;
+    effectParams.params = techparams;
+    techparams.inputTexture0 = source;
+
+    this.applyEffect(effectParams);
+  }
+
+  applyPixelyExpand(params) {
+    let source = params.source;
+    let effectParams = this.effectParams;
+    let techparams = this.copyParameters;
+    effectParams.technique = this.pixelyExpandTechnique;
     effectParams.params = techparams;
     techparams.inputTexture0 = source;
 

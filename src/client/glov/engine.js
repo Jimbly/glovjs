@@ -103,6 +103,7 @@ let mspf_frame_count = 0;
 let show_fps = true;
 
 let do_borders = true;
+let do_viewport_postprocess = false;
 let need_repos = 0;
 
 let app_tick_functions = [];
@@ -305,7 +306,11 @@ function tick() {
     graphics_device.setViewport(glov_camera.render_offset_x, glov_camera.render_offset_y,
       glov_camera.render_viewport_w, glov_camera.render_viewport_h);
     graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
-    effects.applyCopy({ source });
+    if (do_viewport_postprocess) {
+      effects.applyPixelyExpand({ source });
+    } else {
+      effects.applyCopy({ source });
+    }
   }
 
   graphics_device.endFrame();
@@ -331,13 +336,17 @@ export function startup(params) {
   if (params.pixely === 'strict') {
     render_width = game_width;
     render_height = game_height;
+    if (params.viewport_postprocess) {
+      do_viewport_postprocess = true;
+    }
   } else {
     render_width = undefined;
     render_height = undefined;
   }
 
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
-  let draw2d_params = { graphicsDevice: graphics_device, shaders: params.shaders || {} };
+  let shaders = params.shaders || {};
+  let draw2d_params = { graphicsDevice: graphics_device, shaders };
   /* eslint-disable global-require */
   glov_transition.populateDraw2DParams(draw2d_params);
   glov_font.populateDraw2DParams(draw2d_params);
