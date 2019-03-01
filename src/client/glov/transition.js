@@ -280,7 +280,7 @@ function transitionPixelateCapture() {
 function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
   //ms_since_start %= time;
   let viewport = glov_engine.graphics_device.getViewport();
-  let gd_width = viewport[2] - viewport[0];
+  let gd_width = viewport[2];
   let progress = min(ms_since_start / time, 1);
   glov_camera.set2DNormalized();
 

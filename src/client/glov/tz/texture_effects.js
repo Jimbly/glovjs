@@ -54,6 +54,10 @@ let textureeffects_cgfx = {
       'rows': 2,
       'columns': 3
     },
+    'orig_pixel_size': {
+      'type': 'float',
+      'columns': 4,
+    },
     'invTransform': {
       'type': 'float',
       'rows': 2,
@@ -136,7 +140,7 @@ let textureeffects_cgfx = {
     ],
     'pixelyExpand': [
       {
-        'parameters': ['clipSpace', 'copyUVScale', 'inputTexture0'],
+        'parameters': ['clipSpace', 'copyUVScale', 'inputTexture0', 'inputTexture1', 'inputTexture2', 'orig_pixel_size'],
         'semantics': ['ATTR0'/*, 'ATTR8'*/],
         'states': {
           'DepthTestEnable': false,
@@ -328,6 +332,17 @@ export class TextureEffects {
       copyUVScale: this.copyUVScale,
       inputTexture0: null,
       sampleRadius: [1, 1]
+    });
+
+    // Pixely Expand
+    // ---------------
+    this.pixelyExpandParameters = gd.createTechniqueParameters({
+      clipSpace: this.clipSpace,
+      copyUVScale: this.copyUVScale,
+      inputTexture0: null,
+      inputTexture1: null,
+      inputTexture2: null,
+      orig_pixel_size: VMath.v4BuildZero(),
     });
 
     // Shader embedding.
@@ -593,10 +608,37 @@ export class TextureEffects {
   applyPixelyExpand(params) {
     let source = params.source;
     let effectParams = this.effectParams;
-    let techparams = this.copyParameters;
+    let techparams;
+
+    // do horizontal blur for primary lines
+    techparams = this.gaussianBlurParameters;
+    effectParams.technique = this.gaussianBlurTechnique;
+    effectParams.params = techparams;
+    let resx = source.width;
+    let resy = source.height;
+    let sampleRadius = (params.hblur || 0.25) / resx;
+    techparams.sampleRadius[0] = sampleRadius;
+    techparams.sampleRadius[1] = 0;
+    techparams.inputTexture0 = source;
+    this.applyEffect(effectParams, resx, resy);
+    let hblur = glov_engine.captureFramebuffer(null, resx, resy);
+
+    // do seperable gaussian blur for scanlines (using horizontal blur from above)
+    sampleRadius = (params.vblur || 0.75) / resy;
+    techparams.sampleRadius[0] = 0;
+    techparams.sampleRadius[1] = sampleRadius;
+    techparams.inputTexture0 = hblur;
+    this.applyEffect(effectParams, resx, resy);
+    let vblur = glov_engine.captureFramebuffer(null, resx, resy);
+
+    // combine at full res
+    techparams = this.pixelyExpandParameters;
     effectParams.technique = this.pixelyExpandTechnique;
     effectParams.params = techparams;
     techparams.inputTexture0 = source;
+    techparams.inputTexture1 = hblur;
+    techparams.inputTexture2 = vblur;
+    VMath.v4Build(source.width, source.height, 1/source.width, 1/source.height, techparams.orig_pixel_size);
 
     this.applyEffect(effectParams);
   }
@@ -617,7 +659,7 @@ export class TextureEffects {
 
     let viewport = gd.getViewport();
     let res = max_size;
-    while (res > (viewport[2] - viewport[0]) || res > (viewport[3] - viewport[1])) {
+    while (res > viewport[2] || res > viewport[3]) {
       res /= 2;
     }
 
@@ -756,8 +798,8 @@ export class TextureEffects {
     let graphicsDevice = this.graphicsDevice;
 
     let viewport = graphicsDevice.getViewport();
-    let target_w = viewport[2] - viewport[0]; // graphicsDevice.width;
-    let target_h = viewport[3] - viewport[1]; // graphicsDevice.height;
+    let target_w = viewport[2]; // graphicsDevice.width;
+    let target_h = viewport[3]; // graphicsDevice.height;
     view_w = view_w || target_w;
     view_h = view_h || target_h;
     let clipOffsetX = -1.0;

@@ -189,7 +189,9 @@ export function getTemporaryTexture(w, h) {
     let tex = getTextureForCapture();
     temp.list.push(tex);
   }
-  return temp.list[temp.idx++];
+  let tex = temp.list[temp.idx++];
+  tex.override_sampler = null; // in case the previous user set it
+  return tex;
 }
 
 export function captureFramebuffer(tex, w, h) {
@@ -201,7 +203,12 @@ export function captureFramebuffer(tex, w, h) {
     tex = getTemporaryTexture(w, h);
   }
   if (w) {
-    tex.copyTexImage(0, 0, w, h);
+    let viewport = graphics_device.getViewport();
+    if (viewport) {
+      tex.copyTexImage(viewport[0], viewport[1], w, h);
+    } else {
+      tex.copyTexImage(0, 0, w, h);
+    }
   } else {
     tex.copyTexImage();
   }
@@ -293,22 +300,22 @@ function tick() {
 
   if (render_width) {
     let source = captureFramebuffer();
-    if (!copy_nearest_sampler) {
-      copy_nearest_sampler = createSampler({
-        filter_min: 'nearest',
-        filter_max: 'nearest',
-        wrap_s: 'clamp',
-        wrap_t: 'clamp',
-      });
-    }
-    source.override_sampler = copy_nearest_sampler;
-    graphics_device.clear([0, 0, 0, 1]);
+    //graphics_device.clear([0, 0, 0, 1]);
     graphics_device.setViewport(glov_camera.render_offset_x, glov_camera.render_offset_y,
       glov_camera.render_viewport_w, glov_camera.render_viewport_h);
     graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
     if (do_viewport_postprocess) {
       effects.applyPixelyExpand({ source });
     } else {
+      if (!copy_nearest_sampler) {
+        copy_nearest_sampler = createSampler({
+          filter_min: 'nearest',
+          filter_max: 'nearest',
+          wrap_s: 'clamp',
+          wrap_t: 'clamp',
+        });
+      }
+      source.override_sampler = copy_nearest_sampler;
       effects.applyCopy({ source });
     }
   }
