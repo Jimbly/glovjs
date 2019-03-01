@@ -300,7 +300,7 @@ function tick() {
 
   if (render_width) {
     let source = captureFramebuffer();
-    //graphics_device.clear([0, 0, 0, 1]);
+    graphics_device.clear([0, 0, 0, 1]);
     graphics_device.setViewport(glov_camera.render_offset_x, glov_camera.render_offset_y,
       glov_camera.render_viewport_w, glov_camera.render_viewport_h);
     graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
