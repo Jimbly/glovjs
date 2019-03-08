@@ -27,6 +27,7 @@ export let game_width;
 export let game_height;
 export let render_width;
 export let render_height;
+export let render_pixel_aspect = 1;
 export let graphics_device;
 export let draw_2d;
 export let draw_list;
@@ -300,13 +301,19 @@ function tick() {
 
   if (render_width) {
     let source = captureFramebuffer();
-    graphics_device.clear([0, 0, 0, 1]);
-    graphics_device.setViewport(glov_camera.render_offset_x, glov_camera.render_offset_y,
-      glov_camera.render_viewport_w, glov_camera.render_viewport_h);
-    graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
+    let clear_color = [0, 0, 0, 1];
+    let final_viewport = [
+      glov_camera.render_offset_x, glov_camera.render_offset_y,
+      glov_camera.render_viewport_w, glov_camera.render_viewport_h
+    ];
     if (do_viewport_postprocess) {
-      effects.applyPixelyExpand({ source });
+      effects.applyPixelyExpand({ source, final_viewport, clear_color });
     } else {
+      if (clear_color) {
+        graphics_device.clear(clear_color);
+      }
+      graphics_device.setViewport(...final_viewport);
+      graphics_device.setScissor(0, 0, graphics_device.width, graphics_device.height);
       if (!copy_nearest_sampler) {
         copy_nearest_sampler = createSampler({
           filter_min: 'nearest',
@@ -346,6 +353,7 @@ export function startup(params) {
     if (params.viewport_postprocess) {
       do_viewport_postprocess = true;
     }
+    render_pixel_aspect = params.render_pixel_aspect || 1;
   } else {
     render_width = undefined;
     render_height = undefined;

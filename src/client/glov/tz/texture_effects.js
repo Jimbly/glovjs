@@ -640,6 +640,13 @@ export class TextureEffects {
     techparams.inputTexture2 = vblur;
     VMath.v4Build(source.width, source.height, 1/source.width, 1/source.height, techparams.orig_pixel_size);
 
+    let gd = this.graphicsDevice;
+    if (params.clear_color) {
+      gd.clear(params.clear_color);
+    }
+    gd.setViewport(...params.final_viewport);
+    gd.setScissor(0, 0, gd.width, gd.height);
+
     this.applyEffect(effectParams);
   }
 

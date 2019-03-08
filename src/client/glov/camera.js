@@ -158,17 +158,18 @@ class GlovCamera {
       this.render_width = glov_engine.render_width;
       this.render_height = glov_engine.render_height;
       // Find an offset so this rendered viewport is centered while preserving aspect ratio, just like set2DAspectFixed
-      let inv_aspect = this.render_height / this.render_width;
+      let pa = glov_engine.render_pixel_aspect;
+      let inv_aspect = this.render_height / pa / this.render_width;
       let inv_desired_aspect = this.screen_height / this.screen_width;
       if (inv_aspect > inv_desired_aspect) {
-        let margin = (this.render_height / inv_desired_aspect - this.render_width) / 2 *
+        let margin = (this.render_height / inv_desired_aspect - this.render_width * pa) / 2 *
           this.screen_height / this.render_height;
         this.render_offset_x = round(margin);
         this.render_offset_y = 0;
         this.render_viewport_w = round(this.screen_width - margin * 2);
         this.render_viewport_h = this.screen_height;
       } else {
-        let margin = (this.render_width * inv_desired_aspect - this.render_height) / 2 *
+        let margin = (this.render_width * inv_desired_aspect - this.render_height / pa) / 2 *
           this.screen_width / this.render_width;
         this.render_offset_x = 0;
         this.render_offset_y = round(margin);

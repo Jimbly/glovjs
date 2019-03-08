@@ -146,6 +146,8 @@ export function run(x, y, z) {
 }
 
 export function runFontTest(x, y) {
+  glov_ui = glov_engine.glov_ui;
+  glov_input = glov_engine.glov_input;
   const COLOR_RED = 0xFF0000ff;
   const COLOR_GREEN = 0x00FF00ff;
   const COLOR_WHITE = 0xFFFFFFff;
@@ -153,7 +155,7 @@ export function runFontTest(x, y) {
   let z = Z.UI;
   let font = glov_engine.font;
 
-  let font_size = glov_engine.glov_ui.font_height * 2;
+  let font_size = glov_ui.font_height * 2;
   font.drawSized(null, x, y, z, font_size, `Default ${font_size} ${random().toFixed(7)}`);
   y += font_size;
   font.drawSized(null, x, y, z, font_size / 2, `Default ${font_size / 2} Lorem ipsum dolor sit amet`);
