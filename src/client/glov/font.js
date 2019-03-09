@@ -127,7 +127,14 @@ GlovFontDefaultStyle.prototype.color_mode = COLOR_MODE.SINGLE;
 class GlovFontStyle extends GlovFontDefaultStyle {
 }
 
-function vec4ColorFromIntColor(v, c) {
+export function intColorFromVec4Color(v) {
+  return ((v[0] * 255 | 0) << 24) |
+    ((v[1] * 255 | 0) << 16) |
+    ((v[2] * 255 | 0) << 8) |
+    ((v[3] * 255 | 0));
+}
+
+export function vec4ColorFromIntColor(v, c) {
   v[0] = ((c >> 24) & 0xFF) / 255;
   v[1] = ((c >> 16) & 0xFF) / 255;
   v[2] = ((c >> 8) & 0xFF) / 255;
