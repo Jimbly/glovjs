@@ -27,7 +27,7 @@ export let game_width;
 export let game_height;
 export let render_width;
 export let render_height;
-export let render_pixel_aspect = 1;
+export let pixel_aspect = 1;
 export let graphics_device;
 export let draw_2d;
 export let draw_list;
@@ -353,11 +353,11 @@ export function startup(params) {
     if (params.viewport_postprocess) {
       do_viewport_postprocess = true;
     }
-    render_pixel_aspect = params.render_pixel_aspect || 1;
   } else {
     render_width = undefined;
     render_height = undefined;
   }
+  pixel_aspect = params.pixel_aspect || 1;
 
   graphics_device = TurbulenzEngine.createGraphicsDevice({});
   let shaders = params.shaders || {};

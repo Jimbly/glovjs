@@ -124,7 +124,8 @@ class GlovCamera {
   // But keep the aspect ratio of those things drawn to be correct
   // This may create a padding or margin on either bottom or sides of the screen
   set2DAspectFixed(w, h) {
-    let inv_aspect = h / w;
+    let pa = glov_engine.render_width ? 1 : glov_engine.pixel_aspect;
+    let inv_aspect = h / pa / w;
     let inv_desired_aspect;
     if (this.render_width) {
       inv_desired_aspect = this.render_height / this.render_width;
@@ -132,10 +133,10 @@ class GlovCamera {
       inv_desired_aspect = this.screen_height / this.screen_width;
     }
     if (inv_aspect > inv_desired_aspect) {
-      let margin = (h / inv_desired_aspect - w) / 2;
+      let margin = (h / pa / inv_desired_aspect - w) / 2;
       this.set2D(-margin, 0, w + margin, h);
     } else {
-      let margin = (w * inv_desired_aspect - h) / 2;
+      let margin = (w * pa * inv_desired_aspect - h) / 2;
       this.set2D(0, -margin, w, h + margin);
     }
   }
@@ -158,7 +159,7 @@ class GlovCamera {
       this.render_width = glov_engine.render_width;
       this.render_height = glov_engine.render_height;
       // Find an offset so this rendered viewport is centered while preserving aspect ratio, just like set2DAspectFixed
-      let pa = glov_engine.render_pixel_aspect;
+      let pa = glov_engine.pixel_aspect;
       let inv_aspect = this.render_height / pa / this.render_width;
       let inv_desired_aspect = this.screen_height / this.screen_width;
       if (inv_aspect > inv_desired_aspect) {
