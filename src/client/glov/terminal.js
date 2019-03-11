@@ -4,6 +4,7 @@
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 
+const { abs, max, min } = Math;
 const { clamp } = require('../../common/util.js');
 
 const mode_regex1 = /^((?:\d+;)*\d+m)/u;
@@ -22,6 +23,11 @@ const ansi_to_unicode = [
   945,223,915,960,931,963,181,964,934,920,937,948,8734,966,949,8745,8801,177,
   8805,8804,8992,8993,247,8776,176,8729,183,8730,8319,178,9632,160
 ];
+
+const MOD_CH = 1;
+const MOD_SCROLL = 2;
+const MOD_CLEAR = 3;
+const MOD_CLEAREOL = 4;
 
 const ansi_to_vga = [
   0, // black
@@ -48,6 +54,7 @@ const ATTR = {
   BLINK: 1,
   UNDERLINE: 2, // unimplemented
   REVERSE: 4, // unimplemented
+  NUM_BITS: 3,
 };
 
 class CharInfo {
@@ -62,12 +69,29 @@ class CharInfo {
 class GlovTerminal {
   constructor(params) {
     params = params || {};
-    this.x = 0;
-    this.y = 0;
+    this.baud = params.baud || 9600;
+    // screen buffer
     this.w = params.w || 80;
     this.h = params.h || 25;
+    // cursor
+    this.x = 0;
+    this.y = 0;
+    this.fg = 7;
+    this.bg = 0;
+    this.attr = 0;
     this.saved_x = 0;
     this.saved_y = 0;
+    this.playback = {
+      x: 0,
+      y: 0,
+      fg: 7,
+      bg: 0,
+      attr: 0,
+    };
+    this.mod_head = null;
+    this.mod_tail = null;
+    this.mod_countdown = 0;
+
     this.palette = params.palette || [
       VMath.v4Build(0/64,0/64,0/63,1),
       VMath.v4Build(0/64,0/64,42/63,1),
@@ -94,9 +118,6 @@ class GlovTerminal {
     }
     this.char_height = params.char_height || 16;
     this.char_width = params.char_width || 9;
-    this.fg = 7;
-    this.bg = 0;
-    this.attr = 0;
     this.font = params.font || glov_engine.font;
     this.buffer = new Array(this.h);
     this.auto_scroll = true;
@@ -105,6 +126,82 @@ class GlovTerminal {
       for (let jj = 0; jj < this.w; ++jj) {
         this.buffer[ii][jj] = new CharInfo(this.fg, this.bg, this.attr);
       }
+    }
+  }
+
+  domod(mod) {
+    switch (mod.type) { // eslint-disable-line default-case
+      case MOD_CH:
+        this.buffer[mod.y][mod.x].ch = mod.ch;
+        this.buffer[mod.y][mod.x].attr = mod.attr;
+        this.buffer[mod.y][mod.x].fg = mod.fg;
+        this.buffer[mod.y][mod.x].bg = mod.bg;
+        this.playback.x = mod.x + 1;
+        this.playback.y = mod.y;
+        break;
+      case MOD_SCROLL: {
+        let row = this.buffer[0];
+        this.buffer = this.buffer.slice(1);
+        this.buffer.push(row);
+        for (let ii = 0; ii < row.length; ++ii) {
+          row[ii].fg = mod.fg;
+          row[ii].bg = mod.bg;
+          row[ii].ch = ' ';
+          row[ii].attr = 0;
+        }
+      } break;
+      case MOD_CLEAR:
+        for (let ii = 0; ii < this.h; ++ii) {
+          let line = this.buffer[ii];
+          for (let jj = 0; jj < this.w; ++jj) {
+            line[jj].attr = mod.attr;
+            line[jj].fg = mod.fg;
+            line[jj].bg = mod.bg;
+            line[jj].ch = ' ';
+          }
+        }
+        this.playback.x = this.playback.y = 0;
+        break;
+      case MOD_CLEAREOL: {
+        let line = this.buffer[mod.y];
+        for (let jj = mod.x; jj < this.w; ++jj) {
+          line[jj].ch = ' ';
+          line[jj].attr = 0;
+          line[jj].fg = mod.fg;
+          line[jj].bg = mod.bg;
+        }
+        this.playback.x = this.w;
+        this.playback.y = mod.y;
+      } break;
+    }
+    if (this.playback.x >= this.w) {
+      this.playback.x = 0;
+      this.playback.y++;
+    }
+    if (this.playback.y >= this.h) {
+      this.playback.y = this.h - 1;
+    }
+  }
+
+  mod(type, ch) {
+    let mod = {
+      type,
+      ch,
+      x: this.x,
+      y: this.y,
+      fg: this.fg,
+      bg: this.bg,
+      attr: this.attr,
+    };
+    if (!this.baud) {
+      this.domod(mod);
+      return;
+    }
+    if (this.mod_tail) {
+      this.mod_tail.next = mod;
+      this.mod_tail = mod;
+    } else {
+      this.mod_head = this.mod_tail = mod;
     }
   }
 
@@ -154,15 +251,7 @@ class GlovTerminal {
     if (this.y >= this.h) {
       this.y = this.h - 1;
       if (this.auto_scroll) {
-        let row = this.buffer[0];
-        this.buffer = this.buffer.slice(1);
-        this.buffer.push(row);
-        for (let ii = 0; ii < row.length; ++ii) {
-          row[ii].fg = this.fg;
-          row[ii].bg = this.bg;
-          row[ii].ch = ' ';
-          row[ii].attr = 0;
-        }
+        this.mod(MOD_SCROLL);
       }
     }
   }
@@ -181,16 +270,10 @@ class GlovTerminal {
   }
   clear() {
     this.moveto(0, 0);
-    this.fill({});
+    this.mod(MOD_CLEAR);
   }
   cleareol() {
-    let line = this.buffer[this.y];
-    for (let jj = this.x; jj < this.w; ++jj) {
-      line[jj].ch = ' ';
-      line[jj].attr = 0;
-      line[jj].fg = this.fg;
-      line[jj].bg = this.bg;
-    }
+    this.mod(MOD_CLEAREOL);
     this.x = this.w; // probably?
     this.checkwrap();
   }
@@ -298,10 +381,7 @@ class GlovTerminal {
       }
       if (!handled) {
         if (this.x >= 0 && this.x < this.w && this.y >= 0 && this.y < this.h) {
-          this.buffer[this.y][this.x].ch = ch;
-          this.buffer[this.y][this.x].attr = this.attr;
-          this.buffer[this.y][this.x].fg = this.fg;
-          this.buffer[this.y][this.x].bg = this.bg;
+          this.mod(MOD_CH, ch);
         }
         ++this.x;
         this.checkwrap();
@@ -318,36 +398,96 @@ class GlovTerminal {
     let x1 = clamp(x + w, 0, this.w);
     let y0 = clamp(y, 0, this.h);
     let y1 = clamp(y + h, 0, this.h);
-    let fg = this.fg;
-    let bg = this.bg;
-    let attr = this.attr;
     let ch = toch(params.ch || ' ');
-    let fill = params.fill || {
-      attr: true,
-      fg: true,
-      bg: true,
-      ch: true,
-    };
     for (let ii = y0; ii < y1; ++ii) {
-      let line = this.buffer[ii];
+      this.moveto(x0, ii);
       for (let jj = x0; jj < x1; ++jj) {
-        if (fill.attr) {
-          line[jj].attr = attr;
-        }
-        if (fill.fg) {
-          line[jj].fg = fg;
-        }
-        if (fill.bg) {
-          line[jj].bg = bg;
-        }
-        if (fill.ch) {
-          line[jj].ch = ch;
-        }
+        this.mod(MOD_CH, ch);
+        this.x++;
       }
     }
   }
 
-  render(params) {
+  ansiCharsTo(mod) {
+    // Adjust attributes
+    let count = 0;
+    let m = false;
+    if (mod.fg !== this.playback.fg) {
+      this.playback.fg = mod.fg;
+      m = true;
+      count += 3;
+    }
+    if (mod.bg !== this.playback.bg) {
+      this.playback.bg = mod.bg;
+      m = true;
+      count += 3;
+    }
+    if (mod.attr !== this.playback.attr) {
+      m = true;
+      let clear = 0;
+      let add = 0;
+      for (let ii = 0; ii < ATTR.NUM_BITS; ++ii) {
+        let bit = (1 << ii);
+        if ((this.playback.attr & bit) !== (mod.attr & bit)) {
+          if (mod.attr & bit) {
+            add++;
+          } else {
+            clear = 1;
+          }
+        }
+      }
+      count += (add + clear) * 2;
+    }
+    if (m) {
+      count += 2;
+    }
+
+    switch (mod.type) { // eslint-disable-line default-case
+      case MOD_SCROLL:
+        // Happens as a result of other actions, instant
+        return count;
+      case MOD_CLEAR:
+        // ESC[2J
+        return count + 4;
+    }
+    // Get to location
+    let dx = mod.x - this.playback.x;
+    let dy = mod.y - this.playback.y;
+    if (dx || dy) {
+      let horiz = dx ? (3 + (dx === 1 ? 0 : ((abs(dx) >= 10 ? 2 : 1) + (dx < 0 ? 1 : 0)))) : 0;
+      let vert = dy ? (3 + (dy === 1 ? 0 : ((abs(dy) >= 10 ? 2 : 1) + (dy < 0 ? 1 : 0)))) : 0;
+      let setpos = 4 + (mod.x ? mod.x > 10 ? 2 : 1 : 0) + (mod.y ? mod.y > 10 ? 2 : 1 : 0);
+      count += min(horiz + vert, setpos);
+    }
+    switch (mod.type) { // eslint-disable-line default-case
+      case MOD_CH:
+        return count + 1;
+      case MOD_CLEAREOL:
+        // ESC[K
+        return count + 3;
+    }
+    return count;
+  }
+
+  render(dt, params) {
+    while (dt >= this.mod_countdown && this.mod_head) {
+      dt -= this.mod_countdown;
+      let mod = this.mod_head;
+      this.mod_head = mod.next;
+      if (!mod.next) {
+        this.mod_tail = null;
+      }
+      this.domod(mod);
+      let next = mod.next;
+      if (next) {
+        let ms_per_char = 1000 / (this.baud / 10); // 10 bits per byte
+        this.mod_countdown = ms_per_char * this.ansiCharsTo(next);
+      } else {
+        this.mod_countdown = 0;
+      }
+    }
+    this.mod_countdown = max(0, this.mod_countdown - dt);
+
     const { glov_ui } = glov_engine;
     const { w, h, buffer, char_width, char_height, palette } = this;
     const blink = glov_engine.getFrameTimestamp() % 1000 > 500;
