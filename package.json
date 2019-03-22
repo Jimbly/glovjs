@@ -1,5 +1,5 @@
 {
-  "name": "nextgen",
+  "name": "glovjs-playground",
   "version": "0.0.2",
   "description": "Template for a state of the art Javascript project using Turbulenz",
   "main": "build/server/index.js",
@@ -51,6 +51,6 @@
     "uglify-js": "3.4.7",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0",
-    "watchify": "^3.9.0"
+    "watchify": "3.11.0"
   }
 }
