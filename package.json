@@ -43,6 +43,7 @@
     "gulp-eslint": "^5.0.0",
     "gulp-if": "^2.0.2",
     "gulp-nodemon": "^2.4.1",
+    "gulp-replace": "^1.0.0",
     "gulp-sourcemaps": "^2.6.0",
     "gulp-uglify": "^3.0.1",
     "gulp-useref": "^3.1.6",

@@ -1,4 +1,4 @@
-/* eslint no-alert:off */
+/* eslint no-alert:off, consistent-return:off */
 (function () {
   let debug = document.getElementById('debug');
   window.onerror = function (e, file, line) {
@@ -9,48 +9,23 @@
   };
 }());
 
-let canvasSupported = true;
-(function () {
+// Embedded code and startup code.
+window.onload = function () {
+  // eslint-disable-next-line global-require
+  const app = require('./app.js');
+
+  let canvas = document.getElementById('canvas');
   let contextNames = ['webgl', 'experimental-webgl'];
-  let context = null;
-  let canvas = document.createElement('canvas');
-
-  document.body.appendChild(canvas);
-
   for (let i = 0; i < contextNames.length; i += 1) {
+    let context;
     try {
       context = canvas.getContext(contextNames[i]);
     } catch (e) {
       // ignore
     }
-
     if (context) {
-      break;
+      return app.main(canvas);
     }
   }
-  if (!context) {
-    canvasSupported = false;
-    window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
-  }
-
-  document.body.removeChild(canvas);
-}());
-
-window.assert = function (exp) {
-  if (!exp) {
-    let e = new Error();
-    console.log(e.stack);
-    window.alert('assertion failed');
-    throw e;
-  }
-};
-
-// Embedded code and startup code.
-window.onload = function () {
-  // eslint-disable-next-line global-require
-  const app = require('./app.js');
-  let canvas = document.getElementById('turbulenz_game_engine_canvas');
-  if (canvas.getContext && canvasSupported) {
-    app.main(canvas);
-  }
+  window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
 };
