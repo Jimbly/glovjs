@@ -98,7 +98,7 @@ export function render(dt) {
       let force_end = trans_idx < transitions.length - 1;
       let ret = trans.func(trans.z, trans.capture, trans.accum_time, force_end);
       if (ret === REMOVE) {
-        setImmediate(destroyTexture.bind(null, trans.capture));
+        setTimeout(destroyTexture.bind(null, trans.capture), 0);
         transitions.splice(trans_idx, 1);
         trans_idx--;
       }
@@ -311,7 +311,7 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
     });
 
   if (force_end || progress === 1) {
-    setImmediate(destroyTexture.bind(null, transition_pixelate_texture));
+    setTimeout(destroyTexture.bind(null, transition_pixelate_texture), 0);
     transition_pixelate_texture = null;
     return REMOVE;
   }
