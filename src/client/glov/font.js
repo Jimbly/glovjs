@@ -1,9 +1,9 @@
 /* eslint no-bitwise:off */
 /* eslint complexity:off */
 /* eslint no-shadow:off */
-/*global assert: true */
 /*global VMath: false */
 
+const assert = require('assert');
 const fs = require('fs');
 let VMathArrayConstructor = VMath.F32Array;
 

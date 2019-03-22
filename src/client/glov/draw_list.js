@@ -1,8 +1,8 @@
 /* eslint no-bitwise:off */
 /* eslint no-underscore-dangle:off */
-/*global assert: true */
 /*global VMath: false */
 
+const assert = require('assert');
 const { Draw2DSpriteData } = require('./tz/draw2d.js');
 const glov_engine = require('./engine.js');
 const { v2BuildZero, v4Build } = VMath;

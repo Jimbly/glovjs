@@ -1,8 +1,8 @@
 /*global RequestHandler: false */
 /*global TextureManager: false */
 /*global VMath: false */
-/*global assert: false */
 
+const assert = require('assert');
 const { Draw2DSprite } = require('./tz/draw2d.js');
 
 class GlovSpriteAnimation {

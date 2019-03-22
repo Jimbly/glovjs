@@ -56,8 +56,9 @@ system.killHard(); // immediately stops drawing
 
 //////////////////////////////////////////////////////////////////////////
 // Implementation
-/*global assert: false */
 /*global VMath: false */
+
+const assert = require('assert');
 
 // Expect all values to be a pair of [base, add_max]
 function normalizeValue(v) {

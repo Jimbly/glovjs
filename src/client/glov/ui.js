@@ -1,7 +1,6 @@
 /* eslint-env jquery */
 /* eslint no-underscore-dangle:off */
 /*global VMath: false */
-/*global assert: false */
 /*global Z: false */
 
 window.Z = window.Z || {};
@@ -18,6 +17,7 @@ Z.TRANSITION_RANGE = Z.TRANSITION_RANGE || 10;
 
 Z.FPSMETER = Z.FPSMETER || 10000;
 
+const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_edit_box = require('./edit_box.js');

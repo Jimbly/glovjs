@@ -1,8 +1,8 @@
 /*global VMath: false */
-/*global assert: false */
 
 let VMathArrayConstructor = VMath.F32Array;
 
+const assert = require('assert');
 const glov_engine = require('./engine.js');
 
 const UP_EDGE = 0;

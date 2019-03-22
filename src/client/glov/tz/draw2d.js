@@ -9,9 +9,9 @@
 /*global
 Float32Array:false,
 debug:false,
-assert:false
 */
 
+const assert = require('assert');
 const util = require('../../../common/util.js');
 const opengl = require('./opengl.js');
 
