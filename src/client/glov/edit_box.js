@@ -2,11 +2,12 @@
 /*global Z: false */
 
 const glov_engine = require('./engine.js');
+const glov_ui = require('./ui.js');
+const camera2d = require('./camera2d.js');
 
 const { focuslog } = require('./ui.js');
 
 let glov_input;
-let glov_ui;
 
 class GlovUIEditBox {
   constructor(params) {
@@ -127,10 +128,10 @@ class GlovUIEditBox {
       }
     }
     if (elem) {
-      let pos = glov_engine.glov_camera.htmlPos(this.x, this.y);
+      let pos = camera2d.htmlPos(this.x, this.y);
       elem[0].style.left = `${pos[0]}%`;
       elem[0].style.top = `${pos[1]}%`;
-      let size = glov_engine.glov_camera.htmlSize(this.w, this.h);
+      let size = camera2d.htmlSize(this.w, this.h);
       elem[0].style.width = `${size[0]}%`;
     }
 
@@ -154,8 +155,7 @@ class GlovUIEditBox {
 GlovUIEditBox.prototype.SUBMIT = 'submit';
 
 export function create(params) {
-  if (!glov_ui) {
-    glov_ui = glov_engine.glov_ui;
+  if (!glov_input) {
     glov_input = glov_engine.glov_input;
   }
   return new GlovUIEditBox(params);

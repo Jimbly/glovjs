@@ -144,7 +144,8 @@ function babelBrfs(filename, opts) {
     builtins: {
       // super-simple replacements, if needed
       assert: './src/client/shims/assert.js',
-      timers: './src/client/shims/timers.js',
+      buffer: './src/client/shims/buffer.js',
+      // timers: './src/client/shims/timers.js',
     },
     debug: true,
     transform: [babelBrfs]

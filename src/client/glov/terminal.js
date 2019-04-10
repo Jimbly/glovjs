@@ -1,11 +1,10 @@
-/*global VMath: false */
 /*global Z: false */
 /*eslint no-bitwise:off */
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 
 const { abs, max, min } = Math;
-const { clamp } = require('../../common/util.js');
+const { clamp, vec4 } = require('./vmath.js');
 
 const mode_regex1 = /^((?:\d+;)*\d+m)/u;
 const mode_regex2 = /(\d+)[;m]/gu;
@@ -93,22 +92,22 @@ class GlovTerminal {
     this.mod_countdown = 0;
 
     this.palette = params.palette || [
-      VMath.v4Build(0/64,0/64,0/63,1),
-      VMath.v4Build(0/64,0/64,42/63,1),
-      VMath.v4Build(0/64,42/64,0/63,1),
-      VMath.v4Build(0/64,42/64,42/63,1),
-      VMath.v4Build(42/64,0/64,0/63,1),
-      VMath.v4Build(42/64,0/64,42/63,1),
-      VMath.v4Build(42/64,21/64,0/63,1),
-      VMath.v4Build(42/64,42/64,42/63,1),
-      VMath.v4Build(21/64,21/64,21/63,1),
-      VMath.v4Build(21/64,21/64,63/63,1),
-      VMath.v4Build(21/64,63/64,21/63,1),
-      VMath.v4Build(21/64,63/64,63/63,1),
-      VMath.v4Build(63/64,21/64,21/63,1),
-      VMath.v4Build(63/64,21/64,63/63,1),
-      VMath.v4Build(63/64,63/64,21/63,1),
-      VMath.v4Build(63/64,63/64,63/63,1),
+      vec4(0/64,0/64,0/63,1),
+      vec4(0/64,0/64,42/63,1),
+      vec4(0/64,42/64,0/63,1),
+      vec4(0/64,42/64,42/63,1),
+      vec4(42/64,0/64,0/63,1),
+      vec4(42/64,0/64,42/63,1),
+      vec4(42/64,21/64,0/63,1),
+      vec4(42/64,42/64,42/63,1),
+      vec4(21/64,21/64,21/63,1),
+      vec4(21/64,21/64,63/63,1),
+      vec4(21/64,63/64,21/63,1),
+      vec4(21/64,63/64,63/63,1),
+      vec4(63/64,21/64,21/63,1),
+      vec4(63/64,21/64,63/63,1),
+      vec4(63/64,63/64,21/63,1),
+      vec4(63/64,63/64,63/63,1),
     ];
     this.font_styles = [];
     for (let ii = 0; ii < this.palette.length; ++ii) {
@@ -289,7 +288,7 @@ class GlovTerminal {
       text = text.split('');
     }
     text = text.map(toch).join('');
-    for (let ii = 0; ii < text.length; ) {
+    for (let ii = 0; ii < text.length;) {
       let ch = text[ii];
       let handled = false;
       if (ch === ESC && text[ii + 1] === '[') {

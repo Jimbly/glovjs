@@ -1,9 +1,18 @@
 /*eslint global-require:off*/
-/*global VMath: false */
 /*global Z: false */
 
+const glov_engine = require('./glov/engine.js');
+const glov_font = require('./glov/font.js');
 const glov_local_storage = require('./glov/local_storage.js');
+const glov_particles = require('./glov/particles.js');
+const glov_sprites = require('./glov/sprites.js');
+const glov_sprite_animation = require('./glov/sprite_animation.js');
+const glov_transition = require('./glov/transition.js');
+const glov_ui = require('./glov/ui.js');
+const glov_ui_test = require('./glov/ui_test.js');
 const particle_data = require('./particle_data.js');
+
+const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
 
 glov_local_storage.storage_prefix = 'glovjs-playground';
 window.Z = window.Z || {};
@@ -37,10 +46,6 @@ function flagSet(key, value) {
 }
 
 export function main(canvas) {
-  const glov_engine = require('./glov/engine.js');
-  const glov_font = require('./glov/font.js');
-  const glov_ui_test = require('./glov/ui_test.js');
-  const glov_transition = require('./glov/transition.js');
 
   glov_engine.startup({
     canvas,
@@ -51,23 +56,19 @@ export function main(canvas) {
   });
 
   const sound_manager = glov_engine.sound_manager;
-  // const glov_camera = glov_engine.glov_camera;
   const glov_input = glov_engine.glov_input;
-  const glov_sprite = glov_engine.glov_sprite;
-  const glov_ui = glov_engine.glov_ui;
-  const draw_list = glov_engine.draw_list;
   // const font = glov_engine.font;
 
   // Perfect sizes for pixely modes
   glov_ui.scaleSizes(13 / 32);
-  glov_ui.font_height = 8;
+  glov_ui.setFontHeight(8);
 
-  const createSpriteSimple = glov_sprite.createSpriteSimple.bind(glov_sprite);
-  const createAnimation = glov_sprite.createAnimation.bind(glov_sprite);
+  const createSprite = glov_sprites.create;
+  const createAnimation = glov_sprite_animation.create;
 
-  const color_white = VMath.v4Build(1, 1, 1, 1);
-  const color_red = VMath.v4Build(1, 0, 0, 1);
-  const color_yellow = VMath.v4Build(1, 1, 0, 1);
+  const color_white = vec4(1, 1, 1, 1);
+  const color_red = vec4(1, 0, 0, 1);
+  const color_yellow = vec4(1, 1, 0, 1);
 
   // Cache key_codes
   const key_codes = glov_input.key_codes;
@@ -75,15 +76,20 @@ export function main(canvas) {
 
   const sprite_size = 64;
   function initGraphics() {
-    glov_sprite.preloadParticleData(particle_data);
+    glov_particles.preloadParticleData(particle_data);
 
     sound_manager.loadSound('test');
 
-    const origin_0_0 = glov_sprite.origin_0_0;
+    sprites.white = createSprite({ url: 'white' });
 
-    sprites.white = createSpriteSimple('white', 1, 1, origin_0_0);
-
-    sprites.test_tint = createSpriteSimple('tinted', [16, 16, 16, 16], [16, 16, 16], { layers: 2 });
+    sprites.test_tint = createSprite({
+      name: 'tinted',
+      ws: [16, 16, 16, 16],
+      hs: [16, 16, 16],
+      size: vec2(sprite_size, sprite_size),
+      layers: 2,
+      origin: vec2(0.5, 0.5),
+    });
     sprites.animation = createAnimation({
       idle_left: {
         frames: [0,1],
@@ -96,10 +102,9 @@ export function main(canvas) {
     });
     sprites.animation.setState('idle_left');
 
-    sprites.game_bg = createSpriteSimple('white', 2, 2, {
-      width: game_width,
-      height: game_height,
-      origin: [0, 0],
+    sprites.game_bg = createSprite({
+      url: 'white',
+      size: vec2(game_width, game_height),
     });
   }
 
@@ -107,7 +112,7 @@ export function main(canvas) {
 
   function test(dt) {
     if (!test.color_sprite) {
-      test.color_sprite = VMath.v4Copy(color_white);
+      test.color_sprite = v4clone(color_white);
       test.character = {
         x: (Math.random() * (game_width - sprite_size) + (sprite_size * 0.5)),
         y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
@@ -116,7 +121,7 @@ export function main(canvas) {
 
     if (flagGet('ui_test')) {
       // let clip_test = 30;
-      // draw_list.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
+      // glov_sprites.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
       glov_ui_test.run(10, 10, Z.UI_TEST);
     }
     if (flagGet('font_test')) {
@@ -155,26 +160,28 @@ export function main(canvas) {
       h: sprite_size,
     };
     if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)) {
-      VMath.v4Copy(color_yellow, test.color_sprite);
+      v4copy(test.color_sprite, color_yellow);
     } else if (glov_input.clickHit(bounds)) {
-      VMath.v4Copy((test.color_sprite[2] === 0) ? color_white : color_red, test.color_sprite);
+      v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
       sound_manager.play('test');
     } else if (glov_input.isMouseOver(bounds)) {
-      VMath.v4Copy(color_white, test.color_sprite);
+      v4copy(test.color_sprite, color_white);
       test.color_sprite[3] = 0.5;
     } else {
-      VMath.v4Copy(color_white, test.color_sprite);
+      v4copy(test.color_sprite, color_white);
       test.color_sprite[3] = 1;
     }
 
-    draw_list.queue(sprites.game_bg, 0, 0, Z.BACKGROUND, [0, 0.72, 1, 1]);
+    sprites.game_bg.draw({
+      x: 0, y: 0, z: Z.BACKGROUND,
+      color: [0, 0.72, 1, 1]
+    });
     sprites.test_tint.drawDualTint({
       x: test.character.x,
       y: test.character.y,
       z: Z.SPRITES,
       color: [1, 1, 0, 1],
       color1: [1, 0, 1, 1],
-      size: [sprite_size, sprite_size],
       frame: sprites.animation.getFrame(dt),
     });
 
@@ -256,9 +263,9 @@ export function main(canvas) {
     }
 
     // Debugging touch state on mobile
-    // const glov_camera = glov_engine.glov_camera;
-    // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera.x0(), glov_camera.y0(), Z.FPSMETER,
-    //   glov_camera.w(), 0, 22, JSON.stringify({
+    // const glov_camera2d = require('./glov/camera2d.js');
+    // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
+    //   glov_camera2d.w(), 0, 22, JSON.stringify({
     //     last_touch_state: glov_input.last_touch_state,
     //     touch_state: glov_input.touch_state,
     //   }, undefined, 2));

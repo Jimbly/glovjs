@@ -1,12 +1,7 @@
-#ifdef GL_ES
-#define TZ_LOWP lowp
-precision highp float;
-precision highp int;
-#else
-#define TZ_LOWP
-#endif
+precision mediump float;
+precision mediump int;
 
-varying vec4 tz_TexCoord[1];
+varying highp vec2 interp_texcoord;
 uniform sampler2D inputTexture0; // source
 uniform sampler2D inputTexture1; // hblur
 uniform sampler2D inputTexture2; // hblur+vblur
@@ -52,7 +47,7 @@ float easeOut(float v) {
 
 void main()
 {
-  vec2 texcoords = Warp(tz_TexCoord[0].xy);
+  vec2 texcoords = Warp(interp_texcoord);
   vec2 intcoords = (floor(texcoords.xy * orig_pixel_size.xy) + 0.5) * orig_pixel_size.zw;
   vec2 deltacoords = (texcoords.xy - intcoords) * orig_pixel_size.xy; // -0.5 ... 0.5
   // for horizontal sampling, map [-0.5 .. -A .. A .. 0.5] -> [-0.5 .. 0 .. 0 .. 0.5];

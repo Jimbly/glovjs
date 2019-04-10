@@ -1,10 +1,10 @@
 /* eslint complexity:off */
 /*global Z: false */
-/*global VMath: false */
 const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
-let glov_ui;
+const glov_ui = require('./ui.js');
+const { vec4 } = require('./vmath.js');
 let glov_input;
 let glov_markup = null; // Not ported
 
@@ -45,10 +45,10 @@ export const default_display = {
 };
 
 
-const color_gray50 = VMath.v4Build(0.313, 0.313, 0.313, 1.000);
-// const color_gray80 = VMath.v4Build(0.500, 0.500, 0.500, 1.000);
-const color_grayD0 = VMath.v4Build(0.816, 0.816, 0.816, 1.000);
-const color_white = VMath.v4Build(1, 1, 1, 1);
+const color_gray50 = vec4(0.313, 0.313, 0.313, 1.000);
+// const color_gray80 = vec4(0.500, 0.500, 0.500, 1.000);
+const color_grayD0 = vec4(0.816, 0.816, 0.816, 1.000);
+const color_white = vec4(1, 1, 1, 1);
 
 const SELBOX_BOUNCE_TIME = 80;
 
@@ -569,8 +569,7 @@ class GlovSelectionBox {
 
 
 export function create(...args) {
-  if (!glov_ui) {
-    glov_ui = glov_engine.glov_ui;
+  if (!glov_input) {
     glov_input = glov_engine.glov_input;
     font = glov_ui.font;
   }

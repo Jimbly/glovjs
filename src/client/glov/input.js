@@ -1,8 +1,5 @@
-/*global VMath: false */
-
-let VMathArrayConstructor = VMath.F32Array;
-
 const assert = require('assert');
+const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 
 const UP_EDGE = 0;
@@ -10,16 +7,14 @@ const DOWN_EDGE = 1;
 const DOWN = 2;
 
 class GlovInput {
-  constructor(input_device, draw2d, camera) {
+  constructor(input_device) {
     this.input_device = input_device;
-    this.draw2d = draw2d;
-    this.camera = camera;
     this.key_state = {};
     this.pad_states = []; // One map per joystick
     this.clicks = [];
-    this.mouse_pos = new VMathArrayConstructor(2);
+    this.mouse_pos = new Float32Array(2);
     this.mouse_pos_is_touch = false;
-    this.mpos = new VMathArrayConstructor(2); // temporary, mapped to camera
+    this.mpos = new Float32Array(2); // temporary, mapped to camera
     this.mouse_over_captured = false;
     this.mouse_down = [];
     this.pad_threshold = 0.25;
@@ -119,7 +114,6 @@ class GlovInput {
     this.mouse_pos[0] = x;
     this.mouse_pos[1] = y;
     this.mouse_pos_is_touch = false;
-    //this.draw2d.viewportMap(x, y, this.mouse_mapped);
   }
   isMouseOver(param) {
     assert(typeof param.x === 'number');
@@ -146,8 +140,8 @@ class GlovInput {
   }
   // returns position mapped to current camera view
   mousePos(dst) {
-    dst = dst || new VMathArrayConstructor(2);
-    this.camera.physicalToVirtual(dst, this.mouse_pos);
+    dst = dst || new Float32Array(2);
+    camera2d.physicalToVirtual(dst, this.mouse_pos);
     return dst;
   }
   mousePosIsTouch() {
@@ -166,7 +160,7 @@ class GlovInput {
     for (let ii = 0; ii < this.clicks[button].length; ++ii) {
       let click = this.clicks[button][ii];
       let pos = click.pos;
-      this.camera.physicalToVirtual(this.mpos, pos);
+      camera2d.physicalToVirtual(this.mpos, pos);
       if (this.mpos[0] >= param.x &&
         (param.w === Infinity || this.mpos[0] < param.x + param.w) &&
         this.mpos[1] >= param.y &&
@@ -213,7 +207,7 @@ class GlovInput {
       return false;
     }
     for (let ii = 0; ii < this.touch_state.length; ++ii) {
-      this.camera.physicalToVirtual(this.mpos, [this.touch_state[ii].positionX, this.touch_state[ii].positionY]);
+      camera2d.physicalToVirtual(this.mpos, [this.touch_state[ii].positionX, this.touch_state[ii].positionY]);
       let pos = this.mpos;
       if (!param ||
         pos[0] >= param.x && pos[0] < param.x + param.w &&

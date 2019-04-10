@@ -3,20 +3,19 @@
 // callbacks/etc upon selecting of elements.
 
 /* eslint complexity:off */
-/*global VMath: false */
 
 const assert = require('assert');
+const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 const selection_box = require('./selection_box.js');
-let glov_camera;
-let glov_ui;
+const glov_ui = require('./ui.js');
+const { clamp, vec4 } = require('./vmath.js');
 let glov_input;
-let { clamp } = require('../../common/util.js');
 
 let key_codes;
 let pad_codes;
 
-const color101010C8 = VMath.v4Build(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
+const color101010C8 = vec4(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
 
 class GlovSimpleMenu {
   constructor(params) {
@@ -94,7 +93,7 @@ class GlovSimpleMenu {
     let selbox_enabled = true;
     if (this.edit_index >= 0 && this.edit_index < items.length) {
       selbox_enabled = false;
-      glov_ui.drawRect(glov_camera.x0(), glov_camera.y0(), glov_camera.x1(), glov_camera.y1(),
+      glov_ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(),
         z + 2, color101010C8);
       // TODO: Need modal text entry dialog
       // let ret = this.internal.mte.run(z + 3);
@@ -272,10 +271,8 @@ class GlovSimpleMenu {
 }
 
 export function create(...args) {
-  if (!glov_ui) {
-    glov_ui = glov_engine.glov_ui;
+  if (!glov_input) {
     glov_input = glov_engine.glov_input;
-    glov_camera = glov_engine.glov_camera;
     pad_codes = glov_input.pad_codes;
     key_codes = glov_input.key_codes;
   }
