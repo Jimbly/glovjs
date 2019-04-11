@@ -197,37 +197,62 @@ function diffTextures(texsa, texsb) {
   return false;
 }
 
-let sprite_start_elem;
+let batch_state;
 let sprite_geom;
 let sprite_buffer; // Float32Array with 8 entries per vert
 let sprite_buffer_len = 0; // in verts
+let sprite_buffer_batch_start = 0;
 let sprite_buffer_idx = 0; // in verts
 let last_blend_mode;
 let last_bound_shader;
 const MAX_VERT_COUNT = 65536;
+let batches = [];
 
-function flush() {
-  if (!sprite_buffer_idx) {
+function commit() {
+  if (sprite_buffer_idx === sprite_buffer_batch_start) {
     return;
   }
+  batches.push({
+    state: batch_state,
+    start: sprite_buffer_batch_start,
+    end: sprite_buffer_idx,
+  });
+  sprite_buffer_batch_start = sprite_buffer_idx;
+}
+
+function commitAndFlush() {
+  commit();
+  if (!batches.length) {
+    return;
+  }
+  assert(sprite_buffer_idx);
   sprite_geom.update(sprite_buffer, sprite_buffer_idx);
-  if (last_bound_shader !== sprite_start_elem.shader || sprite_start_elem.shader_params) {
-    shaders.bind(sprite_vshader,
-      sprite_start_elem.shader || sprite_fshader,
-      sprite_start_elem.shader_params || sprite_shader_params);
-    last_bound_shader = sprite_start_elem.shader;
-  }
-  if (last_blend_mode !== sprite_start_elem.blend) {
-    last_blend_mode = sprite_start_elem.blend;
-    if (last_blend_mode === BLEND_ADDITIVE) {
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    } else {
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  sprite_geom.bind();
+
+  for (let ii = 0; ii < batches.length; ++ii) {
+    let batch = batches[ii];
+    let { state, start, end } = batch;
+    if (last_bound_shader !== state.shader || state.shader_params) {
+      shaders.bind(sprite_vshader,
+        state.shader || sprite_fshader,
+        state.shader_params || sprite_shader_params);
+      last_bound_shader = state.shader;
     }
+    if (last_blend_mode !== state.blend) {
+      last_blend_mode = state.blend;
+      if (last_blend_mode === BLEND_ADDITIVE) {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      } else {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      }
+    }
+    textures.bindArray(state.texs);
+    gl.drawElements(sprite_geom.mode, (end - start) * 3 / 2, gl.UNSIGNED_SHORT, start * 3);
   }
-  textures.bindArray(sprite_start_elem.texs);
-  sprite_geom.draw();
+
+  batches.length = 0;
   sprite_buffer_idx = 0;
+  sprite_buffer_batch_start = 0;
 }
 
 function bufferSpriteData(data) {
@@ -387,40 +412,47 @@ export function draw() {
 
   sprite_queue.sort(cmpSprite);
 
-  sprite_start_elem = null;
+  batch_state = null;
   assert(sprite_buffer_idx === 0);
+  assert(sprite_buffer_batch_start === 0);
+  assert(batches.length === 0);
   for (let ii = 0; ii < sprite_queue.length; ++ii) {
     let elem = sprite_queue[ii];
-    if (!sprite_start_elem ||
-      elem.fn ||
-      diffTextures(elem.texs, sprite_start_elem.texs) ||
-      elem.shader !== sprite_start_elem.shader ||
-      elem.shader_params !== sprite_start_elem.shader_params ||
-      elem.blend !== sprite_start_elem.blend
-    ) {
-      flush();
-      if (elem.fn) {
-        elem.fn();
-      } else {
-        sprite_start_elem = elem;
+    if (elem.fn) {
+      commitAndFlush();
+      batch_state = null;
+      elem.fn();
+    } else {
+      if (!batch_state ||
+        diffTextures(elem.texs, batch_state.texs) ||
+        elem.shader !== batch_state.shader ||
+        elem.shader_params !== batch_state.shader_params ||
+        elem.blend !== batch_state.blend
+      ) {
+        commit();
+        batch_state = elem;
       }
-    } else if (sprite_buffer_idx + 4 > sprite_buffer_len) {
-      flush();
-      if (sprite_buffer_len !== MAX_VERT_COUNT) {
-        let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT); // eslint-disable-line no-bitwise
-        sprite_buffer_len = new_length;
-        sprite_buffer = new Float32Array(new_length * 8);
+      if (sprite_buffer_idx + 4 > sprite_buffer_len) {
+        commitAndFlush();
+        // batch_state left alone
+        if (sprite_buffer_len !== MAX_VERT_COUNT) {
+          let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT); // eslint-disable-line no-bitwise
+          sprite_buffer_len = new_length;
+          sprite_buffer = new Float32Array(new_length * 8);
+        }
       }
-    }
 
-    if (elem.data) {
-      bufferSpriteData(elem.data);
-      sprite_freelist.push(elem);
-    } else if (elem.sprite) {
-      bufferSprite(elem);
+      if (elem.data) {
+        bufferSpriteData(elem.data);
+        sprite_freelist.push(elem);
+      } else if (elem.sprite) {
+        bufferSprite(elem);
+      } else {
+        assert(0);
+      }
     }
   }
-  flush();
+  commitAndFlush();
 
   sprite_queue.length = 0;
   if (last_blend_mode !== BLEND_ALPHA) {

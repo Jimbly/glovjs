@@ -220,7 +220,7 @@ let bound_attribs = (function () {
   }
   return r;
 }());
-Geom.prototype.draw = function () {
+Geom.prototype.bind = function () {
   if (bound_geom !== this) {
     bound_geom = this;
     let vbo = this.vbo;
@@ -251,17 +251,17 @@ Geom.prototype.draw = function () {
     //   bindUnitBuf(1, this.vert_count);
     // }
     enableVertexAttribArray(this.used_attribs);
-  }
 
-  if (this.ibo) {
-    if (bound_index_buf !== this.ibo) {
+    if (this.ibo && bound_index_buf !== this.ibo) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
       bound_index_buf = this.ibo;
     }
-    gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
-  } else {
-    // TODO: gl.drawArrays(this.mode, ... this.ibo_size, gl.UNSIGNED_SHORT, 0);
   }
+};
+Geom.prototype.draw = function () {
+  this.bind();
+  assert(this.ibo); // else: gl.drawArrays(this.mode, ... this.ibo_size, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
 };
 
 export function create(...args) {
