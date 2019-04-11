@@ -29,13 +29,15 @@ let last_uid = 0;
 
 let sprite_queue = [];
 
-let sprite_freelist = [];
+let freelist_data = [];
+let freelist_nodata = [];
 
 function SpriteData() {
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
   // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
   // data for GL queuing
-  this.data = new Float32Array(16);
+  this.data = null; // new Float32Array(16);
+  this.sprite = null;
   // data for sorting/binding/etc
   this.texs = null;
   this.shader = null;
@@ -45,14 +47,27 @@ function SpriteData() {
   this.z = 0;
   this.blend = 0; // BLEND_ALPHA
   this.uid = 0;
+  this.color = null;
+  this.rot = null;
+  this.uvs = null;
 }
 
 function spriteDataAlloc() {
-  if (sprite_freelist.length) {
-    return sprite_freelist.pop();
+  if (freelist_data.length) {
+    return freelist_data.pop();
+  }
+  let ret = new SpriteData();
+  ret.data = new Float32Array(16);
+  return ret;
+}
+
+function spriteDatalessAlloc() {
+  if (freelist_nodata.length) {
+    return freelist_nodata.pop();
   }
   return new SpriteData();
 }
+
 
 function cmpSprite(a, b) {
   if (a.z !== b.z) {
@@ -141,19 +156,21 @@ export function queueraw(
 }
 
 export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params) {
-  let elem = {
-    sprite,
-    texs: sprite.texs,
-    x: (x - camera2d.data[0]) * camera2d.data[4],
-    y: (y - camera2d.data[1]) * camera2d.data[5],
-    z,
-    w: w * camera2d.data[4],
-    h: h * camera2d.data[5],
-    rot, uvs, color,
-    uid: ++last_uid,
-    shader: shader || null,
-    blend: 0, // BLEND_ALPHA
-  };
+  let elem = spriteDatalessAlloc();
+  elem.sprite = sprite;
+  elem.texs = sprite.texs;
+  elem.x = (x - camera2d.data[0]) * camera2d.data[4];
+  elem.y = (y - camera2d.data[1]) * camera2d.data[5];
+  elem.z = z;
+  elem.w = w * camera2d.data[4];
+  elem.h = h * camera2d.data[5];
+  elem.rot = rot;
+  elem.uvs = uvs;
+  elem.color = color;
+  elem.uid = ++last_uid;
+  elem.shader = shader || null;
+  elem.blend = 0; // BLEND_ALPHA
+
   if (shader_params) {
     shader_params.clip_space = sprite_shader_params.clip_space;
     elem.shader_params = shader_params;
@@ -444,9 +461,10 @@ export function draw() {
 
       if (elem.data) {
         bufferSpriteData(elem.data);
-        sprite_freelist.push(elem);
+        freelist_data.push(elem);
       } else if (elem.sprite) {
         bufferSprite(elem);
+        freelist_nodata.push(elem);
       } else {
         assert(0);
       }
