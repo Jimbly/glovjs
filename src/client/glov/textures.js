@@ -27,6 +27,9 @@ const { isPowerOfTwo, nextHighestPowerOfTwo } = require('./vmath.js');
 let bound_unit = null;
 let bound_tex = [];
 
+let handle_loading;
+let handle_error;
+
 function setUnit(unit) {
   if (unit !== bound_unit) {
     gl.activeTexture(gl.TEXTURE0 + unit);
@@ -54,13 +57,22 @@ function unbindHandle(target, handle) {
 
 export function bind(unit, tex) {
   // May or may not change the unit
-  let handle = tex.loaded ? tex.handle : tex.load_fail ? textures.error.handle : textures.loading.handle;
-  bindHandle(unit, tex.target, handle);
+  bindHandle(unit, tex.target, tex.eff_handle);
 }
 
+// hot path inlined for perf
 export function bindArray(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
-    bind(ii, texs[ii]);
+    let tex = texs[ii];
+    let handle = tex.eff_handle;
+    if (bound_tex[ii] !== handle) {
+      if (ii !== bound_unit) {
+        gl.activeTexture(gl.TEXTURE0 + ii);
+        bound_unit = ii;
+      }
+      gl.bindTexture(tex.target, handle);
+      bound_tex[ii] = handle;
+    }
   }
 }
 
@@ -69,6 +81,7 @@ function Texture(params) {
   this.load_fail = false;
   this.target = gl.TEXTURE_2D;
   this.handle = gl.createTexture();
+  this.eff_handle = handle_loading;
   this.setSamplerState(params);
 
   this.format = params.format || format.RGBA8;
@@ -135,6 +148,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   if (this.mipmaps) {
     gl.generateMipmap(this.target);
   }
+  this.eff_handle = this.handle;
   this.loaded = true;
 };
 
@@ -156,6 +170,7 @@ Texture.prototype.loadURL = function loadURL(url) {
   };
   function fail() {
     done();
+    tex.eff_handle = handle_error;
     tex.load_fail = true;
   }
   img.onerror = fail;
@@ -258,7 +273,7 @@ export function startup() {
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
   }
 
-  load({
+  handle_error = load({
     name: 'error',
     width: 2, height: 2,
     format: format.RGBA8,
@@ -269,9 +284,9 @@ export function startup() {
       255, 255, 255, 255,
       255, 20, 147, 255
     ]),
-  });
+  }).handle;
 
-  load({
+  handle_loading = load({
     name: 'loading',
     width: 2, height: 2,
     format: format.RGBA8,
@@ -281,7 +296,7 @@ export function startup() {
       64, 64, 64, 255,
       127, 127, 127, 255,
     ]),
-  });
+  }).handle;
 
   load({
     name: 'white',
