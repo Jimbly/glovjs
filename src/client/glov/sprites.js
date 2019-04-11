@@ -29,15 +29,13 @@ let last_uid = 0;
 
 let sprite_queue = [];
 
-let freelist_data = [];
-let freelist_nodata = [];
+let sprite_freelist = [];
 
 function SpriteData() {
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
   // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
   // data for GL queuing
-  this.data = null; // new Float32Array(16);
-  this.sprite = null;
+  this.data = new Float32Array(16);
   // data for sorting/binding/etc
   this.texs = null;
   this.shader = null;
@@ -47,27 +45,14 @@ function SpriteData() {
   this.z = 0;
   this.blend = 0; // BLEND_ALPHA
   this.uid = 0;
-  this.color = null;
-  this.rot = null;
-  this.uvs = null;
 }
 
 function spriteDataAlloc() {
-  if (freelist_data.length) {
-    return freelist_data.pop();
-  }
-  let ret = new SpriteData();
-  ret.data = new Float32Array(16);
-  return ret;
-}
-
-function spriteDatalessAlloc() {
-  if (freelist_nodata.length) {
-    return freelist_nodata.pop();
+  if (sprite_freelist.length) {
+    return sprite_freelist.pop();
   }
   return new SpriteData();
 }
-
 
 function cmpSprite(a, b) {
   if (a.z !== b.z) {
@@ -156,17 +141,61 @@ export function queueraw(
 }
 
 export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params) {
-  let elem = spriteDatalessAlloc();
-  elem.sprite = sprite;
+  let elem = spriteDataAlloc();
   elem.texs = sprite.texs;
-  elem.x = (x - camera2d.data[0]) * camera2d.data[4];
-  elem.y = (y - camera2d.data[1]) * camera2d.data[5];
+  elem.x = x = (x - camera2d.data[0]) * camera2d.data[4];
+  elem.y = y = (y - camera2d.data[1]) * camera2d.data[5];
   elem.z = z;
-  elem.w = w * camera2d.data[4];
-  elem.h = h * camera2d.data[5];
-  elem.rot = rot;
-  elem.uvs = uvs;
-  elem.color = color;
+  w *= camera2d.data[4];
+  h *= camera2d.data[5];
+  color = color || sprite.color;
+  let data = elem.data;
+  if (!rot) {
+    let x1 = x - sprite.origin[0] * w;
+    let y1 = y - sprite.origin[1] * h;
+    let x2 = x1 + w;
+    let y2 = y1 + h;
+    data[0] = x1;
+    data[1] = y1;
+    data[2] = x1;
+    data[3] = y2;
+    data[4] = x2;
+    data[5] = y2;
+    data[6] = x2;
+    data[7] = y1;
+  } else {
+    let dx = sprite.origin[0] * w;
+    let dy = sprite.origin[1] * h;
+
+    let cosr = cos(rot);
+    let sinr = sin(rot);
+
+    let x1 = x - cosr * dx + sinr * dy;
+    let y1 = y - sinr * dx - cosr * dy;
+    let ch = cosr * h;
+    let cw = cosr * w;
+    let sh = sinr * h;
+    let sw = sinr * w;
+
+    data[0] = x1;
+    data[1] = y1;
+    data[2] = x1 - sh;
+    data[3] = y1 + ch;
+    data[4] = x1 + cw - sh;
+    data[5] = y1 + sw + ch;
+    data[6] = x1 + cw;
+    data[7] = y1 + sw;
+  }
+
+  data[8] = color[0];
+  data[9] = color[1];
+  data[10] = color[2];
+  data[11] = color[3];
+  data[12] = uvs[0];
+  data[13] = uvs[1];
+  data[14] = uvs[2];
+  data[15] = uvs[3];
+
   elem.uid = ++last_uid;
   elem.shader = shader || null;
   elem.blend = 0; // BLEND_ALPHA
@@ -322,88 +351,6 @@ function bufferSpriteData(data) {
   sprite_buffer[index + 31] = v1;
 }
 
-function bufferSprite(elem) {
-  let index = sprite_buffer_idx * 8;
-  sprite_buffer_idx += 4;
-
-  let { sprite, x, y, w, h, rot, uvs } = elem;
-  let color = elem.color || sprite.color;
-
-  let c1 = color[0];
-  let c2 = color[1];
-  let c3 = color[2];
-  let c4 = color[3];
-  let u1 = uvs[0];
-  let v1 = uvs[1];
-  let u2 = uvs[2];
-  let v2 = uvs[3];
-  if (!rot) {
-    let x1 = x - sprite.origin[0] * w;
-    let y1 = y - sprite.origin[1] * h;
-    let x2 = x1 + w;
-    let y2 = y1 + h;
-    sprite_buffer[index] = x1;
-    sprite_buffer[index + 1] = y1;
-    sprite_buffer[index + 8] = x1;
-    sprite_buffer[index + 9] = y2;
-    sprite_buffer[index + 16] = x2;
-    sprite_buffer[index + 17] = y2;
-    sprite_buffer[index + 24] = x2;
-    sprite_buffer[index + 25] = y1;
-  } else {
-    let dx = sprite.origin[0] * w;
-    let dy = sprite.origin[1] * h;
-
-    let cosr = cos(rot);
-    let sinr = sin(rot);
-
-    let x1 = x - cosr * dx + sinr * dy;
-    let y1 = y - sinr * dx - cosr * dy;
-    let ch = cosr * h;
-    let cw = cosr * w;
-    let sh = sinr * h;
-    let sw = sinr * w;
-
-    sprite_buffer[index] = x1;
-    sprite_buffer[index + 1] = y1;
-    sprite_buffer[index + 8] = x1 - sh;
-    sprite_buffer[index + 9] = y1 + ch;
-    sprite_buffer[index + 16] = x1 + cw - sh;
-    sprite_buffer[index + 17] = y1 + sw + ch;
-    sprite_buffer[index + 24] = x1 + cw;
-    sprite_buffer[index + 25] = y1 + sw;
-  }
-
-  sprite_buffer[index + 2] = c1;
-  sprite_buffer[index + 3] = c2;
-  sprite_buffer[index + 4] = c3;
-  sprite_buffer[index + 5] = c4;
-  sprite_buffer[index + 6] = u1;
-  sprite_buffer[index + 7] = v1;
-
-  sprite_buffer[index + 10] = c1;
-  sprite_buffer[index + 11] = c2;
-  sprite_buffer[index + 12] = c3;
-  sprite_buffer[index + 13] = c4;
-  sprite_buffer[index + 14] = u1;
-  sprite_buffer[index + 15] = v2;
-
-  sprite_buffer[index + 18] = c1;
-  sprite_buffer[index + 19] = c2;
-  sprite_buffer[index + 20] = c3;
-  sprite_buffer[index + 21] = c4;
-  sprite_buffer[index + 22] = u2;
-  sprite_buffer[index + 23] = v2;
-
-  sprite_buffer[index + 26] = c1;
-  sprite_buffer[index + 27] = c2;
-  sprite_buffer[index + 28] = c3;
-  sprite_buffer[index + 29] = c4;
-  sprite_buffer[index + 30] = u2;
-  sprite_buffer[index + 31] = v1;
-
-}
-
 export function draw() {
   if (!sprite_queue.length) {
     return;
@@ -459,15 +406,8 @@ export function draw() {
         }
       }
 
-      if (elem.data) {
-        bufferSpriteData(elem.data);
-        freelist_data.push(elem);
-      } else if (elem.sprite) {
-        bufferSprite(elem);
-        freelist_nodata.push(elem);
-      } else {
-        assert(0);
-      }
+      bufferSpriteData(elem.data);
+      sprite_freelist.push(elem);
     }
   }
   commitAndFlush();
