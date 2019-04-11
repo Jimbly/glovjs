@@ -1,5 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
+/* eslint no-bitwise:off */
 
 const assert = require('assert');
 const { ceil, max } = Math;
@@ -17,28 +18,81 @@ const gl_byte_size = {
 let unit_buf;
 let unit_buf_len = 0;
 
+let bound_geom;
+
+let bound_array_buf = null;
+let bound_index_buf = null;
+
 let quad_index_buf;
 let quad_index_buf_len = 0;
 
-function bindUnitBuf(arr_idx, len) {
-  if (len > unit_buf_len) {
-    if (unit_buf) {
-      gl.deleteBuffer(unit_buf);
-    }
-    unit_buf = gl.createBuffer();
-    unit_buf_len = max(ceil(unit_buf_len * 1.5), len);
-    gl.bindBuffer(gl.ARRAY_BUFFER, unit_buf);
-    let arr = new Uint8Array(unit_buf_len * 4);
-    for (let ii = 0; ii < unit_buf_len * 4; ++ii) {
-      arr[ii] = 255;
-    }
-    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
-  } else {
-    gl.bindBuffer(gl.ARRAY_BUFFER, unit_buf);
+function deleteBuffer(handle) {
+  if (!handle) {
+    return;
   }
-  gl.vertexAttribPointer(arr_idx, 4, gl.UNSIGNED_BYTE, true, 0, 0);
-  gl.enableVertexAttribArray(arr_idx);
+  if (bound_array_buf === handle) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    bound_array_buf = null;
+  }
+  if (bound_index_buf === handle) {
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    bound_index_buf = null;
+  }
+  gl.deleteBuffer(handle);
 }
+
+let attrib_enabled = 0;
+function enableVertexAttribArray(bits) {
+  if (bits === attrib_enabled) {
+    return;
+  }
+  let disable_mask = (attrib_enabled & (~bits));
+  let enable_mask = ((~attrib_enabled) & bits);
+  attrib_enabled = bits;
+
+  if (disable_mask) {
+    let n = 0;
+    do {
+      if (disable_mask & 1) {
+        gl.disableVertexAttribArray(n);
+      }
+      n++;
+      disable_mask >>= 1;
+    } while (disable_mask);
+  }
+
+  if (enable_mask) {
+    let n = 0;
+    do {
+      if (enable_mask & 1) {
+        gl.enableVertexAttribArray(n);
+      }
+      n++;
+      enable_mask >>= 1;
+    } while (enable_mask);
+  }
+}
+
+// function bindUnitBuf(arr_idx, len) {
+//   if (len > unit_buf_len) {
+//     deleteBuffer(unit_buf);
+//     unit_buf = gl.createBuffer();
+//     unit_buf_len = max(ceil(unit_buf_len * 1.5), len);
+//     gl.bindBuffer(gl.ARRAY_BUFFER, unit_buf);
+//     bound_array_buf = unit_buf;
+//     let arr = new Uint8Array(unit_buf_len * 4);
+//     for (let ii = 0; ii < unit_buf_len * 4; ++ii) {
+//       arr[ii] = 255;
+//     }
+//     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+//   } else {
+//     if (bound_array_buf !== unit_buf) {
+//       gl.bindBuffer(gl.ARRAY_BUFFER, unit_buf);
+//       bound_array_buf = unit_buf;
+//     }
+//   }
+//   gl.vertexAttribPointer(arr_idx, 4, gl.UNSIGNED_BYTE, true, 0, 0);
+// }
 
 // Verts should be ordered counter-clockwise from the upper left
 function getQuadIndexBuf(quad_count) {
@@ -50,7 +104,10 @@ function getQuadIndexBuf(quad_count) {
       quad_index_buf = gl.createBuffer();
     }
     quad_index_buf_len = max(ceil(quad_index_buf_len * 1.5), quad_count * 6);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad_index_buf);
+    if (bound_index_buf !== quad_index_buf) {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad_index_buf);
+      bound_index_buf = quad_index_buf;
+    }
     let arr = new Uint16Array(quad_index_buf_len);
     let vidx = 0;
     for (let ii = 0; ii < quad_index_buf_len;) {
@@ -73,10 +130,13 @@ function Geom(_format, verts, idxs, mode) {
   this.format = _format;
   this.stride = 0;
   this.elem_count = 0;
+  this.used_attribs = 0;
   for (let ii = 0; ii < _format.length; ++ii) {
     let fmt = _format[ii];
+    let sem = fmt[0];
     let gltype = fmt[1];
     let count = fmt[2];
+    this.used_attribs |= (1 << sem);
     let byte_size = gl_byte_size[gltype];
     assert(byte_size);
     fmt[3] = fmt[3] || false;
@@ -88,6 +148,7 @@ function Geom(_format, verts, idxs, mode) {
   if (verts.length) {
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    bound_array_buf = this.vbo;
     gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
   }
   this.orig_mode = mode;
@@ -96,6 +157,7 @@ function Geom(_format, verts, idxs, mode) {
     this.ibo_owned = true;
     this.ibo_size = idxs.length;
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
+    bound_index_buf = this.ibo;
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxs, gl.STATIC_DRAW);
   } else if (mode === QUADS) {
     assert(this.vert_count % 4 === 0);
@@ -114,18 +176,24 @@ function Geom(_format, verts, idxs, mode) {
 Geom.prototype.update = function (verts, num_verts) {
   assert(this.orig_mode === QUADS);
   if (num_verts > this.vert_count) {
-    if (this.vbo) {
-      gl.deleteBuffer(this.vbo);
+    if (bound_geom === this) {
+      bound_geom = null;
     }
+    deleteBuffer(this.vbo);
     // Note: matching size, ignoring num_verts
     this.vert_count = verts.length / this.elem_count;
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
+    bound_array_buf = this.vbo;
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
   } else {
     // Fits
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    if (bound_array_buf !== this.vbo) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+      bound_array_buf = this.vbo;
+    }
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts.subarray(0, num_verts * this.elem_count));
+    // gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
   }
   let quad_count = num_verts / 4;
   this.ibo = getQuadIndexBuf(quad_count);
@@ -134,47 +202,65 @@ Geom.prototype.update = function (verts, num_verts) {
 
 Geom.prototype.dispose = function () {
   if (this.ibo_owned) {
-    gl.deleteBuffer(this.ibo);
+    deleteBuffer(this.ibo);
   }
   this.ibo = null;
-  if (this.vbo) {
-    gl.deleteBuffer(this.vbo);
-  }
+  deleteBuffer(this.vbo);
   this.vbo = null;
 };
 
-Geom.prototype.draw = function () {
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 
-  let offset = 0;
-  let used = [];
-  for (let ii = 0; ii < this.format.length; ++ii) {
-    let fmt = this.format[ii];
-    let sem = fmt[0];
-    let gltype = fmt[1];
-    let count = fmt[2];
-    let normalized = fmt[3];
-    let byte_size = fmt[4];
-    gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
-    gl.enableVertexAttribArray(sem);
-    used[sem] = true;
-    offset += count * byte_size;
+let bound_attribs = (function () {
+  let r = [];
+  for (let ii = 0; ii < 16; ++ii) {
+    r.push({
+      vbo: null,
+      offset: 0,
+    });
   }
-  if (!used[1]) { // COLOR
-    bindUnitBuf(1, this.vert_count);
+  return r;
+}());
+Geom.prototype.draw = function () {
+  if (bound_geom !== this) {
+    bound_geom = this;
+    let vbo = this.vbo;
+
+    let offset = 0;
+    for (let ii = 0; ii < this.format.length; ++ii) {
+      let fmt = this.format[ii];
+      let count = fmt[2];
+      let byte_size = fmt[4];
+      if (bound_attribs[ii].vbo === vbo) { //  && bound_attribs[ii].offset = offset
+        // already bound
+      } else {
+        if (bound_array_buf !== vbo) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+          bound_array_buf = vbo;
+        }
+        let sem = fmt[0];
+        let gltype = fmt[1];
+        let normalized = fmt[3];
+        gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
+        bound_attribs[ii].vbo = bound_array_buf;
+        // bound_attribs[ii].offset = offset;
+      }
+      offset += count * byte_size;
+    }
+    // if (!used[1]) { // COLOR
+    //   used_attribs |= 1 << shader.semantics.COLOR;
+    //   bindUnitBuf(1, this.vert_count);
+    // }
+    enableVertexAttribArray(this.used_attribs);
   }
 
   if (this.ibo) {
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
+    if (bound_index_buf !== this.ibo) {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
+      bound_index_buf = this.ibo;
+    }
     gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
   } else {
     // TODO: gl.drawArrays(this.mode, ... this.ibo_size, gl.UNSIGNED_SHORT, 0);
-  }
-
-  // TODO: Some state management on this would be way better
-  for (let ii = 0; ii < this.format.length; ++ii) {
-    let sem = this.format[ii][0];
-    gl.disableVertexAttribArray(sem);
   }
 };
 

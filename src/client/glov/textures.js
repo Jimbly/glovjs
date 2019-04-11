@@ -240,7 +240,7 @@ export function load(params) {
 
 export function startup() {
 
-  default_filter_min = gl.LINEAR;
+  default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
   default_filter_mag = gl.LINEAR;
 
   format.RGB8.internal_type = gl.RGB;

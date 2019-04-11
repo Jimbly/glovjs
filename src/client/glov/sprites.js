@@ -105,6 +105,7 @@ export function queueraw4(
   data[13] = v0;
   data[14] = u1;
   data[15] = v1;
+
   elem.texs = texs;
   elem.x = data[0];
   elem.y = data[1];
@@ -137,6 +138,29 @@ export function queueraw(
     z,
     u0, v0, u1, v1,
     color, shader, shader_params, blend);
+}
+
+export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params) {
+  let elem = {
+    sprite,
+    texs: sprite.texs,
+    x: (x - camera2d.data[0]) * camera2d.data[4],
+    y: (y - camera2d.data[1]) * camera2d.data[5],
+    z,
+    w: w * camera2d.data[4],
+    h: h * camera2d.data[5],
+    rot, uvs, color,
+    uid: ++last_uid,
+    shader: shader || null,
+    blend: 0, // BLEND_ALPHA
+  };
+  if (shader_params) {
+    shader_params.clip_space = sprite_shader_params.clip_space;
+    elem.shader_params = shader_params;
+  } else {
+    elem.shader_params = null;
+  }
+  sprite_queue.push(elem);
 }
 
 export function clip(z_start, z_end, x, y, w, h) {
@@ -207,15 +231,6 @@ function flush() {
 }
 
 function bufferSpriteData(data) {
-  if (sprite_buffer_idx + 4 > sprite_buffer_len) {
-    flush();
-    if (sprite_buffer_len !== MAX_VERT_COUNT) {
-      let new_length = min((sprite_buffer_len * 1.5 + 3) & ~3, MAX_VERT_COUNT); // eslint-disable-line no-bitwise
-      sprite_buffer_len = new_length;
-      sprite_buffer = new Float32Array(new_length * 8);
-    }
-  }
-
   let index = sprite_buffer_idx * 8;
   sprite_buffer_idx += 4;
 
@@ -265,6 +280,88 @@ function bufferSpriteData(data) {
   sprite_buffer[index + 31] = v1;
 }
 
+function bufferSprite(elem) {
+  let index = sprite_buffer_idx * 8;
+  sprite_buffer_idx += 4;
+
+  let { sprite, x, y, w, h, rot, uvs } = elem;
+  let color = elem.color || sprite.color;
+
+  let c1 = color[0];
+  let c2 = color[1];
+  let c3 = color[2];
+  let c4 = color[3];
+  let u1 = uvs[0];
+  let v1 = uvs[1];
+  let u2 = uvs[2];
+  let v2 = uvs[3];
+  if (!rot) {
+    let x1 = x - sprite.origin[0] * w;
+    let y1 = y - sprite.origin[1] * h;
+    let x2 = x1 + w;
+    let y2 = y1 + h;
+    sprite_buffer[index] = x1;
+    sprite_buffer[index + 1] = y1;
+    sprite_buffer[index + 8] = x1;
+    sprite_buffer[index + 9] = y2;
+    sprite_buffer[index + 16] = x2;
+    sprite_buffer[index + 17] = y2;
+    sprite_buffer[index + 24] = x2;
+    sprite_buffer[index + 25] = y1;
+  } else {
+    let dx = sprite.origin[0] * w;
+    let dy = sprite.origin[1] * h;
+
+    let cosr = cos(rot);
+    let sinr = sin(rot);
+
+    let x1 = x - cosr * dx + sinr * dy;
+    let y1 = y - sinr * dx - cosr * dy;
+    let ch = cosr * h;
+    let cw = cosr * w;
+    let sh = sinr * h;
+    let sw = sinr * w;
+
+    sprite_buffer[index] = x1;
+    sprite_buffer[index + 1] = y1;
+    sprite_buffer[index + 8] = x1 - sh;
+    sprite_buffer[index + 9] = y1 + ch;
+    sprite_buffer[index + 16] = x1 + cw - sh;
+    sprite_buffer[index + 17] = y1 + sw + ch;
+    sprite_buffer[index + 24] = x1 + cw;
+    sprite_buffer[index + 25] = y1 + sw;
+  }
+
+  sprite_buffer[index + 2] = c1;
+  sprite_buffer[index + 3] = c2;
+  sprite_buffer[index + 4] = c3;
+  sprite_buffer[index + 5] = c4;
+  sprite_buffer[index + 6] = u1;
+  sprite_buffer[index + 7] = v1;
+
+  sprite_buffer[index + 10] = c1;
+  sprite_buffer[index + 11] = c2;
+  sprite_buffer[index + 12] = c3;
+  sprite_buffer[index + 13] = c4;
+  sprite_buffer[index + 14] = u1;
+  sprite_buffer[index + 15] = v2;
+
+  sprite_buffer[index + 18] = c1;
+  sprite_buffer[index + 19] = c2;
+  sprite_buffer[index + 20] = c3;
+  sprite_buffer[index + 21] = c4;
+  sprite_buffer[index + 22] = u2;
+  sprite_buffer[index + 23] = v2;
+
+  sprite_buffer[index + 26] = c1;
+  sprite_buffer[index + 27] = c2;
+  sprite_buffer[index + 28] = c3;
+  sprite_buffer[index + 29] = c4;
+  sprite_buffer[index + 30] = u2;
+  sprite_buffer[index + 31] = v1;
+
+}
+
 export function draw() {
   if (!sprite_queue.length) {
     return;
@@ -307,10 +404,20 @@ export function draw() {
       } else {
         sprite_start_elem = elem;
       }
+    } else if (sprite_buffer_idx + 4 > sprite_buffer_len) {
+      flush();
+      if (sprite_buffer_len !== MAX_VERT_COUNT) {
+        let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT); // eslint-disable-line no-bitwise
+        sprite_buffer_len = new_length;
+        sprite_buffer = new Float32Array(new_length * 8);
+      }
     }
+
     if (elem.data) {
       bufferSpriteData(elem.data);
       sprite_freelist.push(elem);
+    } else if (elem.sprite) {
+      bufferSprite(elem);
     }
   }
   flush();
@@ -411,45 +518,8 @@ Sprite.prototype.draw = function (params) {
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-  let rot = params.rot;
-  if (!rot) {
-    let x1 = params.x - this.origin[0] * w;
-    let y1 = params.y - this.origin[1] * h;
-    let x2 = x1 + w;
-    let y2 = y1 + h;
-    queueraw4(this.texs,
-      x1, y1,
-      x1, y2,
-      x2, y2,
-      x2, y1,
-      params.z,
-      uvs[0], uvs[1], uvs[2], uvs[3],
-      params.color || this.color,
-      params.shader, params.shader_params, params.blend);
-  } else {
-    let dx = this.origin[0] * w;
-    let dy = this.origin[1] * h;
-
-    let cosr = cos(rot);
-    let sinr = sin(rot);
-
-    let x1 = params.x - cosr * dx + sinr * dy;
-    let y1 = params.y - sinr * dx - cosr * dy;
-    let ch = cosr * h;
-    let cw = cosr * w;
-    let sh = sinr * h;
-    let sw = sinr * w;
-
-    queueraw4(this.texs,
-      x1, y1,
-      x1 - sh, y1 + ch,
-      x1 + cw - sh, y1 + sw + ch,
-      x1 + cw, y1 + sw,
-      params.z,
-      uvs[0], uvs[1], uvs[2], uvs[3],
-      params.color || this.color,
-      params.shader, params.shader_params, params.blend);
-  }
+  queuesprite(this, params.x, params.y, params.z, w, h, params.rot, uvs, params.color || this.color,
+    params.shader, params.shader_params);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
