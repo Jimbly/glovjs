@@ -98,18 +98,20 @@ class GlovUIEditBox {
         input.setAttribute('type', this.type);
         input.setAttribute('placeholder', this.placeholder);
         input.setAttribute('tabindex', 2);
-        input.addEventListener('focusin', () => {
+        input.addEventListener('focusin', (ev) => {
           focuslog('EditBox:focusin', this);
           this.got_focus_in = true;
-        });
+          ev.preventDefault();
+        }, true);
         input.addEventListener('focusout', (ev) => {
           focuslog('EditBox:focusout', this);
           this.got_focus_out = true;
-        });
+          ev.preventDefault();
+        }, true);
         form.addEventListener('submit', (ev) => {
           ev.preventDefault();
           this.submitted = true;
-        });
+        }, true);
         form.appendChild(input);
         let span = document.createElement('span');
         span.setAttribute('tabindex', 3);

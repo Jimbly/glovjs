@@ -334,10 +334,10 @@ export function startup(_canvas) {
   window.addEventListener('DOMMouseScroll', onWheel, false);
   window.addEventListener('mousewheel', onWheel, false);
 
-  window.addEventListener('touchstart', onTouchChange, passive_param);
-  window.addEventListener('touchmove', onTouchChange, passive_param);
-  window.addEventListener('touchend', onTouchChange, passive_param);
-  window.addEventListener('touchcancel', onTouchChange, passive_param);
+  canvas.addEventListener('touchstart', onTouchChange, passive_param);
+  canvas.addEventListener('touchmove', onTouchChange, passive_param);
+  canvas.addEventListener('touchend', onTouchChange, passive_param);
+  canvas.addEventListener('touchcancel', onTouchChange, passive_param);
 }
 
 
