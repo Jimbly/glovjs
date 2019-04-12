@@ -151,6 +151,7 @@ export function virtualToPhysical(dst, src) {
 }
 
 export function tick() {
+  data[6] = window.devicePixelRatio || 1; /* css_to_real */
   screen_width = engine.width;
   screen_height = engine.height;
   let viewport = [0, 0, screen_width, screen_height];
@@ -204,7 +205,6 @@ export function tick() {
 }
 
 export function startup() {
-  data[6] = window.devicePixelRatio || 1; /* css_to_real */
   set(0, 0, engine.width, engine.height);
   tick();
 }
