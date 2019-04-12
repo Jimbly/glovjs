@@ -332,7 +332,7 @@ class GlovSelectionBox {
       //   entry_height;
       // let dropdown_x = x + width - dropdown_width;
       //int dropdown_w = glov_ui_menu_header.right.GetTileWidth();
-      if (!this.disabled && glov_input.clickHit({
+      if (!this.disabled && glov_input.click({
         x, y,
         w: width, h: entry_height
       })) {
@@ -399,7 +399,7 @@ class GlovSelectionBox {
         let item = this.items[i];
         let entry_disabled = item.disabled;
         let image_set = null;
-        if (!this.disabled && !entry_disabled && glov_input.clickHit({
+        if (!this.disabled && !entry_disabled && glov_input.click({
           x, y, w: width, h: entry_height
         })) {
           glov_ui.focusSteal(this);
@@ -407,7 +407,7 @@ class GlovSelectionBox {
           this.mouse_mode = true;
           this.selected = i;
         }
-        if (!this.disabled && !entry_disabled &&glov_input.clickHit({
+        if (!this.disabled && !entry_disabled &&glov_input.click({
           x, y, w: width, h: entry_height
         })) {
           glov_ui.focusSteal(this);

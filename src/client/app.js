@@ -216,7 +216,7 @@ export function main(canvas) {
     };
     if (glov_input.isMouseDown() && glov_input.isMouseOver(bounds)) {
       v4copy(test.color_sprite, color_yellow);
-    } else if (glov_input.clickHit(bounds)) {
+    } else if (glov_input.click(bounds)) {
       v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
       sound_manager.play('test');
     } else if (glov_input.isMouseOver(bounds)) {

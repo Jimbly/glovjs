@@ -413,7 +413,7 @@ export function panel(param) {
   param.z = param.z || (Z.UI - 1);
   let color = param.color || color_panel;
   drawBox(param, sprites.panel, panel_pixel_scale, color);
-  glov_input.clickHit(param);
+  glov_input.click(param);
   glov_input.isMouseOver(param);
 }
 
@@ -454,7 +454,7 @@ export function buttonShared(param) {
   button_mouseover = false;
   if (param.disabled) {
     state = 'disabled';
-  } else if (glov_input.clickHit(param)) {
+  } else if (glov_input.click(param)) {
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
       setMouseOver(key);
     }
@@ -740,7 +740,7 @@ export function tick(dt) {
 }
 
 export function endFrame() {
-  if (glov_input.clickHit({
+  if (glov_input.click({
     x: -Infinity, y: -Infinity,
     w: Infinity, h: Infinity,
   })) {
