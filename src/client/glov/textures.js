@@ -237,6 +237,7 @@ export function createForCapture() {
     format: gl.RGB8,
   });
   texture.loaded = true;
+  texture.eff_handle = texture.handle;
   texture.name = 'screen_temporary_tex';
   return texture;
 }
