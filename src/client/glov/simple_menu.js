@@ -205,7 +205,7 @@ class GlovSimpleMenu {
     let selected=-1;
     if (exit_index !== -1 && (
       glov_input.keyDownEdge(KEYS.ESC) ||
-      !items[exit_index].no_controller_exit && glov_input.padDownHit(pad_codes.CANCEL)
+      !items[exit_index].no_controller_exit && glov_input.padButtonDownEdge(pad_codes.CANCEL)
     )) {
       this.execItem(exit_index, 1);
       selected = exit_index;
@@ -216,7 +216,7 @@ class GlovSimpleMenu {
     if (sel_box.was_clicked || sel_box.is_focused && (
       glov_input.keyDownEdge(KEYS.SPACE) ||
       glov_input.keyDownEdge(KEYS.ENTER) ||
-      glov_input.padDownHit(pad_codes.SELECT))
+      glov_input.padButtonDownEdge(pad_codes.SELECT))
     ) {
       this.execItem(sel_box.selected, 1);
       selected = sel_box.selected;
@@ -224,7 +224,7 @@ class GlovSimpleMenu {
     if (sel_box.is_focused && allow_left_right && (
       glov_input.keyDownEdge(KEYS.RIGHT) ||
       glov_input.keyDownEdge(KEYS.D) ||
-      glov_input.padDownHit(pad_codes.RIGHT))
+      glov_input.padButtonDownEdge(pad_codes.RIGHT))
     ) {
       this.execItem(sel_box.selected, 2);
       selected = sel_box.selected;
@@ -234,7 +234,7 @@ class GlovSimpleMenu {
       // events after eating a down for UI?
       glov_input.keyDownEdge(KEYS.LEFT) ||
       glov_input.keyDownEdge(KEYS.A) ||
-      glov_input.padDownHit(pad_codes.LEFT))
+      glov_input.padButtonDownEdge(pad_codes.LEFT))
     ) {
       this.execItem(sel_box.selected, -1);
       selected = sel_box.selected;

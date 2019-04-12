@@ -244,8 +244,8 @@ class GlovSelectionBox {
 
     if (focused) {
       if (glov_input.keyDownEdge(KEYS.PAGEDOWN) ||
-        (glov_input.isPadButtonDown(pad_codes.RIGHTTRIGGER) || glov_input.isPadButtonDown(pad_codes.LEFTTRIGGER)) &&
-        glov_input.padDownHit(pad_codes.DOWN)
+        (glov_input.padButtonDown(pad_codes.RIGHT_TRIGGER) || glov_input.padButtonDown(pad_codes.LEFT_TRIGGER)) &&
+        glov_input.padButtonDownEdge(pad_codes.DOWN)
       ) {
         eff_sel += page_size;
         eff_sel = min(eff_sel, num_non_disabled_selections - 1);
@@ -253,8 +253,8 @@ class GlovSelectionBox {
         pos_changed = true;
       }
       if (glov_input.keyDownEdge(KEYS.PAGEUP) ||
-        (glov_input.isPadButtonDown(pad_codes.RIGHTTRIGGER) || glov_input.isPadButtonDown(pad_codes.LEFTTRIGGER)) &&
-        glov_input.padDownHit(pad_codes.UP)
+        (glov_input.padButtonDown(pad_codes.RIGHT_TRIGGER) || glov_input.padButtonDown(pad_codes.LEFT_TRIGGER)) &&
+        glov_input.padButtonDownEdge(pad_codes.UP)
       ) {
         eff_sel -= page_size;
         eff_sel = max(eff_sel, 0);
@@ -263,7 +263,7 @@ class GlovSelectionBox {
       }
       if (glov_input.keyDownEdge(KEYS.DOWN) ||
         glov_input.keyDownEdge(KEYS.S) ||
-        glov_input.padDownHit(pad_codes.DOWN)
+        glov_input.padButtonDownEdge(pad_codes.DOWN)
       ) {
         eff_sel++;
         this.mouse_mode = false;
@@ -271,7 +271,7 @@ class GlovSelectionBox {
       }
       if (glov_input.keyDownEdge(KEYS.UP) ||
         glov_input.keyDownEdge(KEYS.W) ||
-        glov_input.padDownHit(pad_codes.UP)
+        glov_input.padButtonDownEdge(pad_codes.UP)
       ) {
         eff_sel--;
         this.mouse_mode = false;

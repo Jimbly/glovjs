@@ -186,22 +186,22 @@ export function main(canvas) {
     test.character.dx = 0;
     test.character.dy = 0;
     if (glov_input.keyDown(KEYS.LEFT) || glov_input.keyDown(KEYS.A) ||
-      glov_input.isPadButtonDown(pad_codes.LEFT)
+      glov_input.padButtonDown(pad_codes.LEFT)
     ) {
       test.character.dx = -1;
       sprites.animation.setState('idle_left');
     } else if (glov_input.keyDown(KEYS.RIGHT) || glov_input.keyDown(KEYS.D) ||
-      glov_input.isPadButtonDown(pad_codes.RIGHT)
+      glov_input.padButtonDown(pad_codes.RIGHT)
     ) {
       test.character.dx = 1;
       sprites.animation.setState('idle_right');
     }
     if (glov_input.keyDown(KEYS.UP) || glov_input.keyDown(KEYS.W) ||
-      glov_input.isPadButtonDown(pad_codes.UP)
+      glov_input.padButtonDown(pad_codes.UP)
     ) {
       test.character.dy = -1;
     } else if (glov_input.keyDown(KEYS.DOWN) || glov_input.keyDown(KEYS.S) ||
-      glov_input.isPadButtonDown(pad_codes.DOWN)
+      glov_input.padButtonDown(pad_codes.DOWN)
     ) {
       test.character.dy = 1;
     }

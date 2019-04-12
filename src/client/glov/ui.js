@@ -394,11 +394,11 @@ export function focusCheck(key) {
         focused = false;
       }
     }
-    if (glov_input.padDownHit(pad_codes.RIGHT_SHOULDER)) {
+    if (glov_input.padButtonDownEdge(pad_codes.RIGHT_BUMPER)) {
       focusNext(key);
       focused = false;
     }
-    if (glov_input.padDownHit(pad_codes.LEFT_SHOULDER)) {
+    if (glov_input.padButtonDownEdge(pad_codes.LEFT_BUMPER)) {
       focusPrev(key);
     }
   }
@@ -481,7 +481,7 @@ export function buttonShared(param) {
   button_focused = focused;
   if (focused) {
     if (glov_input.keyDownEdge(KEYS.SPACE) || glov_input.keyDownEdge(KEYS.RETURN) ||
-      glov_input.padDownHit(pad_codes.A)
+      glov_input.padButtonDownEdge(pad_codes.A)
     ) {
       ret = true;
     }
@@ -628,7 +628,7 @@ function modalDialogRun() {
         pressed = pressed || glov_input.keyDownEdge(eff_button_keys.key[jj]);
       }
       for (let jj = 0; jj < eff_button_keys.pad.length; ++jj) {
-        pressed = pressed || glov_input.padDownHit(eff_button_keys.pad[jj]);
+        pressed = pressed || glov_input.padButtonDownEdge(eff_button_keys.pad[jj]);
       }
     }
     if (pressed) {

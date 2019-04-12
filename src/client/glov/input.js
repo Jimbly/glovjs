@@ -1,12 +1,14 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-
-/* global TurbulenzEngine:true */
+// Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
+// Released under MIT License: https://opensource.org/licenses/MIT
+/* global navigator */
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
-const { vec2, v2abs, v2add, v2copy, v2set, v2sub } = require('./vmath.js');
+const { min, sqrt } = Math;
+const { vec2, v2abs, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
 const UP_EDGE = 0;
 const DOWN_EDGE = 1;
@@ -14,8 +16,10 @@ const DOWN = 2;
 
 const MAX_CLICK_DIST = 50;
 
+// per-app overrideable options
 const DO_LOCK = false;
 const TOUCH_AS_MOUSE = true;
+const MAP_ANALOG_TO_DPAD = true;
 
 export const ANY = -1;
 
@@ -48,9 +52,36 @@ export const KEYS = {
     KEYS[String.fromCharCode(ii)] = ii;
   }
 }());
+export const pad_codes = {
+  A: 0,
+  SELECT: 0, // GLOV name
+  B: 1,
+  CANCEL: 1, // GLOV name
+  X: 2,
+  Y: 3,
+  LB: 4,
+  LEFT_BUMPER: 4,
+  RB: 5,
+  RIGHT_BUMPER: 5,
+  LT: 6,
+  LEFT_TRIGGER: 6,
+  RT: 7,
+  RIGHT_TRIGGER: 7,
+  BACK: 8,
+  START: 9,
+  LEFT_STICK: 10,
+  RIGHT_STICK: 11,
+  UP: 12,
+  DOWN: 13,
+  LEFT: 14,
+  RIGHT: 15,
+  ANALOG_UP: 20,
+  ANALOG_LEFT: 21,
+  ANALOG_DOWN: 22,
+  ANALOG_RIGHT: 23,
+};
 
 let canvas;
-let input_device;
 let key_state = {};
 let pad_states = []; // One map per joystick
 let clicks = [];
@@ -61,15 +92,12 @@ let mpos = vec2(); // temporary, mapped to camera
 let mouse_over_captured = false;
 let mouse_down = [];
 let pad_threshold = 0.25;
-let map_analog_to_dpad = true; // user overrideable
 
 let input_eaten_kb = false;
 let input_eaten_mouse = false;
 
 let touch_drag_delta = vec2();
 let touches = {};
-
-export let pad_codes;
 
 export let touch_mode = false;
 
@@ -295,14 +323,6 @@ export function startup(_canvas) {
   document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock ||
     document.webkitExitPointerLock || function () { /* nop */ };
 
-  input_device = TurbulenzEngine.createInputDevice({});
-
-  pad_codes = input_device.padCodes;
-  pad_codes.ANALOG_UP = 20;
-  pad_codes.ANALOG_LEFT = 21;
-  pad_codes.ANALOG_DOWN = 22;
-  pad_codes.ANALOG_RIGHT = 23;
-
   window.addEventListener('keydown', onKeyDown, false);
   window.addEventListener('keyup', onKeyUp, false);
 
@@ -314,22 +334,142 @@ export function startup(_canvas) {
   window.addEventListener('DOMMouseScroll', onWheel, false);
   window.addEventListener('mousewheel', onWheel, false);
 
-  input_device.addEventListener('paddown', (padindex, padcode) => onPadDown(padindex, padcode));
-  input_device.addEventListener('padup', (padindex, padcode) => onPadUp(padindex, padcode));
-  input_device.addEventListener('padmove',
-    (padindex, x, y, z, rx, ry, rz) => onPadMove(padindex, x, y, z, rx, ry, rz));
-
   window.addEventListener('touchstart', onTouchChange, passive_param);
   window.addEventListener('touchmove', onTouchChange, passive_param);
   window.addEventListener('touchend', onTouchChange, passive_param);
   window.addEventListener('touchcancel', onTouchChange, passive_param);
 }
 
+
+function onPadUp(padindex, padcode) {
+  pad_states[padindex] = pad_states[padindex] || { axes: {} };
+  pad_states[padindex][padcode] = UP_EDGE;
+}
+function onPadDown(padindex, padcode) {
+  pad_states[padindex] = pad_states[padindex] || { axes: {} };
+  pad_states[padindex][padcode] = DOWN_EDGE;
+}
+function onPadMove(padindex, left_stick, right_stick) {
+  let ps = pad_states[padindex] = pad_states[padindex] || { axes: {} };
+  ps.axes.x = left_stick[0];
+  ps.axes.y = left_stick[1];
+  ps.axes.rx = right_stick[0];
+  ps.axes.ry = right_stick[1];
+  // Calculate virtual directional buttons
+  function check(b, c) {
+    if (b) {
+      if (ps[c] !== DOWN) {
+        ps[c] = DOWN_EDGE;
+      }
+    } else if (ps[c]) {
+      ps[c] = UP_EDGE;
+    }
+  }
+  check(left_stick[0] < -pad_threshold, pad_codes.ANALOG_LEFT);
+  check(left_stick[0] > pad_threshold, pad_codes.ANALOG_RIGHT);
+  check(left_stick[1] < -pad_threshold, pad_codes.ANALOG_DOWN);
+  check(left_stick[1] > pad_threshold, pad_codes.ANALOG_UP);
+}
+
+const DEADZONE = 0.26;
+const DEADZONE_SQ = DEADZONE * DEADZONE;
+const MAX_BUTTONS = 16;
+let gamepad_data = [];
+function gamepadUpdate() {
+  let gamepads = (navigator.gamepads ||
+    navigator.webkitGamepads ||
+    (navigator.getGamepads && navigator.getGamepads()) ||
+    (navigator.webkitGetGamepads && navigator.webkitGetGamepads()));
+
+  if (gamepads) {
+    let numGamePads = gamepads.length;
+    for (let ii = 0; ii < numGamePads; ii++) {
+      let gamepad = gamepads[ii];
+      if (!gamepad) {
+        continue;
+      }
+      let gpd = gamepad_data[ii];
+      if (!gpd) {
+        gpd = gamepad_data[ii] = {
+          buttons: new Uint8Array(MAX_BUTTONS),
+          timestamp: 0,
+        };
+      }
+      // Update button states
+      if (gpd.timestamp < gamepad.timestamp) {
+        let buttons = gamepad.buttons;
+        gpd.timestamp = gamepad.timestamp;
+
+        let numButtons = min(buttons.length, MAX_BUTTONS);
+        for (let n = 0; n < numButtons; n++) {
+          let value = buttons[n];
+          // if (value.pressed || value.touched || value.value) {
+          //   console.log(`button ${n}: ${value.pressed} ${value.touched} ${value.value}`);
+          // }
+          if (typeof value === 'object') {
+            value = value.value;
+          }
+          value = value > 0.5 ? 1 : 0;
+          if (gpd.buttons[n] !== value) {
+            gpd.buttons[n] = value;
+            if (value) {
+              onPadDown(ii, n);
+            } else {
+              onPadUp(ii, n);
+            }
+          }
+        }
+
+        // Update axes states
+        let axes = gamepad.axes;
+        if (axes.length >= 4) {
+          let left_stick = vec2(axes[0], -axes[1]);
+          // Axis 1 & 2
+          let magnitude = v2lengthSq(left_stick);
+
+          if (magnitude > DEADZONE_SQ) {
+            magnitude = sqrt(magnitude);
+
+            // Normalize lX and lY
+            v2scale(left_stick, left_stick, 1 / magnitude);
+
+            // Clip the magnitude at its max possible value
+            magnitude = min(magnitude, 1);
+
+            // Adjust magnitude relative to the end of the dead zone
+            magnitude = ((magnitude - DEADZONE) / (1 - DEADZONE));
+
+            v2scale(left_stick, left_stick, magnitude);
+          } else {
+            v2set(left_stick, 0, 0);
+          }
+
+          // Axis 3 & 4
+          let right_stick = vec2(axes[2], -axes[3]);
+          magnitude = v2lengthSq(right_stick);
+
+          if (magnitude > DEADZONE_SQ) {
+            magnitude = sqrt(magnitude);
+            v2scale(right_stick, right_stick, 1 / magnitude);
+            magnitude = min(magnitude, 1);
+            magnitude = ((magnitude - DEADZONE) / (1 - DEADZONE));
+            v2scale(right_stick, right_stick, magnitude);
+          } else {
+            v2set(right_stick, 0, 0);
+          }
+
+          onPadMove(ii, left_stick, right_stick);
+        }
+      }
+    }
+  }
+}
+
 export function tick() {
   // browser frame has occurred since the call to endFrame(),
   // we should now have `clicks` and `key_state` populated with edge events
   mouse_over_captured = false;
-  input_device.update();
+  gamepadUpdate();
 }
 
 export function endFrame() {
@@ -493,42 +633,12 @@ export function keyUpEdge(keycode) {
   return false;
 }
 
-function onPadUp(padindex, padcode) {
-  pad_states[padindex] = pad_states[padindex] || { axes: {} };
-  pad_states[padindex][padcode] = UP_EDGE;
-}
-function onPadDown(padindex, padcode) {
-  pad_states[padindex] = pad_states[padindex] || { axes: {} };
-  pad_states[padindex][padcode] = DOWN_EDGE;
-}
-function onPadMove(padindex, x, y, z, rx, ry, rz) {
-  let ps = pad_states[padindex] = pad_states[padindex] || { axes: {} };
-  ps.axes.x = x;
-  ps.axes.y = y;
-  ps.axes.z = z;
-  ps.axes.rx = rx;
-  ps.axes.ry = ry;
-  ps.axes.rz = rz;
-  // Calculate virtual directional buttons
-  function check(b, c) {
-    if (b) {
-      if (ps[c] !== DOWN) {
-        ps[c] = DOWN_EDGE;
-      }
-    } else if (ps[c]) {
-      ps[c] = UP_EDGE;
-    }
-  }
-  check(x < -pad_threshold, pad_codes.ANALOG_LEFT);
-  check(x > pad_threshold, pad_codes.ANALOG_RIGHT);
-  check(y < -pad_threshold, pad_codes.ANALOG_DOWN);
-  check(y > pad_threshold, pad_codes.ANALOG_UP);
-}
-export function isPadButtonDown(padindex, padcode) {
+export function padButtonDown(padindex, padcode) {
   // Handle calling without a specific pad index
   if (padcode === undefined) {
+    assert(padindex !== undefined);
     for (let ii = 0; ii < pad_states.length; ++ii) {
-      if (isPadButtonDown(ii, padindex)) {
+      if (padButtonDown(ii, padindex)) {
         return true;
       }
     }
@@ -541,17 +651,17 @@ export function isPadButtonDown(padindex, padcode) {
   if (!pad_states[padindex]) {
     return false;
   }
-  if (map_analog_to_dpad) {
-    if (padcode === pad_codes.LEFT && isPadButtonDown(padindex, pad_codes.ANALOG_LEFT)) {
+  if (MAP_ANALOG_TO_DPAD) {
+    if (padcode === pad_codes.LEFT && padButtonDown(padindex, pad_codes.ANALOG_LEFT)) {
       return true;
     }
-    if (padcode === pad_codes.RIGHT && isPadButtonDown(padindex, pad_codes.ANALOG_RIGHT)) {
+    if (padcode === pad_codes.RIGHT && padButtonDown(padindex, pad_codes.ANALOG_RIGHT)) {
       return true;
     }
-    if (padcode === pad_codes.UP && isPadButtonDown(padindex, pad_codes.ANALOG_UP)) {
+    if (padcode === pad_codes.UP && padButtonDown(padindex, pad_codes.ANALOG_UP)) {
       return true;
     }
-    if (padcode === pad_codes.DOWN && isPadButtonDown(padindex, pad_codes.ANALOG_DOWN)) {
+    if (padcode === pad_codes.DOWN && padButtonDown(padindex, pad_codes.ANALOG_DOWN)) {
       return true;
     }
   }
@@ -571,11 +681,12 @@ export function padGetAxes(padindex) {
   let axes = ps.axes;
   return { x: axes.x || 0, y: axes.y || 0 };
 }
-export function padDownHit(padindex, padcode) {
+export function padButtonDownEdge(padindex, padcode) {
   // Handle calling without a specific pad index
   if (padcode === undefined) {
+    assert(padindex !== undefined);
     for (let ii = 0; ii < pad_states.length; ++ii) {
-      if (padDownHit(ii, padindex)) {
+      if (padButtonDownEdge(ii, padindex)) {
         return true;
       }
     }
@@ -585,16 +696,16 @@ export function padDownHit(padindex, padcode) {
   if (!pad_states[padindex]) {
     return false;
   }
-  if (padcode === pad_codes.LEFT && padDownHit(padindex, pad_codes.ANALOG_LEFT)) {
+  if (padcode === pad_codes.LEFT && padButtonDownEdge(padindex, pad_codes.ANALOG_LEFT)) {
     return true;
   }
-  if (padcode === pad_codes.RIGHT && padDownHit(padindex, pad_codes.ANALOG_RIGHT)) {
+  if (padcode === pad_codes.RIGHT && padButtonDownEdge(padindex, pad_codes.ANALOG_RIGHT)) {
     return true;
   }
-  if (padcode === pad_codes.UP && padDownHit(padindex, pad_codes.ANALOG_UP)) {
+  if (padcode === pad_codes.UP && padButtonDownEdge(padindex, pad_codes.ANALOG_UP)) {
     return true;
   }
-  if (padcode === pad_codes.DOWN && padDownHit(padindex, pad_codes.ANALOG_DOWN)) {
+  if (padcode === pad_codes.DOWN && padButtonDownEdge(padindex, pad_codes.ANALOG_DOWN)) {
     return true;
   }
   if (pad_states[padindex][padcode] === DOWN_EDGE) {
@@ -603,11 +714,12 @@ export function padDownHit(padindex, padcode) {
   }
   return false;
 }
-export function padUpHit(padindex, padcode) {
+export function padButtonUpEdge(padindex, padcode) {
   // Handle calling without a specific pad index
   if (padcode === undefined) {
+    assert(padindex !== undefined);
     for (let ii = 0; ii < pad_states.length; ++ii) {
-      if (padUpHit(ii, padindex)) {
+      if (padButtonUpEdge(ii, padindex)) {
         return true;
       }
     }
@@ -617,16 +729,16 @@ export function padUpHit(padindex, padcode) {
   if (!pad_states[padindex]) {
     return false;
   }
-  if (padcode === pad_codes.LEFT && padUpHit(padindex, pad_codes.ANALOG_LEFT)) {
+  if (padcode === pad_codes.LEFT && padButtonUpEdge(padindex, pad_codes.ANALOG_LEFT)) {
     return true;
   }
-  if (padcode === pad_codes.RIGHT && padUpHit(padindex, pad_codes.ANALOG_RIGHT)) {
+  if (padcode === pad_codes.RIGHT && padButtonUpEdge(padindex, pad_codes.ANALOG_RIGHT)) {
     return true;
   }
-  if (padcode === pad_codes.UP && padUpHit(padindex, pad_codes.ANALOG_UP)) {
+  if (padcode === pad_codes.UP && padButtonUpEdge(padindex, pad_codes.ANALOG_UP)) {
     return true;
   }
-  if (padcode === pad_codes.DOWN && padUpHit(padindex, pad_codes.ANALOG_DOWN)) {
+  if (padcode === pad_codes.DOWN && padButtonUpEdge(padindex, pad_codes.ANALOG_DOWN)) {
     return true;
   }
   if (pad_states[padindex][padcode] === UP_EDGE) {
