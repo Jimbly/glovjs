@@ -45,6 +45,62 @@ function flagSet(key, value) {
   glov_local_storage.setJSON(`flag_${key}`, flags[key]);
 }
 
+const color_white = vec4(1, 1, 1, 1);
+
+function perfTestSprites() {
+  if (!sprites.test) {
+    sprites.test = [
+      glov_sprites.create({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+      glov_sprites.create({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+    ];
+  }
+
+  let mode = 2;
+  let count = [
+    80000, // one sprite, pre-sorted
+    40000, // one sprite, unsorted
+    20000, // two sprites, unsorted, small batches
+    60000, // two sprites, sorted, bigger batches, sprite API
+    60000, // two sprites, sorted, bigger batches, raw API
+  ][mode];
+  if (mode === 3 || mode === 4) {
+    for (let ii = 0; ii < count;) {
+      let subc = Math.floor(500 + Math.random() * 100);
+      let idx = mode <= 1 ? 0 : Math.round(Math.random());
+      let sprite = sprites.test[idx];
+      let z = Math.random();
+      for (let jj = 0; jj < subc; ++jj) {
+        if (mode === 4) {
+          // glov_sprites.queueraw(sprite.texs,
+          //   Math.random() * game_width - 3, Math.random() * game_height - 3, z,
+          //   6, 6, 0, 0, 1, 1, color_white);
+          glov_sprites.queuesprite(sprite,
+            Math.random() * game_width, Math.random() * game_height, z,
+            6 * sprite.size[0], 6 * sprite.size[1], 0, sprite.uvs, color_white);
+        } else {
+          sprites.test[idx].draw({
+            x: Math.random() * game_width,
+            y: Math.random() * game_height,
+            z,
+            w: 6, h: 6,
+          });
+        }
+      }
+      ii += subc;
+    }
+  } else {
+    for (let ii = 0; ii < count; ++ii) {
+      let idx = mode <= 1 ? 0 : Math.round(Math.random());
+      sprites.test[idx].draw({
+        x: Math.random() * game_width,
+        y: Math.random() * game_height,
+        z: mode === 0 ? ii : Math.random(),
+        w: 6, h: 6,
+      });
+    }
+  }
+}
+
 export function main(canvas) {
 
   glov_engine.startup({
@@ -260,6 +316,10 @@ export function main(canvas) {
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
       }
+    }
+
+    if (flagGet('perf_test')) {
+      perfTestSprites();
     }
 
     // Debugging touch state on mobile
