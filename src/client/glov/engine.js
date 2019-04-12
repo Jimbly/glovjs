@@ -1,8 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* global WebGLTurbulenzEngine:false */
-/* global TurbulenzEngine:true */
 /* global Z:false */
 /* eslint-env browser */
 
@@ -336,18 +334,13 @@ function tick() {
 
 
 export function startup(params) {
+  // globals for leftover Turbulenz bits
+  window.TurbulenzEngine = null;
+  window.assert = assert;
+
   canvas = params.canvas;
   assert(gl);
   canvas.focus();
-  TurbulenzEngine = WebGLTurbulenzEngine.create({
-    canvas: canvas,
-    fillParent: true
-  });
-  if (!TurbulenzEngine) {
-    // eslint-disable-next-line no-alert
-    window.alert('Failed to init TurbulenzEngine (canvas)');
-    return;
-  }
   game_width = params.game_width || 1280;
   game_height = params.game_height || 960;
   if (params.pixely === 'strict') {

@@ -3,7 +3,7 @@ const assert = require('assert');
 // Used under MIT License
 // Modified by Jimb Esser
 
-/* eslint no-underscore-dangle:off, one-var:off, sort-vars:off, max-len:off, consistent-return:off */
+/* eslint no-underscore-dangle:off, one-var:off, sort-vars:off, max-len:off, consistent-return:off, no-bitwise:off */
 
 //
 // AABBTreeNode

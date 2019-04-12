@@ -1,4 +1,5 @@
 // Derived from (MIT Licensed) https://github.com/uber-web/loaders.gl/tree/master/modules/gltf
+/* eslint-env browser */
 
 const assert = require('assert');
 
