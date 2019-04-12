@@ -18,7 +18,7 @@
 // Embedded code and startup code.
 window.onload = function () {
   // eslint-disable-next-line global-require
-  const app = require('./app.js');
+  const main = require('./main.js');
 
   let canvas = document.getElementById('canvas');
 
@@ -40,7 +40,7 @@ window.onload = function () {
       // ignore
     }
     if (window.gl) {
-      return app.main(canvas);
+      return main.main(canvas);
     }
   }
   window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');

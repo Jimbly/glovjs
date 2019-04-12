@@ -529,10 +529,10 @@ export function mousePosIsTouch() {
 }
 
 export function click(param) {
-  assert(typeof param.x === 'number');
-  assert(typeof param.y === 'number');
-  assert(typeof param.w === 'number');
-  assert(typeof param.h === 'number');
+  let x = param.x === undefined ? camera2d.x0() : param.x;
+  let y = param.y === undefined ? camera2d.y0() : param.y;
+  let w = param.w === undefined ? camera2d.w() : param.w;
+  let h = param.h === undefined ? camera2d.h() : param.h;
   let button = param.button || 0;
   mousePos(mpos);
   for (let ii = 0; ii < clicks.length; ++ii) {
@@ -540,12 +540,9 @@ export function click(param) {
     if (clk.button !== button) {
       continue;
     }
-    let pos = clk.pos;
-    camera2d.physicalToVirtual(mpos, pos);
-    if (mpos[0] >= param.x &&
-      (param.w === Infinity || mpos[0] < param.x + param.w) &&
-      mpos[1] >= param.y &&
-      (param.h === Infinity || mpos[1] < param.y + param.h)
+    camera2d.physicalToVirtual(mpos, clk.pos);
+    if (mpos[0] >= x && (w === Infinity || mpos[0] < x + w) &&
+      mpos[1] >= y && (h === Infinity || mpos[1] < y + h)
     ) {
       clicks.splice(ii, 1);
       return mpos.slice(0);

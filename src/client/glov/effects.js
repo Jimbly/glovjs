@@ -1,4 +1,7 @@
-// Derived from texture_effects.js in Turublenz, MIT licensed
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+// Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
+// Released under MIT License: https://opensource.org/licenses/MIT
 
 const fs = require('fs');
 const engine = require('./engine.js');
@@ -115,7 +118,7 @@ function startup() {
   shader_params_pixely_expand = {
     clip_space,
     copy_uv_scale,
-    orig_pixel_size: vec4(0,0,0,0),
+    orig_pixel_size: vec4(),
   };
 }
 
