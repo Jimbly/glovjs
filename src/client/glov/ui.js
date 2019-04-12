@@ -234,13 +234,18 @@ export function startup(_font, ui_sprites) {
   button_keys.no.key.push(KEYS.N);
 }
 
+let dynamic_text_elem;
 export function getElem() {
   if (modal_dialog) {
     return null;
   }
   if (dom_elems_issued >= dom_elems.length) {
-    let elem = $('<div class="glovui_dynamic"></div>');
-    $('#dynamic_text').append(elem);
+    let elem = document.createElement('div');
+    elem.setAttribute('class', 'glovui_dynamic');
+    if (!dynamic_text_elem) {
+      dynamic_text_elem = document.getElementById('dynamic_text');
+    }
+    dynamic_text_elem.appendChild(elem);
     dom_elems.push(elem);
   }
   let elem = dom_elems[dom_elems_issued];
@@ -691,7 +696,7 @@ export function tick(dt) {
 
   while (dom_elems_issued < dom_elems.length) {
     let elem = dom_elems.pop();
-    elem.remove();
+    dynamic_text_elem.removeChild(elem);
   }
   dom_elems_issued = 0;
 

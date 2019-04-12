@@ -40,7 +40,7 @@ class GlovUIEditBox {
   }
   setText(new_text) {
     if (this.input) {
-      this.input.val(new_text);
+      this.input.value = new_text;
     }
     this.text = new_text;
   }
@@ -66,10 +66,10 @@ class GlovUIEditBox {
       this.got_focus_in = false;
     }
     let focused = glov_ui.focusCheck(this);
-    if (focused && this.input && document.activeElement !== this.input[0]) {
+    if (focused && this.input && document.activeElement !== this.input) {
       this.input.focus();
     }
-    if (!focused && this.input && document.activeElement === this.input[0]) {
+    if (!focused && this.input && document.activeElement === this.input) {
       this.input.blur();
     }
 
@@ -92,25 +92,30 @@ class GlovUIEditBox {
     if (elem !== this.elem) {
       if (elem) {
         // new DOM element, initialize
-        elem.html('');
-        let form = $('<form></form>');
-        let input = $(`<input type="${this.type}" placeholder="${this.placeholder}" tabindex="2">`);
-        input.focusin(() => {
+        elem.textContent = '';
+        let form = document.createElement('form');
+        let input = document.createElement('input');
+        input.setAttribute('type', this.type);
+        input.setAttribute('placeholder', this.placeholder);
+        input.setAttribute('tabindex', 2);
+        input.addEventListener('focusin', () => {
           focuslog('EditBox:focusin', this);
           this.got_focus_in = true;
         });
-        input.focusout((ev) => {
+        input.addEventListener('focusout', (ev) => {
           focuslog('EditBox:focusout', this);
           this.got_focus_out = true;
         });
-        form.submit((ev) => {
+        form.addEventListener('submit', (ev) => {
           ev.preventDefault();
           this.submitted = true;
         });
-        form.append(input);
-        form.append($('<span tabindex="3"></span>'));
-        elem.append(form);
-        input.val(this.text);
+        form.appendChild(input);
+        let span = document.createElement('span');
+        span.setAttribute('tabindex', 3);
+        form.appendChild(span);
+        elem.appendChild(form);
+        input.value = this.text;
         this.input = input;
         if (this.initial_focus) {
           input.focus();
@@ -122,15 +127,15 @@ class GlovUIEditBox {
       this.elem = elem;
     } else {
       if (this.input) {
-        this.text = this.input.val();
+        this.text = this.input.value;
       }
     }
     if (elem) {
       let pos = camera2d.htmlPos(this.x, this.y);
-      elem[0].style.left = `${pos[0]}%`;
-      elem[0].style.top = `${pos[1]}%`;
+      elem.style.left = `${pos[0]}%`;
+      elem.style.top = `${pos[1]}%`;
       let size = camera2d.htmlSize(this.w, this.h);
-      elem[0].style.width = `${size[0]}%`;
+      elem.style.width = `${size[0]}%`;
     }
 
     if (focused) {
