@@ -1,9 +1,9 @@
 /* eslint no-bitwise:off */
 /*global Z:false */
 
-const glov_engine = require('./engine.js');
+const glov_input = require('./input.js');
 const glov_ui = require('./ui.js');
-const { v2clone, v4allocZero, vec4, v4mulAdd } = require('./vmath.js');
+const { v2clone, vec4, v4mulAdd } = require('./vmath.js');
 
 const JUMP_THRESHOLD = 0.5;
 const JUMP_TIME = 0.125;
@@ -125,8 +125,7 @@ class Platformer {
   }
 
   drawDebug(pos, scale) {
-    let glov_input = glov_engine.glov_input;
-    let p = v4allocZero();
+    let p = vec4();
     scale = vec4(scale[0], scale[1], scale[0], scale[1]);
     pos = vec4(pos[0], pos[1], pos[0], pos[1]);
     [this.solids, this.platforms].forEach(function (arr, idx) {

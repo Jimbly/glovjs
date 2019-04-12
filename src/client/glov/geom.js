@@ -15,8 +15,8 @@ const gl_byte_size = {
   0x1406: 4, // GL_FLOAT
 };
 
-let unit_buf;
-let unit_buf_len = 0;
+// let unit_buf;
+// let unit_buf_len = 0;
 
 let bound_geom;
 

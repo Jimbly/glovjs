@@ -10,7 +10,7 @@ const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const { clamp } = require('../../common/util.js');
-const { vec4, v4allocZero, v4clone, v4scale } = require('./vmath.js');
+const { vec4, v4clone, v4scale } = require('./vmath.js');
 
 /*
 
@@ -196,14 +196,14 @@ function createTechniqueParameters() {
   }
 
   tech_params = {
-    param0: v4allocZero(4),
-    outlineColor: v4allocZero(4),
-    glowColor: v4allocZero(4),
-    glowParams: v4allocZero(4),
+    param0: vec4(),
+    outlineColor: vec4(),
+    glowColor: vec4(),
+    glowParams: vec4(),
     tex0: null
   };
   if (!temp_color) {
-    temp_color = v4allocZero(4);
+    temp_color = vec4();
   }
 }
 
@@ -567,7 +567,7 @@ class GlovFont {
       value[2] = 0;
     }
     let padding1 = max(1, applied_style.outline_width*font_texel_scale*avg_scale_combined);
-    let padding4 = v4allocZero();
+    let padding4 = vec4();
     const outer_scaled = applied_style.glow_outer*font_texel_scale;
     padding4[0] = max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
     padding4[2] = max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);

@@ -22,6 +22,7 @@ const glov_edit_box = require('./edit_box.js');
 const effects = require('./effects.js');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const glov_input = require('./input.js');
 const { max, min, round } = Math;
 const glov_sprites = require('./sprites.js');
 const { clone, lerp, merge } = require('../../common/util.js');
@@ -29,8 +30,7 @@ const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4scale } = require('./vmath.js');
 
 const MODAL_DARKEN = 0.75;
-let glov_input;
-let key_codes;
+const { KEYS } = glov_input;
 let pad_codes;
 
 const menu_fade_params_default = {
@@ -180,11 +180,8 @@ let focused_key_prev1;
 let focused_key_prev2;
 
 export function startup(_font, ui_sprites) {
-  glov_input = glov_engine.glov_input;
   ui_sprites = ui_sprites || {};
-  assert(glov_input);
   font = _font;
-  key_codes = glov_input.key_codes;
   pad_codes = glov_input.pad_codes;
 
   function loadUISprite(name, ws, hs, only_override) {
@@ -229,12 +226,12 @@ export function startup(_font, ui_sprites) {
 
   button_keys = {
     ok: { key: [], pad: [pad_codes.X] },
-    cancel: { key: [key_codes.ESCAPE], pad: [pad_codes.B, pad_codes.Y] },
+    cancel: { key: [KEYS.ESC], pad: [pad_codes.B, pad_codes.Y] },
   };
   button_keys.yes = clone(button_keys.ok);
-  button_keys.yes.key.push(key_codes.Y);
+  button_keys.yes.key.push(KEYS.Y);
   button_keys.no = clone(button_keys.cancel);
-  button_keys.no.key.push(key_codes.N);
+  button_keys.no.key.push(KEYS.N);
 }
 
 export function getElem() {
@@ -389,8 +386,8 @@ export function focusCheck(key) {
   // Returns true even if focusing previous element, since for this frame, we are still effectively focused!
   let focused = isFocused(key);
   if (focused) {
-    if (glov_input.keyDownHit(key_codes.TAB)) {
-      if (glov_input.isKeyDown(key_codes.SHIFT)) {
+    if (glov_input.keyDownEdge(KEYS.TAB)) {
+      if (glov_input.keyDown(KEYS.SHIFT)) {
         focusPrev(key);
       } else {
         focusNext(key);
@@ -483,7 +480,7 @@ export function buttonShared(param) {
   }
   button_focused = focused;
   if (focused) {
-    if (glov_input.keyDownHit(key_codes.SPACE) || glov_input.keyDownHit(key_codes.RETURN) ||
+    if (glov_input.keyDownEdge(KEYS.SPACE) || glov_input.keyDownEdge(KEYS.RETURN) ||
       glov_input.padDownHit(pad_codes.A)
     ) {
       ret = true;
@@ -628,7 +625,7 @@ function modalDialogRun() {
     let pressed = false;
     if (eff_button_keys) {
       for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed = pressed || glov_input.keyDownHit(eff_button_keys.key[jj]);
+        pressed = pressed || glov_input.keyDownEdge(eff_button_keys.key[jj]);
       }
       for (let jj = 0; jj < eff_button_keys.pad.length; ++jj) {
         pressed = pressed || glov_input.padDownHit(eff_button_keys.pad[jj]);

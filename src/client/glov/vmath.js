@@ -5,7 +5,7 @@
 exports.mat3 = require('gl-mat3/create');
 exports.mat4 = require('gl-mat4/create');
 
-const { floor, max, min, sqrt } = Math;
+const { abs, floor, max, min, sqrt } = Math;
 
 export function clamp(a, mn, mx) {
   return max(mn, min(mx, a));
@@ -29,30 +29,41 @@ export function nextHighestPowerOfTwo(x) {
 
 export function vec2(a, b) {
   let r = new Float32Array(2);
-  r[0] = a;
-  r[1] = b;
+  if (a || b) {
+    r[0] = a;
+    r[1] = b;
+  }
   return r;
 }
 
 export function vec3(a, b, c) {
   let r = new Float32Array(3);
-  r[0] = a;
-  r[1] = b;
-  r[2] = c;
+  if (a || b || c) {
+    r[0] = a;
+    r[1] = b;
+    r[2] = c;
+  }
   return r;
 }
 
 export function vec4(a, b, c, d) {
   let r = new Float32Array(4);
-  r[0] = a;
-  r[1] = b;
-  r[2] = c;
-  r[3] = d;
+  if (a || b || c || d) {
+    r[0] = a;
+    r[1] = b;
+    r[2] = c;
+    r[3] = d;
+  }
   return r;
 }
 
 export const unit_vec = vec4(1,1,1,1);
-export const zero_vec = vec4(0,0,0,0);
+export const zero_vec = vec4();
+
+export function v2abs(out, a) {
+  out[0] = abs(a[0]);
+  out[1] = abs(a[1]);
+}
 
 export function v2add(out, a, b) {
   out[0] = a[0] + b[0];
@@ -62,10 +73,6 @@ export function v2add(out, a, b) {
 export function v2addScale(out, a, b, s) {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
-}
-
-export function v2allocZero() {
-  return new Float32Array(2);
 }
 
 export function v2copy(out, a) {
@@ -105,6 +112,11 @@ export function v2normalize(out, a) {
 export function v2scale(out, a, s) {
   out[0] = a[0] * s;
   out[1] = a[1] * s;
+}
+
+export function v2set(out, a, b) {
+  out[0] = a;
+  out[1] = b;
 }
 
 export function v2sub(out, a, b) {
@@ -199,17 +211,8 @@ export function v3zero(out) {
   out[0] = out[1] = out[2] = 0;
 }
 
-export function v4allocZero() {
-  return new Float32Array(4);
-}
-
 export function v4clone(a) {
-  let r = new Float32Array(4);
-  r[0] = a[0];
-  r[1] = a[1];
-  r[2] = a[2];
-  r[3] = a[3];
-  return r;
+  return a.slice(0);
 }
 
 export function v4copy(out, a) {

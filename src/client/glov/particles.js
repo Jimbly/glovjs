@@ -60,8 +60,8 @@ system.killHard(); // immediately stops drawing
 const assert = require('assert');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
-const { vec2, v2allocZero, v2copy, v2lerp, v2mul } = require('./vmath.js');
-const { vec3, v3add, v4allocZero, v4copy, v4lerp, v4mul } = require('./vmath.js');
+const { vec2, v2copy, v2lerp, v2mul } = require('./vmath.js');
+const { vec3, vec4, v3add, v4copy, v4lerp, v4mul } = require('./vmath.js');
 
 const blend_map = {
   alpha: sprites.BLEND_ALPHA,
@@ -206,10 +206,10 @@ function instValueVec(v) {
   return ret;
 }
 
-let temp_color = v4allocZero();
-let temp_color2 = v4allocZero();
-let temp_size = v2allocZero();
-let temp_size2 = v2allocZero();
+let temp_color = vec4();
+let temp_color2 = vec4();
+let temp_size = vec2();
+let temp_size2 = vec2();
 // let temp_pos = v3allocZero();
 
 class ParticleSystem {

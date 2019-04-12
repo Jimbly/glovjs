@@ -7,12 +7,12 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
+const glov_input = require('./input.js');
 const selection_box = require('./selection_box.js');
 const glov_ui = require('./ui.js');
 const { clamp, vec4 } = require('./vmath.js');
-let glov_input;
 
-let key_codes;
+const { KEYS } = glov_input;
 let pad_codes;
 
 const color101010C8 = vec4(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
@@ -50,7 +50,7 @@ class GlovSimpleMenu {
         this.internal.edit_index = index;
         // glovInputReleaseAll();
       } else if (menu_item.value !== null) {
-        if (glov_input.isKeyDown(key_codes.SHIFT) && !force) {
+        if (glov_input.keyDown(KEYS.SHIFT) && !force) {
           delta = -1;
         }
         menu_item.value += delta * menu_item.value_inc;
@@ -204,7 +204,7 @@ class GlovSimpleMenu {
 
     let selected=-1;
     if (exit_index !== -1 && (
-      glov_input.keyDownHit(key_codes.ESCAPE) ||
+      glov_input.keyDownEdge(KEYS.ESC) ||
       !items[exit_index].no_controller_exit && glov_input.padDownHit(pad_codes.CANCEL)
     )) {
       this.execItem(exit_index, 1);
@@ -214,16 +214,16 @@ class GlovSimpleMenu {
     // kind of menu option, otherwise this just feels weird
     let allow_left_right = items[sel_box.selected].value !== null;
     if (sel_box.was_clicked || sel_box.is_focused && (
-      glov_input.keyDownHit(key_codes.SPACE) ||
-      glov_input.keyDownHit(key_codes.ENTER) ||
+      glov_input.keyDownEdge(KEYS.SPACE) ||
+      glov_input.keyDownEdge(KEYS.ENTER) ||
       glov_input.padDownHit(pad_codes.SELECT))
     ) {
       this.execItem(sel_box.selected, 1);
       selected = sel_box.selected;
     }
     if (sel_box.is_focused && allow_left_right && (
-      glov_input.keyDownHit(key_codes.RIGHT) ||
-      glov_input.keyDownHit(key_codes.d) ||
+      glov_input.keyDownEdge(KEYS.RIGHT) ||
+      glov_input.keyDownEdge(KEYS.D) ||
       glov_input.padDownHit(pad_codes.RIGHT))
     ) {
       this.execItem(sel_box.selected, 2);
@@ -232,8 +232,8 @@ class GlovSimpleMenu {
     if (sel_box.wasRightClicked || sel_box.is_focused && allow_left_right && (
       // This was UpHit before, some problem with it triggering an up on the next screen?  Should supress the next up
       // events after eating a down for UI?
-      glov_input.keyDownHit(key_codes.LEFT) ||
-      glov_input.keyDownHit(key_codes.a) ||
+      glov_input.keyDownEdge(KEYS.LEFT) ||
+      glov_input.keyDownEdge(KEYS.A) ||
       glov_input.padDownHit(pad_codes.LEFT))
     ) {
       this.execItem(sel_box.selected, -1);
@@ -271,10 +271,8 @@ class GlovSimpleMenu {
 }
 
 export function create(...args) {
-  if (!glov_input) {
-    glov_input = glov_engine.glov_input;
+  if (!pad_codes) {
     pad_codes = glov_input.pad_codes;
-    key_codes = glov_input.key_codes;
   }
   return new GlovSimpleMenu(...args);
 }

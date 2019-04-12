@@ -3,6 +3,7 @@
 
 const glov_engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
+const glov_input = require('./glov/input.js');
 const glov_local_storage = require('./glov/local_storage.js');
 const glov_particles = require('./glov/particles.js');
 const glov_sprites = require('./glov/sprites.js');
@@ -112,7 +113,6 @@ export function main(canvas) {
   });
 
   const sound_manager = glov_engine.sound_manager;
-  const glov_input = glov_engine.glov_input;
   // const font = glov_engine.font;
 
   // Perfect sizes for pixely modes
@@ -122,12 +122,11 @@ export function main(canvas) {
   const createSprite = glov_sprites.create;
   const createAnimation = glov_sprite_animation.create;
 
-  const color_white = vec4(1, 1, 1, 1);
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
 
-  // Cache key_codes
-  const key_codes = glov_input.key_codes;
+  // Cache KEYS
+  const KEYS = glov_input.KEYS;
   const pad_codes = glov_input.pad_codes;
 
   const sprite_size = 64;
@@ -186,22 +185,22 @@ export function main(canvas) {
 
     test.character.dx = 0;
     test.character.dy = 0;
-    if (glov_input.isKeyDown(key_codes.LEFT) || glov_input.isKeyDown(key_codes.A) ||
+    if (glov_input.keyDown(KEYS.LEFT) || glov_input.keyDown(KEYS.A) ||
       glov_input.isPadButtonDown(pad_codes.LEFT)
     ) {
       test.character.dx = -1;
       sprites.animation.setState('idle_left');
-    } else if (glov_input.isKeyDown(key_codes.RIGHT) || glov_input.isKeyDown(key_codes.D) ||
+    } else if (glov_input.keyDown(KEYS.RIGHT) || glov_input.keyDown(KEYS.D) ||
       glov_input.isPadButtonDown(pad_codes.RIGHT)
     ) {
       test.character.dx = 1;
       sprites.animation.setState('idle_right');
     }
-    if (glov_input.isKeyDown(key_codes.UP) || glov_input.isKeyDown(key_codes.W) ||
+    if (glov_input.keyDown(KEYS.UP) || glov_input.keyDown(KEYS.W) ||
       glov_input.isPadButtonDown(pad_codes.UP)
     ) {
       test.character.dy = -1;
-    } else if (glov_input.isKeyDown(key_codes.DOWN) || glov_input.isKeyDown(key_codes.S) ||
+    } else if (glov_input.keyDown(KEYS.DOWN) || glov_input.keyDown(KEYS.S) ||
       glov_input.isPadButtonDown(pad_codes.DOWN)
     ) {
       test.character.dy = 1;

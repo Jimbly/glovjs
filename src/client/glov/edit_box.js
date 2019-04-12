@@ -1,13 +1,11 @@
 /* eslint-env jquery */
 /*global Z: false */
 
-const glov_engine = require('./engine.js');
+const glov_input = require('./input.js');
 const glov_ui = require('./ui.js');
 const camera2d = require('./camera2d.js');
 
 const { focuslog } = require('./ui.js');
-
-let glov_input;
 
 class GlovUIEditBox {
   constructor(params) {
@@ -53,8 +51,8 @@ class GlovUIEditBox {
   updateFocus() {
     if (this.got_focus_out) {
       if (glov_ui.isFocusedPeek(this)) {
-        glov_input.keyDownHit(glov_input.key_codes.TAB); // eat the TAB
-        if (glov_input.isKeyDown(glov_input.key_codes.SHIFT)) {
+        glov_input.keyDownEdge(glov_input.KEYS.TAB); // eat the TAB
+        if (glov_input.keyDown(glov_input.KEYS.SHIFT)) {
           glov_ui.focusPrev(this);
         } else {
           glov_ui.focusNext(this);
@@ -63,7 +61,7 @@ class GlovUIEditBox {
       this.got_focus_out = false;
     }
     if (this.got_focus_in) {
-      glov_input.keyDownHit(glov_input.key_codes.TAB); // eat the TAB
+      glov_input.keyDownEdge(glov_input.KEYS.TAB); // eat the TAB
       glov_ui.focusSteal(this);
       this.got_focus_in = false;
     }
@@ -75,7 +73,7 @@ class GlovUIEditBox {
       this.input.blur();
     }
 
-    if (focused && glov_input.keyDownHit(glov_input.key_codes.ESCAPE)) {
+    if (focused && glov_input.keyDownEdge(glov_input.KEYS.ESC)) {
       if (this.text) {
         this.setText('');
       } else {
@@ -155,8 +153,5 @@ class GlovUIEditBox {
 GlovUIEditBox.prototype.SUBMIT = 'submit';
 
 export function create(params) {
-  if (!glov_input) {
-    glov_input = glov_engine.glov_input;
-  }
   return new GlovUIEditBox(params);
 }

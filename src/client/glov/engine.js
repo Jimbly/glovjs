@@ -1,3 +1,6 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
 /* global WebGLTurbulenzEngine:false */
 /* global TurbulenzEngine:true */
 /* global Z:false */
@@ -8,6 +11,7 @@ const camera2d = require('./camera2d.js');
 const effects = require('./effects.js');
 const glov_font = require('./font.js');
 const geom = require('./geom.js');
+const input = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
 const mat4Copy = require('gl-mat4/copy');
@@ -23,8 +27,6 @@ const glov_ui = require('./ui.js');
 const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy } = require('./vmath.js');
 
 let canvas;
-export let glov_input;
-export let glov_sprite;
 export let glov_particles;
 export let sound_manager;
 
@@ -255,7 +257,7 @@ function tick() {
   camera2d.setAspectFixed(game_width, game_height);
 
   sound_manager.tick(dt);
-  glov_input.tick();
+  input.tick();
   glov_ui.tick(dt);
 
   if (need_repos) {
@@ -328,7 +330,7 @@ function tick() {
     }
   }
 
-  glov_input.endFrame();
+  input.endFrame();
   resetEffects();
 }
 
@@ -389,13 +391,12 @@ export function startup(params) {
   });
   camera2d.startup();
   sprites.startup();
+  input.startup(canvas);
 
   // eslint-disable-next-line no-bitwise
   clear_bits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
 
   /* eslint-disable global-require */
-  const input_device = TurbulenzEngine.createInputDevice({});
-  glov_input = require('./input.js').create(input_device);
   glov_particles = require('./particles.js').create();
 
   if (params.pixely) {

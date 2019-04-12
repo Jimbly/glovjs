@@ -2,13 +2,12 @@
 const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const glov_input = require('./input.js');
 const glov_simple_menu = require('./simple_menu.js');
 const glov_selection_box = require('./selection_box.js');
 const glov_ui = require('./ui.js');
 
 const { ceil, random } = Math;
-
-let glov_input;
 
 let demo_menu;
 let demo_menu_up = false;
@@ -21,8 +20,6 @@ let edit_box2;
 let test_select1;
 let test_select2;
 function init(x, y, column_width) {
-  glov_input = glov_engine.glov_input;
-
   edit_box1 = glov_ui.createEditBox({
     x: x + column_width,
     y: y,
@@ -146,7 +143,6 @@ export function run(x, y, z) {
 }
 
 export function runFontTest(x, y) {
-  glov_input = glov_engine.glov_input;
   const COLOR_RED = 0xFF0000ff;
   const COLOR_GREEN = 0x00FF00ff;
   const COLOR_WHITE = 0xFFFFFFff;

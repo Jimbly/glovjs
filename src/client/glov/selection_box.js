@@ -2,10 +2,10 @@
 /*global Z: false */
 const assert = require('assert');
 const glov_engine = require('./engine.js');
+const glov_input = require('./input.js');
 const glov_font = require('./font.js');
 const glov_ui = require('./ui.js');
 const { vec4 } = require('./vmath.js');
-let glov_input;
 let glov_markup = null; // Not ported
 
 const { min, max, sin } = Math;
@@ -163,7 +163,7 @@ class GlovSelectionBox {
   run(params) {
     this.applyParams(params);
     let { x, y, z, width, font_height, entry_height, auto_reset } = this;
-    let { key_codes, pad_codes } = glov_input;
+    let { KEYS, pad_codes } = glov_input;
 
     if (auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
       // Reset, select first non-disabled entry
@@ -243,7 +243,7 @@ class GlovSelectionBox {
     let page_size = (this.scroll_height - 1) / entry_height;
 
     if (focused) {
-      if (glov_input.keyDownHit(key_codes.PAGEDOWN) ||
+      if (glov_input.keyDownEdge(KEYS.PAGEDOWN) ||
         (glov_input.isPadButtonDown(pad_codes.RIGHTTRIGGER) || glov_input.isPadButtonDown(pad_codes.LEFTTRIGGER)) &&
         glov_input.padDownHit(pad_codes.DOWN)
       ) {
@@ -252,7 +252,7 @@ class GlovSelectionBox {
         this.mouse_mode = false;
         pos_changed = true;
       }
-      if (glov_input.keyDownHit(key_codes.PAGEUP) ||
+      if (glov_input.keyDownEdge(KEYS.PAGEUP) ||
         (glov_input.isPadButtonDown(pad_codes.RIGHTTRIGGER) || glov_input.isPadButtonDown(pad_codes.LEFTTRIGGER)) &&
         glov_input.padDownHit(pad_codes.UP)
       ) {
@@ -261,28 +261,28 @@ class GlovSelectionBox {
         this.mouse_mode = false;
         pos_changed = true;
       }
-      if (glov_input.keyDownHit(key_codes.DOWN) ||
-        glov_input.keyDownHit(key_codes.s) ||
+      if (glov_input.keyDownEdge(KEYS.DOWN) ||
+        glov_input.keyDownEdge(KEYS.S) ||
         glov_input.padDownHit(pad_codes.DOWN)
       ) {
         eff_sel++;
         this.mouse_mode = false;
         pos_changed = true;
       }
-      if (glov_input.keyDownHit(key_codes.UP) ||
-        glov_input.keyDownHit(key_codes.w) ||
+      if (glov_input.keyDownEdge(KEYS.UP) ||
+        glov_input.keyDownEdge(KEYS.W) ||
         glov_input.padDownHit(pad_codes.UP)
       ) {
         eff_sel--;
         this.mouse_mode = false;
         pos_changed = true;
       }
-      if (glov_input.keyDownHit(key_codes.HOME)) {
+      if (glov_input.keyDownEdge(KEYS.HOME)) {
         eff_sel = 0;
         this.mouse_mode = false;
         pos_changed = true;
       }
-      if (glov_input.keyDownHit(key_codes.END)) {
+      if (glov_input.keyDownEdge(KEYS.END)) {
         eff_sel = num_non_disabled_selections - 1;
         this.mouse_mode = false;
         pos_changed = true;
@@ -569,8 +569,7 @@ class GlovSelectionBox {
 
 
 export function create(...args) {
-  if (!glov_input) {
-    glov_input = glov_engine.glov_input;
+  if (!font) {
     font = glov_ui.font;
   }
   return new GlovSelectionBox(...args);
