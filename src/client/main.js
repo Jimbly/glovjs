@@ -169,7 +169,7 @@ export function main(canvas) {
     if (!test.color_sprite) {
       test.color_sprite = v4clone(color_white);
       test.character = {
-        x: (Math.random() * (game_width - sprite_size) + (sprite_size * 0.5)),
+        x: (Math.random() * (game_width - sprite_size - 200) + (sprite_size * 0.5) + 200),
         y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
       };
     }
