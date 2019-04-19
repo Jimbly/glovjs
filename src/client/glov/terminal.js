@@ -2,6 +2,7 @@
 /*eslint no-bitwise:off */
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const glov_ui = require('./ui.js');
 
 const { abs, max, min } = Math;
 const { clamp, vec4 } = require('./vmath.js');
@@ -490,7 +491,6 @@ class GlovTerminal {
     }
     this.mod_countdown = max(0, this.mod_countdown - dt);
 
-    const { glov_ui } = glov_engine;
     const { w, h, buffer, char_width, char_height, palette } = this;
     const blink = glov_engine.getFrameTimestamp() % 1000 > 500;
     params = params || {};
