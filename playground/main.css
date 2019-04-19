@@ -1,0 +1,82 @@
+html, body {
+  background-color: black;
+  color: white;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow: hidden;
+}
+
+#content {
+  width: 100%;
+  height: 100%;
+}
+
+#loading {
+  background-color: black;
+}
+
+canvas {
+  display: block; /* remove scrollbars */
+  width: 100%; /* for mobile, deals with canvas resize for top bar */
+  height: 100%;
+  /*width: 100vw;
+  height: 100vh;*/
+}
+
+#debug {
+  left: 0;
+  top: 0;
+  position: fixed;
+  white-space: pre-wrap;
+}
+
+.screenwrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hflex {
+  display: flex;
+  flex-direction: row;
+}
+
+.vflex {
+  display: flex;
+  flex-direction: column;
+}
+
+.fluid {
+  flex: 1;
+}
+
+.flexcenter {
+  align-self: center;
+}
+
+#dynamic_text {
+  left: 0;
+  top: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%
+}
+
+.glovui_dynamic {
+  font-size: 1em;
+  position: absolute;
+  text-align: center;
+  background-color: red;
+  opacity: 1.0;
+  pointer-events: auto;
+}
+.glovui_dynamic input {
+  font-size: 1em;
+  width: 100%;
+}
