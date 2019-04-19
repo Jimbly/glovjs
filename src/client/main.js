@@ -108,7 +108,7 @@ export function main(canvas) {
     canvas,
     game_width,
     game_height,
-    pixely: flagGet('pixely', 'strict'),
+    pixely: flagGet('pixely', 'on'),
     viewport_postprocess: true,
   });
 
