@@ -102,15 +102,15 @@ function perfTestSprites() {
   }
 }
 
-export function main(canvas) {
-
-  glov_engine.startup({
-    canvas,
+export function main() {
+  if (!glov_engine.startup({
     game_width,
     game_height,
     pixely: flagGet('pixely', 'on'),
-    viewport_postprocess: true,
-  });
+    viewport_postprocess: false,
+  })) {
+    return;
+  }
 
   const sound_manager = glov_engine.sound_manager;
   // const font = glov_engine.font;
