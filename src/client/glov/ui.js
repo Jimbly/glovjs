@@ -1,6 +1,6 @@
 /* eslint-env jquery */
 /* eslint no-underscore-dangle:off */
-/*global Z: false */
+/* global Z:false */
 
 window.Z = window.Z || {};
 Z.BORDERS = Z.BORDERS || 90;
@@ -23,14 +23,15 @@ const effects = require('./effects.js');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
-const { max, min, round } = Math;
+const { abs, max, min, round, sqrt } = Math;
 const glov_sprites = require('./sprites.js');
-const { clone, lerp, merge } = require('../../common/util.js');
+const textures = require('./textures.js');
+const { clone, merge } = require('../../common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
-const { vec2, vec4, v4scale } = require('./vmath.js');
+const { clamp, lerp, vec2, vec4, v4scale } = require('./vmath.js');
 
 const MODAL_DARKEN = 0.75;
-const { KEYS } = glov_input;
+let KEYS;
 let pad_codes;
 
 const menu_fade_params_default = {
@@ -42,7 +43,7 @@ const menu_fade_params_default = {
 };
 
 export function focuslog(...args) {
-  // console.log(`focuslog(${glov_engine.getFrameIndex()}): `, ...args);
+  // console.log(`focuslog(${glov_engine.global_frame_index}): `, ...args);
 }
 
 export function makeColorSet(color) {
@@ -182,6 +183,7 @@ let focused_key_prev2;
 export function startup(_font, ui_sprites) {
   ui_sprites = ui_sprites || {};
   font = _font;
+  KEYS = glov_input.KEYS;
   pad_codes = glov_input.pad_codes;
 
   function loadUISprite(name, ws, hs, only_override) {
@@ -213,16 +215,6 @@ export function startup(_font, ui_sprites) {
   loadUISprite('menu_header', [4, 5, 12], [13]);
 
   sprites.white = glov_sprites.create({ url: 'white' });
-  ['circle', 'cone', 'hollow_circle', 'line'].forEach((key) => {
-    let size = key === 'hollow_circle' ? 128 : 32;
-    sprites[key] = glov_sprites.create({
-      name: `glov/util_${key}`,
-      size: vec2(size, size),
-      origin: vec2(0.5, 0.5),
-      wrap_s: gl.CLAMP_TO_EDGE,
-      wrap_t: gl.CLAMP_TO_EDGE,
-    });
-  });
 
   button_keys = {
     ok: { key: [], pad: [pad_codes.X] },
@@ -316,7 +308,7 @@ export function playUISound(name) {
   if (name === 'select') {
     name = 'button_click';
   }
-  if (sounds[name]) {
+  if (sounds[name] && sound_manager) {
     sound_manager.play(sounds[name]);
   }
 }
@@ -419,7 +411,7 @@ export function panel(param) {
   let color = param.color || color_panel;
   drawBox(param, sprites.panel, panel_pixel_scale, color);
   glov_input.click(param);
-  glov_input.isMouseOver(param);
+  glov_input.mouseOver(param);
 }
 
 export function drawTooltip(param) {
@@ -458,6 +450,7 @@ export function buttonShared(param) {
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
   button_mouseover = false;
   if (param.disabled) {
+    glov_input.mouseOver(param); // Still eat mouse events
     state = 'disabled';
   } else if (glov_input.click(param)) {
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
@@ -473,14 +466,14 @@ export function buttonShared(param) {
       focusSteal(key);
       focused = true;
     }
-  } else if (glov_input.isMouseOver(param)) {
+  } else if (glov_input.mouseOver(param)) {
     if (param.no_touch_mouseover && glov_input.mousePosIsTouch()) {
       // do not set mouseover
     } else if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
       // do not set mouseover
     } else {
       setMouseOver(key);
-      state = glov_input.isMouseDown() ? 'down' : 'rollover';
+      state = glov_input.mouseDown() ? 'down' : 'rollover';
     }
   }
   button_focused = focused;
@@ -506,18 +499,7 @@ export function buttonShared(param) {
   return { ret, state, focused };
 }
 
-export function buttonText(param) {
-  // required params
-  assert(typeof param.x === 'number');
-  assert(typeof param.y === 'number');
-  assert(typeof param.text === 'string');
-  // optional params
-  param.z = param.z || Z.UI;
-  param.w = param.w || button_width;
-  param.h = param.h || button_height;
-  param.font_height = param.font_height || font_height;
-
-  let { ret, state, focused } = buttonShared(param);
+export function buttonTextDraw(param, state, focused) {
   let colors = param.colors || color_button;
   let color = colors[state];
   let sprite_name = `button_${state}`;
@@ -534,6 +516,21 @@ export function buttonText(param) {
     param.x, param.y, param.z + 0.1,
     // eslint-disable-next-line no-bitwise
     param.font_height, glov_font.ALIGN.HCENTERFIT | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
+}
+
+export function buttonText(param) {
+  // required params
+  assert(typeof param.x === 'number');
+  assert(typeof param.y === 'number');
+  assert(typeof param.text === 'string');
+  // optional params
+  param.z = param.z || Z.UI;
+  param.w = param.w || button_width;
+  param.h = param.h || button_height;
+  param.font_height = param.font_height || font_height;
+
+  let { ret, state, focused } = buttonShared(param);
+  buttonTextDraw(param, state, focused);
   return ret;
 }
 
@@ -541,45 +538,41 @@ export function buttonImage(param) {
   // required params
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
-  assert(param.img && param.img.getWidth); // should be a sprite
+  assert(param.img && param.img.draw); // should be a sprite
   // optional params
   param.z = param.z || Z.UI;
   param.w = param.w || button_img_size;
   param.h = param.h || param.w || button_img_size;
+  param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
+  let uvs = param.img_rect || (typeof param.frame === 'number' ? param.img.uidata.rects[param.frame] : null);
 
   let { ret, state } = buttonShared(param);
   let colors = param.colors || color_button;
   let color = colors[state];
 
   drawHBox(param, sprites.button, color);
-  let img_w = param.img.getWidth();
-  let img_h = param.img.getHeight();
-  let img_origin = param.img.getOrigin();
-  let img_scale = 1;
-  img_scale = min(img_scale, (param.w * 0.75) / img_w);
-  img_scale = min(img_scale, (param.h * 0.75) / img_h);
+  let img_w = param.img.size[0];
+  let img_h = param.img.size[1];
+  let img_origin = param.img.origin;
+  let img_scale = min(param.w * param.shrink / img_w, param.h * param.shrink / img_h);
   img_w *= img_scale;
   img_h *= img_scale;
+  let draw_param = {
+    x: param.x + (param.w - img_w) / 2 + img_origin[0] * img_w,
+    y: param.y + (param.h - img_h) / 2 + img_origin[1] * img_h,
+    z: param.z + 0.1,
+    color,
+    color1: param.color1,
+    w: img_scale,
+    h: img_scale,
+    uvs,
+    rot: param.rotation,
+  };
   if (param.color1) {
-    glov_sprites.queueDualTint(param.img,
-      param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
-      param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
-      param.z + 0.1,
-      color, param.color1,
-      [img_scale, img_scale, 1, 1], param.img_rect,
-      param.rotation, param.bucket);
+    param.img.drawDualTint(draw_param);
   } else {
-    param.img.draw({
-      x: param.x + (param.w - img_w) / 2 + img_origin[0] * img_scale,
-      y: param.y + (param.h - img_h) / 2 + img_origin[1] * img_scale,
-      z: param.z + 0.1,
-      color,
-      w: img_scale,
-      h: img_scale,
-      uvs: param.img_rect,
-      rot: param.rotation,
-    });
+    param.img.draw(draw_param);
   }
   return ret;
 }
@@ -669,7 +662,6 @@ function modalDialogRun() {
   modal_stealing_focus = true;
 }
 
-// eslint-disable-next-line class-methods-use-this
 export function createEditBox(params) {
   return glov_edit_box.create(params);
 }
@@ -730,7 +722,7 @@ export function tick(dt) {
   }
   menu_up = false;
 
-  if (!glov_engine.is_loading && glov_engine.getFrameDtActual() > 250 && pp_this_frame) {
+  if (!glov_engine.is_loading && glov_engine.this_frame_time > 250 && pp_this_frame) {
     bad_frames++;
     if (bad_frames >= 3) { // 3 in a row, disable superfluous postprocessing
       glov_engine.postprocessingAllow(false);
@@ -806,14 +798,89 @@ function drawCircleInternal(sprite, x, y, z, r, spread, tu1, tv1, tu2, tv2, colo
 }
 
 export function drawCircle(x, y, z, r, spread, color) {
+  if (!sprites.circle) {
+    const CIRCLE_SIZE = 32;
+    let data = new Uint8Array(CIRCLE_SIZE*CIRCLE_SIZE);
+    let midp = (CIRCLE_SIZE - 1) / 2;
+    for (let i = 0; i < CIRCLE_SIZE; i++) {
+      for (let j = 0; j < CIRCLE_SIZE; j++) {
+        let d = sqrt((i - midp)*(i - midp) + (j - midp)*(j - midp)) / midp;
+        let v = clamp(1 - d, 0, 1);
+        data[i + j*CIRCLE_SIZE] = v * 255;
+      }
+    }
+    sprites.circle = glov_sprites.create({
+      url: 'circle',
+      width: CIRCLE_SIZE, height: CIRCLE_SIZE,
+      format: textures.format.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_max: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      origin: vec2(0.5, 0.5),
+    });
+  }
   drawCircleInternal(sprites.circle, x, y, z, r, spread, 0, 0, 1, 1, color);
 }
 
 export function drawHollowCircle(x, y, z, r, spread, color) {
+  if (!sprites.hollow_circle) {
+    const CIRCLE_SIZE = 128;
+    const LINE_W = 2;
+    let data = new Uint8Array(CIRCLE_SIZE*CIRCLE_SIZE);
+    let midp = (CIRCLE_SIZE - 1) / 2;
+    for (let i = 0; i < CIRCLE_SIZE; i++) {
+      for (let j = 0; j < CIRCLE_SIZE; j++) {
+        let d = sqrt((i - midp)*(i - midp) + (j - midp)*(j - midp)) / midp;
+        let v = clamp(1 - d, 0, 1);
+        if (v > 0.5) {
+          v = 1 - v;
+        }
+        v += (LINE_W / CIRCLE_SIZE);
+        data[i + j*CIRCLE_SIZE] = v * 255;
+      }
+    }
+    sprites.hollow_circle = glov_sprites.create({
+      url: 'hollow_circle',
+      width: CIRCLE_SIZE, height: CIRCLE_SIZE,
+      format: textures.format.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_max: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      origin: vec2(0.5, 0.5),
+    });
+  }
   drawCircleInternal(sprites.hollow_circle, x, y, z, r, spread, 0, 0, 1, 1, color);
 }
 
 export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
+  if (!sprites.line) {
+    const LINE_SIZE=32;
+    let data = new Uint8Array(LINE_SIZE*LINE_SIZE);
+    let midp = (LINE_SIZE - 1) / 2;
+    for (let i = 0; i < LINE_SIZE; i++) {
+      for (let j = 0; j < LINE_SIZE; j++) {
+        let d = abs((i - midp) / midp);
+        let v = clamp(1 - d, 0, 1);
+        data[i + j*LINE_SIZE] = v * 255;
+      }
+    }
+    sprites.line = glov_sprites.create({
+      url: 'line',
+      width: LINE_SIZE, height: LINE_SIZE,
+      format: textures.format.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_max: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      origin: vec2(0.5, 0.5),
+    });
+  }
+
   let dx = x1 - x0;
   let dy = y1 - y0;
   let length = Math.sqrt(dx*dx + dy*dy);
@@ -833,6 +900,37 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
 }
 
 export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
+  if (!sprites.cone) {
+    const CONE_SIZE = 32;
+    let data = new Uint8Array(CONE_SIZE*CONE_SIZE);
+    let midp = (CONE_SIZE - 1) / 2;
+    for (let i = 0; i < CONE_SIZE; i++) {
+      for (let j = 0; j < CONE_SIZE; j++) {
+        let dx = 0;
+        let dy = 0;
+        let d = 0;
+        if (i > midp) {
+          dx = (i - midp) / midp;
+          dy = abs(j - midp) / midp;
+          let dCircle = sqrt(dx*dx + dy*dy);
+          d = dx * dCircle;
+        }
+        let v = clamp(1 - d, 0, 1);
+        data[i + j*CONE_SIZE] = v * 255;
+      }
+    }
+    sprites.cone = glov_sprites.create({
+      url: 'cone',
+      width: CONE_SIZE, height: CONE_SIZE,
+      format: textures.format.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_max: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      origin: vec2(0.5, 0.5),
+    });
+  }
   let dx = x1 - x0;
   let dy = y1 - y0;
   let length = Math.sqrt(dx*dx + dy*dy);

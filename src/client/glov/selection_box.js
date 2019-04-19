@@ -340,7 +340,7 @@ class GlovSelectionBox {
         this.dropdown_visible = !this.dropdown_visible;
         color0 = color_grayD0;
         // color1 = color_gray80;
-      } else if (!this.disabled && glov_input.isMouseOver({
+      } else if (!this.disabled && glov_input.mouseOver({
         x, y, w: width, h: entry_height
       })) {
         glov_ui.setMouseOver(this);
@@ -416,7 +416,7 @@ class GlovSelectionBox {
           this.selected = i;
         }
         let is_mouseover = false;
-        if (!this.disabled && !entry_disabled && glov_input.isMouseOver({
+        if (!this.disabled && !entry_disabled && glov_input.mouseOver({
           x, y, w: width, h: entry_height
         })) {
           let mpos = glov_input.mousePos();
@@ -444,7 +444,7 @@ class GlovSelectionBox {
         if (this.selected === i && show_selection) {
           style = display.style_selected || selbox_font_style_selected;
           image_set = glov_ui.sprites.menu_selected;
-          if (is_mouseover && glov_input.isMouseDown()) {
+          if (is_mouseover && glov_input.mouseDown()) {
             if (glov_ui.sprites.menu_down) {
               image_set = glov_ui.sprites.menu_down;
             } else {

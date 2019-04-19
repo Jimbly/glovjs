@@ -13,6 +13,7 @@ let default_filter_min;
 let default_filter_mag;
 
 export const format = {
+  R8: { count: 1 },
   RGB8: { count: 3 },
   RGBA8: { count: 4 },
 };
@@ -99,13 +100,14 @@ Texture.prototype.setSamplerState = function (params) {
   bound_tex[0] = null; // Force a re-bind, no matter what
   bindHandle(0, target, this.handle);
 
-  let filter_min = params.filter_min || default_filter_min;
-  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, filter_min);
-  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, params.filter_mag || default_filter_mag);
+  this.filter_min = params.filter_min || default_filter_min;
+  this.filter_mag = params.filter_mag || default_filter_mag;
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, this.filter_min);
+  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, this.filter_mag);
   gl.texParameteri(target, gl.TEXTURE_WRAP_S, params.wrap_s || gl.REPEAT);
   gl.texParameteri(target, gl.TEXTURE_WRAP_T, params.wrap_t || gl.REPEAT);
 
-  this.mipmaps = filter_min >= 0x2700 && filter_min <= 0x2703; // Probably gl.LINEAR_MIPMAP_LINEAR
+  this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703; // Probably gl.LINEAR_MIPMAP_LINEAR
 
   if (max_aniso) {
     if (this.mipmaps && params.filter_mag !== gl.NEAREST) {
@@ -254,11 +256,35 @@ export function load(params) {
   return texture;
 }
 
+function cname(key) {
+  let idx = key.lastIndexOf('/');
+  if (idx !== -1) {
+    key = key.slice(idx+1);
+  }
+  idx = key.lastIndexOf('.');
+  if (idx !== -1) {
+    key = key.slice(0, idx);
+  }
+  return key.toLowerCase();
+}
+export function findTexForReplacement(search_key) {
+  search_key = cname(search_key);
+  for (let key in textures) {
+    let compare_key = cname(key);
+    if (compare_key === search_key) {
+      return textures[key];
+    }
+  }
+  return null;
+}
+
 export function startup() {
 
   default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
   default_filter_mag = gl.LINEAR;
 
+  format.R8.internal_type = gl.LUMINANCE;
+  format.R8.gl_type = gl.UNSIGNED_BYTE;
   format.RGB8.internal_type = gl.RGB;
   format.RGB8.gl_type = gl.UNSIGNED_BYTE;
   format.RGBA8.internal_type = gl.RGBA;

@@ -48,7 +48,8 @@ export function set(x0, y0, x1, y1) {
 
 // Drawing area 0,0-w,h
 // But keep the aspect ratio of those things drawn to be correct
-// This may create a padding or margin on either bottom or sides of the screen
+// This may create a padding or margin on either top and bottom or sides of the screen
+// User users constant values in this range for consistent UI on all devices
 export function setAspectFixed(w, h) {
   let pa = engine.render_width ? 1 : engine.pixel_aspect;
   let inv_aspect = h / pa / w;
@@ -64,6 +65,30 @@ export function setAspectFixed(w, h) {
   } else {
     let margin = (w * pa * inv_desired_aspect - h) / 2;
     set(0, -margin, w, h + margin);
+  }
+}
+
+// Primary drawing area at least W x H
+// But keep the aspect ratio of those things drawn to be correct
+// Similar to setAspectFixed() but keeps (0,0) in the upper left (all padding
+//   is added to right and bottom)
+// Requires users to use camera2d.w()/ and camera2d.h() to determine reasonable
+//   UI positioning
+export function setAspectFixed2(w, h) {
+  let pa = engine.render_width ? 1 : engine.pixel_aspect;
+  let inv_aspect = h / pa / w;
+  let inv_desired_aspect;
+  if (render_width) {
+    inv_desired_aspect = render_height / render_width;
+  } else {
+    inv_desired_aspect = screen_height / screen_width;
+  }
+  if (inv_aspect > inv_desired_aspect) {
+    let margin = (h / pa / inv_desired_aspect - w);
+    set(0, 0, w + margin, h);
+  } else {
+    let margin = (w * pa * inv_desired_aspect - h);
+    set(0, 0, w, h + margin);
   }
 }
 
@@ -136,6 +161,16 @@ export function physicalToVirtual(dst, src) {
   } else {
     dst[0] = src[0] * data[6] / data[4] + data[0];
     dst[1] = src[1] * data[6] / data[5] + data[1];
+  }
+}
+
+export function physicalDeltaToVirtual(dst, src) {
+  if (render_width) {
+    dst[0] = src[0] * data[6] * data[7];
+    dst[1] = src[1] * data[6] * data[8];
+  } else {
+    dst[0] = src[0] * data[6] / data[4];
+    dst[1] = src[1] * data[6] / data[5];
   }
 }
 

@@ -133,7 +133,7 @@ class Platformer {
         let s = arr[ii];
         v4mulAdd(p, s, scale, pos);
         glov_ui.drawRect(p[0], p[1], p[2], p[3], Z.DEBUG, idx ? [0,1,1,0.5] : [1,0,1,0.5]);
-        if (glov_input.isMouseOver({
+        if (glov_input.mouseOver({
           x: p[0], y: p[1], w: p[2] - p[0], h: p[3] - p[1],
         })) {
           glov_ui.font.drawSizedAligned(null, p[0], p[1], Z.UI,

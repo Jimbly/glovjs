@@ -1,3 +1,5 @@
+#pragma WebGL
+
 precision highp float;
 
 varying vec2 interp_texcoord;

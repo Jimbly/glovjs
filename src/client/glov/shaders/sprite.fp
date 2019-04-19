@@ -1,3 +1,5 @@
+#pragma WebGL
+
 precision lowp float;
 
 uniform sampler2D tex0;

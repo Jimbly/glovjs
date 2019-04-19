@@ -6,22 +6,21 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const local_storage = require('./local_storage.js');
 const glov_engine = require('./engine.js');
-const { min, sqrt } = Math;
-const { vec2, v2abs, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
+const { abs, min, sqrt } = Math;
+const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
 const UP_EDGE = 0;
 const DOWN_EDGE = 1;
 const DOWN = 2;
 
-const MAX_CLICK_DIST = 50;
-
 // per-app overrideable options
-const DO_LOCK = false;
 const TOUCH_AS_MOUSE = true;
 const MAP_ANALOG_TO_DPAD = true;
 
-export const ANY = -1;
+export const ANY = -2;
+export const POINTERLOCK = -1;
 
 export const KEYS = {
   BACKSPACE: 8,
@@ -85,24 +84,56 @@ let canvas;
 let key_state = {};
 let pad_states = []; // One map per gamepad to pad button states
 let gamepad_data = []; // Other tracking data per gamepad
-let clicks = [];
-let dragging = [];
 let mouse_pos = vec2();
+let last_mouse_pos = vec2();
 let mouse_pos_is_touch = false;
-let mpos = vec2(); // temporary, mapped to camera
 let mouse_over_captured = false;
 let mouse_down = [];
+let mouse_wheel = 0;
 
 let input_eaten_kb = false;
 let input_eaten_mouse = false;
 
-let touch_drag_delta = vec2();
-let touches = {};
+let touches = {}; // `m${button}` or touch_id -> TouchData
 
-export let touch_mode = false;
+export let touch_mode = local_storage.getJSON('touch_mode', false);
 
-function isPointerLocked() {
+function TouchData(pos, touch, button) {
+  this.delta = vec2();
+  this.total = 0;
+  this.cur_pos = pos.slice(0);
+  this.start_pos = pos.slice(0);
+  this.release = false;
+  this.touch = touch;
+  this.button = button;
+  this.start_time = Date.now();
+  this.dispatched = false;
+  this.state = DOWN_EDGE;
+}
+
+export function pointerLocked() {
   return document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+}
+let pointerlock_touch_id = `m${POINTERLOCK}`;
+export function pointerLockEnter() {
+  let touch_data = touches[pointerlock_touch_id];
+  if (touch_data) {
+    v2copy(touch_data.start_pos, mouse_pos);
+    touch_data.release = false;
+  } else {
+    touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK);
+    touch_data.state = DOWN; // No DOWN_EDGE for this
+  }
+  return canvas.requestPointerLock && canvas.requestPointerLock();
+}
+export function pointerLockExit() {
+  let touch_data = touches[pointerlock_touch_id];
+  if (touch_data) {
+    v2copy(touch_data.cur_pos, mouse_pos);
+    touch_data.state = null; // no UP_EDGE for this
+    touch_data.release = true;
+  }
+  document.exitPointerLock();
 }
 
 function ignored(event) {
@@ -117,11 +148,10 @@ function onKeyUp(event) {
     event.preventDefault();
   }
 
-  if (DO_LOCK && code === KEYS.ESC && isPointerLocked()) {
-    document.exitPointerLock();
+  if (code === KEYS.ESC && pointerLocked()) {
+    pointerLockExit();
   }
   key_state[code] = UP_EDGE;
-
 }
 
 function onKeyDown(event) {
@@ -135,8 +165,12 @@ function onKeyDown(event) {
 }
 
 let temp_delta = vec2();
-function onMouseMove(event) {
-  if (event.target.tagName !== 'INPUT') {
+function onMouseMove(event, no_stop) {
+  if (touch_mode) {
+    local_storage.setJSON('touch_mode', false);
+    touch_mode = false;
+  }
+  if (event.target.tagName !== 'INPUT' && !no_stop) {
     event.preventDefault();
     event.stopPropagation();
   }
@@ -147,63 +181,47 @@ function onMouseMove(event) {
     mouse_pos[0] = event.layerX;
     mouse_pos[1] = event.layerY;
   }
+  mouse_pos_is_touch = false;
 
-  if (isPointerLocked()) {
+  let any_movement = false;
+  if (pointerLocked()) {
     if (event.movementX || event.movementY) {
-      for (let bid in dragging) {
-        let button = Number(bid);
-        if (mouse_down[button]) {
-          let drag_data = dragging[bid];
-          v2set(temp_delta, event.movementX, event.movementY);
-          v2add(drag_data.delta, drag_data.delta, temp_delta);
-          v2abs(temp_delta, temp_delta);
-          v2add(drag_data.total, drag_data.total, temp_delta);
+      v2set(temp_delta, event.movementX, event.movementY);
+      any_movement = true;
+    }
+  } else {
+    v2sub(temp_delta, mouse_pos, last_mouse_pos);
+    if (temp_delta[0] || temp_delta[1]) {
+      any_movement = true;
+    }
+  }
+  if (any_movement) {
+    for (let button = POINTERLOCK; button < mouse_down.length; ++button) {
+      if (mouse_down[button] || button === POINTERLOCK && pointerLocked()) {
+        let touch_data = touches[`m${button}`];
+        if (touch_data) {
+          v2add(touch_data.delta, touch_data.delta, temp_delta);
+          touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
+          v2copy(touch_data.cur_pos, mouse_pos);
         }
       }
     }
-  } else {
-    for (let bid in dragging) {
-      let button = Number(bid);
-      if (mouse_down[button]) {
-        let drag_data = dragging[bid];
-        v2sub(temp_delta, mouse_pos, drag_data.start_pos);
-        v2add(drag_data.delta, drag_data.delta, temp_delta);
-        v2abs(temp_delta, temp_delta);
-        v2add(drag_data.total, drag_data.total, temp_delta);
-        v2copy(drag_data.start_pos, mouse_pos);
-      }
-    }
   }
-  mouse_pos_is_touch = false;
-}
-
-function anyMouseButtonsDown() {
-  for (let ii = 0; ii < mouse_down.length; ++ii) {
-    if (mouse_down[ii]) {
-      return true;
-    }
-  }
-  return false;
+  v2copy(last_mouse_pos, mouse_pos);
 }
 
 function onMouseDown(event) {
   onMouseMove(event); // update mouse_pos
   glov_engine.sound_manager.resume();
 
-  if (DO_LOCK && canvas.requestPointerLock && !anyMouseButtonsDown()) {
-    canvas.requestPointerLock();
-  }
-
   let button = event.button;
   mouse_down[button] = mouse_pos.slice(0);
-  if (dragging[button]) {
-    v2copy(dragging[button].start_pos, mouse_pos);
+  let touch_id = `m${button}`;
+  if (touches[touch_id]) {
+    v2copy(touches[touch_id].start_pos, mouse_pos);
+    touches[touch_id].release = false;
   } else {
-    dragging[button] = {
-      delta: vec2(),
-      total: vec2(),
-      start_pos: mouse_pos.slice(0),
-    };
+    touches[touch_id] = new TouchData(mouse_pos, false, button);
   }
 }
 
@@ -212,60 +230,61 @@ function onMouseUp(event) {
   let no_click = event.target.tagName === 'INPUT';
   let button = event.button;
   if (mouse_down[button]) {
-    let drag_data = dragging[button];
-    if (drag_data) {
-      v2sub(temp_delta, mouse_pos, drag_data.start_pos);
-      v2add(drag_data.delta, drag_data.delta, temp_delta);
-      v2abs(temp_delta, temp_delta);
-      v2add(drag_data.total, drag_data.total, temp_delta);
-      let dist = drag_data.total[0] + drag_data.total[1];
-      if (!no_click && dist < MAX_CLICK_DIST) {
-        clicks.push({ button, pos: mouse_pos.slice(0), touch: false });
+    let touch_id = `m${button}`;
+    let touch_data = touches[touch_id];
+    if (touch_data) {
+      v2copy(touch_data.cur_pos, mouse_pos);
+      if (!no_click) {
+        touch_data.state = UP_EDGE;
       }
+      touch_data.release = true;
     }
     delete mouse_down[button];
-  }
-  if (DO_LOCK && isPointerLocked() && !anyMouseButtonsDown()) {
-    document.exitPointerLock();
   }
 }
 
 function onWheel(event) {
-  onMouseMove(event);
+  onMouseMove(event, true);
+  if (event.wheelDelta > 0) {
+    mouse_wheel++;
+  } else if (event.wheelDelta < 0) {
+    mouse_wheel--;
+  }
 }
 
+let touch_pos = vec2();
 function onTouchChange(event) {
-  touch_mode = true;
+  glov_engine.sound_manager.resume();
+  if (!touch_mode) {
+    local_storage.set('touch_mode', true);
+    touch_mode = true;
+  }
   if (event.cancelable !== false) {
     event.preventDefault();
   }
   let ct = event.touches;
   let seen = {};
 
-  let old_count = Object.keys(touches).length;
   let new_count = ct.length;
+  let old_count = new_count;
   // Look for press and movement
   for (let ii = 0; ii < new_count; ++ii) {
     let touch = ct[ii];
     let last_touch = touches[touch.identifier];
+    v2set(touch_pos, touch.clientX, touch.clientY);
     if (!last_touch) {
-      last_touch = touches[touch.identifier] = {
-        pos: vec2(),
-        total_drag: vec2(),
-      };
+      last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0);
+      --old_count;
     } else {
-      v2set(temp_delta, touch.clientX, touch.clientY);
-      v2sub(temp_delta, temp_delta, last_touch.pos);
-      // touch drags inverted relative to mouse drags
-      v2sub(touch_drag_delta, touch_drag_delta, temp_delta);
-      v2abs(temp_delta, temp_delta);
-      v2add(last_touch.total_drag, last_touch.total_drag, temp_delta);
+      v2sub(temp_delta, touch_pos, last_touch.cur_pos);
+      v2add(last_touch.delta, last_touch.delta, temp_delta);
+      last_touch.total += abs(temp_delta[0]) + abs(temp_delta[1]);
+      v2copy(last_touch.cur_pos, touch_pos);
     }
-    v2set(last_touch.pos, touch.clientX, touch.clientY);
     seen[touch.identifier] = true;
     if (TOUCH_AS_MOUSE && new_count === 1) {
       // Single touch, treat as mouse movement
-      v2set(mouse_pos, touch.clientX, touch.clientY);
+      v2copy(mouse_pos, touch_pos);
       mouse_pos_is_touch = true;
     }
   }
@@ -273,20 +292,20 @@ function onTouchChange(event) {
   let released_touch;
   for (let id in touches) {
     if (!seen[id]) {
-      released_touch = touches[id];
-      delete touches[id];
+      let touch = touches[id];
+      if (touch.touch) {
+        ++old_count;
+        released_touch = touch;
+        touch.state = UP_EDGE;
+        touch.release = true;
+      }
     }
   }
   if (TOUCH_AS_MOUSE) {
     if (old_count === 1 && new_count === 0) {
-      assert(released_touch);
       delete mouse_down[0];
-      v2copy(mouse_pos, released_touch.pos);
+      v2copy(mouse_pos, released_touch.cur_pos);
       mouse_pos_is_touch = true;
-      let dist = released_touch.total_drag[0] + released_touch.total_drag[1];
-      if (dist < MAX_CLICK_DIST) {
-        clicks.push({ button: 0, pos: released_touch.pos, touch: true });
-      }
     } else if (new_count === 1) {
       let touch = ct[0];
       if (!old_count) {
@@ -437,45 +456,51 @@ function gamepadUpdate() {
 
 export function tick() {
   // browser frame has occurred since the call to endFrame(),
-  // we should now have `clicks` and `key_state` populated with edge events
+  // we should now have `touches` and `key_state` populated with edge events
   mouse_over_captured = false;
   gamepadUpdate();
+  if (touches[pointerlock_touch_id] && !pointerLocked()) {
+    pointerLockExit();
+  }
 }
 
+function endFrameTickMap(map) {
+  Object.keys(map).forEach((keycode) => {
+    switch (map[keycode]) {
+      case DOWN_EDGE:
+        map[keycode] = DOWN;
+        break;
+      case UP_EDGE:
+        delete map[keycode];
+        break;
+      default:
+    }
+  });
+}
 export function endFrame() {
-  function tickMap(map) {
-    Object.keys(map).forEach((keycode) => {
-      switch (map[keycode]) {
-        case DOWN_EDGE:
-          map[keycode] = DOWN;
-          break;
-        case UP_EDGE:
-          delete map[keycode];
-          break;
-        default:
-      }
-    });
-  }
-  tickMap(key_state);
-  pad_states.forEach(tickMap);
-  clicks = [];
-  for (let bid in dragging) {
-    let button = Number(bid);
-    if (mouse_down[button]) {
-      let drag_data = dragging[button];
-      drag_data.start_pos = mouse_pos.slice(0);
-      drag_data.delta[0] = drag_data.delta[1] = 0;
+  endFrameTickMap(key_state);
+  pad_states.forEach(endFrameTickMap);
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.release) {
+      delete touches[touch_id];
     } else {
-      delete dragging[bid];
+      touch_data.delta[0] = touch_data.delta[1] = 0;
+      touch_data.dispatched = false;
+      if (touch_data.state === DOWN_EDGE) {
+        touch_data.state = DOWN;
+      } else {
+        assert(touch_data.state !== UP_EDGE); // should also have set .release!
+      }
     }
   }
-  touch_drag_delta[0] = touch_drag_delta[1] = 0;
+  mouse_wheel = 0;
   input_eaten_kb = false;
   input_eaten_mouse = false;
 }
 
 export function eatAllInput() {
-  // destroy clicks, remove all down and up edges
+  // destroy touches, remove all down and up edges
   endFrame();
   mouse_over_captured = true;
   input_eaten_kb = true;
@@ -483,11 +508,11 @@ export function eatAllInput() {
 }
 
 export function eatAllKeyboardInput() {
-  let clicks_save = clicks;
+  let touches_save = touches;
   let over_save = mouse_over_captured;
   let eaten_mouse_save = input_eaten_mouse;
   eatAllInput();
-  clicks = clicks_save;
+  touches = touches_save;
   mouse_over_captured = over_save;
   input_eaten_mouse = eaten_mouse_save;
 }
@@ -499,27 +524,59 @@ export function mousePos(dst) {
   return dst;
 }
 
-export function isMouseOver(param) {
-  assert(typeof param.x === 'number');
-  assert(typeof param.y === 'number');
-  assert(typeof param.w === 'number');
-  assert(typeof param.h === 'number');
+export function mouseWheel() {
+  let ret = mouse_wheel;
+  mouse_wheel = 0;
+  return ret;
+}
+
+function mousePosParam(param) {
+  param = param || {};
+  return {
+    x: param.x === undefined ? camera2d.x0() : param.x,
+    y: param.y === undefined ? camera2d.y0() : param.y,
+    w: param.w === undefined ? camera2d.w() : param.w,
+    h: param.h === undefined ? camera2d.h() : param.h,
+    button: param.button === undefined ? ANY : param.button,
+  };
+}
+
+let check_pos = vec2();
+function checkPos(pos, param) {
+  camera2d.physicalToVirtual(check_pos, pos);
+  return check_pos[0] >= param.x && (param.w === Infinity || check_pos[0] < param.x + param.w) &&
+    check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
+}
+
+export function mouseOver(param) {
   if (mouse_over_captured) {
     return false;
   }
-  mousePos(mpos);
-  if (mpos[0] >= param.x &&
-    (param.w === Infinity || mpos[0] < param.x + param.w) &&
-    mpos[1] >= param.y &&
-    (param.h === Infinity || mpos[1] < param.y + param.h)
-  ) {
+  let pos_param = mousePosParam(param);
+
+  // eat mouse up/down events
+  for (let id in touches) {
+    let touch = touches[id];
+    if (checkPos(touch.cur_pos, pos_param)) {
+      if (touch.state === DOWN_EDGE) {
+        touch.state = DOWN;
+      } else if (touch.state === UP_EDGE) {
+        touch.state = null;
+      }
+    }
+  }
+
+  if (checkPos(mouse_pos, pos_param)) {
     mouse_over_captured = true;
     return true;
   }
   return false;
 }
 
-export function isMouseDown(button) {
+export function mouseDown(button) {
+  if (button === ANY) {
+    return mouseDown(0) || mouseDown(2);
+  }
   button = button || 0;
   return !input_eaten_mouse && mouse_down[button];
 }
@@ -528,48 +585,15 @@ export function mousePosIsTouch() {
   return mouse_pos_is_touch;
 }
 
-export function click(param) {
-  let x = param.x === undefined ? camera2d.x0() : param.x;
-  let y = param.y === undefined ? camera2d.y0() : param.y;
-  let w = param.w === undefined ? camera2d.w() : param.w;
-  let h = param.h === undefined ? camera2d.h() : param.h;
-  let button = param.button || 0;
-  mousePos(mpos);
-  for (let ii = 0; ii < clicks.length; ++ii) {
-    let clk = clicks[ii];
-    if (clk.button !== button) {
-      continue;
-    }
-    camera2d.physicalToVirtual(mpos, clk.pos);
-    if (mpos[0] >= x && (w === Infinity || mpos[0] < x + w) &&
-      mpos[1] >= y && (h === Infinity || mpos[1] < y + h)
-    ) {
-      clicks.splice(ii, 1);
-      return mpos.slice(0);
-    }
-  }
-  return false;
-}
-
 export function isTouchDown(param) {
-  if (param) {
-    assert(typeof param.x === 'number');
-    assert(typeof param.y === 'number');
-    assert(typeof param.w === 'number');
-    assert(typeof param.h === 'number');
-  }
   if (input_eaten_mouse) {
     return false;
   }
+  let pos_param = mousePosParam(param);
   for (let id in touches) {
     let touch = touches[id];
-    camera2d.physicalToVirtual(mpos, touch.pos);
-    let pos = mpos;
-    if (!param ||
-      pos[0] >= param.x && pos[0] < param.x + param.w &&
-      pos[1] >= param.y && pos[1] < param.y + param.h
-    ) {
-      return pos;
+    if (checkPos(touch.cur_pos, pos_param)) {
+      return check_pos.slice(0);
     }
   }
   return false;
@@ -679,27 +703,90 @@ export function padButtonUpEdge(padcode, padindex) {
   return padButtonShared(padButtonUpEdgeInternal, padcode, padindex);
 }
 
-export function drag(params) {
-  params = params || {};
-  let button = params.button || 0;
-  if (button === ANY) {
-    let lmb = drag({ button: 0 });
-    let rmb = drag({ button: 2 });
-    return [lmb[0] + rmb[0], lmb[1] + rmb[1]];
-  }
+let start_pos = vec2();
+let cur_pos = vec2();
+let delta = vec2();
 
-  let drag_data = dragging[button];
-  let ret = [0,0];
-  if (drag_data) {
-    if (mouse_down[button]) {
-      ret[0] += drag_data.delta[0] + mouse_pos[0] - drag_data.start_pos[0];
-      ret[1] += drag_data.delta[1] + mouse_pos[1] - drag_data.start_pos[1];
-    } else {
-      v2add(ret, ret, drag_data.delta);
+export function mouseUpEdge(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+  let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state !== UP_EDGE ||
+      !(button === ANY || button === touch_data.button) ||
+      touch_data.total > max_click_dist
+    ) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      touch_data.state = null;
+      return {
+        button: touch_data.button,
+        pos: check_pos.slice(0),
+        start_time: touch_data.start_time,
+      };
     }
   }
-  if (button === 0) {
-    v2add(ret, ret, touch_drag_delta);
+  return false;
+}
+exports.click = mouseUpEdge;
+
+export function mouseDownEdge(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state !== DOWN_EDGE ||
+      !(button === ANY || button === touch_data.button)
+    ) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      touch_data.state = DOWN;
+      return {
+        button: touch_data.button,
+        pos: check_pos.slice(0),
+        start_time: touch_data.start_time,
+      };
+    }
   }
-  return ret;
+  return false;
+}
+
+export function drag(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched) {
+      continue;
+    }
+    if (checkPos(touch_data.start_pos, pos_param)) {
+      if (!param.peek) {
+        touch_data.dispatched = true;
+      }
+      camera2d.physicalToVirtual(start_pos, touch_data.start_pos);
+      camera2d.physicalToVirtual(cur_pos, touch_data.cur_pos);
+      camera2d.physicalDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
+      let total = delta[0] + delta[1];
+      camera2d.physicalDeltaToVirtual(delta, touch_data.delta);
+      return {
+        cur_pos,
+        start_pos,
+        delta, // this frame's delta
+        total, // total (linear) distance dragged
+        button: touch_data.button,
+        touch: touch_data.touch,
+        start_time: touch_data.start_time,
+      };
+    }
+  }
+  return null;
 }

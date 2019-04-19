@@ -1,13 +1,14 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* global Z:false */
 /* eslint-env browser */
+/* global Z:false */
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const effects = require('./effects.js');
 const glov_font = require('./font.js');
+const font_info_palanquin32 = require('../img/font/palanquin32.json');
 const geom = require('./geom.js');
 const input = require('./input.js');
 const local_storage = require('./local_storage.js');
@@ -17,6 +18,7 @@ const mat4Invert = require('gl-mat4/invert');
 const mat4Mul = require('gl-mat4/multiply');
 const mat4Transpose = require('gl-mat4/transpose');
 const mat4Perspective = require('gl-mat4/perspective');
+const { asin, cos, min, max, PI, sin, sqrt } = Math;
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
@@ -41,7 +43,9 @@ export let render_height;
 
 export let defines = {};
 
-export let ZFAR = 10000;
+export const ZFAR = 10000;
+export const fov_y = 45 * PI / 180;
+export let fov_x = 1;
 
 export let mat_projection = mat4();
 export let mat_view = mat4();
@@ -221,7 +225,7 @@ function tick() {
   let now = Date.now();
   requestAnimationFrame(tick);
   this_frame_time_actual = now - last_tick;
-  let dt = Math.min(Math.max(this_frame_time_actual, 1), 250);
+  let dt = min(max(this_frame_time_actual, 1), 250);
   this_frame_time = dt;
   last_tick = now;
   global_timer += dt;
@@ -245,7 +249,9 @@ function tick() {
   width = canvas.width;
   height = canvas.height;
 
-  mat4Perspective(mat_projection, 45 * Math.PI / 180, width/height, 0.7, ZFAR);
+  let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
+  fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+  mat4Perspective(mat_projection, fov_y, width/height, 0.7, ZFAR);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
@@ -392,13 +398,14 @@ export function startup(params) {
   /* eslint-disable global-require */
   glov_particles = require('./particles.js').create();
 
-  if (params.pixely) {
+  if (params.pixely && params.pixely !== 'off') {
     textures.defaultFilters(gl.NEAREST, gl.NEAREST);
+  } else {
+    textures.defaultFilters(gl.LINEAR, gl.LINEAR);
   }
 
   sound_manager = require('./sound_manager.js').create();
 
-  const font_info_palanquin32 = require('../img/font/palanquin32.json');
   const font_info_04b03x2 = require('../img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('../img/font/04b03_8x1.json');
   if (params.font) {

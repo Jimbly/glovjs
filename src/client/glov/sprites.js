@@ -9,7 +9,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const fs = require('fs');
 const geom = require('./geom.js');
-const { cos, min, round, sin } = Math;
+const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
 const { vec2, vec4 } = require('./vmath.js');
@@ -191,10 +191,31 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   data[9] = color[1];
   data[10] = color[2];
   data[11] = color[3];
-  data[12] = uvs[0];
-  data[13] = uvs[1];
-  data[14] = uvs[2];
-  data[15] = uvs[3];
+
+  let bias = 0;
+  let tex = elem.texs[0];
+  if (true) {
+    // Bias the texture coordinates depending on the minification/magnification
+    //   level so we do not get pixels from neighboring frames bleeding in
+    let zoom_level = max(
+      (uvs[2] - uvs[0]) * tex.width / w,
+      (uvs[3] - uvs[1]) * tex.height / h,
+    );
+    if (zoom_level < 1) {
+      if (tex.filter_mag === gl.LINEAR) {
+        bias = 0.5;
+      }
+    } else if (zoom_level > 1) {
+      // need to apply this bias even with nearest filtering, not exactly sure why
+      let mipped_texels = zoom_level / 2;
+      bias = 0.5 + mipped_texels;
+    }
+  }
+
+  data[12] = uvs[0] + bias / tex.width;
+  data[13] = uvs[1] + bias / tex.height;
+  data[14] = uvs[2] - bias / tex.width;
+  data[15] = uvs[3] - bias / tex.height;
 
   elem.uid = ++last_uid;
   elem.shader = shader || null;
@@ -356,6 +377,7 @@ export function draw() {
     return;
   }
   gl.disable(gl.DEPTH_TEST);
+  gl.depthMask(false);
   gl.enable(gl.BLEND);
 
   clip_space[0] = 2 / engine.viewport[2];
@@ -439,7 +461,8 @@ function buildRects(ws, hs) {
   for (let jj = 0; jj < hs.length; ++jj) {
     let x = 0;
     for (let ii = 0; ii < ws.length; ++ii) {
-      let r = vec4(x / tex_w, y / tex_h, (x + ws[ii]) / tex_w, (y + hs[jj]) / tex_h);
+      let r = vec4(x / tex_w, y / tex_h,
+        (x + ws[ii]) / tex_w, (y + hs[jj]) / tex_h);
       rects.push(r);
       x += ws[ii];
     }
