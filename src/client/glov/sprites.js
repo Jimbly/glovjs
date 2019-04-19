@@ -9,7 +9,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const fs = require('fs');
 const geom = require('./geom.js');
-const { cos, max, min, round, sin } = Math;
+const { cos, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
 const { vec2, vec4 } = require('./vmath.js');
@@ -197,7 +197,8 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   if (true) {
     // Bias the texture coordinates depending on the minification/magnification
     //   level so we do not get pixels from neighboring frames bleeding in
-    let zoom_level = max(
+    // Using min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
+    let zoom_level = min(
       (uvs[2] - uvs[0]) * tex.width / w,
       (uvs[3] - uvs[1]) * tex.height / h,
     );
