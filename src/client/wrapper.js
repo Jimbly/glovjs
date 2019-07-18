@@ -2,8 +2,12 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 (function () {
   let debug = document.getElementById('debug');
-  window.onerror = function (e, file, line) {
-    debug.innerText = `${e}\n  at ${file}(${line})`;
+  window.onerror = function (e, file, line, col, errorobj) {
+    let msg = errorobj && errorobj.stack || `${e}\n  at ${file}(${line}:${col})`;
+    debug.innerText = msg;
+    if (window.glov_error_report) {
+      window.glov_error_report(msg, file, line, col);
+    }
   };
   window.debugmsg = function (msg, clear) {
     if (clear) {

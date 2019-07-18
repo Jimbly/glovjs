@@ -2,13 +2,12 @@
 
 exports.storage_prefix = 'demo';
 
-let local_storage_sim = {};
 let lsd = (function () {
   try {
     localStorage.test = 'test';
     return localStorage;
   } catch (e) {
-    return local_storage_sim;
+    return {};
   }
 }());
 export function get(key) {
@@ -41,4 +40,36 @@ export function getJSON(key, def) {
     // ignore
   }
   return def;
+}
+
+export function clearAll() {
+  let prefix = new RegExp(`^${exports.storage_prefix}_`, 'u');
+  for (let key in lsd) {
+    if (key.match(prefix)) {
+      delete lsd[key];
+    }
+  }
+}
+
+export function exportAll() {
+  let obj = {};
+  let prefix = new RegExp(`^${exports.storage_prefix}_(.*)`, 'u');
+  for (let key in lsd) {
+    let m = key.match(prefix);
+    if (m) {
+      let v = lsd[key];
+      if (v && v !== 'undefined') {
+        obj[m[1]] = v;
+      }
+    }
+  }
+  return JSON.stringify(obj);
+}
+
+export function importAll(serialized) {
+  let obj = JSON.parse(serialized);
+  clearAll();
+  for (let key in obj) {
+    set(key, obj[key]);
+  }
 }

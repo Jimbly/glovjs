@@ -1,4 +1,5 @@
-/* eslint-env jquery */
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-underscore-dangle:off */
 /* global Z:false */
 
@@ -54,7 +55,7 @@ export function makeColorSet(color) {
     disabled: vec4(),
   };
   v4scale(ret.regular, color, 1);
-  v4scale(ret.rollover, color, 0.8);
+  v4scale(ret.rollover, color, 0.8); // because we do not have specific graphics
   v4scale(ret.down, color, 0.7);
   v4scale(ret.disabled, color, 0.4);
   for (let field in ret) {
@@ -128,12 +129,14 @@ function doDesaturateEffect(factor, params) {
 export let button_height = 32;
 export let font_height = 24;
 export let button_width = 200;
+export let modal_button_width = 100;
 export let button_img_size = button_height;
 export let modal_width = 600;
 export let modal_y0 = 200;
 export let modal_title_scale = 1.2;
 export let pad = 16;
 export let panel_pixel_scale = 32 / 13; // button_height / button pixel resolution
+export let tooltip_panel_pixel_scale = panel_pixel_scale;
 export let tooltip_width = 400;
 export let tooltip_pad = 8;
 
@@ -180,42 +183,41 @@ let focused_key;
 let focused_key_prev1;
 let focused_key_prev2;
 
-export function startup(_font, ui_sprites) {
-  ui_sprites = ui_sprites || {};
+export function loadUISprite(name, ws, hs, overrides, only_override) {
+  let override = overrides && overrides[name];
+  if (override) {
+    sprites[name] = glov_sprites.create({
+      name: override[0],
+      ws: override[1],
+      hs: override[2],
+    });
+  } else if (!only_override) {
+    sprites[name] = glov_sprites.create({
+      name: `ui/${name}`,
+      ws,
+      hs,
+    });
+  }
+}
+
+export function startup(_font, overrides) {
   font = _font;
   KEYS = glov_input.KEYS;
   pad_codes = glov_input.pad_codes;
 
-  function loadUISprite(name, ws, hs, only_override) {
-    let override = ui_sprites[name];
-    if (override) {
-      sprites[name] = glov_sprites.create({
-        name: override[0],
-        ws: override[1],
-        hs: override[2],
-      });
-    } else if (!only_override) {
-      sprites[name] = glov_sprites.create({
-        name: `ui/${name}`,
-        ws,
-        hs,
-      });
-    }
-  }
-
-  loadUISprite('button', [4, 5, 4], [13]);
+  loadUISprite('button', [4, 5, 4], [13], overrides);
   sprites.button_regular = sprites.button;
-  loadUISprite('button_rollover', [4, 5, 4], [13], true);
-  loadUISprite('button_down', [4, 5, 4], [13]);
-  loadUISprite('button_disabled', [4, 5, 4], [13]);
-  loadUISprite('panel', [3, 2, 3], [3, 10, 3]);
-  loadUISprite('menu_entry', [4, 5, 4], [13]);
-  loadUISprite('menu_selected', [4, 5, 4], [13]);
-  loadUISprite('menu_down', [4, 5, 4], [13]);
-  loadUISprite('menu_header', [4, 5, 12], [13]);
-  loadUISprite('slider', [6, 2, 6], [13]);
-  // loadUISprite('slider_notch', [3], [13]);
-  loadUISprite('slider_handle', [9], [13]);
+  loadUISprite('button_rollover', [4, 5, 4], [13], overrides, true);
+  loadUISprite('button_down', [4, 5, 4], [13], overrides);
+  loadUISprite('button_disabled', [4, 5, 4], [13], overrides);
+  loadUISprite('panel', [3, 2, 3], [3, 10, 3], overrides);
+  loadUISprite('menu_entry', [4, 5, 4], [13], overrides);
+  loadUISprite('menu_selected', [4, 5, 4], [13], overrides);
+  loadUISprite('menu_down', [4, 5, 4], [13], overrides);
+  loadUISprite('menu_header', [4, 5, 12], [13], overrides);
+  loadUISprite('slider', [6, 2, 6], [13], overrides);
+  // loadUISprite('slider_notch', [3], [13], overrides);
+  loadUISprite('slider_handle', [9], [13], overrides);
 
   sprites.white = glov_sprites.create({ url: 'white' });
 
@@ -230,8 +232,8 @@ export function startup(_font, ui_sprites) {
 }
 
 let dynamic_text_elem;
-export function getElem() {
-  if (modal_dialog) {
+export function getElem(allow_modal) {
+  if (modal_dialog && !allow_modal) {
     return null;
   }
   if (dom_elems_issued >= dom_elems.length) {
@@ -298,6 +300,7 @@ export function drawBox(coords, s, pixel_scale, color) {
             w: my_w,
             h: my_h,
             uvs: uidata.rects[jj * 3 + ii],
+            nozoom: true, // nozoom since different parts of the box get zoomed differently
           });
           y += my_h;
         }
@@ -412,7 +415,7 @@ export function panel(param) {
   assert(typeof param.h === 'number');
   param.z = param.z || (Z.UI - 1);
   let color = param.color || color_panel;
-  drawBox(param, sprites.panel, panel_pixel_scale, color);
+  drawBox(param, sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   glov_input.click(param);
   glov_input.mouseOver(param);
 }
@@ -442,6 +445,7 @@ export function drawTooltip(param) {
     z,
     w: tooltip_w,
     h: y - tooltip_y0,
+    pixel_scale: tooltip_panel_pixel_scale,
   });
 }
 
@@ -449,12 +453,24 @@ export function drawTooltip(param) {
 export function buttonShared(param) {
   let state = 'regular';
   let ret = false;
+  if (param.draw_only) {
+    return { ret, state };
+  }
   let key = param.key || `${param.x}_${param.y}`;
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
   button_mouseover = false;
   if (param.disabled) {
     glov_input.mouseOver(param); // Still eat mouse events
     state = 'disabled';
+  } else if (param.drag_target && (ret = glov_input.dragDrop(param))) {
+    console.log('dragDrop');
+    if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
+      setMouseOver(key);
+    }
+    if (!param.no_focus) {
+      focusSteal(key);
+      focused = true;
+    }
   } else if (glov_input.click(param)) {
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
       setMouseOver(key);
@@ -469,6 +485,10 @@ export function buttonShared(param) {
       focusSteal(key);
       focused = true;
     }
+  } else if (param.drag_target && glov_input.dragOver(param)) {
+    // Set this even if param.no_touch_mouse_over is set
+    setMouseOver(key);
+    state = glov_input.mouseDown() ? 'down' : 'rollover';
   } else if (glov_input.mouseOver(param)) {
     if (param.no_touch_mouseover && glov_input.mousePosIsTouch()) {
       // do not set mouseover
@@ -499,18 +519,20 @@ export function buttonShared(param) {
       tooltip_width: param.tooltip_width,
     });
   }
+  param.z += param.z_bias && param.z_bias[state] || 0;
   return { ret, state, focused };
 }
 
+export let button_last_color;
 export function buttonTextDraw(param, state, focused) {
   let colors = param.colors || color_button;
-  let color = colors[state];
-  let sprite_name = `button_${state}`;
+  let color = button_last_color = colors[state];
+  let base_name = param.base_name || 'button';
+  let sprite_name = `${base_name}_${state}`;
   let sprite = sprites[sprite_name];
-  if (sprite) { // specific sprite, use regular colors
-    color = colors.regular;
-  } else {
-    sprite = sprites.button;
+  // Note: was if (sprite) color = colors.regular for specific-sprite matches
+  if (!sprite) {
+    sprite = sprites[base_name];
   }
 
   drawHBox(param, sprite, color);
@@ -552,9 +574,15 @@ export function buttonImage(param) {
 
   let { ret, state } = buttonShared(param);
   let colors = param.colors || color_button;
-  let color = colors[state];
+  let color = button_last_color = colors[state];
+  let base_name = param.base_name || 'button';
+  let sprite_name = `${base_name}_${state}`;
+  let sprite = sprites[sprite_name];
+  if (!sprite) {
+    sprite = sprites[base_name];
+  }
 
-  drawHBox(param, sprites.button, color);
+  drawHBox(param, sprite, color);
   let img_w = param.img.size[0];
   let img_h = param.img.size[1];
   let img_origin = param.img.origin;
@@ -595,7 +623,7 @@ export function modalDialog(params) {
 }
 
 function modalDialogRun() {
-  const eff_button_width = modal_dialog.button_width || round(button_width / 2);
+  const eff_button_width = modal_dialog.button_width || modal_button_width;
   const game_width = camera2d.x1() - camera2d.x0();
   const text_w = modal_width - pad * 2;
   const x0 = camera2d.x0() + round((game_width - modal_width) / 2);
@@ -615,6 +643,12 @@ function modalDialogRun() {
     y += font.drawSizedWrapped(modal_font_style, x, y, Z.MODAL, text_w, 0, eff_font_height,
       modal_dialog.text);
     y += pad;
+  }
+
+  if (modal_dialog.tick) {
+    let param = { x, y };
+    modal_dialog.tick(param);
+    y = param.y;
   }
 
   let buttons = modal_dialog.buttons;
@@ -755,7 +789,7 @@ export function slider(value, param) {
 }
 
 let bad_frames = 0;
-export function tick(dt) {
+export function tickUI(dt) {
   last_frame_button_mouseover = frame_button_mouseover;
   frame_button_mouseover = false;
   focused_last_frame = focused_this_frame;
@@ -1041,6 +1075,7 @@ export function scaleSizes(scale) {
   font_height = round(24 * scale);
   button_width = round(200 * scale);
   button_img_size = button_height;
+  modal_button_width = round(button_width / 2);
   modal_width = round(600 * scale);
   modal_y0 = round(200 * scale);
   modal_title_scale = 1.2;
@@ -1048,10 +1083,23 @@ export function scaleSizes(scale) {
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
   panel_pixel_scale = button_height / 13; // button_height / button pixel resolution
+  tooltip_panel_pixel_scale = panel_pixel_scale;
+}
+
+export function setModalSizes(_modal_button_width, width, y0, title_scale) {
+  modal_button_width = _modal_button_width || round(button_width / 2);
+  modal_width = width || 600;
+  modal_y0 = y0 || 200;
+  modal_title_scale = title_scale || 1.2;
 }
 
 export function setFontHeight(_font_height) {
   font_height = _font_height;
+}
+
+export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
+  tooltip_width = _tooltip_width;
+  tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
 }
 
 scaleSizes(1);

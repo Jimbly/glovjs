@@ -492,10 +492,12 @@ class GlovFont {
       text = '(null)';
     }
     this.applyStyle(style);
+    this.last_width = 0;
     let num_lines = this.wrapLinesScaled(w, indent, xsc, text, (xoffs, linenum, word) => {
       let y2 = y + this.font_info.font_size * ysc * linenum;
       let x2 = x + xoffs;
-      this.drawScaled(style, x2, y2, z, xsc, ysc, word);
+      let word_w = this.drawScaled(style, x2, y2, z, xsc, ysc, word);
+      this.last_width = max(this.last_width, xoffs + word_w);
     });
     return num_lines * this.font_info.font_size * ysc;
   }

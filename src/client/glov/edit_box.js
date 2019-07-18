@@ -1,11 +1,11 @@
 /* eslint-env jquery */
 /*global Z: false */
 
+const camera2d = require('./camera2d.js');
 const glov_input = require('./input.js');
 const glov_ui = require('./ui.js');
-const camera2d = require('./camera2d.js');
 
-const { focuslog } = require('./ui.js');
+const { focuslog } = glov_ui;
 
 class GlovUIEditBox {
   constructor(params) {
@@ -14,11 +14,14 @@ class GlovUIEditBox {
     this.z = Z.UI; // actually in DOM, so above everything!
     this.w = glov_ui.button_width;
     this.type = 'text';
+    this.allow_modal = false;
     // this.h = glov_ui.button_height;
-    // this.font_height = glov_ui.font_height;
+    this.font_height = glov_ui.font_height;
     this.text = '';
     this.placeholder = '';
     this.initial_focus = false;
+    this.initial_select = false;
+    this.spellcheck = true;
     this.applyParams(params);
 
     this.got_focus_in = false;
@@ -88,7 +91,7 @@ class GlovUIEditBox {
     let focused = this.updateFocus();
 
     glov_ui.this_frame_edit_boxes.push(this);
-    let elem = glov_ui.getElem();
+    let elem = glov_ui.getElem(this.allow_modal);
     if (elem !== this.elem) {
       if (elem) {
         // new DOM element, initialize
@@ -122,6 +125,9 @@ class GlovUIEditBox {
         if (this.initial_focus) {
           input.focus();
         }
+        if (this.initial_select) {
+          input.select();
+        }
       } else {
         this.input = null;
       }
@@ -134,10 +140,16 @@ class GlovUIEditBox {
     }
     if (elem) {
       let pos = camera2d.htmlPos(this.x, this.y);
+      if (!this.spellcheck) {
+        elem.spellcheck = false;
+      }
       elem.style.left = `${pos[0]}%`;
       elem.style.top = `${pos[1]}%`;
       let size = camera2d.htmlSize(this.w, this.h);
       elem.style.width = `${size[0]}%`;
+      if (this.font_height !== glov_ui.font_height) {
+        elem.style.fontSize = `${(this.font_height / glov_ui.font_height).toFixed(2)}em`;
+      }
     }
 
     if (focused) {

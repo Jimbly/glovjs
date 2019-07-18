@@ -1,5 +1,9 @@
 const { abs, floor, min, max, round, pow, sqrt } = Math;
 
+export function nop() {
+  // empty
+}
+
 export function easeInOut(v, a) {
   let va = pow(v, a);
   return va / (va + pow(1 - v, a));
@@ -51,6 +55,11 @@ export function mix(v0, v1, a) { // GLSL semantics
 
 export function sign(a) {
   return a < 0 ? -1 : a > 0 ? 1 : 0;
+}
+
+export function ridx(arr, idx) {
+  arr[idx] = arr[arr.length - 1];
+  arr.pop();
 }
 
 export function round100(a) {

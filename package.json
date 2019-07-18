@@ -1,7 +1,7 @@
 {
   "name": "glovjs-playground",
   "version": "0.0.2",
-  "description": "Template for a state of the art Javascript project using Turbulenz",
+  "description": "Template for a state of the art Javascript project using GLOV.js",
   "main": "build/server/index.js",
   "keywords": [
     "template",

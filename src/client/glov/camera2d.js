@@ -185,7 +185,7 @@ export function virtualToPhysical(dst, src) {
   }
 }
 
-export function tick() {
+export function tickCamera2D() {
   data[6] = window.devicePixelRatio || 1; /* css_to_real */
   screen_width = engine.width;
   screen_height = engine.height;
@@ -241,5 +241,5 @@ export function tick() {
 
 export function startup() {
   set(0, 0, engine.width, engine.height);
-  tick();
+  tickCamera2D();
 }

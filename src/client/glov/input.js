@@ -6,8 +6,9 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const engine = require('./engine.js');
 const local_storage = require('./local_storage.js');
-const glov_engine = require('./engine.js');
+const pointer_lock = require('./pointer_lock.js');
 const { abs, min, sqrt } = Math;
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
@@ -22,7 +23,7 @@ const MAP_ANALOG_TO_DPAD = true;
 export const ANY = -2;
 export const POINTERLOCK = -1;
 
-export const KEYS = {
+export let KEYS = {
   BACKSPACE: 8,
   TAB: 9,
   ENTER: 13,
@@ -42,6 +43,7 @@ export const KEYS = {
   DOWN: 40,
   INS: 45,
   DEL: 46,
+  TILDE: 192,
 };
 (function () {
   for (let ii = 1; ii <= 12; ++ii) {
@@ -51,6 +53,16 @@ export const KEYS = {
     KEYS[String.fromCharCode(ii)] = ii;
   }
 }());
+if (typeof Proxy === 'function') {
+  // Catch referencing keys that are not in our map
+  KEYS = new Proxy(KEYS, {
+    get: function (target, prop, receiver) {
+      let ret = target[prop];
+      assert(ret);
+      return ret;
+    }
+  });
+}
 export const pad_codes = {
   A: 0,
   SELECT: 0, // GLOV name
@@ -90,6 +102,10 @@ let mouse_pos_is_touch = false;
 let mouse_over_captured = false;
 let mouse_down = [];
 let mouse_wheel = 0;
+let movement_questionable_frames = 0;
+const MOVEMENT_QUESTIONABLE_FRAMES = 2; // Need at least 2
+
+let ptrlock;
 
 let input_eaten_kb = false;
 let input_eaten_mouse = false;
@@ -108,15 +124,20 @@ function TouchData(pos, touch, button) {
   this.button = button;
   this.start_time = Date.now();
   this.dispatched = false;
+  this.dispatched_drag_over = false;
   this.state = DOWN_EDGE;
 }
 
 export function pointerLocked() {
-  return document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+  return ptrlock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
 export function pointerLockEnter() {
+  if (touch_mode) {
+    return;
+  }
   let touch_data = touches[pointerlock_touch_id];
+  v2set(mouse_pos, engine.width*0.5, engine.height*0.5);
   if (touch_data) {
     v2copy(touch_data.start_pos, mouse_pos);
     touch_data.release = false;
@@ -124,7 +145,8 @@ export function pointerLockEnter() {
     touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK);
     touch_data.state = DOWN; // No DOWN_EDGE for this
   }
-  return canvas.requestPointerLock && canvas.requestPointerLock();
+  movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
+  ptrlock.enter();
 }
 export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
@@ -133,7 +155,8 @@ export function pointerLockExit() {
     touch_data.state = null; // no UP_EDGE for this
     touch_data.release = true;
   }
-  document.exitPointerLock();
+  ptrlock.exit();
+  movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
 function ignored(event) {
@@ -152,16 +175,21 @@ function onKeyUp(event) {
     pointerLockExit();
   }
   key_state[code] = UP_EDGE;
+  ptrlock.allowAsync();
 }
 
 function onKeyDown(event) {
   let code = event.keyCode;
-  if (code !== KEYS.F12 && code !== KEYS.F5 && code !== KEYS.F6 && event.target.tagName !== 'INPUT') {
+  if (!(event.target.tagName === 'INPUT' ||
+    code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
+    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) // Safari, alternate Chrome
+  )) {
     event.stopPropagation();
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
   key_state[code] = DOWN_EDGE;
+  ptrlock.allowAsync();
 }
 
 let temp_delta = vec2();
@@ -174,17 +202,21 @@ function onMouseMove(event, no_stop) {
     event.preventDefault();
     event.stopPropagation();
   }
-  if (event.offsetX !== undefined) {
-    mouse_pos[0] = event.offsetX;
-    mouse_pos[1] = event.offsetY;
-  } else {
-    mouse_pos[0] = event.layerX;
-    mouse_pos[1] = event.layerY;
-  }
+  // offsetX/layerX return position relative to text-entry boxes, not good!
+  mouse_pos[0] = event.clientX;
+  mouse_pos[1] = event.clientY;
+  // if (event.offsetX !== undefined) {
+  //   mouse_pos[0] = event.offsetX;
+  //   mouse_pos[1] = event.offsetY;
+  // } else {
+  //   mouse_pos[0] = event.layerX;
+  //   mouse_pos[1] = event.layerY;
+  // }
   mouse_pos_is_touch = false;
 
   let any_movement = false;
   if (pointerLocked()) {
+    v2set(mouse_pos, engine.width*0.5, engine.height*0.5);
     if (event.movementX || event.movementY) {
       v2set(temp_delta, event.movementX, event.movementY);
       any_movement = true;
@@ -194,6 +226,14 @@ function onMouseMove(event, no_stop) {
     if (temp_delta[0] || temp_delta[1]) {
       any_movement = true;
     }
+    v2copy(last_mouse_pos, mouse_pos);
+  }
+  if (any_movement && movement_questionable_frames && v2lengthSq(temp_delta) > 100*100) {
+    // giant movement right after entering or exiting poitner lock, ignore (Chrome bug)
+    // We get these unreasonable jumps in both movementXY and the other, presumably
+    // because pointerLocked() is slightly out of sync, though the large .movementX/Y
+    // is clearly erroneous.
+    any_movement = false;
   }
   if (any_movement) {
     for (let button = POINTERLOCK; button < mouse_down.length; ++button) {
@@ -207,12 +247,11 @@ function onMouseMove(event, no_stop) {
       }
     }
   }
-  v2copy(last_mouse_pos, mouse_pos);
 }
 
 function onMouseDown(event) {
   onMouseMove(event); // update mouse_pos
-  glov_engine.sound_manager.resume();
+  engine.sound_manager.resume();
   let no_click = event.target.tagName === 'INPUT';
 
   let button = event.button;
@@ -227,6 +266,7 @@ function onMouseDown(event) {
       touches[touch_id].state = DOWN; // no edge
     }
   }
+  ptrlock.allowAsync();
 }
 
 function onMouseUp(event) {
@@ -245,6 +285,7 @@ function onMouseUp(event) {
     }
     delete mouse_down[button];
   }
+  ptrlock.allowAsync();
 }
 
 function onWheel(event) {
@@ -258,7 +299,7 @@ function onWheel(event) {
 
 let touch_pos = vec2();
 function onTouchChange(event) {
-  glov_engine.sound_manager.resume();
+  engine.sound_manager.resume();
   if (!touch_mode) {
     local_storage.set('touch_mode', true);
     touch_mode = true;
@@ -324,8 +365,15 @@ function onTouchChange(event) {
   }
 }
 
+function onBlurOrFocus(evt) {
+  for (let code in key_state) {
+    key_state[code] = UP_EDGE;
+  }
+}
+
 export function startup(_canvas) {
   canvas = _canvas;
+  ptrlock = pointer_lock.create(canvas);
 
   let passive_param = false;
   try {
@@ -341,11 +389,6 @@ export function startup(_canvas) {
     passive_param = false;
   }
 
-  canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock ||
-    canvas.webkitRequestPointerLock;
-  document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock ||
-    document.webkitExitPointerLock || function () { /* nop */ };
-
   window.addEventListener('keydown', onKeyDown, false);
   window.addEventListener('keyup', onKeyUp, false);
 
@@ -356,6 +399,9 @@ export function startup(_canvas) {
   window.addEventListener('mouseup', onMouseUp, false);
   window.addEventListener('DOMMouseScroll', onWheel, false);
   window.addEventListener('mousewheel', onWheel, false);
+
+  window.addEventListener('blur', onBlurOrFocus, false);
+  window.addEventListener('focus', onBlurOrFocus, false);
 
   canvas.addEventListener('touchstart', onTouchChange, passive_param);
   canvas.addEventListener('touchmove', onTouchChange, passive_param);
@@ -458,9 +504,12 @@ function gamepadUpdate() {
   }
 }
 
-export function tick() {
+export function tickInput() {
   // browser frame has occurred since the call to endFrame(),
   // we should now have `touches` and `key_state` populated with edge events
+  if (movement_questionable_frames) {
+    --movement_questionable_frames;
+  }
   mouse_over_captured = false;
   gamepadUpdate();
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
@@ -488,10 +537,15 @@ export function endFrame(skip_mouse) {
     for (let touch_id in touches) {
       let touch_data = touches[touch_id];
       if (touch_data.release) {
+        // Manually null out touches[touch_id] - some Chrome optimizer bug causes
+        // callers to later get this old value (instead of the newly added on with
+        // the same ID) unless we null it out (then they seem to get the new one).
+        touches[touch_id] = null;
         delete touches[touch_id];
       } else {
         touch_data.delta[0] = touch_data.delta[1] = 0;
         touch_data.dispatched = false;
+        touch_data.dispatched_drag_over = false;
         if (touch_data.state === DOWN_EDGE) {
           touch_data.state = DOWN;
         } else {
@@ -551,12 +605,12 @@ function checkPos(pos, param) {
 }
 
 export function mouseOver(param) {
-  if (mouse_over_captured) {
+  if (mouse_over_captured || pointerLocked()) {
     return false;
   }
   let pos_param = mousePosParam(param);
 
-  // eat mouse up/down events
+  // eat mouse up/down/drag events
   for (let id in touches) {
     let touch = touches[id];
     if (checkPos(touch.cur_pos, pos_param)) {
@@ -564,6 +618,9 @@ export function mouseOver(param) {
         touch.state = DOWN;
       } else if (touch.state === UP_EDGE) {
         touch.state = null;
+      }
+      if (!param || !param.drag_target) {
+        touch.dispatched = true;
       }
     }
   }
@@ -764,6 +821,7 @@ export function drag(param) {
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
+  let min_dist = param.min_dist || 0;
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
@@ -771,13 +829,22 @@ export function drag(param) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
+      camera2d.physicalDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
+      let total = delta[0] + delta[1];
+      if (total < min_dist) {
+        continue;
+      }
       if (!param.peek) {
         touch_data.dispatched = true;
       }
+      if (param.eat_clicks) {
+        touch_data.state = null;
+      }
+      if (param.payload) {
+        touch_data.drag_payload = param.payload;
+      }
       camera2d.physicalToVirtual(start_pos, touch_data.start_pos);
       camera2d.physicalToVirtual(cur_pos, touch_data.cur_pos);
-      camera2d.physicalDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
-      let total = delta[0] + delta[1];
       camera2d.physicalDeltaToVirtual(delta, touch_data.delta);
       return {
         cur_pos,
@@ -787,6 +854,59 @@ export function drag(param) {
         button: touch_data.button,
         touch: touch_data.touch,
         start_time: touch_data.start_time,
+      };
+    }
+  }
+  return null;
+}
+
+export function dragDrop(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched || !touch_data.drag_payload) {
+      continue;
+    }
+    if (touch_data.state !== UP_EDGE) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      if (!param.peek) {
+        touch_data.dispatched = true;
+      }
+      return { drag_payload: touch_data.drag_payload };
+    }
+  }
+  return null;
+}
+
+export function dragOver(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (!(button === ANY || button === touch_data.button) ||
+      touch_data.dispatched || touch_data.dispatched_drag_over ||
+      !touch_data.drag_payload
+    ) {
+      continue;
+    }
+    if (touch_data.state !== DOWN_EDGE && touch_data.state !== DOWN) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      // Separate 'dispatched' for dragOver (target) and drag (source) - they both need one dispatch per frame
+      if (!param.peek) {
+        touch_data.dispatched_drag_over = true;
+      }
+      return {
+        cur_pos: touch_data.cur_pos,
+        drag_payload: touch_data.drag_payload
       };
     }
   }

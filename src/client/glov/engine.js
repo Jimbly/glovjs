@@ -19,14 +19,15 @@ const mat4Mul = require('gl-mat4/multiply');
 const mat4Transpose = require('gl-mat4/transpose');
 const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, min, max, PI, sin, sqrt } = Math;
+const models = require('./models.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
-const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy } = require('./vmath.js');
+const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy, v4set } = require('./vmath.js');
 
-let canvas;
+export let canvas;
 export let glov_particles;
 export let sound_manager;
 
@@ -43,21 +44,25 @@ export let render_height;
 
 export let defines = {};
 
-export const ZFAR = 10000;
+export let any_3d = false;
+export let ZFAR;
+export let ZNEAR;
 export const fov_y = 45 * PI / 180;
 export let fov_x = 1;
 
 export let mat_projection = mat4();
 export let mat_view = mat4();
 let mat_m = mat4();
-let mat_vp = mat4();
+export let mat_vp = mat4();
 let mat_mv = mat4();
+let mat_mv_no_skew = mat4();
 let mat_mvp = mat4();
 let mat_mv_inv_transform = mat3();
+let projection_inverse = vec4();
 
 export let light_diffuse = vec3(0.75, 0.75, 0.75);
 let light_dir_vs = vec3(0, 0, 0);
-let light_ambient = vec3(0.25, 0.25, 0.25);
+export let light_ambient = vec3(0.25, 0.25, 0.25);
 export let light_dir_ws = vec3(-1, -2, -3);
 
 export let font;
@@ -93,6 +98,16 @@ export function setGlobalMatrices(_mat_view) {
   v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
 }
 
+function normalizeRow(m, idx) {
+  let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];
+  if (len > 0) {
+    len = 1 / sqrt(len);
+    m[idx] *= len;
+    m[idx+1] *= len;
+    m[idx+2] *= len;
+  }
+}
+
 let mat_temp = mat4();
 export function updateMatrices(mat_model) {
   // PERFTODO: depending on rendering path, only some of these are needed (m + vp or just mvp)
@@ -101,7 +116,14 @@ export function updateMatrices(mat_model) {
   mat4Mul(mat_mv, mat_view, mat_model);
   mat4Mul(mat_mvp, mat_projection, mat_mv);
   // TODO: Can expand and simplify all of this, especially below
-  mat4Invert(mat_temp, mat_mv);
+  // Compute the inverse transform of thee model_view matrix, discarding scale,
+  // to be used for getting normals into view space
+  mat4Copy(mat_temp, mat_model);
+  normalizeRow(mat_temp, 0);
+  normalizeRow(mat_temp, 4);
+  normalizeRow(mat_temp, 8);
+  mat4Mul(mat_mv_no_skew, mat_view, mat_temp);
+  mat4Invert(mat_temp, mat_mv_no_skew);
   mat4Transpose(mat_temp, mat_temp);
   mat3FromMat4(mat_mv_inv_transform, mat_temp);
 }
@@ -115,17 +137,17 @@ export function postprocessingAllow(allow) {
   postprocessing = allow;
 }
 
-let global_timer = 0;
+export let global_timer = 0;
 export function getFrameTimestamp() {
   return global_timer;
 }
 
-let global_frame_index = 0;
+export let global_frame_index = 0;
 export function getFrameIndex() {
   return global_frame_index;
 }
 
-let this_frame_time = 0;
+export let this_frame_time = 0;
 export function getFrameDt() {
   return this_frame_time;
 }
@@ -249,21 +271,34 @@ function tick() {
   width = canvas.width;
   height = canvas.height;
 
-  let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
-  fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
-  mat4Perspective(mat_projection, fov_y, width/height, 0.7, ZFAR);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.enable(gl.BLEND);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthMask(true);
+  if (any_3d) {
+    let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
+    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+    mat4Perspective(mat_projection, fov_y, width/height, ZNEAR, ZFAR);
+    v4set(projection_inverse,
+      2 / (width * mat_projection[0]), // projection_matrix.m00),
+      2 / (height * mat_projection[5]), // projection_matrix.m11),
+      -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
+      -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
+    );
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+  } else {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+  }
   textures.bind(0, textures.textures.error);
 
-  camera2d.tick();
+  camera2d.tickCamera2D();
   camera2d.setAspectFixed(game_width, game_height);
 
   sound_manager.tick(dt);
-  input.tick();
-  glov_ui.tick(dt);
+  input.tickInput();
+  glov_ui.tickUI(dt);
 
   if (need_repos) {
     --need_repos;
@@ -339,6 +374,25 @@ function tick() {
   resetEffects();
 }
 
+let last_error_time = 0;
+function glovErrorReport(msg, file, line, col) {
+  let now = Date.now();
+  let dt = now - last_error_time;
+  last_error_time = now;
+  if (dt < 30*1000) {
+    // Less than 30 seconds since the last error, either we're erroring every
+    // frame, or this is a secondary error caused by the first, do not report it.
+    // Could maybe hash the error message and just report each message once, and
+    // flag errors as primary or secondary.
+    return;
+  }
+  // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
+  let url = (location.href || '').match(/^[^#?]*/u)[0];
+  url += `errorReport?file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}&msg=${escape(msg)}`;
+  let xhr = new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.send(null);
+}
 
 export function startup(params) {
   // globals for leftover Turbulenz bits
@@ -346,6 +400,10 @@ export function startup(params) {
   window.assert = assert;
 
   canvas = document.getElementById('canvas');
+
+  if (params.error_report !== false) {
+    window.glov_error_report = glovErrorReport;
+  }
 
   function resizeCanvas() {
     let css_to_real = window.devicePixelRatio || 1;
@@ -383,8 +441,13 @@ export function startup(params) {
 
   assert(gl);
   canvas.focus();
+  width = canvas.width;
+  height = canvas.height;
   game_width = params.game_width || 1280;
   game_height = params.game_height || 960;
+  any_3d = params.any_3d || false;
+  ZNEAR = params.znear || 0.7;
+  ZFAR = params.zfar || 10000;
   if (params.pixely === 'strict') {
     render_width = game_width;
     render_height = game_height;
@@ -418,18 +481,27 @@ export function startup(params) {
     light_dir_vs,
     ambient: light_ambient,
     mat_m: mat_m,
+    mat_mv: mat_mv,
     mat_vp: mat_vp,
     mvp: mat_mvp,
     mv_inv_trans: mat_mv_inv_transform,
     view: mat_view,
     projection: mat_projection,
+    projection_inverse,
   });
   camera2d.startup();
   sprites.startup();
   input.startup(canvas);
+  if (any_3d) {
+    models.startup();
+  }
 
-  // eslint-disable-next-line no-bitwise
-  clear_bits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
+  if (any_3d) {
+    // eslint-disable-next-line no-bitwise
+    clear_bits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
+  } else {
+    clear_bits = gl.COLOR_BUFFER_BIT;
+  }
 
   /* eslint-disable global-require */
   glov_particles = require('./particles.js').create();
@@ -476,7 +548,7 @@ export function startup(params) {
 }
 
 function loading() {
-  let load_count = textures.load_count + sound_manager.loading()/* + models.load_count */;
+  let load_count = textures.load_count + sound_manager.loading() + models.load_count;
   document.getElementById('loading_text').innerText = `Loading (${load_count})...`;
   if (!load_count) {
     let elem = document.getElementById('loading');

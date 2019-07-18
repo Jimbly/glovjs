@@ -9,13 +9,13 @@ html, body {
   overflow: hidden;
 }
 
+#loading {
+  background: black;
+}
+
 #content {
   width: 100%;
   height: 100%;
-}
-
-#loading {
-  background-color: black;
 }
 
 canvas {

@@ -84,6 +84,7 @@ function Texture(params) {
   this.handle = gl.createTexture();
   this.eff_handle = handle_loading;
   this.setSamplerState(params);
+  this.width = this.height = 1;
 
   this.format = params.format || format.RGBA8;
 
@@ -125,10 +126,11 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.width = w;
   this.height = h;
   if (data instanceof Uint8Array) {
+    assert(data.length >= w * h * this.format.count);
     gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
       this.format.internal_type, this.format.gl_type, data);
   } else {
-    assert(data instanceof Image);
+    assert(data instanceof Image || data.width); // instanceof Image fails with ublock AdBlocker
     // Pad up to power of two
     if (!isPowerOfTwo(w) || !isPowerOfTwo(h)) {
       this.width = nextHighestPowerOfTwo(w);

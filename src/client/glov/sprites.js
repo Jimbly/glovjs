@@ -9,7 +9,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const fs = require('fs');
 const geom = require('./geom.js');
-const { cos, min, round, sin } = Math;
+const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
 const { vec2, vec4 } = require('./vmath.js');
@@ -140,7 +140,7 @@ export function queueraw(
     color, shader, shader_params, blend);
 }
 
-export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params) {
+export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom) {
   let elem = spriteDataAlloc();
   elem.texs = sprite.texs;
   elem.x = x = (x - camera2d.data[0]) * camera2d.data[4];
@@ -192,9 +192,10 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   data[10] = color[2];
   data[11] = color[3];
 
-  let bias = 0;
+  let ubias = 0;
+  let vbias = 0;
   let tex = elem.texs[0];
-  if (true) {
+  if (!nozoom) {
     // Bias the texture coordinates depending on the minification/magnification
     //   level so we do not get pixels from neighboring frames bleeding in
     // Using min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
@@ -204,19 +205,27 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
     );
     if (zoom_level < 1) {
       if (tex.filter_mag === gl.LINEAR) {
-        bias = 0.5;
+        ubias = vbias = 0.5;
       }
     } else if (zoom_level > 1) {
       // need to apply this bias even with nearest filtering, not exactly sure why
       let mipped_texels = zoom_level / 2;
-      bias = 0.5 + mipped_texels;
+      ubias = vbias = 0.5 + mipped_texels;
+
+      // Maybe need this on magnification above too?
+      if (uvs[0] > uvs[2]) {
+        ubias *= -1;
+      }
+      if (uvs[1] > uvs[3]) {
+        vbias *= -1;
+      }
     }
   }
 
-  data[12] = uvs[0] + bias / tex.width;
-  data[13] = uvs[1] + bias / tex.height;
-  data[14] = uvs[2] - bias / tex.width;
-  data[15] = uvs[3] - bias / tex.height;
+  data[12] = uvs[0] + ubias / tex.width;
+  data[13] = uvs[1] + vbias / tex.height;
+  data[14] = uvs[2] - ubias / tex.width;
+  data[15] = uvs[3] - vbias / tex.height;
 
   elem.uid = ++last_uid;
   elem.shader = shader || null;
@@ -533,7 +542,7 @@ Sprite.prototype.draw = function (params) {
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
   queuesprite(this, params.x, params.y, params.z, w, h, params.rot, uvs, params.color || this.color,
-    params.shader, params.shader_params);
+    params.shader, params.shader_params, params.nozoom);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
