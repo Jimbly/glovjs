@@ -245,7 +245,14 @@ export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
 let last_tick = Date.now();
 function tick() {
   let now = Date.now();
-  requestAnimationFrame(tick);
+  if (defines.SLOWLOAD && is_loading) {
+    // Safari on CrossBrowserTesting needs this in order to have some time to load/decode audio data
+    setTimeout(function () {
+      requestAnimationFrame(tick);
+    }, 500);
+  } else {
+    requestAnimationFrame(tick);
+  }
   this_frame_time_actual = now - last_tick;
   let dt = min(max(this_frame_time_actual, 1), 250);
   this_frame_time = dt;
