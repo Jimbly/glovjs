@@ -160,8 +160,10 @@ export function pointerLockExit() {
 }
 
 function ignored(event) {
-  event.preventDefault();
-  event.stopPropagation();
+  if (event.target.tagName !== 'INPUT') {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 }
 
 function onKeyUp(event) {
