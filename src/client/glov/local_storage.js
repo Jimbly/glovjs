@@ -34,6 +34,9 @@ export function setJSON(key, value) {
 
 export function getJSON(key, def) {
   let value = get(key);
+  if (value === undefined) {
+    return def;
+  }
   try {
     return JSON.parse(value);
   } catch (e) {

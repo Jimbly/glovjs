@@ -31,6 +31,10 @@ export function nextHighestPowerOfTwo(x) {
   return x + 1;
 }
 
+export function vec1(v) {
+  return new Float32Array([v]);
+}
+
 export function vec2(a, b) {
   let r = new Float32Array(2);
   if (a || b) {
@@ -312,6 +316,14 @@ export function v3sub(out, a, b) {
 
 export function v3zero(out) {
   out[0] = out[1] = out[2] = 0;
+  return out;
+}
+
+export function v4add(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  out[3] = a[3] + b[3];
   return out;
 }
 

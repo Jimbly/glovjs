@@ -9,7 +9,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const fs = require('fs');
 const geom = require('./geom.js');
-const { cos, min, round, sin } = Math;
+const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
 const { vec2, vec4 } = require('./vmath.js');
@@ -198,8 +198,10 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   if (!nozoom) {
     // Bias the texture coordinates depending on the minification/magnification
     //   level so we do not get pixels from neighboring frames bleeding in
-    // Using min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
-    let zoom_level = min(
+    // Use min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
+    // Use max here to solve box buttons not lining up, but instead using nozoom in drawBox/drawHBox,
+    //   but, that only works for magnification - need the max here for minification!
+    let zoom_level = max(
       (uvs[2] - uvs[0]) * tex.width / w,
       (uvs[3] - uvs[1]) * tex.height / h,
     );

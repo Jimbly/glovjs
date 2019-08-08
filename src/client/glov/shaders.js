@@ -88,9 +88,9 @@ function parseIncludes(text) {
 }
 
 function Shader(type, text) {
-  text = text.replace(/#pragma WebGL/gu, '');
   text = `${defines}${text}`;
   text = parseIncludes(text);
+  text = text.replace(/#pragma WebGL/gu, '');
   this.shader = gl.createShader(type);
   if (type === gl.VERTEX_SHADER) {
     this.programs = {};

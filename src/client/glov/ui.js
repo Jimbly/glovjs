@@ -274,6 +274,7 @@ export function drawHBox(coords, s, color) {
       w: my_w,
       h: coords.h,
       uvs: uidata.rects[ii],
+      // nozoom: true, // nozoom since different parts of the box get zoomed differently
     });
     x += my_w;
   }
@@ -536,11 +537,12 @@ export function buttonTextDraw(param, state, focused) {
   }
 
   drawHBox(param, sprite, color);
+  let hpad = min(param.font_height * 0.25, param.w * 0.1);
   font.drawSizedAligned(
     focused ? font_style_focused : font_style_normal,
-    param.x, param.y, param.z + 0.1,
+    param.x + hpad, param.y, param.z + 0.1,
     // eslint-disable-next-line no-bitwise
-    param.font_height, glov_font.ALIGN.HCENTERFIT | glov_font.ALIGN.VCENTER, param.w, param.h, param.text);
+    param.font_height, glov_font.ALIGN.HCENTERFIT | glov_font.ALIGN.VCENTER, param.w - hpad * 2, param.h, param.text);
 }
 
 export function buttonText(param) {
@@ -593,7 +595,7 @@ export function buttonImage(param) {
     x: param.x + (param.w - img_w) / 2 + img_origin[0] * img_w,
     y: param.y + (param.h - img_h) / 2 + img_origin[1] * img_h,
     z: param.z + 0.1,
-    color,
+    color: param.color1 && param.color ? param.color : color, // use explicit tint if doing dual-tinting
     color1: param.color1,
     w: img_scale,
     h: img_scale,

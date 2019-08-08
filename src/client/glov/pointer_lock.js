@@ -23,7 +23,7 @@ export function create(elem) {
   }
 
   function pointerLog(msg) {
-    console.log(`PointerLock: ${msg}`);
+    // console.log(`PointerLock: ${msg}`);
   }
 
   function onPointerLockChange() {
