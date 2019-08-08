@@ -43,11 +43,12 @@ let error_fp;
 let error_vp;
 
 const vp_attr_regex = /attribute [^ ]+ ([^ ;]+);/gu;
-const uniform_regex = /uniform (?:(?:low|medium|high)p )?((?:vec|mat)\d [^ ;]+);/gu;
+const uniform_regex = /uniform (?:(?:low|medium|high)p )?((?:(?:vec|mat)\d(?:x\d)?|float) [^ ;]+);/gu;
 const sampler_regex = /uniform sampler2D ([^ ;]+);/gu;
 const include_regex = /\n#include "([^"]+)"/gu;
 
 const type_size = {
+  float: 1,
   vec2: 2*1,
   vec3: 3*1,
   vec4: 4*1,
@@ -129,6 +130,9 @@ export function create(...args) {
 
 function uniformSetValue(unif) {
   switch (unif.width) { // eslint-disable-line default-case
+    case 1:
+      gl.uniform1fv(unif.location, unif.value);
+      break;
     case 2:
       gl.uniform2fv(unif.location, unif.value);
       break;

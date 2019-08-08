@@ -5,8 +5,9 @@
 const assert = require('assert');
 const { ceil, max } = Math;
 
-export const QUADS = 7;
 export const TRIANGLES = 4;
+export const TRIANGLE_FAN = 6;
+export const QUADS = 7;
 
 const gl_byte_size = {
   0x1400: 1, // GL_BYTE
@@ -135,7 +136,7 @@ export function createIndices(idxs) {
   return ret;
 }
 
-// _format is [shader.semantic.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
+// _format is [shaders.semantic.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
 function Geom(_format, verts, idxs, mode) {
   this.mode = mode || TRIANGLES;
   this.format = _format;
@@ -184,6 +185,8 @@ function Geom(_format, verts, idxs, mode) {
     this.ibo_owned = false;
     this.ibo_size = quad_count * 6;
     this.mode = TRIANGLES;
+  } else if (mode === TRIANGLE_FAN) {
+    this.mode = TRIANGLE_FAN;
   } else {
     this.ibo = null;
     this.ibo_owned = false;
@@ -277,8 +280,11 @@ Geom.prototype.bind = function () {
 };
 Geom.prototype.draw = function () {
   this.bind();
-  assert(this.ibo); // else: gl.drawArrays(this.mode, ... this.ibo_size, gl.UNSIGNED_SHORT, 0);
-  gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
+  if (this.ibo) {
+    gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
+  } else {
+    gl.drawArrays(this.mode, 0, this.vert_count);
+  }
 };
 
 export function create(...args) {
