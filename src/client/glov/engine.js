@@ -34,6 +34,7 @@ export let sound_manager;
 export let width;
 export let height;
 export let pixel_aspect = 1;
+export let antialias;
 let clear_bits;
 
 export let game_width;
@@ -426,7 +427,7 @@ export function startup(params) {
   resizeCanvas();
 
   let is_pixely = params.pixely && params.pixely !== 'off';
-  let antialias = params.antialias || !is_pixely && params.antialias !== false;
+  antialias = params.antialias || !is_pixely && params.antialias !== false;
   let context_names = ['webgl', 'experimental-webgl'];
   let context_opt = { antialias };
   let good = false;
