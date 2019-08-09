@@ -43,6 +43,8 @@ export let KEYS = {
   DOWN: 40,
   INS: 45,
   DEL: 46,
+  NUMPAD_DIVIDE: 111,
+  SLASH: 191,
   TILDE: 192,
 };
 (function () {
