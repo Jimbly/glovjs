@@ -354,6 +354,8 @@ function tick() {
   // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
   gl.clear(clear_bits);
 
+  gl.disable(gl.CULL_FACE); // Need to enable this before 3D drawing!
+
   sprites.draw();
 
   glov_ui.endFrame();
@@ -470,7 +472,6 @@ export function startup(params) {
 
   gl.depthFunc(gl.LEQUAL);
   // gl.enable(gl.SCISSOR_TEST);
-  gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
 
