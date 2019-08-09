@@ -1084,7 +1084,7 @@ export function scaleSizes(scale) {
   pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  panel_pixel_scale = button_height / 13; // button_height / button pixel resolution
+  panel_pixel_scale = button_height / 13; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
 }
 

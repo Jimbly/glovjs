@@ -518,7 +518,7 @@ export function startup(params) {
   if (is_pixely) {
     textures.defaultFilters(gl.NEAREST, gl.NEAREST);
   } else {
-    textures.defaultFilters(gl.LINEAR, gl.LINEAR);
+    textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
 
   sound_manager = require('./sound_manager.js').create();
