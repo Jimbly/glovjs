@@ -195,7 +195,7 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   let ubias = 0;
   let vbias = 0;
   let tex = elem.texs[0];
-  if (!nozoom) {
+  if (!nozoom && !tex.nozoom) {
     // Bias the texture coordinates depending on the minification/magnification
     //   level so we do not get pixels from neighboring frames bleeding in
     // Use min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
@@ -457,7 +457,7 @@ export function draw() {
   }
 }
 
-function buildRects(ws, hs) {
+export function buildRects(ws, hs) {
   let rects = [];
   let total_w = 0;
   for (let ii = 0; ii < ws.length; ++ii) {
@@ -531,6 +531,13 @@ function Sprite(params) {
   this.size = params.size || vec2(1, 1);
   this.color = params.color || vec4(1,1,1,1);
   this.uvs = params.uvs || vec4(0, 0, 1, 1);
+  if (!params.uvs) {
+    // Fix up non-power-of-two textures
+    this.texs[0].onLoad((tex) => {
+      this.uvs[2] = tex.src_width / tex.width;
+      this.uvs[3] = tex.src_height / tex.height;
+    });
+  }
 
   if (params.ws) {
     this.uidata = buildRects(params.ws, params.hs);
