@@ -251,7 +251,10 @@ gulp.task('browser-sync', ['nodemon'], () => {
   browser_sync({
 
     // informs browser-sync to proxy our expressjs app which would run at the following location
-    proxy: 'http://localhost:3000',
+    proxy: {
+      target: 'http://localhost:3000',
+      ws: true,
+    },
 
     // informs browser-sync to use the following port for the proxied app
     // notice that the default port is 3000, which would clash with our expressjs
