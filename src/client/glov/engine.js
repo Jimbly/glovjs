@@ -498,7 +498,7 @@ export function startup(params) {
   });
   camera2d.startup();
   sprites.startup();
-  input.startup(canvas);
+  input.startup(canvas, params);
   if (any_3d) {
     models.startup();
   }
