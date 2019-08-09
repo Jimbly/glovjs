@@ -1,4 +1,3 @@
-/* eslint-env jquery */
 /*global Z: false */
 
 const camera2d = require('./camera2d.js');
