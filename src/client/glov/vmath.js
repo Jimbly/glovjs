@@ -5,31 +5,7 @@
 exports.mat3 = require('gl-mat3/create');
 exports.mat4 = require('gl-mat4/create');
 
-const { abs, floor, max, min, round, sqrt } = Math;
-
-export function clamp(a, mn, mx) {
-  return max(mn, min(mx, a));
-}
-
-export function fract(v) {
-  return v - floor(v);
-}
-
-export function lerp(a, v0, v1) {
-  return (1 - a) * v0 + a * v1;
-}
-
-export function isPowerOfTwo(n) {
-  return ((n & (n - 1)) === 0);
-}
-
-export function nextHighestPowerOfTwo(x) {
-  --x;
-  for (let i = 1; i < 32; i <<= 1) {
-    x |= x >> i;
-  }
-  return x + 1;
-}
+const { abs, floor, round, sqrt } = Math;
 
 export function vec1(v) {
   return new Float32Array([v]);

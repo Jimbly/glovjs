@@ -108,6 +108,7 @@ export function main() {
     game_height,
     pixely: flagGet('pixely', 'on'),
     viewport_postprocess: false,
+    sound_manager: require('./glov/sound_manager.js').create(),
   })) {
     return;
   }

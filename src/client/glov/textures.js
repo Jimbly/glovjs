@@ -23,7 +23,7 @@ export function defaultFilters(min, mag) {
   default_filter_mag = mag;
 }
 
-const { isPowerOfTwo, nextHighestPowerOfTwo } = require('./vmath.js');
+const { isPowerOfTwo, nextHighestPowerOfTwo } = require('../../common/util.js');
 
 let bound_unit = null;
 let bound_tex = [];

@@ -125,3 +125,15 @@ export function inherits(ctor, superCtor) {
     }
   });
 }
+
+export function isPowerOfTwo(n) {
+  return ((n & (n - 1)) === 0); // eslint-disable-line no-bitwise
+}
+
+export function nextHighestPowerOfTwo(x) {
+  --x;
+  for (let i = 1; i < 32; i <<= 1) { // eslint-disable-line no-bitwise
+    x |= x >> i; // eslint-disable-line no-bitwise
+  }
+  return x + 1;
+}

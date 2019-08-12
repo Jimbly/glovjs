@@ -12,7 +12,6 @@ const glov_font = require('./font.js');
 const font_info_palanquin32 = require('../img/font/palanquin32.json');
 const geom = require('./geom.js');
 const input = require('./input.js');
-const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
 const mat4Copy = require('gl-mat4/copy');
 const mat4Invert = require('gl-mat4/invert');
@@ -22,6 +21,7 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, min, max, PI, sin, sqrt } = Math;
 const models = require('./models.js');
 const shaders = require('./shaders.js');
+const sound_manager_dummy = require('./sound_manager_dummy.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
@@ -69,6 +69,7 @@ export let light_dir_ws = vec3(-1, -2, -3);
 
 export let font;
 export let app_state = null;
+export const border_color = vec4(0, 0, 0, 1);
 export const pico8_colors = [
   vec4(0, 0, 0, 1),
   vec4(0.114, 0.169, 0.326, 1),
@@ -129,16 +130,6 @@ export function updateMatrices(mat_model) {
   mat4Transpose(mat_temp, mat_temp);
   mat3FromMat4(mat_mv_inv_transform, mat_temp);
 }
-
-// *Maybe* don't need this logic anymore, postprocessing has been improved to be
-// efficient on all devices.
-const postprocessing_reset_version = '2';
-export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version;
-export function postprocessingAllow(allow) {
-  local_storage.set('glov_no_postprocessing', allow ? undefined : postprocessing_reset_version);
-  postprocessing = allow;
-}
-
 export let global_timer = 0;
 export function getFrameTimestamp() {
   return global_timer;
@@ -322,16 +313,18 @@ function tick() {
     document.getElementById('fullscreen').style['font-size'] = `${font_size}px`;
   }
 
+  if (any_3d) {
+    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    gl.clear(clear_bits);
+    gl.enable(gl.CULL_FACE);
+  }
+
   if (do_borders) {
     // Borders
-    glov_ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), 0, Z.BORDERS,
-      pico8_colors[0]);
-    glov_ui.drawRect(camera2d.x0(), game_height, camera2d.x1(), camera2d.y1(), Z.BORDERS,
-      pico8_colors[0]);
-    glov_ui.drawRect(camera2d.x0(), 0, 0, game_height, Z.BORDERS,
-      pico8_colors[0]);
-    glov_ui.drawRect(game_width, 0, camera2d.x1(), game_height, Z.BORDERS,
-      pico8_colors[0]);
+    glov_ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), 0, Z.BORDERS, border_color);
+    glov_ui.drawRect(camera2d.x0(), game_height, camera2d.x1(), camera2d.y1(), Z.BORDERS, border_color);
+    glov_ui.drawRect(camera2d.x0(), 0, 0, game_height, Z.BORDERS, border_color);
+    glov_ui.drawRect(game_width, 0, camera2d.x1(), game_height, Z.BORDERS, border_color);
   }
 
   for (let ii = 0; ii < app_tick_functions.length; ++ii) {
@@ -349,13 +342,14 @@ function tick() {
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
   glov_transition.render(dt);
 
-  // Above is queuing, below is actual drawing
-
-  gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
-  gl.clear(clear_bits);
-
-  gl.disable(gl.CULL_FACE); // Need to enable this before 3D drawing!
+  if (any_3d) {
+    gl.disable(gl.CULL_FACE);
+  } else {
+    // delaying clear until later, app might change clear color
+    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
+    gl.clear(clear_bits);
+  }
 
   sprites.draw();
 
@@ -473,6 +467,9 @@ export function startup(params) {
 
   gl.depthFunc(gl.LEQUAL);
   // gl.enable(gl.SCISSOR_TEST);
+  if (!any_3d) {
+    gl.disable(gl.CULL_FACE);
+  }
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
 
@@ -522,8 +519,6 @@ export function startup(params) {
     textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
 
-  sound_manager = require('./sound_manager.js').create();
-
   const font_info_04b03x2 = require('../img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('../img/font/04b03_8x1.json');
   if (params.font) {
@@ -536,10 +531,17 @@ export function startup(params) {
     font = glov_font.create(font_info_palanquin32, 'font/palanquin32');
   }
   glov_ui.startup(font, params.ui_sprites);
-  glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
-    button_click: 'button_click',
-    rollover: 'rollover',
-  });
+
+  if (params.sound_manager) {
+    // Require caller to require this module, so we don't force it loaded/bundled in programs that do not need it
+    sound_manager = params.sound_manager;
+    glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
+      button_click: 'button_click',
+      rollover: 'rollover',
+    });
+  } else {
+    sound_manager = sound_manager_dummy;
+  }
 
   camera2d.setAspectFixed(game_width, game_height);
 

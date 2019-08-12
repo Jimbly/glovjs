@@ -12,8 +12,8 @@ const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
+const { nextHighestPowerOfTwo } = require('../../common/util.js');
 const { vec2, vec4 } = require('./vmath.js');
-const { nextHighestPowerOfTwo } = require('./vmath.js');
 
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;

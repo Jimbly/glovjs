@@ -27,9 +27,9 @@ const glov_input = require('./input.js');
 const { abs, max, min, round, sqrt } = Math;
 const glov_sprites = require('./sprites.js');
 const textures = require('./textures.js');
-const { clone, merge } = require('../../common/util.js');
+const { clamp, clone, lerp, merge } = require('../../common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
-const { clamp, lerp, vec2, vec4, v4scale } = require('./vmath.js');
+const { vec2, vec4, v4scale } = require('./vmath.js');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;
@@ -185,7 +185,9 @@ let focused_key_prev2;
 
 export function loadUISprite(name, ws, hs, overrides, only_override) {
   let override = overrides && overrides[name];
-  if (override) {
+  if (override === null) {
+    // skip it, assume not used
+  } else if (override) {
     sprites[name] = glov_sprites.create({
       name: override[0],
       ws: override[1],
@@ -790,7 +792,6 @@ export function slider(value, param) {
   return value;
 }
 
-let bad_frames = 0;
 export function tickUI(dt) {
   last_frame_button_mouseover = frame_button_mouseover;
   frame_button_mouseover = false;
@@ -816,7 +817,6 @@ export function tickUI(dt) {
   }
   dom_elems_issued = 0;
 
-  let pp_this_frame = false;
   if (modal_dialog || menu_up) {
     let params = menu_fade_params;
     if (!menu_up) {
@@ -825,35 +825,22 @@ export function tickUI(dt) {
     }
     menu_up_time += dt;
     // Effects during modal dialogs
-    if (glov_engine.postprocessing) {
-      let factor = min(menu_up_time / 500, 1);
-      glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
-      glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
-      pp_this_frame = true;
-    } else {
-      // Just darken
-      sprites.white.draw({
-        x: camera2d.x0(),
-        y: camera2d.y0(),
-        z: params.z - 2,
-        color: params.fallback_darken,
-        w: camera2d.x1() - camera2d.x0(),
-        h: camera2d.y1() - camera2d.y0(),
-      });
-    }
+    let factor = min(menu_up_time / 500, 1);
+    glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
+    glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
+    // // Or, just darken
+    // sprites.white.draw({
+    //   x: camera2d.x0(),
+    //   y: camera2d.y0(),
+    //   z: params.z - 2,
+    //   color: params.fallback_darken,
+    //   w: camera2d.x1() - camera2d.x0(),
+    //   h: camera2d.y1() - camera2d.y0(),
+    // });
   } else {
     menu_up_time = 0;
   }
   menu_up = false;
-
-  if (!glov_engine.is_loading && glov_engine.this_frame_time > 250 && pp_this_frame) {
-    bad_frames++;
-    if (bad_frames >= 3) { // 3 in a row, disable superfluous postprocessing
-      glov_engine.postprocessingAllow(false);
-    }
-  } else if (bad_frames) {
-    bad_frames = 0;
-  }
 
   if (modal_dialog) {
     modalDialogRun();

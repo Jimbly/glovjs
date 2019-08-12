@@ -9,7 +9,8 @@ const { floor, max, round } = Math;
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
-const { clamp, vec4, v4clone, v4scale } = require('./vmath.js');
+const { clamp } = require('../../common/util.js');
+const { vec4, v4clone, v4scale } = require('./vmath.js');
 
 /*
 
