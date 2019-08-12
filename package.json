@@ -1,5 +1,5 @@
 {
-  "name": "glovjs-playground",
+  "name": "glov",
   "version": "0.0.2",
   "description": "Template for a state of the art Javascript project using GLOV.js",
   "main": "build/server/index.js",
@@ -12,7 +12,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git@github.com:Jimbly/glovjs-playground.git"
+    "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
     "start": "gulp browser-sync",
@@ -27,10 +27,15 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "dot-prop": "^4.2.0",
     "express": "^4.16.4",
+    "fs-store": "^0.3.1",
     "gl-mat3": "^2.0.0",
     "gl-mat4": "^1.2.0",
-    "random-seed": "^0.3.0"
+    "mkdirp": "^0.5.1",
+    "random-seed": "^0.3.0",
+    "request": "^2.88.0",
+    "ws": "^7.1.1"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
@@ -54,5 +59,8 @@
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0",
     "watchify": "3.11.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.1"
   }
 }

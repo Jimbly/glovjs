@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { abs, floor, min, max, round, pow, sqrt } = Math;
 
 export function nop() {
@@ -109,4 +110,18 @@ export function lineCircleIntersect(p1, p2, pCircle, radius) {
   }
 
   return false;
+}
+
+export function inherits(ctor, superCtor) {
+  // From Node.js
+  assert(typeof superCtor === 'function');
+  // not needed? ctor.super_ = superCtor; // eslint-disable-line no-underscore-dangle
+  ctor.prototype = Object.create(superCtor.prototype, {
+    constructor: {
+      value: ctor,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
 }

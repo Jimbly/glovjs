@@ -4,6 +4,7 @@
 /* eslint-env browser */
 /* global Z:false */
 
+require('./bootstrap.js'); // Just in case it's not in wrapper.js
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const effects = require('./effects.js');

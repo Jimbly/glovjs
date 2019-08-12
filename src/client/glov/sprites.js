@@ -423,6 +423,7 @@ export function draw() {
     if (elem.fn) {
       commitAndFlush();
       batch_state = null;
+      last_bound_shader = -1;
       elem.fn();
     } else {
       if (!batch_state ||
