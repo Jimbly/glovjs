@@ -138,9 +138,15 @@ function babelBrfs(filename, opts) {
 // End fork of https://github.com/Jam3/brfs-babel
 //////////////////////////////////////////////////////////////////////////
 
-(function () {
+let client_js_deps = []
+let client_js_watch_deps = [];
+
+function bundleJS(filename) {
+  let bundle_name = filename.replace('.js', '.bundle.js');
   const browserify_opts = {
-    entries: ['./src/client/wrapper.js'],
+    entries: [
+      `./src/client/${filename}`,
+    ],
     cache: {}, // required for watchify
     packageCache: {}, // required for watchify
     builtins: {
@@ -171,7 +177,7 @@ function babelBrfs(filename, opts) {
       .bundle()
       // log errors if they happen
       .on('error', log.error.bind(log, 'Browserify Error'))
-      .pipe(source('wrapper.bundle.js'))
+      .pipe(source(bundle_name))
       // optional, remove if you don't need to buffer file contents
       .pipe(buffer())
       // optional, remove if you don't want sourcemaps
@@ -196,17 +202,24 @@ function babelBrfs(filename, opts) {
       .pipe(browser_sync.stream({ once: true }));
   });
   watched.on('log', log); // output build logs to terminal
-  gulp.task('client_js_watch', function () {
+  client_js_watch_deps.push(`client_js_watch_${filename}`);
+  gulp.task(`client_js_watch_${filename}`, function () {
     return dobundle(watched, uglify_options_dev);
   });
 
   const nonwatched = browserify(browserify_opts);
   nonwatched.transform(babelify, babelify_opts);
   nonwatched.on('log', log); // output build logs to terminal
-  gulp.task('client_js', function () {
+  client_js_deps.push(`client_js_${filename}`);
+  gulp.task(`client_js_${filename}`, function () {
     return dobundle(nonwatched, uglify_options_release);
   });
-}());
+}
+
+bundleJS('wrapper.js');
+
+gulp.task('client_js', client_js_deps);
+gulp.task('client_js_watch', client_js_watch_deps);
 
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
