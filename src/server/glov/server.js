@@ -1,3 +1,6 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
 const assert = require('assert');
 const data_store = require('./data_store.js');
 const glov_channel_server = require('./channel_server.js');

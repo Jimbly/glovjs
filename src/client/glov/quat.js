@@ -1,3 +1,6 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
 // Vector math functions required by the rest of the engine taken piecemeal from
 // gl-matrix and related, as well as some generic math utilities
 

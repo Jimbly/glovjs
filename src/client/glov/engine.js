@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-
 /* eslint-env browser */
 /* global Z:false */
 
@@ -158,6 +157,14 @@ export function setState(new_state) {
     after_loading_state = new_state;
   } else {
     app_state = new_state;
+  }
+}
+
+export function stateActive(test_state) {
+  if (is_loading) {
+    return after_loading_state === test_state;
+  } else {
+    return app_state === test_state;
   }
 }
 

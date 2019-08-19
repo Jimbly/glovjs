@@ -3,7 +3,6 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');

@@ -1,16 +1,16 @@
-class TestWorker {
-  constructor(channel_worker, channel_id) {
-    this.channel_worker = channel_worker;
-    this.channel_id = channel_id;
-    channel_worker.doMaintainClientList();
-    channel_worker.doEmitJoinLeaveEvents();
-  }
-}
+const { ChannelWorker } = require('./glov/channel_worker.js');
 
-function createTestWorker(channel_worker, channel_id) {
-  return new TestWorker(channel_worker, channel_id);
+class TestWorker extends ChannelWorker {
+  // constructor(channel_server, channel_id) {
+  //   super(channel_server, channel_id);
+  // }
 }
+TestWorker.prototype.maintain_client_list = true;
+TestWorker.prototype.emit_join_leave_events = true;
+TestWorker.prototype.require_login = true;
 
 export function init(channel_server) {
-  channel_server.addChannelWorker('test', createTestWorker);
+  channel_server.registerChannelWorker('test', TestWorker, {
+    autocreate: true,
+  });
 }

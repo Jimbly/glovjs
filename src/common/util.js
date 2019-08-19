@@ -1,3 +1,6 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
 const assert = require('assert');
 const { abs, floor, min, max, round, pow, sqrt } = Math;
 
@@ -136,4 +139,15 @@ export function nextHighestPowerOfTwo(x) {
     x |= x >> i; // eslint-disable-line no-bitwise
   }
   return x + 1;
+}
+
+export function logdata(data) {
+  if (data === undefined) {
+    return '';
+  }
+  let r = JSON.stringify(data);
+  if (r.length < 120) {
+    return r;
+  }
+  return `${r.slice(0, 120-3)}...`;
 }

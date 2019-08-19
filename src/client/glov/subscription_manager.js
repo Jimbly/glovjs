@@ -1,3 +1,6 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
 const assert = require('assert');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
@@ -19,13 +22,14 @@ function ClientChannelWorker(subs, channel_id) {
   this.onMsg('channel_data', this.handleChannelData.bind(this));
   this.onMsg('apply_channel_data', this.handleApplyChannelData.bind(this));
   this.logged_in = false;
+  this.was_logged_in = false;
   this.logging_in = false;
 }
 util.inherits(ClientChannelWorker, EventEmitter);
 
 // cb(data)
 ClientChannelWorker.prototype.onSubscribe = function (cb) {
-  assert(this.subscriptions);
+  assert(this.subscriptions || this.autosubscribed);
   this.on('subscribe', cb);
   if (this.got_subscribe) {
     cb(this.data); // eslint-disable-line callback-return
@@ -34,7 +38,7 @@ ClientChannelWorker.prototype.onSubscribe = function (cb) {
 
 // cb(data)
 ClientChannelWorker.prototype.onceSubscribe = function (cb) {
-  assert(this.subscriptions);
+  assert(this.subscriptions || this.autosubscribed);
   if (this.got_subscribe) {
     cb(this.data); // eslint-disable-line callback-return
   } else {
@@ -94,9 +98,8 @@ ClientChannelWorker.prototype.send = function (msg, data, opts, resp_func) {
 };
 
 function SubscriptionManager(client) {
+  EventEmitter.call(this);
   this.client = client;
-  this.on_connect = null;
-  this.on_login = null;
   this.channels = {};
 
   this.first_connect = true;
@@ -106,6 +109,7 @@ function SubscriptionManager(client) {
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
 }
+util.inherits(SubscriptionManager, EventEmitter);
 
 SubscriptionManager.prototype.handleConnect = function () {
   this.connected = true;
@@ -115,16 +119,43 @@ SubscriptionManager.prototype.handleConnect = function () {
   } else {
     reconnect = true;
   }
-  if (this.on_connect) {
-    this.on_connect(reconnect);
-  }
-  // (re-)subscribe to all channels
-  for (let channel_id in this.channels) {
-    let channel = this.channels[channel_id];
-    if (channel.subscriptions) {
-      this.client.send('subscribe', channel_id);
+
+  let subs = this;
+  function resub() {
+    // (re-)subscribe to all channels
+    for (let channel_id in subs.channels) {
+      let channel = subs.channels[channel_id];
+      if (channel.subscriptions) {
+        subs.client.send('subscribe', channel_id);
+      }
     }
+    subs.emit('connect', reconnect);
   }
+
+  if (this.was_logged_in) {
+    // Try to re-connect to existing login
+    this.loginInternal(this.login_credentials, function (err) {
+      if (err && err === 'ERR_DISCONNECTED') {
+        // we got disconnected while trying to log in, we'll retry after reconnection
+      } else if (err) {
+        // Error logging in upon re-connection, no good way to handle this?
+        // TODO: Show some message to the user and prompt them to refresh?  Stay in "disconnected" state?
+        assert(false);
+      } else {
+        resub();
+      }
+    });
+  } else {
+    // Try auto-login
+    if (local_storage.get('name') && local_storage.get('password')) {
+      this.login(local_storage.get('name'), local_storage.get('password'), function () {
+        // ignore error on auto-login
+      });
+    }
+
+    resub();
+  }
+
 };
 
 SubscriptionManager.prototype.handleChannelMessage = function (data, resp_func) {
@@ -144,7 +175,6 @@ SubscriptionManager.prototype.handleChannelMessage = function (data, resp_func) 
 SubscriptionManager.prototype.handleServerTime = function (data) {
   this.server_time = data;
   if (this.server_time < this.server_time_interp && this.server_time > this.server_time_interp - 250) {
-    /*jshint noempty:false*/
     // slight time travel backwards, this one packet must have been delayed,
     // since we once got a packet quicker. Just ignore this, interpolate from
     // where we were before
@@ -193,7 +223,9 @@ SubscriptionManager.prototype.getMyUserChannel = function () {
   if (!user_id) {
     return null;
   }
-  return this.getChannel(`user.${user_id}`);
+  let channel = this.getChannel(`user.${user_id}`);
+  channel.autosubscribed = true;
+  return channel;
 };
 
 SubscriptionManager.prototype.unsubscribe = function (channel_id) {
@@ -209,28 +241,38 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   }
 };
 
-SubscriptionManager.prototype.onConnect = function (cb) {
-  assert(!this.on_connect);
-  this.on_connect = cb;
-};
-
 SubscriptionManager.prototype.onLogin = function (cb) {
-  assert(!this.on_login);
-  this.on_login = cb;
+  this.on('login', cb);
+  if (this.logged_in) {
+    return void cb();
+  }
 };
 
 SubscriptionManager.prototype.loggedIn = function () {
-  return this.logged_in ? this.logged_in_username : false;
+  return this.logged_in ? this.logged_in_username || 'missing_name' : false;
 };
 
-SubscriptionManager.prototype.login = function (username, password, resp_func) {
+SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_func) {
   if (this.logging_in) {
     return resp_func('Login already in progress');
   }
   this.logging_in = true;
   this.logged_in = false;
-  // client.send('channel_msg',
-  //  { channel_id: room_name, msg: 'emote', data: `is now known as ${name}`, broadcast: true });
+  return this.client.send('login', login_credentials, (err) => {
+    this.logging_in = false;
+    if (!err) {
+      this.logged_in_username = login_credentials.name;
+      this.logged_in = true;
+      this.was_logged_in = true;
+      this.emit('login', login_credentials.name);
+    } else {
+      this.emit('login_fail', err);
+    }
+    resp_func(err);
+  });
+};
+
+SubscriptionManager.prototype.login = function (username, password, resp_func) {
   if (password && password.split('$$')[0] === 'prehashed') {
     password = password.split('$$')[1];
   } else if (password) {
@@ -239,19 +281,38 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
   } else {
     password = undefined;
   }
-  return this.client.send('login', { name: username, password: password }, (err) => {
-    this.logging_in = false;
-    if (!err) {
-      this.logged_in_username = username;
-      this.logged_in = true;
-      if (this.on_login) {
-        this.on_login(username);
-      }
-    }
-    resp_func(err);
-  });
+  this.login_credentials = { name: username, password: password };
+  this.loginInternal(this.login_credentials, resp_func);
 };
 
+SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
+  let self = this;
+  let channel_ids = Object.keys(self.channels);
+  let idx = 0;
+  let last_error = 'Unknown command';
+  function tryNext() {
+    let channel_id;
+    do {
+      channel_id = channel_ids[idx++];
+    } while (channel_id && !self.channels[channel_id]);
+    if (!channel_id) {
+      return resp_func(last_error);
+    }
+    return self.client.send('channel_msg', { channel_id: channel_id, msg: 'cmdparse', data: command },
+      function (err, resp) {
+        if (err || resp && resp.found) {
+          return resp_func(err, resp ? resp.resp : null);
+        }
+        // otherwise, was not found
+        if (resp && resp.err) {
+          last_error = resp.err;
+        }
+        return tryNext();
+      }
+    );
+  }
+  tryNext();
+};
 
 export function create(client) {
   return new SubscriptionManager(client);

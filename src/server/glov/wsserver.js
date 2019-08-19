@@ -1,3 +1,7 @@
+// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+
+const ack = require('../../common/ack.js');
 const assert = require('assert');
 const events = require('../../common/tiny-events.js');
 const node_util = require('util');
@@ -33,13 +37,11 @@ function WSClient(ws_server, socket) {
   this.id = ++ws_server.last_client_id;
   this.secret = Math.ceil(Math.random() * 1e10).toString();
   this.addr = ipFromRequest(socket.handshake);
-  this.last_pak_id = 0;
-  this.resp_cbs = {};
   this.handlers = ws_server.handlers; // reference, not copy!
   this.connected = true;
   this.disconnected = false;
-  this.responses_waiting = 0;
   this.last_receive_time = Date.now();
+  ack.initReceiver(this);
   ws_server.clients[this.id] = this;
 }
 util.inherits(WSClient, events.EventEmitter);
@@ -72,6 +74,7 @@ WSClient.prototype.onClose = function () {
   delete ws_server.clients[client.id];
   console.log(`WS Client ${client.id} disconnected` +
     ` (${Object.keys(ws_server.clients).length} clients connected)`);
+  ack.failAll(client); // Should this be before or after other disconnect events?
   client.emit('disconnect');
   ws_server.emit('disconnect', client);
 };
@@ -105,8 +108,6 @@ WSServer.prototype.init = function (server) {
     console.log(`WS Client ${client.id} connected to ${req.url} from ${client.addr}` +
       ` (${Object.keys(ws_server.clients).length} clients connected)`);
 
-    client.send('internal_client_id', { id: client.id, secret: client.secret });
-
     socket.on('close', function () {
       // disable this for testing
       client.onClose();
@@ -119,6 +120,9 @@ WSServer.prototype.init = function (server) {
       client.onError(e);
     });
     ws_server.emit('client', client);
+
+    // after the .emit('client') has a chance to set client.ids
+    client.send('internal_client_id', { id: client.ids ? client.ids.id : client.id, secret: client.secret });
 
     let query = querystring.parse(url.parse(req.url).query);
     let reconnect_id = Number(query.reconnect);
