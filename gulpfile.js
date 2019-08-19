@@ -12,7 +12,6 @@ const lazypipe = require('lazypipe');
 const log = require('fancy-log');
 const useref = require('gulp-useref');
 const uglify = require('gulp-uglify');
-// const node_inspector = require('gulp-node-inspector');
 const nodemon = require('gulp-nodemon');
 const replace = require('gulp-replace');
 const source = require('vinyl-source-stream');
@@ -44,14 +43,17 @@ const uglify_options_release = { keep_fnames: true };
 // Do no significant minification to make debugging easier:
 const uglify_options_dev = { compress: false, mangle: false };
 
-// gulp.task('inspect', function () {
-//   gulp.src([]).pipe(node_inspector({
-//     debugPort: 5858,
-//     webHost: '0.0.0.0',
-//     webPort: '8080',
-//     preload: false
-//   }));
-// });
+// if (args.debug) {
+//   const node_inspector = require('gulp-node-inspector'); // eslint-disable-line global-require
+//   gulp.task('inspect', function () {
+//     gulp.src([]).pipe(node_inspector({
+//       debugPort: 5858,
+//       webHost: '0.0.0.0',
+//       webPort: '8080',
+//       preload: false
+//     }));
+//   });
+// }
 
 gulp.task('js', function () {
   return gulp.src(config.js_files)
@@ -235,7 +237,7 @@ if (args.debug) {
 gulp.task('nodemon', deps, () => {
   const options = {
     script: 'build/server/index.js',
-    nodeArgs: [],
+    nodeArgs: ['--inspect'],
     args: ['--dev'],
     watch: ['build/server/'],
   };
