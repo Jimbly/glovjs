@@ -8,15 +8,9 @@ const { ChannelWorker } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
 const default_workers = require('./default_workers.js');
 const exchange = require('./exchange.js');
-const { logdata } = require('../../common/util.js');
+const { clone, logdata } = require('../../common/util.js');
 
 const { max } = Math;
-
-function defaultRespFunc(err) {
-  if (err) {
-    console.log('Received unhandled error response:', err);
-  }
-}
 
 // source is a ChannelWorker
 // dest is channel_id in the form of `type.id`
@@ -40,15 +34,27 @@ export function channelServerSend(source, dest, msg, err, data, resp_func) {
   if ((!data || !data.q) && typeof msg === 'string') {
     console.log(`${source.channel_id}->${dest}: ${msg} ${err ? `err:${logdata(err)}` : ''} ${logdata(data)}`);
   }
+  assert(source.send_pkt_idx);
+  let pkt_idx = source.send_pkt_idx[dest] = (source.send_pkt_idx[dest] || 0) + 1;
 
   assert(typeof dest === 'string' && dest);
   assert(typeof msg === 'string' || typeof msg === 'number');
   let net_data = ack.wrapMessage(source, msg, err, data, resp_func);
+  net_data.pkt_idx = pkt_idx;
   if (source.ids) {
     net_data.ids = source.ids;
   }
   if (!resp_func) {
-    resp_func = defaultRespFunc;
+    resp_func = function (err) {
+      if (err) {
+        if (err === exchange.ERR_NOT_FOUND && typeof msg === 'number') {
+          // not found error while acking, happens with unsubscribe, etc, right before shutdown, silently ignore
+        } else {
+          console.log(`Received unhandled error response while handling "${msg}" from ${source.channel_id} to ${dest}:`,
+            err);
+        }
+      }
+    };
   }
   let retries = 10;
   function trySend(prev_error) {
@@ -126,6 +132,26 @@ class ChannelServer {
     return channel;
   }
 
+  removeChannelLocal(channel_id) {
+    assert(this.local_channels[channel_id]);
+    exchange.unregister(channel_id);
+    delete this.local_channels[channel_id];
+    // TODO: Let others know to reset/clear their packet ids going to this worker,
+    // to free memory and ease re-creation later?
+    this.sendAsChannelServer('channel_server', 'worker_removed', channel_id);
+    //exchange.publish(this.csworker.channel_id, 'channel_server', ...
+  }
+
+  handleWorkerRemoved(removed_channel_id) {
+    for (let channel_id in this.local_channels) {
+      let channel = this.local_channels[channel_id];
+      assert(channel.recv_pkt_idx);
+      delete channel.recv_pkt_idx[removed_channel_id];
+      assert(channel.send_pkt_idx);
+      delete channel.send_pkt_idx[removed_channel_id];
+    }
+  }
+
   clientIdFromWSClient(client) {
     return `${this.csuid}-${client.id}`;
   }
@@ -139,6 +165,8 @@ class ChannelServer {
     default_workers.init(this);
 
     this.csworker = this.createChannelLocal(`channel_server.${this.csuid}`);
+    // Should this happen for all channels generically?  Do we need a generic "broadcast to all user.* channels"?
+    exchange.subscribe('channel_server', this.csworker.handleMessage.bind(this.csworker));
 
     this.tick_func = this.doTick.bind(this);
     this.tick_time = 250;
@@ -192,10 +220,17 @@ class ChannelServer {
       map[msg] = cb;
     }
     if (!ctor.prototype.handlers) {
+      let allow_client_direct = ctor.prototype.allow_client_direct = clone(ctor.prototype.allow_client_direct || {});
       let handlers = ctor.prototype.handlers = {};
       if (options.handlers) {
         for (let msg in options.handlers) {
           addUnique(handlers, msg, options.handlers[msg]);
+        }
+      }
+      if (options.client_handlers) {
+        for (let msg in options.client_handlers) {
+          allow_client_direct[msg] = true;
+          addUnique(handlers, msg, options.client_handlers[msg]);
         }
       }
       // Built-in and default handlers
@@ -206,9 +241,12 @@ class ChannelServer {
       addUnique(handlers, 'unsubscribe', ChannelWorker.prototype.onUnSubscribe);
       addUnique(handlers, 'client_changed', ChannelWorker.prototype.onClientChanged);
       addUnique(handlers, 'set_channel_data', ChannelWorker.prototype.onSetChannelData);
-      addUnique(handlers, 'setif_channel_data', ChannelWorker.prototype.onSetIfChannelData);
+      addUnique(handlers, 'set_channel_data_if', ChannelWorker.prototype.onSetChannelDataIf);
+      addUnique(handlers, 'set_channel_data_push', ChannelWorker.prototype.onSetChannelDataPush);
       addUnique(handlers, 'get_channel_data', ChannelWorker.prototype.onGetChannelData);
+
       addUnique(handlers, 'broadcast', ChannelWorker.prototype.onBroadcast);
+      allow_client_direct.cmdparse = true;
       addUnique(handlers, 'cmdparse', ChannelWorker.prototype.onCmdParse);
     }
     if (!ctor.prototype.filters) {
@@ -235,12 +273,39 @@ class ChannelServer {
   getLocalChannelsByType(channel_type) {
     let ret = [];
     for (let channel_id in this.local_channels) {
-      let channel_type_test = channel_id.split('.')[0];
-      if (channel_type_test === channel_type) {
-        ret.push(this.local_channels[channel_id]);
+      let channel = this.local_channels[channel_id];
+      if (channel.channel_type === channel_type) {
+        ret.push(channel);
       }
     }
     return ret;
+  }
+
+  getStatus() {
+    let lines = [];
+    let num_clients = Object.keys(this.ws_server.clients).length;
+    lines.push(`Clients: ${num_clients}`);
+    let num_channels = {};
+    for (let channel_id in this.local_channels) {
+      let channel_type = this.local_channels[channel_id].channel_type;
+      num_channels[channel_type] = (num_channels[channel_type] || 0) + 1;
+    }
+    let channels = [];
+    for (let channel_type in num_channels) {
+      channels.push(`${channel_type}: ${num_channels[channel_type]}`);
+    }
+    lines.push(`Channels: ${channels.join(', ')}`);
+    return lines.join('\n  ');
+  }
+
+  handleUncaughtError(e) {
+    if (typeof e !== 'object') {
+      e = new Error(e);
+    }
+    console.error('ERROR', new Date(), e);
+    this.csworker.sendChannelMessage('admin.admin', 'broadcast', { msg: 'chat', data: {
+      msg: 'Server error occurred - check server logs'
+    } });
   }
 }
 

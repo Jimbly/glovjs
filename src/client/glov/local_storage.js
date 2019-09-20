@@ -47,8 +47,8 @@ export function getJSON(key, def) {
   return def;
 }
 
-export function clearAll() {
-  let prefix = new RegExp(`^${exports.storage_prefix}_`, 'u');
+export function clearAll(key_prefix) {
+  let prefix = new RegExp(`^${exports.storage_prefix}_${key_prefix || ''}`, 'u');
   for (let key in lsd) {
     if (key.match(prefix)) {
       delete lsd[key];

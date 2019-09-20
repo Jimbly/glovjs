@@ -86,6 +86,7 @@ export function handleMessage(receiver, source, net_data, send_func, handle_func
     if (!cb) {
       return receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
     }
+    delete receiver.resp_cbs[msg];
     cb(err, data, respFunc); // eslint-disable-line callback-return
   } else {
     if (!msg) {

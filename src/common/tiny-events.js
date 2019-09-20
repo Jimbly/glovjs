@@ -23,8 +23,17 @@ function addListener(ee, type, fn, once) {
   });
 }
 
-EventEmitter.prototype.listeners = function () {
-  return Object.keys(this._listeners);
+EventEmitter.prototype.hasListener = function (type, fn) {
+  let arr = this._listeners[type];
+  if (!arr) {
+    return false;
+  }
+  for (let ii = 0; ii < arr.length; ++ii) {
+    if (arr[ii].fn === fn) {
+      return true;
+    }
+  }
+  return false;
 };
 
 EventEmitter.prototype.on = function (type, fn) {

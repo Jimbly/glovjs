@@ -4,7 +4,6 @@ const babel = require('gulp-babel');
 const babelify = require('babelify');
 const browserify = require('browserify');
 const browser_sync = require('browser-sync');
-const buffer = require('vinyl-buffer');
 const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const eslint = require('gulp-eslint');
@@ -14,8 +13,9 @@ const useref = require('gulp-useref');
 const uglify = require('gulp-uglify');
 const nodemon = require('gulp-nodemon');
 const replace = require('gulp-replace');
-const source = require('vinyl-source-stream');
 const sourcemaps = require('gulp-sourcemaps');
+const vinyl_buffer = require('vinyl-buffer');
+const vinyl_source_stream = require('vinyl-source-stream');
 const watchify = require('watchify');
 
 //////////////////////////////////////////////////////////////////////////
@@ -138,7 +138,7 @@ function babelBrfs(filename, opts) {
 // End fork of https://github.com/Jam3/brfs-babel
 //////////////////////////////////////////////////////////////////////////
 
-let client_js_deps = []
+let client_js_deps = [];
 let client_js_watch_deps = [];
 
 function bundleJS(filename) {
@@ -177,9 +177,9 @@ function bundleJS(filename) {
       .bundle()
       // log errors if they happen
       .on('error', log.error.bind(log, 'Browserify Error'))
-      .pipe(source(bundle_name))
+      .pipe(vinyl_source_stream(bundle_name))
       // optional, remove if you don't need to buffer file contents
-      .pipe(buffer())
+      .pipe(vinyl_buffer())
       // optional, remove if you don't want sourcemaps
       .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
       // Remove extra Babel stuff that does not help anything
@@ -218,26 +218,32 @@ function bundleJS(filename) {
 
 bundleJS('wrapper.js');
 
-gulp.task('client_js', client_js_deps);
-gulp.task('client_js_watch', client_js_watch_deps);
+gulp.task('client_js', gulp.parallel(...client_js_deps));
+gulp.task('client_js_watch', gulp.parallel(...client_js_watch_deps));
 
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
 
-gulp.task('build', ['eslint', 'js', 'client_html', 'client_css', 'client_static', 'client_js']);
+gulp.task('build', gulp.parallel('eslint', 'js', 'client_html',
+  'client_css', 'client_static', 'client_js'));
 
-gulp.task('bs-reload', ['client_static', 'client_html'], () => {
+gulp.task('bs-reload', (done) => {
   browser_sync.reload();
+  done();
 });
 
-gulp.task('watch', ['eslint', 'js', 'client_html', 'client_css', 'client_static', 'client_js_watch'], () => {
-  gulp.watch(config.js_files, ['js']);
-  gulp.watch(config.all_js_files, ['eslint']);
-  gulp.watch(config.client_html, ['client_html', 'bs-reload']);
-  gulp.watch(config.client_vendor, ['client_html', 'bs-reload']);
-  gulp.watch(config.client_css, ['client_css']);
-  gulp.watch(config.client_static, ['client_static', 'bs-reload']);
-});
+gulp.task('watch', gulp.series(
+  gulp.parallel('eslint', 'js', 'client_html', 'client_css', 'client_static', 'client_js_watch'),
+  (done) => {
+    gulp.watch(config.js_files, gulp.series('js'));
+    gulp.watch(config.all_js_files, gulp.series('eslint'));
+    gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
+    gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
+    gulp.watch(config.client_css, gulp.series('client_css'));
+    gulp.watch(config.client_static, gulp.series('client_static', 'bs-reload'));
+    done();
+  }
+));
 
 const deps = ['watch'];
 if (args.debug) {
@@ -247,7 +253,7 @@ if (args.debug) {
 // Depending on "watch" not because that implicitly triggers this, but
 // just to start up the watcher and reprocessor, and nodemon restarts
 // based on its own logic below.
-gulp.task('nodemon', deps, () => {
+gulp.task('nodemon', gulp.series(...deps, (done) => {
   const options = {
     script: 'build/server/index.js',
     nodeArgs: ['--inspect'],
@@ -258,9 +264,10 @@ gulp.task('nodemon', deps, () => {
     options.nodeArgs.push('--debug');
   }
   nodemon(options);
-});
+  done();
+}));
 
-gulp.task('browser-sync', ['nodemon'], () => {
+gulp.task('browser-sync', gulp.series('nodemon', (done) => {
 
   // for more browser-sync config options: http://www.browsersync.io/docs/options/
   browser_sync({
@@ -278,4 +285,5 @@ gulp.task('browser-sync', ['nodemon'], () => {
     // // open the proxied app in chrome
     // browser: ['google-chrome'],
   });
-});
+  done();
+}));

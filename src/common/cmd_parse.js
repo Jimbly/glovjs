@@ -23,7 +23,7 @@ class CmdParse {
       resp_func(`Unknown command: "${m[1]}"`);
       return false;
     }
-    this.cmds[cmd].call(self, m[2], resp_func);
+    this.cmds[cmd].call(self, m[2] || '', resp_func);
     return true;
   }
 

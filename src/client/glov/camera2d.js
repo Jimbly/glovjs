@@ -46,6 +46,15 @@ export function set(x0, y0, x1, y1) {
   reapply();
 }
 
+const stack = [];
+export function push() {
+  stack.push(data.slice(0));
+}
+export function pop() {
+  let old = stack.pop();
+  set(old[0], old[1], old[2], old[3]);
+}
+
 // Drawing area 0,0-w,h
 // But keep the aspect ratio of those things drawn to be correct
 // This may create a padding or margin on either top and bottom or sides of the screen

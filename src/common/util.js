@@ -2,10 +2,17 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const { abs, floor, min, max, round, pow, sqrt } = Math;
+const { abs, floor, min, max, random, round, pow, sqrt } = Math;
 
 export function nop() {
   // empty
+}
+
+export function empty(obj) {
+  for (let key in obj) {
+    return false;
+  }
+  return true;
 }
 
 export function easeInOut(v, a) {
@@ -150,4 +157,20 @@ export function logdata(data) {
     return r;
   }
   return `${r.slice(0, 120-3)}...`;
+}
+
+export function isInteger(v) {
+  return typeof v === 'number' && isFinite(v) && floor(v) === v;
+}
+
+export function toNumber(v) {
+  return Number(v);
+}
+
+export function randomNot(not_value, max_value) {
+  let new_value;
+  do {
+    new_value = floor(random() * max_value);
+  } while (new_value === not_value);
+  return new_value;
 }

@@ -1,7 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off */
-/*global Z:false */
 
 const glov_input = require('./input.js');
 const glov_ui = require('./ui.js');

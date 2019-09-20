@@ -17,13 +17,14 @@ export function create(elem) {
     return user_want_locked; // Either it's locked, or there's an async attempt to lock it outstanding
   }
 
-  function exitLock() {
-    user_want_locked = false;
-    document.exitPointerLock();
-  }
-
   function pointerLog(msg) {
     // console.log(`PointerLock: ${msg}`);
+  }
+
+  function exitLock() {
+    pointerLog('Lock exit requested');
+    user_want_locked = false;
+    document.exitPointerLock();
   }
 
   function onPointerLockChange() {
@@ -84,10 +85,14 @@ export function create(elem) {
     deferred_lock_id = setTimeout(asyncPointerLockCheck, 1);
   }
 
-  function enterLock() {
+  function enterLock(maybe) {
     // Assert that we got a mouse down event recently, otherwise this won't work
-    assert(engine.global_frame_index - async_pointer_lock_start_frame <= 2);
+    assert(maybe || engine.global_frame_index - async_pointer_lock_start_frame <= 2);
     if (!direct_lock_works) {
+      if (maybe && !deferred_lock_id) {
+        // not going to work
+        return;
+      }
       assert(deferred_lock_id);
     }
     user_want_locked = true;

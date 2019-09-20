@@ -5,6 +5,7 @@
 const ack = require('../../common/ack.js');
 const assert = require('assert');
 const { min } = Math;
+const walltime = require('./walltime.js');
 const wscommon = require('../../common/wscommon.js');
 
 export function WSClient() {
@@ -15,7 +16,7 @@ export function WSClient() {
   this.disconnected = false;
   this.retry_scheduled = false;
   this.retry_count = 0;
-  this.disconnect_time = 0;
+  this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
   this.last_send_time = Date.now();
   ack.initReceiver(this);
@@ -40,7 +41,7 @@ export function WSClient() {
 
   this.connect(false);
 
-  this.onMsg('internal_client_id', this.onInternalClientID.bind(this));
+  this.onMsg('cack', this.onConnectAck.bind(this));
   this.onMsg('error', this.onError.bind(this));
 }
 
@@ -48,8 +49,9 @@ WSClient.prototype.timeSinceDisconnect = function () {
   return Date.now() - this.disconnect_time;
 };
 
-WSClient.prototype.onInternalClientID = function (data, resp_func) {
+WSClient.prototype.onConnectAck = function (data, resp_func) {
   let client = this;
+  walltime.sync(data.time);
   client.connected = true;
   client.disconnected = false;
   client.id = data.id;
@@ -70,6 +72,7 @@ WSClient.prototype.send = function (msg, data, resp_func) {
 };
 
 WSClient.prototype.onError = function (e) {
+  console.error(e);
   throw e;
 };
 
@@ -93,15 +96,15 @@ WSClient.prototype.retryConnection = function () {
     assert(!client.socket);
     client.retry_scheduled = false;
     client.connect(true);
-  }, min(client.retry_count * client.retry_count * 100, 1000));
+  }, min(client.retry_count * client.retry_count * 100, 15000));
 };
 
 WSClient.prototype.connect = function (for_reconnect) {
   let client = this;
 
-  let path = for_reconnect && client.id && client.secret ?
-    `${client.path}?reconnect=${client.id}&secret=${client.secret}` :
-    client.path;
+  let path = `${client.path}?pver=${wscommon.PROTOCOL_VERSION}${
+    for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
+  }`;
   let socket = new WebSocket(path);
   client.socket = socket;
 
@@ -120,9 +123,9 @@ WSClient.prototype.connect = function (for_reconnect) {
     client.socket = null;
     if (client.connected) {
       client.disconnect_time = Date.now();
+      client.disconnected = true;
     }
     client.connected = false;
-    client.disconnected = true;
     if (!skip_close) {
       try {
         socket.close();
@@ -145,9 +148,11 @@ WSClient.prototype.connect = function (for_reconnect) {
       console.log('WebSocket error during initial connection, retrying...', err);
       retry();
     } else {
-      console.log('WebSocket error', err);
+      console.error('WebSocket error', err);
       // Disconnect and reconnect here, is this a terminal error? Probably not, we'll get a 'close' event if it is?
-      client.onError(err);
+      // We some error occasionally on iOS, not sure what error, but it auto-reconnects fine, so let's
+      // not do a throw
+      // client.onError(err);
     }
   }));
 
@@ -168,7 +173,7 @@ WSClient.prototype.connect = function (for_reconnect) {
   }));
 
   let doPing = guard(function () {
-    if (Date.now() - client.last_send_time > wscommon.PING_TIME) {
+    if (Date.now() - client.last_send_time > wscommon.PING_TIME && client.connected) {
       client.send('ping');
     }
     setTimeout(doPing, wscommon.PING_TIME);

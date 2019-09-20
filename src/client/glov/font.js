@@ -521,8 +521,10 @@ class GlovFont {
   // Main implementation
 
   drawScaled(style, _x, y, z, xsc, ysc, text) {
-
     let x = _x;
+    assert(isFinite(x));
+    assert(isFinite(y));
+    assert(isFinite(z));
     let font_info = this.font_info;
     // Debug: show expect area of glyphs
     // require('./ui.js').drawRect(_x, y,

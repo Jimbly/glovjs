@@ -58,7 +58,7 @@ export let KEYS = {
 if (typeof Proxy === 'function') {
   // Catch referencing keys that are not in our map
   KEYS = new Proxy(KEYS, {
-    get: function (target, prop, receiver) {
+    get: function (target, prop) {
       let ret = target[prop];
       assert(ret);
       return ret;
@@ -134,7 +134,7 @@ export function pointerLocked() {
   return ptrlock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
-export function pointerLockEnter() {
+export function pointerLockEnter(maybe) {
   if (touch_mode) {
     return;
   }
@@ -148,7 +148,7 @@ export function pointerLockEnter() {
     touch_data.state = DOWN; // No DOWN_EDGE for this
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
-  ptrlock.enter();
+  ptrlock.enter(maybe);
 }
 export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
@@ -198,13 +198,13 @@ function onKeyDown(event) {
 
 let temp_delta = vec2();
 function onMouseMove(event, no_stop) {
-  if (touch_mode) {
-    local_storage.setJSON('touch_mode', false);
-    touch_mode = false;
-  }
   if (event.target.tagName !== 'INPUT' && !no_stop) {
     event.preventDefault();
     event.stopPropagation();
+    if (touch_mode) {
+      local_storage.setJSON('touch_mode', false);
+      touch_mode = false;
+    }
   }
   // offsetX/layerX return position relative to text-entry boxes, not good!
   mouse_pos[0] = event.clientX;
@@ -813,7 +813,9 @@ export function mouseDownEdge(param) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
-      touch_data.state = DOWN;
+      if (!param.peek) {
+        touch_data.state = DOWN;
+      }
       return {
         button: touch_data.button,
         pos: check_pos.slice(0),
@@ -911,8 +913,9 @@ export function dragOver(param) {
       if (!param.peek) {
         touch_data.dispatched_drag_over = true;
       }
+      camera2d.physicalToVirtual(cur_pos, touch_data.cur_pos);
       return {
-        cur_pos: touch_data.cur_pos,
+        cur_pos,
         drag_payload: touch_data.drag_payload
       };
     }

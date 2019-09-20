@@ -1,16 +1,16 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const assert = require('assert');
 const glov_engine = require('./engine.js');
 const net = require('./net.js');
 const util = require('../../common/util.js');
-const { max, min, sqrt } = Math;
-const {
-  vec2, v2copy, v2distSq, v2lengthSq, v2scale, v2sub,
-} = require('./vmath.js');
+const { abs, floor, max, min, PI, sqrt } = Math;
+const TWO_PI = PI * 2;
 
 const valid_options = [
   // Numeric parameters
+  'n', 'dim_pos', 'dim_rot', // dimensions
   'send_time', 'window', 'snap_factor', 'smooth_windows', 'smooth_factor', 'default_pos',
   // Callbacks
   'on_pos_update', 'on_state_update',
@@ -35,11 +35,18 @@ NetPositionManager.prototype.onChannelSubscribe = function (data) {
   this.client_id = net.client.id;
 };
 
-NetPositionManager.prototype.onChannelData = function (data, mod_key/* , mod_value */) {
+NetPositionManager.prototype.onChannelData = function (data, mod_key, mod_value) {
   if (mod_key) {
-    const m = mod_key.match(/public\.clients\.([^.]+)\.pos/u);
+    let m = mod_key.match(/^public\.clients\.([^.]+)\.pos$/u);
     if (m) {
       this.otherClientPosChanged(m[1]);
+    }
+    if (!mod_value) {
+      m = mod_key.match(/^public\.clients\.([^.]+)$/u);
+      if (m) {
+        // other client disconnected
+        delete this.per_client_data[m[1]];
+      }
     }
   } else {
     if (data && data.public && data.public.clients) {
@@ -50,6 +57,67 @@ NetPositionManager.prototype.onChannelData = function (data, mod_key/* , mod_val
         }
       }
     }
+  }
+};
+
+NetPositionManager.prototype.vec = function (fill) {
+  let r = new Float64Array(this.n);
+  if (fill) {
+    for (let ii = 0; ii < this.n; ++ii) {
+      r[ii] = fill;
+    }
+  }
+  return r;
+};
+NetPositionManager.prototype.vcopy = function (dst, src) {
+  for (let ii = 0; ii < this.n; ++ii) {
+    dst[ii] = src[ii];
+  }
+  return dst;
+};
+NetPositionManager.prototype.arr = function (vec) {
+  let arr = new Array(this.n);
+  for (let ii = 0; ii < this.n; ++ii) {
+    arr[ii] = vec[ii];
+  }
+  return arr;
+};
+NetPositionManager.prototype.vsame = function (a, b) {
+  for (let ii = 0; ii < this.n; ++ii) {
+    if (a[ii] !== b[ii]) {
+      return false;
+    }
+  }
+  return true;
+};
+NetPositionManager.prototype.vlength = function (a) {
+  let r = 0;
+  for (let ii = 0; ii < this.n; ++ii) {
+    let d = a[ii];
+    r += d * d;
+  }
+  return sqrt(r);
+};
+NetPositionManager.prototype.vdist = function (a, b) {
+  this.vsub(this.temp_vec, a, b);
+  for (let ii = 0; ii < this.dim_rot; ++ii) {
+    let jj = this.dim_pos + ii;
+    let d = abs(this.temp_vec[jj]);
+    if (d > PI) {
+      this.temp_vec[jj] = d - floor((d + PI) / TWO_PI) * TWO_PI;
+    }
+  }
+  return this.vlength(this.temp_vec);
+};
+NetPositionManager.prototype.vsub = function (dst, a, b) {
+  for (let ii = 0; ii < this.n; ++ii) {
+    dst[ii] = a[ii] - b[ii];
+  }
+  return dst;
+};
+NetPositionManager.prototype.vscale = function (dst, a, scalar) {
+  for (let ii = 0; ii < this.n; ++ii) {
+    dst[ii] = a[ii] * scalar;
   }
 };
 
@@ -65,9 +133,21 @@ NetPositionManager.prototype.reinit = function (options) {
     }
   }
 
+  assert(this.dim_pos + this.dim_rot === this.n);
+
+  if (!this.default_pos) {
+    this.default_pos = this.vec();
+  }
+  if (!this.temp_vec) {
+    this.temp_vec = this.vec();
+  }
+  if (!this.temp_delta) {
+    this.temp_delta = this.vec();
+  }
+
   this.channel = options.channel; // Never inheriting this over reinit()
   this.last_send = {
-    pos: vec2(-1, -1),
+    pos: this.vec(-1),
     sending: false,
     send_time: 0,
   };
@@ -89,6 +169,14 @@ NetPositionManager.prototype.onStateUpdate = function (cb) {
   this.on_state_update = cb;
 };
 
+function syncPosWithCaller(npm, on_pos_set_cb) {
+  npm.vcopy(npm.last_send.pos, npm.default_pos);
+  let new_pos = on_pos_set_cb(npm.last_send.pos);
+  if (new_pos) {
+    npm.vcopy(npm.last_send.pos, new_pos);
+  }
+}
+
 NetPositionManager.prototype.checkNet = function (on_pos_set_cb) {
   if (!net.client.connected || !this.channel || !this.channel.data.public) {
     // Not yet in room, do nothing
@@ -104,27 +192,23 @@ NetPositionManager.prototype.checkNet = function (on_pos_set_cb) {
     if (this.ever_received_character) {
       // we must be reconnecting, use last replicated position
     } else {
-      // fresh connect, use default position
-      v2copy(this.last_send.pos, this.default_pos);
-      on_pos_set_cb(this.last_send.pos);
+      // fresh connect, use default position, or ask for it from caller
+      syncPosWithCaller(this, on_pos_set_cb);
     }
     this.channel.setChannelData(`public.clients.${this.client_id}.pos`, {
-      cur: [this.last_send.pos[0], this.last_send.pos[1]], // Do not send as F32Array
+      cur: this.arr(this.last_send.pos), // Do not send as Float64Array
     });
     this.ever_received_character = true;
   } else if (!this.ever_received_character) {
-    v2copy(this.last_send.pos, me.pos.cur);
-    on_pos_set_cb(this.last_send.pos);
+    syncPosWithCaller(this, on_pos_set_cb);
     this.ever_received_character = true;
   }
   return false;
 };
 
 NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) {
-  if (character_pos[0] !== this.last_send.pos[0] || character_pos[1] !== this.last_send.pos[1] ||
-    anim_state !== this.last_send.anim_state
-  ) {
-    // pos changed
+  if (!this.vsame(character_pos, this.last_send.pos) || anim_state !== this.last_send.anim_state) {
+    // pos or anim_state changed
     const now = glov_engine.getFrameTimestamp();
     if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > this.send_time)) {
       // do send!
@@ -133,20 +217,19 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
       this.last_send.speed = 0;
       if (this.last_send.send_time) {
         const time = now - this.last_send.send_time;
-        this.last_send.speed = sqrt(v2distSq(this.last_send.pos, character_pos)) / time;
+        this.last_send.speed = this.vdist(this.last_send.pos, character_pos) / time;
         if (this.last_send.speed < 0.001) {
           this.last_send.speed = 0;
         }
       }
       this.last_send.send_time = now;
-      this.last_send.pos[0] = character_pos[0];
-      this.last_send.pos[1] = character_pos[1];
+      this.vcopy(this.last_send.pos, character_pos);
       this.last_send.anim_state = anim_state;
       this.channel.setChannelData(
         `public.clients.${this.client_id}.pos`, {
-          cur: [this.last_send.pos[0], this.last_send.pos[1]], // Do not send as F32Array
+          cur: this.arr(this.last_send.pos), // Do not send as Float64Array
           state: this.last_send.anim_state, speed: this.last_send.speed,
-          q: true,
+          q: 1,
         }, false, () => {
           // could avoid needing this response function (and ack packet) if we
           // instead just watch for the apply_channel_data message containing
@@ -163,6 +246,14 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
   }
 };
 
+NetPositionManager.prototype.getPos = function (client_id) {
+  let pcd = this.per_client_data[client_id];
+  if (!pcd) {
+    return null;
+  }
+  return pcd.pos;
+};
+
 NetPositionManager.prototype.otherClientPosChanged = function (client_id) {
   const client_pos = this.channel.getChannelData(`public.clients.${client_id}.pos`);
   if (!client_pos || !client_pos.cur || typeof client_pos.cur[0] !== 'number') {
@@ -171,42 +262,53 @@ NetPositionManager.prototype.otherClientPosChanged = function (client_id) {
   // client_pos is { cur, state, speed }
   let pcd = this.per_client_data[client_id];
   if (!pcd) {
-    pcd = this.per_client_data[client_id] = {}; // eslint-disable-line no-multi-assign
-    pcd.pos = v2copy(vec2(), client_pos.cur);
+    pcd = this.per_client_data[client_id] = {};
+    pcd.pos = this.vcopy(this.vec(), client_pos.cur);
     pcd.net_speed = 0;
-    pcd.net_pos = v2copy(vec2(), client_pos.cur);
-    pcd.impulse = vec2();
+    pcd.net_pos = this.vec();
+    pcd.impulse = this.vec();
     pcd.net_state = 'idle_down';
     pcd.anim_state = 'idle_down';
   }
   if (client_pos.state) {
     pcd.net_state = client_pos.state;
   }
-  v2copy(pcd.net_pos, client_pos.cur);
+  this.vcopy(pcd.net_pos, client_pos.cur);
   pcd.net_speed = client_pos.speed;
+
+  // Keep pcd.pos[rot] within PI of pcd.net_pos, so interpolation always goes the right way
+  for (let ii = 0; ii < this.dim_rot; ++ii) {
+    let jj = this.dim_pos + ii;
+    while (pcd.pos[jj] > pcd.net_pos[jj] + PI) {
+      pcd.pos[jj] -= TWO_PI;
+    }
+    while (pcd.pos[jj] < pcd.net_pos[jj] - PI) {
+      pcd.pos[jj] += TWO_PI;
+    }
+  }
 
   // This interpolation logic taken from Splody
   // Doesn't do great with physics-based jumps though
-  const delta = v2sub(vec2(), pcd.net_pos, pcd.pos);
-  const dist = sqrt(v2lengthSq(delta));
+  const delta = this.vsub(this.temp_delta, pcd.net_pos, pcd.pos);
+  const dist = this.vlength(delta);
 
   if (dist > 0) {
     const time_to_dest = dist / pcd.net_speed;
     if (time_to_dest < this.send_time + this.window) {
       // Would get there in the expected time, use this speed
-      v2scale(pcd.impulse, delta, pcd.net_speed / dist);
+      this.vscale(pcd.impulse, delta, pcd.net_speed / dist);
     } else if (time_to_dest < this.send_time + this.window * this.smooth_windows) { // 0.5s
       // We'll could be there in under half a second, try to catch up smoothly
       // Using provided speed is too slow, go faster, though no slower than we were going
       // (in case this is the last of multiple delayed updates and the last update was going a tiny distance slowly)
-      const old_speed = sqrt(v2lengthSq(pcd.impulse));
+      const old_speed = this.vlength(pcd.impulse);
       const specified_speed = pcd.net_speed;
-      const new_speed = Math.max(specified_speed * this.smooth_factor, old_speed);
-      v2scale(pcd.impulse, delta, new_speed / dist);
+      const new_speed = max(specified_speed * this.smooth_factor, old_speed);
+      this.vscale(pcd.impulse, delta, new_speed / dist);
     } else {
       // We're way far behind using the provided speed, attempt to get all the way there by the next few
       // theoretical updates, this basically snaps if this is particularly small
-      v2scale(pcd.impulse, delta, 1 / (this.send_time + this.window * this.snap_factor));
+      this.vscale(pcd.impulse, delta, 1 / (this.send_time + this.window * this.snap_factor));
     }
   }
 };
@@ -215,37 +317,25 @@ NetPositionManager.prototype.updateOtherClient = function (client_id, dt) {
   const pcd = this.per_client_data[client_id];
   if (!pcd) {
     // Never got a position sent to us, ignore
-    return [0,0];
+    return null;
   }
 
   // Apply interpolation (logic from Splody)
   let stopped = true;
-  if (pcd.impulse[0]) {
-    const delta_old = pcd.net_pos[0] - pcd.pos[0];
-    const delta_old_sign = util.sign(delta_old);
-    pcd.pos[0] += pcd.impulse[0] * dt;
-    const delta_new = pcd.net_pos[0] - pcd.pos[0];
-    const delta_new_sign = util.sign(delta_new);
-    if (delta_new_sign !== delta_old_sign) {
-      // made it or passed it
-      pcd.pos[0] = pcd.net_pos[0];
-      pcd.impulse[0] = 0;
-    } else {
-      stopped = false;
-    }
-  }
-  if (pcd.impulse[1]) {
-    const delta_old = pcd.net_pos[1] - pcd.pos[1];
-    const delta_old_sign = util.sign(delta_old);
-    pcd.pos[1] += pcd.impulse[1] * dt;
-    const delta_new = pcd.net_pos[1] - pcd.pos[1];
-    const delta_new_sign = util.sign(delta_new);
-    if (delta_new_sign !== delta_old_sign) {
-      // made it or passed it
-      pcd.pos[1] = pcd.net_pos[1];
-      pcd.impulse[1] = 0;
-    } else {
-      stopped = false;
+  for (let ii = 0; ii < this.n; ++ii) {
+    if (pcd.impulse[ii]) {
+      const delta_old = pcd.net_pos[ii] - pcd.pos[ii];
+      const delta_old_sign = util.sign(delta_old);
+      pcd.pos[ii] += pcd.impulse[ii] * dt;
+      const delta_new = pcd.net_pos[ii] - pcd.pos[ii];
+      const delta_new_sign = util.sign(delta_new);
+      if (delta_new_sign !== delta_old_sign) {
+        // made it or passed it
+        pcd.pos[ii] = pcd.net_pos[ii];
+        pcd.impulse[ii] = 0;
+      } else {
+        stopped = false;
+      }
     }
   }
   if (this.on_pos_update) {
@@ -262,15 +352,16 @@ NetPositionManager.prototype.updateOtherClient = function (client_id, dt) {
       this.on_state_update(client_id, pcd.net_state);
     }
   }
-  return pcd.pos;
+  return pcd;
 };
-
+NetPositionManager.prototype.n = 2; // dimensionality of position vectors
+NetPositionManager.prototype.dim_pos = 2; // number of components to be interpolated as-is
+NetPositionManager.prototype.dim_rot = 0; // number of components to be interpolated with 2PI wrapping
 NetPositionManager.prototype.send_time = 200; // how often to send position updates
 NetPositionManager.prototype.window = 200; // maximum expected variation in time between updates; ms
 NetPositionManager.prototype.snap_factor = 1.0; // how many windows to snap in when we think we need to snap
 NetPositionManager.prototype.smooth_windows = 6.5; // how many windows behind we can be and only accelerate a little
 NetPositionManager.prototype.smooth_factor = 1.2; // how much faster to go in the smoothing window
-NetPositionManager.prototype.default_pos = vec2();
 
 
 export function create(...args) {

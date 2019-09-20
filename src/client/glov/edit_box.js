@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/*global Z: false */
 
 const camera2d = require('./camera2d.js');
 const glov_input = require('./input.js');
@@ -24,6 +23,7 @@ class GlovUIEditBox {
     this.initial_select = false;
     this.spellcheck = true;
     this.applyParams(params);
+    this.is_focused = false;
 
     this.got_focus_in = false;
     this.got_focus_out = false;
@@ -50,6 +50,9 @@ class GlovUIEditBox {
   }
   focus() {
     glov_ui.focusSteal(this);
+  }
+  isFocused() { // call after .run()
+    return this.is_focused;
   }
 
   updateFocus() {
@@ -157,6 +160,8 @@ class GlovUIEditBox {
       // keyboard input is handled by the INPUT element, but allow mouse events to trickle
       glov_input.eatAllKeyboardInput();
     }
+
+    this.is_focused = focused;
 
     if (this.submitted) {
       this.submitted = false;

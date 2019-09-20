@@ -6,29 +6,11 @@ const assert = require('assert');
 const events = require('../../common/tiny-events.js');
 const node_util = require('util');
 const querystring = require('querystring');
+const { ipFromRequest } = require('./request_utils.js');
 const util = require('../../common/util.js');
 const url = require('url');
 const wscommon = require('../../common/wscommon.js');
 const WebSocket = require('ws');
-
-const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u;
-function ipFromRequest(req) {
-  // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
-  // console.log('Client connection headers ' + JSON.stringify(req.headers));
-
-  // Security note: must check x-forwarded-for *only* if we know this request came from a
-  //   reverse proxy, should warn if missing x-forwarded-for.
-  let ip = req.headers['x-forwarded-for'] || req.client.remoteAddress ||
-    req.client.socket && req.client.socket.remoteAddress;
-  let port = req.headers['x-forwarded-port'] || req.client.remotePort ||
-    req.client.socket && req.client.socket.remotePort;
-  assert(ip);
-  let m = ip.match(regex_ipv4);
-  if (m) {
-    ip = m[1];
-  }
-  return `${ip}${port ? `:${port}` : ''}`;
-}
 
 function WSClient(ws_server, socket) {
   events.EventEmitter.call(this);
@@ -100,7 +82,23 @@ WSServer.prototype.onMsg = function (msg, cb) {
 
 WSServer.prototype.init = function (server) {
   let ws_server = this;
-  ws_server.wss = new WebSocket.Server({ server });
+  ws_server.wss = new WebSocket.Server({ noServer: true });
+
+  // Doing my own upgrade handling to early-reject invalid protocol versions
+  server.on('upgrade', (req, socket, head) => {
+    let query = querystring.parse(url.parse(req.url).query);
+    if (!query.pver || String(query.pver) !== wscommon.PROTOCOL_VERSION) {
+      console.log(`WS Client rejected (bad pver) from ${ipFromRequest(req)}: ${req.url}`);
+      socket.write('HTTP/1.1 400 Invalid Protocol\r\n\r\n');
+      socket.end();
+      socket.destroy();
+      return;
+    }
+
+    ws_server.wss.handleUpgrade(req, socket, head, function done(ws) {
+      ws_server.wss.emit('connection', ws, req);
+    });
+  });
 
   ws_server.wss.on('connection', (socket, req) => {
     socket.handshake = req;
@@ -121,8 +119,12 @@ WSServer.prototype.init = function (server) {
     });
     ws_server.emit('client', client);
 
-    // after the .emit('client') has a chance to set client.ids
-    client.send('internal_client_id', { id: client.ids ? client.ids.id : client.id, secret: client.secret });
+    // after the .emit('client') has a chance to set client.client_id
+    client.send('cack', {
+      id: client.client_id || client.id,
+      secret: client.secret,
+      time: Date.now(),
+    });
 
     let query = querystring.parse(url.parse(req.url).query);
     let reconnect_id = Number(query.reconnect);

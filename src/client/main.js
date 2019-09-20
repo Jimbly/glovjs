@@ -1,5 +1,4 @@
 /*eslint global-require:off*/
-/*global Z: false */
 
 const glov_engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');

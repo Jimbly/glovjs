@@ -1,8 +1,20 @@
 const ack = require('../../common/ack.js');
 const assert = require('assert');
-const exchange = require('./exchange.js');
 const { channelServerSend } = require('./channel_server.js');
 const dot_prop = require('dot-prop');
+const exchange = require('./exchange.js');
+const { min } = Math;
+const { empty } = require('../../common/util.js');
+
+// How long to wait before failing an out of order packet and running it anyway
+const OOO_PACKET_FAIL = 10000; // For testing this, disable channel_server.js:handleWorkerRemoved
+const AUTO_DESTROY_TIME = 90000;
+
+function throwErr(err) {
+  if (err) {
+    throw err;
+  }
+}
 
 export class ChannelWorker {
   constructor(channel_server, channel_id) {
@@ -18,20 +30,37 @@ export class ChannelWorker {
       id: this.channel_subid,
       channel_id,
     };
+    this.send_pkt_idx = {}; // for each destination, the last ordering ID we sent
+    this.recv_pkt_idx = {}; // for each source, the last ordering ID we received
+    this.pkt_queue = {}; // for each source, any queued packets that need to be dispatched in order
     this.subscribers = []; // ids of who is subscribed to us
     this.store_path = `${this.channel_type}/${this.channel_id}`;
+    this.bulk_store_path = `bulk/${this.channel_type}/${this.channel_id}`;
+    this.bulk_store_paths = {};
     this.data = channel_server.ds_store.get(this.store_path, '', {});
     this.data.public = this.data.public || {};
     this.data.private = this.data.private || {};
-    this.data.channel_id = channel_id;
     this.subscribe_counts = {}; // refcount of subscriptions to other channels
     this.is_channel_worker = true; // TODO: Remove this?
     this.adding_client = null; // The client we're in the middle of adding, don't send them state updates yet
+    this.last_msg_time = Date.now();
     ack.initReceiver(this);
     // Handle modes that can be enabled via statics on prototype
     if (this.maintain_client_list) {
       this.data.public.clients = {};
     }
+  }
+
+  shutdown() {
+    assert(!this.numSubscribers());
+    assert(empty(this.subscribe_counts));
+    // TODO: this unloading should be automatic / in lower layer, as it doesn't
+    // make sense when the datastore is a database?
+    this.channel_server.ds_store.unload(this.store_path);
+    for (let path in this.bulk_store_paths) {
+      this.channel_server.ds_store.unload(path);
+    }
+    this.channel_server.removeChannelLocal(this.channel_id);
   }
 
   numSubscribers() {
@@ -49,11 +78,12 @@ export class ChannelWorker {
     this.subscribers.push(channel_id);
     this.adding_client = channel_id;
 
-    if (this.handleNewClient && !this.handleNewClient(src)) {
+    let err = this.handleNewClient && this.handleNewClient(src);
+    if (err) {
       this.adding_client = null;
       // not allowed, undo
-      this.clients.pop();
-      return resp_func('ERR_NOT_ALLOWED_BY_WORKER');
+      this.subscribers.pop();
+      return resp_func(typeof err === 'string' ? err : 'ERR_NOT_ALLOWED_BY_WORKER');
     }
 
     let ids;
@@ -80,10 +110,40 @@ export class ChannelWorker {
 
     this.adding_client = null;
 
+    // 'channel_data' is really an ack for 'subscribe' - sent exactly once
     this.sendChannelMessage(channel_id, 'channel_data', {
       public: this.data.public,
     });
     return resp_func();
+  }
+
+  isEmpty() {
+    return !this.subscribers.length && empty(this.pkt_queue);
+  }
+
+  autoDestroyCheck() {
+    assert(this.auto_destroy_check);
+    if (!this.isEmpty()) {
+      this.auto_destroy_check = false;
+      // have a subscriber now, forget about it
+      return;
+    }
+    if (Date.now() - this.last_msg_time > AUTO_DESTROY_TIME) {
+      this.auto_destroy_check = false;
+      console.log(`${this.channel_id}: Empty time expired, auto-destroying...`);
+      this.shutdown();
+      return;
+    }
+    // Continue checking
+    setTimeout(this.autoDestroyCheck.bind(this), AUTO_DESTROY_TIME);
+  }
+
+  checkAutoDestroy() {
+    this.last_msg_time = Date.now();
+    if (this.auto_destroy && !this.auto_destroy_check && this.isEmpty()) {
+      this.auto_destroy_check = true;
+      setTimeout(this.autoDestroyCheck.bind(this), AUTO_DESTROY_TIME);
+    }
   }
 
   onUnSubscribe(src, data, resp_func) {
@@ -110,13 +170,14 @@ export class ChannelWorker {
       }
     }
     resp_func();
+    this.checkAutoDestroy();
   }
 
   isSubscribedTo(other_channel_id) {
     return this.subscribe_counts[other_channel_id];
   }
 
-  subscribeOther(other_channel_id) {
+  subscribeOther(other_channel_id, resp_func) {
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
       console.log(`${this.channel_id}->${other_channel_id}: subscribe - already subscribed`);
@@ -126,9 +187,19 @@ export class ChannelWorker {
       if (err) {
         console.log(`${this.channel_id}->${other_channel_id} subscribe failed: ${err}`);
         this.subscribe_counts[other_channel_id]--;
-        this.onError(err);
+        if (!this.subscribe_counts[other_channel_id]) {
+          delete this.subscribe_counts[other_channel_id];
+        }
+        if (resp_func) {
+          resp_func(err);
+        } else {
+          this.onError(err);
+        }
       } else {
         // succeeded, nothing special
+        if (resp_func) {
+          resp_func();
+        }
       }
     });
   }
@@ -219,13 +290,22 @@ export class ChannelWorker {
   }
 
   onBroadcast(source, data, resp_func) {
+    if (typeof data !== 'object' || typeof data.data !== 'object' || typeof data.msg !== 'string') {
+      return resp_func('ERR_INVALID_DATA');
+    }
+    if (source.type === 'client') {
+      if (this.allow_client_broadcast[data.msg] !== true) {
+        return resp_func('ERR_NOT_ALLOWED');
+      }
+    }
     // Replicate to all users
     data.data.client_ids = source;
     this.channelEmit(data.msg, data.data);
-    resp_func();
+    return resp_func();
   }
 
   onCmdParse(source, data, resp_func) {
+    this.cmd_parse_source = source;
     this.cmd_parse.handle(this, data, (err, resp) => {
       if (err && this.cmd_parse.was_not_found) {
         return resp_func(null, { found: 0, err });
@@ -243,7 +323,7 @@ export class ChannelWorker {
     }
   }
 
-  onSetIfChannelData(source, data, resp_func) {
+  onSetChannelDataIf(source, data, resp_func) {
     if (source.type === 'client') {
       // deny
       return resp_func('ERR_NOT_ALLOWED');
@@ -256,6 +336,69 @@ export class ChannelWorker {
     return resp_func();
   }
 
+  commitData() {
+    let data = this.data;
+    if (this.maintain_client_list) {
+      data = {};
+      for (let key in this.data) {
+        data[key] = this.data[key];
+      }
+      let public_data = data.public;
+      if (public_data) {
+        let pd = {};
+        for (let key in public_data) {
+          if (key !== 'clients') {
+            pd[key] = public_data[key];
+          }
+        }
+        data.public = pd;
+      }
+    }
+    this.channel_server.ds_store.set(this.store_path, '', data);
+  }
+
+  onSetChannelDataPush(source, data, resp_func) {
+    let { key, value } = data;
+    assert(typeof key === 'string');
+    assert(typeof source === 'object');
+    if (this.handleSetChannelData ?
+      !this.handleSetChannelData(source, key, value) :
+      !this.defaultHandleSetChannelData(source, key, value)
+    ) {
+      // denied by app_worker
+      console.log(' - failed handleSetChannelData() check');
+      return resp_func('ERR_APP_WORKER');
+    }
+    assert(value);
+    let arr = dot_prop.get(this.data, key);
+    let need_create = !arr;
+    if (need_create) {
+      arr = [];
+    }
+    if (!Array.isArray(arr)) {
+      return resp_func('ERR_NOT_ARRAY');
+    }
+
+    let idx = arr.push(value) - 1;
+    if (need_create) {
+      dot_prop.set(this.data, key, arr);
+    } else {
+      // array was modified in-place
+    }
+    // only send public changes
+    if (key.startsWith('public')) {
+      let mod_data;
+      if (need_create) {
+        mod_data = { key, value: arr };
+      } else {
+        mod_data = { key: `${key}.${idx}`, value };
+      }
+      this.channelEmit('apply_channel_data', mod_data, this.adding_client);
+    }
+    this.commitData();
+    return resp_func();
+  }
+
   onSetChannelData(source, data) {
     this.setChannelDataInternal(source, data.key, data.value, data.q);
   }
@@ -264,16 +407,18 @@ export class ChannelWorker {
   }
 
   onGetChannelData(source, data, resp_func) {
-    if (source.type === 'client') {
-      // deny
-      return resp_func('ERR_NOT_ALLOWED');
-    }
+    // Do not deny this here, this is handled by RESERVED in client_comm.js
+    // We want the client_comm functions to send this message if needed.
+    // if (source.type === 'client') {
+    //   // deny
+    //   return resp_func('ERR_NOT_ALLOWED');
+    // }
     return resp_func(null, this.getChannelData(data));
   }
 
   defaultHandleSetChannelData(source, key, value) { // eslint-disable-line class-methods-use-this
-    if (source.type !== 'client') {
-      // from another channel, accept it
+    if (source.type !== 'client' || !source.direct) {
+      // from another channel, or not directly from the user, accept it
       return true;
     }
     // Do not allow modifying of other users' client data
@@ -285,8 +430,9 @@ export class ChannelWorker {
       if (!this.data.public.clients[source.id]) {
         return false;
       }
+      return true;
     }
-    return true;
+    return this.permissive_client_set; // default false - don't let clients change anything other than their own data
   }
 
   setChannelDataInternal(source, key, value, q) {
@@ -314,10 +460,21 @@ export class ChannelWorker {
       }
       this.channelEmit('apply_channel_data', data, this.adding_client);
     }
-    this.channel_server.ds_store.set(this.store_path, '', this.data);
+    this.commitData();
   }
-  getChannelData(key, default_vaulue) {
-    return dot_prop.get(this.data, key, default_vaulue);
+  getChannelData(key, default_value) {
+    return dot_prop.get(this.data, key, default_value);
+  }
+
+  getBulkChannelData(obj_name, key, default_value, cb) {
+    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
+    this.bulk_store_paths[bulk_obj_name] = true;
+    this.channel_server.ds_store.getAsync(bulk_obj_name, key, default_value, cb);
+  }
+  setBulkChannelData(obj_name, key, value, cb) {
+    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
+    this.bulk_store_paths[bulk_obj_name] = true;
+    this.channel_server.ds_store.setAsync(bulk_obj_name, key, value, cb || throwErr);
   }
 
   sendChannelMessage(dest, msg, data, resp_func) {
@@ -326,6 +483,12 @@ export class ChannelWorker {
 
   // source has at least { channel_id, type, id }, possibly also .user_id and .display_name if type === 'client'
   channelMessage(source, msg, data, resp_func) {
+    if (source.direct) {
+      // Ensure this is allowed directly from clients
+      if (!this.allow_client_direct[msg]) {
+        return void resp_func(`ERR_CLIENT_DIRECT (${msg})`);
+      }
+    }
     let had_handler = false;
     assert(resp_func);
     if (this.filters[msg]) {
@@ -357,6 +520,87 @@ export class ChannelWorker {
     resp_func();
   }
 
+  checkPacketQueue(source) {
+    let q_data = this.pkt_queue[source];
+    if (!q_data) {
+      return;
+    }
+    let q = q_data.pkts;
+    let next_idx = (this.recv_pkt_idx[source] || 0) + 1;
+    let next = q[next_idx];
+    if (next) {
+      // Next one is ready to go now!
+      console.error(`${this.channel_id}: Delayed dispatching OOO packet with ID ${next_idx} from ${source}.`);
+      delete q[next_idx];
+      if (empty(q)) {
+        if (q_data.tid) {
+          clearTimeout(q_data.tid);
+        }
+        delete this.pkt_queue[source];
+      }
+      // TODO: Make this not deeply recursive?
+      this.dispatchPacket(next_idx, next.source, next.ids, next.net_data);
+    }
+  }
+
+  startPacketQueueCheck(source) {
+    let q_data = this.pkt_queue[source];
+    assert(q_data);
+    assert(!q_data.tid);
+    q_data.tid = setTimeout(this.checkPacketQueueTimeout.bind(this, source), OOO_PACKET_FAIL);
+    // Could also send a ping here and fulfill this timeout when it comes back, but
+    // a ping is not guaranteed to arrive after all packets, since if there
+    // are multiple sources sending packets, one (that does not do the create)
+    // may still be trying to resend the initial packet (waiting on their (going
+    // to fail) create to finish) when the ping makes it. Could send a more
+    // complicated "request for flush to target" that doesn't return until all
+    // retries are sent, and that would do it.
+  }
+
+  checkPacketQueueTimeout(source) {
+    let q_data = this.pkt_queue[source];
+    q_data.tid = null;
+    let q = q_data.pkts;
+    assert(!empty(q));
+    let oldest_pkt_id = Infinity;
+    for (let pkt_id in q) {
+      oldest_pkt_id = min(oldest_pkt_id, Number(pkt_id));
+    }
+    let next_idx = oldest_pkt_id;
+    let expected_idx = (this.recv_pkt_idx[source] || 0) + 1;
+    let next = q[next_idx];
+    console.error(`${this.channel_id}: Time expired. Running queued OOO packet with ID ${
+      next_idx} (expected ${expected_idx}) from ${source}.`);
+    delete q[next_idx];
+    if (empty(q)) {
+      delete this.pkt_queue[source];
+    }
+    this.dispatchPacket(next_idx, next.source, next.ids, next.net_data);
+    // also dispatches any sequential queued up, and may clear/invalidate q_data
+    if (this.pkt_queue[source]) {
+      // still have remaining, non-sequential packets (untested, unexpected)
+      console.error(`${this.channel_id}: Still remaining packets from ${source}. Queuing...`);
+      this.startPacketQueueCheck(source);
+    }
+  }
+
+  dispatchPacket(pkt_idx, source, ids, net_data) {
+    let channel_worker = this;
+    channel_worker.recv_pkt_idx[source] = pkt_idx;
+    try {
+      ack.handleMessage(channel_worker, source, net_data, function sendFunc(msg, err, data, resp_func) {
+        channelServerSend(channel_worker, source, msg, err, data, resp_func);
+      }, function handleFunc(msg, data, resp_func) {
+        channel_worker.channelMessage(ids, msg, data, resp_func);
+      });
+    } catch (e) {
+      e.source = source;
+      console.error(`Exception while handling packet from "${source}"`);
+      channel_worker.channel_server.handleUncaughtError(e);
+    }
+    this.checkPacketQueue(source);
+  }
+
   // source is a string channel_id
   handleMessage(source, net_data) {
     let channel_worker = this;
@@ -366,15 +610,35 @@ export class ChannelWorker {
     ids.type = split[0];
     ids.id = split[1];
     ids.channel_id = source;
-
-    ack.handleMessage(channel_worker, source, net_data, function sendFunc(msg, err, data, resp_func) {
-      channelServerSend(channel_worker, source, msg, err, data, resp_func);
-    }, function handleFunc(msg, data, resp_func) {
-      channel_worker.channelMessage(ids, msg, data, resp_func);
-    });
+    let pkt_idx = net_data.pkt_idx;
+    assert(pkt_idx);
+    let expected_idx = (this.recv_pkt_idx[source] || 0) + 1;
+    function dispatch() {
+      channel_worker.dispatchPacket(pkt_idx, source, ids, net_data);
+    }
+    if (pkt_idx === expected_idx) {
+      dispatch();
+    } else if (pkt_idx === 1) {
+      console.error(`${channel_worker.channel_id}: Received new initial packet with ID ${pkt_idx
+      } (expected >=${expected_idx}) from ${source}. Dispatching...`);
+      dispatch();
+    } else {
+      console.error(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
+      } (expected ${expected_idx}) from ${source}. Queuing...`);
+      let q_data = channel_worker.pkt_queue[source] = channel_worker.pkt_queue[source] || { pkts: {} };
+      q_data.pkts[pkt_idx] = { source, ids, net_data };
+      if (!q_data.tid) {
+        this.startPacketQueueCheck(source);
+      }
+    }
+    this.checkAutoDestroy();
   }
 }
 // Overrideable by child class's prototype
 ChannelWorker.prototype.maintain_client_list = false;
 ChannelWorker.prototype.emit_join_leave_events = false;
 ChannelWorker.prototype.require_login = false;
+ChannelWorker.prototype.auto_destroy = false;
+ChannelWorker.prototype.permissive_client_set = false; // allow clients to set arbitrary data
+ChannelWorker.prototype.allow_client_broadcast = {}; // default: none
+ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this

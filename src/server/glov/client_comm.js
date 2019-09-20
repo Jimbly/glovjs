@@ -6,26 +6,21 @@ const client_worker = require('./client_worker.js');
 const { channelServerSend } = require('./channel_server.js');
 const { logdata } = require('../../common/util.js');
 
-// Messages not allowed to be forwarded from client to arbitrary worker
-const RESERVED = {
-  'subscribe': 1, 'unsubscribe': 1,
-  'client_changed': 1,
-  'apply_channel_data': 1, 'set_channel_data': 1,
-};
-
-function onUnSubscribe(channel_server, client, channel_id) {
+function onUnSubscribe(client, channel_id) {
   client.client_channel.unsubscribeOther(channel_id);
 }
 
-function onClientDisconnect(channel_server, client) {
+function onClientDisconnect(client) {
   client.client_channel.unsubscribeAll();
+  client.client_channel.shutdown();
 }
 
-function onSubscribe(channel_server, client, channel_id) {
-  client.client_channel.subscribeOther(channel_id);
+function onSubscribe(client, channel_id, resp_func) {
+  console.log(`client_id:${client.id}->${channel_id}: subscribe`);
+  client.client_channel.subscribeOther(channel_id, resp_func);
 }
 
-function onSetChannelData(channel_server, client, data, resp_func) {
+function onSetChannelData(client, data, resp_func) {
   data.key = String(data.key);
   let channel_id = data.channel_id;
   assert(channel_id);
@@ -48,14 +43,35 @@ function onSetChannelData(channel_server, client, data, resp_func) {
   resp_func();
 }
 
-function onChannelMsg(channel_server, client, data, resp_func) {
-  // Messages to everyone subscribed to the channel, e.g. chat
-  console.log(`client_id:${client.id}->${data.channel_id}: channel_msg ${logdata(data)}`);
-  if (RESERVED[data.msg]) {
-    return void resp_func(`Not allowed to send internal message ${data.msg}`);
+function applyCustomIds(ids, user_data_public) {
+  // FRVR - maybe generalize this
+  let perm = user_data_public.permissions;
+  if (perm) {
+    if (perm.admin) {
+      ids.admin = 1;
+    }
+  }
+}
+
+function quietMessage(msg) {
+  // FRVR - maybe generalize this?
+  return msg && msg.msg === 'set_user' && msg.data && msg.data.key === 'pos';
+}
+
+function onChannelMsg(client, data, resp_func) {
+  // Arbitrary messages, or messages to everyone subscribed to the channel, e.g. chat
+  if (quietMessage(data)) {
+    data.data.q = 1; // do not print later, either
+  } else {
+    console.log(`client_id:${client.id}->${data.channel_id}: channel_msg ${logdata(data)}`);
+  }
+  if (typeof data !== 'object') {
+    return void resp_func('Invalid data type');
   }
   let channel_id = data.channel_id;
-  assert(channel_id);
+  if (!channel_id) {
+    return void resp_func('Missing channel_id');
+  }
   let client_channel = client.client_channel;
 
   if (!client_channel.isSubscribedTo(channel_id)) {
@@ -71,21 +87,25 @@ function onChannelMsg(channel_server, client, data, resp_func) {
     delete data.broadcast;
     channelServerSend(client_channel, channel_id, 'broadcast', null, data, resp_func);
   } else {
+    client_channel.ids = client_channel.ids_direct;
     channelServerSend(client_channel, channel_id, data.msg, null, data.data, resp_func);
+    client_channel.ids = client_channel.ids_base;
   }
 }
 
 const regex_valid_username = /^[a-zA-Z0-9_]+$/u;
-function onLogin(channel_server, client, data, resp_func) {
+function onLogin(client, data, resp_func) {
   console.log(`client_id:${client.id}->server login ${logdata(data)}`);
-  if (!data.name) {
+  let user_id = data.name;
+  if (!user_id) {
     return resp_func('invalid username');
   }
-  if ({}[data.name]) {
+  if ({}[user_id]) {
     // hasOwnProperty, etc
     return resp_func('invalid username');
   }
-  if (!data.name.match(regex_valid_username)) {
+  user_id = user_id.toLowerCase();
+  if (!user_id.match(regex_valid_username)) {
     // has a "." or other invalid character
     return resp_func('invalid username');
   }
@@ -93,14 +113,14 @@ function onLogin(channel_server, client, data, resp_func) {
   let client_channel = client.client_channel;
   assert(client_channel);
 
-  return channelServerSend(client_channel, `user.${data.name}`, 'login', null, {
+  return channelServerSend(client_channel, `user.${user_id}`, 'login', null, {
+    display_name: data.display_name || data.name, // original-case'd name
     password: data.password,
   }, function (err, resp_data) {
     if (!err) {
-      client_channel.ids.user_id = data.name;
-      client.ids.user_id = data.name;
-      client_channel.ids.display_name = resp_data.display_name;
-      client.ids.display_name = resp_data.display_name;
+      client_channel.ids_base.user_id = user_id;
+      client_channel.ids_base.display_name = resp_data.display_name;
+      applyCustomIds(client_channel.ids, resp_data);
 
       // Tell channels we have a new user id/display name
       for (let channel_id in client_channel.subscribe_counts) {
@@ -108,33 +128,48 @@ function onLogin(channel_server, client, data, resp_func) {
       }
 
       // Always subscribe client to own user
-      onSubscribe(channel_server, client, `user.${data.name}`);
+      onSubscribe(client, `user.${user_id}`);
     }
-    resp_func(err);
+    resp_func(err, client_channel.ids); // user_id and display_name
   });
+}
+
+function onLogOut(client, data, resp_func) {
+  let client_channel = client.client_channel;
+  assert(client_channel);
+  let { user_id } = client_channel.ids;
+  console.log(`client_id:${client.id}->server logout ${user_id}`);
+  if (!user_id) {
+    return resp_func('ERR_NOT_LOGGED_IN');
+  }
+
+  onUnSubscribe(client, `user.${user_id}`);
+  delete client_channel.ids_base.user_id;
+  delete client_channel.ids_base.display_name;
+
+  // Tell channels we have a new user id/display name
+  for (let channel_id in client_channel.subscribe_counts) {
+    channelServerSend(client_channel, channel_id, 'client_changed');
+  }
+
+  return resp_func();
 }
 
 export function init(channel_server) {
   let ws_server = channel_server.ws_server;
   ws_server.on('client', (client) => {
-    assert(!client.ids);
-    client.ids = {
-      type: 'client',
-      id: channel_server.clientIdFromWSClient(client),
-      // ws_client_id: client.id // not needed anymore?
-      user_id: null,
-      display_name: null,
-    };
-    client.client_channel = channel_server.createChannelLocal(`client.${client.ids.id}`);
+    let client_id = channel_server.clientIdFromWSClient(client);
+    client.client_id = client_id;
+    client.client_channel = channel_server.createChannelLocal(`client.${client_id}`);
     client.client_channel.client = client;
-    client.ids.channel_id = client.client_channel.channel_id;
   });
-  ws_server.on('disconnect', onClientDisconnect.bind(null, channel_server));
-  ws_server.onMsg('subscribe', onSubscribe.bind(null, channel_server));
-  ws_server.onMsg('unsubscribe', onUnSubscribe.bind(null, channel_server));
-  ws_server.onMsg('set_channel_data', onSetChannelData.bind(null, channel_server));
-  ws_server.onMsg('channel_msg', onChannelMsg.bind(null, channel_server));
-  ws_server.onMsg('login', onLogin.bind(null, channel_server));
+  ws_server.on('disconnect', onClientDisconnect);
+  ws_server.onMsg('subscribe', onSubscribe);
+  ws_server.onMsg('unsubscribe', onUnSubscribe);
+  ws_server.onMsg('set_channel_data', onSetChannelData);
+  ws_server.onMsg('channel_msg', onChannelMsg);
+  ws_server.onMsg('login', onLogin);
+  ws_server.onMsg('logout', onLogOut);
 
   client_worker.init(channel_server);
 }

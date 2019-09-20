@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* global Z */
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');

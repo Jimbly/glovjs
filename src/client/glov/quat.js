@@ -5,14 +5,16 @@
 // gl-matrix and related, as well as some generic math utilities
 
 const { vec4 } = require('./vmath.js');
+const { acos, cos, sin, sqrt } = Math;
 
-const { cos, sin, sqrt } = Math;
+const EPSILON = 0.000001;
 
 exports.unit_quat = vec4(0, 0, 0, -1);
 
 export function quat() {
   return vec4(0, 0, 0, -1);
 }
+exports.createQuat = quat;
 
 // qi == "quaterion in-place" operation
 
@@ -119,5 +121,53 @@ export function qRotateZ(out, a, rad) {
   out[1] = ay * bw - ax * bz;
   out[2] = az * bw + aw * bz;
   out[3] = aw * bw - az * bz;
+  return out;
+}
+
+
+export function qSlerp(out, t, a, b) {
+  // benchmarks:
+  //    http://jsperf.com/quaternion-slerp-implementations
+  let ax = a[0];
+  let ay = a[1];
+  let az = a[2];
+  let aw = a[3];
+  let bx = b[0];
+  let by = b[1];
+  let bz = b[2];
+  let bw = b[3];
+
+  let scale0;
+  let scale1;
+
+  // calc cosine
+  let cosom = ax * bx + ay * by + az * bz + aw * bw;
+  // adjust signs (if necessary)
+  if (cosom < 0.0) {
+    cosom = -cosom;
+    bx = -bx;
+    by = -by;
+    bz = -bz;
+    bw = -bw;
+  }
+  // calculate coefficients
+  if ((1.0 - cosom) > EPSILON) {
+    // standard case (slerp)
+    let omega = acos(cosom);
+    let sinom = sin(omega);
+    scale0 = sin((1.0 - t) * omega) / sinom;
+    scale1 = sin(t * omega) / sinom;
+  } else {
+    // "from" and "to" quaternions are very close
+    //  ... so we can do a linear interpolation
+    scale0 = 1.0 - t;
+    scale1 = t;
+  }
+  // calculate final values
+  out[0] = scale0 * ax + scale1 * bx;
+  out[1] = scale0 * ay + scale1 * by;
+  out[2] = scale0 * az + scale1 * bz;
+  out[3] = scale0 * aw + scale1 * bw;
+
   return out;
 }

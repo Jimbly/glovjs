@@ -260,6 +260,21 @@ export function v3normalize(out, a) {
   return out;
 }
 
+// Treats `a` as vec3 input with w assumed to be 1
+// out[0]/[1] have had perspective divide and converted to normalized 0-1 range
+// out[2] is distance
+export function v3perspectiveProject(out, a, m) {
+  let x = a[0];
+  let y = a[1];
+  let z = a[2];
+  let w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  let invw = 0.5 / (w || 0.00001);
+  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) * invw + 0.5;
+  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) * -invw + 0.5;
+  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+  return out;
+}
+
 export function v3round(out, a) {
   out[0] = round(a[0]);
   out[1] = round(a[1]);

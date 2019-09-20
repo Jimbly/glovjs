@@ -1,7 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
-/* global Z:false */
 
 require('./bootstrap.js'); // Just in case it's not in wrapper.js
 const assert = require('assert');
@@ -25,6 +24,8 @@ const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
+const urlhash = require('./urlhash.js');
+const { ridx } = require('../../common/util.js');
 const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy, v4set } = require('./vmath.js');
 
 export let canvas;
@@ -43,7 +44,7 @@ export let game_height;
 export let render_width;
 export let render_height;
 
-export let defines = {};
+export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET });
 
 export let any_3d = false;
 export let ZFAR;
@@ -182,6 +183,12 @@ export function addTickFunc(cb) {
   app_tick_functions.push(cb);
 }
 
+let post_tick = [];
+export function postTick(ticks, fn) {
+  assert(typeof fn === 'function');
+  post_tick.push({ ticks, fn });
+}
+
 let temporary_textures = {};
 
 function resetEffects() {
@@ -272,6 +279,7 @@ function tick() {
 
   if (document.hidden || document.webkitHidden) {
     resetEffects();
+    // Maybe post-tick here too?
     return;
   }
 
@@ -384,6 +392,13 @@ function tick() {
 
   input.endFrame();
   resetEffects();
+
+  for (let ii = post_tick.length - 1; ii >= 0; --ii) {
+    if (!--post_tick[ii].ticks) {
+      post_tick[ii].fn();
+      ridx(post_tick, ii);
+    }
+  }
 }
 
 let last_error_time = 0;
@@ -480,14 +495,6 @@ export function startup(params) {
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
 
-  // Use &D=WIREFRAME to set the WIREFRAME define
-  let m = document.location.search.match(/D=[^&]+/gu);
-  if (m) {
-    m.forEach((v) => {
-      defines[v.slice(2)] = true;
-    });
-  }
-
   textures.startup();
   geom.startup();
   shaders.startup({
@@ -566,14 +573,20 @@ export function startup(params) {
   return true;
 }
 
+export function loadsPending() {
+  return textures.load_count + sound_manager.loading() + models.load_count;
+}
+
 function loading() {
-  let load_count = textures.load_count + sound_manager.loading() + models.load_count;
+  let load_count = loadsPending();
   document.getElementById('loading_text').innerText = `Loading (${load_count})...`;
   if (!load_count) {
-    let elem = document.getElementById('loading');
-    elem.style.visibility = 'hidden';
     is_loading = false;
     app_state = after_loading_state;
+    // Clear after next frame, so something is rendered to the canvas
+    postTick(2, function () {
+      document.getElementById('loading').style.visibility = 'hidden';
+    });
   }
 }
 app_state = loading;

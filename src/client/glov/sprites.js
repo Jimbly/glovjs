@@ -67,6 +67,7 @@ function cmpSprite(a, b) {
 }
 
 export function queuefn(z, fn) {
+  assert(isFinite(z));
   sprite_queue.push({
     fn,
     x: 0,
@@ -82,6 +83,7 @@ export function queueraw4(
   u0, v0, u1, v1,
   color, shader, shader_params, blend
 ) {
+  assert(isFinite(z));
   let elem = spriteDataAlloc();
   let data = elem.data;
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
@@ -140,6 +142,7 @@ export function queueraw(
 }
 
 export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom) {
+  assert(isFinite(z));
   let elem = spriteDataAlloc();
   elem.texs = sprite.texs;
   elem.x = x = (x - camera2d.data[0]) * camera2d.data[4];
