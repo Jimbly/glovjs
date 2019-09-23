@@ -30,6 +30,7 @@ class GlovUIEditBox {
     this.elem = null;
     this.input = null;
     this.submitted = false;
+    this.pointer_lock = false;
   }
   applyParams(params) {
     if (!params) {
@@ -80,11 +81,15 @@ class GlovUIEditBox {
       this.input.blur();
     }
 
-    if (focused && glov_input.keyDownEdge(glov_input.KEYS.ESC)) {
-      if (this.text) {
-        this.setText('');
-      } else {
-        glov_ui.focusCanvas();
+    if (focused) {
+      let key_opt = (this.pointer_lock && !this.text) ? { pointer_lock: true } : null;
+      if (glov_input.keyUpEdge(glov_input.KEYS.ESC, key_opt)) {
+        if (this.text) {
+          this.setText('');
+        } else {
+          glov_ui.focusCanvas();
+          focused = false;
+        }
       }
     }
     return focused;
@@ -118,6 +123,10 @@ class GlovUIEditBox {
         form.addEventListener('submit', (ev) => {
           ev.preventDefault();
           this.submitted = true;
+          this.text = this.input.value;
+          if (this.pointer_lock && !this.text) {
+            glov_input.pointerLockEnter('edit_box_submit');
+          }
         }, true);
         form.appendChild(input);
         let span = document.createElement('span');

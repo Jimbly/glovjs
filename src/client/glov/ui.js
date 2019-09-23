@@ -440,6 +440,7 @@ export function drawTooltip(param) {
     x + eff_tooltip_pad, y, z+1, tooltip_w - eff_tooltip_pad * 2, 0, font_height,
     param.tooltip);
   y += eff_tooltip_pad;
+  let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
 
   panel({
     x,
@@ -447,10 +448,11 @@ export function drawTooltip(param) {
     z,
     w: tooltip_w,
     h: y - tooltip_y0,
-    pixel_scale: tooltip_panel_pixel_scale,
+    pixel_scale,
   });
 }
 
+const opt_pointer_lock = { pointer_lock: true };
 // eslint-disable-next-line complexity
 export function buttonShared(param) {
   let state = 'regular';
@@ -460,6 +462,7 @@ export function buttonShared(param) {
   }
   let key = param.key || `${param.x}_${param.y}`;
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
+  let key_opts = param.pointer_lock ? opt_pointer_lock : null;
   button_mouseover = false;
   if (param.disabled) {
     glov_input.mouseOver(param); // Still eat mouse events
@@ -503,7 +506,7 @@ export function buttonShared(param) {
   }
   button_focused = focused;
   if (focused) {
-    if (glov_input.keyDownEdge(KEYS.SPACE) || glov_input.keyDownEdge(KEYS.RETURN) ||
+    if (glov_input.keyDownEdge(KEYS.SPACE, key_opts) || glov_input.keyDownEdge(KEYS.RETURN, key_opts) ||
       glov_input.padButtonDownEdge(pad_codes.A)
     ) {
       ret = true;
@@ -638,6 +641,10 @@ function modalDialogRun() {
   const y0 = modal_y0;
   let y = y0 + pad;
   let eff_font_height = modal_dialog.font_height || font_height;
+
+  if (glov_input.pointerLocked()) {
+    glov_input.pointerLockExit();
+  }
 
   if (modal_dialog.title) {
     y += font.drawSizedWrapped(modal_font_style,

@@ -194,6 +194,21 @@ export function virtualToPhysical(dst, src) {
   }
 }
 
+// dst/src are x/y/w/h objects (e.g. from input system)
+export function virtualToPhysicalPosParam(dst, src) {
+  if (render_width) {
+    dst.x = (render_offset_x + (src.x - data[0]) / data[7]) / data[6];
+    dst.w = src.w / data[7] / data[6];
+    dst.y = (render_offset_y + (src.y - data[1]) / data[8]) / data[6];
+    dst.h = src.h / data[8] / data[6];
+  } else {
+    dst.x = (src.x - data[0]) * data[4] / data[6];
+    dst.w = src.w * data[4] / data[6];
+    dst.y = (src.y - data[1]) * data[5] / data[6];
+    dst.h = src.h * data[5] / data[6];
+  }
+}
+
 export function tickCamera2D() {
   data[6] = window.devicePixelRatio || 1; /* css_to_real */
   screen_width = engine.width;

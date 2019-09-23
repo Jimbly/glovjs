@@ -134,7 +134,11 @@ export function pointerLocked() {
   return ptrlock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
-export function pointerLockEnter(maybe) {
+// only works reliably when called from an event handler
+export function pointerLockEnter(when) {
+  ptrlock.enter(when);
+}
+function onPointerLockEnter() {
   if (touch_mode) {
     return;
   }
@@ -148,7 +152,6 @@ export function pointerLockEnter(maybe) {
     touch_data.state = DOWN; // No DOWN_EDGE for this
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
-  ptrlock.enter(maybe);
 }
 export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
@@ -170,7 +173,8 @@ function ignored(event) {
 
 function onKeyUp(event) {
   let code = event.keyCode;
-  if (event.target.tagName !== 'INPUT') {
+  let no_stop = event.target.tagName === 'INPUT';
+  if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
   }
@@ -179,21 +183,25 @@ function onKeyUp(event) {
     pointerLockExit();
   }
   key_state[code] = UP_EDGE;
-  ptrlock.allowAsync();
+
+  // Letting through regardless, because we handle things like ESC in INPUT elements
+  ptrlock.handle('keyup', event);
 }
 
 function onKeyDown(event) {
   let code = event.keyCode;
-  if (!(event.target.tagName === 'INPUT' ||
+  let no_stop = event.target.tagName === 'INPUT' ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
-    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) // Safari, alternate Chrome
-  )) {
+    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey); // Safari, alternate Chrome
+  if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
   key_state[code] = DOWN_EDGE;
-  ptrlock.allowAsync();
+
+  // Letting through regardless, because we handle things like ESC in INPUT elements
+  ptrlock.handle('keydown', event);
 }
 
 let temp_delta = vec2();
@@ -233,7 +241,7 @@ function onMouseMove(event, no_stop) {
     v2copy(last_mouse_pos, mouse_pos);
   }
   if (any_movement && movement_questionable_frames && v2lengthSq(temp_delta) > 100*100) {
-    // giant movement right after entering or exiting poitner lock, ignore (Chrome bug)
+    // giant movement right after entering or exiting pointer lock, ignore (Chrome bug)
     // We get these unreasonable jumps in both movementXY and the other, presumably
     // because pointerLocked() is slightly out of sync, though the large .movementX/Y
     // is clearly erroneous.
@@ -270,7 +278,9 @@ function onMouseDown(event) {
       touches[touch_id].state = DOWN; // no edge
     }
   }
-  ptrlock.allowAsync();
+  if (!no_click) {
+    ptrlock.handle('mousedown', event);
+  }
 }
 
 function onMouseUp(event) {
@@ -289,7 +299,9 @@ function onMouseUp(event) {
     }
     delete mouse_down[button];
   }
-  ptrlock.allowAsync();
+  if (!no_click) {
+    ptrlock.handle('mouseup', event);
+  }
 }
 
 function onWheel(event) {
@@ -377,7 +389,7 @@ function onBlurOrFocus(evt) {
 
 export function startup(_canvas, params) {
   canvas = _canvas;
-  ptrlock = pointer_lock.create(canvas);
+  ptrlock = pointer_lock.create(canvas, onPointerLockEnter);
   if (params.map_analog_to_dpad !== undefined) {
     map_analog_to_dpad = params.map_analog_to_dpad;
   }
@@ -519,6 +531,7 @@ export function tickInput() {
   }
   mouse_over_captured = false;
   gamepadUpdate();
+  ptrlock.topOfFrame();
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
     pointerLockExit();
   }
@@ -675,14 +688,20 @@ export function keyDown(keycode) {
   }
   return Boolean(key_state[keycode]);
 }
-export function keyDownEdge(keycode) {
+export function keyDownEdge(keycode, opts) {
+  if (opts && opts.pointer_lock && !input_eaten_kb && !touch_mode) {
+    ptrlock.lockOn('keydown', keycode);
+  }
   if (key_state[keycode] === DOWN_EDGE) {
     key_state[keycode] = DOWN;
     return true;
   }
   return false;
 }
-export function keyUpEdge(keycode) {
+export function keyUpEdge(keycode, opts) {
+  if (opts && opts.pointer_lock && !input_eaten_kb && !touch_mode) {
+    ptrlock.lockOn('keyup', keycode);
+  }
   if (key_state[keycode] === UP_EDGE) {
     delete key_state[keycode];
     return true;
@@ -795,6 +814,15 @@ export function mouseUpEdge(param) {
         start_time: touch_data.start_time,
       };
     }
+  }
+
+  if (param.pointer_lock && !input_eaten_mouse && !touch_mode) {
+    // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
+    if (!param.phys) {
+      param.phys = {};
+    }
+    camera2d.virtualToPhysicalPosParam(param.phys, param);
+    ptrlock.lockOn('mouseup', null, param.phys);
   }
   return false;
 }
