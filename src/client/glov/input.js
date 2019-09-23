@@ -315,6 +315,9 @@ function onWheel(event) {
 
 let touch_pos = vec2();
 function onTouchChange(event) {
+  // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
+  // our canvas offscreen.  Should maybe have the canvas resize and use clientX
+  // instead, but this works well enough.
   engine.sound_manager.resume();
   if (!touch_mode) {
     local_storage.set('touch_mode', true);
@@ -332,7 +335,7 @@ function onTouchChange(event) {
   for (let ii = 0; ii < new_count; ++ii) {
     let touch = ct[ii];
     let last_touch = touches[touch.identifier];
-    v2set(touch_pos, touch.clientX, touch.clientY);
+    v2set(touch_pos, touch.pageX, touch.pageY);
     if (!last_touch) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0);
       --old_count;
@@ -370,9 +373,9 @@ function onTouchChange(event) {
     } else if (new_count === 1) {
       let touch = ct[0];
       if (!old_count) {
-        mouse_down[0] = vec2(touch.clientX, touch.clientY);
+        mouse_down[0] = vec2(touch.pageX, touch.pageY);
       }
-      v2set(mouse_pos, touch.clientX, touch.clientY);
+      v2set(mouse_pos, touch.pageX, touch.pageY);
       mouse_pos_is_touch = true;
     } else if (new_count > 1) {
       // multiple touches, release mouse_down without emitting click
