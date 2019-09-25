@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const camera2d = require('./camera2d.js');
+const engine = require('./engine.js');
 const glov_input = require('./input.js');
 const glov_ui = require('./ui.js');
 
@@ -31,6 +32,7 @@ class GlovUIEditBox {
     this.input = null;
     this.submitted = false;
     this.pointer_lock = false;
+    this.last_frame = 0;
   }
   applyParams(params) {
     if (!params) {
@@ -51,6 +53,10 @@ class GlovUIEditBox {
   }
   focus() {
     glov_ui.focusSteal(this);
+    this.is_focused = true;
+    if (this.pointer_lock) {
+      glov_input.pointerLockExit();
+    }
   }
   isFocused() { // call after .run()
     return this.is_focused;
@@ -82,7 +88,7 @@ class GlovUIEditBox {
     }
 
     if (focused) {
-      let key_opt = (this.pointer_lock && !this.text) ? { pointer_lock: true } : null;
+      let key_opt = (this.pointer_lock && !this.text) ? { in_event_cb: glov_input.pointerLockEnter } : null;
       if (glov_input.keyUpEdge(glov_input.KEYS.ESC, key_opt)) {
         if (this.text) {
           this.setText('');
@@ -97,6 +103,13 @@ class GlovUIEditBox {
 
   run(params) {
     this.applyParams(params);
+
+    if (this.last_frame !== engine.global_frame_index - 1) {
+      // it's been more than a frame, we must have not been running, discard async events
+      this.got_focus_in = this.got_focus_out = this.submitted = false;
+    }
+    this.last_frame = engine.global_frame_index;
+
     let focused = this.updateFocus();
 
     glov_ui.this_frame_edit_boxes.push(this);

@@ -5,7 +5,7 @@ const assert = require('assert');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
 const local_storage = require('./local_storage.js');
-const md5 = require('./md5.js');
+const md5 = require('../../common/md5.js');
 const util = require('../../common/util.js');
 
 // relevant events:
@@ -280,39 +280,96 @@ SubscriptionManager.prototype.loggedIn = function () {
   return this.logged_in ? this.logged_in_username || 'missing_name' : false;
 };
 
+SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, resp) {
+  this.logging_in = false;
+  if (!err) {
+    this.logged_in_username = resp.user_id;
+    this.logged_in_display_name = resp.display_name;
+    this.logged_in = true;
+    this.was_logged_in = true;
+    this.emit('login');
+  } else {
+    this.emit('login_fail', err);
+  }
+  resp_func(err);
+};
+
 SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_func) {
   if (this.logging_in) {
     return resp_func('Login already in progress');
   }
   this.logging_in = true;
   this.logged_in = false;
-  return this.client.send('login', login_credentials, (err, resp) => {
-    this.logging_in = false;
-    if (!err) {
-      this.logged_in_username = resp.user_id;
-      this.logged_in_display_name = resp.display_name;
-      this.logged_in = true;
-      this.was_logged_in = true;
-      this.emit('login', login_credentials.name);
-    } else {
-      this.emit('login_fail', err);
-    }
-    resp_func(err);
-  });
+  return this.client.send('login', {
+    user_id: login_credentials.user_id,
+    password: md5(this.client.secret + login_credentials.password),
+  }, this.handleLoginResponse.bind(this, resp_func));
 };
 
-SubscriptionManager.prototype.login = function (username, password, resp_func) {
-  if (password && password.split('$$')[0] === 'prehashed') {
-    password = password.split('$$')[1];
-  } else if (password) {
-    password = md5(md5(username.toLowerCase()) + password);
-    local_storage.set('password', `prehashed$$${password}`);
-  } else {
-    password = undefined;
+SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) {
+  if (this.logging_in) {
+    return resp_func('Login already in progress');
   }
-  this.login_credentials = { name: username, password: password };
-  this.loginInternal(this.login_credentials, resp_func);
+  this.logging_in = true;
+  this.logged_in = false;
+  return this.client.send('user_create', params, this.handleLoginResponse.bind(this, resp_func));
 };
+
+function hashedPassword(user_id, password) {
+  if (password.split('$$')[0] === 'prehashed') {
+    password = password.split('$$')[1];
+  } else {
+    password = md5(md5(user_id.toLowerCase()) + password);
+  }
+  return password;
+}
+
+
+SubscriptionManager.prototype.login = function (username, password, resp_func) {
+  if (!username) {
+    return resp_func('Missing username');
+  }
+  if (!password) {
+    return resp_func('Missing password');
+  }
+  let hashed_password = hashedPassword(username, password);
+  if (hashed_password !== password) {
+    local_storage.set('password', `prehashed$$${hashed_password}`);
+  }
+  this.login_credentials = { user_id: username, password: hashed_password };
+  return this.loginInternal(this.login_credentials, resp_func);
+};
+
+SubscriptionManager.prototype.userCreate = function (params, resp_func) {
+  if (!params.user_id) {
+    return resp_func('Missing username');
+  }
+  if (!params.password) {
+    return resp_func('Missing password');
+  }
+  if (!params.password_confirm) {
+    return resp_func('Missing password confirmation');
+  }
+  if (!params.email) {
+    return resp_func('Missing email');
+  }
+  let hashed_password = hashedPassword(params.user_id, params.password);
+  if (hashed_password !== params.password) {
+    local_storage.set('password', `prehashed$$${hashed_password}`);
+  }
+  let hashed_password_confirm = hashedPassword(params.user_id, params.password_confirm);
+  if (hashed_password !== hashed_password_confirm) {
+    return resp_func('Passwords do not match');
+  }
+  this.login_credentials = { user_id: params.user_id, password: hashed_password };
+  return this.userCreateInternal({
+    display_name: params.display_name || params.user_id,
+    user_id: params.user_id,
+    email: params.email,
+    password: hashed_password,
+  }, resp_func);
+};
+
 
 SubscriptionManager.prototype.logout = function () {
   assert(this.logged_in);
@@ -322,6 +379,9 @@ SubscriptionManager.prototype.logout = function () {
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
     assert(!channel.subscriptions);
+    if (channel.autosubscribed) {
+      channel.autosubscribed = false;
+    }
   }
 
   this.logging_out = true;

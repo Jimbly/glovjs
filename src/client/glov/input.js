@@ -7,6 +7,7 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
+const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const pointer_lock = require('./pointer_lock.js');
 const { abs, min, sqrt } = Math;
@@ -107,8 +108,6 @@ let mouse_wheel = 0;
 let movement_questionable_frames = 0;
 const MOVEMENT_QUESTIONABLE_FRAMES = 2; // Need at least 2
 
-let ptrlock;
-
 let input_eaten_kb = false;
 let input_eaten_mouse = false;
 
@@ -131,12 +130,12 @@ function TouchData(pos, touch, button) {
 }
 
 export function pointerLocked() {
-  return ptrlock.isLocked();
+  return pointer_lock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
 // only works reliably when called from an event handler
 export function pointerLockEnter(when) {
-  ptrlock.enter(when);
+  pointer_lock.enter(when);
 }
 function onPointerLockEnter() {
   if (touch_mode) {
@@ -160,7 +159,7 @@ export function pointerLockExit() {
     touch_data.state = null; // no UP_EDGE for this
     touch_data.release = true;
   }
-  ptrlock.exit();
+  pointer_lock.exit();
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
@@ -185,7 +184,7 @@ function onKeyUp(event) {
   key_state[code] = UP_EDGE;
 
   // Letting through regardless, because we handle things like ESC in INPUT elements
-  ptrlock.handle('keyup', event);
+  in_event.handle('keyup', event);
 }
 
 function onKeyDown(event) {
@@ -201,7 +200,7 @@ function onKeyDown(event) {
   key_state[code] = DOWN_EDGE;
 
   // Letting through regardless, because we handle things like ESC in INPUT elements
-  ptrlock.handle('keydown', event);
+  in_event.handle('keydown', event);
 }
 
 let temp_delta = vec2();
@@ -215,8 +214,10 @@ function onMouseMove(event, no_stop) {
     }
   }
   // offsetX/layerX return position relative to text-entry boxes, not good!
-  mouse_pos[0] = event.clientX;
-  mouse_pos[1] = event.clientY;
+  // clientX/clientY do not handle weird scrolling that happens on iOS, but
+  //   should not affect mouse events (but maybe on Safari desktop?)
+  mouse_pos[0] = event.pageX;
+  mouse_pos[1] = event.pageY;
   // if (event.offsetX !== undefined) {
   //   mouse_pos[0] = event.offsetX;
   //   mouse_pos[1] = event.offsetY;
@@ -272,6 +273,7 @@ function onMouseDown(event) {
   if (touches[touch_id]) {
     v2copy(touches[touch_id].start_pos, mouse_pos);
     touches[touch_id].release = false;
+    touches[touch_id].state = no_click ? DOWN : DOWN_EDGE;
   } else {
     touches[touch_id] = new TouchData(mouse_pos, false, button);
     if (no_click) {
@@ -279,7 +281,7 @@ function onMouseDown(event) {
     }
   }
   if (!no_click) {
-    ptrlock.handle('mousedown', event);
+    in_event.handle('mousedown', event);
   }
 }
 
@@ -300,7 +302,7 @@ function onMouseUp(event) {
     delete mouse_down[button];
   }
   if (!no_click) {
-    ptrlock.handle('mouseup', event);
+    in_event.handle('mouseup', event);
   }
 }
 
@@ -339,12 +341,14 @@ function onTouchChange(event) {
     if (!last_touch) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0);
       --old_count;
+      in_event.handle('mousedown', touch);
     } else {
       v2sub(temp_delta, touch_pos, last_touch.cur_pos);
       v2add(last_touch.delta, last_touch.delta, temp_delta);
       last_touch.total += abs(temp_delta[0]) + abs(temp_delta[1]);
       v2copy(last_touch.cur_pos, touch_pos);
     }
+
     seen[touch.identifier] = true;
     if (TOUCH_AS_MOUSE && new_count === 1) {
       // Single touch, treat as mouse movement
@@ -360,6 +364,7 @@ function onTouchChange(event) {
       if (touch.touch) {
         ++old_count;
         released_touch = touch;
+        in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         touch.state = UP_EDGE;
         touch.release = true;
       }
@@ -392,7 +397,7 @@ function onBlurOrFocus(evt) {
 
 export function startup(_canvas, params) {
   canvas = _canvas;
-  ptrlock = pointer_lock.create(canvas, onPointerLockEnter);
+  pointer_lock.startup(canvas, onPointerLockEnter);
   if (params.map_analog_to_dpad !== undefined) {
     map_analog_to_dpad = params.map_analog_to_dpad;
   }
@@ -534,7 +539,7 @@ export function tickInput() {
   }
   mouse_over_captured = false;
   gamepadUpdate();
-  ptrlock.topOfFrame();
+  in_event.topOfFrame();
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
     pointerLockExit();
   }
@@ -692,9 +697,10 @@ export function keyDown(keycode) {
   return Boolean(key_state[keycode]);
 }
 export function keyDownEdge(keycode, opts) {
-  if (opts && opts.pointer_lock && !input_eaten_kb && !touch_mode) {
-    ptrlock.lockOn('keydown', keycode);
+  if (opts && opts.in_event_cb && !input_eaten_kb) {
+    in_event.on('keydown', keycode, opts.in_event_cb);
   }
+
   if (key_state[keycode] === DOWN_EDGE) {
     key_state[keycode] = DOWN;
     return true;
@@ -702,9 +708,10 @@ export function keyDownEdge(keycode, opts) {
   return false;
 }
 export function keyUpEdge(keycode, opts) {
-  if (opts && opts.pointer_lock && !input_eaten_kb && !touch_mode) {
-    ptrlock.lockOn('keyup', keycode);
+  if (opts && opts.in_event_cb && !input_eaten_kb) {
+    in_event.on('keyup', keycode, opts.in_event_cb);
   }
+
   if (key_state[keycode] === UP_EDGE) {
     delete key_state[keycode];
     return true;
@@ -819,13 +826,13 @@ export function mouseUpEdge(param) {
     }
   }
 
-  if (param.pointer_lock && !input_eaten_mouse && !touch_mode) {
+  if (param.in_event_cb && !input_eaten_mouse) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};
     }
-    camera2d.virtualToPhysicalPosParam(param.phys, param);
-    ptrlock.lockOn('mouseup', null, param.phys);
+    camera2d.virtualToPhysicalPosParam(param.phys, pos_param);
+    in_event.on('mouseup', param.phys, param.in_event_cb);
   }
   return false;
 }
@@ -853,6 +860,15 @@ export function mouseDownEdge(param) {
         start_time: touch_data.start_time,
       };
     }
+  }
+
+  if (param.in_event_cb && !input_eaten_mouse) {
+    // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
+    if (!param.phys) {
+      param.phys = {};
+    }
+    camera2d.virtualToPhysicalPosParam(param.phys, pos_param);
+    in_event.on('mousedown', param.phys, param.in_event_cb);
   }
   return false;
 }

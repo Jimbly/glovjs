@@ -5,6 +5,7 @@ const assert = require('assert');
 const client_worker = require('./client_worker.js');
 const { channelServerSend } = require('./channel_server.js');
 const { logdata } = require('../../common/util.js');
+const random_names = require('./random_names.js');
 
 function onUnSubscribe(client, channel_id) {
   client.client_channel.unsubscribeOther(channel_id);
@@ -93,45 +94,100 @@ function onChannelMsg(client, data, resp_func) {
   }
 }
 
-const regex_valid_username = /^[a-zA-Z0-9_]+$/u;
-function onLogin(client, data, resp_func) {
-  console.log(`client_id:${client.id}->server login ${logdata(data)}`);
-  let user_id = data.name;
+const regex_valid_username = /^[a-z][a-z0-9_]+$/u;
+const invalid_names = {
+  constructor: 1,
+  hasownproperty: 1,
+  isprototypeof: 1,
+  propertyisenumerable: 1,
+  tolocalestring: 1,
+  tostring: 1,
+  valueof: 1,
+  admin: 1,
+};
+function validUsername(user_id) {
   if (!user_id) {
-    return resp_func('invalid username');
+    return false;
   }
   if ({}[user_id]) {
     // hasOwnProperty, etc
-    return resp_func('invalid username');
+    return false;
   }
   user_id = user_id.toLowerCase();
+  if (invalid_names[user_id]) {
+    // also catches anything on Object.prototype
+    return false;
+  }
   if (!user_id.match(regex_valid_username)) {
     // has a "." or other invalid character
-    return resp_func('invalid username');
+    return false;
   }
+  return true;
+}
+
+function handleLoginResponse(client, user_id, resp_func, err, resp_data) {
+  let client_channel = client.client_channel;
+  assert(client_channel);
+
+  if (client_channel.ids.user_id) {
+    // Logged in while processing the response?
+    return resp_func('Already logged in');
+  }
+
+  if (!err) {
+    client_channel.ids_base.user_id = user_id;
+    client_channel.ids_base.display_name = resp_data.display_name;
+    applyCustomIds(client_channel.ids, resp_data);
+
+    // Tell channels we have a new user id/display name
+    for (let channel_id in client_channel.subscribe_counts) {
+      channelServerSend(client_channel, channel_id, 'client_changed');
+    }
+
+    // Always subscribe client to own user
+    onSubscribe(client, `user.${user_id}`);
+  }
+  return resp_func(err, client_channel.ids); // user_id and display_name
+}
+
+function onLogin(client, data, resp_func) {
+  console.log(`client_id:${client.id}->server login ${logdata(data)}`);
+  let user_id = data.user_id;
+  if (!validUsername(user_id)) {
+    return resp_func('Invalid username');
+  }
+  user_id = user_id.toLowerCase();
 
   let client_channel = client.client_channel;
   assert(client_channel);
 
   return channelServerSend(client_channel, `user.${user_id}`, 'login', null, {
-    display_name: data.display_name || data.name, // original-case'd name
+    display_name: data.display_name || data.user_id, // original-case'd name
     password: data.password,
-  }, function (err, resp_data) {
-    if (!err) {
-      client_channel.ids_base.user_id = user_id;
-      client_channel.ids_base.display_name = resp_data.display_name;
-      applyCustomIds(client_channel.ids, resp_data);
+    salt: client.secret,
+  }, handleLoginResponse.bind(null, client, user_id, resp_func));
+}
 
-      // Tell channels we have a new user id/display name
-      for (let channel_id in client_channel.subscribe_counts) {
-        channelServerSend(client_channel, channel_id, 'client_changed');
-      }
+function onUserCreate(client, data, resp_func) {
+  console.log(`client_id:${client.id}->server user_create ${logdata(data)}`);
+  let user_id = data.user_id;
+  if (!validUsername(user_id)) {
+    return resp_func('Invalid username');
+  }
+  user_id = user_id.toLowerCase();
 
-      // Always subscribe client to own user
-      onSubscribe(client, `user.${user_id}`);
-    }
-    resp_func(err, client_channel.ids); // user_id and display_name
-  });
+  let client_channel = client.client_channel;
+  assert(client_channel);
+
+  if (client_channel.ids.user_id) {
+    return resp_func('Already logged in');
+  }
+
+  return channelServerSend(client_channel, `user.${user_id}`, 'create', null, {
+    display_name: data.display_name || data.user_id, // original-case'd name
+    password: data.password,
+    email: data.email,
+  }, handleLoginResponse.bind(null, client, user_id, resp_func));
 }
 
 function onLogOut(client, data, resp_func) {
@@ -155,6 +211,10 @@ function onLogOut(client, data, resp_func) {
   return resp_func();
 }
 
+function onRandomName(client, data, resp_func) {
+  return resp_func(null, random_names.get());
+}
+
 export function init(channel_server) {
   let ws_server = channel_server.ws_server;
   ws_server.on('client', (client) => {
@@ -169,7 +229,9 @@ export function init(channel_server) {
   ws_server.onMsg('set_channel_data', onSetChannelData);
   ws_server.onMsg('channel_msg', onChannelMsg);
   ws_server.onMsg('login', onLogin);
+  ws_server.onMsg('user_create', onUserCreate);
   ws_server.onMsg('logout', onLogOut);
+  ws_server.onMsg('random_name', onRandomName);
 
   client_worker.init(channel_server);
 }

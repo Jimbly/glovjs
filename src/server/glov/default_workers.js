@@ -3,7 +3,17 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
+const md5 = require('../../common/md5.js');
 const random_names = require('./random_names.js');
+
+const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+
+function validDisplayName(display_name) {
+  if (!display_name) {
+    return false;
+  }
+  return true;
+}
 
 export class DefaultUserWorker extends ChannelWorker {
   constructor(channel_server, channel_id) {
@@ -26,12 +36,38 @@ export class DefaultUserWorker extends ChannelWorker {
     }
 
     if (!this.getChannelData('private.password')) {
-      this.setChannelData('private.password', data.password);
-      this.setChannelData('public.display_name', data.display_name || this.user_id);
+      if (this.auto_create_account) {
+        if (!validDisplayName(data.display_name)) {
+          return resp_func('Invalid display name');
+        }
+        this.setChannelData('private.password', data.password);
+        this.setChannelData('public.display_name', data.display_name);
+      } else {
+        return resp_func('ERR_USER_NOT_FOUND');
+      }
     }
-    if (this.getChannelData('private.password') !== data.password) {
+    if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
     }
+    return resp_func(null, this.getChannelData('public'));
+  }
+  handleCreate(src, data, resp_func) {
+    if (this.getChannelData('private.password')) {
+      return resp_func('Account already exists');
+    }
+    if (!data.password) {
+      return resp_func('Missing password');
+    }
+    if (!email_regex.test(data.email)) {
+      return resp_func('Email invalid');
+    }
+    if (!validDisplayName(data.display_name)) {
+      return resp_func('Invalid display name');
+    }
+
+    this.setChannelData('private.password', data.password);
+    this.setChannelData('public.display_name', data.display_name);
+    this.setChannelData('private.email', data.email);
     return resp_func(null, this.getChannelData('public'));
   }
   handleSetChannelData(src, key, value) {
@@ -52,6 +88,7 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 }
 DefaultUserWorker.prototype.auto_destroy = true;
+DefaultUserWorker.prototype.auto_create_account = true;
 
 class ChannelServerWorker extends ChannelWorker {
   handleWorkerRemoved(src, data, resp_func) {
@@ -70,6 +107,7 @@ let user_worker_init_data = {
   },
   handlers: {
     login: DefaultUserWorker.prototype.handleLogin,
+    create: DefaultUserWorker.prototype.handleCreate,
   },
 };
 export function overrideUserWorker(new_user_worker, extra_data) {

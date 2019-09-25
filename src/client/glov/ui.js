@@ -452,7 +452,6 @@ export function drawTooltip(param) {
   });
 }
 
-const opt_pointer_lock = { pointer_lock: true };
 // eslint-disable-next-line complexity
 export function buttonShared(param) {
   let state = 'regular';
@@ -462,7 +461,7 @@ export function buttonShared(param) {
   }
   let key = param.key || `${param.x}_${param.y}`;
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
-  let key_opts = param.pointer_lock ? opt_pointer_lock : null;
+  let key_opts = param.in_event_cb ? { in_event_cb: param.in_event_cb } : null;
   button_mouseover = false;
   if (param.disabled) {
     glov_input.mouseOver(param); // Still eat mouse events
