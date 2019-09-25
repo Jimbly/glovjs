@@ -321,6 +321,11 @@ export function main() {
       perfTestSprites();
     }
 
+    // Debuggin full canvas stretching
+    // const camera2d = require('./glov/camera2d.js');
+    // glov_ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+    // glov_ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+
     // Debugging touch state on mobile
     // const glov_camera2d = require('./glov/camera2d.js');
     // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
