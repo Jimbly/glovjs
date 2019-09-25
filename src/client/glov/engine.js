@@ -206,6 +206,27 @@ function resetEffects() {
   }
 }
 
+let last_canvas_width;
+let last_canvas_height;
+function resizeCanvas() {
+  let css_to_real = window.devicePixelRatio || 1;
+  window.pixel_scale = css_to_real;
+  last_canvas_width = canvas.width = Math.round(canvas.clientWidth * css_to_real);
+  last_canvas_height = canvas.height = Math.round(canvas.clientHeight * css_to_real);
+
+  // For the next 10 frames, make sure font size is correct
+  need_repos = 10;
+}
+
+function checkResize() {
+  let css_to_real = window.devicePixelRatio || 1;
+  let new_width = Math.round(canvas.clientWidth * css_to_real);
+  let new_height = Math.round(canvas.clientHeight * css_to_real);
+  if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
+    resizeCanvas();
+  }
+}
+
 export let viewport = vec4(0,0,1,1);
 export function setViewport(xywh) {
   v4copy(viewport, xywh);
@@ -283,6 +304,7 @@ function tick() {
     return;
   }
 
+  checkResize();
   width = canvas.width;
   height = canvas.height;
 
@@ -432,15 +454,6 @@ export function startup(params) {
     window.glov_error_report = glovErrorReport;
   }
 
-  function resizeCanvas() {
-    let css_to_real = window.devicePixelRatio || 1;
-    window.pixel_scale = css_to_real;
-    canvas.width = Math.round(canvas.clientWidth * css_to_real);
-    canvas.height = Math.round(canvas.clientHeight * css_to_real);
-
-    // For the next 10 frames, make sure font size is correct
-    need_repos = 10;
-  }
   // resize the canvas to fill browser window dynamically
   window.addEventListener('resize', resizeCanvas, false);
   resizeCanvas();
