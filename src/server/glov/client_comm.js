@@ -17,7 +17,7 @@ function onClientDisconnect(client) {
 }
 
 function onSubscribe(client, channel_id, resp_func) {
-  console.log(`client_id:${client.id}->${channel_id}: subscribe`);
+  console.debug(`client_id:${client.id}->${channel_id}: subscribe`);
   client.client_channel.subscribeOther(channel_id, resp_func);
 }
 
@@ -28,19 +28,28 @@ function onSetChannelData(client, data, resp_func) {
 
   let key = data.key.split('.');
   if (key[0] !== 'public' && key[0] !== 'private') {
-    console.log(` - failed, invalid scope: ${key[0]}`);
+    console.error(` - failed, invalid scope: ${key[0]}`);
     resp_func('failed: invalid scope');
     return;
   }
   if (!key[1]) {
-    console.log(' - failed, missing member name');
+    console.error(' - failed, missing member name');
     resp_func('failed: missing member name');
     return;
   }
 
   // TODO: Disable autocreate for this call?
   // TODO: Error if channel does not exist, but do not require an ack? channelServerSend needs a simple "sent" ack?
-  channelServerSend(client.client_channel, channel_id, 'set_channel_data', null, data);
+
+  let client_channel = client.client_channel;
+
+  if (!client_channel.isSubscribedTo(channel_id)) {
+    return void resp_func(`Client is not on channel ${channel_id}`);
+  }
+
+  client_channel.ids = client_channel.ids_direct;
+  channelServerSend(client_channel, channel_id, 'set_channel_data', null, data);
+  client_channel.ids = client_channel.ids_base;
   resp_func();
 }
 
@@ -56,15 +65,18 @@ function applyCustomIds(ids, user_data_public) {
 
 function quietMessage(msg) {
   // FRVR - maybe generalize this?
-  return msg && msg.msg === 'set_user' && msg.data && msg.data.key === 'pos';
+  return msg && (msg.msg === 'set_user' && msg.data && msg.data.key === 'pos' ||
+    msg.msg === 'vd_get' || msg.msg === 'claim');
 }
 
 function onChannelMsg(client, data, resp_func) {
   // Arbitrary messages, or messages to everyone subscribed to the channel, e.g. chat
   if (quietMessage(data)) {
-    data.data.q = 1; // do not print later, either
+    if (typeof data.data === 'object') {
+      data.data.q = 1; // do not print later, either
+    }
   } else {
-    console.log(`client_id:${client.id}->${data.channel_id}: channel_msg ${logdata(data)}`);
+    console.debug(`client_id:${client.id}->${data.channel_id}: channel_msg ${logdata(data)}`);
   }
   if (typeof data !== 'object') {
     return void resp_func('Invalid data type');
@@ -165,6 +177,7 @@ function onLogin(client, data, resp_func) {
     display_name: data.display_name || data.user_id, // original-case'd name
     password: data.password,
     salt: client.secret,
+    ip: client.addr,
   }, handleLoginResponse.bind(null, client, user_id, resp_func));
 }
 
@@ -187,6 +200,7 @@ function onUserCreate(client, data, resp_func) {
     display_name: data.display_name || data.user_id, // original-case'd name
     password: data.password,
     email: data.email,
+    ip: client.addr,
   }, handleLoginResponse.bind(null, client, user_id, resp_func));
 }
 

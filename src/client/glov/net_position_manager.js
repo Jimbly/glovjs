@@ -7,6 +7,7 @@ const net = require('./net.js');
 const util = require('../../common/util.js');
 const { abs, floor, max, min, PI, sqrt } = Math;
 const TWO_PI = PI * 2;
+const EPSILON = 0.01;
 
 const valid_options = [
   // Numeric parameters
@@ -84,7 +85,7 @@ NetPositionManager.prototype.arr = function (vec) {
 };
 NetPositionManager.prototype.vsame = function (a, b) {
   for (let ii = 0; ii < this.n; ++ii) {
-    if (a[ii] !== b[ii]) {
+    if (abs(a[ii] - b[ii]) > EPSILON) {
       return false;
     }
   }

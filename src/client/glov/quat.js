@@ -171,3 +171,36 @@ export function qSlerp(out, t, a, b) {
 
   return out;
 }
+
+export function qTransformVec3(out, a, q) {
+  let qx = q[0];
+  let qy = q[1];
+  let qz = q[2];
+  let qw = q[3];
+  let x = a[0];
+  let y = a[1];
+  let z = a[2];
+  // var qvec = [qx, qy, qz];
+  // var uv = vec3.cross([], qvec, a);
+  let uvx = qy * z - qz * y;
+  let uvy = qz * x - qx * z;
+  let uvz = qx * y - qy * x;
+  // var uuv = vec3.cross([], qvec, uv);
+  let uuvx = qy * uvz - qz * uvy;
+  let uuvy = qz * uvx - qx * uvz;
+  let uuvz = qx * uvy - qy * uvx;
+  // vec3.scale(uv, uv, 2 * w);
+  let w2 = qw * 2;
+  uvx *= w2;
+  uvy *= w2;
+  uvz *= w2;
+  // vec3.scale(uuv, uuv, 2);
+  uuvx *= 2;
+  uuvy *= 2;
+  uuvz *= 2;
+  // return vec3.add(out, a, vec3.add(out, uv, uuv));
+  out[0] = x + uvx + uuvx;
+  out[1] = y + uvy + uuvy;
+  out[2] = z + uvz + uuvz;
+  return out;
+}

@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
-require('./bootstrap.js'); // Just in case it's not in wrapper.js
+require('./bootstrap.js'); // Just in case it's not in app.js
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const effects = require('./effects.js');
@@ -49,8 +49,9 @@ export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET });
 export let any_3d = false;
 export let ZFAR;
 export let ZNEAR;
-export const fov_y = 45 * PI / 180;
+export let fov_y = 1;
 export let fov_x = 1;
+export let fov_min = 60 * PI / 180;
 
 export let mat_projection = mat4();
 export let mat_view = mat4();
@@ -99,6 +100,10 @@ export function setGlobalMatrices(_mat_view) {
   mat4Mul(mat_vp, mat_projection, mat_view);
   v3normalize(light_dir_ws, light_dir_ws);
   v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
+}
+
+export function setFOV(new_fov) {
+  fov_min = new_fov;
 }
 
 function normalizeRow(m, idx) {
@@ -309,8 +314,15 @@ function tick() {
   height = canvas.height;
 
   if (any_3d) {
-    let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
-    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+    if (width > height) {
+      fov_y = fov_min;
+      let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
+      fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+    } else {
+      fov_x = fov_min;
+      let rise = height/width * sin(fov_x / 2) / cos(fov_x / 2);
+      fov_y = 2 * asin(rise / sqrt(rise * rise + 1));
+    }
     mat4Perspective(mat_projection, fov_y, width/height, ZNEAR, ZFAR);
     v4set(projection_inverse,
       2 / (width * mat_projection[0]), // projection_matrix.m00),
@@ -340,9 +352,9 @@ function tick() {
   if (need_repos) {
     --need_repos;
     let ul = [];
-    camera2d.virtualToPhysical(ul, [0,0]);
+    camera2d.virtualToDom(ul, [0,0]);
     let lr = [];
-    camera2d.virtualToPhysical(lr, [game_width-1,game_height-1]);
+    camera2d.virtualToDom(lr, [game_width-1,game_height-1]);
     let viewport2 = [ul[0], ul[1], lr[0], lr[1]];
     let view_height = viewport2[3] - viewport2[1];
     // default font size of 16 when at height of game_height
@@ -423,8 +435,23 @@ function tick() {
   }
 }
 
+let error_report_details = {};
+let error_report_details_str = '';
+export function setErrorReportDetails(key, value) {
+  if (value) {
+    error_report_details[key] = escape(String(value));
+  } else {
+    delete error_report_details[key];
+  }
+  error_report_details_str = `&${Object.keys(error_report_details)
+    .map((k) => `${k}=${error_report_details[k]}`)
+    .join('&')}`;
+}
+setErrorReportDetails('ver', BUILD_TIMESTAMP);
 let last_error_time = 0;
+let crash_idx = 0;
 function glovErrorReport(msg, file, line, col) {
+  ++crash_idx;
   let now = Date.now();
   let dt = now - last_error_time;
   last_error_time = now;
@@ -437,7 +464,8 @@ function glovErrorReport(msg, file, line, col) {
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = (location.href || '').match(/^[^#?]*/u)[0];
-  url += `errorReport?file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}&msg=${escape(msg)}`;
+  url += `errorReport?cidx=${crash_idx}&file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}` +
+    `&msg=${escape(msg)}${error_report_details_str}`;
   let xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);
   xhr.send(null);
@@ -460,22 +488,28 @@ export function startup(params) {
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
+  let powerPreference = 'high-performance';
   let context_names = ['webgl', 'experimental-webgl'];
-  let context_opt = { antialias };
+  let context_opts = [{ antialias, powerPreference }, { powerPreference }, {}];
   let good = false;
-  for (let i = 0; i < context_names.length; i += 1) {
-    try {
-      window.gl = canvas.getContext(context_names[i], context_opt);
-      good = true;
-      break;
-    } catch (e) {
-      // ignore
+  for (let i = 0; !good && i < context_names.length; i += 1) {
+    for (let jj = 0; !good && jj < context_opts.length; ++jj) {
+      try {
+        window.gl = canvas.getContext(context_names[i], context_opts[jj]);
+        if (window.gl) {
+          good = true;
+          break;
+        }
+      } catch (e) {
+        // ignore
+      }
     }
   }
   if (!good) {
     // eslint-disable-next-line no-alert
     window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
     document.getElementById('loading').style.visibility = 'hidden';
+    document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
   }
 

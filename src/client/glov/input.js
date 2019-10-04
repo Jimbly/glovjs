@@ -99,7 +99,7 @@ let canvas;
 let key_state = {};
 let pad_states = []; // One map per gamepad to pad button states
 let gamepad_data = []; // Other tracking data per gamepad
-let mouse_pos = vec2();
+let mouse_pos = vec2(); // in DOM coordinates, not canvas or virtual
 let last_mouse_pos = vec2();
 let mouse_pos_is_touch = false;
 let mouse_over_captured = false;
@@ -129,6 +129,10 @@ function TouchData(pos, touch, button) {
   this.state = DOWN_EDGE;
 }
 
+function setMouseToMid() {
+  v2set(mouse_pos, engine.width*0.5/camera2d.domToCanvasRatio(), engine.height*0.5/camera2d.domToCanvasRatio());
+}
+
 export function pointerLocked() {
   return pointer_lock.isLocked();
 }
@@ -142,7 +146,7 @@ function onPointerLockEnter() {
     return;
   }
   let touch_data = touches[pointerlock_touch_id];
-  v2set(mouse_pos, engine.width*0.5, engine.height*0.5);
+  setMouseToMid();
   if (touch_data) {
     v2copy(touch_data.start_pos, mouse_pos);
     touch_data.release = false;
@@ -163,8 +167,31 @@ export function pointerLockExit() {
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
+// let last_event;
+// const skip = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1 };
+// function eventlog(event) {
+//   if (event === last_event) {
+//     return;
+//   }
+//   last_event = event;
+//   let pairs = [];
+//   for (let k in event) {
+//     let v = event[k];
+//     if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
+//       continue;
+//     }
+//     pairs.push(`${k}:${v.id || v}`);
+//   }
+//   console.log(`${engine.global_frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
+// }
+
+function letEventThrough(event) {
+  return event.target.tagName === 'INPUT' || (event.target.className || '').indexOf('noglov') !== -1;
+}
+
 function ignored(event) {
-  if (event.target.tagName !== 'INPUT') {
+  // eventlog(event);
+  if (!letEventThrough(event)) {
     event.preventDefault();
     event.stopPropagation();
   }
@@ -172,8 +199,7 @@ function ignored(event) {
 
 function onKeyUp(event) {
   let code = event.keyCode;
-  let no_stop = event.target.tagName === 'INPUT';
-  if (!no_stop) {
+  if (!letEventThrough(event)) {
     event.stopPropagation();
     event.preventDefault();
   }
@@ -189,7 +215,7 @@ function onKeyUp(event) {
 
 function onKeyDown(event) {
   let code = event.keyCode;
-  let no_stop = event.target.tagName === 'INPUT' ||
+  let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey); // Safari, alternate Chrome
   if (!no_stop) {
@@ -205,7 +231,9 @@ function onKeyDown(event) {
 
 let temp_delta = vec2();
 function onMouseMove(event, no_stop) {
-  if (event.target.tagName !== 'INPUT' && !no_stop) {
+  /// eventlog(event);
+  // Don't block mouse button 3, that's the Back button
+  if (!letEventThrough(event) && !no_stop && event.button !== 3) {
     event.preventDefault();
     event.stopPropagation();
     if (touch_mode) {
@@ -229,9 +257,9 @@ function onMouseMove(event, no_stop) {
 
   let any_movement = false;
   if (pointerLocked()) {
-    v2set(mouse_pos, engine.width*0.5, engine.height*0.5);
+    setMouseToMid();
     if (event.movementX || event.movementY) {
-      v2set(temp_delta, event.movementX, event.movementY);
+      v2set(temp_delta, event.movementX || 0, event.movementY || 0);
       any_movement = true;
     }
   } else {
@@ -265,7 +293,7 @@ function onMouseMove(event, no_stop) {
 function onMouseDown(event) {
   onMouseMove(event); // update mouse_pos
   engine.sound_manager.resume();
-  let no_click = event.target.tagName === 'INPUT';
+  let no_click = letEventThrough(event);
 
   let button = event.button;
   mouse_down[button] = mouse_pos.slice(0);
@@ -287,7 +315,7 @@ function onMouseDown(event) {
 
 function onMouseUp(event) {
   onMouseMove(event); // update mouse_pos
-  let no_click = event.target.tagName === 'INPUT';
+  let no_click = letEventThrough(event);
   let button = event.button;
   if (mouse_down[button]) {
     let touch_id = `m${button}`;
@@ -317,6 +345,7 @@ function onWheel(event) {
 
 let touch_pos = vec2();
 function onTouchChange(event) {
+  // eventlog(event);
   // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
   // our canvas offscreen.  Should maybe have the canvas resize and use clientX
   // instead, but this works well enough.
@@ -604,7 +633,7 @@ export function eatAllKeyboardInput() {
 // returns position mapped to current camera view
 export function mousePos(dst) {
   dst = dst || vec2();
-  camera2d.physicalToVirtual(dst, mouse_pos);
+  camera2d.domToVirtual(dst, mouse_pos);
   return dst;
 }
 
@@ -627,7 +656,7 @@ function mousePosParam(param) {
 
 let check_pos = vec2();
 function checkPos(pos, param) {
-  camera2d.physicalToVirtual(check_pos, pos);
+  camera2d.domToVirtual(check_pos, pos);
   return check_pos[0] >= param.x && (param.w === Infinity || check_pos[0] < param.x + param.w) &&
     check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
 }
@@ -831,7 +860,7 @@ export function mouseUpEdge(param) {
     if (!param.phys) {
       param.phys = {};
     }
-    camera2d.virtualToPhysicalPosParam(param.phys, pos_param);
+    camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mouseup', param.phys, param.in_event_cb);
   }
   return false;
@@ -867,7 +896,7 @@ export function mouseDownEdge(param) {
     if (!param.phys) {
       param.phys = {};
     }
-    camera2d.virtualToPhysicalPosParam(param.phys, pos_param);
+    camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mousedown', param.phys, param.in_event_cb);
   }
   return false;
@@ -885,7 +914,7 @@ export function drag(param) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
-      camera2d.physicalDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
+      camera2d.domDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
       let total = delta[0] + delta[1];
       if (total < min_dist) {
         continue;
@@ -899,9 +928,9 @@ export function drag(param) {
       if (param.payload) {
         touch_data.drag_payload = param.payload;
       }
-      camera2d.physicalToVirtual(start_pos, touch_data.start_pos);
-      camera2d.physicalToVirtual(cur_pos, touch_data.cur_pos);
-      camera2d.physicalDeltaToVirtual(delta, touch_data.delta);
+      camera2d.domToVirtual(start_pos, touch_data.start_pos);
+      camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
+      camera2d.domDeltaToVirtual(delta, touch_data.delta);
       return {
         cur_pos,
         start_pos,
@@ -960,7 +989,7 @@ export function dragOver(param) {
       if (!param.peek) {
         touch_data.dispatched_drag_over = true;
       }
-      camera2d.physicalToVirtual(cur_pos, touch_data.cur_pos);
+      camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
       return {
         cur_pos,
         drag_payload: touch_data.drag_payload

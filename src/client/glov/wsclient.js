@@ -1,6 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* global WebSocket */
+/* global WebSocket, XMLHttpRequest */
 
 const ack = require('../../common/ack.js');
 const assert = require('assert');
@@ -42,11 +42,23 @@ export function WSClient() {
   this.connect(false);
 
   this.onMsg('cack', this.onConnectAck.bind(this));
+  this.onMsg('app_ver', this.onAppVer.bind(this));
   this.onMsg('error', this.onError.bind(this));
 }
 
 WSClient.prototype.timeSinceDisconnect = function () {
   return Date.now() - this.disconnect_time;
+};
+
+WSClient.prototype.onAppVer = function (ver) {
+  if (ver !== BUILD_TIMESTAMP) {
+    if (this.on_app_ver_mismatch) {
+      this.on_app_ver_mismatch();
+    } else {
+      console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}, reloading`);
+      document.location.reload();
+    }
+  }
 };
 
 WSClient.prototype.onConnectAck = function (data, resp_func) {
@@ -56,6 +68,9 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   client.disconnected = false;
   client.id = data.id;
   client.secret = data.secret;
+  if (data.app_ver) {
+    client.onAppVer(data.app_ver);
+  }
   // Fire user-level connect handler as well
   wscommon.handleMessage(client, JSON.stringify({
     msg: 'connect',
@@ -85,12 +100,34 @@ WSClient.prototype.onMsg = function (msg, cb) {
   };
 };
 
+WSClient.prototype.checkForNewAppVersion = function () {
+  if (this.app_ver_check_in_progress) {
+    return;
+  }
+  this.app_ver_check_in_progress = true;
+  let xhr = new XMLHttpRequest();
+  xhr.open('GET', 'app.ver.json', true);
+  xhr.responseType = 'json';
+  xhr.onload = () => {
+    this.app_ver_check_in_progress = false;
+    let obj = xhr.response;
+    if (obj && obj.ver) {
+      this.onAppVer(obj.ver);
+    }
+  };
+  xhr.onerror = () => {
+    this.app_ver_check_in_progress = false;
+  };
+  xhr.send(null);
+};
+
 WSClient.prototype.retryConnection = function () {
   let client = this;
   assert(!client.socket);
   assert(!client.retry_scheduled);
   client.retry_scheduled = true;
   ++client.retry_count;
+  this.checkForNewAppVersion();
   setTimeout(function () {
     assert(client.retry_scheduled);
     assert(!client.socket);

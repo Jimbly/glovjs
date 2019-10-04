@@ -824,17 +824,20 @@ export function tickUI(dt) {
     menu_up_time += dt;
     // Effects during modal dialogs
     let factor = min(menu_up_time / 500, 1);
-    glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
-    glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
-    // // Or, just darken
-    // sprites.white.draw({
-    //   x: camera2d.x0(),
-    //   y: camera2d.y0(),
-    //   z: params.z - 2,
-    //   color: params.fallback_darken,
-    //   w: camera2d.x1() - camera2d.x0(),
-    //   h: camera2d.y1() - camera2d.y0(),
-    // });
+    if (!glov_engine.defines.NOPP) {
+      glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
+      glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
+    } else {
+      // Or, just darken
+      sprites.white.draw({
+        x: camera2d.x0(),
+        y: camera2d.y0(),
+        z: params.z - 2,
+        color: params.fallback_darken,
+        w: camera2d.x1() - camera2d.x0(),
+        h: camera2d.y1() - camera2d.y0(),
+      });
+    }
   } else {
     menu_up_time = 0;
   }

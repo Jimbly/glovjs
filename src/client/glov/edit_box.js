@@ -20,6 +20,7 @@ class GlovUIEditBox {
     this.font_height = glov_ui.font_height;
     this.text = '';
     this.placeholder = '';
+    this.max_len = 0;
     this.initial_focus = false;
     this.onetime_focus = false;
     this.initial_select = false;
@@ -96,6 +97,9 @@ class GlovUIEditBox {
           this.setText('');
         } else {
           glov_ui.focusCanvas();
+          if (this.input) {
+            this.input.blur();
+          }
           focused = false;
         }
       }
@@ -127,6 +131,9 @@ class GlovUIEditBox {
         input.setAttribute('autocomplete', `auto_off_${Math.random()}`);
         input.setAttribute('type', this.type);
         input.setAttribute('placeholder', this.placeholder);
+        if (this.max_len) {
+          input.setAttribute('maxLength', this.max_len);
+        }
         input.setAttribute('tabindex', 2);
         form.addEventListener('submit', (ev) => {
           ev.preventDefault();

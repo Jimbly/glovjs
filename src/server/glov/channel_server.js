@@ -8,31 +8,18 @@ const { ChannelWorker } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
 const default_workers = require('./default_workers.js');
 const exchange = require('./exchange.js');
+const log = require('./log.js');
 const { clone, logdata } = require('../../common/util.js');
+const { inspect } = require('util');
 
 const { max } = Math;
 
 // source is a ChannelWorker
 // dest is channel_id in the form of `type.id`
 export function channelServerSend(source, dest, msg, err, data, resp_func) {
-  /*
-    TODO: Deal with ordering of initial packets to new channels:
-    Keep list of known other channels (maybe LRU with expiry).
-    Upon the first message to an unknown channel, we need to queue up all other
-      messages to that channel until the first one gets through (including possible
-      auto-creation of the channel and retry).
-    If a message fails due to ERR_NOT_FOUND, we need to queue up future messages
-      to this channel *as well as* any other messages that fail and want to retry,
-      but these should be queued in the order they were originally sent, not the
-      order failures come back.
-    Or, we have a per-process (same UID we use for client IDs), per-destination-
-      channel index, and the receiving end orders packets and waits for missing ones.
-    Or, it's per-source, to be resilient against moving channels to different
-      processes (logic here from other project).
-  */
   assert(source.channel_id);
   if ((!data || !data.q) && typeof msg === 'string') {
-    console.log(`${source.channel_id}->${dest}: ${msg} ${err ? `err:${logdata(err)}` : ''} ${logdata(data)}`);
+    console.debug(`${source.channel_id}->${dest}: ${msg} ${err ? `err:${logdata(err)}` : ''} ${logdata(data)}`);
   }
   assert(source.send_pkt_idx);
   let pkt_idx = source.send_pkt_idx[dest] = (source.send_pkt_idx[dest] || 0) + 1;
@@ -50,8 +37,8 @@ export function channelServerSend(source, dest, msg, err, data, resp_func) {
         if (err === exchange.ERR_NOT_FOUND && typeof msg === 'number') {
           // not found error while acking, happens with unsubscribe, etc, right before shutdown, silently ignore
         } else {
-          console.log(`Received unhandled error response while handling "${msg}" from ${source.channel_id} to ${dest}:`,
-            err);
+          console.error(`Received unhandled error response while handling "${msg}"` +
+            ` from ${source.channel_id} to ${dest}:`, err);
         }
       }
     };
@@ -82,7 +69,7 @@ export function channelServerSend(source, dest, msg, err, data, resp_func) {
       }
       return channel_server.autoCreateChannel(dest_type, dest_id, function (err2) {
         if (err2) {
-          console.log(`Error auto-creating channel ${dest}:`, err2);
+          console.info(`Error auto-creating channel ${dest}:`, err2);
         } else {
           console.log(`Auto-created channel ${dest}`);
         }
@@ -97,6 +84,7 @@ class ChannelServer {
   constructor() {
     this.channel_types = {};
     this.local_channels = {};
+    this.last_worker = null; // For debug logging upon crash
   }
 
   autoCreateChannel(channel_type, subid, cb) {
@@ -241,6 +229,7 @@ class ChannelServer {
       addUnique(handlers, 'unsubscribe', ChannelWorker.prototype.onUnSubscribe);
       addUnique(handlers, 'client_changed', ChannelWorker.prototype.onClientChanged);
       addUnique(handlers, 'set_channel_data', ChannelWorker.prototype.onSetChannelData);
+      allow_client_direct.set_channel_data = true;
       addUnique(handlers, 'set_channel_data_if', ChannelWorker.prototype.onSetChannelDataIf);
       addUnique(handlers, 'set_channel_data_push', ChannelWorker.prototype.onSetChannelDataPush);
       addUnique(handlers, 'get_channel_data', ChannelWorker.prototype.onGetChannelData);
@@ -302,7 +291,32 @@ class ChannelServer {
     if (typeof e !== 'object') {
       e = new Error(e);
     }
-    console.error('ERROR', new Date(), e);
+    console.error('ERROR', new Date().toISOString(), e);
+    let crash_dump = {
+      err: inspect(e).split('\n'),
+    };
+    let cw = this.last_worker;
+    if (cw) {
+      crash_dump.last_channel_id = cw.channel_id;
+      crash_dump.data = cw.data;
+      if (cw.pkt_log) {
+        let pkt_log = [];
+        for (let ii = 0; ii < cw.pkt_log.length; ++ii) {
+          let idx = (cw.pkt_log_idx - 1 - ii + cw.pkt_log.length) % cw.pkt_log.length;
+          let entry = cw.pkt_log[idx];
+          if (!entry) {
+            continue;
+          }
+          if (typeof entry.ts === 'number') {
+            entry.ts = new Date(entry.ts).toISOString();
+          }
+          pkt_log.push(entry);
+        }
+        crash_dump.pkt_log = pkt_log;
+      }
+    }
+    let dump_file = log.dumpFile('crash', JSON.stringify(crash_dump), 'json');
+    console.error(`  Saving dump to ${dump_file}.`);
     this.csworker.sendChannelMessage('admin.admin', 'broadcast', { msg: 'chat', data: {
       msg: 'Server error occurred - check server logs'
     } });

@@ -25,3 +25,11 @@ export function init(params) {
     });
   }
 }
+
+const build_timestamp_string = new Date(Number(BUILD_TIMESTAMP))
+  .toISOString()
+  .replace('T', ' ')
+  .slice(0, -8);
+export function buildString() {
+  return build_timestamp_string;
+}

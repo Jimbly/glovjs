@@ -39,9 +39,13 @@ export function merge(dest, src) {
   return dest;
 }
 
+export function has(obj, field) {
+  return Object.prototype.hasOwnProperty.call(obj, field);
+}
+
 export function defaults(dest, src) {
   for (let f in src) {
-    if (!Object.prototype.hasOwnProperty.call(dest, f)) {
+    if (!has(dest, f)) {
       dest[f] = src[f];
     }
   }

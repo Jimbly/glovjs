@@ -115,6 +115,7 @@ function SubscriptionManager(client) {
   client.onMsg('connect', this.handleConnect.bind(this));
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
+  client.onMsg('admin_msg', this.handleAdminMsg.bind(this));
 }
 util.inherits(SubscriptionManager, EventEmitter);
 
@@ -123,6 +124,11 @@ SubscriptionManager.prototype.onceConnected = function (cb) {
     return void cb();
   }
   this.once('connect', cb);
+};
+
+SubscriptionManager.prototype.handleAdminMsg = function (data) {
+  console.error(data);
+  this.emit('admin_msg', data);
 };
 
 SubscriptionManager.prototype.handleConnect = function () {

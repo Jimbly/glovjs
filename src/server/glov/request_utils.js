@@ -23,7 +23,7 @@ export function ipFromRequest(req) {
 }
 
 export function allowMapFromLocalhostOnly(app) {
-  let debug_ips = /^127\.0\.0\.1(?:$|:)/u;
+  let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/u;
   let cache = {};
   app.use(function (req, res, next) {
     let ip = ipFromRequest(req);
@@ -31,12 +31,12 @@ export function allowMapFromLocalhostOnly(app) {
     if (cached === undefined) {
       cache[ip] = cached = Boolean(ip.match(debug_ips));
       if (cached) {
-        console.log(`Allowing dev access from ${ip}`);
+        console.info(`Allowing dev access from ${ip}`);
       } else {
         console.warn(`NOT Allowing dev access from ${ip}`);
       }
     }
-    req.glov_is_dev = true;
+    req.glov_is_dev = cached;
     next();
   });
   app.all('*.map', function (req, res, next) {

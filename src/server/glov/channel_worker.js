@@ -4,7 +4,7 @@ const { channelServerSend } = require('./channel_server.js');
 const dot_prop = require('dot-prop');
 const exchange = require('./exchange.js');
 const { min } = Math;
-const { empty } = require('../../common/util.js');
+const { empty, logdata } = require('../../common/util.js');
 
 // How long to wait before failing an out of order packet and running it anyway
 const OOO_PACKET_FAIL = 10000; // For testing this, disable channel_server.js:handleWorkerRemoved
@@ -15,6 +15,9 @@ function throwErr(err) {
     throw err;
   }
 }
+
+const PKT_LOG_SIZE = 16;
+
 
 export class ChannelWorker {
   constructor(channel_server, channel_id) {
@@ -49,6 +52,9 @@ export class ChannelWorker {
     if (this.maintain_client_list) {
       this.data.public.clients = {};
     }
+
+    this.pkt_log_idx = 0;
+    this.pkt_log = new Array(PKT_LOG_SIZE);
   }
 
   shutdown() {
@@ -130,7 +136,7 @@ export class ChannelWorker {
     }
     if (Date.now() - this.last_msg_time > AUTO_DESTROY_TIME) {
       this.auto_destroy_check = false;
-      console.log(`${this.channel_id}: Empty time expired, auto-destroying...`);
+      console.info(`${this.channel_id}: Empty time expired, auto-destroying...`);
       this.shutdown();
       return;
     }
@@ -180,7 +186,7 @@ export class ChannelWorker {
   subscribeOther(other_channel_id, resp_func) {
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
-      console.log(`${this.channel_id}->${other_channel_id}: subscribe - already subscribed`);
+      console.debug(`${this.channel_id}->${other_channel_id}: subscribe - already subscribed`);
       return;
     }
     this.sendChannelMessage(other_channel_id, 'subscribe', undefined, (err, resp_data) => {
@@ -211,7 +217,7 @@ export class ChannelWorker {
     }
     --this.subscribe_counts[other_channel_id];
     if (this.subscribe_counts[other_channel_id]) {
-      console.log(`${this.channel_id}->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
+      console.debug(`${this.channel_id}->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
       return;
     }
 
@@ -220,9 +226,9 @@ export class ChannelWorker {
     this.sendChannelMessage(other_channel_id, 'unsubscribe', undefined, (err, resp_data) => {
       if (err === exchange.ERR_NOT_FOUND) {
         // This is fine, just ignore
-        console.log(`${this.channel_id}->${other_channel_id} unsubscribe (silently) failed: ${err}`);
+        console.debug(`${this.channel_id}->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
-        console.log(`${this.channel_id}->${other_channel_id} unsubscribe failed: ${err}`);
+        console.error(`${this.channel_id}->${other_channel_id} unsubscribe failed: ${err}`);
         this.onError(err);
       } else {
         // succeeded, nothing special
@@ -263,12 +269,14 @@ export class ChannelWorker {
     }
     resp_func();
   }
+
+  // data is a { key, value } pair of what has changed
   onApplyChannelData(source, data) {
     if (this.maintain_client_list) {
       if (source.type === 'user' && data.key === 'public.display_name') {
         for (let client_id in this.data.public.clients) {
           let client_ids = this.data.public.clients[client_id].ids;
-          if (client_ids.user_id === source.id) {
+          if (client_ids && client_ids.user_id === source.id) {
             this.setChannelData(`public.clients.${client_id}.ids.display_name`, data.value);
           }
         }
@@ -276,12 +284,13 @@ export class ChannelWorker {
     }
   }
 
+  // data is the channel's entire (public) data sent in response to a subscribe
   onChannelData(source, data) {
     if (this.maintain_client_list) {
       if (source.type === 'user' && data.public.display_name) {
         for (let client_id in this.data.public.clients) {
           let client_ids = this.data.public.clients[client_id].ids;
-          if (client_ids.user_id === source.id) {
+          if (client_ids && client_ids.user_id === source.id) {
             this.setChannelData(`public.clients.${client_id}.ids.display_name`, data.public.display_name);
           }
         }
@@ -297,6 +306,9 @@ export class ChannelWorker {
       if (this.allow_client_broadcast[data.msg] !== true) {
         return resp_func('ERR_NOT_ALLOWED');
       }
+    }
+    if (data.err) { // From a filter
+      return resp_func(data.err);
     }
     // Replicate to all users
     data.data.client_ids = source;
@@ -315,11 +327,21 @@ export class ChannelWorker {
   }
 
   channelEmit(msg, data, except_client) {
+    let count = 0;
+    let was_q = false;
+    if (typeof data === 'object') {
+      was_q = data.q;
+      data.q = 1;
+    }
     for (let ii = 0; ii < this.subscribers.length; ++ii) {
       if (this.subscribers[ii] === except_client) {
         continue;
       }
+      ++count;
       this.sendChannelMessage(this.subscribers[ii], msg, data);
+    }
+    if (count && !was_q) {
+      console.debug(`${this.channel_id}->broadcast(${count}): ${msg} ${logdata(data)}`);
     }
   }
 
@@ -344,17 +366,37 @@ export class ChannelWorker {
         data[key] = this.data[key];
       }
       let public_data = data.public;
-      if (public_data) {
-        let pd = {};
-        for (let key in public_data) {
-          if (key !== 'clients') {
-            pd[key] = public_data[key];
-          }
+      assert(public_data);
+      let pd = {};
+      for (let key in public_data) {
+        if (key !== 'clients') {
+          pd[key] = public_data[key];
         }
-        data.public = pd;
       }
+      data.public = pd;
     }
     this.channel_server.ds_store.set(this.store_path, '', data);
+    if (this.maintain_client_list) {
+      // Also do some verification to track down a bug
+      // 2019-10-01 I believe this bug is fixed now
+      let public_data = this.data.public;
+      assert(public_data);
+      assert(public_data.clients);
+      for (let client_id in public_data.clients) {
+        let client = this.data.public.clients[client_id];
+        assert(client);
+        let client_ids = client.ids;
+        if (!client_ids) {
+          // do this as a full error with a dump exactly once
+          if (this.HACK_did_error) {
+            console.log(`Missing .ids for client ${client_id}`);
+          } else {
+            this.channel_server.handleUncaughtError(`Missing .ids for client ${client_id}`);
+            this.HACK_did_error = true;
+          }
+        }
+      }
+    }
   }
 
   onSetChannelDataPush(source, data, resp_func) {
@@ -366,7 +408,7 @@ export class ChannelWorker {
       !this.defaultHandleSetChannelData(source, key, value)
     ) {
       // denied by app_worker
-      console.log(' - failed handleSetChannelData() check');
+      console.log(`set_channel_data_push on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
       return resp_func('ERR_APP_WORKER');
     }
     assert(value);
@@ -443,7 +485,7 @@ export class ChannelWorker {
       !this.defaultHandleSetChannelData(source, key, value)
     ) {
       // denied by app_worker
-      console.log(' - failed handleSetChannelData() check');
+      console.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
       return;
     }
 
@@ -586,6 +628,8 @@ export class ChannelWorker {
 
   dispatchPacket(pkt_idx, source, ids, net_data) {
     let channel_worker = this;
+    channel_worker.logPacketDispatch(source, net_data);
+    channel_worker.channel_server.last_worker = channel_worker;
     channel_worker.recv_pkt_idx[source] = pkt_idx;
     try {
       ack.handleMessage(channel_worker, source, net_data, function sendFunc(msg, err, data, resp_func) {
@@ -632,6 +676,11 @@ export class ChannelWorker {
       }
     }
     this.checkAutoDestroy();
+  }
+
+  logPacketDispatch(source, net_data) {
+    this.pkt_log[this.pkt_log_idx] = { ts: Date.now(), source, net_data };
+    this.pkt_log_idx = (this.pkt_log_idx + 1) % PKT_LOG_SIZE;
   }
 }
 // Overrideable by child class's prototype

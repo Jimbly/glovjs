@@ -42,6 +42,8 @@ export class DefaultUserWorker extends ChannelWorker {
         }
         this.setChannelData('private.password', data.password);
         this.setChannelData('public.display_name', data.display_name);
+        this.setChannelData('private.creation_ip', data.ip);
+        this.setChannelData('private.creation_time', Date.now());
       } else {
         return resp_func('ERR_USER_NOT_FOUND');
       }
@@ -49,6 +51,8 @@ export class DefaultUserWorker extends ChannelWorker {
     if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
     }
+    this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_time', Date.now());
     return resp_func(null, this.getChannelData('public'));
   }
   handleCreate(src, data, resp_func) {
@@ -68,6 +72,10 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.password', data.password);
     this.setChannelData('public.display_name', data.display_name);
     this.setChannelData('private.email', data.email);
+    this.setChannelData('private.creation_ip', data.ip);
+    this.setChannelData('private.creation_time', Date.now());
+    this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_time', Date.now());
     return resp_func(null, this.getChannelData('public'));
   }
   handleSetChannelData(src, key, value) {

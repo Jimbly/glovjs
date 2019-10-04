@@ -36,7 +36,7 @@ export function unregister(id) {
 // cb(err)
 export function publish(src, dest, msg, cb) {
   if (LOG_MESSAGES) {
-    console.log(`exchange.publish ${src}->${dest}: ${
+    console.debug(`exchange.publish ${src}->${dest}: ${
       msg.err ?
         `err:${msg.err}` :
         typeof msg.msg==='number' ?

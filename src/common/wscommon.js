@@ -39,7 +39,7 @@ export function handleMessage(client, net_data) {
   client.last_receive_time = now;
 
   if (LOG_MESSAGES) {
-    console.log(`wscommon.receive ${
+    console.debug(`wscommon.receive ${
       typeof net_data.msg==='number' ?
         `ack(${net_data.msg})` :
         net_data.msg
@@ -60,7 +60,7 @@ export function handleMessage(client, net_data) {
     let handler = client.handlers[msg];
     if (!handler) {
       let error_msg = `No handler for message ${JSON.stringify(msg)} from ${source}`;
-      console.log(error_msg, data);
+      console.error(error_msg, data);
       if (client.onError) {
         return client.onError(error_msg);
       }

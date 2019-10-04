@@ -39,6 +39,11 @@ class ClientWorker extends ChannelWorker {
     }
   }
 
+  onForceKick(source, data) {
+    assert(this.client.connected);
+    this.client.ws_server.disconnectClient(this.client);
+  }
+
   onUnhandledMessage(source, msg, data, resp_func) {
     assert(this.client);
     if (!resp_func.expecting_response) {
@@ -47,7 +52,7 @@ class ClientWorker extends ChannelWorker {
 
     if (!this.client.connected) {
       if (resp_func) {
-        console.log(`ClientWorker(${this.channel_id}) received message for disconnected client:`, msg);
+        console.debug(`ClientWorker(${this.channel_id}) received message for disconnected client:`, msg);
         return void resp_func('ERR_CLIENT_DISCONNECTED');
       }
     }
@@ -70,6 +75,9 @@ export function init(channel_server) {
     autocreate: false,
     filters: {
       'apply_channel_data': ClientWorker.prototype.onApplyChannelData,
+    },
+    handlers: {
+      'force_kick': ClientWorker.prototype.onForceKick,
     },
   });
 }
