@@ -36,17 +36,7 @@ export class DefaultUserWorker extends ChannelWorker {
     }
 
     if (!this.getChannelData('private.password')) {
-      if (this.auto_create_account) {
-        if (!validDisplayName(data.display_name)) {
-          return resp_func('Invalid display name');
-        }
-        this.setChannelData('private.password', data.password);
-        this.setChannelData('public.display_name', data.display_name);
-        this.setChannelData('private.creation_ip', data.ip);
-        this.setChannelData('private.creation_time', Date.now());
-      } else {
-        return resp_func('ERR_USER_NOT_FOUND');
-      }
+      return resp_func('ERR_USER_NOT_FOUND');
     }
     if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
@@ -96,7 +86,6 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 }
 DefaultUserWorker.prototype.auto_destroy = true;
-DefaultUserWorker.prototype.auto_create_account = true;
 
 class ChannelServerWorker extends ChannelWorker {
   handleWorkerRemoved(src, data, resp_func) {
