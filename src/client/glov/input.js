@@ -229,6 +229,7 @@ function onKeyDown(event) {
   in_event.handle('keydown', event);
 }
 
+let mouse_moved = false;
 let temp_delta = vec2();
 function onMouseMove(event, no_stop) {
   /// eventlog(event);
@@ -241,6 +242,7 @@ function onMouseMove(event, no_stop) {
       touch_mode = false;
     }
   }
+  mouse_moved = true;
   // offsetX/layerX return position relative to text-entry boxes, not good!
   // clientX/clientY do not handle weird scrolling that happens on iOS, but
   //   should not affect mouse events (but maybe on Safari desktop?)
@@ -614,6 +616,7 @@ export function endFrame(skip_mouse) {
     input_eaten_mouse = false;
   }
   input_eaten_kb = false;
+  mouse_moved = false;
 }
 
 export function eatAllInput(skip_mouse) {
@@ -635,6 +638,10 @@ export function mousePos(dst) {
   dst = dst || vec2();
   camera2d.domToVirtual(dst, mouse_pos);
   return dst;
+}
+
+export function mouseMoved() {
+  return mouse_moved;
 }
 
 export function mouseWheel() {
