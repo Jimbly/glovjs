@@ -475,7 +475,7 @@ export function startup(params) {
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
-  let powerPreference = 'high-performance';
+  let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl', 'experimental-webgl'];
   let context_opts = [{ antialias, powerPreference }, { powerPreference }, {}];
   let good = false;
