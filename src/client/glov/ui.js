@@ -689,6 +689,9 @@ function modalDialogRun() {
         pressed = pressed || glov_input.padButtonDownEdge(eff_button_keys.pad[jj]);
       }
     }
+    if (modal_dialog.click_anywhere && ii === 0 && glov_input.click()) {
+      pressed = true;
+    }
     if (pressed) {
       playUISound('button_click');
     }
