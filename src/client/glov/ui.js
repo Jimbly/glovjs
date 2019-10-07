@@ -575,33 +575,43 @@ export function buttonImage(param) {
   param.h = param.h || param.w || button_img_size;
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
-  let uvs = param.img_rect || (typeof param.frame === 'number' ? param.img.uidata.rects[param.frame] : null);
+  let uvs = param.img_rect;
+  if (typeof param.frame === 'number') {
+    uvs = param.img.uidata.rects[param.frame];
+  }
 
   let { ret, state } = buttonShared(param);
   let colors = param.colors || color_button;
   let color = button_last_color = colors[state];
-  let base_name = param.base_name || 'button';
-  let sprite_name = `${base_name}_${state}`;
-  let sprite = sprites[sprite_name];
-  if (!sprite) {
-    sprite = sprites[base_name];
-  }
+  if (!param.no_bg) {
+    let base_name = param.base_name || 'button';
+    let sprite_name = `${base_name}_${state}`;
+    let sprite = sprites[sprite_name];
+    if (!sprite) {
+      sprite = sprites[base_name];
+    }
 
-  drawHBox(param, sprite, color);
+    drawHBox(param, sprite, color);
+  }
+  let img_origin = param.img.origin;
   let img_w = param.img.size[0];
   let img_h = param.img.size[1];
-  let img_origin = param.img.origin;
-  let img_scale = min(param.w * param.shrink / img_w, param.h * param.shrink / img_h);
-  img_w *= img_scale;
-  img_h *= img_scale;
+  let aspect = img_w / img_h;
+  if (typeof param.frame === 'number') {
+    aspect = param.img.uidata.wh[param.frame];
+  }
+  let largest_w_horiz = param.w * param.shrink;
+  let largest_w_vert = param.h * param.shrink * aspect;
+  img_w = min(largest_w_horiz, largest_w_vert);
+  img_h = img_w / aspect;
   let draw_param = {
     x: param.x + (param.w - img_w) / 2 + img_origin[0] * img_w,
     y: param.y + (param.h - img_h) / 2 + img_origin[1] * img_h,
     z: param.z + 0.1,
     color: param.color1 && param.color ? param.color : color, // use explicit tint if doing dual-tinting
     color1: param.color1,
-    w: img_scale,
-    h: img_scale,
+    w: img_w / param.img.size[0],
+    h: img_h / param.img.size[1],
     uvs,
     rot: param.rotation,
   };
