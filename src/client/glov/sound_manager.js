@@ -2,12 +2,24 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /*global WebGLSoundDevice: true */
 
+const { defaults } = require('../../common/util.js');
+const { abs, floor, max, min, random } = Math;
+
 const DEFAULT_FADE_RATE = 0.001;
 
 let sounds = {};
 let num_loading = 0;
+
+const default_params = {
+  auto_oggs: false, // try loading .ogg versions first, then fallback to .wav
+  auto_mp3s: false, // (recommended) try loading .mp3 versions first, then fallback to .wav
+  sound_on: true,
+  music_on: true,
+};
 class SoundManager {
-  constructor(listenerTransform) {
+  constructor(params) {
+    params = defaults(params || {}, default_params);
+    let { listenerTransform } = params;
     if (!listenerTransform) {
       // const camera = Camera.create(VMath);
       // const look_at_position = VMath.v3Build(0, 1, 0);
@@ -23,10 +35,9 @@ class SoundManager {
     };
     this.soundDevice = WebGLSoundDevice.create(soundDeviceParameters);
     this.soundDevice.listenerTransform = listenerTransform;
-    this.auto_oggs = false; // try loading .ogg versions first, then fallback to .wav
-    this.auto_mp3s = false; // try loading .mp3 versions first, then fallback to .wav
-    this.sound_on = true;
-    this.music_on = true;
+    for (let key in default_params) {
+      this[key] = params[key];
+    }
 
     this.channels = [];
     for (let ii = 0; ii < 16; ++ii) {
@@ -110,11 +121,11 @@ class SoundManager {
       let target = this.music_on ? this.music[ii].target_volume : 0;
       if (this.music[ii].current_volume !== target) {
         let delta = target - this.music[ii].current_volume;
-        let fade_amt = Math.min(Math.abs(delta), max_fade);
+        let fade_amt = min(abs(delta), max_fade);
         if (delta < 0) {
-          this.music[ii].current_volume = Math.max(target, this.music[ii].current_volume - fade_amt);
+          this.music[ii].current_volume = max(target, this.music[ii].current_volume - fade_amt);
         } else {
-          this.music[ii].current_volume = Math.min(target, this.music[ii].current_volume + fade_amt);
+          this.music[ii].current_volume = min(target, this.music[ii].current_volume + fade_amt);
         }
         this.music[ii].source.gain = this.music[ii].current_volume;
       }
@@ -129,6 +140,9 @@ class SoundManager {
     volume = volume || 1;
     if (!this.sound_on) {
       return null;
+    }
+    if (Array.isArray(soundname)) {
+      soundname = soundname[floor(random() * soundname.length)];
     }
     if (!sounds[soundname]) {
       return null;
@@ -207,6 +221,6 @@ SoundManager.FADE_IN = SoundManager.prototype.FADE_IN = 2;
 SoundManager.FADE = SoundManager.prototype.FADE = SoundManager.prototype.FADE_OUT + SoundManager.prototype.FADE_IN;
 
 
-export function create(listenerTransform) {
-  return new SoundManager(listenerTransform);
+export function create(params) {
+  return new SoundManager(params);
 }
