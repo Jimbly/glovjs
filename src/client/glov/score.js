@@ -2,8 +2,8 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 /* eslint callback-return:off */
-/* global $ */
 
+const assert = require('assert');
 const PLAYER_NAME_KEY = 'ld.player_name';
 
 export let need_update = false;
@@ -40,11 +40,28 @@ export function formatName(score) {
   return score.name;
 }
 
+function fetchJSON(param) {
+  assert(param.url);
+  let xhr = new XMLHttpRequest();
+  xhr.open('GET', param.url, true);
+  xhr.responseType = 'json';
+  if (param.success) {
+    xhr.onload = () => {
+      param.success(xhr.response);
+    };
+  }
+  if (param.error) {
+    xhr.onerror = param.error;
+  }
+  xhr.send(null);
+
+}
+
 let num_highscores = 20000;
 let score_update_time = 0;
 export let high_scores = {};
 function refreshScores(level, changed_cb) {
-  $.ajax({
+  fetchJSON({
     url: `${score_host}/api/scoreget?key=${SCORE_KEY}.${level}&limit=${num_highscores}`,
     success: function (scores) {
       let list = [];
@@ -65,7 +82,7 @@ function clearScore(level, old_player_name, cb) {
   if (!old_player_name) {
     return;
   }
-  $.ajax({ url: `${score_host}/api/scoreclear?key=${SCORE_KEY}.${level}&name=${old_player_name}`, success: cb });
+  fetchJSON({ url: `${score_host}/api/scoreclear?key=${SCORE_KEY}.${level}&name=${old_player_name}`, success: cb });
 }
 
 function submitScore(level, score, cb) {
@@ -73,7 +90,7 @@ function submitScore(level, score, cb) {
   if (!player_name) {
     return;
   }
-  $.ajax({
+  fetchJSON({
     url: `${score_host}/api/scoreset?key=${SCORE_KEY}.${level}&name=${player_name}&score=${high_score}`,
     success: function (scores) {
       let list = [];
@@ -94,8 +111,8 @@ export function updateHighScores(changed_cb) {
   if (now - score_update_time > 5*60*1000 || need_update) {
     need_update = false;
     score_update_time = now;
-    for (let key in level_defs) {
-      refreshScores(level_defs[key].name, changed_cb);
+    for (let level_idx in level_defs) {
+      refreshScores(level_defs[level_idx].name, changed_cb);
     }
   } else {
     if (changed_cb) {
@@ -120,8 +137,8 @@ function saveScore(ld, obj, cb) {
   });
 }
 
-export function getScore(level) {
-  let ld = level_defs[level];
+export function getScore(level_idx) {
+  let ld = level_defs[level_idx];
   let key = `${LS_KEY}.score_${ld.name}`;
   if (localStorage && localStorage[key]) {
     let ret = JSON.parse(localStorage[key]);
@@ -137,8 +154,8 @@ export function getScore(level) {
   return null;
 }
 
-export function setScore(level, score, cb) {
-  let ld = level_defs[level];
+export function setScore(level_idx, score, cb) {
+  let ld = level_defs[level_idx];
   let encoded = encodeScore(score) || 0;
   let encoded_local = ld.local_score && encodeScore(ld.local_score) || 0;
   if (encoded > encoded_local) {
@@ -165,7 +182,7 @@ export function updatePlayerName(new_player_name) {
       }
     }
   }
-  for (let key in level_defs) {
-    update(level_defs[key]);
+  for (let level_idx in level_defs) {
+    update(level_defs[level_idx]);
   }
 }
