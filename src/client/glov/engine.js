@@ -25,7 +25,7 @@ const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { ridx } = require('../../common/util.js');
+const { defaults, ridx } = require('../../common/util.js');
 const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy, v4set } = require('./vmath.js');
 
 export let canvas;
@@ -578,10 +578,10 @@ export function startup(params) {
   if (params.sound_manager) {
     // Require caller to require this module, so we don't force it loaded/bundled in programs that do not need it
     sound_manager = params.sound_manager;
-    glov_ui.bindSounds(sound_manager, { // TODO: Allow overriding?
+    glov_ui.bindSounds(sound_manager, defaults(params.ui_sounds || {}, {
       button_click: 'button_click',
       rollover: 'rollover',
-    });
+    }));
   } else {
     sound_manager = sound_manager_dummy;
   }
