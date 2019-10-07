@@ -6,7 +6,8 @@
       "folder_exclude_patterns":
       [
         "node_modules",
-        "build",
+        "build.dev",
+        "build.prod"
       ],
       "file_exclude_patterns": ["jquery-*.min*", "*.00?", "*.wav", "package-lock.json"],
       "path": "."
