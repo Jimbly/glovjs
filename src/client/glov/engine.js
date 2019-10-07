@@ -88,6 +88,11 @@ export function setFOV(new_fov) {
   fov_min = new_fov;
 }
 
+export function setGameDims(w, h) {
+  game_width = w;
+  game_height = h;
+}
+
 function normalizeRow(m, idx) {
   let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];
   if (len > 0) {
