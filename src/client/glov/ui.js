@@ -312,12 +312,12 @@ export function drawBox(coords, s, pixel_scale, color) {
   }
 }
 
-export function playUISound(name) {
+export function playUISound(name, volume) {
   if (name === 'select') {
     name = 'button_click';
   }
   if (sounds[name] && sound_manager) {
-    sound_manager.play(sounds[name]);
+    sound_manager.play(sounds[name], volume);
   }
 }
 
