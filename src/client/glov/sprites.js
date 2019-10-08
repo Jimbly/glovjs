@@ -476,6 +476,8 @@ export function buildRects(ws, hs) {
   for (let ii = 0; ii < ws.length; ++ii) {
     wh.push(ws[ii] / total_h);
   }
+  let aspect = [];
+  let non_square = false;
   let y = 0;
   for (let jj = 0; jj < hs.length; ++jj) {
     let x = 0;
@@ -483,6 +485,11 @@ export function buildRects(ws, hs) {
       let r = vec4(x / tex_w, y / tex_h,
         (x + ws[ii]) / tex_w, (y + hs[jj]) / tex_h);
       rects.push(r);
+      let asp = ws[ii] / hs[jj];
+      if (asp !== 1) {
+        non_square = true;
+      }
+      aspect.push(asp);
       x += ws[ii];
     }
     y += hs[jj];
@@ -492,6 +499,7 @@ export function buildRects(ws, hs) {
     heights: hs,
     wh,
     rects,
+    aspect: non_square ? aspect : null,
     total_w,
     total_h,
   };

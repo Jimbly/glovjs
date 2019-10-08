@@ -598,7 +598,7 @@ export function buttonImage(param) {
   let img_h = param.img.size[1];
   let aspect = img_w / img_h;
   if (typeof param.frame === 'number') {
-    aspect = param.img.uidata.wh[param.frame];
+    aspect = param.img.uidata.aspect ? param.img.uidata.aspect[param.frame] : 1;
   }
   let largest_w_horiz = param.w * param.shrink;
   let largest_w_vert = param.h * param.shrink * aspect;
