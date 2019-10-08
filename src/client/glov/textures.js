@@ -93,7 +93,8 @@ function Texture(params) {
   this.format = params.format || format.RGBA8;
 
   if (params.data) {
-    this.updateData(params.width, params.height, params.data);
+    let err = this.updateData(params.width, params.height, params.data);
+    assert(!err, err);
   } else if (params.url) {
     this.loadURL(params.url);
   }
@@ -131,6 +132,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.src_height = h;
   this.width = w;
   this.height = h;
+  gl.getError(); // clear the error flag if there is one
   if (data instanceof Uint8Array) {
     assert(data.length >= w * h * this.format.count);
     gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
@@ -155,8 +157,13 @@ Texture.prototype.updateData = function updateData(w, h, data) {
       gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
     }
   }
+  let gl_err = gl.getError();
+  if (gl_err) {
+    return gl_err;
+  }
   if (this.mipmaps) {
     gl.generateMipmap(this.target);
+    assert(!gl.getError());
   }
   this.eff_handle = this.handle;
   this.loaded = true;
@@ -166,6 +173,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   for (let ii = 0; ii < arr.length; ++ii) {
     arr[ii](this);
   }
+  return 0;
 };
 
 Texture.prototype.onLoad = function (cb) {
@@ -176,62 +184,92 @@ Texture.prototype.onLoad = function (cb) {
   }
 };
 
+const TEX_RETRY_COUNT = 4;
 Texture.prototype.loadURL = function loadURL(url) {
   let tex = this;
-  let img = new Image();
-  ++load_count;
-  let did_done = false;
-  function done() {
-    if (!did_done) {
-      did_done = true;
-      --load_count;
-    }
-  }
-  img.onload = function () {
-    done();
-    tex.format = format.RGBA8;
-    tex.updateData(img.width, img.height, img);
-  };
-  function fail() {
-    done();
-    tex.eff_handle = handle_error;
-    tex.load_fail = true;
-  }
-  img.onerror = fail;
-  /* Turbulenz was doing it this way - some advantage?
-  if (typeof URL !== "undefined" && URL.createObjectURL) {
-    let xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4) {
-        let xhrStatus = xhr.status;
-        // Sometimes the browser sets status to 200 OK when the connection is closed
-        // before the message is sent (weird!).
-        // In order to address this we fail any completely empty responses.
-        // Hopefully, nobody will get a valid response with no headers and no body!
-        if (xhr.getAllResponseHeaders() === "" && !xhr.response) {
-          fail();
-        } else {
-          if (xhrStatus === 200 || xhrStatus === 0) {
-            var blob = xhr.response;
-            img.onload = function blobImageLoadedFn() {
-              imageLoaded();
-              URL.revokeObjectURL(img.src);
-              blob = null;
-            };
-            img.src = URL.createObjectURL(blob);
-          } else {
-            fail();
-          }
-        }
-        xhr.onreadystatechange = null;
+
+  function tryLoad(next) {
+    let did_next = false;
+    function done(img) {
+      if (!did_next) {
+        did_next = true;
+        return void next(img);
       }
+    }
+
+    let img = new Image();
+    img.onload = function () {
+      done(img);
     };
-    xhr.open('GET', src, true);
-    xhr.responseType = 'blob';
-    xhr.send();
-  } else { */
-  img.crossOrigin = 'anonymous';
-  img.src = url;
+    function fail() {
+      done(null);
+    }
+    img.onerror = fail;
+    /* Turbulenz was doing it this way - some advantage?
+    if (typeof URL !== "undefined" && URL.createObjectURL) {
+      let xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          let xhrStatus = xhr.status;
+          // Sometimes the browser sets status to 200 OK when the connection is closed
+          // before the message is sent (weird!).
+          // In order to address this we fail any completely empty responses.
+          // Hopefully, nobody will get a valid response with no headers and no body!
+          if (xhr.getAllResponseHeaders() === "" && !xhr.response) {
+            fail();
+          } else {
+            if (xhrStatus === 200 || xhrStatus === 0) {
+              var blob = xhr.response;
+              img.onload = function blobImageLoadedFn() {
+                imageLoaded();
+                URL.revokeObjectURL(img.src);
+                blob = null;
+              };
+              img.src = URL.createObjectURL(blob);
+            } else {
+              fail();
+            }
+          }
+          xhr.onreadystatechange = null;
+        }
+      };
+      xhr.open('GET', src, true);
+      xhr.responseType = 'blob';
+      xhr.send();
+    } else { */
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+  }
+
+  ++load_count;
+  let retries = 0;
+  function handleLoad(img) {
+    let err_details = '';
+    if (img) {
+      tex.format = format.RGBA8;
+      let err = tex.updateData(img.width, img.height, img);
+      if (err) {
+        err_details = `: GLError(${err})`;
+        retries = TEX_RETRY_COUNT; // do not retry this
+      } else {
+        --load_count;
+        return;
+      }
+    }
+    let err = `Error loading texture "${url}"${err_details}`;
+    retries++;
+    if (retries > TEX_RETRY_COUNT) {
+      --load_count;
+      tex.eff_handle = handle_error;
+      tex.load_fail = true;
+      console.error(`${err}${err_details ? '' : ', retries failed'}`);
+      assert(false, err);
+      return;
+    }
+    console.error(`${err}, retrying... `);
+    setTimeout(tryLoad.bind(null, handleLoad), 100 * retries * retries);
+  }
+  tryLoad(handleLoad);
 };
 
 Texture.prototype.copyTexImage = function (x, y, w, h) {
