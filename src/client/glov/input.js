@@ -677,6 +677,7 @@ export function mouseOver(param) {
   if (mouse_over_captured || pointerLocked()) {
     return false;
   }
+  param = param || {};
   let pos_param = mousePosParam(param);
 
   // eat mouse up/down/drag events
