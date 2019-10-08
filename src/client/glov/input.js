@@ -338,9 +338,10 @@ function onMouseUp(event) {
 
 function onWheel(event) {
   onMouseMove(event, true);
-  if (event.wheelDelta > 0) {
+  let delta = -event.deltaY || event.wheelDelta || -event.detail;
+  if (delta > 0) {
     mouse_wheel++;
-  } else if (event.wheelDelta < 0) {
+  } else if (delta < 0) {
     mouse_wheel--;
   }
 }
@@ -455,8 +456,12 @@ export function startup(_canvas, params) {
   window.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('mousedown', onMouseDown, false);
   window.addEventListener('mouseup', onMouseUp, false);
-  window.addEventListener('DOMMouseScroll', onWheel, false);
-  window.addEventListener('mousewheel', onWheel, false);
+  if (window.WheelEvent) {
+    window.addEventListener('wheel', onWheel, passive_param);
+  } else {
+    window.addEventListener('DOMMouseScroll', onWheel, false);
+    window.addEventListener('mousewheel', onWheel, false);
+  }
 
   window.addEventListener('blur', onBlurOrFocus, false);
   window.addEventListener('focus', onBlurOrFocus, false);
