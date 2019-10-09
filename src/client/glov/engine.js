@@ -528,6 +528,7 @@ export function startup(params) {
   }
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths
 
   textures.startup();
   geom.startup();
