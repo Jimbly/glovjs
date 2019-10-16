@@ -139,6 +139,9 @@ function saveScore(ld, obj, cb) {
 
 export function getScore(level_idx) {
   let ld = level_defs[level_idx];
+  if (ld.local_score) {
+    return ld.local_score; // allow calling each frame and getting cached version instead of spamming submits
+  }
   let key = `${LS_KEY}.score_${ld.name}`;
   if (localStorage && localStorage[key]) {
     let ret = JSON.parse(localStorage[key]);
