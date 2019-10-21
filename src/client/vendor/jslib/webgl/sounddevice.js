@@ -1402,7 +1402,13 @@ var WebGLSoundDevice = (function () {
       }
     };
 
+    var done_once = false;
     WebGLSoundDevice.create = function (params) {
+        if (done_once) {
+          // Will fail on Object.defineProperty() below
+          throw new Error('WebGLSoundDevice.create called twice');
+        }
+        done_once = true;
         var sd = new WebGLSoundDevice();
 
         sd.extensions = '';
