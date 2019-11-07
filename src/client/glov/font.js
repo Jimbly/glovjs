@@ -249,11 +249,15 @@ class GlovFont {
       url: `img/${texture_name}.png`,
       filter_min: font_info.noFilter ? gl.NEAREST : gl.LINEAR,
       filter_mag: font_info.noFilter ? gl.NEAREST : gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
     });
     this.textures = [this.texture];
 
     this.font_info = font_info;
     this.shader = font_shaders.font_aa;
+    this.tex_w = font_info.imageW;
+    this.tex_h = font_info.imageH;
 
     // Calculate inverse scale
     for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
@@ -374,7 +378,7 @@ class GlovFont {
   }
 
   getCharacterWidth(style, x_size, c) {
-    assert(typeof c === 'number');
+    assert.equal(typeof c, 'number');
     this.applyStyle(style);
     let char_info = this.infoFromChar(c);
     let xsc = x_size / this.font_info.font_size;
@@ -531,7 +535,6 @@ class GlovFont {
     //   _x + xsc * font_info.font_size * 20, y + ysc * font_info.font_size,
     //   1000, [1, 0, 1, 0.5]);
     y += (font_info.y_offset || 0) * ysc;
-    let tex = this.texture;
     let texs = this.textures;
     if (text === null || text === undefined) {
       text = '(null)';
@@ -626,8 +629,8 @@ class GlovFont {
           if (char_info.w) {
             let ysc2 = ysc * char_scale;
             let pad_scale = 1 / char_scale;
-            let tile_width = tex.width;
-            let tile_height = tex.height;
+            let tile_width = this.tex_w;
+            let tile_height = this.tex_h;
             // Lazy update params here
             if (char_scale !== tile_state) {
               value2[0] = -applied_style.glow_xoffs * font_texel_scale * pad_scale / tile_width;
@@ -719,13 +722,13 @@ function fontShadersInit() {
   if (font_shaders.font_aa) {
     return;
   }
-  font_shaders.font_aa = shaders.create(gl.FRAGMENT_SHADER,
+  font_shaders.font_aa = shaders.create(gl.FRAGMENT_SHADER, 'font_aa',
     fs.readFileSync(`${__dirname}/shaders/font_aa.fp`, 'utf8'));
-  font_shaders.font_aa_glow = shaders.create(gl.FRAGMENT_SHADER,
+  font_shaders.font_aa_glow = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_glow',
     fs.readFileSync(`${__dirname}/shaders/font_aa_glow.fp`, 'utf8'));
-  font_shaders.font_aa_outline = shaders.create(gl.FRAGMENT_SHADER,
+  font_shaders.font_aa_outline = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_outline',
     fs.readFileSync(`${__dirname}/shaders/font_aa_outline.fp`, 'utf8'));
-  font_shaders.font_aa_outline_glow = shaders.create(gl.FRAGMENT_SHADER,
+  font_shaders.font_aa_outline_glow = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_outline_glow',
     fs.readFileSync(`${__dirname}/shaders/font_aa_outline_glow.fp`, 'utf8'));
 }
 

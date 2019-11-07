@@ -8,6 +8,13 @@ const { min } = Math;
 const walltime = require('./walltime.js');
 const wscommon = require('../../common/wscommon.js');
 
+// let net_time = 0;
+// export function getNetTime() {
+//   let r = net_time;
+//   net_time = 0;
+//   return r;
+// }
+
 export function WSClient() {
   this.id = null;
   this.handlers = {};
@@ -21,7 +28,7 @@ export function WSClient() {
   this.last_send_time = Date.now();
   ack.initReceiver(this);
 
-  let path = document.location.toString().match(/^[^#?]+/u)[0]; // remove search and anchor
+  let path = document.location.toString().match(/^[^#?]+/)[0]; // remove search and anchor
   if (path.slice(-1) !== '/') {
     // /file.html or /path/file.html or /path
     let idx = path.lastIndexOf('/');
@@ -36,7 +43,7 @@ export function WSClient() {
       path += '/';
     }
   }
-  path = path.replace(/^http/u, 'ws');
+  path = path.replace(/^http/, 'ws');
   this.path = `${path}ws`;
 
   this.connect(false);
@@ -194,7 +201,9 @@ WSClient.prototype.connect = function (for_reconnect) {
   }));
 
   client.socket.addEventListener('message', guard(function (data) {
+    // net_time -= Date.now();
     wscommon.handleMessage(client, data.data);
+    // net_time += Date.now();
   }));
 
   client.socket.addEventListener('open', guard(function () {
@@ -210,7 +219,7 @@ WSClient.prototype.connect = function (for_reconnect) {
   }));
 
   let doPing = guard(function () {
-    if (Date.now() - client.last_send_time > wscommon.PING_TIME && client.connected) {
+    if (Date.now() - client.last_send_time > wscommon.PING_TIME && client.connected && client.socket.readyState === 1) {
       client.send('ping');
     }
     setTimeout(doPing, wscommon.PING_TIME);

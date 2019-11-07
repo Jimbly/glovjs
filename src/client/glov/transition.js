@@ -30,7 +30,7 @@ const shader_data = {
 function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
-    elem.shader = shaders.create(gl.FRAGMENT_SHADER, elem.fp);
+    elem.shader = shaders.create(gl.FRAGMENT_SHADER, key, elem.fp);
   }
   return elem.shader;
 }

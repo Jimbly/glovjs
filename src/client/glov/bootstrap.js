@@ -7,9 +7,12 @@
   let debug = document.getElementById('debug');
   window.onerror = function (e, file, line, col, errorobj) {
     let msg = errorobj && errorobj.stack || `${e}\n  at ${file}(${line}:${col})`;
-    debug.innerText = `${msg}\n\nPlease report this error to the developer, and then reload this page.`;
+    let show = true;
     if (window.glov_error_report) {
-      window.glov_error_report(msg, file, line, col);
+      show = window.glov_error_report(msg, file, line, col);
+    }
+    if (show) {
+      debug.innerText = `${msg}\n\nPlease report this error to the developer, and then reload this page.`;
     }
   };
   window.debugmsg = function (msg, clear) {

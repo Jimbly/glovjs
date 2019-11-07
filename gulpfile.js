@@ -13,6 +13,7 @@ const lazypipe = require('lazypipe');
 const log = require('fancy-log');
 const useref = require('gulp-useref');
 const uglify = require('gulp-uglify');
+const newer = require('gulp-newer');
 const nodemon = require('gulp-nodemon');
 const replace = require('gulp-replace');
 const sourcemaps = require('gulp-sourcemaps');
@@ -34,6 +35,7 @@ const config = {
     'src/client/**/*.ogg',
     'src/client/**/*.png',
     'src/client/**/*.glb',
+    '!**/unused/**',
     '!src/client/sounds/Bfxr/**',
     // 'src/client/**/vendor/**',
     // 'src/client/manifest.json',
@@ -99,6 +101,7 @@ gulp.task('client_css', function () {
 
 gulp.task('client_static', function () {
   return gulp.src(config.client_static)
+    .pipe(newer('./build.dev/client'))
     .pipe(gulp.dest('./build.dev/client'));
 });
 
@@ -149,7 +152,7 @@ function babelBrfs(filename, opts) {
 let client_js_deps = [];
 let client_js_watch_deps = [];
 
-function bundleJS(filename) {
+function bundleJS(filename, is_worker) {
   let bundle_name = filename.replace('.js', '.bundle.js');
   const browserify_opts = {
     entries: [
@@ -161,6 +164,7 @@ function bundleJS(filename) {
       // super-simple replacements, if needed
       assert: './src/client/shims/assert.js',
       buffer: './src/client/shims/buffer.js',
+      not_worker: !is_worker && './src/client/shims/not_worker.js',
       // timers: './src/client/shims/timers.js',
     },
     debug: true,
@@ -177,7 +181,7 @@ function bundleJS(filename) {
   };
   function whitespaceReplace(a) {
     // gulp-replace-with-sourcemaps doens't seem to work, so just replace with exactly matching whitespace
-    return a.replace(/[^\n\r]/gu, ' ');
+    return a.replace(/[^\n\r]/g, ' ');
   }
 
 
@@ -185,7 +189,7 @@ function bundleJS(filename) {
   function buildTimestampReplace() {
     // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
     let ret = `'${build_timestamp}'`;
-    assert(ret.length === 15);
+    assert.equal(ret.length, 15);
     return ret;
   }
   function dobundle(b) {
@@ -202,9 +206,9 @@ function bundleJS(filename) {
       // optional, remove if you don't want sourcemaps
       .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
       // Remove extra Babel stuff that does not help anything
-      .pipe(replace(/_classCallCheck\([^)]+\);|exports\.__esModule = true;/gu, whitespaceReplace))
-      .pipe(replace(/function _classCallCheck\((?:[^}]*\}){2}/gu, whitespaceReplace))
-      .pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/gu, whitespaceReplace))
+      .pipe(replace(/_classCallCheck\([^)]+\);|exports\.__esModule = true;/g, whitespaceReplace))
+      .pipe(replace(/function _classCallCheck\((?:[^}]*\}){2}/g, whitespaceReplace))
+      .pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/g, whitespaceReplace))
       .pipe(replace('BUILD_TIMESTAMP', buildTimestampReplace))
       // Add transformation tasks to the pipeline here.
       .pipe(uglify(uglify_options))
@@ -273,7 +277,9 @@ gulp.task('bs-reload', (done) => {
 gulp.task('watch', gulp.series(
   gulp.parallel('eslint', 'server_js', 'client_html', 'client_css', 'client_static', 'client_js_watch'),
   (done) => {
-    gulp.watch(config.all_js_files, gulp.series('eslint'));
+    if (!args.nolint) {
+      gulp.watch(config.all_js_files, gulp.series('eslint'));
+    }
     gulp.watch(config.server_js_files, gulp.series('server_js'));
     gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
     gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));

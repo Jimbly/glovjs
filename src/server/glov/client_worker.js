@@ -73,6 +73,7 @@ class ClientWorker extends ChannelWorker {
 export function init(channel_server) {
   channel_server.registerChannelWorker('client', ClientWorker, {
     autocreate: false,
+    subid_regex: /^[0-9-]+$/,
     filters: {
       'apply_channel_data': ClientWorker.prototype.onApplyChannelData,
     },

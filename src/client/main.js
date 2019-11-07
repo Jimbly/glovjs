@@ -2,7 +2,7 @@
 
 const glov_engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
-const glov_input = require('./glov/input.js');
+const input = require('./glov/input.js');
 const glov_local_storage = require('./glov/local_storage.js');
 const glov_particles = require('./glov/particles.js');
 const glov_sprites = require('./glov/sprites.js');
@@ -126,8 +126,8 @@ export function main() {
   const color_yellow = vec4(1, 1, 0, 1);
 
   // Cache KEYS
-  const KEYS = glov_input.KEYS;
-  const pad_codes = glov_input.pad_codes;
+  const KEYS = input.KEYS;
+  const PAD = input.PAD;
 
   const sprite_size = 64;
   function initGraphics() {
@@ -184,42 +184,31 @@ export function main() {
     }
 
     test.character.dx = 0;
+    test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
+    test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
     test.character.dy = 0;
-    if (glov_input.keyDown(KEYS.LEFT) || glov_input.keyDown(KEYS.A) ||
-      glov_input.padButtonDown(pad_codes.LEFT)
-    ) {
-      test.character.dx = -1;
+    test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
+    test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+    if (test.character.dx < 0) {
       sprites.animation.setState('idle_left');
-    } else if (glov_input.keyDown(KEYS.RIGHT) || glov_input.keyDown(KEYS.D) ||
-      glov_input.padButtonDown(pad_codes.RIGHT)
-    ) {
-      test.character.dx = 1;
+    } else if (test.character.dx > 0) {
       sprites.animation.setState('idle_right');
     }
-    if (glov_input.keyDown(KEYS.UP) || glov_input.keyDown(KEYS.W) ||
-      glov_input.padButtonDown(pad_codes.UP)
-    ) {
-      test.character.dy = -1;
-    } else if (glov_input.keyDown(KEYS.DOWN) || glov_input.keyDown(KEYS.S) ||
-      glov_input.padButtonDown(pad_codes.DOWN)
-    ) {
-      test.character.dy = 1;
-    }
 
-    test.character.x += test.character.dx * dt * 0.05;
-    test.character.y += test.character.dy * dt * 0.05;
+    test.character.x += test.character.dx * 0.05;
+    test.character.y += test.character.dy * 0.05;
     let bounds = {
       x: test.character.x - sprite_size/2,
       y: test.character.y - sprite_size/2,
       w: sprite_size,
       h: sprite_size,
     };
-    if (glov_input.mouseDown() && glov_input.mouseOver(bounds)) {
+    if (input.mouseDown() && input.mouseOver(bounds)) {
       v4copy(test.color_sprite, color_yellow);
-    } else if (glov_input.click(bounds)) {
+    } else if (input.click(bounds)) {
       v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
       sound_manager.play('test');
-    } else if (glov_input.mouseOver(bounds)) {
+    } else if (input.mouseOver(bounds)) {
       v4copy(test.color_sprite, color_white);
       test.color_sprite[3] = 0.5;
     } else {
@@ -330,8 +319,8 @@ export function main() {
     // const glov_camera2d = require('./glov/camera2d.js');
     // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
     //   glov_camera2d.w(), 0, 22, JSON.stringify({
-    //     last_touch_state: glov_input.last_touch_state,
-    //     touch_state: glov_input.touch_state,
+    //     last_touch_state: input.last_touch_state,
+    //     touch_state: input.touch_state,
     //   }, undefined, 2));
   }
 

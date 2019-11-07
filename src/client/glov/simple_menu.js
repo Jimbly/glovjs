@@ -14,8 +14,7 @@ const selection_box = require('./selection_box.js');
 const glov_ui = require('./ui.js');
 const { clamp, vec4 } = require('./vmath.js');
 
-const { KEYS } = glov_input;
-let pad_codes;
+const { KEYS, PAD } = glov_input;
 
 const color101010C8 = vec4(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
 
@@ -207,7 +206,7 @@ class GlovSimpleMenu {
     let selected=-1;
     if (exit_index !== -1 && (
       glov_input.keyDownEdge(KEYS.ESC) ||
-      !items[exit_index].no_controller_exit && glov_input.padButtonDownEdge(pad_codes.CANCEL)
+      !items[exit_index].no_controller_exit && glov_input.padButtonDownEdge(PAD.CANCEL)
     )) {
       this.execItem(exit_index, 1);
       selected = exit_index;
@@ -218,7 +217,7 @@ class GlovSimpleMenu {
     if (sel_box.was_clicked || sel_box.is_focused && (
       glov_input.keyDownEdge(KEYS.SPACE) ||
       glov_input.keyDownEdge(KEYS.ENTER) ||
-      glov_input.padButtonDownEdge(pad_codes.SELECT))
+      glov_input.padButtonDownEdge(PAD.SELECT))
     ) {
       this.execItem(sel_box.selected, 1);
       selected = sel_box.selected;
@@ -226,7 +225,7 @@ class GlovSimpleMenu {
     if (sel_box.is_focused && allow_left_right && (
       glov_input.keyDownEdge(KEYS.RIGHT) ||
       glov_input.keyDownEdge(KEYS.D) ||
-      glov_input.padButtonDownEdge(pad_codes.RIGHT))
+      glov_input.padButtonDownEdge(PAD.RIGHT))
     ) {
       this.execItem(sel_box.selected, 2);
       selected = sel_box.selected;
@@ -236,7 +235,7 @@ class GlovSimpleMenu {
       // events after eating a down for UI?
       glov_input.keyDownEdge(KEYS.LEFT) ||
       glov_input.keyDownEdge(KEYS.A) ||
-      glov_input.padButtonDownEdge(pad_codes.LEFT))
+      glov_input.padButtonDownEdge(PAD.LEFT))
     ) {
       this.execItem(sel_box.selected, -1);
       selected = sel_box.selected;
@@ -273,8 +272,5 @@ class GlovSimpleMenu {
 }
 
 export function create(...args) {
-  if (!pad_codes) {
-    pad_codes = glov_input.pad_codes;
-  }
   return new GlovSimpleMenu(...args);
 }

@@ -14,5 +14,6 @@ TestWorker.prototype.allow_client_broadcast = { chat: true };
 export function init(channel_server) {
   channel_server.registerChannelWorker('test', TestWorker, {
     autocreate: true,
+    subid_regex: /^.+$/,
   });
 }

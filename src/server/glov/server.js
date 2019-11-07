@@ -49,18 +49,20 @@ function updateVersion(base_name, is_startup) {
     }
     console.info(`Version for "${base_name}"${old_version ? ' changed to' : ''}: ${obj.ver}`);
     last_version[base_name] = obj.ver;
-    if (base_name === 'app' && !is_startup) {
-      // Do a broadcast message so people get a few seconds of warning
-      ws_server.broadcast('admin_msg', 'New client version deployed, reloading momentarily...');
+    if (base_name === 'app') {
       ws_server.setAppVer(obj.ver);
-      if (argv.dev) {
-        // immediate
-        ws_server.broadcast('app_ver', last_version.app);
-      } else {
-        // delay by 15 seconds, the server may also be about to be restarted
-        setTimeout(function () {
+      if (!is_startup) {
+        // Do a broadcast message so people get a few seconds of warning
+        ws_server.broadcast('admin_msg', 'New client version deployed, reloading momentarily...');
+        if (argv.dev) {
+          // immediate
           ws_server.broadcast('app_ver', last_version.app);
-        }, 15000);
+        } else {
+          // delay by 15 seconds, the server may also be about to be restarted
+          setTimeout(function () {
+            ws_server.broadcast('app_ver', last_version.app);
+          }, 15000);
+        }
       }
     }
   });
@@ -78,7 +80,13 @@ export function startup(params) {
   ws_server = glov_wsserver.create(params.server);
   ws_server.on('error', function (error) {
     console.error('Unhandled WSServer error:', error);
-    channel_server.handleUncaughtError(error);
+    let text = String(error);
+    if (text.indexOf('Invalid WebSocket frame: RSV1 must be clear') !== -1) {
+      // Log, but don't broadcast or write crash dump
+      console.error('ERROR (no dump)', new Date().toISOString(), error);
+    } else {
+      channel_server.handleUncaughtError(error);
+    }
   });
 
   channel_server.init(ds_store, ws_server);
@@ -90,7 +98,7 @@ export function startup(params) {
     if (!filename) {
       return;
     }
-    let m = filename.match(/(.*)\.ver\.json$/u);
+    let m = filename.match(/(.*)\.ver\.json$/);
     if (!m) {
       // not a version file, ignore
       return;

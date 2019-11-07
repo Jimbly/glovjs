@@ -42,10 +42,10 @@ let defines;
 let error_fp;
 let error_vp;
 
-const vp_attr_regex = /attribute [^ ]+ ([^ ;]+);/gu;
-const uniform_regex = /uniform (?:(?:low|medium|high)p )?((?:(?:vec|mat)\d(?:x\d)?|float) [^ ;]+);/gu;
-const sampler_regex = /uniform sampler2D ([^ ;]+);/gu;
-const include_regex = /\n#include "([^"]+)"/gu;
+const vp_attr_regex = /attribute [^ ]+ ([^ ;]+);/g;
+const uniform_regex = /uniform (?:(?:low|medium|high)p )?((?:(?:vec|mat)\d(?:x\d)?|float) [^ ;]+);/g;
+const sampler_regex = /uniform sampler2D ([^ ;]+);/g;
+const include_regex = /\n#include "([^"]+)"/g;
 
 const type_size = {
   float: 1,
@@ -61,6 +61,21 @@ let includes = {};
 export function addInclude(key, text) {
   assert(!includes[key]);
   includes[key] = `\n// from include "${key}":\n${text}\n`;
+}
+
+let report_queued = false;
+let shader_errors;
+function reportShaderError(err) {
+  function doReport() {
+    assert(false, `Shader error(s):\n    ${shader_errors.join('\n    ')}`);
+    shader_errors = null;
+  }
+  if (!report_queued) {
+    setTimeout(doReport, 1000);
+    report_queued = true;
+    shader_errors = [];
+  }
+  shader_errors.push(err);
 }
 
 function parseIncludes(text) {
@@ -87,10 +102,34 @@ function parseIncludes(text) {
   return text;
 }
 
-function Shader(type, text) {
-  text = `${defines}${text}`;
+const webgl2_header = [
+  '#version 300 es',
+  '#define WEBGL2',
+].join('\n');
+const webgl2_header_fp = [
+  webgl2_header,
+  '#define varying in',
+  'out lowp vec4 fragColor;',
+  '#define gl_FragColor fragColor',
+  '#define texture2D texture',
+  ''
+].join('\n');
+const webgl2_header_vp = [
+  webgl2_header,
+  '#define varying out',
+  '#define attribute in',
+  ''
+].join('\n');
+
+function Shader(type, name, text) {
+  assert.equal(typeof text, 'string');
+  let header = '';
+  if (engine.webgl2 && text.indexOf('#pragma WebGL2') !== -1) {
+    header = type === gl.VERTEX_SHADER ? webgl2_header_vp : webgl2_header_fp;
+  }
+  text = `${header}${defines}${text}`;
   text = parseIncludes(text);
-  text = text.replace(/#pragma WebGL/gu, '');
+  text = text.replace(/#pragma WebGL2?/g, '');
   this.shader = gl.createShader(type);
   if (type === gl.VERTEX_SHADER) {
     this.programs = {};
@@ -120,12 +159,18 @@ function Shader(type, text) {
   gl.compileShader(this.shader);
 
   if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS)) {
-    console.error(`Shader compile error: ${gl.getShaderInfoLog(this.shader)}`);
+    let error_text = gl.getShaderInfoLog(this.shader)
+      .replace(/\0/g, '')
+      .trim();
+    console.error(`Error compiling ${name}: ${error_text}`);
+    reportShaderError(`${name}: ${error_text}`);
+    // eslint-disable-next-line newline-per-chained-call
+    console.log(text.split('\n').map((line, idx) => `${idx+1}: ${line}`).join('\n'));
   }
 }
 
-export function create(...args) {
-  return new Shader(...args);
+export function create(type, name, text) {
+  return new Shader(type, name, text);
 }
 
 function uniformSetValue(unif) {
@@ -184,7 +229,7 @@ function link(vp, fp) {
     let type = v[0];
     let name = v[1];
     let count = 1;
-    let m = name.match(/([^[]+)\[(\d+)\]/u);
+    let m = name.match(/([^[]+)\[(\d+)\]/);
     if (m) {
       name = m[1];
       count = Number(m[2]);
@@ -233,6 +278,7 @@ export function bind(vp, fp, params) {
     if (!prog.valid) {
       prog = link(error_vp, error_fp);
     }
+    vp.programs[fp.id] = prog;
   }
   if (prog !== bound_prog) {
     bound_prog = prog;
@@ -260,14 +306,15 @@ export function bind(vp, fp, params) {
   }
 }
 
+const reserved = { WEBGL2: 1 };
 export function startup(_globals) {
   defines = Object.keys(engine.defines)
-    .map((v) => `#define ${v}\n`)
+    .map((v) => (reserved[v] ? '' : `#define ${v}\n`))
     .join('');
   globals = _globals;
 
-  error_fp = create(gl.FRAGMENT_SHADER, fs.readFileSync(`${__dirname}/shaders/error.fp`, 'utf8'));
-  error_vp = create(gl.VERTEX_SHADER, fs.readFileSync(`${__dirname}/shaders/error.vp`, 'utf8'));
+  error_fp = create(gl.FRAGMENT_SHADER, 'error.fp', fs.readFileSync(`${__dirname}/shaders/error.fp`, 'utf8'));
+  error_vp = create(gl.VERTEX_SHADER, 'error.vp', fs.readFileSync(`${__dirname}/shaders/error.vp`, 'utf8'));
 }
 
 export function addGlobal(key, vec) {

@@ -376,27 +376,6 @@ export class ChannelWorker {
       data.public = pd;
     }
     this.channel_server.ds_store.set(this.store_path, '', data);
-    if (this.maintain_client_list) {
-      // Also do some verification to track down a bug
-      // 2019-10-01 I believe this bug is fixed now
-      let public_data = this.data.public;
-      assert(public_data);
-      assert(public_data.clients);
-      for (let client_id in public_data.clients) {
-        let client = this.data.public.clients[client_id];
-        assert(client);
-        let client_ids = client.ids;
-        if (!client_ids) {
-          // do this as a full error with a dump exactly once
-          if (this.HACK_did_error) {
-            console.log(`Missing .ids for client ${client_id}`);
-          } else {
-            this.channel_server.handleUncaughtError(`Missing .ids for client ${client_id}`);
-            this.HACK_did_error = true;
-          }
-        }
-      }
-    }
   }
 
   onSetChannelDataPush(source, data, resp_func) {
@@ -650,7 +629,7 @@ export class ChannelWorker {
     let channel_worker = this;
     let ids = net_data.ids || {};
     let split = source.split('.');
-    assert(split.length === 2);
+    assert.equal(split.length, 2);
     ids.type = split[0];
     ids.id = split[1];
     ids.channel_id = source;

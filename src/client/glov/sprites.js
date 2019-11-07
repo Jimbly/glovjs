@@ -417,9 +417,9 @@ export function draw() {
   sprite_queue.sort(cmpSprite);
 
   batch_state = null;
-  assert(sprite_buffer_idx === 0);
-  assert(sprite_buffer_batch_start === 0);
-  assert(batches.length === 0);
+  assert.equal(sprite_buffer_idx, 0);
+  assert.equal(sprite_buffer_batch_start, 0);
+  assert.equal(batches.length, 0);
   for (let ii = 0; ii < sprite_queue.length; ++ii) {
     let elem = sprite_queue[ii];
     if (elem.fn) {
@@ -584,8 +584,10 @@ export function create(params) {
 export function startup() {
   clip_space[2] = -1;
   clip_space[3] = 1;
-  sprite_vshader = shaders.create(gl.VERTEX_SHADER, fs.readFileSync(`${__dirname}/shaders/sprite.vp`, 'utf8'));
-  sprite_fshader = shaders.create(gl.FRAGMENT_SHADER, fs.readFileSync(`${__dirname}/shaders/sprite.fp`, 'utf8'));
-  sprite_dual_fshader = shaders.create(gl.FRAGMENT_SHADER,
+  sprite_vshader = shaders.create(gl.VERTEX_SHADER, 'sprite.vp',
+    fs.readFileSync(`${__dirname}/shaders/sprite.vp`, 'utf8'));
+  sprite_fshader = shaders.create(gl.FRAGMENT_SHADER, 'sprite.fp',
+    fs.readFileSync(`${__dirname}/shaders/sprite.fp`, 'utf8'));
+  sprite_dual_fshader = shaders.create(gl.FRAGMENT_SHADER, 'sprite_dual.fp',
     fs.readFileSync(`${__dirname}/shaders/sprite_dual.fp`, 'utf8'));
 }

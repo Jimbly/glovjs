@@ -46,9 +46,9 @@ function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
     if (elem.fp) {
-      elem.shader = shaders.create(gl.FRAGMENT_SHADER, elem.fp);
+      elem.shader = shaders.create(gl.FRAGMENT_SHADER, key, elem.fp);
     } else {
-      elem.shader = shaders.create(gl.VERTEX_SHADER, elem.vp);
+      elem.shader = shaders.create(gl.VERTEX_SHADER, key, elem.vp);
     }
   }
   return elem.shader;

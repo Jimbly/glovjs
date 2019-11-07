@@ -109,6 +109,7 @@ function SubscriptionManager(client) {
   this.was_logged_in = false;
   this.logging_in = false;
   this.logging_out = false;
+  this.auto_create_user = false;
 
   this.first_connect = true;
   this.server_time = 0;
@@ -332,9 +333,11 @@ function hashedPassword(user_id, password) {
 
 
 SubscriptionManager.prototype.login = function (username, password, resp_func) {
+  username = (username || '').trim();
   if (!username) {
     return resp_func('Missing username');
   }
+  password = (password || '').trim();
   if (!password) {
     return resp_func('Missing password');
   }
@@ -343,22 +346,40 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
     local_storage.set('password', `prehashed$$${hashed_password}`);
   }
   this.login_credentials = { user_id: username, password: hashed_password };
-  return this.loginInternal(this.login_credentials, resp_func);
+  if (!this.auto_create_user) {
+    // Just return result directly
+    return this.loginInternal(this.login_credentials, resp_func);
+  }
+  return this.loginInternal(this.login_credentials, (err, data) => {
+    if (!err || err !== 'ERR_USER_NOT_FOUND') {
+      return void resp_func(err, data);
+    }
+    // user not found, auto-create
+    this.userCreate({
+      user_id: username,
+      password,
+    }, resp_func);
+  });
 };
 
 SubscriptionManager.prototype.userCreate = function (params, resp_func) {
+  params.user_id = (params.user_id || '').trim();
   if (!params.user_id) {
     return resp_func('Missing username');
   }
+  params.password = (params.password || '').trim();
   if (!params.password) {
     return resp_func('Missing password');
   }
-  if (!params.password_confirm) {
+  params.password_confirm = (params.password_confirm || '').trim();
+  if (!this.auto_create_user && !params.password_confirm) {
     return resp_func('Missing password confirmation');
   }
-  if (!params.email) {
+  params.email = (params.email || '').trim();
+  if (!this.auto_create_user && !params.email) {
     return resp_func('Missing email');
   }
+  params.display_name = (params.display_name || '').trim();
   let hashed_password = hashedPassword(params.user_id, params.password);
   if (hashed_password !== params.password) {
     local_storage.set('password', `prehashed$$${hashed_password}`);

@@ -1,5 +1,6 @@
 const argv = require('minimist')(process.argv.slice(2));
 const express = require('express');
+const express_static_gzip = require('express-static-gzip');
 const http = require('http');
 const path = require('path');
 // const { allowMapFromLocalhostOnly } = require('./glov/request_utils.js');
@@ -9,7 +10,10 @@ const glov_server = require('./glov/server.js');
 let app = express();
 let server = new http.Server(app);
 // allowMapFromLocalhostOnly(app);
-app.use(express.static(path.join(__dirname, '../client/')));
+app.use(express_static_gzip(path.join(__dirname, '../client/'), {
+  enableBrotli: true,
+  orderPreference: ['br'],
+}));
 
 glov_server.startup({ server });
 

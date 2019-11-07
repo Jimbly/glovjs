@@ -3,6 +3,7 @@
 /* eslint-env browser */
 
 const assert = require('assert');
+const engine = require('./engine.js');
 
 export let textures = {};
 export let load_count = 0;
@@ -81,7 +82,8 @@ export function bindArray(texs) {
 function Texture(params) {
   this.loaded = false;
   this.load_fail = false;
-  this.target = gl.TEXTURE_2D;
+  this.target = params.target || gl.TEXTURE_2D;
+  this.is_array = this.target === gl.TEXTURE_2D_ARRAY;
   this.handle = gl.createTexture();
   this.eff_handle = handle_loading;
   this.setSamplerState(params);
@@ -89,6 +91,7 @@ function Texture(params) {
   this.width = this.height = 1;
   this.nozoom = params.nozoom || false;
   this.on_load = [];
+  this.gpu_mem = 0;
 
   this.format = params.format || format.RGBA8;
 
@@ -100,6 +103,16 @@ function Texture(params) {
   }
 }
 
+Texture.prototype.updateGPUMem = function () {
+  let new_size = this.height * this.height * this.format.count;
+  if (this.mipmaps) {
+    new_size *= 1.5;
+  }
+  let diff = new_size - this.gpu_mem;
+  engine.perf_state.gpu_mem.tex += diff;
+  this.gpu_mem = diff;
+};
+
 Texture.prototype.setSamplerState = function (params) {
   let target = this.target;
   setUnit(0);
@@ -110,8 +123,10 @@ Texture.prototype.setSamplerState = function (params) {
   this.filter_mag = params.filter_mag || default_filter_mag;
   gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, this.filter_min);
   gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, this.filter_mag);
-  gl.texParameteri(target, gl.TEXTURE_WRAP_S, params.wrap_s || gl.REPEAT);
-  gl.texParameteri(target, gl.TEXTURE_WRAP_T, params.wrap_t || gl.REPEAT);
+  this.wrap_s = params.wrap_s || gl.REPEAT;
+  this.wrap_t = params.wrap_t || gl.REPEAT;
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, this.wrap_s);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_T, this.wrap_t);
 
   this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703; // Probably gl.LINEAR_MIPMAP_LINEAR
 
@@ -133,7 +148,9 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.width = w;
   this.height = h;
   gl.getError(); // clear the error flag if there is one
-  let np2 = !isPowerOfTwo(w) || !isPowerOfTwo(h);
+  // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, wrapped)
+  let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array &&
+    !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
   if (np2) {
     this.width = nextHighestPowerOfTwo(w);
     this.height = nextHighestPowerOfTwo(h);
@@ -142,7 +159,11 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   }
   if (data instanceof Uint8Array) {
     assert(data.length >= w * h * this.format.count);
-    if (np2) {
+    if (this.is_array) {
+      let num_images = h / w; // assume square
+      gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
+        num_images, 0, this.format.internal_type, this.format.gl_type, data);
+    } else if (np2) {
       // Could do multiple upload thing like below, but smarter, but we really shouldn't be doing this for
       // in-process generated images!
       gl.texSubImage2D(this.target, 0, 0, 0, w, h, this.format.internal_type, this.format.gl_type, data);
@@ -151,9 +172,26 @@ Texture.prototype.updateData = function updateData(w, h, data) {
         this.format.internal_type, this.format.gl_type, data);
     }
   } else {
-    assert(data instanceof Image || data.width); // instanceof Image fails with ublock AdBlocker
-    // Pad up to power of two
-    if (np2) {
+    assert(data.width); // instanceof Image fails with ublock AdBlocker; also, this is either an Image or Canvas
+    if (this.is_array) {
+      let num_images = h / w;
+      gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
+        num_images, 0, this.format.internal_type, this.format.gl_type, data);
+
+      if (gl.getError()) {
+        // Fix for Samsung devices (Chris's and Galaxy S8 on CrossBrowserTesting)
+        // Try drawing to canvas first
+        let canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(data, 0, 0);
+        gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
+          num_images, 0, this.format.internal_type, this.format.gl_type, canvas);
+      }
+
+    } else if (np2) {
+      // Pad up to power of two
       // Duplicate right and bottom pixel row by sending image 3 times
       if (w !== this.width) {
         gl.texSubImage2D(this.target, 0, 1, 0, this.format.internal_type, this.format.gl_type, data);
@@ -174,6 +212,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
     gl.generateMipmap(this.target);
     assert(!gl.getError());
   }
+  this.updateGPUMem();
   this.eff_handle = this.handle;
   this.loaded = true;
 
@@ -182,6 +221,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   for (let ii = 0; ii < arr.length; ++ii) {
     arr[ii](this);
   }
+
   return 0;
 };
 
@@ -194,7 +234,7 @@ Texture.prototype.onLoad = function (cb) {
 };
 
 const TEX_RETRY_COUNT = 4;
-Texture.prototype.loadURL = function loadURL(url) {
+Texture.prototype.loadURL = function loadURL(url, filter) {
   let tex = this;
 
   function tryLoad(next) {
@@ -256,6 +296,9 @@ Texture.prototype.loadURL = function loadURL(url) {
     let err_details = '';
     if (img) {
       tex.format = format.RGBA8;
+      if (filter) {
+        img = filter(tex, img);
+      }
       let err = tex.updateData(img.width, img.height, img);
       if (err) {
         err_details = `: GLError(${err})`;
@@ -293,6 +336,8 @@ Texture.prototype.destroy = function () {
   delete textures[this.name];
   unbindHandle(this.target, this.handle);
   gl.deleteTexture(this.handle);
+  this.width = this.height = 0;
+  this.updateGPUMem();
 };
 
 function create(params) {
@@ -325,12 +370,12 @@ export function load(params) {
   return texture;
 }
 
-function cname(key) {
+export function cname(key) {
   let idx = key.lastIndexOf('/');
   if (idx !== -1) {
     key = key.slice(idx+1);
   }
-  idx = key.lastIndexOf('.');
+  idx = key.indexOf('.');
   if (idx !== -1) {
     key = key.slice(0, idx);
   }

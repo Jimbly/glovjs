@@ -3,6 +3,7 @@
 /* eslint no-bitwise:off */
 
 const assert = require('assert');
+const engine = require('./engine.js');
 const { ceil, max } = Math;
 
 export const TRIANGLES = 4;
@@ -104,6 +105,9 @@ function getQuadIndexBuf(quad_count) {
   if (quad_count * 6 > quad_index_buf_len) {
     if (!quad_index_buf) {
       quad_index_buf = gl.createBuffer();
+    } else {
+      // freeing old one
+      engine.perf_state.gpu_mem.geom -= quad_index_buf_len * 2;
     }
     quad_index_buf_len = max(ceil(quad_index_buf_len * 1.5), quad_count * 6);
     if (bound_index_buf !== quad_index_buf) {
@@ -121,6 +125,7 @@ function getQuadIndexBuf(quad_count) {
       arr[ii++] = vidx++; // 3
     }
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+    engine.perf_state.gpu_mem.geom += quad_index_buf_len * 2;
   }
   return quad_index_buf;
 }
@@ -133,6 +138,7 @@ export function createIndices(idxs) {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ret.ibo);
   bound_index_buf = ret.ibo;
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxs, gl.STATIC_DRAW);
+  engine.perf_state.gpu_mem.geom += idxs.length * 2;
   return ret;
 }
 
@@ -143,6 +149,7 @@ function Geom(_format, verts, idxs, mode) {
   this.stride = 0;
   this.elem_count = 0;
   this.used_attribs = 0;
+  let common_byte_size=0;
   for (let ii = 0; ii < _format.length; ++ii) {
     let fmt = _format[ii];
     let sem = fmt[0];
@@ -151,17 +158,22 @@ function Geom(_format, verts, idxs, mode) {
     this.used_attribs |= (1 << sem);
     let byte_size = gl_byte_size[gltype];
     assert(byte_size);
+    assert(!common_byte_size || byte_size === common_byte_size);
+    common_byte_size = byte_size;
     fmt[3] = fmt[3] || false;
     fmt[4] = byte_size;
     this.stride += count * byte_size;
     this.elem_count += count;
   }
   this.vert_count = verts.length / this.elem_count;
+  this.common_byte_size = common_byte_size;
+  this.vert_gpu_mem = verts.length * this.common_byte_size;
   if (verts.length) {
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
     bound_array_buf = this.vbo;
     gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+    engine.perf_state.gpu_mem.geom += this.vert_gpu_mem;
   }
   this.orig_mode = mode;
   if (idxs) {
@@ -176,9 +188,10 @@ function Geom(_format, verts, idxs, mode) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
       bound_index_buf = this.ibo;
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxs, gl.STATIC_DRAW);
+      engine.perf_state.gpu_mem.geom += idxs.length * 2;
     }
   } else if (mode === QUADS) {
-    assert(this.vert_count % 4 === 0);
+    assert.equal(this.vert_count % 4, 0);
     let quad_count = this.vert_count / 4;
     // PERFTODO: Use GL_QUADS_OES extension
     this.ibo = getQuadIndexBuf(quad_count);
@@ -194,18 +207,21 @@ function Geom(_format, verts, idxs, mode) {
 }
 
 Geom.prototype.update = function (verts, num_verts) {
-  assert(this.orig_mode === QUADS);
+  assert.equal(this.orig_mode, QUADS);
   if (num_verts > this.vert_count) {
     if (bound_geom === this) {
       bound_geom = null;
     }
+    engine.perf_state.gpu_mem.geom -= this.vert_gpu_mem;
     deleteBuffer(this.vbo);
     // Note: matching size, ignoring num_verts
     this.vert_count = verts.length / this.elem_count;
+    this.vert_gpu_mem = verts.length * this.common_byte_size;
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
     bound_array_buf = this.vbo;
     gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
+    engine.perf_state.gpu_mem.geom += this.vert_gpu_mem;
   } else {
     // Fits
     if (bound_array_buf !== this.vbo) {
@@ -227,6 +243,8 @@ Geom.prototype.dispose = function () {
   this.ibo = null;
   deleteBuffer(this.vbo);
   this.vbo = null;
+  engine.perf_state.gpu_mem.geom -= this.vert_gpu_mem;
+  this.vert_gpu_mem = 0;
 };
 
 

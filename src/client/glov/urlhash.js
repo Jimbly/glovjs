@@ -26,7 +26,7 @@ export let TYPE_STRING = 'string';
 
 let params = {};
 
-const regex_value = /[^\w]\w+=([^&]+)/u;
+const regex_value = /[^\w]\w+=([^&]+)/;
 function getValue(opts) {
   let m = (document.location.hash || '').match(opts.regex) || [];
   if (opts.type === TYPE_SET) {
@@ -98,7 +98,7 @@ function toString() {
 let last_history_str = null; // always re-set it on the first update
 let last_history_set_time = 0;
 let scheduled = false;
-// const URL_BASE = document.location.href.match(/^[^#]+/u)[0];
+// const URL_BASE = document.location.href.match(/^[^#]+/)[0];
 function updateHistory() {
   let new_str = toString();
   if (last_history_str === new_str) {

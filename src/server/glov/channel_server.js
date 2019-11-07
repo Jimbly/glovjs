@@ -67,6 +67,9 @@ export function channelServerSend(source, dest, msg, err, data, resp_func) {
       if (!ctor.autocreate) {
         return resp_func(err); // ERR_NOT_FOUND
       }
+      if (ctor.subid_regex && !dest_id.match(ctor.subid_regex)) {
+        return resp_func('ERR_INVALID_CHANNEL_ID');
+      }
       return channel_server.autoCreateChannel(dest_type, dest_id, function (err2) {
         if (err2) {
           console.info(`Error auto-creating channel ${dest}:`, err2);
@@ -193,6 +196,7 @@ class ChannelServer {
     options = options || {};
     this.channel_types[channel_type] = ctor;
     ctor.autocreate = options.autocreate;
+    ctor.subid_regex = options.subid_regex;
 
     // Register handlers
     if (!ctor.prototype.cmd_parse) {
@@ -328,5 +332,5 @@ export function create(...args) {
 }
 
 export function pathEscape(filename) {
-  return filename.replace(/\./gu, '\\.');
+  return filename.replace(/\./g, '\\.');
 }

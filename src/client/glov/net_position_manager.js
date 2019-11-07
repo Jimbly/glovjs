@@ -38,12 +38,12 @@ NetPositionManager.prototype.onChannelSubscribe = function (data) {
 
 NetPositionManager.prototype.onChannelData = function (data, mod_key, mod_value) {
   if (mod_key) {
-    let m = mod_key.match(/^public\.clients\.([^.]+)\.pos$/u);
+    let m = mod_key.match(/^public\.clients\.([^.]+)\.pos$/);
     if (m) {
       this.otherClientPosChanged(m[1]);
     }
     if (!mod_value) {
-      m = mod_key.match(/^public\.clients\.([^.]+)$/u);
+      m = mod_key.match(/^public\.clients\.([^.]+)$/);
       if (m) {
         // other client disconnected
         delete this.per_client_data[m[1]];
@@ -134,7 +134,7 @@ NetPositionManager.prototype.reinit = function (options) {
     }
   }
 
-  assert(this.dim_pos + this.dim_rot === this.n);
+  assert.equal(this.dim_pos + this.dim_rot, this.n);
 
   if (!this.default_pos) {
     this.default_pos = this.vec();

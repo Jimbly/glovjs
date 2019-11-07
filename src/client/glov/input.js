@@ -9,13 +9,14 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
-const pointer_lock = require('./pointer_lock.js');
 const { abs, min, sqrt } = Math;
+const pointer_lock = require('./pointer_lock.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
-const UP_EDGE = 0;
-const DOWN_EDGE = 1;
-const DOWN = 2;
+const UP_EDGE = 0; // only for pads, which use === null as "up"
+const UP = 0; // only for key/mouse
+const DOWN = 1;
+const DOWN_EDGE = 2; // only for pads
 
 // per-app overrideable options
 const TOUCH_AS_MOUSE = true;
@@ -66,7 +67,7 @@ if (typeof Proxy === 'function') {
     }
   });
 }
-export const pad_codes = {
+export const PAD = {
   A: 0,
   SELECT: 0, // GLOV name
   B: 1,
@@ -95,8 +96,10 @@ export const pad_codes = {
   ANALOG_RIGHT: 23,
 };
 
+let pad_to_touch;
+
 let canvas;
-let key_state = {};
+let key_state_new = {};
 let pad_states = []; // One map per gamepad to pad button states
 let gamepad_data = []; // Other tracking data per gamepad
 let mouse_pos = vec2(); // in DOM coordinates, not canvas or virtual
@@ -114,20 +117,50 @@ let input_eaten_mouse = false;
 let touches = {}; // `m${button}` or touch_id -> TouchData
 
 export let touch_mode = local_storage.getJSON('touch_mode', false);
+export let pad_mode = local_storage.getJSON('pad_mode', false);
 
 function TouchData(pos, touch, button) {
   this.delta = vec2();
   this.total = 0;
   this.cur_pos = pos.slice(0);
   this.start_pos = pos.slice(0);
-  this.release = false;
   this.touch = touch;
   this.button = button;
   this.start_time = Date.now();
   this.dispatched = false;
   this.dispatched_drag_over = false;
-  this.state = DOWN_EDGE;
+  this.up_edge = 0;
+  this.down_edge = 0;
+  this.state = DOWN;
 }
+TouchData.prototype.down = function (is_edge) {
+  if (is_edge) {
+    this.down_edge++;
+  }
+  this.state = DOWN;
+};
+
+function eventTimestamp(event) {
+  if (event.timeStamp) {
+    assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12)); // Must both be high res times, or both not!
+    return event.timeStamp;
+  }
+  return engine.hrtime;
+}
+
+function KeyData() {
+  this.down_edge = 0;
+  // this.down_start = 0;
+  this.origin_time = 0;
+  this.down_time = 0;
+  this.up_edge = 0;
+  this.state = UP;
+}
+KeyData.prototype.keyUp = function (event) {
+  ++this.up_edge;
+  this.down_time += eventTimestamp(event) - this.origin_time;
+  this.state = UP;
+};
 
 function setMouseToMid() {
   v2set(mouse_pos, engine.width*0.5/camera2d.domToCanvasRatio(), engine.height*0.5/camera2d.domToCanvasRatio());
@@ -149,10 +182,9 @@ function onPointerLockEnter() {
   setMouseToMid();
   if (touch_data) {
     v2copy(touch_data.start_pos, mouse_pos);
-    touch_data.release = false;
+    touch_data.state = DOWN;
   } else {
     touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK);
-    touch_data.state = DOWN; // No DOWN_EDGE for this
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
@@ -160,8 +192,8 @@ export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
   if (touch_data) {
     v2copy(touch_data.cur_pos, mouse_pos);
-    touch_data.state = null; // no UP_EDGE for this
-    touch_data.release = true;
+    // no UP_EDGE for this
+    touch_data.state = UP;
   }
   pointer_lock.exit();
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
@@ -186,7 +218,7 @@ export function pointerLockExit() {
 // }
 
 function letEventThrough(event) {
-  return event.target.tagName === 'INPUT' || (event.target.className || '').indexOf('noglov') !== -1;
+  return event.target.tagName === 'INPUT' || String(event.target.className).indexOf('noglov') !== -1;
 }
 
 function ignored(event) {
@@ -197,7 +229,27 @@ function ignored(event) {
   }
 }
 
+let unload_protected = false;
+function stopCtrlW(e) {
+  // Cancel the event
+  e.preventDefault();
+  // Chrome requires returnValue to be set
+  e.returnValue = 'Are you sure you want to quit?';
+}
+function protectUnload(enable) {
+  if (enable && !unload_protected) {
+    console.log('Adding handler');
+    window.addEventListener('beforeunload', stopCtrlW, false);
+    unload_protected = true;
+  } else if (!enable && unload_protected) {
+    console.log('Removing handler');
+    window.removeEventListener('beforeunload', stopCtrlW, false);
+    unload_protected = false;
+  }
+}
+
 function onKeyUp(event) {
+  protectUnload(event.ctrlKey);
   let code = event.keyCode;
   if (!letEventThrough(event)) {
     event.stopPropagation();
@@ -207,13 +259,18 @@ function onKeyUp(event) {
   if (code === KEYS.ESC && pointerLocked()) {
     pointerLockExit();
   }
-  key_state[code] = UP_EDGE;
+  // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
 
-  // Letting through regardless, because we handle things like ESC in INPUT elements
+  let ks = key_state_new[code];
+  if (ks && ks.state === DOWN) {
+    ks.keyUp(event);
+  }
+
   in_event.handle('keyup', event);
 }
 
 function onKeyDown(event) {
+  protectUnload(event.ctrlKey);
   let code = event.keyCode;
   let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
@@ -223,14 +280,26 @@ function onKeyDown(event) {
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
-  key_state[code] = DOWN_EDGE;
 
-  // Letting through regardless, because we handle things like ESC in INPUT elements
-  in_event.handle('keydown', event);
+  // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
+  let ks = key_state_new[code];
+  if (!ks) {
+    ks = key_state_new[code] = new KeyData();
+  }
+  if (ks.state !== DOWN) { // not a repeat event
+    ++ks.down_edge;
+    ks.state = DOWN;
+    ks.origin_time = eventTimestamp(event);
+    // ks.down_start = ks.origin_time;
+
+    in_event.handle('keydown', event);
+  }
 }
 
 let mouse_moved = false;
 let temp_delta = vec2();
+let last_abs_move = 0;
+let last_abs_move_time = 0;
 function onMouseMove(event, no_stop) {
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
@@ -240,6 +309,10 @@ function onMouseMove(event, no_stop) {
     if (touch_mode) {
       local_storage.setJSON('touch_mode', false);
       touch_mode = false;
+    }
+    if (pad_mode) {
+      local_storage.setJSON('pad_mode', false);
+      pad_mode = false;
     }
   }
   mouse_moved = true;
@@ -261,8 +334,18 @@ function onMouseMove(event, no_stop) {
   if (pointerLocked()) {
     setMouseToMid();
     if (event.movementX || event.movementY) {
-      v2set(temp_delta, event.movementX || 0, event.movementY || 0);
-      any_movement = true;
+      // Smooth out (ignore) large jumps in movement
+      // This is, I believe, just a bug with Chromium on Windows, as it repositions the hidden mouse cursor
+      let ts = event.timeStamp || Date.now();
+      let abs_move = abs(event.movementX) + abs(event.movementY);
+      if (abs_move > 200 && (abs_move > 3 * last_abs_move || ts - last_abs_move_time > 1000)) {
+        console.log(`Ignoring mousemove with sudden large delta: ${event.movementX},${event.movementY}`);
+      } else {
+        v2set(temp_delta, event.movementX || 0, event.movementY || 0);
+        any_movement = true;
+      }
+      last_abs_move = abs_move;
+      last_abs_move_time = ts;
     }
   } else {
     v2sub(temp_delta, mouse_pos, last_mouse_pos);
@@ -302,14 +385,10 @@ function onMouseDown(event) {
   let touch_id = `m${button}`;
   if (touches[touch_id]) {
     v2copy(touches[touch_id].start_pos, mouse_pos);
-    touches[touch_id].release = false;
-    touches[touch_id].state = no_click ? DOWN : DOWN_EDGE;
   } else {
     touches[touch_id] = new TouchData(mouse_pos, false, button);
-    if (no_click) {
-      touches[touch_id].state = DOWN; // no edge
-    }
   }
+  touches[touch_id].down(!no_click);
   if (!no_click) {
     in_event.handle('mousedown', event);
   }
@@ -325,9 +404,9 @@ function onMouseUp(event) {
     if (touch_data) {
       v2copy(touch_data.cur_pos, mouse_pos);
       if (!no_click) {
-        touch_data.state = UP_EDGE;
+        touch_data.up_edge++;
       }
-      touch_data.release = true;
+      touch_data.state = UP;
     }
     delete mouse_down[button];
   }
@@ -347,6 +426,7 @@ function onWheel(event) {
 }
 
 let touch_pos = vec2();
+let released_touch_id = 0;
 function onTouchChange(event) {
   // eventlog(event);
   // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
@@ -356,6 +436,10 @@ function onTouchChange(event) {
   if (!touch_mode) {
     local_storage.set('touch_mode', true);
     touch_mode = true;
+  }
+  if (pad_mode) {
+    local_storage.set('pad_mode', true);
+    pad_mode = true;
   }
   if (event.cancelable !== false) {
     event.preventDefault();
@@ -372,6 +456,7 @@ function onTouchChange(event) {
     v2set(touch_pos, touch.pageX, touch.pageY);
     if (!last_touch) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0);
+      last_touch.down(true);
       --old_count;
       in_event.handle('mousedown', touch);
     } else {
@@ -390,17 +475,29 @@ function onTouchChange(event) {
   }
   // Look for release, if releasing exactly one final touch
   let released_touch;
+  let released_ids = [];
   for (let id in touches) {
     if (!seen[id]) {
       let touch = touches[id];
-      if (touch.touch) {
+      if (touch.touch && touch.state === DOWN) {
         ++old_count;
         released_touch = touch;
+        released_ids.push(id);
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
-        touch.state = UP_EDGE;
+        touch.up_edge++;
+        touch.state = UP;
         touch.release = true;
       }
     }
+  }
+  for (let ii = 0; ii < released_ids.length; ++ii) {
+    let id = released_ids[ii];
+    let touch = touches[id];
+    // get new id, not overlapping with touch.identifier values,
+    // so that if we get a new touch event before the next tick, we still see the release, etc
+    let new_id = `r${++released_touch_id}`;
+    delete touches[id];
+    touches[new_id] = touch;
   }
   if (TOUCH_AS_MOUSE) {
     if (old_count === 1 && new_count === 0) {
@@ -422,8 +519,22 @@ function onTouchChange(event) {
 }
 
 function onBlurOrFocus(evt) {
-  for (let code in key_state) {
-    key_state[code] = UP_EDGE;
+  protectUnload(false);
+  for (let code in key_state_new) {
+    let ks = key_state_new[code];
+    if (ks.state === DOWN) {
+      ks.keyUp(evt);
+    }
+  }
+}
+
+let ANALOG_MAP = {};
+function genAnalogMap() {
+  if (map_analog_to_dpad) {
+    ANALOG_MAP[PAD.LEFT] = PAD.ANALOG_LEFT;
+    ANALOG_MAP[PAD.RIGHT] = PAD.ANALOG_RIGHT;
+    ANALOG_MAP[PAD.UP] = PAD.ANALOG_UP;
+    ANALOG_MAP[PAD.DOWN] = PAD.ANALOG_DOWN;
   }
 }
 
@@ -433,6 +544,8 @@ export function startup(_canvas, params) {
   if (params.map_analog_to_dpad !== undefined) {
     map_analog_to_dpad = params.map_analog_to_dpad;
   }
+  pad_to_touch = params.pad_to_touch;
+  genAnalogMap();
 
   let passive_param = false;
   try {
@@ -482,6 +595,7 @@ function getGamepadData(idx) {
   let gpd = gamepad_data[idx];
   if (!gpd) {
     gpd = gamepad_data[idx] = {
+      id: idx,
       timestamp: 0,
       sticks: new Array(NUM_STICKS),
     };
@@ -493,11 +607,35 @@ function getGamepadData(idx) {
   return gpd;
 }
 
-function updatePadState(ps, b, c) {
-  if (b && !ps[c]) {
-    ps[c] = DOWN_EDGE;
-  } else if (!b && ps[c]) {
-    ps[c] = UP_EDGE;
+function updatePadState(gpd, ps, b, padcode) {
+  if (b && !ps[padcode]) {
+    ps[padcode] = DOWN_EDGE;
+    if (!pad_mode) {
+      local_storage.setJSON('pad_mode', true);
+      pad_mode = true;
+    }
+    if (padcode === pad_to_touch) {
+      let touch_id = `g${gpd.id}`;
+      if (touches[touch_id]) {
+        setMouseToMid();
+        v2copy(touches[touch_id].start_pos, mouse_pos);
+      } else {
+        touches[touch_id] = new TouchData(mouse_pos, false, 0);
+      }
+      touches[touch_id].down(true);
+    }
+  } else if (!b && ps[padcode]) {
+    ps[padcode] = UP_EDGE;
+    if (padcode === pad_to_touch) {
+      let touch_id = `g${gpd.id}`;
+      let touch_data = touches[touch_id];
+      if (touch_data) {
+        setMouseToMid();
+        v2copy(touch_data.cur_pos, mouse_pos);
+        touch_data.up_edge++;
+        touch_data.state = UP;
+      }
+    }
   }
 }
 
@@ -528,7 +666,7 @@ function gamepadUpdate() {
             value = value.value;
           }
           value = value > 0.5;
-          updatePadState(ps, value, n);
+          updatePadState(gpd, ps, value, n);
         }
       }
 
@@ -555,13 +693,25 @@ function gamepadUpdate() {
           } else {
             v2set(pair, 0, 0);
           }
+
+          // Apply "movement" to drag events
+          if (n <= 1 && pad_to_touch !== undefined) {
+            let touch_data = touches[`g${gpd.id}`];
+            if (touch_data) {
+              v2scale(temp_delta, pair, engine.this_frame_time);
+              v2add(touch_data.delta, touch_data.delta, temp_delta);
+              touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
+              setMouseToMid();
+              v2copy(touch_data.cur_pos, mouse_pos);
+            }
+          }
         }
 
         // Calculate virtual directional buttons
-        updatePadState(ps, gpd.sticks[0][0] < -PAD_THRESHOLD, pad_codes.ANALOG_LEFT);
-        updatePadState(ps, gpd.sticks[0][0] > PAD_THRESHOLD, pad_codes.ANALOG_RIGHT);
-        updatePadState(ps, gpd.sticks[0][1] < -PAD_THRESHOLD, pad_codes.ANALOG_DOWN);
-        updatePadState(ps, gpd.sticks[0][1] > PAD_THRESHOLD, pad_codes.ANALOG_UP);
+        updatePadState(gpd, ps, gpd.sticks[0][0] < -PAD_THRESHOLD, PAD.ANALOG_LEFT);
+        updatePadState(gpd, ps, gpd.sticks[0][0] > PAD_THRESHOLD, PAD.ANALOG_RIGHT);
+        updatePadState(gpd, ps, gpd.sticks[0][1] < -PAD_THRESHOLD, PAD.ANALOG_DOWN);
+        updatePadState(gpd, ps, gpd.sticks[0][1] > PAD_THRESHOLD, PAD.ANALOG_UP);
       }
     }
   }
@@ -573,6 +723,18 @@ export function tickInput() {
   if (movement_questionable_frames) {
     --movement_questionable_frames;
   }
+
+  // update timing of key down states
+  let hrtime = engine.hrtime;
+  for (let code in key_state_new) {
+    let ks = key_state_new[code];
+    if (ks.state === DOWN) {
+      ks.down_time += hrtime - ks.origin_time;
+      // assert(hrtime >= ks.origin_time); - should be true, barring weird bugs
+      ks.origin_time = hrtime;
+    }
+  }
+
   mouse_over_captured = false;
   gamepadUpdate();
   in_event.topOfFrame();
@@ -595,12 +757,23 @@ function endFrameTickMap(map) {
   });
 }
 export function endFrame(skip_mouse) {
-  endFrameTickMap(key_state);
+  for (let code in key_state_new) {
+    let ks = key_state_new[code];
+    if (ks.state === UP) {
+      key_state_new[code] = null;
+      delete key_state_new[code];
+    } else {
+      ks.up_edge = 0;
+      ks.down_edge = 0;
+      ks.down_time = 0;
+    }
+  }
+
   pad_states.forEach(endFrameTickMap);
   if (!skip_mouse) {
     for (let touch_id in touches) {
       let touch_data = touches[touch_id];
-      if (touch_data.release) {
+      if (touch_data.state === UP) {
         // Manually null out touches[touch_id] - some Chrome optimizer bug causes
         // callers to later get this old value (instead of the newly added on with
         // the same ID) unless we null it out (then they seem to get the new one).
@@ -610,11 +783,8 @@ export function endFrame(skip_mouse) {
         touch_data.delta[0] = touch_data.delta[1] = 0;
         touch_data.dispatched = false;
         touch_data.dispatched_drag_over = false;
-        if (touch_data.state === DOWN_EDGE) {
-          touch_data.state = DOWN;
-        } else {
-          assert(touch_data.state !== UP_EDGE); // should also have set .release!
-        }
+        touch_data.up_edge = 0;
+        touch_data.down_edge = 0;
       }
     }
     mouse_wheel = 0;
@@ -685,11 +855,8 @@ export function mouseOver(param) {
     for (let id in touches) {
       let touch = touches[id];
       if (checkPos(touch.cur_pos, pos_param)) {
-        if (touch.state === DOWN_EDGE) {
-          touch.state = DOWN;
-        } else if (touch.state === UP_EDGE) {
-          touch.state = null;
-        }
+        touch.down_edge = 0;
+        touch.up_edge = 0;
         if (!param || !param.drag_target) {
           touch.dispatched = true;
         }
@@ -738,31 +905,42 @@ export function numTouches() {
 
 export function keyDown(keycode) {
   if (input_eaten_kb) {
-    return false;
+    return 0;
   }
-  return Boolean(key_state[keycode]);
+  let ks = key_state_new[keycode];
+  if (!ks) {
+    return 0;
+  }
+  if (ks.state === DOWN) {
+    assert(ks.down_time);
+  }
+  return ks.down_time;
 }
 export function keyDownEdge(keycode, opts) {
   if (opts && opts.in_event_cb && !input_eaten_kb) {
     in_event.on('keydown', keycode, opts.in_event_cb);
   }
 
-  if (key_state[keycode] === DOWN_EDGE) {
-    key_state[keycode] = DOWN;
-    return true;
+  let ks = key_state_new[keycode];
+  if (!ks) {
+    return 0;
   }
-  return false;
+  let r = ks.down_edge;
+  ks.down_edge = 0;
+  return r;
 }
 export function keyUpEdge(keycode, opts) {
   if (opts && opts.in_event_cb && !input_eaten_kb) {
     in_event.on('keyup', keycode, opts.in_event_cb);
   }
 
-  if (key_state[keycode] === UP_EDGE) {
-    delete key_state[keycode];
-    return true;
+  let ks = key_state_new[keycode];
+  if (!ks) {
+    return 0;
   }
-  return false;
+  let r = ks.up_edge;
+  ks.up_edge = 0;
+  return r;
 }
 
 export function padGetAxes(out, stickindex, padindex) {
@@ -772,7 +950,7 @@ export function padGetAxes(out, stickindex, padindex) {
     v2set(out, 0, 0);
     for (let ii = 0; ii < gamepad_data.length; ++ii) {
       padGetAxes(sub, stickindex, ii);
-      v2add(out, sub);
+      v2add(out, out, sub);
     }
     return;
   }
@@ -780,59 +958,50 @@ export function padGetAxes(out, stickindex, padindex) {
   v2copy(out, sticks[stickindex]);
 }
 
-function padButtonDownInternal(ps, padcode) {
-  return Boolean(ps[padcode]);
+function padButtonDownInternal(gpd, ps, padcode) {
+  if (ps[padcode]) {
+    return engine.this_frame_time;
+  }
+  return 0;
 }
-function padButtonDownEdgeInternal(ps, padcode) {
+function padButtonDownEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === DOWN_EDGE) {
     ps[padcode] = DOWN;
-    return true;
+    return engine.this_frame_time;
   }
-  return false;
+  return 0;
 }
-function padButtonUpEdgeInternal(ps, padcode) {
+function padButtonUpEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === UP_EDGE) {
     delete ps[padcode];
-    return true;
+    return engine.this_frame_time;
   }
-  return false;
+  return 0;
 }
 
-const ANALOG_MAP = (function () {
-  if (!map_analog_to_dpad) {
-    return {};
-  }
-  let r = {};
-  r[pad_codes.LEFT] = pad_codes.ANALOG_LEFT;
-  r[pad_codes.RIGHT] = pad_codes.ANALOG_RIGHT;
-  r[pad_codes.UP] = pad_codes.ANALOG_UP;
-  r[pad_codes.DOWN] = pad_codes.ANALOG_DOWN;
-  return r;
-}());
 function padButtonShared(fn, padcode, padindex) {
   assert(padcode !== undefined);
+  let r = 0;
   // Handle calling without a specific pad index
   if (padindex === undefined) {
     for (let ii = 0; ii < pad_states.length; ++ii) {
-      if (padButtonShared(fn, padcode, ii)) {
-        return true;
-      }
+      r += padButtonShared(fn, padcode, ii);
     }
-    return false;
+    return r;
   }
 
   if (input_eaten_mouse) {
-    return false;
+    return 0;
+  }
+  let gpd = gamepad_data[padindex];
+  if (!gpd) {
+    return 0;
   }
   let ps = pad_states[padindex];
-  if (!ps) {
-    return false;
-  }
 
-  if (ANALOG_MAP[padcode] && fn(ps, ANALOG_MAP[padcode])) {
-    return true;
-  }
-  return fn(ps, padcode);
+  r += ANALOG_MAP[padcode] && fn(gpd, ps, ANALOG_MAP[padcode]) || 0;
+  r += fn(gpd, ps, padcode);
+  return r;
 }
 export function padButtonDown(padcode, padindex) {
   return padButtonShared(padButtonDownInternal, padcode, padindex);
@@ -856,14 +1025,16 @@ export function mouseUpEdge(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (touch_data.state !== UP_EDGE ||
+    if (!touch_data.up_edge ||
       !(button === ANY || button === touch_data.button) ||
       touch_data.total > max_click_dist
     ) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
-      touch_data.state = null;
+      if (!param.peek) {
+        touch_data.up_edge = 0;
+      }
       return {
         button: touch_data.button,
         pos: check_pos.slice(0),
@@ -872,7 +1043,7 @@ export function mouseUpEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !input_eaten_mouse) {
+  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};
@@ -891,14 +1062,14 @@ export function mouseDownEdge(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (touch_data.state !== DOWN_EDGE ||
+    if (!touch_data.down_edge ||
       !(button === ANY || button === touch_data.button)
     ) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
       if (!param.peek) {
-        touch_data.state = DOWN;
+        touch_data.down_edge = 0;
       }
       return {
         button: touch_data.button,
@@ -908,7 +1079,7 @@ export function mouseDownEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !input_eaten_mouse) {
+  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};
@@ -939,8 +1110,9 @@ export function drag(param) {
       if (!param.peek) {
         touch_data.dispatched = true;
       }
+      let is_down_edge = touch_data.down_edge;
       if (param.eat_clicks) {
-        touch_data.state = null;
+        touch_data.down_edge = touch_data.up_edge = 0;
       }
       if (param.payload) {
         touch_data.drag_payload = param.payload;
@@ -956,6 +1128,7 @@ export function drag(param) {
         button: touch_data.button,
         touch: touch_data.touch,
         start_time: touch_data.start_time,
+        is_down_edge,
       };
     }
   }
@@ -972,7 +1145,7 @@ export function dragDrop(param) {
     if (!(button === ANY || button === touch_data.button) || touch_data.dispatched || !touch_data.drag_payload) {
       continue;
     }
-    if (touch_data.state !== UP_EDGE) {
+    if (!touch_data.up_edge) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
@@ -998,7 +1171,7 @@ export function dragOver(param) {
     ) {
       continue;
     }
-    if (touch_data.state !== DOWN_EDGE && touch_data.state !== DOWN) {
+    if (touch_data.state !== DOWN) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {

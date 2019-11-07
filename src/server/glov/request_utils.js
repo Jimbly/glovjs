@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u;
+const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
   // console.log('Client connection headers ' + JSON.stringify(req.headers));
@@ -23,7 +23,7 @@ export function ipFromRequest(req) {
 }
 
 export function allowMapFromLocalhostOnly(app) {
-  let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/u;
+  let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
   let cache = {};
   app.use(function (req, res, next) {
     let ip = ipFromRequest(req);

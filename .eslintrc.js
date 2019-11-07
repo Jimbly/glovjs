@@ -424,7 +424,7 @@ module.exports = {
     "require-atomic-updates": "error",
     "require-await": "error",
     "require-jsdoc": "off",
-    "require-unicode-regexp": "error",
+    "require-unicode-regexp": "off", // JE: Hasn't caught anything useful, generates bigger code
     "rest-spread-spacing": "error",
     "semi": "error",
     "semi-spacing": "error",

@@ -3,6 +3,11 @@
 /* eslint-env browser */
 
 require('./bootstrap.js'); // Just in case it's not in app.js
+
+export let DEBUG = String(document.location).indexOf('http://localhost') === 0;
+
+require('not_worker'); // This module cannot be required from a worker bundle
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const effects = require('./effects.js');
@@ -16,8 +21,10 @@ const mat4Invert = require('gl-mat4/invert');
 const mat4Mul = require('gl-mat4/multiply');
 const mat4Transpose = require('gl-mat4/transpose');
 const mat4Perspective = require('gl-mat4/perspective');
-const { asin, cos, min, max, PI, sin, sqrt } = Math;
+const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const models = require('./models.js');
+const perf = require('./perf.js');
+const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sound_manager_dummy = require('./sound_manager_dummy.js');
 const sprites = require('./sprites.js');
@@ -29,6 +36,7 @@ const { defaults, ridx } = require('../../common/util.js');
 const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy, v4set } = require('./vmath.js');
 
 export let canvas;
+export let webgl2;
 export let glov_particles;
 export let sound_manager;
 
@@ -44,7 +52,14 @@ export let game_height;
 export let render_width;
 export let render_height;
 
-export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET });
+//eslint-disable-next-line no-use-before-define
+export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
+let initial_webgl2_define = defines.WEBGL2;
+function definesChanged() {
+  if (defines.WEBGL2 !== initial_webgl2_define) {
+    document.location.reload();
+  }
+}
 
 export let any_3d = false;
 export let ZFAR;
@@ -71,11 +86,6 @@ export let light_dir_ws = vec3(-1, -2, -3);
 export let font;
 export let app_state = null;
 export const border_color = vec4(0, 0, 0, 1);
-
-export let fps_style = glov_font.style({
-  outline_width: 2, outline_color: 0x00000080,
-  color: 0xFFFFFFff,
-});
 
 export function setGlobalMatrices(_mat_view) {
   mat4Copy(mat_view, _mat_view);
@@ -137,6 +147,8 @@ export function getFrameDt() {
   return this_frame_time;
 }
 
+export let hrtime = 0;
+
 // Wall time, may contain large jumps, may be 0 or negative
 let this_frame_time_actual = 0;
 export function getFrameDtActual() {
@@ -162,9 +174,45 @@ export function stateActive(test_state) {
 }
 
 let mspf = 1000;
-let mspf_update_time = Date.now();
+let mspf_update_time = 0;
 let mspf_frame_count = 0;
-let show_fps = true;
+let last_tick_cpu = 0;
+let mspf_tick = 1000;
+// let net_time = 1000;
+let mspf_tick_accum = 0;
+// let net_time_accum = 0;
+export const PERF_HISTORY_SIZE = 128;
+export let perf_state = window.glov_perf_state = {
+  fpsgraph: {
+    index: 0,
+    history: new Float32Array(PERF_HISTORY_SIZE * 2),
+  },
+  gpu_mem: {
+    tex: 0,
+    geom: 0,
+  },
+};
+let fpsgraph = perf_state.fpsgraph;
+
+perf.addMetric({
+  name: 'fps',
+  show_stat: 'show_fps', // always, if we're showing any metrics
+  show_graph: 'fps_graph',
+  labels: {
+    'fps: ': () => (1000 / mspf).toFixed(1),
+    'ms/f: ': () => mspf.toFixed(0),
+    'cpu: ': () => mspf_tick.toFixed(0),
+    // 'net: ': () => net_time.toFixed(0),
+  },
+  data: fpsgraph, // contain .index and .history (stride of colors.length)
+  line_scale_top: 50,
+  colors: [
+    // vec4(0.161, 0.678, 1, 1), // net time
+    vec4(1, 0.925, 0.153, 1), // cpu/tick time
+    vec4(0, 0.894, 0.212, 1), // total time (GPU)
+  ],
+  interactable: DEBUG,
+});
 
 let do_borders = true;
 let do_viewport_postprocess = false;
@@ -177,7 +225,7 @@ export function addTickFunc(cb) {
 
 let post_tick = [];
 export function postTick(ticks, fn) {
-  assert(typeof fn === 'function');
+  assert.equal(typeof fn, 'function');
   post_tick.push({ ticks, fn });
 }
 
@@ -203,8 +251,8 @@ let last_canvas_height;
 function resizeCanvas() {
   let css_to_real = window.devicePixelRatio || 1;
   window.pixel_scale = css_to_real;
-  last_canvas_width = canvas.width = Math.round(canvas.clientWidth * css_to_real);
-  last_canvas_height = canvas.height = Math.round(canvas.clientHeight * css_to_real);
+  last_canvas_width = canvas.width = round(canvas.clientWidth * css_to_real) || 1;
+  last_canvas_height = canvas.height = round(canvas.clientHeight * css_to_real) || 1;
 
   // For the next 10 frames, make sure font size is correct
   need_repos = 10;
@@ -212,8 +260,8 @@ function resizeCanvas() {
 
 function checkResize() {
   let css_to_real = window.devicePixelRatio || 1;
-  let new_width = Math.round(canvas.clientWidth * css_to_real);
-  let new_height = Math.round(canvas.clientHeight * css_to_real);
+  let new_width = round(canvas.clientWidth * css_to_real) || 1;
+  let new_height = round(canvas.clientHeight * css_to_real) || 1;
   if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
     resizeCanvas();
   }
@@ -262,16 +310,37 @@ export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
   return tex;
 }
 
-let last_tick = Date.now();
-function tick() {
-  let now = Date.now();
+function requestFrame() {
+  let max_fps = settings.max_fps;
   if (defines.SLOWLOAD && is_loading) {
     // Safari on CrossBrowserTesting needs this in order to have some time to load/decode audio data
-    setTimeout(function () {
-      requestAnimationFrame(tick);
-    }, 500);
+    // TODO: Instead, generally, if loading, compare last_tick_cpu vs dt, and if
+    //   we're not idle for at least half of the time and we have *internal*
+    //   loads (textures, sounds, models, NOT user code), delay so that we are.
+    max_fps = 2;
+  }
+  if (max_fps) {
+    // eslint-disable-next-line no-use-before-define
+    setTimeout(tick, round(1000 / max_fps));
   } else {
+    // eslint-disable-next-line no-use-before-define
     requestAnimationFrame(tick);
+  }
+}
+
+let hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
+
+let last_tick = 0;
+function tick(timestamp) {
+  if (timestamp < 1e12) { // high resolution timer
+    hrtime = timestamp;
+  } else { // probably integer milliseconds since epoch, or nothing
+    hrtime = hrnow();
+  }
+  requestFrame();
+  let now = round(hrtime); // Code assumes integer milliseconds
+  if (!last_tick) {
+    last_tick = now;
   }
   this_frame_time_actual = now - last_tick;
   let dt = min(max(this_frame_time_actual, 1), 250);
@@ -280,18 +349,32 @@ function tick() {
   global_timer += dt;
   ++global_frame_index;
 
+  // let this_net_time = wsclient.getNetTime();
+  // fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 3 + 0] = this_net_time;
+  fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 1] = this_frame_time_actual;
+  fpsgraph.index++;
+  fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = 0;
+
   ++mspf_frame_count;
+  mspf_tick_accum += last_tick_cpu;
+  // net_time_accum += this_net_time;
   if (now - mspf_update_time > 1000) {
-    mspf = (now - mspf_update_time) / mspf_frame_count;
-    mspf_frame_count = 0;
-    mspf_update_time = now;
-    // if (show_fps && fps_elem) {
-    //   fps_elem.innerText = `${(1000 / mspf).toFixed(0)}fps (${mspf.toFixed(1)} ms/f)`;
-    // }
+    if (!mspf_update_time) {
+      mspf_update_time = now;
+    } else {
+      mspf = (now - mspf_update_time) / mspf_frame_count;
+      mspf_tick = mspf_tick_accum / mspf_frame_count;
+      mspf_tick_accum = 0;
+      // net_time = net_time_accum / mspf_frame_count;
+      // net_time_accum = 0;
+      mspf_frame_count = 0;
+      mspf_update_time = now;
+    }
   }
 
   if (document.hidden || document.webkitHidden) {
     resetEffects();
+    last_tick_cpu = 0;
     // Maybe post-tick here too?
     return;
   }
@@ -345,7 +428,7 @@ function tick() {
     let viewport2 = [ul[0], ul[1], lr[0], lr[1]];
     let view_height = viewport2[3] - viewport2[1];
     // default font size of 16 when at height of game_height
-    let font_size = Math.min(256, Math.max(2, Math.floor(view_height/800 * 16)));
+    let font_size = min(256, max(2, floor(view_height/800 * 16)));
     document.getElementById('fullscreen').style['font-size'] = `${font_size}px`;
   }
 
@@ -363,16 +446,15 @@ function tick() {
     glov_ui.drawRect(game_width, 0, camera2d.x1(), game_height, Z.BORDERS, border_color);
   }
 
+  if (settings.show_metrics) {
+    perf.draw();
+  }
+
   for (let ii = 0; ii < app_tick_functions.length; ++ii) {
     app_tick_functions[ii](dt);
   }
   if (app_state) {
     app_state(dt);
-  }
-  if (show_fps) {
-    camera2d.setAspectFixed(game_width, game_height);
-    font.drawSizedAligned(fps_style, camera2d.x0(), camera2d.y0(), Z.FPSMETER, glov_ui.font_height,
-      glov_font.ALIGN.HRIGHT, camera2d.w(), 0, `FPS: ${(1000 / mspf).toFixed(1)} (${mspf.toFixed(0)}ms/f)`);
   }
 
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
@@ -420,6 +502,9 @@ function tick() {
       ridx(post_tick, ii);
     }
   }
+
+  last_tick_cpu = hrnow() - now;
+  fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
 }
 
 let error_report_details = {};
@@ -437,6 +522,7 @@ export function setErrorReportDetails(key, value) {
 setErrorReportDetails('ver', BUILD_TIMESTAMP);
 let last_error_time = 0;
 let crash_idx = 0;
+let filtered_errors = /avast_submit/; // Errors from plugins that we don't want to get reporte dot us, or show the user!
 function glovErrorReport(msg, file, line, col) {
   ++crash_idx;
   let now = Date.now();
@@ -447,15 +533,19 @@ function glovErrorReport(msg, file, line, col) {
     // frame, or this is a secondary error caused by the first, do not report it.
     // Could maybe hash the error message and just report each message once, and
     // flag errors as primary or secondary.
-    return;
+    return true;
+  }
+  if (msg.match(filtered_errors)) {
+    return false;
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = (location.href || '').match(/^[^#?]*/u)[0];
+  let url = (location.href || '').match(/^[^#?]*/)[0];
   url += `errorReport?cidx=${crash_idx}&file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}` +
     `&msg=${escape(msg)}${error_report_details_str}`;
   let xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);
   xhr.send(null);
+  return true;
 }
 
 export function startup(params) {
@@ -477,13 +567,20 @@ export function startup(params) {
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl', 'experimental-webgl'];
+  if (defines.WEBGL2) {
+    context_names.splice(0, 0, 'webgl2');
+  }
   let context_opts = [{ antialias, powerPreference }, { powerPreference }, {}];
   let good = false;
+  webgl2 = false;
   for (let i = 0; !good && i < context_names.length; i += 1) {
     for (let jj = 0; !good && jj < context_opts.length; ++jj) {
       try {
         window.gl = canvas.getContext(context_names[i], context_opts[jj]);
         if (window.gl) {
+          if (context_names[i] === 'webgl2') {
+            webgl2 = true;
+          }
           good = true;
           break;
         }
@@ -499,6 +596,7 @@ export function startup(params) {
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
   }
+  console.log(`Using WebGL${webgl2?2:1}`);
 
   assert(gl);
   canvas.focus();
@@ -579,7 +677,8 @@ export function startup(params) {
   } else {
     font = glov_font.create(font_info_palanquin32, 'font/palanquin32');
   }
-  glov_ui.startup(font, params.ui_sprites);
+  params.font = font;
+  glov_ui.startup(params);
 
   if (params.sound_manager) {
     // Require caller to require this module, so we don't force it loaded/bundled in programs that do not need it
@@ -601,10 +700,10 @@ export function startup(params) {
     do_borders = params.do_borders;
   }
   if (params.show_fps !== undefined) {
-    show_fps = params.show_fps;
+    settings.show_fps = params.show_fps;
   }
 
-  requestAnimationFrame(tick);
+  requestFrame();
   return true;
 }
 

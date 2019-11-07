@@ -4,6 +4,7 @@
 const assert = require('assert');
 const client_worker = require('./client_worker.js');
 const { channelServerSend } = require('./channel_server.js');
+const { regex_valid_username } = require('./default_workers.js');
 const { logdata } = require('../../common/util.js');
 const random_names = require('./random_names.js');
 
@@ -106,7 +107,6 @@ function onChannelMsg(client, data, resp_func) {
   }
 }
 
-const regex_valid_username = /^[a-z][a-z0-9_]+$/u;
 const invalid_names = {
   constructor: 1,
   hasownproperty: 1,
@@ -116,6 +116,17 @@ const invalid_names = {
   tostring: 1,
   valueof: 1,
   admin: 1,
+  gm: 1,
+  mod: 1,
+  moderator: 1,
+  default: 1,
+  anonymous: 1,
+  public: 1,
+  clear: 1,
+  wipe: 1,
+  reset: 1,
+  password: 1,
+  user: 1,
 };
 function validUsername(user_id) {
   if (!user_id) {

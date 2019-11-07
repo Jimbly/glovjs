@@ -14,7 +14,7 @@ function stringUtf8Encode(str) {
   let c;
   let n;
   let utftext = [];
-  str = str.replace(/\r\n/gu, '\n');
+  str = str.replace(/\r\n/g, '\n');
   for (n = 0; n < str.length; ++n) {
     c = str.charCodeAt(n);
     if (c < 128) {

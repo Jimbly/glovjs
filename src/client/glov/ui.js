@@ -32,7 +32,7 @@ const { vec2, vec4, v4scale } = require('./vmath.js');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;
-let pad_codes;
+let PAD;
 
 const menu_fade_params_default = {
   blur: [0.125, 0.865],
@@ -182,6 +182,9 @@ let focused_key;
 let focused_key_prev1;
 let focused_key_prev2;
 
+let pad_focus_left;
+let pad_focus_right;
+
 export function loadUISprite(name, ws, hs, overrides, only_override) {
   let override = overrides && overrides[name];
   if (override === null) {
@@ -201,10 +204,18 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
   }
 }
 
-export function startup(_font, overrides) {
-  font = _font;
+export function startup(param) {
+  font = param.font;
+  let overrides = param.ui_sprites;
   KEYS = glov_input.KEYS;
-  pad_codes = glov_input.pad_codes;
+  PAD = glov_input.PAD;
+  if (param.pad_focus_dpad) {
+    pad_focus_left = PAD.LEFT;
+    pad_focus_right = PAD.RIGHT;
+  } else {
+    pad_focus_left = PAD.LEFT_BUMPER;
+    pad_focus_right = PAD.RIGHT_BUMPER;
+  }
 
   loadUISprite('button', [4, 5, 4], [13], overrides);
   sprites.button_regular = sprites.button;
@@ -223,8 +234,8 @@ export function startup(_font, overrides) {
   sprites.white = glov_sprites.create({ url: 'white' });
 
   button_keys = {
-    ok: { key: [], pad: [pad_codes.X] },
-    cancel: { key: [KEYS.ESC], pad: [pad_codes.B, pad_codes.Y] },
+    ok: { key: [], pad: [PAD.X] },
+    cancel: { key: [KEYS.ESC], pad: [PAD.B, PAD.Y] },
   };
   button_keys.yes = clone(button_keys.ok);
   button_keys.yes.key.push(KEYS.Y);
@@ -399,11 +410,11 @@ export function focusCheck(key) {
         focused = false;
       }
     }
-    if (glov_input.padButtonDownEdge(pad_codes.RIGHT_BUMPER)) {
+    if (glov_input.padButtonDownEdge(pad_focus_right)) {
       focusNext(key);
       focused = false;
     }
-    if (glov_input.padButtonDownEdge(pad_codes.LEFT_BUMPER)) {
+    if (glov_input.padButtonDownEdge(pad_focus_left)) {
       focusPrev(key);
     }
   }
@@ -506,7 +517,7 @@ export function buttonShared(param) {
   button_focused = focused;
   if (focused) {
     if (glov_input.keyDownEdge(KEYS.SPACE, key_opts) || glov_input.keyDownEdge(KEYS.RETURN, key_opts) ||
-      glov_input.padButtonDownEdge(pad_codes.A)
+      glov_input.padButtonDownEdge(PAD.A)
     ) {
       ret = true;
     }
@@ -628,13 +639,13 @@ export function print(style, x, y, z, text) {
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
-export function modalDialog(params) {
-  assert(!params.title || typeof params.title === 'string');
-  assert(!params.text || typeof params.text === 'string');
-  assert(typeof params.buttons === 'object');
-  assert(Object.keys(params.buttons).length);
+export function modalDialog(param) {
+  assert(!param.title || typeof param.title === 'string');
+  assert(!param.text || typeof param.text === 'string');
+  assert(typeof param.buttons === 'object');
+  assert(Object.keys(param.buttons).length);
 
-  modal_dialog = params;
+  modal_dialog = param;
 }
 
 export function modalDialogClear() {
@@ -674,23 +685,23 @@ function modalDialogRun() {
     y = param.y;
   }
 
-  let buttons = modal_dialog.buttons;
+  let { buttons, click_anywhere } = modal_dialog;
   let keys = Object.keys(buttons);
   x = x0 + modal_width - pad - eff_button_width - (pad + eff_button_width) * (keys.length - 1);
   for (let ii = 0; ii < keys.length; ++ii) {
     let key = keys[ii];
     let eff_button_keys = button_keys[key.toLowerCase()];
-    let pressed = false;
+    let pressed = 0;
     if (eff_button_keys) {
       for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed = pressed || glov_input.keyDownEdge(eff_button_keys.key[jj]);
+        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj]);
       }
       for (let jj = 0; jj < eff_button_keys.pad.length; ++jj) {
-        pressed = pressed || glov_input.padButtonDownEdge(eff_button_keys.pad[jj]);
+        pressed += glov_input.padButtonDownEdge(eff_button_keys.pad[jj]);
       }
     }
-    if (modal_dialog.click_anywhere && ii === 0 && glov_input.click()) {
-      pressed = true;
+    if (click_anywhere && ii === 0 && glov_input.click()) {
+      ++pressed;
     }
     if (pressed) {
       playUISound('button_click');
@@ -725,8 +736,8 @@ function modalDialogRun() {
   modal_stealing_focus = true;
 }
 
-export function createEditBox(params) {
-  return glov_edit_box.create(params);
+export function createEditBox(param) {
+  return glov_edit_box.create(param);
 }
 
 const color_slider_handle = vec4(1,1,1,1);
@@ -883,10 +894,10 @@ export function endFrame() {
   }
 }
 
-export function menuUp(params) {
+export function menuUp(param) {
   merge(menu_fade_params, menu_fade_params_default);
-  if (params) {
-    merge(menu_fade_params, params);
+  if (param) {
+    merge(menu_fade_params, param);
   }
   menu_up = true;
   modal_stealing_focus = true;
