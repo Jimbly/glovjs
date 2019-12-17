@@ -129,7 +129,8 @@ function babelBrfs(filename, opts) {
           [
             babel_static_fs, {
               // ensure static-fs files are discovered
-              onFile: this.emit.bind(this, 'file')
+              onFile: this.emit.bind(this, 'file'),
+              dynamic: false,
             }
           ]
         ],
