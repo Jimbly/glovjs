@@ -36,7 +36,7 @@ function findAll(str, re) {
   return ret;
 }
 
-let globals;
+export let globals;
 let defines;
 
 let error_fp;
