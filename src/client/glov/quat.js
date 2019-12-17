@@ -107,6 +107,40 @@ export function qFromYPR(out, yaw, pitch, roll) {
 //   v3set(ypr, y, p, r);
 // }
 
+export function qRotateX(out, a, rad) {
+  rad *= 0.5;
+
+  let ax = a[0];
+  let ay = a[1];
+  let az = a[2];
+  let aw = a[3];
+  let bx = sin(rad);
+  let bw = cos(rad);
+
+  out[0] = ax * bw + aw * bx;
+  out[1] = ay * bw + az * bx;
+  out[2] = az * bw - ay * bx;
+  out[3] = aw * bw - ax * bx;
+  return out;
+}
+
+export function qRotateY(out, a, rad) {
+  rad *= 0.5;
+
+  let ax = a[0];
+  let ay = a[1];
+  let az = a[2];
+  let aw = a[3];
+  let by = sin(rad);
+  let bw = cos(rad);
+
+  out[0] = ax * bw - az * by;
+  out[1] = ay * bw + aw * by;
+  out[2] = az * bw + ax * by;
+  out[3] = aw * bw - ay * by;
+  return out;
+}
+
 export function qRotateZ(out, a, rad) {
   rad *= 0.5;
 
