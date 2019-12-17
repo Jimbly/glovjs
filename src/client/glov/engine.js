@@ -34,7 +34,7 @@ const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
 const { defaults, ridx } = require('../../common/util.js');
-const { mat3, mat4, vec3, vec4, v3mulMat4, v3normalize, v4copy, v4set } = require('./vmath.js');
+const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4set } = require('./vmath.js');
 
 export let canvas;
 export let webgl2;
@@ -94,7 +94,7 @@ export const border_color = vec4(0, 0, 0, 1);
 export function setGlobalMatrices(_mat_view) {
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
-  v3normalize(light_dir_ws, light_dir_ws);
+  v3iNormalize(light_dir_ws);
   v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
 }
 

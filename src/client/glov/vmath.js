@@ -7,7 +7,7 @@
 exports.mat3 = require('gl-mat3/create');
 exports.mat4 = require('gl-mat4/create');
 
-const { abs, floor, round, sqrt } = Math;
+const { abs, max, min, floor, round, sqrt } = Math;
 
 export function vec1(v) {
   return new Float32Array([v]);
@@ -145,6 +145,13 @@ export function v3add(out, a, b) {
   return out;
 }
 
+export function v3iAdd(a, b) {
+  a[0] += b[0];
+  a[1] += b[1];
+  a[2] += b[2];
+  return a;
+}
+
 export function v3addScale(out, a, b, s) {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
@@ -213,6 +220,13 @@ export function v3div(out, a, b) {
   return out;
 }
 
+export function v3iFloor(a) {
+  a[0] = floor(a[0]);
+  a[1] = floor(a[1]);
+  a[2] = floor(a[2]);
+  return a;
+}
+
 export function v3floor(out, a) {
   out[0] = floor(a[0]);
   out[1] = floor(a[1]);
@@ -230,6 +244,20 @@ export function v3lerp(out, t, a, b) {
   out[1] = it * a[1] + t * b[1];
   out[2] = it * a[2] + t * b[2];
   return out;
+}
+
+export function v3iMax(a, b) {
+  a[0] = max(a[0], b[0]);
+  a[1] = max(a[1], b[1]);
+  a[2] = max(a[2], b[2]);
+  return a;
+}
+
+export function v3iMin(a, b) {
+  a[0] = min(a[0], b[0]);
+  a[1] = min(a[1], b[1]);
+  a[2] = min(a[2], b[2]);
+  return a;
 }
 
 export function v3mul(out, a, b) {
@@ -258,6 +286,17 @@ export function v3normalize(out, a) {
     out[2] = a[2] * len;
   }
   return out;
+}
+
+export function v3iNormalize(a) {
+  let len = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
+  if (len > 0) {
+    len = 1 / sqrt(len);
+    a[0] *= len;
+    a[1] *= len;
+    a[2] *= len;
+  }
+  return a;
 }
 
 // Treats `a` as vec3 input with w assumed to be 1
