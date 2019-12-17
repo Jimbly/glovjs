@@ -45,7 +45,6 @@ export let width;
 export let height;
 export let pixel_aspect = 1;
 export let antialias;
-let clear_bits;
 
 export let game_width;
 export let game_height;
@@ -332,6 +331,45 @@ function requestFrame() {
   }
 }
 
+let mat_projection_10;
+export let had_3d_this_frame;
+
+export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
+  mat4Perspective(mat_projection, use_fov_y, use_width/use_height, znear, zfar);
+  mat_projection_10 = mat_projection[10];
+  v4set(projection_inverse,
+    2 / (use_width * mat_projection[0]), // projection_matrix.m00),
+    2 / (use_height * mat_projection[5]), // projection_matrix.m11),
+    -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
+    -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
+  );
+}
+
+export function start3DRendering() {
+  had_3d_this_frame = true;
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.BLEND);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+
+  setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+
+  gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.CULL_FACE);
+}
+
+export function projectionZBias(dist, at_z) {
+  if (!dist) {
+    mat_projection[10] = mat_projection_10;
+    return;
+  }
+  //let e = 2 * ZFAR * ZNEAR / (ZFAR - ZNEAR) * (dist / (at_z * (at_z + dist)));
+  let e = 0.2 * (dist / (at_z * (at_z + dist)));
+  e = max(e, 2e-7);
+  mat_projection[10] = mat_projection_10 + e;
+}
+
 let hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
@@ -385,11 +423,14 @@ function tick(timestamp) {
     return;
   }
 
+  had_3d_this_frame = false;
   checkResize();
   width = canvas.width;
   height = canvas.height;
 
   if (any_3d) {
+    // setting the fov values for the frame even if we don't do 3D this frame, because something
+    // might need it before start3DRendering() (e.g. mouse click inverse projection)
     if (width > height) {
       fov_y = fov_min;
       let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
@@ -399,22 +440,6 @@ function tick(timestamp) {
       let rise = height/width * sin(fov_x / 2) / cos(fov_x / 2);
       fov_y = 2 * asin(rise / sqrt(rise * rise + 1));
     }
-    mat4Perspective(mat_projection, fov_y, width/height, ZNEAR, ZFAR);
-    v4set(projection_inverse,
-      2 / (width * mat_projection[0]), // projection_matrix.m00),
-      2 / (height * mat_projection[5]), // projection_matrix.m11),
-      -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
-      -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
-    );
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthMask(true);
-  } else {
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
-    gl.disable(gl.DEPTH_TEST);
-    gl.depthMask(false);
   }
   textures.bind(0, textures.textures.error);
 
@@ -436,12 +461,6 @@ function tick(timestamp) {
     // default font size of 16 when at height of game_height
     let font_size = min(256, max(2, floor(view_height/800 * 16)));
     document.getElementById('fullscreen').style['font-size'] = `${font_size}px`;
-  }
-
-  if (any_3d) {
-    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    gl.clear(clear_bits);
-    gl.enable(gl.CULL_FACE);
   }
 
   if (do_borders) {
@@ -466,13 +485,18 @@ function tick(timestamp) {
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
   glov_transition.render(dt);
 
-  if (any_3d) {
+  if (had_3d_this_frame) {
     gl.disable(gl.CULL_FACE);
   } else {
-    // delaying clear until later, app might change clear color
+    // delayed clear (and general GL init) until after app_state, app might change clear color
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    // TODO: for do_viewport_post_process, we need to enable gl.scissor to avoid clearing the whole screen!
     // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
-    gl.clear(clear_bits);
+    gl.clear(gl.COLOR_BUFFER_BIT);
   }
 
   sprites.draw();
@@ -662,13 +686,6 @@ export function startup(params) {
   input.startup(canvas, params);
   if (any_3d) {
     models.startup();
-  }
-
-  if (any_3d) {
-    // eslint-disable-next-line no-bitwise
-    clear_bits = gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT;
-  } else {
-    clear_bits = gl.COLOR_BUFFER_BIT;
   }
 
   /* eslint-disable global-require */
