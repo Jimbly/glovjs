@@ -15,6 +15,7 @@ const glov_font = require('./font.js');
 const font_info_palanquin32 = require('../img/font/palanquin32.json');
 const geom = require('./geom.js');
 const input = require('./input.js');
+const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
 const mat4Copy = require('gl-mat4/copy');
 const mat4Invert = require('gl-mat4/invert');
@@ -54,9 +55,12 @@ export let render_height;
 
 //eslint-disable-next-line no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
-let initial_webgl2_define = defines.WEBGL2;
+let initial_define_forcewebgl2 = defines.FORCEWEBGL2;
+let initial_define_nowebgl2 = defines.NOWEBGL2;
 function definesChanged() {
-  if (defines.WEBGL2 !== initial_webgl2_define) {
+  if (defines.FORCEWEBGL2 !== initial_define_forcewebgl2 ||
+    defines.NOWEBGL2 !== initial_define_nowebgl2
+  ) {
     document.location.reload();
   }
 }
@@ -568,9 +572,17 @@ export function startup(params) {
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
-  let context_names = ['webgl', 'experimental-webgl'];
-  if (defines.WEBGL2) {
-    context_names.splice(0, 0, 'webgl2');
+  let context_names = ['webgl2', 'webgl', 'experimental-webgl'];
+  let force_webgl1 = defines.NOWEBGL2;
+  if (DEBUG && !defines.FORCEWEBGL2) {
+    let rc = local_storage.getJSON('run_count', 0) + 1;
+    local_storage.setJSON('run_count', rc);
+    if (rc % 2) {
+      force_webgl1 = true;
+    }
+  }
+  if (force_webgl1) {
+    context_names.splice(0, 1);
   }
   let context_opts = [{ antialias, powerPreference }, { powerPreference }, {}];
   let good = false;

@@ -50,3 +50,7 @@ cmd_parse.register('d', function (str, resp_func) {
   engine.defines[str] = !engine.defines[str];
   resp_func(null, `D=${str} now ${engine.defines[str]?'SET':'unset'}`);
 });
+
+cmd_parse.register('renderer', function (str, resp_func) {
+  resp_func(null, `Renderer=WebGL${engine.webgl2?2:1}`);
+});
