@@ -79,6 +79,17 @@ export function bindArray(texs) {
   }
 }
 
+export function isArrayBound(texs) {
+  for (let ii = 0; ii < texs.length; ++ii) {
+    let tex = texs[ii];
+    let handle = tex.eff_handle;
+    if (bound_tex[ii] !== handle) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function Texture(params) {
   this.loaded = false;
   this.load_fail = false;
@@ -104,7 +115,7 @@ function Texture(params) {
 }
 
 Texture.prototype.updateGPUMem = function () {
-  let new_size = this.height * this.height * this.format.count;
+  let new_size = this.width * this.height * this.format.count;
   if (this.mipmaps) {
     new_size *= 1.5;
   }
@@ -328,8 +339,9 @@ Texture.prototype.copyTexImage = function (x, y, w, h) {
   assert(w && h);
   bindHandle(0, this.target, this.handle);
   gl.copyTexImage2D(this.target, 0, gl.RGB, x, y, w, h, 0);
-  this.width = w;
-  this.height = h;
+  this.src_width = this.width = w;
+  this.src_height = this.height = h;
+  this.updateGPUMem();
 };
 
 Texture.prototype.destroy = function () {
@@ -341,33 +353,36 @@ Texture.prototype.destroy = function () {
 };
 
 function create(params) {
-  return new Texture(params);
+  assert(params.name);
+  let texture = new Texture(params);
+  textures[params.name] = texture;
+  return texture;
 }
 
-export function createForCapture() {
+let last_temporary_id = 0;
+export function createForCapture(unique_name) {
+  let name = unique_name || `screen_temporary_tex_${++last_temporary_id}`;
+  assert(!textures[name]);
   let texture = create({
     filter_min: gl.NEAREST,
     filter_mag: gl.NEAREST,
     wrap_s: gl.CLAMP_TO_EDGE,
     wrap_t: gl.CLAMP_TO_EDGE,
-    format: gl.RGB8,
+    format: format.RGB8,
+    name,
   });
   texture.loaded = true;
   texture.eff_handle = texture.handle;
-  texture.name = 'screen_temporary_tex';
   return texture;
 }
 
 export function load(params) {
-  let key = params.name || params.url;
+  let key = params.name = params.name || params.url;
   assert(key);
   if (textures[key]) {
     return textures[key];
   }
-  let texture = create(params);
-  texture.name = key;
-  textures[key] = texture;
-  return texture;
+  return create(params);
 }
 
 export function cname(key) {

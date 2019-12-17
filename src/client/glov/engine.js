@@ -277,6 +277,7 @@ export function setViewport(xywh) {
   gl.viewport(xywh[0], xywh[1], xywh[2], xywh[3]);
 }
 
+let last_temp_idx = 0;
 export function getTemporaryTexture(w, h) {
   let key = w ? `${w}_${h}` : 'screen';
   let temp = temporary_textures[key];
@@ -284,11 +285,10 @@ export function getTemporaryTexture(w, h) {
     temp = temporary_textures[key] = { list: [], idx: 0 };
   }
   if (temp.idx >= temp.list.length) {
-    let tex = textures.createForCapture();
+    let tex = textures.createForCapture(`temp_${key}_${++last_temp_idx}`);
     temp.list.push(tex);
   }
   let tex = temp.list[temp.idx++];
-  tex.override_sampler = null; // in case the previous user set it
   return tex;
 }
 
