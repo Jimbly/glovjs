@@ -206,8 +206,16 @@ function Geom(_format, verts, idxs, mode) {
   }
 }
 
+Geom.prototype.updateSub = function (offset, verts) {
+  if (bound_array_buf !== this.vbo) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+    bound_array_buf = this.vbo;
+  }
+  gl.bufferSubData(gl.ARRAY_BUFFER, offset, verts);
+};
+
 Geom.prototype.update = function (verts, num_verts) {
-  assert.equal(this.orig_mode, QUADS);
+  assert.equal(this.ibo_owned, false);
   if (num_verts > this.vert_count) {
     if (bound_geom === this) {
       bound_geom = null;
@@ -231,9 +239,11 @@ Geom.prototype.update = function (verts, num_verts) {
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts.subarray(0, num_verts * this.elem_count));
     // gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
   }
-  let quad_count = num_verts / 4;
-  this.ibo = getQuadIndexBuf(quad_count);
-  this.ibo_size = quad_count * 6;
+  if (this.orig_mode === QUADS) {
+    let quad_count = num_verts / 4;
+    this.ibo = getQuadIndexBuf(quad_count);
+    this.ibo_size = quad_count * 6;
+  }
 };
 
 Geom.prototype.dispose = function () {
