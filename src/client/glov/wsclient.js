@@ -45,6 +45,18 @@ export function WSClient() {
   }
   path = path.replace(/^http/, 'ws');
   this.path = `${path}ws`;
+  if (path.match(/:\d+\//)) {
+    // has port, don't try anything fancy
+    this.path2 = this.path;
+  } else if (path.match(/^ws:/)) {
+    // no port, try wss:// if this fails
+    // Should fix Comcast injection issue
+    this.path2 = this.path.replace(/^ws:/, 'wss:');
+  } else {
+    // is wss:/, try to fall back to ws:/?
+    // Not sure this is a good idea
+    this.path2 = this.path.replace(/^wss:/, 'ws:');
+  }
 
   this.connect(false);
 
@@ -146,7 +158,7 @@ WSClient.prototype.retryConnection = function () {
 WSClient.prototype.connect = function (for_reconnect) {
   let client = this;
 
-  let path = `${client.path}?pver=${wscommon.PROTOCOL_VERSION}${
+  let path = `${(client.retry_count % 2) ? client.path2 : client.path}?pver=${wscommon.PROTOCOL_VERSION}${
     for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
   }`;
   let socket = new WebSocket(path);
