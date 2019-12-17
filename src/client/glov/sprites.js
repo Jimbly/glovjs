@@ -553,6 +553,7 @@ function Sprite(params) {
   if (params.ws) {
     this.uidata = buildRects(params.ws, params.hs);
   }
+  this.shader = params.shader || null;
 }
 
 // params:
@@ -566,7 +567,7 @@ Sprite.prototype.draw = function (params) {
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
   queuesprite(this, params.x, params.y, params.z, w, h, params.rot, uvs, params.color || this.color,
-    params.shader, params.shader_params, params.nozoom);
+    params.shader || this.shader, params.shader_params, params.nozoom);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
