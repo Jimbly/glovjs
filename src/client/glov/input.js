@@ -119,7 +119,19 @@ let touches = {}; // `m${button}` or touch_id -> TouchData
 export let touch_mode = local_storage.getJSON('touch_mode', false);
 export let pad_mode = local_storage.getJSON('pad_mode', false);
 
-function TouchData(pos, touch, button) {
+function eventTimestamp(event) {
+  if (event && event.timeStamp) {
+    // assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12));
+    // Must both be high res times, or both not!
+    if ((event.timeStamp < 1e12) !== (engine.hrtime < 1e12)) {
+      return engine.hrtime;
+    }
+    return event.timeStamp;
+  }
+  return engine.hrtime;
+}
+
+function TouchData(pos, touch, button, event) {
   this.delta = vec2();
   this.total = 0;
   this.cur_pos = pos.slice(0);
@@ -132,21 +144,16 @@ function TouchData(pos, touch, button) {
   this.up_edge = 0;
   this.down_edge = 0;
   this.state = DOWN;
+  this.down_time = 0;
+  this.origin_time = eventTimestamp(event);
 }
-TouchData.prototype.down = function (is_edge) {
+TouchData.prototype.down = function (event, is_edge) {
   if (is_edge) {
     this.down_edge++;
   }
   this.state = DOWN;
+  this.origin_time = eventTimestamp(event);
 };
-
-function eventTimestamp(event) {
-  if (event.timeStamp) {
-    assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12)); // Must both be high res times, or both not!
-    return event.timeStamp;
-  }
-  return engine.hrtime;
-}
 
 function KeyData() {
   this.down_edge = 0;
@@ -183,8 +190,9 @@ function onPointerLockEnter() {
   if (touch_data) {
     v2copy(touch_data.start_pos, mouse_pos);
     touch_data.state = DOWN;
+    touch_data.origin_time = engine.hrtime;
   } else {
-    touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK);
+    touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK, null);
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
@@ -386,9 +394,9 @@ function onMouseDown(event) {
   if (touches[touch_id]) {
     v2copy(touches[touch_id].start_pos, mouse_pos);
   } else {
-    touches[touch_id] = new TouchData(mouse_pos, false, button);
+    touches[touch_id] = new TouchData(mouse_pos, false, button, event);
   }
-  touches[touch_id].down(!no_click);
+  touches[touch_id].down(event, !no_click);
   if (!no_click) {
     in_event.handle('mousedown', event);
   }
@@ -407,6 +415,7 @@ function onMouseUp(event) {
         touch_data.up_edge++;
       }
       touch_data.state = UP;
+      touch_data.down_time += eventTimestamp(event) - touch_data.origin_time;
     }
     delete mouse_down[button];
   }
@@ -455,8 +464,8 @@ function onTouchChange(event) {
     let last_touch = touches[touch.identifier];
     v2set(touch_pos, touch.pageX, touch.pageY);
     if (!last_touch) {
-      last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0);
-      last_touch.down(true);
+      last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0, event);
+      last_touch.down(event, true);
       --old_count;
       in_event.handle('mousedown', touch);
     } else {
@@ -486,6 +495,7 @@ function onTouchChange(event) {
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         touch.up_edge++;
         touch.state = UP;
+        touch.down_time += eventTimestamp(event) - touch.origin_time;
         touch.release = true;
       }
     }
@@ -620,9 +630,9 @@ function updatePadState(gpd, ps, b, padcode) {
         setMouseToMid();
         v2copy(touches[touch_id].start_pos, mouse_pos);
       } else {
-        touches[touch_id] = new TouchData(mouse_pos, false, 0);
+        touches[touch_id] = new TouchData(mouse_pos, false, 0, null);
       }
-      touches[touch_id].down(true);
+      touches[touch_id].down(null, true);
     }
   } else if (!b && ps[padcode]) {
     ps[padcode] = UP_EDGE;
@@ -634,6 +644,7 @@ function updatePadState(gpd, ps, b, padcode) {
         v2copy(touch_data.cur_pos, mouse_pos);
         touch_data.up_edge++;
         touch_data.state = UP;
+        touch_data.down_time += engine.hrtime - touch_data.origin_time;
       }
     }
   }
@@ -730,8 +741,20 @@ export function tickInput() {
     let ks = key_state_new[code];
     if (ks.state === DOWN) {
       ks.down_time += hrtime - ks.origin_time;
+      if (!ks.down_time) { // happens on MacOS Safari
+        ks.down_time = 1;
+      }
       // assert(hrtime >= ks.origin_time); - should be true, barring weird bugs
       ks.origin_time = hrtime;
+    }
+  }
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state === DOWN) {
+      touch_data.down_time += hrtime - touch_data.origin_time;
+      // assert(hrtime >= touch_data.origin_time); - should be true, barring weird bugs
+      touch_data.origin_time = hrtime;
     }
   }
 
@@ -785,6 +808,7 @@ export function endFrame(skip_mouse) {
         touch_data.dispatched_drag_over = false;
         touch_data.up_edge = 0;
         touch_data.down_edge = 0;
+        touch_data.down_time = 0;
       }
     }
     mouse_wheel = 0;
@@ -912,7 +936,7 @@ export function keyDown(keycode) {
     return 0;
   }
   if (ks.state === DOWN) {
-    assert(ks.down_time);
+    assert(ks.down_time); // Will fire if we call keyDown() before tickInput()
   }
   return ks.down_time;
 }
@@ -1129,6 +1153,7 @@ export function drag(param) {
         touch: touch_data.touch,
         start_time: touch_data.start_time,
         is_down_edge,
+        down_time: touch_data.down_time,
       };
     }
   }

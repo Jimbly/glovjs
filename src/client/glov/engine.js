@@ -332,11 +332,13 @@ let hrnow = window.performance ? window.performance.now.bind(window.performance)
 
 let last_tick = 0;
 function tick(timestamp) {
-  if (timestamp < 1e12) { // high resolution timer
-    hrtime = timestamp;
-  } else { // probably integer milliseconds since epoch, or nothing
-    hrtime = hrnow();
-  }
+  // if (timestamp < 1e12) { // high resolution timer
+  //   this ends up being a value way back in time, relative to what hrnow() returns,
+  //   causing timing confusion, so ignore it, just call hrnow()
+  //   hrtime = timestamp;
+  // } else { // probably integer milliseconds since epoch, or nothing
+  hrtime = hrnow();
+  // }
   requestFrame();
   let now = round(hrtime); // Code assumes integer milliseconds
   if (!last_tick) {
