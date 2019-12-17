@@ -30,7 +30,7 @@ export function alphaDraw() {
 
   list.sort(cmpAlpha);
   for (let ii = 0; ii < list.length; ++ii) {
-    list[ii][1].drawAlpha();
+    list[ii][1].drawAlpha(list[ii][0]);
   }
   list = [];
 }
