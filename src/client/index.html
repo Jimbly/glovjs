@@ -17,16 +17,19 @@
   </head>
   <body>
     <div id="debug_overlay"><div id="debug" class="noglov"></div></div>
+    <canvas id="canvas" moz-opaque="true" tabindex="1">
+      Sorry, but your browser does not support WebGL or does not have it enabled.  Please check:<br/>
+      <a href="https://get.webgl.org/">get.webgl.org</a> or <a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" target="_blank">Getting a WebGL Implementation</a>
+    </canvas>
     <div id="content">
-      <canvas id="canvas" moz-opaque="true" tabindex="1">
-        Sorry, but your browser does not support WebGL or does not have it enabled.  Please check:<br/>
-        <a href="https://get.webgl.org/">get.webgl.org</a> or <a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" target="_blank">Getting a WebGL Implementation</a>
-      </canvas>
       <div id="nowebgl" class="screenwrap" style="visibility: hidden">
-        Sorry, but your browser does not support WebGL or does not have it enabled.  Please check:<br/>
-        <a href="https://get.webgl.org/">get.webgl.org</a> or <a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" target="_blank">Getting a WebGL Implementation</a>
+        <div style="padding: 20px">
+          Error initializing WebGL.<br/>
+          Try reloading the page.  If the problem persists, perhaps your browser does not support WebGL or does not have it enabled.  Please check:<br/>
+          <a href="https://get.webgl.org/">get.webgl.org</a> or <a href="http://www.khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" target="_blank">Getting a WebGL Implementation</a>
+        </div>
       </div>
-	  <div id="loading" class="screenwrap vflex">
+      <div id="loading" class="screenwrap vflex">
         <div class="flexcenter" style="flex:1; text-align: center;">
         </div>
         <div class="flexcenter" style="text-align: center; width:100%;">
