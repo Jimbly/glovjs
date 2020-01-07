@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const { cmd_parse } = require('./cmds.js');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
 const local_storage = require('./local_storage.js');
@@ -51,6 +52,23 @@ ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
   this.emit('channel_data', this.data);
   this.got_subscribe = true;
   this.emit('subscribe', this.data);
+
+  // Get command list upon first connect
+  let channel_type = this.channel_id.split('.')[0];
+  let cmd_list = this.subs.cmds_list_by_worker;
+  if (!cmd_list[channel_type]) {
+    cmd_list[channel_type] = {};
+    this.send('cmdparse', 'cmd_list', {}, function (err, resp) {
+      if (err) { // already unsubscribed?
+        console.error(`Error getting cmd_list for ${channel_type}`);
+        delete cmd_list[channel_type];
+      } else if (resp.found) {
+        cmd_list[channel_type] = resp;
+        cmd_parse.addServerCommands(resp.resp);
+      }
+    });
+  }
+
   resp_func();
 };
 
@@ -96,6 +114,7 @@ ClientChannelWorker.prototype.send = function (msg, data, opts, resp_func) {
     channel_id: this.channel_id,
     msg, data,
     broadcast: opts && opts.broadcast || undefined,
+    silent_error: opts && opts.silent_error,
   }, resp_func);
 };
 
@@ -110,6 +129,7 @@ function SubscriptionManager(client) {
   this.logging_in = false;
   this.logging_out = false;
   this.auto_create_user = false;
+  this.cmds_list_by_worker = {};
 
   this.first_connect = true;
   this.server_time = 0;
@@ -439,7 +459,7 @@ SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
     if (!channel_id) {
       return resp_func(last_error);
     }
-    return channel.send('cmdparse', command, {},
+    return channel.send('cmdparse', command, { silent_error: 1 },
       function (err, resp) {
         if (err || resp && resp.found) {
           return resp_func(err, resp ? resp.resp : null);

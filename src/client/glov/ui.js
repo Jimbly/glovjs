@@ -244,11 +244,11 @@ export function startup(param) {
 }
 
 let dynamic_text_elem;
-export function getElem(allow_modal) {
+export function getElem(allow_modal, last_elem) {
   if (modal_dialog && !allow_modal) {
     return null;
   }
-  if (dom_elems_issued >= dom_elems.length) {
+  if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
@@ -256,6 +256,15 @@ export function getElem(allow_modal) {
     }
     dynamic_text_elem.appendChild(elem);
     dom_elems.push(elem);
+    last_elem = elem;
+  }
+  if (dom_elems[dom_elems_issued] !== last_elem) {
+    for (let ii = dom_elems_issued + 1; ii < dom_elems.length; ++ii) {
+      if (dom_elems[ii] === last_elem) {
+        dom_elems[ii] = dom_elems[dom_elems_issued];
+        dom_elems[dom_elems_issued] = last_elem;
+      }
+    }
   }
   let elem = dom_elems[dom_elems_issued];
   dom_elems_issued++;

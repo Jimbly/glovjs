@@ -108,6 +108,14 @@ export class ChannelWorker {
     }
 
     if (this.maintain_client_list && is_client) {
+      if (this.getRoles) {
+        let roles = {};
+        if (src.admin) {
+          roles.admin = 1;
+        }
+        this.getRoles(src, roles);
+        ids.roles = roles;
+      }
       this.setChannelData(`public.clients.${src.id}.ids`, ids);
       if (user_id) {
         this.subscribeOther(`user.${user_id}`);
@@ -318,6 +326,12 @@ export class ChannelWorker {
 
   onCmdParse(source, data, resp_func) {
     this.cmd_parse_source = source;
+    if (this.getRoles) {
+      let client_id = source.id;
+      this.access = this.getChannelData(`public.clients.${client_id}.ids.roles`, {});
+    } else {
+      this.access = source; // for cmd_parse access checking rules
+    }
     this.cmd_parse.handle(this, data, (err, resp) => {
       if (err && this.cmd_parse.was_not_found) {
         return resp_func(null, { found: 0, err });

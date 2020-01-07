@@ -202,8 +202,9 @@ class ChannelServer {
     if (!ctor.prototype.cmd_parse) {
       let cmdparser = ctor.prototype.cmd_parse = cmd_parse.create();
       if (options.cmds) {
-        for (let cmd in options.cmds) {
-          cmdparser.register(cmd, options.cmds[cmd]);
+        assert(Array.isArray(options.cmds));
+        for (let ii = 0; ii < options.cmds.length; ++ii) {
+          cmdparser.register(options.cmds[ii]);
         }
       }
     }

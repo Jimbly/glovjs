@@ -27,11 +27,13 @@ settings.register({
     range: [0,1],
   },
   show_fps: {
+    label: 'Show FPS',
     default_value: 1,
     type: cmd_parse.TYPE_INT,
     range: [0,3],
   },
   fps_graph: {
+    label: 'FPS Graph',
     default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0,1],

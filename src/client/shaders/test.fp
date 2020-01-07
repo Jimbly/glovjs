@@ -1,4 +1,4 @@
-#pragma WebGL
+#pragma WebGL2
 precision mediump float;
 precision mediump int;
 

@@ -51,7 +51,7 @@ export function handleMessage(client, net_data) {
     if (resp_func && !resp_func.expecting_response) {
       resp_func = null;
     }
-    if (err) {
+    if (err && !(net_data.data && net_data.data.silent_error)) {
       (client.log ? client : console).log(`Error "${err}" sent to ${source} in response to ${
         net_data.msg} ${logdata(net_data.data)}`);
     }

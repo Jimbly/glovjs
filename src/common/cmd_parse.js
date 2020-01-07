@@ -21,12 +21,60 @@ export function defaultHandler(err, resp) {
   }
 }
 
+function checkAccess(access, list) {
+  if (list) {
+    for (let ii = 0; ii < list.length; ++ii) {
+      if (!access || !access[list[ii]]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function CmdParse(params) {
   this.cmds = {};
+  this.cmds_for_complete = this.cmds;
   this.was_not_found = false;
   this.storage = params && params.storage; // expects .setJSON(), .getJSON()
   this.default_handler = defaultHandler;
+  this.register({
+    cmd: 'cmd_list',
+    func: this.cmdList.bind(this),
+    access_show: ['hidden'],
+  });
 }
+CmdParse.prototype.cmdList = function (str, resp_func) {
+  if (!this.cmd_list) {
+    let list = this.cmd_list = {};
+    for (let cmd in this.cmds) {
+      let cmd_data = this.cmds[cmd];
+      let access = []; // combine for data compaction
+      if (cmd_data.access_show) {
+        access = access.concat(cmd_data.access_show);
+      }
+      if (cmd_data.access_run) {
+        access = access.concat(cmd_data.access_run);
+      }
+      if (access.indexOf('hidden') !== -1) {
+        continue;
+      }
+      let data = {
+        name: cmd_data.name,
+        help: cmd_data.help,
+      };
+      if (cmd_data.usage) {
+        data.usage = cmd_data.usage;
+      }
+      if (access.length) {
+        data.access_show = access;
+      }
+      list[cmd] = data;
+    }
+  }
+  resp_func(null, this.cmd_list);
+};
+
 CmdParse.prototype.setDefaultHandler = function (fn) {
   assert(this.default_handler === defaultHandler); // Should only set this once
   this.default_handler = fn;
@@ -40,17 +88,33 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
     return true;
   }
   let cmd = canonical(m[1]);
-  if (!this.cmds[cmd]) {
+  let cmd_data = this.cmds[cmd];
+  if (cmd_data && !checkAccess(self && self.access, cmd_data.access_run)) {
+    // this.was_not_found = true;
+    resp_func(`Access denied: "${m[1]}"`);
+    return false;
+  }
+  if (!cmd_data) {
     this.was_not_found = true;
     resp_func(`Unknown command: "${m[1]}"`);
     return false;
   }
-  this.cmds[cmd].call(self, m[2] || '', resp_func);
+  cmd_data.fn.call(self, m[2] || '', resp_func);
   return true;
 };
 
-CmdParse.prototype.register = function (cmd, func) {
-  this.cmds[canonical(cmd)] = func;
+CmdParse.prototype.register = function (param) {
+  assert.equal(typeof param, 'object');
+  let { cmd, func, help, usage, access_show, access_run } = param;
+  assert(cmd && func);
+  this.cmds[canonical(cmd)] = {
+    name: cmd,
+    fn: func,
+    help: help || '',
+    usage: usage || undefined,
+    access_show,
+    access_run,
+  };
 };
 
 CmdParse.prototype.registerValue = function (cmd, param) {
@@ -66,7 +130,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       param.set(init_value);
     }
   }
-  this.cmds[canonical(cmd)] = (str, resp_func) => {
+  let fn = (str, resp_func) => {
     function value() {
       resp_func(null, `${label} = ${param.get()}`);
     }
@@ -115,7 +179,66 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       return resp_func(null, `${label} udpated`);
     }
   };
+  this.register({
+    cmd,
+    func: fn,
+    help: param.help || ((param.get && param.set) ?
+      `Set or display "${label}" value` :
+      param.set ? `Set "${label}" value` : `Display "${label}" value`),
+    usage: param.usage || ((param.get ? `Display "${label}" value\n  Usage: /${cmd}\n` : '') +
+      (param.set ? `Set "${label}" value\n  Usage: /${cmd} NewValue` : '')),
+    access_show: param.access_show,
+    access_run: param.access_run,
+  });
 };
+
+function cmpCmd(a, b) {
+  if (a.cname < b.cname) {
+    return -1;
+  }
+  return 1;
+}
+
+// for auto-complete
+CmdParse.prototype.addServerCommands = function (new_cmds) {
+  let cmds = this.cmds_for_complete;
+  if (this.cmds_for_complete === this.cmds) {
+    cmds = this.cmds_for_complete = {};
+    for (let cname in this.cmds) {
+      cmds[cname] = this.cmds[cname];
+    }
+  }
+  for (let cname in new_cmds) {
+    if (!cmds[cname]) {
+      cmds[cname] = new_cmds[cname];
+    }
+  }
+};
+
+CmdParse.prototype.autoComplete = function (str, access) {
+  let list = [];
+  str = str.split(' ');
+  let first_tok = canonical(str[0]);
+  for (let cname in this.cmds_for_complete) {
+    if (str.length === 1 && cname.slice(0, first_tok.length) === first_tok ||
+      str.length > 1 && cname === first_tok
+    ) {
+      let cmd_data = this.cmds_for_complete[cname];
+      if (checkAccess(access, cmd_data.access_show) && checkAccess(access, cmd_data.access_run)) {
+        list.push({
+          cname,
+          cmd: cmd_data.name,
+          help: cmd_data.help,
+          usage: cmd_data.usage,
+        });
+      }
+    }
+  }
+  list.sort(cmpCmd);
+  return list; // .slice(0, 20); Maybe?
+};
+
+CmdParse.prototype.canonical = canonical;
 
 CmdParse.prototype.TYPE_INT = TYPE_INT;
 CmdParse.prototype.TYPE_FLOAT = TYPE_FLOAT;

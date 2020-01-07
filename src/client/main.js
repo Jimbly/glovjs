@@ -1,9 +1,10 @@
 /*eslint global-require:off*/
+const glov_local_storage = require('./glov/local_storage.js');
+glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring anything else that might load from this
 
 const glov_engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
-const glov_local_storage = require('./glov/local_storage.js');
 const glov_particles = require('./glov/particles.js');
 const glov_sprites = require('./glov/sprites.js');
 const glov_sprite_animation = require('./glov/sprite_animation.js');
@@ -14,7 +15,6 @@ const particle_data = require('./particle_data.js');
 
 const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
 
-glov_local_storage.storage_prefix = 'glovjs-playground';
 window.Z = window.Z || {};
 Z.BACKGROUND = 0;
 Z.SPRITES = 10;

@@ -22,7 +22,7 @@ export function register(defs) {
     exports[key] = def.default_value;
     cmd_parse.registerValue(key, {
       type: def.type,
-      label: titleCase(key.replace(/_/g, ' ')),
+      label: def.label || titleCase(key.replace(/_/g, ' ')),
       range: def.range,
       get: () => exports[key],
       set: (v) => (exports[key] = v),
@@ -38,6 +38,7 @@ register({
     range: [0,1],
   },
   max_fps: {
+    label: 'Max FPS',
     default_value: 0,
     type: cmd_parse.TYPE_FLOAT,
   },
