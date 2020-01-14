@@ -10,6 +10,7 @@ require('not_worker'); // This module cannot be required from a worker bundle
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const cmds = require('./cmds.js');
 const effects = require('./effects.js');
 const glov_font = require('./font.js');
 const font_info_palanquin32 = require('../img/font/palanquin32.json');
@@ -33,7 +34,7 @@ const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { defaults, ridx } = require('../../common/util.js');
+const { clamp, defaults, ridx } = require('../../common/util.js');
 const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4set } = require('./vmath.js');
 
 export let canvas;
@@ -105,6 +106,13 @@ export function setGameDims(w, h) {
   game_width = w;
   game_height = h;
 }
+
+let is_ios_safari = (function () {
+  let ua = window.navigator.userAgent;
+  let is_ios = ua.match(/iPad/i) || ua.match(/iPhone/i);
+  let webkit = ua.match(/WebKit/i);
+  return window.visualViewport && is_ios && webkit && !ua.match(/CriOS/i);
+}());
 
 function normalizeRow(m, idx) {
   let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];
@@ -251,22 +259,55 @@ function resetEffects() {
 
 let last_canvas_width;
 let last_canvas_height;
-function resizeCanvas() {
-  let css_to_real = window.devicePixelRatio || 1;
-  window.pixel_scale = css_to_real;
-  last_canvas_width = canvas.width = round(canvas.clientWidth * css_to_real) || 1;
-  last_canvas_height = canvas.height = round(canvas.clientHeight * css_to_real) || 1;
-
-  // For the next 10 frames, make sure font size is correct
-  need_repos = 10;
-}
-
+let last_body_height;
+let safearea_elem;
+let safearea_ignore_bottom = false;
 function checkResize() {
+  // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
+  //   shrinking the viewport without changing the window height
+  let vv = window.visualViewport || {};
   let css_to_real = window.devicePixelRatio || 1;
+  // let view_w = (vv.width || window.innerWidth);
+  let view_h = (vv.height || window.innerHeight);
+  if (view_h !== last_body_height) {
+    // set this *before* getting canvas and safearea_elem dims below
+    last_body_height = view_h;
+    document.body.style.height = `${view_h}px`;
+  }
   let new_width = round(canvas.clientWidth * css_to_real) || 1;
   let new_height = round(canvas.clientHeight * css_to_real) || 1;
+
+  if (cmds.safearea[0] === -1 && safearea_elem && safearea_elem.offsetWidth && safearea_elem.offsetHeight) {
+    if (camera2d.setSafeAreaPadding(
+      safearea_elem.offsetLeft * css_to_real,
+      new_width - (safearea_elem.offsetWidth + safearea_elem.offsetLeft) * css_to_real,
+      safearea_elem.offsetTop * css_to_real,
+      // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
+      //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
+      safearea_ignore_bottom ? 0 : new_height - (safearea_elem.offsetHeight + safearea_elem.offsetTop) * css_to_real
+    )) {
+      need_repos = max(need_repos, 1);
+    }
+  } else {
+    if (camera2d.setSafeAreaPadding(
+      new_width * clamp(cmds.safearea[0], 0, 25)/100,
+      new_width * clamp(cmds.safearea[1], 0, 25)/100,
+      new_height * clamp(cmds.safearea[2], 0, 25)/100,
+      new_height * clamp(cmds.safearea[3], 0, 25)/100)
+    ) {
+      need_repos = max(need_repos, 1);
+    }
+  }
+
   if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
-    resizeCanvas();
+    window.pixel_scale = css_to_real; // for debug
+    last_canvas_width = canvas.width = new_width || 1;
+    last_canvas_height = canvas.height = new_height || 1;
+    // For the next 10 frames, make sure font size is correct
+    need_repos = 10;
+  }
+  if (is_ios_safari) {
+    window.scroll(0,0);
   }
 }
 
@@ -468,10 +509,10 @@ function tick(timestamp) {
 
   if (do_borders) {
     // Borders
-    glov_ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), 0, Z.BORDERS, border_color);
-    glov_ui.drawRect(camera2d.x0(), game_height, camera2d.x1(), camera2d.y1(), Z.BORDERS, border_color);
-    glov_ui.drawRect(camera2d.x0(), 0, 0, game_height, Z.BORDERS, border_color);
-    glov_ui.drawRect(game_width, 0, camera2d.x1(), game_height, Z.BORDERS, border_color);
+    glov_ui.drawRect(camera2d.x0Real(), camera2d.y0Real(), camera2d.x1Real(), 0, Z.BORDERS, border_color);
+    glov_ui.drawRect(camera2d.x0Real(), game_height, camera2d.x1Real(), camera2d.y1Real(), Z.BORDERS, border_color);
+    glov_ui.drawRect(camera2d.x0Real(), 0, 0, game_height, Z.BORDERS, border_color);
+    glov_ui.drawRect(game_width, 0, camera2d.x1Real(), game_height, Z.BORDERS, border_color);
   }
 
   if (settings.show_metrics) {
@@ -510,7 +551,7 @@ function tick(timestamp) {
     let source = captureFramebuffer();
     let clear_color = [0, 0, 0, 1];
     let final_viewport = [
-      camera2d.render_offset_x, camera2d.render_offset_y,
+      camera2d.render_offset_x, camera2d.render_offset_y_bottom,
       camera2d.render_viewport_w, camera2d.render_viewport_h
     ];
     if (do_viewport_postprocess) {
@@ -587,14 +628,17 @@ export function startup(params) {
   window.assert = assert;
 
   canvas = document.getElementById('canvas');
+  safearea_elem = document.getElementById('safearea');
 
   if (params.error_report !== false) {
     window.glov_error_report = glovErrorReport;
   }
 
+  safearea_ignore_bottom = params.safearea_ignore_bottom || false;
+
   // resize the canvas to fill browser window dynamically
-  window.addEventListener('resize', resizeCanvas, false);
-  resizeCanvas();
+  window.addEventListener('resize', checkResize, false);
+  checkResize();
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;

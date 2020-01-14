@@ -27,6 +27,8 @@ export function register(defs) {
       get: () => exports[key],
       set: (v) => (exports[key] = v),
       store: true,
+      help: def.help,
+      usage: def.usage,
     });
   });
 }

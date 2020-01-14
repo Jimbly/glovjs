@@ -1,12 +1,14 @@
 html, body {
   background-color: black;
   color: white;
+  border: 0;
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
   overflow: hidden;
+  position: absolute;
 }
 
 a {
@@ -29,6 +31,24 @@ a:visited {
   overflow: hidden;
   width: 100%;
   height: 100%;
+  position: absolute;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+}
+
+#safearea {
+  display: block;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  left: env(safe-area-inset-left);
+  right: env(safe-area-inset-right);
+  top: env(safe-area-inset-top);
+  bottom: env(safe-area-inset-bottom);
+  position: absolute;
+  pointer-events: none;
 }
 
 canvas {

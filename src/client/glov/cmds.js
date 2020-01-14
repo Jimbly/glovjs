@@ -92,3 +92,33 @@ cmd_parse.register({
     resp_func(null, list.map(cmdDesc).join('\n'));
   }
 });
+
+export let safearea = [-1,-1,-1,-1];
+cmd_parse.registerValue('safe_area', {
+  label: 'Safe Area',
+  type: cmd_parse.TYPE_STRING,
+  usage: 'Safe Area value: Use -1 for auto based on browser environment,\n' +
+    'or 0-25 for percentage of screen size\n' +
+    '  Usage: /safe_area [value]\n' +
+    '  Usage: /safe_area horizontal,vertical\n' +
+    '  Usage: /safe_area left,right,top,bottom',
+  default_value: '-1',
+  get: () => safearea.join(','),
+  set: (v) => {
+    v = String(v);
+    let keys = v.split(',');
+    if (v && keys.length === 1) {
+      safearea[0] = safearea[1] = safearea[2] = safearea[3] = Number(v);
+    } else if (keys.length === 2) {
+      safearea[0] = safearea[1] = Number(keys[0]);
+      safearea[2] = safearea[3] = Number(keys[1]);
+    } else if (keys.length === 4) {
+      for (let ii = 0; ii < 4; ++ii) {
+        safearea[ii] = Number(keys[ii]);
+      }
+    } else {
+      // error, ignore?
+    }
+  },
+  store: true,
+});

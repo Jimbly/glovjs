@@ -863,12 +863,12 @@ export function tickUI(dt) {
     } else {
       // Or, just darken
       sprites.white.draw({
-        x: camera2d.x0(),
-        y: camera2d.y0(),
+        x: camera2d.x0Real(),
+        y: camera2d.y0Real(),
         z: params.z - 2,
         color: params.fallback_darken,
-        w: camera2d.x1() - camera2d.x0(),
-        h: camera2d.y1() - camera2d.y0(),
+        w: camera2d.wReal(),
+        h: camera2d.hReal(),
       });
     }
   } else {

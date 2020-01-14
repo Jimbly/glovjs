@@ -6,7 +6,21 @@ const engine = require('./engine.js');
 
 const { round } = Math;
 
-export const data = new Float32Array(9); // x0, y0, x1, y1, x_scale, y_scale, css_to_real
+const safearea_pad = new Float32Array(4); // left, right, top, bottom
+// 0: x0_real
+// 1: y0_real
+// 2: x1_real
+// 3: y1_real
+// 4: x_scale
+// 5: y_scale
+// 6: css_to_real
+// 7: inverse viewport x_scale
+// 8: inverse viewport y_scale
+// 9: x0
+// 10: y0
+// 11: x1
+// 12: y1
+export const data = new Float32Array(13);
 
 let screen_width;
 let screen_height;
@@ -16,7 +30,8 @@ let render_height;
 export let render_viewport_w;
 export let render_viewport_h;
 export let render_offset_x;
-export let render_offset_y;
+let render_offset_y_top;
+export let render_offset_y_bottom;
 
 function reapply() {
   if (render_width) {
@@ -38,12 +53,48 @@ export function virtualToCanvas(dst, src) {
 
 // Sets the 2D "camera" used to translate sprite positions to screen space.  Affects sprites queued
 //  after this call
-export function set(x0, y0, x1, y1) {
-  data[0] = x0;
-  data[1] = y0;
-  data[2] = x1;
-  data[3] = y1;
+export function set(x0, y0, x1, y1, ignore_safe_area) {
+  if (ignore_safe_area || render_width) {
+    data[9] = data[0] = x0;
+    data[10] = data[1] = y0;
+    data[11] = data[2] = x1;
+    data[12] = data[3] = y1;
+  } else {
+    data[9] = x0;
+    data[10] = y0;
+    data[11] = x1;
+    data[12] = y1;
+    let wscale = (x1 - x0) / (screen_width - safearea_pad[0] - safearea_pad[1]);
+    let hscale = (y1 - y0) / (screen_height - safearea_pad[2] - safearea_pad[3]);
+    data[0] = x0 - safearea_pad[0] * wscale;
+    data[1] = y0 - safearea_pad[2] * hscale;
+    data[2] = x1 + safearea_pad[1] * wscale;
+    data[3] = y1 + safearea_pad[3] * hscale;
+  }
+
   reapply();
+}
+
+export function setSafeAreaPadding(left, right, top, bottom) {
+  let ret = false;
+  if (safearea_pad[0] !== round(left)) {
+    safearea_pad[0] = round(left);
+    ret = true;
+  }
+  if (safearea_pad[1] !== round(right)) {
+    safearea_pad[1] = round(right);
+    ret = true;
+  }
+  if (safearea_pad[2] !== round(top)) {
+    safearea_pad[2] = round(top);
+    ret = true;
+  }
+  if (safearea_pad[3] !== round(bottom)) {
+    safearea_pad[3] = round(bottom);
+    ret = true;
+  }
+  // Called while updating screen width/height, reapply() should get called later
+  return ret;
 }
 
 const stack = [];
@@ -52,11 +103,16 @@ export function push() {
 }
 export function pop() {
   let old = stack.pop();
-  set(old[0], old[1], old[2], old[3]);
+  set(old[0], old[1], old[2], old[3], true);
 }
 
 export function domToCanvasRatio() {
   return data[6];
+}
+
+export function screenAspect() {
+  return (screen_width - safearea_pad[0] - safearea_pad[1]) /
+    (screen_height - safearea_pad[2] - safearea_pad[3]);
 }
 
 // Drawing area 0,0-w,h
@@ -64,20 +120,20 @@ export function domToCanvasRatio() {
 // This may create a padding or margin on either top and bottom or sides of the screen
 // User users constant values in this range for consistent UI on all devices
 export function setAspectFixed(w, h) {
-  let pa = engine.render_width ? 1 : engine.pixel_aspect;
+  let pa = render_width ? 1 : engine.pixel_aspect;
   let inv_aspect = h / pa / w;
   let inv_desired_aspect;
   if (render_width) {
     inv_desired_aspect = render_height / render_width;
   } else {
-    inv_desired_aspect = screen_height / screen_width;
+    inv_desired_aspect = 1 / screenAspect();
   }
   if (inv_aspect > inv_desired_aspect) {
     let margin = (h / pa / inv_desired_aspect - w) / 2;
-    set(-margin, 0, w + margin, h);
+    set(-margin, 0, w + margin, h, false);
   } else {
     let margin = (w * pa * inv_desired_aspect - h) / 2;
-    set(0, -margin, w, h + margin);
+    set(0, -margin, w, h + margin, false);
   }
 }
 
@@ -88,20 +144,20 @@ export function setAspectFixed(w, h) {
 // Requires users to use camera2d.w()/ and camera2d.h() to determine reasonable
 //   UI positioning
 export function setAspectFixed2(w, h) {
-  let pa = engine.render_width ? 1 : engine.pixel_aspect;
+  let pa = render_width ? 1 : engine.pixel_aspect;
   let inv_aspect = h / pa / w;
   let inv_desired_aspect;
   if (render_width) {
     inv_desired_aspect = render_height / render_width;
   } else {
-    inv_desired_aspect = screen_height / screen_width;
+    inv_desired_aspect = 1 / screenAspect();
   }
   if (inv_aspect > inv_desired_aspect) {
     let margin = (h / pa / inv_desired_aspect - w);
-    set(0, 0, w + margin, h);
+    set(0, 0, w + margin, h, false);
   } else {
     let margin = (w * pa * inv_desired_aspect - h);
-    set(0, 0, w, h + margin);
+    set(0, 0, w, h + margin, false);
   }
 }
 
@@ -111,30 +167,48 @@ export function zoom(x, y, factor) {
     x - (x - data[0]) * inv_factor,
     y - (y - data[1]) * inv_factor,
     x + (data[2] - x) * inv_factor,
-    y + (data[3] - y) * inv_factor);
+    y + (data[3] - y) * inv_factor, true);
 }
 
 export function setNormalized() {
-  set(0, 0, 1, 1);
+  set(0, 0, 1, 1, true);
 }
 
-export function x0() {
+export function x0Real() {
   return data[0];
 }
-export function y0() {
+export function y0Real() {
   return data[1];
 }
-export function x1() {
+export function x1Real() {
   return data[2];
 }
-export function y1() {
+export function y1Real() {
   return data[3];
 }
-export function w() {
+export function wReal() {
   return data[2] - data[0];
 }
-export function h() {
+export function hReal() {
   return data[3] - data[1];
+}
+export function x0() {
+  return data[9];
+}
+export function y0() {
+  return data[10];
+}
+export function x1() {
+  return data[11];
+}
+export function y1() {
+  return data[12];
+}
+export function w() {
+  return data[11] - data[9];
+}
+export function h() {
+  return data[12] - data[10];
 }
 export function xScale() {
   return data[4];
@@ -147,7 +221,7 @@ export function htmlPos(x, y) {
   if (render_width) {
     return [
       100 * (((x - data[0]) / data[7] + render_offset_x) / screen_width),
-      100 * (((y - data[1]) / data[8] + render_offset_y) / screen_height),
+      100 * (((y - data[1]) / data[8] + render_offset_y_top) / screen_height),
     ];
   } else {
     return [
@@ -170,7 +244,7 @@ export function htmlSize(w, h) {
 export function domToVirtual(dst, src) {
   if (render_width) {
     dst[0] = (src[0] * data[6] - render_offset_x) * data[7] + data[0];
-    dst[1] = (src[1] * data[6] - render_offset_y) * data[8] + data[1];
+    dst[1] = (src[1] * data[6] - render_offset_y_top) * data[8] + data[1];
   } else {
     dst[0] = src[0] * data[6] / data[4] + data[0];
     dst[1] = src[1] * data[6] / data[5] + data[1];
@@ -191,7 +265,7 @@ export function domDeltaToVirtual(dst, src) {
 export function virtualToDom(dst, src) {
   if (render_width) {
     dst[0] = (render_offset_x + (src[0] - data[0]) / data[7]) / data[6];
-    dst[1] = (render_offset_y + (src[1] - data[1]) / data[8]) / data[6];
+    dst[1] = (render_offset_y_top + (src[1] - data[1]) / data[8]) / data[6];
   } else {
     dst[0] = (src[0] - data[0]) * data[4] / data[6];
     dst[1] = (src[1] - data[1]) * data[5] / data[6];
@@ -203,7 +277,7 @@ export function virtualToDomPosParam(dst, src) {
   if (render_width) {
     dst.x = (render_offset_x + (src.x - data[0]) / data[7]) / data[6];
     dst.w = src.w / data[7] / data[6];
-    dst.y = (render_offset_y + (src.y - data[1]) / data[8]) / data[6];
+    dst.y = (render_offset_y_top + (src.y - data[1]) / data[8]) / data[6];
     dst.h = src.h / data[8] / data[6];
   } else {
     dst.x = (src.x - data[0]) * data[4] / data[6];
@@ -224,28 +298,33 @@ export function tickCamera2D() {
     // Find an offset so this rendered viewport is centered while preserving aspect ratio, just like setAspectFixed
     let pa = engine.pixel_aspect;
     let inv_aspect = render_height / pa / render_width;
-    let inv_desired_aspect = screen_height / screen_width;
+    let eff_screen_width = (screen_width - safearea_pad[0] - safearea_pad[1]);
+    let eff_screen_height = (screen_height - safearea_pad[2] - safearea_pad[3]);
+    let inv_desired_aspect = eff_screen_height / eff_screen_width;
     if (inv_aspect > inv_desired_aspect) {
       let margin = (render_height / inv_desired_aspect - render_width * pa) / 2 *
-        screen_height / render_height;
-      render_offset_x = round(margin);
-      render_offset_y = 0;
-      render_viewport_w = round(screen_width - margin * 2);
-      render_viewport_h = screen_height;
+        eff_screen_height / render_height;
+      render_offset_x = safearea_pad[0] + round(margin);
+      render_offset_y_top = safearea_pad[2];
+      render_offset_y_bottom = safearea_pad[3];
+      render_viewport_w = round(eff_screen_width - margin * 2);
+      render_viewport_h = eff_screen_height;
     } else {
       let margin = (render_width * inv_desired_aspect - render_height / pa) / 2 *
-        screen_width / render_width;
-      render_offset_x = 0;
-      render_offset_y = round(margin);
-      render_viewport_w = screen_width;
-      render_viewport_h = round(screen_height - margin * 2);
+        eff_screen_width / render_width;
+      render_offset_x = safearea_pad[0];
+      render_offset_y_top = safearea_pad[2] + round(margin);
+      render_offset_y_bottom = safearea_pad[3] + round(margin);
+      render_viewport_w = eff_screen_width;
+      render_viewport_h = round(eff_screen_height - margin * 2);
     }
     viewport[2] = render_width;
     viewport[3] = render_height;
   } else {
     render_width = render_height = 0;
     render_offset_x = 0;
-    render_offset_y = 0;
+    render_offset_y_top = 0;
+    render_offset_y_bottom = 0;
   }
 
   reapply();

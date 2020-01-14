@@ -593,6 +593,9 @@ export function startup(_canvas, params) {
   canvas.addEventListener('touchmove', onTouchChange, passive_param);
   canvas.addEventListener('touchend', onTouchChange, passive_param);
   canvas.addEventListener('touchcancel', onTouchChange, passive_param);
+
+  // For iOS, this is needed in test_fullscreen, but not here, for some reason
+  //window.addEventListener('gesturestart', ignored, false);
 }
 
 
@@ -852,10 +855,10 @@ export function mouseWheel() {
 function mousePosParam(param) {
   param = param || {};
   return {
-    x: param.x === undefined ? camera2d.x0() : param.x,
-    y: param.y === undefined ? camera2d.y0() : param.y,
-    w: param.w === undefined ? camera2d.w() : param.w,
-    h: param.h === undefined ? camera2d.h() : param.h,
+    x: param.x === undefined ? camera2d.x0Real() : param.x,
+    y: param.y === undefined ? camera2d.y0Real() : param.y,
+    w: param.w === undefined ? camera2d.wReal() : param.w,
+    h: param.h === undefined ? camera2d.hReal() : param.h,
     button: param.button === undefined ? ANY : param.button,
   };
 }

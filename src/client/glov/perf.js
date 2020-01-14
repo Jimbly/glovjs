@@ -14,7 +14,6 @@ const { vec4 } = require('./vmath.js');
 let metrics = [];
 
 const METRIC_PAD = 2;
-const METRIC_VALUE_WIDTH = 42;
 
 let bg_default = vec4(0,0,0,0.5);
 let bg_mouse_over = vec4(0,0,0,0.75);
@@ -60,10 +59,11 @@ export function addMetric(metric) {
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
-  let x = camera2d.x1() - METRIC_VALUE_WIDTH - pad;
+  let METRIC_VALUE_WIDTH = ui.font_height * 2.5;
+  let x = camera2d.x1Real() - METRIC_VALUE_WIDTH - pad;
   let y0 = y;
   y += pad;
-  let line_height = ui.font_height * 0.75;
+  let line_height = ui.font_height;
   let max_label_w = 0;
   let max_labels = settings[metric.show_stat];
   for (let label in metric.labels) {
@@ -111,12 +111,13 @@ function showMetric(y, metric) {
 }
 
 function showMetricGraph(y, metric) {
-  const LINE_WIDTH = 3;
-  const LINE_PAD = 1;
-  const LINE_HEIGHT = 128;
+  const small = engine.game_height < 300;
+  const LINE_WIDTH = small ? 1 : 3;
+  const LINE_PAD = small ? 0 : 1;
+  const LINE_HEIGHT = small ? 64 : 128;
   const NUM_LINES = metric.history_size - 1;
   let w = (LINE_WIDTH + LINE_PAD) * NUM_LINES;
-  let x = camera2d.x1() - w;
+  let x = camera2d.x1Real() - w;
   let h = LINE_HEIGHT + LINE_PAD * 2;
   let z = Z.FPSMETER;
   ui.drawRect(x, y - h, x + w, y, z++, bg_default);
@@ -161,8 +162,8 @@ function showMetricGraph(y, metric) {
 
 export function draw() {
   camera2d.setAspectFixed(engine.game_width, engine.game_height);
-  let y = camera2d.y0();
-  let y_graph = camera2d.y1();
+  let y = camera2d.y0Real();
+  let y_graph = camera2d.y1Real();
   for (let ii = 0; ii < metrics.length; ++ii) {
     let metric = metrics[ii];
     if (settings[metric.show_stat]) {

@@ -260,7 +260,11 @@ export function main() {
       } else {
         flagSet('pixely', 'on');
       }
-      document.location = String(document.location);
+      if (document.location.reload) {
+        document.location.reload();
+      } else {
+        document.location = String(document.location);
+      }
     }
     y += button_spacing;
 
