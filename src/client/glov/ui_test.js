@@ -164,7 +164,7 @@ export function runFontTest(x, y) {
   let font_size = glov_ui.font_height * 2;
   font.drawSized(null, x, y, z, font_size, `Default ${font_size} ${random().toFixed(7)}`);
   y += font_size;
-  font.drawSized(null, x, y, z, font_size / 2, `Default ${font_size / 2} Lorem ipsum dolor sit amet`);
+  font.drawSized(null, x, y, z, font_size / 2, `Default ${font_size / 2} Lorem ipsum dolor sit amet <[A|B]>`);
   y += ceil(font_size / 2);
   font.drawSized(null, x, y, z, font_size / 4,
     `Default ${font_size / 4} The quick brown fox jumped over the lazy dog rutabaga Alfalfa`);
