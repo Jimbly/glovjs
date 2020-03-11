@@ -10,8 +10,9 @@
   urlhash.register({
     key: 'pos',
     // type: TYPE_STRING,
-    change: (newvalue) => {}
-    def: '1,2'
+    change: (newvalue) => {},
+    def: '1,2',
+    hides: { otherfield: true },
   });
   urlhash.set('pos', '3,4');
   urlhash.get('pos')
@@ -42,7 +43,10 @@ function getValue(opts) {
   }
 }
 
+let last_history_str = null; // always re-set it on the first update
+
 function onPopState() {
+  last_history_str = String(document.location.hash).slice(1);
   // Update all values
   let dirty = {};
   for (let key in params) {
@@ -80,7 +84,19 @@ function onPopState() {
 
 function toString() {
   let values = [];
+  let hidden = {};
   for (let key in params) {
+    let opts = params[key];
+    if (opts.hides && opts.value) {
+      for (let otherkey in opts.hides) {
+        hidden[otherkey] = 1;
+      }
+    }
+  }
+  for (let key in params) {
+    if (hidden[key]) {
+      continue;
+    }
     let opts = params[key];
     if (opts.type === TYPE_SET) {
       for (let v in opts.value) {
@@ -95,7 +111,6 @@ function toString() {
   return values.join('&');
 }
 
-let last_history_str = null; // always re-set it on the first update
 let last_history_set_time = 0;
 let scheduled = false;
 // const URL_BASE = document.location.href.match(/^[^#]+/)[0];
@@ -163,12 +178,19 @@ export function register(opts) {
   return ret;
 }
 
-export function set(key, value) {
+export function set(key, value, value2) {
   let opts = params[key];
   assert(opts);
-  if (opts.value !== value) {
-    opts.value = value;
-    updateHistory();
+  if (opts.type === TYPE_SET) {
+    if (Boolean(opts.value[value]) !== Boolean(value2)) {
+      opts.value[value] = value2 ? 1 : 0;
+      updateHistory();
+    }
+  } else {
+    if (opts.value !== value) {
+      opts.value = value;
+      updateHistory();
+    }
   }
 }
 
