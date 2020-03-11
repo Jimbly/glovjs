@@ -346,6 +346,13 @@ export function v3sub(out, a, b) {
   return out;
 }
 
+export function v3iSub(a, b) {
+  a[0] -= b[0];
+  a[1] -= b[1];
+  a[2] -= b[2];
+  return a;
+}
+
 export function v3zero(out) {
   out[0] = out[1] = out[2] = 0;
   return out;
@@ -394,6 +401,10 @@ export function v4mulAdd(out, a, b, c) {
   out[2] = a[2] * b[2] + c[2];
   out[3] = a[3] * b[3] + c[3];
   return out;
+}
+
+export function v4same(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
 }
 
 export function v4scale(out, a, s) {
