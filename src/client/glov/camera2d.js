@@ -76,25 +76,15 @@ export function set(x0, y0, x1, y1, ignore_safe_area) {
 }
 
 export function setSafeAreaPadding(left, right, top, bottom) {
-  let ret = false;
-  if (safearea_pad[0] !== round(left)) {
-    safearea_pad[0] = round(left);
-    ret = true;
-  }
-  if (safearea_pad[1] !== round(right)) {
-    safearea_pad[1] = round(right);
-    ret = true;
-  }
-  if (safearea_pad[2] !== round(top)) {
-    safearea_pad[2] = round(top);
-    ret = true;
-  }
-  if (safearea_pad[3] !== round(bottom)) {
-    safearea_pad[3] = round(bottom);
-    ret = true;
-  }
+  safearea_pad[0] = round(left);
+  safearea_pad[1] = round(right);
+  safearea_pad[2] = round(top);
+  safearea_pad[3] = round(bottom);
   // Called while updating screen width/height, reapply() should get called later
-  return ret;
+}
+
+export function safeAreaPadding() {
+  return safearea_pad;
 }
 
 const stack = [];

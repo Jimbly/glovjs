@@ -34,8 +34,8 @@ const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { clamp, defaults, ridx } = require('../../common/util.js');
-const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4set } = require('./vmath.js');
+const { clamp, defaults, nearSame, ridx } = require('../../common/util.js');
+const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set } = require('./vmath.js');
 
 export let canvas;
 export let webgl2;
@@ -111,7 +111,7 @@ let is_ios_safari = (function () {
   let ua = window.navigator.userAgent;
   let is_ios = ua.match(/iPad/i) || ua.match(/iPhone/i);
   let webkit = ua.match(/WebKit/i);
-  return window.visualViewport && is_ios && webkit && !ua.match(/CriOS/i);
+  return is_ios && webkit && !ua.match(/CriOS/i);
 }());
 
 function normalizeRow(m, idx) {
@@ -257,17 +257,62 @@ function resetEffects() {
   }
 }
 
+const SAFARI_FULLSCREEN_ASPECT = (function () {
+  let screen = window.screen;
+  if (!is_ios_safari || !screen) {
+    return 0;
+  }
+  const SAFARI_DIMS = { // wxh : [fullscreen aspect]
+    // iPhone XR
+    // iPhone 11 Pro Max
+    // iPhone XS Max
+    // iPhone 11
+    '896,414': 896/414,
+    // iPhone 11 Pro
+    // iPhone X (probably)
+    '812,375': 812/375,
+    // iPhone 8 Plus
+    '736,414': 736/414,
+    // iPhone 6s+
+    // iPhone 6+
+    '716,414': 736/414, // (screen.availWidth reports 20 less)
+    // iPhone 8
+    // iPhone 7 (10.1)
+    // iPhone 7 (11.4)
+    '667,375': 667/375,
+    // iPhone 6s
+    // iPhone 6
+    '647,375': 667/375, // (screen.availWidth reports 20 less)
+    // iPhone 5s
+    '548,320': 568/320, // (screen.availWidth reports 20 less)
+  };
+  let key = `${max(screen.availWidth, screen.availHeight)},${min(screen.availWidth, screen.availHeight)}`;
+  return SAFARI_DIMS[key] || 0;
+}());
+function safariTopSafeArea(view_w, view_h) {
+  // Detect if the URL bar is hidden, but should be a safe area
+  if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
+    // Note: if user has scaling enabled, the padding required might be different
+    //   but the same holds true for the safe area padding detected via CSS!
+    return 50 * (window.devicePixelRatio || 1); // seems to be 50pts on all devices
+  }
+  return 0;
+}
+
+
 let last_canvas_width;
 let last_canvas_height;
 let last_body_height;
 let safearea_elem;
 let safearea_ignore_bottom = false;
+let safearea_values = [0,0,0,0];
+let last_safearea_values = [0,0,0,0];
 function checkResize() {
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
   //   shrinking the viewport without changing the window height
   let vv = window.visualViewport || {};
   let css_to_real = window.devicePixelRatio || 1;
-  // let view_w = (vv.width || window.innerWidth);
+  let view_w = (vv.width || window.innerWidth);
   let view_h = (vv.height || window.innerHeight);
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
@@ -277,26 +322,31 @@ function checkResize() {
   let new_width = round(canvas.clientWidth * css_to_real) || 1;
   let new_height = round(canvas.clientHeight * css_to_real) || 1;
 
-  if (cmds.safearea[0] === -1 && safearea_elem && safearea_elem.offsetWidth && safearea_elem.offsetHeight) {
-    if (camera2d.setSafeAreaPadding(
-      safearea_elem.offsetLeft * css_to_real,
-      new_width - (safearea_elem.offsetWidth + safearea_elem.offsetLeft) * css_to_real,
-      safearea_elem.offsetTop * css_to_real,
-      // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
-      //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
-      safearea_ignore_bottom ? 0 : new_height - (safearea_elem.offsetHeight + safearea_elem.offsetTop) * css_to_real
-    )) {
-      need_repos = max(need_repos, 1);
+  if (cmds.safearea[0] === -1) {
+    if (safearea_elem) {
+      let sa_width = safearea_elem.offsetWidth;
+      let sa_height = safearea_elem.offsetHeight;
+      if (sa_width && sa_height) {
+        v4set(safearea_values,
+          safearea_elem.offsetLeft * css_to_real,
+          new_width - (sa_width + safearea_elem.offsetLeft) * css_to_real,
+          max(safearea_elem.offsetTop * css_to_real, safariTopSafeArea(view_w, view_h)),
+          // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
+          //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
+          safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * css_to_real);
+      }
     }
   } else {
-    if (camera2d.setSafeAreaPadding(
+    v4set(safearea_values,
       new_width * clamp(cmds.safearea[0], 0, 25)/100,
       new_width * clamp(cmds.safearea[1], 0, 25)/100,
       new_height * clamp(cmds.safearea[2], 0, 25)/100,
-      new_height * clamp(cmds.safearea[3], 0, 25)/100)
-    ) {
-      need_repos = max(need_repos, 1);
-    }
+      new_height * clamp(cmds.safearea[3], 0, 25)/100);
+  }
+  if (!v4same(safearea_values, last_safearea_values)) {
+    v4copy(last_safearea_values, safearea_values);
+    camera2d.setSafeAreaPadding(safearea_values[0], safearea_values[1], safearea_values[2], safearea_values[3]);
+    need_repos = max(need_repos, 1);
   }
 
   if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
@@ -306,7 +356,9 @@ function checkResize() {
     // For the next 10 frames, make sure font size is correct
     need_repos = 10;
   }
-  if (is_ios_safari) {
+  if (is_ios_safari && (window.visualViewport || need_repos)) {
+    // we have accurate view information, or screen was just rotated / resized
+    // force scroll to top
     window.scroll(0,0);
   }
 }

@@ -103,7 +103,7 @@ cmd_parse.registerValue('safe_area', {
     '  Usage: /safe_area horizontal,vertical\n' +
     '  Usage: /safe_area left,right,top,bottom',
   default_value: '-1',
-  get: () => safearea.join(','),
+  get: () => (safearea[0] === -1 ? '-1 (auto)' : safearea.join(',')),
   set: (v) => {
     v = String(v);
     let keys = v.split(',');
