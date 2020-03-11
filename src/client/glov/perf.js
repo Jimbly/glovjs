@@ -9,7 +9,7 @@ const input = require('./input.js');
 const { max } = Math;
 const settings = require('./settings.js');
 const ui = require('./ui.js');
-const { vec4 } = require('./vmath.js');
+const { vec4, v3copy } = require('./vmath.js');
 
 let metrics = [];
 
@@ -17,6 +17,7 @@ const METRIC_PAD = 2;
 
 let bg_default = vec4(0,0,0,0.5);
 let bg_mouse_over = vec4(0,0,0,0.75);
+let bg_fade = vec4();
 
 // referenced in engine.js
 settings.register({
@@ -66,20 +67,35 @@ function showMetric(y, metric) {
   let line_height = ui.font_height;
   let max_label_w = 0;
   let max_labels = settings[metric.show_stat];
+  let drew_any = false;
+  let alpha = 1;
   for (let label in metric.labels) {
-    let label_w = font.drawSizedAligned(fps_style, x, y, Z.FPSMETER + 1, line_height,
-      glov_font.ALIGN.HRIGHT, 0, 0, label);
-    max_label_w = max(max_label_w, label_w);
     let value = metric.labels[label]();
-    font.drawSizedAligned(fps_style, x, y, Z.FPSMETER + 1, line_height,
-      glov_font.ALIGN.HFIT, METRIC_VALUE_WIDTH, 0, value);
-    y += line_height;
+    if (value) {
+      let style = fps_style;
+      if (value.alpha) {
+        alpha = value.alpha;
+        value = value.value;
+        style = glov_font.styleAlpha(fps_style, alpha);
+      }
+      let label_w = font.drawSizedAligned(style, x, y, Z.FPSMETER + 1, line_height,
+        glov_font.ALIGN.HRIGHT, 0, 0, label);
+      max_label_w = max(max_label_w, label_w);
+      font.drawSizedAligned(style, x, y, Z.FPSMETER + 1, line_height,
+        glov_font.ALIGN.HFIT, METRIC_VALUE_WIDTH, 0, value);
+      y += line_height;
+      drew_any = true;
+    }
     if (!--max_labels) {
       break;
     }
   }
   let w = METRIC_VALUE_WIDTH + max_label_w + METRIC_PAD;
   x -= max_label_w + METRIC_PAD;
+
+  if (!drew_any) {
+    return y - pad;
+  }
 
   y += pad;
   let bg = bg_default;
@@ -105,6 +121,10 @@ function showMetric(y, metric) {
     if (input.mouseOver(pos_param)) {
       bg = bg_mouse_over;
     }
+  }
+  if (alpha !== 1) {
+    bg_fade[3] = bg[3] * alpha;
+    bg = v3copy(bg_fade, bg);
   }
   ui.drawRect(pos_param.x, pos_param.y, pos_param.x + pos_param.w, y, Z.FPSMETER, bg);
   return y;
