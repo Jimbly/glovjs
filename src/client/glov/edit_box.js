@@ -23,6 +23,7 @@ class GlovUIEditBox {
     this.max_len = 0;
     this.initial_focus = false;
     this.onetime_focus = false;
+    this.auto_unfocus = false;
     this.initial_select = false;
     this.spellcheck = true;
     this.applyParams(params);
@@ -62,6 +63,9 @@ class GlovUIEditBox {
     if (this.pointer_lock) {
       glov_input.pointerLockExit();
     }
+  }
+  unfocus() {
+    glov_ui.focusNext(this);
   }
   isFocused() { // call after .run()
     return this.is_focused;
@@ -184,6 +188,11 @@ class GlovUIEditBox {
     }
 
     if (focused) {
+      if (this.auto_unfocus) {
+        if (glov_input.click({ peek: true })) {
+          glov_ui.focusSteal('canvas');
+        }
+      }
       // keyboard input is handled by the INPUT element, but allow mouse events to trickle
       glov_input.eatAllKeyboardInput();
     }
