@@ -648,7 +648,8 @@ export function setErrorReportDetails(key, value) {
 setErrorReportDetails('ver', BUILD_TIMESTAMP);
 let last_error_time = 0;
 let crash_idx = 0;
-let filtered_errors = /avast_submit/; // Errors from plugins that we don't want to get reporte dot us, or show the user!
+// Errors from plugins that we don't want to get reported to us, or show the user!
+let filtered_errors = /avast_submit|vc_request_action/;
 function glovErrorReport(msg, file, line, col) {
   ++crash_idx;
   let now = Date.now();
