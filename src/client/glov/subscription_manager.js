@@ -114,7 +114,7 @@ ClientChannelWorker.prototype.send = function (msg, data, opts, resp_func) {
     channel_id: this.channel_id,
     msg, data,
     broadcast: opts && opts.broadcast || undefined,
-    silent_error: opts && opts.silent_error,
+    silent_error: (opts && opts.silent_error) ? 1 : undefined,
   }, resp_func);
 };
 
