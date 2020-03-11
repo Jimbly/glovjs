@@ -58,6 +58,12 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validDisplayName(data.display_name)) {
       return resp_func('Invalid display name');
     }
+    if (this.onUserCreate) {
+      let err = this.onUserCreate(data);
+      if (err) {
+        return resp_func(err);
+      }
+    }
 
     this.setChannelData('private.password', data.password);
     this.setChannelData('public.display_name', data.display_name);
