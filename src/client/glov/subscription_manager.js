@@ -378,6 +378,8 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
     this.userCreate({
       user_id: username,
       password,
+      password_confirm: password,
+      email: 'autocreate@glovjs.org',
     }, resp_func);
   });
 };
