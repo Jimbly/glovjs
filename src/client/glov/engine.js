@@ -463,7 +463,7 @@ export function projectionZBias(dist, at_z) {
   mat_projection[10] = mat_projection_10 + e;
 }
 
-let hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
+export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
 function tick(timestamp) {

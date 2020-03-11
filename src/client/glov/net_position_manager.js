@@ -2,12 +2,41 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const { cmd_parse } = require('./cmds.js');
 const glov_engine = require('./engine.js');
 const net = require('./net.js');
+const perf = require('./perf.js');
+const settings = require('./settings.js');
 const util = require('../../common/util.js');
 const { abs, floor, max, min, PI, sqrt } = Math;
 const TWO_PI = PI * 2;
 const EPSILON = 0.01;
+
+let the;
+
+settings.register({
+  show_ping: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+  },
+});
+perf.addMetric({
+  name: 'ping',
+  show_stat: 'show_ping',
+  labels: {
+    'net: ': () => {
+      if (!the) {
+        return '';
+      }
+      let pt = the.getPing(2000);
+      if (!pt || pt.fade < 0.001) {
+        return '';
+      }
+      return { value: `${pt.ping.toFixed(1)}`, alpha: min(1, pt.fade * 3) };
+    },
+  },
+});
 
 const valid_options = [
   // Numeric parameters
@@ -124,6 +153,7 @@ NetPositionManager.prototype.vscale = function (dst, a, scalar) {
 
 NetPositionManager.prototype.reinit = function (options) {
   this.deinit();
+  the = this;
 
   options = options || {};
   this.per_client_data = {};
@@ -215,6 +245,7 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
       // do send!
       this.last_send.sending = true;
       this.last_send.time = now;
+      this.last_send.hrtime = glov_engine.hrnow();
       this.last_send.speed = 0;
       if (this.last_send.send_time) {
         const time = now - this.last_send.send_time;
@@ -236,8 +267,12 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
           // instead just watch for the apply_channel_data message containing
           // (approximately) what we sent
           this.last_send.sending = false;
-          const end = glov_engine.getFrameTimestamp();
-          if (end - this.last_send.time > this.send_time) {
+          let end = glov_engine.getFrameTimestamp();
+          let hrend = glov_engine.hrnow();
+          let round_trip = hrend - this.last_send.hrtime;
+          this.ping_time = round_trip;
+          this.ping_time_time = end;
+          if (round_trip > this.send_time) {
             // hiccup, delay next send
             this.last_send.time = end;
           }
@@ -245,6 +280,20 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
       );
     }
   }
+};
+
+NetPositionManager.prototype.getPing = function (max_age) {
+  if (!this.ping_time_time) {
+    return null;
+  }
+  let age = glov_engine.getFrameTimestamp() - this.ping_time_time;
+  if (age > max_age) {
+    return null;
+  }
+  return {
+    ping: this.ping_time,
+    fade: 1 - age / max_age,
+  };
 };
 
 NetPositionManager.prototype.getPos = function (client_id) {
