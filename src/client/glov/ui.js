@@ -156,6 +156,7 @@ export let modal_font_style = glov_font.styleColored(null, 0x000000ff);
 let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
+export let button_click = null; // on click, for callers to poll which mouse button, etc
 export let touch_changed_focus = false; // did a touch even this frame change focus?
 // For tracking global mouseover state
 let last_frame_button_mouseover = false;
@@ -516,7 +517,9 @@ export function buttonShared(param) {
       focusSteal(key);
       focused = true;
     }
-  } else if (glov_input.click(param)) {
+  } else if ((button_click = glov_input.click(param)) ||
+    param.long_press && (button_click = glov_input.longPress(param))
+  ) {
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
       setMouseOver(key);
     }
