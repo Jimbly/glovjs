@@ -1056,6 +1056,47 @@ export function menuUp(param) {
   glov_input.eatAllInput();
 }
 
+function copyTextToClipboard(text) {
+  let textArea = document.createElement('textarea');
+  textArea.style.position = 'fixed';
+  textArea.style.top = 0;
+  textArea.style.left = 0;
+  textArea.style.width = '2em';
+  textArea.style.height = '2em';
+  textArea.style.border = 'none';
+  textArea.style.outline = 'none';
+  textArea.style.boxShadow = 'none';
+  textArea.style.background = 'transparent';
+  textArea.value = text;
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  let ret = false;
+  try {
+    ret = document.execCommand('copy');
+  } catch (err) {
+    // do nothing
+  }
+
+  document.body.removeChild(textArea);
+  return ret;
+}
+
+export function provideUserString(title, thing, str) {
+  let copy_success = copyTextToClipboard(str);
+  modalTextEntry({
+    edit_w: 400,
+    edit_text: str,
+    title,
+    text: copy_success ? `${thing} copied to clipboard!` : 'Copy to clipboard FAILED, please copy from below\n',
+    buttons: {
+      OK: null,
+    },
+  });
+}
+
 export function drawRect(x0, y0, x1, y1, z, color) {
   let mx = min(x0, x1);
   let my = min(y0, y1);
