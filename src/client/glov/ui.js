@@ -235,7 +235,7 @@ export function startup(param) {
   sprites.white = glov_sprites.create({ url: 'white' });
 
   button_keys = {
-    ok: { key: [], pad: [PAD.X] },
+    ok: { key: [KEYS.O], pad: [PAD.X] },
     cancel: { key: [KEYS.ESC], pad: [PAD.B, PAD.Y] },
   };
   button_keys.yes = clone(button_keys.ok);
