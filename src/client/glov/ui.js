@@ -301,6 +301,27 @@ export function drawHBox(coords, s, color) {
   }
 }
 
+export function drawVBox(coords, s, color) {
+  let uidata = s.uidata;
+  let hs = [uidata.hw[0] * coords.w, 0, uidata.hw[2] * coords.w];
+  let y = coords.y;
+  hs[1] = max(0, coords.h - hs[0] - hs[2]);
+  for (let ii = 0; ii < hs.length; ++ii) {
+    let my_h = hs[ii];
+    s.draw({
+      x: coords.x,
+      y,
+      z: coords.z,
+      color,
+      w: coords.w,
+      h: my_h,
+      uvs: uidata.rects[ii],
+      // nozoom: true, // nozoom since different parts of the box get zoomed differently
+    });
+    y += my_h;
+  }
+}
+
 export function drawBox(coords, s, pixel_scale, color) {
   let uidata = s.uidata;
   let scale = pixel_scale;
