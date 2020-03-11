@@ -675,10 +675,29 @@ function glovErrorReport(msg, file, line, col) {
   return true;
 }
 
+function fixNatives() {
+  // If any browser extensions have added things to the Array prototype, remove them!
+  let b = [];
+  for (let a in b) {
+    console.log(`Found invasive enumerable property "${a}" on Array.prototype, removing...`);
+    let old_val = b[a];
+    delete Array.prototype[a];
+    // If this fails to work, perhaps try using Object.preventExtensions(Array.prototype) in an inline header script?
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(Array.prototype, a, { value: old_val, enumerable: false });
+  }
+  for (let a in b) {
+    // Failed: code that iterates arrays will fail
+    assert(false, `Array.prototype has unremovable member ${a}`);
+  }
+}
+
 export function startup(params) {
   // globals for leftover Turbulenz bits
   window.TurbulenzEngine = null;
   window.assert = assert;
+
+  fixNatives();
 
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
