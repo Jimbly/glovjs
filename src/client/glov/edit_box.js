@@ -105,6 +105,7 @@ class GlovUIEditBox {
             this.input.blur();
           }
           focused = false;
+          this.canceled = true;
         }
       }
     }
@@ -121,6 +122,7 @@ class GlovUIEditBox {
     }
     this.last_frame = engine.global_frame_index;
 
+    this.canceled = false;
     let focused = this.updateFocus();
 
     glov_ui.this_frame_edit_boxes.push(this);
@@ -201,6 +203,10 @@ class GlovUIEditBox {
       this.submitted = false;
       return this.SUBMIT;
     }
+    if (this.canceled) {
+      this.canceled = false;
+      return this.CANCEL;
+    }
     return null;
   }
   unrun() {
@@ -210,6 +216,7 @@ class GlovUIEditBox {
   }
 }
 GlovUIEditBox.prototype.SUBMIT = 'submit';
+GlovUIEditBox.prototype.CANCEL = 'cancel';
 
 export function create(params) {
   return new GlovUIEditBox(params);
