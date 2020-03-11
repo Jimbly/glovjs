@@ -442,6 +442,7 @@ SubscriptionManager.prototype.logout = function () {
       this.logged_in_username = null;
       this.was_logged_in = false;
       this.login_credentials = null;
+      this.emit('logout');
     }
   });
 };
