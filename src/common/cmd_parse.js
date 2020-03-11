@@ -123,6 +123,9 @@ CmdParse.prototype.registerValue = function (cmd, param) {
   let label = param.label || cmd;
   let store = param.store && this.storage || false;
   let store_key = `cmd_parse_${canonical(cmd)}`;
+  if (param.ver) {
+    store_key += `_${param.ver}`;
+  }
   if (store) {
     assert(param.set);
     let init_value = this.storage.getJSON(store_key);
