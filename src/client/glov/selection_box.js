@@ -226,6 +226,9 @@ class GlovSelectionBox {
       }
       pos_changed = true;
     }
+    if (!focused && this.dropdown_visible) {
+      this.dropdown_visible = false;
+    }
 
     if (!this.is_dropdown && !display.no_background) {
       let bg_height = this.getHeight();
