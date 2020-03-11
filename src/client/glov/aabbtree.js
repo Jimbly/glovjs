@@ -195,7 +195,8 @@ AABBTree.prototype.findParent = function (nodeIndex) {
     parentIndex--;
     nodeDist++;
     parent = nodes[parentIndex];
-  } while (parent.escapeNodeOffset <= nodeDist);
+    // JE: Add `parent` check here, otherwise any root element fails
+  } while (parent && parent.escapeNodeOffset <= nodeDist);
   return parent;
 };
 
@@ -242,10 +243,12 @@ AABBTree.prototype.update = function (externalNode, extents) {
             this.needsRebound = true;
           } else {
             let parent = this.findParent(index);
-            let parentExtents = parent.extents;
-            if (parentExtents[0] > min0 || parentExtents[1] > min1 || parentExtents[2] > min2 ||
-              parentExtents[3] < max0 || parentExtents[4] < max1 || parentExtents[5] < max2) {
-              this.needsRebound = true;
+            if (parent) {
+              let parentExtents = parent.extents;
+              if (parentExtents[0] > min0 || parentExtents[1] > min1 || parentExtents[2] > min2 ||
+                parentExtents[3] < max0 || parentExtents[4] < max1 || parentExtents[5] < max2) {
+                this.needsRebound = true;
+              }
             }
           }
         } else {
@@ -1036,71 +1039,72 @@ AABBTree.prototype.getVisibleNodes = function (planes, visibleNodes, startIndex)
   return numVisibleNodes;
 };
 
-// Would need updates for REMOVED_NODE
-// AABBTree.prototype.getOverlappingNodes = function (queryExtents, overlappingNodes, startIndex) {
-//   if (this.numExternalNodes > 0) {
-//     let queryMinX = queryExtents[0];
-//     let queryMinY = queryExtents[1];
-//     let queryMinZ = queryExtents[2];
-//     let queryMaxX = queryExtents[3];
-//     let queryMaxY = queryExtents[4];
-//     let queryMaxZ = queryExtents[5];
-//     let nodes = this.nodes;
-//     let endNodeIndex = this.endNode;
-//     let node, extents, endChildren;
-//     let numOverlappingNodes = 0;
-//     let storageIndex = (startIndex === undefined) ? overlappingNodes.length : startIndex;
-//     let nodeIndex = 0;
-//     for (; ;) {
-//       node = nodes[nodeIndex];
-//       extents = node.extents;
-//       let minX = extents[0];
-//       let minY = extents[1];
-//       let minZ = extents[2];
-//       let maxX = extents[3];
-//       let maxY = extents[4];
-//       let maxZ = extents[5];
-//       if (queryMinX <= maxX && queryMinY <= maxY && queryMinZ <= maxZ && queryMaxX >= minX && queryMaxY >= minY && queryMaxZ >= minZ) {
-//         if (node.externalNode) {
-//           overlappingNodes[storageIndex] = node.externalNode;
-//           storageIndex++;
-//           numOverlappingNodes++;
-//           nodeIndex++;
-//           if (nodeIndex >= endNodeIndex) {
-//             break;
-//           }
-//         } else {
-//           if (queryMaxX >= maxX && queryMaxY >= maxY && queryMaxZ >= maxZ && queryMinX <= minX && queryMinY <= minY && queryMinZ <= minZ) {
-//             endChildren = (nodeIndex + node.escapeNodeOffset);
-//             nodeIndex++;
-//             do {
-//               node = nodes[nodeIndex];
-//               if (node.externalNode) {
-//                 overlappingNodes[storageIndex] = node.externalNode;
-//                 storageIndex++;
-//                 numOverlappingNodes++;
-//               }
-//               nodeIndex++;
-//             } while (nodeIndex < endChildren);
-//             if (nodeIndex >= endNodeIndex) {
-//               break;
-//             }
-//           } else {
-//             nodeIndex++;
-//           }
-//         }
-//       } else {
-//         nodeIndex += node.escapeNodeOffset;
-//         if (nodeIndex >= endNodeIndex) {
-//           break;
-//         }
-//       }
-//     }
-//     return numOverlappingNodes;
-//   } else {
-//     return 0;
-//   }
-// };
+AABBTree.prototype.getOverlappingNodes = function (queryExtents, overlappingNodes, startIndex) {
+  if (this.numExternalNodes > 0) {
+    let queryMinX = queryExtents[0];
+    let queryMinY = queryExtents[1];
+    let queryMinZ = queryExtents[2];
+    let queryMaxX = queryExtents[3];
+    let queryMaxY = queryExtents[4];
+    let queryMaxZ = queryExtents[5];
+    let nodes = this.nodes;
+    let endNodeIndex = this.endNode;
+    let node, extents, endChildren;
+    let numOverlappingNodes = 0;
+    let storageIndex = (startIndex === undefined) ? overlappingNodes.length : startIndex;
+    let nodeIndex = 0;
+    for (; ;) {
+      node = nodes[nodeIndex];
+      extents = node.extents;
+      let minX = extents[0];
+      let minY = extents[1];
+      let minZ = extents[2];
+      let maxX = extents[3];
+      let maxY = extents[4];
+      let maxZ = extents[5];
+      if (queryMinX <= maxX && queryMinY <= maxY && queryMinZ <= maxZ && queryMaxX >= minX && queryMaxY >= minY && queryMaxZ >= minZ) {
+        if (node.externalNode) {
+          if (node.externalNode !== REMOVED_NODE) {
+            overlappingNodes[storageIndex] = node.externalNode;
+            storageIndex++;
+            numOverlappingNodes++;
+          }
+          nodeIndex++;
+          if (nodeIndex >= endNodeIndex) {
+            break;
+          }
+        } else {
+          if (queryMaxX >= maxX && queryMaxY >= maxY && queryMaxZ >= maxZ && queryMinX <= minX && queryMinY <= minY && queryMinZ <= minZ) {
+            endChildren = (nodeIndex + node.escapeNodeOffset);
+            nodeIndex++;
+            do {
+              node = nodes[nodeIndex];
+              if (node.externalNode && node.externalNode !== REMOVED_NODE) {
+                overlappingNodes[storageIndex] = node.externalNode;
+                storageIndex++;
+                numOverlappingNodes++;
+              }
+              nodeIndex++;
+            } while (nodeIndex < endChildren);
+            if (nodeIndex >= endNodeIndex) {
+              break;
+            }
+          } else {
+            nodeIndex++;
+          }
+        }
+      } else {
+        nodeIndex += node.escapeNodeOffset;
+        if (nodeIndex >= endNodeIndex) {
+          break;
+        }
+      }
+    }
+    return numOverlappingNodes;
+  } else {
+    return 0;
+  }
+};
 
 // Would need updates for REMOVED_NODE
 // AABBTree.prototype.getSphereOverlappingNodes = function (center, radius, overlappingNodes) {
