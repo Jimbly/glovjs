@@ -469,7 +469,7 @@ class GlovFont {
         if (x > w) {
           // maybe wrap
           let word_width = x - word_x0;
-          if (word_width > w) {
+          if (word_width > w - indent) {
             // not going to fit, split it up!
             hard_wrap = true;
             // recover and restart at word start
