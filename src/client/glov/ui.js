@@ -891,6 +891,7 @@ export function createEditBox(param) {
 const color_slider_handle = vec4(1,1,1,1);
 const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
 const color_slider_handle_over = vec4(0.75,0.75,0.75,1);
+export let slider_dragging = false; // for caller polling
 // Returns new value
 export function slider(value, param) {
   // required params
@@ -902,6 +903,8 @@ export function slider(value, param) {
   param.w = param.w || button_width;
   param.h = param.h || button_height;
   let disabled = param.disabled || false;
+
+  slider_dragging = false;
 
   drawHBox(param, sprites.slider, param.color);
 
@@ -946,9 +949,10 @@ export function slider(value, param) {
     value = param.min + (param.max - param.min) * clamp(value, 0, 1);
     // Eat all mouseovers while dragging
     glov_input.mouseOver();
+    slider_dragging = true;
   }
   let rollover = !disabled && glov_input.mouseOver(param);
-  let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / param.max;
+  let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / (param.max - param.min);
   let handle_h = param.h;
   let handle_w = sprites.slider_handle.uidata.wh[0] * handle_h;
   let handle_x = handle_center_pos - handle_w / 2;
