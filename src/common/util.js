@@ -178,3 +178,19 @@ export function randomNot(not_value, max_value) {
   } while (new_value === not_value);
   return new_value;
 }
+
+export function toArray(array_like) {
+  return Array.prototype.slice.call(array_like);
+}
+
+export function matchAll(str, re) {
+  let ret = [];
+  let m;
+  do {
+    m = re.exec(str);
+    if (m) {
+      ret.push(m[1]);
+    }
+  } while (m);
+  return ret;
+}

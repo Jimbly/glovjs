@@ -4,6 +4,7 @@
 const assert = require('assert');
 const engine = require('./engine.js');
 const fs = require('fs');
+const { matchAll } = require('../../common/util.js');
 
 let last_id = 0;
 
@@ -23,18 +24,6 @@ export const semantic = {
   'ATTR4': 4,
   'TEXCOORD_1': 4,
 };
-
-function findAll(str, re) {
-  let ret = [];
-  let m;
-  do {
-    m = re.exec(str);
-    if (m) {
-      ret.push(m[1]);
-    }
-  } while (m);
-  return ret;
-}
 
 export let globals;
 let defines;
@@ -133,13 +122,13 @@ function Shader(type, name, text) {
   this.shader = gl.createShader(type);
   if (type === gl.VERTEX_SHADER) {
     this.programs = {};
-    this.attributes = findAll(text, vp_attr_regex);
+    this.attributes = matchAll(text, vp_attr_regex);
     // Ensure they are known names so we can give them indices
     // Add to semantic[] above as needed
     this.attributes.forEach((v) => assert(semantic[v] !== undefined));
   } else {
     this.id = ++last_id;
-    this.samplers = findAll(text, sampler_regex);
+    this.samplers = matchAll(text, sampler_regex);
     // Ensure all samplers end in a unique number
     let found = [];
     this.samplers.forEach((v) => {
@@ -149,7 +138,7 @@ function Shader(type, name, text) {
       found[num] = true;
     });
   }
-  this.uniforms = findAll(text, uniform_regex);
+  this.uniforms = matchAll(text, uniform_regex);
   // Ensure a known type
   this.uniforms.forEach((v) => {
     let type_name = v.split(' ')[0];
