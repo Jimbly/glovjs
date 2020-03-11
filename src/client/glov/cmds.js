@@ -122,3 +122,16 @@ cmd_parse.registerValue('safe_area', {
   },
   store: true,
 });
+
+cmd_parse.register({
+  cmd: 'webgl2_auto',
+  help: 'Resets WebGL2 auto-detection',
+  func: function (str, resp_func) {
+    let disable_data = local_storage.getJSON('webgl2_disable');
+    if (!disable_data) {
+      return resp_func(null, 'WebGL2 is already being auto-detected');
+    }
+    local_storage.setJSON('webgl2_disable', undefined);
+    return resp_func(null, 'WebGL2 was disabled, will attempt to use it again on the next load');
+  },
+});

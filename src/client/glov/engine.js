@@ -697,6 +697,12 @@ export function startup(params) {
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl2', 'webgl', 'experimental-webgl'];
   let force_webgl1 = defines.NOWEBGL2;
+  let disable_data = local_storage.getJSON('webgl2_disable');
+  // Check if a previous, recent run had an error that hinted we should disable WebGL2
+  if (disable_data && disable_data.ua === navigator.userAgent && disable_data.ts > Date.now() - 7*24*60*60*1000) {
+    console.log('Disabling WebGL2 because a previous run encountered a related error');
+    force_webgl1 = true;
+  }
   if (DEBUG && !defines.FORCEWEBGL2) {
     let rc = local_storage.getJSON('run_count', 0) + 1;
     local_storage.setJSON('run_count', rc);

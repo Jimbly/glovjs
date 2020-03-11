@@ -4,6 +4,7 @@
 
 const assert = require('assert');
 const engine = require('./engine.js');
+const local_storage = require('./local_storage.js');
 
 export let textures = {};
 export let load_count = 0;
@@ -312,6 +313,15 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       }
       let err = tex.updateData(img.width, img.height, img);
       if (err) {
+        // Samsung TV gets 1282 on texture arrays
+        // Samsung Galaxy S6 gets 1281 on texture arrays
+        if (tex.is_array && (String(err) === '1282' || String(err) === '1281') && engine.webgl2 && !engine.DEBUG) {
+          local_storage.setJSON('webgl2_disable', {
+            ua: navigator.userAgent,
+            ts: Date.now(),
+          });
+          document.location.reload();
+        }
         err_details = `: GLError(${err})`;
         retries = TEX_RETRY_COUNT; // do not retry this
       } else {
