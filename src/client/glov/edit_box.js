@@ -180,10 +180,10 @@ class GlovUIEditBox {
       }
       elem.style.left = `${pos[0]}%`;
       elem.style.top = `${pos[1]}%`;
-      let size = camera2d.htmlSize(this.w, this.h);
+      let size = camera2d.htmlSize(this.w, 0);
       elem.style.width = `${size[0]}%`;
-      let old_fontsize = elem.style.fontSize || '1.00em';
-      let new_fontsize = `${(this.font_height / glov_ui.font_height).toFixed(2)}em`;
+      let old_fontsize = elem.style.fontSize || '?px';
+      let new_fontsize = `${camera2d.virtualToFontSize(this.font_height).toFixed(0)}px`;
       if (new_fontsize !== old_fontsize) {
         elem.style.fontSize = new_fontsize;
       }

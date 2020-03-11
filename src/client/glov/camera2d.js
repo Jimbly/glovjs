@@ -272,6 +272,10 @@ export function virtualToDom(dst, src) {
   }
 }
 
+export function virtualToFontSize(height) {
+  return height * data[5] / data[6] * 0.84;
+}
+
 // dst/src are x/y/w/h objects (e.g. from input system)
 export function virtualToDomPosParam(dst, src) {
   if (render_width) {
