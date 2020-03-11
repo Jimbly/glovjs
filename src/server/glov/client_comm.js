@@ -57,6 +57,7 @@ function onSetChannelData(client, data, resp_func) {
 function applyCustomIds(ids, user_data_public) {
   // FRVR - maybe generalize this
   let perm = user_data_public.permissions;
+  delete ids.admin;
   if (perm) {
     if (perm.admin) {
       ids.admin = 1;
