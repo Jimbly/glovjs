@@ -145,6 +145,10 @@ class GlovSelectionBox {
     return this.items[this.selected].tag === tag_or_index;
   }
 
+  getSelected() {
+    return this.items[this.selected];
+  }
+
   getHeight() {
     let { display, entry_height } = this;
     if (this.is_dropdown) {
