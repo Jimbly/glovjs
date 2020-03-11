@@ -477,9 +477,13 @@ export function drawTooltip(param) {
   let z = param.z || Z.TOOLTIP;
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
+  let w = tooltip_w - eff_tooltip_pad * 2;
+  if (param.tooltip_above) {
+    tooltip_y0 -= font_height * font.numLines(modal_font_style, w, 0, font_height, param.tooltip) + eff_tooltip_pad * 2;
+  }
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(modal_font_style,
-    x + eff_tooltip_pad, y, z+1, tooltip_w - eff_tooltip_pad * 2, 0, font_height,
+    x + eff_tooltip_pad, y, z+1, w, 0, font_height,
     param.tooltip);
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
@@ -562,7 +566,8 @@ export function buttonShared(param) {
   if (button_mouseover && param.tooltip) {
     drawTooltip({
       x: param.x,
-      y: param.tooltip_above ? param.y - font_height * 2 - 16 : param.y + param.h + 2,
+      y: param.tooltip_above ? param.y - 2 : param.y + param.h + 2,
+      tooltip_above: param.tooltip_above,
       tooltip: param.tooltip,
       tooltip_width: param.tooltip_width,
     });
@@ -648,9 +653,10 @@ export function buttonImage(param) {
   let largest_w_vert = param.h * param.shrink * aspect;
   img_w = min(largest_w_horiz, largest_w_vert);
   img_h = img_w / aspect;
+  let pad_top = (param.h - img_h) / 2;
   let draw_param = {
-    x: param.x + (param.w - img_w) / 2 + img_origin[0] * img_w,
-    y: param.y + (param.h - img_h) / 2 + img_origin[1] * img_h,
+    x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
+    y: param.y + pad_top + img_origin[1] * img_h,
     z: param.z + 0.1,
     color: param.color1 && param.color ? param.color : color, // use explicit tint if doing dual-tinting
     color1: param.color1,
@@ -659,6 +665,11 @@ export function buttonImage(param) {
     uvs,
     rot: param.rotation,
   };
+  if (param.flip) {
+    let { x, w } = draw_param;
+    draw_param.x = x + w;
+    draw_param.w = -w;
+  }
   if (param.color1) {
     param.img.drawDualTint(draw_param);
   } else {
@@ -1262,6 +1273,7 @@ export function setFontHeight(_font_height) {
 export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
   tooltip_width = _tooltip_width;
   tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
+  tooltip_pad = modal_pad / 2 * _tooltip_panel_pixel_scale;
 }
 
 scaleSizes(1);
