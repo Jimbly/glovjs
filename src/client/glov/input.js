@@ -1136,6 +1136,28 @@ export function mouseDownEdge(param) {
   return false;
 }
 
+// Completely consume any clicks or drags coming from a mouse down event in this
+// area - used to catch focus leaving an edit box without wanting to do what
+// a click would normally do.
+export function mouseConsumeClicks(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (!(button === ANY || button === touch_data.button)) {
+      continue;
+    }
+    if (checkPos(touch_data.start_pos, pos_param)) {
+      touch_data.down_edge = 0;
+      // Set start pos so that it will not pass checkPos
+      touch_data.start_pos[0] = touch_data.start_pos[1] = Infinity;
+      // Set .total so that mouseUpEdge will not detect it as a click
+      touch_data.total = Infinity;
+    }
+  }
+}
+
 export function drag(param) {
   param = param || {};
   let pos_param = mousePosParam(param);
@@ -1167,6 +1189,57 @@ export function drag(param) {
       camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
       camera2d.domDeltaToVirtual(delta, touch_data.delta);
       return {
+        cur_pos,
+        start_pos,
+        delta, // this frame's delta
+        total, // total (linear) distance dragged
+        button: touch_data.button,
+        touch: touch_data.touch,
+        start_time: touch_data.start_time,
+        is_down_edge,
+        down_time: touch_data.down_time,
+      };
+    }
+  }
+  return null;
+}
+
+// a lot like drag(), refactor to share more?
+export function longPress(param) {
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+  let max_dist = param.max_dist || 0;
+  let min_time = param.min_time || 500;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (!(button === ANY || button === touch_data.button) || touch_data.long_press_dispatched) {
+      continue;
+    }
+    if (checkPos(touch_data.start_pos, pos_param)) {
+      camera2d.domDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
+      let total = delta[0] + delta[1];
+      if (total > max_dist) {
+        continue;
+      }
+      let time = Date.now() - touch_data.start_time;
+      if (time < min_time) {
+        continue;
+      }
+      if (!param.peek) {
+        // ? touch_data.dispatched = true;
+        touch_data.long_press_dispatched = true;
+      }
+      let is_down_edge = touch_data.down_edge;
+      if (param.eat_clicks) {
+        touch_data.down_edge = touch_data.up_edge = 0;
+      }
+      camera2d.domToVirtual(start_pos, touch_data.start_pos);
+      camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
+      camera2d.domDeltaToVirtual(delta, touch_data.delta);
+      return {
+        long_press: true,
         cur_pos,
         start_pos,
         delta, // this frame's delta
