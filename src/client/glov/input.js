@@ -6,6 +6,7 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
@@ -21,6 +22,8 @@ const DOWN_EDGE = 2; // only for pads
 // per-app overrideable options
 const TOUCH_AS_MOUSE = true;
 let map_analog_to_dpad = true;
+
+let mouse_log = false;
 
 export const ANY = -2;
 export const POINTERLOCK = -1;
@@ -120,6 +123,13 @@ let touches = {}; // `m${button}` or touch_id -> TouchData
 export let touch_mode = local_storage.getJSON('touch_mode', false);
 export let pad_mode = local_storage.getJSON('pad_mode', false);
 
+cmd_parse.registerValue('mouse_log', {
+  type: cmd_parse.TYPE_INT,
+  range: [0, 1],
+  get: () => mouse_log,
+  set: (v) => (mouse_log = v),
+});
+
 function eventTimestamp(event) {
   if (event && event.timeStamp) {
     // assert((event.timeStamp < 1e12) === (engine.hrtime < 1e12));
@@ -208,23 +218,23 @@ export function pointerLockExit() {
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
 }
 
-// let last_event;
-// const skip = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1 };
-// function eventlog(event) {
-//   if (event === last_event) {
-//     return;
-//   }
-//   last_event = event;
-//   let pairs = [];
-//   for (let k in event) {
-//     let v = event[k];
-//     if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
-//       continue;
-//     }
-//     pairs.push(`${k}:${v.id || v}`);
-//   }
-//   console.log(`${engine.global_frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
-// }
+let last_event;
+const skip = { isTrusted: 1, sourceCapabilities: 1, path: 1, currentTarget: 1, view: 1 };
+function eventlog(event) {
+  if (event === last_event) {
+    return;
+  }
+  last_event = event;
+  let pairs = [];
+  for (let k in event) {
+    let v = event[k];
+    if (!v || typeof v === 'function' || k.toUpperCase() === k || skip[k]) {
+      continue;
+    }
+    pairs.push(`${k}:${v.id || v}`);
+  }
+  console.log(`${engine.global_frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
+}
 
 function letEventThrough(event) {
   return event.target.tagName === 'INPUT' || String(event.target.className).indexOf('noglov') !== -1;
@@ -385,6 +395,9 @@ function onMouseMove(event, no_stop) {
 }
 
 function onMouseDown(event) {
+  if (mouse_log) {
+    eventlog(event);
+  }
   onMouseMove(event); // update mouse_pos
   engine.sound_manager.resume();
   let no_click = letEventThrough(event);
@@ -404,6 +417,9 @@ function onMouseDown(event) {
 }
 
 function onMouseUp(event) {
+  if (mouse_log) {
+    eventlog(event);
+  }
   onMouseMove(event); // update mouse_pos
   let no_click = letEventThrough(event);
   let button = event.button;
