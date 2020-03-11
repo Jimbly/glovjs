@@ -478,4 +478,17 @@ export function startup() {
       255, 255, 255, 255,
     ]),
   });
+
+  load({
+    name: 'invisible',
+    width: 2, height: 2,
+    nozoom: true,
+    format: format.RGBA8,
+    data: new Uint8Array([
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+    ]),
+  });
 }
