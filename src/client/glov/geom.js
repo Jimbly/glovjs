@@ -4,7 +4,7 @@
 
 const assert = require('assert');
 const engine = require('./engine.js');
-const { ceil, max } = Math;
+const { ceil, max, min } = Math;
 
 export const TRIANGLES = 4;
 export const TRIANGLE_FAN = 6;
@@ -142,32 +142,44 @@ export function createIndices(idxs) {
   return ret;
 }
 
-// _format is [shaders.semantic.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
-function Geom(_format, verts, idxs, mode) {
-  this.mode = mode || TRIANGLES;
-  this.format = _format;
-  this.stride = 0;
-  this.elem_count = 0;
-  this.used_attribs = 0;
-  let common_byte_size=0;
-  for (let ii = 0; ii < _format.length; ++ii) {
-    let fmt = _format[ii];
-    let sem = fmt[0];
-    let gltype = fmt[1];
-    let count = fmt[2];
-    this.used_attribs |= (1 << sem);
-    let byte_size = gl_byte_size[gltype];
-    assert(byte_size);
-    assert(!common_byte_size || byte_size === common_byte_size);
-    common_byte_size = byte_size;
-    fmt[3] = fmt[3] || false;
-    fmt[4] = byte_size;
-    this.stride += count * byte_size;
-    this.elem_count += count;
+function formatInfo(format) {
+  if (!format.info) {
+    let stride = 0;
+    let elem_count = 0;
+    let used_attribs = 0;
+    let common_byte_size = 0;
+    for (let ii = 0; ii < format.length; ++ii) {
+      let fmt = format[ii];
+      let sem = fmt[0];
+      let gltype = fmt[1];
+      let count = fmt[2];
+      used_attribs |= (1 << sem);
+      let byte_size = gl_byte_size[gltype];
+      assert(byte_size);
+      assert(!common_byte_size || byte_size === common_byte_size);
+      common_byte_size = byte_size;
+      fmt[3] = fmt[3] || false;
+      fmt[4] = byte_size;
+      stride += count * byte_size;
+      elem_count += count;
+    }
+    format.info = {
+      stride, elem_count, used_attribs, common_byte_size
+    };
   }
-  this.vert_count = verts.length / this.elem_count;
-  this.common_byte_size = common_byte_size;
-  this.vert_gpu_mem = verts.length * this.common_byte_size;
+  return format.info;
+}
+
+// format is [shaders.semantic.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
+function Geom(format, verts, idxs, mode) {
+  this.mode = mode || TRIANGLES;
+  this.format = format;
+  let info = this.format_info = formatInfo(format);
+  this.stride = info.stride;
+  this.used_attribs = info.used_attribs;
+
+  this.vert_count = verts.length / this.format_info.elem_count;
+  this.vert_gpu_mem = verts.length * this.format_info.common_byte_size;
   if (verts.length) {
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
@@ -223,8 +235,8 @@ Geom.prototype.update = function (verts, num_verts) {
     engine.perf_state.gpu_mem.geom -= this.vert_gpu_mem;
     deleteBuffer(this.vbo);
     // Note: matching size, ignoring num_verts
-    this.vert_count = verts.length / this.elem_count;
-    this.vert_gpu_mem = verts.length * this.common_byte_size;
+    this.vert_count = verts.length / this.format_info.elem_count;
+    this.vert_gpu_mem = verts.length * this.format_info.common_byte_size;
     this.vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
     bound_array_buf = this.vbo;
@@ -236,7 +248,7 @@ Geom.prototype.update = function (verts, num_verts) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
       bound_array_buf = this.vbo;
     }
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts.subarray(0, num_verts * this.elem_count));
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, verts.subarray(0, num_verts * this.format_info.elem_count));
     // gl.bufferData(gl.ARRAY_BUFFER, verts, gl.DYNAMIC_DRAW);
   }
   if (this.orig_mode === QUADS) {
@@ -315,8 +327,41 @@ Geom.prototype.draw = function () {
   }
 };
 
+function GeomMultiQuads(format, verts) {
+  let format_info = formatInfo(format);
+  let ec = format_info.elem_count;
+  let vert_count = verts.length / ec;
+  this.geoms = [];
+  for (let idx = 0; idx < vert_count; idx += 65536) {
+    let num_sub_verts = min(vert_count - idx, 65536);
+    let sub_data = new Uint8Array(verts.buffer, idx * ec, num_sub_verts * ec);
+    this.geoms.push(new Geom(format, sub_data, null, QUADS));
+  }
+}
+GeomMultiQuads.prototype.draw = function () {
+  for (let ii = 0; ii < this.geoms.length; ++ii) {
+    this.geoms[ii].draw();
+  }
+};
+GeomMultiQuads.prototype.dispose = function () {
+  for (let ii = 0; ii < this.geoms.length; ++ii) {
+    this.geoms[ii].dispose();
+  }
+  this.geoms = null;
+};
+
 export function create(...args) {
   return new Geom(...args);
+}
+
+export function createQuads(format, verts) {
+  let format_info = formatInfo(format);
+  assert(verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
+  let vert_count = verts.length / format_info.elem_count;
+  if (vert_count > 65536) {
+    return new GeomMultiQuads(format, verts);
+  }
+  return new Geom(format, verts, null, QUADS);
 }
 
 export function startup() {
