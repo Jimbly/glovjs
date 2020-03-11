@@ -1075,6 +1075,7 @@ export function mouseUpEdge(param) {
     if (!param.phys) {
       param.phys = {};
     }
+    param.phys.button = typeof param.in_event_button === 'number' ? param.in_event_button : button;
     camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mouseup', param.phys, param.in_event_cb);
   }
@@ -1111,6 +1112,7 @@ export function mouseDownEdge(param) {
     if (!param.phys) {
       param.phys = {};
     }
+    param.phys.button = button;
     camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mousedown', param.phys, param.in_event_cb);
   }
