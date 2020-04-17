@@ -72,6 +72,7 @@ export class ChannelWorker {
   }
 
   shutdown() {
+    ack.failAll(this);
     assert(!this.numSubscribers());
     assert(empty(this.subscribe_counts));
     if (this.onShutdown) {
@@ -273,6 +274,16 @@ export class ChannelWorker {
       }
     }
   }
+  pak(dest, msg) {
+    return channelServerPak(this, dest, msg);
+  }
+  setChannelDataOnOther(channel_id, key, value, resp_func) {
+    let pak = this.pak(channel_id, 'set_channel_data');
+    pak.writeBool(false);
+    pak.writeAnsiString(key);
+    pak.writeJSON(value);
+    pak.send(resp_func);
+  }
   onClientChanged(src, data, resp_func) {
     let { user_id } = src;
     let client_id = src.id;
@@ -386,7 +397,7 @@ export class ChannelWorker {
       // deny
       return resp_func('ERR_NOT_ALLOWED');
     }
-    let q = pak.readBool();
+    let q = false;
     let key = pak.readAnsiString();
     let value = pak.readJSON();
     let set_if = pak.readJSON();
@@ -454,7 +465,7 @@ export class ChannelWorker {
   }
 
   onSetChannelDataPush(source, pak, resp_func) {
-    let q = pak.readBool();
+    let q = false;
     let key = pak.readAnsiString();
     let value = pak.readJSON();
     if (this.handleSetChannelData ?

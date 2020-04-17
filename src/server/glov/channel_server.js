@@ -399,6 +399,9 @@ class ChannelServer {
     }
   }
 
+  pakAsChannelServer(dest, msg) {
+    return this.csworker.pak(dest, msg);
+  }
   sendAsChannelServer(dest, msg, data, resp_func) {
     this.csworker.sendChannelMessage(dest, msg, data, resp_func);
   }
