@@ -1,9 +1,10 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/*global WebGLSoundDevice: true */
 
+const assert = require('assert');
 const { defaults } = require('../../common/util.js');
 const { abs, floor, max, min, random } = Math;
+const { Howl } = require('howler');
 
 const DEFAULT_FADE_RATE = 0.001;
 
@@ -11,129 +12,138 @@ let sounds = {};
 let num_loading = 0;
 
 const default_params = {
-  auto_oggs: false, // try loading .ogg versions first, then fallback to .wav
-  auto_mp3s: false, // (recommended) try loading .mp3 versions first, then fallback to .wav
+  ext_list: ['mp3', 'wav'], // (recommended) try loading .mp3 versions first, then fallback to .wav
+  //  also covers all browsers: ['webm', 'mp3']
   sound_on: true,
   music_on: true,
 };
 class SoundManager {
   constructor(params) {
     params = defaults(params || {}, default_params);
-    let { listenerTransform } = params;
-    if (!listenerTransform) {
-      // const camera = Camera.create(VMath);
-      // const look_at_position = VMath.v3Build(0, 1, 0);
-      // const worldUp = VMath.v3Build(0, 0, 1);
-      // const camera_position = VMath.v3Build(0, 0, 0);
-      // camera.lookAt(look_at_position, worldUp, camera_position);
-      // camera.updateViewMatrix();
-      // listenerTransform = camera.matrix;
-      listenerTransform = new Float32Array([1, 0, -0, 0, 0, 1, 0, -1, 0, 0, 0, 0]);
-    }
-    let soundDeviceParameters = {
-      linearDistance: false
-    };
-    this.soundDevice = WebGLSoundDevice.create(soundDeviceParameters);
-    this.soundDevice.listenerTransform = listenerTransform;
     for (let key in default_params) {
       this[key] = params[key];
     }
 
-    this.channels = [];
-    for (let ii = 0; ii < 16; ++ii) {
-      this.channels[ii] = this.soundDevice.createSource({
-        position: [0, 0, 0],
-        relative: false,
-        pitch: 1.0,
-      });
-    }
-    this.channel = 0;
     this.last_played = {};
     this.global_timer = 0;
 
     // Music
     this.fade_rate = DEFAULT_FADE_RATE;
-    this.current_loop = null;
     this.music = []; // 0 is current, 1 is previous (fading out)
     for (let ii = 0; ii < 2; ++ii) {
       this.music.push({
-        source: this.soundDevice.createSource({
-          position: [0, 0, 0],
-          relative: false,
-          pitch: 1.0,
-          looping: true,
-        }),
+        id: null,
         current_volume: 0,
         target_volume: 0,
       });
     }
   }
 
-  loadSound(base, cb) {
+  loadSound(base, for_music_cb) {
     if (Array.isArray(base)) {
+      assert(!for_music_cb);
       for (let ii = 0; ii < base.length; ++ii) {
-        this.loadSound(base[ii], cb);
+        this.loadSound(base[ii]);
       }
       return;
     }
     let key = base;
-    let m = base.match(/^(.*)\.(mp3|ogg|wav)$/u);
+    if (sounds[key]) {
+      if (for_music_cb) {
+        for_music_cb();
+      }
+      return;
+    }
+    let m = base.match(/^(.*)\.(mp3|ogg|wav|webm)$/u);
     let preferred_ext;
     if (m) {
       base = m[1];
       preferred_ext = m[2];
     }
     let src = `sounds/${base}`;
-    let tryLoad = (ext) => {
+    let srcs = [];
+    if (preferred_ext) {
+      srcs.push(`${src}.${preferred_ext}`);
+    }
+    for (let ii = 0; ii < this.ext_list.length; ++ii) {
+      let ext = this.ext_list[ii];
+      if (ext !== preferred_ext) {
+        srcs.push(`${src}.${ext}`);
+      }
+    }
+    // Try loading desired sound types one at a time.
+    // Cannot rely on Howler's built-in support for this because it only continues
+    //   through the list on *some* load errors, not all :(.
+    function tryLoad(idx) {
+      if (idx === srcs.length) {
+        console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
+        return;
+      }
       ++num_loading;
-      this.soundDevice.createSound({
-        src: src + ext,
-        onload: function (sound) {
-          --num_loading;
-          if (sound) {
+      let once = false;
+      let sound = new Howl({
+        src: srcs.slice(idx),
+        html5: Boolean(for_music_cb),
+        loop: Boolean(for_music_cb),
+        volume: 0,
+        onload: function () {
+          if (!once) {
+            --num_loading;
+            once = true;
             sounds[key] = sound;
-            if (cb) {
-              return cb();
-            }
-          } else {
-            // failed to load
-            if (ext === '.ogg' || ext === '.mp3') {
-              tryLoad('.wav');
+            if (for_music_cb) {
+              for_music_cb();
             }
           }
-          return null;
-        }
+        },
+        onloaderror: function (id, err, extra) {
+          if (idx === srcs.length - 1) {
+            console.error(`Error loading sound ${srcs[idx]}: ${err}`);
+          } else {
+            console.log(`Error loading sound ${srcs[idx]}: ${err}, trying fallback...`);
+          }
+          if (!once) {
+            --num_loading;
+            once = true;
+            tryLoad(idx + 1);
+          }
+        },
       });
-    };
-    if (this.soundDevice.isSupported('FILEFORMAT_OGG') && (this.auto_oggs || preferred_ext === 'ogg')) {
-      tryLoad('.ogg');
-    } else if (this.soundDevice.isSupported('FILEFORMAT_MP3') && (this.auto_mp3s || preferred_ext === 'mp3')) {
-      tryLoad('.mp3');
-    } else {
-      tryLoad('.wav');
     }
+    tryLoad(0);
   }
 
   tick(dt) {
     this.global_timer += dt;
+    // Do music fading
+    // Cannot rely on Howler's fading because starting a fade when one is in progress
+    //   messes things up, as well causes snaps in volume :(
     let max_fade = dt * this.fade_rate;
     for (let ii = 0; ii < this.music.length; ++ii) {
-      let target = this.music_on ? this.music[ii].target_volume : 0;
-      if (this.music[ii].current_volume !== target) {
-        let delta = target - this.music[ii].current_volume;
+      let mus = this.music[ii];
+      if (!mus.sound) {
+        continue;
+      }
+      let target = this.music_on ? mus.target_volume : 0;
+      if (mus.current_volume !== target) {
+        let delta = target - mus.current_volume;
         let fade_amt = min(abs(delta), max_fade);
         if (delta < 0) {
-          this.music[ii].current_volume = max(target, this.music[ii].current_volume - fade_amt);
+          mus.current_volume = max(target, mus.current_volume - fade_amt);
         } else {
-          this.music[ii].current_volume = min(target, this.music[ii].current_volume + fade_amt);
+          mus.current_volume = min(target, mus.current_volume + fade_amt);
         }
-        this.music[ii].source.gain = this.music[ii].current_volume;
+        mus.sound.volume(mus.current_volume, mus.id);
+        if (!mus.target_volume && !mus.current_volume) {
+          mus.sound.stop(mus.id);
+          mus.sound = null;
+        }
       }
     }
   }
 
-  resume() {
-    this.soundDevice.resume();
+  resume() { // eslint-disable-line class-methods-use-this
+    // Not needed for Howler by default
   }
 
   play(soundname, volume) {
@@ -144,24 +154,20 @@ class SoundManager {
     if (Array.isArray(soundname)) {
       soundname = soundname[floor(random() * soundname.length)];
     }
-    if (!sounds[soundname]) {
+    let sound = sounds[soundname];
+    if (!sound) {
       return null;
     }
     let last_played_time = this.last_played[soundname] || -9e9;
     if (this.global_timer - last_played_time < 45) {
       return null;
     }
-    let channel = this.channels[this.channel++];
-    channel.play(sounds[soundname]);
-    channel.gain = volume;
+
+    let id = sound.play();
+    sound.volume(volume, id);
     this.last_played[soundname] = this.global_timer;
-    if (this.channel === this.channels.length) {
-      this.channel = 0;
-    }
     return {
-      stop: function () {
-        channel.stop();
-      }
+      stop: sound.stop.bind(sound, id),
     };
   }
 
@@ -174,19 +180,22 @@ class SoundManager {
     }
     transition = transition || SoundManager.DEFAULT;
     this.loadSound(soundname, () => {
-      if (!sounds[soundname]) {
-        return;
-      }
-      if (this.current_loop === soundname) {
+      let sound = sounds[soundname];
+      assert(sound);
+      if (this.music[0].sound === sound) {
         // Same sound, just adjust volume, if required
         this.music[0].target_volume = volume;
         if (!transition) {
-          this.music[0].source.gain = this.music[0].current_volume = volume;
+          if (!volume) {
+            sound.stop(this.music[0].id);
+            this.music[0].sound = null;
+          } else {
+            sound.volume(volume, this.music[0].id);
+          }
         }
         return;
       }
       // fade out previous music, if any
-      /* eslint-disable no-bitwise */
       if (this.music[0].current_volume) {
         if (transition & SoundManager.FADE_OUT) {
           // swap to position 1, start fadeout
@@ -195,24 +204,22 @@ class SoundManager {
           this.music[0] = temp;
           this.music[1].target_volume = 0;
         }
-        // else source will be replaced, just let it be!
       }
-      this.current_loop = soundname;
+      if (this.music[0].sound) {
+        this.music[0].sound.stop(this.music[0].id);
+      }
+      this.music[0].sound = sound;
+      this.music[0].id = sound.play();
       this.music[0].target_volume = volume;
-      if (transition & SoundManager.FADE_IN) {
-        this.music[0].source.gain = this.music[0].current_volume = 0;
-      } else {
-        this.music[0].source.gain = this.music[0].current_volume = volume;
-      }
-      this.music[0].source.play(sounds[soundname], 0, true);
-      /* eslint-enable no-bitwise */
+      let start_vol = (transition & SoundManager.FADE_IN) ? 0 : volume;
+      sound.volume(start_vol, this.music[0].id);
+      this.music[0].current_volume = start_vol;
     });
   }
 
   loading() { // eslint-disable-line class-methods-use-this
     return num_loading;
   }
-
 }
 
 SoundManager.DEFAULT = SoundManager.prototype.DEFAULT = 0;

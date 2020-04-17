@@ -28,6 +28,8 @@ export const game_height = 240;
 
 export let sprites = {};
 
+const music_file = 'music_test.webm';
+
 // Persistent flags system for testing parameters
 let flags = {};
 function flagGet(key, dflt) {
@@ -273,9 +275,9 @@ export function main() {
     ) {
       flagToggle('music');
       if (flagGet('music')) {
-        sound_manager.playMusic('music_test.mp3', 1, sound_manager.FADE_IN);
+        sound_manager.playMusic(music_file, 1, sound_manager.FADE_IN);
       } else {
-        sound_manager.playMusic('music_test.mp3', 0, sound_manager.FADE_OUT);
+        sound_manager.playMusic(music_file, 0, sound_manager.FADE_OUT);
       }
     }
     y += button_spacing;
@@ -331,7 +333,7 @@ export function main() {
   function testInit(dt) {
     glov_engine.setState(test);
     if (flagGet('music')) {
-      sound_manager.playMusic('music_test.mp3');
+      sound_manager.playMusic(music_file);
     }
     test(dt);
   }

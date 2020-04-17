@@ -705,10 +705,6 @@ function fixNatives() {
 }
 
 export function startup(params) {
-  // globals for leftover Turbulenz bits
-  window.TurbulenzEngine = null;
-  window.assert = assert;
-
   fixNatives();
 
   canvas = document.getElementById('canvas');

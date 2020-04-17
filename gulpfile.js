@@ -30,6 +30,7 @@ const config = {
   client_html: ['src/client/**/*.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
   client_static: [
+    'src/client/**/*.webm',
     'src/client/**/*.mp3',
     'src/client/**/*.wav',
     'src/client/**/*.ogg',
