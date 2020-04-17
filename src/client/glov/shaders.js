@@ -112,6 +112,7 @@ const webgl2_header_vp = [
 
 function Shader(type, name, text) {
   assert.equal(typeof text, 'string');
+  this.name = name;
   let header = '';
   if (engine.webgl2 && text.indexOf('#pragma WebGL2') !== -1) {
     header = type === gl.VERTEX_SHADER ? webgl2_header_vp : webgl2_header_fp;
@@ -200,7 +201,7 @@ function link(vp, fp) {
 
   prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   if (!prog.valid) {
-    reportShaderError(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
+    reportShaderError(`Shader link error (${vp.name} & ${fp.name}): ${gl.getProgramInfoLog(prog.handle)}`);
     console.error(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
   }
 
