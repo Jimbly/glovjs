@@ -318,9 +318,9 @@ export function register(opts) {
   assert(!params[opts.key]);
   opts.type = opts.type || TYPE_STRING;
   let regex_search = `(?:[^\\w])${opts.key}=([^&]+)`;
-  let regex_type = 'u';
+  let regex_type = '';
   if (opts.type === TYPE_SET) {
-    regex_type = 'gu';
+    regex_type = 'g';
   } else {
     opts.def = opts.def || '';
     opts.hide_values = opts.hide_values || {};
