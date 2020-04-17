@@ -308,7 +308,9 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
     });
 
   if (force_end || progress === 1) {
-    setTimeout(destroyTexture.bind(null, transition_pixelate_texture), 0);
+    if (transition_pixelate_texture) {
+      setTimeout(destroyTexture.bind(null, transition_pixelate_texture), 0);
+    }
     transition_pixelate_texture = null;
     return REMOVE;
   }
