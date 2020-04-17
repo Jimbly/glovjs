@@ -170,44 +170,44 @@ export function runFontTest(x, y) {
     `Default ${font_size / 4} The quick brown fox jumped over the lazy dog rutabaga Alfalfa`);
   y += ceil(font_size / 4);
 
-  const font_style_outline = {
+  const font_style_outline = glov_font.style(null, {
     outline_width: 1, outline_color: COLOR_RED,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
     color: COLOR_WHITE
-  };
+  });
   font.drawSized(font_style_outline, x, y, z, font_size, 'Outline');
   y += font_size;
 
-  const font_style_glow = {
+  const font_style_glow = glov_font.style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
-  };
+  });
   font.drawSized(font_style_glow, x, y, z, font_size, 'Glow');
   y += font_size;
 
-  const font_style_shadow = {
+  const font_style_shadow = glov_font.style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 3.25, glow_yoffs: 3.25, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
-  };
+  });
   font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O');
   y += font_size;
 
-  const font_style_both = {
+  const font_style_both = glov_font.style(null, {
     outline_width: 1, outline_color: COLOR_RED,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
-  };
+  });
   font.drawSized(font_style_both, x, y, z, font_size, 'Both 0O0');
   y += font_size;
 
   let font_size2 = 32;
-  const font_style_both2 = {
+  const font_style_both2 = glov_font.style(null, {
     outline_width: 1.75,outline_color: COLOR_RED,
     glow_xoffs: 0.25, glow_yoffs: 0.25, glow_inner: 0, glow_outer: 5, glow_color: 0x7F7F7Fff,
     color: COLOR_WHITE
-  };
+  });
   font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, glov_ui.button_width * 2, 0,
     'ALIGN.HFIT The quick brown fox jumps over the lazy dog');
   y += font_size2;
@@ -218,11 +218,11 @@ export function runFontTest(x, y) {
   let test = 'glow';
 
   if (test === 'outline') {
-    const font_style_outline2 = {
+    const font_style_outline2 = glov_font.style(null, {
       outline_width: 1, outline_color: COLOR_RED,
       glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
       color: COLOR_WHITE
-    };
+    });
     for (let ii = 1; ii <= 4; ii++) {
       font_style_outline2.outline_width = ii * 2;
       font.drawSizedAligned(font_style_outline2, x, y, z, font_size2, glov_font.ALIGN.HLEFT, 400, 0,
@@ -238,11 +238,11 @@ export function runFontTest(x, y) {
     //   'Tall thick outline');
     // y += font_size2 * 2;
   } else if (test === 'glow') {
-    const font_style_glow2 = {
+    const font_style_glow2 = glov_font.style(null, {
       outline_width: 0, outline_color: COLOR_INVISIBLE,
       glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 8, glow_color: COLOR_RED,
       color: COLOR_WHITE
-    };
+    });
     for (let ii = 1; ii <= 4; ii++) {
       //font_style_glow2.glow_inner = ii * 2 - 1;
       font_style_glow2.glow_outer = ii * 2;
@@ -268,11 +268,11 @@ export function runFontTest(x, y) {
   // Gradient not supported
   // y = y0;
   // x += font_size * 8;
-  // const font_style_gradient = {
+  // const font_style_gradient = glov_font.style(null, {
   //   outline_width: 1, outline_color: 0x777777ff,
   //   glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_BLUE,
   //   gradient: [COLOR_WHITE, COLOR_WHITE, COLOR_BLACK, COLOR_BLACK],
-  // };
+  // });
   // font.drawSized(font_style_gradient, x, y + Math.sin(glov_engine.getFrameTimestamp() * 0.005) * 20, z,
   //   font_size*2, 'Gradient');
   // y += font_size*2;
