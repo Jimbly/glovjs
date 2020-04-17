@@ -16,8 +16,8 @@ function validDisplayName(display_name) {
 }
 
 export class DefaultUserWorker extends ChannelWorker {
-  constructor(channel_server, channel_id) {
-    super(channel_server, channel_id);
+  constructor(channel_server, channel_id, channel_data) {
+    super(channel_server, channel_id, channel_data);
     this.user_id = this.channel_subid; // 1234
   }
   cmdRename(new_name, resp_func) {
@@ -65,13 +65,18 @@ export class DefaultUserWorker extends ChannelWorker {
       }
     }
 
-    this.setChannelData('private.password', data.password);
-    this.setChannelData('public.display_name', data.display_name);
-    this.setChannelData('private.email', data.email);
-    this.setChannelData('private.creation_ip', data.ip);
-    this.setChannelData('private.creation_time', Date.now());
-    this.setChannelData('private.login_ip', data.ip);
-    this.setChannelData('private.login_time', Date.now());
+    let public_data = this.data.public;
+    let private_data = this.data.private;
+
+    public_data.display_name = data.display_name;
+    private_data.password = data.password;
+    private_data.email = data.email;
+    private_data.creation_ip = data.ip;
+    private_data.creation_time = Date.now();
+    private_data.login_ip = data.ip;
+    private_data.login_time = Date.now();
+    this.setChannelData('private', private_data);
+    this.setChannelData('public', public_data);
     return resp_func(null, this.getChannelData('public'));
   }
   handleSetChannelData(src, key, value) {
@@ -101,7 +106,9 @@ class ChannelServerWorker extends ChannelWorker {
   }
 }
 
-export const regex_valid_username = /^[a-z][a-z0-9_]+$/;
+ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
+
+export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
 
 let inited = false;
 let user_worker = DefaultUserWorker;
@@ -128,7 +135,12 @@ export function overrideUserWorker(new_user_worker, extra_data) {
   user_worker = new_user_worker;
   for (let key in extra_data) {
     let v = extra_data[key];
-    if (typeof v === 'object') {
+    if (Array.isArray(v)) {
+      let dest = user_worker_init_data[key] = user_worker_init_data[key] || [];
+      for (let ii = 0; ii < v.length; ++ii) {
+        dest.push(v[ii]);
+      }
+    } else if (typeof v === 'object') {
       let dest = user_worker_init_data[key] = user_worker_init_data[key] || {};
       for (let subkey in v) {
         dest[subkey] = v[subkey];

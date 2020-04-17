@@ -92,6 +92,7 @@ export function isArrayBound(texs) {
 }
 
 function Texture(params) {
+  this.name = params.name;
   this.loaded = false;
   this.load_fail = false;
   this.target = params.target || gl.TEXTURE_2D;
@@ -313,6 +314,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       }
       let err = tex.updateData(img.width, img.height, img);
       if (err) {
+        err_details = `: GLError(${err})`;
         // Samsung TV gets 1282 on texture arrays
         // Samsung Galaxy S6 gets 1281 on texture arrays
         if (tex.is_array && (String(err) === '1282' || String(err) === '1281') && engine.webgl2 && !engine.DEBUG) {
@@ -320,9 +322,10 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
             ua: navigator.userAgent,
             ts: Date.now(),
           });
+          console.error(`Error loading array texture "${url}"${err_details}, reloading without WebGL2..`);
           document.location.reload();
+          return;
         }
-        err_details = `: GLError(${err})`;
         retries = TEX_RETRY_COUNT; // do not retry this
       } else {
         --load_count;
@@ -355,6 +358,7 @@ Texture.prototype.copyTexImage = function (x, y, w, h) {
 };
 
 Texture.prototype.destroy = function () {
+  assert(this.name);
   delete textures[this.name];
   unbindHandle(this.target, this.handle);
   gl.deleteTexture(this.handle);

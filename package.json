@@ -27,6 +27,8 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "async-each": "^1.0.3",
+    "async-series": "0.0.1",
     "dot-prop": "^4.2.0",
     "express": "^4.17.1",
     "express-static-gzip": "^2.0.5",

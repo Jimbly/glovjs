@@ -2,14 +2,17 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const ack = require('../../common/ack.js');
+const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 const assert = require('assert');
 const events = require('../../common/tiny-events.js');
 const node_util = require('util');
+const { isPacket } = require('../../common/packet.js');
 const querystring = require('querystring');
 const { ipFromRequest } = require('./request_utils.js');
 const util = require('../../common/util.js');
 const url = require('url');
 const wscommon = require('../../common/wscommon.js');
+const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 const WebSocket = require('ws');
 
 function WSClient(ws_server, socket) {
@@ -23,7 +26,7 @@ function WSClient(ws_server, socket) {
   this.connected = true;
   this.disconnected = false;
   this.last_receive_time = Date.now();
-  ack.initReceiver(this);
+  ackInitReceiver(this);
   ws_server.clients[this.id] = this;
 }
 util.inherits(WSClient, events.EventEmitter);
@@ -112,7 +115,7 @@ WSServer.prototype.init = function (server) {
       client.onClose();
     });
     socket.on('message', function (data) {
-      wscommon.handleMessage(client, data);
+      wsHandleMessage(client, data);
     });
     socket.on('error', function (e) {
       // Not sure this exists on `ws`
@@ -168,17 +171,29 @@ WSServer.prototype.checkTimeouts = function () {
   }
 };
 
-WSServer.prototype.broadcast = function (msg, data) {
+// Must be a ready-to-send packet created with .wsPak, not just the payload
+WSServer.prototype.broadcastPacket = function (pak) {
   let ws_server = this;
   let num_sent = 0;
+  assert(isPacket(pak)); // And should have been created with wsPak()
+  ackWrapPakFinish(pak);
   for (let client_id in ws_server.clients) {
     if (ws_server.clients[client_id]) {
       let client = ws_server.clients[client_id];
-      client.send(msg, data);
+      pak.ref();
+      wsPakSendDest(client, pak);
       ++num_sent;
     }
   }
+  pak.pool();
   return num_sent;
+};
+
+WSServer.prototype.broadcast = function (msg, data) {
+  assert(!isPacket(data));
+  let pak = wsPak(msg);
+  ackWrapPakPayload(pak, data);
+  return this.broadcastPacket(pak);
 };
 
 WSServer.prototype.setAppVer = function (ver) {
@@ -190,6 +205,8 @@ export function isClient(obj) {
 }
 
 WSServer.prototype.isClient = isClient;
+
+WSServer.prototype.wsPak = wsPak;
 
 export function create(...args) {
   let ret = new WSServer();

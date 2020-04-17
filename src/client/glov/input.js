@@ -1262,6 +1262,7 @@ export function dragDrop(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
+    // Maybe touch_data.dispatched_drag_over instead/as well?
     if (!(button === ANY || button === touch_data.button) || touch_data.dispatched || !touch_data.drag_payload) {
       continue;
     }
@@ -1270,6 +1271,7 @@ export function dragDrop(param) {
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
       if (!param.peek) {
+        // Maybe touch_data.dispatched_drag_over as well?
         touch_data.dispatched = true;
       }
       return { drag_payload: touch_data.drag_payload };
@@ -1286,7 +1288,7 @@ export function dragOver(param) {
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
     if (!(button === ANY || button === touch_data.button) ||
-      touch_data.dispatched || touch_data.dispatched_drag_over ||
+      touch_data.dispatched || touch_data.dispatched_drag_over || // Maybe not .dispatched?
       !touch_data.drag_payload
     ) {
       continue;

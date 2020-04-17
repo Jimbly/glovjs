@@ -3,6 +3,7 @@
 /* eslint complexity:off */
 
 const assert = require('assert');
+const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 const glov_input = require('./input.js');
 const glov_font = require('./font.js');
@@ -48,7 +49,7 @@ export const default_display = {
 
 
 const color_gray50 = vec4(0.313, 0.313, 0.313, 1.000);
-// const color_gray80 = vec4(0.500, 0.500, 0.500, 1.000);
+const color_gray80 = vec4(0.500, 0.500, 0.500, 1.000);
 const color_grayD0 = vec4(0.816, 0.816, 0.816, 1.000);
 const color_white = vec4(1, 1, 1, 1);
 
@@ -106,6 +107,8 @@ class GlovSelectionBox {
     this.font_height = glov_ui.font_height;
     this.entry_height = glov_ui.button_height;
     this.auto_reset = true;
+    this.auto_unfocus = true;
+    this.initial_selection = 0;
     this.applyParams(params);
 
     // Run-time state
@@ -120,6 +123,7 @@ class GlovSelectionBox {
     this.last_mousey = 0;
     this.bounce_time = 0;
     this.expected_frame_index = 0;
+    this.pre_dropdown_selection = undefined;
     // this.sa = TODO
   }
 
@@ -172,11 +176,16 @@ class GlovSelectionBox {
     let { KEYS, PAD } = glov_input;
 
     if (auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
-      // Reset, select first non-disabled entry
-      for (let ii = 0; ii < this.items.length; ++ii) {
-        if (!this.items[ii].disabled) {
-          this.selected = ii;
-          break;
+      // Reset
+      if (this.items[this.initial_selection] && !this.items[this.initial_selection].disabled) {
+        this.selected = this.initial_selection;
+      } else {
+        // Selection out of range or disabled, select first non-disabled entry
+        for (let ii = 0; ii < this.items.length; ++ii) {
+          if (!this.items[ii].disabled) {
+            this.selected = ii;
+            break;
+          }
         }
       }
     }
@@ -199,6 +208,18 @@ class GlovSelectionBox {
     }
 
     let old_sel = this.selected;
+    let focused = this.is_focused = this.disabled ? false : glov_ui.focusCheck(this);
+    let gained_focus = focused && !was_focused;
+
+    if (!focused && this.dropdown_visible) {
+      if (this.pre_dropdown_selection !== undefined) {
+        // Restore selection to before opening the dropdown
+        this.selected = this.pre_dropdown_selection;
+        this.pre_dropdown_selection = undefined;
+      }
+      this.dropdown_visible = false;
+    }
+
     let num_non_disabled_selections = 0;
     let eff_sel = -1;
     for (let ii = 0; ii < this.items.length; ++ii) {
@@ -216,8 +237,6 @@ class GlovSelectionBox {
       eff_sel = 0;
     }
 
-    let focused = this.is_focused = this.disabled ? false : glov_ui.focusCheck(this);
-    let gained_focus = focused && !was_focused;
     if (this.transient_focus && gained_focus) {
       if (gained_focus_forward) {
         eff_sel = 0;
@@ -225,9 +244,6 @@ class GlovSelectionBox {
         eff_sel = num_non_disabled_selections - 1;
       }
       pos_changed = true;
-    }
-    if (!focused && this.dropdown_visible) {
-      this.dropdown_visible = false;
     }
 
     if (!this.is_dropdown && !display.no_background) {
@@ -334,6 +350,9 @@ class GlovSelectionBox {
     if (this.is_dropdown) {
       // display header
       let color0 = color_white;
+      if (this.disabled) {
+        color0 = color_gray80;
+      }
       // let color1 = color_white;
       // let dropdown_rect = glov_ui.sprites.menu_header.uidata.rects[2];
       // let dropdown_width = (dropdown_rect[2] - dropdown_rect[0]) / (dropdown_rect[3] - dropdown_rect[1]) *
@@ -346,6 +365,7 @@ class GlovSelectionBox {
       })) {
         glov_ui.focusSteal(this);
         this.dropdown_visible = !this.dropdown_visible;
+        this.pre_dropdown_selection = this.selected;
         color0 = color_grayD0;
         // color1 = color_gray80;
       } else if (!this.disabled && glov_input.mouseOver({
@@ -374,6 +394,9 @@ class GlovSelectionBox {
 
     if (!this.is_dropdown || this.dropdown_visible) {
       let do_scroll = this.scroll_height && this.items.length * entry_height > this.scroll_height;
+      if (!do_scroll && y + this.items.length * entry_height >= camera2d.y1()) {
+        y = camera2d.y1() - this.items.length * entry_height;
+      }
       let y_save = y;
       let x_save = x;
       let scroll_pos = 0;
@@ -562,6 +585,12 @@ class GlovSelectionBox {
 
     if (this.selected !== old_sel || sel_changed) {
       glov_ui.playUISound('rollover');
+    }
+
+    if (focused && this.auto_unfocus) {
+      if (glov_input.click({ peek: true })) {
+        glov_ui.focusSteal('canvas');
+      }
     }
 
     this.expected_frame_index = glov_engine.getFrameIndex() + 1;

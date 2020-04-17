@@ -562,8 +562,8 @@ function Sprite(params) {
 }
 
 // params:
-//   required: x, y, z
-//   optional: w, h, uvs, color
+//   required: x, y
+//   optional: z, w, h, uvs, color
 Sprite.prototype.draw = function (params) {
   if (params.w === 0 || params.h === 0) {
     return;
@@ -571,7 +571,7 @@ Sprite.prototype.draw = function (params) {
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-  queuesprite(this, params.x, params.y, params.z, w, h, params.rot, uvs, params.color || this.color,
+  queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
     params.shader || this.shader, params.shader_params, params.nozoom);
 };
 

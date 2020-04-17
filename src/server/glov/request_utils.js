@@ -46,3 +46,37 @@ export function allowMapFromLocalhostOnly(app) {
     return next(`Cannot ${req.method} ${req.url}`);
   });
 }
+
+export function safeString(str) {
+  return str.replace(/["<>\\]/g, '');
+}
+
+export function respondArray(req, res, next, err, arr) {
+  if (err) {
+    return void next(err);
+  }
+  let text;
+  if (req.query.format === 'csv' || req.query.format === 'tsv') {
+    res.setHeader('Content-Type', 'text/plain');
+    let delim = req.query.format === 'csv' ? ',' : '\t';
+    let header = [];
+    let keys = {};
+    let lines = [];
+    for (let ii = 0; ii < arr.length; ++ii) {
+      let elem = arr[ii];
+      for (let key in elem) {
+        let idx = keys[key];
+        if (idx === undefined) {
+          keys[key] = header.length;
+          header.push(key);
+        }
+      }
+      lines.push(header.map((f) => `${elem[f]}`).join(delim));
+    }
+    text = `${header.join(delim)}\n${lines.join('\n')}`;
+  } else {
+    res.setHeader('Content-Type', 'application/json');
+    text = JSON.stringify(arr);
+  }
+  res.end(text);
+}

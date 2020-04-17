@@ -16,7 +16,7 @@ const particle_data = require('./particle_data.js');
 const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
 
 window.Z = window.Z || {};
-Z.BACKGROUND = 0;
+Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
 Z.UI_TEST = 200;

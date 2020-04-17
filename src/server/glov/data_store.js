@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const dot_prop = require('dot-prop');
+const fs = require('fs');
 const FileStore = require('fs-store').FileStore;
 const mkdirp = require('mkdirp');
 const path = require('path');
@@ -11,31 +12,37 @@ class DataStoreOneFile {
   constructor(store_path) {
     this.root_store = new FileStore(store_path);
   }
-  set(obj_name, key, value) {
-    let obj = this.root_store.get(obj_name, {});
-    if (!key) {
-      obj = value;
-    } else {
-      dot_prop.set(obj, key, value);
-    }
-    this.root_store.set(obj_name, obj);
-  }
-  get(obj_name, key, default_value) {
-    let obj = this.root_store.get(obj_name, key ? {} : default_value);
-    if (!key) {
-      return obj;
-    }
-    return dot_prop.get(obj, key, default_value);
-  }
   setAsync(obj_name, key, value, cb) {
     setImmediate(() => {
-      this.set(obj_name, key, value);
+      let obj;
+      if (Buffer.isBuffer(value)) {
+        assert(!key);
+        obj = value.toString('utf8');
+      } else if (!key) {
+        obj = value;
+      } else {
+        obj = this.root_store.get(obj_name, {});
+        dot_prop.set(obj, key, value);
+      }
+      this.root_store.set(obj_name, obj);
       cb();
     });
   }
   getAsync(obj_name, key, default_value, cb) {
     setImmediate(() => {
-      cb(null, this.get(obj_name, key, default_value));
+      let obj = this.root_store.get(obj_name, key ? {} : default_value);
+      if (key) {
+        obj = dot_prop.get(obj, key, default_value);
+      }
+      cb(null, obj);
+    });
+  }
+  getAsyncBuffer(obj_name, cb) {
+    this.getAsync(obj_name, '', null, function (err, value) {
+      if (!err && value !== null) {
+        value = Buffer.from(value, 'utf8');
+      }
+      return cb(err, value);
     });
   }
   unload(obj_name) { // eslint-disable-line class-methods-use-this
@@ -47,6 +54,7 @@ class DataStore {
   constructor(store_path) {
     this.path = store_path;
     this.stores = {};
+    this.bin_queue = {};
     this.mkdirs = {};
     this.mkdir(store_path);
   }
@@ -71,42 +79,108 @@ class DataStore {
     assert(store);
     delete this.stores[obj_name];
   }
-  set(obj_name, key, value) {
-    let store = this.getStore(obj_name);
-    let obj = store.get('data', {});
-    if (!key) {
-      obj = value;
-    } else {
-      dot_prop.set(obj, key, value);
+
+  setAsyncBufferInternal(obj_name, value, cb) {
+    if (this.bin_queue[obj_name]) {
+      this.bin_queue[obj_name].value = value;
+      this.bin_queue[obj_name].need_write = true;
+      this.bin_queue[obj_name].cbs.push(cb);
+      return;
     }
-    store.set('data', obj);
-  }
-  get(obj_name, key, default_value) {
     let store = this.getStore(obj_name);
-    let obj = store.get('data', key ? {} : default_value);
-    if (!key) {
-      return obj;
-    }
-    return dot_prop.get(obj, key, default_value);
+
+    let onFinish;
+    let startWrite = () => {
+      // save separately, update reference
+      let old_ext = store.get('bin');
+      let bin_ext = old_ext && old_ext === 'b1' ? 'b2' : 'b1';
+      let path_base = path.join(this.path, obj_name);
+      let bin_path = `${path_base}.${bin_ext}`;
+      this.bin_queue[obj_name] = { cbs: [cb] };
+      fs.writeFile(bin_path, value, function (err) {
+        if (err) {
+          // Shouldn't ever happen, out of disk space, maybe?
+          return void onFinish(err);
+        }
+        store.set('bin', bin_ext);
+        store.set('data', null);
+        // Could also delete the old bin file after the flush, but safer to keep it around
+        store.onFlush(onFinish);
+      });
+    };
+    onFinish = (err) => {
+      let queued = this.bin_queue[obj_name];
+      let { cbs, need_write } = queued;
+      delete this.bin_queue[obj_name];
+      if (need_write) {
+        value = queued.value;
+        startWrite();
+      }
+      if (cbs.length) {
+        for (let ii = 0; ii < cbs.length; ++ii) {
+          cbs[ii](err);
+        }
+      }
+    };
+    startWrite();
   }
 
   setAsync(obj_name, key, value, cb) {
     setImmediate(() => {
-      this.set(obj_name, key, value);
+      if (Buffer.isBuffer(value)) {
+        assert(!key);
+        return void this.setAsyncBufferInternal(obj_name, value, cb);
+      }
+      let store = this.getStore(obj_name);
+      assert(!store.get('bin'));
+      let obj;
+      if (!key) {
+        obj = value;
+      } else {
+        obj = store.get('data', {});
+        dot_prop.set(obj, key, value);
+      }
+      store.set('data', obj);
       cb();
     });
   }
   getAsync(obj_name, key, default_value, cb) {
     setImmediate(() => {
-      cb(null, this.get(obj_name, key, default_value));
+      let store = this.getStore(obj_name);
+      assert(!store.get('bin'));
+      let obj = store.get('data', key ? {} : default_value);
+      if (key) {
+        obj = dot_prop.get(obj, key, default_value);
+      }
+      cb(null, obj);
+    });
+  }
+  getAsyncBuffer(obj_name, cb) {
+    setImmediate(() => {
+      let store = this.getStore(obj_name);
+      let bin_ext = store.get('bin');
+      if (bin_ext) {
+        let path_base = path.join(this.path, `${obj_name}.${bin_ext}`);
+        return void fs.readFile(path_base, cb);
+      }
+      // No binary file, is there an old text object stored here?
+      let obj = store.get('data', null);
+      if (obj !== null) {
+        assert.equal(typeof obj, 'string'); // Could maybe JSON.stringify and return that if something else?
+        return void cb(null, Buffer.from(obj, 'utf8'));
+      }
+      cb(null, null);
     });
   }
 }
 
+// Init the type of datastore system
 export function create(store_path, one_file) {
   if (one_file) {
     return new DataStoreOneFile(store_path);
-  } else {
-    return new DataStore(store_path);
   }
+
+  // Defaults to FileStore (this will be the behaviour in local environment)
+  console.info('DataStore - Local FileStore in use for everything');
+  return new DataStore(store_path);
 }

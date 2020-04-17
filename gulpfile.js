@@ -153,7 +153,7 @@ function babelBrfs(filename, opts) {
 let client_js_deps = [];
 let client_js_watch_deps = [];
 
-function bundleJS(filename, is_worker) {
+function bundleJS(filename, is_worker, pre_task) {
   let bundle_name = filename.replace('.js', '.bundle.js');
   const browserify_opts = {
     entries: [
@@ -167,6 +167,7 @@ function bundleJS(filename, is_worker) {
       buffer: './src/client/shims/buffer.js',
       not_worker: !is_worker && './src/client/shims/not_worker.js',
       // timers: './src/client/shims/timers.js',
+      _process: './src/client/shims/empty.js',
     },
     debug: true,
     transform: [babelBrfs]
@@ -240,7 +241,11 @@ function bundleJS(filename, is_worker) {
       }
       return ret;
     });
-    gulp.task(task_base, gulp.series(`${task_base}_bundle`, version_task));
+    if (pre_task) {
+      gulp.task(task_base, gulp.series(pre_task, `${task_base}_bundle`, version_task));
+    } else {
+      gulp.task(task_base, gulp.series(`${task_base}_bundle`, version_task));
+    }
   }
   const watched = watchify(browserify(browserify_opts));
   registerTasks(watched, true);

@@ -95,7 +95,12 @@ ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predic
     dot_prop.set(this.data, key, value);
   }
   let q = value && value.q || undefined;
-  this.subs.client.send('set_channel_data', { channel_id: this.channel_id, key, value, q }, resp_func);
+  let pak = this.subs.client.wsPak('set_channel_data');
+  pak.writeAnsiString(this.channel_id);
+  pak.writeBool(q);
+  pak.writeAnsiString(key);
+  pak.writeJSON(value);
+  pak.send(resp_func);
 };
 
 ClientChannelWorker.prototype.removeMsgHandler = function (msg, cb) {
@@ -106,6 +111,14 @@ ClientChannelWorker.prototype.removeMsgHandler = function (msg, cb) {
 ClientChannelWorker.prototype.onMsg = function (msg, cb) {
   assert(!this.handlers[msg] || this.handlers[msg] === cb);
   this.handlers[msg] = cb;
+};
+
+ClientChannelWorker.prototype.pak = function (msg) {
+  let pak = this.subs.client.wsPak('channel_msg');
+  pak.writeAnsiString(this.channel_id);
+  pak.writeAnsiString(msg);
+  // pak.writeInt(flags);
+  return pak;
 };
 
 ClientChannelWorker.prototype.send = function (msg, data, opts, resp_func) {
@@ -133,6 +146,7 @@ function SubscriptionManager(client) {
 
   this.first_connect = true;
   this.server_time = 0;
+  this.server_time_interp = 0;
   client.onMsg('connect', this.handleConnect.bind(this));
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
@@ -219,8 +233,8 @@ SubscriptionManager.prototype.handleChannelMessage = function (data, resp_func) 
   channel.handlers[msg](data, resp_func);
 };
 
-SubscriptionManager.prototype.handleServerTime = function (data) {
-  this.server_time = data;
+SubscriptionManager.prototype.handleServerTime = function (pak) {
+  this.server_time = pak.readInt();
   if (this.server_time < this.server_time_interp && this.server_time > this.server_time_interp - 250) {
     // slight time travel backwards, this one packet must have been delayed,
     // since we once got a packet quicker. Just ignore this, interpolate from
@@ -278,7 +292,9 @@ SubscriptionManager.prototype.getMyUserChannel = function () {
     return null;
   }
   let channel = this.getChannel(`user.${user_id}`);
-  channel.autosubscribed = true;
+  if (!this.logging_out) {
+    channel.autosubscribed = true;
+  }
   return channel;
 };
 
@@ -314,6 +330,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
     this.was_logged_in = true;
+    this.getMyUserChannel();
     this.emit('login');
   } else {
     this.emit('login_fail', err);

@@ -2,10 +2,11 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const ack = require('../../common/ack.js');
+const { ackHandleMessage, ackInitReceiver } = ack;
 const assert = require('assert');
-const { channelServerSend } = require('./channel_server.js');
+const { channelServerPak, channelServerSend } = require('./channel_server.js');
 const dot_prop = require('dot-prop');
-const exchange = require('./exchange.js');
+const { ERR_NOT_FOUND } = require('./exchange.js');
 const { min } = Math;
 const { empty, logdata } = require('../../common/util.js');
 
@@ -20,10 +21,11 @@ function throwErr(err) {
 }
 
 const PKT_LOG_SIZE = 16;
+const PKT_LOG_BUF_SIZE = 32;
 
 
 export class ChannelWorker {
-  constructor(channel_server, channel_id) {
+  constructor(channel_server, channel_id, channel_data) {
     this.channel_server = channel_server;
     this.channel_id = channel_id;
     let m = channel_id.match(/^([^.]*)\.(.*)$/); // eslint-disable-line require-unicode-regexp
@@ -43,14 +45,18 @@ export class ChannelWorker {
     this.store_path = `${this.channel_type}/${this.channel_id}`;
     this.bulk_store_path = `bulk/${this.channel_type}/${this.channel_id}`;
     this.bulk_store_paths = {};
-    this.data = channel_server.ds_store.get(this.store_path, '', {});
+
+    // This will always be an empty object with creating local channel
+    assert(channel_data);
+    this.data = channel_data;
     this.data.public = this.data.public || {};
     this.data.private = this.data.private || {};
-    this.subscribe_counts = {}; // refcount of subscriptions to other channels
+
+    this.subscribe_counts = Object.create(null); // refcount of subscriptions to other channels
     this.is_channel_worker = true; // TODO: Remove this?
     this.adding_client = null; // The client we're in the middle of adding, don't send them state updates yet
     this.last_msg_time = Date.now();
-    ack.initReceiver(this);
+    ackInitReceiver(this);
     // Handle modes that can be enabled via statics on prototype
     if (this.maintain_client_list) {
       this.data.public.clients = {};
@@ -58,17 +64,29 @@ export class ChannelWorker {
 
     this.pkt_log_idx = 0;
     this.pkt_log = new Array(PKT_LOG_SIZE);
+
+    // Data store optimisation checks
+    this.set_in_flight = false;
+    this.data_awaiting_set = null;
+    this.last_saved_data = '';
   }
 
   shutdown() {
     assert(!this.numSubscribers());
     assert(empty(this.subscribe_counts));
+    if (this.onShutdown) {
+      this.onShutdown();
+    }
     // TODO: this unloading should be automatic / in lower layer, as it doesn't
     // make sense when the datastore is a database?
-    this.channel_server.ds_store.unload(this.store_path);
-    for (let path in this.bulk_store_paths) {
-      this.channel_server.ds_store.unload(path);
+    if (!this.no_datastore) {
+      this.channel_server.ds_store_meta.unload(this.store_path);
     }
+
+    for (let path in this.bulk_store_paths) {
+      this.channel_server.ds_store_bulk.unload(path);
+    }
+
     this.channel_server.removeChannelLocal(this.channel_id);
   }
 
@@ -135,7 +153,7 @@ export class ChannelWorker {
   }
 
   isEmpty() {
-    return !this.subscribers.length && empty(this.pkt_queue);
+    return !this.subscribers.length && empty(this.pkt_queue) && !this.set_in_flight;
   }
 
   autoDestroyCheck() {
@@ -164,7 +182,7 @@ export class ChannelWorker {
   }
 
   onUnSubscribe(src, data, resp_func) {
-    let { channel_id, user_id } = src;
+    let { channel_id } = src;
     let is_client = src.type === 'client';
     let idx = this.subscribers.indexOf(channel_id);
     if (idx === -1) {
@@ -181,6 +199,7 @@ export class ChannelWorker {
     }
 
     if (this.maintain_client_list && is_client) {
+      let user_id = this.getChannelData(`public.clients.${src.id}.ids.user_id`);
       this.setChannelData(`public.clients.${src.id}`, undefined);
       if (user_id) {
         this.unsubscribeOther(`user.${user_id}`);
@@ -235,7 +254,7 @@ export class ChannelWorker {
     delete this.subscribe_counts[other_channel_id];
     // TODO: Disable autocreate for this call?
     this.sendChannelMessage(other_channel_id, 'unsubscribe', undefined, (err, resp_data) => {
-      if (err === exchange.ERR_NOT_FOUND) {
+      if (err === ERR_NOT_FOUND) {
         // This is fine, just ignore
         console.debug(`${this.channel_id}->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
@@ -362,21 +381,27 @@ export class ChannelWorker {
     }
   }
 
-  onSetChannelDataIf(source, data, resp_func) {
+  onSetChannelDataIf(source, pak, resp_func) {
     if (source.type === 'client') {
       // deny
       return resp_func('ERR_NOT_ALLOWED');
     }
-    let old_value = dot_prop.get(this.data, data.key);
-    if (old_value !== data.set_if) {
+    let q = pak.readBool();
+    let key = pak.readAnsiString();
+    let value = pak.readJSON();
+    let set_if = pak.readJSON();
+    let old_value = dot_prop.get(this.data, key);
+    if (old_value !== set_if) {
       return resp_func('ERR_SETIF_MISMATCH');
     }
-    this.setChannelDataInternal(source, data.key, data.value, data.q);
+    this.setChannelDataInternal(source, key, value, q);
     return resp_func();
   }
 
   commitData() {
+    const self = this;
     let data = this.data;
+
     if (this.maintain_client_list) {
       data = {};
       for (let key in this.data) {
@@ -392,13 +417,46 @@ export class ChannelWorker {
       }
       data.public = pd;
     }
-    this.channel_server.ds_store.set(this.store_path, '', data);
+
+    // Mark this data as awaiting to be set
+    this.data_awaiting_set = data;
+
+    // Make sure no more than one write is in flight to avoid corrupted/overlapped data
+    if (this.set_in_flight) {
+      return;
+    }
+
+    // Set data to store along with setting checks to make sure no more than one sets are in flight
+    function safeSet() {
+      const incoming_data = self.data_awaiting_set;
+      const data_to_compare = JSON.stringify(incoming_data);
+      self.data_awaiting_set = null;
+
+      // Do not write to datastore if nothing has changed
+      if (data_to_compare === self.last_saved_data) {
+        return;
+      }
+
+      self.last_saved_data = data_to_compare;
+      self.set_in_flight = true;
+
+      self.channel_server.ds_store_meta.setAsync(self.store_path, '', incoming_data, function () {
+        self.set_in_flight = false;
+
+        // data in memory was updated again in mid flight so we need to set to store again with the new data
+        if (self.data_awaiting_set) {
+          safeSet();
+        }
+      });
+    }
+
+    safeSet();
   }
 
-  onSetChannelDataPush(source, data, resp_func) {
-    let { key, value } = data;
-    assert(typeof key === 'string');
-    assert(typeof source === 'object');
+  onSetChannelDataPush(source, pak, resp_func) {
+    let q = pak.readBool();
+    let key = pak.readAnsiString();
+    let value = pak.readJSON();
     if (this.handleSetChannelData ?
       !this.handleSetChannelData(source, key, value) :
       !this.defaultHandleSetChannelData(source, key, value)
@@ -427,9 +485,9 @@ export class ChannelWorker {
     if (key.startsWith('public')) {
       let mod_data;
       if (need_create) {
-        mod_data = { key, value: arr };
+        mod_data = { key, value: arr, q };
       } else {
-        mod_data = { key: `${key}.${idx}`, value };
+        mod_data = { key: `${key}.${idx}`, value, q };
       }
       this.channelEmit('apply_channel_data', mod_data, this.adding_client);
     }
@@ -437,8 +495,11 @@ export class ChannelWorker {
     return resp_func();
   }
 
-  onSetChannelData(source, data) {
-    this.setChannelDataInternal(source, data.key, data.value, data.q);
+  onSetChannelData(source, pak, resp_func) {
+    let q = pak.readBool();
+    let key = pak.readAnsiString();
+    let value = pak.readJSON();
+    this.setChannelDataInternal(source, key, value, q, resp_func);
   }
   setChannelData(key, value, q) {
     this.setChannelDataInternal(this.core_ids, key, value, q);
@@ -473,7 +534,7 @@ export class ChannelWorker {
     return this.permissive_client_set; // default false - don't let clients change anything other than their own data
   }
 
-  setChannelDataInternal(source, key, value, q) {
+  setChannelDataInternal(source, key, value, q, resp_func) {
     assert(typeof key === 'string');
     assert(typeof source === 'object');
     if (this.handleSetChannelData ?
@@ -482,6 +543,9 @@ export class ChannelWorker {
     ) {
       // denied by app_worker
       console.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
+      if (resp_func) {
+        resp_func('ERR_INTERNAL');
+      }
       return;
     }
 
@@ -499,20 +563,34 @@ export class ChannelWorker {
       this.channelEmit('apply_channel_data', data, this.adding_client);
     }
     this.commitData();
+    if (resp_func) {
+      resp_func();
+    }
   }
   getChannelData(key, default_value) {
     return dot_prop.get(this.data, key, default_value);
   }
 
-  getBulkChannelData(obj_name, key, default_value, cb) {
+  getBulkChannelData(obj_name, default_value, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store.getAsync(bulk_obj_name, key, default_value, cb);
+    this.channel_server.ds_store_bulk.getAsync(bulk_obj_name, '', default_value, cb);
+  }
+  getBulkChannelBuffer(obj_name, cb) {
+    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
+    this.bulk_store_paths[bulk_obj_name] = true;
+    this.channel_server.ds_store_bulk.getAsyncBuffer(bulk_obj_name, cb);
   }
   setBulkChannelData(obj_name, key, value, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store.setAsync(bulk_obj_name, key, value, cb || throwErr);
+    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, key, value, cb || throwErr);
+  }
+  setBulkChannelBuffer(obj_name, value, cb) {
+    assert(Buffer.isBuffer(value));
+    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
+    this.bulk_store_paths[bulk_obj_name] = true;
+    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, '', value, cb || throwErr);
   }
 
   sendChannelMessage(dest, msg, data, resp_func) {
@@ -577,7 +655,7 @@ export class ChannelWorker {
         delete this.pkt_queue[source];
       }
       // TODO: Make this not deeply recursive?
-      this.dispatchPacket(next_idx, next.source, next.ids, next.net_data);
+      this.dispatchPacket(next_idx, next.source, next.pak);
     }
   }
 
@@ -613,7 +691,7 @@ export class ChannelWorker {
     if (empty(q)) {
       delete this.pkt_queue[source];
     }
-    this.dispatchPacket(next_idx, next.source, next.ids, next.net_data);
+    this.dispatchPacket(next_idx, next.source, next.pak);
     // also dispatches any sequential queued up, and may clear/invalidate q_data
     if (this.pkt_queue[source]) {
       // still have remaining, non-sequential packets (untested, unexpected)
@@ -622,14 +700,23 @@ export class ChannelWorker {
     }
   }
 
-  dispatchPacket(pkt_idx, source, ids, net_data) {
+  dispatchPacket(pkt_idx, source, pak) {
+    let ids = pak.readJSON() || {};
+    let split = source.split('.');
+    assert.equal(split.length, 2);
+    ids.type = split[0];
+    ids.id = split[1];
+    ids.channel_id = source;
+
     let channel_worker = this;
-    channel_worker.logPacketDispatch(source, net_data);
+    channel_worker.logPacketDispatch(source, pak);
     channel_worker.channel_server.last_worker = channel_worker;
     channel_worker.recv_pkt_idx[source] = pkt_idx;
     try {
-      ack.handleMessage(channel_worker, source, net_data, function sendFunc(msg, err, data, resp_func) {
+      ackHandleMessage(channel_worker, source, pak, function sendFunc(msg, err, data, resp_func) {
         channelServerSend(channel_worker, source, msg, err, data, resp_func);
+      }, function packFunc(msg, ref_pak) {
+        return channelServerPak(channel_worker, source, msg, ref_pak);
       }, function handleFunc(msg, data, resp_func) {
         channel_worker.channelMessage(ids, msg, data, resp_func);
       });
@@ -641,20 +728,16 @@ export class ChannelWorker {
     this.checkPacketQueue(source);
   }
 
-  // source is a string channel_id
-  handleMessage(source, net_data) {
+  handleMessage(pak) {
     let channel_worker = this;
-    let ids = net_data.ids || {};
-    let split = source.split('.');
-    assert.equal(split.length, 2);
-    ids.type = split[0];
-    ids.id = split[1];
-    ids.channel_id = source;
-    let pkt_idx = net_data.pkt_idx;
+    pak.readFlags();
+    // source is a string channel_id
+    let pkt_idx = pak.readU32();
+    let source = pak.readAnsiString();
     assert(pkt_idx);
     let expected_idx = (this.recv_pkt_idx[source] || 0) + 1;
     function dispatch() {
-      channel_worker.dispatchPacket(pkt_idx, source, ids, net_data);
+      channel_worker.dispatchPacket(pkt_idx, source, pak);
     }
     if (pkt_idx === expected_idx) {
       dispatch();
@@ -666,7 +749,7 @@ export class ChannelWorker {
       console.error(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
       } (expected ${expected_idx}) from ${source}. Queuing...`);
       let q_data = channel_worker.pkt_queue[source] = channel_worker.pkt_queue[source] || { pkts: {} };
-      q_data.pkts[pkt_idx] = { source, ids, net_data };
+      q_data.pkts[pkt_idx] = { source, pak };
       if (!q_data.tid) {
         this.startPacketQueueCheck(source);
       }
@@ -674,8 +757,20 @@ export class ChannelWorker {
     this.checkAutoDestroy();
   }
 
-  logPacketDispatch(source, net_data) {
-    this.pkt_log[this.pkt_log_idx] = { ts: Date.now(), source, net_data };
+  logPacketDispatch(source, pak) {
+    let ple = this.pkt_log[this.pkt_log_idx];
+    if (!ple) {
+      ple = this.pkt_log[this.pkt_log_idx] = { data: Buffer.alloc(PKT_LOG_BUF_SIZE) };
+    }
+    // Copy first PKT_LOG_BUF_SIZE bytes for logging
+    let buf = pak.getBuffer();
+    let buf_len = pak.getBufferLen();
+    let buf_offs = pak.getOffset();
+    let data_len = min(PKT_LOG_BUF_SIZE, buf_len - buf_offs);
+    ple.ts = Date.now();
+    ple.source = source;
+    Buffer.prototype.copy.call(buf, ple.data, 0, buf_offs, buf_offs + data_len);
+    ple.data_len = data_len;
     this.pkt_log_idx = (this.pkt_log_idx + 1) % PKT_LOG_SIZE;
   }
 }
@@ -687,3 +782,4 @@ ChannelWorker.prototype.auto_destroy = false;
 ChannelWorker.prototype.permissive_client_set = false; // allow clients to set arbitrary data
 ChannelWorker.prototype.allow_client_broadcast = {}; // default: none
 ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this
+ChannelWorker.prototype.no_datastore = false; // always assume datastore usage

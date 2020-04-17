@@ -23,6 +23,7 @@ const effects = require('./effects.js');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
+const { linkTick } = require('./link.js');
 const { abs, max, min, round, sqrt } = Math;
 const glov_sprites = require('./sprites.js');
 const textures = require('./textures.js');
@@ -706,13 +707,14 @@ function modalDialogRun() {
   let eff_font_height = modal_dialog.font_height || font_height;
   let eff_button_height = button_height;
   let pad = modal_pad;
+  let vpad = modal_pad * 0.5;
   let general_scale = 1;
   if (virtual_size[0] > 0.1 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
     // If a 24-pt font is more than 10% of the camera height, we're probably super-wide-screen
     // on a mobile device due to keyboard being visible
     fullscreen_mode = true;
     eff_button_height = eff_font_height;
-    pad = 4;
+    vpad = pad = 4;
 
     let old_h = camera2d.h();
     camera2d.push();
@@ -724,14 +726,14 @@ function modalDialogRun() {
   let keys = Object.keys(buttons);
 
   const game_width = camera2d.x1() - camera2d.x0();
-  const eff_modal_width = fullscreen_mode ? game_width : modal_width;
+  const eff_modal_width = fullscreen_mode ? game_width : (modal_dialog.width || modal_width);
   let eff_button_width = modal_dialog.button_width || modal_button_width;
   let max_total_button_width = eff_modal_width * 2 / 3;
   eff_button_width = min(eff_button_width, max_total_button_width / keys.length);
   const text_w = eff_modal_width - pad * 2;
   const x0 = camera2d.x0() + round((game_width - eff_modal_width) / 2);
   let x = x0 + pad;
-  const y0 = fullscreen_mode ? 0 : modal_y0;
+  const y0 = fullscreen_mode ? 0 : (modal_dialog.y0 || modal_y0);
   let y = y0 + pad;
 
   if (glov_input.pointerLocked()) {
@@ -748,7 +750,7 @@ function modalDialogRun() {
         x, y, Z.MODAL, text_w, 0, eff_font_height * modal_title_scale,
         modal_dialog.title);
     }
-    y += round(pad * 1.5);
+    y += round(vpad * 1.5);
   }
 
   if (modal_dialog.text) {
@@ -760,7 +762,7 @@ function modalDialogRun() {
       y += font.drawSizedWrapped(modal_font_style, x, y, Z.MODAL, text_w, 0, eff_font_height,
         modal_dialog.text);
     }
-    y += pad;
+    y += vpad;
   }
 
   let tick_key;
@@ -819,7 +821,7 @@ function modalDialogRun() {
     x += pad + eff_button_width;
   }
   y += eff_button_height;
-  y += pad * 2;
+  y += vpad + pad;
   panel({
     x: x0,
     y: y0,
@@ -843,6 +845,7 @@ export function modalTextEntry(param) {
     spellcheck: false,
     initial_select: true,
     text: param.edit_text,
+    max_len: param.max_len,
   });
   let buttons = {};
   for (let key in param.buttons) {
@@ -873,7 +876,7 @@ export function modalTextEntry(param) {
     if (eb_ret === eb.SUBMIT) {
       ret = KEYS.O; // Do OK, Yes
     } else if (eb_ret === eb.CANCEL) {
-      ret =KEYS.ESC; // Do Cancel, No
+      ret = KEYS.ESC; // Do Cancel, No
     }
     if (old_tick) {
       ret = old_tick(params) || ret;
@@ -977,6 +980,8 @@ export function slider(value, param) {
   return value;
 }
 
+let pp_bad_frames = 0;
+
 export function tickUI(dt) {
   last_frame_button_mouseover = frame_button_mouseover;
   frame_button_mouseover = false;
@@ -988,9 +993,11 @@ export function tickUI(dt) {
 
   last_frame_edit_boxes = exports.this_frame_edit_boxes;
   exports.this_frame_edit_boxes = [];
+  linkTick();
 
   dom_elems_issued = 0;
 
+  let pp_this_frame = false;
   if (modal_dialog || menu_up) {
     let params = menu_fade_params;
     if (!menu_up) {
@@ -1000,9 +1007,10 @@ export function tickUI(dt) {
     menu_up_time += dt;
     // Effects during modal dialogs
     let factor = min(menu_up_time / 500, 1);
-    if (!glov_engine.defines.NOPP) {
+    if (glov_engine.postprocessing && !glov_engine.defines.NOPP) {
       glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
       glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
+      pp_this_frame = true;
     } else {
       // Or, just darken
       sprites.white.draw({
@@ -1018,6 +1026,16 @@ export function tickUI(dt) {
     menu_up_time = 0;
   }
   menu_up = false;
+
+  if (!glov_engine.is_loading && glov_engine.getFrameDtActual() > 50 && pp_this_frame) {
+    pp_bad_frames = (pp_bad_frames || 0) + 1;
+    if (pp_bad_frames >= 3) { // 3 in a row, disable superfluous postprocessing
+      glov_engine.postprocessingAllow(false);
+    }
+  } else if (pp_bad_frames) {
+    pp_bad_frames = 0;
+  }
+
 
   if (modal_dialog) {
     modalDialogRun();

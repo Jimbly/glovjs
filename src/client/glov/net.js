@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const packet = require('../../common/packet.js');
 const subscription_manager = require('./subscription_manager.js');
 const WSClient = require('./wsclient.js').WSClient;
 const wscommon = require('../../common/wscommon.js');
@@ -13,7 +14,10 @@ export function init(params) {
   if (params.pver) {
     wscommon.PROTOCOL_VERSION = params.pver;
   }
-  client = new WSClient();
+  if (String(document.location).indexOf('http://localhost') === 0) {
+    packet.default_flags |= packet.PACKET_DEBUG;
+  }
+  client = new WSClient(params.path);
   subs = subscription_manager.create(client);
   subs.auto_create_user = Boolean(params.auto_create_user);
   window.subs = subs; // for debugging

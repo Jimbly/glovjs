@@ -3,10 +3,13 @@
 /* global WebSocket, XMLHttpRequest */
 
 const ack = require('../../common/ack.js');
+const { ackInitReceiver } = ack;
 const assert = require('assert');
 const { min } = Math;
+const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
 const wscommon = require('../../common/wscommon.js');
+const { wsHandleMessage } = wscommon;
 
 // let net_time = 0;
 // export function getNetTime() {
@@ -15,7 +18,7 @@ const wscommon = require('../../common/wscommon.js');
 //   return r;
 // }
 
-export function WSClient() {
+export function WSClient(path) {
   this.id = null;
   this.handlers = {};
   this.socket = null;
@@ -26,25 +29,34 @@ export function WSClient() {
   this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
   this.last_send_time = Date.now();
-  ack.initReceiver(this);
+  ackInitReceiver(this);
 
-  let path = document.location.toString().match(/^[^#?]+/)[0]; // remove search and anchor
-  if (path.slice(-1) !== '/') {
-    // /file.html or /path/file.html or /path
-    let idx = path.lastIndexOf('/');
-    if (idx !== -1) {
-      let filename = path.slice(idx+1);
-      if (filename.indexOf('.') !== -1) {
-        path = path.slice(0, idx+1);
+  if (!path) {
+
+    path = document.location.toString().match(/^[^#?]+/)[0]; // remove search and anchor
+
+
+    if (path.slice(-1) !== '/') {
+      // /file.html or /path/file.html or /path
+      let idx = path.lastIndexOf('/');
+      if (idx !== -1) {
+        let filename = path.slice(idx+1);
+        if (filename.indexOf('.') !== -1) {
+          path = path.slice(0, idx+1);
+        } else {
+          path += '/';
+        }
       } else {
         path += '/';
       }
-    } else {
-      path += '/';
     }
+    path = path.replace(/^http/, 'ws');
+    this.path = `${path}ws`;
+
+  } else {
+    this.path = path;
   }
-  path = path.replace(/^http/, 'ws');
-  this.path = `${path}ws`;
+
   if (path.match(/:\d+\//)) {
     // has port, don't try anything fancy
     this.path2 = this.path;
@@ -91,15 +103,17 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
     client.onAppVer(data.app_ver);
   }
   // Fire user-level connect handler as well
-  wscommon.handleMessage(client, JSON.stringify({
-    msg: 'connect',
-    data: {
-      client_id: client.id,
-    },
-  }));
+  assert(client.handlers.connect);
+  client.handlers.connect(client, {
+    client_id: client.id,
+  });
   resp_func();
 };
 
+
+WSClient.prototype.wsPak = function (msg) {
+  return wscommon.wsPak(msg, null, this);
+};
 
 WSClient.prototype.send = function (msg, data, resp_func) {
   wscommon.sendMessage.call(this, msg, data, resp_func);
@@ -125,13 +139,28 @@ WSClient.prototype.checkForNewAppVersion = function () {
   }
   this.app_ver_check_in_progress = true;
   let xhr = new XMLHttpRequest();
-  xhr.open('GET', 'app.ver.json', true);
-  xhr.responseType = 'json';
+  xhr.open('GET', `${urlhash.getURLBase()}app.ver.json`, true);
+  // xhr.responseType = 'json'; // causes un-catchable, un-reported errors
   xhr.onload = () => {
     this.app_ver_check_in_progress = false;
-    let obj = xhr.response;
-    if (obj && obj.ver) {
-      this.onAppVer(obj.ver);
+    let text;
+    try {
+      text = xhr.responseText;
+      let obj = JSON.parse(text);
+      if (obj && obj.ver) {
+        this.onAppVer(obj.ver);
+      }
+    } catch (e) {
+      console.error('Received invalid response when checking app version:', text || '<empty response>');
+      // Probably internal server error or such as the server is restart, try again momentarily
+      // This is not triggered on connection errors, only if we got a (non-parseable) response from the server
+      if (!this.delayed_recheck) {
+        this.delayed_recheck = true;
+        setTimeout(() => {
+          this.delayed_recheck = false;
+          this.checkForNewAppVersion();
+        }, 1000);
+      }
     }
   };
   xhr.onerror = () => {
@@ -162,6 +191,7 @@ WSClient.prototype.connect = function (for_reconnect) {
     for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
   }`;
   let socket = new WebSocket(path);
+  socket.binaryType = 'arraybuffer';
   client.socket = socket;
 
   // Protect callbacks from ever firing if we've already disconnected this socket
@@ -212,9 +242,10 @@ WSClient.prototype.connect = function (for_reconnect) {
     }
   }));
 
-  client.socket.addEventListener('message', guard(function (data) {
+  client.socket.addEventListener('message', guard(function (message) {
     // net_time -= Date.now();
-    wscommon.handleMessage(client, data.data);
+    assert(message.data instanceof ArrayBuffer);
+    wsHandleMessage(client, new Uint8Array(message.data));
     // net_time += Date.now();
   }));
 

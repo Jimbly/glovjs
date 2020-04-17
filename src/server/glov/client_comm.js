@@ -3,8 +3,9 @@
 
 const assert = require('assert');
 const client_worker = require('./client_worker.js');
-const { channelServerSend } = require('./channel_server.js');
+const { channelServerPak, channelServerSend } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
+const { isPacket } = require('../../common/packet.js');
 const { logdata } = require('../../common/util.js');
 const random_names = require('./random_names.js');
 
@@ -22,20 +23,23 @@ function onSubscribe(client, channel_id, resp_func) {
   client.client_channel.subscribeOther(channel_id, resp_func);
 }
 
-function onSetChannelData(client, data, resp_func) {
-  data.key = String(data.key);
-  let channel_id = data.channel_id;
+function onSetChannelData(client, pak, resp_func) {
+  assert(isPacket(pak));
+  let channel_id = pak.readAnsiString();
   assert(channel_id);
-
-  let key = data.key.split('.');
-  if (key[0] !== 'public' && key[0] !== 'private') {
-    console.error(` - failed, invalid scope: ${key[0]}`);
+  let q = pak.readBool();
+  let key = pak.readAnsiString();
+  let keyparts = key.split('.');
+  if (keyparts[0] !== 'public' && keyparts[0] !== 'private') {
+    console.error(` - failed, invalid scope: ${keyparts[0]}`);
     resp_func('failed: invalid scope');
+    pak.pool();
     return;
   }
-  if (!key[1]) {
+  if (!keyparts[1]) {
     console.error(' - failed, missing member name');
     resp_func('failed: missing member name');
+    pak.pool();
     return;
   }
 
@@ -45,11 +49,16 @@ function onSetChannelData(client, data, resp_func) {
   let client_channel = client.client_channel;
 
   if (!client_channel.isSubscribedTo(channel_id)) {
+    pak.pool();
     return void resp_func(`Client is not on channel ${channel_id}`);
   }
 
   client_channel.ids = client_channel.ids_direct;
-  channelServerSend(client_channel, channel_id, 'set_channel_data', null, data);
+  let outpak = channelServerPak(client_channel, channel_id, 'set_channel_data', pak, q);
+  outpak.writeBool(q);
+  outpak.writeAnsiString(key);
+  outpak.appendRemaining(pak);
+  outpak.send();
   client_channel.ids = client_channel.ids_base;
   resp_func();
 }
@@ -65,47 +74,91 @@ function applyCustomIds(ids, user_data_public) {
   }
 }
 
-function quietMessage(msg) {
+function quietMessage(msg, payload) {
   // FRVR - maybe generalize this?
-  return msg && (msg.msg === 'set_user' && msg.data && msg.data.key === 'pos' ||
-    msg.msg === 'vd_get' || msg.msg === 'claim');
+  return msg === 'set_user' && payload && payload.key === 'pos' ||
+    msg === 'vd_get' || msg === 'claim';
 }
+
+const nop_pool = {
+  pool: function () {
+    // No-op
+  },
+};
 
 function onChannelMsg(client, data, resp_func) {
   // Arbitrary messages, or messages to everyone subscribed to the channel, e.g. chat
-  if (quietMessage(data)) {
-    if (typeof data.data === 'object') {
-      data.data.q = 1; // do not print later, either
+  let channel_id;
+  let msg;
+  let payload;
+  let broadcast = false;
+  let is_packet = isPacket(data);
+  let log;
+  let pool = nop_pool;
+  if (is_packet) {
+    let pak = data;
+    pak.ref(); // deal with auto-pool of an empty packet
+    channel_id = pak.readAnsiString();
+    msg = pak.readAnsiString();
+    if (!pak.ended()) {
+      pool = pak;
+    }
+    // let flags = pak.readInt();
+    payload = pak;
+    log = '(pak)';
+  } else {
+    if (typeof data !== 'object') {
+      return void resp_func('Invalid data type');
+    }
+    channel_id = data.channel_id;
+    msg = data.msg;
+    payload = data.data;
+    broadcast = data.broadcast;
+    log = logdata(payload);
+  }
+  if (quietMessage(msg, payload)) {
+    if (!is_packet && typeof payload === 'object') {
+      payload.q = 1; // do not print later, either
     }
   } else {
-    console.debug(`client_id:${client.id}->${data.channel_id}: channel_msg ${logdata(data)}`);
+    console.debug(`client_id:${client.id}->${channel_id}: channel_msg ${msg} ${log}`);
   }
-  if (typeof data !== 'object') {
-    return void resp_func('Invalid data type');
-  }
-  let channel_id = data.channel_id;
   if (!channel_id) {
+    pool.pool();
     return void resp_func('Missing channel_id');
   }
   let client_channel = client.client_channel;
 
   if (!client_channel.isSubscribedTo(channel_id)) {
+    pool.pool();
     return void resp_func(`Client is not on channel ${channel_id}`);
   }
-  if (data.broadcast && typeof data.data !== 'object') {
+  if (broadcast && (is_packet || typeof payload !== 'object')) {
+    pool.pool();
     return void resp_func('Broadcast requires data object');
   }
   if (!resp_func.expecting_response) {
     resp_func = null;
   }
-  if (data.broadcast) {
-    delete data.broadcast;
-    channelServerSend(client_channel, channel_id, 'broadcast', null, data, resp_func);
+  let old_resp_func = resp_func;
+  resp_func = function (err, resp_data) {
+    if (err) { // Was previously just on cmd_parse packets: && !(net_data.data && net_data.data.silent_error)) {
+      client.log(`Error "${err}" sent from ${channel_id} to client in response to ${
+        msg} ${logdata(payload)}`);
+    }
+    if (old_resp_func) {
+      old_resp_func(err, resp_data);
+    }
+  };
+  resp_func.expecting_response = Boolean(old_resp_func);
+  if (broadcast) {
+    channelServerSend(client_channel, channel_id, 'broadcast', null, { msg, data: payload }, resp_func);
   } else {
     client_channel.ids = client_channel.ids_direct;
-    channelServerSend(client_channel, channel_id, data.msg, null, data.data, resp_func);
+    channelServerSend(client_channel, channel_id, msg, null, payload, resp_func);
     client_channel.ids = client_channel.ids_base;
   }
+  pool.pool();
 }
 
 const invalid_names = {
@@ -129,7 +182,8 @@ const invalid_names = {
   password: 1,
   user: 1,
 };
-function validUsername(user_id) {
+const regex_admin_username = /^(admin|mod_|gm_|moderator)/; // Might exist in the system, do not allow to be created
+function validUsername(user_id, allow_admin) {
   if (!user_id) {
     return false;
   }
@@ -140,6 +194,9 @@ function validUsername(user_id) {
   user_id = user_id.toLowerCase();
   if (invalid_names[user_id]) {
     // also catches anything on Object.prototype
+    return false;
+  }
+  if (!allow_admin && user_id.match(regex_admin_username)) {
     return false;
   }
   if (!user_id.match(regex_valid_username)) {
@@ -177,7 +234,7 @@ function handleLoginResponse(client, user_id, resp_func, err, resp_data) {
 function onLogin(client, data, resp_func) {
   console.log(`client_id:${client.id}->server login ${logdata(data)}`);
   let user_id = data.user_id;
-  if (!validUsername(user_id)) {
+  if (!validUsername(user_id, true)) {
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();

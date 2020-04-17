@@ -3,10 +3,11 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
+const { isPacket } = require('../../common/packet.js');
 
 class ClientWorker extends ChannelWorker {
-  constructor(channel_server, channel_id) {
-    super(channel_server, channel_id);
+  constructor(channel_server, channel_id, channel_data) {
+    super(channel_server, channel_id, channel_data);
     this.client_id = this.channel_subid; // 1234
     this.client = null; // WSClient filled in by channel_server
     this.ids_base = {
@@ -57,6 +58,8 @@ class ClientWorker extends ChannelWorker {
       }
     }
 
+    assert(!isPacket(data)); // TODO: send differently if this is a packet
+
     this.client.send('channel_msg', {
       channel_id: source.channel_id,
       msg: msg,
@@ -69,6 +72,8 @@ class ClientWorker extends ChannelWorker {
     this.client.send('error', msg);
   }
 }
+
+ClientWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
 
 export function init(channel_server) {
   channel_server.registerChannelWorker('client', ClientWorker, {

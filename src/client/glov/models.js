@@ -58,9 +58,13 @@ Model.prototype.load = function () {
   xhr.responseType = 'arraybuffer';
   xhr.onload = () => {
     --load_count;
-    let array_buffer = xhr.response; // Note: not xhr.responseText
-    if ((xhr.status === 200 || xhr.status === 0) && array_buffer) {
-      this.parse(array_buffer);
+    try {
+      let array_buffer = xhr.response; // Note: not xhr.responseText
+      if ((xhr.status === 200 || xhr.status === 0) && array_buffer) {
+        this.parse(array_buffer);
+      }
+    } catch (e) {
+      window.onerror('Model loading error', 'models.js', 0, 0, e);
     }
   };
   xhr.send(null);

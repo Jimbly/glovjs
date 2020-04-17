@@ -200,6 +200,7 @@ function link(vp, fp) {
 
   prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   if (!prog.valid) {
+    reportShaderError(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
     console.error(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
   }
 

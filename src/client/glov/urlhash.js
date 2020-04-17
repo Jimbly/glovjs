@@ -11,11 +11,20 @@
     key: 'pos',
     // type: TYPE_STRING,
     change: (newvalue) => {},
+    title: (value) => 'string',
     def: '1,2',
     hides: { otherfield: true },
+    push: true, // do a pushState instead of replaceState when this changes
+    hide_values: { foo: true }, // do not add to URL if values is in the provided set
   });
   urlhash.set('pos', '3,4');
   urlhash.get('pos')
+
+  urlhash.route('w/:w')     // use URLs like foo.com/w/1   instead of foo.com/?w=1
+  urlhash.route('w/:w/:wg')  // use URLs like foo.com/w/1/2 instead of foo.com/?w=1&wg=2
+
+  // Called whenever the URL state is pushed, even if to exactly the same URL (e.g. on link click)
+  urlhash.onChange(cb)
 */
 
 const assert = require('assert');
@@ -27,9 +36,81 @@ export let TYPE_STRING = 'string';
 
 let params = {};
 
+let title_suffix = '';
+
+let url_base = (document.location.href || '').match(/^[^#?]+/)[0];
+
+let on_change = [];
+
+export function getURLBase() {
+  return url_base;
+}
+
+export function onChange(cb) {
+  on_change.push(cb);
+}
+
+function cmpNumKeys(a, b) {
+  let d = b.keys.length - a.keys.length;
+  if (d) {
+    return d;
+  }
+  // otherwise alphabetical for stability
+  for (let ii = 0; ii < a.keys.length; ++ii) {
+    if (a.keys[ii] < b.keys[ii]) {
+      return -1;
+    } else if (a.keys[ii] > b.keys[ii]) {
+      return 1;
+    }
+  }
+  assert(false); // two routes with identical keys
+  return 0;
+}
+
+const route_param_regex = /:(\w+)/g;
+let routes = [];
+export function route(route_string) {
+  let keys = [];
+  // foo/:key/:bar => foo/([^/&?]+)/([^/&?]+)
+  let base = route_string.replace(route_param_regex, function (ignored, match) {
+    keys.push(match);
+    return '([^/&?]+)';
+  });
+  let regex = new RegExp(`^${base}(?:$|\\?)`);
+  let new_route = {
+    route_string,
+    regex,
+    keys,
+  };
+  for (let ii = 0; ii < keys.length; ++ii) {
+    let opts = params[keys[ii]];
+    // Must have already registered these keys
+    assert(opts);
+    opts.routes = opts.routes || [];
+    opts.routes.push(new_route);
+  }
+  routes.push(new_route);
+  routes.sort(cmpNumKeys);
+}
+
+function queryString() {
+  let href = String(document.location);
+  return href.slice(url_base.length);
+}
+
 const regex_value = /[^\w]\w+=([^&]+)/;
-function getValue(opts) {
-  let m = (document.location.hash || '').match(opts.regex) || [];
+function getValue(query_string, opts) {
+  if (opts.routes) {
+    for (let ii = 0; ii < opts.routes.length; ++ii) {
+      let r = opts.routes[ii];
+      let m = query_string.match(r.regex);
+      if (m) {
+        let idx = r.keys.indexOf(opts.key);
+        return m[1 + idx];
+      }
+    }
+  }
+  let m = query_string.match(opts.regex) || [];
   if (opts.type === TYPE_SET) {
     let r = {};
     for (let ii = 0; ii < m.length; ++ii) {
@@ -45,13 +126,27 @@ function getValue(opts) {
 
 let last_history_str = null; // always re-set it on the first update
 
-function onPopState() {
-  last_history_str = String(document.location.hash).slice(1);
-  // Update all values
-  let dirty = {};
+function goInternal(query_string) { // with the '?'
+  // Update all values, except those hidden by what is currently in the query string
+  let hidden = {};
   for (let key in params) {
     let opts = params[key];
-    let new_value = getValue(opts);
+    if (opts.hides) {
+      if (getValue(query_string, opts)) {
+        for (let otherkey in opts.hides) {
+          hidden[otherkey] = 1;
+        }
+      }
+    }
+  }
+
+  let dirty = {};
+  for (let key in params) {
+    if (hidden[key]) {
+      continue;
+    }
+    let opts = params[key];
+    let new_value = getValue(query_string, opts);
     if (opts.type === TYPE_SET) {
       for (let v in new_value) {
         if (!opts.value[v]) {
@@ -80,9 +175,14 @@ function onPopState() {
       opts.change(opts.value);
     }
   }
+  for (let ii = 0; ii < on_change.length; ++ii) {
+    on_change[ii]();
+  }
 }
 
+let eff_title;
 function toString() {
+  eff_title = '';
   let values = [];
   let hidden = {};
   for (let key in params) {
@@ -92,6 +192,28 @@ function toString() {
         hidden[otherkey] = 1;
       }
     }
+  }
+  let root_value = '';
+  outer: // eslint-disable-line no-labels
+  for (let ii = 0; ii < routes.length; ++ii) {
+    let r = routes[ii];
+    for (let jj = 0; jj < r.keys.length; ++jj) {
+      let key = r.keys[jj];
+      if (hidden[key]) {
+        continue outer; // eslint-disable-line no-labels
+      }
+      let opts = params[key];
+      if (opts.hide_values[opts.value]) {
+        continue outer; // eslint-disable-line no-labels
+      }
+      // has a value, is not hidden, continue
+    }
+    // route is good!
+    root_value = r.route_string.replace(route_param_regex, function (ignored, key) {
+      hidden[key] = true;
+      return String(params[key].value);
+    });
+    break;
   }
   for (let key in params) {
     if (hidden[key]) {
@@ -103,22 +225,52 @@ function toString() {
         values.push(`${key}=${v}`);
       }
     } else {
-      if (opts.value !== opts.def) {
+      if (!opts.hide_values[opts.value]) {
         values.push(`${key}=${opts.value}`);
+        if (!eff_title && opts.title) {
+          eff_title = opts.title(opts.value);
+        }
       }
     }
   }
-  return values.join('&');
+  if (title_suffix) {
+    if (eff_title) {
+      eff_title = `${eff_title} | ${title_suffix}`;
+    } else {
+      eff_title = title_suffix;
+    }
+  }
+  return `${root_value}${values.length ? '?' : ''}${values.join('&')}`;
+}
+
+export function refreshTitle() {
+  toString();
+  if (eff_title && eff_title !== document.title) {
+    document.title = eff_title;
+  }
+}
+
+function periodicRefreshTitle() {
+  refreshTitle();
+  setTimeout(periodicRefreshTitle, 1000);
+}
+
+function onPopState() {
+  let query_string = queryString();
+  last_history_str = query_string;
+  goInternal(query_string);
+  refreshTitle();
 }
 
 let last_history_set_time = 0;
 let scheduled = false;
-// const URL_BASE = document.location.href.match(/^[^#]+/)[0];
-function updateHistory() {
+let need_push_state = false;
+function updateHistory(new_need_push_state) {
   let new_str = toString();
   if (last_history_str === new_str) {
     return;
   }
+  need_push_state = need_push_state || new_need_push_state;
   last_history_str = new_str;
   if (scheduled) {
     // already queued up
@@ -134,11 +286,32 @@ function updateHistory() {
   setTimeout(function () {
     scheduled = false;
     last_history_set_time = Date.now();
-    // window.history.replaceState('', HISTORY_TITLE, `${URL_BASE}#${last_history_str}`);
-    window.history.replaceState(undefined, undefined, `#${last_history_str}`);
+    if (need_push_state) {
+      need_push_state = false;
+      window.history.pushState(undefined, eff_title, `${url_base}${last_history_str}`);
+    } else {
+      window.history.replaceState(undefined, eff_title, `${url_base}${last_history_str}`);
+    }
+    if (eff_title) {
+      document.title = eff_title;
+    }
+    //window.history.replaceState(undefined, eff_title, `#${last_history_str}`);
   }, delay);
 }
 
+// Optional startup
+export function startup(param) {
+  assert(!title_suffix);
+  title_suffix = param.title_suffix;
+
+  // Refresh the current URL, it might be in the non-rooted format
+  updateHistory(false);
+
+  if (title_suffix) {
+    refreshTitle();
+    setTimeout(periodicRefreshTitle, 1000);
+  }
+}
 
 export function register(opts) {
   assert(opts.key);
@@ -150,11 +323,13 @@ export function register(opts) {
     regex_type = 'gu';
   } else {
     opts.def = opts.def || '';
+    opts.hide_values = opts.hide_values || {};
+    opts.hide_values[opts.def] = true;
   }
   opts.regex = new RegExp(regex_search, regex_type);
   params[opts.key] = opts;
   // Get initial value
-  opts.value = getValue(opts);
+  opts.value = getValue(queryString(), opts);
   let ret = opts.value;
   if (opts.type === TYPE_SET && typeof Proxy === 'function') {
     // Auto-apply changes to URL if someone modifies the proxy
@@ -184,12 +359,12 @@ export function set(key, value, value2) {
   if (opts.type === TYPE_SET) {
     if (Boolean(opts.value[value]) !== Boolean(value2)) {
       opts.value[value] = value2 ? 1 : 0;
-      updateHistory();
+      updateHistory(opts.push);
     }
   } else {
     if (opts.value !== value) {
       opts.value = value;
-      updateHistory();
+      updateHistory(opts.push);
     }
   }
 }
@@ -198,4 +373,9 @@ export function get(key) {
   let opts = params[key];
   assert(opts);
   return opts.value;
+}
+
+export function go(query_string) { // with the '?'
+  goInternal(query_string);
+  updateHistory(true);
 }

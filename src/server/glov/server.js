@@ -4,15 +4,16 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const data_store = require('./data_store.js');
+const glov_exchange = require('./exchange.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const log = require('./log.js');
 const path = require('path');
+const packet = require('../../common/packet.js');
 const glov_wsserver = require('./wsserver.js');
 const glov_wscommon = require('../../common/wscommon.js');
 
 const STATUS_TIME = 5000;
-let ds_store;
 export let ws_server;
 export let channel_server;
 
@@ -74,8 +75,20 @@ export function startup(params) {
   if (params.pver) {
     glov_wscommon.PROTOCOL_VERSION = params.pver;
   }
-  ds_store = params.ds || data_store.create('data_store');
+
+  let { data_stores, exchange } = params;
+  if (!data_stores) {
+    data_stores = {};
+    data_stores.bulk = data_stores.meta = data_store.create('data_store');
+  }
+  if (!exchange) {
+    exchange = glov_exchange.create();
+  }
   channel_server = glov_channel_server.create();
+  if (argv.dev) {
+    console.log('PacketDebug: ON');
+    packet.default_flags = packet.PACKET_DEBUG;
+  }
 
   ws_server = glov_wsserver.create(params.server);
   ws_server.on('error', function (error) {
@@ -89,7 +102,11 @@ export function startup(params) {
     }
   });
 
-  channel_server.init(ds_store, ws_server);
+  channel_server.init({
+    exchange,
+    data_stores,
+    ws_server,
+  });
 
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
   setTimeout(displayStatus, STATUS_TIME);
@@ -107,4 +124,9 @@ export function startup(params) {
     updateVersion(file_base_name);
   });
   updateVersion('app', true);
+}
+
+export function shutdown(message) {
+  console.error(message);
+  process.exit(1);
 }
