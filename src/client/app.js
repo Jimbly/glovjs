@@ -13,6 +13,6 @@ window.onload = function () {
   if (window.glov_env === 'multiplayer') {
     require('./multiplayer.js').main();
   } else {
-    require('./main.js').main();
+    require('./soundscape_test.js').main();
   }
 };
