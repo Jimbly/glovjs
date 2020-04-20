@@ -1,15 +1,18 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
+/* eslint callback-return:off */
 
 const assert = require('assert');
-const { defaults } = require('../../common/util.js');
+const { defaults, ridx } = require('../../common/util.js');
 const { abs, floor, max, min, random } = Math;
-const { Howl } = require('howler');
+const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 
 const DEFAULT_FADE_RATE = 0.001;
 
 let sounds = {};
 let num_loading = 0;
+
+// Howler.usingWebAudio = false; // Disable WebAudio for testing HTML5 fallbacks
 
 const default_params = {
   ext_list: ['mp3', 'wav'], // (recommended) try loading .mp3 versions first, then fallback to .wav
@@ -27,6 +30,8 @@ class SoundManager {
     this.last_played = {};
     this.global_timer = 0;
 
+    this.fades = [];
+
     // Music
     this.fade_rate = DEFAULT_FADE_RATE;
     this.music = []; // 0 is current, 1 is previous (fading out)
@@ -39,18 +44,19 @@ class SoundManager {
     }
   }
 
-  loadSound(base, for_music_cb) {
+  loadSound(base, opts, cb) {
+    opts = opts || {};
     if (Array.isArray(base)) {
-      assert(!for_music_cb);
+      assert(!cb);
       for (let ii = 0; ii < base.length; ++ii) {
-        this.loadSound(base[ii]);
+        this.loadSound(base[ii], opts);
       }
       return;
     }
     let key = base;
     if (sounds[key]) {
-      if (for_music_cb) {
-        for_music_cb();
+      if (cb) {
+        cb();
       }
       return;
     }
@@ -77,22 +83,25 @@ class SoundManager {
     function tryLoad(idx) {
       if (idx === srcs.length) {
         console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
+        if (cb) {
+          cb('Error loading sound');
+        }
         return;
       }
       ++num_loading;
       let once = false;
       let sound = new Howl({
         src: srcs.slice(idx),
-        html5: Boolean(for_music_cb),
-        loop: Boolean(for_music_cb),
+        html5: Boolean(opts.streaming),
+        loop: Boolean(opts.loop),
         volume: 0,
         onload: function () {
           if (!once) {
             --num_loading;
             once = true;
             sounds[key] = sound;
-            if (for_music_cb) {
-              for_music_cb();
+            if (cb) {
+              cb(null);
             }
           }
         },
@@ -140,15 +149,33 @@ class SoundManager {
         }
       }
     }
+
+    for (let ii = this.fades.length - 1; ii >= 0; --ii) {
+      let fade = this.fades[ii];
+      fade.volume = max(0, fade.volume - max_fade);
+      fade.sound.volume(fade.volume, fade.id);
+      if (!fade.volume) {
+        fade.sound.stop(fade.id);
+        ridx(this.fades, ii);
+      }
+    }
   }
 
   resume() { // eslint-disable-line class-methods-use-this
-    // Not needed for Howler by default
+    // Handled internally by Howler, leaving hooks in for now, though
+    // Maybe more reliable than `Howler.safeToPlay`...
   }
 
-  play(soundname, volume) {
+  resumed() { // eslint-disable-line class-methods-use-this
+    return !Howler.noAudio && Howler.safeToPlay;
+  }
+
+  play(soundname, volume, as_music) {
     volume = volume || 1;
-    if (!this.sound_on) {
+    if (!as_music && !this.sound_on || as_music && !this.music_on) {
+      return null;
+    }
+    if (!this.resumed()) {
       return null;
     }
     if (Array.isArray(soundname)) {
@@ -168,6 +195,15 @@ class SoundManager {
     this.last_played[soundname] = this.global_timer;
     return {
       stop: sound.stop.bind(sound, id),
+      playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
+      fadeOut: (time) => {
+        this.fades.push({
+          volume,
+          sound,
+          id,
+          time,
+        });
+      },
     };
   }
 
@@ -179,7 +215,8 @@ class SoundManager {
       volume = 1;
     }
     transition = transition || SoundManager.DEFAULT;
-    this.loadSound(soundname, () => {
+    this.loadSound(soundname, { streaming: true, loop: true }, (err) => {
+      assert(!err);
       let sound = sounds[soundname];
       assert(sound);
       if (this.music[0].sound === sound) {
