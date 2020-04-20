@@ -50,6 +50,7 @@ export let KEYS = {
   DEL: 46,
   NUMPAD_DIVIDE: 111,
   EQUALS: 187,
+  MINUS: 189,
   SLASH: 191,
   TILDE: 192,
 };
@@ -299,6 +300,7 @@ function onKeyDown(event) {
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
+  engine.sound_manager.resume();
 
   // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
   let ks = key_state_new[code];

@@ -1324,11 +1324,12 @@ export function scaleSizes(scale) {
   tooltip_panel_pixel_scale = panel_pixel_scale;
 }
 
-export function setModalSizes(_modal_button_width, width, y0, title_scale) {
+export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) {
   modal_button_width = _modal_button_width || round(button_width / 2);
   modal_width = width || 600;
   modal_y0 = y0 || 200;
   modal_title_scale = title_scale || 1.2;
+  modal_pad = pad || modal_pad;
 }
 
 export function setFontHeight(_font_height) {

@@ -120,6 +120,10 @@ export function v2normalize(out, a) {
   return out;
 }
 
+export function v2same(a, b) {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
 export function v2scale(out, a, s) {
   out[0] = a[0] * s;
   out[1] = a[1] * s;

@@ -103,6 +103,9 @@ export function render(dt) {
   }
 }
 
+export function active() {
+  return transitions.length;
+}
 
 function glovTransitionFadeFunc(fade_time, z, initial, ms_since_start, force_end) {
   let progress = min(ms_since_start / fade_time, 1);
