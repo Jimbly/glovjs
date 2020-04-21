@@ -27,7 +27,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@jimbly/howler": "0.0.3",
+    "@jimbly/howler": "0.0.4",
     "async-each": "^1.0.3",
     "async-series": "0.0.1",
     "dot-prop": "^4.2.0",

@@ -236,8 +236,8 @@ export function soundPlay(soundname, volume, as_music) {
     return null;
   }
 
-  let id = sound.play();
-  sound.volume(volume * settings.volume, id);
+  let id = sound.play(undefined, volume * settings.volume);
+  // sound.volume(volume * settings.volume, id);
   last_played[soundname] = global_timer;
   return {
     stop: sound.stop.bind(sound, id),
@@ -297,9 +297,9 @@ export function soundPlayMusic(soundname, volume, transition) {
     let start_vol = (transition & FADE_IN) ? 0 : volume;
     music[0].current_volume = start_vol;
     if (soundResumed()) {
-      music[0].id = sound.play();
       let sys_volume = start_vol * settings.volume;
-      sound.volume(sys_volume, music[0].id);
+      music[0].id = sound.play(undefined, sys_volume);
+      // sound.volume(sys_volume, music[0].id);
       music[0].sys_volume = sys_volume;
       music[0].need_play = false;
     } else {
