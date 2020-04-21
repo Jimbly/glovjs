@@ -28,7 +28,7 @@ const models = require('./models.js');
 const perf = require('./perf.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
-const sound_manager_dummy = require('./sound_manager_dummy.js');
+const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const glov_transition = require('./transition.js');
@@ -40,7 +40,6 @@ const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set }
 export let canvas;
 export let webgl2;
 export let glov_particles;
-export let sound_manager;
 
 export let width;
 export let height;
@@ -471,6 +470,23 @@ export function projectionZBias(dist, at_z) {
   mat_projection[10] = mat_projection_10 + e;
 }
 
+function fixNatives(is_startup) {
+  // If any browser extensions have added things to the Array prototype, remove them!
+  let b = [];
+  for (let a in b) {
+    console[is_startup ? 'log' : 'error'](`Found invasive enumerable property "${a}" on Array.prototype, removing...`);
+    let old_val = b[a];
+    delete Array.prototype[a];
+    // If this fails to work, perhaps try using Object.preventExtensions(Array.prototype) in an inline header script?
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(Array.prototype, a, { value: old_val, enumerable: false });
+  }
+  for (let a in b) {
+    // Failed: code that iterates arrays will fail
+    assert(false, `Array.prototype has unremovable member ${a}`);
+  }
+}
+
 export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
@@ -493,6 +509,8 @@ function tick(timestamp) {
   last_tick = now;
   global_timer += dt;
   ++global_frame_index;
+
+  fixNatives(false);
 
   // let this_net_time = wsclient.getNetTime();
   // fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 3 + 0] = this_net_time;
@@ -547,7 +565,7 @@ function tick(timestamp) {
   camera2d.tickCamera2D();
   camera2d.setAspectFixed(game_width, game_height);
 
-  sound_manager.tick(dt);
+  soundTick(dt);
   input.tickInput();
   glov_ui.tickUI(dt);
 
@@ -687,25 +705,8 @@ function glovErrorReport(msg, file, line, col) {
   return true;
 }
 
-function fixNatives() {
-  // If any browser extensions have added things to the Array prototype, remove them!
-  let b = [];
-  for (let a in b) {
-    console.log(`Found invasive enumerable property "${a}" on Array.prototype, removing...`);
-    let old_val = b[a];
-    delete Array.prototype[a];
-    // If this fails to work, perhaps try using Object.preventExtensions(Array.prototype) in an inline header script?
-    // eslint-disable-next-line no-extend-native
-    Object.defineProperty(Array.prototype, a, { value: old_val, enumerable: false });
-  }
-  for (let a in b) {
-    // Failed: code that iterates arrays will fail
-    assert(false, `Array.prototype has unremovable member ${a}`);
-  }
-}
-
 export function startup(params) {
-  fixNatives();
+  fixNatives(true);
 
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
@@ -844,16 +845,11 @@ export function startup(params) {
   params.font = font;
   glov_ui.startup(params);
 
-  if (params.sound_manager) {
-    // Require caller to require this module, so we don't force it loaded/bundled in programs that do not need it
-    sound_manager = params.sound_manager;
-    glov_ui.bindSounds(sound_manager, defaults(params.ui_sounds || {}, {
-      button_click: 'button_click',
-      rollover: 'rollover',
-    }));
-  } else {
-    sound_manager = sound_manager_dummy;
-  }
+  soundStartup(params.sound);
+  glov_ui.bindSounds(defaults(params.ui_sounds || {}, {
+    button_click: 'button_click',
+    rollover: 'rollover',
+  }));
 
   camera2d.setAspectFixed(game_width, game_height);
 
@@ -872,7 +868,7 @@ export function startup(params) {
 }
 
 export function loadsPending() {
-  return textures.load_count + sound_manager.loading() + models.load_count;
+  return textures.load_count + soundLoading() + models.load_count;
 }
 
 function loading() {

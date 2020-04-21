@@ -12,7 +12,7 @@ const glov_transition = require('./glov/transition.js');
 const glov_ui = require('./glov/ui.js');
 const glov_ui_test = require('./glov/ui_test.js');
 const particle_data = require('./particle_data.js');
-
+const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('./glov/sound.js');
 const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
 
 window.Z = window.Z || {};
@@ -109,12 +109,10 @@ export function main() {
     game_height,
     pixely: flagGet('pixely', 'on'),
     viewport_postprocess: false,
-    sound_manager: require('./glov/sound_manager.js').create(),
   })) {
     return;
   }
 
-  const sound_manager = glov_engine.sound_manager;
   // const font = glov_engine.font;
 
   // Perfect sizes for pixely modes
@@ -135,7 +133,7 @@ export function main() {
   function initGraphics() {
     glov_particles.preloadParticleData(particle_data);
 
-    sound_manager.loadSound('test');
+    soundLoad('test');
 
     sprites.white = createSprite({ url: 'white' });
 
@@ -209,7 +207,7 @@ export function main() {
       v4copy(test.color_sprite, color_yellow);
     } else if (input.click(bounds)) {
       v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
-      sound_manager.play('test');
+      soundPlay('test');
     } else if (input.mouseOver(bounds)) {
       v4copy(test.color_sprite, color_white);
       test.color_sprite[3] = 0.5;
@@ -275,9 +273,9 @@ export function main() {
     ) {
       flagToggle('music');
       if (flagGet('music')) {
-        sound_manager.playMusic(music_file, 1, sound_manager.FADE_IN);
+        soundPlayMusic(music_file, 1, FADE_IN);
       } else {
-        sound_manager.playMusic(music_file, 0, sound_manager.FADE_OUT);
+        soundPlayMusic(music_file, 0, FADE_OUT);
       }
     }
     y += button_spacing;
@@ -333,7 +331,7 @@ export function main() {
   function testInit(dt) {
     glov_engine.setState(test);
     if (flagGet('music')) {
-      sound_manager.playMusic(music_file);
+      soundPlayMusic(music_file);
     }
     test(dt);
   }

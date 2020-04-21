@@ -1,6 +1,8 @@
 const assert = require('assert');
 const engine = require('./engine.js');
 const { floor, min, random } = Math;
+const settings = require('./settings.js');
+const { soundLoad, soundPlay, soundResumed } = require('./sound.js');
 const { ridx } = require('../../common/util.js');
 
 const DEFAULT_PERIOD = 30000;
@@ -12,13 +14,11 @@ function SoundScape(params) {
   let { base_path, layers } = params;
   this.intensity = 0;
   this.tags = {};
-  let sound_manager = engine.sound_manager;
-  this.sound_manager = sound_manager;
   function preload(layer, parent) {
     let { files, tags } = layer;
     for (let ii = 0; ii < files.length; ++ii) {
       files[ii] = `${base_path}${files[ii]}`;
-      sound_manager.loadSound(files[ii], { streaming: true });
+      soundLoad(files[ii], { streaming: true });
     }
     if (parent) {
       for (let ii = 0; ii < inherit_props.length; ++ii) {
@@ -94,7 +94,7 @@ function stop(active_list, idx) {
 }
 SoundScape.prototype.tick = function () {
   let now = engine.global_timer;
-  let { intensity, layer_state, sound_manager } = this;
+  let { intensity, layer_state } = this;
   for (let key in layer_state) {
     let data = this.getLayer(key);
     let { files, add_delay } = data;
@@ -116,7 +116,7 @@ SoundScape.prototype.tick = function () {
       } while (wanted < data.odds.length - 1);
     }
     wanted = min(wanted, files.length);
-    if (!sound_manager.music_on || !sound_manager.resumed()) {
+    if (!settings.music || !soundResumed()) {
       wanted = 0;
     }
     // Ensure active sounds are in the current file list
@@ -150,7 +150,7 @@ SoundScape.prototype.tick = function () {
       assert(valid_files.length);
       let idx = floor(random() * valid_files.length);
       let file = valid_files[idx];
-      let sound = sound_manager.play(file, volume, true);
+      let sound = soundPlay(file, volume, true);
       if (!sound) {
         // still loading?
         --wanted;

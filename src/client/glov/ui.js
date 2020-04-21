@@ -25,6 +25,7 @@ const glov_font = require('./font.js');
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
 const { abs, max, min, round, sqrt } = Math;
+const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const { clamp, clone, lerp, merge } = require('../../common/util.js');
@@ -273,12 +274,10 @@ export function getElem(allow_modal, last_elem) {
   return elem;
 }
 
-let sound_manager;
-export function bindSounds(_sound_manager, _sounds) {
-  sound_manager = _sound_manager;
+export function bindSounds(_sounds) {
   sounds = _sounds;
   for (let key in sounds) {
-    sound_manager.loadSound(sounds[key]);
+    soundLoad(sounds[key]);
   }
 }
 
@@ -359,13 +358,13 @@ export function playUISound(name, volume) {
   if (name === 'select') {
     name = 'button_click';
   }
-  if (sounds[name] && sound_manager) {
-    sound_manager.play(sounds[name], volume);
+  if (sounds[name]) {
+    soundPlay(sounds[name], volume);
   }
 }
 
-export function setMouseOver(key) {
-  if (last_frame_button_mouseover !== key && frame_button_mouseover !== key) {
+export function setMouseOver(key, quiet) {
+  if (last_frame_button_mouseover !== key && frame_button_mouseover !== key && !quiet) {
     playUISound('rollover');
   }
   frame_button_mouseover = key;
@@ -507,6 +506,7 @@ export function buttonShared(param) {
     return { ret, state };
   }
   let key = param.key || `${param.x}_${param.y}`;
+  let rollover_quiet = param.rollover_quiet;
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
   let key_opts = param.in_event_cb ? { in_event_cb: param.in_event_cb } : null;
   button_mouseover = false;
@@ -516,7 +516,7 @@ export function buttonShared(param) {
   } else if (param.drag_target && (ret = glov_input.dragDrop(param))) {
     console.log('dragDrop');
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
-      setMouseOver(key);
+      setMouseOver(key, rollover_quiet);
     }
     if (!param.no_focus) {
       focusSteal(key);
@@ -526,7 +526,7 @@ export function buttonShared(param) {
     param.long_press && (button_click = glov_input.longPress(param))
   ) {
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
-      setMouseOver(key);
+      setMouseOver(key, rollover_quiet);
     }
     if (param.touch_twice && glov_input.mousePosIsTouch() && !focused) {
       // Just focus, show tooltip
@@ -540,7 +540,7 @@ export function buttonShared(param) {
     }
   } else if (param.drag_target && glov_input.dragOver(param)) {
     // Set this even if param.no_touch_mouse_over is set
-    setMouseOver(key);
+    setMouseOver(key, rollover_quiet);
     state = glov_input.mouseDown() ? 'down' : 'rollover';
   } else if (param.drag_over && glov_input.dragOver(param)) {
     // do nothing
@@ -550,7 +550,7 @@ export function buttonShared(param) {
     } else if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
       // do not set mouseover
     } else {
-      setMouseOver(key);
+      setMouseOver(key, rollover_quiet);
       state = glov_input.mouseDown() ? 'down' : 'rollover';
     }
   }

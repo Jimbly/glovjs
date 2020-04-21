@@ -12,6 +12,7 @@ const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const { abs, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
+const { soundResume } = require('./sound.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
 const UP_EDGE = 0; // only for pads, which use === null as "up"
@@ -300,7 +301,7 @@ function onKeyDown(event) {
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
-  engine.sound_manager.resume();
+  soundResume();
 
   // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
   let ks = key_state_new[code];
@@ -401,7 +402,7 @@ function onMouseDown(event) {
     eventlog(event);
   }
   onMouseMove(event); // update mouse_pos
-  engine.sound_manager.resume();
+  soundResume();
   let no_click = letEventThrough(event);
 
   let button = event.button;
@@ -460,7 +461,7 @@ function onTouchChange(event) {
   // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
   // our canvas offscreen.  Should maybe have the canvas resize and use clientX
   // instead, but this works well enough.
-  engine.sound_manager.resume();
+  soundResume();
   if (!touch_mode) {
     local_storage.set('touch_mode', true);
     touch_mode = true;

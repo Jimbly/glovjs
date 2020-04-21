@@ -24,7 +24,7 @@ Build distributable files with: `npm run-script build`
 
 Notes:
 * The engine API (glov/*) is subject to change significantly, often changes with each Ludum Dare in which I use this engine ^_^
-* To use MP3 audio files, convert all .wav to .mp3 at the end of development, then create sound_manager with `{ auto_mp3s: true }`
+* To use MP3 audio files, convert all .wav to .mp3 at the end of development, call engine.startup with `{ sound: { ext_list: ['mp3', 'wav'] } }`
 * Before publishing, edit the meta tags in index.html, place a 1200x630px cover image for use on Facebook and Twitter shares.
 
 
