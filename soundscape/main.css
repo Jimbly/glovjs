@@ -13,6 +13,7 @@ html, body {
 
 a {
   color: #DDF;
+  -webkit-tap-highlight-color: rgba(0,0,0,0); /* Work around Safari leaving stuck tap highlights */
 }
 a:visited {
   color: #DBF;
@@ -122,4 +123,5 @@ canvas {
 .glovui_link {
   display: block;
   height: 100%;
+  user-drag: none;
 }
