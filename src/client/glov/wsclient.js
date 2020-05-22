@@ -29,9 +29,10 @@ export function WSClient(path) {
   this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
   this.last_send_time = Date.now();
+  this.auto_path = !path;
   ackInitReceiver(this);
 
-  if (!path) {
+  if (this.auto_path) {
 
     path = document.location.toString().match(/^[^#?]+/)[0]; // remove search and anchor
 
@@ -65,9 +66,8 @@ export function WSClient(path) {
     // Should fix Comcast injection issue
     this.path2 = this.path.replace(/^ws:/, 'wss:');
   } else {
-    // is wss:/, try to fall back to ws:/?
-    // Not sure this is a good idea
-    this.path2 = this.path.replace(/^wss:/, 'ws:');
+    // Using wss:// some browsers will not allow connecting to ws://, so don't even try
+    this.path2 = this.path;
   }
 
   this.connect(false);
@@ -86,8 +86,16 @@ WSClient.prototype.onAppVer = function (ver) {
     if (this.on_app_ver_mismatch) {
       this.on_app_ver_mismatch();
     } else {
-      console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}, reloading`);
-      document.location.reload();
+      if (this.auto_path) {
+        console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), reloading`);
+        if (window.reloadSafe) {
+          window.reloadSafe();
+        } else {
+          document.location.reload();
+        }
+      } else {
+        console.warn(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), ignoring`);
+      }
     }
   }
 };

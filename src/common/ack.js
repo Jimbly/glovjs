@@ -53,7 +53,7 @@ export function ackWrapPakFinish(pak, err, resp_func) {
     // Nothing else must have been written
     assert.equal(pak.ack_data.data_offs, offs);
     flags |= ACKFLAG_ERR;
-    pak.writeString(err);
+    pak.writeString(String(err));
     offs = pak.getOffset();
   }
   pak.makeReadable();

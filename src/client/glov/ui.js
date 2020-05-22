@@ -247,12 +247,21 @@ export function startup(param) {
 }
 
 let dynamic_text_elem;
+let per_frame_dom_alloc = [0,0,0,0,0,0,0];
 export function getElem(allow_modal, last_elem) {
   if (modal_dialog && !allow_modal) {
     return null;
   }
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
+    if (glov_engine.DEBUG && !glov_engine.resizing()) {
+      per_frame_dom_alloc[glov_engine.global_frame_index % per_frame_dom_alloc.length] = 1;
+      let sum = 0;
+      for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
+        sum += per_frame_dom_alloc[ii];
+      }
+      assert(sum < per_frame_dom_alloc.length);
+    }
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
       dynamic_text_elem = document.getElementById('dynamic_text');
@@ -689,8 +698,8 @@ export function print(style, x, y, z, text) {
 export function modalDialog(param) {
   assert(!param.title || typeof param.title === 'string');
   assert(!param.text || typeof param.text === 'string');
-  assert(typeof param.buttons === 'object');
-  assert(Object.keys(param.buttons).length);
+  assert(!param.buttons || typeof param.buttons === 'object');
+  // assert(Object.keys(param.buttons).length);
 
   modal_dialog = param;
 }
@@ -723,7 +732,7 @@ function modalDialogRun() {
   }
 
   let { buttons, click_anywhere } = modal_dialog;
-  let keys = Object.keys(buttons);
+  let keys = Object.keys(buttons || {});
 
   const game_width = camera2d.x1() - camera2d.x0();
   const eff_modal_width = fullscreen_mode ? game_width : (modal_dialog.width || modal_width);
@@ -990,6 +999,7 @@ export function tickUI(dt) {
   focused_key_not = null;
   modal_stealing_focus = false;
   touch_changed_focus = false;
+  per_frame_dom_alloc[glov_engine.global_frame_index % per_frame_dom_alloc.length] = 0;
 
   last_frame_edit_boxes = exports.this_frame_edit_boxes;
   exports.this_frame_edit_boxes = [];

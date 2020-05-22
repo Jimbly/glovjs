@@ -10,7 +10,7 @@ const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
-const { abs, min, sqrt } = Math;
+const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
 const { soundResume } = require('./sound.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
@@ -168,6 +168,13 @@ TouchData.prototype.down = function (event, is_edge) {
   this.origin_time = eventTimestamp(event);
 };
 
+const MIN_EVENT_TIME_DELTA = 0.01; // fractions of a millisecond
+function timeDelta(event, origin_time) {
+  let et = eventTimestamp(event);
+  // timestamps on events are often back in time relative to the last tick time
+  return max(et - origin_time, MIN_EVENT_TIME_DELTA);
+}
+
 function KeyData() {
   this.down_edge = 0;
   // this.down_start = 0;
@@ -178,7 +185,7 @@ function KeyData() {
 }
 KeyData.prototype.keyUp = function (event) {
   ++this.up_edge;
-  this.down_time += eventTimestamp(event) - this.origin_time;
+  this.down_time += timeDelta(event, this.origin_time);
   this.state = UP;
 };
 
@@ -251,22 +258,18 @@ function ignored(event) {
 }
 
 let unload_protected = false;
-function stopCtrlW(e) {
-  // Cancel the event
-  e.preventDefault();
-  // Chrome requires returnValue to be set
-  e.returnValue = 'Are you sure you want to quit?';
+function beforeUnload(e) {
+  if (unload_protected) {
+    // Cancel the event
+    e.preventDefault();
+    // Chrome requires returnValue to be set
+    e.returnValue = 'Are you sure you want to quit?';
+  } else {
+    engine.releaseCanvas();
+  }
 }
 function protectUnload(enable) {
-  if (enable && !unload_protected) {
-    console.log('Adding handler');
-    window.addEventListener('beforeunload', stopCtrlW, false);
-    unload_protected = true;
-  } else if (!enable && unload_protected) {
-    console.log('Removing handler');
-    window.removeEventListener('beforeunload', stopCtrlW, false);
-    unload_protected = false;
-  }
+  unload_protected = enable;
 }
 
 function onKeyUp(event) {
@@ -417,6 +420,10 @@ function onMouseDown(event) {
   if (!no_click) {
     in_event.handle('mousedown', event);
   }
+  //This solves input bug when game is running as iframe. E.g. Facebook Instant
+  if (window.focus) {
+    window.focus();
+  }
 }
 
 function onMouseUp(event) {
@@ -435,7 +442,7 @@ function onMouseUp(event) {
         touch_data.up_edge++;
       }
       touch_data.state = UP;
-      touch_data.down_time += eventTimestamp(event) - touch_data.origin_time;
+      touch_data.down_time += timeDelta(event, touch_data.origin_time);
     }
     delete mouse_down[button];
   }
@@ -515,7 +522,7 @@ function onTouchChange(event) {
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         touch.up_edge++;
         touch.state = UP;
-        touch.down_time += eventTimestamp(event) - touch.origin_time;
+        touch.down_time += timeDelta(event, touch.origin_time);
         touch.release = true;
       }
     }
@@ -616,6 +623,8 @@ export function startup(_canvas, params) {
 
   // For iOS, this is needed in test_fullscreen, but not here, for some reason
   //window.addEventListener('gesturestart', ignored, false);
+
+  window.addEventListener('beforeunload', beforeUnload, false);
 }
 
 
@@ -667,7 +676,7 @@ function updatePadState(gpd, ps, b, padcode) {
         v2copy(touch_data.cur_pos, mouse_pos);
         touch_data.up_edge++;
         touch_data.state = UP;
-        touch_data.down_time += engine.hrtime - touch_data.origin_time;
+        touch_data.down_time += max(engine.hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
       }
     }
   }
@@ -763,11 +772,8 @@ export function tickInput() {
   for (let code in key_state_new) {
     let ks = key_state_new[code];
     if (ks.state === DOWN) {
-      ks.down_time += hrtime - ks.origin_time;
-      if (!ks.down_time) { // happens on MacOS Safari
-        ks.down_time = 1;
-      }
-      // assert(hrtime >= ks.origin_time); - should be true, barring weird bugs
+      ks.down_time += max(hrtime - ks.origin_time, MIN_EVENT_TIME_DELTA);
+      // assert(hrtime >= ks.origin_time); - should be true, but often isn't
       ks.origin_time = hrtime;
     }
   }
@@ -775,8 +781,8 @@ export function tickInput() {
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
     if (touch_data.state === DOWN) {
-      touch_data.down_time += hrtime - touch_data.origin_time;
-      // assert(hrtime >= touch_data.origin_time); - should be true, barring weird bugs
+      touch_data.down_time += max(hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
+      // assert(hrtime >= touch_data.origin_time); - should be true, but often isn't
       touch_data.origin_time = hrtime;
     }
   }

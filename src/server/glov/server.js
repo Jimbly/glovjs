@@ -4,6 +4,8 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const data_store = require('./data_store.js');
+const data_store_limited = require('./data_store_limited.js');
+const data_store_image = require('./data_store_image.js');
 const glov_exchange = require('./exchange.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
@@ -14,6 +16,7 @@ const glov_wsserver = require('./wsserver.js');
 const glov_wscommon = require('../../common/wscommon.js');
 
 const STATUS_TIME = 5000;
+const FILE_CHANGE_PAD = 100;
 export let ws_server;
 export let channel_server;
 
@@ -69,6 +72,12 @@ function updateVersion(base_name, is_startup) {
   });
 }
 
+let deferred_file_changes = {};
+function onFileChange(filename) {
+  delete deferred_file_changes[filename];
+  ws_server.broadcast('filewatch', filename);
+}
+
 export function startup(params) {
   log.startup(argv);
   assert(params.server);
@@ -79,8 +88,21 @@ export function startup(params) {
   let { data_stores, exchange } = params;
   if (!data_stores) {
     data_stores = {};
-    data_stores.bulk = data_stores.meta = data_store.create('data_store');
   }
+  if (!data_stores.meta) {
+    data_stores.meta = data_store.create('data_store');
+  }
+  if (!data_stores.bulk) {
+    if (argv.dev) {
+      data_stores.bulk = data_store_limited.create(data_stores.meta, 1000, 1000, 250);
+    } else {
+      data_stores.bulk = data_stores.meta;
+    }
+  }
+  if (!data_stores.image) {
+    data_stores.image = data_store_image.create('data_store/public', 'upload');
+  }
+
   if (!exchange) {
     exchange = glov_exchange.create();
   }
@@ -90,7 +112,7 @@ export function startup(params) {
     packet.default_flags = packet.PACKET_DEBUG;
   }
 
-  ws_server = glov_wsserver.create(params.server);
+  ws_server = glov_wsserver.create(params.server, params.server_https);
   ws_server.on('error', function (error) {
     console.error('Unhandled WSServer error:', error);
     let text = String(error);
@@ -111,13 +133,22 @@ export function startup(params) {
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
   setTimeout(displayStatus, STATUS_TIME);
 
-  fs.watch(path.join(__dirname, '../../client/'), function (eventType, filename) {
+  fs.watch(path.join(__dirname, '../../client/'), { recursive: true }, function (eventType, filename) {
     if (!filename) {
       return;
     }
+    filename = filename.replace(/\\/g, '/');
     let m = filename.match(/(.*)\.ver\.json$/);
     if (!m) {
-      // not a version file, ignore
+      // not a version file
+      if (argv.dev) {
+        // send a dynamic reload message
+        console.log(`File changed: ${filename}`);
+        if (deferred_file_changes[filename]) {
+          clearTimeout(deferred_file_changes[filename]);
+        }
+        deferred_file_changes[filename] = setTimeout(onFileChange.bind(null, filename), FILE_CHANGE_PAD);
+      }
       return;
     }
     let file_base_name = m[1]; // e.g. 'app' or 'worker'
@@ -126,7 +157,7 @@ export function startup(params) {
   updateVersion('app', true);
 }
 
-export function shutdown(message) {
-  console.error(message);
+export function shutdown(...message) {
+  console.error(...message);
   process.exit(1);
 }

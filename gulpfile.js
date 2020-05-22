@@ -5,22 +5,28 @@ const babel = require('gulp-babel');
 const babelify = require('babelify');
 const browserify = require('browserify');
 const browser_sync = require('browser-sync');
+const clean = require('gulp-clean');
+const eslint = require('gulp-eslint');
 const fs = require('fs');
 const gulp = require('gulp');
 const gulpif = require('gulp-if');
-const eslint = require('gulp-eslint');
+const ifdef = require('gulp-ifdef');
+const ignore = require('gulp-ignore');
 const lazypipe = require('lazypipe');
 const log = require('fancy-log');
 const useref = require('gulp-useref');
 const uglify = require('gulp-uglify');
 const newer = require('gulp-newer');
 const nodemon = require('gulp-nodemon');
+const rename = require('gulp-rename');
 const replace = require('gulp-replace');
 const sourcemaps = require('gulp-sourcemaps');
 const web_compress = require('gulp-web-compress');
 const vinyl_buffer = require('vinyl-buffer');
 const vinyl_source_stream = require('vinyl-source-stream');
 const watchify = require('watchify');
+const webfs = require('./gulp/webfs_build.js');
+const zip = require('gulp-zip');
 
 //////////////////////////////////////////////////////////////////////////
 // Server tasks
@@ -28,6 +34,7 @@ const config = {
   server_js_files: ['src/**/*.js', '!src/client/**/*.js'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
+  client_html_index: ['src/client/**/index.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
   client_static: [
     'src/client/**/*.webm',
@@ -35,6 +42,7 @@ const config = {
     'src/client/**/*.wav',
     'src/client/**/*.ogg',
     'src/client/**/*.png',
+    'src/client/**/*.jpg',
     'src/client/**/*.glb',
     '!**/unused/**',
     '!src/client/sounds/Bfxr/**',
@@ -48,6 +56,13 @@ const config = {
     'client/**/*.css',
     'client/**/*.glb',
     'client/**/manifest.json',
+  ],
+  client_fsdata: [
+    'src/client/autogen/**',
+    'src/client/shaders/**',
+    'src/client/glov/shaders/**',
+    '!src/client/autogen/placeholder.txt',
+    '!src/client/autogen/*.js',
   ],
 };
 
@@ -71,9 +86,10 @@ const uglify_options = { compress: false, mangle: false };
 gulp.task('server_js', function () {
   return gulp.src(config.server_js_files)
     .pipe(sourcemaps.init())
+    .pipe(newer('./dist/game/build.dev'))
     .pipe(babel())
     .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('./build.dev'));
+    .pipe(gulp.dest('./dist/game/build.dev'));
 });
 
 gulp.task('eslint', function () {
@@ -84,26 +100,61 @@ gulp.task('eslint', function () {
 
 //////////////////////////////////////////////////////////////////////////
 // client tasks
-gulp.task('client_html', function () {
+const default_defines = {
+  ENV: 'default',
+};
+gulp.task('client_html_default', function () {
   return gulp.src(config.client_html)
-    // .pipe(eslint())
-    // .pipe(eslint.format())
     .pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
     .on('error', log.error.bind(log, 'client_html Error'))
+    .pipe(ifdef(default_defines, { extname: ['html'] }))
     .pipe(sourcemaps.write('./')) // writes .map file
-    .pipe(gulp.dest('./build.dev/client'));
+    .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
+
+const extra_index = [
+//  {
+//    name: 'staging',
+//    defines: {
+//      ENV: 'staging',
+//    },
+//    zip: true,
+//  },
+];
+
+let client_html_tasks = ['client_html_default'];
+extra_index.forEach(function (elem) {
+  let name = `client_html_${elem.name}`;
+  client_html_tasks.push(name);
+  gulp.task(name, function () {
+    return gulp.src(config.client_html_index)
+      .pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
+      .on('error', log.error.bind(log, 'client_html Error'))
+      .pipe(ifdef(elem.defines, { extname: ['html'] }))
+      .pipe(rename(`index_${elem.name}.html`))
+      .pipe(sourcemaps.write('./')) // writes .map file
+      .pipe(gulp.dest('./dist/game/build.dev/client'));
+  });
+});
+
+gulp.task('client_html', gulp.parallel(...client_html_tasks));
 
 gulp.task('client_css', function () {
   return gulp.src(config.client_css)
-    .pipe(gulp.dest('./build.dev/client'))
+    .pipe(gulp.dest('./dist/game/build.dev/client'))
     .pipe(browser_sync.reload({ stream: true }));
 });
 
 gulp.task('client_static', function () {
   return gulp.src(config.client_static)
-    .pipe(newer('./build.dev/client'))
-    .pipe(gulp.dest('./build.dev/client'));
+    .pipe(newer('./dist/game/build.dev/client'))
+    .pipe(gulp.dest('./dist/game/build.dev/client'));
+});
+
+gulp.task('client_fsdata', function () {
+  return gulp.src(config.client_fsdata, { base: 'src/client' })
+    .pipe(webfs())
+    .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
 
 //////////////////////////////////////////////////////////////////////////
@@ -216,12 +267,12 @@ function bundleJS(filename, is_worker, pre_task) {
       // Add transformation tasks to the pipeline here.
       .pipe(uglify(uglify_options))
       .pipe(sourcemaps.write('./')) // writes .map file
-      .pipe(gulp.dest('./build.dev/client/'));
+      .pipe(gulp.dest('./dist/game/build.dev/client/'));
   }
 
   function writeVersion(done) {
     let ver_filename = `${filename.slice(0, -3)}.ver.json`;
-    fs.writeFile(`./build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
+    fs.writeFile(`./dist/game/build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
   }
   let version_task = `client_js_${filename}_version`;
   gulp.task(version_task, writeVersion);
@@ -259,13 +310,42 @@ function bundleJS(filename, is_worker, pre_task) {
 
 bundleJS('app.js');
 
-gulp.task('build.prod', function () {
-  return gulp.src('build.dev/**')
-    .pipe(gulp.dest('./build.prod'))
+gulp.task('build.prod.compress', function () {
+  return gulp.src('dist/game/build.dev/**')
+    .pipe(gulp.dest('./dist/game/build.prod'))
     // skipLarger so we don't end up with orphaned old compressed files
     .pipe(gulpif(config.compress_files, web_compress({ skipLarger: false })))
-    .pipe(gulp.dest('./build.prod'));
+    .pipe(gulp.dest('./dist/game/build.prod'));
 });
+gulp.task('nop', function (next) {
+  next();
+});
+let zip_tasks = [];
+extra_index.forEach(function (elem) {
+  if (!elem.zip) {
+    return;
+  }
+  let name = `build.zip.${elem.name}`;
+  zip_tasks.push(name);
+  gulp.task(name, function () {
+    return gulp.src('dist/game/build.dev/client/**')
+      .pipe(ignore.exclude('index.html'))
+      .pipe(ignore.exclude('*.map'))
+      .pipe(gulpif(`index_${elem.name}.html`, rename('index.html')))
+      .pipe(ignore.exclude('index_*.html'))
+      .pipe(zip(`${elem.name}.zip`))
+      .pipe(gulp.dest('./dist/game/build.prod/client'));
+  });
+});
+if (!zip_tasks.length) {
+  zip_tasks.push('nop');
+}
+gulp.task('build.zip', gulp.parallel(...zip_tasks));
+gulp.task('build.prod.package', function () {
+  return gulp.src('package*.json')
+    .pipe(gulp.dest('./dist/game/build.prod'));
+});
+gulp.task('build.prod', gulp.parallel('build.prod.package', 'build.prod.compress', 'build.zip'));
 
 gulp.task('client_js', gulp.parallel(...client_js_deps));
 gulp.task('client_js_watch', gulp.parallel(...client_js_watch_deps));
@@ -273,8 +353,10 @@ gulp.task('client_js_watch', gulp.parallel(...client_js_watch_deps));
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
 
+gulp.task('client_fsdata_wrap', gulp.series('client_fsdata'));
+
 gulp.task('build', gulp.series(gulp.parallel('eslint', 'server_js', 'client_html',
-  'client_css', 'client_static', 'client_js'), 'build.prod'));
+  'client_css', 'client_static', 'client_js', 'client_fsdata_wrap'), 'build.prod'));
 
 gulp.task('bs-reload', (done) => {
   browser_sync.reload();
@@ -282,7 +364,8 @@ gulp.task('bs-reload', (done) => {
 });
 
 gulp.task('watch', gulp.series(
-  gulp.parallel('eslint', 'server_js', 'client_html', 'client_css', 'client_static', 'client_js_watch'),
+  gulp.parallel('eslint', 'server_js', 'client_html', 'client_css', 'client_static',
+    'client_fsdata_wrap', 'client_js_watch'),
   (done) => {
     if (!args.nolint) {
       gulp.watch(config.all_js_files, gulp.series('eslint'));
@@ -291,7 +374,8 @@ gulp.task('watch', gulp.series(
     gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
     gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
     gulp.watch(config.client_css, gulp.series('client_css'));
-    gulp.watch(config.client_static, gulp.series('client_static', 'bs-reload'));
+    gulp.watch(config.client_static, gulp.series('client_static'));
+    gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
     done();
   }
 ));
@@ -306,11 +390,12 @@ if (args.debug) {
 // based on its own logic below.
 gulp.task('nodemon', gulp.series(...deps, (done) => {
   const options = {
-    script: 'build.dev/server/index.js',
+    script: 'dist/game/build.dev/server/index.js',
     nodeArgs: ['--inspect'],
     args: ['--dev'],
-    watch: ['build.dev/server/', 'build.dev/common'],
+    watch: ['dist/game/build.dev/server/', 'dist/game/build.dev/common'],
   };
+
   if (args.debug) {
     options.nodeArgs.push('--debug');
   }
@@ -341,3 +426,15 @@ gulp.task('browser-sync', gulp.series('nodemon', (done) => {
   });
   done();
 }));
+
+gulp.task('clean', function () {
+  return gulp.src([
+    'build.dev',
+    'build.prod',
+    'dist/game/build.dev',
+    'dist/game/build.prod',
+    'src/client/autogen/*.*',
+    '!src/client/autogen/placeholder.txt',
+  ], { read: false, allowEmpty: true })
+    .pipe(clean());
+});

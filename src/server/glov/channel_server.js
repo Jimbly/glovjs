@@ -3,7 +3,7 @@
 
 const { ackWrapPakStart, ackWrapPakFinish, ackWrapPakPayload } = require('../../common/ack.js');
 const assert = require('assert');
-const asyncSeries = require('async-series');
+const { asyncSeries } = require('../../common/async.js');
 const cmd_parse = require('../../common/cmd_parse.js');
 const { ChannelWorker } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
@@ -13,7 +13,7 @@ const log = require('./log.js');
 const packet = require('../../common/packet.js');
 const { isPacket, packetCreate } = packet;
 const { shutdown } = require('./server.js');
-const { clone, logdata } = require('../../common/util.js');
+const { callEach, clone, logdata } = require('../../common/util.js');
 const { inspect } = require('util');
 
 const { max } = Math;
@@ -94,7 +94,17 @@ function channelServerSendFinish(pak, err, resp_func) {
       });
     });
   }
-  trySend();
+  if (!source.registered) {
+    console.debug(`Delaying sending "${msg}" from ${source.channel_id} to ${dest}: not yet registered`);
+    assert(source.no_datastore); // This must be a local channel, which all have this set
+    assert(source.on_register);
+    source.on_register.push(function () {
+      console.debug(`Executing delayed send "${msg}" from ${source.channel_id} to ${dest}`);
+      trySend();
+    });
+  } else {
+    trySend();
+  }
 }
 
 function channelServerPakSend(err, resp_func) {
@@ -203,7 +213,7 @@ class ChannelServer {
           if (err) {
             // We do not handle this - any messages sent to us have been lost, no
             // other worker will replace us, and queued_msgs will continuously grow.
-            shutdown(`autoCreateChannel(${channel_id}) error loading data store:`, err);
+            shutdown(`autoCreateChannel(${channel_id}) error loading data store: ${err}`);
             return void next(err);
           }
           channel_data = response;
@@ -214,6 +224,7 @@ class ChannelServer {
         assert(channel_data);
         assert(!self.local_channels[channel_id]);
         let channel = new Ctor(self, channel_id, channel_data);
+        channel.registered = true; // Pre-registered
         self.local_channels[channel_id] = channel;
         self.exchange.replaceMessageHandler(channel_id, proxyMessageHandler, channel.handleMessage.bind(channel));
         console.log(`Auto-created channel ${channel_id} (${queued_msgs.length} ` +
@@ -229,10 +240,7 @@ class ChannelServer {
       }
     ], function (err) {
       assert.equal(self.channels_creating[channel_id], cbs);
-      delete self.channels_creating[channel_id];
-      for (let ii = 0; ii < cbs.length; ++ii) {
-        cbs[ii](err);
-      }
+      callEach(self.channels_creating[channel_id], delete self.channels_creating[channel_id], err);
     });
   }
 
@@ -243,20 +251,32 @@ class ChannelServer {
     assert(Ctor);
     // fine whether it's Ctor.autocreate or not
 
+    // These constructors *always* get an empty object for their metadata (nothing persisted)
     let channel = new Ctor(this, channel_id, {});
     assert(channel.no_datastore); // local channels should not be having any data persistance
 
     this.local_channels[channel_id] = channel;
-    this.exchange.register(channel.channel_id, channel.handleMessage.bind(channel), function (err) {
+    channel.on_register = [];
+    this.exchange.register(channel.channel_id, channel.handleMessage.bind(channel), (err) => {
       // someone else create an identically named channel, shouldn't be possible to happen!
       assert(!err, `failed to register channel: ${channel.channel_id}`);
+      channel.registered = true;
+      callEach(channel.on_register, channel.on_register = null);
+      if (channel.need_unregister) {
+        this.exchange.unregister(channel_id);
+      }
     });
     return channel;
   }
 
   removeChannelLocal(channel_id) {
-    assert(this.local_channels[channel_id]);
-    this.exchange.unregister(channel_id);
+    let channel = this.local_channels[channel_id];
+    assert(channel);
+    if (channel.registered) {
+      this.exchange.unregister(channel_id);
+    } else {
+      channel.need_unregister = true;
+    }
     delete this.local_channels[channel_id];
     // TODO: Let others know to reset/clear their packet ids going to this worker,
     // to free memory and ease re-creation later?
@@ -285,6 +305,7 @@ class ChannelServer {
 
     this.ds_store_bulk = data_stores.bulk;
     this.ds_store_meta = data_stores.meta;
+    this.ds_store_image = data_stores.image;
     this.exchange = exchange;
 
     client_comm.init(this);
@@ -422,13 +443,22 @@ class ChannelServer {
     let num_clients = Object.keys(this.ws_server.clients).length;
     lines.push(`Clients: ${num_clients}`);
     let num_channels = {};
+    let channels_verbose = {};
     for (let channel_id in this.local_channels) {
-      let channel_type = this.local_channels[channel_id].channel_type;
+      let channel = this.local_channels[channel_id];
+      let channel_type = channel.channel_type;
+      channels_verbose[channel_type] = channels_verbose[channel_type] || [];
+      channels_verbose[channel_type].push(channel.channel_subid);
       num_channels[channel_type] = (num_channels[channel_type] || 0) + 1;
     }
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
+    }
+    lines.push(`Channel Counts: ${channels.join(', ')}`);
+    channels = [];
+    for (let channel_type in channels_verbose) {
+      channels.push(`${channel_type}:${channels_verbose[channel_type].join(',')}`);
     }
     lines.push(`Channels: ${channels.join(', ')}`);
     return lines.join('\n  ');

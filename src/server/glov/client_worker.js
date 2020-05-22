@@ -58,13 +58,17 @@ class ClientWorker extends ChannelWorker {
       }
     }
 
-    assert(!isPacket(data)); // TODO: send differently if this is a packet
-
-    this.client.send('channel_msg', {
-      channel_id: source.channel_id,
-      msg: msg,
-      data: data,
-    }, resp_func);
+    let is_packet = isPacket(data);
+    let pak = this.client.wsPak('channel_msg', is_packet ? data : null);
+    pak.writeAnsiString(source.channel_id);
+    pak.writeAnsiString(msg);
+    pak.writeBool(is_packet);
+    if (is_packet) {
+      pak.appendRemaining(data);
+    } else {
+      pak.writeJSON(data);
+    }
+    pak.send(resp_func);
   }
 
   onError(msg) {

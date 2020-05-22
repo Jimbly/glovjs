@@ -3,38 +3,36 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const fs = require('fs');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
-
 const { vec2, vec3, vec4, v4set } = require('./vmath.js');
 
 const shader_data = {
   vp_copy: {
-    vp: fs.readFileSync(`${__dirname}/shaders/effects_copy.vp`, 'utf8'),
+    vp: 'glov/shaders/effects_copy.vp',
   },
   copy: {
-    fp: fs.readFileSync(`${__dirname}/shaders/effects_copy.fp`, 'utf8'),
+    fp: 'glov/shaders/effects_copy.fp',
   },
   pixely_expand: {
-    fp: fs.readFileSync(`${__dirname}/shaders/pixely_expand.fp`, 'utf8'),
+    fp: 'glov/shaders/pixely_expand.fp',
   },
   gaussian_blur: {
-    fp: fs.readFileSync(`${__dirname}/shaders/effects_gaussian_blur.fp`, 'utf8'),
+    fp: 'glov/shaders/effects_gaussian_blur.fp',
   },
   // bloom_merge: {
-  //   fp: fs.readFileSync(`${__dirname}/shaders/effects_bloom_merge.fp`, 'utf8'),
+  //   fp: 'glov/shaders/effects_bloom_merge.fp',
   // },
   // bloom_threshold: {
-  //   fp: fs.readFileSync(`${__dirname}/shaders/effects_bloom_threshold.fp`, 'utf8'),
+  //   fp: 'glov/shaders/effects_bloom_threshold.fp',
   // },
   color_matrix: {
-    fp: fs.readFileSync(`${__dirname}/shaders/effects_color_matrix.fp`, 'utf8'),
+    fp: 'glov/shaders/effects_color_matrix.fp',
   },
   // distort: {
-  //   fp: fs.readFileSync(`${__dirname}/shaders/effects_distort.fp`, 'utf8'),
+  //   fp: 'glov/shaders/effects_distort.fp',
   // },
 };
 
@@ -46,9 +44,9 @@ function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
     if (elem.fp) {
-      elem.shader = shaders.create(gl.FRAGMENT_SHADER, key, elem.fp);
+      elem.shader = shaders.create(elem.fp);
     } else {
-      elem.shader = shaders.create(gl.VERTEX_SHADER, key, elem.vp);
+      elem.shader = shaders.create(elem.vp);
     }
   }
   return elem.shader;
@@ -571,3 +569,16 @@ export function applyColorMatrix(params) {
 //
 //   return true;
 // }
+
+export function clearAlpha() {
+  let old_dt = gl.getParameter(gl.DEPTH_TEST);
+  if (old_dt) {
+    gl.disable(gl.DEPTH_TEST);
+  }
+  gl.colorMask(false, false, false, true);
+  applyCopy({ source: textures.textures.white });
+  gl.colorMask(true, true, true, true);
+  if (old_dt) {
+    gl.enable(gl.DEPTH_TEST);
+  }
+}

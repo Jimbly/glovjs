@@ -48,7 +48,7 @@ export function unregister(id) {
 // cb(err)
 export function publish(dest, pak, cb) {
   assert(isPacket(pak));
-  let buf = pak.getBuffer(); // Actually probably a Uint8Array - Buffer.from(buf.buffer, buf_len) will coerce to Buffer
+  let buf = pak.getBuffer(); // Actually probably a Uint8Array, Buffer.from(buf.buffer,0,buf_len) will coerce to Buffer
   let buf_len = pak.getBufferLen();
   assert(buf_len);
   // Force this async, pak is *not* serialized upon call, so this can be super-fast in-process later

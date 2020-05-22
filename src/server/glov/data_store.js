@@ -7,6 +7,7 @@ const fs = require('fs');
 const FileStore = require('fs-store').FileStore;
 const mkdirp = require('mkdirp');
 const path = require('path');
+const { callEach } = require('../../common/util.js');
 
 class DataStoreOneFile {
   constructor(store_path) {
@@ -83,7 +84,6 @@ class DataStore {
   setAsyncBufferInternal(obj_name, value, cb) {
     if (this.bin_queue[obj_name]) {
       this.bin_queue[obj_name].value = value;
-      this.bin_queue[obj_name].need_write = true;
       this.bin_queue[obj_name].cbs.push(cb);
       return;
     }
@@ -96,7 +96,7 @@ class DataStore {
       let bin_ext = old_ext && old_ext === 'b1' ? 'b2' : 'b1';
       let path_base = path.join(this.path, obj_name);
       let bin_path = `${path_base}.${bin_ext}`;
-      this.bin_queue[obj_name] = { cbs: [cb] };
+      this.bin_queue[obj_name] = { cbs: [] };
       fs.writeFile(bin_path, value, function (err) {
         if (err) {
           // Shouldn't ever happen, out of disk space, maybe?
@@ -108,18 +108,16 @@ class DataStore {
         store.onFlush(onFinish);
       });
     };
+    let cur_cbs = [cb];
     onFinish = (err) => {
       let queued = this.bin_queue[obj_name];
-      let { cbs, need_write } = queued;
+      let { cbs } = queued;
       delete this.bin_queue[obj_name];
-      if (need_write) {
-        value = queued.value;
-        startWrite();
-      }
+      callEach(cur_cbs, null, err);
       if (cbs.length) {
-        for (let ii = 0; ii < cbs.length; ++ii) {
-          cbs[ii](err);
-        }
+        value = queued.value;
+        cur_cbs = cbs;
+        startWrite();
       }
     };
     startWrite();
@@ -156,6 +154,7 @@ class DataStore {
     });
   }
   getAsyncBuffer(obj_name, cb) {
+    assert(!this.bin_queue[obj_name]); // Currently being set
     setImmediate(() => {
       let store = this.getStore(obj_name);
       let bin_ext = store.get('bin');
@@ -172,6 +171,22 @@ class DataStore {
       cb(null, null);
     });
   }
+
+  // Buffer or string, for migration utilities
+  getAsyncAuto(obj_name, cb) {
+    assert(!this.bin_queue[obj_name]); // Currently being set
+    setImmediate(() => {
+      let store = this.getStore(obj_name);
+      let bin_ext = store.get('bin');
+      if (bin_ext) {
+        let path_base = path.join(this.path, `${obj_name}.${bin_ext}`);
+        return void fs.readFile(path_base, cb);
+      }
+      // No binary file
+      cb(null, store.get('data', null));
+    });
+  }
+
 }
 
 // Init the type of datastore system
@@ -181,6 +196,6 @@ export function create(store_path, one_file) {
   }
 
   // Defaults to FileStore (this will be the behaviour in local environment)
-  console.info('DataStore - Local FileStore in use for everything');
+  console.info('DataStore - Local FileStore in use');
   return new DataStore(store_path);
 }

@@ -167,6 +167,13 @@ function poolBuf(dv) {
   }
 }
 
+export function packetBufPoolAlloc(size) {
+  return allocDataView(size);
+}
+export function packetBufPoolFree(dv) {
+  poolBuf(dv);
+}
+
 function Packet(flags, init_size, pak_debug) {
   this.reinit(flags, init_size, pak_debug);
 }
@@ -853,7 +860,7 @@ function format(v) {
 }
 PacketDebug.prototype.contents = function () {
   let { pak } = this;
-  let cur_offs = pak.totalSize();
+  let cur_offs = pak.getOffset();
   let read_len = cur_offs;
   let ret = [`buf:${pak.buf_offs}/${pak.buf_len}`];
   if (pak.bufs) {
@@ -868,6 +875,7 @@ PacketDebug.prototype.contents = function () {
     assert(pak.buf);
     pak.buf_offs = 0;
   }
+  let saved_ref_count = pak.ref_count;
   pak.ref(); // prevent auto pooling
   try {
     if (pak.has_flags) {
@@ -886,7 +894,7 @@ PacketDebug.prototype.contents = function () {
   } catch (e) {
     ret.push(`Error dumping packet contents: ${e}`);
   }
-  pak.pool();
+  pak.ref_count = saved_ref_count;
   pak.buf_offs = cur_offs;
   return ret.join(',');
 };

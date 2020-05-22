@@ -311,7 +311,7 @@ module.exports = {
     "no-shadow": [
       "error",
       {
-        "allow": ["next", "done", "err"],
+        "allow": ["next", "done", "err", "pak"],
       }
     ],
     "no-shadow-restricted-names": "error",
@@ -407,7 +407,7 @@ module.exports = {
     "prefer-promise-reject-errors": "error",
     "prefer-reflect": "off", // JE
     "prefer-rest-params": "error",
-    "prefer-spread": "error",
+    "prefer-spread": "off",
     "prefer-template": ignore_style ? "off" : "error",
     "quote-props": relaxed ? "off" : [
       "error",

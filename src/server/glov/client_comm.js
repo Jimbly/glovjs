@@ -2,18 +2,38 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const {
+  chunkedReceiverCleanup,
+  chunkedReceiverFinish,
+  chunkedReceiverInit,
+  chunkedReceiverOnChunk,
+  chunkedReceiverStart,
+} = require('../../common/chunked_send.js');
 const client_worker = require('./client_worker.js');
+const createHmac = require('crypto').createHmac;
 const { channelServerPak, channelServerSend } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
 const { isPacket } = require('../../common/packet.js');
 const { logdata } = require('../../common/util.js');
 const random_names = require('./random_names.js');
+const { serverConfig } = require('./server_config.js');
+
+// combined size of all chunked sends at any given time
+const MAX_CLIENT_UPLOAD_SIZE = 1*1024*1024;
 
 function onUnSubscribe(client, channel_id) {
   client.client_channel.unsubscribeOther(channel_id);
 }
 
+function uploadCleanup(client) {
+  if (client.chunked) {
+    chunkedReceiverCleanup(client.chunked);
+    delete client.chunked;
+  }
+}
+
 function onClientDisconnect(client) {
+  uploadCleanup(client);
   client.client_channel.unsubscribeAll();
   client.client_channel.shutdown();
 }
@@ -250,6 +270,34 @@ function onLogin(client, data, resp_func) {
   }, handleLoginResponse.bind(null, client, user_id, resp_func));
 }
 
+let facebook_access_token;
+function onLoginFacebook(client, data, resp_func) {
+  console.log(`client_id:${client.id}->server login_facebook ${logdata(data)}`);
+  assert(facebook_access_token, 'Missing facebook.access_token in config/server.json');
+
+  const signatureComponent = data.signature.split('.');
+  // buffer supports base64url
+  const signature = Buffer.from(signatureComponent[0], 'base64').toString('hex');
+  const generated_signature = createHmac('sha256', facebook_access_token).update(signatureComponent[1]).digest('hex');
+  if (generated_signature === signature) {
+    const payload = JSON.parse(Buffer.from(signatureComponent[1], 'base64').toString('utf8'));
+    let user_id = `fb$${payload.player_id}`;
+    console.log(`client_id:${client.id} login_facebook ${user_id} success ${logdata(payload)}`);
+
+    let client_channel = client.client_channel;
+    assert(client_channel);
+
+    return channelServerSend(client_channel, `user.${user_id}`, 'login_facebook', null, {
+      display_name: data.display_name,
+      ip: client.addr,
+    }, handleLoginResponse.bind(null, client, user_id, resp_func));
+
+  } else {
+    console.log('Auth Failed', generated_signature, signature);
+    return resp_func('Auth Failed');
+  }
+}
+
 function onUserCreate(client, data, resp_func) {
   console.log(`client_id:${client.id}->server user_create ${logdata(data)}`);
   let user_id = data.user_id;
@@ -298,6 +346,21 @@ function onRandomName(client, data, resp_func) {
   return resp_func(null, random_names.get());
 }
 
+function uploadOnStart(client, pak, resp_func) {
+  if (!client.chunked) {
+    client.chunked = chunkedReceiverInit(`client_id:${client.id}`, MAX_CLIENT_UPLOAD_SIZE);
+  }
+  chunkedReceiverStart(client.chunked, pak, resp_func);
+}
+
+function uploadOnChunk(client, pak, resp_func) {
+  chunkedReceiverOnChunk(client.chunked, pak, resp_func);
+}
+
+function uploadOnFinish(client, pak, resp_func) {
+  chunkedReceiverFinish(client.chunked, pak, resp_func);
+}
+
 export function init(channel_server) {
   let ws_server = channel_server.ws_server;
   ws_server.on('client', (client) => {
@@ -312,9 +375,16 @@ export function init(channel_server) {
   ws_server.onMsg('set_channel_data', onSetChannelData);
   ws_server.onMsg('channel_msg', onChannelMsg);
   ws_server.onMsg('login', onLogin);
+  ws_server.onMsg('login_facebook', onLoginFacebook);
   ws_server.onMsg('user_create', onUserCreate);
   ws_server.onMsg('logout', onLogOut);
   ws_server.onMsg('random_name', onRandomName);
+
+  ws_server.onMsg('upload_start', uploadOnStart);
+  ws_server.onMsg('upload_chunk', uploadOnChunk);
+  ws_server.onMsg('upload_finish', uploadOnFinish);
+
+  facebook_access_token = serverConfig().facebook && serverConfig().facebook.access_token;
 
   client_worker.init(channel_server);
 }

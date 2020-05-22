@@ -9,3 +9,5 @@ build.prod/
 *.sublime-workspace
 Bfxr
 *.00?
+src/client/autogen/
+.DS_Store

@@ -4,15 +4,13 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
-const fs = require('fs');
+const { floor, min, pow, random } = Math;
 const sprites = require('./sprites.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const glov_ui = require('./ui.js');
-
 const { easeOut } = require('../../common/util.js');
 const { unit_vec, vec4 } = require('./vmath.js');
-const { floor, min, pow, random } = Math;
 
 let transitions = [];
 
@@ -23,14 +21,14 @@ export const CONTINUE = 'continue';
 
 const shader_data = {
   transition_pixelate: {
-    fp: fs.readFileSync(`${__dirname}/shaders/transition_pixelate.fp`, 'utf8'),
+    fp: 'glov/shaders/transition_pixelate.fp',
   },
 };
 
 function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
-    elem.shader = shaders.create(gl.FRAGMENT_SHADER, key, elem.fp);
+    elem.shader = shaders.create(elem.fp);
   }
   return elem.shader;
 }

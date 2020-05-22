@@ -6,7 +6,6 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
-const fs = require('fs');
 const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
@@ -29,6 +28,19 @@ let last_uid = 0;
 let sprite_queue = [];
 
 let sprite_freelist = [];
+
+let sprite_queue_stack = null;
+export function spriteQueuePush() {
+  assert(!sprite_queue_stack);
+  sprite_queue_stack = sprite_queue;
+  sprite_queue = [];
+}
+export function spriteQueuePop() {
+  assert(sprite_queue_stack);
+  assert(!sprite_queue.length);
+  sprite_queue = sprite_queue_stack;
+  sprite_queue_stack = null;
+}
 
 function SpriteData() {
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
@@ -141,15 +153,23 @@ export function queueraw(
     color, shader, shader_params, blend);
 }
 
-export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom) {
+export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom, pixel_perfect) {
   assert(isFinite(z));
   let elem = spriteDataAlloc();
   elem.texs = sprite.texs;
-  elem.x = x = (x - camera2d.data[0]) * camera2d.data[4];
-  elem.y = y = (y - camera2d.data[1]) * camera2d.data[5];
+  x = (x - camera2d.data[0]) * camera2d.data[4];
+  y = (y - camera2d.data[1]) * camera2d.data[5];
   elem.z = z;
   w *= camera2d.data[4];
   h *= camera2d.data[5];
+  if (pixel_perfect) {
+    x |= 0;
+    y |= 0;
+    w |= 0;
+    h |= 0;
+  }
+  elem.x = x;
+  elem.y = y;
   color = color || sprite.color;
   let data = elem.data;
   if (!rot) {
@@ -563,7 +583,7 @@ function Sprite(params) {
 
 // params:
 //   required: x, y
-//   optional: z, w, h, uvs, color
+//   optional: z, w, h, uvs, color, nozoom, pixel_perfect
 Sprite.prototype.draw = function (params) {
   if (params.w === 0 || params.h === 0) {
     return;
@@ -572,7 +592,7 @@ Sprite.prototype.draw = function (params) {
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
   queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
-    params.shader || this.shader, params.shader_params, params.nozoom);
+    params.shader || this.shader, params.shader_params, params.nozoom, params.pixel_perfect);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
@@ -590,10 +610,7 @@ export function create(params) {
 export function startup() {
   clip_space[2] = -1;
   clip_space[3] = 1;
-  sprite_vshader = shaders.create(gl.VERTEX_SHADER, 'sprite.vp',
-    fs.readFileSync(`${__dirname}/shaders/sprite.vp`, 'utf8'));
-  sprite_fshader = shaders.create(gl.FRAGMENT_SHADER, 'sprite.fp',
-    fs.readFileSync(`${__dirname}/shaders/sprite.fp`, 'utf8'));
-  sprite_dual_fshader = shaders.create(gl.FRAGMENT_SHADER, 'sprite_dual.fp',
-    fs.readFileSync(`${__dirname}/shaders/sprite_dual.fp`, 'utf8'));
+  sprite_vshader = shaders.create('glov/shaders/sprite.vp');
+  sprite_fshader = shaders.create('glov/shaders/sprite.fp');
+  sprite_dual_fshader = shaders.create('glov/shaders/sprite_dual.fp');
 }

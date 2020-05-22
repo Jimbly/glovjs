@@ -66,6 +66,10 @@ WSClient.prototype.onClose = function () {
 
 WSClient.prototype.send = wscommon.sendMessage;
 
+WSClient.prototype.wsPak = function (msg, ref_pak) {
+  return wsPak(msg, ref_pak, this);
+};
+
 function WSServer() {
   events.EventEmitter.call(this);
   this.wss = null;
@@ -84,12 +88,12 @@ WSServer.prototype.onMsg = function (msg, cb) {
   this.handlers[msg] = cb;
 };
 
-WSServer.prototype.init = function (server) {
+WSServer.prototype.init = function (server, server_https) {
   let ws_server = this;
   ws_server.wss = new WebSocket.Server({ noServer: true });
 
   // Doing my own upgrade handling to early-reject invalid protocol versions
-  server.on('upgrade', (req, socket, head) => {
+  let onUpgrade = (req, socket, head) => {
     let query = querystring.parse(url.parse(req.url).query);
     if (!query.pver || String(query.pver) !== wscommon.PROTOCOL_VERSION) {
       console.log(`WS Client rejected (bad pver) from ${ipFromRequest(req)}: ${req.url}`);
@@ -102,7 +106,11 @@ WSServer.prototype.init = function (server) {
     ws_server.wss.handleUpgrade(req, socket, head, function done(ws) {
       ws_server.wss.emit('connection', ws, req);
     });
-  });
+  };
+  server.on('upgrade', onUpgrade);
+  if (server_https) {
+    server_https.on('upgrade', onUpgrade);
+  }
 
   ws_server.wss.on('connection', (socket, req) => {
     socket.handshake = req;

@@ -4,7 +4,12 @@
 
 const assert = require('assert');
 const engine = require('./engine.js');
+const { filewatchOn } = require('./filewatch.js');
 const local_storage = require('./local_storage.js');
+const urlhash = require('./urlhash.js');
+const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('../../common/util.js');
+
+const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 
 export let textures = {};
 export let load_count = 0;
@@ -14,6 +19,15 @@ let aniso_enum;
 
 let default_filter_min;
 let default_filter_mag;
+
+const cube_faces = [
+  { target: 'TEXTURE_CUBE_MAP_NEGATIVE_X', pos: [0,1] },
+  { target: 'TEXTURE_CUBE_MAP_POSITIVE_X', pos: [0,0] },
+  { target: 'TEXTURE_CUBE_MAP_NEGATIVE_Y', pos: [1,0] },
+  { target: 'TEXTURE_CUBE_MAP_POSITIVE_Y', pos: [1,1] },
+  { target: 'TEXTURE_CUBE_MAP_NEGATIVE_Z', pos: [2,0] },
+  { target: 'TEXTURE_CUBE_MAP_POSITIVE_Z', pos: [2,1] },
+];
 
 export const format = {
   R8: { count: 1 },
@@ -26,13 +40,13 @@ export function defaultFilters(min, mag) {
   default_filter_mag = mag;
 }
 
-const { isPowerOfTwo, nextHighestPowerOfTwo } = require('../../common/util.js');
-
 let bound_unit = null;
 let bound_tex = [];
 
 let handle_loading;
 let handle_error;
+
+let global_timer;
 
 function setUnit(unit) {
   if (unit !== bound_unit) {
@@ -49,17 +63,16 @@ function bindHandle(unit, target, handle) {
   }
 }
 
-function unbindHandle(target, handle) {
+function unbindAll(target) {
   for (let unit = 0; unit < bound_tex.length; ++unit) {
-    if (bound_tex[unit] === handle) {
-      setUnit(unit);
-      gl.bindTexture(target, null);
-      bound_tex[unit] = null;
-    }
+    setUnit(unit);
+    gl.bindTexture(target, target === gl.TEXTURE_2D ? handle_loading : null);
+    bound_tex[unit] = null;
   }
 }
 
 export function bind(unit, tex) {
+  tex.last_use = global_timer;
   // May or may not change the unit
   bindHandle(unit, tex.target, tex.eff_handle);
 }
@@ -68,6 +81,7 @@ export function bind(unit, tex) {
 export function bindArray(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
     let tex = texs[ii];
+    tex.last_use = global_timer;
     let handle = tex.eff_handle;
     if (bound_tex[ii] !== handle) {
       if (ii !== bound_unit) {
@@ -91,12 +105,15 @@ export function isArrayBound(texs) {
   return true;
 }
 
+let auto_unload_textures = [];
+
 function Texture(params) {
   this.name = params.name;
   this.loaded = false;
   this.load_fail = false;
   this.target = params.target || gl.TEXTURE_2D;
   this.is_array = this.target === gl.TEXTURE_2D_ARRAY;
+  this.is_cube = this.target === gl.TEXTURE_CUBE_MAP;
   this.handle = gl.createTexture();
   this.eff_handle = handle_loading;
   this.setSamplerState(params);
@@ -105,14 +122,25 @@ function Texture(params) {
   this.nozoom = params.nozoom || false;
   this.on_load = [];
   this.gpu_mem = 0;
+  this.soft_error = params.soft_error || false;
+  this.last_use = global_timer;
+  this.auto_unload = params.auto_unload || false;
+  if (this.auto_unload) {
+    auto_unload_textures.push(this);
+  }
 
   this.format = params.format || format.RGBA8;
 
   if (params.data) {
     let err = this.updateData(params.width, params.height, params.data);
     assert(!err, err);
-  } else if (params.url) {
-    this.loadURL(params.url);
+  } else {
+    // texture is not valid, do not leave bound
+    unbindAll(this.target);
+    if (params.url) {
+      this.url = params.url;
+      this.loadURL(params.url);
+    }
   }
 }
 
@@ -153,16 +181,18 @@ Texture.prototype.setSamplerState = function (params) {
 };
 
 Texture.prototype.updateData = function updateData(w, h, data) {
+  assert(!this.destroyed);
   setUnit(0);
   bound_tex[0] = null; // Force a re-bind, no matter what
   bindHandle(0, this.target, this.handle);
+  this.last_use = global_timer;
   this.src_width = w;
   this.src_height = h;
   this.width = w;
   this.height = h;
   gl.getError(); // clear the error flag if there is one
   // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, wrapped)
-  let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array &&
+  let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array && !this.is_cube &&
     !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
   if (np2) {
     this.width = nextHighestPowerOfTwo(w);
@@ -172,6 +202,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   }
   if (data instanceof Uint8Array) {
     assert(data.length >= w * h * this.format.count);
+    assert(!this.is_cube);
     if (this.is_array) {
       let num_images = h / w; // assume square
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
@@ -186,7 +217,21 @@ Texture.prototype.updateData = function updateData(w, h, data) {
     }
   } else {
     assert(data.width); // instanceof Image fails with ublock AdBlocker; also, this is either an Image or Canvas
-    if (this.is_array) {
+    if (this.is_cube) {
+      assert.equal(w * 2, h * 3);
+      let tex_size = h / 2;
+      let canvas = document.createElement('canvas');
+      canvas.width = tex_size;
+      canvas.height = tex_size;
+      let ctx = canvas.getContext('2d');
+      for (let ii = 0; ii < cube_faces.length; ++ii) {
+        let face = cube_faces[ii];
+        ctx.drawImage(data, face.pos[0] * tex_size, face.pos[1] * tex_size, tex_size, tex_size,
+          0, 0, tex_size, tex_size);
+        gl.texImage2D(gl[face.target], 0, this.format.internal_type, this.format.internal_type, this.format.gl_type,
+          canvas);
+      }
+    } else if (this.is_array) {
       let num_images = h / w;
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
@@ -229,11 +274,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.eff_handle = this.handle;
   this.loaded = true;
 
-  let arr = this.on_load;
-  this.on_load = [];
-  for (let ii = 0; ii < arr.length; ++ii) {
-    arr[ii](this);
-  }
+  callEach(this.on_load, this.on_load = null, this);
 
   return 0;
 };
@@ -246,9 +287,28 @@ Texture.prototype.onLoad = function (cb) {
   }
 };
 
+let texture_base_url = '';
+export function getExternalTextureURL(url) {
+  if (!url.match(/^.{2,7}:/)) {
+    url = `${texture_base_url||urlhash.getURLBase()}${url}`;
+  }
+  return url;
+}
+export function setExternalTextureBaseURL(base_url) {
+  texture_base_url = base_url;
+}
+
 const TEX_RETRY_COUNT = 4;
 Texture.prototype.loadURL = function loadURL(url, filter) {
   let tex = this;
+  assert(!tex.destroyed);
+
+  // When our browser's location has been changed from 'site.com/foo/' to
+  //  'site.com/foo/bar/7' our relative image URLs are still relative to the
+  //  base.  Maybe should set some meta tag to do this instead?
+  if (!url.match(/^.{2,7}:/)) {
+    url = `${urlhash.getURLBase()}${url}`;
+  }
 
   function tryLoad(next) {
     let did_next = false;
@@ -267,38 +327,6 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       done(null);
     }
     img.onerror = fail;
-    /* Turbulenz was doing it this way - some advantage?
-    if (typeof URL !== "undefined" && URL.createObjectURL) {
-      let xhr = new XMLHttpRequest();
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4) {
-          let xhrStatus = xhr.status;
-          // Sometimes the browser sets status to 200 OK when the connection is closed
-          // before the message is sent (weird!).
-          // In order to address this we fail any completely empty responses.
-          // Hopefully, nobody will get a valid response with no headers and no body!
-          if (xhr.getAllResponseHeaders() === "" && !xhr.response) {
-            fail();
-          } else {
-            if (xhrStatus === 200 || xhrStatus === 0) {
-              var blob = xhr.response;
-              img.onload = function blobImageLoadedFn() {
-                imageLoaded();
-                URL.revokeObjectURL(img.src);
-                blob = null;
-              };
-              img.src = URL.createObjectURL(blob);
-            } else {
-              fail();
-            }
-          }
-          xhr.onreadystatechange = null;
-        }
-      };
-      xhr.open('GET', src, true);
-      xhr.responseType = 'blob';
-      xhr.send();
-    } else { */
     img.crossOrigin = 'anonymous';
     img.src = url;
   }
@@ -323,7 +351,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
             ts: Date.now(),
           });
           console.error(`Error loading array texture "${url}"${err_details}, reloading without WebGL2..`);
-          document.location.reload();
+          engine.reloadSafe();
           return;
         }
         retries = TEX_RETRY_COUNT; // do not retry this
@@ -339,7 +367,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       tex.eff_handle = handle_error;
       tex.load_fail = true;
       console.error(`${err}${err_details ? '' : ', retries failed'}`);
-      assert(false, err);
+      if (tex.soft_error) {
+        tex.err = 'Load failed';
+      } else {
+        assert(false, err);
+      }
       return;
     }
     console.error(`${err}, retrying... `);
@@ -349,21 +381,37 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 };
 
 Texture.prototype.copyTexImage = function (x, y, w, h) {
+  assert(!this.destroyed);
   assert(w && h);
   bindHandle(0, this.target, this.handle);
   gl.copyTexImage2D(this.target, 0, gl.RGB, x, y, w, h, 0);
+  this.last_use = global_timer;
   this.src_width = this.width = w;
   this.src_height = this.height = h;
   this.updateGPUMem();
 };
 
 Texture.prototype.destroy = function () {
+  if (this.destroyed) {
+    return;
+  }
   assert(this.name);
+  let auto_unload = this.auto_unload;
+  if (auto_unload) {
+    this.auto_unload = null;
+    let idx = auto_unload_textures.indexOf(this);
+    assert(idx !== -1);
+    ridx(auto_unload_textures, idx);
+  }
   delete textures[this.name];
-  unbindHandle(this.target, this.handle);
+  unbindAll(this.target);
   gl.deleteTexture(this.handle);
   this.width = this.height = 0;
   this.updateGPUMem();
+  this.destroyed = true;
+  if (typeof auto_unload === 'function') {
+    auto_unload();
+  }
 };
 
 function create(params) {
@@ -374,7 +422,7 @@ function create(params) {
 }
 
 let last_temporary_id = 0;
-export function createForCapture(unique_name) {
+export function createForCapture(unique_name, auto_unload) {
   let name = unique_name || `screen_temporary_tex_${++last_temporary_id}`;
   assert(!textures[name]);
   let texture = create({
@@ -384,6 +432,7 @@ export function createForCapture(unique_name) {
     wrap_t: gl.CLAMP_TO_EDGE,
     format: format.RGB8,
     name,
+    auto_unload,
   });
   texture.loaded = true;
   texture.eff_handle = texture.handle;
@@ -393,10 +442,12 @@ export function createForCapture(unique_name) {
 export function load(params) {
   let key = params.name = params.name || params.url;
   assert(key);
-  if (textures[key]) {
-    return textures[key];
+  let tex = textures[key];
+  if (!tex) {
+    tex = create(params);
   }
-  return create(params);
+  tex.last_use = global_timer;
+  return tex;
 }
 
 export function cname(key) {
@@ -419,6 +470,38 @@ export function findTexForReplacement(search_key) {
     }
   }
   return null;
+}
+
+let tick_next_tex = 0;
+export function texturesTick() {
+  global_timer = engine.global_timer;
+  let len = auto_unload_textures.length;
+  if (!len) {
+    return;
+  }
+  if (tick_next_tex >= len) {
+    tick_next_tex = 0;
+  }
+  let tex = auto_unload_textures[tick_next_tex];
+  if (tex.last_use < global_timer - TEX_UNLOAD_TIME) {
+    console.log(`Unloading texture ${tex.name}`);
+    tex.destroy();
+  } else {
+    ++tick_next_tex;
+  }
+}
+
+export function texturesUnloadDynamic() {
+  while (auto_unload_textures.length) {
+    auto_unload_textures[0].destroy();
+  }
+}
+
+function textureReload(filename) {
+  let tex = textures[filename];
+  if (tex && tex.url) {
+    tex.loadURL(`${tex.url}?rl=${Date.now()}`);
+  }
 }
 
 export function startup() {
@@ -495,4 +578,6 @@ export function startup() {
       0, 0, 0, 0,
     ]),
   });
+
+  filewatchOn('.png', textureReload);
 }

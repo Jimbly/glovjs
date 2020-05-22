@@ -18,7 +18,8 @@ export function mashString(data) {
     h -= n;
     n += h * 0x100000000; // 2^32
   }
-  return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
+  return n >>> 0;
+  // return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
 }
 
 function Mash() {

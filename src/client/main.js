@@ -5,6 +5,7 @@ glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring any
 const glov_engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
+const net = require('./glov/net.js');
 const glov_particles = require('./glov/particles.js');
 const glov_sprites = require('./glov/sprites.js');
 const glov_sprite_animation = require('./glov/sprite_animation.js');
@@ -104,6 +105,11 @@ function perfTestSprites() {
 }
 
 export function main() {
+  if (glov_engine.DEBUG) {
+    // Enable auto-reload, etc
+    net.init({ engine: glov_engine });
+  }
+
   if (!glov_engine.startup({
     game_width,
     game_height,

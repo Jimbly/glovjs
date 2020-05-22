@@ -4,7 +4,6 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
-const fs = require('fs');
 const { floor, max, round } = Math;
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
@@ -730,14 +729,10 @@ function fontShadersInit() {
   if (font_shaders.font_aa) {
     return;
   }
-  font_shaders.font_aa = shaders.create(gl.FRAGMENT_SHADER, 'font_aa',
-    fs.readFileSync(`${__dirname}/shaders/font_aa.fp`, 'utf8'));
-  font_shaders.font_aa_glow = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_glow',
-    fs.readFileSync(`${__dirname}/shaders/font_aa_glow.fp`, 'utf8'));
-  font_shaders.font_aa_outline = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_outline',
-    fs.readFileSync(`${__dirname}/shaders/font_aa_outline.fp`, 'utf8'));
-  font_shaders.font_aa_outline_glow = shaders.create(gl.FRAGMENT_SHADER, 'font_aa_outline_glow',
-    fs.readFileSync(`${__dirname}/shaders/font_aa_outline_glow.fp`, 'utf8'));
+  font_shaders.font_aa = shaders.create('glov/shaders/font_aa.fp');
+  font_shaders.font_aa_glow = shaders.create('glov/shaders/font_aa_glow.fp');
+  font_shaders.font_aa_outline = shaders.create('glov/shaders/font_aa_outline.fp');
+  font_shaders.font_aa_outline_glow = shaders.create('glov/shaders/font_aa_outline_glow.fp');
 }
 
 export function create(...args) {

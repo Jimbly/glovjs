@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const { filewatchStartup } = require('./filewatch.js');
 const packet = require('../../common/packet.js');
 const subscription_manager = require('./subscription_manager.js');
 const WSClient = require('./wsclient.js').WSClient;
@@ -14,7 +15,8 @@ export function init(params) {
   if (params.pver) {
     wscommon.PROTOCOL_VERSION = params.pver;
   }
-  if (String(document.location).indexOf('http://localhost') === 0) {
+  if (String(document.location).match(/^https?:\/\/localhost/)) {
+    console.log('PacketDebug: ON');
     packet.default_flags |= packet.PACKET_DEBUG;
   }
   client = new WSClient(params.path);
@@ -23,6 +25,7 @@ export function init(params) {
   window.subs = subs; // for debugging
   exports.subs = subs;
   exports.client = client;
+  filewatchStartup(client);
 
   if (params.engine) {
     params.engine.addTickFunc((dt) => {

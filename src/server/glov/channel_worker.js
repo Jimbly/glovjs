@@ -14,6 +14,9 @@ const { empty, logdata } = require('../../common/util.js');
 const OOO_PACKET_FAIL = 10000; // For testing this, disable channel_server.js:handleWorkerRemoved
 const AUTO_DESTROY_TIME = 90000;
 
+// Delay subsequent writes by at least 1.5 seconds
+const METADATA_COMMIT_RATELIMIT = 1500;
+
 function throwErr(err) {
   if (err) {
     throw err;
@@ -23,6 +26,46 @@ function throwErr(err) {
 const PKT_LOG_SIZE = 16;
 const PKT_LOG_BUF_SIZE = 32;
 
+// We lose all undefineds when going to and from JSON, so strip them from in-memory
+// representation.
+function filterUndefineds(v) {
+  assert(v !== undefined);
+  if (Array.isArray(v)) {
+    for (let ii = 0; ii < v.length; ++ii) {
+      filterUndefineds(v[ii]);
+    }
+  } else if (typeof v === 'object') {
+    for (let key in v) {
+      let subv = v[key];
+      if (subv === undefined) {
+        delete v[key];
+      } else {
+        filterUndefineds(subv);
+      }
+    }
+  }
+}
+
+// Some data stores (FireStore) cannot handle any undefined values
+function anyUndefined(walk) {
+  if (walk === undefined) {
+    return true;
+  }
+  if (Array.isArray(walk)) {
+    for (let ii = 0; ii < walk.length; ++ii) {
+      if (anyUndefined(walk[ii])) {
+        return true;
+      }
+    }
+  } else if (typeof walk === 'object') {
+    for (let key in walk) {
+      if (anyUndefined(walk[key])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 export class ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
@@ -45,6 +88,7 @@ export class ChannelWorker {
     this.store_path = `${this.channel_type}/${this.channel_id}`;
     this.bulk_store_path = `bulk/${this.channel_type}/${this.channel_id}`;
     this.bulk_store_paths = {};
+    this.shutting_down = false;
 
     // This will always be an empty object with creating local channel
     assert(channel_data);
@@ -54,6 +98,8 @@ export class ChannelWorker {
 
     this.subscribe_counts = Object.create(null); // refcount of subscriptions to other channels
     this.is_channel_worker = true; // TODO: Remove this?
+    this.registered = false;
+    this.need_unregister = false;
     this.adding_client = null; // The client we're in the middle of adding, don't send them state updates yet
     this.last_msg_time = Date.now();
     ackInitReceiver(this);
@@ -72,6 +118,7 @@ export class ChannelWorker {
   }
 
   shutdown() {
+    this.shutting_down = true;
     ack.failAll(this);
     assert(!this.numSubscribers());
     assert(empty(this.subscribe_counts));
@@ -154,7 +201,7 @@ export class ChannelWorker {
   }
 
   isEmpty() {
-    return !this.subscribers.length && empty(this.pkt_queue) && !this.set_in_flight;
+    return !this.subscribers.length && empty(this.pkt_queue);
   }
 
   autoDestroyCheck() {
@@ -164,7 +211,7 @@ export class ChannelWorker {
       // have a subscriber now, forget about it
       return;
     }
-    if (Date.now() - this.last_msg_time > AUTO_DESTROY_TIME) {
+    if (Date.now() - this.last_msg_time > AUTO_DESTROY_TIME && !this.set_in_flight) {
       this.auto_destroy_check = false;
       console.info(`${this.channel_id}: Empty time expired, auto-destroying...`);
       this.shutdown();
@@ -255,7 +302,7 @@ export class ChannelWorker {
     delete this.subscribe_counts[other_channel_id];
     // TODO: Disable autocreate for this call?
     this.sendChannelMessage(other_channel_id, 'unsubscribe', undefined, (err, resp_data) => {
-      if (err === ERR_NOT_FOUND) {
+      if (err === ERR_NOT_FOUND || err && this.shutting_down) {
         // This is fine, just ignore
         console.debug(`${this.channel_id}->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
@@ -274,8 +321,8 @@ export class ChannelWorker {
       }
     }
   }
-  pak(dest, msg) {
-    return channelServerPak(this, dest, msg);
+  pak(dest, msg, ref_pak) {
+    return channelServerPak(this, dest, msg, ref_pak);
   }
   setChannelDataOnOther(channel_id, key, value, resp_func) {
     let pak = this.pak(channel_id, 'set_channel_data');
@@ -429,6 +476,11 @@ export class ChannelWorker {
       data.public = pd;
     }
 
+    if (anyUndefined(data)) {
+      console.log('Undefined value found in channel data:', data);
+      assert(false, 'Undefined value found in channel data');
+    }
+
     // Mark this data as awaiting to be set
     this.data_awaiting_set = data;
 
@@ -451,13 +503,19 @@ export class ChannelWorker {
       self.last_saved_data = data_to_compare;
       self.set_in_flight = true;
 
-      self.channel_server.ds_store_meta.setAsync(self.store_path, '', incoming_data, function () {
-        self.set_in_flight = false;
-
-        // data in memory was updated again in mid flight so we need to set to store again with the new data
-        if (self.data_awaiting_set) {
-          safeSet();
+      self.channel_server.ds_store_meta.setAsync(self.store_path, '', incoming_data, function (err) {
+        if (err) {
+          throw err;
         }
+        // Delay the next write
+        setTimeout(function () {
+          self.set_in_flight = false;
+
+          // data in memory was updated again in mid flight so we need to set to store again with the new data
+          if (self.data_awaiting_set) {
+            safeSet();
+          }
+        }, METADATA_COMMIT_RATELIMIT);
       });
     }
 
@@ -477,6 +535,7 @@ export class ChannelWorker {
       return resp_func('ERR_APP_WORKER');
     }
     assert(value);
+    filterUndefineds(value);
     let arr = dot_prop.get(this.data, key);
     let need_create = !arr;
     if (need_create) {
@@ -563,6 +622,7 @@ export class ChannelWorker {
     if (value === undefined) {
       dot_prop.delete(this.data, key);
     } else {
+      filterUndefineds(value);
       dot_prop.set(this.data, key, value);
     }
     // only send public changes
@@ -573,7 +633,9 @@ export class ChannelWorker {
       }
       this.channelEmit('apply_channel_data', data, this.adding_client);
     }
-    this.commitData();
+    if (!this.maintain_client_list || !key.startsWith('public.clients.')) {
+      this.commitData();
+    }
     if (resp_func) {
       resp_func();
     }
@@ -592,10 +654,10 @@ export class ChannelWorker {
     this.bulk_store_paths[bulk_obj_name] = true;
     this.channel_server.ds_store_bulk.getAsyncBuffer(bulk_obj_name, cb);
   }
-  setBulkChannelData(obj_name, key, value, cb) {
+  setBulkChannelData(obj_name, value, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, key, value, cb || throwErr);
+    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, '', value, cb || throwErr);
   }
   setBulkChannelBuffer(obj_name, value, cb) {
     assert(Buffer.isBuffer(value));

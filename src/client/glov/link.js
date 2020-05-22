@@ -3,6 +3,7 @@
 
 const engine = require('./engine.js');
 const camera2d = require('./camera2d.js');
+const in_event = require('./in_event.js');
 const input = require('./input.js');
 const ui = require('./ui.js');
 
@@ -29,6 +30,7 @@ export function link(param) {
       // new DOM element, initialize
       elem.textContent = '';
       let a_elem = document.createElement('a');
+      a_elem.setAttribute('draggable', false);
       a_elem.textContent = ' ';
       a_elem.className = 'glovui_link noglov';
       a_elem.setAttribute('target', '_blank');
@@ -38,6 +40,7 @@ export function link(param) {
         a_elem.onclick = function (ev) {
           ev.preventDefault();
           state.clicked = true;
+          in_event.handle('mouseup', ev);
         };
       }
       elem.appendChild(a_elem);

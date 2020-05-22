@@ -28,6 +28,7 @@
 */
 
 const assert = require('assert');
+const { callEach } = require('../../common/util.js');
 
 const HISTORY_UPDATE_TIME = 1000;
 
@@ -39,7 +40,8 @@ let params = {};
 let title_suffix = '';
 
 let url_base = (document.location.href || '').match(/^[^#?]+/)[0];
-
+//Removes index.html et all
+url_base = url_base.replace(/[^/]*$/,'');
 let on_change = [];
 
 export function getURLBase() {
@@ -175,9 +177,7 @@ function goInternal(query_string) { // with the '?'
       opts.change(opts.value);
     }
   }
-  for (let ii = 0; ii < on_change.length; ++ii) {
-    on_change[ii]();
-  }
+  callEach(on_change);
 }
 
 let eff_title;
@@ -197,6 +197,7 @@ function toString() {
   outer: // eslint-disable-line no-labels
   for (let ii = 0; ii < routes.length; ++ii) {
     let r = routes[ii];
+    let route_title = '';
     for (let jj = 0; jj < r.keys.length; ++jj) {
       let key = r.keys[jj];
       if (hidden[key]) {
@@ -207,12 +208,18 @@ function toString() {
         continue outer; // eslint-disable-line no-labels
       }
       // has a value, is not hidden, continue
+      if (!route_title && opts.title) {
+        route_title = opts.title(opts.value);
+      }
     }
     // route is good!
     root_value = r.route_string.replace(route_param_regex, function (ignored, key) {
       hidden[key] = true;
       return String(params[key].value);
     });
+    if (!eff_title && route_title) {
+      eff_title = route_title;
+    }
     break;
   }
   for (let key in params) {
@@ -262,6 +269,11 @@ function onPopState() {
   refreshTitle();
 }
 
+let on_url_change;
+export function onURLChange(cb) {
+  on_url_change = cb;
+}
+
 let last_history_set_time = 0;
 let scheduled = false;
 let need_push_state = false;
@@ -294,6 +306,9 @@ function updateHistory(new_need_push_state) {
     }
     if (eff_title) {
       document.title = eff_title;
+    }
+    if (on_url_change) {
+      on_url_change();
     }
     //window.history.replaceState(undefined, eff_title, `#${last_history_str}`);
   }, delay);

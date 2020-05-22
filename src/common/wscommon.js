@@ -27,9 +27,15 @@ export function wsPakSendDest(client, pak) {
   if (buf_len !== buf.length) {
     buf = new Uint8Array(buf.buffer, buf.byteOffset, buf_len);
   }
-  client.socket.send(buf);
+  if (client.ws_server) {
+    client.socket.send(buf, function () {
+      pak.pool();
+    });
+  } else {
+    client.socket.send(buf);
+    pak.pool();
+  }
   client.last_send_time = Date.now();
-  pak.pool();
 }
 
 function wsPakSendFinish(pak, err, resp_func) {

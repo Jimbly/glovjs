@@ -204,3 +204,11 @@ export function matchAll(str, re) {
   } while (m);
   return ret;
 }
+
+export function callEach(arr, pre_clear, ...args) {
+  if (arr && arr.length) {
+    for (let ii = 0; ii < arr.length; ++ii) {
+      arr[ii](...args);
+    }
+  }
+}

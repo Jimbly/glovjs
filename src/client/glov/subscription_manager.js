@@ -7,6 +7,7 @@ const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('../../common/md5.js');
+const { isPacket } = require('../../common/packet.js');
 const util = require('../../common/util.js');
 
 // relevant events:
@@ -174,6 +175,11 @@ SubscriptionManager.prototype.handleConnect = function () {
     reconnect = true;
   }
 
+  if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
+    // we got disconnected while trying to log in, we'll retry after reconnection
+    return;
+  }
+
   let subs = this;
   function resub() {
     // (re-)subscribe to all channels
@@ -218,13 +224,23 @@ SubscriptionManager.prototype.handleConnect = function () {
 
 };
 
-SubscriptionManager.prototype.handleChannelMessage = function (data, resp_func) {
-  if (!data.data || !data.data.q) {
-    console.log(`got channel_msg(${data.channel_id}) ${data.msg}: ${JSON.stringify(data.data)}`);
+SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
+  assert(isPacket(pak));
+  let channel_id = pak.readAnsiString();
+  let msg = pak.readAnsiString();
+  let is_packet = pak.readBool();
+  let data = is_packet ? pak : pak.readJSON();
+  if (!data || !data.q) {
+    let debug_msg;
+    if (!is_packet) {
+      debug_msg = JSON.stringify(data);
+    } else if (typeof data.contents === 'function') {
+      debug_msg = data.contents();
+    } else {
+      debug_msg = '(pak)';
+    }
+    console.log(`got channel_msg(${channel_id}) ${msg}: ${debug_msg}`);
   }
-  let channel_id = data.channel_id;
-  let msg = data.msg;
-  data = data.data;
   let channel = this.getChannel(channel_id);
   if (!channel.handlers[msg]) {
     console.error(`no handler for channel_msg(${channel_id}) ${msg}: ${JSON.stringify(data)}`);
@@ -340,11 +356,11 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
 
 SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_func) {
   if (this.logging_in) {
-    return resp_func('Login already in progress');
+    return void resp_func('Login already in progress');
   }
   this.logging_in = true;
   this.logged_in = false;
-  return this.client.send('login', {
+  this.client.send('login', {
     user_id: login_credentials.user_id,
     password: md5(this.client.secret + login_credentials.password),
   }, this.handleLoginResponse.bind(this, resp_func));
@@ -444,7 +460,7 @@ SubscriptionManager.prototype.logout = function () {
   // Don't know how to gracefully handle logging out with subscriptions currently, assert we have none
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
-    assert(!channel.subscriptions);
+    assert(!channel.subscriptions, `Remaining active subscription for ${channel_id}`);
     if (channel.autosubscribed) {
       channel.autosubscribed = false;
     }

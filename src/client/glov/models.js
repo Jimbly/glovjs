@@ -35,10 +35,8 @@ export let default_vshader;
 export let default_fshader;
 
 function initShaders() {
-  default_vshader = shaders.create(gl.VERTEX_SHADER, 'default.vp',
-    fs.readFileSync(`${__dirname}/shaders/default.vp`, 'utf8'));
-  default_fshader = shaders.create(gl.FRAGMENT_SHADER, 'default.fp',
-    fs.readFileSync(`${__dirname}/shaders/default.fp`, 'utf8'));
+  default_vshader = shaders.create('glov/shaders/default.vp');
+  default_fshader = shaders.create('glov/shaders/default.fp');
 }
 
 function Model(url) {

@@ -60,6 +60,7 @@ cmd_parse.register({
     str = str.toUpperCase();
     engine.defines[str] = !engine.defines[str];
     resp_func(null, `D=${str} now ${engine.defines[str]?'SET':'unset'}`);
+    engine.definesChanged();
   }
 });
 

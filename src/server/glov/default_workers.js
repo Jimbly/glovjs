@@ -45,8 +45,18 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_time', Date.now());
     return resp_func(null, this.getChannelData('public'));
   }
+  handleLoginFacebook(src, data, resp_func) {
+    //Should the authentication step happen here instead?
+    if (!this.getChannelData('private.external')) {
+      this.setChannelData('private.external', true);
+      return this.createShared(data, resp_func);
+    }
+    this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_time', Date.now());
+    return resp_func(null, this.getChannelData('public'));
+  }
   handleCreate(src, data, resp_func) {
-    if (this.getChannelData('private.password')) {
+    if (this.getChannelData('private.password') || this.getChannelData('private.external')) {
       return resp_func('Account already exists');
     }
     if (!data.password) {
@@ -58,6 +68,9 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validDisplayName(data.display_name)) {
       return resp_func('Invalid display name');
     }
+    return this.createShared(data, resp_func);
+  }
+  createShared(data, resp_func) {
     if (this.onUserCreate) {
       let err = this.onUserCreate(data);
       if (err) {
@@ -109,12 +122,13 @@ class ChannelServerWorker extends ChannelWorker {
 ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
 
 export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
+const regex_valid_channelname = /^(?:fb\$|[a-z])[a-z0-9_]{1,32}$/;
 
 let inited = false;
 let user_worker = DefaultUserWorker;
 let user_worker_init_data = {
   autocreate: true,
-  subid_regex: regex_valid_username,
+  subid_regex: regex_valid_channelname,
   cmds: [{
     cmd: 'rename',
     help: 'Change display name',
@@ -126,6 +140,7 @@ let user_worker_init_data = {
     func: DefaultUserWorker.prototype.cmdRenameRandom,
   }],
   handlers: {
+    login_facebook: DefaultUserWorker.prototype.handleLoginFacebook,
     login: DefaultUserWorker.prototype.handleLogin,
     create: DefaultUserWorker.prototype.handleCreate,
   },

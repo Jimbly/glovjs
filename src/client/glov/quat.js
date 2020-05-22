@@ -4,6 +4,8 @@
 // Vector math functions required by the rest of the engine taken piecemeal from
 // gl-matrix and related, as well as some generic math utilities
 
+// Source of some: https://github.com/toji/gl-matrix/blob/master/src/quat.js
+
 const { vec4 } = require('./vmath.js');
 const { acos, cos, sin, sqrt } = Math;
 
@@ -236,5 +238,37 @@ export function qTransformVec3(out, a, q) {
   out[0] = x + uvx + uuvx;
   out[1] = y + uvy + uuvy;
   out[2] = z + uvz + uuvz;
+  return out;
+}
+
+export function qMult(out, a, b) {
+  let ax = a[0];
+  let ay = a[1];
+  let az = a[2];
+  let aw = a[3];
+  let bx = b[0];
+  let by = b[1];
+  let bz = b[2];
+  let bw = b[3];
+
+  out[0] = ax * bw + aw * bx + ay * bz - az * by;
+  out[1] = ay * bw + aw * by + az * bx - ax * bz;
+  out[2] = az * bw + aw * bz + ax * by - ay * bx;
+  out[3] = aw * bw - ax * bx - ay * by - az * bz;
+  return out;
+}
+
+export function qInvert(out, a) {
+  let a0 = a[0];
+  let a1 = a[1];
+  let a2 = a[2];
+  let a3 = a[3];
+  let denom = a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
+  let scale = denom ? 1.0 / denom : 0;
+
+  out[0] = -a0 * scale;
+  out[1] = -a1 * scale;
+  out[2] = -a2 * scale;
+  out[3] = a3 * scale;
   return out;
 }

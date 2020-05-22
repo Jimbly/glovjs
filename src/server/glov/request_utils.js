@@ -80,3 +80,10 @@ export function respondArray(req, res, next, err, arr) {
   }
   res.end(text);
 }
+
+export function setOriginHeaders(req, res, next) {
+  if (req.headers.origin) {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  }
+  next();
+}

@@ -4,7 +4,7 @@
 
 require('./bootstrap.js'); // Just in case it's not in app.js
 
-export let DEBUG = String(document.location).indexOf('http://localhost') === 0;
+export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
 
 require('not_worker'); // This module cannot be required from a worker bundle
 
@@ -31,6 +31,7 @@ const shaders = require('./shaders.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
+const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
@@ -54,15 +55,6 @@ export let render_height;
 
 //eslint-disable-next-line no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
-let initial_define_forcewebgl2 = defines.FORCEWEBGL2;
-let initial_define_nowebgl2 = defines.NOWEBGL2;
-function definesChanged() {
-  if (defines.FORCEWEBGL2 !== initial_define_forcewebgl2 ||
-    defines.NOWEBGL2 !== initial_define_nowebgl2
-  ) {
-    document.location.reload();
-  }
-}
 
 export let any_3d = false;
 export let ZFAR;
@@ -79,6 +71,7 @@ let mat_mv = mat4();
 let mat_mv_no_skew = mat4();
 let mat_mvp = mat4();
 let mat_mv_inv_transform = mat3();
+let mat_inv_view = mat3();
 let projection_inverse = vec4();
 
 export let light_diffuse = vec3(0.75, 0.75, 0.75);
@@ -90,11 +83,14 @@ export let font;
 export let app_state = null;
 export const border_color = vec4(0, 0, 0, 1);
 
+let mat_temp = mat4();
 export function setGlobalMatrices(_mat_view) {
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
   v3iNormalize(light_dir_ws);
   v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
+  mat4Invert(mat_temp, mat_view);
+  mat3FromMat4(mat_inv_view, mat_temp);
 }
 
 export function setFOV(new_fov) {
@@ -121,6 +117,50 @@ export function postprocessingAllow(allow) {
   postprocessing = allow;
 }
 
+export function glCheckError() {
+  let gl_err = gl.getError();
+  if (gl_err) {
+    console.error(gl_err);
+    throw new Error(gl_err);
+  }
+}
+
+export function releaseCanvas() {
+  try {
+    if (gl) {
+      let ext = gl.getExtension('WEBGL_lose_context');
+      if (ext) {
+        ext.loseContext();
+      }
+    }
+  } catch (ignored) {
+    // nothing, it's fine
+  }
+}
+
+export function reloadSafe() {
+  // Release canvas to not leak memory on Firefox
+  releaseCanvas();
+  document.location.reload();
+}
+window.reloadSafe = reloadSafe;
+
+let reloading_defines = {};
+export function defineCausesReload(define) {
+  reloading_defines[define] = defines[define];
+}
+defineCausesReload('FORCEWEBGL2');
+defineCausesReload('NOWEBGL2');
+export function definesChanged() {
+  for (let key in reloading_defines) {
+    if (defines[key] !== reloading_defines[key]) {
+      urlhash.onURLChange(reloadSafe);
+      break;
+    }
+  }
+  shaders.handleDefinesChanged();
+}
+
 function normalizeRow(m, idx) {
   let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];
   if (len > 0) {
@@ -131,7 +171,6 @@ function normalizeRow(m, idx) {
   }
 }
 
-let mat_temp = mat4();
 export function updateMatrices(mat_model) {
   // PERFTODO: depending on rendering path, only some of these are needed (m + vp or just mvp)
   mat4Copy(mat_m, mat_model);
@@ -236,15 +275,21 @@ let do_borders = true;
 let do_viewport_postprocess = false;
 let need_repos = 0;
 
+export function resizing() {
+  return need_repos;
+}
+
 let app_tick_functions = [];
 export function addTickFunc(cb) {
   app_tick_functions.push(cb);
 }
 
 let post_tick = [];
-export function postTick(ticks, fn) {
-  assert.equal(typeof fn, 'function');
-  post_tick.push({ ticks, fn });
+export function postTick(opts) {
+  opts.ticks = opts.ticks || 1; // run in how many ticks?
+  opts.inactive = opts.inactive || false; // run even if inactive?
+  assert.equal(typeof opts.fn, 'function');
+  post_tick.push(opts);
 }
 
 let temporary_textures = {};
@@ -413,7 +458,12 @@ export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
   return tex;
 }
 
+let frame_requested = false;
 function requestFrame() {
+  if (frame_requested) {
+    return;
+  }
+  frame_requested = true;
   let max_fps = settings.max_fps;
   if (defines.SLOWLOAD && is_loading) {
     // Safari on CrossBrowserTesting needs this in order to have some time to load/decode audio data
@@ -491,14 +541,15 @@ export const hrnow = window.performance ? window.performance.now.bind(window.per
 
 let last_tick = 0;
 function tick(timestamp) {
+  frame_requested = false;
   // if (timestamp < 1e12) { // high resolution timer
   //   this ends up being a value way back in time, relative to what hrnow() returns,
+  //   and even back in time relative to input events already dispatched,
   //   causing timing confusion, so ignore it, just call hrnow()
   //   hrtime = timestamp;
   // } else { // probably integer milliseconds since epoch, or nothing
   hrtime = hrnow();
   // }
-  requestFrame();
   let now = round(hrtime); // Code assumes integer milliseconds
   if (!last_tick) {
     last_tick = now;
@@ -538,7 +589,13 @@ function tick(timestamp) {
   if (document.hidden || document.webkitHidden) {
     resetEffects();
     last_tick_cpu = 0;
-    // Maybe post-tick here too?
+    for (let ii = post_tick.length - 1; ii >= 0; --ii) {
+      if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
+        post_tick[ii].fn();
+        ridx(post_tick, ii);
+      }
+    }
+    requestFrame();
     return;
   }
 
@@ -647,6 +704,7 @@ function tick(timestamp) {
 
   input.endFrame();
   resetEffects();
+  texturesTick();
 
   for (let ii = post_tick.length - 1; ii >= 0; --ii) {
     if (!--post_tick[ii].ticks) {
@@ -657,6 +715,7 @@ function tick(timestamp) {
 
   last_tick_cpu = hrnow() - now;
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
+  requestFrame();
 }
 
 let error_report_details = {};
@@ -679,6 +738,7 @@ let filtered_errors = /avast_submit|vc_request_action/;
 function glovErrorReport(msg, file, line, col) {
   ++crash_idx;
   let now = Date.now();
+  setTimeout(requestFrame, 1);
   let dt = now - last_error_time;
   last_error_time = now;
   if (dt < 30*1000) {
@@ -703,6 +763,11 @@ function glovErrorReport(msg, file, line, col) {
   xhr.open('POST', url, true);
   xhr.send(null);
   return true;
+}
+
+function periodiclyRequestFrame() {
+  requestFrame();
+  setTimeout(periodiclyRequestFrame, 5000);
 }
 
 export function startup(params) {
@@ -811,6 +876,7 @@ export function startup(params) {
     mat_vp: mat_vp,
     mvp: mat_mvp,
     mv_inv_trans: mat_mv_inv_transform,
+    mat_inv_view: mat_inv_view,
     view: mat_view,
     projection: mat_projection,
     projection_inverse,
@@ -863,7 +929,7 @@ export function startup(params) {
     settings.show_fps = params.show_fps;
   }
 
-  requestFrame();
+  periodiclyRequestFrame();
   return true;
 }
 
@@ -881,10 +947,13 @@ function loading() {
     is_loading = false;
     app_state = after_loading_state;
     // Clear after next frame, so something is rendered to the canvas
-    postTick(2, function () {
-      let loading_elem = document.getElementById('loading');
-      if (loading_elem) {
-        loading_elem.style.visibility = 'hidden';
+    postTick({
+      ticks: 2,
+      fn: function () {
+        let loading_elem = document.getElementById('loading');
+        if (loading_elem) {
+          loading_elem.style.visibility = 'hidden';
+        }
       }
     });
   }

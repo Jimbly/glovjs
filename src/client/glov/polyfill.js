@@ -53,6 +53,9 @@ if (!Uint8Array.prototype.fill) {
   Object.defineProperty(Int32Array.prototype, 'fill', {
     value: fill
   });
+  Object.defineProperty(Uint32Array.prototype, 'fill', {
+    value: fill
+  });
 }
 
 if (!Int16Array.prototype.sort) {

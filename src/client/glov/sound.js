@@ -9,9 +9,11 @@ export const FADE = FADE_OUT + FADE_IN;
 
 const assert = require('assert');
 const { cmd_parse } = require('./cmds.js');
+const { filewatchOn } = require('./filewatch.js');
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 const { abs, floor, max, min, random } = Math;
 const settings = require('./settings.js');
+const urlhash = require('./urlhash.js');
 const { defaults, ridx } = require('../../common/util.js');
 
 const DEFAULT_FADE_RATE = 0.001;
@@ -57,23 +59,6 @@ settings.register({
   },
 });
 
-export function soundStartup(params) {
-  sound_params = defaults(params || {}, default_params);
-
-  // Music
-  music = []; // 0 is current, 1 is previous (fading out)
-  for (let ii = 0; ii < 2; ++ii) {
-    music.push({
-      sound: null,
-      id: 0,
-      current_volume: 0,
-      target_volume: 0,
-      sys_volume: 0,
-      need_play: false,
-    });
-  }
-}
-
 export function soundLoad(base, opts, cb) {
   opts = opts || {};
   if (Array.isArray(base)) {
@@ -98,13 +83,17 @@ export function soundLoad(base, opts, cb) {
   }
   let src = `sounds/${base}`;
   let srcs = [];
+  let suffix = '';
+  if (opts.for_reload) {
+    suffix = `?rl=${Date.now()}`;
+  }
   if (preferred_ext) {
-    srcs.push(`${src}.${preferred_ext}`);
+    srcs.push(`${urlhash.getURLBase()}${src}.${preferred_ext}${suffix}`);
   }
   for (let ii = 0; ii < sound_params.ext_list.length; ++ii) {
     let ext = sound_params.ext_list[ii];
     if (ext !== preferred_ext) {
-      srcs.push(`${src}.${ext}`);
+      srcs.push(`${urlhash.getURLBase()}${src}.${ext}${suffix}`);
     }
   }
   // Try loading desired sound types one at a time.
@@ -129,6 +118,7 @@ export function soundLoad(base, opts, cb) {
         if (!once) {
           --num_loading;
           once = true;
+          sound.glov_load_opts = opts;
           sounds[key] = sound;
           if (cb) {
             cb(null);
@@ -150,6 +140,43 @@ export function soundLoad(base, opts, cb) {
     });
   }
   tryLoad(0);
+}
+
+function soundReload(filename) {
+  let sound_name = filename.match(/^sounds\/([^.]+)\.\w+$/);
+  sound_name = sound_name && sound_name[1];
+  if (!sound_name) {
+    return;
+  }
+  if (!sounds[sound_name]) {
+    console.log(`Reload trigged for non-existent sound: ${filename}`);
+    return;
+  }
+  let opts = sounds[sound_name].glov_load_opts;
+  opts.for_reload = true;
+  delete sounds[sound_name];
+  soundLoad(sound_name, opts);
+}
+
+export function soundStartup(params) {
+  sound_params = defaults(params || {}, default_params);
+
+  // Music
+  music = []; // 0 is current, 1 is previous (fading out)
+  for (let ii = 0; ii < 2; ++ii) {
+    music.push({
+      sound: null,
+      id: 0,
+      current_volume: 0,
+      target_volume: 0,
+      sys_volume: 0,
+      need_play: false,
+    });
+  }
+  filewatchOn('.mp3', soundReload);
+  filewatchOn('.ogg', soundReload);
+  filewatchOn('.wav', soundReload);
+  filewatchOn('.webm', soundReload);
 }
 
 export function soundResume() {

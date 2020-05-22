@@ -108,6 +108,7 @@ class GlovSelectionBox {
     this.entry_height = glov_ui.button_height;
     this.auto_reset = true;
     this.auto_unfocus = true;
+    this.reset_selection = false;
     this.initial_selection = 0;
     this.applyParams(params);
 
@@ -175,7 +176,8 @@ class GlovSelectionBox {
     let { x, y, z, width, font_height, entry_height, auto_reset } = this;
     let { KEYS, PAD } = glov_input;
 
-    if (auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
+    if (this.reset_selection || auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
+      this.reset_selection = false;
       // Reset
       if (this.items[this.initial_selection] && !this.items[this.initial_selection].disabled) {
         this.selected = this.initial_selection;
@@ -347,48 +349,9 @@ class GlovSelectionBox {
 
     let pad = 8;
 
+    let dropdown_x = x;
+    let dropdown_y = y;
     if (this.is_dropdown) {
-      // display header
-      let color0 = color_white;
-      if (this.disabled) {
-        color0 = color_gray80;
-      }
-      // let color1 = color_white;
-      // let dropdown_rect = glov_ui.sprites.menu_header.uidata.rects[2];
-      // let dropdown_width = (dropdown_rect[2] - dropdown_rect[0]) / (dropdown_rect[3] - dropdown_rect[1]) *
-      //   entry_height;
-      // let dropdown_x = x + width - dropdown_width;
-      //int dropdown_w = glov_ui_menu_header.right.GetTileWidth();
-      if (!this.disabled && glov_input.click({
-        x, y,
-        w: width, h: entry_height
-      })) {
-        glov_ui.focusSteal(this);
-        this.dropdown_visible = !this.dropdown_visible;
-        this.pre_dropdown_selection = this.selected;
-        color0 = color_grayD0;
-        // color1 = color_gray80;
-      } else if (!this.disabled && glov_input.mouseOver({
-        x, y, w: width, h: entry_height
-      })) {
-        glov_ui.setMouseOver(this);
-        color0 = color_grayD0;
-        // color1 = color_gray80;
-      }
-      glov_ui.drawHBox({
-        x, y, z: z + 1,
-        w: width, h: entry_height
-      }, glov_ui.sprites.menu_header, color0); // TODO: only pieces 1 and 2?
-      // glov_ui.draw_list.queue(glov_ui.sprites.menu_header,
-      //   dropdown_x, y, z + 1.5, color1, [dropdown_width, entry_height, 1, 1],
-      //   glov_ui.sprites.menu_header.uidata.rects[2]);
-      font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
-        x + display.xpad, y, z + 2,
-        font_height, glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
-        width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
-        this.items[this.selected].name);
-      y += entry_height;
-      yret = y + 2;
       z += 1000; // drop-down part should be above everything
     }
 
@@ -581,6 +544,53 @@ class GlovSelectionBox {
       if (this.was_clicked && this.is_dropdown) {
         this.dropdown_visible = false;
       }
+    }
+
+    if (this.is_dropdown) {
+      z -= 1000;
+      x = dropdown_x;
+      y = dropdown_y;
+      // display header
+      let color0 = color_white;
+      if (this.disabled) {
+        color0 = color_gray80;
+      }
+      // let color1 = color_white;
+      // let dropdown_rect = glov_ui.sprites.menu_header.uidata.rects[2];
+      // let dropdown_width = (dropdown_rect[2] - dropdown_rect[0]) / (dropdown_rect[3] - dropdown_rect[1]) *
+      //   entry_height;
+      // let dropdown_x = x + width - dropdown_width;
+      //int dropdown_w = glov_ui_menu_header.right.GetTileWidth();
+      if (!this.disabled && glov_input.click({
+        x, y,
+        w: width, h: entry_height
+      })) {
+        glov_ui.focusSteal(this);
+        this.dropdown_visible = !this.dropdown_visible;
+        this.pre_dropdown_selection = this.selected;
+        color0 = color_grayD0;
+        // color1 = color_gray80;
+      } else if (!this.disabled && glov_input.mouseOver({
+        x, y, w: width, h: entry_height
+      })) {
+        glov_ui.setMouseOver(this);
+        color0 = color_grayD0;
+        // color1 = color_gray80;
+      }
+      glov_ui.drawHBox({
+        x, y, z: z + 1,
+        w: width, h: entry_height
+      }, glov_ui.sprites.menu_header, color0); // TODO: only pieces 1 and 2?
+      // glov_ui.draw_list.queue(glov_ui.sprites.menu_header,
+      //   dropdown_x, y, z + 1.5, color1, [dropdown_width, entry_height, 1, 1],
+      //   glov_ui.sprites.menu_header.uidata.rects[2]);
+      font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
+        x + display.xpad, y, z + 2,
+        font_height, glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
+        width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
+        this.items[this.selected].name);
+      y += entry_height;
+      yret = y + 2;
     }
 
     if (this.selected !== old_sel || sel_changed) {
