@@ -2,16 +2,16 @@
 const glov_local_storage = require('./glov/local_storage.js');
 glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring anything else that might load from this
 
-const glov_engine = require('./glov/engine.js');
+const engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
 const net = require('./glov/net.js');
-const glov_particles = require('./glov/particles.js');
+const particles = require('./glov/particles.js');
 const glov_sprites = require('./glov/sprites.js');
-const glov_sprite_animation = require('./glov/sprite_animation.js');
-const glov_transition = require('./glov/transition.js');
-const glov_ui = require('./glov/ui.js');
-const glov_ui_test = require('./glov/ui_test.js');
+const sprite_animation = require('./glov/sprite_animation.js');
+const transition = require('./glov/transition.js');
+const ui = require('./glov/ui.js');
+const ui_test = require('./glov/ui_test.js');
 const particle_data = require('./particle_data.js');
 const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('./glov/sound.js');
 const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
@@ -105,12 +105,12 @@ function perfTestSprites() {
 }
 
 export function main() {
-  if (glov_engine.DEBUG) {
+  if (engine.DEBUG) {
     // Enable auto-reload, etc
-    net.init({ engine: glov_engine });
+    net.init({ engine });
   }
 
-  if (!glov_engine.startup({
+  if (!engine.startup({
     game_width,
     game_height,
     pixely: flagGet('pixely', 'on'),
@@ -119,14 +119,14 @@ export function main() {
     return;
   }
 
-  // const font = glov_engine.font;
+  // const font = engine.font;
 
   // Perfect sizes for pixely modes
-  glov_ui.scaleSizes(13 / 32);
-  glov_ui.setFontHeight(8);
+  ui.scaleSizes(13 / 32);
+  ui.setFontHeight(8);
 
   const createSprite = glov_sprites.create;
-  const createAnimation = glov_sprite_animation.create;
+  const createAnimation = sprite_animation.create;
 
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
@@ -137,7 +137,7 @@ export function main() {
 
   const sprite_size = 64;
   function initGraphics() {
-    glov_particles.preloadParticleData(particle_data);
+    particles.preloadParticleData(particle_data);
 
     soundLoad('test');
 
@@ -183,10 +183,10 @@ export function main() {
     if (flagGet('ui_test')) {
       // let clip_test = 30;
       // glov_sprites.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
-      glov_ui_test.run(10, 10, Z.UI_TEST);
+      ui_test.run(10, 10, Z.UI_TEST);
     }
     if (flagGet('font_test')) {
-      glov_ui_test.runFontTest(105, 85);
+      ui_test.runFontTest(105, 85);
     }
 
     test.character.dx = 0;
@@ -237,7 +237,7 @@ export function main() {
 
     let font_test_idx = 0;
 
-    glov_ui.print(glov_font.styleColored(null, 0x000000ff),
+    ui.print(glov_font.styleColored(null, 0x000000ff),
       test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
       'TEXT!');
     let font_style = glov_font.style(null, {
@@ -249,14 +249,14 @@ export function main() {
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    glov_ui.print(font_style,
-      test.character.x, test.character.y + (++font_test_idx * glov_ui.font_height), Z.SPRITES,
+    ui.print(font_style,
+      test.character.x, test.character.y + (++font_test_idx * ui.font_height), Z.SPRITES,
       'Outline and Drop Shadow');
 
-    let x = glov_ui.button_height;
-    let button_spacing = glov_ui.button_height + 2;
+    let x = ui.button_height;
+    let button_spacing = ui.button_height + 2;
     let y = game_height - 10 - button_spacing * 5;
-    if (glov_ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
+    if (ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
       tooltip: 'Toggles pixely or regular mode (requires reload)' })
     ) {
       if (flagGet('pixely') === 'strict') {
@@ -274,7 +274,7 @@ export function main() {
     }
     y += button_spacing;
 
-    if (glov_ui.buttonText({ x, y, text: `Music: ${flagGet('music') ? 'ON' : 'OFF'}`,
+    if (ui.buttonText({ x, y, text: `Music: ${flagGet('music') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles playing a looping background music track' })
     ) {
       flagToggle('music');
@@ -286,30 +286,30 @@ export function main() {
     }
     y += button_spacing;
 
-    if (glov_ui.buttonText({ x, y, text: `Font Test: ${flagGet('font_test') ? 'ON' : 'OFF'}`,
+    if (ui.buttonText({ x, y, text: `Font Test: ${flagGet('font_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general Font tests' })
     ) {
       flagToggle('font_test');
-      glov_transition.queue(Z.TRANSITION_FINAL, glov_transition.randomTransition());
+      transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
     }
     y += button_spacing;
 
-    if (glov_ui.buttonText({ x, y, text: `UI Test: ${flagGet('ui_test') ? 'ON' : 'OFF'}`,
+    if (ui.buttonText({ x, y, text: `UI Test: ${flagGet('ui_test') ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles visibility of general UI tests' })
     ) {
       flagToggle('ui_test');
     }
     y += button_spacing;
 
-    if (glov_ui.buttonText({ x, y, text: `Particles: ${flagGet('particles', true) ? 'ON' : 'OFF'}`,
+    if (ui.buttonText({ x, y, text: `Particles: ${flagGet('particles', true) ? 'ON' : 'OFF'}`,
       tooltip: 'Toggles particles' })
     ) {
       flagToggle('particles');
     }
     if (flagGet('particles')) {
-      if (glov_engine.getFrameTimestamp() - last_particles > 1000) {
-        last_particles = glov_engine.getFrameTimestamp();
-        glov_engine.glov_particles.createSystem(particle_data.defs.explosion,
+      if (engine.getFrameTimestamp() - last_particles > 1000) {
+        last_particles = engine.getFrameTimestamp();
+        engine.glov_particles.createSystem(particle_data.defs.explosion,
           //[test.character.x, test.character.y, Z.PARTICLES]
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
@@ -322,12 +322,12 @@ export function main() {
 
     // Debuggin full canvas stretching
     // const camera2d = require('./glov/camera2d.js');
-    // glov_ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
-    // glov_ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+    // ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+    // ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
 
     // Debugging touch state on mobile
     // const glov_camera2d = require('./glov/camera2d.js');
-    // glov_engine.font.drawSizedWrapped(glov_engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
+    // engine.font.drawSizedWrapped(engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
     //   glov_camera2d.w(), 0, 22, JSON.stringify({
     //     last_touch_state: input.last_touch_state,
     //     touch_state: input.touch_state,
@@ -335,7 +335,7 @@ export function main() {
   }
 
   function testInit(dt) {
-    glov_engine.setState(test);
+    engine.setState(test);
     if (flagGet('music')) {
       soundPlayMusic(music_file);
     }
@@ -343,5 +343,5 @@ export function main() {
   }
 
   initGraphics();
-  glov_engine.setState(testInit);
+  engine.setState(testInit);
 }
