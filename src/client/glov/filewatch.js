@@ -26,14 +26,16 @@ function onFileChange(filename) {
   if (ext_idx !== -1) {
     let ext = filename.slice(ext_idx);
     if (by_ext[ext]) {
-      by_ext[ext](filename);
-      did_reload = true;
+      if (by_ext[ext](filename) !== false) {
+        did_reload = true;
+      }
     }
   }
   for (let ii = 0; ii < by_match.length; ++ii) {
     if (filename.match(by_match[ii][0])) {
-      by_match[ii][1](filename);
-      did_reload = true;
+      if (by_match[ii][1](filename) !== false) {
+        did_reload = true;
+      }
     }
   }
   if (message_cb && did_reload) {

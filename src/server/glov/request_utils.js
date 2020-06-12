@@ -41,9 +41,10 @@ export function allowMapFromLocalhostOnly(app) {
   });
   app.all('*.map', function (req, res, next) {
     if (req.glov_is_dev) {
-      return next();
+      return void next();
     }
-    return next(`Cannot ${req.method} ${req.url}`);
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end(`Cannot ${req.method} ${req.url}`);
   });
 }
 

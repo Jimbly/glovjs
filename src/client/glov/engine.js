@@ -138,7 +138,10 @@ export function releaseCanvas() {
   }
 }
 
+let error_report_disabled = false;
 export function reloadSafe() {
+  // Do not report any errors after this point
+  error_report_disabled = true;
   // Release canvas to not leak memory on Firefox
   releaseCanvas();
   document.location.reload();
@@ -741,6 +744,9 @@ function glovErrorReport(msg, file, line, col) {
   setTimeout(requestFrame, 1);
   let dt = now - last_error_time;
   last_error_time = now;
+  if (error_report_disabled) {
+    return false;
+  }
   if (dt < 30*1000) {
     // Less than 30 seconds since the last error, either we're erroring every
     // frame, or this is a secondary error caused by the first, do not report it.
@@ -752,11 +758,7 @@ function glovErrorReport(msg, file, line, col) {
     return false;
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = urlhash.getURLBase(); // base like http://foo.com/bar/index.html or http://foo.com/bar/
-  let idx = url.lastIndexOf('/'); // Remove anything after the last slash
-  if (idx !== -1 && idx > 8) { // > 'https://'.length
-    url = url.slice(0, idx + 1);
-  }
+  let url = urlhash.getURLBase(); // base like http://foo.com/bar/ (without index.html)
   url += `errorReport?cidx=${crash_idx}&file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}` +
     `&msg=${escape(msg)}${error_report_details_str}`;
   let xhr = new XMLHttpRequest();

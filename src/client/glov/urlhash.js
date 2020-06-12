@@ -39,13 +39,20 @@ let params = {};
 
 let title_suffix = '';
 
-let url_base = (document.location.href || '').match(/^[^#?]+/)[0];
+let page_base = (document.location.href || '').match(/^[^#?]+/)[0];
+if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
+  page_base += '?';
+}
 //Removes index.html et all
-url_base = url_base.replace(/[^/]*$/,'');
+let url_base = page_base.replace(/[^/]*$/,'');
 let on_change = [];
 
 export function getURLBase() {
   return url_base;
+}
+
+export function getURLPageBase() {
+  return page_base;
 }
 
 export function onChange(cb) {
@@ -71,33 +78,10 @@ function cmpNumKeys(a, b) {
 
 const route_param_regex = /:(\w+)/g;
 let routes = [];
-export function route(route_string) {
-  let keys = [];
-  // foo/:key/:bar => foo/([^/&?]+)/([^/&?]+)
-  let base = route_string.replace(route_param_regex, function (ignored, match) {
-    keys.push(match);
-    return '([^/&?]+)';
-  });
-  let regex = new RegExp(`^${base}(?:$|\\?)`);
-  let new_route = {
-    route_string,
-    regex,
-    keys,
-  };
-  for (let ii = 0; ii < keys.length; ++ii) {
-    let opts = params[keys[ii]];
-    // Must have already registered these keys
-    assert(opts);
-    opts.routes = opts.routes || [];
-    opts.routes.push(new_route);
-  }
-  routes.push(new_route);
-  routes.sort(cmpNumKeys);
-}
 
 function queryString() {
   let href = String(document.location);
-  return href.slice(url_base.length);
+  return href.slice(page_base.length);
 }
 
 const regex_value = /[^\w]\w+=([^&]+)/;
@@ -298,11 +282,15 @@ function updateHistory(new_need_push_state) {
   setTimeout(function () {
     scheduled = false;
     last_history_set_time = Date.now();
+    let url = `${page_base}${last_history_str}`;
+    if (url.endsWith('?')) {
+      url = url.slice(0, -1);
+    }
     if (need_push_state) {
       need_push_state = false;
-      window.history.pushState(undefined, eff_title, `${url_base}${last_history_str}`);
+      window.history.pushState(undefined, eff_title, url);
     } else {
-      window.history.replaceState(undefined, eff_title, `${url_base}${last_history_str}`);
+      window.history.replaceState(undefined, eff_title, url);
     }
     if (eff_title) {
       document.title = eff_title;
@@ -319,13 +307,39 @@ export function startup(param) {
   assert(!title_suffix);
   title_suffix = param.title_suffix;
 
-  // Refresh the current URL, it might be in the non-rooted format
+  // Refresh the current URL, it might be in the non-route format
   updateHistory(false);
 
   if (title_suffix) {
     refreshTitle();
     setTimeout(periodicRefreshTitle, 1000);
   }
+}
+
+export function route(route_string) {
+  let keys = [];
+  // foo/:key/:bar => foo/([^/&?]+)/([^/&?]+)
+  let base = route_string.replace(route_param_regex, function (ignored, match) {
+    keys.push(match);
+    return '([^/&?]+)';
+  });
+  let regex = new RegExp(`^${base}(?:$|\\?)`);
+  let new_route = {
+    route_string,
+    regex,
+    keys,
+  };
+  for (let ii = 0; ii < keys.length; ++ii) {
+    let opts = params[keys[ii]];
+    // Must have already registered these keys
+    assert(opts);
+    opts.routes = opts.routes || [];
+    opts.routes.push(new_route);
+    // Update initial value
+    opts.value = getValue(queryString(), opts);
+  }
+  routes.push(new_route);
+  routes.sort(cmpNumKeys);
 }
 
 export function register(opts) {

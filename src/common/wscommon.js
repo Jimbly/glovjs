@@ -3,7 +3,7 @@
 
 const ack = require('./ack.js');
 const assert = require('assert');
-const { ackHandleMessage, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
+const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
 const packet = require('./packet.js');
 const { isPacket, packetCreate, packetFromBuffer } = packet;
 
@@ -18,7 +18,7 @@ const PAK_HEADER_SIZE = 1 + // flags
 
 export function wsPakSendDest(client, pak) {
   if (!client.connected || client.socket.readyState !== 1) {
-    console.error('Attempting to send on a disconnected link (internal), ignoring');
+    console.error(`Attempting to send on a disconnected link (client_id:${client.id}), ignoring`);
     pak.pool();
     return;
   }
@@ -44,6 +44,26 @@ function wsPakSendFinish(pak, err, resp_func) {
   let ack_resp_pkt_id = ackWrapPakFinish(pak, err, resp_func);
 
   if (!client.connected || client.socket.readyState !== 1) { // WebSocket.OPEN
+    if (msg === 'channel_msg') { // client -> server channel message, attach additional debugging info
+      pak.seek(0);
+      pak.readFlags();
+      let header = ackReadHeader(pak);
+      let is_packet = isPacket(header.data);
+      let channel_id;
+      let submsg;
+      if (is_packet) {
+        pak.ref(); // deal with auto-pool of an empty packet
+        channel_id = pak.readAnsiString();
+        submsg = pak.readAnsiString();
+        if (!pak.ended()) {
+          pak.pool();
+        }
+      } else {
+        channel_id = header.data.channel_id;
+        submsg = header.data.msg;
+      }
+      msg = `channel_msg:${channel_id}:${submsg}`;
+    }
     (client.log ? client : console).log(`Attempting to send msg=${msg} on a disconnected link, ignoring`);
     if (!client.log && client.onError && msg && typeof msg !== 'number') {
       // On the client, if we try to send a new packet while disconnected, this is an application error
@@ -58,7 +78,7 @@ function wsPakSendFinish(pak, err, resp_func) {
     return;
   }
 
-  assert.equal(Boolean(resp_func), Boolean(ack_resp_pkt_id));
+  assert.equal(Boolean(resp_func && resp_func.expecting_response !== false), Boolean(ack_resp_pkt_id));
 
   wsPakSendDest(client, pak);
 }

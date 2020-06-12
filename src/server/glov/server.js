@@ -10,13 +10,15 @@ const glov_exchange = require('./exchange.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const log = require('./log.js');
+const metrics = require('./metrics.js');
 const path = require('path');
 const packet = require('../../common/packet.js');
 const glov_wsserver = require('./wsserver.js');
 const glov_wscommon = require('../../common/wscommon.js');
 
 const STATUS_TIME = 5000;
-const FILE_CHANGE_PAD = 100;
+const FILE_CHANGE_POLL = 16;
+const FILE_CHANGE_STABLE = 150;
 export let ws_server;
 export let channel_server;
 
@@ -72,10 +74,46 @@ function updateVersion(base_name, is_startup) {
   });
 }
 
-let deferred_file_changes = {};
-function onFileChange(filename) {
-  delete deferred_file_changes[filename];
-  ws_server.broadcast('filewatch', filename);
+function waitForAccess(filename, cb) {
+  // Really this should just use _sopen_s() w/ _SH_DENYRW, but that seems totally inaccessible from Node :(
+  let first = true;
+  let last_stats;
+  let last_change = Date.now();
+  let err_count = 0;
+  function check() {
+    fs.stat(filename, function (err, stats) {
+      let now = Date.now();
+      if (err) {
+        ++err_count;
+        if (err_count > 50) {
+          // give up
+          console.error(`Too many errors waiting for ${filename} to finish writing, giving up`);
+          return void cb();
+        }
+      } else {
+        err_count = 0;
+      }
+      let unchanged = false;
+      if (!first) {
+        unchanged = last_stats && stats &&
+          last_stats.mtime.getTime() === stats.mtime.getTime() &&
+          last_stats.size === stats.size;
+        if (unchanged && now - last_change > FILE_CHANGE_STABLE) {
+          return void cb();
+        }
+      }
+      first = false;
+      last_stats = stats;
+      if (!unchanged) {
+        last_change = now;
+      }
+      // Two timeouts, ensure main loop gets to tick
+      setTimeout(function () {
+        setTimeout(check, FILE_CHANGE_POLL);
+      }, FILE_CHANGE_POLL);
+    });
+  }
+  setTimeout(check, FILE_CHANGE_POLL);
 }
 
 export function startup(params) {
@@ -85,7 +123,7 @@ export function startup(params) {
     glov_wscommon.PROTOCOL_VERSION = params.pver;
   }
 
-  let { data_stores, exchange } = params;
+  let { data_stores, exchange, metrics_impl } = params;
   if (!data_stores) {
     data_stores = {};
   }
@@ -93,14 +131,17 @@ export function startup(params) {
     data_stores.meta = data_store.create('data_store');
   }
   if (!data_stores.bulk) {
+    data_stores.bulk = data_store.create('data_store/bulk');
     if (argv.dev) {
-      data_stores.bulk = data_store_limited.create(data_stores.meta, 1000, 1000, 250);
-    } else {
-      data_stores.bulk = data_stores.meta;
+      data_stores.bulk = data_store_limited.create(data_stores.bulk, 1000, 1000, 250);
     }
   }
   if (!data_stores.image) {
     data_stores.image = data_store_image.create('data_store/public', 'upload');
+  }
+
+  if (metrics_impl) {
+    metrics.init(metrics_impl);
   }
 
   if (!exchange) {
@@ -133,6 +174,7 @@ export function startup(params) {
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
   setTimeout(displayStatus, STATUS_TIME);
 
+  let deferred_file_changes = {};
   fs.watch(path.join(__dirname, '../../client/'), { recursive: true }, function (eventType, filename) {
     if (!filename) {
       return;
@@ -143,11 +185,17 @@ export function startup(params) {
       // not a version file
       if (argv.dev) {
         // send a dynamic reload message
-        console.log(`File changed: ${filename}`);
         if (deferred_file_changes[filename]) {
-          clearTimeout(deferred_file_changes[filename]);
+          // console.log(`File changed: ${filename} (already waiting)`);
+        } else {
+          // console.log(`File changed: ${filename} (starting waiting)`);
+          deferred_file_changes[filename] = true;
+          waitForAccess(path.join(__dirname, '../../client', filename), function () {
+            console.log(`File changed: ${filename}`);
+            delete deferred_file_changes[filename];
+            ws_server.broadcast('filewatch', filename);
+          });
         }
-        deferred_file_changes[filename] = setTimeout(onFileChange.bind(null, filename), FILE_CHANGE_PAD);
       }
       return;
     }

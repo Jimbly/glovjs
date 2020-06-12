@@ -4,12 +4,13 @@
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
 const md5 = require('../../common/md5.js');
+const { isProfane } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
 
 const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validDisplayName(display_name) {
-  if (!display_name) {
+  if (!display_name || isProfane(display_name)) {
     return false;
   }
   return true;
@@ -21,8 +22,14 @@ export class DefaultUserWorker extends ChannelWorker {
     this.user_id = this.channel_subid; // 1234
   }
   cmdRename(new_name, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.channel_subid) {
+      return resp_func('ERR_INVALID_USER');
+    }
     if (!new_name) {
       return resp_func('Missing name');
+    }
+    if (!validDisplayName(new_name)) {
+      return resp_func('Invalid display name');
     }
     this.setChannelData('public.display_name', new_name);
     return resp_func(null, 'Successfully renamed');
@@ -82,6 +89,9 @@ export class DefaultUserWorker extends ChannelWorker {
     let private_data = this.data.private;
 
     public_data.display_name = data.display_name;
+    if (!validDisplayName(public_data.display_name)) { // If from external auth
+      public_data.display_name = random_names.get();
+    }
     private_data.password = data.password;
     private_data.email = data.email;
     private_data.creation_ip = data.ip;

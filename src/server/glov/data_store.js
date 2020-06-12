@@ -196,6 +196,6 @@ export function create(store_path, one_file) {
   }
 
   // Defaults to FileStore (this will be the behaviour in local environment)
-  console.info('DataStore - Local FileStore in use');
+  console.info('[DATASTORE] Local FileStore in use');
   return new DataStore(store_path);
 }

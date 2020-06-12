@@ -220,6 +220,9 @@ function link(vp, fp) {
     handle: gl.createProgram(),
     uniforms: null,
   };
+  if (!prog.handle) {
+    assert(false, `gl.createProgram() returned ${prog.handle}${gl.createProgram() ? ', retry would succeed' : ''}`);
+  }
   gl.attachShader(prog.handle, vp.shader);
   gl.attachShader(prog.handle, fp.shader);
   // call this for all relevant semantic

@@ -86,7 +86,7 @@ export class ChannelWorker {
     this.pkt_queue = {}; // for each source, any queued packets that need to be dispatched in order
     this.subscribers = []; // ids of who is subscribed to us
     this.store_path = `${this.channel_type}/${this.channel_id}`;
-    this.bulk_store_path = `bulk/${this.channel_type}/${this.channel_id}`;
+    this.bulk_store_path = `${this.channel_type}/${this.channel_id}`;
     this.bulk_store_paths = {};
     this.shutting_down = false;
 
@@ -828,6 +828,16 @@ export class ChannelWorker {
       }
     }
     this.checkAutoDestroy();
+  }
+
+  // Like handleMessage, but does not require OOO queuing, for broadcast-queues
+  //   that do not have any retransmission mechanism
+  handleMessageBroadcast(pak) {
+    let channel_worker = this;
+    pak.readFlags();
+    let pkt_idx = pak.readU32();
+    let source = pak.readAnsiString();
+    channel_worker.dispatchPacket(pkt_idx, source, pak);
   }
 
   logPacketDispatch(source, pak) {

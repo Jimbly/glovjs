@@ -238,6 +238,8 @@ Texture.prototype.updateData = function updateData(w, h, data) {
 
       if (gl.getError()) {
         // Fix for Samsung devices (Chris's and Galaxy S8 on CrossBrowserTesting)
+        // Also fixes locally on Chrome when using a 8K source texture (was 896x57344),
+        //  perhaps some auto-scaling is going on in the gl.texImage3D call if required?
         // Try drawing to canvas first
         let canvas = document.createElement('canvas');
         canvas.width = w;
@@ -310,6 +312,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     url = `${urlhash.getURLBase()}${url}`;
   }
 
+  let load_gen = tex.load_gen = (tex.load_gen || 0) + 1;
   function tryLoad(next) {
     let did_next = false;
     function done(img) {
@@ -334,6 +337,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   ++load_count;
   let retries = 0;
   function handleLoad(img) {
+    if (tex.load_gen !== load_gen || tex.destroyed) {
+      // someone else requested this texture to be loaded!  Or, it was already unloaded
+      --load_count;
+      return;
+    }
     let err_details = '';
     if (img) {
       tex.format = format.RGBA8;
@@ -345,6 +353,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         err_details = `: GLError(${err})`;
         // Samsung TV gets 1282 on texture arrays
         // Samsung Galaxy S6 gets 1281 on texture arrays
+        // Note: Any failed image load (partial read of a bad png, etc) also results in 1281!
         if (tex.is_array && (String(err) === '1282' || String(err) === '1281') && engine.webgl2 && !engine.DEBUG) {
           local_storage.setJSON('webgl2_disable', {
             ua: navigator.userAgent,
@@ -354,7 +363,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
           engine.reloadSafe();
           return;
         }
-        retries = TEX_RETRY_COUNT; // do not retry this
+        if (!tex.for_reload) {
+          retries = TEX_RETRY_COUNT; // do not retry this
+        }
       } else {
         --load_count;
         return;
@@ -500,8 +511,11 @@ export function texturesUnloadDynamic() {
 function textureReload(filename) {
   let tex = textures[filename];
   if (tex && tex.url) {
+    tex.for_reload = true;
     tex.loadURL(`${tex.url}?rl=${Date.now()}`);
+    return true;
   }
+  return false;
 }
 
 export function startup() {

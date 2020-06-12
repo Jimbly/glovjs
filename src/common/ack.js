@@ -58,7 +58,7 @@ export function ackWrapPakFinish(pak, err, resp_func) {
   }
   pak.makeReadable();
   let resp_pak_id = 0;
-  if (resp_func) {
+  if (resp_func && resp_func.expecting_response !== false) {
     resp_pak_id = pak.ack_data.resp_pak_id;
     assert(resp_pak_id);
     assert(pak.ack_data.receiver);
@@ -73,7 +73,7 @@ export function ackWrapPakFinish(pak, err, resp_func) {
   return resp_pak_id;
 }
 
-function ackReadHeader(pak) {
+export function ackReadHeader(pak) {
   let flags = pak.getFlags();
   let msg = (flags & ACKFLAG_IS_RESP) ? pak.readInt() : pak.readAnsiString();
   let pak_id = pak.readInt();

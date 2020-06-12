@@ -40,6 +40,20 @@ settings.register({
   },
 });
 
+cmd_parse.register({
+  cmd: 'fps',
+  help: 'Toggles FPS display',
+  func: function (str, resp_func) {
+    if (settings.show_fps && settings.show_metrics || str === '0') {
+      settings.set('show_fps', 0);
+    } else {
+      settings.set('show_fps', 1);
+      settings.set('show_metrics', 1);
+    }
+    resp_func();
+  },
+});
+
 let fps_style = glov_font.style({
   outline_width: 2, outline_color: 0x00000080,
   color: 0xFFFFFFff,

@@ -13,6 +13,7 @@ const gulpif = require('gulp-if');
 const ifdef = require('gulp-ifdef');
 const ignore = require('gulp-ignore');
 const lazypipe = require('lazypipe');
+const ll = require('./gulp/ll.js');
 const log = require('fancy-log');
 const useref = require('gulp-useref');
 const uglify = require('gulp-uglify');
@@ -28,10 +29,25 @@ const watchify = require('watchify');
 const webfs = require('./gulp/webfs_build.js');
 const zip = require('gulp-zip');
 
+ll.tasks(['eslint']);
+
+if (args.ll === false && !args.noserial) {
+  // With --no-ll, absolutely no parallelism, for profiling
+  gulp.reallyparallel = gulp.series;
+} else {
+  gulp.reallyparallel = gulp.parallel;
+}
+if (!args.noserial) {
+  // Since this process is primarily parsing/CPU-bound, using gulp.parallel only confuses
+  //   the output without any speed increase (possibly speed decrease)
+  gulp.parallel = gulp.series;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Server tasks
 const config = {
   server_js_files: ['src/**/*.js', '!src/client/**/*.js'],
+  server_static: ['src/**/common/words/*.gkg'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_html: ['src/client/**/*.html'],
   client_html_index: ['src/client/**/index.html'],
@@ -83,6 +99,11 @@ const uglify_options = { compress: false, mangle: false };
 //   });
 // }
 
+gulp.task('server_static', function () {
+  return gulp.src(config.server_static)
+    .pipe(newer('./dist/game/build.dev'))
+    .pipe(gulp.dest('./dist/game/build.dev'));
+});
 gulp.task('server_js', function () {
   return gulp.src(config.server_js_files)
     .pipe(sourcemaps.init())
@@ -92,11 +113,18 @@ gulp.task('server_js', function () {
     .pipe(gulp.dest('./dist/game/build.dev'));
 });
 
-gulp.task('eslint', function () {
-  return gulp.src(config.all_js_files)
+function eslintTask() {
+  // I'm not completely sure this `since` is a good idea, since you will miss
+  // seeing previously saved (yet un-fixed) files
+  return gulp.src(['src/**/*.js', '!src/client/vendor/**/*.js'], { since: gulp.lastRun('eslint') })
     .pipe(eslint())
     .pipe(eslint.format());
-});
+}
+
+// This one runs in a parallel process
+gulp.task('eslint', eslintTask);
+// This one runs in-process, and takes advantage of gulp.lastRun
+gulp.task('eslint_watch', eslintTask);
 
 //////////////////////////////////////////////////////////////////////////
 // client tasks
@@ -128,11 +156,15 @@ extra_index.forEach(function (elem) {
   client_html_tasks.push(name);
   gulp.task(name, function () {
     return gulp.src(config.client_html_index)
-      .pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
+      //.pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
       .on('error', log.error.bind(log, 'client_html Error'))
       .pipe(ifdef(elem.defines, { extname: ['html'] }))
       .pipe(rename(`index_${elem.name}.html`))
-      .pipe(sourcemaps.write('./')) // writes .map file
+      .pipe(replace(/<!-- build:js ([^.]+\.js) -->[^!]+<!-- endbuild -->/g, function (a, b) {
+        // already bundled in client_html_default, just export filename reference
+        return `<script src="${b}"></script>`;
+      }))
+      //.pipe(sourcemaps.write('./')) // writes .map file
       .pipe(gulp.dest('./dist/game/build.dev/client'));
   });
 });
@@ -353,24 +385,42 @@ gulp.task('client_js_watch', gulp.parallel(...client_js_watch_deps));
 //////////////////////////////////////////////////////////////////////////
 // Combined tasks
 
-gulp.task('client_fsdata_wrap', gulp.series('client_fsdata'));
+gulp.task('client_fsdata_wrap', gulp.series(
+  'client_fsdata'));
 
-gulp.task('build', gulp.series(gulp.parallel('eslint', 'server_js', 'client_html',
-  'client_css', 'client_static', 'client_js', 'client_fsdata_wrap'), 'build.prod'));
+const build_misc_nolint = [
+  'server_static',
+  'server_js',
+  'client_html',
+  'client_css',
+  'client_static',
+  'client_fsdata_wrap',
+];
+
+if (args.nolint) {
+  gulp.task('build_deps', gulp.parallel(...build_misc_nolint, 'client_js'));
+  gulp.task('watch_deps', gulp.parallel(...build_misc_nolint, 'client_js_watch'));
+} else {
+  gulp.task('build_deps', gulp.reallyparallel('eslint', gulp.parallel(...build_misc_nolint, 'client_js')));
+  gulp.task('watch_deps', gulp.reallyparallel('eslint', gulp.parallel(...build_misc_nolint, 'client_js_watch')));
+}
+
+
+gulp.task('build', gulp.series('build_deps', 'build.prod'));
 
 gulp.task('bs-reload', (done) => {
   browser_sync.reload();
   done();
 });
 
-gulp.task('watch', gulp.series(
-  gulp.parallel('eslint', 'server_js', 'client_html', 'client_css', 'client_static',
-    'client_fsdata_wrap', 'client_js_watch'),
+
+gulp.task('watch', gulp.series('watch_deps',
   (done) => {
     if (!args.nolint) {
-      gulp.watch(config.all_js_files, gulp.series('eslint'));
+      gulp.watch(config.all_js_files, gulp.series('eslint_watch'));
     }
     gulp.watch(config.server_js_files, gulp.series('server_js'));
+    gulp.watch(config.server_static, gulp.series('server_static')); // Want to also force server reload?
     gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
     gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
     gulp.watch(config.client_css, gulp.series('client_css'));

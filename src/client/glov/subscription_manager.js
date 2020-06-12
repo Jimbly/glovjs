@@ -480,6 +480,10 @@ SubscriptionManager.prototype.logout = function () {
   });
 };
 
+SubscriptionManager.prototype.serverLog = function (type, data) {
+  this.client.send('log', { type, data });
+};
+
 SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
   let self = this;
   let channel_ids = Object.keys(self.channels);
@@ -493,6 +497,7 @@ SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
       channel = self.channels[channel_id];
     } while (channel_id && (!channel || !(channel.subscriptions || channel.autosubscribed)));
     if (!channel_id) {
+      self.serverLog('cmd_parse_unknown', command);
       return resp_func(last_error);
     }
     return channel.send('cmdparse', command, { silent_error: 1 },

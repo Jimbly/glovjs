@@ -41,7 +41,8 @@ WSClient.prototype.log = function (...args) {
       msg.push(args[ii]);
     }
   }
-  console.log(`WS Client ${client.id} ${msg.join(' ')}`);
+  let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
+  console.log(`WS Client ${client.id}(${user_id || ''}) ${msg.join(' ')}`);
 };
 
 WSClient.prototype.onError = function (e) {
@@ -57,7 +58,8 @@ WSClient.prototype.onClose = function () {
   client.connected = false;
   client.disconnected = true;
   delete ws_server.clients[client.id];
-  console.info(`WS Client ${client.id} disconnected` +
+  let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
+  console.info(`WS Client ${client.id}(${user_id}) disconnected` +
     ` (${Object.keys(ws_server.clients).length} clients connected)`);
   ack.failAll(client); // Should this be before or after other disconnect events?
   client.emit('disconnect');
@@ -123,7 +125,13 @@ WSServer.prototype.init = function (server, server_https) {
       client.onClose();
     });
     socket.on('message', function (data) {
-      wsHandleMessage(client, data);
+      if (client.disconnected) {
+        // message received after disconnect!
+        // ignore
+        console.info(`WS Client ${client.id} ignoring message received after disconnect`);
+      } else {
+        wsHandleMessage(client, data);
+      }
     });
     socket.on('error', function (e) {
       // Not sure this exists on `ws`
@@ -146,7 +154,9 @@ WSServer.prototype.init = function (server, server_https) {
       let old_client = ws_server.clients[reconnect_id];
       if (old_client) {
         if (old_client.secret === query.secret) {
-          console.info(`WS Client ${old_client.id} being replaced by reconnect, disconnecting...`);
+          let user_id = old_client.client_channel && old_client.client_channel.ids &&
+            old_client.client_channel.ids.user_id;
+          console.info(`WS Client ${old_client.id}(${user_id}) being replaced by reconnect, disconnecting...`);
           this.disconnectClient(old_client);
         } else {
           console.log(`WS Client ${client.id} requested disconnect of Client ${reconnect_id}` +
@@ -173,7 +183,8 @@ WSServer.prototype.checkTimeouts = function () {
   for (let client_id in this.clients) {
     let client = this.clients[client_id];
     if (client.last_receive_time < expiry) {
-      console.info(`WS Client ${client.id} timed out, disconnecting...`);
+      let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
+      console.info(`WS Client ${client.id}(${user_id}) timed out, disconnecting...`);
       this.disconnectClient(client);
     }
   }

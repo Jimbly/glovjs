@@ -15,6 +15,7 @@ const { channelServerPak, channelServerSend } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
 const { isPacket } = require('../../common/packet.js');
 const { logdata } = require('../../common/util.js');
+const { isProfane } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
 const { serverConfig } = require('./server_config.js');
 
@@ -223,19 +224,26 @@ function validUsername(user_id, allow_admin) {
     // has a "." or other invalid character
     return false;
   }
+  if (isProfane(user_id)) {
+    return false;
+  }
   return true;
 }
 
-function handleLoginResponse(client, user_id, resp_func, err, resp_data) {
+function handleLoginResponse(message, client, user_id, resp_func, err, resp_data) {
   let client_channel = client.client_channel;
   assert(client_channel);
 
   if (client_channel.ids.user_id) {
     // Logged in while processing the response?
+    console.log(`client_id:${client.id} ${message} failed: Already logged in`);
     return resp_func('Already logged in');
   }
 
-  if (!err) {
+  if (err) {
+    console.log(`client_id:${client.id} ${message} failed: ${err}`);
+  } else {
+    console.log(`client_id:${client.id} ${message} success: logged in as ${user_id}`);
     client_channel.ids_base.user_id = user_id;
     client_channel.ids_base.display_name = resp_data.display_name;
     applyCustomIds(client_channel.ids, resp_data);
@@ -255,6 +263,7 @@ function onLogin(client, data, resp_func) {
   console.log(`client_id:${client.id}->server login ${logdata(data)}`);
   let user_id = data.user_id;
   if (!validUsername(user_id, true)) {
+    console.log(`client_id:${client.id} login failed: Invalid username`);
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
@@ -267,7 +276,7 @@ function onLogin(client, data, resp_func) {
     password: data.password,
     salt: client.secret,
     ip: client.addr,
-  }, handleLoginResponse.bind(null, client, user_id, resp_func));
+  }, handleLoginResponse.bind(null, 'login', client, user_id, resp_func));
 }
 
 let facebook_access_token;
@@ -290,10 +299,10 @@ function onLoginFacebook(client, data, resp_func) {
     return channelServerSend(client_channel, `user.${user_id}`, 'login_facebook', null, {
       display_name: data.display_name,
       ip: client.addr,
-    }, handleLoginResponse.bind(null, client, user_id, resp_func));
+    }, handleLoginResponse.bind(null, 'login_facebook', client, user_id, resp_func));
 
   } else {
-    console.log('Auth Failed', generated_signature, signature);
+    console.log(`client_id:${client.id} login_facebook auth failed`, generated_signature, signature);
     return resp_func('Auth Failed');
   }
 }
@@ -302,6 +311,7 @@ function onUserCreate(client, data, resp_func) {
   console.log(`client_id:${client.id}->server user_create ${logdata(data)}`);
   let user_id = data.user_id;
   if (!validUsername(user_id)) {
+    console.log(`client_id:${client.id} user_create failed: Invalid username`);
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
@@ -310,6 +320,7 @@ function onUserCreate(client, data, resp_func) {
   assert(client_channel);
 
   if (client_channel.ids.user_id) {
+    console.log(`client_id:${client.id} user_create failed: Already logged in`);
     return resp_func('Already logged in');
   }
 
@@ -318,7 +329,7 @@ function onUserCreate(client, data, resp_func) {
     password: data.password,
     email: data.email,
     ip: client.addr,
-  }, handleLoginResponse.bind(null, client, user_id, resp_func));
+  }, handleLoginResponse.bind(null, 'user_create', client, user_id, resp_func));
 }
 
 function onLogOut(client, data, resp_func) {
@@ -344,6 +355,11 @@ function onLogOut(client, data, resp_func) {
 
 function onRandomName(client, data, resp_func) {
   return resp_func(null, random_names.get());
+}
+
+function onLog(client, data, resp_func) {
+  console.log(`client_id:${client.id} server_log`, data);
+  resp_func();
 }
 
 function uploadOnStart(client, pak, resp_func) {
@@ -379,6 +395,7 @@ export function init(channel_server) {
   ws_server.onMsg('user_create', onUserCreate);
   ws_server.onMsg('logout', onLogOut);
   ws_server.onMsg('random_name', onRandomName);
+  ws_server.onMsg('log', onLog);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);

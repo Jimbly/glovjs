@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { inspect } = require('util');
+const metrics = require('./metrics.js');
 
 let log_dir = './logs/';
 
@@ -55,11 +56,13 @@ export function startup(argv) {
     let native_fn = console[fn] || native_default;
     let my_level = LOG_LEVELS[fn];
     let prefix = ` ${LOG_NAMES[fn]}] `;
+    let metric = `log.${fn}`;
     console[fn] = function (...args) {
       ++last_uid;
       if (log_level < my_level) {
         return;
       }
+      metrics.add(metric, 1);
       let ts = new Date().toISOString();
       let msg = (args || []).map(argProcessor).join(' ');
       if (is_dev) {

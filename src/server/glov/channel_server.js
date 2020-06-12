@@ -10,6 +10,7 @@ const client_comm = require('./client_comm.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const log = require('./log.js');
+const metrics = require('./metrics.js');
 const packet = require('../../common/packet.js');
 const { isPacket, packetCreate } = packet;
 const { shutdown } = require('./server.js');
@@ -36,12 +37,14 @@ function channelServerSendFinish(pak, err, resp_func) {
   pak.seek(pkt_idx_offs);
   pak.writeU32(pkt_idx);
   pak.seek(saved_offs);
-  assert.equal(Boolean(resp_func), Boolean(ack_resp_pkt_id));
+  assert.equal(Boolean(resp_func && resp_func.expecting_response !== false), Boolean(ack_resp_pkt_id));
   if (!resp_func) {
     resp_func = function (err) {
       if (err) {
-        if (err === ERR_NOT_FOUND && typeof msg === 'number') {
+        if (err === ERR_NOT_FOUND && (typeof msg === 'number' || dest.startsWith('client.'))) {
           // not found error while acking, happens with unsubscribe, etc, right before shutdown, silently ignore
+          // also, generally workers sending to clients, will often get ERR_NOT_FOUND
+          //   for any packet in-flight when the client disconnects.
         } else {
           console.error(`Received unhandled error response while handling "${msg}"` +
             ` from ${source.channel_id} to ${dest}:`, err);
@@ -314,7 +317,7 @@ class ChannelServer {
 
     this.csworker = this.createChannelLocal(`channel_server.${this.csuid}`);
     // Should this happen for all channels generically?  Do we need a generic "broadcast to all user.* channels"?
-    this.exchange.subscribe('channel_server', this.csworker.handleMessage.bind(this.csworker));
+    this.exchange.subscribe('channel_server', this.csworker.handleMessageBroadcast.bind(this.csworker));
 
     this.tick_func = this.doTick.bind(this);
     this.tick_time = 250;
@@ -333,6 +336,8 @@ class ChannelServer {
     let stall = false;
     if (dt > this.tick_time * 2) {
       // large stall, discard extra time
+      console.warn(`Late server tick: ${dt}ms elapsed, ${this.tick_time} expected,` +
+        ` last tick took ${this.last_tick_time}ms`);
       dt = this.tick_time;
       stall = true;
     }
@@ -349,6 +354,7 @@ class ChannelServer {
         channel.tick(dt, this.server_time);
       }
     }
+    this.last_tick_time = Date.now() - now;
   }
 
   registerChannelWorker(channel_type, ctor, options) {
@@ -454,6 +460,7 @@ class ChannelServer {
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
+      metrics.set(`count.${channel_type}`, num_channels[channel_type]);
     }
     lines.push(`Channel Counts: ${channels.join(', ')}`);
     channels = [];
