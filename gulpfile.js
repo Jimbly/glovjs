@@ -2,7 +2,7 @@
 const args = require('yargs').argv;
 const assert = require('assert');
 const babel = require('gulp-babel');
-const babelify = require('babelify');
+const babelify = 'donotcheckin'; // require('babelify');
 const browserify = require('browserify');
 const browser_sync = require('browser-sync');
 const clean = require('gulp-clean');
@@ -49,6 +49,8 @@ const config = {
   server_js_files: ['src/**/*.js', '!src/client/**/*.js'],
   server_static: ['src/**/common/words/*.gkg'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
+  // client_js_files: ['src/**/*.js', '!src/server/**/*.js', '!src/client/vendor/**/*.js'],
+  client_js_files: ['src/**/app.js'],
   client_html: ['src/client/**/*.html'],
   client_html_index: ['src/client/**/index.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
@@ -191,7 +193,7 @@ gulp.task('client_fsdata', function () {
 
 //////////////////////////////////////////////////////////////////////////
 // Fork of https://github.com/Jam3/brfs-babel that adds bablerc:false
-const babel_core = require('babel-core');
+const babel_core = require('@babel/core');
 const through = require('through2');
 const babel_static_fs = require('babel-plugin-static-fs');
 function babelBrfs(filename, opts) {
@@ -311,7 +313,7 @@ function bundleJS(filename, is_worker, pre_task) {
 
   function registerTasks(b, watch) {
     let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
-    b.transform(babelify, babelify_opts);
+    // donotcheckin b.transform(babelify, babelify_opts);
     b.on('log', log); // output build logs to terminal
     if (watch) {
       client_js_watch_deps.push(task_base);
@@ -341,6 +343,30 @@ function bundleJS(filename, is_worker, pre_task) {
 }
 
 bundleJS('app.js');
+
+const minify = require('gulp-babel-minify');
+
+gulp.task('client_js_babel', function () {
+
+  return gulp.src(config.client_js_files)
+    //.pipe(newer('./dist/game/build.intermediate'))
+    .pipe(sourcemaps.init())
+    .pipe(sourcemaps.identityMap())
+    .pipe(babel())
+    .on('error', log.error.bind(log, 'Error'))
+    // Remove extra Babel stuff that does not help anything
+    //.pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
+    //.pipe(replace(/class Foo5 \{\n\}\n/g, ''))
+    //.pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/g, '')) should not be there anymore due to loose: true in .babelrc
+
+    // TODO: need to fork gulp-uglify and fix the sourcemap handling
+
+    .pipe(uglify(uglify_options))
+    //.pipe(minify())
+    .pipe(sourcemaps.write())
+    .pipe(gulp.dest('./dist/game/build.intermediate'))
+    ;
+});
 
 gulp.task('build.prod.compress', function () {
   return gulp.src('dist/game/build.dev/**')

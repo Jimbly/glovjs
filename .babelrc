@@ -1,7 +1,8 @@
 {
-  "presets": [["env", {
+  "presets": [["@babel/env", {
     "targets": {
       "ie": "10"
-    }
-  }]]
+    },
+    "loose": true
+  }]],
 }
