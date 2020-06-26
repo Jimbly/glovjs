@@ -1,6 +1,12 @@
 Javascript libGlov/GLOV.js framework
 ============================
 
+Build pipeline rework status:
+* have `bundleJS2` tasks, which depends on `client_js_babel`, which seems to be generating acceptable output
+* Need to add watch tasks and see if this new pipeline saves anything
+  * First, watch task to go from client_js -> babel
+  * Then, watchify should handle the rest, already?
+
 **Demos**
 * General feature test: [glovjs-playground](http://jimbly.github.io/glovjs/playground/)
 * Terminal module test: [glovjs-terminal](http://jimbly.github.io/glovjs/terminal/)
