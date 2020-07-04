@@ -9,7 +9,6 @@
  */
 
 const assert = require('assert');
-const fs = require('fs');
 const geom = require('./geom.js');
 const glb_parser = require('./glb/parser.js');
 const { ATTRIBUTE_TYPE_TO_COMPONENTS } = require('./glb/gltf-type-utils.js');
@@ -17,17 +16,9 @@ const renderer = require('./engine.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const { vec4 } = require('./vmath.js');
+const { webFSGetFile } = require('./webfs.js');
 
 export let load_count = 0;
-
-let box_glb = fs.readFileSync(`${__dirname}/models/box_textured_embed.glb`, 'binary');
-{
-  let arr = new Uint8Array(box_glb.length);
-  for (let ii = 0; ii < box_glb.length; ++ii) {
-    arr[ii] = box_glb.charCodeAt(ii);
-  }
-  box_glb = arr.buffer;
-}
 
 export let models = {};
 
@@ -202,5 +193,5 @@ export function load(url) {
 export function startup() {
   initShaders();
   let model_box = models.box = new Model('box');
-  model_box.parse(box_glb);
+  model_box.parse(webFSGetFile('box_textured_embed.glb'));
 }

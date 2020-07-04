@@ -13,9 +13,10 @@ const client_worker = require('./client_worker.js');
 const createHmac = require('crypto').createHmac;
 const { channelServerPak, channelServerSend } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
+const fs = require('fs');
 const { isPacket } = require('../../common/packet.js');
 const { logdata } = require('../../common/util.js');
-const { isProfane } = require('../../common/words/profanity_common.js');
+const { isProfane, profanityCommonStartup } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
 const { serverConfig } = require('./server_config.js');
 
@@ -378,6 +379,8 @@ function uploadOnFinish(client, pak, resp_func) {
 }
 
 export function init(channel_server) {
+  profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/words/filter.gkg`, 'utf8'));
+
   let ws_server = channel_server.ws_server;
   ws_server.on('client', (client) => {
     let client_id = channel_server.clientIdFromWSClient(client);

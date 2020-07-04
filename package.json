@@ -56,6 +56,7 @@
     "gulp-if": "^3.0.0",
     "gulp-ifdef": "^0.2.0",
     "gulp-ignore": "^3.0.0",
+    "gulp-json5": "0.0.2",
     "gulp-newer": "^1.4.0",
     "gulp-nodemon": "^2.4.2",
     "gulp-rename": "^2.0.0",

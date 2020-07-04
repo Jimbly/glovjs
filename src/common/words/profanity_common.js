@@ -34,11 +34,14 @@ let suffixes =           [ '', 's',  's', 'in', 'ing', 'er', 'ers', 'ed', 'y' ];
 let suffixes_canonized = [ '', '5', '35', '1n', '1ng', '3r', '3r5', '3d', 'y' ];
 
 let max_len = 0;
-function profanityStartup() {
+let inited = false;
+export function profanityCommonStartup(filter_gkg) {
+  assert(!inited);
+  inited = true;
   for (let ii = 0; ii < trans_src.length; ++ii) {
     trans_lookup[trans_src[ii]] = trans_dst[ii];
   }
-  let data = fs.readFileSync(`${__dirname}/filter.gkg`, 'binary').split('\n').filter((a) => a);
+  let data = filter_gkg.split('\n').filter((a) => a);
   for (let ii = 0; ii < data.length; ++ii) {
     let s = rot13(data[ii]);
     let start_len = s.length;
@@ -54,7 +57,6 @@ function profanityStartup() {
     }
   }
 }
-profanityStartup();
 
 let randWord;
 function filterWord(word_src) {
@@ -97,11 +99,13 @@ function checkWord(word_src) {
 }
 
 export function profanityFilterCommon(user_str, rand_word_fn) {
+  assert(inited);
   randWord = rand_word_fn;
   return user_str.replace(trans_src_regex, filterWord);
 }
 
 export function isProfane(user_str) {
+  assert(inited);
   is_profane = false;
   user_str.replace(trans_src_regex, checkWord);
   return is_profane;

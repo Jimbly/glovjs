@@ -2,7 +2,6 @@
 const args = require('yargs').argv;
 const assert = require('assert');
 const babel = require('gulp-babel');
-const babelify = require('babelify');
 const browserify = require('browserify');
 const browser_sync = require('browser-sync');
 const clean = require('gulp-clean');
@@ -12,6 +11,7 @@ const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const ifdef = require('gulp-ifdef');
 const ignore = require('gulp-ignore');
+const json5 = require('gulp-json5');
 const lazypipe = require('lazypipe');
 const ll = require('./gulp/ll.js');
 const log = require('fancy-log');
@@ -50,7 +50,7 @@ const config = {
   server_static: ['src/**/common/words/*.gkg'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_js_files: ['src/**/*.js', '!src/server/**/*.js', '!src/client/vendor/**/*.js'],
-  client_js_required_files: ['src/**/*.json', '!src/server/**/*.json', '!src/client/vendor/**/*.json'],
+  client_json_files: ['src/**/*.json', '!src/server/**/*.json', '!src/client/vendor/**/*.json'],
   client_html: ['src/client/**/*.html'],
   client_html_index: ['src/client/**/index.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
@@ -79,6 +79,9 @@ const config = {
     'src/client/autogen/**',
     'src/client/shaders/**',
     'src/client/glov/shaders/**',
+    'src/client/glov/models/**.glb',
+    'src/client/glov/words/*.txt',
+    'src/common/words/*.gkg',
     '!src/client/autogen/placeholder.txt',
     '!src/client/autogen/*.js',
   ],
@@ -191,160 +194,10 @@ gulp.task('client_fsdata', function () {
     .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
 
-//////////////////////////////////////////////////////////////////////////
-// Fork of https://github.com/Jam3/brfs-babel that adds bablerc:false
-const babel_core = require('@babel/core');
-const through = require('through2');
-const babel_static_fs = require('babel-plugin-static-fs');
-function babelBrfs(filename, opts) {
-  let input = '';
-  if ((/\.json$/iu).test(filename)) {
-    return through();
-  }
-
-  function write(buf, enc, next) {
-    input += buf.toString();
-    next();
-  }
-
-  function flush(next) {
-    let result;
-    try {
-      result = babel_core.transform(input, {
-        plugins: [
-          [
-            babel_static_fs, {
-              // ensure static-fs files are discovered
-              onFile: this.emit.bind(this, 'file'),
-              dynamic: false,
-            }
-          ]
-        ],
-        filename: filename,
-        babelrc: false,
-      });
-      this.push(result.code);
-      this.push(null);
-      return next();
-    } catch (err) {
-      return next(err);
-    }
-  }
-
-  return through(write, flush);
-}
-// End fork of https://github.com/Jam3/brfs-babel
-//////////////////////////////////////////////////////////////////////////
-
 let client_js_deps = [];
 let client_js_watch_deps = [];
 
 function bundleJS(filename, is_worker, pre_task) {
-  let bundle_name = filename.replace('.js', '.bundle.js');
-  const browserify_opts = {
-    entries: [
-      `./src/client/${filename}`,
-    ],
-    cache: {}, // required for watchify
-    packageCache: {}, // required for watchify
-    builtins: {
-      // super-simple replacements, if needed
-      assert: './src/client/shims/assert.js',
-      buffer: './src/client/shims/buffer.js',
-      not_worker: !is_worker && './src/client/shims/not_worker.js',
-      // timers: './src/client/shims/timers.js',
-      _process: './src/client/shims/empty.js',
-    },
-    debug: true,
-    transform: [babelBrfs]
-  };
-  const babelify_opts = {
-    global: true, // Required because dot-prop has ES6 code in it
-    plugins: [],
-    // plugins: [
-    //   // ['syntax-object-rest-spread', {}],
-    //   // ['transform-object-rest-spread', {}],
-    //   // ['static-fs', {}], - generates good code, but does not allow reloading/watchify
-    // ],
-  };
-  function whitespaceReplace(a) {
-    // gulp-replace-with-sourcemaps doens't seem to work, so just replace with exactly matching whitespace
-    return a.replace(/[^\n\r]/g, ' ');
-  }
-
-
-  let build_timestamp = Date.now();
-  function buildTimestampReplace() {
-    // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
-    let ret = `'${build_timestamp}'`;
-    assert.equal(ret.length, 15);
-    return ret;
-  }
-  function dobundle(b) {
-    build_timestamp = Date.now();
-    log(`Using BUILD_TIMESTAMP=${build_timestamp} for ${filename}`);
-    return b
-      //.transform(babelify, babelify_opts)
-      .bundle()
-      // log errors if they happen
-      .on('error', log.error.bind(log, 'Browserify Error'))
-      .pipe(vinyl_source_stream(bundle_name))
-      // optional, remove if you don't need to buffer file contents
-      .pipe(vinyl_buffer())
-      // optional, remove if you don't want sourcemaps
-      .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
-      // Remove extra Babel stuff that does not help anything
-      .pipe(replace(/_classCallCheck\([^)]+\);|exports\.__esModule = true;/g, whitespaceReplace))
-      .pipe(replace(/function _classCallCheck\((?:[^}]*\}){2}/g, whitespaceReplace))
-      .pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/g, whitespaceReplace))
-      .pipe(replace('BUILD_TIMESTAMP', buildTimestampReplace))
-      // Add transformation tasks to the pipeline here.
-      .pipe(uglify(uglify_options))
-      .pipe(sourcemaps.write('./')) // writes .map file
-      .pipe(gulp.dest('./dist/game/build.dev/client/'));
-  }
-
-  function writeVersion(done) {
-    let ver_filename = `${filename.slice(0, -3)}.ver.json`;
-    fs.writeFile(`./dist/game/build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
-  }
-  let version_task = `client_js_${filename}_version`;
-  gulp.task(version_task, writeVersion);
-
-  function registerTasks(b, watch) {
-    let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
-    b.transform(babelify, babelify_opts);
-    b.on('log', log); // output build logs to terminal
-    if (watch) {
-      client_js_watch_deps.push(task_base);
-    } else {
-      client_js_deps.push(task_base);
-    }
-    gulp.task(`${task_base}_bundle`, function () {
-      let ret = dobundle(b);
-      if (watch) {
-        ret = ret.pipe(browser_sync.stream({ once: true }));
-      }
-      return ret;
-    });
-    if (pre_task) {
-      gulp.task(task_base, gulp.series(pre_task, `${task_base}_bundle`, version_task));
-    } else {
-      gulp.task(task_base, gulp.series(`${task_base}_bundle`, version_task));
-    }
-  }
-  const watched = watchify(browserify(browserify_opts));
-  registerTasks(watched, true);
-  // on any dep update, runs the bundler
-  watched.on('update', gulp.series(`client_js_watch_${filename}_bundle`, writeVersion));
-
-  const nonwatched = browserify(browserify_opts);
-  registerTasks(nonwatched, false);
-}
-
-// bundleJS('app.js');
-
-function bundleJS2(filename, is_worker, pre_task) {
   let bundle_name = filename.replace('.js', '.bundle.js');
   const browserify_opts = {
     entries: [
@@ -361,10 +214,7 @@ function bundleJS2(filename, is_worker, pre_task) {
       _process: './dist/game/build.intermediate/client/shims/empty.js',
     },
     debug: true,
-    transform: [babelBrfs],
-    paths: [
-      './src/',
-    ],
+    transform: [],
   };
 
   let build_timestamp = Date.now();
@@ -430,22 +280,26 @@ function bundleJS2(filename, is_worker, pre_task) {
   registerTasks(nonwatched, false);
 }
 
-bundleJS2('app.js');
+client_js_watch_deps.push('client_json', 'client_js_babel');
+bundleJS('app.js');
 
 gulp.task('client_js_babel', function () {
 
-  return gulp.src(config.client_js_files)
-    //.pipe(newer('./dist/game/build.intermediate'))
+  return gulp.src(config.client_js_files, { since: gulp.lastRun('client_js_babel') })
+    // Instead of newer, using since above, so upon restart it re-processes files
+    //   whose deps may have changed
+    // .pipe(newer('./dist/game/build.intermediate'))
     .pipe(sourcemaps.init())
     .pipe(sourcemaps.identityMap())
     .pipe(babel({
       plugins: [
-        // TODO: Will we get good reloads on this?
+        // Note: Dependencies are not tracked from babel plugins, so use `webfs` instead of `static-fs` where possible
         ['static-fs', {}], // generates good code, but does not allow reloading/watchify
       ]
     }))
     .on('error', log.error.bind(log, 'Error'))
     // Remove extra Babel stuff that does not help anything
+    // TODO: restore this stuff
     //.pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
     //.pipe(replace(/class Foo5 \{\n\}\n/g, ''))
     //.pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/g, '')) should not be there anymore due to loose: true in .babelrc
@@ -455,11 +309,15 @@ gulp.task('client_js_babel', function () {
     .pipe(gulp.dest('./dist/game/build.intermediate'));
 });
 
-gulp.task('client_js_required', function () {
-  return gulp.src(config.client_js_required_files)
+gulp.task('client_json', function () {
+  return gulp.src(config.client_json_files)
     .pipe(newer('./dist/game/build.intermediate'))
+    // Minify, and convert from json5
+    .pipe(json5({ beautify: false }))
     .pipe(gulp.dest('./dist/game/build.intermediate'));
 });
+
+gulp.task('test', gulp.series('client_json', 'client_js_babel', 'client_js_watch_app.js_bundle'));
 
 gulp.task('build.prod.compress', function () {
   return gulp.src('dist/game/build.dev/**')
@@ -545,6 +403,9 @@ gulp.task('watch', gulp.series('watch_deps',
     gulp.watch(config.client_css, gulp.series('client_css'));
     gulp.watch(config.client_static, gulp.series('client_static'));
     gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
+    gulp.watch(config.client_json_files, gulp.series('client_json', 'client_js_babel'));
+    gulp.watch(config.client_js_files, gulp.series('client_js_babel'));
+
     done();
   }
 ));
@@ -598,9 +459,8 @@ gulp.task('browser-sync', gulp.series('nodemon', (done) => {
 
 gulp.task('clean', function () {
   return gulp.src([
-    'build.dev',
-    'build.prod',
     'dist/game/build.dev',
+    'dist/game/build.intermediate',
     'dist/game/build.prod',
     'src/client/autogen/*.*',
     '!src/client/autogen/placeholder.txt',
