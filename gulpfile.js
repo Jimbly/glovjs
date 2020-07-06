@@ -1,22 +1,15 @@
 // TODO:
-//   things imported from node_modules are not getting minified
-//     kind of want these as separate deps anyway, except for the worker js file that needs them combined?
-//     maybe just concat those two for the worker explicitly?  worker will have it's own deps though anyway?
-//   Cannot figure out any way to reliably get external dependency list
-//     So, add a deps.js and worker_deps.js that build separately and just look like:
-//       global.require = (a) => deps[a];
-//       deps['assert'] = require('assert'));
-//     And then worker build needs to concat this before the body (and have tasks intertwined).
-//       Non-workers require it separately
-//       Maybe we later also don't use browserify/watchify on app or worker code, but just this simple deps system?
+//   Maybe we don't use browserify/watchify on app or worker code, but just the simple glov/require system and concat?
 
 /* eslint no-invalid-this:off */
 const args = require('yargs').argv;
 const assert = require('assert');
 const babel = require('gulp-babel');
+const babelify = require('babelify');
 const browserify = require('browserify');
 const browser_sync = require('browser-sync');
 const clean = require('gulp-clean');
+const concat = require('gulp-concat');
 const eslint = require('gulp-eslint');
 const fs = require('fs');
 const gulp = require('gulp');
@@ -34,7 +27,6 @@ const nodemon = require('gulp-nodemon');
 const rename = require('gulp-rename');
 const replace = require('gulp-replace');
 const sourcemaps = require('gulp-sourcemaps');
-const through2 = require('through2');
 const web_compress = require('gulp-web-compress');
 const vinyl_buffer = require('vinyl-buffer');
 const vinyl_source_stream = require('vinyl-source-stream');
@@ -105,6 +97,8 @@ const config = {
 // But, at least keep function names to get good callstacks
 // TODO: One, global-scoped uglify pass on bundled file just for prod builds?
 const uglify_options = { compress: false, keep_fnames: true, mangle: false };
+// Different options for external (node_modules / deps.js):
+const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
 
 // if (args.debug) {
 //   const node_inspector = require('gulp-node-inspector'); // eslint-disable-line global-require
@@ -212,24 +206,17 @@ let client_js_deps = ['client_json', 'client_js_babel'];
 let client_js_watch_deps = client_js_deps.slice(0);
 
 function bundleJS(filename, is_worker, pre_task) {
-  let bundle_name = filename.replace('.js', '.bundle.js');
+  let bundle_name = filename.replace('.js', is_worker ? '.bundle.int.js' : '.bundle.js');
+  let do_version = !is_worker;
   const browserify_opts = {
     entries: [
       `./dist/game/build.intermediate/client/${filename}`,
     ],
     cache: {}, // required for watchify
     packageCache: {}, // required for watchify
-    builtins: {
-      // super-simple replacements, if needed
-      assert: './dist/game/build.intermediate/client/shims/assert.js',
-      buffer: './dist/game/build.intermediate/client/shims/buffer.js',
-      not_worker: !is_worker && './dist/game/build.intermediate/client/shims/not_worker.js',
-      // timers: './dist/game/build.intermediate/client/shims/timers.js',
-      _process: './dist/game/build.intermediate/client/shims/empty.js',
-    },
     debug: true,
     transform: [],
-    // bundleExternal: false, // disables grabbing things from node_modules, but *also* from builtins :(
+    bundleExternal: false,
   };
 
   let build_timestamp = Date.now();
@@ -263,16 +250,26 @@ function bundleJS(filename, is_worker, pre_task) {
     // }, function (next) {
     //   next();
     // }));
-    return b
+    let stream = b
       .bundle()
       // log errors if they happen
       .on('error', log.error.bind(log, 'Browserify Error'))
       .pipe(vinyl_source_stream(bundle_name))
       .pipe(vinyl_buffer())
-      .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
-      .pipe(replace('BUILD_TIMESTAMP', buildTimestampReplace))
-      .pipe(sourcemaps.write('./')) // writes .map file
-      .pipe(gulp.dest('./dist/game/build.dev/client/'));
+      .pipe(sourcemaps.init({ loadMaps: true })); // loads map from browserify file
+    if (do_version) {
+      stream = stream.pipe(replace('BUILD_TIMESTAMP', buildTimestampReplace));
+    }
+    if (is_worker) {
+      // Not as useful as old method of browserify hard-stop, but better than nothing?
+      stream = stream.pipe(warn_match({
+        'Worker requiring not_worker': /not_worker/,
+      }));
+    }
+    stream = stream
+      .pipe(sourcemaps.write(is_worker ? undefined : './')) // embeds or writes .map file
+      .pipe(gulp.dest(is_worker ? './dist/game/build.intermediate/worker/' : './dist/game/build.dev/client/'));
+    return stream;
   }
 
   function writeVersion(done) {
@@ -280,7 +277,9 @@ function bundleJS(filename, is_worker, pre_task) {
     fs.writeFile(`./dist/game/build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
   }
   let version_task = `client_js_${filename}_version`;
-  gulp.task(version_task, writeVersion);
+  if (do_version) {
+    gulp.task(version_task, writeVersion);
+  }
 
   function registerTasks(b, watch) {
     let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
@@ -297,22 +296,129 @@ function bundleJS(filename, is_worker, pre_task) {
       }
       return ret;
     });
+    let task_list = [];
     if (pre_task) {
-      gulp.task(task_base, gulp.series(pre_task, `${task_base}_bundle`, version_task));
-    } else {
-      gulp.task(task_base, gulp.series(`${task_base}_bundle`, version_task));
+      task_list.push(pre_task);
     }
+    task_list.push(`${task_base}_bundle`);
+    if (do_version) {
+      task_list.push(version_task);
+    }
+    gulp.task(task_base, gulp.series(...task_list));
   }
   const watched = watchify(browserify(browserify_opts));
   registerTasks(watched, true);
   // on any dep update, runs the bundler
-  watched.on('update', gulp.series(`client_js_watch_${filename}_bundle`, writeVersion));
+  let on_update = [`client_js_watch_${filename}_bundle`];
+  if (do_version) {
+    on_update.push(writeVersion);
+  }
+  watched.on('update', gulp.series(...on_update));
 
   const nonwatched = browserify(browserify_opts);
   registerTasks(nonwatched, false);
 }
 
-bundleJS('app.js');
+function bundleDeps(filename, is_worker) {
+  let bundle_name = filename.replace('.js', is_worker ? '.bundle.int.js' : '.bundle.js');
+  const browserify_opts = {
+    entries: [
+      `./src/client/${filename}`,
+    ],
+    cache: {}, // required for watchify
+    packageCache: {}, // required for watchify
+    builtins: {
+      // super-simple replacements, if needed
+      assert: './src/client/shims/assert.js',
+      buffer: './src/client/shims/buffer.js',
+      not_worker: !is_worker && './src/client/shims/not_worker.js',
+      // timers: './src/client/shims/timers.js',
+      _process: './src/client/shims/empty.js',
+    },
+    debug: true,
+    transform: [],
+  };
+  const babelify_opts = {
+    global: true, // Required because some modules (e.g. dot-prop) have ES6 code in it
+    // For some reason this is not getting picked up from .bablerc for modules!
+    presets: [
+      ['@babel/env', {
+        'targets': {
+          'ie': '10'
+        },
+        'loose': true,
+      }]
+    ],
+  };
+
+  function dobundle(b) {
+    return b
+      .bundle()
+      // log errors if they happen
+      .on('error', log.error.bind(log, 'Browserify Error'))
+      .pipe(vinyl_source_stream(bundle_name))
+      .pipe(vinyl_buffer())
+      .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
+      .pipe(uglify(uglify_options_ext))
+      .pipe(sourcemaps.write(is_worker ? undefined : './')) // embeds or writes .map file
+      .pipe(gulp.dest(is_worker ? './dist/game/build.intermediate/worker/' : './dist/game/build.dev/client/'));
+  }
+
+  function registerTasks(b, watch) {
+    let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
+    b.transform(babelify, babelify_opts);
+    b.on('log', log); // output build logs to terminal
+    if (watch) {
+      client_js_watch_deps.push(task_base);
+    } else {
+      client_js_deps.push(task_base);
+    }
+    gulp.task(task_base, function () {
+      let ret = dobundle(b);
+      if (watch) {
+        ret = ret.pipe(browser_sync.stream({ once: true }));
+      }
+      return ret;
+    });
+  }
+  const watched = watchify(browserify(browserify_opts));
+  registerTasks(watched, true);
+  // on any dep update, runs the bundler
+  watched.on('update', gulp.series(`client_js_watch_${filename}`));
+
+  const nonwatched = browserify(browserify_opts);
+  registerTasks(nonwatched, false);
+}
+
+function registerBundle(entrypoint, deps, is_worker) {
+  bundleJS(entrypoint, is_worker);
+  bundleDeps(deps, is_worker);
+  // Just for workers, combine the deps and and entrypoint together (slower, but required)
+  if (is_worker) {
+    let task_name = `client_js_${entrypoint}_final`;
+    client_js_deps.push(task_name);
+    client_js_watch_deps.push(task_name);
+    let src_files = [
+      `./dist/game/build.intermediate/worker/${deps.replace('.js', '.bundle.int.js')}`,
+      `./dist/game/build.intermediate/worker/${entrypoint.replace('.js', '.bundle.int.js')}`,
+    ];
+    gulp.task(task_name, function () {
+      return gulp.src(src_files)
+        .pipe(sourcemaps.init({ loadMaps: true }))
+        .pipe(concat(entrypoint.replace('.js', '.bundle.js')))
+        .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('./dist/game/build.dev/client/'));
+    });
+    let watch_task_name = `${task_name}_watch`;
+    client_js_watch_deps.push(watch_task_name);
+    gulp.task(watch_task_name, function (done) {
+      gulp.watch(src_files, gulp.series(task_name));
+      done();
+    });
+  }
+}
+registerBundle('app.js', 'app_deps.js', false);
+registerBundle('worker.js', 'worker_deps.js', true);
 
 gulp.task('client_js_babel', function () {
 
