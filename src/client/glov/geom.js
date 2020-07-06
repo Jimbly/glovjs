@@ -350,8 +350,8 @@ GeomMultiQuads.prototype.dispose = function () {
   this.geoms = null;
 };
 
-export function create(...args) {
-  return new Geom(...args);
+export function create(format, verts, idxs, mode) {
+  return new Geom(format, verts, idxs, mode);
 }
 
 export function createQuads(format, verts) {

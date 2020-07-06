@@ -748,6 +748,6 @@ class GlovTerminal {
   }
 }
 
-export function create(...args) {
-  return new GlovTerminal(...args);
+export function create(params) {
+  return new GlovTerminal(params);
 }

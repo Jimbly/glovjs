@@ -326,6 +326,6 @@ class Platformer {
 }
 
 
-export function create(...args) {
-  return new Platformer(...args);
+export function create(def) {
+  return new Platformer(def);
 }

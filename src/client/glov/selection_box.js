@@ -615,9 +615,9 @@ class GlovSelectionBox {
 }
 
 
-export function create(...args) {
+export function create(params) {
   if (!font) {
     font = glov_ui.font;
   }
-  return new GlovSelectionBox(...args);
+  return new GlovSelectionBox(params);
 }

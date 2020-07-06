@@ -735,7 +735,7 @@ function fontShadersInit() {
   font_shaders.font_aa_outline_glow = shaders.create('glov/shaders/font_aa_outline_glow.fp');
 }
 
-export function create(...args) {
+export function create(font_info, texture_name) {
   fontShadersInit();
-  return new GlovFont(...args);
+  return new GlovFont(font_info, texture_name);
 }

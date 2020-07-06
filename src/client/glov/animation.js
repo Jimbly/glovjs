@@ -58,6 +58,6 @@ class GlovAnimationSequencer {
   }
 }
 
-export function create(...args) {
-  return new GlovAnimationSequencer(...args);
+export function create() {
+  return new GlovAnimationSequencer();
 }

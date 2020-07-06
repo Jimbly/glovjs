@@ -3,6 +3,6 @@
     "targets": {
       "ie": "10"
     },
-    "loose": true
+    "loose": true,
   }]],
 }

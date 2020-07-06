@@ -288,6 +288,6 @@ AccountUI.prototype.showLogin = function (param) {
   return y;
 };
 
-export function create(...args) {
-  return new AccountUI(...args);
+export function create() {
+  return new AccountUI();
 }

@@ -432,6 +432,6 @@ class ParticleManager {
   }
 }
 
-export function create(...args) {
-  return new ParticleManager(...args);
+export function create() {
+  return new ParticleManager();
 }

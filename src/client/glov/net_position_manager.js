@@ -414,8 +414,8 @@ NetPositionManager.prototype.smooth_windows = 6.5; // how many windows behind we
 NetPositionManager.prototype.smooth_factor = 1.2; // how much faster to go in the smoothing window
 
 
-export function create(...args) {
-  return new NetPositionManager(...args);
+export function create(options) {
+  return new NetPositionManager(options);
 }
 
 
@@ -457,6 +457,6 @@ ScalarInterpolator.prototype.getValue = function () {
   return this.value;
 };
 
-export function createScalarInterpolator(...args) {
-  return new ScalarInterpolator(...args);
+export function createScalarInterpolator(tick_time) {
+  return new ScalarInterpolator(tick_time);
 }

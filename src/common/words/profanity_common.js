@@ -4,7 +4,6 @@
 /* eslint no-multi-spaces:off, array-bracket-spacing:off */
 
 const assert = require('assert');
-const fs = require('fs');
 const { max } = Math;
 
 const trans_src = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+';

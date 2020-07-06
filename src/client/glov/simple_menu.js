@@ -271,6 +271,6 @@ class GlovSimpleMenu {
   }
 }
 
-export function create(...args) {
-  return new GlovSimpleMenu(...args);
+export function create(params) {
+  return new GlovSimpleMenu(params);
 }

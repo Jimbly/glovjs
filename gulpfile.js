@@ -1,3 +1,15 @@
+// TODO:
+//   things imported from node_modules are not getting minified
+//     kind of want these as separate deps anyway, except for the worker js file that needs them combined?
+//     maybe just concat those two for the worker explicitly?  worker will have it's own deps though anyway?
+//   Cannot figure out any way to reliably get external dependency list
+//     So, add a deps.js and worker_deps.js that build separately and just look like:
+//       global.require = (a) => deps[a];
+//       deps['assert'] = require('assert'));
+//     And then worker build needs to concat this before the body (and have tasks intertwined).
+//       Non-workers require it separately
+//       Maybe we later also don't use browserify/watchify on app or worker code, but just this simple deps system?
+
 /* eslint no-invalid-this:off */
 const args = require('yargs').argv;
 const assert = require('assert');
@@ -11,7 +23,7 @@ const gulp = require('gulp');
 const gulpif = require('gulp-if');
 const ifdef = require('gulp-ifdef');
 const ignore = require('gulp-ignore');
-const json5 = require('gulp-json5');
+const json5 = require('./gulp/json5.js');
 const lazypipe = require('lazypipe');
 const ll = require('./gulp/ll.js');
 const log = require('fancy-log');
@@ -22,9 +34,11 @@ const nodemon = require('gulp-nodemon');
 const rename = require('gulp-rename');
 const replace = require('gulp-replace');
 const sourcemaps = require('gulp-sourcemaps');
+const through2 = require('through2');
 const web_compress = require('gulp-web-compress');
 const vinyl_buffer = require('vinyl-buffer');
 const vinyl_source_stream = require('vinyl-source-stream');
+const warn_match = require('./gulp/warn-match.js');
 const watchify = require('watchify');
 const webfs = require('./gulp/webfs_build.js');
 const zip = require('gulp-zip');
@@ -87,10 +101,10 @@ const config = {
   ],
 };
 
-// At least keep function names to get good callstacks
-// const uglify_options = { keep_fnames: true };
-// Do no significant minification to make debugging easier, better error reports
-const uglify_options = { compress: false, mangle: false };
+// Currently, do no significant minification to make debugging easier, better error reports
+// But, at least keep function names to get good callstacks
+// TODO: One, global-scoped uglify pass on bundled file just for prod builds?
+const uglify_options = { compress: false, keep_fnames: true, mangle: false };
 
 // if (args.debug) {
 //   const node_inspector = require('gulp-node-inspector'); // eslint-disable-line global-require
@@ -194,8 +208,8 @@ gulp.task('client_fsdata', function () {
     .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
 
-let client_js_deps = [];
-let client_js_watch_deps = [];
+let client_js_deps = ['client_json', 'client_js_babel'];
+let client_js_watch_deps = client_js_deps.slice(0);
 
 function bundleJS(filename, is_worker, pre_task) {
   let bundle_name = filename.replace('.js', '.bundle.js');
@@ -215,6 +229,7 @@ function bundleJS(filename, is_worker, pre_task) {
     },
     debug: true,
     transform: [],
+    // bundleExternal: false, // disables grabbing things from node_modules, but *also* from builtins :(
   };
 
   let build_timestamp = Date.now();
@@ -227,18 +242,35 @@ function bundleJS(filename, is_worker, pre_task) {
   function dobundle(b) {
     build_timestamp = Date.now();
     log(`Using BUILD_TIMESTAMP=${build_timestamp} for ${filename}`);
+    // These only log anything useful on the first run, do not catch newly added dependencies:
+    // let external_deps = {};
+    // b.pipeline.get('deps').push(through2.obj(function (entry, enc, next) {
+    //   console.log(entry.deps);
+    //   for (let key in entry.deps) {
+    //     if (key[0] !== '.') {
+    //       external_deps[key] = true;
+    //       entry.deps[key] = false;
+    //     }
+    //   }
+    //   next(null, entry);
+    // }, function (next) {
+    //   console.log('External deps', external_deps);
+    //   next();
+    // }));
+    // b.pipeline.get('emit-deps').push(through2.obj(function (entry, enc, next) {
+    //   console.log(entry.file, entry.deps);
+    //   next(null, entry);
+    // }, function (next) {
+    //   next();
+    // }));
     return b
       .bundle()
       // log errors if they happen
       .on('error', log.error.bind(log, 'Browserify Error'))
       .pipe(vinyl_source_stream(bundle_name))
-      // optional, remove if you don't need to buffer file contents
       .pipe(vinyl_buffer())
-      // optional, remove if you don't want sourcemaps
       .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
-      // Remove extra Babel stuff that does not help anything
       .pipe(replace('BUILD_TIMESTAMP', buildTimestampReplace))
-      // Add transformation tasks to the pipeline here.
       .pipe(sourcemaps.write('./')) // writes .map file
       .pipe(gulp.dest('./dist/game/build.dev/client/'));
   }
@@ -280,7 +312,6 @@ function bundleJS(filename, is_worker, pre_task) {
   registerTasks(nonwatched, false);
 }
 
-client_js_watch_deps.push('client_json', 'client_js_babel');
 bundleJS('app.js');
 
 gulp.task('client_js_babel', function () {
@@ -299,10 +330,12 @@ gulp.task('client_js_babel', function () {
     }))
     .on('error', log.error.bind(log, 'Error'))
     // Remove extra Babel stuff that does not help anything
-    // TODO: restore this stuff
-    //.pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
-    //.pipe(replace(/class Foo5 \{\n\}\n/g, ''))
-    //.pipe(replace(/Object\.defineProperty\(exports, "__esModule"[^}]+\}\);/g, '')) should not be there anymore due to loose: true in .babelrc
+    .pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
+    // Add filter that checks for "bad" transforms happening:
+    .pipe(warn_match({
+      'Spread constructor param': /isNativeReflectConstruct/,
+      'Bad babel': /__esModule/,
+    }))
 
     .pipe(uglify(uglify_options))
     .pipe(sourcemaps.write())
