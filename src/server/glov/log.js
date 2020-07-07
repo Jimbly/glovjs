@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const argv = require('minimist')(process.argv.slice(2));
 const fs = require('fs');
 const metrics = require('./metrics.js');
 const path = require('path');
@@ -88,7 +89,7 @@ export function startup(params) {
       args.push(winston.format.timestamp({ format: 'HH:mm:ss' }));
       args.push(winston.format.padLevels());
     }
-    if (format === 'dev') {
+    if (format === 'dev' || !format && argv.dev) {
       args.push(winston.format.colorize());
       args.push(
         winston.format.printf(function (data) {

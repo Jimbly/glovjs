@@ -6,8 +6,9 @@ const args = require('yargs').argv;
 const assert = require('assert');
 const babel = require('gulp-babel');
 const babelify = require('babelify');
-const browserify = require('browserify');
 const browser_sync = require('browser-sync');
+const browserify = require('browserify');
+const chalk = require('chalk');
 const clean = require('gulp-clean');
 const concat = require('gulp-concat');
 const eslint = require('gulp-eslint');
@@ -20,18 +21,20 @@ const json5 = require('./gulp/json5.js');
 const lazypipe = require('lazypipe');
 const ll = require('./gulp/ll.js');
 const log = require('fancy-log');
-const useref = require('gulp-useref');
-const uglify = require('@jimbly/gulp-uglify');
 const newer = require('gulp-newer');
 const nodemon = require('gulp-nodemon');
 const rename = require('gulp-rename');
 const replace = require('gulp-replace');
 const sourcemaps = require('gulp-sourcemaps');
-const web_compress = require('gulp-web-compress');
+const taskLog = require('./gulp/task-log.js');
+const through = require('through2');
+const uglify = require('@jimbly/gulp-uglify');
+const useref = require('gulp-useref');
 const vinyl_buffer = require('vinyl-buffer');
 const vinyl_source_stream = require('vinyl-source-stream');
 const warn_match = require('./gulp/warn-match.js');
 const watchify = require('watchify');
+const web_compress = require('gulp-web-compress');
 const webfs = require('./gulp/webfs_build.js');
 const zip = require('gulp-zip');
 
@@ -53,7 +56,7 @@ if (!args.noserial) {
 // Server tasks
 const config = {
   server_js_files: ['src/**/*.js', '!src/client/**/*.js'],
-  server_static: ['src/**/common/words/*.gkg'],
+  server_static: ['src/**/common/words/*.gkg', 'src/**/config/*.json'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_js_files: ['src/**/*.js', '!src/server/**/*.js', '!src/client/vendor/**/*.js'],
   client_json_files: ['src/**/*.json', '!src/server/**/*.json', '!src/client/vendor/**/*.json'],
@@ -117,27 +120,66 @@ gulp.task('server_static', function () {
     .pipe(newer('./dist/game/build.dev'))
     .pipe(gulp.dest('./dist/game/build.dev'));
 });
-gulp.task('server_js', function () {
-  return gulp.src(config.server_js_files)
-    .pipe(sourcemaps.init())
-    .pipe(newer('./dist/game/build.dev'))
-    .pipe(babel())
-    .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('./dist/game/build.dev'));
-});
 
-function eslintTask() {
-  // I'm not completely sure this `since` is a good idea, since you will miss
-  // seeing previously saved (yet un-fixed) files
-  return gulp.src(['src/**/*.js', '!src/client/vendor/**/*.js'], { since: gulp.lastRun('eslint') })
-    .pipe(eslint())
-    .pipe(eslint.format());
+function targetedStream(options, body) {
+  let start = Date.now();
+  let { label, obj, output, src } = options;
+  if (typeof obj === 'function') { // Called as a task, not a 'change' event
+    obj = null;
+  }
+  let stream = gulp.src(obj ? obj : src, { base: 'src/' });
+  if (!obj) {
+    // on startup only
+    if (output) {
+      stream = stream.pipe(newer(output));
+      stream = stream.pipe(taskLog(`  ${label}`));
+    }
+  } else {
+    label = `${label}:${obj.slice(4).replace(/\\/g, '/')}`;
+    log(`Reprocessing '${chalk.cyan(`${label}`)}'...`);
+  }
+  stream = body(stream);
+  if (output) {
+    stream = stream.pipe(gulp.dest(output));
+  }
+  if (obj) {
+    stream = stream.pipe(through.obj((file, enc, callback) => {
+      callback(null, file);
+    }, () => {
+      log(`Reprocessed  '${chalk.cyan(`${label}`)}' in ${chalk.magenta(`${Date.now() - start} ms`)}`);
+    }));
+  }
+  return stream;
 }
 
-// This one runs in a parallel process
+function serverJS(obj) {
+  return targetedStream({
+    label: 'server_js',
+    obj,
+    output: './dist/game/build.dev',
+    src: config.server_js_files,
+  }, function (stream) {
+    return stream.pipe(sourcemaps.init())
+      .pipe(babel())
+      .pipe(sourcemaps.write('.'));
+  });
+}
+gulp.task('server_js', serverJS);
+
+function eslintTask(obj) {
+  // TODO: Cache results, on reprocess display all previous errors for all files (need to catch removed files?)
+  return targetedStream({
+    label: 'eslint',
+    obj,
+    src: ['src/**/*.js', '!src/client/vendor/**/*.js']
+  }, function (stream) {
+    return stream.pipe(eslint())
+      .pipe(eslint.format());
+  });
+}
+
+// This task runs in a parallel process
 gulp.task('eslint', eslintTask);
-// This one runs in-process, and takes advantage of gulp.lastRun
-gulp.task('eslint_watch', eslintTask);
 
 //////////////////////////////////////////////////////////////////////////
 // client tasks
@@ -340,7 +382,7 @@ function bundleDeps(filename, is_worker) {
   };
   const babelify_opts = {
     global: true, // Required because some modules (e.g. dot-prop) have ES6 code in it
-    // For some reason this is not getting picked up from .bablerc for modules!
+    // For some reason this is not getting picked up from .babelrc for modules!
     presets: [
       ['@babel/env', {
         'targets': {
@@ -420,33 +462,38 @@ function registerBundle(entrypoint, deps, is_worker) {
 registerBundle('app.js', 'app_deps.js', false);
 registerBundle('worker.js', 'worker_deps.js', true);
 
-gulp.task('client_js_babel', function () {
+function clientBabel(obj) {
+  return targetedStream({
+    label: 'client_js_babel',
+    obj,
+    output: './dist/game/build.intermediate',
+    src: config.client_js_files,
+  }, function (stream) {
+    return stream
+      .pipe(sourcemaps.init())
+      .pipe(sourcemaps.identityMap())
+      .pipe(babel({
+        plugins: [
+          // Note: Dependencies are not tracked from babel plugins, so use
+          //   `webfs` instead of `static-fs` where possible
+          ['static-fs', {}], // generates good code, but does not allow reloading/watchify
+        ]
+      }))
+      .on('error', log.error.bind(log, 'Error'))
+      // Remove extra Babel stuff that does not help anything
+      .pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
+      // Add filter that checks for "bad" transforms happening:
+      .pipe(warn_match({
+        'Spread constructor param': /isNativeReflectConstruct/,
+        'Bad babel': /__esModule/,
+      }))
 
-  return gulp.src(config.client_js_files, { since: gulp.lastRun('client_js_babel') })
-    // Instead of newer, using since above, so upon restart it re-processes files
-    //   whose deps may have changed
-    // .pipe(newer('./dist/game/build.intermediate'))
-    .pipe(sourcemaps.init())
-    .pipe(sourcemaps.identityMap())
-    .pipe(babel({
-      plugins: [
-        // Note: Dependencies are not tracked from babel plugins, so use `webfs` instead of `static-fs` where possible
-        ['static-fs', {}], // generates good code, but does not allow reloading/watchify
-      ]
-    }))
-    .on('error', log.error.bind(log, 'Error'))
-    // Remove extra Babel stuff that does not help anything
-    .pipe(replace(/_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g, ''))
-    // Add filter that checks for "bad" transforms happening:
-    .pipe(warn_match({
-      'Spread constructor param': /isNativeReflectConstruct/,
-      'Bad babel': /__esModule/,
-    }))
+      .pipe(uglify(uglify_options))
+      .pipe(sourcemaps.write());
+  });
+}
 
-    .pipe(uglify(uglify_options))
-    .pipe(sourcemaps.write())
-    .pipe(gulp.dest('./dist/game/build.intermediate'));
-});
+gulp.task('client_js_babel', clientBabel);
 
 gulp.task('client_json', function () {
   return gulp.src(config.client_json_files)
@@ -527,35 +574,34 @@ gulp.task('bs-reload', (done) => {
   done();
 });
 
+gulp.task('watch_start', (done) => {
+  // Simple reprocessing that targets everything:
+  gulp.watch(config.server_static, gulp.series('server_static')); // Want to also force server reload?
+  gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
+  gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
+  gulp.watch(config.client_css, gulp.series('client_css'));
+  gulp.watch(config.client_static, gulp.series('client_static'));
+  gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
+  gulp.watch(config.client_json_files, gulp.series('client_json'));
 
-gulp.task('watch', gulp.series('watch_deps',
-  (done) => {
-    if (!args.nolint) {
-      gulp.watch(config.all_js_files, gulp.series('eslint_watch'));
-    }
-    gulp.watch(config.server_js_files, gulp.series('server_js'));
-    gulp.watch(config.server_static, gulp.series('server_static')); // Want to also force server reload?
-    gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
-    gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
-    gulp.watch(config.client_css, gulp.series('client_css'));
-    gulp.watch(config.client_static, gulp.series('client_static'));
-    gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
-    gulp.watch(config.client_json_files, gulp.series('client_json', 'client_js_babel'));
-    gulp.watch(config.client_js_files, gulp.series('client_js_babel'));
-
-    done();
+  // More efficient reprocessing watchers that only look at the file that changed:
+  if (!args.nolint) {
+    gulp.watch(config.all_js_files).on('change', eslintTask);
   }
-));
+  gulp.watch(config.server_js_files).on('change', serverJS);
+  gulp.watch(config.client_js_files).on('change', clientBabel);
+
+  done();
+});
+
+gulp.task('watch', gulp.series('watch_deps', 'watch_start'));
 
 const deps = ['watch'];
 if (args.debug) {
   deps.push('inspect');
 }
 
-// Depending on "watch" not because that implicitly triggers this, but
-// just to start up the watcher and reprocessor, and nodemon restarts
-// based on its own logic below.
-gulp.task('nodemon', gulp.series(...deps, (done) => {
+gulp.task('nodemon-start', (done) => {
   const options = {
     script: 'dist/game/build.dev/server/index.js',
     nodeArgs: ['--inspect'],
@@ -579,10 +625,14 @@ gulp.task('nodemon', gulp.series(...deps, (done) => {
 
   nodemon(options);
   done();
-}));
+});
 
-gulp.task('browser-sync', gulp.series('nodemon', (done) => {
+// Depending on "watch" not because that implicitly triggers this, but
+// just to start up the watcher and reprocessor, and nodemon restarts
+// based on its own logic below.
+gulp.task('nodemon', gulp.series(...deps, 'nodemon-start'));
 
+gulp.task('browser-sync-start', (done) => {
   // for more browser-sync config options: http://www.browsersync.io/docs/options/
   browser_sync({
 
@@ -603,7 +653,9 @@ gulp.task('browser-sync', gulp.series('nodemon', (done) => {
     ghostMode: false,
   });
   done();
-}));
+});
+
+gulp.task('browser-sync', gulp.series('nodemon', 'browser-sync-start'));
 
 gulp.task('clean', function () {
   return gulp.src([
