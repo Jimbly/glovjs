@@ -244,10 +244,12 @@ gulp.task('client_fsdata', function () {
     .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
 
-let client_js_deps = ['client_json', 'client_js_babel'];
+let client_js_deps = [];
+client_js_deps.push('client_json');
+client_js_deps.push('client_js_babel');
 let client_js_watch_deps = client_js_deps.slice(0);
 
-function bundleJS(filename, is_worker, pre_task) {
+function bundleJS(filename, is_worker) {
   let bundle_name = filename.replace('.js', is_worker ? '.bundle.int.js' : '.bundle.js');
   let do_version = !is_worker;
   const browserify_opts = {
@@ -339,9 +341,6 @@ function bundleJS(filename, is_worker, pre_task) {
       return ret;
     });
     let task_list = [];
-    if (pre_task) {
-      task_list.push(pre_task);
-    }
     task_list.push(`${task_base}_bundle`);
     if (do_version) {
       task_list.push(version_task);
