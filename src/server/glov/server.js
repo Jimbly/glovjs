@@ -117,7 +117,7 @@ function waitForAccess(filename, cb) {
 }
 
 export function startup(params) {
-  log.startup(argv);
+  log.startup();
   assert(params.server);
   if (params.pver) {
     glov_wscommon.PROTOCOL_VERSION = params.pver;

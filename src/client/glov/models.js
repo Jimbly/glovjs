@@ -193,5 +193,5 @@ export function load(url) {
 export function startup() {
   initShaders();
   let model_box = models.box = new Model('box');
-  model_box.parse(webFSGetFile('box_textured_embed.glb'));
+  model_box.parse(webFSGetFile('glov/models/box_textured_embed.glb').buffer);
 }

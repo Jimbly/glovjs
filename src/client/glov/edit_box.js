@@ -26,9 +26,10 @@ class GlovUIEditBox {
     this.auto_unfocus = false;
     this.initial_select = false;
     this.spellcheck = true;
+    this.esc_clears = true;
     this.applyParams(params);
-    this.is_focused = false;
 
+    this.is_focused = false;
     this.elem = null;
     this.input = null;
     this.submitted = false;
@@ -97,7 +98,7 @@ class GlovUIEditBox {
     if (focused) {
       let key_opt = (this.pointer_lock && !this.text) ? { in_event_cb: glov_input.pointerLockEnter } : null;
       if (glov_input.keyUpEdge(glov_input.KEYS.ESC, key_opt)) {
-        if (this.text) {
+        if (this.text && this.esc_clears) {
           this.setText('');
         } else {
           glov_ui.focusCanvas();

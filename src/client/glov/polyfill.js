@@ -1,71 +1,79 @@
-/* eslint no-extend-native:off,no-var:off,func-style:off,no-invalid-this:off */
+/* eslint no-extend-native:off,no-invalid-this:off */
 
-// TypedArray.slice - not supported on IE, some older Safari
+// TypedArray.slice, fill, join, sort, etc - not supported on IE, some older Safari, older Android
+let typedarrays = [Int8Array, Uint8Array, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array];
+
 if (!Uint8Array.prototype.slice) {
-  Object.defineProperty(Uint8Array.prototype, 'slice', {
-    value: function (begin, end) {
-      // PERFTODO: If we use this on any significant audience, this can be likely
-      // way faster by not making a temporary Array in the middle
-      return new Uint8Array(Array.prototype.slice.call(this, begin, end));
-    }
-  });
-  Object.defineProperty(Int8Array.prototype, 'slice', {
-    value: function (begin, end) {
-      return new Int8Array(Array.prototype.slice.call(this, begin, end));
-    }
-  });
-  Object.defineProperty(Int32Array.prototype, 'slice', {
-    value: function (begin, end) {
-      return new Int32Array(Array.prototype.slice.call(this, begin, end));
-    }
-  });
-  Object.defineProperty(Float32Array.prototype, 'slice', {
-    value: function (begin, end) {
-      return new Float32Array(Array.prototype.slice.call(this, begin, end));
-    }
-  });
-}
-
-if (!Int32Array.prototype.join) {
-  Object.defineProperty(Int32Array.prototype, 'join', {
-    value: function (delim) {
-      return Array.prototype.join.call(this, delim);
-    }
+  typedarrays.forEach(function (ArrayType) {
+    Object.defineProperty(ArrayType.prototype, 'slice', {
+      value: function (begin, end) {
+        if (end === undefined) {
+          end = this.length;
+        }
+        if (end < 0) {
+          end = this.length - end;
+        }
+        begin = begin || 0;
+        if (begin >= this.length) {
+          begin = this.length - 1;
+        }
+        if (end > this.length) {
+          end = this.length;
+        }
+        if (end < begin) {
+          end = begin;
+        }
+        let len = end - begin;
+        let ret = new ArrayType(len);
+        for (let ii = begin; ii < end; ++ii) {
+          ret[ii] = this[ii];
+        }
+        return ret;
+      }
+    });
   });
 }
 
-if (!Uint8Array.prototype.fill) {
-  var fill = function (value, begin, end) {
+function cmpDefault(a, b) {
+  return a - b;
+}
+let replacements = {
+  join: function (delim) {
+    return Array.prototype.join.call(this, delim);
+  },
+  fill: function (value, begin, end) {
     if (end === undefined) {
       end = this.length;
     }
-    for (var ii = begin || 0; ii < end; ++ii) {
+    for (let ii = begin || 0; ii < end; ++ii) {
       this[ii] = value;
     }
     return this;
-  };
-  Object.defineProperty(Uint8Array.prototype, 'fill', {
-    value: fill
-  });
-  Object.defineProperty(Int16Array.prototype, 'fill', {
-    value: fill
-  });
-  Object.defineProperty(Int32Array.prototype, 'fill', {
-    value: fill
-  });
-  Object.defineProperty(Uint32Array.prototype, 'fill', {
-    value: fill
-  });
+  },
+  sort: function (cmp) {
+    Array.prototype.sort.call(this, cmp || cmpDefault);
+  },
+};
+
+for (let key in replacements) {
+  if (!Uint8Array.prototype[key]) {
+    typedarrays.forEach(function (ArrayType) {
+      Object.defineProperty(ArrayType.prototype, key, {
+        value: replacements[key],
+      });
+    });
+  }
 }
 
-if (!Int16Array.prototype.sort) {
-  var cmpDefault = function (a, b) {
-    return a - b;
-  };
-  var sort = function (cmp) {
-    Array.prototype.sort.call(this, cmp || cmpDefault);
-  };
-  Object.defineProperty(Int16Array.prototype, 'sort', {
-    value: sort
+if (!String.prototype.endsWith) {
+  Object.defineProperty(String.prototype, 'endsWith', {
+    value: function (test) {
+      return this.slice(-test.length) === test;
+    },
+  });
+  Object.defineProperty(String.prototype, 'startsWith', {
+    value: function (test) {
+      return this.slice(0, test.length) === test;
+    },
   });
 }

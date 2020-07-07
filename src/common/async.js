@@ -41,31 +41,38 @@ function eachLimit(arr, limit, proc, done) {
   let is_errored;
 
   let next;
-  function doNext(err, result) {
+  let results = [];
+  function doNext(idx, err, result) {
+    results[idx] = result;
     if (err) {
       is_errored = true;
     }
     if (--pending === 0 || err) {
       if (done) {
-        done(err);
+        done(err, results);
       }
       done = null;
     } else if (!is_errored && next < len) {
       let key = next++;
-      proc(arr[key], doNext);
+      proc(arr[key], doNext.bind(null, key));
     }
   }
 
   if (!pending) {
     // empty
-    return void nextTick(done);
+    return void nextTick(done.bind(null, null, results));
   }
   next = limit;
   for (let ii = 0; ii < arr.length && ii < limit; ++ii) {
-    proc(arr[ii], doNext);
+    proc(arr[ii], doNext.bind(null, ii));
   }
 }
 exports.eachLimit = eachLimit;
+
+function each(arr, proc, done) {
+  eachLimit(arr, Infinity, proc, done);
+}
+exports.each = each;
 
 function parallelLimit(tasks, limit, done) {
   eachLimit(tasks, limit, function (task, next) {

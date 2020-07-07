@@ -6,7 +6,7 @@
 const { mashString } = require('../rand_alea.js');
 const { randFastCreate } = require('../rand_fast.js');
 const { profanityFilterCommon, profanityCommonStartup } = require('../../../common/words/profanity_common.js');
-const { webFSGetFile } = require('./glov/webfs.js');
+const { webFSGetFile } = require('../webfs.js');
 
 let non_profanity;
 

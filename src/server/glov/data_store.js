@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const dot_prop = require('dot-prop');
 const fs = require('fs');
 const FileStore = require('fs-store').FileStore;
 const mkdirp = require('mkdirp');
@@ -13,28 +12,21 @@ class DataStoreOneFile {
   constructor(store_path) {
     this.root_store = new FileStore(store_path);
   }
-  setAsync(obj_name, key, value, cb) {
+  setAsync(obj_name, value, cb) {
     setImmediate(() => {
       let obj;
       if (Buffer.isBuffer(value)) {
-        assert(!key);
         obj = value.toString('utf8');
-      } else if (!key) {
-        obj = value;
       } else {
-        obj = this.root_store.get(obj_name, {});
-        dot_prop.set(obj, key, value);
+        obj = value;
       }
       this.root_store.set(obj_name, obj);
       cb();
     });
   }
-  getAsync(obj_name, key, default_value, cb) {
+  getAsync(obj_name, default_value, cb) {
     setImmediate(() => {
-      let obj = this.root_store.get(obj_name, key ? {} : default_value);
-      if (key) {
-        obj = dot_prop.get(obj, key, default_value);
-      }
+      let obj = this.root_store.get(obj_name, default_value);
       cb(null, obj);
     });
   }
@@ -123,33 +115,23 @@ class DataStore {
     startWrite();
   }
 
-  setAsync(obj_name, key, value, cb) {
+  setAsync(obj_name, value, cb) {
+    assert.equal(typeof cb, 'function');
     setImmediate(() => {
       if (Buffer.isBuffer(value)) {
-        assert(!key);
         return void this.setAsyncBufferInternal(obj_name, value, cb);
       }
       let store = this.getStore(obj_name);
       assert(!store.get('bin'));
-      let obj;
-      if (!key) {
-        obj = value;
-      } else {
-        obj = store.get('data', {});
-        dot_prop.set(obj, key, value);
-      }
-      store.set('data', obj);
+      store.set('data', value);
       cb();
     });
   }
-  getAsync(obj_name, key, default_value, cb) {
+  getAsync(obj_name, default_value, cb) {
     setImmediate(() => {
       let store = this.getStore(obj_name);
       assert(!store.get('bin'));
-      let obj = store.get('data', key ? {} : default_value);
-      if (key) {
-        obj = dot_prop.get(obj, key, default_value);
-      }
+      let obj = store.get('data', default_value);
       cb(null, obj);
     });
   }

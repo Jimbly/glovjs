@@ -212,7 +212,7 @@ class ChannelServer {
           channel_data = {};
           return void next();
         }
-        self.ds_store_meta.getAsync(store_path, '', {}, function (err, response) {
+        self.ds_store_meta.getAsync(store_path, {}, function (err, response) {
           if (err) {
             // We do not handle this - any messages sent to us have been lost, no
             // other worker will replace us, and queued_msgs will continuously grow.
@@ -499,7 +499,7 @@ class ChannelServer {
         crash_dump.pkt_log = pkt_log;
       }
     }
-    let dump_file = log.dumpFile('crash', JSON.stringify(crash_dump), 'json');
+    let dump_file = log.dumpJSON('crash', crash_dump, 'json');
     console.error(`  Saving dump to ${dump_file}.`);
     this.csworker.sendChannelMessage('admin.admin', 'broadcast', { msg: 'chat', data: {
       msg: 'Server error occurred - check server logs'
@@ -507,8 +507,8 @@ class ChannelServer {
   }
 }
 
-export function create(...args) {
-  return new ChannelServer(...args);
+export function create() {
+  return new ChannelServer();
 }
 
 export function pathEscape(filename) {

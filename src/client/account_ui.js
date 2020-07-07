@@ -99,6 +99,23 @@ AccountUI.prototype.showLogin = function (param) {
     login_message = 'Logging in...';
   } else if (net.subs.logging_out) {
     login_message = 'Logging out...';
+  } else if (!net.subs.loggedIn() && window.FBInstant) {
+    net.subs.loginFacebook(function (err) {
+      if (err) {
+        ui.modalDialog({
+          title: 'Facebook-login Failed',
+          text: err,
+          buttons: {
+            'Retry': function () {
+              //...
+            },
+            'Cancel': null,
+          },
+        });
+      } else {
+        net.subs.getMyUserChannel();
+      }
+    });
   } else if (!net.subs.loggedIn() && net.subs.auto_create_user &&
     !local_storage.get('did_auto_anon') && !local_storage.get('name')
   ) {
@@ -265,17 +282,20 @@ AccountUI.prototype.showLogin = function (param) {
       Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
       name);
 
-    if (ui.buttonText({
-      x, y, w: button_width, h: button_height,
-      text: 'Log out',
-    })) {
-      edit_box_password.setText('');
-      if (prelogout) {
-        prelogout();
+    // FB Users can't logout
+    if (!window.FBInstant) {
+      if (ui.buttonText({
+        x, y, w: button_width, h: button_height,
+        text: 'Log out',
+      })) {
+        edit_box_password.setText('');
+        if (prelogout) {
+          prelogout();
+        }
+        net.subs.logout();
       }
-      net.subs.logout();
+      y += button_height + 8;
     }
-    y += button_height + 8;
   }
   if (login_message) {
     let w = ui.font.drawSizedAligned(style, center ? x - 400 : x, y, Z.UI, ui.font_height * 1.5,

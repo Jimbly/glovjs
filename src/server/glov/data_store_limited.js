@@ -37,8 +37,7 @@ DataStoreLimited.prototype.unload = function (obj_name) {
   this.actual_ds.unload(obj_name);
 };
 
-DataStoreLimited.prototype.setAsync = function (obj_name, key, value, cb) {
-  assert(!key);
+DataStoreLimited.prototype.setAsync = function (obj_name, value, cb) {
   let state = this.per_obj_state[obj_name];
   if (!state) {
     state = this.per_obj_state[obj_name] = {};
@@ -66,7 +65,7 @@ DataStoreLimited.prototype.setAsync = function (obj_name, key, value, cb) {
     state.next_cbs = [];
     state.next_value = null;
     setTimeout(function () {
-      self.actual_ds.setAsync(obj_name, '', next_value, function (err) {
+      self.actual_ds.setAsync(obj_name, next_value, function (err) {
         for (let ii = 0; ii < cbs.length; ++ii) {
           cbs[ii](err);
         }
@@ -78,14 +77,13 @@ DataStoreLimited.prototype.setAsync = function (obj_name, key, value, cb) {
   limit(self.limit_time, state, doWrite);
 };
 
-DataStoreLimited.prototype.getAsync = function (obj_name, key, default_value, cb) {
-  assert(!key);
+DataStoreLimited.prototype.getAsync = function (obj_name, default_value, cb) {
   let state = this.per_obj_state[obj_name];
   assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
   setTimeout(() => {
     state = this.per_obj_state[obj_name];
     assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
-    this.actual_ds.getAsync(obj_name, key, default_value, cb);
+    this.actual_ds.getAsync(obj_name, default_value, cb);
   }, this.get_delay_time);
 };
 

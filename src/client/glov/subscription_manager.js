@@ -213,7 +213,11 @@ SubscriptionManager.prototype.handleConnect = function () {
     });
   } else {
     // Try auto-login
-    if (local_storage.get('name') && local_storage.get('password')) {
+    if (window.FBInstant) {
+      this.loginFacebook(function () {
+        // ignore error on auto-login
+      });
+    } else if (local_storage.get('name') && local_storage.get('password')) {
       this.login(local_storage.get('name'), local_storage.get('password'), function () {
         // ignore error on auto-login
       });
@@ -415,6 +419,11 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
       email: 'autocreate@glovjs.org',
     }, resp_func);
   });
+};
+
+SubscriptionManager.prototype.loginFacebook = function (resp_func) { // FRVR
+  this.login_credentials = { fb: true };
+  return this.loginInternal(this.login_credentials, resp_func);
 };
 
 SubscriptionManager.prototype.userCreate = function (params, resp_func) {

@@ -758,7 +758,7 @@ function glovErrorReport(msg, file, line, col) {
     return false;
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = urlhash.getURLBase(); // base like http://foo.com/bar/ (without index.html)
+  let url = urlhash.getAPIPath(); // base like http://foo.com/bar/ (without index.html)
   url += `errorReport?cidx=${crash_idx}&file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}` +
     `&msg=${escape(msg)}${error_report_details_str}`;
   let xhr = new XMLHttpRequest();

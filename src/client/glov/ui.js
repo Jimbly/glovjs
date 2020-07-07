@@ -237,7 +237,7 @@ export function startup(param) {
   sprites.white = glov_sprites.create({ url: 'white' });
 
   button_keys = {
-    ok: { key: [KEYS.O], pad: [PAD.X] },
+    ok: { key: [KEYS.O], pad: [PAD.X], low_key: [KEYS.ESC] },
     cancel: { key: [KEYS.ESC], pad: [PAD.B, PAD.Y] },
   };
   button_keys.yes = clone(button_keys.ok);
@@ -792,6 +792,7 @@ function modalDialogRun() {
   }
 
   x = x0 + eff_modal_width - (pad + eff_button_width) * keys.length;
+  let did_button = -1;
   for (let ii = 0; ii < keys.length; ++ii) {
     let key = keys[ii];
     let eff_button_keys = button_keys[key.toLowerCase()];
@@ -811,7 +812,7 @@ function modalDialogRun() {
       ++pressed;
     }
     if (pressed) {
-      playUISound('button_click');
+      did_button = ii;
     }
     if (buttonText({
       x: x,
@@ -820,14 +821,32 @@ function modalDialogRun() {
       w: eff_button_width,
       h: eff_button_height,
       text: key
-    }) || pressed
-    ) {
-      modal_dialog = null;
-      if (buttons[key]) {
-        buttons[key]();
-      }
+    })) {
+      did_button = ii;
     }
     x += pad + eff_button_width;
+  }
+  // Also check low-priority keys
+  if (did_button === -1) {
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
+      let eff_button_keys = button_keys[key.toLowerCase()];
+      if (eff_button_keys && eff_button_keys.low_key) {
+        for (let jj = 0; jj < eff_button_keys.low_key.length; ++jj) {
+          if (glov_input.keyDownEdge(eff_button_keys.low_key[jj]) || eff_button_keys.low_key[jj] === tick_key) {
+            did_button = ii;
+          }
+        }
+      }
+    }
+  }
+  if (did_button !== -1) {
+    let key = keys[did_button];
+    playUISound('button_click');
+    modal_dialog = null;
+    if (buttons[key]) {
+      buttons[key]();
+    }
   }
   y += eff_button_height;
   y += vpad + pad;
@@ -855,6 +874,7 @@ export function modalTextEntry(param) {
     initial_select: true,
     text: param.edit_text,
     max_len: param.max_len,
+    esc_clears: false,
   });
   let buttons = {};
   for (let key in param.buttons) {

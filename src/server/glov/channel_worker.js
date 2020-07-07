@@ -503,7 +503,7 @@ export class ChannelWorker {
       self.last_saved_data = data_to_compare;
       self.set_in_flight = true;
 
-      self.channel_server.ds_store_meta.setAsync(self.store_path, '', incoming_data, function (err) {
+      self.channel_server.ds_store_meta.setAsync(self.store_path, incoming_data, function (err) {
         if (err) {
           throw err;
         }
@@ -647,7 +647,7 @@ export class ChannelWorker {
   getBulkChannelData(obj_name, default_value, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.getAsync(bulk_obj_name, '', default_value, cb);
+    this.channel_server.ds_store_bulk.getAsync(bulk_obj_name, default_value, cb);
   }
   getBulkChannelBuffer(obj_name, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
@@ -657,13 +657,13 @@ export class ChannelWorker {
   setBulkChannelData(obj_name, value, cb) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, '', value, cb || throwErr);
+    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, value, cb || throwErr);
   }
   setBulkChannelBuffer(obj_name, value, cb) {
     assert(Buffer.isBuffer(value));
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
     this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, '', value, cb || throwErr);
+    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, value, cb || throwErr);
   }
 
   sendChannelMessage(dest, msg, data, resp_func) {
@@ -719,7 +719,7 @@ export class ChannelWorker {
     let next = q[next_idx];
     if (next) {
       // Next one is ready to go now!
-      console.error(`${this.channel_id}: Delayed dispatching OOO packet with ID ${next_idx} from ${source}.`);
+      console.info(`${this.channel_id}: Delayed dispatching OOO packet with ID ${next_idx} from ${source}.`);
       delete q[next_idx];
       if (empty(q)) {
         if (q_data.tid) {
@@ -819,7 +819,7 @@ export class ChannelWorker {
       } (expected >=${expected_idx}) from ${source}. Dispatching...`);
       dispatch();
     } else {
-      console.error(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
+      console.warn(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
       } (expected ${expected_idx}) from ${source}. Queuing...`);
       let q_data = channel_worker.pkt_queue[source] = channel_worker.pkt_queue[source] || { pkts: {} };
       q_data.pkts[pkt_idx] = { source, pak };

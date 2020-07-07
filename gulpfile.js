@@ -85,7 +85,7 @@ const config = {
     'src/client/autogen/**',
     'src/client/shaders/**',
     'src/client/glov/shaders/**',
-    'src/client/glov/models/**.glb',
+    'src/client/glov/models/box_textured_embed.glb',
     'src/client/glov/words/*.txt',
     'src/common/words/*.gkg',
     '!src/client/autogen/placeholder.txt',
@@ -456,8 +456,6 @@ gulp.task('client_json', function () {
     .pipe(gulp.dest('./dist/game/build.intermediate'));
 });
 
-gulp.task('test', gulp.series('client_json', 'client_js_babel', 'client_js_watch_app.js_bundle'));
-
 gulp.task('build.prod.compress', function () {
   return gulp.src('dist/game/build.dev/**')
     .pipe(gulp.dest('./dist/game/build.prod'))
@@ -568,6 +566,17 @@ gulp.task('nodemon', gulp.series(...deps, (done) => {
   if (args.debug) {
     options.nodeArgs.push('--debug');
   }
+
+  if (args.env) {
+    options.args.push(`--env=${args.env}`);
+  }
+
+  if (args.port) {
+    options.args.push(`--port=${args.port}`);
+    assert.equal(options.nodeArgs[0], '--inspect');
+    options.nodeArgs[0] = `--inspect=${9229 + Number(args.port) - 3000}`;
+  }
+
   nodemon(options);
   done();
 }));
@@ -579,7 +588,7 @@ gulp.task('browser-sync', gulp.series('nodemon', (done) => {
 
     // informs browser-sync to proxy our expressjs app which would run at the following location
     proxy: {
-      target: 'http://localhost:3000',
+      target: `http://localhost:${args.port || process.env.port || 3000}`,
       ws: true,
     },
 

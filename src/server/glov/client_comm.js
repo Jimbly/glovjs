@@ -359,6 +359,9 @@ function onRandomName(client, data, resp_func) {
 }
 
 function onLog(client, data, resp_func) {
+  let client_channel = client.client_channel;
+  data.user_id = client_channel.ids.user_id;
+  data.display_name = client_channel.ids.display_name;
   console.log(`client_id:${client.id} server_log`, data);
   resp_func();
 }

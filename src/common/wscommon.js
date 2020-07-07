@@ -18,7 +18,9 @@ const PAK_HEADER_SIZE = 1 + // flags
 
 export function wsPakSendDest(client, pak) {
   if (!client.connected || client.socket.readyState !== 1) {
-    console.error(`Attempting to send on a disconnected link (client_id:${client.id}), ignoring`);
+    // We only get to this particular location from wsserver.broadcast*, all
+    //   other paths will print the actual message and error earlier.
+    console.warn(`Attempting to send on a disconnected link (client_id:${client.id}), ignoring`);
     pak.pool();
     return;
   }

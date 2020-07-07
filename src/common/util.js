@@ -52,8 +52,57 @@ export function defaults(dest, src) {
   return dest;
 }
 
+export function defaultsDeep(dest, src) {
+  for (let f in src) {
+    if (!has(dest, f)) {
+      dest[f] = src[f];
+    } else if (typeof dest[f] === 'object') {
+      defaultsDeep(dest[f], src[f]);
+    }
+  }
+  return dest;
+}
+
 export function cloneShallow(src) {
   return merge({}, src);
+}
+
+export function deepEqual(a, b) {
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b)) {
+      return false;
+    }
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let ii = 0; ii < a.length; ++ii) {
+      if (!deepEqual(a[ii], b[ii])) {
+        return false;
+      }
+    }
+    return true;
+  } else if (typeof a === 'object') {
+    if (typeof b !== 'object') {
+      return false;
+    }
+    if (!a || !b) { // at least one is null
+      return !a && !b; // equal if both are null
+    }
+    for (let key in a) {
+      // b must have key, or both a[key] and b[key] are undefined
+      if (!deepEqual(a[key], b[key])) {
+        return false;
+      }
+    }
+    for (let key in b) {
+      // if b has key and it's defined, a must also be defined (and would have checked equality above)
+      if (b[key] !== undefined && a[key] === undefined) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return a === b;
 }
 
 export function clamp(v, mn, mx) {
