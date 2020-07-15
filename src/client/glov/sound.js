@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint callback-return:off */
 
 export const FADE_DEFAULT = 0;
 export const FADE_OUT = 1;

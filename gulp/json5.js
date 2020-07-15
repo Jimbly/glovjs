@@ -23,7 +23,7 @@ module.exports = function(options) {
         throw new PluginError(PLUGIN_NAME, "JSON5 parser error", err);
       }
     }
-    file.contents = Buffer.from(JSON5.stringify(obj, null, options['beautify'] ? 4 : null));
+    file.contents = Buffer.from(JSON.stringify(obj, null, options['beautify'] ? 2 : null));
     file.path = file.path.replace(/\.json5$/, '.json');
     callback(null, file);
   }

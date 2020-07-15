@@ -283,7 +283,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
 
 Texture.prototype.onLoad = function (cb) {
   if (this.loaded) {
-    cb(this); // eslint-disable-line callback-return
+    cb(this);
   } else {
     this.on_load.push(cb);
   }

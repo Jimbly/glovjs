@@ -67,6 +67,15 @@ function anyUndefined(walk) {
   return false;
 }
 
+export function userDataMap(mapping) {
+  let ret = Object.create(null);
+  ret['public.display_name'] = 'ids.display_name';
+  for (let key in mapping) {
+    ret[key] = mapping[key];
+  }
+  return ret;
+}
+
 export class ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     this.channel_server = channel_server;
@@ -361,11 +370,12 @@ export class ChannelWorker {
   // data is a { key, value } pair of what has changed
   onApplyChannelData(source, data) {
     if (this.maintain_client_list) {
-      if (source.type === 'user' && data.key === 'public.display_name') {
+      let mapped = this.user_data_map && this.user_data_map[data.key];
+      if (source.type === 'user' && mapped) {
         for (let client_id in this.data.public.clients) {
           let client_ids = this.data.public.clients[client_id].ids;
           if (client_ids && client_ids.user_id === source.id) {
-            this.setChannelData(`public.clients.${client_id}.ids.display_name`, data.value);
+            this.setChannelData(`public.clients.${client_id}.${mapped}`, data.value);
           }
         }
       }
@@ -866,3 +876,4 @@ ChannelWorker.prototype.permissive_client_set = false; // allow clients to set a
 ChannelWorker.prototype.allow_client_broadcast = {}; // default: none
 ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this
 ChannelWorker.prototype.no_datastore = false; // always assume datastore usage
+ChannelWorker.prototype.user_data_map = userDataMap({});

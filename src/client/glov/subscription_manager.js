@@ -32,7 +32,7 @@ ClientChannelWorker.prototype.onSubscribe = function (cb) {
   assert(this.subscriptions || this.autosubscribed);
   this.on('subscribe', cb);
   if (this.got_subscribe) {
-    cb(this.data); // eslint-disable-line callback-return
+    cb(this.data);
   }
 };
 
@@ -40,7 +40,7 @@ ClientChannelWorker.prototype.onSubscribe = function (cb) {
 ClientChannelWorker.prototype.onceSubscribe = function (cb) {
   assert(this.subscriptions || this.autosubscribed);
   if (this.got_subscribe) {
-    cb(this.data); // eslint-disable-line callback-return
+    cb(this.data);
   } else {
     this.once('subscribe', cb);
   }
@@ -421,7 +421,7 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
   });
 };
 
-SubscriptionManager.prototype.loginFacebook = function (resp_func) { // FRVR
+SubscriptionManager.prototype.loginFacebook = function (resp_func) {
   this.login_credentials = { fb: true };
   return this.loginInternal(this.login_credentials, resp_func);
 };

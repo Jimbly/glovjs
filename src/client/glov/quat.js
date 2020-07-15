@@ -272,3 +272,20 @@ export function qInvert(out, a) {
   out[3] = a3 * scale;
   return out;
 }
+
+
+export function qLerp(out, t, v0, v1) {
+
+  qiNormalize(v0);
+  qiNormalize(v1);
+  let d = v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2] + v0[3] * v1[3];
+  let v0_t = (d < 0 ? -1 : 1) * (1 - t);
+
+  out[0] =v0[0]*v0_t+v1[0]*t;
+  out[1] =v0[1]*v0_t+v1[1]*t;
+  out[2] =v0[2]*v0_t+v1[2]*t;
+  out[3] =v0[3]*v0_t+v1[3]*t;
+
+  qiNormalize(out);
+  return out;
+}

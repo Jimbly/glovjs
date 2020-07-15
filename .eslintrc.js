@@ -55,7 +55,7 @@ module.exports = {
         "allowSingleLine": false
       }
     ],
-    "callback-return": "error",
+    "callback-return": "off", // JE
     "camelcase": "off",
     "capitalized-comments": "off",
     "class-methods-use-this": "error",

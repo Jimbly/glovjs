@@ -1,5 +1,3 @@
-/* eslint callback-return:off */
-
 const { deepEqual } = require('../../common/util.js');
 
 function DataStoreMirror(readwrite_ds, write_ds) {

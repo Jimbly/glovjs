@@ -1384,7 +1384,7 @@ AABBTree.rayTest = function (trees, ray, callback) {
 
     if (node.externalNode) {
       if (node.externalNode !== REMOVED_NODE) {
-        let result = callback(tree, node.externalNode, ray, distance, upperBound); // eslint-disable-line callback-return
+        let result = callback(tree, node.externalNode, ray, distance, upperBound);
         if (result) {
           minimumResult = result;
           upperBound = result.factor;

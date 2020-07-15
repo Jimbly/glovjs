@@ -56,10 +56,11 @@ if (!args.noserial) {
 // Server tasks
 const config = {
   server_js_files: ['src/**/*.js', '!src/client/**/*.js'],
-  server_static: ['src/**/common/words/*.gkg', 'src/**/config/*.json'],
+  server_static: ['src/**/common/words/*.gkg'],
   all_js_files: ['src/**/*.js', '!src/client/vendor/**/*.js'],
   client_js_files: ['src/**/*.js', '!src/server/**/*.js', '!src/client/vendor/**/*.js'],
-  client_json_files: ['src/**/*.json', '!src/server/**/*.json', '!src/client/vendor/**/*.json'],
+  client_json_files: ['src/client/**/*.json', '!src/client/vendor/**/*.json'],
+  server_json_files: ['src/server/**/*.json'],
   client_html: ['src/client/**/*.html'],
   client_html_index: ['src/client/**/index.html'],
   client_css: ['src/client/**/*.css', '!src/client/sounds/Bfxr/**'],
@@ -71,6 +72,7 @@ const config = {
     'src/client/**/*.png',
     'src/client/**/*.jpg',
     'src/client/**/*.glb',
+    'src/client/**/*.ico',
     '!**/unused/**',
     '!src/client/sounds/Bfxr/**',
     // 'src/client/**/vendor/**',
@@ -496,10 +498,18 @@ gulp.task('client_js_babel', clientBabel);
 
 gulp.task('client_json', function () {
   return gulp.src(config.client_json_files)
-    .pipe(newer('./dist/game/build.intermediate'))
+    .pipe(newer('./dist/game/build.intermediate/client'))
     // Minify, and convert from json5
     .pipe(json5({ beautify: false }))
-    .pipe(gulp.dest('./dist/game/build.intermediate'));
+    .pipe(gulp.dest('./dist/game/build.intermediate/client'));
+});
+
+gulp.task('server_json', function () {
+  return gulp.src(config.server_json_files)
+    .pipe(newer('./dist/game/build.dev/server'))
+    // convert from json5, beautify
+    .pipe(json5({ beautify: true }))
+    .pipe(gulp.dest('./dist/game/build.dev/server'));
 });
 
 gulp.task('build.prod.compress', function () {
@@ -550,6 +560,7 @@ gulp.task('client_fsdata_wrap', gulp.series(
 
 const build_misc_nolint = [
   'server_static',
+  'server_json',
   'server_js',
   'client_html',
   'client_css',
@@ -582,6 +593,7 @@ gulp.task('watch_start', (done) => {
   gulp.watch(config.client_static, gulp.series('client_static'));
   gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
   gulp.watch(config.client_json_files, gulp.series('client_json'));
+  gulp.watch(config.server_json_files, gulp.series('server_json'));
 
   // More efficient reprocessing watchers that only look at the file that changed:
   if (!args.nolint) {

@@ -173,7 +173,7 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
       return receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
     }
     delete receiver.resp_cbs[msg];
-    cb(err, data, respFunc); // eslint-disable-line callback-return
+    cb(err, data, respFunc);
   } else {
     if (!msg) {
       return receiver.onError(`Received message with no .msg from ${source}`);
