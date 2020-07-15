@@ -11,6 +11,7 @@ const browserify = require('browserify');
 const chalk = require('chalk');
 const clean = require('gulp-clean');
 const concat = require('gulp-concat');
+const console_api = require('console-api');
 const eslint = require('gulp-eslint');
 const fs = require('fs');
 const gulp = require('gulp');
@@ -18,6 +19,7 @@ const gulpif = require('gulp-if');
 const ifdef = require('gulp-ifdef');
 const ignore = require('gulp-ignore');
 const json5 = require('./gulp/json5.js');
+const JSON5 = require('json5');
 const lazypipe = require('lazypipe');
 const ll = require('./gulp/ll.js');
 const log = require('fancy-log');
@@ -37,6 +39,21 @@ const watchify = require('watchify');
 const web_compress = require('gulp-web-compress');
 const webfs = require('./gulp/webfs_build.js');
 const zip = require('gulp-zip');
+
+function prettyInterface() {
+  console_api.setPalette(console_api.palettes.desaturated);
+  let project_name = 'glov';
+  try {
+    let pkg = JSON5.parse(fs.readFileSync('./package.json', 'utf8'));
+    if (pkg && pkg.name) {
+      project_name = pkg.name;
+    }
+  } catch (e) {
+    // ignored, use default
+  }
+  console_api.setTitle(args.title || `gulp ${__filename} | ${project_name}`);
+}
+prettyInterface();
 
 ll.tasks(['eslint']);
 
