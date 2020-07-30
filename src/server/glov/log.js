@@ -23,6 +23,10 @@ const LOG_LEVELS = {
   error: 0,
 };
 
+export function getUID() {
+  return ++last_uid;
+}
+
 export function dumpJSON(prefix, data, ext) {
   if (dumpToFile) {
     let filename = path.join(log_dir, `${prefix}-${process.pid}-${++last_uid}.${ext || 'log'}`);

@@ -81,6 +81,11 @@ function parallelLimit(tasks, limit, done) {
 }
 exports.parallelLimit = parallelLimit;
 
+function parallel(tasks, done) {
+  parallelLimit(tasks, Infinity, done);
+}
+exports.parallel = parallel;
+
 Object.keys(exports).forEach((key) => {
   exports[`async${key[0].toUpperCase()}${key.slice(1)}`] = exports[key];
 });

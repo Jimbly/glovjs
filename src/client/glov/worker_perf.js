@@ -35,7 +35,7 @@ function drawGraph(y, graph) {
   let z = Z.FPSMETER;
   y -= LINE_PAD;
   ui.drawRect(x0, y - LINE_HEIGHT, x + w, y, z++, bg_unknown);
-  let xoffs = (engine.global_timer - graph.last_update) * BAR_SCALE;
+  let xoffs = (engine.frame_timestamp - graph.last_update) * BAR_SCALE;
   x -= xoffs;
   for (let ii = 1; ii < PERF_HISTORY_SIZE; ++ii) {
     if (x <= x0) {
@@ -95,7 +95,7 @@ function onTiming(source, data) {
   }
   graph.batch_idx = batch_idx;
   graph.index = index;
-  graph.last_update = engine.global_timer;
+  graph.last_update = engine.frame_timestamp;
 }
 
 export function startup() {

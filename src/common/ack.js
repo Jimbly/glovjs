@@ -11,6 +11,8 @@ export function ackInitReceiver(receiver) {
   receiver.responses_waiting = 0;
 }
 
+const ERR_FAILALL_DISCONNECT = 'ERR_FAILALL_DISCONNECT';
+
 const ACKFLAG_IS_RESP = 1<<3;
 const ACKFLAG_ERR = 1<<4;
 const ACKFLAG_DATA_JSON = 1<<5;
@@ -93,7 +95,7 @@ export function ackReadHeader(pak) {
 }
 
 export function failAll(receiver, err) {
-  err = err || 'ERR_DISCONNECTED';
+  err = err || ERR_FAILALL_DISCONNECT;
   let cbs = receiver.resp_cbs;
   receiver.resp_cbs = {};
   receiver.responses_waiting = 0;
@@ -119,7 +121,7 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
   let sent_response = false;
   let start_time = now;
 
-  function preSendResp() {
+  function preSendResp(err) {
     assert(!sent_response, 'Response function called twice');
     sent_response = true;
 
@@ -129,15 +131,19 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
           clearTimeout(timeout_id);
         }
       } else {
-        (receiver.log ? receiver : console).log(`Response finally sent for ${msg
-        } after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
+        if (err === ERR_FAILALL_DISCONNECT) {
+          // this is the result of a failAll() call, a response was not actually sent!
+        } else {
+          (receiver.log ? receiver : console).log(`Response finally sent for ${msg
+          } after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
+        }
       }
       receiver.responses_waiting--;
     }
   }
 
   function respFunc(err, resp_data, resp_func) {
-    preSendResp();
+    preSendResp(err);
     // the callback wants to send a response, and possibly get a response from that!
     if (!expecting_response) {
       // But, the other end is not expecting a response from this packet, black-hole it
@@ -161,7 +167,7 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
     let pak = pak_func(pak_id, ref_pak);
     let orig_send = pak.send;
     pak.send = function (err, resp_func) {
-      preSendResp();
+      preSendResp(err);
       orig_send.call(pak, err, resp_func);
     };
     return pak;

@@ -110,7 +110,7 @@ let is_ios_safari = (function () {
 }());
 
 // Didn't need this for a while, but got slow on iOS recently :(
-const postprocessing_reset_version = '3';
+const postprocessing_reset_version = '4';
 export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version;
 export function postprocessingAllow(allow) {
   local_storage.set('glov_no_postprocessing', allow ? undefined : postprocessing_reset_version);
@@ -192,19 +192,19 @@ export function updateMatrices(mat_model) {
   mat4Transpose(mat_temp, mat_temp);
   mat3FromMat4(mat_mv_inv_transform, mat_temp);
 }
-export let global_timer = 0;
+export let frame_timestamp = 0;
 export function getFrameTimestamp() {
-  return global_timer;
+  return frame_timestamp;
 }
 
-export let global_frame_index = 0;
+export let frame_index = 0;
 export function getFrameIndex() {
-  return global_frame_index;
+  return frame_index;
 }
 
-export let this_frame_time = 0;
+export let frame_dt = 0;
 export function getFrameDt() {
-  return this_frame_time;
+  return frame_dt;
 }
 
 export let hrtime = 0;
@@ -498,6 +498,14 @@ export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
   );
 }
 
+export function setZRange(znear, zfar) {
+  ZNEAR = znear;
+  ZFAR = zfar;
+  if (had_3d_this_frame) {
+    setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  }
+}
+
 export function start3DRendering() {
   had_3d_this_frame = true;
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -510,6 +518,14 @@ export function start3DRendering() {
   gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // eslint-disable-line no-bitwise
   gl.enable(gl.CULL_FACE);
+}
+
+export function startSpriteRendering() {
+  gl.disable(gl.CULL_FACE);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.BLEND);
+  gl.disable(gl.DEPTH_TEST);
+  gl.depthMask(false);
 }
 
 export function projectionZBias(dist, at_z) {
@@ -559,10 +575,10 @@ function tick(timestamp) {
   }
   this_frame_time_actual = now - last_tick;
   let dt = min(max(this_frame_time_actual, 1), 250);
-  this_frame_time = dt;
+  frame_dt = dt;
   last_tick = now;
-  global_timer += dt;
-  ++global_frame_index;
+  frame_timestamp += dt;
+  ++frame_index;
 
   fixNatives(false);
 
@@ -667,20 +683,15 @@ function tick(timestamp) {
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
   glov_transition.render(dt);
 
-  if (had_3d_this_frame) {
-    gl.disable(gl.CULL_FACE);
-  } else {
+  if (!had_3d_this_frame) {
     // delayed clear (and general GL init) until after app_state, app might change clear color
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
-    gl.disable(gl.DEPTH_TEST);
-    gl.depthMask(false);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     // TODO: for do_viewport_post_process, we need to enable gl.scissor to avoid clearing the whole screen!
     // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
     gl.clear(gl.COLOR_BUFFER_BIT);
   }
 
+  startSpriteRendering();
   sprites.draw();
 
   glov_ui.endFrame();

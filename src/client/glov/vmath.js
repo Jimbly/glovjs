@@ -43,14 +43,21 @@ export function vec4(a, b, c, d) {
   return r;
 }
 
-export const unit_vec = vec4(1,1,1,1);
-export const half_vec = vec4(0.5,0.5,0.5,0.5);
-export const zero_vec = vec4();
+function frozenVec4(a,b,c,d) {
+  // if (debug) {
+  //   return Object.freeze([a,b,c,d]); // Not a vec4, but lets us catch bugs
+  // }
+  return vec4(a,b,c,d);
+}
+
+export const unit_vec = frozenVec4(1,1,1,1);
+export const half_vec = frozenVec4(0.5,0.5,0.5,0.5);
+export const zero_vec = frozenVec4(0,0,0,0);
 export const identity_mat3 = exports.mat3();
 export const identity_mat4 = exports.mat4();
-export const xaxis = vec4(1,0,0,0);
-export const yaxis = vec4(0,1,0,0);
-export const zaxis = vec4(0,0,1,0);
+export const xaxis = frozenVec4(1,0,0,0);
+export const yaxis = frozenVec4(0,1,0,0);
+export const zaxis = frozenVec4(0,0,1,0);
 
 export function v2abs(out, a) {
   out[0] = abs(a[0]);

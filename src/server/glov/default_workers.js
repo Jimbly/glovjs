@@ -7,10 +7,12 @@ const md5 = require('../../common/md5.js');
 const { isProfane } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
 
+const DISPLAY_NAME_MAX_LENGTH = 30;
+const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validDisplayName(display_name) {
-  if (!display_name || isProfane(display_name)) {
+  if (!display_name || isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH) {
     return false;
   }
   return true;
@@ -31,7 +33,16 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validDisplayName(new_name)) {
       return resp_func('Invalid display name');
     }
+    if (new_name === this.getChannelData('public.display_name')) {
+      return resp_func('Name unchanged');
+    }
+    let now = Date.now();
+    let last_change = this.getChannelData('private.display_name_change');
+    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD) {
+      return resp_func('You must wait before changing your display name again');
+    }
     this.setChannelData('public.display_name', new_name);
+    this.setChannelData('private.display_name_change', now);
     return resp_func(null, 'Successfully renamed');
   }
   cmdRenameRandom(ignored, resp_func) {

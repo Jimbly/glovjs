@@ -414,9 +414,6 @@ export function draw() {
   if (!sprite_queue.length) {
     return;
   }
-  gl.disable(gl.DEPTH_TEST);
-  gl.depthMask(false);
-  gl.enable(gl.BLEND);
 
   clip_space[0] = 2 / engine.viewport[2];
   clip_space[1] = -2 / engine.viewport[3];
@@ -445,8 +442,15 @@ export function draw() {
     if (elem.fn) {
       commitAndFlush();
       batch_state = null;
-      last_bound_shader = -1;
       elem.fn();
+      last_bound_shader = -1;
+      last_blend_mode = -1;
+      assert.equal(sprite_buffer_idx, 0);
+      assert.equal(sprite_buffer_batch_start, 0);
+      assert.equal(batches.length, 0);
+
+      clip_space[0] = 2 / engine.viewport[2];
+      clip_space[1] = -2 / engine.viewport[3];
     } else {
       if (!batch_state ||
         diffTextures(elem.texs, batch_state.texs) ||

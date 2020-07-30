@@ -184,7 +184,7 @@ module.exports = {
       "error",
       "separate-lines"
     ],
-    "multiline-ternary": ignore_style ? "off" : ["error", "always-multiline"],
+    "multiline-ternary": "off",
     "new-cap": "error",
     "new-parens": "error",
     "newline-after-var": "off",

@@ -46,7 +46,7 @@ let bound_tex = [];
 let handle_loading;
 let handle_error;
 
-let global_timer;
+let frame_timestamp;
 
 function setUnit(unit) {
   if (unit !== bound_unit) {
@@ -72,7 +72,7 @@ function unbindAll(target) {
 }
 
 export function bind(unit, tex) {
-  tex.last_use = global_timer;
+  tex.last_use = frame_timestamp;
   // May or may not change the unit
   bindHandle(unit, tex.target, tex.eff_handle);
 }
@@ -81,7 +81,7 @@ export function bind(unit, tex) {
 export function bindArray(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
     let tex = texs[ii];
-    tex.last_use = global_timer;
+    tex.last_use = frame_timestamp;
     let handle = tex.eff_handle;
     if (bound_tex[ii] !== handle) {
       if (ii !== bound_unit) {
@@ -123,7 +123,7 @@ function Texture(params) {
   this.on_load = [];
   this.gpu_mem = 0;
   this.soft_error = params.soft_error || false;
-  this.last_use = global_timer;
+  this.last_use = frame_timestamp;
   this.auto_unload = params.auto_unload || false;
   if (this.auto_unload) {
     auto_unload_textures.push(this);
@@ -185,7 +185,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   setUnit(0);
   bound_tex[0] = null; // Force a re-bind, no matter what
   bindHandle(0, this.target, this.handle);
-  this.last_use = global_timer;
+  this.last_use = frame_timestamp;
   this.src_width = w;
   this.src_height = h;
   this.width = w;
@@ -396,7 +396,7 @@ Texture.prototype.copyTexImage = function (x, y, w, h) {
   assert(w && h);
   bindHandle(0, this.target, this.handle);
   gl.copyTexImage2D(this.target, 0, gl.RGB, x, y, w, h, 0);
-  this.last_use = global_timer;
+  this.last_use = frame_timestamp;
   this.src_width = this.width = w;
   this.src_height = this.height = h;
   this.updateGPUMem();
@@ -457,7 +457,7 @@ export function load(params) {
   if (!tex) {
     tex = create(params);
   }
-  tex.last_use = global_timer;
+  tex.last_use = frame_timestamp;
   return tex;
 }
 
@@ -485,7 +485,7 @@ export function findTexForReplacement(search_key) {
 
 let tick_next_tex = 0;
 export function texturesTick() {
-  global_timer = engine.global_timer;
+  frame_timestamp = engine.frame_timestamp;
   let len = auto_unload_textures.length;
   if (!len) {
     return;
@@ -494,7 +494,7 @@ export function texturesTick() {
     tick_next_tex = 0;
   }
   let tex = auto_unload_textures[tick_next_tex];
-  if (tex.last_use < global_timer - TEX_UNLOAD_TIME) {
+  if (tex.last_use < frame_timestamp - TEX_UNLOAD_TIME) {
     console.log(`Unloading texture ${tex.name}`);
     tex.destroy();
   } else {

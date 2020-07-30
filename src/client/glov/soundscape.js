@@ -48,7 +48,7 @@ function SoundScape(params) {
     }
   }
   this.layer_state = {};
-  let now = engine.global_timer;
+  let now = engine.frame_timestamp;
   for (let key in layers) {
     preload(layers[key]);
     this.layer_state[key] = {
@@ -93,7 +93,7 @@ function stop(active_list, idx) {
   to_remove.sound.fadeOut();
 }
 SoundScape.prototype.tick = function () {
-  let now = engine.global_timer;
+  let now = engine.frame_timestamp;
   let { intensity, layer_state } = this;
   for (let key in layer_state) {
     let data = this.getLayer(key);

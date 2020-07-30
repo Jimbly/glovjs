@@ -32,6 +32,43 @@ export let OFFSET_GOLDEN = vec3(-1 / 1.618, -1, 1 / 1.618 / 1.618);
 let snapshot_shader;
 
 let viewport_save = vec4();
+
+export function viewportRenderPrepare(param) {
+  const { pre, viewport } = param;
+  v4copy(viewport_save, engine.viewport);
+  alphaListPush();
+  sprites.spriteQueuePush();
+  camera2d.push();
+  if (pre) {
+    pre();
+  }
+
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.BLEND);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  gl.enable(gl.CULL_FACE);
+
+  engine.setViewport(viewport);
+  camera2d.setNormalized();
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+}
+
+export function viewportRenderFinish(param) {
+  const { post } = param;
+  gl.disable(gl.SCISSOR_TEST);
+  if (post) {
+    post();
+  }
+  alphaListPop();
+  camera2d.pop();
+  sprites.spriteQueuePop();
+  engine.setViewport(viewport_save);
+  engine.startSpriteRendering();
+}
+
+
 let view_mat = mat4();
 let target_pos = vec3();
 let camera_pos = vec3();
@@ -55,23 +92,9 @@ export function snapshot(param) {
     textures.createForCapture(`${name}(1)`, auto_unload)
   ];
 
-  v4copy(viewport_save, engine.viewport);
-  alphaListPush();
-  sprites.spriteQueuePush();
-  camera2d.push();
-  if (param.pre) {
-    param.pre();
-  }
+  param.viewport = [0, 0, param.w, param.h];
+  viewportRenderPrepare(param);
 
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.enable(gl.BLEND);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthMask(true);
-
-  engine.setViewport([0, 0, param.w, param.h]);
-  camera2d.setNormalized();
-  gl.enable(gl.SCISSOR_TEST);
-  gl.scissor(0, 0, param.w, param.h);
   let max_dim = max(param.size[0], param.size[2]);
   let dist = max_dim * DIST_SCALE + param.size[1] / 2;
   engine.setupProjection(FOV, param.w, param.h, 0.1, dist * 2);
@@ -116,14 +139,7 @@ export function snapshot(param) {
   // PERFTODO: we only need to capture the red channel, does that speed things up and use less mem?
   engine.captureFramebuffer(texs[1], param.w, param.h, true, false);
 
-  gl.disable(gl.SCISSOR_TEST);
-  if (param.post) {
-    param.post();
-  }
-  alphaListPop();
-  camera2d.pop();
-  sprites.spriteQueuePop();
-  engine.setViewport(viewport_save);
+  viewportRenderFinish(param);
 
   if (!param.sprite) {
     param.sprite = sprites.create({

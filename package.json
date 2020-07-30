@@ -2,7 +2,7 @@
   "name": "glov",
   "version": "0.0.2",
   "description": "Template for a state of the art Javascript project using GLOV.js",
-  "main": "build/server/index.js",
+  "main": "server/index.js",
   "keywords": [
     "template",
     "es2015",

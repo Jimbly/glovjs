@@ -622,7 +622,7 @@ Packet.prototype.readBuffer = function (do_copy) {
   }
   let offs = this.advance(len);
   if (do_copy) {
-    return this.buf.u8.slice(offs, len);
+    return this.buf.u8.slice(offs, offs + len);
   } else {
     let { buf } = this;
     return new Uint8Array(buf.buffer, buf.byteOffset + offs, len);
@@ -762,6 +762,10 @@ Packet.prototype.getInternalFlags = function () {
   return this.flags & FLAG_PACKET_INTERNAL;
 };
 
+Packet.prototype.contents = function () {
+  return `pak(${this.totalSize()}b)`;
+};
+
 function PacketDebug(flags, init_size) {
   this.reinit(flags, init_size);
 }
@@ -853,6 +857,9 @@ PacketDebug.prototype.appendRemaining = function (pak) {
 function format(v) {
   switch (typeof v) {
     case 'object':
+      if (v instanceof Uint8Array) {
+        return `u8<${v.length}>`;
+      }
       return JSON.stringify(v);
     default:
       return v;
@@ -867,13 +874,15 @@ PacketDebug.prototype.contents = function () {
     // write packet, just combine and reset location when done
     pak.makeReadable();
     ret.push('bufs');
-  } else {
+  } else if (pak.buf) {
     // read packet, or write packet that is a single buf
     if (pak.readable) {
       read_len = pak.buf_len;
     }
-    assert(pak.buf);
     pak.buf_offs = 0;
+  } else {
+    ret.push('empty');
+    read_len = -1;
   }
   let saved_ref_count = pak.ref_count;
   pak.ref(); // prevent auto pooling

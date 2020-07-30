@@ -19,6 +19,7 @@ const METADATA_COMMIT_RATELIMIT = 1500;
 
 function throwErr(err) {
   if (err) {
+    console.error(`Throwing error ${err} from`, new Error().stack);
     throw err;
   }
 }
@@ -385,11 +386,17 @@ export class ChannelWorker {
   // data is the channel's entire (public) data sent in response to a subscribe
   onChannelData(source, data) {
     if (this.maintain_client_list) {
-      if (source.type === 'user' && data.public.display_name) {
+      if (source.type === 'user') {
         for (let client_id in this.data.public.clients) {
           let client_ids = this.data.public.clients[client_id].ids;
           if (client_ids && client_ids.user_id === source.id) {
-            this.setChannelData(`public.clients.${client_id}.ids.display_name`, data.public.display_name);
+            for (let key in this.user_data_map) {
+              let value = dot_prop.get(data, key);
+              if (value) {
+                let mapped = this.user_data_map[key];
+                this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
+              }
+            }
           }
         }
       }
@@ -515,7 +522,7 @@ export class ChannelWorker {
 
       self.channel_server.ds_store_meta.setAsync(self.store_path, incoming_data, function (err) {
         if (err) {
-          throw err;
+          throwErr(err);
         }
         // Delay the next write
         setTimeout(function () {
@@ -711,6 +718,10 @@ export class ChannelWorker {
 
   onError(msg) {
     console.error(`ChannelWorker(${this.channel_id}) error:`, msg);
+  }
+
+  log(msg) {
+    console.log(`${this.channel_id}:`, msg);
   }
 
   // Default error handler

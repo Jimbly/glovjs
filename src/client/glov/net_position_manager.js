@@ -316,6 +316,10 @@ NetPositionManager.prototype.getPos = function (client_id) {
   return pcd.pos;
 };
 
+NetPositionManager.prototype.getPCD = function (client_id) {
+  return this.per_client_data[client_id];
+};
+
 NetPositionManager.prototype.otherClientPosChanged = function (client_id) {
   const client_pos = this.channel.getChannelData(`public.clients.${client_id}.pos`);
   if (!client_pos || !client_pos.cur || typeof client_pos.cur[0] !== 'number') {

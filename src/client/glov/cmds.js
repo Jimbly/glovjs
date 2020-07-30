@@ -136,3 +136,11 @@ cmd_parse.register({
     return resp_func(null, 'WebGL2 was disabled, will attempt to use it again on the next load');
   },
 });
+
+cmd_parse.registerValue('postprocessing', {
+  label: 'Postprocessing',
+  type: cmd_parse.TYPE_INT,
+  help: 'Enables/disables postprocessing',
+  get: () => (engine.postprocessing ? 1 : 0),
+  set: (v) => engine.postprocessingAllow(v),
+});

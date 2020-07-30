@@ -23,7 +23,7 @@ export function link(param) {
     state = state_cache[key] = { clicked: false };
   }
   let elem = ui.getElem(allow_modal, state.elem);
-  state.frame = engine.global_frame_index;
+  state.frame = engine.frame_index;
   if (elem !== state.elem) {
     state.elem = elem;
     if (elem) {
@@ -86,7 +86,7 @@ export function linkText(param) {
 export function linkTick() {
   for (let key in state_cache) {
     let state = state_cache[key];
-    if (state.frame !== engine.global_frame_index - 1) {
+    if (state.frame !== engine.frame_index - 1) {
       delete state_cache[key];
     }
   }

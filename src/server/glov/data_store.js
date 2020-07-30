@@ -6,7 +6,7 @@ const fs = require('fs');
 const FileStore = require('fs-store').FileStore;
 const mkdirp = require('mkdirp');
 const path = require('path');
-const { callEach } = require('../../common/util.js');
+const { callEach, clone } = require('../../common/util.js');
 
 class DataStoreOneFile {
   constructor(store_path) {
@@ -123,7 +123,7 @@ class DataStore {
       }
       let store = this.getStore(obj_name);
       assert(!store.get('bin'));
-      store.set('data', value);
+      store.set('data', clone(value));
       cb();
     });
   }
@@ -132,7 +132,7 @@ class DataStore {
       let store = this.getStore(obj_name);
       assert(!store.get('bin'));
       let obj = store.get('data', default_value);
-      cb(null, obj);
+      cb(null, obj && obj !== default_value ? clone(obj) : obj);
     });
   }
   getAsyncBuffer(obj_name, cb) {

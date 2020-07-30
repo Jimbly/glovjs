@@ -45,7 +45,7 @@ const menu_fade_params_default = {
 };
 
 export function focuslog(...args) {
-  // console.log(`focuslog(${glov_engine.global_frame_index}): `, ...args);
+  // console.log(`focuslog(${glov_engine.frame_index}): `, ...args);
 }
 
 export function makeColorSet(color) {
@@ -255,7 +255,7 @@ export function getElem(allow_modal, last_elem) {
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
     if (glov_engine.DEBUG && !glov_engine.resizing()) {
-      per_frame_dom_alloc[glov_engine.global_frame_index % per_frame_dom_alloc.length] = 1;
+      per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
       let sum = 0;
       for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
         sum += per_frame_dom_alloc[ii];
@@ -520,10 +520,13 @@ export function buttonShared(param) {
   let key_opts = param.in_event_cb ? { in_event_cb: param.in_event_cb } : null;
   button_mouseover = false;
   if (param.disabled) {
-    glov_input.mouseOver(param); // Still eat mouse events
+    if (glov_input.mouseOver(param)) { // Still eat mouse events
+      if (param.disabled_mouseover) {
+        setMouseOver(key, rollover_quiet);
+      }
+    }
     state = 'disabled';
   } else if (param.drag_target && (ret = glov_input.dragDrop(param))) {
-    console.log('dragDrop');
     if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
       setMouseOver(key, rollover_quiet);
     }
@@ -1019,7 +1022,7 @@ export function tickUI(dt) {
   focused_key_not = null;
   modal_stealing_focus = false;
   touch_changed_focus = false;
-  per_frame_dom_alloc[glov_engine.global_frame_index % per_frame_dom_alloc.length] = 0;
+  per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
 
   last_frame_edit_boxes = exports.this_frame_edit_boxes;
   exports.this_frame_edit_boxes = [];
@@ -1059,7 +1062,7 @@ export function tickUI(dt) {
 
   if (!glov_engine.is_loading && glov_engine.getFrameDtActual() > 50 && pp_this_frame) {
     pp_bad_frames = (pp_bad_frames || 0) + 1;
-    if (pp_bad_frames >= 3) { // 3 in a row, disable superfluous postprocessing
+    if (pp_bad_frames >= 6) { // 6 in a row, disable superfluous postprocessing
       glov_engine.postprocessingAllow(false);
     }
   } else if (pp_bad_frames) {
@@ -1176,40 +1179,55 @@ function spreadTechParams(spread) {
   return tech_params;
 }
 
-function drawCircleInternal(sprite, x, y, z, r, spread, tu1, tv1, tu2, tv2, color) {
-  let x0 = x - r * 2 + r * 4 * tu1;
-  let x1 = x - r * 2 + r * 4 * tu2;
-  let y0 = y - r * 2 + r * 4 * tv1;
-  let y1 = y - r * 2 + r * 4 * tv2;
+function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv1, color) {
   glov_sprites.queueraw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
-    tu1, tv1, tu2, tv2,
+    tu0, tv0, tu1, tv1,
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
+}
+
+function drawCircleInternal(sprite, x, y, z, r, spread, tu0, tv0, tu1, tv1, color) {
+  let x0 = x - r * 2 + r * 4 * tu0;
+  let x1 = x - r * 2 + r * 4 * tu1;
+  let y0 = y - r * 2 + r * 4 * tv0;
+  let y1 = y - r * 2 + r * 4 * tv1;
+  drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv1, color);
+}
+
+function initCircleSprite() {
+  const CIRCLE_SIZE = 32;
+  let data = new Uint8Array(CIRCLE_SIZE*CIRCLE_SIZE);
+  let midp = (CIRCLE_SIZE - 1) / 2;
+  for (let i = 0; i < CIRCLE_SIZE; i++) {
+    for (let j = 0; j < CIRCLE_SIZE; j++) {
+      let d = sqrt((i - midp)*(i - midp) + (j - midp)*(j - midp)) / midp;
+      let v = clamp(1 - d, 0, 1);
+      data[i + j*CIRCLE_SIZE] = v * 255;
+    }
+  }
+  sprites.circle = glov_sprites.create({
+    url: 'circle',
+    width: CIRCLE_SIZE, height: CIRCLE_SIZE,
+    format: textures.format.R8,
+    data,
+    filter_min: gl.LINEAR,
+    filter_max: gl.LINEAR,
+    wrap_s: gl.CLAMP_TO_EDGE,
+    wrap_t: gl.CLAMP_TO_EDGE,
+    origin: vec2(0.5, 0.5),
+  });
+}
+
+export function drawElipse(x0, y0, x1, y1, z, spread, color) {
+  if (!sprites.circle) {
+    initCircleSprite();
+  }
+  drawElipseInternal(sprites.circle, x0, y0, x1, y1, z, spread, 0, 0, 1, 1, color);
 }
 
 export function drawCircle(x, y, z, r, spread, color) {
   if (!sprites.circle) {
-    const CIRCLE_SIZE = 32;
-    let data = new Uint8Array(CIRCLE_SIZE*CIRCLE_SIZE);
-    let midp = (CIRCLE_SIZE - 1) / 2;
-    for (let i = 0; i < CIRCLE_SIZE; i++) {
-      for (let j = 0; j < CIRCLE_SIZE; j++) {
-        let d = sqrt((i - midp)*(i - midp) + (j - midp)*(j - midp)) / midp;
-        let v = clamp(1 - d, 0, 1);
-        data[i + j*CIRCLE_SIZE] = v * 255;
-      }
-    }
-    sprites.circle = glov_sprites.create({
-      url: 'circle',
-      width: CIRCLE_SIZE, height: CIRCLE_SIZE,
-      format: textures.format.R8,
-      data,
-      filter_min: gl.LINEAR,
-      filter_max: gl.LINEAR,
-      wrap_s: gl.CLAMP_TO_EDGE,
-      wrap_t: gl.CLAMP_TO_EDGE,
-      origin: vec2(0.5, 0.5),
-    });
+    initCircleSprite();
   }
   drawCircleInternal(sprites.circle, x, y, z, r, spread, 0, 0, 1, 1, color);
 }

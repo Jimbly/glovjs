@@ -93,7 +93,10 @@ export function push() {
 }
 export function pop() {
   let old = stack.pop();
-  set(old[0], old[1], old[2], old[3], true);
+  for (let ii = 0; ii < old.length; ++ii) {
+    data[ii] = old[ii];
+  }
+  reapply();
 }
 
 export function domToCanvasRatio() {
@@ -158,6 +161,26 @@ export function zoom(x, y, factor) {
     y - (y - data[1]) * inv_factor,
     x + (data[2] - x) * inv_factor,
     y + (data[3] - y) * inv_factor, true);
+}
+
+// returns [x0,y0,x1,y1] to use as parameters set() such that src_rect in the
+// current view is now addressable by dest_rect (presumably something like
+// [0,0,vw,vh])
+export function calcMap(out, src_rect, dest_rect) {
+  let cur_w = data[11] - data[9];
+  let cur_h = data[12] - data[10];
+  let vx0 = src_rect[0] / cur_w;
+  let vy0 = src_rect[1] / cur_h;
+  let vx1 = src_rect[2] / cur_w;
+  let vy1 = src_rect[3] / cur_h;
+  let vw = vx1 - vx0;
+  let vh = vy1 - vy0;
+  let dest_vw = dest_rect[2] - dest_rect[0];
+  let dest_vh = dest_rect[3] - dest_rect[1];
+  out[0] = dest_rect[0] - dest_vw / vw * vx0;
+  out[1] = dest_rect[1] - dest_vh / vh * vy0;
+  out[2] = dest_rect[2] + dest_vw / vw * (1 - vx1);
+  out[3] = dest_rect[3] + dest_vh / vh * (1 - vy1);
 }
 
 export function setNormalized() {

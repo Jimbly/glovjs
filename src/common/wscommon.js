@@ -149,7 +149,7 @@ export function wsHandleMessage(client, buf) {
     let handler = client.handlers[msg];
     if (!handler) {
       let error_msg = `No handler for message ${JSON.stringify(msg)} from ${source}`;
-      console.error(error_msg, data);
+      console.error(error_msg, isPacket(data) ? data.contents() : data);
       if (client.onError) {
         return client.onError(error_msg);
       }

@@ -215,13 +215,13 @@ gulp.task('client_html_default', function () {
 });
 
 const extra_index = [
-//  {
-//    name: 'staging',
-//    defines: {
-//      ENV: 'staging',
-//    },
-//    zip: true,
-//  },
+  {
+    name: 'multiplayer',
+    defines: {
+      ENV: 'multiplayer',
+    },
+    zip: false,
+  },
 ];
 
 let client_html_tasks = ['client_html_default'];
@@ -344,17 +344,17 @@ function bundleJS(filename, is_worker) {
     gulp.task(version_task, writeVersion);
   }
 
-  function registerTasks(b, watch) {
-    let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
+  function registerTasks(b, is_watch) {
+    let task_base = `client_js${is_watch ? '_watch' : ''}_${filename}`;
     b.on('log', log); // output build logs to terminal
-    if (watch) {
+    if (is_watch) {
       client_js_watch_deps.push(task_base);
     } else {
       client_js_deps.push(task_base);
     }
     gulp.task(`${task_base}_bundle`, function () {
       let ret = dobundle(b);
-      if (watch) {
+      if (is_watch) {
         ret = ret.pipe(browser_sync.stream({ once: true }));
       }
       return ret;
@@ -424,18 +424,18 @@ function bundleDeps(filename, is_worker) {
       .pipe(gulp.dest(is_worker ? './dist/game/build.intermediate/worker/' : './dist/game/build.dev/client/'));
   }
 
-  function registerTasks(b, watch) {
-    let task_base = `client_js${watch ? '_watch' : ''}_${filename}`;
+  function registerTasks(b, is_watch) {
+    let task_base = `client_js${is_watch ? '_watch' : ''}_${filename}`;
     b.transform(babelify, babelify_opts);
     b.on('log', log); // output build logs to terminal
-    if (watch) {
+    if (is_watch) {
       client_js_watch_deps.push(task_base);
     } else {
       client_js_deps.push(task_base);
     }
     gulp.task(task_base, function () {
       let ret = dobundle(b);
-      if (watch) {
+      if (is_watch) {
         ret = ret.pipe(browser_sync.stream({ once: true }));
       }
       return ret;
@@ -452,7 +452,9 @@ function bundleDeps(filename, is_worker) {
 
 function registerBundle(entrypoint, deps, is_worker) {
   bundleJS(entrypoint, is_worker);
-  bundleDeps(deps, is_worker);
+  if (deps) {
+    bundleDeps(deps, is_worker);
+  }
   // Just for workers, combine the deps and and entrypoint together (slower, but required)
   if (is_worker) {
     let task_name = `client_js_${entrypoint}_final`;

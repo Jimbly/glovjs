@@ -153,6 +153,7 @@ function TouchData(pos, touch, button, event) {
   this.button = button;
   this.start_time = Date.now();
   this.dispatched = false;
+  this.dispatched_drag = false;
   this.dispatched_drag_over = false;
   this.up_edge = 0;
   this.down_edge = 0;
@@ -242,7 +243,7 @@ function eventlog(event) {
     }
     pairs.push(`${k}:${v.id || v}`);
   }
-  console.log(`${engine.global_frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
+  console.log(`${engine.frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
 }
 
 function letEventThrough(event) {
@@ -741,7 +742,7 @@ function gamepadUpdate() {
           if (n <= 1 && pad_to_touch !== undefined) {
             let touch_data = touches[`g${gpd.id}`];
             if (touch_data) {
-              v2scale(temp_delta, pair, engine.this_frame_time);
+              v2scale(temp_delta, pair, engine.frame_dt);
               v2add(touch_data.delta, touch_data.delta, temp_delta);
               touch_data.total += abs(temp_delta[0]) + abs(temp_delta[1]);
               setMouseToMid();
@@ -834,6 +835,7 @@ export function endFrame(skip_mouse) {
       } else {
         touch_data.delta[0] = touch_data.delta[1] = 0;
         touch_data.dispatched = false;
+        touch_data.dispatched_drag = false;
         touch_data.dispatched_drag_over = false;
         touch_data.up_edge = 0;
         touch_data.down_edge = 0;
@@ -1013,21 +1015,21 @@ export function padGetAxes(out, stickindex, padindex) {
 
 function padButtonDownInternal(gpd, ps, padcode) {
   if (ps[padcode]) {
-    return engine.this_frame_time;
+    return engine.frame_dt;
   }
   return 0;
 }
 function padButtonDownEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === DOWN_EDGE) {
     ps[padcode] = DOWN;
-    return engine.this_frame_time;
+    return engine.frame_dt;
   }
   return 0;
 }
 function padButtonUpEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === UP_EDGE) {
     delete ps[padcode];
-    return engine.this_frame_time;
+    return engine.frame_dt;
   }
   return 0;
 }
@@ -1175,7 +1177,7 @@ export function drag(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched) {
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
@@ -1184,9 +1186,7 @@ export function drag(param) {
       if (total < min_dist) {
         continue;
       }
-      if (!param.peek) {
-        touch_data.dispatched = true;
-      }
+      touch_data.dispatched_drag = true;
       let is_down_edge = touch_data.down_edge;
       if (param.eat_clicks) {
         touch_data.down_edge = touch_data.up_edge = 0;
@@ -1280,7 +1280,9 @@ export function dragDrop(param) {
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
       if (!param.peek) {
-        // Maybe touch_data.dispatched_drag_over as well?
+        // don't want the source (possibly called later this frame) to still think it's dragging
+        touch_data.dispatched_drag_over = true;
+        touch_data.dispatched_drag = true;
         touch_data.dispatched = true;
       }
       return { drag_payload: touch_data.drag_payload };
@@ -1297,7 +1299,7 @@ export function dragOver(param) {
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
     if (!(button === ANY || button === touch_data.button) ||
-      touch_data.dispatched || touch_data.dispatched_drag_over || // Maybe not .dispatched?
+      touch_data.dispatched_drag_over ||
       !touch_data.drag_payload
     ) {
       continue;
