@@ -1,12 +1,6 @@
 Javascript libGlov/GLOV.js framework
 ============================
 
-Build pipeline rework status:
-* have `bundleJS2` tasks, which depends on `client_js_babel`, which seems to be generating acceptable output
-* Need to add watch tasks and see if this new pipeline saves anything
-  * First, watch task to go from client_js -> babel
-  * Then, watchify should handle the rest, already?
-
 **Demos**
 * General feature test: [glovjs-playground](http://jimbly.github.io/glovjs/playground/)
 * Terminal module test: [glovjs-terminal](http://jimbly.github.io/glovjs/terminal/)
@@ -15,10 +9,10 @@ Build pipeline rework status:
 * Files can be ES2018 (through Babel)
 * Server automatically restarts on any relevant file change
 * Client automatically reloads on javascript or html change
-* Client automatically dynamically reloads CSS file changes
+* Client automatically dynamically reloads CSS, texture, etc file changes
 * Client .js and vendor files all bundled and minified
 * Source maps created for debugging, even on minified builds
-* brfs supported for embedding non-.js files into source
+* Limited static-fs supported for embedding non-.js files into source, glov/webfs preferred to get dynamic reloads
 
 Useful SublimeText 3 packages
 * SublimeLinter
@@ -27,6 +21,8 @@ Useful SublimeText 3 packages
 Start with: `npm start` (after running `npm i` once)
 
 Build distributable files with: `npm run-script build`
+
+Feature demo is index.html (`main.js`), multiplayer demo (requires server) is the built index_multiplayer.html (references `multiplayer.js`)
 
 Notes:
 * The engine API (glov/*) is subject to change significantly, often changes with each Ludum Dare in which I use this engine ^_^
@@ -37,5 +33,3 @@ Notes:
 TODO:
 * use spine for sequencing, or leave this until later?
 * cleaner window resize handling (have to be checking this each frame anyway?)
-
-* minify, bundle CSS, if we ever have more than 1
