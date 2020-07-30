@@ -203,6 +203,7 @@ gulp.task('eslint', eslintTask);
 //////////////////////////////////////////////////////////////////////////
 // client tasks
 const default_defines = {
+  FACEBOOK: false,
   ENV: 'default',
 };
 gulp.task('client_html_default', function () {
@@ -218,6 +219,7 @@ const extra_index = [
   {
     name: 'multiplayer',
     defines: {
+      FACEBOOK: false,
       ENV: 'multiplayer',
     },
     zip: false,

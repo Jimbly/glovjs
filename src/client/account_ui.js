@@ -103,12 +103,9 @@ AccountUI.prototype.showLogin = function (param) {
     net.subs.loginFacebook(function (err) {
       if (err) {
         ui.modalDialog({
-          title: 'Facebook-login Failed',
+          title: 'Facebook login Failed',
           text: err,
           buttons: {
-            'Retry': function () {
-              //...
-            },
             'Cancel': null,
           },
         });

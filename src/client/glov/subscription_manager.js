@@ -5,6 +5,7 @@ const assert = require('assert');
 const { cmd_parse } = require('./cmds.js');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
+const fbinstant = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('../../common/md5.js');
 const { isPacket } = require('../../common/packet.js');
@@ -364,10 +365,24 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   }
   this.logging_in = true;
   this.logged_in = false;
-  this.client.send('login', {
-    user_id: login_credentials.user_id,
-    password: md5(this.client.secret + login_credentials.password),
-  }, this.handleLoginResponse.bind(this, resp_func));
+
+  if (login_credentials.fb) {
+    fbinstant.onready(() => {
+      window.FBInstant.player.getSignedPlayerInfoAsync().then((result) => {
+        this.client.send('login_facebook', {
+          signature: result.getSignature(),
+          display_name: window.FBInstant.player.getName(),
+        }, this.handleLoginResponse.bind(this, resp_func));
+      }).catch((err) => {
+        this.handleLoginResponse(resp_func, err);
+      });
+    });
+  } else {
+    this.client.send('login', {
+      user_id: login_credentials.user_id,
+      password: md5(this.client.secret + login_credentials.password),
+    }, this.handleLoginResponse.bind(this, resp_func));
+  }
 };
 
 SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) {
