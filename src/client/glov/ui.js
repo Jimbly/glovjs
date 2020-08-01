@@ -234,6 +234,12 @@ export function startup(param) {
   // loadUISprite('slider_notch', [3], [13], overrides);
   loadUISprite('slider_handle', [9], [13], overrides);
 
+  loadUISprite('scrollbar_bottom', [11], [13], overrides);
+  loadUISprite('scrollbar_trough', [11], [8], overrides);
+  loadUISprite('scrollbar_top', [11], [13], overrides);
+  loadUISprite('scrollbar_handle_grabber', [11], [13], overrides);
+  loadUISprite('scrollbar_handle', [11], [3, 7, 3], overrides);
+
   sprites.white = glov_sprites.create({ url: 'white' });
 
   button_keys = {

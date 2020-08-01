@@ -5,8 +5,9 @@ const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
-const glov_simple_menu = require('./simple_menu.js');
+const { scrollAreaCreate } = require('./scroll_area.js');
 const glov_selection_box = require('./selection_box.js');
+const glov_simple_menu = require('./simple_menu.js');
 const glov_ui = require('./ui.js');
 
 const { ceil, random } = Math;
@@ -21,7 +22,9 @@ let edit_box1;
 let edit_box2;
 let test_select1;
 let test_select2;
+let test_scroll_area;
 let slider_value = 1;
+let test_lines = 10;
 function init(x, y, column_width) {
   edit_box1 = glov_ui.createEditBox({
     x: x + column_width,
@@ -68,6 +71,8 @@ function init(x, y, column_width) {
     z: Z.UI,
     width: column_width - 8,
   });
+
+  test_scroll_area = scrollAreaCreate();
 }
 
 export function run(x, y, z) {
@@ -95,13 +100,35 @@ export function run(x, y, z) {
     glov_input.eatAllInput();
   }
 
-  let pad = 8;
-  let w = glov_ui.print(font_style, x + column_width + 4, y + 40, z,
-    `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
-  w = Math.max(w, glov_ui.print(font_style, x + column_width, y + 40 + glov_ui.font_height + pad, z,
-    `Result: ${demo_result}`));
-  glov_ui.panel({ x: x + column_width + 4 - pad, y: y + 40 - pad, z: z - 1,
-    w: w + pad * 2, h: glov_ui.font_height * 2 + pad * 3 });
+  let pad = 4;
+  test_scroll_area.begin({
+    x: x + column_width + 4,
+    y: y + 40,
+    z,
+    w: 100,
+    h: glov_ui.font_height * 8 + pad,
+  });
+  let internal_y = 2;
+  glov_ui.drawLine(0,0,10,10,z+2, 1, 0.9, [1,0,0,0.5]);
+  glov_ui.print(font_style, 2, internal_y, z + 1, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
+  internal_y += glov_ui.font_height + pad;
+  glov_ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
+  internal_y += glov_ui.font_height + pad;
+  for (let ii = 0; ii < test_lines; ++ii) {
+    glov_ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
+    internal_y += glov_ui.font_height + pad;
+  }
+  if (glov_ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line' })) {
+    ++test_lines;
+  }
+  internal_y += glov_ui.button_height + pad;
+  if (glov_ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line' })) {
+    --test_lines;
+  }
+  internal_y += glov_ui.button_height + pad;
+  test_scroll_area.end(internal_y);
+  glov_ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
+    w: test_scroll_area.w + pad * 2, h: test_scroll_area.h + pad * 2 });
 
   if (glov_ui.buttonText({ x, y, z, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
     demo_result = '';
