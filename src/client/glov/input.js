@@ -113,7 +113,7 @@ let last_mouse_pos = vec2();
 let mouse_pos_is_touch = false;
 let mouse_over_captured = false;
 let mouse_down = [];
-let mouse_wheel = 0;
+let wheel_events = [];
 let movement_questionable_frames = 0;
 const MOVEMENT_QUESTIONABLE_FRAMES = 2; // Need at least 2
 
@@ -455,11 +455,11 @@ function onMouseUp(event) {
 function onWheel(event) {
   onMouseMove(event, true);
   let delta = -event.deltaY || event.wheelDelta || -event.detail;
-  if (delta > 0) {
-    mouse_wheel++;
-  } else if (delta < 0) {
-    mouse_wheel--;
-  }
+  wheel_events.push({
+    pos: [event.pageX, event.pageY],
+    delta: delta > 0 ? 1 : -1,
+    dispatched: false,
+  });
 }
 
 let touch_pos = vec2();
@@ -842,7 +842,7 @@ export function endFrame(skip_mouse) {
         touch_data.down_time = 0;
       }
     }
-    mouse_wheel = 0;
+    wheel_events.length = 0;
     input_eaten_mouse = false;
   }
   input_eaten_kb = false;
@@ -874,12 +874,6 @@ export function mouseMoved() {
   return mouse_moved;
 }
 
-export function mouseWheel() {
-  let ret = mouse_wheel;
-  mouse_wheel = 0;
-  return ret;
-}
-
 function mousePosParam(param) {
   param = param || {};
   return {
@@ -898,6 +892,26 @@ function checkPos(pos, param) {
   }
   return check_pos[0] >= param.x && (param.w === Infinity || check_pos[0] < param.x + param.w) &&
     check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
+}
+
+export function mouseWheel(param) {
+  if (input_eaten_mouse || !wheel_events.length) {
+    return 0;
+  }
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let ret = 0;
+  for (let ii = 0; ii < wheel_events.length; ++ii) {
+    let data = wheel_events[ii];
+    if (data.dispatched) {
+      continue;
+    }
+    if (checkPos(data.pos, pos_param)) {
+      ret += data.delta;
+      data.dispatched = true;
+    }
+  }
+  return ret;
 }
 
 export function mouseOver(param) {

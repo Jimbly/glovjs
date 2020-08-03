@@ -16,6 +16,7 @@ const { clamp } = require('../../common/util.js');
 const { vec2, vec4 } = require('./vmath.js');
 
 const MAX_OVERSCROLL = 50;
+const OVERSCROLL_DELAY_WHEEL = 180;
 
 function darken(color, factor) {
   return vec4(color[0] * factor, color[1] * factor, color[2] * factor, color[3]);
@@ -44,6 +45,7 @@ function ScrollArea(params) {
   // run-time state
   this.scroll_pos = 0;
   this.overscroll = 0; // overscroll beyond beginning or end
+  this.overscroll_delay = 0;
   this.grabbed_pos = 0;
   this.grabbed = false;
   this.drag_start = null;
@@ -102,7 +104,13 @@ ScrollArea.prototype.end = function (h) {
     this.scroll_pos = max(0, h - this.h+1);
   }
   if (this.overscroll) {
-    this.overscroll = this.overscroll * max(1 - 8*engine.getFrameDt() * 0.001, 0);
+    let dt = engine.getFrameDt();
+    if (dt >= this.overscroll_delay) {
+      this.overscroll_delay = 0;
+      this.overscroll = this.overscroll * max(1 - dt * 0.008, 0);
+    } else {
+      this.overscroll_delay -= dt;
+    }
   }
 
   let {
@@ -143,14 +151,16 @@ ScrollArea.prototype.end = function (h) {
     this.drag_start = null;
   } else {
     // handle scroll wheel
-    // TODO: positional mouseWheel events!
     let wheel_delta = input.mouseWheel({
       x: this.x,
       y: this.y,
       w: this.w,
       h: this.h
     });
-    this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
+    if (wheel_delta) {
+      this.overscroll_delay = OVERSCROLL_DELAY_WHEEL;
+      this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
+    }
 
     // handle drag of handle
     // before end buttons, as those might be effectively hidden in some UIs
