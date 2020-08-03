@@ -410,7 +410,7 @@ function onMouseDown(event) {
   let no_click = letEventThrough(event);
 
   let button = event.button;
-  mouse_down[button] = mouse_pos.slice(0);
+  mouse_down[button] = true;
   let touch_id = `m${button}`;
   if (touches[touch_id]) {
     v2copy(touches[touch_id].start_pos, mouse_pos);
@@ -545,7 +545,7 @@ function onTouchChange(event) {
     } else if (new_count === 1) {
       let touch = ct[0];
       if (!old_count) {
-        mouse_down[0] = vec2(touch.pageX, touch.pageY);
+        mouse_down[0] = true;
       }
       v2set(mouse_pos, touch.pageX, touch.pageY);
       mouse_pos_is_touch = true;
