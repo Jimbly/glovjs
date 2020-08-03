@@ -169,7 +169,8 @@ ScrollArea.prototype.end = function (h) {
       this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
       handle_color = rollover_color_light;
     }
-    if (this.grabbed && !input.mouseDown(0)) { // released but someone else ate it, release anyway!
+    if (this.grabbed && !input.mouseDown({ button: 0, max_dist: Infinity })) {
+      // released but someone else ate it, release anyway!
       this.grabbed = false;
     }
     if (this.grabbed) {

@@ -928,30 +928,41 @@ export function mouseOver(param) {
   return false;
 }
 
-export function mouseDown(button) {
-  if (button === ANY) {
-    return mouseDown(0) || mouseDown(2);
+export function mouseDown(param) {
+  if (input_eaten_mouse) {
+    return null;
   }
-  button = button || 0;
-  return !input_eaten_mouse && mouse_down[button];
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+  // *maybe* should default to Infinite, but for now, defaulting to the same as mouseUpEdge()
+  let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state !== DOWN ||
+      !(button === ANY || button === touch_data.button) ||
+      touch_data.total > max_click_dist
+    ) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      // if (!param.peek) {
+      //   touch_data.up_edge = 0;
+      // }
+      return {
+        button: touch_data.button,
+        pos: check_pos.slice(0),
+        start_time: touch_data.start_time,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function mousePosIsTouch() {
   return mouse_pos_is_touch;
-}
-
-export function isTouchDown(param) {
-  if (input_eaten_mouse) {
-    return false;
-  }
-  let pos_param = mousePosParam(param);
-  for (let id in touches) {
-    let touch = touches[id];
-    if (checkPos(touch.cur_pos, pos_param)) {
-      return check_pos.slice(0);
-    }
-  }
-  return false;
 }
 
 export function numTouches() {

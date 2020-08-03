@@ -559,7 +559,7 @@ export function buttonShared(param) {
   } else if (param.drag_target && glov_input.dragOver(param)) {
     // Set this even if param.no_touch_mouse_over is set
     setMouseOver(key, rollover_quiet);
-    state = glov_input.mouseDown() ? 'down' : 'rollover';
+    state = glov_input.mouseDown({ max_dist: Infinity }) ? 'down' : 'rollover';
   } else if (param.drag_over && glov_input.dragOver(param)) {
     // do nothing
   } else if (glov_input.mouseOver(param)) {
@@ -569,7 +569,7 @@ export function buttonShared(param) {
       // do not set mouseover
     } else {
       setMouseOver(key, rollover_quiet);
-      state = glov_input.mouseDown() ? 'down' : 'rollover';
+      state = glov_input.mouseDown(param) ? 'down' : 'rollover';
     }
   }
   button_focused = focused;
