@@ -1199,7 +1199,9 @@ export function drag(param) {
       if (total < min_dist) {
         continue;
       }
-      touch_data.dispatched_drag = true;
+      if (!param.peek) {
+        touch_data.dispatched_drag = true;
+      }
       let is_down_edge = touch_data.down_edge;
       if (param.eat_clicks) {
         touch_data.down_edge = touch_data.up_edge = 0;
