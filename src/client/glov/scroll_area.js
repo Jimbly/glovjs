@@ -45,6 +45,7 @@ function ScrollArea(params) {
   this.overscroll = 0; // overscroll beyond beginning or end
   this.grabbed_pos = 0;
   this.grabbed = false;
+  this.drag_start = null;
   this.began = false;
 }
 
@@ -134,6 +135,7 @@ ScrollArea.prototype.end = function (h) {
   // Handle UI interactions
   if (disabled) {
     trough_color = top_color = bottom_color = handle_color = this.disabled_color;
+    this.drag_start = null;
   } else {
     // handle scroll wheel
     // TODO: positional mouseWheel events!
@@ -226,6 +228,17 @@ ScrollArea.prototype.end = function (h) {
       } else {
         this.scroll_pos -= this.h;
       }
+    }
+
+    // handle dragging the scroll area background
+    let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
+    if (drag) {
+      if (this.drag_start === null) {
+        this.drag_start = this.scroll_pos;
+      }
+      this.scroll_pos = this.drag_start - drag.cur_pos[1] + drag.start_pos[1];
+    } else {
+      this.drag_start = null;
     }
   }
 
