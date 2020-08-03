@@ -9,7 +9,8 @@ const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
-const { max, min } = Math;
+const { max, min, round } = Math;
+const { clipPush, clipPop } = require('./sprites.js');
 const ui = require('./ui.js');
 const { clamp } = require('../../common/util.js');
 const { vec2, vec4 } = require('./vmath.js');
@@ -60,25 +61,22 @@ ScrollArea.prototype.applyParams = function (params) {
 
 ScrollArea.prototype.begin = function (params) {
   this.applyParams(params);
-  let { x, y } = this;
+  let { x, y, w, h, z } = this;
   assert(!this.began); // Checking mismatched begin/end
   this.began = true;
   // Set up camera and clippers
+  clipPush(z + 0.05, x, y, w, h);
   let camera_orig_x0 = camera2d.x0();
   let camera_orig_x1 = camera2d.x1();
   let camera_orig_y0 = camera2d.y0();
   let camera_orig_y1 = camera2d.y1();
   // map (0,0) onto (x,y) in the current camera space, keeping w/h scale the same
   let camera_new_x0 = -(x - camera_orig_x0);
-  let camera_new_y0 = -(y - camera_orig_y0) + this.scroll_pos;
+  let camera_new_y0 = -(y - camera_orig_y0) + round(this.scroll_pos + this.overscroll);
   let camera_new_x1 = camera_new_x0 + camera_orig_x1 - camera_orig_x0;
   let camera_new_y1 = camera_new_y0 + camera_orig_y1 - camera_orig_y0;
-  // shift by overscroll
-  camera_new_y0 += this.overscroll;
-  camera_new_y1 += this.overscroll;
   camera2d.push();
   camera2d.set(camera_new_x0, camera_new_y0, camera_new_x1, camera_new_y1);
-  // TODO spriteListClipperPush(0, this.scroll_pos + (int)this.overscroll, w - scrollbar_top->GetTileWidth() * pixel_scale, h);
 };
 
 let temp_pos = vec2();
@@ -91,7 +89,7 @@ ScrollArea.prototype.end = function (h) {
   this.began = false;
   // restore camera and clippers
   camera2d.pop();
-  // TODO spriteListClipperPop();
+  clipPop();
 
   if (this.scroll_pos > h - this.h) {
     // internal height must have shrunk
@@ -122,7 +120,7 @@ ScrollArea.prototype.end = function (h) {
   let handle_pixel_h = handle_h * (this.h - button_h_nopad * 2);
   let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
   handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, button_h / 2));
-  let handle_screenpos = this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h);
+  let handle_screenpos = round(this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h));
   let top_color = this.color;
   let bottom_color = this.color;
   let handle_color = this.color;

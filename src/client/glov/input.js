@@ -893,7 +893,9 @@ function mousePosParam(param) {
 
 let check_pos = vec2();
 function checkPos(pos, param) {
-  camera2d.domToVirtual(check_pos, pos);
+  if (!camera2d.domToVirtual(check_pos, pos)) {
+    return false;
+  }
   return check_pos[0] >= param.x && (param.w === Infinity || check_pos[0] < param.x + param.w) &&
     check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
 }

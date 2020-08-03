@@ -254,7 +254,20 @@ export function htmlSize(w, h) {
   }
 }
 
+let input_clipping;
+export function setInputClipping(xywh) {
+  input_clipping = xywh;
+}
+
 export function domToVirtual(dst, src) {
+  let ret = true;
+  if (input_clipping) {
+    if (src[0] < input_clipping[0] || src[0] > input_clipping[0] + input_clipping[2] ||
+      src[1] < input_clipping[1] || src[1] > input_clipping[1] + input_clipping[3]
+    ) {
+      ret = false;
+    }
+  }
   if (render_width) {
     dst[0] = (src[0] * data[6] - render_offset_x) * data[7] + data[0];
     dst[1] = (src[1] * data[6] - render_offset_y_top) * data[8] + data[1];
@@ -262,6 +275,7 @@ export function domToVirtual(dst, src) {
     dst[0] = src[0] * data[6] / data[4] + data[0];
     dst[1] = src[1] * data[6] / data[5] + data[1];
   }
+  return ret;
 }
 
 export function domDeltaToVirtual(dst, src) {

@@ -103,13 +103,12 @@ export function run(x, y, z) {
   let pad = 4;
   test_scroll_area.begin({
     x: x + column_width + 4,
-    y: y + 40,
+    y: y + 30,
     z,
     w: 100,
     h: ui.font_height * 8 + pad,
   });
   let internal_y = 2;
-  ui.drawLine(0,0,10,10,z+2, 1, 0.9, [1,0,0,0.5]);
   ui.print(font_style, 2, internal_y, z + 1, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);

@@ -268,24 +268,73 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   sprite_queue.push(elem);
 }
 
-export function clip(z_start, z_end, x, y, w, h) {
-  let xy = vec2();
-  camera2d.virtualToCanvas(xy, [x, y]);
-  let wh = vec2();
-  camera2d.virtualToCanvas(wh, [x + w, y + h]);
-  xy[0] = round(xy[0]);
-  xy[1] = round(xy[1]);
-  wh[0] = round(wh[0]) - xy[0];
-  wh[1] = round(wh[1]) - xy[1];
+
+let clip_temp_xy = vec2();
+let clip_temp_wh = vec2();
+function clipCoordsScissor(x, y, w, h) {
+  camera2d.virtualToCanvas(clip_temp_xy, [x, y]);
+  clip_temp_xy[0] = round(clip_temp_xy[0]);
+  clip_temp_xy[1] = round(clip_temp_xy[1]);
+  camera2d.virtualToCanvas(clip_temp_wh, [x + w, y + h]);
+  clip_temp_wh[0] = round(clip_temp_wh[0]) - clip_temp_xy[0];
+  clip_temp_wh[1] = round(clip_temp_wh[1]) - clip_temp_xy[1];
 
   // let gd_w = engine.render_width || engine.width;
   let gd_h = engine.render_height || engine.height;
-  let scissor = [xy[0], gd_h - (xy[1] + wh[1]), wh[0], wh[1]];
+  return [clip_temp_xy[0], gd_h - (clip_temp_xy[1] + clip_temp_wh[1]), clip_temp_wh[0], clip_temp_wh[1]];
+}
+
+function clipCoordsDom(x, y, w, h) {
+  let xywh = vec4();
+  camera2d.virtualToDom(xywh, [x + w, y + h]);
+  xywh[2] = xywh[0];
+  xywh[3] = xywh[1];
+  camera2d.virtualToDom(xywh, [x, y]);
+  xywh[0] = round(xywh[0]);
+  xywh[1] = round(xywh[1]);
+  xywh[2] = round(xywh[2]) - xywh[0];
+  xywh[3] = round(xywh[3]) - xywh[1];
+
+  return xywh;
+}
+
+export function clip(z_start, z_end, x, y, w, h) {
+  let scissor = clipCoordsScissor(x, y, w, h);
   queuefn(z_start - 0.01, () => {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
   });
   queuefn(z_end - 0.01, () => {
+    gl.disable(gl.SCISSOR_TEST);
+  });
+}
+
+let clip_stack = [];
+export function clipPush(z, x, y, w, h) {
+  assert(clip_stack.length < 1); // do not currently support nesting; maybe leaking?
+  let scissor = clipCoordsScissor(x, y, w, h);
+  let dom_clip = clipCoordsDom(x, y, w, h);
+  camera2d.setInputClipping(dom_clip);
+  spriteQueuePush();
+  clip_stack.push({
+    z, scissor
+  });
+}
+
+export function clipPop() {
+  assert(clip_stack.length);
+  let { z, scissor } = clip_stack.pop();
+  let sprites = sprite_queue;
+  sprite_queue = [];
+  spriteQueuePop();
+  camera2d.setInputClipping(null);
+  queuefn(z, () => {
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+    spriteQueuePush();
+    sprite_queue = sprites;
+    exports.draw();
+    spriteQueuePop();
     gl.disable(gl.SCISSOR_TEST);
   });
 }
