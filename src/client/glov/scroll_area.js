@@ -59,6 +59,12 @@ ScrollArea.prototype.applyParams = function (params) {
   }
 };
 
+ScrollArea.prototype.barWidth = function () {
+  let { pixel_scale } = this;
+  let { scrollbar_top } = ui.sprites;
+  return scrollbar_top.uidata.total_w * pixel_scale;
+};
+
 ScrollArea.prototype.begin = function (params) {
   this.applyParams(params);
   let { x, y, w, h, z } = this;
@@ -100,6 +106,7 @@ ScrollArea.prototype.end = function (h) {
   }
 
   let {
+    auto_hide,
     pixel_scale,
     rollover_color,
     rollover_color_light,
@@ -252,6 +259,10 @@ ScrollArea.prototype.end = function (h) {
 
   if (this.background_color) {
     ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, this.background_color);
+  }
+
+  if (disabled && auto_hide) {
+    return;
   }
 
   scrollbar_top.draw({
