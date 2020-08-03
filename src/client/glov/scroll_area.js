@@ -34,6 +34,7 @@ function ScrollArea(params) {
   this.top_pad = true; // set to false it the top/bottom "buttons" don't look like buttons
   this.color = vec4(1,1,1,1);
   this.background_color = vec4(0.8, 0.8, 0.8, 1); // can be null
+  this.auto_scroll = false; // If true, will scroll to the bottom if the height changes and we're not actively scrolling
   this.applyParams(params);
 
   // Calculated (only once) if not set
@@ -50,6 +51,8 @@ function ScrollArea(params) {
   this.grabbed = false;
   this.drag_start = null;
   this.began = false;
+  this.last_internal_h = 0;
+  this.last_frame = 0;
 }
 
 ScrollArea.prototype.applyParams = function (params) {
@@ -146,6 +149,7 @@ ScrollArea.prototype.end = function (h) {
   }
 
   // Handle UI interactions
+  let user_moved_this_frame = false;
   if (disabled) {
     trough_color = top_color = bottom_color = handle_color = this.disabled_color;
     this.drag_start = null;
@@ -160,6 +164,7 @@ ScrollArea.prototype.end = function (h) {
     if (wheel_delta) {
       this.overscroll_delay = OVERSCROLL_DELAY_WHEEL;
       this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
+      user_moved_this_frame = true;
     }
 
     // handle drag of handle
@@ -175,6 +180,9 @@ ScrollArea.prototype.end = function (h) {
       this.grabbed_pos = (down.pos[1] - handle_screenpos);
       this.grabbed = true;
       handle_color = rollover_color_light;
+    }
+    if (this.grabbed) {
+      user_moved_this_frame = true;
     }
     let up = this.grabbed && input.mouseUpEdge({ button: 0 });
     if (up) {
@@ -217,6 +225,7 @@ ScrollArea.prototype.end = function (h) {
     while (input.mouseUpEdge(button_param)) {
       top_color = rollover_color;
       this.scroll_pos -= this.rate_scroll_click;
+      user_moved_this_frame = true;
     }
     if (input.mouseOver(button_param)) {
       top_color = rollover_color;
@@ -225,6 +234,7 @@ ScrollArea.prototype.end = function (h) {
     while (input.mouseUpEdge(button_param)) {
       bottom_color = rollover_color;
       this.scroll_pos += this.rate_scroll_click;
+      user_moved_this_frame = true;
     }
     if (input.mouseOver(button_param)) {
       bottom_color = rollover_color;
@@ -244,11 +254,13 @@ ScrollArea.prototype.end = function (h) {
       } else {
         this.scroll_pos -= this.h;
       }
+      user_moved_this_frame = true;
     }
 
     // handle dragging the scroll area background
     let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
     if (drag) {
+      user_moved_this_frame = true;
       if (this.drag_start === null) {
         this.drag_start = this.scroll_pos;
       }
@@ -266,10 +278,22 @@ ScrollArea.prototype.end = function (h) {
     this.overscroll = min(this.scroll_pos - maxvalue, MAX_OVERSCROLL);
   }
   this.scroll_pos = clamped_pos;
+  if (this.auto_scroll && (this.last_internal_h !== h || this.last_frame !== engine.getFrameIndex() - 1)) {
+    // We were at the bottom, but we are now not, and auto-scroll is enabled
+    if (!user_moved_this_frame) {
+      // want to be at the bottom, scroll down (effective next frame)
+      this.scroll_pos = maxvalue;
+      this.overscroll = 0;
+    }
+  }
+  this.last_internal_h = h;
+  this.last_frame = engine.getFrameIndex();
+
 
   if (this.background_color) {
     ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, this.background_color);
   }
+
 
   if (disabled && auto_hide) {
     return;

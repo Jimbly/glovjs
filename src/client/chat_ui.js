@@ -1,4 +1,4 @@
-// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 const assert = require('assert');
 const camera2d = require('./glov/camera2d.js');
@@ -11,6 +11,7 @@ const local_storage = require('./glov/local_storage.js');
 const { ceil, floor, max, min } = Math;
 const net = require('./glov/net.js');
 const { profanityFilter, profanityStartup } = require('./glov/words/profanity.js');
+const { scrollAreaCreate } = require('./glov/scroll_area.js');
 const settings = require('./glov/settings.js');
 const ui = require('./glov/ui.js');
 const { clamp, matchAll } = require('../common/util.js');
@@ -18,6 +19,8 @@ const { vec4, v3copy } = require('./glov/vmath.js');
 
 const FADE_START_TIME = [10000, 1000];
 const FADE_TIME = [1000, 500];
+
+const INDENT = 80;
 
 settings.register({
   chat_auto_unfocus: {
@@ -137,8 +140,14 @@ function ChatUI(params) {
   this.handle_cmd_parse_error = this.handleCmdParseError.bind(this);
   cmd_parse.setDefaultHandler(this.handle_cmd_parse_error);
   this.msgs = [];
-  this.max_messages = 8;
+  this.total_lines = 0;
+  this.max_lines = params.max_lines || 8; // Max shown when chat not active
+  this.max_messages = params.max_messages || 1000; // Size of history kept
   this.max_len = params.max_len;
+  this.font_height = params.font_height || ui.font_height;
+  this.w = params.w || engine.game_width / 2;
+  this.h = params.h || engine.game_height / 2; // excluding text entry
+  this.scroll_area = scrollAreaCreate();
   this.history = new CmdHistory();
   this.get_roles = null; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
@@ -173,16 +182,30 @@ function ChatUI(params) {
   });
 }
 
+ChatUI.prototype.addMsgInternal = function (msg, style) {
+  let elem = { msg, style, timestamp: Date.now() };
+  elem.numlines = ui.font.numLines(this.styles.def, this.w, INDENT, this.font_height, msg);
+  this.total_lines += elem.numlines;
+  this.msgs.push(elem);
+  if (this.msgs.length > this.max_messages * 1.25) {
+    this.msgs.splice(0, this.msgs.length - this.max_messages);
+    this.total_lines = 0;
+    for (let ii = 0; ii < this.msgs.length; ++ii) {
+      this.total_lines += this.msgs[ii].numlines;
+    }
+  }
+};
+
 ChatUI.prototype.addChat = function (msg, style) {
-  this.msgs.push({ msg, style, timestamp: Date.now() });
   console.log(msg);
+  this.addMsgInternal(msg, style);
 };
 ChatUI.prototype.addChatFiltered = function (msg, style) {
   console.log(msg);
   if (settings.profanity_filter) {
     msg = profanityFilter(msg);
   }
-  this.msgs.push({ msg, style, timestamp: Date.now() });
+  this.addMsgInternal(msg, style);
 };
 ChatUI.prototype.onMsgJoin = function (data) {
   if (data.client_id !== net.client.id) {
@@ -384,7 +407,6 @@ ChatUI.prototype.isFocused = function () {
   return this.edit_text_entry && this.edit_text_entry.isFocused();
 };
 
-const indent = 80;
 const SPACE_ABOVE_ENTRY = 8;
 ChatUI.prototype.run = function (opts) {
   opts = opts || {};
@@ -407,11 +429,11 @@ ChatUI.prototype.run = function (opts) {
   let x = camera2d.x0() + 10;
   let y0 = camera2d.y1();
   let y = y0;
-  let w = engine.game_width / 2;
+  let w = this.w;
   let was_focused = this.edit_text_entry && this.edit_text_entry.isFocused();
   let z = was_focused ? Z.CHAT_FOCUSED : Z.CHAT;
   let is_focused = false;
-  let font_height = ui.font_height;
+  let font_height = this.font_height;
   let anything_visible = false;
   let hide_light = (opts.hide || engine.defines.NOUI || !net.subs.loggedIn()) &&
     !(this.edit_text_entry && this.edit_text_entry.isFocused()) ?
@@ -475,7 +497,7 @@ ChatUI.prototype.run = function (opts) {
               if (last_msg) {
                 let msg = last_msg.msg;
                 if (msg && msg.slice(0, 7) === '[error]') {
-                  let numlines = ui.font.numLines(this.styles.def, w, indent, font_height, msg);
+                  let numlines = last_msg.numlines;
                   tooltip_y -= font_height * numlines + SPACE_ABOVE_ENTRY;
                 }
               }
@@ -577,34 +599,30 @@ ChatUI.prototype.run = function (opts) {
     }
   }
   y -= SPACE_ABOVE_ENTRY;
-  let now = Date.now();
-  for (let ii = 0; ii < Math.min(this.msgs.length, this.max_messages); ++ii) {
-    let msg = this.msgs[this.msgs.length - ii - 1];
-    let age = now - msg.timestamp;
-    let alpha = is_focused ? 1 : 1 - clamp((age - FADE_START_TIME[hide_light]) / FADE_TIME[hide_light], 0, 1);
-    if (!alpha) {
-      break;
-    }
+
+  let { url_match, url_info, styles } = this;
+  let self = this;
+  // Slightly hacky: uses `x` and `y` from the higher scope
+  function drawChatLine(msg, alpha) {
     let line = msg.msg;
-    let is_url = this.url_match && matchAll(line, this.url_match);
+    let numlines = msg.numlines;
+    let is_url = url_match && matchAll(line, url_match);
     is_url = is_url && is_url.length === 1 && is_url[0];
-    let url_info = is_url;
-    if (is_url && this.url_info) {
-      let m = is_url.match(this.url_info);
+    let url_label = is_url;
+    if (is_url && url_info) {
+      let m = is_url.match(url_info);
       if (m) {
-        url_info = m[1];
+        url_label = m[1];
       }
     }
-    let numlines = ui.font.numLines(this.styles.def, w, indent, font_height, line);
     let h = font_height * numlines;
-    y -= h;
     let click;
     if (is_url) {
       click = link({ x, y, w, h, url: is_url, internal: true });
     }
     let mouseover = input.mouseOver({ x, y, w, h, peek: true }) && !input.mousePosIsTouch();
-    let style = this.styles[msg.style || (is_url ? mouseover ? 'link_hover' : 'link' : 'def')];
-    ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, w, indent, font_height, line);
+    let style = styles[msg.style || (is_url ? mouseover ? 'link_hover' : 'link' : 'def')];
+    ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, w, INDENT, font_height, line);
     if (mouseover) {
       ui.drawTooltip({
         x, y, z: Z.TOOLTIP - 5,
@@ -612,7 +630,7 @@ ChatUI.prototype.run = function (opts) {
         tooltip_width: 350,
         tooltip_pad: ui.tooltip_pad * 0.5,
         tooltip: is_url ?
-          `Click to open ${url_info}` :
+          `Click to open ${url_label}` :
           `Received at ${conciseDate(new Date(msg.timestamp))}\nRight-click to copy`,
         pixel_scale: ui.tooltip_panel_pixel_scale * 0.5,
       });
@@ -623,10 +641,56 @@ ChatUI.prototype.run = function (opts) {
       if (click.button === 2) {
         ui.provideUserString('Chat Text', is_url ? 'URL' : 'Text', is_url || line);
       } else if (is_url) {
-        this.cmdParseInternal(`url ${url_info}`);
+        self.cmdParseInternal(`url ${url_label}`);
       }
     }
     anything_visible = true;
+  }
+
+
+  let now = Date.now();
+  if (is_focused) {
+    // within scroll area, just draw visible parts
+    let scroll_internal_h = this.total_lines * font_height;
+    let scroll_external_h = min(this.h, scroll_internal_h);
+    this.scroll_area.begin({
+      x, y: y - scroll_external_h, z,
+      w: this.w + 8,
+      h: scroll_external_h,
+      background_color: null,
+      auto_scroll: true,
+    });
+    let x_save = x;
+    let y_save = y;
+    x = 0;
+    y = 0;
+    for (let ii = 0; ii < this.msgs.length; ++ii) {
+      let msg = this.msgs[ii];
+      drawChatLine(msg, 1);
+      y += font_height * msg.numlines;
+    }
+    this.scroll_area.end(scroll_internal_h);
+    x = x_save;
+    y = y_save - scroll_external_h;
+  } else {
+    // Just recent entries, fade them out over time
+    let { max_lines } = this;
+    for (let ii = 0; ii < this.msgs.length; ++ii) {
+      let msg = this.msgs[this.msgs.length - ii - 1];
+      let age = now - msg.timestamp;
+      let alpha = 1 - clamp((age - FADE_START_TIME[hide_light]) / FADE_TIME[hide_light], 0, 1);
+      if (!alpha) {
+        break;
+      }
+      let numlines = msg.numlines;
+      if (numlines > max_lines && ii) {
+        break;
+      }
+      max_lines -= numlines;
+      let h = font_height * numlines;
+      y -= h;
+      drawChatLine(msg, alpha);
+    }
   }
 
   if (!anything_visible && (ui.modal_dialog || ui.menu_up || hide_light)) {
