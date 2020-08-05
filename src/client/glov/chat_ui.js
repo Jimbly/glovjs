@@ -1,22 +1,22 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 const assert = require('assert');
-const { asyncParallel } = require('../common/async.js');
-const camera2d = require('./glov/camera2d.js');
-const { cmd_parse } = require('./glov/cmds.js');
-const engine = require('./glov/engine.js');
-const glov_font = require('./glov/font.js');
-const input = require('./glov/input.js');
-const { link } = require('./glov/link.js');
-const local_storage = require('./glov/local_storage.js');
+const { asyncParallel } = require('../../common/async.js');
+const camera2d = require('./camera2d.js');
+const { cmd_parse } = require('./cmds.js');
+const engine = require('./engine.js');
+const glov_font = require('./font.js');
+const input = require('./input.js');
+const { link } = require('./link.js');
+const local_storage = require('./local_storage.js');
 const { ceil, floor, max, min } = Math;
-const net = require('./glov/net.js');
-const { profanityFilter, profanityStartup } = require('./glov/words/profanity.js');
-const { scrollAreaCreate } = require('./glov/scroll_area.js');
-const settings = require('./glov/settings.js');
-const ui = require('./glov/ui.js');
-const { clamp, matchAll } = require('../common/util.js');
-const { vec4, v3copy } = require('./glov/vmath.js');
+const net = require('./net.js');
+const { profanityFilter, profanityStartup } = require('./words/profanity.js');
+const { scrollAreaCreate } = require('./scroll_area.js');
+const settings = require('./settings.js');
+const ui = require('./ui.js');
+const { clamp, matchAll } = require('../../common/util.js');
+const { vec4, v3copy } = require('./vmath.js');
 
 const FADE_START_TIME = [10000, 1000];
 const FADE_TIME = [1000, 500];
@@ -147,6 +147,7 @@ function ChatUI(params) {
   this.max_messages = params.max_messages || 1000; // Size of history kept
   this.max_len = params.max_len;
   this.font_height = params.font_height || ui.font_height;
+  this.hide_disconnected_message = params.hide_disconnected_message || false;
   this.scroll_area = scrollAreaCreate({
     background_color: null,
     auto_scroll: true,
@@ -485,7 +486,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
 const SPACE_ABOVE_ENTRY = 8;
 ChatUI.prototype.run = function (opts) {
   opts = opts || {};
-  if (net.client.disconnected) {
+  if (net.client.disconnected && !this.hide_disconnected_message) {
     ui.font.drawSizedAligned(
       glov_font.style(null, {
         outline_width: 2,
@@ -722,6 +723,7 @@ ChatUI.prototype.run = function (opts) {
       w: w + 8,
       h: scroll_external_h,
       focusable_elem: this.edit_text_entry,
+      auto_hide: this.total_lines <= 2,
     });
     let x_save = x;
     let y_save = y;

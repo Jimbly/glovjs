@@ -192,7 +192,7 @@ ScrollArea.prototype.end = function (h) {
   let handle_color = this.color;
   let trough_color = this.color;
   let disabled = false;
-  if (handle_h === 1) {
+  if (!this.h || handle_h === 1) {
     disabled = true;
   }
   this.was_disabled = disabled;
@@ -348,7 +348,7 @@ ScrollArea.prototype.end = function (h) {
     ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, bg_color);
   }
 
-  if (disabled && auto_hide) {
+  if (disabled && (auto_hide || !this.h)) {
     return;
   }
 

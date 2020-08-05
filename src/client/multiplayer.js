@@ -95,7 +95,7 @@ export function main() {
   const createAnimation = sprite_animation.create;
 
   app.account_ui = require('./account_ui.js').create();
-  app.chat_ui = require('./chat_ui.js').create({ max_len: 1000 });
+  app.chat_ui = require('./glov/chat_ui.js').create({ max_len: 1000 });
 
   const color_white = vec4(1, 1, 1, 1);
   const color_gray = vec4(0.5, 0.5, 0.5, 1);
