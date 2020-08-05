@@ -1183,7 +1183,8 @@ export function mouseConsumeClicks(param) {
   let button = pos_param.button;
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!(button === ANY || button === touch_data.button)) {
+    // Skipping those that already dispatched a drag this frame, must have been handled, do not consume it!
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {

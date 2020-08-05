@@ -187,6 +187,55 @@ export function overrideUserWorker(new_user_worker, extra_data) {
   }
 }
 
+const CHAT_MAX_MESSAGES = 50;
+const CHAT_MAX_LEN = 1024; // Client must be set to this or fewer
+const CHAT_USER_FLAGS = 0x1;
+export function handleChat(src, pak, resp_func) {
+  // eslint-disable-next-line no-invalid-this
+  let self = this;
+  let { user_id, channel_id, display_name } = src; // user_id is falsey if not logged in
+  let client_id = src.id;
+  let flags = pak.readInt();
+  let msg = pak.readString().trim();
+  if (!msg) {
+    return resp_func('ERR_EMPTY_MESSAGE');
+  }
+  if (msg.length > CHAT_MAX_LEN) {
+    return resp_func('ERR_MESSAGE_TOO_LONG');
+  }
+  if (flags & ~CHAT_USER_FLAGS) {
+    return resp_func('ERR_INVALID_FLAGS');
+  }
+  let chat = self.getChannelData('private.chat', null);
+  if (!chat) {
+    chat = {
+      idx: 0,
+      msgs: [],
+    };
+  }
+  let ts = Date.now();
+  let id = user_id || channel_id;
+  // Not saving display name, client can look that up if absolutely needed
+  let data_saved = { id, msg, flags, ts };
+  // Not broadcasting timestamp, so client will use local timestamp for smooth fading
+  // Need client_id on broadcast so client can avoid playing a sound for own messages
+  let data_broad = { id, msg, flags, client_id, display_name };
+  chat.msgs[chat.idx] = data_saved;
+  chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
+  // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
+  self.setChannelData('private.chat', chat);
+  self.channelEmit('chat', data_broad);
+  // Log entire, non-truncated chat string
+  console.info(`${self.channel_id}: chat from ${id} ("${display_name}") ` +
+    `(${channel_id}): ${JSON.stringify(msg)}`);
+  return resp_func();
+}
+
+export function handleChatGet(src, data, resp_func) {
+  // eslint-disable-next-line no-invalid-this
+  resp_func(null, this.getChannelData('private.chat'));
+}
+
 export function init(channel_server) {
   inited = true;
   channel_server.registerChannelWorker('user', user_worker, user_worker_init_data);

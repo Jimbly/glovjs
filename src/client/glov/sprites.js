@@ -323,6 +323,9 @@ export function clipPush(z, x, y, w, h) {
 
 export function clipPop() {
   assert(clip_stack.length);
+  queuefn(Z.TOOLTIP - 0.1, () => {
+    gl.disable(gl.SCISSOR_TEST);
+  });
   let { z, scissor } = clip_stack.pop();
   let sprites = sprite_queue;
   sprite_queue = [];
@@ -335,7 +338,7 @@ export function clipPop() {
     sprite_queue = sprites;
     exports.draw();
     spriteQueuePop();
-    gl.disable(gl.SCISSOR_TEST);
+    // done at Z.TOOLTIP: gl.disable(gl.SCISSOR_TEST);
   });
 }
 

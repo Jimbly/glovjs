@@ -426,7 +426,7 @@ export function focusNext(key) {
   focused_key_not = key;
   // Eat input events so a pair of keys (e.g. SDLK_DOWN and SDLK_CONTROLLER_DOWN)
   // don't get consumed by two separate widgets
-  glov_input.eatAllInput();
+  glov_input.eatAllInput(true);
 }
 
 export function focusPrev(key) {
@@ -437,7 +437,7 @@ export function focusPrev(key) {
   } else {
     focusSteal(focused_key_prev2);
   }
-  glov_input.eatAllInput();
+  glov_input.eatAllInput(true);
 }
 
 export function focusCheck(key) {

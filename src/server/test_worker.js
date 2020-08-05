@@ -1,4 +1,5 @@
 const { ChannelWorker } = require('./glov/channel_worker.js');
+const { handleChat, handleChatGet } = require('./glov/default_workers.js');
 
 class TestWorker extends ChannelWorker {
   // constructor(channel_server, channel_id) {
@@ -20,9 +21,8 @@ class TestWorker extends ChannelWorker {
 }
 TestWorker.prototype.maintain_client_list = true;
 TestWorker.prototype.emit_join_leave_events = true;
-TestWorker.prototype.require_login = true;
+TestWorker.prototype.require_login = false;
 TestWorker.prototype.auto_destroy = true;
-TestWorker.prototype.allow_client_broadcast = { chat: true };
 
 export function init(channel_server) {
   channel_server.registerChannelWorker('test', TestWorker, {
@@ -31,6 +31,8 @@ export function init(channel_server) {
     client_handlers: {
       bin_get: TestWorker.prototype.handleBinGet,
       bin_set: TestWorker.prototype.handleBinSet,
+      chat: handleChat,
+      chat_get: handleChatGet,
     },
   });
 }

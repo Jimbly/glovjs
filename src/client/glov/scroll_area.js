@@ -9,6 +9,7 @@ const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
+const { KEYS, PAD } = input;
 const { max, min, round } = Math;
 const { clipPush, clipPop } = require('./sprites.js');
 const ui = require('./ui.js');
@@ -35,6 +36,7 @@ function ScrollArea(params) {
   this.color = vec4(1,1,1,1);
   this.background_color = vec4(0.8, 0.8, 0.8, 1); // can be null
   this.auto_scroll = false; // If true, will scroll to the bottom if the height changes and we're not actively scrolling
+  this.focusable_elem = null; // Another element to call .focus() on if we think we are focused
   this.applyParams(params);
 
   // Calculated (only once) if not set
@@ -42,6 +44,9 @@ function ScrollArea(params) {
   this.rollover_color = this.rollover_color || darken(this.color, 0.5);
   this.rollover_color_light = this.rollover_color_light || darken(this.color, 0.75);
   this.disabled_color = this.disabled_color || this.rollover_color;
+  this.background_color_focused = this.background_color_focused || (
+    this.background_color ? vec4(0.4, 0.4, 0.4, 1) : null
+  );
 
   // run-time state
   this.scroll_pos = 0;
@@ -53,6 +58,8 @@ function ScrollArea(params) {
   this.began = false;
   this.last_internal_h = 0;
   this.last_frame = 0;
+  this.focused = false;
+  this.was_disabled = false;
 }
 
 ScrollArea.prototype.applyParams = function (params) {
@@ -68,6 +75,10 @@ ScrollArea.prototype.barWidth = function () {
   let { pixel_scale } = this;
   let { scrollbar_top } = ui.sprites;
   return scrollbar_top.uidata.total_w * pixel_scale;
+};
+
+ScrollArea.prototype.isFocused = function () {
+  return this.focused;
 };
 
 ScrollArea.prototype.begin = function (params) {
@@ -88,6 +99,43 @@ ScrollArea.prototype.begin = function (params) {
   let camera_new_y1 = camera_new_y0 + camera_orig_y1 - camera_orig_y0;
   camera2d.push();
   camera2d.set(camera_new_x0, camera_new_y0, camera_new_x1, camera_new_y1);
+};
+
+ScrollArea.prototype.clampScrollPos = function () {
+  let clamped_pos = clamp(this.scroll_pos, 0, this.last_max_value);
+  if (this.scroll_pos < 0) {
+    this.overscroll = max(this.scroll_pos, -MAX_OVERSCROLL);
+  } else if (this.scroll_pos > this.last_max_value) {
+    this.overscroll = min(this.scroll_pos - this.last_max_value, MAX_OVERSCROLL);
+  }
+  this.scroll_pos = clamped_pos;
+};
+
+ScrollArea.prototype.keyboardScroll = function () {
+  if (this.was_disabled) {
+    return;
+  }
+  let modified = false;
+  let pad_shift = input.padButtonDown(PAD.RIGHT_TRIGGER) || input.padButtonDown(PAD.LEFT_TRIGGER);
+  let value = input.keyDownEdge(KEYS.PAGEDOWN) +
+    (pad_shift ? input.padButtonDownEdge(PAD.DOWN) : 0);
+  if (value) {
+    // don't overscroll on pageup/pagedown unless we're already at the end
+    this.scroll_pos = min(this.scroll_pos + this.h,
+      this.scroll_pos === this.last_max_value ? Infinity : this.last_max_value);
+    modified = true;
+  }
+  value = input.keyDownEdge(KEYS.PAGEUP) +
+    (pad_shift ? input.padButtonDownEdge(PAD.UP) : 0);
+  if (value) {
+    this.scroll_pos = max(this.scroll_pos - this.h,
+      this.scroll_pos === 0 ? -this.h : 0);
+    modified = true;
+  }
+
+  if (modified) {
+    this.clampScrollPos();
+  }
 };
 
 let temp_pos = vec2();
@@ -147,6 +195,7 @@ ScrollArea.prototype.end = function (h) {
   if (handle_h === 1) {
     disabled = true;
   }
+  this.was_disabled = disabled;
 
   // Handle UI interactions
   let user_moved_this_frame = false;
@@ -182,6 +231,7 @@ ScrollArea.prototype.end = function (h) {
       handle_color = rollover_color_light;
     }
     if (this.grabbed) {
+      ui.focusSteal(this);
       user_moved_this_frame = true;
     }
     let up = this.grabbed && input.mouseUpEdge({ button: 0 });
@@ -223,6 +273,7 @@ ScrollArea.prototype.end = function (h) {
       button: 0
     };
     while (input.mouseUpEdge(button_param)) {
+      ui.focusSteal(this);
       top_color = rollover_color;
       this.scroll_pos -= this.rate_scroll_click;
       user_moved_this_frame = true;
@@ -232,6 +283,7 @@ ScrollArea.prototype.end = function (h) {
     }
     button_param.y = this.y + this.h - button_h;
     while (input.mouseUpEdge(button_param)) {
+      ui.focusSteal(this);
       bottom_color = rollover_color;
       this.scroll_pos += this.rate_scroll_click;
       user_moved_this_frame = true;
@@ -249,6 +301,7 @@ ScrollArea.prototype.end = function (h) {
       h: this.h,
       button: 0
     }))) {
+      ui.focusSteal(this);
       if (click.pos[1] > handle_screenpos + handle_pixel_h/2) {
         this.scroll_pos += this.h;
       } else {
@@ -260,6 +313,7 @@ ScrollArea.prototype.end = function (h) {
     // handle dragging the scroll area background
     let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
     if (drag) {
+      ui.focusSteal(this);
       user_moved_this_frame = true;
       if (this.drag_start === null) {
         this.drag_start = this.scroll_pos;
@@ -270,14 +324,14 @@ ScrollArea.prototype.end = function (h) {
     }
   }
 
-  let maxvalue = max(h - this.h+1, 0);
-  let clamped_pos = clamp(this.scroll_pos, 0, maxvalue);
-  if (this.scroll_pos < 0) {
-    this.overscroll = max(this.scroll_pos, -MAX_OVERSCROLL);
-  } else if (this.scroll_pos > maxvalue) {
-    this.overscroll = min(this.scroll_pos - maxvalue, MAX_OVERSCROLL);
+  this.focused = !disabled && ui.focusCheck(this);
+  if (this.focused && this.focusable_elem) {
+    this.focusable_elem.focus();
   }
-  this.scroll_pos = clamped_pos;
+
+  let maxvalue = max(h - this.h+1, 0);
+  this.last_max_value = maxvalue;
+  this.clampScrollPos();
   if (this.auto_scroll && (this.last_internal_h !== h || this.last_frame !== engine.getFrameIndex() - 1)) {
     // We were at the bottom, but we are now not, and auto-scroll is enabled
     if (!user_moved_this_frame) {
@@ -289,11 +343,10 @@ ScrollArea.prototype.end = function (h) {
   this.last_internal_h = h;
   this.last_frame = engine.getFrameIndex();
 
-
-  if (this.background_color) {
-    ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, this.background_color);
+  let bg_color = this.focused ? this.background_color_focused : this.background_color;
+  if (bg_color) {
+    ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, bg_color);
   }
-
 
   if (disabled && auto_hide) {
     return;

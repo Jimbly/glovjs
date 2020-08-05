@@ -34,6 +34,8 @@ window.app = app; // for debugging
 
 const pos_manager = net_position_manager.create({ n: 3, dim_pos: 2, dim_rot: 1 });
 
+const ROOM_REQUIRES_LOGIN = true;
+
 // Virtual viewport for our game logic
 export const game_width = 1280;
 export const game_height = 960;
@@ -71,6 +73,7 @@ export function main() {
     game_width,
     game_height,
     pixely: false,
+    safearea_ignore_bottom: true, // We keep the chat button out of the bottom center safe area trouble spot
     ui_sounds: {
       msg_err: 'msg_err',
       msg_in: 'msg_in',
@@ -196,11 +199,30 @@ export function main() {
     pos_manager.updateMyPos(new Float64Array([test.character.x, test.character.y, test.character.rot]), 'idle');
   }
 
+  function getRoom() {
+    if (!test_room) {
+      test_room = net.subs.getChannel('test.test', true);
+      pos_manager.reinit({
+        channel: test_room,
+        default_pos: vec3(
+          (random() * (game_width - sprite_size) + (sprite_size * 0.5)),
+          (random() * (game_height - sprite_size) + (sprite_size * 0.5)),
+          0
+        ),
+      });
+      app.chat_ui.setChannel(test_room);
+    }
+  }
+
   function preLogout() {
     if (test_room) {
       assert(test_room.subscriptions);
       net.subs.unsubscribe(test_room.channel_id);
+      app.chat_ui.setChannel(null);
       test_room = null;
+      if (!ROOM_REQUIRES_LOGIN) {
+        setTimeout(getRoom, 1);
+      }
     }
   }
 
@@ -274,21 +296,11 @@ export function main() {
 
   function testInit(dt) {
     engine.setState(test);
+    if (!ROOM_REQUIRES_LOGIN) {
+      getRoom();
+    }
 
-    net.subs.onLogin(function () {
-      if (!test_room) {
-        test_room = net.subs.getChannel('test.test', true);
-      }
-      pos_manager.reinit({
-        channel: test_room,
-        default_pos: vec3(
-          (random() * (game_width - sprite_size) + (sprite_size * 0.5)),
-          (random() * (game_height - sprite_size) + (sprite_size * 0.5)),
-          0
-        ),
-      });
-      app.chat_ui.setChannel(test_room);
-    });
+    net.subs.onLogin(getRoom);
 
     test(dt);
   }
