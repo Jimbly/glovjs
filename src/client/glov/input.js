@@ -1107,8 +1107,10 @@ export function mouseUpEdge(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!touch_data.up_edge ||
-      !(button === ANY || button === touch_data.button) ||
+    if (!touch_data.up_edge) {
+      continue;
+    }
+    if (!(button === ANY || button === touch_data.button) ||
       touch_data.total > max_click_dist
     ) {
       continue;

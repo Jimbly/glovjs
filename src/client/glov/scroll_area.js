@@ -23,6 +23,11 @@ function darken(color, factor) {
   return vec4(color[0] * factor, color[1] * factor, color[2] * factor, color[3]);
 }
 
+let default_pixel_scale = 1;
+export function setPixelScale(scale) {
+  default_pixel_scale = scale;
+}
+
 function ScrollArea(params) {
   // configuration options
   this.x = 0;
@@ -31,7 +36,7 @@ function ScrollArea(params) {
   this.w = 10;
   this.h = 10; // height of visible area, not scrolled area
   this.rate_scroll_click = ui.font_height;
-  this.pixel_scale = 1;
+  this.pixel_scale = default_pixel_scale;
   this.top_pad = true; // set to false it the top/bottom "buttons" don't look like buttons
   this.color = vec4(1,1,1,1);
   this.background_color = vec4(0.8, 0.8, 0.8, 1); // can be null
@@ -41,8 +46,9 @@ function ScrollArea(params) {
 
   // Calculated (only once) if not set
   this.rate_scroll_wheel = this.rate_scroll_wheel || this.rate_scroll_click * 2;
-  this.rollover_color = this.rollover_color || darken(this.color, 0.5);
-  this.rollover_color_light = this.rollover_color_light || darken(this.color, 0.75);
+  this.rollover_color = this.rollover_color || darken(this.color, 0.75);
+  this.rollover_color_light = this.rollover_color_light || darken(this.color, 0.95);
+  assert(this.rollover_color_light !== this.color); // equality is used to detect if this gets used and prevent rollover
   this.disabled_color = this.disabled_color || this.rollover_color;
   this.background_color_focused = this.background_color_focused || (
     this.background_color ? vec4(0.4, 0.4, 0.4, 1) : null
@@ -87,7 +93,7 @@ ScrollArea.prototype.begin = function (params) {
   assert(!this.began); // Checking mismatched begin/end
   this.began = true;
   // Set up camera and clippers
-  clipPush(z + 0.05, x, y, w, h);
+  clipPush(z + 0.05, x, y, w - this.barWidth(), h);
   let camera_orig_x0 = camera2d.x0();
   let camera_orig_x1 = camera2d.x1();
   let camera_orig_y0 = camera2d.y0();

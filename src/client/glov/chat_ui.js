@@ -515,7 +515,6 @@ ChatUI.prototype.run = function (opts) {
     !was_focused ?
     1 : // must be numerical, used to index fade values
     0;
-  let help_tooltip_up = false;
   let hide_text_input = ui.modal_dialog || ui.menu_up || hide_light;
   if (!hide_text_input && was_focused && input.touch_mode) {
     // expand chat when focused on touch devices
@@ -580,7 +579,6 @@ ChatUI.prototype.run = function (opts) {
                 }
               }
 
-              help_tooltip_up = true;
               let selected = drawHelpTooltip({
                 x, y: tooltip_y,
                 tooltip_width: max(w, engine.game_width * 0.8),
@@ -655,11 +653,6 @@ ChatUI.prototype.run = function (opts) {
         // Gained focus undo pointerlock
         input.pointerLockExit();
       }
-      if (is_focused && was_focused && input.mouseDownEdge({ peek: true })) {
-        // On touch, tapping doesn't always remove focus from the edit box!
-        // Maybe this logic should be in the editbox logic?
-        ui.focusCanvas();
-      }
     }
   }
   y -= SPACE_ABOVE_ENTRY;
@@ -713,6 +706,7 @@ ChatUI.prototype.run = function (opts) {
   }
 
 
+  let border = 8;
   let now = Date.now();
   if (is_focused) {
     // within scroll area, just draw visible parts
@@ -742,6 +736,18 @@ ChatUI.prototype.run = function (opts) {
     this.scroll_area.end(scroll_internal_h);
     x = x_save;
     y = y_save - scroll_external_h;
+    // Eat mouse events (not handled by above) in the scroll area to prevent unfocusing
+    input.mouseDownEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border });
+    // But a click should dismiss it (important on fullscreen touch UI!)
+    if (input.mouseUpEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border })) {
+      ui.focusCanvas();
+    }
+    // Also a mouse down anywhere outside of the chat UI should dismiss it
+    if (input.mouseDownEdge({ peek: true })) {
+      // On touch, tapping doesn't always remove focus from the edit box!
+      // Maybe this logic should be in the editbox logic?
+      ui.focusCanvas();
+    }
   } else {
     // Just recent entries, fade them out over time
     let { max_lines } = this;
@@ -766,16 +772,7 @@ ChatUI.prototype.run = function (opts) {
   if (!anything_visible && (ui.modal_dialog || ui.menu_up || hide_light)) {
     return;
   }
-  let border = 8;
   ui.drawRect(camera2d.x0(), y - border, x + w + border + 8, y0, z, [0.3,0.3,0.3,0.75]);
-  if (was_focused && !help_tooltip_up) {
-    input.mouseConsumeClicks({
-      x: camera2d.x0(),
-      y: y - border,
-      w: x + w + border + 8 - camera2d.x0(),
-      h: y0 - (y - border),
-    });
-  }
 };
 
 ChatUI.prototype.setChannel = function (channel) {
