@@ -322,6 +322,13 @@ function onKeyDown(event) {
   }
 }
 
+let mouse_move_x = 0;
+export function debugGetMouseMoveX() {
+  let ret = mouse_move_x;
+  mouse_move_x = 0;
+  return ret;
+}
+
 let mouse_moved = false;
 let temp_delta = vec2();
 let last_abs_move = 0;
@@ -355,6 +362,8 @@ function onMouseMove(event, no_stop) {
   //   mouse_pos[1] = event.layerY;
   // }
   mouse_pos_is_touch = false;
+
+  mouse_move_x += (event.movementX || 0);
 
   let any_movement = false;
   if (pointerLocked()) {
@@ -576,6 +585,14 @@ function genAnalogMap() {
   }
 }
 
+let passive_param = false;
+export function handleTouches(elem) {
+  elem.addEventListener('touchstart', onTouchChange, passive_param);
+  elem.addEventListener('touchmove', onTouchChange, passive_param);
+  elem.addEventListener('touchend', onTouchChange, passive_param);
+  elem.addEventListener('touchcancel', onTouchChange, passive_param);
+}
+
 export function startup(_canvas, params) {
   canvas = _canvas;
   pointer_lock.startup(canvas, onPointerLockEnter);
@@ -585,7 +602,6 @@ export function startup(_canvas, params) {
   pad_to_touch = params.pad_to_touch;
   genAnalogMap();
 
-  let passive_param = false;
   try {
     let opts = Object.defineProperty({}, 'passive', {
       get: function () {
@@ -617,10 +633,7 @@ export function startup(_canvas, params) {
   window.addEventListener('blur', onBlurOrFocus, false);
   window.addEventListener('focus', onBlurOrFocus, false);
 
-  canvas.addEventListener('touchstart', onTouchChange, passive_param);
-  canvas.addEventListener('touchmove', onTouchChange, passive_param);
-  canvas.addEventListener('touchend', onTouchChange, passive_param);
-  canvas.addEventListener('touchcancel', onTouchChange, passive_param);
+  handleTouches(canvas);
 
   // For iOS, this is needed in test_fullscreen, but not here, for some reason
   //window.addEventListener('gesturestart', ignored, false);

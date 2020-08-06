@@ -61,7 +61,7 @@ class GlovUIEditBox {
     }
     glov_ui.focusSteal(this);
     this.is_focused = true;
-    if (this.pointer_lock) {
+    if (this.pointer_lock && glov_input.pointerLocked()) {
       glov_input.pointerLockExit();
     }
   }

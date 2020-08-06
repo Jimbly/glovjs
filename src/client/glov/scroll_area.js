@@ -319,7 +319,10 @@ ScrollArea.prototype.end = function (h) {
     // handle dragging the scroll area background
     let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
     if (drag) {
-      ui.focusSteal(this);
+      // Drag should not steal focus
+      // This also fixes an interaction with chat_ui where clicking on the chat background (which causes
+      //   a flicker of a drag) would cause pointer lock to be lost
+      //ui.focusSteal(this);
       user_moved_this_frame = true;
       if (this.drag_start === null) {
         this.drag_start = this.scroll_pos;

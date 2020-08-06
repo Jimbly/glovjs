@@ -48,6 +48,8 @@ export function focuslog(...args) {
   // console.log(`focuslog(${glov_engine.frame_index}): `, ...args);
 }
 
+let color_set_shades = vec4(1, 0.8, 0.7, 0.4);
+
 export function makeColorSet(color) {
   let ret = {
     regular: vec4(),
@@ -55,10 +57,10 @@ export function makeColorSet(color) {
     down: vec4(),
     disabled: vec4(),
   };
-  v4scale(ret.regular, color, 1);
-  v4scale(ret.rollover, color, 0.8); // because we do not have specific graphics
-  v4scale(ret.down, color, 0.7);
-  v4scale(ret.disabled, color, 0.4);
+  v4scale(ret.regular, color, color_set_shades[0]);
+  v4scale(ret.rollover, color, color_set_shades[1]);
+  v4scale(ret.down, color, color_set_shades[2]);
+  v4scale(ret.disabled, color, color_set_shades[3]);
   for (let field in ret) {
     ret[field][3] = color[3];
   }
@@ -187,6 +189,13 @@ let focused_key_prev2;
 
 let pad_focus_left;
 let pad_focus_right;
+
+export function colorSetSetShades(rollover, down, disabled) {
+  color_set_shades[1] = rollover;
+  color_set_shades[2] = down;
+  color_set_shades[3] = disabled;
+  color_button = makeColorSet([1,1,1,1]);
+}
 
 export function loadUISprite(name, ws, hs, overrides, only_override) {
   let override = overrides && overrides[name];
@@ -1376,6 +1385,10 @@ export function scaleSizes(scale) {
   tooltip_pad = round(8 * scale);
   panel_pixel_scale = button_height / 13; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
+}
+
+export function setPanelPixelScale(scale) {
+  tooltip_panel_pixel_scale = panel_pixel_scale = scale;
 }
 
 export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) {

@@ -21,7 +21,7 @@ const { vec4, v3copy } = require('./vmath.js');
 const FADE_START_TIME = [10000, 1000];
 const FADE_TIME = [1000, 500];
 
-const INDENT = 80;
+const INDENT = 40;
 
 const FLAG_EMOTE = 1;
 
@@ -649,16 +649,13 @@ ChatUI.prototype.run = function (opts) {
           ui.focusCanvas();
         }
       }
-      if (opts.pointerlock && is_focused && input.pointerLocked()) {
-        // Gained focus undo pointerlock
-        input.pointerLockExit();
-      }
     }
   }
   y -= SPACE_ABOVE_ENTRY;
 
   let { url_match, url_info, styles, wrap_w } = this;
   let self = this;
+  let do_scroll_area = is_focused;
   // Slightly hacky: uses `x` and `y` from the higher scope
   function drawChatLine(msg, alpha) {
     let line = msg.msg;
@@ -677,10 +674,20 @@ ChatUI.prototype.run = function (opts) {
     if (is_url) {
       click = link({ x, y, w: wrap_w, h, url: is_url, internal: true });
     }
-    let mouseover = input.mouseOver({ x, y, w: wrap_w, h, peek: true }) && !input.mousePosIsTouch();
+    let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || msg.style === 'def' || is_url);
+    let text_w;
+    let mouseover = false;
+    if (do_mouseover) {
+      text_w = ui.font.getStringWidth(styles.def, font_height, line);
+      // mouseOver peek because we're doing it before checking for clicks
+      mouseover = input.mouseOver({ x, y, w: min(text_w, wrap_w), h, peek: true });
+    }
     let style = styles[msg.style || (is_url ? mouseover ? 'link_hover' : 'link' : 'def')];
     ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, INDENT, font_height, line);
-    if (mouseover) {
+    if (mouseover && (!do_scroll_area || y > self.scroll_area.scroll_pos - font_height) &&
+      // Only show tooltip for user messages or links
+      (!msg.style || msg.style === 'def' || is_url)
+    ) {
       ui.drawTooltip({
         x, y, z: Z.TOOLTIP,
         tooltip_above: true,
@@ -708,7 +715,7 @@ ChatUI.prototype.run = function (opts) {
 
   let border = 8;
   let now = Date.now();
-  if (is_focused) {
+  if (do_scroll_area) {
     // within scroll area, just draw visible parts
     let scroll_internal_h = this.total_lines * font_height;
     let scroll_external_h = min(this.h, scroll_internal_h);
@@ -739,14 +746,20 @@ ChatUI.prototype.run = function (opts) {
     // Eat mouse events (not handled by above) in the scroll area to prevent unfocusing
     input.mouseDownEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border });
     // But a click should dismiss it (important on fullscreen touch UI!)
-    if (input.mouseUpEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border })) {
+    if (input.mouseUpEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border,
+      in_event_cb: opts.pointerlock ? input.pointerLockEnter : null })
+    ) {
       ui.focusCanvas();
+      is_focused = false;
     }
+    // Also prevent mouseover from going to anything beneat it
+    input.mouseOver({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border });
     // Also a mouse down anywhere outside of the chat UI should dismiss it
     if (input.mouseDownEdge({ peek: true })) {
       // On touch, tapping doesn't always remove focus from the edit box!
       // Maybe this logic should be in the editbox logic?
       ui.focusCanvas();
+      is_focused = false;
     }
   } else {
     // Just recent entries, fade them out over time
@@ -767,6 +780,11 @@ ChatUI.prototype.run = function (opts) {
       y -= h;
       drawChatLine(msg, alpha);
     }
+  }
+
+  if (opts.pointerlock && is_focused && input.pointerLocked()) {
+    // Gained focus undo pointerlock
+    input.pointerLockExit();
   }
 
   if (!anything_visible && (ui.modal_dialog || ui.menu_up || hide_light)) {
