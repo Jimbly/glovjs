@@ -66,6 +66,7 @@ cmd_parse.register({
 export function main() {
   net.init({
     engine,
+    cmd_parse,
     auto_create_user: false,
   });
 

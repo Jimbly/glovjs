@@ -260,7 +260,7 @@ gulp.task('client_static', function () {
 });
 
 gulp.task('client_fsdata', function () {
-  return gulp.src(config.client_fsdata, { base: 'src/client' })
+  return gulp.src(config.client_fsdata, { base: 'src/client', allowEmpty: true })
     .pipe(webfs())
     .pipe(gulp.dest('./dist/game/build.dev/client'));
 });

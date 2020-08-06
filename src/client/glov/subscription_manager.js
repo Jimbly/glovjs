@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const { cmd_parse } = require('./cmds.js');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
 const fbinstant = require('./fbinstant.js');
@@ -58,15 +57,15 @@ ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
   // Get command list upon first connect
   let channel_type = this.channel_id.split('.')[0];
   let cmd_list = this.subs.cmds_list_by_worker;
-  if (!cmd_list[channel_type]) {
+  if (cmd_list && !cmd_list[channel_type]) {
     cmd_list[channel_type] = {};
-    this.send('cmdparse', 'cmd_list', {}, function (err, resp) {
+    this.send('cmdparse', 'cmd_list', (err, resp) => {
       if (err) { // already unsubscribed?
         console.error(`Error getting cmd_list for ${channel_type}`);
         delete cmd_list[channel_type];
       } else if (resp.found) {
         cmd_list[channel_type] = resp;
-        cmd_parse.addServerCommands(resp.resp);
+        this.subs.cmd_parse.addServerCommands(resp.resp);
       }
     });
   }
@@ -123,17 +122,16 @@ ClientChannelWorker.prototype.pak = function (msg) {
   return pak;
 };
 
-ClientChannelWorker.prototype.send = function (msg, data, opts, resp_func) {
-  assert(typeof opts !== 'function');
+ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth) {
+  assert(!resp_func || typeof resp_func === 'function');
+  assert(!old_fourth);
   this.subs.client.send('channel_msg', {
     channel_id: this.channel_id,
     msg, data,
-    broadcast: opts && opts.broadcast || undefined,
-    silent_error: (opts && opts.silent_error) ? 1 : undefined,
   }, resp_func);
 };
 
-function SubscriptionManager(client) {
+function SubscriptionManager(client, cmd_parse) {
   EventEmitter.call(this);
   this.client = client;
   this.channels = {};
@@ -144,7 +142,10 @@ function SubscriptionManager(client) {
   this.logging_in = false;
   this.logging_out = false;
   this.auto_create_user = false;
-  this.cmds_list_by_worker = {};
+  this.cmd_parse = cmd_parse;
+  if (cmd_parse) {
+    this.cmds_list_by_worker = {};
+  }
 
   this.first_connect = true;
   this.server_time = 0;
@@ -524,7 +525,7 @@ SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
       self.serverLog('cmd_parse_unknown', command);
       return resp_func(last_error);
     }
-    return channel.send('cmdparse', command, { silent_error: 1 },
+    return channel.send('cmdparse', command,
       function (err, resp) {
         if (err || resp && resp.found) {
           return resp_func(err, resp ? resp.resp : null);
@@ -540,6 +541,6 @@ SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
   self.onceConnected(tryNext);
 };
 
-export function create(client) {
-  return new SubscriptionManager(client);
+export function create(client, cmd_parse) {
+  return new SubscriptionManager(client, cmd_parse);
 }

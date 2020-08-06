@@ -2,8 +2,8 @@ const { ChannelWorker } = require('./glov/channel_worker.js');
 const { handleChat, handleChatGet } = require('./glov/default_workers.js');
 
 class TestWorker extends ChannelWorker {
-  // constructor(channel_server, channel_id) {
-  //   super(channel_server, channel_id);
+  // constructor(channel_server, channel_id, channel_data) {
+  //   super(channel_server, channel_id, channel_data);
   // }
   handleBinGet(src, pak, resp_func) {
     let resp = resp_func.pak();

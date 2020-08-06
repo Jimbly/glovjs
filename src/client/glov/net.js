@@ -20,7 +20,7 @@ export function init(params) {
     packet.default_flags |= packet.PACKET_DEBUG;
   }
   client = new WSClient(params.path);
-  subs = subscription_manager.create(client);
+  subs = subscription_manager.create(client, params.cmd_parse);
   subs.auto_create_user = Boolean(params.auto_create_user);
   window.subs = subs; // for debugging
   exports.subs = subs;

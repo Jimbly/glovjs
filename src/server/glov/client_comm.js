@@ -113,7 +113,6 @@ function onChannelMsg(client, data, resp_func) {
   let channel_id;
   let msg;
   let payload;
-  let broadcast = false;
   let is_packet = isPacket(data);
   let log;
   let pool = nop_pool;
@@ -135,7 +134,6 @@ function onChannelMsg(client, data, resp_func) {
     channel_id = data.channel_id;
     msg = data.msg;
     payload = data.data;
-    broadcast = data.broadcast;
     log = logdata(payload);
   }
   if (quietMessage(msg, payload)) {
@@ -155,10 +153,6 @@ function onChannelMsg(client, data, resp_func) {
     pool.pool();
     return void resp_func(`Client is not on channel ${channel_id}`);
   }
-  if (broadcast && (is_packet || typeof payload !== 'object')) {
-    pool.pool();
-    return void resp_func('Broadcast requires data object');
-  }
   if (!resp_func.expecting_response) {
     resp_func = null;
   }
@@ -173,13 +167,9 @@ function onChannelMsg(client, data, resp_func) {
     }
   };
   resp_func.expecting_response = Boolean(old_resp_func);
-  if (broadcast) {
-    channelServerSend(client_channel, channel_id, 'broadcast', null, { msg, data: payload }, resp_func);
-  } else {
-    client_channel.ids = client_channel.ids_direct;
-    channelServerSend(client_channel, channel_id, msg, null, payload, resp_func);
-    client_channel.ids = client_channel.ids_base;
-  }
+  client_channel.ids = client_channel.ids_direct;
+  channelServerSend(client_channel, channel_id, msg, null, payload, resp_func);
+  client_channel.ids = client_channel.ids_base;
   pool.pool();
 }
 

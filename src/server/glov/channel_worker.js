@@ -407,11 +407,6 @@ export class ChannelWorker {
     if (typeof data !== 'object' || typeof data.data !== 'object' || typeof data.msg !== 'string') {
       return resp_func('ERR_INVALID_DATA');
     }
-    if (source.type === 'client') {
-      if (this.allow_client_broadcast[data.msg] !== true) {
-        return resp_func('ERR_NOT_ALLOWED');
-      }
-    }
     if (data.err) { // From a filter
       return resp_func(data.err);
     }
@@ -884,7 +879,6 @@ ChannelWorker.prototype.emit_join_leave_events = false;
 ChannelWorker.prototype.require_login = false;
 ChannelWorker.prototype.auto_destroy = false;
 ChannelWorker.prototype.permissive_client_set = false; // allow clients to set arbitrary data
-ChannelWorker.prototype.allow_client_broadcast = {}; // default: none
 ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this
 ChannelWorker.prototype.no_datastore = false; // always assume datastore usage
 ChannelWorker.prototype.user_data_map = userDataMap({});

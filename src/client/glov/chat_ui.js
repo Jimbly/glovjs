@@ -819,7 +819,7 @@ ChatUI.prototype.setChannel = function (channel) {
   let here_map = {};
   asyncParallel([
     (next) => {
-      channel.send('chat_get', null, null, (err, data) => {
+      channel.send('chat_get', null, (err, data) => {
         if (!err && data && data.msgs && data.msgs.length) {
           chat_history = data;
         }

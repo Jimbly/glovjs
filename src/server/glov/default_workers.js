@@ -33,16 +33,20 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validDisplayName(new_name)) {
       return resp_func('Invalid display name');
     }
-    if (new_name === this.getChannelData('public.display_name')) {
+    let old_name = this.getChannelData('public.display_name');
+    if (new_name === old_name) {
       return resp_func('Name unchanged');
     }
+    let unimportant = new_name.toLowerCase() === old_name.toLowerCase();
     let now = Date.now();
     let last_change = this.getChannelData('private.display_name_change');
-    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD) {
+    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant) {
       return resp_func('You must wait before changing your display name again');
     }
     this.setChannelData('public.display_name', new_name);
-    this.setChannelData('private.display_name_change', now);
+    if (!unimportant) {
+      this.setChannelData('private.display_name_change', now);
+    }
     return resp_func(null, 'Successfully renamed');
   }
   cmdRenameRandom(ignored, resp_func) {

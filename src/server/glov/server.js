@@ -159,7 +159,7 @@ export function startup(params) {
   }
 
   // Image data store is a different API, not supporting mirror/shield for now
-  if (!data_stores.image) {
+  if (data_stores.image === undefined) {
     data_stores.image = data_store_image.create('data_store/public', 'upload');
   }
 
