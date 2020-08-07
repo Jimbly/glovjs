@@ -66,6 +66,7 @@ function ScrollArea(params) {
   this.last_frame = 0;
   this.focused = false;
   this.was_disabled = false;
+  this.scrollbar_visible = false;
 }
 
 ScrollArea.prototype.applyParams = function (params) {
@@ -358,8 +359,10 @@ ScrollArea.prototype.end = function (h) {
   }
 
   if (disabled && (auto_hide || !this.h)) {
+    this.scrollbar_visible = false;
     return;
   }
+  this.scrollbar_visible = true;
 
   scrollbar_top.draw({
     x: bar_x0, y: this.y, z: this.z + 0.2,
