@@ -8,7 +8,7 @@ const glov_ui = require('./ui.js');
 const glov_input = require('./input.js');
 
 window.Z = window.Z || {};
-Z.BACKGROUND = Z.BACKGROUND || 0;
+Z.BACKGROUND = Z.BACKGROUND || 1;
 
 const { KEYS } = glov_input;
 const { abs, floor, max, min } = Math;

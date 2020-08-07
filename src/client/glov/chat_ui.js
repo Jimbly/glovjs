@@ -25,6 +25,9 @@ const INDENT = 40;
 
 const FLAG_EMOTE = 1;
 
+Z.CHAT = Z.CHAT || 500;
+Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
+
 settings.register({
   chat_auto_unfocus: {
     default_value: 0,

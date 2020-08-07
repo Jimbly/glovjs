@@ -5,13 +5,16 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const path = require('path');
-const { allowMapFromLocalhostOnly, setOriginHeaders } = require('./glov/request_utils.js');
+const {
+  // allowMapFromLocalhostOnly,
+  setOriginHeaders,
+} = require('./glov/request_utils.js');
 const glov_server = require('./glov/server.js');
 const test_worker = require('./test_worker.js');
 
 let app = express();
 let server = http.createServer(app);
-allowMapFromLocalhostOnly(app);
+// allowMapFromLocalhostOnly(app);
 
 let server_https;
 if (argv.dev) {

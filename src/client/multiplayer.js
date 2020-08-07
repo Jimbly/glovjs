@@ -25,9 +25,6 @@ window.Z = window.Z || {};
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
-Z.BORDERS = 90;
-Z.UI = 100;
-Z.CHAT_FOCUSED = Z.CHAT = 500;
 
 let app = exports;
 window.app = app; // for debugging
