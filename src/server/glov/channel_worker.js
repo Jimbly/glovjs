@@ -275,6 +275,9 @@ export class ChannelWorker {
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
       console.debug(`${this.channel_id}->${other_channel_id}: subscribe - already subscribed`);
+      if (resp_func) {
+        resp_func();
+      }
       return;
     }
     this.sendChannelMessage(other_channel_id, 'subscribe', undefined, (err, resp_data) => {
@@ -835,7 +838,7 @@ export class ChannelWorker {
       } (expected >=${expected_idx}) from ${source}. Dispatching...`);
       dispatch();
     } else {
-      console.warn(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
+      console.info(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
       } (expected ${expected_idx}) from ${source}. Queuing...`);
       let q_data = channel_worker.pkt_queue[source] = channel_worker.pkt_queue[source] || { pkts: {} };
       q_data.pkts[pkt_idx] = { source, pak };

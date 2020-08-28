@@ -123,7 +123,7 @@ let input_eaten_mouse = false;
 let touches = {}; // `m${button}` or touch_id -> TouchData
 
 export let touch_mode = local_storage.getJSON('touch_mode', false);
-export let pad_mode = local_storage.getJSON('pad_mode', false);
+export let pad_mode = !touch_mode && local_storage.getJSON('pad_mode', false);
 
 cmd_parse.registerValue('mouse_log', {
   type: cmd_parse.TYPE_INT,
@@ -273,6 +273,15 @@ function protectUnload(enable) {
   unload_protected = enable;
 }
 
+let last_input_time = 0;
+export function inputLastTime() {
+  return last_input_time;
+}
+function onUserInput() {
+  soundResume();
+  last_input_time = Date.now();
+}
+
 function onKeyUp(event) {
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
@@ -305,7 +314,7 @@ function onKeyDown(event) {
     event.preventDefault();
   }
   // console.log(`${event.code} ${event.keyCode}`);
-  soundResume();
+  onUserInput();
 
   // Letting through to our code regardless of no_stop, because we handle things like ESC in INPUT elements
   let ks = key_state_new[code];
@@ -415,7 +424,7 @@ function onMouseDown(event) {
     eventlog(event);
   }
   onMouseMove(event); // update mouse_pos
-  soundResume();
+  onUserInput();
   let no_click = letEventThrough(event);
 
   let button = event.button;
@@ -478,14 +487,14 @@ function onTouchChange(event) {
   // Using .pageX/Y here because on iOS when a text entry is selected, it scrolls
   // our canvas offscreen.  Should maybe have the canvas resize and use clientX
   // instead, but this works well enough.
-  soundResume();
+  onUserInput();
   if (!touch_mode) {
     local_storage.set('touch_mode', true);
     touch_mode = true;
   }
   if (pad_mode) {
-    local_storage.set('pad_mode', true);
-    pad_mode = true;
+    local_storage.set('pad_mode', false);
+    pad_mode = false;
   }
   if (event.cancelable !== false) {
     event.preventDefault();
@@ -666,6 +675,10 @@ function getGamepadData(idx) {
 function updatePadState(gpd, ps, b, padcode) {
   if (b && !ps[padcode]) {
     ps[padcode] = DOWN_EDGE;
+    if (touch_mode) {
+      local_storage.set('touch_mode', false);
+      touch_mode = false;
+    }
     if (!pad_mode) {
       local_storage.setJSON('pad_mode', true);
       pad_mode = true;
@@ -928,7 +941,7 @@ export function mouseWheel(param) {
 }
 
 export function mouseOver(param) {
-  if (mouse_over_captured || pointerLocked()) {
+  if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
     return false;
   }
   param = param || {};

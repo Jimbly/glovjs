@@ -7,6 +7,7 @@ const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
 const net = require('./glov/net.js');
 const particles = require('./glov/particles.js');
+const settings = require('./glov/settings.js');
 const glov_sprites = require('./glov/sprites.js');
 const sprite_animation = require('./glov/sprite_animation.js');
 const transition = require('./glov/transition.js');
@@ -255,7 +256,7 @@ export function main() {
 
     let x = ui.button_height;
     let button_spacing = ui.button_height + 2;
-    let y = game_height - 10 - button_spacing * 5;
+    let y = game_height - 10 - button_spacing * 6;
     if (ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
       tooltip: 'Toggles pixely or regular mode (requires reload)' })
     ) {
@@ -270,6 +271,17 @@ export function main() {
         document.location.reload();
       } else {
         document.location = String(document.location);
+      }
+    }
+    y += button_spacing;
+
+    if (ui.buttonText({ x, y, text: `Render Scale: ${settings.render_scale}`,
+      tooltip: 'Changes render_scale' })
+    ) {
+      if (settings.render_scale === 1) {
+        settings.set('render_scale', 0.5);
+      } else {
+        settings.set('render_scale', 1);
       }
     }
     y += button_spacing;

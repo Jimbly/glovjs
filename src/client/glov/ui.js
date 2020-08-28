@@ -151,6 +151,7 @@ export let font_style_focused = glov_font.style(null, {
 export let font_style_normal = glov_font.styleColored(null, 0x000000ff);
 
 export let font;
+export let title_font;
 export let sprites = {};
 
 export let color_button = makeColorSet([1,1,1,1]);
@@ -218,6 +219,7 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
 
 export function startup(param) {
   font = param.font;
+  title_font = param.title_font || font;
   let overrides = param.ui_sprites;
   KEYS = glov_input.KEYS;
   PAD = glov_input.PAD;
@@ -542,7 +544,7 @@ export function buttonShared(param) {
     }
     state = 'disabled';
   } else if (param.drag_target && (ret = glov_input.dragDrop(param))) {
-    if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
+    if (!glov_input.mousePosIsTouch()) {
       setMouseOver(key, rollover_quiet);
     }
     if (!param.no_focus) {
@@ -552,12 +554,10 @@ export function buttonShared(param) {
   } else if ((button_click = glov_input.click(param)) ||
     param.long_press && (button_click = glov_input.longPress(param))
   ) {
-    if (!param.no_touch_mouseover || !glov_input.mousePosIsTouch()) {
-      setMouseOver(key, rollover_quiet);
-    }
-    if (param.touch_twice && glov_input.mousePosIsTouch() && !focused) {
+    if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
       // Just focus, show tooltip
       touch_changed_focus = true;
+      setMouseOver(key, rollover_quiet);
     } else {
       ret = true;
     }
@@ -566,16 +566,17 @@ export function buttonShared(param) {
       focused = true;
     }
   } else if (param.drag_target && glov_input.dragOver(param)) {
-    // Set this even if param.no_touch_mouse_over is set
+    // Mouseover even if touch?
     setMouseOver(key, rollover_quiet);
     state = glov_input.mouseDown({ max_dist: Infinity }) ? 'down' : 'rollover';
   } else if (param.drag_over && glov_input.dragOver(param)) {
     // do nothing
   } else if (glov_input.mouseOver(param)) {
-    if (param.no_touch_mouseover && glov_input.mousePosIsTouch()) {
-      // do not set mouseover
-    } else if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
-      // do not set mouseover
+    if (glov_input.mousePosIsTouch()) {
+      // do not set mouseover, but still do 'down' event
+      if (glov_input.mouseDown(param)) {
+        state = 'down';
+      }
     } else {
       setMouseOver(key, rollover_quiet);
       state = glov_input.mouseDown(param) ? 'down' : 'rollover';
@@ -769,11 +770,11 @@ function modalDialogRun() {
 
   if (modal_dialog.title) {
     if (fullscreen_mode) {
-      font.drawSizedAligned(modal_font_style, x, y, Z.MODAL, eff_font_height * modal_title_scale,
+      title_font.drawSizedAligned(modal_font_style, x, y, Z.MODAL, eff_font_height * modal_title_scale,
         glov_font.ALIGN.HFIT, text_w, 0, modal_dialog.title);
       y += eff_font_height * modal_title_scale;
     } else {
-      y += font.drawSizedWrapped(modal_font_style,
+      y += title_font.drawSizedWrapped(modal_font_style,
         x, y, Z.MODAL, text_w, 0, eff_font_height * modal_title_scale,
         modal_dialog.title);
     }
@@ -1176,6 +1177,10 @@ export function drawRect(x0, y0, x1, y1, z, color) {
     w: Mx - mx,
     h: My - my,
   });
+}
+
+export function drawRect2(param) {
+  drawRect(param.x, param.y, param.x + param.w, param.y + param.h, param.z, param.color);
 }
 
 function spreadTechParams(spread) {

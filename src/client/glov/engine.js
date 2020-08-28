@@ -45,6 +45,7 @@ export let glov_particles;
 export let width;
 export let height;
 export let pixel_aspect = 1;
+export let dom_to_canvas_ratio = window.devicePixelRatio || 1;
 export let antialias;
 
 export let game_width;
@@ -91,6 +92,13 @@ export function setGlobalMatrices(_mat_view) {
   v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
   mat4Invert(mat_temp, mat_view);
   mat3FromMat4(mat_inv_view, mat_temp);
+}
+
+// Just set up mat_vp and mat_projection
+export function setMatVP(_mat_view) {
+  // exports.setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  mat4Copy(mat_view, _mat_view);
+  mat4Mul(mat_vp, mat_projection, mat_view);
 }
 
 export function setFOV(new_fov) {
@@ -366,7 +374,8 @@ function checkResize() {
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
   //   shrinking the viewport without changing the window height
   let vv = window.visualViewport || {};
-  let css_to_real = window.devicePixelRatio || 1;
+  dom_to_canvas_ratio = window.devicePixelRatio || 1;
+  dom_to_canvas_ratio *= settings.render_scale;
   let view_w = (vv.width || window.innerWidth);
   let view_h = (vv.height || window.innerHeight);
   if (view_h !== last_body_height) {
@@ -374,8 +383,8 @@ function checkResize() {
     last_body_height = view_h;
     document.body.style.height = `${view_h}px`;
   }
-  let new_width = round(canvas.clientWidth * css_to_real) || 1;
-  let new_height = round(canvas.clientHeight * css_to_real) || 1;
+  let new_width = round(canvas.clientWidth * dom_to_canvas_ratio) || 1;
+  let new_height = round(canvas.clientHeight * dom_to_canvas_ratio) || 1;
 
   if (cmds.safearea[0] === -1) {
     if (safearea_elem) {
@@ -383,12 +392,12 @@ function checkResize() {
       let sa_height = safearea_elem.offsetHeight;
       if (sa_width && sa_height) {
         v4set(safearea_values,
-          safearea_elem.offsetLeft * css_to_real,
-          new_width - (sa_width + safearea_elem.offsetLeft) * css_to_real,
-          max(safearea_elem.offsetTop * css_to_real, safariTopSafeArea(view_w, view_h)),
+          safearea_elem.offsetLeft * dom_to_canvas_ratio,
+          new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
+          max(safearea_elem.offsetTop * dom_to_canvas_ratio, safariTopSafeArea(view_w, view_h)),
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
-          safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * css_to_real);
+          safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
       }
     }
   } else {
@@ -405,7 +414,7 @@ function checkResize() {
   }
 
   if (new_width !== last_canvas_width || new_height !== last_canvas_height) {
-    window.pixel_scale = css_to_real; // for debug
+    window.pixel_scale = dom_to_canvas_ratio; // for debug
     last_canvas_width = canvas.width = new_width || 1;
     last_canvas_height = canvas.height = new_height || 1;
     // For the next 10 frames, make sure font size is correct
@@ -922,6 +931,9 @@ export function startup(params) {
     font = glov_font.create(font_info_palanquin32, 'font/palanquin32');
   }
   params.font = font;
+  if (params.title_font) {
+    params.title_font = glov_font.create(params.title_font.info, params.title_font.texture);
+  }
   glov_ui.startup(params);
 
   soundStartup(params.sound);

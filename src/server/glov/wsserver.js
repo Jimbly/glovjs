@@ -22,10 +22,15 @@ function WSClient(ws_server, socket) {
   this.id = ++ws_server.last_client_id;
   this.secret = Math.ceil(Math.random() * 1e10).toString();
   this.addr = ipFromRequest(socket.handshake);
+  if (socket.handshake.headers) {
+    this.user_agent = socket.handshake.headers['user-agent'];
+    this.origin = socket.handshake.headers.origin;
+  }
   this.handlers = ws_server.handlers; // reference, not copy!
   this.connected = true;
   this.disconnected = false;
   this.last_receive_time = Date.now();
+  this.idle_counter = 0;
   ackInitReceiver(this);
   ws_server.clients[this.id] = this;
 }
@@ -118,7 +123,8 @@ WSServer.prototype.init = function (server, server_https) {
     socket.handshake = req;
     let client = new WSClient(ws_server, socket);
     console.info(`WS Client ${client.id} connected to ${req.url} from ${client.addr}` +
-      ` (${Object.keys(ws_server.clients).length} clients connected)`);
+      ` (${Object.keys(ws_server.clients).length} clients connected);` +
+      ` UA:${JSON.stringify(client.user_agent)}, origin:${JSON.stringify(client.origin)}`);
 
     socket.on('close', function () {
       // disable this for testing
@@ -166,7 +172,8 @@ WSServer.prototype.init = function (server, server_https) {
     }
   });
 
-  setInterval(this.checkTimeouts.bind(this), wscommon.CONNECTION_TIMEOUT / 2);
+  this.check_timeouts_fn = this.checkTimeouts.bind(this);
+  setTimeout(this.check_timeouts_fn, wscommon.CONNECTION_TIMEOUT / 4);
 };
 
 WSServer.prototype.disconnectClient = function (client) {
@@ -179,15 +186,16 @@ WSServer.prototype.disconnectClient = function (client) {
 };
 
 WSServer.prototype.checkTimeouts = function () {
-  let expiry = Date.now() - wscommon.CONNECTION_TIMEOUT;
   for (let client_id in this.clients) {
     let client = this.clients[client_id];
-    if (client.last_receive_time < expiry) {
+    client.idle_counter++;
+    if (client.idle_counter === 5) {
       let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
       console.info(`WS Client ${client.id}(${user_id}) timed out, disconnecting...`);
       this.disconnectClient(client);
     }
   }
+  setTimeout(this.check_timeouts_fn, wscommon.CONNECTION_TIMEOUT / 4);
 };
 
 // Must be a ready-to-send packet created with .wsPak, not just the payload

@@ -125,6 +125,7 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   assert(typeof dest === 'string' && dest);
   assert(typeof msg === 'string' || typeof msg === 'number');
   assert(source.channel_id);
+  assert(!source.shutting_down); // or already shut down - will be OOO and will not get responses!
   if (!q && typeof msg === 'string') {
     console.debug(`${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
   }

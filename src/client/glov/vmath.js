@@ -357,6 +357,13 @@ export function v3sub(out, a, b) {
   return out;
 }
 
+export function v3iScale(a, s) {
+  a[0] *= s;
+  a[1] *= s;
+  a[2] *= s;
+  return a;
+}
+
 export function v3iSub(a, b) {
   a[0] -= b[0];
   a[1] -= b[1];

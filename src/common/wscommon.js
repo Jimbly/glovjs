@@ -137,6 +137,7 @@ export function wsHandleMessage(client, buf) {
   let pak = packetFromBuffer(buf, buf.length, false);
   pak.readFlags();
   client.last_receive_time = now;
+  client.idle_counter = 0;
 
   return ackHandleMessage(client, source, pak, function sendFunc(msg, err, data, resp_func) {
     if (resp_func && !resp_func.expecting_response) {

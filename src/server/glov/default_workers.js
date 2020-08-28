@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
+const { FRIEND_ADDED, FRIEND_ADDED_AUTO, FRIEND_REMOVED, PRESENCE_OFFLINE } = require('../../common/enums.js');
 const md5 = require('../../common/md5.js');
 const { isProfane } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
@@ -10,6 +11,7 @@ const random_names = require('./random_names.js');
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_FRIENDS = 100;
 
 function validDisplayName(display_name) {
   if (!display_name || isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH) {
@@ -22,9 +24,11 @@ export class DefaultUserWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
     this.user_id = this.channel_subid; // 1234
+    this.presence_data = {}; // client_id -> data
+    this.presence_idx = 0;
   }
   cmdRename(new_name, resp_func) {
-    if (this.cmd_parse_source.user_id !== this.channel_subid) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
       return resp_func('ERR_INVALID_USER');
     }
     if (!new_name) {
@@ -52,6 +56,140 @@ export class DefaultUserWorker extends ChannelWorker {
   cmdRenameRandom(ignored, resp_func) {
     return this.cmdRename(random_names.get(), resp_func);
   }
+  cmdFriendAdd(user_id, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!user_id) {
+      return void resp_func('Missing User ID');
+    }
+    if (user_id === this.user_id) {
+      return void resp_func('Cannot friend yourself');
+    }
+    if (this.getChannelData(`private.friends.${user_id}`)) {
+      return void resp_func(`Already on friends list: ${user_id}`);
+    }
+    if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
+      return void resp_func('Maximum friends list size exceeded');
+    }
+    this.pak(`user.${user_id}`, 'user_ping').send((err) => {
+      if (err) {
+        this.log(`Error pinging ${user_id}: ${err}`);
+        // Return generic error
+        return void resp_func(`User not found: ${user_id}`);
+      }
+      assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
+      this.setChannelData(`private.friends.${user_id}`, FRIEND_ADDED);
+      resp_func(null, `Friend added: ${user_id}`);
+    });
+  }
+  cmdFriendRemove(user_id, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!user_id) {
+      return void resp_func('Missing User ID');
+    }
+    if (!this.getChannelData(`private.friends.${user_id}`)) {
+      return void resp_func(`Not on your friends list: ${user_id}`);
+    }
+    // Flag as 'removed' if this was potentially populated from an external auth system
+    let new_value = (user_id.indexOf('$') === -1 || this.user_id.indexOf('$') === -1) ?
+      undefined :
+      FRIEND_REMOVED;
+    this.setChannelData(`private.friends.${user_id}`, new_value);
+    resp_func(null, `Friend removed: ${user_id}`);
+  }
+  cmdChannelDataGet(param, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!this.getChannelData('public.permissions.admin')) {
+      return void resp_func('ERR_ACCESS_DENIED');
+    }
+    let m = param.match(/^([^ ]+) ([^ ]+)$/);
+    if (!m) {
+      return void resp_func('Error parsing arguments');
+    }
+    if (!m[2].match(/^(public|private)/)) {
+      return void resp_func('Key must start with public. or private.');
+    }
+    this.sendChannelMessage(m[1], 'get_channel_data', m[2], function (err, resp) {
+      resp_func(err,
+        `${m[1]}:${m[2]} = ${resp === undefined ? 'undefined' : JSON.stringify(resp)}`);
+    });
+  }
+  cmdChannelDataSet(param, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!this.getChannelData('public.permissions.admin')) {
+      return void resp_func('ERR_ACCESS_DENIED');
+    }
+    let m = param.match(/^([^ ]+) ([^ ]+) (.+)$/);
+    if (!m) {
+      return void resp_func('Error parsing arguments');
+    }
+    if (!m[2].match(/^(public\.|private\.)/)) {
+      return void resp_func('Key must start with public. or private.');
+    }
+    let value;
+    try {
+      if (m[3] !== 'undefined') {
+        value = JSON.parse(m[3]);
+      }
+    } catch (e) {
+      return void resp_func(`Error parsing value: ${e}`);
+    }
+    this.setChannelDataOnOther(m[1], m[2], value, function (err, resp) {
+      if (err || resp) {
+        resp_func(err, resp);
+      } else {
+        resp_func(null, 'Channel data set.');
+      }
+    });
+  }
+  handleFriendList(src, pak, resp_func) {
+    if (src.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    let friends = this.getChannelData('private.friends', {});
+    pak = resp_func.pak();
+    for (let user_id in friends) {
+      pak.writeAnsiString(user_id);
+      pak.writeInt(friends[user_id]);
+    }
+    pak.writeAnsiString('');
+    pak.send();
+  }
+  handleFriendAutoUpdate(src, pak, resp_func) {
+    if (src.user_id !== this.user_id) {
+      pak.pool();
+      return void resp_func('ERR_INVALID_USER');
+    }
+    let user_id;
+    let friends = this.getChannelData('private.friends', {});
+    while ((user_id = pak.readAnsiString())) {
+      if (user_id !== this.user_id) {
+        friends[user_id] = FRIEND_ADDED_AUTO;
+      }
+    }
+    while ((user_id = pak.readAnsiString())) {
+      friends[user_id] = FRIEND_REMOVED;
+    }
+    this.setChannelData('private.friends', friends);
+    resp_func();
+  }
+  exists() {
+    return this.getChannelData('private.password') || this.getChannelData('private.external');
+  }
+  handleUserPing(src, pak, resp_func) {
+    if (!this.exists()) {
+      return resp_func('ERR_USER_NOT_FOUND');
+    }
+    // Also return display name and any other relevant info?
+    return resp_func();
+  }
   handleLogin(src, data, resp_func) {
     if (!data.password) {
       return resp_func('Missing password');
@@ -64,6 +202,7 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Invalid password');
     }
     this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
     return resp_func(null, this.getChannelData('public'));
   }
@@ -74,11 +213,12 @@ export class DefaultUserWorker extends ChannelWorker {
       return this.createShared(data, resp_func);
     }
     this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
     return resp_func(null, this.getChannelData('public'));
   }
   handleCreate(src, data, resp_func) {
-    if (this.getChannelData('private.password') || this.getChannelData('private.external')) {
+    if (this.exists()) {
       return resp_func('Account already exists');
     }
     if (!data.password) {
@@ -112,6 +252,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.creation_ip = data.ip;
     private_data.creation_time = Date.now();
     private_data.login_ip = data.ip;
+    private_data.login_ua = data.ua;
     private_data.login_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
@@ -133,9 +274,52 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     return true;
   }
+
+  handleNewClient(src) {
+    if (this.rich_presence && src.type === 'client' && this.presence_data) {
+      this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
+    }
+  }
+  updatePresence() {
+    for (let ii = 0; ii < this.subscribers.length; ++ii) {
+      let channel_id = this.subscribers[ii];
+      if (channel_id.startsWith('client.')) {
+        this.sendChannelMessage(channel_id, 'presence', this.presence_data);
+      }
+    }
+  }
+  handleClientDisconnect(src) {
+    if (this.rich_presence && this.presence_data[src.channel_id]) {
+      delete this.presence_data[src.channel_id];
+      this.updatePresence();
+    }
+  }
+  handlePresenceSet(src, pak, resp_func) {
+    let active = pak.readInt();
+    let state = pak.readAnsiString(); // app-defined state
+    let payload = pak.readJSON();
+    if (!this.rich_presence) {
+      return void resp_func('ERR_NO_RICH_PRESENCE');
+    }
+    if (src.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (active === PRESENCE_OFFLINE) {
+      delete this.presence_data[src.channel_id];
+    } else {
+      this.presence_data[src.channel_id] = {
+        id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
+        active,
+        state,
+        payload
+      };
+    }
+    this.updatePresence();
+  }
 }
 DefaultUserWorker.prototype.auto_destroy = true;
 DefaultUserWorker.prototype.require_email = true;
+DefaultUserWorker.prototype.rich_presence = true;
 
 class ChannelServerWorker extends ChannelWorker {
   handleWorkerRemoved(src, data, resp_func) {
@@ -163,11 +347,35 @@ let user_worker_init_data = {
     cmd: 'rename_random',
     help: 'Change display name to something random',
     func: DefaultUserWorker.prototype.cmdRenameRandom,
+  },{
+    cmd: 'friend_add',
+    help: 'Add a friend',
+    func: DefaultUserWorker.prototype.cmdFriendAdd,
+  },{
+    cmd: 'friend_remove',
+    help: 'Remove a friend',
+    func: DefaultUserWorker.prototype.cmdFriendRemove,
+  },{
+    cmd: 'channel_data_get',
+    help: '(Admin) Get from a channel\'s metadata',
+    usage: '/channel_data_get channel_id field.name',
+    func: DefaultUserWorker.prototype.cmdChannelDataGet,
+  },{
+    cmd: 'channel_data_set',
+    help: '(Admin) Set a channel\'s metadata',
+    usage: '/channel_data_set channel_id field.name JSON',
+    func: DefaultUserWorker.prototype.cmdChannelDataSet,
   }],
   handlers: {
     login_facebook: DefaultUserWorker.prototype.handleLoginFacebook,
     login: DefaultUserWorker.prototype.handleLogin,
     create: DefaultUserWorker.prototype.handleCreate,
+    user_ping: DefaultUserWorker.prototype.handleUserPing,
+  },
+  client_handlers: {
+    friend_auto_update: DefaultUserWorker.prototype.handleFriendAutoUpdate,
+    friend_list: DefaultUserWorker.prototype.handleFriendList,
+    presence_set: DefaultUserWorker.prototype.handlePresenceSet,
   },
 };
 export function overrideUserWorker(new_user_worker, extra_data) {
@@ -219,8 +427,7 @@ export function handleChat(src, pak, resp_func) {
   }
   let ts = Date.now();
   let id = user_id || channel_id;
-  // Not saving display name, client can look that up if absolutely needed
-  let data_saved = { id, msg, flags, ts };
+  let data_saved = { id, msg, flags, ts, display_name };
   // Not broadcasting timestamp, so client will use local timestamp for smooth fading
   // Need client_id on broadcast so client can avoid playing a sound for own messages
   let data_broad = { id, msg, flags, client_id, display_name };

@@ -295,11 +295,15 @@ function updateHistory(new_need_push_state) {
     if (url.endsWith('?')) {
       url = url.slice(0, -1);
     }
-    if (need_push_state) {
-      need_push_state = false;
-      window.history.pushState(undefined, eff_title, url);
-    } else {
-      window.history.replaceState(undefined, eff_title, url);
+    try {
+      if (need_push_state) {
+        need_push_state = false;
+        window.history.pushState(undefined, eff_title, url);
+      } else {
+        window.history.replaceState(undefined, eff_title, url);
+      }
+    } catch (e) {
+      // ignore; some browsers disallow this, I guess
     }
     if (eff_title) {
       document.title = eff_title;

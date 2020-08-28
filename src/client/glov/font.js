@@ -5,6 +5,7 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const { floor, max, round } = Math;
+const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
@@ -550,7 +551,8 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   const camera_xscale = camera2d.data[4];
   const camera_yscale = camera2d.data[5];
   let avg_scale_combined = (xsc * camera_xscale + ysc * camera_yscale) * 0.5;
-  // avg_scale_combined *= glov_settings.render_scale;
+  // Not doing this here, because render_scale is not currently reflected in camera_x/yscale
+  // avg_scale_combined *= settings.render_scale;
 
   // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
   //   things look almost identical, just crisper

@@ -21,6 +21,14 @@ export let style_link_hover = glov_font.style(null, {
   outline_color: 0x00000020,
 });
 
+export function formatUserID(user_id, display_name) {
+  let name = display_name || user_id;
+  if (user_id.toLowerCase() !== name.toLowerCase()) {
+    name = `${display_name} (${user_id})`;
+  }
+  return name;
+}
+
 function AccountUI() {
   this.edit_box_name = ui.createEditBox({
     placeholder: 'Username',
@@ -109,8 +117,6 @@ AccountUI.prototype.showLogin = function (param) {
             'Cancel': null,
           },
         });
-      } else {
-        net.subs.getMyUserChannel();
       }
     });
   } else if (!net.subs.loggedIn() && net.subs.auto_create_user &&
@@ -135,7 +141,6 @@ AccountUI.prototype.showLogin = function (param) {
           },
         });
       } else {
-        net.subs.getMyUserChannel();
         net.subs.sendCmdParse('rename_random', (err) => {
           if (err) {
             console.log(err);
@@ -263,24 +268,23 @@ AccountUI.prototype.showLogin = function (param) {
       }
     }
   } else {
+    // FB Users can't logout
+    let show_logout = !window.FBInstant;
     let user_id = net.subs.loggedIn();
     let user_channel = net.subs.getChannel(`user.${user_id}`);
     let display_name = user_channel.getChannelData('public.display_name') || user_id;
-    ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
-      y + ui.font_height * (center ? -0.5 : -0.25),
-      Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
-      'Logged in as:');
-    let name = display_name;
-    if (user_id.toLowerCase() !== display_name.toLowerCase()) {
-      name = `${display_name} (${user_id})`;
-    }
-    ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
-      y + ui.font_height * (center ? 0.5 : 0.75),
-      Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
-      name);
+    let name = formatUserID(user_id, display_name);
 
-    // FB Users can't logout
-    if (!window.FBInstant) {
+    if (show_logout) {
+      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
+        y + ui.font_height * (center ? -0.5 : -0.25),
+        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
+        'Logged in as:');
+      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
+        y + ui.font_height * (center ? 0.5 : 0.75),
+        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
+        name);
+
       if (ui.buttonText({
         x, y, w: button_width, h: button_height,
         text: 'Log out',
@@ -292,6 +296,11 @@ AccountUI.prototype.showLogin = function (param) {
         net.subs.logout();
       }
       y += button_height + 8;
+    } else {
+      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8, y,
+        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT,
+        text_w + button_width, button_height,
+        `Logged in as: ${name}`);
     }
   }
   if (login_message) {

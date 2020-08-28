@@ -13,7 +13,7 @@ const safearea_pad = new Float32Array(4); // left, right, top, bottom
 // 3: y1_real
 // 4: x_scale
 // 5: y_scale
-// 6: css_to_real
+// 6: dom_to_canvas_ratio
 // 7: inverse viewport x_scale
 // 8: inverse viewport y_scale
 // 9: x0
@@ -49,6 +49,11 @@ function reapply() {
 export function virtualToCanvas(dst, src) {
   dst[0] = (src[0] - data[0]) * data[4];
   dst[1] = (src[1] - data[1]) * data[5];
+}
+
+export function canvasToVirtual(dst, src) {
+  dst[0] = src[0] / data[4] + data[0];
+  dst[1] = src[1] / data[5] + data[1];
 }
 
 // Sets the 2D "camera" used to translate sprite positions to screen space.  Affects sprites queued
@@ -288,6 +293,20 @@ export function domDeltaToVirtual(dst, src) {
   }
 }
 
+let input_clipping_virtual = new Float32Array(4);
+function updateVirtualInputClipping() {
+  domToVirtual(input_clipping_virtual, input_clipping);
+  //domDeltaToVirtual(input_clipping_virtual.slice(2), input_clipping.slice(2)) :
+  if (render_width) {
+    input_clipping_virtual[2] = input_clipping[2] * data[6] * data[7];
+    input_clipping_virtual[3] = input_clipping[3] * data[6] * data[8];
+  } else {
+    input_clipping_virtual[2] = input_clipping[2] * data[6] / data[4];
+    input_clipping_virtual[3] = input_clipping[3] * data[6] / data[5];
+  }
+}
+
+
 // To get to coordinates used by mouse events
 export function virtualToDom(dst, src) {
   if (render_width) {
@@ -322,8 +341,39 @@ export function virtualToDomPosParam(dst, src) {
   }
 }
 
+export function clipTestRect(rect) {
+  if (!input_clipping) {
+    return true;
+  }
+  updateVirtualInputClipping();
+  let icv = input_clipping_virtual;
+  if (rect.x > icv[0] + icv[2] ||
+    rect.x + rect.w < icv[0] ||
+    rect.y > icv[1] + icv[3] ||
+    rect.y + rect.h < icv[1]
+  ) {
+    // fully clipped
+    return false;
+  }
+  if (rect.x < icv[0]) {
+    rect.w -= icv[0] - rect.x;
+    rect.x = icv[0];
+  }
+  if (rect.y < icv[1]) {
+    rect.h -= icv[1] - rect.y;
+    rect.y = icv[1];
+  }
+  if (rect.x + rect.w > icv[0] + icv[2]) {
+    rect.w = icv[0] + icv[2] - rect.x;
+  }
+  if (rect.y + rect.h > icv[1] + icv[3]) {
+    rect.h = icv[1] + icv[3] - rect.y;
+  }
+  return true;
+}
+
 export function tickCamera2D() {
-  data[6] = window.devicePixelRatio || 1; /* css_to_real */
+  data[6] = engine.dom_to_canvas_ratio; /* dom_to_canvas_ratio */
   screen_width = engine.width;
   screen_height = engine.height;
   let viewport = [0, 0, screen_width, screen_height];

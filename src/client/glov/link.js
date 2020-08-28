@@ -23,56 +23,62 @@ export function link(param) {
   if (!state) {
     state = state_cache[key] = { clicked: false };
   }
-  let elem = ui.getElem(allow_modal, state.elem);
   state.frame = engine.frame_index;
-  if (elem !== state.elem) {
-    state.elem = elem;
-    if (elem) {
-      // new DOM element, initialize
-      elem.textContent = '';
-      let a_elem = document.createElement('a');
-      a_elem.setAttribute('draggable', false);
-      a_elem.textContent = ' ';
-      a_elem.className = 'glovui_link noglov';
-      a_elem.setAttribute('target', '_blank');
-      a_elem.setAttribute('href', url);
-      state.url = url;
-      if (internal) {
-        let down_x;
-        let down_y;
-        input.handleTouches(a_elem);
-        a_elem.onmousedown = function (ev) {
-          down_x = ev.pageX;
-          down_y = ev.pageY;
-        };
-        a_elem.onclick = function (ev) {
-          ev.preventDefault();
-          if (down_x) {
-            let dist = abs(ev.pageX - down_x) + abs(ev.pageY - down_y);
-            if (dist > 50) {
-              return;
-            }
-          }
-          state.clicked = true;
-          in_event.handle('mouseup', ev);
-        };
-      }
-      elem.appendChild(a_elem);
-      state.a_elem = a_elem;
-    }
-  }
-  if (elem) {
-    if (url !== state.url) {
-      state.a_elem.setAttribute('href', url);
-      state.url = url;
-    }
 
-    let pos = camera2d.htmlPos(x, y);
-    elem.style.left = `${pos[0]}%`;
-    elem.style.top = `${pos[1]}%`;
-    let size = camera2d.htmlSize(w, h);
-    elem.style.width = `${size[0]}%`;
-    elem.style.height = `${size[1]}%`;
+  let rect = { x, y, w, h };
+
+  if (camera2d.clipTestRect(rect)) {
+    // at least some is not clipped
+    let elem = ui.getElem(allow_modal, state.elem);
+    if (elem !== state.elem) {
+      state.elem = elem;
+      if (elem) {
+        // new DOM element, initialize
+        elem.textContent = '';
+        let a_elem = document.createElement('a');
+        a_elem.setAttribute('draggable', false);
+        a_elem.textContent = ' ';
+        a_elem.className = 'glovui_link noglov';
+        a_elem.setAttribute('target', '_blank');
+        a_elem.setAttribute('href', url);
+        state.url = url;
+        if (internal) {
+          let down_x;
+          let down_y;
+          input.handleTouches(a_elem);
+          a_elem.onmousedown = function (ev) {
+            down_x = ev.pageX;
+            down_y = ev.pageY;
+          };
+          a_elem.onclick = function (ev) {
+            ev.preventDefault();
+            if (down_x) {
+              let dist = abs(ev.pageX - down_x) + abs(ev.pageY - down_y);
+              if (dist > 50) {
+                return;
+              }
+            }
+            state.clicked = true;
+            in_event.handle('mouseup', ev);
+          };
+        }
+        elem.appendChild(a_elem);
+        state.a_elem = a_elem;
+      }
+    }
+    if (elem) {
+      if (url !== state.url) {
+        state.a_elem.setAttribute('href', url);
+        state.url = url;
+      }
+
+      let pos = camera2d.htmlPos(rect.x, rect.y);
+      elem.style.left = `${pos[0]}%`;
+      elem.style.top = `${pos[1]}%`;
+      let size = camera2d.htmlSize(rect.w, rect.h);
+      elem.style.width = `${size[0]}%`;
+      elem.style.height = `${size[1]}%`;
+    }
   }
   let clicked = state.clicked;
   state.clicked = false;

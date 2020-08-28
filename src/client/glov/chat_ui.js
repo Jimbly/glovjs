@@ -24,9 +24,12 @@ const FADE_TIME = [1000, 500];
 const INDENT = 40;
 
 const FLAG_EMOTE = 1;
+const FLAG_USERCHAT = 2;
 
 Z.CHAT = Z.CHAT || 500;
 Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
+
+const color_user_rollover = vec4(1,1,1,0.5);
 
 settings.register({
   chat_auto_unfocus: {
@@ -161,6 +164,7 @@ function ChatUI(params) {
   this.get_roles = null; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
   this.url_info = params.url_info; // Optional for grabbing the interesting portion of the URL for tooltip and /url
+  this.user_context_cb = params.user_context_cb; // Cb called with { user_id } on click
   this.setActiveSize(this.font_height, this.w);
 
   this.styles = {
@@ -208,7 +212,7 @@ ChatUI.prototype.setActiveSize = function (font_height, w) {
     for (let ii = 0; ii < this.msgs.length; ++ii) {
       let elem = this.msgs[ii];
       elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
-        this.wrap_w, INDENT, this.active_font_height, elem.msg);
+        this.wrap_w, INDENT, this.active_font_height, elem.msg_text);
       this.total_lines += elem.numlines;
     }
   }
@@ -221,8 +225,17 @@ ChatUI.prototype.clearChat = function () {
 
 ChatUI.prototype.addMsgInternal = function (elem) {
   elem.timestamp = elem.timestamp || Date.now();
+  if (elem.flags & FLAG_USERCHAT) {
+    if (elem.flags & FLAG_EMOTE) {
+      elem.msg_text = `${elem.display_name} ${elem.msg}`;
+    } else {
+      elem.msg_text = `[${elem.display_name}] ${elem.msg}`;
+    }
+  } else {
+    elem.msg_text = elem.msg;
+  }
   elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
-    this.wrap_w, INDENT, this.active_font_height, elem.msg);
+    this.wrap_w, INDENT, this.active_font_height, elem.msg_text);
   this.total_lines += elem.numlines;
   this.msgs.push(elem);
   if (this.msgs.length > this.max_messages * 1.25) {
@@ -239,7 +252,7 @@ ChatUI.prototype.addChat = function (msg, style) {
   this.addMsgInternal({ msg, style });
 };
 ChatUI.prototype.addChatFiltered = function (data) {
-  console.log(data.msg);
+  console.log(`Chat from ${data.id}: ${data.msg}`);
   if (settings.profanity_filter) {
     data.msg = profanityFilter(data.msg);
   }
@@ -250,7 +263,9 @@ ChatUI.prototype.onMsgJoin = function (data) {
     ui.playUISound('user_join');
     this.addChatFiltered({
       id: data.user_id || data.client_id,
-      msg: `${data.display_name || data.client_id} joined the channel`,
+      display_name: data.display_name || data.client_id,
+      flags: FLAG_EMOTE|FLAG_USERCHAT,
+      msg: 'joined the channel',
       style: 'join_leave',
     });
   }
@@ -259,7 +274,9 @@ ChatUI.prototype.onMsgLeave = function (data) {
   ui.playUISound('user_leave');
   this.addChatFiltered({
     id: data.user_id || data.client_id,
-    msg: `${data.display_name || data.client_id} left the channel`,
+    display_name: data.display_name || data.client_id,
+    flags: FLAG_EMOTE|FLAG_USERCHAT,
+    msg: 'left the channel',
     style: 'join_leave',
   });
 };
@@ -268,11 +285,11 @@ ChatUI.prototype.onMsgChat = function (data) {
   if (!quiet && client_id !== net.client.id) {
     ui.playUISound('msg_in');
   }
-  msg = (flags & FLAG_EMOTE) ?
-    `${display_name || id} ${msg}` :
-    `[${display_name || id}] ${msg}`;
+  display_name = display_name || id;
+  flags = (flags || 0) | FLAG_USERCHAT;
   this.addChatFiltered({
     id,
+    display_name,
     msg,
     flags,
     timestamp: ts,
@@ -576,7 +593,7 @@ ChatUI.prototype.run = function (opts) {
               let last_msg = this.msgs[this.msgs.length - 1];
               if (last_msg) {
                 let msg = last_msg.msg;
-                if (msg && msg.slice(0, 7) === '[error]') {
+                if (msg && !(msg.flags & FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
                   let numlines = last_msg.numlines;
                   tooltip_y -= font_height * numlines + SPACE_ABOVE_ENTRY;
                 }
@@ -656,14 +673,16 @@ ChatUI.prototype.run = function (opts) {
   }
   y -= SPACE_ABOVE_ENTRY;
 
-  let { url_match, url_info, styles, wrap_w } = this;
+  let { url_match, url_info, styles, wrap_w, user_context_cb } = this;
   let self = this;
   let do_scroll_area = is_focused;
+  let bracket_width = 0;
+  let name_width = {};
   // Slightly hacky: uses `x` and `y` from the higher scope
   function drawChatLine(msg, alpha) {
-    let line = msg.msg;
+    let line = msg.msg_text;
     let numlines = msg.numlines;
-    let is_url = url_match && matchAll(line, url_match);
+    let is_url = do_scroll_area && url_match && matchAll(line, url_match);
     is_url = is_url && is_url.length === 1 && is_url[0];
     let url_label = is_url;
     if (is_url && url_info) {
@@ -673,10 +692,6 @@ ChatUI.prototype.run = function (opts) {
       }
     }
     let h = font_height * numlines;
-    let click;
-    if (is_url) {
-      click = link({ x, y, w: wrap_w, h, url: is_url, internal: true });
-    }
     let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || msg.style === 'def' || is_url);
     let text_w;
     let mouseover = false;
@@ -685,8 +700,50 @@ ChatUI.prototype.run = function (opts) {
       // mouseOver peek because we're doing it before checking for clicks
       mouseover = input.mouseOver({ x, y, w: min(text_w, wrap_w), h, peek: true });
     }
-    let style = styles[msg.style || (is_url ? mouseover ? 'link_hover' : 'link' : 'def')];
+    let user_mouseover = false;
+    let user_indent = 0;
+    let did_user_context = false;
+    if ((msg.flags & FLAG_USERCHAT) && user_context_cb && msg.id && do_scroll_area) {
+      let nw = name_width[msg.display_name];
+      if (!nw) {
+        nw = name_width[msg.display_name] = ui.font.getStringWidth(styles.def, font_height, msg.display_name);
+      }
+      if (!(msg.flags & FLAG_EMOTE)) {
+        if (!bracket_width) {
+          bracket_width = ui.font.getStringWidth(styles.def, font_height, '[]');
+        }
+        nw += bracket_width;
+      }
+      user_indent = nw;
+      let pos_param = {
+        x, y, w: min(nw, wrap_w), h: font_height, button: 0, peek: true,
+        z: z + 0.5,
+        color: color_user_rollover,
+      };
+      if (input.click(pos_param)) {
+        did_user_context = true;
+        user_context_cb({
+          user_id: msg.id, // Need any other msg. params?
+          // x: pos_param.x + pos_param.w,
+          // y: pos_param.y,
+        });
+      } else {
+        user_mouseover = input.mouseOver(pos_param);
+        if (user_mouseover) {
+          ui.drawRect2(pos_param);
+        }
+      }
+    }
+    let click;
+    if (is_url) {
+      click = link({ x: x + user_indent, y, w: wrap_w - user_indent, h, url: is_url, internal: true });
+    }
+
+    let style = styles[msg.style || (is_url ? mouseover && !user_mouseover ? 'link_hover' : 'link' : 'def')];
+
+    // Draw the actual text
     ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, INDENT, font_height, line);
+
     if (mouseover && (!do_scroll_area || y > self.scroll_area.scroll_pos - font_height) &&
       // Only show tooltip for user messages or links
       (!msg.style || msg.style === 'def' || is_url)
@@ -696,15 +753,19 @@ ChatUI.prototype.run = function (opts) {
         tooltip_above: true,
         tooltip_width: 450,
         tooltip_pad: ui.tooltip_pad * 0.5,
-        tooltip: is_url ?
+        tooltip: is_url && !user_mouseover ?
           `Click to open ${url_label}` :
           `Received${msg.id ? ` from "${msg.id}"` : ''} at ${conciseDate(new Date(msg.timestamp))}\n` +
-          'Right-click to copy',
+          'Right-click to copy message' +
+          `${(user_mouseover ? '\nClick to view user info' : '')}`,
         pixel_scale: ui.tooltip_panel_pixel_scale * 0.5,
       });
     }
-    // mouseDownEdge because by the time the Up happens, the chat text might not be here anymore
-    click = click || input.mouseDownEdge({ x, y, w: wrap_w, h });
+    // Previously: mouseDownEdge because by the time the Up happens, the chat text might not be here anymore
+    click = click || input.click({ x, y, w: wrap_w, h });
+    if (did_user_context) {
+      click = null;
+    }
     if (click) {
       if (click.button === 2) {
         ui.provideUserString('Chat Text', is_url ? 'URL' : 'Text', is_url || line);
@@ -851,6 +912,10 @@ ChatUI.prototype.setChannel = function (channel) {
       });
     },
   ], () => {
+    if (!this.channel) {
+      // disconnected/left already
+      return;
+    }
     // First display chat history
     if (chat_history) {
       let messages_pre = this.msgs.slice(0);

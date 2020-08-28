@@ -28,6 +28,7 @@ export function WSClient(path) {
   this.retry_count = 0;
   this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
+  this.idle_counter = 0;
   this.last_send_time = Date.now();
   this.auto_path = !path;
   ackInitReceiver(this);

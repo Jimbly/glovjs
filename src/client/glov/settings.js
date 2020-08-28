@@ -45,4 +45,10 @@ register({
     default_value: 0,
     type: cmd_parse.TYPE_FLOAT,
   },
+  render_scale: {
+    label: 'Render Scale',
+    default_value: 1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0.1,4],
+  },
 });

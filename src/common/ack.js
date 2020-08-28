@@ -189,12 +189,14 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
   if (expecting_response) {
     // Note, this may be -1 if respFunc has already been called
     receiver.responses_waiting++;
-    if (!sent_response) {
+    if (!sent_response && !respFunc.suppress_timeout) {
       // timeout warning for response
       timeout_id = setTimeout(function () {
         timeout_id = null;
-        (receiver.log ? receiver : console).log(`Response not sent for ${msg
-        } from ${source} after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
+        if (!respFunc.suppress_timeout) {
+          (receiver.log ? receiver : console).log(`Response not sent for ${msg
+          } from ${source} after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
+        }
       }, 15*1000);
     }
   }

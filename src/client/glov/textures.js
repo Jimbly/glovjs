@@ -133,7 +133,9 @@ function Texture(params) {
 
   if (params.data) {
     let err = this.updateData(params.width, params.height, params.data);
-    assert(!err, err);
+    if (err) {
+      assert(false, `Error loading ${params.name}: GLError(${err})`);
+    }
   } else {
     // texture is not valid, do not leave bound
     unbindAll(this.target);
@@ -270,7 +272,10 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   }
   if (this.mipmaps) {
     gl.generateMipmap(this.target);
-    assert(!gl.getError());
+    gl_err = gl.getError();
+    if (gl_err) {
+      return gl_err;
+    }
   }
   this.updateGPUMem();
   this.eff_handle = this.handle;

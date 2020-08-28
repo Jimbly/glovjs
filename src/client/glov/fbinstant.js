@@ -39,3 +39,51 @@ export function init() {
     console.warn('initializeAsync failed', e);
   });
 }
+
+export function fbGetLoginInfo(cb) {
+  onready(() => {
+    window.FBInstant.player.getSignedPlayerInfoAsync().then((result) => {
+      if (cb) {
+        cb(null, {
+          signature: result.getSignature(),
+          display_name: window.FBInstant.player.getName(),
+        });
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        cb(err);
+        cb = null;
+      }
+    });
+  });
+}
+
+let fb_friends = {};
+// Returns a display name if the user_id is a Facebook friend
+export function fbFriendName(user_id) {
+  return fb_friends[user_id];
+}
+
+// TODO: Expects an array of valid user IDs:
+// cb(null, ['fb$1234', 'fb$4567']);
+export function fbGetFriends(cb) {
+  onready(() => {
+    window.FBInstant.player.getConnectedPlayersAsync().then((players) => {
+      let list = players.map((player) => {
+        let user_id = `fb$${player.getID()}`;
+        fb_friends[user_id] = player.getName();
+        return user_id;
+      });
+      if (cb) {
+        cb(null, list);
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        cb(err);
+        cb = null;
+      }
+    });
+  });
+}

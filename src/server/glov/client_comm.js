@@ -192,6 +192,11 @@ const invalid_names = {
   wipe: 1,
   reset: 1,
   password: 1,
+  server: 1,
+  system: 1,
+  internal: 1,
+  error: 1,
+  info: 1,
   user: 1,
 };
 const regex_admin_username = /^(admin|mod_|gm_|moderator)/; // Might exist in the system, do not allow to be created
@@ -267,6 +272,7 @@ function onLogin(client, data, resp_func) {
     password: data.password,
     salt: client.secret,
     ip: client.addr,
+    ua: client.user_agent,
   }, handleLoginResponse.bind(null, 'login', client, user_id, resp_func));
 }
 
@@ -290,6 +296,7 @@ function onLoginFacebook(client, data, resp_func) {
     return channelServerSend(client_channel, `user.${user_id}`, 'login_facebook', null, {
       display_name: data.display_name,
       ip: client.addr,
+      ua: client.user_agent,
     }, handleLoginResponse.bind(null, 'login_facebook', client, user_id, resp_func));
 
   } else {
@@ -320,6 +327,7 @@ function onUserCreate(client, data, resp_func) {
     password: data.password,
     email: data.email,
     ip: client.addr,
+    ua: client.user_agent,
   }, handleLoginResponse.bind(null, 'user_create', client, user_id, resp_func));
 }
 

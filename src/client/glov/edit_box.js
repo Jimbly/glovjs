@@ -199,6 +199,8 @@ class GlovUIEditBox {
       // keyboard input is handled by the INPUT element, but allow mouse events to trickle
       glov_input.eatAllKeyboardInput();
     }
+    // Eat mouse events going to the edit box
+    glov_input.mouseConsumeClicks({ x: this.x, y: this.y, w: this.w, h: this.font_height });
 
     if (this.submitted) {
       this.submitted = false;

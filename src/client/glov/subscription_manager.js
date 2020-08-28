@@ -4,7 +4,7 @@
 const assert = require('assert');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
-const fbinstant = require('./fbinstant.js');
+const { fbGetLoginInfo } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('../../common/md5.js');
 const { isPacket } = require('../../common/packet.js');
@@ -13,17 +13,16 @@ const util = require('../../common/util.js');
 // relevant events:
 //   .on('channel_data', cb(data [, mod_key, mod_value]));
 
-function ClientChannelWorker(subs, channel_id) {
+function ClientChannelWorker(subs, channel_id, base_handlers) {
   EventEmitter.call(this);
   this.subs = subs;
   this.channel_id = channel_id;
   this.subscriptions = 0;
   this.subscribe_failed = false;
   this.got_subscribe = false;
-  this.handlers = {};
+  this.immediate_subscribe = 0;
+  this.handlers = Object.create(base_handlers);
   this.data = {};
-  this.onMsg('channel_data', this.handleChannelData.bind(this));
-  this.onMsg('apply_channel_data', this.handleApplyChannelData.bind(this));
 }
 util.inherits(ClientChannelWorker, EventEmitter);
 
@@ -131,6 +130,13 @@ ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth)
   }, resp_func);
 };
 
+ClientChannelWorker.prototype.cmdParse = function (cmd, resp_func) {
+  this.send('cmdparse', cmd, function (err, resp) {
+    err = err || resp.err;
+    resp_func(err, resp && resp.resp);
+  });
+};
+
 function SubscriptionManager(client, cmd_parse) {
   EventEmitter.call(this);
   this.client = client;
@@ -146,6 +152,8 @@ function SubscriptionManager(client, cmd_parse) {
   if (cmd_parse) {
     this.cmds_list_by_worker = {};
   }
+  this.base_handlers = {};
+  this.channel_handlers = {}; // channel type -> msg -> handler
 
   this.first_connect = true;
   this.server_time = 0;
@@ -154,6 +162,9 @@ function SubscriptionManager(client, cmd_parse) {
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
   client.onMsg('admin_msg', this.handleAdminMsg.bind(this));
+  // Add handlers for all channel types
+  this.onChannelMsg(null, 'channel_data', ClientChannelWorker.prototype.handleChannelData);
+  this.onChannelMsg(null, 'apply_channel_data', ClientChannelWorker.prototype.handleApplyChannelData);
 }
 util.inherits(SubscriptionManager, EventEmitter);
 
@@ -162,6 +173,20 @@ SubscriptionManager.prototype.onceConnected = function (cb) {
     return void cb();
   }
   this.once('connect', cb);
+};
+
+SubscriptionManager.prototype.getBaseHandlers = function (channel_type) {
+  let handlers = this.channel_handlers[channel_type];
+  if (!handlers) {
+    handlers = this.channel_handlers[channel_type] = Object.create(this.base_handlers);
+  }
+  return handlers;
+};
+
+SubscriptionManager.prototype.onChannelMsg = function (channel_type, msg, cb) {
+  let handlers = channel_type ? this.getBaseHandlers(channel_type) : this.base_handlers;
+  assert(!handlers[msg]);
+  handlers[msg] = cb;
 };
 
 SubscriptionManager.prototype.handleAdminMsg = function (data) {
@@ -203,12 +228,12 @@ SubscriptionManager.prototype.handleConnect = function () {
   if (this.was_logged_in) {
     // Try to re-connect to existing login
     this.loginInternal(this.login_credentials, function (err) {
-      if (err && err === 'ERR_DISCONNECTED') {
+      if (err && err === 'ERR_FAILALL_DISCONNECT') {
         // we got disconnected while trying to log in, we'll retry after reconnection
       } else if (err) {
         // Error logging in upon re-connection, no good way to handle this?
         // TODO: Show some message to the user and prompt them to refresh?  Stay in "disconnected" state?
-        assert(false);
+        assert(false, err);
       } else {
         resub();
       }
@@ -248,11 +273,12 @@ SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
     console.log(`got channel_msg(${channel_id}) ${msg}: ${debug_msg}`);
   }
   let channel = this.getChannel(channel_id);
-  if (!channel.handlers[msg]) {
+  let handler = channel.handlers[msg];
+  if (!handler) {
     console.error(`no handler for channel_msg(${channel_id}) ${msg}: ${JSON.stringify(data)}`);
     return;
   }
-  channel.handlers[msg](data, resp_func);
+  handler.call(channel, data, resp_func);
 };
 
 SubscriptionManager.prototype.handleServerTime = function (pak) {
@@ -277,6 +303,17 @@ SubscriptionManager.prototype.getServerTime = function () {
 
 SubscriptionManager.prototype.tick = function (dt) {
   this.server_time_interp += dt;
+  for (let channel_id in this.channels) {
+    let channel = this.channels[channel_id];
+    if (channel.immediate_subscribe) {
+      if (dt >= channel.immediate_subscribe) {
+        channel.immediate_subscribe = 0;
+        this.unsubscribe(channel_id);
+      } else {
+        channel.immediate_subscribe -= dt;
+      }
+    }
+  }
 };
 
 SubscriptionManager.prototype.subscribe = function (channel_id) {
@@ -286,7 +323,9 @@ SubscriptionManager.prototype.subscribe = function (channel_id) {
 SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
   let channel = this.channels[channel_id];
   if (!channel) {
-    channel = this.channels[channel_id] = new ClientChannelWorker(this, channel_id);
+    let channel_type = channel_id.split('.')[0];
+    let handlers = this.getBaseHandlers(channel_type);
+    channel = this.channels[channel_id] = new ClientChannelWorker(this, channel_id, handlers);
   }
   if (do_subscribe) {
     channel.subscriptions++;
@@ -333,8 +372,19 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   }
 };
 
+// Immediate-mode channel subscription; will unsubscribe automatically on logout
+//   or if not accessed for some time
+SubscriptionManager.prototype.getChannelImmediate = function (channel_id, timeout) {
+  timeout = timeout || 60000;
+  let channel = this.getChannel(channel_id);
+  if (!channel.immediate_subscribe) {
+    this.subscribe(channel_id);
+  }
+  channel.immediate_subscribe = timeout;
+  return channel;
+};
+
 SubscriptionManager.prototype.onLogin = function (cb) {
-  this.getMyUserChannel();
   this.on('login', cb);
   if (this.logged_in) {
     return void cb();
@@ -352,7 +402,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
     this.was_logged_in = true;
-    this.getMyUserChannel();
+    this.getMyUserChannel(); // auto-subscribe to it
     this.emit('login');
   } else {
     this.emit('login_fail', err);
@@ -368,15 +418,11 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   this.logged_in = false;
 
   if (login_credentials.fb) {
-    fbinstant.onready(() => {
-      window.FBInstant.player.getSignedPlayerInfoAsync().then((result) => {
-        this.client.send('login_facebook', {
-          signature: result.getSignature(),
-          display_name: window.FBInstant.player.getName(),
-        }, this.handleLoginResponse.bind(this, resp_func));
-      }).catch((err) => {
-        this.handleLoginResponse(resp_func, err);
-      });
+    fbGetLoginInfo((err, result) => {
+      if (err) {
+        return void this.handleLoginResponse(resp_func, err);
+      }
+      this.client.send('login_facebook', result, this.handleLoginResponse.bind(this, resp_func));
     });
   } else {
     this.client.send('login', {
@@ -485,6 +531,10 @@ SubscriptionManager.prototype.logout = function () {
   // Don't know how to gracefully handle logging out with subscriptions currently, assert we have none
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
+    if (channel.immediate_subscribe) {
+      channel.immediate_subscribe = 0;
+      this.unsubscribe(channel_id);
+    }
     assert(!channel.subscriptions, `Remaining active subscription for ${channel_id}`);
     if (channel.autosubscribed) {
       channel.autosubscribed = false;
