@@ -590,6 +590,7 @@ function Sprite(params) {
   if (params.texs) {
     this.texs = params.texs;
   } else {
+    let ext = params.ext || '.png';
     this.texs = [];
     if (params.tex) {
       this.texs.push(params.tex);
@@ -598,7 +599,7 @@ function Sprite(params) {
       this.texs = [];
       for (let ii = 0; ii < params.layers; ++ii) {
         this.texs.push(textures.load({
-          url: `img/${params.name}_${ii}.png`,
+          url: `img/${params.name}_${ii}${ext}`,
           filter_min: params.filter_min,
           filter_mag: params.filter_mag,
           wrap_s: params.wrap_s,
@@ -607,7 +608,7 @@ function Sprite(params) {
       }
     } else if (params.name) {
       this.texs.push(textures.load({
-        url: `img/${params.name}.png`,
+        url: `img/${params.name}${ext}`,
         filter_min: params.filter_min,
         filter_mag: params.filter_mag,
         wrap_s: params.wrap_s,

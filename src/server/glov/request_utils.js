@@ -14,6 +14,7 @@ export function ipFromRequest(req) {
   // let port = req.headers['x-forwarded-port'] || req.client.remotePort ||
   //   req.client.socket && req.client.socket.remotePort;
   assert(ip);
+  ip = ip.split(',')[0]; // If forwarded through multiple proxies, use just the original client IP
   let m = ip.match(regex_ipv4);
   if (m) {
     ip = m[1];
@@ -33,7 +34,7 @@ export function allowMapFromLocalhostOnly(app) {
       if (cached) {
         console.info(`Allowing dev access from ${ip}`);
       } else {
-        console.warn(`NOT Allowing dev access from ${ip}`);
+        console.debug(`NOT Allowing dev access from ${ip}`);
       }
     }
     req.glov_is_dev = cached;

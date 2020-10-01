@@ -1,5 +1,6 @@
 /* globals FBInstant */
 const urlhash = require('./urlhash.js');
+const local_storage = require('./local_storage.js');
 
 export let ready = false;
 let onreadycallbacks = [];
@@ -9,6 +10,105 @@ export function onready(callback) {
   }
   onreadycallbacks.push(callback);
 }
+
+let hasSubscribedAlready = false;
+function initSubscribe(callback, skipShortcut) {
+
+  skipShortcut = skipShortcut||false;
+
+  function handleSubscribeToBotComplete() {
+    if (callback) {
+      //Prevents the handleSubscribeToBotComplete promise from eating unfreeze event errors
+      setTimeout(callback,1);
+    }
+  }
+
+  function handleSubscribeToBotFailure(e) {
+    if (e && e.code !== 'USER_INPUT') {
+      console.error('handleSubscribeToBotFailure', e);
+    }
+    FBInstant.logEvent(
+      'bot_subscribe_failure'
+    );
+    handleSubscribeToBotComplete();
+  }
+
+  function subscribeToBot() {
+    console.warn('Window social trying to bot subscribe');
+    if (FBInstant.getSupportedAPIs().indexOf('player.canSubscribeBotAsync') !== -1) {
+      FBInstant.player.canSubscribeBotAsync().then(function (canSubscribe) {
+        if (canSubscribe) {
+          FBInstant.logEvent(
+            'bot_subscribe_show'
+          );
+          FBInstant.player.subscribeBotAsync().then(function () {
+            FBInstant.logEvent(
+              'bot_subscribe_success'
+            );
+            handleSubscribeToBotComplete();
+          },handleSubscribeToBotFailure).catch(handleSubscribeToBotFailure);
+        } else {
+          handleSubscribeToBotComplete();
+        }
+      }).catch(handleSubscribeToBotFailure);
+    } else {
+      handleSubscribeToBotComplete();
+    }
+  }
+
+  function handleHomescreenComplete() {
+    subscribeToBot();
+  }
+
+  function handleCreateShortcutFailure(e) {
+    console.error('handleCreateShortcutFailure', e);
+    FBInstant.logEvent(
+      'homescreen_install_failure'
+    );
+    handleHomescreenComplete();
+  }
+
+  let hasAddedToHomescreen = local_storage.get('instant.hasInstalledShortcut.v2');
+  function createShortcut() {
+    console.warn('Window social trying to create shortcut');
+    if (FBInstant.getSupportedAPIs().indexOf('canCreateShortcutAsync') !== -1 &&
+      !hasAddedToHomescreen &&
+      !hasSubscribedAlready
+    ) {
+      hasSubscribedAlready = true;
+      FBInstant.canCreateShortcutAsync().then(function (canCreateShortcut) {
+        if (canCreateShortcut) {
+          FBInstant.logEvent(
+            'homescreen_install_show'
+          );
+          FBInstant.createShortcutAsync().then(function () {
+            local_storage.set('instant.hasInstalledShortcut.v2',true);
+            FBInstant.logEvent(
+              'homescreen_install_success'
+            );
+            handleHomescreenComplete();
+          },function () {
+            FBInstant.logEvent(
+              'homescreen_install_useraborted'
+            );
+            handleHomescreenComplete();
+          }).catch(handleCreateShortcutFailure);
+        } else {
+          handleHomescreenComplete();
+        }
+      }).catch(handleCreateShortcutFailure);
+    } else {
+      handleHomescreenComplete();
+    }
+  }
+
+  if (skipShortcut) {
+    subscribeToBot();
+  } else {
+    createShortcut();
+  }
+}
+
 export function init() {
   if (!window.FBInstant) {
     return;
@@ -34,6 +134,11 @@ export function init() {
     FBInstant.startGameAsync().then(function () {
       onreadycallbacks.forEach((e) => e());
       onreadycallbacks = [];
+
+      console.warn('outside init fb');
+      initSubscribe(function () {
+        console.warn('All done initing FB');
+      });
     });
   }).catch(function (e) {
     console.warn('initializeAsync failed', e);

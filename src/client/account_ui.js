@@ -58,13 +58,14 @@ function AccountUI() {
 }
 
 AccountUI.prototype.showLogin = function (param) {
-  let { x, y, style, button_height, button_width, prelogout, center, url_tos, url_priv, text_w } = param;
+  let { x, y, style, button_height, button_width, prelogout, center, url_tos, url_priv, text_w, font_height } = param;
+  font_height = font_height || ui.font_height;
   button_height = button_height || ui.button_height;
   button_width = button_width || 240;
   text_w = text_w || 400;
   let { edit_box_name, edit_box_password, edit_box_password_confirm, edit_box_email, edit_box_display_name } = this;
   let login_message;
-  const BOX_H = ui.font_height;
+  const BOX_H = font_height;
   let pad = 10;
   let min_h = BOX_H * 2 + pad * 3 + button_height;
   let calign = center ? glov_font.ALIGN.HRIGHT : glov_font.ALIGN.HLEFT | glov_font.ALIGN.HFIT;
@@ -72,7 +73,7 @@ AccountUI.prototype.showLogin = function (param) {
   function showTOS(is_create) {
     if (url_tos) {
       assert(url_priv);
-      let terms_height = ui.font_height * 0.75;
+      let terms_height = font_height * 0.75;
       ui.font.drawSizedAligned(style, x, y, Z.UI, terms_height, glov_font.ALIGN.HCENTER, 0, 0,
         `By ${is_create ? 'creating an account' : 'logging in'} you agree to our`);
       y += terms_height;
@@ -150,32 +151,33 @@ AccountUI.prototype.showLogin = function (param) {
     });
   } else if (!net.subs.loggedIn()) {
     let submit = false;
-    let w = 200;
+    let w = text_w / 2;
     let indent = center ? 0 : 140;
     let text_x = center ? x - 8 : x;
-    ui.font.drawSizedAligned(style, text_x, y, Z.UI, ui.font_height, calign, indent - pad, 0, 'Username:');
-    submit = edit_box_name.run({ x: x + indent, y, w }) === edit_box_name.SUBMIT || submit;
+    ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Username:');
+    submit = edit_box_name.run({ x: x + indent, y, w, font_height }) === edit_box_name.SUBMIT || submit;
     y += BOX_H + pad;
-    ui.font.drawSizedAligned(style, text_x, y, Z.UI, ui.font_height, calign, indent - pad, 0, 'Password:');
-    submit = edit_box_password.run({ x: x + indent, y, w }) === edit_box_password.SUBMIT || submit;
+    ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Password:');
+    submit = edit_box_password.run({ x: x + indent, y, w, font_height }) === edit_box_password.SUBMIT || submit;
     y += BOX_H + pad;
 
     if (this.creation_mode) {
-      ui.font.drawSizedAligned(style, text_x, y, Z.UI, ui.font_height, calign, indent - pad, 0, 'Confirm Password:');
-      submit = edit_box_password_confirm.run({ x: x + indent, y, w }) === edit_box_password.SUBMIT || submit;
+      ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Confirm Password:');
+      submit = edit_box_password_confirm.run({ x: x + indent, y, w, font_height }) === edit_box_password.SUBMIT ||
+        submit;
       y += BOX_H + pad;
 
-      ui.font.drawSizedAligned(style, text_x, y, Z.UI, ui.font_height, calign, indent - pad, 0, 'Email Address:');
-      submit = edit_box_email.run({ x: x + indent, y, w }) === edit_box_password.SUBMIT || submit;
+      ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Email Address:');
+      submit = edit_box_email.run({ x: x + indent, y, w, font_height }) === edit_box_password.SUBMIT || submit;
       y += BOX_H + pad;
 
-      ui.font.drawSizedAligned(style, text_x, y, Z.UI, ui.font_height, calign, indent - pad, 0, 'Display Name:');
-      submit = edit_box_display_name.run({ x: x + indent, y, w: 200 }) === edit_box_password.SUBMIT ||
+      ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Display Name:');
+      submit = edit_box_display_name.run({ x: x + indent, y, w, font_height }) === edit_box_password.SUBMIT ||
         submit;
 
       if (ui.buttonText({
-        x: x + w + (center ? 0 : 140) + pad, y, w: 80, h: BOX_H + pad - 4,
-        font_height: ui.font_height * 0.75,
+        x: x + w + (center ? 0 : 140) + pad, y, w: button_width * 0.5, h: BOX_H + pad - 4,
+        font_height: font_height * 0.75,
         text: 'Random',
       })) {
         net.client.send('random_name', null, function (ignored, data) {
@@ -190,11 +192,13 @@ AccountUI.prototype.showLogin = function (param) {
       showTOS(true);
 
       submit = ui.buttonText({
-        x, y, w: 150, h: button_height,
+        x, y, w: button_width, h: button_height,
+        font_height,
         text: 'Create User',
       }) || submit;
       if (ui.buttonText({
-        x: x + 150 + pad, y, w: 150, h: button_height,
+        x: x + button_width + pad, y, w: button_width, h: button_height,
+        font_height,
         text: 'Cancel',
       }) || keyDownEdge(KEYS.ESC)) {
         this.creation_mode = false;
@@ -233,11 +237,16 @@ AccountUI.prototype.showLogin = function (param) {
       showTOS(false);
 
       submit = ui.buttonText({
-        x, y, w: 150, h: button_height,
+        x: x, y, w: button_width, h: button_height,
+        font_height,
         text: 'Log in',
       }) || submit;
+      if (center) {
+        y += button_height + pad;
+      }
       if (ui.buttonText({
-        x: x + 150 + pad, y, w: 150, h: button_height,
+        x: center ? x : x + button_width + pad, y, w: button_width, h: button_height,
+        font_height,
         text: 'New User',
       })) {
         this.creation_mode = true;
@@ -276,17 +285,29 @@ AccountUI.prototype.showLogin = function (param) {
     let name = formatUserID(user_id, display_name);
 
     if (show_logout) {
-      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
-        y + ui.font_height * (center ? -0.5 : -0.25),
-        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
-        'Logged in as:');
-      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8,
-        y + ui.font_height * (center ? 0.5 : 0.75),
-        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
-        name);
+      let logged_in_font_height = font_height * 0.75;
+      if (center) {
+        ui.font.drawSizedAligned(style, center ? x - text_w / 2 : x + button_width + 8, y,
+          Z.UI, logged_in_font_height,
+          (center ? glov_font.ALIGN.HCENTER : calign) | glov_font.ALIGN.HFIT,
+          text_w, button_height,
+          `Logged in as: ${name}`);
+        y += logged_in_font_height + 8;
+      } else {
+        ui.font.drawSizedAligned(style, x + button_width + 8,
+          y + logged_in_font_height * -0.25,
+          Z.UI, logged_in_font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
+          'Logged in as:');
+        ui.font.drawSizedAligned(style, x + button_width + 8,
+          y + logged_in_font_height * 0.75,
+          Z.UI, logged_in_font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
+          name);
+      }
 
       if (ui.buttonText({
-        x, y, w: button_width, h: button_height,
+        x: center ? x - button_width / 2 : x,
+        y, w: button_width, h: button_height,
+        font_height,
         text: 'Log out',
       })) {
         edit_box_password.setText('');
@@ -297,14 +318,15 @@ AccountUI.prototype.showLogin = function (param) {
       }
       y += button_height + 8;
     } else {
-      ui.font.drawSizedAligned(style, center ? x - 8 - text_w : x + button_width + 8, y,
-        Z.UI, ui.font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT,
-        text_w + button_width, button_height,
+      ui.font.drawSizedAligned(style, center ? x - text_w / 2 : x + button_width + 8, y,
+        Z.UI, font_height,
+        (center ? glov_font.ALIGN.HCENTER : calign) | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT,
+        text_w, button_height,
         `Logged in as: ${name}`);
     }
   }
   if (login_message) {
-    let w = ui.font.drawSizedAligned(style, center ? x - 400 : x, y, Z.UI, ui.font_height * 1.5,
+    let w = ui.font.drawSizedAligned(style, center ? x - 400 : x, y, Z.UI, font_height * 1.5,
       glov_font.ALIGN.HVCENTERFIT,
       center ? 800 : 400, min_h, login_message);
     w += 100;

@@ -82,7 +82,7 @@ ClientWorker.prototype.no_datastore = true; // No datastore instances created he
 export function init(channel_server) {
   channel_server.registerChannelWorker('client', ClientWorker, {
     autocreate: false,
-    subid_regex: /^[0-9-]+$/,
+    subid_regex: /^[a-zA-Z0-9-]+$/,
     filters: {
       'apply_channel_data': ClientWorker.prototype.onApplyChannelData,
     },

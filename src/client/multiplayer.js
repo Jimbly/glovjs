@@ -71,6 +71,10 @@ export function main() {
     game_width,
     game_height,
     pixely: false,
+    font: {
+      info: require('./img/font/palanquin32.json'),
+      texture: 'font/palanquin32',
+    },
     safearea_ignore_bottom: true, // We keep the chat button out of the bottom center safe area trouble spot
     ui_sounds: {
       msg_err: 'msg_err',

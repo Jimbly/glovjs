@@ -12,6 +12,13 @@
  * doing and if they are getting backed up.
  */
 
+export let dss_stats = {
+  set: 0,
+  get: 0,
+  inflight_set: 0,
+  inflight_get: 0,
+};
+
 const assert = require('assert');
 const metrics = require('./metrics.js');
 const { getUID } = require('./log.js');
@@ -19,7 +26,8 @@ const { getUID } = require('./log.js');
 // Write timeouts *very* high, because if we ever assume a write has failed when
 //  it's still in progress, that can lead to data corruption (earlier write
 //  finally finishing after a later write went through).
-const TIMEOUT_WRITE = 10*60*1000;
+// GCP Firestore has a timeout of 10 minutes, so should be higher than that
+const TIMEOUT_WRITE = 15*60*1000;
 const RETRIES_WRITE = 3;
 
 const TIMEOUT_READ = 5*60*1000;
@@ -53,6 +61,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
   let metric_inflight = self[`metric_inflight_${op}`];
   let field_inflight = `inflight_${op}`;
   metrics.set(metric_inflight, ++self[field_inflight]);
+  ++dss_stats[field_inflight];
   let attempts = 0;
   function doAttempt() {
     let attempt = attempts++;
@@ -109,6 +118,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
         console.error(`DATASTORESHIELD(${op}:${uid}:${attempt}) retries exhausted, erroring`);
       }
       metrics.set(metric_inflight, --self[field_inflight]);
+      --dss_stats[field_inflight];
       cb(err, ret);
     }
 
@@ -131,6 +141,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
 DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
   let self = this;
   metrics.add(self.metric_set, 1);
+  dss_stats.set++;
   this.executeShielded('set', obj_name, RETRIES_WRITE, TIMEOUT_WRITE, (onDone) => {
     self.data_store.setAsync(obj_name, value, onDone);
   }, cb);
@@ -139,6 +150,7 @@ DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
 DataStoreShield.prototype.getAsync = function (obj_name, default_value, cb) {
   let self = this;
   metrics.add(self.metric_get, 1);
+  dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsync(obj_name, default_value, onDone);
   }, cb);
@@ -147,6 +159,7 @@ DataStoreShield.prototype.getAsync = function (obj_name, default_value, cb) {
 DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
   let self = this;
   metrics.add(self.metric_get, 1);
+  dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsyncBuffer(obj_name, onDone);
   }, cb);

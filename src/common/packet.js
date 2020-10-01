@@ -260,7 +260,7 @@ Packet.prototype.makeReadable = function () {
   for (let ii = 0; ii < this.bufs.length; ++ii) {
     let bsize = this.bsizes[ii];
     let dv = this.bufs[ii];
-    if (offs + bsize > total) {
+    if (offs + dv.u8.length > total) {
       // unused portion would overrun
       assert.equal(dv.byteOffset, 0);
       u8.set(new Uint8Array(dv.buffer, 0, bsize), offs);

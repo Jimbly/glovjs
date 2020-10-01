@@ -2,16 +2,17 @@ const assert = require('assert');
 
 // Various async functions
 
-let nextTick = typeof process !== 'undefined' ?
-  process.nextTick :
-  window.setImmediate ? window.setImmediate : (fn) => setTimeout(fn, 1);
+// Do *not* nextTick upon empty request, this causes different behavior when empty!
+// let nextTick = typeof process !== 'undefined' ?
+//   process.nextTick :
+//   window.setImmediate ? window.setImmediate : (fn) => setTimeout(fn, 1);
 
 // Derived from https://github.com/hughsk/async-series - MIT Licensed
 function series(arr, done) {
   let length = arr.length;
 
   if (!length) {
-    return void nextTick(done);
+    return void done(); // void nextTick(done);
   }
 
   function handleItem(idx) {
@@ -60,7 +61,7 @@ function eachLimit(arr, limit, proc, done) {
 
   if (!pending) {
     // empty
-    return void nextTick(done.bind(null, null, results));
+    return void done(null, results); // void nextTick(done.bind(null, null, results));
   }
   next = limit;
   for (let ii = 0; ii < arr.length && ii < limit; ++ii) {

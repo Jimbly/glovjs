@@ -29,6 +29,7 @@ export function init(params) {
 
   if (params.engine) {
     params.engine.addTickFunc((dt) => {
+      client.checkDisconnect();
       subs.tick(dt);
     });
   }
@@ -37,7 +38,7 @@ export function init(params) {
 const build_timestamp_string = new Date(Number(BUILD_TIMESTAMP))
   .toISOString()
   .replace('T', ' ')
-  .slice(0, -8);
+  .slice(5, -8);
 export function buildString() {
   return build_timestamp_string;
 }

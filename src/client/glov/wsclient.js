@@ -115,6 +115,7 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   assert(client.handlers.connect);
   client.handlers.connect(client, {
     client_id: client.id,
+    restarting: data.restarting,
   });
   resp_func();
 };
@@ -193,6 +194,15 @@ WSClient.prototype.retryConnection = function () {
   }, min(client.retry_count * client.retry_count * 100, 15000));
 };
 
+WSClient.prototype.checkDisconnect = function () {
+  if (this.connected && this.socket.readyState !== 1) { // WebSocket.OPEN
+    // We think we're connected, but we're not, we must have received an
+    // animation frame before the close event when phone was locked or something
+    this.on_close();
+    assert(!this.connected);
+  }
+};
+
 WSClient.prototype.connect = function (for_reconnect) {
   let client = this;
 
@@ -265,10 +275,12 @@ WSClient.prototype.connect = function (for_reconnect) {
     client.retry_count = 0;
   }));
 
-  client.socket.addEventListener('close', guard(function () {
+  // This may get called before the close event gets to use
+  client.on_close = guard(function () {
     console.log('WebSocket close, retrying connection...');
     retry(true);
-  }));
+  });
+  client.socket.addEventListener('close', client.on_close);
 
   let doPing = guard(function () {
     if (Date.now() - client.last_send_time > wscommon.PING_TIME && client.connected && client.socket.readyState === 1) {

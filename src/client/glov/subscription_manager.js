@@ -21,6 +21,7 @@ function ClientChannelWorker(subs, channel_id, base_handlers) {
   this.subscribe_failed = false;
   this.got_subscribe = false;
   this.immediate_subscribe = 0;
+  this.channel_data_ver = 0; // for polling for changes
   this.handlers = Object.create(base_handlers);
   this.data = {};
 }
@@ -49,6 +50,7 @@ ClientChannelWorker.prototype.onceSubscribe = function (cb) {
 ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
   console.log(`got channel_data(${this.channel_id}):  ${JSON.stringify(data)}`);
   this.data = data;
+  ++this.channel_data_ver;
   this.emit('channel_data', this.data);
   this.got_subscribe = true;
   this.emit('subscribe', this.data);
@@ -82,6 +84,7 @@ ClientChannelWorker.prototype.handleApplyChannelData = function (data, resp_func
   } else {
     dot_prop.set(this.data, data.key, data.value);
   }
+  ++this.channel_data_ver;
   this.emit('channel_data', this.data, data.key, data.value);
   resp_func();
 };
@@ -161,7 +164,8 @@ function SubscriptionManager(client, cmd_parse) {
   client.onMsg('connect', this.handleConnect.bind(this));
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
-  client.onMsg('admin_msg', this.handleAdminMsg.bind(this));
+  client.onMsg('chat_broadcast', this.handleChatBroadcast.bind(this));
+  client.onMsg('restarting', this.handleRestarting.bind(this));
   // Add handlers for all channel types
   this.onChannelMsg(null, 'channel_data', ClientChannelWorker.prototype.handleChannelData);
   this.onChannelMsg(null, 'apply_channel_data', ClientChannelWorker.prototype.handleApplyChannelData);
@@ -189,18 +193,24 @@ SubscriptionManager.prototype.onChannelMsg = function (channel_type, msg, cb) {
   handlers[msg] = cb;
 };
 
-SubscriptionManager.prototype.handleAdminMsg = function (data) {
-  console.error(data);
-  this.emit('admin_msg', data);
+SubscriptionManager.prototype.handleChatBroadcast = function (data) {
+  console.error(`[${data.src}] ${data.msg}`);
+  this.emit('chat_broadcast', data);
 };
 
-SubscriptionManager.prototype.handleConnect = function () {
+SubscriptionManager.prototype.handleRestarting = function (data) {
+  this.restarting = data;
+  this.emit('restarting', data);
+};
+
+SubscriptionManager.prototype.handleConnect = function (data) {
   let reconnect = false;
   if (this.first_connect) {
     this.first_connect = false;
   } else {
     reconnect = true;
   }
+  this.restarting = Boolean(data.restarting);
 
   if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
     // we got disconnected while trying to log in, we'll retry after reconnection
@@ -225,7 +235,9 @@ SubscriptionManager.prototype.handleConnect = function () {
     subs.emit('connect', reconnect);
   }
 
-  if (this.was_logged_in) {
+  if (this.logging_in) {
+    // already have a login in-flight, it should error before we try again
+  } else if (this.was_logged_in) {
     // Try to re-connect to existing login
     this.loginInternal(this.login_credentials, function (err) {
       if (err && err === 'ERR_FAILALL_DISCONNECT') {
@@ -402,7 +414,14 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
     this.was_logged_in = true;
-    this.getMyUserChannel(); // auto-subscribe to it
+    let user_channel = this.getMyUserChannel(); // auto-subscribe to it
+    user_channel.onceSubscribe(() => {
+      if (!this.did_master_subscribe && user_channel.getChannelData('public.permissions.admin')) {
+        // For cmd_parse access
+        this.did_master_subscribe = true;
+        this.subscribe('master.master');
+      }
+    });
     this.emit('login');
   } else {
     this.emit('login_fail', err);
@@ -528,7 +547,12 @@ SubscriptionManager.prototype.logout = function () {
   assert(this.logged_in);
   assert(!this.logging_in);
   assert(!this.logging_out);
-  // Don't know how to gracefully handle logging out with subscriptions currently, assert we have none
+  // Don't know how to gracefully handle logging out with app-level subscriptions
+  //   currently, clean up those we can, assert we have no others
+  if (this.did_master_subscribe) {
+    this.did_master_subscribe = false;
+    this.unsubscribe('master.master');
+  }
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
     if (channel.immediate_subscribe) {
@@ -570,7 +594,10 @@ SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
     do {
       channel_id = channel_ids[idx++];
       channel = self.channels[channel_id];
-    } while (channel_id && (!channel || !(channel.subscriptions || channel.autosubscribed)));
+    } while (channel_id && (!channel || !(
+      // are we subscribed, and is it not just an immediate-mode subscribe (e.g. a friend's user channel)
+      (channel.subscriptions - channel.immediate_subscribe) || channel.autosubscribed
+    )));
     if (!channel_id) {
       self.serverLog('cmd_parse_unknown', command);
       return resp_func(last_error);

@@ -4,9 +4,12 @@
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
 const { FRIEND_ADDED, FRIEND_ADDED_AUTO, FRIEND_REMOVED, PRESENCE_OFFLINE } = require('../../common/enums.js');
+const master_worker = require('./master_worker.js');
 const md5 = require('../../common/md5.js');
+const metrics = require('./metrics.js');
 const { isProfane } = require('../../common/words/profanity_common.js');
 const random_names = require('./random_names.js');
+const { sanitize } = require('../../common/util.js');
 
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
@@ -14,7 +17,9 @@ const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FRIENDS = 100;
 
 function validDisplayName(display_name) {
-  if (!display_name || isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH) {
+  if (!display_name || sanitize(display_name).trim() !== display_name ||
+    isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH
+  ) {
     return false;
   }
   return true;
@@ -66,7 +71,8 @@ export class DefaultUserWorker extends ChannelWorker {
     if (user_id === this.user_id) {
       return void resp_func('Cannot friend yourself');
     }
-    if (this.getChannelData(`private.friends.${user_id}`)) {
+    let friend_value = this.getChannelData(`private.friends.${user_id}`);
+    if (friend_value && friend_value !== FRIEND_REMOVED) {
       return void resp_func(`Already on friends list: ${user_id}`);
     }
     if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
@@ -191,6 +197,12 @@ export class DefaultUserWorker extends ChannelWorker {
     return resp_func();
   }
   handleLogin(src, data, resp_func) {
+    if (this.channel_server.restarting) {
+      if (!this.getChannelData('public.permissions.admin')) {
+        // Maybe black-hole like other messages instead?
+        return resp_func('ERR_RESTARTING');
+      }
+    }
     if (!data.password) {
       return resp_func('Missing password');
     }
@@ -204,6 +216,7 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
+    metrics.add('user.login', 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleLoginFacebook(src, data, resp_func) {
@@ -215,6 +228,8 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
+    metrics.add('user.login', 1);
+    metrics.add('user.login_fb', 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleCreate(src, data, resp_func) {
@@ -256,6 +271,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.login_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
+    metrics.add('user.create', 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleSetChannelData(src, key, value) {
@@ -281,8 +297,7 @@ export class DefaultUserWorker extends ChannelWorker {
     }
   }
   updatePresence() {
-    for (let ii = 0; ii < this.subscribers.length; ++ii) {
-      let channel_id = this.subscribers[ii];
+    for (let channel_id in this.subscribers) {
       if (channel_id.startsWith('client.')) {
         this.sendChannelMessage(channel_id, 'presence', this.presence_data);
       }
@@ -315,6 +330,7 @@ export class DefaultUserWorker extends ChannelWorker {
       };
     }
     this.updatePresence();
+    resp_func();
   }
 }
 DefaultUserWorker.prototype.auto_destroy = true;
@@ -322,10 +338,18 @@ DefaultUserWorker.prototype.require_email = true;
 DefaultUserWorker.prototype.rich_presence = true;
 
 class ChannelServerWorker extends ChannelWorker {
-  handleWorkerRemoved(src, data, resp_func) {
+}
+// Returns a function that forwards to a method of the same name on the ChannelServer
+function channelServerBroadcast(name) {
+  return (ChannelServerWorker.prototype[name] = function (src, data, resp_func) {
     assert(!resp_func.expecting_response); // this is a broadcast
-    this.channel_server.handleWorkerRemoved(data);
-  }
+    this.channel_server[name](data);
+  });
+}
+function channelServerHandler(name) {
+  return (ChannelServerWorker.prototype[name] = function (src, data, resp_func) {
+    this.channel_server[name](data, resp_func);
+  });
 }
 
 ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
@@ -408,7 +432,7 @@ export function handleChat(src, pak, resp_func) {
   let { user_id, channel_id, display_name } = src; // user_id is falsey if not logged in
   let client_id = src.id;
   let flags = pak.readInt();
-  let msg = pak.readString().trim();
+  let msg = sanitize(pak.readString()).trim();
   if (!msg) {
     return resp_func('ERR_EMPTY_MESSAGE');
   }
@@ -434,7 +458,9 @@ export function handleChat(src, pak, resp_func) {
   chat.msgs[chat.idx] = data_saved;
   chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
   // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
-  self.setChannelData('private.chat', chat);
+  if (!self.channel_server.restarting) {
+    self.setChannelData('private.chat', chat);
+  }
   self.channelEmit('chat', data_broad);
   // Log entire, non-truncated chat string
   console.info(`${self.channel_id}: chat from ${id} ("${display_name}") ` +
@@ -452,9 +478,16 @@ export function init(channel_server) {
   channel_server.registerChannelWorker('user', user_worker, user_worker_init_data);
   channel_server.registerChannelWorker('channel_server', ChannelServerWorker, {
     autocreate: false,
-    subid_regex: /^[0-9-]+$/,
+    subid_regex: /^[a-zA-Z0-9-]+$/,
     handlers: {
-      worker_removed: ChannelServerWorker.prototype.handleWorkerRemoved,
+      worker_create: channelServerHandler('handleWorkerCreate'),
+      master_startup: channelServerBroadcast('handleMasterStartup'),
+      master_stats: channelServerBroadcast('handleMasterStats'),
+      restarting: channelServerBroadcast('handleRestarting'),
+      chat_broadcast: channelServerBroadcast('handleChatBroadcast'),
+      ping: channelServerBroadcast('handlePing'),
+      eat_cpu: channelServerHandler('handleEatCPU'),
     },
   });
+  master_worker.init(channel_server);
 }

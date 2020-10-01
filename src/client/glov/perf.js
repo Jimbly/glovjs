@@ -66,7 +66,7 @@ export function addMetric(metric) {
   }
   metric.num_labels = Object.keys(metric.labels).length;
   if (metric.interactable === undefined) {
-    metric.interactable = metric.num_labels > 1 || metric.show_graph;
+    metric.interactable = engine.DEBUG && (metric.num_labels > 1 || metric.show_graph);
   }
   metrics.push(metric);
 }
@@ -74,7 +74,7 @@ export function addMetric(metric) {
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
-  let METRIC_VALUE_WIDTH = ui.font_height * 2.5;
+  let METRIC_VALUE_WIDTH = ui.font_height * (metric.width || 2.5);
   let x = camera2d.x1Real() - METRIC_VALUE_WIDTH - pad;
   let y0 = y;
   y += pad;

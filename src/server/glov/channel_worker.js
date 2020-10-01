@@ -1,18 +1,30 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+export let cwstats = { msgs: 0, bytes: 0 };
+
+const AUTO_DESTROY_TIME = 90000;
+// How long to wait before assuming a packet was delivered and there is a chance
+//   that the next packet would be sent to a new generation of the worker, and
+//   therefore should be processed immediately, ignoring OOOness
+export const UNACKED_PACKET_ASSUME_GOOD = AUTO_DESTROY_TIME/2; // <= AUTO_DESTROY_TIME
+// How long before discarding all packet indices for a source, must be
+//   significantly greater than UNACKED_PACKET_ASSUME_GOOD
+const PACKET_INDEX_EXPIRE = UNACKED_PACKET_ASSUME_GOOD * 2;
+const PACKET_INDEX_CLEANUP = PACKET_INDEX_EXPIRE / 4;
+
 const ack = require('../../common/ack.js');
-const { ackHandleMessage, ackInitReceiver } = ack;
+const { ackHandleMessage, ackInitReceiver, ackReadHeader } = ack;
 const assert = require('assert');
-const { channelServerPak, channelServerSend } = require('./channel_server.js');
+const { channelServerPak, channelServerSend, PAK_HINT_NEWSEQ, PAK_ID_MASK } = require('./channel_server.js');
 const dot_prop = require('dot-prop');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const { min } = Math;
+const { packetLogInit, packetLog } = require('./packet_log.js');
 const { empty, logdata } = require('../../common/util.js');
 
 // How long to wait before failing an out of order packet and running it anyway
-const OOO_PACKET_FAIL = 10000; // For testing this, disable channel_server.js:handleWorkerRemoved
-const AUTO_DESTROY_TIME = 90000;
+const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
 
 // Delay subsequent writes by at least 1.5 seconds
 const METADATA_COMMIT_RATELIMIT = 1500;
@@ -23,9 +35,6 @@ function throwErr(err) {
     throw err;
   }
 }
-
-const PKT_LOG_SIZE = 16;
-const PKT_LOG_BUF_SIZE = 32;
 
 // We lose all undefineds when going to and from JSON, so strip them from in-memory
 // representation.
@@ -91,12 +100,19 @@ export class ChannelWorker {
       id: this.channel_subid,
       channel_id,
     };
+    this.pkt_idx_last_cleanup = channel_server.server_time;
+    this.pkt_idx_timestamp = {}; // for each destination, the timestamp of last communication
     this.send_pkt_idx = {}; // for each destination, the last ordering ID we sent
+    this.send_pkt_ackd = {}; // for each destination, the id of the last ack'd packet
+    this.send_pkt_unackd = {}; // for each destination, the id and timestamp of the last packet that did not need an ack
     this.recv_pkt_idx = {}; // for each source, the last ordering ID we received
     this.pkt_queue = {}; // for each source, any queued packets that need to be dispatched in order
-    this.subscribers = []; // ids of who is subscribed to us
+    this.subscribers = {}; // set of ids of who is subscribed to us
+    this.num_subscribers = 0;
     this.store_path = `${this.channel_type}/${this.channel_id}`;
+
     this.bulk_store_path = `${this.channel_type}/${this.channel_id}`;
+
     this.bulk_store_paths = {};
     this.shutting_down = false;
 
@@ -118,8 +134,7 @@ export class ChannelWorker {
       this.data.public.clients = {};
     }
 
-    this.pkt_log_idx = 0;
-    this.pkt_log = new Array(PKT_LOG_SIZE);
+    packetLogInit(this);
 
     // Data store optimisation checks
     this.set_in_flight = false;
@@ -127,7 +142,7 @@ export class ChannelWorker {
     this.last_saved_data = '';
   }
 
-  shutdown() {
+  shutdownFinal() {
     this.shutting_down = true;
     ack.failAll(this);
     assert(!this.numSubscribers());
@@ -137,6 +152,9 @@ export class ChannelWorker {
     }
     // TODO: this unloading should be automatic / in lower layer, as it doesn't
     // make sense when the datastore is a database?
+
+    // This check is for local filestore usage environment
+    // There will not be a filestore instance created during createChannelLocal as there is no persistance
     if (!this.no_datastore) {
       this.channel_server.ds_store_meta.unload(this.store_path);
     }
@@ -144,12 +162,22 @@ export class ChannelWorker {
     for (let path in this.bulk_store_paths) {
       this.channel_server.ds_store_bulk.unload(path);
     }
+  }
 
-    this.channel_server.removeChannelLocal(this.channel_id);
+  shutdownImmediate() {
+    this.channel_server.removeChannelLocal(this.channel_id, true);
+    this.shutdownFinal();
+    // Due to async unsubscribing from the message exchange, messages may still
+    //   be delivered after this, but this.shutting_down should cause them to
+    //   immediately fail.
   }
 
   numSubscribers() {
-    return this.subscribers.length;
+    return this.num_subscribers;
+  }
+
+  onWhere(src, data, resp_func) {
+    resp_func(null, this.channel_server.debug_addr);
   }
 
   onSubscribe(src, data, resp_func) {
@@ -159,15 +187,19 @@ export class ChannelWorker {
     if (is_client && this.require_login && !user_id) {
       return resp_func('ERR_LOGIN_REQUIRED');
     }
-
-    this.subscribers.push(channel_id);
+    if (this.subscribers[channel_id]) {
+      return resp_func('ERR_ALREADY_SUBSCRIBED');
+    }
+    this.subscribers[channel_id] = 1;
+    this.num_subscribers++;
     this.adding_client = channel_id;
 
     let err = this.handleNewClient && this.handleNewClient(src);
     if (err) {
       this.adding_client = null;
       // not allowed, undo
-      this.subscribers.pop();
+      delete this.subscribers[channel_id];
+      this.num_subscribers--;
       return resp_func(typeof err === 'string' ? err : 'ERR_NOT_ALLOWED_BY_WORKER');
     }
 
@@ -197,7 +229,7 @@ export class ChannelWorker {
       }
       this.setChannelData(`public.clients.${src.id}.ids`, ids);
       if (user_id) {
-        this.subscribeOther(`user.${user_id}`);
+        this.subscribeClientToUser(src.id, user_id);
       }
     }
 
@@ -210,8 +242,69 @@ export class ChannelWorker {
     return resp_func();
   }
 
+  autoDestroyStart() {
+    let { channel_id, channel_server } = this;
+    let self = this;
+    this.info('Empty time expired, starting auto-destroy, locking...');
+    assert(this.registered);
+    this.attempting_shutdown = true;
+    function unlock(next) {
+      if (next) {
+        self.pak('master.master', 'master_unlock').send((err) => {
+          assert(!err, err);
+          self.attempting_shutdown = false;
+          next();
+        });
+      } else {
+        // do *not* expect a response, we are gone.
+        self.pak('master.master', 'master_unlock').send();
+        self.attempting_shutdown = false;
+      }
+    }
+
+    let pak = this.pak('master.master', 'master_lock');
+    pak.writeAnsiString(channel_server.csuid);
+    pak.send((err) => {
+      assert(!err, err);
+      if (!this.shouldShutdown()) {
+        this.info('locked, but no longer should shutdown, unlocking...');
+        unlock(() => {
+          this.info('unlocked');
+          self.checkAutoDestroy(); // If we're empty again, need to check in a while
+        });
+        return;
+      }
+      this.debug('locked, unregistering from exchange...');
+      channel_server.exchange.unregister(channel_id, (err) => {
+        assert(!err, err);
+        if (!this.shouldShutdown()) {
+          // abort!
+          this.info('unregistered from exchange, but no longer should shutdown, re-registering...');
+          channel_server.exchange.register(channel_id, this.handleMessage.bind(this), (err) => {
+            this.info('re-registered to exchange, unlocking...');
+            assert(!err, err); // master locked, so no one else should be able to create at this time
+            unlock(() => {
+              this.info('unlocked');
+              self.checkAutoDestroy(); // If we're empty again, need to check in a while
+            });
+          });
+          return;
+        }
+        // unregistered, now actually finish shutdown and let the master know to unlock us
+        this.debug('unregistered, unlocking and finalizing shutdown');
+        unlock();
+        channel_server.removeChannelLocal(channel_id, false);
+        this.shutdownFinal();
+      });
+    });
+  }
+
   isEmpty() {
-    return !this.subscribers.length && empty(this.pkt_queue);
+    return !this.num_subscribers && empty(this.pkt_queue);
+  }
+
+  shouldShutdown() {
+    return this.isEmpty() && Date.now() - this.last_msg_time > AUTO_DESTROY_TIME && !this.set_in_flight;
   }
 
   autoDestroyCheck() {
@@ -221,19 +314,20 @@ export class ChannelWorker {
       // have a subscriber now, forget about it
       return;
     }
-    if (Date.now() - this.last_msg_time > AUTO_DESTROY_TIME && !this.set_in_flight) {
+    if (this.shouldShutdown()) {
       this.auto_destroy_check = false;
-      console.info(`${this.channel_id}: Empty time expired, auto-destroying...`);
-      this.shutdown();
+      this.autoDestroyStart();
       return;
     }
     // Continue checking
     setTimeout(this.autoDestroyCheck.bind(this), AUTO_DESTROY_TIME);
   }
 
-  checkAutoDestroy() {
-    this.last_msg_time = Date.now();
-    if (this.auto_destroy && !this.auto_destroy_check && this.isEmpty()) {
+  checkAutoDestroy(skip_timestamp) {
+    if (!skip_timestamp) {
+      this.last_msg_time = Date.now();
+    }
+    if (this.auto_destroy && !this.auto_destroy_check && !this.attempting_shutdown && this.isEmpty()) {
       this.auto_destroy_check = true;
       setTimeout(this.autoDestroyCheck.bind(this), AUTO_DESTROY_TIME);
     }
@@ -242,13 +336,13 @@ export class ChannelWorker {
   onUnSubscribe(src, data, resp_func) {
     let { channel_id } = src;
     let is_client = src.type === 'client';
-    let idx = this.subscribers.indexOf(channel_id);
-    if (idx === -1) {
+    if (!this.subscribers[channel_id]) {
       // This can happen if a client is unsubscribing before it got the message
       // back saying its subscription attempt failed
       return void resp_func('ERR_NOT_SUBSCRIBED');
     }
-    this.subscribers.splice(idx, 1);
+    delete this.subscribers[channel_id];
+    this.num_subscribers--;
     if (this.handleClientDisconnect) {
       this.handleClientDisconnect(src);
     }
@@ -264,7 +358,6 @@ export class ChannelWorker {
       }
     }
     resp_func();
-    this.checkAutoDestroy();
   }
 
   isSubscribedTo(other_channel_id) {
@@ -274,7 +367,7 @@ export class ChannelWorker {
   subscribeOther(other_channel_id, resp_func) {
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
-      console.debug(`${this.channel_id}->${other_channel_id}: subscribe - already subscribed`);
+      this.debug(`->${other_channel_id}: subscribe - already subscribed`);
       if (resp_func) {
         resp_func();
       }
@@ -282,7 +375,7 @@ export class ChannelWorker {
     }
     this.sendChannelMessage(other_channel_id, 'subscribe', undefined, (err, resp_data) => {
       if (err) {
-        console.log(`${this.channel_id}->${other_channel_id} subscribe failed: ${err}`);
+        this.log(`->${other_channel_id} subscribe failed: ${err}`);
         this.subscribe_counts[other_channel_id]--;
         if (!this.subscribe_counts[other_channel_id]) {
           delete this.subscribe_counts[other_channel_id];
@@ -303,12 +396,12 @@ export class ChannelWorker {
   unsubscribeOther(other_channel_id) {
     assert(this.channel_type === 'client' || this.subscribe_counts[other_channel_id]);
     if (!this.subscribe_counts[other_channel_id]) {
-      console.log(`${this.channel_id}->${other_channel_id}: unsubscribe - failed: not subscribed`);
+      this.log(`->${other_channel_id}: unsubscribe - failed: not subscribed`);
       return;
     }
     --this.subscribe_counts[other_channel_id];
     if (this.subscribe_counts[other_channel_id]) {
-      console.debug(`${this.channel_id}->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
+      this.debug(`->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
       return;
     }
 
@@ -317,9 +410,9 @@ export class ChannelWorker {
     this.sendChannelMessage(other_channel_id, 'unsubscribe', undefined, (err, resp_data) => {
       if (err === ERR_NOT_FOUND || err && this.shutting_down) {
         // This is fine, just ignore
-        console.debug(`${this.channel_id}->${other_channel_id} unsubscribe (silently) failed: ${err}`);
+        // this.debug(`->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
-        console.error(`${this.channel_id}->${other_channel_id} unsubscribe failed: ${err}`);
+        this.error(`->${other_channel_id} unsubscribe failed: ${err}`);
         this.onError(err);
       } else {
         // succeeded, nothing special
@@ -334,8 +427,8 @@ export class ChannelWorker {
       }
     }
   }
-  pak(dest, msg, ref_pak) {
-    return channelServerPak(this, dest, msg, ref_pak);
+  pak(dest, msg, ref_pak, q) {
+    return channelServerPak(this, dest, msg, ref_pak, q);
   }
   setChannelDataOnOther(channel_id, key, value, resp_func) {
     let pak = this.pak(channel_id, 'set_channel_data');
@@ -359,7 +452,7 @@ export class ChannelWorker {
           this.unsubscribeOther(`user.${old_ids.user_id}`);
         }
         if (user_id) {
-          this.subscribeOther(`user.${user_id}`);
+          this.subscribeClientToUser(client_id, user_id);
         }
       }
       this.setChannelData(`public.clients.${client_id}.ids`, {
@@ -369,6 +462,35 @@ export class ChannelWorker {
       });
     }
     resp_func();
+  }
+
+  subscribeClientToUser(client_id, user_id) {
+    let channel_id = `user.${user_id}`;
+    if (this.user_data_map && this.subscribe_counts[channel_id]) {
+      // already subscribed, must be able to apply user_data_map immediately
+      //   from another client's data
+      let existing_client;
+      for (let other_client_id in this.data.public.clients) {
+        let other_client = this.data.public.clients[other_client_id];
+        if (other_client_id !== client_id && other_client.ids.user_id === user_id) {
+          existing_client = other_client;
+          break;
+        }
+      }
+      if (existing_client) {
+        let client = this.data.public.clients[client_id];
+        for (let key in this.user_data_map) {
+          let mapped = this.user_data_map[key];
+          let value = existing_client[mapped];
+          if (value) {
+            this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
+          } else if (client[mapped]) {
+            this.setChannelData(`public.clients.${client_id}.${mapped}`, undefined);
+          }
+        }
+      } // else, okay?
+    }
+    this.subscribeOther(channel_id);
   }
 
   // data is a { key, value } pair of what has changed
@@ -442,15 +564,15 @@ export class ChannelWorker {
       was_q = data.q;
       data.q = 1;
     }
-    for (let ii = 0; ii < this.subscribers.length; ++ii) {
-      if (this.subscribers[ii] === except_client) {
+    for (let channel_id in this.subscribers) {
+      if (channel_id === except_client) {
         continue;
       }
       ++count;
-      this.sendChannelMessage(this.subscribers[ii], msg, data);
+      this.sendChannelMessage(channel_id, msg, data);
     }
     if (count && !was_q) {
-      console.debug(`${this.channel_id}->broadcast(${count}): ${msg} ${logdata(data)}`);
+      this.debug(`broadcast(${count}): ${msg} ${logdata(data)}`);
     }
   }
 
@@ -492,7 +614,7 @@ export class ChannelWorker {
     }
 
     if (anyUndefined(data)) {
-      console.log('Undefined value found in channel data:', data);
+      this.log('Undefined value found in channel data:', data);
       assert(false, 'Undefined value found in channel data');
     }
 
@@ -519,9 +641,6 @@ export class ChannelWorker {
       self.set_in_flight = true;
 
       self.channel_server.ds_store_meta.setAsync(self.store_path, incoming_data, function (err) {
-        if (err) {
-          throwErr(err);
-        }
         // Delay the next write
         setTimeout(function () {
           self.set_in_flight = false;
@@ -531,6 +650,9 @@ export class ChannelWorker {
             safeSet();
           }
         }, METADATA_COMMIT_RATELIMIT);
+        if (err) {
+          throwErr(err);
+        }
       });
     }
 
@@ -546,7 +668,7 @@ export class ChannelWorker {
       !this.defaultHandleSetChannelData(source, key, value)
     ) {
       // denied by app_worker
-      console.log(`set_channel_data_push on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
+      this.log(`set_channel_data_push on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
       return resp_func('ERR_APP_WORKER');
     }
     assert(value);
@@ -627,7 +749,7 @@ export class ChannelWorker {
       !this.defaultHandleSetChannelData(source, key, value)
     ) {
       // denied by app_worker
-      console.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
+      this.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
       if (resp_func) {
         resp_func('ERR_INTERNAL');
       }
@@ -681,8 +803,8 @@ export class ChannelWorker {
     this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, value, cb || throwErr);
   }
 
-  sendChannelMessage(dest, msg, data, resp_func) {
-    channelServerSend(this, dest, msg, null, data, resp_func);
+  sendChannelMessage(dest, msg, data, resp_func, q) {
+    channelServerSend(this, dest, msg, null, data, resp_func, q);
   }
 
   // source has at least { channel_id, type, id }, possibly also .user_id and .display_name if type === 'client'
@@ -691,6 +813,10 @@ export class ChannelWorker {
       // Ensure this is allowed directly from clients
       if (!this.allow_client_direct[msg]) {
         return void resp_func(`ERR_CLIENT_DIRECT (${msg})`);
+      }
+      // Ensure the client was allowed to subscribe to this worker
+      if (!this.subscribers[source.channel_id]) {
+        return void resp_func('ERR_NOT_SUBSCRIBED');
       }
     }
     let had_handler = false;
@@ -715,11 +841,27 @@ export class ChannelWorker {
   }
 
   onError(msg) {
-    console.error(`ChannelWorker(${this.channel_id}) error:`, msg);
+    this.error(msg);
   }
 
-  log(msg) {
-    console.log(`${this.channel_id}:`, msg);
+  debug(...args) {
+    console.debug(`${this.channel_id}:`, ...args);
+  }
+
+  info(...args) {
+    console.info(`${this.channel_id}:`, ...args);
+  }
+
+  log(...args) {
+    console.log(`${this.channel_id}:`, ...args);
+  }
+
+  warn(...args) {
+    console.warn(`${this.channel_id}:`, ...args);
+  }
+
+  error(...args) {
+    console.error(`${this.channel_id}:`, ...args);
   }
 
   // Default error handler
@@ -734,11 +876,11 @@ export class ChannelWorker {
       return;
     }
     let q = q_data.pkts;
-    let next_idx = (this.recv_pkt_idx[source] || 0) + 1;
+    let next_idx = ((this.recv_pkt_idx[source] || 0) + 1) & PAK_ID_MASK;
     let next = q[next_idx];
     if (next) {
       // Next one is ready to go now!
-      console.info(`${this.channel_id}: Delayed dispatching OOO packet with ID ${next_idx} from ${source}.`);
+      this.info(`Delayed dispatching OOO packet with ID ${next_idx} from ${source}.`);
       delete q[next_idx];
       if (empty(q)) {
         if (q_data.tid) {
@@ -755,7 +897,8 @@ export class ChannelWorker {
     let q_data = this.pkt_queue[source];
     assert(q_data);
     assert(!q_data.tid);
-    q_data.tid = setTimeout(this.checkPacketQueueTimeout.bind(this, source), OOO_PACKET_FAIL);
+    q_data.start_pings = this.channel_server.exchange_pings;
+    q_data.tid = setTimeout(this.checkPacketQueueTimeout.bind(this, source), (OOO_PACKET_FAIL_PINGS + 1) * 1000);
     // Could also send a ping here and fulfill this timeout when it comes back, but
     // a ping is not guaranteed to arrive after all packets, since if there
     // are multiple sources sending packets, one (that does not do the create)
@@ -763,11 +906,21 @@ export class ChannelWorker {
     // to fail) create to finish) when the ping makes it. Could send a more
     // complicated "request for flush to target" that doesn't return until all
     // retries are sent, and that would do it.
+    // Instead, now, timeout is proportional to exchange pings, should reflect any
+    // delays going on, as long as the delays are affecting our processes as well.
   }
 
   checkPacketQueueTimeout(source) {
     let q_data = this.pkt_queue[source];
     q_data.tid = null;
+    let elapsed_pings = this.channel_server.exchange_pings - q_data.start_pings;
+    if (elapsed_pings < OOO_PACKET_FAIL_PINGS) {
+      // timeout finished, but the expected number of pings has not occurred, delay until it does
+      q_data.tid = setTimeout(this.checkPacketQueueTimeout.bind(this, source),
+        (OOO_PACKET_FAIL_PINGS + 1 - elapsed_pings) * 1000);
+      return;
+    }
+
     let q = q_data.pkts;
     assert(!empty(q));
     let oldest_pkt_id = Infinity;
@@ -775,9 +928,9 @@ export class ChannelWorker {
       oldest_pkt_id = min(oldest_pkt_id, Number(pkt_id));
     }
     let next_idx = oldest_pkt_id;
-    let expected_idx = (this.recv_pkt_idx[source] || 0) + 1;
+    let expected_idx = ((this.recv_pkt_idx[source] || 0) + 1) & PAK_ID_MASK;
     let next = q[next_idx];
-    console.error(`${this.channel_id}: Time expired. Running queued OOO packet with ID ${
+    this.error(`Time expired. Running queued OOO packet with ID ${
       next_idx} (expected ${expected_idx}) from ${source}.`);
     delete q[next_idx];
     if (empty(q)) {
@@ -787,8 +940,23 @@ export class ChannelWorker {
     // also dispatches any sequential queued up, and may clear/invalidate q_data
     if (this.pkt_queue[source]) {
       // still have remaining, non-sequential packets (untested, unexpected)
-      console.error(`${this.channel_id}: Still remaining packets from ${source}. Queuing...`);
+      this.error(`Still remaining packets from ${source}. Queuing...`);
       this.startPacketQueueCheck(source);
+    }
+  }
+
+  dispatchPacketError(source, pak) {
+    /*let ids = */pak.readJSON();
+    let net_data = ackReadHeader(pak);
+    let { msg, pak_id } = net_data;
+    let expecting_response = Boolean(pak_id);
+    if (expecting_response) {
+      this.info(`received packet after shutdown, msg=${msg} from ${source}, returning ERR_TERMINATED`);
+      channelServerSend(this, source, msg, 'ERR_TERMINATED');
+    } else if (typeof msg === 'number') {
+      // this is a response, totally common, happens on responses to every last-moment `unsbuscribe`
+    } else {
+      this.info(`received packet after shutdown, msg=${msg} from ${source}, ignoring`);
     }
   }
 
@@ -801,9 +969,12 @@ export class ChannelWorker {
     ids.channel_id = source;
 
     let channel_worker = this;
-    channel_worker.logPacketDispatch(source, pak);
-    channel_worker.channel_server.last_worker = channel_worker;
-    channel_worker.recv_pkt_idx[source] = pkt_idx;
+    let { channel_server } = channel_worker;
+    channel_server.last_worker = channel_worker;
+    if (pkt_idx !== -1) { // not a broadcast
+      channel_worker.pkt_idx_timestamp[source] = channel_server.server_time;
+      channel_worker.recv_pkt_idx[source] = pkt_idx;
+    }
     try {
       ackHandleMessage(channel_worker, source, pak, function sendFunc(msg, err, data, resp_func) {
         channelServerSend(channel_worker, source, msg, err, data, resp_func);
@@ -814,31 +985,43 @@ export class ChannelWorker {
       });
     } catch (e) {
       e.source = source;
-      console.error(`Exception while handling packet from "${source}"`);
-      channel_worker.channel_server.handleUncaughtError(e);
+      this.error(`Exception while handling packet from "${source}"`);
+      channel_server.handleUncaughtError(e);
     }
-    this.checkPacketQueue(source);
+    if (pkt_idx !== -1) {
+      this.checkPacketQueue(source);
+    }
   }
 
   handleMessage(pak) {
+    ++cwstats.msgs;
+    cwstats.bytes += pak.totalSize();
     let channel_worker = this;
     pak.readFlags();
     // source is a string channel_id
     let pkt_idx = pak.readU32();
+    let pak_new_seq = pkt_idx & PAK_HINT_NEWSEQ;
+    pkt_idx &= PAK_ID_MASK;
     let source = pak.readAnsiString();
-    assert(pkt_idx);
-    let expected_idx = (this.recv_pkt_idx[source] || 0) + 1;
+
+    if (this.shutting_down) {
+      // We're already shut down, just still getting cleaned up, return failure
+      return void this.dispatchPacketError(source, pak);
+    }
+
+    // assert(pkt_idx); not true after wrapping (doesn't look like anything cares other than this assert?)
+    let expected_idx = ((this.recv_pkt_idx[source] || 0) + 1) & PAK_ID_MASK;
     function dispatch() {
       channel_worker.dispatchPacket(pkt_idx, source, pak);
     }
     if (pkt_idx === expected_idx) {
       dispatch();
-    } else if (pkt_idx === 1) {
-      console.error(`${channel_worker.channel_id}: Received new initial packet with ID ${pkt_idx
-      } (expected >=${expected_idx}) from ${source}. Dispatching...`);
+    } else if (pak_new_seq) {
+      this.debug(`Received new initial packet with ID ${pkt_idx
+      } (expected >=${expected_idx}) from ${source}, flagged as new_seq, dispatching...`);
       dispatch();
     } else {
-      console.info(`${channel_worker.channel_id}: Received OOO packet with ID ${pkt_idx
+      this.info(`Received OOO packet with ID ${pkt_idx
       } (expected ${expected_idx}) from ${source}. Queuing...`);
       let q_data = channel_worker.pkt_queue[source] = channel_worker.pkt_queue[source] || { pkts: {} };
       q_data.pkts[pkt_idx] = { source, pak };
@@ -846,7 +1029,34 @@ export class ChannelWorker {
         this.startPacketQueueCheck(source);
       }
     }
-    this.checkAutoDestroy();
+    this.checkAutoDestroy(source === 'master.master');
+  }
+
+  cleanupPktIndices() {
+    // Using relative server time (server_time) instead of absolute time
+    //   (last_tick_timestamp) because otherwise any debugger stall
+    //   guarantees packet ordering to get totally messed up.
+    //   As a trade-off, if one server is stalling *significantly* more (more than
+    //   50% of time lost) two servers may send confused packet indices to each other.
+    let timestamp = this.channel_server.server_time;
+    if (timestamp - this.pkt_idx_last_cleanup < PACKET_INDEX_CLEANUP) {
+      return;
+    }
+    this.pkt_idx_last_cleanup = timestamp;
+    let expire = timestamp - PACKET_INDEX_EXPIRE;
+    for (let channel_id in this.pkt_idx_timestamp) {
+      let other_time = this.pkt_idx_timestamp[channel_id];
+      if (other_time < expire) {
+        // It's been long enough that any packets in either direction will, long since, have
+        // PAK_HINT_NEWSEQ, so, we have no reason to keep this tracking information
+        // around.
+        delete this.pkt_idx_timestamp[channel_id];
+        delete this.recv_pkt_idx[channel_id];
+        delete this.send_pkt_idx[channel_id];
+        delete this.send_pkt_ackd[channel_id];
+        delete this.send_pkt_unackd[channel_id];
+      }
+    }
   }
 
   // Like handleMessage, but does not require OOO queuing, for broadcast-queues
@@ -854,28 +1064,12 @@ export class ChannelWorker {
   handleMessageBroadcast(pak) {
     let channel_worker = this;
     pak.readFlags();
-    let pkt_idx = pak.readU32();
+    /*let pkt_idx = */pak.readU32();/* & PAK_ID_MASK;*/
     let source = pak.readAnsiString();
-    channel_worker.dispatchPacket(pkt_idx, source, pak);
-  }
-
-  logPacketDispatch(source, pak) {
-    let ple = this.pkt_log[this.pkt_log_idx];
-    if (!ple) {
-      ple = this.pkt_log[this.pkt_log_idx] = { data: Buffer.alloc(PKT_LOG_BUF_SIZE) };
-    }
-    // Copy first PKT_LOG_BUF_SIZE bytes for logging
-    let buf = pak.getBuffer();
-    let buf_len = pak.getBufferLen();
-    let buf_offs = pak.getOffset();
-    let data_len = min(PKT_LOG_BUF_SIZE, buf_len - buf_offs);
-    ple.ts = Date.now();
-    ple.source = source;
-    Buffer.prototype.copy.call(buf, ple.data, 0, buf_offs, buf_offs + data_len);
-    ple.data_len = data_len;
-    this.pkt_log_idx = (this.pkt_log_idx + 1) % PKT_LOG_SIZE;
+    channel_worker.dispatchPacket(-1, source, pak);
   }
 }
+ChannelWorker.prototype.logPacketDispatch = packetLog;
 // Overrideable by child class's prototype
 ChannelWorker.prototype.maintain_client_list = false;
 ChannelWorker.prototype.emit_join_leave_events = false;

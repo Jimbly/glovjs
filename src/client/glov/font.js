@@ -5,7 +5,7 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const { floor, max, round } = Math;
-const settings = require('./settings.js');
+// const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
@@ -249,10 +249,11 @@ function GlovFont(font_info, texture_name) {
   this.tex_w = font_info.imageW;
   this.tex_h = font_info.imageH;
 
-  // Calculate inverse scale
+  // Calculate inverse scale, fixup 0s
   for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
     let char_info = font_info.char_infos[ii];
     char_info.scale = 1 / (char_info.sc || 1);
+    char_info.w = char_info.w || 0;
   }
 
   // build lookup

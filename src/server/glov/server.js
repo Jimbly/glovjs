@@ -62,7 +62,10 @@ function updateVersion(base_name, is_startup) {
       ws_server.setAppVer(obj.ver);
       if (!is_startup) {
         // Do a broadcast message so people get a few seconds of warning
-        ws_server.broadcast('admin_msg', 'New client version deployed, reloading momentarily...');
+        ws_server.broadcast('chat_broadcast', {
+          src: 'system',
+          msg: 'New client version deployed, reloading momentarily...'
+        });
         if (argv.dev) {
           // immediate
           ws_server.broadcast('app_ver', last_version.app);
@@ -137,8 +140,21 @@ export function startup(params) {
     data_stores.meta = data_store.create('data_store');
   } else if (server_config.do_mirror) {
     if (data_stores.meta) {
-      console.log('[DATASTORE] Mirroring meta store (local authoritative)');
-      data_stores.meta = data_store_mirror.create(data_store.create('data_store'), data_stores.meta);
+      if (server_config.local_authoritative === false) {
+        console.log('[DATASTORE] Mirroring meta store (cloud authoritative)');
+        data_stores.meta = data_store_mirror.create({
+          read_check: true,
+          readwrite: data_stores.meta,
+          write: data_store.create('data_store'),
+        });
+      } else {
+        console.log('[DATASTORE] Mirroring meta store (local authoritative)');
+        data_stores.meta = data_store_mirror.create({
+          read_check: true,
+          readwrite: data_store.create('data_store'),
+          write: data_stores.meta,
+        });
+      }
     }
   }
   if (!data_stores.bulk) {
@@ -148,8 +164,21 @@ export function startup(params) {
     }
   } else if (server_config.do_mirror) {
     if (data_stores.bulk) {
-      console.log('[DATASTORE] Mirroring bulk store (local authoritative)');
-      data_stores.bulk = data_store_mirror.create(data_store.create('data_store/bulk'), data_stores.bulk);
+      if (server_config.local_authoritative === false) {
+        console.log('[DATASTORE] Mirroring bulk store (cloud authoritative)');
+        data_stores.bulk = data_store_mirror.create({
+          read_check: true,
+          readwrite: data_stores.bulk,
+          write: data_store.create('data_store/bulk'),
+        });
+      } else {
+        console.log('[DATASTORE] Mirroring bulk store (local authoritative)');
+        data_stores.bulk = data_store_mirror.create({
+          read_check: true,
+          readwrite: data_store.create('data_store/bulk'),
+          write: data_stores.bulk,
+        });
+      }
     }
   }
   if (server_config.do_shield) {
@@ -192,8 +221,10 @@ export function startup(params) {
     exchange,
     data_stores,
     ws_server,
+    is_master: argv.master,
   });
 
+  process.on('SIGTERM', channel_server.forceShutdown.bind(channel_server));
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
   setTimeout(displayStatus, STATUS_TIME);
 
@@ -228,7 +259,10 @@ export function startup(params) {
   updateVersion('app', true);
 }
 
-export function shutdown(...message) {
+export function panic(...message) {
   console.error(...message);
-  process.exit(1);
+  process.stderr.write(message, () => {
+    process.exit(1);
+  });
+  throw new Error('panic'); // ensure calling code does not continue
 }

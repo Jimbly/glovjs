@@ -91,7 +91,7 @@ ScrollArea.prototype.isFocused = function () {
 ScrollArea.prototype.begin = function (params) {
   this.applyParams(params);
   let { x, y, w, h, z } = this;
-  assert(!this.began); // Checking mismatched begin/end
+  assert(!this.began || engine.DEBUG); // Checking mismatched begin/end
   this.began = true;
   // Set up camera and clippers
   clipPush(z + 0.05, x, y, w - this.barWidth(), h);

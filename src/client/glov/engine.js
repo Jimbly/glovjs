@@ -13,7 +13,6 @@ const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
 const effects = require('./effects.js');
 const glov_font = require('./font.js');
-const font_info_palanquin32 = require('../img/font/palanquin32.json');
 const geom = require('./geom.js');
 const input = require('./input.js');
 const local_storage = require('./local_storage.js');
@@ -83,6 +82,15 @@ export let light_dir_ws = vec3(-1, -2, -3);
 export let font;
 export let app_state = null;
 export const border_color = vec4(0, 0, 0, 1);
+
+let no_render = false;
+
+export function disableRender(new_value) {
+  no_render = new_value;
+  if (no_render) {
+    glov_ui.cleanupDOMElems();
+  }
+}
 
 let mat_temp = mat4();
 export function setGlobalMatrices(_mat_view) {
@@ -279,7 +287,6 @@ perf.addMetric({
     vec4(1, 0.925, 0.153, 1), // cpu/tick time
     vec4(0, 0.894, 0.212, 1), // total time (GPU)
   ],
-  interactable: DEBUG,
 });
 
 let do_borders = true;
@@ -394,7 +401,7 @@ function checkResize() {
         v4set(safearea_values,
           safearea_elem.offsetLeft * dom_to_canvas_ratio,
           new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
-          max(safearea_elem.offsetTop * dom_to_canvas_ratio, safariTopSafeArea(view_w, view_h)),
+          max(safearea_elem.offsetTop * dom_to_canvas_ratio, safariTopSafeArea(view_w, view_h) * settings.render_scale),
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
           safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
@@ -614,8 +621,9 @@ function tick(timestamp) {
     }
   }
 
-  if (document.hidden || document.webkitHidden) {
+  if (document.hidden || document.webkitHidden || no_render) {
     resetEffects();
+    input.tickInputInactive();
     last_tick_cpu = 0;
     for (let ii = post_tick.length - 1; ii >= 0; --ii) {
       if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
@@ -919,18 +927,19 @@ export function startup(params) {
     textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
 
-  const font_info_04b03x2 = require('../img/font/04b03_8x2.json');
-  const font_info_04b03x1 = require('../img/font/04b03_8x1.json');
-  if (params.font) {
-    font = glov_font.create(params.font.info, params.font.texture);
-  } else if (params.pixely === 'strict') {
-    font = glov_font.create(font_info_04b03x1, 'font/04b03_8x1');
-  } else if (is_pixely) {
-    font = glov_font.create(font_info_04b03x2, 'font/04b03_8x2');
-  } else {
-    font = glov_font.create(font_info_palanquin32, 'font/palanquin32');
-  }
-  params.font = font;
+  assert(params.font);
+  // If not, something like:
+  // const font_info_04b03x2 = require('../img/font/04b03_8x2.json');
+  // const font_info_04b03x1 = require('../img/font/04b03_8x1.json');
+  // const font_info_palanquin32 = require('../img/font/palanquin32.json');
+  // if (params.pixely === 'strict') {
+  //   font = glov_font.create(font_info_04b03x1, 'font/04b03_8x1');
+  // } else if (is_pixely) {
+  //   font = glov_font.create(font_info_04b03x2, 'font/04b03_8x2');
+  // } else {
+  //   font = glov_font.create(font_info_palanquin32, 'font/palanquin32');
+  // }
+  params.font = font = glov_font.create(params.font.info, params.font.texture);
   if (params.title_font) {
     params.title_font = glov_font.create(params.title_font.info, params.title_font.texture);
   }

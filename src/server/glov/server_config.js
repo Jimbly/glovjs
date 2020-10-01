@@ -16,6 +16,12 @@ function determinEnv() {
   } else if (process.env.GKE_PROJECTNAME) {
     env = process.env.GKE_PROJECTNAME;
   } else if (process.env.PODNAME) {
+    if (process.env.LOCAL_GCP_CRED) {
+      fs.writeFileSync('local-k8s.json', process.env.LOCAL_GCP_CRED);
+    } else {
+      console.log('Running in env:local-k8s, but no gcp.cred secret found.  You may need to add one with:');
+      console.log('  kubectl create secret generic gcp.cred --from-file=json=my-gcp-cred.json');
+    }
     env = 'local-k8s';
   } else if (argv.dev) {
     env = 'dev';

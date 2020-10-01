@@ -1,6 +1,6 @@
 /* eslint no-extend-native:off,no-invalid-this:off */
 
-// TypedArray.slice, fill, join, sort, etc - not supported on IE, some older Safari, older Android
+// TypedArray.slice, fill, join, sort, etc - not supported on IE, some older Safari, older Android, Chrome 44
 let typedarrays = [Int8Array, Uint8Array, Int16Array, Uint16Array, Int32Array, Uint32Array, Float32Array];
 
 if (!Uint8Array.prototype.slice) {
@@ -25,8 +25,8 @@ if (!Uint8Array.prototype.slice) {
         }
         let len = end - begin;
         let ret = new ArrayType(len);
-        for (let ii = begin; ii < end; ++ii) {
-          ret[ii] = this[ii];
+        for (let ii = 0; ii < len; ++ii) {
+          ret[ii] = this[begin + ii];
         }
         return ret;
       }

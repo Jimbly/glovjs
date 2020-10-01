@@ -7,6 +7,7 @@ const assert = require('assert');
 const events = require('../../common/tiny-events.js');
 const node_util = require('util');
 const { isPacket } = require('../../common/packet.js');
+const { packetLog, packetLogInit } = require('./packet_log.js');
 const querystring = require('querystring');
 const { ipFromRequest } = require('./request_utils.js');
 const util = require('../../common/util.js');
@@ -31,8 +32,10 @@ function WSClient(ws_server, socket) {
   this.disconnected = false;
   this.last_receive_time = Date.now();
   this.idle_counter = 0;
+  this.last_client = null; // Last client to have had a message dispatched
   ackInitReceiver(this);
   ws_server.clients[this.id] = this;
+  this.logPacketDispatch = ws_server.logPacketDispatch.bind(ws_server);
 }
 util.inherits(WSClient, events.EventEmitter);
 
@@ -47,7 +50,7 @@ WSClient.prototype.log = function (...args) {
     }
   }
   let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-  console.log(`WS Client ${client.id}(${user_id || ''}) ${msg.join(' ')}`);
+  console.log(`WS Client ${client.client_id}(${user_id || ''}) ${msg.join(' ')}`);
 };
 
 WSClient.prototype.onError = function (e) {
@@ -64,7 +67,7 @@ WSClient.prototype.onClose = function () {
   client.disconnected = true;
   delete ws_server.clients[client.id];
   let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-  console.info(`WS Client ${client.id}(${user_id}) disconnected` +
+  console.info(`WS Client ${client.client_id}(${user_id || ''}) disconnected` +
     ` (${Object.keys(ws_server.clients).length} clients connected)`);
   ack.failAll(client); // Should this be before or after other disconnect events?
   client.emit('disconnect');
@@ -83,11 +86,20 @@ function WSServer() {
   this.last_client_id = 0;
   this.clients = Object.create(null);
   this.handlers = {};
-  this.restarting = false;
+  this.restarting = undefined;
   this.app_ver = 0;
+  this.restart_filter = null;
   this.onMsg('ping', util.nop);
+  packetLogInit(this);
 }
 util.inherits(WSServer, events.EventEmitter);
+
+WSServer.prototype.logPacketDispatch = packetLog;
+
+// `filter` returns true if message is allowed while shutting down
+WSServer.prototype.setRestartFilter = function (filter) {
+  this.restart_filter = filter;
+};
 
 // cb(client, data, resp_func)
 WSServer.prototype.onMsg = function (msg, cb) {
@@ -115,16 +127,15 @@ WSServer.prototype.init = function (server, server_https) {
     });
   };
   server.on('upgrade', onUpgrade);
+  ws_server.http_servers = [server];
   if (server_https) {
+    ws_server.http_servers.push(server_https);
     server_https.on('upgrade', onUpgrade);
   }
 
   ws_server.wss.on('connection', (socket, req) => {
     socket.handshake = req;
     let client = new WSClient(ws_server, socket);
-    console.info(`WS Client ${client.id} connected to ${req.url} from ${client.addr}` +
-      ` (${Object.keys(ws_server.clients).length} clients connected);` +
-      ` UA:${JSON.stringify(client.user_agent)}, origin:${JSON.stringify(client.origin)}`);
 
     socket.on('close', function () {
       // disable this for testing
@@ -134,9 +145,10 @@ WSServer.prototype.init = function (server, server_https) {
       if (client.disconnected) {
         // message received after disconnect!
         // ignore
-        console.info(`WS Client ${client.id} ignoring message received after disconnect`);
+        console.info(`WS Client ${client.client_id} ignoring message received after disconnect`);
       } else {
-        wsHandleMessage(client, data);
+        ws_server.last_client = client;
+        wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter);
       }
     });
     socket.on('error', function (e) {
@@ -145,12 +157,19 @@ WSServer.prototype.init = function (server, server_https) {
     });
     ws_server.emit('client', client);
 
-    // after the .emit('client') has a chance to set client.client_id
+    // log and send cack after the .emit('client') has a chance to set client.client_id
+    client.client_id = client.client_id || client.id;
+
+    console.info(`WS Client ${client.client_id} connected to ${req.url} from ${client.addr}` +
+      ` (${Object.keys(ws_server.clients).length} clients connected);` +
+      ` UA:${JSON.stringify(client.user_agent)}, origin:${JSON.stringify(client.origin)}`);
+
     client.send('cack', {
-      id: client.client_id || client.id,
+      id: client.client_id,
       secret: client.secret,
       app_ver: this.app_ver,
       time: Date.now(),
+      restarting: ws_server.restarting,
     });
 
     let query = querystring.parse(url.parse(req.url).query);
@@ -162,10 +181,10 @@ WSServer.prototype.init = function (server, server_https) {
         if (old_client.secret === query.secret) {
           let user_id = old_client.client_channel && old_client.client_channel.ids &&
             old_client.client_channel.ids.user_id;
-          console.info(`WS Client ${old_client.id}(${user_id}) being replaced by reconnect, disconnecting...`);
+          console.info(`WS Client ${old_client.client_id}(${user_id}) being replaced by reconnect, disconnecting...`);
           this.disconnectClient(old_client);
         } else {
-          console.log(`WS Client ${client.id} requested disconnect of Client ${reconnect_id}` +
+          console.log(`WS Client ${client.client_id} requested disconnect of Client ${reconnect_id}` +
             ' with incorrect secret, ignoring');
         }
       }
@@ -191,11 +210,21 @@ WSServer.prototype.checkTimeouts = function () {
     client.idle_counter++;
     if (client.idle_counter === 5) {
       let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-      console.info(`WS Client ${client.id}(${user_id}) timed out, disconnecting...`);
+      console.info(`WS Client ${client.client_id}(${user_id}) timed out, disconnecting...`);
       this.disconnectClient(client);
     }
   }
   setTimeout(this.check_timeouts_fn, wscommon.CONNECTION_TIMEOUT / 4);
+};
+
+WSServer.prototype.close = function () {
+  for (let client_id in this.clients) {
+    let client = this.clients[client_id];
+    this.disconnectClient(client);
+  }
+  for (let ii = 0; ii < this.http_servers.length; ++ii) {
+    this.http_servers[ii].close();
+  }
 };
 
 // Must be a ready-to-send packet created with .wsPak, not just the payload

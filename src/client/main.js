@@ -111,10 +111,24 @@ export function main() {
     net.init({ engine });
   }
 
+  const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
+  const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
+  const font_info_palanquin32 = require('./img/font/palanquin32.json');
+  let pixely = flagGet('pixely', 'on');
+  let font;
+  if (pixely === 'strict') {
+    font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
+  } else if (pixely && pixely !== 'off') {
+    font = { info: font_info_04b03x2, texture: 'font/04b03_8x2' };
+  } else {
+    font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
+  }
+
   if (!engine.startup({
     game_width,
     game_height,
-    pixely: flagGet('pixely', 'on'),
+    pixely,
+    font,
     viewport_postprocess: false,
   })) {
     return;

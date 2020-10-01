@@ -39,9 +39,15 @@ export function subscribe(id, cb) {
   broadcasts[id].push(cb);
 }
 
-export function unregister(id) {
+export function unregister(id, cb) {
   assert(queues[id]);
-  delete queues[id];
+  process.nextTick(function () {
+    assert(queues[id]);
+    delete queues[id];
+    if (cb) {
+      cb();
+    }
+  });
 }
 
 // pak and it's buffers are valid until cb() is called

@@ -109,7 +109,10 @@ export function failAll(receiver, err) {
 // sendFunc(msg, err, data, resp_func)
 // handleFunc(msg, data, resp_func)
 // eslint-disable-next-line consistent-return
-export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, pak_func, handle_func) {
+export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, pak_func, handle_func, filter_func) {
+  if (receiver.logPacketDispatch) {
+    receiver.logPacketDispatch(source, net_data_or_pak);
+  }
   let net_data = isPacket(net_data_or_pak) ? ackReadHeader(net_data_or_pak) : net_data_or_pak;
   let { err, data, msg, pak_id } = net_data;
   let now = Date.now();
@@ -120,6 +123,11 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
   }
   let sent_response = false;
   let start_time = now;
+
+  if (filter_func && !filter_func(receiver, msg, data)) {
+    // Simply discard this message
+    return;
+  }
 
   function preSendResp(err) {
     assert(!sent_response, 'Response function called twice');
@@ -176,13 +184,13 @@ export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, p
   if (typeof msg === 'number') {
     let cb = receiver.resp_cbs[msg];
     if (!cb) {
-      return receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
+      return void receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
     }
     delete receiver.resp_cbs[msg];
     cb(err, data, respFunc);
   } else {
     if (!msg) {
-      return receiver.onError(`Received message with no .msg from ${source}`);
+      return void receiver.onError(`Received message with no .msg from ${source}`);
     }
     handle_func(msg, data, respFunc);
   }

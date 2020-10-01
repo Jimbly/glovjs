@@ -8,6 +8,17 @@ export function nop() {
   // empty
 }
 
+export function once(fn) {
+  let called = false;
+  return function (...args) {
+    if (called) {
+      return;
+    }
+    called = true;
+    fn(...args);
+  };
+}
+
 export function empty(obj) {
   for (let key in obj) {
     return false;
@@ -260,4 +271,11 @@ export function callEach(arr, pre_clear, ...args) {
       arr[ii](...args);
     }
   }
+}
+
+// The characters cause problems with lower level systems (Google Firestore)
+// that presumably try to convert to UTF-16.
+const utf16_surrogates = /[\uD800-\uDFFF]/g;
+export function sanitize(str) {
+  return (str || '').replace(utf16_surrogates, '');
 }

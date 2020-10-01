@@ -939,6 +939,10 @@ export function createEditBox(param) {
   return glov_edit_box.create(param);
 }
 
+let slider_default_vshrink = 1.0;
+export function setSliderDefaultVShrink(vshrink) {
+  slider_default_vshrink = vshrink;
+}
 const color_slider_handle = vec4(1,1,1,1);
 const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
 const color_slider_handle_over = vec4(0.75,0.75,0.75,1);
@@ -953,11 +957,17 @@ export function slider(value, param) {
   param.z = param.z || Z.UI;
   param.w = param.w || button_width;
   param.h = param.h || button_height;
+  let vshrink = param.vshrink || slider_default_vshrink;
   let disabled = param.disabled || false;
 
   slider_dragging = false;
 
-  drawHBox(param, sprites.slider, param.color);
+  drawHBox({
+    x: param.x + param.h * (1 - vshrink)/2,
+    y: param.y + param.h * (1 - vshrink)/2,
+    h: param.h * vshrink,
+    w: param.w - param.h * vshrink,
+  }, sprites.slider, param.color);
 
   let xoffs = round(sprites.slider.uidata.wh[0] * param.h / 2);
   let draggable_width = param.w - xoffs * 2;
@@ -1108,6 +1118,13 @@ export function endFrame() {
   }
 
   while (dom_elems_issued < dom_elems.length) {
+    let elem = dom_elems.pop();
+    dynamic_text_elem.removeChild(elem);
+  }
+}
+
+export function cleanupDOMElems() {
+  while (dom_elems.length) {
     let elem = dom_elems.pop();
     dynamic_text_elem.removeChild(elem);
   }

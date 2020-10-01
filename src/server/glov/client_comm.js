@@ -11,7 +11,7 @@ const {
 } = require('../../common/chunked_send.js');
 const client_worker = require('./client_worker.js');
 const createHmac = require('crypto').createHmac;
-const { channelServerPak, channelServerSend } = require('./channel_server.js');
+const { channelServerPak, channelServerSend, quietMessage } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
 const fs = require('fs');
 const { isPacket } = require('../../common/packet.js');
@@ -22,6 +22,26 @@ const { serverConfig } = require('./server_config.js');
 
 // combined size of all chunked sends at any given time
 const MAX_CLIENT_UPLOAD_SIZE = 1*1024*1024;
+
+// Note: this object is both filtering wsclient -> wsserver messages and client->channel messages
+let ALLOWED_DURING_RESTART = Object.create(null);
+ALLOWED_DURING_RESTART.login = true; // filtered at lower level
+ALLOWED_DURING_RESTART.logout = true; // always allow
+ALLOWED_DURING_RESTART.channel_msg = true; // filtered at lower level
+ALLOWED_DURING_RESTART.chat = true;
+
+let channel_server;
+
+
+function restartFilter(client, msg, data) {
+  if (client && client.client_channel && client.client_channel.ids && client.client_channel.ids.admin) {
+    return true;
+  }
+  if (ALLOWED_DURING_RESTART[msg]) {
+    return true;
+  }
+  return false;
+}
 
 function onUnSubscribe(client, channel_id) {
   client.client_channel.unsubscribeOther(channel_id);
@@ -37,7 +57,7 @@ function uploadCleanup(client) {
 function onClientDisconnect(client) {
   uploadCleanup(client);
   client.client_channel.unsubscribeAll();
-  client.client_channel.shutdown();
+  client.client_channel.shutdownImmediate();
 }
 
 function onSubscribe(client, channel_id, resp_func) {
@@ -96,12 +116,6 @@ function applyCustomIds(ids, user_data_public) {
   }
 }
 
-function quietMessage(msg, payload) {
-  // FRVR - maybe generalize this?
-  return msg === 'set_user' && payload && payload.key === 'pos' ||
-    msg === 'vd_get' || msg === 'claim';
-}
-
 const nop_pool = {
   pool: function () {
     // No-op
@@ -109,7 +123,7 @@ const nop_pool = {
 };
 
 function onChannelMsg(client, data, resp_func) {
-  // Arbitrary messages, or messages to everyone subscribed to the channel, e.g. chat
+  // Arbitrary messages
   let channel_id;
   let msg;
   let payload;
@@ -136,6 +150,11 @@ function onChannelMsg(client, data, resp_func) {
     payload = data.data;
     log = logdata(payload);
   }
+  if (channel_server.restarting) {
+    if (!restartFilter(client, msg, data)) {
+      return;
+    }
+  }
   if (quietMessage(msg, payload)) {
     if (!is_packet && typeof payload === 'object') {
       payload.q = 1; // do not print later, either
@@ -158,9 +177,9 @@ function onChannelMsg(client, data, resp_func) {
   }
   let old_resp_func = resp_func;
   resp_func = function (err, resp_data) {
-    if (err) { // Was previously just on cmd_parse packets: && !(net_data.data && net_data.data.silent_error)) {
+    if (err && err !== 'ERR_FAILALL_DISCONNECT') { // Was previously not logging on cmd_parse packets to
       client.log(`Error "${err}" sent from ${channel_id} to client in response to ${
-        msg} ${logdata(payload)}`);
+        msg} ${is_packet ? '(pak)' : logdata(payload)}`);
     }
     if (old_resp_func) {
       old_resp_func(err, resp_data);
@@ -168,7 +187,7 @@ function onChannelMsg(client, data, resp_func) {
   };
   resp_func.expecting_response = Boolean(old_resp_func);
   client_channel.ids = client_channel.ids_direct;
-  channelServerSend(client_channel, channel_id, msg, null, payload, resp_func);
+  channelServerSend(client_channel, channel_id, msg, null, payload, resp_func, true); // quiet since we already logged
   client_channel.ids = client_channel.ids_base;
   pool.pool();
 }
@@ -343,6 +362,7 @@ function onLogOut(client, data, resp_func) {
   onUnSubscribe(client, `user.${user_id}`);
   delete client_channel.ids_base.user_id;
   delete client_channel.ids_base.display_name;
+  delete client_channel.ids_base.admin;
 
   // Tell channels we have a new user id/display name
   for (let channel_id in client_channel.subscribe_counts) {
@@ -379,9 +399,14 @@ function uploadOnFinish(client, pak, resp_func) {
   chunkedReceiverFinish(client.chunked, pak, resp_func);
 }
 
-export function init(channel_server) {
+function onGetStats(client, data, resp_func) {
+  resp_func(null, { ccu: channel_server.master_stats.num_channels.client || 1 });
+}
+
+export function init(channel_server_in) {
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/words/filter.gkg`, 'utf8'));
 
+  channel_server = channel_server_in;
   let ws_server = channel_server.ws_server;
   ws_server.on('client', (client) => {
     let client_id = channel_server.clientIdFromWSClient(client);
@@ -400,12 +425,16 @@ export function init(channel_server) {
   ws_server.onMsg('logout', onLogOut);
   ws_server.onMsg('random_name', onRandomName);
   ws_server.onMsg('log', onLog);
+  ws_server.onMsg('get_stats', onGetStats);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);
   ws_server.onMsg('upload_finish', uploadOnFinish);
 
-  facebook_access_token = serverConfig().facebook && serverConfig().facebook.access_token;
+  ws_server.setRestartFilter(restartFilter);
+
+  facebook_access_token = process.env.FACEBOOK_ACCESS_TOKEN ||
+    serverConfig().facebook && serverConfig().facebook.access_token;
 
   client_worker.init(channel_server);
 }

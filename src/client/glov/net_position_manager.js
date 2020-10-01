@@ -8,6 +8,7 @@ const net = require('./net.js');
 const perf = require('./perf.js');
 const settings = require('./settings.js');
 const util = require('../../common/util.js');
+const { wsstats, wsstats_out } = require('../../common/wscommon.js');
 const { abs, floor, max, min, PI, sqrt } = Math;
 const TWO_PI = PI * 2;
 const EPSILON = 0.01;
@@ -25,7 +26,7 @@ perf.addMetric({
   name: 'ping',
   show_stat: 'show_ping',
   labels: {
-    'net: ': () => {
+    'ping: ': () => {
       if (!the) {
         return '';
       }
@@ -35,6 +36,39 @@ perf.addMetric({
       }
       return { value: `${pt.ping.toFixed(1)}`, alpha: min(1, pt.fade * 3) };
     },
+  },
+});
+settings.register({
+  show_net: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,2],
+  },
+});
+let last_wsstats = { msgs: 0, bytes: 0, time: Date.now(), dm: 0, db: 0 };
+let last_wsstats_out = { msgs: 0, bytes: 0, time: Date.now(), dm: 0, db: 0 };
+function bandwidth(stats, last) {
+  let now = Date.now();
+  if (now - last.time > 1000) {
+    last.dm = stats.msgs - last.msgs;
+    last.db = stats.bytes - last.bytes;
+    last.msgs = stats.msgs;
+    last.bytes = stats.bytes;
+    if (now - last.time > 2000) { // stall
+      last.time = now;
+    } else {
+      last.time += 1000;
+    }
+  }
+  return `${(last.db/1024).toFixed(2)} kb (${last.dm})`;
+}
+perf.addMetric({
+  name: 'net',
+  show_stat: 'show_net',
+  width: 5,
+  labels: {
+    'down: ': bandwidth.bind(null, wsstats, last_wsstats),
+    'up: ': bandwidth.bind(null, wsstats_out, last_wsstats_out),
   },
 });
 

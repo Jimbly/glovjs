@@ -247,7 +247,8 @@ function eventlog(event) {
 }
 
 function letEventThrough(event) {
-  return event.target.tagName === 'INPUT' || String(event.target.className).indexOf('noglov') !== -1;
+  return event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
+    event.target.tagName === 'LABEL' || String(event.target.className).indexOf('noglov') !== -1;
 }
 
 function ignored(event) {
@@ -873,6 +874,11 @@ export function endFrame(skip_mouse) {
   }
   input_eaten_kb = false;
   mouse_moved = false;
+}
+
+export function tickInputInactive() {
+  in_event.topOfFrame();
+  endFrame();
 }
 
 export function eatAllInput(skip_mouse) {

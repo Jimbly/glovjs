@@ -11,4 +11,5 @@ build.intermediate/
 Bfxr
 *.00?
 src/client/autogen/
+config/*.json
 .DS_Store

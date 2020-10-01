@@ -2,9 +2,19 @@ const assert = require('assert');
 const { deepEqual } = require('../../common/util.js');
 const { getUID } = require('./log.js');
 
-function DataStoreMirror(readwrite_ds, write_ds) {
-  this.readwrite_ds = readwrite_ds;
-  this.write_ds = write_ds;
+function DataStoreMirror(options) {
+  this.readwrite_ds = options.readwrite;
+  this.write_ds = options.write;
+  if (!options.read_check) {
+    // Simply pass through
+    this.getAsync = this.readwrite_ds.getAsync.bind(this.readwrite_ds);
+    if (this.readwrite_ds.getAsyncBuffer) {
+      this.getAsyncBuffer = this.readwrite_ds.getAsyncBuffer.bind(this.readwrite_ds);
+    } else {
+      // Not supported on this kind of data store (metadata)
+      this.getAsyncBuffer = null;
+    }
+  }
 }
 
 DataStoreMirror.prototype.unload = function (obj_name) {
@@ -23,6 +33,7 @@ function DoubleCall(type, obj_name, cb) {
   this.data_ret = [];
   this.received = [];
   this.uid = getUID();
+  this.start = Date.now();
   this.timeout = setTimeout(() => {
     let missing = [];
     let got_rw = this.received[0];
@@ -47,6 +58,13 @@ DoubleCall.prototype.onDone = function (idx, err, data) {
     assert(!received[idx]);
     received[idx] = -1;
   } else {
+    let dt = Date.now() - this.start;
+    if (dt > 15000) {
+      console.warn(`DATASTOREMIRROR(${this.type}:${this.uid}) Slow response for ` +
+        `${idx?'mirror':'primary'}:${this.obj_name}` +
+        ` (${(dt/1000).toFixed(1)}s elapsed)`);
+    }
+
     if (received[idx]) {
       if (received[idx] === -1) {
         console.error(`DATASTOREMIRROR(${this.type}:${this.uid}) Callback finally called for ${idx}:${this.obj_name}`);
@@ -146,6 +164,6 @@ DataStoreMirror.prototype.getAsyncBuffer = function (obj_name, cb) {
   this.write_ds.getAsyncBuffer(obj_name, wrapped.onDone.bind(wrapped, 1));
 };
 
-export function create(readwrite_ds, write_ds) {
-  return new DataStoreMirror(readwrite_ds, write_ds);
+export function create(options) {
+  return new DataStoreMirror(options);
 }

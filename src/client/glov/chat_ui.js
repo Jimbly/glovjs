@@ -196,10 +196,7 @@ function ChatUI(params) {
   };
   this.styles.join_leave = this.styles.system;
 
-  net.subs.on('admin_msg', (msg) => {
-    ui.playUISound('msg_err');
-    this.addChat(msg, 'error');
-  });
+  net.subs.on('chat_broadcast', this.onChatBroadcast.bind(this));
 }
 
 ChatUI.prototype.setActiveSize = function (font_height, w) {
@@ -296,6 +293,14 @@ ChatUI.prototype.onMsgChat = function (data) {
     quiet,
   });
 };
+ChatUI.prototype.onChatBroadcast = function (data) {
+  let { msg, src } = data;
+  ui.playUISound('msg_err');
+  this.addChatFiltered({
+    msg: `[${src}] ${msg}`,
+    style: 'error',
+  });
+};
 
 ChatUI.prototype.runLate = function () {
   this.did_run_late = true;
@@ -310,15 +315,22 @@ ChatUI.prototype.runLate = function () {
   }
 };
 
+function errStr(err) {
+  if (typeof err === 'object') {
+    return JSON.stringify(err);
+  }
+  return err;
+}
+
 ChatUI.prototype.handleCmdParseError = function (err, resp) {
   if (err) {
-    this.addChat(`[error] ${err}`, 'error');
+    this.addChat(`[error] ${errStr(err)}`, 'error');
   }
 };
 
 ChatUI.prototype.handleCmdParse = function (err, resp) {
   if (err) {
-    this.addChat(`[error] ${err}`, 'error');
+    this.addChat(`[error] ${errStr(err)}`, 'error');
   } else if (resp) {
     this.addChat(`[system] ${(typeof resp === 'string') ? resp : JSON.stringify(resp)}`, 'system');
   }
@@ -494,7 +506,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
     pak.writeString(text);
     pak.send((err) => {
       if (err) {
-        this.addChat(`[error] ${err}`, 'error');
+        this.addChat(`[error] ${errStr(err)}`, 'error');
         // if (!this.edit_text_entry.getText()) {
         //   this.edit_text_entry.setText(text);
         // }
@@ -958,6 +970,11 @@ export function create(params) {
     if (!str) {
       return void resp_func(null, 'Usage: /me does something.');
     }
+
+    if (params.emote_cb) {
+      params.emote_cb(str);
+    }
+
     chat_ui.sendChat(FLAG_EMOTE, str);
   }
   cmd_parse.register({

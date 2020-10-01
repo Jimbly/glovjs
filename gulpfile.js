@@ -35,10 +35,23 @@ const useref = require('gulp-useref');
 const vinyl_buffer = require('vinyl-buffer');
 const vinyl_source_stream = require('vinyl-source-stream');
 const warn_match = require('./gulp/warn-match.js');
+const watch = require('./gulp/watch.js');
 const watchify = require('watchify');
 const web_compress = require('gulp-web-compress');
 const webfs = require('./gulp/webfs_build.js');
 const zip = require('gulp-zip');
+
+if (fs.readFileSync(__filename, 'utf8').indexOf('\r\n') !== -1) {
+  // CRLF Line endings currently break gulp-ifdef, mess up with git diff/log/blame, and
+  //   cause unnecessary diffs when pushing builds to production servers.
+  console.error('ERROR: Windows line endings detected');
+  console.error('Check your git config and make sure core.autocrlf is false:\n' +
+    '  git config --get core.autocrlf\n' +
+    '  git config --global --add core.autocrlf false\n' +
+    '    (or --local if you want it on for other projects)');
+  // eslint-disable-next-line no-throw-literal
+  process.exit(-1);
+}
 
 function prettyInterface() {
   console_api.setPalette(console_api.palettes.desaturated);
@@ -68,6 +81,8 @@ if (!args.noserial) {
   //   the output without any speed increase (possibly speed decrease)
   gulp.parallel = gulp.series;
 }
+
+const is_prod = args.prod;
 
 //////////////////////////////////////////////////////////////////////////
 // Server tasks
@@ -265,6 +280,48 @@ gulp.task('client_fsdata', function () {
     .pipe(gulp.dest('./dist/game/build.dev/client'));
 });
 
+gulp.task('build.prod.compress', function () {
+  return gulp.src('dist/game/build.dev/**')
+    .pipe(newer('./dist/game/build.prod'))
+    .pipe(gulp.dest('./dist/game/build.prod'))
+    // skipLarger so we don't end up with orphaned old compressed files
+    .pipe(gulpif(config.compress_files, web_compress({ skipLarger: false })))
+    .pipe(gulp.dest('./dist/game/build.prod'));
+});
+gulp.task('nop', function (next) {
+  next();
+});
+let zip_tasks = [];
+extra_index.forEach(function (elem) {
+  if (!elem.zip) {
+    return;
+  }
+  let name = `build.zip.${elem.name}`;
+  zip_tasks.push(name);
+  gulp.task(name, function () {
+    return gulp.src('dist/game/build.dev/client/**')
+      .pipe(ignore.exclude('index.html'))
+      .pipe(ignore.exclude('*.map'))
+      .pipe(gulpif(`index_${elem.name}.html`, rename('index.html')))
+      .pipe(ignore.exclude('index_*.html'))
+      .pipe(zip(`${elem.name}.zip`))
+      .pipe(gulp.dest('./dist/game/build.prod/client'));
+  });
+});
+if (!zip_tasks.length) {
+  zip_tasks.push('nop');
+}
+gulp.task('build.zip', gulp.parallel(...zip_tasks));
+gulp.task('build.prod.package', function () {
+  return gulp.src('package*.json')
+    .pipe(newer('./dist/game/build.prod'))
+    .pipe(gulp.dest('./dist/game/build.prod'));
+});
+gulp.task('build.prod', gulp.parallel('build.prod.package', 'build.prod.compress', 'build.zip'));
+gulp.task('build.prod.client', gulp.parallel('build.prod.compress', 'build.zip'));
+gulp.task('build.prod.server', gulp.parallel('build.prod.compress'));
+
+
 let client_js_deps = [];
 client_js_deps.push('client_json');
 client_js_deps.push('client_js_babel');
@@ -374,6 +431,9 @@ function bundleJS(filename, is_worker) {
   let on_update = [`client_js_watch_${filename}_bundle`];
   if (do_version) {
     on_update.push(writeVersion);
+  }
+  if (is_prod) {
+    on_update.push('build.prod.client');
   }
   watched.on('update', gulp.series(...on_update));
 
@@ -533,43 +593,6 @@ gulp.task('server_json', function () {
     .pipe(gulp.dest('./dist/game/build.dev/server'));
 });
 
-gulp.task('build.prod.compress', function () {
-  return gulp.src('dist/game/build.dev/**')
-    .pipe(gulp.dest('./dist/game/build.prod'))
-    // skipLarger so we don't end up with orphaned old compressed files
-    .pipe(gulpif(config.compress_files, web_compress({ skipLarger: false })))
-    .pipe(gulp.dest('./dist/game/build.prod'));
-});
-gulp.task('nop', function (next) {
-  next();
-});
-let zip_tasks = [];
-extra_index.forEach(function (elem) {
-  if (!elem.zip) {
-    return;
-  }
-  let name = `build.zip.${elem.name}`;
-  zip_tasks.push(name);
-  gulp.task(name, function () {
-    return gulp.src('dist/game/build.dev/client/**')
-      .pipe(ignore.exclude('index.html'))
-      .pipe(ignore.exclude('*.map'))
-      .pipe(gulpif(`index_${elem.name}.html`, rename('index.html')))
-      .pipe(ignore.exclude('index_*.html'))
-      .pipe(zip(`${elem.name}.zip`))
-      .pipe(gulp.dest('./dist/game/build.prod/client'));
-  });
-});
-if (!zip_tasks.length) {
-  zip_tasks.push('nop');
-}
-gulp.task('build.zip', gulp.parallel(...zip_tasks));
-gulp.task('build.prod.package', function () {
-  return gulp.src('package*.json')
-    .pipe(gulp.dest('./dist/game/build.prod'));
-});
-gulp.task('build.prod', gulp.parallel('build.prod.package', 'build.prod.compress', 'build.zip'));
-
 gulp.task('client_js', gulp.parallel(...client_js_deps));
 gulp.task('client_js_watch', gulp.parallel(...client_js_watch_deps));
 
@@ -605,28 +628,47 @@ gulp.task('bs-reload', (done) => {
   done();
 });
 
-gulp.task('watch_start', (done) => {
+function watchStart(done) {
+  function maybeProdSeries(prod_task, ...params) {
+    if (is_prod) {
+      if (params[params.length-1] === 'bs-reload') {
+        return gulp.series(params.slice(0, -1), prod_task);
+      }
+      return gulp.series(...params, prod_task);
+    } else {
+      return gulp.series(...params);
+    }
+  }
   // Simple reprocessing that targets everything:
-  gulp.watch(config.server_static, gulp.series('server_static')); // Want to also force server reload?
-  gulp.watch(config.client_html, gulp.series('client_html', 'bs-reload'));
-  gulp.watch(config.client_vendor, gulp.series('client_html', 'bs-reload'));
-  gulp.watch(config.client_css, gulp.series('client_css'));
-  gulp.watch(config.client_static, gulp.series('client_static'));
-  gulp.watch(config.client_fsdata, gulp.series('client_fsdata'));
-  gulp.watch(config.client_json_files, gulp.series('client_json'));
-  gulp.watch(config.server_json_files, gulp.series('server_json'));
+  gulp.watch(config.server_static, maybeProdSeries('build.prod.server', 'server_static')); // Maybe force server reload?
+  gulp.watch(config.client_html, maybeProdSeries('build.prod.client', 'client_html', 'bs-reload'));
+  gulp.watch(config.client_vendor, maybeProdSeries('build.prod.client', 'client_html', 'bs-reload'));
+  gulp.watch(config.client_css, maybeProdSeries('build.prod.client', 'client_css'));
+  gulp.watch(config.client_static, maybeProdSeries('build.prod.client', 'client_static'));
+  gulp.watch(config.client_fsdata, maybeProdSeries('build.prod.client', 'client_fsdata'));
+  gulp.watch(config.client_json_files, maybeProdSeries('build.prod.client', 'client_json'));
+  gulp.watch(config.server_json_files, maybeProdSeries('build.prod.server', 'server_json'));
+  if (is_prod) {
+    gulp.watch('package*.json', gulp.series('build.prod.package'));
+  }
 
   // More efficient reprocessing watchers that only look at the file that changed:
   if (!args.nolint) {
     gulp.watch(config.all_js_files).on('change', eslintTask);
   }
-  gulp.watch(config.server_js_files).on('change', serverJS);
+  gulp.watch(config.server_js_files).on('change', is_prod ? gulp.series(serverJS, 'build.prod.server') : serverJS);
   gulp.watch(config.client_js_files).on('change', clientBabel);
 
   done();
-});
+}
 
-gulp.task('watch', gulp.series('watch_deps', 'watch_start'));
+gulp.task('watch_start', watchStart);
+
+if (is_prod) {
+  gulp.task('watch', gulp.series('watch_deps', 'build.prod', 'watch_start'));
+} else {
+  gulp.task('watch', gulp.series('watch_deps', 'watch_start'));
+}
 
 const deps = ['watch'];
 if (args.debug) {
@@ -637,7 +679,7 @@ gulp.task('nodemon-start', (done) => {
   const options = {
     script: 'dist/game/build.dev/server/index.js',
     nodeArgs: ['--inspect'],
-    args: ['--dev'],
+    args: ['--dev', '--master'],
     watch: ['dist/game/build.dev/server/', 'dist/game/build.dev/common'],
   };
 
