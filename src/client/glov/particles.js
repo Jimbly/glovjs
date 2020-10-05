@@ -248,8 +248,10 @@ class ParticleSystem {
       };
       this.emitters.push(emitter);
     }
-    // do initial tick for things that have an emit_time[0] of 0 and have an emit_initial
-    this.tick(0);
+    // Do *not* do this here, causes them to be drawn twice on the first frame,
+    //   they'll be ticked as usual.
+    // // do initial tick for things that have an emit_time[0] of 0 and have an emit_initial
+    // this.tick(0);
   }
 
   tickParticle(part, dt) { // eslint-disable-line class-methods-use-this
@@ -290,14 +292,14 @@ class ParticleSystem {
 
     v2copy(temp_size, part.size);
     if (def.size_track) {
-      if (age_norm < def.size_track[0][4]) {
+      if (age_norm < def.size_track[0][2]) {
         v2mul(temp_size, temp_size, def.size_track[0]);
-      } else if (age_norm >= def.size_track[def.size_track.length - 1][4]) {
+      } else if (age_norm >= def.size_track[def.size_track.length - 1][2]) {
         v2mul(temp_size, temp_size, def.size_track[def.size_track.length - 1]);
       } else {
         for (let ii = 0; ii < def.size_track.length - 1; ++ii) {
-          if (age_norm >= def.size_track[ii][4] && age_norm < def.size_track[ii + 1][4]) {
-            let weight = (age_norm - def.size_track[ii][4]) / (def.size_track[ii + 1][4] - def.size_track[ii][4]);
+          if (age_norm >= def.size_track[ii][2] && age_norm < def.size_track[ii + 1][2]) {
+            let weight = (age_norm - def.size_track[ii][2]) / (def.size_track[ii + 1][2] - def.size_track[ii][2]);
             v2lerp(temp_size2, weight, def.size_track[ii], def.size_track[ii + 1]);
             v2mul(temp_size, temp_size, temp_size2);
             break;
@@ -310,8 +312,8 @@ class ParticleSystem {
 
     // TODO: draw using:
     //   rot
-    let w = part.size[0];
-    let h = part.size[1];
+    let w = temp_size[0];
+    let h = temp_size[1];
     let x = part.pos[0] - w/2;
     let y = part.pos[1] - h/2;
     let z = part.pos[2];
@@ -373,7 +375,7 @@ class ParticleSystem {
       }
       emitter.countdown = instValue(def.emit_rate);
     }
-    if (emitter.started && !emitter.stopped) {
+    if (emitter.started && !emitter.stopped && !this.kill_soft) {
       // should we stop?
       let remaining_dt = dt;
       let emit_dt = dt;
@@ -409,6 +411,24 @@ class ParticleSystem {
 
     return this.age >= this.system_lifespan; // kill if past lifespan
   }
+
+  shift(delta) {
+    if (this.def.no_shift) {
+      return;
+    }
+    this.pos[0] += delta[0];
+    this.pos[1] += delta[1];
+    this.pos[2] += delta[2];
+    for (let ii = 0; ii < this.part_sets.length; ++ii) {
+      let parts = this.part_sets[ii].parts;
+      for (let jj = 0; jj < parts.length; ++jj) {
+        let part = parts[jj];
+        part.pos[0] += delta[0];
+        part.pos[1] += delta[1];
+        part.pos[2] += delta[2];
+      }
+    }
+  }
 }
 
 class ParticleManager {
@@ -428,6 +448,16 @@ class ParticleManager {
         this.systems[ii] = this.systems[this.systems.length - 1];
         this.systems.pop();
       }
+    }
+  }
+
+  killAll() {
+    this.systems = [];
+  }
+
+  shift(delta) {
+    for (let ii = 0; ii < this.systems.length; ++ii) {
+      this.systems[ii].shift(delta);
     }
   }
 }
