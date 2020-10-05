@@ -127,8 +127,10 @@ class MasterWorker extends ChannelWorker {
     // Reset error counts
     cs.spawn_errors = 0;
 
-    this.debug(`load from ${src.id}: ${cs.load_value} ` +
-      `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})${cs.is_master ? ' (master)':''}`);
+    if (this.channel_server.load_log) {
+      this.debug(`load from ${src.id}: ${cs.load_value} ` +
+        `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})${cs.is_master ? ' (master)':''}`);
+    }
 
     resp_func();
 
@@ -509,7 +511,7 @@ class MasterWorker extends ChannelWorker {
       this.master_stats_countdown = MASTER_STATS_PERIOD;
       this.sendChannelMessage('channel_server', 'master_stats', {
         num_channels: this.total_num_channels
-      });
+      }, null, !this.channel_server.load_log);
     }
   }
 }

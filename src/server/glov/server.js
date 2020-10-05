@@ -203,6 +203,7 @@ export function startup(params) {
   if (argv.dev) {
     console.log('PacketDebug: ON');
     packet.default_flags = packet.PACKET_DEBUG;
+    channel_server.load_log = false;
   }
 
   ws_server = glov_wsserver.create(params.server, params.server_https);

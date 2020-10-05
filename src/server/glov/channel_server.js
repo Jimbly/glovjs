@@ -281,6 +281,7 @@ class ChannelServer {
     this.ds_store_bulk = null; // bulkdata store
     this.ds_store_meta = null; // metadata store
     this.master_stats = { num_channels: {} };
+    this.load_log = true;
     this.restarting = false;
   }
 
@@ -666,13 +667,15 @@ class ChannelServer {
     metrics.set('load.kbps.total', kbytes_per_s);
     metrics.set('load.exchange', ping_max);
     // Log
-    this.csworker.log(`load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
-      ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
-      // Maybe useful: packets and bytes per second (both websocket + exchange)
-      `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
-      // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
-      `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.external + mu.arrayBuffers)}MB` +
-      `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`);
+    if (this.load_log) {
+      this.csworker.log(`load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
+        ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
+        // Maybe useful: packets and bytes per second (both websocket + exchange)
+        `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
+        // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
+        `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.external + mu.arrayBuffers)}MB` +
+        `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`);
+    }
 
     // Report to master worker
     let pak = this.csworker.pak('master.master', 'load', null, 1);
