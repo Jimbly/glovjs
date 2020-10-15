@@ -34,15 +34,18 @@ function DoubleCall(type, obj_name, cb) {
   this.received = [];
   this.uid = getUID();
   this.start = Date.now();
+  this.timeout_error = [];
   this.timeout = setTimeout(() => {
     let missing = [];
     let got_rw = this.received[0];
     let got_w = this.received[1];
     if (!got_rw) {
       missing.push('readwrite');
+      this.timeout_error[0] = true;
     }
     if (!got_w) {
       missing.push('write-only');
+      this.timeout_error[1] = true;
     }
     console.error(`DATASTOREMIRROR(${type}:${this.uid}) Error: No response to ${obj_name}` +
       ` received after 60s from ${missing.join(',')}`);
@@ -60,9 +63,14 @@ DoubleCall.prototype.onDone = function (idx, err, data) {
   } else {
     let dt = Date.now() - this.start;
     if (dt > 15000) {
-      console.warn(`DATASTOREMIRROR(${this.type}:${this.uid}) Slow response for ` +
-        `${idx?'mirror':'primary'}:${this.obj_name}` +
-        ` (${(dt/1000).toFixed(1)}s elapsed)`);
+      let msg = 'Slow response for ' +
+        `${idx?'write-only':'readwrite'}:${this.obj_name}` +
+        ` (${(dt/1000).toFixed(1)}s elapsed)`;
+      if (this.timeout_error[idx]) {
+        console.error(`DATASTOREMIRROR(${this.type}:${this.uid}) Finally received ${msg}`);
+      } else {
+        console.warn(`DATASTOREMIRROR(${this.type}:${this.uid}) ${msg}`);
+      }
     }
 
     if (received[idx]) {
@@ -89,10 +97,10 @@ DataStoreMirror.prototype.setAsync = function (obj_name, value, cb) {
   let wrapped = new DoubleCall('set', obj_name, function (err_ret, data_ret) {
     // Neither is ever expected to error on write
     if (err_ret[0]) {
-      console.error(`DATASTOREMIRROR(set:${wrapped.uid}) Write error on 0:${obj_name}:`, err_ret[0]);
+      console.error(`DATASTOREMIRROR(set:${wrapped.uid}) Write error on readwrite:${obj_name}:`, err_ret[0]);
     }
     if (err_ret[1]) {
-      console.error(`DATASTOREMIRROR(set:${wrapped.uid}) Write error on 1:${obj_name}:`, err_ret[1]);
+      console.error(`DATASTOREMIRROR(set:${wrapped.uid}) Write error on write-only:${obj_name}:`, err_ret[1]);
       if (!err_ret[0]) {
         console.warn(`DATASTOREMIRROR(set:${wrapped.uid}) ...but primary succeeded, returning success`);
       }
@@ -114,8 +122,8 @@ function logMismatch(label, uid, obj_name, ret0, ret1) {
     }
   }
   console.error(`DATASTOREMIRROR(${label}:${uid}) Data Mismatch on ${obj_name}`);
-  console.error(`  d0: ${ret0}`);
-  console.error(`  d1: ${ret1}`);
+  console.error(`  readwrite: ${ret0}`);
+  console.error(`  write-only: ${ret1}`);
 }
 
 DataStoreMirror.prototype.getAsync = function (obj_name, default_value, cb) {
