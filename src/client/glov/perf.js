@@ -80,11 +80,11 @@ export function addMetric(metric) {
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
-  let METRIC_VALUE_WIDTH = ui.font_height * (metric.width || 2.5);
+  let line_height = ui.font_height / settings.render_scale_all;
+  let METRIC_VALUE_WIDTH = line_height * (metric.width || 2.5);
   let x = camera2d.x1Real() - METRIC_VALUE_WIDTH - pad;
   let y0 = y;
   y += pad;
-  let line_height = ui.font_height;
   let max_label_w = 0;
   let max_labels = settings[metric.show_stat];
   let drew_any = false;
