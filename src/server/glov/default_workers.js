@@ -49,8 +49,10 @@ export class DefaultUserWorker extends ChannelWorker {
     let unimportant = new_name.toLowerCase() === old_name.toLowerCase();
     let now = Date.now();
     let last_change = this.getChannelData('private.display_name_change');
-    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant) {
-      return resp_func('You must wait before changing your display name again');
+    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant &&
+      !this.cmd_parse_source.sysadmin
+    ) {
+      return resp_func('You must wait 24h before changing your display name again');
     }
     this.setChannelData('public.display_name', new_name);
     if (!unimportant) {
@@ -110,7 +112,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (!this.getChannelData('public.permissions.admin')) {
+    if (!this.getChannelData('public.permissions.sysadmin')) {
       return void resp_func('ERR_ACCESS_DENIED');
     }
     let m = param.match(/^([^ ]+) ([^ ]+)$/);
@@ -310,6 +312,10 @@ export class DefaultUserWorker extends ChannelWorker {
     }
   }
   handlePresenceSet(src, pak, resp_func) {
+    if (src.user_id !== this.user_id) {
+      pak.pool();
+      return void resp_func('ERR_INVALID_USER');
+    }
     let active = pak.readInt();
     let state = pak.readAnsiString(); // app-defined state
     let payload = pak.readJSON();
