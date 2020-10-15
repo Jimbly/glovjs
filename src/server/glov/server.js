@@ -229,6 +229,8 @@ export function startup(params) {
 
   process.on('SIGTERM', channel_server.forceShutdown.bind(channel_server));
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
+  ws_server.on('uncaught_exception', channel_server.handleUncaughtError.bind(channel_server));
+
   setTimeout(displayStatus, STATUS_TIME);
 
   let deferred_file_changes = {};

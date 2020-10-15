@@ -152,7 +152,15 @@ WSServer.prototype.init = function (server, server_https) {
         client.log('ignoring message received after disconnect');
       } else {
         ws_server.last_client = client;
-        wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter);
+        try {
+          wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter);
+        } catch (e) {
+          e.source = client.ctx();
+          client.logCtx('error', `Exception "${e}" while handling packet from`, e.source);
+          client.logCtx('error', `Packet data (base64) = ${data.toString('base64', 0, 1000000)}`);
+          client.logCtx('error', `Packet data (utf8,1K) = ${JSON.stringify(data.toString('utf8', 0, 1000))}`);
+          ws_server.emit('uncaught_exception', e);
+        }
       }
     });
     socket.on('error', function (e) {
