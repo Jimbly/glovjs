@@ -1369,6 +1369,13 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
 }
 
+export function drawHollowRect(x0, y0, x1, y1, z, w, spread, color) {
+  drawLine(x0, y0, x1, y0, z, w, spread, color);
+  drawLine(x1, y0, x1, y1, z, w, spread, color);
+  drawLine(x1, y1, x0, y1, z, w, spread, color);
+  drawLine(x0, y1, x0, y0, z, w, spread, color);
+}
+
 export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
   if (!sprites.cone) {
     const CONE_SIZE = 32;
