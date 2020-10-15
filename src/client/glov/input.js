@@ -263,6 +263,8 @@ let ctrl_checked = false;
 let unload_protected = false;
 function beforeUnload(e) {
   if (unload_protected && ctrl_checked) {
+    // Exit pointer lock if the browser didn't do that automatically
+    pointerLockExit();
     // Cancel the event
     e.preventDefault();
     // Chrome requires returnValue to be set
