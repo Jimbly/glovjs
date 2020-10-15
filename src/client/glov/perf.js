@@ -38,6 +38,12 @@ settings.register({
     type: cmd_parse.TYPE_INT,
     range: [0,1],
   },
+  fps_window: {
+    label: 'FPS Time Window (seconds)',
+    default_value: 1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0.001, 120],
+  },
 });
 
 cmd_parse.register({

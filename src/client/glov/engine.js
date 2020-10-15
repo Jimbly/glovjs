@@ -607,7 +607,7 @@ function tick(timestamp) {
   ++mspf_frame_count;
   mspf_tick_accum += last_tick_cpu;
   // net_time_accum += this_net_time;
-  if (now - mspf_update_time > 1000) {
+  if (now - mspf_update_time > settings.fps_window * 1000) {
     if (!mspf_update_time) {
       mspf_update_time = now;
     } else {
