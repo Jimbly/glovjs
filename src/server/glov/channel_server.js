@@ -845,6 +845,7 @@ class ChannelServer {
       addUnique(handlers, 'where', ChannelWorker.prototype.onWhere);
 
       addUnique(handlers, 'broadcast', ChannelWorker.prototype.onBroadcast);
+      addUnique(handlers, 'cmdparse_auto', ChannelWorker.prototype.onCmdParseAuto);
       allow_client_direct.cmdparse = true;
       addUnique(handlers, 'cmdparse', ChannelWorker.prototype.onCmdParse);
     }

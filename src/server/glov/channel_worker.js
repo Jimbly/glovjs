@@ -588,7 +588,23 @@ export class ChannelWorker {
     } else {
       this.access = source; // for cmd_parse access checking rules
     }
-    this.cmd_parse.handle(this, data, (err, resp) => {
+    this.cmd_parse.handle(this, data, resp_func);
+  }
+
+  onCmdParseAuto(source, pak, resp_func) {
+    let cmd = pak.readString();
+    let access = pak.readJSON();
+    this.cmd_parse_source = source;
+    if (access) {
+      // Maybe want to use the clients.foo.ids.roles access of the initiator?
+      this.access = access;
+    } else if (this.getRoles) {
+      let client_id = source.id;
+      this.access = this.getChannelData(`public.clients.${client_id}.ids.roles`, {});
+    } else {
+      this.access = source; // for cmd_parse access checking rules
+    }
+    this.cmd_parse.handle(this, cmd, (err, resp) => {
       if (err && this.cmd_parse.was_not_found) {
         return resp_func(null, { found: 0, err });
       }

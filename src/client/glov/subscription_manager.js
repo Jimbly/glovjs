@@ -57,16 +57,15 @@ ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
 
   // Get command list upon first connect
   let channel_type = this.channel_id.split('.')[0];
-  let cmd_list = this.subs.cmds_list_by_worker;
+  let cmd_list = this.subs.cmds_fetched_by_type;
   if (cmd_list && !cmd_list[channel_type]) {
-    cmd_list[channel_type] = {};
+    cmd_list[channel_type] = true;
     this.send('cmdparse', 'cmd_list', (err, resp) => {
       if (err) { // already unsubscribed?
         console.error(`Error getting cmd_list for ${channel_type}`);
         delete cmd_list[channel_type];
-      } else if (resp.found) {
-        cmd_list[channel_type] = resp;
-        this.subs.cmd_parse.addServerCommands(resp.resp);
+      } else {
+        this.subs.cmd_parse.addServerCommands(resp);
       }
     });
   }
@@ -134,10 +133,7 @@ ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth)
 };
 
 ClientChannelWorker.prototype.cmdParse = function (cmd, resp_func) {
-  this.send('cmdparse', cmd, function (err, resp) {
-    err = err || resp.err;
-    resp_func(err, resp && resp.resp);
-  });
+  this.send('cmdparse', cmd, resp_func);
 };
 
 function SubscriptionManager(client, cmd_parse) {
@@ -153,7 +149,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.auto_create_user = false;
   this.cmd_parse = cmd_parse;
   if (cmd_parse) {
-    this.cmds_list_by_worker = {};
+    this.cmds_fetched_by_type = {};
   }
   this.base_handlers = {};
   this.channel_handlers = {}; // channel type -> msg -> handler
@@ -166,6 +162,9 @@ function SubscriptionManager(client, cmd_parse) {
   client.onMsg('server_time', this.handleServerTime.bind(this));
   client.onMsg('chat_broadcast', this.handleChatBroadcast.bind(this));
   client.onMsg('restarting', this.handleRestarting.bind(this));
+  if (cmd_parse) {
+    client.onMsg('csr_to_client', this.handleCSRToClient.bind(this));
+  }
   // Add handlers for all channel types
   this.onChannelMsg(null, 'channel_data', ClientChannelWorker.prototype.handleChannelData);
   this.onChannelMsg(null, 'apply_channel_data', ClientChannelWorker.prototype.handleApplyChannelData);
@@ -584,38 +583,23 @@ SubscriptionManager.prototype.serverLog = function (type, data) {
 };
 
 SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {
-  let self = this;
-  let channel_ids = Object.keys(self.channels);
-  let idx = 0;
-  let last_error = 'Unknown command';
-  function tryNext() {
-    let channel_id;
-    let channel;
-    do {
-      channel_id = channel_ids[idx++];
-      channel = self.channels[channel_id];
-    } while (channel_id && (!channel || !(
-      // are we subscribed, and is it not just an immediate-mode subscribe (e.g. a friend's user channel)
-      (channel.subscriptions - channel.immediate_subscribe) || channel.autosubscribed
-    )));
-    if (!channel_id) {
-      self.serverLog('cmd_parse_unknown', command);
-      return resp_func(last_error);
+  this.onceConnected(() => {
+    let pak = this.client.pak('cmd_parse_auto');
+    pak.writeString(command);
+    pak.send(resp_func);
+  });
+};
+
+SubscriptionManager.prototype.handleCSRToClient = function (pak, resp_func) {
+  let cmd = pak.readString();
+  let access = pak.readJSON();
+  this.cmd_parse.handle({ access }, cmd, (err, resp) => {
+    if (err && this.cmd_parse.was_not_found) {
+      // bounce back to server
+      return resp_func(null, { found: 0, err });
     }
-    return channel.send('cmdparse', command,
-      function (err, resp) {
-        if (err || resp && resp.found) {
-          return resp_func(err, resp ? resp.resp : null);
-        }
-        // otherwise, was not found
-        if (resp && resp.err) {
-          last_error = resp.err;
-        }
-        return self.onceConnected(tryNext);
-      }
-    );
-  }
-  self.onceConnected(tryNext);
+    return resp_func(err, { found: 1, resp });
+  });
 };
 
 export function create(client, cmd_parse) {

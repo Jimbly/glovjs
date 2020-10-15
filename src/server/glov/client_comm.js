@@ -408,6 +408,14 @@ function onGetStats(client, data, resp_func) {
   resp_func(null, { ccu: channel_server.master_stats.num_channels.client || 1 });
 }
 
+function onCmdParseAuto(client, pak, resp_func) {
+  let cmd = pak.readString();
+  let { client_channel } = client;
+  client_channel.cmdParseAuto({ cmd }, (err, resp) => {
+    resp_func(err, resp ? resp.resp : null);
+  });
+}
+
 export function init(channel_server_in) {
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/words/filter.gkg`, 'utf8'));
 
@@ -431,6 +439,7 @@ export function init(channel_server_in) {
   ws_server.onMsg('random_name', onRandomName);
   ws_server.onMsg('log', onLog);
   ws_server.onMsg('get_stats', onGetStats);
+  ws_server.onMsg('cmd_parse_auto', onCmdParseAuto);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);

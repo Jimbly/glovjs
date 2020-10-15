@@ -7,6 +7,8 @@ const { canonical } = require('../../common/cmd_parse.js');
 const { logEx } = require('./log.js');
 const { isPacket } = require('../../common/packet.js');
 
+let cmd_parse_routes = {}; // cmd string -> worker type
+
 class ClientWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
@@ -46,6 +48,32 @@ class ClientWorker extends ChannelWorker {
   onForceKick(source, data) {
     assert(this.client.connected);
     this.client.ws_server.disconnectClient(this.client);
+  }
+
+  onCSRUserToClientWorker(source, pak, resp_func) {
+    let cmd = pak.readString();
+    let access = pak.readJSON(); // also has original source info in it, but that's fine?
+    // first try to run on connected client
+    if (!this.client.connected) {
+      return void resp_func('ERR_CLIENT_DISCONNECTED');
+    }
+    pak = this.client.pak('csr_to_client');
+    pak.writeString(cmd);
+    pak.writeJSON(access);
+    pak.send((err, resp) => {
+      if (err || resp && resp.found) {
+        return void resp_func(err, resp ? resp.resp : null);
+      }
+      if (!this.client.connected) {
+        return void resp_func('ERR_CLIENT_DISCONNECTED');
+      }
+      this.cmdParseAuto({
+        cmd,
+        access,
+      }, (err, resp2) => {
+        resp_func(err, resp2 ? resp2.resp : null);
+      });
+    });
   }
 
   onUnhandledMessage(source, msg, data, resp_func) {
@@ -173,10 +201,11 @@ export function init(channel_server) {
     autocreate: false,
     subid_regex: /^[a-zA-Z0-9-]+$/,
     filters: {
-      'apply_channel_data': ClientWorker.prototype.onApplyChannelData,
+      apply_channel_data: ClientWorker.prototype.onApplyChannelData,
     },
     handlers: {
-      'force_kick': ClientWorker.prototype.onForceKick,
+      force_kick: ClientWorker.prototype.onForceKick,
+      csr_user_to_clientworker: ClientWorker.prototype.onCSRUserToClientWorker,
     },
   });
 }

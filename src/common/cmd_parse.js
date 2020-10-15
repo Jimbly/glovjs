@@ -4,7 +4,7 @@
 const assert = require('assert');
 const { isInteger } = require('./util.js');
 
-function canonical(cmd) {
+export function canonical(cmd) {
   return cmd.toLowerCase().replace(/[_.]/g, '');
 }
 

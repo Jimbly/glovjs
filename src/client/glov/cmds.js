@@ -6,6 +6,7 @@ const local_storage = require('./local_storage.js');
 export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 
 const engine = require('./engine.js');
+const net = require('./net.js');
 const textures = require('./textures.js');
 const { PI, round } = Math;
 
@@ -69,6 +70,25 @@ cmd_parse.register({
   help: 'Displays current renderer',
   func: function (str, resp_func) {
     resp_func(null, `Renderer=WebGL${engine.webgl2?2:1}`);
+  }
+});
+
+cmd_parse.register({
+  cmd: 'csr',
+  access_run: ['sysadmin'],
+  help: '(Admin) Run a command as another user',
+  usage: '/csr UserID command\n' +
+    'Example: /csr jimbly gems -100',
+  func: function (str, resp_func) {
+    let idx = str.indexOf(' ');
+    if (idx === -1) {
+      return void resp_func('Invalid number of arguments');
+    }
+    let user_id = str.slice(0, idx);
+    let cmd = str.slice(idx + 1);
+    let pak = net.subs.getChannelImmediate(`user.${user_id}`).pak('csr_admin_to_user');
+    pak.writeString(cmd);
+    pak.send(resp_func);
   }
 });
 

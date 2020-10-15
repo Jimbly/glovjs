@@ -31,6 +31,7 @@ export class DefaultUserWorker extends ChannelWorker {
     this.user_id = this.channel_subid; // 1234
     this.presence_data = {}; // client_id -> data
     this.presence_idx = 0;
+    this.my_clients = {};
   }
   cmdRename(new_name, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
@@ -297,6 +298,9 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence && src.type === 'client' && this.presence_data) {
       this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
     }
+    if (src.type === 'client' && src.user_id === this.user_id) {
+      this.my_clients[src.channel_id] = true;
+    }
   }
   updatePresence() {
     for (let channel_id in this.subscribers) {
@@ -309,6 +313,9 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
       delete this.presence_data[src.channel_id];
       this.updatePresence();
+    }
+    if (this.my_clients[src.channel_id]) {
+      delete this.my_clients[src.channel_id];
     }
   }
   handlePresenceSet(src, pak, resp_func) {
@@ -337,6 +344,41 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     this.updatePresence();
     resp_func();
+  }
+  handleCSRAdminToUser(src, pak, resp_func) {
+    let cmd = pak.readString();
+    if (!this.exists()) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!src.sysadmin) {
+      return void resp_func('ERR_ACCESS_DENIED');
+    }
+    // first, try running here on a (potentially offline) user
+    this.cmd_parse_source = { user_id: this.user_id }; // spoof as is from self
+    this.access = src; // use caller's access credentials
+    this.cmd_parse.handle(this, cmd, (err, resp) => {
+      if (!this.cmd_parse.was_not_found) {
+        return void resp_func(err, resp);
+      }
+      // not found
+      // find a client worker for this user
+      let to_use;
+      for (let channel_id in this.my_clients) {
+        to_use = channel_id;
+        if (channel_id !== src.channel_id) {
+          break;
+        }
+      }
+      if (!to_use) {
+        return void resp_func(`User ${this.user_id} has no connected clients`);
+      }
+      this.log(`Fowarding /csr request ("${cmd}") for ${src.user_id}(${src.channel_id}) to ${to_use}`);
+      let out = this.pak(to_use, 'csr_user_to_clientworker');
+      out.writeString(cmd);
+      out.writeJSON(src);
+      out.send(resp_func);
+    });
+
   }
 }
 DefaultUserWorker.prototype.auto_destroy = true;
@@ -406,6 +448,7 @@ let user_worker_init_data = {
     friend_auto_update: DefaultUserWorker.prototype.handleFriendAutoUpdate,
     friend_list: DefaultUserWorker.prototype.handleFriendList,
     presence_set: DefaultUserWorker.prototype.handlePresenceSet,
+    csr_admin_to_user: DefaultUserWorker.prototype.handleCSRAdminToUser,
   },
 };
 export function overrideUserWorker(new_user_worker, extra_data) {
