@@ -31,6 +31,10 @@ Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 
 const color_user_rollover = vec4(1,1,1,0.5);
 
+const MAX_PER_STYLE = {
+  join_leave: 3,
+};
+
 settings.register({
   chat_auto_unfocus: {
     default_value: 0,
@@ -220,6 +224,10 @@ ChatUI.prototype.clearChat = function () {
   this.total_lines = 0;
 };
 
+function notHidden(msg) {
+  return !msg.hidden;
+}
+
 ChatUI.prototype.addMsgInternal = function (elem) {
   elem.timestamp = elem.timestamp || Date.now();
   if (elem.flags & FLAG_USERCHAT) {
@@ -235,11 +243,37 @@ ChatUI.prototype.addMsgInternal = function (elem) {
     this.wrap_w, INDENT, this.active_font_height, elem.msg_text);
   this.total_lines += elem.numlines;
   this.msgs.push(elem);
+  let max_msgs = MAX_PER_STYLE[elem.style];
+  if (max_msgs) {
+    // Remove any more than max
+    // Also remove any for the same ID (want for 'join_leave', maybe not others?)
+    for (let ii = this.msgs.length - 2; ii >= 0; --ii) {
+      let elem2 = this.msgs[ii];
+      if (elem2.style === elem.style && !elem2.hidden) {
+        if (elem.id && elem2.id === elem.id) {
+          elem2.hidden = true;
+          this.total_lines -= elem2.numlines;
+          elem2.numlines = 0;
+        } else {
+          --max_msgs;
+          if (max_msgs <= 0) {
+            elem2.hidden = true;
+            this.total_lines -= elem2.numlines;
+            elem2.numlines = 0;
+            break;
+          }
+        }
+      }
+    }
+  }
   if (this.msgs.length > this.max_messages * 1.25) {
-    this.msgs.splice(0, this.msgs.length - this.max_messages);
-    this.total_lines = 0;
-    for (let ii = 0; ii < this.msgs.length; ++ii) {
-      this.total_lines += this.msgs[ii].numlines;
+    this.msgs = this.msgs.filter(notHidden);
+    if (this.msgs.length > this.max_messages * 1.25) {
+      this.msgs.splice(0, this.msgs.length - this.max_messages);
+      this.total_lines = 0;
+      for (let ii = 0; ii < this.msgs.length; ++ii) {
+        this.total_lines += this.msgs[ii].numlines;
+      }
     }
   }
 };
@@ -692,6 +726,9 @@ ChatUI.prototype.run = function (opts) {
   let name_width = {};
   // Slightly hacky: uses `x` and `y` from the higher scope
   function drawChatLine(msg, alpha) {
+    if (msg.hidden) {
+      return;
+    }
     let line = msg.msg_text;
     let numlines = msg.numlines;
     let is_url = do_scroll_area && url_match && matchAll(line, url_match);
