@@ -279,3 +279,7 @@ const utf16_surrogates = /[\uD800-\uDFFF]/g;
 export function sanitize(str) {
   return (str || '').replace(utf16_surrogates, '');
 }
+
+export function plural(number, label) {
+  return `${label}${number === 1 ? '' : 's'}`;
+}

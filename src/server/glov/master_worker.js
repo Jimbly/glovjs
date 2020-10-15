@@ -6,7 +6,7 @@ const assert = require('assert');
 const { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } = require('./channel_server.js');
 const { ChannelWorker } = require('./channel_worker.js');
 const { max } = Math;
-const { callEach, nop } = require('../../common/util.js');
+const { callEach, nop, plural } = require('../../common/util.js');
 
 // Do not attempt to recreate a channel if it was created this long ago, assume
 // the requester simply failed to send before the channel was created.
@@ -405,7 +405,7 @@ class MasterWorker extends ChannelWorker {
     let seconds = Number(value) || 10;
     this.sendChannelMessage('channel_server', 'chat_broadcast', {
       src: 'system',
-      msg: `Server restarting in ${seconds} second${seconds === 1 ? '' : 's'}...`,
+      msg: `Server restarting in ${seconds} ${plural(seconds, 'second')}...`,
     });
     if (this.restart_countdown_id) {
       clearInterval(this.restart_countdown_id);
@@ -418,7 +418,7 @@ class MasterWorker extends ChannelWorker {
       } else if (seconds <= 5 || (seconds % 10 === 0)) {
         this.sendChannelMessage('channel_server', 'chat_broadcast', {
           src: 'system',
-          msg: `Server restarting in ${seconds} second${seconds === 1 ? '' : 's'}...`,
+          msg: `Server restarting in ${seconds} ${plural(seconds, 'second')}...`,
         });
       }
     }, 1000);
