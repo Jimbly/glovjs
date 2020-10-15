@@ -67,6 +67,14 @@ export function makeColorSet(color) {
   return ret;
 }
 
+let hooks = [];
+export function addHook(draw, click) {
+  hooks.push({
+    draw,
+    click,
+  });
+}
+
 function doBlurEffect(factor, params) {
   factor = lerp(factor, params.blur[0], params.blur[1]);
   if (factor) {
@@ -524,8 +532,20 @@ export function drawTooltip(param) {
   });
 }
 
+export function checkHooks(param, click) {
+  if (param.hook) {
+    for (let ii = 0; ii < hooks.length; ++ii) {
+      if (click) {
+        hooks[ii].click(param);
+      }
+      hooks[ii].draw(param);
+    }
+  }
+}
+
 // eslint-disable-next-line complexity
 export function buttonShared(param) {
+  param.z = param.z || Z.UI;
   let state = 'regular';
   let ret = false;
   if (param.draw_only) {
@@ -604,6 +624,7 @@ export function buttonShared(param) {
     });
   }
   param.z += param.z_bias && param.z_bias[state] || 0;
+  checkHooks(param, ret);
   return { ret, state, focused };
 }
 
@@ -634,7 +655,7 @@ export function buttonText(param) {
   assert(typeof param.y === 'number');
   assert(typeof param.text === 'string');
   // optional params
-  param.z = param.z || Z.UI;
+  // param.z = param.z || Z.UI;
   param.w = param.w || button_width;
   param.h = param.h || button_height;
   param.font_height = param.font_height || font_height;

@@ -561,11 +561,15 @@ class GlovSelectionBox {
       //   entry_height;
       // let dropdown_x = x + width - dropdown_width;
       //int dropdown_w = glov_ui_menu_header.right.GetTileWidth();
-      if (!this.disabled && glov_input.click({
-        x, y,
-        w: width, h: entry_height
-      })) {
+      let dropdown_param = {
+        x, y, z: z + 2 - 0.1,
+        w: width, h: entry_height,
+        disabled: this.disabled,
+      };
+      let clicked = false;
+      if (!this.disabled && glov_input.click(dropdown_param)) {
         glov_ui.focusSteal(this);
+        clicked = true;
         this.dropdown_visible = !this.dropdown_visible;
         this.pre_dropdown_selection = this.selected;
         color0 = color_grayD0;
@@ -577,6 +581,7 @@ class GlovSelectionBox {
         color0 = color_grayD0;
         // color1 = color_gray80;
       }
+      glov_ui.checkHooks(dropdown_param, clicked);
       glov_ui.drawHBox({
         x, y, z: z + 1,
         w: width, h: entry_height
