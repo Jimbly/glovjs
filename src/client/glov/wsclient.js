@@ -5,6 +5,7 @@
 const ack = require('../../common/ack.js');
 const { ackInitReceiver } = ack;
 const assert = require('assert');
+const { errorReportSetDetails } = require('./error_report.js');
 const { min } = Math;
 const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
@@ -20,6 +21,7 @@ const { wsHandleMessage } = wscommon;
 
 export function WSClient(path) {
   this.id = null;
+  this.my_ids = {}; // set of all IDs I've been during this session
   this.handlers = {};
   this.socket = null;
   this.connected = false;
@@ -107,6 +109,8 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   client.connected = true;
   client.disconnected = false;
   client.id = data.id;
+  client.my_ids[data.id] = true;
+  errorReportSetDetails('client_id', client.id);
   client.secret = data.secret;
   if (data.app_ver) {
     client.onAppVer(data.app_ver);
