@@ -164,6 +164,9 @@ function ChatUI(params) {
   });
   this.w = params.w || engine.game_width / 2;
   this.h = params.h || engine.game_height / 2; // excluding text entry
+  this.volume_join_leave = params.volume_join_leave || 1;
+  this.volume_in = params.volume_in || 1;
+  this.volume_out = params.volume_out || 1;
   this.history = new CmdHistory();
   this.get_roles = null; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
@@ -291,7 +294,9 @@ ChatUI.prototype.addChatFiltered = function (data) {
 };
 ChatUI.prototype.onMsgJoin = function (data) {
   if (data.client_id !== net.client.id) {
-    ui.playUISound('user_join');
+    if (this.volume_join_leave) {
+      ui.playUISound('user_join', this.volume_join_leave);
+    }
     this.addChatFiltered({
       id: data.user_id || data.client_id,
       display_name: data.display_name || data.client_id,
@@ -302,7 +307,9 @@ ChatUI.prototype.onMsgJoin = function (data) {
   }
 };
 ChatUI.prototype.onMsgLeave = function (data) {
-  ui.playUISound('user_leave');
+  if (this.volume_join_leave) {
+    ui.playUISound('user_leave', this.volume_join_leave);
+  }
   this.addChatFiltered({
     id: data.user_id || data.client_id,
     display_name: data.display_name || data.client_id,
@@ -314,7 +321,9 @@ ChatUI.prototype.onMsgLeave = function (data) {
 ChatUI.prototype.onMsgChat = function (data) {
   let { msg, id, client_id, display_name, flags, ts, quiet } = data;
   if (!quiet && client_id !== net.client.id) {
-    ui.playUISound('msg_in');
+    if (this.volume_in) {
+      ui.playUISound('msg_in', this.volume_in);
+    }
   }
   display_name = display_name || id;
   flags = (flags || 0) | FLAG_USERCHAT;
@@ -693,7 +702,9 @@ ChatUI.prototype.run = function (opts) {
             }
             this.history.add(text);
             this.cmdParse(text.slice(1), () => {
-              ui.playUISound('msg_out_err');
+              if (this.volume_out) {
+                ui.playUISound('msg_out_err', this.volume_out);
+              }
               if (!this.edit_text_entry.getText()) {
                 this.history.unadd(text);
                 this.edit_text_entry.setText(text);
@@ -705,7 +716,9 @@ ChatUI.prototype.run = function (opts) {
           } else {
             this.sendChat(0, text);
           }
-          ui.playUISound('msg_out'); // after cmdParse may have adjust volume
+          if (this.volume_out) {
+            ui.playUISound('msg_out', this.volume_out); // after cmdParse may have adjust volume
+          }
           if (settings.chat_auto_unfocus) {
             is_focused = false;
             ui.focusCanvas();
@@ -1014,6 +1027,30 @@ export function create(params) {
 
     chat_ui.sendChat(FLAG_EMOTE, str);
   }
+  cmd_parse.registerValue('volume_chat_joinleave', {
+    type: cmd_parse.TYPE_FLOAT,
+    label: 'Join/Leave chat message volume',
+    range: [0,1],
+    get: () => chat_ui.volume_join_leave,
+    set: (v) => (chat_ui.volume_join_leave = v),
+    store: true,
+  });
+  cmd_parse.registerValue('volume_chat_in', {
+    type: cmd_parse.TYPE_FLOAT,
+    label: 'Incoming chat message volume',
+    range: [0,1],
+    get: () => chat_ui.volume_in,
+    set: (v) => (chat_ui.volume_in = v),
+    store: true,
+  });
+  cmd_parse.registerValue('volume_chat_out', {
+    type: cmd_parse.TYPE_FLOAT,
+    label: 'Outgoing chat message volume',
+    range: [0,1],
+    get: () => chat_ui.volume_out,
+    set: (v) => (chat_ui.volume_out = v),
+    store: true,
+  });
   cmd_parse.register({
     cmd: 'me',
     help: 'Emote',
