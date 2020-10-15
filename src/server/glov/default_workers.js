@@ -463,7 +463,7 @@ export function handleChat(src, pak, resp_func) {
   }
   self.channelEmit('chat', data_broad);
   // Log entire, non-truncated chat string
-  console.info(`${self.channel_id}: chat from ${id} ("${display_name}") ` +
+  self.logSrc(src, `chat from ${id} ("${display_name}") ` +
     `(${channel_id}): ${JSON.stringify(msg)}`);
   return resp_func();
 }

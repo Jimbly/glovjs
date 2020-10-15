@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const argv = require('minimist')(process.argv.slice(2));
+const assert = require('assert');
 const fs = require('fs');
 const metrics = require('./metrics.js');
 const path = require('path');
@@ -27,11 +28,11 @@ if (pid === 1 && process.env.PODNAME) {
 }
 
 const LOG_LEVELS = {
-  debug: 4,
-  log: 3,
-  info: 2,
-  warn: 1,
-  error: 0,
+  debug: 'debug',
+  log: 'info',
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
 };
 
 export function getUID() {
@@ -54,32 +55,62 @@ export function dumpJSON(prefix, data, ext) {
   }
 }
 
-export function debug(message, ...args) {
-  metrics.add('log.debug', 1);
-  logger.log('debug', message, args.length === 0 ? null : (args.length === 1 ? args[0] : args));
-}
-
-export function info(message, ...args) {
-  metrics.add('log.info', 1);
-  logger.log('info', message, args.length === 0 ? null : (args.length === 1 ? args[0] : args));
-}
-
-export function warn(message, ...args) {
-  metrics.add('log.warn', 1);
-  logger.log('warn', message, args.length === 0 ? null : (args.length === 1 ? args[0] : args));
-}
-
-export function error(message, ...args) {
-  metrics.add('log.error', 1);
-  logger.log('error', message, args.length === 0 ? null : (args.length === 1 ? args[0] : args));
-}
-
 function argProcessor(arg) {
   if (typeof arg === 'object') {
     return inspect(arg, { breakLength: Infinity });
   }
   return arg;
 }
+
+let do_console_filter = false;
+
+// Note: modifies `context`
+export function logEx(context, level, ...args) {
+  assert(typeof context !== 'string');
+  context = !do_console_filter && context || {};
+  level = LOG_LEVELS[level];
+  assert(level);
+  metrics.add(`log.${level}`, 1);
+  context.level = level;
+  // If 2 or more arguments and the last argument is an object, assume it is
+  //   per-call metadata, and merge with context metadata
+  let arg_len = args.length;
+  let meta_arg = args[arg_len - 1];
+  if (typeof meta_arg === 'object' && !Array.isArray(meta_arg) && !(meta_arg instanceof Error)) {
+    // last parameter is an object, merge with context metadata
+    if (typeof meta_arg.toJSON === 'function') {
+      meta_arg = meta_arg.toJSON();
+    }
+    for (let key in meta_arg) {
+      context[key] = meta_arg[key];
+    }
+    --arg_len;
+  }
+  let message = [];
+  for (let ii = 0; ii < arg_len; ++ii) {
+    message.push(argProcessor(args[ii]));
+  }
+  message = message.join(' ');
+  if (!message) {
+    message = 'NO_MESSAGE';
+  }
+  context.message = message;
+  logger.log(context);
+}
+
+// export function debug(...args) {
+//   logEx(null, 'debug', ...args);
+// }
+// export function info(...args) {
+//   logEx(null, 'info', ...args);
+// }
+// export function warn(...args) {
+//   logEx(null, 'warn', ...args);
+// }
+// export function error(...args) {
+//   logEx(null, 'error', ...args);
+// }
+
 
 const { MESSAGE, LEVEL } = require('triple-beam');
 
@@ -95,11 +126,11 @@ class SimpleConsoleTransport extends Transport {
 }
 
 const STACKDRIVER_SEVERITY = {
-  silly: 'DEFAULT',
-  verbose: 'DEBUG',
+  // silly: 'DEFAULT',
+  // verbose: 'DEBUG',
   debug: 'DEBUG',
-  default: 'INFO',
-  http: 'INFO',
+  // default: 'INFO',
+  // http: 'INFO',
   info: 'INFO',
   warn: 'WARNING',
   error: 'ERROR',
@@ -108,6 +139,8 @@ const STACKDRIVER_SEVERITY = {
 // add severity level to work on GCP stackdriver
 // reference: https://gist.github.com/jasperkuperus/9df894041e3d5216ce25af03d38ec3f1
 const stackdriverFormat = format((data) => {
+  data.pid = pid;
+  data.uid = ++last_uid;
   data.severity = STACKDRIVER_SEVERITY[data[LEVEL]] || STACKDRIVER_SEVERITY.default;
   return data;
 });
@@ -127,6 +160,7 @@ export function startup(params) {
   if (params.transports) {
     options.transports = options.transports.concat(params.transports);
   } else {
+    do_console_filter = config_log.console_filter;
     let args = [];
     let stderrLevels;
     if (config_log.stackdriver) {
@@ -151,15 +185,19 @@ export function startup(params) {
         args.push(format.colorize());
         args.push(
           format.printf(function (data) {
-            let meta = Object.keys(data.metadata).length !== 0 ? ` | ${inspect(data.metadata)}` : '';
-            return `[${data.timestamp}] ${data.level} ${data.message} ${meta}`;
+            let meta = Object.keys(data.metadata).length !== 0 ?
+              ` | ${inspect(data.metadata, { breakLength: Infinity })}` :
+              '';
+            return `[${data.timestamp}] ${data.level} ${data.message}${meta}`;
           })
         );
       } else {
         args.push(
           format.printf(function (data) {
-            let meta = Object.keys(data.metadata).length !== 0 ? ` | ${inspect(data.metadata)}` : '';
-            return `[${data.timestamp} ${pid} ${last_uid++}] ${data.level} ${data.message} ${meta}`;
+            let meta = Object.keys(data.metadata).length !== 0 ?
+              ` | ${inspect(data.metadata, { breakLength: Infinity })}` :
+              '';
+            return `[${data.timestamp} ${pid} ${last_uid++}] ${data.level} ${data.message}${meta}`;
           })
         );
       }
@@ -197,20 +235,9 @@ export function startup(params) {
   }
 
   Object.keys(LOG_LEVELS).forEach(function (fn) {
-    let logfn = logger.log.bind(logger, fn === 'log' ? 'info' : fn);
-    let metric = `log.${fn}`;
+    let log_level = LOG_LEVELS[fn];
     raw_console[fn] = console[fn];
-    console[fn] = function (...args) {
-      metrics.add(metric, 1);
-      if (!dumpToFile && args.length === 2 && typeof args[0] === 'string' && typeof args[1] === 'object') {
-        // `message, data` format
-        logfn(args[0], args[1]);
-      } else {
-        // anything else, convert to string
-        let msg = (args || []).map(argProcessor).join(' ');
-        logfn(msg);
-      }
-    };
+    console[fn] = logEx.bind(null, null, log_level);
   });
 
   // console.debug('TESTING DEBUG LEVEL');

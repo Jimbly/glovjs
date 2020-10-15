@@ -73,13 +73,13 @@ function onSetChannelData(client, pak, resp_func) {
   let key = pak.readAnsiString();
   let keyparts = key.split('.');
   if (keyparts[0] !== 'public' && keyparts[0] !== 'private') {
-    console.error(` - failed, invalid scope: ${keyparts[0]}`);
+    client.client_channel.logCtx('error', ` - failed, invalid scope: ${keyparts[0]}`);
     resp_func('failed: invalid scope');
     pak.pool();
     return;
   }
   if (!keyparts[1]) {
-    console.error(' - failed, missing member name');
+    client.client_channel.logCtx('error', ' - failed, missing member name');
     resp_func('failed: missing member name');
     pak.pool();
     return;
@@ -160,7 +160,7 @@ function onChannelMsg(client, data, resp_func) {
       payload.q = 1; // do not print later, either
     }
   } else {
-    console.debug(`client_id:${client.id}->${channel_id}: channel_msg ${msg} ${log}`);
+    client.client_channel.logDest(channel_id, 'debug', `channel_msg ${msg} ${log}`);
   }
   if (!channel_id) {
     pool.pool();
@@ -251,17 +251,18 @@ function handleLoginResponse(message, client, user_id, resp_func, err, resp_data
 
   if (client_channel.ids.user_id) {
     // Logged in while processing the response?
-    console.log(`client_id:${client.id} ${message} failed: Already logged in`);
+    client.client_channel.logCtx('info', `${message} failed: Already logged in`);
     return resp_func('Already logged in');
   }
 
   if (err) {
-    console.log(`client_id:${client.id} ${message} failed: ${err}`);
+    client.client_channel.logCtx('info', `${message} failed: ${err}`);
   } else {
-    console.log(`client_id:${client.id} ${message} success: logged in as ${user_id}`);
     client_channel.ids_base.user_id = user_id;
     client_channel.ids_base.display_name = resp_data.display_name;
+    client_channel.log_user_id = user_id;
     applyCustomIds(client_channel.ids, resp_data);
+    client.client_channel.logCtx('info', `${message} success: logged in as ${user_id}`, { ip: client.addr });
 
     // Tell channels we have a new user id/display name
     for (let channel_id in client_channel.subscribe_counts) {
@@ -275,10 +276,10 @@ function handleLoginResponse(message, client, user_id, resp_func, err, resp_data
 }
 
 function onLogin(client, data, resp_func) {
-  console.log(`client_id:${client.id}->server login ${logdata(data)}`);
+  client.client_channel.logCtx('info', `login ${logdata(data)}`, { ip: client.addr });
   let user_id = data.user_id;
   if (!validUsername(user_id, true)) {
-    console.log(`client_id:${client.id} login failed: Invalid username`);
+    client.client_channel.logCtx('info', 'login failed: Invalid username');
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
@@ -297,7 +298,7 @@ function onLogin(client, data, resp_func) {
 
 let facebook_access_token;
 function onLoginFacebook(client, data, resp_func) {
-  console.log(`client_id:${client.id}->server login_facebook ${logdata(data)}`);
+  client.client_channel.logCtx('info', `login_facebook ${logdata(data)}`);
   assert(facebook_access_token, 'Missing facebook.access_token in config/server.json');
 
   const signatureComponent = data.signature.split('.');
@@ -307,7 +308,7 @@ function onLoginFacebook(client, data, resp_func) {
   if (generated_signature === signature) {
     const payload = JSON.parse(Buffer.from(signatureComponent[1], 'base64').toString('utf8'));
     let user_id = `fb$${payload.player_id}`;
-    console.log(`client_id:${client.id} login_facebook ${user_id} success ${logdata(payload)}`);
+    client.client_channel.logCtx('info', `login_facebook ${user_id} success ${logdata(payload)}`);
 
     let client_channel = client.client_channel;
     assert(client_channel);
@@ -319,16 +320,16 @@ function onLoginFacebook(client, data, resp_func) {
     }, handleLoginResponse.bind(null, 'login_facebook', client, user_id, resp_func));
 
   } else {
-    console.log(`client_id:${client.id} login_facebook auth failed`, generated_signature, signature);
+    client.client_channel.logCtx('info', 'login_facebook auth failed', generated_signature, signature);
     return resp_func('Auth Failed');
   }
 }
 
 function onUserCreate(client, data, resp_func) {
-  console.log(`client_id:${client.id}->server user_create ${logdata(data)}`);
+  client.client_channel.logCtx('info', `user_create ${logdata(data)}`);
   let user_id = data.user_id;
   if (!validUsername(user_id)) {
-    console.log(`client_id:${client.id} user_create failed: Invalid username`);
+    client.client_channel.logCtx('info', 'user_create failed: Invalid username');
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
@@ -337,7 +338,7 @@ function onUserCreate(client, data, resp_func) {
   assert(client_channel);
 
   if (client_channel.ids.user_id) {
-    console.log(`client_id:${client.id} user_create failed: Already logged in`);
+    client.client_channel.logCtx('info', 'user_create failed: Already logged in');
     return resp_func('Already logged in');
   }
 
@@ -354,7 +355,7 @@ function onLogOut(client, data, resp_func) {
   let client_channel = client.client_channel;
   assert(client_channel);
   let { user_id } = client_channel.ids;
-  console.log(`client_id:${client.id}->server logout ${user_id}`);
+  client.client_channel.logCtx('info', `logout ${user_id}`);
   if (!user_id) {
     return resp_func('ERR_NOT_LOGGED_IN');
   }
@@ -363,6 +364,7 @@ function onLogOut(client, data, resp_func) {
   delete client_channel.ids_base.user_id;
   delete client_channel.ids_base.display_name;
   delete client_channel.ids_base.admin;
+  client_channel.log_user_id = null;
 
   // Tell channels we have a new user id/display name
   for (let channel_id in client_channel.subscribe_counts) {
@@ -380,7 +382,7 @@ function onLog(client, data, resp_func) {
   let client_channel = client.client_channel;
   data.user_id = client_channel.ids.user_id;
   data.display_name = client_channel.ids.display_name;
-  console.log(`client_id:${client.id} server_log`, data);
+  client.client_channel.logCtx('info', 'server_log', data);
   resp_func();
 }
 

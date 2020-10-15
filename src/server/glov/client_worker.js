@@ -3,6 +3,8 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
+const { canonical } = require('../../common/cmd_parse.js');
+const { logEx } = require('./log.js');
 const { isPacket } = require('../../common/packet.js');
 
 class ClientWorker extends ChannelWorker {
@@ -10,6 +12,7 @@ class ClientWorker extends ChannelWorker {
     super(channel_server, channel_id, channel_data);
     this.client_id = this.channel_subid; // 1234
     this.client = null; // WSClient filled in by channel_server
+    this.log_user_id = null;
     this.ids_base = {
       user_id: undefined,
       display_name: channel_id,
@@ -72,8 +75,94 @@ class ClientWorker extends ChannelWorker {
   }
 
   onError(msg) {
-    console.error(`ClientWorker(${this.channel_id}) error:`, msg);
-    this.client.send('error', msg);
+    if (this.client.connected) {
+      console.error(`ClientWorker(${this.channel_id}) error:`, msg);
+      this.client.send('error', msg);
+    } else {
+      console.debug(`ClientWorker(${this.channel_id}) error(disconnected,ignored):`, msg);
+    }
+  }
+
+  cmdParseAuto(opts, resp_func) {
+    let { cmd, access } = opts;
+    let space_idx = cmd.indexOf(' ');
+    let cmd_base = canonical(space_idx === -1 ? cmd : cmd.slice(0, space_idx));
+    let { user_id } = this.ids;
+    let route = cmd_parse_routes[cmd_base];
+    let channel_ids = Object.keys(this.subscribe_counts);
+    if (!channel_ids.length) {
+      return void resp_func('ERR_NO_SUBSCRIPTIONS');
+    }
+    channel_ids = channel_ids.filter((channel_id) => {
+      if (channel_id.startsWith('user.') && channel_id !== `user.${user_id}`) {
+        return false;
+      }
+      if (route && !channel_id.startsWith(route)) {
+        return false;
+      }
+      return true;
+    });
+    if (!channel_ids.length) {
+      // Not subscribed to any worker that can handle this command
+      return void resp_func(`Unknown command: "${cmd_base}"`);
+    }
+    let self = this;
+    let idx = 0;
+    let last_err;
+    function tryNext() {
+      if (!self.client.connected) {
+        // Disconnected while routing, silently fail; probably already had a failall_disconnect error triggered
+        return void resp_func();
+      }
+      if (idx === channel_ids.length) {
+        self.logCtx('info', 'cmd_parse_unknown', {
+          cmd,
+          display_name: self.ids.display_name,
+        });
+        return void resp_func(last_err);
+      }
+      let channel_id = channel_ids[idx++];
+      let pak = self.pak(channel_id, 'cmdparse_auto');
+      pak.writeString(cmd);
+      pak.writeJSON(access);
+      pak.send(function (err, resp) {
+        if (!route && !cmd_parse_routes[cmd_base] && resp && resp.found) {
+          let target = channel_id.split('.')[0];
+          cmd_parse_routes[cmd_base] = target;
+          self.debug(`Added cmdParseAuto route for ${cmd_base} to ${target}`);
+        }
+        if (err || resp && resp.found) {
+          return void resp_func(err, resp);
+        }
+        // otherwise, was not found
+        if (resp && resp.err) {
+          last_err = resp.err;
+        }
+        tryNext();
+      });
+    }
+    tryNext();
+  }
+
+  logDest(channel_id, level, ...args) {
+    let ctx = {
+      client: this.client_id,
+    };
+    let ids = channel_id.split('.');
+    ctx[ids[0]] = ids[1]; // set ctx.world: 1234, etc
+    if (this.log_user_id) {
+      ctx.user_id = this.log_user_id;
+    }
+    logEx(ctx, level, `${this.client_id}->${channel_id}:`, ...args);
+  }
+  logCtx(level, ...args) {
+    let ctx = {
+      client: this.client_id,
+    };
+    if (this.log_user_id) {
+      ctx.user_id = this.log_user_id;
+    }
+    logEx(ctx, level, `${this.client_id}:`, ...args);
   }
 }
 

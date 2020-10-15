@@ -5,7 +5,7 @@ const ack = require('../../common/ack.js');
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 const assert = require('assert');
 const events = require('../../common/tiny-events.js');
-const node_util = require('util');
+const { logEx } = require('./log.js');
 const { isPacket } = require('../../common/packet.js');
 const { packetLog, packetLogInit } = require('./packet_log.js');
 const querystring = require('querystring');
@@ -39,18 +39,22 @@ function WSClient(ws_server, socket) {
 }
 util.inherits(WSClient, events.EventEmitter);
 
+WSClient.prototype.ctx = function () {
+  let user_id = this.client_channel && this.client_channel.log_user_id || undefined;
+  return {
+    client: this.client_id,
+    ip: this.addr,
+    user_id,
+  };
+};
+
+WSClient.prototype.logCtx = function (level, ...args) {
+  let ctx = this.ctx();
+  logEx(ctx, level, `WSClient:${this.client_id}(${ctx.user_id || ''})`, ...args);
+};
+
 WSClient.prototype.log = function (...args) {
-  let client = this;
-  let msg = [];
-  for (let ii = 0; ii < arguments.length; ++ii) {
-    if (typeof args[ii] === 'object') {
-      msg.push(node_util.inspect(args[ii]));
-    } else {
-      msg.push(args[ii]);
-    }
-  }
-  let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-  console.log(`WS Client ${client.client_id}(${user_id || ''}) ${msg.join(' ')}`);
+  this.logCtx('info', ...args);
 };
 
 WSClient.prototype.onError = function (e) {
@@ -66,9 +70,7 @@ WSClient.prototype.onClose = function () {
   client.connected = false;
   client.disconnected = true;
   delete ws_server.clients[client.id];
-  let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-  console.info(`WS Client ${client.client_id}(${user_id || ''}) disconnected` +
-    ` (${Object.keys(ws_server.clients).length} clients connected)`);
+  this.log(`disconnected (${Object.keys(ws_server.clients).length} clients connected)`);
   ack.failAll(client); // Should this be before or after other disconnect events?
   client.emit('disconnect');
   ws_server.emit('disconnect', client);
@@ -115,7 +117,9 @@ WSServer.prototype.init = function (server, server_https) {
   let onUpgrade = (req, socket, head) => {
     let query = querystring.parse(url.parse(req.url).query);
     if (!query.pver || String(query.pver) !== wscommon.PROTOCOL_VERSION) {
-      console.log(`WS Client rejected (bad pver) from ${ipFromRequest(req)}: ${req.url}`);
+      logEx({
+        ip: ipFromRequest(req),
+      }, 'info', `WS Client rejected (bad pver) from ${ipFromRequest(req)}: ${req.url}`);
       socket.write('HTTP/1.1 400 Invalid Protocol\r\n\r\n');
       socket.end();
       socket.destroy();
@@ -145,7 +149,7 @@ WSServer.prototype.init = function (server, server_https) {
       if (client.disconnected) {
         // message received after disconnect!
         // ignore
-        console.info(`WS Client ${client.client_id} ignoring message received after disconnect`);
+        client.log('ignoring message received after disconnect');
       } else {
         ws_server.last_client = client;
         wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter);
@@ -160,9 +164,13 @@ WSServer.prototype.init = function (server, server_https) {
     // log and send cack after the .emit('client') has a chance to set client.client_id
     client.client_id = client.client_id || client.id;
 
-    console.info(`WS Client ${client.client_id} connected to ${req.url} from ${client.addr}` +
-      ` (${Object.keys(ws_server.clients).length} clients connected);` +
-      ` UA:${JSON.stringify(client.user_agent)}, origin:${JSON.stringify(client.origin)}`);
+    client.log(`connected to ${req.url} from ${client.addr}` +
+      ` (${Object.keys(ws_server.clients).length} clients connected)`,
+    {
+      ua: client.user_agent,
+      origin: client.origin,
+      url: req.url,
+    });
 
     client.send('cack', {
       id: client.client_id,
@@ -179,13 +187,10 @@ WSServer.prototype.init = function (server, server_https) {
       let old_client = ws_server.clients[reconnect_id];
       if (old_client) {
         if (old_client.secret === query.secret) {
-          let user_id = old_client.client_channel && old_client.client_channel.ids &&
-            old_client.client_channel.ids.user_id;
-          console.info(`WS Client ${old_client.client_id}(${user_id}) being replaced by reconnect, disconnecting...`);
+          old_client.log('being replaced by reconnect, disconnecting...');
           this.disconnectClient(old_client);
         } else {
-          console.log(`WS Client ${client.client_id} requested disconnect of Client ${reconnect_id}` +
-            ' with incorrect secret, ignoring');
+          client.log(`requested disconnect of Client ${reconnect_id} with incorrect secret, ignoring`);
         }
       }
     }
@@ -209,8 +214,7 @@ WSServer.prototype.checkTimeouts = function () {
     let client = this.clients[client_id];
     client.idle_counter++;
     if (client.idle_counter === 5) {
-      let user_id = client.client_channel && client.client_channel.ids && client.client_channel.ids.user_id;
-      console.info(`WS Client ${client.client_id}(${user_id}) timed out, disconnecting...`);
+      client.log('timed out, disconnecting...');
       this.disconnectClient(client);
     }
   }

@@ -19,9 +19,10 @@ const assert = require('assert');
 const { channelServerPak, channelServerSend, PAK_HINT_NEWSEQ, PAK_ID_MASK } = require('./channel_server.js');
 const dot_prop = require('dot-prop');
 const { ERR_NOT_FOUND } = require('./exchange.js');
+const { logEx } = require('./log.js');
 const { min } = Math;
 const { packetLogInit, packetLog } = require('./packet_log.js');
-const { empty, logdata } = require('../../common/util.js');
+const { callEach, empty, logdata } = require('../../common/util.js');
 
 // How long to wait before failing an out of order packet and running it anyway
 const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
@@ -844,25 +845,68 @@ export class ChannelWorker {
     this.error(msg);
   }
 
+  ctx() {
+    // *not* using a static `context`, as it gets merged into
+    let ctx = {};
+    ctx[this.channel_type] = this.channel_subid;
+    return ctx;
+  }
+
   debug(...args) {
-    console.debug(`${this.channel_id}:`, ...args);
+    logEx(this.ctx(), 'debug', `${this.channel_id}:`, ...args);
   }
 
   info(...args) {
-    console.info(`${this.channel_id}:`, ...args);
+    logEx(this.ctx(), 'info', `${this.channel_id}:`, ...args);
   }
 
   log(...args) {
-    console.log(`${this.channel_id}:`, ...args);
+    logEx(this.ctx(), 'log', `${this.channel_id}:`, ...args);
   }
 
   warn(...args) {
-    console.warn(`${this.channel_id}:`, ...args);
+    logEx(this.ctx(), 'warn', `${this.channel_id}:`, ...args);
   }
 
   error(...args) {
-    console.error(`${this.channel_id}:`, ...args);
+    logEx(this.ctx(), 'error', `${this.channel_id}:`, ...args);
   }
+
+
+  ctxSrc(src) {
+    // *not* using a static `context`, as it gets merged into
+    let ctx = {};
+    ctx[this.channel_type] = this.channel_subid;
+    if (src.user_id) {
+      ctx.user_id = src.user_id;
+    }
+    if (src.type !== this.channel_type) {
+      ctx[src.type] = src.id;
+    }
+    // Also add display_name?
+    return ctx;
+  }
+
+  debugSrc(src, ...args) {
+    logEx(this.ctxSrc(src), 'debug', `${this.channel_id}:`, ...args);
+  }
+
+  infoSrc(src, ...args) {
+    logEx(this.ctxSrc(src), 'info', `${this.channel_id}:`, ...args);
+  }
+
+  logSrc(src, ...args) {
+    logEx(this.ctxSrc(src), 'log', `${this.channel_id}:`, ...args);
+  }
+
+  warnSrc(src, ...args) {
+    logEx(this.ctxSrc(src), 'warn', `${this.channel_id}:`, ...args);
+  }
+
+  errorSrc(src, ...args) {
+    logEx(this.ctxSrc(src), 'error', `${this.channel_id}:`, ...args);
+  }
+
 
   // Default error handler
   handleError(src, data, resp_func) {
@@ -984,8 +1028,10 @@ export class ChannelWorker {
         channel_worker.channelMessage(ids, msg, data, resp_func);
       });
     } catch (e) {
-      e.source = source;
-      this.error(`Exception while handling packet from "${source}"`);
+      e.source = ids;
+      this.errorSrc(ids, `Exception while handling packet from "${source}"`);
+      this.errorSrc(ids, `Packet data (base64) = ${pak.getBuffer().toString('base64', 0, 1000000)}`);
+      this.errorSrc(ids, `Packet data (utf8,1K) = ${JSON.stringify(pak.getBuffer().toString('utf8', 0, 1000))}`);
       channel_server.handleUncaughtError(e);
     }
     if (pkt_idx !== -1) {

@@ -17,6 +17,7 @@ const { dss_stats } = require('./data_store_shield.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const log = require('./log.js');
+const { logEx } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
@@ -210,7 +211,16 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   assert(source.channel_id);
   assert(!source.shutting_down); // or already shut down - will be OOO and will not get responses!
   if (!q && typeof msg === 'string' && !quietMessage(msg)) {
-    console.debug(`${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
+    let ctx = {};
+    let ids = source.channel_id.split('.');
+    ctx[ids[0]] = ids[1];
+    ids = dest.split('.');
+    ctx[ids[0]] = ids[1];
+    if (source.log_user_id) {
+      // Log user_id of the initiating user, if applicable
+      ctx.user_id = source.log_user_id;
+    }
+    logEx(ctx, 'debug', `${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
   }
   assert(source.send_pkt_idx);
 
@@ -281,7 +291,7 @@ class ChannelServer {
     this.ds_store_bulk = null; // bulkdata store
     this.ds_store_meta = null; // metadata store
     this.master_stats = { num_channels: {} };
-    this.load_log = true;
+    this.load_log = false;
     this.restarting = false;
   }
 
