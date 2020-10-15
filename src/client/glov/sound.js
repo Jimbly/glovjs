@@ -34,6 +34,9 @@ let frame_timestamp = 0;
 let fades = [];
 let music;
 
+let volume_override = 1;
+let volume_override_target = 1;
+
 settings.register({
   volume: {
     default_value: 1,
@@ -178,8 +181,17 @@ export function soundStartup(params) {
   filewatchOn('.webm', soundReload);
 }
 
+export function soundPause() {
+  volume_override = volume_override_target = 0;
+  // Immediately mute all the music
+  // Can't do a nice fade out here because we stop getting ticked when we're not in the foreground
+  soundTick(0); // eslint-disable-line no-use-before-define
+}
+
 export function soundResume() {
-  // Handled internally by Howler, leaving hooks in for now, though
+  volume_override_target = 1;
+
+  // Actual context resuming handled internally by Howler, leaving hooks in for now, though
   // Maybe more reliable than `Howler.safeToPlay`...
 }
 
@@ -189,6 +201,14 @@ export function soundResumed() {
 
 export function soundTick(dt) {
   frame_timestamp += dt;
+  if (volume_override !== volume_override_target) {
+    let delta = dt * 0.004;
+    if (volume_override < volume_override_target) {
+      volume_override = min(volume_override + delta, volume_override_target);
+    } else {
+      volume_override = max(volume_override - delta, volume_override_target);
+    }
+  }
   if (!soundResumed()) {
     return;
   }
@@ -218,7 +238,7 @@ export function soundTick(dt) {
       }
     }
     if (mus.sound) {
-      let sys_volume = mus.current_volume * settings.volume;
+      let sys_volume = mus.current_volume * settings.volume * volume_override;
       if (mus.need_play) {
         mus.need_play= false;
         mus.id = mus.sound.play();
@@ -234,7 +254,7 @@ export function soundTick(dt) {
   for (let ii = fades.length - 1; ii >= 0; --ii) {
     let fade = fades[ii];
     fade.volume = max(0, fade.volume - max_fade);
-    fade.sound.volume(fade.volume * settings.volume, fade.id);
+    fade.sound.volume(fade.volume * settings.volume * volume_override, fade.id);
     if (!fade.volume) {
       fade.sound.stop(fade.id);
       ridx(fades, ii);
@@ -262,8 +282,8 @@ export function soundPlay(soundname, volume, as_music) {
     return null;
   }
 
-  let id = sound.play(undefined, volume * settings.volume);
-  // sound.volume(volume * settings.volume, id);
+  let id = sound.play(undefined, volume * settings.volume * volume_override);
+  // sound.volume(volume * settings.volume * volume_override, id);
   last_played[soundname] = frame_timestamp;
   return {
     stop: sound.stop.bind(sound, id),
@@ -299,7 +319,7 @@ export function soundPlayMusic(soundname, volume, transition) {
           sound.stop(music[0].id);
           music[0].sound = null;
         } else {
-          let sys_volume = music[0].sys_volume = volume * settings.volume;
+          let sys_volume = music[0].sys_volume = volume * settings.volume * volume_override;
           sound.volume(sys_volume, music[0].id);
         }
       }
@@ -323,7 +343,7 @@ export function soundPlayMusic(soundname, volume, transition) {
     let start_vol = (transition & FADE_IN) ? 0 : volume;
     music[0].current_volume = start_vol;
     if (soundResumed()) {
-      let sys_volume = start_vol * settings.volume;
+      let sys_volume = start_vol * settings.volume * volume_override;
       music[0].id = sound.play(undefined, sys_volume);
       // sound.volume(sys_volume, music[0].id);
       music[0].sys_volume = sys_volume;

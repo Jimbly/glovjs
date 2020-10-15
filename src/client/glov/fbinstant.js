@@ -1,6 +1,7 @@
 /* globals FBInstant */
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
+const { soundPause } = require('./sound.js');
 
 export let ready = false;
 let onreadycallbacks = [];
@@ -143,6 +144,10 @@ export function init() {
   }).catch(function (e) {
     console.warn('initializeAsync failed', e);
   });
+
+  FBInstant.onPause(() => {
+    soundPause();
+  });
 }
 
 export function fbGetLoginInfo(cb) {
@@ -170,7 +175,7 @@ export function fbFriendName(user_id) {
   return fb_friends[user_id];
 }
 
-// TODO: Expects an array of valid user IDs:
+// Expects an array of valid user IDs:
 // cb(null, ['fb$1234', 'fb$4567']);
 export function fbGetFriends(cb) {
   onready(() => {
