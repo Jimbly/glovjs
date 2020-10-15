@@ -108,7 +108,7 @@ export class ChannelWorker {
     this.send_pkt_unackd = {}; // for each destination, the id and timestamp of the last packet that did not need an ack
     this.recv_pkt_idx = {}; // for each source, the last ordering ID we received
     this.pkt_queue = {}; // for each source, any queued packets that need to be dispatched in order
-    this.subscribers = {}; // set of ids of who is subscribed to us
+    this.subscribers = {}; // map of ids to { field_map } of who is subscribed to us
     this.num_subscribers = 0;
     this.store_path = `${this.channel_type}/${this.channel_id}`;
 
@@ -141,6 +141,7 @@ export class ChannelWorker {
     this.set_in_flight = false;
     this.data_awaiting_set = null;
     this.last_saved_data = '';
+    this.commit_queued = false;
   }
 
   shutdownFinal() {
@@ -181,28 +182,46 @@ export class ChannelWorker {
     resp_func(null, this.channel_server.debug_addr);
   }
 
-  onSubscribe(src, data, resp_func) {
+  onSubscribe(src, field_list, resp_func) {
     let { channel_id, user_id } = src;
     let is_client = src.type === 'client';
+    assert(Array.isArray(field_list));
 
     if (is_client && this.require_login && !user_id) {
       return resp_func('ERR_LOGIN_REQUIRED');
     }
     if (this.subscribers[channel_id]) {
+      // Assume we have the same field_list
       return resp_func('ERR_ALREADY_SUBSCRIBED');
     }
-    this.subscribers[channel_id] = 1;
-    this.num_subscribers++;
-    this.adding_client = channel_id;
 
-    let err = this.handleNewClient && this.handleNewClient(src);
+    let opts = { field_list };
+    let err = this.handleNewClient && this.handleNewClient(src, opts);
     if (err) {
-      this.adding_client = null;
-      // not allowed, undo
-      delete this.subscribers[channel_id];
-      this.num_subscribers--;
+      // not allowed
       return resp_func(typeof err === 'string' ? err : 'ERR_NOT_ALLOWED_BY_WORKER');
     }
+
+    field_list = opts.field_list; // if modify by handleNewClient
+    let field_map;
+    if (field_list.length === 1 && field_list[0] === '*') {
+      field_map = null;
+    } else {
+      field_map = {};
+      for (let ii = 0; ii < field_list.length; ++ii) {
+        let key = field_list[ii];
+        // Must be in the form `public.foo`
+        assert(key.startsWith('public.'), key);
+        key = key.slice(7);
+        assert(key);
+        assert(key.indexOf('.') === -1);
+        field_map[key] = true;
+      }
+    }
+
+    this.subscribers[channel_id] = { field_map };
+    this.num_subscribers++;
+    this.adding_client = channel_id;
 
     let ids;
     if ((this.emit_join_leave_events || this.maintain_client_list) && is_client) {
@@ -237,8 +256,18 @@ export class ChannelWorker {
     this.adding_client = null;
 
     // 'channel_data' is really an ack for 'subscribe' - sent exactly once
+    let out = this.data.public;
+    if (field_map) {
+      out = {};
+      for (let key in field_map) {
+        let v = this.data.public[key];
+        if (v !== undefined) {
+          out[key] = v;
+        }
+      }
+    }
     this.sendChannelMessage(channel_id, 'channel_data', {
-      public: this.data.public,
+      public: out,
     });
     return resp_func();
   }
@@ -305,7 +334,8 @@ export class ChannelWorker {
   }
 
   shouldShutdown() {
-    return this.isEmpty() && Date.now() - this.last_msg_time > AUTO_DESTROY_TIME && !this.set_in_flight;
+    return this.isEmpty() && Date.now() - this.last_msg_time > AUTO_DESTROY_TIME &&
+      !this.set_in_flight && !this.commit_queued;
   }
 
   autoDestroyCheck() {
@@ -365,7 +395,9 @@ export class ChannelWorker {
     return this.subscribe_counts[other_channel_id];
   }
 
-  subscribeOther(other_channel_id, resp_func) {
+  // field_list is ['*'] or ['public.foo', 'public.bar']
+  subscribeOther(other_channel_id, field_list, resp_func) {
+    assert(typeof field_list !== 'function'); // old API
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
       this.debug(`->${other_channel_id}: subscribe - already subscribed`);
@@ -374,7 +406,7 @@ export class ChannelWorker {
       }
       return;
     }
-    this.sendChannelMessage(other_channel_id, 'subscribe', undefined, (err, resp_data) => {
+    this.sendChannelMessage(other_channel_id, 'subscribe', field_list, (err, resp_data) => {
       if (err) {
         this.log(`->${other_channel_id} subscribe failed: ${err}`);
         this.subscribe_counts[other_channel_id]--;
@@ -467,31 +499,37 @@ export class ChannelWorker {
 
   subscribeClientToUser(client_id, user_id) {
     let channel_id = `user.${user_id}`;
-    if (this.user_data_map && this.subscribe_counts[channel_id]) {
-      // already subscribed, must be able to apply user_data_map immediately
-      //   from another client's data
-      let existing_client;
-      for (let other_client_id in this.data.public.clients) {
-        let other_client = this.data.public.clients[other_client_id];
-        if (other_client_id !== client_id && other_client.ids.user_id === user_id) {
-          existing_client = other_client;
-          break;
-        }
+    let field_list = [];
+    if (this.user_data_map) {
+      for (let key in this.user_data_map) {
+        field_list.push(key);
       }
-      if (existing_client) {
-        let client = this.data.public.clients[client_id];
-        for (let key in this.user_data_map) {
-          let mapped = this.user_data_map[key];
-          let value = existing_client[mapped];
-          if (value) {
-            this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
-          } else if (client[mapped]) {
-            this.setChannelData(`public.clients.${client_id}.${mapped}`, undefined);
+      if (this.subscribe_counts[channel_id]) {
+        // already subscribed, must be able to apply user_data_map immediately
+        //   from another client's data
+        let existing_client;
+        for (let other_client_id in this.data.public.clients) {
+          let other_client = this.data.public.clients[other_client_id];
+          if (other_client_id !== client_id && other_client.ids.user_id === user_id) {
+            existing_client = other_client;
+            break;
           }
         }
-      } // else, okay?
+        if (existing_client) {
+          let client = this.data.public.clients[client_id];
+          for (let key in this.user_data_map) {
+            let mapped = this.user_data_map[key];
+            let value = existing_client[mapped];
+            if (value) {
+              this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
+            } else if (client[mapped]) {
+              this.setChannelData(`public.clients.${client_id}.${mapped}`, undefined);
+            }
+          }
+        } // else, okay?
+      }
     }
-    this.subscribeOther(channel_id);
+    this.subscribeOther(channel_id, field_list);
   }
 
   // data is a { key, value } pair of what has changed
@@ -594,7 +632,27 @@ export class ChannelWorker {
     return resp_func();
   }
 
+  onFlush(fn) {
+    if (!this.on_flush) {
+      this.on_flush = [];
+    }
+    this.on_flush.push(fn);
+  }
+
   commitData() {
+    // delay the commit until next frame, so multiple call of setChannelData get
+    //   batched into a single atomic database write
+    if (this.commit_queued) {
+      return;
+    }
+    this.commit_queued = true;
+    process.nextTick(() => {
+      this.commit_queued = false;
+      this.commitDataActual();
+    });
+  }
+
+  commitDataActual() {
     const self = this;
     let data = this.data;
 
@@ -640,6 +698,11 @@ export class ChannelWorker {
 
       self.last_saved_data = data_to_compare;
       self.set_in_flight = true;
+      let on_flush;
+      if (self.on_flush) {
+        on_flush = self.on_flush;
+        self.on_flush = null;
+      }
 
       self.channel_server.ds_store_meta.setAsync(self.store_path, incoming_data, function (err) {
         // Delay the next write
@@ -654,10 +717,43 @@ export class ChannelWorker {
         if (err) {
           throwErr(err);
         }
+        if (on_flush && !err) {
+          // We should absolutely never get an error here, but if we do, these
+          //   on_flush callbacks will never be called.
+          callEach(on_flush, null, err);
+        }
       });
     }
 
     safeSet();
+  }
+
+  emitApplyChannelData(data) {
+    let { key } = data;
+    assert(key);
+    assert(key.startsWith('public.'));
+    key = key.slice(7);
+    assert(key);
+
+    let count = 0;
+    let was_q = false;
+    if (typeof data === 'object') {
+      was_q = data.q;
+      data.q = 1;
+    }
+    for (let channel_id in this.subscribers) {
+      if (channel_id === this.adding_client) {
+        continue;
+      }
+      let { field_map } = this.subscribers[channel_id];
+      if (!field_map || field_map[key]) {
+        ++count;
+        this.sendChannelMessage(channel_id, 'apply_channel_data', data);
+      }
+    }
+    if (count && !was_q) {
+      this.debug(`broadcast(${count}): apply_channel_data ${logdata(data)}`);
+    }
   }
 
   onSetChannelDataPush(source, pak, resp_func) {
@@ -690,14 +786,14 @@ export class ChannelWorker {
       // array was modified in-place
     }
     // only send public changes
-    if (key.startsWith('public')) {
+    if (key.startsWith('public.')) {
       let mod_data;
       if (need_create) {
         mod_data = { key, value: arr, q };
       } else {
         mod_data = { key: `${key}.${idx}`, value, q };
       }
-      this.channelEmit('apply_channel_data', mod_data, this.adding_client);
+      this.emitApplyChannelData(mod_data);
     }
     this.commitData();
     return resp_func();
@@ -714,7 +810,7 @@ export class ChannelWorker {
   }
 
   onGetChannelData(source, data, resp_func) {
-    // Do not deny this here, this is handled by RESERVED in client_comm.js
+    // Do not deny this here, this is blocked by the allow_client_direct map
     // We want the client_comm functions to send this message if needed.
     // if (source.type === 'client') {
     //   // deny
@@ -764,12 +860,12 @@ export class ChannelWorker {
       dot_prop.set(this.data, key, value);
     }
     // only send public changes
-    if (key.startsWith('public')) {
+    if (key.startsWith('public.')) {
       let data = { key, value };
       if (q) {
         data.q = 1;
       }
-      this.channelEmit('apply_channel_data', data, this.adding_client);
+      this.emitApplyChannelData(data);
     }
     if (!this.maintain_client_list || !key.startsWith('public.clients.')) {
       this.commitData();
