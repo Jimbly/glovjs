@@ -44,6 +44,8 @@ export let glov_particles;
 
 export let width;
 export let height;
+let width_3d;
+let height_3d;
 export let pixel_aspect = 1;
 export let dom_to_canvas_ratio = window.devicePixelRatio || 1;
 export let antialias;
@@ -105,7 +107,8 @@ export function setGlobalMatrices(_mat_view) {
 
 // Just set up mat_vp and mat_projection
 export function setMatVP(_mat_view) {
-  // exports.setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  // eslint-disable-next-line no-use-before-define
+  setupProjection(fov_y, width, height, ZNEAR, ZFAR);
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
 }
@@ -382,7 +385,7 @@ function checkResize() {
   //   shrinking the viewport without changing the window height
   let vv = window.visualViewport || {};
   dom_to_canvas_ratio = window.devicePixelRatio || 1;
-  dom_to_canvas_ratio *= settings.render_scale;
+  dom_to_canvas_ratio *= settings.render_scale_all;
   let view_w = (vv.width || window.innerWidth);
   let view_h = (vv.height || window.innerHeight);
   if (view_h !== last_body_height) {
@@ -401,7 +404,8 @@ function checkResize() {
         v4set(safearea_values,
           safearea_elem.offsetLeft * dom_to_canvas_ratio,
           new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
-          max(safearea_elem.offsetTop * dom_to_canvas_ratio, safariTopSafeArea(view_w, view_h) * settings.render_scale),
+          max(safearea_elem.offsetTop * dom_to_canvas_ratio,
+            safariTopSafeArea(view_w, view_h) * settings.render_scale_all),
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
           safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
@@ -528,12 +532,44 @@ export function start3DRendering() {
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
   gl.depthMask(true);
+  if (settings.render_scale_clear) {
+    // full clear, before setting viewport
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
 
   setupProjection(fov_y, width, height, ZNEAR, ZFAR);
 
+  if (width_3d !== width) { // settings.render_scale
+    v4set(viewport, 0, 0, width_3d, height_3d);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+  }
   gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // eslint-disable-line no-bitwise
+  if (!settings.render_scale_clear) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
   gl.enable(gl.CULL_FACE);
+}
+
+function renderScaleFinish() {
+  if (width_3d !== width) {
+    if (defines.NOCOPY) {
+      gl.disable(gl.SCISSOR_TEST);
+      v4set(viewport, 0, 0, width, height);
+      gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    } else {
+      let filter = settings.render_scale_mode === 0;
+      let source = captureFramebuffer(null, width_3d, height_3d, filter, false);
+      gl.disable(gl.SCISSOR_TEST);
+      v4set(viewport, 0, 0, width, height);
+      gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+      if (settings.render_scale_mode === 2) {
+        effects.applyPixelyExpand({ source, final_viewport: viewport });
+      } else {
+        effects.applyCopy({ source });
+      }
+    }
+  }
 }
 
 export function startSpriteRendering() {
@@ -639,6 +675,8 @@ function tick(timestamp) {
   checkResize();
   width = canvas.width;
   height = canvas.height;
+  width_3d = round(width * settings.render_scale);
+  height_3d = round(height * settings.render_scale);
 
   if (any_3d) {
     // setting the fov values for the frame even if we don't do 3D this frame, because something
@@ -700,7 +738,11 @@ function tick(timestamp) {
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
   glov_transition.render(dt);
 
-  if (!had_3d_this_frame) {
+  if (had_3d_this_frame) {
+    if (width !== width_3d) {
+      renderScaleFinish();
+    }
+  } else {
     // delayed clear (and general GL init) until after app_state, app might change clear color
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     // TODO: for do_viewport_post_process, we need to enable gl.scissor to avoid clearing the whole screen!

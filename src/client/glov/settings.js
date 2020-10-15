@@ -46,9 +46,27 @@ register({
     type: cmd_parse.TYPE_FLOAT,
   },
   render_scale: {
-    label: 'Render Scale',
+    label: 'Render Scale (3D)',
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
-    range: [0.1,4],
+    range: [0.1,1],
+  },
+  render_scale_mode: {
+    label: 'Render Scale Mode',
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,2],
+  },
+  render_scale_all: {
+    label: 'Render Scale (All)',
+    default_value: 1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0.3333,4],
+  },
+  render_scale_clear: {
+    label: 'Render Scale Full Clear',
+    default_value: 1,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
   },
 });

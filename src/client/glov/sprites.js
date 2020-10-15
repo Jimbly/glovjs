@@ -463,6 +463,9 @@ function bufferSpriteData(data) {
 }
 
 export function draw() {
+  if (engine.defines.NOSPRITES) {
+    sprite_queue.length = 0;
+  }
   if (!sprite_queue.length) {
     return;
   }
