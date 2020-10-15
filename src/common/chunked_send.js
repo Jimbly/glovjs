@@ -174,7 +174,7 @@ export function chunkedSend(opts, cb) {
   let id;
   asyncSeries([
     function getID(next) {
-      let pak = client.wsPak('upload_start');
+      let pak = client.pak('upload_start');
       pak.writeInt(length);
       pak.writeU32(crc);
       pak.writeAnsiString(mime_type);
@@ -188,7 +188,7 @@ export function chunkedSend(opts, cb) {
 
       function sendChunk(idx, next) {
         assert(idx < num_chunks);
-        let pak = client.wsPak('upload_chunk');
+        let pak = client.pak('upload_chunk');
         pak.writeInt(id);
         let start = idx * CHUNK_SIZE;
         pak.writeInt(start);
@@ -203,7 +203,7 @@ export function chunkedSend(opts, cb) {
       asyncParallelLimit(tasks, max_in_flight, next);
     },
     function finish(next) {
-      let pak = client.wsPak('upload_finish');
+      let pak = client.pak('upload_finish');
       pak.writeInt(id);
       pak.send(next);
     },

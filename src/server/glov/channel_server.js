@@ -768,7 +768,7 @@ class ChannelServer {
     }
     this.server_time += dt;
     if (stall || this.server_time > this.last_server_time_send + this.server_time_send_interval) {
-      let pak = this.ws_server.wsPak('server_time');
+      let pak = this.ws_server.pak('server_time');
       pak.writeInt(this.server_time);
       this.ws_server.broadcastPacket(pak);
       this.last_server_time_send = this.server_time;

@@ -76,7 +76,7 @@ WSClient.prototype.onClose = function () {
 
 WSClient.prototype.send = wscommon.sendMessage;
 
-WSClient.prototype.wsPak = function (msg, ref_pak) {
+WSClient.prototype.pak = function (msg, ref_pak) {
   return wsPak(msg, ref_pak, this);
 };
 
@@ -227,11 +227,11 @@ WSServer.prototype.close = function () {
   }
 };
 
-// Must be a ready-to-send packet created with .wsPak, not just the payload
+// Must be a ready-to-send packet created with .pak, not just the payload
 WSServer.prototype.broadcastPacket = function (pak) {
   let ws_server = this;
   let num_sent = 0;
-  assert(isPacket(pak)); // And should have been created with wsPak()
+  assert(isPacket(pak)); // And should have been created with pak()
   ackWrapPakFinish(pak);
   for (let client_id in ws_server.clients) {
     if (ws_server.clients[client_id]) {
@@ -262,7 +262,7 @@ export function isClient(obj) {
 
 WSServer.prototype.isClient = isClient;
 
-WSServer.prototype.wsPak = wsPak;
+WSServer.prototype.pak = wsPak;
 
 export function create(...args) {
   let ret = new WSServer();

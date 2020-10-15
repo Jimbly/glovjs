@@ -98,7 +98,7 @@ ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predic
     dot_prop.set(this.data, key, value);
   }
   let q = value && value.q || undefined;
-  let pak = this.subs.client.wsPak('set_channel_data');
+  let pak = this.subs.client.pak('set_channel_data');
   pak.writeAnsiString(this.channel_id);
   pak.writeBool(q);
   pak.writeAnsiString(key);
@@ -117,7 +117,7 @@ ClientChannelWorker.prototype.onMsg = function (msg, cb) {
 };
 
 ClientChannelWorker.prototype.pak = function (msg) {
-  let pak = this.subs.client.wsPak('channel_msg');
+  let pak = this.subs.client.pak('channel_msg');
   pak.writeAnsiString(this.channel_id);
   pak.writeAnsiString(msg);
   // pak.writeInt(flags);

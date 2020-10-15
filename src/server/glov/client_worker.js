@@ -59,7 +59,7 @@ class ClientWorker extends ChannelWorker {
     }
 
     let is_packet = isPacket(data);
-    let pak = this.client.wsPak('channel_msg', is_packet ? data : null);
+    let pak = this.client.pak('channel_msg', is_packet ? data : null);
     pak.writeAnsiString(source.channel_id);
     pak.writeAnsiString(msg);
     pak.writeBool(is_packet);
