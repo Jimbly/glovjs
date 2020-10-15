@@ -97,6 +97,7 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
   if (!cmd_data) {
     this.was_not_found = true;
     resp_func(`Unknown command: "${m[1]}"`);
+    this.was_not_found = false;
     return false;
   }
   cmd_data.fn.call(self, m[2] || '', resp_func);
