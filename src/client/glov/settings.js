@@ -16,6 +16,16 @@ export function set(key, value) {
   }
 }
 
+let modified = {};
+export function runTimeDefault(key, new_default) {
+  // Set a default value that cannot be determined at load time
+  // Only set if this has never been modified
+  if (!modified[key]) {
+    // Does *not* call cmd_parse.set - will not write to storage, still at "default" setting
+    exports[key] = new_default;
+  }
+}
+
 export function register(defs) {
   Object.keys(defs).forEach(function (key) {
     let def = defs[key];
@@ -25,7 +35,10 @@ export function register(defs) {
       label: def.label || titleCase(key.replace(/_/g, ' ')),
       range: def.range,
       get: () => exports[key],
-      set: (v) => (exports[key] = v),
+      set: (v) => {
+        modified[key] = true;
+        exports[key] = v;
+      },
       store: true,
       ver: def.ver,
       help: def.help,
