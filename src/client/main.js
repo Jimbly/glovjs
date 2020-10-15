@@ -5,6 +5,7 @@ glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring any
 const engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
+const { floor } = Math;
 const net = require('./glov/net.js');
 const particles = require('./glov/particles.js');
 const settings = require('./glov/settings.js');
@@ -15,6 +16,7 @@ const ui = require('./glov/ui.js');
 const ui_test = require('./glov/ui_test.js');
 const particle_data = require('./particle_data.js');
 const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('./glov/sound.js');
+const { test3D } = require('./test_3d.js');
 const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
 
 window.Z = window.Z || {};
@@ -50,6 +52,8 @@ function flagSet(key, value) {
 }
 
 const color_white = vec4(1, 1, 1, 1);
+const colors_active = ui.makeColorSet(vec4(0.5, 1, 0.5, 1));
+const colors_inactive = ui.makeColorSet(vec4(0.5, 0.5, 0.5, 1));
 
 function perfTestSprites() {
   if (!sprites.test) {
@@ -69,7 +73,7 @@ function perfTestSprites() {
   ][mode];
   if (mode === 3 || mode === 4) {
     for (let ii = 0; ii < count;) {
-      let subc = Math.floor(500 + Math.random() * 100);
+      let subc = floor(500 + Math.random() * 100);
       let idx = mode <= 1 ? 0 : Math.round(Math.random());
       let sprite = sprites.test[idx];
       let z = Math.random();
@@ -133,6 +137,7 @@ export function main() {
   })) {
     return;
   }
+  font = engine.font;
 
   // const font = engine.font;
 
@@ -187,6 +192,7 @@ export function main() {
   let last_particles = 0;
 
   function test(dt) {
+    gl.clearColor(0, 0.72, 1, 1);
     if (!test.color_sprite) {
       test.color_sprite = v4clone(color_white);
       test.character = {
@@ -202,6 +208,10 @@ export function main() {
     }
     if (flagGet('font_test')) {
       ui_test.runFontTest(105, 85);
+    }
+
+    if (flagGet('3d_test')) {
+      test3D();
     }
 
     test.character.dx = 0;
@@ -237,10 +247,10 @@ export function main() {
       test.color_sprite[3] = 1;
     }
 
-    sprites.game_bg.draw({
-      x: 0, y: 0, z: Z.BACKGROUND,
-      color: [0, 0.72, 1, 1]
-    });
+    // sprites.game_bg.draw({
+    //   x: 0, y: 0, z: Z.BACKGROUND,
+    //   color: [0, 0.72, 1, 1]
+    // });
     sprites.test_tint.drawDualTint({
       x: test.character.x,
       y: test.character.y,
@@ -271,6 +281,22 @@ export function main() {
     let x = ui.button_height;
     let button_spacing = ui.button_height + 2;
     let y = game_height - 10 - button_spacing * 6;
+    let mini_button_w = floor((ui.button_width - 2) / 2);
+
+    function miniButton(text, tooltip, active) {
+      let ret = ui.buttonText({
+        x, y, text, tooltip,
+        w: mini_button_w,
+        colors: active ? colors_active : colors_inactive,
+      });
+      x += 2 + mini_button_w;
+      if (x >= ui.button_width) {
+        x = ui.button_height;
+        y += button_spacing;
+      }
+      return ret;
+    }
+
     if (ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
       tooltip: 'Toggles pixely or regular mode (requires reload)' })
     ) {
@@ -289,7 +315,19 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `Render Scale (All): ${settings.render_scale_all}`,
+    if (ui.buttonText({ x, y, text: `RenderScale3D: ${settings.render_scale}`,
+      tooltip: 'Changes render_scale',
+      disabled: !flagGet('3d_test') || engine.render_width })
+    ) {
+      if (settings.render_scale === 1) {
+        settings.set('render_scale', 0.25);
+      } else {
+        settings.set('render_scale', 1);
+      }
+    }
+    y += button_spacing;
+
+    if (ui.buttonText({ x, y, text: `RenderScaleAll: ${settings.render_scale_all}`,
       tooltip: 'Changes render_scale_all' })
     ) {
       if (settings.render_scale_all === 1) {
@@ -300,9 +338,28 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `Music: ${flagGet('music') ? 'ON' : 'OFF'}`,
-      tooltip: 'Toggles playing a looping background music track' })
-    ) {
+    font.drawSizedAligned(null, x, y, Z.UI, ui.font_height, font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
+    y += ui.font_height + 1;
+
+    if (miniButton('3D', 'Toggles visibility of a 3D test', flagGet('3d_test'))) {
+      flagToggle('3d_test');
+      transition.queue(Z.TRANSITION_FINAL, transition.fade(500));
+    }
+
+    if (miniButton('Font', 'Toggles visibility of general Font tests', flagGet('font_test'))) {
+      flagToggle('font_test');
+      transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
+    }
+
+    if (miniButton('UI', 'Toggles visibility of general UI tests', flagGet('ui_test'))) {
+      flagToggle('ui_test');
+    }
+
+    if (miniButton('FX', 'Toggles particles', flagGet('particles', true))) {
+      flagToggle('particles');
+    }
+
+    if (miniButton('Music', 'Toggles playing a looping background music track', flagGet('music'))) {
       flagToggle('music');
       if (flagGet('music')) {
         soundPlayMusic(music_file, 1, FADE_IN);
@@ -312,26 +369,6 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `Font Test: ${flagGet('font_test') ? 'ON' : 'OFF'}`,
-      tooltip: 'Toggles visibility of general Font tests' })
-    ) {
-      flagToggle('font_test');
-      transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
-    }
-    y += button_spacing;
-
-    if (ui.buttonText({ x, y, text: `UI Test: ${flagGet('ui_test') ? 'ON' : 'OFF'}`,
-      tooltip: 'Toggles visibility of general UI tests' })
-    ) {
-      flagToggle('ui_test');
-    }
-    y += button_spacing;
-
-    if (ui.buttonText({ x, y, text: `Particles: ${flagGet('particles', true) ? 'ON' : 'OFF'}`,
-      tooltip: 'Toggles particles' })
-    ) {
-      flagToggle('particles');
-    }
     if (flagGet('particles')) {
       if (engine.getFrameTimestamp() - last_particles > 1000) {
         last_particles = engine.getFrameTimestamp();
