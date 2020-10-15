@@ -675,8 +675,14 @@ function tick(timestamp) {
   checkResize();
   width = canvas.width;
   height = canvas.height;
-  width_3d = round(width * settings.render_scale);
-  height_3d = round(height * settings.render_scale);
+  if (render_width) {
+    // render_scale not supported with render_width, doesn't make much sense
+    width_3d = width;
+    height_3d = height;
+  } else {
+    width_3d = round(width * settings.render_scale);
+    height_3d = round(height * settings.render_scale);
+  }
 
   if (any_3d) {
     // setting the fov values for the frame even if we don't do 3D this frame, because something
