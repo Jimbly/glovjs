@@ -425,19 +425,13 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
     let c = s < len ? text.charCodeAt(s) : 0;
     let newx = x;
     let char_w;
-    if (c === 9) { // '\t') {
-      let tabsize = xsc * this.font_info.font_size * 4;
-      newx = (floor(x / tabsize) + 1) * tabsize;
-      char_w = tabsize;
-    } else {
-      let char_info = this.infoFromChar(c);
-      if (!char_info) {
-        char_info = this.infoFromChar(10);
-      }
-      if (char_info) {
-        char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
-        newx = x + char_w;
-      }
+    let char_info = this.infoFromChar(c);
+    if (!char_info) {
+      char_info = this.infoFromChar(10);
+    }
+    if (char_info) {
+      char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
+      newx = x + char_w;
     }
     if (newx >= w && hard_wrap) {
       // flush the word so far!
@@ -451,11 +445,11 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
     } else {
       x = newx;
     }
-    if (!(c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/)) {
+    if (!(c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9)) {
       s++;
       c = s < len ? text.charCodeAt(s) : 0;
     }
-    if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/) {
+    if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9) {
       hard_wrap = false;
       // draw word until s
       if (x > w) {
@@ -481,11 +475,14 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
       if (c === 10 /*'\n'*/) {
         x = indent;
         linenum++;
+      } else if (c === 9 /*'\t'*/) {
+        let tabsize = xsc * this.font_info.font_size * 2;
+        x = (floor(x / tabsize) + 1) * tabsize;
       } else {
         x += space_size;
       }
       word_x0 = x;
-      if (c === 32 /*' '*/ || c === 10 /*'\n'*/) {
+      if (c === 32 /*' '*/ || c === 10 /*'\n'*/ || c === 9) {
         s++; // advance past space
       }
     }
