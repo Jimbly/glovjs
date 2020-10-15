@@ -795,7 +795,12 @@ export function startup(params) {
   if (force_webgl1) {
     context_names.splice(0, 1);
   }
-  let context_opts = [{ antialias, powerPreference }, { powerPreference }, {}];
+  let context_opts = [
+    { antialias, powerPreference, alpha: false },
+    { powerPreference, alpha: false },
+    { alpha: false },
+    {},
+  ];
   let good = false;
   webgl2 = false;
   for (let i = 0; !good && i < context_names.length; i += 1) {
