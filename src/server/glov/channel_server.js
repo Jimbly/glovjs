@@ -542,9 +542,9 @@ class ChannelServer {
     for (let client_id in ws_server.clients) {
       let client = ws_server.clients[client_id];
       if (client) {
-        if (data.admin) {
+        if (data.sysadmin) { // Send to system admins only
           let { client_channel } = client;
-          if (!client_channel || !client_channel.ids || !client_channel.ids.admin) {
+          if (!client_channel || !client_channel.ids || !client_channel.ids.sysadmin) {
             continue;
           }
         }
@@ -957,7 +957,7 @@ class ChannelServer {
     let dump_file = log.dumpJSON('crash', crash_dump, 'json');
     console.error(`  Saving dump to ${dump_file}.`);
     this.csworker.sendChannelMessage('channel_server', 'chat_broadcast', {
-      admin: true,
+      sysadmin: true,
       src: 'ADMIN',
       msg: 'Server error occurred - check server logs'
     });

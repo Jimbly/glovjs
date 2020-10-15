@@ -222,8 +222,8 @@ export class ChannelWorker {
     if (this.maintain_client_list && is_client) {
       if (this.getRoles) {
         let roles = {};
-        if (src.admin) {
-          roles.admin = 1;
+        if (src.sysadmin) {
+          roles.sysadmin = 1;
         }
         this.getRoles(src, roles);
         ids.roles = roles;

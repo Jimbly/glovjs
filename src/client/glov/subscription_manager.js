@@ -416,7 +416,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     this.was_logged_in = true;
     let user_channel = this.getMyUserChannel(); // auto-subscribe to it
     user_channel.onceSubscribe(() => {
-      if (!this.did_master_subscribe && user_channel.getChannelData('public.permissions.admin')) {
+      if (!this.did_master_subscribe && user_channel.getChannelData('public.permissions.sysadmin')) {
         // For cmd_parse access
         this.did_master_subscribe = true;
         this.subscribe('master.master');

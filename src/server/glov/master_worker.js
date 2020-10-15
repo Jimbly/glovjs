@@ -255,8 +255,8 @@ class MasterWorker extends ChannelWorker {
     });
   }
   handleNewClient(src) { // eslint-disable-line class-methods-use-this
-    // Only admin users allowed
-    if (!src.admin) {
+    // Only system admin users allowed
+    if (!src.sysadmin) {
       return 'ERR_ACCESS_DENIED';
     }
     return null;
@@ -384,7 +384,7 @@ class MasterWorker extends ChannelWorker {
         `${totals.inflight_set} inflight sets, ${totals.set} new sets, ${totals.get} new gets`;
     }
     this.sendChannelMessage('channel_server', 'chat_broadcast', {
-      admin: 1,
+      sysadmin: 1,
       src: 'system',
       msg
     });

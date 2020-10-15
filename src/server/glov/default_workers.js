@@ -129,7 +129,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (!this.getChannelData('public.permissions.admin')) {
+    if (!this.getChannelData('public.permissions.sysadmin')) {
       return void resp_func('ERR_ACCESS_DENIED');
     }
     let m = param.match(/^([^ ]+) ([^ ]+) (.+)$/);
@@ -198,7 +198,7 @@ export class DefaultUserWorker extends ChannelWorker {
   }
   handleLogin(src, data, resp_func) {
     if (this.channel_server.restarting) {
-      if (!this.getChannelData('public.permissions.admin')) {
+      if (!this.getChannelData('public.permissions.sysadmin')) {
         // Maybe black-hole like other messages instead?
         return resp_func('ERR_RESTARTING');
       }

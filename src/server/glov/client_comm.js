@@ -34,7 +34,7 @@ let channel_server;
 
 
 function restartFilter(client, msg, data) {
-  if (client && client.client_channel && client.client_channel.ids && client.client_channel.ids.admin) {
+  if (client && client.client_channel && client.client_channel.ids && client.client_channel.ids.sysadmin) {
     return true;
   }
   if (ALLOWED_DURING_RESTART[msg]) {
@@ -108,10 +108,11 @@ function onSetChannelData(client, pak, resp_func) {
 function applyCustomIds(ids, user_data_public) {
   // FRVR - maybe generalize this
   let perm = user_data_public.permissions;
-  delete ids.admin;
+  delete ids.sysadmin;
+  delete ids.elevated;
   if (perm) {
-    if (perm.admin) {
-      ids.admin = 1;
+    if (perm.sysadmin) {
+      ids.sysadmin = 1;
     }
   }
 }
@@ -201,6 +202,8 @@ const invalid_names = {
   tostring: 1,
   valueof: 1,
   admin: 1,
+  sysadmin: 1,
+  sysop: 1,
   gm: 1,
   mod: 1,
   moderator: 1,
@@ -363,7 +366,7 @@ function onLogOut(client, data, resp_func) {
   onUnSubscribe(client, `user.${user_id}`);
   delete client_channel.ids_base.user_id;
   delete client_channel.ids_base.display_name;
-  delete client_channel.ids_base.admin;
+  delete client_channel.ids_base.sysadmin;
   client_channel.log_user_id = null;
 
   // Tell channels we have a new user id/display name
