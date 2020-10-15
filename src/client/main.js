@@ -289,13 +289,13 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `Render Scale: ${settings.render_scale}`,
-      tooltip: 'Changes render_scale' })
+    if (ui.buttonText({ x, y, text: `Render Scale (All): ${settings.render_scale_all}`,
+      tooltip: 'Changes render_scale_all' })
     ) {
-      if (settings.render_scale === 1) {
-        settings.set('render_scale', 0.5);
+      if (settings.render_scale_all === 1) {
+        settings.set('render_scale_all', 0.5);
       } else {
-        settings.set('render_scale', 1);
+        settings.set('render_scale_all', 1);
       }
     }
     y += button_spacing;
