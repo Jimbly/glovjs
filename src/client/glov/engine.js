@@ -12,8 +12,10 @@ const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
 const effects = require('./effects.js');
+const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
 const { errorReportDisable, errorReportSetPath, glovErrorReport } = require('./error_report.js');
 const glov_font = require('./font.js');
+const { framebufferEnd, framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const input = require('./input.js');
 const local_storage = require('./local_storage.js');
@@ -313,11 +315,19 @@ export function postTick(opts) {
   post_tick.push(opts);
 }
 
+let reset_fbos = false;
+export function resetFBOs() {
+  reset_fbos = true;
+}
 let temporary_textures = {};
 
 function resetEffects() {
   for (let key in temporary_textures) {
     let temp = temporary_textures[key];
+    if (reset_fbos) {
+      // Release all textures
+      temp.idx = 0;
+    }
     // Release unused textures
     while (temp.list.length > temp.idx) {
       temp.list.pop().destroy();
@@ -328,6 +338,16 @@ function resetEffects() {
       temp.idx = 0;
     }
   }
+  reset_fbos = false;
+  effectsReset();
+  framebufferEndOfFrame();
+}
+
+export function renderWidth() {
+  return render_width || width;
+}
+export function renderHeight() {
+  return render_height || height;
 }
 
 const SAFARI_FULLSCREEN_ASPECT = (function () {
@@ -445,39 +465,82 @@ export function setViewport(xywh) {
 }
 
 let last_temp_idx = 0;
-export function getTemporaryTexture(w, h) {
-  let key = w ? `${w}_${h}` : 'screen';
+function getTemporaryTexture(w, h, possibly_fbo, need_depth) {
+  let key = `${w}_${h}`;
+  let is_fbo = possibly_fbo && settings.use_fbos;
+  if (is_fbo) {
+    key += '_fbo';
+    if (need_depth) {
+      key += '_d';
+    }
+  }
   let temp = temporary_textures[key];
   if (!temp) {
     temp = temporary_textures[key] = { list: [], idx: 0 };
   }
   if (temp.idx >= temp.list.length) {
     let tex = textures.createForCapture(`temp_${key}_${++last_temp_idx}`);
+    if (is_fbo) {
+      tex.allocFBO(w, h, need_depth);
+    }
     temp.list.push(tex);
   }
   let tex = temp.list[temp.idx++];
   return tex;
 }
 
-export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
-  if (!w && render_width) {
-    w = render_width;
-    h = render_height;
+export function temporaryTextureClaim(tex) {
+  for (let key in temporary_textures) {
+    let temp = temporary_textures[key];
+    let idx = temp.list.indexOf(tex);
+    if (idx !== -1) {
+      temp.list.splice(idx, 1);
+      if (temp.idx > idx) {
+        --temp.idx;
+      }
+      return;
+    }
+  }
+  assert(false);
+}
+
+let is_pixely;
+// Call tex.captureEnd when done
+export function captureFramebufferStart(tex, w, h, do_filter_linear, do_wrap, need_depth) {
+  assert.equal(viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
+  assert.equal(viewport[1], 0);
+  if (!w) {
+    if (render_width) {
+      w = render_width;
+      h = render_height;
+    } else {
+      w = width;
+      h = height;
+    }
   }
   if (!tex) {
-    tex = getTemporaryTexture(w, h);
+    tex = getTemporaryTexture(w, h, true, need_depth);
   }
-  if (w) {
-    tex.copyTexImage(viewport[0], viewport[1], w, h);
+  let filter;
+  if (do_filter_linear === undefined) {
+    filter = is_pixely ? gl.NEAREST : gl.LINEAR;
   } else {
-    tex.copyTexImage(0, 0, width, height);
+    filter = do_filter_linear ? gl.LINEAR : gl.NEAREST;
   }
   tex.setSamplerState({
-    filter_min: do_filter_linear ? gl.LINEAR : gl.NEAREST,
-    filter_mag: do_filter_linear ? gl.LINEAR : gl.NEAREST,
+    filter_min: filter,
+    filter_mag: filter,
     wrap_s: do_wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
     wrap_t: do_wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
   });
+  tex.captureStart(w, h);
+  return tex;
+}
+
+// donotheckin: remove this function
+export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
+  tex = captureFramebufferStart(tex, w, h, do_filter_linear, do_wrap, false);
+  tex.captureEnd();
   return tex;
 }
 
@@ -526,48 +589,41 @@ export function setZRange(znear, zfar) {
   }
 }
 
+let render_scale_3d_this_frame;
 export function start3DRendering() {
   had_3d_this_frame = true;
+  if (render_scale_3d_this_frame) {
+    effectsPassAdd();
+  }
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
   gl.depthMask(true);
-  if (settings.render_scale_clear) {
-    // full clear, before setting viewport
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  }
+  framebufferStart({
+    width: width_3d,
+    height: height_3d,
+    final: effectsIsFinal(),
+    need_depth: true,
+    clear: true,
+    do_filter_linear: render_scale_3d_this_frame ? settings.render_scale_mode === 0 : undefined,
+  });
 
   setupProjection(fov_y, width, height, ZNEAR, ZFAR);
 
-  if (width_3d !== width) { // settings.render_scale
-    v4set(viewport, 0, 0, width_3d, height_3d);
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
-  }
-  gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  if (!settings.render_scale_clear) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  }
   gl.enable(gl.CULL_FACE);
 }
 
 function renderScaleFinish() {
-  if (width_3d !== width) {
-    if (defines.NOCOPY) {
-      gl.disable(gl.SCISSOR_TEST);
-      v4set(viewport, 0, 0, width, height);
-      gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  if (defines.NOCOPY) {
+    // donotcheckin
+    gl.disable(gl.SCISSOR_TEST);
+    v4set(viewport, 0, 0, width, height);
+    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  } else {
+    if (settings.render_scale_mode === 2) {
+      effects.applyPixelyExpand({ final_viewport: [0, 0, width, height], final: effectsIsFinal() });
     } else {
-      let filter = settings.render_scale_mode === 0;
-      let source = captureFramebuffer(null, width_3d, height_3d, filter, false);
-      gl.disable(gl.SCISSOR_TEST);
-      v4set(viewport, 0, 0, width, height);
-      gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-      if (settings.render_scale_mode === 2) {
-        effects.applyPixelyExpand({ source, final_viewport: viewport });
-      } else {
-        effects.applyCopy({ source });
-      }
+      effects.applyCopy({});
     }
   }
 }
@@ -657,6 +713,8 @@ function tick(timestamp) {
     }
   }
 
+  effectsTopOfFrame();
+
   if (document.hidden || document.webkitHidden || no_render) {
     resetEffects();
     input.tickInputInactive();
@@ -675,13 +733,18 @@ function tick(timestamp) {
   checkResize();
   width = canvas.width;
   height = canvas.height;
+  render_scale_3d_this_frame = false;
   if (render_width) {
-    // render_scale not supported with render_width, doesn't make much sense
-    width_3d = width;
-    height_3d = height;
+    // render_scale not supported with render_width, doesn't make much sense, just use render_width
+    width_3d = render_width;
+    height_3d = render_height;
+    effectsPassAdd();
   } else {
     width_3d = round(width * settings.render_scale);
     height_3d = round(height * settings.render_scale);
+    if (width_3d !== width) {
+      render_scale_3d_this_frame = true;
+    }
   }
 
   if (any_3d) {
@@ -700,6 +763,7 @@ function tick(timestamp) {
   textures.bind(0, textures.textures.error);
 
   camera2d.tickCamera2D();
+  glov_transition.render(dt);
   camera2d.setAspectFixed(game_width, game_height);
 
   soundTick(dt);
@@ -742,18 +806,34 @@ function tick(timestamp) {
   }
 
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
-  glov_transition.render(dt);
 
   if (had_3d_this_frame) {
-    if (width !== width_3d) {
+    if (render_scale_3d_this_frame) {
+      effectsPassConsume();
       renderScaleFinish();
     }
   } else {
     // delayed clear (and general GL init) until after app_state, app might change clear color
-    gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     // TODO: for do_viewport_post_process, we need to enable gl.scissor to avoid clearing the whole screen!
     // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (render_width) {
+      assert(!effectsIsFinal()); // donotcheckin
+      framebufferStart({
+        width: render_width,
+        height: render_height,
+        clear: true,
+        final: effectsIsFinal(),
+        need_depth: false,
+      });
+    } else {
+      framebufferStart({
+        width,
+        height,
+        clear: true,
+        final: effectsIsFinal(),
+        need_depth: false,
+      });
+    }
   }
 
   startSpriteRendering();
@@ -762,22 +842,24 @@ function tick(timestamp) {
   glov_ui.endFrame();
 
   if (render_width) {
-    let source = captureFramebuffer();
+    effectsPassConsume();
     let clear_color = [0, 0, 0, 1];
     let final_viewport = [
       camera2d.render_offset_x, camera2d.render_offset_y_bottom,
       camera2d.render_viewport_w, camera2d.render_viewport_h
     ];
     if (do_viewport_postprocess) {
+      let source = framebufferEnd();
       effects.applyPixelyExpand({ source, final_viewport, clear_color });
     } else {
-      if (clear_color) {
+      let source = framebufferEnd();
+      gl.disable(gl.SCISSOR_TEST);
+      if (clear_color) { // donotcheckin: need this, more internally?
         gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
         gl.clear(gl.COLOR_BUFFER_BIT);
       }
       setViewport(final_viewport);
-      // gl.scissor(0, 0, width, height);
-      effects.applyCopy({ source });
+      effects.applyCopy({ source, use_viewport: true });
     }
   }
 
@@ -822,7 +904,7 @@ export function startup(params) {
   window.addEventListener('resize', checkResize, false);
   checkResize();
 
-  let is_pixely = params.pixely && params.pixely !== 'off';
+  is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl2', 'webgl', 'experimental-webgl'];

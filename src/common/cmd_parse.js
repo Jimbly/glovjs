@@ -177,6 +177,9 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     if (store) {
       this.storage.setJSON(store_key, store_value);
     }
+    if (param.on_change) {
+      param.on_change();
+    }
     if (param.get) {
       return value();
     } else {

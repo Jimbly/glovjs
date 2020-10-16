@@ -217,7 +217,7 @@ export function runFontTest(x, y) {
     glow_xoffs: 3.25, glow_yoffs: 3.25, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O');
+  font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O1Il');
   y += font_size;
 
   const font_style_both = glov_font.style(null, {

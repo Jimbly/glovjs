@@ -210,10 +210,6 @@ export function main() {
       ui_test.runFontTest(105, 85);
     }
 
-    if (flagGet('3d_test')) {
-      test3D();
-    }
-
     test.character.dx = 0;
     test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
     test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
@@ -315,9 +311,10 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `RenderScale3D: ${settings.render_scale}`,
+    let rs3d_disabled = !flagGet('3d_test') || engine.render_width;
+    if (ui.buttonText({ x, y, text: `RenderScale3D: ${rs3d_disabled ? '' : settings.render_scale}`,
       tooltip: 'Changes render_scale',
-      disabled: !flagGet('3d_test') || engine.render_width })
+      disabled: rs3d_disabled })
     ) {
       if (settings.render_scale === 1) {
         settings.set('render_scale', 0.25);
@@ -341,9 +338,10 @@ export function main() {
     font.drawSizedAligned(null, x, y, Z.UI, ui.font_height, font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
     y += ui.font_height + 1;
 
+    let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
     if (miniButton('3D', 'Toggles visibility of a 3D test', flagGet('3d_test'))) {
       flagToggle('3d_test');
-      transition.queue(Z.TRANSITION_FINAL, transition.fade(500));
+      transition.queue(Z.TRANSITION_FINAL, transition.pixelate(2000)); // donotcheckin transition.fade(500));
     }
 
     if (miniButton('Font', 'Toggles visibility of general Font tests', flagGet('font_test'))) {
@@ -382,6 +380,11 @@ export function main() {
     if (flagGet('perf_test')) {
       perfTestSprites();
     }
+
+    if (do_3d) {
+      test3D();
+    }
+
 
     // Debuggin full canvas stretching
     // const camera2d = require('./glov/camera2d.js');

@@ -3,9 +3,13 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const assert = require('assert');
 const engine = require('./engine.js');
+const { renderWidth, renderHeight } = engine;
+const { framebufferEnd, framebufferStart } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const shaders = require('./shaders.js');
+const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 const { vec2, vec3, vec4, v4set } = require('./vmath.js');
 
@@ -122,6 +126,37 @@ function startup() {
     copy_uv_scale,
     orig_pixel_size: vec4(),
   };
+}
+
+let num_passes = 0;
+export function effectsPassAdd() {
+  ++num_passes;
+}
+export function effectsPassConsume() {
+  --num_passes;
+}
+
+function doEffect(fn) {
+  effectsPassConsume();
+  fn();
+}
+
+export function effectsQueue(z, fn) {
+  effectsPassAdd();
+  sprites.queuefn(z, doEffect.bind(null, fn));
+}
+
+export function effectsTopOfFrame() {
+  // In case of crash on previous frame
+  num_passes = 0;
+}
+
+export function effectsReset() {
+  assert.equal(num_passes, 0); // otherwise probably still have a framebuffer bound
+}
+
+export function effectsIsFinal() {
+  return !num_passes;
 }
 
 export function grayScaleMatrix(dst) {
@@ -252,21 +287,36 @@ export function contrastMatrix(dst, contrastScale) {
   dst[9] = dst[10] = dst[11] = 0.5 * (1 - contrastScale);
 }
 
-// effect: { shader, params, texs }
+// effect: { shader, params, texs, do_filter_linear, do_wrap, final }
 function applyEffect(effect, view_w, view_h) {
-  let viewport = engine.viewport;
-  let target_w = viewport[2];
-  let target_h = viewport[3];
-  view_w = view_w || target_w;
-  view_h = view_h || target_h;
+  if (effect.use_viewport) {
+    assert(effect.final);
+    let viewport = engine.viewport;
+    let target_w = viewport[2];
+    let target_h = viewport[3];
+    view_w = view_w || target_w;
+    view_h = view_h || target_h;
 
-  // Set values for parameters used by all effects
-  clip_space[0] = 2.0 * view_w / target_w;
-  clip_space[1] = 2.0 * view_h / target_h;
-  // clip_space[2] = -1.0;
-  // clip_space[3] = -1.0;
-  // copy_uv_scale[0] = target_w / effect.coord_source.width;
-  // copy_uv_scale[1] = target_h / effect.coord_source.height;
+    // Set values for parameters used by all effects
+    clip_space[0] = 2.0 * view_w / target_w;
+    clip_space[1] = 2.0 * view_h / target_h;
+    // clip_space[2] = -1.0;
+    // clip_space[3] = -1.0;
+    // copy_uv_scale[0] = target_w / effect.coord_source.width;
+    // copy_uv_scale[1] = target_h / effect.coord_source.height;
+  } else {
+    clip_space[0] = 2.0;
+    clip_space[1] = 2.0;
+    view_w = view_w || renderWidth();
+    view_h = view_h || renderHeight();
+
+    framebufferStart({
+      width: view_w, height: view_h,
+      final: effect.final, // donotcheckin: should default to effectIsFinal if undefined?
+      do_filter_linear: effect.do_filter_linear,
+      do_wrap: effect.do_wrap,
+    });
+  }
 
   shaders.bind(getShader('vp_copy'), getShader(effect.shader), effect.params);
   textures.bindArray(effect.texs);
@@ -340,10 +390,16 @@ export function applyCopy(params) {
   if (!inited) {
     startup();
   }
+  let source = params.source;
+  if (!source) {
+    source = framebufferEnd();
+  }
   applyEffect({
     shader: params.shader || 'copy',
     params: shader_params_default,
-    texs: [params.source],
+    texs: [source],
+    final: effectsIsFinal(),
+    use_viewport: params.use_viewport,
   });
 }
 
@@ -352,6 +408,9 @@ export function applyPixelyExpand(params) {
     startup();
   }
   let source = params.source;
+  if (!source) {
+    source = framebufferEnd();
+  }
   source.setSamplerState({
     filter_min: gl.LINEAR,
     filter_mag: gl.LINEAR,
@@ -370,8 +429,9 @@ export function applyPixelyExpand(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [source],
+    do_filter_linear: true,
   }, resx, resy);
-  let hblur = engine.captureFramebuffer(null, resx, resy, true, false);
+  let hblur = framebufferEnd();
 
   // do seperable gaussian blur for scanlines (using horizontal blur from above)
   sampleRadius = (params.vblur || 0.75) / resy;
@@ -382,14 +442,16 @@ export function applyPixelyExpand(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [hblur],
+    do_filter_linear: true,
   }, resx, resy);
-  let vblur = engine.captureFramebuffer(null, resx, resy, true, false);
+  let vblur = framebufferEnd();
 
   // combine at full res
   v4set(shader_params_pixely_expand.orig_pixel_size,
     source.width, source.height, 1/source.width, 1/source.height);
 
   engine.setViewport(params.final_viewport);
+  gl.disable(gl.SCISSOR_TEST); // donotcheckin: should be part of framebufferStart, same with clearing?
   if (params.clear_color) {
     gl.clearColor(params.clear_color[0], params.clear_color[1], params.clear_color[2], params.clear_color[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -399,6 +461,8 @@ export function applyPixelyExpand(params) {
     shader: 'pixely_expand',
     params: shader_params_pixely_expand,
     texs: [source, hblur, vblur],
+    final: effectsIsFinal(),
+    use_viewport: true,
   });
 }
 
@@ -406,7 +470,7 @@ export function applyGaussianBlur(params) {
   if (!inited) {
     startup();
   }
-  let source = params.source;
+  let source = framebufferEnd();
   source.setSamplerState({
     filter_min: gl.LINEAR,
     filter_mag: gl.LINEAR,
@@ -430,8 +494,9 @@ export function applyGaussianBlur(params) {
       shader: params.shader_copy || 'copy',
       params: shader_params_default,
       texs: [inputTexture0],
+      do_filter_linear: true,
     }, res, res);
-    inputTexture0 = engine.captureFramebuffer(null, res, res, true, false);
+    inputTexture0 = framebufferEnd();
     res /= 2;
   }
 
@@ -444,8 +509,9 @@ export function applyGaussianBlur(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [inputTexture0],
+    do_filter_linear: true,
   }, res, res);
-  let blur = engine.captureFramebuffer(null, res, res, true, false);
+  let blur = framebufferEnd();
 
   shader_params_gaussian_blur.sampleRadius[0] = 0;
   shader_params_gaussian_blur.sampleRadius[1] = sampleRadius;
@@ -454,6 +520,8 @@ export function applyGaussianBlur(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [blur],
+    do_filter_linear: false, // use `source` filter instead?
+    final: effectsIsFinal()
   });
 
   return true;
@@ -463,7 +531,7 @@ export function applyColorMatrix(params) {
   if (!inited) {
     startup();
   }
-  let source = params.source;
+  let source = framebufferEnd();
   source.setSamplerState({
     filter_min: gl.LINEAR,
     filter_mag: gl.LINEAR,
@@ -491,6 +559,8 @@ export function applyColorMatrix(params) {
     shader: 'color_matrix',
     params: shader_params_color_matrix,
     texs: [source],
+    do_filter_linear: false, // use `source` filter instead?
+    final: effectsIsFinal(),
   });
 
   return true;
@@ -576,7 +646,7 @@ export function clearAlpha() {
     gl.disable(gl.DEPTH_TEST);
   }
   gl.colorMask(false, false, false, true);
-  applyCopy({ source: textures.textures.white });
+  applyCopy({ source: textures.textures.white }); // donotcheckin
   gl.colorMask(true, true, true, true);
   if (old_dt) {
     gl.enable(gl.DEPTH_TEST);

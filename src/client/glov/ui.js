@@ -20,6 +20,7 @@ const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_edit_box = require('./edit_box.js');
 const effects = require('./effects.js');
+const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
@@ -75,25 +76,17 @@ export function addHook(draw, click) {
   });
 }
 
-function doBlurEffect(factor, params) {
-  factor = lerp(factor, params.blur[0], params.blur[1]);
-  if (factor) {
-    effects.applyGaussianBlur({
-      source: glov_engine.captureFramebuffer(),
-      blur: factor,
-      // min_size: 128,
-    });
-  }
+function doBlurEffect(factor) {
+  effects.applyGaussianBlur({
+    // source: glov_engine.captureFramebuffer(),
+    blur: factor,
+    // min_size: 128,
+  });
 }
 
 let desaturate_xform = mat43();
 let desaturate_tmp = mat43();
-function doDesaturateEffect(factor, params) {
-  let saturation = lerp(factor, params.saturation[0], params.saturation[1]);
-  let brightness = lerp(factor, params.brightness[0], params.brightness[1]);
-  if (saturation === 1 && brightness === 1) {
-    return;
-  }
+function doDesaturateEffect(saturation, brightness) {
   m43identity(desaturate_xform);
 
   effects.saturationMatrix(desaturate_tmp, saturation);
@@ -132,7 +125,7 @@ function doDesaturateEffect(factor, params) {
   // }
   effects.applyColorMatrix({
     colorMatrix: desaturate_xform,
-    source: glov_engine.captureFramebuffer(),
+    // source: glov_engine.captureFramebuffer(),
   });
 }
 
@@ -1092,8 +1085,16 @@ export function tickUI(dt) {
     // Effects during modal dialogs
     let factor = min(menu_up_time / 500, 1);
     if (glov_engine.postprocessing && !glov_engine.defines.NOPP) {
-      glov_sprites.queuefn(params.z - 2, doBlurEffect.bind(null, factor, params));
-      glov_sprites.queuefn(params.z - 1, doDesaturateEffect.bind(null, factor, params));
+      // Note: this lerp used to be done later in the frame (during drawing, not queueing) a problem?
+      let blur_factor = lerp(factor, params.blur[0], params.blur[1]);
+      if (blur_factor) {
+        effectsQueue(params.z - 2, doBlurEffect.bind(null, blur_factor));
+      }
+      let saturation = lerp(factor, params.saturation[0], params.saturation[1]);
+      let brightness = lerp(factor, params.brightness[0], params.brightness[1]);
+      if (saturation !== 1 || brightness !== 1) {
+        effectsQueue(params.z - 1, doDesaturateEffect.bind(null, saturation, brightness));
+      }
       pp_this_frame = true;
     } else {
       // Or, just darken

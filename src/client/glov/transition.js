@@ -4,6 +4,8 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
+const { applyCopy, effectsQueue, effectsIsFinal } = require('./effects.js');
+const { framebufferStart, framebufferEnd } = require('./framebuffer.js');
 const { floor, min, pow, random } = Math;
 const sprites = require('./sprites.js');
 const shaders = require('./shaders.js');
@@ -33,22 +35,38 @@ function getShader(key) {
   return elem.shader;
 }
 
-class GlovTransition {
-  constructor(z, func) {
-    this.z = z;
-    this.capture = null;
-    this.func = func;
-    this.accum_time = 0;
-  }
+function GlovTransition(z, func) {
+  this.z = z;
+  this.capture = null;
+  this.func = func;
+  this.accum_time = 0;
 }
 
 function transitionCapture(trans) {
+  // Warning: Slow on iOS
   assert(!trans.capture);
   trans.capture = textures.createForCapture();
   glov_engine.captureFramebuffer(trans.capture);
 }
 
+function transitionCaptureFramebuffer(trans) {
+  assert(!trans.capture);
+  trans.capture = framebufferEnd();
+  glov_engine.temporaryTextureClaim(trans.capture);
+  if (trans.capture.fbo) {
+    // new framebuffer bound, effectively cleared, need to blit this to it!
+    applyCopy({ source: trans.capture, final: effectsIsFinal() });
+  } else {
+    framebufferStart({
+      width: trans.capture.width,
+      height: trans.capture.height,
+      final: effectsIsFinal(),
+    });
+  }
+}
+
 export function queue(z, fn) {
+  assert(!glov_engine.had_3d_this_frame); // Cannot queue a transition after we've already started 3d rendering/cleared
   let immediate = false;
   if (z === IMMEDIATE) {
     immediate = true;
@@ -71,6 +89,10 @@ export function queue(z, fn) {
 
   if (immediate) {
     transitionCapture(trans);
+  } else {
+    // queue up a capture past the specified Z, so transitions rendering at that Z (plus a handful) get captured
+    effectsQueue(z + Z.TRANSITION_RANGE, transitionCaptureFramebuffer.bind(null, trans));
+    //sprites.queuefn(z + Z.TRANSITION_RANGE, transitionCapture.bind(null, trans));
   }
   return true;
 }
@@ -84,19 +106,15 @@ export function render(dt) {
   for (let trans_idx = 0; trans_idx < transitions.length; ++trans_idx) {
     let trans = transitions[trans_idx];
     trans.accum_time += dt;
-    if (!trans.capture) {
-      // queue up a capture past the specified Z, so transitions rendering at that Z (plus a handful) get captured
-      sprites.queuefn(trans.z + Z.TRANSITION_RANGE, transitionCapture.bind(null, trans));
-    } else if (trans.capture) {
-      // call the function and give them the Z
-      // If not the last one, want it to end now!
-      let force_end = trans_idx < transitions.length - 1;
-      let ret = trans.func(trans.z, trans.capture, trans.accum_time, force_end);
-      if (ret === REMOVE) {
-        setTimeout(destroyTexture.bind(null, trans.capture), 0);
-        transitions.splice(trans_idx, 1);
-        trans_idx--;
-      }
+    assert(trans.capture);
+    // call the function and give them the Z
+    // If not the last one, want it to end now!
+    let force_end = trans_idx < transitions.length - 1;
+    let ret = trans.func(trans.z, trans.capture, trans.accum_time, force_end);
+    if (ret === REMOVE) {
+      setTimeout(destroyTexture.bind(null, trans.capture), 0);
+      transitions.splice(trans_idx, 1);
+      trans_idx--;
     }
   }
 }
@@ -266,13 +284,22 @@ function glovTransitionSplitScreenFunc(time, border_width, slide_window, z, tex,
 }
 
 const render_scale = 1;
-let transition_pixelate_texture;
+let transition_pixelate_textures = [null];
 
 function transitionPixelateCapture() {
-  if (!transition_pixelate_texture) {
-    transition_pixelate_texture = textures.createForCapture();
-  }
-  glov_engine.captureFramebuffer(transition_pixelate_texture);
+  let tex = framebufferEnd();
+  // if (!transition_pixelate_texture) {
+  //   transition_pixelate_texture = textures.createForCapture();
+  // }
+  // glov_engine.captureFramebuffer(transition_pixelate_texture);
+
+  transition_pixelate_textures[0] = tex;
+  // don't need copy here, this effect completely rewrites the frame buffer
+  framebufferStart({
+    width: tex.width,
+    height: tex.height,
+    final: effectsIsFinal(),
+  });
 }
 
 function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
@@ -283,11 +310,9 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
   let progress = min(ms_since_start / time, 1);
   camera2d.setNormalized();
 
+  transition_pixelate_textures[0] = tex;
   if (progress > 0.5) {
-    sprites.queuefn(z, transitionPixelateCapture);
-    if (transition_pixelate_texture) {
-      tex = transition_pixelate_texture;
-    }
+    effectsQueue(z, transitionPixelateCapture); // modifies transition_pixelate_textures[]
   }
 
   let partial_progress = (progress > 0.5 ? 1 - progress : progress) * 2;
@@ -301,7 +326,7 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
     (tex.texSizeX - 1) / tex.width, (tex.texSizeY - 1) / tex.height);
 
 
-  sprites.queueraw([tex], 0, 0, z + 1, 1, 1,
+  sprites.queueraw(transition_pixelate_textures, 0, 0, z + 1, 1, 1,
     0, 1, 1, 0,
     unit_vec, getShader('transition_pixelate'), {
       param0,
@@ -309,10 +334,6 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
     });
 
   if (force_end || progress === 1) {
-    if (transition_pixelate_texture) {
-      setTimeout(destroyTexture.bind(null, transition_pixelate_texture), 0);
-    }
-    transition_pixelate_texture = null;
     return REMOVE;
   }
   return CONTINUE;

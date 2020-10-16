@@ -6,6 +6,7 @@ const assert = require('assert');
 const engine = require('./engine.js');
 const { filewatchOn } = require('./filewatch.js');
 const local_storage = require('./local_storage.js');
+const settings = require('./settings.js');
 const urlhash = require('./urlhash.js');
 const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('../../common/util.js');
 
@@ -156,11 +157,16 @@ Texture.prototype.updateGPUMem = function () {
   this.gpu_mem = diff;
 };
 
-Texture.prototype.setSamplerState = function (params) {
-  let target = this.target;
+function bindForced(tex) {
+  let target = tex.target;
   setUnit(0);
   bound_tex[0] = null; // Force a re-bind, no matter what
-  bindHandle(0, target, this.handle);
+  bindHandle(0, target, tex.handle);
+}
+
+Texture.prototype.setSamplerState = function (params) {
+  let target = this.target;
+  bindForced(this);
 
   this.filter_min = params.filter_min || default_filter_min;
   this.filter_mag = params.filter_mag || default_filter_mag;
@@ -184,9 +190,7 @@ Texture.prototype.setSamplerState = function (params) {
 
 Texture.prototype.updateData = function updateData(w, h, data) {
   assert(!this.destroyed);
-  setUnit(0);
-  bound_tex[0] = null; // Force a re-bind, no matter what
-  bindHandle(0, this.target, this.handle);
+  bindForced(this);
   this.last_use = frame_timestamp;
   this.src_width = w;
   this.src_height = h;
@@ -396,6 +400,54 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   tryLoad(handleLoad);
 };
 
+Texture.prototype.allocFBO = function (w, h, need_depth) {
+  const fbo_format = settings.fbo_rgba ? gl.RGBA : gl.RGB;
+  bindForced(this);
+  gl.texImage2D(this.target, 0, fbo_format, w, h, 0, fbo_format, gl.UNSIGNED_BYTE, null);
+
+  this.fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.handle, 0);
+
+  if (need_depth) {
+    // TODO: If we ever need two of these on one frame, just reuse the existing depth buffer
+
+    this.fbo_depth_buffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.fbo_depth_buffer);
+
+    if (settings.fbo_depth16) {
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.fbo_depth_buffer);
+    } else {
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, w, h);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.fbo_depth_buffer);
+    }
+  }
+  this.last_use = frame_timestamp;
+  this.src_width = this.width = w;
+  this.src_height = this.height = h;
+  this.updateGPUMem(); // donotcheckin: add depth buffer too!
+};
+
+Texture.prototype.captureStart = function (w, h) {
+  assert(!this.capture);
+  this.capture = { w, h };
+  if (this.fbo) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+  }
+};
+
+Texture.prototype.captureEnd = function () {
+  assert(this.capture);
+  let capture = this.capture;
+  this.capture = null;
+  if (this.fbo) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  } else {
+    this.copyTexImage(0, 0, capture.w, capture.h);
+  }
+};
+
 Texture.prototype.copyTexImage = function (x, y, w, h) {
   assert(!this.destroyed);
   assert(w && h);
@@ -422,6 +474,13 @@ Texture.prototype.destroy = function () {
   delete textures[this.name];
   unbindAll(this.target);
   gl.deleteTexture(this.handle);
+  if (this.fbo) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.deleteFramebuffer(this.fbo);
+  }
+  if (this.fbo_depth_buffer) {
+    gl.deleteRenderbuffer(this.fbo_depth_buffer);
+  }
   this.width = this.height = 0;
   this.updateGPUMem();
   this.destroyed = true;
