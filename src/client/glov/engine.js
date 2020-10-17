@@ -613,7 +613,7 @@ function renderScaleFinish() {
   } else {
     effectsPassConsume();
     if (settings.render_scale_mode === 2) {
-      effects.applyPixelyExpand({ final: effectsIsFinal() });
+      effects.applyPixelyExpand({ final: effectsIsFinal(), clear: false });
     } else {
       effects.applyCopy({ filter_linear: settings.render_scale_mode === 0 });
     }
@@ -838,15 +838,16 @@ function tick(timestamp) {
       camera2d.render_offset_x, camera2d.render_offset_y_bottom,
       camera2d.render_viewport_w, camera2d.render_viewport_h
     ];
+    let params = {
+      clear: true,
+      clear_all: true,
+      clear_color: clear_color,
+      viewport: final_viewport,
+    };
     if (do_viewport_postprocess) {
-      effects.applyPixelyExpand({ final_viewport, clear_color });
+      effects.applyPixelyExpand(params);
     } else {
-      effects.applyCopy({
-        clear: true, // donotcheckin: these are the same parameters applyPixelyExpand is doing internally too?
-        viewport: final_viewport,
-        clear_all: true,
-        clear_color: clear_color,
-      });
+      effects.applyCopy(params);
     }
   }
 

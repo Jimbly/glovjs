@@ -462,10 +462,10 @@ export function applyPixelyExpand(params) {
     params: shader_params_pixely_expand,
     texs: [source, hblur, vblur],
 
-    clear: true,
-    viewport: params.final_viewport,
-    clear_all: true,
+    clear: params.clear,
+    clear_all: params.clear_all,
     clear_color: params.clear_color,
+    viewport: params.viewport,
   });
 }
 
