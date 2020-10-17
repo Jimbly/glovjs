@@ -10,23 +10,41 @@ let num_passes = 0;
 let cur_tex;
 export function framebufferStart(opts) {
   assert(!cur_tex);
-  let { width, height, final, clear, need_depth } = opts;
+  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color } = opts;
   ++num_passes;
   if (!final) {
     cur_tex = engine.captureFramebufferStart(null, width, height, need_depth);
   }
-  if (clear && settings.render_scale_clear) {
+  if (clear_color) {
+    gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+  }
+  if (clear && clear_all) {
     // full clear, before setting viewport
+    gl.disable(gl.SCISSOR_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
   }
-  engine.setViewport([0, 0, width, height]);
-  if (width !== engine.width && !settings.use_fbos) {
+  let need_scissor;
+  if (viewport) {
+    engine.setViewport(viewport);
+    need_scissor = viewport[0] || viewport[1] || viewport[2] !== engine.width || viewport[3] !== engine.height;
+    if (clear_all) { // not sure this logically follows, but we want this anywhere we're clearing all currently
+      need_scissor = false;
+    }
+  } else {
+    engine.setViewport([0, 0, width, height]);
+    need_scissor = width !== engine.width;
+  }
+  if (need_scissor && !settings.use_fbos) {
     gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(0, 0, width, height);
+    if (viewport) {
+      gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+    } else {
+      gl.scissor(0, 0, width, height);
+    }
   } else {
     gl.disable(gl.SCISSOR_TEST);
   }
-  if (clear && !settings.render_scale_clear) {
+  if (clear && !clear_all) {
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
   }
 }

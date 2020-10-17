@@ -15,7 +15,7 @@ const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
 const { errorReportDisable, errorReportSetPath, glovErrorReport } = require('./error_report.js');
 const glov_font = require('./font.js');
-const { framebufferEnd, framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
+const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const input = require('./input.js');
 const local_storage = require('./local_storage.js');
@@ -580,7 +580,7 @@ export function setZRange(znear, zfar) {
 let render_scale_3d_this_frame;
 export function start3DRendering() {
   had_3d_this_frame = true;
-  if (render_scale_3d_this_frame) {
+  if (render_scale_3d_this_frame && !defines.NOCOPY) {
     effectsPassAdd();
   }
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -593,22 +593,27 @@ export function start3DRendering() {
     final: effectsIsFinal(),
     need_depth: true,
     clear: true,
+    clear_all: settings.render_scale_clear,
   });
 
-  setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  if (render_width) {
+    setupProjection(fov_y, render_width, render_height, ZNEAR, ZFAR);
+  } else {
+    setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  }
 
   gl.enable(gl.CULL_FACE);
 }
 
 function renderScaleFinish() {
   if (defines.NOCOPY) {
-    // donotcheckin
     gl.disable(gl.SCISSOR_TEST);
     v4set(viewport, 0, 0, width, height);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
   } else {
+    effectsPassConsume();
     if (settings.render_scale_mode === 2) {
-      effects.applyPixelyExpand({ final_viewport: [0, 0, width, height], final: effectsIsFinal() });
+      effects.applyPixelyExpand({ final: effectsIsFinal() });
     } else {
       effects.applyCopy({ filter_linear: settings.render_scale_mode === 0 });
     }
@@ -796,19 +801,17 @@ function tick(timestamp) {
 
   if (had_3d_this_frame) {
     if (render_scale_3d_this_frame) {
-      effectsPassConsume();
       renderScaleFinish();
     }
   } else {
     // delayed clear (and general GL init) until after app_state, app might change clear color
-    // TODO: for do_viewport_post_process, we need to enable gl.scissor to avoid clearing the whole screen!
-    // gl.scissor(0, 0, viewport[2] - viewport[0], viewport[3] - viewport[1]);
     if (render_width) {
-      assert(!effectsIsFinal()); // donotcheckin
+      // assert(!effectsIsFinal());
       framebufferStart({
         width: render_width,
         height: render_height,
         clear: true,
+        clear_all: settings.render_scale_clear, // Not sure if this is ever faster in this case?
         final: effectsIsFinal(),
         need_depth: false,
       });
@@ -838,14 +841,12 @@ function tick(timestamp) {
     if (do_viewport_postprocess) {
       effects.applyPixelyExpand({ final_viewport, clear_color });
     } else {
-      let source = framebufferEnd();
-      gl.disable(gl.SCISSOR_TEST);
-      if (clear_color) { // donotcheckin: need this, more internally?
-        gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-      }
-      setViewport(final_viewport);
-      effects.applyCopy({ source, use_viewport: true });
+      effects.applyCopy({
+        clear: true, // donotcheckin: these are the same parameters applyPixelyExpand is doing internally too?
+        viewport: final_viewport,
+        clear_all: true,
+        clear_color: clear_color,
+      });
     }
   }
 

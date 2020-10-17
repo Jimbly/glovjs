@@ -290,21 +290,33 @@ export function contrastMatrix(dst, contrastScale) {
 // effect: { shader, params, texs, final }
 function applyEffect(effect, view_w, view_h) {
   let final = effect.final !== false && effectsIsFinal();
-  if (effect.use_viewport) {
-    assert(final);
+  if (effect.no_framebuffer) {
+    // neither starting nor ending a framebuffer, presumably something effectively additive
     let viewport = engine.viewport;
     let target_w = viewport[2];
     let target_h = viewport[3];
     view_w = view_w || target_w;
     view_h = view_h || target_h;
-
-    // Set values for parameters used by all effects
     clip_space[0] = 2.0 * view_w / target_w;
     clip_space[1] = 2.0 * view_h / target_h;
-    // clip_space[2] = -1.0;
-    // clip_space[3] = -1.0;
-    // copy_uv_scale[0] = target_w / effect.coord_source.width;
-    // copy_uv_scale[1] = target_h / effect.coord_source.height;
+  } else if (effect.viewport) {
+    assert(final);
+    let { viewport } = effect;
+    let target_w = viewport[2];
+    let target_h = viewport[3];
+    view_w = view_w || target_w;
+    view_h = view_h || target_h;
+
+    clip_space[0] = 2.0 * view_w / target_w;
+    clip_space[1] = 2.0 * view_h / target_h;
+
+    framebufferStart({
+      clear: effect.clear,
+      clear_all: effect.clear_all,
+      clear_color: effect.clear_color,
+      viewport,
+      final,
+    });
   } else {
     clip_space[0] = 2.0;
     clip_space[1] = 2.0;
@@ -316,6 +328,10 @@ function applyEffect(effect, view_w, view_h) {
       final,
     });
   }
+  // clip_space[2] = -1.0;
+  // clip_space[3] = -1.0;
+  // copy_uv_scale[0] = target_w / effect.coord_source.width;
+  // copy_uv_scale[1] = target_h / effect.coord_source.height;
 
   shaders.bind(getShader('vp_copy'), getShader(effect.shader), effect.params);
   textures.bindArray(effect.texs);
@@ -393,12 +409,10 @@ export function applyCopy(params) {
   if (!source) {
     source = framebufferEnd({ filter_linear: params.filter_linear });
   }
-  applyEffect({
-    shader: params.shader || 'copy',
-    params: shader_params_default,
-    texs: [source],
-    use_viewport: params.use_viewport,
-  });
+  params.shader = params.shader || 'copy';
+  params.params = shader_params_default;
+  params.texs = [source];
+  applyEffect(params);
 }
 
 export function applyPixelyExpand(params) {
@@ -443,18 +457,15 @@ export function applyPixelyExpand(params) {
   v4set(shader_params_pixely_expand.orig_pixel_size,
     source.width, source.height, 1/source.width, 1/source.height);
 
-  engine.setViewport(params.final_viewport);
-  gl.disable(gl.SCISSOR_TEST); // donotcheckin: should be part of framebufferStart, same with clearing?
-  if (params.clear_color) {
-    gl.clearColor(params.clear_color[0], params.clear_color[1], params.clear_color[2], params.clear_color[3]);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  }
-
   applyEffect({
     shader: 'pixely_expand',
     params: shader_params_pixely_expand,
     texs: [source, hblur, vblur],
-    use_viewport: true,
+
+    clear: true,
+    viewport: params.final_viewport,
+    clear_all: true,
+    clear_color: params.clear_color,
   });
 }
 
@@ -622,7 +633,7 @@ export function clearAlpha() {
     gl.disable(gl.DEPTH_TEST);
   }
   gl.colorMask(false, false, false, true);
-  applyCopy({ source: textures.textures.white }); // donotcheckin
+  applyCopy({ source: textures.textures.white, no_framebuffer: true });
   gl.colorMask(true, true, true, true);
   if (old_dt) {
     gl.enable(gl.DEPTH_TEST);
