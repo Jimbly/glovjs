@@ -341,7 +341,7 @@ export function main() {
     let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
     if (miniButton('3D', 'Toggles visibility of a 3D test', flagGet('3d_test'))) {
       flagToggle('3d_test');
-      transition.queue(Z.TRANSITION_FINAL, transition.pixelate(2000)); // donotcheckin transition.fade(500));
+      transition.queue(Z.TRANSITION_FINAL, transition.fade(500));
     }
 
     if (miniButton('Font', 'Toggles visibility of general Font tests', flagGet('font_test'))) {

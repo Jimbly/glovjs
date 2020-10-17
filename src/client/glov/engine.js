@@ -506,7 +506,7 @@ export function temporaryTextureClaim(tex) {
 
 let is_pixely;
 // Call tex.captureEnd when done
-export function captureFramebufferStart(tex, w, h, do_filter_linear, do_wrap, need_depth) {
+export function captureFramebufferStart(tex, w, h, need_depth) {
   assert.equal(viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
   assert.equal(viewport[1], 0);
   if (!w) {
@@ -521,26 +521,14 @@ export function captureFramebufferStart(tex, w, h, do_filter_linear, do_wrap, ne
   if (!tex) {
     tex = getTemporaryTexture(w, h, true, need_depth);
   }
-  let filter;
-  if (do_filter_linear === undefined) {
-    filter = is_pixely ? gl.NEAREST : gl.LINEAR;
-  } else {
-    filter = do_filter_linear ? gl.LINEAR : gl.NEAREST;
-  }
-  tex.setSamplerState({
-    filter_min: filter,
-    filter_mag: filter,
-    wrap_s: do_wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
-    wrap_t: do_wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
-  });
   tex.captureStart(w, h);
   return tex;
 }
 
 // donotheckin: remove this function
-export function captureFramebuffer(tex, w, h, do_filter_linear, do_wrap) {
-  tex = captureFramebufferStart(tex, w, h, do_filter_linear, do_wrap, false);
-  tex.captureEnd();
+export function captureFramebuffer(tex, w, h, filter_linear, wrap) {
+  tex = captureFramebufferStart(tex, w, h, false);
+  tex.captureEnd(filter_linear, wrap);
   return tex;
 }
 
@@ -605,7 +593,6 @@ export function start3DRendering() {
     final: effectsIsFinal(),
     need_depth: true,
     clear: true,
-    do_filter_linear: render_scale_3d_this_frame ? settings.render_scale_mode === 0 : undefined,
   });
 
   setupProjection(fov_y, width, height, ZNEAR, ZFAR);
@@ -623,7 +610,7 @@ function renderScaleFinish() {
     if (settings.render_scale_mode === 2) {
       effects.applyPixelyExpand({ final_viewport: [0, 0, width, height], final: effectsIsFinal() });
     } else {
-      effects.applyCopy({});
+      effects.applyCopy({ filter_linear: settings.render_scale_mode === 0 });
     }
   }
 }
@@ -849,8 +836,7 @@ function tick(timestamp) {
       camera2d.render_viewport_w, camera2d.render_viewport_h
     ];
     if (do_viewport_postprocess) {
-      let source = framebufferEnd();
-      effects.applyPixelyExpand({ source, final_viewport, clear_color });
+      effects.applyPixelyExpand({ final_viewport, clear_color });
     } else {
       let source = framebufferEnd();
       gl.disable(gl.SCISSOR_TEST);

@@ -8,13 +8,12 @@ let last_num_passes = 0;
 let num_passes = 0;
 
 let cur_tex;
-// donotcheckin: move do_filter_linear/do_wrap to End()?  simplifies applyGaussianBlur and other flow?
 export function framebufferStart(opts) {
   assert(!cur_tex);
-  let { width, height, final, clear, do_filter_linear, do_wrap, need_depth } = opts;
+  let { width, height, final, clear, need_depth } = opts;
   ++num_passes;
   if (!final) {
-    cur_tex = engine.captureFramebufferStart(null, width, height, do_filter_linear, do_wrap, need_depth);
+    cur_tex = engine.captureFramebufferStart(null, width, height, need_depth);
   }
   if (clear && settings.render_scale_clear) {
     // full clear, before setting viewport
@@ -32,10 +31,12 @@ export function framebufferStart(opts) {
   }
 }
 
-export function framebufferEnd() {
+export function framebufferEnd(opts) {
   assert(cur_tex);
+  opts = opts || {};
+  let { filter_linear, wrap } = opts;
 
-  cur_tex.captureEnd();
+  cur_tex.captureEnd(filter_linear, wrap);
 
   let ret = cur_tex;
   cur_tex = null;

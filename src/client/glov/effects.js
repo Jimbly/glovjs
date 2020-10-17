@@ -287,10 +287,11 @@ export function contrastMatrix(dst, contrastScale) {
   dst[9] = dst[10] = dst[11] = 0.5 * (1 - contrastScale);
 }
 
-// effect: { shader, params, texs, do_filter_linear, do_wrap, final }
+// effect: { shader, params, texs, final }
 function applyEffect(effect, view_w, view_h) {
+  let final = effect.final !== false && effectsIsFinal();
   if (effect.use_viewport) {
-    assert(effect.final);
+    assert(final);
     let viewport = engine.viewport;
     let target_w = viewport[2];
     let target_h = viewport[3];
@@ -312,9 +313,7 @@ function applyEffect(effect, view_w, view_h) {
 
     framebufferStart({
       width: view_w, height: view_h,
-      final: effect.final, // donotcheckin: should default to effectIsFinal if undefined?
-      do_filter_linear: effect.do_filter_linear,
-      do_wrap: effect.do_wrap,
+      final,
     });
   }
 
@@ -392,13 +391,12 @@ export function applyCopy(params) {
   }
   let source = params.source;
   if (!source) {
-    source = framebufferEnd();
+    source = framebufferEnd({ filter_linear: params.filter_linear });
   }
   applyEffect({
     shader: params.shader || 'copy',
     params: shader_params_default,
     texs: [source],
-    final: effectsIsFinal(),
     use_viewport: params.use_viewport,
   });
 }
@@ -408,15 +406,10 @@ export function applyPixelyExpand(params) {
     startup();
   }
   let source = params.source;
+  assert(!source); // would need linear/non-wrap sampler state set
   if (!source) {
-    source = framebufferEnd();
+    source = framebufferEnd({ filter_linear: true });
   }
-  source.setSamplerState({
-    filter_min: gl.LINEAR,
-    filter_mag: gl.LINEAR,
-    wrap_s: gl.CLAMP_TO_EDGE,
-    wrap_t: gl.CLAMP_TO_EDGE,
-  });
 
   // do horizontal blur for primary lines
   let resx = source.width;
@@ -429,9 +422,9 @@ export function applyPixelyExpand(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [source],
-    do_filter_linear: true,
+    final: false,
   }, resx, resy);
-  let hblur = framebufferEnd();
+  let hblur = framebufferEnd({ filter_linear: true });
 
   // do seperable gaussian blur for scanlines (using horizontal blur from above)
   sampleRadius = (params.vblur || 0.75) / resy;
@@ -442,9 +435,9 @@ export function applyPixelyExpand(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [hblur],
-    do_filter_linear: true,
+    final: false,
   }, resx, resy);
-  let vblur = framebufferEnd();
+  let vblur = framebufferEnd({ filter_linear: true });
 
   // combine at full res
   v4set(shader_params_pixely_expand.orig_pixel_size,
@@ -461,7 +454,6 @@ export function applyPixelyExpand(params) {
     shader: 'pixely_expand',
     params: shader_params_pixely_expand,
     texs: [source, hblur, vblur],
-    final: effectsIsFinal(),
     use_viewport: true,
   });
 }
@@ -470,13 +462,7 @@ export function applyGaussianBlur(params) {
   if (!inited) {
     startup();
   }
-  let source = framebufferEnd();
-  source.setSamplerState({
-    filter_min: gl.LINEAR,
-    filter_mag: gl.LINEAR,
-    wrap_s: gl.CLAMP_TO_EDGE,
-    wrap_t: gl.CLAMP_TO_EDGE,
-  });
+  let source = framebufferEnd({ filter_linear: true });
   let max_size = params.max_size || 512;
   let min_size = params.min_size || 128;
 
@@ -494,9 +480,9 @@ export function applyGaussianBlur(params) {
       shader: params.shader_copy || 'copy',
       params: shader_params_default,
       texs: [inputTexture0],
-      do_filter_linear: true,
+      final: false,
     }, res, res);
-    inputTexture0 = framebufferEnd();
+    inputTexture0 = framebufferEnd({ filter_linear: true });
     res /= 2;
   }
 
@@ -509,9 +495,9 @@ export function applyGaussianBlur(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [inputTexture0],
-    do_filter_linear: true,
+    final: false,
   }, res, res);
-  let blur = framebufferEnd();
+  let blur = framebufferEnd({ filter_linear: true });
 
   shader_params_gaussian_blur.sampleRadius[0] = 0;
   shader_params_gaussian_blur.sampleRadius[1] = sampleRadius;
@@ -520,8 +506,6 @@ export function applyGaussianBlur(params) {
     shader: 'gaussian_blur',
     params: shader_params_gaussian_blur,
     texs: [blur],
-    do_filter_linear: false, // use `source` filter instead?
-    final: effectsIsFinal()
   });
 
   return true;
@@ -531,13 +515,7 @@ export function applyColorMatrix(params) {
   if (!inited) {
     startup();
   }
-  let source = framebufferEnd();
-  source.setSamplerState({
-    filter_min: gl.LINEAR,
-    filter_mag: gl.LINEAR,
-    wrap_s: gl.CLAMP_TO_EDGE,
-    wrap_t: gl.CLAMP_TO_EDGE,
-  });
+  let source = framebufferEnd({ filter_linear: true });
 
   let matrix = params.colorMatrix;
   let mout = shader_params_color_matrix.colorMatrix;
@@ -559,8 +537,6 @@ export function applyColorMatrix(params) {
     shader: 'color_matrix',
     params: shader_params_color_matrix,
     texs: [source],
-    do_filter_linear: false, // use `source` filter instead?
-    final: effectsIsFinal(),
   });
 
   return true;

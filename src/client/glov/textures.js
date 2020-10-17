@@ -437,7 +437,7 @@ Texture.prototype.captureStart = function (w, h) {
   }
 };
 
-Texture.prototype.captureEnd = function () {
+Texture.prototype.captureEnd = function (filter_linear, wrap) {
   assert(this.capture);
   let capture = this.capture;
   this.capture = null;
@@ -446,6 +446,13 @@ Texture.prototype.captureEnd = function () {
   } else {
     this.copyTexImage(0, 0, capture.w, capture.h);
   }
+  let filter = filter_linear ? gl.LINEAR : gl.NEAREST;
+  this.setSamplerState({
+    filter_min: filter,
+    filter_mag: filter,
+    wrap_s: wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
+    wrap_t: wrap ? gl.REPEAT : gl.CLAMP_TO_EDGE,
+  });
 };
 
 Texture.prototype.copyTexImage = function (x, y, w, h) {
