@@ -78,7 +78,6 @@ export function addHook(draw, click) {
 
 function doBlurEffect(factor) {
   effects.applyGaussianBlur({
-    // source: glov_engine.captureFramebuffer(),
     blur: factor,
     // min_size: 128,
   });
@@ -125,7 +124,6 @@ function doDesaturateEffect(saturation, brightness) {
   // }
   effects.applyColorMatrix({
     colorMatrix: desaturate_xform,
-    // source: glov_engine.captureFramebuffer(),
   });
 }
 

@@ -525,7 +525,6 @@ export function captureFramebufferStart(tex, w, h, need_depth) {
   return tex;
 }
 
-// donotheckin: remove this function
 export function captureFramebuffer(tex, w, h, filter_linear, wrap) {
   tex = captureFramebufferStart(tex, w, h, false);
   tex.captureEnd(filter_linear, wrap);

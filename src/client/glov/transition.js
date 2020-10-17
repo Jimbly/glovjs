@@ -288,18 +288,12 @@ let transition_pixelate_textures = [null];
 
 function transitionPixelateCapture() {
   let tex = framebufferEnd();
-  // if (!transition_pixelate_texture) {
-  //   transition_pixelate_texture = textures.createForCapture();
-  // }
-  // glov_engine.captureFramebuffer(transition_pixelate_texture);
-
-  transition_pixelate_textures[0] = tex;
-  // don't need copy here, this effect completely rewrites the frame buffer
   framebufferStart({
     width: tex.width,
     height: tex.height,
     final: effectsIsFinal(),
   });
+  transition_pixelate_textures[0] = tex;
 }
 
 function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {

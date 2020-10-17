@@ -122,7 +122,7 @@ export function snapshot(param) {
     alphaDraw();
     gl.depthMask(true);
   }
-  // donotcheckin: use new framebuffer API here
+  // TODO: use new framebuffer API here
   engine.captureFramebuffer(texs[0], param.w, param.h, true, false);
 
   gl.clearColor(1, 1, 1, 0);

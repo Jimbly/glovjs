@@ -152,6 +152,9 @@ Texture.prototype.updateGPUMem = function () {
   if (this.mipmaps) {
     new_size *= 1.5;
   }
+  if (this.fbo_depth_buffer) {
+    new_size += this.width * this.height * 4;
+  }
   let diff = new_size - this.gpu_mem;
   engine.perf_state.gpu_mem.tex += diff;
   this.gpu_mem = diff;
@@ -426,7 +429,7 @@ Texture.prototype.allocFBO = function (w, h, need_depth) {
   this.last_use = frame_timestamp;
   this.src_width = this.width = w;
   this.src_height = this.height = h;
-  this.updateGPUMem(); // donotcheckin: add depth buffer too!
+  this.updateGPUMem();
 };
 
 Texture.prototype.captureStart = function (w, h) {
