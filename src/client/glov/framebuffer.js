@@ -47,20 +47,19 @@ function bindTemporaryDepthbuffer(w, h) {
   if (temp.idx >= temp.list.length) {
     let depth_buffer = gl.createRenderbuffer();
     gl.bindRenderbuffer(gl.RENDERBUFFER, depth_buffer);
+    let attachment;
     if (settings.fbo_depth16) {
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+      attachment = gl.DEPTH_ATTACHMENT;
     } else {
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, w, h);
+      attachment = gl.DEPTH_STENCIL_ATTACHMENT;
     }
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-    temp.list.push(depth_buffer);
+    temp.list.push({ depth_buffer, attachment });
   }
-  let depth_buffer = temp.list[temp.idx++];
-  if (settings.fbo_depth16) {
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth_buffer);
-  } else {
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth_buffer);
-  }
+  let { depth_buffer, attachment } = temp.list[temp.idx++];
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, depth_buffer);
 }
 
 export function temporaryTextureClaim(tex) {
@@ -193,7 +192,7 @@ export function framebufferEndOfFrame() {
     }
     // Release unused renderbuffers
     while (temp.list.length > temp.idx) {
-      let depth_buffer = temp.list.pop();
+      let { depth_buffer } = temp.list.pop();
       // TODO: can this still be bound to a framebuffer? unlikely, but possible?
       gl.deleteRenderbuffer(depth_buffer);
     }
