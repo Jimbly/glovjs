@@ -3,7 +3,7 @@
 
 const { titleCase } = require('../../common/util.js');
 const { cmd_parse } = require('./cmds.js');
-const { resetFBOs } = require('./engine.js');
+const { resetFBOs } = require('./framebuffer.js');
 
 exports.true = true; // for perf.js
 

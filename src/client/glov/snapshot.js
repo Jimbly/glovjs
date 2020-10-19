@@ -7,6 +7,7 @@ const camera2d = require('./camera2d.js');
 const { alphaDraw, alphaDrawListSize, alphaListPush, alphaListPop } = require('./draw_list.js');
 const effects = require('./effects.js');
 const engine = require('./engine.js');
+const { framebufferCapture } = require('./framebuffer.js');
 const mat4LookAt = require('gl-mat4/lookat');
 const { max, PI, tan } = Math;
 const shaders = require('./shaders.js');
@@ -123,7 +124,7 @@ export function snapshot(param) {
     gl.depthMask(true);
   }
   // TODO: use new framebuffer API here
-  engine.captureFramebuffer(texs[0], param.w, param.h, true, false);
+  framebufferCapture(texs[0], param.w, param.h, true, false);
 
   gl.clearColor(1, 1, 1, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -138,7 +139,7 @@ export function snapshot(param) {
     gl.depthMask(true);
   }
   // PERFTODO: we only need to capture the red channel, does that speed things up and use less mem?
-  engine.captureFramebuffer(texs[1], param.w, param.h, true, false);
+  framebufferCapture(texs[1], param.w, param.h, true, false);
 
   viewportRenderFinish(param);
 

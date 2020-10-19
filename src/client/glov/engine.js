@@ -315,30 +315,7 @@ export function postTick(opts) {
   post_tick.push(opts);
 }
 
-let reset_fbos = false;
-export function resetFBOs() {
-  reset_fbos = true;
-}
-let temporary_textures = {};
-
 function resetEffects() {
-  for (let key in temporary_textures) {
-    let temp = temporary_textures[key];
-    if (reset_fbos) {
-      // Release all textures
-      temp.idx = 0;
-    }
-    // Release unused textures
-    while (temp.list.length > temp.idx) {
-      temp.list.pop().destroy();
-    }
-    if (!temp.idx) {
-      delete temporary_textures[key];
-    } else {
-      temp.idx = 0;
-    }
-  }
-  reset_fbos = false;
   effectsReset();
   framebufferEndOfFrame();
 }
@@ -462,73 +439,6 @@ export let viewport = vec4(0,0,1,1);
 export function setViewport(xywh) {
   v4copy(viewport, xywh);
   gl.viewport(xywh[0], xywh[1], xywh[2], xywh[3]);
-}
-
-let last_temp_idx = 0;
-function getTemporaryTexture(w, h, possibly_fbo, need_depth) {
-  let key = `${w}_${h}`;
-  let is_fbo = possibly_fbo && settings.use_fbos;
-  if (is_fbo) {
-    key += '_fbo';
-    if (need_depth) {
-      key += '_d';
-    }
-  }
-  let temp = temporary_textures[key];
-  if (!temp) {
-    temp = temporary_textures[key] = { list: [], idx: 0 };
-  }
-  if (temp.idx >= temp.list.length) {
-    let tex = textures.createForCapture(`temp_${key}_${++last_temp_idx}`);
-    if (is_fbo) {
-      tex.allocFBO(w, h, need_depth);
-    }
-    temp.list.push(tex);
-  }
-  let tex = temp.list[temp.idx++];
-  return tex;
-}
-
-export function temporaryTextureClaim(tex) {
-  for (let key in temporary_textures) {
-    let temp = temporary_textures[key];
-    let idx = temp.list.indexOf(tex);
-    if (idx !== -1) {
-      temp.list.splice(idx, 1);
-      if (temp.idx > idx) {
-        --temp.idx;
-      }
-      return;
-    }
-  }
-  assert(false);
-}
-
-let is_pixely;
-// Call tex.captureEnd when done
-export function captureFramebufferStart(tex, w, h, need_depth) {
-  assert.equal(viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
-  assert.equal(viewport[1], 0);
-  if (!w) {
-    if (render_width) {
-      w = render_width;
-      h = render_height;
-    } else {
-      w = width;
-      h = height;
-    }
-  }
-  if (!tex) {
-    tex = getTemporaryTexture(w, h, true, need_depth);
-  }
-  tex.captureStart(w, h);
-  return tex;
-}
-
-export function captureFramebuffer(tex, w, h, filter_linear, wrap) {
-  tex = captureFramebufferStart(tex, w, h, false);
-  tex.captureEnd(filter_linear, wrap);
-  return tex;
 }
 
 let frame_requested = false;
@@ -891,7 +801,7 @@ export function startup(params) {
   window.addEventListener('resize', checkResize, false);
   checkResize();
 
-  is_pixely = params.pixely && params.pixely !== 'off';
+  let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl2', 'webgl', 'experimental-webgl'];

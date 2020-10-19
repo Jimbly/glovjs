@@ -3,9 +3,86 @@ const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const perf = require('./perf.js');
 const settings = require('./settings.js');
+const textures = require('./textures.js');
 
 let last_num_passes = 0;
 let num_passes = 0;
+
+let temporary_textures = {};
+
+let reset_fbos = false;
+export function resetFBOs() {
+  reset_fbos = true;
+}
+
+let last_temp_idx = 0;
+function getTemporaryTexture(w, h, possibly_fbo, need_depth) {
+  let key = `${w}_${h}`;
+  let is_fbo = possibly_fbo && settings.use_fbos;
+  if (is_fbo) {
+    key += '_fbo';
+    if (need_depth) {
+      key += '_d';
+    }
+  }
+  let temp = temporary_textures[key];
+  if (!temp) {
+    temp = temporary_textures[key] = { list: [], idx: 0 };
+  }
+  if (temp.idx >= temp.list.length) {
+    let tex = textures.createForCapture(`temp_${key}_${++last_temp_idx}`);
+    if (is_fbo) {
+      tex.allocFBO(w, h, need_depth);
+    }
+    temp.list.push(tex);
+  }
+  let tex = temp.list[temp.idx++];
+  return tex;
+}
+
+export function temporaryTextureClaim(tex) {
+  for (let key in temporary_textures) {
+    let temp = temporary_textures[key];
+    let idx = temp.list.indexOf(tex);
+    if (idx !== -1) {
+      temp.list.splice(idx, 1);
+      if (temp.idx > idx) {
+        --temp.idx;
+      }
+      return;
+    }
+  }
+  assert(false);
+}
+
+// Call tex.captureEnd when done
+function framebufferCaptureStart(tex, w, h, need_depth) {
+  assert.equal(engine.viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
+  assert.equal(engine.viewport[1], 0);
+  if (!w) {
+    if (engine.render_width) {
+      w = engine.render_width;
+      h = engine.render_height;
+    } else {
+      w = engine.width;
+      h = engine.height;
+    }
+  }
+  if (!tex) {
+    tex = getTemporaryTexture(w, h, true, need_depth);
+  }
+  tex.captureStart(w, h);
+  return tex;
+}
+
+// Does a capture directly from the framebuffer regardless of current use_fbos setting
+// Warning: Slow on iOS
+export function framebufferCapture(tex, w, h, filter_linear, wrap) {
+  tex = framebufferCaptureStart(tex, w, h, false);
+  tex.captureEnd(filter_linear, wrap);
+  return tex;
+}
+
 
 let cur_tex;
 export function framebufferStart(opts) {
@@ -13,7 +90,7 @@ export function framebufferStart(opts) {
   let { width, height, viewport, final, clear, need_depth, clear_all, clear_color } = opts;
   ++num_passes;
   if (!final) {
-    cur_tex = engine.captureFramebufferStart(null, width, height, need_depth);
+    cur_tex = framebufferCaptureStart(null, width, height, need_depth);
   }
   if (clear_color) {
     gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
@@ -65,6 +142,24 @@ export function framebufferEndOfFrame() {
   assert(!cur_tex);
   last_num_passes = num_passes;
   num_passes = 0;
+
+  for (let key in temporary_textures) {
+    let temp = temporary_textures[key];
+    if (reset_fbos) {
+      // Release all textures
+      temp.idx = 0;
+    }
+    // Release unused textures
+    while (temp.list.length > temp.idx) {
+      temp.list.pop().destroy();
+    }
+    if (!temp.idx) {
+      delete temporary_textures[key];
+    } else {
+      temp.idx = 0;
+    }
+  }
+  reset_fbos = false;
 }
 
 settings.register({

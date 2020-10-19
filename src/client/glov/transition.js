@@ -5,7 +5,7 @@ const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 const { applyCopy, effectsQueue, effectsIsFinal } = require('./effects.js');
-const { framebufferStart, framebufferEnd } = require('./framebuffer.js');
+const { framebufferCapture, framebufferStart, framebufferEnd, temporaryTextureClaim } = require('./framebuffer.js');
 const { floor, min, pow, random } = Math;
 const sprites = require('./sprites.js');
 const shaders = require('./shaders.js');
@@ -46,13 +46,13 @@ function transitionCapture(trans) {
   // Warning: Slow on iOS
   assert(!trans.capture);
   trans.capture = textures.createForCapture();
-  glov_engine.captureFramebuffer(trans.capture);
+  framebufferCapture(trans.capture);
 }
 
 function transitionCaptureFramebuffer(trans) {
   assert(!trans.capture);
   trans.capture = framebufferEnd();
-  glov_engine.temporaryTextureClaim(trans.capture);
+  temporaryTextureClaim(trans.capture);
   if (trans.capture.fbo) {
     // new framebuffer bound, effectively cleared, need to blit this to it!
     applyCopy({ source: trans.capture, final: effectsIsFinal() });
