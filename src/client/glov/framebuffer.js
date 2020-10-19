@@ -9,6 +9,7 @@ let last_num_passes = 0;
 let num_passes = 0;
 
 let temporary_textures = {};
+let temporary_depthbuffers = {};
 
 let reset_fbos = false;
 export function resetFBOs() {
@@ -16,14 +17,11 @@ export function resetFBOs() {
 }
 
 let last_temp_idx = 0;
-function getTemporaryTexture(w, h, possibly_fbo, need_depth) {
+function getTemporaryTexture(w, h, possibly_fbo) {
   let key = `${w}_${h}`;
   let is_fbo = possibly_fbo && settings.use_fbos;
   if (is_fbo) {
     key += '_fbo';
-    if (need_depth) {
-      key += '_d';
-    }
   }
   let temp = temporary_textures[key];
   if (!temp) {
@@ -32,12 +30,37 @@ function getTemporaryTexture(w, h, possibly_fbo, need_depth) {
   if (temp.idx >= temp.list.length) {
     let tex = textures.createForCapture(`temp_${key}_${++last_temp_idx}`);
     if (is_fbo) {
-      tex.allocFBO(w, h, need_depth);
+      tex.allocFBO(w, h);
     }
     temp.list.push(tex);
   }
   let tex = temp.list[temp.idx++];
   return tex;
+}
+
+function bindTemporaryDepthbuffer(w, h) {
+  let key = `${w}_${h}`;
+  let temp = temporary_depthbuffers[key];
+  if (!temp) {
+    temp = temporary_depthbuffers[key] = { list: [], idx: 0 };
+  }
+  if (temp.idx >= temp.list.length) {
+    let depth_buffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depth_buffer);
+    if (settings.fbo_depth16) {
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+    } else {
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, w, h);
+    }
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    temp.list.push(depth_buffer);
+  }
+  let depth_buffer = temp.list[temp.idx++];
+  if (settings.fbo_depth16) {
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth_buffer);
+  } else {
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth_buffer);
+  }
 }
 
 export function temporaryTextureClaim(tex) {
@@ -56,7 +79,7 @@ export function temporaryTextureClaim(tex) {
 }
 
 // Call tex.captureEnd when done
-function framebufferCaptureStart(tex, w, h, need_depth) {
+function framebufferCaptureStart(tex, w, h) {
   assert.equal(engine.viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
   assert.equal(engine.viewport[1], 0);
   if (!w) {
@@ -69,7 +92,7 @@ function framebufferCaptureStart(tex, w, h, need_depth) {
     }
   }
   if (!tex) {
-    tex = getTemporaryTexture(w, h, true, need_depth);
+    tex = getTemporaryTexture(w, h, true);
   }
   tex.captureStart(w, h);
   return tex;
@@ -78,7 +101,7 @@ function framebufferCaptureStart(tex, w, h, need_depth) {
 // Does a capture directly from the framebuffer regardless of current use_fbos setting
 // Warning: Slow on iOS
 export function framebufferCapture(tex, w, h, filter_linear, wrap) {
-  tex = framebufferCaptureStart(tex, w, h, false);
+  tex = framebufferCaptureStart(tex, w, h);
   tex.captureEnd(filter_linear, wrap);
   return tex;
 }
@@ -90,7 +113,10 @@ export function framebufferStart(opts) {
   let { width, height, viewport, final, clear, need_depth, clear_all, clear_color } = opts;
   ++num_passes;
   if (!final) {
-    cur_tex = framebufferCaptureStart(null, width, height, need_depth);
+    cur_tex = framebufferCaptureStart(null, width, height);
+    if (need_depth) {
+      bindTemporaryDepthbuffer(width, height);
+    }
   }
   if (clear_color) {
     gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
@@ -155,6 +181,24 @@ export function framebufferEndOfFrame() {
     }
     if (!temp.idx) {
       delete temporary_textures[key];
+    } else {
+      temp.idx = 0;
+    }
+  }
+  for (let key in temporary_depthbuffers) {
+    let temp = temporary_depthbuffers[key];
+    if (reset_fbos) {
+      // Release all renderbuffers
+      temp.idx = 0;
+    }
+    // Release unused renderbuffers
+    while (temp.list.length > temp.idx) {
+      let depth_buffer = temp.list.pop();
+      // TODO: can this still be bound to a framebuffer? unlikely, but possible?
+      gl.deleteRenderbuffer(depth_buffer);
+    }
+    if (!temp.idx) {
+      delete temporary_depthbuffers[key];
     } else {
       temp.idx = 0;
     }

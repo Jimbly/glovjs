@@ -152,9 +152,6 @@ Texture.prototype.updateGPUMem = function () {
   if (this.mipmaps) {
     new_size *= 1.5;
   }
-  if (this.fbo_depth_buffer) {
-    new_size += this.width * this.height * 4;
-  }
   let diff = new_size - this.gpu_mem;
   engine.perf_state.gpu_mem.tex += diff;
   this.gpu_mem = diff;
@@ -412,20 +409,6 @@ Texture.prototype.allocFBO = function (w, h, need_depth) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.handle, 0);
 
-  if (need_depth) {
-    // TODO: If we ever need two of these on one frame, just reuse the existing depth buffer
-
-    this.fbo_depth_buffer = gl.createRenderbuffer();
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.fbo_depth_buffer);
-
-    if (settings.fbo_depth16) {
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.fbo_depth_buffer);
-    } else {
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, w, h);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.fbo_depth_buffer);
-    }
-  }
   this.last_use = frame_timestamp;
   this.src_width = this.width = w;
   this.src_height = this.height = h;
@@ -487,9 +470,6 @@ Texture.prototype.destroy = function () {
   if (this.fbo) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.deleteFramebuffer(this.fbo);
-  }
-  if (this.fbo_depth_buffer) {
-    gl.deleteRenderbuffer(this.fbo_depth_buffer);
   }
   this.width = this.height = 0;
   this.updateGPUMem();
