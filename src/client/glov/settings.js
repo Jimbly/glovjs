@@ -1,11 +1,12 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+let modified = {};
+exports.true = true; // for perf.js
+
 const { titleCase } = require('../../common/util.js');
 const { cmd_parse } = require('./cmds.js');
 const { resetFBOs } = require('./framebuffer.js');
-
-exports.true = true; // for perf.js
 
 export function get(key) {
   return exports[key];
@@ -17,7 +18,6 @@ export function set(key, value) {
   }
 }
 
-let modified = {};
 export function runTimeDefault(key, new_default) {
   // Set a default value that cannot be determined at load time
   // Only set if this has never been modified
@@ -50,11 +50,6 @@ export function register(defs) {
 }
 
 register({
-  show_metrics: {
-    default_value: 1,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-  },
   max_fps: {
     label: 'Max FPS',
     default_value: 0,

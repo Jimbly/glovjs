@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
+const { renderWidth, renderHeight } = engine;
 const perf = require('./perf.js');
 const settings = require('./settings.js');
 const textures = require('./textures.js');
@@ -78,20 +79,15 @@ export function temporaryTextureClaim(tex) {
 }
 
 // Call tex.captureEnd when done
-function framebufferCaptureStart(tex, w, h) {
+function framebufferCaptureStart(tex, w, h, possibly_fbo) {
   assert.equal(engine.viewport[0], 0); // maybe allow/require setting viewport *after* starting capture instead?
   assert.equal(engine.viewport[1], 0);
   if (!w) {
-    if (engine.render_width) {
-      w = engine.render_width;
-      h = engine.render_height;
-    } else {
-      w = engine.width;
-      h = engine.height;
-    }
+    w = renderWidth();
+    h = renderHeight();
   }
   if (!tex) {
-    tex = getTemporaryTexture(w, h, true);
+    tex = getTemporaryTexture(w, h, possibly_fbo);
   }
   tex.captureStart(w, h);
   return tex;
@@ -100,7 +96,7 @@ function framebufferCaptureStart(tex, w, h) {
 // Does a capture directly from the framebuffer regardless of current use_fbos setting
 // Warning: Slow on iOS
 export function framebufferCapture(tex, w, h, filter_linear, wrap) {
-  tex = framebufferCaptureStart(tex, w, h);
+  tex = framebufferCaptureStart(tex, w, h, false);
   tex.captureEnd(filter_linear, wrap);
   return tex;
 }
@@ -112,8 +108,8 @@ export function framebufferStart(opts) {
   let { width, height, viewport, final, clear, need_depth, clear_all, clear_color } = opts;
   ++num_passes;
   if (!final) {
-    cur_tex = framebufferCaptureStart(null, width, height);
-    if (need_depth) {
+    cur_tex = framebufferCaptureStart(null, width, height, true);
+    if (need_depth && settings.use_fbos) {
       bindTemporaryDepthbuffer(width, height);
     }
   }
@@ -207,7 +203,7 @@ export function framebufferEndOfFrame() {
 
 settings.register({
   show_passes: {
-    label: 'Show FPS',
+    label: 'Show Postprocessing Passes',
     default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0,1],
