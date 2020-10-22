@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const engine = require('./engine.js');
+const { errorReportSetDetails } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
 const { matchAll } = require('../../common/util.js');
 const { texturesUnloadDynamic } = require('./textures.js');
@@ -28,7 +29,7 @@ export const semantic = {
 };
 
 export let globals;
-let defines;
+let global_defines;
 
 let error_fp;
 let error_vp;
@@ -62,18 +63,47 @@ export function addInclude(key, filename) {
   loadInclude(key);
 }
 
+function setGLErrorReportDetails() {
+  // Set some debug details we might want
+  let details = {
+    max_fragment_uniform_vectors: gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
+    max_varying_vectors: gl.getParameter(gl.MAX_VARYING_VECTORS),
+    max_vertex_attribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
+    max_vertex_uniform_vectors: gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
+    vendor: gl.getParameter(gl.VENDOR),
+    renderer: gl.getParameter(gl.RENDERER),
+  };
+  let debug_info = gl.getExtension('WEBGL_debug_renderer_info');
+  if (debug_info) {
+    details.renderer_unmasked = gl.getParameter(debug_info.UNMASKED_RENDERER_WEBGL);
+    details.vendor_unmasked = gl.getParameter(debug_info.UNMASKED_VENDOR_WEBGL);
+  }
+  for (let key in details) {
+    errorReportSetDetails(key, details[key]);
+  }
+}
+
 let report_queued = false;
 let shader_errors;
-function reportShaderError(err) {
+let shader_errors_any_fatal;
+function reportShaderError(non_fatal, err) {
   function doReport() {
-    assert(false, `Shader error(s):\n    ${shader_errors.join('\n    ')}`);
+    setGLErrorReportDetails();
+    let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
+    if (!shader_errors_any_fatal && window.glov_error_report) {
+      window.glov_error_report(msg, 'shaders.js', 0, 0);
+    } else {
+      assert(false, msg);
+    }
     shader_errors = null;
   }
   if (!report_queued) {
     setTimeout(doReport, 1000);
     report_queued = true;
     shader_errors = [];
+    shader_errors_any_fatal = false;
   }
+  shader_errors_any_fatal = shader_errors_any_fatal || !non_fatal;
   shader_errors.push(err);
 }
 
@@ -123,12 +153,15 @@ const webgl2_header_vp = [
 ].join('\n');
 
 function Shader(params) {
-  let { filename } = params;
+  let { filename, defines, non_fatal } = params;
   assert.equal(typeof filename, 'string');
   let type = filename.endsWith('.fp') ? gl.FRAGMENT_SHADER : filename.endsWith('.vp') ? gl.VERTEX_SHADER : 0;
   assert(type);
   this.type = type;
   this.filename = filename;
+  this.non_fatal = non_fatal;
+  this.defines_arr = (defines || []);
+  this.defines = this.defines_arr.map((a) => `#define ${a}\n`).join('');
   this.shader = gl.createShader(type);
   this.id = ++last_id;
   if (type === gl.VERTEX_SHADER) {
@@ -145,7 +178,7 @@ Shader.prototype.compile = function () {
   if (engine.webgl2 && text.indexOf('#pragma WebGL2') !== -1) {
     header = type === gl.VERTEX_SHADER ? webgl2_header_vp : webgl2_header_fp;
   }
-  text = `${header}${defines}${text}`;
+  text = `${header}${global_defines}${this.defines}${text}`;
   text = parseIncludes(text);
   text = text.replace(/#pragma WebGL2?/g, '');
   if (type === gl.VERTEX_SHADER) {
@@ -174,14 +207,20 @@ Shader.prototype.compile = function () {
   gl.compileShader(this.shader);
 
   if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS)) {
+    this.valid = false;
     let error_text = gl.getShaderInfoLog(this.shader);
     if (error_text) { // sometimes null on iOS
       error_text = error_text.replace(/\0/g, '').trim();
     }
-    console.error(`Error compiling ${filename}: ${error_text}`);
-    reportShaderError(`${filename}: ${error_text}`);
+    if (this.defines_arr.length) {
+      filename += `(${this.defines_arr.join(',')})`;
+    }
+    console[this.non_fatal ? 'warn' : 'error'](`Error compiling ${filename}: ${error_text}`);
+    reportShaderError(this.non_fatal, `${filename}: ${error_text}`);
     // eslint-disable-next-line newline-per-chained-call
     console.log(text.split('\n').map((line, idx) => `${idx+1}: ${line}`).join('\n'));
+  } else {
+    this.valid = true;
   }
 };
 
@@ -233,7 +272,8 @@ function link(vp, fp) {
 
   prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   if (!prog.valid) {
-    reportShaderError(`Shader link error (${vp.filename} & ${fp.filename}): ${gl.getProgramInfoLog(prog.handle)}`);
+    reportShaderError(false, `Shader link error (${vp.filename} & ${fp.filename}):` +
+      ` ${gl.getProgramInfoLog(prog.handle)}`);
     console.error(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
   }
 
@@ -335,7 +375,7 @@ export function addReservedDefine(key) {
 }
 let internal_defines = {};
 function applyDefines() {
-  defines = Object.keys(engine.defines).filter((v) => !reserved[v])
+  global_defines = Object.keys(engine.defines).filter((v) => !reserved[v])
     .concat(Object.keys(internal_defines))
     .map((v) => `#define ${v}\n`)
     .join('');

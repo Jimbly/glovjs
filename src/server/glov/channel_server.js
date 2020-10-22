@@ -24,6 +24,7 @@ const os = require('os');
 const packet = require('../../common/packet.js');
 const { isPacket, packetCreate } = packet;
 const { panic } = require('./server.js');
+const { processUID } = require('./server_config.js');
 const { callEach, clone, cloneShallow, logdata, once } = require('../../common/util.js');
 const { inspect } = require('util');
 const { wsstats } = require('../../common/wscommon.js');
@@ -559,7 +560,7 @@ class ChannelServer {
 
   init(params) {
     let { data_stores, ws_server, exchange, is_master } = params;
-    this.csuid = `${process.env.PODNAME || 'local'}${process.pid === 1 ? '' : `-${process.pid}`}`;
+    this.csuid = processUID();
     this.ws_server = ws_server;
 
     this.debug_addr = getDebugAddr();
@@ -604,6 +605,7 @@ class ChannelServer {
     //   that increases directly proportionally to communication latency.
     this.exchange_pings = 0;
     setTimeout(this.tick_func, this.tick_time);
+    this.csworker.log('Channel server started');
   }
 
   reportLoad(dt) {

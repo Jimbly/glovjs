@@ -8,6 +8,21 @@ const { defaultsDeep } = require('../../common/util.js');
 
 let server_config;
 
+let process_uid;
+export function processUID() {
+  if (!process_uid) {
+    if (process.env.PODNAME) {
+      process_uid = `${process.env.PODNAME}${process.pid === 1 ? '' : `-${process.pid}`}`;
+      // Add timestamp because failed pods restart with the same PODNAME
+      // Timestamp mod 10m (approx 4 months), should be acceptably low chance for a collision
+      process_uid += `-${Math.floor(Date.now()/1000) % 10000000}`;
+    } else {
+      process_uid = `local-${process.pid}`;
+    }
+  }
+  return process_uid;
+}
+
 function determinEnv() {
   let env;
   if (argv.env || server_config.env) {

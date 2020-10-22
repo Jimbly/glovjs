@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { is_ios } = require('./browser.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const { renderWidth, renderHeight } = engine;
@@ -13,7 +14,7 @@ let temporary_textures = {};
 let temporary_depthbuffers = {};
 
 let reset_fbos = false;
-export function resetFBOs() {
+function resetFBOs() {
   reset_fbos = true;
 }
 
@@ -109,8 +110,14 @@ export function framebufferStart(opts) {
   ++num_passes;
   if (!final) {
     cur_tex = framebufferCaptureStart(null, width, height, true);
-    if (need_depth && settings.use_fbos) {
-      bindTemporaryDepthbuffer(width, height);
+    if (settings.use_fbos) {
+      if (need_depth) {
+        bindTemporaryDepthbuffer(width, height);
+      } else {
+        // testing: force unbind, in case one was left bound
+        // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, settings.fbo_depth16 ?
+        //   gl.DEPTH_ATTACHMENT : gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, null);
+      }
     }
   }
   if (clear_color) {
@@ -207,6 +214,27 @@ settings.register({
     default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0,1],
+  },
+  use_fbos: {
+    label: 'Use Framebuffer Objects for postprocessing',
+    default_value: is_ios ? 1 : 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    ver: 1,
+  },
+  fbo_depth16: { // This had no effect on performance, tested on iPhone, Xperia or Intel GPU
+    label: 'Use 16-bit depth buffers for offscreen rendering',
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    on_change: resetFBOs,
+  },
+  fbo_rgba: { // This had no effect on performance, tested on iPhone, Xperia or Intel GPU
+    label: 'Use RGBA color buffers for offscreen rendering',
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    on_change: resetFBOs,
   },
 });
 

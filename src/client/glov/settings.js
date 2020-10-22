@@ -6,7 +6,6 @@ exports.true = true; // for perf.js
 
 const { titleCase } = require('../../common/util.js');
 const { cmd_parse } = require('./cmds.js');
-const { resetFBOs } = require('./framebuffer.js');
 
 export function get(key) {
   return exports[key];
@@ -78,25 +77,5 @@ register({
     default_value: 1,
     type: cmd_parse.TYPE_INT,
     range: [0,1],
-  },
-  use_fbos: {
-    label: 'Use Framebuffer Objects for postprocessing',
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-  },
-  fbo_depth16: {
-    label: 'Use 16-bit depth buffers for offscreen rendering',
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-    on_change: resetFBOs,
-  },
-  fbo_rgba: {
-    label: 'Use RGBA color buffers for offscreen rendering',
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-    on_change: resetFBOs,
   },
 });

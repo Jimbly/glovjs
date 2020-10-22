@@ -36,6 +36,7 @@ class MasterWorker extends ChannelWorker {
     // Broadcast to all ChannelServers to let them know there is a (potentially new) master worker
     // Delay until we finish startup/registration
     setImmediate(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
+    console.log('lifecycle_master_start');
   }
   getChanServData(id) {
     assert(id);
@@ -310,6 +311,9 @@ class MasterWorker extends ChannelWorker {
   }
 
   cmdMasterWhere(worker_id, resp_func) {
+    if (!worker_id) {
+      return void resp_func('Missing parameter');
+    }
     channelServerSendNoCreate(this, worker_id, 'where', null, null, resp_func);
   }
   cmdMasterStats(ignored, resp_func) {
@@ -392,6 +396,7 @@ class MasterWorker extends ChannelWorker {
     this.restart_monitor_id = setTimeout(this.monitorRestart.bind(this), 1000);
   }
   cmdMasterRestarting(value, resp_func) {
+    console.log('lifecycle_master_restarting');
     let new_value = value !== '0';
     this.sendChannelMessage('channel_server', 'restarting', new_value);
     resp_func(null, `Servers now ${new_value ? '' : 'not '}shutting down`);

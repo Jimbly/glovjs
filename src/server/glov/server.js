@@ -265,8 +265,15 @@ export function startup(params) {
 }
 
 export function panic(...message) {
-  console.error(...message);
-  process.stderr.write(message, () => {
+  if (message && message.length === 1 && message[0] instanceof Error) {
+    console.error(message[0]);
+  } else {
+    console.error(...message); // Log all parameters
+    console.error(new Error(message)); // So Stackdriver error reporting catches it
+  }
+  console.error('Process exiting due to panic');
+  process.stderr.write(String(message), () => {
+    console.error('Process exiting due to panic (2)'); // May not be seen due to buffering, but useful if it is seen
     process.exit(1);
   });
   throw new Error('panic'); // ensure calling code does not continue

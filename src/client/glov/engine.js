@@ -9,6 +9,7 @@ export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
 require('not_worker'); // This module cannot be required from a worker bundle
 
 const assert = require('assert');
+const { is_ios_safari } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
 const effects = require('./effects.js');
@@ -51,6 +52,7 @@ let height_3d;
 export let pixel_aspect = 1;
 export let dom_to_canvas_ratio = window.devicePixelRatio || 1;
 export let antialias;
+export let antialias_unavailable;
 
 export let game_width;
 export let game_height;
@@ -115,7 +117,15 @@ export function setMatVP(_mat_view) {
   mat4Mul(mat_vp, mat_projection, mat_view);
 }
 
+let fov_set = false;
+function setDefaultFOV(default_fov) {
+  if (!fov_set) {
+    fov_min = default_fov;
+  }
+}
+
 export function setFOV(new_fov) {
+  fov_set = true;
   fov_min = new_fov;
 }
 
@@ -124,15 +134,9 @@ export function setGameDims(w, h) {
   game_height = h;
 }
 
-let is_ios_safari = (function () {
-  let ua = window.navigator.userAgent;
-  let is_ios = ua.match(/iPad/i) || ua.match(/iPhone/i);
-  let webkit = ua.match(/WebKit/i);
-  return is_ios && webkit && !ua.match(/CriOS/i);
-}());
-
 // Didn't need this for a while, but got slow on iOS recently :(
-const postprocessing_reset_version = '4';
+// Better when using FBOs for postprocessing now, though!
+const postprocessing_reset_version = '5';
 export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version;
 export function postprocessingAllow(allow) {
   local_storage.set('glov_no_postprocessing', allow ? undefined : postprocessing_reset_version);
@@ -165,7 +169,16 @@ export function reloadSafe() {
   errorReportDisable();
   // Release canvas to not leak memory on Firefox
   releaseCanvas();
-  document.location.reload();
+  if (window.FBInstant) {
+    try {
+      window.top.location.reload();
+    } catch (e) {
+      // Not good, but better than the alternatives, I guess
+      window.FBInstant.quit();
+    }
+  } else {
+    document.location.reload();
+  }
 }
 window.reloadSafe = reloadSafe;
 
@@ -390,8 +403,9 @@ function checkResize() {
     last_body_height = view_h;
     document.body.style.height = `${view_h}px`;
   }
-  let new_width = round(canvas.clientWidth * dom_to_canvas_ratio) || 1;
-  let new_height = round(canvas.clientHeight * dom_to_canvas_ratio) || 1;
+  let rect = canvas.getBoundingClientRect();
+  let new_width = round(rect.width * dom_to_canvas_ratio) || 1;
+  let new_height = round(rect.height * dom_to_canvas_ratio) || 1;
 
   if (cmds.safearea[0] === -1) {
     if (safearea_elem) {
@@ -825,6 +839,7 @@ export function startup(params) {
   let context_opts = [
     { antialias, powerPreference, alpha: false },
     { powerPreference, alpha: false },
+    { antialias, alpha: false },
     { alpha: false },
     {},
   ];
@@ -837,6 +852,10 @@ export function startup(params) {
         if (window.gl) {
           if (context_names[i] === 'webgl2') {
             webgl2 = true;
+          }
+          if (antialias && !context_opts[jj].antialias) {
+            antialias_unavailable = true;
+            antialias = false;
           }
           good = true;
           break;
@@ -864,6 +883,7 @@ export function startup(params) {
   any_3d = params.any_3d || false;
   ZNEAR = params.znear || 0.7;
   ZFAR = params.zfar || 10000;
+  setDefaultFOV((params.fov || 60) * PI / 180);
   if (params.pixely === 'strict') {
     render_width = game_width;
     render_height = game_height;

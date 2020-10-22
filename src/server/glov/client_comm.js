@@ -208,6 +208,8 @@ const invalid_names = {
   mod: 1,
   moderator: 1,
   default: 1,
+  all: 1,
+  everyone: 1,
   anonymous: 1,
   public: 1,
   clear: 1,

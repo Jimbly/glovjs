@@ -701,7 +701,8 @@ export function buttonImage(param) {
     x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
     y: param.y + pad_top + img_origin[1] * img_h,
     z: param.z + 0.1,
-    color: param.color1 && param.color ? param.color : color, // use explicit tint if doing dual-tinting
+    // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
+    color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
     w: img_w / param.img.size[0],
     h: img_h / param.img.size[1],
@@ -952,8 +953,10 @@ export function createEditBox(param) {
 }
 
 let slider_default_vshrink = 1.0;
-export function setSliderDefaultVShrink(vshrink) {
+let slider_default_handle_shrink = 1.0;
+export function setSliderDefaultShrink(vshrink, handle_shrink) {
   slider_default_vshrink = vshrink;
+  slider_default_handle_shrink = handle_shrink;
 }
 const color_slider_handle = vec4(1,1,1,1);
 const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
@@ -970,18 +973,22 @@ export function slider(value, param) {
   param.w = param.w || button_width;
   param.h = param.h || button_height;
   let vshrink = param.vshrink || slider_default_vshrink;
+  let handle_shrink = param.handle_shrink || slider_default_handle_shrink;
   let disabled = param.disabled || false;
+  let handle_h = param.h * handle_shrink;
+  let handle_w = sprites.slider_handle.uidata.wh[0] * handle_h;
 
   slider_dragging = false;
 
+  let shrinkdiff = handle_shrink - vshrink;
   drawHBox({
-    x: param.x + param.h * (1 - vshrink)/2,
+    x: param.x + param.h * shrinkdiff/2,
     y: param.y + param.h * (1 - vshrink)/2,
+    w: param.w - param.h * shrinkdiff,
     h: param.h * vshrink,
-    w: param.w - param.h * vshrink,
   }, sprites.slider, param.color);
 
-  let xoffs = round(sprites.slider.uidata.wh[0] * param.h / 2);
+  let xoffs = round(max(sprites.slider.uidata.wh[0] * param.h * vshrink, handle_w) / 2);
   let draggable_width = param.w - xoffs * 2;
 
   // Draw notches - would also need to quantize the values below
@@ -1026,8 +1033,6 @@ export function slider(value, param) {
   }
   let rollover = !disabled && glov_input.mouseOver(param);
   let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / (param.max - param.min);
-  let handle_h = param.h;
-  let handle_w = sprites.slider_handle.uidata.wh[0] * handle_h;
   let handle_x = handle_center_pos - handle_w / 2;
   let handle_y = param.y + param.h / 2 - handle_h / 2;
   let handle_color = color_slider_handle;
