@@ -422,7 +422,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
   let x_advance = this.calcXAdvance(xsc);
 
   do {
-    let c = s < len ? text.charCodeAt(s) : 0;
+    let c = s < len ? text.charCodeAt(s) || 0xFFFD : 0;
     let newx = x;
     let char_w;
     let char_info = this.infoFromChar(c);
@@ -447,7 +447,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
     }
     if (!(c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9)) {
       s++;
-      c = s < len ? text.charCodeAt(s) : 0;
+      c = s < len ? text.charCodeAt(s) || 0xFFFD : 0;
     }
     if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9) {
       hard_wrap = false;
