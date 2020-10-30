@@ -21,12 +21,14 @@ class GlovUIEditBox {
     this.text = '';
     this.placeholder = '';
     this.max_len = 0;
+    this.zindex = null;
     this.initial_focus = false;
     this.onetime_focus = false;
     this.auto_unfocus = false;
     this.initial_select = false;
     this.spellcheck = true;
     this.esc_clears = true;
+    this.multiline = 0;
     this.applyParams(params);
 
     this.is_focused = false;
@@ -134,12 +136,15 @@ class GlovUIEditBox {
         elem.textContent = '';
         let form = document.createElement('form');
         form.setAttribute('autocomplete', 'off');
-        let input = document.createElement('input');
+        let input = document.createElement(this.multiline ? 'textarea' : 'input');
         input.setAttribute('autocomplete', `auto_off_${Math.random()}`);
         input.setAttribute('type', this.type);
         input.setAttribute('placeholder', this.placeholder);
         if (this.max_len) {
           input.setAttribute('maxLength', this.max_len);
+        }
+        if (this.multiline) {
+          input.setAttribute('rows', this.multiline);
         }
         input.setAttribute('tabindex', 2);
         form.addEventListener('submit', (ev) => {
@@ -187,6 +192,9 @@ class GlovUIEditBox {
       let new_fontsize = `${camera2d.virtualToFontSize(this.font_height).toFixed(0)}px`;
       if (new_fontsize !== old_fontsize) {
         elem.style.fontSize = new_fontsize;
+      }
+      if (this.zindex) {
+        elem.style['z-index'] = this.zindex;
       }
     }
 
