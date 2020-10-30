@@ -196,7 +196,8 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.src_height = h;
   this.width = w;
   this.height = h;
-  gl.getError(); // clear the error flag if there is one
+  // clear the error flag(s) if there are any
+  for (let ii = 0; ii < 10 && gl.getError(); ++ii); // eslint-disable-line curly
   // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, wrapped)
   let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array && !this.is_cube &&
     !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
