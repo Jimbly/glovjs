@@ -4,6 +4,7 @@
 
 const assert = require('assert');
 const engine = require('./engine.js');
+const { MAX_SEMANTIC } = require('./shaders.js');
 const { ceil, max, min } = Math;
 
 export const TRIANGLES = 4;
@@ -269,7 +270,6 @@ Geom.prototype.dispose = function () {
   this.vert_gpu_mem = 0;
 };
 
-
 let bound_attribs = (function () {
   let r = [];
   for (let ii = 0; ii < 16; ++ii) {
@@ -280,7 +280,26 @@ let bound_attribs = (function () {
   }
   return r;
 }());
-Geom.prototype.bind = function () {
+
+export function geomResetState() {
+  // Resetting this avoids a state management bug on Chrome 71-73 on Redmi 6A -
+  //   it seems the browser was leaving something bound at a low level, perhaps
+  //   from generating mipmaps or something?
+  bound_geom = null;
+  bound_index_buf = null;
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  bound_array_buf = null;
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  for (let ii = 0; ii < MAX_SEMANTIC; ++ii) {
+    gl.disableVertexAttribArray(ii);
+  }
+  attrib_enabled = 0;
+  for (let ii = 0; ii < bound_attribs.length; ++ii) {
+    bound_attribs[ii].vbo = null;
+  }
+}
+
+Geom.prototype.bind = function (debug) {
   if (bound_geom !== this) {
     bound_geom = this;
     let vbo = this.vbo;
@@ -300,8 +319,10 @@ Geom.prototype.bind = function () {
         let sem = fmt[0];
         let gltype = fmt[1];
         let normalized = fmt[3];
-        gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
-        bound_attribs[ii].vbo = bound_array_buf;
+        if (!debug) {
+          gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
+          bound_attribs[ii].vbo = bound_array_buf;
+        }
         // bound_attribs[ii].offset = offset;
       }
       offset += count * byte_size;
@@ -310,10 +331,12 @@ Geom.prototype.bind = function () {
     //   used_attribs |= 1 << shader.semantics.COLOR;
     //   bindUnitBuf(1, this.vert_count);
     // }
-    enableVertexAttribArray(this.used_attribs);
+    if (!debug) {
+      enableVertexAttribArray(this.used_attribs);
+    }
   }
 
-  if (this.ibo && bound_index_buf !== this.ibo) {
+  if (this.ibo && bound_index_buf !== this.ibo && !debug) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
     bound_index_buf = this.ibo;
   }

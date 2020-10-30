@@ -1,6 +1,8 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+export const MAX_SEMANTIC = 5;
+
 const assert = require('assert');
 const engine = require('./engine.js');
 const { errorReportSetDetails } = require('./error_report.js');
@@ -61,6 +63,27 @@ export function addInclude(key, filename) {
   assert(!includes[key]);
   includes[key] = { filename };
   loadInclude(key);
+}
+
+export function shadersResetState() {
+  for (let ii = 0; ii < shaders.length; ++ii) {
+    let shader = shaders[ii];
+    if (shader.programs) {
+      for (let fpid in shader.programs) {
+        let prog = shader.programs[fpid];
+        //gl.useProgram(prog.handle);
+        for (let jj = 0; jj < prog.uniforms.length; ++jj) {
+          let unif = prog.uniforms[jj];
+          for (let kk = 0; kk < unif.size; ++kk) {
+            unif.value[kk] = 0;
+          }
+          //uniformSetValue(unif);
+        }
+      }
+    }
+  }
+  bound_prog = null;
+  gl.useProgram(null);
 }
 
 function setGLErrorReportDetails() {

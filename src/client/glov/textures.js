@@ -106,6 +106,17 @@ export function isArrayBound(texs) {
   return true;
 }
 
+export function texturesResetState() {
+  bound_unit = -1;
+  if (engine.webgl2) {
+    unbindAll(gl.TEXTURE_2D_ARRAY);
+  }
+  unbindAll(gl.TEXTURE_2D);
+  setUnit(0);
+  gl.getError();
+}
+
+
 let auto_unload_textures = [];
 
 function Texture(params) {

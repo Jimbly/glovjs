@@ -63,7 +63,6 @@ export let render_height;
 //eslint-disable-next-line no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
 
-export let any_3d = false;
 export let ZFAR;
 export let ZNEAR;
 export let fov_y = 1;
@@ -579,6 +578,33 @@ function fixNatives(is_startup) {
   }
 }
 
+function resetState() {
+  // Only geom.geomResetState appears to have been strictly needed to work around
+  //  a bug on Chrome 71, but doing the rest of this to be safe.
+  textures.texturesResetState();
+  shaders.shadersResetState();
+  geom.geomResetState();
+
+  // These should already be true:
+  // gl.blendFunc(gl.ONE, gl.ONE);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  // gl.disable(gl.BLEND);
+  gl.enable(gl.BLEND);
+  // gl.disable(gl.DEPTH_TEST);
+  gl.enable(gl.DEPTH_TEST);
+  // gl.depthMask(false);
+  gl.depthMask(true);
+  // gl.disable(gl.CULL_FACE);
+  gl.enable(gl.CULL_FACE);
+  // gl.depthFunc(gl.GEQUAL);
+  gl.depthFunc(gl.LEQUAL);
+  // gl.enable(gl.SCISSOR_TEST);
+  gl.disable(gl.SCISSOR_TEST);
+  // gl.cullFace(gl.FRONT);
+  gl.cullFace(gl.BACK);
+  gl.viewport(0, 0, width, height);
+}
+
 export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
@@ -662,19 +688,20 @@ function tick(timestamp) {
     }
   }
 
-  if (any_3d) {
-    // setting the fov values for the frame even if we don't do 3D this frame, because something
-    // might need it before start3DRendering() (e.g. mouse click inverse projection)
-    if (width > height) {
-      fov_y = fov_min;
-      let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
-      fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
-    } else {
-      fov_x = fov_min;
-      let rise = height/width * sin(fov_x / 2) / cos(fov_x / 2);
-      fov_y = 2 * asin(rise / sqrt(rise * rise + 1));
-    }
+  resetState();
+
+  // setting the fov values for the frame even if we don't do 3D this frame, because something
+  // might need it before start3DRendering() (e.g. mouse click inverse projection)
+  if (width > height) {
+    fov_y = fov_min;
+    let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
+    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+  } else {
+    fov_x = fov_min;
+    let rise = height/width * sin(fov_x / 2) / cos(fov_x / 2);
+    fov_y = 2 * asin(rise / sqrt(rise * rise + 1));
   }
+
   textures.bind(0, textures.textures.error);
 
   camera2d.tickCamera2D();
@@ -880,7 +907,6 @@ export function startup(params) {
   height = canvas.height;
   game_width = params.game_width || 1280;
   game_height = params.game_height || 960;
-  any_3d = params.any_3d || false;
   ZNEAR = params.znear || 0.7;
   ZFAR = params.zfar || 10000;
   setDefaultFOV((params.fov || 60) * PI / 180);
@@ -898,9 +924,6 @@ export function startup(params) {
 
   gl.depthFunc(gl.LEQUAL);
   // gl.enable(gl.SCISSOR_TEST);
-  if (!any_3d) {
-    gl.disable(gl.CULL_FACE);
-  }
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths
@@ -924,9 +947,7 @@ export function startup(params) {
   camera2d.startup();
   sprites.startup();
   input.startup(canvas, params);
-  if (any_3d) {
-    models.startup();
-  }
+  models.startup();
 
   /* eslint-disable global-require */
   glov_particles = require('./particles.js').create();
