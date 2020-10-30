@@ -51,7 +51,7 @@ export function webFSExists(filename) {
 }
 
 // Don't report on files we know are loaded dynamically, and are small
-const report_ignore_regex = /\.(fp|vp)$/;
+const report_ignore_regex = /\.(fp|vp|vm)$/;
 export function webFSReportUnused() {
   let tot_size = 0;
   for (let filename in fs) {

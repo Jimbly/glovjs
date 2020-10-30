@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { is_ios } = require('./browser.js');
 const { cmd_parse } = require('./cmds.js');
+const { applyCopy } = require('./effects.js');
 const engine = require('./engine.js');
 const { renderWidth, renderHeight } = engine;
 const perf = require('./perf.js');
@@ -106,9 +107,13 @@ export function framebufferCapture(tex, w, h, filter_linear, wrap) {
 let cur_tex;
 export function framebufferStart(opts) {
   assert(!cur_tex);
-  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color } = opts;
+  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, force_tex } = opts;
   ++num_passes;
-  if (!final) {
+  if (force_tex) {
+    assert(viewport);
+    cur_tex = force_tex;
+    cur_tex.captureStart();
+  } else if (!final) {
     cur_tex = framebufferCaptureStart(null, width, height, true);
     if (settings.use_fbos) {
       if (need_depth) {
@@ -166,6 +171,11 @@ export function framebufferEnd(opts) {
   return ret;
 }
 
+export function framebufferTopOfFrame() {
+  // In case of crash on previous frame
+  cur_tex = null;
+}
+
 export function framebufferEndOfFrame() {
   assert(!cur_tex);
   last_num_passes = num_passes;
@@ -206,6 +216,28 @@ export function framebufferEndOfFrame() {
     }
   }
   reset_fbos = false;
+}
+
+export function framebufferUpdateCanvasForCapture() {
+  if (cur_tex && settings.use_fbos) {
+    let saved_tex = cur_tex;
+    let saved_viewport = engine.viewport.slice(0);
+    // copy to canvas
+    framebufferEnd();
+    applyCopy({
+      source: saved_tex,
+      final: true,
+      viewport: saved_viewport,
+    });
+    // resume rendering to framebuffer
+    framebufferStart({
+      force_tex: saved_tex,
+      viewport: saved_viewport,
+    });
+    return saved_tex; // just for .width/height
+  } else {
+    return { width: engine.viewport[2], height: engine.viewport[3] };
+  }
 }
 
 settings.register({

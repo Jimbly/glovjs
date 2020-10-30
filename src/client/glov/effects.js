@@ -6,7 +6,7 @@
 const assert = require('assert');
 const engine = require('./engine.js');
 const { renderWidth, renderHeight } = engine;
-const { framebufferEnd, framebufferStart } = require('./framebuffer.js');
+const { framebufferEnd, framebufferStart, framebufferTopOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
@@ -149,6 +149,7 @@ export function effectsQueue(z, fn) {
 export function effectsTopOfFrame() {
   // In case of crash on previous frame
   num_passes = 0;
+  framebufferTopOfFrame();
 }
 
 export function effectsReset() {
@@ -289,7 +290,7 @@ export function contrastMatrix(dst, contrastScale) {
 
 // effect: { shader, params, texs, final }
 function applyEffect(effect, view_w, view_h) {
-  let final = effect.final !== false && effectsIsFinal();
+  let final = effect.final !== false && effectsIsFinal() || effect.final;
   if (effect.no_framebuffer) {
     // neither starting nor ending a framebuffer, presumably something effectively additive
     let viewport = engine.viewport;

@@ -5,7 +5,7 @@ export const MAX_SEMANTIC = 5;
 
 const assert = require('assert');
 const engine = require('./engine.js');
-const { errorReportSetDetails } = require('./error_report.js');
+const { errorReportSetDetails, glovErrorReport } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
 const { matchAll } = require('../../common/util.js');
 const { texturesUnloadDynamic } = require('./textures.js');
@@ -113,8 +113,8 @@ function reportShaderError(non_fatal, err) {
   function doReport() {
     setGLErrorReportDetails();
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
-    if (!shader_errors_any_fatal && window.glov_error_report) {
-      window.glov_error_report(msg, 'shaders.js', 0, 0);
+    if (!shader_errors_any_fatal) {
+      glovErrorReport(false, msg, 'shaders.js');
     } else {
       assert(false, msg);
     }

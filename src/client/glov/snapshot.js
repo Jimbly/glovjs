@@ -115,7 +115,7 @@ export function snapshot(param) {
 
   if (param.snapshot_backdrop) {
     gl.depthMask(false);
-    effects.applyCopy({ source: param.snapshot_backdrop });
+    effects.applyCopy({ source: param.snapshot_backdrop, no_framebuffer: true });
     gl.depthMask(true);
   }
   param.draw();
@@ -130,7 +130,7 @@ export function snapshot(param) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   if (param.snapshot_backdrop) {
     gl.depthMask(false);
-    effects.applyCopy({ source: param.snapshot_backdrop });
+    effects.applyCopy({ source: param.snapshot_backdrop, no_framebuffer: true });
     gl.depthMask(true);
   }
   param.draw();

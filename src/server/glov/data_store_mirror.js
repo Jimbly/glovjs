@@ -15,6 +15,11 @@ function DataStoreMirror(options) {
       this.getAsyncBuffer = null;
     }
   }
+  if (this.readwrite_ds.search) {
+    this.search = this.readwrite_ds.search.bind(this.readwrite_ds);
+  } else if (this.write_ds.search) {
+    this.search = this.write_ds.search.bind(this.write_ds);
+  }
 }
 
 DataStoreMirror.prototype.unload = function (obj_name) {

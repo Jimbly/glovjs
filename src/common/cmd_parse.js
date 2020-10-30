@@ -131,7 +131,16 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     assert(param.set);
     let init_value = this.storage.getJSON(store_key);
     if (init_value !== undefined) {
-      param.set(init_value);
+      // enforce stored values within current range
+      if (param.range) {
+        init_value = Number(init_value);
+        if (!isFinite(init_value) || init_value < param.range[0] || init_value > param.range[1]) {
+          init_value = undefined;
+        }
+      }
+      if (init_value !== undefined) {
+        param.set(init_value);
+      }
     }
   }
   let fn = (str, resp_func) => {

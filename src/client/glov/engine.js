@@ -8,6 +8,10 @@ export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
 
 require('not_worker'); // This module cannot be required from a worker bundle
 
+// init before requiring anything because persisted settings call back into this module
+let fov_set = false;
+export let fov_min = 60 * Math.PI / 180;
+
 const assert = require('assert');
 const { is_ios_safari } = require('./browser.js');
 const camera2d = require('./camera2d.js');
@@ -67,7 +71,6 @@ export let ZFAR;
 export let ZNEAR;
 export let fov_y = 1;
 export let fov_x = 1;
-export let fov_min = 60 * PI / 180;
 
 export let mat_projection = mat4();
 export let mat_view = mat4();
@@ -116,7 +119,6 @@ export function setMatVP(_mat_view) {
   mat4Mul(mat_vp, mat_projection, mat_view);
 }
 
-let fov_set = false;
 function setDefaultFOV(default_fov) {
   if (!fov_set) {
     fov_min = default_fov;
@@ -832,7 +834,7 @@ export function startup(params) {
     errorReportSetPath(urlhash.getAPIPath());
     window.glov_error_report = (msg, file, line, col) => {
       setTimeout(requestFrame, 1);
-      return glovErrorReport(msg, file, line, col);
+      return glovErrorReport(true, msg, file, line, col);
     };
   }
 

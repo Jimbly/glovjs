@@ -15,8 +15,10 @@
 export let dss_stats = {
   set: 0,
   get: 0,
+  search: 0,
   inflight_set: 0,
   inflight_get: 0,
+  inflight_search: 0,
 };
 
 const assert = require('assert');
@@ -41,13 +43,19 @@ function DataStoreShield(data_store, opts) {
   this.label = label;
   this.metric_set = `${label}.set`;
   this.metric_get = `${label}.get`;
+  this.metric_search = `${label}.search`;
   this.metric_errors = `${label}.errors`;
   this.metric_inflight_set = `${label}.inflight_set`;
   this.metric_inflight_get = `${label}.inflight_get`;
+  this.metric_inflight_search = `${label}.inflight_search`;
   this.metric_timing = `${label}.timing`;
   this.data_store = data_store;
   this.inflight_set = 0;
   this.inflight_get = 0;
+  this.inflight_search = 0;
+  if (!data_store.search) {
+    this.search = null;
+  }
 }
 
 DataStoreShield.prototype.unload = function (obj_name) {
@@ -162,6 +170,15 @@ DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
   dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsyncBuffer(obj_name, onDone);
+  }, cb);
+};
+
+DataStoreShield.prototype.search = function (collection, search, cb) {
+  let self = this;
+  metrics.add(self.metric_search, 1);
+  dss_stats.search++;
+  this.executeShielded('search', collection, RETRIES_READ, TIMEOUT_READ, (onDone) => {
+    self.data_store.search(collection, search, onDone);
   }, cb);
 };
 

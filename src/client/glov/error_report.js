@@ -25,31 +25,40 @@ export function errorReportSetDetails(key, value) {
 }
 errorReportSetDetails('ver', BUILD_TIMESTAMP);
 
+export function errorReportGetDetails() {
+  return error_report_details;
+}
+
 let last_error_time = 0;
 let crash_idx = 0;
 // Errors from plugins that we don't want to get reported to us, or show the user!
 let filtered_errors = /avast_submit|vc_request_action/;
-export function glovErrorReport(msg, file, line, col) {
-  ++crash_idx;
-  let now = Date.now();
-  let dt = now - last_error_time;
-  last_error_time = now;
-  if (error_report_disabled) {
-    return false;
-  }
-  if (dt < 30*1000) {
-    // Less than 30 seconds since the last error, either we're erroring every
-    // frame, or this is a secondary error caused by the first, do not report it.
-    // Could maybe hash the error message and just report each message once, and
-    // flag errors as primary or secondary.
-    return false;
-  }
-  if (msg.match(filtered_errors)) {
-    return false;
+export function glovErrorReport(is_fatal, msg, file, line, col) {
+  if (is_fatal) {
+    // Only doing filtering and such on fatal errors, as non-fatal errors are
+    // just logged and should not corrupt state.
+    ++crash_idx;
+    let now = Date.now();
+    let dt = now - last_error_time;
+    last_error_time = now;
+    if (error_report_disabled) {
+      return false;
+    }
+    if (dt < 30*1000) {
+      // Less than 30 seconds since the last error, either we're erroring every
+      // frame, or this is a secondary error caused by the first, do not report it.
+      // Could maybe hash the error message and just report each message once, and
+      // flag errors as primary or secondary.
+      return false;
+    }
+    if (msg.match(filtered_errors)) {
+      return false;
+    }
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = api_path; // base like http://foo.com/bar/ (without index.html)
-  url += `errorReport?cidx=${crash_idx}&file=${escape(file)}&line=${line}&col=${col}&url=${escape(location.href)}` +
+  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
+    `&line=${line||0}&col=${col||0}&url=${escape(location.href)}` +
     `&msg=${escape(msg)}${error_report_details_str}`;
   let xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);

@@ -299,7 +299,7 @@ export function geomResetState() {
   }
 }
 
-Geom.prototype.bind = function (debug) {
+Geom.prototype.bind = function () {
   if (bound_geom !== this) {
     bound_geom = this;
     let vbo = this.vbo;
@@ -319,10 +319,8 @@ Geom.prototype.bind = function (debug) {
         let sem = fmt[0];
         let gltype = fmt[1];
         let normalized = fmt[3];
-        if (!debug) {
-          gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
-          bound_attribs[ii].vbo = bound_array_buf;
-        }
+        gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
+        bound_attribs[ii].vbo = bound_array_buf;
         // bound_attribs[ii].offset = offset;
       }
       offset += count * byte_size;
@@ -331,12 +329,10 @@ Geom.prototype.bind = function (debug) {
     //   used_attribs |= 1 << shader.semantics.COLOR;
     //   bindUnitBuf(1, this.vert_count);
     // }
-    if (!debug) {
-      enableVertexAttribArray(this.used_attribs);
-    }
+    enableVertexAttribArray(this.used_attribs);
   }
 
-  if (this.ibo && bound_index_buf !== this.ibo && !debug) {
+  if (this.ibo && bound_index_buf !== this.ibo) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ibo);
     bound_index_buf = this.ibo;
   }
