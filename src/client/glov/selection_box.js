@@ -359,6 +359,13 @@ class GlovSelectionBox {
       let do_scroll = this.scroll_height && this.items.length * entry_height > this.scroll_height;
       if (!do_scroll && y + this.items.length * entry_height >= camera2d.y1()) {
         y = camera2d.y1() - this.items.length * entry_height;
+        if (this.is_dropdown) {
+          y -= entry_height;
+        }
+      } else {
+        if (this.is_dropdown) {
+          y += entry_height;
+        }
       }
       let y_save = y;
       let x_save = x;
@@ -589,11 +596,14 @@ class GlovSelectionBox {
       // glov_ui.draw_list.queue(glov_ui.sprites.menu_header,
       //   dropdown_x, y, z + 1.5, color1, [dropdown_width, entry_height, 1, 1],
       //   glov_ui.sprites.menu_header.uidata.rects[2]);
+      let eff_selection = this.is_dropdown && this.dropdown_visible && this.pre_dropdown_selection !== undefined ?
+        this.pre_dropdown_selection :
+        this.selected;
       font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
         x + display.xpad, y, z + 2,
         font_height, glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
         width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
-        this.items[this.selected].name);
+        this.items[eff_selection].name);
       y += entry_height;
       yret = y + 2;
     }
