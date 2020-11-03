@@ -112,7 +112,7 @@ export class ChannelWorker {
     this.num_subscribers = 0;
     this.store_path = `${this.channel_type}/${this.channel_id}`;
 
-    this.bulk_store_path = `${this.channel_type}/${this.channel_id}`;
+    this.bulk_store_path = `${this.channel_type}/${this.channel_subid}`;
 
     this.bulk_store_paths = {};
     this.shutting_down = false;
