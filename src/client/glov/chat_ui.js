@@ -6,6 +6,7 @@ const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
+const { isFriend } = require('./friends.js');
 const input = require('./input.js');
 const { link } = require('./link.js');
 const local_storage = require('./local_storage.js');
@@ -943,6 +944,7 @@ ChatUI.prototype.setChannel = function (channel) {
   let chat_history;
   let here;
   let here_map = {};
+  let friends;
   asyncParallel([
     (next) => {
       channel.send('chat_get', null, (err, data) => {
@@ -957,16 +959,27 @@ ChatUI.prototype.setChannel = function (channel) {
         let clients = data && data.public && data.public.clients;
         if (clients) {
           here = [];
+          friends = [];
           for (let client_id in clients) {
             let client = clients[client_id];
-            if (client.ids && client.ids.user_id && client.ids.display_name) {
-              here_map[client.ids.user_id] = client.ids.display_name;
+            let user_id = client.ids && client.ids.user_id;
+            let already_in_list = false;
+            if (user_id && client.ids.display_name) {
+              if (here_map[user_id]) {
+                already_in_list = true;
+              } else {
+                here_map[user_id] = client.ids.display_name;
+              }
             }
-            if (client_id === net.client.id) {
+            if (client_id === net.client.id || already_in_list) {
               continue;
             }
             if (client.ids) {
-              here.push(client.ids.display_name || client.ids.user_id || client_id);
+              if (user_id && isFriend(user_id)) {
+                friends.push(client.ids.display_name || user_id || client_id);
+              } else {
+                here.push(client.ids.display_name || user_id || client_id);
+              }
             }
           }
         }
@@ -1004,9 +1017,16 @@ ChatUI.prototype.setChannel = function (channel) {
     // Then join message
     this.addChat(`Joined channel ${this.channel.channel_id}`, 'join_leave');
     // Then who's here now
-    if (here && here.length) {
+    if (here && here.length || friends && friends.length) {
+      let msg = [];
+      if (here.length) {
+        msg.push(`Other users already here: ${here.join(', ')}`);
+      }
+      if (friends.length) {
+        msg.push(`Friends already here: ${friends.join(', ')}`);
+      }
       this.addChatFiltered({
-        msg: `Other users already here: ${here.join(', ')}`,
+        msg: msg.join('\n'),
         style: 'join_leave',
       });
     }
