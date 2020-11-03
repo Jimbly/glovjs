@@ -134,6 +134,7 @@ WSClient.prototype.send = function (msg, data, resp_func) {
 };
 
 WSClient.prototype.onError = function (e) {
+  console.error('WSClient Error');
   console.error(e);
   throw e;
 };
