@@ -4,7 +4,7 @@
 
 const engine = require('./engine.js');
 
-const { round } = Math;
+const { max, round } = Math;
 
 const safearea_pad = new Float32Array(4); // left, right, top, bottom
 // 0: x0_real
@@ -56,6 +56,14 @@ export function canvasToVirtual(dst, src) {
   dst[1] = src[1] / data[5] + data[1];
 }
 
+function safeScreenWidth() {
+  return max(1, screen_width - safearea_pad[0] - safearea_pad[1]);
+}
+
+function safeScreenHeight() {
+  return max(1, screen_height - safearea_pad[2] - safearea_pad[3]);
+}
+
 // Sets the 2D "camera" used to translate sprite positions to screen space.  Affects sprites queued
 //  after this call
 export function set(x0, y0, x1, y1, ignore_safe_area) {
@@ -69,8 +77,8 @@ export function set(x0, y0, x1, y1, ignore_safe_area) {
     data[10] = y0;
     data[11] = x1;
     data[12] = y1;
-    let wscale = (x1 - x0) / (screen_width - safearea_pad[0] - safearea_pad[1]);
-    let hscale = (y1 - y0) / (screen_height - safearea_pad[2] - safearea_pad[3]);
+    let wscale = (x1 - x0) / safeScreenWidth();
+    let hscale = (y1 - y0) / safeScreenHeight();
     data[0] = x0 - safearea_pad[0] * wscale;
     data[1] = y0 - safearea_pad[2] * hscale;
     data[2] = x1 + safearea_pad[1] * wscale;
@@ -109,8 +117,8 @@ export function domToCanvasRatio() {
 }
 
 export function screenAspect() {
-  return (screen_width - safearea_pad[0] - safearea_pad[1]) /
-    (screen_height - safearea_pad[2] - safearea_pad[3]);
+  return safeScreenWidth() /
+    safeScreenHeight();
 }
 
 // Drawing area 0,0-w,h
@@ -383,8 +391,8 @@ export function tickCamera2D() {
     // Find an offset so this rendered viewport is centered while preserving aspect ratio, just like setAspectFixed
     let pa = engine.pixel_aspect;
     let inv_aspect = render_height / pa / render_width;
-    let eff_screen_width = (screen_width - safearea_pad[0] - safearea_pad[1]);
-    let eff_screen_height = (screen_height - safearea_pad[2] - safearea_pad[3]);
+    let eff_screen_width = safeScreenWidth();
+    let eff_screen_height = safeScreenHeight();
     let inv_desired_aspect = eff_screen_height / eff_screen_width;
     if (inv_aspect > inv_desired_aspect) {
       let margin = (render_height / inv_desired_aspect - render_width * pa) / 2 *
