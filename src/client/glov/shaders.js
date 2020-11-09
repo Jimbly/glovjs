@@ -75,7 +75,7 @@ export function shadersResetState() {
         for (let jj = 0; jj < prog.uniforms.length; ++jj) {
           let unif = prog.uniforms[jj];
           for (let kk = 0; kk < unif.size; ++kk) {
-            unif.value[kk] = 0;
+            unif.value[kk] = NaN;
           }
           //uniformSetValue(unif);
         }
