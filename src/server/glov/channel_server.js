@@ -391,7 +391,10 @@ class ChannelServer {
       cbs.push(cb);
       return;
     }
-    assert(!this.local_channels[channel_id]);
+    if (this.local_channels[channel_id]) {
+      // it has since been created (here!), probably at the request of someone else
+      return void cb();
+    }
     let Ctor = this.channel_types[channel_type];
     assert(Ctor);
     assert(Ctor.autocreate);
