@@ -224,6 +224,10 @@ export function v3distSq(a, b) {
     (a[2] - b[2]) * (a[2] - b[2]);
 }
 
+export function v3dist(a,b) {
+  return sqrt(v3distSq(a,b));
+}
+
 export function v3div(out, a, b) {
   out[0] = a[0] / b[0];
   out[1] = a[1] / b[1];
