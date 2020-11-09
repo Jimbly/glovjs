@@ -562,6 +562,7 @@ export function buttonShared(param) {
       focusSteal(key);
       focused = true;
     }
+    button_click = { drag: true };
   } else if ((button_click = glov_input.click(param)) ||
     param.long_press && (button_click = glov_input.longPress(param))
   ) {
