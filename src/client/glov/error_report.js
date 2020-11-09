@@ -32,8 +32,14 @@ export function errorReportGetDetails() {
 let last_error_time = 0;
 let crash_idx = 0;
 // Errors from plugins that we don't want to get reported to us, or show the user!
-let filtered_errors = /avast_submit|vc_request_action/;
+// The exact phrase "Script error.\n  at (0:0)" comes from our bootstap.js when we
+//   receive the message 'Script Error.' and no stack.  This happens on the Mi Browser on Redmi phones
+//   and doesn't seem to be indicative of any actual problem.
+// Ignoring null at null for similar reasons and because we get nothing useful from the reports.
+// eslint-disable-next-line no-regex-spaces
+let filtered_errors = /avast_submit|vc_request_action|^Script error\.\n  at \(0:0\)$|^null\n  at null(null:null)$/;
 export function glovErrorReport(is_fatal, msg, file, line, col) {
+  console.error(msg);
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
     // just logged and should not corrupt state.
