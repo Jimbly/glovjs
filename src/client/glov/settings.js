@@ -6,6 +6,7 @@ exports.true = true; // for perf.js
 
 const { titleCase } = require('../../common/util.js');
 const { cmd_parse } = require('./cmds.js');
+const engine = require('./engine.js');
 
 export function get(key) {
   return exports[key];
@@ -15,6 +16,10 @@ export function set(key, value) {
   if (exports[key] !== value) {
     cmd_parse.handle(null, `${key} ${value}`, null); // uses default cmd_parse handler
   }
+}
+
+export function setAsync(key, value) {
+  engine.postTick({ fn: set.bind(null, key, value) });
 }
 
 export function runTimeDefault(key, new_default) {
