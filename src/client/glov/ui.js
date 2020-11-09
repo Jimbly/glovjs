@@ -584,14 +584,10 @@ export function buttonShared(param) {
   } else if (param.drag_over && glov_input.dragOver(param)) {
     // do nothing
   } else if (glov_input.mouseOver(param)) {
-    if (glov_input.mousePosIsTouch()) {
-      // do not set mouseover, but still do 'down' event
-      if (glov_input.mouseDown(param)) {
-        state = 'down';
-      }
-    } else {
+    state = glov_input.mouseDown(param) ? 'down' : 'rollover';
+    // On touch, only set mouseover if also down
+    if (glov_input.mousePosIsTouch() || state === 'down') {
       setMouseOver(key, rollover_quiet);
-      state = glov_input.mouseDown(param) ? 'down' : 'rollover';
     }
   }
   button_focused = focused;
