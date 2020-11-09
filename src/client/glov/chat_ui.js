@@ -1083,5 +1083,13 @@ export function create(params) {
     cmd: 'em',
     func: emote,
   });
+  cmd_parse.register({
+    cmd: 'echo',
+    help: 'Echo text locally',
+    func: (str, resp_func) => {
+      chat_ui.addChatFiltered({ msg: str });
+      resp_func();
+    },
+  });
   return chat_ui;
 }
