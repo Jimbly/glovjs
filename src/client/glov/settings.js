@@ -83,4 +83,9 @@ register({
     type: cmd_parse.TYPE_INT,
     range: [0,1],
   },
+  fov: {
+    default_value: 60,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [40,100],
+  },
 });

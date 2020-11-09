@@ -8,10 +8,6 @@ export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
 
 require('not_worker'); // This module cannot be required from a worker bundle
 
-// init before requiring anything because persisted settings call back into this module
-let fov_set = false;
-export let fov_min = 60 * Math.PI / 180;
-
 const assert = require('assert');
 const { is_ios_safari } = require('./browser.js');
 const camera2d = require('./camera2d.js');
@@ -60,6 +56,7 @@ export let antialias_unavailable;
 
 export let game_width;
 export let game_height;
+let game_aspect;
 
 export let render_width;
 export let render_height;
@@ -119,20 +116,29 @@ export function setMatVP(_mat_view) {
   mat4Mul(mat_vp, mat_projection, mat_view);
 }
 
-function setDefaultFOV(default_fov) {
-  if (!fov_set) {
-    fov_min = default_fov;
+export function setFOV(fov_min) {
+  let w = render_width || width;
+  let h = render_height || height;
+  let aspect = w / h;
+  if (aspect > game_aspect) {
+    fov_y = fov_min;
+    let rise = sin(fov_y / 2) / cos(fov_y / 2) * aspect;
+    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+  } else {
+    // Calculate what fov_x would be if the screen was game_aspect, then derive fov_y from that
+    let rise = sin(fov_min / 2) / cos(fov_min / 2) * game_aspect;
+    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
+    // Old method, just apply fov to x (it's the same thing, if game_aspect is 1.0)
+    // fov_x = fov_min;
+    let rise2 = sin(fov_x / 2) / cos(fov_x / 2) / aspect;
+    fov_y = 2 * asin(rise2 / sqrt(rise2 * rise2 + 1));
   }
-}
-
-export function setFOV(new_fov) {
-  fov_set = true;
-  fov_min = new_fov;
 }
 
 export function setGameDims(w, h) {
   game_width = w;
   game_height = h;
+  game_aspect = game_width / game_height;
 }
 
 // Didn't need this for a while, but got slow on iOS recently :(
@@ -440,6 +446,11 @@ function checkResize() {
     window.pixel_scale = dom_to_canvas_ratio; // for debug
     last_canvas_width = canvas.width = new_width || 1;
     last_canvas_height = canvas.height = new_height || 1;
+
+    width = canvas.width;
+    height = canvas.height;
+    setFOV(settings.fov * PI / 180);
+
     // For the next 10 frames, make sure font size is correct
     need_repos = 10;
   }
@@ -672,10 +683,8 @@ function tick(timestamp) {
     return;
   }
 
-  had_3d_this_frame = false;
   checkResize();
-  width = canvas.width;
-  height = canvas.height;
+  had_3d_this_frame = false;
   render_scale_3d_this_frame = false;
   if (render_width) {
     // render_scale not supported with render_width, doesn't make much sense, just use render_width
@@ -691,18 +700,6 @@ function tick(timestamp) {
   }
 
   resetState();
-
-  // setting the fov values for the frame even if we don't do 3D this frame, because something
-  // might need it before start3DRendering() (e.g. mouse click inverse projection)
-  if (width > height) {
-    fov_y = fov_min;
-    let rise = width/height * sin(fov_y / 2) / cos(fov_y / 2);
-    fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
-  } else {
-    fov_x = fov_min;
-    let rise = height/width * sin(fov_x / 2) / cos(fov_x / 2);
-    fov_y = 2 * asin(rise / sqrt(rise * rise + 1));
-  }
 
   textures.bind(0, textures.textures.error);
 
@@ -905,13 +902,9 @@ export function startup(params) {
 
   assert(gl);
   canvas.focus();
-  width = canvas.width;
-  height = canvas.height;
-  game_width = params.game_width || 1280;
-  game_height = params.game_height || 960;
+  setGameDims(params.game_width || 1280, params.game_height || 960);
   ZNEAR = params.znear || 0.7;
   ZFAR = params.zfar || 10000;
-  setDefaultFOV((params.fov || 60) * PI / 180);
   if (params.pixely === 'strict') {
     render_width = game_width;
     render_height = game_height;
@@ -923,6 +916,7 @@ export function startup(params) {
     render_height = undefined;
   }
   pixel_aspect = params.pixel_aspect || 1;
+  setFOV(settings.fov * PI / 180);
 
   gl.depthFunc(gl.LEQUAL);
   // gl.enable(gl.SCISSOR_TEST);

@@ -8,20 +8,10 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 const engine = require('./engine.js');
 const net = require('./net.js');
 const textures = require('./textures.js');
-const { PI, round } = Math;
 
 window.cmd = function (str) {
   cmd_parse.handle(null, str, cmd_parse_mod.defaultHandler);
 };
-
-cmd_parse.registerValue('fov', {
-  type: cmd_parse.TYPE_FLOAT,
-  label: 'FOV',
-  range: [1,179],
-  get: () => round(engine.fov_min * 180 / PI),
-  set: (v) => engine.setFOV(v * PI / 180),
-  store: true,
-});
 
 function byteFormat(bytes) {
   if (bytes > 850000) {
