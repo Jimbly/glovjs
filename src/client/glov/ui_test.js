@@ -22,6 +22,7 @@ let edit_box1;
 let edit_box2;
 let test_select1;
 let test_select2;
+let test_select_large1;
 let test_scroll_area;
 let slider_value = 1;
 let test_lines = 10;
@@ -72,6 +73,17 @@ function init(x, y, column_width) {
     width: column_width - 8,
   });
 
+  let large_param = {
+    items: [],
+    is_dropdown: true,
+    z: Z.UI,
+    width: column_width - 8,
+  };
+  for (let ii = 0; ii < 100; ++ii) {
+    large_param.items.push(`item${ii}`);
+  }
+  test_select_large1 = selection_box.create(large_param);
+
   test_scroll_area = scrollAreaCreate();
 }
 
@@ -113,6 +125,8 @@ export function run(x, y, z) {
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
+  test_select_large1.run({ x: 2, y: internal_y, z: z + 1 });
+  internal_y += ui.button_height + pad;
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
     internal_y += ui.font_height + pad;

@@ -7,6 +7,7 @@ const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 const glov_input = require('./input.js');
 const glov_font = require('./font.js');
+const { clipped, clipPause, clipResume } = require('./sprites.js');
 const glov_ui = require('./ui.js');
 const { vec4 } = require('./vmath.js');
 let glov_markup = null; // Not ported
@@ -351,8 +352,13 @@ class GlovSelectionBox {
 
     let dropdown_x = x;
     let dropdown_y = y;
+    let clip_pause = clipped() && this.is_dropdown && this.dropdown_visible;
+    if (clip_pause) {
+      clipPause();
+    }
+    let z_save = z;
     if (this.is_dropdown) {
-      z += 1000; // drop-down part should be above everything
+      z += 1000; // drop-down part should be above everything except tooltips
     }
 
     if (!this.is_dropdown || this.dropdown_visible) {
@@ -551,8 +557,12 @@ class GlovSelectionBox {
       }
     }
 
+    if (clip_pause) {
+      clipResume();
+    }
+
     if (this.is_dropdown) {
-      z -= 1000;
+      z = z_save;
       x = dropdown_x;
       y = dropdown_y;
       // display header

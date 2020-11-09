@@ -30,14 +30,14 @@ let sprite_queue = [];
 let sprite_freelist = [];
 
 let sprite_queue_stack = null;
-export function spriteQueuePush() {
+export function spriteQueuePush(new_list) {
   assert(!sprite_queue_stack);
   sprite_queue_stack = sprite_queue;
-  sprite_queue = [];
+  sprite_queue = new_list || [];
 }
-export function spriteQueuePop() {
+export function spriteQueuePop(for_pause) {
   assert(sprite_queue_stack);
-  assert(!sprite_queue.length);
+  assert(for_pause || !sprite_queue.length);
   sprite_queue = sprite_queue_stack;
   sprite_queue_stack = null;
 }
@@ -310,6 +310,10 @@ export function clip(z_start, z_end, x, y, w, h) {
 }
 
 let clip_stack = [];
+export function clipped() {
+  return clip_stack.length > 0;
+}
+
 export function clipPush(z, x, y, w, h) {
   assert(clip_stack.length < 1); // do not currently support nesting; maybe leaking?
   let scissor = clipCoordsScissor(x, y, w, h);
@@ -317,12 +321,12 @@ export function clipPush(z, x, y, w, h) {
   camera2d.setInputClipping(dom_clip);
   spriteQueuePush();
   clip_stack.push({
-    z, scissor
+    z, scissor, dom_clip,
   });
 }
 
 export function clipPop() {
-  assert(clip_stack.length);
+  assert(clipped());
   queuefn(Z.TOOLTIP - 0.1, () => {
     gl.disable(gl.SCISSOR_TEST);
   });
@@ -340,6 +344,26 @@ export function clipPop() {
     spriteQueuePop();
     // done at Z.TOOLTIP: gl.disable(gl.SCISSOR_TEST);
   });
+}
+
+let clip_paused;
+export function clipPause() {
+  assert(clipped());
+  assert(!clip_paused);
+  clip_paused = {
+    sprites: sprite_queue,
+  };
+  spriteQueuePop(true);
+  camera2d.setInputClipping(null);
+}
+export function clipResume() {
+  assert(clipped());
+  assert(clip_paused);
+  let { sprites } = clip_paused;
+  let { dom_clip } = clip_stack[clip_stack.length - 1];
+  spriteQueuePush(sprites);
+  camera2d.setInputClipping(dom_clip);
+  clip_paused = null;
 }
 
 function diffTextures(texsa, texsb) {
