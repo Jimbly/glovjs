@@ -247,8 +247,8 @@ function eventlog(event) {
 }
 
 function letEventThrough(event) {
-  return event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL' || String(event.target.className).indexOf('noglov') !== -1;
+  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
+    event.target.tagName === 'LABEL' || String(event.target.className).indexOf('noglov') !== -1);
 }
 
 function ignored(event) {
@@ -952,7 +952,7 @@ export function mouseWheel(param) {
 }
 
 export function mouseOver(param) {
-  if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
+  if (mouse_over_captured || pointerLocked() && !(param && param.allow_pointerlock)) {
     return false;
   }
   param = param || {};
