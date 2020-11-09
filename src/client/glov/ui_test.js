@@ -125,8 +125,7 @@ export function run(x, y, z) {
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
-  test_select_large1.run({ x: 2, y: internal_y, z: z + 1 });
-  internal_y += ui.button_height + pad;
+  internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
     internal_y += ui.font_height + pad;

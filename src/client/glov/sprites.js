@@ -29,17 +29,16 @@ let sprite_queue = [];
 
 let sprite_freelist = [];
 
-let sprite_queue_stack = null;
+let sprite_queue_stack = [];
 export function spriteQueuePush(new_list) {
-  assert(!sprite_queue_stack);
-  sprite_queue_stack = sprite_queue;
+  assert(sprite_queue_stack.length < 10); // probably leaking
+  sprite_queue_stack.push(sprite_queue);
   sprite_queue = new_list || [];
 }
 export function spriteQueuePop(for_pause) {
-  assert(sprite_queue_stack);
+  assert(sprite_queue_stack.length);
   assert(for_pause || !sprite_queue.length);
-  sprite_queue = sprite_queue_stack;
-  sprite_queue_stack = null;
+  sprite_queue = sprite_queue_stack.pop();
 }
 
 function SpriteData() {
@@ -315,7 +314,7 @@ export function clipped() {
 }
 
 export function clipPush(z, x, y, w, h) {
-  assert(clip_stack.length < 1); // do not currently support nesting; maybe leaking?
+  assert(clip_stack.length < 10); // probably leaking
   let scissor = clipCoordsScissor(x, y, w, h);
   let dom_clip = clipCoordsDom(x, y, w, h);
   camera2d.setInputClipping(dom_clip);
@@ -332,9 +331,13 @@ export function clipPop() {
   });
   let { z, scissor } = clip_stack.pop();
   let sprites = sprite_queue;
-  sprite_queue = [];
-  spriteQueuePop();
-  camera2d.setInputClipping(null);
+  spriteQueuePop(true);
+  if (clip_stack.length) {
+    let { dom_clip } = clip_stack[clip_stack.length - 1];
+    camera2d.setInputClipping(dom_clip);
+  } else {
+    camera2d.setInputClipping(null);
+  }
   queuefn(z, () => {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
@@ -348,22 +351,25 @@ export function clipPop() {
 
 let clip_paused;
 export function clipPause() {
+  // Queue back into the root sprite queue
   assert(clipped());
   assert(!clip_paused);
-  clip_paused = {
-    sprites: sprite_queue,
-  };
-  spriteQueuePop(true);
+  clip_paused = true;
+  spriteQueuePush(sprite_queue_stack[0]);
   camera2d.setInputClipping(null);
+  // push onto the clip stack so if there's another clip push/pop we get back to
+  // escaped when it pops.
+  clip_stack.push({ dom_clip: null });
 }
 export function clipResume() {
   assert(clipped());
   assert(clip_paused);
-  let { sprites } = clip_paused;
+  clip_stack.pop(); // remove us
+  clip_paused = false;
+  assert(clipped());
   let { dom_clip } = clip_stack[clip_stack.length - 1];
-  spriteQueuePush(sprites);
+  spriteQueuePop(true);
   camera2d.setInputClipping(dom_clip);
-  clip_paused = null;
 }
 
 function diffTextures(texsa, texsb) {

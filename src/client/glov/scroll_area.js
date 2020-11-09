@@ -301,13 +301,14 @@ ScrollArea.prototype.end = function (h) {
 
     // handle clicking trough if not caught by anything above +/-
     let click;
-    while ((click = input.mouseUpEdge({
+    let bar_param = {
       x: bar_x0,
       y: this.y,
       w: bar_w,
       h: this.h,
       button: 0
-    }))) {
+    };
+    while ((click = input.mouseUpEdge(bar_param))) {
       ui.focusSteal(this);
       if (click.pos[1] > handle_screenpos + handle_pixel_h/2) {
         this.scroll_pos += this.h;
@@ -316,6 +317,8 @@ ScrollArea.prototype.end = function (h) {
       }
       user_moved_this_frame = true;
     }
+    // Catch mouse over on trough
+    input.mouseOver(bar_param);
 
     // handle dragging the scroll area background
     let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
@@ -353,7 +356,9 @@ ScrollArea.prototype.end = function (h) {
   this.last_internal_h = h;
   this.last_frame = engine.getFrameIndex();
 
-  let bg_color = this.focused ? this.background_color_focused : this.background_color;
+  let bg_color = this.focused || this.focusable_elem && this.focusable_elem.is_focused ?
+    this.background_color_focused :
+    this.background_color;
   if (bg_color) {
     ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, bg_color);
   }

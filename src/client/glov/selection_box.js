@@ -7,6 +7,7 @@ const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
 const glov_input = require('./input.js');
 const glov_font = require('./font.js');
+const { scrollAreaCreate } = require('./scroll_area.js');
 const { clipped, clipPause, clipResume } = require('./sprites.js');
 const glov_ui = require('./ui.js');
 const { vec4 } = require('./vmath.js');
@@ -126,7 +127,12 @@ class GlovSelectionBox {
     this.bounce_time = 0;
     this.expected_frame_index = 0;
     this.pre_dropdown_selection = undefined;
-    // this.sa = TODO
+    if (this.is_dropdown || this.scroll_height) {
+      this.sa = scrollAreaCreate({
+        focusable_elem: this,
+        //background_color: null,
+      });
+    }
   }
 
   applyParams(params) {
@@ -172,6 +178,11 @@ class GlovSelectionBox {
     return list_height + 3;
   }
 
+  focus() {
+    glov_ui.focusSteal(this);
+    this.is_focused = true;
+  }
+
   run(params) {
     this.applyParams(params);
     let { x, y, z, width, font_height, entry_height, auto_reset } = this;
@@ -214,7 +225,9 @@ class GlovSelectionBox {
     let focused = this.is_focused = this.disabled ? false : glov_ui.focusCheck(this);
     let gained_focus = focused && !was_focused;
 
-    if (!focused && this.dropdown_visible) {
+    if (this.dropdown_visible && (!focused ||
+      focused && glov_input.keyDownEdge(KEYS.ESC)
+    )) {
       if (this.pre_dropdown_selection !== undefined) {
         // Restore selection to before opening the dropdown
         this.selected = this.pre_dropdown_selection;
@@ -268,7 +281,11 @@ class GlovSelectionBox {
       }
     }
 
-    let page_size = (this.scroll_height - 1) / entry_height;
+    let scroll_height = this.scroll_height;
+    if (!scroll_height && this.is_dropdown) {
+      scroll_height = camera2d.y1() - (y + entry_height);
+    }
+    let page_size = (scroll_height - 1) / entry_height;
 
     if (focused) {
       let pad_shift = glov_input.padButtonDown(PAD.RIGHT_TRIGGER) || glov_input.padButtonDown(PAD.LEFT_TRIGGER);
@@ -313,6 +330,14 @@ class GlovSelectionBox {
         eff_sel = num_non_disabled_selections - 1;
         this.mouse_mode = false;
         pos_changed = true;
+      }
+      if (glov_input.keyDownEdge(KEYS.SPACE) || glov_input.keyDownEdge(KEYS.ENTER)) {
+        if (!this.is_dropdown || this.dropdown_visible) {
+          this.was_clicked = true;
+        } else {
+          this.dropdown_visible = !this.dropdown_visible;
+          this.pre_dropdown_selection = this.selected;
+        }
       }
     }
 
@@ -362,7 +387,7 @@ class GlovSelectionBox {
     }
 
     if (!this.is_dropdown || this.dropdown_visible) {
-      let do_scroll = this.scroll_height && this.items.length * entry_height > this.scroll_height;
+      let do_scroll = scroll_height && this.items.length * entry_height > scroll_height;
       let extra_height = this.is_dropdown ? entry_height : 0;
       if (!do_scroll && y + this.items.length * entry_height + extra_height >= camera2d.y1()) {
         y = camera2d.y1() - this.items.length * entry_height;
@@ -374,29 +399,23 @@ class GlovSelectionBox {
       let scroll_pos = 0;
       let eff_width = width;
       if (do_scroll) {
-        // this.sa.display = &scroll_area_no_background;
         if (pos_changed) {
           // ensure part of visible scroll area includes the current selection
-          let buffer = min(1.5 * entry_height, (this.scroll_height - entry_height) / 2);
-          let min_scroll_pos = max(0, this.selected * entry_height - buffer);
-          let old_scroll_pos = this.sa.scroll_pos;
-          if (min_scroll_pos < this.sa.scroll_pos) {
-            this.sa.scroll_pos = min_scroll_pos;
-          }
-          let max_scroll_pos = min(this.items.length * entry_height,
-            (this.selected + 1) * entry_height + buffer) - this.scroll_height;
-          if (max_scroll_pos > this.sa.scroll_pos) {
-            this.sa.scroll_pos = max_scroll_pos;
-          }
-          // Make it smooth/bouncy a bit
-          this.sa.overscroll = old_scroll_pos - this.sa.scroll_pos;
+          let buffer = min(1.5 * entry_height, (scroll_height - entry_height) / 2);
+          this.sa.scrollIntoFocus(this.selected * entry_height - buffer,
+            min(this.items.length * entry_height,
+              (this.selected + 1) * entry_height + buffer),
+            scroll_height);
         }
-        this.sa.begin(x, y, z, width, this.scroll_height, color_white);
+        this.sa.begin({
+          x, y, z,
+          w: width,
+          h: scroll_height,
+        });
         scroll_pos = this.sa.scroll_pos + this.sa.overscroll;
         y = 0;
         x = 0;
-        // extern float glov_scrollbar_scale;
-        // eff_width = width - glov_ui_scrollbar_top.GetTileWidth() * glov_scrollbar_scale;
+        eff_width = width - this.sa.barWidth();
       }
       for (let i = 0; i < this.items.length; i++) {
         let item = this.items[i];
@@ -444,7 +463,7 @@ class GlovSelectionBox {
         let style;
         let show_selection = !this.disabled && (
           !(this.transient_focus && !this.is_focused) && !this.is_dropdown || // show if a non-dropdown that's focused
-          is_mouseover);
+          is_mouseover || !this.mouse_mode);
         let bounce = false;
         if (this.selected === i && show_selection) {
           style = display.style_selected || selbox_font_style_selected;
@@ -548,7 +567,7 @@ class GlovSelectionBox {
       }
       if (do_scroll) {
         this.sa.end(y);
-        y = y_save + this.scroll_height;
+        y = y_save + scroll_height;
         x = x_save;
       }
 
