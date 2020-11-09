@@ -234,6 +234,7 @@ WSClient.prototype.connect = function (for_reconnect) {
     if (client.connected) {
       client.disconnect_time = Date.now();
       client.disconnected = true;
+      errorReportSetDetails('disconnected', 1);
     }
     client.connected = false;
     if (!skip_close) {
