@@ -309,19 +309,19 @@ Geom.prototype.bind = function () {
       let fmt = this.format[ii];
       let count = fmt[2];
       let byte_size = fmt[4];
-      if (bound_attribs[ii].vbo === vbo) { //  && bound_attribs[ii].offset = offset
+      let sem = fmt[0];
+      if (bound_attribs[sem].vbo === vbo) { //  && bound_attribs[sem].offset = offset
         // already bound
       } else {
         if (bound_array_buf !== vbo) {
           gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
           bound_array_buf = vbo;
         }
-        let sem = fmt[0];
         let gltype = fmt[1];
         let normalized = fmt[3];
         gl.vertexAttribPointer(sem, count, gltype, normalized, this.stride, offset);
-        bound_attribs[ii].vbo = bound_array_buf;
-        // bound_attribs[ii].offset = offset;
+        bound_attribs[sem].vbo = bound_array_buf;
+        // bound_attribs[sem].offset = offset;
       }
       offset += count * byte_size;
     }
