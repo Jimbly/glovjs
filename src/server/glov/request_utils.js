@@ -1,11 +1,14 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const assert = require('assert');
 const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
   // console.log('Client connection headers ' + JSON.stringify(req.headers));
+
+  if (req.glov_ip) {
+    return req.glov_ip;
+  }
 
   // Security note: must check x-forwarded-for *only* if we know this request came from a
   //   reverse proxy, should warn if missing x-forwarded-for.
@@ -13,12 +16,16 @@ export function ipFromRequest(req) {
     req.client.socket && req.client.socket.remoteAddress;
   // let port = req.headers['x-forwarded-port'] || req.client.remotePort ||
   //   req.client.socket && req.client.socket.remotePort;
-  assert(ip);
+  if (!ip) {
+    // client already disconnected?
+    return 'unknown';
+  }
   ip = ip.split(',')[0]; // If forwarded through multiple proxies, use just the original client IP
   let m = ip.match(regex_ipv4);
   if (m) {
     ip = m[1];
   }
+  req.glov_ip = ip;
   return ip;
   // return `${ip}${port ? `:${port}` : ''}`;
 }
