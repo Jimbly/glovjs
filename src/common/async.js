@@ -87,6 +87,38 @@ function parallel(tasks, done) {
 }
 exports.parallel = parallel;
 
+function limiter(max_parallel) {
+  let avail = max_parallel;
+  let head = null;
+  let tail = null;
+  function onFinish() {
+    if (!head) {
+      ++avail;
+      return;
+    }
+    let next = head;
+    head = head.next;
+    if (!head) {
+      tail = null;
+    }
+    next(onFinish);
+  }
+  return function limiterRun(exec) {
+    if (!avail) {
+      if (!head) {
+        head = tail = exec;
+      } else {
+        tail.next = exec;
+        tail = exec;
+      }
+      return;
+    }
+    --avail;
+    exec(onFinish);
+  };
+}
+exports.limiter = limiter;
+
 Object.keys(exports).forEach((key) => {
   exports[`async${key[0].toUpperCase()}${key.slice(1)}`] = exports[key];
 });
