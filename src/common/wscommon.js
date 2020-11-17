@@ -71,10 +71,12 @@ function wsPakSendFinish(pak, err, resp_func) {
       }
       msg = `channel_msg:${channel_id}:${submsg}`;
     }
-    (client.log ? client : console).log(`Attempting to send msg=${msg} on a disconnected link, ignoring`);
-    if (!client.log && client.onError && msg && typeof msg !== 'number') {
-      // On the client, if we try to send a new packet while disconnected, this is an application error
-      client.onError(`Attempting to send msg=${msg} on a disconnected link`);
+    if (typeof msg !== 'number') {
+      (client.log ? client : console).log(`Attempting to send msg=${msg} on a disconnected link, ignoring`);
+      if (!client.log && client.onError && msg) {
+        // On the client, if we try to send a new packet while disconnected, this is an application error
+        client.onError(`Attempting to send msg=${msg} on a disconnected link`);
+      }
     }
 
     if (ack_resp_pkt_id) {
