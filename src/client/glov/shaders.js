@@ -95,6 +95,7 @@ function setGLErrorReportDetails() {
     max_vertex_uniform_vectors: gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),
     vendor: gl.getParameter(gl.VENDOR),
     renderer: gl.getParameter(gl.RENDERER),
+    webgl: engine.webgl2 ? 2 : 1,
   };
   let debug_info = gl.getExtension('WEBGL_debug_renderer_info');
   if (debug_info) {
