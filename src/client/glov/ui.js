@@ -586,7 +586,7 @@ export function buttonShared(param) {
   } else if (glov_input.mouseOver(param)) {
     state = glov_input.mouseDown(param) ? 'down' : 'rollover';
     // On touch, only set mouseover if also down
-    if (glov_input.mousePosIsTouch() || state === 'down') {
+    if (!glov_input.mousePosIsTouch() || state === 'down') {
       setMouseOver(key, rollover_quiet);
     }
   }
