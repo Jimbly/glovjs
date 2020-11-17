@@ -2,22 +2,14 @@
 const glov_local_storage = require('./glov/local_storage.js');
 glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring anything else that might load from this
 
+const assert = require('assert');
 const engine = require('./glov/engine.js');
-const glov_font = require('./glov/font.js');
-const input = require('./glov/input.js');
-const { floor } = Math;
+const { abs, max, min, round } = Math;
 const net = require('./glov/net.js');
-const particles = require('./glov/particles.js');
-const settings = require('./glov/settings.js');
-const glov_sprites = require('./glov/sprites.js');
-const sprite_animation = require('./glov/sprite_animation.js');
-const transition = require('./glov/transition.js');
+const { randCreate } = require('./glov/rand_alea.js');
 const ui = require('./glov/ui.js');
-const ui_test = require('./glov/ui_test.js');
-const particle_data = require('./particle_data.js');
-const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('./glov/sound.js');
-const { test3D } = require('./test_3d.js');
-const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
+const { clone, deepEqual, ridx, sign } = require('../common/util.js');
+const { vec4 } = require('./glov/vmath.js');
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;
@@ -27,87 +19,10 @@ Z.UI_TEST = 200;
 
 // let app = exports;
 // Virtual viewport for our game logic
-export const game_width = 320;
+export const game_width = 380;
 export const game_height = 240;
 
 export let sprites = {};
-
-const music_file = 'music_test.webm';
-
-// Persistent flags system for testing parameters
-let flags = {};
-function flagGet(key, dflt) {
-  if (flags[key] === undefined) {
-    flags[key] = glov_local_storage.getJSON(`flag_${key}`, dflt) || false;
-  }
-  return flags[key];
-}
-function flagToggle(key) {
-  flags[key] = !flagGet(key);
-  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
-}
-function flagSet(key, value) {
-  flags[key] = value;
-  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
-}
-
-const color_white = vec4(1, 1, 1, 1);
-const colors_active = ui.makeColorSet(vec4(0.5, 1, 0.5, 1));
-const colors_inactive = ui.makeColorSet(vec4(0.5, 0.5, 0.5, 1));
-
-function perfTestSprites() {
-  if (!sprites.test) {
-    sprites.test = [
-      glov_sprites.create({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
-      glov_sprites.create({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
-    ];
-  }
-
-  let mode = 2;
-  let count = [
-    80000, // one sprite, pre-sorted
-    40000, // one sprite, unsorted
-    20000, // two sprites, unsorted, small batches
-    60000, // two sprites, sorted, bigger batches, sprite API
-    60000, // two sprites, sorted, bigger batches, raw API
-  ][mode];
-  if (mode === 3 || mode === 4) {
-    for (let ii = 0; ii < count;) {
-      let subc = floor(500 + Math.random() * 100);
-      let idx = mode <= 1 ? 0 : Math.round(Math.random());
-      let sprite = sprites.test[idx];
-      let z = Math.random();
-      for (let jj = 0; jj < subc; ++jj) {
-        if (mode === 4) {
-          // glov_sprites.queueraw(sprite.texs,
-          //   Math.random() * game_width - 3, Math.random() * game_height - 3, z,
-          //   6, 6, 0, 0, 1, 1, color_white);
-          glov_sprites.queuesprite(sprite,
-            Math.random() * game_width, Math.random() * game_height, z,
-            6 * sprite.size[0], 6 * sprite.size[1], 0, sprite.uvs, color_white);
-        } else {
-          sprites.test[idx].draw({
-            x: Math.random() * game_width,
-            y: Math.random() * game_height,
-            z,
-            w: 6, h: 6,
-          });
-        }
-      }
-      ii += subc;
-    }
-  } else {
-    for (let ii = 0; ii < count; ++ii) {
-      let idx = mode <= 1 ? 0 : Math.round(Math.random());
-      sprites.test[idx].draw({
-        x: Math.random() * game_width,
-        y: Math.random() * game_height,
-        z: mode === 0 ? ii : Math.random(),
-        w: 6, h: 6,
-      });
-    }
-  }
-}
 
 export function main() {
   if (engine.DEBUG) {
@@ -118,7 +33,7 @@ export function main() {
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
-  let pixely = flagGet('pixely', 'on');
+  let pixely = 'off';
   let font;
   if (pixely === 'strict') {
     font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
@@ -134,280 +49,266 @@ export function main() {
     pixely,
     font,
     viewport_postprocess: false,
+    antialias: false,
   })) {
     return;
   }
   font = engine.font;
 
-  // const font = engine.font;
-
   // Perfect sizes for pixely modes
   ui.scaleSizes(13 / 32);
   ui.setFontHeight(8);
 
-  const createSprite = glov_sprites.create;
-  const createAnimation = sprite_animation.create;
+  let params = {
+    w: 100,
+    h: 100,
+    min_dim: 2,
+    door_w: 2,
+    r1: 1,
+    treasure: 4,
+  };
+  let gen_params;
+  let maze;
+  let rand = randCreate(1);
+  let max_depth;
 
-  const color_red = vec4(1, 0, 0, 1);
-  const color_yellow = vec4(1, 1, 0, 1);
+  function genMaze() {
+    const { w, h, min_dim, door_w, r1, treasure } = params;
+    const size = w * h;
+    maze = new Uint8Array(size);
+    gen_params = clone(params);
+    max_depth = 0;
 
-  // Cache KEYS
-  const KEYS = input.KEYS;
-  const PAD = input.PAD;
-
-  const sprite_size = 64;
-  function initGraphics() {
-    particles.preloadParticleData(particle_data);
-
-    soundLoad('test');
-
-    sprites.white = createSprite({ url: 'white' });
-
-    sprites.test_tint = createSprite({
-      name: 'tinted',
-      ws: [16, 16, 16, 16],
-      hs: [16, 16, 16],
-      size: vec2(sprite_size, sprite_size),
-      layers: 2,
-      origin: vec2(0.5, 0.5),
-    });
-    sprites.animation = createAnimation({
-      idle_left: {
-        frames: [0,1],
-        times: [200, 500],
-      },
-      idle_right: {
-        frames: [3,2],
-        times: [200, 500],
-      },
-    });
-    sprites.animation.setState('idle_left');
-
-    sprites.game_bg = createSprite({
-      url: 'white',
-      size: vec2(game_width, game_height),
-    });
+    function line(x0, y0, x1, y1, v) {
+      v = v || 1;
+      let dx = sign(x1 - x0);
+      let dy = sign(y1 - y0);
+      assert(abs(dx) + abs(dy) <= 1);
+      maze[x0 + y0 * w] = v;
+      while (x0 !== x1 || y0 !== y1) {
+        x0 += dx;
+        y0 += dy;
+        maze[x0 + y0 * w] = v;
+      }
+    }
+    function drawRect(x0, y0, x1, y1, v) {
+      for (let xx = x0; xx <= x1; ++xx) {
+        for (let yy = y0; yy <= y1; ++yy) {
+          maze[xx + yy * w] = v;
+        }
+      }
+    }
+    let doors = [];
+    function doorAt(depth, x, y) {
+      max_depth = max(max_depth, depth);
+      for (let ii = 0; ii < depth; ++ii) {
+        if (x >= doors[ii].x &&
+          x < doors[ii].x + door_w &&
+          y >= doors[ii].y &&
+          y < doors[ii].y + door_w
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+    let terminals = [];
+    function divide(depth, x0, y0, x1, y1) {
+      let dx = x1 - x0;
+      let dy = y1 - y0;
+      let r = 0.25 + r1;
+      do {
+        if (max(dx, dy) < min_dim * 2 + 1) {
+          break;
+        }
+        if (min(dx, dy) <= min_dim) {
+          break;
+        }
+        let offs = (rand.range(2) * 2 - 1) * r;
+        r++;
+        if (dx > dy) {
+          // divide with vertical line
+          let split = x0 + round((dx - door_w) / 2 + offs);
+          if (split < x0 + min_dim || split > x1 - min_dim) {
+            break;
+          }
+          if (doorAt(depth, split, y0 - 1) || doorAt(depth, split, y1 + 1)) {
+            continue;
+          }
+          let door = y0 + rand.range(dy);
+          if (door > y0) {
+            line(split, y0, split, door - 1);
+          }
+          if (door <= y1 - door_w) {
+            line(split, door + door_w, split, y1);
+          }
+          doors[depth] = { x: split, y: door };
+          line(split, door, split, door + door_w - 1, 7 + depth);
+          divide(depth + 1, x0, y0, split - 1, y1);
+          divide(depth + 1, split + 1, y0, x1, y1);
+        } else {
+          // divide with horizontal line
+          let split = y0 + round((dy - 1) / 2 + offs);
+          if (split < y0 + min_dim || split > y1 - min_dim) {
+            break;
+          }
+          if (doorAt(depth, x0 - 1, split) || doorAt(depth, x1 + 1, split)) {
+            continue;
+          }
+          let door = x0 + rand.range(dx);
+          if (door > x0) {
+            line(x0, split, door - 1, split);
+          }
+          if (door <= x1 - door_w) {
+            line(door + door_w, split, x1, split);
+          }
+          doors[depth] = { x: door, y: split };
+          line(door, split, door + door_w - 1, split, 7 + depth);
+          divide(depth + 1, x0, y0, x1, split - 1);
+          divide(depth + 1, x0, split + 1, x1, y1);
+        }
+        return;
+      } while (true);
+      // failed to place anything, is it a dead end?
+      let openings = 0;
+      for (let ii = 0; ii < depth; ++ii) {
+        let door = doors[ii];
+        if ((door.x === x0 - 1 || door.x === x1 + 1) && door.y >= y0 && door.y <= y1) {
+          openings++;
+        } else if ((door.y === y0 - 1 || door.y === y1 + 1) && door.x >= x0 && door.x <= x1) {
+          openings++;
+        }
+      }
+      if (openings === 1) {
+        drawRect(x0, y0, x1, y1, 2);
+        terminals.push({ x0, x1, y0, y1 });
+      } else {
+        // hallway / adjoining multiple rooms
+        // Also add a torch somewhere not overlapping a doorway
+        let torch_pos = null;
+        let count = 0;
+        for (let xx = x0; xx <= x1; ++xx) {
+          for (let yy = y0; yy <= y1; ++yy) {
+            if (xx === x0 || xx === x1 || yy === y0 || yy === y1) {
+              // on the edge, potential torch
+              if (xx === x0 && doorAt(depth, xx - 1, yy) ||
+                xx === x1 && doorAt(depth, xx + 1, yy) ||
+                yy === y0 && doorAt(depth, xx, yy - 1) ||
+                yy === y1 && doorAt(depth, xx, yy + 1)
+              ) {
+                // not valid
+              } else {
+                ++count;
+                if (!rand.range(count)) {
+                  torch_pos = xx + yy * w;
+                }
+              }
+            } else {
+              // paint interior
+              maze[xx + yy * w] = 3;
+            }
+          }
+        }
+        if (torch_pos) {
+          maze[torch_pos] = 5;
+        }
+      }
+    }
+    line(0, 0, w - 1, 0);
+    line(w-1, 0, w-1, h-1);
+    line(w-1, h-1, 0, h-1);
+    line(0, h-1, 0, 0);
+    divide(0, 1, 1, w-2, h-2);
+    for (let ii = 0; ii < treasure && terminals.length; ++ii) {
+      let idx = rand.range(terminals.length);
+      let room = terminals[idx];
+      ridx(terminals, idx);
+      drawRect(room.x0, room.y0, room.x1, room.y1, 4);
+    }
   }
 
-  let last_particles = 0;
+  let color_bg = vec4(0,0,0,1);
+  let color_tiles = [
+    null,
+    vec4(1,1,1,1),
+    vec4(0,0.3,0.3,1),
+    vec4(0,0,0.2,1),
+    vec4(0,1,1,1),
+    vec4(1,0.8,0,1),
+    null,
+  ];
+  for (let ii = 0; ii < 32; ++ii) {
+    color_tiles.push(vec4(0.125 + ii/33 * 0.5, 0, 0, 1));
+  }
 
   function test(dt) {
     gl.clearColor(0, 0.72, 1, 1);
-    if (!test.color_sprite) {
-      test.color_sprite = v4clone(color_white);
-      test.character = {
-        x: (Math.random() * (game_width - sprite_size - 200) + (sprite_size * 0.5) + 200),
-        y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
-      };
-    }
-
-    if (flagGet('ui_test')) {
-      // let clip_test = 30;
-      // glov_sprites.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
-      ui_test.run(10, 10, Z.UI_TEST);
-    }
-    if (flagGet('font_test')) {
-      ui_test.runFontTest(105, 85);
-    }
-
-    test.character.dx = 0;
-    test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-    test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
-    test.character.dy = 0;
-    test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-    test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
-    if (test.character.dx < 0) {
-      sprites.animation.setState('idle_left');
-    } else if (test.character.dx > 0) {
-      sprites.animation.setState('idle_right');
-    }
-
-    test.character.x += test.character.dx * 0.05;
-    test.character.y += test.character.dy * 0.05;
-    let bounds = {
-      x: test.character.x - sprite_size/2,
-      y: test.character.y - sprite_size/2,
-      w: sprite_size,
-      h: sprite_size,
-    };
-    if (input.mouseDown(bounds)) {
-      v4copy(test.color_sprite, color_yellow);
-    } else if (input.click(bounds)) {
-      v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
-      soundPlay('test');
-    } else if (input.mouseOver(bounds)) {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 0.5;
-    } else {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 1;
-    }
-
-    // sprites.game_bg.draw({
-    //   x: 0, y: 0, z: Z.BACKGROUND,
-    //   color: [0, 0.72, 1, 1]
-    // });
-    sprites.test_tint.drawDualTint({
-      x: test.character.x,
-      y: test.character.y,
-      z: Z.SPRITES,
-      color: [1, 1, 0, 1],
-      color1: [1, 0, 1, 1],
-      frame: sprites.animation.getFrame(dt),
-    });
-
-    let font_test_idx = 0;
-
-    ui.print(glov_font.styleColored(null, 0x000000ff),
-      test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
-      'TEXT!');
-    let font_style = glov_font.style(null, {
-      outline_width: 1.0,
-      outline_color: 0x800000ff,
-      glow_xoffs: 3.25,
-      glow_yoffs: 3.25,
-      glow_inner: -2.5,
-      glow_outer: 5,
-      glow_color: 0x000000ff,
-    });
-    ui.print(font_style,
-      test.character.x, test.character.y + (++font_test_idx * ui.font_height), Z.SPRITES,
-      'Outline and Drop Shadow');
+    let z = Z.UI;
 
     let x = ui.button_height;
-    let button_spacing = ui.button_height + 2;
-    let y = game_height - 10 - button_spacing * 6;
-    let mini_button_w = floor((ui.button_width - 2) / 2);
+    let button_spacing = ui.button_height + 6;
+    let y = ui.button_height;
 
-    function miniButton(text, tooltip, active) {
-      let ret = ui.buttonText({
-        x, y, text, tooltip,
-        w: mini_button_w,
-        colors: active ? colors_active : colors_inactive,
-      });
-      x += 2 + mini_button_w;
-      if (x >= ui.button_width) {
-        x = ui.button_height;
-        y += button_spacing;
-      }
-      return ret;
+    if (!deepEqual(params, gen_params)) {
+      genMaze();
     }
+    // if (ui.buttonText({ x, y, text: 'Test', w: ui.button_width * 0.5 }) || !maze) {
+    //   genMaze();
+    // }
+    // y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
-      tooltip: 'Toggles pixely or regular mode (requires reload)' })
-    ) {
-      if (flagGet('pixely') === 'strict') {
-        flagSet('pixely', false);
-      } else if (flagGet('pixely') === 'on') {
-        flagSet('pixely', 'strict');
-      } else {
-        flagSet('pixely', 'on');
-      }
-      if (document.location.reload) {
-        document.location.reload();
-      } else {
-        document.location = String(document.location);
-      }
-    }
+    ui.print(null, x, y, z, `Size: ${params.w}`);
+    y += ui.font_height;
+    params.h = params.w = round(ui.slider(params.w, { x, y, z, min: 5, max: 256 }));
     y += button_spacing;
 
-    let rs3d_disabled = !flagGet('3d_test') || engine.render_width;
-    if (ui.buttonText({ x, y, text: `RenderScale3D: ${rs3d_disabled ? '' : settings.render_scale}`,
-      tooltip: 'Changes render_scale',
-      disabled: rs3d_disabled })
-    ) {
-      if (settings.render_scale === 1) {
-        settings.set('render_scale', 0.25);
-      } else {
-        settings.set('render_scale', 1);
-      }
-    }
+    ui.print(null, x, y, z, `Roominess: ${params.r1}`);
+    y += ui.font_height;
+    params.r1 = round(ui.slider(params.r1, { x, y, z, min: 0, max: 20 }));
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `RenderScaleAll: ${settings.render_scale_all}`,
-      tooltip: 'Changes render_scale_all' })
-    ) {
-      if (settings.render_scale_all === 1) {
-        settings.set('render_scale_all', 0.5);
-      } else {
-        settings.set('render_scale_all', 1);
-      }
-    }
+    ui.print(null, x, y, z, `Min Room Width: ${params.min_dim}`);
+    y += ui.font_height;
+    params.min_dim = round(ui.slider(params.min_dim, { x, y, z, min: 1, max: 20 }));
     y += button_spacing;
 
-    font.drawSizedAligned(null, x, y, Z.UI, ui.font_height, font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
-    y += ui.font_height + 1;
-
-    let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
-    if (miniButton('3D', 'Toggles visibility of a 3D test', flagGet('3d_test'))) {
-      flagToggle('3d_test');
-      transition.queue(Z.TRANSITION_FINAL, transition.fade(500));
-    }
-
-    if (miniButton('Font', 'Toggles visibility of general Font tests', flagGet('font_test'))) {
-      flagToggle('font_test');
-      transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
-    }
-
-    if (miniButton('UI', 'Toggles visibility of general UI tests', flagGet('ui_test'))) {
-      flagToggle('ui_test');
-    }
-
-    if (miniButton('FX', 'Toggles particles', flagGet('particles', true))) {
-      flagToggle('particles');
-    }
-
-    if (miniButton('Music', 'Toggles playing a looping background music track', flagGet('music'))) {
-      flagToggle('music');
-      if (flagGet('music')) {
-        soundPlayMusic(music_file, 1, FADE_IN);
-      } else {
-        soundPlayMusic(music_file, 0, FADE_OUT);
-      }
-    }
+    ui.print(null, x, y, z, `Door Width: ${params.door_w}`);
+    y += ui.font_height;
+    params.door_w = round(ui.slider(params.door_w, { x, y, z, min: 1, max: 20 }));
     y += button_spacing;
 
-    if (flagGet('particles')) {
-      if (engine.getFrameTimestamp() - last_particles > 1000) {
-        last_particles = engine.getFrameTimestamp();
-        engine.glov_particles.createSystem(particle_data.defs.explosion,
-          //[test.character.x, test.character.y, Z.PARTICLES]
-          [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
-        );
+    ui.print(null, x, y, z, `Treasure: ${params.treasure}`);
+    y += ui.font_height;
+    params.treasure = round(ui.slider(params.treasure, { x, y, z, min: 0, max: 20 }));
+    y += button_spacing;
+
+    y += button_spacing;
+    ui.print(null, x, y, z, `Max depth: ${max_depth}`);
+
+    if (maze) {
+      const { w, h } = gen_params;
+      let max_dim = max(w, h);
+      let x0 = game_width - game_height;
+      let y0 = 0;
+      let cell_size = game_height / max_dim;
+      ui.drawRect(x0, y0, x0 + cell_size * w, y0 + cell_size * h, 9, color_bg);
+      for (let yy = 0; yy < h; ++yy) {
+        for (let xx = 0; xx < w; ++xx) {
+          let v = maze[yy * w + xx];
+          if (v) {
+            x = x0 + xx * cell_size;
+            y = y0 + yy * cell_size;
+            ui.drawRect(x, y, x + cell_size, y + cell_size, 10, color_tiles[v]);
+          }
+        }
       }
     }
-
-    if (flagGet('perf_test')) {
-      perfTestSprites();
-    }
-
-    if (do_3d) {
-      test3D();
-    }
-
-
-    // Debuggin full canvas stretching
-    // const camera2d = require('./glov/camera2d.js');
-    // ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
-    // ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
-
-    // Debugging touch state on mobile
-    // const glov_camera2d = require('./glov/camera2d.js');
-    // engine.font.drawSizedWrapped(engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
-    //   glov_camera2d.w(), 0, 22, JSON.stringify({
-    //     last_touch_state: input.last_touch_state,
-    //     touch_state: input.touch_state,
-    //   }, undefined, 2));
   }
 
   function testInit(dt) {
     engine.setState(test);
-    if (flagGet('music')) {
-      soundPlayMusic(music_file);
-    }
     test(dt);
   }
 
-  initGraphics();
   engine.setState(testInit);
 }
