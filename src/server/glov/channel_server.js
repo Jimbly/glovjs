@@ -134,6 +134,10 @@ function channelServerSendFinish(pak, err, resp_func) {
     pak.pool();
     return resp_func(err);
   }
+  let splitids = dest.split('.');
+  if (splitids.length > 2) {
+    return void finalError('ERR_INVALID_CHANNEL_ID');
+  }
   const MAX_RETRIES = 10;
   let retries = 0;
   function trySend(prev_error) {
@@ -152,7 +156,10 @@ function channelServerSendFinish(pak, err, resp_func) {
         return finalError(err);
       }
       // Destination not found, should we create it?
-      let [dest_type, dest_id] = dest.split('.');
+      if (splitids.length !== 2) {
+        return finalError('ERR_INVALID_CHANNEL_ID');
+      }
+      let [dest_type, dest_id] = splitids;
       let ctor = channel_server.channel_types[dest_type];
       if (!ctor) {
         return finalError('ERR_UNKNOWN_CHANNEL_TYPE');
@@ -210,7 +217,7 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   assert(typeof dest === 'string' && dest);
   assert(typeof msg === 'string' || typeof msg === 'number');
   assert(source.channel_id);
-  assert(!source.shutting_down); // or already shut down - will be OOO and will not get responses!
+  assert(source.shutting_down < 2); // or already shut down - will be OOO and will not get responses!
   if (!q && typeof msg === 'string' && !quietMessage(msg)) {
     let ctx = {};
     let ids = source.channel_id.split('.');
@@ -419,8 +426,10 @@ class ChannelServer {
 
   createChannelLocal(channel_id) {
     assert(!this.local_channels[channel_id]);
-    let channel_type = channel_id.split('.')[0];
-    let subid = channel_id.split('.')[1];
+    let splitids = channel_id.split('.');
+    assert.equal(splitids.length, 2);
+    let channel_type = splitids[0];
+    let subid = splitids[1];
     let Ctor = this.channel_types[channel_type];
     assert(Ctor);
     // fine whether it's Ctor.autocreate or not
@@ -771,9 +780,10 @@ class ChannelServer {
   doTick() {
     setTimeout(this.tick_func, this.tick_time);
     let now = Date.now();
-    let dt = max(0, now - this.last_tick_timestamp);
+    let wall_dt = max(0, now - this.last_tick_timestamp);
     this.last_tick_timestamp = now;
     let stall = false;
+    let dt = wall_dt;
     if (dt > this.tick_time * 2) {
       // large stall, discard extra time
       console.warn(`Late server tick: ${dt}ms elapsed, ${this.tick_time} expected,` +
@@ -788,8 +798,8 @@ class ChannelServer {
       this.ws_server.broadcastPacket(pak);
       this.last_server_time_send = this.server_time;
     }
-    this.exchangePing(dt);
-    this.reportLoad(dt);
+    this.exchangePing(wall_dt);
+    this.reportLoad(wall_dt);
     for (let channel_id in this.local_channels) {
       let channel = this.local_channels[channel_id];
       if (channel.tick) {

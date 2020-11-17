@@ -115,7 +115,7 @@ export class ChannelWorker {
     this.bulk_store_path = `${this.channel_type}/${this.channel_subid}`;
 
     this.bulk_store_paths = {};
-    this.shutting_down = false;
+    this.shutting_down = 0;
 
     // This will always be an empty object with creating local channel
     assert(channel_data);
@@ -145,8 +145,10 @@ export class ChannelWorker {
   }
 
   shutdownFinal() {
-    this.shutting_down = true;
+    this.shutting_down = 1;
+    // Fail before finishing setting shutting_down, so any error responses can be sent (probably to stuck packets)
     ack.failAll(this);
+    this.shutting_down = 2;
     assert(!this.numSubscribers());
     assert(empty(this.subscribe_counts));
     if (this.onShutdown) {
