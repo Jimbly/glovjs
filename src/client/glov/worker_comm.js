@@ -52,22 +52,28 @@ function workerOnError(e, file, line, col, errorobj) {
   }
 }
 
-function allocWorker(worker_name) {
-  let worker = new Worker(worker_name || 'worker.bundle.js');
+let debug_names;
+
+function allocWorker(idx, worker_filename) {
+  let suffix = debug_names && debug_names[idx] && `#${debug_names[idx]}` || '';
+  let worker = new Worker(`${worker_filename || 'worker.bundle.js'}${suffix}`);
   worker.onmessage = workerOnMessage.bind(null, workers.length);
   worker.onerror = workerOnError;
   workers.push(worker);
 }
 
-export function setNumWorkers(max_workers, worker_name) {
+export function setNumWorkers(max_workers, worker_filename) {
   for (let ii = workers.length; ii < max_workers; ++ii) {
-    allocWorker(worker_name);
+    allocWorker(ii, worker_filename);
   }
 }
 
 export let keep_busy = 0;
 
-export function startup(worker_name) {
+export function startup(worker_filename, debug_names_in) {
+  if (String(document.location).match(/^https?:\/\/localhost/)) {
+    debug_names = debug_names_in;
+  }
   addHandler('debugmsg', function (source, data) {
     window.debugmsg(data.msg, data.clear);
   });
@@ -83,7 +89,7 @@ export function startup(worker_name) {
       sendmsg(source, 'busy', 1000);
     }
   });
-  allocWorker(worker_name);
+  allocWorker(0, worker_filename);
 }
 
 export function keepBusy(num_workers) {
