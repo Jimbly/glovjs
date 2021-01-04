@@ -14,7 +14,12 @@ const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
 const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
-const { errorReportDisable, errorReportSetPath, glovErrorReport } = require('./error_report.js');
+const {
+  errorReportDisable,
+  errorReportSetPath,
+  errorReportSetTimeAccum,
+  glovErrorReport,
+} = require('./error_report.js');
 const glov_font = require('./font.js');
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
@@ -649,6 +654,7 @@ function tick(timestamp) {
   last_tick = now;
   frame_timestamp += dt;
   ++frame_index;
+  errorReportSetTimeAccum(frame_timestamp);
 
   fixNatives(false);
 

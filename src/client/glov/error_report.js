@@ -1,5 +1,7 @@
 /* eslint-env browser */
 
+export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
+
 let error_report_disabled = false;
 
 export function errorReportDisable() {
@@ -24,6 +26,13 @@ export function errorReportSetDetails(key, value) {
     .join('&')}`;
 }
 errorReportSetDetails('ver', BUILD_TIMESTAMP);
+errorReportSetDetails('sesuid', session_uid);
+const time_start = Date.now();
+errorReportSetDetails('time_start', time_start);
+let time_accum = 0;
+export function errorReportSetTimeAccum(new_value) {
+  time_accum = new_value;
+}
 
 export function errorReportGetDetails() {
   return error_report_details;
@@ -37,7 +46,7 @@ let crash_idx = 0;
 //   and doesn't seem to be indicative of any actual problem.
 // Ignoring null at null for similar reasons and because we get nothing useful from the reports.
 // eslint-disable-next-line no-regex-spaces
-let filtered_errors = /avast_submit|vc_request_action|^Script error\.\n  at \(0:0\)$|^null\n  at null(null:null)$/;
+let filtered_errors = /avast_submit|vc_request_action|^Script error\.\n  at \(0:0\)$|^null\n  at null\(null:null\)$/;
 export function glovErrorReport(is_fatal, msg, file, line, col) {
   console.error(msg);
   if (is_fatal) {
@@ -65,7 +74,8 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   let url = api_path; // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}&url=${escape(location.href)}` +
-    `&msg=${escape(msg)}${error_report_details_str}`;
+    `&msg=${escape(msg)}${error_report_details_str}` +
+    `&time_up=${Date.now() - time_start}&time_accum=${time_accum}`;
   let xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);
   xhr.send(null);

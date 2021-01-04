@@ -5,7 +5,7 @@
 const ack = require('../../common/ack.js');
 const { ackInitReceiver } = ack;
 const assert = require('assert');
-const { errorReportSetDetails } = require('./error_report.js');
+const { errorReportSetDetails, session_uid } = require('./error_report.js');
 const { min } = Math;
 const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
@@ -213,7 +213,7 @@ WSClient.prototype.connect = function (for_reconnect) {
 
   let path = `${(client.retry_count % 2) ? client.path2 : client.path}?pver=${wscommon.PROTOCOL_VERSION}${
     for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
-  }`;
+  }&sesuid=${session_uid}`;
   let socket = new WebSocket(path);
   socket.binaryType = 'arraybuffer';
   client.socket = socket;
