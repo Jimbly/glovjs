@@ -22,8 +22,27 @@ export function vec2(a, b) {
   return r;
 }
 
+export function ivec2(a, b) {
+  let r = new Int32Array(2);
+  if (a || b) {
+    r[0] = a;
+    r[1] = b;
+  }
+  return r;
+}
+
 export function vec3(a, b, c) {
   let r = new Float32Array(3);
+  if (a || b || c) {
+    r[0] = a;
+    r[1] = b;
+    r[2] = c;
+  }
+  return r;
+}
+
+export function ivec3(a, b, c) {
+  let r = new Int32Array(3);
   if (a || b || c) {
     r[0] = a;
     r[1] = b;
@@ -282,6 +301,13 @@ export function v3mul(out, a, b) {
   return out;
 }
 
+export function v3iMul(a, b) {
+  a[0] *= b[0];
+  a[1] *= b[1];
+  a[2] *= b[2];
+  return a;
+}
+
 export function v3mulMat4(out, a, m) {
   let x = a[0];
   let y = a[1];
@@ -289,6 +315,17 @@ export function v3mulMat4(out, a, m) {
   out[0] = x * m[0] + y * m[4] + z * m[8];
   out[1] = x * m[1] + y * m[5] + z * m[9];
   out[2] = x * m[2] + y * m[6] + z * m[10];
+  return out;
+}
+
+// Same as v3mulMat4, but assumes it's a vector with w=1
+export function m4TransformVec3(out, a, m) {
+  let x = a[0];
+  let y = a[1];
+  let z = a[2];
+  out[0] = x * m[0] + y * m[4] + z * m[8] + m[12];
+  out[1] = x * m[1] + y * m[5] + z * m[9] + m[13];
+  out[2] = x * m[2] + y * m[6] + z * m[10] + m[14];
   return out;
 }
 

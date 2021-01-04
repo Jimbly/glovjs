@@ -19,6 +19,12 @@ function resetFBOs() {
   reset_fbos = true;
 }
 
+let skip_release = false;
+export function framebufferSkipRelease() {
+  // Skip releases for one frame, we're making a temporary change for a screenshot/etc
+  skip_release = true;
+}
+
 let last_temp_idx = 0;
 function getTemporaryTexture(w, h, possibly_fbo) {
   let key = `${w}_${h}`;
@@ -180,6 +186,7 @@ export function framebufferEndOfFrame() {
   assert(!cur_tex);
   last_num_passes = num_passes;
   num_passes = 0;
+  skip_release = skip_release && !reset_fbos;
 
   for (let key in temporary_textures) {
     let temp = temporary_textures[key];
@@ -188,10 +195,12 @@ export function framebufferEndOfFrame() {
       temp.idx = 0;
     }
     // Release unused textures
-    while (temp.list.length > temp.idx) {
-      temp.list.pop().destroy();
+    if (!skip_release) {
+      while (temp.list.length > temp.idx) {
+        temp.list.pop().destroy();
+      }
     }
-    if (!temp.idx) {
+    if (!temp.list.length) {
       delete temporary_textures[key];
     } else {
       temp.idx = 0;
@@ -204,18 +213,21 @@ export function framebufferEndOfFrame() {
       temp.idx = 0;
     }
     // Release unused renderbuffers
-    while (temp.list.length > temp.idx) {
-      let { depth_buffer } = temp.list.pop();
-      // TODO: can this still be bound to a framebuffer? unlikely, but possible?
-      gl.deleteRenderbuffer(depth_buffer);
+    if (!skip_release) {
+      while (temp.list.length > temp.idx) {
+        let { depth_buffer } = temp.list.pop();
+        // TODO: can this still be bound to a framebuffer? unlikely, but possible?
+        gl.deleteRenderbuffer(depth_buffer);
+      }
     }
-    if (!temp.idx) {
+    if (!temp.list.length) {
       delete temporary_depthbuffers[key];
     } else {
       temp.idx = 0;
     }
   }
   reset_fbos = false;
+  skip_release = false;
 }
 
 export function framebufferUpdateCanvasForCapture() {
@@ -269,6 +281,7 @@ settings.register({
     on_change: resetFBOs,
   },
 });
+reset_fbos = false; // in case it was flagged while registering settings
 
 perf.addMetric({
   name: 'passes',

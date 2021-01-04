@@ -5,6 +5,7 @@ const {
   FRIEND_ADDED,
   FRIEND_ADDED_AUTO,
   FRIEND_REMOVED,
+  FRIEND_BLOCKED,
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
@@ -26,7 +27,13 @@ export function friendsGet() {
 }
 
 export function isFriend(user_id) {
-  return friend_list && friend_list[user_id] && friend_list[user_id] !== FRIEND_REMOVED;
+  let value = friend_list && friend_list[user_id];
+  return value === FRIEND_ADDED || value === FRIEND_ADDED_AUTO;
+}
+
+export function friendIsBlocked(user_id) {
+  let value = friend_list && friend_list[user_id];
+  return value === FRIEND_BLOCKED;
 }
 
 export function friendAdd(user_id, cb) {
@@ -47,6 +54,24 @@ export function friendRemove(user_id, cb) {
   });
 }
 
+export function friendBlock(user_id, cb) {
+  net.subs.getMyUserChannel().cmdParse(`friend_block ${user_id}`, function (err, resp) {
+    if (!err) {
+      friend_list[user_id] = FRIEND_BLOCKED;
+    }
+    cb(err, resp);
+  });
+}
+
+export function friendUnblock(user_id, cb) {
+  net.subs.getMyUserChannel().cmdParse(`friend_unblock ${user_id}`, function (err, resp) {
+    if (!err) {
+      delete friend_list[user_id];
+    }
+    cb(err, resp);
+  });
+}
+
 // Pass-through commands
 cmd_parse.register({
   cmd: 'friend_add',
@@ -59,14 +84,35 @@ cmd_parse.register({
   func: friendRemove,
 });
 cmd_parse.register({
+  cmd: 'friend_block',
+  help: 'Block someone from seeing your rich presence, also removes from your friends list',
+  func: friendBlock,
+});
+cmd_parse.register({
+  cmd: 'friend_unblock',
+  help: 'Reset a user to allow seeing your rich presence again',
+  func: friendUnblock,
+});
+cmd_parse.register({
   cmd: 'friend_list',
   help: 'List all friends',
   func: function (str, resp_func) {
     if (!friend_list) {
-      return void resp_func('Friend list not loaded');
+      return void resp_func('Friends list not loaded');
     }
-    resp_func(null, Object.keys(friend_list).filter((a) => friend_list[a] !== FRIEND_REMOVED).join(',') ||
+    resp_func(null, Object.keys(friend_list).filter(isFriend).join(',') ||
       'You have no friends');
+  },
+});
+cmd_parse.register({
+  cmd: 'friend_block_list',
+  help: 'List all blocked users',
+  func: function (str, resp_func) {
+    if (!friend_list) {
+      return void resp_func('Friends list not loaded');
+    }
+    resp_func(null, Object.keys(friend_list).filter(friendIsBlocked).join(',') ||
+      'You have no blocked users');
   },
 });
 

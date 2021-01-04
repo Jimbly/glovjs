@@ -373,9 +373,9 @@ export function create(format, verts, idxs, mode) {
   return new Geom(format, verts, idxs, mode);
 }
 
-export function createQuads(format, verts) {
+export function createQuads(format, verts, fixed_size) {
   let format_info = formatInfo(format);
-  assert(verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
+  assert(fixed_size || verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
   let vert_count = verts.length / format_info.elem_count;
   if (vert_count > 65536) {
     return new GeomMultiQuads(format, verts);

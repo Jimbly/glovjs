@@ -572,6 +572,10 @@ export function buttonShared(param) {
       setMouseOver(key, rollover_quiet);
     } else {
       ret = true;
+      if (last_frame_button_mouseover === key) {
+        // preserve mouse over if we have it
+        setMouseOver(key, rollover_quiet);
+      }
     }
     if (!param.no_focus) {
       focusSteal(key);

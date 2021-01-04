@@ -4,9 +4,12 @@
 let modified = {};
 exports.true = true; // for perf.js
 
+const assert = require('assert');
 const { titleCase } = require('../../common/util.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
+
+let change_cbs = {};
 
 export function get(key) {
   return exports[key];
@@ -31,10 +34,39 @@ export function runTimeDefault(key, new_default) {
   }
 }
 
+let settings_stack = null;
+export function push(pairs) {
+  assert(!settings_stack);
+  settings_stack = {};
+  for (let key in pairs) {
+    settings_stack[key] = exports[key];
+    exports[key] = pairs[key];
+    let cb = change_cbs[key];
+    if (cb) {
+      cb();
+    }
+  }
+}
+
+export function pop() {
+  assert(settings_stack);
+  for (let key in settings_stack) {
+    exports[key] = settings_stack[key];
+    let cb = change_cbs[key];
+    if (cb) {
+      cb();
+    }
+  }
+  settings_stack = null;
+}
+
 export function register(defs) {
   Object.keys(defs).forEach(function (key) {
     let def = defs[key];
     exports[key] = def.default_value;
+    if (def.on_change) {
+      change_cbs[key] = def.on_change;
+    }
     cmd_parse.registerValue(key, {
       type: def.type,
       label: def.label || titleCase(key.replace(/_/g, ' ')),

@@ -53,3 +53,12 @@ RandSeed2.prototype.floatBetween = function (a, b) {
 export function randFastCreate(seed) {
   return new RandSeed2(seed);
 }
+
+// from https://www.shadertoy.com/view/wsXfDM
+const RND_A = 134775813;
+const RND_B = 1103515245;
+export function randSimpleSpatial(seed, x, y, z) {
+  y += z * 10327;
+
+  return (((((x ^ y) * RND_A) ^ (seed + x)) * (((RND_B * x) << 16) ^ (RND_B * y) - RND_A)) >>> 0) / 4294967295;
+}

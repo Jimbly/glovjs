@@ -1,7 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const assert = require('assert');
 const { cmd_parse } = require('./cmds.js');
 const glov_engine = require('./engine.js');
 const net = require('./net.js');
@@ -74,7 +73,7 @@ perf.addMetric({
 
 const valid_options = [
   // Numeric parameters
-  'n', 'dim_pos', 'dim_rot', // dimensions
+  'dim_pos', 'dim_rot', // dimensions
   'send_time', 'window', 'snap_factor', 'smooth_windows', 'smooth_factor', 'default_pos',
   // Callbacks
   'on_pos_update', 'on_state_update',
@@ -208,7 +207,7 @@ NetPositionManager.prototype.reinit = function (options) {
     }
   }
 
-  assert.equal(this.dim_pos + this.dim_rot, this.n);
+  this.n = this.dim_pos + this.dim_rot;
 
   if (!this.default_pos) {
     this.default_pos = this.vec();
@@ -455,7 +454,7 @@ NetPositionManager.prototype.updateOtherClient = function (client_id, dt) {
   }
   return pcd;
 };
-NetPositionManager.prototype.n = 2; // dimensionality of position vectors
+
 NetPositionManager.prototype.dim_pos = 2; // number of components to be interpolated as-is
 NetPositionManager.prototype.dim_rot = 0; // number of components to be interpolated with 2PI wrapping
 NetPositionManager.prototype.send_time = 200; // how often to send position updates
