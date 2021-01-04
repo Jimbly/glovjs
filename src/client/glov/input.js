@@ -511,6 +511,11 @@ function onTouchChange(event) {
   // Look for press and movement
   for (let ii = 0; ii < new_count; ++ii) {
     let touch = ct[ii];
+    if (!isFinite(touch.pageX) || !isFinite(touch.pageY)) {
+      // getting bad touch events sometimes (Moto phones?), simply ignore
+      continue;
+    }
+
     let last_touch = touches[touch.identifier];
     v2set(touch_pos, touch.pageX, touch.pageY);
     if (!last_touch) {
