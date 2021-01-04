@@ -48,7 +48,14 @@ cmd_parse.register({
   cmd: 'd',
   help: 'Toggles a debug define',
   func: function (str, resp_func) {
-    str = str.toUpperCase();
+    str = str.toUpperCase().trim();
+    if (!str) {
+      for (let key in engine.defines) {
+        engine.defines[key] = false;
+      }
+      engine.definesChanged();
+      return void resp_func(null, 'All debug defines cleared');
+    }
     engine.defines[str] = !engine.defines[str];
     resp_func(null, `D=${str} now ${engine.defines[str]?'SET':'unset'}`);
     engine.definesChanged();
