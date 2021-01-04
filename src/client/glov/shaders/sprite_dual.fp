@@ -10,12 +10,12 @@ varying lowp vec4 interp_color;
 varying vec2 interp_texcoord;
 
 void main(void) {
-  vec4 tex0 = texture2D(tex0,interp_texcoord);
-  vec2 tex1 = texture2D(tex1,interp_texcoord).rg;
-  float value = dot(tex0.rgb, vec3(0.2, 0.5, 0.3));
+  vec4 texA = texture2D(tex0,interp_texcoord);
+  vec2 texB = texture2D(tex1,interp_texcoord).rg;
+  float value = dot(texA.rgb, vec3(0.2, 0.5, 0.3));
   vec3 valueR = value * interp_color.rgb;
   vec3 valueG = value * color1.rgb;
-  vec3 value3 = mix(tex0.rgb, valueG, tex1.g);
-  value3 = mix(value3, valueR, tex1.r);
-  gl_FragColor = vec4(value3, tex0.a * interp_color.a);
+  vec3 value3 = mix(texA.rgb, valueG, texB.g);
+  value3 = mix(value3, valueR, texB.r);
+  gl_FragColor = vec4(value3, texA.a * interp_color.a);
 }
