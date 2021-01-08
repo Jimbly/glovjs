@@ -28,6 +28,7 @@ const { linkTick } = require('./link.js');
 const { abs, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
+const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const { clamp, clone, lerp, merge } = require('../../common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -190,6 +191,8 @@ let focused_key_prev2;
 let pad_focus_left;
 let pad_focus_right;
 
+let line_shader;
+
 export function colorSetSetShades(rollover, down, disabled) {
   color_set_shades[1] = rollover;
   color_set_shades[2] = down;
@@ -260,6 +263,7 @@ export function startup(param) {
   button_keys.yes.key.push(KEYS.Y);
   button_keys.no = clone(button_keys.cancel);
   button_keys.no.key.push(KEYS.N);
+  line_shader = shaders.create('glov/shaders/line.fp');
 }
 
 let dynamic_text_elem;
@@ -1359,7 +1363,7 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
 
   let dx = x1 - x0;
   let dy = y1 - y0;
-  let length = Math.sqrt(dx*dx + dy*dy);
+  let length = sqrt(dx*dx + dy*dy);
   dx /= length;
   dy /= length;
   let tangx = -dy * w;
@@ -1373,6 +1377,75 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
     z,
     0, 0, 1, 1,
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
+}
+
+export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
+  const LINE_SIZE=16;
+  if (!sprites.line2) {
+    let data = new Uint8Array(LINE_SIZE*LINE_SIZE);
+    for (let i = 0; i < LINE_SIZE; i++) {
+      for (let j = 0; j < LINE_SIZE; j++) {
+        data[i + j*LINE_SIZE] = round(i/(LINE_SIZE-1) * 255);
+      }
+    }
+    sprites.line2 = glov_sprites.create({
+      url: 'line2',
+      width: LINE_SIZE, height: LINE_SIZE,
+      format: textures.format.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_mag: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      origin: vec2(0.5, 0.5),
+    });
+  }
+
+  const camera_xscale = camera2d.data[4];
+  const camera_yscale = camera2d.data[5];
+  let virtual_to_pixels = (camera_xscale + camera_yscale) * 0.5;
+  let pixels_to_virutal = 1/virtual_to_pixels;
+  let w_in_pixels = w * virtual_to_pixels;
+  let draw_w_pixels = w_in_pixels + 2*2;
+  let half_draw_w_pixels = draw_w_pixels * 0.5;
+  let draw_w = half_draw_w_pixels * pixels_to_virutal;
+  // let tex_delta_for_pixel = 1 / draw_w_pixels; // should be 51/255 for width=1 (draw_w_pixels = 5)
+
+  // align drawing so that the edge of the line is aligned with a pixel edge
+  //   (avoids a 0.1,1.0,0.1 line drawing in favor of 1.0,0.2, which will be crisper, if slightly visually offset)
+  let y0_real = (y0 - camera2d.data[1]) * camera2d.data[5];
+  let y0_real_aligned = round(y0_real - half_draw_w_pixels) + half_draw_w_pixels;
+  let yoffs = (y0_real_aligned - y0_real) / camera2d.data[5];
+  y0 += yoffs;
+  y1 += yoffs;
+
+  let x0_real = (x0 - camera2d.data[0]) * camera2d.data[4];
+  let x0_real_aligned = round(x0_real - half_draw_w_pixels) + half_draw_w_pixels;
+  let xoffs = (x0_real_aligned - x0_real) / camera2d.data[4];
+  x0 += xoffs;
+  x1 += xoffs;
+
+  let dx = x1 - x0;
+  let dy = y1 - y0;
+  let length = sqrt(dx*dx + dy*dy);
+  dx /= length;
+  dy /= length;
+  let tangx = -dy * draw_w;
+  let tangy = dx * draw_w;
+
+  let inv_tex_delta = draw_w_pixels; // 1.0 / tex_delta_for_pixel
+  let a = 0.5 * (1 + inv_tex_delta - w_in_pixels);
+  let b = 0.5 * (1 - inv_tex_delta - w_in_pixels);
+  let param0 = [inv_tex_delta, a, b];
+
+  glov_sprites.queueraw4(sprites.line2.texs,
+    x0 + tangx, y0 + tangy,
+    x1 + tangx, y1 + tangy,
+    x1 - tangx, y1 - tangy,
+    x0 - tangx, y0 - tangy,
+    z,
+    0.5/LINE_SIZE, 0.5/LINE_SIZE, 1-0.5/LINE_SIZE, 1-0.5/LINE_SIZE,
+    color, line_shader, { param0 });
 }
 
 export function drawHollowRect(x0, y0, x1, y1, z, w, spread, color) {
@@ -1421,7 +1494,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
   }
   let dx = x1 - x0;
   let dy = y1 - y0;
-  let length = Math.sqrt(dx*dx + dy*dy);
+  let length = sqrt(dx*dx + dy*dy);
   dx /= length;
   dy /= length;
   let tangx = -dy;

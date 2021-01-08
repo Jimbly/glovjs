@@ -5,7 +5,7 @@ glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring any
 const engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
 const input = require('./glov/input.js');
-const { floor } = Math;
+const { floor, sin } = Math;
 const net = require('./glov/net.js');
 const particles = require('./glov/particles.js');
 const settings = require('./glov/settings.js');
@@ -105,6 +105,33 @@ function perfTestSprites() {
         z: mode === 0 ? ii : Math.random(),
         w: 6, h: 6,
       });
+    }
+  }
+}
+
+const color_black = vec4(0,0,0,1);
+function lineTest() {
+  const line_len = 20;
+  let y_values = [
+    10, 15.25, 20.5, 25.667,
+    35 + sin(engine.frame_timestamp * 0.001) * 5
+  ];
+  let widths = [0.5, 1, 1.5, 2, 4];
+  for (let widx = 0; widx < widths.length; ++widx) {
+    let width = widths[widx];
+    let x0 = 10 + widx * (line_len + 4);
+    for (let jj = 0; jj < y_values.length; ++jj) {
+      let x = x0 + jj * 2;
+      let y = y_values[jj];
+      if (0) {
+        ui.drawLine(x, y, x + line_len, y, Z.UI, width, 1, color_black);
+        ui.drawLine(x, y, x + line_len, y + 4.5, Z.UI, width, 1, color_black);
+        ui.drawLine(x + width/2, y, x + width/2, y + line_len / 2, Z.UI, width, 1, color_black);
+      } else {
+        ui.drawLineCrisp(x, y, x + line_len, y, Z.UI, width, color_black);
+        ui.drawLineCrisp(x, y, x + line_len, y + 4.5, Z.UI, width, color_black);
+        ui.drawLineCrisp(x, y, x, y + line_len / 2, Z.UI, width, color_black);
+      }
     }
   }
 }
@@ -351,9 +378,19 @@ export function main() {
 
     if (miniButton('UI', 'Toggles visibility of general UI tests', flagGet('ui_test'))) {
       flagToggle('ui_test');
+      if (flagGet('ui_test')) {
+        flagSet('lines', false);
+      }
     }
 
-    if (miniButton('FX', 'Toggles particles', flagGet('particles', true))) {
+    if (miniButton('Lines', 'Toggles line drawing', flagGet('lines'))) {
+      flagToggle('lines');
+      if (flagGet('lines')) {
+        flagSet('ui_test', false);
+      }
+    }
+
+    if (miniButton('FX', 'Toggles particles', flagGet('particles'))) {
       flagToggle('particles');
     }
 
@@ -365,7 +402,6 @@ export function main() {
         soundPlayMusic(music_file, 0, FADE_OUT);
       }
     }
-    y += button_spacing;
 
     if (flagGet('particles')) {
       if (engine.getFrameTimestamp() - last_particles > 1000) {
@@ -375,6 +411,10 @@ export function main() {
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
       }
+    }
+
+    if (flagGet('lines')) {
+      lineTest();
     }
 
     if (flagGet('perf_test')) {
