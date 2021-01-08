@@ -16,6 +16,10 @@ Z.TRANSITION_RANGE = Z.TRANSITION_RANGE || 10;
 
 Z.FPSMETER = Z.FPSMETER || 10000;
 
+export const LINE_ALIGN = 1<<0;
+export const LINE_CAP_SQUARE = 1<<1;
+export const LINE_CAP_ROUND = 1<<2;
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_edit_box = require('./edit_box.js');
@@ -192,6 +196,7 @@ let pad_focus_left;
 let pad_focus_right;
 
 let line_shader;
+let default_line_mode;
 
 export function colorSetSetShades(rollover, down, disabled) {
   color_set_shades[1] = rollover;
@@ -264,6 +269,17 @@ export function startup(param) {
   button_keys.no = clone(button_keys.cancel);
   button_keys.no.key.push(KEYS.N);
   line_shader = shaders.create('glov/shaders/line.fp');
+
+  if (param.line_mode !== undefined) {
+    default_line_mode = param.line_mode;
+  } else {
+    default_line_mode = LINE_ALIGN|LINE_CAP_ROUND;
+    // let is_pixely = param.pixely && param.pixely !== 'off';
+    // if (is_pixely) {
+    //   // Maybe want to not do aligning here, causes inconsistencies when smoothly scrolling
+    //   default_line_mode = 0;
+    // }
+  }
 }
 
 let dynamic_text_elem;
@@ -1379,22 +1395,49 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
 }
 
-export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
-  const LINE_TEX_W=16;
-  const LINE_TEX_H=16; // Only using 15, so we can have a value of 255 in the middle
-  if (!sprites.line2) {
+const LINE_TEX_W=16;
+const LINE_TEX_H=16; // Only using 15, so we can have a value of 255 in the middle
+const LINE_MIDP = floor((LINE_TEX_H - 1) / 2);
+const LINE_V0 = 0.5/LINE_TEX_H;
+const LINE_V1 = 1-1.5/LINE_TEX_H;
+const LINE_U0 = 0.5/LINE_TEX_W;
+const LINE_U1 = LINE_MIDP / LINE_TEX_W;
+const LINE_U2 = 1 - LINE_U1; // 1 texel away from LINE_U1
+const LINE_U3 = 1 - 0.5/LINE_TEX_W;
+export function drawLineCrisp(x0, y0, x1, y1, z, w, color, mode) {
+  if (mode === undefined) {
+    mode = default_line_mode;
+  }
+  let tex_key = mode & LINE_CAP_ROUND ? 'line3' : 'line2';
+  if (!sprites[tex_key]) {
     let data = new Uint8Array(LINE_TEX_W * LINE_TEX_H);
-    let midp = floor((LINE_TEX_H - 1) / 2);
-    for (let j = 0; j < LINE_TEX_H; j++) {
-      // let j_value = round(j/(LINE_TEX_H-1) * 255);
-      let d = abs((j - midp) / midp);
-      let j_value = round(clamp(1 - d, 0, 1) * 255);
-      for (let i = 0; i < LINE_TEX_W; i++) {
-        data[i + j*LINE_TEX_W] = j_value;
+    let i1 = LINE_MIDP;
+    let i2 = LINE_TEX_W - 1 - LINE_MIDP;
+    if (tex_key === 'line2') {
+      // rectangular caps
+      for (let j = 0; j < LINE_TEX_H; j++) {
+        let d = abs((j - LINE_MIDP) / LINE_MIDP);
+        let j_value = round(clamp(1 - d, 0, 1) * 255);
+        for (let i = 0; i < LINE_TEX_W; i++) {
+          d = i < i1 ? i/LINE_MIDP : i >= i2 ? 1 - (i-i2) / LINE_MIDP : 1;
+          let i_value = round(clamp(d, 0, 1) * 255);
+          data[i + j*LINE_TEX_W] = min(i_value, j_value);
+        }
+      }
+    } else {
+      // round caps
+      for (let j = 0; j < LINE_TEX_H; j++) {
+        let d = abs((j - LINE_MIDP) / LINE_MIDP);
+        for (let i = 0; i < LINE_TEX_W; i++) {
+          let id = i < i1 ? 1-i/LINE_MIDP : i >= i2 ? (i-i2) / LINE_MIDP : 0;
+          let dv = sqrt(id*id + d*d);
+          dv = clamp(1-dv, 0, 1);
+          data[i + j*LINE_TEX_W] = round(dv * 255);
+        }
       }
     }
-    sprites.line2 = glov_sprites.create({
-      url: 'line2',
+    sprites[tex_key] = glov_sprites.create({
+      url: tex_key,
       width: LINE_TEX_W, height: LINE_TEX_H,
       format: textures.format.R8,
       data,
@@ -1402,9 +1445,9 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
       filter_mag: gl.LINEAR,
       wrap_s: gl.CLAMP_TO_EDGE,
       wrap_t: gl.CLAMP_TO_EDGE,
-      origin: vec2(0.5, 0.5),
     });
   }
+  let texs = sprites[tex_key].texs;
 
   const camera_xscale = camera2d.data[4];
   const camera_yscale = camera2d.data[5];
@@ -1424,14 +1467,7 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
   let tangx = -dy * draw_w;
   let tangy = dx * draw_w;
 
-  if (0) { // naive square caps - not good when combined with rounding below
-    x0 -= dx * w/2;
-    y0 -= dy * w/2;
-    x1 += dx * w/2;
-    y1 += dy * w/2;
-  }
-
-  if (1) {
+  if (mode & LINE_ALIGN) {
     // align drawing so that the edge of the line is aligned with a pixel edge
     //   (avoids a 0.1,1.0,0.1 line drawing in favor of 1.0,0.2, which will be crisper, if slightly visually offset)
     let y0_real = (y0 - camera2d.data[1]) * camera2d.data[5];
@@ -1451,15 +1487,38 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
   let a = 0.5 * (1 - w_in_pixels) + inv_tex_delta;
   let b = 0.5 * (1 - w_in_pixels) - inv_tex_delta;
   let param0 = [inv_tex_delta, a, b];
+  let shader_param = { param0 };
 
-  glov_sprites.queueraw4(sprites.line2.texs,
+  glov_sprites.queueraw4(texs,
     x1 + tangx, y1 + tangy,
     x1 - tangx, y1 - tangy,
     x0 - tangx, y0 - tangy,
     x0 + tangx, y0 + tangy,
     z,
-    0.5/LINE_TEX_W, 0.5/LINE_TEX_H, 1-0.5/LINE_TEX_W, 1-1.5/LINE_TEX_H,
-    color, line_shader, { param0 });
+    LINE_U1, LINE_V0, LINE_U2, LINE_V1,
+    color, line_shader, shader_param);
+
+  if (mode & (LINE_CAP_ROUND|LINE_CAP_SQUARE)) {
+    // round caps (line3) - square caps (line2)
+    let nx = dx * w/2;
+    let ny = dy * w/2;
+    glov_sprites.queueraw4(texs,
+      x1 - tangx, y1 - tangy,
+      x1 + tangx, y1 + tangy,
+      x1 + tangx + nx, y1 + tangy + ny,
+      x1 - tangx + nx, y1 - tangy + ny,
+      z,
+      LINE_U2, LINE_V1, LINE_U3, LINE_V0,
+      color, line_shader, shader_param);
+    glov_sprites.queueraw4(texs,
+      x0 - tangx, y0 - tangy,
+      x0 + tangx, y0 + tangy,
+      x0 + tangx - nx, y0 + tangy - ny,
+      x0 - tangx - nx, y0 - tangy - ny,
+      z,
+      LINE_U1, LINE_V1, LINE_U0, LINE_V0,
+      color, line_shader, shader_param);
+  }
 }
 
 export function drawHollowRect(x0, y0, x1, y1, z, w, spread, color) {
