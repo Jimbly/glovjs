@@ -25,7 +25,7 @@ const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
-const { abs, max, min, round, sqrt } = Math;
+const { abs, floor, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
 const shaders = require('./shaders.js');
@@ -1380,17 +1380,22 @@ export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
 }
 
 export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
-  const LINE_SIZE=16;
+  const LINE_TEX_W=16;
+  const LINE_TEX_H=16; // Only using 15, so we can have a value of 255 in the middle
   if (!sprites.line2) {
-    let data = new Uint8Array(LINE_SIZE*LINE_SIZE);
-    for (let i = 0; i < LINE_SIZE; i++) {
-      for (let j = 0; j < LINE_SIZE; j++) {
-        data[i + j*LINE_SIZE] = round(i/(LINE_SIZE-1) * 255);
+    let data = new Uint8Array(LINE_TEX_W * LINE_TEX_H);
+    let midp = floor((LINE_TEX_H - 1) / 2);
+    for (let j = 0; j < LINE_TEX_H; j++) {
+      // let j_value = round(j/(LINE_TEX_H-1) * 255);
+      let d = abs((j - midp) / midp);
+      let j_value = round(clamp(1 - d, 0, 1) * 255);
+      for (let i = 0; i < LINE_TEX_W; i++) {
+        data[i + j*LINE_TEX_W] = j_value;
       }
     }
     sprites.line2 = glov_sprites.create({
       url: 'line2',
-      width: LINE_SIZE, height: LINE_SIZE,
+      width: LINE_TEX_W, height: LINE_TEX_H,
       format: textures.format.R8,
       data,
       filter_min: gl.LINEAR,
@@ -1411,20 +1416,6 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
   let draw_w = half_draw_w_pixels * pixels_to_virutal;
   // let tex_delta_for_pixel = 1 / draw_w_pixels; // should be 51/255 for width=1 (draw_w_pixels = 5)
 
-  // align drawing so that the edge of the line is aligned with a pixel edge
-  //   (avoids a 0.1,1.0,0.1 line drawing in favor of 1.0,0.2, which will be crisper, if slightly visually offset)
-  let y0_real = (y0 - camera2d.data[1]) * camera2d.data[5];
-  let y0_real_aligned = round(y0_real - half_draw_w_pixels) + half_draw_w_pixels;
-  let yoffs = (y0_real_aligned - y0_real) / camera2d.data[5];
-  y0 += yoffs;
-  y1 += yoffs;
-
-  let x0_real = (x0 - camera2d.data[0]) * camera2d.data[4];
-  let x0_real_aligned = round(x0_real - half_draw_w_pixels) + half_draw_w_pixels;
-  let xoffs = (x0_real_aligned - x0_real) / camera2d.data[4];
-  x0 += xoffs;
-  x1 += xoffs;
-
   let dx = x1 - x0;
   let dy = y1 - y0;
   let length = sqrt(dx*dx + dy*dy);
@@ -1433,18 +1424,41 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color) {
   let tangx = -dy * draw_w;
   let tangy = dx * draw_w;
 
-  let inv_tex_delta = draw_w_pixels; // 1.0 / tex_delta_for_pixel
-  let a = 0.5 * (1 + inv_tex_delta - w_in_pixels);
-  let b = 0.5 * (1 - inv_tex_delta - w_in_pixels);
+  if (0) { // naive square caps - not good when combined with rounding below
+    x0 -= dx * w/2;
+    y0 -= dy * w/2;
+    x1 += dx * w/2;
+    y1 += dy * w/2;
+  }
+
+  if (1) {
+    // align drawing so that the edge of the line is aligned with a pixel edge
+    //   (avoids a 0.1,1.0,0.1 line drawing in favor of 1.0,0.2, which will be crisper, if slightly visually offset)
+    let y0_real = (y0 - camera2d.data[1]) * camera2d.data[5];
+    let y0_real_aligned = round(y0_real - half_draw_w_pixels) + half_draw_w_pixels;
+    let yoffs = (y0_real_aligned - y0_real) / camera2d.data[5];
+    y0 += yoffs;
+    y1 += yoffs;
+
+    let x0_real = (x0 - camera2d.data[0]) * camera2d.data[4];
+    let x0_real_aligned = round(x0_real - half_draw_w_pixels) + half_draw_w_pixels;
+    let xoffs = (x0_real_aligned - x0_real) / camera2d.data[4];
+    x0 += xoffs;
+    x1 += xoffs;
+  }
+
+  let inv_tex_delta = draw_w_pixels * 0.5; // 2.0 / tex_delta_for_pixel
+  let a = 0.5 * (1 - w_in_pixels) + inv_tex_delta;
+  let b = 0.5 * (1 - w_in_pixels) - inv_tex_delta;
   let param0 = [inv_tex_delta, a, b];
 
   glov_sprites.queueraw4(sprites.line2.texs,
-    x0 + tangx, y0 + tangy,
     x1 + tangx, y1 + tangy,
     x1 - tangx, y1 - tangy,
     x0 - tangx, y0 - tangy,
+    x0 + tangx, y0 + tangy,
     z,
-    0.5/LINE_SIZE, 0.5/LINE_SIZE, 1-0.5/LINE_SIZE, 1-0.5/LINE_SIZE,
+    0.5/LINE_TEX_W, 0.5/LINE_TEX_H, 1-0.5/LINE_TEX_W, 1-1.5/LINE_TEX_H,
     color, line_shader, { param0 });
 }
 

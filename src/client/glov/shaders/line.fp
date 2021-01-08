@@ -15,17 +15,17 @@ void main()
   // explicit:
   // float half_w_in_pixels = param0.x;
   // float tex_delta_for_pixel = param0.y;
-  // distance from left side of fragment to edge of line
-  // float left_dist = (0.5 - (texture0 - tex_delta_for_pixel*0.5)) / tex_delta_for_pixel - half_w_in_pixels;
+  // // distance from left side of fragment to edge of line
+  // float left_dist = (1.0 - (texture0 - tex_delta_for_pixel*0.5)) / tex_delta_for_pixel - half_w_in_pixels;
   // // distance from right side of fragment to edge of line
-  // float right_dist = ((texture0 + tex_delta_for_pixel*0.5) - 0.5) / tex_delta_for_pixel - half_w_in_pixels;
+  // float right_dist = ((texture0 + tex_delta_for_pixel*0.5) - 1.0) / tex_delta_for_pixel - half_w_in_pixels;
 
   // refactor into MAD constants:
   // float inv_tex_delta = 1.0 / tex_delta_for_pixel;
-  // float A = 0.5 + 0.5*inv_tex_delta - half_w_in_pixels;
-  // float B = 0.5 - 0.5*inv_tex_delta - half_w_in_pixels;
-  // float left_dist = -texture0 * inv_tex_delta + A;
-  // float right_dist = texture0 * inv_tex_delta + B;
+  // float A = 0.5 + inv_tex_delta - half_w_in_pixels;
+  // float B = 0.5 - inv_tex_delta - half_w_in_pixels;
+  // float left_dist = -texture0*inv_tex_delta + A;
+  // float right_dist = texture0*inv_tex_delta + B;
 
   // super-efficient:
   float left_dist = -texture0 * param0.x + param0.y;
