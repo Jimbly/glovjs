@@ -110,14 +110,16 @@ function perfTestSprites() {
 }
 
 const color_black = vec4(0,0,0,1);
+let line_precise = 1;
 function lineTest() {
   const line_len = 20;
   let y_values = [
-    10, 15.25, 20.5, 25.667,
-    35 + sin(engine.frame_timestamp * 0.001) * 5
+    20, 25.25, 30.5, 35.667,
+    45 + sin(engine.frame_timestamp * 0.001) * 5
   ];
   let widths = [0.5, 1, 1.5, 2, 4];
   let z = Z.UI;
+  line_precise = ui.slider(line_precise, { x: 2, y: 2, min: 0, max: 1 });
   for (let widx = 0; widx < widths.length; ++widx) {
     let width = widths[widx];
     let x0 = 10 + widx * (line_len + 4);
@@ -125,20 +127,23 @@ function lineTest() {
       let x = x0 + jj * 2;
       let y = y_values[jj];
       if (0) {
-        ui.drawLine(x, y, x + line_len, y, z, width, 1, color_black);
-        ui.drawLine(x, y, x + line_len, y + 4.5, z, width, 1, color_black);
-        ui.drawLine(x + width/2, y, x + width/2, y + line_len / 2, z, width, 1, color_black);
+        ui.drawLine(x, y, x + line_len, y, z, width, line_precise, color_black);
+        ui.drawLine(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black);
+        ui.drawLine(x + width/2, y, x + width/2, y + line_len / 2, z, width, line_precise, color_black);
       } else {
-        ui.drawLineCrisp(x, y, x + line_len, y, z, width, color_black, ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+        ui.drawLineCrisp(x, y, x + line_len, y, z, width, line_precise, color_black,
+          ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
         z += 0.1;
-        ui.drawLineCrisp(x, y, x + line_len, y + 4.5, z, width, color_black, ui.LINE_ALIGN|ui.LINE_CAP_ROUND);
+        ui.drawLineCrisp(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black,
+          ui.LINE_ALIGN|ui.LINE_CAP_ROUND);
         z += 0.1;
-        ui.drawLineCrisp(x, y, x, y + line_len / 2, z, width, color_black, ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+        ui.drawLineCrisp(x, y, x, y + line_len / 2, z, width, line_precise, color_black,
+          ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
         z += 0.1;
       }
     }
   }
-  ui.drawLineCrisp(50, 72, 250, 200, z, 20, color_black, ui.LINE_CAP_ROUND);
+  ui.drawLineCrisp(50, 72, 250, 200, z, 20, line_precise, color_black, ui.LINE_CAP_ROUND);
 }
 
 export function main() {

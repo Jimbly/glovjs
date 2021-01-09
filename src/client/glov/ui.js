@@ -1401,10 +1401,10 @@ const LINE_MIDP = floor((LINE_TEX_H - 1) / 2);
 const LINE_V0 = 0.5/LINE_TEX_H;
 const LINE_V1 = 1-1.5/LINE_TEX_H;
 const LINE_U0 = 0.5/LINE_TEX_W;
-const LINE_U1 = LINE_MIDP / LINE_TEX_W;
+const LINE_U1 = (LINE_MIDP + 0.5) / LINE_TEX_W;
 const LINE_U2 = 1 - LINE_U1; // 1 texel away from LINE_U1
 const LINE_U3 = 1 - 0.5/LINE_TEX_W;
-export function drawLineCrisp(x0, y0, x1, y1, z, w, color, mode) {
+export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
   if (mode === undefined) {
     mode = default_line_mode;
   }
@@ -1483,10 +1483,17 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, color, mode) {
     x1 += xoffs;
   }
 
-  let inv_tex_delta = draw_w_pixels * 0.5; // 2.0 / tex_delta_for_pixel
-  let a = 0.5 * (1 - w_in_pixels) + inv_tex_delta;
-  let b = 0.5 * (1 - w_in_pixels) - inv_tex_delta;
-  let param0 = [inv_tex_delta, a, b];
+
+  let tex_delta_for_pixel = 2/draw_w_pixels;
+  let step_start = 1 - (w_in_pixels + 1) / draw_w_pixels;
+  let step_end = step_start + tex_delta_for_pixel;
+  step_start = lerp(precise, tex_delta_for_pixel, step_start);
+  step_end = 1 + precise * (step_end - 1);
+  let A = 1.0 / (step_end - step_start);
+  let B = -step_start * A;
+  let param0 = [A, B];
+  // param0 = [w_in_pixels*0.5, 2.0/draw_w_pixels]; // for explicit math
+
   let shader_param = { param0 };
 
   glov_sprites.queueraw4(texs,
