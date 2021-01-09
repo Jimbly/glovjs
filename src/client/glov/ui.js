@@ -32,7 +32,6 @@ const { linkTick } = require('./link.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
-const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const { clamp, clone, lerp, merge } = require('../../common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -195,7 +194,6 @@ let focused_key_prev2;
 let pad_focus_left;
 let pad_focus_right;
 
-let line_shader;
 let default_line_mode;
 
 export function colorSetSetShades(rollover, down, disabled) {
@@ -268,7 +266,6 @@ export function startup(param) {
   button_keys.yes.key.push(KEYS.Y);
   button_keys.no = clone(button_keys.cancel);
   button_keys.no.key.push(KEYS.N);
-  line_shader = shaders.create('glov/shaders/line.fp');
 
   if (param.line_mode !== undefined) {
     default_line_mode = param.line_mode;
@@ -1483,7 +1480,6 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
     x1 += xoffs;
   }
 
-
   let tex_delta_for_pixel = 2/draw_w_pixels;
   let step_start = 1 - (w_in_pixels + 1) / draw_w_pixels;
   let step_end = step_start + tex_delta_for_pixel;
@@ -1491,10 +1487,7 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
   step_end = 1 + precise * (step_end - 1);
   let A = 1.0 / (step_end - step_start);
   let B = -step_start * A;
-  let param0 = [A, B];
-  // param0 = [w_in_pixels*0.5, 2.0/draw_w_pixels]; // for explicit math
-
-  let shader_param = { param0 };
+  let shader_param = { param0: [A, B] };
 
   glov_sprites.queueraw4(texs,
     x1 + tangx, y1 + tangy,
@@ -1503,7 +1496,7 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
     x0 + tangx, y0 + tangy,
     z,
     LINE_U1, LINE_V0, LINE_U2, LINE_V1,
-    color, line_shader, shader_param);
+    color, glov_font.font_shaders.font_aa, shader_param);
 
   if (mode & (LINE_CAP_ROUND|LINE_CAP_SQUARE)) {
     // round caps (line3) - square caps (line2)
@@ -1516,7 +1509,7 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
       x1 - tangx + nx, y1 - tangy + ny,
       z,
       LINE_U2, LINE_V1, LINE_U3, LINE_V0,
-      color, line_shader, shader_param);
+      color, glov_font.font_shaders.font_aa, shader_param);
     glov_sprites.queueraw4(texs,
       x0 - tangx, y0 - tangy,
       x0 + tangx, y0 + tangy,
@@ -1524,7 +1517,7 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
       x0 - tangx - nx, y0 - tangy - ny,
       z,
       LINE_U1, LINE_V1, LINE_U0, LINE_V0,
-      color, line_shader, shader_param);
+      color, glov_font.font_shaders.font_aa, shader_param);
   }
 }
 
