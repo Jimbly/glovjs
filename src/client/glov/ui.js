@@ -1349,48 +1349,6 @@ export function drawHollowCircle(x, y, z, r, spread, color, blend) {
   drawCircleInternal(sprites.hollow_circle, x, y, z, r, spread, 0, 0, 1, 1, color, blend);
 }
 
-export function drawLine(x0, y0, x1, y1, z, w, spread, color) {
-  if (!sprites.line) {
-    const LINE_SIZE=32;
-    let data = new Uint8Array(LINE_SIZE*LINE_SIZE);
-    let midp = (LINE_SIZE - 1) / 2;
-    for (let i = 0; i < LINE_SIZE; i++) {
-      for (let j = 0; j < LINE_SIZE; j++) {
-        let d = abs((i - midp) / midp);
-        let v = clamp(1 - d, 0, 1);
-        data[i + j*LINE_SIZE] = v * 255;
-      }
-    }
-    sprites.line = glov_sprites.create({
-      url: 'line',
-      width: LINE_SIZE, height: LINE_SIZE,
-      format: textures.format.R8,
-      data,
-      filter_min: gl.LINEAR,
-      filter_mag: gl.LINEAR,
-      wrap_s: gl.CLAMP_TO_EDGE,
-      wrap_t: gl.CLAMP_TO_EDGE,
-      origin: vec2(0.5, 0.5),
-    });
-  }
-
-  let dx = x1 - x0;
-  let dy = y1 - y0;
-  let length = sqrt(dx*dx + dy*dy);
-  dx /= length;
-  dy /= length;
-  let tangx = -dy * w;
-  let tangy = dx * w;
-
-  glov_sprites.queueraw4(sprites.line.texs,
-    x0 + tangx, y0 + tangy,
-    x1 + tangx, y1 + tangy,
-    x1 - tangx, y1 - tangy,
-    x0 - tangx, y0 - tangy,
-    z,
-    0, 0, 1, 1,
-    color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
-}
 
 const LINE_TEX_W=16;
 const LINE_TEX_H=16; // Only using 15, so we can have a value of 255 in the middle
@@ -1401,7 +1359,7 @@ const LINE_U0 = 0.5/LINE_TEX_W;
 const LINE_U1 = (LINE_MIDP + 0.5) / LINE_TEX_W;
 const LINE_U2 = 1 - LINE_U1; // 1 texel away from LINE_U1
 const LINE_U3 = 1 - 0.5/LINE_TEX_W;
-export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
+export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   if (mode === undefined) {
     mode = default_line_mode;
   }
@@ -1483,7 +1441,6 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
   let tex_delta_for_pixel = 2/draw_w_pixels;
   let step_start = 1 - (w_in_pixels + 1) / draw_w_pixels;
   let step_end = step_start + tex_delta_for_pixel;
-  step_start = lerp(precise, tex_delta_for_pixel, step_start);
   step_end = 1 + precise * (step_end - 1);
   let A = 1.0 / (step_end - step_start);
   let B = -step_start * A;
@@ -1521,16 +1478,16 @@ export function drawLineCrisp(x0, y0, x1, y1, z, w, precise, color, mode) {
   }
 }
 
-export function drawHollowRect(x0, y0, x1, y1, z, w, spread, color) {
-  drawLine(x0, y0, x1, y0, z, w, spread, color);
-  drawLine(x1, y0, x1, y1, z, w, spread, color);
-  drawLine(x1, y1, x0, y1, z, w, spread, color);
-  drawLine(x0, y1, x0, y0, z, w, spread, color);
+export function drawHollowRect(x0, y0, x1, y1, z, w, precise, color) {
+  drawLine(x0, y0, x1, y0, z, w, precise, color);
+  drawLine(x1, y0, x1, y1, z, w, precise, color);
+  drawLine(x1, y1, x0, y1, z, w, precise, color);
+  drawLine(x0, y1, x0, y0, z, w, precise, color);
 }
 
 export function drawHollowRect2(param) {
   drawHollowRect(param.x, param.y, param.x + param.w, param.y + param.h,
-    param.z || Z.UI, param.line_width || 1, param.spread || 1, param.color || unit_vec);
+    param.z || Z.UI, param.line_width || 1, param.precise || 1, param.color || unit_vec);
 }
 
 export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {

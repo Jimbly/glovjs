@@ -126,24 +126,18 @@ function lineTest() {
     for (let jj = 0; jj < y_values.length; ++jj) {
       let x = x0 + jj * 2;
       let y = y_values[jj];
-      if (0) {
-        ui.drawLine(x, y, x + line_len, y, z, width, line_precise, color_black);
-        ui.drawLine(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black);
-        ui.drawLine(x + width/2, y, x + width/2, y + line_len / 2, z, width, line_precise, color_black);
-      } else {
-        ui.drawLineCrisp(x, y, x + line_len, y, z, width, line_precise, color_black,
-          ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
-        z += 0.1;
-        ui.drawLineCrisp(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black,
-          ui.LINE_ALIGN|ui.LINE_CAP_ROUND);
-        z += 0.1;
-        ui.drawLineCrisp(x, y, x, y + line_len / 2, z, width, line_precise, color_black,
-          ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
-        z += 0.1;
-      }
+      ui.drawLine(x, y, x + line_len, y, z, width, line_precise, color_black,
+        ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+      z += 0.1;
+      ui.drawLine(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black,
+        ui.LINE_ALIGN|ui.LINE_CAP_ROUND);
+      z += 0.1;
+      ui.drawLine(x, y, x, y + line_len / 2, z, width, line_precise, color_black,
+        ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+      z += 0.1;
     }
   }
-  ui.drawLineCrisp(50, 72, 250, 200, z, 20, line_precise, color_black, ui.LINE_CAP_ROUND);
+  ui.drawLine(50, 72, 250, 200, z, 20, line_precise, color_black, ui.LINE_CAP_ROUND);
 }
 
 export function main() {
