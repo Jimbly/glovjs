@@ -20,7 +20,7 @@ module.exports = function(options) {
       try {
         obj = JSON5.parse(file.contents + '');
       } catch (err) {
-        throw new PluginError(PLUGIN_NAME, "JSON5 parser error", err);
+        throw new PluginError(PLUGIN_NAME, err);
       }
     }
     file.contents = Buffer.from(JSON.stringify(obj, null, options['beautify'] ? 2 : null));
