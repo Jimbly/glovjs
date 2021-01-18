@@ -617,7 +617,7 @@ export class ChannelWorker {
   channelEmit(msg, data, except_client) {
     let count = 0;
     let was_q = false;
-    if (typeof data === 'object') {
+    if (data && typeof data === 'object') {
       was_q = data.q;
       data.q = 1;
     }
