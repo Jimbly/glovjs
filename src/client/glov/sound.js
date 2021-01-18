@@ -8,6 +8,7 @@ export const FADE = FADE_OUT + FADE_IN;
 
 const assert = require('assert');
 const { cmd_parse } = require('./cmds.js');
+const { fbInstantOnPause } = require('./fbinstant.js');
 const { filewatchOn } = require('./filewatch.js');
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 const { abs, floor, max, min, random } = Math;
@@ -160,6 +161,20 @@ function soundReload(filename) {
   soundLoad(sound_name, opts);
 }
 
+export function soundPause() {
+  volume_override = volume_override_target = 0;
+  // Immediately mute all the music
+  // Can't do a nice fade out here because we stop getting ticked when we're not in the foreground
+  soundTick(0); // eslint-disable-line no-use-before-define
+}
+
+export function soundResume() {
+  volume_override_target = 1;
+
+  // Actual context resuming handled internally by Howler, leaving hooks in for now, though
+  // Maybe more reliable than `Howler.safeToPlay`...
+}
+
 export function soundStartup(params) {
   sound_params = defaults(params || {}, default_params);
 
@@ -179,20 +194,8 @@ export function soundStartup(params) {
   filewatchOn('.ogg', soundReload);
   filewatchOn('.wav', soundReload);
   filewatchOn('.webm', soundReload);
-}
 
-export function soundPause() {
-  volume_override = volume_override_target = 0;
-  // Immediately mute all the music
-  // Can't do a nice fade out here because we stop getting ticked when we're not in the foreground
-  soundTick(0); // eslint-disable-line no-use-before-define
-}
-
-export function soundResume() {
-  volume_override_target = 1;
-
-  // Actual context resuming handled internally by Howler, leaving hooks in for now, though
-  // Maybe more reliable than `Howler.safeToPlay`...
+  fbInstantOnPause(soundPause);
 }
 
 export function soundResumed() {

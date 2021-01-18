@@ -1,7 +1,7 @@
 /* globals FBInstant */
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
-const { soundPause } = require('./sound.js');
+const { callEach } = require('../../common/util.js');
 
 export let ready = false;
 let onreadycallbacks = [];
@@ -110,6 +110,11 @@ function initSubscribe(callback, skipShortcut) {
   }
 }
 
+let on_pause = [];
+export function fbInstantOnPause(cb) {
+  on_pause.push(cb);
+}
+
 export function init() {
   if (!window.FBInstant) {
     return;
@@ -146,7 +151,7 @@ export function init() {
   });
 
   FBInstant.onPause(() => {
-    soundPause();
+    callEach(on_pause);
   });
 }
 
