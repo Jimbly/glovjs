@@ -44,7 +44,7 @@
   "devDependencies": {
     "@babel/core": "^7.10.2",
     "@babel/preset-env": "^7.10.2",
-    "@jimbly/gulp-uglify": "0.0.2",
+    "@jimbly/gulp-uglify": "0.0.4",
     "@jimbly/howler": "0.0.7",
     "babel-plugin-static-fs": "^3.0.0",
     "babelify": "^10.0.0",
@@ -75,7 +75,6 @@
     "lazypipe": "^1.0.1",
     "nodemon": "^1.19.1",
     "through2": "^3.0.1",
-    "uglify-js": "3.9.4",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0",
     "watchify": "3.11.0"
