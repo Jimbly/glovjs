@@ -65,6 +65,11 @@ function onSubscribe(client, channel_id, resp_func) {
   client.client_channel.subscribeOther(channel_id, ['*'], resp_func);
 }
 
+let set_channel_data_async_reply = false;
+export function setChannelDataAsyncReply(do_async) {
+  set_channel_data_async_reply = do_async;
+}
+
 function onSetChannelData(client, pak, resp_func) {
   assert(isPacket(pak));
   let channel_id = pak.readAnsiString();
@@ -100,9 +105,13 @@ function onSetChannelData(client, pak, resp_func) {
   outpak.writeBool(q);
   outpak.writeAnsiString(key);
   outpak.appendRemaining(pak);
-  outpak.send();
   client_channel.ids = client_channel.ids_base;
-  resp_func();
+  if (set_channel_data_async_reply) {
+    outpak.send(resp_func);
+  } else {
+    outpak.send();
+    resp_func();
+  }
 }
 
 function applyCustomIds(ids, user_data_public) {
