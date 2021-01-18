@@ -131,6 +131,9 @@ export function chunkedReceiverOnChunk(state, pak, resp_func) {
   console.debug(log);
   file_data.total += buf.length;
   file_data.dv.u8.set(buf, offs);
+  if (state.on_progress) {
+    state.on_progress(file_data.total, file_data.length, file_data.mime_type, id);
+  }
   resp_func();
 }
 

@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
+const { chunkedSend } = require('../../common/chunked_send.js');
 const { canonical } = require('../../common/cmd_parse.js');
 const { logEx } = require('./log.js');
 const { isPacket } = require('../../common/packet.js');
@@ -48,6 +49,22 @@ class ClientWorker extends ChannelWorker {
   onForceKick(source, data) {
     assert(this.client.connected);
     this.client.ws_server.disconnectClient(this.client);
+  }
+
+  onUpload(source, pak, resp_func) {
+    pak.ref();
+    let mime_type = pak.readAnsiString();
+    let max_in_flight = pak.readInt();
+    let buffer = pak.readBuffer();
+    chunkedSend({
+      client: this.client,
+      mime_type,
+      buffer,
+      max_in_flight,
+    }, function (err, id) {
+      pak.pool();
+      resp_func(err, id);
+    });
   }
 
   onCSRUserToClientWorker(source, pak, resp_func) {
@@ -205,6 +222,7 @@ export function init(channel_server) {
     },
     handlers: {
       force_kick: ClientWorker.prototype.onForceKick,
+      upload: ClientWorker.prototype.onUpload,
       csr_user_to_clientworker: ClientWorker.prototype.onCSRUserToClientWorker,
     },
   });

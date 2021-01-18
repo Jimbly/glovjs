@@ -2,6 +2,14 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const {
+  chunkedReceiverFinish,
+  chunkedReceiverInit,
+  chunkedReceiverOnChunk,
+  chunkedReceiverStart,
+  chunkedReceiverFreeFile,
+  chunkedReceiverGetFile,
+} = require('../../common/chunked_send.js');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('../../common/tiny-events.js');
 const { fbGetLoginInfo } = require('./fbinstant.js');
@@ -166,6 +174,10 @@ function SubscriptionManager(client, cmd_parse) {
   if (cmd_parse) {
     client.onMsg('csr_to_client', this.handleCSRToClient.bind(this));
   }
+  this.chunked = null;
+  client.onMsg('upload_start', this.handleUploadStart.bind(this));
+  client.onMsg('upload_chunk', this.handleUploadChunk.bind(this));
+  client.onMsg('upload_finish', this.handleUploadFinish.bind(this));
   // Add handlers for all channel types
   this.onChannelMsg(null, 'channel_data', ClientChannelWorker.prototype.handleChannelData);
   this.onChannelMsg(null, 'apply_channel_data', ClientChannelWorker.prototype.handleApplyChannelData);
@@ -328,6 +340,49 @@ SubscriptionManager.prototype.tick = function (dt) {
     }
   }
 };
+
+
+SubscriptionManager.prototype.onUploadProgress = function (mime_type, cb) {
+  if (!this.upload_progress_cbs) {
+    this.upload_progress_cbs = {};
+  }
+  assert(!this.upload_progress_cbs[mime_type]);
+  this.upload_progress_cbs[mime_type] = cb;
+  if (!this.chunked) {
+    this.chunked = chunkedReceiverInit('client_receive', Infinity);
+  }
+  if (!this.chunked.on_progress) {
+    this.chunked.on_progress = (progress, total, type) => {
+      if (this.upload_progress_cbs[type]) {
+        this.upload_progress_cbs[type](progress, total);
+      }
+    };
+  }
+};
+
+SubscriptionManager.prototype.handleUploadStart = function (pak, resp_func) {
+  if (!this.chunked) {
+    this.chunked = chunkedReceiverInit('client_receive', Infinity);
+  }
+  chunkedReceiverStart(this.chunked, pak, resp_func);
+};
+
+SubscriptionManager.prototype.handleUploadChunk = function (pak, resp_func) {
+  chunkedReceiverOnChunk(this.chunked, pak, resp_func);
+};
+
+SubscriptionManager.prototype.handleUploadFinish = function (pak, resp_func) {
+  chunkedReceiverFinish(this.chunked, pak, resp_func);
+};
+
+SubscriptionManager.prototype.uploadGetFile = function (file_id) {
+  return chunkedReceiverGetFile(this.chunked, file_id);
+};
+
+SubscriptionManager.prototype.uploadFreeFile = function (file_data) {
+  return chunkedReceiverFreeFile(file_data);
+};
+
 
 SubscriptionManager.prototype.subscribe = function (channel_id) {
   this.getChannel(channel_id, true);
