@@ -1144,7 +1144,12 @@ export class ChannelWorker {
     } catch (e) {
       e.source = ids;
       this.errorSrc(ids, `Exception while handling packet from "${source}"`);
-      this.errorSrc(ids, `Packet data (base64) = ${pak.getBuffer().toString('base64', 0, 1000000)}`);
+      let buf = pak.getBuffer();
+      let max_len = min(buf.length, 4*1024*1024);
+      for (let offs = 0; offs < max_len; offs+=65536) {
+        let end = min(offs + 65536, max_len);
+        this.errorSrc(ids, `Packet data (base64,${offs}-${end}) = ${buf.toString('base64', offs, end)}`);
+      }
       this.errorSrc(ids, `Packet data (utf8,1K) = ${JSON.stringify(pak.getBuffer().toString('utf8', 0, 1000))}`);
       channel_server.handleUncaughtError(e);
     }

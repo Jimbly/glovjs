@@ -140,6 +140,9 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       }
       if (init_value !== undefined) {
         param.set(init_value);
+        if (param.on_change) {
+          param.on_change();
+        }
       }
     }
   }

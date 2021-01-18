@@ -128,6 +128,10 @@ export function mix(v0, v1, a) { // GLSL semantics
   return (1 - a) * v0 + a * v1;
 }
 
+export function map01(number,in_min, in_max) {
+  return (number - in_min) / (in_max - in_min);
+}
+
 export function sign(a) {
   return a < 0 ? -1 : a > 0 ? 1 : 0;
 }

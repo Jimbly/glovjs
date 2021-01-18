@@ -35,6 +35,9 @@ const RETRIES_WRITE = 3;
 const TIMEOUT_READ = 5*60*1000;
 const RETRIES_READ = 6;
 
+const TIMEOUT_SEARCH = 10*60*1000;
+const RETRIES_SEARCH = 3;
+
 const RETRY_DELAY_BASE = 5000;
 const ERR_TIMEOUT_FORCED_SHIELD = 'ERR_TIMEOUT_FORCED_SHIELD'; // Must be a unique error string
 
@@ -177,7 +180,7 @@ DataStoreShield.prototype.search = function (collection, search, cb) {
   let self = this;
   metrics.add(self.metric_search, 1);
   dss_stats.search++;
-  this.executeShielded('search', collection, RETRIES_READ, TIMEOUT_READ, (onDone) => {
+  this.executeShielded('search', collection, RETRIES_SEARCH, TIMEOUT_SEARCH, (onDone) => {
     self.data_store.search(collection, search, onDone);
   }, cb);
 };

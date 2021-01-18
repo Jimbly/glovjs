@@ -212,7 +212,7 @@ export function startup(params) {
   ws_server.on('error', function (error) {
     console.error('Unhandled WSServer error:', error);
     let text = String(error);
-    if (text.indexOf('Invalid WebSocket frame: RSV1 must be clear') !== -1) {
+    if (text.indexOf('Invalid WebSocket frame:') !== -1) {
       // Log, but don't broadcast or write crash dump
       console.error('ERROR (no dump)', new Date().toISOString(), error);
     } else {

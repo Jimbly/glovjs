@@ -3,7 +3,13 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
-const { FRIEND_ADDED, FRIEND_ADDED_AUTO, FRIEND_REMOVED, PRESENCE_OFFLINE } = require('../../common/enums.js');
+const {
+  FRIEND_ADDED,
+  FRIEND_ADDED_AUTO,
+  FRIEND_BLOCKED,
+  FRIEND_REMOVED,
+  PRESENCE_OFFLINE,
+} = require('../../common/enums.js');
 const master_worker = require('./master_worker.js');
 const md5 = require('../../common/md5.js');
 const metrics = require('./metrics.js');
@@ -75,7 +81,7 @@ export class DefaultUserWorker extends ChannelWorker {
       return void resp_func('Cannot friend yourself');
     }
     let friend_value = this.getChannelData(`private.friends.${user_id}`);
-    if (friend_value && friend_value !== FRIEND_REMOVED) {
+    if (friend_value && friend_value !== FRIEND_REMOVED && friend_value !== FRIEND_BLOCKED) {
       return void resp_func(`Already on friends list: ${user_id}`);
     }
     if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
@@ -108,6 +114,47 @@ export class DefaultUserWorker extends ChannelWorker {
       FRIEND_REMOVED;
     this.setChannelData(`private.friends.${user_id}`, new_value);
     resp_func(null, `Friend removed: ${user_id}`);
+  }
+  cmdFriendUnblock(user_id, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!user_id) {
+      return void resp_func('Missing User ID');
+    }
+    if (this.getChannelData(`private.friends.${user_id}`) !== FRIEND_BLOCKED) {
+      return void resp_func(`Not on your friends list: ${user_id}`);
+    }
+    this.setChannelData(`private.friends.${user_id}`, undefined);
+    resp_func(null, `User unblocked: ${user_id}`);
+  }
+  cmdFriendBlock(user_id, resp_func) {
+    if (this.cmd_parse_source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!user_id) {
+      return void resp_func('Missing User ID');
+    }
+    let old_value = this.getChannelData(`private.friends.${user_id}`);
+    if (old_value === FRIEND_BLOCKED) {
+      return void resp_func(`User already blocked: ${user_id}`);
+    }
+    if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
+      return void resp_func('Maximum friends list size exceeded');
+    }
+    this.pak(`user.${user_id}`, 'user_ping').send((err) => {
+      if (err) {
+        this.log(`Error pinging ${user_id}: ${err}`);
+        // Return generic error
+        return void resp_func(`User not found: ${user_id}`);
+      }
+      assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
+      this.setChannelData(`private.friends.${user_id}`, FRIEND_BLOCKED);
+      let was_friend = old_value === FRIEND_ADDED || old_value === FRIEND_ADDED_AUTO;
+      resp_func(null,
+        `User${was_friend ? ' removed from friends list and' : ''} blocked: ${user_id}`);
+      this.clearPresenceToUser(user_id);
+    });
   }
   cmdChannelDataGet(param, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
@@ -296,16 +343,32 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleNewClient(src) {
     if (this.rich_presence && src.type === 'client' && this.presence_data) {
-      this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
+      if (this.getChannelData(`private.friends.${src.user_id}`) !== FRIEND_BLOCKED) {
+        this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
+      }
     }
     if (src.type === 'client' && src.user_id === this.user_id) {
       this.my_clients[src.channel_id] = true;
     }
   }
   updatePresence() {
-    for (let channel_id in this.subscribers) {
-      if (channel_id.startsWith('client.')) {
-        this.sendChannelMessage(channel_id, 'presence', this.presence_data);
+    let clients = this.data.public.clients || {};
+    let friends = this.data.private.friends || {};
+    for (let client_id in clients) {
+      let client = clients[client_id];
+      if (client.ids) {
+        if (friends[client.ids.user_id] !== FRIEND_BLOCKED) {
+          this.sendChannelMessage(`client.${client_id}`, 'presence', this.presence_data);
+        }
+      }
+    }
+  }
+  clearPresenceToUser(user_id) {
+    let clients = this.data.public.clients || {};
+    for (let client_id in clients) {
+      let client = clients[client_id];
+      if (client.ids && client.ids.user_id === user_id) {
+        this.sendChannelMessage(`client.${client_id}`, 'presence', {});
       }
     }
   }
@@ -319,10 +382,6 @@ export class DefaultUserWorker extends ChannelWorker {
     }
   }
   handlePresenceSet(src, pak, resp_func) {
-    if (src.user_id !== this.user_id) {
-      pak.pool();
-      return void resp_func('ERR_INVALID_USER');
-    }
     let active = pak.readInt();
     let state = pak.readAnsiString(); // app-defined state
     let payload = pak.readJSON();
@@ -384,6 +443,7 @@ export class DefaultUserWorker extends ChannelWorker {
 DefaultUserWorker.prototype.auto_destroy = true;
 DefaultUserWorker.prototype.require_email = true;
 DefaultUserWorker.prototype.rich_presence = true;
+DefaultUserWorker.prototype.maintain_client_list = true; // needed for rich_presence features
 
 class ChannelServerWorker extends ChannelWorker {
 }
@@ -427,6 +487,14 @@ let user_worker_init_data = {
     cmd: 'friend_remove',
     help: 'Remove a friend',
     func: DefaultUserWorker.prototype.cmdFriendRemove,
+  },{
+    cmd: 'friend_block',
+    help: 'Block someone from seeing your rich presence, also removes from your friends list',
+    func: DefaultUserWorker.prototype.cmdFriendBlock,
+  },{
+    cmd: 'friend_unblock',
+    help: 'Reset a user to allow seeing your rich presence again',
+    func: DefaultUserWorker.prototype.cmdFriendUnblock,
   },{
     cmd: 'channel_data_get',
     help: '(Admin) Get from a channel\'s metadata',

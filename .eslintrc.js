@@ -434,7 +434,7 @@ module.exports = {
     ],
     "sort-imports": "error",
     "sort-keys": "off",
-    "sort-vars": "error",
+    "sort-vars": "off", // JE
     "space-before-blocks": [
       "error",
       "always"

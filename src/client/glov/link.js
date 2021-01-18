@@ -97,7 +97,7 @@ export function linkText(param) {
   let style = mouseover ? style_link_hover : style_link;
   ui.font.drawSized(style, x, y, z, font_size, text);
   let underline_w = 1;
-  ui.drawLine(x, y + h - underline_w, x + w, y + h - underline_w, z - 0.5, underline_w, 0.99, style.color_vec4);
+  ui.drawLine(x, y + h - underline_w, x + w, y + h - underline_w, z - 0.5, underline_w, 1, style.color_vec4);
   param.w = w;
   param.h = h;
   return link(param);

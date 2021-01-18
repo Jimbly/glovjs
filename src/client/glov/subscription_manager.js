@@ -9,6 +9,7 @@ const local_storage = require('./local_storage.js');
 const md5 = require('../../common/md5.js');
 const { isPacket } = require('../../common/packet.js');
 const util = require('../../common/util.js');
+const walltime = require('./walltime.js');
 
 // relevant events:
 //   .on('channel_data', cb(data [, mod_key, mod_value]));
@@ -305,6 +306,7 @@ SubscriptionManager.prototype.handleServerTime = function (pak) {
   } else {
     this.server_time_interp = this.server_time;
   }
+  walltime.sync(pak.readInt());
 };
 
 SubscriptionManager.prototype.getServerTime = function () {
