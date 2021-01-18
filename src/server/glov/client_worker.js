@@ -56,13 +56,28 @@ class ClientWorker extends ChannelWorker {
     let mime_type = pak.readAnsiString();
     let max_in_flight = pak.readInt();
     let buffer = pak.readBuffer();
+    this.logCtx('debug', `sending chunked upload (${mime_type}, ` +
+      `${buffer.length} bytes) from ${source.channel_id}`);
     chunkedSend({
       client: this.client,
       mime_type,
       buffer,
       max_in_flight,
-    }, function (err, id) {
+    }, (err, id) => {
       pak.pool();
+      if (err === 'ERR_FAILALL_DISCONNECT') {
+        // client disconnected while in progress, nothing unusual
+        this.logCtx('info', `${err} sending chunked upload (${mime_type})` +
+          ` data as file#${id} from ${source.channel_id}`);
+      } else if (err) {
+        // any other errors we might need to investigate
+        this.logCtx('warn', `error ${err} sending chunked upload (${mime_type})` +
+          ` data as file#${id} from ${source.channel_id}`);
+      } else {
+        this.logCtx('debug', `sent chunked upload (${mime_type})` +
+          ` data as file#${id} from ${source.channel_id}`);
+      }
+
       resp_func(err, id);
     });
   }
