@@ -44,7 +44,7 @@
   "devDependencies": {
     "@babel/core": "^7.10.2",
     "@babel/preset-env": "^7.10.2",
-    "@jimbly/gulp-uglify": "0.0.4",
+    "@jimbly/gulp-uglify": "0.0.6",
     "@jimbly/howler": "0.0.7",
     "babel-plugin-static-fs": "^3.0.0",
     "babelify": "^10.0.0",
