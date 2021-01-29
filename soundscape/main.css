@@ -113,7 +113,7 @@ canvas {
   opacity: 1.0;
   pointer-events: auto;
 }
-.glovui_dynamic input {
+.glovui_dynamic input,.glovui_dynamic textarea {
   font-size: 1em;
   width: 100%;
   padding: 0;
