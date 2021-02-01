@@ -155,6 +155,7 @@ function TouchData(pos, touch, button, event) {
   this.dispatched = false;
   this.dispatched_drag = false;
   this.dispatched_drag_over = false;
+  this.was_double_click = false;
   this.up_edge = 0;
   this.down_edge = 0;
   this.state = DOWN;
@@ -474,6 +475,18 @@ function onMouseUp(event) {
   }
 }
 
+function onDoubleClick(event) {
+  if (mouse_log) {
+    eventlog(event);
+  }
+  let button = event.button;
+  let touch_id = `m${button}`;
+  let touch_data = touches[touch_id];
+  if (touch_data && touch_data.up_edge) { // && touch_data.state === UP? Always?
+    touch_data.was_double_click = true;
+  }
+}
+
 function onWheel(event) {
   onMouseMove(event, true);
   let delta = -event.deltaY || event.wheelDelta || -event.detail;
@@ -637,6 +650,8 @@ export function startup(_canvas, params) {
   window.addEventListener('keyup', onKeyUp, false);
 
   window.addEventListener('click', ignored, false);
+  //window.addEventListener('click', eventlog, false);
+  window.addEventListener('dblclick', onDoubleClick, false);
   window.addEventListener('contextmenu', ignored, false);
   window.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('mousedown', onMouseDown, false);
@@ -1168,6 +1183,7 @@ export function mouseUpEdge(param) {
         button: touch_data.button,
         pos: check_pos.slice(0),
         start_time: touch_data.start_time,
+        was_double_click: touch_data.was_double_click,
       };
     }
   }

@@ -189,6 +189,12 @@ export function run(x, y, z) {
     max: 2,
   });
   ui.print(null, x + ui.button_width + pad, y, z, `${slider_value.toFixed(2)}`);
+  ui.progressBar({
+    x: x + ui.button_width + pad * 2 + ui.font_height * 2,
+    y, z,
+    w: 60, h: ui.button_height,
+    progress: slider_value,
+  });
   y += ui.button_height;
 }
 

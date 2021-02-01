@@ -440,6 +440,8 @@ export function tickCamera2D() {
 }
 
 export function startup() {
+  screen_width = engine.width;
+  screen_height = engine.height;
   set(0, 0, engine.width, engine.height);
   tickCamera2D();
 }

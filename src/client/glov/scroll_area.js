@@ -67,6 +67,7 @@ function ScrollArea(params) {
   this.focused = false;
   this.was_disabled = false;
   this.scrollbar_visible = false;
+  this.last_max_value = 0;
 }
 
 ScrollArea.prototype.applyParams = function (params) {

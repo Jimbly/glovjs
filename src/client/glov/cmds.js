@@ -137,6 +137,11 @@ cmd_parse.registerValue('safe_area', {
     } else {
       // error, ignore?
     }
+    for (let ii = 0; ii < 4; ++ii) {
+      if (!isFinite(safearea[ii])) {
+        safearea[ii] = -1;
+      }
+    }
   },
   store: true,
 });

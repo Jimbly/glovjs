@@ -79,6 +79,7 @@ export class GlovMenuItem {
     this.value_max = 0;
     this.value_inc = 0;
     this.tag = params.tag || null; // for isSelected(tag)
+    this.style = params.style || null;
     // was bitmask
     this.exit = Boolean(params.exit);
     this.prompt_int = Boolean(params.prompt_int);
@@ -491,7 +492,7 @@ class GlovSelectionBox {
           style = display.style_disabled || selbox_font_style_disabled;
           image_set = glov_ui.sprites.menu_entry;
         } else {
-          style = display.style_default || selbox_font_style_default;
+          style = item.style || display.style_default || selbox_font_style_default;
           image_set = glov_ui.sprites.menu_entry;
         }
         let yoffs = 0;

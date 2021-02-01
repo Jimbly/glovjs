@@ -212,12 +212,16 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
       name: override[0],
       ws: override[1],
       hs: override[2],
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
     });
   } else if (!only_override) {
     sprites[name] = glov_sprites.create({
       name: `ui/${name}`,
       ws,
       hs,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
     });
   }
 }
@@ -255,6 +259,8 @@ export function startup(param) {
   loadUISprite('scrollbar_top', [11], [13], overrides);
   loadUISprite('scrollbar_handle_grabber', [11], [13], overrides);
   loadUISprite('scrollbar_handle', [11], [3, 7, 3], overrides);
+  loadUISprite('progress_bar', [3, 7, 3], [13], overrides);
+  loadUISprite('progress_bar_trough', [3, 7, 3], [13], overrides);
 
   sprites.white = glov_sprites.create({ url: 'white' });
 
@@ -325,21 +331,29 @@ export function bindSounds(_sounds) {
 
 export function drawHBox(coords, s, color) {
   let uidata = s.uidata;
-  let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
   let x = coords.x;
-  ws[1] = max(0, coords.w - ws[0] - ws[2]);
+  let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
+  if (coords.no_min_width && ws[0] + ws[2] > coords.w) {
+    let scale = coords.w / (ws[0] + ws[2]);
+    ws[0] *= scale;
+    ws[2] *= scale;
+  } else {
+    ws[1] = max(0, coords.w - ws[0] - ws[2]);
+  }
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
-    s.draw({
-      x,
-      y: coords.y,
-      z: coords.z,
-      color,
-      w: my_w,
-      h: coords.h,
-      uvs: uidata.rects[ii],
-      // nozoom: true, // nozoom since different parts of the box get zoomed differently
-    });
+    if (my_w) {
+      s.draw({
+        x,
+        y: coords.y,
+        z: coords.z,
+        color,
+        w: my_w,
+        h: coords.h,
+        uvs: uidata.rects[ii],
+        nozoom: true, // nozoom since different parts of the box get zoomed differently
+      });
+    }
     x += my_w;
   }
 }
@@ -359,7 +373,7 @@ export function drawVBox(coords, s, color) {
       w: coords.w,
       h: my_h,
       uvs: uidata.rects[ii],
-      // nozoom: true, // nozoom since different parts of the box get zoomed differently
+      nozoom: true, // nozoom since different parts of the box get zoomed differently
     });
     y += my_h;
   }
@@ -394,6 +408,19 @@ export function drawBox(coords, s, pixel_scale, color) {
       x += my_w;
     }
   }
+}
+
+export function progressBar(param) {
+  drawHBox(param, sprites.progress_bar_trough, param.color_trough || param.color || unit_vec);
+  let progress = clamp(param.progress, 0, 1);
+  drawHBox({
+    x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
+    y: param.y,
+    z: param.z + 0.1,
+    w: param.w * progress,
+    h: param.h,
+    no_min_width: true,
+  }, sprites.progress_bar, param.color || unit_vec);
 }
 
 export function playUISound(name, volume) {
