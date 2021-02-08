@@ -10,22 +10,23 @@ export function ipFromRequest(req) {
     return req.glov_ip;
   }
 
+  let raw_ip = req.client.remoteAddress || req.client.socket && req.client.socket.remoteAddress;
   // Security note: must check x-forwarded-for *only* if we know this request came from a
   //   reverse proxy, should warn if missing x-forwarded-for.
-  let ip = req.headers['x-forwarded-for'] || req.client.remoteAddress ||
-    req.client.socket && req.client.socket.remoteAddress;
+  let ip = req.headers['x-forwarded-for'] || raw_ip;
   // let port = req.headers['x-forwarded-port'] || req.client.remotePort ||
   //   req.client.socket && req.client.socket.remotePort;
   if (!ip) {
     // client already disconnected?
     return 'unknown';
   }
-  ip = ip.split(',')[0]; // If forwarded through multiple proxies, use just the original client IP
+  ip = ip.split(',')[0].trim(); // If forwarded through multiple proxies, use just the original client IP
   let m = ip.match(regex_ipv4);
   if (m) {
     ip = m[1];
   }
   req.glov_ip = ip;
+  req.glov_raw_ip = raw_ip;
   return ip;
   // return `${ip}${port ? `:${port}` : ''}`;
 }
@@ -34,17 +35,22 @@ export function allowMapFromLocalhostOnly(app) {
   let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
   let cache = {};
   app.use(function (req, res, next) {
-    let ip = ipFromRequest(req);
-    let cached = cache[ip];
-    if (cached === undefined) {
-      cache[ip] = cached = Boolean(ip.match(debug_ips));
-      if (cached) {
-        console.info(`Allowing dev access from ${ip}`);
-      } else {
-        console.debug(`NOT Allowing dev access from ${ip}`);
+    ipFromRequest(req); // Cache IP early, so it's available if the client disconnects
+    let ip = req.glov_raw_ip;
+    if (ip) {
+      let cached = cache[ip];
+      if (cached === undefined) {
+        cache[ip] = cached = Boolean(ip.match(debug_ips));
+        if (cached) {
+          console.info(`Allowing dev access from ${ip}`);
+        } else {
+          console.debug(`NOT Allowing dev access from ${ip}`);
+        }
       }
+      req.glov_is_dev = cached;
+    } else {
+      req.glov_is_dev = false;
     }
-    req.glov_is_dev = cached;
     next();
   });
   app.all('*.map', function (req, res, next) {
