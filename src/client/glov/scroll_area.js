@@ -166,7 +166,7 @@ ScrollArea.prototype.end = function (h) {
     let dt = engine.getFrameDt();
     if (dt >= this.overscroll_delay) {
       this.overscroll_delay = 0;
-      this.overscroll = this.overscroll * max(1 - dt * 0.008, 0);
+      this.overscroll *= max(1 - dt * 0.008, 0);
     } else {
       this.overscroll_delay -= dt;
     }

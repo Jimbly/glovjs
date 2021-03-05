@@ -80,10 +80,10 @@ GlovSpriteAnimation.prototype.update = function (dt) {
   this.time += dt;
   if (this.time > this.anim.times[this.anim_idx]) {
     this.time -= this.anim.times[this.anim_idx];
-    this.anim_idx = this.anim_idx + 1;
+    this.anim_idx++;
     if (this.anim_idx === this.anim.frames.length) {
       if (this.anim.loop) {
-        this.anim_idx = this.anim_idx % this.anim.frames.length;
+        this.anim_idx %= this.anim.frames.length;
       } else {
         // keep final frame
         this.anim = null;
