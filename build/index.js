@@ -5,7 +5,7 @@
 
 const assert = require('assert');
 const gb = require('glovjs-build');
-const { callbackify } = gb;
+const eslint = require('./eslint.js');
 const path = require('path');
 
 require('./checks.js')(__filename);
@@ -70,106 +70,63 @@ function copy(job, done) {
   done();
 }
 
-// BUILDTODO: server_js babel need not target ie 10!
-let babel;
-function babelTask(job, done) {
-  let source_file = job.getFile();
-  let source_code = source_file.contents.toString();
-  try {
-    let is_first = !babel;
-    let time_start;
-    if (is_first) {
-      time_start = Date.now();
-      process.stdout.write('  Initializing Babel...');
+function babelTask() {
+  // BUILDTODO: server_js babel need not target ie 10!
+  let babel;
+  function babelInit(next) {
+    if (!babel) {
       // eslint-disable-next-line global-require
       babel = require('@babel/core');
+      // prime it for timing purposes
+      babel.transformSync('', {
+        filename: path.join(gb.getSourceRoot(), 'foo.js'),
+        filenameRelative: 'foo.js',
+        sourceMap: true,
+        sourceFileName: 'foo.js',
+      });
     }
-    // BUILDTODO: set `babelrc:false` and explicitly reference a config file for slightly better perf?
-    let result = babel.transformSync(source_code, {
-      // even if the file does not actually live in the source dir, treat it as such, for finding .babelrc files
-      filename: path.join(SOURCE_DIR, source_file.path),
-      filenameRelative: source_file.path,
-      sourceMap: true,
-      sourceFileName: source_file.path,
-    });
-    if (is_first) {
-      console.log(` done (${Date.now() - time_start}ms)`);
-    }
-    assert.equal(typeof result.code, 'string');
-    assert(result.map);
-    result.map.file = path.basename(source_file.path);
-    let sourcemap_filename = `${source_file.path}.map`;
-    let code = `${result.code}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
-
-    job.out({
-      path: source_file.path,
-      contents: code,
-    });
-    job.out({
-      path: sourcemap_filename,
-      contents: JSON.stringify(result.map),
-    });
-    // result.code = result.code.slice(0, 200);
-    // console.log(result);
-    done();
-  } catch (err) {
-    done(err);
+    next();
   }
-}
+  function babelTaskFunc(job, done) {
+    let source_file = job.getFile();
+    let source_code = source_file.contents.toString();
+    try {
+      // BUILDTODO: set `babelrc:false` and explicitly reference a config file for slightly better perf?
+      let result = babel.transformSync(source_code, {
+        // even if the file does not actually live in the source dir, treat it as such, for finding .babelrc files
+        filename: path.join(gb.getSourceRoot(), source_file.path),
+        filenameRelative: source_file.path,
+        sourceMap: true,
+        sourceFileName: source_file.path,
+      });
+      assert.equal(typeof result.code, 'string');
+      assert(result.map);
+      result.map.file = path.basename(source_file.path);
+      let sourcemap_filename = `${source_file.path}.map`;
+      let code = `${result.code}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
 
-
-let eslintLinter;
-let eslintFormatter;
-function eslintTaskStart(user_data) {
-  user_data.results = [];
-}
-function eslintTaskEnd(user_data) {
-  if (user_data.results.length) {
-    let results_text = eslintFormatter.format(user_data.results);
-    if (results_text) {
-      console.log(results_text);
-    }
-  }
-}
-function eslintTask(job, done) {
-  function init(next) {
-    // eslint-disable-next-line global-require
-    const { ESLint } = require('eslint');
-    let eslint = new ESLint();
-    eslintLinter = callbackify(eslint.lintText.bind(eslint));
-    eslint.loadFormatter().then(function (result) {
-      eslintFormatter = result;
-      next();
-    });
-  }
-  let source_file = job.getFile();
-  let source_code = source_file.contents.toString();
-  function doLint() {
-    eslintLinter(source_code, {
-      filePath: path.join(SOURCE_DIR, source_file.path),
-    }, function (err, results) {
-      if (results) {
-        let user_data = job.getTaskUserData();
-        user_data.results = user_data.results.concat(results);
-      }
-      if (!err) {
-        assert.equal(results.length, 1);
-        let result = results[0];
-        if (result.errorCount) {
-          job.error('lint error');
-        } else if (result.warningCount) {
-          job.warn('lint warning');
-        }
-      }
+      job.out({
+        path: source_file.path,
+        contents: code,
+      });
+      job.out({
+        path: sourcemap_filename,
+        contents: JSON.stringify(result.map),
+      });
+      // result.code = result.code.slice(0, 200);
+      // console.log(result);
+      done();
+    } catch (err) {
       done(err);
-    });
+    }
   }
-  if (eslintLinter) {
-    doLint();
-  } else {
-    init(doLint);
-  }
+  return {
+    type: gb.SINGLE,
+    init: babelInit,
+    func: babelTaskFunc,
+  };
 }
+
 
 gb.task({
   name: 'client_static',
@@ -190,28 +147,24 @@ gb.task({
 gb.task({
   name: 'server_js',
   input: config.server_js_files,
-  type: gb.SINGLE,
   target: 'dev',
-  func: babelTask,
+  ...babelTask(),
 });
 
 gb.task({
   name: 'eslint',
   input: config.all_js_files,
-  type: gb.SINGLE,
-  func: eslintTask,
-  on_start: eslintTaskStart,
-  on_end: eslintTaskEnd,
+  ...eslint()
 });
 
 
 gb.task({
   name: 'default',
   deps: [
-    'server_static',
-    // 'server_js',
+    // 'server_static',
+    'server_js',
     // 'client_static',
-    'eslint',
+    // 'eslint',
   ],
 });
 
