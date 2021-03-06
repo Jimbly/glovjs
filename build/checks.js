@@ -1,5 +1,4 @@
 const args = require('minimist')(process.argv.slice(2));
-const console_api = require('console-api');
 const fs = require('fs');
 const JSON5 = require('json5');
 
@@ -17,6 +16,8 @@ module.exports = function (filename) {
   }
 
   function prettyInterface() {
+    // eslint-disable-next-line global-require
+    const console_api = require('console-api');
     console_api.setPalette(console_api.palettes.desaturated);
     let project_name = 'glov';
     try {

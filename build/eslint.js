@@ -56,8 +56,8 @@ module.exports = function () {
   }
   return {
     type: gb.SINGLE,
-    func: eslintTask,
     init: eslintTaskInit,
+    func: eslintTask,
     finish: eslintTaskEnd,
   };
 };

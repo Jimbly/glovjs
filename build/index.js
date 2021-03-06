@@ -6,6 +6,7 @@
 const assert = require('assert');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
+const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 
 require('./checks.js')(__filename);
@@ -113,12 +114,10 @@ function babelTask() {
         path: sourcemap_filename,
         contents: JSON.stringify(result.map),
       });
-      // result.code = result.code.slice(0, 200);
-      // console.log(result);
-      done();
     } catch (err) {
-      done(err);
+      return void done(err);
     }
+    done();
   }
   return {
     type: gb.SINGLE,
@@ -157,14 +156,27 @@ gb.task({
   ...eslint()
 });
 
+gb.task({
+  name: 'gulpish-eslint',
+  input: ['common/*.js'],
+  ...gulpish_tasks.eslint()
+});
+
+gb.task({
+  name: 'gulpish-client_html_default',
+  input: config.client_html,
+  ...gulpish_tasks.client_html_default('dev')
+});
 
 gb.task({
   name: 'default',
   deps: [
     // 'server_static',
-    'server_js',
+    // 'server_js',
     // 'client_static',
     // 'eslint',
+    // 'gulpish-eslint',
+    'gulpish-client_html_default',
   ],
 });
 

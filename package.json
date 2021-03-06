@@ -15,6 +15,7 @@
     "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
+    "oldtest": "gulp client_html_default",
     "start": "nodemon -w build -w src -w ../glovjs-build/ build default",
     "clean": "node build clean",
     "prod": "node build build && node dist2/game/build.prod/server/index.js --master",
