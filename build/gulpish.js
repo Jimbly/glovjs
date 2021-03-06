@@ -2,8 +2,11 @@ const assert = require('assert');
 const gb = require('glovjs-build');
 const { Transform, Writable } = require('stream');
 const path = require('path');
+const Vinyl = require('vinyl');
 
 module.exports = function (target, streamfunc) {
+  // TODO: also monkey-patch require('vinyl-fs').src to detect deps?
+
   function func(job, done) {
     // Creating a new stream per-file, might need something smarter? Or they should be gb.ALL tasks anyway?
     let source_stream = new Transform({
@@ -12,23 +15,27 @@ module.exports = function (target, streamfunc) {
     let outstream = streamfunc(source_stream);
     outstream.on('error', done);
     let the_file = job.getFile();
+    let the_file_vinyl_param = the_file.toVinyl();
     let target_stream = outstream.pipe(new Writable({
       objectMode: true,
       write: function (chunk, encoding, callback) {
         if (target) {
 
           // If a Vinyl object, re-map to relative to the bucket
-          chunk.base = the_file.base;
-          // Probably not strictly necessary, but let's check expected relative path
-          assert.equal(chunk.relative.replace(/\\/g, '/'), path.relative(the_file.base, chunk.path).replace(/\\/g, '/'));
+          chunk.base = the_file_vinyl_param.base;
+          let out_file = {
+            relative: chunk.relative.replace(/\\/g,'/'),
+            contents: chunk.contents,
+          };
+          assert.equal(out_file.relative, path.relative(the_file_vinyl_param.base, chunk.path).replace(/\\/g, '/'));
 
-          job.out(chunk);
+          job.out(out_file);
         }
         callback();
       },
     }));
     target_stream.on('finish', done);
-    source_stream.push(the_file);
+    source_stream.push(new Vinyl(the_file_vinyl_param));
     source_stream.end();
   }
 

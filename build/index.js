@@ -29,7 +29,7 @@ const config = {
   client_json_files: ['client/**/*.json', '!client/vendor/**/*.json'],
   server_json_files: ['server/**/*.json'],
   client_html: ['client/**/*.html'],
-  client_html_index: ['client/**/index.html'],
+  client_html_index: ['**/client/index.html'],
   client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
   client_static: [
     'client/**/*.webm',
@@ -136,6 +136,15 @@ gb.task({
 });
 
 gb.task({
+  name: 'client_css',
+  input: config.client_css,
+  type: gb.SINGLE,
+  target: 'dev',
+  func: copy,
+  // BUILDTODO: Also trigger browser_sync reload or something similar?
+});
+
+gb.task({
   name: 'server_static',
   input: config.server_static,
   type: gb.SINGLE,
@@ -162,10 +171,41 @@ gb.task({
   ...gulpish_tasks.eslint()
 });
 
+const default_defines = {
+  FACEBOOK: false,
+  ENV: 'default',
+};
+const extra_index = [
+  {
+    name: 'multiplayer',
+    defines: {
+      FACEBOOK: false,
+      ENV: 'multiplayer',
+    },
+    zip: false,
+  },
+];
+
 gb.task({
   name: 'gulpish-client_html_default',
   input: config.client_html,
-  ...gulpish_tasks.client_html_default('dev')
+  ...gulpish_tasks.client_html_default('dev', default_defines)
+});
+
+let gulpish_client_html_tasks = ['gulpish-client_html_default'];
+extra_index.forEach(function (elem) {
+  let name = `gulpish-client_html_${elem.name}`;
+  gulpish_client_html_tasks.push(name);
+  gb.task({
+    name,
+    input: config.client_html_index,
+    ...gulpish_tasks.client_html_custom('dev', elem)
+  });
+});
+
+gb.task({
+  name: 'gulpish-client_html',
+  deps: gulpish_client_html_tasks,
 });
 
 gb.task({
