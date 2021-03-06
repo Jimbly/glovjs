@@ -205,7 +205,7 @@ function eslintTask(obj) {
   return targetedStream({
     label: 'eslint',
     obj,
-    src: ['src/**/*.js', '!src/client/vendor/**/*.js']
+    src: config.all_js_files,
   }, function (stream) {
     return stream.pipe(eslint())
       .pipe(eslint.format());
