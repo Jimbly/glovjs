@@ -6,8 +6,11 @@
 const assert = require('assert');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
+const json5 = require('./json5.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
+const warnMatch = require('./warn-match.js');
+const webfs = require('./webfs_build.js');
 
 require('./checks.js')(__filename);
 
@@ -26,8 +29,8 @@ const config = {
   server_static: ['**/common/words/*.gkg'],
   all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
   client_js_files: ['**/*.js', '!server/**/*.js', '!client/vendor/**/*.js'],
-  client_json_files: ['client/**/*.json', '!client/vendor/**/*.json'],
-  server_json_files: ['server/**/*.json'],
+  client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
+  server_json_files: ['server/**/*.json', 'server/**/*.json5'],
   client_html: ['client/**/*.html'],
   client_html_index: ['**/client/index.html'],
   client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
@@ -71,7 +74,14 @@ function copy(job, done) {
   done();
 }
 
-function babelTask() {
+function babelTask(opts) {
+  opts = opts || {};
+  let babel_opts = {
+    sourceMap: true,
+  };
+  if (opts.plugins) {
+    babel_opts.plugins = opts.plugins;
+  }
   // BUILDTODO: server_js babel need not target ie 10!
   let babel;
   function babelInit(next) {
@@ -82,8 +92,8 @@ function babelTask() {
       babel.transformSync('', {
         filename: path.join(gb.getSourceRoot(), 'foo.js'),
         filenameRelative: 'foo.js',
-        sourceMap: true,
         sourceFileName: 'foo.js',
+        ...babel_opts
       });
     }
     next();
@@ -91,32 +101,33 @@ function babelTask() {
   function babelTaskFunc(job, done) {
     let source_file = job.getFile();
     let source_code = source_file.contents.toString();
+    let result;
     try {
       // BUILDTODO: set `babelrc:false` and explicitly reference a config file for slightly better perf?
-      let result = babel.transformSync(source_code, {
+      result = babel.transformSync(source_code, {
         // even if the file does not actually live in the source dir, treat it as such, for finding .babelrc files
-        filename: path.join(gb.getSourceRoot(), source_file.path),
-        filenameRelative: source_file.path,
-        sourceMap: true,
-        sourceFileName: source_file.path,
-      });
-      assert.equal(typeof result.code, 'string');
-      assert(result.map);
-      result.map.file = path.basename(source_file.path);
-      let sourcemap_filename = `${source_file.path}.map`;
-      let code = `${result.code}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
-
-      job.out({
-        path: source_file.path,
-        contents: code,
-      });
-      job.out({
-        path: sourcemap_filename,
-        contents: JSON.stringify(result.map),
+        filename: path.join(gb.getSourceRoot(), source_file.relative),
+        filenameRelative: source_file.relative,
+        sourceFileName: source_file.relative,
+        ...babel_opts
       });
     } catch (err) {
       return void done(err);
     }
+    assert.equal(typeof result.code, 'string');
+    assert(result.map);
+    result.map.file = path.basename(source_file.relative);
+    let sourcemap_filename = `${source_file.relative}.map`;
+    let code = `${result.code}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
+
+    job.out({
+      relative: source_file.relative,
+      contents: code,
+    });
+    job.out({
+      relative: sourcemap_filename,
+      contents: JSON.stringify(result.map),
+    });
     done();
   }
   return {
@@ -209,6 +220,84 @@ gb.task({
 });
 
 gb.task({
+  name: 'client_fsdata',
+  input: config.client_fsdata,
+  target: 'dev',
+  ...webfs({
+    base: 'client',
+    output: 'client/fsdata.js',
+  })
+});
+
+gb.task({
+  name: 'client_json',
+  input: config.client_json_files,
+  ...json5({ beautify: false })
+});
+
+gb.task({
+  name: 'server_json',
+  input: config.server_json_files,
+  target: 'dev',
+  ...json5({ beautify: true })
+});
+
+gb.task({
+  name: 'client_js_babel_files',
+  input: config.client_js_files,
+  ...babelTask({
+    plugins: [
+      // Note: Dependencies are not tracked from babel plugins, so use
+      //   `webfs` instead of `static-fs` where possible
+      ['static-fs', {}], // generates good code, but does not allow reloading/watchify
+    ]
+  })
+});
+
+const regex_code_strip = /_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g;
+gb.task({
+  name: 'client_js_babel_cleanup',
+  input: ['client_js_babel_files:**.js'],
+  type: gb.SINGLE,
+  func: function (job, done) {
+    let file = job.getFile();
+    job.depReset();
+    job.depAdd(`${file.bucket}:${file.relative}.map`, function (err, map_file) {
+      if (err) {
+        return void done(err);
+      }
+      let code = file.contents.toString();
+      if (!code.match(regex_code_strip)) {
+        job.out(file);
+        job.out(map_file);
+        return void done();
+      }
+      // TODO: replace with updating sourcemap
+      pipe(replace(regex_code_strip, ''))
+      done();
+    });
+  }
+});
+
+gb.task({
+  name: 'client_js_warnings',
+  input: ['client_js_babel_cleanup:**.js'],
+  ...warnMatch({
+    'Spread constructor param': /isNativeReflectConstruct/,
+    'Bad babel': /__esModule/,
+  })
+});
+
+gb.task({
+  name: 'client_js_babel',
+  deps: [
+    'client_js_babel_cleanup',
+    'client_js_warnings',
+  ]
+});
+
+// prod tasks for later: build.prod.compress, build.zip, build.prod.*
+gb.task({
   name: 'default',
   deps: [
     // 'server_static',
@@ -216,7 +305,10 @@ gb.task({
     // 'client_static',
     // 'eslint',
     // 'gulpish-eslint',
-    'gulpish-client_html_default',
+    // 'gulpish-client_html',
+    // 'client_css',
+    // 'client_json',
+    'client_js_warnings',
   ],
 });
 

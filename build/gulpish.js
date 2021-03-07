@@ -1,3 +1,12 @@
+//////////////////////////////////////////////////////////////////////////
+// Wrapper for gulp-like stream tasks to run as glovjs-build tasks
+// Caveats:
+//   Dependencies are not tracked, to get a task to re-process something, the
+//     referencing source file must be re-saved.
+//   All glovjs-build jobs are relative to the bucket root, regardless of where
+//     the ** is in the glob, so some tasks may need to be adjusted (e.g.
+//     gulp-rename will behave slightly differently)
+
 const assert = require('assert');
 const gb = require('glovjs-build');
 const { Transform, Writable } = require('stream');

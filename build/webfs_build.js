@@ -1,8 +1,7 @@
-/* eslint no-invalid-this:off */
 const assert = require('assert');
-const log = require('fancy-log');
-const through = require('through2');
-const Vinyl = require('vinyl');
+const gb = require('glovjs-build');
+const { forwardSlashes } = gb;
+const path = require('path');
 
 const preamble = `(function () {
 var fs = window.glov_webfs = window.glov_webfs || {};`;
@@ -42,40 +41,61 @@ function encodeString(buf) {
   return ret.join('');
 }
 
+function fileFSName(opts, name) {
+  name = forwardSlashes(name).replace('autogen/', '');
+  if (opts.base) {
+    name = forwardSlashes(path.relative(opts.base, name));
+  }
+  return name;
+}
+
 function cmpName(a, b) {
   return a.name < b.name ? -1 : 1;
 }
 
-module.exports = function () {
-  let files = [];
-  return through.obj(function transform(file, encoding, callback) {
-    if (file.isDirectory()) {
-      return void callback();
-    }
-    assert(file.isBuffer());
-    let data = file.contents;
-    let name = file.relative.replace(/\\/g, '/').replace('autogen/', '');
-    files.push({ name, data });
-    callback();
-  }, function flush(cb) {
-    if (!files.length) {
-      return void cb();
-    }
-    log(`webfs(${files.length} files)`);
-    files.sort(cmpName);
-    let output = [preamble];
-    for (let ii = 0; ii < files.length; ++ii) {
-      let name = files[ii].name;
-      let data = files[ii].data;
-      output.push(`fs['${name}'] = [${data.length},'${encodeString(data)}'];`);
+module.exports = function (opts) {
+  assert(opts.output);
+  function webfsBuild(job, done) {
+    let updated_files = job.getFilesUpdated();
+    let deleted_files = job.getFilesDeleted();
+    let user_data = job.getUserData();
+    user_data.files = user_data.files || {};
+
+    for (let ii = 0; ii < deleted_files.length; ++ii) {
+      let file = deleted_files[ii];
+      let name = fileFSName(opts, file.relative);
+      delete user_data.files[name];
     }
 
+    for (let ii = 0; ii < updated_files.length; ++ii) {
+      let file = updated_files[ii];
+      let name = fileFSName(opts, file.relative);
+      let data = file.contents;
+      let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
+      user_data.files[name] = { name, line };
+    }
+    let files = Object.values(user_data.files).sort(cmpName);
+
+    if (!files.length) {
+      return void done();
+    }
+
+    console.log(`  webfs(${files.length} files)`);
+
+    let output = [preamble];
+    for (let ii = 0; ii < files.length; ++ii) {
+      output.push(files[ii].line);
+    }
     output.push(postamble);
-    this.push(new Vinyl({
-      // base: file.base,
-      path: 'fsdata.js',
+
+    job.out({
+      relative: opts.output,
       contents: Buffer.from(output.join('\n')),
-    }));
-    cb();
-  });
+    });
+    done();
+  }
+  return {
+    type: gb.ALL,
+    func: webfsBuild,
+  };
 };
