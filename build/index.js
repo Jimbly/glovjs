@@ -9,6 +9,8 @@ const eslint = require('./eslint.js');
 const json5 = require('./json5.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
+const Replacer = require('regexp-sourcemaps');
+const sourcemap = require('./sourcemap.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 
@@ -256,28 +258,61 @@ gb.task({
 
 const regex_code_strip = /_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g;
 gb.task({
-  name: 'client_js_babel_cleanup',
+  name: 'client_js_babel_cleanup_bad',
   input: ['client_js_babel_files:**.js'],
   type: gb.SINGLE,
   func: function (job, done) {
     let file = job.getFile();
     job.depReset();
-    job.depAdd(`${file.bucket}:${file.relative}.map`, function (err, map_file) {
+    sourcemap.init(job, file, function (err, raw_map_file) {
       if (err) {
         return void done(err);
       }
       let code = file.contents.toString();
       if (!code.match(regex_code_strip)) {
         job.out(file);
-        job.out(map_file);
+        if (raw_map_file) {
+          job.out(raw_map_file);
+        }
         return void done();
       }
-      // TODO: replace with updating sourcemap
-      pipe(replace(regex_code_strip, ''))
+      // replace while updating sourcemap
+      // This doesn't work because `source-map`::applySourceMap() just doesn't
+      // work for anything non-trivial, and the babel-generated sourcemap is far from trivial
+      let replacer = new Replacer(regex_code_strip, '');
+      let result = replacer.replace(code, file.relative);
+      sourcemap.apply(file, result.map);
+      let result_code = result.code;
+
+      job.out({
+        relative: file.relative,
+        contents: result_code,
+      });
+      job.out(sourcemap.getMapFile(file));
       done();
     });
   }
 });
+
+// much simpler version of above that simply passes through existing .map files
+gb.task({
+  name: 'client_js_babel_cleanup',
+  input: ['client_js_babel_files:**'],
+  type: gb.SINGLE,
+  func: function (job, done) {
+    let file = job.getFile();
+    if (path.extname(file.relative) === '.js') {
+      job.out({
+        relative: file.relative,
+        contents: file.contents.toString().replace(regex_code_strip, ''),
+      });
+    } else {
+      job.out(file);
+    }
+    done();
+  }
+});
+
 
 gb.task({
   name: 'client_js_warnings',
@@ -308,7 +343,7 @@ gb.task({
     // 'gulpish-client_html',
     // 'client_css',
     // 'client_json',
-    'client_js_warnings',
+    'client_js_babel_cleanup',
   ],
 });
 

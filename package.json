@@ -74,6 +74,8 @@
     "gulp-zip": "^5.0.2",
     "lazypipe": "^1.0.1",
     "nodemon": "^1.19.1",
+    "regexp-sourcemaps": "^1.0.1",
+    "source-map": "^0.5.7",
     "through2": "^3.0.1",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0",

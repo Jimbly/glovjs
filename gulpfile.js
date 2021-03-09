@@ -553,7 +553,7 @@ function clientBabel(obj) {
   }, function (stream) {
     return stream
       .pipe(sourcemaps.init())
-      .pipe(sourcemaps.identityMap())
+      //.pipe(sourcemaps.identityMap()) // somehow makes it worse?
       .pipe(babel({
         plugins: [
           // Note: Dependencies are not tracked from babel plugins, so use
