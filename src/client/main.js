@@ -69,6 +69,7 @@ export function main() {
     door_w: 2, // 2-3
     r1: 1, // 0-2
     treasure: 4/100/100,
+    treasure_size: 2,
   };
   let gen_params;
   let maze;
@@ -130,6 +131,11 @@ export function main() {
     ui.print(null, x, y, z, `Treasure: ${(params.treasure * 100).toFixed(2)}%`);
     y += ui.font_height;
     params.treasure = ui.slider(params.treasure, { x, y, z, min: 0, max: 20/100/100 });
+    y += button_spacing;
+
+    ui.print(null, x, y, z, `Treasure Size: ${params.treasure_size}`);
+    y += ui.font_height;
+    params.treasure_size = round(ui.slider(params.treasure_size, { x, y, z, min: 1, max: 10 }));
     y += button_spacing;
 
     y += button_spacing;

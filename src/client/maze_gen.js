@@ -14,7 +14,7 @@ export const M_DOOR = 6;
 let rand = randCreate(1);
 // Using recursive division method
 export function mazeGen(params) {
-  const { w, h, min_dim, door_w, r1, treasure, seed } = params;
+  const { w, h, min_dim, door_w, r1, treasure, treasure_size, seed } = params;
   const size = w * h;
   let maze = new Uint8Array(size);
   let max_depth = 0;
@@ -111,7 +111,7 @@ export function mazeGen(params) {
         if (doorAt(depth, split, y0 - 1) || doorAt(depth, split, y1 + 1)) {
           continue;
         }
-        let door = y0 + rand.range(dy);
+        let door = y0 + rand.range(dy - door_w);
         if (door > y0) {
           line(split, y0, split, door - 1, M_WALL);
         }
@@ -131,7 +131,7 @@ export function mazeGen(params) {
         if (doorAt(depth, x0 - 1, split) || doorAt(depth, x1 + 1, split)) {
           continue;
         }
-        let door = x0 + rand.range(dx);
+        let door = x0 + rand.range(dx - door_w);
         if (door > x0) {
           line(x0, split, door - 1, split, M_WALL);
         }
@@ -200,12 +200,24 @@ export function mazeGen(params) {
   line(0, h-1, 0, 0, M_WALL);
   divide(0, 1, 1, w-2, h-2);
   let num_treasure = round(treasure * w * h);
-  for (let ii = 0; ii < num_treasure && terminals.length; ++ii) {
+  while (num_treasure && terminals.length) {
     let idx = rand.range(terminals.length);
     let room = terminals[idx];
     ridx(terminals, idx);
-    drawRect(room.x0, room.y0, room.x1, room.y1, M_TREASURE);
+    let room_w = room.x1 - room.x0 + 1;
+    let room_h = room.y1 - room.y0 + 1;
+    // Leaving at least 1 space on each size of treasure
+    if (room_w < treasure_size + 2 || room_h < treasure_size + 2) {
+      continue;
+    }
+    --num_treasure;
+    let toffsx = 1 + rand.range(room_w - treasure_size - 2);
+    let toffsy = 1 + rand.range(room_h - treasure_size - 2);
+    let tx0 = room.x0 + toffsx;
+    let ty0 = room.y0 + toffsy;
+    drawRect(tx0, ty0, tx0 + treasure_size - 1, ty0 + treasure_size - 1, M_TREASURE);
   }
+  // Paint depth last after all tiles are set (bitmasked in)
   if (doors[0]) {
     paintDepth(7, doors[0]);
   }
