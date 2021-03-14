@@ -15,8 +15,9 @@
     "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
-    "oldtest": "gulp client_html_default",
+    "oldtest": "gulp client_js",
     "start": "nodemon -w build -w src -w ../glovjs-build/ build default",
+    "serve": "nodemon -w dist2/game/build.dev/server -w dist2/game/build.dev/common dist2/game/build.dev/server/index.js --master",
     "clean": "node build clean",
     "prod": "node build build && node dist2/game/build.prod/server/index.js --master",
     "lint": "node build eslint"
@@ -77,6 +78,7 @@
     "regexp-sourcemaps": "^1.0.1",
     "source-map": "^0.5.7",
     "through2": "^3.0.1",
+    "uglify-js": "^3.13.1",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0",
     "watchify": "3.11.0"

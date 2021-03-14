@@ -7,10 +7,12 @@ const assert = require('assert');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
 const json5 = require('./json5.js');
+const gulpish_bundle = require('./gulpish-bundle.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
 const sourcemap = require('./sourcemap.js');
+const uglify = require('uglify-js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 
@@ -119,16 +121,11 @@ function babelTask(opts) {
     assert.equal(typeof result.code, 'string');
     assert(result.map);
     result.map.file = path.basename(source_file.relative);
-    let sourcemap_filename = `${source_file.relative}.map`;
-    let code = `${result.code}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
-
-    job.out({
+    sourcemap.out(job, {
       relative: source_file.relative,
-      contents: code,
-    });
-    job.out({
-      relative: sourcemap_filename,
-      contents: JSON.stringify(result.map),
+      contents: result.code,
+      map: result.map,
+      ...opts.sourcemap,
     });
     done();
   }
@@ -178,6 +175,7 @@ gb.task({
   ...eslint()
 });
 
+// example, superseded by `eslint`
 gb.task({
   name: 'gulpish-eslint',
   input: ['common/*.js'],
@@ -248,6 +246,9 @@ gb.task({
   name: 'client_js_babel_files',
   input: config.client_js_files,
   ...babelTask({
+    sourcemap: {
+      inline: true,
+    },
     plugins: [
       // Note: Dependencies are not tracked from babel plugins, so use
       //   `webfs` instead of `static-fs` where possible
@@ -264,7 +265,7 @@ gb.task({
   func: function (job, done) {
     let file = job.getFile();
     job.depReset();
-    sourcemap.init(job, file, function (err, raw_map_file) {
+    sourcemap.init(job, file, function (err, map, raw_map_file) {
       if (err) {
         return void done(err);
       }
@@ -281,14 +282,14 @@ gb.task({
       // work for anything non-trivial, and the babel-generated sourcemap is far from trivial
       let replacer = new Replacer(regex_code_strip, '');
       let result = replacer.replace(code, file.relative);
-      sourcemap.apply(file, result.map);
+      map = sourcemap.apply(map, result.map);
       let result_code = result.code;
 
-      job.out({
+      sourcemap.out({
         relative: file.relative,
         contents: result_code,
+        map,
       });
-      job.out(sourcemap.getMapFile(file));
       done();
     });
   }
@@ -324,26 +325,113 @@ gb.task({
 });
 
 gb.task({
+  name: 'client_js_uglify',
+  input: ['client_js_babel_cleanup:**.js'],
+  type: gb.SINGLE,
+  func: function (job, done) {
+    let file = job.getFile();
+    job.depReset();
+    sourcemap.init(job, file, function (err, map) {
+      if (err) {
+        return void done(err);
+      }
+      let uglify_options = {
+        sourceMap: {
+          filename: map.file,
+          includeSources: true,
+          content: map,
+        },
+        compress: false,
+        keep_fnames: true,
+        mangle: false,
+      };
+      let files = {};
+      files[file.relative] = String(file.contents);
+
+      let mangled = uglify.minify(files, uglify_options);
+      if (!mangled || mangled.error) {
+        return void done(mangled && mangled.error || 'Uglify error');
+      }
+      if (mangled.warnings) {
+        mangled.warnings.forEach(function (warn) {
+          job.warn(warn);
+        });
+      }
+
+      sourcemap.out(job, {
+        relative: file.relative,
+        contents: mangled.code,
+        map: mangled.map,
+        inline: true,
+      });
+      done();
+    });
+  }
+});
+
+gb.task({
   name: 'client_js_babel',
   deps: [
-    'client_js_babel_cleanup',
+    'client_js_uglify',
     'client_js_warnings',
   ]
 });
+
+// Pull from multiple tasks into one (on-disk) folder for another tasks to reference
+// TODO: for non-gulpish tasks, should be able to pull from multiple sources (automatically?) without this step?
+gb.task({
+  name: 'client_intermediate',
+  input: [
+    'client_json:**',
+    'client_js_uglify:**',
+  ],
+  type: gb.SINGLE,
+  func: copy,
+});
+
+gb.task({
+  name: 'client_bundle_app.js',
+  ...gulpish_bundle.bundle({
+    entrypoint: 'app.js',
+    source: 'client_intermediate:client/',
+    deps: 'app_deps.js',
+    deps_source: 'client/',
+    is_worker: false,
+    target: 'dev:client',
+  })
+});
+gb.task({
+  name: 'client_bundle_worker.js',
+  ...gulpish_bundle.bundle({
+    entrypoint: 'worker.js',
+    source: 'client_intermediate:client/',
+    deps: 'worker_deps.js',
+    deps_source: 'client/',
+    is_worker: true,
+    target: 'dev:client',
+  })
+});
+
 
 // prod tasks for later: build.prod.compress, build.zip, build.prod.*
 gb.task({
   name: 'default',
   deps: [
-    // 'server_static',
-    // 'server_js',
-    // 'client_static',
-    // 'eslint',
-    // 'gulpish-eslint',
-    // 'gulpish-client_html',
-    // 'client_css',
-    // 'client_json',
-    'client_js_babel_cleanup',
+    // 'client_json', // dep'd fromclient_bundle*
+    // 'client_js_babel', // dep'd fromclient_bundle*
+
+    'server_static',
+    'server_js',
+    'server_json',
+    'client_static',
+    'client_css',
+    'client_fsdata',
+    'eslint',
+    // 'gulpish-eslint', // example, superseded by `eslint`
+    'gulpish-client_html',
+    'client_js_warnings',
+    'client_bundle_app.js',
+    'client_bundle_worker.js',
   ],
 });
 

@@ -37,7 +37,7 @@ module.exports = function () {
     let source_file = job.getFile();
     let source_code = source_file.contents.toString();
     linter(source_code, {
-      filePath: path.join(job.gb.getSourceRoot(), source_file.path),
+      filePath: path.join(job.gb.getSourceRoot(), source_file.relative),
     }, function (err, results) {
       if (results) {
         all_results = all_results.concat(results);

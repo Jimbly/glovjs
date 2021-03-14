@@ -1,56 +1,94 @@
 const assert = require('assert');
 const gb = require('glovjs-build');
 const { forwardSlashes } = gb;
+const path = require('path');
 const { SourceMapConsumer, SourceMapGenerator } = require('source-map');
 
+const BASE64PRE = 'data:application/json;charset=utf8;base64,';
+// Calls next(err, map, raw_sourcemap_file (for pass-through))
 exports.init = function init(job, file, next) {
-  // TODO: also load inline?
+  let code = String(file.contents);
+  let m = code.match(/^\/\/# sourceMappingURL=(.*)$/m);
+  if (!m) {
+    // no sourcemaps found, will probably error if expected?
+    job.warn('No sourceMappingURL found in source file');
+    return void next(null, null, null);
+  }
+  if (m[1].startsWith(BASE64PRE)) {
+    // Load inline
+    // TODO: delay this parsing until needed?
+    let map = JSON.parse(Buffer.from(m[1].slice(BASE64PRE.length), 'base64').toString('utf8'));
+    if (map.file !== file.relative) { // sometimes seeing a dirname-less name for sourceMap.file
+      map.file = file.relative;
+    }
+    return void next(null, map, null);
+  }
   job.depAdd(`${file.bucket}:${file.relative}.map`, function (err, map_file) {
+    let map = null;
     if (map_file) {
       // TODO: delay this parsing until needed?
-      file.sourceMap = JSON.parse(map_file.contents.toString('utf8'));
-      if (file.sourceMap.file !== file.relative) { // sometimes seeing a dirname-less name for sourceMap.file
-        file.sourceMap.file = file.relative;
+      map = JSON.parse(map_file.contents.toString('utf8'));
+      if (map.file !== file.relative) { // sometimes seeing a dirname-less name for sourceMap.file
+        map.file = file.relative;
       }
     }
-    next(err, map_file);
+    next(err, map, map_file);
   });
 };
 
-exports.getMapFile = function getMapFile(file) {
-  if (!file.sourceMap) {
-    return null;
-  }
-  return {
-    relative: `${file.relative}.map`,
-    contents: JSON.stringify(file.sourceMap),
-  };
-};
-
-exports.apply = function (file, map) {
+exports.apply = function (map, new_map) {
   // Derived from vinyl-sourcemaps-apply
   // However, this basically doesn't work because `source-map`::applySourceMap() doesn't
   // work for anything non-trivial, and the babel-generated sourcemaps are far from trivial
 
-  if (typeof map === 'string') {
-    map = JSON.parse(map);
+  if (typeof new_map === 'string') {
+    new_map = JSON.parse(new_map);
   }
 
   // check source map properties
-  assert(map.file);
-  assert(map.mappings);
-  assert(map.sources);
+  assert(new_map.file);
+  assert(new_map.mappings);
+  assert(new_map.sources);
 
   // normalize paths
-  map.file = forwardSlashes(map.file);
-  map.sources = map.sources.map(forwardSlashes);
+  new_map.file = forwardSlashes(new_map.file);
+  new_map.sources = new_map.sources.map(forwardSlashes);
 
-  if (file.sourceMap && file.sourceMap.mappings !== '') {
-    let generator = SourceMapGenerator.fromSourceMap(new SourceMapConsumer(map));
-    generator.applySourceMap(new SourceMapConsumer(file.sourceMap));
+  if (map && map.mappings !== '') {
+    let generator = SourceMapGenerator.fromSourceMap(new SourceMapConsumer(new_map));
+    generator.applySourceMap(new SourceMapConsumer(map));
     // TODO: leave as string for efficiency?
-    file.sourceMap = JSON.parse(generator.toString());
+    map = JSON.parse(generator.toString());
   } else {
-    file.sourceMap = map;
+    map = new_map;
+  }
+  return map;
+};
+
+exports.out = function (job, opts) {
+  let { relative, contents, map, inline } = opts;
+  if (typeof map === 'object' && !Buffer.isBuffer(map)) {
+    map = JSON.stringify(map);
+  }
+  if (!Buffer.isBuffer(map)) {
+    map = Buffer.from(map);
+  }
+  if (inline) {
+    contents = `${contents}\n//# sourceMappingURL=data:application/json;charset=utf8;base64,${map.toString('base64')}`;
+    job.out({
+      relative,
+      contents,
+    });
+  } else {
+    let sourcemap_filename = `${relative}.map`;
+    contents = `${contents}\n//# sourceMappingURL=${path.basename(sourcemap_filename)}\n`;
+    job.out({
+      relative,
+      contents,
+    });
+    job.out({
+      relative: sourcemap_filename,
+      contents: map,
+    });
   }
 };
