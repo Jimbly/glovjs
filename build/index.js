@@ -4,6 +4,7 @@
 //
 
 const assert = require('assert');
+const bundle = require('./bundle.js');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
 const json5 = require('./json5.js');
@@ -391,15 +392,27 @@ gb.task({
 
 gb.task({
   name: 'client_bundle_app.js',
-  ...gulpish_bundle.bundle({
-    entrypoint: 'app.js',
-    source: 'client_intermediate:client/',
+  target: 'dev',
+  ...bundle({
+    entrypoint: 'client/app.js',
+    source: 'client_intermediate',
     deps: 'app_deps.js',
     deps_source: 'client/',
     is_worker: false,
-    target: 'dev:client',
   })
 });
+
+// gb.task({
+//   name: 'client_bundle_app.js',
+//   ...gulpish_bundle.bundle({
+//     entrypoint: 'app.js',
+//     source: 'client_intermediate:client/',
+//     deps: 'app_deps.js',
+//     deps_source: 'client/',
+//     is_worker: false,
+//     target: 'dev:client',
+//   })
+// });
 gb.task({
   name: 'client_bundle_worker.js',
   ...gulpish_bundle.bundle({
