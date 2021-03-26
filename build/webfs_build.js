@@ -57,22 +57,19 @@ module.exports = function (opts) {
   assert(opts.output);
   function webfsBuild(job, done) {
     let updated_files = job.getFilesUpdated();
-    let deleted_files = job.getFilesDeleted();
     let user_data = job.getUserData();
     user_data.files = user_data.files || {};
-
-    for (let ii = 0; ii < deleted_files.length; ++ii) {
-      let file = deleted_files[ii];
-      let name = fileFSName(opts, file.relative);
-      delete user_data.files[name];
-    }
 
     for (let ii = 0; ii < updated_files.length; ++ii) {
       let file = updated_files[ii];
       let name = fileFSName(opts, file.relative);
       let data = file.contents;
-      let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
-      user_data.files[name] = { name, line };
+      if (!data) {
+        delete user_data.files[name];
+      } else {
+        let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
+        user_data.files[name] = { name, line };
+      }
     }
     let files = Object.values(user_data.files).sort(cmpName);
 

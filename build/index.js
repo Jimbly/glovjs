@@ -19,12 +19,12 @@ const webfs = require('./webfs_build.js');
 require('./checks.js')(__filename);
 
 const targets = {
-  dev: path.join(__dirname, '../dist2/game/build.dev'),
+  dev: path.join(__dirname, '../dist3/game/build.dev'),
 };
 const SOURCE_DIR = path.join(__dirname, '../src/');
 gb.configure({
   source: SOURCE_DIR,
-  statedir: path.join(__dirname, '../dist2/game/.gbstate'),
+  statedir: path.join(__dirname, '../dist3/game/.gbstate'),
   targets,
 });
 
