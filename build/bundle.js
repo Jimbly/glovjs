@@ -16,38 +16,39 @@ module.exports = function bundle(opts) {
   let { source, entrypoint, deps, deps_source, is_worker, target } = opts;
   let out_name = entrypoint.replace('.js', '.bundle.js');
 
-  let browserify_opts = {
-    debug: true, // generate sourceMaps
-    transform: [],
-    bundleExternal: false,
-    // want fullPaths, but that includes full working paths for some reason, even with basedir set
-  };
+  let browserify;
+  function bundleTaskInit(next) {
+    // eslint-disable-next-line global-require
+    browserify = require('browserify');
+    next();
+  }
 
-  let the_job;
-  let base_path;
-  let cache = {};
   // This option is passed to `module-deps`
   // It allows us to source our own files from our job layer instead of requiring
   //   them to exist on-disk relative to any particular path.
-  browserify_opts.persistentCache = function persistentCache(
+  function persistentCache(job,
     file_name, // the path to the file that is loaded
     id,   // the id that is used to reference this file
     pkg,  // the package that this file belongs to fallback
     fallback, // async fallback handler to be called if the cache doesn't hold the given file
     cb    // callback handler that receives the cache data
   ) {
-    assert(base_path);
+    let user_data = job.getUserData();
+    let { base_path, cache } = user_data;
+    if (!base_path) {
+      base_path = user_data.base_path = job.getFile().getBucketDir();
+    }
     let relative = forwardSlashes(path.relative(base_path, file_name));
     // TODO: if outside of our base, or node_modeules, just do simple caching and/or just pass it to `fallback`?
     let key = `${source}:${relative}`;
     if (cache[key]) {
       return void cb(null, cache[key]);
     }
-    if (!the_job) {
+    if (!user_data.job_in_progress) {
       return void cb('Job already completed');
     }
-    // TODO: when/how do we reset or remove deps?
-    the_job.depAdd(key, function (err, buildfile) {
+    // TODO: when/how do we reset or remove deps?  Bundle will grow until build task is restarted, otherwise
+    job.depAdd(key, function (err, buildfile) {
       assert.equal(buildfile.key, key);
       if (err) {
         return void cb(err);
@@ -69,23 +70,27 @@ module.exports = function bundle(opts) {
         cb(null, cacheableEntry);
       });
     });
-  };
-
-  let browserify;
-  let b;
-  function bundleTaskInit(next) {
-    // eslint-disable-next-line global-require
-    browserify = require('browserify');
-    b = browserify(browserify_opts);
-    next();
   }
 
   function bundleTask(job, done) {
-    assert(!the_job);
-    the_job = job;
+    let user_data = job.getUserData();
+    let { b, cache } = user_data;
     let the_file = job.getFile();
-    let disk_path = the_file.getDiskPath();
-    base_path = the_file.getBucketDir();
+    if (!b) {
+      cache = user_data.cache = {};
+      let browserify_opts = {
+        debug: true, // generate sourceMaps
+        transform: [],
+        bundleExternal: false,
+        // want fullPaths, but that includes full working paths for some reason, even with basedir set
+      };
+
+      browserify_opts.persistentCache = persistentCache.bind(null, job);
+
+      let disk_path = the_file.getDiskPath();
+      b = user_data.b = browserify(disk_path, browserify_opts);
+      b.on('log', console.log); // output build logs to terminal
+    }
 
     let updated = job.getFilesUpdated();
     for (let ii = 0; ii < updated.length; ++ii) {
@@ -93,9 +98,7 @@ module.exports = function bundle(opts) {
       delete cache[file.key];
     }
 
-    b.add(disk_path);
-    b.on('log', console.log); // output build logs to terminal
-    // b.pipeline.get('deps').unshift(through.obj(function (obj, enc, next) {
+    // b.pipeline.get('deps').push(through.obj(function (obj, enc, next) {
     //   let log = {};
     //   for (let key in obj) {
     //     let v = obj[key];
@@ -110,13 +113,13 @@ module.exports = function bundle(opts) {
     // }));
 
 
-
+    user_data.job_in_progress = true;
     b.bundle(function (err, buf) {
-      if (!the_job) {
+      if (!user_data.job_in_progress) {
         // already called this!  Probably an error, log this somewhere, though?
         return;
       }
-      the_job = null;
+      user_data.job_in_progress = false;
       if (err) {
         return void done(err);
       }
