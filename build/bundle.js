@@ -1,25 +1,35 @@
 const assert = require('assert');
-const fs = require('fs');
 const gb = require('glovjs-build');
 const { forwardSlashes } = gb;
 const path = require('path');
 const sourcemap = require('./sourcemap.js');
-const through = require('through2');
+// const through = require('through2');
 
-module.exports = function bundle(opts) {
-  // entrypoint: 'app.js',
-  // source: 'client_intermediate:client/',
-  // deps: 'app_deps.js',
-  // deps_source: 'client/',
-  // is_worker: false,
-  // target: 'dev:client',
-  let { source, entrypoint, deps, deps_source, is_worker, target } = opts;
-  let out_name = entrypoint.replace('.js', '.bundle.js');
+function bundleSub(opts) {
+  // entrypoint: 'client/app.js',
+  // source: 'client_intermediate',
+  // out: 'client/app.bundle.js',
+  // sourcemap: false, // defaults true
+  // browserify: {}
+  const { source, entrypoint, out } = opts;
+  let do_sourcemaps = opts.sourcemap !== false;
+  let browserify_opts = { ...opts.browserify };
+  if (do_sourcemaps) {
+    browserify_opts.debug = true;
+  }
+  let out_name = out || entrypoint.replace('.js', '.bundle.js'); // Or just use entrypoint?
 
   let browserify;
   function bundleTaskInit(next) {
-    // eslint-disable-next-line global-require
-    browserify = require('browserify');
+    browserify = require('browserify'); // eslint-disable-line global-require
+    if (browserify_opts.transform) {
+      browserify_opts.transform.forEach((row) => {
+        if (typeof row[0] === 'string') {
+          // pre-load for timing/pipelining purposes
+          require(row[0]); // eslint-disable-line global-require
+        }
+      });
+    }
     next();
   }
 
@@ -78,12 +88,6 @@ module.exports = function bundle(opts) {
     let the_file = job.getFile();
     if (!b) {
       cache = user_data.cache = {};
-      let browserify_opts = {
-        debug: true, // generate sourceMaps
-        transform: [],
-        bundleExternal: false,
-        // want fullPaths, but that includes full working paths for some reason, even with basedir set
-      };
 
       browserify_opts.persistentCache = persistentCache.bind(null, job);
 
@@ -123,12 +127,18 @@ module.exports = function bundle(opts) {
       if (err) {
         return void done(err);
       }
-      sourcemap.out(job, {
-        relative: out_name,
-        contents: String(buf),
-        inline: false,
-      });
-
+      if (do_sourcemaps) {
+        sourcemap.out(job, {
+          relative: out_name,
+          contents: String(buf),
+          inline: false,
+        });
+      } else {
+        job.out({
+          relative: out_name,
+          contents: buf,
+        });
+      }
 
       done();
     });
@@ -140,5 +150,83 @@ module.exports = function bundle(opts) {
     func: bundleTask,
     // finish: bundleTaskEnd,
     input: `${source}:${entrypoint}`,
+  };
+}
+
+module.exports = function bundle(opts) {
+  // entrypoint: 'client/app.js',
+  // source: 'client_intermediate',
+  // out: 'client/app.bundle.js',
+  // deps: 'client/app_deps.js',
+  // deps_source: 'source',
+  // is_worker: false,
+  // target: 'dev:client',
+  let { source, entrypoint, out, deps, deps_source, is_worker, target, deps_out } = opts;
+  let subtask_name = `bundle_${path.basename(entrypoint)}`;
+
+  let tasks = [];
+
+  function addBundle(name, subbundle_opts) {
+    gb.task({
+      name,
+      target,
+      ...bundleSub(subbundle_opts)
+    });
+    tasks.push(name);
+  }
+
+  let browserify = {
+    transform: [],
+    bundleExternal: false,
+    // want fullPaths, but that includes full working paths for some reason, even with basedir set
+  };
+
+  addBundle(`${subtask_name}_entrypoint`, {
+    entrypoint,
+    source,
+    out,
+    browserify,
+  });
+
+  if (deps) {
+    const babelify_opts = {
+      global: true, // Required because some modules (e.g. dot-prop) have ES6 code in it
+      // For some reason this is not getting picked up from .babelrc for modules!
+      presets: [
+        ['@babel/env', {
+          'targets': {
+            'ie': '10'
+          },
+          'loose': true,
+        }]
+      ],
+    };
+    browserify = {
+      bundleExternal: true,
+      builtins: {
+        // super-simple replacements, if needed
+        assert: './src/client/shims/assert.js',
+        buffer: './src/client/shims/buffer.js',
+        not_worker: !is_worker && './src/client/shims/not_worker.js',
+        // timers: './src/client/shims/timers.js',
+        _process: './src/client/shims/empty.js',
+      },
+      debug: true, // generate sourceMaps
+      transform: [
+        ['babelify', babelify_opts],
+      ],
+    };
+
+    addBundle(`${subtask_name}_deps`, {
+      entrypoint: deps,
+      source: deps_source,
+      out: deps_out,
+      browserify,
+    });
+  }
+
+  return {
+    type: gb.SINGLE,
+    deps: tasks,
   };
 };

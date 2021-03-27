@@ -392,13 +392,14 @@ gb.task({
 
 gb.task({
   name: 'client_bundle_app.js',
-  target: 'dev',
   ...bundle({
     entrypoint: 'client/app.js',
+    out: 'client/app.bundle.js',
     source: 'client_intermediate',
-    deps: 'app_deps.js',
-    deps_source: 'client/',
+    deps: 'client/app_deps.js',
+    deps_source: 'source',
     is_worker: false,
+    target: 'dev',
   })
 });
 
