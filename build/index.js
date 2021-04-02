@@ -13,7 +13,7 @@ const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
 const sourcemap = require('./sourcemap.js');
-const uglify = require('uglify-js');
+const uglify = require('./uglify.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 
@@ -328,46 +328,11 @@ gb.task({
 gb.task({
   name: 'client_js_uglify',
   input: ['client_js_babel_cleanup:**.js'],
-  type: gb.SINGLE,
-  func: function (job, done) {
-    let file = job.getFile();
-    job.depReset();
-    sourcemap.init(job, file, function (err, map) {
-      if (err) {
-        return void done(err);
-      }
-      let uglify_options = {
-        sourceMap: {
-          filename: map.file,
-          includeSources: true,
-          content: map,
-        },
-        compress: false,
-        keep_fnames: true,
-        mangle: false,
-      };
-      let files = {};
-      files[file.relative] = String(file.contents);
-
-      let mangled = uglify.minify(files, uglify_options);
-      if (!mangled || mangled.error) {
-        return void done(mangled && mangled.error || 'Uglify error');
-      }
-      if (mangled.warnings) {
-        mangled.warnings.forEach(function (warn) {
-          job.warn(warn);
-        });
-      }
-
-      sourcemap.out(job, {
-        relative: file.relative,
-        contents: mangled.code,
-        map: mangled.map,
-        inline: true,
-      });
-      done();
-    });
-  }
+  ...uglify({ inline: true }, {
+    compress: false,
+    keep_fnames: true,
+    mangle: false,
+  }),
 });
 
 gb.task({
@@ -393,12 +358,25 @@ gb.task({
 gb.task({
   name: 'client_bundle_app.js',
   ...bundle({
+    source: 'client_intermediate',
     entrypoint: 'client/app.js',
     out: 'client/app.bundle.js',
-    source: 'client_intermediate',
-    deps: 'client/app_deps.js',
     deps_source: 'source',
+    deps: 'client/app_deps.js',
+    deps_out: 'client/app_deps.bundle.js',
     is_worker: false,
+    target: 'dev',
+  })
+});
+gb.task({
+  name: 'client_bundle_worker.js',
+  ...bundle({
+    source: 'client_intermediate',
+    entrypoint: 'client/worker.js',
+    out: 'client/worker.bundle.js',
+    deps_source: 'source',
+    deps: 'client/worker_deps.js',
+    is_worker: true,
     target: 'dev',
   })
 });
@@ -414,17 +392,17 @@ gb.task({
 //     target: 'dev:client',
 //   })
 // });
-gb.task({
-  name: 'client_bundle_worker.js',
-  ...gulpish_bundle.bundle({
-    entrypoint: 'worker.js',
-    source: 'client_intermediate:client/',
-    deps: 'worker_deps.js',
-    deps_source: 'client/',
-    is_worker: true,
-    target: 'dev:client',
-  })
-});
+// gb.task({
+//   name: 'client_bundle_worker.js',
+//   ...gulpish_bundle.bundle({
+//     entrypoint: 'worker.js',
+//     source: 'client_intermediate:client/',
+//     deps: 'worker_deps.js',
+//     deps_source: 'client/',
+//     is_worker: true,
+//     target: 'dev:client',
+//   })
+// });
 
 
 // prod tasks for later: build.prod.compress, build.zip, build.prod.*
