@@ -27,6 +27,7 @@ gb.configure({
   source: SOURCE_DIR,
   statedir: path.join(__dirname, '../dist3/game/.gbstate'),
   targets,
+  log_level: gb.LOG_INFO,
 });
 
 const config = {

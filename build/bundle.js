@@ -25,7 +25,6 @@ function concat(opts) {
   function isJS(file) {
     return file.relative.endsWith('.js');
   }
-  let LF = Buffer.from('\n');
   return function (job, done) {
     let files = job.getFiles().filter(isJS);
     files.sort(cmpFirstFile);
