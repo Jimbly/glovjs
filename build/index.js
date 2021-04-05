@@ -1,14 +1,20 @@
 //////////////////////////////////////////////////////////////////////////
 // Migration TODO:
-//   parallel running of eslint
+//   parallel running of eslint; related: it always re-lints all files upon
+//     a fresh run - problem was if it didn't do this it wouldn't output good
+//     per-file errors for files that errored on previous runs; cannot do a
+//     SINGLE-style task with a Finish because we don't get notified of deleted
+//     files - maybe those could be provided to the init/finish callbacks?
 //
 
+const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const bundle = require('./bundle.js');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
+const exec = require('./exec.js');
 const json5 = require('./json5.js');
-const gulpish_bundle = require('./gulpish-bundle.js');
+// const gulpish_bundle = require('./gulpish-bundle.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
@@ -28,6 +34,7 @@ gb.configure({
   statedir: path.join(__dirname, '../dist3/game/.gbstate'),
   targets,
   log_level: gb.LOG_INFO,
+  watch: true,
 });
 
 const config = {
@@ -405,6 +412,29 @@ gb.task({
 //   })
 // });
 
+gb.task({
+  name: 'run_server',
+  input: [
+    'server_static:**',
+    'server_js:**',
+    'server_json:**',
+  ],
+  ...exec({
+    cwd: '.',
+    cmd: 'node',
+    args: [
+      argv.port ? `--inspect=${9229 + Number(argv.port) - 3000}` : '--inspect',
+      'dev:server/index.js',
+      '--dev',
+      '--master',
+    ].concat(argv.debug ? ['--debug'] : [])
+    .concat(argv.env ? [`--env=${argv.env}`] : [])
+    .concat(argv.port ? [`--port=${argv.port}`] : []),
+    stdio: 'inherit',
+    // shell: true,
+    // detached: true,
+  }),
+});
 
 // prod tasks for later: build.prod.compress, build.zip, build.prod.*
 gb.task({
@@ -425,6 +455,8 @@ gb.task({
     'client_js_warnings',
     'client_bundle_app.js',
     'client_bundle_worker.js',
+
+    'run_server',
   ],
 });
 
