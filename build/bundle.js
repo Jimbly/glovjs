@@ -122,8 +122,9 @@ function bundleSub(opts) {
   // source: 'client_intermediate',
   // out: 'client/app.bundle.js',
   // sourcemap: false, // defaults true
+  // do_version: true,
   // browserify: {}
-  const { source, entrypoint, out } = opts;
+  const { source, entrypoint, out, do_version } = opts;
   let do_sourcemaps = opts.sourcemap !== false;
   let browserify_opts = { ...opts.browserify };
   if (do_sourcemaps) {
@@ -205,7 +206,7 @@ function bundleSub(opts) {
 
       let disk_path = the_file.getDiskPath();
       b = user_data.b = browserify(disk_path, browserify_opts);
-      b.on('log', console.log); // output build logs to terminal
+      b.on('log', job.log.bind(job)); // output build logs to terminal
     }
 
     let updated = job.getFilesUpdated();
@@ -238,6 +239,18 @@ function bundleSub(opts) {
       user_data.job_in_progress = false;
       if (err) {
         return void done(err);
+      }
+      if (do_version) {
+        let build_timestamp = Date.now();
+        // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
+        build_timestamp = `"${build_timestamp}"`;
+        assert.equal(build_timestamp.length, 15);
+
+        buf = String(buf).replace(/BUILD_TIMESTAMP/g, build_timestamp);
+        job.out({
+          relative: do_version,
+          contents: `{"ver":${build_timestamp}}`,
+        });
       }
       if (do_sourcemaps) {
         sourcemap.out(job, {
@@ -272,7 +285,7 @@ module.exports = function bundle(opts) {
   // deps_source: 'source',
   // is_worker: false,
   // target: 'dev:client',
-  let { source, entrypoint, out, deps, deps_source, is_worker, target, deps_out } = opts;
+  let { source, entrypoint, out, deps, deps_source, is_worker, target, deps_out, do_version } = opts;
   let subtask_name = `bundle_${path.basename(entrypoint)}`;
 
   let tasks = [];
@@ -294,6 +307,8 @@ module.exports = function bundle(opts) {
 
   let do_final_bundle = is_worker && deps;
 
+  assert(!(do_version && do_final_bundle)); // app.ver.json would go to wrong place
+
   let entrypoint_name = `${subtask_name}_entrypoint`;
   addBundle(entrypoint_name, {
     target: do_final_bundle ? undefined : target,
@@ -301,6 +316,7 @@ module.exports = function bundle(opts) {
     source,
     out,
     browserify,
+    do_version,
   });
 
   if (deps) {

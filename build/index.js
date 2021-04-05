@@ -373,6 +373,7 @@ gb.task({
     deps: 'client/app_deps.js',
     deps_out: 'client/app_deps.bundle.js',
     is_worker: false,
+    do_version: 'client/app.ver.json',
     target: 'dev',
   })
 });
