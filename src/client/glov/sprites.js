@@ -569,7 +569,7 @@ export function draw() {
   }
 }
 
-export function buildRects(ws, hs) {
+export function buildRects(ws, hs, tex) {
   let rects = [];
   let total_w = 0;
   for (let ii = 0; ii < ws.length; ++ii) {
@@ -579,8 +579,20 @@ export function buildRects(ws, hs) {
   for (let ii = 0; ii < hs.length; ++ii) {
     total_h += hs[ii];
   }
-  let tex_w = nextHighestPowerOfTwo(total_w);
-  let tex_h = nextHighestPowerOfTwo(total_h);
+  let tex_w;
+  let tex_h;
+  if (!tex || nextHighestPowerOfTwo(tex.src_width) === tex.width &&
+    nextHighestPowerOfTwo(tex.src_height) === tex.height
+  ) {
+    // texture is in fact power of two, or assume it will be
+    tex_w = nextHighestPowerOfTwo(total_w);
+    tex_h = nextHighestPowerOfTwo(total_h);
+  } else {
+    // Assume snuggly fitting, use the summed w/h, which might be a multiple of
+    //   the actual w/h, but should be correct relative to the specified `ws` and `hs`
+    tex_w = total_w;
+    tex_h = total_h;
+  }
   let wh = [];
   for (let ii = 0; ii < ws.length; ++ii) {
     wh.push(ws[ii] / total_h);
@@ -667,6 +679,9 @@ function Sprite(params) {
 
   if (params.ws) {
     this.uidata = buildRects(params.ws, params.hs);
+    this.texs[0].onLoad((tex) => {
+      this.uidata = buildRects(params.ws, params.hs, tex);
+    });
   }
   this.shader = params.shader || null;
 }
