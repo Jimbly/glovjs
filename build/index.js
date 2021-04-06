@@ -160,7 +160,6 @@ gb.task({
   type: gb.SINGLE,
   target: 'dev',
   func: copy,
-  // BUILDTODO: Also trigger browser_sync reload or something similar?
 });
 
 gb.task({
@@ -437,6 +436,53 @@ gb.task({
   }),
 });
 
+let bs;
+gb.task({
+  name: 'browser_sync',
+  input: [
+    'client_static:**',
+    'client_css:**',
+    'client_fsdata:**',
+    'gulpish-client_html:**',
+    'client_bundle_app.js:**',
+    'client_bundle_worker.js:**',
+    ...gulpish_client_html_tasks.map((a) => `${a}:**`),
+  ],
+  type: gb.ALL,
+  version: Date.now(),
+  init: function (next) {
+    if (!bs) {
+      // eslint-disable-next-line global-require
+      bs = require('browser-sync').create();
+    }
+    next();
+  },
+  func: function (job, done) {
+    let user_data = job.getUserData();
+    if (!user_data.running) {
+      user_data.running = true;
+      // for more browser-sync config options: http://www.browsersync.io/docs/options/
+      bs.init({
+        // informs browser-sync to proxy our app which would run at the following location
+        proxy: {
+          target: `http://localhost:${argv.port || process.env.port || 3000}`,
+          ws: true,
+        },
+        // informs browser-sync to use the following port for the proxied app
+        // notice that the default port is 3000, which would clash with our server
+        port: 4000,
+
+        // don't sync clicks/scrolls/forms/etc
+        ghostMode: false,
+      }, done);
+    } else {
+      let updated = job.getFilesUpdated();
+      bs.reload(updated.map((a) => a.relative.replace(/^client\//, '')));
+      done();
+    }
+  },
+});
+
 // prod tasks for later: build.prod.compress, build.zip, build.prod.*
 gb.task({
   name: 'default',
@@ -458,6 +504,7 @@ gb.task({
     'client_bundle_worker.js',
 
     'run_server',
+    'browser_sync',
   ],
 });
 
