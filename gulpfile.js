@@ -151,8 +151,8 @@ const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
 
 gulp.task('server_static', function () {
   return gulp.src(config.server_static)
-    .pipe(newer('./dist/game/build.dev'))
-    .pipe(gulp.dest('./dist/game/build.dev'));
+    .pipe(newer('./dist_gulp/game/build.dev'))
+    .pipe(gulp.dest('./dist_gulp/game/build.dev'));
 });
 
 function targetedStream(options, body) {
@@ -190,7 +190,7 @@ function serverJS(obj) {
   return targetedStream({
     label: 'server_js',
     obj,
-    output: './dist/game/build.dev',
+    output: './dist_gulp/game/build.dev',
     src: config.server_js_files,
   }, function (stream) {
     return stream.pipe(sourcemaps.init())
@@ -227,7 +227,7 @@ gulp.task('client_html_default', function () {
     .on('error', log.error.bind(log, 'client_html Error'))
     .pipe(ifdef(default_defines, { extname: ['html'] }))
     .pipe(sourcemaps.write('./')) // writes .map file
-    .pipe(gulp.dest('./dist/game/build.dev/client'));
+    .pipe(gulp.dest('./dist_gulp/game/build.dev/client'));
 });
 
 const extra_index = [
@@ -256,7 +256,7 @@ extra_index.forEach(function (elem) {
         return `<script src="${b}"></script>`;
       }))
       //.pipe(sourcemaps.write('./')) // writes .map file
-      .pipe(gulp.dest('./dist/game/build.dev/client'));
+      .pipe(gulp.dest('./dist_gulp/game/build.dev/client'));
   });
 });
 
@@ -264,29 +264,29 @@ gulp.task('client_html', gulp.parallel(...client_html_tasks));
 
 gulp.task('client_css', function () {
   return gulp.src(config.client_css)
-    .pipe(gulp.dest('./dist/game/build.dev/client'))
+    .pipe(gulp.dest('./dist_gulp/game/build.dev/client'))
     .pipe(browser_sync.reload({ stream: true }));
 });
 
 gulp.task('client_static', function () {
   return gulp.src(config.client_static)
-    .pipe(newer('./dist/game/build.dev/client'))
-    .pipe(gulp.dest('./dist/game/build.dev/client'));
+    .pipe(newer('./dist_gulp/game/build.dev/client'))
+    .pipe(gulp.dest('./dist_gulp/game/build.dev/client'));
 });
 
 gulp.task('client_fsdata', function () {
   return gulp.src(config.client_fsdata, { base: 'src/client', allowEmpty: true })
     .pipe(webfs())
-    .pipe(gulp.dest('./dist/game/build.dev/client'));
+    .pipe(gulp.dest('./dist_gulp/game/build.dev/client'));
 });
 
 gulp.task('build.prod.compress', function () {
-  return gulp.src('dist/game/build.dev/**')
-    .pipe(newer('./dist/game/build.prod'))
-    .pipe(gulp.dest('./dist/game/build.prod'))
+  return gulp.src('dist_gulp/game/build.dev/**')
+    .pipe(newer('./dist_gulp/game/build.prod'))
+    .pipe(gulp.dest('./dist_gulp/game/build.prod'))
     // skipLarger so we don't end up with orphaned old compressed files
     .pipe(gulpif(config.compress_files, web_compress({ skipLarger: false })))
-    .pipe(gulp.dest('./dist/game/build.prod'));
+    .pipe(gulp.dest('./dist_gulp/game/build.prod'));
 });
 gulp.task('nop', function (next) {
   next();
@@ -299,13 +299,13 @@ extra_index.forEach(function (elem) {
   let name = `build.zip.${elem.name}`;
   zip_tasks.push(name);
   gulp.task(name, function () {
-    return gulp.src('dist/game/build.dev/client/**')
+    return gulp.src('dist_gulp/game/build.dev/client/**')
       .pipe(ignore.exclude('index.html'))
       .pipe(ignore.exclude('*.map'))
       .pipe(gulpif(`index_${elem.name}.html`, rename('index.html')))
       .pipe(ignore.exclude('index_*.html'))
       .pipe(zip(`${elem.name}.zip`))
-      .pipe(gulp.dest('./dist/game/build.prod/client'));
+      .pipe(gulp.dest('./dist_gulp/game/build.prod/client'));
   });
 });
 if (!zip_tasks.length) {
@@ -314,8 +314,8 @@ if (!zip_tasks.length) {
 gulp.task('build.zip', gulp.parallel(...zip_tasks));
 gulp.task('build.prod.package', function () {
   return gulp.src('package*.json')
-    .pipe(newer('./dist/game/build.prod'))
-    .pipe(gulp.dest('./dist/game/build.prod'));
+    .pipe(newer('./dist_gulp/game/build.prod'))
+    .pipe(gulp.dest('./dist_gulp/game/build.prod'));
 });
 gulp.task('build.prod', gulp.parallel('build.prod.package', 'build.prod.compress', 'build.zip'));
 gulp.task('build.prod.client', gulp.parallel('build.prod.compress', 'build.zip'));
@@ -332,7 +332,7 @@ function bundleJS(filename, is_worker) {
   let do_version = !is_worker;
   const browserify_opts = {
     entries: [
-      `./dist/game/build.intermediate/client/${filename}`,
+      `./dist_gulp/game/build.intermediate/client/${filename}`,
     ],
     cache: {}, // required for watchify
     packageCache: {}, // required for watchify
@@ -390,13 +390,13 @@ function bundleJS(filename, is_worker) {
     }
     stream = stream
       .pipe(sourcemaps.write(is_worker ? undefined : './')) // embeds or writes .map file
-      .pipe(gulp.dest(is_worker ? './dist/game/build.intermediate/worker/' : './dist/game/build.dev/client/'));
+      .pipe(gulp.dest(is_worker ? './dist_gulp/game/build.intermediate/worker/' : './dist_gulp/game/build.dev/client/'));
     return stream;
   }
 
   function writeVersion(done) {
     let ver_filename = `${filename.slice(0, -3)}.ver.json`;
-    fs.writeFile(`./dist/game/build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
+    fs.writeFile(`./dist_gulp/game/build.dev/client/${ver_filename}`, `{"ver":"${build_timestamp}"}`, done);
   }
   let version_task = `client_js_${filename}_version`;
   if (do_version) {
@@ -483,7 +483,7 @@ function bundleDeps(filename, is_worker) {
       .pipe(sourcemaps.init({ loadMaps: true })) // loads map from browserify file
       .pipe(uglify(uglify_options_ext))
       .pipe(sourcemaps.write(is_worker ? undefined : './')) // embeds or writes .map file
-      .pipe(gulp.dest(is_worker ? './dist/game/build.intermediate/worker/' : './dist/game/build.dev/client/'));
+      .pipe(gulp.dest(is_worker ? './dist_gulp/game/build.intermediate/worker/' : './dist_gulp/game/build.dev/client/'));
   }
 
   function registerTasks(b, is_watch) {
@@ -523,15 +523,15 @@ function registerBundle(entrypoint, deps, is_worker) {
     client_js_deps.push(task_name);
     client_js_watch_deps.push(task_name);
     let src_files = [
-      `./dist/game/build.intermediate/worker/${deps.replace('.js', '.bundle.int.js')}`,
-      `./dist/game/build.intermediate/worker/${entrypoint.replace('.js', '.bundle.int.js')}`,
+      `./dist_gulp/game/build.intermediate/worker/${deps.replace('.js', '.bundle.int.js')}`,
+      `./dist_gulp/game/build.intermediate/worker/${entrypoint.replace('.js', '.bundle.int.js')}`,
     ];
     gulp.task(task_name, function () {
       return gulp.src(src_files)
         .pipe(sourcemaps.init({ loadMaps: true }))
         .pipe(concat(entrypoint.replace('.js', '.bundle.js')))
         .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('./dist/game/build.dev/client/'));
+        .pipe(gulp.dest('./dist_gulp/game/build.dev/client/'));
     });
     let watch_task_name = `${task_name}_watch`;
     client_js_watch_deps.push(watch_task_name);
@@ -548,7 +548,7 @@ function clientBabel(obj) {
   return targetedStream({
     label: 'client_js_babel',
     obj,
-    output: './dist/game/build.intermediate',
+    output: './dist_gulp/game/build.intermediate',
     src: config.client_js_files,
   }, function (stream) {
     return stream
@@ -579,18 +579,18 @@ gulp.task('client_js_babel', clientBabel);
 
 gulp.task('client_json', function () {
   return gulp.src(config.client_json_files)
-    .pipe(newer('./dist/game/build.intermediate/client'))
+    .pipe(newer('./dist_gulp/game/build.intermediate/client'))
     // Minify, and convert from json5
     .pipe(json5({ beautify: false }))
-    .pipe(gulp.dest('./dist/game/build.intermediate/client'));
+    .pipe(gulp.dest('./dist_gulp/game/build.intermediate/client'));
 });
 
 gulp.task('server_json', function () {
   return gulp.src(config.server_json_files)
-    .pipe(newer('./dist/game/build.dev/server'))
+    .pipe(newer('./dist_gulp/game/build.dev/server'))
     // convert from json5, beautify
     .pipe(json5({ beautify: true }))
-    .pipe(gulp.dest('./dist/game/build.dev/server'));
+    .pipe(gulp.dest('./dist_gulp/game/build.dev/server'));
 });
 
 gulp.task('client_js', gulp.parallel(...client_js_deps));
@@ -677,10 +677,10 @@ if (args.debug) {
 
 gulp.task('nodemon-start', (done) => {
   const options = {
-    script: 'dist/game/build.dev/server/index.js',
+    script: 'dist_gulp/game/build.dev/server/index.js',
     nodeArgs: ['--inspect'],
     args: ['--dev', '--master'],
-    watch: ['dist/game/build.dev/server/', 'dist/game/build.dev/common'],
+    watch: ['dist_gulp/game/build.dev/server/', 'dist_gulp/game/build.dev/common'],
   };
 
   if (args.debug) {
@@ -733,9 +733,9 @@ gulp.task('browser-sync', gulp.series('nodemon', 'browser-sync-start'));
 
 gulp.task('clean', function () {
   return gulp.src([
-    'dist/game/build.dev',
-    'dist/game/build.intermediate',
-    'dist/game/build.prod',
+    'dist_gulp/game/build.dev',
+    'dist_gulp/game/build.intermediate',
+    'dist_gulp/game/build.prod',
     'src/client/autogen/*.*',
     '!src/client/autogen/placeholder.txt',
   ], { read: false, allowEmpty: true })

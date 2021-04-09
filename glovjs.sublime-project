@@ -6,8 +6,9 @@
             "folder_exclude_patterns":
             [
                 "node_modules",
+                ".gbstate",
+                "dist_gulp",
                 "build.dev",
-                "build.intermediate",
                 "build.prod",
                 "logs",
                 "data_store",

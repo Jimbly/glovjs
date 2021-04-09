@@ -1,12 +1,12 @@
 {
-  "name": "glov",
-  "version": "0.0.2",
-  "description": "Template for a state of the art Javascript project using GLOV.js",
+  "name": "glovjs",
+  "version": "0.1.0",
+  "description": "Template for a JavaScript game project using GLOV.js",
   "main": "server/index.js",
   "keywords": [
     "template",
-    "es2015",
-    "es6",
+    "glovjs",
+    "glovjs-build",
     "browserify",
     "babel"
   ],
@@ -15,11 +15,10 @@
     "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
-    "oldtest": "gulp client_js",
-    "start": "nodemon -w build -w ../glovjs-build/ build default",
-    "serve": "nodemon -w dist2/game/build.dev/server -w dist2/game/build.dev/common dist2/game/build.dev/server/index.js --master",
+    "start": "nodemon -w build -w ../glovjs-build/ -- build default --watch",
     "clean": "node build clean",
-    "prod": "node build build && node dist2/game/build.prod/server/index.js --master",
+    "build": "node build build",
+    "prod": "node build build && node dist/game/build.prod/server/index.js --master",
     "lint": "node build eslint"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
@@ -54,9 +53,9 @@
     "console-api": "0.0.4",
     "eslint": "^7.21.0",
     "fancy-log": "^1.3.2",
+    "glovjs-build": "0.0.4",
     "gl-mat3": "^2.0.0",
     "gl-mat4": "^1.2.0",
-    "glovjs-build": "0.0.2",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0",
     "gulp-clean": "^0.4.0",

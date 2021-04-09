@@ -293,10 +293,8 @@ module.exports = function bundle(opts) {
   function addBundle(name, subbundle_opts) {
     gb.task({
       name,
-      target: subbundle_opts.target,
       ...bundleSub(subbundle_opts)
     });
-    tasks.push(name);
   }
 
   let browserify = {
@@ -310,8 +308,10 @@ module.exports = function bundle(opts) {
   assert(!(do_version && do_final_bundle)); // app.ver.json would go to wrong place
 
   let entrypoint_name = `${subtask_name}_entrypoint`;
+  if (!do_final_bundle) {
+    tasks.push(entrypoint_name);
+  }
   addBundle(entrypoint_name, {
-    target: do_final_bundle ? undefined : target,
     entrypoint,
     source,
     out,
@@ -364,7 +364,6 @@ module.exports = function bundle(opts) {
       name: uglify_name,
       type: gb.SINGLE,
       input: `${deps_name}:${deps_out}`,
-      target: do_final_bundle ? undefined : target,
       ...uglify({ inline: Boolean(do_final_bundle) }, uglify_options_ext),
     });
     if (!do_final_bundle) {
@@ -381,7 +380,6 @@ module.exports = function bundle(opts) {
           `${uglify_name}:${deps_out}`,
           `${entrypoint_name}:${out}`,
         ],
-        target,
         func: concat({
           output: out,
           first_file: `${uglify_name}:${deps_out}`
@@ -391,8 +389,18 @@ module.exports = function bundle(opts) {
     }
   }
 
+  function copy(job, done) {
+    job.out(job.getFile());
+    done();
+  }
+
+  // Important: one, final composite task that copies everything to the (optional) target.
+  //   This allows other tasks to reference our output files as a single glob
+  //   without knowing the internal names of the individual tasks.
   return {
     type: gb.SINGLE,
-    deps: tasks,
+    input: tasks.map((name) => `${name}:**`),
+    func: copy,
+    target,
   };
 };

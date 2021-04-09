@@ -30,5 +30,5 @@ module.exports = function (filename) {
     }
     console_api.setTitle(args.title || `build ${filename} | ${project_name}`);
   }
-  prettyInterface();
+  // prettyInterface();
 };

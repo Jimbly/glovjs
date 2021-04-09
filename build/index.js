@@ -5,14 +5,18 @@
 //     per-file errors for files that errored on previous runs; cannot do a
 //     SINGLE-style task with a Finish because we don't get notified of deleted
 //     files - maybe those could be provided to the init/finish callbacks?
-//
+//   purge gulp and all unneeded gulp dependencies from package.json once
+//     everything is stable
 
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
+const { asyncEachSeries } = require('glovjs-async');
 const bundle = require('./bundle.js');
+const compress = require('./compress.js');
 const gb = require('glovjs-build');
 const eslint = require('./eslint.js');
 const exec = require('./exec.js');
+const fs = require('fs');
 const json5 = require('./json5.js');
 // const gulpish_bundle = require('./gulpish-bundle.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
@@ -26,15 +30,15 @@ const webfs = require('./webfs_build.js');
 require('./checks.js')(__filename);
 
 const targets = {
-  dev: path.join(__dirname, '../dist3/game/build.dev'),
+  dev: path.join(__dirname, '../dist/game/build.dev'),
+  prod: path.join(__dirname, '../dist/game/build.prod'),
 };
 const SOURCE_DIR = path.join(__dirname, '../src/');
 gb.configure({
   source: SOURCE_DIR,
-  statedir: path.join(__dirname, '../dist3/game/.gbstate'),
+  statedir: path.join(__dirname, '../dist/game/.gbstate'),
   targets,
   log_level: gb.LOG_INFO,
-  watch: true,
 });
 
 const config = {
@@ -412,13 +416,15 @@ gb.task({
 //   })
 // });
 
+const server_input_globs = [
+  'server_static:**',
+  'server_js:**',
+  'server_json:**',
+];
+
 gb.task({
   name: 'run_server',
-  input: [
-    'server_static:**',
-    'server_js:**',
-    'server_json:**',
-  ],
+  input: server_input_globs,
   ...exec({
     cwd: '.',
     cmd: 'node',
@@ -436,20 +442,26 @@ gb.task({
   }),
 });
 
+let client_input_globs_base = [
+  'client_static:**',
+  'client_css:**',
+  'client_fsdata:**',
+  'client_bundle_app.js:**',
+  'client_bundle_worker.js:**',
+];
+
+let client_input_globs = [
+  ...client_input_globs_base,
+  ...gulpish_client_html_tasks.map((a) => `${a}:**`),
+];
+
+
 let bs;
 gb.task({
   name: 'browser_sync',
-  input: [
-    'client_static:**',
-    'client_css:**',
-    'client_fsdata:**',
-    'gulpish-client_html:**',
-    'client_bundle_app.js:**',
-    'client_bundle_worker.js:**',
-    ...gulpish_client_html_tasks.map((a) => `${a}:**`),
-  ],
+  input: client_input_globs,
   type: gb.ALL,
-  version: Date.now(),
+  version: Date.now(), // always runs once per process
   init: function (next) {
     if (!bs) {
       // eslint-disable-next-line global-require
@@ -483,12 +495,11 @@ gb.task({
   },
 });
 
-// prod tasks for later: build.prod.compress, build.zip, build.prod.*
 gb.task({
-  name: 'default',
+  name: 'build_deps',
   deps: [
-    // 'client_json', // dep'd fromclient_bundle*
-    // 'client_js_babel', // dep'd fromclient_bundle*
+    // 'client_json', // dep'd from client_bundle*
+    // 'client_js_babel', // dep'd from client_bundle*
 
     'server_static',
     'server_js',
@@ -502,7 +513,101 @@ gb.task({
     'client_js_warnings',
     'client_bundle_app.js',
     'client_bundle_worker.js',
+  ],
+});
 
+let zip_tasks = [];
+extra_index.forEach(function (elem) {
+  if (!elem.zip) {
+    return;
+  }
+  let name = `build.zip.${elem.name}`;
+  zip_tasks.push(name);
+  gb.task({
+    name,
+    input: [
+      ...client_input_globs_base,
+      `gulpish-client_html_${elem.name}:**`,
+    ],
+    deps: ['build_deps'],
+    ...gulpish_tasks.zip('prod', elem),
+    type: gb.ALL,
+  });
+});
+if (!zip_tasks.length) {
+  zip_tasks.push('build_deps'); // something arbitrary, just so it's not an empty list
+}
+gb.task({
+  name: 'build.zip',
+  deps: zip_tasks,
+});
+
+
+const package_files = ['package.json', 'package-lock.json'];
+function timestamp(list) {
+  return list.map((fn) => fs.statSync(fn).mtime.getTime()).join(',');
+}
+gb.task({
+  name: 'build.prod.package',
+  input: ['../package.json'], // Not actually valid
+  type: gb.ALL,
+  target: 'prod',
+  // BAD EXAMPLE
+  // This task reads from the filesystem directly, without adding any dependency
+  // tracking, so will only be run when we restart our build process, not
+  // when the source files change.  This is acceptable in this case since these
+  // are rarely-modified files, and we do not want a `watch` happening on the
+  // entire root directory of the project, nor do we want all other tasks to
+  // necessarily be relative of the root instead of the implicit `src/`.
+  // TODO: Some better solution here: multiple sources? external dependency
+  //   function, so this works for sources like web fetches too? custom input
+  //   provider function (key + timestamp) and we reference it as a source?
+  version: timestamp(package_files),
+  func: function (job, done) {
+    asyncEachSeries(package_files, function (filename, next) {
+      fs.readFile(filename, function (err, buffer) {
+        if (buffer) {
+          job.out({
+            relative: filename,
+            contents: buffer,
+          });
+        }
+        next(err);
+      });
+    }, done);
+  },
+});
+
+
+gb.task({
+  name: 'build.prod.compress',
+  input: client_input_globs,
+  target: 'prod',
+  ...compress(config.compress_files),
+});
+
+gb.task({
+  name: 'build.prod.server',
+  input: server_input_globs,
+  target: 'prod',
+  type: gb.SINGLE,
+  func: copy,
+});
+
+gb.task({
+  name: 'build.prod.client',
+  deps: ['build.prod.compress', 'build.zip'],
+});
+gb.task({
+  name: 'build',
+  deps: ['build.prod.package', 'build.prod.server', 'build.prod.compress', 'build.zip'],
+});
+
+// Default development task
+gb.task({
+  name: 'default',
+  deps: [
+    'build_deps',
     'run_server',
     'browser_sync',
   ],
