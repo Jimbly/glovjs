@@ -5,6 +5,7 @@
 require('./bootstrap.js'); // Just in case it's not in app.js
 
 export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
+exports.require = require; // For browser console debugging
 
 require('not_worker'); // This module cannot be required from a worker bundle
 

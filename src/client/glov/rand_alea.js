@@ -117,3 +117,12 @@ Alea.prototype.importState = function (i) {
 export function randCreate(seed) {
   return new Alea(seed);
 }
+
+export function shuffleArray(rand, arr) {
+  for (let ii = arr.length - 1; ii >= 1; --ii) {
+    let swap = rand.range(ii + 1);
+    let t = arr[ii];
+    arr[ii] = arr[swap];
+    arr[swap] = t;
+  }
+}

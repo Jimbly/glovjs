@@ -37,6 +37,7 @@ export function friendIsBlocked(user_id) {
 }
 
 export function friendAdd(user_id, cb) {
+  user_id = user_id.toLowerCase();
   net.subs.getMyUserChannel().cmdParse(`friend_add ${user_id}`, function (err, resp) {
     if (!err) {
       friend_list[user_id] = FRIEND_ADDED;
@@ -46,6 +47,7 @@ export function friendAdd(user_id, cb) {
 }
 
 export function friendRemove(user_id, cb) {
+  user_id = user_id.toLowerCase();
   net.subs.getMyUserChannel().cmdParse(`friend_remove ${user_id}`, function (err, resp) {
     if (!err) {
       friend_list[user_id] = FRIEND_REMOVED;
@@ -55,6 +57,7 @@ export function friendRemove(user_id, cb) {
 }
 
 export function friendBlock(user_id, cb) {
+  user_id = user_id.toLowerCase();
   net.subs.getMyUserChannel().cmdParse(`friend_block ${user_id}`, function (err, resp) {
     if (!err) {
       friend_list[user_id] = FRIEND_BLOCKED;
@@ -64,6 +67,7 @@ export function friendBlock(user_id, cb) {
 }
 
 export function friendUnblock(user_id, cb) {
+  user_id = user_id.toLowerCase();
   net.subs.getMyUserChannel().cmdParse(`friend_unblock ${user_id}`, function (err, resp) {
     if (!err) {
       delete friend_list[user_id];

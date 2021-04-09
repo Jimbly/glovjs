@@ -393,12 +393,12 @@ ChatUI.prototype.getAccessObj = function () {
   return access_dummy;
 };
 
-ChatUI.prototype.cmdParse = function (str, on_error) {
-  let handleResult = on_error ?
+ChatUI.prototype.cmdParse = function (str, cb) {
+  let handleResult = cb ?
     (err, resp) => {
       this.handle_cmd_parse(err, resp);
-      if (on_error && err) {
-        on_error(err);
+      if (cb) {
+        cb(err);
       }
     } :
     this.handle_cmd_parse;
@@ -702,7 +702,13 @@ ChatUI.prototype.run = function (opts) {
               text = text.slice(1);
             }
             this.history.add(text);
-            this.cmdParse(text.slice(1), () => {
+            if (net.subs) {
+              net.subs.serverLog('cmd', text);
+            }
+            this.cmdParse(text.slice(1), (err) => {
+              if (!err) {
+                return;
+              }
               if (this.volume_out) {
                 ui.playUISound('msg_out_err', this.volume_out);
               }

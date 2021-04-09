@@ -636,7 +636,9 @@ SubscriptionManager.prototype.logout = function () {
 };
 
 SubscriptionManager.prototype.serverLog = function (type, data) {
-  this.client.send('log', { type, data });
+  this.onceConnected(() => {
+    this.client.send('log', { type, data });
+  });
 };
 
 SubscriptionManager.prototype.sendCmdParse = function (command, resp_func) {

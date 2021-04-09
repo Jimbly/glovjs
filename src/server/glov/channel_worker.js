@@ -148,12 +148,13 @@ export class ChannelWorker {
     this.shutting_down = 1;
     // Fail before finishing setting shutting_down, so any error responses can be sent (probably to stuck packets)
     ack.failAll(this);
-    this.shutting_down = 2;
-    assert(!this.numSubscribers());
-    assert(empty(this.subscribe_counts));
+    // Also before setting shutting_down, so it can send if it needs to
     if (this.onShutdown) {
       this.onShutdown();
     }
+    this.shutting_down = 2;
+    assert(!this.numSubscribers());
+    assert(empty(this.subscribe_counts));
     // TODO: this unloading should be automatic / in lower layer, as it doesn't
     // make sense when the datastore is a database?
 
@@ -308,6 +309,7 @@ export class ChannelWorker {
       }
       this.debug('locked, unregistering from exchange...');
       channel_server.exchange.unregister(channel_id, (err) => {
+        channel_server.last_worker = this;
         assert(!err, err);
         if (!this.shouldShutdown()) {
           // abort!
@@ -1109,10 +1111,15 @@ export class ChannelWorker {
     let { msg, pak_id } = net_data;
     let expecting_response = Boolean(pak_id);
     if (expecting_response) {
-      this.info(`received packet after shutdown, msg=${msg} from ${source}, returning ERR_TERMINATED`);
-      channelServerSend(this, source, msg, 'ERR_TERMINATED');
+      // Can't easily send a response - channelServerSend will assert that we're not shutting down
+      // In practice this happens only incredibly rarely and ignoring the message should be
+      // almost as good as responding with an error.  Maybe add a channelServerSendPostShutdown()
+      // if we see this black-holed something important?
+      // this.info(`received packet after shutdown, msg=${msg} from ${source}, returning ERR_TERMINATED`);
+      // channelServerSend(this, source, pak_id, 'ERR_TERMINATED');
+      this.warn(`received packet after shutdown, msg=${msg} (expecting response) from ${source}, ignoring`);
     } else if (typeof msg === 'number') {
-      // this is a response, totally common, happens on responses to every last-moment `unsbuscribe`
+      // this is a response, totally common, happens on responses to every last-moment `unsubscribe`
     } else {
       this.info(`received packet after shutdown, msg=${msg} from ${source}, ignoring`);
     }

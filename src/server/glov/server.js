@@ -129,7 +129,7 @@ export function startup(params) {
     glov_wscommon.PROTOCOL_VERSION = params.pver;
   }
 
-  let { data_stores, exchange, metrics_impl } = params;
+  let { data_stores, exchange, metrics_impl, on_report_load } = params;
   if (!data_stores) {
     data_stores = {};
   }
@@ -224,6 +224,7 @@ export function startup(params) {
     exchange,
     data_stores,
     ws_server,
+    on_report_load,
     is_master: argv.master,
   });
 

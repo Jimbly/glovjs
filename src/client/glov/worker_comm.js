@@ -48,7 +48,11 @@ function workerOnError(e, file, line, col, errorobj) {
   if (!file && e.message && e.filename) {
     window.onerror(e.message, e.filename, e.lineno, e.colno, errorobj || e);
   } else {
-    window.onerror(e, file, line, col, errorobj);
+    if (String(e) === '[object Event]') {
+      window.onerror(`Unknown worker errror (${e.message || e.type || e})`, file, line, col, errorobj);
+    } else {
+      window.onerror(e, file, line, col, errorobj);
+    }
   }
 }
 

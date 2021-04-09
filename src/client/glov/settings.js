@@ -76,11 +76,13 @@ export function register(defs) {
         modified[key] = true;
         exports[key] = v;
       },
-      store: true,
+      store: def.store !== false,
       ver: def.ver,
       help: def.help,
       usage: def.usage,
       on_change: def.on_change,
+      access_run: def.access_run,
+      access_show: def.access_show,
     });
   });
 }
@@ -118,6 +120,6 @@ register({
   fov: {
     default_value: 60,
     type: cmd_parse.TYPE_FLOAT,
-    range: [40,100],
+    range: [1,100],
   },
 });

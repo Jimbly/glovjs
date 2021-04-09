@@ -483,7 +483,7 @@ function onDoubleClick(event) {
   let touch_id = `m${button}`;
   let touch_data = touches[touch_id];
   if (touch_data && touch_data.up_edge) { // && touch_data.state === UP? Always?
-    touch_data.was_double_click = true;
+    touch_data.was_double_click = true; // TODO: populate this field for touch events too!
   }
 }
 
@@ -808,6 +808,21 @@ function gamepadUpdate() {
         updatePadState(gpd, ps, gpd.sticks[0][1] > PAD_THRESHOLD, PAD.ANALOG_UP);
       }
     }
+  }
+}
+
+export function fakeTouchEvent(is_down) {
+  const touch_id = 'faketouch';
+  let touch_data = touches[touch_id];
+  if (touch_data && !is_down) {
+    setMouseToMid();
+    v2copy(touch_data.cur_pos, mouse_pos);
+    touch_data.up_edge++;
+    touch_data.state = UP;
+    touch_data.down_time += max(engine.hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
+  } else if (!touch_data && is_down) {
+    setMouseToMid();
+    touches[touch_id] = new TouchData(mouse_pos, false, 0, null);
   }
 }
 

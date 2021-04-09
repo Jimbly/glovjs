@@ -28,6 +28,7 @@ const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_input = require('./input.js');
+const { mouseMoved } = glov_input;
 const { linkTick } = require('./link.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
@@ -346,7 +347,7 @@ export function drawHBox(coords, s, color) {
       s.draw({
         x,
         y: coords.y,
-        z: coords.z,
+        z: coords.z || Z.UI,
         color,
         w: my_w,
         h: coords.h,
@@ -410,19 +411,6 @@ export function drawBox(coords, s, pixel_scale, color) {
   }
 }
 
-export function progressBar(param) {
-  drawHBox(param, sprites.progress_bar_trough, param.color_trough || param.color || unit_vec);
-  let progress = clamp(param.progress, 0, 1);
-  drawHBox({
-    x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
-    y: param.y,
-    z: param.z + 0.1,
-    w: param.w * progress,
-    h: param.h,
-    no_min_width: true,
-  }, sprites.progress_bar, param.color || unit_vec);
-}
-
 export function playUISound(name, volume) {
   if (name === 'select') {
     name = 'button_click';
@@ -433,7 +421,7 @@ export function playUISound(name, volume) {
 }
 
 export function setMouseOver(key, quiet) {
-  if (last_frame_button_mouseover !== key && frame_button_mouseover !== key && !quiet) {
+  if (last_frame_button_mouseover !== key && frame_button_mouseover !== key && !quiet && mouseMoved()) {
     playUISound('rollover');
   }
   frame_button_mouseover = key;
@@ -578,19 +566,55 @@ export function checkHooks(param, click) {
   }
 }
 
+export function drawTooltipBox(param) {
+  drawTooltip({
+    x: param.x,
+    y: param.tooltip_above ? param.y - 2 : param.y + param.h + 2,
+    tooltip_above: param.tooltip_above,
+    tooltip: param.tooltip,
+    tooltip_width: param.tooltip_width,
+  });
+}
+
+export function progressBar(param) {
+  drawHBox(param, sprites.progress_bar_trough, param.color_trough || param.color || unit_vec);
+  let progress = clamp(param.progress, 0, 1);
+  drawHBox({
+    x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
+    y: param.y,
+    z: (param.z || Z.UI) + 0.1,
+    w: param.w * progress,
+    h: param.h,
+    no_min_width: true,
+  }, sprites.progress_bar, param.color || unit_vec);
+  if (param.tooltip) {
+    if (glov_input.mouseOver(param)) {
+      drawTooltipBox(param);
+    }
+  }
+}
+
 // eslint-disable-next-line complexity
 export function buttonShared(param) {
   param.z = param.z || Z.UI;
   let state = 'regular';
   let ret = false;
-  if (param.draw_only) {
-    return { ret, state };
-  }
   let key = param.key || `${param.x}_${param.y}`;
   let rollover_quiet = param.rollover_quiet;
+  button_mouseover = false;
+  if (param.draw_only) {
+    if (param.draw_only_mouseover && (!param.disabled || param.disabled_mouseover)) {
+      if (glov_input.mouseOver(param)) {
+        setMouseOver(key, rollover_quiet);
+      }
+      if (button_mouseover && param.tooltip) {
+        drawTooltipBox(param);
+      }
+    }
+    return { ret, state };
+  }
   let focused = !param.disabled && !param.no_focus && focusCheck(key);
   let key_opts = param.in_event_cb ? { in_event_cb: param.in_event_cb } : null;
-  button_mouseover = false;
   if (param.disabled) {
     if (glov_input.mouseOver(param)) { // Still eat mouse events
       if (param.disabled_mouseover) {
@@ -652,13 +676,7 @@ export function buttonShared(param) {
     playUISound('button_click');
   }
   if (button_mouseover && param.tooltip) {
-    drawTooltip({
-      x: param.x,
-      y: param.tooltip_above ? param.y - 2 : param.y + param.h + 2,
-      tooltip_above: param.tooltip_above,
-      tooltip: param.tooltip,
-      tooltip_width: param.tooltip_width,
-    });
+    drawTooltipBox(param);
   }
   param.z += param.z_bias && param.z_bias[state] || 0;
   checkHooks(param, ret);
@@ -666,18 +684,24 @@ export function buttonShared(param) {
 }
 
 export let button_last_color;
-export function buttonTextDraw(param, state, focused) {
+function buttonBackgroundDraw(param, state) {
   let colors = param.colors || color_button;
   let color = button_last_color = colors[state];
-  let base_name = param.base_name || 'button';
-  let sprite_name = `${base_name}_${state}`;
-  let sprite = sprites[sprite_name];
-  // Note: was if (sprite) color = colors.regular for specific-sprite matches
-  if (!sprite) {
-    sprite = sprites[base_name];
-  }
+  if (!param.no_bg) {
+    let base_name = param.base_name || 'button';
+    let sprite_name = `${base_name}_${state}`;
+    let sprite = sprites[sprite_name];
+    // Note: was if (sprite) color = colors.regular for specific-sprite matches
+    if (!sprite) {
+      sprite = sprites[base_name];
+    }
 
-  drawHBox(param, sprite, color);
+    drawHBox(param, sprite, color);
+  }
+}
+
+export function buttonTextDraw(param, state, focused) {
+  buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   font.drawSizedAligned(
     focused ? font_style_focused : font_style_normal,
@@ -702,35 +726,13 @@ export function buttonText(param) {
   return ret;
 }
 
-export function buttonImage(param) {
-  // required params
-  assert(typeof param.x === 'number');
-  assert(typeof param.y === 'number');
-  assert(param.img && param.img.draw); // should be a sprite
-  // optional params
-  param.z = param.z || Z.UI;
-  param.w = param.w || button_img_size;
-  param.h = param.h || param.w || button_img_size;
-  param.shrink = param.shrink || 0.75;
-  //param.img_rect; null -> full image
+function buttonImageDraw(param, state, focused) {
   let uvs = param.img_rect;
   if (typeof param.frame === 'number') {
     uvs = param.img.uidata.rects[param.frame];
   }
-
-  let { ret, state } = buttonShared(param);
-  let colors = param.colors || color_button;
-  let color = button_last_color = colors[state];
-  if (!param.no_bg) {
-    let base_name = param.base_name || 'button';
-    let sprite_name = `${base_name}_${state}`;
-    let sprite = sprites[sprite_name];
-    if (!sprite) {
-      sprite = sprites[base_name];
-    }
-
-    drawHBox(param, sprite, color);
-  }
+  buttonBackgroundDraw(param, state);
+  let color = button_last_color;
   let img_origin = param.img.origin;
   let img_w = param.img.size[0];
   let img_h = param.img.size[1];
@@ -765,11 +767,85 @@ export function buttonImage(param) {
   } else {
     param.img.draw(draw_param);
   }
+}
+
+export function buttonImage(param) {
+  // required params
+  assert(typeof param.x === 'number');
+  assert(typeof param.y === 'number');
+  assert(param.img && param.img.draw); // should be a sprite
+  // optional params
+  param.z = param.z || Z.UI;
+  param.w = param.w || button_img_size;
+  param.h = param.h || param.w || button_img_size;
+  param.shrink = param.shrink || 0.75;
+  //param.img_rect; null -> full image
+
+  let { ret, state, focused } = buttonShared(param);
+  buttonImageDraw(param, state, focused);
+  return ret;
+}
+
+export function button(param) {
+  if (param.img && !param.text) {
+    return buttonImage(param);
+  } else if (param.text && !param.img) {
+    return buttonText(param);
+  }
+
+  // required params
+  assert(typeof param.x === 'number');
+  assert(typeof param.y === 'number');
+  assert(param.img && param.img.draw); // should be a sprite
+  // optional params
+  param.z = param.z || Z.UI;
+  // w/h initialize differently than either buttonText or buttonImage
+  param.h = param.h || button_img_size;
+  param.w = param.w || button_width;
+  param.shrink = param.shrink || 0.75;
+  //param.img_rect; null -> full image
+  param.left_align = true; // always left-align images
+
+  let { ret, state, focused } = buttonShared(param);
+  buttonImageDraw(param, state, focused);
+  // Hide some stuff on the second draw
+  let saved_no_bg = param.no_bg;
+  let saved_w = param.w;
+  let saved_x = param.x;
+  param.no_bg = true;
+  param.x += param.h * param.shrink;
+  param.w -= param.h * param.shrink;
+  buttonTextDraw(param, state, focused);
+
+  param.no_bg = saved_no_bg;
+  param.w = saved_w;
+  param.x = saved_x;
   return ret;
 }
 
 export function print(style, x, y, z, text) {
   return font.drawSized(style, x, y, z, font_height, text);
+}
+
+export function label(param) {
+  let { style, x, y, align, w, h, text, tooltip } = param;
+  let z = param.z || Z.UI;
+  let size = param.size || font_height;
+  assert(isFinite(x));
+  assert(isFinite(y));
+  assert.equal(typeof text, 'string');
+  if (align) {
+    font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+  } else {
+    font.drawSized(style, x, y, z, size, text);
+  }
+  if (tooltip) {
+    assert(isFinite(w));
+    assert(isFinite(h));
+    if (glov_input.mouseOver(param)) {
+      drawTooltipBox(param);
+    }
+  }
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!

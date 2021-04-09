@@ -392,7 +392,8 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         return;
       }
     }
-    let err = `Error loading texture "${url}"${err_details}`;
+    let err_url = url && url.length > 100 ? `${url.slice(0, 100)}...` : url;
+    let err = `Error loading texture "${err_url}"${err_details}`;
     retries++;
     if (retries > TEX_RETRY_COUNT) {
       --load_count;

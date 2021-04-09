@@ -1,6 +1,13 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const { serverConfig } = require('./server_config.js');
+
+// Options pulled in from serverConfig
+// how far behind proxies that reliably add x-forwarded-for headers are we?
+let forward_depth = serverConfig().forward_depth || 0;
+let forward_loose = serverConfig().forward_loose || false;
+
 const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
@@ -11,22 +18,43 @@ export function ipFromRequest(req) {
   }
 
   let raw_ip = req.client.remoteAddress || req.client.socket && req.client.socket.remoteAddress;
-  // Security note: must check x-forwarded-for *only* if we know this request came from a
-  //   reverse proxy, should warn if missing x-forwarded-for.
-  let ip = req.headers['x-forwarded-for'] || raw_ip;
-  // let port = req.headers['x-forwarded-port'] || req.client.remotePort ||
-  //   req.client.socket && req.client.socket.remotePort;
+  let ip = raw_ip;
+  if (forward_depth) {
+    // Security note: must check x-forwarded-for *only* if we know this request came from a
+    //   reverse proxy, should warn if missing x-forwarded-for.
+    // If forwarded through multiple proxies, want to get just the original client IP,
+    //   but the configuration must specify how many trusted proxies we passed through.
+    let forward_list = (req.headers['x-forwarded-for'] || '').split(',');
+    let forward_ip = (forward_list[forward_list.length - forward_depth] || '').trim();
+    if (!forward_ip) {
+      // forward_depth is incorrect, or someone is not getting the appropriate headers
+      // Best guess: leftmost or raw IP
+      ip = forward_list[0].trim() || raw_ip;
+      if (forward_loose) {
+        // don't warn, just use best guess
+      } else if (req.url === '/' || req.url === '/status') {
+        // skipping warning on '/' because lots of internal health checks or
+        // something on GCP seem to hit this, and / is not an endpoint that could
+        // have anything interesting on its own.
+        // Use best guess IP
+      } else {
+        console.warn(`Received request missing expected x-forwarded-for header from ${raw_ip} for ${req.url}`);
+        // use a malformed IP so that it does not pass "is local" IP checks, etc
+        ip = `untrusted:${ip}`;
+      }
+    } else {
+      ip = forward_ip;
+    }
+  }
   if (!ip) {
     // client already disconnected?
     return 'unknown';
   }
-  ip = ip.split(',')[0].trim(); // If forwarded through multiple proxies, use just the original client IP
   let m = ip.match(regex_ipv4);
   if (m) {
     ip = m[1];
   }
   req.glov_ip = ip;
-  req.glov_raw_ip = raw_ip;
   return ip;
   // return `${ip}${port ? `:${port}` : ''}`;
 }
@@ -35,22 +63,17 @@ export function allowMapFromLocalhostOnly(app) {
   let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
   let cache = {};
   app.use(function (req, res, next) {
-    ipFromRequest(req); // Cache IP early, so it's available if the client disconnects
-    let ip = req.glov_raw_ip;
-    if (ip) {
-      let cached = cache[ip];
-      if (cached === undefined) {
-        cache[ip] = cached = Boolean(ip.match(debug_ips));
-        if (cached) {
-          console.info(`Allowing dev access from ${ip}`);
-        } else {
-          console.debug(`NOT Allowing dev access from ${ip}`);
-        }
+    let ip = ipFromRequest(req); // Cache IP early, so it's available if the client disconnects
+    let cached = cache[ip];
+    if (cached === undefined) {
+      cache[ip] = cached = Boolean(ip.match(debug_ips));
+      if (cached) {
+        console.info(`Allowing dev access from ${ip}`);
+      } else {
+        console.debug(`NOT Allowing dev access from ${ip}`);
       }
-      req.glov_is_dev = cached;
-    } else {
-      req.glov_is_dev = false;
     }
+    req.glov_is_dev = cached;
     next();
   });
   app.all('*.map', function (req, res, next) {

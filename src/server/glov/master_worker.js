@@ -13,6 +13,8 @@ const { callEach, nop, plural } = require('../../common/util.js');
 const CHANNEL_RECREATE_DELAY = 15000;
 // Assume they have crashed if they do not report their load in this time
 const CHANNEL_WORKER_TIMEOUT = LOAD_REPORT_INTERVAL * 3;
+// If the worker is under heavy load, use a much larger timeout
+const CHANNEL_WORKER_TIMEOUT_HEAVY = LOAD_REPORT_INTERVAL * 15;
 // How long between broadcasting master stats
 const MASTER_STATS_PERIOD = 10000;
 
@@ -49,7 +51,7 @@ class MasterWorker extends ChannelWorker {
         load_value: 0,
         load: {
         },
-        timeout: CHANNEL_WORKER_TIMEOUT,
+        last_load_time: this.channel_server.server_time,
         num_channels: {},
         spawn_errors: 0,
       };
@@ -86,7 +88,7 @@ class MasterWorker extends ChannelWorker {
       cs.debug_addr = debug_addr;
     }
 
-    cs.timeout = CHANNEL_WORKER_TIMEOUT;
+    cs.last_load_time = this.channel_server.server_time;
     this.numChannelsMod(cs.num_channels, -1);
     cs.num_channels = num_channels;
     this.numChannelsMod(cs.num_channels, 1);
@@ -241,7 +243,12 @@ class MasterWorker extends ChannelWorker {
     pak.send((err) => {
       let cbs = cc.cbs;
       if (err) {
-        this.error(`Error from request to spawn worker ${channel_id} on ${csid}: ${err}`);
+        // This can happen (with "Error: tried to subscribe to existing channel)
+        // if we receive a spawn request immediately after an unlock due to an
+        // aborted worker shutdown.
+        // Should maybe instead just respond with an immediate error if the channel
+        // was recently unlocked? Similar to `cc.created`.
+        this.warn(`Error from request to spawn worker ${channel_id} on ${csid}: ${err}`);
         cs.spawn_errors++;
         // Will be returned caller(s) and they should try again
         // Do not delay the next attempt to spawn this worker, if necessary
@@ -470,8 +477,9 @@ class MasterWorker extends ChannelWorker {
     let timed_out_csids;
     for (let csid in this.known_servers) {
       let cs = this.known_servers[csid];
-      cs.timeout -= dt;
-      if (cs.timeout <= 0) {
+      let elapsed = this.channel_server.server_time - cs.last_load_time;
+      let timeout = cs.load.cpu >= 500 ? CHANNEL_WORKER_TIMEOUT_HEAVY : CHANNEL_WORKER_TIMEOUT;
+      if (elapsed >= timeout) {
         this.error(`ChannelServer ${csid} timed out, no load received recently`);
         timed_out_csids = timed_out_csids || {};
         timed_out_csids[csid] = true;
@@ -502,7 +510,7 @@ class MasterWorker extends ChannelWorker {
         if (timed_out_csids[cl.csid]) {
           delete this.channels_locked[channel_id];
           // Maybe discarding the lock is not right, or, if expected, we need to check a lock id upon unlock?
-          this.error(`ChannelServer timed out while worker ${cl.csid} locked, discarding lock`);
+          this.error(`ChannelServer ${cl.csid} timed out while worker ${channel_id} locked, discarding lock`);
           if (cl.cbs.length) {
             // This server was just timed out, fail all requests
             callEach(cl.cbs, null, 'ERR_CS_TIMEOUT');

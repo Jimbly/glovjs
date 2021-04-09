@@ -17,7 +17,7 @@ export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 
 let sprite_vshader;
-let sprite_fshader;
+export let sprite_fshader;
 let sprite_dual_fshader;
 let clip_space = vec4();
 let sprite_shader_params = {

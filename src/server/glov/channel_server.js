@@ -368,6 +368,7 @@ class ChannelServer {
         assert(channel_data);
         assert(!self.local_channels[channel_id]);
         let channel = new Ctor(self, channel_id, channel_data);
+        self.last_worker = channel;
         channel.registered = true; // Pre-registered
         self.local_channels[channel_id] = channel;
         self.exchange.replaceMessageHandler(channel_id, proxyMessageHandler, channel.handleMessage.bind(channel));
@@ -571,16 +572,18 @@ class ChannelServer {
   }
 
   init(params) {
-    let { data_stores, ws_server, exchange, is_master } = params;
+    let { data_stores, ws_server, exchange, is_master, on_report_load } = params;
     this.csuid = processUID();
     this.ws_server = ws_server;
 
     this.debug_addr = getDebugAddr();
+    this.debug_addr.csuid = this.csuid;
 
     this.ds_store_bulk = data_stores.bulk;
     this.ds_store_meta = data_stores.meta;
     this.ds_store_image = data_stores.image;
     this.exchange = exchange;
+    this.on_report_load = on_report_load;
 
     client_comm.init(this);
 
@@ -726,6 +729,11 @@ class ChannelServer {
       }
       this.load_report_time = LOAD_REPORT_INTERVAL;
     });
+
+    // Readiness Check CPU Load
+    if (this.on_report_load) {
+      this.on_report_load(load_cpu / 1000);
+    }
   }
 
   exchangePing(dt) {

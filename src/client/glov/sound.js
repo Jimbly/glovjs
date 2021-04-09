@@ -24,6 +24,7 @@ let num_loading = 0;
 // Howler.usingWebAudio = false; // Disable WebAudio for testing HTML5 fallbacks
 
 const default_params = {
+  // Note: as of Firefox v71 (2019), all major browsers support MP3
   ext_list: ['mp3', 'wav'], // (recommended) try loading .mp3 versions first, then fallback to .wav
   //  also covers all browsers: ['webm', 'mp3']
   fade_rate: DEFAULT_FADE_RATE,
@@ -300,6 +301,20 @@ export function soundPlay(soundname, volume, as_music) {
       });
     },
   };
+}
+
+export function soundPlayStreaming(soundname, volume) {
+  if (!settings.sound) {
+    return;
+  }
+  if (Array.isArray(soundname)) {
+    soundname = soundname[floor(random() * soundname.length)];
+  }
+  soundLoad(soundname, { streaming: true, loop: false }, (err) => {
+    if (!err) {
+      soundPlay(soundname, volume);
+    }
+  });
 }
 
 export function soundPlayMusic(soundname, volume, transition) {

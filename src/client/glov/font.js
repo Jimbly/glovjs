@@ -268,6 +268,7 @@ function GlovFont(font_info, texture_name) {
   if (!this.replacement_character) {
     this.replacement_character = this.infoFromChar(63); // '?'
   }
+  this.whitespace_character = this.infoFromChar(13);
 
   this.default_style = new GlovFontStyle();
   this.applied_style = new GlovFontStyle();
@@ -371,11 +372,11 @@ GlovFont.prototype.infoFromChar = function (c) {
   if (ret) {
     return ret;
   }
-  if (c > 127) {
-    // no char info, and non-ascii, non-control code
-    return this.replacement_character;
+  if (c >= 9 && c <= 13) { // characters that String.trim() strip
+    return this.whitespace_character;
   }
-  return null;
+  // no char info, not whitespace, show replacement even if ascii, control code
+  return this.replacement_character;
 };
 
 GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {
@@ -398,9 +399,6 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
   for (let ii = 0; ii < text.length; ++ii) {
     let c = text.charCodeAt(ii);
     let char_info = this.infoFromChar(c);
-    if (!char_info) {
-      char_info = this.infoFromChar(13);
-    }
     if (char_info) {
       ret += (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
     }
@@ -426,9 +424,6 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
     let newx = x;
     let char_w;
     let char_info = this.infoFromChar(c);
-    if (!char_info) {
-      char_info = this.infoFromChar(10);
-    }
     if (char_info) {
       char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
       newx = x + char_w;
@@ -620,9 +615,6 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
       x = ((((x - _x) / tabsize) | 0) + 1) * tabsize + _x;
     } else {
       let char_info = this.infoFromChar(c);
-      if (!char_info) {
-        char_info = this.infoFromChar(13);
-      }
       if (char_info) {
         let char_scale = char_info.scale;
         let xsc2 = xsc * char_scale;

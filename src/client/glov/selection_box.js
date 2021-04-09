@@ -205,6 +205,10 @@ class GlovSelectionBox {
       }
     }
 
+    if (this.pre_dropdown_selection !== undefined && this.pre_dropdown_selection > this.items.length) {
+      this.pre_dropdown_selection = undefined;
+    }
+
     let y0 = y;
     let yret;
     let display = this.display;

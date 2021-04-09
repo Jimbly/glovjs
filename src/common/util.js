@@ -116,6 +116,20 @@ export function deepEqual(a, b) {
   return a === b;
 }
 
+export function deepAdd(dest, src) {
+  assert(dest && src);
+  for (let key in src) {
+    let value = src[key];
+    if (typeof value === 'object') {
+      let dest_sub = dest[key] = dest[key] || {};
+      assert.equal(typeof dest_sub, 'object');
+      deepAdd(dest_sub, value);
+    } else {
+      dest[key] = (dest[key] || 0) + value;
+    }
+  }
+}
+
 export function clamp(v, mn, mx) {
   return min(max(mn, v), mx);
 }
@@ -279,11 +293,70 @@ export function callEach(arr, pre_clear, ...args) {
 
 // The characters cause problems with lower level systems (Google Firestore)
 // that presumably try to convert to UTF-16.
-const utf16_surrogates = /[\uD800-\uDFFF]/g;
+// const utf16_surrogates = /[\uD800-\uDFFF]/g;
+
+// "Bad" whitespace characters not caught by .trim()
+// Found by running:
+//   require('somefont.json').char_infos.filter(a=>String.fromCharCode(a.c).trim()).filter(a=>!a.w).map(a=a.c)
+// const bad_whitespace = /[\x00-\x1F\x7F\u1D54\u1D55\u2000-\u200F\u205F-\u206F\uFE00]/g;
+
+// eslint-disable-next-line no-control-regex, no-misleading-character-class
+const sanitize_regex = /[\uD800-\uDFFF\x00-\x1F\x7F\u1D54\u1D55\u2000-\u200F\u205F-\u206F\uFE00]/g;
 export function sanitize(str) {
-  return (str || '').replace(utf16_surrogates, '');
+  return (str || '').replace(sanitize_regex, '');
 }
 
 export function plural(number, label) {
   return `${label}${number === 1 ? '' : 's'}`;
+}
+
+export function secondsToFriendlyString(seconds) {
+  let days = floor(seconds / (60*60*24));
+  seconds -= days * 60*60*24;
+  let hours = floor(seconds / (60*60));
+  seconds -= hours * 60*60;
+  let minutes = floor(seconds / 60);
+  let resp = [];
+  if (days) {
+    resp.push(`${days} ${plural(days, 'day')}`);
+  }
+  if (hours) {
+    resp.push(`${hours} ${plural(hours, 'hour')}`);
+  }
+  if (minutes || !resp.length) {
+    resp.push(`${minutes} ${plural(minutes, 'minute')}`);
+  }
+  return resp.join(', ');
+}
+
+export function secondsSince2020() {
+  // Seconds since Jan 1st, 2020
+  return floor(Date.now() / 1000) - 1577836800;
+}
+
+let sw = {}; // Stop words map
+sw.am = sw.an = sw.and = sw.as = sw.at = sw.be = sw.by = sw.el =
+  sw.for = sw.in = sw.is = sw.la = sw.las = sw.los = sw.of = sw.on =
+  sw.or = sw.the = sw.that = sw.this = sw.to = sw.with = true;
+/**
+ * Removes single char and stop words from the string array.
+ * @param {string[]} string_array Array of strings to filter out single char
+ * @returns {string[]} Filter string array with single char and stop words removed
+ */
+export function cleanupStringArray(string_array) {
+  return string_array.filter((s) => (s.length > 1) && (s.length <= 32) && !sw[s]);
+}
+
+/**
+ * Return an array of the string splits after transforming to lowercase and trimming whitespaces on each of the split.
+ * Punctuations and symbols are also filtered.
+ * Also removes single char and stopwords via cleanupStringArray.
+ * @param {string[]} string String to use to form the string split result
+ * @param {string} pattern String pattern to divide the string on
+ * @returns {string[]} String split result
+ */
+export function cleanStringSplit(string, pattern) {
+  // remove punctuations and symbols; e.g., 'In!@£$%^&*()_+sane Wo`{}[]|/?\'"rld;:<>s,.' = 'Insane Worlds'
+  const base = sanitize(string).replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
+  return cleanupStringArray(base.toLowerCase().split(pattern).map((s) => s.trim()));
 }

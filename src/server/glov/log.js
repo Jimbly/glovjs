@@ -6,7 +6,7 @@ const assert = require('assert');
 const fs = require('fs');
 const metrics = require('./metrics.js');
 const path = require('path');
-const { serverConfig } = require('./server_config.js');
+const { processUID, serverConfig } = require('./server_config.js');
 const { inspect } = require('util');
 const winston = require('winston');
 const { format } = winston;
@@ -16,6 +16,7 @@ let dumpToFile = false;
 let log_dir = './logs/';
 let last_uid = 0;
 let pid = process.pid;
+let puid = processUID();
 let logger = {};
 let raw_console = {};
 if (pid === 1 && process.env.PODNAME) {
@@ -142,6 +143,7 @@ const stackdriverFormat = format((data) => {
   data.pid = pid;
   data.uid = ++last_uid;
   data.severity = STACKDRIVER_SEVERITY[data[LEVEL]] || STACKDRIVER_SEVERITY.default;
+  data.puid = puid;
   return data;
 });
 
