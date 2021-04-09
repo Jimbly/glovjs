@@ -207,8 +207,12 @@ function eslintTask(obj) {
     obj,
     src: config.all_js_files,
   }, function (stream) {
-    return stream.pipe(eslint())
+    let ret = stream.pipe(eslint())
       .pipe(eslint.format());
+    if (args.linterror) {
+      ret = ret.pipe(eslint.failAfterError());
+    }
+    return ret;
   });
 }
 
