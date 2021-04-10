@@ -1,6 +1,6 @@
 const assert = require('assert');
 const async = require('async');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const { forwardSlashes } = gb;
 const path = require('path');
 const sourcemap = require('./sourcemap.js');

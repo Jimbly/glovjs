@@ -1,4 +1,4 @@
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const sourcemap = require('./sourcemap.js');
 
 module.exports = function (opts, uglify_opts) {

@@ -1,4 +1,4 @@
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const micromatch = require('micromatch');
 const { brotliCompress, gzip } = require('zlib');
 

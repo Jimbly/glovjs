@@ -1,4 +1,4 @@
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const JSON5 = require('json5');
 
 module.exports = function (options) {

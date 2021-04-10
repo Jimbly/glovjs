@@ -1,14 +1,14 @@
 //////////////////////////////////////////////////////////////////////////
-// Wrapper for gulp-like stream tasks to run as glovjs-build tasks
+// Wrapper for gulp-like stream tasks to run as glov-build tasks
 // Caveats:
 //   Dependencies are not tracked, to get a task to re-process something, the
 //     referencing source file must be re-saved.
-//   All glovjs-build jobs are relative to the bucket root, regardless of where
+//   All glov-build jobs are relative to the bucket root, regardless of where
 //     the ** is in the glob, so some tasks may need to be adjusted (e.g.
 //     gulp-rename will behave slightly differently)
 
 const assert = require('assert');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const path = require('path');
 const { Transform, Writable } = require('stream');
 const Vinyl = require('vinyl');

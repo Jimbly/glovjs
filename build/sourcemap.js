@@ -1,5 +1,5 @@
 const assert = require('assert');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const { forwardSlashes } = gb;
 const path = require('path');
 const { SourceMapConsumer, SourceMapGenerator } = require('source-map');

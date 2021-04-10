@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { asyncEachSeries } = require('glovjs-async');
-const gb = require('glovjs-build');
+const { asyncEachSeries } = require('glov-async');
+const gb = require('glov-build');
 const { callbackify } = gb;
 const path = require('path');
 

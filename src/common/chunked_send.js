@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const { asyncParallelLimit, asyncSeries } = require('glovjs-async');
+const { asyncParallelLimit, asyncSeries } = require('glov-async');
 const crc32 = require('./crc32.js');
 const { ceil, min } = Math;
 const { packetBufPoolAlloc, packetBufPoolFree } = require('./packet.js');

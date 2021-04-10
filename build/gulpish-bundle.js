@@ -2,7 +2,7 @@ const assert = require('assert');
 const babelify = require('babelify');
 const browserify = require('browserify');
 const concat = require('gulp-concat');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const gulpish = require('./gulpish.js');
 const replace = require('gulp-replace');
 const log = require('fancy-log');
@@ -178,7 +178,7 @@ exports.bundle = function (opts) {
       ...gulpish({
         sort: function (a, b) {
           // Need explicit ordering for concat
-          // TODO: glovjs-build should do this automatically if task.input.length > 1?
+          // TODO: glov-build should do this automatically if task.input.length > 1?
           if (a.relative.indexOf(entrypoint) !== -1) {
             return 1;
           }

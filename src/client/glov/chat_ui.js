@@ -1,7 +1,7 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 const assert = require('assert');
-const { asyncParallel } = require('glovjs-async');
+const { asyncParallel } = require('glov-async');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');

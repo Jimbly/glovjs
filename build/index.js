@@ -10,10 +10,10 @@
 
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
-const { asyncEachSeries } = require('glovjs-async');
+const { asyncEachSeries } = require('glov-async');
 const bundle = require('./bundle.js');
 const compress = require('./compress.js');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const fs = require('fs');

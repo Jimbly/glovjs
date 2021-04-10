@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const child_process = require('child_process');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 
 const copy_opts = [
   'cwd', 'detached', 'env', 'uid', 'gid', 'shell', 'stdio',

@@ -59,7 +59,7 @@ exports.compress = function (target, compress_files) {
   return gulpish(target, function (stream) {
     return stream
       // skipLarger so we don't end up with orphaned old compressed files
-      //   - not strictly needed after migrating to `glovjs-build` though!
+      //   - not strictly needed after migrating to `glov-build` though!
       .pipe(gulpif(compress_files, web_compress({ skipLarger: false })));
   });
 };

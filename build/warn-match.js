@@ -1,7 +1,7 @@
 /* eslint no-invalid-this:off */
 const assert = require('assert');
 const chalk = require('chalk');
-const gb = require('glovjs-build');
+const gb = require('glov-build');
 
 // patterns = { 'No eval': /\beval\b/ }
 module.exports = function warnMatch(patterns) {
