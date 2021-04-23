@@ -535,8 +535,9 @@ export function drawTooltip(param) {
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad * 2;
+  let dims = font.dims(modal_font_style, w, 0, font_height, param.tooltip);
   if (param.tooltip_above) {
-    tooltip_y0 -= font_height * font.numLines(modal_font_style, w, 0, font_height, param.tooltip) + eff_tooltip_pad * 2;
+    tooltip_y0 -= dims.h + eff_tooltip_pad * 2;
   }
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(modal_font_style,
@@ -549,7 +550,7 @@ export function drawTooltip(param) {
     x,
     y: tooltip_y0,
     z,
-    w: tooltip_w,
+    w: dims.w + eff_tooltip_pad * 2,
     h: y - tooltip_y0,
     pixel_scale,
   });

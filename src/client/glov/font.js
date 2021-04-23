@@ -353,7 +353,7 @@ GlovFont.prototype.drawSizedWrapped = function (style, x, y, z, w, indent, size,
     indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
 };
 
-GlovFont.prototype.wrapLines = function (w, indent, size, text, word_cb /*(x, int linenum, const char *word)*/) {
+GlovFont.prototype.wrapLines = function (w, indent, size, text, word_cb /*(x0, int linenum, const char *word, x1)*/) {
   return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, word_cb);
 };
 
@@ -365,6 +365,21 @@ GlovFont.prototype.numLines = function (style, w, indent, size, text) {
   }
   this.wrapLines(w, indent, size, text, wordCallback);
   return numlines + 1;
+};
+
+GlovFont.prototype.dims = function (style, w, indent, size, text) {
+  this.applyStyle(style);
+  let numlines = 0;
+  let max_x1 = 0;
+  function wordCallback(ignored, linenum, word, x1) {
+    max_x1 = max(max_x1, x1);
+    numlines = max(numlines, linenum);
+  }
+  this.wrapLines(w, indent, size, text, wordCallback);
+  return {
+    h: (numlines + 1) * size,
+    w: max_x1,
+  };
 };
 
 GlovFont.prototype.infoFromChar = function (c) {
@@ -406,7 +421,7 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
   return ret;
 };
 
-// word_cb(x, int linenum, const char *word)
+// word_cb(x0, int linenum, const char *word, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
   let len = text.length;
   let s = 0;
@@ -431,7 +446,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
     if (newx >= w && hard_wrap) {
       // flush the word so far!
       if (word_cb) {
-        word_cb(word_x0, linenum, text.slice(word_start, s));
+        word_cb(word_x0, linenum, text.slice(word_start, s), x);
       }
       word_start = s;
       word_x0 = indent;
@@ -464,7 +479,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
         }
       }
       if (word_cb) {
-        word_cb(word_x0, linenum, text.slice(word_start, s));
+        word_cb(word_x0, linenum, text.slice(word_start, s), x);
       }
       word_start = s+1;
       if (c === 10 /*'\n'*/) {
