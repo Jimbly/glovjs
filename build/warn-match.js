@@ -1,4 +1,3 @@
-/* eslint no-invalid-this:off */
 const assert = require('assert');
 const chalk = require('chalk');
 const gb = require('glov-build');

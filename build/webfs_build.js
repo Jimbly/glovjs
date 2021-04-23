@@ -77,7 +77,7 @@ module.exports = function (opts) {
       return void done();
     }
 
-    console.log(`  webfs(${files.length} files)`);
+    job.log(`webfs packing ${files.length} files`);
 
     let output = [preamble];
     for (let ii = 0; ii < files.length; ++ii) {
