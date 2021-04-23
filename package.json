@@ -55,7 +55,7 @@
     "console-api": "0.0.4",
     "eslint": "^7.21.0",
     "fancy-log": "^1.3.2",
-    "glov-build": "0.0.7",
+    "glov-build": "0.0.15",
     "gl-mat3": "^2.0.0",
     "gl-mat4": "^1.2.0",
     "gulp": "^4.0.2",
