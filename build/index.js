@@ -45,7 +45,11 @@ const config = {
   server_js_files: ['**/*.js', '!client/**/*.js'],
   server_static: ['**/common/words/*.gkg'],
   all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
-  client_js_files: ['**/*.js', '!server/**/*.js', '!client/vendor/**/*.js'],
+  client_js_files: [
+    '**/*.js',
+    '!server/**/*.js',
+    '!client/vendor/**/*.js',
+  ],
   client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
   server_json_files: ['server/**/*.json', 'server/**/*.json5'],
   client_html: ['client/**/*.html'],
@@ -74,14 +78,11 @@ const config = {
     'client/**/manifest.json',
   ],
   client_fsdata: [
-    'client/autogen/**',
     'client/shaders/**',
     'client/glov/shaders/**',
     'client/glov/models/box_textured_embed.glb',
     'client/glov/words/*.txt',
     'common/words/*.gkg',
-    '!client/autogen/placeholder.txt',
-    '!client/autogen/*.js',
   ],
 };
 
@@ -229,16 +230,6 @@ extra_index.forEach(function (elem) {
 gb.task({
   name: 'gulpish-client_html',
   deps: gulpish_client_html_tasks,
-});
-
-gb.task({
-  name: 'client_fsdata',
-  input: config.client_fsdata,
-  target: 'dev',
-  ...webfs({
-    base: 'client',
-    output: 'client/fsdata.js',
-  })
 });
 
 gb.task({
