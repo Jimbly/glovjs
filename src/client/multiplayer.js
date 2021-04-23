@@ -1,6 +1,6 @@
 /*eslint global-require:off*/
 const local_storage = require('./glov/local_storage.js');
-local_storage.storage_prefix = 'glovjs-multiplayer'; // Before requiring anything else that might load from this
+local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
 const assert = require('assert');
 const { cmd_parse } = require('./glov/cmds.js');

@@ -1,6 +1,6 @@
 /*eslint global-require:off*/
-const glov_local_storage = require('./glov/local_storage.js');
-glov_local_storage.storage_prefix = 'glovjs-playground'; // Before requiring anything else that might load from this
+const local_storage = require('./glov/local_storage.js');
+local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
 const engine = require('./glov/engine.js');
 const glov_font = require('./glov/font.js');
@@ -38,17 +38,17 @@ const music_file = 'music_test.webm';
 let flags = {};
 function flagGet(key, dflt) {
   if (flags[key] === undefined) {
-    flags[key] = glov_local_storage.getJSON(`flag_${key}`, dflt) || false;
+    flags[key] = local_storage.getJSON(`flag_${key}`, dflt) || false;
   }
   return flags[key];
 }
 function flagToggle(key) {
   flags[key] = !flagGet(key);
-  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
+  local_storage.setJSON(`flag_${key}`, flags[key]);
 }
 function flagSet(key, value) {
   flags[key] = value;
-  glov_local_storage.setJSON(`flag_${key}`, flags[key]);
+  local_storage.setJSON(`flag_${key}`, flags[key]);
 }
 
 const color_white = vec4(1, 1, 1, 1);

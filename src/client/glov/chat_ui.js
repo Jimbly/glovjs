@@ -55,7 +55,7 @@ settings.register({
 });
 
 function CmdHistory() {
-  assert(local_storage.storage_prefix !== 'demo'); // wrong initialization order
+  assert(local_storage.getStoragePrefix() !== 'demo'); // wrong initialization order
   this.entries = new Array(50);
   this.idx = local_storage.getJSON('console_idx'); // where we will next insert
   if (typeof this.idx !== 'number' || this.idx < 0 || this.idx >= this.entries.length) {

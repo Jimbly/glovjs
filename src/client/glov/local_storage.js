@@ -2,7 +2,19 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
-exports.storage_prefix = 'demo';
+let storage_prefix = 'demo';
+
+let is_set = false;
+export function setStoragePrefix(prefix) {
+  if (is_set) {
+    return;
+  }
+  is_set = true;
+  storage_prefix = prefix;
+}
+export function getStoragePrefix() {
+  return storage_prefix;
+}
 
 let lsd = (function () {
   try {
@@ -13,7 +25,7 @@ let lsd = (function () {
   }
 }());
 export function get(key) {
-  key = `${exports.storage_prefix}_${key}`;
+  key = `${storage_prefix}_${key}`;
   let ret = lsd[key];
   if (ret === 'undefined') {
     ret = undefined;
@@ -22,7 +34,7 @@ export function get(key) {
 }
 
 export function set(key, value) {
-  key = `${exports.storage_prefix}_${key}`;
+  key = `${storage_prefix}_${key}`;
   if (value === undefined || value === null) {
     delete lsd[key];
   } else {
@@ -48,7 +60,7 @@ export function getJSON(key, def) {
 }
 
 export function clearAll(key_prefix) {
-  let prefix = new RegExp(`^${exports.storage_prefix}_${key_prefix || ''}`, 'u');
+  let prefix = new RegExp(`^${storage_prefix}_${key_prefix || ''}`, 'u');
   for (let key in lsd) {
     if (key.match(prefix)) {
       delete lsd[key];
@@ -58,7 +70,7 @@ export function clearAll(key_prefix) {
 
 export function exportAll() {
   let obj = {};
-  let prefix = new RegExp(`^${exports.storage_prefix}_(.*)`, 'u');
+  let prefix = new RegExp(`^${storage_prefix}_(.*)`, 'u');
   for (let key in lsd) {
     let m = key.match(prefix);
     if (m) {
