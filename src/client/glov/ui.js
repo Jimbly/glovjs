@@ -536,8 +536,13 @@ export function drawTooltip(param) {
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad * 2;
   let dims = font.dims(modal_font_style, w, 0, font_height, param.tooltip);
-  if (param.tooltip_above) {
-    tooltip_y0 -= dims.h + eff_tooltip_pad * 2;
+  let above = param.tooltip_above;
+  if (!above && param.tooltip_auto_above_offset) {
+    above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
+  }
+
+  if (above) {
+    tooltip_y0 -= dims.h + eff_tooltip_pad * 2 + (param.tooltip_auto_above_offset || 0);
   }
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(modal_font_style,
@@ -570,7 +575,8 @@ export function checkHooks(param, click) {
 export function drawTooltipBox(param) {
   drawTooltip({
     x: param.x,
-    y: param.tooltip_above ? param.y - 2 : param.y + param.h + 2,
+    y: param.y + param.h + 2,
+    tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
     tooltip: param.tooltip,
     tooltip_width: param.tooltip_width,
