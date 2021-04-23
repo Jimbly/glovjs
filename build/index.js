@@ -11,6 +11,7 @@ const assert = require('assert');
 const { asyncEachSeries } = require('glov-async');
 const babel = require('./babel.js');
 const bundle = require('./bundle.js');
+const config = require('./config.js');
 const compress = require('./compress.js');
 const gb = require('glov-build');
 const eslint = require('./eslint.js');
@@ -38,52 +39,6 @@ gb.configure({
   targets,
   log_level: gb.LOG_INFO,
 });
-
-const config = {
-  server_js_files: ['**/*.js', '!client/**/*.js'],
-  server_static: ['**/common/words/*.gkg'],
-  all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
-  client_js_files: [
-    '**/*.js',
-    '!server/**/*.js',
-    '!client/vendor/**/*.js',
-  ],
-  client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
-  server_json_files: ['server/**/*.json', 'server/**/*.json5'],
-  client_html: ['client/**/*.html'],
-  client_html_index: ['**/client/index.html'],
-  client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
-  client_static: [
-    'client/**/*.webm',
-    'client/**/*.mp3',
-    'client/**/*.wav',
-    'client/**/*.ogg',
-    'client/**/*.png',
-    'client/**/*.jpg',
-    'client/**/*.glb',
-    'client/**/*.ico',
-    '!**/unused/**',
-    '!client/sounds/Bfxr/**',
-    // 'client/**/vendor/**',
-    // 'client/manifest.json',
-  ],
-  client_vendor: ['client/**/vendor/**'],
-  compress_files: [
-    'client/**/*.js',
-    'client/**/*.html',
-    'client/**/*.css',
-    'client/**/*.glb',
-    'client/**/manifest.json',
-  ],
-  client_fsdata: [
-    'client/shaders/**',
-    'client/glov/shaders/**',
-    'client/glov/models/box_textured_embed.glb',
-    'client/glov/words/*.txt',
-    'common/words/*.gkg',
-  ],
-};
-
 
 function copy(job, done) {
   job.out(job.getFile());
@@ -137,29 +92,14 @@ gb.task({
   ...eslint()
 });
 
-const default_defines = {
-  FACEBOOK: false,
-  ENV: 'default',
-};
-const extra_index = [
-  {
-    name: 'multiplayer',
-    defines: {
-      FACEBOOK: false,
-      ENV: 'multiplayer',
-    },
-    zip: false,
-  },
-];
-
 gb.task({
   name: 'gulpish-client_html_default',
   input: config.client_html,
-  ...gulpish_tasks.client_html_default('dev', default_defines)
+  ...gulpish_tasks.client_html_default('dev', config.default_defines)
 });
 
 let gulpish_client_html_tasks = ['gulpish-client_html_default'];
-extra_index.forEach(function (elem) {
+config.extra_index.forEach(function (elem) {
   let name = `gulpish-client_html_${elem.name}`;
   gulpish_client_html_tasks.push(name);
   gb.task({
@@ -297,7 +237,8 @@ gb.task({
 });
 
 // Pull from multiple tasks into one (on-disk) folder for another tasks to reference
-// TODO: for non-gulpish tasks, should be able to pull from multiple sources (automatically?) without this step?
+// For non-gulpish tasks, can pull from multiple sources (automatically) without
+//   this step, but can be useful to see this particular step on-disk.
 gb.task({
   name: 'client_intermediate',
   input: [
@@ -309,7 +250,8 @@ gb.task({
 });
 
 let bundle_tasks = [];
-function registerBundle(entrypoint, deps, is_worker, do_version) {
+function registerBundle(param) {
+  const { entrypoint, deps, is_worker, do_version } = param;
   let name = `client_bundle_${entrypoint.replace('/', '_')}`;
   let task = bundle({
     source: 'client_intermediate',
@@ -329,8 +271,7 @@ function registerBundle(entrypoint, deps, is_worker, do_version) {
   bundle_tasks.push(name);
   gb.task(task);
 }
-registerBundle('worker', 'worker_deps', true, null);
-registerBundle('app', 'app_deps', false, 'client/app.ver.json');
+config.bundles.forEach(registerBundle);
 
 const server_input_globs = [
   'server_static:**',
@@ -451,7 +392,7 @@ gb.task({
 });
 
 let zip_tasks = [];
-extra_index.forEach(function (elem) {
+config.extra_index.forEach(function (elem) {
   if (!elem.zip) {
     return;
   }
