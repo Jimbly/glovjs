@@ -22,6 +22,7 @@ export function init(params) {
   client = new WSClient(params.path);
   subs = subscription_manager.create(client, params.cmd_parse);
   subs.auto_create_user = Boolean(params.auto_create_user);
+  subs.no_auto_login = Boolean(params.no_auto_login);
   window.subs = subs; // for debugging
   exports.subs = subs;
   exports.client = client;

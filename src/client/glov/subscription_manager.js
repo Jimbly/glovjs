@@ -156,6 +156,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.logging_in = false;
   this.logging_out = false;
   this.auto_create_user = false;
+  this.no_auto_login = false;
   this.cmd_parse = cmd_parse;
   if (cmd_parse) {
     this.cmds_fetched_by_type = {};
@@ -262,7 +263,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
         resub();
       }
     });
-  } else {
+  } else if (!this.no_auto_login) {
     // Try auto-login
     if (window.FBInstant) {
       this.loginFacebook(function () {
@@ -275,8 +276,9 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     }
 
     resub();
+  } else {
+    resub();
   }
-
 };
 
 SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
