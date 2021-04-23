@@ -122,4 +122,9 @@ register({
     type: cmd_parse.TYPE_FLOAT,
     range: [1,100],
   },
+  double_click_time: {
+    default_value: 500,
+    type: cmd_parse.TYPE_INT,
+    range: [0,2500],
+  },
 });

@@ -12,6 +12,7 @@ const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
+const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
 
@@ -450,6 +451,22 @@ function onMouseDown(event) {
   }
 }
 
+let last_up_edges = [{
+  timestamp: 0,
+  pos: vec2(),
+},{
+  timestamp: 0,
+  pos: vec2(),
+}];
+function registerMouseUpEdge(touch_data, timestamp) {
+  touch_data.up_edge++;
+  let t = last_up_edges[0];
+  last_up_edges[0] = last_up_edges[1];
+  last_up_edges[1] = t;
+  v2copy(t.pos, touch_data.cur_pos);
+  t.timestamp = timestamp;
+}
+
 function onMouseUp(event) {
   if (mouse_log) {
     eventlog(event);
@@ -463,7 +480,7 @@ function onMouseUp(event) {
     if (touch_data) {
       v2copy(touch_data.cur_pos, mouse_pos);
       if (!no_click) {
-        touch_data.up_edge++;
+        registerMouseUpEdge(touch_data, eventTimestamp(event));
       }
       touch_data.state = UP;
       touch_data.down_time += timeDelta(event, touch_data.origin_time);
@@ -472,18 +489,6 @@ function onMouseUp(event) {
   }
   if (!no_click) {
     in_event.handle('mouseup', event);
-  }
-}
-
-function onDoubleClick(event) {
-  if (mouse_log) {
-    eventlog(event);
-  }
-  let button = event.button;
-  let touch_id = `m${button}`;
-  let touch_data = touches[touch_id];
-  if (touch_data && touch_data.up_edge) { // && touch_data.state === UP? Always?
-    touch_data.was_double_click = true; // TODO: populate this field for touch events too!
   }
 }
 
@@ -561,7 +566,7 @@ function onTouchChange(event) {
         released_touch = touch;
         released_ids.push(id);
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
-        touch.up_edge++;
+        registerMouseUpEdge(touch, eventTimestamp(event));
         touch.state = UP;
         touch.down_time += timeDelta(event, touch.origin_time);
         touch.release = true;
@@ -651,7 +656,6 @@ export function startup(_canvas, params) {
 
   window.addEventListener('click', ignored, false);
   //window.addEventListener('click', eventlog, false);
-  window.addEventListener('dblclick', onDoubleClick, false);
   window.addEventListener('contextmenu', ignored, false);
   window.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('mousedown', onMouseDown, false);
@@ -725,7 +729,7 @@ function updatePadState(gpd, ps, b, padcode) {
       if (touch_data) {
         setMouseToMid();
         v2copy(touch_data.cur_pos, mouse_pos);
-        touch_data.up_edge++;
+        registerMouseUpEdge(touch_data, engine.hrtime);
         touch_data.state = UP;
         touch_data.down_time += max(engine.hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
       }
@@ -817,7 +821,7 @@ export function fakeTouchEvent(is_down) {
   if (touch_data && !is_down) {
     setMouseToMid();
     v2copy(touch_data.cur_pos, mouse_pos);
-    touch_data.up_edge++;
+    registerMouseUpEdge(touch_data, engine.hrtime);
     touch_data.state = UP;
     touch_data.down_time += max(engine.hrtime - touch_data.origin_time, MIN_EVENT_TIME_DELTA);
   } else if (!touch_data && is_down) {
@@ -964,6 +968,13 @@ function checkPos(pos, param) {
   }
   return check_pos[0] >= param.x && (param.w === Infinity || check_pos[0] < param.x + param.w) &&
     check_pos[1] >= param.y && (param.h === Infinity || check_pos[1] < param.y + param.h);
+}
+
+function wasDoubleClick(pos_param) {
+  if (engine.hrtime - last_up_edges[0].timestamp > settings.double_click_time) {
+    return false;
+  }
+  return checkPos(last_up_edges[0].pos, pos_param);
 }
 
 export function mouseWheel(param) {
@@ -1198,7 +1209,7 @@ export function mouseUpEdge(param) {
         button: touch_data.button,
         pos: check_pos.slice(0),
         start_time: touch_data.start_time,
-        was_double_click: touch_data.was_double_click,
+        was_double_click: wasDoubleClick(pos_param),
       };
     }
   }
