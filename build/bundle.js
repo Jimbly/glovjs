@@ -122,9 +122,10 @@ function bundleSub(opts) {
   // source: 'client_intermediate',
   // out: 'client/app.bundle.js',
   // sourcemap: false, // defaults true
-  // do_version: true,
+  // do_version: 'client/app.ver.json',
   // browserify: {}
-  const { source, entrypoint, out, do_version } = opts;
+  // target: 'dev'
+  const { source, entrypoint, out, do_version, target } = opts;
   let do_sourcemaps = opts.sourcemap !== false;
   let browserify_opts = { ...opts.browserify };
   if (do_sourcemaps) {
@@ -240,18 +241,18 @@ function bundleSub(opts) {
       if (err) {
         return void done(err);
       }
+
+      let build_timestamp;
       if (do_version) {
-        let build_timestamp = Date.now();
+        build_timestamp = Date.now();
         // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
         build_timestamp = `"${build_timestamp}"`;
+        opts.last_build_timestamp = build_timestamp;
         assert.equal(build_timestamp.length, 15);
 
         buf = String(buf).replace(/BUILD_TIMESTAMP/g, build_timestamp);
-        job.out({
-          relative: do_version,
-          contents: `{"ver":${build_timestamp}}`,
-        });
       }
+
       if (do_sourcemaps) {
         sourcemap.out(job, {
           relative: out_name,
@@ -274,6 +275,7 @@ function bundleSub(opts) {
     init: bundleTaskInit,
     func: bundleTask,
     input: `${source}:${entrypoint}`,
+    target,
   };
 }
 
@@ -308,16 +310,19 @@ module.exports = function bundle(opts) {
   assert(!(do_version && do_final_bundle)); // app.ver.json would go to wrong place
 
   let entrypoint_name = `${subtask_name}_entrypoint`;
+  let versioned_name = entrypoint_name;
   if (!do_final_bundle) {
     tasks.push(entrypoint_name);
   }
-  addBundle(entrypoint_name, {
+  let entrypoint_subbundle_opts = {
     entrypoint,
     source,
     out,
     browserify,
     do_version,
-  });
+    target: do_final_bundle ? undefined : target,
+  };
+  addBundle(entrypoint_name, entrypoint_subbundle_opts);
 
   if (deps) {
     const babelify_opts = {
@@ -364,6 +369,7 @@ module.exports = function bundle(opts) {
       name: uglify_name,
       type: gb.SINGLE,
       input: `${deps_name}:${deps_out}`,
+      target: do_final_bundle ? undefined : target,
       ...uglify({ inline: Boolean(do_final_bundle) }, uglify_options_ext),
     });
     if (!do_final_bundle) {
@@ -371,6 +377,7 @@ module.exports = function bundle(opts) {
     } else {
 
       let final_name = `${subtask_name}_final`;
+      versioned_name = final_name;
       tasks.push(final_name);
 
       gb.task({
@@ -380,6 +387,7 @@ module.exports = function bundle(opts) {
           `${uglify_name}:${deps_out}`,
           `${entrypoint_name}:${out}`,
         ],
+        target,
         func: concat({
           output: out,
           first_file: `${uglify_name}:${deps_out}`
@@ -389,18 +397,35 @@ module.exports = function bundle(opts) {
     }
   }
 
-  function copy(job, done) {
-    job.out(job.getFile());
-    done();
+  if (do_version) {
+    let version_writer_name = `${subtask_name}_ver`;
+    gb.task({
+      name: version_writer_name,
+      deps: tasks.slice(0),
+      type: gb.SINGLE,
+      input: [`${versioned_name}:${out}`],
+      target,
+      func: function (job, done) {
+        // This would happen if we did not run the bundle in this process, but
+        // were running this task for some reason.  Probably need a clean or
+        // forcing the bundle to re-run.
+        // TODO: Not great!
+        assert(entrypoint_subbundle_opts.last_build_timestamp);
+        job.out({
+          relative: do_version,
+          contents: `{"ver":${entrypoint_subbundle_opts.last_build_timestamp}}`,
+        });
+        done();
+      },
+    });
+    tasks.push(version_writer_name);
   }
 
-  // Important: one, final composite task that copies everything to the (optional) target.
+  // Important: one, final composite task that references each of the final outputs.
   //   This allows other tasks to reference our output files as a single glob
   //   without knowing the internal names of the individual tasks.
   return {
     type: gb.SINGLE,
-    input: tasks.map((name) => `${name}:**`),
-    func: copy,
-    target,
+    deps: tasks,
   };
 };

@@ -366,32 +366,30 @@ gb.task({
   func: copy,
 });
 
-gb.task({
-  name: 'client_bundle_app.js',
-  ...bundle({
+let bundle_tasks = [];
+function registerBundle(entrypoint, deps, is_worker, do_version) {
+  let name = `client_bundle_${entrypoint.replace('/', '_')}`;
+  let task = bundle({
     source: 'client_intermediate',
-    entrypoint: 'client/app.js',
-    out: 'client/app.bundle.js',
+    entrypoint: `client/${entrypoint}.js`,
+    out: `client/${entrypoint}.bundle.js`,
     deps_source: 'source',
-    deps: 'client/app_deps.js',
-    deps_out: 'client/app_deps.bundle.js',
-    is_worker: false,
-    do_version: 'client/app.ver.json',
+    deps: `client/${deps}.js`,
+    deps_out: is_worker ? null : `client/${deps}.bundle.js`,
+    is_worker,
+    do_version,
     target: 'dev',
-  })
-});
-gb.task({
-  name: 'client_bundle_worker.js',
-  ...bundle({
-    source: 'client_intermediate',
-    entrypoint: 'client/worker.js',
-    out: 'client/worker.bundle.js',
-    deps_source: 'source',
-    deps: 'client/worker_deps.js',
-    is_worker: true,
-    target: 'dev',
-  })
-});
+  });
+  task.name = name;
+  if (do_version) { // ensure this is after all previous bundle tasks, so version file gets written last
+    task.deps = task.deps.concat(bundle_tasks);
+  }
+  bundle_tasks.push(name);
+  gb.task(task);
+}
+registerBundle('worker', 'worker_deps', true, null);
+registerBundle('app', 'app_deps', false, 'client/app.ver.json');
+
 
 // gb.task({
 //   name: 'client_bundle_app.js',
@@ -442,17 +440,32 @@ gb.task({
   }),
 });
 
-let client_input_globs_base = [
-  'client_static:**',
-  'client_css:**',
-  'client_fsdata:**',
-  'client_bundle_app.js:**',
-  'client_bundle_worker.js:**',
+gb.task({
+  name: 'client_fsdata',
+  input: config.client_fsdata,
+  target: 'dev',
+  ...webfs({
+    base: 'client',
+    output: 'client/fsdata.js',
+  })
+});
+
+function addStarStar(a) {
+  return `${a}:**`;
+}
+
+let client_tasks = [
+  'client_static',
+  'client_css',
+  'client_fsdata',
+  ...bundle_tasks,
 ];
+
+let client_input_globs_base = client_tasks.map(addStarStar);
 
 let client_input_globs = [
   ...client_input_globs_base,
-  ...gulpish_client_html_tasks.map((a) => `${a}:**`),
+  ...gulpish_client_html_tasks.map(addStarStar),
 ];
 
 
@@ -504,15 +517,11 @@ gb.task({
     'server_static',
     'server_js',
     'server_json',
-    'client_static',
-    'client_css',
-    'client_fsdata',
+    ...client_tasks,
     'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     'gulpish-client_html',
     'client_js_warnings',
-    'client_bundle_app.js',
-    'client_bundle_worker.js',
   ],
 });
 
