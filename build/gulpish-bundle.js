@@ -1,3 +1,4 @@
+// Deprecated - using gulpish to wrap old bundling code; More efficient bundling done in build/bundle.js now
 const assert = require('assert');
 const babelify = require('babelify');
 const browserify = require('browserify');
@@ -15,28 +16,6 @@ const Vinyl = require('vinyl');
 const warn_match = require('../gulp/warn-match.js');
 
 const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
-
-// TODO use these to track deps via job?
-// let external_deps = {};
-// b.pipeline.get('deps').push(through2.obj(function (entry, enc, next) {
-//   console.log(entry.deps);
-//   for (let key in entry.deps) {
-//     if (key[0] !== '.') {
-//       external_deps[key] = true;
-//       entry.deps[key] = false;
-//     }
-//   }
-//   next(null, entry);
-// }, function (next) {
-//   console.log('External deps', external_deps);
-//   next();
-// }));
-// b.pipeline.get('emit-deps').push(through2.obj(function (entry, enc, next) {
-//   console.log(entry.file, entry.deps);
-//   next(null, entry);
-// }, function (next) {
-//   next();
-// }));
 
 function bundleJS(tasks, source, filename, target, is_worker) {
   let bundle_name = filename.replace('.js', is_worker ? '.bundle.int.js' : '.bundle.js');

@@ -19,7 +19,6 @@ const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const fs = require('fs');
 const json5 = require('./json5.js');
-// const gulpish_bundle = require('./gulpish-bundle.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
@@ -138,13 +137,6 @@ gb.task({
   name: 'eslint',
   input: config.all_js_files,
   ...eslint()
-});
-
-// example, superseded by `eslint`
-gb.task({
-  name: 'gulpish-eslint',
-  input: ['common/*.js'],
-  ...gulpish_tasks.eslint()
 });
 
 const default_defines = {
@@ -341,30 +333,6 @@ function registerBundle(entrypoint, deps, is_worker, do_version) {
 }
 registerBundle('worker', 'worker_deps', true, null);
 registerBundle('app', 'app_deps', false, 'client/app.ver.json');
-
-
-// gb.task({
-//   name: 'client_bundle_app.js',
-//   ...gulpish_bundle.bundle({
-//     entrypoint: 'app.js',
-//     source: 'client_intermediate:client/',
-//     deps: 'app_deps.js',
-//     deps_source: 'client/',
-//     is_worker: false,
-//     target: 'dev:client',
-//   })
-// });
-// gb.task({
-//   name: 'client_bundle_worker.js',
-//   ...gulpish_bundle.bundle({
-//     entrypoint: 'worker.js',
-//     source: 'client_intermediate:client/',
-//     deps: 'worker_deps.js',
-//     deps_source: 'client/',
-//     is_worker: true,
-//     target: 'dev:client',
-//   })
-// });
 
 const server_input_globs = [
   'server_static:**',
