@@ -96,11 +96,8 @@ function babelTask(opts) {
   opts = opts || {};
   let babel_opts = {
     sourceMap: true,
+    ...opts.babel,
   };
-  if (opts.plugins) {
-    babel_opts.plugins = opts.plugins;
-  }
-  // BUILDTODO: server_js babel need not target ie 10!
   let babel;
   function babelInit(next) {
     if (!babel) {
@@ -121,7 +118,6 @@ function babelTask(opts) {
     let source_code = source_file.contents.toString();
     let result;
     try {
-      // BUILDTODO: set `babelrc:false` and explicitly reference a config file for slightly better perf?
       result = babel.transformSync(source_code, {
         // even if the file does not actually live in the source dir, treat it as such, for finding .babelrc files
         filename: path.join(gb.getSourceRoot(), source_file.relative),
@@ -179,7 +175,17 @@ gb.task({
   name: 'server_js',
   input: config.server_js_files,
   target: 'dev',
-  ...babelTask(),
+  ...babelTask({
+    babel: {
+      babelrc: false,
+      presets: [['@babel/env', {
+        targets: {
+          node: '12'
+        },
+        loose: true,
+      }]],
+    },
+  }),
 });
 
 gb.task({
@@ -252,11 +258,20 @@ gb.task({
     sourcemap: {
       inline: true,
     },
-    plugins: [
-      // Note: Dependencies are not tracked from babel plugins, so use
-      //   `webfs` instead of `static-fs` where possible
-      ['static-fs', {}], // generates good code, but does not allow reloading/watchify
-    ]
+    babel: {
+      babelrc: false,
+      presets: [['@babel/env', {
+        targets: {
+          ie: '10'
+        },
+        loose: true,
+      }]],
+      plugins: [
+        // Note: Dependencies are not tracked from babel plugins, so use
+        //   `webfs` instead of `static-fs` where possible
+        ['static-fs', {}], // generates good code, but does not allow reloading/watchify
+      ]
+    }
   })
 });
 
