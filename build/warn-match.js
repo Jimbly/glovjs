@@ -1,5 +1,4 @@
 const assert = require('assert');
-const chalk = require('chalk');
 const gb = require('glov-build');
 
 // patterns = { 'No eval': /\beval\b/ }
@@ -15,7 +14,7 @@ module.exports = function warnMatch(patterns) {
       let data = file.contents.toString();
       for (let key in patterns) {
         if (data.match(patterns[key])) {
-          job.warn(`${file.relative}: failed ${chalk.yellow(key)}`);
+          job.warn(`${file.relative}: failed ${key}`);
         }
       }
       done();

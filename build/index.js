@@ -5,8 +5,6 @@
 //     per-file errors for files that errored on previous runs; cannot do a
 //     SINGLE-style task with a Finish because we don't get notified of deleted
 //     files - maybe those could be provided to the init/finish callbacks?
-//   purge gulp and all unneeded gulp dependencies from package.json once
-//     everything is stable
 
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
