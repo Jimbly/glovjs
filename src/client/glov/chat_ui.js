@@ -548,9 +548,19 @@ ChatUI.prototype.sendChat = function (flags, text) {
     let pak = this.channel.pak('chat');
     pak.writeInt(flags);
     pak.writeString(text);
-    pak.send((err) => {
+    pak.send((err, data) => {
       if (err) {
-        this.addChat(`[error] ${errStr(err)}`, 'error');
+        if (err === 'ERR_ECHO') {
+          this.onMsgChat({
+            msg: text,
+            id: net.subs.loggedIn(),
+            client_id: net.client.id,
+            display_name: net.subs.logged_in_display_name,
+            flags,
+          });
+        } else {
+          this.addChat(`[error] ${errStr(err)}`, 'error');
+        }
         // if (!this.edit_text_entry.getText()) {
         //   this.edit_text_entry.setText(text);
         // }
