@@ -218,6 +218,26 @@ exports.out = function (job, opts) {
       assert(false, 'Missing `map` parameter');
     }
   }
+  let dirname = forwardSlashes(path.dirname(relative));
+  if (Buffer.isBuffer(map)) {
+    if (map.indexOf(dirname) !== -1) { // needs path fixup
+      map = map.toString();
+    }
+  }
+  if (typeof map === 'string' && map.indexOf(dirname) !== -1) {
+    map = JSON.parse(map);
+    // Fix up paths to be relative to where we're writing the map
+    if (map.sources) {
+      for (let ii = 0; ii < map.sources.length; ++ii) {
+        if (path.dirname(map.sources[ii]) === path.dirname(relative)) {
+          map.sources[ii] = path.basename(map.sources[ii]);
+        }
+      }
+    }
+    if (path.dirname(map.file) === path.dirname(relative)) {
+      map.file = path.basename(map.file);
+    }
+  }
   if (typeof map === 'object' && !Buffer.isBuffer(map)) {
     map = JSON.stringify(map);
   }

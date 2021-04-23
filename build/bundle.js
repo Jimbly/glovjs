@@ -206,6 +206,7 @@ function bundleSub(opts) {
       browserify_opts.persistentCache = persistentCache.bind(null, job);
 
       let disk_path = the_file.getDiskPath();
+      browserify_opts.basedir = path.dirname(disk_path);
       b = user_data.b = browserify(disk_path, browserify_opts);
       b.on('log', job.log.bind(job)); // output build logs to terminal
     }
