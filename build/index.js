@@ -500,6 +500,13 @@ gb.task({
 });
 
 gb.task({
+  name: 'nop',
+  type: gb.SINGLE,
+  input: 'does_not_exist',
+  func: assert.bind(null, false),
+});
+
+gb.task({
   name: 'build_deps',
   deps: [
     // 'client_json', // dep'd from client_bundle*
@@ -509,7 +516,7 @@ gb.task({
     'server_js',
     'server_json',
     ...client_tasks,
-    'eslint',
+    argv.nolint ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     'gulpish-client_html',
     'client_js_warnings',
