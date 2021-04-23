@@ -28,7 +28,7 @@ module.exports = function (filename) {
     } catch (e) {
       // ignored, use default
     }
-    console_api.setTitle(args.title || `build ${filename} | ${project_name}`);
+    console_api.setTitle(args.title || `build ${args._ || filename} | ${project_name}`);
   }
-  // prettyInterface();
+  prettyInterface();
 };
