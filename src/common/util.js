@@ -356,7 +356,7 @@ export function cleanupStringArray(string_array) {
  * @returns {string[]} String split result
  */
 export function cleanStringSplit(string, pattern) {
-  // remove punctuations and symbols; e.g., 'In!@£$%^&*()_+sane Wo`{}[]|/?\'"rld;:<>s,.' = 'Insane Worlds'
-  const base = sanitize(string).replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
+  // remove punctuations and symbols; e.g., 'In!@Â£$%^&*()_+sane Wo`{}[]|/?\'"rld;:<>s,.' = 'Insane Worlds'
+  const base = sanitize(string).replace(/[.,/\\@#Â£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
   return cleanupStringArray(base.toLowerCase().split(pattern).map((s) => s.trim()));
 }
