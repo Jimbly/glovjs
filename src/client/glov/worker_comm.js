@@ -49,7 +49,7 @@ function workerOnError(e, file, line, col, errorobj) {
     window.onerror(e.message, e.filename, e.lineno, e.colno, errorobj || e);
   } else {
     if (String(e) === '[object Event]') {
-      window.onerror(`Unknown worker errror (${e.message || e.type || e})`, file, line, col, errorobj);
+      window.onerror(`Unknown worker error (${e.message || e.type || e})`, file, line, col, errorobj);
     } else {
       window.onerror(e, file, line, col, errorobj);
     }
