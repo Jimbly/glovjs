@@ -13,6 +13,7 @@ const client_worker = require('./client_worker.js');
 const createHmac = require('crypto').createHmac;
 const { channelServerPak, channelServerSend, quietMessage } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
+const { logSubscribeClient, logUnsubscribeClient } = require('./log.js');
 const fs = require('fs');
 const { isPacket } = require('../../common/packet.js');
 const { logdata } = require('../../common/util.js');
@@ -400,6 +401,21 @@ function onLog(client, data, resp_func) {
   resp_func();
 }
 
+function onLogSubscribe(client, data, resp_func) {
+  if (!client.glov_is_dev) {
+    return void resp_func('ERR_ACCESS_DENIED');
+  }
+  logSubscribeClient(client);
+  resp_func();
+}
+function onLogUnsubscribe(client, data, resp_func) {
+  if (!client.glov_is_dev) {
+    return void resp_func('ERR_ACCESS_DENIED');
+  }
+  logUnsubscribeClient(client);
+  resp_func();
+}
+
 function uploadOnStart(client, pak, resp_func) {
   if (!client.chunked) {
     client.chunked = chunkedReceiverInit(`client_id:${client.id}`, MAX_CLIENT_UPLOAD_SIZE);
@@ -449,6 +465,8 @@ export function init(channel_server_in) {
   ws_server.onMsg('logout', onLogOut);
   ws_server.onMsg('random_name', onRandomName);
   ws_server.onMsg('log', onLog);
+  ws_server.onMsg('log_subscribe', onLogSubscribe);
+  ws_server.onMsg('log_unsubscribe', onLogUnsubscribe);
   ws_server.onMsg('get_stats', onGetStats);
   ws_server.onMsg('cmd_parse_auto', onCmdParseAuto);
 

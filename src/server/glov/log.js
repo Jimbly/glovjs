@@ -8,9 +8,11 @@ const metrics = require('./metrics.js');
 const path = require('path');
 const { processUID, serverConfig } = require('./server_config.js');
 const { inspect } = require('util');
+const { ridx } = require('../../common/util.js');
 const winston = require('winston');
 const { format } = winston;
 const Transport = require('winston-transport');
+require('winston-daily-rotate-file');
 
 let dumpToFile = false;
 let log_dir = './logs/';
@@ -63,12 +65,11 @@ function argProcessor(arg) {
   return arg;
 }
 
-let do_console_filter = false;
 
 // Note: modifies `context`
 export function logEx(context, level, ...args) {
   assert(typeof context !== 'string');
-  context = !do_console_filter && context || {};
+  context = context || {};
   level = LOG_LEVELS[level];
   assert(level);
   metrics.add(`log.${level}`, 1);
@@ -78,13 +79,11 @@ export function logEx(context, level, ...args) {
   let arg_len = args.length;
   let meta_arg = args[arg_len - 1];
   if (typeof meta_arg === 'object' && !Array.isArray(meta_arg) && !(meta_arg instanceof Error)) {
-    // last parameter is an object, merge with context metadata
+    // last parameter is an object pass as a payload
     if (typeof meta_arg.toJSON === 'function') {
       meta_arg = meta_arg.toJSON();
     }
-    for (let key in meta_arg) {
-      context[key] = meta_arg[key];
-    }
+    context.payload = meta_arg;
     --arg_len;
   }
   let message = [];
@@ -126,6 +125,36 @@ class SimpleConsoleTransport extends Transport {
   }
 }
 
+
+const subscribed_clients = [];
+export function logSubscribeClient(client) {
+  subscribed_clients.push(client);
+}
+export function logUnsubscribeClient(client) {
+  for (let ii = subscribed_clients.length - 1; ii >= 0; --ii) {
+    if (subscribed_clients[ii] === client) {
+      ridx(subscribed_clients, ii);
+    }
+  }
+}
+
+class SubscribedClientsTransport extends Transport {
+  log(linfo, callback) {
+    for (let ii = subscribed_clients.length - 1; ii >= 0; --ii) {
+      let client = subscribed_clients[ii];
+      if (!client.connected) {
+        ridx(subscribed_clients, ii);
+        continue;
+      }
+      client.send('log_echo', linfo);
+    }
+    if (callback) {
+      callback();
+    }
+    this.emit('logged', linfo);
+  }
+}
+
 const STACKDRIVER_SEVERITY = {
   // silly: 'DEFAULT',
   // verbose: 'DEBUG',
@@ -142,9 +171,21 @@ const STACKDRIVER_SEVERITY = {
 const stackdriverFormat = format((data) => {
   data.pid = pid;
   data.uid = ++last_uid;
-  data.severity = STACKDRIVER_SEVERITY[data[LEVEL]] || STACKDRIVER_SEVERITY.default;
+  data.severity = STACKDRIVER_SEVERITY[data[LEVEL]] || STACKDRIVER_SEVERITY.info;
   data.puid = puid;
   return data;
+});
+
+// Simulate an output similar to stackdriver for comparable local logs
+const stackdriverLocalFormat = format((data) => {
+  data.pid = pid;
+  data.uid = ++last_uid;
+  // data.puid = puid;
+  return {
+    severity: STACKDRIVER_SEVERITY[data[LEVEL]] || STACKDRIVER_SEVERITY.info,
+    timestamp: new Date().toISOString(),
+    jsonPayload: data,
+  };
 });
 
 let inited = false;
@@ -162,7 +203,6 @@ export function startup(params) {
   if (params.transports) {
     options.transports = options.transports.concat(params.transports);
   } else {
-    do_console_filter = config_log.console_filter;
     let args = [];
     let stderrLevels;
     if (config_log.stackdriver) {
@@ -172,6 +212,26 @@ export function startup(params) {
       args.push(stackdriverFormat());
       args.push(format.json());
     } else {
+      if (config_log.local_log) {
+        // Structured logging to disk in rotating files for local debugging
+        let local_format = format.combine(
+          stackdriverLocalFormat(),
+          format.json(),
+        );
+        options.transports.push(new winston.transports.DailyRotateFile({
+          level,
+          filename: 'server-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          dirname: 'logs',
+          maxFiles: 7,
+          eol: '\n',
+          format: local_format,
+        }));
+        options.transports.push(new SubscribedClientsTransport({
+          level,
+          format: local_format,
+        }));
+      }
       // Human-readable/grep-able console logger
       dumpToFile = true;
       let timestamp_format = config_log.timestamp_format;
@@ -186,9 +246,11 @@ export function startup(params) {
       if (log_format === 'dev' || !log_format && argv.dev) {
         args.push(format.colorize());
         args.push(
+          // Just the payload
           format.printf(function (data) {
-            let meta = Object.keys(data.metadata).length !== 0 ?
-              ` | ${inspect(data.metadata, { breakLength: Infinity })}` :
+            let payload = data.metadata && data.metadata.payload;
+            let meta = payload ?
+              ` | ${inspect(payload, { breakLength: Infinity })}` :
               '';
             return `[${data.timestamp}] ${data.level} ${data.message}${meta}`;
           })

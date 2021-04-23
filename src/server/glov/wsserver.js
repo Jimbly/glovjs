@@ -9,7 +9,7 @@ const { logEx } = require('./log.js');
 const { isPacket } = require('../../common/packet.js');
 const { packetLog, packetLogInit } = require('./packet_log.js');
 const querystring = require('querystring');
-const { ipFromRequest } = require('./request_utils.js');
+const { ipFromRequest, isLocalHost } = require('./request_utils.js');
 const util = require('../../common/util.js');
 const url = require('url');
 const wscommon = require('../../common/wscommon.js');
@@ -23,6 +23,7 @@ function WSClient(ws_server, socket) {
   this.id = ++ws_server.last_client_id;
   this.secret = Math.ceil(Math.random() * 1e10).toString();
   this.addr = ipFromRequest(socket.handshake);
+  this.glov_is_dev = isLocalHost(this.addr);
   if (socket.handshake.headers) {
     this.user_agent = socket.handshake.headers['user-agent'];
     this.origin = socket.handshake.headers.origin;

@@ -59,21 +59,25 @@ export function ipFromRequest(req) {
   // return `${ip}${port ? `:${port}` : ''}`;
 }
 
-export function allowMapFromLocalhostOnly(app) {
-  let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
-  let cache = {};
-  app.use(function (req, res, next) {
-    let ip = ipFromRequest(req); // Cache IP early, so it's available if the client disconnects
-    let cached = cache[ip];
-    if (cached === undefined) {
-      cache[ip] = cached = Boolean(ip.match(debug_ips));
-      if (cached) {
-        console.info(`Allowing dev access from ${ip}`);
-      } else {
-        console.debug(`NOT Allowing dev access from ${ip}`);
-      }
+let cache = {};
+let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
+export function isLocalHost(ip) {
+  let cached = cache[ip];
+  if (cached === undefined) {
+    cache[ip] = cached = Boolean(ip.match(debug_ips));
+    if (cached) {
+      console.info(`Allowing dev access from ${ip}`);
+    } else {
+      console.debug(`NOT Allowing dev access from ${ip}`);
     }
-    req.glov_is_dev = cached;
+  }
+  return cached;
+}
+
+export function allowMapFromLocalhostOnly(app) {
+  app.use(function (req, res, next) {
+    let ip = ipFromRequest(req);
+    req.glov_is_dev = isLocalHost(ip);
     next();
   });
   app.all('*.map', function (req, res, next) {
