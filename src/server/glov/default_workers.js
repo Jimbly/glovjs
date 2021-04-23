@@ -566,8 +566,15 @@ export function handleChat(src, pak, resp_func) {
       msgs: [],
     };
   }
-  let ts = Date.now();
   let id = user_id || channel_id;
+  let last_idx = (chat.idx + CHAT_MAX_MESSAGES - 1) % CHAT_MAX_MESSAGES;
+  let last_msg = chat.msgs[last_idx];
+  if (last_msg && last_msg.id === id && last_msg.msg === msg) {
+    self.logSrc(src, `suppressed echoing chat from ${id} ("${display_name}") ` +
+      `(${channel_id}): ${JSON.stringify(msg)}`);
+    return resp_func('ERR_ECHO');
+  }
+  let ts = Date.now();
   let data_saved = { id, msg, flags, ts, display_name };
   // Not broadcasting timestamp, so client will use local timestamp for smooth fading
   // Need client_id on broadcast so client can avoid playing a sound for own messages

@@ -996,7 +996,7 @@ export class ChannelWorker {
     if (src.user_id) {
       ctx.user_id = src.user_id;
     }
-    if (src.type !== this.channel_type) {
+    if (src.type && src.type !== this.channel_type) {
       ctx[src.type] = src.id;
     }
     // Also add display_name?
@@ -1189,8 +1189,8 @@ export class ChannelWorker {
     if (pkt_idx === expected_idx) {
       dispatch();
     } else if (pak_new_seq) {
-      this.debug(`Received new initial packet with ID ${pkt_idx
-      } (expected >=${expected_idx}) from ${source}, flagged as new_seq, dispatching...`);
+      // this.debug(`Received new initial packet with ID ${pkt_idx} ` +
+      //   `(expected >=${expected_idx}) from ${source}, flagged as new_seq, dispatching...`);
       dispatch();
     } else {
       this.info(`Received OOO packet with ID ${pkt_idx
