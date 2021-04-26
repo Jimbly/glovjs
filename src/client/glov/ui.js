@@ -1588,11 +1588,11 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   }
 }
 
-export function drawHollowRect(x0, y0, x1, y1, z, w, precise, color) {
-  drawLine(x0, y0, x1, y0, z, w, precise, color);
-  drawLine(x1, y0, x1, y1, z, w, precise, color);
-  drawLine(x1, y1, x0, y1, z, w, precise, color);
-  drawLine(x0, y1, x0, y0, z, w, precise, color);
+export function drawHollowRect(x0, y0, x1, y1, z, w, precise, color, mode) {
+  drawLine(x0, y0, x1, y0, z, w, precise, color, mode);
+  drawLine(x1, y0, x1, y1, z, w, precise, color, mode);
+  drawLine(x1, y1, x0, y1, z, w, precise, color, mode);
+  drawLine(x0, y1, x0, y0, z, w, precise, color, mode);
 }
 
 export function drawHollowRect2(param) {
