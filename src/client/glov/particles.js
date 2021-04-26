@@ -98,7 +98,7 @@ function normalizeValue(v) {
 
 function normalizeValueVec(vec, length) {
   assert(length);
-  assert(Array.isArray(vec));
+  assert(Array.isArray(vec) || vec instanceof Float32Array);
   let ret = new Array(length);
   for (let ii = 0; ii < length; ++ii) {
     ret[ii] = normalizeValue(vec[ii]);
