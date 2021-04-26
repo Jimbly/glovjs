@@ -176,6 +176,10 @@ export function zoom(x, y, factor) {
     y + (data[3] - y) * inv_factor, true);
 }
 
+export function shift(dx, dy) {
+  set(data[0] + dx, data[1] + dy, data[2] + dx, data[3] + dy, true);
+}
+
 // returns [x0,y0,x1,y1] to use as parameters set() such that src_rect in the
 // current view is now addressable by dest_rect (presumably something like
 // [0,0,vw,vh])
