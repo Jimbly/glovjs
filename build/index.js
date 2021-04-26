@@ -127,6 +127,10 @@ gb.task({
   ...json5({ beautify: true })
 });
 
+for (let ii = 0; ii < config.client_register_cbs.length; ++ii) {
+  config.client_register_cbs[ii](gb);
+}
+
 gb.task({
   name: 'client_js_babel_files',
   input: config.client_js_files,
@@ -314,6 +318,7 @@ function addStarStar(a) {
 }
 
 let client_tasks = [
+  ...config.extra_client_tasks,
   'client_static',
   'client_css',
   'client_fsdata',

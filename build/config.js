@@ -52,5 +52,7 @@ module.exports = {
     is_worker: false,
     do_version: 'client/app.ver.json',
   }],
+  extra_client_tasks: [],
+  client_register_cbs: [],
 };
 require('./config.local.js')(module.exports);
