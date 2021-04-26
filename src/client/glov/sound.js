@@ -339,6 +339,9 @@ export function soundPlayMusic(soundname, volume, transition) {
         } else {
           let sys_volume = music[0].sys_volume = volume * settings.volume * volume_override;
           sound.volume(sys_volume, music[0].id);
+          if (!sound.playing()) {
+            sound.play(undefined, sys_volume);
+          }
         }
       }
       return;
