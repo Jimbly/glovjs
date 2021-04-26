@@ -53,6 +53,11 @@ module.exports = {
     do_version: 'client/app.ver.json',
   }],
   extra_client_tasks: [],
+  extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
+  client_intermediate_input: [
+    'client_json:**',
+    'client_js_uglify:**',
+  ],
   client_register_cbs: [],
 };
-require('./config.local.js')(module.exports);
+require('./config.project.js')(module.exports);

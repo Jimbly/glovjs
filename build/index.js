@@ -245,10 +245,7 @@ gb.task({
 //   this step, but can be useful to see this particular step on-disk.
 gb.task({
   name: 'client_intermediate',
-  input: [
-    'client_json:**',
-    'client_js_uglify:**',
-  ],
+  input: config.client_intermediate_input,
   type: gb.SINGLE,
   func: copy,
 });
@@ -461,7 +458,10 @@ gb.task({
 
 gb.task({
   name: 'build.prod.compress',
-  input: client_input_globs,
+  input: [
+    ...client_input_globs,
+    ...config.extra_prod_inputs,
+  ],
   target: 'prod',
   ...compress(config.compress_files),
 });
