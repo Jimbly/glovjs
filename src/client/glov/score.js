@@ -31,6 +31,11 @@ export function init(scoreToValue, valueToScore, lds, score_key) {
   level_defs = lds;
   SCORE_KEY = score_key;
   LS_KEY = SCORE_KEY.toLowerCase();
+
+  for (let level_idx in level_defs) {
+    // eslint-disable-next-line no-use-before-define
+    getScore(level_idx); // fetch .local_score for updatePlayerName to take advantage of
+  }
 }
 export function formatName(score) {
   if (score.name.indexOf('Anonymous') === 0) {
