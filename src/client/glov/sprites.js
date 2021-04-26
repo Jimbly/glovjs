@@ -230,10 +230,15 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
       if (tex.filter_mag === gl.LINEAR) {
         // Need to bias by half a texel, so we're doing absolutely no blending with the neighboring texel
         ubias = vbias = 0.5;
-      } else if (tex.filter_mag === gl.NEAREST && engine.antialias) {
-        // When antialiasing is on, even nearest sampling samples from adjacent texels, do slight bias
-        // Want to bias by one *pixel's* worth
-        ubias = vbias = zoom_level / 2;
+      } else if (tex.filter_mag === gl.NEAREST) {
+        if (engine.antialias) {
+          // When antialiasing is on, even nearest sampling samples from adjacent texels, do slight bias
+          // Want to bias by one *pixel's* worth
+          ubias = vbias = zoom_level / 2;
+        } else {
+          // even without it, running into problems, just add a tiny bias!
+          ubias = vbias = zoom_level / 256;
+        }
       }
     } else if (zoom_level > 1) { // minification
       // need to apply this bias even with nearest filtering, not exactly sure why
