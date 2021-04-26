@@ -28,7 +28,7 @@ settings.register({
   },
   show_fps: {
     label: 'Show FPS',
-    default_value: 1,
+    default_value: engine.DEBUG ? 1 : 0,
     type: cmd_parse.TYPE_INT,
     range: [0,3],
   },
