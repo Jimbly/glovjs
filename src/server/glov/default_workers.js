@@ -498,12 +498,12 @@ let user_worker_init_data = {
   },{
     cmd: 'channel_data_get',
     help: '(Admin) Get from a channel\'s metadata',
-    usage: '/channel_data_get channel_id field.name',
+    usage: '$HELP\n/channel_data_get channel_id field.name',
     func: DefaultUserWorker.prototype.cmdChannelDataGet,
   },{
     cmd: 'channel_data_set',
     help: '(Admin) Set a channel\'s metadata',
-    usage: '/channel_data_set channel_id field.name JSON',
+    usage: '$HELP\n/channel_data_set channel_id field.name JSON',
     func: DefaultUserWorker.prototype.cmdChannelDataSet,
   }],
   handlers: {

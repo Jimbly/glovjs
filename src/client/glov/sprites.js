@@ -237,6 +237,7 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
           ubias = vbias = zoom_level / 2;
         } else {
           // even without it, running into problems, just add a tiny bias!
+          // In theory, don't want this if UVs are 0/1 and we're clamping?
           ubias = vbias = zoom_level / 256;
         }
       }

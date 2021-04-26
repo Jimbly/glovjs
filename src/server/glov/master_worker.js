@@ -565,7 +565,7 @@ export function init(channel_server) {
     }, {
       cmd: 'eat_cpu',
       help: 'Cause a channel server to eat CPU',
-      usage: '/eat_cpu INSTANCE_ID PERCENT',
+      usage: '$HELP\n/eat_cpu INSTANCE_ID PERCENT',
       func: MasterWorker.prototype.cmdEatCPU,
     }, {
       cmd: 'admin_broadcast',

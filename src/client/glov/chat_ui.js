@@ -1090,7 +1090,7 @@ export function create(params) {
   cmd_parse.register({
     cmd: 'me',
     help: 'Emote',
-    usage: 'Emote\n  Example: /me jumps up and down!',
+    usage: '$HELP\n  Example: /me jumps up and down!',
     func: emote,
   });
   // Also alias /em

@@ -74,7 +74,7 @@ cmd_parse.register({
   cmd: 'csr',
   access_run: ['sysadmin'],
   help: '(Admin) Run a command as another user',
-  usage: '/csr UserID command\n' +
+  usage: '$HELP\n  /csr UserID command\n' +
     'Example: /csr jimbly gems -100',
   func: function (str, resp_func) {
     let idx = str.indexOf(' ');

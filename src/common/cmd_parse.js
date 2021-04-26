@@ -108,6 +108,9 @@ CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
   let { cmd, func, help, usage, access_show, access_run } = param;
   assert(cmd && func);
+  if (usage && help) {
+    usage = usage.replace(/\$HELP/, help);
+  }
   this.cmds[canonical(cmd)] = {
     name: cmd,
     fn: func,
