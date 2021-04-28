@@ -15,6 +15,7 @@ export function errorReportSetPath(path) {
 
 let error_report_details = {};
 let error_report_details_str = '';
+let error_report_dynamic_details = {};
 export function errorReportSetDetails(key, value) {
   if (value) {
     error_report_details[key] = escape(String(value));
@@ -25,17 +26,38 @@ export function errorReportSetDetails(key, value) {
     .map((k) => `${k}=${error_report_details[k]}`)
     .join('&')}`;
 }
+export function errorReportSetDynamicDetails(key, fn) {
+  error_report_dynamic_details[key] = fn;
+}
+
 errorReportSetDetails('ver', BUILD_TIMESTAMP);
 errorReportSetDetails('sesuid', session_uid);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
+errorReportSetDynamicDetails('url', function () {
+  return escape(location.href);
+});
+errorReportSetDynamicDetails('time_up', function () {
+  return Date.now() - time_start;
+});
 let time_accum = 0;
 export function errorReportSetTimeAccum(new_value) {
   time_accum = new_value;
 }
+errorReportSetDynamicDetails('time_accum', function () {
+  return time_accum;
+});
 
 export function errorReportGetDetails() {
   return error_report_details;
+}
+
+function getDynamicDetail(key) {
+  let value = error_report_dynamic_details[key]();
+  if (!value && value !== 0) {
+    return '';
+  }
+  return `&${key}=${value}`;
 }
 
 let last_error_time = 0;
@@ -73,9 +95,9 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = api_path; // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
-    `&line=${line||0}&col=${col||0}&url=${escape(location.href)}` +
+    `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${error_report_details_str}` +
-    `&time_up=${Date.now() - time_start}&time_accum=${time_accum}`;
+    `${Object.keys(error_report_dynamic_details).map(getDynamicDetail).join('')}`;
   let xhr = new XMLHttpRequest();
   xhr.open('POST', url, true);
   xhr.send(null);
