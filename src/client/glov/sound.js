@@ -7,6 +7,7 @@ export const FADE_IN = 2;
 export const FADE = FADE_OUT + FADE_IN;
 
 const assert = require('assert');
+const { is_firefox } = require('./browser.js');
 const { cmd_parse } = require('./cmds.js');
 const { fbInstantOnPause } = require('./fbinstant.js');
 const { filewatchOn } = require('./filewatch.js');
@@ -14,7 +15,7 @@ const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 const { abs, floor, max, min, random } = Math;
 const settings = require('./settings.js');
 const urlhash = require('./urlhash.js');
-const { defaults, ridx } = require('../../common/util.js');
+const { callEach, defaults, ridx } = require('../../common/util.js');
 
 const DEFAULT_FADE_RATE = 0.001;
 
@@ -63,8 +64,15 @@ settings.register({
   },
 });
 
+let sounds_loading = {};
 export function soundLoad(base, opts, cb) {
   opts = opts || {};
+  if (opts.streaming && is_firefox) {
+    // TODO: Figure out workaround and fix!
+    //   On slow connections, sounds set to streaming sometimes never load on Firefox,
+    //   possibly related to preload options or something ('preload=meta' not guaranteed to fire 'canplay')
+    opts.streaming = false;
+  }
   if (Array.isArray(base)) {
     assert(!cb);
     for (let ii = 0; ii < base.length; ++ii) {
@@ -79,6 +87,17 @@ export function soundLoad(base, opts, cb) {
     }
     return;
   }
+  if (sounds_loading[key]) {
+    if (cb) {
+      sounds_loading[key].push(cb);
+    }
+    return;
+  }
+  let cbs = [];
+  if (cb) {
+    cbs.push(cb);
+  }
+  sounds_loading[key] = cbs;
   let m = base.match(/^(.*)\.(mp3|ogg|wav|webm)$/u);
   let preferred_ext;
   if (m) {
@@ -106,12 +125,12 @@ export function soundLoad(base, opts, cb) {
   function tryLoad(idx) {
     if (idx === srcs.length) {
       console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
-      if (cb) {
-        cb('Error loading sound');
-      }
+      callEach(cbs, delete sounds_loading[key], 'Error loading sound');
       return;
     }
-    ++num_loading;
+    if (!opts.streaming) {
+      ++num_loading;
+    }
     let once = false;
     let sound = new Howl({
       src: srcs.slice(idx),
@@ -120,13 +139,13 @@ export function soundLoad(base, opts, cb) {
       volume: 0,
       onload: function () {
         if (!once) {
-          --num_loading;
+          if (!opts.streaming) {
+            --num_loading;
+          }
           once = true;
           sound.glov_load_opts = opts;
           sounds[key] = sound;
-          if (cb) {
-            cb(null);
-          }
+          callEach(cbs, delete sounds_loading[key], null);
         }
       },
       onloaderror: function (id, err, extra) {
@@ -136,7 +155,9 @@ export function soundLoad(base, opts, cb) {
           console.log(`Error loading sound ${srcs[idx]}: ${err}, trying fallback...`);
         }
         if (!once) {
-          --num_loading;
+          if (!opts.streaming) {
+            --num_loading;
+          }
           once = true;
           tryLoad(idx + 1);
         }
