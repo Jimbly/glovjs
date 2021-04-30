@@ -1,4 +1,5 @@
 const assert = require('assert');
+const concat = require('glov-build-concat');
 const gb = require('glov-build');
 const { forwardSlashes } = gb;
 const path = require('path');
@@ -49,50 +50,17 @@ function fileFSName(opts, name) {
   return name;
 }
 
-function cmpName(a, b) {
-  return a.name < b.name ? -1 : 1;
-}
-
-module.exports = function (opts) {
+module.exports = function webfsBuild(opts) {
   assert(opts.output);
-  function webfsBuild(job, done) {
-    let updated_files = job.getFilesUpdated();
-    let user_data = job.getUserData();
-    user_data.files = user_data.files || {};
-
-    for (let ii = 0; ii < updated_files.length; ++ii) {
-      let file = updated_files[ii];
+  return concat({
+    preamble,
+    postamble,
+    output: opts.output,
+    proc: function (job, file, next) {
       let name = fileFSName(opts, file.relative);
       let data = file.contents;
-      if (!data) {
-        delete user_data.files[name];
-      } else {
-        let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
-        user_data.files[name] = { name, line };
-      }
-    }
-    let files = Object.values(user_data.files).sort(cmpName);
-
-    if (!files.length) {
-      return void done();
-    }
-
-    job.log(`webfs packing ${files.length} files`);
-
-    let output = [preamble];
-    for (let ii = 0; ii < files.length; ++ii) {
-      output.push(files[ii].line);
-    }
-    output.push(postamble);
-
-    job.out({
-      relative: opts.output,
-      contents: Buffer.from(output.join('\n')),
-    });
-    done();
-  }
-  return {
-    type: gb.ALL,
-    func: webfsBuild,
-  };
+      let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
+      next(null, { contents: line });
+    },
+  });
 };
