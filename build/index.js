@@ -10,7 +10,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const { asyncEachSeries } = require('glov-async');
 const babel = require('./babel.js');
-const bundle = require('./bundle.js');
+const appBundle = require('./app-bundle.js');
 const config = require('./config.js');
 const compress = require('./compress.js');
 const gb = require('glov-build');
@@ -21,7 +21,7 @@ const json5 = require('./json5.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
-const sourcemap = require('./sourcemap.js');
+const sourcemap = require('glov-build-sourcemap');
 const uglify = require('./uglify.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
@@ -176,11 +176,11 @@ gb.task({
         return void done();
       }
       // replace while updating sourcemap
-      // This doesn't work because `source-map`::applySourceMap() just doesn't
-      // work for anything non-trivial, and the babel-generated sourcemap is far from trivial
       let replacer = new Replacer(regex_code_strip, '');
       let result = replacer.replace(code, file.relative);
-      map = sourcemap.apply(map, result.map);
+      // This doesn't work because `source-map`::applySourceMap() just doesn't
+      // work for anything non-trivial, and the babel-generated sourcemap is far from trivial
+      // map = sourcemap.apply(map, result.map);
       let result_code = result.code;
 
       sourcemap.out({
@@ -254,23 +254,20 @@ let bundle_tasks = [];
 function registerBundle(param) {
   const { entrypoint, deps, is_worker, do_version } = param;
   let name = `client_bundle_${entrypoint.replace('/', '_')}`;
-  let task = bundle({
+  let out = `client/${entrypoint}.bundle.js`;
+  appBundle({
+    name,
     source: 'client_intermediate',
     entrypoint: `client/${entrypoint}.js`,
-    out: `client/${entrypoint}.bundle.js`,
+    out,
     deps_source: 'source',
     deps: `client/${deps}.js`,
     deps_out: is_worker ? null : `client/${deps}.bundle.js`,
     is_worker,
-    do_version,
     target: 'dev',
+    task_accum: bundle_tasks,
+    do_version,
   });
-  task.name = name;
-  if (do_version) { // ensure this is after all previous bundle tasks, so version file gets written last
-    task.deps = task.deps.concat(bundle_tasks);
-  }
-  bundle_tasks.push(name);
-  gb.task(task);
 }
 config.bundles.forEach(registerBundle);
 

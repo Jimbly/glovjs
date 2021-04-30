@@ -1,7 +1,7 @@
 const assert = require('assert');
 const gb = require('glov-build');
 const path = require('path');
-const sourcemap = require('./sourcemap.js');
+const sourcemap = require('glov-build-sourcemap');
 
 module.exports = function (opts) {
   opts = opts || {};
