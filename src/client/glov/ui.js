@@ -527,10 +527,6 @@ export function drawTooltip(param) {
   assert(typeof param.tooltip === 'string');
 
   let tooltip_w = param.tooltip_width || tooltip_width;
-  let x = param.x;
-  if (x + tooltip_w > camera2d.x1()) {
-    x = camera2d.x1() - tooltip_w;
-  }
   let z = param.z || Z.TOOLTIP;
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
@@ -539,6 +535,11 @@ export function drawTooltip(param) {
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
+  }
+  let x = param.x;
+  let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  if (x + eff_tooltip_w > camera2d.x1()) {
+    x = camera2d.x1() - eff_tooltip_w;
   }
 
   if (above) {
@@ -555,7 +556,7 @@ export function drawTooltip(param) {
     x,
     y: tooltip_y0,
     z,
-    w: dims.w + eff_tooltip_pad * 2,
+    w: eff_tooltip_w,
     h: y - tooltip_y0,
     pixel_scale,
   });
