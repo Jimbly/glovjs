@@ -88,8 +88,9 @@ gb.task({
 
 gb.task({
   name: 'eslint',
-  input: config.all_js_files,
-  ...eslint()
+  ...eslint({
+    input: config.all_js_files,
+  }),
 });
 
 gb.task({
