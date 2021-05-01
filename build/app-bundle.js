@@ -1,3 +1,4 @@
+const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const async = require('async');
 const bundle = require('./bundle.js');
@@ -251,7 +252,7 @@ const VERSION_BUFFER = Buffer.from(VERSION_STRING);
 function versionReplacer(buf) {
   let idx = buf.indexOf(VERSION_BUFFER);
   if (idx !== -1) {
-    let build_timestamp = Date.now();
+    let build_timestamp = argv['no-timestamp'] ? '0000000000000' : Date.now();
     // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
     build_timestamp = `"${build_timestamp}"`;
     assert.equal(build_timestamp.length, 15);
