@@ -358,6 +358,8 @@ gb.task({
 
         // don't sync clicks/scrolls/forms/etc
         ghostMode: false,
+
+        open: argv.browser === false ? false : 'local', // --no-browser
       }, done);
     } else {
       let updated = job.getFilesUpdated();
@@ -384,7 +386,7 @@ gb.task({
     'server_js',
     'server_json',
     ...client_tasks,
-    argv.nolint ? 'nop' : 'eslint',
+    (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     'gulpish-client_html',
     'client_js_warnings',

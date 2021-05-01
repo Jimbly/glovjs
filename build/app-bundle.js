@@ -1,11 +1,10 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
-const async = require('async');
 const bundle = require('./bundle.js');
+const concat = require('glov-build-concat');
 const gb = require('glov-build');
 const uglify = require('./uglify.js');
 const path = require('path');
-const sourcemap = require('glov-build-sourcemap');
 
 const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
 
@@ -52,9 +51,9 @@ const browserify_options_deps_worker = {
 };
 
 
-function concat(opts) {
+function concatJS(opts) {
   let { first_file, output } = opts;
-  function cmpFirstFile(a, b) {
+  function comparator(a, b) {
     if (a.key === first_file) {
       return -1;
     }
@@ -63,98 +62,13 @@ function concat(opts) {
     }
     return a.key < b.key ? -1 : 1;
   }
-  function isJS(file) {
-    return file.relative.endsWith('.js');
-  }
-  return function (job, done) {
-    let files = job.getFiles().filter(isJS);
-    files.sort(cmpFirstFile);
-    let sourcemaps = [];
-    let sourcetext = [];
-    // TODO: do not re-init sourcemap for unchanged files
-    async.eachOf(files, function (file, idx, next) {
-      sourcemap.init(job, file, function (err, map, ignored, stripped) {
-        if (err) {
-          return void next(err);
-        }
-        sourcetext[idx] = stripped;
-        sourcemaps[idx] = map;
-        next();
-      });
-    }, function (err) {
-      if (err) {
-        return void done(err);
-      }
-      // Concatenate lines and sourcemaps
-      let lines = [];
-      let final_map = {
-        mappings: [],
-        sources: [],
-        sourcesContent: [],
-      };
-      let name_to_idx = Object.create(null);
-      let names = [];
-      for (let ii = 0; ii < sourcetext.length; ++ii) {
-        let code = sourcetext[ii];
-        let new_lines = code.toString().split('\n');
-        let map = sourcemaps[ii];
-        map = sourcemap.decode(map);
-        // combine
-        assert(final_map.mappings.length <= lines.length);
-        while (final_map.mappings.length < lines.length) {
-          final_map.mappings.push([]); // [[]] instead?
-        }
-        assert(map.sources);
-        assert(map.sourcesContent);
-        assert.equal(map.sources.length, map.sourcesContent.length);
-        let start_source_idx = final_map.sources.length;
-        final_map.sources = final_map.sources.concat(map.sources);
-        final_map.sourcesContent = final_map.sourcesContent.concat(map.sourcesContent);
-        for (let line_num = 0; line_num < map.mappings.length; ++line_num) {
-          let line_map = map.mappings[line_num];
-          let out_line_map = [];
-          for (let jj = 0; jj < line_map.length; ++jj) {
-            let map_elem = line_map[jj];
-            if (map_elem.length <= 1) {
-              // just output char offset, meaningless? pass it through
-              out_line_map.push(map_elem);
-            } else if (map_elem.length === 4 || map_elem.length === 5) {
-              let elem = [ // mostly pass-through
-                map_elem[0],
-                map_elem[1] + start_source_idx, // source file index
-                map_elem[2],
-                map_elem[3],
-              ];
-              if (map_elem.length === 5) {
-                let name = map.names[map_elem[4]];
-                assert(name);
-                let name_idx = name_to_idx[name];
-                if (name_idx === undefined) {
-                  name_idx = name_to_idx[name] = names.length;
-                  names.push(name);
-                }
-                elem.push(name_idx);
-              }
-              out_line_map.push(elem);
-            } else {
-              assert(false);
-            }
-          }
-          final_map.mappings.push(out_line_map);
-        }
-        lines = lines.concat(new_lines);
-      }
-      if (names.length) {
-        final_map.names = names;
-      }
-      sourcemap.out(job, {
-        relative: output,
-        contents: Buffer.from(lines.join('\n')),
-        map: sourcemap.encode(output, final_map),
-        inline: false,
-      });
-      done();
-    });
+
+  return {
+    ...concat({
+      output,
+      comparator,
+      sourcemap: { inline: false },
+    }),
   };
 }
 
@@ -223,13 +137,12 @@ function bundlePair(opts) {
 
       gb.task({
         name: final_name,
-        type: gb.ALL,
         input: [
           `${uglify_name}:${deps_out}`,
           `${entrypoint_name}:${out}`,
         ],
         target,
-        func: concat({
+        ...concatJS({
           output: out,
           first_file: `${uglify_name}:${deps_out}`
         }),
@@ -252,7 +165,10 @@ const VERSION_BUFFER = Buffer.from(VERSION_STRING);
 function versionReplacer(buf) {
   let idx = buf.indexOf(VERSION_BUFFER);
   if (idx !== -1) {
-    let build_timestamp = argv['no-timestamp'] ? '0000000000000' : Date.now();
+    let build_timestamp = Date.now();
+    if (argv.timestamp === false) { // --no-timestamp
+      build_timestamp = '0000000000000';
+    }
     // Must be exactly 'BUILD_TIMESTAMP'.length (15) characters long
     build_timestamp = `"${build_timestamp}"`;
     assert.equal(build_timestamp.length, 15);

@@ -16,7 +16,7 @@
     "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
-    "start": "nodemon -w build -w ../glovjs-build/ -- build default --watch",
+    "start": "nodemon -w build -w ../glov-build/ -- build default --watch",
     "clean": "node build clean",
     "build": "node build build",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
@@ -56,7 +56,7 @@
     "gl-mat3": "^2.0.0",
     "gl-mat4": "^1.2.0",
     "glov-build": "0.0.17",
-    "glov-build-concat": "0.0.1",
+    "glov-build-concat": "0.0.2",
     "glov-build-sourcemap": "0.0.1",
     "gulp-if": "^3.0.0",
     "gulp-ifdef": "^0.2.0",
