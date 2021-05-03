@@ -1,10 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 // Migration TODO:
-//   parallel running of eslint; related: it always re-lints all files upon
-//     a fresh run - problem was if it didn't do this it wouldn't output good
-//     per-file errors for files that errored on previous runs; cannot do a
-//     SINGLE-style task with a Finish because we don't get notified of deleted
-//     files - maybe those could be provided to the init/finish callbacks?
+//   parallel running of eslint
 
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
