@@ -1,6 +1,6 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
-const bundle = require('./bundle.js');
+const browserify = require('glov-build-browserify');
 const concat = require('glov-build-concat');
 const gb = require('glov-build');
 const uglify = require('./uglify.js');
@@ -11,7 +11,6 @@ const uglify_options_ext = { compress: true, keep_fnames: false, mangle: true };
 const browserify_options_entrypoint = {
   transform: [],
   bundleExternal: false,
-  debug: true, // generate sourceMaps
 };
 
 const babelify_opts_deps = {
@@ -36,7 +35,6 @@ const browserify_options_deps = {
     // timers: './src/client/shims/timers.js',
     _process: './src/client/shims/empty.js',
   },
-  debug: true, // generate sourceMaps
   transform: [
     ['babelify', babelify_opts_deps],
   ],
@@ -96,12 +94,12 @@ function bundlePair(opts) {
     source,
     out,
     browserify: browserify_options_entrypoint,
-    target: do_final_bundle ? undefined : target,
     post_bundle_cb,
   };
   gb.task({
     name: entrypoint_name,
-    ...bundle(entrypoint_subbundle_opts)
+    target: do_final_bundle ? undefined : target,
+    ...browserify(entrypoint_subbundle_opts)
   });
 
   if (deps) {
@@ -111,7 +109,7 @@ function bundlePair(opts) {
     let deps_name = `${subtask_name}_deps`;
     gb.task({
       name: deps_name,
-      ...bundle({
+      ...browserify({
         entrypoint: deps,
         source: deps_source,
         out: deps_out,
