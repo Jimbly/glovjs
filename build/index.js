@@ -5,7 +5,7 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const { asyncEachSeries } = require('glov-async');
-const babel = require('./babel.js');
+const babel = require('glov-build-babel');
 const appBundle = require('./app-bundle.js');
 const config = require('./config.js');
 const compress = require('./compress.js');
