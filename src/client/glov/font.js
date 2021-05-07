@@ -63,7 +63,7 @@ export const ALIGN = {
   VMASK: 3 << 2,
 
   HFIT: 1 << 4,
-  HWRAP: 1 << 5, // only for glovMarkup*, not drawSizedAligned below, use drawSizedWrapped below instead
+  HWRAP: 1 << 5,
 
   HCENTERFIT: 1 | (1 << 4),
   HVCENTER: 1 | (1 << 2), // to avoid doing bitwise ops elsewhere
@@ -287,6 +287,10 @@ GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
 };
 
 GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w, h, text) {
+  if (align & ALIGN.HWRAP) {
+    assert(!(align & (ALIGN.VCENTER | ALIGN.VBOTTOM))); // only VTOP works with wrapping
+    return this.drawSizedAlignedWrapped(style, _x, _y, z, size, align & ~ALIGN.HWRAP, w, h, text);
+  }
   let x_size = size;
   let y_size = size;
   let width = this.getStringWidth(style, x_size, text);
@@ -341,6 +345,27 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
   }
 
   return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
+};
+
+GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, align, w, h, text) {
+  let indent = 0;
+  this.applyStyle(style);
+  this.last_width = 0;
+  let lines = [];
+  this.wrapLines(w, indent, size, text, (xoffs, linenum, word) => {
+    let line = lines[linenum];
+    if (line) {
+      lines[linenum] = `${line} ${word}`; // This is mangling double spaces or tabs, but maybe fine?
+    } else {
+      lines[linenum] = word;
+    }
+  });
+  let yoffs = 0;
+  for (let ii = 0; ii < lines.length; ++ii) {
+    this.drawSizedAligned(style, x, y + yoffs, z, size, align, w, h, lines[ii]);
+    yoffs += size;
+  }
+  return yoffs;
 };
 
 // returns height

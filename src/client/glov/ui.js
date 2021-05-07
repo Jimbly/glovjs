@@ -33,6 +33,7 @@ const { linkTick } = require('./link.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
+const { clipped, clipPause, clipResume } = glov_sprites;
 const textures = require('./textures.js');
 const { clamp, clone, lerp, merge } = require('../../common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -426,6 +427,7 @@ export function setMouseOver(key, quiet) {
   }
   frame_button_mouseover = key;
   button_mouseover = true;
+  glov_input.mouseOverCaptured();
 }
 
 export function focusSteal(key) {
@@ -526,6 +528,11 @@ export function drawTooltip(param) {
   assert(typeof param.y === 'number');
   assert(typeof param.tooltip === 'string');
 
+  let clip_pause = clipped();
+  if (clip_pause) {
+    clipPause();
+  }
+
   let tooltip_w = param.tooltip_width || tooltip_width;
   let z = param.z || Z.TOOLTIP;
   let tooltip_y0 = param.y;
@@ -560,6 +567,9 @@ export function drawTooltip(param) {
     h: y - tooltip_y0,
     pixel_scale,
   });
+  if (clip_pause) {
+    clipResume();
+  }
 }
 
 export function checkHooks(param, click) {

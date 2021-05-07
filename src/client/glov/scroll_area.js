@@ -32,7 +32,7 @@ function ScrollArea(params) {
   // configuration options
   this.x = 0;
   this.y = 0;
-  this.z = Z.UI; // actually in DOM, so above everything!
+  this.z = Z.UI;
   this.w = 10;
   this.h = 10; // height of visible area, not scrolled area
   this.rate_scroll_click = ui.font_height;
@@ -41,7 +41,10 @@ function ScrollArea(params) {
   this.color = vec4(1,1,1,1);
   this.background_color = vec4(0.8, 0.8, 0.8, 1); // can be null
   this.auto_scroll = false; // If true, will scroll to the bottom if the height changes and we're not actively scrolling
+  this.auto_hide = false; // If true, will hide the scroll bar when the scroll area does not require it
+  this.no_disable = false; // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
   this.focusable_elem = null; // Another element to call .focus() on if we think we are focused
+  this.min_dist = undefined; // Minimum drag distance for background drag
   this.applyParams(params);
 
   // Calculated (only once) if not set
@@ -200,8 +203,15 @@ ScrollArea.prototype.end = function (h) {
   let handle_color = this.color;
   let trough_color = this.color;
   let disabled = false;
-  if (!this.h || handle_h === 1) {
+  if (!this.h) {
     disabled = true;
+  } else if (handle_h === 1) {
+    if (this.no_disable) {
+      // Just *look* disabled, but still do overscroll, eat mousewheel events
+      trough_color = top_color = bottom_color = handle_color = this.disabled_color;
+    } else {
+      disabled = true;
+    }
   }
   this.was_disabled = disabled;
 
@@ -322,7 +332,7 @@ ScrollArea.prototype.end = function (h) {
     input.mouseOver(bar_param);
 
     // handle dragging the scroll area background
-    let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0 });
+    let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0, min_dist: this.min_dist });
     if (drag) {
       // Drag should not steal focus
       // This also fixes an interaction with chat_ui where clicking on the chat background (which causes
@@ -416,6 +426,11 @@ ScrollArea.prototype.scrollIntoFocus = function (miny, maxy, h) {
     // Make it smooth/bouncy a bit
     this.overscroll = old_scroll_pos - this.scroll_pos;
   }
+};
+
+ScrollArea.prototype.resetScroll = function () {
+  this.scroll_pos = 0;
+  this.overscroll = 0;
 };
 
 export function scrollAreaCreate(params) {

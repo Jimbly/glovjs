@@ -75,29 +75,29 @@ module.exports = function (opts) {
     let all_results = [];
     let keys = Object.keys(files);
     keys.sort();
-    let error_count = 0;
-    let warning_count = 0;
+    // let error_count = 0;
+    // let warning_count = 0;
     for (let ii = 0; ii < keys.length; ++ii) {
       let results = files[keys[ii]];
-      assert.equal(results.length, 1);
-      let result = results[0];
-      error_count += result.errorCount;
-      warning_count += result.warningCount;
+      // assert.equal(results.length, 1);
+      // let result = results[0];
+      // error_count += result.errorCount;
+      // warning_count += result.warningCount;
       all_results = all_results.concat(results);
     }
 
     if (all_results.length) {
       let results_text = formatter.format(all_results);
       if (results_text) {
-        console.log(results_text);
+        job.error(results_text);
       }
     }
-    if (error_count) {
-      job.error(`${error_count} lint error${error_count===1?'':'s'}`);
-    }
-    if (warning_count) {
-      job.warn(`${warning_count} lint warning${warning_count===1?'':'s'}`);
-    }
+    // if (error_count) {
+    //   job.error(`${error_count} lint error${error_count===1?'':'s'}`);
+    // }
+    // if (warning_count) {
+    //   job.warn(`${warning_count} lint warning${warning_count===1?'':'s'}`);
+    // }
     done();
   }
 

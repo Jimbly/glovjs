@@ -997,6 +997,10 @@ export function mouseWheel(param) {
   return ret;
 }
 
+export function mouseOverCaptured() {
+  mouse_over_captured = true;
+}
+
 export function mouseOver(param) {
   if (mouse_over_captured || pointerLocked() && !(param && param.allow_pointerlock)) {
     return false;
@@ -1190,15 +1194,19 @@ export function mouseUpEdge(param) {
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
+  let dragged_too_far = false;
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
+    if (touch_data.total > max_click_dist) {
+      // Do *not* register in_event_cb, would fire even when we would disregard this click
+      dragged_too_far = true;
+      continue;
+    }
     if (!touch_data.up_edge) {
       continue;
     }
-    if (!(button === ANY || button === touch_data.button) ||
-      touch_data.total > max_click_dist
-    ) {
+    if (!(button === ANY || button === touch_data.button)) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
@@ -1214,7 +1222,7 @@ export function mouseUpEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured) {
+  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured && !dragged_too_far) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};

@@ -8,6 +8,19 @@ const { serverConfig } = require('./server_config.js');
 let forward_depth = serverConfig().forward_depth || 0;
 let forward_loose = serverConfig().forward_loose || false;
 
+function skipWarn(req) {
+  if (forward_loose) {
+    return true;
+  }
+  if (req.url === '/' || req.url === '/status') {
+    // skipping warning on '/' because lots of internal health checks or
+    // something on GCP seem to hit this, and / is not an endpoint that could
+    // have anything interesting on its own.
+    return true;
+  }
+  return false;
+}
+
 const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
@@ -24,26 +37,32 @@ export function ipFromRequest(req) {
     //   reverse proxy, should warn if missing x-forwarded-for.
     // If forwarded through multiple proxies, want to get just the original client IP,
     //   but the configuration must specify how many trusted proxies we passed through.
-    let forward_list = (req.headers['x-forwarded-for'] || '').split(',');
-    let forward_ip = (forward_list[forward_list.length - forward_depth] || '').trim();
-    if (!forward_ip) {
-      // forward_depth is incorrect, or someone is not getting the appropriate headers
-      // Best guess: leftmost or raw IP
-      ip = forward_list[0].trim() || raw_ip;
-      if (forward_loose) {
-        // don't warn, just use best guess
-      } else if (req.url === '/' || req.url === '/status') {
-        // skipping warning on '/' because lots of internal health checks or
-        // something on GCP seem to hit this, and / is not an endpoint that could
-        // have anything interesting on its own.
-        // Use best guess IP
-      } else {
-        console.warn(`Received request missing expected x-forwarded-for header from ${raw_ip} for ${req.url}`);
-        // use a malformed IP so that it does not pass "is local" IP checks, etc
-        ip = `untrusted:${ip}`;
+    let header = req.headers['x-forwarded-for'];
+    if (!header) {
+      if (!skipWarn(req)) {
+        console.warn('Received request missing any x-forwarded-for header from ' +
+          `${raw_ip} for ${req.url}, assuming trusted local`);
       }
+      // Use raw IP
     } else {
-      ip = forward_ip;
+      let forward_list = (header || '').split(',');
+      let forward_ip = (forward_list[forward_list.length - forward_depth] || '').trim();
+      if (!forward_ip) {
+        // forward_depth is incorrect, or someone is not getting the appropriate headers
+        // Best guess: leftmost or raw IP
+        ip = forward_list[0].trim() || raw_ip;
+        if (forward_loose) {
+          // don't warn, just use best guess
+        } else {
+          if (!skipWarn(req)) {
+            console.warn(`Received request missing expected x-forwarded-for header from ${raw_ip} for ${req.url}`);
+          }
+          // use a malformed IP so that it does not pass "is local" IP checks, etc
+          ip = `untrusted:${ip}`;
+        }
+      } else {
+        ip = forward_ip;
+      }
     }
   }
   if (!ip) {
@@ -60,7 +79,7 @@ export function ipFromRequest(req) {
 }
 
 let cache = {};
-let debug_ips = /^(?:::1)|(?:127\.0\.0\.1)(?::\d+)?$/;
+let debug_ips = /^(?:(?:::1)|(?:127\.0\.0\.1)(?::\d+)?)$/;
 export function isLocalHost(ip) {
   let cached = cache[ip];
   if (cached === undefined) {
