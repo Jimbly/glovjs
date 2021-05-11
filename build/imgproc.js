@@ -1,6 +1,6 @@
 /* eslint max-len:off */
 /*
-  To use, in config.local.js, add:
+  To use, in config.project.js, add:
 
   const imgproc = require('./imgproc.js');
 
