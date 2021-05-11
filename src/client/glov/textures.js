@@ -188,7 +188,8 @@ Texture.prototype.setSamplerState = function (params) {
   gl.texParameteri(target, gl.TEXTURE_WRAP_S, this.wrap_s);
   gl.texParameteri(target, gl.TEXTURE_WRAP_T, this.wrap_t);
 
-  this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703; // Probably gl.LINEAR_MIPMAP_LINEAR
+  this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703 || // Probably gl.LINEAR_MIPMAP_LINEAR
+    params.force_mipmaps;
 
   if (max_aniso) {
     if (this.mipmaps && params.filter_mag !== gl.NEAREST) {
