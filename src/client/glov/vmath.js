@@ -119,6 +119,12 @@ export function v2floor(out, a) {
   return out;
 }
 
+export function v2round(out, a) {
+  out[0] = round(a[0]);
+  out[1] = round(a[1]);
+  return out;
+}
+
 export function v2lengthSq(a) {
   return a[0]*a[0] + a[1]*a[1];
 }
