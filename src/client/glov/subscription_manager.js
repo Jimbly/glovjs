@@ -156,6 +156,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.logging_in = false;
   this.logging_out = false;
   this.auto_create_user = false;
+  this.allow_anon = false;
   this.no_auto_login = false;
   this.cmd_parse = cmd_parse;
   if (cmd_parse) {

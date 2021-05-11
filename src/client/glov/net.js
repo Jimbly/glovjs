@@ -23,6 +23,7 @@ export function init(params) {
   subs = subscription_manager.create(client, params.cmd_parse);
   subs.auto_create_user = Boolean(params.auto_create_user);
   subs.no_auto_login = Boolean(params.no_auto_login);
+  subs.allow_anon = Boolean(params.allow_anon);
   window.subs = subs; // for debugging
   exports.subs = subs;
   exports.client = client;

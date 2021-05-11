@@ -540,7 +540,7 @@ ChatUI.prototype.isFocused = function () {
 ChatUI.prototype.sendChat = function (flags, text) {
   if (!net.client.connected) {
     this.addChat('[error] Cannot chat: Disconnected', 'error');
-  } else if (!this.channel || !net.subs.loggedIn()) {
+  } else if (!this.channel || !net.subs.loggedIn() && !net.subs.allow_anon) {
     this.addChat('[error] Cannot chat: Must be logged in', 'error');
   } else if (text.length > this.max_len) {
     this.addChat('[error] Chat message too long', 'error');
