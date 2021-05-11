@@ -501,7 +501,7 @@ function drawHelpTooltip(param) {
       let cmd_w = ui.font.drawSized(help_font_style_cmd,
         text_x, y, z+1, h, cmd);
       ui.font.drawSizedAligned(help_font_style,
-        text_x + cmd_w, y, z+1, h, glov_font.ALIGN.HFIT,
+        text_x + cmd_w, y, z+2, h, glov_font.ALIGN.HFIT,
         text_w - cmd_w, 0,
         help);
       let pos = { x, y, w, h };
@@ -569,8 +569,9 @@ ChatUI.prototype.sendChat = function (flags, text) {
   }
 };
 
-const SPACE_ABOVE_ENTRY = 8;
 ChatUI.prototype.run = function (opts) {
+  const UI_SCALE = ui.font_height / 24;
+  const SPACE_ABOVE_ENTRY = 8 * UI_SCALE;
   opts = opts || {};
   if (net.client.disconnected && !this.hide_disconnected_message) {
     ui.font.drawSizedAligned(
@@ -588,7 +589,7 @@ ChatUI.prototype.run = function (opts) {
     this.runLate();
   }
   this.did_run_late = false;
-  let x = camera2d.x0() + 10;
+  let x = camera2d.x0() + 10 * UI_SCALE;
   let y0 = camera2d.y1();
   let y = y0;
   let w = this.w;
@@ -604,7 +605,7 @@ ChatUI.prototype.run = function (opts) {
   let hide_text_input = ui.modal_dialog || ui.menu_up || hide_light;
   if (!hide_text_input && was_focused && input.touch_mode) {
     // expand chat when focused on touch devices
-    w = camera2d.x1() - x - 24;
+    w = camera2d.x1() - x - 24 * UI_SCALE;
     let font_scale = 4;
     let aspect = camera2d.screenAspect();
     if (aspect > 2) { // scale up to font scale of 8
@@ -615,7 +616,7 @@ ChatUI.prototype.run = function (opts) {
   this.setActiveSize(font_height, w); // may recalc numlines on each elem; updates wrap_w
   if (!hide_text_input) {
     anything_visible = true;
-    y -= 16 + font_height;
+    y -= 16 * UI_SCALE + font_height;
     if (!was_focused && opts.pointerlock && input.pointerLocked()) {
       // do not show edit box
       ui.font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, glov_font.ALIGN.HFIT, w, 0,
@@ -830,7 +831,7 @@ ChatUI.prototype.run = function (opts) {
       ui.drawTooltip({
         x, y, z: Z.TOOLTIP,
         tooltip_above: true,
-        tooltip_width: 450,
+        tooltip_width: 450 * UI_SCALE,
         tooltip_pad: ui.tooltip_pad * 0.5,
         tooltip: is_url && !user_mouseover ?
           `Click to open ${url_label}` :

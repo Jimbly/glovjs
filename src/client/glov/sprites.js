@@ -24,6 +24,7 @@ let sprite_shader_params = {
   clip_space
 };
 let last_uid = 0;
+let geom_stats;
 
 let sprite_queue = [];
 
@@ -133,6 +134,7 @@ export function queueraw4(
   //elem.bucket = bucket || this.default_bucket;
   //elem.tech_params = tech_params || null;
   elem.uid = ++last_uid;
+  ++geom_stats.sprites;
   sprite_queue.push(elem);
   return elem;
 }
@@ -270,6 +272,7 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
   } else {
     elem.shader_params = null;
   }
+  ++geom_stats.sprites;
   sprite_queue.push(elem);
 }
 
@@ -440,6 +443,7 @@ function commitAndFlush() {
       }
     }
     textures.bindArray(state.texs);
+    ++geom_stats.draw_calls_sprite;
     gl.drawElements(sprite_geom.mode, (end - start) * 3 / 2, gl.UNSIGNED_SHORT, start * 3);
   }
 
@@ -719,6 +723,7 @@ export function create(params) {
 }
 
 export function startup() {
+  geom_stats = geom.stats;
   clip_space[2] = -1;
   clip_space[3] = 1;
   sprite_vshader = shaders.create('glov/shaders/sprite.vp');

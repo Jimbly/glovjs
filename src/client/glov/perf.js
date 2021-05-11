@@ -1,17 +1,29 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const engine = require('./engine.js');
+let metrics = [];
+export function addMetric(metric) {
+  if (metric.show_graph) {
+    metric.num_lines = metric.colors.length;
+    metric.history_size = metric.data.history.length / metric.num_lines;
+  }
+  metric.num_labels = Object.keys(metric.labels).length;
+  if (metric.interactable === undefined) {
+    metric.interactable = engine.DEBUG && (metric.num_labels > 1 || metric.show_graph);
+  }
+  metrics.push(metric);
+}
+
+
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
-const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
 const { max } = Math;
 const settings = require('./settings.js');
 const ui = require('./ui.js');
 const { vec4, v3copy } = require('./vmath.js');
-
-let metrics = [];
 
 const METRIC_PAD = 2;
 
@@ -65,18 +77,6 @@ let fps_style = glov_font.style({
   color: 0xFFFFFFff,
 });
 
-export function addMetric(metric) {
-  if (metric.show_graph) {
-    metric.num_lines = metric.colors.length;
-    metric.history_size = metric.data.history.length / metric.num_lines;
-  }
-  metric.num_labels = Object.keys(metric.labels).length;
-  if (metric.interactable === undefined) {
-    metric.interactable = engine.DEBUG && (metric.num_labels > 1 || metric.show_graph);
-  }
-  metrics.push(metric);
-}
-
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
@@ -86,7 +86,7 @@ function showMetric(y, metric) {
   let y0 = y;
   y += pad;
   let max_label_w = 0;
-  let max_labels = settings[metric.show_stat];
+  let max_labels = metric.show_all ? Infinity : settings[metric.show_stat];
   let drew_any = false;
   let alpha = 1;
   for (let label in metric.labels) {

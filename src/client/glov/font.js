@@ -4,6 +4,7 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const geom = require('./geom.js');
 const { floor, max, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
@@ -179,23 +180,24 @@ export function styleAlpha(font_style, alpha) {
 
 let tech_params = null;
 let tech_params_dirty = false;
-let temp_color = null;
+let tech_params_cache = [];
+let tech_params_cache_idx = 0;
+let temp_color = vec4();
+let geom_stats;
 
 function createTechniqueParameters() {
   if (tech_params) {
     return;
   }
 
+  geom_stats = geom.stats;
+
   tech_params = {
     param0: vec4(),
     outlineColor: vec4(),
     glowColor: vec4(),
     glowParams: vec4(),
-    tex0: null
   };
-  if (!temp_color) {
-    temp_color = vec4();
-  }
 }
 
 function techParamsSet(param, value) {
@@ -204,12 +206,15 @@ function techParamsSet(param, value) {
   if (!tech_params_dirty) {
     if (tpv[0] !== value[0] || tpv[1] !== value[1] || tpv[2] !== value[2] || tpv[3] !== value[3]) {
       // clone
+      // PERFTODO: Should not be cloning these vec4s every frame!
+      //   Should use a pool of them, but need to reset the tech_param_cache each frame.
       tech_params = {
         param0: v4clone(tech_params.param0),
         outlineColor: v4clone(tech_params.outlineColor),
         glowColor: v4clone(tech_params.glowColor),
         glowParams: v4clone(tech_params.glowParams),
       };
+      geom_stats.font_params++;
       tech_params_dirty = true;
       tpv = tech_params[param];
     } else {
@@ -227,8 +232,37 @@ function techParamsSet(param, value) {
   }
 }
 
+function sameTP(as) {
+  for (let key in tech_params) {
+    let v1 = tech_params[key];
+    let v2 = as[key];
+    for (let ii = 0; ii < 4; ++ii) {
+      if (v1[ii] !== v2[ii]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 function techParamsGet() {
+  if (!tech_params_dirty) {
+    return tech_params;
+  }
   tech_params_dirty = false;
+  for (let ii = 0; ii < tech_params_cache.length; ++ii) {
+    if (sameTP(tech_params_cache[ii])) {
+      tech_params = tech_params_cache[ii];
+      if (tech_params_cache_idx === ii) {
+        // about to be overwritten
+        tech_params_cache_idx = (tech_params_cache_idx + 1) % 4;
+      }
+      --geom_stats.font_params;
+      return tech_params;
+    }
+  }
+  tech_params_cache[tech_params_cache_idx] = tech_params;
+  tech_params_cache_idx = (tech_params_cache_idx + 1) % 4;
   return tech_params;
 }
 
@@ -578,6 +612,8 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
     return 0;
   }
 
+  geom_stats.font_calls++;
+
   this.applyStyle(style);
 
   const avg_scale_font = (xsc + ysc) * 0.5;
@@ -641,12 +677,15 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   }
 
   // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
-  const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0.0001;
+  // same Z should be drawn in queue order, so not needed
+  const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0; // 0.0001;
 
 
   // For non-1:1 aspect ration rendering, need to scale our coordinates' padding differently in each axis
   let rel_x_scale = xsc / avg_scale_font;
   let rel_y_scale = ysc / avg_scale_font;
+
+  let sort_y = (y - camera2d.data[1]) * camera2d.data[5];
 
   for (let i=0; i<len; i++) {
     const c = text.charCodeAt(i);
@@ -668,6 +707,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
             value2[0] = -applied_style.glow_xoffs * font_texel_scale * pad_scale / tile_width;
             value2[1] = -applied_style.glow_yoffs * font_texel_scale * pad_scale / tile_height;
             techParamsSet('glowParams', value2);
+            tile_state = char_scale;
           }
 
           let u0 = (char_info.x0 - padding_in_font_space[0] * pad_scale) / tile_width;
@@ -678,13 +718,14 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
           let w = char_info.w * xsc2 + (padding4[0] + padding4[2]) * rel_x_scale;
           let h = char_info.h * ysc2 + (padding4[1] + padding4[3]) * rel_y_scale;
 
-          sprites.queueraw(
+          let elem = sprites.queueraw(
             texs,
             x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,
             z + z_advance * i, w, h,
             u0, v0, u1, v1,
             applied_style.color_vec4,
             this.shader, techParamsGet());
+          elem.y = sort_y;
 
           // require('./ui.js').drawRect(x - rel_x_scale * padding4[0],
           //   y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,

@@ -3,13 +3,45 @@
 /* eslint no-bitwise:off */
 
 const assert = require('assert');
+const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
+const perf = require('./perf.js');
+const settings = require('./settings.js');
 const { MAX_SEMANTIC } = require('./shaders.js');
 const { ceil, max, min } = Math;
 
 export const TRIANGLES = 4;
 export const TRIANGLE_FAN = 6;
 export const QUADS = 7;
+
+settings.register({
+  show_render_stats: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+  },
+});
+
+export let stats = {
+  draw_calls: 0,
+  draw_calls_geom: 0,
+  draw_calls_sprite: 0,
+  sprites: 0,
+  font_calls: 0,
+  font_params: 0,
+};
+let last_stats = {};
+let perf_labels = {};
+for (let key in stats) {
+  perf_labels[`${key}: `] = () => String(last_stats[key]);
+}
+perf.addMetric({
+  name: 'render_stats',
+  show_stat: 'show_render_stats',
+  show_all: true,
+  labels: perf_labels,
+});
+
 
 const gl_byte_size = {
   0x1400: 1, // GL_BYTE
@@ -297,6 +329,12 @@ export function geomResetState() {
   for (let ii = 0; ii < bound_attribs.length; ++ii) {
     bound_attribs[ii].vbo = null;
   }
+  // Also resetting stats for metrics here, but could do that separately if needed
+  stats.draw_calls = stats.draw_calls_geom + stats.draw_calls_sprite;
+  for (let key in stats) {
+    last_stats[key] = stats[key];
+    stats[key] = 0;
+  }
 }
 
 Geom.prototype.bind = function () {
@@ -339,6 +377,7 @@ Geom.prototype.bind = function () {
 };
 Geom.prototype.draw = function () {
   this.bind();
+  ++stats.draw_calls_geom;
   if (this.ibo) {
     gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
   } else {
