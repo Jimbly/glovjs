@@ -274,6 +274,9 @@ const server_input_globs = [
   'server_json:**',
 ];
 
+let server_port = argv.port || process.env.port || 3000;
+let server_port_https = argv.sport || process.env.sport || (server_port + 100);
+
 gb.task({
   name: 'run_server',
   input: server_input_globs,
@@ -287,7 +290,7 @@ gb.task({
       '--master',
     ].concat(argv.debug ? ['--debug'] : [])
     .concat(argv.env ? [`--env=${argv.env}`] : [])
-    .concat(argv.port ? [`--port=${argv.port}`] : []),
+    .concat(argv.port ? [`--port=${server_port}`] : []),
     stdio: 'inherit',
     // shell: true,
     // detached: true,
@@ -324,6 +327,8 @@ let client_input_globs = [
 ];
 
 
+let bs_target = `http://localhost:${server_port}`;
+let bs_target_https = `https://localhost:${server_port_https}`;
 let bs;
 gb.task({
   name: 'browser_sync',
@@ -333,6 +338,19 @@ gb.task({
   version: Date.now(), // always runs once per process
   init: function (next) {
     if (!bs) {
+      // eslint-disable-next-line global-require
+      let utils = require('browser-sync/dist/utils.js');
+      // hack the browser opening to go to the URL we want
+      let old_open = utils.opnWrapper;
+      assert(old_open);
+      utils.opnWrapper = (url, name, instance) => {
+        if (instance.options.get('open') === 'target') {
+          url = bs_target;
+        } else if (instance.options.get('open') === 'target_https') {
+          url = bs_target_https;
+        }
+        old_open(url, name, instance);
+      };
       // eslint-disable-next-line global-require
       bs = require('browser-sync').create();
     }
@@ -346,7 +364,7 @@ gb.task({
       bs.init({
         // informs browser-sync to proxy our app which would run at the following location
         proxy: {
-          target: `http://localhost:${argv.port || process.env.port || 3000}`,
+          target: bs_target,
           ws: true,
         },
         // informs browser-sync to use the following port for the proxied app
@@ -356,7 +374,8 @@ gb.task({
         // don't sync clicks/scrolls/forms/etc
         ghostMode: false,
 
-        open: argv.browser === false ? false : 'local', // --no-browser
+        open: argv.browser === false ? false : // --no-browser
+          argv.https ? 'target_https' : 'target',
       }, done);
     } else {
       let updated = job.getFilesUpdated();
