@@ -329,6 +329,7 @@ gb.task({
   name: 'browser_sync',
   input: client_input_globs,
   type: gb.ALL,
+  read: false,
   version: Date.now(), // always runs once per process
   init: function (next) {
     if (!bs) {

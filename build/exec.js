@@ -61,6 +61,7 @@ module.exports = function exec(opts) {
   return {
     type: gb.ALL,
     version: Date.now(), // always runs once per process
+    read: false,
     func: function (job, done) {
       if (proc && proc.exitCode !== null) {
         // Previous run exited
