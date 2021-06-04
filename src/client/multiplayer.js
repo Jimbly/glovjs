@@ -2,6 +2,7 @@
 const local_storage = require('./glov/local_storage.js');
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
+const { createAccountUI } = require('./account_ui.js');
 const assert = require('assert');
 const { cmd_parse } = require('./glov/cmds.js');
 const engine = require('./glov/engine.js');
@@ -101,7 +102,7 @@ export function main() {
   const createSprite = glov_sprites.create;
   const createAnimation = sprite_animation.create;
 
-  app.account_ui = require('./account_ui.js').create();
+  app.account_ui = createAccountUI();
   app.chat_ui = require('./glov/chat_ui.js').create({ max_len: 1000 });
 
   const color_white = vec4(1, 1, 1, 1);

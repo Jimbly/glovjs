@@ -6,6 +6,7 @@ const local_storage = require('./glov/local_storage.js');
 const glov_font = require('./glov/font.js');
 const { KEYS, keyDownEdge } = require('./glov/input.js');
 const { linkText } = require('./glov/link.js');
+const { random, round } = Math;
 const net = require('./glov/net.js');
 const ui = require('./glov/ui.js');
 const { vec4 } = require('./glov/vmath.js');
@@ -58,22 +59,30 @@ function AccountUI() {
 }
 
 AccountUI.prototype.showLogin = function (param) {
-  let { x, y, style, button_height, button_width, prelogout, center, url_tos, url_priv, text_w, font_height } = param;
+  let {
+    x, y, style, button_height, button_width,
+    prelogout, center,
+    url_tos, url_priv, text_w,
+    font_height, font_height_small, label_w,
+    pad,
+  } = param;
   font_height = font_height || ui.font_height;
+  font_height_small = font_height_small || font_height * 0.75;
   button_height = button_height || ui.button_height;
   button_width = button_width || 240;
   text_w = text_w || 400;
+  label_w = label_w || round(font_height * 140/24);
+  pad = pad || 10;
   let { edit_box_name, edit_box_password, edit_box_password_confirm, edit_box_email, edit_box_display_name } = this;
   let login_message;
   const BOX_H = font_height;
-  let pad = 10;
   let min_h = BOX_H * 2 + pad * 3 + button_height;
   let calign = center ? glov_font.ALIGN.HRIGHT : glov_font.ALIGN.HLEFT | glov_font.ALIGN.HFIT;
 
   function showTOS(is_create) {
     if (url_tos) {
       assert(url_priv);
-      let terms_height = font_height * 0.75;
+      let terms_height = font_height_small;
       ui.font.drawSizedAligned(style, x, y, Z.UI, terms_height, glov_font.ALIGN.HCENTER, 0, 0,
         `By ${is_create ? 'creating an account' : 'logging in'} you agree to our`);
       y += terms_height;
@@ -98,8 +107,8 @@ AccountUI.prototype.showLogin = function (param) {
         url: url_priv,
         text: 'Privacy Policy',
       });
+      y += BOX_H + pad;
     }
-    y += BOX_H + pad;
   }
 
   if (!net.client.connected) {
@@ -125,7 +134,7 @@ AccountUI.prototype.showLogin = function (param) {
   ) {
     login_message = 'Auto logging in...';
     local_storage.set('did_auto_anon', 'yes');
-    let name = `anon${String(Math.random()).slice(2, 8)}`;
+    let name = `anon${String(random()).slice(2, 8)}`;
     let pass = 'test';
     local_storage.set('name', name);
     net.subs.login(name, pass, function (err) {
@@ -152,7 +161,7 @@ AccountUI.prototype.showLogin = function (param) {
   } else if (!net.subs.loggedIn()) {
     let submit = false;
     let w = text_w / 2;
-    let indent = center ? 0 : 140;
+    let indent = center ? 0 : label_w;
     let text_x = center ? x - 8 : x;
     ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Username:');
     submit = edit_box_name.run({ x: x + indent, y, w, font_height }) === edit_box_name.SUBMIT || submit;
@@ -176,8 +185,8 @@ AccountUI.prototype.showLogin = function (param) {
         submit;
 
       if (ui.buttonText({
-        x: x + w + (center ? 0 : 140) + pad, y, w: button_width * 0.5, h: BOX_H + pad - 4,
-        font_height: font_height * 0.75,
+        x: x + w + (center ? 0 : label_w) + pad, y, w: button_width * 0.5, h: BOX_H + pad - 2,
+        font_height: font_height_small,
         text: 'Random',
       })) {
         net.client.send('random_name', null, function (ignored, data) {
@@ -285,7 +294,7 @@ AccountUI.prototype.showLogin = function (param) {
     let name = formatUserID(user_id, display_name);
 
     if (show_logout) {
-      let logged_in_font_height = font_height * 0.75;
+      let logged_in_font_height = font_height_small;
       if (center) {
         ui.font.drawSizedAligned(style, center ? x - text_w / 2 : x + button_width + 8, y,
           Z.UI, logged_in_font_height,
@@ -336,6 +345,6 @@ AccountUI.prototype.showLogin = function (param) {
   return y;
 };
 
-export function create() {
+export function createAccountUI() {
   return new AccountUI();
 }
