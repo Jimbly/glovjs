@@ -823,6 +823,7 @@ export function button(param) {
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
+  param.font_height = param.font_height || font_height;
 
   let { ret, state, focused } = buttonShared(param);
   buttonImageDraw(param, state, focused);
