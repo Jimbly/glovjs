@@ -1125,6 +1125,7 @@ export function slider(value, param) {
   drawHBox({
     x: param.x + param.h * shrinkdiff/2,
     y: param.y + param.h * (1 - vshrink)/2,
+    z: param.z,
     w: param.w - param.h * shrinkdiff,
     h: param.h * vshrink,
   }, sprites.slider, param.color);
