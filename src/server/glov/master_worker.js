@@ -51,7 +51,7 @@ class MasterWorker extends ChannelWorker {
         load_value: 0,
         load: {
         },
-        last_load_time: this.channel_server.server_time,
+        last_seen_time: this.channel_server.server_time,
         num_channels: {},
         spawn_errors: 0,
       };
@@ -88,7 +88,7 @@ class MasterWorker extends ChannelWorker {
       cs.debug_addr = debug_addr;
     }
 
-    cs.last_load_time = this.channel_server.server_time;
+    cs.last_seen_time = this.channel_server.server_time;
     this.numChannelsMod(cs.num_channels, -1);
     cs.num_channels = num_channels;
     this.numChannelsMod(cs.num_channels, 1);
@@ -150,6 +150,9 @@ class MasterWorker extends ChannelWorker {
   handleWorkerCreateInternal(src, channel_type, subid, resp_func) {
     let channel_id = `${channel_type}.${subid}`;
     let log_pre = `${channel_id} requested to be created by ${src.id}: `;
+
+    // Flag the other server as heard from, so we don't time it out, even if it neglects sending load reports
+    this.getChanServData(src.id).last_seen_time = this.channel_server.server_time;
 
     // If already spawning this worker somewhere, wait until that
     //   request comes back
@@ -477,8 +480,8 @@ class MasterWorker extends ChannelWorker {
     let timed_out_csids;
     for (let csid in this.known_servers) {
       let cs = this.known_servers[csid];
-      let elapsed = this.channel_server.server_time - cs.last_load_time;
-      let timeout = cs.load.cpu >= 500 ? CHANNEL_WORKER_TIMEOUT_HEAVY : CHANNEL_WORKER_TIMEOUT;
+      let elapsed = this.channel_server.server_time - cs.last_seen_time;
+      let timeout = cs.load.cpu >= 400 ? CHANNEL_WORKER_TIMEOUT_HEAVY : CHANNEL_WORKER_TIMEOUT;
       if (elapsed >= timeout) {
         this.error(`ChannelServer ${csid} timed out, no load received recently`);
         timed_out_csids = timed_out_csids || {};

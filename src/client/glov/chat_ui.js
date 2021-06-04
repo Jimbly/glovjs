@@ -724,7 +724,7 @@ ChatUI.prototype.run = function (opts) {
                 ui.playUISound('msg_out_err', this.volume_out);
               }
               if (!this.edit_text_entry.getText()) {
-                this.history.unadd(text);
+                // this.history.unadd(text);
                 this.edit_text_entry.setText(text);
               }
               if (!is_focused) { // was auto-unfocused

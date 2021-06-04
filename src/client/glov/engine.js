@@ -19,6 +19,7 @@ const {
   errorReportDisable,
   errorReportSetPath,
   errorReportSetTimeAccum,
+  errorReportSetDetails,
   glovErrorReport,
 } = require('./error_report.js');
 const glov_font = require('./font.js');
@@ -318,7 +319,7 @@ perf.addMetric({
     vec4(1, 0.925, 0.153, 1), // cpu/tick time
     vec4(0, 0.894, 0.212, 1), // total time (GPU)
   ],
-});
+}, true);
 
 let do_borders = true;
 let do_viewport_postprocess = false;
@@ -594,6 +595,7 @@ function fixNatives(is_startup) {
   for (let a in b) {
     console[is_startup ? 'log' : 'error'](`Found invasive enumerable property "${a}" on Array.prototype, removing...`);
     let old_val = b[a];
+    errorReportSetDetails(`had_native_${a}`, typeof old_val);
     delete Array.prototype[a];
     // If this fails to work, perhaps try using Object.preventExtensions(Array.prototype) in an inline header script?
     // eslint-disable-next-line no-extend-native

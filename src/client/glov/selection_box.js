@@ -631,9 +631,11 @@ class GlovSelectionBox {
       let eff_selection = this.is_dropdown && this.dropdown_visible && this.pre_dropdown_selection !== undefined ?
         this.pre_dropdown_selection :
         this.selected;
+      let align = (display.centered ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HLEFT) |
+        glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER;
       font.drawSizedAligned(focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
         x + display.xpad, y, z + 2,
-        font_height, glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
+        font_height, align,
         width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
         this.items[eff_selection].name);
       y += entry_height;

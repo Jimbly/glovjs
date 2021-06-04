@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 export let cwstats = { msgs: 0, bytes: 0 };
+export let ERR_QUIET = 'ERR_QUIET';
 
 const AUTO_DESTROY_TIME = 90000;
 // How long to wait before assuming a packet was delivered and there is a chance
@@ -159,7 +160,7 @@ export class ChannelWorker {
     // make sense when the datastore is a database?
 
     // This check is for local filestore usage environment
-    // There will not be a filestore instance created during createChannelLocal as there is no persistance
+    // There will not be a filestore instance created during createChannelLocal as there is no persistence
     if (!this.no_datastore) {
       this.channel_server.ds_store_meta.unload(this.store_path);
     }
@@ -198,7 +199,10 @@ export class ChannelWorker {
       return resp_func('ERR_ALREADY_SUBSCRIBED');
     }
 
-    let opts = { field_list };
+    let opts = {
+      field_list,
+      suppress_join: false, // May be modified by handleNewClient
+    };
     let err = this.handleNewClient && this.handleNewClient(src, opts);
     if (err) {
       // not allowed
@@ -237,7 +241,7 @@ export class ChannelWorker {
       };
     }
 
-    if (this.emit_join_leave_events && is_client) {
+    if (this.emit_join_leave_events && !opts.suppress_join && is_client) {
       this.channelEmit('join', ids);
     }
 
@@ -378,10 +382,11 @@ export class ChannelWorker {
     }
     delete this.subscribers[channel_id];
     this.num_subscribers--;
+    let opts = { suppress_leave: false };
     if (this.handleClientDisconnect) {
-      this.handleClientDisconnect(src);
+      this.handleClientDisconnect(src, opts);
     }
-    if (this.emit_join_leave_events && is_client) {
+    if (this.emit_join_leave_events && !opts.suppress_leave && is_client) {
       this.channelEmit('leave', src);
     }
 
@@ -412,10 +417,22 @@ export class ChannelWorker {
     }
     this.sendChannelMessage(other_channel_id, 'subscribe', field_list, (err, resp_data) => {
       if (err) {
-        this.log(`->${other_channel_id} subscribe failed: ${err}`);
-        this.subscribe_counts[other_channel_id]--;
-        if (!this.subscribe_counts[other_channel_id]) {
-          delete this.subscribe_counts[other_channel_id];
+        if (err === 'ERR_ALREADY_SUBSCRIBED') {
+          // Do not treat this as a critical failure, the other end thinks we're
+          // already subscribed, perhaps we were restarted.
+          this.warn(`->${other_channel_id} subscribe failed: ${err}, ignoring`);
+          err = null;
+        } else {
+          this.log(`->${other_channel_id} subscribe failed: ${err}`);
+        }
+      }
+      if (err) {
+        this.had_subscribe_error = true;
+        if (this.subscribe_counts[other_channel_id]) { // may have already been unsubscribed, don't go negative!
+          this.subscribe_counts[other_channel_id]--;
+          if (!this.subscribe_counts[other_channel_id]) {
+            delete this.subscribe_counts[other_channel_id];
+          }
         }
         if (resp_func) {
           resp_func(err);
@@ -431,7 +448,9 @@ export class ChannelWorker {
     });
   }
   unsubscribeOther(other_channel_id) {
-    assert(this.channel_type === 'client' || this.subscribe_counts[other_channel_id]);
+    // Note: subscribe count will already be 0 if we called .subscribeOther and
+    // it failed, and then we're trying to clean up.
+    assert(this.channel_type === 'client' || this.subscribe_counts[other_channel_id] || this.had_subscribe_error);
     if (!this.subscribe_counts[other_channel_id]) {
       this.log(`->${other_channel_id}: unsubscribe - failed: not subscribed`);
       return;
@@ -780,13 +799,20 @@ export class ChannelWorker {
     let q = false;
     let key = pak.readAnsiString();
     let value = pak.readJSON();
-    if (this.handleSetChannelData ?
-      !this.handleSetChannelData(source, key, value) :
-      !this.defaultHandleSetChannelData(source, key, value)
-    ) {
+    let err = this.handleSetChannelData ?
+      this.handleSetChannelData(source, key, value) :
+      this.defaultHandleSetChannelData(source, key, value);
+    if (err) {
       // denied by app_worker
-      this.log(`set_channel_data_push on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
-      return resp_func('ERR_APP_WORKER');
+      if (err === ERR_QUIET) {
+        this.debug(`set_channel_data_push on ${key} from ${source.channel_id}` +
+          ` failed handleSetChannelData() check: ${err}`);
+        return resp_func();
+      } else {
+        this.log(`set_channel_data_push on ${key} from ${source.channel_id}` +
+          ` failed handleSetChannelData() check: ${err}`);
+        return resp_func(err);
+      }
     }
     assert(value);
     filterUndefineds(value);
@@ -842,33 +868,41 @@ export class ChannelWorker {
   defaultHandleSetChannelData(source, key, value) { // eslint-disable-line class-methods-use-this
     if (source.type !== 'client' || !source.direct) {
       // from another channel, or not directly from the user, accept it
-      return true;
+      return null;
     }
     // Do not allow modifying of other users' client data
     if (key.startsWith('public.clients.')) {
       if (!key.startsWith(`public.clients.${source.id}.`)) {
-        return false;
+        return 'ERR_INVALID_KEY';
       }
       // Do not allow modifying of clients that do not exist
       if (!this.data.public.clients[source.id]) {
-        return false;
+        return 'ERR_NO_CLIENT';
       }
-      return true;
+      return null;
     }
-    return this.permissive_client_set; // default false - don't let clients change anything other than their own data
+    // permissive_client_set default false - don't let clients change anything other than their own data
+    return this.permissive_client_set ? null : 'ERR_INVALID_KEY';
   }
 
   setChannelDataInternal(source, key, value, q, resp_func) {
     assert(typeof key === 'string');
     assert(typeof source === 'object');
-    if (this.handleSetChannelData ?
-      !this.handleSetChannelData(source, key, value) :
-      !this.defaultHandleSetChannelData(source, key, value)
-    ) {
+    let err = this.handleSetChannelData ?
+      this.handleSetChannelData(source, key, value) :
+      this.defaultHandleSetChannelData(source, key, value);
+    if (err) {
       // denied by app_worker
-      this.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check`);
-      if (resp_func) {
-        resp_func('ERR_INTERNAL');
+      if (err === ERR_QUIET) {
+        this.debug(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check: ${err}`);
+        if (resp_func) {
+          resp_func();
+        }
+      } else {
+        this.log(`setChannelData on ${key} from ${source.channel_id} failed handleSetChannelData() check: ${err}`);
+        if (resp_func) {
+          resp_func(err);
+        }
       }
       return;
     }

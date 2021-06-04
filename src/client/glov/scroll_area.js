@@ -28,8 +28,10 @@ export function setPixelScale(scale) {
   default_pixel_scale = scale;
 }
 
+let last_scroll_area_id = 0;
 function ScrollArea(params) {
   // configuration options
+  this.id = ++last_scroll_area_id;
   this.x = 0;
   this.y = 0;
   this.z = Z.UI;
@@ -94,9 +96,10 @@ ScrollArea.prototype.isFocused = function () {
 
 ScrollArea.prototype.begin = function (params) {
   this.applyParams(params);
-  let { x, y, w, h, z } = this;
+  let { x, y, w, h, z, id } = this;
   assert(!this.began || engine.DEBUG); // Checking mismatched begin/end
   this.began = true;
+  ui.focusIdSet(id);
   // Set up camera and clippers
   clipPush(z + 0.05, x, y, w - this.barWidth(), h);
   let camera_orig_x0 = camera2d.x0();
@@ -157,6 +160,7 @@ ScrollArea.prototype.end = function (h) {
   h = max(h, 1); // prevent math from going awry on height of 0
   assert(this.began); // Checking mismatched begin/end
   this.began = false;
+  ui.focusIdSet(null);
   // restore camera and clippers
   camera2d.pop();
   clipPop();

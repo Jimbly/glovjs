@@ -10,6 +10,8 @@ const { isPacket } = require('../../common/packet.js');
 
 let cmd_parse_routes = {}; // cmd string -> worker type
 
+let repeated_disconnect = 0;
+
 class ClientWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
@@ -30,6 +32,15 @@ class ClientWorker extends ChannelWorker {
       }
     });
     this.ids = this.ids_base;
+
+    if (repeated_disconnect) {
+      setTimeout(() => {
+        if (this.client.connected && repeated_disconnect) {
+          this.logCtx('warn', `Disconnecting client ${this.client_id} due to /ws_disconnect_repeated`);
+          this.client.ws_server.disconnectClient(this.client);
+        }
+      }, repeated_disconnect * 1000);
+    }
   }
 
   onApplyChannelData(source, data) {
@@ -48,6 +59,7 @@ class ClientWorker extends ChannelWorker {
 
   onForceKick(source, data) {
     assert(this.client.connected);
+    this.logCtx('debug', `Disconnecting client ${this.client_id} due to force_kick message`);
     this.client.ws_server.disconnectClient(this.client);
   }
 
@@ -162,6 +174,7 @@ class ClientWorker extends ChannelWorker {
       }
       return true;
     });
+    channel_ids.push(this.channel_id);
     if (!channel_ids.length) {
       // Not subscribed to any worker that can handle this command
       return void resp_func(`Unknown command: "${cmd_base}"`);
@@ -204,6 +217,32 @@ class ClientWorker extends ChannelWorker {
     tryNext();
   }
 
+  cmdWSDisconnect(str, resp_func) {
+    let time = Number(str) || 0;
+    if (resp_func) {
+      resp_func(null, `Disconnecting in ${time}s...`);
+    }
+    setTimeout(() => {
+      if (this.client.connected) {
+        this.logCtx('warn', `Disconnecting client ${this.client_id} due to /ws_disconnect`);
+        this.client.ws_server.disconnectClient(this.client);
+      }
+    }, time * 1000);
+  }
+  cmdWSDisconnectRepeated(str, resp_func) {
+    let time = Number(str);
+    if (!isFinite(time)) {
+      return void resp_func('Usage: /ws_disconnect_repeated SECONDS');
+    }
+    repeated_disconnect = time;
+    if (!time) {
+      return void resp_func(null, 'Repeated disconnect cleared');
+    }
+    this.cmdWSDisconnect(str);
+    return void resp_func(`Will repeatedly disconnect all future clients after ${time}s,`+
+      ' run /ws_disconnect_repeated 0 to clear');
+  }
+
   logDest(channel_id, level, ...args) {
     let ctx = {
       client: this.client_id,
@@ -226,7 +265,7 @@ class ClientWorker extends ChannelWorker {
   }
 }
 
-ClientWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
+ClientWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
 
 export function init(channel_server) {
   channel_server.registerChannelWorker('client', ClientWorker, {
@@ -240,5 +279,16 @@ export function init(channel_server) {
       upload: ClientWorker.prototype.onUpload,
       csr_user_to_clientworker: ClientWorker.prototype.onCSRUserToClientWorker,
     },
+    cmds: [{
+      cmd: 'ws_disconnect',
+      help: '(Admin) Forcibly disconnect our WebSocket connection',
+      access_run: ['sysadmin'],
+      func: ClientWorker.prototype.cmdWSDisconnect,
+    }, {
+      cmd: 'ws_disconnect_repeated',
+      help: '(Admin) Forcibly disconnect all WebSocket connections on a timer',
+      access_run: ['sysadmin'],
+      func: ClientWorker.prototype.cmdWSDisconnectRepeated,
+    }],
   });
 }

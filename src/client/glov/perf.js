@@ -3,16 +3,20 @@
 
 const engine = require('./engine.js');
 let metrics = [];
-export function addMetric(metric) {
+export function addMetric(metric, first) {
   if (metric.show_graph) {
     metric.num_lines = metric.colors.length;
     metric.history_size = metric.data.history.length / metric.num_lines;
   }
   metric.num_labels = Object.keys(metric.labels).length;
   if (metric.interactable === undefined) {
-    metric.interactable = engine.DEBUG && (metric.num_labels > 1 || metric.show_graph);
+    metric.interactable = engine.DEBUG && (metric.num_labels > 1 && !metric.show_all || metric.show_graph);
   }
-  metrics.push(metric);
+  if (first) {
+    metrics.splice(0, 0, metric);
+  } else {
+    metrics.push(metric);
+  }
 }
 
 

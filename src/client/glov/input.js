@@ -314,7 +314,8 @@ function onKeyDown(event) {
   let code = event.keyCode;
   let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
-    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey); // Safari, alternate Chrome
+    code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
+    code === KEYS.R && event.ctrlKey; // Chrome reload hotkey
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
@@ -345,6 +346,7 @@ export function debugGetMouseMoveX() {
 }
 
 let mouse_moved = false;
+let mouse_button_had_edge = false;
 let temp_delta = vec2();
 let last_abs_move = 0;
 let last_abs_move_time = 0;
@@ -445,6 +447,7 @@ function onMouseDown(event) {
   if (!no_click) {
     in_event.handle('mousedown', event);
   }
+  mouse_button_had_edge = true;
   //This solves input bug when game is running as iframe. E.g. Facebook Instant
   if (window.focus) {
     window.focus();
@@ -487,6 +490,7 @@ function onMouseUp(event) {
     }
     delete mouse_down[button];
   }
+  mouse_button_had_edge = true;
   if (!no_click) {
     in_event.handle('mouseup', event);
   }
@@ -529,8 +533,13 @@ function onTouchChange(event) {
   // Look for press and movement
   for (let ii = 0; ii < new_count; ++ii) {
     let touch = ct[ii];
-    if (!isFinite(touch.pageX) || !isFinite(touch.pageY)) {
-      // getting bad touch events sometimes (Moto phones?), simply ignore
+    try {
+      if (!isFinite(touch.pageX) || !isFinite(touch.pageY)) {
+        // getting bad touch events sometimes (Moto phones?), simply ignore
+        continue;
+      }
+    } catch (e) {
+      // getting "Permission denied to access property "pageX" rarely on Firefox, simply ignore
       continue;
     }
 
@@ -917,6 +926,7 @@ export function endFrame(skip_mouse) {
   }
   input_eaten_kb = false;
   mouse_moved = false;
+  mouse_button_had_edge = false;
 }
 
 export function tickInputInactive() {
@@ -948,6 +958,10 @@ export function mousePos(dst) {
 
 export function mouseMoved() {
   return mouse_moved;
+}
+
+export function mouseButtonHadEdge() {
+  return mouse_button_had_edge;
 }
 
 function mousePosParam(param) {

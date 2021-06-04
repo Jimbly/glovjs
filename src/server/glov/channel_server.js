@@ -441,7 +441,7 @@ class ChannelServer {
 
     // These constructors *always* get an empty object for their metadata (nothing persisted)
     let channel = new Ctor(this, channel_id, {});
-    assert(channel.no_datastore); // local channels should not be having any data persistance
+    assert(channel.no_datastore); // local channels should not be having any data persistence
 
     this.local_channels[channel_id] = channel;
     channel.on_register = [];

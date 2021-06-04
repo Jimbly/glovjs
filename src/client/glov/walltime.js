@@ -17,7 +17,12 @@ exports.sync = function (server_time) {
     offs = min(offs, server_time - Date.now());
   }
 };
+function toSS2020(milliseconds) {
+  // Seconds since Jan 1st, 2020
+  return floor(milliseconds / 1000) - 1577836800;
+}
+exports.toSS2020 = toSS2020;
 exports.seconds = function () {
   // Seconds since Jan 1st, 2020
-  return floor(now() / 1000) - 1577836800;
+  return toSS2020(now());
 };

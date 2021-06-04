@@ -325,20 +325,21 @@ export class DefaultUserWorker extends ChannelWorker {
     return resp_func(null, this.getChannelData('public'));
   }
   handleSetChannelData(src, key, value) {
-    if (!this.defaultHandleSetChannelData(src, key, value)) {
-      return false;
+    let err = this.defaultHandleSetChannelData(src, key, value);
+    if (err) {
+      return err;
     }
     assert(src);
     assert(src.type);
     if (src.type !== 'client') {
       // from another channel, accept it
-      return true;
+      return null;
     }
     // Only allow changes from own client!
     if (src.user_id !== this.user_id) {
-      return false;
+      return 'ERR_INVALID_USER';
     }
-    return true;
+    return null;
   }
 
   handleNewClient(src) {
@@ -460,7 +461,7 @@ function channelServerHandler(name) {
   });
 }
 
-ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistance is needed
+ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
 
 export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
 const regex_valid_channelname = /^(?:fb\$|[a-z])[a-z0-9_]{1,32}$/;
@@ -545,11 +546,43 @@ export function overrideUserWorker(new_user_worker, extra_data) {
 const CHAT_MAX_MESSAGES = 50;
 const CHAT_MAX_LEN = 1024; // Client must be set to this or fewer
 const CHAT_USER_FLAGS = 0x1;
+export function sendChat(worker, id, client_id, display_name, flags, msg) {
+  let self = worker;
+  let chat = self.getChannelData('private.chat', null);
+  if (!chat) {
+    chat = {
+      idx: 0,
+      msgs: [],
+    };
+  }
+  let last_idx = (chat.idx + CHAT_MAX_MESSAGES - 1) % CHAT_MAX_MESSAGES;
+  let last_msg = chat.msgs[last_idx];
+  if (id && last_msg && last_msg.id === id && last_msg.msg === msg) {
+    return 'ERR_ECHO';
+  }
+  let ts = Date.now();
+  let data_saved = { id, msg, flags, ts, display_name };
+  // Not broadcasting timestamp, so client will use local timestamp for smooth fading
+  // Need client_id on broadcast so client can avoid playing a sound for own messages
+  let data_broad = { id, msg, flags, display_name };
+  if (client_id) {
+    data_broad.client_id = client_id;
+  }
+  chat.msgs[chat.idx] = data_saved;
+  chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
+  // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
+  if (!self.channel_server.restarting) {
+    self.setChannelData('private.chat', chat);
+  }
+  self.channelEmit('chat', data_broad);
+  return null;
+}
 export function handleChat(src, pak, resp_func) {
   // eslint-disable-next-line no-invalid-this
   let self = this;
   let { user_id, channel_id, display_name } = src; // user_id is falsey if not logged in
   let client_id = src.id;
+  let id = user_id || channel_id;
   let flags = pak.readInt();
   let msg = sanitize(pak.readString()).trim();
   if (!msg) {
@@ -561,37 +594,25 @@ export function handleChat(src, pak, resp_func) {
   if (flags & ~CHAT_USER_FLAGS) {
     return resp_func('ERR_INVALID_FLAGS');
   }
-  let chat = self.getChannelData('private.chat', null);
-  if (!chat) {
-    chat = {
-      idx: 0,
-      msgs: [],
-    };
+  if (self.chatFilter) {
+    let err = self.chatFilter(src, msg);
+    if (err) {
+      self.logSrc(src, `denied chat from ${id} ("${display_name}") ` +
+        `(${channel_id}) (${err}): ${JSON.stringify(msg)}`);
+      return resp_func(err);
+    }
   }
-  let id = user_id || channel_id;
-  let last_idx = (chat.idx + CHAT_MAX_MESSAGES - 1) % CHAT_MAX_MESSAGES;
-  let last_msg = chat.msgs[last_idx];
-  if (last_msg && last_msg.id === id && last_msg.msg === msg) {
-    self.logSrc(src, `suppressed echoing chat from ${id} ("${display_name}") ` +
+  let err = sendChat(self, id, client_id, display_name, flags, msg);
+  if (err) {
+    self.logSrc(src, `suppressed chat from ${id} ("${display_name}") ` +
+      `(${channel_id}) (${err}): ${JSON.stringify(msg)}`);
+    return resp_func(err);
+  } else {
+    // Log entire, non-truncated chat string
+    self.logSrc(src, `chat from ${id} ("${display_name}") ` +
       `(${channel_id}): ${JSON.stringify(msg)}`);
-    return resp_func('ERR_ECHO');
+    return resp_func();
   }
-  let ts = Date.now();
-  let data_saved = { id, msg, flags, ts, display_name };
-  // Not broadcasting timestamp, so client will use local timestamp for smooth fading
-  // Need client_id on broadcast so client can avoid playing a sound for own messages
-  let data_broad = { id, msg, flags, client_id, display_name };
-  chat.msgs[chat.idx] = data_saved;
-  chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
-  // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
-  if (!self.channel_server.restarting) {
-    self.setChannelData('private.chat', chat);
-  }
-  self.channelEmit('chat', data_broad);
-  // Log entire, non-truncated chat string
-  self.logSrc(src, `chat from ${id} ("${display_name}") ` +
-    `(${channel_id}): ${JSON.stringify(msg)}`);
-  return resp_func();
 }
 
 export function handleChatGet(src, data, resp_func) {

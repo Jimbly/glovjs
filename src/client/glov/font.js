@@ -324,7 +324,6 @@ GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
 
 GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w, h, text) {
   if (align & ALIGN.HWRAP) {
-    assert(!(align & (ALIGN.VCENTER | ALIGN.VBOTTOM))); // only VTOP works with wrapping
     return this.drawSizedAlignedWrapped(style, _x, _y, z, size, align & ~ALIGN.HWRAP, w, h, text);
   }
   let x_size = size;
@@ -385,6 +384,7 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
 
 GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, align, w, h, text) {
   let indent = 0;
+  assert(w > 0);
   this.applyStyle(style);
   this.last_width = 0;
   let lines = [];
@@ -396,9 +396,25 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, ali
       lines[linenum] = word;
     }
   });
+
   let yoffs = 0;
+  let height = size * lines.length;
+  // eslint-disable-next-line default-case
+  switch (align & ALIGN.VMASK) {
+    case ALIGN.VCENTER:
+      yoffs = (h - height) / 2;
+      if (this.font_info.noFilter) {
+        yoffs |= 0; // ensure integral
+      }
+      break;
+    case ALIGN.VBOTTOM:
+      yoffs = h - height;
+      break;
+  }
+  align &= ~ALIGN.VMASK;
+
   for (let ii = 0; ii < lines.length; ++ii) {
-    this.drawSizedAligned(style, x, y + yoffs, z, size, align, w, h, lines[ii]);
+    this.drawSizedAligned(style, x, y + yoffs, z, size, align, w, 0, lines[ii]);
     yoffs += size;
   }
   return yoffs;
@@ -566,6 +582,7 @@ GlovFont.prototype.drawScaledWrapped = function (style, x, y, z, w, indent, xsc,
   if (text === null || text === undefined) {
     text = '(null)';
   }
+  assert(w > 0);
   this.applyStyle(style);
   this.last_width = 0;
   let num_lines = this.wrapLinesScaled(w, indent, xsc, text, (xoffs, linenum, word) => {

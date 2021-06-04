@@ -4,7 +4,7 @@
 const assert = require('assert');
 const local_storage = require('./glov/local_storage.js');
 const glov_font = require('./glov/font.js');
-const { KEYS, keyDownEdge } = require('./glov/input.js');
+const { click, KEYS, keyDownEdge } = require('./glov/input.js');
 const { linkText } = require('./glov/link.js');
 const { random, round } = Math;
 const net = require('./glov/net.js');
@@ -296,11 +296,14 @@ AccountUI.prototype.showLogin = function (param) {
     if (show_logout) {
       let logged_in_font_height = font_height_small;
       if (center) {
-        ui.font.drawSizedAligned(style, center ? x - text_w / 2 : x + button_width + 8, y,
+        ui.font.drawSizedAligned(style, x - text_w / 2, y,
           Z.UI, logged_in_font_height,
-          (center ? glov_font.ALIGN.HCENTER : calign) | glov_font.ALIGN.HFIT,
-          text_w, button_height,
+          glov_font.ALIGN.HCENTERFIT,
+          text_w, 0,
           `Logged in as: ${name}`);
+        if (click({ x: x - text_w / 2, y, w: text_w, h: logged_in_font_height, button: 0 })) {
+          ui.provideUserString('Your User ID', 'User ID', user_id);
+        }
         y += logged_in_font_height + 8;
       } else {
         ui.font.drawSizedAligned(style, x + button_width + 8,
@@ -311,6 +314,9 @@ AccountUI.prototype.showLogin = function (param) {
           y + logged_in_font_height * 0.75,
           Z.UI, logged_in_font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
           name);
+        if (click({ x: x + button_width + 8, y, w: text_w, h: logged_in_font_height * 2, button: 0 })) {
+          ui.provideUserString('Your User ID', 'User ID', user_id);
+        }
       }
 
       if (ui.buttonText({

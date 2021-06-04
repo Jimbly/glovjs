@@ -82,6 +82,11 @@ export function addHook(draw, click) {
   });
 }
 
+let focus_parent_id = '';
+export function focusIdSet(new_value) {
+  focus_parent_id = new_value || '';
+}
+
 function doBlurEffect(factor) {
   effects.applyGaussianBlur({
     blur: factor,
@@ -518,7 +523,7 @@ export function panel(param) {
   assert(typeof param.h === 'number');
   param.z = param.z || (Z.UI - 1);
   let color = param.color || color_panel;
-  drawBox(param, sprites.panel, param.pixel_scale || panel_pixel_scale, color);
+  drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   glov_input.click(param);
   glov_input.mouseOver(param);
 }
@@ -617,7 +622,7 @@ export function buttonShared(param) {
   param.z = param.z || Z.UI;
   let state = 'regular';
   let ret = false;
-  let key = param.key || `${param.x}_${param.y}`;
+  let key = param.key || `${focus_parent_id}_${param.x}_${param.y}`;
   let rollover_quiet = param.rollover_quiet;
   button_mouseover = false;
   if (param.draw_only) {

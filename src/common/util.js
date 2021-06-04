@@ -271,6 +271,14 @@ export function toArray(array_like) {
   return Array.prototype.slice.call(array_like);
 }
 
+export function arrayToSet(array) {
+  let ret = Object.create(null);
+  for (let ii = 0; ii < array.length; ++ii) {
+    ret[array[ii]] = true;
+  }
+  return ret;
+}
+
 export function matchAll(str, re) {
   let ret = [];
   let m;

@@ -26,6 +26,8 @@ export let stats = {
   draw_calls: 0,
   draw_calls_geom: 0,
   draw_calls_sprite: 0,
+  tris: 0,
+  verts: 0,
   sprites: 0,
   font_calls: 0,
   font_params: 0,
@@ -249,7 +251,24 @@ function Geom(format, verts, idxs, mode) {
     this.ibo = null;
     this.ibo_owned = false;
   }
+  this.updateTriCount();
 }
+
+function trianglesFromMode(mode, eff_vert_count) {
+  if (mode === TRIANGLES) {
+    return eff_vert_count / 3;
+  } else if (mode === TRIANGLE_FAN) {
+    return eff_vert_count - 2;
+  } else {
+    assert(!eff_vert_count);
+    return 0;
+  }
+}
+
+Geom.prototype.updateTriCount = function () {
+  let eff_vert_count = this.ibo ? this.ibo_size : this.vert_count;
+  this.tri_count = trianglesFromMode(this.mode, eff_vert_count);
+};
 
 Geom.prototype.updateSub = function (offset, verts) {
   if (bound_array_buf !== this.vbo) {
@@ -289,6 +308,7 @@ Geom.prototype.update = function (verts, num_verts) {
     this.ibo = getQuadIndexBuf(quad_count);
     this.ibo_size = quad_count * 6;
   }
+  this.updateTriCount();
 };
 
 Geom.prototype.dispose = function () {
@@ -375,13 +395,27 @@ Geom.prototype.bind = function () {
     bound_index_buf = this.ibo;
   }
 };
-Geom.prototype.draw = function () {
+Geom.prototype.draw = function (start, count) {
   this.bind();
   ++stats.draw_calls_geom;
+  stats.tris += this.tri_count;
+  stats.verts += this.vert_count;
   if (this.ibo) {
     gl.drawElements(this.mode, this.ibo_size, gl.UNSIGNED_SHORT, 0);
   } else {
     gl.drawArrays(this.mode, 0, this.vert_count);
+  }
+};
+Geom.prototype.drawSub = function (start, tri_count) {
+  assert.equal(this.mode, TRIANGLES);
+  this.bind();
+  ++stats.draw_calls_geom;
+  if (this.ibo) {
+    stats.tris += tri_count;
+    stats.verts += tri_count*2; // assumes quads
+    gl.drawElements(this.mode, tri_count * 3, gl.UNSIGNED_SHORT, start * 2);
+  } else {
+    gl.drawArrays(this.mode, start, tri_count * 3);
   }
 };
 

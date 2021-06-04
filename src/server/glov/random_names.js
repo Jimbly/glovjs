@@ -17,7 +17,7 @@ const adj = [
   'Pervasive','Petulant','Platitudinous','Precipitate','Propitious','Puckish',
   'Querulous','Quiescent','Rebarbative','Recalcitrant','Redolent','Rhadamanthine',
   'Risible','Ruminative','Sagacious','Salubrious','Sartorial','Sclerotic',
-  'Serpentine','Spasmodic','Strident','Taciturn','Tenacious','Tremulous',
+  'Serpentine','Slumberous','Spasmodic','Strident','Taciturn','Tenacious','Tremulous',
   'Trenchant','Turbulent','Turgid','Ubiquitous','Uxorious','Verdant','Voluble',
   'Voracious','Wheedling','Withering','Zealous',
 ];
