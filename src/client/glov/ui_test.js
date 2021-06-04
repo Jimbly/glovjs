@@ -122,7 +122,7 @@ export function run(x, y, z) {
   });
   let internal_y = 2;
   internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    ui.font_height, ui.font.ALIGN.HWRAP, 100 - test_scroll_area.barWidth() - 2, 0,
+    ui.font_height, ui.font.ALIGN.HWRAP|ui.font.ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
     `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
