@@ -119,6 +119,12 @@ export function v2floor(out, a) {
   return out;
 }
 
+export function v2iFloor(a) {
+  a[0] = floor(a[0]);
+  a[1] = floor(a[1]);
+  return a;
+}
+
 export function v2round(out, a) {
   out[0] = round(a[0]);
   out[1] = round(a[1]);
