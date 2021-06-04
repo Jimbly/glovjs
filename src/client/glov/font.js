@@ -110,7 +110,9 @@ export const ALIGN = {
 */
 
 function GlovFontStyle() {
-  this.color_vec4 = vec4(1,1,1,1); // Matches GlovFontStyle.prototype.color below
+  // Not calling `vec4()` directly, since this constructor may be called during
+  //   initialization before our local `vec4` has been assigned.
+  this.color_vec4 = new Float32Array([1,1,1,1]); // Matches GlovFontStyle.prototype.color below
 }
 GlovFontStyle.prototype.outline_width = 0;
 GlovFontStyle.prototype.outline_color = 0x00000000;
