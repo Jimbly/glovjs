@@ -65,6 +65,11 @@ settings.register({
 });
 
 let sounds_loading = {};
+let on_load_fail;
+export function soundOnLoadFail(cb) {
+  on_load_fail = cb;
+}
+
 export function soundLoad(base, opts, cb) {
   opts = opts || {};
   if (opts.streaming && is_firefox) {
@@ -125,6 +130,9 @@ export function soundLoad(base, opts, cb) {
   function tryLoad(idx) {
     if (idx === srcs.length) {
       console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
+      if (on_load_fail) {
+        on_load_fail(base);
+      }
       callEach(cbs, delete sounds_loading[key], 'Error loading sound');
       return;
     }
@@ -278,7 +286,8 @@ export function soundTick(dt) {
 
   for (let ii = fades.length - 1; ii >= 0; --ii) {
     let fade = fades[ii];
-    fade.volume = max(0, fade.volume - max_fade);
+    let fade_amt = fade.time ? dt / fade.time : max_fade;
+    fade.volume = max(0, fade.volume - fade_amt);
     fade.sound.volume(fade.volume * settings.volume * volume_override, fade.id);
     if (!fade.volume) {
       fade.sound.stop(fade.id);
@@ -313,6 +322,15 @@ export function soundPlay(soundname, volume, as_music) {
   return {
     stop: sound.stop.bind(sound, id),
     playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
+    location: () => { // get current location
+      let v = sound.seek(id);
+      if (typeof v !== 'number') {
+        // Howler sometimes returns `self` from `seek()`
+        return 0;
+      }
+      return v;
+    },
+    duration: sound.duration.bind(sound, id),
     fadeOut: (time) => {
       fades.push({
         volume,
