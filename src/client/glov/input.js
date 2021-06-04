@@ -1139,14 +1139,14 @@ function padButtonDownInternal(gpd, ps, padcode) {
 function padButtonDownEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === DOWN_EDGE) {
     ps[padcode] = DOWN;
-    return engine.frame_dt;
+    return 1;
   }
   return 0;
 }
 function padButtonUpEdgeInternal(gpd, ps, padcode) {
   if (ps[padcode] === UP_EDGE) {
     delete ps[padcode];
-    return engine.frame_dt;
+    return 1;
   }
   return 0;
 }
