@@ -121,8 +121,9 @@ export function run(x, y, z) {
     h: ui.font_height * 8 + pad,
   });
   let internal_y = 2;
-  ui.print(font_style, 2, internal_y, z + 1, `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`);
-  internal_y += ui.font_height + pad;
+  internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
+    ui.font_height, ui.font.ALIGN.HWRAP, 100 - test_scroll_area.barWidth() - 2, 0,
+    `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
   internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;

@@ -520,7 +520,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, word_cb) {
       char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
       newx = x + char_w;
     }
-    if (newx >= w && hard_wrap) {
+    if (newx > w && hard_wrap) {
       // flush the word so far!
       if (word_cb) {
         word_cb(word_x0, linenum, text.slice(word_start, s), x);
