@@ -15,7 +15,7 @@ const { ATTRIBUTE_TYPE_TO_COMPONENTS } = require('./glb/gltf-type-utils.js');
 const renderer = require('./engine.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
-const { vec4 } = require('./vmath.js');
+const { vec4 } = require('glov/vmath.js');
 const { webFSGetFile } = require('./webfs.js');
 
 export let load_count = 0;

@@ -8,16 +8,16 @@ const {
   chunkedReceiverInit,
   chunkedReceiverOnChunk,
   chunkedReceiverStart,
-} = require('../../common/chunked_send.js');
+} = require('glov/chunked_send.js');
 const client_worker = require('./client_worker.js');
 const createHmac = require('crypto').createHmac;
 const { channelServerPak, channelServerSend, quietMessage } = require('./channel_server.js');
 const { regex_valid_username } = require('./default_workers.js');
 const { logSubscribeClient, logUnsubscribeClient } = require('./log.js');
 const fs = require('fs');
-const { isPacket } = require('../../common/packet.js');
-const { logdata } = require('../../common/util.js');
-const { isProfane, profanityCommonStartup } = require('../../common/words/profanity_common.js');
+const { isPacket } = require('glov/packet.js');
+const { logdata } = require('glov/util.js');
+const { isProfane, profanityCommonStartup } = require('glov/words/profanity_common.js');
 const random_names = require('./random_names.js');
 const { serverConfig } = require('./server_config.js');
 
@@ -444,7 +444,7 @@ function onCmdParseAuto(client, pak, resp_func) {
 }
 
 export function init(channel_server_in) {
-  profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/words/filter.gkg`, 'utf8'));
+  profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/glov/words/filter.gkg`, 'utf8'));
 
   channel_server = channel_server_in;
   let ws_server = channel_server.ws_server;

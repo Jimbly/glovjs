@@ -35,9 +35,9 @@ const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
 const { clipped, clipPause, clipResume } = glov_sprites;
 const textures = require('./textures.js');
-const { clamp, clone, lerp, merge } = require('../../common/util.js');
+const { clamp, clone, lerp, merge } = require('glov/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
-const { vec2, vec4, v4scale, unit_vec } = require('./vmath.js');
+const { vec2, vec4, v4scale, unit_vec } = require('glov/vmath.js');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;

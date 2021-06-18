@@ -14,10 +14,10 @@ const fs = require('fs');
 const log = require('./log.js');
 const metrics = require('./metrics.js');
 const path = require('path');
-const packet = require('../../common/packet.js');
+const packet = require('glov/packet.js');
 const { serverConfig } = require('./server_config.js');
 const glov_wsserver = require('./wsserver.js');
-const glov_wscommon = require('../../common/wscommon.js');
+const glov_wscommon = require('glov/wscommon.js');
 
 const STATUS_TIME = 5000;
 const FILE_CHANGE_POLL = 16;

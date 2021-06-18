@@ -2,14 +2,14 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global WebSocket, XMLHttpRequest */
 
-const ack = require('../../common/ack.js');
+const ack = require('glov/ack.js');
 const { ackInitReceiver } = ack;
 const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
 const { min } = Math;
 const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
-const wscommon = require('../../common/wscommon.js');
+const wscommon = require('glov/wscommon.js');
 const { wsHandleMessage } = wscommon;
 
 // let net_time = 0;

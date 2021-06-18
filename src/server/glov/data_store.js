@@ -13,7 +13,7 @@ const FileStore = require('fs-store').FileStore;
 const { createFileStore } = require('fs-store-async');
 const mkdirp = require('mkdirp');
 const path = require('path');
-const { callEach, clone } = require('../../common/util.js');
+const { callEach, clone } = require('glov/util.js');
 
 class DataStoreOneFile {
   constructor(store_path) {

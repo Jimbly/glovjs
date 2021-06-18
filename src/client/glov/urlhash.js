@@ -28,7 +28,7 @@
 */
 
 const assert = require('assert');
-const { callEach } = require('../../common/util.js');
+const { callEach } = require('glov/util.js');
 
 const HISTORY_UPDATE_TIME = 1000;
 

@@ -1,23 +1,24 @@
 /*eslint global-require:off*/
-const local_storage = require('./glov/local_storage.js');
+const local_storage = require('glov/local_storage.js');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
-const engine = require('./glov/engine.js');
-const glov_font = require('./glov/font.js');
-const input = require('./glov/input.js');
+const engine = require('glov/engine.js');
+const glov_font = require('glov/font.js');
+const input = require('glov/input.js');
 const { floor, sin } = Math;
-const net = require('./glov/net.js');
-const particles = require('./glov/particles.js');
-const settings = require('./glov/settings.js');
-const glov_sprites = require('./glov/sprites.js');
-const sprite_animation = require('./glov/sprite_animation.js');
-const transition = require('./glov/transition.js');
-const ui = require('./glov/ui.js');
-const ui_test = require('./glov/ui_test.js');
+const net = require('glov/net.js');
+const particles = require('glov/particles.js');
+const settings = require('glov/settings.js');
+const glov_sprites = require('glov/sprites.js');
+const { createSprite } = glov_sprites;
+const { createSpriteAnimation } = require('glov/sprite_animation.js');
+const transition = require('glov/transition.js');
+const ui = require('glov/ui.js');
+const ui_test = require('glov/ui_test.js');
 const particle_data = require('./particle_data.js');
-const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('./glov/sound.js');
+const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('glov/sound.js');
 const { test3D } = require('./test_3d.js');
-const { vec2, vec4, v4clone, v4copy } = require('./glov/vmath.js');
+const { vec2, vec4, v4clone, v4copy } = require('glov/vmath.js');
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;
@@ -58,8 +59,8 @@ const colors_inactive = ui.makeColorSet(vec4(0.5, 0.5, 0.5, 1));
 function perfTestSprites() {
   if (!sprites.test) {
     sprites.test = [
-      glov_sprites.create({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
-      glov_sprites.create({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+      createSprite({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+      createSprite({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
     ];
   }
 
@@ -176,9 +177,6 @@ export function main() {
   ui.scaleSizes(13 / 32);
   ui.setFontHeight(8);
 
-  const createSprite = glov_sprites.create;
-  const createAnimation = sprite_animation.create;
-
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
 
@@ -202,7 +200,7 @@ export function main() {
       layers: 2,
       origin: vec2(0.5, 0.5),
     });
-    sprites.animation = createAnimation({
+    sprites.animation = createSpriteAnimation({
       idle_left: {
         frames: [0,1],
         times: [200, 500],
@@ -431,12 +429,12 @@ export function main() {
 
 
     // Debuggin full canvas stretching
-    // const camera2d = require('./glov/camera2d.js');
+    // const camera2d = require('glov/camera2d.js');
     // ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
     // ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
 
     // Debugging touch state on mobile
-    // const glov_camera2d = require('./glov/camera2d.js');
+    // const glov_camera2d = require('glov/camera2d.js');
     // engine.font.drawSizedWrapped(engine.fps_style, glov_camera2d.x0(), glov_camera2d.y0(), Z.FPSMETER,
     //   glov_camera2d.w(), 0, 22, JSON.stringify({
     //     last_touch_state: input.last_touch_state,

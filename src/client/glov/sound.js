@@ -15,7 +15,7 @@ const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 const { abs, floor, max, min, random } = Math;
 const settings = require('./settings.js');
 const urlhash = require('./urlhash.js');
-const { callEach, defaults, ridx } = require('../../common/util.js');
+const { callEach, defaults, ridx } = require('glov/util.js');
 
 const DEFAULT_FADE_RATE = 0.001;
 

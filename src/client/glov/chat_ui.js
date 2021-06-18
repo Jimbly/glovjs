@@ -10,19 +10,17 @@ const { isFriend } = require('./friends.js');
 const input = require('./input.js');
 const { link } = require('./link.js');
 const local_storage = require('./local_storage.js');
-const { ceil, floor, max, min } = Math;
+const { ceil, floor, max, min, round } = Math;
 const net = require('./net.js');
 const { profanityFilter, profanityStartup } = require('./words/profanity.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const settings = require('./settings.js');
 const ui = require('./ui.js');
-const { clamp, matchAll } = require('../../common/util.js');
-const { vec4, v3copy } = require('./vmath.js');
+const { clamp, matchAll } = require('glov/util.js');
+const { vec4, v3copy } = require('glov/vmath.js');
 
-const FADE_START_TIME = [10000, 1000];
-const FADE_TIME = [1000, 500];
-
-const INDENT = 40;
+const FADE_START_TIME = [10000, 5000];
+const FADE_TIME = [1000, 1000];
 
 const FLAG_EMOTE = 1;
 const FLAG_USERCHAT = 2;
@@ -211,13 +209,14 @@ ChatUI.prototype.setActiveSize = function (font_height, w) {
   let wrap_w = w - this.scroll_area.barWidth();
   if (this.active_font_height !== font_height || this.wrap_w !== wrap_w) {
     this.active_font_height = font_height;
+    this.indent = round(this.active_font_height/24 * 40);
     this.wrap_w = wrap_w;
     // recalc numlines
     this.total_lines = 0;
     for (let ii = 0; ii < this.msgs.length; ++ii) {
       let elem = this.msgs[ii];
       elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
-        this.wrap_w, INDENT, this.active_font_height, elem.msg_text);
+        this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
       this.total_lines += elem.numlines;
     }
   }
@@ -244,7 +243,7 @@ ChatUI.prototype.addMsgInternal = function (elem) {
     elem.msg_text = elem.msg;
   }
   elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
-    this.wrap_w, INDENT, this.active_font_height, elem.msg_text);
+    this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
   this.total_lines += elem.numlines;
   this.msgs.push(elem);
   let max_msgs = MAX_PER_STYLE[elem.style];
@@ -822,7 +821,7 @@ ChatUI.prototype.run = function (opts) {
     let style = styles[msg.style || (is_url ? mouseover && !user_mouseover ? 'link_hover' : 'link' : 'def')];
 
     // Draw the actual text
-    ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, INDENT, font_height, line);
+    ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, self.indent, font_height, line);
 
     if (mouseover && (!do_scroll_area || y > self.scroll_area.scroll_pos - font_height) &&
       // Only show tooltip for user messages or links
@@ -832,7 +831,7 @@ ChatUI.prototype.run = function (opts) {
         x, y, z: Z.TOOLTIP,
         tooltip_above: true,
         tooltip_width: 450 * UI_SCALE,
-        tooltip_pad: ui.tooltip_pad * 0.5,
+        tooltip_pad: round(ui.tooltip_pad * 0.5),
         tooltip: is_url && !user_mouseover ?
           `Click to open ${url_label}` :
           `Received${msg.id ? ` from "${msg.id}"` : ''} at ${conciseDate(new Date(msg.timestamp))}\n` +
@@ -857,7 +856,7 @@ ChatUI.prototype.run = function (opts) {
   }
 
 
-  let border = 8;
+  let border = 8 * UI_SCALE;
   let now = Date.now();
   if (do_scroll_area) {
     // within scroll area, just draw visible parts

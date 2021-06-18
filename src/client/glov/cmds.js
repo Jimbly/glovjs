@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const cmd_parse_mod = require('../../common/cmd_parse.js');
+const cmd_parse_mod = require('glov/cmd_parse.js');
 const local_storage = require('./local_storage.js');
 export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 

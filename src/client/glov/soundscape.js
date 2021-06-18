@@ -3,7 +3,7 @@ const engine = require('./engine.js');
 const { floor, min, random } = Math;
 const settings = require('./settings.js');
 const { soundLoad, soundPlay, soundResumed } = require('./sound.js');
-const { ridx } = require('../../common/util.js');
+const { ridx } = require('glov/util.js');
 
 const DEFAULT_PERIOD = 30000;
 const DEFAULT_PERIOD_NOISE = 15000;

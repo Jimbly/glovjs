@@ -1,10 +1,10 @@
-const engine = require('./glov/engine.js');
+const engine = require('glov/engine.js');
 const mat4LookAt = require('gl-mat4/lookAt');
-const mat4ScaleRotateTranslate = require('./glov/mat4ScaleRotateTranslate.js');
-const models = require('./glov/models.js');
-const { quat, qRotateZ } = require('./glov/quat.js');
-const textures = require('./glov/textures.js');
-const { mat4, zaxis, zero_vec } = require('./glov/vmath.js');
+const mat4ScaleRotateTranslate = require('glov/mat4ScaleRotateTranslate.js');
+const models = require('glov/models.js');
+const { quat, qRotateZ } = require('glov/quat.js');
+const textures = require('glov/textures.js');
+const { mat4, zaxis, zero_vec } = require('glov/vmath.js');
 
 let mat_view = mat4();
 let mat_obj = mat4();

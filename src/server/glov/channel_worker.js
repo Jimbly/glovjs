@@ -14,7 +14,7 @@ export const UNACKED_PACKET_ASSUME_GOOD = AUTO_DESTROY_TIME/2; // <= AUTO_DESTRO
 const PACKET_INDEX_EXPIRE = UNACKED_PACKET_ASSUME_GOOD * 2;
 const PACKET_INDEX_CLEANUP = PACKET_INDEX_EXPIRE / 4;
 
-const ack = require('../../common/ack.js');
+const ack = require('glov/ack.js');
 const { ackHandleMessage, ackInitReceiver, ackReadHeader } = ack;
 const assert = require('assert');
 const { channelServerPak, channelServerSend, PAK_HINT_NEWSEQ, PAK_ID_MASK } = require('./channel_server.js');
@@ -23,7 +23,7 @@ const { ERR_NOT_FOUND } = require('./exchange.js');
 const { logEx } = require('./log.js');
 const { min } = Math;
 const { packetLogInit, packetLog } = require('./packet_log.js');
-const { callEach, empty, logdata } = require('../../common/util.js');
+const { callEach, empty, logdata } = require('glov/util.js');
 
 // How long to wait before failing an out of order packet and running it anyway
 const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
@@ -1186,12 +1186,13 @@ export class ChannelWorker {
       e.source = ids;
       this.errorSrc(ids, `Exception while handling packet from "${source}"`);
       let buf = pak.getBuffer();
-      let max_len = min(buf.length, 4*1024*1024);
+      let max_len = min(pak.getBufferLen(), 4*1024*1024);
       for (let offs = 0; offs < max_len; offs+=65536) {
         let end = min(offs + 65536, max_len);
-        this.errorSrc(ids, `Packet data (base64,${offs}-${end}) = ${buf.toString('base64', offs, end)}`);
+        this.errorSrc(ids, `Packet data (base64,${offs}-${end}) = ${Buffer.from(buf).toString('base64', offs, end)}`);
       }
-      this.errorSrc(ids, `Packet data (utf8,1K) = ${JSON.stringify(pak.getBuffer().toString('utf8', 0, 1000))}`);
+      this.errorSrc(ids, `Packet data (utf8,1K) = ${JSON.stringify(
+        Buffer.from(pak.getBuffer()).toString('utf8', 0, min(max_len, 1000)))}`);
       channel_server.handleUncaughtError(e);
     }
     if (pkt_idx !== -1) {

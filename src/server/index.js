@@ -8,8 +8,8 @@ const path = require('path');
 const {
   // allowMapFromLocalhostOnly,
   setOriginHeaders,
-} = require('./glov/request_utils.js');
-const glov_server = require('./glov/server.js');
+} = require('glov/request_utils.js');
+const glov_server = require('glov/server.js');
 const test_worker = require('./test_worker.js');
 
 let app = express();

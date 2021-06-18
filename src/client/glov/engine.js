@@ -45,8 +45,11 @@ const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { callEach, clamp, defaults, nearSame, ridx } = require('../../common/util.js');
-const { mat3, mat4, vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set } = require('./vmath.js');
+const { callEach, clamp, defaults, nearSame, ridx } = require('glov/util.js');
+const {
+  mat3, mat4,
+  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
+} = require('glov/vmath.js');
 
 export let canvas;
 export let webgl2;

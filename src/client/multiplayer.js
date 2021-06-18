@@ -1,27 +1,27 @@
 /*eslint global-require:off*/
-const local_storage = require('./glov/local_storage.js');
+const local_storage = require('glov/local_storage.js');
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
 const { createAccountUI } = require('./account_ui.js');
 const assert = require('assert');
-const { cmd_parse } = require('./glov/cmds.js');
-const engine = require('./glov/engine.js');
-const glov_font = require('./glov/font.js');
-const { friendsInit } = require('./glov/friends.js');
-const input = require('./glov/input.js');
+const { cmd_parse } = require('glov/cmds.js');
+const engine = require('glov/engine.js');
+const glov_font = require('glov/font.js');
+const { friendsInit } = require('glov/friends.js');
+const input = require('glov/input.js');
 const { atan2, random } = Math;
-const net = require('./glov/net.js');
-const net_position_manager = require('./glov/net_position_manager.js');
-const particles = require('./glov/particles.js');
-const shaders = require('./glov/shaders.js');
-const { soundLoad, soundPlay } = require('./glov/sound.js');
-const glov_sprites = require('./glov/sprites.js');
-const sprite_animation = require('./glov/sprite_animation.js');
-const ui = require('./glov/ui.js');
-const { toNumber } = require('../common/util.js');
+const net = require('glov/net.js');
+const net_position_manager = require('glov/net_position_manager.js');
+const particles = require('glov/particles.js');
+const shaders = require('glov/shaders.js');
+const { soundLoad, soundPlay } = require('glov/sound.js');
+const glov_sprites = require('glov/sprites.js');
+const sprite_animation = require('glov/sprite_animation.js');
+const ui = require('glov/ui.js');
+const { toNumber } = require('glov/util.js');
 
 const particle_data = require('./particle_data.js');
-const { vec2, vec3, v2sub, vec4, v4copy } = require('./glov/vmath.js');
+const { vec2, vec3, v2sub, vec4, v4copy } = require('glov/vmath.js');
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;
@@ -103,7 +103,7 @@ export function main() {
   const createAnimation = sprite_animation.create;
 
   app.account_ui = createAccountUI();
-  app.chat_ui = require('./glov/chat_ui.js').create({ max_len: 1000 });
+  app.chat_ui = require('glov/chat_ui.js').create({ max_len: 1000 });
 
   const color_white = vec4(1, 1, 1, 1);
   const color_gray = vec4(0.5, 0.5, 0.5, 1);

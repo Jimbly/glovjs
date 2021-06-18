@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const json5 = require('json5');
 const path = require('path');
-const { defaultsDeep } = require('../../common/util.js');
+const { defaultsDeep } = require('glov/util.js');
 
 let server_config;
 

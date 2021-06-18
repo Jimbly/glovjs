@@ -12,7 +12,7 @@ const glov_engine = require('./engine.js');
 const glov_input = require('./input.js');
 const selection_box = require('./selection_box.js');
 const glov_ui = require('./ui.js');
-const { clamp, vec4 } = require('./vmath.js');
+const { clamp, vec4 } = require('glov/vmath.js');
 
 const { KEYS, PAD } = glov_input;
 

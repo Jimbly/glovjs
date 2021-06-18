@@ -51,6 +51,7 @@ function GlovSpriteAnimation(params) {
 export function create(params) {
   return new GlovSpriteAnimation(params);
 }
+exports.createSpriteAnimation = create;
 
 GlovSpriteAnimation.prototype.clone = function () {
   return new GlovSpriteAnimation(this);

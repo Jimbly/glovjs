@@ -113,6 +113,10 @@ export function v2div(out, a, b) {
   return out;
 }
 
+export function v2dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1];
+}
+
 export function v2floor(out, a) {
   out[0] = floor(a[0]);
   out[1] = floor(a[1]);
@@ -156,6 +160,16 @@ export function v2normalize(out, a) {
     out[1] = a[1] * len;
   }
   return out;
+}
+
+export function v2iNormalize(a) {
+  let len = a[0]*a[0] + a[1]*a[1];
+  if (len > 0) {
+    len = 1 / sqrt(len);
+    a[0] *= len;
+    a[1] *= len;
+  }
+  return a;
 }
 
 export function v2same(a, b) {
@@ -497,4 +511,12 @@ export function v4set(out, a, b, c, d) {
 export function v4zero(out) {
   out[0] = out[1] = out[2] = out[3] = 0;
   return out;
+}
+
+export function v4fromRGBA(rgba) {
+  let r = rgba >>> 24;
+  let g = (rgba & 0x00FF0000) >> 16;
+  let b = (rgba & 0x0000FF00) >> 8;
+  let a = rgba & 0xFF;
+  return vec4(r/255, g/255, b/255, a/255);
 }

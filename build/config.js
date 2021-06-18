@@ -1,6 +1,6 @@
 module.exports = {
   server_js_files: ['**/*.js', '!client/**/*.js'],
-  server_static: ['**/common/words/*.gkg'],
+  server_static: ['**/common/glov/words/*.gkg'],
   all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
   client_js_files: [
     '**/*.js',
@@ -39,7 +39,7 @@ module.exports = {
     'client/glov/shaders/**',
     'client/glov/models/box_textured_embed.glb',
     'client/glov/words/*.txt',
-    'common/words/*.gkg',
+    'common/glov/words/*.gkg',
   ],
   default_defines: {
     FACEBOOK: false,

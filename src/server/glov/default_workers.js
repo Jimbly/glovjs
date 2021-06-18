@@ -9,13 +9,13 @@ const {
   FRIEND_BLOCKED,
   FRIEND_REMOVED,
   PRESENCE_OFFLINE,
-} = require('../../common/enums.js');
+} = require('glov/enums.js');
 const master_worker = require('./master_worker.js');
-const md5 = require('../../common/md5.js');
+const md5 = require('glov/md5.js');
 const metrics = require('./metrics.js');
-const { isProfane } = require('../../common/words/profanity_common.js');
+const { isProfane } = require('glov/words/profanity_common.js');
 const random_names = require('./random_names.js');
-const { sanitize } = require('../../common/util.js');
+const { sanitize } = require('glov/util.js');
 
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;

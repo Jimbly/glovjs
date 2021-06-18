@@ -24,9 +24,9 @@ exports.default_flags = 0;
 
 const assert = require('assert');
 const { max } = Math;
-const { isInteger, log2 } = require('../common/util.js');
-// const { isInteger, log2 } = require('../../build.dev/common/util.js');
-const { base64Encode, base64Decode } = require('../common/base64.js');
+const { isInteger, log2 } = require('./util.js');
+// const { isInteger, log2 } = require('../../build.dev/common/glov/util.js');
+const { base64Encode, base64Decode } = require('./base64.js');
 
 const FALSYS = [undefined, null, 0, false, '', NaN];
 const PAK_BUF_DEFAULT_SIZE = 1024;

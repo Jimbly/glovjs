@@ -7,7 +7,7 @@ const engine = require('./engine.js');
 const { max } = Math;
 const settings = require('./settings.js');
 const ui = require('./ui.js');
-const { vec4 } = require('./vmath.js');
+const { vec4 } = require('glov/vmath.js');
 const worker_comm = require('./worker_comm.js');
 const { addHandler, keepBusy, numWorkers, sendmsg } = worker_comm;
 

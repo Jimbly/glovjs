@@ -6,7 +6,7 @@ const assert = require('assert');
 const { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } = require('./channel_server.js');
 const { ChannelWorker } = require('./channel_worker.js');
 const { max } = Math;
-const { callEach, nop, plural } = require('../../common/util.js');
+const { callEach, nop, plural } = require('glov/util.js');
 
 // Do not attempt to recreate a channel if it was created this long ago, assume
 // the requester simply failed to send before the channel was created.

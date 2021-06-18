@@ -13,8 +13,8 @@ const { KEYS, PAD } = input;
 const { max, min, round } = Math;
 const { clipPush, clipPop } = require('./sprites.js');
 const ui = require('./ui.js');
-const { clamp } = require('../../common/util.js');
-const { vec2, vec4 } = require('./vmath.js');
+const { clamp } = require('glov/util.js');
+const { vec2, vec4 } = require('glov/vmath.js');
 
 const MAX_OVERSCROLL = 50;
 const OVERSCROLL_DELAY_WHEEL = 180;

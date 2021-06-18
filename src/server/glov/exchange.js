@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const { isPacket, packetFromBuffer } = require('../../common/packet.js');
+const { isPacket, packetFromBuffer } = require('glov/packet.js');
 
 export const ERR_NOT_FOUND = 'ERR_NOT_FOUND';
 

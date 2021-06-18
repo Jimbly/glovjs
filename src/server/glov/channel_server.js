@@ -6,10 +6,10 @@ const EXCHANGE_PING_INTERVAL = 1000; // Affects `exchange_pings`, should be 1s
 export const PAK_HINT_NEWSEQ = 0x80000000;
 export const PAK_ID_MASK = ~PAK_HINT_NEWSEQ;
 
-const { ackWrapPakStart, ackWrapPakFinish, ackWrapPakPayload } = require('../../common/ack.js');
+const { ackWrapPakStart, ackWrapPakFinish, ackWrapPakPayload } = require('glov/ack.js');
 const assert = require('assert');
 const { asyncSeries } = require('glov-async');
-const cmd_parse = require('../../common/cmd_parse.js');
+const cmd_parse = require('glov/cmd_parse.js');
 const { cwstats, ChannelWorker, UNACKED_PACKET_ASSUME_GOOD } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
 const { ds_stats, dataStoreMonitorFlush } = require('./data_store.js');
@@ -21,13 +21,13 @@ const { logEx } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
-const packet = require('../../common/packet.js');
+const packet = require('glov/packet.js');
 const { isPacket, packetCreate } = packet;
 const { panic } = require('./server.js');
 const { processUID } = require('./server_config.js');
-const { callEach, clone, cloneShallow, logdata, once } = require('../../common/util.js');
+const { callEach, clone, cloneShallow, logdata, once } = require('glov/util.js');
 const { inspect } = require('util');
-const { wsstats } = require('../../common/wscommon.js');
+const { wsstats } = require('glov/wscommon.js');
 
 const { max } = Math;
 

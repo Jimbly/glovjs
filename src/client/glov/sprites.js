@@ -3,6 +3,9 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+// eslint-disable-next-line no-use-before-define
+exports.createSprite = create;
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
@@ -10,8 +13,8 @@ const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const shaders = require('./shaders.js');
-const { nextHighestPowerOfTwo } = require('../../common/util.js');
-const { vec2, vec4 } = require('./vmath.js');
+const { nextHighestPowerOfTwo } = require('glov/util.js');
+const { vec2, vec4 } = require('glov/vmath.js');
 
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;

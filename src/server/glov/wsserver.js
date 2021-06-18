@@ -1,18 +1,18 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const ack = require('../../common/ack.js');
+const ack = require('glov/ack.js');
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 const assert = require('assert');
-const events = require('../../common/tiny-events.js');
+const events = require('glov/tiny-events.js');
 const { logEx } = require('./log.js');
-const { isPacket } = require('../../common/packet.js');
+const { isPacket } = require('glov/packet.js');
 const { packetLog, packetLogInit } = require('./packet_log.js');
 const querystring = require('querystring');
 const { ipFromRequest, isLocalHost } = require('./request_utils.js');
-const util = require('../../common/util.js');
+const util = require('glov/util.js');
 const url = require('url');
-const wscommon = require('../../common/wscommon.js');
+const wscommon = require('glov/wscommon.js');
 const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 const WebSocket = require('ws');
 

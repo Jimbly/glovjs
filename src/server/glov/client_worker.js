@@ -3,10 +3,10 @@
 
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
-const { chunkedSend } = require('../../common/chunked_send.js');
-const { canonical } = require('../../common/cmd_parse.js');
+const { chunkedSend } = require('glov/chunked_send.js');
+const { canonical } = require('glov/cmd_parse.js');
 const { logEx } = require('./log.js');
-const { isPacket } = require('../../common/packet.js');
+const { isPacket } = require('glov/packet.js');
 
 let cmd_parse_routes = {}; // cmd string -> worker type
 

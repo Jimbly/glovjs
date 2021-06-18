@@ -6,7 +6,7 @@
 
 // Source of some: https://github.com/toji/gl-matrix/blob/master/src/quat.js
 
-const { vec4 } = require('./vmath.js');
+const { vec4 } = require('glov/vmath.js');
 const { acos, cos, sin, sqrt } = Math;
 
 const EPSILON = 0.000001;

@@ -27,7 +27,7 @@ const input = require('./input.js');
 const { max } = Math;
 const settings = require('./settings.js');
 const ui = require('./ui.js');
-const { vec4, v3copy } = require('./vmath.js');
+const { vec4, v3copy } = require('glov/vmath.js');
 
 const METRIC_PAD = 2;
 

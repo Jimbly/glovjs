@@ -7,7 +7,7 @@ const assert = require('assert');
 const engine = require('./engine.js');
 const { errorReportSetDetails, glovErrorReport } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
-const { matchAll } = require('../../common/util.js');
+const { matchAll } = require('glov/util.js');
 const { texturesUnloadDynamic } = require('./textures.js');
 const { webFSGetFile } = require('./webfs.js');
 
@@ -52,17 +52,9 @@ const type_size = {
   mat4: 4*4,
 };
 
-let includes = {};
-
-function loadInclude(key) {
-  let text = webFSGetFile(includes[key].filename, 'text');
-  includes[key].text = `\n// from include "${key}":\n${text}\n`;
-}
-
-export function addInclude(key, filename) {
-  assert(!includes[key]);
-  includes[key] = { filename };
-  loadInclude(key);
+function loadInclude(filename) {
+  let text = webFSGetFile(filename, 'text');
+  return `\n// from include "${filename}":\n${text}\n`;
 }
 
 export function shadersResetState() {
@@ -131,18 +123,21 @@ function reportShaderError(non_fatal, err) {
   shader_errors.push(err);
 }
 
-function parseIncludes(text) {
+function parseIncludes(parent_name, text) {
   let supplied_uniforms = {};
   text.replace(uniform_regex, function (str, key) {
     supplied_uniforms[key] = true;
   });
   text = text.replace(include_regex, function (str, filename) {
-    let replacement = includes[filename];
+    let include_path = parent_name.split('/');
+    include_path.pop();
+    include_path.push(filename);
+    include_path = include_path.join('/');
+    let replacement = loadInclude(include_path);
     if (!replacement) {
       console.error(`Could not evaluate ${str}`);
       return str;
     }
-    replacement = replacement.text;
     // Remove duplicate uniforms
     replacement = replacement.replace(uniform_regex, function (str2, key) {
       if (supplied_uniforms[key]) {
@@ -203,7 +198,7 @@ Shader.prototype.compile = function () {
     header = type === gl.VERTEX_SHADER ? webgl2_header_vp : webgl2_header_fp;
   }
   text = `${header}${global_defines}${this.defines}${text}`;
-  text = parseIncludes(text);
+  text = parseIncludes(filename, text);
   text = text.replace(/#pragma WebGL2?/g, '');
   if (type === gl.VERTEX_SHADER) {
     this.attributes = matchAll(text, vp_attr_regex);
@@ -442,9 +437,6 @@ export function setInternalDefines(new_values) {
 }
 
 function onShaderChange(filename) {
-  for (let key in includes) {
-    loadInclude(key);
-  }
   shaderReload();
 }
 

@@ -9,11 +9,11 @@ const {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
-} = require('../../common/enums.js');
+} = require('glov/enums.js');
 const { fbGetFriends } = require('./fbinstant.js');
 const input = require('./input.js');
 const net = require('./net.js');
-const { deepEqual } = require('../../common/util.js');
+const { deepEqual } = require('glov/util.js');
 
 const IDLE_TIME = 60000;
 

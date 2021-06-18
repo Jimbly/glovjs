@@ -1,5 +1,5 @@
 /* eslint no-bitwise: off */
-const { vec4 } = require('./vmath.js');
+const { vec4 } = require('glov/vmath.js');
 
 export const colors = [
   vec4(0, 0, 0, 1),

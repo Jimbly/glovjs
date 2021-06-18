@@ -14,7 +14,7 @@ const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
-const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('./vmath.js');
+const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/vmath.js');
 
 const UP_EDGE = 0; // only for pads, which use === null as "up"
 const UP = 0; // only for key/mouse

@@ -9,14 +9,14 @@ const {
   chunkedReceiverStart,
   chunkedReceiverFreeFile,
   chunkedReceiverGetFile,
-} = require('../../common/chunked_send.js');
+} = require('glov/chunked_send.js');
 const dot_prop = require('dot-prop');
-const EventEmitter = require('../../common/tiny-events.js');
+const EventEmitter = require('glov/tiny-events.js');
 const { fbGetLoginInfo } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
-const md5 = require('../../common/md5.js');
-const { isPacket } = require('../../common/packet.js');
-const util = require('../../common/util.js');
+const md5 = require('glov/md5.js');
+const { isPacket } = require('glov/packet.js');
+const util = require('glov/util.js');
 const walltime = require('./walltime.js');
 
 // relevant events:

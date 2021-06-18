@@ -11,8 +11,8 @@ const sprites = require('./sprites.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const glov_ui = require('./ui.js');
-const { easeOut } = require('../../common/util.js');
-const { unit_vec, vec4 } = require('./vmath.js');
+const { easeOut } = require('glov/util.js');
+const { unit_vec, vec4 } = require('glov/vmath.js');
 
 let transitions = [];
 

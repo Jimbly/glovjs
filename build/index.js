@@ -10,6 +10,7 @@ const appBundle = require('./app-bundle.js');
 const config = require('./config.js');
 const compress = require('./compress.js');
 const gb = require('glov-build');
+const preresolve = require('glov-build-preresolve');
 const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const fs = require('fs');
@@ -68,7 +69,6 @@ gb.task({
 gb.task({
   name: 'server_js',
   input: config.server_js_files,
-  target: 'dev',
   ...babel({
     babel: {
       babelrc: false,
@@ -80,6 +80,12 @@ gb.task({
       }]],
     },
   }),
+});
+
+gb.task({
+  name: 'server_js_glov_preresolve',
+  target: 'dev',
+  ...preresolve({ source: 'server_js' }),
 });
 
 gb.task({
@@ -209,10 +215,14 @@ gb.task({
   }
 });
 
+gb.task({
+  name: 'client_js_glov_preresolve',
+  ...preresolve({ source: 'client_js_babel_cleanup' }),
+});
 
 gb.task({
   name: 'client_js_warnings',
-  input: ['client_js_babel_cleanup:**.js'],
+  input: ['client_js_glov_preresolve:**.js'],
   ...warnMatch({
     'Spread constructor param': /isNativeReflectConstruct/,
     'Bad babel': /__esModule/,
@@ -221,7 +231,7 @@ gb.task({
 
 gb.task({
   name: 'client_js_uglify',
-  input: ['client_js_babel_cleanup:**.js'],
+  input: ['client_js_glov_preresolve:**.js'],
   ...uglify({ inline: true }, {
     compress: false,
     keep_fnames: true,
@@ -270,7 +280,7 @@ config.bundles.forEach(registerBundle);
 
 const server_input_globs = [
   'server_static:**',
-  'server_js:**',
+  'server_js_glov_preresolve:**',
   'server_json:**',
 ];
 
@@ -399,7 +409,7 @@ gb.task({
     // 'client_js_babel', // dep'd from client_bundle*
 
     'server_static',
-    'server_js',
+    'server_js_glov_preresolve',
     'server_json',
     ...client_tasks,
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',

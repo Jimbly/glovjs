@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { deepEqual } = require('../../common/util.js');
+const { deepEqual } = require('glov/util.js');
 const { getUID } = require('./log.js');
 
 function DataStoreMirror(options) {

@@ -8,7 +8,7 @@ const { filewatchOn } = require('./filewatch.js');
 const local_storage = require('./local_storage.js');
 const settings = require('./settings.js');
 const urlhash = require('./urlhash.js');
-const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('../../common/util.js');
+const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('glov/util.js');
 
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 

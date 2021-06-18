@@ -3,16 +3,16 @@
 // Originally from Splody, used with permission
 /* eslint no-multi-spaces:off, array-bracket-spacing:off */
 
-const { mashString } = require('../rand_alea.js');
-const { randFastCreate } = require('../rand_fast.js');
-const { profanityFilterCommon, profanityCommonStartup } = require('../../../common/words/profanity_common.js');
-const { webFSGetFile } = require('../webfs.js');
+const { mashString } = require('glov/rand_alea.js');
+const { randFastCreate } = require('glov/rand_fast.js');
+const { profanityFilterCommon, profanityCommonStartup } = require('glov/words/profanity_common.js');
+const { webFSGetFile } = require('glov/webfs.js');
 
 let non_profanity;
 
 export function profanityStartup() {
   non_profanity = webFSGetFile('glov/words/replacements.txt', 'text').split('\n').filter((a) => a);
-  profanityCommonStartup(webFSGetFile('../common/words/filter.gkg', 'text'));
+  profanityCommonStartup(webFSGetFile('../common/glov/words/filter.gkg', 'text'));
 }
 
 let rand = randFastCreate();

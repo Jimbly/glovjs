@@ -21,7 +21,7 @@ const {
   vec4,
   v4copy,
   zaxis,
-} = require('./vmath.js');
+} = require('glov/vmath.js');
 const {
   qRotateZ,
   qTransformVec3,

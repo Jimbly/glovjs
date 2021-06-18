@@ -5,7 +5,7 @@ let modified = {};
 exports.true = true; // for perf.js
 
 const assert = require('assert');
-const { titleCase } = require('../../common/util.js');
+const { titleCase } = require('glov/util.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 

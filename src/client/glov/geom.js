@@ -395,7 +395,7 @@ Geom.prototype.bind = function () {
     bound_index_buf = this.ibo;
   }
 };
-Geom.prototype.draw = function (start, count) {
+Geom.prototype.draw = function () {
   this.bind();
   ++stats.draw_calls_geom;
   stats.tris += this.tri_count;

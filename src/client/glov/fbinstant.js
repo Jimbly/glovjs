@@ -1,7 +1,7 @@
 /* globals FBInstant */
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
-const { callEach } = require('../../common/util.js');
+const { callEach } = require('glov/util.js');
 
 export let ready = false;
 let onreadycallbacks = [];

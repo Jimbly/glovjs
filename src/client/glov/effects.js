@@ -11,7 +11,7 @@ const geom = require('./geom.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
-const { vec2, vec3, vec4, v4set } = require('./vmath.js');
+const { vec2, vec3, vec4, v4set } = require('glov/vmath.js');
 
 const shader_data = {
   vp_copy: {

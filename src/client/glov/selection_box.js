@@ -10,11 +10,11 @@ const glov_font = require('./font.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const { clipped, clipPause, clipResume } = require('./sprites.js');
 const glov_ui = require('./ui.js');
-const { vec4 } = require('./vmath.js');
+const { vec4 } = require('glov/vmath.js');
 let glov_markup = null; // Not ported
 
 const { min, max, sin } = Math;
-const { cloneShallow, merge, nearSame } = require('../../common/util.js');
+const { cloneShallow, merge, nearSame } = require('glov/util.js');
 
 let font;
 
