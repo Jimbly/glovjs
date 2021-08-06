@@ -194,6 +194,8 @@ function onChannelMsg(client, data, resp_func) {
     }
     if (old_resp_func) {
       old_resp_func(err, resp_data);
+    } else if (err && err !== 'ERR_FAILALL_DISCONNECT') {
+      client.send('error', err);
     }
   };
   resp_func.expecting_response = Boolean(old_resp_func);
