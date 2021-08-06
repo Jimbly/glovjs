@@ -758,17 +758,18 @@ export function buttonText(param) {
 
 function buttonImageDraw(param, state, focused) {
   let uvs = param.img_rect;
+  let img = param.imgs && param.imgs[state] || param.img;
   if (typeof param.frame === 'number') {
-    uvs = param.img.uidata.rects[param.frame];
+    uvs = img.uidata.rects[param.frame];
   }
   buttonBackgroundDraw(param, state);
   let color = button_last_color;
-  let img_origin = param.img.origin;
-  let img_w = param.img.size[0];
-  let img_h = param.img.size[1];
+  let img_origin = img.origin;
+  let img_w = img.size[0];
+  let img_h = img.size[1];
   let aspect = img_w / img_h;
   if (typeof param.frame === 'number') {
-    aspect = param.img.uidata.aspect ? param.img.uidata.aspect[param.frame] : 1;
+    aspect = img.uidata.aspect ? img.uidata.aspect[param.frame] : 1;
   }
   let largest_w_horiz = param.w * param.shrink;
   let largest_w_vert = param.h * param.shrink * aspect;
@@ -782,8 +783,8 @@ function buttonImageDraw(param, state, focused) {
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
-    w: img_w / param.img.size[0],
-    h: img_h / param.img.size[1],
+    w: img_w / img.size[0],
+    h: img_h / img.size[1],
     uvs,
     rot: param.rotation,
   };
@@ -793,9 +794,9 @@ function buttonImageDraw(param, state, focused) {
     draw_param.w = -w;
   }
   if (param.color1) {
-    param.img.drawDualTint(draw_param);
+    img.drawDualTint(draw_param);
   } else {
-    param.img.draw(draw_param);
+    img.draw(draw_param);
   }
 }
 
@@ -803,7 +804,7 @@ export function buttonImage(param) {
   // required params
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
-  assert(param.img && param.img.draw); // should be a sprite
+  assert(param.imgs || param.img && param.img.draw); // should be a sprite
   // optional params
   param.z = param.z || Z.UI;
   param.w = param.w || button_img_size;
