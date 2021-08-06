@@ -79,3 +79,5 @@ const BROWSER = typeof window !== 'undefined';
 exports.base64Decode = BROWSER ? decodeNativeBrowser : decodeNativeNode;
 // Uint8Array or Buffer -> string
 exports.base64Encode = BROWSER ? encode : encodeNativeNode;
+
+exports.base64CharTable = chr_table;

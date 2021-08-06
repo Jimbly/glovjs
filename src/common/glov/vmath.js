@@ -135,6 +135,12 @@ export function v2round(out, a) {
   return out;
 }
 
+export function v2iRound(a) {
+  a[0] = round(a[0]);
+  a[1] = round(a[1]);
+  return a;
+}
+
 export function v2lengthSq(a) {
   return a[0]*a[0] + a[1]*a[1];
 }
