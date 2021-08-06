@@ -605,7 +605,7 @@ GlovFont.prototype.calcXAdvance = function (xsc) {
   //   things look almost identical, just crisper
   let font_texel_scale = this.font_info.font_size / 32;
   // As a compromise, -2 bias here seems to work well
-  let x_advance = xsc * font_texel_scale * max(this.applied_style.outline_width - 2, 0);
+  let x_advance = round(xsc * font_texel_scale * max(this.applied_style.outline_width - 2, 0));
   // As a compromise, there's a -3 bias in there, so it only kicks in under extreme circumstances
   x_advance = max(x_advance, xsc * font_texel_scale *
     max(this.applied_style.glow_outer - this.applied_style.glow_xoffs - 3, 0));
