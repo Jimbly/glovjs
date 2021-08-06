@@ -52,7 +52,9 @@ export let KEYS = {
   DEL: 46,
   NUMPAD_DIVIDE: 111,
   EQUALS: 187,
+  COMMA: 188,
   MINUS: 189,
+  PERIOD: 190,
   SLASH: 191,
   TILDE: 192,
 };
