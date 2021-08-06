@@ -200,7 +200,8 @@ ScrollArea.prototype.end = function (h) {
   handle_pos = clamp(handle_pos, 0, 1);
   let handle_pixel_h = handle_h * (this.h - button_h_nopad * 2);
   let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
-  handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, button_h / 2));
+  let trough_height = this.h - button_h * 2;
+  handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, trough_height * 0.75));
   let handle_screenpos = round(this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h));
   let top_color = this.color;
   let bottom_color = this.color;
@@ -394,9 +395,14 @@ ScrollArea.prototype.end = function (h) {
     w: bar_w, h: button_h,
     color: bottom_color,
   });
+  let trough_draw_pad = button_h / 2;
+  let trough_draw_height = trough_height + trough_draw_pad * 2;
+  let trough_v0 = -trough_draw_pad / pixel_scale / scrollbar_trough.uidata.total_h;
+  let trough_v1 = trough_v0 + trough_draw_height / pixel_scale / scrollbar_trough.uidata.total_h;
   scrollbar_trough.draw({
-    x: bar_x0, y: this.y + button_h / 2, z: this.z+0.1,
-    w: bar_w, h: this.h - button_h,
+    x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
+    w: bar_w, h: trough_draw_height,
+    uvs: [scrollbar_trough.uvs[0], trough_v0, scrollbar_trough.uvs[2], trough_v1],
     color: trough_color,
   });
 
