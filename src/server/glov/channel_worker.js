@@ -770,9 +770,9 @@ export class ChannelWorker {
   emitApplyChannelData(data) {
     let { key } = data;
     assert(key);
-    assert(key.startsWith('public.'));
+    assert(key.startsWith('public'));
     key = key.slice(7);
-    assert(key);
+    // assert(key); No - key can be === 'public'
 
     let count = 0;
     let was_q = false;
@@ -914,7 +914,7 @@ export class ChannelWorker {
       dot_prop.set(this.data, key, value);
     }
     // only send public changes
-    if (key.startsWith('public.')) {
+    if (key.startsWith('public')) {
       let data = { key, value };
       if (q) {
         data.q = 1;
