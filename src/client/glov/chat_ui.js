@@ -172,31 +172,32 @@ function ChatUI(params) {
   this.url_info = params.url_info; // Optional for grabbing the interesting portion of the URL for tooltip and /url
   this.user_context_cb = params.user_context_cb; // Cb called with { user_id } on click
   this.setActiveSize(this.font_height, this.w);
+  let outline_width = params.outline_width || 1;
 
   this.styles = {
     def: glov_font.style(null, {
       color: 0xEEEEEEff,
-      outline_width: 1.0,
+      outline_width,
       outline_color: 0x000000ff,
     }),
     system: glov_font.style(null, {
       color: 0xAAAAAAff,
-      outline_width: 1.0,
+      outline_width,
       outline_color: 0x000000ff,
     }),
     error: glov_font.style(null, {
       color: 0xDD0000ff,
-      outline_width: 1.0,
+      outline_width,
       outline_color: 0x000000ff,
     }),
     link: glov_font.style(null, {
       color: 0x5040FFff,
-      outline_width: 1.0,
+      outline_width,
       outline_color: 0x000000ff,
     }),
     link_hover: glov_font.style(null, {
       color: 0x0000FFff,
-      outline_width: 1.0,
+      outline_width,
       outline_color: 0x000000ff,
     }),
   };
@@ -570,8 +571,10 @@ ChatUI.prototype.sendChat = function (flags, text) {
 
 ChatUI.prototype.run = function (opts) {
   const UI_SCALE = ui.font_height / 24;
-  const SPACE_ABOVE_ENTRY = 8 * UI_SCALE;
   opts = opts || {};
+  const SPACE_ABOVE_ENTRY = opts.border || (8 * UI_SCALE);
+  const border = opts.border || (8 * UI_SCALE);
+  const scroll_grow = opts.scroll_grow || 0;
   if (net.client.disconnected && !this.hide_disconnected_message) {
     ui.font.drawSizedAligned(
       glov_font.style(null, {
@@ -588,10 +591,12 @@ ChatUI.prototype.run = function (opts) {
     this.runLate();
   }
   this.did_run_late = false;
-  let x = camera2d.x0() + 10 * UI_SCALE;
-  let y0 = camera2d.y1();
-  let y = y0;
-  let w = this.w;
+  const x0 = opts.x === undefined ? camera2d.x0() : opts.x;
+  const y0 = opts.y === undefined ? camera2d.y1() - this.h : opts.y;
+  const y1 = y0 + this.h;
+  let x = x0 + border;
+  let y = y1;
+  let outer_w = this.w;
   let was_focused = this.isFocused();
   let z = was_focused ? Z.CHAT_FOCUSED : Z.CHAT;
   let is_focused = false;
@@ -604,7 +609,7 @@ ChatUI.prototype.run = function (opts) {
   let hide_text_input = ui.modal_dialog || ui.menu_up || hide_light;
   if (!hide_text_input && was_focused && input.touch_mode) {
     // expand chat when focused on touch devices
-    w = camera2d.x1() - x - 24 * UI_SCALE;
+    outer_w = camera2d.x1() - x0 - 24 * UI_SCALE;
     let font_scale = 4;
     let aspect = camera2d.screenAspect();
     if (aspect > 2) { // scale up to font scale of 8
@@ -612,13 +617,14 @@ ChatUI.prototype.run = function (opts) {
     }
     font_height *= font_scale;
   }
-  this.setActiveSize(font_height, w); // may recalc numlines on each elem; updates wrap_w
+  const inner_w = outer_w - border;
+  this.setActiveSize(font_height, inner_w); // may recalc numlines on each elem; updates wrap_w
   if (!hide_text_input) {
     anything_visible = true;
-    y -= 16 * UI_SCALE + font_height;
+    y -= border + font_height + 1;
     if (!was_focused && opts.pointerlock && input.pointerLocked()) {
       // do not show edit box
-      ui.font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, glov_font.ALIGN.HFIT, w, 0,
+      ui.font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, glov_font.ALIGN.HFIT, inner_w, 0,
         '<Press Enter to chat>');
     } else {
       if (was_focused) {
@@ -667,7 +673,7 @@ ChatUI.prototype.run = function (opts) {
 
               let selected = drawHelpTooltip({
                 x, y: tooltip_y,
-                tooltip_width: max(w, engine.game_width * 0.8),
+                tooltip_width: max(inner_w, engine.game_width * 0.8),
                 tooltip: auto_text,
                 do_selection,
                 font_height: min(font_height, camera2d.w() / 30),
@@ -693,7 +699,7 @@ ChatUI.prototype.run = function (opts) {
         this.scroll_area.keyboardScroll();
       }
       let input_height = font_height;
-      let input_width = w;
+      let input_width = inner_w - (opts.cuddly_scroll ? this.scroll_area.barWidth() + 1 + border : border);
       if (input.touch_mode && !was_focused) {
         y -= font_height * 2;
         input_height = font_height * 3;
@@ -751,7 +757,7 @@ ChatUI.prototype.run = function (opts) {
 
   let { url_match, url_info, styles, wrap_w, user_context_cb } = this;
   let self = this;
-  let do_scroll_area = is_focused;
+  let do_scroll_area = is_focused || opts.always_scroll;
   let bracket_width = 0;
   let name_width = {};
   // Slightly hacky: uses `x` and `y` from the higher scope
@@ -856,22 +862,31 @@ ChatUI.prototype.run = function (opts) {
   }
 
 
-  let border = 8 * UI_SCALE;
   let now = Date.now();
   if (do_scroll_area) {
     // within scroll area, just draw visible parts
     let scroll_internal_h = this.total_lines * font_height;
-    let scroll_external_h = min(this.h, scroll_internal_h);
+    if (opts.cuddly_scroll) {
+      let new_y = y1 - border;
+      scroll_internal_h += new_y - y;
+      y = new_y;
+    }
+    scroll_internal_h += scroll_grow;
+    y += scroll_grow;
+    let scroll_y0 = opts.always_scroll ? y0 + border - scroll_grow : y - min(this.h, scroll_internal_h);
+    let scroll_external_h = y - scroll_y0;
+    let clip_offs = 1; // for font outline
     this.scroll_area.begin({
-      x, y: y - scroll_external_h, z,
-      w: w + 8,
+      x: x - clip_offs,
+      y: scroll_y0, z,
+      w: inner_w + clip_offs,
       h: scroll_external_h,
       focusable_elem: this.edit_text_entry,
       auto_hide: this.total_lines <= 2,
     });
     let x_save = x;
     let y_save = y;
-    x = 0;
+    x = clip_offs;
     y = 0;
     let y_min = this.scroll_area.scroll_pos;
     let y_max = y_min + scroll_external_h;
@@ -885,18 +900,18 @@ ChatUI.prototype.run = function (opts) {
     }
     this.scroll_area.end(scroll_internal_h);
     x = x_save;
-    y = y_save - scroll_external_h;
+    y = y_save - scroll_external_h + scroll_grow;
     // Eat mouse events (not handled by above) in the scroll area to prevent unfocusing
-    input.mouseDownEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border });
+    input.mouseDownEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border });
     // But a click should dismiss it (important on fullscreen touch UI!)
-    if (input.mouseUpEdge({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border,
+    if (input.mouseUpEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border,
       in_event_cb: opts.pointerlock ? input.pointerLockEnter : null })
     ) {
       ui.focusCanvas();
       is_focused = false;
     }
     // Also prevent mouseover from going to anything beneat it
-    input.mouseOver({ x: camera2d.x0(), y: y - border, w: w + border + 8, h: y0 - y + border });
+    input.mouseOver({ x: x0, y: y - border, w: outer_w, h: y1 - y + border });
     // Also a mouse down anywhere outside of the chat UI should dismiss it
     if (input.mouseDownEdge({ peek: true })) {
       // On touch, tapping doesn't always remove focus from the edit box!
@@ -933,7 +948,7 @@ ChatUI.prototype.run = function (opts) {
   if (!anything_visible && (ui.modal_dialog || ui.menu_up || hide_light)) {
     return;
   }
-  ui.drawRect(camera2d.x0(), y - border, x + w + border + 8, y0, z, [0.3,0.3,0.3,0.75]);
+  ui.drawRect(x0, y - border, x0 + outer_w, y1, z, [0.3,0.3,0.3,0.75]);
 };
 
 ChatUI.prototype.setChannel = function (channel) {
