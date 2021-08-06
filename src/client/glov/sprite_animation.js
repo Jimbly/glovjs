@@ -70,6 +70,10 @@ GlovSpriteAnimation.prototype.setState = function (state, force) {
   if (state === this.state && !force) {
     return this;
   }
+  if (!this.data[state]) {
+    console.error(`Tried to set anim state ${state} which does not exist`);
+    return this;
+  }
   this.state = state;
   this.anim = this.data[state];
   if (this.anim.init_time) {
