@@ -88,7 +88,7 @@ let mat_mv_no_skew = mat4();
 let mat_mvp = mat4();
 let mat_mv_inv_transform = mat3();
 let mat_inv_view = mat3();
-let projection_inverse = vec4();
+// let projection_inverse = vec4();
 
 export let light_diffuse = vec3(0.75, 0.75, 0.75);
 let light_dir_vs = vec3(0, 0, 0);
@@ -514,12 +514,12 @@ export let had_3d_this_frame;
 export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
   mat4Perspective(mat_projection, use_fov_y, use_width/use_height, znear, zfar);
   mat_projection_10 = mat_projection[10];
-  v4set(projection_inverse,
-    2 / (use_width * mat_projection[0]), // projection_matrix.m00),
-    2 / (use_height * mat_projection[5]), // projection_matrix.m11),
-    -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
-    -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
-  );
+  // v4set(projection_inverse,
+  //   2 / (use_width * mat_projection[0]), // projection_matrix.m00),
+  //   2 / (use_height * mat_projection[5]), // projection_matrix.m11),
+  //   -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
+  //   -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
+  // );
 }
 
 export function setZRange(znear, zfar) {
@@ -972,7 +972,7 @@ export function startup(params) {
     mat_inv_view: mat_inv_view,
     view: mat_view,
     projection: mat_projection,
-    projection_inverse,
+    // projection_inverse,
   });
   camera2d.startup();
   sprites.startup();
