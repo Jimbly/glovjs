@@ -212,6 +212,8 @@ export function colorSetSetShades(rollover, down, disabled) {
 
 export function loadUISprite(name, ws, hs, overrides, only_override) {
   let override = overrides && overrides[name];
+  let wrap_s = gl.CLAMP_TO_EDGE;
+  let wrap_t = (name === 'scrollbar_trough') ? gl.REPEAT : gl.CLAMP_TO_EDGE;
   if (override === null) {
     // skip it, assume not used
   } else if (override) {
@@ -219,16 +221,16 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
       name: override[0],
       ws: override[1],
       hs: override[2],
-      wrap_s: gl.CLAMP_TO_EDGE,
-      wrap_t: gl.CLAMP_TO_EDGE,
+      wrap_s,
+      wrap_t,
     });
   } else if (!only_override) {
     sprites[name] = glov_sprites.create({
       name: `ui/${name}`,
       ws,
       hs,
-      wrap_s: gl.CLAMP_TO_EDGE,
-      wrap_t: gl.CLAMP_TO_EDGE,
+      wrap_s,
+      wrap_t,
     });
   }
 }
