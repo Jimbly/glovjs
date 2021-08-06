@@ -235,6 +235,11 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
   }
 }
 
+export function setFonts(new_font, new_title_font) {
+  font = new_font;
+  title_font = new_title_font || font;
+}
+
 export function startup(param) {
   font = param.font;
   title_font = param.title_font || font;

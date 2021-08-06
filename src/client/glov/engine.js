@@ -856,6 +856,11 @@ export function setPixelyStrict(on) {
   }
 }
 
+export function setFonts(new_font, title_font) {
+  font = new_font;
+  glov_ui.setFonts(new_font, title_font);
+}
+
 export function startup(params) {
   fixNatives(true);
 
