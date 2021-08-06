@@ -121,14 +121,14 @@ export function setGlobalMatrices(_mat_view) {
 // Just set up mat_vp and mat_projection
 export function setMatVP(_mat_view) {
   // eslint-disable-next-line no-use-before-define
-  setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+  setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
 }
 
 export function setFOV(fov_min) {
-  let w = render_width || width;
-  let h = render_height || height;
+  let w = width_3d;
+  let h = height_3d;
   let aspect = w / h;
   if (aspect > game_aspect) {
     fov_y = fov_min;
@@ -467,7 +467,6 @@ function checkResize() {
 
     width = canvas.width;
     height = canvas.height;
-    setFOV(settings.fov * PI / 180);
 
     // For the next 10 frames, make sure font size is correct
     need_repos = 10;
@@ -511,6 +510,10 @@ function requestFrame() {
 let mat_projection_10;
 export let had_3d_this_frame;
 
+export function clearHad3DThisFrame() {
+  had_3d_this_frame = false;
+}
+
 export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
   mat4Perspective(mat_projection, use_fov_y, use_width/use_height, znear, zfar);
   mat_projection_10 = mat_projection[10];
@@ -526,34 +529,51 @@ export function setZRange(znear, zfar) {
   ZNEAR = znear;
   ZFAR = zfar;
   if (had_3d_this_frame) {
-    setupProjection(fov_y, width, height, ZNEAR, ZFAR);
+    setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
   }
 }
 
-let render_scale_3d_this_frame;
-export function start3DRendering() {
+function set3DRenderResolution(w, h) {
+  width_3d = w;
+  height_3d = h;
+}
+
+let want_render_scale_3d_this_frame;
+let had_render_scale_3d_this_frame;
+export function start3DRendering(opts) {
+  opts = opts || {};
+  if (opts.width) {
+    set3DRenderResolution(opts.width, opts.height);
+  }
+  setFOV(opts.fov || (settings.fov * PI / 180));
   had_3d_this_frame = true;
-  if (render_scale_3d_this_frame && !defines.NOCOPY) {
+  if (!opts.width && want_render_scale_3d_this_frame && !defines.NOCOPY) {
+    had_render_scale_3d_this_frame = true;
     effectsPassAdd();
   }
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
   gl.depthMask(true);
+  let backbuffer_width = width_3d;
+  let backbuffer_height = height_3d;
+  if (opts.viewport) {
+    // Rendering to a viewport within the backbuffer, and postprocessing must be
+    // UI-level and want to grab the whole thing.
+    backbuffer_width = render_width || width;
+    backbuffer_height = render_height || height;
+  }
   framebufferStart({
-    width: width_3d,
-    height: height_3d,
+    width: backbuffer_width,
+    height: backbuffer_height,
     final: effectsIsFinal(),
-    need_depth: true,
+    need_depth: opts.need_depth || true,
     clear: true,
-    clear_all: settings.render_scale_clear,
+    clear_all: opts.clear_all === undefined ? settings.render_scale_clear : opts.clear_all,
+    viewport: opts.viewport,
   });
 
-  if (render_width) {
-    setupProjection(fov_y, render_width, render_height, ZNEAR, ZFAR);
-  } else {
-    setupProjection(fov_y, width, height, ZNEAR, ZFAR);
-  }
+  setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
 
   gl.enable(gl.CULL_FACE);
 }
@@ -705,17 +725,17 @@ function tick(timestamp) {
 
   checkResize();
   had_3d_this_frame = false;
-  render_scale_3d_this_frame = false;
+  want_render_scale_3d_this_frame = false;
+  had_render_scale_3d_this_frame = false;
   if (render_width) {
     // render_scale not supported with render_width, doesn't make much sense, just use render_width
-    width_3d = render_width;
-    height_3d = render_height;
+    set3DRenderResolution(render_width, render_height);
     effectsPassAdd();
   } else {
     width_3d = round(width * settings.render_scale);
     height_3d = round(height * settings.render_scale);
     if (width_3d !== width) {
-      render_scale_3d_this_frame = true;
+      want_render_scale_3d_this_frame = true;
     }
   }
 
@@ -769,7 +789,7 @@ function tick(timestamp) {
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
 
   if (had_3d_this_frame) {
-    if (render_scale_3d_this_frame) {
+    if (had_render_scale_3d_this_frame) {
       renderScaleFinish();
     }
   } else {
@@ -946,11 +966,10 @@ export function startup(params) {
   ZNEAR = params.znear || 0.7;
   ZFAR = params.zfar || 10000;
   setPixelyStrict(params.pixely === 'strict');
-  if (params.viewport_postprocess && params.pixely === 'strict') {
+  if (params.viewport_postprocess) {
     do_viewport_postprocess = true;
   }
   pixel_aspect = params.pixel_aspect || 1;
-  setFOV(settings.fov * PI / 180);
 
   gl.depthFunc(gl.LEQUAL);
   // gl.enable(gl.SCISSOR_TEST);
