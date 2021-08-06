@@ -133,6 +133,7 @@ export function effectsPassAdd() {
   ++num_passes;
 }
 export function effectsPassConsume() {
+  assert(num_passes);
   --num_passes;
 }
 
@@ -412,7 +413,11 @@ export function applyCopy(params) {
   }
   params.shader = params.shader || 'copy';
   params.params = shader_params_default;
-  params.texs = [source];
+  if (Array.isArray(source)) {
+    params.texs = source;
+  } else {
+    params.texs = [source];
+  }
   applyEffect(params);
 }
 
