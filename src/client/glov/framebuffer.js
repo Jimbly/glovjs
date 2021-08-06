@@ -13,6 +13,7 @@ let num_passes = 0;
 
 let temporary_textures = {};
 let temporary_depthbuffers = {};
+let temporary_depthtextures = {};
 
 let reset_fbos = false;
 function resetFBOs() {
@@ -71,6 +72,25 @@ function bindTemporaryDepthbuffer(w, h) {
   gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, depth_buffer);
 }
 
+function bindTemporaryDepthbufferTexture(w, h) {
+  let key = `${w}_${h}`;
+  let temp = temporary_depthtextures[key];
+  if (!temp) {
+    temp = temporary_depthtextures[key] = { list: [], idx: 0 };
+  }
+  if (temp.idx >= temp.list.length) {
+    let tex = textures.createForDepthCapture(`temp_${key}_${++last_temp_idx}`,
+      settings.fbo_depth16 ? textures.format.DEPTH16 : textures.format.DEPTH24);
+    tex.allocDepth(w, h);
+    let attachment = settings.fbo_depth16 ? gl.DEPTH_ATTACHMENT : gl.DEPTH_STENCIL_ATTACHMENT;
+
+    temp.list.push({ tex, attachment });
+  }
+  let { tex, attachment } = temp.list[temp.idx++];
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, tex.handle, 0);
+  return tex;
+}
+
 export function temporaryTextureClaim(tex) {
   for (let key in temporary_textures) {
     let temp = temporary_textures[key];
@@ -111,10 +131,13 @@ export function framebufferCapture(tex, w, h, filter_linear, wrap) {
 
 
 let cur_tex;
+let cur_depth;
 export function framebufferStart(opts) {
   assert(!cur_tex);
+  assert(!cur_depth);
   let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, force_tex } = opts;
   ++num_passes;
+  cur_depth = null;
   if (force_tex) {
     assert(viewport);
     cur_tex = force_tex;
@@ -123,7 +146,11 @@ export function framebufferStart(opts) {
     cur_tex = framebufferCaptureStart(null, width, height, true);
     if (settings.use_fbos) {
       if (need_depth) {
-        bindTemporaryDepthbuffer(width, height);
+        if (need_depth === 'texture') {
+          cur_depth = bindTemporaryDepthbufferTexture(width, height);
+        } else {
+          bindTemporaryDepthbuffer(width, height);
+        }
       } else {
         // testing: force unbind, in case one was left bound
         // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, settings.fbo_depth16 ?
@@ -150,7 +177,7 @@ export function framebufferStart(opts) {
     engine.setViewport([0, 0, width, height]);
     need_scissor = width !== engine.width;
   }
-  if (need_scissor && !settings.use_fbos) {
+  if (need_scissor) { // Note: previously `&& !settings.use_fbos`, but that seems wrong, why was it there?
     gl.enable(gl.SCISSOR_TEST);
     if (viewport) {
       gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
@@ -168,18 +195,28 @@ export function framebufferStart(opts) {
 export function framebufferEnd(opts) {
   assert(cur_tex);
   opts = opts || {};
-  let { filter_linear, wrap } = opts;
+  let { filter_linear, wrap, need_depth } = opts;
+  assert.equal(Boolean(cur_depth), need_depth === 'texture');
 
   cur_tex.captureEnd(filter_linear, wrap);
+  // Capture end for depth texture?  Nope, only works with FBOs in WebGL!
 
-  let ret = cur_tex;
+  let ret;
+  if (cur_depth) {
+    ret = [cur_tex, cur_depth];
+  } else {
+    ret = cur_tex;
+  }
   cur_tex = null;
+  cur_depth = null;
+
   return ret;
 }
 
 export function framebufferTopOfFrame() {
   // In case of crash on previous frame
   cur_tex = null;
+  cur_depth = null;
 }
 
 export function framebufferEndOfFrame() {
@@ -222,6 +259,25 @@ export function framebufferEndOfFrame() {
     }
     if (!temp.list.length) {
       delete temporary_depthbuffers[key];
+    } else {
+      temp.idx = 0;
+    }
+  }
+  for (let key in temporary_depthtextures) {
+    let temp = temporary_depthtextures[key];
+    if (reset_fbos) {
+      // Release all depth textures
+      temp.idx = 0;
+    }
+    // Release unused depth textures
+    if (!skip_release) {
+      while (temp.list.length > temp.idx) {
+        let { tex } = temp.list.pop();
+        tex.destroy();
+      }
+    }
+    if (!temp.list.length) {
+      delete temporary_depthtextures[key];
     } else {
       temp.idx = 0;
     }

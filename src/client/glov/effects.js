@@ -302,7 +302,6 @@ function applyEffect(effect, view_w, view_h) {
     clip_space[0] = 2.0 * view_w / target_w;
     clip_space[1] = 2.0 * view_h / target_h;
   } else if (effect.viewport) {
-    assert(final);
     let { viewport } = effect;
     let target_w = viewport[2];
     let target_h = viewport[3];
@@ -409,7 +408,7 @@ export function applyCopy(params) {
   }
   let source = params.source;
   if (!source) {
-    source = framebufferEnd({ filter_linear: params.filter_linear });
+    source = framebufferEnd({ filter_linear: params.filter_linear, need_depth: params.need_depth });
   }
   params.shader = params.shader || 'copy';
   params.params = shader_params_default;

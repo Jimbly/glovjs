@@ -34,6 +34,8 @@ export const format = {
   R8: { count: 1 },
   RGB8: { count: 3 },
   RGBA8: { count: 4 },
+  DEPTH16: { count: 1 },
+  DEPTH24: { count: 1 },
 };
 
 export function defaultFilters(min, mag) {
@@ -414,7 +416,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   tryLoad(handleLoad);
 };
 
-Texture.prototype.allocFBO = function (w, h, need_depth) {
+Texture.prototype.allocFBO = function (w, h) {
   const fbo_format = settings.fbo_rgba ? gl.RGBA : gl.RGB;
   bindForced(this);
   gl.texImage2D(this.target, 0, fbo_format, w, h, 0, fbo_format, gl.UNSIGNED_BYTE, null);
@@ -422,6 +424,17 @@ Texture.prototype.allocFBO = function (w, h, need_depth) {
   this.fbo = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.handle, 0);
+
+  this.last_use = frame_timestamp;
+  this.src_width = this.width = w;
+  this.src_height = this.height = h;
+  this.updateGPUMem();
+};
+
+Texture.prototype.allocDepth = function (w, h) {
+  bindForced(this);
+  gl.texImage2D(gl.TEXTURE_2D, 0, this.format.internal_type,
+    w, h, 0, this.format.format, this.format.gl_type, null);
 
   this.last_use = frame_timestamp;
   this.src_width = this.width = w;
@@ -518,6 +531,22 @@ export function createForCapture(unique_name, auto_unload) {
   return texture;
 }
 
+export function createForDepthCapture(unique_name, tex_format) {
+  let name = unique_name || `screen_temporary_tex_${++last_temporary_id}`;
+  assert(!textures[name]);
+  let texture = create({
+    filter_min: gl.NEAREST,
+    filter_mag: gl.NEAREST,
+    wrap_s: gl.CLAMP_TO_EDGE,
+    wrap_t: gl.CLAMP_TO_EDGE,
+    format: tex_format,
+    name,
+  });
+  texture.loaded = true;
+  texture.eff_handle = texture.handle;
+  return texture;
+}
+
 export function load(params) {
   let key = params.name = params.name || params.url;
   assert(key);
@@ -586,6 +615,11 @@ function textureReload(filename) {
   return false;
 }
 
+let depth_supported;
+export function textureSupportsDepth() {
+  return depth_supported;
+}
+
 export function startup() {
 
   default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
@@ -597,6 +631,26 @@ export function startup() {
   format.RGB8.gl_type = gl.UNSIGNED_BYTE;
   format.RGBA8.internal_type = gl.RGBA;
   format.RGBA8.gl_type = gl.UNSIGNED_BYTE;
+
+  let UNSIGNED_INT_24_8;
+  if (engine.webgl2) {
+    depth_supported = true;
+    UNSIGNED_INT_24_8 = gl.UNSIGNED_INT_24_8;
+  } else {
+    let ext = gl.getExtension('WEBGL_depth_texture');
+    if (ext) {
+      UNSIGNED_INT_24_8 = ext.UNSIGNED_INT_24_8_WEBGL;
+      depth_supported = true;
+    }
+  }
+  if (depth_supported) {
+    format.DEPTH16.internal_type = engine.webgl2 ? gl.DEPTH_COMPONENT16 : gl.DEPTH_COMPONENT;
+    format.DEPTH16.format = gl.DEPTH_COMPONENT;
+    format.DEPTH16.gl_type = gl.UNSIGNED_SHORT;
+    format.DEPTH24.internal_type = engine.webgl2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL;
+    format.DEPTH24.format = gl.DEPTH_STENCIL;
+    format.DEPTH24.gl_type = UNSIGNED_INT_24_8;
+  }
 
   let ext_anisotropic = (
     gl.getExtension('EXT_texture_filter_anisotropic') ||
