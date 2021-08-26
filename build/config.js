@@ -11,6 +11,7 @@ module.exports = {
   server_json_files: ['server/**/*.json', 'server/**/*.json5'],
   client_html: ['client/**/*.html'],
   client_html_index: ['**/client/index.html'],
+  extra_client_html: [],
   client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
   client_static: [
     'client/**/*.webm',
@@ -54,6 +55,7 @@ module.exports = {
   }],
   extra_client_tasks: [],
   extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
+  extra_zip_inputs: [],
   client_intermediate_input: [
     'client_json:**',
     'client_js_uglify:**',

@@ -301,7 +301,7 @@ gb.task({
     ].concat(argv.debug ? ['--debug'] : [])
     .concat(argv.env ? [`--env=${argv.env}`] : [])
     .concat(argv.port ? [`--port=${server_port}`] : []),
-    stdio: 'inherit',
+    stdio: argv.serverlog === false ? 'ignore' : 'inherit', // --no-serverlog
     // shell: true,
     // detached: true,
   }),
@@ -319,6 +319,12 @@ gb.task({
 
 function addStarStar(a) {
   return `${a}:**`;
+}
+function addStarStarJS(a) {
+  return `${a}:**.js`;
+}
+function addStarStarJSON(a) {
+  return `${a}:**.json`;
 }
 
 let client_tasks = [
@@ -419,6 +425,37 @@ gb.task({
   ],
 });
 
+if (argv['prod-uglify'] === false) {
+  gb.task({
+    name: 'build.prod.uglify',
+    input: [
+      ...bundle_tasks.map(addStarStarJS),
+    ],
+    type: gb.SINGLE,
+    func: copy,
+  });
+} else {
+  gb.task({
+    name: 'build.prod.uglify',
+    input: [
+      ...bundle_tasks.map(addStarStarJS),
+    ],
+    ...uglify({ inline: false }, {
+      compress: false,
+      keep_fnames: true,
+      mangle: { toplevel: true },
+      output: { semicolons: false },
+    }),
+  });
+}
+
+function noBundleTasks(elem) {
+  if (bundle_tasks.indexOf(elem.split(':')[0]) !== -1) {
+    return false;
+  }
+  return true;
+}
+
 let zip_tasks = [];
 config.extra_index.forEach(function (elem) {
   if (!elem.zip) {
@@ -429,12 +466,17 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      ...client_input_globs_base,
+      ...client_input_globs_base.filter(noBundleTasks),
+      ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
+      'build.prod.uglify:**',
+      ...config.extra_client_html,
+      ...config.extra_zip_inputs,
       `gulpish-client_html_${elem.name}:**`,
     ],
     deps: ['build_deps'],
     ...gulpish_tasks.zip('prod', elem),
     type: gb.ALL,
+    version: 2,
   });
 });
 if (!zip_tasks.length) {
@@ -481,15 +523,17 @@ gb.task({
   },
 });
 
-
 gb.task({
   name: 'build.prod.compress',
   input: [
-    ...client_input_globs,
+    ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
+    'build.prod.uglify:**',
+    ...client_input_globs.filter(noBundleTasks),
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
   ...compress(config.compress_files),
+  version: 2,
 });
 
 gb.task({
