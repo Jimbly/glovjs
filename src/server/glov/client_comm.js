@@ -8,6 +8,7 @@ const {
   chunkedReceiverInit,
   chunkedReceiverOnChunk,
   chunkedReceiverStart,
+  MAX_CLIENT_UPLOAD_SIZE,
 } = require('glov/chunked_send.js');
 const client_worker = require('./client_worker.js');
 const createHmac = require('crypto').createHmac;
@@ -21,8 +22,6 @@ const { isProfane, profanityCommonStartup } = require('glov/words/profanity_comm
 const random_names = require('./random_names.js');
 const { serverConfig } = require('./server_config.js');
 
-// combined size of all chunked sends at any given time
-const MAX_CLIENT_UPLOAD_SIZE = 1*1024*1024;
 
 // Note: this object is both filtering wsclient -> wsserver messages and client->channel messages
 let ALLOWED_DURING_RESTART = Object.create(null);
@@ -115,14 +114,17 @@ function onSetChannelData(client, pak, resp_func) {
   }
 }
 
+let permission_flags;
 function applyCustomIds(ids, user_data_public) {
   // FRVR - maybe generalize this
-  let perm = user_data_public.permissions;
-  delete ids.sysadmin;
   delete ids.elevated;
-  if (perm) {
-    if (perm.sysadmin) {
-      ids.sysadmin = 1;
+  let perm = user_data_public.permissions;
+  for (let ii = 0; ii < permission_flags.length; ++ii) {
+    let f = permission_flags[ii];
+    if (perm && perm[f]) {
+      ids[f] = 1;
+    } else {
+      delete ids[f];
     }
   }
 }
@@ -262,24 +264,24 @@ function validUsername(user_id, allow_admin) {
   return true;
 }
 
-function handleLoginResponse(message, client, user_id, resp_func, err, resp_data) {
+function handleLoginResponse(login_message, client, user_id, resp_func, err, resp_data) {
   let client_channel = client.client_channel;
   assert(client_channel);
 
   if (client_channel.ids.user_id) {
     // Logged in while processing the response?
-    client.client_channel.logCtx('info', `${message} failed: Already logged in`);
+    client.client_channel.logCtx('info', `${login_message} failed: Already logged in`);
     return resp_func('Already logged in');
   }
 
   if (err) {
-    client.client_channel.logCtx('info', `${message} failed: ${err}`);
+    client.client_channel.logCtx('info', `${login_message} failed: ${err}`);
   } else {
     client_channel.ids_base.user_id = user_id;
     client_channel.ids_base.display_name = resp_data.display_name;
     client_channel.log_user_id = user_id;
     applyCustomIds(client_channel.ids, resp_data);
-    client.client_channel.logCtx('info', `${message} success: logged in as ${user_id}`, { ip: client.addr });
+    client.client_channel.logCtx('info', `${login_message} success: logged in as ${user_id}`, { ip: client.addr });
 
     // Tell channels we have a new user id/display name
     for (let channel_id in client_channel.subscribe_counts) {
@@ -293,18 +295,18 @@ function handleLoginResponse(message, client, user_id, resp_func, err, resp_data
 }
 
 function onLogin(client, data, resp_func) {
-  client.client_channel.logCtx('info', `login ${logdata(data)}`, { ip: client.addr });
+  let client_channel = client.client_channel;
+  assert(client_channel);
+
+  client_channel.logCtx('info', `login ${logdata(data)}`, { ip: client.addr });
   let user_id = data.user_id;
   if (!validUsername(user_id, true)) {
-    client.client_channel.logCtx('info', 'login failed: Invalid username');
+    client_channel.logCtx('info', 'login failed: Invalid username');
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
 
-  let client_channel = client.client_channel;
-  assert(client_channel);
-
-  return channelServerSend(client_channel, `user.${user_id}`, 'login', null, {
+  return client_channel.sendChannelMessage(`user.${user_id}`, 'login', {
     display_name: data.display_name || data.user_id, // original-case'd name
     password: data.password,
     salt: client.secret,
@@ -343,23 +345,23 @@ function onLoginFacebook(client, data, resp_func) {
 }
 
 function onUserCreate(client, data, resp_func) {
-  client.client_channel.logCtx('info', `user_create ${logdata(data)}`);
+  let client_channel = client.client_channel;
+  assert(client_channel);
+
+  client_channel.logCtx('info', `user_create ${logdata(data)}`);
   let user_id = data.user_id;
   if (!validUsername(user_id)) {
-    client.client_channel.logCtx('info', 'user_create failed: Invalid username');
+    client_channel.logCtx('info', 'user_create failed: Invalid username');
     return resp_func('Invalid username');
   }
   user_id = user_id.toLowerCase();
 
-  let client_channel = client.client_channel;
-  assert(client_channel);
-
   if (client_channel.ids.user_id) {
-    client.client_channel.logCtx('info', 'user_create failed: Already logged in');
+    client_channel.logCtx('info', 'user_create failed: Already logged in');
     return resp_func('Already logged in');
   }
 
-  return channelServerSend(client_channel, `user.${user_id}`, 'create', null, {
+  return client_channel.sendChannelMessage(`user.${user_id}`, 'create', {
     display_name: data.display_name || data.user_id, // original-case'd name
     password: data.password,
     email: data.email,
@@ -371,8 +373,9 @@ function onUserCreate(client, data, resp_func) {
 function onLogOut(client, data, resp_func) {
   let client_channel = client.client_channel;
   assert(client_channel);
+
   let { user_id } = client_channel.ids;
-  client.client_channel.logCtx('info', `logout ${user_id}`);
+  client_channel.logCtx('info', `logout ${user_id}`);
   if (!user_id) {
     return resp_func('ERR_NOT_LOGGED_IN');
   }
@@ -445,7 +448,15 @@ function onCmdParseAuto(client, pak, resp_func) {
   });
 }
 
+function onCmdParseListClient(client, data, resp_func) {
+  let { client_channel } = client;
+  client_channel.cmd_parse_source = client_channel.ids;
+  client_channel.access = client_channel.ids;
+  client_channel.cmd_parse.handle(client_channel, 'cmd_list', resp_func);
+}
+
 export function init(channel_server_in) {
+  permission_flags = serverConfig().permission_flags || [];
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../../common/glov/words/filter.gkg`, 'utf8'));
 
   channel_server = channel_server_in;
@@ -471,6 +482,7 @@ export function init(channel_server_in) {
   ws_server.onMsg('log_unsubscribe', onLogUnsubscribe);
   ws_server.onMsg('get_stats', onGetStats);
   ws_server.onMsg('cmd_parse_auto', onCmdParseAuto);
+  ws_server.onMsg('cmd_parse_list_client', onCmdParseListClient);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);
@@ -481,5 +493,5 @@ export function init(channel_server_in) {
   facebook_access_token = process.env.FACEBOOK_ACCESS_TOKEN ||
     serverConfig().facebook && serverConfig().facebook.access_token;
 
-  client_worker.init(channel_server);
+  client_worker.init(channel_server, permission_flags);
 }

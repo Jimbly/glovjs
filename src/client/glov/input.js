@@ -382,20 +382,23 @@ function onMouseMove(event, no_stop) {
   // }
   mouse_pos_is_touch = false;
 
-  mouse_move_x += (event.movementX || 0);
+  let movement_x = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+  let movement_y = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+  mouse_move_x += movement_x;
 
   let any_movement = false;
   if (pointerLocked()) {
     setMouseToMid();
-    if (event.movementX || event.movementY) {
+    if (movement_x || movement_y) {
       // Smooth out (ignore) large jumps in movement
       // This is, I believe, just a bug with Chromium on Windows, as it repositions the hidden mouse cursor
       let ts = event.timeStamp || Date.now();
-      let abs_move = abs(event.movementX) + abs(event.movementY);
+      let abs_move = abs(movement_x) + abs(movement_y);
       if (abs_move > 200 && (abs_move > 3 * last_abs_move || ts - last_abs_move_time > 1000)) {
-        console.log(`Ignoring mousemove with sudden large delta: ${event.movementX},${event.movementY}`);
+        console.log(`Ignoring mousemove with sudden large delta: ${movement_x},${movement_y}`);
       } else {
-        v2set(temp_delta, event.movementX || 0, event.movementY || 0);
+        v2set(temp_delta, movement_x || 0, movement_y || 0);
         any_movement = true;
       }
       last_abs_move = abs_move;
@@ -531,17 +534,19 @@ function onTouchChange(event) {
   let seen = {};
 
   let new_count = ct.length;
-  let old_count = new_count;
+  let old_count = 0;
   // Look for press and movement
-  for (let ii = 0; ii < new_count; ++ii) {
+  for (let ii = 0; ii < ct.length; ++ii) {
     let touch = ct[ii];
     try {
       if (!isFinite(touch.pageX) || !isFinite(touch.pageY)) {
         // getting bad touch events sometimes (Moto phones?), simply ignore
+        --new_count;
         continue;
       }
     } catch (e) {
       // getting "Permission denied to access property "pageX" rarely on Firefox, simply ignore
+      --new_count;
       continue;
     }
 
@@ -550,9 +555,9 @@ function onTouchChange(event) {
     if (!last_touch) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0, event);
       last_touch.down(event, true);
-      --old_count;
       in_event.handle('mousedown', touch);
     } else {
+      ++old_count;
       v2sub(temp_delta, touch_pos, last_touch.cur_pos);
       v2add(last_touch.delta, last_touch.delta, temp_delta);
       last_touch.total += abs(temp_delta[0]) + abs(temp_delta[1]);
@@ -749,10 +754,15 @@ function updatePadState(gpd, ps, b, padcode) {
 }
 
 function gamepadUpdate() {
-  let gamepads = (navigator.gamepads ||
-    navigator.webkitGamepads ||
-    (navigator.getGamepads && navigator.getGamepads()) ||
-    (navigator.webkitGetGamepads && navigator.webkitGetGamepads()));
+  let gamepads;
+  try {
+    gamepads = (navigator.gamepads ||
+      navigator.webkitGamepads ||
+      (navigator.getGamepads && navigator.getGamepads()) ||
+      (navigator.webkitGetGamepads && navigator.webkitGetGamepads()));
+  } catch (e) {
+    // Firefox blocks gamepad access sometimes, just ignore it we can't access it
+  }
 
   if (gamepads) {
     let numGamePads = gamepads.length;
@@ -1054,8 +1064,11 @@ export function mouseDown(param) {
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
-  // *maybe* should default to Infinite, but for now, defaulting to the same as mouseUpEdge()
-  let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
+  let max_click_dist = Infinity;
+  if (param.do_max_dist) {
+    // Defaulting to the same as mouseUpEdge()
+    max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
+  }
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];

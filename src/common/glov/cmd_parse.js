@@ -121,6 +121,14 @@ CmdParse.prototype.register = function (param) {
   };
 };
 
+function formatRangeValue(type, value) {
+  let ret = String(value);
+  if (type === TYPE_FLOAT && ret.indexOf('.') === -1) {
+    ret += '.00';
+  }
+  return ret;
+}
+
 CmdParse.prototype.registerValue = function (cmd, param) {
   assert(TYPE_NAME[param.type] || !param.set);
   assert(param.set || param.get);
@@ -157,7 +165,28 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       resp_func(`Usage: /${cmd} ${TYPE_NAME[param.type]}`);
     }
     if (!str) {
-      if (param.get) {
+      if (param.get && param.set) {
+        // More explicit help for these automatic value settings
+        let is_bool = param.type === TYPE_INT && param.range && param.range[0] === 0 && param.range[1] === 1;
+        let help = [
+          `${label}:`,
+        ];
+        if (param.range) {
+          help.push(`Valid range: [${formatRangeValue(param.type, param.range[0])}...` +
+            `${formatRangeValue(param.type, param.range[1])}]`);
+        }
+        let cur_value = param.get();
+        if (is_bool) {
+          help.push(`To disable: /${cmd} 0`);
+          help.push(`To enable: /${cmd} 1`);
+        } else {
+          help.push(`To change: /${cmd} NewValue`);
+          help.push(`  example: /${cmd} ${param.range ?
+            cur_value === param.range[0] ? param.range[1] : param.range[0] : 1}`);
+        }
+        help.push(`Current value = ${cur_value}${is_bool ? ` (${cur_value ? 'Enabled' : 'Disabled'})`: ''}`);
+        return resp_func(null, help.join('\n'));
+      } else if (param.get) {
         return value();
       } else {
         return usage();

@@ -6,7 +6,10 @@ const assert = require('assert');
 const { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } = require('./channel_server.js');
 const { ChannelWorker } = require('./channel_worker.js');
 const { max } = Math;
+const metrics = require('./metrics.js');
+const { serverConfig } = require('./server_config.js');
 const { callEach, nop, plural } = require('glov/util.js');
+const wscommon = require('glov/wscommon.js');
 
 // Do not attempt to recreate a channel if it was created this long ago, assume
 // the requester simply failed to send before the channel was created.
@@ -35,6 +38,7 @@ class MasterWorker extends ChannelWorker {
     this.channels_locked = {};
     this.total_num_channels = {};
     this.master_stats_countdown = MASTER_STATS_PERIOD;
+    this.master_startup_time = this.channel_server.server_time;
     // Broadcast to all ChannelServers to let them know there is a (potentially new) master worker
     // Delay until we finish startup/registration
     setImmediate(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
@@ -52,6 +56,7 @@ class MasterWorker extends ChannelWorker {
         load: {
         },
         last_seen_time: this.channel_server.server_time,
+        first_seen_time: this.channel_server.server_time,
         num_channels: {},
         spawn_errors: 0,
       };
@@ -447,8 +452,47 @@ class MasterWorker extends ChannelWorker {
       resp_func('No restart countdown in progress');
     }
   }
+
+  handleReadyQuery(src, data, resp_func) {
+    let self = this;
+    function reply(value, msg) {
+      let log_msg = value ? `${value} (${msg})` : `(${msg})`;
+      if (log_msg !== self.ready_query_last) {
+        self.ready_query_last = log_msg;
+        self.debug(value ? `Master reporting NOT ready: ${log_msg}` : `Master reporting READY ${log_msg}`);
+      }
+      resp_func(value);
+    }
+    if (this.restart_monitor_id) {
+      return void reply('ERR_RESTARTING', 'restarting');
+    }
+    let { master_ready_servers, master_ready_server_time, master_ready_timeout } = serverConfig();
+    let now = this.channel_server.server_time;
+    if (this.master_startup_time + master_ready_timeout < now) {
+      // It's been more than the timeout, assume everything is ready, or as ready as it's going to be
+      return void reply(null, 'default');
+    }
+    let { known_servers } = this;
+    let count = 0;
+    let newly_connected = 0;
+    for (let csid in known_servers) {
+      let cs = known_servers[csid];
+      ++count;
+      if (cs.first_seen_time + master_ready_server_time > now) {
+        ++newly_connected;
+      }
+    }
+    if (count - newly_connected < master_ready_servers) {
+      return void reply('ERR_STARTUP', `count: ${newly_connected},${count} of ${master_ready_servers}`);
+    }
+    reply(null, `count: ${newly_connected},${count} of ${master_ready_servers}`);
+  }
+
   cmdAdminBroadcast(msg, resp_func) {
     // let source = this.cmd_parse_source;
+    if (msg.length < 5) {
+      return void resp_func('Message too short');
+    }
     this.sendChannelMessage('channel_server', 'chat_broadcast', {
       src: 'system',
       msg
@@ -525,6 +569,9 @@ class MasterWorker extends ChannelWorker {
     this.master_stats_countdown -= dt;
     if (this.master_stats_countdown <= 0) {
       this.master_stats_countdown = MASTER_STATS_PERIOD;
+      for (let channel_type in this.total_num_channels) {
+        metrics.set(`master.count.${channel_type}`, this.total_num_channels[channel_type]);
+      }
       this.sendChannelMessage('channel_server', 'master_stats', {
         num_channels: this.total_num_channels
       }, null, !this.channel_server.load_log);
@@ -581,6 +628,52 @@ export function init(channel_server) {
       monitor_restart: MasterWorker.prototype.handleMonitorRestart,
       master_lock: MasterWorker.prototype.handleMasterLock,
       master_unlock: MasterWorker.prototype.handleMasterUnlock,
+      ready_query: MasterWorker.prototype.handleReadyQuery,
     },
+  });
+}
+
+export function masterInitApp(channel_server, app) {
+  let ready_cache_expires = 0;
+  let ready_cache_result = 'ERR_STARTUP';
+  let ready_check_in_flight = null;
+  const READY_CACHE_TIME_READY = 10000;
+  const READY_CACHE_TIME_UNREADY = 1000;
+  function returnReadyValue(res, result) {
+    if (!result) {
+      return void res.end('OK');
+    }
+    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.end(result);
+  }
+  app.get('/api/ready', function (req, res, next) {
+    // Note: not necessarily called in the same process as the master worker itself
+    if (channel_server.restarting) {
+      return void returnReadyValue(res, 'ERR_RESTARTING');
+    }
+    if (wscommon.PROTOCOL_VERSION) {
+      if (req.query && String(req.query.pver) > wscommon.PROTOCOL_VERSION) {
+        return void returnReadyValue(res, 'ERR_PROTOCOL_VERSION_NEW');
+      }
+      if (!ready_cache_result && (!req.query || String(req.query.pver) !== wscommon.PROTOCOL_VERSION)) {
+        // Only return this if we are *also* ready, so that the client does not
+        //   restart/reload before the server is ready.
+        return void returnReadyValue(res, 'ERR_PROTOCOL_VERSION_OLD');
+      }
+    }
+    let now = Date.now();
+    if (now < ready_cache_expires) {
+      return void returnReadyValue(res, ready_cache_result);
+    }
+    // cache expired, return old value for now, ensure we're updating the cache
+    if (!ready_check_in_flight) {
+      ready_check_in_flight = true;
+      channel_server.sendAsChannelServer('master.master', 'ready_query', null, function (err, data) {
+        ready_cache_expires = Date.now() + (err ? READY_CACHE_TIME_UNREADY : READY_CACHE_TIME_READY);
+        ready_cache_result = err;
+        ready_check_in_flight = false;
+      });
+    }
+    returnReadyValue(res, ready_cache_result);
   });
 }

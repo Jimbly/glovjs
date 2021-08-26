@@ -169,6 +169,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.server_time = 0;
   this.server_time_interp = 0;
   client.onMsg('connect', this.handleConnect.bind(this));
+  client.onMsg('disconnect', this.handleDisconnect.bind(this));
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
   client.onMsg('server_time', this.handleServerTime.bind(this));
   client.onMsg('chat_broadcast', this.handleChatBroadcast.bind(this));
@@ -217,6 +218,10 @@ SubscriptionManager.prototype.handleRestarting = function (data) {
   this.emit('restarting', data);
 };
 
+SubscriptionManager.prototype.handleDisconnect = function (data) {
+  this.emit('disconnect', data);
+};
+
 SubscriptionManager.prototype.handleConnect = function (data) {
   let reconnect = false;
   if (this.first_connect) {
@@ -225,6 +230,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     reconnect = true;
   }
   this.restarting = Boolean(data.restarting);
+  this.app_data = data.app_data;
 
   if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
     // we got disconnected while trying to log in, we'll retry after reconnection
@@ -279,6 +285,21 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     resub();
   } else {
     resub();
+  }
+
+  this.fetchCmds();
+};
+
+SubscriptionManager.prototype.fetchCmds = function () {
+  let channel_type = 'client';
+  let cmd_list = this.cmds_fetched_by_type;
+  if (cmd_list && !cmd_list[channel_type]) {
+    cmd_list[channel_type] = true;
+    this.client.send('cmd_parse_list_client', null, (err, resp) => {
+      if (!err) {
+        this.cmd_parse.addServerCommands(resp);
+      }
+    });
   }
 };
 

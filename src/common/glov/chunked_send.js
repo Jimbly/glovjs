@@ -7,6 +7,9 @@ const crc32 = require('./crc32.js');
 const { ceil, min } = Math;
 const { packetBufPoolAlloc, packetBufPoolFree } = require('./packet.js');
 
+// combined size of all chunked sends at any given time
+export const MAX_CLIENT_UPLOAD_SIZE = 2*1024*1024;
+
 const CHUNK_SIZE = 8192 - 100; // Should fit in a 8kb packet after headers and such; used by sender only
 
 function cleanupFile(state, file_id, pool) {

@@ -115,6 +115,10 @@ export function fbInstantOnPause(cb) {
   on_pause.push(cb);
 }
 
+let can_follow_official_page;
+let can_join_official_group;
+let can_get_live_streams_overlay;
+
 export function init() {
   if (!window.FBInstant) {
     return;
@@ -144,6 +148,9 @@ export function init() {
       console.warn('outside init fb');
       initSubscribe(function () {
         console.warn('All done initing FB');
+        can_follow_official_page = window.FBInstant.community.canFollowOfficialPageAsync();
+        can_join_official_group = window.FBInstant.community.canJoinOfficialGroupAsync();
+        can_get_live_streams_overlay = window.FBInstant.community.canGetLiveStreamsAsync();
       });
     });
   }).catch(function (e) {
@@ -174,6 +181,15 @@ export function fbGetLoginInfo(cb) {
   });
 }
 
+//Returns URL for player's facebook profile picture
+export function fbPlayerPicture() {
+  if (window.FBInstant) {
+    return window.FBInstant.player.getPhoto();
+  } else {
+    return null;
+  }
+}
+
 let fb_friends = {};
 // Returns a display name if the user_id is a Facebook friend
 export function fbFriendName(user_id) {
@@ -201,4 +217,16 @@ export function fbGetFriends(cb) {
       }
     });
   });
+}
+
+export function canFollowOfficialPage() {
+  return window.FBInstant && can_follow_official_page;
+}
+
+export function canJoinOfficialGroup() {
+  return window.FBInstant && can_join_official_group;
+}
+
+export function canShowLiveStreamOverlay() {
+  return window.FBInstant && can_get_live_streams_overlay;
 }

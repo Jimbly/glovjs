@@ -8,6 +8,17 @@ const { defaultsDeep } = require('glov/util.js');
 
 let server_config;
 
+export let default_config_options = {
+  // How many servers must be connected to the master before it is considered ready
+  master_ready_servers: 1,
+  // How long after a new server connects before we consider it being stable/ready
+  master_ready_server_time: 1000,
+  // How long before triggering being ready, even if not enough servers are connected
+  master_ready_timeout: 60000,
+  // Flags that are propagated from a user's public.permissions onto their per-message identity
+  permission_flags: ['sysadmin'],
+};
+
 let process_uid;
 export function processUID() {
   if (!process_uid) {
@@ -48,20 +59,22 @@ function determinEnv() {
   return env;
 }
 
-export function serverConfigStartup(user_defaults) {
+export function serverConfigStartup(code_defaults) {
   assert(!server_config);
   let config_file = 'config/server.json';
   if (argv.config) {
     config_file = argv.config;
   }
-  let user = {};
+  // Highest priority: configuration file specified on command line
   let config_path = path.join(process.cwd(), config_file);
   if (fs.existsSync(config_path)) {
     console.log(`Using local server config from ${config_path}`);
-    user = json5.parse(fs.readFileSync(config_path, 'utf8'));
+    server_config = json5.parse(fs.readFileSync(config_path, 'utf8'));
+  } else {
+    server_config = {};
   }
-  server_config = defaultsDeep(user, user_defaults);
 
+  // Next priority: environment-based config
   let env = determinEnv(); // After getting explicit server_config
 
   let env_path = path.join(__dirname, '../config/env.json');
@@ -75,11 +88,14 @@ export function serverConfigStartup(user_defaults) {
     }
     server_config = defaultsDeep(server_config, env_data.defaults);
   }
+
+  // Lowest priority: hard-coded defaults
+  server_config = defaultsDeep(server_config, code_defaults);
 }
 
 export function serverConfig() {
   if (!server_config) {
-    serverConfigStartup({});
+    serverConfigStartup(default_config_options);
   }
   return server_config;
 }

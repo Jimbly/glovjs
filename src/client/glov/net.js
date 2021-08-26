@@ -18,6 +18,7 @@ export function init(params) {
   if (String(document.location).match(/^https?:\/\/localhost/)) {
     console.log('PacketDebug: ON');
     packet.default_flags |= packet.PACKET_DEBUG;
+    wscommon.netDelaySet();
   }
   client = new WSClient(params.path);
   subs = subscription_manager.create(client, params.cmd_parse);
@@ -43,4 +44,8 @@ const build_timestamp_string = new Date(Number(BUILD_TIMESTAMP))
   .slice(5, -8);
 export function buildString() {
   return build_timestamp_string;
+}
+
+export function netDisconnected() {
+  return client.disconnected || subs.logging_in || !client.socket || client.socket.readyState !== 1;
 }

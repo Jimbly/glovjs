@@ -895,6 +895,17 @@ export function startup(params) {
     };
   }
 
+  if (DEBUG) {
+    // Add check to catch common error of `const FOO=10; for (let i=0; i < FOO.length; i++) {}`
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(Number.prototype, 'length', {
+      get: function () {
+        assert(false, 'Numbers do not have a length property');
+        return undefined;
+      }
+    });
+  }
+
   safearea_ignore_bottom = params.safearea_ignore_bottom || false;
 
   // resize the canvas to fill browser window dynamically

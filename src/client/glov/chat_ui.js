@@ -288,7 +288,7 @@ ChatUI.prototype.addChat = function (msg, style) {
 };
 ChatUI.prototype.addChatFiltered = function (data) {
   console.log(`Chat from ${data.id}: ${data.msg}`);
-  if (settings.profanity_filter) {
+  if (settings.profanity_filter && data.id !== (net.subs.getUserId() || net.client.id)) {
     data.msg = profanityFilter(data.msg);
   }
   this.addMsgInternal(data);
@@ -710,6 +710,7 @@ ChatUI.prototype.run = function (opts) {
       });
       is_focused = this.isFocused();
       if (res === this.edit_text_entry.SUBMIT) {
+        this.scroll_area.scrollToEnd();
         let text = this.edit_text_entry.getText().trim();
         if (text) {
           this.edit_text_entry.setText('');

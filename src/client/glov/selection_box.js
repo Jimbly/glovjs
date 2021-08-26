@@ -293,48 +293,50 @@ class GlovSelectionBox {
     let page_size = (scroll_height - 1) / entry_height;
 
     if (focused) {
+      let non_mouse_interact = false;
       let pad_shift = glov_input.padButtonDown(PAD.RIGHT_TRIGGER) || glov_input.padButtonDown(PAD.LEFT_TRIGGER);
       let value = glov_input.keyDownEdge(KEYS.PAGEDOWN) +
         (pad_shift ? glov_input.padButtonDownEdge(PAD.DOWN) : 0);
       if (value) {
         eff_sel += page_size * value;
         eff_sel = min(eff_sel, num_non_disabled_selections - 1);
-        this.mouse_mode = false;
-        pos_changed = true;
+        non_mouse_interact = true;
       }
       value = glov_input.keyDownEdge(KEYS.PAGEUP) +
         (pad_shift ? glov_input.padButtonDownEdge(PAD.UP) : 0);
       if (value) {
         eff_sel -= page_size * value;
         eff_sel = max(eff_sel, 0);
-        this.mouse_mode = false;
-        pos_changed = true;
+        non_mouse_interact = true;
       }
       value = glov_input.keyDownEdge(KEYS.DOWN) +
         glov_input.keyDownEdge(KEYS.S) +
         glov_input.padButtonDownEdge(PAD.DOWN);
       if (value) {
         eff_sel+=value;
-        this.mouse_mode = false;
-        pos_changed = true;
+        non_mouse_interact = true;
       }
       value = glov_input.keyDownEdge(KEYS.UP) +
         glov_input.keyDownEdge(KEYS.W) +
         glov_input.padButtonDownEdge(PAD.UP);
       if (value) {
         eff_sel-=value;
-        this.mouse_mode = false;
-        pos_changed = true;
+        non_mouse_interact = true;
       }
       if (glov_input.keyDownEdge(KEYS.HOME)) {
         eff_sel = 0;
-        this.mouse_mode = false;
-        pos_changed = true;
+        non_mouse_interact = true;
       }
       if (glov_input.keyDownEdge(KEYS.END)) {
         eff_sel = num_non_disabled_selections - 1;
+        non_mouse_interact = true;
+      }
+      if (non_mouse_interact) {
         this.mouse_mode = false;
         pos_changed = true;
+        if (this.is_dropdown && !this.dropdown_visible) {
+          this.was_clicked = true; // trigger value change immediately
+        }
       }
       if (glov_input.keyDownEdge(KEYS.SPACE) || glov_input.keyDownEdge(KEYS.ENTER)) {
         if (!this.is_dropdown || this.dropdown_visible) {
@@ -353,7 +355,11 @@ class GlovSelectionBox {
         sel_changed = true;
         glov_ui.focusPrev(this);
       } else {
-        eff_sel = num_non_disabled_selections - 1;
+        if (this.is_dropdown && !this.dropdown_visible) {
+          eff_sel = 0;
+        } else {
+          eff_sel = num_non_disabled_selections - 1;
+        }
       }
     }
     if (eff_sel >= num_non_disabled_selections && num_non_disabled_selections) {
@@ -362,7 +368,11 @@ class GlovSelectionBox {
         sel_changed = true;
         glov_ui.focusNext(this);
       } else {
-        eff_sel = 0;
+        if (this.is_dropdown && !this.dropdown_visible) {
+          eff_sel = num_non_disabled_selections - 1;
+        } else {
+          eff_sel = 0;
+        }
       }
     }
 

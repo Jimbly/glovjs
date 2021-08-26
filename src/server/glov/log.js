@@ -38,6 +38,16 @@ const LOG_LEVELS = {
   error: 'error',
 };
 
+let level_map = {};
+
+export function logDowngradeErrors(do_downgrade) {
+  if (do_downgrade) {
+    level_map.error = 'warn';
+  } else {
+    delete level_map.error;
+  }
+}
+
 export function getUID() {
   return ++last_uid;
 }
@@ -72,6 +82,7 @@ export function logEx(context, level, ...args) {
   context = context || {};
   level = LOG_LEVELS[level];
   assert(level);
+  level = level_map[level] || level;
   metrics.add(`log.${level}`, 1);
   context.level = level;
   // If 2 or more arguments and the last argument is an object, assume it is

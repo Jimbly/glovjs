@@ -17,7 +17,7 @@ const { dss_stats } = require('./data_store_shield.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const log = require('./log.js');
-const { logEx } = log;
+const { logEx, logDowngradeErrors } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
@@ -301,6 +301,7 @@ class ChannelServer {
     this.master_stats = { num_channels: {} };
     this.load_log = false;
     this.restarting = false;
+    this.server_time = 0;
   }
 
   // The master requested that we create a worker
@@ -314,6 +315,8 @@ class ChannelServer {
   autoCreateChannelHere(channel_type, subid, cb) {
     const self = this;
     let channel_id = `${channel_type}.${subid}`;
+    let log_ctx = {};
+    log_ctx[channel_type] = channel_id;
     if (this.local_channels[channel_id] || this.channels_creating_here[channel_id]) {
       // Already exists, and it exists here!
       // Happens if this server received an earlier create request, then it timed
@@ -339,7 +342,7 @@ class ChannelServer {
       function registerOnExchange(next) {
         self.exchange.register(channel_id, proxyMessageHandler, (err) => {
           if (err) {
-            console.info(`autoCreateChannelHere(${channel_id}) exchange register failed:`, err);
+            logEx(log_ctx, 'info', `autoCreateChannelHere(${channel_id}) exchange register failed:`, err);
             // someone else created an identically named channel at the same time, discard ours
           }
           // Call callback as soon as the exchange is registered, others can start sending packets
@@ -372,7 +375,7 @@ class ChannelServer {
         channel.registered = true; // Pre-registered
         self.local_channels[channel_id] = channel;
         self.exchange.replaceMessageHandler(channel_id, proxyMessageHandler, channel.handleMessage.bind(channel));
-        console.log(`Auto-created channel ${channel_id} (${queued_msgs.length} msgs queued)`);
+        logEx(log_ctx, 'log', `Auto-created channel ${channel_id} (${queued_msgs.length} msgs queued)`);
 
         // Dispatch queued messages
         for (let ii = 0; ii < queued_msgs.length; ++ii) {
@@ -527,6 +530,11 @@ class ChannelServer {
     let was_restarting = this.restarting;
     this.csworker.log(`restarting = ${data}`);
     this.ws_server.restarting = this.restarting = data;
+    if (this.restarting) {
+      logDowngradeErrors(true);
+    } else {
+      logDowngradeErrors(false);
+    }
     this.ws_server.broadcast('restarting', data);
     if (this.restarting && !was_restarting) {
       this.waiting_to_monitor_flush = true;
@@ -600,7 +608,6 @@ class ChannelServer {
     this.tick_func = this.doTick.bind(this);
     this.tick_time = 250;
     this.last_tick_timestamp = Date.now();
-    this.server_time = 0;
     this.last_server_time_send = 0;
     this.server_time_send_interval = 5000;
     this.load_report_time = 1; // report immediately
@@ -685,13 +692,15 @@ class ChannelServer {
     metrics.set('load.cpu', load_cpu / 1000);
     metrics.set('load.host_cpu', load_host_cpu / 1000);
     metrics.set('load.mem', load_mem);
+    metrics.set('load.heap_used', mu.heapUsed/1024/1024);
+    //metrics.set('load.heap_total', mu.heapTotal/1024/1024);
     metrics.set('load.free_mem', free_mem / 1000);
     metrics.set('load.msgps.cw', msgs_per_s_cw);
     metrics.set('load.msgps.ws', msgs_per_s_ws);
-    metrics.set('load.msgps.total', msgs_per_s);
+    //metrics.set('load.msgps.total', msgs_per_s);
     metrics.set('load.kbps.cw', kbytes_per_s_cw);
     metrics.set('load.kbps.ws', kbytes_per_s_ws);
-    metrics.set('load.kbps.total', kbytes_per_s);
+    //metrics.set('load.kbps.total', kbytes_per_s);
     metrics.set('load.exchange', ping_max);
     // Log
     if (this.load_log) {

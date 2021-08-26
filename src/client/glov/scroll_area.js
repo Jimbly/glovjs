@@ -165,10 +165,27 @@ ScrollArea.prototype.end = function (h) {
   camera2d.pop();
   clipPop();
 
-  if (this.scroll_pos > h - this.h) {
+  let maxvalue = max(h - this.h+1, 0);
+  if (this.scroll_pos >= maxvalue) {
     // internal height must have shrunk
-    this.scroll_pos = max(0, h - this.h+1);
+    this.scroll_pos = max(0, maxvalue);
   }
+
+  let was_at_bottom = this.scroll_pos === this.last_max_value;
+  if (this.auto_scroll && (
+    this.last_frame !== engine.getFrameIndex() - 1 || // was not seen last frame, do a reset
+    this.last_internal_h !== h && was_at_bottom
+  )) {
+    // We were at the bottom, but we are now not, and auto-scroll is enabled
+    // want to be at the bottom, scroll down (effective next frame for the contents,
+    // but this frame for the handle, to prevent flicker)
+    this.overscroll = max(0, this.scroll_pos + this.overscroll - maxvalue);
+    this.scroll_pos = maxvalue;
+  }
+  this.last_internal_h = h;
+  this.last_frame = engine.getFrameIndex();
+
+
   if (this.overscroll) {
     let dt = engine.getFrameDt();
     if (dt >= this.overscroll_delay) {
@@ -221,7 +238,6 @@ ScrollArea.prototype.end = function (h) {
   this.was_disabled = disabled;
 
   // Handle UI interactions
-  let user_moved_this_frame = false;
   if (disabled) {
     trough_color = top_color = bottom_color = handle_color = this.disabled_color;
     this.drag_start = null;
@@ -236,7 +252,6 @@ ScrollArea.prototype.end = function (h) {
     if (wheel_delta) {
       this.overscroll_delay = OVERSCROLL_DELAY_WHEEL;
       this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
-      user_moved_this_frame = true;
     }
 
     // handle drag of handle
@@ -255,7 +270,6 @@ ScrollArea.prototype.end = function (h) {
     }
     if (this.grabbed) {
       ui.focusSteal(this);
-      user_moved_this_frame = true;
     }
     let up = this.grabbed && input.mouseUpEdge({ button: 0 });
     if (up) {
@@ -265,7 +279,7 @@ ScrollArea.prototype.end = function (h) {
       this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
       handle_color = rollover_color_light;
     }
-    if (this.grabbed && !input.mouseDown({ button: 0, max_dist: Infinity })) {
+    if (this.grabbed && !input.mouseDown({ button: 0 })) {
       // released but someone else ate it, release anyway!
       this.grabbed = false;
     }
@@ -299,7 +313,6 @@ ScrollArea.prototype.end = function (h) {
       ui.focusSteal(this);
       top_color = rollover_color;
       this.scroll_pos -= this.rate_scroll_click;
-      user_moved_this_frame = true;
     }
     if (input.mouseOver(button_param)) {
       top_color = rollover_color;
@@ -309,7 +322,6 @@ ScrollArea.prototype.end = function (h) {
       ui.focusSteal(this);
       bottom_color = rollover_color;
       this.scroll_pos += this.rate_scroll_click;
-      user_moved_this_frame = true;
     }
     if (input.mouseOver(button_param)) {
       bottom_color = rollover_color;
@@ -331,7 +343,6 @@ ScrollArea.prototype.end = function (h) {
       } else {
         this.scroll_pos -= this.h;
       }
-      user_moved_this_frame = true;
     }
     // Catch mouse over on trough
     input.mouseOver(bar_param);
@@ -343,7 +354,6 @@ ScrollArea.prototype.end = function (h) {
       // This also fixes an interaction with chat_ui where clicking on the chat background (which causes
       //   a flicker of a drag) would cause pointer lock to be lost
       //ui.focusSteal(this);
-      user_moved_this_frame = true;
       if (this.drag_start === null) {
         this.drag_start = this.scroll_pos;
       }
@@ -351,6 +361,8 @@ ScrollArea.prototype.end = function (h) {
     } else {
       this.drag_start = null;
     }
+    // Also eat drag for bar area, we handle it
+    input.drag({ x: this.x + this.w - bar_w, y: this.y, w: bar_w, h: this.h, button: 0 });
   }
 
   this.focused = !disabled && ui.focusCheck(this);
@@ -358,19 +370,8 @@ ScrollArea.prototype.end = function (h) {
     this.focusable_elem.focus();
   }
 
-  let maxvalue = max(h - this.h+1, 0);
   this.last_max_value = maxvalue;
   this.clampScrollPos();
-  if (this.auto_scroll && (this.last_internal_h !== h || this.last_frame !== engine.getFrameIndex() - 1)) {
-    // We were at the bottom, but we are now not, and auto-scroll is enabled
-    if (!user_moved_this_frame) {
-      // want to be at the bottom, scroll down (effective next frame)
-      this.scroll_pos = maxvalue;
-      this.overscroll = 0;
-    }
-  }
-  this.last_internal_h = h;
-  this.last_frame = engine.getFrameIndex();
 
   let bg_color = this.focused || this.focusable_elem && this.focusable_elem.is_focused ?
     this.background_color_focused :
@@ -436,6 +437,10 @@ ScrollArea.prototype.scrollIntoFocus = function (miny, maxy, h) {
     // Make it smooth/bouncy a bit
     this.overscroll = old_scroll_pos - this.scroll_pos;
   }
+};
+
+ScrollArea.prototype.scrollToEnd = function () {
+  this.scroll_pos = this.last_max_value;
 };
 
 ScrollArea.prototype.resetScroll = function () {

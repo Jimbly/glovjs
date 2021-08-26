@@ -8,6 +8,7 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 const engine = require('./engine.js');
 const net = require('./net.js');
 const textures = require('./textures.js');
+const { netDelayGet, netDelaySet } = require('glov/wscommon.js');
 
 window.cmd = function (str) {
   cmd_parse.handle(null, str, cmd_parse_mod.defaultHandler);
@@ -50,11 +51,17 @@ cmd_parse.register({
   func: function (str, resp_func) {
     str = str.toUpperCase().trim();
     if (!str) {
+      let any_changed = false;
       for (let key in engine.defines) {
         engine.defines[key] = false;
+        any_changed = true;
       }
-      engine.definesChanged();
-      return void resp_func(null, 'All debug defines cleared');
+      if (any_changed) {
+        engine.definesChanged();
+        return void resp_func(null, 'All debug defines cleared');
+      } else {
+        return void resp_func(null, 'No debug defines active');
+      }
     }
     engine.defines[str] = !engine.defines[str];
     resp_func(null, `D=${str} now ${engine.defines[str]?'SET':'unset'}`);
@@ -165,4 +172,18 @@ cmd_parse.registerValue('postprocessing', {
   help: 'Enables/disables postprocessing',
   get: () => (engine.postprocessing ? 1 : 0),
   set: (v) => engine.postprocessingAllow(v),
+});
+
+cmd_parse.register({
+  cmd: 'net_delay',
+  help: 'Sets/shows network delay values',
+  usage: '$HELP\n/net_delay time_base time_rand',
+  func: function (str, resp_func) {
+    if (str) {
+      let params = str.split(' ');
+      netDelaySet(Number(params[0]), Number(params[1]) || 0);
+    }
+    let cur = netDelayGet();
+    resp_func(null, `Client NetDelay: ${cur[0]}+${cur[1]}`);
+  }
 });

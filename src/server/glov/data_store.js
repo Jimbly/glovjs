@@ -157,7 +157,18 @@ class DataStore {
     ++ds_stats.get;
     setImmediate(() => {
       this.getStore(obj_name, (store) => {
-        assert(!store.get('bin'));
+        if (store.get('bin')) {
+          // someone saved to this store as binary unexpectedly (e.g. tools/put.js, or code rollback?)
+          // try to load it as a string and parse it
+          let bin_ext = store.get('bin');
+          let path_base = path.join(this.path, `${obj_name}.${bin_ext}`);
+          return void fs.readFile(path_base, 'utf8', function (err, buf) {
+            if (err) {
+              return void cb(err);
+            }
+            cb(null, JSON.parse(buf));
+          });
+        }
         let obj = store.get('data', default_value);
         cb(null, obj && obj !== default_value ? clone(obj) : obj);
       });
@@ -176,8 +187,12 @@ class DataStore {
         // No binary file, is there an old text object stored here?
         let obj = store.get('data', null);
         if (obj !== null) {
-          assert.equal(typeof obj, 'string'); // Could maybe JSON.stringify and return that if something else?
-          return void cb(null, Buffer.from(obj, 'utf8'));
+          if (typeof obj === 'string') {
+            return void cb(null, Buffer.from(obj, 'utf8'));
+          } else {
+            // This gets hit when reading a local data store's object-format contents as type buffer (e.g. tools/get.js)
+            return void cb(null, Buffer.from(JSON.stringify(obj), 'utf8'));
+          }
         }
         cb(null, null);
       });

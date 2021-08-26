@@ -1,12 +1,13 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* global WebSocket, XMLHttpRequest */
+/* global WebSocket */
 
 const ack = require('glov/ack.js');
 const { ackInitReceiver } = ack;
 const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
-const { min } = Math;
+const { fetch, ERR_CONNECTION } = require('./fetch.js');
+const { min, random } = Math;
 const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
 const wscommon = require('glov/wscommon.js');
@@ -19,11 +20,19 @@ const { wsHandleMessage } = wscommon;
 //   return r;
 // }
 
+// Values exposed for `client.connect_error`
+export const ERR_CONNECTING = 'ERR_CONNECTING';
+export const ERR_APP_VERSION = 'ERR_APP_VERSION';
+export const ERR_RESTARTING = 'ERR_RESTARTING';
+export const ERR_PROTOCOL_VERSION_NEW = 'ERR_PROTOCOL_VERSION_NEW';
+export const ERR_PROTOCOL_VERSION_OLD = 'ERR_PROTOCOL_VERSION_OLD';
+
 export function WSClient(path) {
   this.id = null;
   this.my_ids = {}; // set of all IDs I've been during this session
   this.handlers = {};
   this.socket = null;
+  this.net_delayer = null;
   this.connected = false;
   this.disconnected = false;
   this.retry_scheduled = false;
@@ -32,45 +41,15 @@ export function WSClient(path) {
   this.last_receive_time = Date.now();
   this.idle_counter = 0;
   this.last_send_time = Date.now();
-  this.auto_path = !path;
+  this.connect_error = ERR_CONNECTING;
   ackInitReceiver(this);
 
-  if (this.auto_path) {
-
-    path = document.location.toString().match(/^[^#?]+/)[0]; // remove search and anchor
-
-
-    if (path.slice(-1) !== '/') {
-      // /file.html or /path/file.html or /path
-      let idx = path.lastIndexOf('/');
-      if (idx !== -1) {
-        let filename = path.slice(idx+1);
-        if (filename.indexOf('.') !== -1) {
-          path = path.slice(0, idx+1);
-        } else {
-          path += '/';
-        }
-      } else {
-        path += '/';
-      }
-    }
-    path = path.replace(/^http/, 'ws');
-    this.path = `${path}ws`;
-
-  } else {
+  if (path) {
     this.path = path;
-  }
-
-  if (path.match(/:\d+\//)) {
-    // has port, don't try anything fancy
-    this.path2 = this.path;
-  } else if (path.match(/^ws:/)) {
-    // no port, try wss:// if this fails
-    // Should fix Comcast injection issue
-    this.path2 = this.path.replace(/^ws:/, 'wss:');
   } else {
-    // Using wss:// some browsers will not allow connecting to ws://, so don't even try
-    this.path2 = this.path;
+    let api_path = urlhash.getAPIPath(); // 'https://foo.com/product/api/'
+    this.path = api_path.replace(/^http/, 'ws')
+      .replace(/api\/$/, 'ws'); // 'wss://foo.com/product/ws';
   }
 
   this.connect(false);
@@ -84,20 +63,40 @@ WSClient.prototype.timeSinceDisconnect = function () {
   return Date.now() - this.disconnect_time;
 };
 
+function whenServerReady(cb) {
+  let retry_count = 0;
+  function doit() {
+    fetch({
+      url: `${urlhash.getAPIPath()}ready?pver=${wscommon.PROTOCOL_VERSION}`,
+    }, (err, response) => {
+      if (err && response !== 'ERR_PROTOCOL_VERSION_OLD') {
+        ++retry_count;
+        setTimeout(doit, min(retry_count * retry_count * 100, 15000) * (0.75 + random() * 0.5));
+      } else {
+        cb();
+      }
+    });
+  }
+  doit();
+}
+
 WSClient.prototype.onAppVer = function (ver) {
   if (ver !== BUILD_TIMESTAMP) {
     if (this.on_app_ver_mismatch) {
       this.on_app_ver_mismatch();
     } else {
-      if (this.auto_path) {
-        console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), reloading`);
-        if (window.reloadSafe) {
-          window.reloadSafe();
-        } else {
-          document.location.reload();
-        }
-      } else {
+      if (window.FBInstant) {
+        // not allowed to reload
         console.warn(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), ignoring`);
+      } else {
+        console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), reloading`);
+        whenServerReady(function () {
+          if (window.reloadSafe) {
+            window.reloadSafe();
+          } else {
+            document.location.reload();
+          }
+        });
       }
     }
   }
@@ -107,6 +106,7 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   let client = this;
   walltime.sync(data.time);
   client.connected = true;
+  client.connect_error = null;
   client.disconnected = false;
   client.id = data.id;
   client.my_ids[data.id] = true;
@@ -115,11 +115,12 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   if (data.app_ver) {
     client.onAppVer(data.app_ver);
   }
-  // Fire user-level connect handler as well
+  // Fire subscription_manager connect handler
   assert(client.handlers.connect);
   client.handlers.connect(client, {
     client_id: client.id,
     restarting: data.restarting,
+    app_data: data.app_data,
   });
   resp_func();
 };
@@ -153,22 +154,16 @@ WSClient.prototype.checkForNewAppVersion = function () {
     return;
   }
   this.app_ver_check_in_progress = true;
-  let xhr = new XMLHttpRequest();
-  xhr.open('GET', `${urlhash.getURLBase()}app.ver.json`, true);
-  // xhr.responseType = 'json'; // causes un-catchable, un-reported errors
-  xhr.onload = () => {
+  fetch({
+    url: `${urlhash.getURLBase()}app.ver.json`,
+    response_type: 'json'
+  }, (err, obj) => {
     this.app_ver_check_in_progress = false;
-    let text;
-    try {
-      text = xhr.responseText;
-      let obj = JSON.parse(text);
-      if (obj && obj.ver) {
-        this.onAppVer(obj.ver);
-      }
-    } catch (e) {
-      console.error('Received invalid response when checking app version:', text || '<empty response>');
-      // Probably internal server error or such as the server is restart, try again momentarily
-      // This is not triggered on connection errors, only if we got a (non-parseable) response from the server
+    if (obj && obj.ver) {
+      this.onAppVer(obj.ver);
+    }
+    if (err && err !== ERR_CONNECTION) {
+      // If this is not triggered on connection errors, only if we got a (non-parseable) response from the server
       if (!this.delayed_recheck) {
         this.delayed_recheck = true;
         setTimeout(() => {
@@ -177,11 +172,7 @@ WSClient.prototype.checkForNewAppVersion = function () {
         }, 1000);
       }
     }
-  };
-  xhr.onerror = () => {
-    this.app_ver_check_in_progress = false;
-  };
-  xhr.send(null);
+  });
 };
 
 WSClient.prototype.retryConnection = function () {
@@ -196,7 +187,7 @@ WSClient.prototype.retryConnection = function () {
     assert(!client.socket);
     client.retry_scheduled = false;
     client.connect(true);
-  }, min(client.retry_count * client.retry_count * 100, 15000));
+  }, min(client.retry_count * client.retry_count * 100, 15000) * (0.75 + random() * 0.5));
 };
 
 WSClient.prototype.checkDisconnect = function () {
@@ -210,8 +201,41 @@ WSClient.prototype.checkDisconnect = function () {
 
 WSClient.prototype.connect = function (for_reconnect) {
   let client = this;
+  client.socket = { readyState: 0 }; // Placeholder so it appears disconnected
 
-  let path = `${(client.retry_count % 2) ? client.path2 : client.path}?pver=${wscommon.PROTOCOL_VERSION}${
+  assert(!this.ready_check_in_progress);
+  this.ready_check_in_progress = true;
+  // retry hitting status endpoint until it says it's okay to make a WebSocket connection
+  fetch({
+    url: `${urlhash.getAPIPath()}ready?pver=${wscommon.PROTOCOL_VERSION}`,
+  }, (err, response) => {
+    assert(this.ready_check_in_progress);
+    this.ready_check_in_progress = false;
+    if (!err) {
+      this.connect_error = ERR_CONNECTING;
+      return void this.connectAfterReady(for_reconnect);
+    }
+    console.log(`Server not ready, err=${err}, response=${response}`);
+    // Handle known error strings
+    if (response === 'ERR_RESTARTING' || response === 'ERR_STARTUP') {
+      client.connect_error = ERR_RESTARTING;
+    } else if (response === 'ERR_PROTOCOL_VERSION_NEW') {
+      client.connect_error = ERR_PROTOCOL_VERSION_NEW;
+    } else if (response === 'ERR_PROTOCOL_VERSION_OLD') {
+      client.connect_error = ERR_PROTOCOL_VERSION_OLD;
+    } else {
+      client.connect_error = ERR_CONNECTING;
+    }
+    client.socket = null;
+    client.net_delayer = null;
+    this.retryConnection();
+  });
+};
+
+WSClient.prototype.connectAfterReady = function (for_reconnect) {
+  let client = this;
+
+  let path = `${client.path}?pver=${wscommon.PROTOCOL_VERSION}${
     for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
   }&sesuid=${session_uid}`;
   let socket = new WebSocket(path);
@@ -231,12 +255,14 @@ WSClient.prototype.connect = function (for_reconnect) {
 
   function abort(skip_close) {
     client.socket = null;
+    client.net_delayer = null;
     if (client.connected) {
       client.disconnect_time = Date.now();
       client.disconnected = true;
       errorReportSetDetails('disconnected', 1);
     }
     client.connected = false;
+    client.connect_error = ERR_CONNECTING;
     if (!skip_close) {
       try {
         socket.close();
@@ -244,6 +270,8 @@ WSClient.prototype.connect = function (for_reconnect) {
         // ignore
       }
     }
+    // Fire subscription_manager disconnect handler
+    client.handlers.disconnect();
     ack.failAll(client);
   }
 

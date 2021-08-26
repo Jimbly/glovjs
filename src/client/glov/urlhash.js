@@ -16,6 +16,7 @@
     hides: { otherfield: true },
     push: true, // do a pushState instead of replaceState when this changes
     hide_values: { foo: true }, // do not add to URL if values is in the provided set
+    route_only: true, // never show this value, but still use it to influence routes - use with routeFixed()
   });
   urlhash.set('pos', '3,4');
   urlhash.get('pos')
@@ -39,11 +40,11 @@ let params = {};
 
 let title_suffix = '';
 
-let page_base = (document.location.href || '').match(/^[^#?]+/)[0];
+let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove search and anchor
 if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
   page_base += '?';
 }
-//Removes index.html et all
+// Removes index.html et all
 let url_base = page_base.replace(/[^/]*$/,'');
 let on_change = [];
 
@@ -56,7 +57,7 @@ export function getURLPageBase() {
 }
 
 let api_path;
-// Path base like http://foo.bar/api/ (with trailing slash
+// Path base like http://foo.bar/api/ (with trailing slash)
 export function setAPIPath(path) {
   api_path = path;
 }
@@ -100,6 +101,9 @@ function getValue(query_string, opts) {
       let r = opts.routes[ii];
       let m = query_string.match(r.regex);
       if (m) {
+        if (r.value) {
+          return r.value;
+        }
         let idx = r.keys.indexOf(opts.key);
         return m[1 + idx];
       }
@@ -203,6 +207,12 @@ function toString() {
       // has a value, is not hidden, continue
       if (!route_title && opts.title) {
         route_title = opts.title(opts.value);
+      }
+    }
+    for (let jj = 0; jj < r.keys.length; ++jj) {
+      let key = r.keys[jj];
+      if (params[key].route_only) {
+        hidden[key] = true;
       }
     }
     // route is good!
@@ -329,19 +339,8 @@ export function startup(param) {
   }
 }
 
-export function route(route_string) {
-  let keys = [];
-  // foo/:key/:bar => foo/([^/&?]+)/([^/&?]+)
-  let base = route_string.replace(route_param_regex, function (ignored, match) {
-    keys.push(match);
-    return '([^/&?]+)';
-  });
-  let regex = new RegExp(`^${base}(?:$|\\?)`);
-  let new_route = {
-    route_string,
-    regex,
-    keys,
-  };
+function routeEx(new_route) {
+  let { keys } = new_route;
   for (let ii = 0; ii < keys.length; ++ii) {
     let opts = params[keys[ii]];
     // Must have already registered these keys
@@ -353,6 +352,33 @@ export function route(route_string) {
   }
   routes.push(new_route);
   routes.sort(cmpNumKeys);
+}
+
+export function route(route_string) {
+  let keys = [];
+  // foo/:key/:bar => foo/([^/&?]+)/([^/&?]+)
+  let base = route_string.replace(route_param_regex, function (ignored, match) {
+    keys.push(match);
+    return '([^/&?]+)';
+  });
+  let regex = new RegExp(`^${base}(?:$|\\?)`);
+  routeEx({
+    route_string,
+    regex,
+    keys,
+  });
+}
+
+// For a route that has no parameters, e.g. `foo.html`
+// Needs an associated key already registered, then set(key, '1') and set(key, '') enter and leave this route
+export function routeFixed(route_string, key) {
+  let regex = new RegExp(`^${route_string}(?:$|\\?)`);
+  routeEx({
+    route_string,
+    regex,
+    value: '1', // Just need something
+    keys: [key],
+  });
 }
 
 export function register(opts) {

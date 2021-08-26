@@ -318,12 +318,13 @@ export function plural(number, label) {
   return `${label}${number === 1 ? '' : 's'}`;
 }
 
-export function secondsToFriendlyString(seconds) {
+export function secondsToFriendlyString(seconds, force_include_seconds) {
   let days = floor(seconds / (60*60*24));
   seconds -= days * 60*60*24;
   let hours = floor(seconds / (60*60));
   seconds -= hours * 60*60;
   let minutes = floor(seconds / 60);
+  seconds -= minutes * 60;
   let resp = [];
   if (days) {
     resp.push(`${days} ${plural(days, 'day')}`);
@@ -333,6 +334,9 @@ export function secondsToFriendlyString(seconds) {
   }
   if (minutes || !resp.length) {
     resp.push(`${minutes} ${plural(minutes, 'minute')}`);
+  }
+  if (force_include_seconds) {
+    resp.push(`${seconds} ${plural(seconds, 'second')}`);
   }
   return resp.join(', ');
 }

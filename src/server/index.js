@@ -38,7 +38,11 @@ app.use(express_static_gzip('data_store/public', {
   orderPreference: ['br'],
 }));
 
-glov_server.startup({ server, server_https });
+glov_server.startup({
+  app,
+  server,
+  server_https,
+});
 
 test_worker.init(glov_server.channel_server);
 

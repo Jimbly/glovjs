@@ -7,12 +7,14 @@ const { chunkedSend } = require('glov/chunked_send.js');
 const { canonical } = require('glov/cmd_parse.js');
 const { logEx } = require('./log.js');
 const { isPacket } = require('glov/packet.js');
+const { netDelayGet, netDelaySet } = require('glov/wscommon.js');
 
 let cmd_parse_routes = {}; // cmd string -> worker type
 
 let repeated_disconnect = 0;
+let permission_flags_map;
 
-class ClientWorker extends ChannelWorker {
+export class ClientWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
     this.client_id = this.channel_subid; // 1234
@@ -54,6 +56,24 @@ class ClientWorker extends ChannelWorker {
     }
     if (data.key === 'public.display_name') {
       this.ids_base.display_name = data.value;
+    }
+    if (data.key.startsWith('public.permissions.')) {
+      let f = data.key.slice('public.permissions.'.length);
+      if (permission_flags_map[f]) {
+        if (data.value) {
+          this.ids_base[f] = 1;
+        } else {
+          delete this.ids_base[f];
+        }
+      }
+    } else if (data.key === 'public.permissions') {
+      for (let f in permission_flags_map) {
+        if (data.value && data.value[f]) {
+          this.ids_base[f] = 1;
+        } else {
+          delete this.ids_base[f];
+        }
+      }
     }
   }
 
@@ -160,6 +180,24 @@ class ClientWorker extends ChannelWorker {
     let space_idx = cmd.indexOf(' ');
     let cmd_base = canonical(space_idx === -1 ? cmd : cmd.slice(0, space_idx));
     let { user_id } = this.ids;
+
+    // First try on self
+    let not_found = false;
+    this.cmd_parse_source = this.ids;
+    this.access = access || this.ids;
+    this.cmd_parse.handle(this, cmd, (err, resp) => {
+      if (err && this.cmd_parse.was_not_found) {
+        // this branch guaranteed to be synchronous
+        not_found = true;
+      } else {
+        // this branch may be hit asynchronously
+        resp_func(err, { found: 1, resp: resp });
+      }
+    });
+    if (!not_found) {
+      return;
+    }
+
     let route = cmd_parse_routes[cmd_base];
     let channel_ids = Object.keys(this.subscribe_counts);
     if (!channel_ids.length) {
@@ -174,7 +212,8 @@ class ClientWorker extends ChannelWorker {
       }
       return true;
     });
-    channel_ids.push(this.channel_id);
+    // Don't send to ourself over the message exchange, super inefficient!
+    // channel_ids.push(this.channel_id);
     if (!channel_ids.length) {
       // Not subscribed to any worker that can handle this command
       return void resp_func(`Unknown command: "${cmd_base}"`);
@@ -217,6 +256,15 @@ class ClientWorker extends ChannelWorker {
     tryNext();
   }
 
+  cmdNetDelayServer(str, resp_func) {
+    if (str) {
+      this.warnSrc(this.cmd_parse_source, `Setting NetDelay to ${str}`);
+      let params = str.split(' ');
+      netDelaySet(Number(params[0]), Number(params[1]) || 0);
+    }
+    let cur = netDelayGet();
+    resp_func(null, `Server NetDelay: ${cur[0]}+${cur[1]}`);
+  }
   cmdWSDisconnect(str, resp_func) {
     let time = Number(str) || 0;
     if (resp_func) {
@@ -267,28 +315,63 @@ class ClientWorker extends ChannelWorker {
 
 ClientWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
 
-export function init(channel_server) {
-  channel_server.registerChannelWorker('client', ClientWorker, {
-    autocreate: false,
-    subid_regex: /^[a-zA-Z0-9-]+$/,
-    filters: {
-      apply_channel_data: ClientWorker.prototype.onApplyChannelData,
-    },
-    handlers: {
-      force_kick: ClientWorker.prototype.onForceKick,
-      upload: ClientWorker.prototype.onUpload,
-      csr_user_to_clientworker: ClientWorker.prototype.onCSRUserToClientWorker,
-    },
-    cmds: [{
-      cmd: 'ws_disconnect',
-      help: '(Admin) Forcibly disconnect our WebSocket connection',
-      access_run: ['sysadmin'],
-      func: ClientWorker.prototype.cmdWSDisconnect,
-    }, {
-      cmd: 'ws_disconnect_repeated',
-      help: '(Admin) Forcibly disconnect all WebSocket connections on a timer',
-      access_run: ['sysadmin'],
-      func: ClientWorker.prototype.cmdWSDisconnectRepeated,
-    }],
-  });
+let inited = false;
+let client_worker_init_data = {
+  autocreate: false,
+  subid_regex: /^[a-zA-Z0-9-]+$/,
+  filters: {
+    apply_channel_data: ClientWorker.prototype.onApplyChannelData,
+  },
+  handlers: {
+    force_kick: ClientWorker.prototype.onForceKick,
+    upload: ClientWorker.prototype.onUpload,
+    csr_user_to_clientworker: ClientWorker.prototype.onCSRUserToClientWorker,
+  },
+  cmds: [{
+    cmd: 'net_delay_server',
+    help: '(Admin) Sets/shows network delay values on the server for all clients',
+    usage: '$HELP\n/net_delay_server time_base time_rand',
+    access_run: ['sysadmin'],
+    func: ClientWorker.prototype.cmdNetDelayServer,
+  }, {
+    cmd: 'ws_disconnect',
+    help: '(Admin) Forcibly disconnect our WebSocket connection',
+    access_run: ['sysadmin'],
+    func: ClientWorker.prototype.cmdWSDisconnect,
+  }, {
+    cmd: 'ws_disconnect_repeated',
+    help: '(Admin) Forcibly disconnect all WebSocket connections on a timer',
+    access_run: ['sysadmin'],
+    func: ClientWorker.prototype.cmdWSDisconnectRepeated,
+  }],
+};
+let client_worker = ClientWorker;
+export function overrideClientWorker(new_client_worker, extra_data) {
+  assert(!inited);
+  client_worker = new_client_worker || client_worker;
+  for (let key in extra_data) {
+    let v = extra_data[key];
+    if (Array.isArray(v)) {
+      let dest = client_worker_init_data[key] = client_worker_init_data[key] || [];
+      for (let ii = 0; ii < v.length; ++ii) {
+        dest.push(v[ii]);
+      }
+    } else if (typeof v === 'object') {
+      let dest = client_worker_init_data[key] = client_worker_init_data[key] || {};
+      for (let subkey in v) {
+        dest[subkey] = v[subkey];
+      }
+    } else {
+      client_worker_init_data[key] = v;
+    }
+  }
+}
+
+export function init(channel_server, permission_flags) {
+  inited = true;
+  permission_flags_map = {};
+  for (let ii = 0; ii < permission_flags.length; ++ii) {
+    permission_flags_map[permission_flags[ii]] = true;
+  }
+  channel_server.registerChannelWorker('client', client_worker, client_worker_init_data);
 }

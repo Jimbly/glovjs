@@ -13,7 +13,7 @@ module.exports = function (config) {
   config.extra_index = [{
     name: 'multiplayer',
     defines: {
-      FACEBOOK: false,
+      PLATFORM: 'web',
       ENV: 'multiplayer',
     },
     zip: false,

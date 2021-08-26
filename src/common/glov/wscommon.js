@@ -7,6 +7,7 @@ export let wsstats_out = { msgs: 0, bytes: 0 };
 const ack = require('./ack.js');
 const assert = require('assert');
 const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
+const { random, round } = Math;
 const packet = require('./packet.js');
 const { isPacket, packetCreate, packetFromBuffer } = packet;
 
@@ -18,6 +19,82 @@ exports.PROTOCOL_VERSION = '1';
 const PAK_HEADER_SIZE = 1 + // flags
   1+16 + // message id
   1+9; // resp_pak_id
+
+let net_delay = 0;
+let net_delay_rand = 0;
+
+export function netDelaySet(delay, rand) {
+  if (delay === undefined) {
+    // development defaults
+    delay = 100;
+    rand = 50;
+  }
+  if (delay) {
+    console.log(`NetDelay: ON (${delay}+${rand})`);
+  } else {
+    console.log('NetDelay: Off');
+  }
+  net_delay = delay;
+  net_delay_rand = rand;
+}
+
+export function netDelayGet() {
+  return [net_delay, net_delay_rand];
+}
+
+function NetDelayer(client, socket) {
+  this.client = client;
+  this.head = null;
+  this.tail = null;
+  this.tick = this.tickFn.bind(this);
+}
+NetDelayer.prototype.send = function (buf, pak) {
+  let now = Date.now();
+  let delay = round(net_delay + net_delay_rand * random());
+  let time = now + delay;
+  let elem = { buf, pak, time, next: null };
+  if (this.tail) {
+    this.tail.next = elem;
+    this.tail = elem;
+  } else {
+    this.head = this.tail = elem;
+    setTimeout(this.tick, delay);
+  }
+};
+NetDelayer.prototype.tickFn = function () {
+  let { client } = this;
+  if (client.net_delayer !== this) {
+    // we've been disconnected, just don't ever write these packets
+    while (this.head) {
+      let elem = this.head;
+      elem.pak.pool();
+      this.head = elem.next;
+    }
+    this.tail = null;
+    return;
+  }
+  // Send at least first, possibly more, then schedule tick if any left
+  let now = Date.now();
+  do {
+    // Pop it
+    let elem = this.head;
+    this.head = elem.next;
+    if (!this.head) {
+      this.tail = null;
+    }
+    // Send it
+    let { buf, pak } = elem;
+    if (client.ws_server) {
+      client.socket.send(buf, pak.pool.bind(pak));
+    } else {
+      client.socket.send(buf);
+      pak.pool();
+    }
+  } while (this.head && this.head.time <= now);
+  if (this.head) {
+    setTimeout(this.tick, this.head.time - now);
+  }
+};
 
 export function wsPakSendDest(client, pak) {
   if (!client.connected || client.socket.readyState !== 1) {
@@ -34,13 +111,18 @@ export function wsPakSendDest(client, pak) {
   }
   wsstats_out.msgs++;
   wsstats_out.bytes += buf.length;
-  if (client.ws_server) {
-    client.socket.send(buf, function () {
-      pak.pool();
-    });
+  if (net_delay) {
+    if (!client.net_delayer) {
+      client.net_delayer = new NetDelayer(client);
+    }
+    client.net_delayer.send(buf, pak);
   } else {
-    client.socket.send(buf);
-    pak.pool();
+    if (client.ws_server) {
+      client.socket.send(buf, pak.pool.bind(pak));
+    } else {
+      client.socket.send(buf);
+      pak.pool();
+    }
   }
   client.last_send_time = Date.now();
 }

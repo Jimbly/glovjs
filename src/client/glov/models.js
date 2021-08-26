@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-env browser */
 
 /*
   Convert models to GLB with:
@@ -13,6 +12,7 @@ const geom = require('./geom.js');
 const glb_parser = require('./glb/parser.js');
 const { ATTRIBUTE_TYPE_TO_COMPONENTS } = require('./glb/gltf-type-utils.js');
 const renderer = require('./engine.js');
+const { fetch } = require('./fetch.js');
 const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const { vec4 } = require('glov/vmath.js');
@@ -42,21 +42,21 @@ function Model(url) {
 
 Model.prototype.load = function () {
   ++load_count;
-  let xhr = new XMLHttpRequest();
-  xhr.open('GET', this.url, true);
-  xhr.responseType = 'arraybuffer';
-  xhr.onload = () => {
+  fetch({
+    url: this.url,
+    response_type: 'arraybuffer',
+  }, (err, array_buffer) => {
     --load_count;
-    try {
-      let array_buffer = xhr.response; // Note: not xhr.responseText
-      if ((xhr.status === 200 || xhr.status === 0) && array_buffer) {
+    if (err) {
+      window.onerror('Model loading error', 'models.js', 0, 0, err);
+    } else {
+      try {
         this.parse(array_buffer);
+      } catch (e) {
+        window.onerror('Model loading error', 'models.js', 0, 0, e);
       }
-    } catch (e) {
-      window.onerror('Model loading error', 'models.js', 0, 0, e);
     }
-  };
-  xhr.send(null);
+  });
 };
 
 const skip_attr = {

@@ -3,21 +3,21 @@
 
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
-const data_store = require('./data_store.js');
-const data_store_image = require('./data_store_image.js');
-const data_store_limited = require('./data_store_limited.js');
-const data_store_mirror = require('./data_store_mirror.js');
-const data_store_shield = require('./data_store_shield.js');
+const { dataStoresInit } = require('./data_stores_init.js');
 const glov_exchange = require('./exchange.js');
+const { errorReportsInit } = require('./error_reports.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const log = require('./log.js');
+const { logEx } = log;
+const { masterInitApp } = require('./master_worker.js');
 const metrics = require('./metrics.js');
 const path = require('path');
 const packet = require('glov/packet.js');
 const { serverConfig } = require('./server_config.js');
 const glov_wsserver = require('./wsserver.js');
-const glov_wscommon = require('glov/wscommon.js');
+const wscommon = require('glov/wscommon.js');
+const { netDelaySet } = wscommon;
 
 const STATUS_TIME = 5000;
 const FILE_CHANGE_POLL = 16;
@@ -124,73 +124,20 @@ function waitForAccess(filename, cb) {
 
 export function startup(params) {
   log.startup();
-  assert(params.server);
-  if (params.pver) {
-    glov_wscommon.PROTOCOL_VERSION = params.pver;
-  }
 
-  let { data_stores, exchange, metrics_impl, on_report_load } = params;
+  let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https, pver } = params;
+  assert(app);
+  assert(server);
+
+  if (pver) {
+    wscommon.PROTOCOL_VERSION = pver;
+  }
   if (!data_stores) {
     data_stores = {};
   }
   let server_config = serverConfig();
 
-  // Meta and bulk stores
-  if (!data_stores.meta) {
-    data_stores.meta = data_store.create('data_store');
-  } else if (server_config.do_mirror) {
-    if (data_stores.meta) {
-      if (server_config.local_authoritative === false) {
-        console.log('[DATASTORE] Mirroring meta store (cloud authoritative)');
-        data_stores.meta = data_store_mirror.create({
-          read_check: true,
-          readwrite: data_stores.meta,
-          write: data_store.create('data_store'),
-        });
-      } else {
-        console.log('[DATASTORE] Mirroring meta store (local authoritative)');
-        data_stores.meta = data_store_mirror.create({
-          read_check: true,
-          readwrite: data_store.create('data_store'),
-          write: data_stores.meta,
-        });
-      }
-    }
-  }
-  if (!data_stores.bulk) {
-    data_stores.bulk = data_store.create('data_store/bulk');
-    if (argv.dev) {
-      data_stores.bulk = data_store_limited.create(data_stores.bulk, 1000, 1000, 250);
-    }
-  } else if (server_config.do_mirror) {
-    if (data_stores.bulk) {
-      if (server_config.local_authoritative === false) {
-        console.log('[DATASTORE] Mirroring bulk store (cloud authoritative)');
-        data_stores.bulk = data_store_mirror.create({
-          read_check: true,
-          readwrite: data_stores.bulk,
-          write: data_store.create('data_store/bulk'),
-        });
-      } else {
-        console.log('[DATASTORE] Mirroring bulk store (local authoritative)');
-        data_stores.bulk = data_store_mirror.create({
-          read_check: true,
-          readwrite: data_store.create('data_store/bulk'),
-          write: data_stores.bulk,
-        });
-      }
-    }
-  }
-  if (server_config.do_shield) {
-    console.log('[DATASTORE] Applying shield layer to bulk and meta stores');
-    data_stores.meta = data_store_shield.create(data_stores.meta, { label: 'meta' });
-    data_stores.bulk = data_store_shield.create(data_stores.bulk, { label: 'bulk' });
-  }
-
-  // Image data store is a different API, not supporting mirror/shield for now
-  if (data_stores.image === undefined) {
-    data_stores.image = data_store_image.create('data_store/public', 'upload');
-  }
+  data_stores = dataStoresInit(data_stores);
 
   if (metrics_impl) {
     metrics.init(metrics_impl);
@@ -203,16 +150,25 @@ export function startup(params) {
   if (argv.dev) {
     console.log('PacketDebug: ON');
     packet.default_flags = packet.PACKET_DEBUG;
+    netDelaySet();
   }
   if (server_config.log && server_config.log.load_log) {
     channel_server.load_log = true;
   }
 
-  ws_server = glov_wsserver.create(params.server, params.server_https);
-  ws_server.on('error', function (error) {
-    console.error('Unhandled WSServer error:', error);
+  ws_server = glov_wsserver.create(server, server_https);
+  ws_server.on('error', function (error, client) {
+    if (client) {
+      channel_server.last_worker = client.client_channel;
+      logEx(client.ctx(), 'error', `Unhandled WSServer error from ${client.addr}:`, error);
+    } else {
+      console.error('Unhandled WSServer error:', error);
+    }
     let text = String(error);
-    if (text.indexOf('Invalid WebSocket frame:') !== -1) {
+    if (
+      text.indexOf('Invalid WebSocket frame:') !== -1 || // bad data from old clients?
+      text.indexOf('RangeError: Max payload size exceeded') // client sent too large of data, got auto-disconnected
+    ) {
       // Log, but don't broadcast or write crash dump
       console.error('ERROR (no dump)', new Date().toISOString(), error);
     } else {
@@ -231,6 +187,9 @@ export function startup(params) {
   process.on('SIGTERM', channel_server.forceShutdown.bind(channel_server));
   process.on('uncaughtException', channel_server.handleUncaughtError.bind(channel_server));
   ws_server.on('uncaught_exception', channel_server.handleUncaughtError.bind(channel_server));
+
+  masterInitApp(channel_server, app);
+  errorReportsInit(app);
 
   setTimeout(displayStatus, STATUS_TIME);
 

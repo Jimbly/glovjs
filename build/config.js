@@ -43,7 +43,7 @@ module.exports = {
     'common/glov/words/*.gkg',
   ],
   default_defines: {
-    FACEBOOK: false,
+    PLATFORM: 'web',
     ENV: 'default',
   },
   extra_index: [],

@@ -14,7 +14,16 @@
     <meta name="twitter:card" content="summary_large_image">
 
     <link rel="stylesheet" type="text/css" href="main.css">
-    <!-- #if FACEBOOK -->
+    <script>
+      // Environments
+	  /// #if ENV === 'default'
+      window.glov_env = 'default';
+      /// #endif
+      /// #if ENV === 'multiplayer'
+      window.glov_env = 'multiplayer';
+      /// #endif
+    </script>
+    <!-- #if PLATFORM === 'fbinstant' -->
     <script src="https://connect.facebook.net/en_US/fbinstant.beta.js"></script>
     <!-- #endif -->
   </head>
@@ -79,14 +88,8 @@
         <div id="dynamic_text"></div>
       </div>
     </div>
-    <!-- build:js vendor/combined.js -->
+    <!-- disabled-build:js vendor/combined.js -->
     <!-- endbuild -->
-<script>
-  window.glov_env = 'default';
-/// #if ENV === 'multiplayer'
-  window.glov_env = 'multiplayer';
-/// #endif
-</script>
     <script src="app_deps.bundle.js"></script>
     <script src="app.bundle.js"></script>
     <script src="fsdata.js"></script>

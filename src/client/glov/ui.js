@@ -682,10 +682,11 @@ export function buttonShared(param) {
   } else if (param.drag_target && glov_input.dragOver(param)) {
     // Mouseover even if touch?
     setMouseOver(key, rollover_quiet);
-    state = glov_input.mouseDown({ max_dist: Infinity }) ? 'down' : 'rollover';
+    state = glov_input.mouseDown() ? 'down' : 'rollover';
   } else if (param.drag_over && glov_input.dragOver(param)) {
     // do nothing
   } else if (glov_input.mouseOver(param)) {
+    param.do_max_dist = true; // Need to apply the same max_dist logic to mouseDown() as we do for click()
     state = glov_input.mouseDown(param) ? 'down' : 'rollover';
     // On touch, only set mouseover if also down
     if (!glov_input.mousePosIsTouch() || state === 'down') {
@@ -716,7 +717,7 @@ export function buttonShared(param) {
 export let button_last_color;
 function buttonBackgroundDraw(param, state) {
   let colors = param.colors || color_button;
-  let color = button_last_color = colors[state];
+  let color = button_last_color = param.color || colors[state];
   if (!param.no_bg) {
     let base_name = param.base_name || 'button';
     let sprite_name = `${base_name}_${state}`;

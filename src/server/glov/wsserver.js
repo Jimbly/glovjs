@@ -6,6 +6,7 @@ const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 const assert = require('assert');
 const events = require('glov/tiny-events.js');
 const { logEx } = require('./log.js');
+const { max } = Math;
 const { isPacket } = require('glov/packet.js');
 const { packetLog, packetLogInit } = require('./packet_log.js');
 const querystring = require('querystring');
@@ -59,7 +60,8 @@ WSClient.prototype.log = function (...args) {
 };
 
 WSClient.prototype.onError = function (e) {
-  this.ws_server.emit('error', e);
+  this.ws_server.last_client = this;
+  this.ws_server.emit('error', e, this);
 };
 
 WSClient.prototype.onClose = function () {
@@ -91,6 +93,7 @@ function WSServer() {
   this.handlers = {};
   this.restarting = undefined;
   this.app_ver = 0;
+  this.app_data = undefined;
   this.restart_filter = null;
   this.onMsg('ping', util.nop);
   packetLogInit(this);
@@ -110,9 +113,28 @@ WSServer.prototype.onMsg = function (msg, cb) {
   this.handlers[msg] = cb;
 };
 
+let large_packet_counts = {}; // msg -> { count, largest, last_log }
+function logBigFilter(client, msg, data) {
+  if (client.log_packet_size >= 65536) {
+    let count_data = large_packet_counts[msg];
+    if (!count_data) {
+      count_data = large_packet_counts[msg] = { count: 0, largest: 0, last_log: 0 };
+    }
+    count_data.count++;
+    count_data.largest = max(count_data.largest, client.log_packet_size);
+    let do_log = count_data.count >= count_data.last_log * 10;
+    if (do_log) {
+      count_data.last_log = count_data.count;
+      client.logCtx('warn', `Received large WebSocket packet (${client.log_packet_size}) for message ${msg}.`+
+        ` ${count_data.count} occurrences, largest=${count_data.largest} bytes`);
+    }
+  }
+  return true; // always accept
+}
+
 WSServer.prototype.init = function (server, server_https) {
   let ws_server = this;
-  ws_server.wss = new WebSocket.Server({ noServer: true });
+  ws_server.wss = new WebSocket.Server({ noServer: true, maxPayload: 1024*1024 });
 
   // Doing my own upgrade handling to early-reject invalid protocol versions
   let onUpgrade = (req, socket, head) => {
@@ -153,8 +175,9 @@ WSServer.prototype.init = function (server, server_https) {
         client.log('ignoring message received after disconnect');
       } else {
         ws_server.last_client = client;
+        client.log_packet_size = data && data.length;
         try {
-          wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter);
+          wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter || logBigFilter);
         } catch (e) {
           e.source = client.ctx();
           client.logCtx('error', `Exception "${e}" while handling packet from`, e.source);
@@ -165,7 +188,7 @@ WSServer.prototype.init = function (server, server_https) {
       }
     });
     socket.on('error', function (e) {
-      // Not sure this exists on `ws`
+      // Get low level errors here, as well as WS_ERR_UNSUPPORTED_MESSAGE_LENGTH (1009)
       client.onError(e);
     });
     ws_server.emit('client', client);
@@ -187,6 +210,7 @@ WSServer.prototype.init = function (server, server_https) {
       app_ver: this.app_ver,
       time: Date.now(),
       restarting: ws_server.restarting,
+      app_data: ws_server.app_data,
     });
 
     let query = querystring.parse(url.parse(req.url).query);
@@ -267,6 +291,10 @@ WSServer.prototype.broadcast = function (msg, data) {
 
 WSServer.prototype.setAppVer = function (ver) {
   this.app_ver = ver;
+};
+
+WSServer.prototype.setAppData = function (data) {
+  this.app_data = data;
 };
 
 export function isClient(obj) {

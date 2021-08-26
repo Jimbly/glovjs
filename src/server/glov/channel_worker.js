@@ -468,7 +468,7 @@ export class ChannelWorker {
         // This is fine, just ignore
         // this.debug(`->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
-        this.error(`->${other_channel_id} unsubscribe failed: ${err}`);
+        this[this.had_subscribe_error ? 'warn' : 'error'](`->${other_channel_id} unsubscribe failed: ${err}`);
         this.onError(err);
       } else {
         // succeeded, nothing special
@@ -1274,6 +1274,41 @@ export class ChannelWorker {
     /*let pkt_idx = */pak.readU32();/* & PAK_ID_MASK;*/
     let source = pak.readAnsiString();
     channel_worker.dispatchPacket(-1, source, pak);
+  }
+
+  aquireResourceAsync(resource_id, callback) {
+    assert(resource_id);
+    assert(callback);
+
+    if (!this.locked_resource_ids) {
+      this.locked_resource_ids = Object.create(null);
+    }
+
+    let callbacks = this.locked_resource_ids[resource_id];
+
+    let released = false;
+    let release_callback = () => {
+      assert(!released);
+      released = true;
+
+      if (callbacks.length === 0) {
+        delete this.locked_resource_ids[resource_id];
+      } else {
+        this.debug(`Handling pending request to aquire resource ${resource_id}`);
+        let pending_callback = callbacks.shift();
+        pending_callback();
+      }
+    };
+    // The prepared callback will call the original callback with the release callback as its argument
+    let prepared_callback = callback.bind(this, release_callback);
+
+    if (callbacks) {
+      this.debug(`Queuing request to aquire resource ${resource_id}, it is currently aquired.`);
+      callbacks.push(prepared_callback);
+    } else {
+      callbacks = this.locked_resource_ids[resource_id] = [];
+      prepared_callback();
+    }
   }
 }
 ChannelWorker.prototype.logPacketDispatch = packetLog;

@@ -1,6 +1,8 @@
-/* eslint-env browser */
+/* global location */
 
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
+
+const { fetch } = require('./fetch.js');
 
 let error_report_disabled = false;
 
@@ -14,7 +16,6 @@ export function errorReportSetPath(path) {
 }
 
 let error_report_details = {};
-let error_report_details_str = '';
 let error_report_dynamic_details = {};
 export function errorReportSetDetails(key, value) {
   if (value) {
@@ -22,7 +23,9 @@ export function errorReportSetDetails(key, value) {
   } else {
     delete error_report_details[key];
   }
-  error_report_details_str = `&${Object.keys(error_report_details)
+}
+function errorReportDetailsString() {
+  return `&${Object.keys(error_report_details)
     .map((k) => `${k}=${error_report_details[k]}`)
     .join('&')}`;
 }
@@ -48,10 +51,6 @@ errorReportSetDynamicDetails('time_accum', function () {
   return time_accum;
 });
 
-export function errorReportGetDetails() {
-  return error_report_details;
-}
-
 function getDynamicDetail(key) {
   let value = error_report_dynamic_details[key]();
   if (!value && value !== 0) {
@@ -62,6 +61,10 @@ function getDynamicDetail(key) {
 
 let last_error_time = 0;
 let crash_idx = 0;
+export function hasCrashed() {
+  return crash_idx > 0;
+}
+
 // Errors from plugins that we don't want to get reported to us, or show the user!
 // The exact phrase "Script error.\n  at (0:0)" comes from our bootstap.js when we
 //   receive the message 'Script Error.' and no stack.  This happens on the Mi Browser on Redmi phones
@@ -96,10 +99,8 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   let url = api_path; // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}` +
-    `&msg=${escape(msg)}${error_report_details_str}` +
+    `&msg=${escape(msg)}${errorReportDetailsString()}` +
     `${Object.keys(error_report_dynamic_details).map(getDynamicDetail).join('')}`;
-  let xhr = new XMLHttpRequest();
-  xhr.open('POST', url, true);
-  xhr.send(null);
+  fetch({ method: 'POST', url }, () => { /* nop */ });
   return true;
 }
