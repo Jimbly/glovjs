@@ -163,6 +163,7 @@ function ChatUI(params) {
   });
   this.w = params.w || engine.game_width / 2;
   this.h = params.h || engine.game_height / 2; // excluding text entry
+  this.border = params.border || undefined;
   this.volume_join_leave = params.volume_join_leave || 1;
   this.volume_in = params.volume_in || 1;
   this.volume_out = params.volume_out || 1;
@@ -572,8 +573,8 @@ ChatUI.prototype.sendChat = function (flags, text) {
 ChatUI.prototype.run = function (opts) {
   const UI_SCALE = ui.font_height / 24;
   opts = opts || {};
-  const SPACE_ABOVE_ENTRY = opts.border || (8 * UI_SCALE);
-  const border = opts.border || (8 * UI_SCALE);
+  const border = opts.border || this.border || (8 * UI_SCALE);
+  const SPACE_ABOVE_ENTRY = border;
   const scroll_grow = opts.scroll_grow || 0;
   if (net.client.disconnected && !this.hide_disconnected_message) {
     ui.font.drawSizedAligned(
