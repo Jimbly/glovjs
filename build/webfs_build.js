@@ -47,6 +47,8 @@ function fileFSName(opts, name) {
   if (opts.base) {
     name = forwardSlashes(path.relative(opts.base, name));
   }
+  // Remap `../glov/client/shaders/foo.fp` to be `glov/shaders/foo.fp`
+  name = name.replace(/(.*glov\/(?:client|common)\/)/, 'glov/');
   return name;
 }
 

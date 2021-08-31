@@ -1,10 +1,10 @@
 module.exports = {
-  server_js_files: ['**/*.js', '!client/**/*.js'],
-  server_static: ['**/common/glov/words/*.gkg'],
+  server_js_files: ['**/*.js', '!**/client/**/*.js'],
+  server_static: ['**/glov/common/words/*.gkg'],
   all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
   client_js_files: [
     '**/*.js',
-    '!server/**/*.js',
+    '!**/server/**/*.js',
     '!client/vendor/**/*.js',
   ],
   client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
@@ -37,10 +37,10 @@ module.exports = {
   ],
   client_fsdata: [
     'client/shaders/**',
-    'client/glov/shaders/**',
-    'client/glov/models/box_textured_embed.glb',
-    'client/glov/words/*.txt',
-    'common/glov/words/*.gkg',
+    'glov/client/shaders/**',
+    'glov/client/models/box_textured_embed.glb',
+    'glov/client/words/*.txt',
+    'glov/common/words/*.gkg',
   ],
   default_defines: {
     PLATFORM: 'web',

@@ -2,14 +2,14 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off */
 const assert = require('assert');
-const local_storage = require('glov/local_storage.js');
-const glov_font = require('glov/font.js');
-const { click, KEYS, keyDownEdge } = require('glov/input.js');
-const { linkText } = require('glov/link.js');
+const local_storage = require('glov/client/local_storage.js');
+const glov_font = require('glov/client/font.js');
+const { click, KEYS, keyDownEdge } = require('glov/client/input.js');
+const { linkText } = require('glov/client/link.js');
 const { random, round } = Math;
-const net = require('glov/net.js');
-const ui = require('glov/ui.js');
-const { vec4 } = require('glov/vmath.js');
+const net = require('glov/client/net.js');
+const ui = require('glov/client/ui.js');
+const { vec4 } = require('glov/common/vmath.js');
 
 export let style_link = glov_font.style(null, {
   color: 0x5040FFff,

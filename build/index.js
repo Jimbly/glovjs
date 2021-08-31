@@ -311,6 +311,7 @@ gb.task({
   name: 'client_fsdata',
   input: config.client_fsdata,
   target: 'dev',
+  version: 3,
   ...webfs({
     base: 'client',
     output: 'client/fsdata.js',

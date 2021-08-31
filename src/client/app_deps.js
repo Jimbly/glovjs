@@ -1,5 +1,5 @@
 /* globals deps */
-require('./glov/require.js');
+require('../glov/client/require.js');
 
 // Node built-in replacements
 deps.assert = require('assert');
