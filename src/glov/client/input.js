@@ -928,6 +928,12 @@ export function endFrame(skip_mouse) {
         touch_data.dispatched = false;
         touch_data.dispatched_drag = false;
         touch_data.dispatched_drag_over = false;
+        if (touch_data.drag_payload_frame === engine.frame_index - 2) {
+          // Clear this after an entire frame of not being set (usually, things
+          // on the next frame will need to get the payload that was set later
+          // in the previous frame)
+          touch_data.drag_payload = null;
+        }
         touch_data.up_edge = 0;
         touch_data.down_edge = 0;
         touch_data.down_time = 0;
@@ -1349,6 +1355,7 @@ export function drag(param) {
       }
       if (param.payload) {
         touch_data.drag_payload = param.payload;
+        touch_data.drag_payload_frame = engine.frame_index;
       }
       camera2d.domToVirtual(start_pos, touch_data.start_pos);
       camera2d.domToVirtual(cur_pos, touch_data.cur_pos);
