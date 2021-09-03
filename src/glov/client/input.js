@@ -39,6 +39,7 @@ export let KEYS = {
   CTRL: 17,
   ALT: 18,
   ESC: 27,
+  ESCAPE: 27,
   SPACE: 32,
   PAGEUP: 33,
   PAGEDOWN: 34,
