@@ -12,7 +12,8 @@ Z.BACKGROUND = Z.BACKGROUND || 1;
 
 const { KEYS } = glov_input;
 const { abs, floor, max, min } = Math;
-const { clamp, vec4 } = require('../../common/glov/vmath.js');
+const { vec4 } = require('glov/common/vmath.js');
+const { clamp } = require('glov/common/util.js');
 
 const mode_regex1 = /^((?:\d+;)*\d+m)/u;
 const mode_regex2 = /(\d+)[;m]/gu;
