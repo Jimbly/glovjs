@@ -3,15 +3,16 @@
 /*eslint no-bitwise:off */
 
 const assert = require('assert');
-const glov_engine = require('./engine.js');
+const camera2d = require('./camera2d.js');
+const engine = require('./engine.js');
 const glov_font = require('./font.js');
-const glov_ui = require('./ui.js');
-const glov_input = require('./input.js');
+const ui = require('./ui.js');
+const input = require('./input.js');
 
 window.Z = window.Z || {};
 Z.BACKGROUND = Z.BACKGROUND || 1;
 
-const { KEYS } = glov_input;
+const { KEYS } = input;
 const { abs, floor, max, min } = Math;
 const { vec4 } = require('glov/common/vmath.js');
 const { clamp } = require('glov/common/util.js');
@@ -135,7 +136,7 @@ class GlovTerminal {
     }
     this.char_height = params.char_height || 16;
     this.char_width = params.char_width || 9;
-    this.font = params.font || glov_engine.font;
+    this.font = params.font || engine.font;
     this.auto_scroll = true;
     this.buffer = new Array(this.h);
     this.prebuffer = new Array(this.h); // before applying the mods
@@ -163,20 +164,19 @@ class GlovTerminal {
         }
         break;
       case MOD_SCROLL:
-        if (this.sub_view) {
-          for (let yy = this.y0; yy < this.y1 - 1; ++yy) {
+        if (mod.sub_view) {
+          let x1 = mod.sub_view.x + mod.sub_view.w;
+          let y1 = mod.sub_view.y + mod.sub_view.h;
+          for (let yy = mod.sub_view.y; yy < y1 - 1; ++yy) {
             let rout = buffer[yy];
             let rin = buffer[yy+1];
-            for (let xx = this.x0; xx < this.x1; ++xx) {
+            for (let xx = mod.sub_view.x; xx < x1; ++xx) {
               rout[xx] = rin[xx];
             }
           }
-          let row = buffer[this.y1 - 1];
-          for (let xx = this.x0; xx < this.x1; ++xx) {
-            row[xx].fg = mod.fg;
-            row[xx].bg = mod.bg;
-            row[xx].ch = ' ';
-            row[xx].attr = 0;
+          let row = buffer[y1 - 1];
+          for (let xx = mod.sub_view.x; xx < x1; ++xx) {
+            row[xx] = new CharInfo(mod.fg, mod.bg, 0);
           }
         } else {
           let row = buffer[0];
@@ -191,7 +191,7 @@ class GlovTerminal {
         }
         break;
       case MOD_CLEAR:
-        assert(!this.sub_view); // Not yet implemented
+        assert(!mod.sub_view); // Not yet implemented
         for (let ii = 0; ii < this.h; ++ii) {
           let line = buffer[ii];
           for (let jj = 0; jj < this.w; ++jj) {
@@ -206,7 +206,7 @@ class GlovTerminal {
         }
         break;
       case MOD_CLEAREOL: {
-        assert(!this.sub_view); // Not yet implemented
+        assert(!mod.sub_view); // Not yet implemented
         let line = buffer[mod.y];
         for (let jj = mod.x; jj < this.w; ++jj) {
           line[jj].ch = ' ';
@@ -221,7 +221,7 @@ class GlovTerminal {
       } break;
     }
     if (mod_playback) {
-      this.playback.timestamp = glov_engine.getFrameTimestamp();
+      this.playback.timestamp = engine.getFrameTimestamp();
       if (this.playback.x >= this.w) {
         this.playback.x = 0;
         this.playback.y++;
@@ -241,6 +241,7 @@ class GlovTerminal {
       fg: this.fg,
       bg: this.bg,
       attr: this.attr,
+      sub_view: this.sub_view,
     };
     if (type === MOD_CH) {
       let char_info = this.prebuffer[mod.y][mod.x];
@@ -625,6 +626,8 @@ class GlovTerminal {
   }
 
   menu(params) {
+    camera2d.push();
+    camera2d.set(0, 0, this.w, this.h);
     let { x, y, items } = params;
     let color_sel = params.color_sel || { fg: 15, bg: 8 };
     let color_unsel = params.color_unsel || { fg: 7, bg: 0 };
@@ -639,20 +642,19 @@ class GlovTerminal {
     this.last_menu_frame = this.frame;
     this.last_menu_key = menu_key;
 
-    if (glov_input.keyDownEdge(KEYS.DOWN) || glov_input.keyDownEdge(KEYS.S)) {
+    if (input.keyDownEdge(KEYS.DOWN) || input.keyDownEdge(KEYS.S)) {
       this.menu_idx++;
     }
-    if (glov_input.keyDownEdge(KEYS.UP) || glov_input.keyDownEdge(KEYS.W)) {
+    if (input.keyDownEdge(KEYS.UP) || input.keyDownEdge(KEYS.W)) {
       this.menu_idx--;
     }
-    if (glov_input.keyDownEdge(KEYS.HOME)) {
+    if (input.keyDownEdge(KEYS.HOME)) {
       this.menu_idx = 0;
     }
-    if (glov_input.keyDownEdge(KEYS.END)) {
+    if (input.keyDownEdge(KEYS.END)) {
       this.menu_idx = items.length - 1;
     }
 
-    this.menu_idx = (this.menu_idx + items.length) % items.length;
     let max_w = 0;
     for (let ii = 0; ii < items.length; ++ii) {
       max_w = max(max_w, items[ii].length);
@@ -660,13 +662,7 @@ class GlovTerminal {
     max_w += pre_sel.length;
 
     let ret = -1;
-
-    if (glov_input.keyDownEdge(KEYS.SPACE) ||
-      glov_input.keyDownEdge(KEYS.ENTER)
-    ) {
-      ret = this.menu_idx;
-    }
-
+    // First check anything tha changes menu index
     for (let ii = 0; ii < items.length; ++ii) {
       let param = {
         x,
@@ -674,33 +670,49 @@ class GlovTerminal {
         w: max_w,
         h: 1,
       };
-      if (glov_input.click(param)) {
+      if (input.click(param)) {
         this.menu_idx = ii;
         ret = ii;
-      } else if (glov_input.mouseMoved() && glov_input.mouseOver(param)) {
+      } else if (input.mouseMoved() && input.mouseOver(param)) {
         this.menu_idx = ii;
       }
       let hotkey = items[ii].match(/\[([A-Z0-9])\]/u);
-      if (hotkey && glov_input.keyDownEdge(KEYS.A + hotkey[1].charCodeAt(0) - 'A'.charCodeAt(0))) {
+      if (hotkey && input.keyDownEdge(KEYS.A + hotkey[1].charCodeAt(0) - 'A'.charCodeAt(0))) {
         this.menu_idx = ii;
         ret = ii;
       }
+    }
+
+    this.menu_idx = (this.menu_idx + items.length) % items.length;
+
+    if (input.keyDownEdge(KEYS.SPACE) ||
+      input.keyDownEdge(KEYS.ENTER)
+    ) {
+      ret = this.menu_idx;
+    }
+
+    for (let ii = 0; ii < items.length; ++ii) {
       let selected = ii === this.menu_idx;
       let executing = ii === ret;
       let colors = executing ? color_execute : selected ? color_sel : color_unsel;
-      param.fg = colors.fg;
-      param.bg = colors.bg;
+      let param = {
+        x,
+        y: y + ii,
+        fg: colors.fg,
+        bg: colors.bg,
+      };
       param.text = `${selected ? pre_sel : pre_unsel}${items[ii]}`;
       this.print(param);
     }
 
     this.color(color_unsel.fg, color_unsel.bg);
 
+    camera2d.pop();
     return ret;
   }
 
   render(params) {
-    let dt = glov_engine.getFrameDt();
+    let dt = engine.getFrameDt();
     this.frame++;
 
     while (dt >= this.mod_countdown && this.mod_head) {
@@ -725,7 +737,7 @@ class GlovTerminal {
     this.mod_countdown = max(0, this.mod_countdown - dt);
 
     const { w, h, buffer, char_width, char_height, palette, draw_cursor } = this;
-    const blink = glov_engine.getFrameTimestamp() % 1000 > 500;
+    const blink = engine.getFrameTimestamp() % 1000 > 500;
     params = params || {};
     let x = params.x || 0;
     let y = params.y || 0;
@@ -754,7 +766,7 @@ class GlovTerminal {
           ++jj;
         }
         text = text.join('');
-        glov_engine.font.drawSized(this.font_styles[fg],
+        engine.font.drawSized(this.font_styles[fg],
           x + jj0 * char_width, y + ii * char_height, z + 0.5,
           char_height, text);
       }
@@ -764,9 +776,9 @@ class GlovTerminal {
       let { playback } = this;
       let cx = x + (this.mod_head ? playback.x : this.x) * char_width;
       let cy = y + (this.mod_head ? playback.y : this.y) * char_height;
-      let cursor_blink = (glov_engine.getFrameTimestamp() - playback.timestamp) % 1000 < 500;
+      let cursor_blink = (engine.getFrameTimestamp() - playback.timestamp) % 1000 < 500;
       if (cursor_blink) {
-        glov_ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
+        ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
           cx + char_width, cy + char_height - draw_cursor[0],
           z + 0.75, palette[playback.fg]);
       }
@@ -782,13 +794,13 @@ class GlovTerminal {
     let last_y;
     let box_color = buffer[0][0].bg;
     function flush() {
-      glov_ui.drawRect(box_x0 * char_width, box_y0 * char_height,
+      ui.drawRect(box_x0 * char_width, box_y0 * char_height,
         (last_x + 1) * char_width, (last_y + 1) * char_height, z, palette[box_color]);
       if (box_y0 !== last_y && last_y !== w - 1) {
         // A was draw, draw B:
         // AAABB
         // AAA..
-        glov_ui.drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
+        ui.drawRect(x + (last_x + 1) * char_width, y + box_y0 * char_height,
           x + w * char_width, y + last_y * char_height, z, palette[box_color]);
       }
     }
@@ -810,6 +822,29 @@ class GlovTerminal {
   }
 }
 
-export function create(params) {
+export function terminalCreate(params) {
   return new GlovTerminal(params);
 }
+
+// Convenience functions for generating ANSI strings from named colors
+export const ansi = { bg: {} };
+[
+  'black',
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'magenta',
+  'cyan',
+  'white',
+].forEach(function (color, idx) {
+  ansi[color] = function (str) {
+    return `${ESC}[${30 + idx}m${str}${ESC}[0m`;
+  };
+  ansi[color].bright = function (str) {
+    return `${ESC}[${30 + idx};1m${str}${ESC}[0m`;
+  };
+  ansi.bg[color] = function (str) {
+    return `${ESC}[${40 + idx}m${str}${ESC}[0m`;
+  };
+});
