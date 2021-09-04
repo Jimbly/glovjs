@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /*eslint no-bitwise:off */
 
+const assert = require('assert');
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const glov_ui = require('./ui.js');
@@ -79,6 +80,7 @@ class GlovTerminal {
     params = params || {};
     this.baud = params.baud || 9600;
     this.frame = 0;
+    this.draw_cursor = this.draw_cursor ?? [1,4];
     // screen buffer
     this.w = params.w || 80;
     this.h = params.h || 25;
@@ -100,6 +102,12 @@ class GlovTerminal {
     this.mod_head = null;
     this.mod_tail = null;
     this.mod_countdown = 0;
+    // Current sub-view
+    this.sub_view = null; // { x, y, w, h }
+    this.x0 = 0;
+    this.y0 = 0;
+    this.x1 = this.w;
+    this.y1 = this.h;
 
     this.palette = params.palette || [
       vec4(0/64,0/64,0/63,1),
@@ -154,18 +162,36 @@ class GlovTerminal {
           this.playback.y = mod.y;
         }
         break;
-      case MOD_SCROLL: {
-        let row = buffer[0];
-        buffer.splice(0, 1);
-        buffer.push(row);
-        for (let ii = 0; ii < row.length; ++ii) {
-          row[ii].fg = mod.fg;
-          row[ii].bg = mod.bg;
-          row[ii].ch = ' ';
-          row[ii].attr = 0;
+      case MOD_SCROLL:
+        if (this.sub_view) {
+          for (let yy = this.y0; yy < this.y1 - 1; ++yy) {
+            let rout = buffer[yy];
+            let rin = buffer[yy+1];
+            for (let xx = this.x0; xx < this.x1; ++xx) {
+              rout[xx] = rin[xx];
+            }
+          }
+          let row = buffer[this.y1 - 1];
+          for (let xx = this.x0; xx < this.x1; ++xx) {
+            row[xx].fg = mod.fg;
+            row[xx].bg = mod.bg;
+            row[xx].ch = ' ';
+            row[xx].attr = 0;
+          }
+        } else {
+          let row = buffer[0];
+          buffer.splice(0, 1);
+          buffer.push(row);
+          for (let ii = 0; ii < row.length; ++ii) {
+            row[ii].fg = mod.fg;
+            row[ii].bg = mod.bg;
+            row[ii].ch = ' ';
+            row[ii].attr = 0;
+          }
         }
-      } break;
+        break;
       case MOD_CLEAR:
+        assert(!this.sub_view); // Not yet implemented
         for (let ii = 0; ii < this.h; ++ii) {
           let line = buffer[ii];
           for (let jj = 0; jj < this.w; ++jj) {
@@ -180,6 +206,7 @@ class GlovTerminal {
         }
         break;
       case MOD_CLEAREOL: {
+        assert(!this.sub_view); // Not yet implemented
         let line = buffer[mod.y];
         for (let jj = mod.x; jj < this.w; ++jj) {
           line[jj].ch = ' ';
@@ -194,6 +221,7 @@ class GlovTerminal {
       } break;
     }
     if (mod_playback) {
+      this.playback.timestamp = glov_engine.getFrameTimestamp();
       if (this.playback.x >= this.w) {
         this.playback.x = 0;
         this.playback.y++;
@@ -254,10 +282,10 @@ class GlovTerminal {
 
   moveto(x, y) {
     if (typeof x === 'number') {
-      this.x = x;
+      this.x = this.x0 + x;
     }
     if (typeof y === 'number') {
-      this.y = y;
+      this.y = this.y0 + y;
     }
     this.checkwrap();
   }
@@ -274,22 +302,22 @@ class GlovTerminal {
     this.auto_scroll = b;
   }
   checkwrap() {
-    if (this.x < 0) {
-      this.x = 0;
+    if (this.x < this.x0) {
+      this.x = this.x0;
     }
-    if (this.x >= this.w) {
-      this.x = 0;
+    if (this.x >= this.x1) {
+      this.x = this.x0;
       this.y++;
     }
-    if (this.y >= this.h) {
-      this.y = this.h - 1;
+    if (this.y >= this.y1) {
+      this.y = this.y1 - 1;
       if (this.auto_scroll) {
         this.mod(MOD_SCROLL);
       }
     }
   }
   cr() {
-    this.x = 0;
+    this.x = this.x0;
     this.checkwrap();
   }
   lf() {
@@ -297,7 +325,7 @@ class GlovTerminal {
     this.checkwrap();
   }
   crlf() {
-    this.x = 0;
+    this.x = this.x0;
     this.y++;
     this.checkwrap();
   }
@@ -309,6 +337,27 @@ class GlovTerminal {
     this.mod(MOD_CLEAREOL);
     this.x = this.w; // probably?
     this.checkwrap();
+  }
+
+  subViewPush(sub_view) {
+    assert(!this.sub_view);
+    if (sub_view.cursor_x) {
+      this.moveto(sub_view.cursor_x, sub_view.cursor_y);
+    }
+    this.sub_view = sub_view;
+    this.x0 = sub_view.x || 0;
+    this.y0 = sub_view.y || 0;
+    this.x1 = sub_view.x + sub_view.w;
+    this.y1 = sub_view.y + sub_view.h;
+  }
+  subViewPop() {
+    assert(this.sub_view);
+    this.sub_view.cursor_x = this.x;
+    this.sub_view.cursor_y = this.y;
+    this.sub_view = null;
+    this.x0 = this.y0 = 0;
+    this.x1 = this.w;
+    this.y1 = this.h;
   }
 
   print(params) {
@@ -675,7 +724,7 @@ class GlovTerminal {
     }
     this.mod_countdown = max(0, this.mod_countdown - dt);
 
-    const { w, h, buffer, char_width, char_height, palette } = this;
+    const { w, h, buffer, char_width, char_height, palette, draw_cursor } = this;
     const blink = glov_engine.getFrameTimestamp() % 1000 > 500;
     params = params || {};
     let x = params.x || 0;
@@ -708,6 +757,18 @@ class GlovTerminal {
         glov_engine.font.drawSized(this.font_styles[fg],
           x + jj0 * char_width, y + ii * char_height, z + 0.5,
           char_height, text);
+      }
+    }
+    // Draw cursor
+    if (draw_cursor) {
+      let { playback } = this;
+      let cx = x + (this.mod_head ? playback.x : this.x) * char_width;
+      let cy = y + (this.mod_head ? playback.y : this.y) * char_height;
+      let cursor_blink = (glov_engine.getFrameTimestamp() - playback.timestamp) % 1000 < 500;
+      if (cursor_blink) {
+        glov_ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
+          cx + char_width, cy + char_height - draw_cursor[0],
+          z + 0.75, palette[playback.fg]);
       }
     }
     // Draw background rects
