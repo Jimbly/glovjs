@@ -20,8 +20,6 @@ const wscommon = require('glov/common/wscommon.js');
 const { netDelaySet } = wscommon;
 
 const STATUS_TIME = 5000;
-const FILE_CHANGE_POLL = 16;
-const FILE_CHANGE_STABLE = 150;
 export let ws_server;
 export let channel_server;
 
@@ -78,48 +76,6 @@ function updateVersion(base_name, is_startup) {
       }
     }
   });
-}
-
-function waitForAccess(filename, cb) {
-  // Really this should just use _sopen_s() w/ _SH_DENYRW, but that seems totally inaccessible from Node :(
-  let first = true;
-  let last_stats;
-  let last_change = Date.now();
-  let err_count = 0;
-  function check() {
-    fs.stat(filename, function (err, stats) {
-      let now = Date.now();
-      if (err) {
-        ++err_count;
-        if (err_count > 50) {
-          // give up
-          console.error(`Too many errors waiting for ${filename} to finish writing, giving up`);
-          return void cb();
-        }
-      } else {
-        err_count = 0;
-      }
-      let unchanged = false;
-      if (!first) {
-        unchanged = last_stats && stats &&
-          last_stats.mtime.getTime() === stats.mtime.getTime() &&
-          last_stats.size === stats.size;
-        if (unchanged && now - last_change > FILE_CHANGE_STABLE) {
-          return void cb();
-        }
-      }
-      first = false;
-      last_stats = stats;
-      if (!unchanged) {
-        last_change = now;
-      }
-      // Two timeouts, ensure main loop gets to tick
-      setTimeout(function () {
-        setTimeout(check, FILE_CHANGE_POLL);
-      }, FILE_CHANGE_POLL);
-    });
-  }
-  setTimeout(check, FILE_CHANGE_POLL);
 }
 
 export function startup(params) {
@@ -193,33 +149,20 @@ export function startup(params) {
 
   setTimeout(displayStatus, STATUS_TIME);
 
-  let deferred_file_changes = {};
-  fs.watch(path.join(__dirname, '../../client/'), { recursive: true }, function (eventType, filename) {
-    if (!filename) {
-      return;
-    }
-    filename = filename.replace(/\\/g, '/');
-    let m = filename.match(/(.*)\.ver\.json$/);
-    if (!m) {
-      // not a version file
-      if (argv.dev) {
-        // send a dynamic reload message
-        if (deferred_file_changes[filename]) {
-          // console.log(`File changed: ${filename} (already waiting)`);
-        } else {
-          // console.log(`File changed: ${filename} (starting waiting)`);
-          deferred_file_changes[filename] = true;
-          waitForAccess(path.join(__dirname, '../../client', filename), function () {
-            console.log(`File changed: ${filename}`);
-            delete deferred_file_changes[filename];
-            ws_server.broadcast('filewatch', filename);
-          });
+  process.on('message', function (msg) {
+    if (msg && msg.type === 'file_change') {
+      let files = msg.paths;
+      for (let ii = 0; ii < files.length; ++ii) {
+        let filename = files[ii];
+        console.log(`File changed: ${filename}`);
+        ws_server.broadcast('filewatch', filename);
+        let m = filename.match(/(.*)\.ver\.json$/);
+        if (m) {
+          let file_base_name = m[1]; // e.g. 'app' or 'worker'
+          updateVersion(file_base_name);
         }
       }
-      return;
     }
-    let file_base_name = m[1]; // e.g. 'app' or 'worker'
-    updateVersion(file_base_name);
   });
   updateVersion('app', true);
 }

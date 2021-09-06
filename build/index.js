@@ -287,6 +287,8 @@ const server_input_globs = [
 let server_port = argv.port || process.env.port || 3000;
 let server_port_https = argv.sport || process.env.sport || (server_port + 100);
 
+let server_process_container = {};
+
 gb.task({
   name: 'run_server',
   input: server_input_globs,
@@ -301,9 +303,12 @@ gb.task({
     ].concat(argv.debug ? ['--debug'] : [])
     .concat(argv.env ? [`--env=${argv.env}`] : [])
     .concat(argv.port ? [`--port=${server_port}`] : []),
-    stdio: argv.serverlog === false ? 'ignore' : 'inherit', // --no-serverlog
+    stdio: argv.serverlog === false ?
+      ['ignore', 'ignore', 'ignore', 'ipc'] : // --no-serverlog
+      ['inherit', 'inherit', 'inherit', 'ipc'],
     // shell: true,
     // detached: true,
+    process_container: server_process_container,
   }),
 });
 
@@ -391,12 +396,17 @@ gb.task({
         // don't sync clicks/scrolls/forms/etc
         ghostMode: false,
 
-        open: argv.browser === false ? false : // --no-browser
+        open: argv.browser === false ?
+          false : // --no-browser
           argv.https ? 'target_https' : 'target',
       }, done);
     } else {
       let updated = job.getFilesUpdated();
-      bs.reload(updated.map((a) => a.relative.replace(/^client\//, '')));
+      updated = updated.map((a) => a.relative.replace(/^client\//, ''));
+      if (server_process_container.proc) {
+        server_process_container.proc.send({ type: 'file_change', paths: updated });
+      }
+      bs.reload(updated);
       done();
     }
   },

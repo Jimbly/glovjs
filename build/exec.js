@@ -43,18 +43,22 @@ module.exports = function exec(opts) {
       spawn_opts[key] = opts[key];
     }
   });
+  let process_container = opts.process_container || {};
 
   let proc;
+  function setProc(new_proc) {
+    process_container.proc = proc = new_proc;
+  }
 
   process.on('exit', function onExitCleanup() {
     // Doesn't seem to help
     if (proc && proc.exitCode !== null) {
       // Previous run exited
-      proc = null;
+      setProc(null);
     }
     if (proc) {
       proc.kill('SIGTERM');
-      proc = null;
+      setProc(null);
     }
   });
 
@@ -65,12 +69,12 @@ module.exports = function exec(opts) {
     func: function (job, done) {
       if (proc && proc.exitCode !== null) {
         // Previous run exited
-        proc = null;
+        setProc(null);
       }
       if (proc) {
         job.log(`Restarting ${opts.cmd} ${opts.args.join(' ')}`);
         let kill_proc = proc;
-        proc = null;
+        setProc(null);
         kill_proc.on('exit', startProc);
         kill_proc.kill(kill_sig);
         // Use a stronger signal after a timeout if it doesn't exit?
@@ -85,7 +89,8 @@ module.exports = function exec(opts) {
       }
 
       function startProc() {
-        let my_proc = proc = child_process.spawn(opts.cmd, opts.args, spawn_opts);
+        let my_proc = child_process.spawn(opts.cmd, opts.args, spawn_opts);
+        setProc(my_proc);
         function guard(fn) {
           return function (...args) {
             if (proc === my_proc) {
@@ -95,7 +100,7 @@ module.exports = function exec(opts) {
         }
         proc.on('close', guard(function (code) {
           gb.warn(`Sub-process "${opts.cmd}" (PID ${proc.pid}) exited with code=${code}`);
-          proc = null;
+          setProc(null);
         }));
 
         // Fire done() immediately if we have a PID, otherwise wait for the error
