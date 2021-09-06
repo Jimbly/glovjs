@@ -149,21 +149,35 @@ export function startup(params) {
 
   setTimeout(displayStatus, STATUS_TIME);
 
-  process.on('message', function (msg) {
-    if (msg && msg.type === 'file_change') {
-      let files = msg.paths;
-      for (let ii = 0; ii < files.length; ++ii) {
-        let filename = files[ii];
-        console.log(`File changed: ${filename}`);
-        ws_server.broadcast('filewatch', filename);
-        let m = filename.match(/(.*)\.ver\.json$/);
-        if (m) {
-          let file_base_name = m[1]; // e.g. 'app' or 'worker'
-          updateVersion(file_base_name);
-        }
+  if (argv.dev) {
+    let gbstate;
+    process.on('message', function (msg) {
+      if (!msg) {
+        return;
       }
-    }
-  });
+      if (msg.type === 'file_change') {
+        let files = msg.paths;
+        for (let ii = 0; ii < files.length; ++ii) {
+          let filename = files[ii];
+          console.log(`File changed: ${filename}`);
+          ws_server.broadcast('filewatch', filename);
+          let m = filename.match(/(.*)\.ver\.json$/);
+          if (m) {
+            let file_base_name = m[1]; // e.g. 'app' or 'worker'
+            updateVersion(file_base_name);
+          }
+        }
+      } else if (msg.type === 'gbstate') {
+        gbstate = msg.state;
+        ws_server.broadcast('gbstate', gbstate);
+      }
+    });
+    ws_server.on('client', (client) => {
+      if (gbstate) {
+        client.send('gbstate', gbstate);
+      }
+    });
+  }
   updateVersion('app', true);
 }
 

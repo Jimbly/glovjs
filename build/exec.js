@@ -48,6 +48,9 @@ module.exports = function exec(opts) {
   let proc;
   function setProc(new_proc) {
     process_container.proc = proc = new_proc;
+    if (process_container.on_change) {
+      process_container.on_change();
+    }
   }
 
   process.on('exit', function onExitCleanup() {

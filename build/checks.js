@@ -69,7 +69,7 @@ module.exports = function (filename) {
   prettyInterface();
 
   requireVersions({
-    'glov-build': '0.0.30',
+    'glov-build': '0.0.31',
     'glov-build-browserify': '0.0.4',
     'glov-build-preresolve': '0.1.0',
   });

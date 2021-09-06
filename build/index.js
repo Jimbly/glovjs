@@ -574,4 +574,23 @@ gb.task({
   ],
 });
 
+// Send build state to server process upon server startup and upon state change
+let gbstate;
+function sendGBState() {
+  if (server_process_container.proc && gbstate) {
+    server_process_container.proc.send(gbstate);
+  }
+}
+server_process_container.on_change = sendGBState;
+let last_gbstate = '';
+gb.on('done', function () {
+  let debug_state = gb.getDebugState();
+  let state_str = JSON.stringify(debug_state);
+  if (state_str !== last_gbstate) {
+    gbstate = { type: 'gbstate', state: debug_state };
+    last_gbstate = state_str;
+    sendGBState();
+  }
+});
+
 gb.go();

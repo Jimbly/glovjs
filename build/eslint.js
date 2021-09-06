@@ -89,6 +89,7 @@ module.exports = function (opts) {
     if (all_results.length) {
       let results_text = formatter.format(all_results);
       if (results_text) {
+        results_text = results_text.replace(/\u2716/g, 'X'); // Replace characters not in terminal/client font
         job.error(results_text);
       }
     }

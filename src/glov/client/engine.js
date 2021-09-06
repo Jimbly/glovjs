@@ -11,6 +11,7 @@ require('not_worker'); // This module cannot be required from a worker bundle
 
 const assert = require('assert');
 const { is_ios_safari } = require('./browser.js');
+const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
 const effects = require('./effects.js');
@@ -1042,6 +1043,8 @@ export function startup(params) {
     button_click: 'button_click',
     rollover: 'rollover',
   }));
+
+  buildUIStartup();
 
   camera2d.setAspectFixed(game_width, game_height);
 
