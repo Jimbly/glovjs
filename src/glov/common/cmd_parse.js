@@ -123,7 +123,7 @@ CmdParse.prototype.register = function (param) {
 
 function formatRangeValue(type, value) {
   let ret = String(value);
-  if (type === TYPE_FLOAT && ret.indexOf('.') === -1) {
+  if (type === TYPE_FLOAT && !ret.includes('.')) {
     ret += '.00';
   }
   return ret;

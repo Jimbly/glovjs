@@ -221,7 +221,7 @@ export class ChannelWorker {
         assert(key.startsWith('public.'), key);
         key = key.slice(7);
         assert(key);
-        assert(key.indexOf('.') === -1);
+        assert(!key.includes('.'));
         field_map[key] = true;
       }
     }

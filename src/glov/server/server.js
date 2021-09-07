@@ -122,8 +122,8 @@ export function startup(params) {
     }
     let text = String(error);
     if (
-      text.indexOf('Invalid WebSocket frame:') !== -1 || // bad data from old clients?
-      text.indexOf('RangeError: Max payload size exceeded') // client sent too large of data, got auto-disconnected
+      text.includes('Invalid WebSocket frame:') || // bad data from old clients?
+      text.includes('RangeError: Max payload size exceeded') // client sent too large of data, got auto-disconnected
     ) {
       // Log, but don't broadcast or write crash dump
       console.error('ERROR (no dump)', new Date().toISOString(), error);

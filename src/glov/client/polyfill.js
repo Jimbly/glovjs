@@ -77,6 +77,13 @@ if (!String.prototype.endsWith) {
     },
   });
 }
+if (!String.prototype.includes) {
+  Object.defineProperty(String.prototype, 'includes', {
+    value: function (search, start) {
+      return this.indexOf(search, start) !== -1;
+    },
+  });
+}
 
 if (!Object.values) {
   Object.values = function values(obj) {

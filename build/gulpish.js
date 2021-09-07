@@ -33,7 +33,7 @@ module.exports = function (opts, streamfunc) {
   let { target, sort } = opts;
 
   let out_base = '';
-  if (typeof target === 'string' && target.indexOf(':') !== -1) {
+  if (typeof target === 'string' && target.includes(':')) {
     // format of 'target:sub/dir'
     target = target.split(':');
     assert.equal(target.length, 2);

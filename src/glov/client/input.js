@@ -253,7 +253,7 @@ function eventlog(event) {
 
 function letEventThrough(event) {
   return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL' || String(event.target.className).indexOf('noglov') !== -1);
+    event.target.tagName === 'LABEL' || String(event.target.className).includes('noglov'));
 }
 
 function ignored(event) {

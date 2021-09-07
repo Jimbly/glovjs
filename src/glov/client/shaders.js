@@ -194,7 +194,7 @@ Shader.prototype.compile = function () {
   let { type, filename } = this;
   let header = '';
   let text = webFSGetFile(filename, 'text');
-  if (engine.webgl2 && text.indexOf('#pragma WebGL2') !== -1) {
+  if (engine.webgl2 && text.includes('#pragma WebGL2')) {
     header = type === gl.VERTEX_SHADER ? webgl2_header_vp : webgl2_header_fp;
   }
   text = `${header}${global_defines}${this.defines}${text}`;

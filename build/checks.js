@@ -39,7 +39,7 @@ function requireVersions(versions) {
 }
 
 module.exports = function (filename) {
-  if (fs.readFileSync(filename, 'utf8').indexOf('\r\n') !== -1) {
+  if (fs.readFileSync(filename, 'utf8').includes('\r\n')) {
     // CRLF Line endings currently break gulp-ifdef, mess up with git diff/log/blame, and
     //   cause unnecessary diffs when pushing builds to production servers.
     console.error('ERROR: Windows line endings detected');
