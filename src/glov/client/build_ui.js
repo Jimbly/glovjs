@@ -14,7 +14,6 @@ Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
 
 function onGBState(state) {
   gbstate = state;
-  console.log('!!!!!', gbstate);
 }
 
 const PAD = 4;
