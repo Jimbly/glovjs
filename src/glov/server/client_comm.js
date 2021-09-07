@@ -457,7 +457,7 @@ function onCmdParseListClient(client, data, resp_func) {
 
 export function init(channel_server_in) {
   permission_flags = serverConfig().permission_flags || [];
-  profanityCommonStartup(fs.readFileSync(`${__dirname}/../../glov/common/words/filter.gkg`, 'utf8'));
+  profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'));
 
   channel_server = channel_server_in;
   let ws_server = channel_server.ws_server;

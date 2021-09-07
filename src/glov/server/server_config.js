@@ -77,7 +77,7 @@ export function serverConfigStartup(code_defaults) {
   // Next priority: environment-based config
   let env = determinEnv(); // After getting explicit server_config
 
-  let env_path = path.join(__dirname, '../config/env.json');
+  let env_path = path.join(__dirname, '../../server/config/env.json');
   if (fs.existsSync(env_path)) {
     console.log(`Using config environment "${env}"`);
     let env_data = json5.parse(fs.readFileSync(env_path, 'utf8'));
