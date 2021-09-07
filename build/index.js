@@ -300,9 +300,10 @@ gb.task({
       'dev:server/index.js',
       '--dev',
       '--master',
+      `--port=${server_port}`,
+      `--sport=${server_port_https}`,
     ].concat(argv.debug ? ['--debug'] : [])
-    .concat(argv.env ? [`--env=${argv.env}`] : [])
-    .concat(argv.port ? [`--port=${server_port}`] : []),
+    .concat(argv.env ? [`--env=${argv.env}`] : []),
     stdio: argv.serverlog === false ?
       ['ignore', 'ignore', 'ignore', 'ipc'] : // --no-serverlog
       ['inherit', 'inherit', 'inherit', 'ipc'],
