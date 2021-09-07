@@ -128,7 +128,11 @@ function buildUITick() {
 }
 
 export function buildUIStartup() {
-  net.client.onMsg('gbstate', onGBState);
+  if (net.client) {
+    net.client.onMsg('gbstate', onGBState);
 
-  engine.addTickFunc(buildUITick);
+    if (engine.DEBUG) {
+      engine.addTickFunc(buildUITick);
+    }
+  }
 }
