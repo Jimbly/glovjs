@@ -173,9 +173,7 @@ export function startup(params) {
       }
     });
     ws_server.on('client', (client) => {
-      if (gbstate) {
-        client.send('gbstate', gbstate);
-      }
+      client.send('gbstate', gbstate);
     });
   }
   updateVersion('app', true);
