@@ -6,11 +6,9 @@ ynpm-debug.log
 npm-debug.log
 build.dev/
 build.prod/
-build.intermediate/
+.gbstate/
 *.sublime-workspace
 Bfxr
 *.00?
-src/client/autogen/
 config/*.json
 .DS_Store
-dist/
