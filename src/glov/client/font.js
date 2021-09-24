@@ -1,6 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint no-bitwise:off, complexity:off, no-shadow:off */
+/* eslint no-bitwise:off, complexity:off, @typescript-eslint/no-shadow:off */
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');

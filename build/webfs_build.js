@@ -2,6 +2,7 @@ const assert = require('assert');
 const concat = require('glov-build-concat');
 const gb = require('glov-build');
 const { forwardSlashes } = gb;
+const JSON5 = require('json5');
 const path = require('path');
 
 const preamble = `(function () {
@@ -42,6 +43,10 @@ function encodeString(buf) {
   return ret.join('');
 }
 
+function encodeObj(obj) {
+  return JSON5.stringify(obj);
+}
+
 function fileFSName(opts, name) {
   name = forwardSlashes(name).replace('autogen/', '');
   if (opts.base) {
@@ -61,7 +66,13 @@ module.exports = function webfsBuild(opts) {
     proc: function (job, file, next) {
       let name = fileFSName(opts, file.relative);
       let data = file.contents;
-      let line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
+      let line;
+      if (name.endsWith('.jsobj')) {
+        name = name.slice(0, -6);
+        line = `fs['${name}'] = ${encodeObj(JSON.parse(data))};`;
+      } else {
+        line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
+      }
       next(null, { contents: line });
     },
   });

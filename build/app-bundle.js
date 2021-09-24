@@ -21,8 +21,9 @@ const babelify_opts_deps = {
         'ie': '10'
       },
       'loose': true,
-    }]
-  ],
+    }],
+    '@babel/preset-typescript'
+  ]
 };
 
 const browserify_options_deps = {

@@ -1,11 +1,11 @@
 module.exports = {
-  server_js_files: ['**/*.js', '!**/client/**/*.js'],
+  server_js_files: ['**/*.[jt]s', '!**/client/**/*'],
   server_static: ['**/glov/common/words/*.gkg'],
-  all_js_files: ['**/*.js', '!client/vendor/**/*.js'],
+  all_js_files: ['**/*.[jt]s', '!client/vendor/**/*'],
   client_js_files: [
-    '**/*.js',
-    '!**/server/**/*.js',
-    '!client/vendor/**/*.js',
+    '**/*.[jt]s',
+    '!**/server/**/*.[jt]s',
+    '!client/vendor/**/*.[jt]s',
   ],
   client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
   server_json_files: ['server/**/*.json', 'server/**/*.json5'],

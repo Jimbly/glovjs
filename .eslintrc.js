@@ -20,12 +20,32 @@ module.exports = {
     // Our pre-processor defines
     "BUILD_TIMESTAMP": true,
   },
-  "extends": "eslint:recommended",
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
   "parserOptions": {
     "ecmaVersion": 2020,
     "sourceType": "module"
   },
   "rules": {
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-shadow": [
+      "error",
+      { "allow": ["next", "done", "err", "pak"] }
+    ],
+    "@typescript-eslint/no-this-alias": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "args": "none" }
+    ],
+    "@typescript-eslint/no-var-requires": "off",
+
     "accessor-pairs": "error",
     "array-bracket-newline": ["error", "consistent"], // JE
     "array-bracket-spacing": ignore_style ? "off" : [
@@ -58,7 +78,7 @@ module.exports = {
     "callback-return": "off", // JE
     "camelcase": "off",
     "capitalized-comments": "off",
-    "class-methods-use-this": "error",
+    "class-methods-use-this": "off", // JG
     "comma-dangle": [
       "error",
       "only-multiline"
@@ -137,6 +157,8 @@ module.exports = {
         "ObjectExpression": 1, // "first",
         "SwitchCase": 1,
         "flatTernaryExpressions": true, // JE
+        // JE: ignore inconsistent application to ternaries in object properties / function parameters:
+        "ignoredNodes": ["ObjectExpression > Property > ConditionalExpression", "CallExpression > ConditionalExpression"],
       }
     ],
     "indent-legacy": "off",
@@ -309,12 +331,7 @@ module.exports = {
     "no-self-assign": "error",
     "no-self-compare": "error",
     "no-sequences": "error",
-    "no-shadow": [
-      "error",
-      {
-        "allow": ["next", "done", "err", "pak"],
-      }
-    ],
+    "no-shadow": "off", // replaced with @typescript-eslint/no-shadow
     "no-shadow-restricted-names": "error",
     "no-spaced-func": "error",
     "no-sync": "off", // JE
@@ -347,12 +364,7 @@ module.exports = {
     "no-unsafe-negation": "error",
     "no-unused-expressions": "error",
     "no-unused-labels": "error",
-    "no-unused-vars": [
-      "error",
-      {
-        "args": "none"
-      }
-    ],
+    "no-unused-vars": "off", // Replaced with @typescript-eslint/no-unused-vars
     "no-use-before-define": [
       "error",
       {

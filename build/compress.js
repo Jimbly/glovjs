@@ -44,5 +44,9 @@ module.exports = function (globs) {
   return {
     type: gb.SINGLE,
     func: gbif(globs, compressFunc),
+    version: [
+      globs,
+      compressFunc,
+    ],
   };
 };

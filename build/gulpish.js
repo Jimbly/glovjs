@@ -111,6 +111,10 @@ module.exports = function (opts, streamfunc) {
   let ret = {
     type: gb.SINGLE,
     func,
+    version: [
+      opts,
+      streamfunc,
+    ],
   };
   if (typeof target === 'string') { // allow target=true to trigger output without explicit target
     ret.target = target;

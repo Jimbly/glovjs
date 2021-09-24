@@ -19,6 +19,7 @@ const gulpish_tasks = require('./gulpish-tasks.js');
 const path = require('path');
 const Replacer = require('regexp-sourcemaps');
 const sourcemap = require('glov-build-sourcemap');
+const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
@@ -72,12 +73,20 @@ gb.task({
   ...babel({
     babel: {
       babelrc: false,
-      presets: [['@babel/env', {
-        targets: {
-          node: '12'
-        },
-        loose: true,
-      }]],
+      presets: [
+        ['@babel/env', {
+          targets: {
+            node: '12'
+          },
+          loose: true,
+        }],
+        '@babel/preset-typescript'
+      ],
+      plugins: [
+        // Generates much more optimal require() statements / usage
+        // TODO: Switch (here, and 2 other places) to `transform-modules-simple-commonjs` if PR is accepted
+        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false }],
+      ],
     },
   }),
 });
@@ -143,19 +152,24 @@ gb.task({
     },
     babel: {
       babelrc: false,
-      presets: [['@babel/env', {
-        targets: {
-          ie: '10'
-        },
-        loose: true,
-      }]],
+      presets: [
+        ['@babel/env', {
+          targets: {
+            ie: '10'
+          },
+          loose: true,
+        }],
+        '@babel/preset-typescript'
+      ],
       plugins: [
+        // Generates much more optimal require() statements / usage
+        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false }],
         // Note: Dependencies are not tracked from babel plugins, so use
         //   `webfs` instead of `static-fs` where possible
         ['static-fs', {}], // generates good code, but does not allow reloading/watchify
       ]
     }
-  })
+  }),
 });
 
 const regex_code_strip = /_classCallCheck\([^)]+\);\n|exports\.__esModule = true;|function _classCallCheck\((?:[^}]*\}){2}\n/g;
@@ -314,10 +328,17 @@ gb.task({
 });
 
 gb.task({
+  name: 'check_typescript',
+  input: config.all_js_files,
+  ...typescript({
+    config_path: 'tsconfig.json',
+  }),
+});
+
+gb.task({
   name: 'client_fsdata',
   input: config.client_fsdata,
   target: 'dev',
-  version: 3,
   ...webfs({
     base: 'client',
     output: 'client/fsdata.js',
@@ -432,6 +453,7 @@ gb.task({
     ...client_tasks,
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
+    (argv.nolint || argv.lint === false) ? 'nop' : 'check_typescript',
     'gulpish-client_html',
     'client_js_warnings',
   ],
@@ -488,7 +510,6 @@ config.extra_index.forEach(function (elem) {
     deps: ['build_deps'],
     ...gulpish_tasks.zip('prod', elem),
     type: gb.ALL,
-    version: 2,
   });
 });
 if (!zip_tasks.length) {
@@ -545,7 +566,6 @@ gb.task({
   ],
   target: 'prod',
   ...compress(config.compress_files),
-  version: 2,
 });
 
 gb.task({

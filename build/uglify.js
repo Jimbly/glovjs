@@ -45,6 +45,10 @@ module.exports = function (opts, uglify_opts) {
         });
         done();
       });
-    }
+    },
+    version: [
+      opts,
+      uglify_opts,
+    ],
   };
 };
