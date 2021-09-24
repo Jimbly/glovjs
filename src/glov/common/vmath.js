@@ -7,7 +7,7 @@
 exports.mat3 = require('gl-mat3/create');
 exports.mat4 = require('gl-mat4/create');
 
-const { abs, max, min, floor, round, sqrt } = Math;
+const { abs, acos, max, min, floor, round, sqrt } = Math;
 
 export function vec1(v) {
   return new Float32Array([v]);
@@ -94,6 +94,19 @@ export function v2addScale(out, a, b, s) {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
   return out;
+}
+
+export function v2angle(a, b) {
+  let mag = sqrt(
+    (a[0] * a[0] + a[1] * a[1]) *
+    (b[0] * b[0] + b[1] * b[1])
+  );
+  return acos(
+    min(max(
+      mag && ((a[0] * b[0] + a[1] * b[1]) / mag),
+      -1),1
+    )
+  );
 }
 
 export function v2copy(out, a) {
@@ -219,6 +232,19 @@ export function v3addScale(out, a, b, s) {
   out[1] = a[1] + b[1] * s;
   out[2] = a[2] + b[2] * s;
   return out;
+}
+
+export function v3angle(a, b) {
+  let mag = sqrt(
+    (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) *
+    (b[0] * b[0] + b[1] * b[1] + b[2] * b[2])
+  );
+  return acos(
+    min(max(
+      mag && ((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / mag),
+      -1),1
+    )
+  );
 }
 
 export function v3copy(out, a) {

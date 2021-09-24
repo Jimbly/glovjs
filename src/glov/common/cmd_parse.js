@@ -3,6 +3,7 @@
 
 const assert = require('assert');
 const { isInteger } = require('./util.js');
+const { perfCounterAdd } = require('./perfcounters.js');
 
 export function canonical(cmd) {
   return cmd.toLowerCase().replace(/[_.]/g, '');
@@ -100,6 +101,7 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
     this.was_not_found = false;
     return false;
   }
+  perfCounterAdd(`cmd.${cmd}`);
   cmd_data.fn.call(self, m[2] || '', resp_func);
   return true;
 };

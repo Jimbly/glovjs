@@ -1,10 +1,12 @@
 const assert = require('assert');
 const { filewatchOn, filewatchTriggerChange } = require('./filewatch.js');
 const urlhash = require('./urlhash.js');
+const { clone, deepEqual } = require('glov/common/util.js');
 
 let fs = window.glov_webfs = window.glov_webfs || {};
 let decoded = {};
 let used = {};
+let active_reload = false; // after an active reload, do data cloning to better detect which files changed
 // export function webFSReady() {
 //   // TODO: async ready state?
 // }
@@ -37,10 +39,16 @@ export function webFSGetFile(filename, encoding) {
   used[filename] = true;
   let data = fs[filename];
   assert(data, `Error loading file: ${filename}`);
-  if (encoding === 'text') {
-    ret = data[1];
+  if (encoding === 'jsobj') {
+    assert(!Array.isArray(data));
+    ret = active_reload ? clone(data) : data;
   } else {
-    ret = decode(data);
+    assert(Array.isArray(data));
+    if (encoding === 'text') {
+      ret = data[1];
+    } else {
+      ret = decode(data);
+    }
   }
   decoded[filename] = ret;
   return ret;
@@ -66,6 +74,7 @@ export function webFSReportUnused() {
 }
 
 function webFSReload() {
+  active_reload = true;
   window.glov_webfs = {};
   let scriptTag = document.createElement('script');
   scriptTag.src = `${urlhash.getURLBase()}fsdata.js?rl=${Date.now()}`;
@@ -78,10 +87,17 @@ function webFSReload() {
       for (let key in fs) {
         let old_value = old_fs[key];
         let new_value = fs[key];
-        for (let ii = 0; ii < new_value.length; ++ii) {
-          if (!old_value || new_value[ii] !== old_value[ii]) {
+        if (Array.isArray(old_value)) {
+          for (let ii = 0; ii < new_value.length; ++ii) {
+            if (!old_value || new_value[ii] !== old_value[ii]) {
+              filewatchTriggerChange(key);
+              break;
+            }
+          }
+        } else {
+          // Raw object
+          if (!deepEqual(old_value, new_value)) {
             filewatchTriggerChange(key);
-            break;
           }
         }
       }

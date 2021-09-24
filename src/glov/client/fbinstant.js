@@ -1,6 +1,10 @@
 /* globals FBInstant */
+import { ExternalUserInfo } from './external_user_info.js';
+
+const { registerExternalUserInfoProvider } = require('./social.js');
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
+const { ID_PROVIDER_FB_INSTANT } = require('glov/common/enums.js');
 const { callEach } = require('glov/common/util.js');
 
 export let ready = false;
@@ -28,9 +32,7 @@ function initSubscribe(callback, skipShortcut) {
     if (e && e.code !== 'USER_INPUT') {
       console.error('handleSubscribeToBotFailure', e);
     }
-    FBInstant.logEvent(
-      'bot_subscribe_failure'
-    );
+    FBInstant.logEvent('bot_subscribe_failure');
     handleSubscribeToBotComplete();
   }
 
@@ -39,13 +41,9 @@ function initSubscribe(callback, skipShortcut) {
     if (FBInstant.getSupportedAPIs().indexOf('player.canSubscribeBotAsync') !== -1) {
       FBInstant.player.canSubscribeBotAsync().then(function (canSubscribe) {
         if (canSubscribe) {
-          FBInstant.logEvent(
-            'bot_subscribe_show'
-          );
+          FBInstant.logEvent('bot_subscribe_show');
           FBInstant.player.subscribeBotAsync().then(function () {
-            FBInstant.logEvent(
-              'bot_subscribe_success'
-            );
+            FBInstant.logEvent('bot_subscribe_success');
             handleSubscribeToBotComplete();
           },handleSubscribeToBotFailure).catch(handleSubscribeToBotFailure);
         } else {
@@ -63,9 +61,7 @@ function initSubscribe(callback, skipShortcut) {
 
   function handleCreateShortcutFailure(e) {
     console.error('handleCreateShortcutFailure', e);
-    FBInstant.logEvent(
-      'homescreen_install_failure'
-    );
+    FBInstant.logEvent('homescreen_install_failure');
     handleHomescreenComplete();
   }
 
@@ -79,19 +75,13 @@ function initSubscribe(callback, skipShortcut) {
       hasSubscribedAlready = true;
       FBInstant.canCreateShortcutAsync().then(function (canCreateShortcut) {
         if (canCreateShortcut) {
-          FBInstant.logEvent(
-            'homescreen_install_show'
-          );
+          FBInstant.logEvent('homescreen_install_show');
           FBInstant.createShortcutAsync().then(function () {
             local_storage.set('instant.hasInstalledShortcut.v2',true);
-            FBInstant.logEvent(
-              'homescreen_install_success'
-            );
+            FBInstant.logEvent('homescreen_install_success');
             handleHomescreenComplete();
           },function () {
-            FBInstant.logEvent(
-              'homescreen_install_useraborted'
-            );
+            FBInstant.logEvent('homescreen_install_useraborted');
             handleHomescreenComplete();
           }).catch(handleCreateShortcutFailure);
         } else {
@@ -119,6 +109,83 @@ let can_follow_official_page;
 let can_join_official_group;
 let can_get_live_streams_overlay;
 
+export function fbGetLoginInfo(cb) {
+  onready(() => {
+    window.FBInstant.player.getSignedPlayerInfoAsync().then((result) => {
+      if (cb) {
+        cb(null, {
+          signature: result.getSignature(),
+          display_name: window.FBInstant.player.getName(),
+        });
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        cb(err);
+        cb = null;
+      }
+    });
+  });
+}
+
+/// Maps a player to an ExternalUserInfo
+function mapPlayerToExternalUserInfo(player) {
+  return new ExternalUserInfo(player.getID(), player.getName(), player.getPhoto());
+}
+
+/// Returns an ExternalUserInfo
+function fbInstantGetPlayer(cb) {
+  onready(() => {
+    let player = window.FBInstant.player;
+    cb(null, player ? mapPlayerToExternalUserInfo(player) : undefined);
+  });
+}
+
+/// cb receives an error if any occurs and an array of ExternalUserInfo objects
+function fbInstantGetFriends(cb) {
+  onready(() => {
+    window.FBInstant.player.getConnectedPlayersAsync().then((players) => {
+      if (cb) {
+        cb(null, players?.map(mapPlayerToExternalUserInfo));
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        cb(err);
+        cb = null;
+      }
+    });
+  });
+}
+
+export function fbGetAppScopedUserId(cb) {
+  onready(() => {
+    window.FBInstant.player.getASIDAsync().then((asid) => {
+      if (cb) {
+        cb(null, asid);
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        cb(err);
+        cb = null;
+      }
+    });
+  });
+}
+
+export function canFollowOfficialPage() {
+  return window.FBInstant && can_follow_official_page;
+}
+
+export function canJoinOfficialGroup() {
+  return window.FBInstant && can_join_official_group;
+}
+
+export function canShowLiveStreamOverlay() {
+  return window.FBInstant && can_get_live_streams_overlay;
+}
+
 export function init() {
   if (!window.FBInstant) {
     return;
@@ -142,91 +209,24 @@ export function init() {
     clearInterval(fake_load_interval);
     ready = true;
     FBInstant.startGameAsync().then(function () {
+      registerExternalUserInfoProvider(ID_PROVIDER_FB_INSTANT, fbInstantGetPlayer, fbInstantGetFriends);
+
       onreadycallbacks.forEach((e) => e());
       onreadycallbacks = [];
 
-      console.warn('outside init fb');
+      console.log('Initializing FBInstant');
       initSubscribe(function () {
-        console.warn('All done initing FB');
+        console.log('All done initing FBInstant');
         can_follow_official_page = window.FBInstant.community.canFollowOfficialPageAsync();
         can_join_official_group = window.FBInstant.community.canJoinOfficialGroupAsync();
         can_get_live_streams_overlay = window.FBInstant.community.canGetLiveStreamsAsync();
       });
     });
   }).catch(function (e) {
-    console.warn('initializeAsync failed', e);
+    console.warn('FBInstant initializeAsync failed', e);
   });
 
   FBInstant.onPause(() => {
     callEach(on_pause);
   });
-}
-
-export function fbGetLoginInfo(cb) {
-  onready(() => {
-    window.FBInstant.player.getSignedPlayerInfoAsync().then((result) => {
-      if (cb) {
-        cb(null, {
-          signature: result.getSignature(),
-          display_name: window.FBInstant.player.getName(),
-        });
-        cb = null;
-      }
-    }).catch((err) => {
-      if (cb) {
-        cb(err);
-        cb = null;
-      }
-    });
-  });
-}
-
-//Returns URL for player's facebook profile picture
-export function fbPlayerPicture() {
-  if (window.FBInstant) {
-    return window.FBInstant.player.getPhoto();
-  } else {
-    return null;
-  }
-}
-
-let fb_friends = {};
-// Returns a display name if the user_id is a Facebook friend
-export function fbFriendName(user_id) {
-  return fb_friends[user_id];
-}
-
-// Expects an array of valid user IDs:
-// cb(null, ['fb$1234', 'fb$4567']);
-export function fbGetFriends(cb) {
-  onready(() => {
-    window.FBInstant.player.getConnectedPlayersAsync().then((players) => {
-      let list = players.map((player) => {
-        let user_id = `fb$${player.getID()}`;
-        fb_friends[user_id] = player.getName();
-        return user_id;
-      });
-      if (cb) {
-        cb(null, list);
-        cb = null;
-      }
-    }).catch((err) => {
-      if (cb) {
-        cb(err);
-        cb = null;
-      }
-    });
-  });
-}
-
-export function canFollowOfficialPage() {
-  return window.FBInstant && can_follow_official_page;
-}
-
-export function canJoinOfficialGroup() {
-  return window.FBInstant && can_join_official_group;
-}
-
-export function canShowLiveStreamOverlay() {
-  return window.FBInstant && can_get_live_streams_overlay;
 }

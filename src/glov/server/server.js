@@ -8,6 +8,7 @@ const glov_exchange = require('./exchange.js');
 const { errorReportsInit } = require('./error_reports.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
+const { idmapperWorkerInit } = require('./idmapper_worker.js');
 const log = require('./log.js');
 const { logEx } = log;
 const { masterInitApp } = require('./master_worker.js');
@@ -146,6 +147,7 @@ export function startup(params) {
 
   masterInitApp(channel_server, app);
   errorReportsInit(app);
+  idmapperWorkerInit(channel_server);
 
   setTimeout(displayStatus, STATUS_TIME);
 

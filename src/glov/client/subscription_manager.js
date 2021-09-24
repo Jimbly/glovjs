@@ -12,10 +12,11 @@ const {
 } = require('glov/common/chunked_send.js');
 const dot_prop = require('dot-prop');
 const EventEmitter = require('glov/common/tiny-events.js');
-const { fbGetLoginInfo } = require('./fbinstant.js');
+const { fbGetLoginInfo, fbGetAppScopedUserId } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('glov/common/md5.js');
 const { isPacket } = require('glov/common/packet.js');
+const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const util = require('glov/common/util.js');
 const walltime = require('./walltime.js');
 
@@ -188,7 +189,7 @@ function SubscriptionManager(client, cmd_parse) {
 util.inherits(SubscriptionManager, EventEmitter);
 
 SubscriptionManager.prototype.onceConnected = function (cb) {
-  if (this.client.connected) {
+  if (this.client.connected && this.client.socket.readyState === 1) {
     return void cb();
   }
   this.once('connect', cb);
@@ -326,6 +327,7 @@ SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
     console.error(`no handler for channel_msg(${channel_id}) ${msg}: ${JSON.stringify(data)}`);
     return;
   }
+  perfCounterAdd(`cm.${channel_id.split('.')[0]}.${msg}`);
   handler.call(channel, data, resp_func);
 };
 
@@ -484,7 +486,7 @@ SubscriptionManager.prototype.onLogin = function (cb) {
 };
 
 SubscriptionManager.prototype.loggedIn = function () {
-  return this.logged_in ? this.logged_in_username || 'missing_name' : false;
+  return this.logging_out ? false : this.logged_in ? this.logged_in_username || 'missing_name' : false;
 };
 
 SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, resp) {
@@ -521,7 +523,15 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
       if (err) {
         return void this.handleLoginResponse(resp_func, err);
       }
-      this.client.send('login_facebook', result, this.handleLoginResponse.bind(this, resp_func));
+
+      fbGetAppScopedUserId((err, asid) => {
+        if (err) {
+          return void this.handleLoginResponse(resp_func, err);
+        }
+
+        result.asid = asid;
+        this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
+      });
     });
   } else {
     this.client.send('login', {

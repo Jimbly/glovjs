@@ -5,7 +5,7 @@ export const MAX_SEMANTIC = 5;
 
 const assert = require('assert');
 const engine = require('./engine.js');
-const { errorReportSetDetails, glovErrorReport } = require('./error_report.js');
+const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
 const { matchAll } = require('glov/common/util.js');
 const { texturesUnloadDynamic } = require('./textures.js');
@@ -104,6 +104,7 @@ let shader_errors;
 let shader_errors_any_fatal;
 function reportShaderError(non_fatal, err) {
   function doReport() {
+    report_queued = false;
     setGLErrorReportDetails();
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
     if (!shader_errors_any_fatal) {
@@ -402,7 +403,7 @@ function applyDefines() {
 
 function shaderReload() {
   if (shaders.length) {
-    window.debugmsg('', true);
+    errorReportClear();
     gl.useProgram(null);
     for (let ii = 0; ii < shaders.length; ++ii) {
       let programs = shaders[ii].programs;

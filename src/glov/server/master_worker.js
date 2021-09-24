@@ -39,6 +39,9 @@ class MasterWorker extends ChannelWorker {
     this.total_num_channels = {};
     this.master_stats_countdown = MASTER_STATS_PERIOD;
     this.master_startup_time = this.channel_server.server_time;
+    this.deploy_ready_count = 0;
+    this.deploy_ready_force = false;
+    this.deploy_ready_msg_time = 0;
     // Broadcast to all ChannelServers to let them know there is a (potentially new) master worker
     // Delay until we finish startup/registration
     setImmediate(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
@@ -397,10 +400,12 @@ class MasterWorker extends ChannelWorker {
     let msg;
     if (totals.ready === totals.total) {
       msg = `Ready for restart: ${totals.ready} servers ready`;
+      this.deploy_ready_count++;
     } else {
       msg = `${totals.ready}/${totals.total} ready, ` +
         `${totals.no_report ? `${totals.no_report} not reporting, ` : ''}` +
         `${totals.inflight_set} inflight sets, ${totals.set} new sets, ${totals.get} new gets`;
+      this.deploy_ready_count = 0;
     }
     this.sendChannelMessage('channel_server', 'chat_broadcast', {
       sysadmin: 1,
@@ -452,6 +457,14 @@ class MasterWorker extends ChannelWorker {
       resp_func('No restart countdown in progress');
     }
   }
+  cmdMasterDeployReadyForce(value, resp_func) {
+    if (value === '0') {
+      this.deploy_ready_force = false;
+    } else {
+      this.deploy_ready_force = true;
+    }
+    resp_func(null, `deploy_ready_force = ${this.deploy_ready_force}`);
+  }
 
   handleReadyQuery(src, data, resp_func) {
     let self = this;
@@ -486,6 +499,22 @@ class MasterWorker extends ChannelWorker {
       return void reply('ERR_STARTUP', `count: ${newly_connected},${count} of ${master_ready_servers}`);
     }
     reply(null, `count: ${newly_connected},${count} of ${master_ready_servers}`);
+  }
+
+  handleDeployReadyQuery(src, data, resp_func) {
+    let now = Date.now();
+    if (now - this.deploy_ready_msg_time > 30*1000) {
+      this.deploy_ready_msg_time = now;
+      this.sendChannelMessage('channel_server', 'chat_broadcast', {
+        sysadmin: 1,
+        src: 'system',
+        msg: 'Build system is ready to deploy!  After pushing build live on Facebook, run /master_restart_countdown 10',
+      });
+    }
+    if (this.deploy_ready_count >= 3 || this.deploy_ready_force) {
+      return resp_func(null, null);
+    }
+    return resp_func('ERR_NOT_READY');
   }
 
   cmdAdminBroadcast(msg, resp_func) {
@@ -609,6 +638,10 @@ export function init(channel_server) {
       help: 'Toggle all servers into "restarting" mode',
       func: MasterWorker.prototype.cmdMasterRestarting,
     }, {
+      cmd: 'master_deploy_ready_force',
+      help: 'Force master to report "ready for deployment" to the build system',
+      func: MasterWorker.prototype.cmdMasterDeployReadyForce,
+    }, {
       cmd: 'channel_server_report_load',
       help: '(Dev / single-node only) trigger an immediate load report',
       func: MasterWorker.prototype.cmdChannelServerReportLoad,
@@ -629,6 +662,7 @@ export function init(channel_server) {
       master_lock: MasterWorker.prototype.handleMasterLock,
       master_unlock: MasterWorker.prototype.handleMasterUnlock,
       ready_query: MasterWorker.prototype.handleReadyQuery,
+      deploy_ready_query: MasterWorker.prototype.handleDeployReadyQuery,
     },
   });
 }
@@ -675,5 +709,14 @@ export function masterInitApp(channel_server, app) {
       });
     }
     returnReadyValue(res, ready_cache_result);
+  });
+  app.get('/api/deployready', function (req, res, next) {
+    let expected_secret = serverConfig().deploy_ready_secret;
+    if (expected_secret && req.query.secret !== expected_secret) {
+      return void returnReadyValue(res, 'ERR_ACCESS_DENIED');
+    }
+    channel_server.sendAsChannelServer('master.master', 'deploy_ready_query', null, function (err, data) {
+      returnReadyValue(res, err);
+    });
   });
 }

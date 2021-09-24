@@ -7,7 +7,7 @@ const assert = require('assert');
 const { cmd_parse } = require('glov/client/cmds.js');
 const engine = require('glov/client/engine.js');
 const glov_font = require('glov/client/font.js');
-const { friendsInit } = require('glov/client/friends.js');
+const { socialInit } = require('glov/client/social.js');
 const input = require('glov/client/input.js');
 const { atan2, random } = Math;
 const net = require('glov/client/net.js');
@@ -92,7 +92,7 @@ export function main() {
 
   // Init friends subsystem, just to register handler, not used in demo,
   // alternatively, set DefaultUserWorker.prototype.rich_presence = false on the server.
-  friendsInit();
+  socialInit();
 
   const test_shader = shaders.create('shaders/test.fp');
 

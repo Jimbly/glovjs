@@ -109,12 +109,12 @@ export function failAll(receiver, err) {
 // sendFunc(msg, err, data, resp_func)
 // handleFunc(msg, data, resp_func)
 // eslint-disable-next-line consistent-return
-export function ackHandleMessage(receiver, source, net_data_or_pak, send_func, pak_func, handle_func, filter_func) {
+export function ackHandleMessage(receiver, source, pak, send_func, pak_func, handle_func, filter_func) {
+  let pak_initial_offs = pak.getOffset();
+  let { err, data, msg, pak_id } = ackReadHeader(pak);
   if (receiver.logPacketDispatch) {
-    receiver.logPacketDispatch(source, net_data_or_pak);
+    receiver.logPacketDispatch(source, pak, pak_initial_offs, msg);
   }
-  let net_data = isPacket(net_data_or_pak) ? ackReadHeader(net_data_or_pak) : net_data_or_pak;
-  let { err, data, msg, pak_id } = net_data;
   let now = Date.now();
   let expecting_response = Boolean(pak_id);
   let timeout_id;

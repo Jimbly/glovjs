@@ -47,5 +47,6 @@ export function buildString() {
 }
 
 export function netDisconnected() {
-  return client.disconnected || subs.logging_in || !client.socket || client.socket.readyState !== 1;
+  return !client.connected || client.disconnected || subs.logging_in ||
+    !client.socket || client.socket.readyState !== 1;
 }

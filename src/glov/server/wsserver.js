@@ -101,6 +101,7 @@ function WSServer() {
 util.inherits(WSServer, events.EventEmitter);
 
 WSServer.prototype.logPacketDispatch = packetLog;
+WSServer.prototype.perf_prefix = 'ws.';
 
 // `filter` returns true if message is allowed while shutting down
 WSServer.prototype.setRestartFilter = function (filter) {

@@ -25,6 +25,7 @@ const { cmd_parse } = require('./cmds.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
 const { max } = Math;
+const { perfCounterHistory } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const ui = require('./ui.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
@@ -59,6 +60,11 @@ settings.register({
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
     range: [0.001, 120],
+  },
+  show_perf_counters: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
   },
 });
 
@@ -206,17 +212,49 @@ function showMetricGraph(y, metric) {
 
 export function draw() {
   camera2d.setAspectFixed(engine.game_width, engine.game_height);
-  let y = camera2d.y0Real();
-  let y_graph = camera2d.y1Real();
-  for (let ii = 0; ii < metrics.length; ++ii) {
-    let metric = metrics[ii];
-    if (settings[metric.show_stat]) {
-      y = showMetric(y, metric);
-      y += METRIC_PAD;
+  if (settings.show_metrics) {
+    let y = camera2d.y0Real();
+    let y_graph = camera2d.y1Real();
+    for (let ii = 0; ii < metrics.length; ++ii) {
+      let metric = metrics[ii];
+      if (settings[metric.show_stat]) {
+        y = showMetric(y, metric);
+        y += METRIC_PAD;
+      }
+      if (settings[metric.show_graph]) {
+        y_graph = showMetricGraph(y_graph, metric);
+        y_graph -= METRIC_PAD;
+      }
     }
-    if (settings[metric.show_graph]) {
-      y_graph = showMetricGraph(y_graph, metric);
-      y_graph -= METRIC_PAD;
+  }
+  if (settings.show_perf_counters) {
+    let font = engine.font;
+    let hist = perfCounterHistory();
+    let y = camera2d.y0Real();
+    let line_height = ui.font_height / settings.render_scale_all;
+    let column_width = line_height * 6;
+    let x = camera2d.x0Real() + column_width * 2;
+    let by_key = {};
+    for (let ii = 0; ii < hist.length; ++ii) {
+      let set = hist[ii];
+      for (let key in set) {
+        by_key[key] = by_key[key] || [];
+        by_key[key][ii] = set[key];
+      }
+    }
+    let keys = Object.keys(by_key);
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
+      let data = by_key[key];
+      font.drawSizedAligned(fps_style, x - column_width * 2, y, Z.FPSMETER + 1, line_height,
+        glov_font.ALIGN.HRIGHT|glov_font.ALIGN.HFIT, column_width * 2, 0, `${key}: `);
+      for (let jj = 0; jj < data.length; ++jj) {
+        if (data[jj]) {
+          font.drawSizedAligned(fps_style, x + column_width * jj, y, Z.FPSMETER + 1, line_height,
+            glov_font.ALIGN.HFIT, column_width, 0, `${data[jj]} `);
+        }
+      }
+      y += line_height;
     }
   }
 }

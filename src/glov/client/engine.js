@@ -4,7 +4,9 @@
 
 require('./bootstrap.js'); // Just in case it's not in app.js
 
-export let DEBUG = String(document.location).match(/^https?:\/\/localhost/);
+const client_config = require('./client_config.js');
+export let DEBUG = client_config.MODE_DEVELOPMENT;
+
 exports.require = require; // For browser console debugging
 
 require('not_worker'); // This module cannot be required from a worker bundle
@@ -37,6 +39,7 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const models = require('./models.js');
 const perf = require('./perf.js');
+const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
@@ -708,6 +711,8 @@ function tick(timestamp) {
     }
   }
 
+  perfCounterTick(dt);
+
   effectsTopOfFrame();
 
   if (document.hidden || document.webkitHidden || no_render) {
@@ -776,9 +781,7 @@ function tick(timestamp) {
     glov_ui.drawRect(game_width, 0, camera2d.x1Real(), game_height, Z.BORDERS, border_color);
   }
 
-  if (settings.show_metrics) {
-    perf.draw();
-  }
+  perf.draw();
 
   for (let ii = 0; ii < app_tick_functions.length; ++ii) {
     app_tick_functions[ii](dt);
@@ -917,7 +920,7 @@ export function startup(params) {
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl2', 'webgl', 'experimental-webgl'];
-  let force_webgl1 = defines.NOWEBGL2;
+  let force_webgl1 = defines.NOWEBGL2 || is_ios_safari && !defines.FORCEWEBGL2;
   let disable_data = local_storage.getJSON('webgl2_disable');
   // Check if a previous, recent run had an error that hinted we should disable WebGL2
   if (disable_data && disable_data.ua === navigator.userAgent && disable_data.ts > Date.now() - 7*24*60*60*1000) {

@@ -1,13 +1,14 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+import { FriendStatus } from 'glov/common/friends_data.js';
+
 const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
 const {
-  FRIEND_ADDED,
-  FRIEND_ADDED_AUTO,
-  FRIEND_BLOCKED,
-  FRIEND_REMOVED,
+  ID_PROVIDER_APPLE,
+  ID_PROVIDER_FB_GAMING,
+  ID_PROVIDER_FB_INSTANT,
   PRESENCE_OFFLINE,
 } = require('glov/common/enums.js');
 const master_worker = require('./master_worker.js');
@@ -21,6 +22,30 @@ const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FRIENDS = 100;
+const FRIENDS_DATA_KEY = 'private.friends';
+
+export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
+const regex_valid_user_id = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
+const regex_valid_external_id = /^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]*$/;
+
+export function validUserId(user_id) {
+  return user_id.match(regex_valid_user_id);
+}
+
+export function validProvider(provider) {
+  switch (provider) {
+    case ID_PROVIDER_APPLE:
+    case ID_PROVIDER_FB_GAMING:
+    case ID_PROVIDER_FB_INSTANT:
+      return true;
+    default:
+      return false;
+  }
+}
+
+export function validExternalId(external_id) {
+  return external_id.match(regex_valid_external_id);
+}
 
 function validDisplayName(display_name) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
@@ -31,6 +56,34 @@ function validDisplayName(display_name) {
   return true;
 }
 
+function isLegacyFriendValue(friend_value) {
+  return friend_value.status === undefined;
+}
+
+function createFriendData(status) {
+  return { status };
+}
+
+function deleteFriendExternalId(friend, provider) {
+  if (friend.ids) {
+    delete friend.ids[provider];
+    if (Object.keys(friend.ids).length === 0) {
+      delete friend.ids;
+    }
+  }
+}
+
+function setFriendExternalId(friend, provider, external_id) {
+  if (external_id === null || external_id === undefined) {
+    return void deleteFriendExternalId(friend, provider);
+  }
+
+  if (!friend.ids) {
+    friend.ids = {};
+  }
+  friend.ids[provider] = external_id;
+}
+
 export class DefaultUserWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
@@ -39,6 +92,85 @@ export class DefaultUserWorker extends ChannelWorker {
     this.presence_idx = 0;
     this.my_clients = {};
   }
+
+  migrateFriendsList(legacy_friends) {
+    let new_friends = {};
+    let is_legacy_fbinstant_user = this.user_id.startsWith('fb$');
+
+    for (let user_id in legacy_friends) {
+      // Two users can only be friends through FB instant if both are FB Instant users
+      let fbinstant_friend_id = is_legacy_fbinstant_user && user_id.startsWith('fb$') && user_id.substr(3);
+
+      let status = legacy_friends[user_id];
+      let friend;
+      switch (status) {
+        case FriendStatus.Added:
+        case FriendStatus.Blocked:
+          friend = createFriendData(status);
+          if (fbinstant_friend_id) {
+            setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
+          }
+          break;
+        case FriendStatus.AddedAuto:
+        case FriendStatus.Removed:
+          if (fbinstant_friend_id) {
+            friend = createFriendData(status);
+            setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
+          } else {
+            // Should never happen
+            this.error(`Migrating friends of ${this.user_id}, friend ${user_id} should never have status ${status}!`);
+            friend = undefined;
+          }
+          break;
+        default:
+          assert(false);
+      }
+
+      if (friend) {
+        new_friends[user_id] = friend;
+      }
+    }
+
+    this.setFriendsList(new_friends);
+    return new_friends;
+  }
+
+  getFriendsList() {
+    let friends = this.getChannelData(FRIENDS_DATA_KEY, {});
+    for (let user_id in friends) {
+      if (isLegacyFriendValue(friends[user_id])) {
+        friends = this.migrateFriendsList(friends);
+      }
+      break;
+    }
+    return friends;
+  }
+
+  setFriendsList(friends) {
+    this.setChannelData(FRIENDS_DATA_KEY, friends);
+  }
+
+  getFriend(user_id) {
+    if (!validUserId(user_id)) {
+      return null;
+    }
+
+    let friend = this.getChannelData(`${FRIENDS_DATA_KEY}.${user_id}`, undefined);
+    if (friend !== undefined && isLegacyFriendValue(friend)) {
+      // The getFriendsList handles the migration
+      friend = this.getFriendsList()[user_id];
+    }
+    return friend;
+  }
+
+  setFriend(user_id, friend) {
+    if (!validUserId(user_id)) {
+      return;
+    }
+
+    this.setChannelData(`${FRIENDS_DATA_KEY}.${user_id}`, friend);
+  }
+
   cmdRename(new_name, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return resp_func('ERR_INVALID_USER');
@@ -77,14 +209,18 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!user_id) {
       return void resp_func('Missing User ID');
     }
+    if (!validUserId(user_id)) {
+      return void resp_func('Invalid User ID');
+    }
     if (user_id === this.user_id) {
       return void resp_func('Cannot friend yourself');
     }
-    let friend_value = this.getChannelData(`private.friends.${user_id}`);
-    if (friend_value && friend_value !== FRIEND_REMOVED && friend_value !== FRIEND_BLOCKED) {
+    let friends = this.getFriendsList();
+    let friend = friends[user_id];
+    if (friend?.status === FriendStatus.Added) {
       return void resp_func(`Already on friends list: ${user_id}`);
     }
-    if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
+    if (Object.keys(friends).length >= MAX_FRIENDS) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
@@ -94,8 +230,13 @@ export class DefaultUserWorker extends ChannelWorker {
         return void resp_func(`User not found: ${user_id}`);
       }
       assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
-      this.setChannelData(`private.friends.${user_id}`, FRIEND_ADDED);
-      resp_func(null, `Friend added: ${user_id}`);
+      if (friend) {
+        friend.status = FriendStatus.Added;
+      } else {
+        friend = createFriendData(FriendStatus.Added);
+      }
+      this.setFriend(user_id, friend);
+      resp_func(null, { msg: `Friend added: ${user_id}`, friend });
     });
   }
   cmdFriendRemove(user_id, resp_func) {
@@ -105,15 +246,22 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!user_id) {
       return void resp_func('Missing User ID');
     }
-    if (!this.getChannelData(`private.friends.${user_id}`)) {
+    if (!validUserId(user_id)) {
+      return void resp_func('Invalid User ID');
+    }
+    let friend = this.getFriend(user_id);
+    if (!friend) {
       return void resp_func(`Not on your friends list: ${user_id}`);
     }
-    // Flag as 'removed' if this was potentially populated from an external auth system
-    let new_value = (user_id.indexOf('$') === -1 || this.user_id.indexOf('$') === -1) ?
-      undefined :
-      FRIEND_REMOVED;
-    this.setChannelData(`private.friends.${user_id}`, new_value);
-    resp_func(null, `Friend removed: ${user_id}`);
+    // TODO: Should we handle the blocked friends differently in order to keep them blocked?
+    if (friend.ids) {
+      // Flag as 'removed' if this still has external ids
+      friend.status = FriendStatus.Removed;
+    } else {
+      friend = undefined;
+    }
+    this.setFriend(user_id, friend);
+    resp_func(null, { msg: `Friend removed: ${user_id}`, friend });
   }
   cmdFriendUnblock(user_id, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
@@ -122,11 +270,24 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!user_id) {
       return void resp_func('Missing User ID');
     }
-    if (this.getChannelData(`private.friends.${user_id}`) !== FRIEND_BLOCKED) {
+    if (!validUserId(user_id)) {
+      return void resp_func('Invalid User ID');
+    }
+    let friend = this.getFriend(user_id);
+    if (!friend) {
       return void resp_func(`Not on your friends list: ${user_id}`);
     }
-    this.setChannelData(`private.friends.${user_id}`, undefined);
-    resp_func(null, `User unblocked: ${user_id}`);
+    if (friend.status !== FriendStatus.Blocked) {
+      return void resp_func(`Not blocked: ${user_id}`);
+    }
+    if (friend.ids) {
+      // Flag as 'removed' if this still has external ids
+      friend.status = FriendStatus.Removed;
+    } else {
+      friend = undefined;
+    }
+    this.setFriend(user_id, friend);
+    resp_func(null, { msg: `User unblocked: ${user_id}`, friend });
   }
   cmdFriendBlock(user_id, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
@@ -135,11 +296,15 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!user_id) {
       return void resp_func('Missing User ID');
     }
-    let old_value = this.getChannelData(`private.friends.${user_id}`);
-    if (old_value === FRIEND_BLOCKED) {
+    if (!validUserId(user_id)) {
+      return void resp_func('Invalid User ID');
+    }
+    let friends = this.getFriendsList();
+    let friend = friends[user_id];
+    if (friend?.status === FriendStatus.Blocked) {
       return void resp_func(`User already blocked: ${user_id}`);
     }
-    if (Object.keys(this.getChannelData('private.friends', {})).length >= MAX_FRIENDS) {
+    if (Object.keys(friends).length >= MAX_FRIENDS) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
@@ -149,10 +314,18 @@ export class DefaultUserWorker extends ChannelWorker {
         return void resp_func(`User not found: ${user_id}`);
       }
       assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
-      this.setChannelData(`private.friends.${user_id}`, FRIEND_BLOCKED);
-      let was_friend = old_value === FRIEND_ADDED || old_value === FRIEND_ADDED_AUTO;
-      resp_func(null,
-        `User${was_friend ? ' removed from friends list and' : ''} blocked: ${user_id}`);
+      let was_friend = false;
+      if (friend) {
+        was_friend = friend.status === FriendStatus.Added || friend.status === FriendStatus.AddedAuto;
+        friend.status = FriendStatus.Blocked;
+      } else {
+        friend = createFriendData(FriendStatus.Blocked);
+      }
+      this.setFriend(user_id, friend);
+      resp_func(null, {
+        msg: `User${was_friend ? ' removed from friends list and' : ''} blocked: ${user_id}`,
+        friend,
+      });
       this.clearPresenceToUser(user_id);
     });
   }
@@ -209,32 +382,93 @@ export class DefaultUserWorker extends ChannelWorker {
     if (src.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    let friends = this.getChannelData('private.friends', {});
-    pak = resp_func.pak();
-    for (let user_id in friends) {
-      pak.writeAnsiString(user_id);
-      pak.writeInt(friends[user_id]);
-    }
-    pak.writeAnsiString('');
-    pak.send();
+    let friends = this.getFriendsList();
+    resp_func(null, friends);
   }
   handleFriendAutoUpdate(src, pak, resp_func) {
     if (src.user_id !== this.user_id) {
       pak.pool();
       return void resp_func('ERR_INVALID_USER');
     }
-    let user_id;
-    let friends = this.getChannelData('private.friends', {});
-    while ((user_id = pak.readAnsiString())) {
-      if (user_id !== this.user_id) {
-        friends[user_id] = FRIEND_ADDED_AUTO;
+
+    let provider = pak.readAnsiString();
+    if (!validProvider(provider)) {
+      pak.pool();
+      return void resp_func('ERR_INVALID_PROVIDER');
+    }
+
+    let friends = this.getFriendsList();
+
+    let provider_friends_map = Object.create(null);
+    for (let user_id in friends) {
+      let friend = friends[user_id];
+      let external_id = friend.ids?.[provider];
+      if (external_id) {
+        provider_friends_map[external_id] = { user_id, friend };
       }
     }
-    while ((user_id = pak.readAnsiString())) {
-      friends[user_id] = FRIEND_REMOVED;
+
+    let changed_id;
+    let friends_to_add = [];
+    while ((changed_id = pak.readAnsiString())) {
+      if (!validExternalId(changed_id)) {
+        this.error(`Trying to add external friend with invalid external user id: ${changed_id}`);
+        continue;
+      }
+      if (!provider_friends_map[changed_id]) {
+        friends_to_add.push(changed_id);
+      }
     }
-    this.setChannelData('private.friends', friends);
-    resp_func();
+    let changed = false;
+    while ((changed_id = pak.readAnsiString())) {
+      if (!validExternalId(changed_id)) {
+        this.error(`Trying to remove external friend with invalid external user id: ${changed_id}`);
+        continue;
+      }
+      let entry = provider_friends_map[changed_id];
+      if (entry) {
+        let { user_id, friend } = entry;
+        deleteFriendExternalId(friend, provider);
+        if (!friend.ids && (friend.status === FriendStatus.AddedAuto || friend.status === FriendStatus.Removed)) {
+          delete friends[user_id];
+        }
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.setFriendsList(friends);
+    }
+
+    if (friends_to_add.length === 0) {
+      return void resp_func(null, {});
+    }
+
+    this.sendChannelMessage('idmapper.idmapper', 'id_map_get_multiple_ids', { provider, provider_ids: friends_to_add },
+      (err, id_mappings) => {
+        if (err) {
+          this.error(`Error getting id maps for ${this.user_id} ${provider} friends: ${err}`);
+          return void resp_func('Error when getting friends');
+        }
+        assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
+
+        // Refresh the friends list
+        friends = this.getFriendsList();
+
+        let resp = {};
+        for (let external_id in id_mappings) {
+          let user_id = id_mappings[external_id];
+          let friend = friends[user_id];
+          if (!friend) {
+            friends[user_id] = friend = createFriendData(FriendStatus.AddedAuto);
+          }
+          setFriendExternalId(friend, provider, external_id);
+          resp[user_id] = friend;
+        }
+
+        this.setFriendsList(friends);
+        resp_func(null, resp);
+      }
+    );
   }
   exists() {
     return this.getChannelData('private.password') || this.getChannelData('private.external');
@@ -265,11 +499,12 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
+
     this.setChannelData('private.login_time', Date.now());
     metrics.add('user.login', 1);
     return resp_func(null, this.getChannelData('public'));
   }
-  handleLoginFacebook(src, data, resp_func) {
+  handleLoginExternal(src, data, resp_func) {
     //Should the authentication step happen here instead?
     if (!this.getChannelData('private.external')) {
       this.setChannelData('private.external', true);
@@ -278,8 +513,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
+    this.setChannelData(`private.login_${data.provider}`, data.provider_id);
     metrics.add('user.login', 1);
-    metrics.add('user.login_fb', 1);
+    metrics.add(`user.login_${data.provider}`, 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleCreate(src, data, resp_func) {
@@ -344,7 +580,7 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleNewClient(src) {
     if (this.rich_presence && src.type === 'client' && this.presence_data) {
-      if (this.getChannelData(`private.friends.${src.user_id}`) !== FRIEND_BLOCKED) {
+      if (this.getFriend(src.user_id)?.status !== FriendStatus.Blocked) {
         this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
       }
     }
@@ -354,11 +590,11 @@ export class DefaultUserWorker extends ChannelWorker {
   }
   updatePresence() {
     let clients = this.data.public.clients || {};
-    let friends = this.data.private.friends || {};
+    let friends = this.getFriendsList();
     for (let client_id in clients) {
       let client = clients[client_id];
       if (client.ids) {
-        if (friends[client.ids.user_id] !== FRIEND_BLOCKED) {
+        if (friends[client.ids.user_id]?.status !== FriendStatus.Blocked) {
           this.sendChannelMessage(`client.${client_id}`, 'presence', this.presence_data);
         }
       }
@@ -463,14 +699,11 @@ function channelServerHandler(name) {
 
 ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
 
-export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
-const regex_valid_channelname = /^(?:fb\$|[a-z])[a-z0-9_]{1,32}$/;
-
 let inited = false;
 let user_worker = DefaultUserWorker;
 let user_worker_init_data = {
   autocreate: true,
-  subid_regex: regex_valid_channelname,
+  subid_regex: regex_valid_user_id,
   cmds: [{
     cmd: 'rename',
     help: 'Change display name',
@@ -510,7 +743,7 @@ let user_worker_init_data = {
     func: DefaultUserWorker.prototype.cmdChannelDataSet,
   }],
   handlers: {
-    login_facebook: DefaultUserWorker.prototype.handleLoginFacebook,
+    login_external: DefaultUserWorker.prototype.handleLoginExternal,
     login: DefaultUserWorker.prototype.handleLogin,
     create: DefaultUserWorker.prototype.handleCreate,
     user_ping: DefaultUserWorker.prototype.handleUserPing,

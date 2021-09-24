@@ -23,6 +23,7 @@ const metrics = require('./metrics.js');
 const os = require('os');
 const packet = require('glov/common/packet.js');
 const { isPacket, packetCreate } = packet;
+const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
 const { panic } = require('./server.js');
 const { processUID } = require('./server_config.js');
 const { callEach, clone, cloneShallow, logdata, once } = require('glov/common/util.js');
@@ -302,6 +303,7 @@ class ChannelServer {
     this.load_log = false;
     this.restarting = false;
     this.server_time = 0;
+    this.reportPerfCounters = this.reportPerfCounters.bind(this);
   }
 
   // The master requested that we create a worker
@@ -745,6 +747,12 @@ class ChannelServer {
     }
   }
 
+  reportPerfCounters(counters) {
+    if (this.load_log) {
+      this.csworker.info('perf_counters', counters);
+    }
+  }
+
   exchangePing(dt) {
     if (!this.exchange_ping.countdown) {
       // in-progress
@@ -818,6 +826,7 @@ class ChannelServer {
     }
     this.exchangePing(wall_dt);
     this.reportLoad(wall_dt);
+    perfCounterTick(wall_dt, this.reportPerfCounters);
     for (let channel_id in this.local_channels) {
       let channel = this.local_channels[channel_id];
       if (channel.tick) {
@@ -834,6 +843,8 @@ class ChannelServer {
     this.channel_types[channel_type] = ctor;
     ctor.autocreate = options.autocreate;
     ctor.subid_regex = options.subid_regex;
+
+    ctor.prototype.perf_prefix = `cw.${channel_type}.`;
 
     // Register handlers
     if (!ctor.prototype.cmd_parse) {
@@ -951,6 +962,7 @@ class ChannelServer {
     console.error('ERROR', new Date().toISOString(), e);
     let crash_dump = {
       err: inspect(e).split('\n'),
+      perf_counters: perfCounterHistory(),
     };
     function addPacketLog(receiver, key) {
       if (receiver.pkt_log) {

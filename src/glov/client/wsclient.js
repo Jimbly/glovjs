@@ -8,10 +8,12 @@ const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
 const { fetch, ERR_CONNECTION } = require('./fetch.js');
 const { min, random } = Math;
+const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
 const walltime = require('./walltime.js');
 const wscommon = require('glov/common/wscommon.js');
 const { wsHandleMessage } = wscommon;
+const { PLATFORM_WEB } = require('glov/client/client_config.js');
 
 // let net_time = 0;
 // export function getNetTime() {
@@ -59,6 +61,10 @@ export function WSClient(path) {
   this.onMsg('error', this.onError.bind(this));
 }
 
+WSClient.prototype.logPacketDispatch = function (source, pak, buf_offs, msg) {
+  perfCounterAdd(`ws.${typeof msg === 'number' ? 'ack' : msg}`);
+};
+
 WSClient.prototype.timeSinceDisconnect = function () {
   return Date.now() - this.disconnect_time;
 };
@@ -85,10 +91,7 @@ WSClient.prototype.onAppVer = function (ver) {
     if (this.on_app_ver_mismatch) {
       this.on_app_ver_mismatch();
     } else {
-      if (window.FBInstant) {
-        // not allowed to reload
-        console.warn(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), ignoring`);
-      } else {
+      if (PLATFORM_WEB) {
         console.error(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), reloading`);
         whenServerReady(function () {
           if (window.reloadSafe) {
@@ -97,6 +100,9 @@ WSClient.prototype.onAppVer = function (ver) {
             document.location.reload();
           }
         });
+      } else {
+        // Not allowed to reload
+        console.warn(`App version mismatch (server: ${ver}, client: ${BUILD_TIMESTAMP}), ignoring`);
       }
     }
   }
@@ -137,6 +143,9 @@ WSClient.prototype.send = function (msg, data, resp_func) {
 WSClient.prototype.onError = function (e) {
   console.error('WSClient Error');
   console.error(e);
+  if (!(e instanceof Error)) {
+    e = new Error(e);
+  }
   throw e;
 };
 

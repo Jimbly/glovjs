@@ -150,6 +150,10 @@ export function sign(a) {
   return a < 0 ? -1 : a > 0 ? 1 : 0;
 }
 
+export function mod(a, n) {
+  return ((a % n) + n) % n;
+}
+
 // log2 rounded up to nearest integer
 export function log2(val) {
   for (let ii=1, jj=0; ; ii <<= 1, ++jj) { // eslint-disable-line no-bitwise

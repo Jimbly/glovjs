@@ -193,6 +193,9 @@ Packet.prototype.reinit = function (flags, init_size, pak_debug) {
     this.buf_len = init_size;
   }
 };
+Packet.prototype.getRefCount = function () {
+  return this.ref_count;
+};
 Packet.prototype.ref = function () {
   assert(this.ref_count); // must not already be pooled!
   ++this.ref_count;
@@ -833,6 +836,7 @@ PacketDebug.prototype.zeroInt = function () {
   'getFlags',
   'getInternalFlags',
   'getOffset',
+  'getRefCount',
   'makeReadable',
   'pool',
   'readFlags', // *not* wrapped in debug headers

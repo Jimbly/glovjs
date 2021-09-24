@@ -9,3 +9,7 @@ export let FRIEND_BLOCKED = 4;
 export let PRESENCE_OFFLINE = 0; // for invisible, etc
 export let PRESENCE_ACTIVE = 1;
 export let PRESENCE_INACTIVE = 2;
+
+export const ID_PROVIDER_APPLE = 'apl';
+export const ID_PROVIDER_FB_GAMING = 'fbg';
+export const ID_PROVIDER_FB_INSTANT = 'fbi';
