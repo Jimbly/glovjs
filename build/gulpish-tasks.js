@@ -19,9 +19,13 @@ exports.client_html_default = function (target, default_defines) {
     const lazypipe = require('lazypipe');
     const sourcemaps = require('gulp-sourcemaps');
     const useref = require('gulp-useref');
+    const replace = require('gulp-replace');
     return stream.pipe(useref({}, lazypipe().pipe(sourcemaps.init, { loadMaps: true })))
       //.on('error', log.error.bind(log, 'client_html Error'))
       .pipe(ifdef(default_defines, { extname: ['html'] }))
+      .pipe(replace(/#\{([^}]+)\}/g, function (a, b) {
+        return (b in default_defines) ? default_defines[b] : 'UKNOWN_DEFINE';
+      }))
       .pipe(sourcemaps.write('./')); // writes .map file
   });
 };
@@ -34,6 +38,9 @@ exports.client_html_custom = function (target, elem) {
     return stream
       .pipe(ifdef(elem.defines, { extname: ['html'] }))
       .pipe(rename(`client/index_${elem.name}.html`))
+      .pipe(replace(/#\{([^}]+)\}/g, function (a, b) {
+        return (b in elem.defines) ? elem.defines[b] : 'UKNOWN_DEFINE';
+      }))
       .pipe(replace(/<!-- build:js ([^.]+\.js) -->[^!]+<!-- endbuild -->/g, function (a, b) {
         // already bundled in client_html_default, just export filename reference
         return `<script src="${b}"></script>`;

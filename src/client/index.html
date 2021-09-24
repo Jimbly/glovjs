@@ -15,13 +15,11 @@
 
     <link rel="stylesheet" type="text/css" href="main.css">
     <script>
-      // Environments
-	  /// #if ENV === 'default'
-      window.glov_env = 'default';
-      /// #endif
-      /// #if ENV === 'multiplayer'
-      window.glov_env = 'multiplayer';
-      /// #endif
+      /* eslint-disable */
+      // Platform
+      window.conf_platform = '#{PLATFORM}';
+      // Environment
+      window.conf_env = '#{ENV}';
     </script>
     <!-- #if PLATFORM === 'fbinstant' -->
     <script src="https://connect.facebook.net/en_US/fbinstant.beta.js"></script>

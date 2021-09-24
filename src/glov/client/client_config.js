@@ -5,10 +5,10 @@ export const MODE_DEVELOPMENT = Boolean(String(document.location).match(/^https?
 export const MODE_PRODUCTION = !MODE_DEVELOPMENT;
 
 // Platform
-export const PLATFORM_WEB = true;
-export const PLATFORM_FBINSTANT = false;
-export const PLATFORM_ANDROID = false;
-export const PLATFORM_IOS = false;
+export const PLATFORM_WEB = window.conf_platform === 'web';
+export const PLATFORM_FBINSTANT = window.conf_platform === 'fbinstant';
+export const PLATFORM_ANDROID = window.conf_platform === 'android';
+export const PLATFORM_IOS = window.conf_platform === 'ios';
 export const PLATFORM_MOBILE = PLATFORM_ANDROID || PLATFORM_IOS;
 
 assert(PLATFORM_WEB || PLATFORM_FBINSTANT || PLATFORM_ANDROID || PLATFORM_IOS);
@@ -21,4 +21,4 @@ if (MODE_DEVELOPMENT) {
 }
 
 // Environment
-export const ENV_DEFAULT = true;
+export const ENVIRONMENT = window.conf_env;
