@@ -3,7 +3,6 @@
 /*eslint no-bitwise:off */
 
 const assert = require('assert');
-const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const ui = require('./ui.js');
@@ -79,10 +78,13 @@ class CharInfo {
 class GlovTerminal {
   constructor(params) {
     params = params || {};
-    this.baud = params.baud || 9600;
+    this.baud = params.baud ?? 9600;
     this.frame = 0;
-    this.draw_cursor = this.draw_cursor ?? [1,4];
+    this.draw_cursor = params.draw_cursor ?? [1,4];
     // screen buffer
+    this.render_x = params.x || 0;
+    this.render_y = params.y || 0;
+    this.render_z = params.z || Z.BACKGROUND;
     this.w = params.w || 80;
     this.h = params.h || 25;
     // cursor
@@ -134,10 +136,10 @@ class GlovTerminal {
         color: glov_font.intColorFromVec4Color(this.palette[ii]),
       }));
     }
-    this.char_height = params.char_height || 16;
     this.char_width = params.char_width || 9;
+    this.char_height = params.char_height || 16;
     this.font = params.font || engine.font;
-    this.auto_scroll = true;
+    this.auto_scroll = params.auto_scroll ?? true;
     this.buffer = new Array(this.h);
     this.prebuffer = new Array(this.h); // before applying the mods
     for (let ii = 0; ii < this.h; ++ii) {
@@ -436,6 +438,7 @@ class GlovTerminal {
               }
             } else if (sub_code === 0) {
               this.normal();
+              this.color(params.fg, params.bg);
             } else if (sub_code === 4) {
               this.attr |= ATTR.UNDERLINE;
             } else if (sub_code === 5) {
@@ -626,15 +629,13 @@ class GlovTerminal {
   }
 
   menu(params) {
-    camera2d.push();
-    camera2d.set(0, 0, this.w, this.h);
     let { x, y, items } = params;
     let color_sel = params.color_sel || { fg: 15, bg: 8 };
     let color_unsel = params.color_unsel || { fg: 7, bg: 0 };
     let color_execute = params.color_execute || { fg: 8, bg: 0 };
     let pre_sel = params.pre_sel || '■ ';
     let pre_unsel = params.pre_unsel || '  ';
-    let menu_key = `${x}_${y}_${items.join()}`;
+    let menu_key = params.key || `${x}_${y}_${items.join()}`;
     if (this.last_menu_frame !== this.frame - 1 || this.last_menu_key !== menu_key) {
       // reset
       this.menu_idx = params.def_idx || 0;
@@ -665,10 +666,10 @@ class GlovTerminal {
     // First check anything tha changes menu index
     for (let ii = 0; ii < items.length; ++ii) {
       let param = {
-        x,
-        y: y + ii,
-        w: max_w,
-        h: 1,
+        x: this.render_x + x * this.char_width,
+        y: this.render_y + (y + ii) * this.char_height,
+        w: max_w * this.char_width,
+        h: this.char_height,
       };
       if (input.click(param)) {
         this.menu_idx = ii;
@@ -684,11 +685,20 @@ class GlovTerminal {
     }
 
     this.menu_idx = (this.menu_idx + items.length) % items.length;
+    this.menu_select_delta = 1;
 
+    let left_select = false;
     if (input.keyDownEdge(KEYS.SPACE) ||
-      input.keyDownEdge(KEYS.ENTER)
+      input.keyDownEdge(KEYS.ENTER) ||
+      ret === -1 && (
+        input.keyDownEdge(KEYS.D) || input.keyDownEdge(KEYS.RIGHT) ||
+        (left_select = (input.keyDownEdge(KEYS.A) || input.keyDownEdge(KEYS.LEFT)))
+      )
     ) {
       ret = this.menu_idx;
+      if (left_select) {
+        this.menu_select_delta = -1;
+      }
     }
 
     for (let ii = 0; ii < items.length; ++ii) {
@@ -707,11 +717,10 @@ class GlovTerminal {
 
     this.color(color_unsel.fg, color_unsel.bg);
 
-    camera2d.pop();
     return ret;
   }
 
-  render(params) {
+  render() {
     let dt = engine.getFrameDt();
     this.frame++;
 
@@ -738,10 +747,9 @@ class GlovTerminal {
 
     const { w, h, buffer, char_width, char_height, palette, draw_cursor } = this;
     const blink = engine.getFrameTimestamp() % 1000 > 500;
-    params = params || {};
-    let x = params.x || 0;
-    let y = params.y || 0;
-    let z = params.z || Z.BACKGROUND;
+    const x = this.render_x;
+    const y = this.render_y;
+    const z = this.render_z;
     // Draw foreground text
     for (let ii = 0; ii < h; ++ii) {
       let jj = 0;
@@ -794,8 +802,8 @@ class GlovTerminal {
     let last_y;
     let box_color = buffer[0][0].bg;
     function flush() {
-      ui.drawRect(box_x0 * char_width, box_y0 * char_height,
-        (last_x + 1) * char_width, (last_y + 1) * char_height, z, palette[box_color]);
+      ui.drawRect(x + box_x0 * char_width, y + box_y0 * char_height,
+        x + (last_x + 1) * char_width, y + (last_y + 1) * char_height, z, palette[box_color]);
       if (box_y0 !== last_y && last_y !== w - 1) {
         // A was draw, draw B:
         // AAABB
@@ -848,3 +856,13 @@ export const ansi = { bg: {} };
     return `${ESC}[${40 + idx}m${str}${ESC}[0m`;
   };
 });
+
+// eslint-disable-next-line no-control-regex
+const strip_ansi = /\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g;
+export function padRight(str, width) {
+  let len = str.replace(strip_ansi, '').length;
+  if (len < width) {
+    str += new Array(width - len + 1).join(' ');
+  }
+  return str;
+}

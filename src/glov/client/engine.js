@@ -880,6 +880,13 @@ export function setPixelyStrict(on) {
   }
 }
 
+export function getViewportPostprocess() {
+  return do_viewport_postprocess;
+}
+export function setViewportPostprocess(viewport_postprocess) {
+  do_viewport_postprocess = viewport_postprocess;
+}
+
 export function setFonts(new_font, title_font) {
   font = new_font;
   glov_ui.setFonts(new_font, title_font);
