@@ -663,6 +663,7 @@ class GlovTerminal {
     max_w += pre_sel.length;
 
     let ret = -1;
+    this.menu_select_delta = 1;
     // First check anything tha changes menu index
     for (let ii = 0; ii < items.length; ++ii) {
       let param = {
@@ -671,7 +672,11 @@ class GlovTerminal {
         w: max_w * this.char_width,
         h: this.char_height,
       };
-      if (input.click(param)) {
+      let click;
+      if ((click = input.click(param))) {
+        if (click.button === 2) {
+          this.menu_select_delta = -1;
+        }
         this.menu_idx = ii;
         ret = ii;
       } else if (input.mouseMoved() && input.mouseOver(param)) {
@@ -685,7 +690,6 @@ class GlovTerminal {
     }
 
     this.menu_idx = (this.menu_idx + items.length) % items.length;
-    this.menu_select_delta = 1;
 
     let left_select = false;
     if (input.keyDownEdge(KEYS.SPACE) ||
