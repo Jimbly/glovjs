@@ -654,6 +654,8 @@ class GlovTerminal {
     let color_execute = params.color_execute || { fg: 8, bg: 0 };
     let pre_sel = params.pre_sel || '■ ';
     let pre_unsel = params.pre_unsel || '  ';
+    let post_sel = params.post_sel || '';
+    let post_unsel = params.post_unsel || '';
     let menu_key = params.key || `${x}_${y}_${items.join()}`;
     if (this.last_menu_frame !== this.frame - 1 || this.last_menu_key !== menu_key) {
       // reset
@@ -677,17 +679,38 @@ class GlovTerminal {
 
     let max_w = 0;
     for (let ii = 0; ii < items.length; ++ii) {
-      max_w = max(max_w, items[ii].length);
+      let item = items[ii];
+      if (typeof item === 'object') {
+        item = item.label;
+      }
+      max_w = max(max_w, item.length);
     }
-    max_w += pre_sel.length;
+    max_w += pre_sel.length + post_sel.length;
 
     let ret = -1;
     this.menu_select_delta = 1;
     // First check anything tha changes menu index
     for (let ii = 0; ii < items.length; ++ii) {
+      let item = items[ii];
+      let effx = x;
+      let effy = y + ii;
+      let hotkey;
+      if (typeof item === 'object') {
+        effx = item.x;
+        effy = item.y;
+        hotkey = item.hotkey;
+
+        item = item.label;
+      }
+      if (!hotkey) {
+        let m = item.match(/\[([A-Z0-9])\]/u);
+        if (m) {
+          hotkey = m[1];
+        }
+      }
       let param = {
-        x: this.render_x + x * this.char_width,
-        y: this.render_y + (y + ii) * this.char_height,
+        x: this.render_x + effx * this.char_width,
+        y: this.render_y + effy * this.char_height,
         w: max_w * this.char_width,
         h: this.char_height,
       };
@@ -701,8 +724,11 @@ class GlovTerminal {
       } else if (input.mouseMoved() && input.mouseOver(param)) {
         this.menu_idx = ii;
       }
-      let hotkey = items[ii].match(/\[([A-Z0-9])\]/u);
-      if (hotkey && input.keyDownEdge(KEYS.A + hotkey[1].charCodeAt(0) - 'A'.charCodeAt(0))) {
+      if (hotkey && input.keyDownEdge(KEYS.A + hotkey.charCodeAt(0) - 'A'.charCodeAt(0))) {
+        this.menu_idx = ii;
+        ret = ii;
+      }
+      if ((hotkey && hotkey === '0' || items.length === 1) && input.keyDownEdge(KEYS.ESCAPE)) {
         this.menu_idx = ii;
         ret = ii;
       }
@@ -725,16 +751,29 @@ class GlovTerminal {
     }
 
     for (let ii = 0; ii < items.length; ++ii) {
+      let item = items[ii];
       let selected = ii === this.menu_idx;
       let executing = ii === ret;
       let colors = executing ? color_execute : selected ? color_sel : color_unsel;
+      let effx = x;
+      let effy = y + ii;
+      let eff_pre_sel = pre_sel;
+      let eff_pre_unsel = pre_unsel;
+      if (typeof item === 'object') {
+        effx = item.x;
+        effy = item.y;
+        colors = executing ? item.color_execute : selected ? item.color_sel : item.color_unsel;
+        eff_pre_sel = item.pre_sel;
+        eff_pre_unsel = item.pre_unsel;
+        item = item.label;
+      }
       let param = {
-        x,
-        y: y + ii,
+        x: effx,
+        y: effy,
         fg: colors.fg,
         bg: colors.bg,
       };
-      param.text = `${selected ? pre_sel : pre_unsel}${items[ii]}`;
+      param.text = `${selected ? eff_pre_sel : eff_pre_unsel}${item}${selected ? post_sel : post_unsel}`;
       this.print(param);
     }
 
