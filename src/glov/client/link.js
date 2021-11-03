@@ -29,7 +29,7 @@ export function link(param) {
 
   if (camera2d.clipTestRect(rect)) {
     // at least some is not clipped
-    let elem = ui.getElem(allow_modal, state.elem);
+    let elem = ui.getDOMElem(allow_modal, state.elem);
     if (elem !== state.elem) {
       state.elem = elem;
       if (elem) {

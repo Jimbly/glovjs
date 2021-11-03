@@ -89,6 +89,23 @@ export function focusIdSet(new_value) {
   focus_parent_id = new_value || '';
 }
 
+let ui_elem_data = {};
+// Gets per-element state data that allows a paradigm of inter-frame state but
+//   without the caller being required to allocate a state container.
+export function getUIElemData(type, param, allocator) {
+  let key = param.key || `${focus_parent_id}_${param.x}_${param.y}`;
+  let by_type = ui_elem_data[key];
+  if (!by_type) {
+    by_type = ui_elem_data[key] = {};
+  }
+  let elem_data = by_type[key];
+  if (!elem_data) {
+    elem_data = by_type[key] = allocator ? allocator(param) : {};
+  }
+  elem_data.frame_index = glov_engine.frame_index;
+  return elem_data;
+}
+
 function doBlurEffect(factor) {
   effects.applyGaussianBlur({
     blur: factor,
@@ -303,7 +320,7 @@ export function startup(param) {
 
 let dynamic_text_elem;
 let per_frame_dom_alloc = [0,0,0,0,0,0,0];
-export function getElem(allow_modal, last_elem) {
+export function getDOMElem(allow_modal, last_elem) {
   if (modal_dialog && !allow_modal) {
     return null;
   }
@@ -1285,6 +1302,24 @@ export function isMenuUp() {
   return modal_dialog || menu_up;
 }
 
+function releaseOldUIElemData() {
+  for (let type in ui_elem_data) {
+    let by_type = ui_elem_data[type];
+    let any = false;
+    for (let key in by_type) {
+      let elem_data = by_type[key];
+      if (elem_data.frame_index < glov_engine.frame_index - 1) {
+        delete by_type[key];
+      } else {
+        any = true;
+      }
+    }
+    if (!any) {
+      delete ui_elem_data[type];
+    }
+  }
+}
+
 export function tickUI(dt) {
   last_frame_button_mouseover = frame_button_mouseover;
   frame_button_mouseover = false;
@@ -1294,6 +1329,7 @@ export function tickUI(dt) {
   modal_stealing_focus = false;
   touch_changed_focus = false;
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
+  releaseOldUIElemData();
 
   last_frame_edit_boxes = exports.this_frame_edit_boxes;
   exports.this_frame_edit_boxes = [];

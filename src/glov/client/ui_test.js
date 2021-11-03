@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const { colorPicker } = require('./colorpicker.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
@@ -9,6 +10,7 @@ const { scrollAreaCreate } = require('./scroll_area.js');
 const selection_box = require('./selection_box.js');
 const simple_menu = require('./simple_menu.js');
 const ui = require('./ui.js');
+const { vec4 } = require('glov/common/vmath.js');
 
 const { ceil, random } = Math;
 
@@ -26,6 +28,7 @@ let test_select_large1;
 let test_scroll_area;
 let slider_value = 1;
 let test_lines = 10;
+let test_color = vec4(1,0,1,1);
 function init(x, y, column_width) {
   edit_box1 = ui.createEditBox({
     x: x + column_width,
@@ -113,35 +116,6 @@ export function run(x, y, z) {
   }
 
   let pad = 4;
-  test_scroll_area.begin({
-    x: x + column_width + 4,
-    y: y + 30,
-    z,
-    w: 100,
-    h: ui.font_height * 8 + pad,
-  });
-  let internal_y = 2;
-  internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    ui.font_height, ui.font.ALIGN.HWRAP|ui.font.ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
-    `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
-  ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
-  internal_y += ui.font_height + pad;
-  internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
-  for (let ii = 0; ii < test_lines; ++ii) {
-    ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
-    internal_y += ui.font_height + pad;
-  }
-  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line' })) {
-    ++test_lines;
-  }
-  internal_y += ui.button_height + pad;
-  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line' })) {
-    --test_lines;
-  }
-  internal_y += ui.button_height + pad;
-  test_scroll_area.end(internal_y);
-  ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
-    w: test_scroll_area.w + pad * 2, h: test_scroll_area.h + pad * 2 });
 
   if (ui.buttonText({ x, y, z, text: 'Modal Dialog', tooltip: 'Shows a modal dialog' })) {
     demo_result = '';
@@ -174,11 +148,48 @@ export function run(x, y, z) {
   if (ui.buttonText({ x, y, z, text: 'Menu', tooltip: 'Shows a menu' })) {
     demo_menu_up = true;
   }
+
+  colorPicker({
+    x: x + column_width, y, z,
+    color: test_color,
+  });
+
   y += line_height;
 
   if (ui.buttonText({ x, y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
   }
+
+  test_scroll_area.begin({
+    x: x + column_width + 4,
+    y: y + 4,
+    z,
+    w: 100,
+    h: ui.font_height * 8 + pad,
+  });
+  let internal_y = 2;
+  internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
+    ui.font_height, ui.font.ALIGN.HWRAP|ui.font.ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
+    `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
+  ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
+  internal_y += ui.font_height + pad;
+  internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
+  for (let ii = 0; ii < test_lines; ++ii) {
+    ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
+    internal_y += ui.font_height + pad;
+  }
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line' })) {
+    ++test_lines;
+  }
+  internal_y += ui.button_height + pad;
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line' })) {
+    --test_lines;
+  }
+  internal_y += ui.button_height + pad;
+  test_scroll_area.end(internal_y);
+  ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
+    w: test_scroll_area.w + pad * 2, h: test_scroll_area.h + pad * 2 });
+
   y += line_height;
 
   y += test_select1.run({ x, y, z });
