@@ -918,6 +918,12 @@ export const ansi = { bg: {} };
     return `${ESC}[${40 + idx}m${str}${ESC}[0m`;
   };
 });
+ansi.normal = function (str) {
+  return `${ESC}[0m${str}`;
+};
+ansi.blink = function (str) {
+  return `${ESC}[5m${str}${ESC}[0m`;
+};
 
 // eslint-disable-next-line no-control-regex
 const strip_ansi = /\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g;
@@ -925,6 +931,14 @@ export function padRight(str, width) {
   let len = str.replace(strip_ansi, '').length;
   if (len < width) {
     str += new Array(width - len + 1).join(' ');
+  }
+  return str;
+}
+
+export function padLeft(str, width) {
+  let len = str.replace(strip_ansi, '').length;
+  if (len < width) {
+    str = new Array(width - len + 1).join(' ') + str;
   }
   return str;
 }
