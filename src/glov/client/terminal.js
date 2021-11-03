@@ -51,7 +51,12 @@ const ansi_to_vga = [
 
 function toch(ch) {
   if (typeof ch === 'string') {
-    ch = ch.charCodeAt(0);
+    let idx = ch.charCodeAt(0);
+    if (ansi_to_unicode[idx]) {
+      return String.fromCharCode(ansi_to_unicode[idx]);
+    } else {
+      return ch;
+    }
   }
   if (typeof ch === 'number') {
     return String.fromCharCode(ansi_to_unicode[ch] || ch);
