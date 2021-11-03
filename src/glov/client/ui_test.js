@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
-const { colorPicker } = require('./colorpicker.js');
+const { colorPicker } = require('./color_picker.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');

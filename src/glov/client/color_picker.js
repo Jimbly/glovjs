@@ -10,7 +10,7 @@ const { LINE_CAP_SQUARE } = ui;
 const { clipped, clipPause, clipResume, createSprite } = require('./sprites.js');
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
-const { vec3, vec4, v4copy } = require('glov/common/vmath.js');
+const { vec3, v3copy, vec4 } = require('glov/common/vmath.js');
 
 let color_black = vec4(0,0,0,1);
 
@@ -28,9 +28,9 @@ function colorPickerOpen(state) {
 function colorPickerAlloc(param) {
   let state ={
     open: false,
-    rgba: vec4(),
+    rgba: vec4(0,0,0,1),
   };
-  v4copy(state.rgba, param.color);
+  v3copy(state.rgba, param.color);
   return state;
 }
 
@@ -87,7 +87,7 @@ export function colorPicker(param) {
   let { x, y, z } = param;
 
   if (!state.open) {
-    v4copy(state.rgba, param.color);
+    v3copy(state.rgba, param.color);
   }
 
   if (ui.buttonImage({
@@ -116,7 +116,7 @@ export function colorPicker(param) {
 
     y = min(y, camera2d.y1() - picker_h);
     z+=2;
-    x += icon_w;
+    x += icon_w + pad;
     let x0 = x;
     let y0 = y;
 
@@ -181,7 +181,7 @@ export function colorPicker(param) {
     }
   }
 
-  v4copy(param.color, state.rgba);
+  v3copy(param.color, state.rgba);
 
   // return state; Maybe useful for getting at HSV, open, etc?
 }
