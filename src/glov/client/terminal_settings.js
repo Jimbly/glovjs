@@ -8,9 +8,9 @@ let base_terminal;
 let settings_up = false;
 
 const MODEMS = [
-  { baud: 2400, label: '2400BPS' },
-  { baud: 9600, label: '9600BPS' },
-  { baud: 28800, label: '28.8KBPS' },
+  { baud: 2400, label: 'Hayes Smartmodem 2400bps' },
+  { baud: 9600, label: 'Motorola V.3225 9600bps' },
+  { baud: 28800, label: 'USR Sportster V.34 28.8kbps' },
   { baud: Infinity, label: 'NULL' },
 ];
 
@@ -25,7 +25,7 @@ function settingsOverlay(dt) {
   if (settings_up) {
     settings_terminal.print({
       fg: 6+8,
-      x: 2, y: 0,
+      x: 10, y: 0,
       text: 'TERMINAL OPTIONS'
     });
     let modem_idx = 0;
@@ -43,9 +43,9 @@ function settingsOverlay(dt) {
       pre_unsel: '   ',
       key: 'terminal_settings',
       items: [
-        padRight(`Modem: ${MODEMS[modem_idx].label}`, 17),
-        padRight(`Display: ${engine.getViewportPostprocess() ? 'CRT' : 'LCD'}`, 17),
-        padRight(`Exit ${ansi.yellow.bright('[O]')}ptions`, 17),
+        padRight(`Modem: ${MODEMS[modem_idx].label}`, 34),
+        padRight(`Display: ${engine.getViewportPostprocess() ? 'CRT' : 'LCD'}`, 34),
+        padRight(`Exit ${ansi.yellow.bright('[O]')}ptions`, 34),
       ],
     });
     if (sel === 0) {
@@ -69,7 +69,7 @@ export function terminalSettingsInit(terminal) {
     x: 10 * terminal.char_width,
     y: 2 * terminal.char_height,
     z: Z.DEBUG,
-    w: 21,
+    w: 38,
     h: 6,
     draw_cursor: false,
   });
