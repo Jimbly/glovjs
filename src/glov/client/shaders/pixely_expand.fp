@@ -21,6 +21,7 @@ const float EASING = 1.25;
 
 #define DO_WARP
 #ifdef DO_WARP
+const float VIGNETTE = 0.5;
 // Display warp.
 // 0.0 = none
 // 1.0/8.0 = extreme
@@ -74,7 +75,7 @@ void main()
 #ifdef DO_WARP
   // vignette
   float dist = min(1.0, 100.0 * min(0.5 - abs(texcoords.x - 0.5), 0.5 - abs(texcoords.y - 0.5)));
-  color *= 0.5 + 0.5 * dist;
+  color *= (1.0 - VIGNETTE) + VIGNETTE * dist;
 #endif
 
   gl_FragColor = vec4(color, 1.0);
