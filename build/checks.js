@@ -47,7 +47,6 @@ module.exports = function (filename) {
       '  git config --get core.autocrlf\n' +
       '  git config --global --add core.autocrlf false\n' +
       '    (or --local if you want it on for other projects)');
-    // eslint-disable-next-line no-throw-literal
     process.exit(-1);
   }
 
@@ -72,5 +71,6 @@ module.exports = function (filename) {
     'glov-build': '0.0.32',
     'glov-build-browserify': '0.0.4',
     'glov-build-preresolve': '0.1.0',
+    '@jimbly/babel-plugin-transform-modules-simple-commonjs': '0.0.3',
   });
 };

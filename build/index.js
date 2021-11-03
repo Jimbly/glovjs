@@ -85,7 +85,7 @@ gb.task({
       plugins: [
         // Generates much more optimal require() statements / usage
         // TODO: Switch (here, and 2 other places) to `transform-modules-simple-commonjs` if PR is accepted
-        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false }],
+        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false, inlineReplace: true }],
       ],
     },
   }),
@@ -163,7 +163,7 @@ gb.task({
       ],
       plugins: [
         // Generates much more optimal require() statements / usage
-        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false }],
+        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false, inlineReplace: true }],
         // Note: Dependencies are not tracked from babel plugins, so use
         //   `webfs` instead of `static-fs` where possible
         ['static-fs', {}], // generates good code, but does not allow reloading/watchify
