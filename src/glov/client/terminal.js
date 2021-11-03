@@ -198,14 +198,25 @@ class GlovTerminal {
         }
         break;
       case MOD_CLEAR:
-        assert(!mod.sub_view); // Not yet implemented
-        for (let ii = 0; ii < this.h; ++ii) {
-          let line = buffer[ii];
-          for (let jj = 0; jj < this.w; ++jj) {
-            line[jj].attr = mod.attr;
-            line[jj].fg = mod.fg;
-            line[jj].bg = mod.bg;
-            line[jj].ch = ' ';
+        if (mod.sub_view) {
+          for (let ii = mod.sub_view.y; ii < mod.sub_view.y + mod.sub_view.h; ++ii) {
+            let line = buffer[ii];
+            for (let jj = mod.sub_view.x; jj < mod.sub_view.x + mod.sub_view.w; ++jj) {
+              line[jj].attr = mod.attr;
+              line[jj].fg = mod.fg;
+              line[jj].bg = mod.bg;
+              line[jj].ch = ' ';
+            }
+          }
+        } else {
+          for (let ii = 0; ii < this.h; ++ii) {
+            let line = buffer[ii];
+            for (let jj = 0; jj < this.w; ++jj) {
+              line[jj].attr = mod.attr;
+              line[jj].fg = mod.fg;
+              line[jj].bg = mod.bg;
+              line[jj].ch = ' ';
+            }
           }
         }
         if (mod_playback) {
