@@ -11,8 +11,8 @@ window.onload = function () {
     return;
   }
   called_once = true;
-  // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
   require('glov/client/bootstrap.js');
+  // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
   if (require('glov/client/client_config.js').ENVIRONMENT === 'multiplayer') {
     require('./multiplayer.js').main();
   } else {
