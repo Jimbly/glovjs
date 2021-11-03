@@ -92,7 +92,7 @@ export class ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     this.channel_server = channel_server;
     this.channel_id = channel_id;
-    let m = channel_id.match(/^([^.]*)\.(.*)$/); // eslint-disable-line require-unicode-regexp
+    let m = channel_id.match(/^([^.]*)\.(.*)$/);
     assert(m);
     this.channel_type = m[1];
     this.channel_subid = m[2];
@@ -469,7 +469,9 @@ export class ChannelWorker {
         // this.debug(`->${other_channel_id} unsubscribe (silently) failed: ${err}`);
       } else if (err) {
         this[this.had_subscribe_error ? 'warn' : 'error'](`->${other_channel_id} unsubscribe failed: ${err}`);
-        this.onError(err);
+        if (!this.had_subscribe_error) {
+          this.onError(err);
+        }
       } else {
         // succeeded, nothing special
       }
@@ -865,7 +867,7 @@ export class ChannelWorker {
     return resp_func(null, this.getChannelData(data));
   }
 
-  defaultHandleSetChannelData(source, key, value) { // eslint-disable-line class-methods-use-this
+  defaultHandleSetChannelData(source, key, value) {
     if (source.type !== 'client' || !source.direct) {
       // from another channel, or not directly from the user, accept it
       return null;

@@ -391,19 +391,22 @@ Packet.prototype.zeroInt = function () {
   }
   // Otherwise, leave header bit
   this.buf_offs++;
-  let zeroes = 1;
+  let zeroes;
   switch (b1) {
     case 253:
-    case 252: // 8
-      zeroes += 4;
-    case 251:  // eslint-disable-line no-fallthrough
-    case 250: // 4
-      zeroes += 2;
-    case 249:  // eslint-disable-line no-fallthrough
-    case 248: // 2
-      zeroes++;
-    case 255:  // eslint-disable-line no-fallthrough
-      // 1
+    case 252:
+      zeroes = 8;
+      break;
+    case 251:
+    case 250:
+      zeroes = 4;
+      break;
+    case 249:
+    case 248:
+      zeroes = 2;
+      break;
+    case 255:
+      zeroes = 1;
       break;
     default:
       throw new Error('PKTERR_PACKED_INT');

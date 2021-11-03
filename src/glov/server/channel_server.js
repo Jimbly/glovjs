@@ -998,6 +998,7 @@ class ChannelServer {
     let client = this.ws_server.last_client;
     if (client) {
       crash_dump.last_client_id = client.id;
+      crash_dump.client_data = client.crash_data;
     }
     addPacketLog(this.ws_server, 'ws_pkt_log');
     let dump_file = log.dumpJSON('crash', crash_dump, 'json');

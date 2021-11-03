@@ -168,10 +168,11 @@ export class ClientWorker extends ChannelWorker {
 
   onError(msg) {
     if (this.client.connected) {
-      console.error(`ClientWorker(${this.channel_id}) error:`, msg);
+      // This will throw an exception on the client!
+      this.error('Unhandled error:', msg);
       this.client.send('error', msg);
     } else {
-      console.debug(`ClientWorker(${this.channel_id}) error(disconnected,ignored):`, msg);
+      this.debug('Ignoring(disconnected) unhandled error:', msg);
     }
   }
 

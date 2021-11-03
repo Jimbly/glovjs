@@ -48,7 +48,7 @@ class DataStoreOneFile {
       return cb(err, value);
     });
   }
-  unload(obj_name) { // eslint-disable-line class-methods-use-this
+  unload(obj_name) {
     // doing nothing, as we're not loading individual files
   }
 }

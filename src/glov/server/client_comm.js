@@ -830,6 +830,10 @@ export function init(channel_server_in) {
     client.client_id = client_id;
     client.client_channel = channel_server.createChannelLocal(`client.${client_id}`);
     client.client_channel.client = client;
+    client.crash_data = {
+      addr: client.addr,
+      user_agent: client.user_agent,
+    };
   });
   ws_server.on('disconnect', onClientDisconnect);
   ws_server.onMsg('subscribe', onSubscribe);

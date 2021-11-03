@@ -211,7 +211,9 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   this.width = w;
   this.height = h;
   // clear the error flag(s) if there are any
-  for (let ii = 0; ii < 10 && gl.getError(); ++ii); // eslint-disable-line curly
+  for (let ii = 0; ii < 10 && gl.getError(); ++ii) {
+    // Error cleared with gl.getError()
+  }
   // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, wrapped)
   let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array && !this.is_cube &&
     !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
@@ -395,7 +397,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         return;
       }
     }
-    let err_url = url && url.length > 100 ? `${url.slice(0, 100)}...` : url;
+    let err_url = url && url.length > 200 ? `${url.slice(0, 200)}...` : url;
     let err = `Error loading texture "${err_url}"${err_details}`;
     retries++;
     if (retries > TEX_RETRY_COUNT) {

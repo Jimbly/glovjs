@@ -3,12 +3,11 @@
 
 const assert = require('assert');
 
-/* eslint-disable camelcase, max-statements */
 const { unpackGLBBuffers } = require('./unpack-glb-buffers.js');
 const { unpackBinaryJson } = require('./unpack-binary-json.js');
 
 function padTo4Bytes(byteLength) {
-  return (byteLength + 3) & ~3; //eslint-disable-line no-bitwise
+  return (byteLength + 3) & ~3;
 }
 
 const decode_utf8 = require('./decode-utf8.js');

@@ -830,6 +830,10 @@ function fontShadersInit() {
   font_shaders.font_aa_glow = shaders.create('glov/shaders/font_aa_glow.fp');
   font_shaders.font_aa_outline = shaders.create('glov/shaders/font_aa_outline.fp');
   font_shaders.font_aa_outline_glow = shaders.create('glov/shaders/font_aa_outline_glow.fp');
+  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa);
+  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_glow);
+  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline);
+  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline_glow);
 }
 
 export function create(font_info, texture_name) {

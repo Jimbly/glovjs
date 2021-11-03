@@ -28,6 +28,7 @@ export let default_fshader;
 function initShaders() {
   default_vshader = shaders.create('glov/shaders/default.vp');
   default_fshader = shaders.create('glov/shaders/default.fp');
+  shaders.prelink(default_vshader, default_fshader);
 }
 
 function Model(url) {

@@ -156,7 +156,7 @@ export function mod(a, n) {
 
 // log2 rounded up to nearest integer
 export function log2(val) {
-  for (let ii=1, jj=0; ; ii <<= 1, ++jj) { // eslint-disable-line no-bitwise
+  for (let ii=1, jj=0; ; ii <<= 1, ++jj) {
     if (ii >= val) {
       return jj;
     }
@@ -233,13 +233,13 @@ export function inherits(ctor, superCtor) {
 }
 
 export function isPowerOfTwo(n) {
-  return ((n & (n - 1)) === 0); // eslint-disable-line no-bitwise
+  return ((n & (n - 1)) === 0);
 }
 
 export function nextHighestPowerOfTwo(x) {
   --x;
-  for (let i = 1; i < 32; i <<= 1) { // eslint-disable-line no-bitwise
-    x |= x >> i; // eslint-disable-line no-bitwise
+  for (let i = 1; i < 32; i <<= 1) {
+    x |= x >> i;
   }
   return x + 1;
 }

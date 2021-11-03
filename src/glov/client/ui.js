@@ -57,6 +57,8 @@ export function focuslog(...args) {
 
 let color_set_shades = vec4(1, 0.8, 0.7, 0.4);
 
+const Z_MIN_INC = 1e-5;
+
 export function makeColorSet(color) {
   let ret = {
     regular: vec4(),
@@ -424,6 +426,71 @@ export function drawBox(coords, s, pixel_scale, color) {
   }
 }
 
+export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
+  let uidata = s.uidata;
+  let scale = pixel_scale;
+
+  let ws = [];
+  let fixed_w_sum = 0;
+  let scaleable_sum = 0;
+  for (let i = 0; i < uidata.widths.length; i++) {
+    if (scaleable_data.widths[i] < 0) {
+      ws.push(uidata.widths[i] * scale);
+      fixed_w_sum += uidata.widths[i] * scale;
+    } else {
+      ws.push(0);
+      scaleable_sum += scaleable_data.widths[i];
+    }
+  }
+  assert(scaleable_sum === 1);
+  for (let i = 0; i < uidata.widths.length; i++) {
+    if (scaleable_data.widths[i] >= 0) {
+      ws[i] = max(0, (coords.w - fixed_w_sum) * scaleable_data.widths[i]);
+    }
+  }
+
+  scaleable_sum = 0;
+  let hs = [];
+  let fixed_h_sum = 0;
+  for (let i = 0; i < uidata.heights.length; i++) {
+    if (scaleable_data.heights[i] < 0) {
+      hs.push(uidata.heights[i] * scale);
+      fixed_h_sum += uidata.heights[i] * scale;
+    } else {
+      hs.push(0);
+      scaleable_sum += scaleable_data.heights[i];
+    }
+  }
+  assert(scaleable_sum === 1);
+  for (let i = 0; i < uidata.heights.length; i++) {
+    if (scaleable_data.heights[i] >= 0) {
+      hs[i] = max(0, (coords.h - fixed_h_sum) * scaleable_data.heights[i]);
+    }
+  }
+  let x = coords.x;
+  for (let ii = 0; ii < ws.length; ++ii) {
+    let my_w = ws[ii];
+    if (my_w) {
+      let y = coords.y;
+      for (let jj = 0; jj < hs.length; ++jj) {
+        let my_h = hs[jj];
+        if (my_h) {
+          s.draw({
+            x, y, z: coords.z,
+            color,
+            w: my_w,
+            h: my_h,
+            uvs: uidata.rects[jj * ws.length + ii],
+            nozoom: true, // nozoom since different parts of the box get zoomed differently
+          });
+          y += my_h;
+        }
+      }
+      x += my_w;
+    }
+  }
+}
+
 export function playUISound(name, volume) {
   if (name === 'select') {
     name = 'button_click';
@@ -529,9 +596,12 @@ export function panel(param) {
   assert(typeof param.w === 'number');
   assert(typeof param.h === 'number');
   param.z = param.z || (Z.UI - 1);
+  param.eat_clicks = param.eat_clicks === undefined ? true : param.eat_clicks;
   let color = param.color || color_panel;
   drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
-  glov_input.click(param);
+  if (param.eat_clicks) {
+    glov_input.click(param);
+  }
   glov_input.mouseOver(param);
 }
 
@@ -612,7 +682,7 @@ export function progressBar(param) {
   drawHBox({
     x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
     y: param.y,
-    z: (param.z || Z.UI) + 0.1,
+    z: (param.z || Z.UI) + Z_MIN_INC,
     w: param.w * progress,
     h: param.h,
     no_min_width: true,
@@ -624,7 +694,6 @@ export function progressBar(param) {
   }
 }
 
-// eslint-disable-next-line complexity
 export function buttonShared(param) {
   param.z = param.z || Z.UI;
   let state = 'regular';
@@ -737,7 +806,6 @@ export function buttonTextDraw(param, state, focused) {
   font.drawSizedAligned(
     focused ? font_style_focused : font_style_normal,
     param.x + hpad, param.y, param.z + 0.1,
-    // eslint-disable-next-line no-bitwise
     param.font_height, glov_font.ALIGN.HCENTERFIT | glov_font.ALIGN.VCENTER, param.w - hpad * 2, param.h, param.text);
 }
 
@@ -780,7 +848,7 @@ function buttonImageDraw(param, state, focused) {
   let draw_param = {
     x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
     y: param.y + pad_top + img_origin[1] * img_h,
-    z: param.z + 0.1,
+    z: param.z + Z_MIN_INC,
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
@@ -1201,7 +1269,7 @@ export function slider(value, param) {
   sprites.slider_handle.draw({
     x: handle_x,
     y: handle_y,
-    z: param.z + 0.1,
+    z: param.z + Z_MIN_INC,
     w: handle_w,
     h: handle_h,
     color: handle_color,

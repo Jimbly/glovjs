@@ -29,7 +29,7 @@ const regex_valid_user_id = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
 const regex_valid_external_id = /^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]*$/;
 
 export function validUserId(user_id) {
-  return user_id.match(regex_valid_user_id);
+  return user_id?.match(regex_valid_user_id);
 }
 
 export function validProvider(provider) {

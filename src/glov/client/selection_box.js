@@ -545,17 +545,16 @@ class GlovSelectionBox {
               glov_markup.print(md, x2, text_y, z + 2, post);
             } else {
               font.drawSizedAligned(style, x1, text_y, z + 2, font_height,
-                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
+                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
                 w1, entry_height, pre);
               font.drawSizedAligned(style, x2, text_y, z + 2, font_height,
-                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER, // eslint-disable-line no-bitwise
+                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
                 w2, entry_height, post);
             }
           }
         }
         if (!did_tab) {
           let md = {};
-          // eslint-disable-next-line no-bitwise
           md.align = (item.centered || display.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) |
             glov_font.ALIGN.VCENTER;
           md.x_size = md.y_size = font_height;

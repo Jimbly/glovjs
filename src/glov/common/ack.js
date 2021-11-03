@@ -108,7 +108,6 @@ export function failAll(receiver, err) {
 // `receiver` needs initReceicver called on it, have .onError() in the prototype and optionally .log()
 // sendFunc(msg, err, data, resp_func)
 // handleFunc(msg, data, resp_func)
-// eslint-disable-next-line consistent-return
 export function ackHandleMessage(receiver, source, pak, send_func, pak_func, handle_func, filter_func) {
   let pak_initial_offs = pak.getOffset();
   let { err, data, msg, pak_id } = ackReadHeader(pak);

@@ -5,7 +5,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const { dataStoresInit } = require('./data_stores_init.js');
 const glov_exchange = require('./exchange.js');
-const { errorReportsInit } = require('./error_reports.js');
+const { errorReportsInit, errorReportsSetAppVer } = require('./error_reports.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const { idmapperWorkerInit } = require('./idmapper_worker.js');
@@ -58,6 +58,7 @@ function updateVersion(base_name, is_startup) {
     console.info(`Version for "${base_name}"${old_version ? ' changed to' : ''}: ${obj.ver}`);
     last_version[base_name] = obj.ver;
     if (base_name === 'app') {
+      errorReportsSetAppVer(obj.ver);
       ws_server.setAppVer(obj.ver);
       if (!is_startup) {
         // Do a broadcast message so people get a few seconds of warning

@@ -3,6 +3,7 @@
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
 
 const { fetch } = require('./fetch.js');
+const { PLATFORM } = require('./client_config.js');
 
 let error_report_disabled = false;
 
@@ -35,6 +36,7 @@ export function errorReportSetDynamicDetails(key, fn) {
 
 errorReportSetDetails('ver', BUILD_TIMESTAMP);
 errorReportSetDetails('sesuid', session_uid);
+errorReportSetDetails('platform', PLATFORM);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
 errorReportSetDynamicDetails('url', function () {

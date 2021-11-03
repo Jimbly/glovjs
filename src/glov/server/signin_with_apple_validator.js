@@ -47,6 +47,7 @@ function getAppleIdentityPublicKey(client, kid, forceKeyFetch, callback) {
 }
 
 function appleSignInValidateTokenInternal(client, identityToken, forceKeyFetch, callback) {
+  assert(ios_bundle_id);
   const clientID = ios_bundle_id;
   const { header } = jwt.decode(identityToken, { complete: true });
   getAppleIdentityPublicKey(client, header.kid, forceKeyFetch, function (error, applePublicKey) {

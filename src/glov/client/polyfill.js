@@ -85,6 +85,14 @@ if (!String.prototype.includes) {
   });
 }
 
+if (!Array.prototype.includes) {
+  Object.defineProperty(Array.prototype, 'includes', {
+    value: function (search, start) {
+      return this.indexOf(search, start) !== -1;
+    },
+  });
+}
+
 if (!Object.values) {
   Object.values = function values(obj) {
     return Object.keys(obj).map((k) => obj[k]);

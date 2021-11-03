@@ -192,7 +192,12 @@ export function chunkedSend(opts, cb) {
     function streamFile(next) {
       let num_chunks = ceil(length / CHUNK_SIZE);
 
+      let any_error = false;
       function sendChunk(idx, next) {
+        if (any_error) {
+          // Already had an error, fail-fast, don't try to send on disconnected link, etc
+          return void next();
+        }
         assert(idx < num_chunks);
         let pak = client.pak('upload_chunk');
         pak.writeInt(id);
@@ -200,7 +205,12 @@ export function chunkedSend(opts, cb) {
         pak.writeInt(start);
         let chunk_len = min(CHUNK_SIZE, length - start);
         pak.writeBuffer(new Uint8Array(buffer.buffer, buffer.byteOffset + start, chunk_len));
-        pak.send(next);
+        pak.send(function (err) {
+          if (err) {
+            any_error = true;
+          }
+          next(err);
+        });
       }
       let tasks = [];
       for (let ii = 0; ii < num_chunks; ++ii) {

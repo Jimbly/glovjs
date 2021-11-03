@@ -24,6 +24,7 @@ export let dss_stats = {
 const assert = require('assert');
 const metrics = require('./metrics.js');
 const { getUID } = require('./log.js');
+const { perfCounterAdd } = require('glov/common/perfcounters.js');
 
 // Write timeouts *very* high, because if we ever assume a write has failed when
 //  it's still in progress, that can lead to data corruption (earlier write
@@ -87,6 +88,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
       }
       if (err || cb_called) {
         metrics.add(self.metric_errors, 1);
+        perfCounterAdd(self.metric_errors);
       }
 
       if (err !== ERR_TIMEOUT_FORCED_SHIELD) { // If not already logged about
@@ -152,6 +154,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
 DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
   let self = this;
   metrics.add(self.metric_set, 1);
+  perfCounterAdd(self.metric_set);
   dss_stats.set++;
   this.executeShielded('set', obj_name, RETRIES_WRITE, TIMEOUT_WRITE, (onDone) => {
     self.data_store.setAsync(obj_name, value, onDone);
@@ -161,6 +164,7 @@ DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
 DataStoreShield.prototype.getAsync = function (obj_name, default_value, cb) {
   let self = this;
   metrics.add(self.metric_get, 1);
+  perfCounterAdd(self.metric_get);
   dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsync(obj_name, default_value, onDone);
@@ -170,6 +174,7 @@ DataStoreShield.prototype.getAsync = function (obj_name, default_value, cb) {
 DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
   let self = this;
   metrics.add(self.metric_get, 1);
+  perfCounterAdd(self.metric_get);
   dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsyncBuffer(obj_name, onDone);
@@ -179,6 +184,7 @@ DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
 DataStoreShield.prototype.search = function (collection, search, cb) {
   let self = this;
   metrics.add(self.metric_search, 1);
+  perfCounterAdd(self.metric_search);
   dss_stats.search++;
   this.executeShielded('search', collection, RETRIES_SEARCH, TIMEOUT_SEARCH, (onDone) => {
     self.data_store.search(collection, search, onDone);

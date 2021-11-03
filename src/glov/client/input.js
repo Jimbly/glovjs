@@ -1042,7 +1042,7 @@ export function mouseOver(param) {
   let pos_param = mousePosParam(param);
 
   // eat mouse up/down/drag events
-  if (!param.peek) {
+  if (!param.peek && !param.peek_touch) {
     for (let id in touches) {
       let touch = touches[id];
       if (checkPos(touch.cur_pos, pos_param)) {
@@ -1056,7 +1056,7 @@ export function mouseOver(param) {
   }
 
   if (checkPos(mouse_pos, pos_param)) {
-    if (!param.peek) {
+    if (!param.peek && !param.peek_over) {
       mouse_over_captured = true;
     }
     return true;

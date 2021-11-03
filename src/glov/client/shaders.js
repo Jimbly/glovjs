@@ -31,6 +31,7 @@ export const semantic = {
 };
 
 export let globals;
+let globals_used;
 let global_defines;
 
 let error_fp;
@@ -237,7 +238,6 @@ Shader.prototype.compile = function () {
     }
     console[this.non_fatal ? 'warn' : 'error'](`Error compiling ${filename}: ${error_text}`);
     reportShaderError(this.non_fatal, `${filename}: ${error_text}`);
-    // eslint-disable-next-line newline-per-chained-call
     console.log(text.split('\n').map((line, idx) => `${idx+1}: ${line}`).join('\n'));
   } else {
     this.valid = true;
@@ -274,7 +274,15 @@ function uniformSetValue(unif) {
   }
 }
 
+let require_prelink = false;
+export function shadersRequirePrelink(ensure) {
+  let old = require_prelink;
+  require_prelink = ensure;
+  return old;
+}
+
 function link(vp, fp) {
+  assert(!require_prelink);
   let prog = vp.programs[fp.id] = {
     handle: gl.createProgram(),
     uniforms: null,
@@ -325,6 +333,7 @@ function link(vp, fp) {
     let width = type_size[type];
     let size = width * count;
     let glob = globals[name];
+    globals_used[name] = true;
     let value = new Float32Array(size);
     // set initial value
     let unif = {
@@ -389,6 +398,11 @@ export function bind(vp, fp, params) {
   }
 }
 
+export function prelink(vp, fp, params = {}) {
+  // In theory, only need to link, not bind, but let's push it through the pipe as far as it can to be safe.
+  bind(vp, fp, params);
+}
+
 const reserved = { WEBGL2: 1 };
 export function addReservedDefine(key) {
   reserved[key] = 1;
@@ -402,6 +416,7 @@ function applyDefines() {
 }
 
 function shaderReload() {
+  shadersRequirePrelink(false);
   if (shaders.length) {
     errorReportClear();
     gl.useProgram(null);
@@ -444,6 +459,7 @@ function onShaderChange(filename) {
 export function startup(_globals) {
   applyDefines();
   globals = _globals;
+  globals_used = {};
 
   error_fp = create('glov/shaders/error.fp');
   error_vp = create('glov/shaders/error.vp');
@@ -454,5 +470,6 @@ export function startup(_globals) {
 
 export function addGlobal(key, vec) {
   assert(!globals[key]);
+  assert(!globals_used[key]); // A shader has already been prelinked referencing this global
   globals[key] = vec;
 }

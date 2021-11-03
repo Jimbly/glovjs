@@ -927,7 +927,7 @@ export function startup(params) {
   antialias = params.antialias || !is_pixely && params.antialias !== false;
   let powerPreference = params.high ? 'high-performance' : 'default';
   let context_names = ['webgl2', 'webgl', 'experimental-webgl'];
-  let force_webgl1 = defines.NOWEBGL2 || is_ios_safari && !defines.FORCEWEBGL2;
+  let force_webgl1 = defines.NOWEBGL2;
   let disable_data = local_storage.getJSON('webgl2_disable');
   // Check if a previous, recent run had an error that hinted we should disable WebGL2
   if (disable_data && disable_data.ua === navigator.userAgent && disable_data.ts > Date.now() - 7*24*60*60*1000) {

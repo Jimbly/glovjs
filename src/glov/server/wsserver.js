@@ -34,7 +34,6 @@ function WSClient(ws_server, socket) {
   this.disconnected = false;
   this.last_receive_time = Date.now();
   this.idle_counter = 0;
-  this.last_client = null; // Last client to have had a message dispatched
   ackInitReceiver(this);
   ws_server.clients[this.id] = this;
   this.logPacketDispatch = ws_server.logPacketDispatch.bind(ws_server);
@@ -89,6 +88,7 @@ function WSServer() {
   events.EventEmitter.call(this);
   this.wss = null;
   this.last_client_id = 0;
+  this.last_client = null; // Last client to have had a message dispatched
   this.clients = Object.create(null);
   this.handlers = {};
   this.restarting = undefined;

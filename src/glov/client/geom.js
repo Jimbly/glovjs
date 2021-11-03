@@ -14,6 +14,8 @@ export const TRIANGLES = 4;
 export const TRIANGLE_FAN = 6;
 export const QUADS = 7;
 
+const MAX_VERT_COUNT = 65536 - 4; // WebGL2 treats 65535 as "primitive restart" and also dies on iOS 15
+
 settings.register({
   show_render_stats: {
     default_value: 0,
@@ -134,7 +136,7 @@ function enableVertexAttribArray(bits) {
 
 // Verts should be ordered counter-clockwise from the upper left
 function getQuadIndexBuf(quad_count) {
-  assert(quad_count <= 16384);
+  assert(quad_count <= MAX_VERT_COUNT/4);
   // If not, need to split into multiple vertex and index buffers (fairly easy),
   //   or use the OES_element_index_uint extension (trivial, but probably slower, maybe not supported on mobile?)
   if (quad_count * 6 > quad_index_buf_len) {
@@ -144,7 +146,7 @@ function getQuadIndexBuf(quad_count) {
       // freeing old one
       engine.perf_state.gpu_mem.geom -= quad_index_buf_len * 2;
     }
-    quad_index_buf_len = max(ceil(quad_index_buf_len * 1.5), quad_count * 6);
+    quad_index_buf_len = min(max(ceil(quad_index_buf_len * 1.5), quad_count * 6), MAX_VERT_COUNT*6/4);
     if (bound_index_buf !== quad_index_buf) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad_index_buf);
       bound_index_buf = quad_index_buf;
@@ -424,8 +426,8 @@ function GeomMultiQuads(format, verts) {
   let ec = format_info.elem_count;
   let vert_count = verts.length / ec;
   this.geoms = [];
-  for (let idx = 0; idx < vert_count; idx += 65536) {
-    let num_sub_verts = min(vert_count - idx, 65536);
+  for (let idx = 0; idx < vert_count; idx += MAX_VERT_COUNT) {
+    let num_sub_verts = min(vert_count - idx, MAX_VERT_COUNT);
     let sub_data = new Uint8Array(verts.buffer, idx * ec, num_sub_verts * ec);
     this.geoms.push(new Geom(format, sub_data, null, QUADS));
   }
@@ -450,7 +452,7 @@ export function createQuads(format, verts, fixed_size) {
   let format_info = formatInfo(format);
   assert(fixed_size || verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
   let vert_count = verts.length / format_info.elem_count;
-  if (vert_count > 65536) {
+  if (vert_count > MAX_VERT_COUNT) {
     return new GeomMultiQuads(format, verts);
   }
   return new Geom(format, verts, null, QUADS);

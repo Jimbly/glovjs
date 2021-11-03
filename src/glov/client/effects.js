@@ -644,3 +644,9 @@ export function clearAlpha() {
     gl.enable(gl.DEPTH_TEST);
   }
 }
+
+export function effectsStartup(prelink_effects) {
+  prelink_effects.forEach((name) => {
+    shaders.prelink(getShader('vp_copy'), getShader(name));
+  });
+}

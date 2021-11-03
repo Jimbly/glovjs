@@ -148,6 +148,7 @@ function ChatUI(params) {
   this.on_join = this.onMsgJoin.bind(this);
   this.on_leave = this.onMsgLeave.bind(this);
   this.on_chat = this.onMsgChat.bind(this);
+  this.on_chat_cb = null;
   this.handle_cmd_parse = this.handleCmdParse.bind(this);
   this.handle_cmd_parse_error = this.handleCmdParseError.bind(this);
   cmd_parse.setDefaultHandler(this.handle_cmd_parse_error);
@@ -320,7 +321,16 @@ ChatUI.prototype.onMsgLeave = function (data) {
     style: 'join_leave',
   });
 };
+
+ChatUI.prototype.registerOnMsgChatCB = function (cb) {
+  assert(!this.on_chat_cb);
+  this.on_chat_cb = cb;
+};
+
 ChatUI.prototype.onMsgChat = function (data) {
+  if (this.on_chat_cb) {
+    this.on_chat_cb(data);
+  }
   let { msg, id, client_id, display_name, flags, ts, quiet } = data;
   if (!quiet && client_id !== net.client.id) {
     if (this.volume_in) {

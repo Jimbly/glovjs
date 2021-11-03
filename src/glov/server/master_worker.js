@@ -273,7 +273,7 @@ class MasterWorker extends ChannelWorker {
       callEach(cbs, null, err);
     });
   }
-  handleNewClient(src) { // eslint-disable-line class-methods-use-this
+  handleNewClient(src) {
     // Only system admin users allowed
     if (!src.sysadmin) {
       return 'ERR_ACCESS_DENIED';

@@ -5,6 +5,7 @@ export const MODE_DEVELOPMENT = Boolean(String(document.location).match(/^https?
 export const MODE_PRODUCTION = !MODE_DEVELOPMENT;
 
 // Platform
+export const PLATFORM = window.conf_platform;
 export const PLATFORM_WEB = window.conf_platform === 'web';
 export const PLATFORM_FBINSTANT = window.conf_platform === 'fbinstant';
 export const PLATFORM_ANDROID = window.conf_platform === 'android';

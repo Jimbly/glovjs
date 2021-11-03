@@ -18,6 +18,7 @@ import { deepEqual } from 'glov/common/util.js';
 const assert = require('assert');
 const input = require('./input.js');
 const net = require('./net.js');
+const { netDisconnected } = net;
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 
@@ -50,6 +51,9 @@ export function friendIsBlocked(user_id: string): boolean {
 function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<string>): void {
   user_id = user_id.toLowerCase();
   let requesting_user_id = net.subs.logged_in_username;
+  if (netDisconnected()) {
+    return void cb('ERR_DISCONNECTED');
+  }
   net.subs.getMyUserChannel().cmdParse(`${cmd} ${user_id}`, function (err: string, resp: FriendCmdResponse) {
     if (err) {
       return void cb(err);
@@ -406,6 +410,9 @@ export function socialInit(): void {
     let user_id = net.subs.logged_in_username;
     richPresenceSend();
     friend_list = null;
+    if (netDisconnected()) {
+      return;
+    }
     user_channel.pak('friend_list').send((err: unknown, resp: FriendsData) => {
       if (err || user_id !== net.subs.logged_in_username) {
         // disconnected, etc

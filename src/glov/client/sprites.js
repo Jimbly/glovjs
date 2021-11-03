@@ -19,7 +19,7 @@ const { vec2, vec4 } = require('glov/common/vmath.js');
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 
-let sprite_vshader;
+export let sprite_vshader;
 export let sprite_fshader;
 let sprite_dual_fshader;
 let clip_space = vec4();
@@ -563,7 +563,7 @@ export function draw() {
         commitAndFlush();
         // batch_state left alone
         if (sprite_buffer_len !== MAX_VERT_COUNT) {
-          let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT); // eslint-disable-line no-bitwise
+          let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT);
           sprite_buffer_len = new_length;
           sprite_buffer = new Float32Array(new_length * 8);
         }
@@ -732,4 +732,6 @@ export function startup() {
   sprite_vshader = shaders.create('glov/shaders/sprite.vp');
   sprite_fshader = shaders.create('glov/shaders/sprite.fp');
   sprite_dual_fshader = shaders.create('glov/shaders/sprite_dual.fp');
+  shaders.prelink(sprite_vshader, sprite_fshader);
+  shaders.prelink(sprite_vshader, sprite_dual_fshader);
 }

@@ -50,6 +50,7 @@ class GlovUIEditBox {
     return this.text;
   }
   setText(new_text) {
+    new_text = String(new_text);
     if (this.input) {
       this.input.value = new_text;
     }

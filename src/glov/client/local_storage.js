@@ -2,6 +2,8 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+const assert = require('assert');
+
 let storage_prefix = 'demo';
 
 let is_set = false;
@@ -13,6 +15,7 @@ export function setStoragePrefix(prefix) {
   storage_prefix = prefix;
 }
 export function getStoragePrefix() {
+  assert(is_set);
   return storage_prefix;
 }
 
@@ -25,6 +28,7 @@ let lsd = (function () {
   }
 }());
 export function get(key) {
+  assert(is_set);
   key = `${storage_prefix}_${key}`;
   let ret = lsd[key];
   if (ret === 'undefined') {
@@ -34,6 +38,7 @@ export function get(key) {
 }
 
 export function set(key, value) {
+  assert(is_set);
   key = `${storage_prefix}_${key}`;
   if (value === undefined || value === null) {
     delete lsd[key];

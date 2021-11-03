@@ -155,4 +155,5 @@ export function snapshot(param) {
 
 export function snapshotStartup() {
   snapshot_shader = shaders.create('glov/shaders/snapshot.fp');
+  shaders.prelink(sprites.sprite_vshader, snapshot_shader);
 }
