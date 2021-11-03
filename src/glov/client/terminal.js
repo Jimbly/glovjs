@@ -496,10 +496,13 @@ class GlovTerminal {
     let y = params.y || 0;
     let w = params.w || this.w;
     let h = params.h || this.h;
-    let x0 = clamp(x, 0, this.w);
-    let x1 = clamp(x + w, 0, this.w);
-    let y0 = clamp(y, 0, this.h);
-    let y1 = clamp(y + h, 0, this.h);
+    this.color(params.fg, params.bg);
+    let eff_w = this.sub_view ? this.sub_view.w : this.w;
+    let eff_h = this.sub_view ? this.sub_view.h : this.h;
+    let x0 = clamp(x, 0, eff_w);
+    let x1 = clamp(x + w, 0, eff_w);
+    let y0 = clamp(y, 0, eff_h);
+    let y1 = clamp(y + h, 0, eff_h);
     let ch = toch(params.ch || ' ');
     for (let ii = y0; ii < y1; ++ii) {
       this.moveto(x0, ii);
