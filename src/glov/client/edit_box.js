@@ -152,6 +152,9 @@ class GlovUIEditBox {
           ev.preventDefault();
           this.submitted = true;
           this.text = this.input.value;
+          if (this.max_len > 0) {
+            this.text = this.text.slice(0, this.max_len);
+          }
           if (this.pointer_lock && !this.text) {
             glov_input.pointerLockEnter('edit_box_submit');
           }
@@ -178,6 +181,9 @@ class GlovUIEditBox {
     } else {
       if (this.input) {
         this.text = this.input.value;
+        if (this.max_len > 0) {
+          this.text = this.text.slice(0, this.max_len);
+        }
       }
     }
     if (elem) {

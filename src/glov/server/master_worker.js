@@ -46,6 +46,7 @@ class MasterWorker extends ChannelWorker {
     // Delay until we finish startup/registration
     setImmediate(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
     console.log('lifecycle_master_start');
+    metrics.set('server_error', 0); // "Clear" this upon deployment restart so we get new alerts if new errors happen
   }
   getChanServData(id) {
     assert(id);
@@ -616,43 +617,53 @@ export function init(channel_server) {
     cmds: [{
       cmd: 'master_where',
       help: 'Identify where a worker is located',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterWhere,
     }, {
       cmd: 'master_stats',
       help: 'Get stats from the master worker',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterStats,
     }, {
       cmd: 'master_load',
       help: 'Get load summary from the master worker',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterLoad,
     }, {
       cmd: 'master_restart_countdown',
       help: 'Start a countdown to server restart',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterRestartCountdown,
     }, {
       cmd: 'master_restart_cancel',
       help: 'Cancel a restart countdown',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterRestartCancel,
     }, {
       cmd: 'master_restarting',
       help: 'Toggle all servers into "restarting" mode',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterRestarting,
     }, {
       cmd: 'master_deploy_ready_force',
       help: 'Force master to report "ready for deployment" to the build system',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdMasterDeployReadyForce,
     }, {
       cmd: 'channel_server_report_load',
       help: '(Dev / single-node only) trigger an immediate load report',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdChannelServerReportLoad,
     }, {
       cmd: 'eat_cpu',
       help: 'Cause a channel server to eat CPU',
       usage: '$HELP\n/eat_cpu INSTANCE_ID PERCENT',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdEatCPU,
     }, {
       cmd: 'admin_broadcast',
       help: 'Broadcast a chat message to all users',
+      access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdAdminBroadcast,
     }],
     handlers: {

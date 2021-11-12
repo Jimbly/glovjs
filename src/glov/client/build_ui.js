@@ -126,11 +126,13 @@ function buildUITick() {
 }
 
 export function buildUIStartup() {
-  if (net.client) {
+  if (net.client && engine.DEBUG) {
     net.client.onMsg('gbstate', onGBState);
-
-    if (engine.DEBUG) {
-      engine.addTickFunc(buildUITick);
-    }
+    net.subs.on('connect', function () {
+      let pak = net.client.pak('gbstate_enable');
+      pak.writeBool(true);
+      pak.send();
+    });
+    engine.addTickFunc(buildUITick);
   }
 }

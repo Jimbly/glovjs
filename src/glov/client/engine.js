@@ -95,7 +95,6 @@ let mat_inv_view = mat3();
 // let projection_inverse = vec4();
 
 export let light_diffuse = vec3(0.75, 0.75, 0.75);
-let light_dir_vs = vec3(0, 0, 0);
 export let light_ambient = vec3(0.25, 0.25, 0.25);
 export let light_dir_ws = vec3(-1, -2, -3);
 
@@ -112,12 +111,30 @@ export function disableRender(new_value) {
   }
 }
 
+let view_space_globals = [];
+export function addViewSpaceGlobal(name) {
+  let ws_name = `${name}_ws`;
+  let ws_vec = shaders.globals[ws_name];
+  assert(ws_vec);
+  assert.equal(ws_vec.length, 3);
+  let vs_name = `${name}_vs`;
+  let vs_vec = vec3();
+  shaders.addGlobal(vs_name, vs_vec);
+  view_space_globals.push({
+    vs: vs_vec,
+    ws: ws_vec,
+  });
+}
+
 let mat_temp = mat4();
 export function setGlobalMatrices(_mat_view) {
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
   v3iNormalize(light_dir_ws);
-  v3mulMat4(light_dir_vs, light_dir_ws, mat_view);
+  for (let ii = 0; ii < view_space_globals.length; ++ii) {
+    let vsg = view_space_globals[ii];
+    v3mulMat4(vsg.vs, vsg.ws, mat_view);
+  }
   mat4Invert(mat_temp, mat_view);
   mat3FromMat4(mat_inv_view, mat_temp);
 }
@@ -1003,7 +1020,7 @@ export function startup(params) {
   geom.startup();
   shaders.startup({
     light_diffuse,
-    light_dir_vs,
+    light_dir_ws,
     ambient: light_ambient,
     mat_m: mat_m,
     mat_mv: mat_mv,
@@ -1015,6 +1032,7 @@ export function startup(params) {
     projection: mat_projection,
     // projection_inverse,
   });
+  addViewSpaceGlobal('light_dir');
   camera2d.startup();
   sprites.startup();
   input.startup(canvas, params);

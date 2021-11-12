@@ -35,6 +35,10 @@ module.exports = {
   },
   "rules": {
     "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-array-constructor": "error",
+    "@typescript-eslint/no-empty-function": "error",
+    "@typescript-eslint/no-extra-semi": "error",
+    "@typescript-eslint/no-redeclare": "error",
     "@typescript-eslint/no-shadow": [
       "error",
       { "allow": ["next", "done", "err", "pak"] }
@@ -44,6 +48,7 @@ module.exports = {
       "error",
       { "args": "none" }
     ],
+    "@typescript-eslint/no-useless-constructor": "error",
     "@typescript-eslint/no-var-requires": "off",
 
     "accessor-pairs": "error",
@@ -214,7 +219,7 @@ module.exports = {
     "newline-before-return": "off",
     "newline-per-chained-call": "off",
     "no-alert": "error",
-    "no-array-constructor": "error",
+    "no-array-constructor": "off", // replaced with @typescript-eslint/no-array-constructor
     "no-async-promise-executor": "error",
     "no-await-in-loop": "error",
     "no-bitwise": "off", // JE
@@ -225,6 +230,7 @@ module.exports = {
     "no-confusing-arrow": "error",
     "no-console": "off", // JE
     "no-const-assign": "error",
+    "no-constructor-return": "error", // JE
     "no-constant-condition": "off", // JE
     "no-control-regex": "error",
     "no-continue": "off", // JE
@@ -238,7 +244,7 @@ module.exports = {
     "no-duplicate-imports": "error",
     "no-else-return": ignore_style || relaxed ? "off" : "error",
     "no-empty-character-class": "error",
-    "no-empty-function": "error",
+    "no-empty-function": "off", // replaced with @typescript-eslint/no-empty-function
     "no-eq-null": "error",
     "no-eval": "error",
     "no-ex-assign": "error",
@@ -250,7 +256,7 @@ module.exports = {
       "error",
       "functions", // JE: Complains about useful parens for readability
     ],
-    "no-extra-semi": "error",
+    "no-extra-semi": "off", // replaced with @typescript-eslint/no-extra-semi
     "no-fallthrough": "error",
     "no-floating-decimal": "error",
     "no-func-assign": "error",
@@ -319,7 +325,7 @@ module.exports = {
     "no-process-exit": "off", // JE
     "no-proto": "error",
     "no-prototype-builtins": "error",
-    "no-redeclare": "error",
+    "no-redeclare": "off", // replaced with @typescript-eslint/no-redeclare
     "no-restricted-globals": "error",
     "no-restricted-imports": "error",
     "no-restricted-modules": "error",
@@ -376,7 +382,7 @@ module.exports = {
     "no-useless-call": "error",
     "no-useless-computed-key": "error",
     "no-useless-concat": "error",
-    "no-useless-constructor": "error",
+    "no-useless-constructor": "off", // replaced with @typescript-eslint/no-useless-constructor
     "no-useless-escape": "error",
     "no-useless-rename": "error",
     "no-useless-return": "error",
@@ -501,5 +507,14 @@ module.exports = {
       "error",
       "never"
     ]
-  }
+  },
+  "overrides": [
+    {
+      // enable the rule specifically for TypeScript files
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "@typescript-eslint/explicit-module-boundary-types": "error",
+      }
+    }
+  ]
 };

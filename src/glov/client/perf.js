@@ -90,7 +90,7 @@ let fps_style = glov_font.style({
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
-  let line_height = ui.font_height / settings.render_scale_all;
+  let line_height = settings.render_scale_all < 1 ? ui.font_height / settings.render_scale_all : ui.font_height;
   let METRIC_VALUE_WIDTH = line_height * (metric.width || 2.5);
   let x = camera2d.x1Real() - METRIC_VALUE_WIDTH - pad;
   let y0 = y;
@@ -231,7 +231,7 @@ export function draw() {
     let font = engine.font;
     let hist = perfCounterHistory();
     let y = camera2d.y0Real();
-    let line_height = ui.font_height / settings.render_scale_all;
+    let line_height = settings.render_scale_all < 1 ? ui.font_height / settings.render_scale_all : ui.font_height;
     let column_width = line_height * 6;
     let x = camera2d.x0Real() + column_width * 2;
     let by_key = {};

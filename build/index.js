@@ -76,7 +76,7 @@ gb.task({
       presets: [
         ['@babel/env', {
           targets: {
-            node: '12'
+            node: '16'
           },
           loose: true,
         }],

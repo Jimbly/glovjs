@@ -105,9 +105,9 @@ export function fbInstantOnPause(cb) {
   on_pause.push(cb);
 }
 
-let can_follow_official_page;
-let can_join_official_group;
-let can_get_live_streams_overlay;
+let can_follow_official_page = false;
+let can_join_official_group = false;
+let can_get_live_streams_overlay = false;
 
 export function fbGetLoginInfo(cb) {
   onready(() => {
@@ -217,9 +217,23 @@ export function init() {
       console.log('Initializing FBInstant');
       initSubscribe(function () {
         console.log('All done initing FBInstant');
-        can_follow_official_page = window.FBInstant.community.canFollowOfficialPageAsync();
-        can_join_official_group = window.FBInstant.community.canJoinOfficialGroupAsync();
-        can_get_live_streams_overlay = window.FBInstant.community.canGetLiveStreamsAsync();
+        window.FBInstant.community.canFollowOfficialPageAsync().then(function (state) {
+          can_follow_official_page = state;
+        }).catch(function (err) {
+          console.error(err);
+        });
+
+        window.FBInstant.community.canJoinOfficialGroupAsync().then(function (state) {
+          can_join_official_group = state;
+        }).catch(function (err) {
+          console.error(err);
+        });
+
+        window.FBInstant.community.canGetLiveStreamsAsync().then(function (state) {
+          can_get_live_streams_overlay = state;
+        }).catch(function (err) {
+          console.error(err);
+        });
       });
     });
   }).catch(function (e) {

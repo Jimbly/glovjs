@@ -138,7 +138,7 @@ Model.prototype.parse = function (glb_data) {
       assert.equal(accessor.type, 'SCALAR');
       let idxs = glb.getBuffer(accessor);
       if (accessor.componentType === 5125) { // Uint32
-        assert(vert_count < 65536); // Fits in 16-bits
+        assert(vert_count < 65535); // Fits in 16-bits, doesn't use index 65535
         // Just convert to 16-bit
         idxs = new Uint16Array(idxs);
       } else {

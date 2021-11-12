@@ -7,7 +7,7 @@
 exports.mat3 = require('gl-mat3/create');
 exports.mat4 = require('gl-mat4/create');
 
-const { abs, acos, max, min, floor, round, sqrt } = Math;
+const { abs, acos, max, min, floor, pow, round, sqrt } = Math;
 
 export function vec1(v) {
   return new Float32Array([v]);
@@ -421,6 +421,13 @@ export function v3perspectiveProject(out, a, m) {
   out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) * invw + 0.5;
   out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) * -invw + 0.5;
   out[2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+  return out;
+}
+
+export function v3pow(out, a, exp) {
+  out[0] = pow(a[0], exp);
+  out[1] = pow(a[1], exp);
+  out[2] = pow(a[2], exp);
   return out;
 }
 

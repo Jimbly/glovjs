@@ -4,11 +4,15 @@ const JSON5 = require('json5');
 
 function requireVersion(dep, required) {
   let ver;
-  try {
-    // eslint-disable-next-line global-require
-    ver = require(`${dep}/package.json`).version;
-  } catch (e) {
-    return `"${dep}": missing`;
+  if (dep === 'nodejs') {
+    ver = process.versions.node;
+  } else {
+    try {
+      // eslint-disable-next-line global-require
+      ver = require(`${dep}/package.json`).version;
+    } catch (e) {
+      return `"${dep}": missing`;
+    }
   }
   ver = ver.split('.').map(Number);
   if (ver.length !== 3) {
@@ -68,6 +72,7 @@ module.exports = function (filename) {
   prettyInterface();
 
   requireVersions({
+    'nodejs': '16.13.0',
     'glov-build': '0.0.32',
     'glov-build-browserify': '0.0.4',
     'glov-build-preresolve': '0.1.0',

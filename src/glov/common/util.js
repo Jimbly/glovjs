@@ -331,6 +331,11 @@ export function secondsToFriendlyString(seconds, force_include_seconds) {
   seconds -= minutes * 60;
   let resp = [];
   if (days) {
+    let years = floor(days / 365.25);
+    if (years) {
+      days -= floor(years * 365.25);
+      resp.push(`${years} ${plural(years, 'year')}`);
+    }
     resp.push(`${days} ${plural(days, 'day')}`);
   }
   if (hours) {

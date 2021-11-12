@@ -61,6 +61,7 @@ export function webFSExists(filename) {
 // Don't report on files we know are loaded dynamically, and are small
 const report_ignore_regex = /\.(fp|vp|vm)$/;
 export function webFSReportUnused() {
+  assert(window.glov_webfs, 'Failed to load fsdata.js');
   let tot_size = 0;
   for (let filename in fs) {
     if (!used[filename] && !filename.match(report_ignore_regex)) {

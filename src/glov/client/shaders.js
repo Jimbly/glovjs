@@ -103,11 +103,13 @@ function setGLErrorReportDetails() {
 let report_queued = false;
 let shader_errors;
 let shader_errors_any_fatal;
+let reported_shader_errors = false;
 function reportShaderError(non_fatal, err) {
   function doReport() {
     report_queued = false;
     setGLErrorReportDetails();
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
+    reported_shader_errors = true;
     if (!shader_errors_any_fatal) {
       glovErrorReport(false, msg, 'shaders.js');
     } else {
@@ -418,7 +420,10 @@ function applyDefines() {
 function shaderReload() {
   shadersRequirePrelink(false);
   if (shaders.length) {
-    errorReportClear();
+    if (reported_shader_errors) {
+      errorReportClear();
+      reported_shader_errors = false;
+    }
     gl.useProgram(null);
     for (let ii = 0; ii < shaders.length; ++ii) {
       let programs = shaders[ii].programs;

@@ -404,7 +404,7 @@ let sprite_buffer_batch_start = 0;
 let sprite_buffer_idx = 0; // in verts
 let last_blend_mode;
 let last_bound_shader;
-const MAX_VERT_COUNT = 65536;
+const MAX_VERT_COUNT = 65532; // strictly less than 65536, as index 65535 is special in WebGL2
 let batches = [];
 
 function commit() {

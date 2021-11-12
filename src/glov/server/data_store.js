@@ -15,6 +15,29 @@ const mkdirp = require('mkdirp');
 const path = require('path');
 const { callEach, clone } = require('glov/common/util.js');
 
+// Shuffles the ordering of the keys in an Object, to simulate saving to data
+//   stores that do not use JavaScript Objects (which retain order) as a backing
+//   store.
+const DO_SHUFFLE = true;
+
+function shuffle(obj) {
+  if (!obj) {
+    return obj;
+  }
+  if (typeof obj !== 'object' || Array.isArray(obj)) {
+    return obj;
+  }
+  let ret = {};
+  let keys = Object.keys(obj);
+  for (let ii = 0; ii < keys.length; ++ii) {
+    let idx = Math.floor(Math.random() * (keys.length - ii));
+    let key = keys[idx];
+    keys[idx] = keys[ii];
+    ret[key] = shuffle(obj[key]);
+  }
+  return ret;
+}
+
 class DataStoreOneFile {
   constructor(store_path) {
     this.root_store = new FileStore(store_path);
@@ -36,6 +59,9 @@ class DataStoreOneFile {
     ++ds_stats.get;
     setImmediate(() => {
       let obj = this.root_store.get(obj_name, default_value);
+      if (DO_SHUFFLE) {
+        obj = shuffle(obj);
+      }
       cb(null, obj);
     });
   }
@@ -166,7 +192,11 @@ class DataStore {
             if (err) {
               return void cb(err);
             }
-            cb(null, JSON.parse(buf));
+            let obj = JSON.parse(buf);
+            if (DO_SHUFFLE) {
+              obj = shuffle(obj);
+            }
+            cb(null, obj);
           });
         }
         let obj = store.get('data', default_value);

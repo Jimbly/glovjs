@@ -152,8 +152,8 @@ export function startup(params) {
 
   setTimeout(displayStatus, STATUS_TIME);
 
+  let gbstate;
   if (argv.dev) {
-    let gbstate;
     process.on('message', function (msg) {
       if (!msg) {
         return;
@@ -172,13 +172,22 @@ export function startup(params) {
         }
       } else if (msg.type === 'gbstate') {
         gbstate = msg.state;
-        ws_server.broadcast('gbstate', gbstate);
+        for (let client_id in ws_server.clients) {
+          let client = ws_server.clients[client_id];
+          if (client.gbstate_enable) {
+            client.send('gbstate', gbstate);
+          }
+        }
       }
     });
-    ws_server.on('client', (client) => {
-      client.send('gbstate', gbstate);
-    });
   }
+  ws_server.onMsg('gbstate_enable', (client, pak, resp_func) => {
+    client.gbstate_enable = pak.readBool();
+    if (client.gbstate_enable) {
+      client.send('gbstate', gbstate);
+    }
+    resp_func();
+  });
   updateVersion('app', true);
 }
 
