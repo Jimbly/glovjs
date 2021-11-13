@@ -499,6 +499,15 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
+    let display_name = this.getChannelData('public.display_name');
+    if (!validDisplayName(display_name)) {
+      // Old data with no display_name, or valid display name rules have changed
+      display_name = this.user_id;
+      if (!validDisplayName(display_name)) {
+        display_name = random_names.get();
+      }
+      this.setChannelData('public.display_name', display_name);
+    }
 
     this.setChannelData('private.login_time', Date.now());
     metrics.add('user.login', 1);
