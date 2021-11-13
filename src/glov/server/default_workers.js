@@ -502,11 +502,13 @@ export class DefaultUserWorker extends ChannelWorker {
     let display_name = this.getChannelData('public.display_name');
     if (!validDisplayName(display_name)) {
       // Old data with no display_name, or valid display name rules have changed
-      display_name = this.user_id;
-      if (!validDisplayName(display_name)) {
-        display_name = random_names.get();
+      let new_display_name = this.user_id;
+      if (!validDisplayName(new_display_name)) {
+        new_display_name = random_names.get();
       }
-      this.setChannelData('public.display_name', display_name);
+      this.log(`Invalid display name ("${display_name}") on user ${this.user_id}` +
+        ` detected, changing to "${new_display_name}"`);
+      this.setChannelData('public.display_name', new_display_name);
     }
 
     this.setChannelData('private.login_time', Date.now());
