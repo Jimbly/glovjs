@@ -30,7 +30,7 @@ function shuffle(obj) {
   let ret = {};
   let keys = Object.keys(obj);
   for (let ii = 0; ii < keys.length; ++ii) {
-    let idx = Math.floor(Math.random() * (keys.length - ii));
+    let idx = ii + Math.floor(Math.random() * (keys.length - ii));
     let key = keys[idx];
     keys[idx] = keys[ii];
     ret[key] = shuffle(obj[key]);
