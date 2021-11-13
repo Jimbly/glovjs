@@ -19,7 +19,7 @@ let permission_flags;
 function applyCustomIds(ids, user_data_public) {
   // FRVR - maybe generalize this
   delete ids.elevated;
-  let perm = user_data_public.permissions;
+  let perm = user_data_public?.permissions;
   for (let ii = 0; ii < permission_flags.length; ++ii) {
     let f = permission_flags[ii];
     if (perm && perm[f]) {
@@ -68,8 +68,9 @@ export class ClientWorker extends ChannelWorker {
 
   onLogoutInternal() {
     this.ids_base.user_id = undefined;
-    this.ids_base.display_name = this.channel_id;
-    applyCustomIds(this.ids_base, {});
+    // Just use the last value in the channel id (not unique, but relatively so)
+    this.ids_base.display_name = `guest-${this.channel_subid.split('-').slice(-1)[0]}`;
+    applyCustomIds(this.ids_base, null);
     this.log_user_id = null;
   }
 
