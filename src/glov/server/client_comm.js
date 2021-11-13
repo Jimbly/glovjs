@@ -21,7 +21,6 @@ const { isProfane, profanityCommonStartup } = require('glov/common/words/profani
 const metrics = require('./metrics.js');
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const random_names = require('./random_names.js');
-const { serverConfig } = require('./server_config.js');
 const {
   appleSignInInit,
   appleSignInValidateToken,
@@ -131,21 +130,6 @@ function onSetChannelData(client, pak, resp_func) {
   } else {
     outpak.send();
     resp_func();
-  }
-}
-
-let permission_flags;
-function applyCustomIds(ids, user_data_public) {
-  // FRVR - maybe generalize this
-  delete ids.elevated;
-  let perm = user_data_public.permissions;
-  for (let ii = 0; ii < permission_flags.length; ++ii) {
-    let f = permission_flags[ii];
-    if (perm && perm[f]) {
-      ids[f] = 1;
-    } else {
-      delete ids[f];
-    }
   }
 }
 
@@ -342,14 +326,9 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
   if (err) {
     client_channel.logCtx('info', `${login_message} failed: ${err}`);
   } else {
-    client_channel.ids_base.user_id = user_id;
-    client_channel.ids_base.display_name = resp_data.display_name;
-    client_channel.log_user_id = user_id;
-    applyCustomIds(client_channel.ids, resp_data);
+    client_channel.onLoginInternal(user_id, resp_data);
     client_channel.logCtx('info', `${login_message} success: logged in as ${user_id}`, { ip: client.addr });
-    if (client_channel.onLogin) {
-      client_channel.onLogin(resp_data);
-    }
+    client_channel.onLogin(resp_data);
 
     // Tell channels we have a new user id/display name
     for (let channel_id in client_channel.subscribe_counts) {
@@ -742,10 +721,7 @@ function onLogOut(client, data, resp_func) {
   }
 
   onUnSubscribe(client, `user.${user_id}`);
-  delete client_channel.ids_base.user_id;
-  delete client_channel.ids_base.display_name;
-  delete client_channel.ids_base.sysadmin;
-  client_channel.log_user_id = null;
+  client_channel.onLogoutInternal();
 
   // Tell channels we have a new user id/display name
   for (let channel_id in client_channel.subscribe_counts) {
@@ -820,7 +796,6 @@ function onCmdParseListClient(client, data, resp_func) {
 export function init(channel_server_in) {
   facebookUtilsInit();
   appleSignInInit();
-  permission_flags = serverConfig().permission_flags || [];
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'));
 
   channel_server = channel_server_in;
@@ -860,5 +835,5 @@ export function init(channel_server_in) {
 
   ws_server.setRestartFilter(restartFilter);
 
-  client_worker.init(channel_server, permission_flags);
+  client_worker.init(channel_server);
 }

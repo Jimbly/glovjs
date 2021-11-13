@@ -8,23 +8,37 @@ const { canonical } = require('glov/common/cmd_parse.js');
 const { logEx } = require('./log.js');
 const { isPacket } = require('glov/common/packet.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
+const { serverConfig } = require('./server_config.js');
 
 let cmd_parse_routes = {}; // cmd string -> worker type
 
 let repeated_disconnect = 0;
 let permission_flags_map;
 
+let permission_flags;
+function applyCustomIds(ids, user_data_public) {
+  // FRVR - maybe generalize this
+  delete ids.elevated;
+  let perm = user_data_public.permissions;
+  for (let ii = 0; ii < permission_flags.length; ++ii) {
+    let f = permission_flags[ii];
+    if (perm && perm[f]) {
+      ids[f] = 1;
+    } else {
+      delete ids[f];
+    }
+  }
+}
+
 export class ClientWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);
     this.client_id = this.channel_subid; // 1234
     this.client = null; // WSClient filled in by channel_server
-    this.log_user_id = null;
     this.ids_base = {
-      user_id: undefined,
-      display_name: channel_id,
       direct: undefined, // so it is iterated
     };
+    this.onLogoutInternal();
     this.ids_direct = new Proxy(this.ids_base, {
       get: function (target, prop) {
         if (prop === 'direct') {
@@ -43,6 +57,24 @@ export class ClientWorker extends ChannelWorker {
         }
       }, repeated_disconnect * 1000);
     }
+  }
+
+  onLoginInternal(user_id, resp_data) {
+    this.ids_base.user_id = user_id;
+    this.ids_base.display_name = resp_data.display_name;
+    this.log_user_id = user_id;
+    applyCustomIds(this.ids_base, resp_data);
+  }
+
+  onLogoutInternal() {
+    this.ids_base.user_id = undefined;
+    this.ids_base.display_name = this.channel_id;
+    applyCustomIds(this.ids_base, {});
+    this.log_user_id = null;
+  }
+
+  onLogin(resp_data) {
+    // overrideable
   }
 
   onApplyChannelData(source, data) {
@@ -368,8 +400,9 @@ export function overrideClientWorker(new_client_worker, extra_data) {
   }
 }
 
-export function init(channel_server, permission_flags) {
+export function init(channel_server) {
   inited = true;
+  permission_flags = serverConfig().permission_flags || [];
   permission_flags_map = {};
   for (let ii = 0; ii < permission_flags.length; ++ii) {
     permission_flags_map[permission_flags[ii]] = true;
