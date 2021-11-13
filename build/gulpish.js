@@ -9,6 +9,7 @@
 
 const assert = require('assert');
 const gb = require('glov-build');
+const { forwardSlashes } = gb;
 const path = require('path');
 const { Transform, Writable } = require('stream');
 const Vinyl = require('vinyl');
@@ -69,7 +70,7 @@ module.exports = function (opts, streamfunc) {
       write: function (chunk, encoding, callback) {
         if (target) {
           // If a Vinyl object, re-map to relative to the bucket
-          if (chunk.base.startsWith(task_base)) {
+          if (forwardSlashes(chunk.base).startsWith(task_base)) {
             chunk.base = task_base;
           }
           let out_file = {

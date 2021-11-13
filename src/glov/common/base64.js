@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off */
-/* globals atob */
+
 
 // Encoding is fastest with non-native calls: http://jsperf.com/base64-encode
 // Decoding is fastest using window.btoa: http://jsperf.com/base64-decode
@@ -45,7 +45,7 @@ function encode(dv, offset, length) {
 }
 
 function decodeNativeBrowser(data, allocator) {
-  let str = atob(data);
+  let str = window.atob(data);
   let len = str.length;
   let dv = allocator(len);
   let u8 = dv.u8;
