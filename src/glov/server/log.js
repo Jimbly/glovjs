@@ -245,16 +245,17 @@ export function startup(params) {
       }
       // Human-readable/grep-able console logger
       dumpToFile = true;
-      let timestamp_format = config_log.timestamp_format;
-      let log_format = server_config.log && server_config.log.format;
       args.push(format.metadata());
-      if (timestamp_format === 'long') {
-        args.push(format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZZ' }));
+      if (config_log.timestamp_format === 'long') {
+        // implicitly toISOString, can get local time with {format: 'YYYY-MM-DDTHH:mm:ss.SSSZZ'}
+        args.push(format.timestamp());
       } else {
         args.push(format.timestamp({ format: 'HH:mm:ss' }));
+      }
+      if (config_log.pad_levels) {
         args.push(format.padLevels());
       }
-      if (log_format === 'dev' || !log_format && argv.dev) {
+      if (config_log.format === 'dev') {
         args.push(format.colorize());
         args.push(
           // Just the payload

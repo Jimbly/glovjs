@@ -19,6 +19,21 @@ export let default_config_options = {
   permission_flags: ['sysadmin'],
 };
 
+let default_env_options = {
+  dev: {
+    log: {
+      format: 'dev',
+      pad_levels: true,
+    },
+  },
+  prod: {
+    log: {
+      timestamp_format: 'long',
+      pad_levels: true,
+    },
+  },
+};
+
 let process_uid;
 export function processUID() {
   if (!process_uid) {
@@ -90,6 +105,9 @@ export function serverConfigStartup(code_defaults) {
   }
 
   // Lowest priority: hard-coded defaults
+  if (default_env_options[env]) {
+    server_config = defaultsDeep(server_config, default_env_options[env]);
+  }
   server_config = defaultsDeep(server_config, code_defaults);
 }
 
