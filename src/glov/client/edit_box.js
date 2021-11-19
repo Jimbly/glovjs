@@ -8,6 +8,28 @@ const glov_ui = require('./ui.js');
 
 const { focuslog } = glov_ui;
 
+let form_hook_registered = false;
+let active_edit_box;
+let active_edit_box_frame;
+
+function setActive(edit_box) {
+  active_edit_box = edit_box;
+  active_edit_box_frame = engine.frame_index;
+}
+
+function formHook(ev) {
+  ev.preventDefault();
+
+  if (!active_edit_box || active_edit_box_frame < engine.frame_index - 1) {
+    return;
+  }
+  active_edit_box.submitted = true;
+  active_edit_box.updateText();
+  if (active_edit_box.pointer_lock && !active_edit_box.text) {
+    glov_input.pointerLockEnter('edit_box_submit');
+  }
+}
+
 class GlovUIEditBox {
   constructor(params) {
     this.x = 0;
@@ -29,8 +51,10 @@ class GlovUIEditBox {
     this.spellcheck = true;
     this.esc_clears = true;
     this.multiline = 0;
+    this.autocomplete = false;
     this.applyParams(params);
 
+    this.last_autocomplete = null;
     this.is_focused = false;
     this.elem = null;
     this.input = null;
@@ -46,6 +70,12 @@ class GlovUIEditBox {
       this[f] = params[f];
     }
   }
+  updateText() {
+    this.text = this.input.value;
+    if (this.max_len > 0) {
+      this.text = this.text.slice(0, this.max_len);
+    }
+  }
   getText() {
     return this.text;
   }
@@ -59,6 +89,7 @@ class GlovUIEditBox {
   focus() {
     if (this.input) {
       this.input.focus();
+      setActive(this);
     } else {
       this.onetime_focus = true;
     }
@@ -99,6 +130,7 @@ class GlovUIEditBox {
     let focused = glov_focused;
 
     if (focused) {
+      setActive(this);
       let key_opt = (this.pointer_lock && !this.text) ? { in_event_cb: glov_input.pointerLockEnter } : null;
       if (glov_input.keyUpEdge(glov_input.KEYS.ESC, key_opt)) {
         if (this.text && this.esc_clears) {
@@ -134,11 +166,15 @@ class GlovUIEditBox {
     if (elem !== this.elem) {
       if (elem) {
         // new DOM element, initialize
+        if (!form_hook_registered) {
+          form_hook_registered = true;
+          let form = document.getElementById('dynform');
+          if (form) {
+            form.addEventListener('submit', formHook, true);
+          }
+        }
         elem.textContent = '';
-        let form = document.createElement('form');
-        form.setAttribute('autocomplete', 'off');
         let input = document.createElement(this.multiline ? 'textarea' : 'input');
-        input.setAttribute('autocomplete', `auto_off_${Math.random()}`);
         input.setAttribute('type', this.type);
         input.setAttribute('placeholder', this.placeholder);
         if (this.max_len) {
@@ -148,26 +184,15 @@ class GlovUIEditBox {
           input.setAttribute('rows', this.multiline);
         }
         input.setAttribute('tabindex', 2);
-        form.addEventListener('submit', (ev) => {
-          ev.preventDefault();
-          this.submitted = true;
-          this.text = this.input.value;
-          if (this.max_len > 0) {
-            this.text = this.text.slice(0, this.max_len);
-          }
-          if (this.pointer_lock && !this.text) {
-            glov_input.pointerLockEnter('edit_box_submit');
-          }
-        }, true);
-        form.appendChild(input);
+        elem.appendChild(input);
         let span = document.createElement('span');
         span.setAttribute('tabindex', 3);
-        form.appendChild(span);
-        elem.appendChild(form);
+        elem.appendChild(span);
         input.value = this.text;
         this.input = input;
         if (this.initial_focus || this.onetime_focus) {
           input.focus();
+          setActive(this);
           this.onetime_focus = false;
         }
         if (this.initial_select) {
@@ -180,10 +205,7 @@ class GlovUIEditBox {
       this.elem = elem;
     } else {
       if (this.input) {
-        this.text = this.input.value;
-        if (this.max_len > 0) {
-          this.text = this.text.slice(0, this.max_len);
-        }
+        this.updateText();
       }
     }
     if (elem) {
@@ -202,6 +224,10 @@ class GlovUIEditBox {
       }
       if (this.zindex) {
         elem.style['z-index'] = this.zindex;
+      }
+      if (this.last_autocomplete !== this.autocomplete) {
+        this.last_autocomplete = this.autocomplete;
+        this.input.setAttribute('autocomplete', this.autocomplete || `auto_off_${Math.random()}`);
       }
     }
 

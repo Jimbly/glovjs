@@ -35,6 +35,7 @@ function AccountUI() {
     placeholder: 'Username',
     initial_focus: true,
     text: local_storage.get('name') || '',
+    autocomplete: 'username',
   });
   this.edit_box_password = ui.createEditBox({
     placeholder: 'Password',
@@ -46,14 +47,17 @@ function AccountUI() {
     placeholder: 'Confirm',
     type: 'password',
     text: '',
+    autocomplete: 'new-password',
   });
   this.edit_box_email = ui.createEditBox({
     placeholder: 'Email',
     text: '',
+    autocomplete: 'email',
   });
   this.edit_box_display_name = ui.createEditBox({
     placeholder: 'Display',
     text: '',
+    autocomplete: 'nickname',
   });
   this.creation_mode = false;
 }
@@ -167,7 +171,10 @@ AccountUI.prototype.showLogin = function (param) {
     submit = edit_box_name.run({ x: x + indent, y, w, font_height }) === edit_box_name.SUBMIT || submit;
     y += BOX_H + pad;
     ui.font.drawSizedAligned(style, text_x, y, Z.UI, font_height, calign, indent - pad, 0, 'Password:');
-    submit = edit_box_password.run({ x: x + indent, y, w, font_height }) === edit_box_password.SUBMIT || submit;
+    submit = edit_box_password.run({
+      x: x + indent, y, w, font_height,
+      autocomplete: this.creation_mode ? 'new-password' : 'current-password',
+    }) === edit_box_password.SUBMIT || submit;
     y += BOX_H + pad;
 
     if (this.creation_mode) {
