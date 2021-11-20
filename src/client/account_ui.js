@@ -260,7 +260,7 @@ AccountUI.prototype.showLogin = function (param) {
       if (center) {
         y += button_height + pad;
       }
-      if (ui.buttonText({
+      if (!net.subs.auto_create_user && ui.buttonText({
         x: center ? x : x + button_width + pad, y, w: button_width, h: button_height,
         font_height,
         text: 'New User',
