@@ -433,6 +433,14 @@ gb.task({
           false : // --no-browser
           argv.https ? 'target_https' : 'target',
       }, done);
+
+      if (server_process_container.proc) {
+        // Very first run, but server is already up, make sure they know the
+        //   client has been updated, if it was changed between the server
+        //   being started and this task being run.
+        server_process_container.proc.send({ type: 'file_change', paths: ['app.ver.json'] });
+      }
+
     } else {
       let updated = job.getFilesUpdated();
       updated = updated.map((a) => a.relative.replace(/^client\//, ''));
