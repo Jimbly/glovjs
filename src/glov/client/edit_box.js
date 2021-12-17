@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const glov_input = require('./input.js');
@@ -53,6 +54,7 @@ class GlovUIEditBox {
     this.multiline = 0;
     this.autocomplete = false;
     this.applyParams(params);
+    assert.equal(typeof this.text, 'string');
 
     this.last_autocomplete = null;
     this.is_focused = false;
