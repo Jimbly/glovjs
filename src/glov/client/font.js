@@ -431,6 +431,28 @@ GlovFont.prototype.drawSizedWrapped = function (style, x, y, z, w, indent, size,
     indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
 };
 
+let default_size = 24;
+export function setDefaultSize(h) {
+  default_size = h;
+}
+
+GlovFont.prototype.draw = function (param) {
+  let { style, color, alpha, x, y, z, size, w, h, align, text } = param;
+  if (color) {
+    style = styleColored(style, color);
+  }
+  if (alpha !== undefined) {
+    style = styleAlpha(style, alpha);
+  }
+  size = size || default_size;
+  z = z || Z.UI;
+  if (align) {
+    this.drawSizedAligned(style, x, y, z, size, align, w || 0, h || 0, text);
+  } else {
+    this.drawSized(style, x, y, z, size, text);
+  }
+};
+
 // word_cb(x0, int linenum, const char *word, x1)
 GlovFont.prototype.wrapLines = function (w, indent, size, text, align_bits, word_cb) {
   return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align_bits, word_cb);

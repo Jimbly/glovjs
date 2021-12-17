@@ -1792,9 +1792,14 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
 }
 
+export function setFontHeight(_font_height) {
+  font_height = _font_height;
+  glov_font.setDefaultSize(font_height);
+}
+
 export function scaleSizes(scale) {
   button_height = round(32 * scale);
-  font_height = round(24 * scale);
+  setFontHeight(round(24 * scale));
   button_width = round(200 * scale);
   button_img_size = button_height;
   modal_button_width = round(button_width / 2);
@@ -1818,10 +1823,6 @@ export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) 
   modal_y0 = y0 || 200;
   modal_title_scale = title_scale || 1.2;
   modal_pad = pad || modal_pad;
-}
-
-export function setFontHeight(_font_height) {
-  font_height = _font_height;
 }
 
 export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
