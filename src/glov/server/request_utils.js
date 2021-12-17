@@ -2,6 +2,8 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const { serverConfig } = require('./server_config.js');
+const querystring = require('querystring');
+const url = require('url');
 
 // Options pulled in from serverConfig
 // how far behind proxies that reliably add x-forwarded-for headers are we?
@@ -110,6 +112,16 @@ export function allowMapFromLocalhostOnly(app) {
 
 export function safeString(str) {
   return str.replace(/["<>\\]/g, '');
+}
+
+// Gets a parsed, cached `query` from a request.  This is usually provided
+//   by Express's default middleware, but useful to call manually if not
+//   using Express or on low-level requests like `upgrade`s).
+export function requestGetQuery(req) {
+  if (!req.query) {
+    req.query = querystring.parse(url.parse(req.url).query);
+  }
+  return req.query;
 }
 
 export function respondArray(req, res, next, err, arr) {

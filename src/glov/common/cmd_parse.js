@@ -110,13 +110,20 @@ CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
   let { cmd, func, help, usage, access_show, access_run } = param;
   assert(cmd && func);
+  help = help || '';
+  if (help.toLowerCase().includes('(admin)')) {
+    assert(access_run && access_run.includes('sysadmin'));
+  }
+  if (help.toLowerCase().includes('(hidden)')) {
+    assert(access_show && access_show.length);
+  }
   if (usage && help) {
     usage = usage.replace(/\$HELP/, help);
   }
   this.cmds[canonical(cmd)] = {
     name: cmd,
     fn: func,
-    help: help || '',
+    help,
     usage: usage || undefined,
     access_show,
     access_run,

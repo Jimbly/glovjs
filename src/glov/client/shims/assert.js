@@ -5,7 +5,8 @@ function ok(exp, msg) {
   if (exp) {
     return;
   }
-  throw new Error(`Assertion failed: ${msg ? msg : exp === undefined ? '' : JSON.stringify(exp)}`);
+  msg = msg ? msg : (exp === undefined || exp === false) ? '' : JSON.stringify(exp);
+  throw new Error(`Assertion failed${msg ? `: ${msg}` : ''}`);
 }
 module.exports = ok;
 module.exports.ok = ok;

@@ -8,6 +8,10 @@ export function nop() {
   // empty
 }
 
+export function identity(a) {
+  return a;
+}
+
 export function once(fn) {
   let called = false;
   return function (...args) {
@@ -386,4 +390,32 @@ export function cleanStringSplit(string, pattern) {
   // remove punctuations and symbols; e.g., 'In!@£$%^&*()_+sane Wo`{}[]|/?\'"rld;:<>s,.' = 'Insane Worlds'
   const base = sanitize(string).replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
   return cleanupStringArray(base.toLowerCase().split(pattern).map((s) => s.trim()));
+}
+
+export function eatPossiblePromise(p) {
+  // On some browsers, some APIs return Promises where they did not before,
+  //   wrap in this to discard any exceptions / rejections from these.
+  //   For example, pointerLockEnter, throws "Uncaught UnknownError" on Chrome on
+  //   Android, as well as triggering pointerlockerror.
+  if (p && p.catch) {
+    p.catch(nop);
+  }
+}
+
+export function errorString(e) { // function errorString(e : Error | object | string) : string {
+  let msg = String(e);
+  if (msg === '[object Object]') {
+    try {
+      msg = JSON.stringify(e);
+    } catch (ignored) {
+      // ignored
+    }
+  }
+  if (e && e.stack && e.message) {
+    // Error object or similar
+    // Just grabbing the message, but could do something with the stack similar to error handler in bootstrap.js
+    msg = String(e.message);
+  }
+  msg = msg.slice(0, 600); // Not too huge
+  return msg;
 }
