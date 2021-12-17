@@ -5,6 +5,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const { dataStoresInit } = require('./data_stores_init.js');
 const glov_exchange = require('./exchange.js');
+const exchange_local_bypass = require('./exchange_local_bypass.js');
 const { errorReportsInit, errorReportsSetAppBuildTimestamp } = require('./error_reports.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
@@ -98,7 +99,12 @@ export function startup(params) {
     metrics.init(metrics_impl);
   }
 
-  if (!exchange) {
+  if (exchange) {
+    if (server_config.do_exchange_local_bypass) {
+      console.log('[EXCHANGE] Using local bypass');
+      exchange = exchange_local_bypass.create(exchange);
+    }
+  } else {
     exchange = glov_exchange.create();
   }
   channel_server = glov_channel_server.create();

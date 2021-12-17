@@ -34,9 +34,13 @@ export function replaceMessageHandler(id, old_cb, cb) {
 }
 
 // subscribe to a broadcast-to-all channel
-export function subscribe(id, cb) {
-  broadcasts[id] = broadcasts[id] || [];
-  broadcasts[id].push(cb);
+export function subscribe(id, cb, register_cb) {
+  assert(id);
+  setTimeout(function () {
+    broadcasts[id] = broadcasts[id] || [];
+    broadcasts[id].push(cb);
+    register_cb(null);
+  }, 30); // slight delay to force async behavior
 }
 
 export function unregister(id, cb) {

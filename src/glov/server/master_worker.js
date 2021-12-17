@@ -16,6 +16,7 @@ import { getPlatformValues, isValidPlatform } from 'glov/common/enums.js';
 const assert = require('assert');
 const { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } = require('./channel_server.js');
 const { ChannelWorker } = require('./channel_worker.js');
+const { loadBiasMap } = require('./load_bias_map.js');
 const { max } = Math;
 const metrics = require('./metrics.js');
 const { serverConfig } = require('./server_config.js');
@@ -33,10 +34,9 @@ const MASTER_STATS_PERIOD = 10000;
 
 const ROUND_ROBIN = false;
 
-// Slight bias towards starting workers on the hosts that request them
-// This doesn't currently help performance, but we could short-circuit the
-//   exchange in the future.
-const LOAD_BIAS_REQUESTOR = 20; // 2% CPU
+// Bias towards starting workers on the hosts that request them, so the
+//   local exchange bypass can provide a performance boost
+const LOAD_BIAS_REQUESTOR = 250; // 25% CPU
 // Do not try to spawn on a ChannelServer that had an error, until he has reports load again
 const LOAD_BIAS_ERRORS = 50000;
 // Load level considered "unavailable" (normal load should all be < 1000, exceptional cases > 10000)
@@ -59,7 +59,7 @@ class MasterWorker extends ChannelWorker {
     this.deploy_ready_msg_time = 0;
     // Broadcast to all ChannelServers to let them know there is a (potentially new) master worker
     // Delay until we finish startup/registration
-    setImmediate(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
+    channel_server.whenReady(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
     console.log('lifecycle_master_start');
     metrics.set('server_error', 0); // "Clear" this upon deployment restart so we get new alerts if new errors happen
   }
@@ -72,6 +72,7 @@ class MasterWorker extends ChannelWorker {
         load_new_estimate: 0, // extra load estimated from newly spawned workers
         load_new_estimate_prev: 0,
         load_value: 0,
+        load_over: [],
         load: {
         },
         last_seen_time: this.channel_server.server_time,
@@ -117,20 +118,26 @@ class MasterWorker extends ChannelWorker {
     cs.num_channels = num_channels;
     this.numChannelsMod(cs.num_channels, 1);
 
-    // Calc load value
+    // Calc load value, accumulate warnings
+    let over = cs.load_over = [];
     cs.load_value = 0;
     // free memory: if low on os memory, critical load, otherwise we don't care
-    if (free_mem < 250) {
-      cs.load_value += 30000;
+    if (free_mem < 300) { // < 30%
+      // +30000 @ 25%
+      cs.load_value += loadBiasMap(free_mem, 300, 250, 0, 30000, 40000);
+      over.push('host_free_mem');
     }
     // process cpu usage: if over 50%, critical, otherwise directly correlated to load
     cs.load_value += load_cpu;
     if (load_cpu > 500) {
-      cs.load_value += 20000;
+      // +20000 @ 60%
+      cs.load_value += loadBiasMap(load_cpu, 500, 600, 1000, 20000, 30000);
+      over.push('load_cpu');
     }
     // host cpu usage: if over 80%, critical, otherwise we don't care
-    if (load_host_cpu > 800) {
-      cs.load_value += 25000;
+    if (load_host_cpu > 750) {
+      cs.load_value += loadBiasMap(load_host_cpu, 750, 800, 1000, 25000, 40000);
+      over.push('host_cpu');
     }
     // process memory usage:
     //  if under 400MB, no effect
@@ -139,11 +146,13 @@ class MasterWorker extends ChannelWorker {
     cs.load_value += max(0, 250 * (load_mem - 400) / 800);
     if (load_mem > 1200) {
       cs.load_value += 10000 + (load_mem - 1200) * 10;
+      over.push('load_mem');
     }
     // msgs_per_s: current ignored, let's see how this compares
 
     // Is master? Significant bias against spawning
     if (cs.is_master) {
+      over.push('master');
       cs.load_value += 25000;
     }
 
@@ -155,8 +164,9 @@ class MasterWorker extends ChannelWorker {
     cs.spawn_errors = 0;
 
     if (this.channel_server.load_log) {
-      this.debug(`load from ${src.id}: ${cs.load_value} ` +
-        `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})${cs.is_master ? ' (master)':''}`);
+      this.debug(`load from ${src.id}: ${cs.load_value.toFixed(0)} ` +
+        `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})` +
+        `${over.length ? ` (${over.join(',')})` : ''}`);
     }
 
     resp_func();
@@ -377,7 +387,8 @@ class MasterWorker extends ChannelWorker {
       lines.push({
         sort: loadv,
         msg: `  ${csid}: ${loadv} (cpu=${load.cpu/10}%, hostcpu=${load.host_cpu/10}%, mem=${load.mem}MB` +
-          `, osfree=${load.free_mem/10}%, msgs/s=${load.msgs_per_s})`,
+          `, osfree=${load.free_mem/10}%, msgs/s=${load.msgs_per_s})` +
+          `${cs.load_over.length ? `, over:${cs.load_over.join(',')}` : ''}`,
       });
     }
     lines.sort((a,b) => a.sort - b.sort);
@@ -624,6 +635,7 @@ class MasterWorker extends ChannelWorker {
 
   tick(dt) {
     let timed_out_csids;
+    let count_available = 0;
     for (let csid in this.known_servers) {
       let cs = this.known_servers[csid];
       let elapsed = this.channel_server.server_time - cs.last_seen_time;
@@ -637,8 +649,13 @@ class MasterWorker extends ChannelWorker {
           callEach(cs.on_has_load, cs.on_has_load = null, 'ERR_CS_TIMEOUT');
         }
         delete this.known_servers[csid];
+      } else {
+        if (cs.load_value < LOAD_AVAILABLE) {
+          count_available++;
+        }
       }
     }
+    metrics.set('master.available', count_available);
     for (let channel_id in this.channels_creating) {
       let cc = this.channels_creating[channel_id];
       if (cc.created) {

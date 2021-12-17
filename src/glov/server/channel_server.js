@@ -8,7 +8,7 @@ export const PAK_ID_MASK = ~PAK_HINT_NEWSEQ;
 
 const { ackWrapPakStart, ackWrapPakFinish, ackWrapPakPayload } = require('glov/common/ack.js');
 const assert = require('assert');
-const { asyncSeries } = require('glov-async');
+const { asyncParallel, asyncSeries } = require('glov-async');
 const cmd_parse = require('glov/common/cmd_parse.js');
 const { cwstats, ChannelWorker, UNACKED_PACKET_ASSUME_GOOD } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
@@ -16,6 +16,7 @@ const { ds_stats, dataStoreMonitorFlush } = require('./data_store.js');
 const { dss_stats } = require('./data_store_shield.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
+const fs = require('fs');
 const log = require('./log.js');
 const { logEx, logDowngradeErrors } = log;
 const { min, round } = Math;
@@ -26,7 +27,7 @@ const { isPacket, packetCreate } = packet;
 const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
 const { panic } = require('./server.js');
 const { processUID } = require('./server_config.js');
-const { callEach, clone, cloneShallow, logdata, once } = require('glov/common/util.js');
+const { callEach, clone, cloneShallow, identity, logdata, once } = require('glov/common/util.js');
 const { inspect } = require('util');
 const { wsstats } = require('glov/common/wscommon.js');
 
@@ -121,7 +122,7 @@ function channelServerSendFinish(pak, err, resp_func) {
           // also, generally workers sending to clients, will often get ERR_NOT_FOUND
           //   for any packet in-flight when the client disconnects.
         } else {
-          console.error(`Received unhandled error response while handling "${msg}"` +
+          console.error(`Received unhandled error response while sending "${msg}"` +
             ` from ${source.channel_id} to ${dest}:`, err);
         }
       }
@@ -131,6 +132,9 @@ function channelServerSendFinish(pak, err, resp_func) {
     if (ack_resp_pkt_id) {
       // Callback will never be dispatched through ack.js, remove the callback here
       delete source.resp_cbs[ack_resp_pkt_id];
+    }
+    if (pak.no_local_bypass) {
+      delete pak.no_local_bypass;
     }
     pak.pool();
     return resp_func(err);
@@ -149,6 +153,9 @@ function channelServerSendFinish(pak, err, resp_func) {
     return channel_server.exchange.publish(dest, pak, function (err) {
       if (!err) {
         // Sent successfully, resp_func called when other side ack's.
+        if (pak.no_local_bypass) {
+          delete pak.no_local_bypass;
+        }
         pak.pool();
         return null;
       }
@@ -288,6 +295,61 @@ function osCPUusage() {
     total.idle += cpu.idle;
   }
   return total;
+}
+
+// cb([0-1])
+function osFreeMem(cb) {
+  fs.readFile('/proc/meminfo', 'utf8', function (err, data) {
+    let mem_total = 0;
+    let mem_free = 0;
+    let mem_total_free = 0;
+    if (err) {
+      if (os.platform() === 'win32') {
+        // silently ignore, we'll use the fallback, good enough for development
+      } else {
+        console.error(`Unable to read /proc/meminfo: ${err}`);
+      }
+    } else {
+      let lines = data.split('\n');
+      lines.forEach(function (line) {
+        let fields = line.split(' ').filter(identity);
+        if (fields[0] === 'Mem:') {
+          // cygwin
+          mem_total = Number(fields[1]);
+          // mem_used = Number(fields[2]);
+          mem_free = Number(fields[3]);
+        }
+        if (fields[1]) {
+          // Various flavors of Ubuntu/Linux
+          let value = Number(fields[1]);
+          if (fields[2] === 'kB') {
+            value *= 1024;
+          }
+          if (fields[0] === 'MemTotal:') {
+            mem_total = value;
+          } else if (fields[0] === 'MemFree:') {
+            mem_free += value;
+          } else if (fields[0] === 'Buffers:') {
+            mem_free += value;
+          } else if (fields[0] === 'Cached:') {
+            mem_free += value;
+          } else if (fields[0] === 'MemAvailable:') {
+            // On newer OSes, this value is here and is a (strangely larger?) total that better matches `top`
+            mem_total_free = value;
+          }
+        }
+      });
+    }
+    if (!(mem_total && mem_free)) {
+      // Back to Node's values (reports much less "free" than "actual" doesn't exclude buffers)
+      mem_total = os.totalmem();
+      mem_free = os.freemem();
+    }
+    if (!mem_total_free) {
+      mem_total_free = mem_free;
+    }
+    cb(mem_total_free / mem_total);
+  });
 }
 
 class ChannelServer {
@@ -581,6 +643,14 @@ class ChannelServer {
     return `${this.csuid}-${client.id}`;
   }
 
+  // Call `cb` after we have registered to listen to the `channel_server` broadcast channel
+  // Not needed for other messages, as all other messages are not sent until we've registered
+  // to our own channel.
+  whenReady(cb) {
+    assert(this.when_ready); // Only currently expected to be called at startup for the `master_startup` message
+    this.when_ready.push(cb);
+  }
+
   init(params) {
     let { data_stores, ws_server, exchange, is_master, on_report_load } = params;
     this.csuid = processUID();
@@ -594,6 +664,7 @@ class ChannelServer {
     this.ds_store_image = data_stores.image;
     this.exchange = exchange;
     this.on_report_load = on_report_load;
+    this.when_ready = [];
 
     client_comm.init(this);
 
@@ -605,7 +676,10 @@ class ChannelServer {
 
     this.csworker = this.createChannelLocal(`channel_server.${this.csuid}`);
     // Should this happen for all channels generically?  Do we need a generic "broadcast to all user.* channels"?
-    this.exchange.subscribe('channel_server', this.csworker.handleMessageBroadcast.bind(this.csworker));
+    this.exchange.subscribe('channel_server', this.csworker.handleMessageBroadcast.bind(this.csworker), (err) => {
+      assert(!err);
+      callEach(this.when_ready, this.when_ready = null);
+    });
 
     this.tick_func = this.doTick.bind(this);
     this.tick_time = 250;
@@ -642,109 +716,124 @@ class ChannelServer {
       return;
     }
     this.load_report_time = 0;
-    let now = Date.now();
-    let ru = process.resourceUsage();
-    let mu = process.memoryUsage();
-    let cpu = osCPUusage();
-    dt = now - this.load_last_time;
-    let last = this.load_last_usage;
-    let last_cpu = this.load_last_cpu;
-    // percentage, serialized as 0 - 1000
-    function perc(v) {
-      return round(1000 * v);
-    }
-    function mb(v) {
-      return (v/(1024*1024)).toFixed(1);
-    }
-    function us(v) { // display as milliseconds
-      return (v/1000).toFixed(1);
-    }
-    let load_cpu = perc((ru.userCPUTime + ru.systemCPUTime - last.userCPUTime - last.systemCPUTime) / (dt * 1000));
-    let load_host_cpu = perc((cpu.used - last_cpu.used) / ((cpu.used + cpu.idle - last_cpu.used - last_cpu.idle) || 1));
-    // percentage, serialized as 0 - 1000
-    let free_mem = perc(os.freemem() / os.totalmem());
-    // in MB
-    let load_mem = round(mu.rss/1024/1024);
-    let last_packet = this.load_last_packet_stats;
-    let packet_stats = {
-      msgs_cw: cwstats.msgs,
-      msgs_ws: wsstats.msgs,
-      msgs: cwstats.msgs + wsstats.msgs,
-      bytes_cw: cwstats.bytes,
-      bytes_ws: wsstats.bytes,
-      bytes: cwstats.bytes + wsstats.bytes,
-    };
-    let msgs_per_s_cw = round((packet_stats.msgs_cw - last_packet.msgs_cw) * 1000 / dt);
-    let msgs_per_s_ws = round((packet_stats.msgs_ws - last_packet.msgs_ws) * 1000 / dt);
-    let msgs_per_s = round((packet_stats.msgs - last_packet.msgs) * 1000 / dt);
-    let kbytes_per_s_cw = round((packet_stats.bytes_cw - last_packet.bytes_cw) / 1024 * 1000 / dt);
-    let kbytes_per_s_ws = round((packet_stats.bytes_ws - last_packet.bytes_ws) / 1024 * 1000 / dt);
-    let kbytes_per_s = round((packet_stats.bytes - last_packet.bytes) / 1024 * 1000 / dt);
-    this.load_last_time = now;
-    this.load_last_usage = ru;
-    this.load_last_cpu = cpu;
-    this.load_last_packet_stats = packet_stats;
-    // Ping in microseconds
-    let ping_min = isFinite(this.exchange_ping.min) ? this.exchange_ping.min : 9999900;
-    let ping_max = this.exchange_ping.max;
-    let ping_avg = round(this.exchange_ping.total / (this.exchange_ping.count||1));
-    this.exchange_ping.min = Infinity;
-    this.exchange_ping.count = this.exchange_ping.total = this.exchange_ping.max = 0;
-    // Report to metrics
-    metrics.set('load.cpu', load_cpu / 1000);
-    metrics.set('load.host_cpu', load_host_cpu / 1000);
-    metrics.set('load.mem', load_mem);
-    metrics.set('load.heap_used', mu.heapUsed/1024/1024);
-    //metrics.set('load.heap_total', mu.heapTotal/1024/1024);
-    metrics.set('load.free_mem', free_mem / 1000);
-    metrics.set('load.msgps.cw', msgs_per_s_cw);
-    metrics.set('load.msgps.ws', msgs_per_s_ws);
-    //metrics.set('load.msgps.total', msgs_per_s);
-    metrics.set('load.kbps.cw', kbytes_per_s_cw);
-    metrics.set('load.kbps.ws', kbytes_per_s_ws);
-    //metrics.set('load.kbps.total', kbytes_per_s);
-    metrics.set('load.exchange', ping_max);
-    // Log
-    if (this.load_log) {
-      this.csworker.log(`load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
-        ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
-        // Maybe useful: packets and bytes per second (both websocket + exchange)
-        `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
-        // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
-        `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.external + mu.arrayBuffers)}MB` +
-        `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`);
-    }
-
-    // Report to master worker
-    let pak = this.csworker.pak('master.master', 'load', null, 1);
-    pak.writeInt(load_cpu);
-    pak.writeInt(load_host_cpu);
-    pak.writeInt(load_mem);
-    pak.writeInt(free_mem);
-    pak.writeInt(msgs_per_s);
-    // Also calculate count of and report each channel type
-    let num_channels = {};
-    for (let channel_id in this.local_channels) {
-      let channel = this.local_channels[channel_id];
-      let channel_type = channel.channel_type;
-      num_channels[channel_type] = (num_channels[channel_type] || 0) + 1;
-    }
-    pak.writeJSON(num_channels);
-    // Send our network location for tracking/debugging
-    // Really only need this once (per master_startup), could send null otherwise
-    pak.writeJSON(this.debug_addr);
-
-    pak.send((err) => {
-      if (err) {
-        console.error(`Error reporting load to master worker: ${err}`);
+    let load_report_start = Date.now();
+    let os_free_mem;
+    asyncParallel([
+      // Gather any stats that are asynchronous to gather
+      function getOSFree(next) {
+        osFreeMem(function (value) {
+          os_free_mem = value;
+          next();
+        });
+      },
+    ], () => {
+      let now = Date.now();
+      let ru = process.resourceUsage();
+      let mu = process.memoryUsage();
+      let cpu = osCPUusage();
+      dt = now - this.load_last_time;
+      let last = this.load_last_usage;
+      let last_cpu = this.load_last_cpu;
+      // percentage, serialized as 0 - 1000
+      function perc(v) {
+        return round(1000 * v);
       }
-      this.load_report_time = LOAD_REPORT_INTERVAL;
-    });
+      function mb(v) {
+        return (v/(1024*1024)).toFixed(1);
+      }
+      function us(v) { // display as milliseconds
+        return (v/1000).toFixed(1);
+      }
+      let load_cpu = perc((ru.userCPUTime + ru.systemCPUTime - last.userCPUTime - last.systemCPUTime) / (dt * 1000));
+      let host_cpu_used = cpu.used - last_cpu.used;
+      let host_cpu_total = cpu.used + cpu.idle - last_cpu.used - last_cpu.idle;
+      let load_host_cpu = perc(host_cpu_used / (host_cpu_total || 1));
+      // percentage, serialized as 0 - 1000
+      let free_mem = perc(os_free_mem);
+      // in MB
+      let load_mem = round(mu.rss/1024/1024);
+      let last_packet = this.load_last_packet_stats;
+      let packet_stats = {
+        msgs_cw: cwstats.msgs,
+        msgs_ws: wsstats.msgs,
+        msgs: cwstats.msgs + wsstats.msgs,
+        bytes_cw: cwstats.bytes,
+        bytes_ws: wsstats.bytes,
+        bytes: cwstats.bytes + wsstats.bytes,
+      };
+      let msgs_per_s_cw = round((packet_stats.msgs_cw - last_packet.msgs_cw) * 1000 / dt);
+      let msgs_per_s_ws = round((packet_stats.msgs_ws - last_packet.msgs_ws) * 1000 / dt);
+      let msgs_per_s = round((packet_stats.msgs - last_packet.msgs) * 1000 / dt);
+      let kbytes_per_s_cw = round((packet_stats.bytes_cw - last_packet.bytes_cw) / 1024 * 1000 / dt);
+      let kbytes_per_s_ws = round((packet_stats.bytes_ws - last_packet.bytes_ws) / 1024 * 1000 / dt);
+      let kbytes_per_s = round((packet_stats.bytes - last_packet.bytes) / 1024 * 1000 / dt);
+      this.load_last_time = now;
+      this.load_last_usage = ru;
+      this.load_last_cpu = cpu;
+      this.load_last_packet_stats = packet_stats;
+      // Ping in microseconds
+      let ping_min = isFinite(this.exchange_ping.min) ? this.exchange_ping.min : 9999900;
+      let ping_max = this.exchange_ping.max;
+      let ping_avg = round(this.exchange_ping.total / (this.exchange_ping.count||1));
+      this.exchange_ping.min = Infinity;
+      this.exchange_ping.count = this.exchange_ping.total = this.exchange_ping.max = 0;
+      // Report to metrics
+      metrics.set('load.cpu', load_cpu / 1000);
+      metrics.set('load.host_cpu', load_host_cpu / 1000);
+      metrics.set('load.mem', load_mem);
+      metrics.set('load.heap_used', mu.heapUsed/1024/1024);
+      //metrics.set('load.heap_total', mu.heapTotal/1024/1024);
+      metrics.set('load.free_mem', free_mem / 1000);
+      metrics.set('load.msgps.cw', msgs_per_s_cw);
+      metrics.set('load.msgps.ws', msgs_per_s_ws);
+      //metrics.set('load.msgps.total', msgs_per_s);
+      metrics.set('load.kbps.cw', kbytes_per_s_cw);
+      metrics.set('load.kbps.ws', kbytes_per_s_ws);
+      //metrics.set('load.kbps.total', kbytes_per_s);
+      metrics.set('load.exchange', ping_max);
+      // Log
+      if (this.load_log) {
+        this.csworker.log(`load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
+          ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
+          // Maybe useful: packets and bytes per second (both websocket + exchange)
+          `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
+          // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
+          `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.external + mu.arrayBuffers)}MB` +
+          `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`);
+      }
 
-    // Readiness Check CPU Load
-    if (this.on_report_load) {
-      this.on_report_load(load_cpu / 1000);
-    }
+      // Report to master worker
+      let pak = this.csworker.pak('master.master', 'load', null, 1);
+      pak.writeInt(load_cpu);
+      pak.writeInt(load_host_cpu);
+      pak.writeInt(load_mem);
+      pak.writeInt(free_mem);
+      pak.writeInt(msgs_per_s);
+      // Also calculate count of and report each channel type
+      let num_channels = {};
+      for (let channel_id in this.local_channels) {
+        let channel = this.local_channels[channel_id];
+        let channel_type = channel.channel_type;
+        num_channels[channel_type] = (num_channels[channel_type] || 0) + 1;
+      }
+      pak.writeJSON(num_channels);
+      // Send our network location for tracking/debugging
+      // Really only need this once (per master_startup), could send null otherwise
+      pak.writeJSON(this.debug_addr);
+
+      pak.send((err) => {
+        if (err) {
+          console.error(`Error reporting load to master worker: ${err}`);
+        }
+        let time_to_report = Date.now() - load_report_start;
+        this.load_report_time = max(5000, LOAD_REPORT_INTERVAL - time_to_report);
+      });
+
+      // Readiness Check CPU Load
+      if (this.on_report_load) {
+        this.on_report_load(load_cpu / 1000, load_host_cpu / 1000, load_mem, free_mem / 1000);
+      }
+    });
   }
 
   reportPerfCounters(counters) {
@@ -764,6 +853,7 @@ class ChannelServer {
     }
     this.exchange_ping.countdown = 0;
     let pak = this.csworker.pak(this.csworker.channel_id, 'ping', null, true);
+    pak.no_local_bypass = true;
     let time = process.hrtime();
     pak.writeU32(time[0]);
     pak.writeU32(time[1]);
