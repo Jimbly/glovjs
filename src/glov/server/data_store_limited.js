@@ -79,20 +79,20 @@ DataStoreLimited.prototype.setAsync = function (obj_name, value, cb) {
 
 DataStoreLimited.prototype.getAsync = function (obj_name, default_value, cb) {
   let state = this.per_obj_state[obj_name];
-  assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
+  assert(!state || !state.next_cbs.length, `Cannot get something that is still being written: ${obj_name}`);
   setTimeout(() => {
     state = this.per_obj_state[obj_name];
-    assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
+    assert(!state || !state.next_cbs.length, `Cannot get something that is still being written: ${obj_name}`);
     this.actual_ds.getAsync(obj_name, default_value, cb);
   }, this.get_delay_time);
 };
 
 DataStoreLimited.prototype.getAsyncBuffer = function (obj_name, cb) {
   let state = this.per_obj_state[obj_name];
-  assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
+  assert(!state || !state.next_cbs.length, `Cannot get something that is still being written: ${obj_name}`);
   setTimeout(() => {
     state = this.per_obj_state[obj_name];
-    assert(!state || !state.next_cbs.length, 'Cannot get something that is still being written');
+    assert(!state || !state.next_cbs.length, `Cannot get something that is still being written: ${obj_name}`);
     this.actual_ds.getAsyncBuffer(obj_name, cb);
   }, this.get_delay_time);
 };
