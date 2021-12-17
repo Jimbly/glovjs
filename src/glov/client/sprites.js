@@ -5,6 +5,8 @@
 
 // eslint-disable-next-line no-use-before-define
 exports.createSprite = create;
+// eslint-disable-next-line no-use-before-define
+exports.spritesClip = clip;
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
