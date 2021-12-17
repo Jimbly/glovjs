@@ -52,3 +52,11 @@ export function netDisconnected() {
   return !client.connected || client.disconnected || subs.logging_in ||
     !client.socket || client.socket.readyState !== 1;
 }
+
+export function netClientId() {
+  return client.id;
+}
+
+export function netSubs() {
+  return subs;
+}
