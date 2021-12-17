@@ -148,7 +148,7 @@ function Texture(params) {
   if (params.data) {
     let err = this.updateData(params.width, params.height, params.data);
     if (err) {
-      assert(false, `Error loading ${params.name}: GLError(${err})`);
+      assert(false, `Error loading ${params.name}: ${err}`);
     }
   } else {
     // texture is not valid, do not leave bound
@@ -239,7 +239,10 @@ Texture.prototype.updateData = function updateData(w, h, data) {
         this.format.internal_type, this.format.gl_type, data);
     }
   } else {
-    assert(data.width); // instanceof Image fails with ublock AdBlocker; also, this is either an Image or Canvas
+    // Ensure this is an Image or Canvas
+    if (!data.width) {
+      return `Missing width (${data.width}) ("${String(data).slice(0, 100)}")`;
+    }
     if (this.is_cube) {
       assert.equal(w * 2, h * 3);
       let tex_size = h / 2;
@@ -289,13 +292,13 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   }
   let gl_err = gl.getError();
   if (gl_err) {
-    return gl_err;
+    return `GLError(${gl_err})`;
   }
   if (this.mipmaps) {
     gl.generateMipmap(this.target);
     gl_err = gl.getError();
     if (gl_err) {
-      return gl_err;
+      return `GLError(${gl_err})`;
     }
   }
   this.updateGPUMem();
@@ -304,7 +307,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
 
   callEach(this.on_load, this.on_load = null, this);
 
-  return 0;
+  return null;
 };
 
 Texture.prototype.onLoad = function (cb) {
@@ -365,11 +368,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       }
       let err = tex.updateData(img.width, img.height, img);
       if (err) {
-        err_details = `: GLError(${err})`;
+        err_details = `: ${err}`;
         // Samsung TV gets 1282 on texture arrays
         // Samsung Galaxy S6 gets 1281 on texture arrays
         // Note: Any failed image load (partial read of a bad png, etc) also results in 1281!
-        if (tex.is_array && (String(err) === '1282' || String(err) === '1281') && engine.webgl2 && !engine.DEBUG) {
+        if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') && engine.webgl2 && !engine.DEBUG) {
           local_storage.setJSON('webgl2_disable', {
             ua: navigator.userAgent,
             ts: Date.now(),
