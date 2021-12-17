@@ -2,11 +2,16 @@ const assert = require('assert');
 const gb = require('glov-build');
 const { callbackify } = gb;
 const path = require('path');
+const fs = require('fs');
 
 module.exports = function (opts) {
   let { input, name, name_files } = opts;
   name = name || 'eslint';
   name_files = name_files || `${name}_files`;
+
+  function timestamp(fn) {
+    return fs.statSync(fn).mtime.getTime();
+  }
 
   let eslint;
   let linter;
@@ -108,6 +113,7 @@ module.exports = function (opts) {
     input,
     init: eslintFilesTaskInit,
     func: eslintFilesTask,
+    version: [timestamp('.eslintrc.js')],
   });
 
   return {
