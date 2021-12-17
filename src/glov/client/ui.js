@@ -35,7 +35,7 @@ const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
 const { clipped, clipPause, clipResume } = glov_sprites;
 const textures = require('./textures.js');
-const { clamp, clone, lerp, merge } = require('glov/common/util.js');
+const { clamp, clone, defaults, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4scale, unit_vec } = require('glov/common/vmath.js');
 
@@ -971,8 +971,15 @@ export function modalDialog(param) {
   assert(!param.title || typeof param.title === 'string');
   assert(!param.text || typeof param.text === 'string');
   assert(!param.buttons || typeof param.buttons === 'object');
+  if (param.buttons) {
+    for (let key in param.buttons) {
+      if (typeof param.buttons[key] !== 'object') {
+        // Button is function or null
+        param.buttons[key] = { cb: param.buttons[key] };
+      }
+    }
+  }
   // assert(Object.keys(param.buttons).length);
-
   modal_dialog = param;
 }
 
@@ -990,6 +997,7 @@ function modalDialogRun() {
   let pad = modal_pad;
   let vpad = modal_pad * 0.5;
   let general_scale = 1;
+  let exit_lock = true;
   if (virtual_size[0] > 0.1 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
     // If a 24-pt font is more than 10% of the camera height, we're probably super-wide-screen
     // on a mobile device due to keyboard being visible
@@ -1016,10 +1024,6 @@ function modalDialogRun() {
   let x = x0 + pad;
   const y0 = fullscreen_mode ? 0 : (modal_dialog.y0 || modal_y0);
   let y = round(y0 + pad);
-
-  if (glov_input.pointerLocked()) {
-    glov_input.pointerLockExit();
-  }
 
   if (modal_dialog.title) {
     if (fullscreen_mode) {
@@ -1067,11 +1071,12 @@ function modalDialogRun() {
   let did_button = -1;
   for (let ii = 0; ii < keys.length; ++ii) {
     let key = keys[ii];
+    buttons[key] = buttons[key] || {};
     let eff_button_keys = button_keys[key.toLowerCase()];
     let pressed = 0;
     if (eff_button_keys) {
       for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj]);
+        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj], buttons[key].in_event_cb);
         if (eff_button_keys.key[jj] === tick_key) {
           pressed++;
         }
@@ -1086,14 +1091,12 @@ function modalDialogRun() {
     if (pressed) {
       did_button = ii;
     }
-    if (buttonText({
-      x: x,
-      y,
-      z: Z.MODAL,
+    if (buttonText(defaults({
+      x, y, z: Z.MODAL,
       w: eff_button_width,
       h: eff_button_height,
-      text: key
-    })) {
+      text: key,
+    } , buttons[key]))) {
       did_button = ii;
     }
     x = round(x + pad + eff_button_width);
@@ -1105,7 +1108,8 @@ function modalDialogRun() {
       let eff_button_keys = button_keys[key.toLowerCase()];
       if (eff_button_keys && eff_button_keys.low_key) {
         for (let jj = 0; jj < eff_button_keys.low_key.length; ++jj) {
-          if (glov_input.keyDownEdge(eff_button_keys.low_key[jj]) || eff_button_keys.low_key[jj] === tick_key) {
+          if (glov_input.keyDownEdge(eff_button_keys.low_key[jj], buttons[key].in_event_cb) ||
+          eff_button_keys.low_key[jj] === tick_key) {
             did_button = ii;
           }
         }
@@ -1116,9 +1120,10 @@ function modalDialogRun() {
     let key = keys[did_button];
     playUISound('button_click');
     modal_dialog = null;
-    if (buttons[key]) {
-      buttons[key]();
+    if (buttons[key].cb) {
+      buttons[key].cb();
     }
+    exit_lock = false;
   }
   y += eff_button_height;
   y = round(y + vpad + pad);
@@ -1130,6 +1135,10 @@ function modalDialogRun() {
     h: (fullscreen_mode ? camera2d.y1() : y) - y0,
     pixel_scale: panel_pixel_scale * general_scale,
   });
+
+  if (glov_input.pointerLocked() && exit_lock) {
+    glov_input.pointerLockExit();
+  }
 
   glov_input.eatAllInput();
   modal_stealing_focus = true;
@@ -1150,7 +1159,10 @@ export function modalTextEntry(param) {
   });
   let buttons = {};
   for (let key in param.buttons) {
-    let val = param.buttons[key];
+    let val = null;
+    if (param.buttons[key]) {
+      val = param.buttons[key].cb || param.buttons[key];
+    }
     if (typeof val === 'function') {
       val = (function (old_fn) {
         return function () {
@@ -1158,7 +1170,7 @@ export function modalTextEntry(param) {
         };
       }(val));
     }
-    buttons[key] = val;
+    buttons[key] = defaults({ cb: val }, param.buttons[key]);
   }
   param.buttons = buttons;
   param.text = `${param.text || ''}`;
