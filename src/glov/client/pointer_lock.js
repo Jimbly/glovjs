@@ -1,6 +1,8 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const { eatPossiblePromise } = require('glov/common/util.js');
+
 let user_want_locked = false;
 let elem;
 let on_ptr_lock;
@@ -16,14 +18,14 @@ function pointerLog(msg) {
 export function exit() {
   pointerLog('Lock exit requested');
   user_want_locked = false;
-  document.exitPointerLock();
+  eatPossiblePromise(document.exitPointerLock());
 }
 
 export function enter(when) {
   user_want_locked = true;
   on_ptr_lock();
   pointerLog(`Trying pointer lock in response to ${when}`);
-  elem.requestPointerLock();
+  eatPossiblePromise(elem.requestPointerLock());
 }
 
 function onPointerLockChange() {
@@ -31,7 +33,7 @@ function onPointerLockChange() {
     pointerLog('Lock successful');
     if (!user_want_locked) {
       pointerLog('User canceled lock');
-      document.exitPointerLock();
+      eatPossiblePromise(document.exitPointerLock());
     }
   } else {
     if (user_want_locked) {
