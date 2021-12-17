@@ -25,11 +25,6 @@ export function errorReportSetDetails(key, value) {
     delete error_report_details[key];
   }
 }
-function errorReportDetailsString() {
-  return `&${Object.keys(error_report_details)
-    .map((k) => `${k}=${error_report_details[k]}`)
-    .join('&')}`;
-}
 export function errorReportSetDynamicDetails(key, fn) {
   error_report_dynamic_details[key] = fn;
 }
@@ -59,6 +54,12 @@ function getDynamicDetail(key) {
     return '';
   }
   return `&${key}=${value}`;
+}
+export function errorReportDetailsString() {
+  return `&${Object.keys(error_report_details)
+    .map((k) => `${k}=${error_report_details[k]}`)
+    .join('&')}` +
+    `${Object.keys(error_report_dynamic_details).map(getDynamicDetail).join('')}`;
 }
 
 let last_error_time = 0;
@@ -106,8 +107,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   let url = api_path; // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}` +
-    `&msg=${escape(msg)}${errorReportDetailsString()}` +
-    `${Object.keys(error_report_dynamic_details).map(getDynamicDetail).join('')}`;
+    `&msg=${escape(msg)}${errorReportDetailsString()}`;
   fetch({ method: 'POST', url }, () => { /* nop */ });
   return true;
 }

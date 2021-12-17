@@ -6,6 +6,7 @@ const local_storage = require('./local_storage.js');
 export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 
 const engine = require('./engine.js');
+const { errorReportDetailsString } = require('./error_report.js');
 const net = require('./net.js');
 const textures = require('./textures.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
@@ -186,4 +187,13 @@ cmd_parse.register({
     let cur = netDelayGet();
     resp_func(null, `Client NetDelay: ${cur[0]}+${cur[1]}`);
   }
+});
+
+cmd_parse.register({
+  cmd: 'error_report_details',
+  help: 'Shows details submitted with any error report',
+  access_show: ['hidden'],
+  func: function (str, resp_func) {
+    resp_func(null, errorReportDetailsString());
+  },
 });
