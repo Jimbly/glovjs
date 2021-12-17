@@ -9,60 +9,75 @@ exports.mat4 = require('gl-mat4/create');
 
 const { abs, acos, max, min, floor, pow, round, sqrt } = Math;
 
-export function vec1(v) {
+export type Vec4 = [number, number, number, number] | Float32Array | Int32Array;
+export type Vec3 = [number, number, number] | Vec4;
+export type Vec2 = [number, number] | Vec3;
+export type Vec1 = [number] | Vec2;
+
+export function vec1(v: number): Vec1 {
   return new Float32Array([v]);
 }
 
-export function vec2(a, b) {
+export function vec2(): Vec2;
+export function vec2(a: number, b: number): Vec2;
+export function vec2(a?: number, b?: number): Vec2 {
   let r = new Float32Array(2);
   if (a || b) {
-    r[0] = a;
-    r[1] = b;
+    r[0] = a as number;
+    r[1] = b as number;
   }
   return r;
 }
 
-export function ivec2(a, b) {
+export function ivec2(): Vec2;
+export function ivec2(a: number, b: number): Vec2;
+export function ivec2(a?: number, b?: number): Vec2 {
   let r = new Int32Array(2);
   if (a || b) {
-    r[0] = a;
-    r[1] = b;
+    r[0] = a as number;
+    r[1] = b as number;
   }
   return r;
 }
 
-export function vec3(a, b, c) {
+export function vec3(): Vec3;
+export function vec3(a: number, b: number, c: number): Vec3;
+export function vec3(a?: number, b?: number, c?: number): Vec3 {
   let r = new Float32Array(3);
   if (a || b || c) {
-    r[0] = a;
-    r[1] = b;
-    r[2] = c;
+    r[0] = a as number;
+    r[1] = b as number;
+    r[2] = c as number;
   }
   return r;
 }
 
-export function ivec3(a, b, c) {
+export function ivec3(): Vec3;
+export function ivec3(a: number, b: number, c: number): Vec3;
+export function ivec3(a?: number, b?: number, c?: number): Vec3 {
   let r = new Int32Array(3);
   if (a || b || c) {
-    r[0] = a;
-    r[1] = b;
-    r[2] = c;
+    r[0] = a as number;
+    r[1] = b as number;
+    r[2] = c as number;
   }
   return r;
 }
 
-export function vec4(a, b, c, d) {
+export function vec4(): Vec4
+export function vec4(a: number, b: number, c: number, d: number): Vec4
+export function vec4(a?: number, b?: number, c?: number, d?: number): Vec4 {
   let r = new Float32Array(4);
   if (a || b || c || d) {
-    r[0] = a;
-    r[1] = b;
-    r[2] = c;
-    r[3] = d;
+    r[0] = a as number;
+    r[1] = b as number;
+    r[2] = c as number;
+    r[3] = d as number;
   }
   return r;
 }
 
-function frozenVec4(a,b,c,d) {
+function frozenVec4(a: number, b: number, c: number, d: number): Vec4 {
   // if (debug) {
   //   return Object.freeze([a,b,c,d]); // Not a vec4, but lets us catch bugs
   // }
@@ -78,25 +93,26 @@ export const xaxis = frozenVec4(1,0,0,0);
 export const yaxis = frozenVec4(0,1,0,0);
 export const zaxis = frozenVec4(0,0,1,0);
 
-export function v2abs(out, a) {
+
+export function v2abs(out: Vec2, a: Vec2): Vec2 {
   out[0] = abs(a[0]);
   out[1] = abs(a[1]);
   return out;
 }
 
-export function v2add(out, a, b) {
+export function v2add(out: Vec2, a: Vec2, b: Vec2): Vec2 {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   return out;
 }
 
-export function v2addScale(out, a, b, s) {
+export function v2addScale(out: Vec2, a: Vec2, b: Vec2, s: number): Vec2 {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
   return out;
 }
 
-export function v2angle(a, b) {
+export function v2angle(a: Vec2, b: Vec2): number {
   let mag = sqrt(
     (a[0] * a[0] + a[1] * a[1]) *
     (b[0] * b[0] + b[1] * b[1])
@@ -109,69 +125,57 @@ export function v2angle(a, b) {
   );
 }
 
-export function v2copy(out, a) {
+export function v2copy(out: Vec2, a: Vec2): Vec2 {
   out[0] = a[0];
   out[1] = a[1];
   return out;
 }
 
-export function v2distSq(a, b) {
+export function v2distSq(a: Vec2, b: Vec2): number {
   return (a[0] - b[0]) * (a[0] - b[0]) +
     (a[1] - b[1]) * (a[1] - b[1]);
 }
 
-export function v2div(out, a, b) {
+export function v2div(out: Vec2, a: Vec2, b: Vec2): Vec2 {
   out[0] = a[0] / b[0];
   out[1] = a[1] / b[1];
   return out;
 }
 
-export function v2dot(a, b) {
+export function v2dot(a: Vec2, b: Vec2): number {
   return a[0] * b[0] + a[1] * b[1];
 }
 
-export function v2floor(out, a) {
+export function v2floor(out: Vec2, a: Vec2): Vec2 {
   out[0] = floor(a[0]);
   out[1] = floor(a[1]);
   return out;
 }
 
-export function v2iFloor(a) {
+export function v2iFloor(a: Vec2): Vec2 {
   a[0] = floor(a[0]);
   a[1] = floor(a[1]);
   return a;
 }
 
-export function v2round(out, a) {
-  out[0] = round(a[0]);
-  out[1] = round(a[1]);
-  return out;
-}
-
-export function v2iRound(a) {
-  a[0] = round(a[0]);
-  a[1] = round(a[1]);
-  return a;
-}
-
-export function v2lengthSq(a) {
+export function v2lengthSq(a: Vec2): number {
   return a[0]*a[0] + a[1]*a[1];
 }
 
-export function v2lerp(out, t, a, b) {
+export function v2lerp(out: Vec2, t: number, a: Vec2, b: Vec2): Vec2 {
   let it = 1 - t;
   out[0] = it * a[0] + t * b[0];
   out[1] = it * a[1] + t * b[1];
   return out;
 }
 
-export function v2mul(out, a, b) {
+export function v2mul(out: Vec2, a: Vec2, b: Vec2): Vec2 {
   out[0] = a[0] * b[0];
   out[1] = a[1] * b[1];
   return out;
 }
 
-export function v2normalize(out, a) {
+export function v2normalize(out: Vec2, a: Vec2): Vec2 {
   let len = a[0]*a[0] + a[1]*a[1];
   if (len > 0) {
     len = 1 / sqrt(len);
@@ -181,7 +185,7 @@ export function v2normalize(out, a) {
   return out;
 }
 
-export function v2iNormalize(a) {
+export function v2iNormalize(a: Vec2): Vec2 {
   let len = a[0]*a[0] + a[1]*a[1];
   if (len > 0) {
     len = 1 / sqrt(len);
@@ -191,50 +195,63 @@ export function v2iNormalize(a) {
   return a;
 }
 
-export function v2same(a, b) {
+export function v2round(out: Vec2, a: Vec2): Vec2 {
+  out[0] = round(a[0]);
+  out[1] = round(a[1]);
+  return out;
+}
+
+export function v2iRound(a: Vec2): Vec2 {
+  a[0] = round(a[0]);
+  a[1] = round(a[1]);
+  return a;
+}
+
+export function v2same(a: Vec2, b: Vec2): boolean {
   return a[0] === b[0] && a[1] === b[1];
 }
 
-export function v2scale(out, a, s) {
+export function v2scale(out: Vec2, a: Vec2, s: number): Vec2 {
   out[0] = a[0] * s;
   out[1] = a[1] * s;
   return out;
 }
 
-export function v2set(out, a, b) {
+export function v2set(out: Vec2, a: number, b: number): Vec2 {
   out[0] = a;
   out[1] = b;
   return out;
 }
 
-export function v2sub(out, a, b) {
+export function v2sub(out: Vec2, a: Vec2, b: Vec2): Vec2 {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   return out;
 }
 
-export function v3add(out, a, b) {
+
+export function v3add(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
   return out;
 }
 
-export function v3iAdd(a, b) {
+export function v3iAdd(a: Vec3, b: Vec3): Vec3 {
   a[0] += b[0];
   a[1] += b[1];
   a[2] += b[2];
   return a;
 }
 
-export function v3addScale(out, a, b, s) {
+export function v3addScale(out: Vec3, a: Vec3, b: Vec3, s: number): Vec3 {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
   out[2] = a[2] + b[2] * s;
   return out;
 }
 
-export function v3angle(a, b) {
+export function v3angle(a: Vec3, b: Vec3): number {
   let mag = sqrt(
     (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) *
     (b[0] * b[0] + b[1] * b[1] + b[2] * b[2])
@@ -247,14 +264,14 @@ export function v3angle(a, b) {
   );
 }
 
-export function v3copy(out, a) {
+export function v3copy(out: Vec3, a: Vec3): Vec3 {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
   return out;
 }
 
-export function v3cross(out, a, b) {
+export function v3cross(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   let a0 = a[0];
   let a1 = a[1];
   let a2 = a[2];
@@ -268,7 +285,7 @@ export function v3cross(out, a, b) {
 }
 
 // determinant of the matrix made by (columns?) [a, b, c];
-export function v3determinant(a, b, c) {
+export function v3determinant(a: Vec3, b: Vec3, c: Vec3): number {
   // let a00 = a[0];
   // let a01 = a[1];
   // let a02 = a[2];
@@ -291,46 +308,46 @@ export function v3determinant(a, b, c) {
   return a00 * (a22 * a11 - a12 * a21) + a01 * (-a22 * a10 + a12 * a20) + a02 * (a21 * a10 - a11 * a20);
 }
 
-export function v3dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-export function v3distSq(a, b) {
+export function v3distSq(a: Vec3, b: Vec3): number {
   return (a[0] - b[0]) * (a[0] - b[0]) +
     (a[1] - b[1]) * (a[1] - b[1]) +
     (a[2] - b[2]) * (a[2] - b[2]);
 }
 
-export function v3dist(a,b) {
+export function v3dist(a: Vec3, b: Vec3): number {
   return sqrt(v3distSq(a,b));
 }
 
-export function v3div(out, a, b) {
+export function v3div(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] / b[0];
   out[1] = a[1] / b[1];
   out[2] = a[2] / b[2];
   return out;
 }
 
-export function v3iFloor(a) {
+export function v3dot(a: Vec3, b: Vec3): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+export function v3iFloor(a: Vec3): Vec3 {
   a[0] = floor(a[0]);
   a[1] = floor(a[1]);
   a[2] = floor(a[2]);
   return a;
 }
 
-export function v3floor(out, a) {
+export function v3floor(out: Vec3, a: Vec3): Vec3 {
   out[0] = floor(a[0]);
   out[1] = floor(a[1]);
   out[2] = floor(a[2]);
   return out;
 }
 
-export function v3lengthSq(a) {
+export function v3lengthSq(a: Vec3): number {
   return a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
 }
 
-export function v3lerp(out, t, a, b) {
+export function v3lerp(out: Vec3, t: number, a: Vec3, b: Vec3): Vec3 {
   let it = 1 - t;
   out[0] = it * a[0] + t * b[0];
   out[1] = it * a[1] + t * b[1];
@@ -338,35 +355,35 @@ export function v3lerp(out, t, a, b) {
   return out;
 }
 
-export function v3iMax(a, b) {
+export function v3iMax(a: Vec3, b: Vec3): Vec3 {
   a[0] = max(a[0], b[0]);
   a[1] = max(a[1], b[1]);
   a[2] = max(a[2], b[2]);
   return a;
 }
 
-export function v3iMin(a, b) {
+export function v3iMin(a: Vec3, b: Vec3): Vec3 {
   a[0] = min(a[0], b[0]);
   a[1] = min(a[1], b[1]);
   a[2] = min(a[2], b[2]);
   return a;
 }
 
-export function v3mul(out, a, b) {
+export function v3mul(out: Vec3, a: Vec3, b: Vec3): Vec3 {
   out[0] = a[0] * b[0];
   out[1] = a[1] * b[1];
   out[2] = a[2] * b[2];
   return out;
 }
 
-export function v3iMul(a, b) {
+export function v3iMul(a: Vec3, b: Vec3): Vec3 {
   a[0] *= b[0];
   a[1] *= b[1];
   a[2] *= b[2];
   return a;
 }
 
-export function v3mulMat4(out, a, m) {
+export function v3mulMat4(out: Vec3, a: Vec3, m: Array<number>): Vec3 {
   let x = a[0];
   let y = a[1];
   let z = a[2];
@@ -377,7 +394,7 @@ export function v3mulMat4(out, a, m) {
 }
 
 // Same as v3mulMat4, but assumes it's a vector with w=1
-export function m4TransformVec3(out, a, m) {
+export function m4TransformVec3(out: Vec3, a: Vec3, m: Array<number>): Vec3 {
   let x = a[0];
   let y = a[1];
   let z = a[2];
@@ -387,7 +404,7 @@ export function m4TransformVec3(out, a, m) {
   return out;
 }
 
-export function v3normalize(out, a) {
+export function v3normalize(out: Vec3, a: Vec3): Vec3 {
   let len = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
   if (len > 0) {
     len = 1 / sqrt(len);
@@ -398,7 +415,7 @@ export function v3normalize(out, a) {
   return out;
 }
 
-export function v3iNormalize(a) {
+export function v3iNormalize(a: Vec3): Vec3 {
   let len = a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
   if (len > 0) {
     len = 1 / sqrt(len);
@@ -412,7 +429,7 @@ export function v3iNormalize(a) {
 // Treats `a` as vec3 input with w assumed to be 1
 // out[0]/[1] have had perspective divide and converted to normalized 0-1 range
 // out[2] is distance
-export function v3perspectiveProject(out, a, m) {
+export function v3perspectiveProject(out: Vec3, a: Vec3, m: Array<number>): Vec3 {
   let x = a[0];
   let y = a[1];
   let z = a[2];
@@ -424,65 +441,66 @@ export function v3perspectiveProject(out, a, m) {
   return out;
 }
 
-export function v3pow(out, a, exp) {
+export function v3pow(out: Vec3, a: Vec3, exp: number) : Vec3 {
   out[0] = pow(a[0], exp);
   out[1] = pow(a[1], exp);
   out[2] = pow(a[2], exp);
   return out;
 }
 
-export function v3round(out, a) {
+export function v3round(out: Vec3, a: Vec3): Vec3 {
   out[0] = round(a[0]);
   out[1] = round(a[1]);
   out[2] = round(a[2]);
   return out;
 }
 
-export function v3same(a, b) {
+export function v3same(a: Vec3, b: Vec3): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
-export function v3scale(out, a, s) {
+export function v3scale(out: Vec3, a: Vec3, s: number): Vec3 {
   out[0] = a[0] * s;
   out[1] = a[1] * s;
   out[2] = a[2] * s;
   return out;
 }
 
-export function v3set(out, a, b, c) {
-  out[0] = a;
-  out[1] = b;
-  out[2] = c;
-  return out;
-}
-
-export function v3sub(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  return out;
-}
-
-export function v3iScale(a, s) {
+export function v3iScale(a: Vec3, s: number): Vec3 {
   a[0] *= s;
   a[1] *= s;
   a[2] *= s;
   return a;
 }
 
-export function v3iSub(a, b) {
+export function v3set(out: Vec3, a: number, b: number, c: number): Vec3 {
+  out[0] = a;
+  out[1] = b;
+  out[2] = c;
+  return out;
+}
+
+export function v3sub(out: Vec3, a: Vec3, b: Vec3): Vec3 {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  return out;
+}
+
+export function v3iSub(a: Vec3, b: Vec3): Vec3 {
   a[0] -= b[0];
   a[1] -= b[1];
   a[2] -= b[2];
   return a;
 }
 
-export function v3zero(out) {
+export function v3zero(out: Vec3): Vec3 {
   out[0] = out[1] = out[2] = 0;
   return out;
 }
 
-export function v4add(out, a, b) {
+
+export function v4add(out: Vec4, a: Vec4, b: Vec4): Vec4 {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
@@ -490,11 +508,11 @@ export function v4add(out, a, b) {
   return out;
 }
 
-export function v4clone(a) {
-  return a.slice(0);
+export function v4clone(a: Vec4): Vec4 {
+  return a.slice(0) as Vec4;
 }
 
-export function v4copy(out, a) {
+export function v4copy(out: Vec4, a: Vec4): Vec4 {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -502,7 +520,19 @@ export function v4copy(out, a) {
   return out;
 }
 
-export function v4lerp(out, t, a, b) {
+export function v4dot(a: Vec4, b: Vec4): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+}
+
+export function v4fromRGBA(rgba: number): Vec4 {
+  let r = rgba >>> 24;
+  let g = (rgba & 0x00FF0000) >> 16;
+  let b = (rgba & 0x0000FF00) >> 8;
+  let a = rgba & 0xFF;
+  return vec4(r/255, g/255, b/255, a/255);
+}
+
+export function v4lerp(out: Vec4, t: number, a: Vec4, b: Vec4): Vec4 {
   let it = 1 - t;
   out[0] = it * a[0] + t * b[0];
   out[1] = it * a[1] + t * b[1];
@@ -511,7 +541,7 @@ export function v4lerp(out, t, a, b) {
   return out;
 }
 
-export function v4mul(out, a, b) {
+export function v4mul(out: Vec4, a: Vec4, b: Vec4): Vec4 {
   out[0] = a[0] * b[0];
   out[1] = a[1] * b[1];
   out[2] = a[2] * b[2];
@@ -519,7 +549,7 @@ export function v4mul(out, a, b) {
   return out;
 }
 
-export function v4mulAdd(out, a, b, c) {
+export function v4mulAdd(out: Vec4, a: Vec4, b: Vec4, c: Vec4): Vec4 {
   out[0] = a[0] * b[0] + c[0];
   out[1] = a[1] * b[1] + c[1];
   out[2] = a[2] * b[2] + c[2];
@@ -527,11 +557,11 @@ export function v4mulAdd(out, a, b, c) {
   return out;
 }
 
-export function v4same(a, b) {
+export function v4same(a: Vec4, b: Vec4): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
 }
 
-export function v4scale(out, a, s) {
+export function v4scale(out: Vec4, a: Vec4, s:number): Vec4 {
   out[0] = a[0] * s;
   out[1] = a[1] * s;
   out[2] = a[2] * s;
@@ -539,7 +569,7 @@ export function v4scale(out, a, s) {
   return out;
 }
 
-export function v4set(out, a, b, c, d) {
+export function v4set(out: Vec4, a: number, b: number, c: number, d: number): Vec4 {
   out[0] = a;
   out[1] = b;
   out[2] = c;
@@ -547,15 +577,7 @@ export function v4set(out, a, b, c, d) {
   return out;
 }
 
-export function v4zero(out) {
+export function v4zero(out: Vec4): Vec4 {
   out[0] = out[1] = out[2] = out[3] = 0;
   return out;
-}
-
-export function v4fromRGBA(rgba) {
-  let r = rgba >>> 24;
-  let g = (rgba & 0x00FF0000) >> 16;
-  let b = (rgba & 0x0000FF00) >> 8;
-  let a = rgba & 0xFF;
-  return vec4(r/255, g/255, b/255, a/255);
 }
