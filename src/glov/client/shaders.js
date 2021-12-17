@@ -7,7 +7,7 @@ const assert = require('assert');
 const engine = require('./engine.js');
 const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
-const { matchAll } = require('glov/common/util.js');
+const { matchAll, nop } = require('glov/common/util.js');
 const { texturesUnloadDynamic } = require('./textures.js');
 const { webFSGetFile } = require('./webfs.js');
 
@@ -35,6 +35,7 @@ let globals_used;
 let global_defines;
 
 let error_fp;
+let error_fp_webgl2;
 let error_vp;
 
 let shaders = [];
@@ -194,6 +195,13 @@ function Shader(params) {
   this.compile();
 }
 
+function cleanShaderError(error_text) {
+  if (error_text) { // sometimes null on iOS
+    error_text = error_text.replace(/\0/g, '').trim();
+  }
+  return error_text;
+}
+
 Shader.prototype.compile = function () {
   let { type, filename } = this;
   let header = '';
@@ -231,10 +239,7 @@ Shader.prototype.compile = function () {
 
   if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS)) {
     this.valid = false;
-    let error_text = gl.getShaderInfoLog(this.shader);
-    if (error_text) { // sometimes null on iOS
-      error_text = error_text.replace(/\0/g, '').trim();
-    }
+    let error_text = cleanShaderError(gl.getShaderInfoLog(this.shader));
     if (this.defines_arr.length) {
       filename += `(${this.defines_arr.join(',')})`;
     }
@@ -283,7 +288,7 @@ export function shadersRequirePrelink(ensure) {
   return old;
 }
 
-function link(vp, fp) {
+function link(vp, fp, on_error) {
   assert(!require_prelink);
   let prog = vp.programs[fp.id] = {
     handle: gl.createProgram(),
@@ -302,9 +307,18 @@ function link(vp, fp) {
 
   prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   if (!prog.valid) {
-    reportShaderError(false, `Shader link error (${vp.filename} & ${fp.filename}):` +
-      ` ${gl.getProgramInfoLog(prog.handle)}`);
-    console.error(`Shader link error: ${gl.getProgramInfoLog(prog.handle)}`);
+    let error_text = cleanShaderError(gl.getProgramInfoLog(prog.handle));
+    console.error(`Shader link error: ${error_text}`);
+    // Currently, not calling on_error if `engine.DEBUG`, we want to see our
+    //   shader errors immediately!
+    if (on_error && (!engine.DEBUG || on_error === nop)) {
+      on_error(error_text);
+    } else {
+      reportShaderError(false, `Shader link error (${vp.filename} & ${fp.filename}):` +
+        ` ${error_text}`);
+    }
+    prog.uniforms = [];
+    return prog;
   }
 
   gl.useProgram(prog.handle);
@@ -362,17 +376,28 @@ function link(vp, fp) {
   return prog;
 }
 
+function autoLink(vp, fp, on_error) {
+  let prog = vp.programs[fp.id];
+  if (!prog) {
+    prog = link(vp, fp, on_error);
+  }
+  if (!prog.valid) {
+    prog = link(vp, error_fp, nop);
+    if (!prog.valid && error_fp_webgl2) {
+      prog = link(vp, error_fp_webgl2, nop);
+    }
+    if (!prog.valid) {
+      prog = link(error_vp, error_fp, nop);
+    }
+    vp.programs[fp.id] = prog;
+  }
+  return prog;
+}
+
 export function bind(vp, fp, params) {
   let prog = vp.programs[fp.id];
   if (!prog) {
-    prog = link(vp, fp);
-  }
-  if (!prog.valid) {
-    prog = link(vp, error_fp);
-    if (!prog.valid) {
-      prog = link(error_vp, error_fp);
-    }
-    vp.programs[fp.id] = prog;
+    prog = autoLink(vp, fp);
   }
   if (prog !== bound_prog) {
     bound_prog = prog;
@@ -400,9 +425,13 @@ export function bind(vp, fp, params) {
   }
 }
 
-export function prelink(vp, fp, params = {}) {
+export function prelink(vp, fp, params = {}, on_error) {
+  let prog = autoLink(vp, fp, on_error);
   // In theory, only need to link, not bind, but let's push it through the pipe as far as it can to be safe.
-  bind(vp, fp, params);
+  if (prog.valid) {
+    bind(vp, fp, params);
+  }
+  return prog.valid;
 }
 
 const reserved = { WEBGL2: 1 };
@@ -467,6 +496,9 @@ export function startup(_globals) {
   globals_used = {};
 
   error_fp = create('glov/shaders/error.fp');
+  if (engine.webgl2) {
+    error_fp_webgl2 = create('glov/shaders/error_gl2.fp');
+  }
   error_vp = create('glov/shaders/error.vp');
 
   filewatchOn('.fp', onShaderChange);
