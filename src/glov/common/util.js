@@ -220,6 +220,7 @@ export function lineCircleIntersect(p1, p2, pCircle, radius) {
 export function inherits(ctor, superCtor) {
   // From Node.js
   assert(typeof superCtor === 'function');
+  let ctor_proto_orig = ctor.prototype;
   // not needed? ctor.super_ = superCtor; // eslint-disable-line no-underscore-dangle
   // second parameter also not actually needed, just defines new Foo().constructor === Foo?
   ctor.prototype = Object.create(superCtor.prototype, {
@@ -230,6 +231,11 @@ export function inherits(ctor, superCtor) {
       configurable: true
     }
   });
+  // If anything had been added to the prototype (only in the case of late/double
+  //   inheritance), add it
+  for (let key in ctor_proto_orig) {
+    ctor.prototype[key] = ctor_proto_orig[key];
+  }
 }
 
 export function isPowerOfTwo(n) {
