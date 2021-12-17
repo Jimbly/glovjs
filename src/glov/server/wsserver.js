@@ -1,6 +1,9 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
+import { isValidPlatform } from 'glov/common/enums.js';
+
 const ack = require('glov/common/ack.js');
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 const assert = require('assert');
@@ -9,10 +12,8 @@ const { logEx } = require('./log.js');
 const { max } = Math;
 const { isPacket } = require('glov/common/packet.js');
 const { packetLog, packetLogInit } = require('./packet_log.js');
-const querystring = require('querystring');
-const { ipFromRequest, isLocalHost } = require('./request_utils.js');
+const { ipFromRequest, isLocalHost, requestGetQuery } = require('./request_utils.js');
 const util = require('glov/common/util.js');
-const url = require('url');
 const wscommon = require('glov/common/wscommon.js');
 const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 const WebSocket = require('ws');
@@ -29,6 +30,10 @@ function WSClient(ws_server, socket) {
     this.user_agent = socket.handshake.headers['user-agent'];
     this.origin = socket.handshake.headers.origin;
   }
+  let query = requestGetQuery(socket.handshake);
+  this.client_plat = query.plat;
+  this.client_ver = query.ver;
+  this.client_build = query.build;
   this.handlers = ws_server.handlers; // reference, not copy!
   this.connected = true;
   this.disconnected = false;
@@ -92,7 +97,7 @@ function WSServer() {
   this.clients = Object.create(null);
   this.handlers = {};
   this.restarting = undefined;
-  this.app_ver = 0;
+  this.app_build_timestamp = 0;
   this.restart_filter = null;
   this.onMsg('ping', util.nop);
   packetLogInit(this);
@@ -138,11 +143,16 @@ WSServer.prototype.init = function (server, server_https) {
 
   // Doing my own upgrade handling to early-reject invalid protocol versions
   let onUpgrade = (req, socket, head) => {
-    let query = querystring.parse(url.parse(req.url).query);
-    if (!query.pver || String(query.pver) !== wscommon.PROTOCOL_VERSION) {
+    let query = requestGetQuery(req);
+    let plat = query.plat ?? null;
+    let ver = query.ver ?? null;
+    let versionSupport = plat !== null && ver !== null && isValidPlatform(plat) && isValidVersion(ver) ?
+      getVersionSupport(plat, ver) :
+      VersionSupport.Obsolete;
+    if (versionSupport !== VersionSupport.Supported) {
       logEx({
         ip: ipFromRequest(req),
-      }, 'info', `WS Client rejected (bad pver) from ${ipFromRequest(req)}: ${req.url}`);
+      }, 'info', `WS Client rejected (bad ver) from ${ipFromRequest(req)}: ${req.url}`);
       socket.write('HTTP/1.1 400 Invalid Protocol\r\n\r\n');
       socket.end();
       socket.destroy();
@@ -202,19 +212,22 @@ WSServer.prototype.init = function (server, server_https) {
       ua: client.user_agent,
       origin: client.origin,
       url: req.url,
+      plat: client.client_plat,
+      ver: client.client_ver,
+      build: client.client_build,
     });
 
     let cack_data = {
       id: client.client_id,
       secret: client.secret,
-      app_ver: ws_server.app_ver,
+      build: this.app_build_timestamp,
       restarting: ws_server.restarting,
     };
     ws_server.emit('cack_data', cack_data, client);
 
     client.send('cack', cack_data);
 
-    let query = querystring.parse(url.parse(req.url).query);
+    let query = requestGetQuery(req);
     let reconnect_id = Number(query.reconnect);
     if (reconnect_id) {
       // we're reconnecting an existing client, immediately disconnect the old one
@@ -290,8 +303,8 @@ WSServer.prototype.broadcast = function (msg, data) {
   return this.broadcastPacket(pak);
 };
 
-WSServer.prototype.setAppVer = function (ver) {
-  this.app_ver = ver;
+WSServer.prototype.setAppBuildTimestamp = function (ver) {
+  this.app_build_timestamp = ver;
 };
 
 export function isClient(obj) {

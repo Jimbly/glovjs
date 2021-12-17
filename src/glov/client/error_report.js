@@ -2,6 +2,8 @@
 
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
 
+import { getAPIPath } from 'glov/client/environments.js';
+
 const { fetch } = require('./fetch.js');
 const { PLATFORM } = require('./client_config.js');
 
@@ -9,11 +11,6 @@ let error_report_disabled = false;
 
 export function errorReportDisable() {
   error_report_disabled = true;
-}
-
-let api_path = '/';
-export function errorReportSetPath(path) {
-  api_path = path;
 }
 
 let error_report_details = {};
@@ -29,7 +26,7 @@ export function errorReportSetDynamicDetails(key, fn) {
   error_report_dynamic_details[key] = fn;
 }
 
-errorReportSetDetails('ver', BUILD_TIMESTAMP);
+errorReportSetDetails('build', BUILD_TIMESTAMP);
 errorReportSetDetails('sesuid', session_uid);
 errorReportSetDetails('platform', PLATFORM);
 const time_start = Date.now();
@@ -104,7 +101,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
     }
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = api_path; // base like http://foo.com/bar/ (without index.html)
+  let url = getAPIPath(); // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;

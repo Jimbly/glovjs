@@ -1,9 +1,9 @@
 const metrics = require('./metrics.js');
 const { ipFromRequest } = require('./request_utils.js');
 
-let app_version;
-export function errorReportsSetAppVer(version) {
-  app_version = version;
+let app_build_timestamp;
+export function errorReportsSetAppBuildTimestamp(version) {
+  app_build_timestamp = version;
 }
 
 export function errorReportsInit(app) {
@@ -13,7 +13,7 @@ export function errorReportsInit(app) {
     req.query.ua = req.headers['user-agent'];
     console.info('errorReport', req.query);
     res.end('OK');
-    if (app_version && req.query.ver !== app_version) {
+    if (app_build_timestamp && req.query.build !== app_build_timestamp) {
       metrics.add('client.error_report_old', 1);
     } else {
       metrics.add('client.error_report', 1);

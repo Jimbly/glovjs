@@ -20,7 +20,6 @@ const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
 const {
   errorReportDisable,
-  errorReportSetPath,
   errorReportSetTimeAccum,
   errorReportSetDetails,
   glovErrorReport,
@@ -916,7 +915,6 @@ export function startup(params) {
   safearea_elem = document.getElementById('safearea');
 
   if (params.error_report !== false) {
-    errorReportSetPath(urlhash.getAPIPath());
     window.glov_error_report = (msg, file, line, col) => {
       setTimeout(requestFrame, 1);
       return glovErrorReport(true, msg, file, line, col);

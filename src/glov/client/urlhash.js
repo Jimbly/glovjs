@@ -56,15 +56,6 @@ export function getURLPageBase() {
   return page_base;
 }
 
-let api_path;
-// Path base like http://foo.bar/api/ (with trailing slash)
-export function setAPIPath(path) {
-  api_path = path;
-}
-export function getAPIPath() {
-  return api_path || `${getURLBase()}api/`;
-}
-
 export function onChange(cb) {
   on_change.push(cb);
 }

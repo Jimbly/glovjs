@@ -808,6 +808,9 @@ export function init(channel_server_in) {
     client.crash_data = {
       addr: client.addr,
       user_agent: client.user_agent,
+      plat: client.client_plat,
+      ver: client.client_ver,
+      build: client.client_build,
     };
   });
   ws_server.on('cack_data', (cack_data) => {

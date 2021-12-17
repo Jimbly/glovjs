@@ -315,17 +315,6 @@ Texture.prototype.onLoad = function (cb) {
   }
 };
 
-let texture_base_url = '';
-export function getExternalTextureURL(url) {
-  if (!url.match(/^.{2,7}:/)) {
-    url = `${texture_base_url||urlhash.getURLBase()}${url}`;
-  }
-  return url;
-}
-export function setExternalTextureBaseURL(base_url) {
-  texture_base_url = base_url;
-}
-
 const TEX_RETRY_COUNT = 4;
 Texture.prototype.loadURL = function loadURL(url, filter) {
   let tex = this;

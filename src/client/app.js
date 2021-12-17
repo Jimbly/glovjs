@@ -13,7 +13,7 @@ window.onload = function () {
   called_once = true;
   require('glov/client/bootstrap.js');
   // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
-  if (require('glov/client/client_config.js').ENVIRONMENT === 'multiplayer') {
+  if (window.conf_env === 'multiplayer') {
     require('./multiplayer.js').main();
   } else {
     require('./main.js').main();

@@ -44,7 +44,7 @@ module.exports = {
   ],
   default_defines: {
     PLATFORM: 'web',
-    ENV: 'default',
+    ENV: '',
   },
   extra_index: [],
   bundles: [{

@@ -5,7 +5,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const { dataStoresInit } = require('./data_stores_init.js');
 const glov_exchange = require('./exchange.js');
-const { errorReportsInit, errorReportsSetAppVer } = require('./error_reports.js');
+const { errorReportsInit, errorReportsSetAppBuildTimestamp } = require('./error_reports.js');
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const { idmapperWorkerInit } = require('./idmapper_worker.js');
@@ -34,8 +34,8 @@ function displayStatus() {
   }
 }
 
-let last_version = {};
-function updateVersion(base_name, is_startup) {
+let last_build_timestamp = {};
+function updateBuildTimestamp(base_name, is_startup) {
   let version_file_name = path.join(__dirname, `../../client/${base_name}.ver.json`);
   fs.readFile(version_file_name, function (err, data) {
     if (err) {
@@ -51,15 +51,15 @@ function updateVersion(base_name, is_startup) {
     if (!obj || !obj.ver) {
       return;
     }
-    let old_version = last_version[base_name];
-    if (old_version === obj.ver) {
+    let old_timestamp = last_build_timestamp[base_name];
+    if (old_timestamp === obj.ver) {
       return;
     }
-    console.info(`Version for "${base_name}"${old_version ? ' changed to' : ''}: ${obj.ver}`);
-    last_version[base_name] = obj.ver;
+    console.info(`Build timestamp for "${base_name}"${old_timestamp ? ' changed to' : ''}: ${obj.ver}`);
+    last_build_timestamp[base_name] = obj.ver;
     if (base_name === 'app') {
-      errorReportsSetAppVer(obj.ver);
-      ws_server.setAppVer(obj.ver);
+      errorReportsSetAppBuildTimestamp(obj.ver);
+      ws_server.setAppBuildTimestamp(obj.ver);
       if (!is_startup) {
         // Do a broadcast message so people get a few seconds of warning
         ws_server.broadcast('chat_broadcast', {
@@ -68,11 +68,11 @@ function updateVersion(base_name, is_startup) {
         });
         if (argv.dev) {
           // immediate
-          ws_server.broadcast('app_ver', last_version.app);
+          ws_server.broadcast('build', last_build_timestamp.app);
         } else {
           // delay by 15 seconds, the server may also be about to be restarted
           setTimeout(function () {
-            ws_server.broadcast('app_ver', last_version.app);
+            ws_server.broadcast('build', last_build_timestamp.app);
           }, 15000);
         }
       }
@@ -83,13 +83,10 @@ function updateVersion(base_name, is_startup) {
 export function startup(params) {
   log.startup();
 
-  let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https, pver } = params;
+  let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https } = params;
   assert(app);
   assert(server);
 
-  if (pver) {
-    wscommon.PROTOCOL_VERSION = pver;
-  }
   if (!data_stores) {
     data_stores = {};
   }
@@ -169,7 +166,7 @@ export function startup(params) {
           let m = filename.match(/(.*)\.ver\.json$/);
           if (m) {
             let file_base_name = m[1]; // e.g. 'app' or 'worker'
-            updateVersion(file_base_name);
+            updateBuildTimestamp(file_base_name);
           }
         }
       } else if (msg.type === 'gbstate') {
@@ -190,7 +187,7 @@ export function startup(params) {
     }
     resp_func();
   });
-  updateVersion('app', true);
+  updateBuildTimestamp('app', true);
 }
 
 export function panic(...message) {

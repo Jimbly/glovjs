@@ -13,7 +13,6 @@ const { isPacket, packetCreate, packetFromBuffer } = packet;
 
 export const CONNECTION_TIMEOUT = 60000;
 export const PING_TIME = CONNECTION_TIMEOUT / 2;
-exports.PROTOCOL_VERSION = '1';
 
 // Rough estimate, if over, will prevent resizing the packet
 const PAK_HEADER_SIZE = 1 + // flags
