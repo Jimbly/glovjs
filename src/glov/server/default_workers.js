@@ -95,30 +95,27 @@ export class DefaultUserWorker extends ChannelWorker {
 
   migrateFriendsList(legacy_friends) {
     let new_friends = {};
-    let is_legacy_fbinstant_user = this.user_id.startsWith('fb$');
-
     for (let user_id in legacy_friends) {
-      // Two users can only be friends through FB instant if both are FB Instant users
-      let fbinstant_friend_id = is_legacy_fbinstant_user && user_id.startsWith('fb$') && user_id.substr(3);
-
+      let fbinstant_friend_id = user_id.startsWith('fb$') && user_id.substr(3);
       let status = legacy_friends[user_id];
       let friend;
       switch (status) {
         case FriendStatus.Added:
         case FriendStatus.Blocked:
           friend = createFriendData(status);
-          if (fbinstant_friend_id) {
-            setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
-          }
+          // Note: To prevent possible non FB Instant friends to be marked as FB friends,
+          // the FB Instant ids will only be added when the client sends the FB Instant friends mismatches.
           break;
         case FriendStatus.AddedAuto:
         case FriendStatus.Removed:
           if (fbinstant_friend_id) {
             friend = createFriendData(status);
+            // Note: If the friend status is added-auto or removed, it must have been added through FB Instant,
+            // so we can use its FB Instant id.
             setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
           } else {
-            // Should never happen
-            this.error(`Migrating friends of ${this.user_id}, friend ${user_id} should never have status ${status}!`);
+            // Unknown FB Instant friend id, so remove it and let it be re-added by the client.
+            // This may cause occasional cases of manually removed friends to reappear as added-auto.
             friend = undefined;
           }
           break;

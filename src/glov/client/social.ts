@@ -11,6 +11,7 @@ import {
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
 } from 'glov/common/enums.js';
+import { ErrorCallback } from 'glov/common/types.js';
 import { ExternalUserInfo } from './external_user_info';
 import { PLATFORM_FBINSTANT } from 'glov/client/client_config.js';
 import { cmd_parse } from './cmds.js';
@@ -22,9 +23,7 @@ const { netDisconnected } = net;
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
 
-// TODO: Move this to a file with common definitions
-export declare type ErrorCallback<T = unknown, E = unknown> = (err: E, value?: T) => void;
-
+// TODO: Move this the proper location
 declare interface Presence { active: number, state: unknown, payload: unknown }
 declare type FriendCmdResponse = { msg: string, friend: FriendData };
 
@@ -50,14 +49,14 @@ export function friendIsBlocked(user_id: string): boolean {
 
 function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<string>): void {
   user_id = user_id.toLowerCase();
-  let requesting_user_id = net.subs.logged_in_username;
+  let requesting_user_id = net.subs.loggedIn();
   if (netDisconnected()) {
     return void cb('ERR_DISCONNECTED');
   }
   net.subs.getMyUserChannel().cmdParse(`${cmd} ${user_id}`, function (err: string, resp: FriendCmdResponse) {
     if (err) {
       return void cb(err);
-    } else if (requesting_user_id !== net.subs.logged_in_username || !friend_list) {
+    } else if (requesting_user_id !== net.subs.loggedIn() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return void cb('Invalid data');
     }
@@ -205,7 +204,7 @@ export function getExternalFriendInfos(user_id: string): Record<string, External
 }
 
 export function getExternalUserInfos(user_id: string): Record<string, ExternalUserInfo> | undefined {
-  if (user_id === net.subs.logged_in_username) {
+  if (user_id === net.subs.loggedIn()) {
     return getExternalCurrentUserInfos();
   } else {
     return getExternalFriendInfos(user_id);
@@ -225,7 +224,7 @@ function updateExternalFriendsOnServer(provider: string, to_add: ExternalUserInf
     return;
   }
 
-  let requesting_user_id = net.subs.logged_in_username;
+  let requesting_user_id = net.subs.loggedIn();
   let pak = net.subs.getMyUserChannel().pak('friend_auto_update');
   pak.writeAnsiString(provider);
   for (let ii = 0; ii < to_add.length; ++ii) {
@@ -237,7 +236,7 @@ function updateExternalFriendsOnServer(provider: string, to_add: ExternalUserInf
   }
   pak.writeAnsiString('');
   pak.send(function (err: string, resp: Record<string, FriendData>) {
-    if (requesting_user_id !== net.subs.logged_in_username || !friend_list) {
+    if (requesting_user_id !== net.subs.loggedIn() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err) {
@@ -319,9 +318,9 @@ function setExternalFriends(provider: string, provider_friends: ExternalUserInfo
 
 function requestExternalCurrentUser(provider: string,
   request_func: (cb: ErrorCallback<ExternalUserInfo>) => void): void {
-  let requesting_user_id = net.subs.logged_in_username;
+  let requesting_user_id = net.subs.loggedIn();
   request_func((err, user_info) => {
-    if (requesting_user_id !== net.subs.logged_in_username) {
+    if (requesting_user_id !== net.subs.loggedIn()) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err || !user_info) {
@@ -335,9 +334,9 @@ function requestExternalCurrentUser(provider: string,
 
 function requestExternalFriends(provider: string,
   request_func: (cb: ErrorCallback<ExternalUserInfo[]>) => void): void {
-  let requesting_user_id = net.subs.logged_in_username;
+  let requesting_user_id = net.subs.loggedIn();
   request_func((err, friends) => {
-    if (requesting_user_id !== net.subs.logged_in_username || !friend_list) {
+    if (requesting_user_id !== net.subs.loggedIn() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err || !friends) {
@@ -407,14 +406,14 @@ export function registerExternalUserInfoProvider(
 export function socialInit(): void {
   net.subs.on('login', function () {
     let user_channel = net.subs.getMyUserChannel();
-    let user_id = net.subs.logged_in_username;
+    let user_id = net.subs.loggedIn();
     richPresenceSend();
     friend_list = null;
     if (netDisconnected()) {
       return;
     }
     user_channel.pak('friend_list').send((err: unknown, resp: FriendsData) => {
-      if (err || user_id !== net.subs.logged_in_username) {
+      if (err || user_id !== net.subs.loggedIn()) {
         // disconnected, etc
         return;
       }

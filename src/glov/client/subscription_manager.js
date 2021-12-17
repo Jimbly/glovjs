@@ -10,14 +10,17 @@ const {
   chunkedReceiverFreeFile,
   chunkedReceiverGetFile,
 } = require('glov/common/chunked_send.js');
+import { PLATFORM_FBINSTANT } from 'glov/client/client_config.js';
 const dot_prop = require('dot-prop');
 const EventEmitter = require('glov/common/tiny-events.js');
-const { fbGetLoginInfo, fbGetAppScopedUserId } = require('./fbinstant.js');
+const { fbGetLoginInfo } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('glov/common/md5.js');
+const { netDisconnected } = require('./net.js');
 const { isPacket } = require('glov/common/packet.js');
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const util = require('glov/common/util.js');
+const { errorString } = util;
 const walltime = require('./walltime.js');
 
 // relevant events:
@@ -262,23 +265,31 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     // already have a login in-flight, it should error before we try again
   } else if (this.was_logged_in) {
     // Try to re-connect to existing login
-    this.loginInternal(this.login_credentials, function (err) {
+    this.loginInternal(this.login_credentials, (err) => {
       if (err && err === 'ERR_FAILALL_DISCONNECT') {
         // we got disconnected while trying to log in, we'll retry after reconnection
       } else if (err) {
         // Error logging in upon re-connection, no good way to handle this?
         // TODO: Show some message to the user and prompt them to refresh?  Stay in "disconnected" state?
-        assert(false, err);
+        let credentials_str = this.login_credentials && this.login_credentials.password ?
+          'user_id, password' :
+          JSON.stringify(this.login_credentials);
+        assert(false, `Login failed for ${credentials_str}: ${errorString(err)}`);
       } else {
         resub();
       }
     });
   } else if (!this.no_auto_login) {
     // Try auto-login
-    if (window.FBInstant) {
-      this.loginFacebook(function () {
+    let auto_login_enabled = PLATFORM_FBINSTANT;
+
+    if (auto_login_enabled) {
+      let login_cb = () => {
         // ignore error on auto-login
-      });
+      };
+      if (PLATFORM_FBINSTANT) {
+        this.loginFacebook(login_cb);
+      }
     } else if (local_storage.get('name') && local_storage.get('password')) {
       this.login(local_storage.get('name'), local_storage.get('password'), function () {
         // ignore error on auto-login
@@ -427,7 +438,7 @@ SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
   }
   if (do_subscribe) {
     channel.subscriptions++;
-    if (this.client.connected && channel.subscriptions === 1) {
+    if (!netDisconnected() && channel.subscriptions === 1) {
       channel.subscribe_failed = false;
       this.client.send('subscribe', channel_id, function (err) {
         if (err) {
@@ -465,7 +476,7 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   if (!channel.subscriptions) {
     channel.got_subscribe = false;
   }
-  if (this.client.connected && !channel.subscriptions && !channel.subscribe_failed) {
+  if (!netDisconnected() && !channel.subscriptions && !channel.subscribe_failed) {
     this.client.send('unsubscribe', channel_id);
   }
 };
@@ -527,15 +538,10 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
       if (err) {
         return void this.handleLoginResponse(resp_func, err);
       }
-
-      fbGetAppScopedUserId((err, asid) => {
-        if (err) {
-          return void this.handleLoginResponse(resp_func, err);
-        }
-
-        result.asid = asid;
-        this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
-      });
+      if (!this.client.connected) {
+        return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
+      }
+      this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
     });
   } else {
     this.client.send('login', {

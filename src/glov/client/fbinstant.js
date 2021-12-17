@@ -5,15 +5,18 @@ const { registerExternalUserInfoProvider } = require('./social.js');
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
 const { ID_PROVIDER_FB_INSTANT } = require('glov/common/enums.js');
-const { callEach } = require('glov/common/util.js');
+const { callEach, eatPossiblePromise } = require('glov/common/util.js');
 
-export let ready = false;
 let onreadycallbacks = [];
 export function onready(callback) {
-  if (ready) {
+  if (!onreadycallbacks) {
     return void callback();
   }
   onreadycallbacks.push(callback);
+}
+
+export function fbInstantIsReady() {
+  return onreadycallbacks === null;
 }
 
 let hasSubscribedAlready = false;
@@ -146,13 +149,15 @@ function fbInstantGetFriends(cb) {
   onready(() => {
     window.FBInstant.player.getConnectedPlayersAsync().then((players) => {
       if (cb) {
-        cb(null, players?.map(mapPlayerToExternalUserInfo));
+        let local_cb = cb;
         cb = null;
+        local_cb(null, players?.map(mapPlayerToExternalUserInfo));
       }
     }).catch((err) => {
       if (cb) {
-        cb(err);
+        let local_cb = cb;
         cb = null;
+        local_cb(err);
       }
     });
   });
@@ -186,15 +191,17 @@ export function canShowLiveStreamOverlay() {
   return window.FBInstant && can_get_live_streams_overlay;
 }
 
-export function init() {
+export function fbInstantInit() {
   if (!window.FBInstant) {
     return;
   }
 
+  registerExternalUserInfoProvider(ID_PROVIDER_FB_INSTANT, fbInstantGetPlayer, fbInstantGetFriends);
+
   let left = 1;
   let fake_load_interval = setInterval(function () {
     left *= 0.9;
-    FBInstant.setLoadingProgress(100-(left*100)>>0);
+    eatPossiblePromise(FBInstant.setLoadingProgress(100-(left*100)>>0));
   },100);
 
   FBInstant.initializeAsync().then(function () {
@@ -207,16 +214,13 @@ export function init() {
     }
 
     clearInterval(fake_load_interval);
-    ready = true;
     FBInstant.startGameAsync().then(function () {
-      registerExternalUserInfoProvider(ID_PROVIDER_FB_INSTANT, fbInstantGetPlayer, fbInstantGetFriends);
-
-      onreadycallbacks.forEach((e) => e());
-      onreadycallbacks = [];
+      callEach(onreadycallbacks, onreadycallbacks = null);
 
       console.log('Initializing FBInstant');
       initSubscribe(function () {
         console.log('All done initing FBInstant');
+
         window.FBInstant.community.canFollowOfficialPageAsync().then(function (state) {
           can_follow_official_page = state;
         }).catch(function (err) {

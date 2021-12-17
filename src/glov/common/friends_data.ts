@@ -1,15 +1,8 @@
-const {
-  FRIEND_ADDED,
-  FRIEND_ADDED_AUTO,
-  FRIEND_REMOVED,
-  FRIEND_BLOCKED,
-} = require('./enums.js');
-
 export enum FriendStatus {
-  Added = FRIEND_ADDED,
-  AddedAuto = FRIEND_ADDED_AUTO,
-  Removed = FRIEND_REMOVED,
-  Blocked = FRIEND_BLOCKED,
+  Added = 1,
+  AddedAuto = 2,
+  Removed = 3,
+  Blocked = 4,
 }
 
 export interface FriendData {

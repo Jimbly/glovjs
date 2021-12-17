@@ -446,7 +446,9 @@ function checkResize() {
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
     last_body_height = view_h;
-    document.body.style.height = `${view_h}px`;
+    if (document.body) {
+      document.body.style.height = `${view_h}px`;
+    }
   }
   let rect = canvas.getBoundingClientRect();
   let new_width = round(rect.width * dom_to_canvas_ratio) || 1;
@@ -754,8 +756,8 @@ function tick(timestamp) {
     set3DRenderResolution(render_width, render_height);
     effectsPassAdd();
   } else {
-    width_3d = round(width * settings.render_scale);
-    height_3d = round(height * settings.render_scale);
+    width_3d = max(1, round(width * settings.render_scale));
+    height_3d = max(1, round(height * settings.render_scale));
     if (width_3d !== width) {
       want_render_scale_3d_this_frame = true;
     }

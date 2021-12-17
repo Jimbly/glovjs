@@ -16,7 +16,7 @@ const { regex_valid_username } = require('./default_workers.js');
 const { logSubscribeClient, logUnsubscribeClient } = require('./log.js');
 const fs = require('fs');
 const { isPacket } = require('glov/common/packet.js');
-const { logdata } = require('glov/common/util.js');
+const { logdata, merge } = require('glov/common/util.js');
 const { isProfane, profanityCommonStartup } = require('glov/common/words/profanity_common.js');
 const metrics = require('./metrics.js');
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
@@ -661,7 +661,7 @@ function onLoginApple(client, data, resp_func) {
   appleSignInValidateToken(client, identity_token, (err, result) => {
     if (err) {
       client_channel.logCtx('info', `login_${provider} auth failed`, identity_token, apple_id);
-      return void resp_func('Auth Failed');
+      return void resp_func('Apple Auth Failed - Invalid token');
     } else if (!client.connected) {
       return void resp_func('ERR_DISCONNECTED');
     }
@@ -737,9 +737,8 @@ function onRandomName(client, data, resp_func) {
 
 function onLog(client, data, resp_func) {
   let client_channel = client.client_channel;
-  data.user_id = client_channel.ids.user_id;
-  data.display_name = client_channel.ids.display_name;
-  data.ip = client.addr;
+  merge(data, client_channel.ids);
+  merge(data, client.crash_data);
   client.client_channel.logCtx('info', 'server_log', data);
   resp_func();
 }
