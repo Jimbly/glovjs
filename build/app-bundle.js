@@ -79,7 +79,18 @@ function bundlePair(opts) {
   // deps_source: 'source',
   // is_worker: false,
   // target: 'dev:client',
-  let { source, entrypoint, out, deps, deps_source, is_worker, target, deps_out, post_bundle_cb } = opts;
+  let {
+    source,
+    entrypoint,
+    out,
+    deps,
+    deps_source,
+    is_worker,
+    target,
+    deps_out,
+    post_bundle_cb,
+    bundle_uglify_opts,
+  } = opts;
   let subtask_name = `bundle_${path.basename(entrypoint)}`;
 
   let tasks = [];
@@ -87,7 +98,7 @@ function bundlePair(opts) {
   let do_final_bundle = is_worker && deps;
 
   let entrypoint_name = `${subtask_name}_entrypoint`;
-  if (!do_final_bundle) {
+  if (!do_final_bundle && !bundle_uglify_opts) {
     tasks.push(entrypoint_name);
   }
   let entrypoint_subbundle_opts = {
@@ -99,9 +110,23 @@ function bundlePair(opts) {
   };
   gb.task({
     name: entrypoint_name,
-    target: do_final_bundle ? undefined : target,
+    target: (do_final_bundle || bundle_uglify_opts) ? undefined : target,
     ...browserify(entrypoint_subbundle_opts)
   });
+
+  if (bundle_uglify_opts) {
+    let mangle_name = `${entrypoint_name}_mangle`;
+    gb.task({
+      name: mangle_name,
+      input: [
+        `${entrypoint_name}:${out}`,
+      ],
+      target: do_final_bundle ? undefined : target,
+      ...uglify({ inline: false }, bundle_uglify_opts),
+    });
+    tasks.push(mangle_name);
+    entrypoint_name = mangle_name;
+  }
 
   if (deps) {
     if (!deps_out) {

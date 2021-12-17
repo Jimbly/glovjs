@@ -38,6 +38,15 @@ gb.configure({
   log_level: gb.LOG_INFO,
 });
 
+// Gets applied to the entire bundle
+const max_mangle = argv['max-mangle'];
+const prod_uglify_opts = {
+  compress: false,
+  keep_fnames: !max_mangle,
+  mangle: { toplevel: true },
+  output: { semicolons: false },
+};
+
 function copy(job, done) {
   job.out(job.getFile());
   done();
@@ -288,6 +297,7 @@ function registerBundle(param) {
     target: 'dev',
     task_accum: bundle_tasks,
     do_version,
+    bundle_uglify_opts: argv['dev-mangle'] ? prod_uglify_opts : null,
   });
 }
 config.bundles.forEach(registerBundle);
@@ -475,12 +485,7 @@ if (argv['prod-uglify'] === false) {
     input: [
       ...bundle_tasks.map(addStarStarJS),
     ],
-    ...uglify({ inline: false }, {
-      compress: false,
-      keep_fnames: true,
-      mangle: { toplevel: true },
-      output: { semicolons: false },
-    }),
+    ...uglify({ inline: false }, prod_uglify_opts),
   });
 }
 
