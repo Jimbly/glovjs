@@ -93,7 +93,6 @@ function WSServer() {
   this.handlers = {};
   this.restarting = undefined;
   this.app_ver = 0;
-  this.app_data = undefined;
   this.restart_filter = null;
   this.onMsg('ping', util.nop);
   packetLogInit(this);
@@ -210,7 +209,6 @@ WSServer.prototype.init = function (server, server_https) {
       secret: client.secret,
       app_ver: ws_server.app_ver,
       restarting: ws_server.restarting,
-      app_data: ws_server.app_data, // TODO: Change callers to use on('cack_data') instead of setAppData
     };
     ws_server.emit('cack_data', cack_data, client);
 
@@ -294,10 +292,6 @@ WSServer.prototype.broadcast = function (msg, data) {
 
 WSServer.prototype.setAppVer = function (ver) {
   this.app_ver = ver;
-};
-
-WSServer.prototype.setAppData = function (data) {
-  this.app_data = data;
 };
 
 export function isClient(obj) {

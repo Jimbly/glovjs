@@ -169,6 +169,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.first_connect = true;
   this.server_time = 0;
   this.server_time_interp = 0;
+  this.cack_data = {};
   client.onMsg('connect', this.handleConnect.bind(this));
   client.onMsg('disconnect', this.handleDisconnect.bind(this));
   client.onMsg('channel_msg', this.handleChannelMessage.bind(this));
@@ -231,7 +232,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     reconnect = true;
   }
   this.restarting = Boolean(data.restarting);
-  this.app_data = data.app_data;
+  this.cack_data = data;
   walltime.sync(data.time);
 
   if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
