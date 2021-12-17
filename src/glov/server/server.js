@@ -108,7 +108,9 @@ export function startup(params) {
   if (argv.dev) {
     console.log('PacketDebug: ON');
     packet.default_flags = packet.PACKET_DEBUG;
-    netDelaySet();
+    if (argv['net-delay'] !== false) {
+      netDelaySet();
+    }
   }
   if (server_config.log && server_config.log.load_log) {
     channel_server.load_log = true;

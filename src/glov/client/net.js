@@ -18,7 +18,9 @@ export function init(params) {
   if (String(document.location).match(/^https?:\/\/localhost/)) {
     console.log('PacketDebug: ON');
     packet.default_flags |= packet.PACKET_DEBUG;
-    wscommon.netDelaySet();
+    if (!params.no_net_delay) {
+      wscommon.netDelaySet();
+    }
   }
   client = new WSClient(params.path);
   subs = subscription_manager.create(client, params.cmd_parse);
