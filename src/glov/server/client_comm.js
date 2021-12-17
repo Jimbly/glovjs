@@ -810,6 +810,9 @@ export function init(channel_server_in) {
       user_agent: client.user_agent,
     };
   });
+  ws_server.on('cack_data', (cack_data) => {
+    cack_data.time = Date.now();
+  });
   ws_server.on('disconnect', onClientDisconnect);
   ws_server.onMsg('subscribe', onSubscribe);
   ws_server.onMsg('unsubscribe', onUnSubscribe);

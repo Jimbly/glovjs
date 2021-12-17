@@ -10,7 +10,6 @@ const { fetch, ERR_CONNECTION } = require('./fetch.js');
 const { min, random } = Math;
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
-const walltime = require('./walltime.js');
 const wscommon = require('glov/common/wscommon.js');
 const { wsHandleMessage } = wscommon;
 const { PLATFORM_WEB } = require('glov/client/client_config.js');
@@ -110,7 +109,6 @@ WSClient.prototype.onAppVer = function (ver) {
 
 WSClient.prototype.onConnectAck = function (data, resp_func) {
   let client = this;
-  walltime.sync(data.time);
   client.connected = true;
   client.connect_error = null;
   client.disconnected = false;
@@ -123,11 +121,8 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   }
   // Fire subscription_manager connect handler
   assert(client.handlers.connect);
-  client.handlers.connect(client, {
-    client_id: client.id,
-    restarting: data.restarting,
-    app_data: data.app_data,
-  });
+  data.client_id = client.id;
+  client.handlers.connect(client, data);
   resp_func();
 };
 

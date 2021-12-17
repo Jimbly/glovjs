@@ -205,14 +205,16 @@ WSServer.prototype.init = function (server, server_https) {
       url: req.url,
     });
 
-    client.send('cack', {
+    let cack_data = {
       id: client.client_id,
       secret: client.secret,
-      app_ver: this.app_ver,
-      time: Date.now(),
+      app_ver: ws_server.app_ver,
       restarting: ws_server.restarting,
-      app_data: ws_server.app_data,
-    });
+      app_data: ws_server.app_data, // TODO: Change callers to use on('cack_data') instead of setAppData
+    };
+    ws_server.emit('cack_data', cack_data, client);
+
+    client.send('cack', cack_data);
 
     let query = querystring.parse(url.parse(req.url).query);
     let reconnect_id = Number(query.reconnect);

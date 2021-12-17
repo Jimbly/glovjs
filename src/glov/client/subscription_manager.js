@@ -232,6 +232,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
   }
   this.restarting = Boolean(data.restarting);
   this.app_data = data.app_data;
+  walltime.sync(data.time);
 
   if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
     // we got disconnected while trying to log in, we'll retry after reconnection
@@ -347,6 +348,8 @@ SubscriptionManager.prototype.handleServerTime = function (pak) {
   walltime.sync(pak.readInt());
 };
 
+// DEPRECATED: Not actually a useful unit of time, if your client worker is on a
+//   different process than a particular game worker.
 SubscriptionManager.prototype.getServerTime = function () {
   // Interpolated server time as of start of last tick
   return this.server_time_interp;
