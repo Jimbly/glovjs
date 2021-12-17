@@ -5,6 +5,7 @@
 /* global navigator */
 
 const assert = require('assert');
+const { is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
@@ -291,6 +292,15 @@ function onUserInput() {
   last_input_time = Date.now();
 }
 
+function releaseAllKeysDown(evt) {
+  for (let code in key_state_new) {
+    let ks = key_state_new[code];
+    if (ks.state === DOWN) {
+      ks.keyUp(evt);
+    }
+  }
+}
+
 function onKeyUp(event) {
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
@@ -306,7 +316,12 @@ function onKeyUp(event) {
 
   let ks = key_state_new[code];
   if (ks && ks.state === DOWN) {
-    ks.keyUp(event);
+    if (is_mac_osx && event.key === 'Meta') {
+      // We don't get keyUp events for any keys released while CMD is held, so we must assume all are released
+      releaseAllKeysDown(event);
+    } else {
+      ks.keyUp(event);
+    }
   }
 
   in_event.handle('keyup', event);
@@ -620,12 +635,7 @@ function onTouchChange(event) {
 
 function onBlurOrFocus(evt) {
   protectUnload(false);
-  for (let code in key_state_new) {
-    let ks = key_state_new[code];
-    if (ks.state === DOWN) {
-      ks.keyUp(evt);
-    }
-  }
+  releaseAllKeysDown(evt);
 }
 
 let ANALOG_MAP = {};

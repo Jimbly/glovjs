@@ -1,4 +1,5 @@
 let ua = window.navigator.userAgent;
+export let is_mac_osx = ua.match(/Mac OS X/);
 export let is_ios = !window.MSStream && ua.match(/iPad|iPhone|iPod/);
 export let is_windows_phone = ua.match(/windows phone/i);
 export let is_android = !is_windows_phone && ua.match(/android/i);
