@@ -22,6 +22,7 @@ const dot_prop = require('dot-prop');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const { logEx } = require('./log.js');
 const { min } = Math;
+const { isPacket } = require('glov/common/packet.js');
 const { packetLogInit, packetLog } = require('./packet_log.js');
 const { callEach, empty, logdata } = require('glov/common/util.js');
 
@@ -962,14 +963,24 @@ export class ChannelWorker {
 
   // source has at least { channel_id, type, id }, possibly also .user_id and .display_name if type === 'client'
   channelMessage(source, msg, data, resp_func) {
+    function onError(err) {
+      if (isPacket(data)) {
+        data.pool();
+      }
+      resp_func(err);
+    }
     if (source.direct) {
       // Ensure this is allowed directly from clients
       if (!this.allow_client_direct[msg]) {
-        return void resp_func(`ERR_CLIENT_DIRECT (${msg})`);
+        if (!this.handlers[msg]) {
+          return void onError(`No handler registered for '${msg}'`);
+        } else {
+          return void onError(`ERR_CLIENT_DIRECT (${msg})`);
+        }
       }
       // Ensure the client was allowed to subscribe to this worker
       if (!this.subscribers[source.channel_id]) {
-        return void resp_func('ERR_NOT_SUBSCRIBED');
+        return void onError('ERR_NOT_SUBSCRIBED');
       }
     }
     let had_handler = false;
@@ -983,12 +994,12 @@ export class ChannelWorker {
     } else if (this.onUnhandledMessage) {
       this.onUnhandledMessage(source, msg, data, resp_func);
     } else {
-      // No use handler for this message
+      // No user handler for this message
       if (had_handler) {
         // But, we had a filter (probably something internal) that dealt with it, silently continue;
-        resp_func();
+        onError();
       } else {
-        resp_func(`No handler registered for '${msg}'`);
+        onError(`No handler registered for '${msg}'`);
       }
     }
   }
