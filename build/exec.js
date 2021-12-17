@@ -101,22 +101,25 @@ module.exports = function exec(opts) {
             }
           };
         }
+
+        let is_done = false;
         proc.on('close', guard(function (code) {
-          gb.warn(`Sub-process "${opts.cmd}" (PID ${proc.pid}) exited with code=${code}`);
+          gb[opts.await ? 'info' : 'warn'](`Sub-process "${opts.cmd}" (PID ${proc.pid}) exited with code=${code}`);
+          if (!is_done) {
+            is_done = true;
+            done();
+          }
           setProc(null);
         }));
-
-        // Fire done() immediately if we have a PID, otherwise wait for the error
-        //   event that must be coming.
-        let is_done = false;
         proc.on('error', guard(function (err) {
           if (!is_done) {
             is_done = true;
             done(err);
           }
         }));
-        if (proc.pid && !is_done) {
-          // spawned successfully
+        if (!opts.await && proc.pid && !is_done) {
+          // Spawned successfully - Fire done() immediately if we have a PID,
+          //   otherwise wait for the error or close events that must be coming.
           is_done = true;
           done();
         }
