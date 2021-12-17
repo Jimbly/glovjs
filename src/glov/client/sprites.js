@@ -507,7 +507,7 @@ function bufferSpriteData(data) {
   sprite_buffer[index + 31] = v1;
 }
 
-export function draw() {
+function drawSetup() {
   if (engine.defines.NOSPRITES) {
     sprite_queue.length = 0;
   }
@@ -537,51 +537,75 @@ export function draw() {
   assert.equal(sprite_buffer_idx, 0);
   assert.equal(sprite_buffer_batch_start, 0);
   assert.equal(batches.length, 0);
-  for (let ii = 0; ii < sprite_queue.length; ++ii) {
-    let elem = sprite_queue[ii];
-    if (elem.fn) {
-      commitAndFlush();
-      batch_state = null;
-      elem.fn();
-      last_bound_shader = -1;
-      last_blend_mode = -1;
-      assert.equal(sprite_buffer_idx, 0);
-      assert.equal(sprite_buffer_batch_start, 0);
-      assert.equal(batches.length, 0);
+}
 
-      clip_space[0] = 2 / engine.viewport[2];
-      clip_space[1] = -2 / engine.viewport[3];
-    } else {
-      if (!batch_state ||
-        diffTextures(elem.texs, batch_state.texs) ||
-        elem.shader !== batch_state.shader ||
-        elem.shader_params !== batch_state.shader_params ||
-        elem.blend !== batch_state.blend
-      ) {
-        commit();
-        batch_state = elem;
-      }
-      if (sprite_buffer_idx + 4 > sprite_buffer_len) {
-        commitAndFlush();
-        // batch_state left alone
-        if (sprite_buffer_len !== MAX_VERT_COUNT) {
-          let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT);
-          sprite_buffer_len = new_length;
-          sprite_buffer = new Float32Array(new_length * 8);
-        }
-      }
+function drawElem(elem) {
+  if (elem.fn) {
+    commitAndFlush();
+    batch_state = null;
+    elem.fn();
+    last_bound_shader = -1;
+    last_blend_mode = -1;
+    assert.equal(sprite_buffer_idx, 0);
+    assert.equal(sprite_buffer_batch_start, 0);
+    assert.equal(batches.length, 0);
 
-      bufferSpriteData(elem.data);
-      sprite_freelist.push(elem);
+    clip_space[0] = 2 / engine.viewport[2];
+    clip_space[1] = -2 / engine.viewport[3];
+  } else {
+    if (!batch_state ||
+      diffTextures(elem.texs, batch_state.texs) ||
+      elem.shader !== batch_state.shader ||
+      elem.shader_params !== batch_state.shader_params ||
+      elem.blend !== batch_state.blend
+    ) {
+      commit();
+      batch_state = elem;
     }
-  }
-  commitAndFlush();
+    if (sprite_buffer_idx + 4 > sprite_buffer_len) {
+      commitAndFlush();
+      // batch_state left alone
+      if (sprite_buffer_len !== MAX_VERT_COUNT) {
+        let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT);
+        sprite_buffer_len = new_length;
+        sprite_buffer = new Float32Array(new_length * 8);
+      }
+    }
 
-  sprite_queue.length = 0;
+    bufferSpriteData(elem.data);
+    sprite_freelist.push(elem);
+  }
+}
+
+function finishDraw() {
+  commitAndFlush();
   if (last_blend_mode !== BLEND_ALPHA) {
     // always reset to this
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
+}
+
+export function draw() {
+  drawSetup();
+  for (let ii = 0; ii < sprite_queue.length; ++ii) {
+    let elem = sprite_queue[ii];
+    drawElem(elem);
+  }
+  sprite_queue.length = 0;
+  finishDraw();
+}
+
+export function drawPartial(z) {
+  drawSetup();
+  for (let ii = 0; ii < sprite_queue.length; ++ii) {
+    let elem = sprite_queue[ii];
+    if (elem.z > z) {
+      sprite_queue = sprite_queue.slice(ii);
+      break;
+    }
+    drawElem(elem);
+  }
+  finishDraw();
 }
 
 export function buildRects(ws, hs, tex) {
