@@ -5,6 +5,7 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const geom = require('./geom.js');
+const { getStringFromLocalizable } = require('./localization.js');
 const { floor, max, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
@@ -324,6 +325,8 @@ GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
 };
 
 GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w, h, text) {
+  text = getStringFromLocalizable(text);
+
   if (align & ALIGN.HWRAP) {
     return this.drawSizedAlignedWrapped(style, _x, _y, z, size, align & ~ALIGN.HWRAP, w, h, text);
   }
@@ -384,6 +387,7 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
 };
 
 GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, align, w, h, text) {
+  text = getStringFromLocalizable(text);
   let indent = 0;
   assert(w > 0);
   this.applyStyle(style);
@@ -508,6 +512,8 @@ GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {
 };
 
 GlovFont.prototype.getStringWidth = function (style, x_size, text) {
+  text = getStringFromLocalizable(text);
+
   this.applyStyle(style);
   let ret=0;
   let xsc = x_size / this.font_info.font_size;
@@ -524,6 +530,7 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
 
 // word_cb(x0, int linenum, const char *word, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits, word_cb) {
+  text = getStringFromLocalizable(text);
   assert(typeof align_bits !== 'function'); // Old API had one less parameter
   let len = text.length;
   let s = 0;
@@ -639,6 +646,7 @@ GlovFont.prototype.calcXAdvance = function (xsc) {
 // Main implementation
 
 GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
+  text = getStringFromLocalizable(text);
   let x = _x;
   assert(isFinite(x));
   assert(isFinite(y));

@@ -98,3 +98,9 @@ if (!Object.values) {
     return Object.keys(obj).map((k) => obj[k]);
   };
 }
+
+if (!Math.sign) {
+  Math.sign = function sign(a) {
+    return a < 0 ? -1 : a > 0 ? 1 : 0;
+  };
+}

@@ -18,6 +18,8 @@
     "isolatedModules": true,
     // Import non-ES modules as default imports.
     "esModuleInterop": true,
+    // Allows importing modules with a `.json` extension.
+    "resolveJsonModule": true,
     // Base directory to resolve non-absolute module names
     "baseUrl": ".",
     // Possibly useful, but doing resolution in `typescript.js` instead to avoid cache misses

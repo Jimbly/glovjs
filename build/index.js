@@ -340,7 +340,7 @@ gb.task({
 
 gb.task({
   name: 'check_typescript',
-  input: config.all_js_files,
+  input: [...config.all_js_files, ...config.client_json_files, ...config.server_json_files],
   ...typescript({
     config_path: 'tsconfig.json',
   }),

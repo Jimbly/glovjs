@@ -30,6 +30,7 @@ const glov_font = require('./font.js');
 const glov_input = require('./input.js');
 const { mouseMoved } = glov_input;
 const { linkTick } = require('./link.js');
+const { getStringFromLocalizable } = require('./localization.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
@@ -623,6 +624,8 @@ export function panel(param) {
 }
 
 export function drawTooltip(param) {
+  param.tooltip = getStringFromLocalizable(param.tooltip);
+
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
   assert(typeof param.tooltip === 'string');
@@ -827,6 +830,8 @@ export function buttonTextDraw(param, state, focused) {
 }
 
 export function buttonText(param) {
+  param.text = getStringFromLocalizable(param.text);
+
   // required params
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
@@ -968,6 +973,9 @@ export function label(param) {
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
 export function modalDialog(param) {
+  param.title = getStringFromLocalizable(param.title);
+  param.text = getStringFromLocalizable(param.text);
+
   assert(!param.title || typeof param.title === 'string');
   assert(!param.text || typeof param.text === 'string');
   assert(!param.buttons || typeof param.buttons === 'object');
@@ -1091,11 +1099,12 @@ function modalDialogRun() {
     if (pressed) {
       did_button = ii;
     }
+    let but_label = buttons[key].label || key;
     if (buttonText(defaults({
       x, y, z: Z.MODAL,
       w: eff_button_width,
       h: eff_button_height,
-      text: key,
+      text: but_label,
     } , buttons[key]))) {
       did_button = ii;
     }
@@ -1159,18 +1168,18 @@ export function modalTextEntry(param) {
   });
   let buttons = {};
   for (let key in param.buttons) {
-    let val = null;
-    if (param.buttons[key]) {
-      val = param.buttons[key].cb || param.buttons[key];
+    let cb = param.buttons[key];
+    if ((cb !== null) && (typeof cb === 'object') && ('cb' in cb)) {
+      cb = param.buttons[key].cb;
     }
-    if (typeof val === 'function') {
-      val = (function (old_fn) {
+    if (typeof cb === 'function') {
+      cb = (function (old_fn) {
         return function () {
           old_fn(eb.getText());
         };
-      }(val));
+      }(cb));
     }
-    buttons[key] = defaults({ cb: val }, param.buttons[key]);
+    buttons[key] = defaults({ cb }, param.buttons[key]);
   }
   param.buttons = buttons;
   param.text = `${param.text || ''}`;

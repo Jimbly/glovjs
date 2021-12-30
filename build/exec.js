@@ -104,10 +104,11 @@ module.exports = function exec(opts) {
 
         let is_done = false;
         proc.on('close', guard(function (code) {
-          gb[opts.await ? 'info' : 'warn'](`Sub-process "${opts.cmd}" (PID ${proc.pid}) exited with code=${code}`);
+          gb[code !== 0 ? 'error' : opts.await ? 'info' : 'warn'](
+            `Sub-process "${opts.cmd}" (PID ${proc.pid}) exited with code=${code}`);
           if (!is_done) {
             is_done = true;
-            done();
+            done(code || undefined);
           }
           setProc(null);
         }));
