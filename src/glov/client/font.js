@@ -328,7 +328,7 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
   text = getStringFromLocalizable(text);
 
   if (align & ALIGN.HWRAP) {
-    return this.drawSizedAlignedWrapped(style, _x, _y, z, size, align & ~ALIGN.HWRAP, w, h, text);
+    return this.drawSizedAlignedWrapped(style, _x, _y, z, 0, size, align & ~ALIGN.HWRAP, w, h, text);
   }
   let x_size = size;
   let y_size = size;
@@ -386,18 +386,20 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
   return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
 };
 
-GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, align, w, h, text) {
+GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, size, align, w, h, text) {
   text = getStringFromLocalizable(text);
-  let indent = 0;
   assert(w > 0);
+  assert(typeof h !== 'string'); // Old API did not have `indent` parameter
   this.applyStyle(style);
   this.last_width = 0;
   let lines = [];
+  let line_xoffs = [];
   this.wrapLines(w, indent, size, text, align, (xoffs, linenum, word) => {
     let line = lines[linenum];
     if (line) {
       lines[linenum] = `${line} ${word}`; // This is mangling double spaces or tabs, but maybe fine?
     } else {
+      line_xoffs[linenum] = xoffs;
       lines[linenum] = word;
     }
   });
@@ -419,7 +421,7 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, size, ali
   align &= ~ALIGN.VMASK;
 
   for (let ii = 0; ii < lines.length; ++ii) {
-    this.drawSizedAligned(style, x, y + yoffs, z, size, align, w, 0, lines[ii]);
+    this.drawSizedAligned(style, x + line_xoffs[ii], y + yoffs, z, size, align, w - line_xoffs[ii], 0, lines[ii]);
     yoffs += size;
   }
   return yoffs;
@@ -441,7 +443,7 @@ export function setDefaultSize(h) {
 }
 
 GlovFont.prototype.draw = function (param) {
-  let { style, color, alpha, x, y, z, size, w, h, align, text } = param;
+  let { style, color, alpha, x, y, z, size, w, h, align, text, indent } = param;
   if (color) {
     style = styleColored(style, color);
   }
@@ -451,9 +453,12 @@ GlovFont.prototype.draw = function (param) {
   size = size || default_size;
   z = z || Z.UI;
   if (align) {
-    this.drawSizedAligned(style, x, y, z, size, align, w || 0, h || 0, text);
+    if (align & ALIGN.HWRAP) {
+      return this.drawSizedAlignedWrapped(style, x, y, z, indent, size, align & ~ALIGN.HWRAP, w, h, text);
+    }
+    return this.drawSizedAligned(style, x, y, z, size, align, w || 0, h || 0, text);
   } else {
-    this.drawSized(style, x, y, z, size, text);
+    return this.drawSized(style, x, y, z, size, text);
   }
 };
 
