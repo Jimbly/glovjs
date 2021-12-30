@@ -241,6 +241,7 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
       name: override[0],
       ws: override[1],
       hs: override[2],
+      layers: override[3],
       wrap_s,
       wrap_t,
     });
@@ -377,7 +378,7 @@ export function drawHBox(coords, s, color) {
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
-      s.draw({
+      let draw_param = {
         x,
         y: coords.y,
         z: coords.z || Z.UI,
@@ -386,7 +387,13 @@ export function drawHBox(coords, s, color) {
         h: coords.h,
         uvs: uidata.rects[ii],
         nozoom: true, // nozoom since different parts of the box get zoomed differently
-      });
+      };
+      if (coords.color1) {
+        draw_param.color1 = coords.color1;
+        s.drawDualTint(draw_param);
+      } else {
+        s.draw(draw_param);
+      }
     }
     x += my_w;
   }
