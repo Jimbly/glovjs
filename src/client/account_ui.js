@@ -68,7 +68,7 @@ AccountUI.prototype.showLogin = function (param) {
     prelogout, center,
     url_tos, url_priv, text_w,
     font_height, font_height_small, label_w,
-    pad,
+    pad, status_bar,
   } = param;
   font_height = font_height || ui.font_height;
   font_height_small = font_height_small || font_height * 0.75;
@@ -312,6 +312,15 @@ AccountUI.prototype.showLogin = function (param) {
           ui.provideUserString('Your User ID', 'User ID', user_id);
         }
         y += logged_in_font_height + 8;
+      } else if (status_bar) {
+        ui.font.drawSizedAligned(style, x + button_width + 8, y,
+          Z.UI, logged_in_font_height,
+          glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
+          text_w, button_height,
+          `Logged in as: ${name}`);
+        if (click({ x: x + button_width + 8, y, w: text_w, h: button_height, button: 0 })) {
+          ui.provideUserString('Your User ID', 'User ID', user_id);
+        }
       } else {
         ui.font.drawSizedAligned(style, x + button_width + 8,
           y + logged_in_font_height * -0.25,

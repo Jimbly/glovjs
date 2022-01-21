@@ -9,11 +9,16 @@ const { plural } = require('glov/common/util.js');
 const { vec4 } = require('glov/common/vmath.js');
 
 let gbstate;
+let server_error;
 
 Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
 
 function onGBState(state) {
   gbstate = state;
+}
+
+function onServerError(err) {
+  server_error = err;
 }
 
 const PAD = 4;
@@ -27,7 +32,7 @@ const color_line = vec4(1,1,1,1);
 const strip_ansi = /\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g;
 let scroll_area;
 function buildUITick() {
-  if (!gbstate) {
+  if (!gbstate && !server_error) {
     return;
   }
   const x0 = camera2d.x0() + PAD;
@@ -38,9 +43,11 @@ function buildUITick() {
   let x = x0;
   let y = y0;
 
+  let error_count = (gbstate?.error_count || 0) + (server_error ? 1 : 0);
+  let warning_count = gbstate?.warning_count || 0;
   title_font.drawSizedAligned(style_title, x, y, z, font_height, font.ALIGN.HCENTERFIT, w, 0,
-    `${gbstate.error_count} ${plural(gbstate.error_count, 'error')}, ` +
-    `${gbstate.warning_count} ${plural(gbstate.warning_count, 'warning')}`);
+    `${error_count} ${plural(error_count, 'error')}, ` +
+    `${warning_count} ${plural(warning_count, 'warning')}`);
   y += font_height + 1;
   ui.drawLine(x0 + w * 0.3, y, x0 + w * 0.7, y, z, 0.5, true, color_line);
   y += PAD;
@@ -68,41 +75,52 @@ function buildUITick() {
       `${type}: ${str}`);
   }
 
-  for (let task_name in gbstate.tasks) {
-    let task = gbstate.tasks[task_name];
+  if (gbstate) {
+    for (let task_name in gbstate.tasks) {
+      let task = gbstate.tasks[task_name];
+      x = 0;
+      font.drawSizedAligned(style_task, x, y, z, font_height, font.ALIGN.HLEFT, sub_w, 0,
+        `${task_name}:`);
+      y += font_height;
+      x += font_height;
+      let printed_any = false;
+      for (let job_name in task.jobs) {
+        let job = task.jobs[job_name];
+        let { warnings, errors } = job;
+        if (job_name !== 'all') {
+          if (job_name.startsWith('source:')) {
+            job_name = job_name.slice(7);
+          }
+          y += font.drawSizedWrapped(style_job, x, y, z, sub_w, 0, font_height,
+            job_name);
+        }
+        if (warnings) {
+          for (let ii = 0; ii < warnings.length; ++ii) {
+            printLine('Warning', warnings[ii]);
+            printed_any = true;
+          }
+        }
+        if (errors) {
+          for (let ii = 0; ii < errors.length; ++ii) {
+            printLine('Error', errors[ii]);
+            printed_any = true;
+          }
+        }
+      }
+      if (!printed_any && task.err) {
+        printLine('Error', task.err);
+      }
+      y += PAD;
+    }
+  }
+
+  if (server_error) {
     x = 0;
     font.drawSizedAligned(style_task, x, y, z, font_height, font.ALIGN.HLEFT, sub_w, 0,
-      `${task_name}:`);
+      'Server Error:');
     y += font_height;
     x += font_height;
-    let printed_any = false;
-    for (let job_name in task.jobs) {
-      let job = task.jobs[job_name];
-      let { warnings, errors } = job;
-      if (job_name !== 'all') {
-        if (job_name.startsWith('source:')) {
-          job_name = job_name.slice(7);
-        }
-        y += font.drawSizedWrapped(style_job, x, y, z, sub_w, 0, font_height,
-          job_name);
-      }
-      if (warnings) {
-        for (let ii = 0; ii < warnings.length; ++ii) {
-          printLine('Warning', warnings[ii]);
-          printed_any = true;
-        }
-      }
-      if (errors) {
-        for (let ii = 0; ii < errors.length; ++ii) {
-          printLine('Error', errors[ii]);
-          printed_any = true;
-        }
-      }
-    }
-    if (!printed_any && task.err) {
-      printLine('Error', task.err);
-    }
-    y += PAD;
+    printLine('Server error', server_error);
   }
 
   scroll_area.end(y);
@@ -115,6 +133,7 @@ function buildUITick() {
     text: 'X',
   })) {
     gbstate = null;
+    server_error = null;
   }
 
   ui.panel({
@@ -128,6 +147,7 @@ function buildUITick() {
 export function buildUIStartup() {
   if (net.client && engine.DEBUG) {
     net.client.onMsg('gbstate', onGBState);
+    net.client.onMsg('server_error', onServerError);
     net.subs.on('connect', function () {
       let pak = net.client.pak('gbstate_enable');
       pak.writeBool(true);

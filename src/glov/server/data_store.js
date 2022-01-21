@@ -91,7 +91,9 @@ class DataStore {
     if (this.mkdirs[store_path]) {
       return;
     }
-    mkdirp.sync(store_path);
+    if (!fs.existsSync(store_path)) {
+      mkdirp.sync(store_path);
+    }
     this.mkdirs[store_path] = true;
   }
   getStore(obj_name, cb) {

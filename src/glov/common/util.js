@@ -262,7 +262,7 @@ export function logdata(data) {
   if (r.length < 120) {
     return r;
   }
-  return `${r.slice(0, 120-3)}...`;
+  return `${r.slice(0, 120-3)}...(${r.length})`;
 }
 
 export function isInteger(v) {

@@ -24,8 +24,9 @@ const metrics = require('./metrics.js');
 const os = require('os');
 const packet = require('glov/common/packet.js');
 const { isPacket, packetCreate } = packet;
+const path = require('path');
 const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
-const { panic } = require('./server.js');
+const { panic, sendToBuildClients } = require('./server.js');
 const { processUID } = require('./server_config.js');
 const { callEach, clone, cloneShallow, identity, logdata, once } = require('glov/common/util.js');
 const { inspect } = require('util');
@@ -69,6 +70,28 @@ function getDebugAddr() {
     }
   }
   return ret;
+}
+
+function formatLocalError(e) {
+  if (!e.stack) {
+    return String(e);
+  }
+  let lines = e.stack.split('\n');
+  // Map the file paths to those just relative to the relevant folders
+  let dirname = path.resolve(__dirname, '../..') + path.sep;
+  let start = dirname.slice(0, 5);
+  lines = lines.map((line) => {
+    let idx = line.indexOf(start);
+    if (idx === -1) {
+      return line;
+    }
+    let offset = start.length;
+    while (line[idx + offset] && line[idx + offset] === dirname[offset]) {
+      ++offset;
+    }
+    return line.slice(0, idx) + line.slice(idx + offset);
+  });
+  return lines.join('\n');
 }
 
 function channelServerSendFinish(pak, err, resp_func) {
@@ -1098,6 +1121,7 @@ class ChannelServer {
       src: 'ADMIN',
       msg: 'Server error occurred - check server logs'
     });
+    sendToBuildClients('server_error', formatLocalError(e));
     metrics.add('server_error', 1);
   }
 }

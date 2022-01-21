@@ -8,6 +8,7 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 const engine = require('./engine.js');
 const { errorReportDetailsString } = require('./error_report.js');
 const net = require('./net.js');
+const { netClient } = net;
 const textures = require('./textures.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
 
@@ -195,5 +196,18 @@ cmd_parse.register({
   access_show: ['hidden'],
   func: function (str, resp_func) {
     resp_func(null, errorReportDetailsString());
+  },
+});
+
+cmd_parse.register({
+  cmd: 'disconnect',
+  help: 'Forcibly disconnect WebSocket connection (Note: will auto-reconnect)',
+  func: function (str, resp_func) {
+    let socket = netClient()?.socket;
+    if (!socket) {
+      return void resp_func('No socket');
+    }
+    socket.close();
+    resp_func();
   },
 });

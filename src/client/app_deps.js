@@ -5,7 +5,6 @@ require('../glov/client/require.js');
 deps.assert = require('assert');
 deps.buffer = require('buffer');
 deps.not_worker = require('not_worker');
-deps['dot-prop'] = require('dot-prop');
 deps['glov-async'] = require('glov-async');
 deps['gl-mat3/create'] = require('gl-mat3/create');
 deps['gl-mat3/fromMat4'] = require('gl-mat3/fromMat4');

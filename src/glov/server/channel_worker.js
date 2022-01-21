@@ -18,7 +18,7 @@ const ack = require('glov/common/ack.js');
 const { ackHandleMessage, ackInitReceiver, ackReadHeader } = ack;
 const assert = require('assert');
 const { channelServerPak, channelServerSend, PAK_HINT_NEWSEQ, PAK_ID_MASK } = require('./channel_server.js');
-const dot_prop = require('dot-prop');
+const dot_prop = require('glov/common/dot-prop.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const { logEx } = require('./log.js');
 const { min } = Math;
@@ -124,6 +124,9 @@ export class ChannelWorker {
     this.data = channel_data;
     this.data.public = this.data.public || {};
     this.data.private = this.data.private || {};
+
+    this.batched_sets = null;
+    this.batched_needs_commit = false;
 
     this.subscribe_counts = Object.create(null); // refcount of subscriptions to other channels
     this.is_channel_worker = true; // TODO: Remove this?
@@ -886,6 +889,72 @@ export class ChannelWorker {
     }
     // permissive_client_set default false - don't let clients change anything other than their own data
     return this.permissive_client_set ? null : 'ERR_INVALID_KEY';
+  }
+
+  sendChannelDataBatched(key, value) {
+    let arr = this.batched_sets;
+    if (!arr) {
+      arr = this.batched_sets = [];
+    }
+    if (key.startsWith('public')) {
+      let pair = [key.slice(7)];
+      if (value !== undefined) {
+        pair.push(value);
+      }
+      arr.push(pair);
+    }
+    if (!this.maintain_client_list || !key.startsWith('public.clients.')) {
+      this.batched_needs_commit = true;
+    }
+  }
+
+  setChannelDataBatched(key, value) {
+    if (value === undefined) {
+      dot_prop.delete(this.data, key);
+    } else {
+      filterUndefineds(value);
+      dot_prop.set(this.data, key, value);
+    }
+    this.sendChannelDataBatched(key, value);
+  }
+
+  setChannelDataBatchedFlush() {
+    assert(this.batched_sets);
+    if (this.batched_needs_commit) {
+      this.commitData();
+    }
+
+    let arr = this.batched_sets;
+    if (arr.length) {
+      let count = 0;
+      for (let channel_id in this.subscribers) {
+        let { field_map } = this.subscribers[channel_id];
+        let to_send;
+        if (!field_map) {
+          to_send = arr;
+        } else {
+          to_send = [];
+          for (let ii = 0; ii < arr.length; ++ii) {
+            let pair = arr[ii];
+            let key = pair[0];
+            if (field_map[key]) {
+              to_send.push(pair);
+            }
+          }
+        }
+        if (to_send.length) {
+          arr.q = 1;
+          this.sendChannelMessage(channel_id, 'batch_set', arr);
+          ++count;
+        }
+      }
+      if (count) {
+        this.debug(`broadcast(${count}): batch_set ${logdata(arr)}`);
+      }
+    }
+
+    this.batched_sets = null;
+    this.batched_needs_commit = false;
   }
 
   setChannelDataInternal(source, key, value, q, resp_func) {

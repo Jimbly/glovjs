@@ -82,6 +82,15 @@ function updateBuildTimestamp(base_name, is_startup) {
   });
 }
 
+export function sendToBuildClients(msg, data) {
+  for (let client_id in ws_server.clients) {
+    let client = ws_server.clients[client_id];
+    if (client.gbstate_enable) {
+      client.send(msg, data);
+    }
+  }
+}
+
 export function startup(params) {
   log.startup();
 
@@ -181,12 +190,7 @@ export function startup(params) {
         }
       } else if (msg.type === 'gbstate') {
         gbstate = msg.state;
-        for (let client_id in ws_server.clients) {
-          let client = ws_server.clients[client_id];
-          if (client.gbstate_enable) {
-            client.send('gbstate', gbstate);
-          }
-        }
+        sendToBuildClients('gbstate', gbstate);
       }
     });
   }

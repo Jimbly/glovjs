@@ -11,7 +11,7 @@ const {
   chunkedReceiverGetFile,
 } = require('glov/common/chunked_send.js');
 import { PLATFORM_FBINSTANT } from 'glov/client/client_config.js';
-const dot_prop = require('dot-prop');
+const dot_prop = require('glov/common/dot-prop.js');
 const EventEmitter = require('glov/common/tiny-events.js');
 const { fbGetLoginInfo } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
@@ -98,6 +98,21 @@ ClientChannelWorker.prototype.handleApplyChannelData = function (data, resp_func
   }
   ++this.channel_data_ver;
   this.emit('channel_data', this.data, data.key, data.value);
+  resp_func();
+};
+
+ClientChannelWorker.prototype.handleBatchSet = function (data, resp_func) {
+  for (let ii = 0; ii < data.length; ++ii) {
+    let [key, value] = data[ii];
+    if (value === undefined) {
+      dot_prop.delete(this.data.public, key);
+    } else {
+      dot_prop.set(this.data.public, key, value);
+    }
+    // Question: Should this just be one event at the end?
+    ++this.channel_data_ver;
+    this.emit('channel_data', this.data, `public.${key}`, value);
+  }
   resp_func();
 };
 
@@ -189,6 +204,7 @@ function SubscriptionManager(client, cmd_parse) {
   // Add handlers for all channel types
   this.onChannelMsg(null, 'channel_data', ClientChannelWorker.prototype.handleChannelData);
   this.onChannelMsg(null, 'apply_channel_data', ClientChannelWorker.prototype.handleApplyChannelData);
+  this.onChannelMsg(null, 'batch_set', ClientChannelWorker.prototype.handleBatchSet);
 }
 util.inherits(SubscriptionManager, EventEmitter);
 
