@@ -428,6 +428,25 @@ export function set(key, value, value2) {
   }
 }
 
+export function setMulti(values) {
+  let any = false;
+  let push = false;
+  for (let key in values) {
+    let value = values[key];
+    let opts = params[key];
+    assert(opts);
+    assert(opts.type !== TYPE_SET);
+    if (opts.value !== value) {
+      opts.value = value;
+      any = true;
+      push = push || opts.push;
+    }
+  }
+  if (any) {
+    updateHistory(push);
+  }
+}
+
 export function get(key) {
   let opts = params[key];
   assert(opts);

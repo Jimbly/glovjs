@@ -223,6 +223,16 @@ let pad_focus_right;
 
 let default_line_mode;
 
+// These can be of types string or LocalizableString
+let buttons_default_labels = {
+  ok: 'OK',
+  cancel: 'Cancel',
+  yes: 'Yes',
+  no: 'No',
+};
+let default_copy_success_msg = 'Text copied to clipboard!';
+let default_copy_failure_msg = 'Copy to clipboard FAILED, please copy from below.';
+
 export function colorSetSetShades(rollover, down, disabled) {
   color_set_shades[1] = rollover;
   color_set_shades[2] = down;
@@ -259,6 +269,17 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
 export function setFonts(new_font, new_title_font) {
   font = new_font;
   title_font = new_title_font || font;
+}
+
+export function setButtonsDefaultLabels(buttons_labels) {
+  for (const key in buttons_labels) {
+    buttons_default_labels[key.toLowerCase()] = buttons_labels[key];
+  }
+}
+
+export function setProvideUserStringDefaultMessages(success_msg, failure_msg) {
+  default_copy_success_msg = success_msg;
+  default_copy_failure_msg = failure_msg;
 }
 
 export function startup(param) {
@@ -1086,12 +1107,13 @@ function modalDialogRun() {
   let did_button = -1;
   for (let ii = 0; ii < keys.length; ++ii) {
     let key = keys[ii];
-    buttons[key] = buttons[key] || {};
-    let eff_button_keys = button_keys[key.toLowerCase()];
+    let key_lower = key.toLowerCase();
+    let cur_button = buttons[key] = buttons[key] || {};
+    let eff_button_keys = button_keys[key_lower];
     let pressed = 0;
     if (eff_button_keys) {
       for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj], buttons[key].in_event_cb);
+        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj], cur_button.in_event_cb);
         if (eff_button_keys.key[jj] === tick_key) {
           pressed++;
         }
@@ -1106,13 +1128,13 @@ function modalDialogRun() {
     if (pressed) {
       did_button = ii;
     }
-    let but_label = buttons[key].label || key;
+    let but_label = cur_button.label || buttons_default_labels[key_lower] || key;
     if (buttonText(defaults({
       x, y, z: Z.MODAL,
       w: eff_button_width,
       h: eff_button_height,
       text: but_label,
-    } , buttons[key]))) {
+    } , cur_button))) {
       did_button = ii;
     }
     x = round(x + pad + eff_button_width);
@@ -1485,16 +1507,16 @@ function copyTextToClipboard(text) {
   return ret;
 }
 
-export function provideUserString(title, thing, str) {
+export function provideUserString(title, str, success_msg, failure_msg) {
   let copy_success = copyTextToClipboard(str);
   modalTextEntry({
     edit_w: 400,
     edit_text: str,
     title,
-    text: copy_success ? `${thing} copied to clipboard!` : 'Copy to clipboard FAILED, please copy from below\n',
-    buttons: {
-      OK: null,
-    },
+    text: copy_success ?
+      (success_msg || default_copy_success_msg) :
+      (failure_msg || default_copy_failure_msg),
+    buttons: { ok: null },
   });
 }
 

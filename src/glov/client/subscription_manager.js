@@ -520,6 +520,16 @@ SubscriptionManager.prototype.loggedIn = function () {
   return this.logging_out ? false : this.logged_in ? this.logged_in_username || 'missing_name' : false;
 };
 
+SubscriptionManager.prototype.userOnChannelData = function (expected_user_id, data, key, value) {
+  if (expected_user_id !== this.getUserId()) {
+    // must have logged out
+    return;
+  }
+  if (key === 'public.display_name') {
+    this.logged_in_display_name = value;
+  }
+};
+
 SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, resp) {
   this.logging_in = false;
   if (!err) {
@@ -535,6 +545,11 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
         this.subscribe('master.master');
       }
     });
+
+    if (!user_channel.subs_added_user_on_channel_data) {
+      user_channel.on('channel_data', this.userOnChannelData.bind(this, this.logged_in_username));
+      user_channel.subs_added_user_on_channel_data = true;
+    }
     this.emit('login');
   } else {
     this.emit('login_fail', err);

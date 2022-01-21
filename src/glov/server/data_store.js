@@ -69,7 +69,7 @@ class DataStoreOneFile {
     ++ds_stats.get;
     this.getAsync(obj_name, '', null, function (err, value) {
       if (!err && value !== null) {
-        value = Buffer.from(value, 'utf8');
+        value = Buffer.from(JSON.stringify(value), 'utf8');
       }
       return cb(err, value);
     });

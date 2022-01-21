@@ -26,7 +26,7 @@ const { callEach, nop, plural } = require('glov/common/util.js');
 // the requester simply failed to send before the channel was created.
 const CHANNEL_RECREATE_DELAY = 15000;
 // Assume they have crashed if they do not report their load in this time
-const CHANNEL_WORKER_TIMEOUT = LOAD_REPORT_INTERVAL * 3;
+const CHANNEL_WORKER_TIMEOUT = LOAD_REPORT_INTERVAL * 5;
 // If the worker is under heavy load, use a much larger timeout
 const CHANNEL_WORKER_TIMEOUT_HEAVY = LOAD_REPORT_INTERVAL * 15;
 // How long between broadcasting master stats

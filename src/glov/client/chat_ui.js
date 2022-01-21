@@ -377,15 +377,19 @@ function errStr(err) {
   return err;
 }
 
+ChatUI.prototype.addChatError = function (err) {
+  this.addChat(`[error] ${errStr(err)}`, 'error');
+};
+
 ChatUI.prototype.handleCmdParseError = function (err, resp) {
   if (err) {
-    this.addChat(`[error] ${errStr(err)}`, 'error');
+    this.addChatError(err);
   }
 };
 
 ChatUI.prototype.handleCmdParse = function (err, resp) {
   if (err) {
-    this.addChat(`[error] ${errStr(err)}`, 'error');
+    this.addChatError(err);
   } else if (resp) {
     this.addChat(`[system] ${(typeof resp === 'string') ? resp : JSON.stringify(resp)}`, 'system');
   }
@@ -550,11 +554,11 @@ ChatUI.prototype.isFocused = function () {
 
 ChatUI.prototype.sendChat = function (flags, text) {
   if (!net.client.connected) {
-    this.addChat('[error] Cannot chat: Disconnected', 'error');
+    this.addChatError('Cannot chat: Disconnected');
   } else if (!this.channel || !net.subs.loggedIn() && !net.subs.allow_anon) {
-    this.addChat('[error] Cannot chat: Must be logged in', 'error');
+    this.addChatError('Cannot chat: Must be logged in');
   } else if (text.length > this.max_len) {
-    this.addChat('[error] Chat message too long', 'error');
+    this.addChatError('Chat message too long');
   } else {
     let pak = this.channel.pak('chat');
     pak.writeInt(flags);
@@ -570,7 +574,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
             flags,
           });
         } else {
-          this.addChat(`[error] ${errStr(err)}`, 'error');
+          this.addChatError(err);
         }
         // if (!this.edit_text_entry.getText()) {
         //   this.edit_text_entry.setText(text);
@@ -865,7 +869,7 @@ ChatUI.prototype.run = function (opts) {
     }
     if (click) {
       if (click.button === 2) {
-        ui.provideUserString('Chat Text', is_url ? 'URL' : 'Text', is_url || line);
+        ui.provideUserString('Chat Text', is_url || line);
       } else if (is_url) {
         self.cmdParseInternal(`url ${url_label}`);
       }

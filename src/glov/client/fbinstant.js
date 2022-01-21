@@ -5,6 +5,7 @@ const { registerExternalUserInfoProvider } = require('./social.js');
 const urlhash = require('./urlhash.js');
 const local_storage = require('./local_storage.js');
 const { ID_PROVIDER_FB_INSTANT } = require('glov/common/enums.js');
+const { errorReportSetDynamicDetails } = require('glov/client/error_report.js');
 const { callEach, eatPossiblePromise } = require('glov/common/util.js');
 
 let onreadycallbacks = [];
@@ -17,6 +18,15 @@ export function onready(callback) {
 
 export function fbInstantIsReady() {
   return onreadycallbacks === null;
+}
+
+let fb_log = [];
+function fbInstantLogEvent(event) {
+  FBInstant.logEvent(event);
+  fb_log.push(event);
+  if (fb_log.length > 10) {
+    fb_log.splice(0, 1);
+  }
 }
 
 let hasSubscribedAlready = false;
@@ -35,7 +45,7 @@ function initSubscribe(callback, skipShortcut) {
     if (e && e.code !== 'USER_INPUT') {
       console.error('handleSubscribeToBotFailure', e);
     }
-    FBInstant.logEvent('bot_subscribe_failure');
+    fbInstantLogEvent('bot_subscribe_failure');
     handleSubscribeToBotComplete();
   }
 
@@ -44,9 +54,9 @@ function initSubscribe(callback, skipShortcut) {
     if (FBInstant.getSupportedAPIs().indexOf('player.canSubscribeBotAsync') !== -1) {
       FBInstant.player.canSubscribeBotAsync().then(function (canSubscribe) {
         if (canSubscribe) {
-          FBInstant.logEvent('bot_subscribe_show');
+          fbInstantLogEvent('bot_subscribe_show');
           FBInstant.player.subscribeBotAsync().then(function () {
-            FBInstant.logEvent('bot_subscribe_success');
+            fbInstantLogEvent('bot_subscribe_success');
             handleSubscribeToBotComplete();
           },handleSubscribeToBotFailure).catch(handleSubscribeToBotFailure);
         } else {
@@ -64,7 +74,7 @@ function initSubscribe(callback, skipShortcut) {
 
   function handleCreateShortcutFailure(e) {
     console.error('handleCreateShortcutFailure', e);
-    FBInstant.logEvent('homescreen_install_failure');
+    fbInstantLogEvent('homescreen_install_failure');
     handleHomescreenComplete();
   }
 
@@ -78,13 +88,13 @@ function initSubscribe(callback, skipShortcut) {
       hasSubscribedAlready = true;
       FBInstant.canCreateShortcutAsync().then(function (canCreateShortcut) {
         if (canCreateShortcut) {
-          FBInstant.logEvent('homescreen_install_show');
+          fbInstantLogEvent('homescreen_install_show');
           FBInstant.createShortcutAsync().then(function () {
             local_storage.set('instant.hasInstalledShortcut.v2',true);
-            FBInstant.logEvent('homescreen_install_success');
+            fbInstantLogEvent('homescreen_install_success');
             handleHomescreenComplete();
           },function () {
-            FBInstant.logEvent('homescreen_install_useraborted');
+            fbInstantLogEvent('homescreen_install_useraborted');
             handleHomescreenComplete();
           }).catch(handleCreateShortcutFailure);
         } else {
@@ -196,6 +206,7 @@ export function fbInstantInit() {
     return;
   }
 
+  errorReportSetDynamicDetails('fblog', () => fb_log.join(','));
   registerExternalUserInfoProvider(ID_PROVIDER_FB_INSTANT, fbInstantGetPlayer, fbInstantGetFriends);
 
   let left = 1;

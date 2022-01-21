@@ -309,7 +309,7 @@ AccountUI.prototype.showLogin = function (param) {
           text_w, 0,
           `Logged in as: ${name}`);
         if (click({ x: x - text_w / 2, y, w: text_w, h: logged_in_font_height, button: 0 })) {
-          ui.provideUserString('Your User ID', 'User ID', user_id);
+          ui.provideUserString('Your User ID', user_id);
         }
         y += logged_in_font_height + 8;
       } else if (status_bar) {
@@ -319,7 +319,7 @@ AccountUI.prototype.showLogin = function (param) {
           text_w, button_height,
           `Logged in as: ${name}`);
         if (click({ x: x + button_width + 8, y, w: text_w, h: button_height, button: 0 })) {
-          ui.provideUserString('Your User ID', 'User ID', user_id);
+          ui.provideUserString('Your User ID', user_id);
         }
       } else {
         ui.font.drawSizedAligned(style, x + button_width + 8,
@@ -331,7 +331,7 @@ AccountUI.prototype.showLogin = function (param) {
           Z.UI, logged_in_font_height, calign | glov_font.ALIGN.VCENTER | glov_font.ALIGN.HFIT, text_w, button_height,
           name);
         if (click({ x: x + button_width + 8, y, w: text_w, h: logged_in_font_height * 2, button: 0 })) {
-          ui.provideUserString('Your User ID', 'User ID', user_id);
+          ui.provideUserString('Your User ID', user_id);
         }
       }
 

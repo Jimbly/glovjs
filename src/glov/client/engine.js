@@ -1000,6 +1000,10 @@ export function startup(params) {
       }
     }
   }
+  if (!window.requestAnimationFrame) {
+    // SamsungBrowser/1.1 - apparently has WebGL, but not requestAnimationFrame; also not binary WebSockets
+    good = false;
+  }
   if (!good) {
     // eslint-disable-next-line no-alert
     window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');

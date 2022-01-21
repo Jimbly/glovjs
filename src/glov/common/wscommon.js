@@ -221,6 +221,9 @@ export function wsHandleMessage(client, buf, filter) {
   let source = client.id ? `client ${client.id}` : 'server';
   if (!(buf instanceof Uint8Array)) {
     (client.log ? client : console).log(`Received incorrect WebSocket data type from ${source} (${typeof buf})`);
+    if (typeof buf === 'string') {
+      (client.log ? client : console).log(`Invalid WebSocket data: ${JSON.stringify(buf.slice(0, 120))}`);
+    }
     return client.onError('Invalid data received');
   }
   wsstats.bytes += buf.length;

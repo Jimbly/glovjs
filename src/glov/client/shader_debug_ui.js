@@ -284,7 +284,7 @@ function shaderDebugUITick() {
       align: font.ALIGN.HWRAP,
     });
     if (input.click({ x, y, w, h })) {
-      ui.provideUserString('Analyzed shader source', 'shader source', stats.text);
+      ui.provideUserString('Analyzed shader source', stats.text);
     }
     y += h;
   }
@@ -296,7 +296,7 @@ function shaderDebugUITick() {
     font.draw({
       x, y, z,
       w,
-      style, text: 'SPIR-V Dissassembly',
+      style, text: 'SPIR-V Disassembly',
       align: font.ALIGN.HCENTERFIT,
     });
     y += font_height + 1;
@@ -309,7 +309,7 @@ function shaderDebugUITick() {
       align: font.ALIGN.HWRAP,
     });
     if (input.click({ x, y, w, h })) {
-      ui.provideUserString('SPIR-V Dissassembly', 'disassembly', stats.spirv_raw);
+      ui.provideUserString('SPIR-V Disassembly', stats.spirv_raw);
     }
     y += h;
   }
@@ -333,7 +333,7 @@ function shaderDebugUITick() {
     align: font.ALIGN.HWRAP,
   });
   if (input.click({ x, y, w, h })) {
-    ui.provideUserString('Used WebGL shader source', 'shader source', shader.shader_source_text);
+    ui.provideUserString('Used WebGL shader source', shader.shader_source_text);
   }
   y += h;
 
