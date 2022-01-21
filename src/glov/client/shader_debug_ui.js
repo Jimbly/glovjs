@@ -9,6 +9,7 @@ const { scrollAreaCreate } = require('./scroll_area.js');
 const { shadersGetDebug } = require('./shaders.js');
 const settings = require('./settings.js');
 const ui = require('./ui.js');
+const { errorString } = require('glov/common/util.js');
 const { vec4 } = require('glov/common/vmath.js');
 
 Z.SHADER_DEBUG = Z.SHADER_DEBUG || 900;
@@ -31,7 +32,7 @@ function getShaderStats(text, stage, peek) {
     response_type: 'json',
   }, (err, obj) => {
     if (err) {
-      cache.data = { err };
+      cache.data = { err: `Fetch error: ${errorString(err)}` };
     } else {
       cache.data = obj;
     }
@@ -51,8 +52,9 @@ let scroll_area;
 let scroll_area_source;
 let selected_shader;
 function shaderDebugUITick() {
-  let x0 = camera2d.x0() + PAD;
-  const y0 = camera2d.y0() + PAD;
+  const PANEL_PAD = ui.tooltip_pad;
+  let x0 = camera2d.x0() + PANEL_PAD;
+  const y0 = camera2d.y0() + PANEL_PAD;
   let z = Z.SHADER_DEBUG;
   const { font, title_font, font_height } = ui;
   let w = font_height * 20;
@@ -167,18 +169,19 @@ function shaderDebugUITick() {
   y = scroll_y_start + min(max_h, y);
   z = Z.SHADER_DEBUG;
 
+  let close_button_size = ui.font_height;
   if (ui.buttonText({
-    x: x0 + w - ui.button_height,
+    x: x0 + w - close_button_size,
     y: y0, z: z + 1,
-    w: ui.button_height,
+    w: close_button_size, h: close_button_size,
     text: 'X',
   })) {
     settings.set('shader_debug', 0);
   }
 
   ui.panel({
-    x: x0 - PAD, y: y0 - PAD, z: z - 1,
-    w: w + PAD * 2, h: y - y0 + PAD * 2,
+    x: x0 - PANEL_PAD, y: y0 - PANEL_PAD, z: z - 1,
+    w: w + PANEL_PAD * 2, h: y - y0 + PANEL_PAD * 2,
     color: color_panel,
   });
 
@@ -186,7 +189,7 @@ function shaderDebugUITick() {
     return;
   }
   let shader = selected_shader;
-  x0 += w + PAD * 2;
+  x0 += w + PANEL_PAD * 2;
   w = camera2d.x1() - PAD - x0;
   x = x0;
   y = y0;
@@ -342,8 +345,8 @@ function shaderDebugUITick() {
   z = Z.SHADER_DEBUG;
 
   ui.panel({
-    x: x0 - PAD, y: y0 - PAD, z: z - 1,
-    w: w + PAD * 2, h: y - y0 + PAD * 2,
+    x: x0 - PANEL_PAD, y: y0 - PANEL_PAD, z: z - 1,
+    w: w + PANEL_PAD * 2, h: y - y0 + PANEL_PAD * 2,
     color: color_panel,
   });
 }

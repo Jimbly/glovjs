@@ -120,15 +120,12 @@ ${text}`;
       }
       stdout = stdout.replaceAll(input_file, 'shader');
       stdout = stdout.trim();
-      if (err) {
+      if (err || stderr) {
         console.log('TEXT', text);
         console.log('ERR', err);
         console.log('STDOUT', stdout);
         console.log('STDERR', stderr);
         return void done((stdout + stderr) || err);
-      }
-      if (stderr) {
-        return void done(stderr);
       }
 
       fs.stat(output_file, function (err, stat) {
