@@ -13,15 +13,6 @@ const { vec4 } = require('glov/common/vmath.js');
 
 Z.SHADER_DEBUG = Z.SHADER_DEBUG || 900;
 
-settings.register({
-  shader_debug: {
-    label: 'Shader Debug',
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-  },
-});
-
 const SHADER_STATS_SERVER = 'http://localhost:3000/api/shaderstats';
 
 let shader_stats_cache = {};
@@ -60,9 +51,6 @@ let scroll_area;
 let scroll_area_source;
 let selected_shader;
 function shaderDebugUITick() {
-  if (!settings.shader_debug) {
-    return;
-  }
   let x0 = camera2d.x0() + PAD;
   const y0 = camera2d.y0() + PAD;
   let z = Z.SHADER_DEBUG;
@@ -361,6 +349,19 @@ function shaderDebugUITick() {
 }
 
 export function shaderDebugUIStartup() {
-  engine.addTickFunc(shaderDebugUITick);
-
+  // Registering after startup because of needing to call engine.addTickFunc()
+  settings.register({
+    shader_debug: {
+      label: 'Shader Debug',
+      default_value: 0,
+      type: cmd_parse.TYPE_INT,
+      range: [0,1],
+      on_change: () => {
+        engine.removeTickFunc(shaderDebugUITick);
+        if (settings.shader_debug) {
+          engine.addTickFunc(shaderDebugUITick);
+        }
+      },
+    },
+  });
 }

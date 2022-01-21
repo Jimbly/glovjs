@@ -9,7 +9,6 @@ const { floor, sin } = Math;
 const net = require('glov/client/net.js');
 const particles = require('glov/client/particles.js');
 const settings = require('glov/client/settings.js');
-const { shaderDebugUIStartup } = require('glov/client/shader_debug_ui.js');
 const glov_sprites = require('glov/client/sprites.js');
 const { createSprite } = glov_sprites;
 const { createSpriteAnimation } = require('glov/client/sprite_animation.js');
@@ -171,8 +170,6 @@ export function main() {
     return;
   }
   font = engine.font;
-
-  shaderDebugUIStartup();
 
   // const font = engine.font;
 

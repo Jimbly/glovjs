@@ -41,6 +41,7 @@ const perf = require('./perf.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
+const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const sprites = require('./sprites.js');
 const textures = require('./textures.js');
@@ -355,6 +356,15 @@ export function resizing() {
 let app_tick_functions = [];
 export function addTickFunc(cb) {
   app_tick_functions.push(cb);
+}
+
+export function removeTickFunc(cb) {
+  let idx = app_tick_functions.indexOf(cb);
+  if (idx !== -1) {
+    app_tick_functions.splice(idx, 1);
+    return true;
+  }
+  return false;
 }
 
 let post_tick = [];
@@ -1073,6 +1083,7 @@ export function startup(params) {
   }));
 
   buildUIStartup();
+  shaderDebugUIStartup();
 
   camera2d.setAspectFixed(game_width, game_height);
 
