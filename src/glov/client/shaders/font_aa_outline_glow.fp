@@ -4,7 +4,6 @@ precision lowp float;
 
 varying highp vec2 interp_texcoord;
 varying lowp vec4 interp_color;
-vec4 _ret_0;
 uniform sampler2D tex0;
 uniform vec4 param0;
 uniform vec4 outlineColor;

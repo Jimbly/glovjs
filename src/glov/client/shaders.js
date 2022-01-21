@@ -195,6 +195,10 @@ function Shader(params) {
   this.compile();
 }
 
+export function shadersGetDebug() {
+  return shaders;
+}
+
 function cleanShaderError(error_text) {
   if (error_text) { // sometimes null on iOS
     error_text = error_text.replace(/\0/g, '').trim();
@@ -234,12 +238,13 @@ Shader.prototype.compile = function () {
     let type_name = v.split(' ')[0];
     assert(type_size[type_name]);
   });
+  this.shader_source_text = text;
   gl.shaderSource(this.shader, text);
   gl.compileShader(this.shader);
 
   if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS)) {
     this.valid = false;
-    let error_text = cleanShaderError(gl.getShaderInfoLog(this.shader));
+    let error_text = this.error_text = cleanShaderError(gl.getShaderInfoLog(this.shader));
     if (this.defines_arr.length) {
       filename += `(${this.defines_arr.join(',')})`;
     }
@@ -248,6 +253,9 @@ Shader.prototype.compile = function () {
     console.log(text.split('\n').map((line, idx) => `${idx+1}: ${line}`).join('\n'));
   } else {
     this.valid = true;
+    if (this.error_text) {
+      delete this.error_text;
+    }
   }
 };
 

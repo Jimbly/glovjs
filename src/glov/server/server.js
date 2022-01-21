@@ -17,6 +17,7 @@ const metrics = require('./metrics.js');
 const path = require('path');
 const packet = require('glov/common/packet.js');
 const { serverConfig } = require('./server_config.js');
+const { shaderStatsInit } = require('./shader_stats.js');
 const glov_wsserver = require('./wsserver.js');
 const wscommon = require('glov/common/wscommon.js');
 const { netDelaySet } = wscommon;
@@ -154,6 +155,9 @@ export function startup(params) {
   masterInitApp(channel_server, app);
   errorReportsInit(app);
   idmapperWorkerInit(channel_server);
+  if (argv.dev) {
+    shaderStatsInit(app);
+  }
 
   setTimeout(displayStatus, STATUS_TIME);
 

@@ -450,6 +450,7 @@ GlovFont.prototype.draw = function (param) {
   if (alpha !== undefined) {
     style = styleAlpha(style, alpha);
   }
+  indent = indent || 0;
   size = size || default_size;
   z = z || Z.UI;
   if (align) {

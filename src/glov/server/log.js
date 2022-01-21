@@ -89,7 +89,7 @@ export function logEx(context, level, ...args) {
   //   per-call metadata, and merge with context metadata
   let arg_len = args.length;
   let meta_arg = args[arg_len - 1];
-  if (typeof meta_arg === 'object' && !Array.isArray(meta_arg) && !(meta_arg instanceof Error)) {
+  if (meta_arg && typeof meta_arg === 'object' && !Array.isArray(meta_arg) && !(meta_arg instanceof Error)) {
     // last parameter is an object pass as a payload
     if (typeof meta_arg.toJSON === 'function') {
       meta_arg = meta_arg.toJSON();
