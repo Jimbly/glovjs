@@ -5,7 +5,7 @@
 /* global navigator */
 
 const assert = require('assert');
-const { is_mac_osx } = require('./browser.js');
+const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
@@ -368,6 +368,8 @@ let mouse_button_had_edge = false;
 let temp_delta = vec2();
 let last_abs_move = 0;
 let last_abs_move_time = 0;
+let last_move_x = 0;
+let last_move_y = 0;
 function onMouseMove(event, no_stop) {
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
@@ -410,15 +412,21 @@ function onMouseMove(event, no_stop) {
       // Smooth out (ignore) large jumps in movement
       // This is, I believe, just a bug with Chromium on Windows, as it repositions the hidden mouse cursor
       let ts = event.timeStamp || Date.now();
-      let abs_move = abs(movement_x) + abs(movement_y);
+      let abs_x = abs(movement_x);
+      let abs_y = abs(movement_y);
+      let abs_move = abs_x + abs_y;
       if (abs_move > 200 && (abs_move > 3 * last_abs_move || ts - last_abs_move_time > 1000)) {
         console.log(`Ignoring mousemove with sudden large delta: ${movement_x},${movement_y}`);
+      } else if (is_firefox && movement_x === last_move_x && movement_y === last_move_y && abs_x < 2 && abs_y < 2) {
+        // Ignoring mousemove similar to previous and with very little delta, due to a Firefox bug
       } else {
         v2set(temp_delta, movement_x || 0, movement_y || 0);
         any_movement = true;
       }
       last_abs_move = abs_move;
       last_abs_move_time = ts;
+      last_move_x = movement_x;
+      last_move_y = movement_y;
     }
   } else {
     v2sub(temp_delta, mouse_pos, last_mouse_pos);
