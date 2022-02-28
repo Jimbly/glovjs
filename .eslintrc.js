@@ -59,7 +59,7 @@ module.exports = {
     ],
     "array-callback-return": "error",
     "array-element-newline": "off",
-    "arrow-body-style": "error",
+    "arrow-body-style": "off", // JE
     "arrow-parens": [
       "error",
       "always"
