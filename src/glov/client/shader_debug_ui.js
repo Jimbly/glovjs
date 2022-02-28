@@ -267,7 +267,7 @@ function shaderDebugUITick() {
 
   let source_height = ui.font_height * 0.5;
 
-  if (stats.text) {
+  if (stats?.text) {
     y += PAD;
     ui.drawLine(x + w * 0.3, y, x + w * 0.7, y, z, 0.5, true, color_line);
     y += PAD/2;
@@ -292,7 +292,7 @@ function shaderDebugUITick() {
     y += h;
   }
 
-  if (stats.spirv_raw) {
+  if (stats?.spirv_raw) {
     y += PAD;
     ui.drawLine(x + w * 0.3, y, x + w * 0.7, y, z, 0.5, true, color_line);
     y += PAD/2;
@@ -359,6 +359,7 @@ export function shaderDebugUIStartup() {
       default_value: 0,
       type: cmd_parse.TYPE_INT,
       range: [0,1],
+      access_show: ['sysadmin'],
       on_change: () => {
         engine.removeTickFunc(shaderDebugUITick);
         if (settings.shader_debug) {
