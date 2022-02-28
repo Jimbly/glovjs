@@ -1005,7 +1005,7 @@ export function label(param) {
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
 export function modalDialog(param) {
   param.title = getStringFromLocalizable(param.title);
-  param.text = getStringFromLocalizable(param.text);
+  param.text = `${getStringFromLocalizable(param.text) || ''}`;
 
   assert(!param.title || typeof param.title === 'string');
   assert(!param.text || typeof param.text === 'string');
@@ -1137,7 +1137,7 @@ function modalDialogRun() {
       w: eff_button_width,
       h: eff_button_height,
       text: but_label,
-    } , cur_button))) {
+    }, cur_button))) {
       did_button = ii;
     }
     x = round(x + pad + eff_button_width);
