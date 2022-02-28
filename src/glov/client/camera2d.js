@@ -351,6 +351,22 @@ export function virtualToDomPosParam(dst, src) {
     dst.y = (src.y - data[1]) * data[5] / data[6];
     dst.h = src.h * data[5] / data[6];
   }
+  if (input_clipping) {
+    if (dst.x < input_clipping[0]) {
+      dst.w = max(0, dst.w - (input_clipping[0] - dst.x));
+      dst.x = input_clipping[0];
+    }
+    if (dst.y < input_clipping[1]) {
+      dst.h = max(0, dst.h - (input_clipping[1] - dst.y));
+      dst.y = input_clipping[1];
+    }
+    if (dst.x > input_clipping[0] + input_clipping[2]) {
+      dst.w = 0;
+    }
+    if (dst.y > input_clipping[1] + input_clipping[3]) {
+      dst.h = 0;
+    }
+  }
 }
 
 export function clipTestRect(rect) {
