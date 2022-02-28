@@ -6,15 +6,19 @@
 // GlovSimpleMenu is just a GlovSelectionBox plus some logic to activate
 // callbacks/etc upon selecting of elements.
 
+// eslint-disable-next-line no-use-before-define
+exports.createSimpleMenu = create;
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
-const glov_engine = require('./engine.js');
-const glov_input = require('./input.js');
+const engine = require('./engine.js');
+const input = require('./input.js');
 const selection_box = require('./selection_box.js');
-const glov_ui = require('./ui.js');
-const { clamp, vec4 } = require('glov/common/vmath.js');
+const ui = require('./ui.js');
+const { vec4 } = require('glov/common/vmath.js');
+const { clamp } = require('glov/common/util.js');
 
-const { KEYS, PAD } = glov_input;
+const { KEYS, PAD } = input;
 
 const color101010C8 = vec4(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
 
@@ -29,7 +33,7 @@ class GlovSimpleMenu {
   }
 
   focus() {
-    glov_ui.focusSteal(this.sel_box);
+    ui.focusSteal(this.sel_box);
   }
 
   execItem(index, delta) {
@@ -41,9 +45,6 @@ class GlovSimpleMenu {
       delta = 1;
       force = true;
     }
-    if (menu_item.cb) {
-      menu_item.cb();
-    }
     if (!menu_item.state) {
       if (menu_item.value !== null && (menu_item.prompt_int || menu_item.prompt_string)) {
         // Open an edit box
@@ -51,7 +52,7 @@ class GlovSimpleMenu {
         this.internal.edit_index = index;
         // glovInputReleaseAll();
       } else if (menu_item.value !== null) {
-        if (glov_input.keyDown(KEYS.SHIFT) && !force) {
+        if (input.keyDown(KEYS.SHIFT) && !force) {
           delta = -1;
         }
         menu_item.value += delta * menu_item.value_inc;
@@ -72,8 +73,11 @@ class GlovSimpleMenu {
         // glovInputReleaseAll();
       }
     } else {
-      glov_engine.setState(menu_item.state);
+      engine.setState(menu_item.state);
       // glovInputReleaseAll();
+    }
+    if (menu_item.cb) {
+      menu_item.cb();
     }
   }
 
@@ -82,7 +86,7 @@ class GlovSimpleMenu {
     sel_box.applyParams(params); // Apply new list of items, positions, etc
 
     const { items, x, z } = sel_box;
-    const y0 = sel_box.y;
+    const y0 = sel_box.y + 4;
     let exit_index = -1;
     for (let i = 0; i < items.length; ++i) {
       if (items[i].exit) {
@@ -94,7 +98,7 @@ class GlovSimpleMenu {
     let selbox_enabled = true;
     if (this.edit_index >= 0 && this.edit_index < items.length) {
       selbox_enabled = false;
-      glov_ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(),
+      ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(),
         z + 2, color101010C8);
       // TODO: Need modal text entry dialog
       // let ret = this.internal.mte.run(z + 3);
@@ -117,74 +121,68 @@ class GlovSimpleMenu {
     for (let ii = 0; ii < items.length; ii++) {
       let menu_item = items[ii];
       if (menu_item.slider) {
-        let slider = menu_item.internal.slider;
-        if (!slider) {
-          // slider = menu_item.internal.slider = glov_slider.create();
-        }
-        slider.no_notches = true;
+        // slider.no_notches = true;
         // slider.sound_release = this.sound_accept;
-        slider.disabled = menu_item.disabled;
         let slider_width = 160;
         let slider_x = x + sel_box.width - slider_width - 12;
-        let v = menu_item.value - menu_item.value_min;
-        let color = display.style_default.color;
+        let color = display.style_default.color_vec4;
         // if (display.style_default.color_mode == glov_font.COLOR_MODE.GRADIENT) {
-        //   color = colorIntLerp(display.style_default.color, display.style_default.colorLR, 0.5);
+        //   color = colorIntLerp(display.style_default.color_vec4, display.style_default.colorLR, 0.5);
         // }
-        if (slider.disabled) {
+        if (menu_item.disabled) {
           color = display.style_disabled.color;
         }
-        v = slider.run({
+        menu_item.value = ui.slider(menu_item.value, {
           x: slider_x,
-          y: y0 + ii * 24 + 2,
+          y: y0 + ii * sel_box.entry_height,
           z: z + 3,
           w: slider_width,
+          h: sel_box.entry_height,
           // scale: 1,
+          disabled: menu_item.disabled,
           color,
-          value: v,
-          max: menu_item.value_max - menu_item.value_min
+          min: menu_item.value_min,
+          max: menu_item.value_max,
         });
-        menu_item.value = v + menu_item.value_min;
-        if (slider.rollover || slider.grabbed) {
+        if (ui.slider_rollover || ui.slider_dragging) {
           // expect our row to be selected
           if (sel_box.selected !== ii) {
             sel_box.selected = ii;
-            glov_ui.playUISound('select');
+            ui.playUISound('rollover');
           }
         }
       } else if (menu_item.plus_minus) {
         assert(typeof menu_item.value === 'number', 'plus_minus items require a numerical value');
         assert(menu_item.value_inc, 'plus_minus items require a value increment');
-        let buttons_width = 60;
         let pad = 6;
-        let button_width = (buttons_width - pad) / 2;
-        let button_x = x + sel_box.width - buttons_width;
+        let button_width = sel_box.entry_height;
+        let button_x = x + sel_box.width - button_width * 2 - pad - 4;
         let delta = 0;
         // if (!glovMasterControllerActive()) { // Don't show buttons if using a controller / no mouse
-        if (glov_ui.buttonText({
+        if (ui.buttonText({
           no_focus: true,
           x: button_x,
-          y: y0 + ii * 24 + 2,
+          y: y0 + ii * sel_box.entry_height,
           z: z + 3,
           w: button_width,
-          h: glov_ui.button_height * 0.66,
+          h: sel_box.entry_height,
           text: '-'
         })) {
           delta = -1;
         }
-        let minus_over = glov_ui.button_mouseover;
-        if (glov_ui.buttonText({
+        let minus_over = ui.button_mouseover;
+        if (ui.buttonText({
           no_focus: true,
           x: button_x + pad + button_width,
-          y: y0 + ii * 24 + 2,
+          y: y0 + ii * sel_box.entry_height,
           z: z + 3,
           w: button_width,
-          h: glov_ui.button_height * 0.66,
+          h: sel_box.entry_height,
           text: '+'
         })) {
           delta = 1;
         }
-        let plus_over = glov_ui.button_mouseover;
+        let plus_over = ui.button_mouseover;
         // } end if (!glovMasterControllerActive())
         if (delta) {
           menu_item.value += delta * menu_item.value_inc;
@@ -194,7 +192,7 @@ class GlovSimpleMenu {
           // expect our row to be selected
           if (sel_box.selected !== ii) {
             sel_box.selected = ii;
-            glov_ui.playUISound('select');
+            ui.playUISound('rollover');
           }
         }
       }
@@ -205,8 +203,8 @@ class GlovSimpleMenu {
 
     let selected=-1;
     if (exit_index !== -1 && (
-      glov_input.keyDownEdge(KEYS.ESC) ||
-      !items[exit_index].no_controller_exit && glov_input.padButtonDownEdge(PAD.CANCEL)
+      input.keyDownEdge(KEYS.ESC) ||
+      !items[exit_index].no_controller_exit && input.padButtonDownEdge(PAD.CANCEL)
     )) {
       this.execItem(exit_index, 1);
       selected = exit_index;
@@ -215,17 +213,17 @@ class GlovSimpleMenu {
     // kind of menu option, otherwise this just feels weird
     let allow_left_right = items[sel_box.selected].value !== null;
     if (sel_box.was_clicked || sel_box.is_focused && (
-      glov_input.keyDownEdge(KEYS.SPACE) ||
-      glov_input.keyDownEdge(KEYS.ENTER) ||
-      glov_input.padButtonDownEdge(PAD.SELECT))
+      input.keyDownEdge(KEYS.SPACE) ||
+      input.keyDownEdge(KEYS.ENTER) ||
+      input.padButtonDownEdge(PAD.SELECT))
     ) {
-      this.execItem(sel_box.selected, 1);
+      this.execItem(sel_box.selected, sel_box.was_right_clicked ? -1 : 1);
       selected = sel_box.selected;
     }
     if (sel_box.is_focused && allow_left_right && (
-      glov_input.keyDownEdge(KEYS.RIGHT) ||
-      glov_input.keyDownEdge(KEYS.D) ||
-      glov_input.padButtonDownEdge(PAD.RIGHT))
+      input.keyDownEdge(KEYS.RIGHT) ||
+      input.keyDownEdge(KEYS.D) ||
+      input.padButtonDownEdge(PAD.RIGHT))
     ) {
       this.execItem(sel_box.selected, 2);
       selected = sel_box.selected;
@@ -233,9 +231,9 @@ class GlovSimpleMenu {
     if (sel_box.wasRightClicked || sel_box.is_focused && allow_left_right && (
       // This was UpHit before, some problem with it triggering an up on the next screen?  Should supress the next up
       // events after eating a down for UI?
-      glov_input.keyDownEdge(KEYS.LEFT) ||
-      glov_input.keyDownEdge(KEYS.A) ||
-      glov_input.padButtonDownEdge(PAD.LEFT))
+      input.keyDownEdge(KEYS.LEFT) ||
+      input.keyDownEdge(KEYS.A) ||
+      input.padButtonDownEdge(PAD.LEFT))
     ) {
       this.execItem(sel_box.selected, -1);
       selected = sel_box.selected;
@@ -243,9 +241,9 @@ class GlovSimpleMenu {
     this.selected = selected;
     if (selected !== -1 && !items[selected].no_sound) {
       if (items[selected].exit) {
-        glov_ui.playUISound('cancel');
+        ui.playUISound('cancel');
       } else {
-        glov_ui.playUISound('select');
+        ui.playUISound('select');
       }
     }
 

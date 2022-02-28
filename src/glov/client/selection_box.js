@@ -74,10 +74,10 @@ export class GlovMenuItem {
     this.state = params.state || null; // state to set upon selection
     this.cb = params.cb || null; // callback to call upon selection
     // TODO - cb function on value change?
-    this.value = null; // can be number or string
-    this.value_min = 0;
-    this.value_max = 0;
-    this.value_inc = 0;
+    this.value = params.value === undefined ? null : params.value; // can be number or string
+    this.value_min = params.value_min || 0;
+    this.value_max = params.value_max || 0;
+    this.value_inc = params.value_inc || 0;
     this.tag = params.tag || null; // for isSelected(tag)
     this.style = params.style || null;
     // was bitmask
@@ -437,18 +437,19 @@ class GlovSelectionBox {
         let entry_disabled = item.disabled;
         let image_set = null;
         if (!this.disabled && !entry_disabled && glov_input.click({
-          x, y, w: width, h: entry_height
+          x, y, w: width, h: entry_height, button: 2,
         })) {
           glov_ui.focusSteal(this);
           this.was_clicked = true;
+          this.was_right_clicked = true;
           this.mouse_mode = true;
           this.selected = i;
         }
         if (!this.disabled && !entry_disabled && glov_input.click({
-          x, y, w: width, h: entry_height, button: 1,
+          x, y, w: width, h: entry_height
         })) {
           glov_ui.focusSteal(this);
-          this.was_right_clicked = true;
+          this.was_clicked = true;
           this.mouse_mode = true;
           this.selected = i;
         }
