@@ -3,6 +3,8 @@
 /* eslint no-underscore-dangle:off */
 
 window.Z = window.Z || {};
+export const Z = window.Z;
+
 Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
