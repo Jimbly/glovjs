@@ -5,10 +5,10 @@ precision lowp float;
 varying highp vec2 interp_texcoord;
 varying lowp vec4 interp_color;
 uniform sampler2D tex0;
-uniform vec4 param0;
+uniform mediump vec4 param0;
 uniform vec4 outlineColor;
 uniform vec4 glowColor;
-uniform vec4 glowParams;
+uniform mediump vec4 glowParams;
 void main()
 {
   float texture0=texture2D(tex0,interp_texcoord).r;
