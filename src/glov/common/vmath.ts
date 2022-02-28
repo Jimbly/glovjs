@@ -466,6 +466,13 @@ export function v3scale(out: Vec3, a: Vec3, s: number): Vec3 {
   return out;
 }
 
+export function v3scaleFloor(out: Vec3, a: Vec3, s: number): Vec3 {
+  out[0] = floor(a[0] * s);
+  out[1] = floor(a[1] * s);
+  out[2] = floor(a[2] * s);
+  return out;
+}
+
 export function v3iScale(a: Vec3, s: number): Vec3 {
   a[0] *= s;
   a[1] *= s;
