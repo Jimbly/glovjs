@@ -1,6 +1,6 @@
 module.exports = {
   server_js_files: ['**/*.[jt]s', '!**/client/**/*'],
-  server_static: ['**/glov/common/words/*.gkg'],
+  server_static: ['**/glov/common/words/*.gkg', '**/glov/common/words/*.txt'],
   all_js_files: ['**/*.[jt]s', '!client/vendor/**/*'],
   client_js_files: [
     '**/*.[jt]s',
@@ -41,6 +41,7 @@ module.exports = {
     'glov/client/models/box_textured_embed.glb',
     'glov/client/words/*.txt',
     'glov/common/words/*.gkg',
+    'glov/common/words/*.txt',
   ],
   default_defines: {
     PLATFORM: 'web',

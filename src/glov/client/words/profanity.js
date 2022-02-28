@@ -11,15 +11,16 @@ const { webFSGetFile } = require('glov/client/webfs.js');
 let non_profanity;
 
 export function profanityStartup() {
-  non_profanity = webFSGetFile('glov/words/replacements.txt', 'text').split('\n').filter((a) => a);
-  profanityCommonStartup(webFSGetFile('glov/words/filter.gkg', 'text'));
+  non_profanity = webFSGetFile('words/replacements.txt', 'text').split('\n').filter((a) => a);
+  profanityCommonStartup(webFSGetFile('words/filter.gkg', 'text'),
+    webFSGetFile('words/exceptions.txt', 'text'));
 }
 
 let rand = randFastCreate();
 
 let last_word;
 function randWord() {
-  if (last_word === -1) {
+  if (last_word === -1 || non_profanity.length === 1) {
     last_word = rand.range(non_profanity.length);
   } else {
     let choice = rand.range(non_profanity.length - 1);

@@ -34,7 +34,10 @@ let suffixes_canonized = [ '', '5', '35', '1n', '1ng', '3r', '3r5', '3d', 'y' ];
 
 let max_len = 0;
 let inited = false;
-export function profanityCommonStartup(filter_gkg) {
+// filter_gkg is rot13 of (singular) words to filter
+// exceptions_txt is includes specific words that should not be filtered (e.g.
+//   a common word that looks like a plural of a filtered word)
+export function profanityCommonStartup(filter_gkg, exceptions_txt) {
   assert(!inited);
   inited = true;
   for (let ii = 0; ii < trans_src.length; ++ii) {
@@ -54,6 +57,10 @@ export function profanityCommonStartup(filter_gkg) {
         profanity[str] = jj + 1;
       }
     }
+  }
+  data = exceptions_txt.split('\n').filter((a) => a);
+  for (let ii = 0; ii < data.length; ++ii) {
+    delete profanity[canonize(data[ii])];
   }
 }
 

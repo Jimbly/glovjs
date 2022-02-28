@@ -795,7 +795,8 @@ function onCmdParseListClient(client, data, resp_func) {
 export function init(channel_server_in) {
   facebookUtilsInit();
   appleSignInInit();
-  profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'));
+  profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'),
+    fs.readFileSync(`${__dirname}/../common/words/exceptions.txt`, 'utf8'));
 
   channel_server = channel_server_in;
   let ws_server = channel_server.ws_server;
