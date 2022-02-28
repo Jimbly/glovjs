@@ -1,6 +1,8 @@
-// Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
+// Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint no-bitwise:off */
+
+export const guest_regex = /^anon\d+$/;
+
 const assert = require('assert');
 const local_storage = require('glov/client/local_storage.js');
 const glov_font = require('glov/client/font.js');
@@ -23,6 +25,9 @@ export let style_link_hover = glov_font.style(null, {
 });
 
 export function formatUserID(user_id, display_name) {
+  if (user_id.match(guest_regex)) {
+    user_id = 'guest';
+  }
   let name = display_name || user_id;
   if (user_id.toLowerCase() !== name.toLowerCase()) {
     name = `${display_name} (${user_id})`;
@@ -61,6 +66,44 @@ function AccountUI() {
   });
   this.creation_mode = false;
 }
+
+AccountUI.prototype.logout = function () {
+  this.edit_box_password.setText('');
+  net.subs.logout();
+};
+
+AccountUI.prototype.playAsGuest = function (use_name) {
+  let name;
+  if (use_name && (local_storage.get('name') || '').match(guest_regex)) {
+    name = local_storage.get('name');
+  } else {
+    name = `anon${String(random()).slice(2, 8)}`;
+  }
+  let pass = 'test';
+  local_storage.set('name', name);
+  this.edit_box_name.setText(name);
+  net.subs.login(name, pass, function (err) {
+    if (err) {
+      ui.modalDialog({
+        title: 'Auto-login Failed',
+        text: err,
+        buttons: {
+          'Retry': function () {
+            local_storage.set('did_auto_anon', undefined);
+            local_storage.set('name', undefined);
+          },
+          'Cancel': null,
+        },
+      });
+    } else {
+      net.subs.sendCmdParse('rename_random', (err) => {
+        if (err) {
+          console.log(err);
+        }
+      });
+    }
+  });
+};
 
 AccountUI.prototype.showLogin = function (param) {
   let {
@@ -136,32 +179,9 @@ AccountUI.prototype.showLogin = function (param) {
   } else if (!net.subs.loggedIn() && net.subs.auto_create_user &&
     !local_storage.get('did_auto_anon') && !local_storage.get('name')
   ) {
-    login_message = 'Auto logging in...';
+    login_message = 'Creating guest account...';
     local_storage.set('did_auto_anon', 'yes');
-    let name = `anon${String(random()).slice(2, 8)}`;
-    let pass = 'test';
-    local_storage.set('name', name);
-    net.subs.login(name, pass, function (err) {
-      if (err) {
-        ui.modalDialog({
-          title: 'Auto-login Failed',
-          text: err,
-          buttons: {
-            'Retry': function () {
-              local_storage.set('did_auto_anon', undefined);
-              local_storage.set('name', undefined);
-            },
-            'Cancel': null,
-          },
-        });
-      } else {
-        net.subs.sendCmdParse('rename_random', (err) => {
-          if (err) {
-            console.log(err);
-          }
-        });
-      }
-    });
+    this.playAsGuest(false);
   } else if (!net.subs.loggedIn()) {
     let submit = false;
     let w = text_w / 2;
@@ -252,26 +272,43 @@ AccountUI.prototype.showLogin = function (param) {
 
       showTOS(false);
 
-      submit = ui.buttonText({
-        x: x, y, w: button_width, h: button_height,
-        font_height,
-        text: 'Log in',
-      }) || submit;
-      if (center) {
+      if (net.subs.auto_create_user) {
+        submit = ui.buttonText({
+          x, y, w: w + label_w, h: button_height,
+          font_height,
+          text: 'Log in / Create user',
+        }) || submit;
         y += button_height + pad;
-      }
-      if (!net.subs.auto_create_user && ui.buttonText({
-        x: center ? x : x + button_width + pad, y, w: button_width, h: button_height,
-        font_height,
-        text: 'New User',
-      })) {
-        this.creation_mode = true;
-        edit_box_display_name.setText(edit_box_name.text);
-        if (edit_box_name.text && edit_box_password.text) {
-          edit_box_password_confirm.initial_focus = true;
-        } else {
-          edit_box_password_confirm.initial_focus = false;
-          edit_box_name.focus();
+        if (ui.buttonText({
+          x, y, w: w + label_w, h: button_height,
+          font_height,
+          text: 'Play as Guest',
+        })) {
+          this.playAsGuest(true);
+        }
+        // y += button_height + pad;
+      } else {
+        submit = ui.buttonText({
+          x, y, w: button_width, h: button_height,
+          font_height,
+          text: 'Log in',
+        }) || submit;
+        if (center) {
+          y += button_height + pad;
+        }
+        if (ui.buttonText({
+          x: center ? x : x + button_width + pad, y, w: button_width, h: button_height,
+          font_height,
+          text: 'New User',
+        })) {
+          this.creation_mode = true;
+          edit_box_display_name.setText(edit_box_name.text);
+          if (edit_box_name.text && edit_box_password.text) {
+            edit_box_password_confirm.initial_focus = true;
+          } else {
+            edit_box_password_confirm.initial_focus = false;
+            edit_box_name.focus();
+          }
         }
       }
       y += button_height + pad;
@@ -341,11 +378,10 @@ AccountUI.prototype.showLogin = function (param) {
         font_height,
         text: 'Log out',
       })) {
-        edit_box_password.setText('');
         if (prelogout) {
           prelogout();
         }
-        net.subs.logout();
+        this.logout();
       }
       y += button_height + 8;
     } else {
