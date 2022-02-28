@@ -33,6 +33,13 @@ function checkAccess(access, list) {
   return true;
 }
 
+function formatUsage(usage, help, prefix_help) {
+  return !usage ? undefined :
+    prefix_help ? `${help}\n${usage}`:
+    help ? String(usage).replace(/\$HELP/, help) :
+    String(usage);
+}
+
 function CmdParse(params) {
   this.cmds = {};
   this.cmds_for_complete = this.cmds;
@@ -62,10 +69,10 @@ CmdParse.prototype.cmdList = function (str, resp_func) {
       }
       let data = {
         name: cmd_data.name,
-        help: cmd_data.help,
+        help: String(cmd_data.help),
       };
       if (cmd_data.usage) {
-        data.usage = cmd_data.usage;
+        data.usage = formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help);
       }
       if (access.length) {
         data.access_show = access;
@@ -108,23 +115,21 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
 
 CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
-  let { cmd, func, help, usage, access_show, access_run } = param;
+  let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run } = param;
   assert(cmd && func);
-  help = help || '';
-  if (help.toLowerCase().includes('(admin)')) {
+  let help_lower = String(help || '').toLowerCase();
+  if (help_lower.includes('(admin)')) {
     assert(access_run && access_run.includes('sysadmin'));
   }
-  if (help.toLowerCase().includes('(hidden)')) {
+  if (help_lower.includes('(hidden)')) {
     assert(access_show && access_show.length);
-  }
-  if (usage && help) {
-    usage = usage.replace(/\$HELP/, help);
   }
   this.cmds[canonical(cmd)] = {
     name: cmd,
     fn: func,
     help,
-    usage: usage || undefined,
+    usage,
+    prefix_usage_with_help,
     access_show,
     access_run,
   };
@@ -288,8 +293,8 @@ CmdParse.prototype.autoComplete = function (str, access) {
         list.push({
           cname,
           cmd: cmd_data.name,
-          help: cmd_data.help,
-          usage: cmd_data.usage,
+          help: String(cmd_data.help),
+          usage: formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help),
         });
       }
     }
