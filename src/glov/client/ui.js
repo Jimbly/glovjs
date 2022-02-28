@@ -982,15 +982,16 @@ export function print(style, x, y, z, text) {
 
 export function label(param) {
   let { style, x, y, align, w, h, text, tooltip } = param;
+  let use_font = param.font || font;
   let z = param.z || Z.UI;
   let size = param.size || font_height;
   assert(isFinite(x));
   assert(isFinite(y));
   assert.equal(typeof text, 'string');
   if (align) {
-    font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+    use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
   } else {
-    font.drawSized(style, x, y, z, size, text);
+    use_font.drawSized(style, x, y, z, size, text);
   }
   if (tooltip) {
     assert(isFinite(w));
