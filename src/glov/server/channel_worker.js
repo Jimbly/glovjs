@@ -11,7 +11,7 @@ const AUTO_DESTROY_TIME = 90000;
 export const UNACKED_PACKET_ASSUME_GOOD = AUTO_DESTROY_TIME/2; // <= AUTO_DESTROY_TIME
 // How long before discarding all packet indices for a source, must be
 //   significantly greater than UNACKED_PACKET_ASSUME_GOOD
-const PACKET_INDEX_EXPIRE = UNACKED_PACKET_ASSUME_GOOD * 2;
+const PACKET_INDEX_EXPIRE = UNACKED_PACKET_ASSUME_GOOD * 8;
 const PACKET_INDEX_CLEANUP = PACKET_INDEX_EXPIRE / 4;
 
 const ack = require('glov/common/ack.js');

@@ -26,7 +26,8 @@ const { callEach, nop, plural } = require('glov/common/util.js');
 // the requester simply failed to send before the channel was created.
 const CHANNEL_RECREATE_DELAY = 15000;
 // Assume they have crashed if they do not report their load in this time
-const CHANNEL_WORKER_TIMEOUT = LOAD_REPORT_INTERVAL * 5;
+// JE 22/02/25: Using heavy timeout (~4 minutes) all the time, too many false timeouts during a spike
+const CHANNEL_WORKER_TIMEOUT = LOAD_REPORT_INTERVAL * 15; // LOAD_REPORT_INTERVAL * 5;
 // If the worker is under heavy load, use a much larger timeout
 const CHANNEL_WORKER_TIMEOUT_HEAVY = LOAD_REPORT_INTERVAL * 15;
 // How long between broadcasting master stats
@@ -319,6 +320,9 @@ class MasterWorker extends ChannelWorker {
       // Won't time out, but otherwise fine, if unexpected?
       // Probably happens if master worker restarts during another workers shutdown
       this.error(`Received master_lock for channel ${channel_id} on unknown ChannelServer ${csid}`);
+    } else {
+      // Flag the other server as heard from, so we don't time it out, even if it neglects sending load reports
+      this.getChanServData(csid).last_seen_time = this.channel_server.server_time;
     }
     let cc = this.channels_creating[channel_id];
     if (cc) {
