@@ -74,6 +74,10 @@ export function netClientId() {
   return client.id;
 }
 
+export function netUserId() {
+  return subs.getUserId();
+}
+
 export function netSubs() {
   return subs;
 }
