@@ -15,7 +15,7 @@ export type Vec2 = [number, number] | Vec3;
 export type Vec1 = [number] | Vec2;
 
 export function vec1(v: number): Vec1 {
-  return new Float32Array([v]);
+  return new Float32Array([v || 0]);
 }
 
 export function vec2(): Vec2;
