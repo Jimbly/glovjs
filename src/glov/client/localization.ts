@@ -7,3 +7,9 @@ export function getStringFromLocalizable(s: string | LocalizableString): string 
     (s as LocalizableString).toLocalString() :
     (s as string);
 }
+
+export function getStringIfLocalizable<T>(s: T | LocalizableString): T | string {
+  return s && (s as LocalizableString).toLocalString ?
+    (s as LocalizableString).toLocalString() :
+    (s as T);
+}
