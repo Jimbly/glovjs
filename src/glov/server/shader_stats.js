@@ -4,7 +4,7 @@ const fs = require('fs');
 const glslang_validator = require('glslang-validator-prebuilt-predownloaded');
 const os = require('os');
 const path = require('path');
-const { nop } = require('../common/util.js');
+const { errorString, nop } = require('../common/util.js');
 
 const regex_bound = /; Bound: (\d+)/;
 const regex_ignore = new RegExp([
@@ -64,6 +64,12 @@ function parseSPRIVDisassembly(text) {
 }
 
 function getShaderStats(stage, text, cb) {
+  let validator_path;
+  try {
+    validator_path = glslang_validator.getPath();
+  } catch (e) {
+    return void cb(errorString(e));
+  }
   let temp_dir = os.tmpdir();
   let name = crypto.randomBytes(16).toString('hex');
   let input_file = path.join(temp_dir, `${name}.in`);
@@ -113,7 +119,7 @@ ${text}`;
       '-S', stage,
       input_file,
     ];
-    execFile(glslang_validator.path, args, {}, function (err, stdout, stderr) {
+    execFile(validator_path, args, {}, function (err, stdout, stderr) {
       stderr = stderr.trim();
       if (stdout.startsWith(input_file)) {
         stdout = stdout.slice(input_file.length);
