@@ -52,9 +52,13 @@ function fileFSName(opts, name) {
   if (opts.base) {
     name = forwardSlashes(path.relative(opts.base, name));
   }
-  // Remap `../glov/client/shaders/foo.fp` to be `glov/shaders/foo.fp`
-  name = name.replace(/(.*glov\/(?:client|common)\/)/, 'glov/');
-  return name;
+  // Remap `../glov/client/shaders/foo.fp` to be just `shaders/foo.fp`
+  let non_glov_name = name.replace(/(.*glov\/(?:client|common)\/)/, '');
+  if (name !== non_glov_name) {
+    return { name: non_glov_name, priority: 1 };
+  } else {
+    return { name, priority: 2 };
+  }
 }
 
 module.exports = function webfsBuild(opts) {
@@ -63,8 +67,9 @@ module.exports = function webfsBuild(opts) {
     preamble,
     postamble,
     output: opts.output,
+    key: 'name',
     proc: function (job, file, next) {
-      let name = fileFSName(opts, file.relative);
+      let { name, priority } = fileFSName(opts, file.relative);
       let data = file.contents;
       let line;
       if (name.endsWith('.jsobj')) {
@@ -73,7 +78,12 @@ module.exports = function webfsBuild(opts) {
       } else {
         line = `fs['${name}'] = [${data.length},'${encodeString(data)}'];`;
       }
-      next(null, { contents: line });
+      next(null, { name, contents: line, priority });
     },
+    version: [
+      encodeObj,
+      encodeString,
+      fileFSName,
+    ],
   });
 };

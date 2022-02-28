@@ -862,10 +862,10 @@ function fontShadersInit() {
   if (font_shaders.font_aa) {
     return;
   }
-  font_shaders.font_aa = shaders.create('glov/shaders/font_aa.fp');
-  font_shaders.font_aa_glow = shaders.create('glov/shaders/font_aa_glow.fp');
-  font_shaders.font_aa_outline = shaders.create('glov/shaders/font_aa_outline.fp');
-  font_shaders.font_aa_outline_glow = shaders.create('glov/shaders/font_aa_outline_glow.fp');
+  font_shaders.font_aa = shaders.create('shaders/font_aa.fp');
+  font_shaders.font_aa_glow = shaders.create('shaders/font_aa_glow.fp');
+  font_shaders.font_aa_outline = shaders.create('shaders/font_aa_outline.fp');
+  font_shaders.font_aa_outline_glow = shaders.create('shaders/font_aa_outline_glow.fp');
   shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa);
   shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_glow);
   shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline);

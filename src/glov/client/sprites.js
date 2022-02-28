@@ -755,9 +755,9 @@ export function startup() {
   geom_stats = geom.stats;
   clip_space[2] = -1;
   clip_space[3] = 1;
-  sprite_vshader = shaders.create('glov/shaders/sprite.vp');
-  sprite_fshader = shaders.create('glov/shaders/sprite.fp');
-  sprite_dual_fshader = shaders.create('glov/shaders/sprite_dual.fp');
+  sprite_vshader = shaders.create('shaders/sprite.vp');
+  sprite_fshader = shaders.create('shaders/sprite.fp');
+  sprite_dual_fshader = shaders.create('shaders/sprite_dual.fp');
   shaders.prelink(sprite_vshader, sprite_fshader);
   shaders.prelink(sprite_vshader, sprite_dual_fshader);
 }

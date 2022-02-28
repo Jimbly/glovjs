@@ -503,11 +503,11 @@ export function startup(_globals) {
   globals = _globals;
   globals_used = {};
 
-  error_fp = create('glov/shaders/error.fp');
+  error_fp = create('shaders/error.fp');
   if (engine.webgl2) {
-    error_fp_webgl2 = create('glov/shaders/error_gl2.fp');
+    error_fp_webgl2 = create('shaders/error_gl2.fp');
   }
-  error_vp = create('glov/shaders/error.vp');
+  error_vp = create('shaders/error.vp');
 
   filewatchOn('.fp', onShaderChange);
   filewatchOn('.vp', onShaderChange);

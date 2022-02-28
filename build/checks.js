@@ -75,7 +75,8 @@ module.exports = function (filename) {
     'nodejs': '16.13.0',
     'glov-build': '0.0.32',
     'glov-build-browserify': '0.0.4',
-    'glov-build-preresolve': '0.1.0',
+    'glov-build-concat': '0.0.8',
+    'glov-build-preresolve': '0.2.0',
     '@jimbly/babel-plugin-transform-modules-simple-commonjs': '0.0.3',
   });
 };

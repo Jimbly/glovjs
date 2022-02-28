@@ -276,7 +276,7 @@ function validUsername(user_id, allow_admin) {
 
 function userIdExists(client_channel, user_id, resp_func) {
   /*
-  // Needs: const dot_prop = require('dot-prop');
+  // Needs: const dot_prop = require('glov/common/dot-prop.js');
   const store_path = `user/user.${user_id}`;
   client_channel.channel_server.ds_store_meta.getAsync(store_path, {}, function (err, response) {
     if (err) {

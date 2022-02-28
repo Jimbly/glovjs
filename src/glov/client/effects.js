@@ -15,28 +15,28 @@ const { vec2, vec3, vec4, v4set } = require('glov/common/vmath.js');
 
 const shader_data = {
   vp_copy: {
-    vp: 'glov/shaders/effects_copy.vp',
+    vp: 'shaders/effects_copy.vp',
   },
   copy: {
-    fp: 'glov/shaders/effects_copy.fp',
+    fp: 'shaders/effects_copy.fp',
   },
   pixely_expand: {
-    fp: 'glov/shaders/pixely_expand.fp',
+    fp: 'shaders/pixely_expand.fp',
   },
   gaussian_blur: {
-    fp: 'glov/shaders/effects_gaussian_blur.fp',
+    fp: 'shaders/effects_gaussian_blur.fp',
   },
   // bloom_merge: {
-  //   fp: 'glov/shaders/effects_bloom_merge.fp',
+  //   fp: 'shaders/effects_bloom_merge.fp',
   // },
   // bloom_threshold: {
-  //   fp: 'glov/shaders/effects_bloom_threshold.fp',
+  //   fp: 'shaders/effects_bloom_threshold.fp',
   // },
   color_matrix: {
-    fp: 'glov/shaders/effects_color_matrix.fp',
+    fp: 'shaders/effects_color_matrix.fp',
   },
   // distort: {
-  //   fp: 'glov/shaders/effects_distort.fp',
+  //   fp: 'shaders/effects_distort.fp',
   // },
 };
 

@@ -26,8 +26,8 @@ export let default_vshader;
 export let default_fshader;
 
 function initShaders() {
-  default_vshader = shaders.create('glov/shaders/default.vp');
-  default_fshader = shaders.create('glov/shaders/default.fp');
+  default_vshader = shaders.create('shaders/default.vp');
+  default_fshader = shaders.create('shaders/default.fp');
   shaders.prelink(default_vshader, default_fshader);
 }
 
@@ -194,5 +194,5 @@ export function load(url) {
 export function startup() {
   initShaders();
   let model_box = models.box = new Model('box');
-  model_box.parse(webFSGetFile('glov/models/box_textured_embed.glb').buffer);
+  model_box.parse(webFSGetFile('models/box_textured_embed.glb').buffer);
 }

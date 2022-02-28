@@ -23,7 +23,7 @@ export const CONTINUE = 'continue';
 
 const shader_data = {
   transition_pixelate: {
-    fp: 'glov/shaders/transition_pixelate.fp',
+    fp: 'shaders/transition_pixelate.fp',
   },
 };
 
