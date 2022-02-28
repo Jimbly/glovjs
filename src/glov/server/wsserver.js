@@ -186,13 +186,20 @@ WSServer.prototype.init = function (server, server_https) {
       } else {
         ws_server.last_client = client;
         client.log_packet_size = data && data.length;
+        let log_data;
         try {
+          if (typeof data === 'string') {
+            client.logCtx('debug', `Received incorrect WebSocket data type (${typeof data}), auto-fixing...`);
+            log_data = data;
+            data = Buffer.from(data, 'binary');
+          }
           wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter || logBigFilter);
         } catch (e) {
           e.source = client.ctx();
           client.logCtx('error', `Exception "${e}" while handling packet from`, e.source);
           client.logCtx('error', `Packet data (base64) = ${data.toString('base64', 0, 1000000)}`);
-          client.logCtx('error', `Packet data (utf8,1K) = ${JSON.stringify(data.toString('utf8', 0, 1000))}`);
+          client.logCtx('error', 'Packet data (utf8,1K) = ' +
+            `${JSON.stringify(log_data || data.toString('utf8', 0, 1000))}`);
           ws_server.emit('uncaught_exception', e);
         }
       }
