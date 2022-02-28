@@ -178,9 +178,9 @@ function ChatUI(params) {
   this.w = params.w || engine.game_width / 2;
   this.h = params.h || engine.game_height / 2; // excluding text entry
   this.border = params.border || undefined;
-  this.volume_join_leave = params.volume_join_leave || 1;
-  this.volume_in = params.volume_in || 1;
-  this.volume_out = params.volume_out || 1;
+  this.volume_join_leave = params.volume_join_leave || 0.15;
+  this.volume_in = params.volume_in || 0.5;
+  this.volume_out = params.volume_out || 0.5;
   this.history = new CmdHistory();
   this.get_roles = defaultGetRoles; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
