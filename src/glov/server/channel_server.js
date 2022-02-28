@@ -327,10 +327,13 @@ function osFreeMem(cb) {
     let mem_free = 0;
     let mem_total_free = 0;
     if (err) {
-      if (os.platform() === 'win32') {
-        // silently ignore, we'll use the fallback, good enough for development
-      } else {
-        console.error(`Unable to read /proc/meminfo: ${err}`);
+      switch (os.platform()) {
+        case 'darwin':
+        case 'win32':
+          // silently ignore, we'll use the fallback, good enough for development
+          break;
+        default:
+          console.error(`${os.platform()} Unable to read /proc/meminfo: ${err}`);
       }
     } else {
       let lines = data.split('\n');
