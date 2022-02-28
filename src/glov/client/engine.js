@@ -644,7 +644,7 @@ export function projectionZBias(dist, at_z) {
   mat_projection[10] = mat_projection_10 + e;
 }
 
-function fixNatives(is_startup) {
+export function fixNatives(is_startup) {
   // If any browser extensions have added things to the Array prototype, remove them!
   let b = [];
   for (let a in b) {
