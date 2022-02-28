@@ -823,7 +823,7 @@ export function buttonShared(param) {
   }
   if (ret) {
     state = 'down';
-    playUISound('button_click');
+    playUISound(param.sound || 'button_click');
   }
   if (button_mouseover && param.tooltip) {
     drawTooltipBox(param);
