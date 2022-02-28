@@ -401,6 +401,18 @@ class ChannelServer {
     this.autoCreateChannelHere(channel_type, subid, resp_func);
   }
 
+  clientCanSendDirectWithoutSubscribe(channel_id) {
+    let splitids = channel_id.split('.');
+    if (splitids.length !== 2) {
+      return false;
+    }
+    let Ctor = this.channel_types[splitids[0]];
+    if (!Ctor) {
+      return false;
+    }
+    return !Ctor.prototype.require_subscribe;
+  }
+
   // auto create channel that can make use of cloud store
   autoCreateChannelHere(channel_type, subid, cb) {
     const self = this;

@@ -183,14 +183,18 @@ function onChannelMsg(client, data, resp_func) {
   let client_channel = client.client_channel;
 
   if (!client_channel.isSubscribedTo(channel_id)) {
-    if (is_packet) {
-      payload.pool();
+    if (channel_server.clientCanSendDirectWithoutSubscribe(channel_id)) {
+      // let it through
+    } else {
+      if (is_packet) {
+        payload.pool();
+      }
+      if (!resp_func.expecting_response) {
+        client.logCtx('warn', `Unhandled error "Client is not on channel ${channel_id}" sent to client in response to ${
+          msg} ${is_packet ? '(pak)' : logdata(payload)}`);
+      }
+      return void resp_func(`Client is not on channel ${channel_id}`);
     }
-    if (!resp_func.expecting_response) {
-      client.logCtx('warn', `Unhandled error "Client is not on channel ${channel_id}" sent to client in response to ${
-        msg} ${is_packet ? '(pak)' : logdata(payload)}`);
-    }
-    return void resp_func(`Client is not on channel ${channel_id}`);
   }
   if (!resp_func.expecting_response) {
     resp_func = null;

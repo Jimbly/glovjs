@@ -1048,7 +1048,7 @@ export class ChannelWorker {
         }
       }
       // Ensure the client was allowed to subscribe to this worker
-      if (!this.subscribers[source.channel_id]) {
+      if (!this.subscribers[source.channel_id] && this.require_subscribe) {
         return void onError('ERR_NOT_SUBSCRIBED');
       }
     }
@@ -1409,6 +1409,7 @@ ChannelWorker.prototype.logPacketDispatch = packetLog;
 ChannelWorker.prototype.maintain_client_list = false;
 ChannelWorker.prototype.emit_join_leave_events = false;
 ChannelWorker.prototype.require_login = false;
+ChannelWorker.prototype.require_subscribe = true; // Clients must subscribe to send a direct message
 ChannelWorker.prototype.auto_destroy = false;
 ChannelWorker.prototype.permissive_client_set = false; // allow clients to set arbitrary data
 ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this
