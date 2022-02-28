@@ -517,4 +517,7 @@ export function addGlobal(key, vec) {
   assert(!globals[key]);
   assert(!globals_used[key]); // A shader has already been prelinked referencing this global
   globals[key] = vec;
+  for (let ii = 0; ii < vec.length; ++ii) {
+    assert(isFinite(vec[ii]));
+  }
 }
