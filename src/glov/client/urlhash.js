@@ -38,7 +38,7 @@ export let TYPE_STRING = 'string';
 
 let params = {};
 
-let title_suffix = '';
+let title_transformer;
 
 let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove search and anchor
 if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
@@ -234,13 +234,10 @@ function toString() {
       }
     }
   }
-  if (title_suffix) {
-    if (eff_title) {
-      eff_title = `${eff_title} | ${title_suffix}`;
-    } else {
-      eff_title = title_suffix;
-    }
+  if (title_transformer) {
+    eff_title = title_transformer(eff_title);
   }
+  eff_title = String(eff_title);
   return `${root_value}${values.length ? '?' : ''}${values.join('&')}`;
 }
 
@@ -318,13 +315,22 @@ function updateHistory(new_need_push_state) {
 
 // Optional startup
 export function startup(param) {
-  assert(!title_suffix);
-  title_suffix = param.title_suffix;
+  assert(!title_transformer);
+  title_transformer = param.title_transformer;
+  if (!title_transformer && (param.title_suffix || param.title_default)) {
+    const { title_suffix, title_default } = param;
+    title_transformer = function (title) {
+      if (title_suffix && title) {
+        return `${title} | ${title_suffix}`;
+      }
+      return title || title_default || title_suffix;
+    };
+  }
 
   // Refresh the current URL, it might be in the non-route format
   updateHistory(false);
 
-  if (title_suffix) {
+  if (title_transformer) {
     refreshTitle();
     setTimeout(periodicRefreshTitle, 1000);
   }
