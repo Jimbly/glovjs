@@ -71,6 +71,10 @@ class GlovUIEditBox {
     for (let f in params) {
       this[f] = params[f];
     }
+    if (this.text === undefined) {
+      // do not trigger assert if `params` has a `text: undefined` member
+      this.text = '';
+    }
   }
   updateText() {
     this.text = this.input.value;
