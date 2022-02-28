@@ -74,6 +74,10 @@ function cmpSprite(a, b) {
   if (a.z !== b.z) {
     return a.z - b.z;
   }
+  if (a.blend === BLEND_ADDITIVE && b.blend === BLEND_ADDITIVE) {
+    // both additive at the same Z, do not sort for performance reasons
+    return 0;
+  }
   if (a.y !== b.y) {
     return a.y - b.y;
   }
@@ -159,7 +163,10 @@ export function queueraw(
     color, shader, shader_params, blend);
 }
 
-export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom, pixel_perfect) {
+export function queuesprite(
+  sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
+  pixel_perfect, blend
+) {
   assert(isFinite(z));
   let elem = spriteDataAlloc();
   elem.texs = sprite.texs;
@@ -269,7 +276,7 @@ export function queuesprite(sprite, x, y, z, w, h, rot, uvs, color, shader, shad
 
   elem.uid = ++last_uid;
   elem.shader = shader || null;
-  elem.blend = 0; // BLEND_ALPHA
+  elem.blend = blend || 0;
 
   if (shader_params) {
     shader_params.clip_space = sprite_shader_params.clip_space;
@@ -736,7 +743,7 @@ Sprite.prototype.draw = function (params) {
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
   queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
-    params.shader || this.shader, params.shader_params, params.nozoom, params.pixel_perfect);
+    params.shader || this.shader, params.shader_params, params.nozoom, params.pixel_perfect, params.blend);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
