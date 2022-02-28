@@ -11,7 +11,7 @@ const input = require('./input.js');
 const { link } = require('./link.js');
 const local_storage = require('./local_storage.js');
 const { ceil, floor, max, min, round } = Math;
-const net = require('./net.js');
+const { netClient, netClientId, netSubs, netUserId } = require('./net.js');
 const { profanityFilter, profanityStartup } = require('./words/profanity.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const settings = require('./settings.js');
@@ -133,6 +133,18 @@ CmdHistory.prototype.next = function (cur_text) {
   return this.entries[idx] || '';
 };
 
+function defaultGetRoles() {
+  let user_public_data;
+  if (netUserId() && netClient().connected) {
+    let user_channel = netSubs().getMyUserChannel();
+    user_public_data = user_channel.data && user_channel.data.public;
+    if (user_public_data?.permissions?.sysadmin) {
+      return { sysadmin: 1 };
+    }
+  }
+  return {};
+}
+
 function ChatUI(params) {
   assert.equal(typeof params, 'object');
   assert.equal(typeof params.max_len, 'number');
@@ -169,7 +181,7 @@ function ChatUI(params) {
   this.volume_in = params.volume_in || 1;
   this.volume_out = params.volume_out || 1;
   this.history = new CmdHistory();
-  this.get_roles = null; // returns object for testing cmd access permissions
+  this.get_roles = defaultGetRoles; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
   this.url_info = params.url_info; // Optional for grabbing the interesting portion of the URL for tooltip and /url
   this.user_context_cb = params.user_context_cb; // Cb called with { user_id } on click
@@ -205,7 +217,7 @@ function ChatUI(params) {
   };
   this.styles.join_leave = this.styles.system;
 
-  net.subs.on('chat_broadcast', this.onChatBroadcast.bind(this));
+  netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
 }
 
 ChatUI.prototype.setActiveSize = function (font_height, w) {
@@ -290,13 +302,13 @@ ChatUI.prototype.addChat = function (msg, style) {
 };
 ChatUI.prototype.addChatFiltered = function (data) {
   console.log(`Chat from ${data.id}: ${data.msg}`);
-  if (settings.profanity_filter && data.id !== (net.subs.getUserId() || net.client.id)) {
+  if (settings.profanity_filter && data.id !== (netUserId() || netClientId())) {
     data.msg = profanityFilter(data.msg);
   }
   this.addMsgInternal(data);
 };
 ChatUI.prototype.onMsgJoin = function (data) {
-  if (data.client_id !== net.client.id) {
+  if (data.client_id !== netClientId()) {
     if (this.volume_join_leave) {
       ui.playUISound('user_join', this.volume_join_leave);
     }
@@ -332,7 +344,7 @@ ChatUI.prototype.onMsgChat = function (data) {
     this.on_chat_cb(data);
   }
   let { msg, id, client_id, display_name, flags, ts, quiet } = data;
-  if (!quiet && client_id !== net.client.id) {
+  if (!quiet && client_id !== netClientId()) {
     if (this.volume_in) {
       ui.playUISound('msg_in', this.volume_in);
     }
@@ -401,9 +413,6 @@ ChatUI.prototype.setGetRoles = function (fn) {
 
 let access_dummy = { access: null };
 ChatUI.prototype.getAccessObj = function () {
-  if (!this.get_roles) {
-    return {};
-  }
   access_dummy.access = this.get_roles();
   return access_dummy;
 };
@@ -420,7 +429,7 @@ ChatUI.prototype.cmdParse = function (str, cb) {
   cmd_parse.handle(this.getAccessObj(), str, function (err, resp) {
     if (err && cmd_parse.was_not_found) {
       // forward to server
-      net.subs.sendCmdParse(str, handleResult);
+      netSubs().sendCmdParse(str, handleResult);
     } else {
       handleResult(err, resp);
     }
@@ -553,9 +562,9 @@ ChatUI.prototype.isFocused = function () {
 };
 
 ChatUI.prototype.sendChat = function (flags, text) {
-  if (!net.client.connected) {
+  if (!netClient().connected) {
     this.addChatError('Cannot chat: Disconnected');
-  } else if (!this.channel || !net.subs.loggedIn() && !net.subs.allow_anon) {
+  } else if (!this.channel || !netSubs().loggedIn() && !netSubs().allow_anon) {
     this.addChatError('Cannot chat: Must be logged in');
   } else if (text.length > this.max_len) {
     this.addChatError('Chat message too long');
@@ -568,9 +577,9 @@ ChatUI.prototype.sendChat = function (flags, text) {
         if (err === 'ERR_ECHO') {
           this.onMsgChat({
             msg: text,
-            id: net.subs.loggedIn(),
-            client_id: net.client.id,
-            display_name: net.subs.logged_in_display_name,
+            id: netUserId(),
+            client_id: netClientId(),
+            display_name: netSubs().logged_in_display_name,
             flags,
           });
         } else {
@@ -590,7 +599,7 @@ ChatUI.prototype.run = function (opts) {
   const border = opts.border || this.border || (8 * UI_SCALE);
   const SPACE_ABOVE_ENTRY = border;
   const scroll_grow = opts.scroll_grow || 0;
-  if (net.client.disconnected && !this.hide_disconnected_message) {
+  if (netClient().disconnected && !this.hide_disconnected_message) {
     ui.font.drawSizedAligned(
       glov_font.style(null, {
         outline_width: 2,
@@ -599,7 +608,7 @@ ChatUI.prototype.run = function (opts) {
       }),
       camera2d.x0(), camera2d.y0(), Z.DEBUG,
       ui.font_height, glov_font.ALIGN.HVCENTER, camera2d.w(), camera2d.h() * 0.20,
-      `Connection lost, attempting to reconnect (${(net.client.timeSinceDisconnect()/1000).toFixed(0)})...`);
+      `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
   }
 
   if (!this.did_run_late) {
@@ -617,7 +626,7 @@ ChatUI.prototype.run = function (opts) {
   let is_focused = false;
   let font_height = this.font_height;
   let anything_visible = false;
-  let hide_light = (opts.hide || engine.defines.NOUI || !net.subs.loggedIn()) &&
+  let hide_light = (opts.hide || engine.defines.NOUI || !netSubs().loggedIn()) &&
     !was_focused ?
     1 : // must be numerical, used to index fade values
     0;
@@ -734,8 +743,8 @@ ChatUI.prototype.run = function (opts) {
               text = text.slice(1);
             }
             this.history.add(text);
-            if (net.subs) {
-              net.subs.serverLog('cmd', text);
+            if (netSubs()) {
+              netSubs().serverLog('cmd', text);
             }
             this.cmdParse(text.slice(1), (err) => {
               if (!err) {
@@ -1018,7 +1027,7 @@ ChatUI.prototype.setChannel = function (channel) {
                 here_map[user_id] = client.ids.display_name;
               }
             }
-            if (client_id === net.client.id || already_in_list) {
+            if (client_id === netClientId() || already_in_list) {
               continue;
             }
             if (client.ids) {
