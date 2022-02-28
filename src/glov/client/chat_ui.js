@@ -10,6 +10,7 @@ const { isFriend } = require('./social.js');
 const input = require('./input.js');
 const { link } = require('./link.js');
 const local_storage = require('./local_storage.js');
+const { getStringIfLocalizable } = require('./localization.js');
 const { ceil, floor, max, min, round } = Math;
 const { netClient, netClientId, netSubs, netUserId } = require('./net.js');
 const { profanityFilter, profanityStartup } = require('./words/profanity.js');
@@ -296,11 +297,18 @@ ChatUI.prototype.addMsgInternal = function (elem) {
   }
 };
 
+function toStr(val) {
+  val = getStringIfLocalizable(val);
+  return typeof val === 'string' ? val : JSON.stringify(val);
+}
+
 ChatUI.prototype.addChat = function (msg, style) {
+  msg = toStr(msg);
   console.log(msg);
   this.addMsgInternal({ msg, style });
 };
 ChatUI.prototype.addChatFiltered = function (data) {
+  data.msg = toStr(data.msg);
   console.log(`Chat from ${data.id}: ${data.msg}`);
   if (settings.profanity_filter && data.id !== (netUserId() || netClientId())) {
     data.msg = profanityFilter(data.msg);
@@ -382,15 +390,8 @@ ChatUI.prototype.runLate = function () {
   }
 };
 
-function errStr(err) {
-  if (typeof err === 'object') {
-    return JSON.stringify(err);
-  }
-  return err;
-}
-
 ChatUI.prototype.addChatError = function (err) {
-  this.addChat(`[error] ${errStr(err)}`, 'error');
+  this.addChat(`[error] ${toStr(err)}`, 'error');
 };
 
 ChatUI.prototype.handleCmdParseError = function (err, resp) {
@@ -403,7 +404,7 @@ ChatUI.prototype.handleCmdParse = function (err, resp) {
   if (err) {
     this.addChatError(err);
   } else if (resp) {
-    this.addChat(`[system] ${(typeof resp === 'string') ? resp : JSON.stringify(resp)}`, 'system');
+    this.addChat(`[system] ${toStr(resp)}`, 'system');
   }
 };
 
@@ -689,7 +690,7 @@ ChatUI.prototype.run = function (opts) {
               let last_msg = this.msgs[this.msgs.length - 1];
               if (last_msg) {
                 let msg = last_msg.msg;
-                if (msg && !(msg.flags & FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
+                if (msg && !(last_msg.flags & FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
                   let numlines = last_msg.numlines;
                   tooltip_y -= font_height * numlines + SPACE_ABOVE_ENTRY;
                 }
@@ -998,9 +999,9 @@ ChatUI.prototype.setChannel = function (channel) {
   channel.onMsg('join', this.on_join);
   channel.onMsg('leave', this.on_leave);
   let chat_history;
-  let here;
+  let here = [];
   let here_map = {};
-  let friends;
+  let friends = [];
   asyncParallel([
     (next) => {
       channel.send('chat_get', null, (err, data) => {
@@ -1014,8 +1015,6 @@ ChatUI.prototype.setChannel = function (channel) {
       channel.onceSubscribe((data) => {
         let clients = data && data.public && data.public.clients;
         if (clients) {
-          here = [];
-          friends = [];
           for (let client_id in clients) {
             let client = clients[client_id];
             let user_id = client.ids && client.ids.user_id;
@@ -1073,10 +1072,14 @@ ChatUI.prototype.setChannel = function (channel) {
     // Then join message
     this.addChat(`Joined channel ${this.channel.channel_id}`, 'join_leave');
     // Then who's here now
-    if (here && here.length || friends && friends.length) {
+    if (here.length || friends.length) {
       let msg = [];
       if (here.length) {
-        msg.push(`Other users already here: ${here.join(', ')}`);
+        if (here.length > 10) {
+          msg.push(`Other users already here: ${here.slice(0, 10).join(', ')} (and ${here.length - 10} more...)`);
+        } else {
+          msg.push(`Other users already here: ${here.join(', ')}`);
+        }
       }
       if (friends.length) {
         msg.push(`Friends already here: ${friends.join(', ')}`);
