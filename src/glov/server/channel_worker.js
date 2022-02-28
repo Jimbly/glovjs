@@ -1149,7 +1149,7 @@ export class ChannelWorker {
   checkPacketQueue(source) {
     let q_data = this.pkt_queue[source];
     if (!q_data) {
-      return;
+      return null;
     }
     let q = q_data.pkts;
     let next_idx = ((this.recv_pkt_idx[source] || 0) + 1) & PAK_ID_MASK;
@@ -1164,9 +1164,9 @@ export class ChannelWorker {
         }
         delete this.pkt_queue[source];
       }
-      // TODO: Make this not deeply recursive?
-      this.dispatchPacket(next_idx, next.source, next.pak);
+      return [next_idx, next.source, next.pak];
     }
+    return null;
   }
 
   startPacketQueueCheck(source) {
@@ -1241,7 +1241,7 @@ export class ChannelWorker {
     }
   }
 
-  dispatchPacket(pkt_idx, source, pak) {
+  dispatchPacketInternal(pkt_idx, source, pak) {
     let ids = pak.readJSON() || {};
     let split = source.split('.');
     assert.equal(split.length, 2);
@@ -1277,8 +1277,19 @@ export class ChannelWorker {
         Buffer.from(pak.getBuffer()).toString('utf8', 0, min(max_len, 1000)))}`);
       channel_server.handleUncaughtError(e);
     }
-    if (pkt_idx !== -1) {
-      this.checkPacketQueue(source);
+  }
+
+  dispatchPacket(pkt_idx, source, pak) {
+    while (true) {
+      this.dispatchPacketInternal(pkt_idx, source, pak);
+      if (pkt_idx === -1) {
+        break;
+      }
+      let next = this.checkPacketQueue(source);
+      if (!next) {
+        break;
+      }
+      [pkt_idx, source, pak] = next;
     }
   }
 
