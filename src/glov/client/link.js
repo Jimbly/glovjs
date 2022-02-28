@@ -7,6 +7,7 @@ const in_event = require('./in_event.js');
 const input = require('./input.js');
 const { abs } = Math;
 const ui = require('./ui.js');
+const settings = require('./settings.js');
 
 let state_cache = {};
 let good_url = /https?:\/\//;
@@ -27,7 +28,7 @@ export function link(param) {
 
   let rect = { x, y, w, h };
 
-  if (camera2d.clipTestRect(rect)) {
+  if (camera2d.clipTestRect(rect) && !settings.shader_debug) {
     // at least some is not clipped
     let elem = ui.getDOMElem(allow_modal, state.elem);
     if (elem !== state.elem) {
