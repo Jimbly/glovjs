@@ -1252,6 +1252,7 @@ const color_slider_handle = vec4(1,1,1,1);
 const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
 const color_slider_handle_over = vec4(0.75,0.75,0.75,1);
 export let slider_dragging = false; // for caller polling
+export let slider_rollover = false; // for caller polling
 // Returns new value
 export function slider(value, param) {
   // required params
@@ -1262,6 +1263,7 @@ export function slider(value, param) {
   param.z = param.z || Z.UI;
   param.w = param.w || button_width;
   param.h = param.h || button_height;
+  param.max_dist = param.max_dist || Infinity;
   let vshrink = param.vshrink || slider_default_vshrink;
   let handle_shrink = param.handle_shrink || slider_default_handle_shrink;
   let disabled = param.disabled || false;
@@ -1323,6 +1325,7 @@ export function slider(value, param) {
     slider_dragging = true;
   }
   let rollover = !disabled && glov_input.mouseOver(param);
+  slider_rollover = rollover;
   let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / (param.max - param.min);
   let handle_x = handle_center_pos - handle_w / 2;
   let handle_y = param.y + param.h / 2 - handle_h / 2;
