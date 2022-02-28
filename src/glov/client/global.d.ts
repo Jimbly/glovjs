@@ -10,6 +10,9 @@ declare module 'glov-global' {
       FBInstant?: unknown;
       androidwrapper?: unknown;
       webkit?: { messageHandlers?: { iosWrapper?: unknown } };
+
+      // GLOV ui.js
+      Z: Record<string, number>;
     }
   }
 }
