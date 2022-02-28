@@ -815,6 +815,7 @@ export function init(channel_server_in) {
       plat: client.client_plat,
       ver: client.client_ver,
       build: client.client_build,
+      ua: client.user_agent,
     };
   });
   ws_server.on('cack_data', (cack_data) => {
