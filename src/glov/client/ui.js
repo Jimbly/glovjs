@@ -986,6 +986,7 @@ export function print(style, x, y, z, text) {
 
 export function label(param) {
   let { style, x, y, align, w, h, text, tooltip } = param;
+  text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
   let size = param.size || font_height;
