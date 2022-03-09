@@ -71,6 +71,21 @@ function getVersionUrlParams() {
   return `plat=${PLATFORM}&ver=${exports.CURRENT_VERSION}&build=${BUILD_TIMESTAMP}`;
 }
 
+function jsonParseResponse(response) {
+  if (!response) {
+    return null;
+  }
+  if (response[0] === '<') {
+    // html response
+    return null;
+  }
+  try {
+    return JSON.parse(response);
+  } catch (e) {
+    return null;
+  }
+}
+
 function whenServerReady(cb) {
   let retry_count = 0;
   function doit() {
@@ -78,14 +93,7 @@ function whenServerReady(cb) {
       url: `${getAPIPath()}ready?${getVersionUrlParams()}`,
     }, (err, response) => {
       if (err) {
-        let response_data;
-        try {
-          if (response) {
-            response_data = JSON.parse(response);
-          }
-        } catch (e) {
-          response_data = null;
-        }
+        let response_data = jsonParseResponse(response);
         let status = response_data?.status;
         if (status !== 'ERR_CLIENT_VERSION_OLD') {
           ++retry_count;
@@ -231,14 +239,7 @@ WSClient.prototype.connect = function (for_reconnect) {
   fetch({
     url: `${getAPIPath()}ready?${getVersionUrlParams()}`,
   }, (err, response) => {
-    let response_data;
-    try {
-      if (response) {
-        response_data = JSON.parse(response);
-      }
-    } catch (e) {
-      response_data = null;
-    }
+    let response_data = jsonParseResponse(response);
     let status = response_data?.status;
     let redirect_environment = response_data?.redirect_environment;
     let update_available = response_data?.update_available;
