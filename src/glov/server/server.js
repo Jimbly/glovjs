@@ -129,7 +129,7 @@ export function startup(params) {
     channel_server.load_log = true;
   }
 
-  ws_server = glov_wsserver.create(server, server_https);
+  ws_server = glov_wsserver.create(server, server_https, argv.timeout === false);
   ws_server.on('error', function (error, client) {
     if (client) {
       channel_server.last_worker = client.client_channel;

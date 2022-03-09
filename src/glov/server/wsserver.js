@@ -137,7 +137,7 @@ function logBigFilter(client, msg, data) {
   return true; // always accept
 }
 
-WSServer.prototype.init = function (server, server_https) {
+WSServer.prototype.init = function (server, server_https, no_timeout) {
   let ws_server = this;
   ws_server.wss = new WebSocket.Server({ noServer: true, maxPayload: 1024*1024 });
 
@@ -250,8 +250,10 @@ WSServer.prototype.init = function (server, server_https) {
     }
   });
 
-  this.check_timeouts_fn = this.checkTimeouts.bind(this);
-  setTimeout(this.check_timeouts_fn, wscommon.CONNECTION_TIMEOUT / 4);
+  if (!no_timeout) {
+    this.check_timeouts_fn = this.checkTimeouts.bind(this);
+    setTimeout(this.check_timeouts_fn, wscommon.CONNECTION_TIMEOUT / 4);
+  }
 };
 
 WSServer.prototype.disconnectClient = function (client) {

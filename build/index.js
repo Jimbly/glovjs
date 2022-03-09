@@ -328,6 +328,7 @@ gb.task({
       `--sport=${server_port_https}`,
     ].concat(argv.debug ? ['--debug'] : [])
     .concat(argv['net-delay'] === false ? ['--no-net-delay'] : [])
+    .concat(argv.timeout === false ? ['--no-timeout'] : [])
     .concat(argv.env ? [`--env=${argv.env}`] : []),
     stdio: argv.serverlog === false ?
       ['ignore', 'ignore', 'ignore', 'ipc'] : // --no-serverlog
