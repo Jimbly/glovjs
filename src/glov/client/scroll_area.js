@@ -108,11 +108,16 @@ ScrollArea.prototype.begin = function (params) {
   let camera_orig_y1 = camera2d.y1();
   // map (0,0) onto (x,y) in the current camera space, keeping w/h scale the same
   let camera_new_x0 = -(x - camera_orig_x0);
-  let camera_new_y0 = -(y - camera_orig_y0) + round(this.scroll_pos + this.overscroll);
+  let camera_new_y0 = -(y - camera_orig_y0) + this.getScrollPos();
   let camera_new_x1 = camera_new_x0 + camera_orig_x1 - camera_orig_x0;
   let camera_new_y1 = camera_new_y0 + camera_orig_y1 - camera_orig_y0;
   camera2d.push();
   camera2d.set(camera_new_x0, camera_new_y0, camera_new_x1, camera_new_y1);
+};
+
+// Includes overscroll - actual visible scroll pos for this frame
+ScrollArea.prototype.getScrollPos = function () {
+  return round(this.scroll_pos + this.overscroll);
 };
 
 ScrollArea.prototype.clampScrollPos = function () {

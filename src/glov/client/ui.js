@@ -345,19 +345,23 @@ export function startup(param) {
 
 let dynamic_text_elem;
 let per_frame_dom_alloc = [0,0,0,0,0,0,0];
+let per_frame_dom_suppress = 0;
+export function suppressNewDOMElemWarnings() {
+  per_frame_dom_suppress = glov_engine.frame_index + 1;
+}
 export function getDOMElem(allow_modal, last_elem) {
   if (modal_dialog && !allow_modal) {
     return null;
   }
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
-    if (glov_engine.DEBUG && !glov_engine.resizing()) {
+    if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
       per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
       let sum = 0;
       for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
         sum += per_frame_dom_alloc[ii];
       }
-      assert(sum < per_frame_dom_alloc.length);
+      assert(sum < per_frame_dom_alloc.length, 'Allocated new DOM elements for too many consecutive frames');
     }
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
