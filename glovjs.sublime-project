@@ -7,7 +7,6 @@
             [
                 "node_modules",
                 ".gbstate",
-                "dist_gulp",
                 "build.dev",
                 "build.prod",
                 "logs",

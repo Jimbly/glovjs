@@ -331,6 +331,9 @@ export function soundPlay(soundname, volume, as_music) {
       return v;
     },
     duration: sound.duration.bind(sound, id),
+    volume: (vol) => {
+      sound.volume(vol * settings.volume * volume_override, id);
+    },
     fadeOut: (time) => {
       fades.push({
         volume,
