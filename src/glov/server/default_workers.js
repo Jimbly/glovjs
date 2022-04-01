@@ -650,6 +650,7 @@ export class DefaultUserWorker extends ChannelWorker {
     resp_func();
   }
   handleCSRAdminToUser(src, pak, resp_func) {
+    let access = pak.readJSON();
     let cmd = pak.readString();
     if (!this.exists()) {
       return void resp_func('ERR_INVALID_USER');
@@ -659,7 +660,10 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     // first, try running here on a (potentially offline) user
     this.cmd_parse_source = { user_id: this.user_id }; // spoof as is from self
-    this.access = src; // use caller's access credentials
+    for (let key in src) {
+      access[key] = src[key];
+    }
+    this.access = access; // use caller's access credentials
     this.cmd_parse.handle(this, cmd, (err, resp) => {
       if (!this.cmd_parse.was_not_found) {
         return void resp_func(err, resp);
@@ -679,7 +683,7 @@ export class DefaultUserWorker extends ChannelWorker {
       this.log(`Fowarding /csr request ("${cmd}") for ${src.user_id}(${src.channel_id}) to ${to_use}`);
       let out = this.pak(to_use, 'csr_user_to_clientworker');
       out.writeString(cmd);
-      out.writeJSON(src);
+      out.writeJSON(access);
       out.send(resp_func);
     });
 

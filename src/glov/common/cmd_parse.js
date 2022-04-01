@@ -46,6 +46,7 @@ function CmdParse(params) {
   this.was_not_found = false;
   this.storage = params && params.storage; // expects .setJSON(), .getJSON()
   this.default_handler = defaultHandler;
+  this.last_access = null;
   this.register({
     cmd: 'cmd_list',
     func: this.cmdList.bind(this),
@@ -87,6 +88,9 @@ CmdParse.prototype.setDefaultHandler = function (fn) {
   assert(this.default_handler === defaultHandler); // Should only set this once
   this.default_handler = fn;
 };
+CmdParse.prototype.checkAccess = function (access_list) {
+  return checkAccess(this.last_access, access_list);
+};
 CmdParse.prototype.handle = function (self, str, resp_func) {
   resp_func = resp_func || this.default_handler;
   this.was_not_found = false;
@@ -97,7 +101,8 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
   }
   let cmd = canonical(m[1]);
   let cmd_data = this.cmds[cmd];
-  if (cmd_data && !checkAccess(self && self.access, cmd_data.access_run)) {
+  this.last_access = self && self.access;
+  if (cmd_data && !checkAccess(this.last_access, cmd_data.access_run)) {
     // this.was_not_found = true;
     resp_func(`Access denied: "${m[1]}"`);
     return false;

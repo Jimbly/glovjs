@@ -93,6 +93,7 @@ cmd_parse.register({
     let user_id = str.slice(0, idx);
     let cmd = str.slice(idx + 1);
     let pak = net.subs.getChannelImmediate(`user.${user_id}`).pak('csr_admin_to_user');
+    pak.writeJSON(cmd_parse.last_access);
     pak.writeString(cmd);
     pak.send(resp_func);
   }
