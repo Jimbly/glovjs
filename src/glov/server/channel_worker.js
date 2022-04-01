@@ -1033,7 +1033,7 @@ export class ChannelWorker {
   // source has at least { channel_id, type, id }, possibly also .user_id and .display_name if type === 'client'
   channelMessage(source, msg, data, resp_func) {
     function onError(err) {
-      if (isPacket(data)) {
+      if (isPacket(data) && !data.ended()) {
         data.pool();
       }
       resp_func(err);
