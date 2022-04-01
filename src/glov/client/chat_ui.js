@@ -42,9 +42,13 @@ settings.register({
     range: [0,1],
     help: 'Automatically unfocus chat after sending a message',
   },
-});
-
-settings.register({
+  chat_show_join_leave: {
+    default_value: 1,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    label: 'Show join/leave messages',
+    help: 'Show join/leave messages',
+  },
   profanity_filter: {
     default_value: 1,
     type: cmd_parse.TYPE_INT,
@@ -316,6 +320,9 @@ ChatUI.prototype.addChatFiltered = function (data) {
   this.addMsgInternal(data);
 };
 ChatUI.prototype.onMsgJoin = function (data) {
+  if (!settings.chat_show_join_leave) {
+    return;
+  }
   if (data.client_id !== netClientId()) {
     if (this.volume_join_leave) {
       ui.playUISound('user_join', this.volume_join_leave);
@@ -330,6 +337,9 @@ ChatUI.prototype.onMsgJoin = function (data) {
   }
 };
 ChatUI.prototype.onMsgLeave = function (data) {
+  if (!settings.chat_show_join_leave) {
+    return;
+  }
   if (this.volume_join_leave) {
     ui.playUISound('user_leave', this.volume_join_leave);
   }
