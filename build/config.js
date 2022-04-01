@@ -53,6 +53,7 @@ module.exports = {
     deps: 'app_deps',
     is_worker: false,
     do_version: 'client/app.ver.json',
+    do_reload: true,
   }],
   extra_client_tasks: [],
   extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output

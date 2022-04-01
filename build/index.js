@@ -280,9 +280,11 @@ gb.task({
   func: copy,
 });
 
+let server_process_container = {};
+
 let bundle_tasks = [];
 function registerBundle(param) {
-  const { entrypoint, deps, is_worker, do_version } = param;
+  const { entrypoint, deps, is_worker, do_version, do_reload } = param;
   let name = `client_bundle_${entrypoint.replace('/', '_')}`;
   let out = `client/${entrypoint}.bundle.js`;
   appBundle({
@@ -299,6 +301,29 @@ function registerBundle(param) {
     do_version,
     bundle_uglify_opts: argv['dev-mangle'] ? prod_uglify_opts : null,
   });
+  if (do_reload) {
+    // Add an early sync task, letting the server know we should reload these files
+    let name_last = `${name}${do_version ? '_ver' : ''}`;
+    let name_sync = `${name_last}_reload`;
+    gb.task({
+      name: name_sync,
+      input: [
+        `${name_last}:**`,
+      ],
+      type: gb.ALL,
+      read: false,
+      version: Date.now(), // always runs once per process
+      func: function (job, done) {
+        if (server_process_container.proc) {
+          let updated = job.getFilesUpdated();
+          updated = updated.map((a) => a.relative.replace(/^client\//, ''));
+          server_process_container.proc.send({ type: 'file_change', paths: updated });
+        }
+        done();
+      },
+    });
+    bundle_tasks.push(name_sync);
+  }
 }
 config.bundles.forEach(registerBundle);
 
@@ -310,8 +335,6 @@ const server_input_globs = [
 
 let server_port = argv.port || process.env.port || 3000;
 let server_port_https = argv.sport || process.env.sport || (server_port + 100);
-
-let server_process_container = {};
 
 gb.task({
   name: 'run_server',
@@ -336,14 +359,6 @@ gb.task({
     // shell: true,
     // detached: true,
     process_container: server_process_container,
-  }),
-});
-
-gb.task({
-  name: 'check_typescript',
-  input: [...config.all_js_files, ...config.client_json_files, ...config.server_json_files],
-  ...typescript({
-    config_path: 'tsconfig.json',
   }),
 });
 
@@ -452,6 +467,14 @@ gb.task({
       done();
     }
   },
+});
+
+gb.task({
+  name: 'check_typescript',
+  input: [...config.all_js_files, ...config.client_json_files, ...config.server_json_files],
+  ...typescript({
+    config_path: 'tsconfig.json',
+  }),
 });
 
 gb.task({
