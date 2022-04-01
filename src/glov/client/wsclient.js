@@ -75,7 +75,7 @@ function jsonParseResponse(response) {
   if (!response) {
     return null;
   }
-  if (response[0] === '<') {
+  if (response.trim()[0] === '<') {
     // html response
     return null;
   }
