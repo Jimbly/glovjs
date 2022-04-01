@@ -7,19 +7,68 @@ export const FADE_IN = 2;
 export const FADE = FADE_OUT + FADE_IN;
 
 const assert = require('assert');
-const { is_firefox } = require('./browser.js');
-const { cmd_parse } = require('./cmds.js');
-const { fbInstantOnPause } = require('./fbinstant.js');
-const { filewatchOn } = require('./filewatch.js');
+import { callEach, defaults, ridx } from 'glov/common/util.js';
+import { ErrorCallback } from 'glov/common/types.js';
+import { cmd_parse } from './cmds.js';
+import { fbInstantOnPause } from './fbinstant.js';
+import { filewatchOn } from './filewatch.js';
+import { is_firefox } from './browser.js';
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
 const { abs, floor, max, min, random } = Math;
 const settings = require('./settings.js');
 const urlhash = require('./urlhash.js');
-const { callEach, defaults, ridx } = require('glov/common/util.js');
 
 const DEFAULT_FADE_RATE = 0.001;
 
-let sounds = {};
+interface SoundLoadOpts {
+  streaming?: boolean,
+  for_reload?: boolean,
+  loop?: boolean,
+}
+
+// Workaround to have interface to Howl object available (alongside glov_load_opts).
+interface HowlSound {
+  glov_load_opts: SoundLoadOpts,
+  play: (sprite?: string | number, volume?: number) => number,
+  stop: (id?: number) => HowlSound,
+  volume: (vol?: number, id?: number) => void,
+  seek: (seek?: number, id?: number) => HowlSound | number,
+  playing: (id?: number) => boolean,
+  duration: (id?: number) => number,
+}
+
+interface GlovSound { // Sound wrapper returned by soundPlay to external code
+  stop: (id: number) => HowlSound;
+  volume: (vol: number) => void;
+  playing: (id?: number) => boolean;
+  duration: (id: number) => number;
+  location: () => number;
+  fadeOut: (time: number) => void;
+}
+
+interface GlovMusic {
+  sound: HowlSound | null,
+  id: number,
+  current_volume: number,
+  target_volume: number,
+  sys_volume: number,
+  need_play: boolean,
+}
+
+interface Fade {
+  sound: HowlSound,
+  id: number,
+  time: number,
+  volume: number,
+  settingsVolume: () => number,
+}
+
+let sounds : Record<string, HowlSound> = {};
+let active_sfx_as_music: {
+  sound: GlovSound,
+  play_volume: number,
+  set_volume_when_played: number,
+}[] = [];
 let num_loading = 0;
 
 // Howler.usingWebAudio = false; // Disable WebAudio for testing HTML5 fallbacks
@@ -30,18 +79,37 @@ const default_params = {
   //  also covers all browsers: ['webm', 'mp3']
   fade_rate: DEFAULT_FADE_RATE,
 };
-let sound_params;
+let sound_params: {
+  ext_list: string[],
+  fade_rate: number,
+};
 
-let last_played = {};
+let last_played : Record<string, number> = {};
 let frame_timestamp = 0;
-let fades = [];
-let music;
+let fades : Fade[] = [];
+let music : GlovMusic[];
 
 let volume_override = 1;
 let volume_override_target = 1;
 
 settings.register({
   volume: {
+    default_value: 1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0,1],
+  },
+});
+
+settings.register({
+  volume_music: {
+    default_value: 1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0,1],
+  },
+});
+
+settings.register({
+  volume_sound: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
     range: [0,1],
@@ -64,13 +132,21 @@ settings.register({
   },
 });
 
-let sounds_loading = {};
-let on_load_fail;
-export function soundOnLoadFail(cb) {
+function musicVolume() {
+  return settings.volume * settings.volume_music;
+}
+
+function soundVolume() {
+  return settings.volume * settings.volume_sound;
+}
+
+let sounds_loading : Record<string, ErrorCallback<never, string>[]> = {};
+let on_load_fail: (base: string) => void;
+export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
 }
 
-export function soundLoad(base, opts, cb) {
+export function soundLoad(base: string, opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};
   if (opts.streaming && is_firefox) {
     // TODO: Figure out workaround and fix!
@@ -98,7 +174,7 @@ export function soundLoad(base, opts, cb) {
     }
     return;
   }
-  let cbs = [];
+  let cbs : ErrorCallback<never, string>[] = [];
   if (cb) {
     cbs.push(cb);
   }
@@ -110,7 +186,7 @@ export function soundLoad(base, opts, cb) {
     preferred_ext = m[2];
   }
   let src = `sounds/${base}`;
-  let srcs = [];
+  let srcs : string[] = [];
   let suffix = '';
   if (opts.for_reload) {
     suffix = `?rl=${Date.now()}`;
@@ -127,7 +203,7 @@ export function soundLoad(base, opts, cb) {
   // Try loading desired sound types one at a time.
   // Cannot rely on Howler's built-in support for this because it only continues
   //   through the list on *some* load errors, not all :(.
-  function tryLoad(idx) {
+  function tryLoad(idx: number) {
     if (idx === srcs.length) {
       console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
       if (on_load_fail) {
@@ -156,7 +232,7 @@ export function soundLoad(base, opts, cb) {
           callEach(cbs, delete sounds_loading[key], null);
         }
       },
-      onloaderror: function (id, err, extra) {
+      onloaderror: function (id: unknown, err: string, extra: unknown) {
         if (idx === srcs.length - 1) {
           console.error(`Error loading sound ${srcs[idx]}: ${err}`);
         } else {
@@ -175,9 +251,9 @@ export function soundLoad(base, opts, cb) {
   tryLoad(0);
 }
 
-function soundReload(filename) {
-  let sound_name = filename.match(/^sounds\/([^.]+)\.\w+$/);
-  sound_name = sound_name && sound_name[1];
+function soundReload(filename: string) {
+  let name_match = filename.match(/^sounds\/([^.]+)\.\w+$/);
+  let sound_name = name_match && name_match[1];
   if (!sound_name) {
     return;
   }
@@ -191,21 +267,21 @@ function soundReload(filename) {
   soundLoad(sound_name, opts);
 }
 
-export function soundPause() {
+export function soundPause(): void {
   volume_override = volume_override_target = 0;
   // Immediately mute all the music
   // Can't do a nice fade out here because we stop getting ticked when we're not in the foreground
   soundTick(0); // eslint-disable-line no-use-before-define
 }
 
-export function soundResume() {
+export function soundResume(): void {
   volume_override_target = 1;
 
   // Actual context resuming handled internally by Howler, leaving hooks in for now, though
   // Maybe more reliable than `Howler.safeToPlay`...
 }
 
-export function soundStartup(params) {
+export function soundStartup(params: { ext_list?: string[], fade_rate?: number }): void {
   sound_params = defaults(params || {}, default_params);
 
   // Music
@@ -228,11 +304,11 @@ export function soundStartup(params) {
   fbInstantOnPause(soundPause);
 }
 
-export function soundResumed() {
+export function soundResumed(): boolean {
   return !Howler.noAudio && Howler.safeToPlay;
 }
 
-export function soundTick(dt) {
+export function soundTick(dt: number): void {
   frame_timestamp += dt;
   if (volume_override !== volume_override_target) {
     let delta = dt * 0.004;
@@ -244,6 +320,15 @@ export function soundTick(dt) {
   }
   if (!soundResumed()) {
     return;
+  }
+  for (let i = 0; i < active_sfx_as_music.length; ++i) {
+    let { sound, play_volume, set_volume_when_played } = active_sfx_as_music[i];
+    if (!sound.playing()) {
+      ridx(active_sfx_as_music, i);
+    } else if (set_volume_when_played !== musicVolume()) {
+      sound.volume(play_volume);
+      active_sfx_as_music[i].set_volume_when_played = musicVolume();
+    }
   }
   // Do music fading
   // Cannot rely on Howler's fading because starting a fade when one is in progress
@@ -271,7 +356,7 @@ export function soundTick(dt) {
       }
     }
     if (mus.sound) {
-      let sys_volume = mus.current_volume * settings.volume * volume_override;
+      let sys_volume = mus.current_volume * musicVolume() * volume_override;
       if (mus.need_play) {
         mus.need_play= false;
         mus.id = mus.sound.play();
@@ -288,7 +373,7 @@ export function soundTick(dt) {
     let fade = fades[ii];
     let fade_amt = fade.time ? dt / fade.time : max_fade;
     fade.volume = max(0, fade.volume - fade_amt);
-    fade.sound.volume(fade.volume * settings.volume * volume_override, fade.id);
+    fade.sound.volume(fade.volume * fade.settingsVolume() * volume_override, fade.id);
     if (!fade.volume) {
       fade.sound.stop(fade.id);
       ridx(fades, ii);
@@ -296,7 +381,7 @@ export function soundTick(dt) {
   }
 }
 
-export function soundPlay(soundname, volume, as_music) {
+export function soundPlay(soundname: string, volume: number, as_music?: boolean): GlovSound | null {
   volume = volume || 1;
   if (!as_music && !settings.sound || as_music && !settings.music) {
     return null;
@@ -315,11 +400,11 @@ export function soundPlay(soundname, volume, as_music) {
   if (frame_timestamp - last_played_time < 45) {
     return null;
   }
-
-  let id = sound.play(undefined, volume * settings.volume * volume_override);
-  // sound.volume(volume * settings.volume * volume_override, id);
+  let settingsVolume = as_music ? musicVolume : soundVolume;
+  let id = sound.play(undefined, volume * settingsVolume() * volume_override);
+  // sound.volume(volume * settingsVolume() * volume_override, id);
   last_played[soundname] = frame_timestamp;
-  return {
+  let played_sound = {
     stop: sound.stop.bind(sound, id),
     playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
     location: () => { // get current location
@@ -331,21 +416,30 @@ export function soundPlay(soundname, volume, as_music) {
       return v;
     },
     duration: sound.duration.bind(sound, id),
-    volume: (vol) => {
-      sound.volume(vol * settings.volume * volume_override, id);
+    volume: (vol: number) => {
+      sound.volume(vol * settingsVolume() * volume_override, id);
     },
-    fadeOut: (time) => {
+    fadeOut: (time: number) => {
       fades.push({
         volume,
         sound,
         id,
         time,
+        settingsVolume,
       });
     },
   };
+  if (as_music) {
+    active_sfx_as_music.push({
+      sound: played_sound,
+      play_volume: volume,
+      set_volume_when_played: musicVolume(),
+    });
+  }
+  return played_sound;
 }
 
-export function soundPlayStreaming(soundname, volume) {
+export function soundPlayStreaming(soundname: string, volume: number): void {
   if (!settings.sound) {
     return;
   }
@@ -359,7 +453,7 @@ export function soundPlayStreaming(soundname, volume) {
   });
 }
 
-export function soundPlayMusic(soundname, volume, transition) {
+export function soundPlayMusic(soundname: string, volume: number, transition: number): void {
   if (!settings.music) {
     return;
   }
@@ -379,7 +473,7 @@ export function soundPlayMusic(soundname, volume, transition) {
           sound.stop(music[0].id);
           music[0].sound = null;
         } else {
-          let sys_volume = music[0].sys_volume = volume * settings.volume * volume_override;
+          let sys_volume = music[0].sys_volume = volume * musicVolume() * volume_override;
           sound.volume(sys_volume, music[0].id);
           if (!sound.playing()) {
             sound.play(undefined, sys_volume);
@@ -406,7 +500,7 @@ export function soundPlayMusic(soundname, volume, transition) {
     let start_vol = (transition & FADE_IN) ? 0 : volume;
     music[0].current_volume = start_vol;
     if (soundResumed()) {
-      let sys_volume = start_vol * settings.volume * volume_override;
+      let sys_volume = start_vol * musicVolume() * volume_override;
       music[0].id = sound.play(undefined, sys_volume);
       // sound.volume(sys_volume, music[0].id);
       music[0].sys_volume = sys_volume;
@@ -417,6 +511,6 @@ export function soundPlayMusic(soundname, volume, transition) {
   });
 }
 
-export function soundLoading() {
+export function soundLoading(): number {
   return num_loading;
 }
