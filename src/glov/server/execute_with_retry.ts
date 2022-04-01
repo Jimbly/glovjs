@@ -52,7 +52,7 @@ export function executeWithRetry<T = unknown, E = unknown>(
     attempts++;
 
     // Execute the funtion that was passed in with a callback handler function as a parameter
-    func(function (err: E | undefined | null, res: T | undefined | null) {
+    func(function (err, res) {
       if (!err) {
         if (attempts !== 1) {
           console.info(`[RETRY] ${log_prefix} | [${attempts}] | Finally succeeded`);
