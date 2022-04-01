@@ -4,6 +4,7 @@
 const { cmd_parse } = require('./cmds.js');
 const glov_engine = require('./engine.js');
 const net = require('./net.js');
+const { netDisconnected } = net;
 const perf = require('./perf.js');
 const settings = require('./settings.js');
 const util = require('glov/common/util.js');
@@ -254,7 +255,7 @@ function syncPosWithCaller(npm, on_pos_set_cb) {
 }
 
 NetPositionManager.prototype.checkNet = function (on_pos_set_cb) {
-  if (!net.client.connected || !this.channel || !this.channel.data.public) {
+  if (netDisconnected() || !this.channel || !this.channel.data.public) {
     // Not yet in room, do nothing
     return true;
   }
