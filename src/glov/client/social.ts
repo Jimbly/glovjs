@@ -220,7 +220,7 @@ function setExternalCurrentUser(provider: string, user_info: ExternalUserInfo): 
 }
 
 function updateExternalFriendsOnServer(provider: string, to_add: ExternalUserInfo[], to_remove: string[]): void {
-  if (to_add.length === 0 && to_remove.length === 0) {
+  if (to_add.length === 0 && to_remove.length === 0 || netDisconnected()) {
     return;
   }
 
