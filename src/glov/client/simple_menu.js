@@ -95,7 +95,7 @@ class GlovSimpleMenu {
     }
 
     // Check to see if any selection has an editBox open first
-    let selbox_enabled = true;
+    let selbox_enabled = !(params && params.disabled);
     if (this.edit_index >= 0 && this.edit_index < items.length) {
       selbox_enabled = false;
       ui.drawRect(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(),
@@ -124,7 +124,7 @@ class GlovSimpleMenu {
         // slider.no_notches = true;
         // slider.sound_release = this.sound_accept;
         let slider_width = 160;
-        let slider_x = x + sel_box.width - slider_width - 12;
+        let slider_x = x + sel_box.width - slider_width - 4 - display.xpad;
         let color = display.style_default.color_vec4;
         // if (display.style_default.color_mode == glov_font.COLOR_MODE.GRADIENT) {
         //   color = colorIntLerp(display.style_default.color_vec4, display.style_default.colorLR, 0.5);

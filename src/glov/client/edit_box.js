@@ -45,6 +45,7 @@ class GlovUIEditBox {
     this.placeholder = '';
     this.max_len = 0;
     this.zindex = null;
+    this.uppercase = false;
     this.initial_focus = false;
     this.onetime_focus = false;
     this.auto_unfocus = false;
@@ -195,6 +196,9 @@ class GlovUIEditBox {
         span.setAttribute('tabindex', 3);
         elem.appendChild(span);
         input.value = this.text;
+        if (this.uppercase) {
+          input.style['text-transform'] = 'uppercase';
+        }
         this.input = input;
         if (this.initial_focus || this.onetime_focus) {
           input.focus();

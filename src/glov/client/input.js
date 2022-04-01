@@ -1143,7 +1143,11 @@ export function keyDown(keycode) {
   return ks.down_time;
 }
 export function keyDownEdge(keycode, opts) {
-  if (opts && opts.in_event_cb && !input_eaten_kb) {
+  if (input_eaten_kb) {
+    return 0;
+  }
+
+  if (opts && opts.in_event_cb) {
     in_event.on('keydown', keycode, opts.in_event_cb);
   }
 
@@ -1156,7 +1160,11 @@ export function keyDownEdge(keycode, opts) {
   return r;
 }
 export function keyUpEdge(keycode, opts) {
-  if (opts && opts.in_event_cb && !input_eaten_kb) {
+  if (input_eaten_kb) {
+    return 0;
+  }
+
+  if (opts && opts.in_event_cb) {
     in_event.on('keyup', keycode, opts.in_event_cb);
   }
 

@@ -5,16 +5,17 @@
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
-const glov_input = require('./input.js');
 const glov_font = require('./font.js');
+const glov_input = require('./input.js');
+const { link } = require('./link.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const { clipped, clipPause, clipResume } = require('./sprites.js');
 const glov_ui = require('./ui.js');
-const { vec4 } = require('glov/common/vmath.js');
+const { v4copy, vec4 } = require('glov/common/vmath.js');
 let glov_markup = null; // Not ported
 
 const { min, max, sin } = Math;
-const { cloneShallow, merge, nearSame } = require('glov/common/util.js');
+const { clamp, cloneShallow, easeIn, merge, nearSame } = require('glov/common/util.js');
 
 let font;
 
@@ -34,17 +35,118 @@ const selbox_font_style_disabled = glov_font.style(null, {
   color: 0x808080ff,
 });
 
+const pad = 8;
+
+const color_white = vec4(1, 1, 1, 1);
+
+let color_temp_fade = vec4(1,1,1,1);
+export function selboxDefaultDrawItemBackground({
+  item_idx, item,
+  x, y, z,
+  w, h,
+  image_set, color,
+  image_set_extra, image_set_extra_alpha,
+}) {
+  glov_ui.drawHBox({ x, y, z, w, h },
+    image_set, color);
+  if (image_set_extra) {
+    v4copy(color_temp_fade, color);
+    color_temp_fade[3] *= easeIn(image_set_extra_alpha, 2);
+    glov_ui.drawHBox({ x, y, z, w, h },
+      image_set_extra, color_temp_fade);
+  }
+}
+
+export function selboxDefaultDrawItemText({
+  item_idx, item,
+  x, y, z,
+  w, h,
+  display,
+  font_height,
+  style,
+}) {
+  let text_z = z + 1;
+  // spriteListClipperPush(x, y + yoffs, eff_width - pad, h);
+  let did_tab = false;
+  if (display.tab_stop) {
+    let str = item.name;
+    let tab_idx = str.indexOf('\t');
+    if (tab_idx !== -1) {
+      did_tab = true;
+      let pre = str.slice(0, tab_idx);
+      let post = str.slice(tab_idx + 1);
+      let x1 = x + display.xpad;
+      let x2 = x + display.xpad + display.tab_stop + pad;
+      let w1 = display.tab_stop;
+      let w2 = w - display.tab_stop - display.xpad * 2 - pad;
+      if (display.use_markup) {
+        let md = {};
+        md.align = glov_font.ALIGN.HFIT;
+        md.x_size = md.y_size = font_height;
+        md.w = w1;
+        md.h = 1;
+        md.style = style;
+        glov_markup.print(md, x1, y, text_z, pre);
+        md.w = w2;
+        glov_markup.print(md, x2, y, text_z, post);
+      } else {
+        font.drawSizedAligned(style, x1, y, text_z, font_height,
+          glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
+          w1, h, pre);
+        font.drawSizedAligned(style, x2, y, text_z, font_height,
+          glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
+          w2, h, post);
+      }
+    }
+  }
+  if (!did_tab) {
+    let md = {};
+    md.align = (item.centered || display.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) |
+      glov_font.ALIGN.VCENTER;
+    md.x_size = md.y_size = font_height;
+    md.w = w - display.xpad * 2;
+    md.h = h;
+    md.style = style;
+    let xx = x + display.xpad;
+    if (display.use_markup) {
+      glov_markup.print(md, xx, y, text_z, item.name);
+    } else {
+      font.drawSizedAligned(md.style, xx, y, text_z, md.x_size,
+        md.align, md.w, md.h, item.name);
+    }
+  }
+  // spriteListClipperPop();
+  // if (display.selection_highlight && this.selected === i && show_selection) {
+  //   let grow = 0.2 * (1 - bounce_amt);
+  //   display.selection_highlight.DrawStretched(
+  //     x - grow * w, y - grow * h, text_z + 1.5,
+  //     w * (1 + 2 * grow), h * (1 + 2 * grow), 0, 0xFF);
+  // }
+}
+
+export function selboxDefaultDrawItem(param) {
+  selboxDefaultDrawItemBackground(param);
+  selboxDefaultDrawItemText(param);
+}
+
+
 export const default_display = {
   style_default: selbox_font_style_default,
   style_selected: selbox_font_style_selected,
   style_disabled: selbox_font_style_disabled,
   style_down: selbox_font_style_down,
+  color_default: color_white,
+  color_selected: color_white,
+  color_disabled: color_white,
+  color_down: color_white,
   no_background: false,
-  no_buttons: false,
+  // old: no_buttons: false, instead pass `nop` to draw_cb
+  draw_item_cb: selboxDefaultDrawItem,
   centered: false,
   bounce: true,
   tab_stop: 0,
   xpad: 8,
+  selection_fade: Infinity, // alpha per millisecond
   // selection_highlight: null, // TODO: custom / better selection highlight for menus
   use_markup: false, // always false, Markup not ported
 };
@@ -53,7 +155,6 @@ export const default_display = {
 const color_gray50 = vec4(0.313, 0.313, 0.313, 1.000);
 const color_gray80 = vec4(0.500, 0.500, 0.500, 1.000);
 const color_grayD0 = vec4(0.816, 0.816, 0.816, 1.000);
-const color_white = vec4(1, 1, 1, 1);
 
 const SELBOX_BOUNCE_TIME = 80;
 
@@ -78,6 +179,7 @@ export class GlovMenuItem {
     this.value_min = params.value_min || 0;
     this.value_max = params.value_max || 0;
     this.value_inc = params.value_inc || 0;
+    this.href = params.href || null; // for links
     this.tag = params.tag || null; // for isSelected(tag)
     this.style = params.style || null;
     // was bitmask
@@ -90,6 +192,7 @@ export class GlovMenuItem {
     this.plus_minus = Boolean(params.plus_minus);
     this.disabled = Boolean(params.disabled);
     this.centered = Boolean(params.centered);
+    this.selection_alpha = 0;
   }
 }
 
@@ -388,8 +491,6 @@ class GlovSelectionBox {
       }
     }
 
-    let pad = 8;
-
     let dropdown_x = x;
     let dropdown_y = y;
     let clip_pause = clipped() && this.is_dropdown && this.dropdown_visible;
@@ -432,10 +533,19 @@ class GlovSelectionBox {
         x = 0;
         eff_width = width - this.sa.barWidth();
       }
+      let dt = glov_engine.getFrameDt();
       for (let i = 0; i < this.items.length; i++) {
         let item = this.items[i];
         let entry_disabled = item.disabled;
         let image_set = null;
+        let image_set_extra = null;
+        let image_set_extra_alpha = 0;
+        if (item.href) {
+          link({
+            x, y, w: width, h: entry_height,
+            url: item.href,
+          });
+        }
         if (!this.disabled && !entry_disabled && glov_input.click({
           x, y, w: width, h: entry_height, button: 2,
         })) {
@@ -476,6 +586,7 @@ class GlovSelectionBox {
           // }
         }
 
+        let color;
         let style;
         let show_selection = !this.disabled && (
           !(this.transient_focus && !this.is_focused) && !this.is_dropdown || // show if a non-dropdown that's focused
@@ -483,32 +594,53 @@ class GlovSelectionBox {
         let bounce = false;
         if (this.selected === i && show_selection) {
           style = display.style_selected || selbox_font_style_selected;
-          image_set = glov_ui.sprites.menu_selected;
+          color = display.color_selected || default_display.color_selected;
+          item.selection_alpha = clamp(item.selection_alpha + dt * display.selection_fade, 0, 1);
+          if (item.selection_alpha === 1) {
+            image_set = glov_ui.sprites.menu_selected;
+          } else {
+            image_set = glov_ui.sprites.menu_entry;
+            image_set_extra = glov_ui.sprites.menu_selected;
+            image_set_extra_alpha = item.selection_alpha;
+          }
           if (is_mouseover && glov_input.mouseDown()) {
             if (glov_ui.sprites.menu_down) {
               image_set = glov_ui.sprites.menu_down;
+              if (display.style_down) {
+                style = display.style_down;
+                color = display.color_down || default_display.color_down;
+              }
             } else {
               style = display.style_down || selbox_font_style_down;
+              color = display.color_down || default_display.color_down;
             }
           }
           if (display.bounce && !this.is_dropdown) {
-            let ms = glov_engine.getFrameDt();
             if (this.selected !== old_sel) {
               bounce = true;
               this.bounce_time = SELBOX_BOUNCE_TIME;
-            } else if (ms >= this.bounce_time) {
+            } else if (dt >= this.bounce_time) {
               this.bounce_time = 0;
             } else {
               bounce = true;
-              this.bounce_time -= ms;
+              this.bounce_time -= dt;
             }
           }
-        } else if (entry_disabled) {
-          style = display.style_disabled || selbox_font_style_disabled;
-          image_set = glov_ui.sprites.menu_entry;
         } else {
-          style = item.style || display.style_default || selbox_font_style_default;
-          image_set = glov_ui.sprites.menu_entry;
+          item.selection_alpha = clamp(item.selection_alpha - dt * display.selection_fade, 0, 1);
+          if (item.selection_alpha !== 1) {
+            image_set_extra = glov_ui.sprites.menu_selected;
+            image_set_extra_alpha = item.selection_alpha;
+          }
+          if (entry_disabled) {
+            style = display.style_disabled || selbox_font_style_disabled;
+            color = display.color_disabled || default_display.color_disabled;
+            image_set = glov_ui.sprites.menu_entry;
+          } else {
+            style = item.style || display.style_default || selbox_font_style_default;
+            color = display.color_default || default_display.color_default;
+            image_set = glov_ui.sprites.menu_entry;
+          }
         }
         let yoffs = 0;
         let bounce_amt = 0;
@@ -516,68 +648,21 @@ class GlovSelectionBox {
           bounce_amt = sin(this.bounce_time * 20 / SELBOX_BOUNCE_TIME / 10);
           yoffs = -4 * bounce_amt * entry_height / 32;
         }
-        if (!display.no_buttons) {
-          glov_ui.drawHBox({ x, y: y + yoffs, z: z + 1, w: eff_width, h: entry_height },
-            image_set, color_white);
+
+        display.draw_item_cb({
+          item_idx: i, item,
+          x, y: y + yoffs, z: z + 1,
+          w: eff_width, h: entry_height,
+          image_set, color,
+          image_set_extra, image_set_extra_alpha,
+          font_height,
+          display,
+          style,
+        });
+
+        if (this.was_clicked && this.selected === i && item.href) {
+          window.location.href = item.href;
         }
-        // spriteListClipperPush(x, y + yoffs, eff_width - pad, entry_height);
-        let did_tab = false;
-        let text_y = y + yoffs;
-        if (display.tab_stop) {
-          let str = item.name;
-          let tab_idx = str.indexOf('\t');
-          if (tab_idx !== -1) {
-            did_tab = true;
-            let pre = str.slice(0, tab_idx);
-            let post = str.slice(tab_idx + 1);
-            let x1 = x + display.xpad;
-            let x2 = x + display.xpad + display.tab_stop + pad;
-            let w1 = display.tab_stop;
-            let w2 = eff_width - display.tab_stop - display.xpad * 2 - pad;
-            if (display.use_markup) {
-              let md = {};
-              md.align = glov_font.ALIGN.HFIT;
-              md.x_size = md.y_size = font_height;
-              md.w = w1;
-              md.h = 1;
-              md.style = style;
-              glov_markup.print(md, x1, text_y, z + 2, pre);
-              md.w = w2;
-              glov_markup.print(md, x2, text_y, z + 2, post);
-            } else {
-              font.drawSizedAligned(style, x1, text_y, z + 2, font_height,
-                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
-                w1, entry_height, pre);
-              font.drawSizedAligned(style, x2, text_y, z + 2, font_height,
-                glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
-                w2, entry_height, post);
-            }
-          }
-        }
-        if (!did_tab) {
-          let md = {};
-          md.align = (item.centered || display.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) |
-            glov_font.ALIGN.VCENTER;
-          md.x_size = md.y_size = font_height;
-          md.w = eff_width - display.xpad * 2;
-          md.h = entry_height;
-          md.style = style;
-          let xx = x + display.xpad;
-          let zz = z + 2;
-          if (display.use_markup) {
-            glov_markup.print(md, xx, text_y, zz, item.name);
-          } else {
-            font.drawSizedAligned(md.style, xx, text_y, zz, md.x_size,
-              md.align, md.w, md.h, item.name);
-          }
-        }
-        // spriteListClipperPop();
-        // if (display.selection_highlight && this.selected === i && show_selection) {
-        //   let grow = 0.2 * (1 - bounce_amt);
-        //   display.selection_highlight.DrawStretched(
-        //     x - grow * eff_width, y - grow * entry_height, z + 1.5,
-        //     eff_width * (1 + 2 * grow), entry_height * (1 + 2 * grow), 0, 0xFF);
-        // }
         y += entry_height;
       }
       if (do_scroll) {
