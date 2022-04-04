@@ -44,6 +44,9 @@ export function easeOut(v, a) {
 }
 
 export function clone(obj) {
+  if (!obj) { // handle undefined
+    return obj;
+  }
   return JSON.parse(JSON.stringify(obj));
 }
 
