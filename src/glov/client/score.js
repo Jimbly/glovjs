@@ -20,6 +20,9 @@ if (window.location.host.indexOf('localhost') !== -1 ||
   window.location.host.indexOf('staging') !== -1) {
   score_host = 'http://scores.staging.dashingstrike.com';
 }
+if (window.location.href.startsWith('https://')) {
+  score_host = score_host.replace(/^http:/, 'https:');
+}
 let parseHighScore;
 let encodeScore;
 let level_defs;
