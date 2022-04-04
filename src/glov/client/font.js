@@ -50,10 +50,10 @@ font_style = glov_font.style(null, {
 //   int spread;
 // } FontInfo;
 
-export const COLOR_MODE = {
-  SINGLE: 0,
-  GRADIENT: 1,
-};
+// export const COLOR_MODE = {
+//   SINGLE: 0,
+//   GRADIENT: 1,
+// };
 
 export const ALIGN = {
   HLEFT: 0,
@@ -91,10 +91,10 @@ export const ALIGN = {
 //   float glow_outer;
 //   U32 glow_color;
 //   U32 color; // upper left, or single color
-//   U32 colorUR; // upper right
-//   U32 colorLR; // lower right
-//   U32 colorLL; // lower left
-//   GlovFontColorMode color_mode;
+//   // U32 colorUR; // upper right
+//   // U32 colorLR; // lower right
+//   // U32 colorLL; // lower left
+//   // GlovFontColorMode color_mode;
 // } GlovFontStyle;
 
 /* Default GlovFontStyle:
@@ -104,13 +104,13 @@ export const ALIGN = {
     color: 0xFFFFFFff
   };
 
-  font_style = {
-    outline_width: 0, outline_color: 0x00000000,
-    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: 0x00000000,
-    // Color gradient: UL, UR, LR, LL
-    color: 0xFFFFFFff, colorUR: 0xFFFFFFff, colorLR: 0x000000ff, colorLL: 0x000000ff,
-    color_mode: glov_font.COLOR_MODE.GRADIENT,
-  };
+  // font_style = {
+  //   outline_width: 0, outline_color: 0x00000000,
+  //   glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: 0x00000000,
+  //   // Color gradient: UL, UR, LR, LL
+  //   color: 0xFFFFFFff, colorUR: 0xFFFFFFff, colorLR: 0x000000ff, colorLL: 0x000000ff,
+  //   color_mode: glov_font.COLOR_MODE.GRADIENT,
+  // };
 */
 
 function GlovFontStyle() {
@@ -126,10 +126,10 @@ GlovFontStyle.prototype.glow_inner = 0;
 GlovFontStyle.prototype.glow_outer = 0;
 GlovFontStyle.prototype.glow_color = 0x00000000;
 GlovFontStyle.prototype.color = 0xFFFFFFff;
-GlovFontStyle.prototype.colorUR = 0;
-GlovFontStyle.prototype.colorLR = 0;
-GlovFontStyle.prototype.colorLL = 0;
-GlovFontStyle.prototype.color_mode = COLOR_MODE.SINGLE;
+// GlovFontStyle.prototype.colorUR = 0;
+// GlovFontStyle.prototype.colorLR = 0;
+// GlovFontStyle.prototype.colorLL = 0;
+// GlovFontStyle.prototype.color_mode = COLOR_MODE.SINGLE;
 
 export const font_shaders = {};
 
@@ -843,20 +843,20 @@ GlovFont.prototype.applyStyle = function (style) {
   this.applied_style.glow_color = style.glow_color;
   this.applied_style.color = style.color;
   this.applied_style.color_vec4 = style.color_vec4;
-  this.applied_style.colorUR = style.colorUR;
-  this.applied_style.colorLR = style.colorLR;
-  this.applied_style.colorLL = style.colorLL;
-  this.applied_style.color_mode = style.color_mode;
+  // this.applied_style.colorUR = style.colorUR;
+  // this.applied_style.colorLR = style.colorLR;
+  // this.applied_style.colorLL = style.colorLL;
+  // this.applied_style.color_mode = style.color_mode;
 
-  if (this.applied_style.color_mode === COLOR_MODE.SINGLE) {
-    this.applied_style.colorUR = this.applied_style.colorLL = this.applied_style.colorLR = this.applied_style.color;
-  }
+  // if (this.applied_style.color_mode === COLOR_MODE.SINGLE) {
+  //   this.applied_style.colorUR = this.applied_style.colorLL = this.applied_style.colorLR = this.applied_style.color;
+  // }
 
   this.determineShader();
 };
 
 // Replicate constants and utility functions on all font instances as well
-GlovFont.prototype.COLOR_MODE = COLOR_MODE;
+// GlovFont.prototype.COLOR_MODE = COLOR_MODE;
 GlovFont.prototype.ALIGN = ALIGN;
 GlovFont.prototype.style = style;
 GlovFont.prototype.styleAlpha = styleAlpha;
