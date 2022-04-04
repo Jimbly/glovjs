@@ -4,12 +4,14 @@
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { floor, max, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
+const { BLEND_ALPHA, BLEND_PREMULALPHA } = sprites;
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
 const { vec4, v4clone, v4scale } = require('glov/common/vmath.js');
@@ -676,6 +678,8 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
 
   this.applyStyle(style);
 
+  let blend_mode = engine.defines.NOPREMUL ? BLEND_ALPHA : BLEND_PREMULALPHA;
+
   const avg_scale_font = (xsc + ysc) * 0.5;
   const camera_xscale = camera2d.data[4];
   const camera_yscale = camera2d.data[5];
@@ -784,7 +788,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
             z + z_advance * i, w, h,
             u0, v0, u1, v1,
             applied_style.color_vec4,
-            this.shader, techParamsGet());
+            this.shader, techParamsGet(), blend_mode);
           elem.y = sort_y;
 
           // require('./ui.js').drawRect(x - rel_x_scale * padding4[0],

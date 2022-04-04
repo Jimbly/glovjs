@@ -232,7 +232,20 @@ export function runFontTest(x, y) {
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_outline, x, y, z, font_size, 'Outline');
+  const font_style_outline_dim = glov_font.style(null, {
+    outline_width: 1, outline_color: 0x0000007f,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
+    color: COLOR_WHITE
+  });
+  const font_style_outline_dim2 = glov_font.style(null, {
+    outline_width: 1, outline_color: 0xFF00007f,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
+    color: COLOR_WHITE
+  });
+  let xx = x;
+  xx += font.drawSized(font_style_outline, xx, y, z, font_size, 'Outline ');
+  xx += font.drawSized(font_style_outline_dim, xx, y, z, font_size, 'Dim ');
+  xx += font.drawSized(font_style_outline_dim2, xx, y, z, font_size, 'Outline ');
   y += font_size;
 
   const font_style_glow = glov_font.style(null, {
@@ -240,12 +253,18 @@ export function runFontTest(x, y) {
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_glow, x, y, z, font_size, 'Glow');
+  let w = font.drawSized(font_style_glow, x, y, z, font_size, 'Glow');
+  const font_style_glow_dim = glov_font.style(null, {
+    outline_width: 0, outline_color: COLOR_INVISIBLE,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00000020,
+    color: COLOR_WHITE
+  });
+  font.drawSized(font_style_glow_dim, x + w + font_size, y, z, font_size, 'Dim Glow');
   y += font_size;
 
   const font_style_shadow = glov_font.style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
-    glow_xoffs: 3.25, glow_yoffs: 3.25, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
+    glow_xoffs: 4, glow_yoffs: 4, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
   font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O1Il');
@@ -256,7 +275,26 @@ export function runFontTest(x, y) {
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_both, x, y, z, font_size, 'Both 0O0');
+  const font_style_both_soft_on_hard = glov_font.style(null, {
+    outline_width: 1, outline_color: 0xFF00007f,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: COLOR_GREEN,
+    color: COLOR_WHITE
+  });
+  const font_style_both_hard_on_soft = glov_font.style(null, {
+    outline_width: 1, outline_color: COLOR_RED,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: 0x00FF0040,
+    color: COLOR_WHITE
+  });
+  const font_style_both_soft_on_soft = glov_font.style(null, {
+    outline_width: 1, outline_color: 0xFF00007f,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: 0x00FF0040,
+    color: COLOR_WHITE
+  });
+  xx = x;
+  xx += font.drawSized(font_style_both, xx, y, z, font_size, 'Both ');
+  xx += font.drawSized(font_style_both_soft_on_hard, xx, y, z, font_size, 'SoH ');
+  xx += font.drawSized(font_style_both_hard_on_soft, xx, y, z, font_size, 'HoH ');
+  font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0');
   y += font_size;
 
   let font_size2 = 32;

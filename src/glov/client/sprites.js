@@ -20,6 +20,7 @@ const { vec2, vec4 } = require('glov/common/vmath.js');
 
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
+export const BLEND_PREMULALPHA = 2;
 
 export let sprite_vshader;
 export let sprite_fshader;
@@ -450,6 +451,8 @@ function commitAndFlush() {
       last_blend_mode = state.blend;
       if (last_blend_mode === BLEND_ADDITIVE) {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      } else if (last_blend_mode === BLEND_PREMULALPHA) {
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       } else {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       }

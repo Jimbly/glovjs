@@ -9,13 +9,20 @@ uniform mediump vec4 param0;
 uniform vec4 outlineColor;
 void main()
 {
-  float texture0=texture2D(tex0,interp_texcoord).r;
+  // Body
+  float sdf = texture2D(tex0, interp_texcoord).r;
+  float blend_t = clamp(sdf * param0.x + param0.y, 0.0, 1.0);
   // Outline
-  vec4 outcolor = vec4(outlineColor.xyz, 0);
-  outcolor.w = clamp(texture0 * param0.x + param0.z, 0.0, 1.0);
-  outcolor.w = outcolor.w * outlineColor.w;
-  // outcolor = mix(outcolor, outlineColor, outcolor.w); // Makes a blackish border
-  // Main body
-  float t = clamp(texture0 * param0.x + param0.y, 0.0, 1.0);
-  gl_FragColor = mix(outcolor, interp_color, t);
+  float outline_t = clamp(sdf * param0.x + param0.z, 0.0, 1.0);
+  // Composite
+  #ifdef NOPREMUL
+  outline_t = outline_t * outlineColor.w;
+  vec4 outcolor = vec4(outlineColor.xyz, outline_t);
+  gl_FragColor = mix(outcolor, interp_color, blend_t);
+  #else
+  vec4 premul_outline_color = vec4(outlineColor.xyz * outlineColor.w, outlineColor.w);
+  vec4 premul_color = vec4(interp_color.rgb * interp_color.a, interp_color.a);
+  vec4 my_outline_color = premul_outline_color * outline_t;
+  gl_FragColor = mix(my_outline_color, premul_color, blend_t);
+  #endif
 }
