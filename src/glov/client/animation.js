@@ -6,7 +6,7 @@
 
   // trigger
   let alpha = 0;
-  let anim = glov_animation.create();
+  let anim = createAnimationSequencer();
   let t = anim.add(0, 300, (progress) => alpha = progress);
   t = anim.add(t + 1000, 300, (progress) => alpha = 1 - progress);
 
@@ -19,6 +19,9 @@
     drawSomething(alpha);
   }
 */
+
+// eslint-disable-next-line no-use-before-define
+exports.createAnimationSequencer = create;
 
 class GlovAnimationSequencer {
   constructor() {
