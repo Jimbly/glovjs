@@ -26,20 +26,25 @@ void main()
   #ifdef NOPREMUL
   // Outline on top of glow
   vec4 my_glow_color = vec4(glowColor.xyz, glow_t * glowColor.w);
-  outline_t = outline_t * outlineColor.w;
+  // Previously had the following (blends better with soft outline on hard glow, but breaks alpha-fade of whole style, see below)
+  // outline_t = outline_t * outlineColor.w;
   vec4 outcolor = mix(my_glow_color, outlineColor, outline_t);
   // Body on top of that
   gl_FragColor = mix(outcolor, interp_color, blend_t);
   #else
-  vec4 premul_glow_color = vec4(glowColor.xyz * glowColor.w, glowColor.w);
-  vec4 premul_outline_color = vec4(outlineColor.xyz * outlineColor.w, outlineColor.w);
-  vec4 premul_color = vec4(interp_color.rgb * interp_color.a, interp_color.a);
   // Outline on top of glow
-  vec4 my_outline_color = premul_outline_color * outline_t;
-  vec4 my_glow_color = premul_glow_color * glow_t;
-  // Equivalent to glBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-  vec4 outcolor = my_outline_color + (1.0 - my_outline_color.a) * my_glow_color;
+  vec4 my_glow_color = glowColor * glow_t;
+
+  // This allows a soft outline to blend well through to a glow underneath, but
+  //   causes the colors to bleed when the whole style is faded:
+  // vec4 my_outline_color = outlineColor * outline_t;
+  // vec4 outcolor = my_outline_color + (1.0 - my_outline_color.a) * my_glow_color; // Equivalent to glBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+
+  // Instead, this allows fading of the entire color by an alpha to keep the relative colors:
+  // vec4 outcolor = my_outline_color + (1.0 - outline_t) * my_glow_color;
+  vec4 outcolor = mix(my_glow_color, outlineColor, outline_t);
+
   // Body on top of that
-  gl_FragColor = mix(outcolor, premul_color, blend_t);
+  gl_FragColor = mix(outcolor, interp_color, blend_t);
   #endif
 }

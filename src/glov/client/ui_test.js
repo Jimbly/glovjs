@@ -245,7 +245,8 @@ export function runFontTest(x, y) {
   let xx = x;
   xx += font.drawSized(font_style_outline, xx, y, z, font_size, 'Outline ');
   xx += font.drawSized(font_style_outline_dim, xx, y, z, font_size, 'Dim ');
-  xx += font.drawSized(font_style_outline_dim2, xx, y, z, font_size, 'Outline ');
+  xx += font.drawSized(font_style_outline_dim2, xx, y, z, font_size, 'Out');
+  xx += font.drawSized(font.styleAlpha(font_style_outline_dim2, 0.5), xx, y, z, font_size, 'line');
   y += font_size;
 
   const font_style_glow = glov_font.style(null, {
@@ -253,13 +254,20 @@ export function runFontTest(x, y) {
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  let w = font.drawSized(font_style_glow, x, y, z, font_size, 'Glow');
   const font_style_glow_dim = glov_font.style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
-    glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00000020,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00FF0020,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_glow_dim, x + w + font_size, y, z, font_size, 'Dim Glow');
+  const font_style_glow_dim_on_dim = glov_font.style(null, {
+    outline_width: 0, outline_color: COLOR_INVISIBLE,
+    glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00FF0020,
+    color: 0xFFFFFF80,
+  });
+  xx = x;
+  xx += font.drawSized(font_style_glow, xx, y, z, font_size, 'Glow ');
+  xx += font.drawSized(font_style_glow_dim, xx, y, z, font_size, 'Dim ');
+  font.drawSized(font_style_glow_dim_on_dim, xx, y, z, font_size, 'Glow ');
   y += font_size;
 
   const font_style_shadow = glov_font.style(null, {
@@ -291,7 +299,10 @@ export function runFontTest(x, y) {
     color: COLOR_WHITE
   });
   xx = x;
-  xx += font.drawSized(font_style_both, xx, y, z, font_size, 'Both ');
+  xx += font.drawSized(font_style_both, xx, y, z, font_size, 'B');
+  xx += font.drawSized(font.styleAlpha(font_style_both, 0.75), xx, y, z, font_size, 'o');
+  xx += font.drawSized(font.styleAlpha(font_style_both, 0.5), xx, y, z, font_size, 't');
+  xx += font.drawSized(font.styleAlpha(font_style_both, 0.25), xx, y, z, font_size, 'h ');
   xx += font.drawSized(font_style_both_soft_on_hard, xx, y, z, font_size, 'SoH ');
   xx += font.drawSized(font_style_both_hard_on_soft, xx, y, z, font_size, 'HoH ');
   font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0');
@@ -305,9 +316,6 @@ export function runFontTest(x, y) {
   });
   font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, ui.button_width * 2, 0,
     'ALIGN.HFIT The quick brown fox jumps over the lazy dog');
-  y += font_size2;
-  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, 140, 0,
-    '0 Players (+1 Easy Bots)');
   y += font_size2;
 
   let test = 'glow';

@@ -14,8 +14,6 @@ void main()
   #ifdef NOPREMUL
   gl_FragColor = vec4(interp_color.rgb, interp_color.a * blend_t);
   #else
-  // TODO: do on CPU?
-  vec4 premul_color = vec4(interp_color.rgb * interp_color.a, interp_color.a);
-  gl_FragColor = premul_color * blend_t;
+  gl_FragColor = interp_color * blend_t;
   #endif
 }

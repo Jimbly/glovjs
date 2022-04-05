@@ -22,9 +22,7 @@ void main()
   vec4 my_glow_color = vec4(glowColor.xyz, glow_t * glowColor.w);
   gl_FragColor = mix(my_glow_color, interp_color, blend_t);
   #else
-  vec4 premul_glow_color = vec4(glowColor.xyz * glowColor.w, glowColor.w);
-  vec4 premul_color = vec4(interp_color.rgb * interp_color.a, interp_color.a);
-  vec4 my_glow_color = premul_glow_color * glow_t;
-  gl_FragColor = mix(my_glow_color, premul_color, blend_t);
+  vec4 my_glow_color = glowColor * glow_t;
+  gl_FragColor = mix(my_glow_color, interp_color, blend_t);
   #endif
 }

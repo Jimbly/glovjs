@@ -20,9 +20,7 @@ void main()
   vec4 outcolor = vec4(outlineColor.xyz, outline_t);
   gl_FragColor = mix(outcolor, interp_color, blend_t);
   #else
-  vec4 premul_outline_color = vec4(outlineColor.xyz * outlineColor.w, outlineColor.w);
-  vec4 premul_color = vec4(interp_color.rgb * interp_color.a, interp_color.a);
-  vec4 my_outline_color = premul_outline_color * outline_t;
-  gl_FragColor = mix(my_outline_color, premul_color, blend_t);
+  vec4 my_outline_color = outlineColor * outline_t;
+  gl_FragColor = mix(my_outline_color, interp_color, blend_t);
   #endif
 }

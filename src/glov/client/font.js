@@ -14,7 +14,7 @@ const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA } = sprites;
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
-const { vec4, v4clone, v4scale } = require('glov/common/vmath.js');
+const { v3scale, vec4, v4clone, v4copy, v4scale } = require('glov/common/vmath.js');
 
 /*
 
@@ -145,6 +145,14 @@ export function vec4ColorFromIntColor(v, c) {
   v[1] = ((c >> 16) & 0xFF) / 255;
   v[2] = ((c >> 8) & 0xFF) / 255;
   v[3] = (c & 0xFF) / 255;
+}
+
+function vec4ColorFromIntColorPreMultiplied(v, c) {
+  let a = v[3] = (c & 0xFF) / 255;
+  a *= (1/255);
+  v[0] = ((c >> 24) & 0xFF) * a;
+  v[1] = ((c >> 16) & 0xFF) * a;
+  v[2] = ((c >> 8) & 0xFF) * a;
 }
 
 export const glov_font_default_style = new GlovFontStyle();
@@ -825,13 +833,23 @@ GlovFont.prototype.applyStyle = function (style) {
   if (!style) {
     style = this.default_style;
   }
-  // outline
-  vec4ColorFromIntColor(temp_color, style.outline_color);
-  techParamsSet('outlineColor', temp_color);
+  if (engine.defines.NOPREMUL) {
+    // outline
+    vec4ColorFromIntColor(temp_color, style.outline_color);
+    techParamsSet('outlineColor', temp_color);
 
-  // glow
-  vec4ColorFromIntColor(temp_color, style.glow_color);
-  techParamsSet('glowColor', temp_color);
+    // glow
+    vec4ColorFromIntColor(temp_color, style.glow_color);
+    techParamsSet('glowColor', temp_color);
+  } else {
+    // outline
+    vec4ColorFromIntColorPreMultiplied(temp_color, style.outline_color);
+    techParamsSet('outlineColor', temp_color);
+
+    // glow
+    vec4ColorFromIntColorPreMultiplied(temp_color, style.glow_color);
+    techParamsSet('glowColor', temp_color);
+  }
 
   // everything else
   this.applied_style.outline_width = style.outline_width;
@@ -842,7 +860,12 @@ GlovFont.prototype.applyStyle = function (style) {
   this.applied_style.glow_outer = style.glow_outer;
   this.applied_style.glow_color = style.glow_color;
   this.applied_style.color = style.color;
-  this.applied_style.color_vec4 = style.color_vec4;
+  if (engine.defines.NOPREMUL) {
+    v4copy(this.applied_style.color_vec4, style.color_vec4);
+  } else {
+    let alpha = this.applied_style.color_vec4[3] = style.color_vec4[3];
+    v3scale(this.applied_style.color_vec4, style.color_vec4, alpha);
+  }
   // this.applied_style.colorUR = style.colorUR;
   // this.applied_style.colorLR = style.colorLR;
   // this.applied_style.colorLL = style.colorLL;
