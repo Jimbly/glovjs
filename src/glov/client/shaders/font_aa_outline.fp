@@ -1,3 +1,5 @@
+// Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
 #pragma WebGL2
 
 precision lowp float;
