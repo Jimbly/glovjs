@@ -1,5 +1,10 @@
 // From 'fscreen' module, https://github.com/rafrex/fscreen, MIT Licensed
 
+// Changes:
+//   Fixed depending on Object.keys() ordering
+//   Standardized exports with more meaningful names
+//   Added ability to disable
+
 const { eatPossiblePromise } = require('glov/common/util.js');
 
 const key = {
@@ -10,6 +15,15 @@ const key = {
 //  fullscreenchange: 4,
 //  fullscreenerror: 5,
 };
+
+const html5 = [
+  'fullscreenEnabled',
+  'fullscreenElement',
+  'requestFullscreen',
+  'exitFullscreen',
+  // 'fullscreenchange',
+  // 'fullscreenerror',
+];
 
 const webkit = [
   'webkitFullscreenEnabled',
@@ -41,7 +55,7 @@ const ms = [
 // const document = typeof window !== 'undefined' && typeof window.document !== 'undefined' ? window.document : {};
 
 const vendor = (
-  ('fullscreenEnabled' in document && Object.keys(key)) ||
+  (html5[0] in document && html5) ||
   (webkit[0] in document && webkit) ||
   (moz[0] in document && moz) ||
   (ms[0] in document && ms) ||
@@ -61,8 +75,12 @@ export function fscreenExit() {
 // export function removeEventListener(type, handler, options) {
 //   document.removeEventListener(vendor[key[type]], handler, options);
 // }
+let disabled = false;
 export function fscreenAvailable() {
-  return Boolean(document[vendor[key.fullscreenEnabled]]);
+  return !disabled && Boolean(document[vendor[key.fullscreenEnabled]]);
+}
+export function fscreenDisable() {
+  disabled = true;
 }
 export function fscreenActive() {
   return document[vendor[key.fullscreenElement]];
