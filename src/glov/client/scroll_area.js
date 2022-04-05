@@ -14,6 +14,7 @@ const { max, min, round } = Math;
 const { clipPush, clipPop } = require('./sprites.js');
 const ui = require('./ui.js');
 const { clamp } = require('glov/common/util.js');
+const verify = require('glov/common/verify.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
 const MAX_OVERSCROLL = 50;
@@ -97,7 +98,7 @@ ScrollArea.prototype.isFocused = function () {
 ScrollArea.prototype.begin = function (params) {
   this.applyParams(params);
   let { x, y, w, h, z, id } = this;
-  assert(!this.began || !engine.DEBUG); // Checking mismatched begin/end
+  verify(!this.began); // Checking mismatched begin/end
   this.began = true;
   ui.focusIdSet(id);
   // Set up camera and clippers
