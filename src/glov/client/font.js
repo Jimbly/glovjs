@@ -208,9 +208,9 @@ function createTechniqueParameters() {
 
   tech_params = {
     param0: vec4(),
-    outlineColor: vec4(),
-    glowColor: vec4(),
-    glowParams: vec4(),
+    outline_color: vec4(),
+    glow_color: vec4(),
+    glow_params: vec4(),
   };
 }
 
@@ -224,9 +224,9 @@ function techParamsSet(param, value) {
       //   Should use a pool of them, but need to reset the tech_param_cache each frame.
       tech_params = {
         param0: v4clone(tech_params.param0),
-        outlineColor: v4clone(tech_params.outlineColor),
-        glowColor: v4clone(tech_params.glowColor),
-        glowParams: v4clone(tech_params.glowParams),
+        outline_color: v4clone(tech_params.outline_color),
+        glow_color: v4clone(tech_params.glow_color),
+        glow_params: v4clone(tech_params.glow_params),
       };
       geom_stats.font_params++;
       tech_params_dirty = true;
@@ -778,7 +778,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
           if (char_scale !== tile_state) {
             value2[0] = -applied_style.glow_xoffs * font_texel_scale * pad_scale / tile_width;
             value2[1] = -applied_style.glow_yoffs * font_texel_scale * pad_scale / tile_height;
-            techParamsSet('glowParams', value2);
+            techParamsSet('glow_params', value2);
             tile_state = char_scale;
           }
 
@@ -836,19 +836,19 @@ GlovFont.prototype.applyStyle = function (style) {
   if (engine.defines.NOPREMUL) {
     // outline
     vec4ColorFromIntColor(temp_color, style.outline_color);
-    techParamsSet('outlineColor', temp_color);
+    techParamsSet('outline_color', temp_color);
 
     // glow
     vec4ColorFromIntColor(temp_color, style.glow_color);
-    techParamsSet('glowColor', temp_color);
+    techParamsSet('glow_color', temp_color);
   } else {
     // outline
     vec4ColorFromIntColorPreMultiplied(temp_color, style.outline_color);
-    techParamsSet('outlineColor', temp_color);
+    techParamsSet('outline_color', temp_color);
 
     // glow
     vec4ColorFromIntColorPreMultiplied(temp_color, style.glow_color);
-    techParamsSet('glowColor', temp_color);
+    techParamsSet('glow_color', temp_color);
   }
 
   // everything else
