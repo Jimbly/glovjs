@@ -236,7 +236,7 @@ export function main() {
       ui_test.run(10, 10, Z.UI_TEST);
     }
     if (flagGet('font_test')) {
-      ui_test.runFontTest(105, 85);
+      ui_test.runFontTest(105, 20);
     }
 
     test.character.dx = 0;
