@@ -226,6 +226,7 @@ NetPositionManager.prototype.reinit = function (options) {
     sending: false,
     send_time: 0,
   };
+  this.sends_to_ignore = 0;
   this.ever_received_character = false;
 
   this.on_client_change = options.on_client_change;
@@ -283,13 +284,17 @@ NetPositionManager.prototype.checkNet = function (on_pos_set_cb) {
   return false;
 };
 
-NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) {
+NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state, force) {
   if (!this.vsame(character_pos, this.last_send.pos) || anim_state !== this.last_send.anim_state) {
     // pos or anim_state changed
     const now = glov_engine.getFrameTimestamp();
-    if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > this.send_time)) {
+    if ((!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > this.send_time)) || force) {
       // do send!
-      this.last_send.sending = true;
+      if (this.last_send.sending) {
+        ++this.sends_to_ignore;
+      } else {
+        this.last_send.sending = true;
+      }
       this.last_send.time = now;
       this.last_send.hrtime = glov_engine.hrnow();
       this.last_send.speed = 0;
@@ -309,18 +314,22 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state) 
           state: this.last_send.anim_state, speed: this.last_send.speed,
           q: 1,
         }, false, () => {
-          // could avoid needing this response function (and ack packet) if we
-          // instead just watch for the apply_channel_data message containing
-          // (approximately) what we sent
-          this.last_send.sending = false;
-          let end = glov_engine.getFrameTimestamp();
-          let hrend = glov_engine.hrnow();
-          let round_trip = hrend - this.last_send.hrtime;
-          this.ping_time = round_trip;
-          this.ping_time_time = end;
-          if (round_trip > this.send_time) {
-            // hiccup, delay next send
-            this.last_send.time = end;
+          if (!this.sends_to_ignore) {
+            // could avoid needing this response function (and ack packet) if we
+            // instead just watch for the apply_channel_data message containing
+            // (approximately) what we sent
+            this.last_send.sending = false;
+            let end = glov_engine.getFrameTimestamp();
+            let hrend = glov_engine.hrnow();
+            let round_trip = hrend - this.last_send.hrtime;
+            this.ping_time = round_trip;
+            this.ping_time_time = end;
+            if (round_trip > this.send_time) {
+              // hiccup, delay next send
+              this.last_send.time = end;
+            }
+          } else {
+            --this.sends_to_ignore;
           }
         }
       );
