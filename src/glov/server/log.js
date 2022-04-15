@@ -70,7 +70,7 @@ export function dumpJSON(prefix, data, ext) {
 
 function argProcessor(arg) {
   if (typeof arg === 'object') {
-    return inspect(arg, { breakLength: Infinity });
+    return inspect(arg, { breakLength: Infinity, compact: true });
   }
   return arg;
 }
@@ -262,7 +262,7 @@ export function startup(params) {
           format.printf(function (data) {
             let payload = data.metadata && data.metadata.payload;
             let meta = payload ?
-              ` | ${inspect(payload, { breakLength: Infinity })}` :
+              ` | ${inspect(payload, { breakLength: Infinity, compact: true })}` :
               '';
             return `[${data.timestamp}] ${data.level} ${data.message}${meta}`;
           })
@@ -271,7 +271,7 @@ export function startup(params) {
         args.push(
           format.printf(function (data) {
             let meta = Object.keys(data.metadata).length !== 0 ?
-              ` | ${inspect(data.metadata, { breakLength: Infinity })}` :
+              ` | ${inspect(data.metadata, { breakLength: Infinity, compact: true })}` :
               '';
             return `[${data.timestamp} ${pid} ${last_uid++}] ${data.level} ${data.message}${meta}`;
           })
