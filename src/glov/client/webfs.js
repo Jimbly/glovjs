@@ -31,6 +31,16 @@ function decode(data) {
   return u8;
 }
 
+export function webFSGetFileNames(directory) {
+  let ret = [];
+  for (let filename in fs) {
+    if (filename.startsWith(directory)) {
+      ret.push(filename);
+    }
+  }
+  return ret;
+}
+
 export function webFSGetFile(filename, encoding) {
   let ret = decoded[filename];
   if (ret) {
