@@ -389,6 +389,7 @@ class ChannelServer {
     this.ds_store_meta = null; // metadata store
     this.master_stats = { num_channels: {} };
     this.load_log = false;
+    this.last_load_log = '';
     this.restarting = false;
     this.server_time = 0;
     this.reportPerfCounters = this.reportPerfCounters.bind(this);
@@ -588,6 +589,15 @@ class ChannelServer {
 
   handleMasterStats(data) {
     this.master_stats = data;
+  }
+
+  onPerfFetch(ret, data) {
+    let { fields } = data;
+    ret.log = this.last_load_log;
+    ret.source += ` (${this.csworker.channel_id})`;
+    if (fields.counters) {
+      ret.counters = perfCounterHistory();
+    }
   }
 
   monitorRestart() {
@@ -830,14 +840,15 @@ class ChannelServer {
       //metrics.set('load.kbps.total', kbytes_per_s);
       metrics.set('load.exchange', ping_max);
       // Log
+      this.last_load_log = `load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
+        ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
+        // Maybe useful: packets and bytes per second (both websocket + exchange)
+        `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
+        // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
+        `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.arrayBuffers)}/${mb(mu.external)}MB` +
+        `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`;
       if (this.load_log) {
-        this.csworker.log(`load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
-          ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
-          // Maybe useful: packets and bytes per second (both websocket + exchange)
-          `; msgs/s=${msgs_per_s}, kb/s=${kbytes_per_s}` +
-          // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
-          `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.external + mu.arrayBuffers)}MB` +
-          `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`);
+        this.csworker.log(this.last_load_log);
       }
 
       // Report to master worker
@@ -1015,6 +1026,7 @@ class ChannelServer {
       addUnique(handlers, 'set_channel_data_push', ChannelWorker.prototype.onSetChannelDataPush);
       addUnique(handlers, 'get_channel_data', ChannelWorker.prototype.onGetChannelData);
       addUnique(handlers, 'where', ChannelWorker.prototype.onWhere);
+      addUnique(handlers, 'perf_fetch', ChannelWorker.prototype.onPerfFetch);
 
       addUnique(handlers, 'broadcast', ChannelWorker.prototype.onBroadcast);
       addUnique(handlers, 'cmdparse_auto', ChannelWorker.prototype.onCmdParseAuto);

@@ -781,6 +781,15 @@ function onGetStats(client, data, resp_func) {
   resp_func(null, { ccu: channel_server.master_stats.num_channels.client || 1 });
 }
 
+function onPerfFetch(client, data, resp_func) {
+  let { client_channel } = client;
+  if (!(client_channel.ids && client_channel.ids.sysadmin)) {
+    return void resp_func('ERR_ACCESS_DENIED');
+  }
+  let { channel_id, fields } = data;
+  client_channel.sendChannelMessage(channel_id, 'perf_fetch', { fields }, resp_func);
+}
+
 function onCmdParseAuto(client, pak, resp_func) {
   let cmd = pak.readString();
   let { client_channel } = client;
@@ -839,6 +848,7 @@ export function init(channel_server_in) {
   ws_server.onMsg('get_stats', onGetStats);
   ws_server.onMsg('cmd_parse_auto', onCmdParseAuto);
   ws_server.onMsg('cmd_parse_list_client', onCmdParseListClient);
+  ws_server.onMsg('perf_fetch', onPerfFetch);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);

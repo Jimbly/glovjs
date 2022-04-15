@@ -190,6 +190,32 @@ export class ChannelWorker {
     resp_func(null, this.channel_server.debug_addr);
   }
 
+  defaultGetMemoryUsage() {
+    return {
+      data_size: {
+        public: JSON.stringify(this.data.public).length,
+        private: JSON.stringify(this.data.private).length,
+      },
+    };
+  }
+
+  // Overrideable
+  getMemoryUsage() {
+    return this.defaultGetMemoryUsage();
+  }
+
+  onPerfFetch(src, data, resp_func) {
+    let { fields } = data;
+    let ret = {
+      source: this.channel_id,
+    };
+    if (fields.memory) {
+      ret.memory = this.getMemoryUsage();
+    }
+    this.channel_server.onPerfFetch(ret, data);
+    resp_func(null, ret);
+  }
+
   onSubscribe(src, field_list, resp_func) {
     let { channel_id, user_id } = src;
     let is_client = src.type === 'client';

@@ -1,6 +1,8 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+export let perf_mem_counters = {};
+
 const engine = require('./engine.js');
 let metrics = [];
 export function addMetric(metric, first) {
@@ -25,6 +27,7 @@ const { cmd_parse } = require('./cmds.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
 const { max } = Math;
+const { netClient, netClientId, netDisconnected } = require('./net.js');
 const { perfCounterHistory } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const ui = require('./ui.js');
@@ -66,6 +69,21 @@ settings.register({
     type: cmd_parse.TYPE_INT,
     range: [0,1],
   },
+  show_perf_memory: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    access_run: ['sysadmin'], // only fetches from server, currently
+  },
+  perf_provider: {
+    default_value: 'client',
+    type: cmd_parse.TYPE_STRING,
+    usage: 'Set the perf provider for /show_perf_counters and /show_perf_memory\n' +
+      '  CLIENT : show client values\n' +
+      '  AUTO : automatically determine appropriate server\n' +
+      '  user.1234 : use server hosting a particular worker',
+    access_run: ['sysadmin'],
+  },
 });
 
 cmd_parse.register({
@@ -86,6 +104,35 @@ let fps_style = glov_font.style({
   outline_width: 2, outline_color: 0x00000080,
   color: 0xFFFFFFff,
 });
+
+function friendlyUnit(table, value) {
+  let unit = 0;
+  while (unit < table.length - 1 && value >= table[unit+1][0]) {
+    unit++;
+  }
+  if (unit === 0) {
+    return `${value} ${table[unit][1]}`;
+  }
+  return `${(value/table[unit][0]).toFixed(2)} ${table[unit][1]}`;
+}
+const UNIT_BYTES = [
+  [1, 'bytes'],
+  [1024, 'KB'],
+  [1024*1024, 'MB'],
+  [1024*1024*1024, 'GB'],
+];
+const UNIT_COUNT = [
+  [1, ''],
+  [1000, 'k'],
+  [1000*1000, 'm'],
+  [1000*1000*1000, 'g'],
+];
+function friendlyBytes(bytes) {
+  return friendlyUnit(UNIT_BYTES, bytes);
+}
+function friendlyCount(count) {
+  return friendlyUnit(UNIT_COUNT, count);
+}
 
 function showMetric(y, metric) {
   let font = engine.font;
@@ -210,6 +257,93 @@ function showMetricGraph(y, metric) {
   return y;
 }
 
+function perfDefaultAutoChannel() {
+  let client_id = netClientId();
+  if (client_id) {
+    return `client.${client_id}`;
+  }
+  return null;
+}
+let auto_channel_cb = perfDefaultAutoChannel;
+export function perfSetAutoChannel(cb) {
+  auto_channel_cb = cb;
+}
+const PERF_NET_CACHE_TIME = 10000;
+const PERF_NET_CACHE_TIME_MEM = 2500;
+let perf_provider_data = {
+  last_update: -Infinity,
+  data: null,
+};
+function updatePerfProvider() {
+  let cache_time = PERF_NET_CACHE_TIME;
+  let fields = {
+  };
+  if (settings.show_perf_counters) {
+    fields.counters = 1;
+  }
+  if (settings.show_perf_memory) {
+    fields.memory = 1;
+    cache_time = PERF_NET_CACHE_TIME_MEM;
+  }
+  let provider = settings.perf_provider.toLowerCase();
+  if (provider === 'client') {
+    let ret = {
+      source: 'client',
+    };
+    if (fields.counters) {
+      ret.counters = perfCounterHistory();
+    }
+    if (fields.memory) {
+      ret.memory = perf_mem_counters;
+    }
+    return ret;
+  }
+  // Fetch from server
+  if (perf_provider_data.in_flight || netDisconnected()) {
+    return perf_provider_data.data;
+  }
+  let now = engine.frame_timestamp;
+  if (now - perf_provider_data.last_update < cache_time) {
+    return perf_provider_data.data;
+  }
+  let channel_id;
+  if (provider === 'auto') {
+    channel_id = auto_channel_cb();
+  } else if (provider.match(/^[^.]+\.[^.]+$/)) { // seemingly valid channel ID
+    channel_id = provider;
+  }
+  if (channel_id) {
+    perf_provider_data.in_flight = true;
+    netClient().send('perf_fetch', { channel_id, fields }, function (err, data) {
+      if (err) {
+        console.error(`Error getting perf data: ${Object.keys(fields)}: ${err}`);
+      }
+      perf_provider_data.data = data;
+      perf_provider_data.last_update = engine.frame_timestamp;
+      perf_provider_data.in_flight = false;
+    });
+  }
+  return perf_provider_data.data;
+}
+
+function perfMemObjToLines(out, obj, prefix) {
+  for (let key in obj) {
+    let v = obj[key];
+    if (v && typeof v === 'object') {
+      perfMemObjToLines(out, v, `${prefix}${key}.`);
+    } else {
+      if (typeof v === 'number') {
+        if (key.endsWith('bytes') || prefix.includes('data_size')) {
+          v = friendlyBytes(v);
+        } else {
+          v = friendlyCount(v);
+        }
+      }
+      out.push(`${prefix}${key}: ${v}`);
+    }
+  }
+}
+
 export function draw() {
   camera2d.setAspectFixed(engine.game_width, engine.game_height);
   if (settings.show_metrics) {
@@ -227,34 +361,63 @@ export function draw() {
       }
     }
   }
-  if (settings.show_perf_counters) {
+  if (settings.show_perf_counters || settings.show_perf_memory) {
     let font = engine.font;
-    let hist = perfCounterHistory();
+    let perf_data = updatePerfProvider() || {};
     let y = camera2d.y0Real();
+    let y0 = y;
     let line_height = settings.render_scale_all < 1 ? ui.font_height / settings.render_scale_all : ui.font_height;
     let column_width = line_height * 6;
-    let x = camera2d.x0Real() + column_width * 2;
-    let by_key = {};
-    for (let ii = 0; ii < hist.length; ++ii) {
-      let set = hist[ii];
-      for (let key in set) {
-        by_key[key] = by_key[key] || [];
-        by_key[key][ii] = set[key];
-      }
-    }
-    let keys = Object.keys(by_key);
-    for (let ii = 0; ii < keys.length; ++ii) {
-      let key = keys[ii];
-      let data = by_key[key];
-      font.drawSizedAligned(fps_style, x - column_width * 2, y, Z.FPSMETER + 1, line_height,
-        glov_font.ALIGN.HRIGHT|glov_font.ALIGN.HFIT, column_width * 2, 0, `${key}: `);
-      for (let jj = 0; jj < data.length; ++jj) {
-        if (data[jj]) {
-          font.drawSizedAligned(fps_style, x + column_width * jj, y, Z.FPSMETER + 1, line_height,
-            glov_font.ALIGN.HFIT, column_width, 0, `${data[jj]} `);
-        }
-      }
+    let x0 = camera2d.x0Real();
+    let x = x0 + column_width * 2;
+    let maxx = x + column_width;
+    let z = Z.FPSMETER + 1;
+    let header_x = x0 + column_width;
+    if (perf_data.source) {
+      font.drawSized(fps_style, header_x, y, z, line_height, `Source: ${perf_data.source}`);
       y += line_height;
     }
+    if (perf_data.log) {
+      let w = camera2d.wReal() *0.67;
+      maxx = max(maxx, header_x + w);
+      y += font.drawSizedWrapped(fps_style, header_x, y, z, w, 20, line_height, perf_data.log) + 4;
+    }
+
+    if (perf_data.memory && settings.show_perf_memory) {
+      let lines = [];
+      perfMemObjToLines(lines, perf_data.memory, '');
+      for (let ii = 0; ii < lines.length; ++ii) {
+        font.drawSized(fps_style, x, y, z, line_height, lines[ii]);
+        y += line_height;
+      }
+    }
+
+    if (perf_data.counters && settings.show_perf_counters) {
+      let hist = perf_data.counters || [];
+      let by_key = {};
+      for (let ii = 0; ii < hist.length; ++ii) {
+        let set = hist[ii];
+        for (let key in set) {
+          by_key[key] = by_key[key] || [];
+          by_key[key][ii] = set[key];
+        }
+      }
+      let keys = Object.keys(by_key);
+      for (let ii = 0; ii < keys.length; ++ii) {
+        let key = keys[ii];
+        let data = by_key[key];
+        font.drawSizedAligned(fps_style, x - column_width * 2, y, z, line_height,
+          glov_font.ALIGN.HRIGHT|glov_font.ALIGN.HFIT, column_width * 2, 0, `${key}: `);
+        for (let jj = 0; jj < data.length; ++jj) {
+          if (data[jj]) {
+            font.drawSizedAligned(fps_style, x + column_width * jj, y, z, line_height,
+              glov_font.ALIGN.HFIT, column_width, 0, `${data[jj]} `);
+          }
+        }
+        maxx = max(maxx, x + column_width * data.length);
+        y += line_height;
+      }
+    }
+    ui.drawRect(x0, y0, maxx, y, z - 0.1, bg_default);
   }
 }
