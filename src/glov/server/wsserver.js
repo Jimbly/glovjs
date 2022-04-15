@@ -188,11 +188,14 @@ WSServer.prototype.init = function (server, server_https, no_timeout) {
         client.log_packet_size = data && data.length;
         let log_data;
         try {
-          if (typeof data === 'string') {
-            client.logCtx('debug', `Received incorrect WebSocket data type (${typeof data}), auto-fixing...`);
-            log_data = data;
-            data = Buffer.from(data, 'binary');
-          }
+          // This doesn't actually work for the packets we were receiving in
+          //   production, they contain 0xFFFD characters, which means data has
+          //   been lost, we cannot possibly make the data work.
+          // if (typeof data === 'string') {
+          //   client.logCtx('debug', `Received incorrect WebSocket data type (${typeof data}), auto-fixing...`);
+          //   log_data = data;
+          //   data = Buffer.from(data, 'binary');
+          // }
           wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter || logBigFilter);
         } catch (e) {
           e.source = client.ctx();

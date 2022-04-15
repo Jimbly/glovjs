@@ -22,6 +22,25 @@ const PAK_HEADER_SIZE = 1 + // flags
 let net_delay = 0;
 let net_delay_rand = 0;
 
+function socketSendInternal(client, buf, pak) {
+  if (client.ws_server) {
+    client.socket.send(buf, pak.pool.bind(pak));
+  } else {
+    // Testing code to fake sending string packets for debugging
+    // Note: though we can successfully decode these string packets, ones seen
+    //   in the wild appear to have lost data and cannot be decoded in the same
+    //   way.
+    // let str = [];
+    // for (let ii = 0; ii < buf.length; ++ii) {
+    //   str.push(String.fromCharCode(buf[ii]));
+    // }
+    // client.socket.send(str.join(''));
+
+    client.socket.send(buf);
+    pak.pool();
+  }
+}
+
 export function netDelaySet(delay, rand) {
   if (delay === undefined) {
     // development defaults
@@ -83,12 +102,7 @@ NetDelayer.prototype.tickFn = function () {
     }
     // Send it
     let { buf, pak } = elem;
-    if (client.ws_server) {
-      client.socket.send(buf, pak.pool.bind(pak));
-    } else {
-      client.socket.send(buf);
-      pak.pool();
-    }
+    socketSendInternal(client, buf, pak);
   } while (this.head && this.head.time <= now);
   if (this.head) {
     setTimeout(this.tick, this.head.time - now);
@@ -116,12 +130,7 @@ export function wsPakSendDest(client, pak) {
     }
     client.net_delayer.send(buf, pak);
   } else {
-    if (client.ws_server) {
-      client.socket.send(buf, pak.pool.bind(pak));
-    } else {
-      client.socket.send(buf);
-      pak.pool();
-    }
+    socketSendInternal(client, buf, pak);
   }
   client.last_send_time = Date.now();
 }
@@ -224,7 +233,17 @@ export function wsHandleMessage(client, buf, filter) {
     if (typeof buf === 'string') {
       (client.log ? client : console).log(`Invalid WebSocket data: ${JSON.stringify(buf.slice(0, 120))}`);
     }
-    return client.onError('Invalid data received');
+    if (client.ws_server) {
+      if (!client.has_warned_about_text) {
+        // Send an generic error (still as binary, since if they got this far, they
+        //   must have received the binary `cack` successfully.
+        client.has_warned_about_text = true;
+        client.send('error', 'Server received non-binary WebSocket data.  ' +
+          'Likely cause is a proxy, VPN or something else intercepting and modifying network traffic.');
+      }
+      return;
+    }
+    return void client.onError('Invalid data received');
   }
   wsstats.bytes += buf.length;
   let pak = packetFromBuffer(buf, buf.length, false);
@@ -232,7 +251,7 @@ export function wsHandleMessage(client, buf, filter) {
   client.last_receive_time = now;
   client.idle_counter = 0;
 
-  return ackHandleMessage(client, source, pak, function sendFunc(msg, err, data, resp_func) {
+  return void ackHandleMessage(client, source, pak, function sendFunc(msg, err, data, resp_func) {
     if (resp_func && !resp_func.expecting_response) {
       resp_func = null;
     }
