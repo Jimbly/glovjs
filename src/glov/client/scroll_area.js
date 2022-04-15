@@ -48,6 +48,7 @@ function ScrollArea(params) {
   this.no_disable = false; // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
   this.focusable_elem = null; // Another element to call .focus() on if we think we are focused
   this.min_dist = undefined; // Minimum drag distance for background drag
+  this.disabled = false;
   this.applyParams(params);
 
   // Calculated (only once) if not set
@@ -230,10 +231,13 @@ ScrollArea.prototype.end = function (h) {
   let bottom_color = this.color;
   let handle_color = this.color;
   let trough_color = this.color;
-  let disabled = false;
+  let disabled = this.disabled;
+  let auto_hidden = false;
   if (!this.h) {
     disabled = true;
+    auto_hidden = true;
   } else if (handle_h === 1) {
+    auto_hidden = true;
     if (this.no_disable) {
       // Just *look* disabled, but still do overscroll, eat mousewheel events
       trough_color = top_color = bottom_color = handle_color = this.disabled_color;
@@ -386,7 +390,7 @@ ScrollArea.prototype.end = function (h) {
     ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, bg_color);
   }
 
-  if (disabled && (auto_hide || !this.h)) {
+  if (disabled && (auto_hide && auto_hidden || !this.h)) {
     this.scrollbar_visible = false;
     return;
   }
