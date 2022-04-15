@@ -9,6 +9,7 @@ module.exports = function (config) {
     deps: 'app_deps',
     is_worker: false,
     do_version: 'client/app.ver.json',
+    do_reload: true,
   }];
   config.extra_index = [{
     name: 'multiplayer',
