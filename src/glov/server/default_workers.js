@@ -649,6 +649,13 @@ export class DefaultUserWorker extends ChannelWorker {
     this.updatePresence();
     resp_func();
   }
+  sendMessageToMyClients(message, payload, exclude_channel_id) {
+    for (let channel_id in this.my_clients) {
+      if (channel_id !== exclude_channel_id) {
+        this.sendChannelMessage(channel_id, message, payload);
+      }
+    }
+  }
   handleCSRAdminToUser(src, pak, resp_func) {
     let access = pak.readJSON();
     let cmd = pak.readString();
