@@ -1167,6 +1167,17 @@ export class ChannelWorker {
     logEx(this.ctxSrc(src), 'error', `${this.channel_id}:`, ...args);
   }
 
+  // Wraps `resp_func` so that it logs upon completion or failure
+  loggedResponse(source, resp_func, log_msg) {
+    return (err, payload) => {
+      if (err) {
+        this.logSrc(source, `${log_msg}: failed: ${err}`);
+      } else {
+        this.logSrc(source, `${log_msg}: success`);
+      }
+      resp_func(err, payload);
+    };
+  }
 
   // Default error handler
   handleError(src, data, resp_func) {
