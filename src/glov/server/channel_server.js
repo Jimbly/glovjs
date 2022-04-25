@@ -1,6 +1,8 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+require('./must_import.js').imported('channel_server.js');
+
 export const LOAD_REPORT_INTERVAL = 15000;
 const EXCHANGE_PING_INTERVAL = 1000; // Affects `exchange_pings`, should be 1s
 export const PAK_HINT_NEWSEQ = 0x80000000;
