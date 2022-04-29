@@ -110,6 +110,7 @@ module.exports = function (opts) {
   gb.task({
     name: name_files,
     type: gb.SINGLE,
+    async: gb.ASYNC_FORK,
     input,
     init: eslintFilesTaskInit,
     func: eslintFilesTask,
@@ -121,5 +122,7 @@ module.exports = function (opts) {
     input: `${name_files}:**`,
     init: eslintFormatterTaskInit,
     func: eslintFormatterTask,
+    async: gb.ASYNC_FORK,
+    async_task: name_files,
   };
 };

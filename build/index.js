@@ -633,6 +633,14 @@ gb.task({
   ],
 });
 
+gb.task({
+  name: 'lint',
+  deps: [
+    'eslint',
+    'check_typescript',
+  ],
+});
+
 // Send build state to server process upon server startup and upon state change
 let gbstate;
 function sendGBState() {

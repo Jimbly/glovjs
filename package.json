@@ -20,7 +20,7 @@
     "clean": "node build clean",
     "build": "node build build",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
-    "lint": "node build eslint check_typescript"
+    "lint": "node build lint"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
   "contributors": [
@@ -62,7 +62,7 @@
     "console-api": "0.0.5",
     "eslint": "^7.32.0",
     "glov": "file:./src/glov",
-    "glov-build": "0.0.34",
+    "glov-build": "0.0.35",
     "glov-build-babel": "0.0.4",
     "glov-build-browserify": "0.0.6",
     "glov-build-concat": "0.0.8",
