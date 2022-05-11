@@ -603,12 +603,17 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
           x = word_x0;
           continue;
         } else if (linenum || word_x0) {
-          word_x0 = indent;
-          x = word_x0 + word_width;
-          linenum++;
+          if (word_start === s) {
+            // entire "word" is one whitespace that didn't fit on the previous line,
+            // don't wrap until we have non-whitespace characters, or an explicit newline
+          } else {
+            word_x0 = indent;
+            x = word_x0 + word_width;
+            linenum++;
+          }
         }
       }
-      if (word_cb) {
+      if (word_cb && word_start !== s) {
         word_cb(word_x0, linenum, text.slice(word_start, s), x);
       }
       word_start = s+1;
