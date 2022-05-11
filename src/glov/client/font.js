@@ -558,39 +558,16 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
   let x = word_x0;
   let linenum = 0;
   let space_info = this.infoFromChar(32); // ' '
-  let space_size = (space_info ? space_info.w + space_info.xpad : this.font_info.font_size) * xsc;
+  let space_size = (space_info ? (space_info.w + space_info.xpad) * space_info.scale : this.font_info.font_size) * xsc;
   let hard_wrap = false;
   // "fit" mode: instead of breaking the too-long word, output it on a line of its own
   let hard_wrap_mode_fit = align_bits & ALIGN.HFIT;
   let x_advance = this.calcXAdvance(xsc);
+  space_size += x_advance;
 
   do {
     let c = s < len ? text.charCodeAt(s) || 0xFFFD : 0;
-    let newx = x;
-    let char_w;
-    let char_info = this.infoFromChar(c);
-    if (char_info) {
-      char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
-      newx = x + char_w;
-    }
-    if (newx > w && hard_wrap) {
-      // flush the word so far!
-      if (word_cb) {
-        word_cb(word_x0, linenum, text.slice(word_start, s), x);
-      }
-      word_start = s;
-      word_x0 = indent;
-      x = word_x0 + char_w;
-      linenum++;
-    } else {
-      x = newx;
-    }
-    if (!(c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9)) {
-      s++;
-      c = s < len ? text.charCodeAt(s) || 0xFFFD : 0;
-    }
     if (c === 32 /*' '*/ || c === 0 || c === 10 /*'\n'*/ || c === 9) {
-      hard_wrap = false;
       // draw word until s
       if (x > w) {
         // maybe wrap
@@ -627,11 +604,56 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
         x += space_size;
       }
       word_x0 = x;
-      if (c === 32 /*' '*/ || c === 10 /*'\n'*/ || c === 9) {
-        s++; // advance past space
+    } else {
+      let char_info = this.infoFromChar(c);
+      if (char_info) {
+        let char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
+        let newx = x + char_w;
+        if (newx > w && hard_wrap) {
+          // flush the word so far!
+          let word_end = s;
+          let consumed_this = false;
+          if (word_start === word_end) {
+            // Only a single character, doesn't fit
+            consumed_this = true;
+            word_end++;
+            if (word_x0 > indent) {
+              // At least wrap it to a new line
+              let word_w = x - word_x0;
+              word_x0 = indent;
+              x = word_x0 + word_w;
+              linenum++;
+            }
+          }
+          if (word_cb) {
+            word_cb(word_x0, linenum, text.slice(word_start, word_end), x);
+          }
+          word_start = word_end;
+          word_x0 = indent;
+          x = word_x0;
+          if (!consumed_this) {
+            x += char_w;
+          }
+          linenum++;
+          if (consumed_this) {
+            // Eat any proceeding whitespace up until including a newline
+            while (text.charCodeAt(word_start) === 32 || text.charCodeAt(word_start) === 9) {
+              word_start++;
+              s++;
+            }
+            if (text.charCodeAt(word_start) === 10) {
+              word_start++;
+              s++;
+            }
+          }
+          hard_wrap = false;
+        } else {
+          x = newx;
+        }
       }
     }
-  } while (s < len);
+    s++;
+  } while (s <= len);
   ++linenum;
   return linenum;
 };
