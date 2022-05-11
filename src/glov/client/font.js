@@ -431,7 +431,10 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   align &= ~ALIGN.VMASK;
 
   for (let ii = 0; ii < lines.length; ++ii) {
-    this.drawSizedAligned(style, x + line_xoffs[ii], y + yoffs, z, size, align, w - line_xoffs[ii], 0, lines[ii]);
+    let line = lines[ii] && lines[ii].trim();
+    if (line) {
+      this.drawSizedAligned(style, x + line_xoffs[ii], y + yoffs, z, size, align, w - line_xoffs[ii], 0, line);
+    }
     yoffs += size;
   }
   return yoffs;
