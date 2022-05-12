@@ -403,7 +403,7 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   this.applyStyle(style);
   let lines = [];
   let line_xoffs = [];
-  lines.length = this.wrapLines2(w, indent, size, text, align, (xoffs, linenum, line) => {
+  lines.length = this.wrapLines(w, indent, size, text, align, (xoffs, linenum, line) => {
     line_xoffs[linenum] = xoffs;
     lines[linenum] = line;
   });
@@ -471,18 +471,18 @@ GlovFont.prototype.draw = function (param) {
 };
 
 // word_cb(x0, int linenum, const char *word, x1)
-GlovFont.prototype.wrapLines = function (w, indent, size, text, align_bits, word_cb) {
-  return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align_bits, word_cb);
+GlovFont.prototype.wrapWords = function (w, indent, size, text, align_bits, word_cb) {
+  return this.wrapWordsScaled(w, indent, size / this.font_info.font_size, text, align_bits, word_cb);
 };
 
 // line_cb(x0, int linenum, const char *line, x1)
-GlovFont.prototype.wrapLines2 = function (w, indent, size, text, align_bits, line_cb) {
-  return this.wrapLinesScaled2(w, indent, size / this.font_info.font_size, text, align_bits, line_cb);
+GlovFont.prototype.wrapLines = function (w, indent, size, text, align_bits, line_cb) {
+  return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align_bits, line_cb);
 };
 
 GlovFont.prototype.numLines = function (style, w, indent, size, text) {
   this.applyStyle(style);
-  return this.wrapLines2(w, indent, size, text, 0);
+  return this.wrapLines(w, indent, size, text, 0);
 };
 
 GlovFont.prototype.dims = function (style, w, indent, size, text) {
@@ -491,7 +491,7 @@ GlovFont.prototype.dims = function (style, w, indent, size, text) {
   function lineCallback(ignored1, ignored2, line, x1) {
     max_x1 = max(max_x1, x1);
   }
-  let numlines = this.wrapLines2(w, indent, size, text, 0, lineCallback);
+  let numlines = this.wrapLines(w, indent, size, text, 0, lineCallback);
   return {
     h: (numlines + 1) * size,
     w: max_x1,
@@ -551,8 +551,9 @@ function endsWord(char_code) {
     char_code === 9; // '\t'
 }
 
+// Note: not used internally anymore, prefer wrapLines*
 // word_cb(x0, int linenum, const char *word, x1)
-GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits, word_cb) {
+GlovFont.prototype.wrapWordsScaled = function (w, indent, xsc, text, align_bits, word_cb) {
   text = getStringFromLocalizable(text);
   assert(typeof align_bits !== 'function'); // Old API had one less parameter
   let len = text.length;
@@ -661,7 +662,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
 };
 
 // line_cb(x0, int linenum, const char *line, x1)
-GlovFont.prototype.wrapLinesScaled2 = function (w, indent, xsc, text, align_bits, line_cb) {
+GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits, line_cb) {
   text = getStringFromLocalizable(text);
   assert(typeof align_bits !== 'function'); // Old API had one less parameter
   const len = text.length;
@@ -770,7 +771,7 @@ GlovFont.prototype.drawScaledWrapped = function (style, x, y, z, w, indent, xsc,
   this.applyStyle(style);
   // This function returns height instead of width, so leave the maximum width encountered here for caller
   this.last_width = 0;
-  let num_lines = this.wrapLinesScaled2(w, indent, xsc, text, 0, (xoffs, linenum, line, x1) => {
+  let num_lines = this.wrapLinesScaled(w, indent, xsc, text, 0, (xoffs, linenum, line, x1) => {
     let y2 = y + this.font_info.font_size * ysc * linenum;
     let x2 = x + xoffs;
     this.drawScaled(style, x2, y2, z, xsc, ysc, line);
