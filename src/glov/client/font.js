@@ -7,7 +7,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
-const { floor, max, round } = Math;
+const { max, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
@@ -470,11 +470,6 @@ GlovFont.prototype.draw = function (param) {
   }
 };
 
-// word_cb(x0, int linenum, const char *word, x1)
-GlovFont.prototype.wrapWords = function (w, indent, size, text, align_bits, word_cb) {
-  return this.wrapWordsScaled(w, indent, size / this.font_info.font_size, text, align_bits, word_cb);
-};
-
 // line_cb(x0, int linenum, const char *line, x1)
 GlovFont.prototype.wrapLines = function (w, indent, size, text, align_bits, line_cb) {
   return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align_bits, line_cb);
@@ -550,116 +545,6 @@ function endsWord(char_code) {
     char_code === 10 || // '\n'
     char_code === 9; // '\t'
 }
-
-// Note: not used internally anymore, prefer wrapLines*
-// word_cb(x0, int linenum, const char *word, x1)
-GlovFont.prototype.wrapWordsScaled = function (w, indent, xsc, text, align_bits, word_cb) {
-  text = getStringFromLocalizable(text);
-  assert(typeof align_bits !== 'function'); // Old API had one less parameter
-  let len = text.length;
-  let s = 0;
-  let word_start = 0;
-  let word_x0 = 0;
-  let x = word_x0;
-  let linenum = 0;
-  let hard_wrap = false;
-  // "fit" mode: instead of breaking the too-long word, output it on a line of its own
-  let hard_wrap_mode_fit = align_bits & ALIGN.HFIT;
-  let x_advance = this.calcXAdvance(xsc);
-  let space_size = this.getSpaceSize(xsc) + x_advance;
-
-  do {
-    let c = s < len ? text.charCodeAt(s) || 0xFFFD : 0;
-    if (endsWord(c)) {
-      // draw word until s
-      if (x > w) {
-        // maybe wrap
-        let word_width = x - word_x0;
-        if (word_width > w - indent && !hard_wrap_mode_fit) {
-          // not going to fit, split it up!
-          hard_wrap = true;
-          // recover and restart at word start
-          s = word_start;
-          x = word_x0;
-          continue;
-        } else if (linenum || word_x0) {
-          if (word_start === s) {
-            // entire "word" is one whitespace that didn't fit on the previous line,
-            // don't wrap until we have non-whitespace characters, or an explicit newline
-          } else {
-            word_x0 = indent;
-            x = word_x0 + word_width;
-            linenum++;
-          }
-        }
-      }
-      if (word_cb && word_start !== s) {
-        word_cb(word_x0, linenum, text.slice(word_start, s), x);
-      }
-      word_start = s+1;
-      if (c === 10 /*'\n'*/) {
-        x = indent;
-        linenum++;
-      } else if (c === 9 /*'\t'*/) {
-        let tabsize = xsc * this.font_info.font_size * 2;
-        x = (floor(x / tabsize) + 1) * tabsize;
-      } else {
-        x += space_size;
-      }
-      word_x0 = x;
-    } else {
-      let char_info = this.infoFromChar(c);
-      if (char_info) {
-        let char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
-        let newx = x + char_w;
-        if (newx > w && hard_wrap) {
-          // flush the word so far!
-          let word_end = s;
-          let consumed_this = false;
-          if (word_start === word_end) {
-            // Only a single character, doesn't fit
-            consumed_this = true;
-            word_end++;
-            if (word_x0 > indent) {
-              // At least wrap it to a new line
-              let word_w = x - word_x0;
-              word_x0 = indent;
-              x = word_x0 + word_w;
-              linenum++;
-            }
-          }
-          if (word_cb) {
-            word_cb(word_x0, linenum, text.slice(word_start, word_end), x);
-          }
-          word_start = word_end;
-          word_x0 = indent;
-          x = word_x0;
-          if (!consumed_this) {
-            x += char_w;
-          }
-          linenum++;
-          if (consumed_this) {
-            // Eat any proceeding whitespace up until including a newline
-            while (text.charCodeAt(word_start) === 32 || text.charCodeAt(word_start) === 9) {
-              word_start++;
-              s++;
-            }
-            if (text.charCodeAt(word_start) === 10) {
-              word_start++;
-              s++;
-            }
-          }
-          hard_wrap = false;
-        } else {
-          x = newx;
-        }
-      }
-    }
-    s++;
-  } while (s <= len);
-  ++linenum;
-  return linenum;
-};
 
 // line_cb(x0, int linenum, const char *line, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits, line_cb) {
