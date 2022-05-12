@@ -375,6 +375,14 @@ export function postTick(opts) {
   post_tick.push(opts);
 }
 
+let pre_sprite_render = null;
+export function preSpriteRender(fn) {
+  if (!pre_sprite_render) {
+    pre_sprite_render = [];
+  }
+  pre_sprite_render.push(fn);
+}
+
 let post_render = null;
 export function postRender(fn) {
   if (!post_render) {
@@ -845,6 +853,10 @@ function tick(timestamp) {
         need_depth: false,
       });
     }
+  }
+
+  if (pre_sprite_render) {
+    callEach(pre_sprite_render, pre_sprite_render = null);
   }
 
   startSpriteRendering();
