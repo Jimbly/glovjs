@@ -920,6 +920,11 @@ export function setFonts(new_font, title_font) {
   glov_ui.setFonts(new_font, title_font);
 }
 
+let startup_funcs = [];
+export function engineStartupFunc(func) {
+  startup_funcs.push(func);
+}
+
 export function startup(params) {
   fixNatives(true);
 
@@ -1088,6 +1093,8 @@ export function startup(params) {
 
   buildUIStartup();
   shaderDebugUIStartup();
+
+  callEach(startup_funcs, startup_funcs = null);
 
   camera2d.setAspectFixed(game_width, game_height);
 
