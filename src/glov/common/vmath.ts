@@ -455,6 +455,13 @@ export function v3round(out: Vec3, a: Vec3): Vec3 {
   return out;
 }
 
+export function v3iRound(a: Vec3): Vec3 {
+  a[0] = round(a[0]);
+  a[1] = round(a[1]);
+  a[2] = round(a[2]);
+  return a;
+}
+
 export function v3same(a: Vec3, b: Vec3): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
