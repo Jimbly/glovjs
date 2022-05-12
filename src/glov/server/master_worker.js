@@ -512,7 +512,7 @@ class MasterWorker extends ChannelWorker {
     }
     let { master_ready_servers, master_ready_server_time, master_ready_timeout } = serverConfig();
     let now = this.channel_server.server_time;
-    if (this.master_startup_time + master_ready_timeout < now) {
+    if (this.master_startup_time + master_ready_timeout <= now) {
       // It's been more than the timeout, assume everything is ready, or as ready as it's going to be
       return void reply(null, 'default');
     }
@@ -793,9 +793,9 @@ export function init(channel_server) {
   });
 }
 
-export function masterInitApp(channel_server, app) {
+export function masterInitApp(channel_server, app, argv) {
   let ready_cache_expires = 0;
-  let ready_cache_err = 'ERR_STARTUP';
+  let ready_cache_err = argv.dev ? null : 'ERR_STARTUP';
   let ready_check_in_flight = null;
   const READY_CACHE_TIME_READY = 10000;
   const READY_CACHE_TIME_UNREADY = 1000;

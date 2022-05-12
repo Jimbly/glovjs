@@ -25,6 +25,8 @@ let default_env_options = {
       format: 'dev',
       pad_levels: true,
     },
+    // Always immediately "ready" in dev
+    master_ready_timeout: 0,
   },
   prod: {
     log: {
