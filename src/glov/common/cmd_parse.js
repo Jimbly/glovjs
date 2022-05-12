@@ -168,6 +168,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
           init_value = undefined;
         }
       }
+      if (init_value !== undefined && param.default_clear_on !== undefined && init_value === param.default_clear_on) {
+        // Currently set to the default value, ignore it, so this behaves the same as not being set
+        init_value = undefined;
+      }
       if (init_value !== undefined) {
         param.set(init_value);
         if (param.on_change) {
