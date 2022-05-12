@@ -146,7 +146,9 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
 }
 
-export function soundLoad(base: string, opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
+type SoundID = string | { file: string, volume: number };
+
+export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};
   if (opts.streaming && is_firefox) {
     // TODO: Figure out workaround and fix!
@@ -154,14 +156,14 @@ export function soundLoad(base: string, opts: SoundLoadOpts, cb?: ErrorCallback<
     //   possibly related to preload options or something ('preload=meta' not guaranteed to fire 'canplay')
     opts.streaming = false;
   }
-  if (Array.isArray(base)) {
+  if (Array.isArray(soundid)) {
     assert(!cb);
-    for (let ii = 0; ii < base.length; ++ii) {
-      soundLoad(base[ii], opts);
+    for (let ii = 0; ii < soundid.length; ++ii) {
+      soundLoad(soundid[ii], opts);
     }
     return;
   }
-  let key = base;
+  let key = typeof soundid === 'string' ? soundid : soundid.file;
   if (sounds[key]) {
     if (cb) {
       cb();
@@ -179,13 +181,14 @@ export function soundLoad(base: string, opts: SoundLoadOpts, cb?: ErrorCallback<
     cbs.push(cb);
   }
   sounds_loading[key] = cbs;
-  let m = base.match(/^(.*)\.(mp3|ogg|wav|webm)$/u);
+  let soundname = key;
+  let m = soundname.match(/^(.*)\.(mp3|ogg|wav|webm)$/u);
   let preferred_ext;
   if (m) {
-    base = m[1];
+    soundname = m[1];
     preferred_ext = m[2];
   }
-  let src = `sounds/${base}`;
+  let src = `sounds/${soundname}`;
   let srcs : string[] = [];
   let suffix = '';
   if (opts.for_reload) {
@@ -205,9 +208,9 @@ export function soundLoad(base: string, opts: SoundLoadOpts, cb?: ErrorCallback<
   //   through the list on *some* load errors, not all :(.
   function tryLoad(idx: number) {
     if (idx === srcs.length) {
-      console.error(`Error loading sound ${base}: All fallbacks exhausted, giving up`);
+      console.error(`Error loading sound ${soundname}: All fallbacks exhausted, giving up`);
       if (on_load_fail) {
-        on_load_fail(base);
+        on_load_fail(soundname);
       }
       callEach(cbs, delete sounds_loading[key], 'Error loading sound');
       return;
@@ -381,7 +384,7 @@ export function soundTick(dt: number): void {
   }
 }
 
-export function soundPlay(soundname: string, volume: number, as_music?: boolean): GlovSound | null {
+export function soundPlay(soundid: SoundID, volume: number, as_music?: boolean): GlovSound | null {
   volume = volume || 1;
   if (!as_music && !settings.sound || as_music && !settings.music) {
     return null;
@@ -389,21 +392,25 @@ export function soundPlay(soundname: string, volume: number, as_music?: boolean)
   if (!soundResumed()) {
     return null;
   }
-  if (Array.isArray(soundname)) {
-    soundname = soundname[floor(random() * soundname.length)];
+  if (Array.isArray(soundid)) {
+    soundid = soundid[floor(random() * soundid.length)];
   }
-  let sound = sounds[soundname];
+  if (typeof soundid === 'object') {
+    volume *= (soundid.volume || 1);
+    soundid = soundid.file;
+  }
+  let sound = sounds[soundid];
   if (!sound) {
     return null;
   }
-  let last_played_time = last_played[soundname] || -9e9;
+  let last_played_time = last_played[soundid] || -9e9;
   if (frame_timestamp - last_played_time < 45) {
     return null;
   }
   let settingsVolume = as_music ? musicVolume : soundVolume;
   let id = sound.play(undefined, volume * settingsVolume() * volume_override);
   // sound.volume(volume * settingsVolume() * volume_override, id);
-  last_played[soundname] = frame_timestamp;
+  last_played[soundid] = frame_timestamp;
   let played_sound = {
     stop: sound.stop.bind(sound, id),
     playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
