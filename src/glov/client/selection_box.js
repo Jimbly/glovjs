@@ -2,6 +2,9 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint complexity:off */
 
+// eslint-disable-next-line no-use-before-define
+exports.create = selectionBoxCreate;
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');
@@ -759,7 +762,7 @@ class GlovSelectionBox {
 }
 
 
-export function create(params) {
+export function selectionBoxCreate(params) {
   if (!font) {
     font = glov_ui.font;
   }
