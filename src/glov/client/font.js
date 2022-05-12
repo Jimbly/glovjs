@@ -403,7 +403,7 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   this.applyStyle(style);
   let lines = [];
   let line_xoffs = [];
-  this.wrapLines2(w, indent, size, text, align, (xoffs, linenum, line) => {
+  lines.length = this.wrapLines2(w, indent, size, text, align, (xoffs, linenum, line) => {
     line_xoffs[linenum] = xoffs;
     lines[linenum] = line;
   });
