@@ -425,8 +425,8 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   align &= ~ALIGN.VMASK;
 
   for (let ii = 0; ii < lines.length; ++ii) {
-    let line = lines[ii] && lines[ii].trim();
-    if (line) {
+    let line = lines[ii];
+    if (line && line.trim()) {
       this.drawSizedAligned(style, x + line_xoffs[ii], y + yoffs, z, size, align, w - line_xoffs[ii], 0, line);
     }
     yoffs += size;
@@ -693,14 +693,6 @@ GlovFont.prototype.wrapLinesScaled2 = function (w, indent, xsc, text, align_bits
     line_end = -1;
     word_x0 = line_x0;
   }
-  function addWord() {
-    line_end = idx;
-    line_x1 = word_x0 + word_w;
-    word_x0 = line_x1;
-    word_w = 0;
-    word_start = idx;
-    word_slice = -1;
-  }
 
   do {
     let c = idx < len ? text.charCodeAt(idx) || 0xFFFD : 0;
@@ -709,7 +701,6 @@ GlovFont.prototype.wrapLinesScaled2 = function (w, indent, xsc, text, align_bits
         // flush word, take care of space on next loop
         if (word_x0 + word_w <= w) {
           // fits fine, add to line, start new word
-          addWord();
         } else if (word_w > max_word_w && !hard_wrap_mode_fit) {
           // even just this word alone won't fit, needs a hard wrap
           // output what fits on this line, then continue to next line
@@ -722,29 +713,34 @@ GlovFont.prototype.wrapLinesScaled2 = function (w, indent, xsc, text, align_bits
             // just output one letter, start new word from second letter
             idx = line_start + 1;
             word_w = max_word_w; // underestimate
-            addWord();
           } else {
             // output what fits on this line so far
             idx = word_slice;
             word_w = word_slice_w;
-            addWord();
-            flushLine();
           }
         } else {
           // won't fit, but fits on next line, soft wrap
           if (line_end !== -1) {
             flushLine();
           }
-          addWord();
         }
+        //addWord();
+        line_end = idx;
+        line_x1 = word_x0 + word_w;
+        word_x0 = line_x1;
+        word_w = 0;
+        word_start = idx;
+        word_slice = -1;
+
         // we're now either still pointing at the space, or rewound to an earlier point
         continue;
-      }
-      // process space
-      word_start = idx + 1;
-      word_x0 += space_size;
-      if (c === 10) { // \n
-        flushLine();
+      } else {
+        // process the space
+        word_start = idx + 1;
+        word_x0 += space_size;
+        if (c === 10) { // \n
+          flushLine();
+        }
       }
     } else {
       let char_info = this.infoFromChar(c);
