@@ -584,12 +584,14 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
     let c = idx < len ? text.charCodeAt(idx) || 0xFFFD : 0;
     if (endsWord(c)) {
       if (word_start !== idx) {
+        let need_line_flush = false;
         // flush word, take care of space on next loop
         if (word_x0 + word_w <= w) {
           // fits fine, add to line, start new word
         } else if (word_w > max_word_w && !hard_wrap_mode_fit) {
           // even just this word alone won't fit, needs a hard wrap
           // output what fits on this line, then continue to next line
+          need_line_flush = true;
           if (word_slice === -1) {
             // not even a single letter fits on this line
             if (line_end !== -1) {
@@ -617,6 +619,10 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits,
         word_w = 0;
         word_start = idx;
         word_slice = -1;
+
+        if (need_line_flush) {
+          flushLine();
+        }
 
         // we're now either still pointing at the space, or rewound to an earlier point
         continue;
