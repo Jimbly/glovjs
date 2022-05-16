@@ -26,7 +26,7 @@ let test_select1;
 let test_select2;
 let test_select_large1;
 let test_scroll_area;
-let slider_value = 1;
+let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
 function init(x, y, column_width) {
@@ -154,14 +154,8 @@ export function run(x, y, z) {
     color: test_color,
   });
 
-  y += line_height;
-
-  if (ui.buttonText({ x, y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
-    assert(false);
-  }
-
   test_scroll_area.begin({
-    x: x + column_width + 4,
+    x: x + column_width + 4 + line_height,
     y: y + 4,
     z,
     w: 100,
@@ -174,6 +168,10 @@ export function run(x, y, z) {
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
   internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
+  if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
+    assert(false);
+  }
+  internal_y += ui.button_height + pad;
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
     internal_y += ui.font_height + pad;
