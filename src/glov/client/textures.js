@@ -2,6 +2,9 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+// eslint-disable-next-line no-use-before-define
+exports.textureLoad = load;
+
 const assert = require('assert');
 const engine = require('./engine.js');
 const { filewatchOn } = require('./filewatch.js');

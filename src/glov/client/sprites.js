@@ -35,6 +35,7 @@ let geom_stats;
 let sprite_queue = [];
 
 let sprite_freelist = [];
+let sprite4_freelist = [];
 
 let sprite_queue_stack = [];
 export function spriteQueuePush(new_list) {
@@ -64,11 +65,62 @@ function SpriteData() {
   this.uid = 0;
 }
 
-function spriteDataAlloc() {
+SpriteData.prototype.buffer = function () {
+  // eslint-disable-next-line no-use-before-define
+  bufferSpriteData(this.data);
+  sprite_freelist.push(this);
+};
+
+SpriteData.prototype.queue = function (z) {
+  this.z = z;
+  this.uid = ++last_uid;
+  ++geom_stats.sprites;
+  sprite_queue.push(this);
+};
+
+function spriteDataAlloc(texs) {
+  let ret;
   if (sprite_freelist.length) {
-    return sprite_freelist.pop();
+    ret = sprite_freelist.pop();
+  } else {
+    ret =new SpriteData();
   }
-  return new SpriteData();
+  ret.texs = texs;
+  return ret;
+}
+
+function SpriteData4() {
+  // x y cr cg cb ca u v (x4)
+  // data for GL queuing
+  this.data = new Float32Array(32);
+  // data for sorting/binding/etc
+  this.texs = null;
+  this.shader = null;
+  this.shader_params = null;
+  this.x = 0;
+  this.y = 0;
+  this.z = 0;
+  this.blend = 0; // BLEND_ALPHA
+  this.uid = 0;
+}
+
+SpriteData4.prototype.buffer = function () {
+  // eslint-disable-next-line no-use-before-define
+  bufferSpriteData4(this.data);
+  sprite4_freelist.push(this);
+};
+
+SpriteData4.prototype.queue = SpriteData.prototype.queue;
+
+export function spriteData4Alloc(texs) {
+  let ret;
+  if (sprite4_freelist.length) {
+    ret = sprite4_freelist.pop();
+  } else {
+    ret = new SpriteData4();
+  }
+  ret.texs = texs;
+  return ret;
 }
 
 function cmpSprite(a, b) {
@@ -99,6 +151,8 @@ export function queuefn(z, fn) {
   });
 }
 
+
+// 4 arbitrary positions
 // coordinates must be in counter-clockwise winding order
 export function queueraw4(
   texs, x0, y0, x1, y1, x2, y2, x3, y3, z,
@@ -106,7 +160,7 @@ export function queueraw4(
   color, shader, shader_params, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteDataAlloc();
+  let elem = spriteDataAlloc(texs);
   let data = elem.data;
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
   // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
@@ -129,10 +183,8 @@ export function queueraw4(
   data[14] = u1;
   data[15] = v1;
 
-  elem.texs = texs;
   elem.x = data[0];
   elem.y = data[1];
-  elem.z = z;
   elem.shader = shader || null;
   if (shader_params) {
     shader_params.clip_space = sprite_shader_params.clip_space;
@@ -141,13 +193,125 @@ export function queueraw4(
     elem.shader_params = null;
   }
   elem.blend = blend || 0; // BLEND_ALPHA
-  //elem.bucket = bucket || this.default_bucket;
-  //elem.tech_params = tech_params || null;
-  elem.uid = ++last_uid;
-  ++geom_stats.sprites;
-  sprite_queue.push(elem);
+  elem.queue(z);
   return elem;
 }
+
+// 4 arbitrary positions, colors, uvs
+// coordinates must be in counter-clockwise winding order
+export function queueraw4color(
+  texs,
+  x0, y0, c0, u0, v0,
+  x1, y1, c1, u1, v1,
+  x2, y2, c2, u2, v2,
+  x3, y3, c3, u3, v3,
+  z,
+  shader, shader_params, blend
+) {
+  assert(isFinite(z));
+  let elem = spriteData4Alloc(texs);
+  let data = elem.data;
+  // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
+  // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
+  // Minor perf improvement: convert by clip_space here (still just a single MAD
+  //   if pre-calculated in the camera) and remove it from the shader.
+  data[0] = (x0 - camera2d.data[0]) * camera2d.data[4];
+  data[1] = (y0 - camera2d.data[1]) * camera2d.data[5];
+  data[2] = c0[0];
+  data[3] = c0[1];
+  data[4] = c0[2];
+  data[5] = c0[3];
+  data[6] = u0;
+  data[7] = v0;
+
+  data[8] = (x1 - camera2d.data[0]) * camera2d.data[4];
+  data[9] = (y1 - camera2d.data[1]) * camera2d.data[5];
+  data[10] = c1[0];
+  data[11] = c1[1];
+  data[12] = c1[2];
+  data[13] = c1[3];
+  data[14] = u1;
+  data[15] = v1;
+
+  data[16] = (x2 - camera2d.data[0]) * camera2d.data[4];
+  data[17] = (y2 - camera2d.data[1]) * camera2d.data[5];
+  data[18] = c2[0];
+  data[19] = c2[1];
+  data[20] = c2[2];
+  data[21] = c2[3];
+  data[22] = u2;
+  data[23] = v2;
+
+  data[24] = (x3 - camera2d.data[0]) * camera2d.data[4];
+  data[25] = (y3 - camera2d.data[1]) * camera2d.data[5];
+  data[26] = c3[0];
+  data[27] = c3[1];
+  data[28] = c3[2];
+  data[29] = c3[3];
+  data[30] = u3;
+  data[31] = v3;
+
+  elem.x = data[0];
+  elem.y = data[1];
+  elem.shader = shader || null;
+  if (shader_params) {
+    shader_params.clip_space = sprite_shader_params.clip_space;
+    elem.shader_params = shader_params;
+  } else {
+    elem.shader_params = null;
+  }
+  elem.blend = blend || 0; // BLEND_ALPHA
+  elem.queue(z);
+  return elem;
+}
+
+// allocate with spriteData4Alloc() and then fill .data, .shader, .shader_params
+export function queueSpriteData4(elem, z) {
+  assert(isFinite(z));
+  let data = elem.data;
+  data[0] = (data[0] - camera2d.data[0]) * camera2d.data[4];
+  data[1] = (data[1] - camera2d.data[1]) * camera2d.data[5];
+
+  data[8] = (data[8] - camera2d.data[0]) * camera2d.data[4];
+  data[9] = (data[9] - camera2d.data[1]) * camera2d.data[5];
+
+  data[16] = (data[16] - camera2d.data[0]) * camera2d.data[4];
+  data[17] = (data[17] - camera2d.data[1]) * camera2d.data[5];
+
+  data[24] = (data[24] - camera2d.data[0]) * camera2d.data[4];
+  data[25] = (data[25] - camera2d.data[1]) * camera2d.data[5];
+
+  elem.shader = elem.shader || null;
+  if (elem.shader_params) {
+    elem.shader_params.clip_space = sprite_shader_params.clip_space;
+  }
+
+  elem.x = data[0];
+  elem.y = data[1];
+  elem.blend = elem.blend || 0; // BLEND_ALPHA
+  elem.queue(z);
+  return elem;
+}
+
+// Expects a buffer in the form of:
+//   x, y, r, g, b, a, u, v, (x4)
+export function queueraw4colorBuffer(
+  texs, buf,
+  z, shader, shader_params, blend
+) {
+  assert(isFinite(z));
+  let elem = spriteData4Alloc(texs);
+  let data = elem.data;
+  for (let ii = 0; ii < 32; ++ii) {
+    data[ii] = buf[ii];
+  }
+  elem.shader = shader;
+  elem.shader_params = shader_params;
+  elem.blend = blend;
+  queueSpriteData4(elem, z);
+  return elem;
+}
+
 
 export function queueraw(
   texs, x, y, z, w, h,
@@ -164,16 +328,63 @@ export function queueraw(
     color, shader, shader_params, blend);
 }
 
+let temp_uvs = vec4();
+function fillUVs(tex, w, h, nozoom, uvs) {
+  let ubias = 0;
+  let vbias = 0;
+  if (!nozoom && !tex.nozoom) {
+    // Bias the texture coordinates depending on the minification/magnification
+    //   level so we do not get pixels from neighboring frames bleeding in
+    // Use min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
+    // Use max here to solve box buttons not lining up, but instead using nozoom in drawBox/drawHBox,
+    //   but, that only works for magnification - need the max here for minification!
+    let zoom_level = max(
+      (uvs[2] - uvs[0]) * tex.width / w,
+      (uvs[3] - uvs[1]) * tex.height / h,
+    ); // in texels per pixel
+    if (zoom_level < 1) { // magnification
+      if (tex.filter_mag === gl.LINEAR) {
+        // Need to bias by half a texel, so we're doing absolutely no blending with the neighboring texel
+        ubias = vbias = 0.5;
+      } else if (tex.filter_mag === gl.NEAREST) {
+        if (engine.antialias) {
+          // When antialiasing is on, even nearest sampling samples from adjacent texels, do slight bias
+          // Want to bias by one *pixel's* worth
+          ubias = vbias = zoom_level / 2;
+        } else {
+          // even without it, running into problems, just add a tiny bias!
+          // In theory, don't want this if UVs are 0/1 and we're clamping?
+          ubias = vbias = zoom_level * 0.01;
+        }
+      }
+    } else if (zoom_level > 1) { // minification
+      // need to apply this bias even with nearest filtering, not exactly sure why
+      let mipped_texels = zoom_level / 2;
+      ubias = vbias = 0.5 + mipped_texels;
+
+    }
+    if (uvs[0] > uvs[2]) {
+      ubias *= -1;
+    }
+    if (uvs[1] > uvs[3]) {
+      vbias *= -1;
+    }
+  }
+
+  temp_uvs[0] = uvs[0] + ubias / tex.width;
+  temp_uvs[1] = uvs[1] + vbias / tex.height;
+  temp_uvs[2] = uvs[2] - ubias / tex.width;
+  temp_uvs[3] = uvs[3] - vbias / tex.height;
+}
+
 export function queuesprite(
   sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
   pixel_perfect, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteDataAlloc();
-  elem.texs = sprite.texs;
+  let elem = spriteDataAlloc(sprite.texs);
   x = (x - camera2d.data[0]) * camera2d.data[4];
   y = (y - camera2d.data[1]) * camera2d.data[5];
-  elem.z = z;
   w *= camera2d.data[4];
   h *= camera2d.data[5];
   if (pixel_perfect) {
@@ -228,54 +439,13 @@ export function queuesprite(
   data[10] = color[2];
   data[11] = color[3];
 
-  let ubias = 0;
-  let vbias = 0;
-  let tex = elem.texs[0];
-  if (!nozoom && !tex.nozoom) {
-    // Bias the texture coordinates depending on the minification/magnification
-    //   level so we do not get pixels from neighboring frames bleeding in
-    // Use min here (was max in libGlov), to solve tooltip edges being wrong in strict pixely
-    // Use max here to solve box buttons not lining up, but instead using nozoom in drawBox/drawHBox,
-    //   but, that only works for magnification - need the max here for minification!
-    let zoom_level = max(
-      (uvs[2] - uvs[0]) * tex.width / w,
-      (uvs[3] - uvs[1]) * tex.height / h,
-    ); // in texels per pixel
-    if (zoom_level < 1) { // magnification
-      if (tex.filter_mag === gl.LINEAR) {
-        // Need to bias by half a texel, so we're doing absolutely no blending with the neighboring texel
-        ubias = vbias = 0.5;
-      } else if (tex.filter_mag === gl.NEAREST) {
-        if (engine.antialias) {
-          // When antialiasing is on, even nearest sampling samples from adjacent texels, do slight bias
-          // Want to bias by one *pixel's* worth
-          ubias = vbias = zoom_level / 2;
-        } else {
-          // even without it, running into problems, just add a tiny bias!
-          // In theory, don't want this if UVs are 0/1 and we're clamping?
-          ubias = vbias = zoom_level * 0.01;
-        }
-      }
-    } else if (zoom_level > 1) { // minification
-      // need to apply this bias even with nearest filtering, not exactly sure why
-      let mipped_texels = zoom_level / 2;
-      ubias = vbias = 0.5 + mipped_texels;
+  fillUVs(elem.texs[0], w, h, nozoom, uvs);
 
-    }
-    if (uvs[0] > uvs[2]) {
-      ubias *= -1;
-    }
-    if (uvs[1] > uvs[3]) {
-      vbias *= -1;
-    }
-  }
+  data[12] = temp_uvs[0];
+  data[13] = temp_uvs[1];
+  data[14] = temp_uvs[2];
+  data[15] = temp_uvs[3];
 
-  data[12] = uvs[0] + ubias / tex.width;
-  data[13] = uvs[1] + vbias / tex.height;
-  data[14] = uvs[2] - ubias / tex.width;
-  data[15] = uvs[3] - vbias / tex.height;
-
-  elem.uid = ++last_uid;
   elem.shader = shader || null;
   elem.blend = blend || 0;
 
@@ -285,8 +455,104 @@ export function queuesprite(
   } else {
     elem.shader_params = null;
   }
-  ++geom_stats.sprites;
-  sprite_queue.push(elem);
+  elem.queue(z);
+}
+
+export function queuesprite4color(
+  sprite, x, y, z, w, h, rot, uvs, c0, c1, c2, c3, shader, shader_params, nozoom,
+  pixel_perfect, blend
+) {
+  assert(isFinite(z));
+  let elem = spriteData4Alloc(sprite.texs);
+  x = (x - camera2d.data[0]) * camera2d.data[4];
+  y = (y - camera2d.data[1]) * camera2d.data[5];
+  w *= camera2d.data[4];
+  h *= camera2d.data[5];
+  if (pixel_perfect) {
+    x |= 0;
+    y |= 0;
+    w |= 0;
+    h |= 0;
+  }
+  elem.x = x;
+  elem.y = y;
+  let data = elem.data;
+  if (!rot) {
+    let x1 = x - sprite.origin[0] * w;
+    let y1 = y - sprite.origin[1] * h;
+    let x2 = x1 + w;
+    let y2 = y1 + h;
+    data[0] = x1;
+    data[1] = y1;
+    data[8] = x1;
+    data[9] = y2;
+    data[16] = x2;
+    data[17] = y2;
+    data[24] = x2;
+    data[25] = y1;
+  } else {
+    let dx = sprite.origin[0] * w;
+    let dy = sprite.origin[1] * h;
+
+    let cosr = cos(rot);
+    let sinr = sin(rot);
+
+    let x1 = x - cosr * dx + sinr * dy;
+    let y1 = y - sinr * dx - cosr * dy;
+    let ch = cosr * h;
+    let cw = cosr * w;
+    let sh = sinr * h;
+    let sw = sinr * w;
+
+    data[0] = x1;
+    data[1] = y1;
+    data[8] = x1 - sh;
+    data[9] = y1 + ch;
+    data[16] = x1 + cw - sh;
+    data[17] = y1 + sw + ch;
+    data[24] = x1 + cw;
+    data[25] = y1 + sw;
+  }
+
+  fillUVs(elem.texs[0], w, h, nozoom, uvs);
+  data[2] = c0[0];
+  data[3] = c0[1];
+  data[4] = c0[2];
+  data[5] = c0[3];
+  data[6] = temp_uvs[0];
+  data[7] = temp_uvs[1];
+
+  data[10] = c1[0];
+  data[11] = c1[1];
+  data[12] = c1[2];
+  data[13] = c1[3];
+  data[14] = temp_uvs[0];
+  data[15] = temp_uvs[3];
+
+  data[18] = c2[0];
+  data[19] = c2[1];
+  data[20] = c2[2];
+  data[21] = c2[3];
+  data[22] = temp_uvs[2];
+  data[23] = temp_uvs[3];
+
+  data[26] = c3[0];
+  data[27] = c3[1];
+  data[28] = c3[2];
+  data[29] = c3[3];
+  data[30] = temp_uvs[2];
+  data[31] = temp_uvs[1];
+
+  elem.shader = shader || null;
+  elem.blend = blend || 0;
+
+  if (shader_params) {
+    shader_params.clip_space = sprite_shader_params.clip_space;
+    elem.shader_params = shader_params;
+  } else {
+    elem.shader_params = null;
+  }
+  elem.queue(z);
 }
 
 
@@ -517,6 +783,15 @@ function bufferSpriteData(data) {
   sprite_buffer[index + 31] = v1;
 }
 
+function bufferSpriteData4(data) {
+  let index = sprite_buffer_idx * 8;
+  sprite_buffer_idx += 4;
+
+  for (let ii = 0; ii < 32; ++ii) {
+    sprite_buffer[index + ii] = data[ii];
+  }
+}
+
 function drawSetup() {
   if (engine.defines.NOSPRITES) {
     sprite_queue.length = 0;
@@ -582,8 +857,7 @@ function drawElem(elem) {
       }
     }
 
-    bufferSpriteData(elem.data);
-    sprite_freelist.push(elem);
+    elem.buffer();
   }
 }
 
@@ -755,6 +1029,23 @@ Sprite.prototype.drawDualTint = function (params) {
     color1: params.color1,
   };
   this.draw(params);
+};
+
+Sprite.prototype.draw4Color = function (params) {
+  if (params.w === 0 || params.h === 0) {
+    return;
+  }
+  let w = (params.w || 1) * this.size[0];
+  let h = (params.h || 1) * this.size[1];
+  let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
+
+  queuesprite4color(this,
+    params.x, params.y, params.z || Z.UI, w, h,
+    params.rot, uvs,
+    params.c0, params.c1, params.c2, params.c3,
+    params.shader || this.shader,
+    params.shader_params, params.nozoom,
+    params.pixel_perfect, params.blend);
 };
 
 export function create(params) {

@@ -19,4 +19,11 @@ module.exports = function (config) {
     },
     zip: false,
   }];
+
+  // Spine support
+  // Note: Runtime requires a Spine license to use in any product.
+  config.client_fsdata.push(
+    'client/spine/**.atlas',
+    'client/spine/**.skel',
+  );
 };
