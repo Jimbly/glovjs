@@ -17,6 +17,7 @@ const ui = require('glov/client/ui.js');
 const ui_test = require('glov/client/ui_test.js');
 const particle_data = require('./particle_data.js');
 const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('glov/client/sound.js');
+const { spineCreate } = require('glov/client/spine.js');
 const { test3D } = require('./test_3d.js');
 const { vec2, vec4, v4clone, v4copy } = require('glov/common/vmath.js');
 
@@ -218,6 +219,15 @@ export function main() {
     });
   }
 
+  let spine_inited = false;
+  let spine_anim;
+  function spineInit() {
+    spine_inited = true;
+
+    spine_anim = spineCreate('spine/spineboy-pro.skel', 'spine/spineboy.atlas');
+    spine_anim.setAnimation(0, 'run', true);
+  }
+
   let last_particles = 0;
 
   function test(dt) {
@@ -285,6 +295,19 @@ export function main() {
       frame: sprites.animation.getFrame(dt),
     });
 
+    if (flagGet('4color')) {
+      sprites.test_tint.draw4Color({
+        x: test.character.x,
+        y: test.character.y + 64,
+        z: Z.SPRITES,
+        c0: [1, 0, 0, 1],
+        c1: [0, 1, 0, 1],
+        c2: [0, 0, 1, 1],
+        c3: [1, 0, 1, 1],
+        frame: sprites.animation.getFrame(),
+      });
+    }
+
     let font_test_idx = 0;
 
     ui.print(glov_font.styleColored(null, 0x000000ff),
@@ -305,7 +328,7 @@ export function main() {
 
     let x = ui.button_height;
     let button_spacing = ui.button_height + 2;
-    let y = game_height - 10 - button_spacing * 6;
+    let y = game_height - 10 - button_spacing * 7;
     let mini_button_w = floor((ui.button_width - 2) / 2);
 
     function miniButton(text, tooltip, active) {
@@ -403,6 +426,21 @@ export function main() {
       } else {
         soundPlayMusic(music_file, 0, FADE_OUT);
       }
+    }
+
+    if (miniButton('Spine', 'Toggles Spine animation testing', flagGet('spine'))) {
+      flagToggle('spine');
+    }
+
+    if (flagGet('spine')) {
+      if (!spine_inited) {
+        spineInit();
+      }
+      spine_anim.update(dt);
+      spine_anim.draw({
+        x: 100, y: 100, z: Z.UI,
+        scale: 0.1,
+      });
     }
 
     if (flagGet('particles')) {
