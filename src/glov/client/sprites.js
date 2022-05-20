@@ -110,71 +110,6 @@ export function queuefn(z, fn) {
   });
 }
 
-
-// 4 arbitrary positions
-// coordinates must be in counter-clockwise winding order
-export function queueraw4(
-  texs, x0, y0, x1, y1, x2, y2, x3, y3, z,
-  u0, v0, u1, v1,
-  color, shader, shader_params, blend
-) {
-  assert(isFinite(z));
-  let elem = spriteDataAlloc(texs);
-  let data = elem.data;
-  // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
-  // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
-  // Minor perf improvement: convert by clip_space here (still just a single MAD
-  //   if pre-calculated in the camera) and remove it from the shader.
-  data[0] = (x0 - camera2d.data[0]) * camera2d.data[4];
-  data[1] = (y0 - camera2d.data[1]) * camera2d.data[5];
-  data[2] = color[0];
-  data[3] = color[1];
-  data[4] = color[2];
-  data[5] = color[3];
-  data[6] = u0;
-  data[7] = v0;
-
-  data[8] = (x1 - camera2d.data[0]) * camera2d.data[4];
-  data[9] = (y1 - camera2d.data[1]) * camera2d.data[5];
-  data[10] = color[0];
-  data[11] = color[1];
-  data[12] = color[2];
-  data[13] = color[3];
-  data[14] = u0;
-  data[15] = v1;
-
-  data[16] = (x2 - camera2d.data[0]) * camera2d.data[4];
-  data[17] = (y2 - camera2d.data[1]) * camera2d.data[5];
-  data[18] = color[0];
-  data[19] = color[1];
-  data[20] = color[2];
-  data[21] = color[3];
-  data[22] = u1;
-  data[23] = v1;
-
-  data[24] = (x3 - camera2d.data[0]) * camera2d.data[4];
-  data[25] = (y3 - camera2d.data[1]) * camera2d.data[5];
-  data[26] = color[0];
-  data[27] = color[1];
-  data[28] = color[2];
-  data[29] = color[3];
-  data[30] = u1;
-  data[31] = v0;
-
-  elem.x = data[0];
-  elem.y = data[1];
-  elem.shader = shader || null;
-  if (shader_params) {
-    shader_params.clip_space = sprite_shader_params.clip_space;
-    elem.shader_params = shader_params;
-  } else {
-    elem.shader_params = null;
-  }
-  elem.blend = blend || 0; // BLEND_ALPHA
-  elem.queue(z);
-  return elem;
-}
-
 // 4 arbitrary positions, colors, uvs
 // coordinates must be in counter-clockwise winding order
 export function queueraw4color(
@@ -195,6 +130,7 @@ export function queueraw4color(
   //   if pre-calculated in the camera) and remove it from the shader.
   data[0] = (x0 - camera2d.data[0]) * camera2d.data[4];
   data[1] = (y0 - camera2d.data[1]) * camera2d.data[5];
+  // Note: measurably slower: data.set(c0, 2);
   data[2] = c0[0];
   data[3] = c0[1];
   data[4] = c0[2];
@@ -241,6 +177,22 @@ export function queueraw4color(
   elem.blend = blend || 0; // BLEND_ALPHA
   elem.queue(z);
   return elem;
+}
+
+// 4 arbitrary positions
+// coordinates must be in counter-clockwise winding order
+export function queueraw4(
+  texs, x0, y0, x1, y1, x2, y2, x3, y3, z,
+  u0, v0, u1, v1,
+  color, shader, shader_params, blend
+) {
+  return queueraw4color(texs,
+    x0, y0, color, u0, v0,
+    x1, y1, color, u0, v1,
+    x2, y2, color, u1, v1,
+    x3, y3, color, u1, v0,
+    z,
+    shader, shader_params, blend);
 }
 
 // allocate with spriteDataAlloc() and then fill .data, .shader, .shader_params
@@ -296,14 +248,13 @@ export function queueraw(
   u0, v0, u1, v1,
   color, shader, shader_params, blend
 ) {
-  return queueraw4(texs,
-    x, y,
-    x, y + h,
-    x + w, y + h,
-    x + w, y,
+  return queueraw4color(texs,
+    x, y, color, u0, v0,
+    x, y + h, color, u0, v1,
+    x + w, y + h, color, u1, v1,
+    x + w, y, color, u1, v0,
     z,
-    u0, v0, u1, v1,
-    color, shader, shader_params, blend);
+    shader, shader_params, blend);
 }
 
 let temp_uvs = vec4();
@@ -353,105 +304,6 @@ function fillUVs(tex, w, h, nozoom, uvs) {
   temp_uvs[1] = uvs[1] + vbias / tex.height;
   temp_uvs[2] = uvs[2] - ubias / tex.width;
   temp_uvs[3] = uvs[3] - vbias / tex.height;
-}
-
-export function queuesprite(
-  sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
-  pixel_perfect, blend
-) {
-  assert(isFinite(z));
-  let elem = spriteDataAlloc(sprite.texs);
-  x = (x - camera2d.data[0]) * camera2d.data[4];
-  y = (y - camera2d.data[1]) * camera2d.data[5];
-  w *= camera2d.data[4];
-  h *= camera2d.data[5];
-  if (pixel_perfect) {
-    x |= 0;
-    y |= 0;
-    w |= 0;
-    h |= 0;
-  }
-  elem.x = x;
-  elem.y = y;
-  color = color || sprite.color;
-  let data = elem.data;
-  if (!rot) {
-    let x1 = x - sprite.origin[0] * w;
-    let y1 = y - sprite.origin[1] * h;
-    let x2 = x1 + w;
-    let y2 = y1 + h;
-    data[0] = x1;
-    data[1] = y1;
-    data[8] = x1;
-    data[9] = y2;
-    data[16] = x2;
-    data[17] = y2;
-    data[24] = x2;
-    data[25] = y1;
-  } else {
-    let dx = sprite.origin[0] * w;
-    let dy = sprite.origin[1] * h;
-
-    let cosr = cos(rot);
-    let sinr = sin(rot);
-
-    let x1 = x - cosr * dx + sinr * dy;
-    let y1 = y - sinr * dx - cosr * dy;
-    let ch = cosr * h;
-    let cw = cosr * w;
-    let sh = sinr * h;
-    let sw = sinr * w;
-
-    data[0] = x1;
-    data[1] = y1;
-    data[8] = x1 - sh;
-    data[9] = y1 + ch;
-    data[16] = x1 + cw - sh;
-    data[17] = y1 + sw + ch;
-    data[24] = x1 + cw;
-    data[25] = y1 + sw;
-  }
-
-  fillUVs(elem.texs[0], w, h, nozoom, uvs);
-  // Note: measurably slower: data.set(color, 2);
-  data[2] = color[0];
-  data[3] = color[1];
-  data[4] = color[2];
-  data[5] = color[3];
-  data[6] = temp_uvs[0];
-  data[7] = temp_uvs[1];
-
-  data[10] = color[0];
-  data[11] = color[1];
-  data[12] = color[2];
-  data[13] = color[3];
-  data[14] = temp_uvs[0];
-  data[15] = temp_uvs[3];
-
-  data[18] = color[0];
-  data[19] = color[1];
-  data[20] = color[2];
-  data[21] = color[3];
-  data[22] = temp_uvs[2];
-  data[23] = temp_uvs[3];
-
-  data[26] = color[0];
-  data[27] = color[1];
-  data[28] = color[2];
-  data[29] = color[3];
-  data[30] = temp_uvs[2];
-  data[31] = temp_uvs[1];
-
-  elem.shader = shader || null;
-  elem.blend = blend || 0;
-
-  if (shader_params) {
-    shader_params.clip_space = sprite_shader_params.clip_space;
-    elem.shader_params = shader_params;
-  } else {
-    elem.shader_params = null;
-  }
-  elem.queue(z);
 }
 
 export function queuesprite4color(
@@ -551,6 +403,17 @@ export function queuesprite4color(
   elem.queue(z);
 }
 
+export function queuesprite(
+  sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
+  pixel_perfect, blend
+) {
+  color = color || sprite.color;
+  return queuesprite4color(
+    sprite, x, y, z, w, h, rot, uvs,
+    color, color, color, color,
+    shader, shader_params, nozoom,
+    pixel_perfect, blend);
+}
 
 let clip_temp_xy = vec2();
 let clip_temp_wh = vec2();

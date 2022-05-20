@@ -319,9 +319,13 @@ class ParticleSystem {
     let x = part.pos[0] - w/2;
     let y = part.pos[1] - h/2;
     let z = part.pos[2];
-    sprites.queueraw4([def.texture],
-      x, y, x, y + h, x + w, y + h, x + w, y, z, 0, 0, 1, 1,
-      temp_color, null, null, def.blend);
+    sprites.queueraw4color([def.texture],
+      x, y, temp_color, 0, 0,
+      x, y + h, temp_color, 0, 1,
+      x + w, y + h, temp_color, 1, 1,
+      x + w, y, temp_color, 1, 0,
+      z,
+      null, null, def.blend);
 
     return false;
   }
