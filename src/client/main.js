@@ -65,7 +65,7 @@ function perfTestSprites() {
     ];
   }
 
-  let mode = 2;
+  let mode = 4;
   let count = [
     80000, // one sprite, pre-sorted
     40000, // one sprite, unsorted
@@ -74,11 +74,11 @@ function perfTestSprites() {
     60000, // two sprites, sorted, bigger batches, raw API
   ][mode];
   if (mode === 3 || mode === 4) {
+    let z = 0;
     for (let ii = 0; ii < count;) {
       let subc = floor(500 + Math.random() * 100);
       let idx = mode <= 1 ? 0 : Math.round(Math.random());
       let sprite = sprites.test[idx];
-      let z = Math.random();
       for (let jj = 0; jj < subc; ++jj) {
         if (mode === 4) {
           // glov_sprites.queueraw(sprite.texs,
@@ -95,6 +95,7 @@ function perfTestSprites() {
             w: 6, h: 6,
           });
         }
+        z+=0.01;
       }
       ii += subc;
     }

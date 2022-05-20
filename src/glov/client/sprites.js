@@ -35,7 +35,6 @@ let geom_stats;
 let sprite_queue = [];
 
 let sprite_freelist = [];
-let sprite4_freelist = [];
 
 let sprite_queue_stack = [];
 export function spriteQueuePush(new_list) {
@@ -50,46 +49,6 @@ export function spriteQueuePop(for_pause) {
 }
 
 function SpriteData() {
-  // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
-  // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
-  // data for GL queuing
-  this.data = new Float32Array(16);
-  // data for sorting/binding/etc
-  this.texs = null;
-  this.shader = null;
-  this.shader_params = null;
-  this.x = 0;
-  this.y = 0;
-  this.z = 0;
-  this.blend = 0; // BLEND_ALPHA
-  this.uid = 0;
-}
-
-SpriteData.prototype.buffer = function () {
-  // eslint-disable-next-line no-use-before-define
-  bufferSpriteData(this.data);
-  sprite_freelist.push(this);
-};
-
-SpriteData.prototype.queue = function (z) {
-  this.z = z;
-  this.uid = ++last_uid;
-  ++geom_stats.sprites;
-  sprite_queue.push(this);
-};
-
-function spriteDataAlloc(texs) {
-  let ret;
-  if (sprite_freelist.length) {
-    ret = sprite_freelist.pop();
-  } else {
-    ret =new SpriteData();
-  }
-  ret.texs = texs;
-  return ret;
-}
-
-function SpriteData4() {
   // x y cr cg cb ca u v (x4)
   // data for GL queuing
   this.data = new Float32Array(32);
@@ -104,20 +63,20 @@ function SpriteData4() {
   this.uid = 0;
 }
 
-SpriteData4.prototype.buffer = function () {
-  // eslint-disable-next-line no-use-before-define
-  bufferSpriteData4(this.data);
-  sprite4_freelist.push(this);
+SpriteData.prototype.queue = function (z) {
+  this.z = z;
+  this.uid = ++last_uid;
+  ++geom_stats.sprites;
+  sprite_queue.push(this);
 };
 
-SpriteData4.prototype.queue = SpriteData.prototype.queue;
 
-export function spriteData4Alloc(texs) {
+export function spriteDataAlloc(texs) {
   let ret;
-  if (sprite4_freelist.length) {
-    ret = sprite4_freelist.pop();
+  if (sprite_freelist.length) {
+    ret = sprite_freelist.pop();
   } else {
-    ret = new SpriteData4();
+    ret = new SpriteData();
   }
   ret.texs = texs;
   return ret;
@@ -168,20 +127,39 @@ export function queueraw4(
   //   if pre-calculated in the camera) and remove it from the shader.
   data[0] = (x0 - camera2d.data[0]) * camera2d.data[4];
   data[1] = (y0 - camera2d.data[1]) * camera2d.data[5];
-  data[2] = (x1 - camera2d.data[0]) * camera2d.data[4];
-  data[3] = (y1 - camera2d.data[1]) * camera2d.data[5];
-  data[4] = (x2 - camera2d.data[0]) * camera2d.data[4];
-  data[5] = (y2 - camera2d.data[1]) * camera2d.data[5];
-  data[6] = (x3 - camera2d.data[0]) * camera2d.data[4];
-  data[7] = (y3 - camera2d.data[1]) * camera2d.data[5];
-  data[8] = color[0];
-  data[9] = color[1];
-  data[10] = color[2];
-  data[11] = color[3];
-  data[12] = u0;
-  data[13] = v0;
-  data[14] = u1;
+  data[2] = color[0];
+  data[3] = color[1];
+  data[4] = color[2];
+  data[5] = color[3];
+  data[6] = u0;
+  data[7] = v0;
+
+  data[8] = (x1 - camera2d.data[0]) * camera2d.data[4];
+  data[9] = (y1 - camera2d.data[1]) * camera2d.data[5];
+  data[10] = color[0];
+  data[11] = color[1];
+  data[12] = color[2];
+  data[13] = color[3];
+  data[14] = u0;
   data[15] = v1;
+
+  data[16] = (x2 - camera2d.data[0]) * camera2d.data[4];
+  data[17] = (y2 - camera2d.data[1]) * camera2d.data[5];
+  data[18] = color[0];
+  data[19] = color[1];
+  data[20] = color[2];
+  data[21] = color[3];
+  data[22] = u1;
+  data[23] = v1;
+
+  data[24] = (x3 - camera2d.data[0]) * camera2d.data[4];
+  data[25] = (y3 - camera2d.data[1]) * camera2d.data[5];
+  data[26] = color[0];
+  data[27] = color[1];
+  data[28] = color[2];
+  data[29] = color[3];
+  data[30] = u1;
+  data[31] = v0;
 
   elem.x = data[0];
   elem.y = data[1];
@@ -209,7 +187,7 @@ export function queueraw4color(
   shader, shader_params, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteData4Alloc(texs);
+  let elem = spriteDataAlloc(texs);
   let data = elem.data;
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
   // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
@@ -265,8 +243,8 @@ export function queueraw4color(
   return elem;
 }
 
-// allocate with spriteData4Alloc() and then fill .data, .shader, .shader_params
-export function queueSpriteData4(elem, z) {
+// allocate with spriteDataAlloc() and then fill .data, .shader, .shader_params
+export function queueSpriteData(elem, z) {
   assert(isFinite(z));
   let data = elem.data;
   data[0] = (data[0] - camera2d.data[0]) * camera2d.data[4];
@@ -300,7 +278,7 @@ export function queueraw4colorBuffer(
   z, shader, shader_params, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteData4Alloc(texs);
+  let elem = spriteDataAlloc(texs);
   let data = elem.data;
   for (let ii = 0; ii < 32; ++ii) {
     data[ii] = buf[ii];
@@ -308,7 +286,7 @@ export function queueraw4colorBuffer(
   elem.shader = shader;
   elem.shader_params = shader_params;
   elem.blend = blend;
-  queueSpriteData4(elem, z);
+  queueSpriteData(elem, z);
   return elem;
 }
 
@@ -404,12 +382,12 @@ export function queuesprite(
     let y2 = y1 + h;
     data[0] = x1;
     data[1] = y1;
-    data[2] = x1;
-    data[3] = y2;
-    data[4] = x2;
-    data[5] = y2;
-    data[6] = x2;
-    data[7] = y1;
+    data[8] = x1;
+    data[9] = y2;
+    data[16] = x2;
+    data[17] = y2;
+    data[24] = x2;
+    data[25] = y1;
   } else {
     let dx = sprite.origin[0] * w;
     let dy = sprite.origin[1] * h;
@@ -426,25 +404,43 @@ export function queuesprite(
 
     data[0] = x1;
     data[1] = y1;
-    data[2] = x1 - sh;
-    data[3] = y1 + ch;
-    data[4] = x1 + cw - sh;
-    data[5] = y1 + sw + ch;
-    data[6] = x1 + cw;
-    data[7] = y1 + sw;
+    data[8] = x1 - sh;
+    data[9] = y1 + ch;
+    data[16] = x1 + cw - sh;
+    data[17] = y1 + sw + ch;
+    data[24] = x1 + cw;
+    data[25] = y1 + sw;
   }
 
-  data[8] = color[0];
-  data[9] = color[1];
-  data[10] = color[2];
-  data[11] = color[3];
-
   fillUVs(elem.texs[0], w, h, nozoom, uvs);
+  // Note: measurably slower: data.set(color, 2);
+  data[2] = color[0];
+  data[3] = color[1];
+  data[4] = color[2];
+  data[5] = color[3];
+  data[6] = temp_uvs[0];
+  data[7] = temp_uvs[1];
 
-  data[12] = temp_uvs[0];
-  data[13] = temp_uvs[1];
-  data[14] = temp_uvs[2];
+  data[10] = color[0];
+  data[11] = color[1];
+  data[12] = color[2];
+  data[13] = color[3];
+  data[14] = temp_uvs[0];
   data[15] = temp_uvs[3];
+
+  data[18] = color[0];
+  data[19] = color[1];
+  data[20] = color[2];
+  data[21] = color[3];
+  data[22] = temp_uvs[2];
+  data[23] = temp_uvs[3];
+
+  data[26] = color[0];
+  data[27] = color[1];
+  data[28] = color[2];
+  data[29] = color[3];
+  data[30] = temp_uvs[2];
+  data[31] = temp_uvs[1];
 
   elem.shader = shader || null;
   elem.blend = blend || 0;
@@ -463,7 +459,7 @@ export function queuesprite4color(
   pixel_perfect, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteData4Alloc(sprite.texs);
+  let elem = spriteDataAlloc(sprite.texs);
   x = (x - camera2d.data[0]) * camera2d.data[4];
   y = (y - camera2d.data[1]) * camera2d.data[5];
   w *= camera2d.data[4];
@@ -678,6 +674,7 @@ let sprite_buffer; // Float32Array with 8 entries per vert
 let sprite_buffer_len = 0; // in verts
 let sprite_buffer_batch_start = 0;
 let sprite_buffer_idx = 0; // in verts
+
 let last_blend_mode;
 let last_bound_shader;
 const MAX_VERT_COUNT = 65532; // strictly less than 65536, as index 65535 is special in WebGL2
@@ -731,65 +728,6 @@ function commitAndFlush() {
   batches.length = 0;
   sprite_buffer_idx = 0;
   sprite_buffer_batch_start = 0;
-}
-
-function bufferSpriteData(data) {
-  let index = sprite_buffer_idx * 8;
-  sprite_buffer_idx += 4;
-
-  let c1 = data[8];
-  let c2 = data[9];
-  let c3 = data[10];
-  let c4 = data[11];
-  let u1 = data[12];
-  let v1 = data[13];
-  let u2 = data[14];
-  let v2 = data[15];
-
-  sprite_buffer[index] = data[0];
-  sprite_buffer[index + 1] = data[1];
-  sprite_buffer[index + 2] = c1;
-  sprite_buffer[index + 3] = c2;
-  sprite_buffer[index + 4] = c3;
-  sprite_buffer[index + 5] = c4;
-  sprite_buffer[index + 6] = u1;
-  sprite_buffer[index + 7] = v1;
-
-  sprite_buffer[index + 8] = data[2];
-  sprite_buffer[index + 9] = data[3];
-  sprite_buffer[index + 10] = c1;
-  sprite_buffer[index + 11] = c2;
-  sprite_buffer[index + 12] = c3;
-  sprite_buffer[index + 13] = c4;
-  sprite_buffer[index + 14] = u1;
-  sprite_buffer[index + 15] = v2;
-
-  sprite_buffer[index + 16] = data[4];
-  sprite_buffer[index + 17] = data[5];
-  sprite_buffer[index + 18] = c1;
-  sprite_buffer[index + 19] = c2;
-  sprite_buffer[index + 20] = c3;
-  sprite_buffer[index + 21] = c4;
-  sprite_buffer[index + 22] = u2;
-  sprite_buffer[index + 23] = v2;
-
-  sprite_buffer[index + 24] = data[6];
-  sprite_buffer[index + 25] = data[7];
-  sprite_buffer[index + 26] = c1;
-  sprite_buffer[index + 27] = c2;
-  sprite_buffer[index + 28] = c3;
-  sprite_buffer[index + 29] = c4;
-  sprite_buffer[index + 30] = u2;
-  sprite_buffer[index + 31] = v1;
-}
-
-function bufferSpriteData4(data) {
-  let index = sprite_buffer_idx * 8;
-  sprite_buffer_idx += 4;
-
-  for (let ii = 0; ii < 32; ++ii) {
-    sprite_buffer[index + ii] = data[ii];
-  }
 }
 
 function drawSetup() {
@@ -857,7 +795,16 @@ function drawElem(elem) {
       }
     }
 
-    elem.buffer();
+    let index = sprite_buffer_idx * 8;
+    sprite_buffer_idx += 4;
+
+    // measurably slower:
+    // for (let ii = 0; ii < 32; ++ii) {
+    //   sprite_buffer[index + ii] = elem.data[ii];
+    // }
+    sprite_buffer.set(elem.data, index);
+
+    sprite_freelist.push(elem);
   }
 }
 

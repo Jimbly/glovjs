@@ -11,8 +11,8 @@ const assert = require('assert');
 const {
   BLEND_ALPHA,
   BLEND_ADDITIVE,
-  spriteData4Alloc,
-  queueSpriteData4,
+  spriteDataAlloc,
+  queueSpriteData,
 } = require('glov/client/sprites.js');
 const { textureLoad } = require('./textures.js');
 const { webFSGetFile } = require('./webfs.js');
@@ -139,7 +139,7 @@ Spine.prototype.draw = function (param) {
     lookup[1] = v1;
     lookup[2] = v2;
     lookup[3] = v3;
-    let sprite = spriteData4Alloc(texture.texs);
+    let sprite = spriteDataAlloc(texture.texs);
     sprite.blend = blend;
     let buf = sprite.data;
     for (let corner = 0, vout = 0; corner < 4; corner++) {
@@ -153,7 +153,7 @@ Spine.prototype.draw = function (param) {
       buf[vout++] = uvs[vin];
       buf[vout++] = uvs[vin + 1];
     }
-    queueSpriteData4(sprite, z);
+    queueSpriteData(sprite, z);
     z += ZINC;
   }
 
@@ -263,7 +263,7 @@ Spine.prototype.draw = function (param) {
       } else {
         if (numVertices === 4) {
           // assume quad
-          let sprite = spriteData4Alloc(texture.texs);
+          let sprite = spriteDataAlloc(texture.texs);
           sprite.blend = blend;
           let buf = sprite.data;
           for (let vin = 0, vout = 0; vin < numVertices*2; vin += 2) {
@@ -276,7 +276,7 @@ Spine.prototype.draw = function (param) {
             buf[vout++] = uvs[vin];
             buf[vout++] = uvs[vin + 1];
           }
-          queueSpriteData4(sprite, z);
+          queueSpriteData(sprite, z);
           z += ZINC;
         } else {
           // translate to quads
