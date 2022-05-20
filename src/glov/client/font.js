@@ -488,7 +488,7 @@ GlovFont.prototype.dims = function (style, w, indent, size, text) {
   }
   let numlines = this.wrapLines(w, indent, size, text, 0, lineCallback);
   return {
-    h: (numlines + 1) * size,
+    h: numlines * size,
     w: max_x1,
   };
 };
