@@ -439,7 +439,7 @@ export function main() {
       }
       spine_anim.update(dt);
       spine_anim.draw({
-        x: 100, y: 100, z: Z.UI,
+        x: 100, y: 100, z: 95,
         scale: 0.1,
       });
     }

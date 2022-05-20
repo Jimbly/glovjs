@@ -139,8 +139,7 @@ Spine.prototype.draw = function (param) {
     lookup[1] = v1;
     lookup[2] = v2;
     lookup[3] = v3;
-    let sprite = spriteDataAlloc(texture.texs);
-    sprite.blend = blend;
+    let sprite = spriteDataAlloc(texture.texs, null, null, blend);
     let buf = sprite.data;
     for (let corner = 0, vout = 0; corner < 4; corner++) {
       let vin = lookup[corner] * 2;
@@ -263,8 +262,7 @@ Spine.prototype.draw = function (param) {
       } else {
         if (numVertices === 4) {
           // assume quad
-          let sprite = spriteDataAlloc(texture.texs);
-          sprite.blend = blend;
+          let sprite = spriteDataAlloc(texture.texs, null, null, blend);
           let buf = sprite.data;
           for (let vin = 0, vout = 0; vin < numVertices*2; vin += 2) {
             buf[vout++] = x + verts[vin] * scale;

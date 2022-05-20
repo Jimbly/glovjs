@@ -71,7 +71,7 @@ SpriteData.prototype.queue = function (z) {
 };
 
 
-export function spriteDataAlloc(texs) {
+export function spriteDataAlloc(texs, shader, shader_params, blend) {
   let ret;
   if (sprite_freelist.length) {
     ret = sprite_freelist.pop();
@@ -79,6 +79,14 @@ export function spriteDataAlloc(texs) {
     ret = new SpriteData();
   }
   ret.texs = texs;
+  ret.shader = shader || null;
+  if (shader_params) {
+    shader_params.clip_space = sprite_shader_params.clip_space;
+    ret.shader_params = shader_params;
+  } else {
+    ret.shader_params = null;
+  }
+  ret.blend = blend || 0; // BLEND_ALPHA
   return ret;
 }
 
@@ -122,7 +130,7 @@ export function queueraw4color(
   shader, shader_params, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteDataAlloc(texs);
+  let elem = spriteDataAlloc(texs, shader, shader_params, blend);
   let data = elem.data;
   // x1 y1 x2 y2 x3 y3 x4 y4 - vertices [0,8)
   // cr cg cb ca u1 v1 u2 v2 - normalized color + texture [8,16)
@@ -167,14 +175,6 @@ export function queueraw4color(
 
   elem.x = data[0];
   elem.y = data[1];
-  elem.shader = shader || null;
-  if (shader_params) {
-    shader_params.clip_space = sprite_shader_params.clip_space;
-    elem.shader_params = shader_params;
-  } else {
-    elem.shader_params = null;
-  }
-  elem.blend = blend || 0; // BLEND_ALPHA
   elem.queue(z);
   return elem;
 }
@@ -195,7 +195,7 @@ export function queueraw4(
     shader, shader_params, blend);
 }
 
-// allocate with spriteDataAlloc() and then fill .data, .shader, .shader_params
+// allocate with spriteDataAlloc() and then fill .data
 export function queueSpriteData(elem, z) {
   assert(isFinite(z));
   let data = elem.data;
@@ -211,14 +211,8 @@ export function queueSpriteData(elem, z) {
   data[24] = (data[24] - camera2d.data[0]) * camera2d.data[4];
   data[25] = (data[25] - camera2d.data[1]) * camera2d.data[5];
 
-  elem.shader = elem.shader || null;
-  if (elem.shader_params) {
-    elem.shader_params.clip_space = sprite_shader_params.clip_space;
-  }
-
   elem.x = data[0];
   elem.y = data[1];
-  elem.blend = elem.blend || 0; // BLEND_ALPHA
   elem.queue(z);
   return elem;
 }
@@ -230,14 +224,11 @@ export function queueraw4colorBuffer(
   z, shader, shader_params, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteDataAlloc(texs);
+  let elem = spriteDataAlloc(texs, shader, shader_params, blend);
   let data = elem.data;
   for (let ii = 0; ii < 32; ++ii) {
     data[ii] = buf[ii];
   }
-  elem.shader = shader;
-  elem.shader_params = shader_params;
-  elem.blend = blend;
   queueSpriteData(elem, z);
   return elem;
 }
@@ -311,7 +302,7 @@ export function queuesprite4color(
   pixel_perfect, blend
 ) {
   assert(isFinite(z));
-  let elem = spriteDataAlloc(sprite.texs);
+  let elem = spriteDataAlloc(sprite.texs, shader, shader_params, blend);
   x = (x - camera2d.data[0]) * camera2d.data[4];
   y = (y - camera2d.data[1]) * camera2d.data[5];
   w *= camera2d.data[4];
@@ -391,15 +382,6 @@ export function queuesprite4color(
   data[30] = temp_uvs[2];
   data[31] = temp_uvs[1];
 
-  elem.shader = shader || null;
-  elem.blend = blend || 0;
-
-  if (shader_params) {
-    shader_params.clip_space = sprite_shader_params.clip_space;
-    elem.shader_params = shader_params;
-  } else {
-    elem.shader_params = null;
-  }
   elem.queue(z);
 }
 
