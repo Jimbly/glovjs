@@ -225,8 +225,19 @@ export function main() {
   function spineInit() {
     spine_inited = true;
 
-    spine_anim = spineCreate('spine/spineboy-pro.skel', 'spine/spineboy.atlas');
-    spine_anim.setAnimation(0, 'run', true);
+    spine_anim = spineCreate({
+      skel: 'spine/dino.skel',
+      atlas: 'spine/dino.atlas',
+      mix: {
+        idle: {
+          run: 0.25,
+        },
+        idle_left: {
+          run_left: 0.25,
+        },
+      },
+      anim: 'idle',
+    });
   }
 
   let last_particles = 0;
@@ -258,8 +269,20 @@ export function main() {
     test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
     if (test.character.dx < 0) {
       sprites.animation.setState('idle_left');
+      if (spine_anim) {
+        spine_anim.setAnimation(0, 'run_left', true);
+      }
     } else if (test.character.dx > 0) {
       sprites.animation.setState('idle_right');
+      if (spine_anim) {
+        spine_anim.setAnimation(0, 'run', true);
+      }
+    } else if (spine_anim) {
+      if (spine_anim.getAnimation(0) === 'run') {
+        spine_anim.setAnimation(0, 'idle', true);
+      } else if (spine_anim.getAnimation(0) === 'run_left') {
+        spine_anim.setAnimation(0, 'idle_left', true);
+      }
     }
 
     test.character.x += test.character.dx * 0.05;
@@ -287,14 +310,25 @@ export function main() {
     //   x: 0, y: 0, z: Z.BACKGROUND,
     //   color: [0, 0.72, 1, 1]
     // });
-    sprites.test_tint.drawDualTint({
-      x: test.character.x,
-      y: test.character.y,
-      z: Z.SPRITES,
-      color: [1, 1, 0, 1],
-      color1: [1, 0, 1, 1],
-      frame: sprites.animation.getFrame(dt),
-    });
+    if (flagGet('spine')) {
+      if (!spine_inited) {
+        spineInit();
+      }
+      spine_anim.update(dt * 2);
+      spine_anim.draw({
+        x: test.character.x, y: test.character.y, z: Z.SPRITES,
+        scale: 0.25,
+      });
+    } else {
+      sprites.test_tint.drawDualTint({
+        x: test.character.x,
+        y: test.character.y,
+        z: Z.SPRITES,
+        color: [1, 1, 0, 1],
+        color1: [1, 0, 1, 1],
+        frame: sprites.animation.getFrame(dt),
+      });
+    }
 
     if (flagGet('4color')) {
       sprites.test_tint.draw4Color({
@@ -431,17 +465,6 @@ export function main() {
 
     if (miniButton('Spine', 'Toggles Spine animation testing', flagGet('spine'))) {
       flagToggle('spine');
-    }
-
-    if (flagGet('spine')) {
-      if (!spine_inited) {
-        spineInit();
-      }
-      spine_anim.update(dt);
-      spine_anim.draw({
-        x: 100, y: 100, z: 95,
-        scale: 0.1,
-      });
     }
 
     if (flagGet('particles')) {

@@ -78,7 +78,8 @@ function spineLoadAtlas(filename) {
 }
 
 let skeletons = {};
-function spineLoadSkeleton(atlas, filename) {
+function spineLoadSkeleton(atlas, params) {
+  let { skel: filename, mix } = params;
   if (skeletons[filename]) {
     return skeletons[filename];
   }
@@ -97,6 +98,16 @@ function spineLoadSkeleton(atlas, filename) {
   }
   let skeleton = new Skeleton(skeleton_data);
   let animation_state_data = new AnimationStateData(skeleton_data);
+  for (let from in mix) {
+    let map = mix[from];
+    for (let to in map) {
+      let v = map[to];
+      animation_state_data.setMix(from, to, v);
+      if (!mix[to] || mix[to][from] === undefined) {
+        animation_state_data.setMix(to, from, v);
+      }
+    }
+  }
   return (skeletons[filename] = { skeleton, animation_state_data });
 }
 
@@ -107,15 +118,30 @@ let tempDark = new Color();
 let finalColor = new Color();
 let tempColor2 = new Color();
 
-function Spine(filename_skeleton, filename_atlas) {
-  let atlas = spineLoadAtlas(filename_atlas);
-  let { skeleton, animation_state_data } = spineLoadSkeleton(atlas, filename_skeleton);
+function Spine(params) {
+  let {
+    anim,
+  } = params;
+  let atlas = spineLoadAtlas(params.atlas);
+  let { skeleton, animation_state_data } = spineLoadSkeleton(atlas, params);
   this.skeleton = skeleton;
 
   this.animation_state = new AnimationState(animation_state_data);
   this.vertices = new Float32Array(1024);
+  if (anim) {
+    this.setAnimation(0, anim, true);
+  }
 }
+Spine.prototype.getAnimation = function (track_index) {
+  track_index = track_index || 0;
+  let cur = this.animation_state.getCurrent(track_index);
+  return cur && cur.animation && cur.animation.name || null;
+};
 Spine.prototype.setAnimation = function (track_index, name, loop) {
+  let cur = this.animation_state.getCurrent(track_index);
+  if (cur && cur.animation && cur.animation.name === name) {
+    return;
+  }
   this.animation_state.setAnimation(track_index, name, loop);
 };
 Spine.prototype.update = function (dt) {
@@ -325,6 +351,6 @@ Spine.prototype.draw = function (param) {
   // clipper.clipEnd();
 };
 
-export function spineCreate(filename_skeleton, filename_atlas) {
-  return new Spine(filename_skeleton, filename_atlas);
+export function spineCreate(params) {
+  return new Spine(params);
 }
