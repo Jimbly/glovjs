@@ -25,5 +25,6 @@ module.exports = function (config) {
   config.client_fsdata.push(
     'client/spine/**.atlas',
     'client/spine/**.skel',
+    'client/spine/**.json',
   );
 };

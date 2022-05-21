@@ -26,6 +26,7 @@ const { MeshAttachment } = require('spine-core/MeshAttachment');
 const { RegionAttachment } = require('spine-core/RegionAttachment');
 const { Skeleton } = require('spine-core/Skeleton');
 const { SkeletonBinary } = require('spine-core/SkeletonBinary');
+const { SkeletonJson } = require('spine-core/SkeletonJson');
 const { TextureAtlas } = require('spine-core/TextureAtlas');
 const { Color, Vector2 } = require('spine-core/Utils');
 
@@ -82,9 +83,17 @@ function spineLoadSkeleton(atlas, filename) {
     return skeletons[filename];
   }
   let atlas_loader = new AtlasAttachmentLoader(atlas);
-  let skeleton_binary = new SkeletonBinary(atlas_loader);
-  skeleton_binary.scale = 1;
-  let skeleton_data = skeleton_binary.readSkeletonData(webFSGetFile(filename, 'binary'));
+  let is_json = filename.endsWith('.json');
+  let skeleton_data;
+  if (is_json) {
+    let skeleton_json = new SkeletonJson(atlas_loader);
+    skeleton_json.scale = 1;
+    skeleton_data = skeleton_json.readSkeletonData(webFSGetFile(filename.slice(0, -'.json'.length), 'jsobj'));
+  } else {
+    let skeleton_binary = new SkeletonBinary(atlas_loader);
+    skeleton_binary.scale = 1;
+    skeleton_data = skeleton_binary.readSkeletonData(webFSGetFile(filename, 'binary'));
+  }
   let skeleton = new Skeleton(skeleton_data);
   let animation_state_data = new AnimationStateData(skeleton_data);
   return (skeletons[filename] = { skeleton, animation_state_data });
