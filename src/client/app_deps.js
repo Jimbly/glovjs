@@ -26,6 +26,6 @@ deps['spine-core/RegionAttachment'] = require('@jimbly/spine-core/dist/attachmen
 deps['spine-core/SlotData'] = require('@jimbly/spine-core/dist/SlotData');
 deps['spine-core/Skeleton'] = require('@jimbly/spine-core/dist/Skeleton');
 deps['spine-core/SkeletonBinary'] = require('@jimbly/spine-core/dist/SkeletonBinary');
-deps['spine-core/SkeletonJson'] = require('@jimbly/spine-core/dist/SkeletonJson');
+// deps['spine-core/SkeletonJson'] = require('@jimbly/spine-core/dist/SkeletonJson');
 deps['spine-core/TextureAtlas'] = require('@jimbly/spine-core/dist/TextureAtlas');
 deps['spine-core/Utils'] = require('@jimbly/spine-core/dist/Utils');
