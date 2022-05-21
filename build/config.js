@@ -29,11 +29,12 @@ module.exports = {
   ],
   client_vendor: ['client/**/vendor/**'],
   compress_files: [
-    'client/**/*.js',
-    'client/**/*.html',
-    'client/**/*.css',
-    'client/**/*.glb',
-    'client/**/manifest.json',
+    'client/**',
+    '!**/*.png',
+    '!**/*.mp3',
+    '!**/*.ogg',
+    '!**/*.webm',
+    '!**/*.js.map',
   ],
   client_fsdata: [
     'client/shaders/**',
