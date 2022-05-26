@@ -1042,8 +1042,9 @@ function modalDialogRun() {
   let vpad = modal_pad * 0.5;
   let general_scale = 1;
   let exit_lock = true;
-  if (virtual_size[0] > 0.1 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
-    // If a 24-pt font is more than 10% of the camera height, we're probably super-wide-screen
+  let num_lines;
+  if (virtual_size[0] > 0.05 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
+    // If a 24-pt font is more than 5% of the camera height, we're probably super-wide-screen
     // on a mobile device due to keyboard being visible
     fullscreen_mode = true;
     eff_button_height = eff_font_height;
@@ -1051,8 +1052,20 @@ function modalDialogRun() {
 
     let old_h = camera2d.h();
     camera2d.push();
-    camera2d.setAspectFixed2(1, eff_font_height * (modal_title_scale + 2) + pad * 4.5);
-    general_scale = camera2d.h() / old_h;
+    // Find a number of lines (and implicit scaling) such they all fit
+    for (num_lines = 1; ; num_lines++) {
+      camera2d.setAspectFixed2(1, eff_font_height * (modal_title_scale + 1 + num_lines) + pad * 4.5);
+      general_scale = camera2d.h() / old_h;
+      if (!modal_dialog.text) {
+        break;
+      }
+      const game_width = camera2d.x1() - camera2d.x0();
+      const text_w = game_width - pad * 2;
+      let wrapped_numlines = font.numLines(modal_font_style, text_w, 0, eff_font_height, modal_dialog.text);
+      if (wrapped_numlines <= num_lines) {
+        break;
+      }
+    }
   }
 
   let { buttons, click_anywhere } = modal_dialog;
@@ -1082,11 +1095,13 @@ function modalDialogRun() {
     y = round(y + vpad * 1.5);
   }
 
-  if (modal_dialog.text) {
+  if (modal_dialog.text || fullscreen_mode) {
     if (fullscreen_mode) {
-      font.drawSizedAligned(modal_font_style, x, y, Z.MODAL, eff_font_height,
-        glov_font.ALIGN.HFIT, text_w, 0, modal_dialog.text);
-      y += eff_font_height;
+      if (modal_dialog.text) {
+        font.drawSizedAligned(modal_font_style, x, y, Z.MODAL, eff_font_height,
+          glov_font.ALIGN.HWRAP, text_w, 0, modal_dialog.text);
+      }
+      y += eff_font_height * num_lines;
     } else {
       y += font.drawSizedWrapped(modal_font_style, x, y, Z.MODAL, text_w, 0, eff_font_height,
         modal_dialog.text);
@@ -1522,7 +1537,7 @@ export function provideUserString(title, str, success_msg, failure_msg) {
   let copy_success = copyTextToClipboard(str);
   modalTextEntry({
     edit_w: 400,
-    edit_text: str,
+    edit_text: str.replace(/[\n\r]/g, ' '),
     title,
     text: copy_success ?
       (success_msg || default_copy_success_msg) :
