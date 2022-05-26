@@ -26,6 +26,7 @@ export function setAsync(key, value) {
 }
 
 export function runTimeDefault(key, new_default) {
+  assert(!change_cbs[key]); // If so, we set `default_clear_on` below, and may have discarded a desired setting.
   // Set a default value that cannot be determined at load time
   // Only set if this has never been modified
   if (!modified[key]) {
@@ -83,7 +84,12 @@ export function register(defs) {
       on_change: def.on_change,
       access_run: def.access_run,
       access_show: def.access_show,
-      default_clear_on: def.default_value,
+      // Only applying `default_clear_on` if there's an `def.on_change` handler - otherwise
+      //   there's no functional difference.  Do *not* want to apply `default_clear_on`
+      //   for any settings which later have `runTimeDefault()` called on them,
+      //   as we may have discarded the actual (matching the hard-coded default,
+      //   but not the run-time default) desired value.
+      default_clear_on: def.on_change ? def.default_value : undefined,
     });
   });
 }
