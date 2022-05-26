@@ -951,7 +951,7 @@ export function startup(params) {
     };
   }
 
-  if (DEBUG) {
+  if (DEBUG && !window.spector) {
     // Add check to catch common error of `const FOO=10; for (let i=0; i < FOO.length; i++) {}`
     // eslint-disable-next-line no-extend-native
     Object.defineProperty(Number.prototype, 'length', {
