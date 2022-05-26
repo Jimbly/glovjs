@@ -7,6 +7,8 @@ require('./bootstrap.js'); // Just in case it's not in app.js
 const client_config = require('./client_config.js');
 export let DEBUG = client_config.MODE_DEVELOPMENT;
 
+let startup_funcs = [];
+
 exports.require = require; // For browser console debugging
 
 require('not_worker'); // This module cannot be required from a worker bundle
@@ -932,7 +934,6 @@ export function setFonts(new_font, title_font) {
   glov_ui.setFonts(new_font, title_font);
 }
 
-let startup_funcs = [];
 export function engineStartupFunc(func) {
   startup_funcs.push(func);
 }
