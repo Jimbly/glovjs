@@ -14,7 +14,7 @@ const {
 const master_worker = require('./master_worker.js');
 const md5 = require('glov/common/md5.js');
 const metrics = require('./metrics.js');
-const { isProfane } = require('glov/common/words/profanity_common.js');
+const { isProfane, isReserved } = require('glov/common/words/profanity_common.js');
 const random_names = require('./random_names.js');
 const { sanitize } = require('glov/common/util.js');
 
@@ -49,7 +49,7 @@ export function validExternalId(external_id) {
 
 function validDisplayName(display_name) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
-    isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH
+    isProfane(display_name) || isReserved(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH
   ) {
     return false;
   }
@@ -175,7 +175,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!new_name) {
       return resp_func('Missing name');
     }
-    if (!validDisplayName(new_name)) {
+    if (!validDisplayName(new_name) && !this.cmd_parse_source.sysadmin) {
       return resp_func('Invalid display name');
     }
     let old_name = this.getChannelData('public.display_name');
