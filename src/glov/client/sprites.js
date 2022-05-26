@@ -526,6 +526,26 @@ function commit() {
   sprite_buffer_batch_start = sprite_buffer_idx;
 }
 
+export function blendModeSet(blend) {
+  if (last_blend_mode !== blend) {
+    last_blend_mode = blend;
+    if (last_blend_mode === BLEND_ADDITIVE) {
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    } else if (last_blend_mode === BLEND_PREMULALPHA) {
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    } else {
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    }
+  }
+}
+
+export function blendModeReset() {
+  if (last_blend_mode !== BLEND_ALPHA) {
+    // always reset to this
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  }
+}
+
 function commitAndFlush() {
   commit();
   if (!batches.length) {
@@ -545,14 +565,7 @@ function commitAndFlush() {
       last_bound_shader = state.shader;
     }
     if (last_blend_mode !== state.blend) {
-      last_blend_mode = state.blend;
-      if (last_blend_mode === BLEND_ADDITIVE) {
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-      } else if (last_blend_mode === BLEND_PREMULALPHA) {
-        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      } else {
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      }
+      blendModeSet(state.blend);
     }
     textures.bindArray(state.texs);
     ++geom_stats.draw_calls_sprite;
@@ -644,10 +657,7 @@ function drawElem(elem) {
 
 function finishDraw() {
   commitAndFlush();
-  if (last_blend_mode !== BLEND_ALPHA) {
-    // always reset to this
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  }
+  blendModeReset();
 }
 
 export function draw() {
