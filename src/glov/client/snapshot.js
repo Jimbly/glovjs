@@ -12,6 +12,10 @@ const mat4LookAt = require('gl-mat4/lookAt');
 const { max, PI, tan } = Math;
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
+const {
+  blendModeSet,
+  BLEND_ALPHA,
+} = sprites;
 const textures = require('./textures.js');
 const {
   mat4,
@@ -44,7 +48,7 @@ export function viewportRenderPrepare(param) {
     pre();
   }
 
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  blendModeSet(BLEND_ALPHA);
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
   gl.depthMask(true);

@@ -539,10 +539,11 @@ export function blendModeSet(blend) {
   }
 }
 
-export function blendModeReset() {
-  if (last_blend_mode !== BLEND_ALPHA) {
+export function blendModeReset(force) {
+  if (last_blend_mode !== BLEND_ALPHA || force) {
     // always reset to this
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    last_blend_mode = BLEND_ALPHA;
   }
 }
 

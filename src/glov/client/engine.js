@@ -46,6 +46,7 @@ const shaders = require('./shaders.js');
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const sprites = require('./sprites.js');
+const { blendModeReset } = sprites;
 const textures = require('./textures.js');
 const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
@@ -593,7 +594,7 @@ export function start3DRendering(opts) {
     had_render_scale_3d_this_frame = true;
     effectsPassAdd();
   }
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  blendModeReset(true);
   gl.enable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
   gl.depthMask(true);
@@ -637,7 +638,7 @@ function renderScaleFinish() {
 
 export function startSpriteRendering() {
   gl.disable(gl.CULL_FACE);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  blendModeReset(true);
   gl.enable(gl.BLEND);
   gl.disable(gl.DEPTH_TEST);
   gl.depthMask(false);
@@ -680,8 +681,7 @@ function resetState() {
   geom.geomResetState();
 
   // These should already be true:
-  // gl.blendFunc(gl.ONE, gl.ONE);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  blendModeReset(true);
   // gl.disable(gl.BLEND);
   gl.enable(gl.BLEND);
   // gl.disable(gl.DEPTH_TEST);
