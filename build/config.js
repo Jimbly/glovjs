@@ -31,6 +31,7 @@ module.exports = {
   compress_files: [
     'client/**',
     '!**/*.png',
+    '!**/*.jpg',
     '!**/*.mp3',
     '!**/*.ogg',
     '!**/*.webm',
