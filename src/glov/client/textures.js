@@ -100,6 +100,20 @@ export function bindArray(texs) {
   }
 }
 
+export function cmpTextureArray(texsa, texsb) {
+  let d = texsa.length - texsb.length;
+  if (d) {
+    return d;
+  }
+  for (let ii = 0; ii < texsa.length; ++ii) {
+    d = texsa[ii].id - texsb[ii].id;
+    if (d) {
+      return d;
+    }
+  }
+  return 0;
+}
+
 export function isArrayBound(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
     let tex = texs[ii];
@@ -124,7 +138,9 @@ export function texturesResetState() {
 
 let auto_unload_textures = [];
 
+let last_id = 0;
 function Texture(params) {
+  this.id = ++last_id;
   this.name = params.name;
   this.loaded = false;
   this.load_fail = false;

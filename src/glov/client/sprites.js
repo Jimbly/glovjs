@@ -18,6 +18,7 @@ const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
+const { cmpTextureArray } = textures;
 const shaders = require('./shaders.js');
 const { nextHighestPowerOfTwo } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
@@ -501,18 +502,6 @@ export function clipResume() {
   camera2d.setInputClipping(dom_clip);
 }
 
-function diffTextures(texsa, texsb) {
-  if (texsa.length !== texsb.length) {
-    return true;
-  }
-  for (let ii = 0; ii < texsa.length; ++ii) {
-    if (texsa[ii] !== texsb[ii]) {
-      return true;
-    }
-  }
-  return false;
-}
-
 let batch_state;
 let sprite_geom;
 let sprite_buffer; // Float32Array with 8 entries per vert
@@ -622,7 +611,7 @@ function drawElem(elem) {
     clip_space[1] = -2 / engine.viewport[3];
   } else {
     if (!batch_state ||
-      diffTextures(elem.texs, batch_state.texs) ||
+      cmpTextureArray(elem.texs, batch_state.texs) ||
       elem.shader !== batch_state.shader ||
       elem.shader_params !== batch_state.shader_params ||
       elem.blend !== batch_state.blend
