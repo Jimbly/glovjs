@@ -69,14 +69,6 @@ gb.task({
 });
 
 gb.task({
-  name: 'server_static',
-  input: config.server_static,
-  type: gb.SINGLE,
-  target: 'dev',
-  func: copy,
-});
-
-gb.task({
   name: 'server_js',
   input: config.server_js_files,
   ...babel({
@@ -151,6 +143,14 @@ gb.task({
 for (let ii = 0; ii < config.client_register_cbs.length; ++ii) {
   config.client_register_cbs[ii](gb);
 }
+
+gb.task({
+  name: 'server_static',
+  input: config.server_static,
+  type: gb.SINGLE,
+  target: 'dev',
+  func: copy,
+});
 
 gb.task({
   name: 'client_js_babel_files',
