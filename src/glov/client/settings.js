@@ -81,6 +81,7 @@ export function register(defs) {
       ver: def.ver,
       help: def.help,
       usage: def.usage,
+      prefix_usage_with_help: def.prefix_usage_with_help,
       on_change: def.on_change,
       access_run: def.access_run,
       access_show: def.access_show,

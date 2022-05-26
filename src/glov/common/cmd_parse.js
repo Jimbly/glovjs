@@ -261,6 +261,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       param.set ? `Set "${label}" value` : `Display "${label}" value`),
     usage: param.usage || ((param.get ? `Display "${label}" value\n  Usage: /${cmd}\n` : '') +
       (param.set ? `Set "${label}" value\n  Usage: /${cmd} NewValue` : '')),
+    prefix_usage_with_help: param.prefix_usage_with_help,
     access_show: param.access_show,
     access_run: param.access_run,
   });
