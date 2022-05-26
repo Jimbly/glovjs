@@ -8,6 +8,10 @@ exports.createSprite = create;
 // eslint-disable-next-line no-use-before-define
 exports.spritesClip = clip;
 
+export const BLEND_ALPHA = 0;
+export const BLEND_ADDITIVE = 1;
+export const BLEND_PREMULALPHA = 2;
+
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
@@ -17,10 +21,6 @@ const textures = require('./textures.js');
 const shaders = require('./shaders.js');
 const { nextHighestPowerOfTwo } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
-
-export const BLEND_ALPHA = 0;
-export const BLEND_ADDITIVE = 1;
-export const BLEND_PREMULALPHA = 2;
 
 export let sprite_vshader;
 export let sprite_fshader;
