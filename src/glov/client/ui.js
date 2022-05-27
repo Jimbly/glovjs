@@ -268,6 +268,27 @@ export function loadUISprite(name, ws, hs, overrides, only_override) {
   }
 }
 
+export function loadUISprite2(name, param) {
+  if (param === null) {
+    // skip it, assume not used
+    return;
+  }
+  let wrap_s = gl.CLAMP_TO_EDGE;
+  let wrap_t = param.wrap_t ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  let sprite_param = {
+    ws: param.ws,
+    hs: param.hs,
+    wrap_s,
+    wrap_t,
+  };
+  if (param.url) {
+    sprite_param.url = param.url;
+  } else {
+    sprite_param.name = `ui/${param.name || name}`;
+  }
+  sprites[name] = glov_sprites.create(sprite_param);
+}
+
 export function setFonts(new_font, new_title_font) {
   font = new_font;
   title_font = new_title_font || font;
@@ -284,6 +305,63 @@ export function setProvideUserStringDefaultMessages(success_msg, failure_msg) {
   default_copy_failure_msg = failure_msg;
 }
 
+const base_ui_sprites = {
+  white: { url: 'white' },
+
+  button: { ws: [32, 64, 32], hs: [128] },
+  button_rollover: { ws: [32, 64, 32], hs: [128] },
+  button_down: { ws: [32, 64, 32], hs: [128] },
+  button_disabled: { ws: [32, 64, 32], hs: [128] },
+  panel: { ws: [32, 64, 32], hs: [32, 64, 32] },
+
+  // TODO: high res versions
+  menu_entry: { ws: [4, 5, 4], hs: [13] },
+  menu_selected: { ws: [4, 5, 4], hs: [13] },
+  menu_down: { ws: [4, 5, 4], hs: [13] },
+  menu_header: { ws: [4, 5, 12], hs: [13] },
+  slider: { ws: [6, 2, 6], hs: [13] },
+  // slider_notch: { ws: [3], hs: [13] },
+  slider_handle: { ws: [9], hs: [13] },
+
+  scrollbar_bottom: { ws: [11], hs: [13] },
+  scrollbar_trough: { ws: [11], hs: [8], wrap_t: true },
+  scrollbar_top: { ws: [11], hs: [13] },
+  scrollbar_handle_grabber: { ws: [11], hs: [13] },
+  scrollbar_handle: { ws: [11], hs: [3, 7, 3] },
+  progress_bar: { ws: [3, 7, 3], hs: [13] },
+  progress_bar_trough: { ws: [3, 7, 3], hs: [13] },
+};
+
+export const ui_sprites_stone = {
+  button: { name: 'stone/button', ws: [32, 64, 32], hs: [128] },
+  button_rollover: { name: 'stone/button_rollover', ws: [32, 64, 32], hs: [128] },
+  button_down: { name: 'stone/button_down', ws: [32, 64, 32], hs: [128] },
+  button_disabled: { name: 'stone/button_disabled', ws: [32, 64, 32], hs: [128] },
+};
+
+export const ui_sprites_pixely = {
+  button: { name: 'pixely/button', ws: [4, 5, 4], hs: [13] },
+  button_rollover: null,
+  button_down: { name: 'pixely/button_down', ws: [4, 5, 4], hs: [13] },
+  button_disabled: { name: 'pixely/button_disabled', ws: [4, 5, 4], hs: [13] },
+  panel: { name: 'pixely/panel', ws: [3, 2, 3], hs: [3, 10, 3] },
+  menu_entry: { name: 'pixely/menu_entry', ws: [4, 5, 4], hs: [13] },
+  menu_selected: { name: 'pixely/menu_selected', ws: [4, 5, 4], hs: [13] },
+  menu_down: { name: 'pixely/menu_down', ws: [4, 5, 4], hs: [13] },
+  menu_header: { name: 'pixely/menu_header', ws: [4, 5, 12], hs: [13] },
+  slider: { name: 'pixely/slider', ws: [6, 2, 6], hs: [13] },
+  // slider_notch:  name: 'pixely///',{ ws: [3], hs: [13] },
+  slider_handle: { name: 'pixely/slider_handle', ws: [9], hs: [13] },
+
+  scrollbar_bottom: { name: 'pixely/scrollbar_bottom', ws: [11], hs: [13] },
+  scrollbar_trough: { name: 'pixely/scrollbar_trough', ws: [11], hs: [8], wrap_t: true },
+  scrollbar_top: { name: 'pixely/scrollbar_top', ws: [11], hs: [13] },
+  scrollbar_handle_grabber: { name: 'pixely/scrollbar_handle_grabber', ws: [11], hs: [13] },
+  scrollbar_handle: { name: 'pixely/scrollbar_handle', ws: [11], hs: [3, 7, 3] },
+  progress_bar: { name: 'pixely/progress_bar', ws: [3, 7, 3], hs: [13] },
+  progress_bar_trough: { name: 'pixely/progress_bar_trough', ws: [3, 7, 3], hs: [13] },
+};
+
 export function startup(param) {
   font = param.font;
   title_font = param.title_font || font;
@@ -298,29 +376,27 @@ export function startup(param) {
     pad_focus_right = PAD.RIGHT_BUMPER;
   }
 
-  loadUISprite('button', [4, 5, 4], [13], overrides);
+  let ui_sprites = {
+    ...base_ui_sprites,
+    ...param.ui_sprites,
+  };
+
+  for (let key in ui_sprites) {
+    let base_elem = base_ui_sprites[key];
+    let override = overrides && overrides[key];
+    loadUISprite2(key, override === undefined ? base_elem : override);
+  }
   sprites.button_regular = sprites.button;
-  loadUISprite('button_rollover', [4, 5, 4], [13], overrides, true);
-  loadUISprite('button_down', [4, 5, 4], [13], overrides);
-  loadUISprite('button_disabled', [4, 5, 4], [13], overrides);
-  loadUISprite('panel', [3, 2, 3], [3, 10, 3], overrides);
-  loadUISprite('menu_entry', [4, 5, 4], [13], overrides);
-  loadUISprite('menu_selected', [4, 5, 4], [13], overrides);
-  loadUISprite('menu_down', [4, 5, 4], [13], overrides);
-  loadUISprite('menu_header', [4, 5, 12], [13], overrides);
-  loadUISprite('slider', [6, 2, 6], [13], overrides);
-  // loadUISprite('slider_notch', [3], [13], overrides);
-  loadUISprite('slider_handle', [9], [13], overrides);
 
-  loadUISprite('scrollbar_bottom', [11], [13], overrides);
-  loadUISprite('scrollbar_trough', [11], [8], overrides);
-  loadUISprite('scrollbar_top', [11], [13], overrides);
-  loadUISprite('scrollbar_handle_grabber', [11], [13], overrides);
-  loadUISprite('scrollbar_handle', [11], [3, 7, 3], overrides);
-  loadUISprite('progress_bar', [3, 7, 3], [13], overrides);
-  loadUISprite('progress_bar_trough', [3, 7, 3], [13], overrides);
-
-  sprites.white = glov_sprites.create({ url: 'white' });
+  if (sprites.button_rollover) {
+    colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
+  }
+  if (sprites.button_down) {
+    colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
+  }
+  if (sprites.button_disabled) {
+    colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
+  }
 
   button_keys = {
     ok: { key: [KEYS.O], pad: [PAD.X], low_key: [KEYS.ESC] },
@@ -341,6 +417,9 @@ export function startup(param) {
     //   default_line_mode = 0;
     // }
   }
+
+  // eslint-disable-next-line no-use-before-define
+  scaleSizes(1);
 }
 
 let dynamic_text_elem;
@@ -1873,7 +1952,7 @@ export function scaleSizes(scale) {
   modal_pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  panel_pixel_scale = button_height / 13; // button_height / panel pixel resolution
+  panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
 }
 
@@ -1894,5 +1973,3 @@ export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
   tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
   tooltip_pad = modal_pad / 2 * _tooltip_panel_pixel_scale;
 }
-
-scaleSizes(1);
