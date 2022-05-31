@@ -298,6 +298,11 @@ function fillUVs(tex, w, h, nozoom, uvs) {
   temp_uvs[3] = uvs[3] - vbias / tex.height;
 }
 
+// Colors counter-clockwise from upper-left
+// c0 = upper left
+// c1 = lower left
+// c2 = lower right
+// c3 = upper right
 export function queuesprite4color(
   sprite, x, y, z, w, h, rot, uvs, c0, c1, c2, c3, shader, shader_params, nozoom,
   pixel_perfect, blend
@@ -834,7 +839,7 @@ Sprite.prototype.draw4Color = function (params) {
   queuesprite4color(this,
     params.x, params.y, params.z || Z.UI, w, h,
     params.rot, uvs,
-    params.c0, params.c1, params.c2, params.c3,
+    params.color_ul, params.color_ll, params.color_lr, params.color_ur,
     params.shader || this.shader,
     params.shader_params, params.nozoom,
     params.pixel_perfect, params.blend);

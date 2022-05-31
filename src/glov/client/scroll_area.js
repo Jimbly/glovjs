@@ -25,7 +25,7 @@ function darken(color, factor) {
 }
 
 let default_pixel_scale = 1;
-export function setPixelScale(scale) {
+export function scrollAreaSetPixelScale(scale) {
   default_pixel_scale = scale;
 }
 
@@ -226,7 +226,8 @@ ScrollArea.prototype.end = function (h) {
   let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
   let trough_height = this.h - button_h * 2;
   handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, trough_height * 0.75));
-  let handle_screenpos = round(this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h));
+  let handle_screenpos = this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h);
+  // TODO: round handle_screenpos in pixely modes?
   let top_color = this.color;
   let bottom_color = this.color;
   let handle_color = this.color;

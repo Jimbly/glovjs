@@ -34,6 +34,7 @@ const { mouseMoved } = glov_input;
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { abs, floor, max, min, round, sqrt } = Math;
+const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { soundLoad, soundPlay } = require('./sound.js');
 const glov_sprites = require('./sprites.js');
 const { clipped, clipPause, clipResume } = glov_sprites;
@@ -308,28 +309,27 @@ export function setProvideUserStringDefaultMessages(success_msg, failure_msg) {
 const base_ui_sprites = {
   white: { url: 'white' },
 
-  button: { ws: [32, 64, 32], hs: [128] },
-  button_rollover: { ws: [32, 64, 32], hs: [128] },
-  button_down: { ws: [32, 64, 32], hs: [128] },
-  button_disabled: { ws: [32, 64, 32], hs: [128] },
+  button: { ws: [8, 112, 8], hs: [128] },
+  button_rollover: { ws: [8, 112, 8], hs: [128] },
+  button_down: { ws: [8, 112, 8], hs: [128] },
+  button_disabled: { ws: [8, 112, 8], hs: [128] },
   panel: { ws: [32, 64, 32], hs: [32, 64, 32] },
 
-  // TODO: high res versions
-  menu_entry: { ws: [4, 5, 4], hs: [13] },
-  menu_selected: { ws: [4, 5, 4], hs: [13] },
-  menu_down: { ws: [4, 5, 4], hs: [13] },
-  menu_header: { ws: [4, 5, 12], hs: [13] },
-  slider: { ws: [6, 2, 6], hs: [13] },
+  menu_entry: { ws: [8, 112, 8], hs: [128] },
+  menu_selected: { ws: [8, 112, 8], hs: [128] },
+  menu_down: { ws: [8, 112, 8], hs: [128] },
+  menu_header: { ws: [8, 112, 136], hs: [128] },
+  slider: { ws: [56, 16, 56], hs: [128] },
   // slider_notch: { ws: [3], hs: [13] },
-  slider_handle: { ws: [9], hs: [13] },
+  slider_handle: { ws: [64], hs: [128] },
 
-  scrollbar_bottom: { ws: [11], hs: [13] },
-  scrollbar_trough: { ws: [11], hs: [8], wrap_t: true },
-  scrollbar_top: { ws: [11], hs: [13] },
-  scrollbar_handle_grabber: { ws: [11], hs: [13] },
-  scrollbar_handle: { ws: [11], hs: [3, 7, 3] },
-  progress_bar: { ws: [3, 7, 3], hs: [13] },
-  progress_bar_trough: { ws: [3, 7, 3], hs: [13] },
+  scrollbar_bottom: { ws: [64], hs: [64] },
+  scrollbar_trough: { ws: [64], hs: [8], wrap_t: true },
+  scrollbar_top: { ws: [64], hs: [64] },
+  scrollbar_handle_grabber: { ws: [64], hs: [64] },
+  scrollbar_handle: { ws: [64], hs: [24, 16, 24] },
+  progress_bar: { ws: [48, 32, 48], hs: [128] },
+  progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
 };
 
 export const ui_sprites_stone = {
@@ -1972,6 +1972,7 @@ export function scaleSizes(scale) {
   tooltip_pad = round(8 * scale);
   panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
+  scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
 }
 
 export function setPanelPixelScale(scale) {
