@@ -734,6 +734,13 @@ function profilerUIRun() {
       if (mouseover_bar_idx < 0 || mouseover_bar_idx >= HIST_SIZE) {
         mouseover_bar_idx = -1;
       }
+      // Just use this one elem's values
+      dmem_max_value = 0;
+      for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+        if (mouseover_main_elem.history[ii]) {
+          dmem_max_value = max(dmem_max_value, mouseover_main_elem.history[ii+2]);
+        }
+      }
     }
   }
 

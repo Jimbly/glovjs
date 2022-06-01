@@ -345,10 +345,12 @@ WSClient.prototype.connectAfterReady = function (for_reconnect) {
   }));
 
   client.socket.addEventListener('message', guard(function (message) {
+    profilerStart('WS');
     // net_time -= Date.now();
     assert(message.data instanceof ArrayBuffer);
     wsHandleMessage(client, new Uint8Array(message.data));
     // net_time += Date.now();
+    profilerStop('WS');
   }));
 
   client.socket.addEventListener('open', guard(function () {

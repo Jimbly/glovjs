@@ -224,6 +224,7 @@ Texture.prototype.setSamplerState = function (params) {
 };
 
 Texture.prototype.updateData = function updateData(w, h, data) {
+  profilerStart('Texture:updateData');
   assert(!this.destroyed);
   bindForced(this);
   this.last_use = frame_timestamp;
@@ -262,6 +263,7 @@ Texture.prototype.updateData = function updateData(w, h, data) {
   } else {
     // Ensure this is an Image or Canvas
     if (!data.width) {
+      profilerStop();
       return `Missing width (${data.width}) ("${String(data).slice(0, 100)}")`;
     }
     if (this.is_cube) {
@@ -311,24 +313,28 @@ Texture.prototype.updateData = function updateData(w, h, data) {
       gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
     }
   }
+  let err = null;
   let gl_err = gl.getError();
   if (gl_err) {
-    return `GLError(${gl_err})`;
+    err = `GLError(${gl_err})`;
   }
-  if (this.mipmaps) {
+  if (!err && this.mipmaps) {
     gl.generateMipmap(this.target);
     gl_err = gl.getError();
     if (gl_err) {
-      return `GLError(${gl_err})`;
+      err = `GLError(${gl_err})`;
     }
   }
-  this.updateGPUMem();
-  this.eff_handle = this.handle;
-  this.loaded = true;
+  if (!err) {
+    this.updateGPUMem();
+    this.eff_handle = this.handle;
+    this.loaded = true;
 
-  callEach(this.on_load, this.on_load = null, this);
+    callEach(this.on_load, this.on_load = null, this);
+  }
 
-  return null;
+  profilerStop();
+  return err;
 };
 
 Texture.prototype.onLoad = function (cb) {
@@ -353,6 +359,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
   let load_gen = tex.load_gen = (tex.load_gen || 0) + 1;
   function tryLoad(next) {
+    profilerStart('Texture:tryLoad');
     let did_next = false;
     function done(img) {
       if (!did_next) {
@@ -363,7 +370,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
     let img = new Image();
     img.onload = function () {
+      profilerStart('Texture:onload');
       done(img);
+      profilerStop();
     };
     function fail() {
       done(null);
@@ -371,6 +380,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     img.onerror = fail;
     img.crossOrigin = 'anonymous';
     img.src = url;
+    profilerStop();
   }
 
   ++load_count;

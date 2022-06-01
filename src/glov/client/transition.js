@@ -98,7 +98,9 @@ export function queue(z, fn) {
 }
 
 function destroyTexture(tex) {
+  profilerStart('transition:destroyTexture');
   tex.destroy();
+  profilerStop();
 }
 
 export function render(dt) {
