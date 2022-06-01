@@ -451,7 +451,11 @@ module.exports = {
       "error",
       "last"
     ],
-    "sort-imports": "error",
+    "sort-imports":["error", {
+        "ignoreCase": false,
+        "ignoreDeclarationSort": true,
+        "ignoreMemberSort": false,
+    }],
     "sort-keys": "off",
     "sort-vars": "off", // JE
     "space-before-blocks": [
