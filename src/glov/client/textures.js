@@ -132,7 +132,9 @@ export function texturesResetState() {
   }
   unbindAll(gl.TEXTURE_2D);
   setUnit(0);
+  profilerStart('gl.getError()');
   gl.getError();
+  profilerStop('gl.getError()');
 }
 
 

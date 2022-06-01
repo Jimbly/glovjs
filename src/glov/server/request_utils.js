@@ -158,5 +158,10 @@ export function setOriginHeaders(req, res, next) {
   if (req.headers.origin) {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
   }
+  // For developers, not crawlers: Set as "cross-origin isolated", for access to high resolution timers
+  // Disclaimer: I have no idea what this does, other than allows high resolution timers on Chrome/Firefox
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+
   next();
 }

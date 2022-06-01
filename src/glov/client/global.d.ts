@@ -16,6 +16,11 @@ declare module 'glov-global' {
 
       // GLOV bootstrap
       debugmsg: (msg: string, clear: boolean) => void;
+
+      // GLOV profiler
+      profilerStart: (name: string, count?: number) => void;
+      profilerStop: (name: string) => void;
+      profilerStopStart: (name: string, count?: number) => void;
     }
   }
 }

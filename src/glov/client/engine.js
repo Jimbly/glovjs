@@ -40,6 +40,7 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const models = require('./models.js');
 const perf = require('./perf.js');
+const { profilerFrameStart, profilerStartup } = require('./profiler.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
@@ -457,6 +458,7 @@ let safearea_ignore_bottom = false;
 let safearea_values = [0,0,0,0];
 let last_safearea_values = [0,0,0,0];
 function checkResize() {
+  profilerStart('checkResize');
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
   //   shrinking the viewport without changing the window height
   let vv = window.visualViewport || {};
@@ -519,6 +521,7 @@ function checkResize() {
     // force scroll to top
     window.scroll(0,0);
   }
+  profilerStop('checkResize');
 }
 
 export let viewport = vec4(0,0,1,1);
@@ -676,8 +679,12 @@ export function fixNatives(is_startup) {
 function resetState() {
   // Only geom.geomResetState appears to have been strictly needed to work around
   //  a bug on Chrome 71, but doing the rest of this to be safe.
+  profilerStart('resetState');
+  profilerStart('textures');
   textures.texturesResetState();
+  profilerStopStart('shaders');
   shaders.shadersResetState();
+  profilerStopStart('geom;gl');
   geom.geomResetState();
 
   // These should already be true:
@@ -697,12 +704,17 @@ function resetState() {
   // gl.cullFace(gl.FRONT);
   gl.cullFace(gl.BACK);
   gl.viewport(0, 0, width, height);
+  profilerStop();
+  profilerStop('resetState');
 }
 
 export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
 function tick(timestamp) {
+  profilerFrameStart();
+  profilerStart('tick');
+  profilerStart('top');
   frame_requested = false;
   // if (timestamp < 1e12) { // high resolution timer
   //   this ends up being a value way back in time, relative to what hrnow() returns,
@@ -764,7 +776,8 @@ function tick(timestamp) {
       }
     }
     requestFrame();
-    return;
+    profilerStop();
+    return profilerStop('tick');
   }
 
   checkResize();
@@ -790,6 +803,8 @@ function tick(timestamp) {
   camera2d.tickCamera2D();
   glov_transition.render(dt);
   camera2d.setAspectFixed(game_width, game_height);
+
+  profilerStopStart('mid');
 
   soundTick(dt);
   input.tickInput();
@@ -821,6 +836,7 @@ function tick(timestamp) {
 
   perf.draw();
 
+  profilerStopStart('app_state');
   for (let ii = 0; ii < app_tick_functions.length; ++ii) {
     app_tick_functions[ii](dt);
   }
@@ -828,6 +844,7 @@ function tick(timestamp) {
     app_state(dt);
   }
 
+  profilerStopStart('bottom');
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
 
   if (had_3d_this_frame) {
@@ -904,6 +921,8 @@ function tick(timestamp) {
   last_tick_cpu = hrnow() - now;
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
   requestFrame();
+  profilerStop('bottom');
+  return profilerStop('tick');
 }
 
 function periodiclyRequestFrame() {
@@ -1107,6 +1126,7 @@ export function startup(params) {
 
   buildUIStartup();
   shaderDebugUIStartup();
+  profilerStartup();
 
   callEach(startup_funcs, startup_funcs = null);
 

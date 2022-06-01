@@ -29,6 +29,7 @@ const input = require('./input.js');
 const { max } = Math;
 const { netClient, netClientId, netDisconnected } = require('./net.js');
 const { perfCounterHistory } = require('glov/common/perfcounters.js');
+const { profilerUI } = require('./profiler.js');
 const settings = require('./settings.js');
 const ui = require('./ui.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
@@ -344,18 +345,36 @@ function perfMemObjToLines(out, obj, prefix) {
   }
 }
 
+let graph_override = null;
+// `override` is like a `metric` passed to addMetric.  Contains:
+// history_size
+// num_lines
+// data: { history[history_size * num_lines], index }
+// line_scale_top
+// bars_stack : boolean
+// colors : vec4[]
+export function perfGraphOverride(override) {
+  graph_override = override;
+}
+
 export function draw() {
+  camera2d.push();
+  profilerUI();
   camera2d.setAspectFixed(engine.game_width, engine.game_height);
   if (settings.show_metrics) {
     let y = camera2d.y0Real();
     let y_graph = camera2d.y1Real();
+    if (graph_override) {
+      y_graph = showMetricGraph(y_graph, graph_override);
+      y_graph -= METRIC_PAD;
+    }
     for (let ii = 0; ii < metrics.length; ++ii) {
       let metric = metrics[ii];
       if (settings[metric.show_stat]) {
         y = showMetric(y, metric);
         y += METRIC_PAD;
       }
-      if (settings[metric.show_graph]) {
+      if (!graph_override && settings[metric.show_graph]) {
         y_graph = showMetricGraph(y_graph, metric);
         y_graph -= METRIC_PAD;
       }
@@ -420,4 +439,6 @@ export function draw() {
     }
     ui.drawRect(x0, y0, maxx, y, z - 0.1, bg_default);
   }
+  camera2d.pop();
+  graph_override = null;
 }

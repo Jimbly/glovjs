@@ -667,18 +667,25 @@ function finishDraw() {
 }
 
 export function draw() {
+  profilerStart('sprites:draw');
   drawSetup();
+  profilerStart('drawElem');
   for (let ii = 0; ii < sprite_queue.length; ++ii) {
     let elem = sprite_queue[ii];
     drawElem(elem);
   }
+  profilerStop('drawElem', sprite_queue.length);
   sprite_queue.length = 0;
   finishDraw();
+  profilerStop('sprites:draw', sprite_queue.length);
 }
 
 export function drawPartial(z) {
+  profilerStart('sprites:drawPartial');
   drawSetup();
-  for (let ii = 0; ii < sprite_queue.length; ++ii) {
+  profilerStart('drawElem');
+  let ii;
+  for (ii = 0; ii < sprite_queue.length; ++ii) {
     let elem = sprite_queue[ii];
     if (elem.z > z) {
       sprite_queue = sprite_queue.slice(ii);
@@ -686,7 +693,9 @@ export function drawPartial(z) {
     }
     drawElem(elem);
   }
+  profilerStop('drawElem', ii);
   finishDraw();
+  profilerStop('sprites:drawPartial');
 }
 
 export function buildRects(ws, hs, tex) {
