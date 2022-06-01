@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 // Initially derived from libGlov:utilPerf.h/GlovPerf.cpp
+// For good memory profiling, Chrome must be launched with --enable-precise-memory-info
 
 /* globals performance*/
 const assert = require('assert');
@@ -15,10 +16,11 @@ const { floor, max, min } = Math;
 const ui = require('./ui.js');
 const { perfGraphOverride } = require('./perf.js');
 const settings = require('./settings.js');
+const { lerp } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
 const HIST_SIZE = 64;
-const HIST_COMPONENTS = 2; // count, time
+const HIST_COMPONENTS = 3; // count, time
 const HIST_TOT = HIST_SIZE * HIST_COMPONENTS;
 
 Z.PROFILER = Z.PROFILER || 9950; // above Z.BUILD_ERRORS
@@ -33,9 +35,11 @@ function ProfilerEntry(parent, name) {
   this.name = name;
   this.count = 0;
   this.time = 0;
+  this.dmem = 0;
   this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
   this.history = new Float32Array(HIST_TOT);
   this.start_time = 0;
+  this.start_mem = 0;
   this.id = ++last_id;
   this.color_override = null;
 }
@@ -68,13 +72,34 @@ let history_index = 0;
 let paused = false;
 let avg_percents;
 
+function memSizeChrome() {
+  return performance.memory.usedJSHeapSize;
+}
+function memSizeNop() {
+  return 0;
+}
+const HAS_MEMSIZE = Boolean(window.performance && performance.memory && performance.memory.usedJSHeapSize);
+let memSize = HAS_MEMSIZE ? memSizeChrome : memSizeNop;
+let mem_is_high_res = 10;
+
 export function profilerFrameStart() {
-  let now = performance.now();
   root.count = 1;
+  let now = performance.now();
   root.time += now - root.start_time;
   root.start_time = now;
+  let memnow = memSize();
+  root.dmem += memnow - root.start_mem;
+  root.start_mem = memnow;
   node_out_of_tick.count = 1;
   node_out_of_tick.time = root.time - node_tick.time;
+  node_out_of_tick.dmem = root.dmem - node_tick.dmem;
+  if (HAS_MEMSIZE) {
+    if (node_tick.dmem) {
+      mem_is_high_res++;
+    } else {
+      mem_is_high_res-=5;
+    }
+  }
   if (current !== root) {
     console.error('Profiler starting new frame but some section was not stopped', current && current.name);
     current = root;
@@ -85,9 +110,11 @@ export function profilerFrameStart() {
     if (!paused) {
       walk.history[history_index] = walk.count;
       walk.history[history_index+1] = walk.time;
+      walk.history[history_index+2] = walk.dmem;
     }
     walk.count = 0;
     walk.time = 0;
+    walk.dmem = 0;
     do {
       if (recursing_down && walk.child) {
         walk = walk.child;
@@ -135,15 +162,15 @@ function profilerStart(name) {
 
   current = instance;
   instance.start_time = performance.now();
+  instance.start_mem = memSize();
 }
 
 function profilerStop(old_name, count) {
   if (old_name) {
     assert.equal(old_name, current.name);
   }
-  let now = performance.now();
-  let dt = now - current.start_time;
-  current.time += dt;
+  current.time += performance.now() - current.start_time;
+  current.dmem += memSize() - current.start_mem;
   current.count += count || 1;
   current = current.parent;
 }
@@ -214,6 +241,12 @@ settings.register({
   },
   profiler_interactable: {
     default_value: 1,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    access_show: ['hidden'],
+  },
+  profiler_graph: {
+    default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0,1],
     access_show: ['hidden'],
@@ -300,8 +333,14 @@ const style_time_spike = style(null, {
 const style_number = style(null, {
   color: 0xFFFFD0ff,
 });
+const style_percent = style(null, {
+  color: 0xFFFFD0ff,
+});
 const style_ms = style(null, {
   color: 0xD0FFFFff,
+});
+const style_mem = style(null, {
+  color: 0xD0FFD0ff,
 });
 const style_header = style(null, {
   color: 0xFFFFFFff,
@@ -330,8 +369,13 @@ const Z_MS = Z.PROFILER+5;
 const MS_W = 56;
 const MS_AVG_W = 50;
 const MSPAIR_W = MS_W + 4 + MS_AVG_W;
-const COL_HEADERS = ['Profiler', 'µs (count)', 'average', 'max'];
-const COL_W = [400, MSPAIR_W, MSPAIR_W, MS_W];
+const MEM_W = 100;
+const COL_HEADERS = ['Profiler', 'µs (count)', 'average', 'max', 'Δmem'];
+const COL_W = [400, MSPAIR_W, MSPAIR_W, MS_W, MEM_W];
+if (!HAS_MEMSIZE) {
+  COL_W.pop();
+  COL_HEADERS.pop();
+}
 const COL_X = [];
 let bar_x0;
 COL_X[0] = 0;
@@ -339,6 +383,7 @@ for (let ii = 0; ii < COL_W.length; ++ii) {
   COL_X[ii+1] = COL_X[ii] + COL_W[ii] + 4;
 }
 const LINE_WIDTH = COL_X[COL_W.length];
+let color_hint = vec4(0,0.25,0,0.85);
 let color_bar = vec4(0,0,0,0.85);
 let color_bar2 = vec4(0.2,0.2,0.2,0.85);
 let color_bar_header = vec4(0.3,0.3,0.3,0.85);
@@ -350,13 +395,16 @@ let color_timing = vec4(1, 1, 0.5, 1);
 let color_bar_highlight = vec4(0,0,0, 0.5);
 let color_gpu = node_out_of_tick.color_override = vec4(0.5, 0.5, 1, 1);
 const GRAPH_FRAME_TIME = 16;
+let GRAPH_MAX_MEM = 4096;
 let total_frame_time;
 let show_index_count;
 let show_index_time;
+let show_index_mem;
 let do_ui;
 let mouseover_elem = {};
 let mouseover_main_elem;
 let mouseover_bar_idx;
+let dmem_max_value = 0;
 let perf_graph = {
   history_size: HIST_SIZE,
   num_lines: 2,
@@ -426,6 +474,7 @@ function profilerShowEntry(walk, depth) {
       count_sum += walk.history[ii]; // count
       time_sum += walk.history[ii+1]; // time
       time_max = max(time_max, walk.history[ii+1]);
+      dmem_max_value = max(dmem_max_value, walk.history[ii+2]);
     }
   }
   if (!count_sum) {
@@ -446,10 +495,12 @@ function profilerShowEntry(walk, depth) {
     color_top, color_top, color_bot, color_bot);
 
   let x = bar_x0;
+  let offs = 1 + settings.profiler_graph;
+  let graph_max = settings.profiler_graph ? GRAPH_MAX_MEM : GRAPH_FRAME_TIME;
   for (let ii = 0; ii < HIST_SIZE; ++ii) {
-    let time = walk.history[(history_index + ii*2) % HIST_TOT + 1];
-    if (time) {
-      let hv = time / GRAPH_FRAME_TIME;
+    let value = walk.history[(history_index + ii*HIST_COMPONENTS) % HIST_TOT + offs];
+    if (value > 0) {
+      let hv = value / graph_max;
       let h = min(hv * LINE_HEIGHT, LINE_HEIGHT);
       if (hv < 1) {
         color_timing[0] = hv;
@@ -495,7 +546,7 @@ function profilerShowEntry(walk, depth) {
     font.drawSized(null, x - 16, y, Z_TREE, FONT_SIZE, prefix);
   }
   x += FONT_SIZE*2;
-  font.drawSizedAligned(style_number, x, y + number_yoffs, Z_NUMBER, font_size_number, font.ALIGN.HRIGHT, 0, 0,
+  font.drawSizedAligned(style_percent, x, y + number_yoffs, Z_NUMBER, font_size_number, font.ALIGN.HRIGHT, 0, 0,
     `${(percent * 100).toFixed(0)}%`);
   x += 4;
   font.drawSized(style_name, x, y, Z_NAMES, FONT_SIZE,
@@ -520,6 +571,12 @@ function profilerShowEntry(walk, depth) {
     font.ALIGN.HRIGHT, COL_W[3], 0,
     (time_max*1000).toFixed(0));
 
+  if (HAS_MEMSIZE) {
+    x = COL_X[4];
+    font.drawSizedAligned(style_mem, x, y + number_yoffs, Z_MS, font_size_number, font.ALIGN.HRIGHT, MEM_W, 0,
+      `${walk.history[show_index_mem]}`);
+  }
+
   y += FONT_SIZE + LINE_YOFFS;
   if (!walk.show_children) {
     return false;
@@ -527,26 +584,32 @@ function profilerShowEntry(walk, depth) {
   return true;
 }
 
-function doGraph() {
-  if (!mouseover_main_elem || mouseover_main_elem === node_out_of_tick) {
+function doZoomedGraph() {
+  if (settings.profiler_graph) {
+    perf_graph.line_scale_top = GRAPH_MAX_MEM;
+    if (!mouseover_main_elem) {
+      mouseover_main_elem = node_tick;
+    }
+  } else if (!mouseover_main_elem || mouseover_main_elem === node_out_of_tick) {
     perf_graph.line_scale_top = GRAPH_FRAME_TIME * 2;
   } else {
     perf_graph.line_scale_top = GRAPH_FRAME_TIME;
   }
+  let offs = 1 + settings.profiler_graph;
   if (mouseover_main_elem) {
     let elem = mouseover_main_elem;
     for (let ii = 0; ii < HIST_SIZE; ++ii) {
-      perf_graph.data.history[ii*2] = elem.history[ii*HIST_COMPONENTS + 1];
+      perf_graph.data.history[ii*2] = elem.history[ii*HIST_COMPONENTS + offs];
       perf_graph.data.history[ii*2+1] = 0;
     }
   } else {
     for (let ii = 0; ii < HIST_SIZE; ++ii) {
-      let idx = ii*HIST_COMPONENTS + 1;
+      let idx = ii*HIST_COMPONENTS + offs;
       perf_graph.data.history[ii*2] = root.history[idx] - node_out_of_tick.history[idx];
       perf_graph.data.history[ii*2+1] = node_out_of_tick.history[idx];
     }
   }
-  perf_graph.data.index = history_index/2;
+  perf_graph.data.index = history_index/HIST_COMPONENTS;
   perfGraphOverride(perf_graph);
 }
 
@@ -633,14 +696,27 @@ function profilerUIRun() {
       settings.profiler_avg_percents ? 'average %' : 'frame %');
   }
   y += BUTTON_H;
+  if (do_ui) {
+    if (ui.buttonText({
+      x, y, z,
+      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+      text: settings.profiler_graph ? 'graph mem' : 'graph CPU',
+    })) {
+      settings.set('profiler_graph', 1 - settings.profiler_graph);
+    }
+  } else {
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
+      settings.profiler_graph ? 'graph mem' : 'graph CPU');
+  }
+  y += BUTTON_H;
   ui.drawRect(x, 0, x + BUTTON_W, y, z-1, color_bar);
 
   y = 0;
 
   font.drawSizedAligned(style_header, COL_X[0], y, z, FONT_SIZE, font.ALIGN.HLEFT, COL_W[0], 0, COL_HEADERS[0]);
-  font.drawSizedAligned(style_header, COL_X[1], y, z, FONT_SIZE, font.ALIGN.HCENTER, COL_W[1], 0, COL_HEADERS[1]);
-  font.drawSizedAligned(style_header, COL_X[2], y, z, FONT_SIZE, font.ALIGN.HCENTER, COL_W[2], 0, COL_HEADERS[2]);
-  font.drawSizedAligned(style_header, COL_X[3], y, z, FONT_SIZE, font.ALIGN.HCENTER, COL_W[3], 0, COL_HEADERS[3]);
+  for (let ii = 1; ii < COL_HEADERS.length; ++ii) {
+    font.drawSizedAligned(style_header, COL_X[ii], y, z, FONT_SIZE, font.ALIGN.HCENTER, COL_W[ii], 0, COL_HEADERS[ii]);
+  }
   ui.drawRect(0, y, LINE_WIDTH, y + LINE_HEIGHT, z-1, color_bar_header);
   y += LINE_HEIGHT;
 
@@ -661,16 +737,21 @@ function profilerUIRun() {
     }
   }
 
+  if (dmem_max_value < GRAPH_MAX_MEM * 0.25 || dmem_max_value > GRAPH_MAX_MEM) {
+    GRAPH_MAX_MEM = lerp(0.1, GRAPH_MAX_MEM, dmem_max_value);
+  }
+  dmem_max_value = 0;
   avg_percents = settings.profiler_avg_percents;
   show_index_count = (history_index - HIST_COMPONENTS + HIST_TOT) % HIST_TOT;
 
   if (mouseover_bar_idx !== -1) {
     // override avg_percents if the mouse is over a particular frame in the bar graph
     avg_percents = false;
-    show_index_count = (show_index_count - (HIST_SIZE - mouseover_bar_idx - 1) * 2 + HIST_TOT) % HIST_TOT;
+    show_index_count = (show_index_count - (HIST_SIZE - mouseover_bar_idx - 1) * HIST_COMPONENTS + HIST_TOT) % HIST_TOT;
   }
 
   show_index_time = show_index_count + 1;
+  show_index_mem = show_index_count + 2;
 
   if (avg_percents) {
     // use average for percents
@@ -711,6 +792,19 @@ function profilerUIRun() {
   // then render / do UI
   y = y0;
   walkTree(profilerShowEntry);
+  let hint;
+  if (!HAS_MEMSIZE) {
+    hint = 'To access memory profiling, run in Chrome';
+  } else if (mem_is_high_res < 10) {
+    hint = 'For precise memory profiling, launch Chrome with --enable-precise-memory-info';
+  }
+  if (hint) {
+    font.drawSizedAligned(style_name, 0, y, Z_NAMES, FONT_SIZE, font.ALIGN.HVCENTER, LINE_WIDTH, LINE_HEIGHT*1.5,
+      hint);
+    ui.drawRect(0, y,
+      LINE_WIDTH, y + LINE_HEIGHT*1.5, Z_NAMES - 0.5,
+      color_hint);
+  }
 
   if (mouseover_bar_idx !== -1) {
     ui.drawRect(bar_x0 + mouseover_bar_idx * bar_w, y0,
@@ -718,10 +812,12 @@ function profilerUIRun() {
       color_bar_highlight);
   }
 
-  // consume mouseover regardless
-  input.mouseOver({ x: 0, y: 0, w: LINE_WIDTH, h: y });
+  if (do_ui) {
+    // consume mouseover regardless
+    input.mouseOver({ x: 0, y: 0, w: LINE_WIDTH, h: y });
+  }
 
-  doGraph();
+  doZoomedGraph();
 
   profilerStop('profilerUIRun');
 }
