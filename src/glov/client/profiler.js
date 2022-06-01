@@ -10,6 +10,7 @@ const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const { style } = require('./font.js');
 const input = require('./input.js');
+const { localStorageGetJSON, localStorageSetJSON } = require('./local_storage.js');
 const { floor, max, min } = Math;
 const ui = require('./ui.js');
 const { perfGraphOverride } = require('./perf.js');
@@ -22,6 +23,8 @@ const HIST_TOT = HIST_SIZE * HIST_COMPONENTS;
 
 Z.PROFILER = Z.PROFILER || 9950; // above Z.BUILD_ERRORS
 
+let profiler_open_keys = localStorageGetJSON('profiler_open_keys', {});
+
 let last_id = 0;
 function ProfilerEntry(parent, name) {
   this.parent = parent;
@@ -30,12 +33,28 @@ function ProfilerEntry(parent, name) {
   this.name = name;
   this.count = 0;
   this.time = 0;
-  this.show_children = !(parent && parent.parent);
+  this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
   this.history = new Float32Array(HIST_TOT);
   this.start_time = 0;
   this.id = ++last_id;
   this.color_override = null;
 }
+ProfilerEntry.prototype.getKey = function () {
+  if (!this.parent) {
+    return '';
+  } else {
+    return `${this.parent.getKey()}.${this.name}`;
+  }
+};
+ProfilerEntry.prototype.toggleShowChildren = function () {
+  this.show_children = !this.show_children;
+  if (this.show_children) {
+    profiler_open_keys[this.getKey()] = 1;
+  } else {
+    delete profiler_open_keys[this.getKey()];
+  }
+  localStorageSetJSON('profiler_open_keys', profiler_open_keys);
+};
 
 let root = new ProfilerEntry(null, 'root');
 // Add static nodes to the tree that we will reference later
@@ -416,9 +435,9 @@ function profilerShowEntry(walk, depth) {
   let parent_over = mouseover_elem[walk.id] === 2;
   if (do_ui) {
     if (input.click({ x: 0, y, w: LINE_WIDTH, h: LINE_HEIGHT, button: 0 })) {
-      walk.show_children = !walk.show_children;
+      walk.toggleShowChildren();
     } else if (input.click({ x: 0, y, w: LINE_WIDTH, h: LINE_HEIGHT, button: 1 })) {
-      walk.parent.show_children = !walk.parent.show_children;
+      walk.parent.toggleShowChildren();
     }
   }
   let color_top = over ? color_bar_over : parent_over ? color_bar_parent : color_bar;
@@ -494,7 +513,7 @@ function profilerShowEntry(walk, depth) {
     (time_sum / sum_count*1000).toFixed(0));
   x += MS_W + 4;
   font.drawSizedAligned(style_number, x, y + number_yoffs, Z_NUMBER, font_size_number, font.ALIGN.HFIT, MS_AVG_W, 0,
-    `(${(count_sum / sum_count).toFixed(1)})`);
+    `(${(count_sum / sum_count).toFixed(0)})`);
   x = COL_X[3];
   let spike = (time_max * 0.25 > (time_sum / sum_count));
   font.drawSizedAligned(spike ? style_time_spike : style_ms, x, y + number_yoffs, Z_MS, font_size_number,
