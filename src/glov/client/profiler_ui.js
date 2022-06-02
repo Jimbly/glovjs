@@ -30,6 +30,7 @@ const {
   profilerNodeRoot,
   profilerPause,
   profilerPaused,
+  profilerTotalCalls,
   profilerWalkTree,
   profilerWarning,
 } = require('./profiler.js');
@@ -524,9 +525,9 @@ function profilerUIRun() {
 
   if (HAS_MEMSIZE) {
     let cur_depth = profilerMemDepthGet();
-    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, FONT_SIZE,
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
       'Mem Depth');
-    y += FONT_SIZE;
+    y += LINE_HEIGHT;
     if (do_ui) {
       if (ui.buttonText({
         x, y, z,
@@ -564,6 +565,9 @@ function profilerUIRun() {
     y += BUTTON_H;
   }
 
+  font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
+    `${profilerTotalCalls()} calls`);
+  y += LINE_HEIGHT;
 
   ui.drawRect(x, 0, x + BUTTON_W, y, z-1, color_bar);
 

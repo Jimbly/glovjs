@@ -70,6 +70,8 @@ let current = root;
 let history_index = 0;
 let paused = false;
 let mem_depth = MEM_DEPTH_DEFAULT;
+let total_calls = 0;
+let last_frame_total_calls = 0;
 
 function memSizeChrome() {
   return performance.memory.usedJSHeapSize;
@@ -79,8 +81,11 @@ function memSizeNop() {
 }
 let memSize = HAS_MEMSIZE ? memSizeChrome : memSizeNop;
 let mem_is_high_res = 10;
+const WARN_CALLS_COUNT = 1000;
 export function profilerWarning() {
-  if (!HAS_MEMSIZE) {
+  if (last_frame_total_calls > WARN_CALLS_COUNT) {
+    return `Warning: Too many per-frame profilerStart() calls (${last_frame_total_calls} > ${WARN_CALLS_COUNT})`;
+  } else if (!HAS_MEMSIZE) {
     return 'To access memory profiling, run in Chrome';
   } else if (mem_depth > 1 && mem_is_high_res < 10) {
     return 'For precise memory profiling, launch Chrome with --enable-precise-memory-info';
@@ -102,6 +107,8 @@ export function profilerHistoryIndex() {
 }
 
 export function profilerFrameStart() {
+  last_frame_total_calls = total_calls;
+  total_calls = 0;
   root.count = 1;
   let now = performance.now();
   root.time = now - root.start_time;
@@ -168,6 +175,8 @@ export function profilerFrameStart() {
 }
 
 function profilerStart(name) {
+  ++total_calls;
+
   // Find us in current's children
   let last = null;
   let instance;
@@ -236,6 +245,10 @@ export function profilerMemDepthGet() {
 
 export function profilerMemDepthSet(value) {
   mem_depth = value;
+}
+
+export function profilerTotalCalls() {
+  return last_frame_total_calls;
 }
 
 export function profilerWalkTree(cb) {
