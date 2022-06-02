@@ -22,10 +22,11 @@ const {
   HAS_MEMSIZE,
   MEM_DEPTH_DEFAULT,
   profilerAvgTime,
+  profilerImport,
+  profilerExport,
   profilerHistoryIndex,
   profilerMemDepthGet,
   profilerMemDepthSet,
-  profilerNodeOutOfTick,
   profilerNodeTick,
   profilerNodeRoot,
   profilerPause,
@@ -39,12 +40,43 @@ const { lerp } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
 Z.PROFILER = Z.PROFILER || 9950; // above Z.BUILD_ERRORS
+let color_gpu = vec4(0.5, 0.5, 1, 1);
 
-let do_average;
+let loaded_profile = null;
 let node_out_of_tick;
 let root;
 
+function useNewRoot(new_root) {
+  root = new_root;
+  node_out_of_tick = root.child;
+  if (node_out_of_tick) {
+    node_out_of_tick.color_override = color_gpu;
+  }
+}
+
+function useSavedProfile(text) {
+  let obj = profilerImport(text);
+  if (!obj) {
+    ui.modalDialog({
+      title: 'Error loading profile',
+      text: text || 'No data',
+      buttons: {
+        Ok: null,
+      },
+    });
+    return;
+  }
+  useNewRoot(obj.root);
+  loaded_profile = obj;
+}
+
+function useLiveProfile() {
+  useNewRoot(profilerNodeRoot());
+  loaded_profile = null;
+}
+
 function profilerToggle(data, resp_func) {
+  useLiveProfile();
   if (data === '1') {
     settings.set('show_profiler', 1);
   } else if (data === '0') {
@@ -161,17 +193,14 @@ const MSPAIR_W = MS_W + 4 + COUNT_W;
 const MEM_W = 120;
 const COL_HEADERS = ['Profiler', 'µs (count)', 'max', 'GC / Δmem'];
 const COL_W = [400, MSPAIR_W, MS_W, MEM_W];
-if (!HAS_MEMSIZE) {
-  COL_W.pop();
-  COL_HEADERS.pop();
-}
 const COL_X = [];
 let bar_x0;
 COL_X[0] = 0;
 for (let ii = 0; ii < COL_W.length; ++ii) {
   COL_X[ii+1] = COL_X[ii] + COL_W[ii] + 4;
 }
-const LINE_WIDTH = COL_X[COL_W.length];
+const LINE_WIDTH_WITH_MEM = COL_X[COL_W.length];
+const LINE_WIDTH_NO_MEM = COL_X[COL_W.length-1];
 let color_hint = vec4(0,0.25,0,0.85);
 let color_bar = vec4(0,0,0,0.85);
 let color_bar2 = vec4(0.2,0.2,0.2,0.85);
@@ -182,14 +211,17 @@ let color_bar_parent = vec4(0,0,0.3,0.85);
 let color_bar_parent2 = vec4(0.2,0.2,0.4,0.85);
 let color_timing = vec4(1, 1, 0.5, 1);
 let color_bar_highlight = vec4(0,0,0, 0.5);
-let color_gpu = vec4(0.5, 0.5, 1, 1);
 const GRAPH_FRAME_TIME = 16;
 let GRAPH_MAX_MEM = 4096;
 let total_frame_time;
 let show_index_count;
 let show_index_time;
 let show_index_mem;
+let do_average;
+let history_index;
 let do_ui;
+let line_width;
+let show_mem;
 let mouseover_elem = {};
 let mouseover_main_elem;
 let mouseover_bar_idx;
@@ -220,7 +252,7 @@ function profilerShowEntryEarly(walk, depth) {
   if (!count_sum) {
     return true;
   }
-  if (input.mouseOver({ x: 0, y, w: LINE_WIDTH, h: LINE_HEIGHT, peek: true })) {
+  if (input.mouseOver({ x: 0, y, w: line_width, h: LINE_HEIGHT, peek: true })) {
     mouseover_main_elem = walk;
     mouseover_elem[walk.id] = 1;
     for (let parent = walk.parent; parent; parent = parent.parent) {
@@ -277,9 +309,9 @@ function profilerShowEntry(walk, depth) {
   let over = mouseover_elem[walk.id] === 1;
   let parent_over = mouseover_elem[walk.id] === 2;
   if (do_ui) {
-    if (input.click({ x: 0, y, w: LINE_WIDTH, h: LINE_HEIGHT, button: 0 })) {
+    if (input.click({ x: 0, y, w: line_width, h: LINE_HEIGHT, button: 0 })) {
       walk.toggleShowChildren();
-    } else if (input.click({ x: 0, y, w: LINE_WIDTH, h: LINE_HEIGHT, button: 1 })) {
+    } else if (input.click({ x: 0, y, w: line_width, h: LINE_HEIGHT, button: 1 })) {
       walk.parent.toggleShowChildren();
     }
   }
@@ -287,14 +319,13 @@ function profilerShowEntry(walk, depth) {
   // Draw background
   let color_top = over ? color_bar_over : parent_over ? color_bar_parent : color_bar;
   let color_bot = over ? color_bar_over2 : parent_over ? color_bar_parent2 : color_bar2;
-  ui.drawRect4Color(0, y, LINE_WIDTH, y + LINE_HEIGHT, Z_BAR,
+  ui.drawRect4Color(0, y, line_width, y + LINE_HEIGHT, Z_BAR,
     color_top, color_top, color_bot, color_bot);
 
   // Draw bar graph
   let x = bar_x0;
   let offs = 1 + settings.profiler_graph;
   let graph_max = settings.profiler_graph ? GRAPH_MAX_MEM : GRAPH_FRAME_TIME;
-  const history_index = profilerHistoryIndex();
   for (let ii = 0; ii < HIST_SIZE; ++ii) {
     let value = walk.history[(history_index + ii*HIST_COMPONENTS) % HIST_TOT + offs];
     if (value > 0) {
@@ -365,7 +396,7 @@ function profilerShowEntry(walk, depth) {
     font.ALIGN.HRIGHT, COL_W[2], 0,
     (time_max*1000).toFixed(0));
 
-  if (HAS_MEMSIZE) {
+  if (show_mem) {
     x = COL_X[3];
 
     if (dmem_min < 0) {
@@ -415,7 +446,7 @@ function doZoomedGraph() {
       perf_graph.data.history[ii*2+1] = node_out_of_tick.history[idx];
     }
   }
-  perf_graph.data.index = profilerHistoryIndex()/HIST_COMPONENTS;
+  perf_graph.data.index = history_index/HIST_COMPONENTS;
   perfGraphOverride(perf_graph);
 }
 
@@ -445,11 +476,18 @@ function profilerUIRun() {
     profilerMemDepthSet(settings.profiler_mem_depth);
   }
 
-  const history_index = profilerHistoryIndex();
+  if (loaded_profile) {
+    history_index = loaded_profile.history_index;
+    show_mem = loaded_profile.mem_depth > 0;
+  } else {
+    history_index = profilerHistoryIndex();
+    show_mem = HAS_MEMSIZE;
+  }
+  line_width = show_mem ? LINE_WIDTH_WITH_MEM : LINE_WIDTH_NO_MEM;
 
   let z = Z.PROFILER + 10;
   y = 0;
-  let x = LINE_WIDTH;
+  let x = line_width;
   if (ui.buttonText({
     x, y, z,
     w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
@@ -467,17 +505,21 @@ function profilerUIRun() {
   }
   y += BUTTON_H;
 
+  let text = loaded_profile ? 'loaded' : profilerPaused() ? 'paused' : 'live';
   if (do_ui) {
     if (ui.buttonText({
       x, y, z,
       w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: profilerPaused() ? 'paused' : 'live',
+      text,
     })) {
-      profilerPause(!profilerPaused());
+      if (loaded_profile) {
+        useLiveProfile();
+      } else {
+        profilerPause(!profilerPaused());
+      }
     }
   } else {
-    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
-      profilerPaused() ? 'paused' : 'live');
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
   }
   y += BUTTON_H;
 
@@ -523,8 +565,8 @@ function profilerUIRun() {
   }
   y += BUTTON_H;
 
-  if (HAS_MEMSIZE) {
-    let cur_depth = profilerMemDepthGet();
+  if (loaded_profile ? true : HAS_MEMSIZE) {
+    let cur_depth = loaded_profile ? loaded_profile.mem_depth : profilerMemDepthGet();
     font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
       'Mem Depth');
     y += LINE_HEIGHT;
@@ -533,7 +575,7 @@ function profilerUIRun() {
         x, y, z,
         w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
         text: '-',
-        disabled: cur_depth === 0,
+        disabled: loaded_profile || cur_depth === 0,
       })) {
         profilerMemDepthSet(cur_depth - 1);
         settings.set('profiler_mem_depth', profilerMemDepthGet());
@@ -542,6 +584,7 @@ function profilerUIRun() {
         x: x + BUTTON_W/3, y, z,
         w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
         text: `${cur_depth || 'OFF'}`,
+        disabled: loaded_profile,
       })) {
         if (cur_depth === MEM_DEPTH_DEFAULT) {
           profilerMemDepthSet(99);
@@ -554,6 +597,7 @@ function profilerUIRun() {
         x: x + 2*BUTTON_W/3, y, z,
         w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
         text: '+',
+        disabled: loaded_profile,
       })) {
         profilerMemDepthSet(cur_depth + 1);
         settings.set('profiler_mem_depth', profilerMemDepthGet());
@@ -566,18 +610,50 @@ function profilerUIRun() {
   }
 
   font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
-    `${profilerTotalCalls()} calls`);
+    `${loaded_profile ? loaded_profile.calls : profilerTotalCalls()} calls`);
   y += LINE_HEIGHT;
+
+  if (ui.buttonText({
+    x, y, z,
+    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: 'save',
+    disabled: loaded_profile,
+  })) {
+    // Note: doesn't work in IE, but we probably don't care
+    let a = document.createElement('a');
+    a.href = `data:application/json,${encodeURIComponent(profilerExport())}`;
+    a.setAttribute('download', 'profile.json');
+    a.click();
+  }
+  if (ui.buttonText({
+    x: x + BUTTON_W/2, y, z,
+    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: 'load',
+  })) {
+    let input_elem = document.createElement('input');
+    input_elem.setAttribute('type', 'file');
+    let reader = new FileReader();
+    reader.onload = () => {
+      if (reader.readyState === 2) {
+        useSavedProfile(reader.error || reader.result);
+      }
+    };
+    input_elem.onchange = () => {
+      reader.readAsText(input_elem.files[0]);
+    };
+    input_elem.click();
+  }
+  y += BUTTON_H;
 
   ui.drawRect(x, 0, x + BUTTON_W, y, z-1, color_bar);
 
   y = 0;
 
   font.drawSizedAligned(style_header, COL_X[0], y, z, FONT_SIZE, font.ALIGN.HLEFT, COL_W[0], 0, COL_HEADERS[0]);
-  for (let ii = 1; ii < COL_HEADERS.length; ++ii) {
+  for (let ii = 1; ii < COL_HEADERS.length - (show_mem ? 0 : 1); ++ii) {
     font.drawSizedAligned(style_header, COL_X[ii], y, z, FONT_SIZE, font.ALIGN.HCENTER, COL_W[ii], 0, COL_HEADERS[ii]);
   }
-  ui.drawRect(0, y, LINE_WIDTH, y + LINE_HEIGHT, z-1, color_bar_header);
+  ui.drawRect(0, y, line_width, y + LINE_HEIGHT, z-1, color_bar_header);
   y += LINE_HEIGHT;
 
   let y0 = y;
@@ -587,7 +663,7 @@ function profilerUIRun() {
   mouseover_bar_idx = -1;
   if (do_ui) {
     mouseover_elem = {};
-    profilerWalkTree(profilerShowEntryEarly);
+    profilerWalkTree(root, profilerShowEntryEarly);
     if (mouseover_main_elem) {
       let xx = input.mousePos(mouse_pos)[0] - bar_x0;
       mouseover_bar_idx = floor(xx / bar_w);
@@ -658,14 +734,14 @@ function profilerUIRun() {
 
   // then render / do UI
   y = y0;
-  profilerWalkTree(profilerShowEntry);
-  let hint = profilerWarning();
+  profilerWalkTree(root, profilerShowEntry);
+  let hint = !loaded_profile && profilerWarning();
   if (hint) {
     font.drawSizedAligned(style_name, FONT_SIZE, y, Z_NAMES, FONT_SIZE,
-      font.ALIGN.HVCENTERFIT, LINE_WIDTH - FONT_SIZE*2, LINE_HEIGHT*1.5,
+      font.ALIGN.HVCENTERFIT, line_width - FONT_SIZE*2, LINE_HEIGHT*1.5,
       hint);
     ui.drawRect(0, y,
-      LINE_WIDTH, y + LINE_HEIGHT*1.5, Z_NAMES - 0.5,
+      line_width, y + LINE_HEIGHT*1.5, Z_NAMES - 0.5,
       color_hint);
   }
 
@@ -677,7 +753,7 @@ function profilerUIRun() {
 
   if (do_ui) {
     // consume mouseover regardless
-    input.mouseOver({ x: 0, y: 0, w: LINE_WIDTH, h: y });
+    input.mouseOver({ x: 0, y: 0, w: line_width, h: y });
   }
 
   doZoomedGraph();
@@ -687,9 +763,7 @@ function profilerUIRun() {
 
 export function profilerUIStartup() {
   ({ font } = ui);
-  node_out_of_tick = profilerNodeOutOfTick();
-  node_out_of_tick.color_override = color_gpu;
-  root = profilerNodeRoot();
+  useLiveProfile();
 }
 
 export function profilerUI() {

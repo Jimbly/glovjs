@@ -15,6 +15,7 @@ export const HIST_TOT = HIST_SIZE * HIST_COMPONENTS;
 export const MEM_DEPTH_DEFAULT = 2;
 
 const assert = require('assert');
+const engine = require('./engine.js');
 const { max } = Math;
 
 // For profiler_ui.js
@@ -39,6 +40,49 @@ function ProfilerEntry(parent, name) {
   this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
   this.color_override = null;
 }
+ProfilerEntry.prototype.isEmpty = function () {
+  for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+    if (this.history[ii]) {
+      return false;
+    }
+  }
+  return true;
+};
+ProfilerEntry.prototype.toJSON = function () {
+  let { next, child } = this;
+  while (next && next.isEmpty()) {
+    next = next.next;
+  }
+  while (child && child.isEmpty()) {
+    child = child.next;
+  }
+  let ret = {
+    i: this.name,
+    h: Array.prototype.slice.call(this.history), // Float32Array -> Array
+  };
+  if (next) {
+    ret.n = next;
+  }
+  if (child) {
+    ret.c = child;
+  }
+  return ret;
+};
+function profilerEntryFromJSON(parent, obj) {
+  let ret = new ProfilerEntry(parent, obj.i);
+  assert.equal(obj.h.length, ret.history.length);
+  for (let ii = 0; ii < obj.h.length; ++ii) {
+    ret.history[ii] = obj.h[ii];
+  }
+  if (obj.n) {
+    ret.next = profilerEntryFromJSON(parent, obj.n);
+  }
+  if (obj.c) {
+    ret.child = profilerEntryFromJSON(ret, obj.c);
+  }
+  return ret;
+}
+
 // For profiler_ui.js
 ProfilerEntry.prototype.getKey = function () {
   if (!this.parent) {
@@ -60,6 +104,7 @@ ProfilerEntry.prototype.toggleShowChildren = function () {
 
 let root = new ProfilerEntry(null, 'root');
 // Add static node to the tree that we will reference later
+// Note: profiler_ui.js assumes this is always `root.child`
 let node_out_of_tick = new ProfilerEntry(root, 'GPU/idle');
 root.child = node_out_of_tick;
 // Immediately add `tick` node, so it's always second in the list
@@ -98,9 +143,6 @@ export function profilerNodeRoot() {
 }
 export function profilerNodeTick() {
   return node_tick;
-}
-export function profilerNodeOutOfTick() {
-  return node_out_of_tick;
 }
 export function profilerHistoryIndex() {
   return history_index;
@@ -250,12 +292,12 @@ export function profilerTotalCalls() {
   return last_frame_total_calls;
 }
 
-export function profilerWalkTree(cb) {
+export function profilerWalkTree(use_root, cb) {
   let depth = 0;
-  let walk = root;
+  let walk = use_root;
   while (walk) {
     let recursing_down = true;
-    if (walk !== root) {
+    if (walk !== use_root) {
       if (!cb(walk, depth)) {
         recursing_down = false;
       }
@@ -289,6 +331,56 @@ export function profilerAvgTime(entry) {
   return sum / HIST_SIZE;
 }
 
+export function profilerExport() {
+  let obj = {
+    history_index,
+    root,
+    mem_depth: HAS_MEMSIZE ? mem_depth : 0,
+    calls: last_frame_total_calls,
+    // Include some device info
+    device: {
+      ua: window.navigator.userAgent,
+      vendor: gl.getParameter(gl.VENDOR),
+      renderer: gl.getParameter(gl.RENDERER),
+      webgl: engine.webgl2 ? 2 : 1,
+      width: engine.width,
+      height: engine.height,
+    },
+  };
+  let debug_info = gl.getExtension('WEBGL_debug_renderer_info');
+  if (debug_info) {
+    obj.device.renderer_unmasked = gl.getParameter(debug_info.UNMASKED_RENDERER_WEBGL);
+    obj.device.vendor_unmasked = gl.getParameter(debug_info.UNMASKED_VENDOR_WEBGL);
+  }
+  let str = JSON.stringify(obj);
+  // Round all numbers (in text form) to 3 digits of precision, that's the most
+  //   we're getting from performance.now anyway, and JSON ends up with lots
+  //   of 0.12299999999999 strings otherwise.
+  str = str.replace(/\d\.\d\d\d\d+/g, (a) => {
+    a = a[5]>'4' ? a.slice(0,4) + (Number(a[4])+1) : a.slice(0,5);
+    while (a.slice(-1) === '0' || a.slice(-1) === '.') {
+      a = a.slice(0, -1);
+    }
+    return a;
+  });
+
+  return str;
+}
+export function profilerImport(text) {
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch (e) {
+    // handled below
+  }
+  if (!obj) {
+    return null;
+  }
+
+  obj.root = profilerEntryFromJSON(null, obj.root);
+  return obj;
+}
+
 // For calling manually in the console for debugging
 export function profilerDump() {
   assert(current === root);
@@ -297,7 +389,7 @@ export function profilerDump() {
   // Using "% of frame" and "average" equivalent options from profiler_ui
   let total_frame_time = profilerAvgTime(root);
 
-  profilerWalkTree(function (walk, depth) {
+  profilerWalkTree(root, function (walk, depth) {
     let time_sum=0;
     let count_sum=0;
     let time_max=0;
