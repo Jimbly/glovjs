@@ -10,6 +10,9 @@ export const HAS_MEMSIZE = Boolean(window.performance && performance.memory && p
 export const HIST_SIZE = 64;
 export const HIST_COMPONENTS = 3; // count, time, dmem
 export const HIST_TOT = HIST_SIZE * HIST_COMPONENTS;
+// Default `mem_depth` very low, as every profile section with
+//    memory adds about 12µs and 56bytes, compared to 1µs and 24bytes without
+export const MEM_DEPTH_DEFAULT = 2;
 
 const assert = require('assert');
 const { max } = Math;
@@ -21,15 +24,16 @@ let profiler_open_keys = localStorageGetJSON('profiler_open_keys', {});
 let last_id = 0;
 function ProfilerEntry(parent, name) {
   this.parent = parent;
+  this.depth = parent ? parent.depth + 1 : 0;
   this.next = null;
   this.child = null;
   this.name = name;
   this.count = 0;
   this.time = 0;
   this.dmem = 0;
-  this.history = new Float32Array(HIST_TOT);
   this.start_time = 0;
   this.start_mem = 0;
+  this.history = new Float32Array(HIST_TOT);
   this.id = ++last_id;
   // For profiler_ui.js
   this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
@@ -65,6 +69,7 @@ node_out_of_tick.next = node_tick;
 let current = root;
 let history_index = 0;
 let paused = false;
+let mem_depth = MEM_DEPTH_DEFAULT;
 
 function memSizeChrome() {
   return performance.memory.usedJSHeapSize;
@@ -72,12 +77,12 @@ function memSizeChrome() {
 function memSizeNop() {
   return 0;
 }
-const memSize = HAS_MEMSIZE ? memSizeChrome : memSizeNop;
+let memSize = HAS_MEMSIZE ? memSizeChrome : memSizeNop;
 let mem_is_high_res = 10;
 export function profilerWarning() {
   if (!HAS_MEMSIZE) {
     return 'To access memory profiling, run in Chrome';
-  } else if (mem_is_high_res < 10) {
+  } else if (mem_depth > 1 && mem_is_high_res < 10) {
     return 'For precise memory profiling, launch Chrome with --enable-precise-memory-info';
   }
   return '';
@@ -99,11 +104,13 @@ export function profilerHistoryIndex() {
 export function profilerFrameStart() {
   root.count = 1;
   let now = performance.now();
-  root.time += now - root.start_time;
+  root.time = now - root.start_time;
   root.start_time = now;
-  let memnow = memSize();
-  root.dmem += memnow - root.start_mem;
-  root.start_mem = memnow;
+  if (mem_depth > 0) {
+    let memnow = memSize();
+    root.dmem = memnow - root.start_mem;
+    root.start_mem = memnow;
+  }
   node_out_of_tick.count = 1;
   // Place the unaccounted portion of the root's time in `node_out_of_tick`
   node_out_of_tick.time = root.time;
@@ -114,7 +121,7 @@ export function profilerFrameStart() {
     }
     node_out_of_tick.time -= walk.time;
     node_out_of_tick.dmem -= walk.dmem;
-    if (HAS_MEMSIZE) {
+    if (mem_depth > 1) {
       if (walk.count) {
         // Should basically never see a `0` for dmem, if we do, probably low-precision memory tracking
         if (walk.dmem) {
@@ -187,7 +194,9 @@ function profilerStart(name) {
 
   current = instance;
   instance.start_time = performance.now();
-  instance.start_mem = memSize();
+  if (instance.depth < mem_depth) {
+    instance.start_mem = memSize();
+  }
 }
 
 function profilerStop(old_name, count) {
@@ -195,7 +204,9 @@ function profilerStop(old_name, count) {
     assert.equal(old_name, current.name);
   }
   current.time += performance.now() - current.start_time;
-  current.dmem += memSize() - current.start_mem;
+  if (current.depth < mem_depth) {
+    current.dmem += memSize() - current.start_mem;
+  }
   current.count += count || 1;
   current = current.parent;
 }
@@ -217,6 +228,14 @@ export function profilerPaused() {
 }
 export function profilerPause(new_value) {
   paused = new_value;
+}
+
+export function profilerMemDepthGet() {
+  return mem_depth;
+}
+
+export function profilerMemDepthSet(value) {
+  mem_depth = value;
 }
 
 export function profilerWalkTree(cb) {

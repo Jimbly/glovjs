@@ -20,8 +20,11 @@ const {
   HIST_COMPONENTS,
   HIST_TOT,
   HAS_MEMSIZE,
+  MEM_DEPTH_DEFAULT,
   profilerAvgTime,
   profilerHistoryIndex,
+  profilerMemDepthGet,
+  profilerMemDepthSet,
   profilerNodeOutOfTick,
   profilerNodeTick,
   profilerNodeRoot,
@@ -45,12 +48,14 @@ function profilerToggle(data, resp_func) {
     settings.set('show_profiler', 1);
   } else if (data === '0') {
     settings.set('show_profiler', 0);
+    profilerMemDepthSet(MEM_DEPTH_DEFAULT);
   } else {
     if (settings.show_profiler) {
-      if (profilerPause()) {
+      if (profilerPaused()) {
         profilerPause(false);
       } else {
         settings.set('show_profiler', 0);
+        profilerMemDepthSet(MEM_DEPTH_DEFAULT);
       }
     } else {
       settings.set('show_profiler', 1);
@@ -98,6 +103,12 @@ settings.register({
     default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0,1],
+    access_show: ['hidden'],
+  },
+  profiler_mem_depth: {
+    default_value: MEM_DEPTH_DEFAULT,
+    type: cmd_parse.TYPE_INT,
+    range: [0,100],
     access_show: ['hidden'],
   },
 });
@@ -428,6 +439,11 @@ function profilerUIRun() {
   font_size_number = FONT_SIZE * font_number_scale;
   number_yoffs = (FONT_SIZE - font_size_number) / 2;
 
+  if (profilerMemDepthGet() !== settings.profiler_mem_depth) {
+    // First time opening the UI this session, restore previous mem_depth values
+    profilerMemDepthSet(settings.profiler_mem_depth);
+  }
+
   const history_index = profilerHistoryIndex();
 
   let z = Z.PROFILER + 10;
@@ -449,6 +465,7 @@ function profilerUIRun() {
     settings.set('show_profiler', 0);
   }
   y += BUTTON_H;
+
   if (do_ui) {
     if (ui.buttonText({
       x, y, z,
@@ -462,6 +479,7 @@ function profilerUIRun() {
       profilerPaused() ? 'paused' : 'live');
   }
   y += BUTTON_H;
+
   if (do_ui) {
     if (ui.buttonText({
       x, y, z,
@@ -475,6 +493,7 @@ function profilerUIRun() {
       PROFILER_RELATIVE_LABELS[settings.profiler_relative]);
   }
   y += BUTTON_H;
+
   if (do_ui) {
     if (ui.buttonText({
       x, y, z,
@@ -488,6 +507,7 @@ function profilerUIRun() {
       settings.profiler_average ? 'average' : 'last frame');
   }
   y += BUTTON_H;
+
   if (do_ui) {
     if (ui.buttonText({
       x, y, z,
@@ -501,6 +521,50 @@ function profilerUIRun() {
       settings.profiler_graph ? 'graph: mem' : 'graph: CPU');
   }
   y += BUTTON_H;
+
+  if (HAS_MEMSIZE) {
+    let cur_depth = profilerMemDepthGet();
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, FONT_SIZE,
+      'Mem Depth');
+    y += FONT_SIZE;
+    if (do_ui) {
+      if (ui.buttonText({
+        x, y, z,
+        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+        text: '-',
+        disabled: cur_depth === 0,
+      })) {
+        profilerMemDepthSet(cur_depth - 1);
+        settings.set('profiler_mem_depth', profilerMemDepthGet());
+      }
+      if (ui.buttonText({
+        x: x + BUTTON_W/3, y, z,
+        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+        text: `${cur_depth || 'OFF'}`,
+      })) {
+        if (cur_depth === MEM_DEPTH_DEFAULT) {
+          profilerMemDepthSet(99);
+        } else {
+          profilerMemDepthSet(MEM_DEPTH_DEFAULT);
+        }
+        settings.set('profiler_mem_depth', profilerMemDepthGet());
+      }
+      if (ui.buttonText({
+        x: x + 2*BUTTON_W/3, y, z,
+        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+        text: '+',
+      })) {
+        profilerMemDepthSet(cur_depth + 1);
+        settings.set('profiler_mem_depth', profilerMemDepthGet());
+      }
+    } else {
+      font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
+        `${cur_depth || 'OFF'}`);
+    }
+    y += BUTTON_H;
+  }
+
+
   ui.drawRect(x, 0, x + BUTTON_W, y, z-1, color_bar);
 
   y = 0;
@@ -593,7 +657,8 @@ function profilerUIRun() {
   profilerWalkTree(profilerShowEntry);
   let hint = profilerWarning();
   if (hint) {
-    font.drawSizedAligned(style_name, 0, y, Z_NAMES, FONT_SIZE, font.ALIGN.HVCENTER, LINE_WIDTH, LINE_HEIGHT*1.5,
+    font.drawSizedAligned(style_name, FONT_SIZE, y, Z_NAMES, FONT_SIZE,
+      font.ALIGN.HVCENTERFIT, LINE_WIDTH - FONT_SIZE*2, LINE_HEIGHT*1.5,
       hint);
     ui.drawRect(0, y,
       LINE_WIDTH, y + LINE_HEIGHT*1.5, Z_NAMES - 0.5,
