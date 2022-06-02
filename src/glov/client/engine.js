@@ -40,7 +40,8 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const models = require('./models.js');
 const perf = require('./perf.js');
-const { profilerFrameStart, profilerStartup } = require('./profiler.js');
+const { profilerFrameStart } = require('./profiler.js');
+const { profilerUIStartup } = require('./profiler_ui.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
@@ -1126,7 +1127,7 @@ export function startup(params) {
 
   buildUIStartup();
   shaderDebugUIStartup();
-  profilerStartup();
+  profilerUIStartup();
 
   callEach(startup_funcs, startup_funcs = null);
 
