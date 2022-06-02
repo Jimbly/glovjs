@@ -34,8 +34,8 @@ function ProfilerEntry(parent, name) {
   this.start_time = 0;
   this.start_mem = 0;
   this.history = new Float32Array(HIST_TOT);
-  this.id = ++last_id;
   // For profiler_ui.js
+  this.id = ++last_id;
   this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
   this.color_override = null;
 }
@@ -180,7 +180,6 @@ function profilerStart(name) {
   // Find us in current's children
   let last = null;
   let instance;
-  // PERFTODO: is having a child map instead of / in addition to the children linked list more efficient?
   for (instance = current.child; instance; last = instance, instance = instance.next) {
     if (instance.name === name) {
       break;
