@@ -14,7 +14,7 @@ const { style } = require('./font.js');
 const input = require('./input.js');
 const { floor, max, min } = Math;
 const ui = require('./ui.js');
-const { perfGraphOverride } = require('./perf.js');
+const { perfGraphOverride, friendlyBytes } = require('./perf.js');
 const {
   HIST_SIZE,
   HIST_COMPONENTS,
@@ -146,8 +146,8 @@ const Z_MS = Z.PROFILER+5;
 const MS_W = 58;
 const COUNT_W = 56;
 const MSPAIR_W = MS_W + 4 + COUNT_W;
-const MEM_W = 100;
-const COL_HEADERS = ['Profiler', 'µs (count)', 'max', 'Δmem'];
+const MEM_W = 120;
+const COL_HEADERS = ['Profiler', 'µs (count)', 'max', 'GC / Δmem'];
 const COL_W = [400, MSPAIR_W, MS_W, MEM_W];
 if (!HAS_MEMSIZE) {
   COL_W.pop();
@@ -245,13 +245,18 @@ function profilerShowEntry(walk, depth) {
   let count_sum=0;
   let time_max=0;
   let sum_count=0;
+  let dmem_min=Infinity;
+  let dmem_max=-Infinity;
   for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
     if (walk.history[ii]) {
       sum_count++;
       count_sum += walk.history[ii]; // count
       time_sum += walk.history[ii+1]; // time
       time_max = max(time_max, walk.history[ii+1]);
-      dmem_max_value = max(dmem_max_value, walk.history[ii+2]);
+      let dmem = walk.history[ii+2];
+      dmem_max_value = max(dmem_max_value, dmem);
+      dmem_min = min(dmem_min, dmem);
+      dmem_max = max(dmem_max, dmem);
     }
   }
   if (!count_sum) {
@@ -350,8 +355,20 @@ function profilerShowEntry(walk, depth) {
 
   if (HAS_MEMSIZE) {
     x = COL_X[3];
-    font.drawSizedAligned(style_mem, x, y + number_yoffs, Z_MS, font_size_number, font.ALIGN.HRIGHT, MEM_W, 0,
-      `${walk.history[show_index_mem]}`);
+
+    if (dmem_min < 0) {
+      // Had a GC
+      font.drawSizedAligned(style_time_spike, x, y + number_yoffs, Z_MS, font_size_number,
+        font.ALIGN.HLEFT|font.ALIGN.HFIT, MEM_W/2, 0,
+        `${friendlyBytes(-dmem_min)}`);
+      font.drawSizedAligned(style_mem, x + MEM_W/2, y + number_yoffs, Z_MS, font_size_number,
+        font.ALIGN.HRIGHT|font.ALIGN.HFIT, MEM_W/2, 0,
+        `${do_average ? dmem_max : walk.history[show_index_mem]}`);
+    } else {
+      // Just increase
+      font.drawSizedAligned(style_mem, x, y + number_yoffs, Z_MS, font_size_number, font.ALIGN.HRIGHT, MEM_W, 0,
+        `${do_average ? dmem_max : walk.history[show_index_mem]}`);
+    }
   }
 
   y += FONT_SIZE + LINE_YOFFS;

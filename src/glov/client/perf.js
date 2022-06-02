@@ -128,7 +128,7 @@ const UNIT_COUNT = [
   [1000*1000, 'm'],
   [1000*1000*1000, 'g'],
 ];
-function friendlyBytes(bytes) {
+export function friendlyBytes(bytes) {
   return friendlyUnit(UNIT_BYTES, bytes);
 }
 function friendlyCount(count) {
