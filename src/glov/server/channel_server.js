@@ -20,7 +20,7 @@ const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const fs = require('fs');
 const log = require('./log.js');
-const { logEx, logDowngradeErrors } = log;
+const { logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
@@ -1143,7 +1143,7 @@ class ChannelServer {
       crash_dump.client_data = client.crash_data;
     }
     addPacketLog(this.ws_server, 'ws_pkt_log');
-    let dump_file = log.dumpJSON('crash', crash_dump, 'json');
+    let dump_file = logDumpJSON('crash', crash_dump, 'json');
     console.error(`  Saving dump to ${dump_file}.`);
     this.csworker.sendChannelMessage('channel_server', 'chat_broadcast', {
       sysadmin: true,

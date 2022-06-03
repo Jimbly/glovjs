@@ -13,6 +13,7 @@ const engine = require('./engine.js');
 const { style } = require('./font.js');
 const input = require('./input.js');
 const { floor, max, min } = Math;
+const { netClient, netDisconnected } = require('./net.js');
 const ui = require('./ui.js');
 const { perfGraphOverride, friendlyBytes } = require('./perf.js');
 const {
@@ -777,3 +778,34 @@ export function profilerUI() {
     // TODO: warn if more than some number of profiler calls per frame
   }
 }
+
+cmd_parse.register({
+  cmd: 'profile',
+  help: 'Captures a performance profile for developer investigation',
+  prefix_usage_with_help: true,
+  usage: 'Optionally delays for DELAY seconds before capturing the profile.\n' +
+    'Usage: /profile [DELAY]',
+  func: function (str, resp_func) {
+    function doit() {
+      let profile = profilerExport();
+      if (netDisconnected()) {
+        ui.provideUserString('Profiler Snapshot', profile);
+        resp_func();
+      } else {
+        netClient().send('profile', profile, function (err, data) {
+          if (data?.id) {
+            ui.provideUserString('Profile submitted', `ID=${data.id}`);
+            resp_func(null, `Profile submitted with ID=${data.id}`);
+          } else {
+            resp_func(err, data);
+          }
+        });
+      }
+    }
+    if (Number(str)) {
+      setTimeout(doit, Number(str) * 1000);
+    } else {
+      doit();
+    }
+  },
+});
