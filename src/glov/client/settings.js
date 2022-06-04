@@ -44,7 +44,7 @@ export function push(pairs) {
     exports[key] = pairs[key];
     let cb = change_cbs[key];
     if (cb) {
-      cb();
+      cb(false);
     }
   }
 }
@@ -55,7 +55,7 @@ export function pop() {
     exports[key] = settings_stack[key];
     let cb = change_cbs[key];
     if (cb) {
-      cb();
+      cb(false);
     }
   }
   settings_stack = null;
@@ -85,12 +85,6 @@ export function register(defs) {
       on_change: def.on_change,
       access_run: def.access_run,
       access_show: def.access_show,
-      // Only applying `default_clear_on` if there's an `def.on_change` handler - otherwise
-      //   there's no functional difference.  Do *not* want to apply `default_clear_on`
-      //   for any settings which later have `runTimeDefault()` called on them,
-      //   as we may have discarded the actual (matching the hard-coded default,
-      //   but not the run-time default) desired value.
-      default_clear_on: def.on_change ? def.default_value : undefined,
     });
   });
 }

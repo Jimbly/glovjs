@@ -148,6 +148,7 @@ function formatRangeValue(type, value) {
   return ret;
 }
 
+// Optional param.on_change(is_startup:boolean)
 CmdParse.prototype.registerValue = function (cmd, param) {
   assert(TYPE_NAME[param.type] || !param.set);
   assert(param.set || param.get);
@@ -168,15 +169,11 @@ CmdParse.prototype.registerValue = function (cmd, param) {
           init_value = undefined;
         }
       }
-      if (init_value !== undefined && param.default_clear_on !== undefined && init_value === param.default_clear_on) {
-        // Currently set to the default value, ignore it, so this behaves the same as not being set
-        init_value = undefined;
-      }
       if (init_value !== undefined) {
         param.set(init_value);
-        if (param.on_change) {
-          param.on_change();
-        }
+      }
+      if (param.on_change) {
+        param.on_change(true);
       }
     }
   }
@@ -245,7 +242,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       this.storage.setJSON(store_key, store_value);
     }
     if (param.on_change) {
-      param.on_change();
+      param.on_change(false);
     }
     if (param.get) {
       return value();
