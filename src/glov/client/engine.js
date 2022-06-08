@@ -531,13 +531,13 @@ export function setViewport(xywh) {
   gl.viewport(xywh[0], xywh[1], xywh[2], xywh[3]);
 }
 
-let frame_requested = false;
-function requestFrame() {
-  if (frame_requested) {
+let frames_requested = 0;
+function requestFrame(user_time) {
+  let max_fps = settings.max_fps;
+  let desired_frames = (max_fps >= 1000) ? 10 : 1;
+  if (frames_requested >= desired_frames) {
     return;
   }
-  frame_requested = true;
-  let max_fps = settings.max_fps;
   if (defines.SLOWLOAD && is_loading) {
     // Safari on CrossBrowserTesting needs this in order to have some time to load/decode audio data
     // TODO: Instead, generally, if loading, compare last_tick_cpu vs dt, and if
@@ -545,10 +545,21 @@ function requestFrame() {
     //   loads (textures, sounds, models, NOT user code), delay so that we are.
     max_fps = 2;
   }
-  if (max_fps) {
+  if (desired_frames > 1) {
+    // Ensure we have at least that many frames queued up at any point in time, so they
+    // can fire at less than the normal 4ms browser delay of setTimeout()
+    while (frames_requested < desired_frames) {
+      // eslint-disable-next-line no-use-before-define
+      setTimeout(tick, 1);
+      frames_requested++;
+    }
+  } else if (max_fps) {
+    let desired_delay = max(0, round(1000 / max_fps - (user_time || 0)));
+    frames_requested++;
     // eslint-disable-next-line no-use-before-define
-    setTimeout(tick, round(1000 / max_fps));
+    setTimeout(tick, desired_delay);
   } else {
+    frames_requested++;
     // eslint-disable-next-line no-use-before-define
     requestAnimationFrame(tick);
   }
@@ -716,7 +727,7 @@ function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
   profilerStart('top');
-  frame_requested = false;
+  frames_requested--;
   // if (timestamp < 1e12) { // high resolution timer
   //   this ends up being a value way back in time, relative to what hrnow() returns,
   //   and even back in time relative to input events already dispatched,
@@ -921,7 +932,7 @@ function tick(timestamp) {
 
   last_tick_cpu = hrnow() - now;
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
-  requestFrame();
+  requestFrame(hrnow() - hrtime);
   profilerStop('bottom');
   return profilerStop('tick');
 }
