@@ -340,7 +340,8 @@ function profilerShowEntry(walk, depth) {
         color_timing[1] = max(0, 2 - hv);
       }
       let color = walk.color_override || color_timing;
-      ui.drawRect(x + ii*bar_w, y + LINE_HEIGHT - h, x + (ii + 1)*bar_w, y + LINE_HEIGHT, Z_GRAPH, color);
+      let elem = ui.drawRect(x + ii*bar_w, y + LINE_HEIGHT - h, x + (ii + 1)*bar_w, y + LINE_HEIGHT, Z_GRAPH, color);
+      elem.x = elem.y = 0; // no sorting by x/y required
     }
   }
 

@@ -1630,7 +1630,7 @@ export function drawRect(x0, y0, x1, y1, z, color) {
   let my = min(y0, y1);
   let Mx = max(x0, x1);
   let My = max(y0, y1);
-  sprites.white.draw({
+  return sprites.white.draw({
     x: mx,
     y: my,
     z,
@@ -1641,7 +1641,7 @@ export function drawRect(x0, y0, x1, y1, z, color) {
 }
 
 export function drawRect2(param) {
-  drawRect(param.x, param.y, param.x + param.w, param.y + param.h, param.z, param.color);
+  return drawRect(param.x, param.y, param.x + param.w, param.y + param.h, param.z, param.color);
 }
 
 export function drawRect4Color(x0, y0, x1, y1, z, color_ul, color_ur, color_ll, color_lr) {
@@ -1649,7 +1649,7 @@ export function drawRect4Color(x0, y0, x1, y1, z, color_ul, color_ur, color_ll, 
   let my = min(y0, y1);
   let Mx = max(x0, x1);
   let My = max(y0, y1);
-  sprites.white.draw4Color({
+  return sprites.white.draw4Color({
     x: mx,
     y: my,
     z,

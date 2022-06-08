@@ -389,6 +389,7 @@ export function queuesprite4color(
   data[31] = temp_uvs[1];
 
   elem.queue(z);
+  return elem;
 }
 
 export function queuesprite(
@@ -820,12 +821,12 @@ function Sprite(params) {
 //   optional: z, w, h, uvs, color, nozoom, pixel_perfect
 Sprite.prototype.draw = function (params) {
   if (params.w === 0 || params.h === 0) {
-    return;
+    return null;
   }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-  queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
+  return queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
     params.shader || this.shader, params.shader_params, params.nozoom, params.pixel_perfect, params.blend);
 };
 
@@ -834,18 +835,18 @@ Sprite.prototype.drawDualTint = function (params) {
   params.shader_params = {
     color1: params.color1,
   };
-  this.draw(params);
+  return this.draw(params);
 };
 
 Sprite.prototype.draw4Color = function (params) {
   if (params.w === 0 || params.h === 0) {
-    return;
+    return null;
   }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
 
-  queuesprite4color(this,
+  return queuesprite4color(this,
     params.x, params.y, params.z || Z.UI, w, h,
     params.rot, uvs,
     params.color_ul, params.color_ll, params.color_lr, params.color_ur,
