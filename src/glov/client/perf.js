@@ -156,10 +156,10 @@ function showMetric(y, metric) {
         value = value.value;
         style = glov_font.styleAlpha(fps_style, alpha);
       }
-      let label_w = font.drawSizedAligned(style, x, y, Z.FPSMETER + 1, line_height,
+      let label_w = font.drawSizedAligned(style, x, y, Z.FPSMETER + 3, line_height,
         glov_font.ALIGN.HRIGHT, 0, 0, label);
       max_label_w = max(max_label_w, label_w);
-      font.drawSizedAligned(style, x, y, Z.FPSMETER + 1, line_height,
+      font.drawSizedAligned(style, x, y, Z.FPSMETER + 3, line_height,
         glov_font.ALIGN.HFIT, METRIC_VALUE_WIDTH, 0, value);
       y += line_height;
       drew_any = true;
@@ -204,7 +204,7 @@ function showMetric(y, metric) {
     bg_fade[3] = bg[3] * alpha;
     bg = v3copy(bg_fade, bg);
   }
-  ui.drawRect(pos_param.x, pos_param.y, pos_param.x + pos_param.w, y, Z.FPSMETER, bg);
+  ui.drawRect(pos_param.x, pos_param.y, pos_param.x + pos_param.w, y, Z.FPSMETER+2, bg);
   return y;
 }
 
