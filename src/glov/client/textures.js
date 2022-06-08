@@ -132,9 +132,15 @@ export function texturesResetState() {
   }
   unbindAll(gl.TEXTURE_2D);
   setUnit(0);
-  profilerStart('gl.getError()');
-  gl.getError();
-  profilerStop('gl.getError()');
+  // Disabling this.  In theory clearing the GL error at the beginning of the frame
+  //   is good for debugging, and shouldn't actually harm anything (possibly stall
+  //   as it's the first GL call of the frame, but theoretically not much more than
+  //   whatever the next GL call would be), however in practice this is adding up
+  //   to a couple ms (when running at /max_fps 1000) in Chrome.  Does not seem to
+  //   have any effect either way under GPU-bound conditions though.
+  // profilerStart('gl.getError()');
+  // gl.getError();
+  // profilerStop('gl.getError()');
 }
 
 
