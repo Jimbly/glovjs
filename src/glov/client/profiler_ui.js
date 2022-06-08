@@ -459,6 +459,7 @@ const PROFILER_RELATIVE_LABELS = ['% of user', '% of parent', '% of frame'];
 let mouse_pos = vec2();
 function profilerUIRun() {
   profilerStart('profilerUIRun');
+  profilerStart('top+buttons');
   if (engine.render_width) {
     let scale = FONT_SIZE / ui.font_height;
     camera2d.set(0, 0, scale * engine.render_width, scale * engine.render_height);
@@ -734,6 +735,8 @@ function profilerUIRun() {
     }
   }
 
+  profilerStopStart('interface');
+
   // then render / do UI
   y = y0;
   profilerWalkTree(root, profilerShowEntry);
@@ -746,6 +749,8 @@ function profilerUIRun() {
       line_width, y + LINE_HEIGHT*1.5, Z_NAMES - 0.5,
       color_hint);
   }
+
+  // profilerStopStart('bottom'); // nothing
 
   if (mouseover_bar_idx !== -1) {
     ui.drawRect(bar_x0 + mouseover_bar_idx * bar_w, y0,
@@ -760,6 +765,7 @@ function profilerUIRun() {
 
   doZoomedGraph();
 
+  profilerStop();
   profilerStop('profilerUIRun');
 }
 

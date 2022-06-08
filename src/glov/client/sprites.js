@@ -608,7 +608,9 @@ function drawSetup() {
     sprite_buffer_len = sprite_buffer.length / 8;
   }
 
+  profilerStart('sort');
   sprite_queue.sort(cmpSprite);
+  profilerStop('sort');
 
   batch_state = null;
   assert.equal(sprite_buffer_idx, 0);

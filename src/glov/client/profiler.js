@@ -7,7 +7,7 @@
 /* globals performance*/
 
 export const HAS_MEMSIZE = Boolean(window.performance && performance.memory && performance.memory.usedJSHeapSize);
-export const HIST_SIZE = 64;
+export const HIST_SIZE = 128;
 export const HIST_COMPONENTS = 3; // count, time, dmem
 export const HIST_TOT = HIST_SIZE * HIST_COMPONENTS;
 // Default `mem_depth` very low, as every profile section with
