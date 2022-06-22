@@ -239,10 +239,14 @@ function channelServerPakSend(err, resp_func) {
   channelServerSendFinish(pak, err, resp_func);
 }
 
+let quiet_messages = Object.create(null);
+export function quietMessagesSet(list) {
+  for (let ii = 0; ii < list.length; ++ii) {
+    quiet_messages[list[ii]] = true;
+  }
+}
 export function quietMessage(msg, payload) {
-  // FRVR - maybe generalize this?
-  return msg === 'set_user' && payload && payload.key === 'pos' ||
-    msg === 'vd_get' || msg === 'claim' || msg === 'dig';
+  return msg === 'set_user' && payload && payload.key === 'pos' || quiet_messages[msg];
 }
 
 // source is a ChannelWorker
