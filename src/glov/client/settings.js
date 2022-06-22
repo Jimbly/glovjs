@@ -92,7 +92,13 @@ export function register(defs) {
 
 register({
   max_fps: {
-    label: 'Max FPS',
+    label: 'Maximum frame rate (FPS)',
+    prefix_usage_with_help: true,
+    usage:
+      'Display current maximum: /max_fps\n' +
+      'Disable maximum FPS limit: /max_fps 0 (highly recommended)\n' +
+      'Set maximum FPS limit: /max_fps 30\n' +
+      'Default: /max_fps 0',
     default_value: 0,
     type: cmd_parse.TYPE_FLOAT,
   },
