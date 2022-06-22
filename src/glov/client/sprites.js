@@ -12,6 +12,7 @@ export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');

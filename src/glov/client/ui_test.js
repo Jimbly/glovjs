@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 const assert = require('assert');
+const { vec4 } = require('glov/common/vmath.js');
 const { colorPicker } = require('./color_picker.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
@@ -10,7 +11,6 @@ const { scrollAreaCreate } = require('./scroll_area.js');
 const selection_box = require('./selection_box.js');
 const simple_menu = require('./simple_menu.js');
 const ui = require('./ui.js');
-const { vec4 } = require('glov/common/vmath.js');
 
 const { ceil, random } = Math;
 

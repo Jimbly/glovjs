@@ -61,12 +61,12 @@ system.killHard(); // immediately stops drawing
 // Implementation
 
 const assert = require('assert');
-const sprites = require('./sprites.js');
-const textures = require('./textures.js');
 const {
   vec2, v2copy, v2lerp, v2mul,
   vec3, vec4, v3add, v4copy, v4lerp, v4mul,
 } = require('glov/common/vmath.js');
+const sprites = require('./sprites.js');
+const textures = require('./textures.js');
 
 const blend_map = {
   alpha: sprites.BLEND_ALPHA,

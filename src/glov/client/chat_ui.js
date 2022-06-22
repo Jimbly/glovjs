@@ -1,5 +1,6 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
+/* eslint-disable import/order */
 const assert = require('assert');
 const { asyncParallel } = require('glov-async');
 const camera2d = require('./camera2d.js');

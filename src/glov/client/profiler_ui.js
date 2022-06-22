@@ -7,6 +7,7 @@
 
 // Add to ProfilerEntry.prototype before any other (potentially circular) requires
 
+/* eslint-disable import/order */
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');

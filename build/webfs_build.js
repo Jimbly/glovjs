@@ -1,9 +1,8 @@
 const assert = require('assert');
-const concat = require('glov-build-concat');
-const gb = require('glov-build');
-const { forwardSlashes } = gb;
-const JSON5 = require('json5');
 const path = require('path');
+const { forwardSlashes } = require('glov-build');
+const concat = require('glov-build-concat');
+const JSON5 = require('json5');
 
 const preamble = `(function () {
 var fs = window.glov_webfs = window.glov_webfs || {};`;

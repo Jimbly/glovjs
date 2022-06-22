@@ -1,15 +1,15 @@
-const argv = require('minimist')(process.argv.slice(2));
-const express = require('express');
-const express_static_gzip = require('express-static-gzip');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const path = require('path');
+const express = require('express');
+const express_static_gzip = require('express-static-gzip');
 const {
   // allowMapFromLocalhostOnly,
   setOriginHeaders,
 } = require('glov/server/request_utils.js');
 const glov_server = require('glov/server/server.js');
+const argv = require('minimist')(process.argv.slice(2));
 const test_worker = require('./test_worker.js');
 
 let app = express();

@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');

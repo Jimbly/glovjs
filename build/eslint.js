@@ -1,8 +1,8 @@
 const assert = require('assert');
-const gb = require('glov-build');
-const { callbackify } = gb;
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const gb = require('glov-build');
+const { callbackify } = require('glov-build');
 
 module.exports = function (opts) {
   let { input, name, name_files } = opts;

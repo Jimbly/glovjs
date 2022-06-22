@@ -10,13 +10,13 @@
 exports.createSimpleMenu = create;
 
 const assert = require('assert');
+const { clamp } = require('glov/common/util.js');
+const { vec4 } = require('glov/common/vmath.js');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
 const selection_box = require('./selection_box.js');
 const ui = require('./ui.js');
-const { vec4 } = require('glov/common/vmath.js');
-const { clamp } = require('glov/common/util.js');
 
 const { KEYS, PAD } = input;
 

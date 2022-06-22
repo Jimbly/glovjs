@@ -4,6 +4,7 @@
 export let wsstats = { msgs: 0, bytes: 0 };
 export let wsstats_out = { msgs: 0, bytes: 0 };
 
+/* eslint-disable import/order */
 const ack = require('./ack.js');
 const assert = require('assert');
 const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;

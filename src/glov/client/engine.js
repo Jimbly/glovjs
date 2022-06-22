@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+/* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
 const client_config = require('./client_config.js');

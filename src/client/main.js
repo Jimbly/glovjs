@@ -1,25 +1,26 @@
 /*eslint global-require:off*/
+// eslint-disable-next-line import/order
 const local_storage = require('glov/client/local_storage.js');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
-const engine = require('glov/client/engine.js');
-const glov_font = require('glov/client/font.js');
-const input = require('glov/client/input.js');
+import * as engine from 'glov/client/engine.js';
+import * as glov_font from 'glov/client/font.js';
+import * as input from 'glov/client/input.js';
 const { floor, sin } = Math;
-const net = require('glov/client/net.js');
-const particles = require('glov/client/particles.js');
-const settings = require('glov/client/settings.js');
-const glov_sprites = require('glov/client/sprites.js');
-const { createSprite } = glov_sprites;
-const { createSpriteAnimation } = require('glov/client/sprite_animation.js');
-const transition = require('glov/client/transition.js');
-const ui = require('glov/client/ui.js');
-const ui_test = require('glov/client/ui_test.js');
-const particle_data = require('./particle_data.js');
-const { soundLoad, soundPlay, soundPlayMusic, FADE_IN, FADE_OUT } = require('glov/client/sound.js');
-const { spineCreate } = require('glov/client/spine.js');
-const { test3D } = require('./test_3d.js');
-const { vec2, vec4, v4clone, v4copy } = require('glov/common/vmath.js');
+import * as net from 'glov/client/net.js';
+import * as particles from 'glov/client/particles.js';
+import * as settings from 'glov/client/settings.js';
+import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/client/sound.js';
+import { spineCreate } from 'glov/client/spine.js';
+import { createSpriteAnimation } from 'glov/client/sprite_animation.js';
+import * as glov_sprites from 'glov/client/sprites.js';
+import { createSprite } from 'glov/client/sprites.js';
+import * as transition from 'glov/client/transition.js';
+import * as ui from 'glov/client/ui.js';
+import * as ui_test from 'glov/client/ui_test.js';
+import { v4clone, v4copy, vec2, vec4 } from 'glov/common/vmath.js';
+import * as particle_data from './particle_data.js';
+import { test3D } from './test_3d.js';
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;

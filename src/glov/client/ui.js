@@ -22,6 +22,7 @@ export const LINE_ALIGN = 1<<0;
 export const LINE_CAP_SQUARE = 1<<1;
 export const LINE_CAP_ROUND = 1<<2;
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_edit_box = require('./edit_box.js');

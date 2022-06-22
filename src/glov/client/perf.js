@@ -3,6 +3,7 @@
 
 export let perf_mem_counters = {};
 
+/* eslint-disable import/order */
 const engine = require('./engine.js');
 let metrics = [];
 export function addMetric(metric, first) {

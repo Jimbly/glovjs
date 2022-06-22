@@ -5,6 +5,7 @@
 // eslint-disable-next-line no-use-before-define
 exports.create = selectionBoxCreate;
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const glov_engine = require('./engine.js');

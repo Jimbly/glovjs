@@ -22,6 +22,7 @@ const PACKET_UNOWNED_BUFFER = 1 << 8;
 
 exports.default_flags = 0;
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const { max } = Math;
 const { isInteger, log2 } = require('./util.js');

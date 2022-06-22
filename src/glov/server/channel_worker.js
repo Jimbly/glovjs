@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+/* eslint-disable import/order */
 require('./must_import.js')('channel_server.js', __filename);
 
 export let cwstats = { msgs: 0, bytes: 0 };

@@ -1,24 +1,22 @@
-//////////////////////////////////////////////////////////////////////////
-// Migration TODO:
-//   parallel running of eslint
-
-const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
 const { asyncEachSeries } = require('glov-async');
-const babel = require('glov-build-babel');
-const appBundle = require('./app-bundle.js');
-const config = require('./config.js');
-const compress = require('./compress.js');
 const gb = require('glov-build');
+const babel = require('glov-build-babel');
 const preresolve = require('glov-build-preresolve');
+const sourcemap = require('glov-build-sourcemap');
+const argv = require('minimist')(process.argv.slice(2));
+const Replacer = require('regexp-sourcemaps');
+
+const appBundle = require('./app-bundle.js');
+const compress = require('./compress.js');
+const config = require('./config.js');
 const eslint = require('./eslint.js');
 const exec = require('./exec.js');
-const fs = require('fs');
-const json5 = require('./json5.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
-const path = require('path');
-const Replacer = require('regexp-sourcemaps');
-const sourcemap = require('glov-build-sourcemap');
+const json5 = require('./json5.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const warnMatch = require('./warn-match.js');

@@ -2,7 +2,8 @@
 
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
 
-import { getAPIPath } from 'glov/client/environments.js';
+/* eslint-disable import/order */
+import { getAPIPath } from 'glov/client/environments';
 
 const { fetch } = require('./fetch.js');
 const { PLATFORM } = require('./client_config.js');

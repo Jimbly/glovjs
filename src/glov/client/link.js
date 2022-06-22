@@ -1,6 +1,7 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+/* eslint-disable import/order */
 const engine = require('./engine.js');
 const camera2d = require('./camera2d.js');
 const in_event = require('./in_event.js');

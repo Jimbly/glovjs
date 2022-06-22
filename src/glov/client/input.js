@@ -4,6 +4,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global navigator */
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');

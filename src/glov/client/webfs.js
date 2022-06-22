@@ -1,3 +1,4 @@
+/* eslint-disable import/order */
 const assert = require('assert');
 const { filewatchOn, filewatchTriggerChange } = require('./filewatch.js');
 const urlhash = require('./urlhash.js');

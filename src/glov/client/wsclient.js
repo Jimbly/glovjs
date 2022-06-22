@@ -2,7 +2,8 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* global WebSocket */
 
-import { getAPIPath, setCurrentEnvironment } from 'glov/client/environments.js';
+/* eslint-disable import/order */
+import { getAPIPath, setCurrentEnvironment } from 'glov/client/environments';
 
 const ack = require('glov/common/ack.js');
 const { ackInitReceiver } = ack;

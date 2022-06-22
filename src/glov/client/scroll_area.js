@@ -5,6 +5,7 @@
 //   implementation that is more focus aware and gamepad friendly, and should
 //   use ui.buttonShared logic.
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');

@@ -1,6 +1,6 @@
-const args = require('minimist')(process.argv.slice(2));
 const fs = require('fs');
 const JSON5 = require('json5');
+const args = require('minimist')(process.argv.slice(2));
 
 function requireVersion(dep, required) {
   let ver;
@@ -8,7 +8,7 @@ function requireVersion(dep, required) {
     ver = process.versions.node;
   } else {
     try {
-      // eslint-disable-next-line global-require
+      // eslint-disable-next-line global-require, import/no-dynamic-require
       ver = require(`${dep}/package.json`).version;
     } catch (e) {
       return `"${dep}": missing`;

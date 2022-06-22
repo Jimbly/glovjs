@@ -1,4 +1,5 @@
 /* eslint global-require:off */
+/* eslint-disable import/order */
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const fs = require('fs');

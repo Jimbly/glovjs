@@ -1,10 +1,10 @@
-const engine = require('glov/client/engine.js');
-const mat4LookAt = require('gl-mat4/lookAt');
-const mat4ScaleRotateTranslate = require('glov/client/mat4ScaleRotateTranslate.js');
-const models = require('glov/client/models.js');
-const { quat, qRotateZ } = require('glov/client/quat.js');
-const textures = require('glov/client/textures.js');
-const { mat4, zaxis, zero_vec } = require('glov/common/vmath.js');
+import * as mat4LookAt from 'gl-mat4/lookAt';
+import * as engine from 'glov/client/engine.js';
+import * as mat4ScaleRotateTranslate from 'glov/client/mat4ScaleRotateTranslate.js';
+import * as models from 'glov/client/models.js';
+import { qRotateZ, quat } from 'glov/client/quat.js';
+import * as textures from 'glov/client/textures.js';
+import { mat4, zaxis, zero_vec } from 'glov/common/vmath.js';
 
 let mat_view = mat4();
 let mat_obj = mat4();

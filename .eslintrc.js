@@ -25,12 +25,14 @@ module.exports = {
   },
   "parser": "@typescript-eslint/parser",
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "import",
   ],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"
+    "plugin:@typescript-eslint/recommended",
+    "plugin:import/typescript",
   ],
   "parserOptions": {
     "ecmaVersion": 2020,
@@ -147,6 +149,23 @@ module.exports = {
       "error",
       "beside"
     ],
+    "import/no-dynamic-require": "error",
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        ["external", "internal"],
+        "parent",
+        "sibling",
+        "index",
+        "object",
+        "type",
+      ],
+      "warnOnUnassignedImports": true,
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": false,
+      }
+    }],
     "indent": [
       "error",
       2,

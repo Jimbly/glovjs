@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off, complexity:off, @typescript-eslint/no-shadow:off */
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');

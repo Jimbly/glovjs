@@ -1,8 +1,8 @@
-import * as urlhash from './urlhash';
 import assert from 'assert';
+import { setAbilityReload } from './client_config';
 import { cmd_parse } from './cmds';
 import { netForceDisconnect } from './net';
-import { setAbilityReload } from './client_config';
+import * as urlhash from './urlhash';
 
 export interface EnvironmentConfig {
   name: string;

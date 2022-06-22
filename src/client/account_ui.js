@@ -3,6 +3,7 @@
 
 export const guest_regex = /^anon\d+$/;
 
+/* eslint import/order:off */
 const assert = require('assert');
 const local_storage = require('glov/client/local_storage.js');
 const glov_font = require('glov/client/font.js');

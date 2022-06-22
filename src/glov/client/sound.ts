@@ -6,17 +6,19 @@ export const FADE_OUT = 1;
 export const FADE_IN = 2;
 export const FADE = FADE_OUT + FADE_IN;
 
-const assert = require('assert');
-import { callEach, defaults, ridx } from 'glov/common/util.js';
-import { ErrorCallback } from 'glov/common/types.js';
-import { cmd_parse } from './cmds.js';
-import { fbInstantOnPause } from './fbinstant.js';
-import { filewatchOn } from './filewatch.js';
-import { is_firefox } from './browser.js';
+import assert from 'assert';
+import { ErrorCallback } from 'glov/common/types';
+import { callEach, defaults, ridx } from 'glov/common/util';
+import { is_firefox } from './browser';
+import { cmd_parse } from './cmds';
+import { fbInstantOnPause } from './fbinstant';
+import { filewatchOn } from './filewatch';
+import * as urlhash from './urlhash';
+
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
+// TODO: Replace with "import * as settings" and replace settings.x with settings.get('x')
+const settings = require('./settings');
 const { abs, floor, max, min, random } = Math;
-const settings = require('./settings.js');
-const urlhash = require('./urlhash.js');
 
 const DEFAULT_FADE_RATE = 0.001;
 

@@ -1,27 +1,28 @@
 /*eslint global-require:off*/
-const local_storage = require('glov/client/local_storage.js');
+// eslint-disable-next-line import/order
+import * as local_storage from 'glov/client/local_storage.js';
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
-const { createAccountUI } = require('./account_ui.js');
-const assert = require('assert');
-const { cmd_parse } = require('glov/client/cmds.js');
-const engine = require('glov/client/engine.js');
-const glov_font = require('glov/client/font.js');
-const { socialInit } = require('glov/client/social.js');
-const input = require('glov/client/input.js');
+import * as assert from 'assert';
+import { cmd_parse } from 'glov/client/cmds.js';
+import * as engine from 'glov/client/engine.js';
+import * as glov_font from 'glov/client/font.js';
+import * as input from 'glov/client/input.js';
 const { atan2, random } = Math;
-const net = require('glov/client/net.js');
-const net_position_manager = require('glov/client/net_position_manager.js');
-const particles = require('glov/client/particles.js');
-const shaders = require('glov/client/shaders.js');
-const { soundLoad, soundPlay } = require('glov/client/sound.js');
-const glov_sprites = require('glov/client/sprites.js');
-const sprite_animation = require('glov/client/sprite_animation.js');
-const ui = require('glov/client/ui.js');
-const { toNumber } = require('glov/common/util.js');
+import * as net from 'glov/client/net.js';
+import * as net_position_manager from 'glov/client/net_position_manager.js';
+import * as particles from 'glov/client/particles.js';
+import * as shaders from 'glov/client/shaders.js';
+import { socialInit } from 'glov/client/social.js';
+import { soundLoad, soundPlay } from 'glov/client/sound.js';
+import * as sprite_animation from 'glov/client/sprite_animation.js';
+import * as glov_sprites from 'glov/client/sprites.js';
+import * as ui from 'glov/client/ui.js';
+import { toNumber } from 'glov/common/util.js';
 
-const particle_data = require('./particle_data.js');
-const { vec2, vec3, v2sub, vec4, v4copy } = require('glov/common/vmath.js');
+import { v2sub, v4copy, vec2, vec3, vec4 } from 'glov/common/vmath.js';
+import { createAccountUI } from './account_ui.js';
+import * as particle_data from './particle_data.js';
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;

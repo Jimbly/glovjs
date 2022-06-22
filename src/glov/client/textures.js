@@ -5,6 +5,7 @@
 // eslint-disable-next-line no-use-before-define
 exports.textureLoad = load;
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const engine = require('./engine.js');
 const { filewatchOn } = require('./filewatch.js');

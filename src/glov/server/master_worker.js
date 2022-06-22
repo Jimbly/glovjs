@@ -2,6 +2,7 @@ export let LOAD_ESTIMATE = {
   def: 10, // 1% CPU
 };
 
+/* eslint-disable import/order */
 import {
   VersionSupport,
   getFallbackEnvironment,
@@ -11,7 +12,7 @@ import {
   setFallbackEnvironments,
   setLatestVersions,
 } from './version_management';
-import { getPlatformValues, isValidPlatform } from 'glov/common/enums.js';
+import { getPlatformValues, isValidPlatform } from 'glov/common/enums';
 
 const assert = require('assert');
 const { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } = require('./channel_server.js');

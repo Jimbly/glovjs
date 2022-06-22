@@ -7,6 +7,7 @@ export let ds_stats = {
   inflight_set: 0,
 };
 
+/* eslint-disable import/order */
 const assert = require('assert');
 const fs = require('fs');
 const FileStore = require('fs-store').FileStore;

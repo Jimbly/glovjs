@@ -7,28 +7,29 @@
  * Note: Requires a Spine license to use in any product.
  */
 
-const assert = require('assert');
-const {
-  BLEND_ALPHA,
+import * as assert from 'assert';
+import {
   BLEND_ADDITIVE,
-  spriteDataAlloc,
+  BLEND_ALPHA,
   queueSpriteData,
-} = require('glov/client/sprites.js');
-const { textureLoad } = require('./textures.js');
-const { webFSGetFile } = require('./webfs.js');
+  spriteDataAlloc,
+} from 'glov/client/sprites.js';
 
-const { AnimationState } = require('spine-core/AnimationState');
-const { AnimationStateData } = require('spine-core/AnimationStateData');
-const { AtlasAttachmentLoader } = require('spine-core/AtlasAttachmentLoader');
-const { BlendMode } = require('spine-core/SlotData');
-const { ClippingAttachment } = require('spine-core/ClippingAttachment');
-const { MeshAttachment } = require('spine-core/MeshAttachment');
-const { RegionAttachment } = require('spine-core/RegionAttachment');
-const { Skeleton } = require('spine-core/Skeleton');
-const { SkeletonBinary } = require('spine-core/SkeletonBinary');
-// const { SkeletonJson } = require('spine-core/SkeletonJson');
-const { TextureAtlas } = require('spine-core/TextureAtlas');
-const { Color, Vector2 } = require('spine-core/Utils');
+import { AnimationState } from 'spine-core/AnimationState';
+import { AnimationStateData } from 'spine-core/AnimationStateData';
+import { AtlasAttachmentLoader } from 'spine-core/AtlasAttachmentLoader';
+import { ClippingAttachment } from 'spine-core/ClippingAttachment';
+import { MeshAttachment } from 'spine-core/MeshAttachment';
+import { RegionAttachment } from 'spine-core/RegionAttachment';
+import { Skeleton } from 'spine-core/Skeleton';
+import { SkeletonBinary } from 'spine-core/SkeletonBinary';
+// import { SkeletonJson } from 'spine-core/SkeletonJson';
+import { BlendMode } from 'spine-core/SlotData';
+import { TextureAtlas } from 'spine-core/TextureAtlas';
+import { Color, Vector2 } from 'spine-core/Utils';
+
+import { textureLoad } from './textures.js';
+import { webFSGetFile } from './webfs.js';
 
 function SpineTexture(texture) {
   this.texture = texture;

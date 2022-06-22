@@ -1,6 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+/* eslint-disable import/order */
 const { serverConfig } = require('./server_config.js');
 const querystring = require('querystring');
 const url = require('url');
