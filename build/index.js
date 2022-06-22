@@ -24,6 +24,9 @@ const webfs = require('./webfs_build.js');
 
 require('./checks.js')(__filename);
 
+// Suppress nonsensical warning from `caniuse-lite` that shows up even when targeting Node
+process.env.BROWSERSLIST_IGNORE_OLD_DATA = 1;
+
 const targets = {
   dev: path.join(__dirname, '../dist/game/build.dev'),
   prod: path.join(__dirname, '../dist/game/build.prod'),
