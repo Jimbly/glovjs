@@ -205,6 +205,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
           help.push(`  example: /${cmd} ${param.range ?
             cur_value === param.range[0] ? param.range[1] : param.range[0] : 1}`);
         }
+        let def_value = param.default_value;
+        if (def_value !== undefined) {
+          help.push(`Default value = ${def_value}${is_bool ? ` (${def_value ? 'Enabled' : 'Disabled'})`: ''}`);
+        }
         help.push(`Current value = ${cur_value}${is_bool ? ` (${cur_value ? 'Enabled' : 'Disabled'})`: ''}`);
         return resp_func(null, help.join('\n'));
       } else if (param.get) {

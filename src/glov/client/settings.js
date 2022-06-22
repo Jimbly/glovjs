@@ -85,6 +85,7 @@ export function register(defs) {
       on_change: def.on_change,
       access_run: def.access_run,
       access_show: def.access_show,
+      default_value: def.default_value,
     });
   });
 }
