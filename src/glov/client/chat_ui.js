@@ -866,7 +866,7 @@ ChatUI.prototype.run = function (opts) {
     // Draw the actual text
     ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, self.indent, font_height, line);
 
-    if (mouseover && (!do_scroll_area || y > self.scroll_area.scroll_pos - font_height) &&
+    if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
       // Only show tooltip for user messages or links
       (!msg.style || msg.style === 'def' || is_url)
     ) {
@@ -925,7 +925,7 @@ ChatUI.prototype.run = function (opts) {
     let y_save = y;
     x = clip_offs;
     y = 0;
-    let y_min = this.scroll_area.scroll_pos;
+    let y_min = this.scroll_area.getScrollPos();
     let y_max = y_min + scroll_external_h;
     for (let ii = 0; ii < this.msgs.length; ++ii) {
       let msg = this.msgs[ii];

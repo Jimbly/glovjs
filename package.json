@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.10.2",
-    "@babel/preset-env": "^7.10.2",
+    "@babel/preset-env": "7.15.6",
     "@babel/preset-typescript": "^7.17.12",
     "@jimbly/babel-plugin-transform-modules-simple-commonjs": "0.0.3",
     "@jimbly/howler": "0.0.8",

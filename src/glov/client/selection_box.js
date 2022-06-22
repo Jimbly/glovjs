@@ -532,7 +532,7 @@ class GlovSelectionBox {
           w: width,
           h: scroll_height,
         });
-        scroll_pos = this.sa.scroll_pos + this.sa.overscroll;
+        scroll_pos = this.sa.getScrollPos();
         y = 0;
         x = 0;
         eff_width = width - this.sa.barWidth();
