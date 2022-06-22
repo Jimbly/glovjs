@@ -984,6 +984,18 @@ export class ChannelServer {
     this.last_tick_time = Date.now() - now;
   }
 
+  /*
+    options: {
+      autocreate: if true, workers will be created whenever a message is attempted to be delivered
+      subid_regex: for validating if a message can even potentially be sent to a given channel
+      cmds: array of cmd_parse definitions
+      handlers: map of message to handler functions (invoked with the worker as `this`)
+        these handlers are only called in response to server->server messages
+      client_handlers: like `handlers`, but allow direct client->server messages
+      filters: map of message to a function that is called before passing a message off to it's handler function
+        useful for low-level messages that are handled internally ("apply_channel_data")
+    }
+   */
   registerChannelWorker(channel_type, ctor, options) {
     options = options || {};
     assert(!this.channel_types[channel_type]);
