@@ -535,7 +535,7 @@ export function setViewport(xywh) {
 let frames_requested = 0;
 function requestFrame(user_time) {
   let max_fps = settings.max_fps;
-  let desired_frames = (max_fps >= 1000) ? 10 : 1;
+  let desired_frames = (max_fps >= 250) ? 10 : 1;
   if (frames_requested >= desired_frames) {
     return;
   }
