@@ -260,6 +260,7 @@ gb.task({
     compress: false,
     keep_fnames: true,
     mangle: false,
+    output: { semicolons: false },
   }),
 });
 
