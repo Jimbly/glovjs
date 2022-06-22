@@ -118,6 +118,11 @@ function onSetChannelData(client, pak, resp_func) {
 
   if (!client_channel.isSubscribedTo(channel_id)) {
     pak.pool();
+    if (client_channel.recentlyForceUnsubbed(channel_id)) {
+      // Silently ignore, client will assert on this but we were forcibly kicked from
+      //   this channel, so it's not a client bug.
+      return void resp_func();
+    }
     return void resp_func(`Client is not on channel ${channel_id}`);
   }
 
@@ -192,8 +197,15 @@ function onChannelMsg(client, data, resp_func) {
         payload.pool();
       }
       if (!resp_func.expecting_response) {
-        client.logCtx('warn', `Unhandled error "Client is not on channel ${channel_id}" sent to client in response to ${
-          msg} ${is_packet ? '(pak)' : logdata(payload)}`);
+        if (client_channel.recentlyForceUnsubbed(channel_id)) {
+          // Silently ignore, client will assert on this but we were forcibly kicked from
+          //   this channel, so it's not a client bug.
+          return void resp_func();
+        } else {
+          client.logCtx('warn', 'Unhandled error "Client is not on channel' +
+            ` ${channel_id}" sent to client in response to ${msg}`+
+            ` ${is_packet ? '(pak)' : logdata(payload)}`);
+        }
       }
       return void resp_func(`Client is not on channel ${channel_id}`);
     }

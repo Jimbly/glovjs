@@ -482,7 +482,8 @@ export class ChannelWorker {
   }
   unsubscribeOther(other_channel_id) {
     // Note: subscribe count will already be 0 if we called .subscribeOther and
-    // it failed, and then we're trying to clean up.
+    // it failed, and then we're trying to clean up.  Also: unreliable client
+    // initiated request, such as after a force_unsub message, or a bug/timing issue.
     assert(this.channel_type === 'client' || this.subscribe_counts[other_channel_id] || this.had_subscribe_error);
     if (!this.subscribe_counts[other_channel_id]) {
       this.log(`->${other_channel_id}: unsubscribe - failed: not subscribed`);
