@@ -596,10 +596,10 @@ ChatUI.prototype.sendChat = function (flags, text) {
           });
         } else {
           this.addChatError(err);
+          if (!this.edit_text_entry.getText()) {
+            this.edit_text_entry.setText(text);
+          }
         }
-        // if (!this.edit_text_entry.getText()) {
-        //   this.edit_text_entry.setText(text);
-        // }
       }
     });
   }
