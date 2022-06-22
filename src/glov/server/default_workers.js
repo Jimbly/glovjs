@@ -587,7 +587,7 @@ export class DefaultUserWorker extends ChannelWorker {
     return null;
   }
 
-  handleNewClient(src) {
+  handleNewClient(src, opts) {
     if (this.rich_presence && src.type === 'client' && this.presence_data) {
       if (this.getFriend(src.user_id)?.status !== FriendStatus.Blocked) {
         this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
@@ -596,6 +596,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (src.type === 'client' && src.user_id === this.user_id) {
       this.my_clients[src.channel_id] = true;
     }
+    return null;
   }
   updatePresence() {
     let clients = this.data.public.clients || {};
