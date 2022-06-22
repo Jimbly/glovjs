@@ -14,6 +14,7 @@ const textures = require('./textures.js');
 const glov_ui = require('./ui.js');
 const { easeOut } = require('glov/common/util.js');
 const { unit_vec, vec4 } = require('glov/common/vmath.js');
+const verify = require('glov/common/verify.js');
 
 let transitions = [];
 
@@ -78,8 +79,7 @@ export function queue(z, fn) {
     let trans = transitions[ii];
     if (trans.z === z) {
       // same Z
-      assert(trans.capture);
-      if (!trans.capture) {
+      if (!verify(trans.capture)) {
         // two transitions at the same Z on one frame!  ignore second
         return false;
       }
