@@ -1,4 +1,4 @@
-declare module 'glov-global' {
+declare module 'glov/client/global' {
   global {
     interface Window {
       // GLOV injected variables

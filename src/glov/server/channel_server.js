@@ -381,7 +381,8 @@ function osFreeMem(cb) {
   });
 }
 
-class ChannelServer {
+export class ChannelServer {
+  // TODO: When migrating this class to typescript, the constructor should be made private or protected, not public
   constructor() {
     this.channel_types = {};
     this.local_channels = {};
