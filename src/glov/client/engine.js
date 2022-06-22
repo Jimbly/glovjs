@@ -48,6 +48,7 @@ const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
+const { spotEndInput } = require('./spot.js');
 const sprites = require('./sprites.js');
 const { blendModeReset } = sprites;
 const textures = require('./textures.js');
@@ -858,6 +859,7 @@ function tick(timestamp) {
   }
 
   profilerStopStart('bottom');
+  spotEndInput();
   glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
 
   if (had_3d_this_frame) {

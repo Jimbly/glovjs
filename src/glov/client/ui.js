@@ -37,8 +37,21 @@ const { getStringFromLocalizable } = require('./localization.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { soundLoad, soundPlay } = require('./sound.js');
+const {
+  SPOT_DEFAULT_BUTTON,
+  SPOT_DEFAULT_BUTTON_DRAW_ONLY,
+  SPOT_DEFAULT_LABEL,
+  SPOT_STATE_REGULAR,
+  SPOT_STATE_DOWN,
+  SPOT_STATE_FOCUSED,
+  SPOT_STATE_DISABLED,
+  spot,
+  spotEndOfFrame,
+  spotPadMode,
+  spotTopOfFrame,
+} = require('./spot.js');
 const glov_sprites = require('./sprites.js');
-const { clipped, clipPause, clipResume } = glov_sprites;
+const { clipped, clipPause, clipResume, BLEND_PREMULALPHA } = glov_sprites;
 const textures = require('./textures.js');
 const { clamp, clone, defaults, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -177,12 +190,13 @@ export let tooltip_panel_pixel_scale = panel_pixel_scale;
 export let tooltip_width = 400;
 export let tooltip_pad = 8;
 
-export let font_style_focused = glov_font.style(null, {
-  color: 0x000000ff,
-  outline_width: 2,
-  outline_color: 0xFFFFFFff,
-});
+// export let font_style_focused = glov_font.style(null, {
+//   color: 0x000000ff,
+//   outline_width: 2,
+//   outline_color: 0xFFFFFFff,
+// });
 export let font_style_normal = glov_font.styleColored(null, 0x000000ff);
+export let font_style_focused = glov_font.style(font_style_normal, {});
 
 export let font;
 export let title_font;
@@ -196,7 +210,6 @@ let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
 export let button_click = null; // on click, for callers to poll which mouse button, etc
-export let touch_changed_focus = false; // did a touch even this frame change focus?
 // For tracking global mouseover state
 let last_frame_button_mouseover = false;
 let frame_button_mouseover = false;
@@ -222,8 +235,8 @@ let focused_key;
 let focused_key_prev1;
 let focused_key_prev2;
 
-let pad_focus_left;
-let pad_focus_right;
+// let pad_focus_left;
+// let pad_focus_right;
 
 let default_line_mode;
 
@@ -282,6 +295,7 @@ export function loadUISprite2(name, param) {
     hs: param.hs,
     wrap_s,
     wrap_t,
+    layers: param.layers,
   };
   if (param.url) {
     sprite_param.url = param.url;
@@ -369,13 +383,13 @@ export function startup(param) {
   let overrides = param.ui_sprites;
   KEYS = glov_input.KEYS;
   PAD = glov_input.PAD;
-  if (param.pad_focus_dpad) {
-    pad_focus_left = PAD.LEFT;
-    pad_focus_right = PAD.RIGHT;
-  } else {
-    pad_focus_left = PAD.LEFT_BUMPER;
-    pad_focus_right = PAD.RIGHT_BUMPER;
-  }
+  // if (param.pad_focus_dpad) {
+  //   pad_focus_left = PAD.LEFT;
+  //   pad_focus_right = PAD.RIGHT;
+  // } else {
+  //   pad_focus_left = PAD.LEFT_BUMPER;
+  //   pad_focus_right = PAD.RIGHT_BUMPER;
+  // }
 
   let ui_sprites = {
     ...base_ui_sprites,
@@ -703,21 +717,21 @@ export function focusCheck(key) {
   // Returns true even if focusing previous element, since for this frame, we are still effectively focused!
   let focused = isFocused(key);
   if (focused) {
-    if (glov_input.keyDownEdge(KEYS.TAB)) {
-      if (glov_input.keyDown(KEYS.SHIFT)) {
-        focusPrev(key);
-      } else {
-        focusNext(key);
-        focused = false;
-      }
-    }
-    if (glov_input.padButtonDownEdge(pad_focus_right)) {
-      focusNext(key);
-      focused = false;
-    }
-    if (glov_input.padButtonDownEdge(pad_focus_left)) {
-      focusPrev(key);
-    }
+    // if (glov_input.keyDownEdge(KEYS.TAB)) {
+    //   if (glov_input.keyDown(KEYS.SHIFT)) {
+    //     focusPrev(key);
+    //   } else {
+    //     focusNext(key);
+    //     focused = false;
+    //   }
+    // }
+    // if (glov_input.padButtonDownEdge(pad_focus_right)) {
+    //   focusNext(key);
+    //   focused = false;
+    // }
+    // if (glov_input.padButtonDownEdge(pad_focus_left)) {
+    //   focusPrev(key);
+    // }
   }
   return focused;
 }
@@ -782,6 +796,7 @@ export function drawTooltip(param) {
     w: eff_tooltip_w,
     h: y - tooltip_y0,
     pixel_scale,
+    no_obscure_spots: true,
   });
   if (clip_pause) {
     clipResume();
@@ -822,103 +837,85 @@ export function progressBar(param) {
     no_min_width: true,
   }, sprites.progress_bar, param.color || unit_vec);
   if (param.tooltip) {
-    if (glov_input.mouseOver(param)) {
-      drawTooltipBox(param);
-    }
+    spot({
+      x: param.x, y: param.y,
+      w: param.w, h: param.h,
+      tooltip: param.tooltip,
+      def: SPOT_DEFAULT_LABEL,
+    });
   }
 }
+
+// TODO: refactor so callers all use the new states 'focused'
+const SPOT_STATE_TO_UI_BUTTON_STATE = {
+  [SPOT_STATE_REGULAR]: 'regular',
+  [SPOT_STATE_DOWN]: 'down',
+  [SPOT_STATE_FOCUSED]: 'rollover',
+  [SPOT_STATE_DISABLED]: 'disabled',
+};
+
+const UISPOT_BUTTON_DISABLED = {
+  ...SPOT_DEFAULT_BUTTON,
+  disabled: true,
+  disabled_focusable: false,
+  sound_rollover: null,
+};
+
 
 export function buttonShared(param) {
   param.z = param.z || Z.UI;
-  let state = 'regular';
-  let ret = false;
-  let key = param.key || `${focus_parent_id}_${param.x}_${param.y}`;
-  let rollover_quiet = param.rollover_quiet;
-  button_mouseover = false;
-  if (param.draw_only) {
-    if (param.draw_only_mouseover && (!param.disabled || param.disabled_mouseover)) {
-      if (glov_input.mouseOver(param)) {
-        setMouseOver(key, rollover_quiet);
-      }
-      if (button_mouseover && param.tooltip) {
-        drawTooltipBox(param);
-      }
-    }
-    return { ret, state };
+  if (param.rollover_quiet) {
+    param.sound_rollover = null;
   }
-  let focused = !param.disabled && !param.no_focus && focusCheck(key);
-  let key_opts = param.in_event_cb ? { in_event_cb: param.in_event_cb } : null;
-  if (param.disabled) {
-    if (glov_input.mouseOver(param)) { // Still eat mouse events
-      if (param.disabled_mouseover) {
-        setMouseOver(key, rollover_quiet);
-      }
-    }
-    state = 'disabled';
-  } else if (param.drag_target && (ret = glov_input.dragDrop(param))) {
-    if (!glov_input.mousePosIsTouch()) {
-      setMouseOver(key, rollover_quiet);
-    }
-    if (!param.no_focus) {
-      focusSteal(key);
-      focused = true;
-    }
-    button_click = { drag: true };
-  } else if ((button_click = glov_input.click(param)) ||
-    param.long_press && (button_click = glov_input.longPress(param))
-  ) {
-    if (param.touch_twice && !focused && glov_input.mousePosIsTouch()) {
-      // Just focus, show tooltip
-      touch_changed_focus = true;
-      setMouseOver(key, rollover_quiet);
+  let spot_ret;
+  if (param.draw_only && !param.draw_only_mouseover) {
+    // no spot() needed
+    spot_ret = { ret: false, state: 'regular', focused: false };
+  } else {
+    if (param.draw_only) {
+      assert(!param.def || param.def === SPOT_DEFAULT_BUTTON_DRAW_ONLY);
+      param.def = SPOT_DEFAULT_BUTTON_DRAW_ONLY;
+    } else if (param.disabled && !param.disabled_focusable) {
+      param.def = param.def || UISPOT_BUTTON_DISABLED;
     } else {
-      ret = true;
-      if (last_frame_button_mouseover === key) {
-        // preserve mouse over if we have it
-        setMouseOver(key, rollover_quiet);
-      }
+      param.def = param.def || SPOT_DEFAULT_BUTTON;
     }
-    if (!param.no_focus) {
-      focusSteal(key);
-      focused = true;
+    if (param.sound) {
+      param.sound_button = param.sound;
     }
-  } else if (param.drag_target && glov_input.dragOver(param)) {
-    // Mouseover even if touch?
-    setMouseOver(key, rollover_quiet);
-    state = glov_input.mouseDown() ? 'down' : 'rollover';
-  } else if (param.drag_over && glov_input.dragOver(param)) {
-    // do nothing
-  } else if (glov_input.mouseOver(param)) {
-    param.do_max_dist = true; // Need to apply the same max_dist logic to mouseDown() as we do for click()
-    state = glov_input.mouseDown(param) ? 'down' : 'rollover';
-    // On touch, only set mouseover if also down
-    if (!glov_input.mousePosIsTouch() || state === 'down') {
-      setMouseOver(key, rollover_quiet);
+    spot_ret = spot(param);
+    spot_ret.state = SPOT_STATE_TO_UI_BUTTON_STATE[spot_ret.spot_state];
+    if (spot_ret.ret) {
+      // TODO: refactor callers to gather this from spot_ret, passes as return from button()/etc
+      button_click = spot_ret;
+      button_click.was_double_click = spot_ret.double_click;
     }
   }
-  button_focused = focused;
-  if (focused) {
-    if (glov_input.keyDownEdge(KEYS.SPACE, key_opts) || glov_input.keyDownEdge(KEYS.RETURN, key_opts) ||
-      glov_input.padButtonDownEdge(PAD.A)
-    ) {
-      button_click = { kb: true };
-      ret = true;
-    }
-  }
-  if (ret) {
-    state = 'down';
-    playUISound(param.sound || 'button_click');
-  }
-  if (button_mouseover && param.tooltip) {
-    drawTooltipBox(param);
-  }
-  param.z += param.z_bias && param.z_bias[state] || 0;
-  checkHooks(param, ret);
-  return { ret, state, focused };
+
+  button_focused = button_mouseover = spot_ret.focused;
+  param.z += param.z_bias && param.z_bias[spot_ret.state] || 0;
+  return spot_ret;
 }
 
 export let button_last_color;
-function buttonBackgroundDraw(param, state) {
+export function buttonBackgroundDraw(param, state) {
+  let colors = param.colors || color_button;
+  let color = button_last_color = param.color || colors[state];
+  if (!param.no_bg) {
+    let base_name = param.base_name || 'button';
+    let sprite_name = `${base_name}_${state}`;
+    let sprite = sprites[sprite_name];
+    // Note: was if (sprite) color = colors.regular for specific-sprite matches
+    if (!sprite) {
+      sprite = sprites[base_name];
+    }
+
+    drawHBox(param, sprite, color);
+  }
+}
+
+export function buttonSpotBackgroundDraw(param, spot_state) {
+  let state = SPOT_STATE_TO_UI_BUTTON_STATE[spot_state];
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
   if (!param.no_bg) {
@@ -956,9 +953,10 @@ export function buttonText(param) {
   param.h = param.h || button_height;
   param.font_height = param.font_height || font_height;
 
-  let { ret, state, focused } = buttonShared(param);
+  let spot_ret = buttonShared(param);
+  let { ret, state, focused } = spot_ret;
   buttonTextDraw(param, state, focused);
-  return ret;
+  return ret ? spot_ret : null;
 }
 
 function buttonImageDraw(param, state, focused) {
@@ -1017,9 +1015,10 @@ export function buttonImage(param) {
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
 
-  let { ret, state, focused } = buttonShared(param);
+  let spot_ret = buttonShared(param);
+  let { ret, state, focused } = spot_ret;
   buttonImageDraw(param, state, focused);
-  return ret;
+  return ret ? spot_ret : null;
 }
 
 export function button(param) {
@@ -1043,7 +1042,8 @@ export function button(param) {
   param.left_align = true; // always left-align images
   param.font_height = param.font_height || font_height;
 
-  let { ret, state, focused } = buttonShared(param);
+  let spot_ret = buttonShared(param);
+  let { ret, state, focused } = spot_ret;
   buttonImageDraw(param, state, focused);
   // Hide some stuff on the second draw
   let saved_no_bg = param.no_bg;
@@ -1057,7 +1057,7 @@ export function button(param) {
   param.no_bg = saved_no_bg;
   param.w = saved_w;
   param.x = saved_x;
-  return ret;
+  return ret ? spot_ret : null;
 }
 
 export function print(style, x, y, z, text) {
@@ -1073,17 +1073,31 @@ export function label(param) {
   assert(isFinite(x));
   assert(isFinite(y));
   assert.equal(typeof text, 'string');
+  if (tooltip) {
+    if (!w) {
+      w = use_font.getStringWidth(style, size, text);
+    }
+    assert(isFinite(w));
+    assert(isFinite(h));
+    let spot_ret = spot({
+      x, y, w, h,
+      tooltip: tooltip,
+      def: SPOT_DEFAULT_LABEL,
+    });
+    if (spot_ret.focused && spotPadMode()) {
+      if (param.style_focused) {
+        style = param.style_focused;
+      } else {
+        // No focused style provided, do a generic glow instead?
+        // eslint-disable-next-line no-use-before-define
+        drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+      }
+    }
+  }
   if (align) {
     use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
   } else {
     use_font.drawSized(style, x, y, z, size, text);
-  }
-  if (tooltip) {
-    assert(isFinite(w));
-    assert(isFinite(h));
-    if (glov_input.mouseOver(param)) {
-      drawTooltipBox(param);
-    }
   }
 }
 
@@ -1483,7 +1497,6 @@ export function tickUI(dt) {
   focused_this_frame = false;
   focused_key_not = null;
   modal_stealing_focus = false;
-  touch_changed_focus = false;
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
   releaseOldUIElemData();
 
@@ -1540,6 +1553,7 @@ export function tickUI(dt) {
     pp_bad_frames = 0;
   }
 
+  spotTopOfFrame();
 
   if (modal_dialog) {
     modalDialogRun();
@@ -1547,6 +1561,8 @@ export function tickUI(dt) {
 }
 
 export function endFrame() {
+  spotEndOfFrame();
+
   if (glov_input.click({
     x: -Infinity, y: -Infinity,
     w: Infinity, h: Infinity,
@@ -1683,7 +1699,7 @@ function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv
   glov_sprites.queueraw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
     tu0, tv0, tu1, tv1,
-    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
+    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend || BLEND_PREMULALPHA);
 }
 
 function drawCircleInternal(sprite, x, y, z, r, spread, tu0, tv0, tu1, tv1, color, blend) {
@@ -1868,7 +1884,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
     x0 + tangx, y0 + tangy,
     z,
     LINE_U1, LINE_V0, LINE_U2, LINE_V1,
-    color, glov_font.font_shaders.font_aa, shader_param);
+    color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
 
   if (mode & (LINE_CAP_ROUND|LINE_CAP_SQUARE)) {
     // round caps (line3) - square caps (line2)
@@ -1881,7 +1897,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       x1 - tangx + nx, y1 - tangy + ny,
       z,
       LINE_U2, LINE_V1, LINE_U3, LINE_V0,
-      color, glov_font.font_shaders.font_aa, shader_param);
+      color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
     glov_sprites.queueraw4(texs,
       x0 - tangx, y0 - tangy,
       x0 + tangx, y0 + tangy,
@@ -1889,7 +1905,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       x0 - tangx - nx, y0 - tangy - ny,
       z,
       LINE_U1, LINE_V1, LINE_U0, LINE_V0,
-      color, glov_font.font_shaders.font_aa, shader_param);
+      color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
   }
 }
 
@@ -1951,7 +1967,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     x1 - tangx*w1, y1 - tangy*w1,
     z,
     0, 0, 1, 1,
-    color, glov_font.font_shaders.font_aa, spreadTechParams(spread));
+    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), BLEND_PREMULALPHA);
 }
 
 export function setFontHeight(_font_height) {

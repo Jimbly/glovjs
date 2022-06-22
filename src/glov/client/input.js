@@ -6,17 +6,6 @@
 
 /* eslint-disable import/order */
 const assert = require('assert');
-const { is_firefox, is_mac_osx } = require('./browser.js');
-const camera2d = require('./camera2d.js');
-const { cmd_parse } = require('./cmds.js');
-const engine = require('./engine.js');
-const in_event = require('./in_event.js');
-const local_storage = require('./local_storage.js');
-const { abs, max, min, sqrt } = Math;
-const pointer_lock = require('./pointer_lock.js');
-const settings = require('./settings.js');
-const { soundResume } = require('./sound.js');
-const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 const UP_EDGE = 0; // only for pads, which use === null as "up"
 const UP = 0; // only for key/mouse
@@ -28,6 +17,9 @@ const TOUCH_AS_MOUSE = true;
 let map_analog_to_dpad = true;
 
 let mouse_log = false;
+
+exports.click = mouseUpEdge; // eslint-disable-line no-use-before-define
+exports.inputClick = mouseUpEdge; // eslint-disable-line no-use-before-define
 
 export const ANY = -2;
 export const POINTERLOCK = -1;
@@ -108,6 +100,19 @@ export const PAD = {
   ANALOG_RIGHT: 23,
 };
 
+const { is_firefox, is_mac_osx } = require('./browser.js');
+const camera2d = require('./camera2d.js');
+const { cmd_parse } = require('./cmds.js');
+const engine = require('./engine.js');
+const in_event = require('./in_event.js');
+const local_storage = require('./local_storage.js');
+const { abs, max, min, sqrt } = Math;
+const pointer_lock = require('./pointer_lock.js');
+const settings = require('./settings.js');
+const { soundResume } = require('./sound.js');
+const { spotMouseverHook } = require('./spot.js');
+const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
+
 let pad_to_touch;
 
 let canvas;
@@ -137,6 +142,14 @@ cmd_parse.registerValue('mouse_log', {
   get: () => mouse_log,
   set: (v) => (mouse_log = v),
 });
+
+export function inputTouchMode() {
+  return touch_mode;
+}
+
+export function inputEatenMouse() {
+  return input_eaten_mouse;
+}
 
 function eventTimestamp(event) {
   if (event && event.timeStamp) {
@@ -580,6 +593,7 @@ function onTouchChange(event) {
     if (!last_touch) {
       last_touch = touches[touch.identifier] = new TouchData(touch_pos, true, 0, event);
       last_touch.down(event, true);
+      mouse_button_had_edge = true;
       in_event.handle('mousedown', touch);
     } else {
       ++old_count;
@@ -608,6 +622,7 @@ function onTouchChange(event) {
         released_ids.push(id);
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         registerMouseUpEdge(touch, eventTimestamp(event));
+        mouse_button_had_edge = true;
         touch.state = UP;
         touch.down_time += timeDelta(event, touch.origin_time);
         touch.release = true;
@@ -994,6 +1009,10 @@ export function mousePos(dst) {
   return dst;
 }
 
+export function mouseDomPos() {
+  return mouse_pos;
+}
+
 export function mouseMoved() {
   return mouse_moved;
 }
@@ -1054,11 +1073,12 @@ export function mouseOverCaptured() {
 }
 
 export function mouseOver(param) {
-  if (mouse_over_captured || pointerLocked() && !(param && param.allow_pointerlock)) {
-    return false;
-  }
   param = param || {};
   let pos_param = mousePosParam(param);
+  spotMouseverHook(pos_param, param);
+  if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
+    return false;
+  }
 
   // eat mouse up/down/drag events
   if (!param.peek && !param.peek_touch) {
@@ -1269,6 +1289,10 @@ export function mouseUpEdge(param) {
     if (!touch_data.up_edge) {
       continue;
     }
+    if (touch_data.long_press_dispatched) {
+      // If this touch has already triggered a long-press, do not additionally trigger a click
+      continue;
+    }
     if (!(button === ANY || button === touch_data.button)) {
       continue;
     }
@@ -1296,7 +1320,6 @@ export function mouseUpEdge(param) {
   }
   return false;
 }
-exports.click = mouseUpEdge;
 
 export function mouseDownEdge(param) {
   param = param || {};

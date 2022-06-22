@@ -12,6 +12,7 @@ const engine = require('./engine.js');
 const input = require('./input.js');
 const { KEYS, PAD } = input;
 const { max, min, round } = Math;
+const { spotSubBegin, spotSubEnd } = require('./spot.js');
 const { clipPush, clipPop } = require('./sprites.js');
 const ui = require('./ui.js');
 const { clamp } = require('glov/common/util.js');
@@ -102,7 +103,7 @@ ScrollArea.prototype.begin = function (params) {
   let { x, y, w, h, z, id } = this;
   verify(!this.began); // Checking mismatched begin/end
   this.began = true;
-  ui.focusIdSet(id);
+  spotSubBegin({ x, y, w, h, key: id });
   // Set up camera and clippers
   clipPush(z + 0.05, x, y, w - this.barWidth(), h);
   let camera_orig_x0 = camera2d.x0();
@@ -168,7 +169,7 @@ ScrollArea.prototype.end = function (h) {
   h = max(h, 1); // prevent math from going awry on height of 0
   assert(this.began); // Checking mismatched begin/end
   this.began = false;
-  ui.focusIdSet(null);
+  spotSubEnd();
   // restore camera and clippers
   camera2d.pop();
   clipPop();

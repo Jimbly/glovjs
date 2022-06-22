@@ -214,6 +214,16 @@ export function setScreen() {
   }
 }
 
+// Sets virtual viewport equal to DOM coordinates, for debugging input events/etc
+export function setDOMMapped() {
+  if (render_width) {
+    set(render_offset_x, render_offset_y_top,
+      screen_width - render_offset_x, screen_height - render_offset_y_top, true);
+  } else {
+    set(0, 0, screen_width / engine.dom_to_canvas_ratio, screen_height / engine.dom_to_canvas_ratio, true);
+  }
+}
+
 export function x0Real() {
   return data[0];
 }

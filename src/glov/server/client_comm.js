@@ -23,10 +23,10 @@ const { isProfane, profanityCommonStartup } = require('glov/common/words/profani
 const metrics = require('./metrics.js');
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const random_names = require('./random_names.js');
-const {
-  appleSignInInit,
-  appleSignInValidateToken,
-} = require('./signin_with_apple_validator.js');
+// const {
+//   appleSignInInit,
+//   appleSignInValidateToken,
+// } = require('./signin_with_apple_validator.js');
 const {
   facebookGetASIDFromLoginDataAsync,
   facebookGetPayloadFromSignedData,
@@ -35,7 +35,7 @@ const {
   facebookUtilsInit,
 } = require('./facebook_utils.js');
 const {
-  ID_PROVIDER_APPLE,
+  // ID_PROVIDER_APPLE,
   ID_PROVIDER_FB_GAMING,
   ID_PROVIDER_FB_INSTANT,
 } = require('glov/common/enums.js');
@@ -667,40 +667,40 @@ function onLoginFacebookGaming(client, data, resp_func) {
   });
 }
 
-function onLoginApple(client, data, resp_func) {
-  const provider = ID_PROVIDER_APPLE;
-  let client_channel = client.client_channel;
-  assert(client_channel);
+// function onLoginApple(client, data, resp_func) {
+//   const provider = ID_PROVIDER_APPLE;
+//   let client_channel = client.client_channel;
+//   assert(client_channel);
 
-  client_channel.logCtx('info', `login_${provider} ${logdata(data)}`);
+//   client_channel.logCtx('info', `login_${provider} ${logdata(data)}`);
 
-  let identity_token = data.loginCredentials.token;
-  let apple_id = data.loginCredentials.userIdentifier;
-  appleSignInValidateToken(client, identity_token, (err, result) => {
-    if (err) {
-      client_channel.logCtx('info', `login_${provider} auth failed`, identity_token, apple_id);
-      return void resp_func('Apple Auth Failed - Invalid token');
-    } else if (!client.connected) {
-      return void resp_func('ERR_DISCONNECTED');
-    }
+//   let identity_token = data.loginCredentials.token;
+//   let apple_id = data.loginCredentials.userIdentifier;
+//   appleSignInValidateToken(client, identity_token, (err, result) => {
+//     if (err) {
+//       client_channel.logCtx('info', `login_${provider} auth failed`, identity_token, apple_id);
+//       return void resp_func('Apple Auth Failed - Invalid token');
+//     } else if (!client.connected) {
+//       return void resp_func('ERR_DISCONNECTED');
+//     }
 
-    if (apple_id !== result.sub) {
-      client_channel.logCtx('warn',
-        `login_${provider} auth apple user id from client differs from token (possible spoofing attempt)`,
-        result.sub, apple_id);
-    }
-    getOrCreateMappedUserIdFromProviderId(client_channel, provider, result.sub, (err, user_id) => {
-      if (err) {
-        return void resp_func(err);
-      } else if (!client.connected) {
-        return void resp_func('ERR_DISCONNECTED');
-      }
-      assert(user_id);
-      let display_name = data.loginCredentials.user.name;
-      channelServerExternalLoginSend(client, provider, result.sub, user_id, display_name, resp_func);
-    });
-  });
-}
+//     if (apple_id !== result.sub) {
+//       client_channel.logCtx('warn',
+//         `login_${provider} auth apple user id from client differs from token (possible spoofing attempt)`,
+//         result.sub, apple_id);
+//     }
+//     getOrCreateMappedUserIdFromProviderId(client_channel, provider, result.sub, (err, user_id) => {
+//       if (err) {
+//         return void resp_func(err);
+//       } else if (!client.connected) {
+//         return void resp_func('ERR_DISCONNECTED');
+//       }
+//       assert(user_id);
+//       let display_name = data.loginCredentials.user.name;
+//       channelServerExternalLoginSend(client, provider, result.sub, user_id, display_name, resp_func);
+//     });
+//   });
+// }
 
 function onUserCreate(client, data, resp_func) {
   let client_channel = client.client_channel;
@@ -849,7 +849,7 @@ function onCmdParseListClient(client, data, resp_func) {
 
 export function init(channel_server_in) {
   facebookUtilsInit();
-  appleSignInInit();
+  // appleSignInInit();
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'),
     fs.readFileSync(`${__dirname}/../common/words/exceptions.txt`, 'utf8'));
 
@@ -880,7 +880,7 @@ export function init(channel_server_in) {
   ws_server.onMsg('login', onLogin);
   ws_server.onMsg('login_facebook_instant', onLoginFacebookInstant);
   ws_server.onMsg('login_facebook_gaming', onLoginFacebookGaming);
-  ws_server.onMsg('login_apple', onLoginApple);
+  // ws_server.onMsg('login_apple', onLoginApple);
   ws_server.onMsg('user_create', onUserCreate);
   ws_server.onMsg('logout', onLogOut);
   ws_server.onMsg('random_name', onRandomName);
