@@ -131,6 +131,11 @@ export function v2copy(out: Vec2, a: Vec2): Vec2 {
   return out;
 }
 
+export function v2dist(a: Vec2, b: Vec2): number {
+  return sqrt((a[0] - b[0]) * (a[0] - b[0]) +
+    (a[1] - b[1]) * (a[1] - b[1]));
+}
+
 export function v2distSq(a: Vec2, b: Vec2): number {
   return (a[0] - b[0]) * (a[0] - b[0]) +
     (a[1] - b[1]) * (a[1] - b[1]);
