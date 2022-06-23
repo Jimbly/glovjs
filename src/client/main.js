@@ -10,6 +10,7 @@ const { floor, sin } = Math;
 import * as net from 'glov/client/net.js';
 import * as particles from 'glov/client/particles.js';
 import * as settings from 'glov/client/settings.js';
+import { slider } from 'glov/client/slider.js';
 import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/client/sound.js';
 import { spineCreate } from 'glov/client/spine.js';
 import { createSpriteAnimation } from 'glov/client/sprite_animation.js';
@@ -123,7 +124,7 @@ function lineTest() {
   ];
   let widths = [0.5, 1, 1.5, 2, 4];
   let z = Z.UI;
-  line_precise = ui.slider(line_precise, { x: 2, y: 2, min: 0, max: 1 });
+  line_precise = slider(line_precise, { x: 2, y: 2, min: 0, max: 1 });
   for (let widx = 0; widx < widths.length; ++widx) {
     let width = widths[widx];
     let x0 = 10 + widx * (line_len + 4);

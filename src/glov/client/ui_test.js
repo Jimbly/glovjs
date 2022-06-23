@@ -10,6 +10,7 @@ const input = require('./input.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const selection_box = require('./selection_box.js');
 const simple_menu = require('./simple_menu.js');
+const { slider } = require('./slider.js');
 const ui = require('./ui.js');
 
 const { ceil, random } = Math;
@@ -193,7 +194,7 @@ export function run(x, y, z) {
   y += test_select1.run({ x, y, z });
   y += test_select2.run({ x, y, z });
 
-  slider_value = ui.slider(slider_value, {
+  slider_value = slider(slider_value, {
     x, y, z,
     min: 0,
     max: 2,

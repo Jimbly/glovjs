@@ -5,6 +5,8 @@
 window.Z = window.Z || {};
 export const Z = window.Z;
 
+export const Z_MIN_INC = 1e-5;
+
 Z.BORDERS = Z.BORDERS || 90;
 Z.UI = Z.UI || 100;
 Z.MODAL = Z.MODAL || 1000;
@@ -53,9 +55,14 @@ const {
 const glov_sprites = require('./sprites.js');
 const { clipped, clipPause, clipResume, BLEND_PREMULALPHA } = glov_sprites;
 const textures = require('./textures.js');
-const { clamp, clone, defaults, lerp, merge } = require('glov/common/util.js');
+const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v3scale, unit_vec } = require('glov/common/vmath.js');
+
+deprecate(exports, 'slider_dragging', 'slider.js:sliderIsDragging()');
+deprecate(exports, 'slider_rollover', 'slider.js:sliderIsRollover()');
+deprecate(exports, 'setSliderDefaultShrink', 'slider.js:sliderSetDefaultShrink()');
+deprecate(exports, 'slider', 'slider.js:slider()');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;
@@ -74,8 +81,6 @@ export function focuslog(...args) {
 }
 
 let color_set_shades = vec4(1, 1, 1, 1);
-
-const Z_MIN_INC = 1e-5;
 
 let color_sets = [];
 function applyColorSet(color_set) {
@@ -1375,113 +1380,6 @@ export function modalTextEntry(param) {
 
 export function createEditBox(param) {
   return glov_edit_box.create(param);
-}
-
-let slider_default_vshrink = 1.0;
-let slider_default_handle_shrink = 1.0;
-export function setSliderDefaultShrink(vshrink, handle_shrink) {
-  slider_default_vshrink = vshrink;
-  slider_default_handle_shrink = handle_shrink;
-}
-const color_slider_handle = vec4(1,1,1,1);
-const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
-const color_slider_handle_over = vec4(0.75,0.75,0.75,1);
-export let slider_dragging = false; // for caller polling
-export let slider_rollover = false; // for caller polling
-// Returns new value
-export function slider(value, param) {
-  // required params
-  assert(typeof param.x === 'number');
-  assert(typeof param.y === 'number');
-  assert(param.min < param.max); // also must be numbers
-  // optional params
-  param.z = param.z || Z.UI;
-  param.w = param.w || button_width;
-  param.h = param.h || button_height;
-  param.max_dist = param.max_dist || Infinity;
-  let vshrink = param.vshrink || slider_default_vshrink;
-  let handle_shrink = param.handle_shrink || slider_default_handle_shrink;
-  let disabled = param.disabled || false;
-  let handle_h = param.h * handle_shrink;
-  let handle_w = sprites.slider_handle.uidata.wh[0] * handle_h;
-
-  slider_dragging = false;
-
-  let shrinkdiff = handle_shrink - vshrink;
-  drawHBox({
-    x: param.x + param.h * shrinkdiff/2,
-    y: param.y + param.h * (1 - vshrink)/2,
-    z: param.z,
-    w: param.w - param.h * shrinkdiff,
-    h: param.h * vshrink,
-  }, sprites.slider, param.color);
-
-  let xoffs = round(max(sprites.slider.uidata.wh[0] * param.h * vshrink, handle_w) / 2);
-  let draggable_width = param.w - xoffs * 2;
-
-  // Draw notches - would also need to quantize the values below
-  // if (!slider->no_notches) {
-  //   float space_for_notches = width - xoffs * 4;
-  //   int num_notches = max - 1;
-  //   float notch_w = tile_scale * glov_ui_slider_notch->GetTileWidth();
-  //   float notch_h = tile_scale * glov_ui_slider_notch->GetTileHeight();
-  //   float max_notches = space_for_notches / (notch_w + 2);
-  //   int notch_inc = 1;
-  //   if (num_notches > max_notches)
-  //     notch_inc = ceil(num_notches / floor(max_notches));
-
-  //   for (int ii = 1; ii*notch_inc <= num_notches; ii++) {
-  //     float notch_x_mid = x + xoffs + draggable_width * ii * notch_inc / (float)max;
-  //     if (notch_x_mid - notch_w/2 < x + xoffs * 2)
-  //       continue;
-  //     if (notch_x_mid + notch_w/2 > x + width - xoffs * 2)
-  //       continue;
-  //     glov_ui_slider_notch->DrawStretchedColor(notch_x_mid - notch_w / 2, y + yoffs,
-  //       z + 0.25, notch_w, notch_h, 0, color);
-  //   }
-  // }
-
-  // Handle
-  let drag = !disabled && glov_input.drag(param);
-  let grabbed = Boolean(drag);
-  let click = glov_input.click(param);
-  if (click) {
-    grabbed = false;
-    // update pos
-    value = (click.pos[0] - (param.x + xoffs)) / draggable_width;
-    value = param.min + (param.max - param.min) * clamp(value, 0, 1);
-    playUISound('button_click');
-  } else if (grabbed) {
-    // update pos
-    value = (drag.cur_pos[0] - (param.x + xoffs)) / draggable_width;
-    value = param.min + (param.max - param.min) * clamp(value, 0, 1);
-    // Eat all mouseovers while dragging
-    glov_input.mouseOver();
-    slider_dragging = true;
-  }
-  let rollover = !disabled && glov_input.mouseOver(param);
-  slider_rollover = rollover;
-  let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / (param.max - param.min);
-  let handle_x = handle_center_pos - handle_w / 2;
-  let handle_y = param.y + param.h / 2 - handle_h / 2;
-  let handle_color = color_slider_handle;
-  if (grabbed) {
-    handle_color = color_slider_handle_grab;
-  } else if (rollover) {
-    handle_color = color_slider_handle_over;
-  }
-
-  sprites.slider_handle.draw({
-    x: handle_x,
-    y: handle_y,
-    z: param.z + Z_MIN_INC,
-    w: handle_w,
-    h: handle_h,
-    color: handle_color,
-    frame: 0,
-  });
-
-  return value;
 }
 
 let pp_bad_frames = 0;

@@ -434,3 +434,12 @@ export function errorString(e) { // function errorString(e : Error | object | st
   msg = msg.slice(0, 600); // Not too huge
   return msg;
 }
+
+export function deprecate(exports, field, replacement) {
+  Object.defineProperty(exports, field, {
+    get: function () {
+      assert(false, `${field} is deprecated, use ${replacement} instead`);
+      return undefined;
+    }
+  });
+}

@@ -16,6 +16,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
 const selection_box = require('./selection_box.js');
+const { slider, sliderIsDragging, sliderIsRollver } = require('./slider.js');
 const ui = require('./ui.js');
 
 const { KEYS, PAD } = input;
@@ -121,8 +122,8 @@ class GlovSimpleMenu {
     for (let ii = 0; ii < items.length; ii++) {
       let menu_item = items[ii];
       if (menu_item.slider) {
-        // slider.no_notches = true;
-        // slider.sound_release = this.sound_accept;
+        // slider_no_notches = true;
+        // slider_sound_release = this.sound_accept;
         let slider_width = 160;
         let slider_x = x + sel_box.width - slider_width - 4 - display.xpad;
         let color = display.style_default.color_vec4;
@@ -132,7 +133,7 @@ class GlovSimpleMenu {
         if (menu_item.disabled) {
           color = display.style_disabled.color;
         }
-        menu_item.value = ui.slider(menu_item.value, {
+        menu_item.value = slider(menu_item.value, {
           x: slider_x,
           y: y0 + ii * sel_box.entry_height,
           z: z + 3,
@@ -144,7 +145,7 @@ class GlovSimpleMenu {
           min: menu_item.value_min,
           max: menu_item.value_max,
         });
-        if (ui.slider_rollover || ui.slider_dragging) {
+        if (sliderIsRollver() || sliderIsDragging()) {
           // expect our row to be selected
           if (sel_box.selected !== ii) {
             sel_box.selected = ii;
