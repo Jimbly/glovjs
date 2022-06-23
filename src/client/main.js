@@ -262,6 +262,9 @@ export function main() {
     if (flagGet('font_test')) {
       ui_test.runFontTest(105, 20);
     }
+    if (flagGet('lines')) {
+      lineTest();
+    }
 
     test.character.dx = 0;
     test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
@@ -477,10 +480,6 @@ export function main() {
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
       }
-    }
-
-    if (flagGet('lines')) {
-      lineTest();
     }
 
     if (flagGet('perf_test')) {

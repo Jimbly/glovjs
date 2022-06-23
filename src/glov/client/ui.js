@@ -60,7 +60,7 @@ const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v3scale, unit_vec } = require('glov/common/vmath.js');
 
 deprecate(exports, 'slider_dragging', 'slider.js:sliderIsDragging()');
-deprecate(exports, 'slider_rollover', 'slider.js:sliderIsRollover()');
+deprecate(exports, 'slider_rollover', 'slider.js:sliderIsFocused()');
 deprecate(exports, 'setSliderDefaultShrink', 'slider.js:sliderSetDefaultShrink()');
 deprecate(exports, 'slider', 'slider.js:slider()');
 

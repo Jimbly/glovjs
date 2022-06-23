@@ -16,7 +16,7 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
 const selection_box = require('./selection_box.js');
-const { slider, sliderIsDragging, sliderIsRollver } = require('./slider.js');
+const { slider, sliderIsFocused } = require('./slider.js');
 const ui = require('./ui.js');
 
 const { KEYS, PAD } = input;
@@ -145,7 +145,7 @@ class GlovSimpleMenu {
           min: menu_item.value_min,
           max: menu_item.value_max,
         });
-        if (sliderIsRollver() || sliderIsDragging()) {
+        if (sliderIsFocused()) {
           // expect our row to be selected
           if (sel_box.selected !== ii) {
             sel_box.selected = ii;

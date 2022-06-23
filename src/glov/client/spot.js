@@ -1,3 +1,12 @@
+export const SPOT_NAV_NONE = 0;
+export const SPOT_NAV_LEFT = 1;
+export const SPOT_NAV_UP = 2;
+export const SPOT_NAV_RIGHT = 3;
+export const SPOT_NAV_DOWN = 4;
+export const SPOT_NAV_NEXT = 5;
+export const SPOT_NAV_PREV = 6;
+const SPOT_NAV_MAX = 7;
+
 export const SPOT_DEFAULT = {
   key: undefined, // string | undefined (defaults to from x,y otherwise)
   disabled: false, // boolean
@@ -16,6 +25,13 @@ export const SPOT_DEFAULT = {
   disabled_focusable: true, // allow focusing even if disabled (e.g. to show tooltip)
   hotkey: null, // optional keyboard hotkey
   hotpad: null, // optional gamepad button
+  // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
+  // should retain focus even without mouseover)
+  focus_steal: false,
+  // optional map of SPOT_NAV_* to either:
+  //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
+  //   a string key: a custom element to target with navigation
+  custom_nav: null,
 };
 
 export const SPOT_DEFAULT_BUTTON = {
@@ -80,15 +96,6 @@ import {
   focusIdSet,
   playUISound,
 } from './ui.js';
-
-// const SPOT_NAV_NONE = 0;
-const SPOT_NAV_LEFT = 1;
-const SPOT_NAV_UP = 2;
-const SPOT_NAV_RIGHT = 3;
-const SPOT_NAV_DOWN = 4;
-const SPOT_NAV_NEXT = 5;
-const SPOT_NAV_PREV = 6;
-const SPOT_NAV_MAX = 7;
 
 let focus_sub_rect = null;
 let focus_key = null;
@@ -261,7 +268,7 @@ function spotCalcNavTargets() {
   //   we peek at the key/pad state and see that it *might be* pressed this
   //   frame.
   for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
-    focus_next[ii] = null;
+    focus_next[ii] = undefined;
   }
   let start;
   let do_next = false;
@@ -316,6 +323,14 @@ function spotCalcNavTargets() {
         focus_next[ii] = best;
         break;
       }
+    }
+  }
+  if (start) {
+    const def = start.def || SPOT_DEFAULT;
+    const custom_nav = start.custom_nav === undefined ? def.custom_nav : start.custom_nav;
+    for (let key in custom_nav) {
+      let target = custom_nav[key];
+      focus_next[key] = target;
     }
   }
 }
@@ -414,10 +429,14 @@ function keyCheck(nav_dir) {
   return false;
 }
 
-function spotFocusCheckNavButtonsFocused() {
+function spotFocusCheckNavButtonsFocused(param) {
   for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
-    if (focus_next[ii] && keyCheck(ii)) {
-      spotFocusSet(focus_next[ii], false, 'nav_focused');
+    if (focus_next[ii] !== undefined && keyCheck(ii)) {
+      if (focus_next[ii]) {
+        spotFocusSet(focus_next[ii], false, 'nav_focused');
+      } else {
+        param.out.nav = ii;
+      }
     }
   }
 }
@@ -445,9 +464,14 @@ function spotFocusCheck(param) {
     }
     // Otherwise disabled_focusable - allow focusing
   }
+  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
+  if (focus_steal) {
+    // Silently steal (keep) focus
+    focus_key = key;
+  }
   if (focus_key === key) {
     // last_frame_focus_found = true;
-    spotFocusCheckNavButtonsFocused();
+    spotFocusCheckNavButtonsFocused(param);
   } else {
     spotFocusCheckNavButtonsUnfocused(param);
   }
@@ -499,8 +523,10 @@ function spotUnfocus() {
 //   ret: boolean // if `param.button` and was activated
 //   long_press: boolean // if button_long_press and ret and was a long press, set to true
 //   button: number // if ret, set to mouse button used to click it
+//   pos: vec2 // if ret, set to position of the click
 //   double_click: boolean // if ret, set to true if it was a double click
 //   drag: any // if drag_target and a drop happened, contains payload
+//   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
 export function spot(param) {
   const def = param.def || SPOT_DEFAULT;
   const disabled = param.disabled === undefined ? def.disabled : param.disabled;
@@ -511,6 +537,8 @@ export function spot(param) {
   const drag_target = param.drag_target === undefined ? def.drag_target : param.drag_target;
   const drag_over = param.drag_over === undefined ? def.drag_over : param.drag_over;
   const touch_focuses = param.touch_focuses === undefined ? def.touch_focuses : param.touch_focuses;
+  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
+  const custom_nav = param.custom_nav === undefined ? def.custom_nav : param.custom_nav;
 
   let out = param.out;
   if (!out) {
@@ -524,10 +552,12 @@ export function spot(param) {
   if (drag_target) {
     out.drag = null;
   }
-
+  if (custom_nav) {
+    out.nav = SPOT_NAV_NONE;
+  }
 
   let state = SPOT_STATE_REGULAR;
-  let focused = spotFocusCheck(param); // sets allow_focus
+  let focused = spotFocusCheck(param); // sets allow_focus, param.out.nav
   if (disabled) {
     state = SPOT_STATE_DISABLED;
   } else {
@@ -541,6 +571,7 @@ export function spot(param) {
       out.long_press = button_click.long_press;
       out.button = button_click.button;
       out.double_click = button_click.was_double_click;
+      out.pos = button_click.pos;
       if (mousePosIsTouch()) {
         if (touch_focuses) {
           if (!focused) {
@@ -593,7 +624,7 @@ export function spot(param) {
     }
   }
   let is_mouseover = mouseOver(param);
-  if (focused && !is_mouseover && (mouseMoved() || mouseButtonHadEdge())) {
+  if (focused && !focus_steal && !is_mouseover && (mouseMoved() || mouseButtonHadEdge())) {
     focused = false;
     spotUnfocus();
   }
@@ -642,6 +673,8 @@ export function spot(param) {
   if (button_activate) {
     out.ret = true;
     out.button = 0;
+    out.double_click = false;
+    out.pos = null;
   }
 
   out.focused = focused;

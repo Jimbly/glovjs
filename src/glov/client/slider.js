@@ -3,8 +3,23 @@ const { round, max } = Math;
 import { clamp } from 'glov/common/util.js';
 import { vec4 } from 'glov/common/vmath.js';
 import * as input from './input.js';
+import {
+  SPOT_DEFAULT_BUTTON,
+  SPOT_NAV_LEFT,
+  SPOT_NAV_RIGHT,
+  spot,
+} from './spot.js';
 import { Z_MIN_INC, drawHBox, playUISound } from './ui.js';
 import * as ui from './ui.js';
+
+const SPOT_DEFAULT_SLIDER = {
+  ...SPOT_DEFAULT_BUTTON,
+  sound_button: null,
+  custom_nav: {
+    [SPOT_NAV_RIGHT]: null,
+    [SPOT_NAV_LEFT]: null,
+  },
+};
 
 let slider_default_vshrink = 1.0;
 let slider_default_handle_shrink = 1.0;
@@ -15,14 +30,13 @@ export function sliderSetDefaultShrink(vshrink, handle_shrink) {
 const color_slider_handle = vec4(1,1,1,1);
 const color_slider_handle_grab = vec4(0.5,0.5,0.5,1);
 const color_slider_handle_over = vec4(0.75,0.75,0.75,1);
-// TODO: Can we combine these two into sliderIsFocused instead?
 let slider_dragging = false; // for caller polling
-let slider_rollover = false; // for caller polling
+let slider_focused = false; // for caller polling
 export function sliderIsDragging() {
   return slider_dragging;
 }
-export function sliderIsRollver() {
-  return slider_rollover;
+export function sliderIsFocused() {
+  return slider_focused;
 }
 // Returns new value
 export function slider(value, param) {
@@ -35,6 +49,7 @@ export function slider(value, param) {
   param.w = param.w || ui.button_width;
   param.h = param.h || ui.button_height;
   param.max_dist = param.max_dist || Infinity;
+  // below: param.step = param.step || (param.max - param.min)/16;
   let vshrink = param.vshrink || slider_default_vshrink;
   let handle_shrink = param.handle_shrink || slider_default_handle_shrink;
   let disabled = param.disabled || false;
@@ -80,11 +95,17 @@ export function slider(value, param) {
   // Handle
   let drag = !disabled && input.drag(param);
   let grabbed = Boolean(drag);
-  let click = input.click(param);
-  if (click) {
+  param.def = SPOT_DEFAULT_SLIDER;
+  if (grabbed) {
+    param.focus_steal = true;
+  }
+  let spot_ret = spot(param);
+  slider_focused = spot_ret.focused;
+  if (spot_ret.ret && spot_ret.pos) {
+    // was actually clicked (not
     grabbed = false;
     // update pos
-    value = (click.pos[0] - (param.x + xoffs)) / draggable_width;
+    value = (spot_ret.pos[0] - (param.x + xoffs)) / draggable_width;
     value = param.min + (param.max - param.min) * clamp(value, 0, 1);
     playUISound('button_click');
   } else if (grabbed) {
@@ -94,16 +115,24 @@ export function slider(value, param) {
     // Eat all mouseovers while dragging
     input.mouseOver();
     slider_dragging = true;
+    slider_focused = true;
   }
-  let rollover = !disabled && input.mouseOver(param);
-  slider_rollover = rollover;
+  if (spot_ret.nav) {
+    playUISound('button_click');
+    let step = param.step || (param.max - param.min)/16;
+    if (spot_ret.nav === SPOT_NAV_RIGHT) {
+      value = clamp(value + step, param.min, param.max);
+    } else if (spot_ret.nav === SPOT_NAV_LEFT) {
+      value = clamp(value - step, param.min, param.max);
+    }
+  }
   let handle_center_pos = param.x + xoffs + draggable_width * (value - param.min) / (param.max - param.min);
   let handle_x = handle_center_pos - handle_w / 2;
   let handle_y = param.y + param.h / 2 - handle_h / 2;
   let handle_color = color_slider_handle;
   if (grabbed) {
     handle_color = color_slider_handle_grab;
-  } else if (rollover) {
+  } else if (spot_ret.focused) {
     handle_color = color_slider_handle_over;
   }
 
