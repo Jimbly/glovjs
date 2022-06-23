@@ -55,7 +55,7 @@ const { clipped, clipPause, clipResume, BLEND_PREMULALPHA } = glov_sprites;
 const textures = require('./textures.js');
 const { clamp, clone, defaults, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
-const { vec2, vec4, v4scale, unit_vec } = require('glov/common/vmath.js');
+const { vec2, vec4, v3scale, unit_vec } = require('glov/common/vmath.js');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;
@@ -77,20 +77,26 @@ let color_set_shades = vec4(1, 0.8, 0.7, 0.4);
 
 const Z_MIN_INC = 1e-5;
 
+let color_sets = [];
+function applyColorSet(color_set) {
+  v3scale(color_set.regular, color_set.color, color_set_shades[0]);
+  v3scale(color_set.rollover, color_set.color, color_set_shades[1]);
+  v3scale(color_set.down, color_set.color, color_set_shades[2]);
+  v3scale(color_set.disabled, color_set.color, color_set_shades[3]);
+}
 export function makeColorSet(color) {
   let ret = {
+    color,
     regular: vec4(),
     rollover: vec4(),
     down: vec4(),
     disabled: vec4(),
   };
-  v4scale(ret.regular, color, color_set_shades[0]);
-  v4scale(ret.rollover, color, color_set_shades[1]);
-  v4scale(ret.down, color, color_set_shades[2]);
-  v4scale(ret.disabled, color, color_set_shades[3]);
   for (let field in ret) {
     ret[field][3] = color[3];
   }
+  color_sets.push(ret);
+  applyColorSet(ret);
   return ret;
 }
 
@@ -254,7 +260,9 @@ export function colorSetSetShades(rollover, down, disabled) {
   color_set_shades[1] = rollover;
   color_set_shades[2] = down;
   color_set_shades[3] = disabled;
-  color_button = makeColorSet([1,1,1,1]);
+  for (let ii = 0; ii < color_sets.length; ++ii) {
+    applyColorSet(color_sets[ii]);
+  }
 }
 
 export function loadUISprite(name, ws, hs, overrides, only_override) {
