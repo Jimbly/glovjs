@@ -73,7 +73,7 @@ export function focuslog(...args) {
   // console.log(`focuslog(${glov_engine.frame_index}): `, ...args);
 }
 
-let color_set_shades = vec4(1, 0.8, 0.7, 0.4);
+let color_set_shades = vec4(1, 1, 1, 1);
 
 const Z_MIN_INC = 1e-5;
 
@@ -330,6 +330,8 @@ export function setProvideUserStringDefaultMessages(success_msg, failure_msg) {
 }
 
 const base_ui_sprites = {
+  color_set_shades: [1, 1, 1],
+
   white: { url: 'white' },
 
   button: { ws: [8, 112, 8], hs: [128] },
@@ -363,6 +365,8 @@ export const ui_sprites_stone = {
 };
 
 export const ui_sprites_pixely = {
+  color_set_shades: [0.8, 0.7, 0.4],
+
   button: { name: 'pixely/button', ws: [4, 5, 4], hs: [13] },
   button_rollover: null,
   button_down: { name: 'pixely/button_down', ws: [4, 5, 4], hs: [13] },
@@ -406,18 +410,24 @@ export function startup(param) {
 
   for (let key in ui_sprites) {
     let base_elem = base_ui_sprites[key];
-    let override = overrides && overrides[key];
-    loadUISprite2(key, override === undefined ? base_elem : override);
+    if (typeof base_elem === 'object' && !Array.isArray(base_elem)) {
+      let override = overrides && overrides[key];
+      loadUISprite2(key, override === undefined ? base_elem : override);
+    }
   }
   sprites.button_regular = sprites.button;
 
-  if (sprites.button_rollover) {
+  if (ui_sprites.color_set_shades) {
+    colorSetSetShades(...ui_sprites.color_set_shades);
+  }
+
+  if (sprites.button_rollover && color_set_shades[1] !== 1) {
     colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
   }
-  if (sprites.button_down) {
+  if (sprites.button_down && color_set_shades[2] !== 1) {
     colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
   }
-  if (sprites.button_disabled) {
+  if (sprites.button_disabled && color_set_shades[3] !== 1) {
     colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
   }
 
