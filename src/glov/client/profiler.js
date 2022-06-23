@@ -4,6 +4,7 @@
 // Initially derived from libGlov:utilPerf.h/GlovPerf.cpp
 // For good memory profiling, Chrome must be launched with --enable-precise-memory-info
 
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals performance*/
 
 export const HAS_MEMSIZE = Boolean(window.performance && performance.memory && performance.memory.usedJSHeapSize);
