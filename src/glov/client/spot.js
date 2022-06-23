@@ -1,38 +1,3 @@
-import assert from 'assert';
-import * as camera2d from './camera2d.js';
-import * as engine from './engine.js';
-// import { getFrameIndex } from './engine.js';
-import {
-  KEYS,
-  PAD,
-  dragDrop,
-  dragOver,
-  inputClick,
-  inputEatenMouse,
-  inputTouchMode,
-  keyDown,
-  keyDownEdge,
-  longPress,
-  mouseButtonHadEdge,
-  mouseDomPos,
-  mouseDown,
-  mouseDownEdge,
-  mouseMoved,
-  mouseOver,
-  mousePosIsTouch,
-  padButtonDownEdge,
-} from './input.js';
-import * as ui from './ui.js';
-import {
-  checkHooks,
-  drawLine,
-  drawRect,
-  drawTooltipBox,
-  focusIdSet,
-  playUISound,
-} from './ui.js';
-const { abs } = Math;
-
 export const SPOT_DEFAULT = {
   key: undefined, // string | undefined (defaults to from x,y otherwise)
   disabled: false, // boolean
@@ -80,6 +45,41 @@ export const SPOT_STATE_REGULAR = 1;
 export const SPOT_STATE_DOWN = 2;
 export const SPOT_STATE_FOCUSED = 3;
 export const SPOT_STATE_DISABLED = 4;
+
+import assert from 'assert';
+const { abs } = Math;
+import * as camera2d from './camera2d.js';
+import * as engine from './engine.js';
+// import { getFrameIndex } from './engine.js';
+import {
+  KEYS,
+  PAD,
+  dragDrop,
+  dragOver,
+  inputClick,
+  inputEatenMouse,
+  inputTouchMode,
+  keyDown,
+  keyDownEdge,
+  longPress,
+  mouseButtonHadEdge,
+  mouseDomPos,
+  mouseDown,
+  mouseDownEdge,
+  mouseMoved,
+  mouseOver,
+  mousePosIsTouch,
+  padButtonDownEdge,
+} from './input.js';
+import * as ui from './ui.js';
+import {
+  checkHooks,
+  drawLine,
+  drawRect,
+  drawTooltipBox,
+  focusIdSet,
+  playUISound,
+} from './ui.js';
 
 // const SPOT_NAV_NONE = 0;
 const SPOT_NAV_LEFT = 1;
