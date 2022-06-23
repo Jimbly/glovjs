@@ -7,6 +7,8 @@ export const SPOT_NAV_NEXT = 5;
 export const SPOT_NAV_PREV = 6;
 const SPOT_NAV_MAX = 7;
 
+export const BUTTON_ANY = -2; // same as input.ANY
+
 export const SPOT_DEFAULT = {
   key: undefined, // string | undefined (defaults to from x,y otherwise)
   disabled: false, // boolean
@@ -14,7 +16,8 @@ export const SPOT_DEFAULT = {
   in_event_cb: null, // for clicks and key presses
   drag_target: false, // receive dragDrop events
   drag_over: false, // consume dragOver events
-  button: false, // can be activated/clicked/etc
+  button: BUTTON_ANY, // respond to which mouse button
+  is_button: false, // can be activated/clicked/etc
   button_long_press: false, // detect long press differently than a regular click/tap
   pad_focusable: true, // is a target for keyboard/gamepad focus; set to false if only accessible via hotkey/button
   auto_focus: false, // if this spot is new this frame, and doing pad (not mouse/touch) focusing, automatically focus it
@@ -36,7 +39,7 @@ export const SPOT_DEFAULT = {
 
 export const SPOT_DEFAULT_BUTTON = {
   ...SPOT_DEFAULT,
-  button: true,
+  is_button: true,
 };
 
 export const SPOT_DEFAULT_BUTTON_DISABLED = {
@@ -98,6 +101,7 @@ import {
 } from './ui.js';
 
 let focus_sub_rect = null;
+let focus_sub_rect_elem;
 let focus_key = null;
 let focus_pos = { x: 0, y: 0, w: 0, h: 0 };
 let frame_spots = [];
@@ -209,16 +213,21 @@ function spotDebug() {
     let pos = area.dom_pos;
     let color;
     if (area.only_mouseover) {
-      if (!area.debug_ignore) {
+      if (!area.spot_debug_ignore) {
         color = [1,0.5,0, 0.5];
       }
     } else {
-      for (let jj = 0; jj < frame_spots.length; ++jj) {
+      const def = area.def || SPOT_DEFAULT;
+      const pad_focusable = area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable;
+      if (!pad_focusable) {
+        continue;
+      }
+      for (let jj = ii; jj < frame_spots.length; ++jj) {
         if (ii === jj) {
           continue;
         }
         let other = frame_spots[jj];
-        if (other.only_mouseover) {
+        if (other.only_mouseover || (other.pad_focusable ?? other.def?.pad_focusable)) {
           continue;
         }
         let other_pos = other.dom_pos;
@@ -244,7 +253,7 @@ function spotDebug() {
       ui.font.ALIGN.HVCENTERFIT, pos.w, pos.h, area.key_computed || 'unknown');
   }
 
-  if (pad_mode) {
+  if (pad_mode || show_all) {
     for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {
       let next = focus_next[ii];
       if (next) {
@@ -361,6 +370,7 @@ export function spotSubBegin(param) {
   assert(!focus_sub_rect); // no recursive nesting supported yet
   spotKey(param);
   focus_sub_rect = param;
+  focus_sub_rect_elem = null;
   focusIdSet(param.key_computed);
 }
 
@@ -368,6 +378,7 @@ export function spotSubEnd() {
   assert(focus_sub_rect);
   focus_sub_rect = null;
   focusIdSet(null);
+  return focus_sub_rect_elem;
 }
 
 function spotEntirelyObscured(param) {
@@ -403,7 +414,8 @@ export function spotMouseverHook(pos_param, param) {
     pos_param.pad_focusable = false;
     pos_param.no_obscure_spots = param.no_obscure_spots;
     if (engine.defines.SPOT_DEBUG) {
-      pos_param.debug_ignore = param.eat_clicks; // just consuming mouseover, not a button / etc
+      pos_param.spot_debug_ignore = param.eat_clicks || // just consuming mouseover, not a button / etc
+        param.spot_debug_ignore;
     }
     frame_spots.push(pos_param);
   }
@@ -495,6 +507,9 @@ function spotFocusCheck(param) {
         frame_autofocus_spots[key] = param;
       }
     }
+    if (focus_sub_rect && focus_key === key) {
+      focus_sub_rect_elem = param;
+    }
   }
 
   return focused;
@@ -520,7 +535,7 @@ function spotUnfocus() {
 // returns/modifies param.out:
 //   focused : boolean // focused by any means
 //   spot_state: one of SPOT_STATE_*
-//   ret: boolean // if `param.button` and was activated
+//   ret: number // if `param.is_button` and was activated (0/1 or more if clicked multiple times in a frame)
 //   long_press: boolean // if button_long_press and ret and was a long press, set to true
 //   button: number // if ret, set to mouse button used to click it
 //   pos: vec2 // if ret, set to position of the click
@@ -531,7 +546,7 @@ export function spot(param) {
   const def = param.def || SPOT_DEFAULT;
   const disabled = param.disabled === undefined ? def.disabled : param.disabled;
   const tooltip = param.tooltip === undefined ? def.tooltip : param.tooltip;
-  const button = param.button === undefined ? def.button : param.button;
+  const is_button = param.is_button === undefined ? def.is_button : param.is_button;
   const button_long_press = param.button_long_press === undefined ? def.button_long_press : param.button_long_press;
   const in_event_cb = param.in_event_cb === undefined ? def.in_event_cb : param.in_event_cb;
   const drag_target = param.drag_target === undefined ? def.drag_target : param.drag_target;
@@ -545,7 +560,7 @@ export function spot(param) {
     out = param.out = {};
   }
   out.focused = false;
-  out.ret = false;
+  out.ret = 0;
   if (button_long_press) {
     out.long_press = false;
   }
@@ -566,8 +581,9 @@ export function spot(param) {
       spotFocusSet(param, true, 'drag_drop');
       focused = true;
     } else if (button_long_press && (button_click = longPress(param)) ||
-        button && (button_click = inputClick(param))
+        is_button && (button_click = inputClick(param))
     ) {
+      // TODO: change `ret` to be a count of how many clicks/taps happened?
       out.long_press = button_click.long_press;
       out.button = button_click.button;
       out.double_click = button_click.was_double_click;
@@ -582,23 +598,23 @@ export function spot(param) {
             focused = true;
           } else {
             // activate, and also unfocus
-            out.ret = true;
+            out.ret++;
             spotUnfocus();
             focused = false;
           }
         } else {
           // not focusing, would flicker a tooltip for 1 frame
           // also, unfocusing, in case it was focused via long_press_focuses
-          out.ret = true;
+          out.ret++;
           spotUnfocus();
           focused = false;
         }
       } else {
-        out.ret = true;
+        out.ret++;
         spotFocusSet(param, true, 'click');
         focused = true;
       }
-    } else if (!button && touch_focuses && mousePosIsTouch() && inputClick(param)) {
+    } else if (!is_button && touch_focuses && mousePosIsTouch() && inputClick(param)) {
       // Considering this a "pad" focus, not mouse, as it's sticky
       spotFocusSet(param, false, 'touch_focus');
       focused = true;
@@ -635,12 +651,14 @@ export function spot(param) {
       }
     }
   }
-  if (button && mouseDown({
+  if (is_button && mouseDown({
     x: param.x, y: param.y,
     w: param.w, h: param.h,
     do_max_dist: true, // Need to apply the same max_dist logic to mouseDown() as we do for click()
   })) {
-    state = SPOT_STATE_DOWN;
+    if (!disabled) {
+      state = SPOT_STATE_DOWN;
+    }
   }
 
   let button_activate = false;
@@ -648,7 +666,7 @@ export function spot(param) {
     if (state === SPOT_STATE_REGULAR) {
       state = SPOT_STATE_FOCUSED;
     }
-    if (button && !disabled) {
+    if (is_button && !disabled) {
       let key_opts = in_event_cb ? { in_event_cb } : null;
       if (keyDownEdge(KEYS.SPACE, key_opts) || keyDownEdge(KEYS.RETURN, key_opts) || padButtonDownEdge(PAD.A)) {
         button_activate = true;
@@ -671,7 +689,7 @@ export function spot(param) {
     }
   }
   if (button_activate) {
-    out.ret = true;
+    out.ret++;
     out.button = 0;
     out.double_click = false;
     out.pos = null;

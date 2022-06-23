@@ -1,4 +1,4 @@
-// Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
+// Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 // This is ported pretty directly from libGLOV, could really use a fresh
@@ -13,7 +13,14 @@ import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
 import * as input from './input.js';
 import { KEYS, PAD } from './input.js';
-import { spotSubBegin, spotSubEnd } from './spot.js';
+import {
+  SPOT_DEFAULT_BUTTON,
+  SPOT_STATE_DOWN,
+  SPOT_STATE_FOCUSED,
+  spot,
+  spotSubBegin,
+  spotSubEnd,
+} from './spot.js';
 import { clipPop, clipPush } from './sprites.js';
 import * as ui from './ui.js';
 
@@ -81,7 +88,6 @@ interface ScrollAreaOpts {
   rollover_color?: Vec4,
   rollover_color_light?: Vec4,
   disabled_color?: Vec4,
-  background_color_focused?: Vec4 | null,
 }
 
 let temp_pos = vec2();
@@ -98,7 +104,7 @@ export class ScrollArea {
   private pixel_scale = default_pixel_scale;
   private top_pad = true;
   private color = vec4(1,1,1,1);
-  private background_color: Vec4 | null = vec4(0.8, 0.8, 0.8, 1);
+  private background_color: Vec4 | null = vec4(0.4, 0.4, 0.4, 1);
   private auto_scroll = false;
   private auto_hide = false;
   private no_disable = false;
@@ -111,7 +117,6 @@ export class ScrollArea {
   private rollover_color;
   private rollover_color_light;
   private disabled_color;
-  private background_color_focused;
 
   // run-time state
   private scroll_pos = 0;
@@ -123,7 +128,6 @@ export class ScrollArea {
   private began = false;
   private last_internal_h = 0;
   private last_frame = 0;
-  private focused = false;
   private was_disabled = false;
   private scrollbar_visible = false;
   private last_max_value = 0;
@@ -137,9 +141,6 @@ export class ScrollArea {
     // equality is used to detect if this gets used and prevent rollover
     assert(this.rollover_color_light !== this.color);
     this.disabled_color = params.disabled_color || this.rollover_color;
-    this.background_color_focused = params.background_color_focused || (
-      this.background_color ? vec4(0.4, 0.4, 0.4, 1) : null
-    );
   }
 
   applyParams(params?: ScrollAreaOpts): void {
@@ -156,7 +157,8 @@ export class ScrollArea {
   }
 
   isFocused(): boolean {
-    return this.focused;
+    assert(false, 'deprecated?');
+    return false;
   }
 
   isVisible(): boolean {
@@ -206,18 +208,18 @@ export class ScrollArea {
     let modified = false;
     let pad_shift = input.padButtonDown(PAD.RIGHT_TRIGGER) || input.padButtonDown(PAD.LEFT_TRIGGER);
     let value = input.keyDownEdge(KEYS.PAGEDOWN) +
-    (pad_shift ? input.padButtonDownEdge(PAD.DOWN) : 0);
+      (pad_shift ? input.padButtonDownEdge(PAD.DOWN) : 0);
     if (value) {
-    // don't overscroll on pageup/pagedown unless we're already at the end
+      // don't overscroll on pageup/pagedown unless we're already at the end
       this.scroll_pos = min(this.scroll_pos + this.h,
-      this.scroll_pos === this.last_max_value ? Infinity : this.last_max_value);
+        this.scroll_pos === this.last_max_value ? Infinity : this.last_max_value);
       modified = true;
     }
     value = input.keyDownEdge(KEYS.PAGEUP) +
-    (pad_shift ? input.padButtonDownEdge(PAD.UP) : 0);
+      (pad_shift ? input.padButtonDownEdge(PAD.UP) : 0);
     if (value) {
       this.scroll_pos = max(this.scroll_pos - this.h,
-      this.scroll_pos === 0 ? -this.h : 0);
+        this.scroll_pos === 0 ? -this.h : 0);
       modified = true;
     }
 
@@ -232,10 +234,15 @@ export class ScrollArea {
     h = max(h, 1); // prevent math from going awry on height of 0
     assert(this.began); // Checking mismatched begin/end
     this.began = false;
-    spotSubEnd();
+    let focused_sub_elem = spotSubEnd();
     // restore camera and clippers
     camera2d.pop();
     clipPop();
+
+    if (focused_sub_elem) {
+      // assumes the focus'd spot was in the same camera transform, if not, need to adapt to use .dom_pos instead
+      this.scrollIntoFocus(focused_sub_elem.y, focused_sub_elem.y + focused_sub_elem.h + 1, this.h);
+    }
 
     let maxvalue = max(h - this.h+1, 0);
     if (this.scroll_pos >= maxvalue) {
@@ -313,6 +320,8 @@ export class ScrollArea {
     }
     this.was_disabled = disabled;
 
+    let gained_focus = false;
+
     // Handle UI interactions
     if (disabled) {
       trough_color = top_color = bottom_color = handle_color = this.disabled_color;
@@ -332,46 +341,42 @@ export class ScrollArea {
 
       // handle drag of handle
       // before end buttons, as those might be effectively hidden in some UIs
-      let down = input.mouseDownEdge({
+      let handle_rect = {
         x: bar_x0,
         y: handle_screenpos,
         w: bar_w,
         h: handle_pixel_h,
-        button: 0
-      });
+        button: 0,
+        spot_debug_ignore: true,
+      };
+
+      let down = input.mouseDownEdge(handle_rect);
       if (down) {
         this.grabbed_pos = (down.pos[1] - handle_screenpos);
         this.grabbed = true;
         handle_color = rollover_color_light;
       }
       if (this.grabbed) {
-        ui.focusSteal(this);
-      }
-      let up = this.grabbed && input.mouseUpEdge({ button: 0 });
-      if (up) {
-        this.grabbed = false;
-        // update pos
-        let delta = up.pos[1] - (this.y + button_h_nopad) - this.grabbed_pos;
-        this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
-        handle_color = rollover_color_light;
-      }
-      if (this.grabbed && !input.mouseDown({ button: 0 })) {
-        // released but someone else ate it, release anyway!
-        this.grabbed = false;
+        gained_focus = true;
       }
       if (this.grabbed) {
         // update pos
-        input.mousePos(temp_pos);
-        let delta = temp_pos[1] - (this.y + button_h_nopad) - this.grabbed_pos;
-        this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
-        handle_color = rollover_color_light;
+        let up = input.mouseUpEdge({ button: 0 });
+        if (up) {
+          temp_pos[1] = up.pos[1];
+        } else if (!input.mouseDown({ button: 0 })) {
+          // released but someone else ate it, release anyway!
+          this.grabbed = false;
+        } else {
+          input.mousePos(temp_pos);
+        }
+        if (this.grabbed) {
+          let delta = temp_pos[1] - (this.y + button_h_nopad) - this.grabbed_pos;
+          this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
+          handle_color = rollover_color_light;
+        }
       }
-      if (input.mouseOver({
-        x: bar_x0,
-        y: handle_screenpos,
-        w: bar_w,
-        h: handle_pixel_h
-      })) {
+      if (input.mouseOver(handle_rect)) {
         if (handle_color !== rollover_color_light) {
           handle_color = rollover_color;
         }
@@ -383,23 +388,37 @@ export class ScrollArea {
         y: this.y,
         w: bar_w,
         h: button_h,
-        button: 0
+        button: 0,
+        pad_focusable: false,
+        key: `${this.id}_up`,
+        key_computed: undefined,
+        disabled: this.grabbed,
+        disabled_focusable: false,
+        def: SPOT_DEFAULT_BUTTON,
       };
-      while (input.mouseUpEdge(button_param)) {
-        ui.focusSteal(this);
-        top_color = rollover_color;
+      let button_spot_ret = spot(button_param);
+      while (button_spot_ret.ret) {
+        --button_spot_ret.ret;
+        gained_focus = true;
         this.scroll_pos -= this.rate_scroll_click;
       }
-      if (input.mouseOver(button_param)) {
+      if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
+        top_color = rollover_color_light;
+      } else if (button_spot_ret.spot_state === SPOT_STATE_FOCUSED) {
         top_color = rollover_color;
       }
       button_param.y = this.y + this.h - button_h;
-      while (input.mouseUpEdge(button_param)) {
-        ui.focusSteal(this);
-        bottom_color = rollover_color;
+      button_param.key_computed = undefined;
+      button_param.key = `${this.id}_down`;
+      button_spot_ret = spot(button_param);
+      while (button_spot_ret.ret) {
+        --button_spot_ret.ret;
+        gained_focus = true;
         this.scroll_pos += this.rate_scroll_click;
       }
-      if (input.mouseOver(button_param)) {
+      if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
+        bottom_color = rollover_color_light;
+      } else if (button_spot_ret.spot_state === SPOT_STATE_FOCUSED) {
         bottom_color = rollover_color;
       }
 
@@ -409,20 +428,21 @@ export class ScrollArea {
         y: this.y,
         w: bar_w,
         h: this.h,
-        button: 0
+        button: 0,
+        sound_rollover: null,
+        pad_focusable: false,
+        def: SPOT_DEFAULT_BUTTON,
       };
-      let click = input.mouseUpEdge(bar_param);
-      while (click) {
-        ui.focusSteal(this);
-        if (click.pos[1] > handle_screenpos + handle_pixel_h/2) {
+      let bar_spot_ret = spot(bar_param);
+      while (bar_spot_ret.ret) {
+        --bar_spot_ret.ret;
+        gained_focus = true;
+        if (bar_spot_ret.pos[1] > handle_screenpos + handle_pixel_h/2) {
           this.scroll_pos += this.h;
         } else {
           this.scroll_pos -= this.h;
         }
-        click = input.mouseUpEdge(bar_param);
       }
-      // Catch mouse over on trough
-      input.mouseOver(bar_param);
 
       // handle dragging the scroll area background
       let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0, min_dist: this.min_dist });
@@ -442,19 +462,15 @@ export class ScrollArea {
       input.drag({ x: this.x + this.w - bar_w, y: this.y, w: bar_w, h: this.h, button: 0 });
     }
 
-    this.focused = !disabled && ui.focusCheck(this);
-    if (this.focused && this.focusable_elem) {
+    if (gained_focus && this.focusable_elem) {
       this.focusable_elem.focus();
     }
 
     this.last_max_value = maxvalue;
     this.clampScrollPos();
 
-    let bg_color = this.focused || this.focusable_elem && this.focusable_elem.is_focused ?
-      this.background_color_focused :
-      this.background_color;
-    if (bg_color) {
-      ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, bg_color);
+    if (this.background_color) {
+      ui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, this.z, this.background_color);
     }
 
     if (disabled && (auto_hide && auto_hidden || !this.h)) {

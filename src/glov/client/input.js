@@ -110,8 +110,10 @@ const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
-const { spotMouseverHook } = require('./spot.js');
+const { spotMouseverHook, BUTTON_ANY } = require('./spot.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
+
+assert.equal(BUTTON_ANY, ANY);
 
 let pad_to_touch;
 
@@ -540,7 +542,9 @@ function onMouseUp(event) {
 }
 
 function onWheel(event) {
+  let saved = mouse_moved; // don't trigger mouseMoved()
   onMouseMove(event, true);
+  mouse_moved = saved;
   let delta = -event.deltaY || event.wheelDelta || -event.detail;
   wheel_events.push({
     pos: [event.pageX, event.pageY],
@@ -976,10 +980,10 @@ export function endFrame(skip_mouse) {
     }
     wheel_events.length = 0;
     input_eaten_mouse = false;
+    mouse_moved = false;
+    mouse_button_had_edge = false;
   }
   input_eaten_kb = false;
-  mouse_moved = false;
-  mouse_button_had_edge = false;
 }
 
 export function tickInputInactive() {
