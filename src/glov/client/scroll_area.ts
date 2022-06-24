@@ -93,7 +93,7 @@ interface ScrollAreaOpts {
 let temp_pos = vec2();
 let last_scroll_area_id = 0;
 export class ScrollArea {
-  private id = ++last_scroll_area_id;
+  private id = `sa:${++last_scroll_area_id}`;
   private x = 0;
   private y = 0;
   // TODO: figure out why this is causing the error "Property 'UI' does not exist on type 'typeof Z'"
@@ -383,20 +383,22 @@ export class ScrollArea {
       }
 
       // handle clicking on end buttons
-      let button_param = {
+      let button_param_up = {
         x: bar_x0,
         y: this.y,
         w: bar_w,
         h: button_h,
         button: 0,
         pad_focusable: false,
-        key: `${this.id}_up`,
-        key_computed: undefined,
         disabled: this.grabbed,
         disabled_focusable: false,
         def: SPOT_DEFAULT_BUTTON,
       };
-      let button_spot_ret = spot(button_param);
+      let button_param_down = {
+        ...button_param_up,
+        y: this.y + this.h - button_h,
+      };
+      let button_spot_ret = spot(button_param_up);
       while (button_spot_ret.ret) {
         --button_spot_ret.ret;
         gained_focus = true;
@@ -407,10 +409,7 @@ export class ScrollArea {
       } else if (button_spot_ret.spot_state === SPOT_STATE_FOCUSED) {
         top_color = rollover_color;
       }
-      button_param.y = this.y + this.h - button_h;
-      button_param.key_computed = undefined;
-      button_param.key = `${this.id}_down`;
-      button_spot_ret = spot(button_param);
+      button_spot_ret = spot(button_param_down);
       while (button_spot_ret.ret) {
         --button_spot_ret.ret;
         gained_focus = true;

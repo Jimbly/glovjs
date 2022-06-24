@@ -106,6 +106,7 @@ let focus_key = null;
 let focus_pos = { x: 0, y: 0, w: 0, h: 0 };
 let frame_spots = [];
 let focus_next = []; // indexed by SPOT_NAV_*
+let focus_next_via = []; // just for spotDebug
 let frame_autofocus_spots = {};
 let last_frame_autofocus_spots = {};
 // pad_mode: really "non-mouse-mode" - touch triggers this in various situations
@@ -153,13 +154,16 @@ const TARGET_QUAD = 0;
 const TARGET_HALF = 1;
 const TARGET_ALL = 2;
 
-function findBestTarget(nav, dom_pos, targets, precision) {
+function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
   let start_x = dom_pos.x * 2 + dom_pos.w;
   let start_y = dom_pos.y * 2 + dom_pos.h;
   let best = null;
   let bestd = Infinity;
   for (let ii = 0; ii < targets.length; ++ii) {
     let param = targets[ii];
+    if (!filter(param)) {
+      continue;
+    }
     let x = param.dom_pos.x * 2 + param.dom_pos.w;
     let y = param.dom_pos.y * 2 + param.dom_pos.h;
     let dx = x - start_x;
@@ -204,30 +208,31 @@ function findBestTarget(nav, dom_pos, targets, precision) {
 
 const EPSILON = 0.00001;
 let debug_style;
-function spotDebug() {
-  camera2d.push();
-  camera2d.setDOMMapped();
-  let show_all = keyDown(KEYS.SHIFT);
-  for (let ii = 0; ii < frame_spots.length; ++ii) {
-    let area = frame_spots[ii];
+function spotDebugList(show_all, list) {
+  for (let ii = 0; ii < list.length; ++ii) {
+    let area = list[ii];
     let pos = area.dom_pos;
     let color;
+    if (area.spot_debug_ignore) {
+      continue;
+    }
     if (area.only_mouseover) {
-      if (!area.spot_debug_ignore) {
-        color = [1,0.5,0, 0.5];
-      }
+      color = [1,0.5,0, 0.5];
     } else {
       const def = area.def || SPOT_DEFAULT;
       const pad_focusable = area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable;
       if (!pad_focusable) {
         continue;
       }
-      for (let jj = ii; jj < frame_spots.length; ++jj) {
+      for (let jj = ii; jj < list.length; ++jj) {
         if (ii === jj) {
           continue;
         }
-        let other = frame_spots[jj];
-        if (other.only_mouseover || (other.pad_focusable ?? other.def?.pad_focusable)) {
+        let other = list[jj];
+        if (other.sub_rect !== area.sub_rect) {
+          continue;
+        }
+        if (other.only_mouseover || !(other.pad_focusable ?? other.def?.pad_focusable)) {
           continue;
         }
         let other_pos = other.dom_pos;
@@ -252,6 +257,12 @@ function spotDebug() {
     ui.font.drawSizedAligned(debug_style, pos.x, pos.y, Z.DEBUG, 8,
       ui.font.ALIGN.HVCENTERFIT, pos.w, pos.h, area.key_computed || 'unknown');
   }
+}
+function spotDebug() {
+  camera2d.push();
+  camera2d.setDOMMapped();
+  let show_all = keyDown(KEYS.SHIFT);
+  spotDebugList(show_all, frame_spots);
 
   if (pad_mode || show_all) {
     for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {
@@ -259,6 +270,14 @@ function spotDebug() {
       if (next) {
         let pos = focus_pos;
         next = next.dom_pos;
+        let via = focus_next_via[ii];
+        if (via) {
+          pos = via.dom_pos;
+          drawLine(pos.x + pos.w/2, pos.y + pos.h/2, next.x + next.w/2, next.y+next.h/2,
+            Z.DEBUG, 1, 0.95, [1, 0.5, 0, 1]);
+          pos = focus_pos;
+          next = via.dom_pos;
+        }
         drawLine(pos.x + pos.w/2, pos.y + pos.h/2, next.x + next.w/2, next.y+next.h/2,
           Z.DEBUG, 1, 0.95, [1, 1, 0, 1]);
       }
@@ -266,6 +285,58 @@ function spotDebug() {
   }
 
   camera2d.pop();
+}
+
+let filter_sub_rect;
+let filter_not;
+function filterMatchesSubrect(param) {
+  return param !== filter_not && param.sub_rect === filter_sub_rect;
+}
+
+function overlaps(r1, r2) {
+  return r1.x + r1.w > r2.x && r1.x < r2.x + r2.w &&
+    r1.y + r1.h > r2.y && r1.y < r2.y + r2.h;
+}
+function contains(outer, inner) {
+  return inner.x >= outer.x && inner.x + inner.w <= outer.x + outer.w &&
+    inner.y >= outer.y && inner.y + inner.h <= outer.y + outer.h;
+}
+
+function filterInSubrectView(param) {
+  if (param.sub_rect !== filter_sub_rect) {
+    return false;
+  }
+  return overlaps(param.dom_pos, filter_sub_rect.dom_pos);
+}
+
+const SUBRECT_FILTERS = [filterInSubrectView, filterMatchesSubrect];
+function findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision_max) {
+  // we hit a sub rect, find the best target inside it, first trying all
+  //   in view (all precision), then all out of view
+  filter_sub_rect = best;
+  for (let jj = 0; jj < SUBRECT_FILTERS.length; ++jj) {
+    let filter = SUBRECT_FILTERS[jj];
+    for (let precision = 0; precision <= precision_max; ++precision) {
+      let best_inside = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filter);
+      if (best_inside) {
+        return best_inside;
+      }
+    }
+  }
+  return null;
+}
+
+function findBestTargetFromSubRect(start_sub_rect, nav, dom_pos, pad_focusable_list, precision) {
+  // Go to the one in the appropriate quadrant which has the smallest Manhattan distance
+  filter_sub_rect = start_sub_rect;
+  let best = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filterMatchesSubrect);
+  if (best) {
+    if (best.is_sub_rect) {
+      focus_next_via[nav] = best;
+      best = findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision);
+    }
+  }
+  return best;
 }
 
 function spotCalcNavTargets() {
@@ -278,68 +349,116 @@ function spotCalcNavTargets() {
   //   frame.
   for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
     focus_next[ii] = undefined;
+    focus_next_via[ii] = undefined;
   }
   let start;
-  let do_next = false;
   let pad_focusable_list = [];
+  let prev;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let param = frame_spots[ii];
-    if (param.key_computed === focus_key) {
-      if (!focus_next[SPOT_NAV_PREV] && pad_focusable_list.length) {
-        focus_next[SPOT_NAV_PREV] = pad_focusable_list[pad_focusable_list.length - 1];
+    if (param.is_sub_rect) {
+      // Not actually "focusable", but need to target it to then target its contents
+      pad_focusable_list.push(param);
+    } else if (param.key_computed === focus_key) {
+      if (!focus_next[SPOT_NAV_PREV] && prev) {
+        focus_next[SPOT_NAV_PREV] = prev;
       }
-      do_next = true;
       start = param;
     } else {
       const def = param.def || SPOT_DEFAULT;
       const pad_focusable = param.pad_focusable === undefined ? def.pad_focusable : param.pad_focusable;
       if (pad_focusable) {
-        if (do_next) {
+        prev = param;
+        if (!focus_next[SPOT_NAV_NEXT] && start) {
           focus_next[SPOT_NAV_NEXT] = param;
-          do_next = false;
         }
         pad_focusable_list.push(param);
       }
     }
   }
-  if (!focus_next[SPOT_NAV_PREV]) {
+  if (!focus_next[SPOT_NAV_PREV] && prev) {
     // but, didn't trigger above, must have been first, wrap to end
-    if (pad_focusable_list.length) {
-      focus_next[SPOT_NAV_PREV] = pad_focusable_list[pad_focusable_list.length - 1];
-    }
+    focus_next[SPOT_NAV_PREV] = prev;
   }
   if (!focus_next[SPOT_NAV_NEXT]) {
-    // nothing next, go to first
-    if (pad_focusable_list.length) {
-      focus_next[SPOT_NAV_NEXT] = pad_focusable_list[0];
+    // nothing next, go to first non-sub_rect
+    for (let ii = 0; ii < pad_focusable_list.length; ++ii) {
+      let first = pad_focusable_list[ii];
+      if (!first.is_sub_rect) {
+        focus_next[SPOT_NAV_NEXT] = first;
+        break;
+      }
     }
   }
   let precision_max;
+  let start_sub_rect;
   if (start) {
+    start_sub_rect = start.sub_rect;
     focus_pos.x = start.dom_pos.x;
     focus_pos.y = start.dom_pos.y;
     focus_pos.w = start.dom_pos.w;
     focus_pos.h = start.dom_pos.h;
     precision_max = TARGET_HALF;
   } else {
-    precision_max = TARGET_ALL;
+    // use the subrect overlapped, if any
+    start_sub_rect = null;
+    for (let ii = 0; ii < frame_spots.length; ++ii) {
+      let param = frame_spots[ii];
+      if (param.is_sub_rect) {
+        if (contains(param.dom_pos, focus_pos)) {
+          start_sub_rect = param;
+        }
+      }
+    }
+    if (start_sub_rect) {
+      precision_max = TARGET_HALF;
+    } else {
+      precision_max = TARGET_ALL;
+    }
   }
-  for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {
+
+  for (let nav = SPOT_NAV_LEFT; nav <= SPOT_NAV_DOWN; ++nav) {
     for (let precision = 0; precision <= precision_max; ++precision) {
-      // Go to the one in the appropriate quadrant which has the smallest Manhattan distance
-      let best = findBestTarget(ii, focus_pos, pad_focusable_list, precision);
+      filter_not = null;
+      let best = findBestTargetFromSubRect(start_sub_rect, nav, focus_pos, pad_focusable_list, precision);
       if (best) {
-        focus_next[ii] = best;
+        focus_next[nav] = best;
         break;
+      }
+      if (start_sub_rect) {
+        // Did not find anything within our subrect, try searching outside, from the subrect itself
+        filter_not = start_sub_rect; // do not target oneself
+        best = findBestTargetFromSubRect(start_sub_rect.sub_rect, nav, start_sub_rect.dom_pos,
+          pad_focusable_list, precision);
+        if (best) {
+          focus_next[nav] = best;
+          break;
+        }
       }
     }
   }
   if (start) {
     const def = start.def || SPOT_DEFAULT;
     const custom_nav = start.custom_nav === undefined ? def.custom_nav : start.custom_nav;
-    for (let key in custom_nav) {
-      let target = custom_nav[key];
-      focus_next[key] = target;
+    if (custom_nav) {
+      let by_key;
+      for (let key in custom_nav) {
+        let target = custom_nav[key];
+        if (!target) {
+          focus_next[key] = null;
+        } else {
+          if (!by_key) {
+            by_key = {};
+            for (let ii = 0; ii < frame_spots.length; ++ii) {
+              let param = frame_spots[ii];
+              by_key[param.key_computed] = param;
+            }
+          }
+          if (by_key[target]) {
+            focus_next[key] = by_key[target];
+          }
+        }
+      }
     }
   }
 }
@@ -365,10 +484,22 @@ export function spotEndOfFrame() {
   frame_autofocus_spots = {};
 }
 
+function frameSpotsPush(param) {
+  assert(param.dom_pos);
+  param.sub_rect = focus_sub_rect;
+  frame_spots.push(param);
+}
+
 export function spotSubBegin(param) {
   assert(param.key);
   assert(!focus_sub_rect); // no recursive nesting supported yet
   spotKey(param);
+  param.is_sub_rect = true;
+  if (!param.dom_pos) {
+    param.dom_pos = {};
+  }
+  camera2d.virtualToDomPosParam(param.dom_pos, param);
+  frameSpotsPush(param);
   focus_sub_rect = param;
   focus_sub_rect_elem = null;
   focusIdSet(param.key_computed);
@@ -385,6 +516,9 @@ function spotEntirelyObscured(param) {
   let pos = param.dom_pos;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let other = frame_spots[ii];
+    if (other.is_sub_rect || other.sub_rect !== focus_sub_rect) {
+      continue;
+    }
     let other_pos = other.dom_pos;
     if (other_pos.x <= pos.x && other_pos.x + other_pos.w >= pos.x + pos.w &&
       other_pos.y <= pos.y && other_pos.y + other_pos.h >= pos.y + pos.h
@@ -413,7 +547,7 @@ export function spotMouseverHook(pos_param, param) {
       pos_param.spot_debug_ignore = param.eat_clicks || // just consuming mouseover, not a button / etc
         param.spot_debug_ignore;
     }
-    frame_spots.push(pos_param);
+    frameSpotsPush(pos_param);
   }
 }
 
@@ -490,7 +624,7 @@ function spotFocusCheck(param) {
     }
     camera2d.virtualToDomPosParam(param.dom_pos, param);
     if (!spotEntirelyObscured(param)) {
-      frame_spots.push(param);
+      frameSpotsPush(param);
       const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
       if (auto_focus) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
