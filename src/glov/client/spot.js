@@ -385,9 +385,6 @@ function spotEntirelyObscured(param) {
   let pos = param.dom_pos;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let other = frame_spots[ii];
-    if (other.no_obscure_spots) {
-      continue;
-    }
     let other_pos = other.dom_pos;
     if (other_pos.x <= pos.x && other_pos.x + other_pos.w >= pos.x + pos.w &&
       other_pos.y <= pos.y && other_pos.y + other_pos.h >= pos.y + pos.h
@@ -412,7 +409,6 @@ export function spotMouseverHook(pos_param, param) {
   if (!spotEntirelyObscured(pos_param)) {
     pos_param.only_mouseover = true;
     pos_param.pad_focusable = false;
-    pos_param.no_obscure_spots = param.no_obscure_spots;
     if (engine.defines.SPOT_DEBUG) {
       pos_param.spot_debug_ignore = param.eat_clicks || // just consuming mouseover, not a button / etc
         param.spot_debug_ignore;

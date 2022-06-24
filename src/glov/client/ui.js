@@ -769,9 +769,8 @@ export function panel(param) {
   let color = param.color || color_panel;
   drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   if (param.eat_clicks) {
-    glov_input.click(param);
+    glov_input.mouseOver(param);
   }
-  glov_input.mouseOver(param);
 }
 
 export function drawTooltip(param) {
@@ -819,7 +818,7 @@ export function drawTooltip(param) {
     w: eff_tooltip_w,
     h: y - tooltip_y0,
     pixel_scale,
-    no_obscure_spots: true,
+    eat_clicks: false,
   });
   if (clip_pause) {
     clipResume();
