@@ -102,6 +102,7 @@ import {
 
 let focus_sub_rect = null;
 let focus_sub_rect_elem;
+let sub_stack = [];
 let focus_key = null;
 let focus_pos = { x: 0, y: 0, w: 0, h: 0 };
 let frame_spots = [];
@@ -334,6 +335,9 @@ function findBestTargetFromSubRect(start_sub_rect, nav, dom_pos, pad_focusable_l
     if (best.is_sub_rect) {
       focus_next_via[nav] = best;
       best = findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision);
+      if (!best) {
+        focus_next_via[nav] = undefined;
+      }
     }
   }
   return best;
@@ -474,6 +478,7 @@ export function spotTopOfFrame() {
   if (mouseDownEdge({ peek: true })) {
     pad_mode = false;
   }
+  sub_stack.length = 0;
 }
 
 export function spotEndOfFrame() {
@@ -488,28 +493,6 @@ function frameSpotsPush(param) {
   assert(param.dom_pos);
   param.sub_rect = focus_sub_rect;
   frame_spots.push(param);
-}
-
-export function spotSubBegin(param) {
-  assert(param.key);
-  assert(!focus_sub_rect); // no recursive nesting supported yet
-  spotKey(param);
-  param.is_sub_rect = true;
-  if (!param.dom_pos) {
-    param.dom_pos = {};
-  }
-  camera2d.virtualToDomPosParam(param.dom_pos, param);
-  frameSpotsPush(param);
-  focus_sub_rect = param;
-  focus_sub_rect_elem = null;
-  focusIdSet(param.key_computed);
-}
-
-export function spotSubEnd() {
-  assert(focus_sub_rect);
-  focus_sub_rect = null;
-  focusIdSet(null);
-  return focus_sub_rect_elem;
 }
 
 function spotEntirelyObscured(param) {
@@ -527,6 +510,44 @@ function spotEntirelyObscured(param) {
     }
   }
   return false;
+}
+
+export function spotSubPush() {
+  sub_stack.push([focus_sub_rect, focus_sub_rect_elem]);
+  focus_sub_rect = null;
+  focusIdSet(null);
+}
+export function spotSubPop() {
+  ([focus_sub_rect, focus_sub_rect_elem] = sub_stack.pop());
+  if (focus_sub_rect) {
+    focusIdSet(focus_sub_rect.key_computed);
+  } else {
+    focusIdSet(null);
+  }
+}
+
+export function spotSubBegin(param) {
+  assert(param.key);
+  assert(!focus_sub_rect); // no recursive nesting supported yet
+  spotKey(param);
+  param.is_sub_rect = true;
+  if (!param.dom_pos) {
+    param.dom_pos = {};
+  }
+  camera2d.virtualToDomPosParam(param.dom_pos, param);
+  if (!spotEntirelyObscured(param)) {
+    frameSpotsPush(param);
+  }
+  focus_sub_rect = param;
+  focus_sub_rect_elem = null;
+  focusIdSet(focus_sub_rect.key_computed);
+}
+
+export function spotSubEnd() {
+  assert(focus_sub_rect);
+  focus_sub_rect = null;
+  focusIdSet(null);
+  return focus_sub_rect_elem;
 }
 
 export function spotMouseverHook(pos_param, param) {
@@ -655,6 +676,15 @@ function spotUnfocus() {
   spotlog('spotUnfocus');
   focus_key = null;
   pad_mode = false;
+}
+
+export function spotFocusSteal(param, from_mouseover) {
+  let key = spotKey(param);
+  spotlog('spotFocusSteal', key, from_mouseover);
+  // Silent, no sound, no checking parameters, just set the key string
+  pad_mode = !from_mouseover;
+  focus_key = key;
+  // spotFocusSet(param, from_mouseover, 'spotFocusSteal');
 }
 
 // param:

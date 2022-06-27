@@ -8,12 +8,12 @@ const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
-const selection_box = require('./selection_box.js');
+const { dropDownCreate, selectionBoxCreate } = require('./selection_box.js');
 const simple_menu = require('./simple_menu.js');
 const { slider } = require('./slider.js');
 const ui = require('./ui.js');
 
-const { ceil, random } = Math;
+const { ceil, max, random } = Math;
 
 let demo_menu;
 let demo_menu_up = false;
@@ -24,8 +24,8 @@ let inited;
 let edit_box1;
 let edit_box2;
 let test_select1;
-let test_select2;
-let test_select_large1;
+let test_dropdown;
+let test_dropdown_large;
 let test_scroll_area;
 let slider_value = 0.75;
 let test_lines = 10;
@@ -65,28 +65,27 @@ function init(x, y, column_width) {
     glow_color: 0x000000ff,
   });
 
-  test_select1 = selection_box.create({
+  test_select1 = selectionBoxCreate({
     items: ['Apples', 'Bananas', 'Chameleon'],
     z: Z.UI,
     width: column_width - 8,
+    transient_focus: true,
   });
-  test_select2 = selection_box.create({
-    items: ['Apples', 'Bananas', 'Chameleon'],
-    is_dropdown: true,
+  test_dropdown = dropDownCreate({
+    items: ['Apples', 'Bananas', 'Chameleon', { name: 'Disabled', disabled: true }],
     z: Z.UI,
     width: column_width - 8,
   });
 
   let large_param = {
     items: [],
-    is_dropdown: true,
     z: Z.UI,
     width: column_width - 8,
   };
   for (let ii = 0; ii < 100; ++ii) {
     large_param.items.push(`item${ii}`);
   }
-  test_select_large1 = selection_box.create(large_param);
+  test_dropdown_large = dropDownCreate(large_param);
 
   test_scroll_area = scrollAreaCreate();
 }
@@ -168,7 +167,9 @@ export function run(x, y, z) {
     `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
-  internal_y += test_select_large1.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
+  ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
+  internal_y += ui.font_height + pad;
+  internal_y += test_dropdown_large.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
   if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
   }
@@ -177,11 +178,11 @@ export function run(x, y, z) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
     internal_y += ui.font_height + pad;
   }
-  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line' })) {
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line', key: 'add_line' })) {
     ++test_lines;
   }
   internal_y += ui.button_height + pad;
-  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line' })) {
+  if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line', key: 'remove_line' })) {
     --test_lines;
   }
   internal_y += ui.button_height + pad;
@@ -192,8 +193,9 @@ export function run(x, y, z) {
   y += line_height;
 
   y += test_select1.run({ x, y, z });
-  y += test_select2.run({ x, y, z });
+  y += test_dropdown.run({ x, y, z });
 
+  y = max(y, test_scroll_area.y + test_scroll_area.h + pad);
   slider_value = slider(slider_value, {
     x, y, z,
     min: 0,

@@ -381,6 +381,7 @@ export function debugGetMouseMoveX() {
 
 let mouse_moved = false;
 let mouse_button_had_edge = false;
+let mouse_button_had_up_edge = false;
 let temp_delta = vec2();
 let last_abs_move = 0;
 let last_abs_move_time = 0;
@@ -536,6 +537,7 @@ function onMouseUp(event) {
     delete mouse_down[button];
   }
   mouse_button_had_edge = true;
+  mouse_button_had_up_edge = true;
   if (!no_click) {
     in_event.handle('mouseup', event);
   }
@@ -627,6 +629,7 @@ function onTouchChange(event) {
         in_event.handle('mouseup', { pageX: touch.cur_pos[0], pageY: touch.cur_pos[1] });
         registerMouseUpEdge(touch, eventTimestamp(event));
         mouse_button_had_edge = true;
+        mouse_button_had_up_edge = true;
         touch.state = UP;
         touch.down_time += timeDelta(event, touch.origin_time);
         touch.release = true;
@@ -982,6 +985,7 @@ export function endFrame(skip_mouse) {
     input_eaten_mouse = false;
     mouse_moved = false;
     mouse_button_had_edge = false;
+    mouse_button_had_up_edge = false;
   }
   input_eaten_kb = false;
 }
@@ -1023,6 +1027,10 @@ export function mouseMoved() {
 
 export function mouseButtonHadEdge() {
   return mouse_button_had_edge;
+}
+
+export function mouseButtonHadUpEdge() {
+  return mouse_button_had_up_edge;
 }
 
 function mousePosParam(param) {

@@ -5,21 +5,47 @@
 // eslint-disable-next-line no-use-before-define
 exports.create = selectionBoxCreate;
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const camera2d = require('./camera2d.js');
-const glov_engine = require('./engine.js');
-const glov_font = require('./font.js');
-const glov_input = require('./input.js');
-const { link } = require('./link.js');
-const { scrollAreaCreate } = require('./scroll_area.js');
-const { clipped, clipPause, clipResume } = require('./sprites.js');
-const glov_ui = require('./ui.js');
-const { v4copy, vec4 } = require('glov/common/vmath.js');
+import * as assert from 'assert';
+const { min, max, round, sin } = Math;
+import { clamp, cloneShallow, easeIn, merge, nearSame } from 'glov/common/util.js';
+import { v4copy, vec4 } from 'glov/common/vmath.js';
+import * as camera2d from './camera2d.js';
+import * as glov_engine from './engine.js';
+import * as glov_font from './font.js';
+import * as glov_input from './input.js';
+import {
+  KEYS,
+  PAD,
+  keyDownEdge,
+  mouseButtonHadUpEdge,
+  padButtonDown,
+  padButtonDownEdge,
+} from './input.js';
+import { link } from './link.js';
+import { scrollAreaCreate } from './scroll_area.js';
+import {
+  SPOT_DEFAULT_BUTTON,
+  SPOT_NAV_DOWN,
+  SPOT_NAV_LEFT,
+  SPOT_NAV_RIGHT,
+  SPOT_NAV_UP,
+  SPOT_STATE_DISABLED,
+  SPOT_STATE_DOWN,
+  SPOT_STATE_FOCUSED,
+  SPOT_STATE_REGULAR,
+  spot,
+  spotFocusSteal,
+  spotPadMode,
+  spotSubPop,
+  spotSubPush,
+} from './spot.js';
+import { clipPause, clipResume, clipped } from './sprites.js';
+import { playUISound } from './ui.js';
+import * as glov_ui from './ui.js';
+
 let glov_markup = null; // Not ported
 
-const { min, max, sin } = Math;
-const { clamp, cloneShallow, easeIn, merge, nearSame } = require('glov/common/util.js');
+let last_key_id = 0;
 
 let font;
 
@@ -53,10 +79,10 @@ export function selboxDefaultDrawItemBackground({
 }) {
   glov_ui.drawHBox({ x, y, z, w, h },
     image_set, color);
-  if (image_set_extra) {
+  if (image_set_extra && image_set_extra_alpha) {
     v4copy(color_temp_fade, color);
     color_temp_fade[3] *= easeIn(image_set_extra_alpha, 2);
-    glov_ui.drawHBox({ x, y, z, w, h },
+    glov_ui.drawHBox({ x, y, z: z + 0.001, w, h },
       image_set_extra, color_temp_fade);
   }
 }
@@ -159,10 +185,16 @@ export const default_display = {
 const color_gray50 = vec4(0.313, 0.313, 0.313, 1.000);
 const color_gray80 = vec4(0.500, 0.500, 0.500, 1.000);
 const color_grayD0 = vec4(0.816, 0.816, 0.816, 1.000);
+const COLORS = {
+  [SPOT_STATE_REGULAR]: color_white,
+  [SPOT_STATE_DOWN]: color_grayD0,
+  [SPOT_STATE_FOCUSED]: color_grayD0,
+  [SPOT_STATE_DISABLED]: color_gray80,
+};
 
 const SELBOX_BOUNCE_TIME = 80;
 
-// Used by GlovSimpleMenu and GlovSelectionBox
+// Used by GlovSimpleMenu and GlovSelectionBox and GlovDropDown
 export class GlovMenuItem {
   constructor(params) {
     params = params || {};
@@ -203,6 +235,7 @@ export class GlovMenuItem {
 
 class GlovSelectionBox {
   constructor(params) {
+    assert(!params.is_dropdown, 'Use dropDownCreate() instead');
     // Options (and defaults)
     this.x = 0;
     this.y = 0;
@@ -294,7 +327,6 @@ class GlovSelectionBox {
   run(params) {
     this.applyParams(params);
     let { x, y, z, width, font_height, entry_height, auto_reset } = this;
-    let { KEYS, PAD } = glov_input;
 
     if (this.reset_selection || auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
       this.reset_selection = false;
@@ -742,7 +774,7 @@ class GlovSelectionBox {
     }
 
     if (this.selected !== old_sel || sel_changed) {
-      glov_ui.playUISound('rollover');
+      playUISound('rollover');
     }
 
     if (focused && this.auto_unfocus) {
@@ -762,10 +794,453 @@ class GlovSelectionBox {
   }
 }
 
+class GlovDropDown {
+  constructor(params) {
+    assert(!params.is_dropdown, 'Old parameter: is_dropdown');
+    assert(!params.auto_unfocus, 'Old parameter: auto_unfocus');
+    // Options (and defaults)
+    this.key = `dd${++last_key_id}`;
+    this.x = 0;
+    this.y = 0;
+    this.z = Z.UI;
+    this.width = glov_ui.button_width;
+    this.items = [];
+    this.disabled = false;
+    this.display = cloneShallow(default_display);
+    this.scroll_height = 0;
+    this.font_height = glov_ui.font_height;
+    this.entry_height = glov_ui.button_height;
+    this.auto_reset = true;
+    this.reset_selection = false;
+    this.initial_selection = 0;
+    this.applyParams(params);
+
+    // Run-time state
+    this.dropdown_visible = false;
+    this.selected = 0;
+    this.was_clicked = false;
+    this.was_right_clicked = false;
+    this.is_focused = false;
+    this.bounce_time = 0;
+    this.expected_frame_index = 0;
+    this.last_selected = undefined;
+    this.sa = scrollAreaCreate({
+      focusable_elem: this,
+      //background_color: null,
+    });
+  }
+
+  applyParams(params) {
+    if (!params) {
+      return;
+    }
+    for (let f in params) {
+      if (f === 'items') {
+        this.items = params.items.map((item) => new GlovMenuItem(item));
+      } else if (f === 'display') {
+        merge(this.display, params[f]);
+      } else {
+        this[f] = params[f];
+      }
+    }
+  }
+
+  isSelected(tag_or_index) {
+    if (typeof tag_or_index === 'number') {
+      return this.selected === tag_or_index;
+    }
+    return this.items[this.selected].tag === tag_or_index;
+  }
+
+  getSelected() {
+    return this.items[this.selected];
+  }
+
+  focus() {
+    glov_ui.focusSteal(this);
+    this.is_focused = true;
+  }
+
+  run(params) {
+    this.applyParams(params);
+    let { x, y, z, width, font_height, entry_height, auto_reset, disabled, key } = this;
+    // let { KEYS, PAD } = glov_input;
+
+    if (this.reset_selection || auto_reset && this.expected_frame_index !== glov_engine.getFrameIndex()) {
+      this.reset_selection = false;
+      // Reset
+      if (this.items[this.initial_selection] && !this.items[this.initial_selection].disabled) {
+        this.selected = this.initial_selection;
+      } else {
+        // Selection out of range or disabled, select first non-disabled entry
+        for (let ii = 0; ii < this.items.length; ++ii) {
+          if (!this.items[ii].disabled) {
+            this.selected = ii;
+            break;
+          }
+        }
+      }
+    }
+
+    if (this.last_selected !== undefined && this.last_selected >= this.items.length) {
+      this.last_selected = undefined;
+    }
+
+    let y0 = y;
+    let yret;
+    let display = this.display;
+    this.was_clicked = false;
+    this.was_right_clicked = false;
+    // let pos_changed = false;
+
+    // let old_sel = this.selected;
+    let num_non_disabled_selections = 0;
+    let first_non_disabled_selection = -1;
+    let last_non_disabled_selection = -1;
+    let eff_sel = -1;
+    for (let ii = 0; ii < this.items.length; ++ii) {
+      let item = this.items[ii];
+      if (!item.disabled) {
+        if (eff_sel === -1 && this.selected <= ii) {
+          eff_sel = num_non_disabled_selections;
+        }
+        if (first_non_disabled_selection === -1) {
+          first_non_disabled_selection = ii;
+        }
+        num_non_disabled_selections++;
+        last_non_disabled_selection = ii;
+      }
+    }
+    // This is OK, can have an empty selection box: assert(num_non_disabled_selections);
+    if (eff_sel === -1) {
+      // perhaps had the end selected, and selection became smaller
+      eff_sel = 0;
+    }
+
+    // let focused = this.is_focused = disabled ? false : glov_ui.focusCheck(this);
+    let root_spot_rect = {
+      key,
+      disabled,
+      x, y,
+      z: z + 2 - 0.1, // z used for checkHooks
+      w: width, h: entry_height,
+      def: SPOT_DEFAULT_BUTTON,
+      custom_nav: {
+        // left/right toggle the dropdown visibility - maybe make this customizable?
+        [SPOT_NAV_RIGHT]: null,
+      },
+    };
+    if (this.dropdown_visible) {
+      root_spot_rect.custom_nav[SPOT_NAV_LEFT] = null;
+    }
+    let root_spot_ret = spot(root_spot_rect);
+
+    let scroll_height = this.scroll_height;
+    if (!scroll_height) {
+      scroll_height = camera2d.y1() - (y + entry_height);
+    }
+
+    let need_focus_steal = false;
+    if (root_spot_ret.focused || this.dropdown_visible) {
+      let page_size = round((scroll_height - 1) / entry_height);
+      let non_mouse_interact = false;
+      let pad_shift = padButtonDown(PAD.RIGHT_TRIGGER) || padButtonDown(PAD.LEFT_TRIGGER);
+      let value = keyDownEdge(KEYS.PAGEDOWN) +
+        (pad_shift ? padButtonDownEdge(PAD.DOWN) : 0);
+      if (value) {
+        eff_sel += page_size * value;
+        eff_sel = min(eff_sel, num_non_disabled_selections - 1);
+        non_mouse_interact = true;
+      }
+      value = keyDownEdge(KEYS.PAGEUP) +
+        (pad_shift ? padButtonDownEdge(PAD.UP) : 0);
+      if (value) {
+        eff_sel -= page_size * value;
+        eff_sel = max(eff_sel, 0);
+        non_mouse_interact = true;
+      }
+      if (keyDownEdge(KEYS.HOME)) {
+        eff_sel = 0;
+        non_mouse_interact = true;
+      }
+      if (keyDownEdge(KEYS.END)) {
+        eff_sel = num_non_disabled_selections - 1;
+        non_mouse_interact = true;
+      }
+      if (non_mouse_interact) {
+        if (this.dropdown_visible) {
+          need_focus_steal = true;
+        } else {
+          this.was_clicked = true; // trigger value change immediately
+        }
+      }
+    }
+
+    if (eff_sel < 0) {
+      if (!this.dropdown_visible) {
+        eff_sel = 0;
+      } else {
+        eff_sel = num_non_disabled_selections - 1;
+      }
+    }
+    if (eff_sel >= num_non_disabled_selections) {
+      if (!this.dropdown_visible && num_non_disabled_selections) {
+        eff_sel = num_non_disabled_selections - 1;
+      } else {
+        eff_sel = 0;
+      }
+    }
+
+    // Convert from eff_sel back to actual selection
+    for (let ii = 0; ii < this.items.length; ++ii) {
+      let item = this.items[ii];
+      if (!item.disabled) {
+        if (!eff_sel) {
+          this.selected = ii;
+          break;
+        }
+        --eff_sel;
+      }
+    }
+
+    let eff_selection = this.dropdown_visible && this.last_selected !== undefined ?
+      this.last_selected :
+      this.selected;
+
+    if (need_focus_steal) {
+      spotFocusSteal({ key: `${key}_${this.selected}` });
+    }
+
+    if (this.dropdown_visible && (
+      keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B)
+    )) {
+      this.selected = eff_selection;
+      this.dropdown_visible = false;
+      spotFocusSteal(root_spot_rect);
+    }
+
+    // display header, respond to clicks
+    if (root_spot_ret.ret || root_spot_ret.nav) {
+      if (root_spot_ret.nav) {
+        playUISound('button_click');
+      }
+      if (this.dropdown_visible) {
+        this.selected = eff_selection;
+        this.dropdown_visible = false;
+      } else {
+        this.dropdown_visible = true;
+        this.last_selected = this.selected;
+        if (spotPadMode()) {
+          spotFocusSteal({ key: `${key}_${this.selected}` });
+        }
+      }
+    }
+    glov_ui.drawHBox({
+      x, y, z: z + 1,
+      w: width, h: entry_height
+    }, glov_ui.sprites.menu_header, COLORS[root_spot_ret.spot_state]);
+    let align = (display.centered ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HLEFT) |
+      glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER;
+    font.drawSizedAligned(root_spot_ret.focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
+      x + display.xpad, y, z + 2,
+      font_height, align,
+      width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
+      this.items[eff_selection].name);
+    y += entry_height;
+    yret = y + 2;
+
+
+    if (this.dropdown_visible) {
+      z += 1000; // drop-down part should be above everything except tooltips
+      let clip_pause = clipped();
+      if (clip_pause) {
+        clipPause();
+      }
+      spotSubPush();
+      let do_scroll = scroll_height && this.items.length * entry_height > scroll_height;
+      if (!do_scroll && y + this.items.length * entry_height >= camera2d.y1()) {
+        y = camera2d.y1() - this.items.length * entry_height;
+      }
+      let eff_width = width;
+      if (do_scroll) {
+        this.sa.begin({
+          x, y, z,
+          w: width,
+          h: scroll_height,
+        });
+        y = 0;
+        x = 0;
+        eff_width = width - this.sa.barWidth();
+      }
+      let dt = glov_engine.getFrameDt();
+      let any_focused = false;
+      for (let ii = 0; ii < this.items.length; ii++) {
+        let item = this.items[ii];
+        let entry_disabled = item.disabled;
+        let image_set = null;
+        let image_set_extra = null;
+        let image_set_extra_alpha = 0;
+        if (item.href) {
+          link({
+            x, y, w: width, h: entry_height,
+            url: item.href,
+          });
+        }
+        let entry_spot_rect = {
+          def: SPOT_DEFAULT_BUTTON,
+          key: `${key}_${ii}`,
+          disabled: disabled || entry_disabled,
+          disabled_focusable: false,
+          x, y, w: width, h: entry_height,
+          custom_nav: {
+            [SPOT_NAV_RIGHT]: null,
+            [SPOT_NAV_LEFT]: null,
+          },
+        };
+        if (ii === first_non_disabled_selection) {
+          entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
+        }
+        if (ii === last_non_disabled_selection) {
+          entry_spot_rect.custom_nav[SPOT_NAV_DOWN] = `${key}_${first_non_disabled_selection}`;
+        }
+        let entry_spot_ret = spot(entry_spot_rect);
+        any_focused = any_focused || entry_spot_ret.focused;
+        if (entry_spot_ret.nav === SPOT_NAV_RIGHT) {
+          // select
+          playUISound('button_click');
+          entry_spot_ret.ret = true;
+        }
+        if (entry_spot_ret.ret) {
+          // select
+          this.was_clicked = true;
+          this.was_right_clicked = entry_spot_ret.button === 2;
+          this.selected = ii;
+          this.dropdown_visible = false;
+          spotFocusSteal(root_spot_rect);
+        }
+
+        if (entry_spot_ret.focused) {
+          this.selected = ii;
+        }
+        if (entry_spot_ret.nav === SPOT_NAV_LEFT) {
+          // cancel
+          this.selected = eff_selection;
+          this.dropdown_visible = false;
+          spotFocusSteal(root_spot_rect);
+        }
+
+        let color;
+        let style;
+        let bounce = false;
+        if (entry_spot_ret.spot_state === SPOT_STATE_DOWN || entry_spot_ret.spot_state === SPOT_STATE_FOCUSED) {
+          style = display.style_selected || selbox_font_style_selected;
+          color = display.color_selected || default_display.color_selected;
+          item.selection_alpha = clamp(item.selection_alpha + dt * display.selection_fade, 0, 1);
+          if (item.selection_alpha === 1) {
+            image_set = glov_ui.sprites.menu_selected;
+          } else {
+            image_set = glov_ui.sprites.menu_entry;
+            image_set_extra = glov_ui.sprites.menu_selected;
+            image_set_extra_alpha = item.selection_alpha;
+          }
+          if (entry_spot_ret.spot_state === SPOT_STATE_DOWN) {
+            if (glov_ui.sprites.menu_down) {
+              image_set = glov_ui.sprites.menu_down;
+              if (display.style_down) {
+                style = display.style_down;
+                color = display.color_down || default_display.color_down;
+              }
+            } else {
+              style = display.style_down || selbox_font_style_down;
+              color = display.color_down || default_display.color_down;
+            }
+          }
+        } else {
+          item.selection_alpha = clamp(item.selection_alpha - dt * display.selection_fade, 0, 1);
+          if (item.selection_alpha !== 1) {
+            image_set_extra = glov_ui.sprites.menu_selected;
+            image_set_extra_alpha = item.selection_alpha;
+          }
+          if (entry_spot_ret.spot_state === SPOT_STATE_DISABLED) {
+            style = display.style_disabled || selbox_font_style_disabled;
+            color = display.color_disabled || default_display.color_disabled;
+            image_set = glov_ui.sprites.menu_entry;
+          } else {
+            style = item.style || display.style_default || selbox_font_style_default;
+            color = display.color_default || default_display.color_default;
+            image_set = glov_ui.sprites.menu_entry;
+          }
+        }
+        let yoffs = 0;
+        let bounce_amt = 0;
+        if (bounce) {
+          bounce_amt = sin(this.bounce_time * 20 / SELBOX_BOUNCE_TIME / 10);
+          yoffs = -4 * bounce_amt * entry_height / 32;
+        }
+
+        display.draw_item_cb({
+          item_idx: ii, item,
+          x, y: y + yoffs, z: z + 1,
+          w: eff_width, h: entry_height,
+          image_set, color,
+          image_set_extra, image_set_extra_alpha,
+          font_height,
+          display,
+          style,
+        });
+
+        if (entry_spot_ret.ret && item.href) {
+          window.location.href = item.href;
+        }
+        y += entry_height;
+      }
+      if (do_scroll) {
+        this.sa.end(y);
+      }
+
+      if (this.was_clicked) {
+        this.dropdown_visible = false;
+      }
+      spotSubPop();
+      if (clip_pause) {
+        clipResume();
+      }
+
+      if (!any_focused) {
+        // Nothing focused?  Don't preview any current selection.
+        this.selected = eff_selection;
+      }
+      if (!any_focused && !root_spot_ret.focused) {
+        // Not focused
+        if (
+          // Clicked anywhere else?
+          mouseButtonHadUpEdge() ||
+          // In pad mode
+          spotPadMode()
+        ) {
+          // Cancel and close dropdown
+          this.selected = eff_selection;
+          this.dropdown_visible = false;
+        }
+      }
+    }
+
+    this.expected_frame_index = glov_engine.getFrameIndex() + 1;
+    return yret - y0;
+  }
+}
+
 
 export function selectionBoxCreate(params) {
   if (!font) {
     font = glov_ui.font;
   }
   return new GlovSelectionBox(params);
+}
+
+export function dropDownCreate(params) {
+  if (!font) {
+    font = glov_ui.font;
+  }
+  return new GlovDropDown(params);
 }
