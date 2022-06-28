@@ -35,6 +35,8 @@ import {
   spot,
   spotFocusSteal,
   spotPadMode,
+  spotSubBegin,
+  spotSubEnd,
   spotSubPop,
   spotSubPush,
 } from './spot.js';
@@ -427,6 +429,15 @@ class SelectionBoxBase {
       y = 0;
       x = 0;
       eff_width = width - this.sa.barWidth();
+    } else if (this.is_dropdown) {
+      // Need a spot sub here so that navigation within elements does not target
+      //   other elements that happen to be behind the dropdown
+      spotSubBegin({
+        key,
+        x, y, z,
+        w: width,
+        h: scroll_height || entry_height,
+      });
     }
     let dt = glov_engine.getFrameDt();
     let any_focused = false;
@@ -564,6 +575,8 @@ class SelectionBoxBase {
     if (do_scroll) {
       this.sa.end(y);
       y = y_save + scroll_height;
+    } else if (this.is_dropdown) {
+      spotSubEnd();
     }
     ctx.any_focused = any_focused;
     return y;
