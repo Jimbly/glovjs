@@ -73,6 +73,7 @@ import * as engine from './engine.js';
 import {
   KEYS,
   PAD,
+  drag,
   dragDrop,
   dragOver,
   inputClick,
@@ -788,6 +789,8 @@ export function spot(param) {
       // do nothing, just consume event
       // not even set focus?
     }
+    // Consume drag events (desired for drop-down menu temporarily overlapping a slider, generally fine?)
+    drag(param);
   }
   // Long-press (on touch) focuses, a la mouse rollover
   if (allow_focus && inputTouchMode()) {
