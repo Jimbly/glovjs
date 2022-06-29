@@ -227,6 +227,7 @@ export class GlovMenuItem {
     this.plus_minus = Boolean(params.plus_minus);
     this.disabled = Boolean(params.disabled);
     this.centered = Boolean(params.centered);
+    this.auto_focus = Boolean(params.auto_focus);
     this.selection_alpha = 0;
   }
 }
@@ -464,6 +465,7 @@ class SelectionBoxBase {
           [SPOT_NAV_RIGHT]: null,
           [SPOT_NAV_LEFT]: null,
         },
+        auto_focus: item.auto_focus,
       };
       if (ii === first_non_disabled_selection && this.is_dropdown) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;

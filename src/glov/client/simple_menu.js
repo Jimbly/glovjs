@@ -85,6 +85,7 @@ class GlovSimpleMenu {
   run(params) {
     let { sel_box } = this;
     sel_box.applyParams(params); // Apply new list of items, positions, etc
+    sel_box.items[0].auto_focus = true;
 
     const { items, x, z } = sel_box;
     const y0 = sel_box.y + 4;
