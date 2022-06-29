@@ -152,6 +152,13 @@ function spotFocusSet(param, from_mouseover, log) {
   return true;
 }
 
+function spotUnfocus() {
+  spotlog('spotUnfocus');
+  focus_key = null;
+  pad_mode = false;
+}
+
+
 const TARGET_QUAD = 0;
 const TARGET_HALF = 1;
 const TARGET_ALL = 2;
@@ -615,7 +622,7 @@ function spotFocusCheckNavButtonsUnfocused(param) {
 
 let allow_focus;
 function spotFocusCheck(param) {
-  allow_focus = true;
+  allow_focus = false;
   const key = spotKey(param); // Doing this even if disabled for spotDebug()
   const def = param.def || SPOT_DEFAULT;
   const disabled = param.disabled === undefined ? def.disabled : param.disabled;
@@ -623,7 +630,6 @@ function spotFocusCheck(param) {
     const disabled_focusable = param.disabled_focusable === undefined ? def.disabled_focusable :
       param.disabled_focusable;
     if (!disabled_focusable) {
-      allow_focus = false;
       return false;
     }
     // Otherwise disabled_focusable - allow focusing
@@ -640,7 +646,13 @@ function spotFocusCheck(param) {
     spotFocusCheckNavButtonsUnfocused(param);
   }
   let focused = focus_key === key;
-  if (!inputEatenMouse()) {
+  if (inputEatenMouse()) {
+    if (focus_key === key) {
+      spotUnfocus();
+      focused = false;
+    }
+  } else {
+    allow_focus = true;
     if (!param.dom_pos) {
       param.dom_pos = {};
     }
@@ -671,12 +683,6 @@ export function spotEndInput() {
   if (engine.defines.SPOT_DEBUG) {
     spotDebug();
   }
-}
-
-function spotUnfocus() {
-  spotlog('spotUnfocus');
-  focus_key = null;
-  pad_mode = false;
 }
 
 export function spotFocusSteal(param, from_mouseover) {
