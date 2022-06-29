@@ -69,7 +69,6 @@ function init(x, y, column_width) {
     items: ['Apples', 'Bananas', 'Chameleon'],
     z: Z.UI,
     width: column_width - 8,
-    transient_focus: true,
   });
   test_dropdown = dropDownCreate({
     items: ['Apples', 'Bananas', 'Chameleon', { name: 'Disabled', disabled: true }],

@@ -370,7 +370,9 @@ function spotCalcNavTargets() {
     let param = frame_spots[ii];
     if (param.is_sub_rect) {
       // Not actually "focusable", but need to target it to then target its contents
-      pad_focusable_list.push(param);
+      if (!param.is_empty_sub_rect) {
+        pad_focusable_list.push(param);
+      }
     } else if (param.key_computed === focus_key) {
       if (!focus_next[SPOT_NAV_PREV] && prev) {
         focus_next[SPOT_NAV_PREV] = prev;
@@ -501,6 +503,9 @@ function frameSpotsPush(param) {
   assert(param.dom_pos);
   param.sub_rect = focus_sub_rect;
   frame_spots.push(param);
+  if (focus_sub_rect) {
+    focus_sub_rect.is_empty_sub_rect = false;
+  }
 }
 
 function spotEntirelyObscured(param) {
@@ -547,6 +552,7 @@ export function spotSubBegin(param) {
     frameSpotsPush(param);
   }
   focus_sub_rect = param;
+  focus_sub_rect.is_empty_sub_rect = true;
   focus_sub_rect_elem = null;
   focusIdSet(focus_sub_rect.key_computed);
 }
@@ -593,7 +599,7 @@ function keyCheck(nav_dir) {
     case SPOT_NAV_PREV:
       return keyDown(KEYS.SHIFT) && keyDownEdge(KEYS.TAB) || padButtonDownEdge(PAD.LEFT_BUMPER);
     case SPOT_NAV_NEXT:
-      return keyDownEdge(KEYS.TAB) || padButtonDownEdge(PAD.RIGHT_BUMPER);
+      return !keyDown(KEYS.SHIFT) && keyDownEdge(KEYS.TAB) || padButtonDownEdge(PAD.RIGHT_BUMPER);
     default:
       assert(false);
   }

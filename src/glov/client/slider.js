@@ -55,6 +55,7 @@ export function slider(value, param) {
   let disabled = param.disabled || false;
   let handle_h = param.h * handle_shrink;
   let handle_w = ui.sprites.slider_handle.uidata.wh[0] * handle_h;
+  let pad_focusable = param.pad_focusable;
 
   slider_dragging = false;
 
@@ -99,6 +100,7 @@ export function slider(value, param) {
   if (grabbed) {
     param.focus_steal = true;
   }
+  param.pad_focusable = pad_focusable;
   let spot_ret = spot(param);
   slider_focused = spot_ret.focused;
   if (spot_ret.ret && spot_ret.pos) {

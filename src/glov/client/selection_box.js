@@ -251,6 +251,7 @@ class SelectionBoxBase {
     this.auto_reset = true;
     this.reset_selection = false;
     this.initial_selection = 0;
+    this.show_as_focused = -1;
     this.applyParams(params);
 
     // Run-time inter-frame state
@@ -416,7 +417,17 @@ class SelectionBoxBase {
   }
 
   doList(x, y, z, do_scroll, eff_selection) {
-    let { ctx, width, entry_height, key, disabled, display, font_height, selected: old_sel } = this;
+    let {
+      ctx,
+      disabled,
+      display,
+      entry_height,
+      font_height,
+      key,
+      selected: old_sel,
+      show_as_focused,
+      width,
+    } = this;
     let { scroll_height } = ctx;
     let eff_width = width;
     let y_save;
@@ -467,14 +478,25 @@ class SelectionBoxBase {
         },
         auto_focus: item.auto_focus,
       };
-      if (ii === first_non_disabled_selection && this.is_dropdown) {
+      if (ii === first_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
       }
-      if (ii === last_non_disabled_selection && this.is_dropdown) {
+      if (ii === last_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_DOWN] = `${key}_${first_non_disabled_selection}`;
       }
       let entry_spot_ret = spot(entry_spot_rect);
+      if (ii === show_as_focused) {
+        entry_spot_ret.focused = true;
+        entry_spot_ret.spot_state = SPOT_STATE_FOCUSED;
+      }
       any_focused = any_focused || entry_spot_ret.focused;
+      if (item.slider || item.plus_minus) {
+        // Allow left to negatively select
+        if (entry_spot_ret.nav === SPOT_NAV_LEFT) {
+          entry_spot_ret.nav = SPOT_NAV_RIGHT;
+          entry_spot_ret.button = 2; // hack: right click is also treated as negative-select
+        }
+      }
       if (entry_spot_ret.nav === SPOT_NAV_RIGHT) {
         // select
         playUISound('button_click');
@@ -589,7 +611,6 @@ class GlovSelectionBox extends SelectionBoxBase {
   constructor(params) {
     assert(!params.is_dropdown, 'Use dropDownCreate() instead');
     super(params);
-    this.transient_focus = true;
 
     // Run-time state
     this.bounce_time = 0;
@@ -647,6 +668,7 @@ class GlovSelectionBox extends SelectionBoxBase {
   }
 }
 GlovSelectionBox.prototype.is_dropdown = false;
+GlovSelectionBox.prototype.nav_loop = false;
 
 class GlovDropDown extends SelectionBoxBase {
   constructor(params) {
@@ -804,6 +826,7 @@ class GlovDropDown extends SelectionBoxBase {
 }
 
 GlovDropDown.prototype.is_dropdown = true;
+GlovDropDown.prototype.nav_loop = true;
 
 
 export function selectionBoxCreate(params) {
