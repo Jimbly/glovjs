@@ -1273,6 +1273,7 @@ function modalDialogRun() {
       w: eff_button_width,
       h: eff_button_height,
       text: but_label,
+      auto_focus: ii === 0,
     }, cur_button))) {
       did_button = ii;
     }
