@@ -21,7 +21,7 @@ const {
   keyDownEdge,
   padButtonDownEdge,
 } = require('./input.js');
-const selection_box = require('./selection_box.js');
+const { selectionBoxCreate } = require('./selection_box.js');
 const { slider, sliderIsFocused } = require('./slider.js');
 const ui = require('./ui.js');
 
@@ -30,7 +30,7 @@ const color101010C8 = vec4(0x10/255, 0x10/255, 0x10/255, 0xC8/255);
 class GlovSimpleMenu {
   constructor(params) {
     params = params || {};
-    this.sel_box = selection_box.create(params);
+    this.sel_box = selectionBoxCreate(params);
     this.edit_index = -1;
 
     // Output members

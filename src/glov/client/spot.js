@@ -119,7 +119,7 @@ export function spotPadMode() {
   return pad_mode;
 }
 
-function spotlog(...args) {
+export function spotlog(...args) {
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
 }
 
@@ -152,7 +152,7 @@ function spotFocusSet(param, from_mouseover, log) {
   return true;
 }
 
-function spotUnfocus() {
+export function spotUnfocus() {
   spotlog('spotUnfocus');
   focus_key = null;
   pad_mode = false;
@@ -626,9 +626,15 @@ function spotFocusCheckNavButtonsUnfocused(param) {
   }
 }
 
-let allow_focus;
-function spotFocusCheck(param) {
-  allow_focus = false;
+
+// sets param.out.allow_focus, param.out.nav, and param.dom_pos (if allow_focus)
+export function spotFocusCheck(param) {
+  let out = param.out;
+  if (!out) {
+    out = param.out = {};
+  }
+  out.focused = false;
+  out.allow_focus = false;
   const key = spotKey(param); // Doing this even if disabled for spotDebug()
   const def = param.def || SPOT_DEFAULT;
   const disabled = param.disabled === undefined ? def.disabled : param.disabled;
@@ -636,7 +642,7 @@ function spotFocusCheck(param) {
     const disabled_focusable = param.disabled_focusable === undefined ? def.disabled_focusable :
       param.disabled_focusable;
     if (!disabled_focusable) {
-      return false;
+      return out;
     }
     // Otherwise disabled_focusable - allow focusing
   }
@@ -658,7 +664,7 @@ function spotFocusCheck(param) {
       focused = false;
     }
   } else {
-    allow_focus = true;
+    out.allow_focus = true;
     if (!param.dom_pos) {
       param.dom_pos = {};
     }
@@ -682,7 +688,8 @@ function spotFocusCheck(param) {
     }
   }
 
-  return focused;
+  out.focused = focused;
+  return out;
 }
 
 export function spotEndInput() {
@@ -745,7 +752,7 @@ export function spot(param) {
   }
 
   let state = SPOT_STATE_REGULAR;
-  let focused = spotFocusCheck(param); // sets allow_focus, param.out.nav
+  let { focused, allow_focus } = spotFocusCheck(param);
   if (disabled) {
     state = SPOT_STATE_DISABLED;
   } else {

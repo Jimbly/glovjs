@@ -7,6 +7,7 @@ const camera2d = require('./camera2d.js');
 const in_event = require('./in_event.js');
 const input = require('./input.js');
 const { abs } = Math;
+const { uiGetDOMElem } = require('./ui.js');
 const ui = require('./ui.js');
 const settings = require('./settings.js');
 
@@ -31,7 +32,7 @@ export function link(param) {
 
   if (camera2d.clipTestRect(rect) && !settings.shader_debug) {
     // at least some is not clipped
-    let elem = ui.getDOMElem(allow_modal, state.elem);
+    let elem = uiGetDOMElem(state.elem, allow_modal);
     if (elem !== state.elem) {
       state.elem = elem;
       if (elem) {

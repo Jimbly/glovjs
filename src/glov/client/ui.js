@@ -27,7 +27,7 @@ export const LINE_CAP_ROUND = 1<<2;
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
-const glov_edit_box = require('./edit_box.js');
+const { editBoxCreate, editBoxTick } = require('./edit_box.js');
 const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
@@ -51,6 +51,7 @@ const {
   spotEndOfFrame,
   spotPadMode,
   spotTopOfFrame,
+  spotUnfocus,
 } = require('./spot.js');
 const glov_sprites = require('./sprites.js');
 const { clipped, clipPause, clipResume, BLEND_PREMULALPHA } = glov_sprites;
@@ -231,8 +232,6 @@ export let menu_up = false; // Boolean to be set by app to impact behavior, simi
 let menu_fade_params = merge({}, menu_fade_params_default);
 let menu_up_time = 0;
 
-exports.this_frame_edit_boxes = [];
-let last_frame_edit_boxes = [];
 let dom_elems = [];
 let dom_elems_issued = 0;
 
@@ -466,8 +465,10 @@ let per_frame_dom_suppress = 0;
 export function suppressNewDOMElemWarnings() {
   per_frame_dom_suppress = glov_engine.frame_index + 1;
 }
-export function getDOMElem(allow_modal, last_elem) {
+export function uiGetDOMElem(last_elem, allow_modal) {
   if (modal_dialog && !allow_modal) {
+    // Note: this case is no longer needed for edit boxes (spot's focus logic
+    //   handles this), but links still rely on this
     return null;
   }
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
@@ -687,6 +688,7 @@ export function focusSteal(key) {
 }
 
 export function focusCanvas() {
+  spotUnfocus();
   focusSteal('canvas');
 }
 
@@ -1326,8 +1328,7 @@ function modalDialogRun() {
 }
 
 export function modalTextEntry(param) {
-  let eb = glov_edit_box.create({
-    allow_modal: true,
+  let eb = editBoxCreate({
     initial_focus: true,
     spellcheck: false,
     initial_select: true,
@@ -1379,7 +1380,7 @@ export function modalTextEntry(param) {
 
 
 export function createEditBox(param) {
-  return glov_edit_box.create(param);
+  return editBoxCreate(param);
 }
 
 let pp_bad_frames = 0;
@@ -1416,8 +1417,7 @@ export function tickUI(dt) {
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
   releaseOldUIElemData();
 
-  last_frame_edit_boxes = exports.this_frame_edit_boxes;
-  exports.this_frame_edit_boxes = [];
+  editBoxTick();
   linkTick();
 
   dom_elems_issued = 0;
@@ -1484,14 +1484,6 @@ export function endFrame() {
     w: Infinity, h: Infinity,
   })) {
     focusSteal('canvas');
-  }
-
-  for (let ii = 0; ii < last_frame_edit_boxes.length; ++ii) {
-    let edit_box = last_frame_edit_boxes[ii];
-    let idx = exports.this_frame_edit_boxes.indexOf(edit_box);
-    if (idx === -1) {
-      edit_box.unrun();
-    }
   }
 
   while (dom_elems_issued < dom_elems.length) {
