@@ -77,10 +77,6 @@ const menu_fade_params_default = {
   z: Z.MODAL,
 };
 
-export function focuslog(...args) {
-  // console.log(`focuslog(${glov_engine.frame_index}): `, ...args);
-}
-
 let color_set_shades = vec4(1, 1, 1, 1);
 
 let color_sets = [];
@@ -227,7 +223,6 @@ let last_frame_button_mouseover = false;
 let frame_button_mouseover = false;
 
 let modal_dialog = null;
-let modal_stealing_focus = false;
 export let menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
 let menu_fade_params = merge({}, menu_fade_params_default);
 let menu_up_time = 0;
@@ -237,16 +232,6 @@ let dom_elems_issued = 0;
 
 // for modal dialogs
 let button_keys;
-
-let focused_last_frame;
-let focused_this_frame;
-let focused_key_not;
-let focused_key;
-let focused_key_prev1;
-let focused_key_prev2;
-
-// let pad_focus_left;
-// let pad_focus_right;
 
 let default_line_mode;
 
@@ -399,13 +384,6 @@ export function startup(param) {
   let overrides = param.ui_sprites;
   KEYS = glov_input.KEYS;
   PAD = glov_input.PAD;
-  // if (param.pad_focus_dpad) {
-  //   pad_focus_left = PAD.LEFT;
-  //   pad_focus_right = PAD.RIGHT;
-  // } else {
-  //   pad_focus_left = PAD.LEFT_BUMPER;
-  //   pad_focus_right = PAD.RIGHT_BUMPER;
-  // }
 
   let ui_sprites = {
     ...base_ui_sprites,
@@ -679,86 +657,8 @@ export function setMouseOver(key, quiet) {
   glov_input.mouseOverCaptured();
 }
 
-export function focusSteal(key) {
-  if (key !== focused_key) {
-    focuslog('focusSteal ', key);
-  }
-  focused_this_frame = true;
-  focused_key = key;
-}
-
 export function focusCanvas() {
   spotUnfocus();
-  focusSteal('canvas');
-}
-
-export function isFocusedPeek(key) {
-  return focused_key === key;
-}
-export function isFocused(key) {
-  if (key !== focused_key_prev2) {
-    focused_key_prev1 = focused_key_prev2;
-    focused_key_prev2 = key;
-  }
-  if (key === focused_key || key !== focused_key_not && !focused_this_frame &&
-    !focused_last_frame
-  ) {
-    if (key !== focused_key) {
-      focuslog('isFocused->focusSteal');
-    }
-    focusSteal(key);
-    return true;
-  }
-  return false;
-}
-
-export function focusNext(key) {
-  focuslog('focusNext ', key);
-  playUISound('rollover');
-  focused_key = null;
-  focused_last_frame = focused_this_frame = false;
-  focused_key_not = key;
-  // Eat input events so a pair of keys (e.g. SDLK_DOWN and SDLK_CONTROLLER_DOWN)
-  // don't get consumed by two separate widgets
-  glov_input.eatAllInput(true);
-}
-
-export function focusPrev(key) {
-  focuslog('focusPrev ', key);
-  playUISound('rollover');
-  if (key === focused_key_prev2) {
-    focusSteal(focused_key_prev1);
-  } else {
-    focusSteal(focused_key_prev2);
-  }
-  glov_input.eatAllInput(true);
-}
-
-export function focusCheck(key) {
-  if (modal_stealing_focus) {
-    // hidden by modal, etc
-    return false;
-  }
-  // Returns true even if focusing previous element, since for this frame, we are still effectively focused!
-  let focused = isFocused(key);
-  if (focused) {
-    // if (glov_input.keyDownEdge(KEYS.TAB)) {
-    //   if (glov_input.keyDown(KEYS.SHIFT)) {
-    //     focusPrev(key);
-    //   } else {
-    //     focusNext(key);
-    //     focused = false;
-    //   }
-    // }
-    // if (glov_input.padButtonDownEdge(pad_focus_right)) {
-    //   focusNext(key);
-    //   focused = false;
-    // }
-    // if (glov_input.padButtonDownEdge(pad_focus_left)) {
-    //   focusPrev(key);
-    // }
-  }
-  return focused;
 }
 
 export function panel(param) {
@@ -1321,7 +1221,6 @@ function modalDialogRun() {
   }
 
   glov_input.eatAllInput();
-  modal_stealing_focus = true;
   if (fullscreen_mode) {
     camera2d.pop();
   }
@@ -1410,10 +1309,6 @@ function releaseOldUIElemData() {
 export function tickUI(dt) {
   last_frame_button_mouseover = frame_button_mouseover;
   frame_button_mouseover = false;
-  focused_last_frame = focused_this_frame;
-  focused_this_frame = false;
-  focused_key_not = null;
-  modal_stealing_focus = false;
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
   releaseOldUIElemData();
 
@@ -1483,7 +1378,7 @@ export function endFrame() {
     x: -Infinity, y: -Infinity,
     w: Infinity, h: Infinity,
   })) {
-    focusSteal('canvas');
+    spotUnfocus();
   }
 
   while (dom_elems_issued < dom_elems.length) {
@@ -1505,7 +1400,6 @@ export function menuUp(param) {
     merge(menu_fade_params, param);
   }
   menu_up = true;
-  modal_stealing_focus = true;
   glov_input.eatAllInput();
 }
 

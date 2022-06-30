@@ -450,7 +450,7 @@ export class ScrollArea {
         // Drag should not steal focus
         // This also fixes an interaction with chat_ui where clicking on the chat background (which causes
         //   a flicker of a drag) would cause pointer lock to be lost
-        //ui.focusSteal(this);
+        //spotFocusSteal(this);
         if (this.drag_start === null) {
           this.drag_start = this.scroll_pos;
         }

@@ -236,9 +236,6 @@ export function main() {
   }
 
   test = function (dt) {
-    // Allow focusing the canvas, and before chat.
-    ui.focusCheck('canvas');
-
     app.chat_ui.run();
     app.account_ui.showLogin({
       x: 0, y: 0,
