@@ -423,6 +423,7 @@ export class ScrollArea {
 
       // handle clicking trough if not caught by anything above +/-
       let bar_param = {
+        key: `bar_${this.id}`,
         x: bar_x0,
         y: this.y,
         w: bar_w,
