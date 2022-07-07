@@ -38,6 +38,11 @@ app.use(express_static_gzip('data_store/public', {
   orderPreference: ['br'],
 }));
 
+app.post('/upload', function (req, res) {
+  req.pipe(fs.createWriteStream('temp.raw'));
+  res.send('OK');
+});
+
 glov_server.startup({
   app,
   server,
