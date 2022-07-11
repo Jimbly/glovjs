@@ -31,6 +31,7 @@ export const SPOT_DEFAULT = {
   // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
   // should retain focus even without mouseover)
   focus_steal: false,
+  sticky_focus: false, // focus is not lost due to mouseover elsewhere
   // optional map of SPOT_NAV_* to either:
   //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
   //   a string key: a custom element to target with navigation
@@ -105,6 +106,11 @@ let focus_sub_rect = null;
 let focus_sub_rect_elem;
 let sub_stack = [];
 let focus_key = null;
+// sticky focus: used for edit boxes so that they do not lose focus even when
+//   mousing over other elements (those elements become the temporary `nonsticky`
+//   focus.
+let focus_is_sticky = false;
+let focus_key_nonsticky = null;
 let focus_pos = { x: 0, y: 0, w: 0, h: 0 };
 let frame_spots = [];
 let focus_next = []; // indexed by SPOT_NAV_*
@@ -133,21 +139,30 @@ function spotKey(param) {
   return param.key_computed;
 }
 
-function spotFocusSet(param, from_mouseover, log) {
+function spotFocusSet(param, from_mouseover, force, log) {
   if (from_mouseover && (!mouseMoved() || mousePosIsTouch())) {
     return false;
   }
   const def = param.def || SPOT_DEFAULT;
   const sound_rollover = param.sound_rollover === undefined ? def.sound_rollover : param.sound_rollover;
   const key = param.key_computed || spotKey(param);
-  if ((sound_rollover || !from_mouseover) && focus_key !== key) {
+  const use_nonsticky = focus_is_sticky && !force && from_mouseover && key !== focus_key;
+  const key_prev = use_nonsticky ? focus_key_nonsticky : focus_key;
+  if ((sound_rollover || !from_mouseover) && key_prev !== key) {
     playUISound(sound_rollover || SPOT_DEFAULT.sound_rollover);
   }
-  if (focus_key !== key || pad_mode !== !from_mouseover) {
+  if (key_prev !== key || pad_mode !== !from_mouseover) {
     spotlog('spotFocusSet', key, log, from_mouseover ? '' : 'pad_mode');
   }
   pad_mode = !from_mouseover;
-  focus_key = key;
+  if (use_nonsticky) {
+    focus_key_nonsticky = key;
+  } else {
+    focus_key = key;
+    const sticky_focus = param.sticky_focus === undefined ? def.sticky_focus : param.sticky_focus;
+    focus_is_sticky = sticky_focus;
+    focus_key_nonsticky = null;
+  }
   assert(param.dom_pos);
   return true;
 }
@@ -155,6 +170,8 @@ function spotFocusSet(param, from_mouseover, log) {
 export function spotUnfocus() {
   spotlog('spotUnfocus');
   focus_key = null;
+  focus_is_sticky = false;
+  focus_key_nonsticky = null;
   pad_mode = false;
 }
 
@@ -610,7 +627,7 @@ function spotFocusCheckNavButtonsFocused(param) {
   for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
     if (focus_next[ii] !== undefined && keyCheck(ii)) {
       if (focus_next[ii]) {
-        spotFocusSet(focus_next[ii], false, 'nav_focused');
+        spotFocusSet(focus_next[ii], false, false, 'nav_focused');
       } else {
         param.out.nav = ii;
       }
@@ -621,9 +638,27 @@ function spotFocusCheckNavButtonsFocused(param) {
 function spotFocusCheckNavButtonsUnfocused(param) {
   for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
     if (focus_next[ii] && focus_next[ii].key_computed === param.key_computed && keyCheck(ii)) {
-      spotFocusSet(focus_next[ii], false, 'nav_unfocused');
+      spotFocusSet(focus_next[ii], false, false, 'nav_unfocused');
     }
   }
+}
+
+// Silently steal (keep) focus
+function spotFocusSetSilent(param) {
+  const key = spotKey(param);
+  const def = param.def || SPOT_DEFAULT;
+  focus_key = key;
+  const sticky_focus = param.sticky_focus === undefined ? def.sticky_focus : param.sticky_focus;
+  focus_is_sticky = sticky_focus;
+  focus_key_nonsticky = null;
+}
+
+export function spotFocusSteal(param) {
+  const key = spotKey(param);
+  spotlog('spotFocusSteal', key, false);
+  // Silent, no sound, no checking parameters, just set the key string
+  pad_mode = true;
+  spotFocusSetSilent(param);
 }
 
 
@@ -634,6 +669,7 @@ export function spotFocusCheck(param) {
     out = param.out = {};
   }
   out.focused = false;
+  out.kb_focused = false;
   out.allow_focus = false;
   const key = spotKey(param); // Doing this even if disabled for spotDebug()
   const def = param.def || SPOT_DEFAULT;
@@ -649,7 +685,7 @@ export function spotFocusCheck(param) {
   const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
   if (focus_steal) {
     // Silently steal (keep) focus
-    focus_key = key;
+    spotFocusSetSilent(param);
   }
   if (focus_key === key) {
     // last_frame_focus_found = true;
@@ -657,10 +693,14 @@ export function spotFocusCheck(param) {
   } else {
     spotFocusCheckNavButtonsUnfocused(param);
   }
-  let focused = focus_key === key;
+  let focused = focus_key === key || focus_key_nonsticky === key;
   if (inputEatenMouse()) {
     if (focus_key === key) {
       spotUnfocus();
+      focused = false;
+    }
+    if (focus_key_nonsticky === key) {
+      focus_key_nonsticky = null;
       focused = false;
     }
   } else {
@@ -676,8 +716,7 @@ export function spotFocusCheck(param) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
           spotlog('auto_focus', key);
           // play no sound, etc, just silently steal focus
-          // spotFocusSet(param, false, 'auto_focus');
-          focus_key = key;
+          spotFocusSetSilent(param);
           focused = true;
         }
         frame_autofocus_spots[key] = param;
@@ -688,6 +727,7 @@ export function spotFocusCheck(param) {
     }
   }
 
+  out.kb_focused = focus_key === key;
   out.focused = focused;
   return out;
 }
@@ -697,16 +737,6 @@ export function spotEndInput() {
     spotDebug();
   }
 }
-
-export function spotFocusSteal(param, from_mouseover) {
-  let key = spotKey(param);
-  spotlog('spotFocusSteal', key, from_mouseover);
-  // Silent, no sound, no checking parameters, just set the key string
-  pad_mode = !from_mouseover;
-  focus_key = key;
-  // spotFocusSet(param, from_mouseover, 'spotFocusSteal');
-}
-
 // param:
 //   See SPOT_DEFAULT, additionally:
 //   x,y,w,h : number // only parameters not inherited from `def`
@@ -714,6 +744,7 @@ export function spotFocusSteal(param, from_mouseover) {
 //   out: object // holds return values, lazy-allocated if needed
 // returns/modifies param.out:
 //   focused : boolean // focused by any means
+//   kb_focused : boolean // focused for the purpose of receiving keyboard input (focused and no other sticky focus)
 //   spot_state: one of SPOT_STATE_*
 //   ret: number // if `param.is_button` and was activated (0/1 or more if clicked multiple times in a frame)
 //   long_press: boolean // if button_long_press and ret and was a long press, set to true
@@ -752,13 +783,13 @@ export function spot(param) {
   }
 
   let state = SPOT_STATE_REGULAR;
-  let { focused, allow_focus } = spotFocusCheck(param);
+  let { focused, allow_focus, kb_focused } = spotFocusCheck(param);
   if (disabled) {
     state = SPOT_STATE_DISABLED;
   } else {
     let button_click;
     if (drag_target && (param.drag = dragDrop(param))) {
-      spotFocusSet(param, true, 'drag_drop');
+      spotFocusSet(param, true, true, 'drag_drop');
       focused = true;
     } else if (button_long_press && (button_click = longPress(param)) ||
         is_button && (button_click = inputClick(param))
@@ -774,7 +805,7 @@ export function spot(param) {
             // Just focus, show tooltip
             // touch_changed_focus = true;
             // Considering this a "pad" focus, not mouse, as it's sticky
-            spotFocusSet(param, false, 'touch_focus');
+            spotFocusSet(param, false, false, 'touch_focus');
             focused = true;
           } else {
             // activate, and also unfocus
@@ -791,15 +822,15 @@ export function spot(param) {
         }
       } else {
         out.ret++;
-        spotFocusSet(param, true, 'click');
+        spotFocusSet(param, true, true, 'click');
         focused = true;
       }
     } else if (!is_button && touch_focuses && mousePosIsTouch() && inputClick(param)) {
       // Considering this a "pad" focus, not mouse, as it's sticky
-      spotFocusSet(param, false, 'touch_focus');
+      spotFocusSet(param, false, false, 'touch_focus');
       focused = true;
     } else if (drag_target && dragOver(param)) {
-      spotFocusSet(param, true, 'drag_over');
+      spotFocusSet(param, true, false, 'drag_over');
       focused = true;
       if (mouseDown()) {
         state = SPOT_STATE_DOWN;
@@ -817,18 +848,30 @@ export function spot(param) {
       def.long_press_focuses : param.long_press_focuses;
     if (long_press_focuses && longPress(param)) {
       // Considering this a "pad" focus, not mouse, as it's sticky
-      spotFocusSet(param, false, 'long_press');
+      spotFocusSet(param, false, false, 'long_press');
       focused = true;
     }
   }
   let is_mouseover = mouseOver(param);
-  if (focused && !focus_steal && !is_mouseover && (mouseMoved() || mouseButtonHadEdge())) {
-    focused = false;
-    spotUnfocus();
+  if (focused && !focus_steal && !is_mouseover) {
+    // Want to unfocus if mouse is in use
+    if (mouseButtonHadEdge()) {
+      // Unfocus regardless
+      focused = false;
+      spotUnfocus();
+    } else if (mouseMoved()) {
+      // Unfocus just focus_non_sticky if appropriate
+      focused = false;
+      if (focus_key === param.key_computed) {
+        spotUnfocus();
+      } else if (focus_key_nonsticky === param.key_computed) {
+        focus_key_nonsticky = null;
+      }
+    }
   }
   if (is_mouseover) {
     if (allow_focus) {
-      if (spotFocusSet(param, true, 'mouseover')) {
+      if (spotFocusSet(param, true, false, 'mouseover')) {
         focused = true;
       }
     }
@@ -848,7 +891,7 @@ export function spot(param) {
     if (state === SPOT_STATE_REGULAR) {
       state = SPOT_STATE_FOCUSED;
     }
-    if (is_button && !disabled) {
+    if (is_button && !disabled && kb_focused) {
       let key_opts = in_event_cb ? { in_event_cb } : null;
       if (keyDownEdge(KEYS.SPACE, key_opts) || keyDownEdge(KEYS.RETURN, key_opts) || padButtonDownEdge(PAD.A)) {
         button_activate = true;

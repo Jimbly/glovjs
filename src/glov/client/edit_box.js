@@ -91,6 +91,7 @@ class GlovUIEditBox {
       [SPOT_NAV_LEFT]: null,
       [SPOT_NAV_RIGHT]: null,
     };
+    this.sticky_focus = true;
     this.applyParams(params);
     assert.equal(typeof this.text, 'string');
 
@@ -139,7 +140,7 @@ class GlovUIEditBox {
     } else {
       this.onetime_focus = true;
     }
-    spotFocusSteal(this, false);
+    spotFocusSteal(this);
     this.is_focused = true;
     if (this.pointer_lock && pointerLocked()) {
       pointerLockExit();
@@ -169,7 +170,7 @@ class GlovUIEditBox {
       }
     } else if (dom_focused && !focused) {
       spotlog('DOM focused, GLOV not, stealing', this);
-      spotFocusSteal(this, false);
+      spotFocusSteal(this);
       focused = true;
     } else if (!dom_focused && focused) {
       // Leave it alone, it may be a browser pop-up such as for passwords

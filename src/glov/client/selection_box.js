@@ -653,11 +653,13 @@ class GlovSelectionBox extends SelectionBoxBase {
 
     let { scroll_height } = ctx;
 
-    this.doPadMovement();
-
     let do_scroll = scroll_height && this.items.length * entry_height > scroll_height;
 
     y = this.doList(x, y, z, do_scroll, this.selected);
+
+    if (ctx.any_focused) {
+      this.doPadMovement();
+    }
 
     this.expected_frame_index = glov_engine.getFrameIndex() + 1;
     x = 10;
@@ -707,7 +709,7 @@ class GlovDropDown extends SelectionBoxBase {
 
     this.runPrep(y);
 
-    let { list_visible, scroll_height } = ctx;
+    let { first_non_disabled_selection, list_visible, scroll_height } = ctx;
 
     let root_spot_rect = {
       key,
@@ -724,11 +726,12 @@ class GlovDropDown extends SelectionBoxBase {
     ctx.root_spot_rect = root_spot_rect;
     if (this.dropdown_visible) {
       root_spot_rect.custom_nav[SPOT_NAV_LEFT] = null;
+      root_spot_rect.custom_nav[SPOT_NAV_DOWN] = `${key}_${first_non_disabled_selection}`;
     }
     let root_spot_ret = spot(root_spot_rect);
     this.is_focused = root_spot_ret.focused;
 
-    if (root_spot_ret.focused || list_visible) {
+    if (root_spot_ret.kb_focused || list_visible) {
       this.doPadMovement();
     }
 
