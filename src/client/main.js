@@ -18,6 +18,7 @@ import * as glov_sprites from 'glov/client/sprites.js';
 import { createSprite } from 'glov/client/sprites.js';
 import * as transition from 'glov/client/transition.js';
 import * as ui from 'glov/client/ui.js';
+import { uiHandlingNav } from 'glov/client/ui.js';
 import * as ui_test from 'glov/client/ui_test.js';
 import { v4clone, v4copy, vec2, vec4 } from 'glov/common/vmath.js';
 import * as particle_data from './particle_data.js';
@@ -245,6 +246,7 @@ export function main() {
   let last_particles = 0;
 
   function test(dt) {
+    uiHandlingNav(); // register nav focus handler first in frame
     gl.clearColor(0, 0.72, 1, 1);
     if (!test.color_sprite) {
       test.color_sprite = v4clone(color_white);
@@ -267,11 +269,13 @@ export function main() {
     }
 
     test.character.dx = 0;
-    test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-    test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
     test.character.dy = 0;
-    test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-    test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+    if (!uiHandlingNav()) {
+      test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
+      test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
+      test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
+      test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+    }
     if (test.character.dx < 0) {
       sprites.animation.setState('idle_left');
       if (spine_anim) {

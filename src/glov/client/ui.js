@@ -49,6 +49,7 @@ const {
   SPOT_STATE_DISABLED,
   spot,
   spotEndOfFrame,
+  spotFocusableCanvas,
   spotPadMode,
   spotTopOfFrame,
   spotUnfocus,
@@ -659,6 +660,11 @@ export function setMouseOver(key, quiet) {
 
 export function focusCanvas() {
   spotUnfocus();
+}
+
+// Returns true if the navigation inputs (arrows, etc) should go to the UI, not the app
+export function uiHandlingNav() {
+  return menu_up || !spotFocusableCanvas().focused;
 }
 
 export function panel(param) {

@@ -17,6 +17,7 @@ const { netClient, netClientId, netSubs, netUserId } = require('./net.js');
 const { profanityFilter, profanityStartup } = require('./words/profanity.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const settings = require('./settings.js');
+const { spotUnfocus } = require('./spot.js');
 const ui = require('./ui.js');
 const { clamp, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
@@ -158,6 +159,7 @@ function ChatUI(params) {
     placeholder: 'Chat',
     initial_focus: false,
     auto_unfocus: true,
+    spatial_focus: false,
     max_len: params.max_len,
     text: '',
   });
@@ -665,7 +667,7 @@ ChatUI.prototype.run = function (opts) {
       if (was_focused) {
         // Do auto-complete logic *before* edit box, so we can eat TAB without changing focus
         // Eat tab even if there's nothing to complete, for consistency
-        let pressed_tab = input.keyDownEdge(input.KEYS.TAB);
+        let pressed_tab = !input.keyDown(input.KEYS.SHIFT) && input.keyDownEdge(input.KEYS.TAB);
         if (pressed_tab) {
           this.edit_text_entry.focus();
         }
@@ -780,11 +782,11 @@ ChatUI.prototype.run = function (opts) {
           }
           if (settings.chat_auto_unfocus) {
             is_focused = false;
-            ui.focusCanvas();
+            spotUnfocus();
           }
         } else {
           is_focused = false;
-          ui.focusCanvas();
+          spotUnfocus();
         }
       }
     }
@@ -943,7 +945,7 @@ ChatUI.prototype.run = function (opts) {
     if (input.mouseUpEdge({ x: x0, y: y - border, w: outer_w, h: y1 - y + border,
       in_event_cb: opts.pointerlock ? input.pointerLockEnter : null })
     ) {
-      ui.focusCanvas();
+      spotUnfocus();
       is_focused = false;
     }
     // Also prevent mouseover from going to anything beneat it
@@ -952,7 +954,7 @@ ChatUI.prototype.run = function (opts) {
     if (input.mouseDownEdge({ peek: true })) {
       // On touch, tapping doesn't always remove focus from the edit box!
       // Maybe this logic should be in the editbox logic?
-      ui.focusCanvas();
+      spotUnfocus();
       is_focused = false;
     }
   } else {

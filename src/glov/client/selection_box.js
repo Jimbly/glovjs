@@ -401,18 +401,22 @@ class SelectionBoxBase {
       let value = keyDownEdge(KEYS.PAGEDOWN) +
         (pad_shift ? padButtonDownEdge(PAD.DOWN) : 0);
       if (value) {
+        playUISound('rollover');
         this.selectForward(this.selected + page_size * value);
       }
       value = keyDownEdge(KEYS.PAGEUP) +
         (pad_shift ? padButtonDownEdge(PAD.UP) : 0);
       if (value) {
+        playUISound('rollover');
         this.selectBackward(this.selected - page_size * value);
       }
     }
     if (keyDownEdge(KEYS.HOME)) {
+      playUISound('rollover');
       this.selectForward(0);
     }
     if (keyDownEdge(KEYS.END)) {
+      playUISound('rollover');
       this.selectBackward(Infinity);
     }
   }

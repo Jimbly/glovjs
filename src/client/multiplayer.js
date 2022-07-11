@@ -18,6 +18,7 @@ import { soundLoad, soundPlay } from 'glov/client/sound.js';
 import * as sprite_animation from 'glov/client/sprite_animation.js';
 import * as glov_sprites from 'glov/client/sprites.js';
 import * as ui from 'glov/client/ui.js';
+import { uiHandlingNav } from 'glov/client/ui.js';
 import { toNumber } from 'glov/common/util.js';
 
 import { v2sub, v4copy, vec2, vec3, vec4 } from 'glov/common/vmath.js';
@@ -165,6 +166,10 @@ export function main() {
       test.character.y = pos[1];
       test.character.rot = pos[2];
     })) {
+      return;
+    }
+
+    if (uiHandlingNav()) {
       return;
     }
 

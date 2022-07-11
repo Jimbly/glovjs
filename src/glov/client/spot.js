@@ -20,6 +20,7 @@ export const SPOT_DEFAULT = {
   is_button: false, // can be activated/clicked/etc
   button_long_press: false, // detect long press differently than a regular click/tap
   pad_focusable: true, // is a target for keyboard/gamepad focus; set to false if only accessible via hotkey/button
+  spatial_focus: true, // if pad_focusable: can be focused spatialy (via d-pad/etc), otherwise only through tab
   auto_focus: false, // if this spot is new this frame, and doing pad (not mouse/touch) focusing, automatically focus it
   long_press_focuses: true, // a long press will focus an element (triggering tooltips, etc, on touch devices)
   sound_button: 'button_click', // string // when activated
@@ -115,6 +116,7 @@ let focus_next = []; // indexed by SPOT_NAV_*
 let focus_next_via = []; // just for spotDebug
 let frame_autofocus_spots = {};
 let last_frame_autofocus_spots = {};
+let did_canvas_spot = false;
 // pad_mode: really "non-mouse-mode" - touch triggers this in various situations
 // non-pad_mode (mouse mode) requires constant mouse over state to maintain focus
 let pad_mode = false;
@@ -249,6 +251,10 @@ function spotDebugList(show_all, list) {
       if (!pad_focusable) {
         continue;
       }
+      const spatial_focus = area.spatial_focus === undefined ? def.spatial_focus : area.spatial_focus;
+      if (!spatial_focus) {
+        continue;
+      }
       for (let jj = ii; jj < list.length; ++jj) {
         if (ii === jj) {
           continue;
@@ -258,6 +264,11 @@ function spotDebugList(show_all, list) {
           continue;
         }
         if (other.only_mouseover || !(other.pad_focusable ?? other.def?.pad_focusable)) {
+          continue;
+        }
+        const other_def = other.def || SPOT_DEFAULT;
+        const other_spatial_focus = other.spatial_focus === undefined ? other_def.spatial_focus : other.spatial_focus;
+        if (!other_spatial_focus) {
           continue;
         }
         let other_pos = other.dom_pos;
@@ -382,6 +393,7 @@ function spotCalcNavTargets() {
   let start;
   let pad_focusable_list = [];
   let prev;
+  let first_non_sub_rect;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let param = frame_spots[ii];
     if (param.is_sub_rect) {
@@ -398,11 +410,17 @@ function spotCalcNavTargets() {
       const def = param.def || SPOT_DEFAULT;
       const pad_focusable = param.pad_focusable === undefined ? def.pad_focusable : param.pad_focusable;
       if (pad_focusable) {
+        if (!first_non_sub_rect) {
+          first_non_sub_rect = param;
+        }
         prev = param;
         if (!focus_next[SPOT_NAV_NEXT] && start) {
           focus_next[SPOT_NAV_NEXT] = param;
         }
-        pad_focusable_list.push(param);
+        const spatial_focus = param.spatial_focus === undefined ? def.spatial_focus : param.spatial_focus;
+        if (spatial_focus) {
+          pad_focusable_list.push(param);
+        }
       }
     }
   }
@@ -412,13 +430,7 @@ function spotCalcNavTargets() {
   }
   if (!focus_next[SPOT_NAV_NEXT]) {
     // nothing next, go to first non-sub_rect
-    for (let ii = 0; ii < pad_focusable_list.length; ++ii) {
-      let first = pad_focusable_list[ii];
-      if (!first.is_sub_rect) {
-        focus_next[SPOT_NAV_NEXT] = first;
-        break;
-      }
-    }
+    focus_next[SPOT_NAV_NEXT] = first_non_sub_rect;
   }
   let precision_max;
   let start_sub_rect;
@@ -508,9 +520,14 @@ export function spotTopOfFrame() {
 }
 
 export function spotEndOfFrame() {
+  if (did_canvas_spot && focus_key && (keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B))) {
+    // Handle cancelling to auto-focus "canvas" spot (maybe this should be moved to app logic?)
+    spotUnfocus();
+  }
   spotCalcNavTargets();
 
   last_frame_autofocus_spots = frame_autofocus_spots;
+  did_canvas_spot = false;
   frame_spots = [];
   frame_autofocus_spots = {};
 }
@@ -930,4 +947,30 @@ export function spot(param) {
   out.spot_state = state;
 
   return out;
+}
+
+
+const canvas_spot = {
+  def: SPOT_DEFAULT,
+  key: 'canvas',
+  pad_focusable: true,
+  spatial_focus: false,
+  x: Infinity, y: Infinity, // Cause no spatial events to be eaten
+  custom_nav: {
+    [SPOT_NAV_LEFT]: null,
+    [SPOT_NAV_UP]: null,
+    [SPOT_NAV_RIGHT]: null,
+    [SPOT_NAV_DOWN]: null,
+  },
+  sound_rollover: null,
+};
+// Defines a virtual spot for the canvas, which is focusable, and which, when focused,
+//  does not capture any navigation keys (e.g. for arrows driving avatar control)
+export function spotFocusableCanvas() {
+  if (!did_canvas_spot) {
+    did_canvas_spot = true;
+    canvas_spot.focus_steal = !focus_key;
+    spot(canvas_spot);
+  }
+  return canvas_spot.out;
 }
