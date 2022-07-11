@@ -1444,7 +1444,7 @@ export function longPress(param) {
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
-  let max_dist = param.max_dist || 0;
+  let max_dist = param.long_press_max_dist || 50;
   let min_time = param.min_time || 500;
 
   for (let touch_id in touches) {
