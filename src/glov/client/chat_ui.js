@@ -569,8 +569,7 @@ function drawHelpTooltip(param) {
 }
 
 ChatUI.prototype.isFocused = function () {
-  return this.edit_text_entry && this.edit_text_entry.isFocused() ||
-    this.scroll_area && this.scroll_area.isFocused();
+  return this.edit_text_entry && this.edit_text_entry.isFocused();
 };
 
 ChatUI.prototype.sendChat = function (flags, text) {

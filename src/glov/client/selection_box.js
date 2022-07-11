@@ -15,6 +15,7 @@ import * as glov_font from './font.js';
 import {
   KEYS,
   PAD,
+  drag,
   keyDownEdge,
   mouseButtonHadUpEdge,
   padButtonDown,
@@ -264,7 +265,7 @@ class SelectionBoxBase {
     this.ctx = {};
     if (this.is_dropdown || this.scroll_height) {
       this.sa = scrollAreaCreate({
-        focusable_elem: this,
+        //focusable_elem: this,
         //background_color: null,
       });
     }
@@ -430,9 +431,8 @@ class SelectionBoxBase {
     } = this;
     let { scroll_height } = ctx;
     let eff_width = width;
-    let y_save;
+    const y_save = y;
     if (do_scroll) {
-      y_save = y;
       this.sa.begin({
         x, y, z,
         w: width,
@@ -489,7 +489,8 @@ class SelectionBoxBase {
         entry_spot_ret.focused = true;
         entry_spot_ret.spot_state = SPOT_STATE_FOCUSED;
       }
-      any_focused = any_focused || entry_spot_ret.focused;
+      let focused_or_down = entry_spot_ret.focused || entry_spot_ret.spot_state === SPOT_STATE_DOWN;
+      any_focused = any_focused || focused_or_down;
       if (item.slider || item.plus_minus) {
         // Allow left to negatively select
         if (entry_spot_ret.nav === SPOT_NAV_LEFT) {
@@ -512,7 +513,7 @@ class SelectionBoxBase {
       }
 
       let bounce = false;
-      if (entry_spot_ret.focused) {
+      if (focused_or_down) {
         this.selected = ii;
         if (!this.is_dropdown && display.bounce) {
           if (this.selected !== old_sel) {
@@ -596,10 +597,18 @@ class SelectionBoxBase {
       }
       y += entry_height;
     }
+    ctx.scroll_area_consumed_click = false;
     if (do_scroll) {
       this.sa.end(y);
+      ctx.scroll_area_consumed_click = this.sa.consumedClick();
       y = y_save + scroll_height;
     } else if (this.is_dropdown) {
+      // Consume drag events (desired for drop-down menu temporarily overlapping a slider)
+      drag({
+        x, y: y_save,
+        w: width,
+        h: y - y_save,
+      });
       spotSubEnd();
     }
     ctx.any_focused = any_focused;
@@ -631,9 +640,10 @@ class GlovSelectionBox extends SelectionBoxBase {
   }
 
   focus() {
+    assert(false, 'deprecated?');
     // focus the currently select element?  top element?
     let { key } = this;
-    spotFocusSteal(`${key}_0`);
+    spotFocusSteal({ key: `${key}_0` });
   }
 
   onListSelect() {
@@ -683,6 +693,7 @@ class GlovDropDown extends SelectionBoxBase {
   }
 
   focus() {
+    assert(false, 'deprecated?');
     spotFocusSteal(this);
     this.is_focused = true;
   }
@@ -801,14 +812,17 @@ class GlovDropDown extends SelectionBoxBase {
         clipResume();
       }
 
-      let { any_focused } = ctx;
+      let { any_focused, scroll_area_consumed_click } = ctx;
+      if (root_spot_ret.ret || this.was_clicked) {
+        any_focused = true;
+      }
       this.is_focused = this.is_focused || any_focused;
       if (!any_focused) {
         // Nothing focused?  Don't preview any current selection.
         this.selected = eff_selection;
       }
-      if (!any_focused && !root_spot_ret.focused) {
-        // Not focused
+      if (!any_focused && !root_spot_ret.focused && !scroll_area_consumed_click) {
+        // Not focused, and not toggled this frame
         if (
           // Clicked anywhere else?
           mouseButtonHadUpEdge() ||

@@ -70,11 +70,9 @@ import assert from 'assert';
 const { abs } = Math;
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
-// import { getFrameIndex } from './engine.js';
 import {
   KEYS,
   PAD,
-  drag,
   dragDrop,
   dragOver,
   inputClick,
@@ -126,6 +124,7 @@ export function spotPadMode() {
 }
 
 export function spotlog(...args) {
+  // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line global-require
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
 }
 
@@ -839,8 +838,6 @@ export function spot(param) {
       // do nothing, just consume event
       // not even set focus?
     }
-    // Consume drag events (desired for drop-down menu temporarily overlapping a slider, generally fine?)
-    drag(param);
   }
   // Long-press (on touch) focuses, a la mouse rollover
   if (allow_focus && inputTouchMode()) {

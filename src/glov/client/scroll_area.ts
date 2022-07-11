@@ -20,6 +20,7 @@ import {
   spot,
   spotSubBegin,
   spotSubEnd,
+  spotUnfocus,
 } from './spot.js';
 import { clipPop, clipPush } from './sprites.js';
 import * as ui from './ui.js';
@@ -124,6 +125,7 @@ export class ScrollArea {
   private overscroll_delay = 0;
   private grabbed_pos = 0;
   private grabbed = false;
+  private consumed_click = false;
   private drag_start: number | null = null;
   private began = false;
   private last_internal_h = 0;
@@ -159,6 +161,10 @@ export class ScrollArea {
   isFocused(): boolean {
     assert(false, 'deprecated?');
     return false;
+  }
+
+  consumedClick(): boolean {
+    return this.consumed_click;
   }
 
   isVisible(): boolean {
@@ -234,6 +240,7 @@ export class ScrollArea {
     h = max(h, 1); // prevent math from going awry on height of 0
     assert(this.began); // Checking mismatched begin/end
     this.began = false;
+    this.consumed_click = false;
     let focused_sub_elem = spotSubEnd();
     // restore camera and clippers
     camera2d.pop();
@@ -337,6 +344,9 @@ export class ScrollArea {
       if (wheel_delta) {
         this.overscroll_delay = OVERSCROLL_DELAY_WHEEL;
         this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
+        if (focused_sub_elem) {
+          spotUnfocus();
+        }
       }
 
       // handle drag of handle
@@ -364,9 +374,11 @@ export class ScrollArea {
         let up = input.mouseUpEdge({ button: 0 });
         if (up) {
           temp_pos[1] = up.pos[1];
+          this.consumed_click = true;
         } else if (!input.mouseDown({ button: 0 })) {
           // released but someone else ate it, release anyway!
           this.grabbed = false;
+          this.consumed_click = true;
         } else {
           input.mousePos(temp_pos);
         }
@@ -403,6 +415,7 @@ export class ScrollArea {
         --button_spot_ret.ret;
         gained_focus = true;
         this.scroll_pos -= this.rate_scroll_click;
+        this.consumed_click = true;
       }
       if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
         top_color = rollover_color_light;
@@ -414,6 +427,7 @@ export class ScrollArea {
         --button_spot_ret.ret;
         gained_focus = true;
         this.scroll_pos += this.rate_scroll_click;
+        this.consumed_click = true;
       }
       if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
         bottom_color = rollover_color_light;
@@ -437,6 +451,7 @@ export class ScrollArea {
       while (bar_spot_ret.ret) {
         --bar_spot_ret.ret;
         gained_focus = true;
+        this.consumed_click = true;
         if (bar_spot_ret.pos[1] > handle_screenpos + handle_pixel_h/2) {
           this.scroll_pos += this.h;
         } else {
@@ -455,6 +470,7 @@ export class ScrollArea {
           this.drag_start = this.scroll_pos;
         }
         this.scroll_pos = this.drag_start - drag.cur_pos[1] + drag.start_pos[1];
+        this.consumed_click = true;
       } else {
         this.drag_start = null;
       }

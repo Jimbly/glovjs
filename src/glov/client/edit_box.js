@@ -64,8 +64,11 @@ function formHook(ev) {
   }
 }
 
+let last_key_id = 0;
+
 class GlovUIEditBox {
   constructor(params) {
+    this.key = `eb${++last_key_id}`;
     this.x = 0;
     this.y = 0;
     this.z = Z.UI; // actually in DOM, so above everything!
