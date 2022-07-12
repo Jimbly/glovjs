@@ -98,6 +98,14 @@ export const PAD = {
   ANALOG_LEFT: 21,
   ANALOG_DOWN: 22,
   ANALOG_RIGHT: 23,
+  LSTICK_UP: 20,
+  LSTICK_LEFT: 21,
+  LSTICK_DOWN: 22,
+  LSTICK_RIGHT: 23,
+  RSTICK_UP: 24,
+  RSTICK_LEFT: 25,
+  RSTICK_DOWN: 26,
+  RSTICK_RIGHT: 27,
 };
 
 const { is_firefox, is_mac_osx } = require('./browser.js');
@@ -672,10 +680,10 @@ function onBlurOrFocus(evt) {
 let ANALOG_MAP = {};
 function genAnalogMap() {
   if (map_analog_to_dpad) {
-    ANALOG_MAP[PAD.LEFT] = PAD.ANALOG_LEFT;
-    ANALOG_MAP[PAD.RIGHT] = PAD.ANALOG_RIGHT;
-    ANALOG_MAP[PAD.UP] = PAD.ANALOG_UP;
-    ANALOG_MAP[PAD.DOWN] = PAD.ANALOG_DOWN;
+    ANALOG_MAP[PAD.LEFT] = [PAD.LSTICK_LEFT, PAD.RSTICK_LEFT];
+    ANALOG_MAP[PAD.RIGHT] = [PAD.LSTICK_RIGHT, PAD.RSTICK_RIGHT];
+    ANALOG_MAP[PAD.UP] = [PAD.LSTICK_UP, PAD.RSTICK_UP];
+    ANALOG_MAP[PAD.DOWN] = [PAD.LSTICK_DOWN, PAD.RSTICK_DOWN];
   }
 }
 
@@ -740,7 +748,7 @@ export function startup(_canvas, params) {
 const DEADZONE = 0.26;
 const DEADZONE_SQ = DEADZONE * DEADZONE;
 const NUM_STICKS = 2;
-const PAD_THRESHOLD = 0.25; // for turning analog motion into digital events
+const PAD_THRESHOLD = 0.35; // for turning analog motion into digital events
 
 function getGamepadData(idx) {
   let gpd = gamepad_data[idx];
@@ -869,10 +877,15 @@ function gamepadUpdate() {
         }
 
         // Calculate virtual directional buttons
-        updatePadState(gpd, ps, gpd.sticks[0][0] < -PAD_THRESHOLD, PAD.ANALOG_LEFT);
-        updatePadState(gpd, ps, gpd.sticks[0][0] > PAD_THRESHOLD, PAD.ANALOG_RIGHT);
-        updatePadState(gpd, ps, gpd.sticks[0][1] < -PAD_THRESHOLD, PAD.ANALOG_DOWN);
-        updatePadState(gpd, ps, gpd.sticks[0][1] > PAD_THRESHOLD, PAD.ANALOG_UP);
+        updatePadState(gpd, ps, gpd.sticks[0][0] < -PAD_THRESHOLD, PAD.LSTICK_LEFT);
+        updatePadState(gpd, ps, gpd.sticks[0][0] > PAD_THRESHOLD, PAD.LSTICK_RIGHT);
+        updatePadState(gpd, ps, gpd.sticks[0][1] < -PAD_THRESHOLD, PAD.LSTICK_DOWN);
+        updatePadState(gpd, ps, gpd.sticks[0][1] > PAD_THRESHOLD, PAD.LSTICK_UP);
+
+        updatePadState(gpd, ps, gpd.sticks[1][0] < -PAD_THRESHOLD, PAD.RSTICK_LEFT);
+        updatePadState(gpd, ps, gpd.sticks[1][0] > PAD_THRESHOLD, PAD.RSTICK_RIGHT);
+        updatePadState(gpd, ps, gpd.sticks[1][1] < -PAD_THRESHOLD, PAD.RSTICK_DOWN);
+        updatePadState(gpd, ps, gpd.sticks[1][1] > PAD_THRESHOLD, PAD.RSTICK_UP);
       }
     }
   }
@@ -1266,7 +1279,12 @@ function padButtonShared(fn, padcode, padindex) {
   }
   let ps = pad_states[padindex];
 
-  r += ANALOG_MAP[padcode] && fn(gpd, ps, ANALOG_MAP[padcode]) || 0;
+  let am = ANALOG_MAP[padcode];
+  if (am) {
+    for (let ii = 0; ii < am.length; ++ii) {
+      r += fn(gpd, ps, am[ii]) || 0;
+    }
+  }
   r += fn(gpd, ps, padcode);
   return r;
 }
