@@ -974,3 +974,11 @@ export function spotFocusableCanvas() {
   }
   return canvas_spot.out;
 }
+
+export function spotCanvasHandles(list) {
+  let custom_nav = {};
+  for (let ii = 0; ii < list.length; ++ii) {
+    custom_nav[list[ii]] = null;
+  }
+  canvas_spot.custom_nav = custom_nav;
+}
