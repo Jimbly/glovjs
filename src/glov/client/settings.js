@@ -101,6 +101,7 @@ register({
       'Default: /max_fps 0',
     default_value: 0,
     type: cmd_parse.TYPE_FLOAT,
+    ver: 1,
   },
   render_scale: {
     label: 'Render Scale (3D)',
