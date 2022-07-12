@@ -56,7 +56,7 @@ const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { callEach, clamp, defaults, merge, nearSame, ridx } = require('glov/common/util.js');
+const { callEach, clamp, defaults, nearSame, ridx } = require('glov/common/util.js');
 const {
   mat3, mat4,
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
@@ -1110,7 +1110,7 @@ export function startup(params) {
   if (is_pixely) {
     textures.defaultFilters(gl.NEAREST, gl.NEAREST);
     settings.runTimeDefault('render_scale_mode', 1);
-    params.ui_sprites = merge(params.ui_sprites || {}, glov_ui.ui_sprites_pixely);
+    params.ui_sprites = defaults(params.ui_sprites || {}, glov_ui.ui_sprites_pixely);
   } else {
     textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
