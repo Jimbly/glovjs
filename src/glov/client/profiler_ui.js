@@ -27,6 +27,7 @@ const {
   profilerImport,
   profilerExport,
   profilerHistoryIndex,
+  profilerMaxMem,
   profilerMemDepthGet,
   profilerMemDepthSet,
   profilerNodeTick,
@@ -109,6 +110,7 @@ cmd_parse.register({
   access_show,
   func: profilerToggle,
 });
+const PROFILER_RELATIVE_LABELS = ['% of user', '% of parent', '% of frame', '% of mem'];
 settings.register({
   show_profiler: {
     default_value: 0,
@@ -125,7 +127,7 @@ settings.register({
   profiler_relative: {
     default_value: 1,
     type: cmd_parse.TYPE_INT,
-    range: [0,2],
+    range: [0, PROFILER_RELATIVE_LABELS.length-1],
     access_show: ['hidden'],
   },
   profiler_interactable: {
@@ -216,6 +218,7 @@ let color_bar_highlight = vec4(0,0,0, 0.5);
 const GRAPH_FRAME_TIME = 16;
 let GRAPH_MAX_MEM = 4096;
 let total_frame_time;
+let total_frame_mem;
 let show_index_count;
 let show_index_time;
 let show_index_mem;
@@ -366,6 +369,13 @@ function profilerShowEntry(walk, depth) {
         percent = walk.history[show_index_time] / walk.parent.history[show_index_time];
       }
     }
+  } else if (settings.profiler_relative === 3) {
+    // % of meme
+    if (do_average) {
+      percent = dmem_max / total_frame_mem;
+    } else {
+      percent = walk.history[show_index_mem] / total_frame_mem;
+    }
   } else {
     if (do_average) {
       percent = (time_sum/HIST_SIZE) / total_frame_time;
@@ -456,7 +466,6 @@ function doZoomedGraph() {
 const BUTTON_W = 140;
 const BUTTON_H = 48;
 const BUTTON_FONT_HEIGHT = 24;
-const PROFILER_RELATIVE_LABELS = ['% of user', '% of parent', '% of frame'];
 let mouse_pos = vec2();
 function profilerUIRun() {
   profilerStart('profilerUIRun');
@@ -533,7 +542,7 @@ function profilerUIRun() {
       w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
       text: PROFILER_RELATIVE_LABELS[settings.profiler_relative],
     })) {
-      settings.set('profiler_relative', (settings.profiler_relative + 1) % 3);
+      settings.set('profiler_relative', (settings.profiler_relative + 1) % PROFILER_RELATIVE_LABELS.length);
     }
   } else {
     font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
@@ -716,6 +725,8 @@ function profilerUIRun() {
     } else if (settings.profiler_relative === 2) {
       // "% of frame"
       total_frame_time = profilerAvgTime(root);
+    } else if (settings.profiler_relative === 3) {
+      total_frame_mem = profilerMaxMem(root);
     }
   } else {
     // use last frame for percents
@@ -733,6 +744,17 @@ function profilerUIRun() {
     } else if (settings.profiler_relative === 2) {
       // "% of frame"
       total_frame_time = root.history[show_index_time];
+    } else if (settings.profiler_relative === 3) {
+      total_frame_mem = root.history[show_index_mem];
+      if (total_frame_mem < 0) {
+        // sum positive children instead, for better estimate
+        let walk = root.child;
+        total_frame_mem = 0;
+        while (walk) {
+          total_frame_mem += max(0, walk.history[show_index_mem]);
+          walk = walk.next;
+        }
+      }
     }
   }
 

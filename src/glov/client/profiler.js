@@ -332,6 +332,16 @@ export function profilerAvgTime(entry) {
   return sum / HIST_SIZE;
 }
 
+export function profilerMaxMem(entry) {
+  let dmem_max = 0;
+  for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+    if (entry.history[ii]) {
+      dmem_max = max(dmem_max, entry.history[ii+2]);
+    }
+  }
+  return dmem_max;
+}
+
 export function profilerExport() {
   let obj = {
     history_index,
