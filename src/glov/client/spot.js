@@ -68,7 +68,7 @@ export const SPOT_STATE_FOCUSED = 3;
 export const SPOT_STATE_DISABLED = 4;
 
 import assert from 'assert';
-const { abs } = Math;
+const { abs, max } = Math;
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
 import {
@@ -182,8 +182,12 @@ const TARGET_HALF = 1;
 const TARGET_ALL = 2;
 
 function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
-  let start_x = dom_pos.x * 2 + dom_pos.w;
-  let start_y = dom_pos.y * 2 + dom_pos.h;
+  let start_x = dom_pos.x + dom_pos.w/2;
+  let start_y = dom_pos.y + dom_pos.h/2;
+  let start_left = dom_pos.x;
+  let start_right = dom_pos.x + dom_pos.w;
+  let start_top = dom_pos.y;
+  let start_bottom = dom_pos.y + dom_pos.h;
   let best = null;
   let bestd = Infinity;
   for (let ii = 0; ii < targets.length; ++ii) {
@@ -191,29 +195,67 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
     if (!filter(param)) {
       continue;
     }
-    let x = param.dom_pos.x * 2 + param.dom_pos.w;
-    let y = param.dom_pos.y * 2 + param.dom_pos.h;
-    let dx = x - start_x;
-    let dy = y - start_y;
+    let target = param.dom_pos;
+    let d;
     if (precision === TARGET_QUAD) {
       let quadrant;
-      if (abs(dx) > abs(dy)) {
-        if (dx > 0) {
-          quadrant = SPOT_NAV_RIGHT;
+      // edge facing quadrant calc: to be to the "left" our right edge must be
+      //   in the quadrant formed by the 2 45-degree lines passing through the
+      //   left 2 points of the start rect.
+      // In this case, for `d`, use the Manhattan distance from the center of
+      //   the start edge to the nearest point in the target, this will favor
+      //   those that are nearby and aligned without skipping past a large, wide
+      //   button in favor of a small (closer) button on the other side of it.
+      let target_right = target.x + target.w;
+      let target_bottom = target.y + target.h;
+      let left_dx = start_left - target_right;
+      let right_dx = target.x - start_right;
+      let top_dy = start_top - target_bottom;
+      let bottom_dy = target.y - start_bottom;
+      if (left_dx >= 0 && target_bottom > start_top - left_dx && target.y < start_bottom + left_dx) {
+        quadrant = SPOT_NAV_LEFT;
+        d = left_dx + max(target.y - start_y, start_y - target_bottom, 0);
+      } else if (right_dx >= 0 && target_bottom > start_top - right_dx && target.y < start_bottom + right_dx) {
+        quadrant = SPOT_NAV_RIGHT;
+        d = right_dx + max(target.y - start_y, start_y - target_bottom, 0);
+      } else if (top_dy >= 0 && target_right >= start_left - top_dy && target.x <= start_right + top_dy) {
+        quadrant = SPOT_NAV_UP;
+        d = top_dy + max(target.x - start_x, start_x - target_right, 0);
+      } else if (bottom_dy >= 0 && target_right >= start_left - bottom_dy && target.x <= start_right + bottom_dy) {
+        quadrant = SPOT_NAV_DOWN;
+        d = bottom_dy + max(target.x - start_x, start_x - target_right, 0);
+      }
+
+      if (quadrant === undefined) {
+        // smart logic didn't work, perhaps heavily overlapping, instead use
+        // simple center-point quadrant calc:
+        let x = target.x + target.w/2;
+        let y = target.y + target.h/2;
+        let dx = x - start_x;
+        let dy = y - start_y;
+        d = abs(dx) + abs(dy);
+        if (abs(dx) > abs(dy)) {
+          if (dx > 0) {
+            quadrant = SPOT_NAV_RIGHT;
+          } else {
+            quadrant = SPOT_NAV_LEFT;
+          }
         } else {
-          quadrant = SPOT_NAV_LEFT;
-        }
-      } else {
-        if (dy > 0) {
-          quadrant = SPOT_NAV_DOWN;
-        } else {
-          quadrant = SPOT_NAV_UP;
+          if (dy > 0) {
+            quadrant = SPOT_NAV_DOWN;
+          } else {
+            quadrant = SPOT_NAV_UP;
+          }
         }
       }
       if (quadrant !== nav) {
         continue;
       }
     } else if (precision === TARGET_HALF) {
+      let x = target.x + target.w/2;
+      let y = target.y + target.h/2;
+      let dx = x - start_x;
+      let dy = y - start_y;
       if (dx <= 0 && nav === SPOT_NAV_RIGHT ||
         dx >= 0 && nav === SPOT_NAV_LEFT ||
         dy <= 0 && nav === SPOT_NAV_DOWN ||
@@ -221,10 +263,10 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
       ) {
         continue;
       }
+      d = abs(dx) + abs(dy);
     } else {
       // allow any, just find closest
     }
-    let d = abs(dx) + abs(dy);
     if (d < bestd) {
       best = param;
       bestd = d;
@@ -382,7 +424,7 @@ function spotCalcNavTargets() {
   // Computes, for each direction, where we would target from the current focus
   //   state, to be used next frame if a focus key is pressed.
   // Note: cannot compute this trivially only upon keypress since we do not know
-  //   which keys to press until we reached a focused / focusable element.  We
+  //   which keys to check until we reached a focused / focusable element.  We
   //   could, however, instead, do this at the beginning of the frame only if
   //   we peek at the key/pad state and see that it *might be* pressed this
   //   frame.
@@ -390,6 +432,9 @@ function spotCalcNavTargets() {
     focus_next[ii] = undefined;
     focus_next_via[ii] = undefined;
   }
+  // First, find current focused element (if any) and gather the list of potentially
+  //  focusable elements, computing where "prev" and "next should go (based on
+  //  the in-frame order).
   let start;
   let pad_focusable_list = [];
   let prev;
@@ -459,6 +504,8 @@ function spotCalcNavTargets() {
     }
   }
 
+  // Second, using the currently focused rect as a starting point, find
+  //   appropriate elements to focus in each of the cardinal directions.
   for (let nav = SPOT_NAV_LEFT; nav <= SPOT_NAV_DOWN; ++nav) {
     for (let precision = 0; precision <= precision_max; ++precision) {
       filter_not = null;
@@ -470,7 +517,7 @@ function spotCalcNavTargets() {
       if (start_sub_rect) {
         // Did not find anything within our subrect, try searching outside, from the subrect itself
         filter_not = start_sub_rect; // do not target oneself
-        best = findBestTargetFromSubRect(start_sub_rect.sub_rect, nav, start_sub_rect.dom_pos,
+        best = findBestTargetFromSubRect(start_sub_rect.sub_rect, nav, focus_pos,
           pad_focusable_list, precision);
         if (best) {
           focus_next[nav] = best;
@@ -479,6 +526,10 @@ function spotCalcNavTargets() {
       }
     }
   }
+
+  // Finally, apply any custom navigation instructions (keys which should not change
+  //   focus or which target a particular other element by key) based on the currently
+  //   focused element.
   if (start) {
     const def = start.def || SPOT_DEFAULT;
     const custom_nav = start.custom_nav === undefined ? def.custom_nav : start.custom_nav;
