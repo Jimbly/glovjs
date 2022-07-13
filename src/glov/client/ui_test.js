@@ -129,7 +129,6 @@ export function run(x, y, z) {
       },
     });
   }
-  y += line_height;
 
   if (edit_box1.run() === edit_box1.SUBMIT) {
     ui.modalDialog({
@@ -143,6 +142,21 @@ export function run(x, y, z) {
   if (edit_box2.run() === edit_box2.SUBMIT) {
     edit_box2.setText('');
   }
+
+  if (ui.buttonText({ x: edit_box2.x + edit_box2.w + pad, y, z, text: '...', w: ui.button_height })) {
+    ui.modalTextEntry({
+      title: 'Type something',
+      edit_text: edit_box2.getText(),
+      buttons: {
+        ok: function (text) {
+          edit_box2.setText(text);
+        },
+        cancel: null,
+      }
+    });
+  }
+
+  y += line_height;
 
   if (ui.buttonText({ x, y, z, text: 'Menu', tooltip: 'Shows a menu' })) {
     demo_menu_up = true;

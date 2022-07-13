@@ -212,7 +212,7 @@ class GlovUIEditBox {
     let { allow_focus, focused } = this.updateFocus();
 
     this_frame_edit_boxes.push(this);
-    let elem = allow_focus && uiGetDOMElem(this.elem);
+    let elem = allow_focus && uiGetDOMElem(this.elem, true);
     if (elem !== this.elem) {
       if (elem) {
         // new DOM element, initialize
