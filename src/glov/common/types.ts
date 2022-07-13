@@ -1,4 +1,5 @@
 import type { FriendData } from './friends_data';
+import type { Vec4 } from './vmath';
 
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
@@ -42,6 +43,24 @@ export interface ServerPresenceData {
 }
 
 /*
+ * Chat message data
+ */
+export interface ChatMessageData {
+  id: string | undefined;
+  msg: string;
+  flags: number;
+  ts: number;
+  display_name: string | undefined;
+}
+/*
+ * Chat history data
+ */
+export interface ChatHistoryData {
+  idx: number;
+  msgs: ChatMessageData[];
+}
+
+/*
  * Friends command response
  */
 export type FriendCmdResponse = { msg: string, friend: FriendData };
@@ -64,8 +83,6 @@ export interface HandlerSource {
  * Server client worker handler source
  */
 export interface ClientHandlerSource extends HandlerSource {
-  channel_id: string,
-  id: string,
   type: 'client',
   user_id?: string,
   display_name?: string,
@@ -120,3 +137,34 @@ export interface Packet {
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;
+
+/**
+ * Client Sprite class
+ */
+export interface Sprite {
+  uidata: {
+    total_w: number,
+    total_h: number,
+  },
+  uvs: number[],
+  draw: (params: {
+    x: number, y: number, z: number,
+    w: number, h: number,
+    uvs?: number[], color: Vec4,
+  }) => void,
+}
+/**
+ * Client Sprite creation parameters
+ */
+export type SpriteParam = UnimplementedData;
+/**
+ * UI Sprites object
+ */
+export interface UISprites {
+  chat_panel: Sprite,
+  scrollbar_top: Sprite,
+  scrollbar_bottom: Sprite,
+  scrollbar_trough: Sprite,
+  scrollbar_handle: Sprite,
+  scrollbar_handle_grabber: Sprite,
+}

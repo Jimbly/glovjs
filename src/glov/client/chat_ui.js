@@ -188,6 +188,7 @@ function ChatUI(params) {
   this.volume_join_leave = params.volume_join_leave || 0.15;
   this.volume_in = params.volume_in || 0.5;
   this.volume_out = params.volume_out || 0.5;
+  this.msg_out_err_delay = params.msg_out_err_delay || 0; // Delay when playing msg_out_err after msg_out.
   this.history = new CmdHistory();
   this.get_roles = defaultGetRoles; // returns object for testing cmd access permissions
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
@@ -624,6 +625,15 @@ ChatUI.prototype.run = function (opts) {
       `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
   }
 
+  // Test sending a stream of chat
+  // if (engine.defines.CHATTER) {
+  //   this.chatter_countdown = (this.chatter_countdown || 0) - engine.frame_dt;
+  //   if (this.chatter_countdown < 0) {
+  //     this.sendChat(0, `Something random ${Math.random()}`);
+  //     this.chatter_countdown = 1000 * Math.random();
+  //   }
+  // }
+
   if (!this.did_run_late) {
     this.runLate();
   }
@@ -750,6 +760,7 @@ ChatUI.prototype.run = function (opts) {
         this.scroll_area.scrollToEnd();
         let text = this.edit_text_entry.getText().trim();
         if (text) {
+          let start_time = Date.now();
           this.edit_text_entry.setText('');
           if (text[0] === '/') {
             if (text[1] === '/') { // common error of starting with //foo because chat was already focused
@@ -764,7 +775,10 @@ ChatUI.prototype.run = function (opts) {
                 return;
               }
               if (this.volume_out) {
-                ui.playUISound('msg_out_err', this.volume_out);
+                setTimeout(
+                  () => ui.playUISound('msg_out_err', this.volume_out),
+                  max(0, this.msg_out_err_delay * 1000 - (Date.now() - start_time))
+                );
               }
               if (!this.edit_text_entry.getText()) {
                 // this.history.unadd(text);

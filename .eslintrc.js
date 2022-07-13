@@ -43,6 +43,7 @@ module.exports = {
     "@typescript-eslint/no-array-constructor": "error",
     "@typescript-eslint/no-empty-function": "error",
     "@typescript-eslint/no-extra-semi": "error",
+    "@typescript-eslint/no-invalid-this": "error",
     "@typescript-eslint/no-redeclare": "error",
     "@typescript-eslint/no-shadow": [
       "error",
@@ -288,7 +289,7 @@ module.exports = {
     "no-implied-eval": "error",
     "no-inline-comments": "off",
     "no-invalid-regexp": "error",
-    "no-invalid-this": "error",
+    "no-invalid-this": "off", // replaced with @typescript-eslint/no-invalid-this
     "no-irregular-whitespace": "error",
     "no-iterator": "error",
     "no-label-var": "error",
@@ -474,9 +475,9 @@ module.exports = {
       "last"
     ],
     "sort-imports":["error", {
-        "ignoreCase": false,
-        "ignoreDeclarationSort": true,
-        "ignoreMemberSort": false,
+      "ignoreCase": false,
+      "ignoreDeclarationSort": true,
+      "ignoreMemberSort": false,
     }],
     "sort-keys": "off",
     "sort-vars": "off", // JE

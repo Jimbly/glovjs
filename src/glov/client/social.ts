@@ -148,7 +148,7 @@ cmd_parse.registerValue('afk', {
 });
 
 function onPresence(this: { presence_data?: ServerPresenceData }, data: ServerPresenceData): void {
-  let user_channel = this; // eslint-disable-line no-invalid-this
+  let user_channel = this;
   user_channel.presence_data = data;
 }
 

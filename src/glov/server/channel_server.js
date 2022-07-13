@@ -231,7 +231,7 @@ function channelServerSendFinish(pak, err, resp_func) {
 }
 
 function channelServerPakSend(err, resp_func) {
-  let pak = this; //eslint-disable-line no-invalid-this
+  let pak = this; // eslint-disable-line @typescript-eslint/no-invalid-this
   if (typeof err === 'function' && !resp_func) {
     resp_func = err;
     err = null;

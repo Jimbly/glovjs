@@ -184,7 +184,7 @@ function wsPakSendFinish(pak, err, resp_func) {
 }
 
 function wsPakSend(err, resp_func) {
-  let pak = this; //eslint-disable-line no-invalid-this
+  let pak = this; // eslint-disable-line @typescript-eslint/no-invalid-this
   if (typeof err === 'function' && !resp_func) {
     resp_func = err;
     err = null;
@@ -222,7 +222,7 @@ function sendMessageInternal(client, msg, err, data, resp_func) {
 }
 
 export function sendMessage(msg, data, resp_func) {
-  sendMessageInternal(this, msg, null, data, resp_func); // eslint-disable-line no-invalid-this
+  sendMessageInternal(this, msg, null, data, resp_func); // eslint-disable-line @typescript-eslint/no-invalid-this
 }
 
 export function wsHandleMessage(client, buf, filter) {

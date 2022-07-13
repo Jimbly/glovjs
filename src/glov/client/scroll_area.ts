@@ -25,29 +25,12 @@ import {
 import { clipPop, clipPush } from './sprites.js';
 import * as ui from './ui.js';
 
+// TODO: remove when ui.js is converted to TS
+import type { UISprites } from 'glov/common/types.js';
+
 const { max, min, round } = Math;
 
-// TODO: delete SpriteInterface and ScrollbarSpritesInterface interface when ui.js is converted to TS.
 // TODO: move FocusableElement to appropriate TS file after conversion (probably input)
-interface SpriteInterface {
-  uidata: {
-    total_w: number,
-    total_h: number,
-  },
-  uvs: number[],
-  draw: (params: {
-    x: number, y: number, z: number,
-    w: number, h: number,
-    uvs?: number[], color: Vec4,
-  }) => void,
-}
-interface ScrollAreaSpritesInterface {
-  scrollbar_top: SpriteInterface,
-  scrollbar_bottom: SpriteInterface,
-  scrollbar_trough: SpriteInterface,
-  scrollbar_handle: SpriteInterface,
-  scrollbar_handle_grabber: SpriteInterface,
-}
 interface FocusableElement {
   focus: () => void
   is_focused: boolean,
@@ -154,7 +137,7 @@ export class ScrollArea {
 
   barWidth(): number {
     let { pixel_scale } = this;
-    let { scrollbar_top } = ui.sprites as ScrollAreaSpritesInterface;
+    let { scrollbar_top } = ui.sprites as UISprites;
     return scrollbar_top.uidata.total_w * pixel_scale;
   }
 
@@ -291,7 +274,7 @@ export class ScrollArea {
 
     let {
       scrollbar_top, scrollbar_bottom, scrollbar_trough, scrollbar_handle, scrollbar_handle_grabber
-    } = ui.sprites as ScrollAreaSpritesInterface;
+    } = ui.sprites as UISprites;
 
     let bar_w = scrollbar_top.uidata.total_w * pixel_scale;
     let button_h = min(scrollbar_top.uidata.total_h * pixel_scale, this.h / 3);
