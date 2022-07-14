@@ -190,7 +190,7 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
   let start_top = dom_pos.y;
   let start_bottom = dom_pos.y + dom_pos.h;
   let best = null;
-  let bestd = Infinity;
+  let bestd;
   for (let ii = 0; ii < targets.length; ++ii) {
     let param = targets[ii];
     if (!filter(param)) {
@@ -252,23 +252,25 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
       if (quadrant !== nav) {
         continue;
       }
-    } else if (precision === TARGET_HALF) {
+    } else {
       let x = target.x + target.w/2;
       let y = target.y + target.h/2;
       let dx = x - start_x;
       let dy = y - start_y;
-      if (dx <= 0 && nav === SPOT_NAV_RIGHT ||
-        dx >= 0 && nav === SPOT_NAV_LEFT ||
-        dy <= 0 && nav === SPOT_NAV_DOWN ||
-        dy >= 0 && nav === SPOT_NAV_UP
-      ) {
-        continue;
-      }
       d = abs(dx) + abs(dy);
-    } else {
-      // allow any, just find closest
+      if (precision === TARGET_HALF) {
+        if (dx <= 0 && nav === SPOT_NAV_RIGHT ||
+          dx >= 0 && nav === SPOT_NAV_LEFT ||
+          dy <= 0 && nav === SPOT_NAV_DOWN ||
+          dy >= 0 && nav === SPOT_NAV_UP
+        ) {
+          continue;
+        }
+      } else {
+        // allow any, just find closest
+      }
     }
-    if (d < bestd) {
+    if (!best || d < bestd) {
       best = param;
       bestd = d;
     }
