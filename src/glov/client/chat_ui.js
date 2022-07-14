@@ -181,6 +181,7 @@ function ChatUI(params) {
   });
   this.w = params.w || engine.game_width / 2;
   this.h = params.h || engine.game_height / 2; // excluding text entry
+  this.inner_width_adjust = params.inner_width_adjust || 0;
   this.border = params.border || undefined;
   this.volume_join_leave = params.volume_join_leave || 0.15;
   this.volume_in = params.volume_in || 0.5;
@@ -665,7 +666,7 @@ ChatUI.prototype.run = function (opts) {
     }
     font_height *= font_scale;
   }
-  const inner_w = outer_w - border;
+  const inner_w = outer_w - border + this.inner_width_adjust;
   this.setActiveSize(font_height, inner_w); // may recalc numlines on each elem; updates wrap_w
   if (!hide_text_input) {
     anything_visible = true;
