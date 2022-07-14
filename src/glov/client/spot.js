@@ -290,7 +290,8 @@ function spotDebugList(show_all, list) {
       color = [1,0.5,0, 0.5];
     } else {
       const def = area.def || SPOT_DEFAULT;
-      const pad_focusable = area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable;
+      const pad_focusable = !area.is_sub_rect &&
+        (area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable);
       if (!pad_focusable) {
         continue;
       }
@@ -298,7 +299,7 @@ function spotDebugList(show_all, list) {
       if (!spatial_focus) {
         continue;
       }
-      for (let jj = ii; jj < list.length; ++jj) {
+      for (let jj = 0; jj < list.length; ++jj) {
         if (ii === jj) {
           continue;
         }
@@ -306,10 +307,12 @@ function spotDebugList(show_all, list) {
         if (other.sub_rect !== area.sub_rect) {
           continue;
         }
-        if (other.only_mouseover || !(other.pad_focusable ?? other.def?.pad_focusable)) {
+        const other_def = other.def || SPOT_DEFAULT;
+        const other_pad_focusable = !other.is_sub_rect &&
+          (other.pad_focusable === undefined ? other_def.pad_focusable : other.pad_focusable);
+        if (other.only_mouseover || !other_pad_focusable) {
           continue;
         }
-        const other_def = other.def || SPOT_DEFAULT;
         const other_spatial_focus = other.spatial_focus === undefined ? other_def.spatial_focus : other.spatial_focus;
         if (!other_spatial_focus) {
           continue;
