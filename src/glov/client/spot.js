@@ -130,7 +130,7 @@ export function spotlog(...args) {
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
 }
 
-function spotKey(param) {
+export function spotKey(param) {
   let key = param.key || `${focus_sub_rect ? focus_sub_rect.key_computed : ''}_${param.x}_${param.y}`;
   if (param.key_computed) {
     assert.equal(param.key_computed, key);
@@ -1007,12 +1007,8 @@ const canvas_spot = {
   pad_focusable: true,
   spatial_focus: false,
   x: Infinity, y: Infinity, // Cause no spatial events to be eaten
-  custom_nav: {
-    [SPOT_NAV_LEFT]: null,
-    [SPOT_NAV_UP]: null,
-    [SPOT_NAV_RIGHT]: null,
-    [SPOT_NAV_DOWN]: null,
-  },
+  w: 0, h: 0,
+  // custom_nav filled below
   sound_rollover: null,
 };
 // Defines a virtual spot for the canvas, which is focusable, and which, when focused,
@@ -1026,6 +1022,7 @@ export function spotFocusableCanvas() {
   return canvas_spot.out;
 }
 
+const CANVAS_HANDLES_DEFAULT = [SPOT_NAV_LEFT, SPOT_NAV_UP, SPOT_NAV_RIGHT, SPOT_NAV_DOWN];
 export function spotCanvasHandles(list) {
   let custom_nav = {};
   for (let ii = 0; ii < list.length; ++ii) {
@@ -1033,3 +1030,4 @@ export function spotCanvasHandles(list) {
   }
   canvas_spot.custom_nav = custom_nav;
 }
+spotCanvasHandles(CANVAS_HANDLES_DEFAULT);

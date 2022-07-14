@@ -7,11 +7,13 @@ const { colorPicker } = require('./color_picker.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const input = require('./input.js');
+const { linkText } = require('./link.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const { dropDownCreate, selectionBoxCreate } = require('./selection_box.js');
 const simple_menu = require('./simple_menu.js');
 const { slider } = require('./slider.js');
 const ui = require('./ui.js');
+const { getURLBase } = require('./urlhash.js');
 
 const { ceil, max, random } = Math;
 
@@ -181,6 +183,14 @@ export function run(x, y, z) {
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
+  internal_y += ui.font_height + pad;
+  linkText({ x: 2, y: internal_y, text: 'Ext URL', url: 'https://github.com/jimbly/glovjs' });
+  if (linkText({ x: column_width/2, y: internal_y, text: 'Int URL',
+    internal: true,
+    url: engine.defines.SPOT_DEBUG ? getURLBase() : `${getURLBase()}?D=SPOT_DEBUG` })
+  ) {
+    engine.defines.SPOT_DEBUG = !engine.defines.SPOT_DEBUG;
+  }
   internal_y += ui.font_height + pad;
   internal_y += test_dropdown_large.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
   if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
