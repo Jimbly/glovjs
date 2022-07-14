@@ -22,9 +22,6 @@ const ui = require('./ui.js');
 const { clamp, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
 
-const FADE_START_TIME = [10000, 5000];
-const FADE_TIME = [1000, 1000];
-
 const FLAG_EMOTE = 1;
 const FLAG_USERCHAT = 2;
 
@@ -194,6 +191,10 @@ function ChatUI(params) {
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
   this.url_info = params.url_info; // Optional for grabbing the interesting portion of the URL for tooltip and /url
   this.user_context_cb = params.user_context_cb; // Cb called with { user_id } on click
+
+  this.fade_start_time = params.fade_start_time || [10000, 1000];
+  this.fade_time = params.fade_time || [1000, 500];
+
   this.setActiveSize(this.font_height, this.w);
   let outline_width = params.outline_width || 1;
 
@@ -977,7 +978,7 @@ ChatUI.prototype.run = function (opts) {
     for (let ii = 0; ii < this.msgs.length; ++ii) {
       let msg = this.msgs[this.msgs.length - ii - 1];
       let age = now - msg.timestamp;
-      let alpha = 1 - clamp((age - FADE_START_TIME[hide_light]) / FADE_TIME[hide_light], 0, 1);
+      let alpha = 1 - clamp((age - this.fade_start_time[hide_light]) / this.fade_time[hide_light], 0, 1);
       if (!alpha || msg.quiet) {
         break;
       }
