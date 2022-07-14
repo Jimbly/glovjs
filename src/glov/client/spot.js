@@ -35,6 +35,7 @@ export const SPOT_DEFAULT = {
   sticky_focus: false, // focus is not lost due to mouseover elsewhere
   // optional map of SPOT_NAV_* to either:
   //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
+  //   undefined: indicates navigation should target nothing (and those keys will not be consumed)
   //   a string key: a custom element to target with navigation
   custom_nav: null,
 };
@@ -538,7 +539,7 @@ function spotCalcNavTargets() {
       for (let key in custom_nav) {
         let target = custom_nav[key];
         if (!target) {
-          focus_next[key] = null;
+          focus_next[key] = target;
         } else {
           if (!by_key) {
             by_key = {};
@@ -1026,7 +1027,7 @@ const CANVAS_HANDLES_DEFAULT = [SPOT_NAV_LEFT, SPOT_NAV_UP, SPOT_NAV_RIGHT, SPOT
 export function spotCanvasHandles(list) {
   let custom_nav = {};
   for (let ii = 0; ii < list.length; ++ii) {
-    custom_nav[list[ii]] = null;
+    custom_nav[list[ii]] = undefined;
   }
   canvas_spot.custom_nav = custom_nav;
 }
