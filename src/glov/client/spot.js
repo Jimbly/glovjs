@@ -655,7 +655,7 @@ export function spotSubEnd() {
 }
 
 export function spotMouseverHook(pos_param, param) {
-  if (inputEatenMouse()) {
+  if (inputEatenMouse() || param.peek) {
     return;
   }
   if (param.key_computed) { // presumably in a call to `spot()`
