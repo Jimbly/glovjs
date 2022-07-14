@@ -14,6 +14,11 @@ export function errorReportDisable() {
   error_report_disabled = true;
 }
 
+let ignore_promises = false;
+export function errorReportIgnoreUncaughtPromises() {
+  ignore_promises = true;
+}
+
 let error_report_details = {};
 let error_report_dynamic_details = {};
 export function errorReportSetDetails(key, value) {
@@ -107,5 +112,8 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;
   fetch({ method: 'POST', url }, () => { /* nop */ });
+  if (ignore_promises && msg.match(/Uncaught \(in promise\)/)) {
+    return false;
+  }
   return true;
 }
