@@ -397,6 +397,20 @@ function filterInSubrectView(param) {
   return overlaps(param.dom_pos, filter_sub_rect.dom_pos);
 }
 
+function filterMatchesSubrectOrInVisibleChild(param) {
+  if (param === filter_not) {
+    return false;
+  }
+  if (param.sub_rect === filter_sub_rect) {
+    return true;
+  }
+  if (param.sub_rect && param.sub_rect.sub_rect === filter_sub_rect) {
+    // in immediate child
+    return overlaps(param.dom_pos, param.sub_rect.dom_pos);
+  }
+  return false;
+}
+
 const SUBRECT_FILTERS = [filterInSubrectView, filterMatchesSubrect];
 function findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision_max) {
   // we hit a sub rect, find the best target inside it, first trying all
@@ -417,7 +431,7 @@ function findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision
 function findBestTargetFromSubRect(start_sub_rect, nav, dom_pos, pad_focusable_list, precision) {
   // Go to the one in the appropriate quadrant which has the smallest Manhattan distance
   filter_sub_rect = start_sub_rect;
-  let best = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filterMatchesSubrect);
+  let best = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filterMatchesSubrectOrInVisibleChild);
   if (best) {
     if (best.is_sub_rect) {
       focus_next_via[nav] = best;
