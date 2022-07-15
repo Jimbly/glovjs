@@ -1024,10 +1024,12 @@ export function label(param) {
       }
     }
   }
-  if (align) {
-    use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
-  } else {
-    use_font.drawSized(style, x, y, z, size, text);
+  if (text) {
+    if (align) {
+      use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+    } else {
+      use_font.drawSized(style, x, y, z, size, text);
+    }
   }
 }
 
