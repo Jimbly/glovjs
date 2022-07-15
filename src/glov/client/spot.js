@@ -183,8 +183,10 @@ const TARGET_HALF = 1;
 const TARGET_ALL = 2;
 
 function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
-  let start_x = dom_pos.x + dom_pos.w/2;
-  let start_y = dom_pos.y + dom_pos.h/2;
+  let start_w2 = dom_pos.w/2;
+  let start_h2 = dom_pos.h/2;
+  let start_x = dom_pos.x + start_w2;
+  let start_y = dom_pos.y + start_h2;
   let start_left = dom_pos.x;
   let start_right = dom_pos.x + dom_pos.w;
   let start_top = dom_pos.y;
@@ -213,16 +215,18 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
       let right_dx = target.x - start_right;
       let top_dy = start_top - target_bottom;
       let bottom_dy = target.y - start_bottom;
-      if (left_dx >= 0 && target_bottom > start_top - left_dx && target.y < start_bottom + left_dx) {
+      if (left_dx >= -start_w2 && target_bottom > start_top - left_dx && target.y < start_bottom + left_dx) {
         quadrant = SPOT_NAV_LEFT;
         d = left_dx + max(target.y - start_y, start_y - target_bottom, 0);
-      } else if (right_dx >= 0 && target_bottom > start_top - right_dx && target.y < start_bottom + right_dx) {
+      } else if (right_dx >= -start_w2 && target_bottom > start_top - right_dx && target.y < start_bottom + right_dx) {
         quadrant = SPOT_NAV_RIGHT;
         d = right_dx + max(target.y - start_y, start_y - target_bottom, 0);
-      } else if (top_dy >= 0 && target_right >= start_left - top_dy && target.x <= start_right + top_dy) {
+      } else if (top_dy >= -start_h2 && target_right >= start_left - top_dy && target.x <= start_right + top_dy) {
         quadrant = SPOT_NAV_UP;
         d = top_dy + max(target.x - start_x, start_x - target_right, 0);
-      } else if (bottom_dy >= 0 && target_right >= start_left - bottom_dy && target.x <= start_right + bottom_dy) {
+      } else if (bottom_dy >= -start_h2 && target_right >= start_left - bottom_dy &&
+        target.x <= start_right + bottom_dy
+      ) {
         quadrant = SPOT_NAV_DOWN;
         d = bottom_dy + max(target.x - start_x, start_x - target_right, 0);
       }
