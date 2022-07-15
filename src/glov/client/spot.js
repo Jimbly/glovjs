@@ -842,7 +842,7 @@ export function spotEndInput() {
 //   button: number // if ret, set to mouse button used to click it
 //   pos: vec2 // if ret, set to position of the click
 //   double_click: boolean // if ret, set to true if it was a double click
-//   drag: any // if drag_target and a drop happened, contains payload
+//   drag_drop: any // if drag_target and a drop happened, contains dragDrop event { drag_payload }
 //   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
 export function spot(param) {
   const def = param.def || SPOT_DEFAULT;
@@ -867,7 +867,7 @@ export function spot(param) {
     out.long_press = false;
   }
   if (drag_target) {
-    out.drag = null;
+    out.drag_drop = null;
   }
   if (custom_nav) {
     out.nav = SPOT_NAV_NONE;
@@ -879,8 +879,9 @@ export function spot(param) {
     state = SPOT_STATE_DISABLED;
   } else {
     let button_click;
-    if (drag_target && (param.drag = dragDrop(param))) {
+    if (drag_target && (out.drag_drop = dragDrop(param))) {
       spotFocusSet(param, true, true, 'drag_drop');
+      out.ret++;
       focused = true;
     } else if (button_long_press && (button_click = longPress(param)) ||
         is_button && (button_click = inputClick(param))
