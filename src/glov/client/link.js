@@ -59,7 +59,8 @@ export function link(param) {
 
   let rect = { x, y, w, h };
 
-  if (camera2d.clipTestRect(rect) && !settings.shader_debug) {
+  // TODO: use spot_ret.allow_focus instead of all of this?
+  if (camera2d.clipTestRect(rect) && !(settings.shader_debug || settings.show_profiler)) {
     // at least some is not clipped
     let elem = uiGetDOMElem(state.elem, allow_modal);
     if (elem !== state.elem) {
