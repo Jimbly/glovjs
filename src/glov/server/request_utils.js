@@ -166,7 +166,7 @@ function setOriginHeaders(req, res, next) {
 
 function setCrossOriginHeadersAlways(req, res, next) {
   let pathname = url.parse(req.url).pathname;
-  if (pathname.endsWith('/') || pathname.endsWith('.html')) {
+  if (pathname.endsWith('/') || pathname.endsWith('.html') || pathname.endsWith('.js')) {
     // For developers: Set as "cross-origin isolated", for access to high resolution timers
     // Disclaimer: I have no idea what this does, other than allows high resolution timers on Chrome/Firefox
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
