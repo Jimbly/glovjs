@@ -282,8 +282,9 @@ export function soundPause(): void {
 export function soundResume(): void {
   volume_override_target = 1;
 
-  // Actual context resuming handled internally by Howler, leaving hooks in for now, though
-  // Maybe more reliable than `Howler.safeToPlay`...
+  // Actual context resuming handled internally by Howler, except for gamepad
+  //   which calls soundResume, so let's poke howler to unlock.
+  Howler.manualUnlock();
 }
 
 export function soundStartup(params: { ext_list?: string[], fade_rate?: number }): void {

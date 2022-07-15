@@ -769,6 +769,7 @@ function getGamepadData(idx) {
 function updatePadState(gpd, ps, b, padcode) {
   if (b && !ps[padcode]) {
     ps[padcode] = DOWN_EDGE;
+    onUserInput();
     if (touch_mode) {
       local_storage.set('touch_mode', false);
       touch_mode = false;
