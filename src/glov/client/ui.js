@@ -1505,11 +1505,23 @@ function spreadTechParams(spread) {
   return tech_params;
 }
 
+let temp_color = vec4();
+function premulAlphaColor(color) {
+  temp_color[0] = color[0] * color[3];
+  temp_color[1] = color[1] * color[3];
+  temp_color[2] = color[2] * color[3];
+  temp_color[3] = color[3];
+  return temp_color;
+}
 function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv1, color, blend) {
+  if (!blend && !glov_engine.defines.NOPREMUL) {
+    blend = BLEND_PREMULALPHA;
+    color = premulAlphaColor(color);
+  }
   glov_sprites.queueraw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
     tu0, tv0, tu1, tv1,
-    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend || BLEND_PREMULALPHA);
+    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
 }
 
 function drawCircleInternal(sprite, x, y, z, r, spread, tu0, tv0, tu1, tv1, color, blend) {
@@ -1604,6 +1616,12 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   if (mode === undefined) {
     mode = default_line_mode;
   }
+  let blend;
+  if (!glov_engine.defines.NOPREMUL) {
+    blend = BLEND_PREMULALPHA;
+    color = premulAlphaColor(color);
+  }
+
   let tex_key = mode & LINE_CAP_ROUND ? 'line3' : 'line2';
   if (!sprites[tex_key]) {
     let data = new Uint8Array(LINE_TEX_W * LINE_TEX_H);
@@ -1694,7 +1712,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
     x0 + tangx, y0 + tangy,
     z,
     LINE_U1, LINE_V0, LINE_U2, LINE_V1,
-    color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
+    color, glov_font.font_shaders.font_aa, shader_param, blend);
 
   if (mode & (LINE_CAP_ROUND|LINE_CAP_SQUARE)) {
     // round caps (line3) - square caps (line2)
@@ -1707,7 +1725,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       x1 - tangx + nx, y1 - tangy + ny,
       z,
       LINE_U2, LINE_V1, LINE_U3, LINE_V0,
-      color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
+      color, glov_font.font_shaders.font_aa, shader_param, blend);
     glov_sprites.queueraw4(texs,
       x0 - tangx, y0 - tangy,
       x0 + tangx, y0 + tangy,
@@ -1715,7 +1733,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       x0 - tangx - nx, y0 - tangy - ny,
       z,
       LINE_U1, LINE_V1, LINE_U0, LINE_V0,
-      color, glov_font.font_shaders.font_aa, shader_param, BLEND_PREMULALPHA);
+      color, glov_font.font_shaders.font_aa, shader_param, blend);
   }
 }
 
@@ -1732,6 +1750,11 @@ export function drawHollowRect2(param) {
 }
 
 export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
+  let blend;
+  if (!glov_engine.defines.NOPREMUL) {
+    blend = BLEND_PREMULALPHA;
+    color = premulAlphaColor(color);
+  }
   if (!sprites.cone) {
     const CONE_SIZE = 32;
     let data = new Uint8Array(CONE_SIZE*CONE_SIZE);
@@ -1777,7 +1800,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     x1 - tangx*w1, y1 - tangy*w1,
     z,
     0, 0, 1, 1,
-    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), BLEND_PREMULALPHA);
+    color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
 }
 
 export function setFontHeight(_font_height) {
