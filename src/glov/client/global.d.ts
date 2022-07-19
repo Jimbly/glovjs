@@ -11,9 +11,6 @@ declare module 'glov/client/global' {
       androidwrapper?: unknown;
       webkit?: { messageHandlers?: { iosWrapper?: unknown } };
 
-      // GLOV ui.js
-      Z: Record<string, number>;
-
       // GLOV bootstrap
       debugmsg: (msg: string, clear: boolean) => void;
 
@@ -22,5 +19,8 @@ declare module 'glov/client/global' {
       profilerStop: (name: string) => void;
       profilerStopStart: (name: string, count?: number) => void;
     }
+
+    // GLOV ui.js
+    let Z: Record<string, number>;
   }
 }

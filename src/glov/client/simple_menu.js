@@ -6,8 +6,8 @@
 // GlovSimpleMenu is just a GlovSelectionBox plus some logic to activate
 // callbacks/etc upon selecting of elements.
 
-// eslint-disable-next-line no-use-before-define
-exports.createSimpleMenu = create;
+exports.createSimpleMenu = simpleMenuCreate; // eslint-disable-line no-use-before-define
+exports.create = simpleMenuCreate; // eslint-disable-line no-use-before-define
 
 const assert = require('assert');
 const { clamp } = require('glov/common/util.js');
@@ -242,6 +242,6 @@ class GlovSimpleMenu {
   }
 }
 
-export function create(params) {
+export function simpleMenuCreate(params) {
   return new GlovSimpleMenu(params);
 }

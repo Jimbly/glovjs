@@ -1,10 +1,6 @@
 // Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-// This is ported pretty directly from libGLOV, could really use a fresh
-//   implementation that is more focus aware and gamepad friendly, and should
-//   use ui.buttonShared logic.
-
 import assert from 'assert';
 import { clamp, merge } from 'glov/common/util.js';
 import verify from 'glov/common/verify.js';
@@ -50,74 +46,85 @@ export function scrollAreaSetPixelScale(scale: number): void {
 
 interface ScrollAreaOpts {
   // configuration options
-  x?: number,
-  y?: number,
-  z?: number,
-  w?: number,
-  h?: number, // height of visible area, not scrolled area
-  rate_scroll_click?: number,
-  pixel_scale?: number,
-  top_pad?: boolean, // set to false it the top/bottom "buttons" don't look like buttons
-  color?: Vec4,
-  background_color?: Vec4 | null,
-  auto_scroll?: boolean, // If true, will scroll to the bottom if the height changes and we're not actively scrolling
-  auto_hide?: boolean, // If true, will hide the scroll bar when the scroll area does not require it
-  no_disable?: boolean, // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
-  focusable_elem?: FocusableElement | null // Another element to call .focus() on if we think we are focused
-  min_dist?: number, // Minimum drag distance for background drag
-  disabled?: boolean,
+  x: number,
+  y: number,
+  z: number,
+  w: number,
+  h: number, // height of visible area, not scrolled area
+  rate_scroll_click: number,
+  pixel_scale: number,
+  top_pad: boolean, // set to false it the top/bottom "buttons" don't look like buttons
+  color: Vec4,
+  background_color: Vec4 | null,
+  auto_scroll: boolean, // If true, will scroll to the bottom if the height changes and we're not actively scrolling
+  auto_hide: boolean, // If true, will hide the scroll bar when the scroll area does not require it
+  no_disable: boolean, // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
+  focusable_elem: FocusableElement | null // Another element to call .focus() on if we think we are focused
+  min_dist: number | undefined, // Minimum drag distance for background drag
+  disabled: boolean,
 
   // Calculated (only once) if not set
-  rate_scroll_wheel?: number,
-  rollover_color?: Vec4,
-  rollover_color_light?: Vec4,
-  disabled_color?: Vec4,
+  rate_scroll_wheel: number,
+  rollover_color: Vec4,
+  rollover_color_light: Vec4,
+  disabled_color: Vec4,
+}
+
+export interface ScrollArea extends Readonly<ScrollAreaOpts> {
+  barWidth(): number;
+  isFocused(): boolean;
+  consumedClick(): boolean;
+  isVisible(): boolean;
+  begin(params?: Partial<ScrollAreaOpts>): void;
+  // Includes overscroll - actual visible scroll pos for this frame
+  getScrollPos(): number;
+  keyboardScroll(): void;
+  end(h: number): void;
 }
 
 let temp_pos = vec2();
 let last_scroll_area_id = 0;
-export class ScrollArea {
-  private id = `sa:${++last_scroll_area_id}`;
-  private x = 0;
-  private y = 0;
-  // TODO: figure out why this is causing the error "Property 'UI' does not exist on type 'typeof Z'"
-  private z = (Z as Record<string, number>).UI;
-  private w = 10;
-  private h = 10;
-  private rate_scroll_click = ui.font_height;
-  private pixel_scale = default_pixel_scale;
-  private top_pad = true;
-  private color = vec4(1,1,1,1);
-  private background_color: Vec4 | null = vec4(0.4, 0.4, 0.4, 1);
-  private auto_scroll = false;
-  private auto_hide = false;
-  private no_disable = false;
-  private focusable_elem: FocusableElement | null = null;
-  private min_dist?: number;
-  private disabled = false;
+class ScrollAreaInternal implements ScrollArea {
+  id = `sa:${++last_scroll_area_id}`;
+  x = 0;
+  y = 0;
+  z = Z.UI;
+  w = 10;
+  h = 10;
+  rate_scroll_click = ui.font_height;
+  pixel_scale = default_pixel_scale;
+  top_pad = true;
+  color = vec4(1,1,1,1);
+  background_color: Vec4 | null = vec4(0.4, 0.4, 0.4, 1);
+  auto_scroll = false;
+  auto_hide = false;
+  no_disable = false;
+  focusable_elem: FocusableElement | null = null;
+  min_dist: number | undefined;
+  disabled = false;
 
   // Calculated (only once) if not set
-  private rate_scroll_wheel;
-  private rollover_color;
-  private rollover_color_light;
-  private disabled_color;
+  rate_scroll_wheel;
+  rollover_color;
+  rollover_color_light;
+  disabled_color;
 
   // run-time state
-  private scroll_pos = 0;
-  private overscroll = 0; // overscroll beyond beginning or end
-  private overscroll_delay = 0;
-  private grabbed_pos = 0;
-  private grabbed = false;
-  private consumed_click = false;
-  private drag_start: number | null = null;
-  private began = false;
-  private last_internal_h = 0;
-  private last_frame = 0;
-  private was_disabled = false;
-  private scrollbar_visible = false;
-  private last_max_value = 0;
+  scroll_pos = 0;
+  overscroll = 0; // overscroll beyond beginning or end
+  overscroll_delay = 0;
+  grabbed_pos = 0;
+  grabbed = false;
+  consumed_click = false;
+  drag_start: number | null = null;
+  began = false;
+  last_internal_h = 0;
+  last_frame = 0;
+  was_disabled = false;
+  scrollbar_visible = false;
+  last_max_value = 0;
 
-  constructor(params?: ScrollAreaOpts) {
+  constructor(params?: Partial<ScrollAreaOpts>) {
     params = params || {};
     this.applyParams(params);
     this.rate_scroll_wheel = params.rate_scroll_wheel || this.rate_scroll_click * 2;
@@ -128,7 +135,7 @@ export class ScrollArea {
     this.disabled_color = params.disabled_color || this.rollover_color;
   }
 
-  applyParams(params?: ScrollAreaOpts): void {
+  applyParams(params?: Partial<ScrollAreaOpts>): void {
     if (!params) {
       return;
     }
@@ -541,6 +548,6 @@ export class ScrollArea {
   }
 }
 
-export function scrollAreaCreate(params?: ScrollAreaOpts): ScrollArea {
-  return new ScrollArea(params);
+export function scrollAreaCreate(params?: Partial<ScrollAreaOpts>): ScrollArea {
+  return new ScrollAreaInternal(params) as ScrollArea;
 }

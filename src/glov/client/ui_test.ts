@@ -1,49 +1,61 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const assert = require('assert');
-const { vec4 } = require('glov/common/vmath.js');
-const { colorPicker } = require('./color_picker.js');
-const engine = require('./engine.js');
-const glov_font = require('./font.js');
-const input = require('./input.js');
-const { linkText } = require('./link.js');
-const { scrollAreaCreate } = require('./scroll_area.js');
-const { dropDownCreate, selectionBoxCreate } = require('./selection_box.js');
-const simple_menu = require('./simple_menu.js');
-const { slider } = require('./slider.js');
-const ui = require('./ui.js');
-const { getURLBase } = require('./urlhash.js');
+import assert from 'assert';
+import { vec4 } from 'glov/common/vmath';
+import { colorPicker } from './color_picker.js';
+import { EditBox, editBoxCreate } from './edit_box';
+import * as engine from './engine.js';
+import { ALIGN, FontStyle, style, styleAlpha } from './font';
+import * as input from './input.js';
+import { linkText } from './link.js';
+import { ScrollArea, scrollAreaCreate } from './scroll_area';
+import {
+  MenuItemEntry,
+  SelectionBox,
+  SelectionBoxParams,
+  dropDownCreate,
+  selectionBoxCreate,
+} from './selection_box';
+import { SimpleMenu, simpleMenuCreate } from './simple_menu';
+import { slider } from './slider.js';
+import * as ui from './ui.js';
+import { getURLBase } from './urlhash.js';
 
 const { ceil, max, random } = Math;
 
-let demo_menu;
+let demo_menu: SimpleMenu;
 let demo_menu_up = false;
-let demo_result;
-let font_style;
+let demo_result: string | undefined;
+let font_style: FontStyle;
 
-let inited;
-let edit_box1;
-let edit_box2;
-let test_select1;
-let test_dropdown;
-let test_dropdown_large;
-let test_scroll_area;
+let inited: string | undefined;
+let edit_box1: EditBox;
+let edit_box2: EditBox;
+let test_select1: SelectionBox;
+let test_dropdown: SelectionBox;
+let test_dropdown_large: SelectionBox;
+let test_scroll_area: ScrollArea;
 let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
-function init(x, y, column_width) {
-  edit_box1 = ui.createEditBox({
+
+interface SelectionBoxParamsWithItems extends Partial<SelectionBoxParams> {
+  items: MenuItemEntry[];
+}
+
+function init(x: number, y: number, column_width: number) {
+  edit_box1 = editBoxCreate({
     x: x + column_width,
     y: y,
     w: column_width - 8,
   });
-  edit_box2 = ui.createEditBox({
+  edit_box2 = editBoxCreate({
     x: x + column_width + column_width,
     y: y,
     w: column_width - 8,
   });
-  demo_menu = simple_menu.create({
+  demo_menu = simpleMenuCreate({
     items: [
       'Option 1',
       {
@@ -57,7 +69,7 @@ function init(x, y, column_width) {
       },
     ]
   });
-  font_style = glov_font.style(null, {
+  font_style = style(null, {
     outline_width: 1.0,
     outline_color: 0x800000ff,
     glow_xoffs: 3.25,
@@ -78,7 +90,7 @@ function init(x, y, column_width) {
     width: column_width - 8,
   });
 
-  let large_param = {
+  let large_param: SelectionBoxParamsWithItems = {
     items: [],
     z: Z.UI,
     width: column_width - 8,
@@ -91,7 +103,7 @@ function init(x, y, column_width) {
   test_scroll_area = scrollAreaCreate();
 }
 
-export function run(x, y, z) {
+export function run(x: number, y: number, z: number): void {
   z = z || Z.UI;
   let line_height = ui.button_height + 2;
   let column_width = ui.button_width + 8;
@@ -135,7 +147,7 @@ export function run(x, y, z) {
   if (edit_box1.run() === edit_box1.SUBMIT) {
     ui.modalDialog({
       title: 'Modal Dialog',
-      text: `Edit box submitted with text ${edit_box1.text}`,
+      text: `Edit box submitted with text ${edit_box1.getText()}`,
       buttons: {
         'OK': null,
       },
@@ -150,7 +162,7 @@ export function run(x, y, z) {
       title: 'Type something',
       edit_text: edit_box2.getText(),
       buttons: {
-        ok: function (text) {
+        ok: function (text: string) {
           edit_box2.setText(text);
         },
         cancel: null,
@@ -179,7 +191,7 @@ export function run(x, y, z) {
   let internal_y = 2;
   internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
     ui.font_height, ui.font.ALIGN.HWRAP|ui.font.ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
-    `Edit Box Text: ${edit_box1.text}+${edit_box2.text}`) + pad;
+    `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
@@ -234,7 +246,7 @@ export function run(x, y, z) {
   y += ui.button_height;
 }
 
-export function runFontTest(x, y) {
+export function runFontTest(x: number, y: number): void {
   const COLOR_RED = 0xFF0000ff;
   const COLOR_GREEN = 0x00FF00ff;
   const COLOR_WHITE = 0xFFFFFFff;
@@ -251,17 +263,17 @@ export function runFontTest(x, y) {
     `Default ${font_size / 4} The quick brown fox jumped over the lazy dog rutabaga Alfalfa`);
   y += ceil(font_size / 4);
 
-  const font_style_outline = glov_font.style(null, {
+  const font_style_outline = style(null, {
     outline_width: 1, outline_color: COLOR_RED,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
     color: COLOR_WHITE
   });
-  const font_style_outline_dim = glov_font.style(null, {
+  const font_style_outline_dim = style(null, {
     outline_width: 1, outline_color: 0x0000007f,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
     color: COLOR_WHITE
   });
-  const font_style_outline_dim2 = glov_font.style(null, {
+  const font_style_outline_dim2 = style(null, {
     outline_width: 1, outline_color: 0xFF00007f,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
     color: COLOR_WHITE
@@ -270,20 +282,20 @@ export function runFontTest(x, y) {
   xx += font.drawSized(font_style_outline, xx, y, z, font_size, 'Outline ');
   xx += font.drawSized(font_style_outline_dim, xx, y, z, font_size, 'Dim ');
   xx += font.drawSized(font_style_outline_dim2, xx, y, z, font_size, 'Out');
-  xx += font.drawSized(font.styleAlpha(font_style_outline_dim2, 0.5), xx, y, z, font_size, 'line');
+  xx += font.drawSized(styleAlpha(font_style_outline_dim2, 0.5), xx, y, z, font_size, 'line');
   y += font_size;
 
-  const font_style_glow = glov_font.style(null, {
+  const font_style_glow = style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  const font_style_glow_dim = glov_font.style(null, {
+  const font_style_glow_dim = style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00FF0020,
     color: COLOR_WHITE
   });
-  const font_style_glow_dim_on_dim = glov_font.style(null, {
+  const font_style_glow_dim_on_dim = style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: -1, glow_outer: 4, glow_color: 0x00FF0020,
     color: 0xFFFFFF80,
@@ -294,7 +306,7 @@ export function runFontTest(x, y) {
   font.drawSized(font_style_glow_dim_on_dim, xx, y, z, font_size, 'Glow ');
   y += font_size;
 
-  const font_style_shadow = glov_font.style(null, {
+  const font_style_shadow = style(null, {
     outline_width: 0, outline_color: COLOR_INVISIBLE,
     glow_xoffs: 4, glow_yoffs: 4, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
@@ -302,87 +314,91 @@ export function runFontTest(x, y) {
   font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O1Il');
   y += font_size;
 
-  const font_style_both = glov_font.style(null, {
+  const font_style_both = style(null, {
     outline_width: 1, outline_color: COLOR_RED,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  const font_style_both_soft_on_hard = glov_font.style(null, {
+  const font_style_both_soft_on_hard = style(null, {
     outline_width: 1, outline_color: 0xFF00007f,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  const font_style_both_hard_on_soft = glov_font.style(null, {
+  const font_style_both_hard_on_soft = style(null, {
     outline_width: 1, outline_color: COLOR_RED,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: 0x00FF0040,
     color: COLOR_WHITE
   });
-  const font_style_both_soft_on_soft = glov_font.style(null, {
+  const font_style_both_soft_on_soft = style(null, {
     outline_width: 1, outline_color: 0xFF00007f,
     glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 6, glow_color: 0x00FF0040,
     color: COLOR_WHITE
   });
   xx = x;
   xx += font.drawSized(font_style_both, xx, y, z, font_size, 'B');
-  xx += font.drawSized(font.styleAlpha(font_style_both, 0.75), xx, y, z, font_size, 'o');
-  xx += font.drawSized(font.styleAlpha(font_style_both, 0.5), xx, y, z, font_size, 't');
-  xx += font.drawSized(font.styleAlpha(font_style_both, 0.25), xx, y, z, font_size, 'h ');
+  xx += font.drawSized(styleAlpha(font_style_both, 0.75), xx, y, z, font_size, 'o');
+  xx += font.drawSized(styleAlpha(font_style_both, 0.5), xx, y, z, font_size, 't');
+  xx += font.drawSized(styleAlpha(font_style_both, 0.25), xx, y, z, font_size, 'h ');
   xx += font.drawSized(font_style_both_soft_on_hard, xx, y, z, font_size, 'SoH ');
   xx += font.drawSized(font_style_both_hard_on_soft, xx, y, z, font_size, 'HoH ');
   font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0');
   y += font_size;
 
   let font_size2 = 32;
-  const font_style_both2 = glov_font.style(null, {
+  const font_style_both2 = style(null, {
     outline_width: 1.75,outline_color: COLOR_RED,
     glow_xoffs: 0.25, glow_yoffs: 0.25, glow_inner: 0, glow_outer: 5, glow_color: 0x7F7F7Fff,
     color: COLOR_WHITE
   });
-  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, glov_font.ALIGN.HFIT, ui.button_width * 2, 0,
+  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, ALIGN.HFIT, ui.button_width * 2, 0,
     'ALIGN.HFIT The quick brown fox jumps over the lazy dog');
   y += font_size2;
 
   let test = 'glow';
 
   if (test === 'outline') {
-    const font_style_outline2 = glov_font.style(null, {
+    const font_style_outline2 = style(null, {
       outline_width: 1, outline_color: COLOR_RED,
       glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_INVISIBLE,
       color: COLOR_WHITE
     });
     for (let ii = 1; ii <= 4; ii++) {
-      font_style_outline2.outline_width = ii * 2;
-      font.drawSizedAligned(font_style_outline2, x, y, z, font_size2, glov_font.ALIGN.HLEFT, 400, 0,
+      font.drawSizedAligned(
+        style(font_style_outline2, {
+          outline_width: ii * 2,
+        }), x, y, z, font_size2, ALIGN.HLEFT, 400, 0,
         `Outline thickness ${ii * 2}`);
       y += font_size2;
     }
 
     // Not allowing non-uniform scaling here, simulate with camera?
-    // font.drawSizedAligned(font_style_outline2, x, y, z, font_size2 * 2, font_size2, glov_font.ALIGN.HLEFT, 400, 0,
+    // font.drawSizedAligned(font_style_outline2, x, y, z, font_size2 * 2, font_size2, ALIGN.HLEFT, 400, 0,
     //   'Wide thick outline');
     // y += font_size2;
-    // font.drawSizedAligned(font_style_outline2, x, y, z, font_size2, font_size2 * 2, glov_font.ALIGN.HLEFT, 400, 0,
+    // font.drawSizedAligned(font_style_outline2, x, y, z, font_size2, font_size2 * 2, ALIGN.HLEFT, 400, 0,
     //   'Tall thick outline');
     // y += font_size2 * 2;
   } else if (test === 'glow') {
-    const font_style_glow2 = glov_font.style(null, {
+    const font_style_glow2 = style(null, {
       outline_width: 0, outline_color: COLOR_INVISIBLE,
       glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 8, glow_color: COLOR_RED,
       color: COLOR_WHITE
     });
     for (let ii = 1; ii <= 4; ii++) {
-      //font_style_glow2.glow_inner = ii * 2 - 1;
-      font_style_glow2.glow_outer = ii * 2;
-      font.drawSizedAligned(font_style_glow2, x, y, z, font_size2, glov_font.ALIGN.HLEFT, 400, 0,
+      font.drawSizedAligned(
+        style(font_style_glow2, {
+          // glow_inner: ii * 2 - 1,
+          glow_outer: ii * 2,
+        }), x, y, z, font_size2, ALIGN.HLEFT, 400, 0,
         `Glow outer ${ii * 2}`);
       y += font_size2;
     }
 
     // Not allowing non-uniform scaling here, simulate with camera?
-    // font.drawSizedAligned(font_style_glow2, x, y, z, font_size2 * 2, font_size2, glov_font.ALIGN.HLEFT, 400, 0,
+    // font.drawSizedAligned(font_style_glow2, x, y, z, font_size2 * 2, font_size2, ALIGN.HLEFT, 400, 0,
     //   'Wide thick glow \x01\x02\xe5\xae\xb4\xe8\xaf\xb7');
     // y += font_size2;
-    // font.drawSizedAligned(font_style_glow2, x, y, z, font_size2, font_size2 * 2, glov_font.ALIGN.HLEFT, 400, 0,
+    // font.drawSizedAligned(font_style_glow2, x, y, z, font_size2, font_size2 * 2, ALIGN.HLEFT, 400, 0,
     //   'Tall thick glow');
     // y += font_size2 * 2;
   } else if (test === 'wrap') {
@@ -395,7 +411,7 @@ export function runFontTest(x, y) {
   // Gradient not supported
   // y = y0;
   // x += font_size * 8;
-  // const font_style_gradient = glov_font.style(null, {
+  // const font_style_gradient = style(null, {
   //   outline_width: 1, outline_color: 0x777777ff,
   //   glow_xoffs: 0, glow_yoffs: 0, glow_inner: 0, glow_outer: 0, glow_color: COLOR_BLUE,
   //   gradient: [COLOR_WHITE, COLOR_WHITE, COLOR_BLACK, COLOR_BLACK],
