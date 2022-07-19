@@ -92,6 +92,7 @@ import {
   mousePosIsTouch,
   padButtonDownEdge,
 } from './input.js';
+import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
   checkHooks,
@@ -828,6 +829,22 @@ export function spotEndInput() {
     spotDebug();
   }
 }
+
+let last_signal = {
+  key: '',
+  timestamp: 0,
+};
+function spotSignalRet(param) {
+  let out = param.out;
+  let key = param.key_computed;
+  assert(key);
+  out.double_click = key === last_signal.key &&
+    engine.frame_timestamp - last_signal.timestamp < settings.double_click_time;
+  last_signal.key = key;
+  last_signal.timestamp = engine.frame_timestamp;
+  out.ret++;
+}
+
 // param:
 //   See SPOT_DEFAULT, additionally:
 //   x,y,w,h : number // only parameters not inherited from `def`
@@ -841,7 +858,7 @@ export function spotEndInput() {
 //   long_press: boolean // if button_long_press and ret and was a long press, set to true
 //   button: number // if ret, set to mouse button used to click it
 //   pos: vec2 // if ret, set to position of the click
-//   double_click: boolean // if ret, set to true if it was a double click
+//   double_click: boolean // if ret, set to true if it was a double click/tap/button press/etc
 //   drag_drop: any // if drag_target and a drop happened, contains dragDrop event { drag_payload }
 //   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
 export function spot(param) {
@@ -881,7 +898,7 @@ export function spot(param) {
     let button_click;
     if (drag_target && (out.drag_drop = dragDrop(param))) {
       spotFocusSet(param, true, true, 'drag_drop');
-      out.ret++;
+      spotSignalRet(param);
       focused = true;
     } else if (button_long_press && (button_click = longPress(param)) ||
         is_button && (button_click = inputClick(param))
@@ -889,7 +906,8 @@ export function spot(param) {
       // TODO: change `ret` to be a count of how many clicks/taps happened?
       out.long_press = button_click.long_press;
       out.button = button_click.button;
-      out.double_click = button_click.was_double_click;
+      // Not using button_click.was_double_click: relying on doubly activating this exact spot instead
+      // out.double_click = button_click.was_double_click;
       out.pos = button_click.pos;
       if (mousePosIsTouch()) {
         if (touch_focuses) {
@@ -901,19 +919,19 @@ export function spot(param) {
             focused = true;
           } else {
             // activate, and also unfocus
-            out.ret++;
+            spotSignalRet(param);
             spotUnfocus();
             focused = false;
           }
         } else {
           // not focusing, would flicker a tooltip for 1 frame
           // also, unfocusing, in case it was focused via long_press_focuses
-          out.ret++;
+          spotSignalRet(param);
           spotUnfocus();
           focused = false;
         }
       } else {
-        out.ret++;
+        spotSignalRet(param);
         spotFocusSet(param, true, true, 'click');
         focused = true;
       }
@@ -1004,9 +1022,8 @@ export function spot(param) {
     }
   }
   if (button_activate) {
-    out.ret++;
+    spotSignalRet(param);
     out.button = 0;
-    out.double_click = false;
     out.pos = null;
   }
 
