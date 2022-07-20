@@ -18,9 +18,9 @@ export interface FontStyleParam {
 
 export type FontStyle = { _opaque: 'FontStyle' };
 
-export function style(base: FontStyle | null, param: FontStyleParam): FontStyle;
-export function styleAlpha(base: FontStyle | null, alpha: number): FontStyle;
-export function styleColored(base: FontStyle | null, color: RGBA): FontStyle;
+export function fontStyle(base: FontStyle | null, param: FontStyleParam): FontStyle;
+export function fontStyleAlpha(base: FontStyle | null, alpha: number): FontStyle;
+export function fontStyleColored(base: FontStyle | null, color: RGBA): FontStyle;
 
 type AlignKey =
   'HLEFT' | 'HCENTER' | 'HRIGHT' | 'HMASK' |
@@ -29,3 +29,8 @@ type AlignKey =
   'HCENTERFIT' | 'HRIGHTFIT' | 'HVCENTER' | 'HVCENTERFIT';
 
 export const ALIGN: Record<AlignKey, number>;
+
+// Legacy interfaces
+export const style: typeof fontStyle;
+export const styleAlpha: typeof fontStyleAlpha;
+export const styleColored: typeof fontStyleColored;

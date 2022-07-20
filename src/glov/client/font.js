@@ -2,6 +2,10 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off, complexity:off, @typescript-eslint/no-shadow:off */
 
+exports.style = fontStyle; // eslint-disable-line no-use-before-define
+exports.styleColored = fontStyleColored; // eslint-disable-line no-use-before-define
+exports.styleAlpha = fontStyleAlpha; // eslint-disable-line no-use-before-define
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -158,7 +162,7 @@ function vec4ColorFromIntColorPreMultiplied(v, c) {
 
 export const glov_font_default_style = new GlovFontStyle();
 
-export function style(font_style, fields) {
+export function fontStyle(font_style, fields) {
   let ret = new GlovFontStyle();
   let { color_vec4 } = ret;
   if (font_style) {
@@ -174,8 +178,8 @@ export function style(font_style, fields) {
   return ret;
 }
 
-export function styleColored(font_style, color) {
-  return style(font_style, {
+export function fontStyleColored(font_style, color) {
+  return fontStyle(font_style, {
     color
   });
 }
@@ -185,8 +189,8 @@ function colorAlpha(color, alpha) {
   return color & 0xFFFFFF00 | alpha;
 }
 
-export function styleAlpha(font_style, alpha) {
-  return style(font_style, {
+export function fontStyleAlpha(font_style, alpha) {
+  return fontStyle(font_style, {
     color: colorAlpha((font_style || glov_font_default_style).color, alpha),
     outline_color: colorAlpha((font_style || glov_font_default_style).outline_color, alpha),
     glow_color: colorAlpha((font_style || glov_font_default_style).glow_color, alpha),
@@ -329,7 +333,7 @@ function GlovFont(font_info, texture_name) {
 // Pass NULL for style to use default style
 // If the function takes a color, this overrides the color on the style
 GlovFont.prototype.drawSizedColor = function (style, x, y, z, size, color, text) {
-  return this.drawSized(styleColored(style, color), x, y, z, size, text);
+  return this.drawSized(fontStyleColored(style, color), x, y, z, size, text);
 };
 GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
   return this.drawScaled(style, x, y, z, size / this.font_info.font_size, size / this.font_info.font_size, text);
@@ -437,7 +441,7 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
 
 // returns height
 GlovFont.prototype.drawSizedColorWrapped = function (style, x, y, z, w, indent, size, color, text) {
-  return this.drawScaledWrapped(styleColored(style, color), x, y, z, w,
+  return this.drawScaledWrapped(fontStyleColored(style, color), x, y, z, w,
     indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
 };
 GlovFont.prototype.drawSizedWrapped = function (style, x, y, z, w, indent, size, text) {
@@ -453,10 +457,10 @@ export function setDefaultSize(h) {
 GlovFont.prototype.draw = function (param) {
   let { style, color, alpha, x, y, z, size, w, h, align, text, indent } = param;
   if (color) {
-    style = styleColored(style, color);
+    style = fontStyleColored(style, color);
   }
   if (alpha !== undefined) {
-    style = styleAlpha(style, alpha);
+    style = fontStyleAlpha(style, alpha);
   }
   indent = indent || 0;
   size = size || default_size;
@@ -909,9 +913,9 @@ GlovFont.prototype.applyStyle = function (style) {
 // Replicate constants and utility functions on all font instances as well
 // GlovFont.prototype.COLOR_MODE = COLOR_MODE;
 GlovFont.prototype.ALIGN = ALIGN;
-GlovFont.prototype.style = style;
-GlovFont.prototype.styleAlpha = styleAlpha;
-GlovFont.prototype.styleColored = styleColored;
+GlovFont.prototype.style = fontStyle;
+GlovFont.prototype.styleAlpha = fontStyleAlpha;
+GlovFont.prototype.styleColored = fontStyleColored;
 
 function fontShadersInit() {
   if (font_shaders.font_aa) {
