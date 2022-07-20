@@ -6,7 +6,7 @@ import { vec4 } from 'glov/common/vmath';
 import { colorPicker } from './color_picker.js';
 import { EditBox, editBoxCreate } from './edit_box';
 import * as engine from './engine.js';
-import { ALIGN, FontStyle, fontStyle, fontStyleAlpha } from './font';
+import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import * as input from './input.js';
 import { linkText } from './link.js';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
@@ -98,6 +98,7 @@ function init(x: number, y: number, column_width: number) {
 }
 
 export function run(x: number, y: number, z: number): void {
+  const font: Font = ui.font;
   z = z || Z.UI;
   let line_height = ui.button_height + 2;
   let column_width = ui.button_width + 8;
@@ -183,8 +184,8 @@ export function run(x: number, y: number, z: number): void {
     h: ui.font_height * 8 + pad,
   });
   let internal_y = 2;
-  internal_y += ui.font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    ui.font_height, ui.font.ALIGN.HWRAP|ui.font.ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
+  internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
+    ui.font_height, ALIGN.HWRAP|ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
     `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
@@ -246,7 +247,7 @@ export function runFontTest(x: number, y: number): void {
   const COLOR_WHITE = 0xFFFFFFff;
   const COLOR_INVISIBLE = 0x00000000;
   let z = Z.UI;
-  let font = engine.font;
+  const font: Font = ui.font;
 
   let font_size = ui.font_height * 2;
   font.drawSized(null, x, y, z, font_size, `Default ${font_size} ${random().toFixed(7)}`);
@@ -396,7 +397,7 @@ export function runFontTest(x: number, y: number): void {
     //   'Tall thick glow');
     // y += font_size2 * 2;
   } else if (test === 'wrap') {
-    y += font.drawSizedWrapped(null, x, y, z, 400, 24, font_size2, 0xFFFFFFff,
+    y += font.drawSizedWrapped(null, x, y, z, 400, 24, font_size2,
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor' +
       ' incididunt utlaboreetdoloremagnaaliqua.');
   }

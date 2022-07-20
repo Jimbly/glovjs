@@ -1,3 +1,5 @@
+import { Vec4 } from 'glov/common/vmath';
+import { LocalizableString } from './localization';
 
 type RGBA = number; // In the 0xRRGGBBAA format
 
@@ -22,13 +24,117 @@ export function fontStyle(base: FontStyle | null, param: FontStyleParam): FontSt
 export function fontStyleAlpha(base: FontStyle | null, alpha: number): FontStyle;
 export function fontStyleColored(base: FontStyle | null, color: RGBA): FontStyle;
 
-type AlignKey =
-  'HLEFT' | 'HCENTER' | 'HRIGHT' | 'HMASK' |
-  'VTOP' | 'VCENTER' | 'VBOTTOM' | 'VMASK' |
-  'HFIT' | 'HWRAP' |
-  'HCENTERFIT' | 'HRIGHTFIT' | 'HVCENTER' | 'HVCENTERFIT';
+export enum ALIGN {
+  HLEFT,
+  HCENTER,
+  HRIGHT,
 
-export const ALIGN: Record<AlignKey, number>;
+  VTOP,
+  VCENTER,
+  VBOTTOM,
+
+  HFIT,
+  HWRAP,
+
+  // Convenience combinations of the above:
+  HCENTERFIT,
+  HRIGHTFIT,
+  HVCENTER,
+  HVCENTERFIT,
+}
+
+export function fontSetDefaultSize(h: number): void;
+export function intColorFromVec4Color(v: Vec4): RGBA;
+export function vec4ColorFromIntColor(v: Vec4, c: RGBA): void;
+
+interface FontDrawOpts {
+  style?: FontStyle,
+  color?: RGBA,
+  alpha?: number,
+  x: number, y: number, z?: number,
+  size?: number,
+  w?: number, h?: number,
+  align?: ALIGN,
+  indent?: number,
+  text: string | LocalizableString,
+}
+
+type FontLineWrapCallback = (x0: number, linenume: number, line: string, x1: number) => void;
+type Text = string | LocalizableString;
+
+export interface Font {
+  // General draw functions return width
+  // Pass null for style to use default style
+  // If the function takes a color, this overrides the color on the style
+  drawSized(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    size: number,
+    text: Text
+  ): number;
+  drawSizedColor(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    size: number,
+    color: RGBA,
+    text: Text
+  ): number;
+  drawSizedAligned(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    size: number,
+    align: ALIGN, w: number, h: number,
+    text: Text
+  ): number;
+  drawSizedAlignedWrapped(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    indent: number, size: number,
+    align: ALIGN, w: number, h: number,
+    text: Text
+  ): number;
+  // Wrapped raw functions return height
+  drawSizedColorWrapped(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    w: number, indent: number,
+    size: number,
+    color: RGBA,
+    text: Text
+  ): number;
+  drawSizedWrapped(
+    style: FontStyle | null,
+    x: number, y: number, z: number,
+    w: number, indent: number,
+    size: number,
+    text: Text
+  ): number;
+
+  // Generic draw: if (align & HWRAP), returns height, otherwise returns width
+  draw(param: FontDrawOpts): number;
+
+  // Returns number of lines
+  wrapLines(
+    style: FontStyle | null,
+    w: number, indent: number, size: number,
+    text: Text, align: ALIGN,
+    line_cb: FontLineWrapCallback
+  ): number;
+  numLines(style: FontStyle | null, w: number, indent: number, size: number, text: Text): number;
+  dims(style: FontStyle | null, w: number, indent: number, size: number, text: Text): { w: number, h: number };
+
+  getCharacterWidth(style: FontStyle | null, x_size: number, c: number): number;
+
+  getStringWidth(style: FontStyle | null, x_size: number, text: Text): number;
+
+  // Constants and utility functions are replicated on all font instances as well:
+  ALIGN: typeof ALIGN;
+  style: typeof fontStyle;
+  styleAlpha: typeof fontStyleAlpha;
+  styleColored: typeof fontStyleColored;
+}
+
+export function fontCreate(font_info: unknown, texture_name: string): Font;
 
 // Legacy interfaces
 export const style: typeof fontStyle;

@@ -32,6 +32,7 @@ const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
+const { fontSetDefaultSize } = glov_font;
 const glov_input = require('./input.js');
 const { mouseMoved } = glov_input;
 const { linkTick } = require('./link.js');
@@ -1805,7 +1806,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
 
 export function setFontHeight(_font_height) {
   font_height = _font_height;
-  glov_font.setDefaultSize(font_height);
+  fontSetDefaultSize(font_height);
 }
 
 export function scaleSizes(scale) {

@@ -5,6 +5,7 @@
 exports.style = fontStyle; // eslint-disable-line no-use-before-define
 exports.styleColored = fontStyleColored; // eslint-disable-line no-use-before-define
 exports.styleAlpha = fontStyleAlpha; // eslint-disable-line no-use-before-define
+exports.create = fontCreate; // eslint-disable-line no-use-before-define
 
 /* eslint-disable import/order */
 const assert = require('assert');
@@ -405,10 +406,9 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   text = getStringFromLocalizable(text);
   assert(w > 0);
   assert(typeof h !== 'string'); // Old API did not have `indent` parameter
-  this.applyStyle(style);
   let lines = [];
   let line_xoffs = [];
-  lines.length = this.wrapLines(w, indent, size, text, align, (xoffs, linenum, line) => {
+  lines.length = this.wrapLines(style, w, indent, size, text, align, (xoffs, linenum, line) => {
     line_xoffs[linenum] = xoffs;
     lines[linenum] = line;
   });
@@ -450,7 +450,7 @@ GlovFont.prototype.drawSizedWrapped = function (style, x, y, z, w, indent, size,
 };
 
 let default_size = 24;
-export function setDefaultSize(h) {
+export function fontSetDefaultSize(h) {
   default_size = h;
 }
 
@@ -476,25 +476,25 @@ GlovFont.prototype.draw = function (param) {
 };
 
 // line_cb(x0, int linenum, const char *line, x1)
-GlovFont.prototype.wrapLines = function (w, indent, size, text, align_bits, line_cb) {
-  return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align_bits, line_cb);
+GlovFont.prototype.wrapLines = function (style, w, indent, size, text, align, line_cb) {
+  assert(typeof style !== 'number'); // old API did not have `style` parameter
+  this.applyStyle(style);
+  return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align, line_cb);
 };
 
 GlovFont.prototype.numLines = function (style, w, indent, size, text) {
-  this.applyStyle(style);
-  return this.wrapLines(w, indent, size, text, 0);
+  return this.wrapLines(style, w, indent, size, text, 0);
 };
 
 GlovFont.prototype.dims = function (style, w, indent, size, text) {
-  this.applyStyle(style);
   let max_x1 = 0;
   function lineCallback(ignored1, ignored2, line, x1) {
     max_x1 = max(max_x1, x1);
   }
-  let numlines = this.wrapLines(w, indent, size, text, 0, lineCallback);
+  let numlines = this.wrapLines(style, w, indent, size, text, 0, lineCallback);
   return {
-    h: numlines * size,
     w: max_x1,
+    h: numlines * size,
   };
 };
 
@@ -552,13 +552,13 @@ function endsWord(char_code) {
 }
 
 // line_cb(x0, int linenum, const char *line, x1)
-GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align_bits, line_cb) {
+GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line_cb) {
   text = getStringFromLocalizable(text);
-  assert(typeof align_bits !== 'function'); // Old API had one less parameter
+  assert(typeof align !== 'function'); // Old API had one less parameter
   const len = text.length;
   const max_word_w = w - indent;
   // "fit" mode: instead of breaking the too-long word, output it on a line of its own
-  const hard_wrap_mode_fit = align_bits & ALIGN.HFIT;
+  const hard_wrap_mode_fit = align & ALIGN.HFIT;
   const x_advance = this.calcXAdvance(xsc);
   const space_size = this.getSpaceSize(xsc) + x_advance;
   let idx = 0;
@@ -931,7 +931,7 @@ function fontShadersInit() {
   shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline_glow);
 }
 
-export function create(font_info, texture_name) {
+export function fontCreate(font_info, texture_name) {
   fontShadersInit();
   return new GlovFont(font_info, texture_name);
 }
