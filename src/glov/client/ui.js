@@ -51,6 +51,7 @@ const {
   spot,
   spotEndOfFrame,
   spotFocusableCanvas,
+  spotKey,
   spotPadMode,
   spotTopOfFrame,
   spotUnfocus,
@@ -112,19 +113,14 @@ export function addHook(draw, click) {
   });
 }
 
-let focus_parent_id = '';
-export function focusIdSet(new_value) {
-  focus_parent_id = new_value || '';
-}
-
 let ui_elem_data = {};
 // Gets per-element state data that allows a paradigm of inter-frame state but
 //   without the caller being required to allocate a state container.
 export function getUIElemData(type, param, allocator) {
-  let key = param.key || `${focus_parent_id}_${param.x}_${param.y}`;
-  let by_type = ui_elem_data[key];
+  let key = spotKey(param);
+  let by_type = ui_elem_data[type];
   if (!by_type) {
-    by_type = ui_elem_data[key] = {};
+    by_type = ui_elem_data[type] = {};
   }
   let elem_data = by_type[key];
   if (!elem_data) {

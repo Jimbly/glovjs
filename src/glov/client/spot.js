@@ -99,7 +99,6 @@ import {
   drawLine,
   drawRect,
   drawTooltipBox,
-  focusIdSet,
   playUISound,
 } from './ui.js';
 
@@ -637,15 +636,9 @@ function spotEntirelyObscured(param) {
 export function spotSubPush() {
   sub_stack.push([focus_sub_rect, focus_sub_rect_elem]);
   focus_sub_rect = null;
-  focusIdSet(null);
 }
 export function spotSubPop() {
   ([focus_sub_rect, focus_sub_rect_elem] = sub_stack.pop());
-  if (focus_sub_rect) {
-    focusIdSet(focus_sub_rect.key_computed);
-  } else {
-    focusIdSet(null);
-  }
 }
 
 export function spotSubBegin(param) {
@@ -663,13 +656,11 @@ export function spotSubBegin(param) {
   focus_sub_rect = param;
   focus_sub_rect.is_empty_sub_rect = true;
   focus_sub_rect_elem = null;
-  focusIdSet(focus_sub_rect.key_computed);
 }
 
 export function spotSubEnd() {
   assert(focus_sub_rect);
   focus_sub_rect = null;
-  focusIdSet(null);
   return focus_sub_rect_elem;
 }
 
