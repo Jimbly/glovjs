@@ -13,7 +13,6 @@ import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   MenuItemEntry,
   SelectionBox,
-  SelectionBoxParams,
   dropDownCreate,
   selectionBoxCreate,
 } from './selection_box';
@@ -39,10 +38,6 @@ let test_scroll_area: ScrollArea;
 let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
-
-interface SelectionBoxParamsWithItems extends Partial<SelectionBoxParams> {
-  items: MenuItemEntry[];
-}
 
 function init(x: number, y: number, column_width: number) {
   edit_box1 = editBoxCreate({
@@ -90,8 +85,8 @@ function init(x: number, y: number, column_width: number) {
     width: column_width - 8,
   });
 
-  let large_param: SelectionBoxParamsWithItems = {
-    items: [],
+  let large_param = {
+    items: [] as MenuItemEntry[],
     z: Z.UI,
     width: column_width - 8,
   };
