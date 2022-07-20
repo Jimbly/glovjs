@@ -8,7 +8,7 @@ export interface EditBoxOptsAll {
   w: number;
   type: 'text' | 'number' | 'password' | 'email';
   font_height: number;
-  text: string;
+  text: string | number;
   placeholder: string;
   max_len: number;
   zindex: null | number;
