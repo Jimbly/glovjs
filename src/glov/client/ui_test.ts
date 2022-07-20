@@ -11,7 +11,6 @@ import * as input from './input.js';
 import { linkText } from './link.js';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
-  MenuItemEntry,
   SelectionBox,
   dropDownCreate,
   selectionBoxCreate,
@@ -85,15 +84,15 @@ function init(x: number, y: number, column_width: number) {
     width: column_width - 8,
   });
 
-  let large_param = {
-    items: [] as MenuItemEntry[],
+  let items = [];
+  for (let ii = 0; ii < 100; ++ii) {
+    items.push(`item${ii}`);
+  }
+  test_dropdown_large = dropDownCreate({
+    items,
     z: Z.UI,
     width: column_width - 8,
-  };
-  for (let ii = 0; ii < 100; ++ii) {
-    large_param.items.push(`item${ii}`);
-  }
-  test_dropdown_large = dropDownCreate(large_param);
+  });
 
   test_scroll_area = scrollAreaCreate();
 }
