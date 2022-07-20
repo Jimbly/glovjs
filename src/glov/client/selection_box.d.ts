@@ -67,7 +67,7 @@ export interface SelectionBoxDisplay {
   selection_fade: number; // alpha per millisecond; default: Infinity
 }
 
-export interface SelectionBoxParams {
+export interface SelectionBoxOptsAll {
   key: string; // default: `dd${id}`
   x: number; // default: 0
   y: number; // default: 0
@@ -85,14 +85,16 @@ export interface SelectionBoxParams {
   show_as_focused: number; // default: -1
 }
 
-export interface SelectionBox extends Readonly<SelectionBoxParams> {
+export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
+
+export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   readonly display: SelectionBoxDisplay; // always fully realized (non-Partial) after being applied
 
-  run(params?: Partial<SelectionBoxParams>): number;
+  run(params?: SelectionBoxOpts): number;
 
   isSelected(tag_or_index: string | number): boolean;
   getSelected(): MenuItem;
 }
 
-export function selectionBoxCreate(params?: Partial<SelectionBoxParams>): SelectionBox;
-export function dropDownCreate(params?: Partial<SelectionBoxParams>): SelectionBox;
+export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;
+export function dropDownCreate(params?: SelectionBoxOpts): SelectionBox;

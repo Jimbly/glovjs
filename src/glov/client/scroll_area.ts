@@ -44,7 +44,7 @@ export function scrollAreaSetPixelScale(scale: number): void {
   default_pixel_scale = scale;
 }
 
-interface ScrollAreaOpts {
+interface ScrollAreaOptsAll {
   // configuration options
   x: number,
   y: number,
@@ -70,12 +70,14 @@ interface ScrollAreaOpts {
   disabled_color: Vec4,
 }
 
-export interface ScrollArea extends Readonly<ScrollAreaOpts> {
+export type ScrollAreaOpts = Partial<ScrollAreaOptsAll>;
+
+export interface ScrollArea extends Readonly<ScrollAreaOptsAll> {
   barWidth(): number;
   isFocused(): boolean;
   consumedClick(): boolean;
   isVisible(): boolean;
-  begin(params?: Partial<ScrollAreaOpts>): void;
+  begin(params?: ScrollAreaOpts): void;
   // Includes overscroll - actual visible scroll pos for this frame
   getScrollPos(): number;
   keyboardScroll(): void;
@@ -124,7 +126,7 @@ class ScrollAreaInternal implements ScrollArea {
   scrollbar_visible = false;
   last_max_value = 0;
 
-  constructor(params?: Partial<ScrollAreaOpts>) {
+  constructor(params?: ScrollAreaOpts) {
     params = params || {};
     this.applyParams(params);
     this.rate_scroll_wheel = params.rate_scroll_wheel || this.rate_scroll_click * 2;
@@ -135,7 +137,7 @@ class ScrollAreaInternal implements ScrollArea {
     this.disabled_color = params.disabled_color || this.rollover_color;
   }
 
-  applyParams(params?: Partial<ScrollAreaOpts>): void {
+  applyParams(params?: ScrollAreaOpts): void {
     if (!params) {
       return;
     }
@@ -161,7 +163,7 @@ class ScrollAreaInternal implements ScrollArea {
     return this.scrollbar_visible;
   }
 
-  begin(params?: Partial<ScrollAreaOpts>): void {
+  begin(params?: ScrollAreaOpts): void {
     this.applyParams(params);
     let { x, y, w, h, z, id } = this;
     verify(!this.began); // Checking mismatched begin/end
@@ -548,6 +550,6 @@ class ScrollAreaInternal implements ScrollArea {
   }
 }
 
-export function scrollAreaCreate(params?: Partial<ScrollAreaOpts>): ScrollArea {
+export function scrollAreaCreate(params?: ScrollAreaOpts): ScrollArea {
   return new ScrollAreaInternal(params);
 }

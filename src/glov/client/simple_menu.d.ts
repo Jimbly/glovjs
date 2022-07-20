@@ -1,7 +1,7 @@
-import { MenuItem, SelectionBoxParams } from './selection_box';
+import { MenuItem, SelectionBoxOpts } from './selection_box';
 
 export interface SimpleMenu {
-  run(params?: Partial<SelectionBoxParams>): number;
+  run(params?: SelectionBoxOpts): number;
   isSelected(): boolean | string;
   isSelected(tag_or_index?: number | string): boolean;
 
@@ -9,4 +9,4 @@ export interface SimpleMenu {
   getSelectedItem(): MenuItem;
 }
 
-export function simpleMenuCreate(params?: Partial<SelectionBoxParams>): SimpleMenu;
+export function simpleMenuCreate(params?: SelectionBoxOpts): SimpleMenu;

@@ -1,6 +1,6 @@
 export type EditBoxResult = null | 'submit' | 'cancel';
 
-export interface EditBoxParams {
+export interface EditBoxOptsAll {
   key: string;
   x: number;
   y: number;
@@ -24,8 +24,10 @@ export interface EditBoxParams {
   custom_nav: Partial<Record<number, null>>;
 }
 
-export interface EditBox extends Readonly<EditBoxParams> {
-  run(params?: Partial<EditBoxParams>): EditBoxResult;
+export type EditBoxOpts = Partial<EditBoxOptsAll>;
+
+export interface EditBox extends Readonly<EditBoxOptsAll> {
+  run(params?: EditBoxOpts): EditBoxResult;
   getText(): string;
   setText(new_text: string | number): void;
   isFocused(): boolean;
@@ -34,4 +36,4 @@ export interface EditBox extends Readonly<EditBoxParams> {
   readonly CANCEL: 'cancel';
 }
 
-export function editBoxCreate(params?: Partial<EditBoxParams>): EditBox;
+export function editBoxCreate(params?: EditBoxOpts): EditBox;
