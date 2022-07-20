@@ -161,7 +161,7 @@ class ScrollAreaInternal implements ScrollArea {
     return this.scrollbar_visible;
   }
 
-  begin(params?: ScrollAreaOpts): void {
+  begin(params?: Partial<ScrollAreaOpts>): void {
     this.applyParams(params);
     let { x, y, w, h, z, id } = this;
     verify(!this.began); // Checking mismatched begin/end
