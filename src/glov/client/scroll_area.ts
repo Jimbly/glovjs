@@ -549,5 +549,5 @@ class ScrollAreaInternal implements ScrollArea {
 }
 
 export function scrollAreaCreate(params?: Partial<ScrollAreaOpts>): ScrollArea {
-  return new ScrollAreaInternal(params) as ScrollArea;
+  return new ScrollAreaInternal(params);
 }
