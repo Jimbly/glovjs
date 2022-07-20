@@ -387,8 +387,9 @@ export function soundTick(dt: number): void {
   }
 }
 
-export function soundPlay(soundid: SoundID, volume: number, as_music?: boolean): GlovSound | null {
-  volume = volume || 1;
+// TODO: why does simply using `volume?: number` not work?
+export function soundPlay(soundid: SoundID, volume_in?: number, as_music?: boolean): GlovSound | null {
+  let volume = volume_in || 1;
   if (!as_music && !settings.sound || as_music && !settings.music) {
     return null;
   }
