@@ -34,7 +34,6 @@ const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const { fontSetDefaultSize } = glov_font;
 const glov_input = require('./input.js');
-const { mouseMoved } = glov_input;
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { abs, floor, max, min, round, sqrt } = Math;
@@ -216,9 +215,6 @@ let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
 export let button_click = null; // on click, for callers to poll which mouse button, etc
-// For tracking global mouseover state
-let last_frame_button_mouseover = false;
-let frame_button_mouseover = false;
 
 let modal_dialog = null;
 export let menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
@@ -252,30 +248,16 @@ export function colorSetSetShades(rollover, down, disabled) {
   }
 }
 
-export function loadUISprite(name, ws, hs, overrides, only_override) {
-  let override = overrides && overrides[name];
+export function loadUISprite(name, ws, hs) {
   let wrap_s = gl.CLAMP_TO_EDGE;
-  let wrap_t = (name === 'scrollbar_trough') ? gl.REPEAT : gl.CLAMP_TO_EDGE;
-  if (override === null) {
-    // skip it, assume not used
-  } else if (override) {
-    sprites[name] = glov_sprites.create({
-      name: override[0],
-      ws: override[1],
-      hs: override[2],
-      layers: override[3],
-      wrap_s,
-      wrap_t,
-    });
-  } else if (!only_override) {
-    sprites[name] = glov_sprites.create({
-      name: `ui/${name}`,
-      ws,
-      hs,
-      wrap_s,
-      wrap_t,
-    });
-  }
+  let wrap_t = gl.CLAMP_TO_EDGE;
+  sprites[name] = glov_sprites.create({
+    name: `ui/${name}`,
+    ws,
+    hs,
+    wrap_s,
+    wrap_t,
+  });
 }
 
 export function loadUISprite2(name, param) {
@@ -644,15 +626,6 @@ export function playUISound(name, volume) {
   if (sounds[name]) {
     soundPlay(sounds[name], volume);
   }
-}
-
-export function setMouseOver(key, quiet) {
-  if (last_frame_button_mouseover !== key && frame_button_mouseover !== key && !quiet && mouseMoved()) {
-    playUISound('rollover');
-  }
-  frame_button_mouseover = key;
-  button_mouseover = true;
-  glov_input.mouseOverCaptured();
 }
 
 export function focusCanvas() {
@@ -1312,8 +1285,6 @@ function releaseOldUIElemData() {
 }
 
 export function tickUI(dt) {
-  last_frame_button_mouseover = frame_button_mouseover;
-  frame_button_mouseover = false;
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
   releaseOldUIElemData();
 
