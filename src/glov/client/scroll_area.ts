@@ -21,9 +21,6 @@ import {
 import { clipPop, clipPush } from './sprites.js';
 import * as ui from './ui.js';
 
-// TODO: remove when ui.js is converted to TS
-import type { UISprites } from 'glov/common/types.js';
-
 const { max, min, round } = Math;
 
 // TODO: move FocusableElement to appropriate TS file after conversion (probably input)
@@ -146,7 +143,7 @@ class ScrollAreaInternal implements ScrollArea {
 
   barWidth(): number {
     let { pixel_scale } = this;
-    let { scrollbar_top } = ui.sprites as UISprites;
+    let { scrollbar_top } = ui.sprites;
     return scrollbar_top.uidata.total_w * pixel_scale;
   }
 
@@ -283,7 +280,7 @@ class ScrollAreaInternal implements ScrollArea {
 
     let {
       scrollbar_top, scrollbar_bottom, scrollbar_trough, scrollbar_handle, scrollbar_handle_grabber
-    } = ui.sprites as UISprites;
+    } = ui.sprites;
 
     let bar_w = scrollbar_top.uidata.total_w * pixel_scale;
     let button_h = min(scrollbar_top.uidata.total_h * pixel_scale, this.h / 3);
