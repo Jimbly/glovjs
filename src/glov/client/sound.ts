@@ -148,7 +148,7 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
 }
 
-type SoundID = string | { file: string; volume: number };
+export type SoundID = string | { file: string; volume: number };
 
 export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};

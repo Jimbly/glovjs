@@ -8,6 +8,11 @@ exports.createSprite = create;
 // eslint-disable-next-line no-use-before-define
 exports.spritesClip = clip;
 
+export const BlendMode = {
+  BLEND_ALPHA: 0,
+  BLEND_ADDITIVE: 1,
+  BLEND_PREMULALPHA: 2,
+};
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
