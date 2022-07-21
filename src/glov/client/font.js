@@ -791,6 +791,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
 
   let sort_y = (y - camera2d.data[1]) * camera2d.data[5];
 
+  let last_elem;
   for (let i=0; i<len; i++) {
     const c = text.charCodeAt(i);
     if (c === 9) { // '\t'.charCodeAt(0)) {
@@ -822,19 +823,27 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
           let w = char_info.w * xsc2 + (padding4[0] + padding4[2]) * rel_x_scale;
           let h = char_info.h * ysc2 + (padding4[1] + padding4[3]) * rel_y_scale;
 
-          let elem = sprites.queueraw(
-            texs,
-            x - rel_x_scale * padding4[0], y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,
-            z + z_advance * i, w, h,
-            u0, v0, u1, v1,
-            applied_style.color_vec4,
-            this.shader, techParamsGet(), blend_mode);
-          elem.y = sort_y;
+          let xx = x - rel_x_scale * padding4[0];
+          let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
+          if (last_elem && !z_advance) {
+            last_elem = sprites.chainraw(
+              last_elem,
+              xx, yy,
+              w, h,
+              u0, v0, u1, v1,
+              applied_style.color_vec4);
+          } else {
+            last_elem = sprites.queueraw(
+              texs,
+              xx, yy,
+              z + z_advance * i, w, h,
+              u0, v0, u1, v1,
+              applied_style.color_vec4,
+              this.shader, techParamsGet(), blend_mode);
+            last_elem.y = sort_y;
+          }
 
-          // require('./ui.js').drawRect(x - rel_x_scale * padding4[0],
-          //   y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,
-          //   w + x - rel_x_scale * padding4[0],
-          //   h + y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2,
+          // require('./ui.js').drawRect(xx, yy, xx + w, yy + h,
           //   1000, [i & 1, (i & 2)>>1, (i & 4)>>2, 0.5]);
         }
 

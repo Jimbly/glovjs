@@ -68,6 +68,7 @@ function SpriteData() {
   this.z = 0;
   this.blend = 0; // BLEND_ALPHA
   this.uid = 0;
+  this.next = null;
 }
 
 SpriteData.prototype.queue = function (z) {
@@ -76,7 +77,6 @@ SpriteData.prototype.queue = function (z) {
   ++geom_stats.sprites;
   sprite_queue.push(this);
 };
-
 
 export function spriteDataAlloc(texs, shader, shader_params, blend) {
   let ret;
@@ -94,6 +94,26 @@ export function spriteDataAlloc(texs, shader, shader_params, blend) {
     ret.shader_params = null;
   }
   ret.blend = blend || 0; // BLEND_ALPHA
+  return ret;
+}
+
+function spriteDataAllocChained(prev) {
+  let ret;
+  if (sprite_freelist.length) {
+    ret = sprite_freelist.pop();
+  } else {
+    ret = new SpriteData();
+  }
+
+  // these fields should never be accessed, can just leave dirty
+  // ret.texs = null;
+  // ret.shader = null;
+  // ret.shader_params = null;
+  // ret.blend = 0;
+
+  assert(!prev.next);
+  prev.next = ret;
+  ++geom_stats.sprites;
   return ret;
 }
 
@@ -254,6 +274,60 @@ export function queueraw(
     x + w, y, color, u1, v0,
     z,
     shader, shader_params, blend);
+}
+
+export function chainraw(
+  prev,
+  x, y, w, h,
+  u0, v0, u1, v1,
+  color,
+) {
+  let x0 = (x - camera2d.data[0]) * camera2d.data[4];
+  let y0 = (y - camera2d.data[1]) * camera2d.data[5];
+  let x1 = (x + w - camera2d.data[0]) * camera2d.data[4];
+  let y1 = (y + h - camera2d.data[1]) * camera2d.data[5];
+
+  let elem = spriteDataAllocChained(prev);
+  let data = elem.data;
+  data[0] = x0;
+  data[1] = y0;
+  data[2] = color[0];
+  data[3] = color[1];
+  data[4] = color[2];
+  data[5] = color[3];
+  data[6] = u0;
+  data[7] = v0;
+
+  data[8] = x0;
+  data[9] = y1;
+  data[10] = color[0];
+  data[11] = color[1];
+  data[12] = color[2];
+  data[13] = color[3];
+  data[14] = u0;
+  data[15] = v1;
+
+  data[16] = x1;
+  data[17] = y1;
+  data[18] = color[0];
+  data[19] = color[1];
+  data[20] = color[2];
+  data[21] = color[3];
+  data[22] = u1;
+  data[23] = v1;
+
+  data[24] = x1;
+  data[25] = y0;
+  data[26] = color[0];
+  data[27] = color[1];
+  data[28] = color[2];
+  data[29] = color[3];
+  data[30] = u1;
+  data[31] = v0;
+
+  elem.x = data[0];
+  elem.y = data[1];
+  return elem;
 }
 
 let temp_uvs = vec4();
@@ -626,7 +700,14 @@ function drawSetup() {
   assert.equal(batches.length, 0);
 }
 
+function growSpriteBuffer() {
+  let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT);
+  sprite_buffer_len = new_length;
+  sprite_buffer = new Float32Array(new_length * 8);
+}
+
 function drawElem(elem) {
+  let count = 0;
   if (elem.fn) {
     commitAndFlush();
     batch_state = null;
@@ -639,6 +720,7 @@ function drawElem(elem) {
 
     clip_space[0] = 2 / engine.viewport[2];
     clip_space[1] = -2 / engine.viewport[3];
+    count++;
   } else {
     if (!batch_state ||
       cmpTextureArray(elem.texs, batch_state.texs) ||
@@ -649,27 +731,32 @@ function drawElem(elem) {
       commit();
       batch_state = elem;
     }
-    if (sprite_buffer_idx + 4 > sprite_buffer_len) {
-      commitAndFlush();
-      // batch_state left alone
-      if (sprite_buffer_len !== MAX_VERT_COUNT) {
-        let new_length = min((sprite_buffer_len * 1.25 + 3) & ~3, MAX_VERT_COUNT);
-        sprite_buffer_len = new_length;
-        sprite_buffer = new Float32Array(new_length * 8);
+    do {
+      if (sprite_buffer_idx + 4 > sprite_buffer_len) {
+        commitAndFlush();
+        // batch_state left alone
+        if (sprite_buffer_len !== MAX_VERT_COUNT) {
+          growSpriteBuffer();
+        }
       }
-    }
 
-    let index = sprite_buffer_idx * 8;
-    sprite_buffer_idx += 4;
+      let index = sprite_buffer_idx * 8;
+      sprite_buffer_idx += 4;
 
-    // measurably slower:
-    // for (let ii = 0; ii < 32; ++ii) {
-    //   sprite_buffer[index + ii] = elem.data[ii];
-    // }
-    sprite_buffer.set(elem.data, index);
+      // measurably slower:
+      // for (let ii = 0; ii < 32; ++ii) {
+      //   sprite_buffer[index + ii] = elem.data[ii];
+      // }
+      sprite_buffer.set(elem.data, index);
+      count++;
 
-    sprite_freelist.push(elem);
+      sprite_freelist.push(elem);
+      let next = elem.next;
+      elem.next = null;
+      elem = next;
+    } while (elem);
   }
+  return count;
 }
 
 function finishDraw() {
