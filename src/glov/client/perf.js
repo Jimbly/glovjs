@@ -32,6 +32,7 @@ const { netClient, netClientId, netDisconnected } = require('./net.js');
 const { perfCounterHistory } = require('glov/common/perfcounters.js');
 const { profilerUI } = require('./profiler_ui.js');
 const settings = require('./settings.js');
+const { spriteChainedStart, spriteChainedStop } = require('./sprites.js');
 const ui = require('./ui.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
 
@@ -219,6 +220,7 @@ function showMetricGraph(y, metric) {
   let x = camera2d.x1Real() - w;
   let h = LINE_HEIGHT + LINE_PAD * 2;
   let z = Z.FPSMETER;
+  spriteChainedStart();
   ui.drawRect(x, y - h, x + w, y, z++, bg_default);
   x += LINE_PAD;
   y -= LINE_PAD;
@@ -256,6 +258,7 @@ function showMetricGraph(y, metric) {
   }
   z += NUM_LINES;
   y -= LINE_HEIGHT + LINE_PAD;
+  spriteChainedStop();
   return y;
 }
 

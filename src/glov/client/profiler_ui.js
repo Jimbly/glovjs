@@ -38,6 +38,7 @@ const {
   profilerWarning,
 } = require('./profiler.js');
 const settings = require('./settings.js');
+const { spriteChainedStart, spriteChainedStop } = require('./sprites.js');
 const { lerp } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
@@ -351,11 +352,15 @@ function profilerShowEntry(walk, depth) {
     }
   }
 
+  spriteChainedStart();
+
   // Draw background
   let color_top = over ? color_bar_over : parent_over ? color_bar_parent : color_bar;
   let color_bot = over ? color_bar_over2 : parent_over ? color_bar_parent2 : color_bar2;
-  ui.drawRect4Color(0, y, line_width, y + LINE_HEIGHT, Z_BAR,
-    color_top, color_top, color_bot, color_bot);
+  if (!engine.defines.NORECTS) {
+    ui.drawRect4Color(0, y, line_width, y + LINE_HEIGHT, Z_BAR,
+      color_top, color_top, color_bot, color_bot);
+  }
 
   // Draw bar graph
   let x = bar_x0;
@@ -374,10 +379,14 @@ function profilerShowEntry(walk, depth) {
         color_timing[1] = max(0, 2 - hv);
       }
       let color = walk.color_override || color_timing;
-      let elem = ui.drawRect(x + ii*bar_w, y + LINE_HEIGHT - h, x + (ii + 1)*bar_w, y + LINE_HEIGHT, Z_GRAPH, color);
-      elem.x = elem.y = 0; // no sorting by x/y required
+      if (!engine.defines.NORECTS) {
+        let elem = ui.drawRect(x + ii*bar_w, y + LINE_HEIGHT - h, x + (ii + 1)*bar_w, y + LINE_HEIGHT, Z_GRAPH, color);
+        elem.x = elem.y = 0; // no sorting by x/y required
+      }
     }
   }
+
+  spriteChainedStop();
 
   y += LINE_YOFFS;
 

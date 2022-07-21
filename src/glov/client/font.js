@@ -17,7 +17,7 @@ const { max, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
-const { BLEND_ALPHA, BLEND_PREMULALPHA } = sprites;
+const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, queueraw } = sprites;
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
 const { v3scale, vec4, v4clone, v4copy, v4scale } = require('glov/common/vmath.js');
@@ -783,7 +783,9 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   // Choose appropriate z advance so that character are drawn left to right (or RTL if the glow is on the other side)
   // same Z should be drawn in queue order, so not needed
   const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0; // 0.0001;
-
+  if (!z_advance) {
+    spriteChainedStart();
+  }
 
   // For non-1:1 aspect ration rendering, need to scale our coordinates' padding differently in each axis
   let rel_x_scale = xsc / avg_scale_font;
@@ -791,7 +793,6 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
 
   let sort_y = (y - camera2d.data[1]) * camera2d.data[5];
 
-  let last_elem;
   for (let i=0; i<len; i++) {
     const c = text.charCodeAt(i);
     if (c === 9) { // '\t'.charCodeAt(0)) {
@@ -825,23 +826,14 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
 
           let xx = x - rel_x_scale * padding4[0];
           let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
-          if (last_elem && !z_advance) {
-            last_elem = sprites.chainraw(
-              last_elem,
-              xx, yy,
-              w, h,
-              u0, v0, u1, v1,
-              applied_style.color_vec4);
-          } else {
-            last_elem = sprites.queueraw(
-              texs,
-              xx, yy,
-              z + z_advance * i, w, h,
-              u0, v0, u1, v1,
-              applied_style.color_vec4,
-              this.shader, techParamsGet(), blend_mode);
-            last_elem.y = sort_y;
-          }
+          let elem = queueraw(
+            texs,
+            xx, yy,
+            z + z_advance * i, w, h,
+            u0, v0, u1, v1,
+            applied_style.color_vec4,
+            this.shader, techParamsGet(), blend_mode);
+          elem.y = sort_y;
 
           // require('./ui.js').drawRect(xx, yy, xx + w, yy + h,
           //   1000, [i & 1, (i & 2)>>1, (i & 4)>>2, 0.5]);
@@ -850,6 +842,9 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
         x += (char_info.w + char_info.xpad) * xsc2 + x_advance;
       }
     }
+  }
+  if (!z_advance) {
+    spriteChainedStop();
   }
   return x - _x;
 };

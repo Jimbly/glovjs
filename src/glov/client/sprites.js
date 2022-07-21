@@ -68,15 +68,29 @@ function SpriteData() {
   this.z = 0;
   this.blend = 0; // BLEND_ALPHA
   this.uid = 0;
+  this.chained = false;
   this.next = null;
 }
 
 SpriteData.prototype.queue = function (z) {
-  this.z = z;
-  this.uid = ++last_uid;
   ++geom_stats.sprites;
-  sprite_queue.push(this);
+  if (!this.chained) {
+    this.z = z;
+    this.uid = ++last_uid;
+    sprite_queue.push(this);
+  }
 };
+
+let is_chained = false;
+let chained_prev = null;
+export function spriteChainedStart() {
+  is_chained = true;
+  chained_prev = null;
+}
+export function spriteChainedStop() {
+  is_chained = false;
+  chained_prev = null;
+}
 
 export function spriteDataAlloc(texs, shader, shader_params, blend) {
   let ret;
@@ -86,34 +100,23 @@ export function spriteDataAlloc(texs, shader, shader_params, blend) {
     ret = new SpriteData();
   }
   ret.texs = texs;
-  ret.shader = shader || null;
-  if (shader_params) {
-    shader_params.clip_space = sprite_shader_params.clip_space;
-    ret.shader_params = shader_params;
+  if (is_chained && chained_prev) {
+    ret.chained = true;
+    chained_prev.next = ret;
   } else {
-    ret.shader_params = null;
+    ret.chained = false;
+    ret.shader = shader || null;
+    if (shader_params) {
+      shader_params.clip_space = sprite_shader_params.clip_space;
+      ret.shader_params = shader_params;
+    } else {
+      ret.shader_params = null;
+    }
+    ret.blend = blend || 0; // BLEND_ALPHA
   }
-  ret.blend = blend || 0; // BLEND_ALPHA
-  return ret;
-}
-
-function spriteDataAllocChained(prev) {
-  let ret;
-  if (sprite_freelist.length) {
-    ret = sprite_freelist.pop();
-  } else {
-    ret = new SpriteData();
+  if (is_chained) {
+    chained_prev = ret;
   }
-
-  // these fields should never be accessed, can just leave dirty
-  // ret.texs = null;
-  // ret.shader = null;
-  // ret.shader_params = null;
-  // ret.blend = 0;
-
-  assert(!prev.next);
-  prev.next = ret;
-  ++geom_stats.sprites;
   return ret;
 }
 
@@ -274,60 +277,6 @@ export function queueraw(
     x + w, y, color, u1, v0,
     z,
     shader, shader_params, blend);
-}
-
-export function chainraw(
-  prev,
-  x, y, w, h,
-  u0, v0, u1, v1,
-  color,
-) {
-  let x0 = (x - camera2d.data[0]) * camera2d.data[4];
-  let y0 = (y - camera2d.data[1]) * camera2d.data[5];
-  let x1 = (x + w - camera2d.data[0]) * camera2d.data[4];
-  let y1 = (y + h - camera2d.data[1]) * camera2d.data[5];
-
-  let elem = spriteDataAllocChained(prev);
-  let data = elem.data;
-  data[0] = x0;
-  data[1] = y0;
-  data[2] = color[0];
-  data[3] = color[1];
-  data[4] = color[2];
-  data[5] = color[3];
-  data[6] = u0;
-  data[7] = v0;
-
-  data[8] = x0;
-  data[9] = y1;
-  data[10] = color[0];
-  data[11] = color[1];
-  data[12] = color[2];
-  data[13] = color[3];
-  data[14] = u0;
-  data[15] = v1;
-
-  data[16] = x1;
-  data[17] = y1;
-  data[18] = color[0];
-  data[19] = color[1];
-  data[20] = color[2];
-  data[21] = color[3];
-  data[22] = u1;
-  data[23] = v1;
-
-  data[24] = x1;
-  data[25] = y0;
-  data[26] = color[0];
-  data[27] = color[1];
-  data[28] = color[2];
-  data[29] = color[3];
-  data[30] = u1;
-  data[31] = v0;
-
-  elem.x = data[0];
-  elem.y = data[1];
-  return elem;
 }
 
 let temp_uvs = vec4();
