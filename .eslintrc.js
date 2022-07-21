@@ -40,6 +40,7 @@ module.exports = {
   },
   "rules": {
     "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/member-delimiter-style": "error",
     "@typescript-eslint/no-array-constructor": "error",
     "@typescript-eslint/no-empty-function": "error",
     "@typescript-eslint/no-extra-semi": "error",
@@ -56,6 +57,7 @@ module.exports = {
     ],
     "@typescript-eslint/no-useless-constructor": "error",
     "@typescript-eslint/no-var-requires": "off",
+    "@typescript-eslint/semi": "error",
 
     "accessor-pairs": "error",
     "array-bracket-newline": ["error", "consistent"], // JE
@@ -468,7 +470,7 @@ module.exports = {
     "require-jsdoc": "off",
     "require-unicode-regexp": "off", // JE: Hasn't caught anything useful, generates bigger code
     "rest-spread-spacing": "error",
-    "semi": "error",
+    "semi": "off", // replaced by @typescript-eslint/semi
     "semi-spacing": "error",
     "semi-style": [
       "error",

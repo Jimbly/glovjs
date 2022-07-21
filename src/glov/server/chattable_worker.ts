@@ -12,8 +12,8 @@ const CHAT_COOLDOWN_DATA_KEY = 'public.chat_cooldown';
 const CHAT_DATA_KEY = 'private.chat';
 
 export interface ChattableWorker extends ChannelWorker {
-  chat_msg_timestamps?: FIFO< { timestamp: number, id: string }>;
-  chat_records_map?: Partial<Record<string, { timestamp: number, id: string }>>;
+  chat_msg_timestamps?: FIFO< { timestamp: number; id: string }>;
+  chat_records_map?: Partial<Record<string, { timestamp: number; id: string }>>;
   chatFilter?: (source: ClientHandlerSource, msg: string) => string | null;
   chatCooldownFilter?: (source: ClientHandlerSource) => boolean;
 }

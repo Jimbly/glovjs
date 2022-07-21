@@ -48,15 +48,15 @@ export function intColorFromVec4Color(v: Vec4): RGBA;
 export function vec4ColorFromIntColor(v: Vec4, c: RGBA): void;
 
 interface FontDrawOpts {
-  style?: FontStyle,
-  color?: RGBA,
-  alpha?: number,
-  x: number, y: number, z?: number,
-  size?: number,
-  w?: number, h?: number,
-  align?: ALIGN,
-  indent?: number,
-  text: string | LocalizableString,
+  style?: FontStyle;
+  color?: RGBA;
+  alpha?: number;
+  x: number; y: number; z?: number;
+  size?: number;
+  w?: number; h?: number;
+  align?: ALIGN;
+  indent?: number;
+  text: string | LocalizableString;
 }
 
 type FontLineWrapCallback = (x0: number, linenume: number, line: string, x1: number) => void;
@@ -121,7 +121,7 @@ export interface Font {
     line_cb: FontLineWrapCallback
   ): number;
   numLines(style: FontStyle | null, w: number, indent: number, size: number, text: Text): number;
-  dims(style: FontStyle | null, w: number, indent: number, size: number, text: Text): { w: number, h: number };
+  dims(style: FontStyle | null, w: number, indent: number, size: number, text: Text): { w: number; h: number };
 
   getCharacterWidth(style: FontStyle | null, x_size: number, c: number): number;
 

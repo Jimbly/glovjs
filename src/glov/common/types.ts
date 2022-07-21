@@ -63,7 +63,7 @@ export interface ChatHistoryData {
 /*
  * Friends command response
  */
-export type FriendCmdResponse = { msg: string, friend: FriendData };
+export type FriendCmdResponse = { msg: string; friend: FriendData };
 
 /**
  * Server worker handler callback
@@ -74,64 +74,64 @@ export type HandlerCallback<T = never> = ErrorCallback<T, string>;
  * Server worker handler source
  */
 export interface HandlerSource {
-  channel_id: string,
-  id: string,
-  type: string,
+  channel_id: string;
+  id: string;
+  type: string;
 }
 
 /**
  * Server client worker handler source
  */
 export interface ClientHandlerSource extends HandlerSource {
-  type: 'client',
-  user_id?: string,
-  display_name?: string,
-  access?: true,
-  direct?: true,
-  sysadmin?: true,
+  type: 'client';
+  user_id?: string;
+  display_name?: string;
+  access?: true;
+  direct?: true;
+  sysadmin?: true;
 }
 export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
   return src.type === 'client';
 }
 
 export interface Packet {
-  readU8: () => number,
-  writeU8: (value: number) => void,
-  readU32: () => number,
-  writeU32: (value: number) => void,
-  readInt: () => number,
-  writeInt: (value: number) => void,
-  readFloat: () => number,
-  writeFloat: (value: number) => void,
-  readString: () => string,
-  writeString: (value: string) => void,
-  readAnsiString: () => string,
-  writeAnsiString: (value: string) => void,
-  readJSON: () => unknown,
-  writeJSON: (value: unknown) => void,
-  readBool: () => boolean,
-  writeBool: (value: boolean) => void,
-  readBuffer: (do_copy: boolean) => Uint8Array,
-  writeBuffer: (value: Uint8Array) => void,
+  readU8: () => number;
+  writeU8: (value: number) => void;
+  readU32: () => number;
+  writeU32: (value: number) => void;
+  readInt: () => number;
+  writeInt: (value: number) => void;
+  readFloat: () => number;
+  writeFloat: (value: number) => void;
+  readString: () => string;
+  writeString: (value: string) => void;
+  readAnsiString: () => string;
+  writeAnsiString: (value: string) => void;
+  readJSON: () => unknown;
+  writeJSON: (value: unknown) => void;
+  readBool: () => boolean;
+  writeBool: (value: boolean) => void;
+  readBuffer: (do_copy: boolean) => Uint8Array;
+  writeBuffer: (value: Uint8Array) => void;
 
-  append: (other: Packet) => void,
-  appendRemaining: (other: Packet) => void,
-  send: (resp_func?: ErrorCallback) => void,
-  ended: () => boolean,
-  updateFlags: (flags: number) => void,
-  readFlags: () => void,
-  writeFlags: () => void,
-  getFlags: () => number,
-  getBuffer: () => Uint8Array,
-  getBufferLen: () => number,
-  getInternalFlags: () => number,
-  getOffset: () => number,
-  getRefCount: () => number,
-  makeReadable: () => void,
-  pool: () => void,
-  ref: () => void,
-  seek: (offs: number) => void,
-  totalSize: () => number,
+  append: (other: Packet) => void;
+  appendRemaining: (other: Packet) => void;
+  send: (resp_func?: ErrorCallback) => void;
+  ended: () => boolean;
+  updateFlags: (flags: number) => void;
+  readFlags: () => void;
+  writeFlags: () => void;
+  getFlags: () => number;
+  getBuffer: () => Uint8Array;
+  getBufferLen: () => number;
+  getInternalFlags: () => number;
+  getOffset: () => number;
+  getRefCount: () => number;
+  makeReadable: () => void;
+  pool: () => void;
+  ref: () => void;
+  seek: (offs: number) => void;
+  totalSize: () => number;
 }
 
 // TODO: Delete this type and all usages of it.
@@ -144,15 +144,15 @@ export type UnimplementedFunction = () => void;
  */
 export interface Sprite {
   uidata: {
-    total_w: number,
-    total_h: number,
-  },
-  uvs: number[],
+    total_w: number;
+    total_h: number;
+  };
+  uvs: number[];
   draw: (params: {
-    x: number, y: number, z: number,
-    w: number, h: number,
-    uvs?: number[], color: Vec4,
-  }) => void,
+    x: number; y: number; z: number;
+    w: number; h: number;
+    uvs?: number[]; color: Vec4;
+  }) => void;
 }
 /**
  * Client Sprite creation parameters

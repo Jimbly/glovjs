@@ -23,20 +23,20 @@ const { abs, floor, max, min, random } = Math;
 const DEFAULT_FADE_RATE = 0.001;
 
 interface SoundLoadOpts {
-  streaming?: boolean,
-  for_reload?: boolean,
-  loop?: boolean,
+  streaming?: boolean;
+  for_reload?: boolean;
+  loop?: boolean;
 }
 
 // Workaround to have interface to Howl object available (alongside glov_load_opts).
 interface HowlSound {
-  glov_load_opts: SoundLoadOpts,
-  play: (sprite?: string | number, volume?: number) => number,
-  stop: (id?: number) => HowlSound,
-  volume: (vol?: number, id?: number) => void,
-  seek: (seek?: number, id?: number) => HowlSound | number,
-  playing: (id?: number) => boolean,
-  duration: (id?: number) => number,
+  glov_load_opts: SoundLoadOpts;
+  play: (sprite?: string | number, volume?: number) => number;
+  stop: (id?: number) => HowlSound;
+  volume: (vol?: number, id?: number) => void;
+  seek: (seek?: number, id?: number) => HowlSound | number;
+  playing: (id?: number) => boolean;
+  duration: (id?: number) => number;
 }
 
 interface GlovSound { // Sound wrapper returned by soundPlay to external code
@@ -49,27 +49,27 @@ interface GlovSound { // Sound wrapper returned by soundPlay to external code
 }
 
 interface GlovMusic {
-  sound: HowlSound | null,
-  id: number,
-  current_volume: number,
-  target_volume: number,
-  sys_volume: number,
-  need_play: boolean,
+  sound: HowlSound | null;
+  id: number;
+  current_volume: number;
+  target_volume: number;
+  sys_volume: number;
+  need_play: boolean;
 }
 
 interface Fade {
-  sound: HowlSound,
-  id: number,
-  time: number,
-  volume: number,
-  settingsVolume: () => number,
+  sound: HowlSound;
+  id: number;
+  time: number;
+  volume: number;
+  settingsVolume: () => number;
 }
 
 let sounds : Record<string, HowlSound> = {};
 let active_sfx_as_music: {
-  sound: GlovSound,
-  play_volume: number,
-  set_volume_when_played: number,
+  sound: GlovSound;
+  play_volume: number;
+  set_volume_when_played: number;
 }[] = [];
 let num_loading = 0;
 
@@ -82,8 +82,8 @@ const default_params = {
   fade_rate: DEFAULT_FADE_RATE,
 };
 let sound_params: {
-  ext_list: string[],
-  fade_rate: number,
+  ext_list: string[];
+  fade_rate: number;
 };
 
 let last_played : Record<string, number> = {};
@@ -148,7 +148,7 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
 }
 
-type SoundID = string | { file: string, volume: number };
+type SoundID = string | { file: string; volume: number };
 
 export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};
@@ -287,7 +287,7 @@ export function soundResume(): void {
   Howler.manualUnlock();
 }
 
-export function soundStartup(params: { ext_list?: string[], fade_rate?: number }): void {
+export function soundStartup(params: { ext_list?: string[]; fade_rate?: number }): void {
   sound_params = defaults(params || {}, default_params);
 
   // Music

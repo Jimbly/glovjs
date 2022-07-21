@@ -11,8 +11,11 @@ export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
 export function makeColorSet(color: Vec4): ColorSet;
 export interface UIBox {
-  x: number, y: number, z?: number,
-  w: number, h: number,
+  x: number;
+  y: number;
+  z?: number;
+  w: number;
+  h: number;
 }
 export type UIHookFn = (param: UIBox) => void;
 export function addHook(draw: UIHookFn, click: UIHookFn): void;
@@ -48,7 +51,7 @@ export let button_height: number;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
 //export function loadUISprite2(name, param)
-export function setFonts(new_font: Font, new_title_font?: Font): void
+export function setFonts(new_font: Font, new_title_font?: Font): void;
 //export function setButtonsDefaultLabels(buttons_labels)
 //export function setProvideUserStringDefaultMessages(success_msg, failure_msg)
 //export function suppressNewDOMElemWarnings()
@@ -170,12 +173,12 @@ interface ModalDialogButtonEx<CB> extends ButtonTextParam {
 }
 type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB>;
 type ModalDialogTickCallback = (param: {
-  readonly x: number,
-  y: number,
-  readonly modal_width: number,
-  readonly avail_width: number,
-  readonly font_height: number,
-  readonly fullscreen_mode: boolean,
+  readonly x: number;
+  y: number;
+  readonly modal_width: number;
+  readonly avail_width: number;
+  readonly font_height: number;
+  readonly fullscreen_mode: boolean;
 }) => string | void;
 interface ModalDialogParamBase<CB> {
   title?: Text;
@@ -201,11 +204,11 @@ export function modalTextEntry(param: ModalTextEntryParam): void;
 export function isMenuUp(): boolean;
 
 interface MenuFadeParams {
-  blur?: [number, number],
-  saturation?: [number, number],
-  brightness?: [number, number],
-  fallback_darken?: Vec4,
-  z?: number,
+  blur?: [number, number];
+  saturation?: [number, number];
+  brightness?: [number, number];
+  fallback_darken?: Vec4;
+  z?: number;
 }
 export function menuUp(param?: MenuFadeParams): void;
 //export function provideUserString(title, str, success_msg, failure_msg)

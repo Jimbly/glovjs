@@ -76,8 +76,8 @@ export function ivec3(a?: number, b?: number, c?: number): Vec3 {
   return r;
 }
 
-export function vec4(): Vec4
-export function vec4(a: number, b: number, c: number, d: number): Vec4
+export function vec4(): Vec4;
+export function vec4(a: number, b: number, c: number, d: number): Vec4;
 export function vec4(a?: number, b?: number, c?: number, d?: number): Vec4 {
   let r = new Float32Array(4);
   if (a || b || c || d) {

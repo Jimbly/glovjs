@@ -28,7 +28,7 @@ export declare interface FacebookGraphDebugToken extends FacebookGraphResult {
     app_id?: string;
     is_valid?: boolean;
     user_id?: string;
-  }
+  };
 }
 
 const BASE_GRAPH_URL = 'https://graph.fb.gg';

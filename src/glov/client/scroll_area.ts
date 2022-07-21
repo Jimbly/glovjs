@@ -25,8 +25,8 @@ const { max, min, round } = Math;
 
 // TODO: move FocusableElement to appropriate TS file after conversion (probably input)
 interface FocusableElement {
-  focus: () => void
-  is_focused: boolean,
+  focus: () => void;
+  is_focused: boolean;
 }
 
 const MAX_OVERSCROLL = 50;
@@ -43,28 +43,28 @@ export function scrollAreaSetPixelScale(scale: number): void {
 
 interface ScrollAreaOptsAll {
   // configuration options
-  x: number,
-  y: number,
-  z: number,
-  w: number,
-  h: number, // height of visible area, not scrolled area
-  rate_scroll_click: number,
-  pixel_scale: number,
-  top_pad: boolean, // set to false it the top/bottom "buttons" don't look like buttons
-  color: Vec4,
-  background_color: Vec4 | null,
-  auto_scroll: boolean, // If true, will scroll to the bottom if the height changes and we're not actively scrolling
-  auto_hide: boolean, // If true, will hide the scroll bar when the scroll area does not require it
-  no_disable: boolean, // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
-  focusable_elem: FocusableElement | null // Another element to call .focus() on if we think we are focused
-  min_dist: number | undefined, // Minimum drag distance for background drag
-  disabled: boolean,
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  h: number; // height of visible area, not scrolled area
+  rate_scroll_click: number;
+  pixel_scale: number;
+  top_pad: boolean; // set to false it the top/bottom "buttons" don't look like buttons
+  color: Vec4;
+  background_color: Vec4 | null;
+  auto_scroll: boolean; // If true, will scroll to the bottom if the height changes and we're not actively scrolling
+  auto_hide: boolean; // If true, will hide the scroll bar when the scroll area does not require it
+  no_disable: boolean; // Use with auto_hide=false to always do scrolling actions (overscroll, mousewheel)
+  focusable_elem: FocusableElement | null; // Another element to call .focus() on if we think we are focused
+  min_dist: number | undefined; // Minimum drag distance for background drag
+  disabled: boolean;
 
   // Calculated (only once) if not set
-  rate_scroll_wheel: number,
-  rollover_color: Vec4,
-  rollover_color_light: Vec4,
-  disabled_color: Vec4,
+  rate_scroll_wheel: number;
+  rollover_color: Vec4;
+  rollover_color_light: Vec4;
+  disabled_color: Vec4;
 }
 
 export type ScrollAreaOpts = Partial<ScrollAreaOptsAll>;
