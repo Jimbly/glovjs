@@ -175,6 +175,7 @@ function ChatUI(params) {
   this.max_len = params.max_len;
   this.font_height = params.font_height || ui.font_height;
   this.hide_disconnected_message = params.hide_disconnected_message || false;
+  this.disconnected_message_top = params.disconnected_message_top || false;
   this.scroll_area = scrollAreaCreate({
     background_color: null,
     auto_scroll: true,
@@ -622,8 +623,12 @@ ChatUI.prototype.run = function (opts) {
         outline_color: 0x000000ff,
         color: 0xDD2020ff
       }),
-      camera2d.x0(), camera2d.y0(), Z.DEBUG,
-      ui.font_height, glov_font.ALIGN.HVCENTER, camera2d.w(), camera2d.h() * 0.20,
+      camera2d.x0(),
+      this.disconnected_message_top ? engine.game_height * 0.80 : camera2d.y0(),
+      Z.DEBUG,
+      ui.font_height,
+      this.disconnected_message_top ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HVCENTER,
+      camera2d.w(), camera2d.h() * 0.20,
       `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
   }
 
