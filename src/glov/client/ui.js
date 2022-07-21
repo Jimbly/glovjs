@@ -1407,15 +1407,15 @@ function copyTextToClipboard(text) {
   return ret;
 }
 
-export function provideUserString(title, str, success_msg, failure_msg) {
+export function provideUserString(title, str) {
   let copy_success = copyTextToClipboard(str);
   modalTextEntry({
     edit_w: 400,
     edit_text: str.replace(/[\n\r]/g, ' '),
     title,
     text: copy_success ?
-      (success_msg || default_copy_success_msg) :
-      (failure_msg || default_copy_failure_msg),
+      default_copy_success_msg :
+      default_copy_failure_msg,
     buttons: { ok: null },
   });
 }
