@@ -250,7 +250,7 @@ function profilerStart(name) {
   }
 }
 
-function profilerStop(old_name, count) {
+function profilerStop(old_name) {
   if (old_name) {
     assert.equal(old_name, current.name);
   }
@@ -258,13 +258,13 @@ function profilerStop(old_name, count) {
   if (current.depth < mem_depth) {
     current.dmem += memSize() - current.start_mem;
   }
-  current.count += count || 1;
+  current.count++;
   current = current.parent;
 }
 
-function profilerStopStart(name, count) {
+function profilerStopStart(name) {
   // TODO: only sample timestamp once
-  profilerStop(null, count);
+  profilerStop(null);
   profilerStart(name);
 }
 

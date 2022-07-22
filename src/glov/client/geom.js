@@ -31,6 +31,8 @@ export let stats = {
   tris: 0,
   verts: 0,
   sprites: 0,
+  sprite_sort_elems: 0,
+  sprite_sort_cmps: 0,
   font_calls: 0,
   font_params: 0,
 };

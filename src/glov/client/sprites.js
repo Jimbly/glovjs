@@ -98,6 +98,7 @@ export function spriteDataAlloc(texs, shader, shader_params, blend) {
 }
 
 function cmpSprite(a, b) {
+  ++geom_stats.sprite_sort_cmps;
   if (a.z !== b.z) {
     return a.z - b.z;
   }
@@ -616,6 +617,7 @@ function drawSetup() {
 
   profilerStart('sort');
   sprite_queue.sort(cmpSprite);
+  geom_stats.sprite_sort_elems += sprite_queue.length;
   profilerStop('sort');
 
   batch_state = null;
@@ -683,18 +685,17 @@ export function draw() {
     let elem = sprite_queue[ii];
     drawElem(elem);
   }
-  profilerStop('drawElem', sprite_queue.length);
+  profilerStop('drawElem');
   sprite_queue.length = 0;
   finishDraw();
-  profilerStop('sprites:draw', sprite_queue.length);
+  profilerStop('sprites:draw');
 }
 
 export function drawPartial(z) {
   profilerStart('sprites:drawPartial');
   drawSetup();
   profilerStart('drawElem');
-  let ii;
-  for (ii = 0; ii < sprite_queue.length; ++ii) {
+  for (let ii = 0; ii < sprite_queue.length; ++ii) {
     let elem = sprite_queue[ii];
     if (elem.z > z) {
       sprite_queue = sprite_queue.slice(ii);
@@ -702,7 +703,7 @@ export function drawPartial(z) {
     }
     drawElem(elem);
   }
-  profilerStop('drawElem', ii);
+  profilerStop('drawElem');
   finishDraw();
   profilerStop('sprites:drawPartial');
 }
