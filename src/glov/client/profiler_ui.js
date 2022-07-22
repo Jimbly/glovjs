@@ -11,7 +11,7 @@ const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const { style } = require('./font.js');
 const input = require('./input.js');
-const { floor, max, min } = Math;
+const { floor, max, min, round } = Math;
 const { netClient, netDisconnected } = require('./net.js');
 const ui = require('./ui.js');
 const { perfGraphOverride, friendlyBytes } = require('./perf.js');
@@ -26,6 +26,7 @@ const {
   profilerExport,
   profilerHistoryIndex,
   profilerMaxMem,
+  profilerMeasureBloat,
   profilerMemDepthGet,
   profilerMemDepthSet,
   profilerNodeTick,
@@ -146,6 +147,12 @@ settings.register({
     range: [0,100],
     access_show: ['hidden'],
   },
+  profiler_hide_bloat: {
+    default_value: 1,
+    type: cmd_parse.TYPE_INT,
+    range: [0,1],
+    access_show,
+  },
 });
 
 let font;
@@ -243,6 +250,7 @@ let perf_graph = {
     color_gpu,
   ],
 };
+let bloat;
 function profilerShowEntryEarly(walk, depth) {
   if (settings.profiler_relative === 0 && walk === node_out_of_tick) {
     // doesn't make sense to show
@@ -282,6 +290,30 @@ function hasActiveChildren(walk) {
     walk = walk.next;
   }
   return false;
+}
+function childCallCount(node) {
+  let walk = node.child;
+  let count = 0;
+  while (walk) {
+    if (do_average) {
+      let total = 0;
+      let sum_count = 0;
+      for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+        if (walk.history[ii]) {
+          sum_count++;
+          total += walk.history[ii]; // count
+        }
+      }
+      if (sum_count) {
+        count += round(total / sum_count);
+      }
+    } else {
+      count += walk.history[show_index_count];
+    }
+    count += childCallCount(walk);
+    walk = walk.next;
+  }
+  return count;
 }
 function profilerShowEntry(walk, depth) {
   if (settings.profiler_relative === 0 && walk === node_out_of_tick) {
@@ -368,7 +400,7 @@ function profilerShowEntry(walk, depth) {
       }
     }
   } else if (settings.profiler_relative === 3) {
-    // % of meme
+    // % of mem
     if (do_average) {
       percent = dmem_max / total_frame_mem;
     } else {
@@ -394,6 +426,7 @@ function profilerShowEntry(walk, depth) {
 
   x = COL_X[1];
   let ms = do_average ? time_sum / sum_count : walk.history[show_index_time];
+  // TODO: removing timing bloat here (and in percents above? much more complicated...)
   let count = do_average ? (count_sum / sum_count).toFixed(0) : walk.history[show_index_count];
   font.drawSizedAligned(style_ms, x, y + number_yoffs, Z_MS, font_size_number, font.ALIGN.HRIGHT, MS_W, 0,
     (ms*1000).toFixed(0));
@@ -410,6 +443,17 @@ function profilerShowEntry(walk, depth) {
   if (show_mem) {
     x = COL_X[3];
 
+    let mem_value = do_average ? dmem_max : walk.history[show_index_mem];
+    if (mem_value > 0) {
+      if (do_average) {
+        mem_value -= bloat.inner.mem * round(count_sum / sum_count);
+      } else {
+        mem_value -= bloat.inner.mem * walk.history[show_index_count];
+      }
+      let child_count = childCallCount(walk);
+      mem_value = max(0, mem_value - bloat.outer.mem * child_count);
+    }
+
     if (dmem_min < 0) {
       // Had a GC
       font.drawSizedAligned(style_time_spike, x, y + number_yoffs, Z_MS, font_size_number,
@@ -417,11 +461,11 @@ function profilerShowEntry(walk, depth) {
         `${friendlyBytes(-dmem_min)}`);
       font.drawSizedAligned(style_mem, x + MEM_W/2, y + number_yoffs, Z_MS, font_size_number,
         font.ALIGN.HRIGHT|font.ALIGN.HFIT, MEM_W/2, 0,
-        `${do_average ? dmem_max : walk.history[show_index_mem]}`);
+        `${mem_value}`);
     } else {
       // Just increase
       font.drawSizedAligned(style_mem, x, y + number_yoffs, Z_MS, font_size_number, font.ALIGN.HRIGHT, MEM_W, 0,
-        `${do_average ? dmem_max : walk.history[show_index_mem]}`);
+        `${mem_value}`);
     }
   }
 
@@ -465,9 +509,14 @@ const BUTTON_W = 140;
 const BUTTON_H = 48;
 const BUTTON_FONT_HEIGHT = 24;
 let mouse_pos = vec2();
+let bloat_none = { inner: { time: 0, mem: 0 }, outer: { time: 0, mem: 0 } };
 function profilerUIRun() {
   profilerStart('profilerUIRun');
   profilerStart('top+buttons');
+  bloat = bloat_none;
+  if (!loaded_profile && settings.profiler_hide_bloat) {
+    bloat = profilerMeasureBloat();
+  }
   if (engine.render_width) {
     let scale = FONT_SIZE / ui.font_height;
     camera2d.set(0, 0, scale * engine.render_width, scale * engine.render_height);

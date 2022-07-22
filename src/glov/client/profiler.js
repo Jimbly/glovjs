@@ -17,7 +17,7 @@ export const MEM_DEPTH_DEFAULT = 2;
 
 const assert = require('assert');
 const engine = require('./engine.js');
-const { max } = Math;
+const { floor, max, min } = Math;
 
 // For profiler_ui.js
 const { localStorageGetJSON, localStorageSetJSON } = require('./local_storage.js');
@@ -291,6 +291,50 @@ export function profilerMemDepthSet(value) {
 
 export function profilerTotalCalls() {
   return last_frame_total_calls;
+}
+
+let bloat_inner = { time: 0, mem: 0 };
+let bloat_outer = { time: 0, mem: 0 };
+let bloat = { inner: bloat_inner, outer: bloat_outer };
+const MEASURE_KEY1 = 'profilerMeasureBloat';
+const MEASURE_KEY2 = 'profilerMeasureBloat:child';
+export function profilerMeasureBloat() {
+  let mem_depth_saved = mem_depth;
+  if (mem_depth > 2) {
+    mem_depth = Infinity;
+  }
+  profilerStart(MEASURE_KEY1);
+  profilerStart(MEASURE_KEY2);
+  profilerStop(MEASURE_KEY2);
+  profilerStop(MEASURE_KEY1);
+  mem_depth = mem_depth_saved;
+
+  let walk = null;
+  for (walk = current.child; walk.name !== MEASURE_KEY1; walk = walk.next) {
+    // just walk until we find it, should just be the first entry, though!
+  }
+  let child = walk.child;
+  assert.equal(child.name, MEASURE_KEY2);
+  bloat_inner.time = Infinity;
+  bloat_inner.mem = 0;
+  bloat_outer.time = Infinity;
+  bloat_outer.mem = 0;
+  for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
+    bloat_inner.time = min(bloat_inner.time, child.history[idx+1]);
+    if (child.history[idx+2] > 0) {
+      bloat_inner.mem += child.history[idx+2];
+    }
+  }
+  for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
+    bloat_outer.time = min(bloat_outer.time, walk.history[idx+1]);
+    if (walk.history[idx+2] > 0) {
+      bloat_outer.mem += walk.history[idx+2];
+    }
+  }
+  bloat_outer.time = max(0, bloat_outer.time - bloat_inner[0]);
+  bloat_outer.mem = max(0, floor((bloat_outer.mem - bloat_inner.mem) / HIST_SIZE));
+  bloat_inner.mem = max(0, floor(bloat_inner.mem / HIST_SIZE));
+  return bloat;
 }
 
 export function profilerWalkTree(use_root, cb) {
