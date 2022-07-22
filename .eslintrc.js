@@ -18,7 +18,9 @@ module.exports = {
     "gl": true,
     "Z": true,
     "profilerStart": true,
+    "profilerStartFunc": true,
     "profilerStop": true,
+    "profilerStopFunc": true,
     "profilerStopStart": true,
     // Our pre-processor defines
     "BUILD_TIMESTAMP": true,

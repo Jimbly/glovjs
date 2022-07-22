@@ -15,9 +15,9 @@ declare module 'glov/client/global' {
       debugmsg: (msg: string, clear: boolean) => void;
 
       // GLOV profiler
-      profilerStart: (name: string, count?: number) => void;
+      profilerStart: (name: string) => void;
       profilerStop: (name: string) => void;
-      profilerStopStart: (name: string, count?: number) => void;
+      profilerStopStart: (name: string) => void;
     }
 
     // GLOV ui.js

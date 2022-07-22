@@ -177,6 +177,10 @@ gb.task({
         // Note: Dependencies are not tracked from babel plugins, so use
         //   `webfs` instead of `static-fs` where possible
         ['static-fs', {}], // generates good code, but does not allow reloading/watchify
+        ['transform-preprocessor', { replace: {
+          'profilerStartFunc()': 'profilerStart(__funcname)',
+          'profilerStopFunc()': 'profilerStop(__funcname)',
+        } }],
       ]
     }
   }),
