@@ -13,14 +13,21 @@ const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
-const { max, round } = Math;
+const { max, min, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, queueraw } = sprites;
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
-const { v3scale, vec4, v4clone, v4copy, v4scale } = require('glov/common/vmath.js');
+const {
+  v3scale,
+  v3set,
+  vec4,
+  v4clone,
+  v4copy,
+  v4scale,
+} = require('glov/common/vmath.js');
 
 /*
 
@@ -701,6 +708,10 @@ GlovFont.prototype.calcXAdvance = function (xsc) {
 //////////////////////////////////////////////////////////////////////////
 // Main implementation
 
+const temp_vec4_param0 = vec4();
+const temp_vec4_glow_params = vec4();
+const padding4 = vec4();
+const padding_in_font_space = vec4();
 GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   profilerStartFunc();
   text = getStringFromLocalizable(text);
@@ -748,18 +759,14 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   // Calculate anti-aliasing values
   let delta_per_source_pixel = 0.5 / font_info.spread;
   let delta_per_dest_pixel = delta_per_source_pixel / avg_scale_combined;
-  let value = vec4(
+  let value = v3set(temp_vec4_param0,
     1 / delta_per_dest_pixel, // AA Mult and Outline Mult
     -0.5 / delta_per_dest_pixel + 0.5, // AA Add
     // Outline Add
-    -0.5 / delta_per_dest_pixel + 0.5 + applied_style.outline_width*font_texel_scale*avg_scale_combined,
-    0, // Unused
+    min(0, -0.5 / delta_per_dest_pixel + 0.5 + applied_style.outline_width*font_texel_scale*avg_scale_combined),
+    // 0, // Unused
   );
-  if (value[2] > 0) {
-    value[2] = 0;
-  }
   let padding1 = max(0, applied_style.outline_width*font_texel_scale*avg_scale_font);
-  let padding4 = vec4();
   const outer_scaled = applied_style.glow_outer*font_texel_scale;
   padding4[0] = max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
   padding4[2] = max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
@@ -767,19 +774,12 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   padding4[3] = max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
 
   techParamsSet('param0', value);
-  let value2 = vec4(
-    0, // filled later
-    0, // filled later
-    // Glow mult
-    1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale),
-    -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) / ((applied_style.glow_outer -
-      applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale)
-  );
-  if (value2[3] > 0) {
-    value2[3] = 0;
-  }
+  let value2 = temp_vec4_glow_params;
+  // Glow mult
+  value2[2] = 1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale);
+  value2[3] = min(0, -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) /
+    ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale));
 
-  let padding_in_font_space = vec4();
   v4scale(padding_in_font_space, padding4, 1 / avg_scale_font);
   for (let ii = 0; ii < 4; ++ii) {
     if (padding_in_font_space[ii] > font_info.spread) {
