@@ -1053,15 +1053,19 @@ export function mouseButtonHadUpEdge() {
   return mouse_button_had_up_edge;
 }
 
+const full_screen_pos_param = {};
 function mousePosParam(param) {
-  param = param || {};
-  return {
-    x: param.x === undefined ? camera2d.x0Real() : param.x,
-    y: param.y === undefined ? camera2d.y0Real() : param.y,
-    w: param.w === undefined ? camera2d.wReal() : param.w,
-    h: param.h === undefined ? camera2d.hReal() : param.h,
-    button: param.button === undefined ? ANY : param.button,
-  };
+  param = param || full_screen_pos_param;
+  let pos_param = param.mouse_pos_param;
+  if (!pos_param) {
+    pos_param = param.mouse_pos_param = {};
+  }
+  pos_param.x = param.x === undefined ? camera2d.x0Real() : param.x;
+  pos_param.y = param.y === undefined ? camera2d.y0Real() : param.y;
+  pos_param.w = param.w === undefined ? camera2d.wReal() : param.w;
+  pos_param.h = param.h === undefined ? camera2d.hReal() : param.h;
+  pos_param.button = param.button === undefined ? ANY : param.button;
+  return pos_param;
 }
 
 let check_pos = vec2();
