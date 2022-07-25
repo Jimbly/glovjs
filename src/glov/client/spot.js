@@ -85,8 +85,9 @@ import {
   longPress,
   mouseButtonHadEdge,
   mouseDomPos,
-  mouseDown,
+  mouseDownAnywhere,
   mouseDownEdge,
+  mouseDownMidClick,
   mouseMoved,
   mouseOver,
   mousePosIsTouch,
@@ -936,7 +937,7 @@ export function spot(param) {
     } else if (drag_target && dragOver(param)) {
       spotFocusSet(param, true, false, 'drag_over');
       focused = true;
-      if (mouseDown()) {
+      if (mouseDownAnywhere()) {
         state = SPOT_STATE_DOWN;
       }
     } else if (drag_over && dragOver(param)) {
@@ -978,11 +979,7 @@ export function spot(param) {
       }
     }
   }
-  if (is_button && mouseDown({
-    x: param.x, y: param.y,
-    w: param.w, h: param.h,
-    do_max_dist: true, // Need to apply the same max_dist logic to mouseDown() as we do for click()
-  })) {
+  if (is_button && mouseDownMidClick(param)) {
     if (!disabled) {
       state = SPOT_STATE_DOWN;
     }

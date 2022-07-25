@@ -364,7 +364,7 @@ class ScrollAreaInternal implements ScrollArea {
         if (up) {
           temp_pos[1] = up.pos[1];
           this.consumed_click = true;
-        } else if (!input.mouseDown({ button: 0 })) {
+        } else if (!input.mouseDownAnywhere(0)) {
           // released but someone else ate it, release anyway!
           this.grabbed = false;
           this.consumed_click = true;

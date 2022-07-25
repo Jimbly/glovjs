@@ -177,7 +177,7 @@ export function colorPicker(param) {
       clipResume();
     }
 
-    if (input.click({ peek: true }) || !handled && input.mouseDown({ peek: true })) {
+    if (input.click({ peek: true }) || !handled && input.mouseDownAnywhere()) {
       state.open = false;
     }
   }

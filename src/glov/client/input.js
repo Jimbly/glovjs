@@ -21,6 +21,9 @@ let mouse_log = false;
 exports.click = mouseUpEdge; // eslint-disable-line no-use-before-define
 exports.inputClick = mouseUpEdge; // eslint-disable-line no-use-before-define
 
+const { deprecate } = require('glov/common/util.js');
+deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
+
 export const ANY = -2;
 export const POINTERLOCK = -1;
 
@@ -1133,18 +1136,35 @@ export function mouseOver(param) {
   return ret;
 }
 
-export function mouseDown(param) {
+export function mouseDownAnywhere(button) {
   if (input_eaten_mouse) {
-    return null;
+    return false;
   }
+  if (button === undefined) {
+    button = ANY;
+  }
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state !== DOWN ||
+      !(button === ANY || button === touch_data.button)
+    ) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+export function mouseDownMidClick(param) {
+  if (input_eaten_mouse) {
+    return false;
+  }
+  // Same logic as mouseUpEdge()
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
-  let max_click_dist = Infinity;
-  if (param.do_max_dist) {
-    // Defaulting to the same as mouseUpEdge()
-    max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
-  }
+  let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
@@ -1155,18 +1175,34 @@ export function mouseDown(param) {
       continue;
     }
     if (checkPos(touch_data.cur_pos, pos_param)) {
-      // if (!param.peek) {
-      //   touch_data.up_edge = 0;
-      // }
-      return {
-        button: touch_data.button,
-        pos: check_pos.slice(0),
-        start_time: touch_data.start_time,
-      };
+      return true;
     }
   }
 
-  return null;
+  return false;
+}
+
+export function mouseDownOverBounds(param) {
+  if (input_eaten_mouse) {
+    return false;
+  }
+  param = param || {};
+  let pos_param = mousePosParam(param);
+  let button = pos_param.button;
+
+  for (let touch_id in touches) {
+    let touch_data = touches[touch_id];
+    if (touch_data.state !== DOWN ||
+      !(button === ANY || button === touch_data.button)
+    ) {
+      continue;
+    }
+    if (checkPos(touch_data.cur_pos, pos_param)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function mousePosIsTouch() {
