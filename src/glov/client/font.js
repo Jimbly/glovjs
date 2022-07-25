@@ -787,6 +787,13 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
     spriteChainedStart();
   }
 
+  const has_glow_offs = applied_style.glow_xoffs || applied_style.glow_yoffs;
+  if (!has_glow_offs) {
+    value2[0] = value2[1] = 0;
+    techParamsSet('glow_params', value2);
+    techParamsGet();
+  }
+
   // For non-1:1 aspect ration rendering, need to scale our coordinates' padding differently in each axis
   let rel_x_scale = xsc / avg_scale_font;
   let rel_y_scale = ysc / avg_scale_font;
@@ -809,10 +816,15 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
           let tile_width = this.tex_w;
           let tile_height = this.tex_h;
           // Lazy update params here
-          if (char_scale !== tile_state) {
+          if (has_glow_offs && char_scale !== tile_state) {
             value2[0] = -applied_style.glow_xoffs * font_texel_scale * pad_scale / tile_width;
             value2[1] = -applied_style.glow_yoffs * font_texel_scale * pad_scale / tile_height;
             techParamsSet('glow_params', value2);
+            if (!z_advance) {
+              spriteChainedStop();
+              spriteChainedStart();
+            }
+            techParamsGet();
             tile_state = char_scale;
           }
 
@@ -832,7 +844,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
             z + z_advance * i, w, h,
             u0, v0, u1, v1,
             applied_style.color_vec4,
-            this.shader, techParamsGet(), blend_mode);
+            this.shader, tech_params, blend_mode);
           elem.y = sort_y;
 
           // require('./ui.js').drawRect(xx, yy, xx + w, yy + h,
