@@ -523,6 +523,97 @@ const BUTTON_H = 48;
 const BUTTON_FONT_HEIGHT = 24;
 let mouse_pos = vec2();
 let bloat_none = { inner: { time: 0, mem: 0 }, outer: { time: 0, mem: 0 } };
+let button_overlay;
+let button_close;
+let button_paused;
+let button_relative;
+let button_average;
+let button_graph;
+let button_mem_dec;
+let button_mem_depth;
+let button_mem_inc;
+let button_max_fps;
+let button_save;
+let button_load;
+let last_line_width;
+function buttonInit() {
+  let z = Z.PROFILER + 10;
+  y = 0;
+  let x = line_width;
+  button_overlay = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: settings.profiler_interactable ? 'interactable' : 'overlay',
+  };
+  button_close = {
+    x: x + BUTTON_W, y, z,
+    w: BUTTON_H, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: 'X',
+  };
+  y += BUTTON_H;
+  button_paused = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: loaded_profile ? 'loaded' : profilerPaused() ? 'paused' : 'live';
+  };
+  y += BUTTON_H;
+  button_relative = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: PROFILER_RELATIVE_LABELS[settings.profiler_relative],
+  };
+  y += BUTTON_H;
+  button_average = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: settings.profiler_average ? 'average' : 'last frame',
+  };
+  y += BUTTON_H;
+  button_graph = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: settings.profiler_graph ? 'graph: mem' : 'graph: CPU',
+  };
+  y += BUTTON_H;
+  y += LINE_HEIGHT;
+  button_mem_dec = {
+    x, y, z,
+    w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: '-',
+    // disabled: loaded_profile || cur_depth === 0,
+  };
+  button_mem_depth = {
+    x: x + BUTTON_W/3, y, z,
+    w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: `${cur_depth || 'OFF'}`,
+    // disabled: loaded_profile,
+  };
+  button_mem_inc = {
+    x: x + 2*BUTTON_W/3, y, z,
+    w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: '+',
+    // disabled: loaded_profile,
+  };
+  y += BUTTON_H;
+  button_max_fps = {
+    x, y, z,
+    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    // text: settings.max_fps ? 'max CPU' : 'anim frame',
+  };
+  y += BUTTON_H;
+  y += LINE_HEIGHT;
+  button_save = {
+    x, y, z,
+    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: 'save',
+    // disabled: loaded_profile,
+  };
+  button_load = {
+    x: x + BUTTON_W/2, y, z,
+    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+    text: 'load',
+  };
+}
 function profilerUIRun() {
   profilerStart('profilerUIRun');
   profilerStart('top+buttons');
@@ -558,33 +649,28 @@ function profilerUIRun() {
   }
   line_width = show_mem ? LINE_WIDTH_WITH_MEM : LINE_WIDTH_NO_MEM;
 
+  if (!button_overlay || line_width !== last_line_width) {
+    last_line_width = line_width;
+    buttonInit();
+  }
+
   let z = Z.PROFILER + 10;
   y = 0;
   let x = line_width;
-  if (ui.buttonText({
-    x, y, z,
-    w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-    text: settings.profiler_interactable ? 'interactable' : 'overlay',
-  })) {
+  button_overlay.text = settings.profiler_interactable ? 'interactable' : 'overlay';
+  if (ui.buttonText(button_overlay)) {
     settings.set('profiler_interactable', 1 - settings.profiler_interactable);
   }
   do_ui = settings.profiler_interactable;
-  if (do_ui && ui.buttonText({
-    x: x + BUTTON_W, y, z,
-    w: BUTTON_H, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-    text: 'X',
-  })) {
+  if (do_ui && ui.buttonText(button_close)) {
     settings.set('show_profiler', 0);
   }
   y += BUTTON_H;
 
   let text = loaded_profile ? 'loaded' : profilerPaused() ? 'paused' : 'live';
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text,
-    })) {
+    button_paused.text = text;
+    if (ui.buttonText(button_paused)) {
       if (loaded_profile) {
         useLiveProfile();
       } else {
@@ -597,11 +683,8 @@ function profilerUIRun() {
   y += BUTTON_H;
 
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: PROFILER_RELATIVE_LABELS[settings.profiler_relative],
-    })) {
+    button_relative.text = PROFILER_RELATIVE_LABELS[settings.profiler_relative];
+    if (ui.buttonText(button_relative)) {
       settings.set('profiler_relative', (settings.profiler_relative + 1) % PROFILER_RELATIVE_LABELS.length);
     }
   } else {
@@ -610,31 +693,25 @@ function profilerUIRun() {
   }
   y += BUTTON_H;
 
+  text = settings.profiler_average ? 'average' : 'last frame';
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: settings.profiler_average ? 'average' : 'last frame',
-    })) {
+    button_average.text = text;
+    if (ui.buttonText(button_average)) {
       settings.set('profiler_average', 1 - settings.profiler_average);
     }
   } else {
-    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
-      settings.profiler_average ? 'average' : 'last frame');
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
   }
   y += BUTTON_H;
 
+  text = settings.profiler_graph ? 'graph: mem' : 'graph: CPU';
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: settings.profiler_graph ? 'graph: mem' : 'graph: CPU',
-    })) {
+    button_graph.text = text;
+    if (ui.buttonText(button_graph)) {
       settings.set('profiler_graph', 1 - settings.profiler_graph);
     }
   } else {
-    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
-      settings.profiler_graph ? 'graph: mem' : 'graph: CPU');
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
   }
   y += BUTTON_H;
 
@@ -643,22 +720,16 @@ function profilerUIRun() {
     font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
       'Mem Depth');
     y += LINE_HEIGHT;
+    text = `${cur_depth || 'OFF'}`;
     if (do_ui) {
-      if (ui.buttonText({
-        x, y, z,
-        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-        text: '-',
-        disabled: loaded_profile || cur_depth === 0,
-      })) {
+      button_mem_dec.disabled = loaded_profile || cur_depth === 0;
+      if (ui.buttonText(button_mem_dec)) {
         profilerMemDepthSet(cur_depth - 1);
         settings.set('profiler_mem_depth', profilerMemDepthGet());
       }
-      if (ui.buttonText({
-        x: x + BUTTON_W/3, y, z,
-        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-        text: `${cur_depth || 'OFF'}`,
-        disabled: loaded_profile,
-      })) {
+      button_mem_depth.disabled = loaded_profile;
+      button_mem_depth.text = text;
+      if (ui.buttonText(button_mem_depth)) {
         if (cur_depth === MEM_DEPTH_DEFAULT) {
           profilerMemDepthSet(99);
         } else {
@@ -666,29 +737,23 @@ function profilerUIRun() {
         }
         settings.set('profiler_mem_depth', profilerMemDepthGet());
       }
-      if (ui.buttonText({
-        x: x + 2*BUTTON_W/3, y, z,
-        w: BUTTON_W/3, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-        text: '+',
-        disabled: loaded_profile,
-      })) {
+      button_mem_inc.disabled = loaded_profile;
+      if (ui.buttonText(button_mem_inc)) {
         profilerMemDepthSet(cur_depth + 1);
         settings.set('profiler_mem_depth', profilerMemDepthGet());
       }
     } else {
-      font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H,
-        `${cur_depth || 'OFF'}`);
+      font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
     }
-    y += BUTTON_H;
+  } else {
+    y += LINE_HEIGHT;
   }
+  y += BUTTON_H;
 
   text = settings.max_fps === 1000 ? 'max CPU' : settings.max_fps === 0 ? 'anim frame' : '?';
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text,
-    })) {
+    button_max_fps.text = text;
+    if (ui.buttonText(button_max_fps)) {
       settings.set('max_fps', settings.max_fps === 0 ? 1000 : 0);
     }
   } else {
@@ -701,23 +766,15 @@ function profilerUIRun() {
   y += LINE_HEIGHT;
 
   if (do_ui) {
-    if (ui.buttonText({
-      x, y, z,
-      w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: 'save',
-      disabled: loaded_profile,
-    })) {
+    button_save.disabled = loaded_profile;
+    if (ui.buttonText(button_save)) {
       // Note: doesn't work in IE, but we probably don't care
       let a = document.createElement('a');
       a.href = `data:application/json,${encodeURIComponent(profilerExport())}`;
       a.setAttribute('download', 'profile.json');
       a.click();
     }
-    if (ui.buttonText({
-      x: x + BUTTON_W/2, y, z,
-      w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-      text: 'load',
-    })) {
+    if (ui.buttonText(button_load)) {
       let input_elem = document.createElement('input');
       input_elem.setAttribute('type', 'file');
       let reader = new FileReader();
