@@ -763,6 +763,7 @@ const UISPOT_BUTTON_DISABLED = {
 
 
 export function buttonShared(param) {
+  profilerStartFunc();
   param.z = param.z || Z.UI;
   if (param.rollover_quiet) {
     param.sound_rollover = null;
@@ -794,11 +795,13 @@ export function buttonShared(param) {
 
   button_focused = button_mouseover = spot_ret.focused;
   param.z += param.z_bias && param.z_bias[spot_ret.state] || 0;
+  profilerStopFunc();
   return spot_ret;
 }
 
 export let button_last_color;
 export function buttonBackgroundDraw(param, state) {
+  profilerStartFunc();
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
   if (!param.no_bg) {
@@ -812,9 +815,11 @@ export function buttonBackgroundDraw(param, state) {
 
     drawHBox(param, sprite, color);
   }
+  profilerStopFunc();
 }
 
 export function buttonSpotBackgroundDraw(param, spot_state) {
+  profilerStartFunc();
   let state = SPOT_STATE_TO_UI_BUTTON_STATE[spot_state];
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
@@ -829,18 +834,22 @@ export function buttonSpotBackgroundDraw(param, spot_state) {
 
     drawHBox(param, sprite, color);
   }
+  profilerStopFunc();
 }
 
 export function buttonTextDraw(param, state, focused) {
+  profilerStartFunc();
   buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   font.drawSizedAligned(
     focused ? font_style_focused : font_style_normal,
     param.x + hpad, param.y, param.z + 0.1,
     param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
+  profilerStopFunc();
 }
 
 export function buttonText(param) {
+  profilerStartFunc();
   param.text = getStringFromLocalizable(param.text);
 
   // required params
@@ -856,10 +865,12 @@ export function buttonText(param) {
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
   buttonTextDraw(param, state, focused);
+  profilerStopFunc();
   return ret ? spot_ret : null;
 }
 
 function buttonImageDraw(param, state, focused) {
+  profilerStartFunc();
   let uvs = param.img_rect;
   let img = param.imgs && param.imgs[state] || param.img;
   if (typeof param.frame === 'number') {
@@ -901,9 +912,11 @@ function buttonImageDraw(param, state, focused) {
   } else {
     img.draw(draw_param);
   }
+  profilerStopFunc();
 }
 
 export function buttonImage(param) {
+  profilerStartFunc();
   // required params
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
@@ -918,6 +931,7 @@ export function buttonImage(param) {
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
   buttonImageDraw(param, state, focused);
+  profilerStopFunc();
   return ret ? spot_ret : null;
 }
 
@@ -927,6 +941,7 @@ export function button(param) {
   } else if (param.text && !param.img) {
     return buttonText(param);
   }
+  profilerStartFunc();
 
   // required params
   assert(typeof param.x === 'number');
@@ -957,6 +972,7 @@ export function button(param) {
   param.no_bg = saved_no_bg;
   param.w = saved_w;
   param.x = saved_x;
+  profilerStopFunc();
   return ret ? spot_ret : null;
 }
 
@@ -965,6 +981,7 @@ export function print(style, x, y, z, text) {
 }
 
 export function label(param) {
+  profilerStartFunc();
   let { style, x, y, align, w, h, text, tooltip } = param;
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
@@ -1001,6 +1018,7 @@ export function label(param) {
       use_font.drawSized(style, x, y, z, size, text);
     }
   }
+  profilerStopFunc();
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!

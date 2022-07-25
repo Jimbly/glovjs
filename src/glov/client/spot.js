@@ -132,12 +132,14 @@ export function spotlog(...args) {
 }
 
 export function spotKey(param) {
+  profilerStartFunc();
   let key = param.key || `${focus_sub_rect ? focus_sub_rect.key_computed : ''}_${param.x}_${param.y}`;
   if (param.key_computed) {
     assert.equal(param.key_computed, key);
   } else {
     param.key_computed = key;
   }
+  profilerStopFunc();
   return param.key_computed;
 }
 
@@ -853,6 +855,7 @@ function spotSignalRet(param) {
 //   drag_drop: any // if drag_target and a drop happened, contains dragDrop event { drag_payload }
 //   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
 export function spot(param) {
+  profilerStartFunc();
   const def = param.def || SPOT_DEFAULT;
   const disabled = param.disabled === undefined ? def.disabled : param.disabled;
   const tooltip = param.tooltip === undefined ? def.tooltip : param.tooltip;
@@ -1030,6 +1033,7 @@ export function spot(param) {
   checkHooks(param, out.ret);
   out.spot_state = state;
 
+  profilerStopFunc();
   return out;
 }
 

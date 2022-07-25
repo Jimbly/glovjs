@@ -354,6 +354,7 @@ function profilerShowEntry(walk, depth) {
     }
   }
 
+  profilerStart('bar graph');
   spriteChainedStart();
 
   // Draw background
@@ -389,6 +390,7 @@ function profilerShowEntry(walk, depth) {
   }
 
   spriteChainedStop();
+  profilerStop('bar graph');
 
   y += LINE_YOFFS;
 

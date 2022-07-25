@@ -1099,10 +1099,12 @@ export function mouseOverCaptured() {
 }
 
 export function mouseOver(param) {
+  profilerStartFunc();
   param = param || {};
   let pos_param = mousePosParam(param);
   spotMouseoverHook(pos_param, param);
   if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
+    profilerStopFunc();
     return false;
   }
 
@@ -1120,13 +1122,15 @@ export function mouseOver(param) {
     }
   }
 
+  let ret = false;
   if (checkPos(mouse_pos, pos_param)) {
     if (!param.peek && !param.peek_over) {
       mouse_over_captured = true;
     }
-    return true;
+    ret = true;
   }
-  return false;
+  profilerStopFunc();
+  return ret;
 }
 
 export function mouseDown(param) {

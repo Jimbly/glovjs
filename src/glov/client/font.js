@@ -341,10 +341,13 @@ GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
 };
 
 GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w, h, text) {
+  profilerStartFunc();
   text = getStringFromLocalizable(text);
 
   if (align & ALIGN.HWRAP) {
-    return this.drawSizedAlignedWrapped(style, _x, _y, z, 0, size, align & ~ALIGN.HWRAP, w, h, text);
+    let drawn_height = this.drawSizedAlignedWrapped(style, _x, _y, z, 0, size, align & ~ALIGN.HWRAP, w, h, text);
+    profilerStopFunc();
+    return drawn_height;
   }
   let x_size = size;
   let y_size = size;
@@ -399,7 +402,12 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
       y = _y;
   }
 
-  return this.drawScaled(style, x, y, z, x_size / this.font_info.font_size, y_size / this.font_info.font_size, text);
+  let drawn_width = this.drawScaled(
+    style, x, y, z,
+    x_size / this.font_info.font_size, y_size / this.font_info.font_size,
+    text);
+  profilerStopFunc();
+  return drawn_width;
 };
 
 GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, size, align, w, h, text) {
