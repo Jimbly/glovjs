@@ -24,7 +24,6 @@ const {
   v3scale,
   v3set,
   vec4,
-  v4clone,
   v4copy,
   v4scale,
 } = require('glov/common/vmath.js');
@@ -209,22 +208,31 @@ let tech_params = null;
 let tech_params_dirty = false;
 let tech_params_cache = [];
 let tech_params_cache_idx = 0;
+let tech_params_pool = [];
+let tech_params_pool_idx = 0;
 let temp_color = vec4();
 let geom_stats;
 
-function createTechniqueParameters() {
+function techParamsAlloc() {
+  if (tech_params_pool_idx === tech_params_pool.length) {
+    tech_params_pool.push({
+      param0: vec4(),
+      outline_color: vec4(),
+      glow_color: vec4(),
+      glow_params: vec4(),
+    });
+  }
+  tech_params = tech_params_pool[tech_params_pool_idx++];
+}
+
+function fontStartup() {
   if (tech_params) {
     return;
   }
 
   geom_stats = geom.stats;
 
-  tech_params = {
-    param0: vec4(),
-    outline_color: vec4(),
-    glow_color: vec4(),
-    glow_params: vec4(),
-  };
+  techParamsAlloc();
 }
 
 function techParamsSet(param, value) {
@@ -232,15 +240,13 @@ function techParamsSet(param, value) {
   // not dirty, if anything changes, we need a new object!
   if (!tech_params_dirty) {
     if (tpv[0] !== value[0] || tpv[1] !== value[1] || tpv[2] !== value[2] || tpv[3] !== value[3]) {
-      // clone
-      // PERFTODO: Should not be cloning these vec4s every frame!
-      //   Should use a pool of them, but need to reset the tech_param_cache each frame.
-      tech_params = {
-        param0: v4clone(tech_params.param0),
-        outline_color: v4clone(tech_params.outline_color),
-        glow_color: v4clone(tech_params.glow_color),
-        glow_params: v4clone(tech_params.glow_params),
-      };
+      // clone old values before modifying
+      let old_tech_params = tech_params;
+      techParamsAlloc();
+      v4copy(tech_params.param0, old_tech_params.param0);
+      v4copy(tech_params.outline_color, old_tech_params.outline_color);
+      v4copy(tech_params.glow_color, old_tech_params.glow_color);
+      v4copy(tech_params.glow_params, old_tech_params.glow_params);
       geom_stats.font_params++;
       tech_params_dirty = true;
       tpv = tech_params[param];
@@ -259,8 +265,10 @@ function techParamsSet(param, value) {
   }
 }
 
+const SHADER_KEYS = ['param0', 'outline_color', 'glow_color', 'glow_params'];
 function sameTP(as) {
-  for (let key in tech_params) {
+  for (let jj = 0; jj < 4; ++jj) {
+    let key = SHADER_KEYS[jj];
     let v1 = tech_params[key];
     let v2 = as[key];
     for (let ii = 0; ii < 4; ++ii) {
@@ -279,6 +287,11 @@ function techParamsGet() {
   tech_params_dirty = false;
   for (let ii = 0; ii < tech_params_cache.length; ++ii) {
     if (sameTP(tech_params_cache[ii])) {
+      // Found a match in the cache, use that instead
+      if (tech_params === tech_params_pool[tech_params_pool_idx-1]) {
+        // and this was just pulled off the pool, put it back on
+        tech_params_pool_idx--;
+      }
       tech_params = tech_params_cache[ii];
       if (tech_params_cache_idx === ii) {
         // about to be overwritten
@@ -334,7 +347,7 @@ function GlovFont(font_info, texture_name) {
   this.default_style = new GlovFontStyle();
   this.applied_style = new GlovFontStyle();
 
-  createTechniqueParameters();
+  fontStartup();
 }
 
 // General draw functions return width
@@ -961,4 +974,10 @@ function fontShadersInit() {
 export function fontCreate(font_info, texture_name) {
   fontShadersInit();
   return new GlovFont(font_info, texture_name);
+}
+
+export function fontTick() {
+  tech_params_cache_idx = 0;
+  tech_params_cache.length = 0;
+  tech_params_pool_idx = 0;
 }

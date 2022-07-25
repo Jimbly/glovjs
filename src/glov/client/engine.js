@@ -28,6 +28,7 @@ const {
   glovErrorReport,
 } = require('./error_report.js');
 const glov_font = require('./font.js');
+const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const input = require('./input.js');
@@ -818,6 +819,7 @@ function tick(timestamp) {
 
   textures.bind(0, textures.textures.error);
 
+  fontTick();
   camera2d.tickCamera2D();
   glov_transition.render(dt);
   camera2d.setAspectFixed(game_width, game_height);
