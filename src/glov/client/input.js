@@ -122,6 +122,7 @@ const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { spotMouseoverHook, BUTTON_ANY } = require('./spot.js');
+const { empty } = require('glov/common/util.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 assert.equal(BUTTON_ANY, ANY);
@@ -145,6 +146,7 @@ let input_eaten_kb = false;
 let input_eaten_mouse = false;
 
 let touches = {}; // `m${button}` or touch_id -> TouchData
+let no_active_touches = true;
 
 export let touch_mode = local_storage.getJSON('touch_mode', false);
 export let pad_mode = !touch_mode && local_storage.getJSON('pad_mode', false);
@@ -944,6 +946,7 @@ export function tickInput() {
   if (touches[pointerlock_touch_id] && !pointerLocked()) {
     pointerLockExit();
   }
+  no_active_touches = empty(touches);
 }
 
 function endFrameTickMap(map) {
@@ -1157,7 +1160,7 @@ export function mouseDownAnywhere(button) {
 }
 
 export function mouseDownMidClick(param) {
-  if (input_eaten_mouse) {
+  if (input_eaten_mouse || no_active_touches) {
     return false;
   }
   // Same logic as mouseUpEdge()
@@ -1183,7 +1186,7 @@ export function mouseDownMidClick(param) {
 }
 
 export function mouseDownOverBounds(param) {
-  if (input_eaten_mouse) {
+  if (input_eaten_mouse || no_active_touches) {
     return false;
   }
   param = param || {};
@@ -1345,6 +1348,9 @@ let delta = vec2();
 
 export function mouseUpEdge(param) {
   param = param || {};
+  if (!param.in_event_cb && no_active_touches) {
+    return null;
+  }
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
@@ -1389,11 +1395,14 @@ export function mouseUpEdge(param) {
     camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mouseup', param.phys, param.in_event_cb);
   }
-  return false;
+  return null;
 }
 
 export function mouseDownEdge(param) {
   param = param || {};
+  if (!param.in_event_cb && no_active_touches) {
+    return null;
+  }
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
 
@@ -1425,13 +1434,16 @@ export function mouseDownEdge(param) {
     camera2d.virtualToDomPosParam(param.phys, pos_param);
     in_event.on('mousedown', param.phys, param.in_event_cb);
   }
-  return false;
+  return null;
 }
 
 // Completely consume any clicks or drags coming from a mouse down event in this
 // area - used to catch focus leaving an edit box without wanting to do what
 // a click would normally do.
 export function mouseConsumeClicks(param) {
+  if (no_active_touches) {
+    return;
+  }
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
@@ -1452,6 +1464,9 @@ export function mouseConsumeClicks(param) {
 }
 
 export function drag(param) {
+  if (no_active_touches) {
+    return null;
+  }
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
@@ -1500,6 +1515,9 @@ export function drag(param) {
 
 // a lot like drag(), refactor to share more?
 export function longPress(param) {
+  if (no_active_touches) {
+    return null;
+  }
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
@@ -1550,6 +1568,9 @@ export function longPress(param) {
 }
 
 export function dragDrop(param) {
+  if (no_active_touches) {
+    return null;
+  }
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
@@ -1577,6 +1598,9 @@ export function dragDrop(param) {
 }
 
 export function dragOver(param) {
+  if (no_active_touches) {
+    return null;
+  }
   param = param || {};
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
