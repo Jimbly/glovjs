@@ -133,9 +133,17 @@ export function spotlog(...args) {
 }
 
 export function spotKey(param) {
-  profilerStartFunc();
-  let key = param.key || `${focus_sub_rect ? focus_sub_rect.key_computed : ''}_${param.x}_${param.y}`;
   if (param.key_computed) {
+    // already computed, early this frame, or in a persistent object, use it
+    if (!engine.defines.SPOT_DEBUG) {
+      return param.key_computed;
+    }
+  }
+  profilerStartFunc();
+  let key = param.key ||
+    `${focus_sub_rect ? focus_sub_rect.key_computed : ''}_${param.x}_${param.y}`;
+  if (param.key_computed) {
+    // ensure two different spots on the same frame are not using the same param object
     assert.equal(param.key_computed, key);
   } else {
     param.key_computed = key;
