@@ -702,6 +702,7 @@ GlovFont.prototype.calcXAdvance = function (xsc) {
 // Main implementation
 
 GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
+  profilerStartFunc();
   text = getStringFromLocalizable(text);
   let x = _x;
   assert(isFinite(x));
@@ -719,6 +720,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   }
   const len = text.length;
   if (xsc === 0 || ysc === 0) {
+    profilerStopFunc();
     return 0;
   }
 
@@ -866,6 +868,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   if (!z_advance) {
     spriteChainedStop();
   }
+  profilerStopFunc();
   return x - _x;
 };
 
