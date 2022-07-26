@@ -254,6 +254,7 @@ gb.task({
   ...warnMatch({
     'Spread constructor param': /isNativeReflectConstruct/,
     'Bad babel': /__esModule/,
+    'TypeError: read-only': /_readOnlyError/,
   })
 });
 
