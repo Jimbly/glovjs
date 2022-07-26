@@ -10,6 +10,7 @@ exports.create = fontCreate; // eslint-disable-line no-use-before-define
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const { transformX, transformY } = require('./camera2d.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
@@ -17,7 +18,7 @@ const { max, min, round } = Math;
 // const settings = require('./settings.js');
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
-const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, queueraw } = sprites;
+const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, spriteDataAlloc } = sprites;
 const textures = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
 const {
@@ -821,7 +822,9 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   let rel_x_scale = xsc / avg_scale_font;
   let rel_y_scale = ysc / avg_scale_font;
 
-  let sort_y = (y - camera2d.data[1]) * camera2d.data[5];
+  let sort_y = transformY(y);
+  let color = applied_style.color_vec4;
+  let shader = this.shader;
 
   for (let i=0; i<len; i++) {
     const c = text.charCodeAt(i);
@@ -861,17 +864,66 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
 
           let xx = x - rel_x_scale * padding4[0];
           let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
-          let elem = queueraw(
-            texs,
-            xx, yy,
-            z + z_advance * i, w, h,
-            u0, v0, u1, v1,
-            applied_style.color_vec4,
-            this.shader, tech_params, blend_mode);
-          elem.y = sort_y;
+          // Below is inlined/optimized version of:
+          // queueraw(
+          //   texs,
+          //   xx, yy,
+          //   z + z_advance * i, w, h,
+          //   u0, v0, u1, v1,
+          //   color,
+          //   shader, tech_params, blend_mode).y = sort_y;
 
-          // require('./ui.js').drawRect(xx, yy, xx + w, yy + h,
-          //   1000, [i & 1, (i & 2)>>1, (i & 4)>>2, 0.5]);
+          let y1 = yy + h;
+          let x1 = xx + w;
+          let zz = z + z_advance * i;
+
+          let tx0 = transformX(xx);
+          let ty0 = transformY(yy);
+          let tx1 = transformX(x1);
+          let ty1 = transformY(y1);
+          let elem = spriteDataAlloc(texs, shader, tech_params, blend_mode);
+          let data = elem.data;
+          data[0] = tx0;
+          data[1] = ty0;
+          data[2] = color[0];
+          data[3] = color[1];
+          data[4] = color[2];
+          data[5] = color[3];
+          data[6] = u0;
+          data[7] = v0;
+
+          data[8] = tx0;
+          data[9] = ty1;
+          data[10] = color[0];
+          data[11] = color[1];
+          data[12] = color[2];
+          data[13] = color[3];
+          data[14] = u0;
+          data[15] = v1;
+
+          data[16] = tx1;
+          data[17] = ty1;
+          data[18] = color[0];
+          data[19] = color[1];
+          data[20] = color[2];
+          data[21] = color[3];
+          data[22] = u1;
+          data[23] = v1;
+
+          data[24] = tx1;
+          data[25] = ty0;
+          data[26] = color[0];
+          data[27] = color[1];
+          data[28] = color[2];
+          data[29] = color[3];
+          data[30] = u1;
+          data[31] = v0;
+
+          elem.x = tx0;
+          elem.y = sort_y;
+          elem.queue(zz);
+
+          // require('./ui.js').drawRect(xx, yy, x1, y1, 1000, [i & 1, (i & 2)>>1, (i & 4)>>2, 0.5]);
         }
 
         x += (char_info.w + char_info.xpad) * xsc2 + x_advance;
