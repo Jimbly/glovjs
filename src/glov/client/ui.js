@@ -1438,41 +1438,41 @@ export function provideUserString(title, str) {
   });
 }
 
+const draw_rect_param = {};
 export function drawRect(x0, y0, x1, y1, z, color) {
   let mx = min(x0, x1);
   let my = min(y0, y1);
   let Mx = max(x0, x1);
   let My = max(y0, y1);
-  return sprites.white.draw({
-    x: mx,
-    y: my,
-    z,
-    color,
-    w: Mx - mx,
-    h: My - my,
-  });
+  draw_rect_param.x = mx;
+  draw_rect_param.y = my;
+  draw_rect_param.z = z;
+  draw_rect_param.w = Mx - mx;
+  draw_rect_param.h = My - my;
+  draw_rect_param.color = color;
+  return sprites.white.draw(draw_rect_param);
 }
 
 export function drawRect2(param) {
-  return drawRect(param.x, param.y, param.x + param.w, param.y + param.h, param.z, param.color);
+  return sprites.white.draw(param);
 }
 
+const draw_rect_4color_param = {};
 export function drawRect4Color(x0, y0, x1, y1, z, color_ul, color_ur, color_ll, color_lr) {
   let mx = min(x0, x1);
   let my = min(y0, y1);
   let Mx = max(x0, x1);
   let My = max(y0, y1);
-  return sprites.white.draw4Color({
-    x: mx,
-    y: my,
-    z,
-    color_ul,
-    color_ll,
-    color_lr,
-    color_ur,
-    w: Mx - mx,
-    h: My - my,
-  });
+  draw_rect_4color_param.x = mx;
+  draw_rect_4color_param.y = my;
+  draw_rect_4color_param.z = z;
+  draw_rect_4color_param.w = Mx - mx;
+  draw_rect_4color_param.h = My - my;
+  draw_rect_4color_param.color_ul = color_ul;
+  draw_rect_4color_param.color_ll = color_ll;
+  draw_rect_4color_param.color_lr = color_lr;
+  draw_rect_4color_param.color_ur = color_ur;
+  return sprites.white.draw4Color(draw_rect_4color_param);
 }
 
 function spreadTechParams(spread) {
