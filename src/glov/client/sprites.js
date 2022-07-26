@@ -328,22 +328,19 @@ function fillUVs(tex, w, h, nozoom, uvs) {
   temp_uvs[3] = uvs[3] - vbias / tex.height;
 }
 
-// Colors counter-clockwise from upper-left
-// c0 = upper left
-// c1 = lower left
-// c2 = lower right
-// c3 = upper right
-export function queuesprite4color(
-  sprite, x, y, z, w, h, rot, uvs, c0, c1, c2, c3, shader, shader_params, nozoom,
-  pixel_perfect, blend
-) {
+let qsp = {};
+function queuesprite4colorObj() {
+  let {
+    rot, z, sprite,
+    color_ul, color_ll, color_lr, color_ur,
+  } = qsp;
   assert(isFinite(z));
-  let elem = spriteDataAlloc(sprite.texs, shader, shader_params, blend);
-  x = (x - camera2d.data[0]) * camera2d.data[4];
-  y = (y - camera2d.data[1]) * camera2d.data[5];
-  w *= camera2d.data[4];
-  h *= camera2d.data[5];
-  if (pixel_perfect) {
+  let elem = spriteDataAlloc(sprite.texs, qsp.shader, qsp.shader_params, qsp.blend);
+  let x = (qsp.x - camera2d.data[0]) * camera2d.data[4];
+  let y = (qsp.y - camera2d.data[1]) * camera2d.data[5];
+  let w = qsp.w * camera2d.data[4];
+  let h = qsp.h * camera2d.data[5];
+  if (qsp.pixel_perfect) {
     x |= 0;
     y |= 0;
     w |= 0;
@@ -389,32 +386,32 @@ export function queuesprite4color(
     data[25] = y1 + sw;
   }
 
-  fillUVs(elem.texs[0], w, h, nozoom, uvs);
-  data[2] = c0[0];
-  data[3] = c0[1];
-  data[4] = c0[2];
-  data[5] = c0[3];
+  fillUVs(elem.texs[0], w, h, qsp.nozoom, qsp.uvs);
+  data[2] = color_ul[0];
+  data[3] = color_ul[1];
+  data[4] = color_ul[2];
+  data[5] = color_ul[3];
   data[6] = temp_uvs[0];
   data[7] = temp_uvs[1];
 
-  data[10] = c1[0];
-  data[11] = c1[1];
-  data[12] = c1[2];
-  data[13] = c1[3];
+  data[10] = color_ll[0];
+  data[11] = color_ll[1];
+  data[12] = color_ll[2];
+  data[13] = color_ll[3];
   data[14] = temp_uvs[0];
   data[15] = temp_uvs[3];
 
-  data[18] = c2[0];
-  data[19] = c2[1];
-  data[20] = c2[2];
-  data[21] = c2[3];
+  data[18] = color_lr[0];
+  data[19] = color_lr[1];
+  data[20] = color_lr[2];
+  data[21] = color_lr[3];
   data[22] = temp_uvs[2];
   data[23] = temp_uvs[3];
 
-  data[26] = c3[0];
-  data[27] = c3[1];
-  data[28] = c3[2];
-  data[29] = c3[3];
+  data[26] = color_ur[0];
+  data[27] = color_ur[1];
+  data[28] = color_ur[2];
+  data[29] = color_ur[3];
   data[30] = temp_uvs[2];
   data[31] = temp_uvs[1];
 
@@ -424,14 +421,27 @@ export function queuesprite4color(
 
 export function queuesprite(
   sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
-  pixel_perfect, blend
+  pixel_perfect, blend,
 ) {
   color = color || sprite.color;
-  return queuesprite4color(
-    sprite, x, y, z, w, h, rot, uvs,
-    color, color, color, color,
-    shader, shader_params, nozoom,
-    pixel_perfect, blend);
+  qsp.sprite = sprite;
+  qsp.x = x;
+  qsp.y = y;
+  qsp.z = z;
+  qsp.w = w;
+  qsp.h = h;
+  qsp.rot = rot;
+  qsp.uvs = uvs;
+  qsp.color_ul = color;
+  qsp.color_ll = color;
+  qsp.color_lr = color;
+  qsp.color_ur = color;
+  qsp.shader = shader;
+  qsp.shader_params = shader_params;
+  qsp.nozoom = nozoom;
+  qsp.pixel_perfect = pixel_perfect;
+  qsp.blend = blend;
+  return queuesprite4colorObj(qsp);
 }
 
 let clip_temp_xy = vec2();
@@ -871,8 +881,25 @@ Sprite.prototype.draw = function (params) {
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-  return queuesprite(this, params.x, params.y, params.z || Z.UI, w, h, params.rot, uvs, params.color || this.color,
-    params.shader || this.shader, params.shader_params, params.nozoom, params.pixel_perfect, params.blend);
+  let color = params.color || this.color;
+  qsp.sprite = this;
+  qsp.x = params.x;
+  qsp.y = params.y;
+  qsp.z = params.z || Z.UI;
+  qsp.w = w;
+  qsp.h = h;
+  qsp.rot = params.rot;
+  qsp.uvs = uvs;
+  qsp.color_ul = color;
+  qsp.color_ll = color;
+  qsp.color_lr = color;
+  qsp.color_ur = color;
+  qsp.shader = params.shader || this.shader;
+  qsp.shader_params = params.shader_params;
+  qsp.nozoom = params.nozoom;
+  qsp.pixel_perfect = params.pixel_perfect;
+  qsp.blend = params.blend;
+  return queuesprite4colorObj(qsp);
 };
 
 Sprite.prototype.drawDualTint = function (params) {
@@ -890,14 +917,24 @@ Sprite.prototype.draw4Color = function (params) {
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-
-  return queuesprite4color(this,
-    params.x, params.y, params.z || Z.UI, w, h,
-    params.rot, uvs,
-    params.color_ul, params.color_ll, params.color_lr, params.color_ur,
-    params.shader || this.shader,
-    params.shader_params, params.nozoom,
-    params.pixel_perfect, params.blend);
+  qsp.sprite = this;
+  qsp.x = params.x;
+  qsp.y = params.y;
+  qsp.z = params.z || Z.UI;
+  qsp.w = w;
+  qsp.h = h;
+  qsp.rot = params.rot;
+  qsp.uvs = uvs;
+  qsp.color_ul = params.color_ul;
+  qsp.color_ll = params.color_ll;
+  qsp.color_lr = params.color_lr;
+  qsp.color_ur = params.color_ur;
+  qsp.shader = params.shader || this.shader;
+  qsp.shader_params = params.shader_params;
+  qsp.nozoom = params.nozoom;
+  qsp.pixel_perfect = params.pixel_perfect;
+  qsp.blend = params.blend;
+  return queuesprite4colorObj(qsp);
 };
 
 export function create(params) {
