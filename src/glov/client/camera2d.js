@@ -50,6 +50,12 @@ export function virtualToCanvas(dst, src) {
   dst[0] = (src[0] - data[0]) * data[4];
   dst[1] = (src[1] - data[1]) * data[5];
 }
+export function transformX(x) {
+  return (x - data[0]) * data[4];
+}
+export function transformY(y) {
+  return (y - data[1]) * data[5];
+}
 
 export function canvasToVirtual(dst, src) {
   dst[0] = src[0] / data[4] + data[0];
