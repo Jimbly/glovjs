@@ -88,6 +88,8 @@ export const ALIGN = {
   HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
 };
 
+const ALIGN_NEEDS_WIDTH = ALIGN.HMASK | ALIGN.HFIT;
+
 
 // typedef struct GlovFontStyle
 // {
@@ -213,6 +215,8 @@ let tech_params_pool = [];
 let tech_params_pool_idx = 0;
 let temp_color = vec4();
 let geom_stats;
+
+let dsp = {}; // drawScaled param
 
 function techParamsAlloc() {
   if (tech_params_pool_idx === tech_params_pool.length) {
@@ -362,7 +366,14 @@ GlovFont.prototype.drawSizedColor = function (style, x, y, z, size, color, text)
   return this.drawSized(fontStyleColored(style, color), x, y, z, size, text);
 };
 GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
-  return this.drawScaled(style, x, y, z, size * this.inv_font_size, size * this.inv_font_size, text);
+  dsp.style = style;
+  dsp.x = x;
+  dsp.y = y;
+  dsp.z = z;
+  dsp.xsc = size * this.inv_font_size;
+  dsp.ysc = size * this.inv_font_size;
+  dsp.text = text;
+  return this.drawScaled();
 };
 
 GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, h, text) {
@@ -376,31 +387,33 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
   }
   let x_size = size;
   let y_size = size;
-  let width = this.getStringWidth(style, x_size, text);
-  if ((align & ALIGN.HFIT) && width > w) {
-    let scale = w / width;
-    x_size *= scale;
-    width = w;
-    // Additionally, if we're really squishing things horizontally, shrink the font size
-    // and offset to be centered.
-    if (scale < 0.5) {
-      if ((align & ALIGN.VMASK) !== ALIGN.VCENTER && (align & ALIGN.VMASK) !== ALIGN.VBOTTOM) {
-        // Offset to be roughly centered in the original line bounds
-        y += (y_size - (y_size * scale * 2)) * 0.5;
+  if (align & ALIGN_NEEDS_WIDTH) {
+    let width = this.getStringWidth(style, x_size, text);
+    if ((align & ALIGN.HFIT) && width > w) {
+      let scale = w / width;
+      x_size *= scale;
+      width = w;
+      // Additionally, if we're really squishing things horizontally, shrink the font size
+      // and offset to be centered.
+      if (scale < 0.5) {
+        if ((align & ALIGN.VMASK) !== ALIGN.VCENTER && (align & ALIGN.VMASK) !== ALIGN.VBOTTOM) {
+          // Offset to be roughly centered in the original line bounds
+          y += (y_size - (y_size * scale * 2)) * 0.5;
+        }
+        y_size *= scale * 2;
       }
-      y_size *= scale * 2;
     }
-  }
-  switch (align & ALIGN.HMASK) { // eslint-disable-line default-case
-    case ALIGN.HCENTER:
-      x += (w - width) * 0.5;
-      if (this.integral) {
-        x |= 0;
-      }
-      break;
-    case ALIGN.HRIGHT:
-      x += w - width;
-      break;
+    switch (align & ALIGN.HMASK) { // eslint-disable-line default-case
+      case ALIGN.HCENTER:
+        x += (w - width) * 0.5;
+        if (this.integral) {
+          x |= 0;
+        }
+        break;
+      case ALIGN.HRIGHT:
+        x += w - width;
+        break;
+    }
   }
   switch (align & ALIGN.VMASK) { // eslint-disable-line default-case
     case ALIGN.VCENTER:
@@ -414,10 +427,16 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
       break;
   }
 
-  let drawn_width = this.drawScaled(
-    style, x, y, z,
-    x_size * this.inv_font_size, y_size * this.inv_font_size,
-    text);
+  let xsc = x_size * this.inv_font_size;
+  let ysc = y_size * this.inv_font_size;
+  dsp.style = style;
+  dsp.x = x;
+  dsp.y = y;
+  dsp.z = z;
+  dsp.xsc = xsc;
+  dsp.ysc = ysc;
+  dsp.text = text;
+  let drawn_width = this.drawScaled();
   profilerStopFunc();
   return drawn_width;
 };
@@ -687,10 +706,15 @@ GlovFont.prototype.drawScaledWrapped = function (style, x, y, z, w, indent, xsc,
   this.applyStyle(style);
   // This function returns height instead of width, so leave the maximum width encountered here for caller
   this.last_width = 0;
+  dsp.style = style;
+  dsp.z = z;
+  dsp.xsc = xsc;
+  dsp.ysc = ysc;
   let num_lines = this.wrapLinesScaled(w, indent, xsc, text, 0, (xoffs, linenum, line, x1) => {
-    let y2 = y + this.font_size * ysc * linenum;
-    let x2 = x + xoffs;
-    this.drawScaled(style, x2, y2, z, xsc, ysc, line);
+    dsp.x = x + xoffs;
+    dsp.y = y + this.font_size * ysc * linenum;
+    dsp.text = line;
+    this.drawScaled();
     this.last_width = max(this.last_width, x1);
   });
   return num_lines * this.font_size * ysc;
@@ -717,7 +741,8 @@ const temp_vec4_param0 = vec4();
 const temp_vec4_glow_params = vec4();
 const padding4 = vec4();
 const padding_in_font_space = vec4();
-GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
+GlovFont.prototype.drawScaled = function () {
+  let { style, x: _x, y, z, xsc, ysc, text } = dsp;
   profilerStartFunc();
   text = getStringFromLocalizable(text);
   let x = _x;
