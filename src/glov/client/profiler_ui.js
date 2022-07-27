@@ -321,6 +321,7 @@ function childCallCount(node, with_mem) {
   }
   return count;
 }
+let click_param = { x: 0, h: LINE_HEIGHT };
 function profilerShowEntry(walk, depth) {
   if (settings.profiler_relative === 0 && walk === node_out_of_tick) {
     // doesn't make sense to show
@@ -350,10 +351,15 @@ function profilerShowEntry(walk, depth) {
   let over = mouseover_elem[walk.id] === 1;
   let parent_over = mouseover_elem[walk.id] === 2;
   if (do_ui) {
-    if (input.click({ x: 0, y, w: line_width, h: LINE_HEIGHT, button: 0 })) {
-      walk.toggleShowChildren();
-    } else if (input.click({ x: 0, y, w: line_width, h: LINE_HEIGHT, button: 1 })) {
-      walk.parent.toggleShowChildren();
+    click_param.y = y;
+    click_param.w = line_width;
+    let click = input.click(click_param);
+    if (click) {
+      if (click.button === 1) {
+        walk.parent.toggleShowChildren();
+      } else {
+        walk.toggleShowChildren();
+      }
     }
   }
 
