@@ -298,6 +298,7 @@ let bloat_outer = { time: 0, mem: 0 };
 let bloat = { inner: bloat_inner, outer: bloat_outer };
 const MEASURE_KEY1 = 'profilerMeasureBloat';
 const MEASURE_KEY2 = 'profilerMeasureBloat:child';
+const MEASURE_HIST = 10;
 export function profilerMeasureBloat() {
   let mem_depth_saved = mem_depth;
   if (mem_depth >= 2) {
@@ -323,7 +324,9 @@ export function profilerMeasureBloat() {
   bloat_outer.time = Infinity;
   bloat_outer.mem = 0;
   let count_mem = 0;
-  for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
+  let idx_start = ((history_index - HIST_COMPONENTS * MEASURE_HIST) + HIST_TOT) % HIST_TOT;
+  for (let offs = 0; offs < MEASURE_HIST; offs++) {
+    let idx = (idx_start + offs * HIST_COMPONENTS) % HIST_TOT;
     bloat_inner.time = min(bloat_inner.time, child.history[idx+1]);
     bloat_outer.time = min(bloat_outer.time, walk.history[idx+1]);
     if (child.history[idx+2] > 0 && walk.history[idx+2] > 0) {
@@ -342,7 +345,10 @@ export function profilerMeasureBloat() {
   //   optimized away?), so, using this default value for memory instead
   //   as measured Chrome 103 as an average over ~800 profiler calls in a
   //   real app.
-  bloat_outer.mem = 56;
+  // On second consideration, not doing this: memory profiling is most useful when
+  //   looking at the leaf nodes, and the measured values best match the leaf
+  //   node values.
+  // bloat_outer.mem = 56;
   return bloat;
 }
 
