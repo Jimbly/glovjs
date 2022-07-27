@@ -338,6 +338,7 @@ function GlovFont(font_info, texture_name) {
     this.char_infos[font_info.char_infos[ii].c] = char_info;
     char_info.xpad = char_info.xpad || 0;
     char_info.yoffs = char_info.yoffs || 0;
+    char_info.w_pad_scale = (char_info.w + char_info.xpad) * char_info.scale;
   }
   this.replacement_character = this.infoFromChar(0xFFFD);
   if (!this.replacement_character) {
@@ -546,7 +547,7 @@ GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {
   let xsc = x_size / this.font_info.font_size;
   let x_advance = this.calcXAdvance(xsc);
   if (char_info) {
-    return (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
+    return char_info.w_pad_scale * xsc + x_advance;
   }
   return 0;
 };
@@ -562,7 +563,7 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
     let c = text.charCodeAt(ii);
     let char_info = this.infoFromChar(c);
     if (char_info) {
-      ret += (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
+      ret += char_info.w_pad_scale * xsc + x_advance;
     }
   }
   return ret;
@@ -671,7 +672,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
     } else {
       let char_info = this.infoFromChar(c);
       if (char_info) {
-        let char_w = (char_info.w + char_info.xpad) * xsc * char_info.scale + x_advance;
+        let char_w = char_info.w_pad_scale * xsc + x_advance;
         word_w += char_w;
         if (word_x0 + word_w <= w) { // would partially fit up to and including this letter
           word_slice = idx + 1;
