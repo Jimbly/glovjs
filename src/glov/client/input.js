@@ -118,7 +118,7 @@ const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
-const { spotMouseverHook, BUTTON_ANY } = require('./spot.js');
+const { spotMouseoverHook, BUTTON_ANY } = require('./spot.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 assert.equal(BUTTON_ANY, ANY);
@@ -1101,7 +1101,7 @@ export function mouseOverCaptured() {
 export function mouseOver(param) {
   param = param || {};
   let pos_param = mousePosParam(param);
-  spotMouseverHook(pos_param, param);
+  spotMouseoverHook(pos_param, param);
   if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
     return false;
   }

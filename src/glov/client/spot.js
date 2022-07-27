@@ -664,7 +664,7 @@ export function spotSubEnd() {
   return focus_sub_rect_elem;
 }
 
-export function spotMouseverHook(pos_param, param) {
+export function spotMouseoverHook(pos_param, param) {
   if (inputEatenMouse() || param.peek) {
     return;
   }
