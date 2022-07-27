@@ -318,8 +318,11 @@ function GlovFont(font_info, texture_name) {
     wrap_t: gl.CLAMP_TO_EDGE,
   });
   this.textures = [this.texture];
+  this.integral = Boolean(font_info.noFilter); // TODO: often only want this for pixely = strict modes?
 
   this.font_info = font_info;
+  this.font_size = font_info.font_size;
+  this.inv_font_size = 1 / font_info.font_size;
   this.shader = font_shaders.font_aa;
   this.tex_w = font_info.imageW;
   this.tex_h = font_info.imageH;
@@ -359,15 +362,15 @@ GlovFont.prototype.drawSizedColor = function (style, x, y, z, size, color, text)
   return this.drawSized(fontStyleColored(style, color), x, y, z, size, text);
 };
 GlovFont.prototype.drawSized = function (style, x, y, z, size, text) {
-  return this.drawScaled(style, x, y, z, size / this.font_info.font_size, size / this.font_info.font_size, text);
+  return this.drawScaled(style, x, y, z, size * this.inv_font_size, size * this.inv_font_size, text);
 };
 
-GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w, h, text) {
+GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, h, text) {
   profilerStartFunc();
   text = getStringFromLocalizable(text);
 
   if (align & ALIGN.HWRAP) {
-    let drawn_height = this.drawSizedAlignedWrapped(style, _x, _y, z, 0, size, align & ~ALIGN.HWRAP, w, h, text);
+    let drawn_height = this.drawSizedAlignedWrapped(style, x, y, z, 0, size, align & ~ALIGN.HWRAP, w, h, text);
     profilerStopFunc();
     return drawn_height;
   }
@@ -383,50 +386,37 @@ GlovFont.prototype.drawSizedAligned = function (style, _x, _y, z, size, align, w
     if (scale < 0.5) {
       if ((align & ALIGN.VMASK) !== ALIGN.VCENTER && (align & ALIGN.VMASK) !== ALIGN.VBOTTOM) {
         // Offset to be roughly centered in the original line bounds
-        _y += (y_size - (y_size * scale * 2)) / 2;
+        y += (y_size - (y_size * scale * 2)) * 0.5;
       }
       y_size *= scale * 2;
     }
   }
-  let height = y_size;
-  let x;
-  let y;
-  switch (align & ALIGN.HMASK) {
+  switch (align & ALIGN.HMASK) { // eslint-disable-line default-case
     case ALIGN.HCENTER:
-      x = _x + (w - width) / 2;
-      if (this.font_info.noFilter) {
-        x |= 0; // ensure integral - TODO: often only want this for pixely = strict modes?
+      x += (w - width) * 0.5;
+      if (this.integral) {
+        x |= 0;
       }
       break;
     case ALIGN.HRIGHT:
-      x = _x + w - width;
+      x += w - width;
       break;
-    case ALIGN.HLEFT:
-      x = _x;
-      break;
-    default:
-      x = _x;
   }
-  switch (align & ALIGN.VMASK) {
+  switch (align & ALIGN.VMASK) { // eslint-disable-line default-case
     case ALIGN.VCENTER:
-      y = _y + (h - height) / 2;
-      if (this.font_info.noFilter) {
-        y |= 0; // ensure integral
+      y += (h - y_size) * 0.5;
+      if (this.integral) {
+        y |= 0;
       }
       break;
     case ALIGN.VBOTTOM:
-      y = _y + h - height;
+      y += h - y_size;
       break;
-    case ALIGN.VTOP:
-      y = _y;
-      break;
-    default:
-      y = _y;
   }
 
   let drawn_width = this.drawScaled(
     style, x, y, z,
-    x_size / this.font_info.font_size, y_size / this.font_info.font_size,
+    x_size * this.inv_font_size, y_size * this.inv_font_size,
     text);
   profilerStopFunc();
   return drawn_width;
@@ -449,8 +439,8 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   switch (align & ALIGN.VMASK) {
     case ALIGN.VCENTER:
       yoffs = (h - height) / 2;
-      if (this.font_info.noFilter) {
-        yoffs |= 0; // ensure integral
+      if (this.integral) {
+        yoffs |= 0;
       }
       break;
     case ALIGN.VBOTTOM:
@@ -472,11 +462,11 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
 // returns height
 GlovFont.prototype.drawSizedColorWrapped = function (style, x, y, z, w, indent, size, color, text) {
   return this.drawScaledWrapped(fontStyleColored(style, color), x, y, z, w,
-    indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
+    indent, size * this.inv_font_size, size * this.inv_font_size, text);
 };
 GlovFont.prototype.drawSizedWrapped = function (style, x, y, z, w, indent, size, text) {
   return this.drawScaledWrapped(style, x, y, z, w,
-    indent, size / this.font_info.font_size, size / this.font_info.font_size, text);
+    indent, size * this.inv_font_size, size * this.inv_font_size, text);
 };
 
 let default_size = 24;
@@ -509,7 +499,7 @@ GlovFont.prototype.draw = function (param) {
 GlovFont.prototype.wrapLines = function (style, w, indent, size, text, align, line_cb) {
   assert(typeof style !== 'number'); // old API did not have `style` parameter
   this.applyStyle(style);
-  return this.wrapLinesScaled(w, indent, size / this.font_info.font_size, text, align, line_cb);
+  return this.wrapLinesScaled(w, indent, size * this.inv_font_size, text, align, line_cb);
 };
 
 GlovFont.prototype.numLines = function (style, w, indent, size, text) {
@@ -544,7 +534,7 @@ GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {
   assert.equal(typeof c, 'number');
   this.applyStyle(style);
   let char_info = this.infoFromChar(c);
-  let xsc = x_size / this.font_info.font_size;
+  let xsc = x_size * this.inv_font_size;
   let x_advance = this.calcXAdvance(xsc);
   if (char_info) {
     return char_info.w_pad_scale * xsc + x_advance;
@@ -557,7 +547,7 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
 
   this.applyStyle(style);
   let ret=0;
-  let xsc = x_size / this.font_info.font_size;
+  let xsc = x_size * this.inv_font_size;
   let x_advance = this.calcXAdvance(xsc);
   for (let ii = 0; ii < text.length; ++ii) {
     let c = text.charCodeAt(ii);
@@ -571,7 +561,7 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
 
 GlovFont.prototype.getSpaceSize = function (xsc) {
   let space_info = this.infoFromChar(32); // ' '
-  return (space_info ? (space_info.w + space_info.xpad) * space_info.scale : this.font_info.font_size) * xsc;
+  return (space_info ? (space_info.w + space_info.xpad) * space_info.scale : this.font_size) * xsc;
 };
 
 function endsWord(char_code) {
@@ -698,12 +688,12 @@ GlovFont.prototype.drawScaledWrapped = function (style, x, y, z, w, indent, xsc,
   // This function returns height instead of width, so leave the maximum width encountered here for caller
   this.last_width = 0;
   let num_lines = this.wrapLinesScaled(w, indent, xsc, text, 0, (xoffs, linenum, line, x1) => {
-    let y2 = y + this.font_info.font_size * ysc * linenum;
+    let y2 = y + this.font_size * ysc * linenum;
     let x2 = x + xoffs;
     this.drawScaled(style, x2, y2, z, xsc, ysc, line);
     this.last_width = max(this.last_width, x1);
   });
-  return num_lines * this.font_info.font_size * ysc;
+  return num_lines * this.font_size * ysc;
 };
 
 GlovFont.prototype.calcXAdvance = function (xsc) {
@@ -711,7 +701,7 @@ GlovFont.prototype.calcXAdvance = function (xsc) {
 
   // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
   //   things look almost identical, just crisper
-  let font_texel_scale = this.font_info.font_size / 32;
+  let font_texel_scale = this.font_size / 32;
   // As a compromise, -2 bias here seems to work well
   let x_advance = round(xsc * font_texel_scale * max(this.applied_style.outline_width - 2, 0));
   // As a compromise, there's a -3 bias in there, so it only kicks in under extreme circumstances
@@ -737,7 +727,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   let font_info = this.font_info;
   // Debug: show expect area of glyphs
   // require('./ui.js').drawRect(_x, y,
-  //   _x + xsc * font_info.font_size * 20, y + ysc * font_info.font_size,
+  //   _x + xsc * font_size * 20, y + ysc * font_size,
   //   1000, [1, 0, 1, 0.5]);
   y += (font_info.y_offset || 0) * ysc;
   let texs = this.textures;
@@ -766,7 +756,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   // scale all supplied values by this so that if we swap in a font with twice the resolution (and twice the spread)
   //   things look almost identical, just crisper
   let x_advance = this.calcXAdvance(xsc);
-  let font_texel_scale = font_info.font_size / 32;
+  let font_texel_scale = this.font_size / 32;
   let tile_state = 0;
 
   let applied_style = this.applied_style;
@@ -830,7 +820,7 @@ GlovFont.prototype.drawScaled = function (style, _x, y, z, xsc, ysc, text) {
   for (let i=0; i<len; i++) {
     const c = text.charCodeAt(i);
     if (c === 9) { // '\t'.charCodeAt(0)) {
-      let tabsize = xsc * font_info.font_size * 4;
+      let tabsize = xsc * this.font_size * 4;
       x = ((((x - _x) / tabsize) | 0) + 1) * tabsize + _x;
     } else {
       let char_info = this.infoFromChar(c);
