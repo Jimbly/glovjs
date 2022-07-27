@@ -300,7 +300,7 @@ const MEASURE_KEY1 = 'profilerMeasureBloat';
 const MEASURE_KEY2 = 'profilerMeasureBloat:child';
 export function profilerMeasureBloat() {
   let mem_depth_saved = mem_depth;
-  if (mem_depth > 2) {
+  if (mem_depth >= 2) {
     mem_depth = Infinity;
   }
   profilerStart(MEASURE_KEY1);
@@ -319,21 +319,25 @@ export function profilerMeasureBloat() {
   bloat_inner.mem = 0;
   bloat_outer.time = Infinity;
   bloat_outer.mem = 0;
+  let count_inner_mem = 0;
   for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
     bloat_inner.time = min(bloat_inner.time, child.history[idx+1]);
     if (child.history[idx+2] > 0) {
       bloat_inner.mem += child.history[idx+2];
+      ++count_inner_mem;
     }
   }
+  let count_outer_mem = 0;
   for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
     bloat_outer.time = min(bloat_outer.time, walk.history[idx+1]);
     if (walk.history[idx+2] > 0) {
       bloat_outer.mem += walk.history[idx+2];
+      ++count_outer_mem;
     }
   }
   bloat_outer.time = max(0, bloat_outer.time - bloat_inner[0]);
-  bloat_outer.mem = max(0, floor((bloat_outer.mem - bloat_inner.mem) / HIST_SIZE));
-  bloat_inner.mem = max(0, floor(bloat_inner.mem / HIST_SIZE));
+  bloat_outer.mem = count_outer_mem ? max(0, floor((bloat_outer.mem - bloat_inner.mem) / count_outer_mem)) : 0;
+  bloat_inner.mem = count_inner_mem ? max(0, floor(bloat_inner.mem / count_inner_mem)) : 0;
   return bloat;
 }
 

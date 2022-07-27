@@ -292,7 +292,7 @@ function hasActiveChildren(walk) {
   }
   return false;
 }
-function childCallCount(node) {
+function childCallCount(node, with_mem) {
   let walk = node.child;
   let count = 0;
   while (walk) {
@@ -300,7 +300,7 @@ function childCallCount(node) {
       let total = 0;
       let sum_count = 0;
       for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
-        if (walk.history[ii]) {
+        if (walk.history[ii] && (!with_mem || walk.history[ii+2])) {
           sum_count++;
           total += walk.history[ii]; // count
         }
@@ -309,9 +309,11 @@ function childCallCount(node) {
         count += round(total / sum_count);
       }
     } else {
-      count += walk.history[show_index_count];
+      if (!with_mem || walk.history[show_index_mem]) {
+        count += walk.history[show_index_count];
+      }
     }
-    count += childCallCount(walk);
+    count += childCallCount(walk, with_mem);
     walk = walk.next;
   }
   return count;
@@ -459,7 +461,7 @@ function profilerShowEntry(walk, depth) {
       } else {
         mem_value -= bloat.inner.mem * walk.history[show_index_count];
       }
-      let child_count = childCallCount(walk);
+      let child_count = childCallCount(walk, true);
       mem_value = max(0, mem_value - bloat.outer.mem * child_count);
     }
 
