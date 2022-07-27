@@ -305,6 +305,9 @@ export function profilerMeasureBloat() {
   }
   profilerStart(MEASURE_KEY1);
   profilerStart(MEASURE_KEY2);
+  profilerStopStart(MEASURE_KEY2);
+  profilerStopStart(MEASURE_KEY2);
+  profilerStopStart(MEASURE_KEY2);
   profilerStop(MEASURE_KEY2);
   profilerStop(MEASURE_KEY1);
   mem_depth = mem_depth_saved;
@@ -319,25 +322,27 @@ export function profilerMeasureBloat() {
   bloat_inner.mem = 0;
   bloat_outer.time = Infinity;
   bloat_outer.mem = 0;
-  let count_inner_mem = 0;
+  let count_mem = 0;
   for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
     bloat_inner.time = min(bloat_inner.time, child.history[idx+1]);
-    if (child.history[idx+2] > 0) {
-      bloat_inner.mem += child.history[idx+2];
-      ++count_inner_mem;
-    }
-  }
-  let count_outer_mem = 0;
-  for (let idx = 0; idx < HIST_TOT; idx += HIST_COMPONENTS) {
     bloat_outer.time = min(bloat_outer.time, walk.history[idx+1]);
-    if (walk.history[idx+2] > 0) {
+    if (child.history[idx+2] > 0 && walk.history[idx+2] > 0) {
+      bloat_inner.mem += child.history[idx+2];
       bloat_outer.mem += walk.history[idx+2];
-      ++count_outer_mem;
+      ++count_mem;
     }
   }
-  bloat_outer.time = max(0, bloat_outer.time - bloat_inner[0]);
-  bloat_outer.mem = count_outer_mem ? max(0, floor((bloat_outer.mem - bloat_inner.mem) / count_outer_mem)) : 0;
-  bloat_inner.mem = count_inner_mem ? max(0, floor(bloat_inner.mem / count_inner_mem)) : 0;
+  bloat_inner.time /= 4;
+  bloat_outer.time = max(0, bloat_outer.time - bloat_inner.time) / 4;
+  let avg_inner_mem = bloat_inner.mem / count_mem / 4;
+  bloat_outer.mem = count_mem ? max(0, floor((bloat_outer.mem / count_mem - avg_inner_mem) / 4)) : 0;
+  bloat_inner.mem = count_mem ? max(0, floor(avg_inner_mem)) : 0;
+  // Code above semi-accurately measures the bloat in small scales, but seems
+  //   to overestimate on the grand scale (possibly some measurements are being
+  //   optimized away?), so, using this default value for memory instead
+  //   as measured Chrome 103 as an average over ~800 profiler calls in a
+  //   real app.
+  bloat_outer.mem = 56;
   return bloat;
 }
 
