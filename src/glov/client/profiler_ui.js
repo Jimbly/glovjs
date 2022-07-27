@@ -252,6 +252,7 @@ let perf_graph = {
   ],
 };
 let bloat;
+let mouseover_param = { x: 0, peek: true, h: LINE_HEIGHT };
 function profilerShowEntryEarly(walk, depth) {
   if (settings.profiler_relative === 0 && walk === node_out_of_tick) {
     // doesn't make sense to show
@@ -264,7 +265,9 @@ function profilerShowEntryEarly(walk, depth) {
   if (!count_sum) {
     return true;
   }
-  if (input.mouseOver({ x: 0, y, w: line_width, h: LINE_HEIGHT, peek: true })) {
+  mouseover_param.y = y;
+  mouseover_param.w = line_width;
+  if (input.mouseOver(mouseover_param)) {
     mouseover_main_elem = walk;
     mouseover_elem[walk.id] = 1;
     for (let parent = walk.parent; parent; parent = parent.parent) {
