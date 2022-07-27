@@ -1054,7 +1054,7 @@ export function mouseButtonHadUpEdge() {
 }
 
 const full_screen_pos_param = {};
-function mousePosParam(param) {
+function mousePosParamUnique(param) {
   param = param || full_screen_pos_param;
   let pos_param = param.mouse_pos_param;
   if (!pos_param) {
@@ -1066,6 +1066,17 @@ function mousePosParam(param) {
   pos_param.h = param.h === undefined ? camera2d.hReal() : param.h;
   pos_param.button = param.button === undefined ? ANY : param.button;
   return pos_param;
+}
+
+let pos_param_temp = {};
+function mousePosParam(param) {
+  param = param || {};
+  pos_param_temp.x = param.x === undefined ? camera2d.x0Real() : param.x;
+  pos_param_temp.y = param.y === undefined ? camera2d.y0Real() : param.y;
+  pos_param_temp.w = param.w === undefined ? camera2d.wReal() : param.w;
+  pos_param_temp.h = param.h === undefined ? camera2d.hReal() : param.h;
+  pos_param_temp.button = param.button === undefined ? ANY : param.button;
+  return pos_param_temp;
 }
 
 let check_pos = vec2();
@@ -1111,7 +1122,7 @@ export function mouseOverCaptured() {
 export function mouseOver(param) {
   profilerStartFunc();
   param = param || {};
-  let pos_param = mousePosParam(param);
+  let pos_param = mousePosParamUnique(param);
   spotMouseoverHook(pos_param, param);
   if (mouse_over_captured || pointerLocked() && !param.allow_pointerlock) {
     profilerStopFunc();
