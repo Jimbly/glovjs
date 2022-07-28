@@ -38,7 +38,7 @@ function ProfilerEntry(parent, name) {
   this.history = new Float32Array(HIST_TOT);
   // For profiler_ui.js
   this.id = ++last_id;
-  this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || false;
+  this.show_children = !(parent && parent.parent) || profiler_open_keys[this.getKey()] || true;
   this.color_override = null;
 }
 ProfilerEntry.prototype.isEmpty = function () {

@@ -1,7 +1,7 @@
 /*eslint global-require:off*/
 // eslint-disable-next-line import/order
 const local_storage = require('glov/client/local_storage.js');
-local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
+local_storage.setStoragePrefix('glovjs-perf'); // Before requiring anything else that might load from this
 
 import * as engine from 'glov/client/engine.js';
 import * as glov_font from 'glov/client/font.js';
@@ -155,7 +155,7 @@ export function main() {
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
-  let pixely = flagGet('pixely', 'on');
+  let pixely = flagGet('pixely', 'off');
   let font;
   if (pixely === 'strict') {
     font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
@@ -181,6 +181,11 @@ export function main() {
   // Perfect sizes for pixely modes
   ui.scaleSizes(13 / 32);
   ui.setFontHeight(8);
+
+  settings.set('show_profiler', 1);
+  settings.set('max_fps', 0);
+  settings.set('show_fps', 4);
+  settings.set('fps_window', 10);
 
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
@@ -248,6 +253,9 @@ export function main() {
   function test(dt) {
     uiHandlingNav(); // register nav focus handler first in frame
     gl.clearColor(0, 0.72, 1, 1);
+    if (1) {
+      return;
+    }
     if (!test.color_sprite) {
       test.color_sprite = v4clone(color_white);
       test.character = {
