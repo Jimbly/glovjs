@@ -41,7 +41,7 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const models = require('./models.js');
 const perf = require('./perf.js');
-const { profilerFrameStart } = require('./profiler.js');
+const { profilerFrameStart, profilerGarbageEstimate } = require('./profiler.js');
 const { profilerUIStartup } = require('./profiler_ui.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
@@ -321,6 +321,7 @@ let mspf_tick = 1000;
 // let net_time = 1000;
 let mspf_tick_accum = 0;
 // let net_time_accum = 0;
+let garbage_estimate = 0;
 export const PERF_HISTORY_SIZE = 128;
 export let perf_state = window.glov_perf_state = {
   fpsgraph: {
@@ -342,6 +343,7 @@ perf.addMetric({
     'fps: ': () => (1000 / mspf).toFixed(1),
     'ms/f: ': () => mspf.toFixed(0),
     'cpu: ': () => mspf_tick.toFixed(0),
+    'gc/f: ': () => (garbage_estimate ? garbage_estimate.toFixed(1) : ''),
     // 'net: ': () => net_time.toFixed(0),
   },
   data: fpsgraph, // contain .index and .history (stride of colors.length)
@@ -769,6 +771,7 @@ function tick(timestamp) {
       mspf = (now - mspf_update_time) / mspf_frame_count;
       mspf_tick = mspf_tick_accum / mspf_frame_count;
       mspf_tick_accum = 0;
+      garbage_estimate = profilerGarbageEstimate() / 1024;
       // net_time = net_time_accum / mspf_frame_count;
       // net_time_accum = 0;
       mspf_frame_count = 0;

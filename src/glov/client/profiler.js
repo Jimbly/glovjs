@@ -149,6 +149,8 @@ export function profilerHistoryIndex() {
   return history_index;
 }
 
+let garbage_accum = [0, 0];
+let garbage_count = [0, 0, 0];
 export function profilerFrameStart() {
   last_frame_total_calls = total_calls;
   total_calls = 0;
@@ -181,6 +183,22 @@ export function profilerFrameStart() {
         }
       }
     }
+  }
+  let pos = 0;
+  let neg = 0;
+  for (let walk = root.child; walk; walk = walk.next) {
+    if (walk.dmem < 0) {
+      neg -= walk.dmem;
+    } else {
+      pos += walk.dmem;
+    }
+  }
+  if (pos > neg) {
+    garbage_accum[0] += pos;
+    garbage_count[0]++;
+  } else {
+    garbage_accum[1] += neg;
+    garbage_count[1]++;
   }
   if (current !== root) {
     console.error('Profiler starting new frame but some section was not stopped', current && current.name);
@@ -350,6 +368,18 @@ export function profilerMeasureBloat() {
   //   node values.
   // bloat_outer.mem = 56;
   return bloat;
+}
+
+export function profilerGarbageEstimate() {
+  let ret;
+  if (garbage_count[0] > garbage_count[1]) {
+    ret = garbage_accum[0] / garbage_count[0];
+  } else {
+    ret = garbage_accum[1] / garbage_count[1];
+  }
+  garbage_count[0] = garbage_count[1] = 0;
+  garbage_accum[0] = garbage_accum[1] = 0;
+  return ret;
 }
 
 export function profilerWalkTree(use_root, cb) {
