@@ -536,7 +536,7 @@ function profilerUIRun() {
     font_number_scale = 1;
     bar_w = scale;
   } else {
-    camera2d.setScreen();
+    camera2d.setScreen(true);
     font_number_scale = 0.9;
     bar_w = 2;
   }

@@ -207,9 +207,11 @@ export function setNormalized() {
 
 // Sets virtual viewport equal to (DPI-aware) screen pixels
 //   (generally a bad idea, will not scale well without lots of app work)
-export function setScreen() {
+export function setScreen(no_dpi_aware) {
   if (render_width) {
     set(0, 0, render_width, render_height);
+  } else if (no_dpi_aware) {
+    set(0, 0, safeScreenWidth(), safeScreenHeight());
   } else {
     set(0, 0, safeScreenWidth() / engine.dom_to_canvas_ratio, safeScreenHeight() / engine.dom_to_canvas_ratio);
   }
