@@ -682,41 +682,57 @@ function profilerUIRun() {
     y += BUTTON_H;
   }
 
+  text = settings.max_fps === 1000 ? 'max CPU' : settings.max_fps === 0 ? 'anim frame' : '?';
+  if (do_ui) {
+    if (ui.buttonText({
+      x, y, z,
+      w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+      text,
+    })) {
+      settings.set('max_fps', settings.max_fps === 0 ? 1000 : 0);
+    }
+  } else {
+    font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
+  }
+  y += BUTTON_H;
+
   font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
     `${loaded_profile ? loaded_profile.calls : profilerTotalCalls()} calls`);
   y += LINE_HEIGHT;
 
-  if (ui.buttonText({
-    x, y, z,
-    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-    text: 'save',
-    disabled: loaded_profile,
-  })) {
-    // Note: doesn't work in IE, but we probably don't care
-    let a = document.createElement('a');
-    a.href = `data:application/json,${encodeURIComponent(profilerExport())}`;
-    a.setAttribute('download', 'profile.json');
-    a.click();
+  if (do_ui) {
+    if (ui.buttonText({
+      x, y, z,
+      w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+      text: 'save',
+      disabled: loaded_profile,
+    })) {
+      // Note: doesn't work in IE, but we probably don't care
+      let a = document.createElement('a');
+      a.href = `data:application/json,${encodeURIComponent(profilerExport())}`;
+      a.setAttribute('download', 'profile.json');
+      a.click();
+    }
+    if (ui.buttonText({
+      x: x + BUTTON_W/2, y, z,
+      w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
+      text: 'load',
+    })) {
+      let input_elem = document.createElement('input');
+      input_elem.setAttribute('type', 'file');
+      let reader = new FileReader();
+      reader.onload = () => {
+        if (reader.readyState === 2) {
+          useSavedProfile(reader.error || reader.result);
+        }
+      };
+      input_elem.onchange = () => {
+        reader.readAsText(input_elem.files[0]);
+      };
+      input_elem.click();
+    }
+    y += BUTTON_H;
   }
-  if (ui.buttonText({
-    x: x + BUTTON_W/2, y, z,
-    w: BUTTON_W/2, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-    text: 'load',
-  })) {
-    let input_elem = document.createElement('input');
-    input_elem.setAttribute('type', 'file');
-    let reader = new FileReader();
-    reader.onload = () => {
-      if (reader.readyState === 2) {
-        useSavedProfile(reader.error || reader.result);
-      }
-    };
-    input_elem.onchange = () => {
-      reader.readAsText(input_elem.files[0]);
-    };
-    input_elem.click();
-  }
-  y += BUTTON_H;
 
   ui.drawRect(x, 0, x + BUTTON_W, y, z-1, color_bar);
 
