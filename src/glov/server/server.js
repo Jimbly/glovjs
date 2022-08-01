@@ -1,6 +1,10 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+global.profilerStart = global.profilerStop = global.profilerStopStart = function () {
+  // not yet profiling on server
+};
+
 /* eslint-disable import/order */
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');

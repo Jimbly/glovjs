@@ -186,12 +186,16 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
       return void receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
     }
     delete receiver.resp_cbs[msg];
+    profilerStart('response');
     cb(err, data, respFunc);
+    profilerStop('response');
   } else {
     if (!msg) {
       return void receiver.onError(`Received message with no .msg from ${source}`);
     }
+    profilerStart(msg);
     handle_func(msg, data, respFunc);
+    profilerStop(msg);
   }
   if (expecting_response) {
     // Note, this may be -1 if respFunc has already been called

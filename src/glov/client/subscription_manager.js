@@ -357,8 +357,11 @@ SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
     console.error(`no handler for channel_msg(${channel_id}) ${msg}: ${JSON.stringify(data)}`);
     return;
   }
-  perfCounterAdd(`cm.${channel_id.split('.')[0]}.${msg}`);
+  let msg_name = `${channel_id.split('.')[0]}.${msg}`;
+  perfCounterAdd(`cm.${msg_name}`);
+  profilerStart(msg_name);
   handler.call(channel, data, resp_func);
+  profilerStop(msg_name);
 };
 
 SubscriptionManager.prototype.handleServerTime = function (pak) {
