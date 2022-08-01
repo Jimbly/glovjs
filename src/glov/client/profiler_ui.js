@@ -823,10 +823,12 @@ function profilerUIRun() {
     mouseover_elem = {};
     profilerWalkTree(root, profilerShowEntryEarly);
     if (mouseover_main_elem) {
-      let xx = input.mousePos(mouse_pos)[0] - bar_x0;
-      mouseover_bar_idx = floor(xx / bar_w);
-      if (mouseover_bar_idx < 0 || mouseover_bar_idx >= HIST_SIZE) {
-        mouseover_bar_idx = -1;
+      if (loaded_profile || profilerPaused()) {
+        let xx = input.mousePos(mouse_pos)[0] - bar_x0;
+        mouseover_bar_idx = floor(xx / bar_w);
+        if (mouseover_bar_idx < 0 || mouseover_bar_idx >= HIST_SIZE) {
+          mouseover_bar_idx = -1;
+        }
       }
       // Just use this one elem's values
       dmem_max_value = 0;
