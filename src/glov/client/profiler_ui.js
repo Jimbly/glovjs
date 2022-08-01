@@ -22,6 +22,7 @@ const {
   HAS_MEMSIZE,
   MEM_DEPTH_DEFAULT,
   profilerAvgTime,
+  profilerChildCallCount,
   profilerImport,
   profilerExport,
   profilerHistoryIndex,
@@ -33,7 +34,6 @@ const {
   profilerNodeRoot,
   profilerPause,
   profilerPaused,
-  profilerTotalCalls,
   profilerWalkTree,
   profilerWarning,
 } = require('./profiler.js');
@@ -303,7 +303,7 @@ function childCallCount(node, with_mem) {
       let total = 0;
       let sum_count = 0;
       for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
-        if (walk.history[ii] && (!with_mem || walk.history[ii+2])) {
+        if (!with_mem || walk.history[ii+2]) {
           sum_count++;
           total += walk.history[ii]; // count
         }
@@ -379,7 +379,7 @@ function profilerShowEntry(walk, depth) {
   let offs = 1 + settings.profiler_graph;
   let graph_max = settings.profiler_graph ? GRAPH_MAX_MEM : GRAPH_FRAME_TIME;
   for (let ii = 0; ii < HIST_SIZE; ++ii) {
-    let value = walk.history[(history_index + ii*HIST_COMPONENTS) % HIST_TOT + offs];
+    let value = walk.history[(history_index + (ii+1)*HIST_COMPONENTS) % HIST_TOT + offs];
     if (value > 0) {
       let hv = value / graph_max;
       let h = min(hv * LINE_HEIGHT, LINE_HEIGHT);
@@ -770,8 +770,9 @@ function profilerUIRun() {
   }
   y += BUTTON_H;
 
+  let total_calls = profilerChildCallCount(root, false, settings.profiler_average);
   font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, LINE_HEIGHT,
-    `${loaded_profile ? loaded_profile.calls : profilerTotalCalls()} calls`);
+    `${total_calls} calls`);
   y += LINE_HEIGHT;
 
   if (do_ui) {
@@ -840,7 +841,7 @@ function profilerUIRun() {
   }
   dmem_max_value = 0;
   do_average = settings.profiler_average;
-  show_index_count = (history_index - HIST_COMPONENTS + HIST_TOT) % HIST_TOT;
+  show_index_count = history_index;
 
   if (mouseover_bar_idx !== -1) {
     // override do_average if the mouse is over a particular frame in the bar graph

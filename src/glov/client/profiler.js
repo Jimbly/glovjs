@@ -17,7 +17,7 @@ export const MEM_DEPTH_DEFAULT = 2;
 
 const assert = require('assert');
 const engine = require('./engine.js');
-const { floor, max, min } = Math;
+const { floor, max, min, round } = Math;
 
 // For profiler_ui.js
 const { localStorageGetJSON, localStorageSetJSON } = require('./local_storage.js');
@@ -113,11 +113,9 @@ let node_tick = new ProfilerEntry(root, 'tick');
 node_out_of_tick.next = node_tick;
 
 let current = root;
-let history_index = 0;
+let history_index = 0; // index to the last written frame of data
 let paused = false;
 let mem_depth = MEM_DEPTH_DEFAULT;
-let total_calls = 0;
-let last_frame_total_calls = 0;
 
 function memSizeChrome() {
   return performance.memory.usedJSHeapSize;
@@ -127,10 +125,38 @@ function memSizeNop() {
 }
 let memSize = HAS_MEMSIZE ? memSizeChrome : memSizeNop;
 let mem_is_high_res = 10;
+
+export function profilerChildCallCount(node, with_mem, do_average) {
+  let walk = node.child;
+  let count = 0;
+  while (walk) {
+    if (do_average) {
+      let total = 0;
+      let sum_count = 0;
+      for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+        if (!with_mem || walk.history[ii+2]) {
+          sum_count++;
+          total += walk.history[ii]; // count
+        }
+      }
+      if (sum_count) {
+        count += round(total / sum_count);
+      }
+    } else {
+      if (!with_mem || walk.history[history_index + 2]) {
+        count += walk.history[history_index];
+      }
+    }
+    count += profilerChildCallCount(walk, with_mem, do_average);
+    walk = walk.next;
+  }
+  return count;
+}
 const WARN_CALLS_COUNT = 1000;
 export function profilerWarning() {
-  if (last_frame_total_calls > WARN_CALLS_COUNT) {
-    return `Warning: Too many per-frame profilerStart() calls (${last_frame_total_calls} > ${WARN_CALLS_COUNT})`;
+  let total_calls = profilerChildCallCount(root, false, true);
+  if (total_calls > WARN_CALLS_COUNT) {
+    return `Warning: Too many per-frame profilerStart() calls (${total_calls} > ${WARN_CALLS_COUNT})`;
   } else if (!HAS_MEMSIZE) {
     return 'To access memory profiling, run in Chrome';
   } else if (mem_depth > 1 && mem_is_high_res < 10) {
@@ -152,8 +178,6 @@ export function profilerHistoryIndex() {
 let garbage_accum = [0, 0];
 let garbage_count = [0, 0, 0];
 export function profilerFrameStart() {
-  last_frame_total_calls = total_calls;
-  total_calls = 0;
   root.count = 1;
   let now = performance.now();
   root.time = now - root.start_time;
@@ -204,6 +228,9 @@ export function profilerFrameStart() {
     console.error('Profiler starting new frame but some section was not stopped', current && current.name);
     current = root;
   }
+  if (!paused) {
+    history_index = (history_index + HIST_COMPONENTS) % HIST_TOT;
+  }
   let walk = root;
   while (walk) {
     let recursing_down = true;
@@ -230,14 +257,9 @@ export function profilerFrameStart() {
       break;
     } while (true);
   }
-  if (!paused) {
-    history_index = (history_index + HIST_COMPONENTS) % HIST_TOT;
-  }
 }
 
 function profilerStart(name) {
-  ++total_calls;
-
   // Find us in current's children
   let last = null;
   let instance;
@@ -307,10 +329,6 @@ export function profilerMemDepthSet(value) {
   mem_depth = value;
 }
 
-export function profilerTotalCalls() {
-  return last_frame_total_calls;
-}
-
 let bloat_inner = { time: 0, mem: 0 };
 let bloat_outer = { time: 0, mem: 0 };
 let bloat = { inner: bloat_inner, outer: bloat_outer };
@@ -342,7 +360,7 @@ export function profilerMeasureBloat() {
   bloat_outer.time = Infinity;
   bloat_outer.mem = 0;
   let count_mem = 0;
-  let idx_start = ((history_index - HIST_COMPONENTS * MEASURE_HIST) + HIST_TOT) % HIST_TOT;
+  let idx_start = ((history_index - HIST_COMPONENTS * (MEASURE_HIST - 1)) + HIST_TOT) % HIST_TOT;
   for (let offs = 0; offs < MEASURE_HIST; offs++) {
     let idx = (idx_start + offs * HIST_COMPONENTS) % HIST_TOT;
     bloat_inner.time = min(bloat_inner.time, child.history[idx+1]);
@@ -436,7 +454,6 @@ export function profilerExport() {
     history_index,
     root,
     mem_depth: HAS_MEMSIZE ? mem_depth : 0,
-    calls: last_frame_total_calls,
     // Include some device info
     device: {
       ua: window.navigator.userAgent,
