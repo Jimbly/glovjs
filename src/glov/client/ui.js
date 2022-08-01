@@ -620,12 +620,14 @@ export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) 
 }
 
 export function playUISound(name, volume) {
+  profilerStartFunc();
   if (name === 'select') {
     name = 'button_click';
   }
   if (sounds[name]) {
     soundPlay(sounds[name], volume);
   }
+  profilerStopFunc();
 }
 
 export function focusCanvas() {

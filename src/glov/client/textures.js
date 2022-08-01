@@ -515,6 +515,7 @@ Texture.prototype.destroy = function () {
   if (this.destroyed) {
     return;
   }
+  profilerStart('Texture:destroy');
   assert(this.name);
   let auto_unload = this.auto_unload;
   if (auto_unload) {
@@ -536,6 +537,7 @@ Texture.prototype.destroy = function () {
   if (typeof auto_unload === 'function') {
     auto_unload();
   }
+  profilerStop('Texture:destroy');
 };
 
 function create(params) {
