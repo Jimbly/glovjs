@@ -21,12 +21,7 @@ export interface UIBox {
   w: number;
   h: number;
 }
-export interface UIBoxColored {
-  x: number;
-  y: number;
-  z?: number;
-  w: number;
-  h: number;
+export interface UIBoxColored extends UIBox {
   color?: Vec4;
 }
 export type UIHookFn = (param: UIBox) => void;
@@ -77,7 +72,10 @@ export function setProvideUserStringDefaultMessages(success_msg: Text, failure_m
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
 export function bindSounds(sounds: Partial<Record<string, SoundID | SoundID[]>>): void;
-export function drawHBox(coords: UIBox, s: Sprite, color?: Vec4): void;
+export interface DrawHBoxParam extends UIBox {
+  no_min_width?: boolean;
+}
+export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: Vec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: Vec4): void;
 export function drawBox(coords: UIBox, s: Sprite, pixel_scale: number, color?: Vec4): void;
 export function drawMultiPartBox(

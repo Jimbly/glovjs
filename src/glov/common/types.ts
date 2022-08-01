@@ -137,7 +137,6 @@ export interface Packet {
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;
-export type UnimplementedFunction = () => void;
 
 /**
  * Client Sprite class
