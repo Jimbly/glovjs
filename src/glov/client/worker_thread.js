@@ -5,6 +5,12 @@
 
 require('./polyfill.js');
 
+if (!self.profilerStart) {
+  self.profilerStart = self.profilerStop = self.profilerStopStart = function () {
+    // no profiling in the worker thread
+  };
+}
+
 const assert = require('assert');
 
 export function sendmsg(id, data, transfer) {
