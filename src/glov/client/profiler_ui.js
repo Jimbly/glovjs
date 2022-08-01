@@ -418,7 +418,9 @@ function profilerShowEntry(walk, depth) {
       if (do_average) {
         percent = (time_sum/HIST_SIZE) / profilerAvgTime(walk.parent);
       } else {
-        percent = walk.history[show_index_time] / walk.parent.history[show_index_time];
+        percent = walk.history[show_index_time] ?
+          walk.history[show_index_time] / walk.parent.history[show_index_time] :
+          0;
       }
     }
   } else if (settings.profiler_relative === 3) {
