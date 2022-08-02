@@ -280,6 +280,10 @@ function profilerStart(name) {
         assert(!current.child);
         instance = new ProfilerEntry(current, name);
         current.child = instance;
+      } else if (last_child) {
+        instance = new ProfilerEntry(current, name);
+        instance.next = last_child.next;
+        last_child.next = instance;
       } else {
         instance = new ProfilerEntry(current, name);
         last.next = instance;
