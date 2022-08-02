@@ -113,6 +113,7 @@ let node_tick = new ProfilerEntry(root, 'tick');
 node_out_of_tick.next = node_tick;
 
 let current = root;
+let last_child = null;
 let history_index = 0; // index to the last written frame of data
 let paused = false;
 let mem_depth = MEM_DEPTH_DEFAULT;
@@ -261,26 +262,31 @@ export function profilerFrameStart() {
 
 function profilerStart(name) {
   // Find us in current's children
-  let last = null;
   let instance;
-  for (instance = current.child; instance; last = instance, instance = instance.next) {
-    if (instance.name === name) {
-      break;
-    }
-  }
-  if (!instance) {
-    if (!last) {
-      // No children yet
-      assert(!current.child);
-      instance = new ProfilerEntry(current, name);
-      current.child = instance;
-    } else {
-      instance = new ProfilerEntry(current, name);
-      last.next = instance;
-    }
+  if (last_child && last_child.name === name) {
+    instance = last_child;
+  } else if (last_child && last_child.next && last_child.next.name === name) {
+    instance = last_child.next;
   } else {
-    assert(instance.parent === current);
+    let last = null;
+    for (instance = current.child; instance; last = instance, instance = instance.next) {
+      if (instance.name === name) {
+        break;
+      }
+    }
+    if (!instance) {
+      if (!last) {
+        // No children yet
+        assert(!current.child);
+        instance = new ProfilerEntry(current, name);
+        current.child = instance;
+      } else {
+        instance = new ProfilerEntry(current, name);
+        last.next = instance;
+      }
+    }
   }
+  assert(instance.parent === current);
   // instance is set to us now!
 
   current = instance;
@@ -288,6 +294,7 @@ function profilerStart(name) {
   if (instance.depth < mem_depth) {
     instance.start_mem = memSize();
   }
+  last_child = null;
 }
 
 function profilerStop(old_name) {
@@ -299,6 +306,7 @@ function profilerStop(old_name) {
     current.dmem += memSize() - current.start_mem;
   }
   current.count++;
+  last_child = current;
   current = current.parent;
 }
 
