@@ -474,6 +474,9 @@ export function bindSounds(_sounds) {
   }
 }
 
+let draw_box_param = {
+  nozoom: true, // nozoom since different parts of the box get zoomed differently
+};
 export function drawHBox(coords, s, color) {
   spriteChainedStart();
   let uidata = s.uidata;
@@ -486,24 +489,21 @@ export function drawHBox(coords, s, color) {
   } else {
     ws[1] = max(0, coords.w - ws[0] - ws[2]);
   }
+  draw_box_param.y = coords.y;
+  draw_box_param.z = coords.z;
+  draw_box_param.h = coords.h;
+  draw_box_param.color = color;
+  draw_box_param.color1 = coords.color1;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
-      let draw_param = {
-        x,
-        y: coords.y,
-        z: coords.z || Z.UI,
-        color,
-        w: my_w,
-        h: coords.h,
-        uvs: uidata.rects[ii],
-        nozoom: true, // nozoom since different parts of the box get zoomed differently
-      };
+      draw_box_param.x = x;
+      draw_box_param.w = my_w;
+      draw_box_param.uvs = uidata.rects[ii];
       if (coords.color1) {
-        draw_param.color1 = coords.color1;
-        s.drawDualTint(draw_param);
+        s.drawDualTint(draw_box_param);
       } else {
-        s.draw(draw_param);
+        s.draw(draw_box_param);
       }
     }
     x += my_w;
@@ -517,18 +517,16 @@ export function drawVBox(coords, s, color) {
   let hs = [uidata.hw[0] * coords.w, 0, uidata.hw[2] * coords.w];
   let y = coords.y;
   hs[1] = max(0, coords.h - hs[0] - hs[2]);
+  draw_box_param.x = coords.x;
+  draw_box_param.z = coords.z;
+  draw_box_param.w = coords.w;
+  draw_box_param.color = color;
   for (let ii = 0; ii < hs.length; ++ii) {
     let my_h = hs[ii];
-    s.draw({
-      x: coords.x,
-      y,
-      z: coords.z,
-      color,
-      w: coords.w,
-      h: my_h,
-      uvs: uidata.rects[ii],
-      nozoom: true, // nozoom since different parts of the box get zoomed differently
-    });
+    draw_box_param.y = y;
+    draw_box_param.h = my_h;
+    draw_box_param.uvs = uidata.rects[ii];
+    s.draw(draw_box_param);
     y += my_h;
   }
   spriteChainedStop();
@@ -543,21 +541,21 @@ export function drawBox(coords, s, pixel_scale, color) {
   let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
   hs[1] = max(0, coords.h - hs[0] - hs[2]);
   let x = coords.x;
+  draw_box_param.z = coords.z;
+  draw_box_param.color = color;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
+      draw_box_param.x = x;
+      draw_box_param.w = my_w;
       let y = coords.y;
       for (let jj = 0; jj < hs.length; ++jj) {
         let my_h = hs[jj];
         if (my_h) {
-          s.draw({
-            x, y, z: coords.z,
-            color,
-            w: my_w,
-            h: my_h,
-            uvs: uidata.rects[jj * 3 + ii],
-            nozoom: true, // nozoom since different parts of the box get zoomed differently
-          });
+          draw_box_param.y = y;
+          draw_box_param.h = my_h;
+          draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+          s.draw(draw_box_param);
           y += my_h;
         }
       }
