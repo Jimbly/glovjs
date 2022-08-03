@@ -56,7 +56,14 @@ const {
   spotUnfocus,
 } = require('./spot.js');
 const glov_sprites = require('./sprites.js');
-const { clipped, clipPause, clipResume, BLEND_PREMULALPHA } = glov_sprites;
+const {
+  BLEND_PREMULALPHA,
+  clipped,
+  clipPause,
+  clipResume,
+  spriteChainedStart,
+  spriteChainedStop,
+} = glov_sprites;
 const textures = require('./textures.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -468,6 +475,7 @@ export function bindSounds(_sounds) {
 }
 
 export function drawHBox(coords, s, color) {
+  spriteChainedStart();
   let uidata = s.uidata;
   let x = coords.x;
   let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
@@ -500,9 +508,11 @@ export function drawHBox(coords, s, color) {
     }
     x += my_w;
   }
+  spriteChainedStop();
 }
 
 export function drawVBox(coords, s, color) {
+  spriteChainedStart();
   let uidata = s.uidata;
   let hs = [uidata.hw[0] * coords.w, 0, uidata.hw[2] * coords.w];
   let y = coords.y;
@@ -521,9 +531,11 @@ export function drawVBox(coords, s, color) {
     });
     y += my_h;
   }
+  spriteChainedStop();
 }
 
 export function drawBox(coords, s, pixel_scale, color) {
+  spriteChainedStart();
   let uidata = s.uidata;
   let scale = pixel_scale;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
@@ -552,9 +564,11 @@ export function drawBox(coords, s, pixel_scale, color) {
       x += my_w;
     }
   }
+  spriteChainedStop();
 }
 
 export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
+  spriteChainedStart();
   let uidata = s.uidata;
   let scale = pixel_scale;
 
@@ -617,6 +631,7 @@ export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) 
       x += my_w;
     }
   }
+  spriteChainedStop();
 }
 
 export function playUISound(name, volume) {
