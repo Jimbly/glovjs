@@ -82,7 +82,7 @@ export function errorReportClear() {
 //   and doesn't seem to be indicative of any actual problem.
 // Ignoring null at null for similar reasons and because we get nothing useful from the reports.
 // eslint-disable-next-line no-regex-spaces
-let filtered_errors = /avast_submit|vc_request_action|^Script error\.\n  at \(0:0\)$|^null\n  at null\(null:null\)$|getElementsByTagName\('video'\)|document\.getElementById\("search"\)|change_ua|chrome-extension|setConnectedRobot|Failed to (?:start|stop) the audio device|zaloJSV2|getCookie is not defined|originalPrompt|_AutofillCallbackHandler|sytaxError|bannerNight|privateSpecialRepair/;
+let filtered_errors = /avast_submit|vc_request_action|^Script error\.\n  at \(0:0\)$|^null\n  at null\(null:null\)$|getElementsByTagName\('video'\)|document\.getElementById\("search"\)|change_ua|chrome-extension|setConnectedRobot|Failed to (?:start|stop) the audio device|zaloJSV2|getCookie is not defined|originalPrompt|_AutofillCallbackHandler|sytaxError|bannerNight|privateSpecialRepair|__gCrWeb/;
 export function glovErrorReport(is_fatal, msg, file, line, col) {
   console.error(msg);
   if (is_fatal) {
