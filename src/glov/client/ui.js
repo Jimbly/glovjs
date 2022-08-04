@@ -494,6 +494,7 @@ export function drawHBox(coords, s, color) {
   draw_box_param.h = coords.h;
   draw_box_param.color = color;
   draw_box_param.color1 = coords.color1;
+  draw_box_param.shader = null; // gets overridden in drawDualTint
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
