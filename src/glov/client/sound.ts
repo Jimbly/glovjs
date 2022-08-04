@@ -276,7 +276,7 @@ export function soundPause(): void {
   volume_override = volume_override_target = 0;
   // Immediately mute all the music
   // Can't do a nice fade out here because we stop getting ticked when we're not in the foreground
-  soundTick(0); // eslint-disable-line no-use-before-define
+  soundTick(0); // eslint-disable-line @typescript-eslint/no-use-before-define
 }
 
 export function soundResume(): void {

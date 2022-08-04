@@ -4,13 +4,6 @@
 
 import assert from 'assert';
 
-// Old API exports
-exports.get = localStorageGet; // eslint-disable-line no-use-before-define
-exports.set = localStorageSet; // eslint-disable-line no-use-before-define
-exports.setJSON = localStorageSetJSON; // eslint-disable-line no-use-before-define
-exports.getJSON = localStorageGetJSON; // eslint-disable-line no-use-before-define
-exports.clearAll = localStorageClearAll; // eslint-disable-line no-use-before-define
-
 let storage_prefix = 'demo';
 
 let is_set = false;
@@ -144,3 +137,10 @@ export function localStorageImportAll(serialized: string): void {
     localStorageSet(key, obj[key]);
   }
 }
+
+// Old API exports
+exports.get = localStorageGet;
+exports.set = localStorageSet;
+exports.setJSON = localStorageSetJSON;
+exports.getJSON = localStorageGetJSON;
+exports.clearAll = localStorageClearAll;

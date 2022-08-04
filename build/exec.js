@@ -1,4 +1,4 @@
-/* eslint no-use-before-define:off */
+/* eslint @typescript-eslint/no-use-before-define:off */
 
 const assert = require('assert');
 const child_process = require('child_process');

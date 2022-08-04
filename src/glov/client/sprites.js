@@ -3,9 +3,9 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-// eslint-disable-next-line no-use-before-define
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.createSprite = create;
-// eslint-disable-next-line no-use-before-define
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.spritesClip = clip;
 
 export const BlendMode = {

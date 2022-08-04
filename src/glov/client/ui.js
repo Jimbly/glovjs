@@ -420,7 +420,7 @@ export function startup(param) {
     // }
   }
 
-  // eslint-disable-next-line no-use-before-define
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   scaleSizes(1);
 }
 
@@ -1021,7 +1021,7 @@ export function label(param) {
         style = param.style_focused;
       } else {
         // No focused style provided, do a generic glow instead?
-        // eslint-disable-next-line no-use-before-define
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
       }
     }

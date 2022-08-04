@@ -18,8 +18,8 @@ let map_analog_to_dpad = true;
 
 let mouse_log = false;
 
-exports.click = mouseUpEdge; // eslint-disable-line no-use-before-define
-exports.inputClick = mouseUpEdge; // eslint-disable-line no-use-before-define
+exports.click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
+exports.inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const { deprecate } = require('glov/common/util.js');
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');

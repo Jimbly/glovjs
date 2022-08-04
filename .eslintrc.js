@@ -57,6 +57,14 @@ module.exports = {
       "error",
       { "args": "none" }
     ],
+    "@typescript-eslint/no-use-before-define": [
+      "error",
+      {
+        "classes": true,
+        "functions": true,
+        "variables": true
+      }
+    ],
     "@typescript-eslint/no-useless-constructor": "error",
     "@typescript-eslint/no-var-requires": "off",
     "@typescript-eslint/semi": "error",
@@ -398,14 +406,7 @@ module.exports = {
     "no-unused-expressions": "error",
     "no-unused-labels": "error",
     "no-unused-vars": "off", // Replaced with @typescript-eslint/no-unused-vars
-    "no-use-before-define": [
-      "error",
-      {
-        "classes": true,
-        "functions": true,
-        "variables": true
-      }
-    ],
+    "no-use-before-define": "off", // Replaced with @typescript-eslint/no-use-before-define
     "no-useless-call": "error",
     "no-useless-computed-key": "error",
     "no-useless-concat": "error",

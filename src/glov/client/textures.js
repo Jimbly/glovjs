@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
-// eslint-disable-next-line no-use-before-define
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.textureLoad = load;
 
 /* eslint-disable import/order */

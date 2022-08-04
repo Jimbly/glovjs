@@ -83,7 +83,7 @@ let game_aspect;
 export let render_width;
 export let render_height;
 
-//eslint-disable-next-line no-use-before-define
+//eslint-disable-next-line @typescript-eslint/no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
 
 export let ZFAR;
@@ -150,7 +150,7 @@ export function setGlobalMatrices(_mat_view) {
 
 // Just set up mat_vp and mat_projection
 export function setMatVP(_mat_view) {
-  // eslint-disable-next-line no-use-before-define
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
@@ -555,18 +555,18 @@ function requestFrame(user_time) {
     // Ensure we have at least that many frames queued up at any point in time, so they
     // can fire at less than the normal 4ms browser delay of setTimeout()
     while (frames_requested < desired_frames) {
-      // eslint-disable-next-line no-use-before-define
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
       setTimeout(tick, 1);
       frames_requested++;
     }
   } else if (max_fps) {
     let desired_delay = max(0, round(1000 / max_fps - (user_time || 0)));
     frames_requested++;
-    // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     setTimeout(tick, desired_delay);
   } else {
     frames_requested++;
-    // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     requestAnimationFrame(tick);
   }
 }

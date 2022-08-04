@@ -2,7 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint complexity:off */
 
-// eslint-disable-next-line no-use-before-define
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.create = selectionBoxCreate;
 
 import * as assert from 'assert';

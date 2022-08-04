@@ -2,10 +2,10 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint no-bitwise:off, complexity:off, @typescript-eslint/no-shadow:off */
 
-exports.style = fontStyle; // eslint-disable-line no-use-before-define
-exports.styleColored = fontStyleColored; // eslint-disable-line no-use-before-define
-exports.styleAlpha = fontStyleAlpha; // eslint-disable-line no-use-before-define
-exports.create = fontCreate; // eslint-disable-line no-use-before-define
+exports.style = fontStyle; // eslint-disable-line @typescript-eslint/no-use-before-define
+exports.styleColored = fontStyleColored; // eslint-disable-line @typescript-eslint/no-use-before-define
+exports.styleAlpha = fontStyleAlpha; // eslint-disable-line @typescript-eslint/no-use-before-define
+exports.create = fontCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 /* eslint-disable import/order */
 const assert = require('assert');

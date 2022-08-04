@@ -36,7 +36,7 @@ export function init(scoreToValue, valueToScore, lds, score_key) {
   LS_KEY = SCORE_KEY.toLowerCase();
 
   for (let level_idx in level_defs) {
-    // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     getScore(level_idx); // fetch .local_score for updatePlayerName to take advantage of
   }
 }

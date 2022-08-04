@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-exports.create = editBoxCreate; // eslint-disable-line no-use-before-define
+exports.create = editBoxCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const assert = require('assert');
 const camera2d = require('./camera2d.js');

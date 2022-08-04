@@ -38,7 +38,6 @@ export interface SelectionBoxDrawItemParams {
   z: number;
   w: number;
   h: number;
-  // eslint-disable-next-line no-use-before-define
   display: SelectionBoxDisplay;
   font_height: number;
   style: FontStyle;
