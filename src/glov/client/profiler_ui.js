@@ -459,7 +459,7 @@ function profilerShowEntry(walk, depth) {
     `(${count})`);
 
   x = COL_X[2];
-  let spike = (time_max * 0.25 > (time_sum / sum_count));
+  let spike = (time_max * 0.25 > (time_sum / sum_count)) && (time_max > 500);
   font.drawSizedAligned(spike ? style_time_spike : style_ms, x, y + number_yoffs, Z_MS, font_size_number,
     font.ALIGN.HRIGHT, COL_W[2], 0,
     (time_max*1000).toFixed(0));
