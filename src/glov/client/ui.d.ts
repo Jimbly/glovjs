@@ -67,7 +67,10 @@ export function loadUISprite2(name: string, param: {
   layers?: number;
 }): void;
 export function setFonts(new_font: Font, new_title_font?: Font): void;
-export function setButtonsDefaultLabels(buttons_labels: Record<'ok' | 'cancel' | 'yes' | 'no', Text>): void;
+type BaseButtonLabels = Record<'ok' | 'cancel' | 'yes' | 'no', Text>;
+type ExtraButtonLabels = Partial<Record<string, Text>>;
+type ButtonLabels = BaseButtonLabels & ExtraButtonLabels;
+export function setButtonsDefaultLabels(buttons_labels: ButtonLabels): void;
 export function setProvideUserStringDefaultMessages(success_msg: Text, failure_msg: Text): void;
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
