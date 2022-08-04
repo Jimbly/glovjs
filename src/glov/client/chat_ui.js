@@ -17,7 +17,13 @@ const { netClient, netClientId, netSubs, netUserId } = require('./net.js');
 const { profanityFilter, profanityStartup } = require('./words/profanity.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
 const settings = require('./settings.js');
-const { spotUnfocus } = require('./spot.js');
+const {
+  SPOT_NAV_DOWN,
+  SPOT_NAV_LEFT,
+  SPOT_NAV_RIGHT,
+  SPOT_NAV_UP,
+  spotUnfocus,
+} = require('./spot.js');
 const ui = require('./ui.js');
 const { clamp, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
@@ -159,6 +165,13 @@ function ChatUI(params) {
     spatial_focus: false,
     max_len: params.max_len,
     text: '',
+    custom_nav: {
+      // We want left/right as well as up/down to be handled by the input element, not used to change focus.
+      [SPOT_NAV_LEFT]: null,
+      [SPOT_NAV_UP]: null,
+      [SPOT_NAV_RIGHT]: null,
+      [SPOT_NAV_DOWN]: null,
+    },
   });
   this.channel = null;
 
