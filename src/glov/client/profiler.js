@@ -461,6 +461,24 @@ export function profilerMaxMem(entry) {
   return dmem_max;
 }
 
+export function profilerAvgMem(entry) {
+  let dmem_avg = 0;
+  let dmem_count = 0;
+  for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
+    if (entry.history[ii]) {
+      let dmem = entry.history[ii+2];
+      if (dmem >= 0) {
+        dmem_avg += dmem;
+        dmem_count++;
+      }
+    }
+  }
+  if (dmem_count) {
+    dmem_avg /= dmem_count;
+  }
+  return dmem_avg;
+}
+
 export function profilerExport() {
   let obj = {
     history_index,

@@ -26,6 +26,7 @@ const {
   profilerImport,
   profilerExport,
   profilerHistoryIndex,
+  profilerAvgMem,
   profilerMaxMem,
   profilerMeasureBloat,
   profilerMemDepthGet,
@@ -121,7 +122,7 @@ settings.register({
   profiler_average: {
     default_value: 1,
     type: cmd_parse.TYPE_INT,
-    range: [0,1],
+    range: [0,2],
     access_show: ['hidden'],
   },
   profiler_relative: {
@@ -333,6 +334,8 @@ function profilerShowEntry(walk, depth) {
   let sum_count=0;
   let dmem_min=Infinity;
   let dmem_max=-Infinity;
+  let dmem_avg=0;
+  let dmem_count=0;
   for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
     if (walk.history[ii]) {
       sum_count++;
@@ -343,10 +346,17 @@ function profilerShowEntry(walk, depth) {
       dmem_max_value = max(dmem_max_value, dmem);
       dmem_min = min(dmem_min, dmem);
       dmem_max = max(dmem_max, dmem);
+      if (dmem >= 0) {
+        dmem_avg += dmem;
+        ++dmem_count;
+      }
     }
   }
   if (!count_sum) {
     return true;
+  }
+  if (dmem_count) {
+    dmem_avg = round(dmem_avg / dmem_count);
   }
   let over = mouseover_elem[walk.id] === 1;
   let parent_over = mouseover_elem[walk.id] === 2;
@@ -425,8 +435,10 @@ function profilerShowEntry(walk, depth) {
     }
   } else if (settings.profiler_relative === 3) {
     // % of mem
-    if (do_average) {
+    if (do_average === 2) {
       percent = dmem_max / total_frame_mem;
+    } else if (do_average) {
+      percent = dmem_avg / total_frame_mem;
     } else {
       percent = walk.history[show_index_mem] / total_frame_mem;
     }
@@ -467,7 +479,7 @@ function profilerShowEntry(walk, depth) {
   if (show_mem) {
     x = COL_X[3];
 
-    let mem_value = do_average ? dmem_max : walk.history[show_index_mem];
+    let mem_value = do_average === 2 ? dmem_max : do_average ? dmem_avg : walk.history[show_index_mem];
     if (mem_value > 0) {
       if (do_average) {
         mem_value -= bloat.inner.mem * round(count_sum / sum_count);
@@ -577,7 +589,6 @@ function buttonInit() {
   button_average = {
     x, y, z,
     w: BUTTON_W, h: BUTTON_H, font_height: BUTTON_FONT_HEIGHT,
-    // text: settings.profiler_average ? 'average' : 'last frame',
   };
   y += BUTTON_H;
   button_graph = {
@@ -704,11 +715,12 @@ function profilerUIRun() {
   }
   y += BUTTON_H;
 
-  text = settings.profiler_average ? 'average' : 'last frame';
+  text = settings.profiler_average === 2 ? 'max' : settings.profiler_average ? 'average' : 'last frame';
   if (do_ui) {
     button_average.text = text;
     if (ui.buttonText(button_average)) {
-      settings.set('profiler_average', 1 - settings.profiler_average);
+      let num_values = HAS_MEMSIZE ? 3 : 2;
+      settings.set('profiler_average', (settings.profiler_average + 1) % num_values);
     }
   } else {
     font.drawSizedAligned(null, x, y, z, FONT_SIZE, font.ALIGN.HVCENTERFIT, BUTTON_W, BUTTON_H, text);
@@ -873,7 +885,11 @@ function profilerUIRun() {
       // "% of frame"
       total_frame_time = profilerAvgTime(root);
     } else if (settings.profiler_relative === 3) {
-      total_frame_mem = profilerMaxMem(root);
+      if (do_average === 2) {
+        total_frame_mem = profilerMaxMem(root);
+      } else {
+        total_frame_mem = profilerAvgMem(root);
+      }
     }
   } else {
     // use last frame for percents
