@@ -53,6 +53,9 @@ function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<st
   if (netDisconnected()) {
     return void cb('ERR_DISCONNECTED');
   }
+  if (!requesting_user_id) {
+    return void cb('ERR_NOT_LOGGED_IN');
+  }
   netSubs().getMyUserChannel().cmdParse(`${cmd} ${user_id}`, function (err: string, resp: FriendCmdResponse) {
     if (err) {
       return void cb(err);
