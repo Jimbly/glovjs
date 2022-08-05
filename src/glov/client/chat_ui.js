@@ -985,7 +985,7 @@ ChatUI.prototype.run = function (opts) {
     // Also prevent mouseover from going to anything beneat it
     input.mouseOver({ x: x0, y: y - border, w: outer_w, h: y1 - y + border });
     // Also a mouse down anywhere outside of the chat UI should dismiss it
-    if (input.mouseDownEdge({ peek: true })) {
+    if (is_focused && input.mouseDownEdge({ peek: true })) {
       // On touch, tapping doesn't always remove focus from the edit box!
       // Maybe this logic should be in the editbox logic?
       spotUnfocus();
