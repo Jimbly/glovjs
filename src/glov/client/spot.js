@@ -165,7 +165,7 @@ function spotFocusSet(param, from_mouseover, force, log) {
     playUISound(sound_rollover || SPOT_DEFAULT.sound_rollover);
   }
   if (key_prev !== key || pad_mode !== !from_mouseover) {
-    spotlog('spotFocusSet', key, log, from_mouseover ? '' : 'pad_mode');
+    spotlog('spotFocusSet', key, log, from_mouseover ? '' : 'pad_mode', use_nonsticky ? 'nonsticky' : '');
   }
   pad_mode = !from_mouseover;
   if (use_nonsticky) {
@@ -964,7 +964,7 @@ export function spot(param) {
     }
   }
   let is_mouseover = mouseOver(param);
-  if (focused && !focus_steal && !is_mouseover) {
+  if (focused && !focus_steal && !is_mouseover && !param.always_over) {
     // Want to unfocus if mouse is in use
     if (mouseButtonHadEdge()) {
       // Unfocus regardless
@@ -1052,6 +1052,8 @@ const canvas_spot = {
   w: 0, h: 0,
   // custom_nav filled below
   sound_rollover: null,
+  always_over: true,
+  sticky_focus: true,
 };
 // Defines a virtual spot for the canvas, which is focusable, and which, when focused,
 //  does not capture any navigation keys (e.g. for arrows driving avatar control)
