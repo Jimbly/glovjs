@@ -668,11 +668,18 @@ export function panel(param) {
 }
 
 export function drawTooltip(param) {
-  param.tooltip = getStringFromLocalizable(param.tooltip);
+  let { tooltip } = param;
+  if (typeof tooltip === 'function') {
+    tooltip = tooltip(param);
+    if (!tooltip) {
+      return;
+    }
+  }
+  tooltip = getStringFromLocalizable(tooltip);
 
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
-  assert(typeof param.tooltip === 'string');
+  assert(typeof tooltip === 'string');
 
   let clip_pause = clipped();
   if (clip_pause) {
@@ -684,7 +691,7 @@ export function drawTooltip(param) {
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad * 2;
-  let dims = font.dims(modal_font_style, w, 0, font_height, param.tooltip);
+  let dims = font.dims(modal_font_style, w, 0, font_height, tooltip);
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
@@ -701,7 +708,7 @@ export function drawTooltip(param) {
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(modal_font_style,
     x + eff_tooltip_pad, y, z+1, w, 0, font_height,
-    param.tooltip);
+    tooltip);
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
 
@@ -731,12 +738,19 @@ export function checkHooks(param, click) {
 }
 
 export function drawTooltipBox(param) {
+  let { tooltip } = param;
+  if (typeof tooltip === 'function') {
+    tooltip = tooltip(param);
+    if (!tooltip) {
+      return;
+    }
+  }
   drawTooltip({
     x: param.x,
     y: param.y + param.h + 2,
     tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
-    tooltip: param.tooltip,
+    tooltip,
     tooltip_width: param.tooltip_width,
   });
 }

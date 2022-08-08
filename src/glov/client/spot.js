@@ -12,7 +12,7 @@ export const BUTTON_ANY = -2; // same as input.ANY
 export const SPOT_DEFAULT = {
   key: undefined, // string | undefined (defaults to from x,y otherwise)
   disabled: false, // boolean
-  tooltip: null, // string | LocalizableString
+  tooltip: null, // string | LocalizableString | (param) => string | null
   in_event_cb: null, // for clicks and key presses
   drag_target: false, // receive dragDrop events
   drag_over: false, // consume dragOver events
