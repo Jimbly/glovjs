@@ -156,7 +156,7 @@ class GlovUIEditBox {
     return this.is_focused;
   }
 
-  updateFocus() {
+  updateFocus(is_reset) {
     let was_glov_focused = this.is_focused;
     let spot_ret = spotFocusCheck(this);
     let { focused } = spot_ret;
@@ -176,7 +176,13 @@ class GlovUIEditBox {
       spotFocusSteal(this);
       focused = true;
     } else if (!dom_focused && focused) {
-      // Leave it alone, it may be a browser pop-up such as for passwords
+      if (is_reset) {
+        // Just appeared this frame, steal DOM focus
+        this.onetime_focus = true;
+        spotlog('GLOV focused, DOM not, new edit box, focusing', this);
+      } else {
+        // Leave it alone, it may be a browser pop-up such as for passwords
+      }
     }
 
     if (focused) {
@@ -202,14 +208,16 @@ class GlovUIEditBox {
   run(params) {
     this.applyParams(params);
 
+    let is_reset = false;
     if (this.last_frame !== engine.frame_index - 1) {
       // it's been more than a frame, we must have not been running, discard async events
       this.submitted = false;
+      is_reset = true;
     }
     this.last_frame = engine.frame_index;
 
     this.canceled = false;
-    let { allow_focus, focused } = this.updateFocus();
+    let { allow_focus, focused } = this.updateFocus(is_reset);
 
     this_frame_edit_boxes.push(this);
     let elem = allow_focus && uiGetDOMElem(this.elem, true);
