@@ -296,31 +296,25 @@ function hasActiveChildren(walk) {
   }
   return false;
 }
-function childCallCount(node, with_mem) {
+function childMemCallCount(node, idx) {
   let walk = node.child;
   let count = 0;
   while (walk) {
-    if (do_average) {
-      let total = 0;
-      let sum_count = 0;
-      for (let ii = 0; ii < HIST_TOT; ii+=HIST_COMPONENTS) {
-        if (!with_mem || walk.history[ii+2]) {
-          sum_count++;
-          total += walk.history[ii]; // count
-        }
-      }
-      if (sum_count) {
-        count += round(total / sum_count);
-      }
-    } else {
-      if (!with_mem || walk.history[show_index_mem]) {
-        count += walk.history[show_index_count];
-      }
+    if (walk.history[idx+2]) {
+      count += walk.history[idx];
     }
-    count += childCallCount(walk, with_mem);
+    count += childMemCallCount(walk, idx);
     walk = walk.next;
   }
   return count;
+}
+function nodeMemValue(node, idx) {
+  let count = node.history[idx];
+  let dmem = node.history[idx+2];
+  if (show_mem && settings.profiler_hide_bloat && dmem > 0) {
+    dmem = max(0, dmem - count * bloat.inner.mem - childMemCallCount(node, idx) * bloat.outer.mem);
+  }
+  return dmem;
 }
 let click_param = { x: 0, h: LINE_HEIGHT };
 function profilerShowEntry(walk, depth) {
@@ -342,8 +336,8 @@ function profilerShowEntry(walk, depth) {
       count_sum += walk.history[ii]; // count
       time_sum += walk.history[ii+1]; // time
       time_max = max(time_max, walk.history[ii+1]);
-      let dmem = walk.history[ii+2];
-      dmem_max_value = max(dmem_max_value, dmem);
+      let dmem = nodeMemValue(walk, ii);
+      dmem_max_value = max(dmem_max_value, dmem); // global max, for graph scaling
       dmem_min = min(dmem_min, dmem);
       dmem_max = max(dmem_max, dmem);
       if (dmem >= 0) {
@@ -479,16 +473,7 @@ function profilerShowEntry(walk, depth) {
   if (show_mem) {
     x = COL_X[3];
 
-    let mem_value = do_average === 2 ? dmem_max : do_average ? dmem_avg : walk.history[show_index_mem];
-    if (mem_value > 0) {
-      if (do_average) {
-        mem_value -= bloat.inner.mem * round(count_sum / sum_count);
-      } else {
-        mem_value -= bloat.inner.mem * walk.history[show_index_count];
-      }
-      let child_count = childCallCount(walk, true);
-      mem_value = max(0, mem_value - bloat.outer.mem * child_count);
-    }
+    let mem_value = do_average === 2 ? dmem_max : do_average ? dmem_avg : nodeMemValue(walk, show_index_count);
 
     if (dmem_min < 0) {
       // Had a GC
