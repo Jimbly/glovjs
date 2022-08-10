@@ -522,6 +522,7 @@ export function drawVBox(coords, s, color) {
   draw_box_param.z = coords.z;
   draw_box_param.w = coords.w;
   draw_box_param.color = color;
+  draw_box_param.shader = null;
   for (let ii = 0; ii < hs.length; ++ii) {
     let my_h = hs[ii];
     draw_box_param.y = y;
@@ -544,6 +545,7 @@ export function drawBox(coords, s, pixel_scale, color) {
   let x = coords.x;
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
+  draw_box_param.shader = null;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
