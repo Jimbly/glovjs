@@ -1199,6 +1199,7 @@ function modalDialogRun() {
     }
     let but_label = cur_button.label || buttons_default_labels[key_lower] || key;
     if (buttonText(defaults({
+      key: `md_${key}`,
       x, y, z: Z.MODAL,
       w: eff_button_width,
       h: eff_button_height,
