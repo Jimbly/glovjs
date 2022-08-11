@@ -441,10 +441,12 @@ class ScrollAreaInternal implements ScrollArea {
         --bar_spot_ret.ret;
         gained_focus = true;
         this.consumed_click = true;
-        if (bar_spot_ret.pos[1] > handle_screenpos + handle_pixel_h/2) {
-          this.scroll_pos += this.h;
-        } else {
-          this.scroll_pos -= this.h;
+        if (bar_spot_ret.pos) {
+          if (bar_spot_ret.pos[1] > handle_screenpos + handle_pixel_h/2) {
+            this.scroll_pos += this.h;
+          } else {
+            this.scroll_pos -= this.h;
+          }
         }
       }
 
