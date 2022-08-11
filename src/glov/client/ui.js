@@ -1412,7 +1412,7 @@ export function menuUp(param) {
   glov_input.eatAllInput();
 }
 
-function copyTextToClipboard(text) {
+export function copyTextToClipboard(text) {
   let textArea = document.createElement('textarea');
   textArea.style.position = 'fixed';
   textArea.style.top = 0;

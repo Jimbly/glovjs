@@ -256,6 +256,7 @@ export interface MenuFadeParams {
   z?: number;
 }
 export function menuUp(param?: MenuFadeParams): void;
+export function copyTextToClipboard(text: string): boolean;
 export function provideUserString(title: Text, str: string): void;
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: Vec4): void;
 export function drawRect2(param: UIBoxColored): void;
