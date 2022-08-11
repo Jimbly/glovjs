@@ -408,15 +408,19 @@ ChatUI.prototype.onChatBroadcast = function (data) {
   });
 };
 
+ChatUI.prototype.focus = function () {
+  this.edit_text_entry.focus();
+};
+
 ChatUI.prototype.runLate = function () {
   this.did_run_late = true;
   if (input.keyDownEdge(input.KEYS.RETURN)) {
-    this.edit_text_entry.focus();
+    this.focus();
   }
   if (input.keyDownEdge(input.KEYS.SLASH) ||
     input.keyDownEdge(input.KEYS.NUMPAD_DIVIDE)
   ) {
-    this.edit_text_entry.focus();
+    this.focus();
     this.edit_text_entry.setText('/');
   }
 };
@@ -705,7 +709,7 @@ ChatUI.prototype.run = function (opts) {
         // Eat tab even if there's nothing to complete, for consistency
         let pressed_tab = !input.keyDown(input.KEYS.SHIFT) && input.keyDownEdge(input.KEYS.TAB);
         if (pressed_tab) {
-          this.edit_text_entry.focus();
+          this.focus();
         }
         let cur_text = this.edit_text_entry.getText();
         if (cur_text) {
@@ -811,7 +815,7 @@ ChatUI.prototype.run = function (opts) {
                 this.edit_text_entry.setText(text);
               }
               if (!is_focused) { // was auto-unfocused
-                this.edit_text_entry.focus();
+                this.focus();
               }
             });
           } else {
