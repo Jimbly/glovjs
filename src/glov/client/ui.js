@@ -255,6 +255,10 @@ export function colorSetSetShades(rollover, down, disabled) {
   }
 }
 
+export function uiSetFontStyleFocused(new_style) {
+  font_style_focused = new_style;
+}
+
 export function loadUISprite(name, ws, hs) {
   let wrap_s = gl.CLAMP_TO_EDGE;
   let wrap_t = gl.CLAMP_TO_EDGE;
