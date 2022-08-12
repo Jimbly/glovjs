@@ -813,9 +813,9 @@ export function spotFocusCheck(param) {
       param.dom_pos = {};
     }
     camera2d.virtualToDomPosParam(param.dom_pos, param);
+    const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
     if (!spotEntirelyObscured(param)) {
       frameSpotsPush(param);
-      const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
       if (auto_focus) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
           spotlog('auto_focus', key);
@@ -823,8 +823,10 @@ export function spotFocusCheck(param) {
           spotFocusSetSilent(param);
           focused = true;
         }
-        frame_autofocus_spots[key] = param;
       }
+    }
+    if (auto_focus) {
+      frame_autofocus_spots[key] = param;
     }
     if (focus_sub_rect && focus_key === key) {
       focus_sub_rect_elem = param;
