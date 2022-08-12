@@ -96,14 +96,17 @@ export function isLocalHost(ip) {
   return cached;
 }
 
-export function allowMapFromLocalhostOnly(app) {
-  app.use(function (req, res, next) {
+export function requestIsLocalHost(req) {
+  if (req.glov_is_dev === undefined) {
     let ip = ipFromRequest(req);
     req.glov_is_dev = isLocalHost(ip);
-    next();
-  });
+  }
+  return req.glov_is_dev;
+}
+
+export function allowMapFromLocalhostOnly(app) {
   app.all('*.map', function (req, res, next) {
-    if (req.glov_is_dev) {
+    if (requestIsLocalHost(req)) {
       return void next();
     }
     res.writeHead(403, { 'Content-Type': 'text/plain' });
