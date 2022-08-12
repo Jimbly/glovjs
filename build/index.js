@@ -48,6 +48,13 @@ const prod_uglify_opts = {
   mangle: { toplevel: true },
 };
 
+const babel_plugins_base = [
+  // Generates much more optimal require() statements / usage
+  // TODO: Switch (here, and 2 other places) to `transform-modules-simple-commonjs` if PR is accepted
+  ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false, inlineReplace: true }],
+  ['replace-ts-export-assignment', {}],
+];
+
 function copy(job, done) {
   job.out(job.getFile());
   done();
@@ -84,12 +91,7 @@ gb.task({
         }],
         '@babel/preset-typescript'
       ],
-      plugins: [
-        // Generates much more optimal require() statements / usage
-        // TODO: Switch (here, and 2 other places) to `transform-modules-simple-commonjs` if PR is accepted
-        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false, inlineReplace: true }],
-        ['replace-ts-export-assignment', {}],
-      ],
+      plugins: babel_plugins_base,
     },
   }),
 });
@@ -173,12 +175,10 @@ gb.task({
         '@babel/preset-typescript'
       ],
       plugins: [
-        // Generates much more optimal require() statements / usage
-        ['@jimbly/babel-plugin-transform-modules-simple-commonjs', { exportNamed: false, inlineReplace: true }],
+        ...babel_plugins_base,
         // Note: Dependencies are not tracked from babel plugins, so use
         //   `webfs` instead of `static-fs` where possible
         ['static-fs', {}], // generates good code, but does not allow reloading/watchify
-        ['replace-ts-export-assignment', {}],
         ['transform-preprocessor', { replace: {
           'profilerStartFunc()': 'profilerStart(__funcname)',
           'profilerStopFunc()': 'profilerStop(__funcname)',
