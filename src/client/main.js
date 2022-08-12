@@ -13,6 +13,7 @@ import * as settings from 'glov/client/settings.js';
 import { slider } from 'glov/client/slider.js';
 import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/client/sound.js';
 import { spineCreate } from 'glov/client/spine.js';
+import { spotSuppressPad } from 'glov/client/spot.js';
 import { createSpriteAnimation } from 'glov/client/sprite_animation.js';
 import * as glov_sprites from 'glov/client/sprites.js';
 import { createSprite } from 'glov/client/sprites.js';
@@ -244,9 +245,9 @@ export function main() {
   }
 
   let last_particles = 0;
+  let pad_controls_sprite = false;
 
   function test(dt) {
-    uiHandlingNav(); // register nav focus handler first in frame
     gl.clearColor(0, 0.72, 1, 1);
     if (!test.color_sprite) {
       test.color_sprite = v4clone(color_white);
@@ -254,6 +255,9 @@ export function main() {
         x: (Math.random() * (game_width - sprite_size - 200) + (sprite_size * 0.5) + 200),
         y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
       };
+    }
+    if (pad_controls_sprite) {
+      spotSuppressPad();
     }
 
     if (flagGet('ui_test')) {
@@ -270,7 +274,7 @@ export function main() {
 
     test.character.dx = 0;
     test.character.dy = 0;
-    if (!uiHandlingNav()) {
+    if (!uiHandlingNav()) { // could do WASD regardless
       test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
       test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
       test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
@@ -507,6 +511,10 @@ export function main() {
     //     last_touch_state: input.last_touch_state,
     //     touch_state: input.touch_state,
     //   }, undefined, 2));
+
+    if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
+      pad_controls_sprite = !pad_controls_sprite;
+    }
   }
 
   function testInit(dt) {

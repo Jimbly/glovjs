@@ -15,6 +15,7 @@ import * as particles from 'glov/client/particles.js';
 import * as shaders from 'glov/client/shaders.js';
 import { socialInit } from 'glov/client/social.js';
 import { soundLoad, soundPlay } from 'glov/client/sound.js';
+import { spotSuppressPad } from 'glov/client/spot.js';
 import * as sprite_animation from 'glov/client/sprite_animation.js';
 import * as glov_sprites from 'glov/client/sprites.js';
 import * as ui from 'glov/client/ui.js';
@@ -240,7 +241,12 @@ export function main() {
     }
   }
 
+  let pad_controls_sprite = true;
+  let was_active = false;
   test = function (dt) {
+    if (pad_controls_sprite) {
+      spotSuppressPad();
+    }
     app.chat_ui.run();
     app.account_ui.showLogin({
       x: 0, y: 0,
@@ -258,6 +264,10 @@ export function main() {
     }
 
     if (test_room && test_room.subscriptions) {
+      if (!was_active) {
+        pad_controls_sprite = true;
+        was_active = true;
+      }
       playerMotion(dt);
 
       sprites.game_bg.draw({
@@ -300,9 +310,16 @@ export function main() {
           }
         }
       }
+    } else {
+      pad_controls_sprite = false;
+      was_active = false;
     }
 
     app.chat_ui.runLate();
+
+    if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
+      pad_controls_sprite = !pad_controls_sprite;
+    }
   };
 
   function testInit(dt) {
