@@ -127,6 +127,10 @@ export function spotPadMode() {
   return pad_mode;
 }
 
+export function spotSetPadMode(new_mode) {
+  pad_mode = new_mode;
+}
+
 export function spotlog(...args) {
   // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line global-require
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
@@ -609,6 +613,7 @@ export function spotSuppressPad() {
   suppress_pad = true;
   if (pad_mode && focus_key && !focus_is_sticky) {
     spotUnfocus();
+    pad_mode = true; // but, keep pad_mode set
   }
 }
 
