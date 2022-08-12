@@ -1068,6 +1068,11 @@ export function startup(params) {
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
   }
+  let nocanvas = document.getElementById('nocanvas');
+  if (nocanvas) {
+    // hide the interior of the <canvas> elements, so that the get.webgl.org link is not focusable!
+    nocanvas.style.visibility = 'hidden';
+  }
   console.log(`Using WebGL${webgl2?2:1}`);
 
   assert(gl);
