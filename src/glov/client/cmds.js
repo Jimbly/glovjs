@@ -10,6 +10,7 @@ const engine = require('./engine.js');
 const { errorReportDetailsString } = require('./error_report.js');
 const net = require('./net.js');
 const { netClient, netDisconnected } = net;
+const shaders = require('./shaders.js');
 const textures = require('./textures.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
 
@@ -48,6 +49,13 @@ cmd_parse.register({
   }
 });
 
+function validDefine(str) {
+  if (shaders.semantic[str]) {
+    return false;
+  }
+  return str.match(/^[A-Z][A-Z0-9_]*$/);
+}
+
 cmd_parse.register({
   cmd: 'd',
   help: 'Toggles a debug define',
@@ -59,6 +67,9 @@ cmd_parse.register({
       } else {
         return void resp_func(null, 'No debug defines active');
       }
+    }
+    if (!validDefine(str)) {
+      return void resp_func('Invalid define specified');
     }
     engine.defines[str] = !engine.defines[str];
     resp_func(null, `D=${str} now ${engine.defines[str]?'SET':'unset'}`);
