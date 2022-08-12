@@ -49,9 +49,9 @@ const {
   SPOT_STATE_DISABLED,
   spot,
   spotEndOfFrame,
-  spotFocusableCanvas,
   spotKey,
   spotPadMode,
+  spotPadSuppressed,
   spotTopOfFrame,
   spotUnfocus,
 } = require('./spot.js');
@@ -652,7 +652,7 @@ export function focusCanvas() {
 
 // Returns true if the navigation inputs (arrows, etc) should go to the UI, not the app
 export function uiHandlingNav() {
-  return menu_up || !spotFocusableCanvas().focused;
+  return menu_up || !spotPadSuppressed();
 }
 
 export function panel(param) {

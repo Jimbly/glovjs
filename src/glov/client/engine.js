@@ -58,6 +58,7 @@ const glov_transition = require('./transition.js');
 const glov_ui = require('./ui.js');
 const urlhash = require('./urlhash.js');
 const { callEach, clamp, defaults, nearSame, ridx } = require('glov/common/util.js');
+const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
@@ -1069,7 +1070,7 @@ export function startup(params) {
     return false;
   }
   let nocanvas = document.getElementById('nocanvas');
-  if (nocanvas) {
+  if (verify(nocanvas)) {
     // hide the interior of the <canvas> elements, so that the get.webgl.org link is not focusable!
     nocanvas.style.visibility = 'hidden';
   }
