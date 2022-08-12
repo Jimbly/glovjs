@@ -180,6 +180,10 @@ class GlovUIEditBox {
         // Just appeared this frame, steal DOM focus
         this.onetime_focus = true;
         spotlog('GLOV focused, DOM not, new edit box, focusing', this);
+      } else if (document.activeElement === engine.canvas || document.activeElement === this.postspan) {
+        // focus explicitly on canvas or left our input element, lose focus
+        spotlog('GLOV focused, DOM canvas focused, unfocusing', this);
+        spotUnfocus();
       } else {
         // Leave it alone, it may be a browser pop-up such as for passwords
       }
@@ -245,6 +249,7 @@ class GlovUIEditBox {
         elem.appendChild(input);
         let span = document.createElement('span');
         span.setAttribute('tabindex', 3);
+        this.postspan = span;
         elem.appendChild(span);
         input.value = this.text;
         if (this.uppercase) {
