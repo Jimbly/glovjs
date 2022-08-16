@@ -16,6 +16,7 @@ const {
   pointerLocked,
   inputClick,
 } = require('./input.js');
+const { getStringIfLocalizable } = require('./localization.js');
 const {
   SPOT_NAV_LEFT,
   SPOT_NAV_RIGHT,
@@ -238,7 +239,7 @@ class GlovUIEditBox {
         elem.textContent = '';
         let input = document.createElement(this.multiline ? 'textarea' : 'input');
         input.setAttribute('type', this.type);
-        input.setAttribute('placeholder', this.placeholder);
+        input.setAttribute('placeholder', getStringIfLocalizable(this.placeholder));
         if (this.max_len) {
           input.setAttribute('maxLength', this.max_len);
         }
