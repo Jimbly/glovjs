@@ -14,13 +14,15 @@ declare module 'glov/client/global' {
       // GLOV bootstrap
       debugmsg: (msg: string, clear: boolean) => void;
 
-      // GLOV profiler
-      profilerStart: (name: string) => void;
-      profilerStop: (name: string) => void;
-      profilerStopStart: (name: string) => void;
     }
 
     // GLOV ui.js
     let Z: Record<string, number>;
+    // GLOV profiler
+    const profilerStart: (name: string) => void;
+    const profilerStop: (name: string) => void;
+    const profilerStopStart: (name: string) => void;
+    const profilerStartFunc: () => void;
+    const profilerStopFunc: () => void;
   }
 }
