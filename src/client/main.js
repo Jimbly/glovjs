@@ -15,6 +15,7 @@ import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/cl
 import { spineCreate } from 'glov/client/spine.js';
 import { spotSuppressPad } from 'glov/client/spot.js';
 import { createSpriteAnimation } from 'glov/client/sprite_animation.js';
+import { spriteSetGet } from 'glov/client/sprite_sets.js';
 import * as glov_sprites from 'glov/client/sprites.js';
 import { createSprite } from 'glov/client/sprites.js';
 import * as transition from 'glov/client/transition.js';
@@ -158,10 +159,13 @@ export function main() {
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
   let pixely = flagGet('pixely', 'on');
   let font;
+  let ui_sprites;
   if (pixely === 'strict') {
     font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
+    ui_sprites = spriteSetGet('pixely');
   } else if (pixely && pixely !== 'off') {
     font = { info: font_info_04b03x2, texture: 'font/04b03_8x2' };
+    ui_sprites = spriteSetGet('pixely');
   } else {
     font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
@@ -172,6 +176,7 @@ export function main() {
     pixely,
     font,
     viewport_postprocess: false,
+    ui_sprites,
   })) {
     return;
   }

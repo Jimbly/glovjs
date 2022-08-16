@@ -1121,7 +1121,6 @@ export function startup(params) {
   if (is_pixely) {
     textures.defaultFilters(gl.NEAREST, gl.NEAREST);
     settings.runTimeDefault('render_scale_mode', 1);
-    params.ui_sprites = defaults(params.ui_sprites || {}, glov_ui.ui_sprites_pixely);
   } else {
     textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
