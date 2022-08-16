@@ -819,7 +819,7 @@ export function spotFocusCheck(param) {
     }
     camera2d.virtualToDomPosParam(param.dom_pos, param);
     const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
-    if (!spotEntirelyObscured(param)) {
+    if (!spotEntirelyObscured(param) || focused && focus_is_sticky) {
       frameSpotsPush(param);
       if (auto_focus) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
