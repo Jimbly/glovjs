@@ -24,6 +24,15 @@ export const LINE_ALIGN = 1<<0;
 export const LINE_CAP_SQUARE = 1<<1;
 export const LINE_CAP_ROUND = 1<<2;
 
+export const internal = {
+  checkHooks, // eslint-disable-line @typescript-eslint/no-use-before-define
+  cleanupDOMElems, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiEndFrame, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiSetFonts, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiTick, // eslint-disable-line @typescript-eslint/no-use-before-define
+};
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -73,6 +82,7 @@ deprecate(exports, 'slider_dragging', 'slider.js:sliderIsDragging()');
 deprecate(exports, 'slider_rollover', 'slider.js:sliderIsFocused()');
 deprecate(exports, 'setSliderDefaultShrink', 'slider.js:sliderSetDefaultShrink()');
 deprecate(exports, 'slider', 'slider.js:slider()');
+deprecate(exports, 'bindSounds', 'uiBindSounds');
 
 const MODAL_DARKEN = 0.75;
 let KEYS;
@@ -293,7 +303,7 @@ export function loadUISprite2(name, param) {
   sprites[name] = glov_sprites.create(sprite_param);
 }
 
-export function setFonts(new_font, new_title_font) {
+function uiSetFonts(new_font, new_title_font) {
   font = new_font;
   title_font = new_title_font || font;
 }
@@ -337,7 +347,7 @@ const base_ui_sprites = {
   progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
 };
 
-export function startup(param) {
+function uiStartup(param) {
   font = param.font;
   title_font = param.title_font || font;
   let overrides = param.ui_sprites;
@@ -439,7 +449,7 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   return elem;
 }
 
-export function bindSounds(_sounds) {
+export function uiBindSounds(_sounds) {
   sounds = _sounds;
   for (let key in sounds) {
     soundLoad(sounds[key]);
@@ -700,7 +710,7 @@ export function drawTooltip(param) {
   }
 }
 
-export function checkHooks(param, click) {
+function checkHooks(param, click) {
   if (param.hook) {
     for (let ii = 0; ii < hooks.length; ++ii) {
       if (click) {
@@ -1307,7 +1317,7 @@ function releaseOldUIElemData() {
   }
 }
 
-export function tickUI(dt) {
+function uiTick(dt) {
   per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 0;
   releaseOldUIElemData();
 
@@ -1370,7 +1380,7 @@ export function tickUI(dt) {
   }
 }
 
-export function endFrame() {
+function uiEndFrame() {
   spotEndOfFrame();
 
   if (glov_input.click({
@@ -1386,7 +1396,7 @@ export function endFrame() {
   }
 }
 
-export function cleanupDOMElems() {
+function cleanupDOMElems() {
   while (dom_elems.length) {
     let elem = dom_elems.pop();
     dynamic_text_elem.removeChild(elem);

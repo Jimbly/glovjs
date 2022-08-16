@@ -96,12 +96,12 @@ import {
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
-  checkHooks,
   drawLine,
   drawRect,
   drawTooltipBox,
   playUISound,
 } from './ui.js';
+const { checkHooks } = ui.internal;
 
 let focus_sub_rect = null;
 let focus_sub_rect_elem;

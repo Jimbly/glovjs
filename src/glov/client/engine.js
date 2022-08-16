@@ -55,7 +55,17 @@ const { blendModeReset } = sprites;
 const textures = require('./textures.js');
 const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
-const glov_ui = require('./ui.js');
+const {
+  drawRect,
+  internal: {
+    cleanupDOMElems,
+    uiEndFrame,
+    uiSetFonts,
+    uiStartup,
+    uiTick,
+  },
+  uiBindSounds,
+} = require('./ui.js');
 const urlhash = require('./urlhash.js');
 const { callEach, clamp, defaults, nearSame, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
@@ -117,7 +127,7 @@ let no_render = false;
 export function disableRender(new_value) {
   no_render = new_value;
   if (no_render) {
-    glov_ui.cleanupDOMElems();
+    cleanupDOMElems();
   }
 }
 
@@ -829,7 +839,7 @@ function tick(timestamp) {
 
   soundTick(dt);
   input.tickInput();
-  glov_ui.tickUI(dt);
+  uiTick(dt);
 
   if (need_repos) {
     --need_repos;
@@ -849,10 +859,10 @@ function tick(timestamp) {
 
   if (do_borders) {
     // Borders
-    glov_ui.drawRect(camera2d.x0Real(), camera2d.y0Real(), camera2d.x1Real(), 0, Z.BORDERS, border_color);
-    glov_ui.drawRect(camera2d.x0Real(), game_height, camera2d.x1Real(), camera2d.y1Real(), Z.BORDERS, border_color);
-    glov_ui.drawRect(camera2d.x0Real(), 0, 0, game_height, Z.BORDERS, border_color);
-    glov_ui.drawRect(game_width, 0, camera2d.x1Real(), game_height, Z.BORDERS, border_color);
+    drawRect(camera2d.x0Real(), camera2d.y0Real(), camera2d.x1Real(), 0, Z.BORDERS, border_color);
+    drawRect(camera2d.x0Real(), game_height, camera2d.x1Real(), camera2d.y1Real(), Z.BORDERS, border_color);
+    drawRect(camera2d.x0Real(), 0, 0, game_height, Z.BORDERS, border_color);
+    drawRect(game_width, 0, camera2d.x1Real(), game_height, Z.BORDERS, border_color);
   }
 
   perf.draw();
@@ -903,7 +913,7 @@ function tick(timestamp) {
   startSpriteRendering();
   sprites.draw();
 
-  glov_ui.endFrame();
+  uiEndFrame();
 
   if (post_render) {
     callEach(post_render, post_render = null);
@@ -971,7 +981,7 @@ export function setViewportPostprocess(viewport_postprocess) {
 
 export function setFonts(new_font, title_font) {
   font = new_font;
-  glov_ui.setFonts(new_font, title_font);
+  uiSetFonts(new_font, title_font);
 }
 
 export function engineStartupFunc(func) {
@@ -1141,10 +1151,10 @@ export function startup(params) {
   if (params.title_font) {
     params.title_font = glov_font.create(params.title_font.info, params.title_font.texture);
   }
-  glov_ui.startup(params);
+  uiStartup(params);
 
   soundStartup(params.sound);
-  glov_ui.bindSounds(defaults(params.ui_sounds || {}, {
+  uiBindSounds(defaults(params.ui_sounds || {}, {
     button_click: 'button_click',
     rollover: 'rollover',
   }));

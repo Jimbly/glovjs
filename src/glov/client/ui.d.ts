@@ -58,15 +58,15 @@ export const button_height: number;
 export const panel_pixel_scale: number;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
-export function loadUISprite2(name: string, param: {
+type UISpriteDef = {
   name?: string;
   url?: string;
   ws?: number[];
   hs?: number[];
   wrap_t?: number; // gl.REPEAT | gl.CLAMP_TO_EDGE
   layers?: number;
-}): void;
-export function setFonts(new_font: Font, new_title_font?: Font): void;
+};
+export function loadUISprite2(name: string, param: UISpriteDef): void;
 type BaseButtonLabels = Record<'ok' | 'cancel' | 'yes' | 'no', Text>;
 type ExtraButtonLabels = Partial<Record<string, Text>>;
 type ButtonLabels = BaseButtonLabels & ExtraButtonLabels;
@@ -339,9 +339,40 @@ export function setModalSizes(
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
 
-// Internal, do not export, or export in another fashion?
-// export function startup(param)
-// export function tickUI(dt: number): void;
-// export function endFrame(): void;
-// export function cleanupDOMElems(): void;
-// export function checkHooks(param, click: boolean): void;
+type UISpriteSet = {
+  color_set_shades?: [number, number, number];
+
+  button?: UISpriteDef;
+  button_rollover?: UISpriteDef;
+  button_down?: UISpriteDef;
+  button_disabled?: UISpriteDef;
+  panel?: UISpriteDef;
+  menu_entry?: UISpriteDef;
+  menu_selected?: UISpriteDef;
+  menu_down?: UISpriteDef;
+  menu_header?: UISpriteDef;
+  slider?: UISpriteDef;
+  slider_notch?: UISpriteDef;
+  slider_handle?: UISpriteDef;
+
+  scrollbar_bottom?: UISpriteDef;
+  scrollbar_trough?: UISpriteDef;
+  scrollbar_top?: UISpriteDef;
+  scrollbar_handle_grabber?: UISpriteDef;
+  scrollbar_handle?: UISpriteDef;
+  progress_bar?: UISpriteDef;
+  progress_bar_trough?: UISpriteDef;
+};
+export const internal : {
+  checkHooks(param: { hook: string }, click: boolean): void;
+  cleanupDOMElems(): void;
+  uiEndFrame(): void;
+  uiSetFonts(new_font: Font, new_title_font?: Font): void;
+  uiStartup(param: {
+    font: Font;
+    title_font?: Font;
+    ui_sprites: UISpriteSet;
+    line_mode?: LineMode;
+  }): void;
+  uiTick(dt: number): void;
+};
