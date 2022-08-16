@@ -14,6 +14,7 @@ import {
   SPOT_STATE_DOWN,
   SPOT_STATE_FOCUSED,
   spot,
+  spotPadMode,
   spotSubBegin,
   spotSubEnd,
   spotUnfocus,
@@ -235,7 +236,7 @@ class ScrollAreaInternal implements ScrollArea {
     camera2d.pop();
     clipPop();
 
-    if (focused_sub_elem) {
+    if (focused_sub_elem && spotPadMode()) {
       // assumes the focus'd spot was in the same camera transform, if not, need to adapt to use .dom_pos instead
       this.scrollIntoFocus(focused_sub_elem.y, focused_sub_elem.y + focused_sub_elem.h + 1, this.h);
     }
