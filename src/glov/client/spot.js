@@ -981,7 +981,7 @@ export function spot(param) {
     }
   }
   let is_mouseover = mouseOver(param);
-  if (focused && !focus_steal && !is_mouseover && !param.always_over) {
+  if (focused && !focus_steal && !is_mouseover) {
     // Want to unfocus if mouse is in use
     if (mouseButtonHadEdge()) {
       // Unfocus regardless
