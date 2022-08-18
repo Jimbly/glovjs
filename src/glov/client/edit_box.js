@@ -52,10 +52,14 @@ function setActive(edit_box) {
   active_edit_box_frame = engine.frame_index;
 }
 
+export function editBoxAnyActive() {
+  return active_edit_box && active_edit_box_frame >= engine.frame_index - 1;
+}
+
 function formHook(ev) {
   ev.preventDefault();
 
-  if (!active_edit_box || active_edit_box_frame < engine.frame_index - 1) {
+  if (!editBoxAnyActive()) {
     return;
   }
   active_edit_box.submitted = true;
