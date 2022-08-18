@@ -22,7 +22,6 @@ const babelify_opts_deps = {
       },
       'loose': true,
     }],
-    '@babel/preset-typescript'
   ]
 };
 
