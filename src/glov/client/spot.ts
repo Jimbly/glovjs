@@ -956,38 +956,51 @@ export function spotFocusSteal(param: SpotParam): void {
   spotFocusSetSilent(param);
 }
 
+function spotParamAddOut(param: SpotParam): asserts param is SpotParamWithOut {
+  if (!param.out) {
+    param.out = {} as SpotRet;
+  }
+}
+
+function spotParamAddPosCache(param: SpotParamWithOut): asserts param is SpotInternal {
+  assert(param.key_computed);
+  if (!param.dom_pos) {
+    param.dom_pos = {} as Box;
+  }
+}
+
+function spotParamIsSpotInternal(param: SpotParam): asserts param is SpotInternal {
+  // nothing, just for TypeScript
+}
 
 // sets param.out.allow_focus, param.out.nav, and param.dom_pos (if allow_focus)
-export function spotFocusCheck(param0: SpotParam): SpotRet {
-  let out = param0.out;
-  if (!out) {
-    out = param0.out = {} as SpotRet;
-  }
-  let param1 = param0 as SpotParamWithOut;
+export function spotFocusCheck(param: SpotParam): SpotRet {
+  spotParamAddOut(param);
+  let out = param.out;
   out.focused = false;
   out.kb_focused = false;
   out.allow_focus = false;
-  const key = spotKey(param1); // Doing this even if disabled for spotDebug()
-  const def = param1.def || SPOT_DEFAULT;
-  const disabled = param1.disabled === undefined ? def.disabled : param1.disabled;
+  const key = spotKey(param); // Doing this even if disabled for spotDebug()
+  const def = param.def || SPOT_DEFAULT;
+  const disabled = param.disabled === undefined ? def.disabled : param.disabled;
   if (disabled) {
-    const disabled_focusable = param1.disabled_focusable === undefined ? def.disabled_focusable :
-      param1.disabled_focusable;
+    const disabled_focusable = param.disabled_focusable === undefined ? def.disabled_focusable :
+      param.disabled_focusable;
     if (!disabled_focusable) {
       return out;
     }
     // Otherwise disabled_focusable - allow focusing
   }
-  const focus_steal = param1.focus_steal === undefined ? def.focus_steal : param1.focus_steal;
+  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
   if (focus_steal) {
     // Silently steal (keep) focus
-    spotFocusSetSilent(param1);
+    spotFocusSetSilent(param);
   }
   if (focus_key === key) {
     // last_frame_focus_found = true;
-    spotFocusCheckNavButtonsFocused(param1);
+    spotFocusCheckNavButtonsFocused(param);
   } else {
-    spotFocusCheckNavButtonsUnfocused(param1);
+    spotFocusCheckNavButtonsUnfocused(param);
   }
   let focused = focus_key === key || focus_key_nonsticky === key;
   if (inputEatenMouse()) {
@@ -1001,28 +1014,25 @@ export function spotFocusCheck(param0: SpotParam): SpotRet {
     }
   } else {
     out.allow_focus = true;
-    if (!param1.dom_pos) {
-      param1.dom_pos = {} as Box;
-    }
-    let param2 = param1 as SpotInternal;
-    camera2d.virtualToDomPosParam(param2.dom_pos, param2);
-    const auto_focus = param2.auto_focus === undefined ? def.auto_focus : param2.auto_focus;
-    if (!spotEntirelyObscured(param2) || focused && focus_is_sticky) {
-      frameSpotsPush(param2);
+    spotParamAddPosCache(param);
+    camera2d.virtualToDomPosParam(param.dom_pos, param);
+    const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
+    if (!spotEntirelyObscured(param) || focused && focus_is_sticky) {
+      frameSpotsPush(param);
       if (auto_focus) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
           spotlog('auto_focus', key);
           // play no sound, etc, just silently steal focus
-          spotFocusSetSilent(param2);
+          spotFocusSetSilent(param);
           focused = true;
         }
       }
     }
     if (auto_focus) {
-      frame_autofocus_spots[key] = param2;
+      frame_autofocus_spots[key] = param;
     }
     if (focus_sub_rect && focus_key === key) {
-      focus_sub_rect_elem = param2;
+      focus_sub_rect_elem = param;
     }
   }
 
@@ -1070,23 +1080,21 @@ function spotSignalRet(param: SpotInternal): void {
 //   double_click: boolean // if ret, set to true if it was a double click/tap/button press/etc
 //   drag_drop: any // if drag_target and a drop happened, contains dragDrop event { drag_payload }
 //   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
-export function spot(param0: SpotParam): SpotRet {
+export function spot(param: SpotParam): SpotRet {
   profilerStartFunc();
-  const def = param0.def || SPOT_DEFAULT;
-  const disabled = param0.disabled === undefined ? def.disabled : param0.disabled;
-  const is_button = param0.is_button === undefined ? def.is_button : param0.is_button;
-  const button_long_press = param0.button_long_press === undefined ? def.button_long_press : param0.button_long_press;
-  const in_event_cb = param0.in_event_cb === undefined ? def.in_event_cb : param0.in_event_cb;
-  const drag_target = param0.drag_target === undefined ? def.drag_target : param0.drag_target;
-  const drag_over = param0.drag_over === undefined ? def.drag_over : param0.drag_over;
-  const touch_focuses = param0.touch_focuses === undefined ? def.touch_focuses : param0.touch_focuses;
-  const focus_steal = param0.focus_steal === undefined ? def.focus_steal : param0.focus_steal;
-  const custom_nav = param0.custom_nav === undefined ? def.custom_nav : param0.custom_nav;
+  const def = param.def || SPOT_DEFAULT;
+  const disabled = param.disabled === undefined ? def.disabled : param.disabled;
+  const is_button = param.is_button === undefined ? def.is_button : param.is_button;
+  const button_long_press = param.button_long_press === undefined ? def.button_long_press : param.button_long_press;
+  const in_event_cb = param.in_event_cb === undefined ? def.in_event_cb : param.in_event_cb;
+  const drag_target = param.drag_target === undefined ? def.drag_target : param.drag_target;
+  const drag_over = param.drag_over === undefined ? def.drag_over : param.drag_over;
+  const touch_focuses = param.touch_focuses === undefined ? def.touch_focuses : param.touch_focuses;
+  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
+  const custom_nav = param.custom_nav === undefined ? def.custom_nav : param.custom_nav;
 
-  let out = param0.out;
-  if (!out) {
-    out = param0.out = {} as SpotRet;
-  }
+  spotParamAddOut(param);
+  let out = param.out;
   out.focused = false;
   out.ret = 0;
   if (button_long_press) {
@@ -1100,8 +1108,8 @@ export function spot(param0: SpotParam): SpotRet {
   }
 
   let state: SpotStateEnum = SPOT_STATE_REGULAR;
-  let { focused, allow_focus, kb_focused } = spotFocusCheck(param0);
-  let param = param0 as SpotInternal; // massaged in spotFocusCheck()
+  let { focused, allow_focus, kb_focused } = spotFocusCheck(param);
+  spotParamIsSpotInternal(param); // massaged in spotFocusCheck(), but type assertion is lost
   if (disabled) {
     state = SPOT_STATE_DISABLED;
   } else {
