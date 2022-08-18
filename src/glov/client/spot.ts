@@ -1209,7 +1209,7 @@ export function spot(param: SpotParam): SpotRet {
       }
     }
   }
-  if (is_button && mouseDownMidClick(param)) {
+  if (is_button && is_mouseover && mouseDownMidClick(param)) {
     if (!disabled) {
       state = SPOT_STATE_DOWN;
     }
