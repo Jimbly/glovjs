@@ -18,14 +18,18 @@ let map_analog_to_dpad = true;
 
 let mouse_log = false;
 
-exports.click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
-exports.inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const { deprecate } = require('glov/common/util.js');
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
 
-export const ANY = -2;
-export const POINTERLOCK = -1;
+import {
+  ANY,
+  POINTERLOCK,
+} from './input_constants';
+
+export * from './input_constants';
 
 export let KEYS = {
   BACKSPACE: 8,
@@ -121,11 +125,9 @@ const { abs, max, min, sqrt } = Math;
 const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
-const { spotMouseoverHook, BUTTON_ANY } = require('./spot.js');
+const { spotMouseoverHook } = require('./spot.js');
 const { empty } = require('glov/common/util.js');
 const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
-
-assert.equal(BUTTON_ANY, ANY);
 
 let pad_to_touch;
 

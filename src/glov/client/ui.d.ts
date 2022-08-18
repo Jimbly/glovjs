@@ -101,6 +101,7 @@ export interface PanelParam extends UIBoxColored {
 }
 export function panel(param: PanelParam): void;
 
+export type TooltipValue = Text | ((param:unknown) => (Text | null));
 export interface TooltipParam {
   x: number;
   y: number;
@@ -110,7 +111,7 @@ export interface TooltipParam {
   tooltip_above?: boolean;
   tooltip_auto_above_offset?: number;
   pixel_scale?: number;
-  tooltip: Text | ((param:unknown) => (Text | null));
+  tooltip: TooltipValue;
 }
 export function drawTooltip(param: TooltipParam): void;
 export interface TooltipBoxParam {
@@ -364,7 +365,7 @@ type UISpriteSet = {
   progress_bar_trough?: UISpriteDef;
 };
 export const internal : {
-  checkHooks(param: { hook: string }, click: boolean): void;
+  checkHooks(param: { hook?: string }, click: boolean): void;
   cleanupDOMElems(): void;
   uiEndFrame(): void;
   uiSetFonts(new_font: Font, new_title_font?: Font): void;

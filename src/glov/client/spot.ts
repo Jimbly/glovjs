@@ -1,3 +1,9 @@
+// eslint-disable-next-line import/order
+import {
+  BUTTON_ANY,
+  ButtonIndex,
+} from './input_constants';
+
 export const SPOT_NAV_NONE = 0;
 export const SPOT_NAV_LEFT = 1;
 export const SPOT_NAV_UP = 2;
@@ -7,71 +13,201 @@ export const SPOT_NAV_NEXT = 5;
 export const SPOT_NAV_PREV = 6;
 const SPOT_NAV_MAX = 7;
 
-export const BUTTON_ANY = -2; // same as input.ANY
-
-export const SPOT_DEFAULT = {
-  key: undefined, // string | undefined (defaults to from x,y otherwise)
-  disabled: false, // boolean
-  tooltip: null, // string | LocalizableString | (param) => string | null
-  in_event_cb: null, // for clicks and key presses
-  drag_target: false, // receive dragDrop events
-  drag_over: false, // consume dragOver events
-  button: BUTTON_ANY, // respond to which mouse button
-  is_button: false, // can be activated/clicked/etc
-  button_long_press: false, // detect long press differently than a regular click/tap
-  pad_focusable: true, // is a target for keyboard/gamepad focus; set to false if only accessible via hotkey/button
-  spatial_focus: true, // if pad_focusable: can be focused spatialy (via d-pad/etc), otherwise only through tab
-  auto_focus: false, // if this spot is new this frame, and doing pad (not mouse/touch) focusing, automatically focus it
-  long_press_focuses: true, // a long press will focus an element (triggering tooltips, etc, on touch devices)
-  sound_button: 'button_click', // string // when activated
-  sound_rollover: 'rollover', // string | null // when mouse movement triggers focus
-  touch_focuses: false, // first touch focuses (on touch devices), showing tooltip, etc, second activates the button
-  disabled_focusable: true, // allow focusing even if disabled (e.g. to show tooltip)
-  hotkey: null, // optional keyboard hotkey
-  hotpad: null, // optional gamepad button
-  // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
-  // should retain focus even without mouseover)
-  focus_steal: false,
-  sticky_focus: false, // focus is not lost due to mouseover elsewhere
-  // optional map of SPOT_NAV_* to either:
-  //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
-  //   undefined: indicates navigation should target nothing (and those keys will not be consumed)
-  //   a string key: a custom element to target with navigation
-  custom_nav: null,
-};
-
-export const SPOT_DEFAULT_BUTTON = {
-  ...SPOT_DEFAULT,
-  is_button: true,
-};
-
-export const SPOT_DEFAULT_BUTTON_DISABLED = {
-  ...SPOT_DEFAULT,
-  disabled: true,
-  sound_rollover: null,
-};
-
-export const SPOT_DEFAULT_BUTTON_DRAW_ONLY = {
-  // Matches previous { draw_only: true, draw_only_mouseover: true, disabled_mouseover: true } option to ui.buttonShared
-  ...SPOT_DEFAULT,
-  pad_focusable: false,
-};
-
-export const SPOT_DEFAULT_LABEL = {
-  ...SPOT_DEFAULT,
-  sound_rollover: null,
-  touch_focuses: true, // usually want this?
-};
+type SpotNavEnum = typeof SPOT_NAV_LEFT |
+  typeof SPOT_NAV_LEFT |
+  typeof SPOT_NAV_UP |
+  typeof SPOT_NAV_RIGHT |
+  typeof SPOT_NAV_DOWN |
+  typeof SPOT_NAV_NEXT |
+  typeof SPOT_NAV_PREV;
+type SpotNavEnumOrNone = SpotNavEnum | typeof SPOT_NAV_NONE;
 
 export const SPOT_STATE_REGULAR = 1;
 export const SPOT_STATE_DOWN = 2;
 export const SPOT_STATE_FOCUSED = 3;
 export const SPOT_STATE_DISABLED = 4;
+export type SpotStateEnum = typeof SPOT_STATE_REGULAR |
+  typeof SPOT_STATE_DOWN |
+  typeof SPOT_STATE_FOCUSED |
+  typeof SPOT_STATE_DISABLED;
+
+
+type SpotCustomNavTarget = null | // indicates the spot should do no navigation, but allow the caller to handle
+  undefined | // indicates navigation should target nothing (keys not consumed)
+  string; // the key of a custom element
+
+type SpotCustomNav = Partial<Record<SpotNavEnum, SpotCustomNavTarget>>;
+
+
+// See SPOT_DEFAULT for defaults
+export interface SpotParamBase {
+  key?: string; // defaults to from x,y otherwise
+  disabled: boolean;
+  in_event_cb: EventCallback | null; // for clicks and key presses
+  drag_target: boolean; // receive dragDrop events
+  drag_over: boolean; // consume dragOver events
+  button: ButtonIndex; // respond to which mouse button
+  is_button: boolean; // can be activated/clicked/etc
+  button_long_press: boolean; // detect long press differently than a regular click/tap
+  pad_focusable: boolean; // is a target for keyboard/gamepad focus; set to false if only accessible via hotkey/button
+  spatial_focus: boolean; // if pad_focusable: can be focused spatialy (via d-pad/etc), otherwise only through tab
+  auto_focus: boolean; // if this spot is new this frame, and doing pad (not mouse/touch) focusing, automatically focus
+  long_press_focuses: boolean; // a long press will focus an element (triggering tooltips, etc, on touch devices)
+  sound_button: string | null; // when activated
+  sound_rollover: string | null; // when mouse movement triggers focus
+  touch_focuses: boolean; // first touch focuses (on touch devices), showing tooltip, etc, second activates the button
+  disabled_focusable: boolean; // allow focusing even if disabled (e.g. to show tooltip)
+  hotkey: number | null; // optional keyboard hotkey
+  hotpad: number | null; // optional gamepad button
+  // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
+  // should retain focus even without mouseover)
+  focus_steal: boolean;
+  sticky_focus: boolean; // focus is not lost due to mouseover elsewhere
+  // optional map of SPOT_NAV_* to either:
+  //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
+  //   undefined: indicates navigation should target nothing (and those keys will not be consumed)
+  //   a string key: a custom element to target with navigation
+  custom_nav: SpotCustomNav | null;
+}
+
+export const SPOT_DEFAULT = {
+  key: undefined, // defaults to from x,y
+  disabled: false,
+  in_event_cb: null,
+  drag_target: false,
+  drag_over: false,
+  button: BUTTON_ANY,
+  is_button: false,
+  button_long_press: false,
+  pad_focusable: true,
+  spatial_focus: true,
+  auto_focus: false,
+  long_press_focuses: true,
+  sound_button: 'button_click',
+  sound_rollover: 'rollover',
+  touch_focuses: false,
+  disabled_focusable: true,
+  hotkey: null,
+  hotpad: null,
+  focus_steal: false,
+  sticky_focus: false,
+  custom_nav: null,
+};
+
+export const SPOT_DEFAULT_BUTTON: SpotParamBase = {
+  ...SPOT_DEFAULT,
+  is_button: true,
+};
+
+export const SPOT_DEFAULT_BUTTON_DISABLED: SpotParamBase = {
+  ...SPOT_DEFAULT,
+  disabled: true,
+  sound_rollover: null,
+};
+
+export const SPOT_DEFAULT_BUTTON_DRAW_ONLY: SpotParamBase = {
+  // Matches previous { draw_only: true, draw_only_mouseover: true, disabled_mouseover: true } option to ui.buttonShared
+  ...SPOT_DEFAULT,
+  pad_focusable: false,
+};
+
+export const SPOT_DEFAULT_LABEL: SpotParamBase = {
+  ...SPOT_DEFAULT,
+  sound_rollover: null,
+  touch_focuses: true, // usually want this?
+};
+
+type Box = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+type SpotKeyableKeyed = {
+  key: string;
+};
+type SpotKeyableAuto = {
+  x: number;
+  y: number;
+};
+
+export type SpotKeyable = (SpotKeyableKeyed | SpotKeyableAuto) & {
+  // computed
+  key_computed?: string;
+};
+
+type SpotRet = {
+  focused: boolean; // focused by any means
+  kb_focused: boolean; // focused for the purpose of receiving keyboard input (focused and no other sticky focus)
+  spot_state: SpotStateEnum;
+  ret: number; // if `param.is_button` and was activated (0/1 or more if clicked multiple times in a frame)
+  long_press?: boolean; // if button_long_press and ret and was a long press, set to true
+  button?: number; // if ret, set to mouse button used to click it
+  pos?: Vec2 | null | undefined; // if ret, set to position of the click
+  double_click?: boolean; // if ret, set to true if it was a double click/tap/button press/etc
+  drag_drop?: unknown | null; // if drag_target and a drop happened, contains dragDrop event { drag_payload }
+  nav?: SpotNavEnumOrNone; // if custom_nav, and the user navigated, set to the navigation event
+  allow_focus?: boolean; // set and used internally if this spot is allowed to be focused
+};
+
+type SpotComputedFields = {
+  // internal run-time fields that might be useful to callers
+  key_computed?: string;
+  dom_pos?: Box;
+  out?: SpotRet;
+};
+
+export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFields {
+  def: SpotParamBase; // inherit all undefined SpotParamBase members from this
+  tooltip?: TooltipValue | null;
+  hook?: string;
+}
+
+export interface SpotSubParam extends Box, SpotComputedFields {
+  key: string;
+}
+
+interface SpotInternal extends SpotParam {
+  // internal run-time fields
+  dom_pos: Box;
+  key_computed: string;
+  sub_rect: SpotSubInternal | null;
+  out: SpotRet;
+
+  // only on fake Spots from spotMouseoverHook
+  only_mouseover?: true;
+  spot_debug_ignore?: boolean;
+}
+
+interface SpotSubInternal extends SpotSubParam {
+  // internal run-time fields
+  dom_pos: Box;
+  key_computed: string;
+  sub_rect: SpotSubInternal | null;
+
+  is_sub_rect: true;
+  is_empty_sub_rect: boolean;
+}
+
+type SpotListElem = SpotInternal | SpotSubInternal;
+
+// TODO: move to input.js when converted to TypeScript
+type MouseOverParam = {
+  peek?: boolean;
+  eat_clicks?: boolean;
+  spot_debug_ignore?: boolean;
+};
 
 import assert from 'assert';
 const { abs, max } = Math;
+import { Vec2, Vec4 } from 'glov/common/vmath.js';
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
+import {
+  FontStyle,
+  fontStyle,
+} from './font.js';
 import {
   KEYS,
   PAD,
@@ -96,6 +232,9 @@ import {
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
+  EventCallback,
+  TooltipBoxParam,
+  TooltipValue,
   drawLine,
   drawRect,
   drawTooltipBox,
@@ -103,40 +242,44 @@ import {
 } from './ui.js';
 const { checkHooks } = ui.internal;
 
-let focus_sub_rect = null;
-let focus_sub_rect_elem;
-let sub_stack = [];
-let focus_key = null;
+let focus_sub_rect = null as (SpotSubInternal | null);
+let focus_sub_rect_elem = null as (SpotInternal | null);
+let sub_stack: [typeof focus_sub_rect, typeof focus_sub_rect_elem][] = [];
+let focus_key: string | null = null;
 // sticky focus: used for edit boxes so that they do not lose focus even when
 //   mousing over other elements (those elements become the temporary `nonsticky`
 //   focus.
 let focus_is_sticky = false;
-let focus_key_nonsticky = null;
-let focus_pos = { x: 0, y: 0, w: 0, h: 0 };
-let frame_spots = [];
-let focus_next = []; // indexed by SPOT_NAV_*
-let focus_next_via = []; // just for spotDebug
-let frame_autofocus_spots = {};
-let last_frame_autofocus_spots = {};
+let focus_key_nonsticky: string | null = null;
+let focus_pos: Box = { x: 0, y: 0, w: 0, h: 0 };
+let frame_spots: SpotListElem[] = [];
+let focus_next: (SpotInternal|null|undefined)[] = []; // indexed by SPOT_NAV_*
+let focus_next_via: (SpotSubInternal|undefined)[] = []; // just for spotDebug
+let frame_autofocus_spots: Partial<Record<string, SpotInternal>> = {};
+let last_frame_autofocus_spots: typeof frame_autofocus_spots = {};
 // pad_mode: really "non-mouse-mode" - touch triggers this in various situations
 // non-pad_mode (mouse mode) requires constant mouse over state to maintain focus
 let pad_mode = false;
 let suppress_pad = false;
 
-export function spotPadMode() {
+function isSubRect(area: SpotListElem): area is SpotSubInternal {
+  return (area as SpotSubInternal).is_sub_rect;
+}
+
+export function spotPadMode(): boolean {
   return pad_mode;
 }
 
-export function spotSetPadMode(new_mode) {
+export function spotSetPadMode(new_mode: boolean): void {
   pad_mode = new_mode;
 }
 
-export function spotlog(...args) {
+export function spotlog(...args: unknown[]): void {
   // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line global-require
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
 }
 
-export function spotKey(param) {
+export function spotKey(param: SpotKeyable): string {
   if (param.key_computed) {
     // already computed, early this frame, or in a persistent object, use it
     if (!engine.defines.SPOT_DEBUG) {
@@ -144,8 +287,9 @@ export function spotKey(param) {
     }
   }
   profilerStartFunc();
-  let key = param.key ||
-    `${focus_sub_rect ? focus_sub_rect.key_computed : ''}_${param.x}_${param.y}`;
+  let key = (param as SpotKeyableKeyed).key ||
+    (`${focus_sub_rect ? focus_sub_rect.key_computed : ''}_` +
+    `${(param as SpotKeyableAuto).x}_${(param as SpotKeyableAuto).y}`);
   if (param.key_computed) {
     // ensure two different spots on the same frame are not using the same param object
     assert.equal(param.key_computed, key);
@@ -156,7 +300,7 @@ export function spotKey(param) {
   return param.key_computed;
 }
 
-function spotFocusSet(param, from_mouseover, force, log) {
+function spotFocusSet(param: SpotInternal, from_mouseover: boolean, force: boolean, log: string): boolean {
   if (from_mouseover && (!mouseMoved() || mousePosIsTouch())) {
     return false;
   }
@@ -184,7 +328,7 @@ function spotFocusSet(param, from_mouseover, force, log) {
   return true;
 }
 
-export function spotUnfocus() {
+export function spotUnfocus(): void {
   spotlog('spotUnfocus');
   focus_key = null;
   focus_is_sticky = false;
@@ -196,8 +340,15 @@ export function spotUnfocus() {
 const TARGET_QUAD = 0;
 const TARGET_HALF = 1;
 const TARGET_ALL = 2;
+type TargetTypeEnum = typeof TARGET_QUAD | typeof TARGET_HALF | typeof TARGET_ALL;
 
-function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
+function findBestTargetInternal(
+  nav: SpotNavEnum,
+  dom_pos: Box,
+  targets: SpotListElem[],
+  precision: TargetTypeEnum,
+  filter: (param: SpotListElem) => boolean
+): SpotListElem | null {
   let start_w2 = dom_pos.w/2;
   let start_h2 = dom_pos.h/2;
   let start_x = dom_pos.x + start_w2;
@@ -289,7 +440,7 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
         // allow any, just find closest
       }
     }
-    if (!best || d < bestd) {
+    if (!best || <number>d < <number>bestd) {
       best = param;
       bestd = d;
     }
@@ -298,12 +449,15 @@ function findBestTargetInternal(nav, dom_pos, targets, precision, filter) {
 }
 
 const EPSILON = 0.00001;
-let debug_style;
-function spotDebugList(show_all, list) {
+let debug_style: FontStyle;
+function spotDebugList(show_all: boolean, list: SpotListElem[]): void {
   for (let ii = 0; ii < list.length; ++ii) {
     let area = list[ii];
     let pos = area.dom_pos;
-    let color;
+    let color: Vec4 | undefined;
+    if (isSubRect(area)) {
+      continue;
+    }
     if (area.spot_debug_ignore) {
       continue;
     }
@@ -311,8 +465,7 @@ function spotDebugList(show_all, list) {
       color = [1,0.5,0, 0.5];
     } else {
       const def = area.def || SPOT_DEFAULT;
-      const pad_focusable = !area.is_sub_rect &&
-        (area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable);
+      const pad_focusable = area.pad_focusable === undefined ? def.pad_focusable : area.pad_focusable;
       if (!pad_focusable) {
         continue;
       }
@@ -325,12 +478,14 @@ function spotDebugList(show_all, list) {
           continue;
         }
         let other = list[jj];
+        if (isSubRect(other)) {
+          continue;
+        }
         if (other.sub_rect !== area.sub_rect) {
           continue;
         }
         const other_def = other.def || SPOT_DEFAULT;
-        const other_pad_focusable = !other.is_sub_rect &&
-          (other.pad_focusable === undefined ? other_def.pad_focusable : other.pad_focusable);
+        const other_pad_focusable = other.pad_focusable === undefined ? other_def.pad_focusable : other.pad_focusable;
         if (other.only_mouseover || !other_pad_focusable) {
           continue;
         }
@@ -351,7 +506,7 @@ function spotDebugList(show_all, list) {
     }
     drawRect(pos.x, pos.y, pos.x + pos.w, pos.y + pos.h, Z.DEBUG, color || [1,1,0, 0.5]);
     if (!debug_style) {
-      debug_style = ui.font.style(null, {
+      debug_style = fontStyle(null, {
         color: 0x000000ff,
         outline_color: 0xFFFFFFcc,
         outline_width: 2,
@@ -361,7 +516,7 @@ function spotDebugList(show_all, list) {
       ui.font.ALIGN.HVCENTERFIT, pos.w, pos.h, area.key_computed || 'unknown');
   }
 }
-function spotDebug() {
+function spotDebug(): void {
   camera2d.push();
   camera2d.setDOMMapped();
   let show_all = keyDown(KEYS.SHIFT);
@@ -369,10 +524,10 @@ function spotDebug() {
 
   if (pad_mode || show_all) {
     for (let ii = SPOT_NAV_LEFT; ii <= SPOT_NAV_DOWN; ++ii) {
-      let next = focus_next[ii];
-      if (next) {
+      let next_spot = focus_next[ii];
+      if (next_spot) {
         let pos = focus_pos;
-        next = next.dom_pos;
+        let next = next_spot.dom_pos;
         let via = focus_next_via[ii];
         if (via) {
           pos = via.dom_pos;
@@ -390,29 +545,29 @@ function spotDebug() {
   camera2d.pop();
 }
 
-let filter_sub_rect;
-let filter_not;
-function filterMatchesSubrect(param) {
+let filter_sub_rect: SpotSubInternal | null;
+let filter_not: SpotListElem | null;
+function filterMatchesSubrect(param: SpotListElem): boolean {
   return param !== filter_not && param.sub_rect === filter_sub_rect;
 }
 
-function overlaps(r1, r2) {
+function overlaps(r1: Box, r2: Box): boolean {
   return r1.x + r1.w > r2.x && r1.x < r2.x + r2.w &&
     r1.y + r1.h > r2.y && r1.y < r2.y + r2.h;
 }
-function contains(outer, inner) {
+function contains(outer: Box, inner: Box): boolean {
   return inner.x >= outer.x && inner.x + inner.w <= outer.x + outer.w &&
     inner.y >= outer.y && inner.y + inner.h <= outer.y + outer.h;
 }
 
-function filterInSubrectView(param) {
+function filterInSubrectView(param: SpotListElem): boolean {
   if (param.sub_rect !== filter_sub_rect) {
     return false;
   }
-  return overlaps(param.dom_pos, filter_sub_rect.dom_pos);
+  return overlaps(param.dom_pos, (filter_sub_rect as SpotSubInternal).dom_pos);
 }
 
-function filterMatchesSubrectOrInVisibleChild(param) {
+function filterMatchesSubrectOrInVisibleChild(param: SpotListElem): boolean {
   if (param === filter_not) {
     return false;
   }
@@ -427,15 +582,22 @@ function filterMatchesSubrectOrInVisibleChild(param) {
 }
 
 const SUBRECT_FILTERS = [filterInSubrectView, filterMatchesSubrect];
-function findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision_max) {
+function findBestWithinSubrect(
+  nav: SpotNavEnum,
+  dom_pos: Box,
+  pad_focusable_list: SpotListElem[],
+  best: SpotSubInternal,
+  precision_max: TargetTypeEnum,
+): SpotInternal | null {
   // we hit a sub rect, find the best target inside it, first trying all
   //   in view (all precision), then all out of view
   filter_sub_rect = best;
   for (let jj = 0; jj < SUBRECT_FILTERS.length; ++jj) {
     let filter = SUBRECT_FILTERS[jj];
-    for (let precision = 0; precision <= precision_max; ++precision) {
+    for (let precision = <TargetTypeEnum>0; precision <= precision_max; ++precision) {
       let best_inside = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filter);
       if (best_inside) {
+        assert(!isSubRect(best_inside));
         return best_inside;
       }
     }
@@ -443,12 +605,18 @@ function findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision
   return null;
 }
 
-function findBestTargetFromSubRect(start_sub_rect, nav, dom_pos, pad_focusable_list, precision) {
+function findBestTargetFromSubRect(
+  start_sub_rect: SpotSubInternal | null,
+  nav: SpotNavEnum,
+  dom_pos: Box,
+  pad_focusable_list: SpotListElem[],
+  precision: TargetTypeEnum,
+): SpotInternal | null {
   // Go to the one in the appropriate quadrant which has the smallest Manhattan distance
   filter_sub_rect = start_sub_rect;
   let best = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filterMatchesSubrectOrInVisibleChild);
   if (best) {
-    if (best.is_sub_rect) {
+    if (isSubRect(best)) {
       focus_next_via[nav] = best;
       best = findBestWithinSubrect(nav, dom_pos, pad_focusable_list, best, precision);
       if (!best) {
@@ -459,7 +627,7 @@ function findBestTargetFromSubRect(start_sub_rect, nav, dom_pos, pad_focusable_l
   return best;
 }
 
-function spotCalcNavTargets() {
+function spotCalcNavTargets(): void {
   // Computes, for each direction, where we would target from the current focus
   //   state, to be used next frame if a focus key is pressed.
   // Note: cannot compute this trivially only upon keypress since we do not know
@@ -480,7 +648,7 @@ function spotCalcNavTargets() {
   let first_non_sub_rect;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let param = frame_spots[ii];
-    if (param.is_sub_rect) {
+    if (isSubRect(param)) {
       // Not actually "focusable", but need to target it to then target its contents
       if (!param.is_empty_sub_rect) {
         pad_focusable_list.push(param);
@@ -517,7 +685,7 @@ function spotCalcNavTargets() {
     focus_next[SPOT_NAV_NEXT] = first_non_sub_rect;
   }
   let precision_max;
-  let start_sub_rect;
+  let start_sub_rect: SpotSubInternal | null;
   if (start) {
     start_sub_rect = start.sub_rect;
     focus_pos.x = start.dom_pos.x;
@@ -530,7 +698,7 @@ function spotCalcNavTargets() {
     start_sub_rect = null;
     for (let ii = 0; ii < frame_spots.length; ++ii) {
       let param = frame_spots[ii];
-      if (param.is_sub_rect) {
+      if (isSubRect(param)) {
         if (contains(param.dom_pos, focus_pos)) {
           start_sub_rect = param;
         }
@@ -545,8 +713,8 @@ function spotCalcNavTargets() {
 
   // Second, using the currently focused rect as a starting point, find
   //   appropriate elements to focus in each of the cardinal directions.
-  for (let nav = SPOT_NAV_LEFT; nav <= SPOT_NAV_DOWN; ++nav) {
-    for (let precision = 0; precision <= precision_max; ++precision) {
+  for (let nav = <SpotNavEnum>1; nav <= SPOT_NAV_DOWN; ++nav) {
+    for (let precision = <TargetTypeEnum>0; precision <= precision_max; ++precision) {
       filter_not = null;
       let best = findBestTargetFromSubRect(start_sub_rect, nav, focus_pos, pad_focusable_list, precision);
       if (best) {
@@ -573,21 +741,23 @@ function spotCalcNavTargets() {
     const def = start.def || SPOT_DEFAULT;
     const custom_nav = start.custom_nav === undefined ? def.custom_nav : start.custom_nav;
     if (custom_nav) {
-      let by_key;
+      let by_key: Partial<Record<string,SpotInternal>> | undefined;
       for (let key in custom_nav) {
-        let target = custom_nav[key];
+        let target = custom_nav[key as unknown as SpotNavEnum];
         if (!target) {
-          focus_next[key] = target;
+          focus_next[key as unknown as SpotNavEnum] = target as (null | undefined);
         } else {
           if (!by_key) {
             by_key = {};
             for (let ii = 0; ii < frame_spots.length; ++ii) {
               let param = frame_spots[ii];
-              by_key[param.key_computed] = param;
+              if (!isSubRect(param)) {
+                by_key[param.key_computed] = param;
+              }
             }
           }
           if (by_key[target]) {
-            focus_next[key] = by_key[target];
+            focus_next[key as unknown as SpotNavEnum] = by_key[target];
           }
         }
       }
@@ -595,7 +765,7 @@ function spotCalcNavTargets() {
   }
 }
 
-export function spotTopOfFrame() {
+export function spotTopOfFrame(): void {
   if (mouseMoved()) {
     let pos = mouseDomPos();
     focus_pos.x = pos[0];
@@ -609,7 +779,7 @@ export function spotTopOfFrame() {
   sub_stack.length = 0;
 }
 
-export function spotSuppressPad() {
+export function spotSuppressPad(): void {
   suppress_pad = true;
   if (pad_mode && focus_key && !focus_is_sticky) {
     spotUnfocus();
@@ -617,11 +787,11 @@ export function spotSuppressPad() {
   }
 }
 
-export function spotPadSuppressed() {
+export function spotPadSuppressed(): boolean {
   return suppress_pad;
 }
 
-export function spotEndOfFrame() {
+export function spotEndOfFrame(): void {
   spotCalcNavTargets();
 
   last_frame_autofocus_spots = frame_autofocus_spots;
@@ -630,7 +800,7 @@ export function spotEndOfFrame() {
   frame_autofocus_spots = {};
 }
 
-function frameSpotsPush(param) {
+function frameSpotsPush(param: SpotListElem): void {
   assert(param.dom_pos);
   param.sub_rect = focus_sub_rect;
   frame_spots.push(param);
@@ -639,11 +809,18 @@ function frameSpotsPush(param) {
   }
 }
 
-function spotEntirelyObscured(param) {
+type HasPosCache = {
+  dom_pos: Box;
+};
+
+function spotEntirelyObscured(param: HasPosCache): boolean {
   let pos = param.dom_pos;
   for (let ii = 0; ii < frame_spots.length; ++ii) {
     let other = frame_spots[ii];
-    if (other.is_sub_rect || other.sub_rect !== focus_sub_rect) {
+    if (isSubRect(other)) {
+      continue;
+    }
+    if (other.sub_rect !== focus_sub_rect) {
       continue;
     }
     let other_pos = other.dom_pos;
@@ -656,60 +833,63 @@ function spotEntirelyObscured(param) {
   return false;
 }
 
-export function spotSubPush() {
+export function spotSubPush(): void {
   sub_stack.push([focus_sub_rect, focus_sub_rect_elem]);
   focus_sub_rect = null;
 }
-export function spotSubPop() {
-  ([focus_sub_rect, focus_sub_rect_elem] = sub_stack.pop());
+export function spotSubPop(): void {
+  ([focus_sub_rect, focus_sub_rect_elem] = sub_stack.pop() as typeof sub_stack[0]);
 }
 
-export function spotSubBegin(param) {
-  assert(param.key);
+export function spotSubBegin(param_in: SpotSubParam): void {
+  assert(param_in.key);
   assert(!focus_sub_rect); // no recursive nesting supported yet
-  spotKey(param);
-  param.is_sub_rect = true;
-  if (!param.dom_pos) {
-    param.dom_pos = {};
+  spotKey(param_in);
+  let sub_rect = param_in as SpotSubInternal;
+  sub_rect.is_sub_rect = true;
+  if (!sub_rect.dom_pos) {
+    sub_rect.dom_pos = {} as Box;
   }
-  camera2d.virtualToDomPosParam(param.dom_pos, param);
-  if (!spotEntirelyObscured(param)) {
-    frameSpotsPush(param);
+  camera2d.virtualToDomPosParam(sub_rect.dom_pos, sub_rect);
+  if (!spotEntirelyObscured(sub_rect)) {
+    frameSpotsPush(sub_rect);
   }
-  focus_sub_rect = param;
+  focus_sub_rect = sub_rect;
   focus_sub_rect.is_empty_sub_rect = true;
   focus_sub_rect_elem = null;
 }
 
-export function spotSubEnd() {
+export function spotSubEnd(): SpotParam | null {
   assert(focus_sub_rect);
   focus_sub_rect = null;
   return focus_sub_rect_elem;
 }
 
-export function spotMouseoverHook(pos_param, param) {
+export function spotMouseoverHook(pos_param_in: Box, param: MouseOverParam): void {
   if (inputEatenMouse() || param.peek) {
     return;
   }
-  if (param.key_computed) { // presumably in a call to `spot()`
+  if ((param as SpotParam).key_computed) { // presumably in a call to `spot()`
     return;
   }
+  let pos_param = pos_param_in as Box & HasPosCache;
   if (!pos_param.dom_pos) {
-    pos_param.dom_pos = {};
+    pos_param.dom_pos = {} as Box;
   }
   camera2d.virtualToDomPosParam(pos_param.dom_pos, pos_param);
   if (!spotEntirelyObscured(pos_param)) {
-    pos_param.only_mouseover = true;
-    pos_param.pad_focusable = false;
+    let area = pos_param as SpotInternal;
+    area.only_mouseover = true;
+    area.pad_focusable = false;
     if (engine.defines.SPOT_DEBUG) {
-      pos_param.spot_debug_ignore = param.eat_clicks || // just consuming mouseover, not a button / etc
+      area.spot_debug_ignore = param.eat_clicks || // just consuming mouseover, not a button / etc
         param.spot_debug_ignore;
     }
-    frameSpotsPush(pos_param);
+    frameSpotsPush(area);
   }
 }
 
-function keyCheck(nav_dir) {
+function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
@@ -732,11 +912,16 @@ function keyCheck(nav_dir) {
   return false;
 }
 
-function spotFocusCheckNavButtonsFocused(param) {
-  for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
-    if (focus_next[ii] !== undefined && keyCheck(ii)) {
-      if (focus_next[ii]) {
-        spotFocusSet(focus_next[ii], false, false, 'nav_focused');
+type SpotParamWithOut = SpotParam & {
+  out: SpotRet;
+};
+
+function spotFocusCheckNavButtonsFocused(param: SpotParamWithOut) {
+  for (let ii = <SpotNavEnum>1; ii < SPOT_NAV_MAX; ++ii) {
+    let elem = focus_next[ii];
+    if (elem !== undefined && keyCheck(ii)) {
+      if (elem) {
+        spotFocusSet(elem, false, false, 'nav_focused');
       } else {
         param.out.nav = ii;
       }
@@ -744,16 +929,17 @@ function spotFocusCheckNavButtonsFocused(param) {
   }
 }
 
-function spotFocusCheckNavButtonsUnfocused(param) {
-  for (let ii = 1; ii < SPOT_NAV_MAX; ++ii) {
-    if (focus_next[ii] && focus_next[ii].key_computed === param.key_computed && keyCheck(ii)) {
-      spotFocusSet(focus_next[ii], false, false, 'nav_unfocused');
+function spotFocusCheckNavButtonsUnfocused(param: SpotParamWithOut): void {
+  for (let ii = <SpotNavEnum>1; ii < SPOT_NAV_MAX; ++ii) {
+    let elem = focus_next[ii];
+    if (elem && elem.key_computed === param.key_computed && keyCheck(ii)) {
+      spotFocusSet(elem, false, false, 'nav_unfocused');
     }
   }
 }
 
 // Silently steal (keep) focus
-function spotFocusSetSilent(param) {
+function spotFocusSetSilent(param: SpotParam): void {
   const key = spotKey(param);
   const def = param.def || SPOT_DEFAULT;
   focus_key = key;
@@ -762,7 +948,7 @@ function spotFocusSetSilent(param) {
   focus_key_nonsticky = null;
 }
 
-export function spotFocusSteal(param) {
+export function spotFocusSteal(param: SpotParam): void {
   const key = spotKey(param);
   spotlog('spotFocusSteal', key, false);
   // Silent, no sound, no checking parameters, just set the key string
@@ -772,35 +958,36 @@ export function spotFocusSteal(param) {
 
 
 // sets param.out.allow_focus, param.out.nav, and param.dom_pos (if allow_focus)
-export function spotFocusCheck(param) {
-  let out = param.out;
+export function spotFocusCheck(param0: SpotParam): SpotRet {
+  let out = param0.out;
   if (!out) {
-    out = param.out = {};
+    out = param0.out = {} as SpotRet;
   }
+  let param1 = param0 as SpotParamWithOut;
   out.focused = false;
   out.kb_focused = false;
   out.allow_focus = false;
-  const key = spotKey(param); // Doing this even if disabled for spotDebug()
-  const def = param.def || SPOT_DEFAULT;
-  const disabled = param.disabled === undefined ? def.disabled : param.disabled;
+  const key = spotKey(param1); // Doing this even if disabled for spotDebug()
+  const def = param1.def || SPOT_DEFAULT;
+  const disabled = param1.disabled === undefined ? def.disabled : param1.disabled;
   if (disabled) {
-    const disabled_focusable = param.disabled_focusable === undefined ? def.disabled_focusable :
-      param.disabled_focusable;
+    const disabled_focusable = param1.disabled_focusable === undefined ? def.disabled_focusable :
+      param1.disabled_focusable;
     if (!disabled_focusable) {
       return out;
     }
     // Otherwise disabled_focusable - allow focusing
   }
-  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
+  const focus_steal = param1.focus_steal === undefined ? def.focus_steal : param1.focus_steal;
   if (focus_steal) {
     // Silently steal (keep) focus
-    spotFocusSetSilent(param);
+    spotFocusSetSilent(param1);
   }
   if (focus_key === key) {
     // last_frame_focus_found = true;
-    spotFocusCheckNavButtonsFocused(param);
+    spotFocusCheckNavButtonsFocused(param1);
   } else {
-    spotFocusCheckNavButtonsUnfocused(param);
+    spotFocusCheckNavButtonsUnfocused(param1);
   }
   let focused = focus_key === key || focus_key_nonsticky === key;
   if (inputEatenMouse()) {
@@ -814,27 +1001,28 @@ export function spotFocusCheck(param) {
     }
   } else {
     out.allow_focus = true;
-    if (!param.dom_pos) {
-      param.dom_pos = {};
+    if (!param1.dom_pos) {
+      param1.dom_pos = {} as Box;
     }
-    camera2d.virtualToDomPosParam(param.dom_pos, param);
-    const auto_focus = param.auto_focus === undefined ? def.auto_focus : param.auto_focus;
-    if (!spotEntirelyObscured(param) || focused && focus_is_sticky) {
-      frameSpotsPush(param);
+    let param2 = param1 as SpotInternal;
+    camera2d.virtualToDomPosParam(param2.dom_pos, param2);
+    const auto_focus = param2.auto_focus === undefined ? def.auto_focus : param2.auto_focus;
+    if (!spotEntirelyObscured(param2) || focused && focus_is_sticky) {
+      frameSpotsPush(param2);
       if (auto_focus) {
         if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
           spotlog('auto_focus', key);
           // play no sound, etc, just silently steal focus
-          spotFocusSetSilent(param);
+          spotFocusSetSilent(param2);
           focused = true;
         }
       }
     }
     if (auto_focus) {
-      frame_autofocus_spots[key] = param;
+      frame_autofocus_spots[key] = param2;
     }
     if (focus_sub_rect && focus_key === key) {
-      focus_sub_rect_elem = param;
+      focus_sub_rect_elem = param2;
     }
   }
 
@@ -843,7 +1031,7 @@ export function spotFocusCheck(param) {
   return out;
 }
 
-export function spotEndInput() {
+export function spotEndInput(): void {
   if (engine.defines.SPOT_DEBUG) {
     spotDebug();
   }
@@ -853,12 +1041,14 @@ let last_signal = {
   key: '',
   timestamp: 0,
 };
-function spotSignalRet(param) {
+function spotSignalRet(param: SpotInternal): void {
   let out = param.out;
   let key = param.key_computed;
   assert(key);
   out.double_click = key === last_signal.key &&
-    engine.frame_timestamp - last_signal.timestamp < settings.double_click_time;
+    engine.frame_timestamp - last_signal.timestamp <
+    // TODO: After input.js and settings.js are converted to TypeScript, remove type casts
+    (settings as unknown as { double_click_time:number }).double_click_time;
   last_signal.key = key;
   last_signal.timestamp = engine.frame_timestamp;
   out.ret++;
@@ -880,23 +1070,22 @@ function spotSignalRet(param) {
 //   double_click: boolean // if ret, set to true if it was a double click/tap/button press/etc
 //   drag_drop: any // if drag_target and a drop happened, contains dragDrop event { drag_payload }
 //   nav: SPOT_NAV_* // if custom_nav, and the user navigated, set to the navigation event
-export function spot(param) {
+export function spot(param0: SpotParam): SpotRet {
   profilerStartFunc();
-  const def = param.def || SPOT_DEFAULT;
-  const disabled = param.disabled === undefined ? def.disabled : param.disabled;
-  const tooltip = param.tooltip === undefined ? def.tooltip : param.tooltip;
-  const is_button = param.is_button === undefined ? def.is_button : param.is_button;
-  const button_long_press = param.button_long_press === undefined ? def.button_long_press : param.button_long_press;
-  const in_event_cb = param.in_event_cb === undefined ? def.in_event_cb : param.in_event_cb;
-  const drag_target = param.drag_target === undefined ? def.drag_target : param.drag_target;
-  const drag_over = param.drag_over === undefined ? def.drag_over : param.drag_over;
-  const touch_focuses = param.touch_focuses === undefined ? def.touch_focuses : param.touch_focuses;
-  const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
-  const custom_nav = param.custom_nav === undefined ? def.custom_nav : param.custom_nav;
+  const def = param0.def || SPOT_DEFAULT;
+  const disabled = param0.disabled === undefined ? def.disabled : param0.disabled;
+  const is_button = param0.is_button === undefined ? def.is_button : param0.is_button;
+  const button_long_press = param0.button_long_press === undefined ? def.button_long_press : param0.button_long_press;
+  const in_event_cb = param0.in_event_cb === undefined ? def.in_event_cb : param0.in_event_cb;
+  const drag_target = param0.drag_target === undefined ? def.drag_target : param0.drag_target;
+  const drag_over = param0.drag_over === undefined ? def.drag_over : param0.drag_over;
+  const touch_focuses = param0.touch_focuses === undefined ? def.touch_focuses : param0.touch_focuses;
+  const focus_steal = param0.focus_steal === undefined ? def.focus_steal : param0.focus_steal;
+  const custom_nav = param0.custom_nav === undefined ? def.custom_nav : param0.custom_nav;
 
-  let out = param.out;
+  let out = param0.out;
   if (!out) {
-    out = param.out = {};
+    out = param0.out = {} as SpotRet;
   }
   out.focused = false;
   out.ret = 0;
@@ -910,25 +1099,33 @@ export function spot(param) {
     out.nav = SPOT_NAV_NONE;
   }
 
-  let state = SPOT_STATE_REGULAR;
-  let { focused, allow_focus, kb_focused } = spotFocusCheck(param);
+  let state: SpotStateEnum = SPOT_STATE_REGULAR;
+  let { focused, allow_focus, kb_focused } = spotFocusCheck(param0);
+  let param = param0 as SpotInternal; // massaged in spotFocusCheck()
   if (disabled) {
     state = SPOT_STATE_DISABLED;
   } else {
     let button_click;
+    let long_press_ret;
     if (drag_target && (out.drag_drop = dragDrop(param))) {
       spotFocusSet(param, true, true, 'drag_drop');
       spotSignalRet(param);
       focused = true;
-    } else if (button_long_press && (button_click = longPress(param)) ||
+    } else if (button_long_press && (long_press_ret = longPress(param)) ||
         is_button && (button_click = inputClick(param))
     ) {
       // TODO: change `ret` to be a count of how many clicks/taps happened?
-      out.long_press = button_click.long_press;
-      out.button = button_click.button;
+      if (long_press_ret) {
+        out.long_press = long_press_ret.long_press;
+        out.button = long_press_ret.button;
+        out.pos = undefined;
+      } else {
+        assert(button_click);
+        out.button = button_click.button;
+        out.pos = button_click.pos as Vec2;
+      }
       // Not using button_click.was_double_click: relying on doubly activating this exact spot instead
       // out.double_click = button_click.was_double_click;
-      out.pos = button_click.pos;
       if (mousePosIsTouch()) {
         if (touch_focuses) {
           if (!focused) {
@@ -1047,12 +1244,14 @@ export function spot(param) {
   if (out.ret) {
     state = SPOT_STATE_DOWN;
     const sound_button = param.sound_button === undefined ? def.sound_button : param.sound_button;
-    playUISound(sound_button);
+    if (sound_button) {
+      playUISound(sound_button);
+    }
   }
-  if (out.focused && tooltip) {
-    drawTooltipBox(param);
+  if (out.focused && param.tooltip) {
+    drawTooltipBox(param as TooltipBoxParam);
   }
-  checkHooks(param, out.ret);
+  checkHooks(param, Boolean(out.ret));
   out.spot_state = state;
 
   profilerStopFunc();

@@ -8,7 +8,11 @@ import { Vec4, vec2, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
 import * as input from './input.js';
-import { KEYS, PAD } from './input.js';
+import {
+  BUTTON_LEFT,
+  KEYS,
+  PAD,
+} from './input.js';
 import {
   SPOT_DEFAULT_BUTTON,
   SPOT_STATE_DOWN,
@@ -390,7 +394,7 @@ class ScrollAreaInternal implements ScrollArea {
         y: this.y,
         w: bar_w,
         h: button_h,
-        button: 0,
+        button: BUTTON_LEFT,
         pad_focusable: false,
         disabled: this.grabbed,
         disabled_focusable: false,
@@ -432,7 +436,7 @@ class ScrollAreaInternal implements ScrollArea {
         y: this.y,
         w: bar_w,
         h: this.h,
-        button: 0,
+        button: BUTTON_LEFT,
         sound_rollover: null,
         pad_focusable: false,
         def: SPOT_DEFAULT_BUTTON,
