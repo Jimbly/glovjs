@@ -7,30 +7,30 @@
 
 let should_throw = true;
 
-function ok(exp, msg) {
-  if (exp) {
-    return true;
-  }
-  if (should_throw) {
+function verify<T>(exp: T | undefined | null | false, msg?: string): T {
+  if (!exp && should_throw) {
     throw new Error(`Assertion failed${msg ? `: ${msg}` : ''}`);
   }
-  return false;
+  return exp as T;
 }
-module.exports = ok;
-module.exports.ok = ok;
 
-function equal(a, b) {
-  if (a === b) {
-    return true;
-  }
-  if (should_throw) {
-    throw new Error(`Assertion failed: "${a}"==="${b}"`);
-  }
-  return false;
-}
-module.exports.equal = equal;
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace verify {
+  export const ok = verify;
 
-function dothrow(doit) {
-  should_throw = doit;
+  export function equal<T>(a: T, b: T): boolean {
+    if (a === b) {
+      return true;
+    }
+    if (should_throw) {
+      throw new Error(`Assertion failed: "${a}"==="${b}"`);
+    }
+    return false;
+  }
+
+  export function dothrow(doit: boolean): void {
+    should_throw = doit;
+  }
 }
-module.exports.dothrow = dothrow;
+
+export = verify;
