@@ -191,6 +191,7 @@ type MouseOverParam = {
 
 import assert from 'assert';
 const { abs, max } = Math;
+import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
@@ -829,7 +830,7 @@ export function spotSubPush(): void {
   focus_sub_rect = null;
 }
 export function spotSubPop(): void {
-  ([focus_sub_rect, focus_sub_rect_elem] = sub_stack.pop() as typeof sub_stack[0]);
+  ([focus_sub_rect, focus_sub_rect_elem] = verify(sub_stack.pop()));
 }
 
 export function spotSubBegin(param_in: SpotSubParam): void {
