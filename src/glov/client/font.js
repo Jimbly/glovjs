@@ -806,9 +806,14 @@ GlovFont.prototype.drawScaled = function () {
   techParamsSet('param0', value);
   let value2 = temp_vec4_glow_params;
   // Glow mult
-  value2[2] = 1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale);
-  value2[3] = min(0, -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) /
-    ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale));
+  if (applied_style.glow_outer) {
+    value2[2] = 1 / ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale);
+    value2[3] = min(0, -(0.5 - applied_style.glow_outer * delta_per_source_pixel * font_texel_scale) /
+      ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale));
+  } else {
+    // Avoid sending `Infinity` to GPU
+    value2[2] = value[3] = 0;
+  }
 
   v4scale(padding_in_font_space, padding4, 1 / avg_scale_font);
   for (let ii = 0; ii < 4; ++ii) {
