@@ -1053,4 +1053,5 @@ export function fontTick() {
   tech_params_cache_idx = 0;
   tech_params_cache.length = 0;
   tech_params_pool_idx = 0;
+  techParamsAlloc();
 }
