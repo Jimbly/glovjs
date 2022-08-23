@@ -4,6 +4,7 @@
 exports.create = editBoxCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const assert = require('assert');
+const verify = require('glov/common/verify.js');
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
 const {
@@ -218,6 +219,10 @@ class GlovUIEditBox {
     this.applyParams(params);
 
     let is_reset = false;
+    if (!verify(this.last_frame !== engine.frame_index)) {
+      // two calls on one frame (asserts in dev, silently do nothing otherwise?)
+      return null;
+    }
     if (this.last_frame !== engine.frame_index - 1) {
       // it's been more than a frame, we must have not been running, discard async events
       this.submitted = false;
