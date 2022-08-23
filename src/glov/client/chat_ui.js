@@ -209,6 +209,7 @@ function ChatUI(params) {
 
   this.fade_start_time = params.fade_start_time || [10000, 1000];
   this.fade_time = params.fade_time || [1000, 500];
+  this.z_override = null; // 1-frame Z override
 
   this.setActiveSize(this.font_height, this.w);
   let outline_width = params.outline_width || 1;
@@ -623,6 +624,10 @@ ChatUI.prototype.sendChat = function (flags, text) {
   }
 };
 
+ChatUI.prototype.setZOverride = function (z) {
+  this.z_override = z;
+};
+
 ChatUI.prototype.run = function (opts) {
   const UI_SCALE = ui.font_height / 24;
   opts = opts || {};
@@ -665,7 +670,8 @@ ChatUI.prototype.run = function (opts) {
   let y = y1;
   let outer_w = this.w;
   let was_focused = this.isFocused();
-  let z = was_focused ? Z.CHAT_FOCUSED : Z.CHAT;
+  let z = this.z_override || (was_focused ? Z.CHAT_FOCUSED : Z.CHAT);
+  this.z_override = null;
   let is_focused = false;
   let font_height = this.font_height;
   let anything_visible = false;
