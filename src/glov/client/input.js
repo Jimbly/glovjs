@@ -235,6 +235,7 @@ export function pointerLocked() {
   return pointer_lock.isLocked();
 }
 let pointerlock_touch_id = `m${POINTERLOCK}`;
+let pointerlock_frame = -1;
 // only works reliably when called from an event handler
 export function pointerLockEnter(when) {
   pointer_lock.enter(when);
@@ -243,6 +244,7 @@ function onPointerLockEnter() {
   if (touch_mode) {
     return;
   }
+  pointerlock_frame = engine.frame_index;
   let touch_data = touches[pointerlock_touch_id];
   setMouseToMid();
   if (touch_data) {
@@ -253,6 +255,9 @@ function onPointerLockEnter() {
     touch_data = touches[pointerlock_touch_id] = new TouchData(mouse_pos, false, POINTERLOCK, null);
   }
   movement_questionable_frames = MOVEMENT_QUESTIONABLE_FRAMES;
+}
+export function pointerLockJustEntered(num_frames) {
+  return engine.frame_index <= pointerlock_frame + (num_frames || 1);
 }
 export function pointerLockExit() {
   let touch_data = touches[pointerlock_touch_id];
