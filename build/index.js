@@ -19,6 +19,7 @@ const gulpish_tasks = require('./gulpish-tasks.js');
 const json5 = require('./json5.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
+const uglifyrc = require('./uglifyrc.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 
@@ -42,10 +43,9 @@ gb.configure({
 // Gets applied to the entire bundle
 const max_mangle = argv['max-mangle'];
 const prod_uglify_opts = {
-  compress: false,
+  ...uglifyrc,
   keep_fnames: !max_mangle,
   mangle: { toplevel: true },
-  output: { semicolons: false },
 };
 
 function copy(job, done) {
@@ -261,12 +261,7 @@ gb.task({
 gb.task({
   name: 'client_js_uglify',
   input: ['client_js_glov_preresolve:**.js'],
-  ...uglify({ inline: true }, {
-    compress: false,
-    keep_fnames: true,
-    mangle: false,
-    output: { semicolons: false },
-  }),
+  ...uglify({ inline: true }, uglifyrc),
 });
 
 gb.task({
