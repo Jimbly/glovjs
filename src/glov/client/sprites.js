@@ -20,6 +20,7 @@ export const BLEND_PREMULALPHA = 2;
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
+const { dynGeomQueueSprite } = require('./dyn_geom.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
@@ -936,6 +937,19 @@ Sprite.prototype.draw4Color = function (params) {
   qsp.blend = params.blend;
   return queuesprite4colorObj(qsp);
 };
+
+Sprite.prototype.draw3D = function (params) {
+  // Note: ignoring this.size[] for now for simplicity, is this useful?
+  // let w = (params.size[0] || 1) * this.size[0];
+  // let h = (params.size[1] || 1) * this.size[1];
+  if (typeof params.frame === 'number') {
+    params.uvs = this.uidata.rects[params.frame];
+  } else if (!params.uvs) {
+    params.uvs = this.uvs;
+  }
+  dynGeomQueueSprite(this, params);
+};
+
 
 export function create(params) {
   return new Sprite(params);
