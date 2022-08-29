@@ -19,8 +19,10 @@ const {
 } = require('./input.js');
 const { getStringIfLocalizable } = require('./localization.js');
 const {
+  SPOT_NAV_DOWN,
   SPOT_NAV_LEFT,
   SPOT_NAV_RIGHT,
+  SPOT_NAV_UP,
   spotFocusCheck,
   spotFocusSteal,
   spotUnfocus,
@@ -125,6 +127,12 @@ class GlovUIEditBox {
       this.text = '';
     }
     this.h = this.font_height;
+    if (this.multiline && this.custom_nav[SPOT_NAV_UP] === undefined) {
+      this.custom_nav[SPOT_NAV_UP] = null;
+    }
+    if (this.multiline && this.custom_nav[SPOT_NAV_DOWN] === undefined) {
+      this.custom_nav[SPOT_NAV_DOWN] = null;
+    }
   }
   updateText() {
     this.text = this.input.value;
