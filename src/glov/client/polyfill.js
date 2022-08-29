@@ -99,6 +99,19 @@ if (!Object.values) {
   };
 }
 
+if (!Object.assign) {
+  Object.assign = function assign(target, source1) {
+    for (let argindex = 1; argindex < arguments.length; ++argindex) {
+      // eslint-disable-next-line prefer-rest-params
+      let source = arguments[argindex];
+      for (let key in source) {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  };
+}
+
 if (!Math.sign) {
   Math.sign = function sign(a) {
     return a < 0 ? -1 : a > 0 ? 1 : 0;
