@@ -105,9 +105,11 @@ export function localStorageClearAll(key_prefix?: string): void {
   }
 }
 
-export function localStorageExportAll(): string {
-  let obj: Partial<Record<string, unknown>> = {};
-  let prefix = new RegExp(`^${storage_prefix}_(.*)`, 'u');
+export type LocalStorageData = Partial<Record<string, string>>;
+
+export function localStorageExportAll(filter_prefix: string): LocalStorageData {
+  let obj: LocalStorageData = {};
+  let prefix = new RegExp(`^${storage_prefix}_(${filter_prefix || ''}.*)`, 'u');
   if (lsd) {
     for (let i = 0; i < lsd.length; i++) {
       let key = lsd.key(i);
@@ -115,7 +117,7 @@ export function localStorageExportAll(): string {
       let m = key.match(prefix);
       if (m) {
         let v = lsd.getItem(key);
-        if (v !== 'undefined') {
+        if (v && v !== 'undefined') {
           obj[m[1]] = v;
         }
       }
@@ -127,14 +129,13 @@ export function localStorageExportAll(): string {
       obj[m[1]] = lsd_overlay[key];
     }
   }
-  return JSON.stringify(obj);
+  return obj;
 }
 
-export function localStorageImportAll(serialized: string): void {
-  let obj = JSON.parse(serialized);
+export function localStorageImportAll(serialized: LocalStorageData): void {
   localStorageClearAll();
-  for (let key in obj) {
-    localStorageSet(key, obj[key]);
+  for (let key in serialized) {
+    localStorageSet(key, serialized[key]);
   }
 }
 

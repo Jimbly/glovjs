@@ -121,7 +121,7 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
 
 CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
-  let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run } = param;
+  let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data } = param;
   assert(cmd && func);
   let help_lower = String(help || '').toLowerCase();
   if (help_lower.includes('(admin)')) {
@@ -138,6 +138,7 @@ CmdParse.prototype.register = function (param) {
     prefix_usage_with_help,
     access_show,
     access_run,
+    store_data, // just for resetSettings
   };
 };
 
@@ -149,18 +150,25 @@ function formatRangeValue(type, value) {
   return ret;
 }
 
+const CMD_STORAGE_PREFIX = 'cmd_parse_';
+
 // Optional param.on_change(is_startup:boolean)
 CmdParse.prototype.registerValue = function (cmd, param) {
   assert(TYPE_NAME[param.type] || !param.set);
   assert(param.set || param.get);
   let label = param.label || cmd;
   let store = param.store && this.storage || false;
-  let store_key = `cmd_parse_${canonical(cmd)}`;
+  let store_key = `${CMD_STORAGE_PREFIX}${canonical(cmd)}`;
   if (param.ver) {
     store_key += `_${param.ver}`;
   }
+  let store_data;
   if (store) {
     assert(param.set);
+    store_data = {
+      store_key,
+      param,
+    };
     let init_value = this.storage.getJSON(store_key);
     if (init_value !== undefined) {
       // enforce stored values within current range
@@ -266,7 +274,54 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     prefix_usage_with_help: param.prefix_usage_with_help,
     access_show: param.access_show,
     access_run: param.access_run,
+    store_data,
   });
+};
+
+CmdParse.prototype.resetSettings = function () {
+  let results = [];
+  let all_saved_data = this.storage.localStorageExportAll(CMD_STORAGE_PREFIX);
+  let count = 0;
+  for (let key in all_saved_data) {
+    let value = all_saved_data[key];
+    let cmd_name = key.slice(CMD_STORAGE_PREFIX.length);
+    let version;
+    ([cmd_name, version] = cmd_name.split('_')); // grab and strip version
+    let cmd_data = this.cmds[cmd_name];
+    if (!cmd_data) {
+      this.storage.set(key, undefined);
+      results.push(`Cleared unknown setting "${cmd_name}" = ${value}`);
+      ++count;
+    } else {
+      let { name, store_data } = cmd_data;
+      let default_value = store_data?.param?.default_value;
+      if (store_data && store_data.store_key !== key) {
+        this.storage.set(key, undefined);
+        results.push(`Cleared old setting "${name} (v${version || 0})"`);
+        ++count;
+      } else if (default_value !== undefined) {
+        if (JSON.stringify(default_value) === value) {
+          // Already at default value, "clear" this silently, just remove from storage
+          this.storage.set(key, undefined);
+          // results.push(`Cleared setting "${name}" already at default value`);
+          // ++count;
+        } else {
+          this.storage.set(key, undefined);
+          results.push(`Cleared setting "${name}" = ${value} (default = ${default_value})`);
+          ++count;
+        }
+      } else {
+        this.storage.set(key, undefined);
+        results.push(`Cleared setting "${name}" = ${value}`);
+        ++count;
+      }
+    }
+  }
+
+  if (results.length) {
+    results.push(`Reset ${count} setting(s)`);
+  }
+  return results;
 };
 
 function cmpCmd(a, b) {

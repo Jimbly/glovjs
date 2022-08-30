@@ -255,6 +255,17 @@ export function definesChanged() {
   }
   shaders.handleDefinesChanged();
 }
+export function definesClearAll() {
+  let any_changed = false;
+  for (let key in defines) {
+    defines[key] = false;
+    any_changed = true;
+  }
+  if (any_changed) {
+    definesChanged();
+  }
+  return any_changed;
+}
 
 function normalizeRow(m, idx) {
   let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];

@@ -54,13 +54,7 @@ cmd_parse.register({
   func: function (str, resp_func) {
     str = str.toUpperCase().trim();
     if (!str) {
-      let any_changed = false;
-      for (let key in engine.defines) {
-        engine.defines[key] = false;
-        any_changed = true;
-      }
-      if (any_changed) {
-        engine.definesChanged();
+      if (engine.definesClearAll()) {
         return void resp_func(null, 'All debug defines cleared');
       } else {
         return void resp_func(null, 'No debug defines active');
@@ -214,5 +208,25 @@ cmd_parse.register({
     }
     socket.close();
     resp_func();
+  },
+});
+
+export function resetSettings() {
+  let results = cmd_parse.resetSettings();
+  if (engine.definesClearAll()) {
+    results.push('Debug defines cleared');
+  }
+  if (!results.length) {
+    return null;
+  }
+  results.push('Please restart the app or reload to page for the new settings to take effect.');
+  return results.join('\n');
+}
+
+cmd_parse.register({
+  cmd: 'reset_settings',
+  help: 'Resets all settings and options to their defaults (Note: requires an app restart)',
+  func: function (str, resp_func) {
+    resp_func(null, resetSettings() || 'No stored settings to reset');
   },
 });
