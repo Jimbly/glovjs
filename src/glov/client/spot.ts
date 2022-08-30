@@ -117,20 +117,10 @@ export const SPOT_DEFAULT_LABEL: SpotParamBase = {
   touch_focuses: true, // usually want this?
 };
 
-type Box = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
 type SpotKeyableKeyed = {
   key: string;
 };
-type SpotKeyableAuto = {
-  x: number;
-  y: number;
-};
+type SpotKeyableAuto = Point2D;
 
 export type SpotKeyable = (SpotKeyableKeyed | SpotKeyableAuto) & {
   // computed
@@ -208,6 +198,7 @@ import {
   FontStyle,
   fontStyle,
 } from './font.js';
+import { Box, Point2D } from './geom_types';
 import {
   KEYS,
   PAD,

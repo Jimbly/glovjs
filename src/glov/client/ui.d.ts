@@ -5,6 +5,7 @@ import { Sprite, UnimplementedData } from 'glov/common/types';
 import { Vec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
+import { Box } from './geom_types';
 import { SoundID } from './sound';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -14,12 +15,8 @@ export const LINE_ALIGN: number;
 export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
 export function makeColorSet(color: Vec4): ColorSet;
-export interface UIBox {
-  x: number;
-  y: number;
+export interface UIBox extends Box {
   z?: number;
-  w: number;
-  h: number;
 }
 export interface UIBoxColored extends UIBox {
   color?: Vec4;

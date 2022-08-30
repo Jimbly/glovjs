@@ -7,6 +7,7 @@ import verify from 'glov/common/verify.js';
 import { Vec4, vec2, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d.js';
 import * as engine from './engine.js';
+import { Box } from './geom_types';
 import * as input from './input.js';
 import {
   BUTTON_LEFT,
@@ -46,13 +47,10 @@ export function scrollAreaSetPixelScale(scale: number): void {
   default_pixel_scale = scale;
 }
 
-interface ScrollAreaOptsAll {
+interface ScrollAreaOptsAll extends Box {
   // configuration options
-  x: number;
-  y: number;
   z: number;
-  w: number;
-  h: number; // height of visible area, not scrolled area
+  // h: number (from Box) is height of visible area, not interior scrolled area
   rate_scroll_click: number;
   pixel_scale: number;
   top_pad: boolean; // set to false it the top/bottom "buttons" don't look like buttons
