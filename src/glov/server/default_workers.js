@@ -1,25 +1,25 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-import { FriendStatus } from 'glov/common/friends_data.js';
-
-const assert = require('assert');
-const base32 = require('glov/common/base32.js');
-const { ChannelWorker } = require('./channel_worker.js');
-const dot_prop = require('glov/common/dot-prop');
-const {
+import assert from 'assert';
+import * as base32 from 'glov/common/base32';
+import * as dot_prop from 'glov/common/dot-prop';
+import {
   ID_PROVIDER_APPLE,
   ID_PROVIDER_FB_GAMING,
   ID_PROVIDER_FB_INSTANT,
   PRESENCE_OFFLINE,
-} = require('glov/common/enums.js');
-const master_worker = require('./master_worker.js');
-const md5 = require('glov/common/md5.js');
-const metrics = require('./metrics.js');
-const { isProfane, isReserved } = require('glov/common/words/profanity_common.js');
-const random_names = require('./random_names.js');
-const { deprecate, sanitize } = require('glov/common/util.js');
+} from 'glov/common/enums.js';
+import { FriendStatus } from 'glov/common/friends_data.js';
+import * as md5 from 'glov/common/md5.js';
+import { deprecate, sanitize } from 'glov/common/util.js';
+import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
+
+import { channelServerWorkerInit } from './channel_server_worker.js';
+import { ChannelWorker } from './channel_worker.js';
+import * as master_worker from './master_worker.js';
+import * as metrics from './metrics.js';
+import * as random_names from './random_names.js';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
@@ -810,23 +810,6 @@ DefaultUserWorker.prototype.require_email = true;
 DefaultUserWorker.prototype.rich_presence = true;
 DefaultUserWorker.prototype.maintain_client_list = true; // needed for rich_presence features
 
-class ChannelServerWorker extends ChannelWorker {
-}
-// Returns a function that forwards to a method of the same name on the ChannelServer
-function channelServerBroadcast(name) {
-  return (ChannelServerWorker.prototype[name] = function (src, data, resp_func) {
-    assert(!resp_func.expecting_response); // this is a broadcast
-    this.channel_server[name](data);
-  });
-}
-function channelServerHandler(name) {
-  return (ChannelServerWorker.prototype[name] = function (src, data, resp_func) {
-    this.channel_server[name](data, resp_func);
-  });
-}
-
-ChannelServerWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
-
 let inited = false;
 let user_worker = DefaultUserWorker;
 let user_worker_init_data = {
@@ -922,18 +905,6 @@ export function init(channel_server) {
   }
   access_token_regex = new RegExp(`^([${token_keys.join('')}])([^Z]*)Z([0-9A-Z]+)$`);
   channel_server.registerChannelWorker('user', user_worker, user_worker_init_data);
-  channel_server.registerChannelWorker('channel_server', ChannelServerWorker, {
-    autocreate: false,
-    subid_regex: /^[a-zA-Z0-9-]+$/,
-    handlers: {
-      worker_create: channelServerHandler('handleWorkerCreate'),
-      master_startup: channelServerBroadcast('handleMasterStartup'),
-      master_stats: channelServerBroadcast('handleMasterStats'),
-      restarting: channelServerBroadcast('handleRestarting'),
-      chat_broadcast: channelServerBroadcast('handleChatBroadcast'),
-      ping: channelServerBroadcast('handlePing'),
-      eat_cpu: channelServerHandler('handleEatCPU'),
-    },
-  });
+  channelServerWorkerInit(channel_server);
   master_worker.init(channel_server);
 }
