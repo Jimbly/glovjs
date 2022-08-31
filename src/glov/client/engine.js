@@ -748,6 +748,19 @@ function resetState() {
   profilerStop('resetState');
 }
 
+let in_background = false;
+let enter_background_cb = [];
+let exit_background_cb = [];
+export function isInBackground() {
+  return in_background;
+}
+export function onEnterBackground(fn) {
+  enter_background_cb.push(fn);
+}
+export function onExitBackground(fn) {
+  exit_background_cb.push(fn);
+}
+
 export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
@@ -819,6 +832,10 @@ function tick(timestamp) {
     requestFrame();
     profilerStop();
     return profilerStop('tick');
+  }
+  if (in_background) {
+    in_background = false;
+    callEach(exit_background_cb);
   }
 
   checkResize();
@@ -967,9 +984,26 @@ function tick(timestamp) {
   return profilerStop('tick');
 }
 
+let blurred = false;
+function onBlur(evt) {
+  blurred = true;
+}
+
+function onFocus(evt) {
+  blurred = false;
+}
+
 function periodiclyRequestFrame() {
   requestFrame();
-  setTimeout(periodiclyRequestFrame, 5000);
+  setTimeout(periodiclyRequestFrame, 1000);
+
+  if (!in_background && blurred) {
+    let now = round(hrnow());
+    if (now - last_tick > 400) {
+      in_background = true;
+      callEach(enter_background_cb);
+    }
+  }
 }
 
 // Must be called out-of-frame (use setTimeout) if not at startup
@@ -1135,6 +1169,9 @@ export function startup(params) {
   sprites.startup();
   input.startup(canvas, params);
   models.startup();
+
+  window.addEventListener('blur', onBlur, false);
+  window.addEventListener('focus', onFocus, false);
 
   /* eslint-disable global-require */
   glov_particles = require('./particles.js').create();

@@ -39,13 +39,27 @@ interface HowlSound {
   duration: (id?: number) => number;
 }
 
-interface GlovSound { // Sound wrapper returned by soundPlay to external code
+// Sound wrapper returned by soundPlay to external code
+export interface GlovSoundSetUp {
+  name: string;
   stop: (id: number) => HowlSound;
   volume: (vol: number) => void;
   playing: (id?: number) => boolean;
-  duration: (id: number) => number;
+  duration: (id?: number) => number;
   location: () => number;
-  fadeOut: (time: number) => void;
+  fade: (target_volume: number, time: number) => void;
+}
+
+// Placeholder to track reference to sound whenever it's played
+export interface GlovSoundStreamedPlaceholder {
+  name: string;
+  is_placeholder: true;
+}
+
+export type GlovSound = GlovSoundSetUp | GlovSoundStreamedPlaceholder;
+
+export function isPlaceholderSound(sound: GlovSound): sound is GlovSoundStreamedPlaceholder {
+  return (sound as GlovSoundStreamedPlaceholder).is_placeholder;
 }
 
 interface GlovMusic {
@@ -58,7 +72,8 @@ interface GlovMusic {
 }
 
 interface Fade {
-  sound: HowlSound;
+  sound: GlovSoundSetUp;
+  target_volume: number;
   id: number;
   time: number;
   volume: number;
@@ -67,7 +82,7 @@ interface Fade {
 
 let sounds : Record<string, HowlSound> = {};
 let active_sfx_as_music: {
-  sound: GlovSound;
+  sound: GlovSoundSetUp;
   play_volume: number;
   set_volume_when_played: number;
 }[] = [];
@@ -90,6 +105,10 @@ let last_played : Record<string, number> = {};
 let frame_timestamp = 0;
 let fades : Fade[] = [];
 let music : GlovMusic[];
+
+export function fadesCount(): number {
+  return fades.length;
+}
 
 let volume_override = 1;
 let volume_override_target = 1;
@@ -114,22 +133,6 @@ settings.register({
   volume_sound: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
-    range: [0,1],
-  },
-});
-
-settings.register({
-  sound: {
-    default_value: 1,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-  },
-});
-
-settings.register({
-  music: {
-    default_value: 1,
-    type: cmd_parse.TYPE_INT,
     range: [0,1],
   },
 });
@@ -345,7 +348,7 @@ export function soundTick(dt: number): void {
     if (!mus.sound) {
       continue;
     }
-    let target = settings.music ? mus.target_volume : 0;
+    let target = (settings.volume * settings.volume_music === 0) ? 0 : mus.target_volume;
     if (mus.current_volume !== target) {
       let delta = target - mus.current_volume;
       let fade_amt = min(abs(delta), max_fade);
@@ -377,19 +380,26 @@ export function soundTick(dt: number): void {
 
   for (let ii = fades.length - 1; ii >= 0; --ii) {
     let fade = fades[ii];
-    let fade_amt = fade.time ? dt / fade.time : max_fade;
-    fade.volume = max(0, fade.volume - fade_amt);
-    fade.sound.volume(fade.volume * fade.settingsVolume() * volume_override, fade.id);
-    if (!fade.volume) {
-      fade.sound.stop(fade.id);
+    let delta = fade.target_volume - fade.volume;
+    let fade_amt = min(abs(delta), fade.time ? dt / fade.time : max_fade);
+    if (delta < 0) {
+      fade.volume = max(fade.target_volume, fade.volume - fade_amt);
+    } else {
+      fade.volume = min(fade.target_volume, fade.volume + fade_amt);
+    }
+    fade.sound.volume(fade.volume);
+    if (fade.volume === fade.target_volume) {
       ridx(fades, ii);
+      if (!fade.volume) {
+        fade.sound.stop(fade.id);
+      }
     }
   }
 }
 
-export function soundPlay(soundid: SoundID, volume_in?: number, as_music?: boolean): GlovSound | null {
-  let volume = volume_in || 1;
-  if (!as_music && !settings.sound || as_music && !settings.music) {
+export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean): GlovSoundSetUp | null {
+  volume = volume || 1;
+  if (settings.volume * (as_music ? settings.volume_music : settings.volume_sound) === 0) {
     return null;
   }
   if (!soundResumed()) {
@@ -415,6 +425,8 @@ export function soundPlay(soundid: SoundID, volume_in?: number, as_music?: boole
   // sound.volume(volume * settingsVolume() * volume_override, id);
   last_played[soundid] = frame_timestamp;
   let played_sound = {
+    name: soundid,
+    volume_current: volume,
     stop: sound.stop.bind(sound, id),
     playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
     location: () => { // get current location
@@ -427,16 +439,25 @@ export function soundPlay(soundid: SoundID, volume_in?: number, as_music?: boole
     },
     duration: sound.duration.bind(sound, id),
     volume: (vol: number) => {
+      played_sound.volume_current = vol;
       sound.volume(vol * settingsVolume() * volume_override, id);
     },
-    fadeOut: (time: number) => {
-      fades.push({
-        volume,
-        sound,
+    fade: (target_volume: number, time: number) => {
+      let new_fade = {
+        sound: played_sound,
+        volume: played_sound.volume_current,
+        target_volume,
         id,
         time,
         settingsVolume,
-      });
+      };
+      for (let ii = 0; ii < fades.length; ++ii) {
+        if (fades[ii].id === id) {
+          fades[ii] = new_fade;
+          return;
+        }
+      }
+      fades.push(new_fade);
     },
   };
   if (as_music) {
@@ -449,22 +470,29 @@ export function soundPlay(soundid: SoundID, volume_in?: number, as_music?: boole
   return played_sound;
 }
 
-export function soundPlayStreaming(soundname: string, volume: number): void {
-  if (!settings.sound) {
-    return;
+export function soundPlayStreaming(
+  soundname: string, volume: number, as_music: boolean, on_played_sound: (sound: GlovSoundSetUp | null) => void
+): GlovSound | null {
+  if (settings.volume * (as_music ? settings.volume_music : settings.volume_sound) === 0) {
+    return null;
   }
   if (Array.isArray(soundname)) {
     soundname = soundname[floor(random() * soundname.length)];
   }
+  let played_sound: GlovSound | null = { name: soundname, is_placeholder: true };
   soundLoad(soundname, { streaming: true, loop: false }, (err) => {
     if (!err) {
-      soundPlay(soundname, volume);
+      played_sound = soundPlay(soundname, volume, as_music);
+      if (on_played_sound) {
+        on_played_sound(played_sound);
+      }
     }
   });
+  return played_sound;
 }
 
 export function soundPlayMusic(soundname: string, volume: number, transition: number): void {
-  if (!settings.music) {
+  if (settings.volume * settings.volume_music === 0) {
     return;
   }
   if (volume === undefined) {
