@@ -227,8 +227,7 @@ export function run(x: number, y: number, z: number): void {
 
   y = max(y, test_scroll_area.y + test_scroll_area.h + pad);
   slider_value = slider(slider_value, {
-    x: 200,
-    y: 120, z,
+    x, y, z,
     min: 0,
     max: 2,
   });
