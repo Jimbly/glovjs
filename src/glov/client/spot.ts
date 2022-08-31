@@ -14,7 +14,6 @@ export const SPOT_NAV_PREV = 6;
 const SPOT_NAV_MAX = 7;
 
 type SpotNavEnum = typeof SPOT_NAV_LEFT |
-  typeof SPOT_NAV_LEFT |
   typeof SPOT_NAV_UP |
   typeof SPOT_NAV_RIGHT |
   typeof SPOT_NAV_DOWN |
@@ -734,10 +733,11 @@ function spotCalcNavTargets(): void {
     const custom_nav = start.custom_nav === undefined ? def.custom_nav : start.custom_nav;
     if (custom_nav) {
       let by_key: Partial<Record<string,SpotInternal>> | undefined;
-      for (let key in custom_nav) {
-        let target = custom_nav[key as unknown as SpotNavEnum];
-        if (!target) {
-          focus_next[key as unknown as SpotNavEnum] = target as (null | undefined);
+      for (let key_string in custom_nav) {
+        let key = Number(key_string) as SpotNavEnum;
+        let target = custom_nav[key];
+        if (target === null || target === undefined) {
+          focus_next[key] = target;
         } else {
           if (!by_key) {
             by_key = {};
@@ -749,7 +749,7 @@ function spotCalcNavTargets(): void {
             }
           }
           if (by_key[target]) {
-            focus_next[key as unknown as SpotNavEnum] = by_key[target];
+            focus_next[key] = by_key[target];
           }
         }
       }
