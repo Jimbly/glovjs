@@ -631,6 +631,19 @@ export class DefaultUserWorker extends ChannelWorker {
       delete this.my_clients[src.channel_id];
     }
   }
+  handlePresenceGet(src, pak, resp_func) {
+    if (!this.exists()) {
+      return void resp_func('ERR_USER_NOT_FOUND');
+    }
+    if (!this.rich_presence) {
+      return void resp_func('ERR_NO_RICH_PRESENCE');
+    }
+    let friends = this.getFriendsList();
+    if (friends[src.user_id]?.status === FriendStatus.Blocked) {
+      return void resp_func(null, {});
+    }
+    resp_func(null, this.presence_data);
+  }
   handlePresenceSet(src, pak, resp_func) {
     let active = pak.readInt();
     let state = pak.readAnsiString(); // app-defined state
@@ -775,6 +788,7 @@ let user_worker_init_data = {
   client_handlers: {
     friend_auto_update: DefaultUserWorker.prototype.handleFriendAutoUpdate,
     friend_list: DefaultUserWorker.prototype.handleFriendList,
+    presence_get: DefaultUserWorker.prototype.handlePresenceGet,
     presence_set: DefaultUserWorker.prototype.handlePresenceSet,
     csr_admin_to_user: DefaultUserWorker.prototype.handleCSRAdminToUser,
   },
