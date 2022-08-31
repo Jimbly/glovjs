@@ -179,6 +179,10 @@ export function v2lengthSq(a: Vec2): number {
   return a[0]*a[0] + a[1]*a[1];
 }
 
+export function v2length(a: Vec2): number {
+  return sqrt(v2lengthSq(a));
+}
+
 export function v2lerp(out: Vec2, t: number, a: Vec2, b: Vec2): Vec2 {
   let it = 1 - t;
   out[0] = it * a[0] + t * b[0];
@@ -362,6 +366,10 @@ export function v3floor(out: Vec3, a: Vec3): Vec3 {
 
 export function v3lengthSq(a: Vec3): number {
   return a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
+}
+
+export function v3length(a: Vec3): number {
+  return sqrt(v3lengthSq(a));
 }
 
 export function v3lerp(out: Vec3, t: number, a: Vec3, b: Vec3): Vec3 {
