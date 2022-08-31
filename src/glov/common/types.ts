@@ -94,6 +94,10 @@ export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerS
   return src.type === 'client';
 }
 
+export interface ChatIDs extends ClientHandlerSource {
+  style?: string;
+}
+
 export interface Packet {
   readU8: () => number;
   writeU8: (value: number) => void;
@@ -132,6 +136,12 @@ export interface Packet {
   ref: () => void;
   seek: (offs: number) => void;
   totalSize: () => number;
+}
+
+export interface Channel {
+  on: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
+  removeListener: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
+  onceSubscribe: (cb: ((data: DataObject) => void) | (() => void)) => void;
 }
 
 // TODO: Delete this type and all usages of it.

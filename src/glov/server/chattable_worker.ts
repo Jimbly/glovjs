@@ -1,6 +1,6 @@
 import { assert } from 'console';
 import { FIFO, fifoCreate } from 'glov/common/fifo';
-import { ChatHistoryData, ClientHandlerSource, ErrorCallback, Packet } from 'glov/common/types';
+import { ChatHistoryData, ChatIDs, ClientHandlerSource, ErrorCallback, Packet } from 'glov/common/types';
 import { sanitize } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker';
 
@@ -42,10 +42,12 @@ export function sendChat(
   display_name: string | undefined,
   flags: number,
   msg: string,
+  style?: string,
 ): string | null {
   id = id || undefined;
   client_id = client_id || undefined;
   display_name = display_name || undefined;
+  style = style || undefined;
   let chat = chatGet(worker);
   if (!chat) {
     chat = {
@@ -59,10 +61,10 @@ export function sendChat(
     return 'ERR_ECHO';
   }
   let ts = Date.now();
-  let data_saved = { id, msg, flags, ts, display_name };
+  let data_saved = { id, msg, style, flags, ts, display_name };
   // Not broadcasting timestamp, so client will use local timestamp for smooth fading
   // Need client_id on broadcast so client can avoid playing a sound for own messages
-  let data_broad = { id, msg, flags, display_name, client_id };
+  let data_broad = { id, msg, style, flags, display_name, client_id };
   chat.msgs[chat.idx] = data_saved;
   chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
   // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
@@ -75,7 +77,7 @@ export function sendChat(
 
 function chatReceive(
   worker: ChattableWorker,
-  source: ClientHandlerSource,
+  source: ChatIDs,
   pak: Packet,
 ): string | null {
   let { user_id, channel_id, display_name } = source; // user_id is falsey if not logged in
@@ -131,10 +133,11 @@ function chatReceive(
     };
     worker.chat_msg_timestamps.add(last);
   }
-  let err = sendChat(worker, id, client_id, display_name, flags, msg);
+  let style = source.style;
+  let err = sendChat(worker, id, client_id, display_name, flags, msg, style);
   if (err) {
     worker.logSrc(source,
-      `suppressed chat from ${id} ("${display_name}") (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
+      `suppressed chat from ${id} ("${display_name}") (${style}) (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
     return err;
   }
   // Log entire, non-truncated chat string

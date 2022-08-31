@@ -25,7 +25,7 @@ const {
   spotUnfocus,
 } = require('./spot.js');
 const ui = require('./ui.js');
-const { clamp, matchAll } = require('glov/common/util.js');
+const { clamp, defaults, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
 
 const FLAG_EMOTE = 1;
@@ -39,6 +39,10 @@ const color_user_rollover = vec4(1,1,1,0.5);
 const MAX_PER_STYLE = {
   join_leave: 3,
 };
+
+function messageFromUser(msg) {
+  return msg.style !== 'error' && msg.style !== 'system';
+}
 
 settings.register({
   chat_auto_unfocus: {
@@ -213,15 +217,9 @@ function ChatUI(params) {
 
   this.setActiveSize(this.font_height, this.w);
   let outline_width = params.outline_width || 1;
-
-  this.styles = {
+  this.styles = defaults(params.styles || {}, {
     def: glov_font.style(null, {
       color: 0xEEEEEEff,
-      outline_width,
-      outline_color: 0x000000ff,
-    }),
-    system: glov_font.style(null, {
-      color: 0xAAAAAAff,
       outline_width,
       outline_color: 0x000000ff,
     }),
@@ -240,8 +238,14 @@ function ChatUI(params) {
       outline_width,
       outline_color: 0x000000ff,
     }),
-  };
+    system: glov_font.style(null, {
+      color: 0xAAAAAAff,
+      outline_width,
+      outline_color: 0x000000ff,
+    }),
+  });
   this.styles.join_leave = this.styles.system;
+  this.classifyRole = params.classifyRole;
 
   netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
 }
@@ -256,7 +260,7 @@ ChatUI.prototype.setActiveSize = function (font_height, w) {
     this.total_lines = 0;
     for (let ii = 0; ii < this.msgs.length; ++ii) {
       let elem = this.msgs[ii];
-      elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
+      elem.numlines = ui.font.numLines((this.styles[elem.style] || this.styles.def),
         this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
       this.total_lines += elem.numlines;
     }
@@ -283,7 +287,7 @@ ChatUI.prototype.addMsgInternal = function (elem) {
   } else {
     elem.msg_text = elem.msg;
   }
-  elem.numlines = ui.font.numLines(this.styles[elem.style] || this.styles.def,
+  elem.numlines = ui.font.numLines((this.styles[elem.style] || this.styles.def),
     this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
   this.total_lines += elem.numlines;
   this.msgs.push(elem);
@@ -382,7 +386,7 @@ ChatUI.prototype.onMsgChat = function (data) {
   if (this.on_chat_cb) {
     this.on_chat_cb(data);
   }
-  let { msg, id, client_id, display_name, flags, ts, quiet } = data;
+  let { msg, style, id, client_id, display_name, flags, ts, quiet } = data;
   if (!quiet && client_id !== netClientId()) {
     if (this.volume_in) {
       ui.playUISound('msg_in', this.volume_in);
@@ -394,6 +398,7 @@ ChatUI.prototype.onMsgChat = function (data) {
     id,
     display_name,
     msg,
+    style,
     flags,
     timestamp: ts,
     quiet,
@@ -610,8 +615,11 @@ ChatUI.prototype.sendChat = function (flags, text) {
     pak.send((err, data) => {
       if (err) {
         if (err === 'ERR_ECHO') {
+          let roles = this.channel.data.public.clients[netClientId()].ids.roles;
+          let style = this.classifyRole(roles, true);
           this.onMsgChat({
             msg: text,
+            style: style,
             id: netUserId(),
             client_id: netClientId(),
             display_name: netSubs().logged_in_display_name,
@@ -859,7 +867,7 @@ ChatUI.prototype.run = function (opts) {
       }
     }
     let h = font_height * numlines;
-    let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || msg.style === 'def' || is_url);
+    let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg) || is_url);
     let text_w;
     let mouseover = false;
     if (do_mouseover) {
@@ -906,14 +914,19 @@ ChatUI.prototype.run = function (opts) {
       click = link({ x: x + user_indent, y, w: wrap_w - user_indent, h, url: is_url, internal: true });
     }
 
-    let style = styles[msg.style || (is_url ? mouseover && !user_mouseover ? 'link_hover' : 'link' : 'def')];
+    let style;
+    if (is_url) {
+      style = mouseover && !user_mouseover ? styles.link_hover : styles.link;
+    } else {
+      style = styles[msg.style] || styles.def;
+    }
 
     // Draw the actual text
     ui.font.drawSizedWrapped(glov_font.styleAlpha(style, alpha), x, y, z + 1, wrap_w, self.indent, font_height, line);
 
     if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
       // Only show tooltip for user messages or links
-      (!msg.style || msg.style === 'def' || is_url)
+      (!msg.style || messageFromUser(msg) || is_url)
     ) {
       ui.drawTooltip({
         x, y, z: Z.TOOLTIP,
