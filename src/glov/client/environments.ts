@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { ErrorCallback } from 'glov/common/types';
 import { setAbilityReload } from './client_config';
 import { cmd_parse } from './cmds';
 import { netForceDisconnect } from './net';
@@ -80,5 +81,14 @@ export function environmentsInit<T extends EnvironmentConfig>(
     get: () => JSON.stringify(getCurrentEnvironment() || 'default', null, 2),
     set: setCurrentEnvironment,
     access_show: ['sysadmin'],
+  });
+
+  cmd_parse.register({
+    cmd: 'env',
+    help: 'Alias for /environment',
+    access_show: ['sysadmin'],
+    func: function (str: string, resp_func: ErrorCallback<string>) {
+      cmd_parse.handle(this, `environment ${str}`, resp_func);
+    },
   });
 }
