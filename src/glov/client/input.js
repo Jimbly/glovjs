@@ -1370,7 +1370,7 @@ let delta = vec2();
 
 export function mouseUpEdge(param) {
   param = param || {};
-  if (!param.in_event_cb && no_active_touches) {
+  if (input_eaten_mouse || !param.in_event_cb && no_active_touches) {
     return null;
   }
   let pos_param = mousePosParam(param);
@@ -1408,7 +1408,7 @@ export function mouseUpEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured && !dragged_too_far) {
+  if (param.in_event_cb && !mouse_over_captured && !dragged_too_far) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};
@@ -1422,7 +1422,7 @@ export function mouseUpEdge(param) {
 
 export function mouseDownEdge(param) {
   param = param || {};
-  if (!param.in_event_cb && no_active_touches) {
+  if (input_eaten_mouse || !param.in_event_cb && no_active_touches) {
     return null;
   }
   let pos_param = mousePosParam(param);
@@ -1447,7 +1447,7 @@ export function mouseDownEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !input_eaten_mouse && !mouse_over_captured) {
+  if (param.in_event_cb && !mouse_over_captured) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};
@@ -1486,7 +1486,7 @@ export function mouseConsumeClicks(param) {
 }
 
 export function drag(param) {
-  if (no_active_touches) {
+  if (input_eaten_mouse || no_active_touches) {
     return null;
   }
   param = param || {};
@@ -1537,7 +1537,7 @@ export function drag(param) {
 
 // a lot like drag(), refactor to share more?
 export function longPress(param) {
-  if (no_active_touches) {
+  if (input_eaten_mouse || no_active_touches) {
     return null;
   }
   param = param || {};
@@ -1590,7 +1590,7 @@ export function longPress(param) {
 }
 
 export function dragDrop(param) {
-  if (no_active_touches) {
+  if (input_eaten_mouse || no_active_touches) {
     return null;
   }
   param = param || {};
@@ -1620,7 +1620,7 @@ export function dragDrop(param) {
 }
 
 export function dragOver(param) {
-  if (no_active_touches) {
+  if (input_eaten_mouse || no_active_touches) {
     return null;
   }
   param = param || {};
