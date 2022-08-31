@@ -27,6 +27,7 @@ export function addHook(draw: UIHookFn, click: UIHookFn): void;
 export function getUIElemData<T, P>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
+export const modal_font_style: FontStyle;
 export interface UISprites {
   button: Sprite;
   button_rollover: null | Sprite;
@@ -217,14 +218,17 @@ export interface ModalDialogButtonEx<CB> extends Partial<ButtonTextParam> {
   label?: Text;
 }
 export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB>;
-export type ModalDialogTickCallback = (param: {
+export type ModalDialogTickCallbackParams = {
+  readonly x0: number;
   readonly x: number;
+  readonly y0: number;
   y: number;
   readonly modal_width: number;
   readonly avail_width: number;
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
-}) => string | void;
+};
+export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => string | void;
 export interface ModalDialogParamBase<CB> {
   title?: Text;
   text?: Text;

@@ -1137,6 +1137,8 @@ function modalDialogRun() {
     y = round(y + vpad);
   }
 
+  let panel_color = modal_dialog.color || null; // tick might clear modalDialog
+
   let tick_key;
   if (modal_dialog.tick) {
     let avail_width = eff_modal_width - pad * 2;
@@ -1144,7 +1146,7 @@ function modalDialogRun() {
       avail_width -= (pad + eff_button_width) * keys.length;
     }
     let param = {
-      x, y,
+      x0, y0, x, y,
       modal_width: eff_modal_width,
       avail_width,
       font_height: eff_font_height,
@@ -1216,7 +1218,9 @@ function modalDialogRun() {
     }
     exit_lock = false;
   }
-  y += eff_button_height;
+  if (keys.length > 0) {
+    y += eff_button_height;
+  }
   y = round(y + vpad + pad);
   panel({
     x: x0,
@@ -1225,6 +1229,7 @@ function modalDialogRun() {
     w: eff_modal_width,
     h: (fullscreen_mode ? camera2d.y1() : y) - y0,
     pixel_scale: panel_pixel_scale * general_scale,
+    color: panel_color,
   });
 
   if (glov_input.pointerLocked() && exit_lock) {
