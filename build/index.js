@@ -99,7 +99,7 @@ gb.task({
 gb.task({
   name: 'server_js_glov_preresolve',
   target: 'dev',
-  ...preresolve({ source: 'server_js' }),
+  ...preresolve({ ...config.preresolve_params, source: 'server_js' }),
 });
 
 gb.task({
@@ -247,7 +247,7 @@ gb.task({
 
 gb.task({
   name: 'client_js_glov_preresolve',
-  ...preresolve({ source: 'client_js_babel_cleanup' }),
+  ...preresolve({ ...config.preresolve_params, source: 'client_js_babel_cleanup' }),
 });
 
 gb.task({

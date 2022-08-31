@@ -70,5 +70,6 @@ module.exports = {
     'client_js_uglify:**',
   ],
   client_register_cbs: [],
+  preresolve_params: { modules: { glov: 'glov' } },
 };
 require('./config.project.js')(module.exports);
