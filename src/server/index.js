@@ -4,6 +4,7 @@ const https = require('https');
 const path = require('path');
 const express = require('express');
 const express_static_gzip = require('express-static-gzip');
+const { permTokenWorkerInit } = require('glov/server/perm_token_worker.js');
 const { setupRequestHeaders } = require('glov/server/request_utils.js');
 const glov_server = require('glov/server/server.js');
 const argv = require('minimist')(process.argv.slice(2));
@@ -42,6 +43,9 @@ glov_server.startup({
   server,
   server_https,
 });
+
+// Opt-in to the permissions token system (Note: make sure config/server.json:forward_depth is correct!)
+permTokenWorkerInit(glov_server.channel_server, app);
 
 test_worker.init(glov_server.channel_server);
 
