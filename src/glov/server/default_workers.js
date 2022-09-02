@@ -5,7 +5,9 @@
 import { FriendStatus } from 'glov/common/friends_data.js';
 
 const assert = require('assert');
+const base32 = require('glov/common/base32.js');
 const { ChannelWorker } = require('./channel_worker.js');
+const dot_prop = require('glov/common/dot-prop');
 const {
   ID_PROVIDER_APPLE,
   ID_PROVIDER_FB_GAMING,
@@ -26,6 +28,9 @@ const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FRIENDS = 100;
 const FRIENDS_DATA_KEY = 'private.friends';
+
+let access_token_fns;
+let access_token_regex;
 
 export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
 const regex_valid_user_id = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
@@ -330,6 +335,92 @@ export class DefaultUserWorker extends ChannelWorker {
       this.clearPresenceToUser(user_id);
     });
   }
+  cmdAccessToken(access_token/*: string*/, resp_func/*: HandlerCallback<UnimplementedData>*/) {
+    let source = this.cmd_parse_source;
+    if (source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+
+    if (!access_token || typeof access_token !== 'string') {
+      return void resp_func('ERR_MISSING_TOKEN');
+    }
+
+    this.logSrc(source, `access_token "${access_token}"`);
+    access_token = base32.cannonize(access_token);
+    if (!access_token) {
+      return void resp_func('ERR_MALFORMED_TOKEN');
+    }
+    // Determine type of token
+    let m = access_token.match(access_token_regex);
+    if (!m || m[3].length < 8) {
+      return void resp_func('ERR_MALFORMED_TOKEN');
+    }
+    let type = m[1];
+    let target = m[2];
+    let body = m[3];
+    let fn = access_token_fns[type];
+    assert(fn); // shouldn't pass the regex otherwise
+    fn.call(this, target, body, resp_func);
+  }
+  applyTokenPerm(target/*:string*/, perm_token/*: string*/, resp_func/*: HandlerCallback<UnimplementedData>*/) {
+    let source = this.cmd_parse_source;
+    if (target) {
+      return void resp_func('ERR_INVALID_DATA');
+    }
+    let key = `private.tokens.${perm_token}`;
+    this.sendChannelMessage('perm_token.perm_token', 'get_channel_data', key,
+      (err/*?: string*/, resp_data/*?: UnimplementedData*/) => {
+        if (err) {
+          return void resp_func(err);
+        }
+        if (!resp_data) {
+          return void resp_func('ERR_INVALID_TOKEN');
+        }
+        assert(Array.isArray(resp_data.ops));
+        let ops = resp_data.ops/* as UnimplementedData[]*/;
+        if (resp_data.claimed) {
+          // Really, was in process of being claimed, could perhaps re-apply if it was us that was doing the original
+          // applying.
+          return void resp_func('ERR_ALREADY_CLAIMED');
+        }
+        this.logSrc(source, `Claiming token ${perm_token} for ${JSON.stringify(ops)}`);
+        // Atomically claim (but not atomically applying to user)
+        // Could be conservative and apply to user, try to claim
+        let pak = this.pak('perm_token.perm_token', 'set_channel_data_if');
+        pak.writeAnsiString(`${key}.claimed`);
+        pak.writeJSON(1); // value
+        pak.writeJSON(0); // set_if
+        pak.send((err/*?: string*/) => {
+          if (err) {
+            return resp_func(err);
+          }
+          // Apply
+          let perm = this.getChannelData('public.permissions', {});
+          for (let ii = 0; ii < ops.length; ++ii) {
+            let op = ops[ii];
+            assert(op.key);
+            let value = op.value;
+            switch (op.op) {
+              case 'add':
+                dot_prop.set(perm, op.key, (dot_prop.get(perm, op.key) || 0) + value);
+                break;
+              case 'set':
+                dot_prop.set(perm, op.key, value);
+                break;
+              default:
+                console.error(resp_data);
+                assert(0);
+            }
+          }
+          this.setChannelData('public.permissions', perm);
+          // Also delete token from global
+          this.setChannelDataOnOther('perm_token.perm_token', `${key}`, undefined);
+          this.logSrc(source, `Claimed token ${perm_token}`);
+          return resp_func(null, `Successfully applied permissions token ${perm_token}`);
+        });
+      });
+  }
+
   cmdChannelDataGet(param, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
@@ -767,6 +858,10 @@ let user_worker_init_data = {
     help: 'Reset a user to allow seeing your rich presence again',
     func: DefaultUserWorker.prototype.cmdFriendUnblock,
   },{
+    cmd: 'access_token',
+    help: 'Apply an access token',
+    func: DefaultUserWorker.prototype.cmdAccessToken,
+  },{
     cmd: 'channel_data_get',
     help: '(Admin) Get from a channel\'s metadata',
     usage: '$HELP\n/channel_data_get channel_id field.name',
@@ -792,6 +887,9 @@ let user_worker_init_data = {
     presence_set: DefaultUserWorker.prototype.handlePresenceSet,
     csr_admin_to_user: DefaultUserWorker.prototype.handleCSRAdminToUser,
   },
+  access_tokens: {
+    P: DefaultUserWorker.prototype.applyTokenPerm,
+  },
 };
 export function overrideUserWorker(new_user_worker, extra_data) {
   assert(!inited);
@@ -816,6 +914,13 @@ export function overrideUserWorker(new_user_worker, extra_data) {
 
 export function init(channel_server) {
   inited = true;
+  let token_keys = [];
+  access_token_fns = user_worker_init_data.access_tokens;
+  for (let key in access_token_fns) {
+    assert(access_token_fns[key]);
+    token_keys.push(key);
+  }
+  access_token_regex = new RegExp(`^([${token_keys.join('')}])([^Z]*)Z([0-9A-Z]+)$`);
   channel_server.registerChannelWorker('user', user_worker, user_worker_init_data);
   channel_server.registerChannelWorker('channel_server', ChannelServerWorker, {
     autocreate: false,
