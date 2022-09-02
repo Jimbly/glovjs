@@ -13,6 +13,7 @@ import * as wscommon from 'glov/common/wscommon.js';
 const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 import * as WebSocket from 'ws';
 
+import { ipBanReady, ipBanned } from './ip_ban';
 import { logEx } from './log';
 import { packetLog, packetLogInit } from './packet_log';
 import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
@@ -143,6 +144,19 @@ WSServer.prototype.init = function (server, server_https, no_timeout) {
 
   // Doing my own upgrade handling to early-reject invalid protocol versions
   let onUpgrade = (req, socket, head) => {
+    if (ipBanReady()) {
+      let addr = ipFromRequest(req);
+      if (ipBanned(addr)) {
+        logEx({
+          ip: addr,
+        }, 'info', `WS Client rejected (ip banned) from ${addr}: ${req.url}`);
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.end();
+        socket.destroy();
+        return;
+      }
+    }
+
     let query = requestGetQuery(req);
     let plat = query.plat ?? null;
     let ver = query.ver ?? null;
@@ -287,6 +301,17 @@ WSServer.prototype.close = function () {
   }
   for (let ii = 0; ii < this.http_servers.length; ++ii) {
     this.http_servers[ii].close();
+  }
+};
+
+WSServer.prototype.checkAllIPBans = function () {
+  assert(ipBanReady());
+  for (let client_id in this.clients) {
+    let client = this.clients[client_id];
+    if (ipBanned(client.addr)) {
+      client.log('IP is now banned, disconnecting...');
+      this.disconnectClient(client);
+    }
   }
 };
 

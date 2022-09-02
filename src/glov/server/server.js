@@ -15,6 +15,7 @@ const { errorReportsInit, errorReportsSetAppBuildTimestamp } = require('./error_
 const glov_channel_server = require('./channel_server.js');
 const fs = require('fs');
 const { idmapperWorkerInit } = require('./idmapper_worker.js');
+const { ipBanInit } = require('./ip_ban.js');
 const log = require('./log.js');
 const { logEx } = log;
 const { masterInitApp } = require('./master_worker.js');
@@ -153,6 +154,8 @@ export function startup(params) {
       channel_server.handleUncaughtError(error);
     }
   });
+
+  ipBanInit();
 
   channel_server.init({
     exchange,
