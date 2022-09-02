@@ -1,23 +1,22 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
-import { isValidPlatform } from 'glov/common/enums';
-
-const ack = require('glov/common/ack.js');
-const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
-const assert = require('assert');
-const events = require('glov/common/tiny-events.js');
-const { logEx } = require('./log.js');
+import assert from 'assert';
 const { max } = Math;
-const { isPacket } = require('glov/common/packet.js');
-const { packetLog, packetLogInit } = require('./packet_log.js');
-const { ipFromRequest, isLocalHost, requestGetQuery } = require('./request_utils.js');
-const util = require('glov/common/util.js');
-const wscommon = require('glov/common/wscommon.js');
+import * as ack from 'glov/common/ack.js';
+const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
+import { isValidPlatform } from 'glov/common/enums';
+import { isPacket } from 'glov/common/packet';
+import * as events from 'glov/common/tiny-events.js';
+import * as util from 'glov/common/util.js';
+import * as wscommon from 'glov/common/wscommon.js';
 const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
-const WebSocket = require('ws');
+import * as WebSocket from 'ws';
+
+import { logEx } from './log';
+import { packetLog, packetLogInit } from './packet_log';
+import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
+import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
 
 function WSClient(ws_server, socket) {
   events.EventEmitter.call(this);
