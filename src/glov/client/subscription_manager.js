@@ -547,6 +547,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
         // For cmd_parse access
         this.did_master_subscribe = true;
         this.subscribe('master.master');
+        this.subscribe('global.global');
       }
     });
 

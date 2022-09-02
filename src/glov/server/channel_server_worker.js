@@ -1,7 +1,28 @@
-const assert = require('assert');
-const { ChannelWorker } = require('./channel_worker.js');
+import assert from 'assert';
+import { ChannelWorker } from './channel_worker.js';
+import { serverGlobalsHandleChannelData, serverGlobalsInit } from './server_globals';
 
-class ChannelServerWorker extends ChannelWorker {
+export class ChannelServerWorker extends ChannelWorker {
+  constructor(channel_server, channel_id, channel_data) {
+    super(channel_server, channel_id, channel_data);
+    serverGlobalsInit(this);
+    channel_server.whenReady(this.subscribeOther.bind(this, 'global.global', ['*']));
+  }
+
+  // data is a { key, value } pair of what has changed
+  onApplyChannelData(source, data) {
+    if (source.type === 'global') {
+      serverGlobalsHandleChannelData(data.key, data.value);
+    }
+  }
+
+  // data is the channel's entire (public) data sent in response to a subscribe
+  onChannelData(source, data) {
+    if (source.type === 'global') {
+      serverGlobalsHandleChannelData('', data);
+    }
+  }
+
 }
 // Returns a function that forwards to a method of the same name on the ChannelServer
 function channelServerBroadcast(name) {
@@ -30,6 +51,12 @@ export function channelServerWorkerInit(channel_server) {
       chat_broadcast: channelServerBroadcast('handleChatBroadcast'),
       ping: channelServerBroadcast('handlePing'),
       eat_cpu: channelServerHandler('handleEatCPU'),
+    },
+    filters: {
+      // note: these do *not* override the one on ChannelWorker.prototype, both
+      // would be called via `filters` (if maintain_client_list were set)
+      channel_data: ChannelServerWorker.prototype.onChannelData,
+      apply_channel_data: ChannelServerWorker.prototype.onApplyChannelData,
     },
   });
 }

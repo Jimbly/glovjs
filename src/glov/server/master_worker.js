@@ -868,7 +868,7 @@ export function masterInitApp(channel_server, app, argv) {
           }
           channel_server.sendAsChannelServer(READY_DATA_CHANNEL, 'get_channel_data', READY_DATA_KEY,
             function (err, ready_data) {
-              if (err === 'ERR_UNKNOWN_CHANNEL_TYPE') {
+              if (err === 'ERR_UNKNOWN_CHANNEL_TYPE' || err === 'ERR_INVALID_CHANNEL_ID') {
                 // No global worker defined in this deployment
                 err = null;
                 ready_data = null;

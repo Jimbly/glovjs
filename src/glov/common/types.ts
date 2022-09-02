@@ -25,6 +25,20 @@ export type ErrorCallback<T = never, E = unknown> = (
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
+ * CmdParse data
+ */
+export type CmdRespFunc = ErrorCallback<string | unknown, string | null>;
+export interface CmdDef {
+  cmd?: string;
+  help?: string;
+  usage?: string;
+  prefix_usage_with_help?: boolean;
+  access_show?: string[];
+  access_run?: string[];
+  func: (str: string, resp_func: CmdRespFunc) => void;
+}
+
+/**
  * Client presence data
  */
 export interface ClientPresenceData {

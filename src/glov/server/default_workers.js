@@ -17,6 +17,7 @@ import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 
 import { channelServerWorkerInit } from './channel_server_worker.js';
 import { ChannelWorker } from './channel_worker.js';
+import { globalWorkerInit } from './global_worker.js';
 import * as master_worker from './master_worker.js';
 import * as metrics from './metrics.js';
 import * as random_names from './random_names.js';
@@ -906,5 +907,6 @@ export function init(channel_server) {
   access_token_regex = new RegExp(`^([${token_keys.join('')}])([^Z]*)Z([0-9A-Z]+)$`);
   channel_server.registerChannelWorker('user', user_worker, user_worker_init_data);
   channelServerWorkerInit(channel_server);
+  globalWorkerInit(channel_server);
   master_worker.init(channel_server);
 }
