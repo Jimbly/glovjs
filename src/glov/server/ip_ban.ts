@@ -102,7 +102,7 @@ export function ipBanReady(): boolean {
   return serverGlobalsReady();
 }
 
-function ipBanOnData(csworker: ChannelServerWorker, data: unknown): void {
+function ipBanOnData(csworker: ChannelServerWorker, data: IPBanList | undefined): void {
   // Make as object with null prototype so it is safe to query
   banlist = Object.create(null);
   merge(banlist, data);
@@ -114,7 +114,7 @@ function ipBanOnData(csworker: ChannelServerWorker, data: unknown): void {
 // Initialization
 
 export function ipBanInit(): void {
-  serverGlobalsRegister(IPBAN_KEY, {
+  serverGlobalsRegister<IPBanList>(IPBAN_KEY, {
     on_data: ipBanOnData,
     cmds: [{
       cmd: 'ipban',

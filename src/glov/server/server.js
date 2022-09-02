@@ -22,6 +22,7 @@ const { masterInitApp } = require('./master_worker.js');
 const metrics = require('./metrics.js');
 const path = require('path');
 const packet = require('glov/common/packet.js');
+const { readyDataInit } = require('./ready_data.js');
 const { serverConfig } = require('./server_config.js');
 const { shaderStatsInit } = require('./shader_stats.js');
 const glov_wsserver = require('./wsserver.js');
@@ -156,6 +157,7 @@ export function startup(params) {
   });
 
   ipBanInit();
+  readyDataInit();
 
   channel_server.init({
     exchange,

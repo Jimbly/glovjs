@@ -13,7 +13,7 @@ export function serverGlobalsInit(csworker_in: ChannelServerWorker): void {
   csworker = csworker_in;
 }
 
-export type ServerGlobalOnDataCB = (csworker: ChannelServerWorker, data: unknown) => void;
+export type ServerGlobalOnDataCB<T=unknown> = (csworker: ChannelServerWorker, data: T | undefined) => void;
 
 let on_data_cbs: {
   prefix: string;
@@ -53,18 +53,18 @@ export function serverGlobalsGet<T>(key: string, def?: T): T | undefined {
   return dot_prop.get(global_data, key, def);
 }
 
-type ServerGlobalsDef = {
+type ServerGlobalsDef<T=unknown> = {
   // Note: callbacks here are ran in the context of the _ChannelServerWorker_
-  on_data?: ServerGlobalOnDataCB;
+  on_data?: ServerGlobalOnDataCB<T>;
   // Note: commands here are ran in the context of the _GlobalWorker_
   cmds?: CmdDef[];
 };
 
-export function serverGlobalsRegister(prefix: string, param: ServerGlobalsDef): void {
+export function serverGlobalsRegister<T>(prefix: string, param: ServerGlobalsDef<T>): void {
   if (param.on_data) {
     on_data_cbs.push({
       prefix,
-      cb: param.on_data,
+      cb: param.on_data as ServerGlobalOnDataCB,
     });
   }
   if (param.cmds) {
