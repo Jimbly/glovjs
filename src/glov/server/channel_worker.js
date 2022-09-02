@@ -440,6 +440,7 @@ export class ChannelWorker {
   // field_list is ['*'] or ['public.foo', 'public.bar']
   subscribeOther(other_channel_id, field_list, resp_func) {
     assert(typeof field_list !== 'function'); // old API
+    assert(Array.isArray(field_list));
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
       this.debug(`->${other_channel_id}: subscribe - already subscribed`);
