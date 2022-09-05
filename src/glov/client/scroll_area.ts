@@ -377,7 +377,11 @@ class ScrollAreaInternal implements ScrollArea {
         }
         if (this.grabbed) {
           let delta = temp_pos[1] - (this.y + button_h_nopad) - this.grabbed_pos;
-          this.scroll_pos = (h - this.h) * delta / (this.h - button_h_nopad * 2 - handle_pixel_h);
+          let denom = this.h - button_h_nopad * 2 - handle_pixel_h;
+          if (denom > 0) {
+            this.scroll_pos = (h - this.h) * delta / denom;
+            assert(isFinite(this.scroll_pos));
+          }
           handle_color = rollover_color_light;
         }
       }
