@@ -798,6 +798,10 @@ export function spotEndOfFrame(): void {
 
 function frameSpotsPush(param: SpotListElem): void {
   assert(param.dom_pos);
+  verify(isFinite(param.dom_pos.x));
+  verify(isFinite(param.dom_pos.y));
+  verify(isFinite(param.dom_pos.w));
+  verify(isFinite(param.dom_pos.h));
   param.sub_rect = focus_sub_rect;
   frame_spots.push(param);
   if (focus_sub_rect) {
