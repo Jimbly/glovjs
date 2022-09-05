@@ -431,7 +431,7 @@ function findBestTargetInternal(
         // allow any, just find closest
       }
     }
-    if (!best || <number>d < <number>bestd) {
+    if (!best || (d as number) < (bestd as number)) {
       best = param;
       bestd = d;
     }
@@ -589,7 +589,7 @@ function findBestWithinSubrect(
   filter_sub_rect = best;
   for (let jj = 0; jj < SUBRECT_FILTERS.length; ++jj) {
     let filter = SUBRECT_FILTERS[jj];
-    for (let precision = <TargetTypeEnum>0; precision <= precision_max; ++precision) {
+    for (let precision = 0 as TargetTypeEnum; precision <= precision_max; ++precision) {
       let best_inside = findBestTargetInternal(nav, dom_pos, pad_focusable_list, precision, filter);
       if (best_inside) {
         assert(!isSubRect(best_inside));
@@ -708,8 +708,8 @@ function spotCalcNavTargets(): void {
 
   // Second, using the currently focused rect as a starting point, find
   //   appropriate elements to focus in each of the cardinal directions.
-  for (let nav = <SpotNavEnum>1; nav <= SPOT_NAV_DOWN; ++nav) {
-    for (let precision = <TargetTypeEnum>0; precision <= precision_max; ++precision) {
+  for (let nav = 1 as SpotNavEnum; nav <= SPOT_NAV_DOWN; ++nav) {
+    for (let precision = 0 as TargetTypeEnum; precision <= precision_max; ++precision) {
       filter_not = null;
       let best = findBestTargetFromSubRect(start_sub_rect, nav, focus_pos, pad_focusable_list, precision);
       if (best) {
@@ -913,7 +913,7 @@ type SpotParamWithOut = SpotParam & {
 };
 
 function spotFocusCheckNavButtonsFocused(param: SpotParamWithOut) {
-  for (let ii = <SpotNavEnum>1; ii < SPOT_NAV_MAX; ++ii) {
+  for (let ii = 1 as SpotNavEnum; ii < SPOT_NAV_MAX; ++ii) {
     let elem = focus_next[ii];
     if (elem !== undefined && keyCheck(ii)) {
       if (elem) {
@@ -926,7 +926,7 @@ function spotFocusCheckNavButtonsFocused(param: SpotParamWithOut) {
 }
 
 function spotFocusCheckNavButtonsUnfocused(param: SpotParamWithOut): void {
-  for (let ii = <SpotNavEnum>1; ii < SPOT_NAV_MAX; ++ii) {
+  for (let ii = 1 as SpotNavEnum; ii < SPOT_NAV_MAX; ++ii) {
     let elem = focus_next[ii];
     if (elem && elem.key_computed === param.key_computed && keyCheck(ii)) {
       spotFocusSet(elem, false, false, 'nav_unfocused');
