@@ -442,11 +442,22 @@ function findBestTargetInternal(
 const EPSILON = 0.00001;
 let debug_style: FontStyle;
 function spotDebugList(show_all: boolean, list: SpotListElem[]): void {
+  if (!debug_style) {
+    debug_style = fontStyle(null, {
+      color: 0x000000ff,
+      outline_color: 0xFFFFFFcc,
+      outline_width: 2,
+    });
+  }
   for (let ii = 0; ii < list.length; ++ii) {
     let area = list[ii];
     let pos = area.dom_pos;
     let color: Vec4 | undefined;
     if (isSubRect(area)) {
+      if (show_all) {
+        ui.font.drawSizedAligned(debug_style, pos.x, pos.y, Z.DEBUG, 8,
+          ui.font.ALIGN.HVCENTERFIT, pos.w, pos.h, area.key_computed || 'unknown');
+      }
       continue;
     }
     if (area.spot_debug_ignore) {
@@ -496,13 +507,6 @@ function spotDebugList(show_all: boolean, list: SpotListElem[]): void {
       continue;
     }
     drawRect(pos.x, pos.y, pos.x + pos.w, pos.y + pos.h, Z.DEBUG, color || [1,1,0, 0.5]);
-    if (!debug_style) {
-      debug_style = fontStyle(null, {
-        color: 0x000000ff,
-        outline_color: 0xFFFFFFcc,
-        outline_width: 2,
-      });
-    }
     ui.font.drawSizedAligned(debug_style, pos.x, pos.y, Z.DEBUG, 8,
       ui.font.ALIGN.HVCENTERFIT, pos.w, pos.h, area.key_computed || 'unknown');
   }
