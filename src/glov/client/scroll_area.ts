@@ -291,8 +291,9 @@ class ScrollAreaInternal implements ScrollArea {
     let bar_x0 = this.x + this.w - bar_w;
     let handle_h = this.h / h; // How much of the area is visible
     handle_h = clamp(handle_h, 0, 1);
-    let handle_pos = (this.h > h) ? 0 : (this.scroll_pos / (h - this.h));
+    let handle_pos = (this.h >= h) ? 0 : (this.scroll_pos / (h - this.h));
     handle_pos = clamp(handle_pos, 0, 1);
+    assert(isFinite(handle_pos));
     let handle_pixel_h = handle_h * (this.h - button_h_nopad * 2);
     let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
     let trough_height = this.h - button_h * 2;
