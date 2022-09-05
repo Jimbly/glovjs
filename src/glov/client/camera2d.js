@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint @typescript-eslint/no-shadow:off */
 
+const assert = require('assert');
 const engine = require('./engine.js');
 
 const { max, round } = Math;
@@ -73,6 +74,10 @@ function safeScreenHeight() {
 // Sets the 2D "camera" used to translate sprite positions to screen space.  Affects sprites queued
 //  after this call
 export function set(x0, y0, x1, y1, ignore_safe_area) {
+  assert(isFinite(x0));
+  assert(isFinite(y0));
+  assert(isFinite(x1));
+  assert(isFinite(y1));
   if (ignore_safe_area || render_width) {
     data[9] = data[0] = x0;
     data[10] = data[1] = y0;
