@@ -252,6 +252,7 @@ let last_frame_autofocus_spots: typeof frame_autofocus_spots = {};
 // non-pad_mode (mouse mode) requires constant mouse over state to maintain focus
 let pad_mode = false;
 let suppress_pad = false;
+let async_activate_key: string | null = null;
 
 function isSubRect(area: SpotListElem): area is SpotSubInternal {
   return (area as SpotSubInternal).is_sub_rect;
@@ -794,6 +795,7 @@ export function spotEndOfFrame(): void {
   suppress_pad = false;
   frame_spots = [];
   frame_autofocus_spots = {};
+  async_activate_key = null;
 }
 
 function frameSpotsPush(param: SpotListElem): void {
@@ -1047,6 +1049,13 @@ export function spotEndInput(): void {
   }
 }
 
+// This is useful for preemptively triggering a button press within an in_event_cb that has
+// a side-effect (such as rotating the screen) that might cause the actual button press to
+// not reach the appropriate button.
+export function spotAsyncActivateButton(key: string): void {
+  async_activate_key = key;
+}
+
 let last_signal = {
   key: '',
   timestamp: 0,
@@ -1240,6 +1249,9 @@ export function spot(param: SpotParam): SpotRet {
       if (padButtonDownEdge(hotpad)) {
         button_activate = true;
       }
+    }
+    if (async_activate_key === param.key_computed) {
+      button_activate = true;
     }
   }
   if (button_activate) {
