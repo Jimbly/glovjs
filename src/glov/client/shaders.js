@@ -81,7 +81,7 @@ export function shadersResetState() {
   gl.useProgram(null);
 }
 
-function setGLErrorReportDetails() {
+export function setGLErrorReportDetails() {
   // Set some debug details we might want
   let details = {
     max_fragment_uniform_vectors: gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
