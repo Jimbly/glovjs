@@ -369,12 +369,14 @@ WSClient.prototype.connectAfterReady = function (for_reconnect) {
   client.socket.addEventListener('close', client.on_close);
 
   let doPing = guard(function () {
-    if (Date.now() - client.last_send_time > wscommon.PING_TIME && client.connected && client.socket.readyState === 1) {
+    if (Date.now() - client.last_send_time >= wscommon.PING_TIME &&
+      client.connected && client.socket.readyState === 1
+    ) {
       client.send('ping');
     }
-    setTimeout(doPing, wscommon.PING_TIME);
+    setTimeout(doPing, wscommon.PING_TIME / 2);
   });
-  setTimeout(doPing, wscommon.PING_TIME);
+  setTimeout(doPing, wscommon.PING_TIME / 2);
 
   // For debugging reconnect handling
   // setTimeout(function () {
