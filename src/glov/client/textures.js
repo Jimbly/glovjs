@@ -11,6 +11,7 @@ const engine = require('./engine.js');
 const { filewatchOn } = require('./filewatch.js');
 const local_storage = require('./local_storage.js');
 const settings = require('./settings.js');
+const { setGLErrorReportDetails } = require('./shaders.js');
 const urlhash = require('./urlhash.js');
 const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('glov/common/util.js');
 
@@ -176,6 +177,7 @@ function Texture(params) {
   if (params.data) {
     let err = this.updateData(params.width, params.height, params.data);
     if (err) {
+      setGLErrorReportDetails();
       assert(false, `Error loading ${params.name}: ${err}`);
     }
   } else {
@@ -438,6 +440,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       if (tex.soft_error) {
         tex.err = 'Load failed';
       } else {
+        setGLErrorReportDetails();
         assert(false, err);
       }
       return;
