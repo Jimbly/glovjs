@@ -55,9 +55,13 @@ export function buildString() {
   return wsclient.CURRENT_VERSION ? `${wsclient.CURRENT_VERSION} (${build_timestamp_string})` : build_timestamp_string;
 }
 
-export function netDisconnected() {
-  return !client || !client.connected || client.disconnected || subs.logging_in ||
+export function netDisconnectedRaw() {
+  return !client || !client.connected || client.disconnected ||
     !client.socket || client.socket.readyState !== 1;
+}
+
+export function netDisconnected() {
+  return netDisconnectedRaw() || subs.logging_in;
 }
 
 export function netForceDisconnect() {
