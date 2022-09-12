@@ -1,5 +1,6 @@
 import { perfCounterAdd } from 'glov/common/perfcounters';
 import { ErrorCallback } from 'glov/common/types';
+import { metricsAdd } from './metrics';
 
 const { floor, min, random } = Math;
 
@@ -60,13 +61,17 @@ export function executeWithRetry<T = unknown, E = unknown>(
         }
         return cb(null, res);
       } else {
+        // For metrics, use just first token, strip document name, etc
+        let metric = (log_prefix.match(/^[A-Za-z0-9]*/)?.[0] || 'unknown').toLowerCase();
         // If there was an error, try again if we have not exceeded max retries
         if (attempts === max_retries) {
           // Return the error if we have exceeded max retries
           (quiet ? console.info : console.error)(`[RETRY] ${log_prefix} | [Retries exhausted] | ${err}`);
+          metricsAdd(`retry.${metric}.fail`, 1);
           return cb(err);
         }
 
+        metricsAdd(`retry.${metric}`, 1);
         (quiet ? console.info : console.warn)(`[RETRY] ${log_prefix} | [${attempts}] | ${err}`);
         perfCounterAdd(`retry.${log_prefix}`);
 
