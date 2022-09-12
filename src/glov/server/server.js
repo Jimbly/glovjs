@@ -19,7 +19,7 @@ const { ipBanInit } = require('./ip_ban.js');
 const log = require('./log.js');
 const { logEx } = log;
 const { masterInitApp } = require('./master_worker.js');
-const metrics = require('./metrics.js');
+const { metricsInit } = require('./metrics.js');
 const path = require('path');
 const packet = require('glov/common/packet.js');
 const { readyDataInit } = require('./ready_data.js');
@@ -113,7 +113,7 @@ export function startup(params) {
   data_stores = dataStoresInit(data_stores);
 
   if (metrics_impl) {
-    metrics.init(metrics_impl);
+    metricsInit(metrics_impl);
   }
 
   if (exchange) {
