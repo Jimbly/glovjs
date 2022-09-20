@@ -2,7 +2,7 @@
 /* globals HTMLElement, Event */
 
 import { Sprite, UISprite, UnimplementedData } from 'glov/common/types';
-import { Vec4 } from 'glov/common/vmath';
+import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
@@ -14,12 +14,12 @@ export const Z_MIN_INC: number;
 export const LINE_ALIGN: number;
 export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
-export function makeColorSet(color: Vec4): ColorSet;
+export function makeColorSet(color: ROVec4): ColorSet;
 export interface UIBox extends Box {
   z?: number;
 }
 export interface UIBoxColored extends UIBox {
-  color?: Vec4;
+  color?: ROVec4;
 }
 export type UIHookFn = (param: UIBox) => void;
 export function addHook(draw: UIHookFn, click: UIHookFn): void;
@@ -79,9 +79,9 @@ export function bindSounds(sounds?: Partial<Record<string, SoundID | SoundID[]>>
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
-export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: Vec4): void;
-export function drawVBox(coords: UIBox, s: Sprite, color?: Vec4): void;
-export function drawBox(coords: UIBox, s: Sprite, pixel_scale: number, color?: Vec4): void;
+export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
+export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
+export function drawBox(coords: UIBox, s: Sprite, pixel_scale: number, color?: ROVec4): void;
 export function drawMultiPartBox(
   coords: UIBox,
   scaleable_data: {
@@ -89,7 +89,7 @@ export function drawMultiPartBox(
     heights: number[];
   }, sprite: Sprite,
   pixel_scale: number,
-  color?: Vec4,
+  color?: ROVec4,
 ): void;
 export function playUISound(name: string, volume?: number): void;
 export function focusCanvas(): void;
@@ -127,7 +127,7 @@ export function drawTooltipBox(param: TooltipBoxParam): void;
 
 export interface ProgressBarParam extends UIBoxColored {
   progress: number; // 0..1
-  color_trough?: Vec4;
+  color_trough?: ROVec4;
   centered?: boolean;
   tooltip?: Text;
 }
@@ -162,7 +162,7 @@ export interface ButtonParam extends Partial<TooltipParam> {
   draw_only?: boolean;
   draw_only_mouseover?: boolean;
   def?: SpotParam;
-  color?: Vec4;
+  color?: ROVec4;
   disabled?: boolean;
   disabled_focusable?: boolean;
   rollover_quiet?: boolean;
@@ -184,10 +184,10 @@ export interface ButtonTextParam extends ButtonParam {
 export interface ButtonImageParamBase extends ButtonParam {
   shrink?: number;
   frame?: number;
-  img_rect?: Vec4;
+  img_rect?: ROVec4;
   left_align?: boolean;
-  img_color?: Vec4;
-  color1?: Vec4;
+  img_color?: ROVec4;
+  color1?: ROVec4;
   rotation?: number;
   flip?: boolean;
 }
@@ -265,22 +265,22 @@ export interface MenuFadeParams {
   blur?: [number, number];
   saturation?: [number, number];
   brightness?: [number, number];
-  fallback_darken?: Vec4;
+  fallback_darken?: ROVec4;
   z?: number;
 }
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
 export function provideUserString(title: Text, str: string): void;
-export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: Vec4): void;
+export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(
   x0: number, y0: number,
   x1: number, y1: number,
   z: number,
-  color_ul: Vec4,
-  color_ur: Vec4,
-  color_ll: Vec4,
-  color_lr: Vec4,
+  color_ul: ROVec4,
+  color_ur: ROVec4,
+  color_ll: ROVec4,
+  color_lr: ROVec4,
 ): void;
 // TODO: import from sprites.js's types after conversion
 type BlendMode = 0 | 1 | 2; // BlendMode
@@ -289,21 +289,21 @@ export function drawElipse(
   x1: number, y1: number,
   z: number,
   spread: number,
-  color?: Vec4,
+  color?: ROVec4,
   blend?: BlendMode,
 ): void;
 export function drawCircle(
   x: number, y: number, z: number,
   r: number,
   spread: number,
-  color?: Vec4,
+  color?: ROVec4,
   blend?: BlendMode,
 ): void;
 export function drawHollowCircle(
   x: number, y: number, z: number,
   r: number,
   spread: number,
-  color?: Vec4,
+  color?: ROVec4,
   blend?: BlendMode,
 ): void;
 export type LineMode = number; // TODO: convert to enum type?
@@ -313,7 +313,7 @@ export function drawLine(
   z: number,
   w: number,
   precise: number,
-  color?: Vec4,
+  color?: ROVec4,
   mode?: LineMode,
 ): void;
 export function drawHollowRect(
@@ -322,7 +322,7 @@ export function drawHollowRect(
   z: number,
   w: number,
   precise: number,
-  color?: Vec4,
+  color?: ROVec4,
   mode?: LineMode,
 ): void;
 export interface DrawHollowRectParam extends UIBoxColored {
@@ -337,7 +337,7 @@ export function drawCone(
   z: number,
   w0: number, w1: number,
   spread: number,
-  color?: Vec4,
+  color?: ROVec4,
 ): void;
 export function setFontHeight(new_font_height: number): void;
 export function scaleSizes(scale: number): void;
