@@ -308,6 +308,11 @@ export function arrayToSet(array) {
   return ret;
 }
 
+// Makes a prototype-less object that can safely be used as a set to query for user-supplied strings
+export function objectToSet(obj) {
+  return merge(Object.create(null), obj);
+}
+
 export function matchAll(str, re) {
   let ret = [];
   let m;
