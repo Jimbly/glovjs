@@ -44,6 +44,7 @@ module.exports = {
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/member-delimiter-style": "error",
     "@typescript-eslint/no-array-constructor": "error",
+    "@typescript-eslint/no-dupe-class-members": "error",
     "@typescript-eslint/no-empty-function": "error",
     "@typescript-eslint/no-extra-semi": "error",
     "@typescript-eslint/no-invalid-this": "error",
@@ -273,7 +274,7 @@ module.exports = {
     "no-delete-var": "error",
     "no-div-regex": "error",
     "no-dupe-args": "error",
-    "no-dupe-class-members": "error",
+    "no-dupe-class-members": "off", // replaced with @typescript-eslint/no-dupe-class-members
     "no-dupe-keys": "error",
     "no-duplicate-case": "error",
     "no-duplicate-imports": "error",
