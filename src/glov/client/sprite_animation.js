@@ -48,10 +48,10 @@ function GlovSpriteAnimation(params) {
   }
 }
 
-export function create(params) {
+export function createSpriteAnimation(params) {
   return new GlovSpriteAnimation(params);
 }
-exports.createSpriteAnimation = create;
+exports.create = createSpriteAnimation;
 
 GlovSpriteAnimation.prototype.clone = function () {
   return new GlovSpriteAnimation(this);
