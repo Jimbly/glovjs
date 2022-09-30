@@ -1,6 +1,7 @@
 import { assert } from 'console';
 import { FIFO, fifoCreate } from 'glov/common/fifo';
-import { ChatHistoryData, ChatIDs, ClientHandlerSource, ErrorCallback, Packet } from 'glov/common/types';
+import { Packet } from 'glov/common/packet';
+import { ChatHistoryData, ChatIDs, ClientHandlerSource, ErrorCallback } from 'glov/common/types';
 import { sanitize } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker';
 

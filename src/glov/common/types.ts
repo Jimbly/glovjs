@@ -21,6 +21,18 @@ export type ErrorCallback<T = never, E = unknown> = (
   result?: T extends (never | void) ? never : (T | undefined | null)
 ) => void;
 
+/**
+ * Error callback accepting an (string) error as the first parameter and a result as the second parameter.
+ * Will only be called as cb(string) or cb(null, result)
+ *
+ * @template T - The result type, defaults to never (no result)
+ * @param err - The error parameter
+ * @param result - The result parameter
+ */
+export type NetErrorCallback<T = never> = (
+  err: string | null,
+  result?: T
+) => void;
 
 // TODO: Implement the types below and move them to the appropriate files
 
@@ -110,46 +122,6 @@ export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerS
 
 export interface ChatIDs extends ClientHandlerSource {
   style?: string;
-}
-
-export interface Packet {
-  readU8: () => number;
-  writeU8: (value: number) => void;
-  readU32: () => number;
-  writeU32: (value: number) => void;
-  readInt: () => number;
-  writeInt: (value: number) => void;
-  readFloat: () => number;
-  writeFloat: (value: number) => void;
-  readString: () => string;
-  writeString: (value: string) => void;
-  readAnsiString: () => string;
-  writeAnsiString: (value: string) => void;
-  readJSON: () => unknown;
-  writeJSON: (value: unknown) => void;
-  readBool: () => boolean;
-  writeBool: (value: boolean) => void;
-  readBuffer: (do_copy: boolean) => Uint8Array;
-  writeBuffer: (value: Uint8Array) => void;
-
-  append: (other: Packet) => void;
-  appendRemaining: (other: Packet) => void;
-  send: (resp_func?: ErrorCallback) => void;
-  ended: () => boolean;
-  updateFlags: (flags: number) => void;
-  readFlags: () => void;
-  writeFlags: () => void;
-  getFlags: () => number;
-  getBuffer: () => Uint8Array;
-  getBufferLen: () => number;
-  getInternalFlags: () => number;
-  getOffset: () => number;
-  getRefCount: () => number;
-  makeReadable: () => void;
-  pool: () => void;
-  ref: () => void;
-  seek: (offs: number) => void;
-  totalSize: () => number;
 }
 
 export interface Channel {

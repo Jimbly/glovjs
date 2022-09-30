@@ -1,7 +1,8 @@
 import assert from 'assert';
 import { Express, NextFunction, Request, Response } from 'express';
 import * as base32 from 'glov/common/base32';
-import { ErrorCallback, HandlerSource, Packet } from 'glov/common/types';
+import { Packet } from 'glov/common/packet';
+import { ErrorCallback, HandlerSource } from 'glov/common/types';
 import './channel_server'; // importing to enforce import ordering (note the import below gets stripped by TypeScript)
 // eslint-disable-next-line no-duplicate-imports
 import { ChannelServer } from './channel_server';
