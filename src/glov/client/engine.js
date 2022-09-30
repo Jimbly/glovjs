@@ -67,7 +67,7 @@ const {
   uiBindSounds,
 } = require('./ui.js');
 const urlhash = require('./urlhash.js');
-const { callEach, clamp, defaults, nearSame, ridx } = require('glov/common/util.js');
+const { callEach, clamp, nearSame, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
@@ -1202,10 +1202,7 @@ export function startup(params) {
   uiStartup(params);
 
   soundStartup(params.sound);
-  uiBindSounds(defaults(params.ui_sounds || {}, {
-    button_click: 'button_click',
-    rollover: 'rollover',
-  }));
+  uiBindSounds(params.ui_sounds);
 
   buildUIStartup();
   shaderDebugUIStartup();

@@ -117,3 +117,25 @@ if (!Math.sign) {
     return a < 0 ? -1 : a > 0 ? 1 : 0;
   };
 }
+
+if (typeof window !== 'undefined') {
+  if (!window.Intl) {
+    window.Intl = {};
+  }
+  if (!window.Intl.NumberFormat) {
+    window.Intl.NumberFormat = function () {
+      // Constructor
+    };
+    window.Intl.NumberFormat.prototype.format = function (v) {
+      return String(v);
+    };
+  }
+  if (!window.Intl.DateTimeFormat) {
+    window.Intl.DateTimeFormat = function () {
+      // Constructor
+    };
+    window.Intl.DateTimeFormat.prototype.format = function (v) {
+      return String(v);
+    };
+  }
+}

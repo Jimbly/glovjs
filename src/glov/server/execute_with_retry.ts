@@ -18,6 +18,8 @@ export interface ExecuteWithRetryOptions {
   log_prefix?: string | undefined | null;
   /** If true, all the output will be logged to the console as info */
   quiet?: boolean;
+  /** Disable notifying metrics system of retries */
+  no_metrics?: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ export function executeWithRetry<T = unknown, E = unknown>(
   let max_retries = options.max_retries;
   let inc_backoff_duration = options.inc_backoff_duration;
   let max_backoff = options.max_backoff;
+  let no_metrics = options.no_metrics;
   let log_prefix = options.log_prefix || 'Log';
   let quiet = options.quiet;
 
@@ -62,16 +65,20 @@ export function executeWithRetry<T = unknown, E = unknown>(
         return cb(null, res);
       } else {
         // For metrics, use just first token, strip document name, etc
-        let metric = (log_prefix.match(/^[A-Za-z0-9]*/)?.[0] || 'unknown').toLowerCase();
+        let metric = (log_prefix.split(' | ')[0].replace(/ /g, '') || 'unknown').toLowerCase();
         // If there was an error, try again if we have not exceeded max retries
         if (attempts === max_retries) {
           // Return the error if we have exceeded max retries
           (quiet ? console.info : console.error)(`[RETRY] ${log_prefix} | [Retries exhausted] | ${err}`);
-          metricsAdd(`retry.${metric}.fail`, 1);
+          if (!no_metrics) {
+            metricsAdd(`retry.${metric}.fail`, 1);
+          }
           return cb(err);
         }
 
-        metricsAdd(`retry.${metric}`, 1);
+        if (!no_metrics) {
+          metricsAdd(`retry.${metric}`, 1);
+        }
         (quiet ? console.info : console.warn)(`[RETRY] ${log_prefix} | [${attempts}] | ${err}`);
         perfCounterAdd(`retry.${log_prefix}`);
 

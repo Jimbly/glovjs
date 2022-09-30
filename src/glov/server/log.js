@@ -275,7 +275,7 @@ export function startup(params) {
             let meta = Object.keys(data.metadata).length !== 0 ?
               ` | ${inspect(data.metadata, { breakLength: Infinity, compact: true })}` :
               '';
-            return `[${data.timestamp} ${pid} ${last_uid++}] ${data.level} ${data.message}${meta}`;
+            return `[${data.timestamp} ${pid} ${++last_uid}] ${data.level} ${data.message}${meta}`;
           })
         );
       }

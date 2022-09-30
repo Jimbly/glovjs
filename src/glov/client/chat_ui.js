@@ -34,7 +34,8 @@ const FLAG_USERCHAT = 2;
 Z.CHAT = Z.CHAT || 500;
 Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 
-const color_user_rollover = vec4(1,1,1,0.5);
+const color_user_rollover = vec4(1, 1, 1, 0.5);
+const color_same_user_rollover = vec4(1, 1, 1, 0.25);
 
 const MAX_PER_STYLE = {
   join_leave: 3,
@@ -210,6 +211,7 @@ function ChatUI(params) {
   this.url_match = params.url_match; // runs `/url match[1]` if clicked
   this.url_info = params.url_info; // Optional for grabbing the interesting portion of the URL for tooltip and /url
   this.user_context_cb = params.user_context_cb; // Cb called with { user_id } on click
+  this.user_id_mouseover = false;
 
   this.fade_start_time = params.fade_start_time || [10000, 1000];
   this.fade_time = params.fade_time || [1000, 500];
@@ -615,7 +617,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
     pak.send((err, data) => {
       if (err) {
         if (err === 'ERR_ECHO') {
-          let roles = this.channel.data.public.clients[netClientId()].ids.roles;
+          let roles = this.channel?.data?.public?.clients[netClientId()]?.ids?.roles;
           let style = this.classifyRole(roles, true);
           this.onMsgChat({
             msg: text,
@@ -850,6 +852,7 @@ ChatUI.prototype.run = function (opts) {
   let do_scroll_area = is_focused || opts.always_scroll;
   let bracket_width = 0;
   let name_width = {};
+  let did_user_mouseover = false;
   // Slightly hacky: uses `x` and `y` from the higher scope
   function drawChatLine(msg, alpha) {
     if (msg.hidden) {
@@ -904,8 +907,16 @@ ChatUI.prototype.run = function (opts) {
         });
       } else {
         user_mouseover = input.mouseOver(pos_param);
+        if (self.user_id_mouseover === msg.id) {
+          ui.drawRect2({
+            ...pos_param,
+            color: color_same_user_rollover,
+          });
+        }
         if (user_mouseover) {
           ui.drawRect2(pos_param);
+          did_user_mouseover = true;
+          self.user_id_mouseover = msg.id;
         }
       }
     }
@@ -1035,6 +1046,10 @@ ChatUI.prototype.run = function (opts) {
     }
   }
 
+  if (!did_user_mouseover) {
+    self.user_id_mouseover = false;
+  }
+
   if (opts.pointerlock && is_focused && input.pointerLocked()) {
     // Gained focus undo pointerlock
     input.pointerLockExit();
@@ -1043,7 +1058,7 @@ ChatUI.prototype.run = function (opts) {
   if (!anything_visible && (ui.modal_dialog || ui.menu_up || hide_light)) {
     return;
   }
-  ui.drawRect(x0, y - border, x0 + outer_w, y1, z, [0.3,0.3,0.3,0.75]);
+  ui.drawRect(x0, y - border, x0 + outer_w, y1, z, [0.3,0.3,0.3,0.8]);
 };
 
 ChatUI.prototype.setChannel = function (channel) {

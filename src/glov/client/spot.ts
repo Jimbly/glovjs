@@ -243,6 +243,7 @@ let focus_key: string | null = null;
 let focus_is_sticky = false;
 let focus_key_nonsticky: string | null = null;
 let focus_pos: Box = { x: 0, y: 0, w: 0, h: 0 };
+let last_frame_spots: SpotListElem[] = [];
 let frame_spots: SpotListElem[] = [];
 let focus_next: (SpotInternal|null|undefined)[] = []; // indexed by SPOT_NAV_*
 let focus_next_via: (SpotSubInternal|undefined)[] = []; // just for spotDebug
@@ -269,6 +270,21 @@ export function spotSetPadMode(new_mode: boolean): void {
 export function spotlog(...args: unknown[]): void {
   // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line global-require
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
+}
+
+export function spotGet(key: string, last_frame: boolean): SpotListElem | null {
+  let frames = last_frame ? last_frame_spots : frame_spots;
+  let key_computed_spot = null;
+  // Match first by key, and afterwards by key_computed
+  for (let ii = 0; ii < frames.length; ++ii) {
+    if (key === frames[ii].key) {
+      return frames[ii];
+    }
+    if (key === frames[ii].key_computed) {
+      key_computed_spot = frames[ii];
+    }
+  }
+  return key_computed_spot;
 }
 
 export function spotKey(param: SpotKeyable): string {
@@ -793,6 +809,7 @@ export function spotEndOfFrame(): void {
 
   last_frame_autofocus_spots = frame_autofocus_spots;
   suppress_pad = false;
+  last_frame_spots = frame_spots;
   frame_spots = [];
   frame_autofocus_spots = {};
   async_activate_key = null;

@@ -18,8 +18,10 @@ import {
   ErrorCallback,
   FriendCmdResponse,
   ServerPresenceData,
+  Sprite,
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
+import { Vec4 } from 'glov/common/vmath';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
@@ -351,9 +353,14 @@ function requestExternalFriends(provider: string,
   });
 }
 
-let profile_images: Record<string, unknown> = {};
-let default_profile_image: unknown = null;
-export function getUserProfileImage(user_id: string): unknown {
+export type UserProfileImage = {
+  img: Sprite;
+  img_color?: Vec4;
+  frame?: number;
+};
+let profile_images: Record<string, UserProfileImage> = {};
+let default_profile_image: UserProfileImage;
+export function getUserProfileImage(user_id: string): UserProfileImage {
   let image = profile_images[user_id];
   if (image) {
     return image;
@@ -385,7 +392,7 @@ export function getUserProfileImage(user_id: string): unknown {
   return default_profile_image;
 }
 
-export function setDefaultUserProfileImage(image: unknown): void {
+export function setDefaultUserProfileImage(image: UserProfileImage): void {
   default_profile_image = image;
 }
 

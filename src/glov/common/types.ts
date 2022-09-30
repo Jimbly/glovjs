@@ -136,6 +136,10 @@ export interface Channel {
   onceSubscribe: (cb: ((data: DataObject) => void) | (() => void)) => void;
 }
 
+export interface UserChannel extends Channel {
+  presence_data: Partial<Record<string, ServerPresenceData>>;
+}
+
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;
@@ -143,17 +147,26 @@ export type UnimplementedData = DataObject;
 /**
  * Client Sprite class
  */
+export interface SpriteUIData {
+  widths: number[]; heights: number[];
+  wh: number[]; hw: number[];
+  rects: Vec4[];
+  aspect: number[] | null;
+  total_w: number; total_h: number;
+}
 export interface Sprite {
-  uidata: {
-    total_w: number;
-    total_h: number;
-  };
+  uidata?: SpriteUIData;
   uvs: number[];
   draw: (params: {
     x: number; y: number; z: number;
     w: number; h: number;
-    uvs?: number[]; color: Vec4;
+    frame?: number;
+    uvs?: number[];
+    color?: Vec4;
   }) => void;
+}
+export interface UISprite extends Sprite {
+  uidata: SpriteUIData;
 }
 /**
  * Client Sprite creation parameters

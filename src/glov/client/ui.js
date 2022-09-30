@@ -233,6 +233,10 @@ export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
 export let button_click = null; // on click, for callers to poll which mouse button, etc
 
+export function buttonWasFocused() {
+  return button_focused;
+}
+
 let modal_dialog = null;
 export let menu_up = false; // Boolean to be set by app to impact behavior, similar to a modal
 let menu_fade_params = merge({}, menu_fade_params_default);
@@ -449,8 +453,13 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   return elem;
 }
 
+const base_ui_sounds = {
+  button_click: 'button_click',
+  rollover: 'rollover',
+};
+
 export function uiBindSounds(_sounds) {
-  sounds = _sounds;
+  sounds = defaults(_sounds || {}, base_ui_sounds);
   for (let key in sounds) {
     soundLoad(sounds[key]);
   }

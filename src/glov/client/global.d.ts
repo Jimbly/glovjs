@@ -1,3 +1,4 @@
+/* eslint-env browser */
 declare module 'glov/client/global' {
   global {
     interface Window {
@@ -18,6 +19,8 @@ declare module 'glov/client/global' {
 
     // GLOV ui.js
     let Z: Record<string, number>;
+    // GL context
+    let gl: WebGLRenderingContext | WebGL2RenderingContext;
     // GLOV profiler
     const profilerStart: (name: string) => void;
     const profilerStop: (name: string) => void;

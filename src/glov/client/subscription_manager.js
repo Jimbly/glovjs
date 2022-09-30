@@ -688,6 +688,7 @@ SubscriptionManager.prototype.logout = function () {
   if (this.did_master_subscribe) {
     this.did_master_subscribe = false;
     this.unsubscribe('master.master');
+    this.unsubscribe('global.global');
   }
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];

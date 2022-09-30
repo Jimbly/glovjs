@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
-import { Sprite, UnimplementedData } from 'glov/common/types';
+import { Sprite, UISprite, UnimplementedData } from 'glov/common/types';
 import { Vec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
@@ -29,31 +29,33 @@ export const font: Font;
 export const title_font: Font;
 export const modal_font_style: FontStyle;
 export interface UISprites {
-  button: Sprite;
-  button_rollover: null | Sprite;
-  button_down: Sprite;
-  button_disabled: Sprite;
-  panel: Sprite;
-  menu_entry: Sprite;
-  menu_selected: Sprite;
-  menu_down: Sprite;
-  menu_header: Sprite;
-  slider: Sprite;
-  slider_handle: Sprite;
+  button: UISprite;
+  button_rollover: null | UISprite;
+  button_down: UISprite;
+  button_disabled: UISprite;
+  panel: UISprite;
+  menu_entry: UISprite;
+  menu_selected: UISprite;
+  menu_down: UISprite;
+  menu_header: UISprite;
+  slider: UISprite;
+  slider_handle: UISprite;
 
-  scrollbar_bottom: Sprite;
-  scrollbar_trough: Sprite;
-  scrollbar_top: Sprite;
-  scrollbar_handle_grabber: Sprite;
-  scrollbar_handle: Sprite;
-  progress_bar: Sprite;
-  progress_bar_trough: Sprite;
+  scrollbar_bottom: UISprite;
+  scrollbar_trough: UISprite;
+  scrollbar_top: UISprite;
+  scrollbar_handle_grabber: UISprite;
+  scrollbar_handle: UISprite;
+  progress_bar: UISprite;
+  progress_bar_trough: UISprite;
+  white: UISprite;
 }
 export const sprites: UISprites;
 export const font_height: number;
 export const button_width: number;
 export const button_height: number;
 export const panel_pixel_scale: number;
+export function buttonWasFocused(): boolean;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
 type UISpriteDef = {
@@ -72,7 +74,8 @@ export function setButtonsDefaultLabels(buttons_labels: ButtonLabels): void;
 export function setProvideUserStringDefaultMessages(success_msg: Text, failure_msg: Text): void;
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
-export function bindSounds(sounds: Partial<Record<string, SoundID | SoundID[]>>): void;
+export type BaseSoundKey = 'button_click' | 'rollover';
+export function bindSounds(sounds?: Partial<Record<string, SoundID | SoundID[]>>): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
@@ -159,13 +162,19 @@ export interface ButtonParam extends Partial<TooltipParam> {
   draw_only?: boolean;
   draw_only_mouseover?: boolean;
   def?: SpotParam;
+  color?: Vec4;
   disabled?: boolean;
   disabled_focusable?: boolean;
+  rollover_quiet?: boolean;
+  colors?: ColorSet;
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
   in_event_cb?: EventCallback | null;
   hook?: HookList;
-  // Also: everything in SpotParam
+  pad_focusable?: boolean;
+  base_name?: string;
+  drag_over?: boolean;
+  // Also: everything in SpotParam (Move to spot.js and extend interface when converted to TS)
 }
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
@@ -193,9 +202,9 @@ export function buttonShared(param: ButtonParam): ButtonRet;
 export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): void;
 export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotState): void;
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
-export function buttonText(param: ButtonTextParam): ButtonRet;
-export function buttonImage(param: ButtonImageParam): ButtonRet;
-export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet;
+export function buttonText(param: ButtonTextParam): ButtonRet | null;
+export function buttonImage(param: ButtonImageParam): ButtonRet | null;
+export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | null;
 
 export function print(style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 

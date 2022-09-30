@@ -73,6 +73,7 @@ interface ScrollAreaOptsAll extends Box {
 export type ScrollAreaOpts = Partial<ScrollAreaOptsAll>;
 
 export interface ScrollArea extends Readonly<ScrollAreaOptsAll> {
+  resetScroll(): void;
   barWidth(): number;
   isFocused(): boolean;
   consumedClick(): boolean;
