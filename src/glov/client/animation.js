@@ -20,9 +20,6 @@
   }
 */
 
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
-exports.createAnimationSequencer = create;
-
 class GlovAnimationSequencer {
   constructor() {
     this.time = 0;
@@ -61,6 +58,8 @@ class GlovAnimationSequencer {
   }
 }
 
-export function create() {
+export function createAnimationSequencer() {
   return new GlovAnimationSequencer();
 }
+
+exports.create = createAnimationSequencer;
