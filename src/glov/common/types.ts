@@ -34,6 +34,12 @@ export type NetErrorCallback<T = never> = (
   result?: T
 ) => void;
 
+/**
+ * Helper type to make a new type that has specific members marked as required.
+ * Example: WithRequired<CmdDef, 'cmd' | 'help'>
+ */
+export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
+
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
