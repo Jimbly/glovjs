@@ -224,6 +224,12 @@ export function lineCircleIntersect(p1, p2, pCircle, radius) {
   return false;
 }
 
+// let setPrototypeOf = Object.setPrototypeOf ?
+//   Object.setPrototypeOf.bind() :
+//   function _setPrototypeOf(o, p) {
+//     o.__proto__ = p; // eslint-disable-line no-proto
+//     return o;
+//   };
 export function inherits(ctor, superCtor) {
   // From Node.js
   assert(typeof superCtor === 'function');
@@ -242,6 +248,12 @@ export function inherits(ctor, superCtor) {
   //   inheritance), add it
   for (let key in ctor_proto_orig) {
     ctor.prototype[key] = ctor_proto_orig[key];
+  }
+  // Also inherit static methods
+  // Could use setPrototypeOf (fewer ordering issues) if needed, but has strong performance warnings
+  // setPrototypeOf(ctor, superCtor);
+  for (let key in superCtor) {
+    ctor[key] = superCtor[key];
   }
 }
 
