@@ -119,7 +119,7 @@ export class ChannelWorker {
 
     this.bulk_store_path = `${this.channel_type}/${this.channel_subid}`;
 
-    this.bulk_store_paths = {};
+    this.bulk_store_cache = {};
     this.shutting_down = 0;
 
     // This will always be an empty object with creating local channel
@@ -172,7 +172,7 @@ export class ChannelWorker {
       this.channel_server.ds_store_meta.unload(this.store_path);
     }
 
-    for (let path in this.bulk_store_paths) {
+    for (let path in this.bulk_store_cache) {
       this.channel_server.ds_store_bulk.unload(path);
     }
   }
@@ -1035,26 +1035,56 @@ export class ChannelWorker {
     return dot_prop.get(this.data, key, default_value);
   }
 
-  getBulkChannelData(obj_name, default_value, cb) {
+  getBulkCache(obj_name) {
     let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
-    this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.getAsync(bulk_obj_name, default_value, cb);
+    let cache = this.bulk_store_cache[bulk_obj_name];
+    if (!cache) {
+      cache = this.bulk_store_cache[bulk_obj_name] = {
+        bulk_obj_name,
+        writing: 0,
+      };
+    }
+    return cache;
+  }
+
+  getBulkChannelData(obj_name, default_value, cb) {
+    let cache = this.getBulkCache(obj_name);
+    if (cache.writing) {
+      assert(!Buffer.isBuffer(cache.value)); // Assume writer and reader are both doing Buffer/JSON consistently
+      return void cb(null, cache.value);
+    }
+    this.channel_server.ds_store_bulk.getAsync(cache.bulk_obj_name, default_value, cb);
   }
   getBulkChannelBuffer(obj_name, cb) {
-    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
-    this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.getAsyncBuffer(bulk_obj_name, cb);
+    let cache = this.getBulkCache(obj_name);
+    if (cache.writing) {
+      assert(Buffer.isBuffer(cache.value)); // Assume writer and reader are both doing Buffer/JSON consistently
+      return void cb(null, cache.value);
+    }
+    this.channel_server.ds_store_bulk.getAsyncBuffer(cache.bulk_obj_name, cb);
   }
   setBulkChannelData(obj_name, value, cb) {
-    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
-    this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, value, cb || throwErr);
+    let cache = this.getBulkCache(obj_name);
+    cache.writing++;
+    cache.value = value;
+    this.channel_server.ds_store_bulk.setAsync(cache.bulk_obj_name, value, (err) => {
+      if (!--cache.writing) {
+        delete cache.value;
+      }
+      (cb || throwErr)(err);
+    });
   }
   setBulkChannelBuffer(obj_name, value, cb) {
     assert(Buffer.isBuffer(value));
-    let bulk_obj_name = `${this.bulk_store_path}/${obj_name}`;
-    this.bulk_store_paths[bulk_obj_name] = true;
-    this.channel_server.ds_store_bulk.setAsync(bulk_obj_name, value, cb || throwErr);
+    let cache = this.getBulkCache(obj_name);
+    cache.writing++;
+    cache.value = value;
+    this.channel_server.ds_store_bulk.setAsync(cache.bulk_obj_name, value, (err) => {
+      if (!--cache.writing) {
+        delete cache.value;
+      }
+      (cb || throwErr)(err);
+    });
   }
 
   sendChannelMessage(dest, msg, data, resp_func, q) {
