@@ -224,6 +224,35 @@ export function lineCircleIntersect(p1, p2, pCircle, radius) {
   return false;
 }
 
+// line segment intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+export function lineLineIntersect(p1, p2, p3, p4) {
+  let denominator = ((p4[1] - p3[1]) * (p2[0] - p1[0]) - (p4[0] - p3[0]) * (p2[1] - p1[1]));
+  let numa = ((p4[0] - p3[0]) * (p1[1] - p3[1]) - (p4[1] - p3[1]) * (p1[0] - p3[0]));
+  let numb = ((p2[0] - p1[0]) * (p1[1] - p3[1]) - (p2[1] - p1[1]) * (p1[0] - p3[0]));
+
+  if (denominator === 0) {
+    // lines are parallel, or 0-length line
+    if (!numa && !numb) {
+      // lines are coincident
+      return true;
+    }
+    return false;
+  }
+
+  let ua = numa / denominator;
+  let ub = numb / denominator;
+
+  // is the intersection along the segments
+  if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+    return false;
+  }
+
+  return true;
+  // let x = p1[0] + ua * (p2[0] - p1[0]);
+  // let y = p1[1] + ua * (p2[1] - p1[1]);
+  // return [x, y];
+}
+
 // let setPrototypeOf = Object.setPrototypeOf ?
 //   Object.setPrototypeOf.bind() :
 //   function _setPrototypeOf(o, p) {
