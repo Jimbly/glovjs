@@ -19,11 +19,11 @@ import { socialInit } from 'glov/client/social';
 import { soundLoad } from 'glov/client/sound';
 import { spotSuppressPad } from 'glov/client/spot';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
-import { spriteCreate } from 'glov/client/sprites';
+import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
 import { Packet } from 'glov/common/packet';
-import { ClientChannelWorker, DataObject, ErrorCallback, Sprite } from 'glov/common/types';
+import { ClientChannelWorker, DataObject, ErrorCallback } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
 
 import { ROVec3, v2sub, vec2, vec3, vec4 } from 'glov/common/vmath';

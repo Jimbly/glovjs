@@ -19,12 +19,12 @@ import * as particles from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
-import { spriteCreate } from 'glov/client/sprites';
+import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
 import { EntityID } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
-import { ClientChannelWorker, ErrorCallback, Sprite } from 'glov/common/types';
+import { ClientChannelWorker, ErrorCallback } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
 import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
 

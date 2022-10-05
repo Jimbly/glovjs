@@ -50,8 +50,7 @@ const shaders = require('./shaders.js');
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const { spotEndInput } = require('./spot.js');
-const sprites = require('./sprites.js');
-const { blendModeReset } = sprites;
+const { blendModeReset, spriteDraw, spriteStartup } = require('./sprites.js');
 const textures = require('./textures.js');
 const { texturesTick } = textures;
 const glov_transition = require('./transition.js');
@@ -939,7 +938,7 @@ function tick(timestamp) {
   }
 
   startSpriteRendering();
-  sprites.draw();
+  spriteDraw();
 
   uiEndFrame();
 
@@ -1166,7 +1165,7 @@ export function startup(params) {
   });
   addViewSpaceGlobal('light_dir');
   camera2d.startup();
-  sprites.startup();
+  spriteStartup();
   input.startup(canvas, params);
   models.startup();
 

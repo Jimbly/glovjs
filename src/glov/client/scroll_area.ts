@@ -24,7 +24,7 @@ import {
   spotSubEnd,
   spotUnfocus,
 } from './spot.js';
-import { clipPop, clipPush } from './sprites.js';
+import { spriteClipPop, spriteClipPush } from './sprites.js';
 import * as ui from './ui.js';
 
 const { max, min, round } = Math;
@@ -171,7 +171,7 @@ class ScrollAreaInternal implements ScrollArea {
     this.began = true;
     spotSubBegin({ x, y, w, h, key: id });
     // Set up camera and clippers
-    clipPush(z + 0.05, x, y, w - this.barWidth(), h);
+    spriteClipPush(z + 0.05, x, y, w - this.barWidth(), h);
     let camera_orig_x0 = camera2d.x0();
     let camera_orig_x1 = camera2d.x1();
     let camera_orig_y0 = camera2d.y0();
@@ -237,7 +237,7 @@ class ScrollAreaInternal implements ScrollArea {
     let focused_sub_elem = spotSubEnd();
     // restore camera and clippers
     camera2d.pop();
-    clipPop();
+    spriteClipPop();
 
     if (focused_sub_elem && spotPadMode()) {
       // assumes the focus'd spot was in the same camera transform, if not, need to adapt to use .dom_pos instead

@@ -3,12 +3,11 @@
 // Some code from Turbulenz: Copyright (c) 2012-2013 Turbulenz Limited
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+// Legacy APIs
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.createSprite = spriteCreate;
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.create = spriteCreate;
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
-exports.spritesClip = clip;
 
 export const BlendMode = {
   BLEND_ALPHA: 0,
@@ -29,8 +28,18 @@ const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const { cmpTextureArray } = textures;
 const shaders = require('./shaders.js');
-const { nextHighestPowerOfTwo } = require('glov/common/util.js');
+const { deprecate, nextHighestPowerOfTwo } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
+
+deprecate(exports, 'clip', 'spriteClip');
+deprecate(exports, 'clipped', 'spriteClipped');
+deprecate(exports, 'clipPush', 'spriteClipPush');
+deprecate(exports, 'clipPop', 'spriteClipPop');
+deprecate(exports, 'clipPause', 'spriteClipPause');
+deprecate(exports, 'clipResume', 'spriteClipResume');
+deprecate(exports, 'queuefn', 'spriteQueueFn');
+deprecate(exports, 'draw', 'spriteDraw');
+deprecate(exports, 'drawPartial', 'spriteDrawPartial');
 
 export let sprite_vshader;
 export let sprite_fshader;
@@ -141,7 +150,7 @@ function cmpSprite(a, b) {
   return a.uid - b.uid;
 }
 
-export function queuefn(z, fn) {
+export function spriteQueueFn(z, fn) {
   assert(isFinite(z));
   sprite_queue.push({
     fn,
@@ -476,23 +485,23 @@ function clipCoordsDom(x, y, w, h) {
   return xywh;
 }
 
-export function clip(z_start, z_end, x, y, w, h) {
+export function spriteClip(z_start, z_end, x, y, w, h) {
   let scissor = clipCoordsScissor(x, y, w, h);
-  queuefn(z_start - 0.01, () => {
+  spriteQueueFn(z_start - 0.01, () => {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
   });
-  queuefn(z_end - 0.01, () => {
+  spriteQueueFn(z_end - 0.01, () => {
     gl.disable(gl.SCISSOR_TEST);
   });
 }
 
 let clip_stack = [];
-export function clipped() {
+export function spriteClipped() {
   return clip_stack.length > 0;
 }
 
-export function clipPush(z, x, y, w, h) {
+export function spriteClipPush(z, x, y, w, h) {
   assert(clip_stack.length < 10); // probably leaking
   let scissor = clipCoordsScissor(x, y, w, h);
   let dom_clip = clipCoordsDom(x, y, w, h);
@@ -503,9 +512,9 @@ export function clipPush(z, x, y, w, h) {
   });
 }
 
-export function clipPop() {
-  assert(clipped());
-  queuefn(Z.TOOLTIP - 0.1, () => {
+export function spriteClipPop() {
+  assert(spriteClipped());
+  spriteQueueFn(Z.TOOLTIP - 0.1, () => {
     gl.disable(gl.SCISSOR_TEST);
   });
   let { z, scissor } = clip_stack.pop();
@@ -517,21 +526,22 @@ export function clipPop() {
   } else {
     camera2d.setInputClipping(null);
   }
-  queuefn(z, () => {
+  spriteQueueFn(z, () => {
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
     spriteQueuePush();
     sprite_queue = sprites;
-    exports.draw();
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    spriteDraw();
     spriteQueuePop();
     // done at Z.TOOLTIP: gl.disable(gl.SCISSOR_TEST);
   });
 }
 
 let clip_paused;
-export function clipPause() {
+export function spriteClipPause() {
   // Queue back into the root sprite queue
-  assert(clipped());
+  assert(spriteClipped());
   assert(!clip_paused);
   clip_paused = true;
   spriteQueuePush(sprite_queue_stack[0]);
@@ -540,12 +550,12 @@ export function clipPause() {
   // escaped when it pops.
   clip_stack.push({ dom_clip: null });
 }
-export function clipResume() {
-  assert(clipped());
+export function spriteClipResume() {
+  assert(spriteClipped());
   assert(clip_paused);
   clip_stack.pop(); // remove us
   clip_paused = false;
-  assert(clipped());
+  assert(spriteClipped());
   let { dom_clip } = clip_stack[clip_stack.length - 1];
   spriteQueuePop(true);
   camera2d.setInputClipping(dom_clip);
@@ -726,7 +736,7 @@ function finishDraw() {
   blendModeReset();
 }
 
-export function draw() {
+export function spriteDraw() {
   profilerStart('sprites:draw');
   drawSetup();
   profilerStart('drawElem');
@@ -740,7 +750,7 @@ export function draw() {
   profilerStop('sprites:draw');
 }
 
-export function drawPartial(z) {
+export function spriteDrawPartial(z) {
   profilerStart('sprites:drawPartial');
   drawSetup();
   profilerStart('drawElem');
@@ -957,7 +967,7 @@ export function spriteCreate(params) {
   return new Sprite(params);
 }
 
-export function startup() {
+export function spriteStartup() {
   geom_stats = geom.stats;
   clip_space[2] = -1;
   clip_space[3] = 1;

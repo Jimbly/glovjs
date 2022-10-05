@@ -10,7 +10,7 @@ const { renderWidth, renderHeight } = engine;
 const { framebufferEnd, framebufferStart, framebufferTopOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
 const shaders = require('./shaders.js');
-const sprites = require('./sprites.js');
+const { spriteQueueFn } = require('./sprites.js');
 const textures = require('./textures.js');
 const { vec2, vec3, vec4, v4set } = require('glov/common/vmath.js');
 
@@ -145,7 +145,7 @@ function doEffect(fn) {
 
 export function effectsQueue(z, fn) {
   effectsPassAdd();
-  sprites.queuefn(z, doEffect.bind(null, fn));
+  spriteQueueFn(z, doEffect.bind(null, fn));
 }
 
 export function effectsTopOfFrame() {

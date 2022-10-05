@@ -1,6 +1,5 @@
 import type { FriendData } from './friends_data';
 import type { Packet } from './packet';
-import type { Vec4 } from './vmath';
 
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
@@ -173,37 +172,3 @@ export interface UserChannel extends ClientChannelWorker {
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;
-
-/**
- * Client Sprite class
- */
-export interface SpriteUIData {
-  widths: number[]; heights: number[];
-  wh: number[]; hw: number[];
-  rects: Vec4[];
-  aspect: number[] | null;
-  total_w: number; total_h: number;
-}
-export interface SpriteDrawParams {
-  x: number; y: number; z?: number;
-  w?: number; h?: number;
-  frame?: number;
-  rot?: number;
-  uvs?: number[];
-  color?: Vec4;
-  shader?: unknown;
-  shader_params?: Partial<Record<string, number[]>>;
-}
-export interface Sprite {
-  uidata?: SpriteUIData;
-  uvs: number[];
-  draw: (params: SpriteDrawParams) => void;
-  drawDualTint: (params: SpriteDrawParams & { color1: Vec4 }) => void;
-}
-export interface UISprite extends Sprite {
-  uidata: SpriteUIData;
-}
-/**
- * Client Sprite creation parameters
- */
-export type SpriteParam = UnimplementedData;

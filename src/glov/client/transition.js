@@ -93,7 +93,7 @@ export function queue(z, fn) {
   } else {
     // queue up a capture past the specified Z, so transitions rendering at that Z (plus a handful) get captured
     effectsQueue(z + Z.TRANSITION_RANGE, transitionCaptureFramebuffer.bind(null, trans));
-    //sprites.queuefn(z + Z.TRANSITION_RANGE, transitionCapture.bind(null, trans));
+    //spriteQueueFn(z + Z.TRANSITION_RANGE, transitionCapture.bind(null, trans));
   }
   return true;
 }

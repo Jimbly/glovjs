@@ -67,9 +67,9 @@ const {
 const glov_sprites = require('./sprites.js');
 const {
   BLEND_PREMULALPHA,
-  clipped,
-  clipPause,
-  clipResume,
+  spriteClipped,
+  spriteClipPause,
+  spriteClipResume,
   spriteChainedStart,
   spriteChainedStop,
 } = glov_sprites;
@@ -674,9 +674,9 @@ export function drawTooltip(param) {
   assert(typeof param.y === 'number');
   assert(typeof tooltip === 'string');
 
-  let clip_pause = clipped();
+  let clip_pause = spriteClipped();
   if (clip_pause) {
-    clipPause();
+    spriteClipPause();
   }
 
   let tooltip_w = param.tooltip_width || tooltip_width;
@@ -715,7 +715,7 @@ export function drawTooltip(param) {
     eat_clicks: false,
   });
   if (clip_pause) {
-    clipResume();
+    spriteClipResume();
   }
 }
 

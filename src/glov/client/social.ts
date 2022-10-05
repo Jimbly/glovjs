@@ -18,7 +18,6 @@ import {
   ErrorCallback,
   FriendCmdResponse,
   ServerPresenceData,
-  Sprite,
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
@@ -26,7 +25,7 @@ import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
 import { netDisconnected, netSubs } from './net';
-import { spriteCreate } from './sprites';
+import { Sprite, spriteCreate } from './sprites';
 import * as textures from './textures';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;

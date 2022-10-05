@@ -1,6 +1,6 @@
-import { Sprite } from 'glov/common/types';
 import { Vec4 } from 'glov/common/vmath';
-import { FontStyle } from './font.js';
+import { FontStyle } from './font';
+import { Sprite } from './sprites';
 
 export type EngineStateFunc = (dt: number) => void;
 

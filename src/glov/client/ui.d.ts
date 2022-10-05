@@ -1,12 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
-import { Sprite, UISprite, UnimplementedData } from 'glov/common/types';
+import { UnimplementedData } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
+import { Sprite, UISprite } from './sprites';
 
 export type ColorSet = { _opaque: 'ColorSet' };
 export const Z: Partial<Record<string, number>>;

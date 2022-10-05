@@ -41,7 +41,7 @@ import {
   spotSubPop,
   spotSubPush,
 } from './spot.js';
-import { clipPause, clipResume, clipped } from './sprites.js';
+import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
 import { playUISound } from './ui.js';
 import * as glov_ui from './ui.js';
 
@@ -796,9 +796,9 @@ class GlovDropDown extends SelectionBoxBase {
 
     if (this.dropdown_visible) {
       z += 1000; // drop-down part should be above everything except tooltips
-      let clip_pause = clipped();
+      let clip_pause = spriteClipped();
       if (clip_pause) {
-        clipPause();
+        spriteClipPause();
       }
       spotSubPush();
       let do_scroll = scroll_height && this.items.length * entry_height > scroll_height;
@@ -813,7 +813,7 @@ class GlovDropDown extends SelectionBoxBase {
       }
       spotSubPop();
       if (clip_pause) {
-        clipResume();
+        spriteClipResume();
       }
 
       let { any_focused, scroll_area_consumed_click } = ctx;
