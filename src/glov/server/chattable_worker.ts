@@ -149,7 +149,7 @@ function chatReceive(
 export function handleChat(this: ChattableWorker,
   source: ClientHandlerSource,
   pak: Packet,
-  resp_func: ErrorCallback<string>
+  resp_func: ErrorCallback<never, string>
 ): void {
   let err = chatReceive(this, source, pak);
   resp_func(err);
@@ -161,4 +161,9 @@ export function handleChatGet(this: ChattableWorker,
   resp_func: ErrorCallback<ChatHistoryData | null>
 ): void {
   resp_func(null, chatGet(this));
+}
+
+export function chattableWorkerInit(ctor: typeof ChannelWorker): void {
+  ctor.registerClientHandler('chat', handleChat);
+  ctor.registerClientHandler('chat_get', handleChatGet);
 }
