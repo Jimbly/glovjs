@@ -92,6 +92,8 @@ export function userDataMap(mapping) {
   return ret;
 }
 
+let temp_buffer_6 = Buffer.alloc(6);
+
 export class ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     this.channel_server = channel_server;
@@ -219,6 +221,12 @@ export class ChannelWorker {
     resp_func(null, ret);
   }
 
+  getSubscriberId(channel_id) {
+    assert(this.maintain_subscription_ids);
+    assert(this.subscribers[channel_id]);
+    return this.subscribers[channel_id].subscription_id;
+  }
+
   onSubscribe(src, field_list, resp_func) {
     let { channel_id, user_id } = src;
     let is_client = src.type === 'client';
@@ -259,7 +267,17 @@ export class ChannelWorker {
       }
     }
 
-    this.subscribers[channel_id] = { field_map };
+    let subscription_id;
+    if (this.maintain_subscription_ids && is_client) {
+      if (!this.last_sub_id) {
+        this.last_sub_id = 0;
+      }
+      let sub_id_idx = ++this.last_sub_id;
+      temp_buffer_6.writeUintBE(sub_id_idx, 0, 6);
+      subscription_id = temp_buffer_6.toString('base64').replace(/^A+/, '');
+    }
+
+    this.subscribers[channel_id] = { field_map, subscription_id };
     this.num_subscribers++;
     this.adding_client = channel_id;
 
@@ -308,6 +326,7 @@ export class ChannelWorker {
     }
     this.sendChannelMessage(channel_id, 'channel_data', {
       public: out,
+      subscription_id,
     });
     return resp_func();
   }
@@ -1479,6 +1498,7 @@ export class ChannelWorker {
 ChannelWorker.prototype.logPacketDispatch = packetLog;
 // Overrideable by child class's prototype
 ChannelWorker.prototype.maintain_client_list = false;
+ChannelWorker.prototype.maintain_subscription_ids = false; // generates a minimally sized unique ID for each subscriber
 ChannelWorker.prototype.emit_join_leave_events = false;
 ChannelWorker.prototype.require_login = false;
 ChannelWorker.prototype.require_subscribe = true; // Clients must subscribe to send a direct message
