@@ -94,6 +94,27 @@ export function userDataMap(mapping) {
 
 let temp_buffer_6 = Buffer.alloc(6);
 
+// Recursively merge objects and append arrays
+function mergeAndAppendDeep(dest, src) {
+  if (dest === undefined) {
+    return src;
+  } else if (src === undefined) {
+    return dest;
+  }
+  assert.equal(typeof dest, typeof src);
+  assert.equal(Array.isArray(dest), Array.isArray(src));
+  if (Array.isArray(dest)) {
+    return dest.concat(src);
+  } else if (typeof dest === 'object') {
+    for (let key in src) {
+      dest[key] = mergeAndAppendDeep(dest[key], src[key]);
+    }
+    return dest;
+  } else {
+    return src;
+  }
+}
+
 export class ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     this.channel_server = channel_server;
@@ -1493,6 +1514,34 @@ export class ChannelWorker {
       callbacks = this.locked_resource_ids[resource_id] = [];
       prepared_callback();
     }
+  }
+
+  static workerExtend(init_data) {
+    // Note: `this` is a particular ChannelWorker's descendant's constructor
+    assert(this !== ChannelWorker);
+    assert(!this.has_been_registered); // must be called before registerChannelWorker()
+    this.init_data = mergeAndAppendDeep(this.init_data, init_data);
+  }
+
+  // Convenience wrappers
+  static registerCmds(arr) {
+    this.workerExtend({
+      cmds: arr,
+    });
+  }
+  static registerClientHandler(message, handler) {
+    this.workerExtend({
+      client_handlers: {
+        [message]: handler,
+      },
+    });
+  }
+  static registerServerHandler(message, handler) {
+    this.workerExtend({
+      handlers: {
+        [message]: handler,
+      },
+    });
   }
 }
 ChannelWorker.prototype.logPacketDispatch = packetLog;

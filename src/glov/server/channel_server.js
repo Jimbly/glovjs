@@ -996,8 +996,13 @@ export class ChannelServer {
         useful for low-level messages that are handled internally ("apply_channel_data")
     }
    */
-  registerChannelWorker(channel_type, ctor, options) {
-    options = options || {};
+  registerChannelWorker(channel_type, ctor, options_in) {
+    if (options_in) {
+      ctor.workerExtend(options_in);
+    }
+    assert(!ctor.has_been_registered);
+    ctor.has_been_registered = true;
+    let options = ctor.init_data;
     assert(!this.channel_types[channel_type]);
     this.channel_types[channel_type] = ctor;
     ctor.autocreate = options.autocreate;
