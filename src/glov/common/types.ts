@@ -1,4 +1,5 @@
 import type { FriendData } from './friends_data';
+import type { Packet } from './packet';
 import type { Vec4 } from './vmath';
 
 /**
@@ -33,6 +34,20 @@ export type NetErrorCallback<T = never> = (
   err: string | null,
   result?: T
 ) => void;
+
+type NetResponseCallbackFn<T = never, E = unknown> = (
+  err?: E | undefined | null,
+  result?: T extends (never | void) ? never : (T | undefined | null),
+  resp_func?: NetErrorCallback
+) => void;
+/**
+ * Callback function type passed to any network message handlers: can use it to
+ * send back a packet, an error, a result, as well as register a function to be
+ * called in response to your response.
+ */
+export interface NetResponseCallback<T = never> extends NetResponseCallbackFn<T, string> {
+  pak: () => Packet;
+}
 
 /**
  * Helper type to make a new type that has specific members marked as required.
