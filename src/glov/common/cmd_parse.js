@@ -130,7 +130,9 @@ CmdParse.prototype.register = function (param) {
   if (help_lower.includes('(hidden)')) {
     assert(access_show && access_show.length);
   }
-  this.cmds[canonical(cmd)] = {
+  let canon = canonical(cmd);
+  assert(!this.cmds[canon], `Duplicate commands registered as "${canon}"`);
+  this.cmds[canon] = {
     name: cmd,
     fn: func,
     help,
