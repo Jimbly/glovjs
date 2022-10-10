@@ -4,21 +4,21 @@ import { ChannelServer } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
 
-class TestWorker extends ChannelWorker {
+class MultiplayerWorker extends ChannelWorker {
   // constructor(channel_server, channel_id, channel_data) {
   //   super(channel_server, channel_id, channel_data);
   // }
   test_bin?: Uint8Array;
 }
-TestWorker.prototype.maintain_client_list = true;
-TestWorker.prototype.emit_join_leave_events = true;
-TestWorker.prototype.require_login = false;
-TestWorker.prototype.auto_destroy = true;
+MultiplayerWorker.prototype.maintain_client_list = true;
+MultiplayerWorker.prototype.emit_join_leave_events = true;
+MultiplayerWorker.prototype.require_login = false;
+MultiplayerWorker.prototype.auto_destroy = true;
 
-chattableWorkerInit(TestWorker);
+chattableWorkerInit(MultiplayerWorker);
 
-TestWorker.registerClientHandler('bin_get', function (
-  this: TestWorker,
+MultiplayerWorker.registerClientHandler('bin_get', function (
+  this: MultiplayerWorker,
   src: HandlerSource,
   pak: Packet,
   resp_func: NetResponseCallback
@@ -28,8 +28,8 @@ TestWorker.registerClientHandler('bin_get', function (
   resp.send();
 });
 
-TestWorker.registerClientHandler('bin_set', function (
-  this: TestWorker,
+MultiplayerWorker.registerClientHandler('bin_set', function (
+  this: MultiplayerWorker,
   src: HandlerSource,
   pak: Packet,
   resp_func: NetResponseCallback
@@ -42,8 +42,8 @@ TestWorker.registerClientHandler('bin_set', function (
   resp_func();
 });
 
-export function init(channel_server: ChannelServer): void {
-  channel_server.registerChannelWorker('test', TestWorker, {
+export function multiplayerWorkerInit(channel_server: ChannelServer): void {
+  channel_server.registerChannelWorker('multiplayer', MultiplayerWorker, {
     autocreate: true,
     subid_regex: /^.+$/,
   });

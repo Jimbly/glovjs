@@ -217,7 +217,7 @@ export function main(): void {
 
   function getRoom() {
     if (!test_room) {
-      test_room = netSubs().getChannel('test.test', true);
+      test_room = netSubs().getChannel('multiplayer.test', true);
       pos_manager.reinit({
         channel: test_room,
         default_pos: vec3(
