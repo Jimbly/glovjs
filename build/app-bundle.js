@@ -90,7 +90,7 @@ function bundlePair(opts) {
     post_bundle_cb,
     bundle_uglify_opts,
   } = opts;
-  let subtask_name = `bundle_${path.basename(entrypoint)}`;
+  let subtask_name = `bundle_${entrypoint.replace(/^client\//, '').replace(/\//g, '_')}`;
 
   let tasks = [];
 
