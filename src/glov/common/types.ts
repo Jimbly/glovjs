@@ -149,6 +149,9 @@ export interface Channel {
   on: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
   removeListener: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
   onceSubscribe: (cb: ((data: DataObject) => void) | (() => void)) => void;
+  numSubscriptions: () => number;
+  unsubscribe: () => void;
+  getChannelData: <T>(key: string, default_value: T) => T;
 }
 
 export interface UserChannel extends Channel {

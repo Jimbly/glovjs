@@ -60,6 +60,9 @@ ClientChannelWorker.prototype.onceSubscribe = function (cb) {
   }
 };
 
+ClientChannelWorker.prototype.numSubscriptions = function () {
+  return this.subscriptions;
+};
 
 ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
   console.log(`got channel_data(${this.channel_id}):  ${JSON.stringify(data)}`);
@@ -163,6 +166,10 @@ ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth)
 
 ClientChannelWorker.prototype.cmdParse = function (cmd, resp_func) {
   this.send('cmdparse', cmd, resp_func);
+};
+
+ClientChannelWorker.prototype.unsubscribe = function () {
+  this.subs.unsubscribe(this.channel_id);
 };
 
 function SubscriptionManager(client, cmd_parse) {
