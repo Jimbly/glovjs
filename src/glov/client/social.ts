@@ -26,7 +26,7 @@ import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
 import { netDisconnected, netSubs } from './net';
-import * as sprites from './sprites';
+import { spriteCreate } from './sprites';
 import * as textures from './textures';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
@@ -383,7 +383,7 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
     });
     if (tex && tex.loaded) {
       image = profile_images[user_id] = {
-        img: sprites.create({ tex }),
+        img: spriteCreate({ tex }),
       };
       return image;
     }

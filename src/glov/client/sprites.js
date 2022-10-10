@@ -4,7 +4,9 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
-exports.createSprite = create;
+exports.createSprite = spriteCreate;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.create = spriteCreate;
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.spritesClip = clip;
 
@@ -951,7 +953,7 @@ Sprite.prototype.draw3D = function (params) {
 };
 
 
-export function create(params) {
+export function spriteCreate(params) {
   return new Sprite(params);
 }
 

@@ -14,10 +14,10 @@ import { slider } from 'glov/client/slider.js';
 import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/client/sound.js';
 import { spineCreate } from 'glov/client/spine.js';
 import { spotSuppressPad } from 'glov/client/spot.js';
-import { createSpriteAnimation } from 'glov/client/sprite_animation.js';
+import { spriteAnimationCreate } from 'glov/client/sprite_animation.js';
 import { spriteSetGet } from 'glov/client/sprite_sets.js';
 import * as glov_sprites from 'glov/client/sprites.js';
-import { createSprite } from 'glov/client/sprites.js';
+import { spriteCreate } from 'glov/client/sprites.js';
 import * as transition from 'glov/client/transition.js';
 import * as ui from 'glov/client/ui.js';
 import { uiHandlingNav } from 'glov/client/ui.js';
@@ -65,8 +65,8 @@ const colors_inactive = ui.makeColorSet(vec4(0.5, 0.5, 0.5, 1));
 function perfTestSprites() {
   if (!sprites.test) {
     sprites.test = [
-      createSprite({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
-      createSprite({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+      spriteCreate({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
+      spriteCreate({ url: 'img/test.png?1', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
     ];
   }
 
@@ -201,9 +201,9 @@ export function main() {
 
     soundLoad('test');
 
-    sprites.white = createSprite({ url: 'white' });
+    sprites.white = spriteCreate({ url: 'white' });
 
-    sprites.test_tint = createSprite({
+    sprites.test_tint = spriteCreate({
       name: 'tinted',
       ws: [16, 16, 16, 16],
       hs: [16, 16, 16],
@@ -211,7 +211,7 @@ export function main() {
       layers: 2,
       origin: vec2(0.5, 0.5),
     });
-    sprites.animation = createSpriteAnimation({
+    sprites.animation = spriteAnimationCreate({
       idle_left: {
         frames: [0,1],
         times: [200, 500],
@@ -223,7 +223,7 @@ export function main() {
     });
     sprites.animation.setState('idle_left');
 
-    sprites.game_bg = createSprite({
+    sprites.game_bg = spriteCreate({
       url: 'white',
       size: vec2(game_width, game_height),
     });
