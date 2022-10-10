@@ -153,7 +153,7 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
 
 export type SoundID = string | { file: string; volume: number };
 
-export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
+export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};
   if (opts.streaming && is_firefox) {
     // TODO: Figure out workaround and fix!
@@ -161,6 +161,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?
     //   possibly related to preload options or something ('preload=meta' not guaranteed to fire 'canplay')
     opts.streaming = false;
   }
+  const { streaming, loop } = opts;
   if (Array.isArray(soundid)) {
     assert(!cb);
     for (let ii = 0; ii < soundid.length; ++ii) {
@@ -220,18 +221,18 @@ export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?
       callEach(cbs, delete sounds_loading[key], 'Error loading sound');
       return;
     }
-    if (!opts.streaming) {
+    if (!streaming) {
       ++num_loading;
     }
     let once = false;
     let sound = new Howl({
       src: srcs.slice(idx),
-      html5: Boolean(opts.streaming),
-      loop: Boolean(opts.loop),
+      html5: Boolean(streaming),
+      loop: Boolean(loop),
       volume: 0,
       onload: function () {
         if (!once) {
-          if (!opts.streaming) {
+          if (!streaming) {
             --num_loading;
           }
           once = true;
@@ -247,7 +248,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts: SoundLoadOpts, cb?
           console.log(`Error loading sound ${srcs[idx]}: ${err}, trying fallback...`);
         }
         if (!once) {
-          if (!opts.streaming) {
+          if (!streaming) {
             --num_loading;
           }
           once = true;
