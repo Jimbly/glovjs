@@ -1,71 +1,75 @@
 /*eslint global-require:off*/
 // eslint-disable-next-line import/order
-import * as local_storage from 'glov/client/local_storage.js';
+import * as local_storage from 'glov/client/local_storage';
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
-import * as assert from 'assert';
-import { cmd_parse } from 'glov/client/cmds.js';
-import * as engine from 'glov/client/engine.js';
-import * as glov_font from 'glov/client/font.js';
-import * as input from 'glov/client/input.js';
+import assert from 'assert';
+import { chatUICreate } from 'glov/client/chat_ui';
+import { cmd_parse } from 'glov/client/cmds';
+import * as engine from 'glov/client/engine';
+import * as glov_font from 'glov/client/font';
+import * as input from 'glov/client/input';
 const { atan2, random } = Math;
-import * as net from 'glov/client/net.js';
-import * as net_position_manager from 'glov/client/net_position_manager.js';
-import * as particles from 'glov/client/particles.js';
-import * as shaders from 'glov/client/shaders.js';
-import { socialInit } from 'glov/client/social.js';
-import { soundLoad, soundPlay } from 'glov/client/sound.js';
-import { spotSuppressPad } from 'glov/client/spot.js';
-import * as sprite_animation from 'glov/client/sprite_animation.js';
-import * as glov_sprites from 'glov/client/sprites.js';
-import * as ui from 'glov/client/ui.js';
-import { uiHandlingNav } from 'glov/client/ui.js';
-import { toNumber } from 'glov/common/util.js';
+import * as net from 'glov/client/net';
+import { netSubs } from 'glov/client/net';
+import * as net_position_manager from 'glov/client/net_position_manager';
+import * as particles from 'glov/client/particles';
+import * as shaders from 'glov/client/shaders';
+import { socialInit } from 'glov/client/social';
+import { soundLoad, soundPlay } from 'glov/client/sound';
+import { spotSuppressPad } from 'glov/client/spot';
+import { spriteAnimationCreate } from 'glov/client/sprite_animation';
+import { spriteCreate } from 'glov/client/sprites';
+import * as ui from 'glov/client/ui';
+import { uiHandlingNav } from 'glov/client/ui';
+import { Packet } from 'glov/common/packet';
+import { Channel, DataObject, ErrorCallback, Sprite } from 'glov/common/types';
+import { toNumber } from 'glov/common/util';
 
-import { v2sub, v4copy, vec2, vec3, vec4 } from 'glov/common/vmath.js';
-import { createAccountUI } from './account_ui.js';
-import * as particle_data from './particle_data.js';
+import { ROVec3, v2sub, v4clone, v4copy, vec2, vec3, vec4 } from 'glov/common/vmath';
+import { createAccountUI } from './account_ui';
+import * as particle_data from './particle_data';
 
-window.Z = window.Z || {};
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
-
-let app = exports;
-window.app = app; // for debugging
 
 const pos_manager = net_position_manager.create({ n: 3, dim_pos: 2, dim_rot: 1 });
 
 const ROOM_REQUIRES_LOGIN = true;
 
 // Virtual viewport for our game logic
-export const game_width = 1280;
-export const game_height = 960;
+const game_width = 1280;
+const game_height = 960;
 
-export let sprites = {};
+let sprites: Record<string, Sprite> = {};
+let animation: ReturnType<typeof spriteAnimationCreate>;
+
+let account_ui: ReturnType<typeof createAccountUI>;
+let chat_ui: ReturnType<typeof chatUICreate>;
 
 cmd_parse.register({
   cmd: 'bin_get',
-  func: function (str, resp_func) {
-    app.chat_ui.channel.pak('bin_get').send(function (err, pak) {
+  func: function (str: string, resp_func: ErrorCallback<string>) {
+    chat_ui.channel.pak('bin_get').send(function (err?: string, pak?: Packet) {
       if (err) {
         return void resp_func(err);
       }
-      resp_func(null, pak.readBuffer(false).join(','));
+      resp_func(null, pak!.readBuffer(false).join(','));
     });
   },
 });
 
 cmd_parse.register({
   cmd: 'bin_set',
-  func: function (str, resp_func) {
-    let pak = app.chat_ui.channel.pak('bin_set');
+  func: function (str: string, resp_func: ErrorCallback<string>) {
+    let pak = chat_ui.channel.pak('bin_set');
     pak.writeBuffer(new Uint8Array(str.split(' ').map(toNumber)));
     pak.send(resp_func);
   },
 });
 
-export function main() {
+export function main(): void {
   net.init({
     engine,
     cmd_parse,
@@ -101,12 +105,8 @@ export function main() {
 
   // const font = engine.font;
 
-
-  const createSprite = glov_sprites.create;
-  const createAnimation = sprite_animation.create;
-
-  app.account_ui = createAccountUI();
-  app.chat_ui = require('glov/client/chat_ui.js').create({ max_len: 1000 });
+  account_ui = createAccountUI();
+  chat_ui = chatUICreate({ max_len: 1000 });
 
   const color_white = vec4(1, 1, 1, 1);
   const color_gray = vec4(0.5, 0.5, 0.5, 1);
@@ -123,14 +123,14 @@ export function main() {
 
     soundLoad('test');
 
-    sprites.white = createSprite({ url: 'white' });
+    sprites.white = spriteCreate({ url: 'white' });
 
-    sprites.test = createSprite({
+    sprites.test = spriteCreate({
       name: 'test',
       size: vec2(sprite_size, sprite_size),
       origin: vec2(0.5, 0.5),
     });
-    sprites.test_tint = createSprite({
+    sprites.test_tint = spriteCreate({
       name: 'tinted',
       ws: [16, 16, 16, 16],
       hs: [16, 16, 16],
@@ -138,7 +138,7 @@ export function main() {
       layers: 2,
       origin: vec2(0.5, 0.5),
     });
-    sprites.animation = createAnimation({
+    animation = spriteAnimationCreate({
       idle_left: {
         frames: [0,1],
         times: [200, 500],
@@ -148,24 +148,25 @@ export function main() {
         times: [200, 500],
       },
     });
-    sprites.animation.setState('idle_left');
+    animation.setState('idle_left');
 
-    sprites.game_bg = createSprite({
+    sprites.game_bg = spriteCreate({
       url: 'white',
       size: vec2(game_width, game_height),
     });
   }
 
 
-  let test_room;
-  let test;
+  let test_room: Channel | null = null;
+  let test_color_sprite = v4clone(color_white);
+  let test_character = { x: 0, y: 0, rot: 0 };
 
-  function playerMotion(dt) {
+  function playerMotion(dt: number) {
     // Network send
-    if (pos_manager.checkNet((pos) => {
-      test.character.x = pos[0];
-      test.character.y = pos[1];
-      test.character.rot = pos[2];
+    if (pos_manager.checkNet((pos: ROVec3) => {
+      test_character.x = pos[0];
+      test_character.y = pos[1];
+      test_character.rot = pos[2];
     })) {
       return;
     }
@@ -174,49 +175,49 @@ export function main() {
       return;
     }
 
-    test.character.dx = 0;
-    test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-    test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
-    test.character.dy = 0;
-    test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-    test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
-    if (test.character.dx < 0) {
-      sprites.animation.setState('idle_left');
-    } else if (test.character.dx > 0) {
-      sprites.animation.setState('idle_right');
+    let dx = 0;
+    dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
+    dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
+    let dy = 0;
+    dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
+    dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+    if (dx < 0) {
+      animation.setState('idle_left');
+    } else if (dx > 0) {
+      animation.setState('idle_right');
     }
 
-    test.character.x += test.character.dx * 0.2;
-    test.character.y += test.character.dy * 0.2;
+    test_character.x += dx * 0.2;
+    test_character.y += dy * 0.2;
     let bounds = {
-      x: test.character.x - sprite_size/2,
-      y: test.character.y - sprite_size/2,
+      x: test_character.x - sprite_size/2,
+      y: test_character.y - sprite_size/2,
       w: sprite_size,
       h: sprite_size,
     };
     if (input.mouseDownOverBounds(bounds)) {
-      v4copy(test.color_sprite, color_yellow);
+      v4copy(test_color_sprite, color_yellow);
     } else if (input.click(bounds)) {
-      v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
+      v4copy(test_color_sprite, (test_color_sprite[2] === 0) ? color_white : color_red);
       soundPlay('test');
     } else if (input.mouseOver(bounds)) {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 0.5;
+      v4copy(test_color_sprite, color_white);
+      test_color_sprite[3] = 0.5;
     } else {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 1;
+      v4copy(test_color_sprite, color_white);
+      test_color_sprite[3] = 1;
     }
 
-    let aim = v2sub(vec2(), input.mousePos(), [test.character.x, test.character.y]);
-    test.character.rot = atan2(aim[0], -aim[1]);
+    let aim = v2sub(vec2(), input.mousePos(), [test_character.x, test_character.y]);
+    test_character.rot = atan2(aim[0], -aim[1]);
 
     // Network send
-    pos_manager.updateMyPos(new Float64Array([test.character.x, test.character.y, test.character.rot]), 'idle');
+    pos_manager.updateMyPos(new Float64Array([test_character.x, test_character.y, test_character.rot]), 'idle');
   }
 
   function getRoom() {
     if (!test_room) {
-      test_room = net.subs.getChannel('test.test', true);
+      test_room = netSubs().getChannel('test.test', true);
       pos_manager.reinit({
         channel: test_room,
         default_pos: vec3(
@@ -225,15 +226,15 @@ export function main() {
           0
         ),
       });
-      app.chat_ui.setChannel(test_room);
+      chat_ui.setChannel(test_room);
     }
   }
 
   function preLogout() {
     if (test_room) {
-      assert(test_room.subscriptions);
-      net.subs.unsubscribe(test_room.channel_id);
-      app.chat_ui.setChannel(null);
+      assert(test_room.numSubscriptions());
+      test_room.unsubscribe();
+      chat_ui.setChannel(null);
       test_room = null;
       if (!ROOM_REQUIRES_LOGIN) {
         setTimeout(getRoom, 1);
@@ -243,12 +244,12 @@ export function main() {
 
   let pad_controls_sprite = true;
   let was_active = false;
-  test = function (dt) {
+  function test(dt: number) {
     if (pad_controls_sprite) {
       spotSuppressPad();
     }
-    app.chat_ui.run();
-    app.account_ui.showLogin({
+    chat_ui.run();
+    account_ui.showLogin({
       x: 0, y: 0,
       prelogout: preLogout, center: false,
       style: glov_font.style(null, {
@@ -258,12 +259,7 @@ export function main() {
       }),
     });
 
-    if (!test.color_sprite) {
-      test.color_sprite = v4copy(vec4(), color_white);
-      test.character = { x: 0, y: 0, rot: 0 };
-    }
-
-    if (test_room && test_room.subscriptions) {
+    if (test_room && test_room.numSubscriptions()) {
       if (!was_active) {
         pad_controls_sprite = true;
         was_active = true;
@@ -280,21 +276,21 @@ export function main() {
       });
 
       sprites.test_tint.drawDualTint({
-        x: test.character.x,
-        y: test.character.y,
+        x: test_character.x,
+        y: test_character.y,
         z: Z.SPRITES,
-        rot: test.character.rot,
+        rot: test_character.rot,
         color: [1, 1, 0, 1],
         color1: [1, 0, 1, 1],
-        size: [sprite_size, sprite_size],
-        frame: sprites.animation.getFrame(dt),
+        frame: animation.getFrame(dt),
       });
 
       // Draw other users
-      let room_clients = test_room.getChannelData('public.clients', {});
+      let room_clients = test_room.getChannelData<DataObject>('public.clients', {});
       for (let client_id in room_clients) {
-        let other_client = room_clients[client_id];
+        let other_client = room_clients[client_id] as DataObject;
         if (other_client.pos && other_client.ids) {
+          let ids = other_client.ids as Partial<Record<string, string>>;
           let pcd = pos_manager.updateOtherClient(client_id, dt);
           if (pcd) {
             let pos = pcd.pos;
@@ -306,7 +302,7 @@ export function main() {
             ui.font.drawSizedAligned(glov_font.styleColored(null, 0x00000080),
               pos[0], pos[1] - 64, Z.SPRITES - 1,
               ui.font_height, glov_font.ALIGN.HCENTER, 0, 0,
-              other_client.ids.display_name || `client_${client_id}`);
+              ids.display_name || `client_${client_id}`);
           }
         }
       }
@@ -315,20 +311,20 @@ export function main() {
       was_active = false;
     }
 
-    app.chat_ui.runLate();
+    chat_ui.runLate();
 
     if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
       pad_controls_sprite = !pad_controls_sprite;
     }
-  };
+  }
 
-  function testInit(dt) {
+  function testInit(dt: number) {
     engine.setState(test);
     if (!ROOM_REQUIRES_LOGIN) {
       getRoom();
     }
 
-    net.subs.onLogin(getRoom);
+    netSubs().onLogin(getRoom);
 
     test(dt);
   }
