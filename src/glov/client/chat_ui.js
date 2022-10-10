@@ -25,8 +25,9 @@ const {
   spotUnfocus,
 } = require('./spot.js');
 const ui = require('./ui.js');
-const { clamp, defaults, matchAll } = require('glov/common/util.js');
+const { clamp, defaults, deprecate, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
+deprecate(exports, 'create', 'chatUICreate');
 
 const FLAG_EMOTE = 1;
 const FLAG_USERCHAT = 2;
@@ -1176,7 +1177,7 @@ ChatUI.prototype.setChannel = function (channel) {
   });
 };
 
-export function create(params) {
+export function chatUICreate(params) {
   profanityStartup();
   let chat_ui = new ChatUI(params);
   function emote(str, resp_func) {
