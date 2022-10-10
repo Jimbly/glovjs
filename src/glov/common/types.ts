@@ -172,16 +172,21 @@ export interface SpriteUIData {
   aspect: number[] | null;
   total_w: number; total_h: number;
 }
+export interface SpriteDrawParams {
+  x: number; y: number; z?: number;
+  w?: number; h?: number;
+  frame?: number;
+  rot?: number;
+  uvs?: number[];
+  color?: Vec4;
+  shader?: unknown;
+  shader_params?: Partial<Record<string, number[]>>;
+}
 export interface Sprite {
   uidata?: SpriteUIData;
   uvs: number[];
-  draw: (params: {
-    x: number; y: number; z: number;
-    w: number; h: number;
-    frame?: number;
-    uvs?: number[];
-    color?: Vec4;
-  }) => void;
+  draw: (params: SpriteDrawParams) => void;
+  drawDualTint: (params: SpriteDrawParams & { color1: Vec4 }) => void;
 }
 export interface UISprite extends Sprite {
   uidata: SpriteUIData;
