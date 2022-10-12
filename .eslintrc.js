@@ -24,6 +24,8 @@ module.exports = {
     "profilerStopStart": true,
     // Our pre-processor defines
     "BUILD_TIMESTAMP": true,
+    // Our global types
+    "Constructor": true,
   },
   "parser": "@typescript-eslint/parser",
   "plugins": [
