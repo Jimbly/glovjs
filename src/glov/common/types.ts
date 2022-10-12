@@ -151,16 +151,22 @@ export interface ChatIDs extends ClientHandlerSource {
   style?: string;
 }
 
-export interface Channel {
+export interface ClientChannelWorker {
   on: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
   removeListener: (key: string, cb: (data: DataObject, key: string, value: DataObject) => void) => void;
+  onSubscribe: (cb: (data: unknown) => void) => void;
   onceSubscribe: (cb: ((data: DataObject) => void) | (() => void)) => void;
   numSubscriptions: () => number;
   unsubscribe: () => void;
   getChannelData: <T>(key: string, default_value: T) => T;
+  pak: (msg: string) => Packet;
+  send: (msg: string, data: unknown, resp_func: NetErrorCallback) => void;
+  readonly data: {
+    public?: unknown;
+  };
 }
 
-export interface UserChannel extends Channel {
+export interface UserChannel extends ClientChannelWorker {
   presence_data: Partial<Record<string, ServerPresenceData>>;
 }
 
