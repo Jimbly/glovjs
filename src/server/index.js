@@ -8,6 +8,7 @@ const { permTokenWorkerInit } = require('glov/server/perm_token_worker.js');
 const { setupRequestHeaders } = require('glov/server/request_utils.js');
 const glov_server = require('glov/server/server.js');
 const argv = require('minimist')(process.argv.slice(2));
+const { entTestWorkerInit } = require('./enttest_worker.js');
 const { multiplayerWorkerInit } = require('./multiplayer_worker.js');
 
 let app = express();
@@ -48,6 +49,7 @@ glov_server.startup({
 permTokenWorkerInit(glov_server.channel_server, app);
 
 multiplayerWorkerInit(glov_server.channel_server);
+entTestWorkerInit(glov_server.channel_server);
 
 let port = argv.port || process.env.port || 3000;
 
