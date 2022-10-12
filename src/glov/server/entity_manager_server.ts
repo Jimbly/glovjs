@@ -359,7 +359,6 @@ class ServerEntityManagerImpl<
   clientJoin(
     src: ClientHandlerSource,
     player_uid: string,
-    resp_func: NetResponseCallback<{ ent_id: EntityID }>
   ): void {
     let { id: client_id } = src;
     assert(!this.clients[client_id]);
@@ -371,13 +370,17 @@ class ServerEntityManagerImpl<
         // Immediately failed, remove this client
         this.clientLeave(client_id);
         this.worker.logSrc(src, `${client_id}: clientJoin failed: ${err}`);
-        return void resp_func(err);
+        // TODO: send error to client?
+        return;
       }
       assert(ent_id);
       this.worker.debugSrc(src, `${client_id}: clientJoin success: ent_id=${ent_id}, sub_id="${sub_id}"`);
       // Immediately let client know their entity ID, and notify that they are
       //   now receiving entity updates (will not yet have own entity yet, though)
-      resp_func(null, { ent_id });
+      this.worker.sendChannelMessage(`client.${client_id}`, 'ent_start', {
+        ent_id,
+        sub_id,
+      });
       // Join and initialize appropriate visible areas
       client.visible_area_sees = this.worker.semClientInitialVisibleAreaSees(client);
       this.sendInitialEntsToClient(client, false, () => {

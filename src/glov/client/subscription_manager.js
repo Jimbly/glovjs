@@ -27,7 +27,7 @@ const walltime = require('./walltime.js');
 // relevant events:
 //   .on('channel_data', cb(data [, mod_key, mod_value]));
 
-function ClientChannelWorker(subs, channel_id, base_handlers) {
+function ClientChannelWorker(subs, channel_id, base_handlers, base_event_listeners) {
   EventEmitter.call(this);
   this.subs = subs;
   this.channel_id = channel_id;
@@ -37,9 +37,22 @@ function ClientChannelWorker(subs, channel_id, base_handlers) {
   this.immediate_subscribe = 0;
   this.channel_data_ver = 0; // for polling for changes
   this.handlers = Object.create(base_handlers);
+  this.base_event_listeners = base_event_listeners;
   this.data = {};
 }
 util.inherits(ClientChannelWorker, EventEmitter);
+
+ClientChannelWorker.prototype.emit = function (event, param) {
+  EventEmitter.prototype.emit.call(this, event, param);
+  if (this.base_event_listeners) {
+    let listeners = this.base_event_listeners[event];
+    if (listeners) {
+      for (let ii = 0; ii < listeners.length; ++ii) {
+        listeners[ii].call(this, param);
+      }
+    }
+  }
+};
 
 // cb(data)
 ClientChannelWorker.prototype.onSubscribe = function (cb) {
@@ -191,6 +204,7 @@ function SubscriptionManager(client, cmd_parse) {
   }
   this.base_handlers = {};
   this.channel_handlers = {}; // channel type -> msg -> handler
+  this.channel_event_listeners = {}; // channel type -> event -> array of listeners
 
   this.first_connect = true;
   this.server_time = 0;
@@ -235,6 +249,17 @@ SubscriptionManager.prototype.onChannelMsg = function (channel_type, msg, cb) {
   let handlers = channel_type ? this.getBaseHandlers(channel_type) : this.base_handlers;
   assert(!handlers[msg]);
   handlers[msg] = cb;
+};
+
+SubscriptionManager.prototype.onChannelEvent = function (channel_type, event, cb) {
+  let listeners = this.channel_event_listeners[channel_type];
+  if (!listeners) {
+    listeners = this.channel_event_listeners[channel_type] = {};
+  }
+  if (!listeners[event]) {
+    listeners[event] = [];
+  }
+  listeners[event].push(cb);
 };
 
 SubscriptionManager.prototype.handleChatBroadcast = function (data) {
@@ -461,7 +486,8 @@ SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
   if (!channel) {
     let channel_type = channel_id.split('.')[0];
     let handlers = this.getBaseHandlers(channel_type);
-    channel = this.channels[channel_id] = new ClientChannelWorker(this, channel_id, handlers);
+    let event_listeners = this.channel_event_listeners[channel_type];
+    channel = this.channels[channel_id] = new ClientChannelWorker(this, channel_id, handlers, event_listeners);
   }
   if (do_subscribe) {
     channel.subscriptions++;

@@ -160,7 +160,7 @@ export interface ClientChannelWorker {
   unsubscribe: () => void;
   getChannelData: <T>(key: string, default_value: T) => T;
   pak: (msg: string) => Packet;
-  send: (msg: string, data: unknown, resp_func: NetErrorCallback) => void;
+  send: (msg: string, data?: unknown, resp_func?: NetErrorCallback) => void;
   readonly data: {
     public?: unknown;
   };

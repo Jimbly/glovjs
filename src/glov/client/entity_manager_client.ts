@@ -31,8 +31,6 @@ import { netClientId, netDisconnected, netSubs } from './net';
 const { min, round } = Math;
 
 interface ClientEntityManagerBaseOpts {
-  my_ent_id?: EntityID;
-
   on_broadcast?: (data: EntityManagerEvent) => void;
   EntityCtor: typeof EntityBaseClient;
 
@@ -64,7 +62,6 @@ export type ClientEntityManager<Entity extends EntityBaseClient> =
 class ClientEntityManagerImpl<
   Entity extends EntityBaseClient
 > extends EventEmitter implements EntityManager<Entity>, ClientEntityManagerBaseOpts {
-  on_subscribe: (data: unknown) => void;
   my_ent_id?: EntityID;
 
   on_broadcast!: (data: EntityManagerEvent) => void;
@@ -81,14 +78,16 @@ class ClientEntityManagerImpl<
   field_decoders: Partial<Record<EntityFieldEncodingType, FieldDecoder<EntityBaseClient>>>;
 
   received_ent_ready!: boolean;
+  received_ent_start!: boolean;
 
   constructor(options: ClientEntityManagerOpts) {
     super();
     assert(options.channel_type);
-    this.on_subscribe = this.onChannelSubscribe.bind(this);
     netSubs().onChannelMsg(options.channel_type, 'ent_update', this.onEntUpdate.bind(this));
     netSubs().onChannelMsg(options.channel_type, 'ent_broadcast', this.onBroadcast.bind(this));
+    netSubs().onChannelMsg(options.channel_type, 'ent_start', this.onEntStart.bind(this));
     netSubs().onChannelMsg(options.channel_type, 'ent_ready', this.onEntReady.bind(this));
+    netSubs().onChannelEvent(options.channel_type, 'subscribe', this.onChannelSubscribe.bind(this));
 
     this.reinit(options);
 
@@ -102,22 +101,22 @@ class ClientEntityManagerImpl<
     this.on_broadcast = options.on_broadcast || this.on_broadcast;
 
     // Never inheriting this over reinit()
-    this.my_ent_id = options.my_ent_id;
     this.channel = options.channel;
 
+    this.reinitInternal();
+  }
+
+  private reinitInternal(): void {
     this.entities = {};
     this.fading_ents = [];
+    this.my_ent_id = 0;
     this.received_ent_ready = false;
-
-    if (this.channel) {
-      this.channel.onSubscribe(this.on_subscribe);
-    }
+    this.received_ent_start = false;
   }
 
   deinit(): void {
-    if (this.channel) {
-      this.channel.removeListener('subscribe', this.on_subscribe);
-    }
+    // Maybe this function is not needed anymore
+    this.received_ent_start = false;
   }
 
   private finalizeDelete(ent_id: EntityID) {
@@ -143,11 +142,11 @@ class ClientEntityManagerImpl<
           }
           ridx(this.fading_ents, ii);
         } else {
-          // if playing death animations, dividing by this was better (adds a
-          //    delay before starting fading): min(elem.countdown_max, 500));
           let ent = this.entities[ent_id];
           assert(ent);
           if (elem.is_out) {
+            // if playing death animations, dividing by this was better (adds a
+            //    delay before starting fading): min(elem.countdown_max, 500));
             ent.fade = min(1, elem.countdown / elem.countdown_max);
           } else {
             ent.fade = 1 - elem.countdown / elem.countdown_max;
@@ -160,12 +159,15 @@ class ClientEntityManagerImpl<
   private onChannelSubscribe(data: unknown): void {
     // initial connection or reconnect
     this.client_id = netClientId();
-    this.subscription_id = (data as DataObject).subscription_id as string || this.client_id;
-    this.received_ent_ready = false;
+    this.subscription_id = (data as DataObject).sub_id as string || this.client_id;
+    this.reinitInternal();
     this.emit('subscribe', data);
   }
 
   private onBroadcast(data: EntityManagerEvent): void {
+    if (!this.received_ent_start) {
+      return;
+    }
     this.on_broadcast(data);
   }
 
@@ -345,6 +347,10 @@ class ClientEntityManagerImpl<
   }
 
   private onEntUpdate(pak: Packet): void {
+    if (!this.received_ent_start) {
+      pak.pool();
+      return;
+    }
     let cmd: EntityUpdateCmd;
     let is_initial = false;
     while ((cmd = pak.readU8())) {
@@ -386,8 +392,21 @@ class ClientEntityManagerImpl<
   }
 
   private onEntReady(): void {
-    this.received_ent_ready = true;
-    this.emit('ent_ready');
+    if (this.received_ent_start) {
+      this.received_ent_ready = true;
+      this.emit('ent_ready');
+    } // else may have been from a previous connection?
+  }
+
+  isReady(): boolean {
+    return this.received_ent_ready;
+  }
+
+  private onEntStart(data: { ent_id: EntityID; sub_id: string }): void {
+    if (data.sub_id === this.subscription_id) {
+      this.my_ent_id = data.ent_id;
+      this.received_ent_start = true;
+    } // else may have been from a previous connection
   }
 
   checkNet(): boolean {

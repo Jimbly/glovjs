@@ -99,10 +99,8 @@ cmd_parse.register({
   },
 });
 
-let waiting_for_ent_ready = false;
 let test_character = { x: 0, y: 0, rot: 0 };
 function onEntReady() {
-  waiting_for_ent_ready = false;
   let my_ent = entity_manager.getMyEnt();
   let pos = my_ent.getData('pos', [0,0]);
   test_character.x = pos[0];
@@ -237,25 +235,14 @@ export function main(): void {
     entity_pos_manager.updateMyPos(new Float64Array([test_character.x, test_character.y, test_character.rot]), 'idle');
   }
 
-  let waiting = 0;
   function getRoom() {
     if (!test_room) {
       test_room = netSubs().getChannel('enttest.test', true);
       assert(test_room);
-      ++waiting;
-      test_room.send('ent_join', null, (err: string | null, join_data?: { ent_id: EntityID }) => {
-        --waiting;
-        if (err) {
-          throw err;
-        }
-        assert(join_data);
-        waiting_for_ent_ready = true;
-        entity_manager.reinit({
-          my_ent_id: join_data.ent_id,
-          channel: test_room || undefined,
-        });
-        entity_pos_manager.reinit();
+      entity_manager.reinit({
+        channel: test_room,
       });
+      entity_pos_manager.reinit();
       chat_ui.setChannel(test_room);
     }
   }
@@ -290,7 +277,7 @@ export function main(): void {
       }),
     });
 
-    if (test_room && test_room.numSubscriptions() && !waiting && !waiting_for_ent_ready) {
+    if (test_room && test_room.numSubscriptions() && entity_manager.isReady()) {
       if (!was_active) {
         pad_controls_sprite = true;
         was_active = true;

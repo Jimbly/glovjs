@@ -116,8 +116,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
   private handleSubscribe() {
     // initial connection or reconnect
-    this.last_send.sending = false; // ignore send on previous, disconnected link
-    this.last_send.time = 0;
+    this.reinit();
   }
 
   getPos(ent_id: EntityID): Vector | null {

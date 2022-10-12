@@ -3,14 +3,13 @@ import assert from 'assert';
 // import { HandlerSource, NetResponseCallback } from 'glov/common/types';
 import {
   EntityFieldEncoding,
-  EntityID,
 } from 'glov/common/entity_base_common';
 import {
-  ClientHandlerSource,
   DataObject,
   ErrorCallback,
+  HandlerSource,
   NetErrorCallback,
-  NetResponseCallback,
+  isClientHandlerSource,
 } from 'glov/common/types';
 import { v3copy } from 'glov/common/vmath';
 import { ChannelServer } from 'glov/server/channel_server';
@@ -127,9 +126,14 @@ class EntTestWorker extends ChannelWorker {
     });
   }
 
-  handleClientDisconnect(src: ClientHandlerSource, opts: unknown): void {
-    let is_client = src.type === 'client';
-    if (is_client) {
+  postNewClient(src: HandlerSource): void {
+    if (isClientHandlerSource(src)) {
+      this.entity_manager.clientJoin(src, src.id);
+    }
+  }
+
+  handleClientDisconnect(src: HandlerSource, opts: unknown): void {
+    if (isClientHandlerSource(src)) {
       this.entity_manager.clientLeave(src.id);
     }
   }
@@ -145,17 +149,6 @@ EntTestWorker.prototype.maintain_subscription_ids = true;
 EntTestWorker.prototype.emit_join_leave_events = true;
 EntTestWorker.prototype.require_login = false;
 EntTestWorker.prototype.auto_destroy = true;
-
-EntTestWorker.registerClientHandler('ent_join', function (
-  this: EntTestWorker,
-  src: ClientHandlerSource,
-  param: DataObject,
-  resp_func: NetResponseCallback<{ ent_id: EntityID }>
-): void {
-  let { id: client_id } = src;
-  let player_uid = client_id;
-  this.entity_manager.clientJoin(src, player_uid, resp_func);
-});
 
 entityManagerWorkerInit(EntTestWorker);
 

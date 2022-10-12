@@ -347,8 +347,13 @@ export class ChannelWorker {
     }
     this.sendChannelMessage(channel_id, 'channel_data', {
       public: out,
-      subscription_id,
+      sub_id: subscription_id,
     });
+
+    if (this.postNewClient) {
+      this.postNewClient(src);
+    }
+
     return resp_func();
   }
 
