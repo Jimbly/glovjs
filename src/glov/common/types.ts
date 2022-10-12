@@ -55,6 +55,12 @@ export interface NetResponseCallback<T = never> extends NetResponseCallbackFn<T,
  */
 export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
 
+/**
+ * Helper type to get the type of the value of entries in a Partial<Record<>>/dictionary,
+ * excluding the value of `undefined` from the Partial<>
+ */
+export type DefinedValueOf<T> = Exclude<T[keyof T], undefined>;
+
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
