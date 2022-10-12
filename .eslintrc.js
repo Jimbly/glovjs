@@ -122,12 +122,6 @@ module.exports = {
       "error",
       "never"
     ],
-    "consistent-return": [
-      "error",
-      {
-        "treatUndefinedAsUnspecified": true,
-      }
-    ],
     "consistent-this": "off", // JE
     "constructor-super": "error",
     "curly": "error",
@@ -548,11 +542,23 @@ module.exports = {
   },
   "overrides": [
     {
-      // enable the rule specifically for TypeScript files
+      // Enable rules specifically for JavaScript files
+      "files": ["*.js"],
+      "rules": {
+        "consistent-return": [
+          "error",
+          {
+            "treatUndefinedAsUnspecified": true,
+          }
+        ],
+      }
+    },
+    {
+      // Enable rules specifically for TypeScript files
       "files": ["*.ts", "*.tsx"],
       "rules": {
         "@typescript-eslint/explicit-module-boundary-types": "error",
       }
-    }
+    },
   ]
 };
