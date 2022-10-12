@@ -26,7 +26,7 @@ import { EntityID } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { ClientChannelWorker, ErrorCallback, Sprite } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
-import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v3set, v4set, vec2, vec4 } from 'glov/common/vmath';
+import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
 
 import {
   VA_SIZE,
@@ -314,6 +314,13 @@ export function main(): void {
       }
       for (let yy = VA_SIZE; yy < game_height; yy+=VA_SIZE) {
         ui.drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
+      }
+      // Draw VisibleArea boundaries
+      for (let xx = VA_SIZE/2; xx < game_width; xx+=VA_SIZE) {
+        ui.drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
+      }
+      for (let yy = VA_SIZE/2; yy < game_height; yy+=VA_SIZE) {
+        ui.drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
       }
 
       // Draw other entities

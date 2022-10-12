@@ -11,7 +11,7 @@ import {
   NetErrorCallback,
   isClientHandlerSource,
 } from 'glov/common/types';
-import { v3copy } from 'glov/common/vmath';
+import { Vec2, v2dist, v3copy } from 'glov/common/vmath';
 import { ChannelServer } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
@@ -51,6 +51,9 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
 
   data!: EntityTestDataServer;
 
+  last_vaids?: VAID[];
+  last_vaids_pos?: Vec2;
+
   // cb(err, constructed entity)
   static loadPlayerEntityImpl = ((
     sem: ServerEntityManager<Entity, EntTestWorker>,
@@ -76,17 +79,21 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
   }
 
   visibleAreaSees(): VAID[] {
-    let vax0 = floor((this.data.pos[0] - VIEW_DIST) / VA_SIZE);
-    let vax1 = floor((this.data.pos[0] + VIEW_DIST) / VA_SIZE);
-    let vay0 = floor((this.data.pos[1] - VIEW_DIST) / VA_SIZE);
-    let vay1 = floor((this.data.pos[1] + VIEW_DIST) / VA_SIZE);
-    let vaids: VAID[] = [];
-    for (let xx = vax0; xx <= vax1; ++xx) {
-      for (let yy = vay0; yy <= vay1; ++yy) {
-        vaids.push(xx + yy * 100);
+    if (!this.last_vaids || v2dist(this.data.pos, this.last_vaids_pos!) > VIEW_DIST/4) {
+      let vax0 = floor((this.data.pos[0] - VIEW_DIST) / VA_SIZE);
+      let vax1 = floor((this.data.pos[0] + VIEW_DIST) / VA_SIZE);
+      let vay0 = floor((this.data.pos[1] - VIEW_DIST) / VA_SIZE);
+      let vay1 = floor((this.data.pos[1] + VIEW_DIST) / VA_SIZE);
+      let vaids: VAID[] = [];
+      for (let xx = vax0; xx <= vax1; ++xx) {
+        for (let yy = vay0; yy <= vay1; ++yy) {
+          vaids.push(xx + yy * 100);
+        }
       }
+      this.last_vaids = vaids;
+      this.last_vaids_pos = this.data.pos.slice(0) as Vec2;
     }
-    return vaids;
+    return this.last_vaids;
   }
 }
 
