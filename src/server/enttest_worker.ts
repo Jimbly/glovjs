@@ -28,7 +28,8 @@ import {
 } from 'glov/server/entity_manager_server';
 import {
   EntityTestDataCommon,
-  // entSamePos,
+  VA_SIZE,
+  VIEW_DIST,
   entityTestCommonClass,
 } from '../common/entity_test_common';
 const { floor, random } = Math;
@@ -44,9 +45,6 @@ EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
   display_name: { encoding: EntityFieldEncoding.String, ephemeral: true },
 });
-
-const VA_SIZE = 500;
-const VIEW_DIST = 200;
 
 class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
   entity_manager!: ServerEntityManager<EntityTestServer, EntTestWorker>;

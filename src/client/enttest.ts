@@ -26,9 +26,13 @@ import { EntityID } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { ClientChannelWorker, ErrorCallback, Sprite } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
-import { v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
+import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v3set, v4set, vec2, vec4 } from 'glov/common/vmath';
 
-import { entityTestCommonClass } from '../common/entity_test_common';
+import {
+  VA_SIZE,
+  VIEW_DIST,
+  entityTestCommonClass,
+} from '../common/entity_test_common';
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
 
@@ -99,12 +103,11 @@ cmd_parse.register({
   },
 });
 
-let test_character = { x: 0, y: 0, rot: 0 };
+let test_character = { pos: vec2(), rot: 0 };
 function onEntReady() {
   let my_ent = entity_manager.getMyEnt();
-  let pos = my_ent.getData('pos', [0,0]);
-  test_character.x = pos[0];
-  test_character.y = pos[1];
+  let pos = my_ent.getData<[number,number]>('pos', [0,0]);
+  v2copy(test_character.pos, pos);
 }
 
 
@@ -228,14 +231,15 @@ export function main(): void {
       animation.setState('idle_right');
     }
 
-    test_character.x += impulse[0] * SPEED;
-    test_character.y += impulse[1] * SPEED;
+    v2addScale(test_character.pos, test_character.pos, impulse, SPEED);
 
-    let aim = v2sub(vec2(), input.mousePos(), [test_character.x, test_character.y]);
+    let aim = v2sub(vec2(), input.mousePos(), test_character.pos);
     test_character.rot = atan2(aim[0], -aim[1]);
 
     // Network send
-    entity_pos_manager.updateMyPos(new Float64Array([test_character.x, test_character.y, test_character.rot]), 'idle');
+    entity_pos_manager.updateMyPos(
+      new Float64Array([test_character.pos[0], test_character.pos[1], test_character.rot]),
+      'idle');
   }
 
   function getRoom() {
@@ -289,18 +293,28 @@ export function main(): void {
 
       sprites.game_bg.draw({
         x: 0, y: 0, z: Z.BACKGROUND,
-        color: [0.5, 0.6, 0.7, 1],
+        color: [0.3, 0.32, 0.35, 1],
       });
 
+      // Draw self
       sprites.test_tint.drawDualTint({
-        x: test_character.x,
-        y: test_character.y,
+        x: test_character.pos[0],
+        y: test_character.pos[1],
         z: Z.SPRITES,
         rot: test_character.rot,
         color: [1, 1, 0, 1],
         color1: [1, 0, 1, 1],
         frame: animation.getFrame(dt),
       });
+      // Draw view area
+      ui.drawCircle(test_character.pos[0], test_character.pos[1], Z.SPRITES - 2, VIEW_DIST, 0.99, [1,1,1,0.5]);
+      // Draw VisibleArea boundaries
+      for (let xx = VA_SIZE; xx < game_width; xx+=VA_SIZE) {
+        ui.drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
+      }
+      for (let yy = VA_SIZE; yy < game_height; yy+=VA_SIZE) {
+        ui.drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
+      }
 
       // Draw other entities
       let { entities } = entity_manager;
@@ -315,6 +329,9 @@ export function main(): void {
         v4set(color_temp, 1, 1, 1, ent.fade !== null ? ent.fade : 1);
         if (ent_id === entity_manager.my_ent_id) {
           color_temp[3] *= 0.5;
+        }
+        if (v2dist(test_character.pos, pos as unknown as Vec2) > VIEW_DIST) {
+          color_temp[3] *= 0.25;
         }
         sprites.test.draw({
           x: pos[0], y: pos[1], z: Z.SPRITES - 1,

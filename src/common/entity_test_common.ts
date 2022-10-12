@@ -3,6 +3,9 @@ import {
   EntityBaseDataCommon,
 } from 'glov/common/entity_base_common';
 
+export const VA_SIZE = 500;
+export const VIEW_DIST = 200;
+
 export type EntityTestDataCommon = {
   pos: [number, number, number];
   speed: number;
