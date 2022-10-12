@@ -170,6 +170,10 @@ export function setScore(level_idx, score, cb) {
   let encoded_local = ld.local_score && encodeScore(ld.local_score) || 0;
   if (encoded > encoded_local) {
     saveScore(ld, score, cb);
+  } else {
+    if (cb) {
+      cb();
+    }
   }
 }
 
