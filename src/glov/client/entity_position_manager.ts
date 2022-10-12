@@ -213,23 +213,25 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
         this.last_send.sending = true;
         this.last_send.time = now;
         this.last_send.hrtime = engine.hrnow();
-        // this.last_send.speed = 0;
-        // if (this.last_send.send_time) {
-        //   const time = now - this.last_send.send_time;
-        //   this.last_send.speed = this.vdist(this.last_send.pos, character_pos) / time;
-        //   if (this.last_send.speed < 0.001) {
-        //     this.last_send.speed = 0;
-        //   }
-        // }
+        let speed = 0;
+        if (this.last_send.send_time) {
+          const time = now - this.last_send.send_time;
+          speed = this.vdist(this.last_send.pos, character_pos) / time;
+          if (speed < 0.001) {
+            speed = 0;
+          }
+        }
         this.last_send.send_time = now;
         this.vcopy(this.last_send.pos, character_pos);
         this.last_send.anim_state = anim_state;
         let data_assignments: {
           pos?: number[];
           state?: string;
+          speed?: number;
         } = {};
         if (pos_diff) {
           data_assignments.pos = this.arr(this.last_send.pos);
+          data_assignments.speed = speed;
         }
         if (state_diff) {
           data_assignments.state = this.last_send.anim_state;
@@ -268,7 +270,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
       ped.net_state = ent_data.state as string;
     }
     this.vcopy(ped.net_pos, ent_data.pos as number[]);
-    // ped.net_speed = client_pos.speed;
+    ped.net_speed = ent_data.speed;
 
     // Keep ped.pos[rot] within PI of ped.net_pos, so interpolation always goes the right way
     for (let ii = 0; ii < this.dim_rot; ++ii) {

@@ -5,6 +5,7 @@ import {
 
 export type EntityTestDataCommon = {
   pos: [number, number, number];
+  speed: number;
   state: string;
   display_name?: string;
 } & EntityBaseDataCommon;

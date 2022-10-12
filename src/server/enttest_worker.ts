@@ -40,6 +40,7 @@ type EntityTestDataServer = {
 
 EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   pos: { encoding: EntityFieldEncoding.Vec3 },
+  speed: { encoding: EntityFieldEncoding.Float },
   state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
   display_name: { encoding: EntityFieldEncoding.String, ephemeral: true },
 });
@@ -95,6 +96,7 @@ EntityTestServer.registerActions<EntityTestServer>([{
   action_id: 'move',
   allowed_data_assignments: {
     pos: 'array', // actually number[3]
+    speed: 'number',
     state: 'string',
   },
   self_only: true,
