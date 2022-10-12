@@ -26,7 +26,7 @@ import { EntityID } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { ClientChannelWorker, ErrorCallback, Sprite } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
-import { v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
+import { v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
 
 import { entityTestCommonClass } from '../common/entity_test_common';
 import { createAccountUI } from './account_ui';
@@ -203,6 +203,7 @@ export function main(): void {
 
   let test_room: ClientChannelWorker | null = null;
 
+  let impulse = vec2();
   function playerMotion(dt: number) {
     // Network send
     if (entity_manager.checkNet()) {
@@ -213,20 +214,22 @@ export function main(): void {
       return;
     }
 
-    let dx = 0;
-    dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-    dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
-    let dy = 0;
-    dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-    dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
-    if (dx < 0) {
+    v2set(impulse, 0, 0);
+    input.padGetAxes(impulse, 0);
+    impulse[1] *= -1;
+    v2scale(impulse, impulse, dt);
+    impulse[0] -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A);
+    impulse[0] += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D);
+    impulse[1] -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W);
+    impulse[1] += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S);
+    if (impulse[0] < 0) {
       animation.setState('idle_left');
-    } else if (dx > 0) {
+    } else if (impulse[0] > 0) {
       animation.setState('idle_right');
     }
 
-    test_character.x += dx * SPEED;
-    test_character.y += dy * SPEED;
+    test_character.x += impulse[0] * SPEED;
+    test_character.y += impulse[1] * SPEED;
 
     let aim = v2sub(vec2(), input.mousePos(), [test_character.x, test_character.y]);
     test_character.rot = atan2(aim[0], -aim[1]);
