@@ -7,6 +7,10 @@ import type { Packet } from './packet';
  */
 export type DataObject = Partial<Record<string, unknown>>;
 
+export function isDataObject(value: unknown): value is DataObject {
+  return value ? typeof value === 'object' && !Array.isArray(value) : false;
+}
+
 /**
  * Error callback accepting an error as the first parameter and a result as the second parameter.
  * Both parameters are optional.
