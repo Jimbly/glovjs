@@ -12,7 +12,6 @@ import { ClientEntityManager, clientEntityManagerCreate } from 'glov/client/enti
 import { EntityPositionManager, entityPositionManagerCreate } from 'glov/client/entity_position_manager';
 import * as glov_font from 'glov/client/font';
 import * as input from 'glov/client/input';
-const { atan2 } = Math;
 import * as net from 'glov/client/net';
 import { netSubs } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
@@ -23,9 +22,7 @@ import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
 import { EntityID } from 'glov/common/entity_base_common';
-import { Packet } from 'glov/common/packet';
-import { ClientChannelWorker, ErrorCallback } from 'glov/common/types';
-import { toNumber } from 'glov/common/util';
+import { ClientChannelWorker } from 'glov/common/types';
 import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
 
 import {
@@ -35,6 +32,8 @@ import {
 } from '../common/entity_test_common';
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
+
+const { PI, atan2, cos, random, sin } = Math;
 
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
@@ -48,21 +47,6 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     super(ent_id, entity_manager);
     this.anim = null;
   }
-
-  // static PLAYER_MOVE_FIELD = 'seq_player_move';
-  // applyPlayerMove(
-  //   action_id: string,
-  //   new_pos: [number, number, number],
-  //   resp_func: NetErrorCallback
-  // ): void {
-  //   this.applyBatchUpdate({
-  //     field: EntityTestClient.PLAYER_MOVE_FIELD,
-  //     action_id,
-  //     data_assignments: {
-  //       pos: new_pos,
-  //     },
-  //   }, resp_func);
-  // }
 }
 
 let entity_manager: ClientEntityManager<EntityTestClient>;
@@ -81,27 +65,6 @@ let animation: ReturnType<typeof spriteAnimationCreate>;
 
 const account_ui = createAccountUI();
 let chat_ui: ReturnType<typeof chatUICreate>;
-
-cmd_parse.register({
-  cmd: 'bin_get',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
-    chat_ui.channel.pak('bin_get').send(function (err?: string, pak?: Packet) {
-      if (err) {
-        return void resp_func(err);
-      }
-      resp_func(null, pak!.readBuffer(false).join(','));
-    });
-  },
-});
-
-cmd_parse.register({
-  cmd: 'bin_set',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
-    let pak = chat_ui.channel.pak('bin_set');
-    pak.writeBuffer(new Uint8Array(str.split(' ').map(toNumber)));
-    pak.send(resp_func);
-  },
-});
 
 let test_character = { pos: vec2(), rot: 0 };
 function onEntReady() {
@@ -290,6 +253,16 @@ export function main(): void {
         was_active = true;
       }
       playerMotion(dt);
+
+      if (ui.buttonText({
+        x: 0, y: ui.button_height + 4,
+        text: 'Spawn Entity',
+      })) {
+        let r = 128;
+        let theta = random() * PI * 2;
+        let pos = [test_character.pos[0] + sin(theta) * r, test_character.pos[1] + cos(theta) * r, 0];
+        test_room.send('spawn', { pos });
+      }
 
       sprites.game_bg.draw({
         x: 0, y: 0, z: Z.BACKGROUND,

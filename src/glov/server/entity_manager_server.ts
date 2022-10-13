@@ -442,10 +442,11 @@ class ServerEntityManagerImpl<
     let ent_id = ++sem.last_ent_id;
     let ent = sem.entities[ent_id] = new this.EntityCtor(ent_id, sem) as Entity;
     assert(!ent.is_player);
-    let vaid = ent.visibleAreaGet();
-    sem.visible_areas_need_save[vaid] = true;
     ent.fromSerialized(data);
     ent.fixupPostLoad();
+
+    let vaid = ent.visibleAreaGet();
+    sem.visible_areas_need_save[vaid] = true;
 
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(this, ent);

@@ -28,6 +28,7 @@ import {
 } from 'glov/server/entity_manager_server';
 import {
   EntityTestDataCommon,
+  EntityType,
   VA_SIZE,
   VIEW_DIST,
   entityTestCommonClass,
@@ -41,7 +42,8 @@ type EntityTestDataServer = {
 
 EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   pos: { encoding: EntityFieldEncoding.Vec3 },
-  speed: { encoding: EntityFieldEncoding.Float },
+  type: { encoding: EntityFieldEncoding.Int },
+  speed: { encoding: EntityFieldEncoding.Float, ephemeral: true },
   state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
   display_name: { encoding: EntityFieldEncoding.String, ephemeral: true },
 });
@@ -64,6 +66,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
     let ent = new this(-1, sem);
     ent.fromSerialized({
       pos: [random() * 1200 + 40, random() * 880 + 40, 0],
+      type: EntityType.Player,
       display_name: sem.worker.getChannelData(`public.clients.${player_uid}.ids.display_name`),
     });
     cb(null, ent);
@@ -156,6 +159,21 @@ EntTestWorker.prototype.maintain_subscription_ids = true;
 EntTestWorker.prototype.emit_join_leave_events = true;
 EntTestWorker.prototype.require_login = false;
 EntTestWorker.prototype.auto_destroy = true;
+
+EntTestWorker.registerClientHandler('spawn', function (
+  this: EntTestWorker,
+  src: HandlerSource,
+  data: { pos: [number, number, number] },
+  resp_func: ErrorCallback
+) {
+  assert(data.pos);
+  assert(data.pos.length === 3);
+  this.entity_manager.addEntityFromSerialized({
+    pos: data.pos,
+    type: EntityType.Bot,
+  });
+  resp_func();
+});
 
 entityManagerWorkerInit(EntTestWorker);
 

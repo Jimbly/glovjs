@@ -6,9 +6,15 @@ import {
 export const VA_SIZE = 500;
 export const VIEW_DIST = 200;
 
+export enum EntityType {
+  Player = 1,
+  Bot = 2,
+}
+
 export type EntityTestDataCommon = {
   pos: [number, number, number];
   speed: number;
+  type: EntityType;
   state: string;
   display_name?: string;
 } & EntityBaseDataCommon;
