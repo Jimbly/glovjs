@@ -5,28 +5,28 @@ global.profilerStart = global.profilerStop = global.profilerStopStart = function
   // not yet profiling on server
 };
 
-/* eslint-disable import/order */
-const argv = require('minimist')(process.argv.slice(2));
-const assert = require('assert');
-const { dataStoresInit } = require('./data_stores_init.js');
-const glov_exchange = require('./exchange.js');
-const exchange_local_bypass = require('./exchange_local_bypass.js');
-const { errorReportsInit, errorReportsSetAppBuildTimestamp } = require('./error_reports.js');
-const glov_channel_server = require('./channel_server.js');
-const fs = require('fs');
-const { idmapperWorkerInit } = require('./idmapper_worker.js');
-const { ipBanInit } = require('./ip_ban.js');
-const log = require('./log.js');
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import packet from 'glov/common/packet';
+import wscommon from 'glov/common/wscommon';
+import minimist from 'minimist';
+const argv = minimist(process.argv.slice(2));
+import glov_channel_server from './channel_server';
+import { dataStoresInit } from './data_stores_init';
+import { errorReportsInit, errorReportsSetAppBuildTimestamp } from './error_reports';
+import glov_exchange from './exchange';
+import exchange_local_bypass from './exchange_local_bypass';
+import { idmapperWorkerInit } from './idmapper_worker';
+import { ipBanInit } from './ip_ban';
+import log from './log';
 const { logEx } = log;
-const { masterInitApp } = require('./master_worker.js');
-const { metricsInit } = require('./metrics.js');
-const path = require('path');
-const packet = require('glov/common/packet.js');
-const { readyDataInit } = require('./ready_data.js');
-const { serverConfig } = require('./server_config.js');
-const { shaderStatsInit } = require('./shader_stats.js');
-const glov_wsserver = require('./wsserver.js');
-const wscommon = require('glov/common/wscommon.js');
+import { masterInitApp } from './master_worker';
+import { metricsInit } from './metrics';
+import { readyDataInit } from './ready_data';
+import { serverConfig } from './server_config';
+import { shaderStatsInit } from './shader_stats';
+import glov_wsserver from './wsserver';
 const { netDelaySet } = wscommon;
 
 const STATUS_TIME = 5000;
