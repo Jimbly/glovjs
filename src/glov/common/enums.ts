@@ -9,10 +9,22 @@ export const ID_PROVIDER_APPLE = 'apl';
 export const ID_PROVIDER_FB_GAMING = 'fbg';
 export const ID_PROVIDER_FB_INSTANT = 'fbi';
 
-function getStringEnumValues<T extends string>(e: Record<string, T>) {
+export type NumberEnum<K extends string, V extends number> = Record<K, V> & Partial<Record<string, V | string>>;
+export type StringEnum<K extends string, V extends string> = Record<K, V>;
+
+export function getStringEnumValues<K extends string, V extends string>(e: StringEnum<K, V>): V[] {
   return Object.values(e);
 }
-function isValidStringEnumValue<T extends string>(e: Record<string, T>, v: string | undefined | null): boolean {
+export function isValidNumberEnumKey<K extends string, V extends number>(e: NumberEnum<K, V>, k: string): k is K {
+  return typeof e[k] === 'number';
+}
+export function isValidStringEnumKey<K extends string, V extends string>(e: StringEnum<K, V>, k: string): k is K {
+  return k in e;
+}
+export function isValidStringEnumValue<K extends string, V extends string>(
+  e: StringEnum<K, V>,
+  v: string | undefined | null,
+): v is V {
   for (let key in e) {
     if (e[key] === v) {
       return true;
