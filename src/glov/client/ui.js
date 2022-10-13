@@ -72,6 +72,7 @@ const {
   spriteClipResume,
   spriteChainedStart,
   spriteChainedStop,
+  spriteCreate,
 } = glov_sprites;
 const textures = require('./textures.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
@@ -276,7 +277,7 @@ export function uiSetFontStyleFocused(new_style) {
 export function loadUISprite(name, ws, hs) {
   let wrap_s = gl.CLAMP_TO_EDGE;
   let wrap_t = gl.CLAMP_TO_EDGE;
-  sprites[name] = glov_sprites.create({
+  sprites[name] = spriteCreate({
     name: `ui/${name}`,
     ws,
     hs,
@@ -304,7 +305,7 @@ export function loadUISprite2(name, param) {
   } else {
     sprite_param.name = `ui/${param.name || name}`;
   }
-  sprites[name] = glov_sprites.create(sprite_param);
+  sprites[name] = spriteCreate(sprite_param);
 }
 
 function uiSetFonts(new_font, new_title_font) {
@@ -1558,7 +1559,7 @@ function initCircleSprite() {
       data[i + j*CIRCLE_SIZE] = v * 255;
     }
   }
-  sprites.circle = glov_sprites.create({
+  sprites.circle = spriteCreate({
     url: 'circle',
     width: CIRCLE_SIZE, height: CIRCLE_SIZE,
     format: textures.format.R8,
@@ -1602,7 +1603,7 @@ export function drawHollowCircle(x, y, z, r, spread, color, blend) {
         data[i + j*CIRCLE_SIZE] = v * 255;
       }
     }
-    sprites.hollow_circle = glov_sprites.create({
+    sprites.hollow_circle = spriteCreate({
       url: 'hollow_circle',
       width: CIRCLE_SIZE, height: CIRCLE_SIZE,
       format: textures.format.R8,
@@ -1665,7 +1666,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
         }
       }
     }
-    sprites[tex_key] = glov_sprites.create({
+    sprites[tex_key] = spriteCreate({
       url: tex_key,
       width: LINE_TEX_W, height: LINE_TEX_H,
       format: textures.format.R8,
@@ -1789,7 +1790,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
         data[i + j*CONE_SIZE] = v * 255;
       }
     }
-    sprites.cone = glov_sprites.create({
+    sprites.cone = spriteCreate({
       url: 'cone',
       width: CONE_SIZE, height: CONE_SIZE,
       format: textures.format.R8,

@@ -13,6 +13,7 @@ const mat4LookAt = require('gl-mat4/lookAt');
 const { max, PI, tan } = Math;
 const shaders = require('./shaders.js');
 const sprites = require('./sprites.js');
+const { spriteCreate } = require('glov/client/sprites.js');
 const {
   blendModeSet,
   BLEND_ALPHA,
@@ -149,7 +150,7 @@ export function snapshot(param) {
   viewportRenderFinish(param);
 
   if (!param.sprite) {
-    param.sprite = sprites.create({
+    param.sprite = spriteCreate({
       texs,
       shader: snapshot_shader,
       uvs: capture_uvs,
