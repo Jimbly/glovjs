@@ -814,6 +814,7 @@ export class ChannelWorker {
 
       // Do not write to datastore if nothing has changed
       if (data_to_compare === self.last_saved_data) {
+        callEach(self.on_flush, self.on_flush = null);
         return;
       }
 
