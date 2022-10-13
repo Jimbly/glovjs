@@ -1,11 +1,11 @@
 import assert from 'assert';
 import { createHmac } from 'crypto';
-import { ErrorCallback } from 'glov/common/types';
+import { DataObject, ErrorCallback } from 'glov/common/types';
 import request from 'request';
 import { executeWithRetry } from './execute_with_retry';
 import { serverConfig } from './server_config';
 
-export declare interface FacebookGraphError {
+export interface FacebookGraphError {
   message?: string;
   type?: string;
   code?: number;
@@ -13,22 +13,33 @@ export declare interface FacebookGraphError {
   fbtrace_id?: string;
 }
 
-export declare interface FacebookGraphResult extends Record<string, unknown> {
+export interface FacebookGraphResult extends DataObject {
   error?: FacebookGraphError;
 }
 
-export declare interface FacebookGraphUser extends FacebookGraphResult {
+export interface FacebookGraphUser extends FacebookGraphResult {
   name?: string;
   first_name?: string;
   instant_game_player_id?: string;
 }
 
-export declare interface FacebookGraphDebugToken extends FacebookGraphResult {
+export interface FacebookGraphDebugToken extends FacebookGraphResult {
   data?: {
     app_id?: string;
     is_valid?: boolean;
     user_id?: string;
   };
+}
+
+export interface FacebookGraphPayment extends FacebookGraphResult {
+  id?: string;
+  actions?: DataObject[];
+  application?: DataObject;
+  country?: string;
+  payout_foreign_exchange_rate?: number;
+  refundable_amount?: DataObject;
+  test?: boolean | number;
+  user?: DataObject;
 }
 
 const BASE_GRAPH_URL = 'https://graph.fb.gg';
@@ -49,8 +60,11 @@ export function facebookUtilsInit(): void {
   access_token_url_parameter = `access_token=${access_token}`;
 }
 
-export function facebookGraphRequest(path: string, url_params_str: string,
-  cb: ErrorCallback<FacebookGraphResult>): void {
+export function facebookGraphRequest(
+  path: string,
+  url_params_str: string,
+  cb: ErrorCallback<FacebookGraphResult>,
+): void {
   assert(access_token, 'Missing facebook.graph_access_token in config/server.json');
 
   if (url_params_str) {
@@ -107,8 +121,11 @@ export function facebookGetPayloadFromSignedData(signed_data: string): unknown |
 // Gets specific fields from the app-scoped user id.
 // cb is called with an error as the first argument if any occurs,
 // and with the resulting object as the second argument.
-export function facebookGetUserFieldsFromASIDAsync(asid: string, fields: string,
-  cb: ErrorCallback<FacebookGraphUser>): void {
+export function facebookGetUserFieldsFromASIDAsync(
+  asid: string,
+  fields: string,
+  cb: ErrorCallback<FacebookGraphUser>,
+): void {
   facebookGraphRequest(asid, `fields=${fields}`, cb);
 }
 
@@ -140,4 +157,12 @@ export function facebookGetASIDFromUserTokenAsync(user_token: string, cb: ErrorC
       }
       return cb(null, data.user_id);
     });
+}
+
+export function facebookGetPaymentAsync(
+  payment_id: string,
+  fields: string,
+  cb: ErrorCallback<FacebookGraphPayment>,
+): void {
+  facebookGraphRequest(payment_id, `fields=${fields}`, cb);
 }
