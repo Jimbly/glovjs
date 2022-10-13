@@ -122,7 +122,8 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
 CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
   let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data } = param;
-  assert(cmd && func);
+  assert(cmd);
+  assert(func, `Missing function for command "${cmd}"`);
   let help_lower = String(help || '').toLowerCase();
   if (help_lower.includes('(admin)')) {
     assert(access_run && access_run.includes('sysadmin'));
