@@ -342,7 +342,9 @@ export function main(): void {
     let y = 0;
     y = account_ui.showLogin({
       x: 0, y,
-      prelogout: preLogout, center: false,
+      prelogout: preLogout,
+      prelogin: preLogout,
+      center: false,
       style: glov_font.style(null, {
         outline_width: 2,
         outline_color: 0xFFFFFFff,

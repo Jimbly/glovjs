@@ -98,7 +98,7 @@ AccountUI.prototype.playAsGuest = function (use_name) {
 AccountUI.prototype.showLogin = function (param) {
   let {
     x, y, style, button_height, button_width,
-    prelogout, center,
+    prelogout, prelogin, center,
     url_tos, url_priv, text_w,
     font_height, font_height_small, label_w,
     pad, status_bar,
@@ -303,6 +303,9 @@ AccountUI.prototype.showLogin = function (param) {
 
       if (submit) {
         local_storage.set('name', edit_box_name.text);
+        if (prelogin) {
+          prelogin();
+        }
         // do log in!
         net.subs.login(edit_box_name.text, edit_box_password.text, (err) => {
           if (err) {
