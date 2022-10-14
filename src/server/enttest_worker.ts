@@ -5,6 +5,7 @@ import {
   EntityFieldEncoding,
 } from 'glov/common/entity_base_common';
 import {
+  ClientHandlerSource,
   DataObject,
   ErrorCallback,
   HandlerSource,
@@ -136,7 +137,7 @@ EntityTestServer.registerActions<EntityTestServer>([{
     { src, payload, data_assignments }: ActionHandlerParam,
     resp_func: ErrorCallback<never, string>
   ) {
-    // Dirty the ent, apply their change to their VAID and VAIDs they see
+    // Dirty the ent, apply their change to their VAID
     v3copy(this.data.pos, data_assignments.pos as [number, number, number]);
     this.dirtyVA('pos', 'move');
     resp_func();
@@ -158,6 +159,14 @@ class EntTestWorker extends ChannelWorker {
   postNewClient(src: HandlerSource): void {
     if (isClientHandlerSource(src)) {
       this.entity_manager.clientJoin(src, src.id);
+    }
+  }
+
+  handleClientChanged(src: ClientHandlerSource): void {
+    let client = this.entity_manager.getClient(src.id);
+    let ent = this.entity_manager.getEntityForClient(client);
+    if (ent) {
+      ent.setData('display_name', src.display_name);
     }
   }
 

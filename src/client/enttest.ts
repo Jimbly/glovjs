@@ -13,7 +13,7 @@ import { EntityPositionManager, entityPositionManagerCreate } from 'glov/client/
 import * as glov_font from 'glov/client/font';
 import * as input from 'glov/client/input';
 import * as net from 'glov/client/net';
-import { netSubs } from 'glov/client/net';
+import { netDisconnected, netSubs } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
@@ -147,7 +147,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
 let entity_manager: ClientEntityManager<EntityTestClient>;
 let entity_pos_manager: EntityPositionManager;
 
-const ROOM_REQUIRES_LOGIN = true;
+const ROOM_REQUIRES_LOGIN = false;
 
 // Virtual viewport for our game logic
 const game_width = 1280;
@@ -331,17 +331,18 @@ export function main(): void {
     }
     entity_manager.tick();
     chat_ui.run();
-    account_ui.showLogin({
-      x: 0, y: 0,
+    let y = 0;
+    y = account_ui.showLogin({
+      x: 0, y,
       prelogout: preLogout, center: false,
       style: glov_font.style(null, {
         outline_width: 2,
         outline_color: 0xFFFFFFff,
         color: 0x000000ff,
       }),
-    });
+    }) + 4;
 
-    if (test_room && test_room.numSubscriptions() && entity_manager.isReady()) {
+    if (test_room && test_room.numSubscriptions() && entity_manager.isReady() && !netDisconnected()) {
       if (!was_active) {
         pad_controls_sprite = true;
         was_active = true;
@@ -351,7 +352,7 @@ export function main(): void {
       aiMotion(dt);
 
       if (ui.buttonText({
-        x: 0, y: ui.button_height + 4,
+        x: 0, y,
         text: 'Spawn Entity',
       })) {
         let r = 128;
@@ -451,7 +452,7 @@ export function main(): void {
   function testInit(dt: number) {
     engine.setState(test);
     if (!ROOM_REQUIRES_LOGIN) {
-      getRoom();
+      netSubs().onceConnected(getRoom);
     }
 
     netSubs().onLogin(getRoom);
