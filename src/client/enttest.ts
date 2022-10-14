@@ -60,6 +60,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   in_view: boolean;
   my_activate_time: number;
   error_time: number;
+  home_point?: Vec2;
 
   constructor(ent_id: EntityID, entity_manager: ClientEntityManager<EntityTestClient>) {
     super(ent_id, entity_manager);
@@ -67,11 +68,11 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     this.in_view = false;
     this.my_activate_time = -Infinity;
     this.error_time = -Infinity;
-    this.resetMoveTime();
+    this.resetMoveTime(true);
   }
 
-  resetMoveTime() {
-    this.next_move_time = engine.frame_timestamp + 500 + random() * 500;
+  resetMoveTime(initial: boolean) {
+    this.next_move_time = engine.frame_timestamp + 500 + random() * (500 + (initial ? AI_CLAIM_TIME : 0));
   }
 
   waiting: boolean;
@@ -125,17 +126,20 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     if (this.lastUpdatedBySomeoneElse()) {
       if (engine.frame_timestamp - this.last_update_timestamp < AI_CLAIM_TIME) {
         // someone else updated recently, ignore
-        this.resetMoveTime();
+        this.resetMoveTime(false);
         return;
       } // else it's been a while, do an update if we want
     }
-    let r = 32;
-    let theta = random() * PI * 2;
     let pos = this.getData<Vec3>('pos');
     assert(pos);
-    let new_pos: Vec3 = [pos[0] + sin(theta) * r, pos[1] - cos(theta) * r, theta];
+    if (!this.home_point) {
+      this.home_point = pos.slice(0) as Vec2;
+    }
+    let r = 64 * random();
+    let theta = random() * PI * 2;
+    let new_pos: Vec3 = [this.home_point[0] + sin(theta) * r, this.home_point[1] - cos(theta) * r, theta];
     this.my_activate_time = engine.frame_timestamp;
-    this.resetMoveTime();
+    this.resetMoveTime(false);
     this.applyAIMove(new_pos);
   }
 }
