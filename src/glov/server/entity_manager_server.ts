@@ -128,9 +128,15 @@ function loadPlayerEntity<
   sem: ServerEntityManager<Entity, Worker>,
   src: ClientHandlerSource,
   client: SEMClient,
-  player_uid: string,
+  player_uid: string | null,
   cb: NetErrorCallback<EntityID>
 ) {
+  if (!player_uid) {
+    assert(!client.loading);
+    assert(!client.ent_id);
+    assert(!client.player_uid);
+    return void cb(null, 0);
+  }
   // Asks the entity to load it's data (presumably from the worker) if needed
   // Boots existing client registered for this player_uid
 
@@ -162,7 +168,7 @@ function loadPlayerEntity<
   sem.player_uid_to_client[player_uid] = client;
   client.player_uid = player_uid;
   client.loading = true;
-  sem.EntityCtor.loadPlayerEntityImpl(sem, player_uid, (err?: string | null, ent?: Entity) => {
+  sem.EntityCtor.loadPlayerEntityImpl(sem, src, player_uid, (err?: string | null, ent?: Entity) => {
     client.loading = false;
     if (err || client.left_while_loading) {
       sem.clientLeave(client.client_id);
@@ -222,6 +228,7 @@ class SEMClientImpl {
   left_while_loading: boolean;
   visible_area_sees: VAID[];
   has_schema: boolean;
+  user_data: unknown;
   constructor(client_id: ClientID) {
     this.client_id = client_id;
     this.player_uid = null;
@@ -231,6 +238,13 @@ class SEMClientImpl {
     this.left_while_loading = false;
     this.visible_area_sees = [];
     this.has_schema = false;
+  }
+
+  getUserData<T>(): T {
+    return this.user_data as T;
+  }
+  setUserData<T>(data: T) {
+    this.user_data = data;
   }
 }
 
@@ -358,7 +372,7 @@ class ServerEntityManagerImpl<
 
   clientJoin(
     src: ClientHandlerSource,
-    player_uid: string,
+    player_uid: string | null,
   ): void {
     let { id: client_id } = src;
     assert(!this.clients[client_id]);
@@ -373,7 +387,6 @@ class ServerEntityManagerImpl<
         // TODO: send error to client?
         return;
       }
-      assert(ent_id);
       this.worker.debugSrc(src, `${client_id}: clientJoin success: ent_id=${ent_id}, sub_id="${sub_id}"`);
       // Immediately let client know their entity ID, and notify that they are
       //   now receiving entity updates (will not yet have own entity yet, though)
@@ -385,7 +398,7 @@ class ServerEntityManagerImpl<
       client.visible_area_sees = this.worker.semClientInitialVisibleAreaSees(client);
       this.sendInitialEntsToClient(client, false, () => {
         // By now, client has already received the initial update for all relevant
-        //   entities (should include own entity)
+        //   entities (should include own entity, if they have one)
         this.worker.sendChannelMessage(`client.${client_id}`, 'ent_ready');
       });
     });
@@ -571,14 +584,12 @@ class ServerEntityManagerImpl<
     // Go through all need_save entities and batch them up to user stores and bulk store
     let { visible_areas_need_save } = this;
     this.visible_areas_need_save = {};
-    let dirty_players:Partial<Record<string, true>> = {};
     let by_vaid: Partial<Record<VAID, Entity[]>> = {};
     let { entities } = this;
     for (let ent_id_string in entities) {
       let ent = entities[ent_id_string]!;
       if (ent.isPlayer()) {
         if (ent.need_save) {
-          dirty_players[ent.player_uid] = true;
           ++left;
           ent.savePlayerEntity(done);
           ent.need_save = false;

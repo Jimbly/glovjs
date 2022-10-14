@@ -444,6 +444,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     Entity extends EntityBaseServer,
   >(
     sem: ServerEntityManagerInterface,
+    src: ClientHandlerSource,
     player_uid: string,
     cb: NetErrorCallback<Entity>,
   ): void {

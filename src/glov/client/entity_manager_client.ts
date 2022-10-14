@@ -521,6 +521,10 @@ class ClientEntityManagerImpl<
     return this.entities[ent_id];
   }
 
+  hasMyEnt(): boolean {
+    return Boolean(this.my_ent_id); // Maybe: && this.getEnt(this.my_ent_id));
+  }
+
   getMyEnt(): Entity {
     assert(this.my_ent_id);
     let ent = this.getEnt(this.my_ent_id);

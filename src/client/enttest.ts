@@ -163,9 +163,13 @@ let chat_ui: ReturnType<typeof chatUICreate>;
 
 let test_character = { pos: vec2(), rot: 0 };
 function onEntReady() {
-  let my_ent = entity_manager.getMyEnt();
-  let pos = my_ent.getData<[number,number]>('pos', [0,0]);
-  v2copy(test_character.pos, pos);
+  if (entity_manager.hasMyEnt()) {
+    let my_ent = entity_manager.getMyEnt();
+    let pos = my_ent.getData<[number,number]>('pos', [0,0]);
+    v2copy(test_character.pos, pos);
+  } else {
+    // Position should have already arrived in `initial_pos` message
+  }
 }
 
 const color_self = vec4(0.5, 1, 0.5, 1);
@@ -217,6 +221,10 @@ export function main(): void {
   });
 
   entity_manager.on('ent_ready', onEntReady);
+
+  netSubs().onChannelMsg('enttest', 'initial_pos', (data: Vec2) => {
+    v2copy(test_character.pos, data);
+  });
 
   // Init friends subsystem, just to register handler, not used in demo,
   // alternatively, set DefaultUserWorker.prototype.rich_presence = false on the server.

@@ -12,7 +12,7 @@ import {
   NetErrorCallback,
   isClientHandlerSource,
 } from 'glov/common/types';
-import { Vec2, v2dist, v3copy } from 'glov/common/vmath';
+import { Vec2, Vec3, v2dist, v3copy } from 'glov/common/vmath';
 import { ChannelServer } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
@@ -50,7 +50,34 @@ EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   seq_ai_move: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
 });
 
-class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
+function initialPos(): [number, number, number] {
+  return [random() * 1200 + 40, random() * 880 + 40, 0];
+}
+
+interface VAIDHolder {
+  last_vaids?: VAID[];
+  last_vaids_pos?: Vec2;
+}
+
+function visibleAreaSees(pos: Vec2, holder: VAIDHolder): VAID[] {
+  if (!holder.last_vaids || v2dist(pos, holder.last_vaids_pos!) > VIEW_DIST/4) {
+    let vax0 = floor((pos[0] - VIEW_DIST) / VA_SIZE);
+    let vax1 = floor((pos[0] + VIEW_DIST) / VA_SIZE);
+    let vay0 = floor((pos[1] - VIEW_DIST) / VA_SIZE);
+    let vay1 = floor((pos[1] + VIEW_DIST) / VA_SIZE);
+    let vaids: VAID[] = [];
+    for (let xx = vax0; xx <= vax1; ++xx) {
+      for (let yy = vay0; yy <= vay1; ++yy) {
+        vaids.push(xx + yy * 100);
+      }
+    }
+    holder.last_vaids = vaids;
+    holder.last_vaids_pos = pos.slice(0) as Vec2;
+  }
+  return holder.last_vaids;
+}
+
+class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implements VAIDHolder {
   entity_manager!: ServerEntityManager<EntityTestServer, EntTestWorker>;
 
   data!: EntityTestDataServer;
@@ -61,15 +88,16 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
   // cb(err, constructed entity)
   static loadPlayerEntityImpl = ((
     sem: ServerEntityManager<Entity, EntTestWorker>,
+    src: ClientHandlerSource,
     player_uid: string,
     cb: NetErrorCallback<Entity>
   ): void => {
     // Not loading anything
     let ent = new this(-1, sem);
     ent.fromSerialized({
-      pos: [random() * 1200 + 40, random() * 880 + 40, 0],
+      pos: initialPos(),
       type: EntityType.Player,
-      display_name: sem.worker.getChannelData(`public.clients.${player_uid}.ids.display_name`),
+      display_name: src.display_name,
     });
     cb(null, ent);
   }) as typeof EntityBaseServer.loadPlayerEntityImpl;
@@ -84,21 +112,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
   }
 
   visibleAreaSees(): VAID[] {
-    if (!this.last_vaids || v2dist(this.data.pos, this.last_vaids_pos!) > VIEW_DIST/4) {
-      let vax0 = floor((this.data.pos[0] - VIEW_DIST) / VA_SIZE);
-      let vax1 = floor((this.data.pos[0] + VIEW_DIST) / VA_SIZE);
-      let vay0 = floor((this.data.pos[1] - VIEW_DIST) / VA_SIZE);
-      let vay1 = floor((this.data.pos[1] + VIEW_DIST) / VA_SIZE);
-      let vaids: VAID[] = [];
-      for (let xx = vax0; xx <= vax1; ++xx) {
-        for (let yy = vay0; yy <= vay1; ++yy) {
-          vaids.push(xx + yy * 100);
-        }
-      }
-      this.last_vaids = vaids;
-      this.last_vaids_pos = this.data.pos.slice(0) as Vec2;
-    }
-    return this.last_vaids;
+    return visibleAreaSees(this.data.pos, this);
   }
 }
 
@@ -144,6 +158,10 @@ EntityTestServer.registerActions<EntityTestServer>([{
   },
 }]);
 
+interface NonEntClientData extends VAIDHolder {
+  pos: Vec3;
+}
+
 class EntTestWorker extends ChannelWorker {
   entity_manager: ServerEntityManager<Entity, EntTestWorker>;
 
@@ -158,7 +176,13 @@ class EntTestWorker extends ChannelWorker {
 
   postNewClient(src: HandlerSource): void {
     if (isClientHandlerSource(src)) {
-      this.entity_manager.clientJoin(src, src.id);
+      if (src.user_id) {
+        // logged in, get an entity
+        this.entity_manager.clientJoin(src, src.id);
+      } else {
+        // anonymous, no entity
+        this.entity_manager.clientJoin(src, null);
+      }
     }
   }
 
@@ -178,8 +202,16 @@ class EntTestWorker extends ChannelWorker {
 
   semClientInitialVisibleAreaSees(sem_client: SEMClient): VAID[] {
     let ent = this.entity_manager.getEntityForClient(sem_client);
-    assert(ent);
-    return ent.visibleAreaSees();
+    if (ent) {
+      return ent.visibleAreaSees();
+    } else {
+      let necd: NonEntClientData = {
+        pos: initialPos(),
+      };
+      this.sendChannelMessage(`client.${sem_client.client_id}`, 'initial_pos', necd.pos);
+      sem_client.setUserData(necd);
+      return visibleAreaSees(necd.pos, necd);
+    }
   }
 }
 EntTestWorker.prototype.maintain_client_list = true;
@@ -200,6 +232,22 @@ EntTestWorker.registerClientHandler('spawn', function (
     pos: data.pos,
     type: EntityType.Bot,
   });
+  resp_func();
+});
+
+EntTestWorker.registerClientHandler('move', function (
+  this: EntTestWorker,
+  src: HandlerSource,
+  data: { pos: [number, number, number] },
+  resp_func: ErrorCallback
+) {
+  assert(data.pos);
+  assert(data.pos.length === 3);
+
+  let client = this.entity_manager.getClient(src.id);
+  let necd = client.getUserData<NonEntClientData>();
+  v3copy(necd.pos, data.pos);
+  this.entity_manager.clientSetVisibleAreaSees(client, visibleAreaSees(necd.pos, necd));
   resp_func();
 });
 

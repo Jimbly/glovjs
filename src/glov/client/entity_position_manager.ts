@@ -19,6 +19,7 @@ interface EntityPositionManagerOpts {
   dim_pos?: number; // number of components to be interpolated as-is
   dim_rot?: number; // number of components to be interpolated with 2PI wrapping
   send_time?: number; // how often to send position updates
+  entless_send_time?: number; // if applicable, if we are entityless, how often to send position updates
   window?: number; // maximum expected variation in time between updates; ms
   snap_factor?: number; // how many windows to snap in when we think we need to snap
   smooth_windows?: number; // how many windows behind we can be and only accelerate a little
@@ -57,6 +58,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   n: number;
 
   send_time: number;
+  entless_send_time: number;
   window: number;
   snap_factor: number;
   smooth_windows: number;
@@ -80,6 +82,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.dim_rot = options.dim_rot || 0;
     this.n = this.dim_pos + this.dim_rot;
     this.send_time = options.send_time || 200;
+    this.entless_send_time = options.entless_send_time || 1000;
     this.window = options.window || 200;
     this.snap_factor = options.snap_factor || 1.0;
     this.smooth_windows = options.smooth_windows || 6.5;
@@ -203,13 +206,14 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
   updateMyPos(character_pos: Vector, anim_state: string) {
     let pos_diff = !this.vsame(character_pos, this.last_send.pos);
-    let state_diff = anim_state !== this.last_send.anim_state;
+    let entless = this.entity_manager.hasMyEnt();
+    let state_diff = !entless && (anim_state !== this.last_send.anim_state);
     if (pos_diff || state_diff) {
       // pos or anim_state changed
       const now = getFrameTimestamp();
-      if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > this.send_time)) {
+      let send_time = entless ? this.entless_send_time : this.send_time;
+      if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > send_time)) {
         // do send!
-        let my_ent = this.entity_manager.getMyEnt();
         this.last_send.sending = true;
         this.last_send.time = now;
         this.last_send.hrtime = engine.hrnow();
@@ -236,10 +240,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
         if (state_diff) {
           data_assignments.state = this.last_send.anim_state;
         }
-        my_ent.actionSend({
-          action_id: 'move',
-          data_assignments,
-        }, (err: string | null) => {
+        let handle_resp = (err: string | null) => {
           if (err) {
             throw err;
           }
@@ -247,11 +248,22 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           let end = getFrameTimestamp();
           let hrend = engine.hrnow();
           let round_trip = hrend - this.last_send.hrtime;
-          if (round_trip > this.send_time) {
+          if (round_trip > send_time) {
             // hiccup, delay next send
             this.last_send.time = end;
           }
-        });
+        };
+        if (this.entity_manager.hasMyEnt()) {
+          // send via entity
+          let my_ent = this.entity_manager.getMyEnt();
+          my_ent.actionSend({
+            action_id: 'move',
+            data_assignments,
+          }, handle_resp);
+        } else {
+          assert(this.entity_manager.channel);
+          this.entity_manager.channel.send('move', data_assignments, handle_resp);
+        }
       }
     }
   }
