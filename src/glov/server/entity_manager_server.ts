@@ -42,6 +42,8 @@ import {
 
 const { min } = Math;
 
+export const ENTITY_LOG_VERBOSE = false;
+
 export interface EntityManagerReadyWorker<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
@@ -495,7 +497,9 @@ class ServerEntityManagerImpl<
       }
       actions.push(action_data);
     }
-    this.worker.debugSrc(src, `${src.id}: ent_action_list(${count}): ${logdata(actions)}`);
+    if (ENTITY_LOG_VERBOSE) {
+      this.worker.debugSrc(src, `${src.id}: ent_action_list(${count}): ${logdata(actions)}`);
+    }
     let results: undefined | ActionListResponse;
     asyncEach(actions, (action_data, next, idx) => {
       function returnResult(err?: string | null, data?: unknown) {
@@ -661,8 +665,9 @@ class ServerEntityManagerImpl<
       }
     }
     pak.writeU8(EntityUpdateCmd.Terminate);
-    // TODO: logging is probably too verbose
-    this.worker.debug(`->${client.client_id}: ent_update(initial) ${debug.join(';')}`);
+    if (ENTITY_LOG_VERBOSE) {
+      this.worker.debug(`->${client.client_id}: ent_update(initial) ${debug.join(';')}`);
+    }
     pak.send();
   }
 
@@ -1014,8 +1019,10 @@ class ServerEntityManagerImpl<
         }
       }
       pak.writeU8(EntityUpdateCmd.Terminate);
-      // TODO: logging is probably too verbose, combine to summary for all updates sent?
-      this.worker.debug(`->${client.client_id}: ent_update(tick) ${debug.join(';')}`);
+      if (ENTITY_LOG_VERBOSE) {
+        // TODO: logging is probably too verbose, combine to summary for all updates sent?
+        this.worker.debug(`->${client.client_id}: ent_update(tick) ${debug.join(';')}`);
+      }
       pak.send();
     }
   }

@@ -13,7 +13,7 @@ import {
   isClientHandlerSource,
 } from 'glov/common/types';
 import { Vec2, Vec3, v2dist, v3copy } from 'glov/common/vmath';
-import { ChannelServer } from 'glov/server/channel_server';
+import { ChannelServer, quietMessagesSet } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
 import {
@@ -250,6 +250,7 @@ EntTestWorker.registerClientHandler('move', function (
   this.entity_manager.clientSetVisibleAreaSees(client, visibleAreaSees(necd.pos, necd));
   resp_func();
 });
+quietMessagesSet(['move', 'ent_action_list']);
 
 entityManagerWorkerInit(EntTestWorker);
 
