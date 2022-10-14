@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
+import * as engine from 'glov/client/engine';
 import {
   ActionDataAssignments,
   ActionMessageParam,
@@ -45,6 +46,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   seq_id: number;
   data_overrides: DataOverride[];
   fade: number | null;
+  last_update_timestamp: number;
 
   constructor(ent_id: EntityID, entity_manager: ClientEntityManagerInterface) {
     super(ent_id, entity_manager);
@@ -53,6 +55,7 @@ export class EntityBaseClient extends EntityBaseCommon {
     this.fading_in = false;
     this.data_overrides = [];
     this.seq_id = 0;
+    this.last_update_timestamp = engine.frame_timestamp;
   }
 
   getData<T>(field: string, deflt: T): T;
@@ -75,8 +78,8 @@ export class EntityBaseClient extends EntityBaseCommon {
   }
   setDataOverride(field: string, data: Partial<Record<string, unknown>>): string | undefined {
     let field_start = this.getData<string>(field);
-    let sub_id = this.entity_manager.subscription_id;
-    let field_new = `${sub_id}:${++this.seq_id}`;
+    let sub_id_prefix = this.entity_manager.sub_id_prefix;
+    let field_new = `${sub_id_prefix}${++this.seq_id}`;
     // Also predict this change
     data[field] = field_new;
     this.data_overrides.push({
@@ -88,6 +91,7 @@ export class EntityBaseClient extends EntityBaseCommon {
     return field_start;
   }
   postEntUpdate(): void {
+    this.last_update_timestamp = engine.frame_timestamp;
     if (this.data_overrides.length) {
       // Flush all data overrides up to the one who's field_start matches our current values
       let by_field: Partial<Record<string, true>> = {};

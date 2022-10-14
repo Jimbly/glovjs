@@ -46,6 +46,7 @@ EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   speed: { encoding: EntityFieldEncoding.Float, ephemeral: true },
   state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
   display_name: { encoding: EntityFieldEncoding.String, ephemeral: true },
+  seq_ai_move: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
 });
 
 class EntityTestServer extends entityTestCommonClass(EntityBaseServer) {
@@ -121,7 +122,25 @@ EntityTestServer.registerActions<EntityTestServer>([{
     this.entity_manager.clientSetVisibleAreaSees(client, this.visibleAreaSees());
     resp_func();
   },
-
+}, {
+  action_id: 'ai_move',
+  allowed_data_assignments: {
+    pos: 'array', // actually number[3]
+    seq_ai_move: 'string',
+    // speed: 'number',
+    // state: 'string',
+  },
+  self_only: false,
+  handler: function (
+    this: EntityTestServer,
+    { src, payload, data_assignments }: ActionHandlerParam,
+    resp_func: ErrorCallback<never, string>
+  ) {
+    // Dirty the ent, apply their change to their VAID and VAIDs they see
+    v3copy(this.data.pos, data_assignments.pos as [number, number, number]);
+    this.dirtyVA('pos', 'move');
+    resp_func();
+  },
 }]);
 
 class EntTestWorker extends ChannelWorker {

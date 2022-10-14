@@ -27,8 +27,9 @@ import {
   FieldDecoder,
 } from './entity_base_client';
 import { netClientId, netDisconnected, netSubs } from './net';
+const walltime: () => number = require('./walltime.js');
 
-const { min, round } = Math;
+const { max, min, round } = Math;
 
 interface ClientEntityManagerBaseOpts {
   on_broadcast?: (data: EntityManagerEvent) => void;
@@ -70,6 +71,7 @@ class ClientEntityManagerImpl<
 
   client_id?: ClientID;
   subscription_id?: string;
+  sub_id_prefix!: string;
 
   entities!: Partial<Record<EntityID, Entity>>;
   fading_ents!: FadingEnt[];
@@ -79,6 +81,8 @@ class ClientEntityManagerImpl<
 
   received_ent_ready!: boolean;
   received_ent_start!: boolean;
+
+  frame_wall_time: number;
 
   constructor(options: ClientEntityManagerOpts) {
     super();
@@ -92,6 +96,7 @@ class ClientEntityManagerImpl<
     this.reinit(options);
 
     this.field_decoders = this.EntityCtor.field_decoders;
+    this.frame_wall_time = walltime();
   }
 
   reinit(options: Partial<ClientEntityManagerBaseOpts>): void {
@@ -112,6 +117,7 @@ class ClientEntityManagerImpl<
     this.my_ent_id = 0;
     this.received_ent_ready = false;
     this.received_ent_start = false;
+    this.sub_id_prefix = '::'; // anything not valid
   }
 
   deinit(): void {
@@ -125,6 +131,8 @@ class ClientEntityManagerImpl<
   }
 
   tick(): void {
+    this.frame_wall_time = max(this.frame_wall_time, walltime()); // strictly increasing
+
     if (this.fading_ents) {
       for (let ii = this.fading_ents.length - 1; ii >= 0; --ii) {
         let elem = this.fading_ents[ii];
@@ -156,11 +164,16 @@ class ClientEntityManagerImpl<
     }
   }
 
+  getFrameWallTime(): number {
+    return this.frame_wall_time;
+  }
+
   private onChannelSubscribe(data: unknown): void {
     // initial connection or reconnect
+    this.reinitInternal();
     this.client_id = netClientId();
     this.subscription_id = (data as DataObject).sub_id as string || this.client_id;
-    this.reinitInternal();
+    this.sub_id_prefix = `${this.subscription_id}:`;
     this.emit('subscribe', data);
   }
 

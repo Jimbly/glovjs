@@ -12,11 +12,12 @@ export enum EntityType {
 }
 
 export type EntityTestDataCommon = {
-  pos: [number, number, number];
-  speed: number;
   type: EntityType;
-  state: string;
+  pos: [number, number, number];
+  speed?: number;
+  state?: string;
   display_name?: string;
+  seq_ai_move?: string;
 } & EntityBaseDataCommon;
 
 // export function entSamePos(ent: EntityBaseCommon, pos: [number, number]): boolean {

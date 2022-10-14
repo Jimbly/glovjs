@@ -17,15 +17,28 @@ import { netSubs } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
-import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
 import { EntityID } from 'glov/common/entity_base_common';
 import { ClientChannelWorker } from 'glov/common/types';
-import { Vec2, v2addScale, v2copy, v2dist, v2scale, v2set, v2sub, v4set, vec2, vec4 } from 'glov/common/vmath';
+import {
+  Vec2,
+  Vec3,
+  v2addScale,
+  v2copy,
+  v2dist,
+  v2scale,
+  v2set,
+  v2sub,
+  v4copy,
+  v4lerp,
+  vec2,
+  vec4,
+} from 'glov/common/vmath';
 
 import {
+  EntityType,
   VA_SIZE,
   VIEW_DIST,
   entityTestCommonClass,
@@ -33,19 +46,97 @@ import {
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
 
-const { PI, atan2, cos, random, sin } = Math;
+const { PI, atan2, cos, max, random, sin } = Math;
 
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 
+const AI_CLAIM_TIME = 2000;
+
 class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   entity_manager!: ClientEntityManager<EntityTestClient>;
 
-  anim: ReturnType<typeof spriteAnimationCreate> | null;
+  next_move_time!: number;
+  in_view: boolean;
+  my_activate_time: number;
+  error_time: number;
 
   constructor(ent_id: EntityID, entity_manager: ClientEntityManager<EntityTestClient>) {
     super(ent_id, entity_manager);
-    this.anim = null;
+    this.waiting = false;
+    this.in_view = false;
+    this.my_activate_time = -Infinity;
+    this.error_time = -Infinity;
+    this.resetMoveTime();
+  }
+
+  resetMoveTime() {
+    this.next_move_time = engine.frame_timestamp + 500 + random() * 500;
+  }
+
+  waiting: boolean;
+  static AI_MOVE_FIELD = 'seq_ai_move';
+  applyAIMove(
+    new_pos: Vec3,
+  ): void {
+    assert(!this.waiting);
+    this.waiting = true;
+    this.applyBatchUpdate({
+      field: EntityTestClient.AI_MOVE_FIELD,
+      action_id: 'ai_move',
+      data_assignments: {
+        pos: new_pos,
+      },
+    }, (err) => {
+      if (err) {
+        this.error_time = engine.frame_timestamp;
+      }
+      this.waiting = false;
+    });
+  }
+
+  erroredRecently() {
+    let dt = engine.frame_timestamp - this.error_time;
+    return max(0, 1 - dt / 2000);
+  }
+
+  activatedRecently() {
+    let dt = engine.frame_timestamp - this.my_activate_time;
+    return max(0, 1 - dt / 2000);
+  }
+
+  lastUpdatedBySomeoneElse() {
+    if (!this.data.seq_ai_move) {
+      return false;
+    }
+    if (this.data.seq_ai_move.startsWith(this.entity_manager.sub_id_prefix)) {
+      return false;
+    }
+    return true;
+  }
+
+  tickAI(dt: number) {
+    if (this.waiting || !this.in_view) {
+      return;
+    }
+    if (engine.frame_timestamp < this.next_move_time) {
+      return;
+    }
+    if (this.lastUpdatedBySomeoneElse()) {
+      if (engine.frame_timestamp - this.last_update_timestamp < AI_CLAIM_TIME) {
+        // someone else updated recently, ignore
+        this.resetMoveTime();
+        return;
+      } // else it's been a while, do an update if we want
+    }
+    let r = 32;
+    let theta = random() * PI * 2;
+    let pos = this.getData<Vec3>('pos');
+    assert(pos);
+    let new_pos: Vec3 = [pos[0] + sin(theta) * r, pos[1] - cos(theta) * r, theta];
+    this.my_activate_time = engine.frame_timestamp;
+    this.resetMoveTime();
+    this.applyAIMove(new_pos);
   }
 }
 
@@ -60,8 +151,8 @@ const game_height = 960;
 
 const SPEED = 0.2;
 
-let sprites: Record<string, Sprite> = {};
-let animation: ReturnType<typeof spriteAnimationCreate>;
+let sprite_entity: Sprite;
+let sprite_game_bg: Sprite;
 
 const account_ui = createAccountUI();
 let chat_ui: ReturnType<typeof chatUICreate>;
@@ -73,6 +164,12 @@ function onEntReady() {
   v2copy(test_character.pos, pos);
 }
 
+const color_self = vec4(0.5, 1, 0.5, 1);
+const color_self_shadow = vec4(0, 1, 0, 0.25);
+const color_player = vec4(0.75, 0.5, 1.0, 1);
+const color_bot = vec4(0.25, 0.25, 0.25, 1);
+const color_bot_active = vec4(1, 0.66, 0.25, 1);
+const color_bot_error = vec4(1, 0, 0, 1);
 
 export function main(): void {
   net.init({
@@ -129,38 +226,19 @@ export function main(): void {
 
   let color_temp = vec4();
 
-  const sprite_size = 64;
+  const sprite_size = 48;
   function initGraphics() {
     particles.preloadParticleData(particle_data);
 
-    sprites.white = spriteCreate({ url: 'white' });
-
-    sprites.test = spriteCreate({
-      name: 'test',
+    sprite_entity = spriteCreate({
+      name: 'entity',
+      ws: [128, 128],
+      hs: [128],
       size: vec2(sprite_size, sprite_size),
       origin: vec2(0.5, 0.5),
     });
-    sprites.test_tint = spriteCreate({
-      name: 'tinted',
-      ws: [16, 16, 16, 16],
-      hs: [16, 16, 16],
-      size: vec2(sprite_size, sprite_size),
-      layers: 2,
-      origin: vec2(0.5, 0.5),
-    });
-    animation = spriteAnimationCreate({
-      idle_left: {
-        frames: [0,1],
-        times: [200, 500],
-      },
-      idle_right: {
-        frames: [3,2],
-        times: [200, 500],
-      },
-    });
-    animation.setState('idle_left');
 
-    sprites.game_bg = spriteCreate({
+    sprite_game_bg = spriteCreate({
       url: 'white',
       size: vec2(game_width, game_height),
     });
@@ -188,11 +266,6 @@ export function main(): void {
     impulse[0] += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D);
     impulse[1] -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W);
     impulse[1] += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S);
-    if (impulse[0] < 0) {
-      animation.setState('idle_left');
-    } else if (impulse[0] > 0) {
-      animation.setState('idle_right');
-    }
 
     v2addScale(test_character.pos, test_character.pos, impulse, SPEED);
 
@@ -203,6 +276,18 @@ export function main(): void {
     entity_pos_manager.updateMyPos(
       new Float64Array([test_character.pos[0], test_character.pos[1], test_character.rot]),
       'idle');
+  }
+
+  function aiMotion(dt: number) {
+    let { entities } = entity_manager;
+    for (let ent_id_string in entities) {
+      let ent_id = Number(ent_id_string);
+      let ent = entities[ent_id]!;
+      if (ent.data.type !== EntityType.Bot) {
+        continue;
+      }
+      ent.tickAI(dt);
+    }
   }
 
   function getRoom() {
@@ -254,6 +339,8 @@ export function main(): void {
       }
       playerMotion(dt);
 
+      aiMotion(dt);
+
       if (ui.buttonText({
         x: 0, y: ui.button_height + 4,
         text: 'Spawn Entity',
@@ -264,20 +351,19 @@ export function main(): void {
         test_room.send('spawn', { pos });
       }
 
-      sprites.game_bg.draw({
+      sprite_game_bg.draw({
         x: 0, y: 0, z: Z.BACKGROUND,
         color: [0.3, 0.32, 0.35, 1],
       });
 
       // Draw self
-      sprites.test_tint.drawDualTint({
+      sprite_entity.draw({
         x: test_character.pos[0],
         y: test_character.pos[1],
         z: Z.SPRITES,
         rot: test_character.rot,
-        color: [1, 1, 0, 1],
-        color1: [1, 0, 1, 1],
-        frame: animation.getFrame(dt),
+        color: color_self,
+        frame: 1,
       });
       // Draw view area
       ui.drawCircle(test_character.pos[0], test_character.pos[1], Z.SPRITES - 2, VIEW_DIST, 0.99, [1,1,1,0.5]);
@@ -306,17 +392,31 @@ export function main(): void {
           continue;
         }
         let { pos } = ped;
-        v4set(color_temp, 1, 1, 1, ent.fade !== null ? ent.fade : 1);
-        if (ent_id === entity_manager.my_ent_id) {
-          color_temp[3] *= 0.5;
+        let frame;
+        if (ent.data.type === EntityType.Player) {
+          if (ent_id === entity_manager.my_ent_id) {
+            v4copy(color_temp, color_self_shadow);
+          } else {
+            v4copy(color_temp, color_player);
+          }
+          frame = 1;
+        } else {
+          v4lerp(color_temp, ent.activatedRecently(), color_bot, color_bot_active);
+          v4lerp(color_temp, ent.erroredRecently(), color_temp, color_bot_error);
+          frame = 0;
         }
+        color_temp[3] *= ent.fade !== null ? ent.fade : 1;
         if (v2dist(test_character.pos, pos as unknown as Vec2) > VIEW_DIST) {
           color_temp[3] *= 0.25;
+          ent.in_view = false;
+        } else {
+          ent.in_view = true;
         }
-        sprites.test.draw({
+        sprite_entity.draw({
           x: pos[0], y: pos[1], z: Z.SPRITES - 1,
           rot: pos[2],
           color: color_temp,
+          frame,
         });
         if (ent.data.display_name) {
           ui.font.drawSizedAligned(glov_font.styleAlpha(glov_font.styleColored(null, 0x00000080), color_temp[3]),
