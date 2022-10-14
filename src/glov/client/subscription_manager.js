@@ -17,7 +17,7 @@ const EventEmitter = require('glov/common/tiny-events.js');
 const { fbGetLoginInfo } = require('./fbinstant.js');
 const local_storage = require('./local_storage.js');
 const md5 = require('glov/common/md5.js');
-const { netDisconnected } = require('./net.js');
+const { netDisconnectedRaw } = require('./net.js');
 const { isPacket } = require('glov/common/packet.js');
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const util = require('glov/common/util.js');
@@ -495,7 +495,7 @@ SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
   }
   if (do_subscribe) {
     channel.subscriptions++;
-    if (!netDisconnected() && channel.subscriptions === 1) {
+    if (!netDisconnectedRaw() && channel.subscriptions === 1) {
       channel.subscribe_failed = false;
       this.client.send('subscribe', channel_id, function (err) {
         if (err) {
@@ -533,7 +533,7 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   if (!channel.subscriptions) {
     channel.got_subscribe = false;
   }
-  if (!netDisconnected() && !channel.subscriptions && !channel.subscribe_failed) {
+  if (!netDisconnectedRaw() && !channel.subscriptions && !channel.subscribe_failed) {
     this.client.send('unsubscribe', channel_id);
   }
 };
