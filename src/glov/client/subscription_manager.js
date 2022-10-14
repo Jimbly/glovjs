@@ -42,13 +42,17 @@ function ClientChannelWorker(subs, channel_id, base_handlers, base_event_listene
 }
 util.inherits(ClientChannelWorker, EventEmitter);
 
-ClientChannelWorker.prototype.emit = function (event, param) {
-  EventEmitter.prototype.emit.call(this, event, param);
+ClientChannelWorker.prototype.emit = function (event) {
+  // Using `arguments` instead of rest params because Babel is generating pretty
+  //   bloated code and this is a hot path.
+  // eslint-disable-next-line prefer-rest-params
+  let args = arguments;
+  EventEmitter.prototype.emit.apply(this, args);
   if (this.base_event_listeners) {
     let listeners = this.base_event_listeners[event];
     if (listeners) {
       for (let ii = 0; ii < listeners.length; ++ii) {
-        listeners[ii].call(this, param);
+        listeners[ii].apply(this, Array.prototype.slice.call(args, 1));
       }
     }
   }
