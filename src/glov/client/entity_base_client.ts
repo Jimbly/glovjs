@@ -39,6 +39,46 @@ interface BatchUpdateParam extends ActionMessageParam {
 
 export type FieldDecoder<Entity extends EntityBaseClient> = (ent: Entity, pak: Packet, old_value: unknown) => unknown;
 
+export function entActionAppend(pak: Packet, action_data: ActionMessageParam): void {
+  let { action_id, ent_id, predicate, self, payload, data_assignments } = action_data;
+  let flags = 0;
+  if (predicate) {
+    flags |= EALF_HAS_PREDICATE;
+  }
+  if (self) {
+    // not sending ent ID
+  } else {
+    flags |= EALF_HAS_ENT_ID;
+  }
+  if (payload !== undefined) {
+    flags |= EALF_HAS_PAYLOAD;
+  }
+  if (data_assignments) {
+    flags |= EALF_HAS_ASSIGNMENTS;
+  }
+  pak.writeInt(flags);
+  pak.writeAnsiString(action_id);
+  if (flags & EALF_HAS_PREDICATE) {
+    assert(predicate);
+    pak.writeAnsiString(predicate.field);
+    pak.writeAnsiString(predicate.expected_value || '');
+  }
+  if (flags & EALF_HAS_ENT_ID) {
+    assert(ent_id);
+    pak.writeInt(ent_id);
+  }
+  if (flags & EALF_HAS_PAYLOAD) {
+    pak.writeJSON(payload);
+  }
+  if (flags & EALF_HAS_ASSIGNMENTS) {
+    for (let key in data_assignments) {
+      pak.writeAnsiString(key);
+      pak.writeJSON(data_assignments[key]);
+    }
+    pak.writeAnsiString('');
+  }
+}
+
 export class EntityBaseClient extends EntityBaseCommon {
   entity_manager!: ClientEntityManagerInterface;
   fading_out: boolean;
@@ -112,46 +152,6 @@ export class EntityBaseClient extends EntityBaseCommon {
     }
   }
 
-  actionAppend(pak: Packet, action_data: ActionMessageParam): void {
-    let { action_id, ent_id, predicate, self, payload, data_assignments } = action_data;
-    let flags = 0;
-    if (predicate) {
-      flags |= EALF_HAS_PREDICATE;
-    }
-    if (self) {
-      // not sending ent ID
-    } else {
-      flags |= EALF_HAS_ENT_ID;
-    }
-    if (payload !== undefined) {
-      flags |= EALF_HAS_PAYLOAD;
-    }
-    if (data_assignments) {
-      flags |= EALF_HAS_ASSIGNMENTS;
-    }
-    pak.writeInt(flags);
-    pak.writeAnsiString(action_id);
-    if (flags & EALF_HAS_PREDICATE) {
-      assert(predicate);
-      pak.writeAnsiString(predicate.field);
-      pak.writeAnsiString(predicate.expected_value || '');
-    }
-    if (flags & EALF_HAS_ENT_ID) {
-      assert(ent_id);
-      pak.writeInt(ent_id);
-    }
-    if (flags & EALF_HAS_PAYLOAD) {
-      pak.writeJSON(payload);
-    }
-    if (flags & EALF_HAS_ASSIGNMENTS) {
-      for (let key in data_assignments) {
-        pak.writeAnsiString(key);
-        pak.writeJSON(data_assignments[key]);
-      }
-      pak.writeAnsiString('');
-    }
-  }
-
   actionPrepDataAssignments(
     action_data: ActionMessageParam,
     field: string,
@@ -199,7 +199,7 @@ export class EntityBaseClient extends EntityBaseCommon {
 
   actionSend<T=unknown>(action: ActionMessageParam, resp_func: NetErrorCallback<T>): void {
     (action as ClientActionMessageParam).ent = this;
-    this.entity_manager.actionListSend([action as ClientActionMessageParam], [resp_func as NetErrorCallback<unknown>]);
+    this.entity_manager.actionSendQueued(action as ClientActionMessageParam, resp_func as NetErrorCallback<unknown>);
   }
 
   applyBatchUpdate<T=unknown>(update: BatchUpdateParam, resp_func: NetErrorCallback<T>): void {

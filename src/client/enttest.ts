@@ -282,7 +282,12 @@ export function main(): void {
       'idle');
   }
 
+  let last_ai_tick = engine.frame_timestamp;
   function aiMotion(dt: number) {
+    if (engine.frame_timestamp < last_ai_tick + 200) {
+      return;
+    }
+    last_ai_tick = engine.frame_timestamp;
     let { entities } = entity_manager;
     for (let ent_id_string in entities) {
       let ent_id = Number(ent_id_string);
@@ -439,6 +444,8 @@ export function main(): void {
     if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
       pad_controls_sprite = !pad_controls_sprite;
     }
+
+    entity_manager.actionListFlush();
   }
 
   function testInit(dt: number) {

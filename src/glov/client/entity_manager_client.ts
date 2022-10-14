@@ -25,6 +25,7 @@ import {
   ClientActionMessageParam,
   EntityBaseClient,
   FieldDecoder,
+  entActionAppend,
 } from './entity_base_client';
 import { netClientId, netDisconnected, netSubs } from './net';
 const walltime: () => number = require('./walltime.js');
@@ -474,11 +475,18 @@ class ClientEntityManagerImpl<
     }
   }
 
-  actionListSend(
-    action_list: ClientActionMessageParam[],
-    resp_list: NetErrorCallback<unknown>[],
-  ): void {
+  action_list_queue: {
+    action_list: ClientActionMessageParam[];
+    resp_list: NetErrorCallback<unknown>[];
+  } | null = null;
+
+  actionListFlush(): void {
+    if (!this.action_list_queue) {
+      return;
+    }
     assert(this.channel);
+    let { action_list, resp_list } = this.action_list_queue;
+    this.action_list_queue = null;
     let pak = this.channel.pak('ent_action_list');
     pak.writeInt(action_list.length);
     for (let ii = 0; ii < action_list.length; ++ii) {
@@ -489,10 +497,24 @@ class ClientEntityManagerImpl<
       } else {
         action_data.ent_id = ent.id;
       }
-      ent.actionAppend(pak, action_data);
+      entActionAppend(pak, action_data);
     }
 
     pak.send<ActionListResponse>(this.handleActionListResult.bind(this, action_list, resp_list));
+  }
+
+  actionSendQueued(
+    action: ClientActionMessageParam,
+    resp_func: NetErrorCallback<unknown>,
+  ): void {
+    if (!this.action_list_queue) {
+      this.action_list_queue = {
+        action_list: [],
+        resp_list: [],
+      };
+    }
+    this.action_list_queue.action_list.push(action);
+    this.action_list_queue.resp_list.push(resp_func);
   }
 
   getEnt(ent_id: EntityID): Entity | undefined {
