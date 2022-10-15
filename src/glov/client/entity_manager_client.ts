@@ -4,8 +4,15 @@
 import assert from 'assert';
 import {
   ActionListResponse,
+  ActionMessageParam,
   ClientID,
+  EALF_HAS_ASSIGNMENTS,
+  EALF_HAS_ENT_ID,
+  EALF_HAS_PAYLOAD,
+  EALF_HAS_PREDICATE,
+  EntityFieldDecoder,
   EntityFieldDefCommon,
+  EntityFieldEncoder,
   EntityFieldEncoding,
   EntityFieldEncodingType,
   EntityFieldSpecial,
@@ -24,8 +31,6 @@ import * as engine from './engine';
 import {
   ClientActionMessageParam,
   EntityBaseClient,
-  FieldDecoder,
-  entActionAppend,
 } from './entity_base_client';
 import { netClientId, netDisconnected, netSubs } from './net';
 const walltime: () => number = require('./walltime.js');
@@ -53,10 +58,62 @@ interface FadingEnt {
   countdown_max: number;
 }
 
-export type WithNotRequired<T, K extends keyof T> = T & { [P in K]?: T[P] };
-
 interface EntityFieldDefClient extends EntityFieldDefCommon {
   field_name: string;
+  field_id: number;
+}
+
+function entActionAppend<Entity extends EntityBaseClient>(
+  entity_manager: ClientEntityManager<Entity>,
+  ent: Entity,
+  pak: Packet,
+  action_data: ActionMessageParam
+): void {
+  let { action_id, ent_id, predicate, self, payload, data_assignments } = action_data;
+  let flags = 0;
+  if (predicate) {
+    flags |= EALF_HAS_PREDICATE;
+  }
+  if (self) {
+    // not sending ent ID
+  } else {
+    flags |= EALF_HAS_ENT_ID;
+  }
+  if (payload !== undefined) {
+    flags |= EALF_HAS_PAYLOAD;
+  }
+  if (data_assignments) {
+    flags |= EALF_HAS_ASSIGNMENTS;
+  }
+  pak.writeInt(flags);
+  pak.writeAnsiString(action_id);
+  if (flags & EALF_HAS_PREDICATE) {
+    assert(predicate);
+    pak.writeAnsiString(predicate.field);
+    pak.writeAnsiString(predicate.expected_value || '');
+  }
+  if (flags & EALF_HAS_ENT_ID) {
+    assert(ent_id);
+    pak.writeInt(ent_id);
+  }
+  if (flags & EALF_HAS_PAYLOAD) {
+    pak.writeJSON(payload);
+  }
+  if (flags & EALF_HAS_ASSIGNMENTS) {
+    let { field_defs_by_name, field_encoders } = entity_manager;
+    assert(field_defs_by_name);
+    for (let key in data_assignments) {
+      let field_def = field_defs_by_name[key];
+      assert(field_def);
+      assert(!field_def.sub); // TODO: support
+      pak.writeInt(field_def.field_id);
+      let encoder = field_encoders[field_def.encoding];
+      assert(encoder);
+      // TODO: maybe need an optional non-differential decoder here?
+      encoder(ent, pak, data_assignments[key]);
+    }
+    pak.writeInt(EntityFieldSpecial.Terminate);
+  }
 }
 
 export type ClientEntityManager<Entity extends EntityBaseClient> =
@@ -78,7 +135,9 @@ class ClientEntityManagerImpl<
   fading_ents!: FadingEnt[];
 
   field_defs?: (EntityFieldDefClient|null)[];
-  field_decoders: Partial<Record<EntityFieldEncodingType, FieldDecoder<EntityBaseClient>>>;
+  field_defs_by_name?: Partial<Record<string, EntityFieldDefClient>>;
+  field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<EntityBaseClient>>>;
+  field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<EntityBaseClient>>>;
 
   received_ent_ready!: boolean;
   received_ent_start!: boolean;
@@ -97,6 +156,7 @@ class ClientEntityManagerImpl<
     this.reinit(options);
 
     this.field_decoders = this.EntityCtor.field_decoders;
+    this.field_encoders = this.EntityCtor.field_encoders;
     this.frame_wall_time = walltime();
   }
 
@@ -295,7 +355,7 @@ class ClientEntityManagerImpl<
               sub_value.length = pak.readInt();
             } else {
               let old_value = sub_value[index-1];
-              let new_value = decoder(ent, pak, old_value);
+              let new_value = decoder(pak, old_value);
               sub_value[index-1] = new_value;
             }
           }
@@ -308,7 +368,7 @@ class ClientEntityManagerImpl<
           let key;
           while ((key = pak.readAnsiString())) {
             let old_value = sub_obj[key];
-            let new_value = decoder(ent, pak, old_value);
+            let new_value = decoder(pak, old_value);
             if (new_value === undefined) {
               delete sub_obj[key];
             } else {
@@ -318,7 +378,7 @@ class ClientEntityManagerImpl<
         }
       } else {
         let old_value = data[field_name];
-        let new_value = do_default ? default_value : decoder(ent, pak, old_value);
+        let new_value = do_default ? default_value : decoder(pak, old_value);
         if (new_value === undefined) {
           delete data[field_name];
         } else {
@@ -332,16 +392,21 @@ class ClientEntityManagerImpl<
 
   private initSchema(schema: EntityManagerSchema): void {
     let field_defs: (EntityFieldDefClient|null)[] = [null];
+    let field_defs_by_name: Partial<Record<string, EntityFieldDefClient>> = {};
     for (let ii = 0; ii < schema.length; ++ii) {
       let ser_def = schema[ii];
-      field_defs[ii + EntityFieldSpecial.MAX] = {
+      let idx = ii + EntityFieldSpecial.MAX;
+      let def = field_defs[idx] = {
         encoding: ser_def.e || EntityFieldEncoding.JSON,
         default_value: ser_def.d, // *not* `|| undefined` - 0, '', and null allowed here
         sub: ser_def.s || EntityFieldSub.None,
         field_name: ser_def.n,
+        field_id: idx,
       };
+      field_defs_by_name[def.field_name] = def;
     }
     this.field_defs = field_defs;
+    this.field_defs_by_name = field_defs_by_name;
   }
 
   private initializeNewFullEnt(ent: Entity): void {
@@ -497,7 +562,7 @@ class ClientEntityManagerImpl<
       } else {
         action_data.ent_id = ent.id;
       }
-      entActionAppend(pak, action_data);
+      entActionAppend(this, ent, pak, action_data);
     }
 
     pak.send<ActionListResponse>(this.handleActionListResult.bind(this, action_list, resp_list));

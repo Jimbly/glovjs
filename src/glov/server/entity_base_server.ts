@@ -7,17 +7,15 @@ import {
   ActionMessageParam,
   ClientID,
   EntityBaseCommon,
+  EntityFieldDecoder,
   EntityFieldDefCommon,
+  EntityFieldEncoder,
   EntityFieldEncoding,
-  EntityFieldEncodingType,
   EntityFieldSpecial,
   EntityFieldSub,
   EntityID,
   EntityManagerEvent,
 } from 'glov/common/entity_base_common';
-import {
-  Packet,
-} from 'glov/common/packet';
 import {
   ClientHandlerSource,
   DataObject,
@@ -33,12 +31,6 @@ import {
 
 export type VAID = number; // Or, maybe `number | string`?
 
-export type FieldEncoder<Entity extends EntityBaseServer> = (
-  ent: Entity,
-  pak: Packet,
-  value: unknown,
-) => void;
-
 /*
   Note: Can extend this per-app with code like:
 
@@ -53,9 +45,11 @@ export type FieldEncoder<Entity extends EntityBaseServer> = (
 export interface EntityFieldDef extends EntityFieldDefCommon {
   ephemeral: boolean; // not saved to storage
   server_only: boolean; // not synced to clients
-  // Next two are auto-filled, and only actually required for non-server_only fields
-  encoder: FieldEncoder<EntityBaseServer>; // Looked up by `encoding`, _not_ specified per-field (just cached here)
+  // The following members are auto-filled, and only actually required for non-server_only fields
+  encoder: EntityFieldEncoder<EntityBaseServer>; // Looked up by `encoding`, _not_ specified per-field, just cached here
+  decoder: EntityFieldDecoder<EntityBaseServer>; // Looked up by `encoding`, _not_ specified per-field, just cached here
   field_id: number;
+  field_name: string;
 }
 export type EntityFieldDefOpts = Partial<Exclude<EntityFieldDef, 'encoder'>>;
 
@@ -379,19 +373,6 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 
-  static field_encoders: Partial<Record<EntityFieldEncodingType, FieldEncoder<EntityBaseServer>>> = {};
-  // Note: must be called _before_ registerFieldDefs()
-  static registerFieldEncoders<Entity extends EntityBaseServer>(
-    encoders: Partial<Record<EntityFieldEncodingType, FieldEncoder<Entity>>>
-  ): void {
-    for (let key_string in encoders) {
-      let key = Number(key_string) as EntityFieldEncodingType;
-      let func = encoders[key] as FieldEncoder<EntityBaseServer>;
-      assert(!this.field_encoders[key]);
-      this.field_encoders[key] = func;
-    }
-  }
-
   field_defs!: Partial<Record<string, EntityFieldDef>>; // on prototype, not instances
   private static last_field_id = EntityFieldSpecial.MAX - 1;
   static registerFieldDefs<DataObjectType>(defs: Record<keyof DataObjectType, EntityFieldDefOpts>): void;
@@ -405,6 +386,8 @@ export class EntityBaseServer extends EntityBaseCommon {
       let encoding = def_in.encoding || EntityFieldEncoding.JSON;
       let encoder = this.field_encoders[encoding];
       assert(encoder, `Missing encoder for type ${encoding} referenced by field ${key}`);
+      let decoder = this.field_decoders[encoding];
+      assert(decoder);
       let sub = def_in.sub || EntityFieldSub.None;
       if (sub) {
         assert(default_value === undefined, 'Default values not supported for Records/Arrays');
@@ -414,10 +397,12 @@ export class EntityBaseServer extends EntityBaseCommon {
         ephemeral,
         server_only,
         encoding,
-        encoder,
         default_value,
-        field_id,
         sub,
+        encoder,
+        decoder,
+        field_id,
+        field_name: key,
       };
 
       // Then also copy all other app-specific fields
@@ -462,56 +447,6 @@ export class EntityBaseServer extends EntityBaseCommon {
     });
   }
 }
-
-EntityBaseServer.registerFieldEncoders({
-  [EntityFieldEncoding.JSON]: function encJSON(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeJSON(value);
-  },
-  [EntityFieldEncoding.Int]: function encInt(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeInt(value as number);
-  },
-  [EntityFieldEncoding.Float]: function encFloat(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeFloat(value as number);
-  },
-  [EntityFieldEncoding.AnsiString]: function encAnsiString(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeAnsiString(value as string);
-  },
-  [EntityFieldEncoding.U8]: function encU8(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeU8(value as number);
-  },
-  [EntityFieldEncoding.U32]: function encU32(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeU32(value as number);
-  },
-  [EntityFieldEncoding.String]: function encString(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeString(value as string);
-  },
-  [EntityFieldEncoding.Boolean]: function encBool(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    pak.writeBool(value as boolean);
-  },
-  [EntityFieldEncoding.Vec2]: function encVec2(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    let v = value as [number, number];
-    pak.writeFloat(v[0]);
-    pak.writeFloat(v[1]);
-  },
-  [EntityFieldEncoding.Vec3]: function encVec3(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    let v = value as [number, number, number];
-    pak.writeFloat(v[0]);
-    pak.writeFloat(v[1]);
-    pak.writeFloat(v[2]);
-  },
-  [EntityFieldEncoding.U8Vec3]: function encU8Vec3(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    let v = value as [number, number, number];
-    pak.writeU8(v[0]);
-    pak.writeU8(v[1]);
-    pak.writeU8(v[2]);
-  },
-  [EntityFieldEncoding.IVec3]: function encIVec3(ent: EntityBaseServer, pak: Packet, value: unknown): void {
-    let v = value as [number, number, number];
-    pak.writeInt(v[0]);
-    pak.writeInt(v[1]);
-    pak.writeInt(v[2]);
-  },
-});
 
 EntityBaseServer.prototype.field_defs = Object.create(null);
 EntityBaseServer.registerFieldDefs({

@@ -282,6 +282,7 @@ class ServerEntityManagerImpl<
   worker: Worker;
   EntityCtor: typeof EntityBaseServer;
   field_defs: Partial<Record<string, EntityFieldDef>>;
+  field_defs_by_id: (EntityFieldDef|null)[];
 
   last_ent_id: EntityID = 0;
   clients: Partial<Record<ClientID, SEMClient>> = {};
@@ -305,7 +306,8 @@ class ServerEntityManagerImpl<
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.schema = [];
     this.all_client_fields = {};
-    let { field_defs, all_client_fields } = this;
+    this.field_defs_by_id = [null];
+    let { field_defs, all_client_fields, field_defs_by_id } = this;
     for (let key in field_defs) {
       let field_def = field_defs[key]!;
       if (!field_def.server_only) {
@@ -326,6 +328,7 @@ class ServerEntityManagerImpl<
         }
         this.schema[index] = schema_def;
         all_client_fields[key] = true;
+        field_defs_by_id[field_def.field_id] = field_def;
       }
     }
     // Ensure we properly filled in the schema
@@ -489,10 +492,14 @@ class ServerEntityManagerImpl<
       }
       if (flags & EALF_HAS_ASSIGNMENTS) {
         action_data.data_assignments = {};
-        let key = pak.readAnsiString();
-        while (key) {
-          action_data.data_assignments[key] = pak.readJSON();
-          key = pak.readAnsiString();
+        let field_id = pak.readInt();
+        while (field_id !== EntityFieldSpecial.Terminate) {
+          let field_def = this.field_defs_by_id[field_id];
+          assert(field_def);
+          assert(!field_def.sub); // TODO: support
+          let { decoder } = field_def;
+          action_data.data_assignments[field_def.field_name] = decoder(pak, null);
+          field_id = pak.readInt();
         }
       }
       actions.push(action_data);

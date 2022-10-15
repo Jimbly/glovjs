@@ -2,7 +2,9 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
+import { Packet } from 'glov/common/packet';
 import { DataObject } from 'glov/common/types';
+import { Vec2, Vec3 } from 'glov/common/vmath';
 
 // Entity Action List Flags
 export const EALF_HAS_PREDICATE = 1<<0;
@@ -28,6 +30,20 @@ export const EntityFieldEncoding = {
   Custom0: 127, // App-specific encodings in the range 127...255
 };
 export type EntityFieldEncodingType = typeof EntityFieldEncoding[keyof typeof EntityFieldEncoding];
+
+export type EntityFieldEncoder<Entity extends EntityBaseCommon> = (
+  ent: Entity,
+  pak: Packet,
+  value: unknown,
+) => void;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type EntityFieldDecoder<Entity extends EntityBaseCommon> = (
+  // ent: Entity,
+  pak: Packet,
+  old_value: unknown
+) => unknown;
+
 
 export const EntityFieldSub = {
   None: 0,
@@ -118,4 +134,156 @@ export class EntityBaseCommon {
     assert(0); // should hit EntityBaseServer or EntityBaseClient's implementation instead
     return undefined;
   }
+
+  static field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<EntityBaseCommon>>> = {};
+  static field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<EntityBaseCommon>>> = {};
+  // Note: must be called _before_ registerFieldDefs()
+  static registerFieldEncoding<Entity extends EntityBaseCommon>(
+    data: Partial<Record<EntityFieldEncodingType, {
+      // encoder: on the CLIENT used for sending data_assigments
+      // decoder: on the CLIENT used for receiving full entity updates and entity diffs
+      // encoder: on the SERVER used for sending full entity updates and entity diffs
+      // decoder: on the SERVER used for receiving data_assignemnts (old_value always === null)
+      encoder: EntityFieldEncoder<Entity>;
+      decoder: EntityFieldDecoder<Entity>;
+    }>>
+  ): void {
+    for (let key_string in data) {
+      let key = Number(key_string) as EntityFieldEncodingType;
+      let pair = data[key]!;
+      let encoder = pair.encoder as EntityFieldEncoder<EntityBaseCommon>;
+      let decoder = pair.decoder as EntityFieldDecoder<EntityBaseCommon>;
+      assert(!this.field_encoders[key]);
+      this.field_encoders[key] = encoder;
+      this.field_decoders[key] = decoder;
+    }
+  }
 }
+
+EntityBaseCommon.registerFieldEncoding({
+  // Using functions with names to get better callstacks
+  /* eslint-disable func-name-matching */
+  [EntityFieldEncoding.JSON]: {
+    encoder: function encJSON(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeJSON(value);
+    },
+    decoder: function decJSON(pak: Packet, old_value: unknown): unknown {
+      return pak.readJSON();
+    },
+  },
+  [EntityFieldEncoding.Int]: {
+    encoder: function encInt(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeInt(value as number);
+    },
+    decoder: function decInt(pak: Packet, old_value: unknown): unknown {
+      return pak.readInt();
+    },
+  },
+  [EntityFieldEncoding.Float]: {
+    encoder: function encFloat(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeFloat(value as number);
+    },
+    decoder: function decFloat(pak: Packet, old_value: unknown): unknown {
+      return pak.readFloat();
+    },
+  },
+  [EntityFieldEncoding.AnsiString]: {
+    encoder: function encAnsiString(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeAnsiString(value as string);
+    },
+    decoder: function decAnsiString(pak: Packet, old_value: unknown
+    ): unknown {
+      return pak.readAnsiString();
+    },
+  },
+  [EntityFieldEncoding.U8]: {
+    encoder: function encU8(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeU8(value as number);
+    },
+    decoder: function decU8(pak: Packet, old_value: unknown): unknown {
+      return pak.readU8();
+    },
+  },
+  [EntityFieldEncoding.U32]: {
+    encoder: function encU32(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeU32(value as number);
+    },
+    decoder: function decU32(pak: Packet, old_value: unknown): unknown {
+      return pak.readU32();
+    },
+  },
+  [EntityFieldEncoding.String]: {
+    encoder: function encString(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeString(value as string);
+    },
+    decoder: function decString(pak: Packet, old_value: unknown): unknown {
+      return pak.readString();
+    },
+  },
+  [EntityFieldEncoding.Boolean]: {
+    encoder: function encBool(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      pak.writeBool(value as boolean);
+    },
+    decoder: function decBool(pak: Packet, old_value: unknown): unknown {
+      return pak.readBool();
+    },
+  },
+  [EntityFieldEncoding.Vec2]: {
+    encoder: function encVec2(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      let v = value as [number, number];
+      pak.writeFloat(v[0]);
+      pak.writeFloat(v[1]);
+    },
+    decoder: function decVec2(pak: Packet, old_value: unknown): unknown {
+      let v = old_value as Vec2 || [];
+      v[0] = pak.readFloat();
+      v[1] = pak.readFloat();
+      return v;
+    },
+  },
+  [EntityFieldEncoding.Vec3]: {
+    encoder: function encVec3(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      let v = value as [number, number, number];
+      pak.writeFloat(v[0]);
+      pak.writeFloat(v[1]);
+      pak.writeFloat(v[2]);
+    },
+    decoder: function decVec3(pak: Packet, old_value: unknown): unknown {
+      let v = old_value as Vec3 || [];
+      v[0] = pak.readFloat();
+      v[1] = pak.readFloat();
+      v[2] = pak.readFloat();
+      return v;
+    },
+  },
+  [EntityFieldEncoding.U8Vec3]: {
+    encoder: function encU8Vec3(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      let v = value as [number, number, number];
+      pak.writeU8(v[0]);
+      pak.writeU8(v[1]);
+      pak.writeU8(v[2]);
+    },
+    decoder: function decU8Vec3(pak: Packet, old_value: unknown): unknown {
+      let v = old_value as Vec3 || [];
+      v[0] = pak.readU8();
+      v[1] = pak.readU8();
+      v[2] = pak.readU8();
+      return v;
+    },
+  },
+  [EntityFieldEncoding.IVec3]: {
+    encoder: function encIVec3(ent: EntityBaseCommon, pak: Packet, value: unknown): void {
+      let v = value as [number, number, number];
+      pak.writeInt(v[0]);
+      pak.writeInt(v[1]);
+      pak.writeInt(v[2]);
+    },
+    decoder: function decIVec3(pak: Packet, old_value: unknown): unknown {
+      let v = old_value as Vec3 || [];
+      v[0] = pak.readInt();
+      v[1] = pak.readInt();
+      v[2] = pak.readInt();
+      return v;
+    },
+  },
+});

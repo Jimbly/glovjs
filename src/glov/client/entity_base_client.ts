@@ -6,18 +6,10 @@ import * as engine from 'glov/client/engine';
 import {
   ActionDataAssignments,
   ActionMessageParam,
-  EALF_HAS_ASSIGNMENTS,
-  EALF_HAS_ENT_ID,
-  EALF_HAS_PAYLOAD,
-  EALF_HAS_PREDICATE,
   EntityBaseCommon,
-  EntityFieldEncoding,
-  EntityFieldEncodingType,
   EntityID,
 } from 'glov/common/entity_base_common';
-import { Packet } from 'glov/common/packet';
 import { DataObject, NetErrorCallback } from 'glov/common/types';
-import { Vec2, Vec3 } from 'glov/common/vmath';
 import {
   ClientEntityManagerInterface,
 } from './entity_manager_client';
@@ -35,48 +27,6 @@ export interface ClientActionMessageParam extends ActionMessageParam {
 
 interface BatchUpdateParam extends ActionMessageParam {
   field: string;
-}
-
-export type FieldDecoder<Entity extends EntityBaseClient> = (ent: Entity, pak: Packet, old_value: unknown) => unknown;
-
-export function entActionAppend(pak: Packet, action_data: ActionMessageParam): void {
-  let { action_id, ent_id, predicate, self, payload, data_assignments } = action_data;
-  let flags = 0;
-  if (predicate) {
-    flags |= EALF_HAS_PREDICATE;
-  }
-  if (self) {
-    // not sending ent ID
-  } else {
-    flags |= EALF_HAS_ENT_ID;
-  }
-  if (payload !== undefined) {
-    flags |= EALF_HAS_PAYLOAD;
-  }
-  if (data_assignments) {
-    flags |= EALF_HAS_ASSIGNMENTS;
-  }
-  pak.writeInt(flags);
-  pak.writeAnsiString(action_id);
-  if (flags & EALF_HAS_PREDICATE) {
-    assert(predicate);
-    pak.writeAnsiString(predicate.field);
-    pak.writeAnsiString(predicate.expected_value || '');
-  }
-  if (flags & EALF_HAS_ENT_ID) {
-    assert(ent_id);
-    pak.writeInt(ent_id);
-  }
-  if (flags & EALF_HAS_PAYLOAD) {
-    pak.writeJSON(payload);
-  }
-  if (flags & EALF_HAS_ASSIGNMENTS) {
-    for (let key in data_assignments) {
-      pak.writeAnsiString(key);
-      pak.writeJSON(data_assignments[key]);
-    }
-    pak.writeAnsiString('');
-  }
 }
 
 export class EntityBaseClient extends EntityBaseCommon {
@@ -230,72 +180,4 @@ export class EntityBaseClient extends EntityBaseCommon {
     return is_initial && !this.entity_manager.received_ent_ready ? 0 : 250;
   }
 
-  static field_decoders: Partial<Record<EntityFieldEncodingType, FieldDecoder<EntityBaseClient>>> = {};
-  // Note: must be called _before_ registerFieldDefs()
-  static registerFieldDecoders<Entity extends EntityBaseClient>(
-    encoders: Partial<Record<EntityFieldEncodingType, FieldDecoder<Entity>>>
-  ): void {
-    for (let key_string in encoders) {
-      let key = Number(key_string) as EntityFieldEncodingType;
-      let func = encoders[key] as FieldDecoder<EntityBaseClient>;
-      assert(!this.field_decoders[key]);
-      this.field_decoders[key] = func;
-    }
-  }
 }
-EntityBaseClient.registerFieldDecoders({
-  // Using functions with names to get better callstacks
-  [EntityFieldEncoding.JSON]: function decJSON(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readJSON();
-  },
-  [EntityFieldEncoding.Int]: function decInt(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readInt();
-  },
-  [EntityFieldEncoding.Float]: function decFloat(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readFloat();
-  },
-  [EntityFieldEncoding.AnsiString]: function decAnsiString(
-    ent: EntityBaseClient, pak: Packet, old_value: unknown
-  ): unknown {
-    return pak.readAnsiString();
-  },
-  [EntityFieldEncoding.U8]: function decU8(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readU8();
-  },
-  [EntityFieldEncoding.U32]: function decU32(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readU32();
-  },
-  [EntityFieldEncoding.String]: function decString(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readString();
-  },
-  [EntityFieldEncoding.Boolean]: function decBool(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    return pak.readBool();
-  },
-  [EntityFieldEncoding.Vec2]: function decVec2(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    let v = old_value as Vec2;
-    v[0] = pak.readFloat();
-    v[1] = pak.readFloat();
-    return v;
-  },
-  [EntityFieldEncoding.Vec3]: function decVec3(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    let v = old_value as Vec3;
-    v[0] = pak.readFloat();
-    v[1] = pak.readFloat();
-    v[2] = pak.readFloat();
-    return v;
-  },
-  [EntityFieldEncoding.U8Vec3]: function decU8Vec3(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    let v = old_value as Vec3;
-    v[0] = pak.readU8();
-    v[1] = pak.readU8();
-    v[2] = pak.readU8();
-    return v;
-  },
-  [EntityFieldEncoding.IVec3]: function decIVec3(ent: EntityBaseClient, pak: Packet, old_value: unknown): unknown {
-    let v = old_value as Vec3;
-    v[0] = pak.readInt();
-    v[1] = pak.readInt();
-    v[2] = pak.readInt();
-    return v;
-  },
-});
