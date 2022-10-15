@@ -492,14 +492,18 @@ class ServerEntityManagerImpl<
       }
       if (flags & EALF_HAS_ASSIGNMENTS) {
         action_data.data_assignments = {};
-        let field_id = pak.readInt();
-        while (field_id !== EntityFieldSpecial.Terminate) {
+        let field_id;
+        while ((field_id = pak.readInt())) {
+          let do_default = field_id === EntityFieldSpecial.Default;
+          if (do_default) {
+            field_id = pak.readInt();
+          }
           let field_def = this.field_defs_by_id[field_id];
           assert(field_def);
-          assert(!field_def.sub); // TODO: support
-          let { decoder } = field_def;
-          action_data.data_assignments[field_def.field_name] = decoder(pak, null);
-          field_id = pak.readInt();
+          let { decoder, sub, field_name, default_value } = field_def;
+          assert(!sub); // TODO: support
+          let new_value = do_default ? default_value === undefined ? null : default_value : decoder(pak, null);
+          action_data.data_assignments[field_name] = new_value;
         }
       }
       actions.push(action_data);

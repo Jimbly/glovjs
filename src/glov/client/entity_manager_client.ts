@@ -61,6 +61,7 @@ interface FadingEnt {
 interface EntityFieldDefClient extends EntityFieldDefCommon {
   field_name: string;
   field_id: number;
+  encoder: EntityFieldEncoder<EntityBaseClient>;
 }
 
 function entActionAppend<Entity extends EntityBaseClient>(
@@ -100,17 +101,22 @@ function entActionAppend<Entity extends EntityBaseClient>(
     pak.writeJSON(payload);
   }
   if (flags & EALF_HAS_ASSIGNMENTS) {
-    let { field_defs_by_name, field_encoders } = entity_manager;
+    let { field_defs_by_name } = entity_manager;
     assert(field_defs_by_name);
     for (let key in data_assignments) {
       let field_def = field_defs_by_name[key];
       assert(field_def);
-      assert(!field_def.sub); // TODO: support
-      pak.writeInt(field_def.field_id);
-      let encoder = field_encoders[field_def.encoding];
-      assert(encoder);
-      // TODO: maybe need an optional non-differential decoder here?
-      encoder(ent, pak, data_assignments[key]);
+      let { field_id, sub, default_value, encoder } = field_def;
+      assert(!sub); // TODO: support
+      let value = data_assignments[key];
+      if (value === default_value || value === null && default_value === undefined) {
+        pak.writeInt(EntityFieldSpecial.Default);
+        pak.writeInt(field_id);
+      } else {
+        pak.writeInt(field_id);
+        // TODO: maybe need an optional non-differential decoder here?
+        encoder(ent, pak, value);
+      }
     }
     pak.writeInt(EntityFieldSpecial.Terminate);
   }
@@ -393,11 +399,16 @@ class ClientEntityManagerImpl<
   private initSchema(schema: EntityManagerSchema): void {
     let field_defs: (EntityFieldDefClient|null)[] = [null];
     let field_defs_by_name: Partial<Record<string, EntityFieldDefClient>> = {};
+    let { field_encoders } = this;
     for (let ii = 0; ii < schema.length; ++ii) {
       let ser_def = schema[ii];
       let idx = ii + EntityFieldSpecial.MAX;
+      let encoding = ser_def.e || EntityFieldEncoding.JSON;
+      let encoder = field_encoders[encoding];
+      assert(encoder);
       let def = field_defs[idx] = {
-        encoding: ser_def.e || EntityFieldEncoding.JSON,
+        encoding,
+        encoder,
         default_value: ser_def.d, // *not* `|| undefined` - 0, '', and null allowed here
         sub: ser_def.s || EntityFieldSub.None,
         field_name: ser_def.n,
@@ -485,6 +496,7 @@ class ClientEntityManagerImpl<
     if (data.sub_id === this.subscription_id) {
       this.my_ent_id = data.ent_id;
       this.received_ent_start = true;
+      this.emit('ent_start');
     } // else may have been from a previous connection
   }
 
@@ -588,6 +600,11 @@ class ClientEntityManagerImpl<
 
   hasMyEnt(): boolean {
     return Boolean(this.my_ent_id); // Maybe: && this.getEnt(this.my_ent_id));
+  }
+
+  getMyEntID() {
+    assert(this.my_ent_id);
+    return this.my_ent_id;
   }
 
   getMyEnt(): Entity {
