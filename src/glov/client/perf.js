@@ -426,6 +426,7 @@ export function draw() {
         }
       }
       let keys = Object.keys(by_key);
+      keys.sort();
       for (let ii = 0; ii < keys.length; ++ii) {
         let key = keys[ii];
         let data = by_key[key];
