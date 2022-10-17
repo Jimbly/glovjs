@@ -25,8 +25,7 @@ const { logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
-const packet = require('glov/common/packet.js');
-const { isPacket, packetCreate } = packet;
+const { isPacket, packetCreate, packetDefaultFlags } = require('glov/common/packet.js');
 const path = require('path');
 const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
 const { panic, sendToBuildClients } = require('./server.js');
@@ -271,7 +270,7 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   assert(source.send_pkt_idx);
 
   // Assume new packet needs to be comparable to old packet, in flags and size
-  let pak = packetCreate(ref_pak ? ref_pak.getInternalFlags() : packet.default_flags,
+  let pak = packetCreate(ref_pak ? ref_pak.getInternalFlags() : packetDefaultFlags(),
     ref_pak ? ref_pak.totalSize() + PAK_HEADER_SIZE : 0);
   pak.writeFlags();
   let pkt_idx_offs = pak.getOffset();

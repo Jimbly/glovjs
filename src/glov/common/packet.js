@@ -20,14 +20,14 @@ const FLAG_PACKET_INTERNAL = PACKET_DEBUG | PACKET_RESERVED1 | PACKET_RESERVED2;
 // Internal, runtime-only (not serialized) flags < 8 bits
 const PACKET_UNOWNED_BUFFER = 1 << 8;
 
-exports.default_flags = 0;
-
 /* eslint-disable import/order */
 const assert = require('assert');
 const { max } = Math;
-const { isInteger, log2 } = require('./util.js');
+const { deprecate, isInteger, log2 } = require('./util.js');
 // const { isInteger, log2 } = require('../../build.dev/common/glov/util.js');
 const { base64Encode, base64Decode } = require('./base64.js');
+
+deprecate(exports, 'default_flags');
 
 const FALSYS = [undefined, null, 0, false, '', NaN];
 const PAK_BUF_DEFAULT_SIZE = 1024;
@@ -169,6 +169,18 @@ export function packetBufPoolAlloc(size) {
 }
 export function packetBufPoolFree(dv) {
   poolBuf(dv);
+}
+
+
+let default_flags = 0;
+export function packetDefaultFlags() {
+  return default_flags;
+}
+
+export function packetEnableDebug(enable) {
+  if (enable) {
+    default_flags |= PACKET_DEBUG;
+  }
 }
 
 function Packet(flags, init_size, pak_debug) {
@@ -919,7 +931,7 @@ PacketDebug.prototype.contents = function () {
 
 function packetCreate(flags, init_size) {
   if (flags === undefined) {
-    flags = exports.default_flags;
+    flags = default_flags;
   }
   let pool = (flags & PACKET_DEBUG) ? pak_debug_pool : pak_pool;
   if (pool.length) {

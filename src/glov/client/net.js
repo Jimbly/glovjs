@@ -8,7 +8,7 @@ exports.netInit = init;
 
 /* eslint-disable import/order */
 const { filewatchStartup } = require('./filewatch.js');
-const packet = require('glov/common/packet.js');
+const { packetEnableDebug } = require('glov/common/packet.js');
 const subscription_manager = require('./subscription_manager.js');
 const wsclient = require('./wsclient.js');
 const wscommon = require('glov/common/wscommon.js');
@@ -23,8 +23,10 @@ export function init(params) {
     wsclient.CURRENT_VERSION = params.ver;
   }
   if (String(document.location).match(/^https?:\/\/localhost/)) {
-    console.log('PacketDebug: ON');
-    packet.default_flags |= packet.PACKET_DEBUG;
+    if (!params.no_packet_debug) {
+      console.log('PacketDebug: ON');
+      packetEnableDebug(true);
+    }
     if (!params.no_net_delay) {
       wscommon.netDelaySet();
     }

@@ -8,7 +8,7 @@ global.profilerStart = global.profilerStop = global.profilerStopStart = function
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import packet from 'glov/common/packet';
+import { packetEnableDebug } from 'glov/common/packet';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
 const argv = minimist(process.argv.slice(2));
@@ -126,8 +126,10 @@ export function startup(params) {
   }
   channel_server = glov_channel_server.create();
   if (argv.dev) {
-    console.log('PacketDebug: ON');
-    packet.default_flags = packet.PACKET_DEBUG;
+    if (argv['packet-debug'] !== false) {
+      console.log('PacketDebug: ON');
+      packetEnableDebug(true);
+    }
     if (argv['net-delay'] !== false) {
       netDelaySet();
     }

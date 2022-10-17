@@ -4,7 +4,8 @@ export const PACKET_DEBUG = 1;
 
 type PacketFlags = 0 | typeof PACKET_DEBUG;
 
-export let default_flags: PacketFlags;
+export function packetDefaultFlags(): PacketFlags;
+export function packetEnableDebug(enable: true): void;
 
 export interface Packet {
   readU8: () => number;

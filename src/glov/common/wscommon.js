@@ -9,8 +9,7 @@ const ack = require('./ack.js');
 const assert = require('assert');
 const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
 const { random, round } = Math;
-const packet = require('./packet.js');
-const { isPacket, packetCreate, packetFromBuffer } = packet;
+const { isPacket, packetCreate, packetDefaultFlags, packetFromBuffer } = require('./packet.js');
 
 export const CONNECTION_TIMEOUT = 60000;
 export const PING_TIME = CONNECTION_TIMEOUT / 2;
@@ -196,7 +195,7 @@ export function wsPak(msg, ref_pak, client) {
   assert(typeof msg === 'string' || typeof msg === 'number');
 
   // Assume new packet needs to be comparable to old packet, in flags and size
-  let pak = packetCreate(ref_pak ? ref_pak.getInternalFlags() : packet.default_flags,
+  let pak = packetCreate(ref_pak ? ref_pak.getInternalFlags() : packetDefaultFlags(),
     ref_pak ? ref_pak.totalSize() + PAK_HEADER_SIZE : 0);
   pak.writeFlags();
 
