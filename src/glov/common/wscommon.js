@@ -10,6 +10,7 @@ const assert = require('assert');
 const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
 const { random, round } = Math;
 const { isPacket, packetCreate, packetDefaultFlags, packetFromBuffer } = require('./packet.js');
+const { perfCounterAddValue } = require('./perfcounters.js');
 
 export const CONNECTION_TIMEOUT = 60000;
 export const PING_TIME = CONNECTION_TIMEOUT / 2;
@@ -122,6 +123,7 @@ export function wsPakSendDest(client, pak) {
   if (buf_len !== buf.length) {
     buf = new Uint8Array(buf.buffer, buf.byteOffset, buf_len);
   }
+  perfCounterAddValue('net.send_bytes.total', buf.length);
   wsstats_out.msgs++;
   wsstats_out.bytes += buf.length;
   if (net_delay) {

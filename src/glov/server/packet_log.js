@@ -25,5 +25,5 @@ export function packetLog(source, pak, buf_offs, msg) {
   ple.data_len = data_len;
   receiver.pkt_log_idx = (receiver.pkt_log_idx + 1) % PKT_LOG_SIZE;
 
-  perfCounterAdd(`${receiver.perf_prefix}${typeof msg === 'number' ? 'ack' : msg}`);
+  perfCounterAdd(`${receiver.perf_prefix}${msg}`);
 }

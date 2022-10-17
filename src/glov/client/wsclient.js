@@ -61,7 +61,7 @@ export function WSClient(path) {
 }
 
 WSClient.prototype.logPacketDispatch = function (source, pak, buf_offs, msg) {
-  perfCounterAdd(`ws.${typeof msg === 'number' ? 'ack' : msg}`);
+  perfCounterAdd(`ws.${msg}`);
 };
 
 WSClient.prototype.timeSinceDisconnect = function () {

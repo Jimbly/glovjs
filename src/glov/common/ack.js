@@ -4,6 +4,7 @@
 
 const assert = require('assert');
 const { isPacket } = require('./packet.js');
+const { perfCounterAddValue } = require('./perfcounters.js');
 
 export function ackInitReceiver(receiver) {
   receiver.last_pak_id = 0;
@@ -112,7 +113,10 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
   let pak_initial_offs = pak.getOffset();
   let { err, data, msg, pak_id } = ackReadHeader(pak);
   if (receiver.logPacketDispatch) {
-    receiver.logPacketDispatch(source, pak, pak_initial_offs, msg);
+    perfCounterAddValue('net.recv_bytes.total', pak.totalSize());
+    let msg_name = typeof msg === 'number' ? 'ack' : msg;
+    perfCounterAddValue(`net.recv_bytes.${msg_name}`, pak.totalSize());
+    receiver.logPacketDispatch(source, pak, pak_initial_offs, msg_name);
   }
   let now = Date.now();
   let expecting_response = Boolean(pak_id);
