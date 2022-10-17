@@ -308,7 +308,7 @@ export function main(): void {
   }
 
   function getRoom() {
-    if (!test_room) {
+    if (!test_room && !netDisconnected()) { // includes not doing this if actively logging in
       test_room = netSubs().getChannel('enttest.test', true);
       assert(test_room);
       entity_manager.reinit({
