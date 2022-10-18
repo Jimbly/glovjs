@@ -33,8 +33,8 @@ export type EntityTestDataCommon = {
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function entityTestCommonClass<T extends Constructor<EntityBaseCommon>>(base: T) {
   // Note: `base` is either `EntityBaseServer` or `EntityBaseClient`
-  return class EntitySpireCommon extends base {
-    data!: EntityTestDataCommon;
+  return class EntityTestCommon extends base {
+    declare data: EntityTestDataCommon;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(...args: any[]) {
       super(...args);

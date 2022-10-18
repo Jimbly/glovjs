@@ -30,7 +30,7 @@ interface BatchUpdateParam extends ActionMessageParam {
 }
 
 export class EntityBaseClient extends EntityBaseCommon {
-  entity_manager!: ClientEntityManagerInterface;
+  declare entity_manager: ClientEntityManagerInterface;
   fading_out: boolean;
   fading_in: boolean;
   seq_id: number;

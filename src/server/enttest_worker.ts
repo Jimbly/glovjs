@@ -78,9 +78,9 @@ function visibleAreaSees(pos: Vec2, holder: VAIDHolder): VAID[] {
 }
 
 class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implements VAIDHolder {
-  entity_manager!: ServerEntityManager<EntityTestServer, EntTestWorker>;
+  declare entity_manager: ServerEntityManager<EntityTestServer, EntTestWorker>;
 
-  data!: EntityTestDataServer;
+  declare data: EntityTestDataServer;
 
   last_vaids?: VAID[];
   last_vaids_pos?: Vec2;

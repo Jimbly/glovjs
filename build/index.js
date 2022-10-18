@@ -55,6 +55,8 @@ const babel_plugins_base = [
   ['replace-ts-export-assignment', {}],
 ];
 
+const babel_preset_typescript = ['@babel/preset-typescript', { allowDeclareFields: true }];
+
 function copy(job, done) {
   job.out(job.getFile());
   done();
@@ -89,7 +91,7 @@ gb.task({
           },
           loose: true,
         }],
-        '@babel/preset-typescript'
+        babel_preset_typescript,
       ],
       plugins: babel_plugins_base,
     },
@@ -172,7 +174,7 @@ gb.task({
           },
           loose: true,
         }],
-        '@babel/preset-typescript'
+        babel_preset_typescript,
       ],
       plugins: [
         ...babel_plugins_base,

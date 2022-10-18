@@ -54,7 +54,7 @@ Z.SPRITES = 10;
 const AI_CLAIM_TIME = 2000;
 
 class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
-  entity_manager!: ClientEntityManager<EntityTestClient>;
+  declare entity_manager: ClientEntityManager<EntityTestClient>;
 
   next_move_time!: number;
   in_view: boolean;

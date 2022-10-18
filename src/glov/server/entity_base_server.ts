@@ -98,7 +98,7 @@ interface PlayerEntity extends EntityBaseServer {
 export type DirtyFields = Partial<Record<string, true>>;
 
 export class EntityBaseServer extends EntityBaseCommon {
-  entity_manager!: ServerEntityManagerInterface;
+  declare entity_manager: ServerEntityManagerInterface;
 
   static DEFAULT_PLAYER_DATA = {
     // pos: [0,0]
@@ -373,7 +373,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 
-  field_defs!: Partial<Record<string, EntityFieldDef>>; // on prototype, not instances
+  declare field_defs: Partial<Record<string, EntityFieldDef>>; // on prototype, not instances
   private static last_field_id = EntityFieldSpecial.MAX - 1;
   static registerFieldDefs<DataObjectType>(defs: Record<keyof DataObjectType, EntityFieldDefOpts>): void;
   static registerFieldDefs(defs: Record<string, EntityFieldDefOpts>): void {
@@ -413,7 +413,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 
-  action_defs!: Partial<Record<string, ActionDef<EntityBaseServer>>>; // on prototype, not instances
+  declare action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>>; // on prototype, not instances
   static registerActions<Entity extends EntityBaseServer>(action_defs: ActionDefOpts<Entity>[]): void {
     action_defs.forEach((action_def) => {
       let { action_id } = action_def;
