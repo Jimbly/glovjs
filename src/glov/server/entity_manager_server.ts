@@ -85,6 +85,7 @@ function visibleAreaInit<
     return;
   }
   let va2: VARecord<Entity> = va = sem.visible_areas[vaid] = new VARecord(next);
+  sem.mem_usage.va.count++;
   function done(err?: string) {
     if (err) {
       delete sem.visible_areas[vaid];
@@ -316,12 +317,24 @@ class ServerEntityManagerImpl<
   va_unload_time: number;
   schema: EntityManagerSchema;
   all_client_fields: DirtyFields;
+  mem_usage = {
+    entities: {
+      count: 0,
+    },
+    va: {
+      count: 0,
+    },
+    clients: {
+      count: 0,
+    },
+  };
 
   last_server_time = 0;
 
   constructor(options: ServerEntityManagerOpts<Entity, Worker>) {
     super();
     this.worker = options.worker;
+    (this.worker.default_mem_usage as DataObject).entity_manager = this.mem_usage;
     this.EntityCtor = options.EntityCtor;
     this.field_defs = this.EntityCtor.prototype.field_defs;
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
@@ -400,6 +413,7 @@ class ServerEntityManagerImpl<
     let { id: client_id } = src;
     assert(!this.clients[client_id]);
     let client = this.clients[client_id] = new SEMClientImpl(client_id);
+    this.mem_usage.clients.count++;
     let sub_id = this.worker.getSubscriberId(src.channel_id); // Just for logging for now?
 
     loadPlayerEntity(this, src, client, player_uid, (err, ent_id) => {
@@ -459,6 +473,7 @@ class ServerEntityManagerImpl<
       }
     }
     delete this.clients[client.client_id];
+    this.mem_usage.clients.count--;
   }
 
   deleteEntityInternal(ent: Entity) {
@@ -470,6 +485,7 @@ class ServerEntityManagerImpl<
     let { entities: va_entities } = va;
     delete sem_entities[ent_id];
     delete va_entities[ent_id];
+    this.mem_usage.entities.count--;
   }
 
   deleteEntity(ent_id: EntityID, reason: string): void {
@@ -498,6 +514,7 @@ class ServerEntityManagerImpl<
     assert(!va_entities[ent.id]);
     sem_entities[ent.id] = ent;
     va_entities[ent.id] = ent;
+    this.mem_usage.entities.count++;
   }
 
   addEntityFromSerialized(data: DataObject): void {
@@ -700,10 +717,12 @@ class ServerEntityManagerImpl<
       // inlined to avoid re-looking up the VA every time: this.deleteEntityInternal(ent);
       delete sem_entities[ent_id_string];
       delete va_entities[ent_id_string];
+      this.mem_usage.entities.count--;
       ++count;
     }
     delete this.visible_areas[vaid];
     delete this.visible_areas_unseen[vaid];
+    this.mem_usage.va.count--;
     this.worker.debug(`Unloaded VA ${vaid} (${count} entities)`);
   }
 
