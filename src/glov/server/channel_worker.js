@@ -166,6 +166,13 @@ export class ChannelWorker {
       this.data.public.clients = {};
     }
 
+    this.default_mem_usage = {
+      data_size: {
+        public: 0,
+        private: 0,
+      },
+    };
+
     packetLogInit(this);
 
     // Data store optimisation checks
@@ -217,12 +224,9 @@ export class ChannelWorker {
   }
 
   defaultGetMemoryUsage() {
-    return {
-      data_size: {
-        public: JSON.stringify(this.data.public).length,
-        private: JSON.stringify(this.data.private).length,
-      },
-    };
+    this.default_mem_usage.data_size.public = JSON.stringify(this.data.public).length;
+    this.default_mem_usage.data_size.private = JSON.stringify(this.data.private).length;
+    return this.default_mem_usage;
   }
 
   // Overrideable
