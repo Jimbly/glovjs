@@ -30,7 +30,6 @@ import {
   v2dist,
   v2scale,
   v2set,
-  v2sub,
   v4copy,
   v4lerp,
   vec2,
@@ -46,7 +45,7 @@ import {
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
 
-const { PI, atan2, cos, max, random, sin } = Math;
+const { PI, cos, max, random, sin } = Math;
 
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
@@ -281,8 +280,8 @@ export function main(): void {
 
     v2addScale(test_character.pos, test_character.pos, impulse, SPEED);
 
-    let aim = v2sub(vec2(), input.mousePos(), test_character.pos);
-    test_character.rot = atan2(aim[0], -aim[1]);
+    // let aim = v2sub(vec2(), input.mousePos(), test_character.pos);
+    // test_character.rot = atan2(aim[0], -aim[1]);
 
     // Network send
     entity_pos_manager.updateMyPos(
@@ -370,6 +369,15 @@ export function main(): void {
         let pos = [test_character.pos[0] + sin(theta) * r, test_character.pos[1] + cos(theta) * r, 0];
         test_room.send('spawn', { pos });
       }
+      y += ui.button_height + 4;
+
+      if (ui.buttonText({
+        x: 0, y,
+        text: 'Reset Current VA',
+      })) {
+        test_room.send('resetva');
+      }
+      y += ui.button_height + 4;
 
       sprite_game_bg.draw({
         x: 0, y: 0, z: Z.BACKGROUND,

@@ -77,6 +77,12 @@ function visibleAreaSees(pos: Vec2, holder: VAIDHolder): VAID[] {
   return holder.last_vaids;
 }
 
+function visibleAreaGet(pos: Vec2): VAID {
+  let vax = floor((pos[0]) / VA_SIZE);
+  let vay = floor((pos[1]) / VA_SIZE);
+  return vax + vay * 100;
+}
+
 class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implements VAIDHolder {
   declare entity_manager: ServerEntityManager<EntityTestServer, EntTestWorker>;
 
@@ -251,6 +257,24 @@ EntTestWorker.registerClientHandler('move', function (
   resp_func();
 });
 quietMessagesSet(['move', 'ent_action_list']);
+
+EntTestWorker.registerClientHandler('resetva', function (
+  this: EntTestWorker,
+  src: HandlerSource,
+  data: unknown,
+  resp_func: ErrorCallback<string>
+) {
+  let client = this.entity_manager.getClient(src.id);
+  let ent = this.entity_manager.getEntityForClient(client);
+  let pos: Vec2 | undefined = ent && ent.data.pos;
+  if (!pos) {
+    let necd = client.getUserData<NonEntClientData>();
+    pos = necd.pos;
+  }
+  let vaid = visibleAreaGet(pos);
+  this.infoSrc(src, `Reseting VAID ${vaid}`);
+  this.entity_manager.visibleAreaReset(vaid, resp_func);
+});
 
 entityManagerWorkerInit(EntTestWorker);
 

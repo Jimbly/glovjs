@@ -42,7 +42,7 @@ import {
 
 const { min } = Math;
 
-export const ENTITY_LOG_VERBOSE = false;
+export const ENTITY_LOG_VERBOSE = true;
 
 export interface EntityManagerReadyWorker<
   Entity extends EntityBaseServer,
@@ -55,31 +55,42 @@ export interface EntityManagerReadyWorker<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServerEntityManagerInterface = ServerEntityManager<any,any>;
 
-type VARecord = {
+class VARecord {
   loading: NetErrorCallback<never>[] | null;
-};
+  client_count = 0;
+  in_unseen_set = false;
+  last_needed_timestamp = 0; // was either seen or modified
+
+  constructor(on_load?: NetErrorCallback<never>) {
+    this.loading = on_load ? [on_load] : [];
+  }
+}
 
 function visibleAreaInit<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
->(sem: ServerEntityManager<Entity, Worker>, vaid: VAID, next: ErrorCallback<never, string>) {
+>(sem: ServerEntityManager<Entity, Worker>, vaid: VAID, next?: ErrorCallback<never, string>) {
   let va = sem.visible_areas[vaid];
   if (va) {
     if (va.loading) {
-      va.loading.push(next);
+      if (next) {
+        va.loading.push(next);
+      }
       return;
     }
-    return void next();
+    if (next) {
+      return void next();
+    }
+    return;
   }
-  let va2: VARecord = va = sem.visible_areas[vaid] = {
-    loading: [next],
-  };
+  let va2: VARecord = va = sem.visible_areas[vaid] = new VARecord(next);
   function done(err?: string) {
     if (err) {
       delete sem.visible_areas[vaid];
     }
     callEach(va2.loading, va2.loading = null, err);
   }
+  sem.vaAddToUnseenSet(vaid, va);
   sem.worker.log(`Initializing VisibleArea ${vaid}: Loading existing entities`);
   sem.worker.getBulkChannelData(`ents.${vaid}`, null, function (err?: string, ent_data?: DataObject[]) {
     if (err) {
@@ -104,6 +115,7 @@ function visibleAreaInit<
         // during regular ticking.
         assert(!ent.in_dirty_list);
         assert(ent.current_vaid !== undefined);
+        ent.last_vaid = ent.current_vaid;
       }
       sem.emit('visible_area_load', vaid);
     }
@@ -208,7 +220,7 @@ function newEntsInVA<
   for (let ent_id_string in sem.entities) {
     let ent = sem.entities[ent_id_string]!;
     if (!ent.in_dirty_list && !known_entities[ent.id]) {
-      if (ent.visibleAreaGet() === vaid) {
+      if (ent.visibleAreaGet() === vaid) { // since not dirty, this will be == last_vaid == current_vaid
         known_entities[ent.id] = true;
         array_out.push(ent);
       }
@@ -257,6 +269,7 @@ interface ServerEntityManagerOpts<
   worker: Worker;
   EntityCtor: typeof EntityBaseServer;
   max_ents_per_tick?: number;
+  va_unload_time?: number;
 }
 
 export type ServerEntityManager<
@@ -289,14 +302,18 @@ class ServerEntityManagerImpl<
   player_uid_to_client: Partial<Record<string, SEMClient>> = {}; // player_uid -> SEMClient
   visible_areas: Partial<Record<VAID, VARecord>> = {};
   visible_areas_need_save: Partial<Record<VAID, true>> = {};
+  visible_areas_unseen: Partial<Record<VAID, true>> = {};
   visible_area_broadcasts: Partial<Record<VAID, EntityManagerEvent[]>> = {};
   ent_deletes: Partial<Record<VAID, EntDelete[]>> = {};
   entities: Partial<Record<EntityID, Entity>> = {};
   flushing_changes = false;
   dirty_list: Entity[] = [];
   max_ents_per_tick: number;
+  va_unload_time: number;
   schema: EntityManagerSchema;
   all_client_fields: DirtyFields;
+
+  last_server_time = 0;
 
   constructor(options: ServerEntityManagerOpts<Entity, Worker>) {
     super();
@@ -304,6 +321,7 @@ class ServerEntityManagerImpl<
     this.EntityCtor = options.EntityCtor;
     this.field_defs = this.EntityCtor.prototype.field_defs;
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
+    this.va_unload_time = options.va_unload_time || 10000;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];
@@ -347,32 +365,27 @@ class ServerEntityManagerImpl<
   }
 
   visibleAreaReset(vaid: VAID, resp_func: ErrorCallback<string>): void {
-    let va = this.visible_areas[vaid];
-    if (!va) {
+    let old_va_check = this.visible_areas[vaid];
+    if (!old_va_check) {
       return void resp_func('VisibleArea not loaded');
     }
-    if (va.loading) {
+    let old_va = old_va_check;
+    if (old_va.loading) {
       return void resp_func('VisibleArea still loading');
     }
 
-    this.worker.setBulkChannelData(`ents.${vaid}`, null, (err?: string) => {
-      if (err) {
-        return void resp_func(err);
+    let { entities } = this;
+    for (let ent_id_string in entities) {
+      let ent = entities[ent_id_string]!;
+      if (ent.current_vaid === vaid && !ent.is_player) {
+        this.deleteEntity(ent.id, 'debug');
       }
-      let { entities } = this;
-      for (let ent_id_string in entities) {
-        let ent = entities[ent_id_string]!;
-        if (ent.visibleAreaGet() === vaid && !ent.is_player) {
-          this.deleteEntity(ent.id, 'debug');
-        }
-      }
-      delete this.visible_areas[vaid];
-      delete this.visible_areas_need_save[vaid];
+    }
 
-      visibleAreaInit(this, vaid, (err) => {
-        resp_func(err, 'VisibleArea re-initialized');
-      });
-    });
+    this.worker.log(`Reinitializing VisibleArea ${vaid}: Asking worker to initialize`);
+    this.emit('visible_area_init', vaid);
+
+    resp_func(null, 'VisibleArea re-initialized');
   }
 
   clientJoin(
@@ -400,7 +413,7 @@ class ServerEntityManagerImpl<
         sub_id,
       });
       // Join and initialize appropriate visible areas
-      client.visible_area_sees = this.worker.semClientInitialVisibleAreaSees(client);
+      this.clientSetVisibleAreaSeesInternal(client, this.worker.semClientInitialVisibleAreaSees(client));
       this.sendInitialEntsToClient(client, false, () => {
         // By now, client has already received the initial update for all relevant
         //   entities (should include own entity, if they have one)
@@ -421,6 +434,7 @@ class ServerEntityManagerImpl<
       // This function will be called again when loading flag is cleared
       return;
     }
+    this.clientSetVisibleAreaSeesInternal(client, []);
     let { player_uid, ent_id } = client;
     if (player_uid) {
       if (ent_id) {
@@ -446,13 +460,15 @@ class ServerEntityManagerImpl<
     assert.equal(typeof ent_id, 'number');
     let ent = this.entities[ent_id];
     assert(ent);
-    let vaid = ent.visibleAreaGet();
-    let dels = this.ent_deletes[vaid] = this.ent_deletes[vaid] || [];
+    let { last_vaid } = ent;
+    assert(last_vaid !== undefined);
+    let dels = this.ent_deletes[last_vaid] = this.ent_deletes[last_vaid] || [];
     dels.push([ent_id, reason]);
-    delete this.entities[ent_id];
     if (!ent.is_player) {
-      this.visible_areas_need_save[vaid] = true;
+      this.visible_areas_need_save[last_vaid] = true;
     }
+
+    delete this.entities[ent_id];
   }
 
   addEntityFromSerialized(data: DataObject): void {
@@ -463,8 +479,8 @@ class ServerEntityManagerImpl<
     ent.fromSerialized(data);
     ent.fixupPostLoad();
 
-    let vaid = ent.visibleAreaGet();
-    sem.visible_areas_need_save[vaid] = true;
+    assert.equal(ent.visibleAreaGet(), ent.current_vaid);
+    sem.visible_areas_need_save[ent.current_vaid] = true;
 
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(this, ent);
@@ -576,11 +592,98 @@ class ServerEntityManagerImpl<
     this.dirty(ent, field, null);
   }
 
+  vaRemoveFromUnseenSet(vaid: VAID, va: VARecord) {
+    assert(va.in_unseen_set);
+    va.in_unseen_set = false;
+    delete this.visible_areas_unseen[vaid];
+    va.last_needed_timestamp = 0;
+  }
+  vaAddToUnseenSet(vaid: VAID, va: VARecord) {
+    assert(!va.in_unseen_set);
+    va.last_needed_timestamp = this.last_server_time;
+    va.in_unseen_set = true;
+    this.visible_areas_unseen[vaid] = true;
+  }
+
+  clientSetVisibleAreaSeesInternal(client: SEMClient, new_visible_areas: VAID[]): void {
+    for (let ii = 0; ii < new_visible_areas.length; ++ii) {
+      let vaid = new_visible_areas[ii];
+      let va = this.visible_areas[vaid];
+      if (!va) {
+        visibleAreaInit(this, vaid);
+        va = this.visible_areas[vaid];
+      }
+      assert(va);
+      va.client_count++;
+      if (va.in_unseen_set) {
+        this.vaRemoveFromUnseenSet(vaid, va);
+      }
+    }
+    let old = client.visible_area_sees;
+    for (let ii = 0; ii < old.length; ++ii) {
+      let vaid = old[ii];
+      let va = this.visible_areas[vaid];
+      assert(va);
+      va.client_count--;
+      if (!va.client_count) {
+        this.vaAddToUnseenSet(vaid, va);
+      }
+    }
+    client.visible_area_sees = new_visible_areas;
+  }
+
   // Optional resp_func called when all full updates have been sent to the client,
   // but dirty ents still pending, likely including one's own entity.
   clientSetVisibleAreaSees(client: SEMClient, new_visible_areas: VAID[], resp_func?: NetErrorCallback<never>): void {
-    client.visible_area_sees = new_visible_areas;
+    this.clientSetVisibleAreaSeesInternal(client, new_visible_areas);
     this.sendInitialEntsToClient(client, true, resp_func);
+  }
+
+  private unloadVA(vaid: VAID) {
+    // unload all relevant entities and other tracking structures
+    let va = this.visible_areas[vaid];
+    assert(va);
+    assert(!va.loading);
+    assert(!this.visible_areas_need_save[vaid]);
+    assert(!this.visible_area_broadcasts[vaid]);
+    let { entities } = this;
+    let count = 0;
+    for (let ent_id_string in entities) {
+      let ent_id = Number(ent_id_string);
+      let ent = entities[ent_id]!;
+      if (ent.is_player) {
+        continue;
+      }
+      let { current_vaid, last_vaid } = ent;
+      if (current_vaid !== vaid) {
+        continue;
+      }
+      assert.equal(current_vaid, last_vaid); // Shouldn't be mid-move if this is getting unloaded!
+      delete entities[ent_id];
+      ++count;
+    }
+    delete this.visible_areas[vaid];
+    delete this.visible_areas_unseen[vaid];
+    this.worker.debug(`Unloaded VA ${vaid} (${count} entities)`);
+  }
+
+  last_unload_time = 0;
+  private unloadUnseenVAs() {
+    let unload_time = this.last_server_time - this.va_unload_time;
+    if (this.last_unload_time > unload_time) {
+      // Did an unload recently, nothing this tick
+      return;
+    }
+    this.last_unload_time = unload_time;
+    let { visible_areas_unseen, visible_areas, visible_areas_need_save } = this;
+    for (let vaid_string in visible_areas_unseen) {
+      let vaid = Number(vaid_string);
+      let va = visible_areas[vaid];
+      assert(va);
+      if (!va.loading && va.last_needed_timestamp < unload_time && !visible_areas_need_save[vaid]) {
+        this.unloadVA(vaid);
+      }
+    }
   }
 
   private flushChangesToDataStores() {
@@ -603,14 +706,14 @@ class ServerEntityManagerImpl<
     let { entities } = this;
     for (let ent_id_string in entities) {
       let ent = entities[ent_id_string]!;
-      if (ent.isPlayer()) {
+      if (ent.is_player) {
         if (ent.need_save) {
           ++left;
           ent.savePlayerEntity(done);
           ent.need_save = false;
         }
       } else {
-        let vaid = ent.visibleAreaGet();
+        let vaid = ent.current_vaid;
         if (visible_areas_need_save[vaid]) {
           let bv = by_vaid[vaid];
           if (!bv) {
@@ -621,7 +724,29 @@ class ServerEntityManagerImpl<
       }
     }
 
-    for (let vaid in visible_areas_need_save) {
+    for (let vaid_string in visible_areas_need_save) {
+      let vaid = Number(vaid_string);
+      let va = this.visible_areas[vaid];
+      if (!va) {
+        // Trying to save entities in an area that is not loaded?  something must
+        //   have moved out of view into an unloaded VA
+        // TODO: maybe this init should happen when the entity moves?
+        visibleAreaInit(this, vaid);
+        va = this.visible_areas[vaid];
+      }
+      assert(va);
+      if (va.loading) {
+        // still loading, cannot save yet
+        // re-add for next flush
+        this.visible_areas_need_save[vaid] = true;
+        // also don't flush until this is loaded
+        ++left;
+        va.loading.push(done);
+        continue;
+      }
+      // If it's in the unseen list, flag it as still needed
+      va.last_needed_timestamp = this.last_server_time;
+
       let ents: Entity[] = by_vaid[vaid] || [];
       ++left;
       let ent_data = ents.map(toSerializedStorage);
@@ -721,21 +846,36 @@ class ServerEntityManagerImpl<
       });
     });
 
+    let my_ent = this.getEntityForClient(client);
+
     let all_dels: EntDelete[][] | null = null;
     if (needs_deletes) {
       let dels: EntDelete[] = [];
       for (let ent_id_str in known_entities) {
         let ent_id = Number(ent_id_str);
         let other_ent = this.entities[ent_id];
+        if (other_ent === my_ent) {
+          // Never delete own entity
+          continue;
+        }
         if (!other_ent) {
-          // Presumably there is a delete queued in the VA we just left.
+          // Presumably there is a delete queued, possibly in the VA we just left.
           // Could look up why somewhere in ent_deletes, but presumably they're now
           //   out of view anyway, so just sending 'unknown'
+          // TODO: This might go slightly wrong if there's an unrelated delete
+          //   right near us on the same frame we transition!  Maybe need to do
+          //   something smarter (either here or on the client when it next receives
+          //   an update packet)
           dels.push([ent_id, 'unknown']);
           delete known_entities[ent_id];
         } else {
-          let vaid = other_ent.visibleAreaGet();
-          if (!needed_areas.includes(vaid)) {
+          let { last_vaid, current_vaid } = other_ent;
+          // Delete this entity if either the current or last VAID is in an area we no longer see.
+          // If it just transitioned from last(seen) to current(unseen), we would get the delete later
+          // If it just transitioned from last(just now unseen) to current(unseen) we would never get the delete
+          // If it just transitioned from last(unseen) to current(seen), we would not get a delete if it transitions
+          //    back to last(unseen) between now and when the updates are broadcast
+          if (last_vaid !== undefined && !needed_areas.includes(last_vaid) || !needed_areas.includes(current_vaid)) {
             dels.push([ent_id, 'oldva']);
             delete known_entities[ent_id];
           }
@@ -749,11 +889,10 @@ class ServerEntityManagerImpl<
       }
     }
 
-    let ent = this.getEntityForClient(client);
-    if (ent && !known_entities[ent.id]) {
+    if (my_ent && !known_entities[my_ent.id]) {
       // Always send own entity if it is currently unknown
-      known_entities[ent.id] = true;
-      sync_ents.push(ent);
+      known_entities[my_ent.id] = true;
+      sync_ents.push(my_ent);
     }
 
     if (sync_ents.length || all_dels) {
@@ -1039,6 +1178,7 @@ class ServerEntityManagerImpl<
   }
 
   tick(dt: number, server_time: number): void {
+    this.last_server_time = server_time;
     this.update_per_va = {};
     let { clients, dirty_list, max_ents_per_tick, update_per_va } = this;
 
@@ -1070,6 +1210,9 @@ class ServerEntityManagerImpl<
       delete this.ent_deletes[vaid];
     }
 
+    if (!this.flushing_changes) {
+      this.unloadUnseenVAs();
+    }
     this.flushChangesToDataStores();
     this.update_per_va = null!; // only valid/used inside `tick()`, release references so they can be GC'd
   }
