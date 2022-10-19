@@ -833,7 +833,7 @@ class ServerEntityManagerImpl<
     new_ents: Entity[],
     deletes: EntDelete[][] | null,
   ): void {
-    let debug: string[] = [];
+    let debug: string[] | null = ENTITY_LOG_VERBOSE ? [] : null;
     let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 1);
     pak.writeU8(EntityUpdateCmd.IsInitialList);
     if (!client.has_schema) {
@@ -851,7 +851,9 @@ class ServerEntityManagerImpl<
         for (let jj = 0; jj < dels.length; ++jj) {
           let pair = dels[jj];
           let [ent_id, reason] = pair;
-          debug.push(`${ent_id}:X(${reason})`);
+          if (debug) {
+            debug.push(`${ent_id}:X(${reason})`);
+          }
           pak.writeU8(EntityUpdateCmd.Delete);
           pak.writeInt(ent_id);
           pak.writeAnsiString(reason);
@@ -860,7 +862,7 @@ class ServerEntityManagerImpl<
     }
     pak.writeU8(EntityUpdateCmd.Terminate);
     if (ENTITY_LOG_VERBOSE) {
-      this.worker.debug(`->${client.client_id}: ent_update(initial) ${debug.join(';')}`);
+      this.worker.debug(`->${client.client_id}: ent_update(initial) ${debug!.join(';')}`);
     }
     pak.send();
   }
@@ -961,13 +963,13 @@ class ServerEntityManagerImpl<
     done();
   }
 
-  private addFullEntToPacket(pak: Packet, debug_out: string[], ent: Entity): void {
+  private addFullEntToPacket(pak: Packet, debug_out: string[] | null, ent: Entity): void {
     let { field_defs, all_client_fields } = this;
     pak.writeU8(EntityUpdateCmd.Full);
     pak.writeInt(ent.id);
 
     let data: DataObject = ent.data;
-    let debug = [];
+    let debug: string[] | null = debug_out ? [] : null;
 
     for (let field in all_client_fields) {
       let field_def = field_defs[field];
@@ -979,7 +981,9 @@ class ServerEntityManagerImpl<
         continue;
       }
       if (sub) {
-        debug.push(field);
+        if (debug) {
+          debug.push(field);
+        }
         pak.writeInt(field_id);
         if (sub === EntityFieldSub.Array) {
           assert(Array.isArray(value));
@@ -1001,12 +1005,16 @@ class ServerEntityManagerImpl<
           pak.writeAnsiString('');
         }
       } else {
-        debug.push(field);
+        if (debug) {
+          debug.push(field);
+        }
         pak.writeInt(field_id);
         encoder(ent, pak, value);
       }
     }
-    debug_out.push(`${ent.id}:${debug.join()}`);
+    if (debug_out) {
+      debug_out.push(`${ent.id}:${debug!.join()}`);
+    }
     pak.writeInt(EntityFieldSpecial.Terminate);
   }
 
@@ -1176,12 +1184,14 @@ class ServerEntityManagerImpl<
         pak.writeJSON(this.schema);
       }
       let new_ents: EntityID[] | undefined;
-      let debug: string[] = [];
+      let debug: string[] | null = ENTITY_LOG_VERBOSE ? [] : null;
       if (va_updates) {
         for (let ii = 0; ii < va_updates.length; ++ii) {
           let per_va = va_updates[ii];
           pak.append(per_va.pak);
-          debug = debug.concat(per_va.debug);
+          if (debug) {
+            debug = debug.concat(per_va.debug);
+          }
           for (let jj = 0; jj < per_va.ent_ids.length; ++jj) {
             let ent_id = per_va.ent_ids[jj];
             if (!known_entities[ent_id]) {
@@ -1208,7 +1218,9 @@ class ServerEntityManagerImpl<
                 // Or, it's a full delete
                 !current_ent
               ) {
-                debug.push(`${ent_id}:X(${reason})`);
+                if (debug) {
+                  debug.push(`${ent_id}:X(${reason})`);
+                }
                 pak.writeU8(EntityUpdateCmd.Delete);
                 pak.writeInt(ent_id);
                 pak.writeAnsiString(reason);
@@ -1229,7 +1241,7 @@ class ServerEntityManagerImpl<
       pak.writeU8(EntityUpdateCmd.Terminate);
       if (ENTITY_LOG_VERBOSE) {
         // TODO: logging is probably too verbose, combine to summary for all updates sent?
-        this.worker.debug(`->${client.client_id}: ent_update(tick) ${debug.join(';')}`);
+        this.worker.debug(`->${client.client_id}: ent_update(tick) ${debug!.join(';')}`);
       }
       pak.send();
     }
