@@ -91,27 +91,51 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   last_vaids?: VAID[];
   last_vaids_pos?: Vec2;
 
-  // cb(err, constructed entity)
+  /// Example: no saved player data
+  // static loadPlayerEntityImpl = ((
+  //   sem: ServerEntityManager<Entity, EntTestWorker>,
+  //   src: ClientHandlerSource,
+  //   player_uid: string,
+  //   cb: NetErrorCallback<Entity>
+  // ): void => {
+  //   // Not loading anything
+  //   let ent = new this(-1, sem);
+  //   ent.fromSerialized({
+  //     pos: initialPos(),
+  //     type: EntityType.Player,
+  //     display_name: src.display_name,
+  //   });
+  //   cb(null, ent);
+  // }) as typeof EntityBaseServer.loadPlayerEntityImpl;
+  // savePlayerEntity(cb: () => void): void {
+  //   // Not saving anything
+  //   cb();
+  // }
+
+  /// Example: default player data saving/loading, add current display name upon load
+  static DEFAULT_PLAYER_DATA = {
+    type: EntityType.Player,
+    pos: [10,10,0],
+  };
   static loadPlayerEntityImpl = ((
     sem: ServerEntityManager<Entity, EntTestWorker>,
     src: ClientHandlerSource,
     player_uid: string,
     cb: NetErrorCallback<Entity>
   ): void => {
-    // Not loading anything
-    let ent = new this(-1, sem);
-    ent.fromSerialized({
-      pos: initialPos(),
-      type: EntityType.Player,
-      display_name: src.display_name,
-    });
-    cb(null, ent);
+    this.DEFAULT_PLAYER_DATA.pos = initialPos();
+    EntityBaseServer.loadPlayerEntityImpl.call(this, sem, src, player_uid,
+      (err: null | string, ent_in?: EntityBaseServer) => {
+        if (err) {
+          return void cb(err);
+        }
+        assert(ent_in);
+        let ent = ent_in as Entity;
+        ent.data.display_name = src.display_name;
+        cb(null, ent);
+      }
+    );
   }) as typeof EntityBaseServer.loadPlayerEntityImpl;
-
-  savePlayerEntity(cb: () => void): void {
-    // Not saving anything
-    cb();
-  }
 
   visibleAreaGet(): VAID {
     return floor(this.data.pos[0] / VA_SIZE) + floor(this.data.pos[1] / VA_SIZE) * 100;
@@ -184,7 +208,9 @@ class EntTestWorker extends ChannelWorker {
     if (isClientHandlerSource(src)) {
       if (src.user_id) {
         // logged in, get an entity
-        this.entity_manager.clientJoin(src, src.id);
+        /// Example: no persisted player data
+        // this.entity_manager.clientJoin(src, src.id);
+        this.entity_manager.clientJoin(src, src.user_id);
       } else {
         // anonymous, no entity
         this.entity_manager.clientJoin(src, null);
