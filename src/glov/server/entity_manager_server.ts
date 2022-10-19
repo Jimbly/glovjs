@@ -286,7 +286,7 @@ type EntDelete = [EntityID, string];
 
 type PerVAUpdate = {
   ent_ids: EntityID[];
-  pak: Packet;
+  pak: Packet | null;
   debug: string[];
 };
 
@@ -1018,16 +1018,18 @@ class ServerEntityManagerImpl<
     pak.writeInt(EntityFieldSpecial.Terminate);
   }
 
-  private addDiffToPacket(pak: Packet, debug_out: string[], ent: Entity): boolean {
+  private addDiffToPacket(per_va: PerVAUpdate, ent: Entity): boolean {
     let { field_defs } = this;
     let data: DataObject = ent.data;
     let wrote_header = false;
+    let pak!: Packet; // Initialized with wrote_header
     let debug = [];
     let { dirty_fields, dirty_sub_fields } = ent;
 
     // Clear these *before* iterating, in case of crash, don't crash repeatedly!
     ent.dirty_fields = {};
     ent.dirty_sub_fields = {};
+
 
     for (let field in dirty_fields) {
       let field_def = field_defs[field];
@@ -1038,6 +1040,12 @@ class ServerEntityManagerImpl<
       }
       assert(typeof field_id === 'number');
       if (!wrote_header) {
+        if (!pak) {
+          if (!per_va.pak) {
+            per_va.pak = packetCreate();
+          }
+          pak = per_va.pak;
+        }
         pak.writeU8(EntityUpdateCmd.Diff);
         pak.writeInt(ent.id);
         wrote_header = true;
@@ -1083,7 +1091,7 @@ class ServerEntityManagerImpl<
       }
     }
     if (wrote_header) {
-      debug_out.push(`${ent.id}:${debug.join()}`);
+      per_va.debug.push(`${ent.id}:${debug.join()}`);
       pak.writeInt(EntityFieldSpecial.Terminate);
     }
     return wrote_header;
@@ -1099,14 +1107,13 @@ class ServerEntityManagerImpl<
 
     let per_va = update_per_va[vaid];
     if (!per_va) {
-      // TODO: only allocate this if actually needed in addDiffToPacket/etc
       per_va = update_per_va[vaid] = {
         ent_ids: [],
-        pak: packetCreate(),
+        pak: null,
         debug: [],
       };
     }
-    let had_diff = this.addDiffToPacket(per_va.pak, per_va.debug, ent);
+    let had_diff = this.addDiffToPacket(per_va, ent);
 
     let vaid_changed = vaid !== ent.last_vaid;
     if (vaid_changed) {
@@ -1140,9 +1147,12 @@ class ServerEntityManagerImpl<
       if (!per_va) {
         per_va = update_per_va[vaid] = {
           ent_ids: [],
-          pak: packetCreate(),
+          pak: null,
           debug: [],
         };
+      }
+      if (!per_va.pak) {
+        per_va.pak = packetCreate();
       }
       let pak = per_va.pak;
       for (let ii = 0; ii < broadcasts.length; ++ii) {
@@ -1162,12 +1172,25 @@ class ServerEntityManagerImpl<
     let { visible_area_sees: needed_areas, known_entities } = client;
     let va_updates: PerVAUpdate[] | undefined;
     let va_deletes: EntDelete[][] | undefined;
+    let new_ents: EntityID[] | undefined;
     for (let ii = 0; ii < needed_areas.length; ++ii) {
       let vaid = needed_areas[ii];
       let per_va = update_per_va[vaid];
       if (per_va) {
-        va_updates = va_updates || [];
-        va_updates.push(per_va);
+        if (per_va.pak) {
+          va_updates = va_updates || [];
+          va_updates.push(per_va);
+        }
+        for (let jj = 0; jj < per_va.ent_ids.length; ++jj) {
+          let ent_id = per_va.ent_ids[jj];
+          if (!known_entities[ent_id]) {
+            known_entities[ent_id] = true;
+            if (!new_ents) {
+              new_ents = [];
+            }
+            new_ents.push(ent_id);
+          }
+        }
       }
       let dels = this.ent_deletes[vaid];
       if (dels) {
@@ -1176,31 +1199,22 @@ class ServerEntityManagerImpl<
       }
     }
 
-    if (va_updates || va_deletes) {
+    if (va_updates || va_deletes || new_ents) {
       let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 1);
       if (!client.has_schema) {
         client.has_schema = true;
         pak.writeU8(EntityUpdateCmd.Schema);
         pak.writeJSON(this.schema);
       }
-      let new_ents: EntityID[] | undefined;
       let debug: string[] | null = ENTITY_LOG_VERBOSE ? [] : null;
       if (va_updates) {
         for (let ii = 0; ii < va_updates.length; ++ii) {
           let per_va = va_updates[ii];
-          pak.append(per_va.pak);
+          if (per_va.pak) {
+            pak.append(per_va.pak);
+          }
           if (debug) {
             debug = debug.concat(per_va.debug);
-          }
-          for (let jj = 0; jj < per_va.ent_ids.length; ++jj) {
-            let ent_id = per_va.ent_ids[jj];
-            if (!known_entities[ent_id]) {
-              known_entities[ent_id] = true;
-              if (!new_ents) {
-                new_ents = [];
-              }
-              new_ents.push(ent_id);
-            }
           }
         }
       }
@@ -1274,7 +1288,9 @@ class ServerEntityManagerImpl<
     // Reset / clear state
     for (let vaid in update_per_va) {
       let per_va = update_per_va[vaid]!;
-      per_va.pak.pool();
+      if (per_va.pak) {
+        per_va.pak.pool();
+      }
     }
     for (let vaid in this.ent_deletes) {
       delete this.ent_deletes[vaid];
