@@ -55,11 +55,12 @@ export interface EntityManagerReadyWorker<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServerEntityManagerInterface = ServerEntityManager<any,any>;
 
-class VARecord {
+class VARecord<Entity extends EntityBaseServer> {
   loading: NetErrorCallback<never>[] | null;
   client_count = 0;
   in_unseen_set = false;
   last_needed_timestamp = 0; // was either seen or modified
+  entities: Partial<Record<EntityID, Entity>> = {};
 
   constructor(on_load?: NetErrorCallback<never>) {
     this.loading = on_load ? [on_load] : [];
@@ -83,7 +84,7 @@ function visibleAreaInit<
     }
     return;
   }
-  let va2: VARecord = va = sem.visible_areas[vaid] = new VARecord(next);
+  let va2: VARecord<Entity> = va = sem.visible_areas[vaid] = new VARecord(next);
   function done(err?: string) {
     if (err) {
       delete sem.visible_areas[vaid];
@@ -107,7 +108,7 @@ function visibleAreaInit<
       for (let ii = 0; ii < ent_data.length; ++ii) {
         // Same as addEntityFromSerialized(), but does not flag `visible_areas_need_save`
         let ent_id = ++sem.last_ent_id;
-        let ent = sem.entities[ent_id] = new sem.EntityCtor(ent_id, sem) as Entity;
+        let ent = new sem.EntityCtor(ent_id, sem) as Entity;
         ent.fromSerialized(ent_data[ii]);
         ent.fixupPostLoad();
         // Dirty flag should not be set: anyone who sees this VA must be waiting to send
@@ -116,6 +117,8 @@ function visibleAreaInit<
         assert(!ent.in_dirty_list);
         assert(ent.current_vaid !== undefined);
         ent.last_vaid = ent.current_vaid;
+        assert.equal(ent.current_vaid, vaid);
+        sem.addEntityInternal(ent);
       }
       sem.emit('visible_area_load', vaid);
     }
@@ -193,13 +196,13 @@ function loadPlayerEntity<
     assert.equal(client, sem.player_uid_to_client[player_uid]); // hasn't changed async while loading
     let ent_id = ++sem.last_ent_id;
     ent.id = /*ent.data.id = */ent_id;
-    sem.entities[ent_id] = ent;
-    assert(ent.current_vaid !== undefined);
     // ent.user_id = user_id; // not currently needed, but might be generally useful?
     ent.player_uid = player_uid;
     ent.is_player = true;
     client.ent_id = ent_id;
     ent.fixupPostLoad();
+
+    sem.addEntityInternal(ent);
 
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(sem, ent);
@@ -217,13 +220,14 @@ function newEntsInVA<
   vaid: VAID,
   known_entities: Partial<Record<EntityID, true>>
 ): void {
-  for (let ent_id_string in sem.entities) {
-    let ent = sem.entities[ent_id_string]!;
+  let va = sem.vaGetRecord(vaid);
+  let { entities: va_entities } = va;
+  for (let ent_id_string in va_entities) {
+    let ent = va_entities[ent_id_string]!;
     if (!ent.in_dirty_list && !known_entities[ent.id]) {
-      if (ent.visibleAreaGet() === vaid) { // since not dirty, this will be == last_vaid == current_vaid
-        known_entities[ent.id] = true;
-        array_out.push(ent);
-      }
+      // Note: since not dirty, current_vaid === last_vaid
+      known_entities[ent.id] = true;
+      array_out.push(ent);
     }
   }
 }
@@ -300,7 +304,7 @@ class ServerEntityManagerImpl<
   last_ent_id: EntityID = 0;
   clients: Partial<Record<ClientID, SEMClient>> = {};
   player_uid_to_client: Partial<Record<string, SEMClient>> = {}; // player_uid -> SEMClient
-  visible_areas: Partial<Record<VAID, VARecord>> = {};
+  visible_areas: Partial<Record<VAID, VARecord<Entity>>> = {};
   visible_areas_need_save: Partial<Record<VAID, true>> = {};
   visible_areas_unseen: Partial<Record<VAID, true>> = {};
   visible_area_broadcasts: Partial<Record<VAID, EntityManagerEvent[]>> = {};
@@ -374,10 +378,11 @@ class ServerEntityManagerImpl<
       return void resp_func('VisibleArea still loading');
     }
 
-    let { entities } = this;
+    let { entities } = old_va;
     for (let ent_id_string in entities) {
       let ent = entities[ent_id_string]!;
-      if (ent.current_vaid === vaid && !ent.is_player) {
+      if (!ent.is_player) {
+        assert.equal(ent.current_vaid, vaid);
         this.deleteEntity(ent.id, 'debug');
       }
     }
@@ -456,6 +461,17 @@ class ServerEntityManagerImpl<
     delete this.clients[client.client_id];
   }
 
+  deleteEntityInternal(ent: Entity) {
+    // Note: unloadVA also deletes entities in a similar way
+    let { entities: sem_entities } = this;
+    let { current_vaid, id: ent_id } = ent;
+    let va = this.visible_areas[current_vaid];
+    assert(va);
+    let { entities: va_entities } = va;
+    delete sem_entities[ent_id];
+    delete va_entities[ent_id];
+  }
+
   deleteEntity(ent_id: EntityID, reason: string): void {
     assert.equal(typeof ent_id, 'number');
     let ent = this.entities[ent_id];
@@ -468,19 +484,31 @@ class ServerEntityManagerImpl<
       this.visible_areas_need_save[last_vaid] = true;
     }
 
-    delete this.entities[ent_id];
+    this.deleteEntityInternal(ent);
+  }
+
+  addEntityInternal(ent: Entity): void {
+    let { entities: sem_entities } = this;
+    assert(ent.id);
+    assert(ent.current_vaid !== undefined);
+    assert.equal(ent.visibleAreaGet(), ent.current_vaid);
+    assert(!sem_entities[ent.id]);
+    let va = this.vaGetRecord(ent.current_vaid);
+    let { entities: va_entities } = va;
+    assert(!va_entities[ent.id]);
+    sem_entities[ent.id] = ent;
+    va_entities[ent.id] = ent;
   }
 
   addEntityFromSerialized(data: DataObject): void {
-    let sem = this;
-    let ent_id = ++sem.last_ent_id;
-    let ent = sem.entities[ent_id] = new this.EntityCtor(ent_id, sem) as Entity;
+    let ent_id = ++this.last_ent_id;
+    let ent = new this.EntityCtor(ent_id, this) as Entity;
     assert(!ent.is_player);
     ent.fromSerialized(data);
     ent.fixupPostLoad();
 
-    assert.equal(ent.visibleAreaGet(), ent.current_vaid);
-    sem.visible_areas_need_save[ent.current_vaid] = true;
+    this.addEntityInternal(ent);
+    this.visible_areas_need_save[ent.current_vaid] = true;
 
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(this, ent);
@@ -569,7 +597,14 @@ class ServerEntityManagerImpl<
     ent.dirty_fields[field] = true;
     ent.need_save = true;
     let vaid = ent.visibleAreaGet();
-    ent.current_vaid = vaid;
+    if (vaid !== ent.current_vaid) {
+      let oldva = this.vaGetRecord(ent.current_vaid);
+      assert(oldva.entities[ent.id]);
+      delete oldva.entities[ent.id];
+      ent.current_vaid = vaid;
+      let newva = this.vaGetRecord(ent.current_vaid);
+      newva.entities[ent.id] = ent;
+    }
     if (!ent.is_player) {
       this.visible_areas_need_save[vaid] = true;
       if (vaid !== ent.last_vaid) {
@@ -592,28 +627,33 @@ class ServerEntityManagerImpl<
     this.dirty(ent, field, null);
   }
 
-  vaRemoveFromUnseenSet(vaid: VAID, va: VARecord) {
+  vaRemoveFromUnseenSet(vaid: VAID, va: VARecord<Entity>) {
     assert(va.in_unseen_set);
     va.in_unseen_set = false;
     delete this.visible_areas_unseen[vaid];
     va.last_needed_timestamp = 0;
   }
-  vaAddToUnseenSet(vaid: VAID, va: VARecord) {
+  vaAddToUnseenSet(vaid: VAID, va: VARecord<Entity>) {
     assert(!va.in_unseen_set);
     va.last_needed_timestamp = this.last_server_time;
     va.in_unseen_set = true;
     this.visible_areas_unseen[vaid] = true;
   }
 
+  vaGetRecord(vaid: VAID): VARecord<Entity> {
+    let va = this.visible_areas[vaid];
+    if (!va) {
+      visibleAreaInit(this, vaid);
+      va = this.visible_areas[vaid];
+    }
+    assert(va);
+    return va;
+  }
+
   clientSetVisibleAreaSeesInternal(client: SEMClient, new_visible_areas: VAID[]): void {
     for (let ii = 0; ii < new_visible_areas.length; ++ii) {
       let vaid = new_visible_areas[ii];
-      let va = this.visible_areas[vaid];
-      if (!va) {
-        visibleAreaInit(this, vaid);
-        va = this.visible_areas[vaid];
-      }
-      assert(va);
+      let va = this.vaGetRecord(vaid);
       va.client_count++;
       if (va.in_unseen_set) {
         this.vaRemoveFromUnseenSet(vaid, va);
@@ -646,20 +686,20 @@ class ServerEntityManagerImpl<
     assert(!va.loading);
     assert(!this.visible_areas_need_save[vaid]);
     assert(!this.visible_area_broadcasts[vaid]);
-    let { entities } = this;
+    let { entities: va_entities } = va;
+    let { entities: sem_entities } = this;
     let count = 0;
-    for (let ent_id_string in entities) {
-      let ent_id = Number(ent_id_string);
-      let ent = entities[ent_id]!;
+    for (let ent_id_string in va_entities) {
+      let ent = va_entities[ent_id_string]!;
       if (ent.is_player) {
         continue;
       }
       let { current_vaid, last_vaid } = ent;
-      if (current_vaid !== vaid) {
-        continue;
-      }
+      assert.equal(current_vaid, vaid);
       assert.equal(current_vaid, last_vaid); // Shouldn't be mid-move if this is getting unloaded!
-      delete entities[ent_id];
+      // inlined to avoid re-looking up the VA every time: this.deleteEntityInternal(ent);
+      delete sem_entities[ent_id_string];
+      delete va_entities[ent_id_string];
       ++count;
     }
     delete this.visible_areas[vaid];
@@ -700,42 +740,31 @@ class ServerEntityManagerImpl<
     }
 
     // Go through all need_save entities and batch them up to user stores and bulk store
-    let { visible_areas_need_save } = this;
-    this.visible_areas_need_save = {};
-    let by_vaid: Partial<Record<VAID, Entity[]>> = {};
-    let { entities } = this;
-    for (let ent_id_string in entities) {
-      let ent = entities[ent_id_string]!;
-      if (ent.is_player) {
+    // First, save player entities (not VA-specific)
+    let { clients, entities: sem_entities } = this;
+    // PERFTODO: Add "need save" list for players instead of iterating all?
+    for (let client_id in clients) {
+      let client = clients[client_id]!;
+      if (client.ent_id) {
+        let ent = sem_entities[client.ent_id];
+        assert(ent);
+        assert(ent.is_player);
         if (ent.need_save) {
           ++left;
           ent.savePlayerEntity(done);
           ent.need_save = false;
         }
-      } else {
-        let vaid = ent.current_vaid;
-        if (visible_areas_need_save[vaid]) {
-          let bv = by_vaid[vaid];
-          if (!bv) {
-            bv = by_vaid[vaid] = [];
-          }
-          bv.push(ent);
-        }
       }
     }
-
+    // Second, save each VA's entities
+    let { visible_areas_need_save } = this;
+    this.visible_areas_need_save = {};
     for (let vaid_string in visible_areas_need_save) {
       let vaid = Number(vaid_string);
-      let va = this.visible_areas[vaid];
-      if (!va) {
+      let va = this.vaGetRecord(vaid);
+      if (va.loading) {
         // Trying to save entities in an area that is not loaded?  something must
         //   have moved out of view into an unloaded VA
-        // TODO: maybe this init should happen when the entity moves?
-        visibleAreaInit(this, vaid);
-        va = this.visible_areas[vaid];
-      }
-      assert(va);
-      if (va.loading) {
         // still loading, cannot save yet
         // re-add for next flush
         this.visible_areas_need_save[vaid] = true;
@@ -744,10 +773,20 @@ class ServerEntityManagerImpl<
         va.loading.push(done);
         continue;
       }
+
+      let ents = [];
+      let { entities: va_entities } = va;
+      for (let ent_id_string in va_entities) {
+        let ent = va_entities[ent_id_string]!;
+        if (!ent.is_player) {
+          assert.equal(vaid, ent.current_vaid);
+          ents.push(ent);
+        }
+      }
+
       // If it's in the unseen list, flag it as still needed
       va.last_needed_timestamp = this.last_server_time;
 
-      let ents: Entity[] = by_vaid[vaid] || [];
       ++left;
       let ent_data = ents.map(toSerializedStorage);
       this.worker.debug(`Saving ${ent_data.length} ent(s) for VA ${vaid}`);
@@ -1217,6 +1256,7 @@ class ServerEntityManagerImpl<
     this.update_per_va = null!; // only valid/used inside `tick()`, release references so they can be GC'd
   }
 
+  // PERFTODO: Find by VAID API
   entitiesFind(
     predicate: (ent: Entity) => boolean,
     skip_fading_out?: boolean
