@@ -42,7 +42,7 @@ import {
 
 const { min } = Math;
 
-export const ENTITY_LOG_VERBOSE = true;
+export const ENTITY_LOG_VERBOSE = false;
 
 export interface EntityManagerReadyWorker<
   Entity extends EntityBaseServer,
