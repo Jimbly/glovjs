@@ -24,7 +24,12 @@ import {
   NetErrorCallback,
   WithRequired,
 } from 'glov/common/types';
-import { clone, defaults, has, objectToSet } from 'glov/common/util';
+import {
+  clone,
+  defaults,
+  has,
+  objectToSet,
+} from 'glov/common/util';
 import {
   ServerEntityManagerInterface,
 } from './entity_manager_server';
@@ -205,7 +210,7 @@ export class EntityBaseServer extends EntityBaseCommon {
       if (!field_def.ephemeral) {
         let value = (data as DataObject)[key];
         if (value !== field_def.default_value) {
-          ret[key] = value;
+          ret[key] = clone(value);
         }
       }
     }
