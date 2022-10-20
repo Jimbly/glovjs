@@ -1352,7 +1352,7 @@ export function entityManagerWorkerInit<
       this.entity_manager.tick(dt, server_time);
     };
   }
-  ctor.registerClientHandler('ent_action_list', function (
+  ctor.registerClientHandler('ent_action_list', function entityManagerHandleEntActionList(
     this: EntityManagerReadyWorker<Entity, Worker>,
     src: ClientHandlerSource,
     pak: Packet,
