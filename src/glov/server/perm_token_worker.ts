@@ -16,7 +16,7 @@ class PermTokenWorker extends ChannelWorker {
   //   super(channel_server, channel_id, channel_data);
   // }
 
-  handleTokenAlloc(src: HandlerSource, pak: Packet, resp_func: ErrorCallback<string>) {
+  handleTokenAlloc(src: HandlerSource, pak: Packet, resp_func: ErrorCallback<string>): void {
     let ops = pak.readJSON();
 
     let token_key = 'PZ';

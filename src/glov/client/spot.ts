@@ -935,7 +935,7 @@ type SpotParamWithOut = SpotParam & {
   out: SpotRet;
 };
 
-function spotFocusCheckNavButtonsFocused(param: SpotParamWithOut) {
+function spotFocusCheckNavButtonsFocused(param: SpotParamWithOut): void {
   for (let ii = 1 as SpotNavEnum; ii < SPOT_NAV_MAX; ++ii) {
     let elem = focus_next[ii];
     if (elem !== undefined && keyCheck(ii)) {

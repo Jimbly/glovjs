@@ -53,7 +53,7 @@ export function executeWithRetry<T = unknown, E = unknown>(
 
   let attempts = 0;
 
-  function execute() {
+  function execute(): void {
     attempts++;
 
     // Execute the funtion that was passed in with a callback handler function as a parameter

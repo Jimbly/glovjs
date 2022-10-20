@@ -20,7 +20,7 @@ let on_data_cbs: {
   cb: ServerGlobalOnDataCB;
 }[] = [];
 
-function prefixMatches(prefix: string, key: string) {
+function prefixMatches(prefix: string, key: string): boolean {
   // true if watching `foo.bar` and we get an update on `foo` or the other way around
   return key.startsWith(prefix) || prefix.startsWith(key);
 }

@@ -35,7 +35,7 @@ function banSummary(entry: IPBanEntry): string {
 
 const IPBAN_KEY = 'public.ipban.banlist';
 
-function cmdIPBan(this: GlobalWorker, str: string, resp_func: CmdRespFunc) {
+function cmdIPBan(this: GlobalWorker, str: string, resp_func: CmdRespFunc): void {
   // eslint-disable-next-line @typescript-eslint/no-shadow
   let banlist = this.getChannelData(IPBAN_KEY, {});
   let msgs = [];
