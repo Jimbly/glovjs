@@ -557,6 +557,9 @@ module.exports = {
       // Enable rules specifically for TypeScript files
       "files": ["*.ts", "*.tsx"],
       "rules": {
+        "@typescript-eslint/explicit-function-return-type": ["error", {
+          "allowExpressions": true,
+        }],
         "@typescript-eslint/explicit-module-boundary-types": "error",
       }
     },
