@@ -275,6 +275,7 @@ interface ServerEntityManagerOpts<
   EntityCtor: typeof EntityBaseServer;
   max_ents_per_tick?: number;
   va_unload_time?: number;
+  save_time?: number;
 }
 
 export type ServerEntityManager<
@@ -315,6 +316,7 @@ class ServerEntityManagerImpl<
   dirty_list: Entity[] = [];
   max_ents_per_tick: number;
   va_unload_time: number;
+  save_time: number;
   schema: EntityManagerSchema;
   all_client_fields: DirtyFields;
   mem_usage = {
@@ -329,7 +331,8 @@ class ServerEntityManagerImpl<
     },
   };
 
-  last_server_time = 0;
+  last_save_time: number = 0;
+  last_server_time: number = 0;
 
   constructor(options: ServerEntityManagerOpts<Entity, Worker>) {
     super();
@@ -339,6 +342,7 @@ class ServerEntityManagerImpl<
     this.field_defs = this.EntityCtor.prototype.field_defs;
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.va_unload_time = options.va_unload_time || 10000;
+    this.save_time = options.save_time || 10000;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];
@@ -749,6 +753,10 @@ class ServerEntityManagerImpl<
     if (this.flushing_changes) {
       return;
     }
+    if (this.last_server_time - this.last_save_time < this.save_time) {
+      return;
+    }
+    this.last_save_time = this.last_server_time;
     this.flushing_changes = true;
     let left = 1;
     let self = this;
