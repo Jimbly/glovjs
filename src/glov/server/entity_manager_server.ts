@@ -311,7 +311,7 @@ class ServerEntityManagerImpl<
   visible_area_broadcasts: Partial<Record<VAID, EntityManagerEvent[]>> = {};
   ent_deletes: Partial<Record<VAID, EntDelete[]>> = {};
   entities: Partial<Record<EntityID, Entity>> = {};
-  flushing_changes = false;
+  flushing_changes: boolean = false;
   dirty_list: Entity[] = [];
   max_ents_per_tick: number;
   va_unload_time: number;
@@ -726,7 +726,7 @@ class ServerEntityManagerImpl<
     this.worker.debug(`Unloaded VA ${vaid} (${count} entities)`);
   }
 
-  last_unload_time = 0;
+  last_unload_time: number = 0;
   private unloadUnseenVAs() {
     let unload_time = this.last_server_time - this.va_unload_time;
     if (this.last_unload_time > unload_time) {

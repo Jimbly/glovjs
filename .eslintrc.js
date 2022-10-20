@@ -49,6 +49,7 @@ module.exports = {
     "@typescript-eslint/no-dupe-class-members": "error",
     "@typescript-eslint/no-empty-function": "error",
     "@typescript-eslint/no-extra-semi": "error",
+    "@typescript-eslint/no-inferrable-types": "off",
     "@typescript-eslint/no-invalid-this": "error",
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-redeclare": "error",
