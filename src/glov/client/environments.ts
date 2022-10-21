@@ -19,7 +19,7 @@ let link_base: string;    // Link base like http://foo.bar/ (with trailing slash
 let api_path: string;     // API base like http://foo.bar/api/ (with trailing slash)
 let texture_base: string; // Texture base like http://foo.bar/ (with trailing slash)
 
-function applyEnvironment() {
+function applyEnvironment(): void {
   link_base = (current_environment && current_environment.link_base) || urlhash.getURLBase();
   api_path = (current_environment && current_environment.api_path) || `${link_base}api/`;
   texture_base = link_base.replace('//localhost:', '//127.0.0.1:');

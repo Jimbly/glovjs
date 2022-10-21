@@ -74,7 +74,7 @@ export function facebookGraphRequest(
   }
   const url = `${BASE_GRAPH_URL}/${path}?${url_params_str}`;
 
-  function makeRequest(handler: ErrorCallback<FacebookGraphResult>) {
+  function makeRequest(handler: ErrorCallback<FacebookGraphResult>): void {
     request({ url, json: true },
       (err: unknown, response: request.Response, body: FacebookGraphResult | undefined | null) => {
         if (err || response?.statusCode !== 200 || !body) {
