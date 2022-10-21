@@ -137,11 +137,11 @@ settings.register({
   },
 });
 
-function musicVolume() {
+function musicVolume(): number {
   return settings.volume * settings.volume_music;
 }
 
-function soundVolume() {
+function soundVolume(): number {
   return settings.volume * settings.volume_sound;
 }
 
@@ -212,7 +212,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
   // Try loading desired sound types one at a time.
   // Cannot rely on Howler's built-in support for this because it only continues
   //   through the list on *some* load errors, not all :(.
-  function tryLoad(idx: number) {
+  function tryLoad(idx: number): void {
     if (idx === srcs.length) {
       console.error(`Error loading sound ${soundname}: All fallbacks exhausted, giving up`);
       if (on_load_fail) {
@@ -260,7 +260,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
   tryLoad(0);
 }
 
-function soundReload(filename: string) {
+function soundReload(filename: string): void {
   let name_match = filename.match(/^sounds\/([^.]+)\.\w+$/);
   let sound_name = name_match && name_match[1];
   if (!sound_name) {

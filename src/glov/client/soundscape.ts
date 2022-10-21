@@ -223,8 +223,8 @@ export class GlovSoundScape implements SoundScape {
       };
       this.layer_keys.push(key);
       this.layer_keys.sort((a, b) => {
-        let layera = this.layers[a];
-        let layerb = this.layers[b];
+        let layera: GlovSSParentLayer = this.layers[a];
+        let layerb: GlovSSParentLayer = this.layers[b];
         let d = (layera.excl_group_master?1:0) - (layerb.excl_group_master?1:0);
         if (d) {
           return -d;
@@ -288,10 +288,10 @@ export class GlovSoundScape implements SoundScape {
 
     let active_excl_group = '';
     let active_files: Record<string, boolean>;
-    function filterValidFiles(a: GlovSSFile) {
+    function filterValidFiles(a: GlovSSFile): boolean {
       return !active_files[a.file] && (!a.excl_group || a.excl_group[active_excl_group]);
     }
-    function filterValidFilesMaster(a: GlovSSFile) {
+    function filterValidFilesMaster(a: GlovSSFile): boolean {
       return !active_files[a.file] && (!a.excl_group || !active_excl_group || a.excl_group[active_excl_group]);
     }
 
