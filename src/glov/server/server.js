@@ -25,6 +25,7 @@ import { masterInitApp } from './master_worker';
 import { metricsInit } from './metrics';
 import { readyDataInit } from './ready_data';
 import { serverConfig } from './server_config';
+import { serverFilewatchTriggerChange } from './server_filewatch';
 import { shaderStatsInit } from './shader_stats';
 import glov_wsserver from './wsserver';
 const { netDelaySet } = wscommon;
@@ -194,6 +195,7 @@ export function startup(params) {
           let filename = files[ii];
           console.log(`File changed: ${filename}`);
           ws_server.broadcast('filewatch', filename);
+          serverFilewatchTriggerChange(filename);
           let m = filename.match(/(.*)\.ver\.json$/);
           if (m) {
             let file_base_name = m[1]; // e.g. 'app' or 'worker'
