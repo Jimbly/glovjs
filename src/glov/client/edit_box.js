@@ -11,6 +11,7 @@ const {
   KEYS,
   eatAllKeyboardInput,
   mouseConsumeClicks,
+  keyDownEdge,
   keyUpEdge,
   pointerLockEnter,
   pointerLockExit,
@@ -320,6 +321,10 @@ class GlovUIEditBox {
         if (inputClick({ peek: true })) {
           spotUnfocus();
         }
+      }
+      // For IFRAMEs with `sandbox` not including `allow-form`, catch Enter ourselves
+      if (keyDownEdge(KEYS.ENTER)) {
+        this.submitted = true;
       }
       // keyboard input is handled by the INPUT element, but allow mouse events to trickle
       eatAllKeyboardInput();
