@@ -306,6 +306,12 @@ function eventlog(event) {
   console.log(`${engine.frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
 }
 
+function letWheelEventThrough(event) {
+  // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
+  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
+    event.target.tagName === 'LABEL');
+}
+
 function letEventThrough(event) {
   return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
     event.target.tagName === 'LABEL' || String(event.target.className).includes('noglov'));
@@ -591,6 +597,11 @@ function onWheel(event) {
     delta: delta > 0 ? 1 : -1,
     dispatched: false,
   });
+
+  if (!letWheelEventThrough(event)) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
 }
 
 let touch_pos = vec2();
