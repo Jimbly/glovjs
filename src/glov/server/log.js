@@ -25,8 +25,17 @@ let raw_console = {};
 if (pid === 1 && process.env.PODNAME) {
   pid = process.env.PODNAME;
   let split = pid.split('-');
-  if (split.length > 2) {
-    pid = `${split[0][0]}${split.pop()}`;
+  let tail = split.pop();
+  if (split.includes('worker')) {
+    // test-worker-foo-1234
+    pid = `w${tail}`;
+  } else if (split.includes('master')) {
+    // test-master-foo-1234
+    // master-instance-foo-1234
+    pid = `m${tail}`;
+  } else if (split.length > 2) {
+    // instance-foo-1234
+    pid = `${split[0][0]}${tail}`;
   }
   console.log(`Using fake logging PID of ${pid}`);
 }
