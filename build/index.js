@@ -107,7 +107,10 @@ gb.task({
 gb.task({
   name: 'eslint',
   ...eslint({
-    input: config.all_js_files,
+    input: [
+      ...config.client_html,
+      ...config.all_js_files,
+    ],
   }),
 });
 

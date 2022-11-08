@@ -28,6 +28,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "eslint-plugin-html": "^7.1.0",
     "express": "^4.17.1",
     "express-static-gzip": "^2.0.5",
     "fs-store": "^0.3.2",
