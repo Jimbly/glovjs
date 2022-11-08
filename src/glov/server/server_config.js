@@ -57,6 +57,8 @@ function determinEnv() {
   if (argv.env || server_config.env) {
     // explicitly specified, use it
     env = argv.env || server_config.env;
+  } else if (process.env.CONFIG_ENV) {
+    env = process.env.CONFIG_ENV;
   } else if (process.env.GKE_PROJECTNAME) {
     env = process.env.GKE_PROJECTNAME;
   } else if (process.env.PODNAME) {
