@@ -76,6 +76,16 @@ export function errorReportClear() {
   window.debugmsg('', true);
 }
 
+let submit_errors = true;
+export function glovErrorReportDisableSubmit() {
+  submit_errors = false;
+}
+
+let on_crash_cb = null;
+export function glovErrorReportSetCrashCB(cb) {
+  on_crash_cb = cb;
+}
+
 // Errors from plugins that we don't want to get reported to us, or show the user!
 // The exact phrase "Script error.\n  at (0:0)" comes from our bootstap.js when we
 //   receive the message 'Script Error.' and no stack.  This happens on the Mi Browser on Redmi phones
@@ -85,6 +95,9 @@ export function errorReportClear() {
 let filtered_errors = /avast_submit|vc_request_action|^Error: Script error\.$|^Error: Script error\.\n  at \(0:0\)$|^Error: null$|^Error: null\n  at null\(null:null\)$|getElementsByTagName\('video'\)|document\.getElementById\("search"\)|change_ua|chrome-extension|setConnectedRobot|Failed to (?:start|stop) the audio device|zaloJSV2|getCookie is not defined|originalPrompt|_AutofillCallbackHandler|sytaxError|bannerNight|privateSpecialRepair|__gCrWeb|\$wrap is not/;
 export function glovErrorReport(is_fatal, msg, file, line, col) {
   console.error(msg);
+  if (on_crash_cb) {
+    on_crash_cb();
+  }
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
     // just logged and should not corrupt state.
@@ -111,9 +124,13 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;
-  fetch({ method: 'POST', url }, () => { /* nop */ });
+  if (submit_errors) {
+    fetch({ method: 'POST', url }, () => { /* nop */ });
+  }
   if (ignore_promises && msg.match(/Uncaught \(in promise\)/)) {
     return false;
   }
   return true;
 }
+
+window.glov_error_report = glovErrorReport.bind(null, true);

@@ -25,7 +25,8 @@ const {
   errorReportDisable,
   errorReportSetTimeAccum,
   errorReportSetDetails,
-  glovErrorReport,
+  glovErrorReportDisableSubmit,
+  glovErrorReportSetCrashCB,
 } = require('./error_report.js');
 const glov_font = require('./font.js');
 const { fontTick } = glov_font;
@@ -1038,11 +1039,11 @@ export function startup(params) {
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
 
+  glovErrorReportSetCrashCB(function () {
+    setTimeout(requestFrame, 1);
+  });
   if (params.error_report !== false) {
-    window.glov_error_report = (msg, file, line, col) => {
-      setTimeout(requestFrame, 1);
-      return glovErrorReport(true, msg, file, line, col);
-    };
+    glovErrorReportDisableSubmit();
   }
 
   if (DEBUG && !window.spector) {
