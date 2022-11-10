@@ -1,4 +1,4 @@
-import type { Vec4 } from 'glov/common/vmath';
+import type { ROVec4, Vec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
   BLEND_ALPHA = 0,
@@ -29,7 +29,7 @@ export interface SpriteDrawParams {
   frame?: number;
   rot?: number;
   uvs?: number[];
-  color?: Vec4;
+  color?: Vec4 | ROVec4;
   shader?: unknown;
   shader_params?: Partial<Record<string, number[]>>;
 }
