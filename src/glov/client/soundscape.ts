@@ -39,7 +39,6 @@ class GlovSSFile implements SSFile {
   excl_group_first: string;
   excl_group_debug: string;
 
-  // eslint-disable-next-line no-use-before-define
   constructor(ss: GlovSoundScape, file: SSDataFile) {
     this.file = `${ss.base_path}${file.file}`;
     if (typeof file.excl_group === 'string') {
@@ -77,7 +76,6 @@ class GlovSSTagLayer implements SSTagLayer {
 
   priority: number;
 
-  // eslint-disable-next-line no-use-before-define
   constructor(ss: GlovSoundScape, layer: SSDataTagLayer, parent: SSLayer) {
     this.files_map = {};
     this.files = layer.files.map((file) => {
@@ -121,7 +119,6 @@ class GlovSSParentLayer implements SSParentLayer {
   tags: Record<string, GlovSSTagLayer>;
   user_idx: number;
 
-  // eslint-disable-next-line no-use-before-define
   constructor(ss: GlovSoundScape, layer: SSDataLayer) {
     let { tags } = layer;
     this.files_map = {};
