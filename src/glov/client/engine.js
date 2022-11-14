@@ -1042,7 +1042,7 @@ export function startup(params) {
   glovErrorReportSetCrashCB(function () {
     setTimeout(requestFrame, 1);
   });
-  if (params.error_report !== false) {
+  if (params.error_report === false) {
     glovErrorReportDisableSubmit();
   }
 
