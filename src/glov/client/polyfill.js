@@ -98,6 +98,16 @@ if (!Object.values) {
     return Object.keys(obj).map((k) => obj[k]);
   };
 }
+if (!Object.entries) {
+  Object.entries = function entries(obj) {
+    let keys = Object.keys(obj);
+    let ret = new Array(keys.length);
+    for (let ii = keys.length - 1; ii >= 0; --ii) {
+      ret[ii] = [keys[ii], obj[keys[ii]]];
+    }
+    return ret;
+  };
+}
 
 if (!Object.assign) {
   Object.assign = function assign(target, source1) {
