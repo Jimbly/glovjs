@@ -1094,8 +1094,38 @@ export class ChannelServer {
 
   getStatus() {
     let lines = [];
-    let num_clients = Object.keys(this.ws_server.clients).length;
-    lines.push(`Clients: ${num_clients}`);
+    let clients_by_platform = Object.create(null);
+    let clients_by_ver = Object.create(null);
+    let { clients } = this.ws_server;
+    let num_clients = 0;
+    for (let client_id in clients) {
+      let client = clients[client_id];
+      let plat = client.client_plat;
+      if (plat) {
+        clients_by_platform[plat] = (clients_by_platform[plat] || 0) + 1;
+      }
+      let ver = client.client_ver;
+      if (ver) {
+        clients_by_ver[ver] = (clients_by_ver[ver] || 0) + 1;
+      }
+      ++num_clients;
+    }
+    let sub_summary = [];
+    for (let key in clients_by_platform) {
+      if (key.match(/^[a-zA-Z0-9-_]+$/)) {
+        let count = clients_by_platform[key];
+        sub_summary.push(`${key}:${count}`);
+        metrics.set(`clients.platform.${key}`, count);
+      }
+    }
+    for (let key in clients_by_ver) {
+      if (key.match(/^[a-zA-Z0-9-_.]+$/)) {
+        let count = clients_by_ver[key];
+        sub_summary.push(`${key}:${count}`);
+        metrics.set(`clients.ver.${key.replace(/\./g, '_')}`, count);
+      }
+    }
+    lines.push(`Clients: ${num_clients}${sub_summary.length ? ` (${sub_summary.join(', ')})`: ''}`);
     let num_channels = {};
     let channels_verbose = {};
     for (let channel_id in this.local_channels) {
