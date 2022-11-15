@@ -290,8 +290,8 @@ SubscriptionManager.prototype.handleConnect = function (data) {
   this.cack_data = data;
   walltime.sync(data.time);
 
-  if (!this.client.connected || this.client.socket.readyState !== 1) { // WebSocket.OPEN
-    // we got disconnected while trying to log in, we'll retry after reconnection
+  if (netDisconnectedRaw()) {
+    // we got disconnected while trying to log in, we'll retry after reconnecting
     return;
   }
 
@@ -610,7 +610,7 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
       if (err) {
         return void this.handleLoginResponse(resp_func, err);
       }
-      if (!this.client.connected) {
+      if (netDisconnectedRaw()) {
         return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
       }
       this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
