@@ -447,6 +447,18 @@ gb.task({
         proxy: {
           target: bs_target,
           ws: true,
+          proxyReq: [
+            function (proxyReq) {
+              // Note: adding this will cause the browser-sync port (:4000) to
+              // be considered insecure (not serve .map files if private, no
+              // access to permtoken API, etc), since it could be forwarding
+              // a non-local request.  For now, leaving this request alone
+              // and relying on the developer to protect the port appropriately.
+              // If the port is only ever served via a proxy that adds the
+              // forward header, it's sufficiently protected.
+              // proxyReq.setHeader('X-Forwarded-For', 'browser-sync');
+            }
+          ]
         },
         // informs browser-sync to use the following port for the proxied app
         // notice that the default port is 3000, which would clash with our server

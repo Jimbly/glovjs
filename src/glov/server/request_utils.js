@@ -35,12 +35,12 @@ export function ipFromRequest(req) {
 
   let raw_ip = req.client.remoteAddress || req.client.socket && req.client.socket.remoteAddress;
   let ip = raw_ip;
+  let header = req.headers['x-forwarded-for'];
   if (forward_depth) {
     // Security note: must check x-forwarded-for *only* if we know this request came from a
     //   reverse proxy, should warn if missing x-forwarded-for.
     // If forwarded through multiple proxies, want to get just the original client IP,
     //   but the configuration must specify how many trusted proxies we passed through.
-    let header = req.headers['x-forwarded-for'];
     if (!header) {
       if (!skipWarn(req)) {
         console.warn('Received request missing any x-forwarded-for header from ' +
@@ -66,6 +66,18 @@ export function ipFromRequest(req) {
       } else {
         ip = forward_ip;
       }
+    }
+  } else {
+    // No forward_depth specified, so, if we do see a x-forwarded-for header, then
+    // this is either someone spoofing, or a forwarded request (e.g. from
+    // browser-sync). Either way, do not trust it.
+    if (header) {
+      if (!skipWarn(req)) {
+        console.warn('Received request with unexpected x-forwarded-for header '+
+          `(${header}) from ${raw_ip} for ${req.url}`);
+      }
+      // use a malformed IP so that it does not pass "is local" IP checks, etc
+      ip = `untrusted:${ip}`;
     }
   }
   if (!ip) {
