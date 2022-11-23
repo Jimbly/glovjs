@@ -1,28 +1,27 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const {
+import assert from 'assert';
+import { PLATFORM_FBINSTANT } from 'glov/client/client_config';
+import {
   chunkedReceiverFinish,
+  chunkedReceiverFreeFile,
+  chunkedReceiverGetFile,
   chunkedReceiverInit,
   chunkedReceiverOnChunk,
   chunkedReceiverStart,
-  chunkedReceiverFreeFile,
-  chunkedReceiverGetFile,
-} = require('glov/common/chunked_send.js');
-import { PLATFORM_FBINSTANT } from 'glov/client/client_config.js';
-const dot_prop = require('glov/common/dot-prop.js');
-const EventEmitter = require('glov/common/tiny-events.js');
-const { fbGetLoginInfo } = require('./fbinstant.js');
-const local_storage = require('./local_storage.js');
-const md5 = require('glov/common/md5.js');
-const { netDisconnectedRaw } = require('./net.js');
-const { isPacket } = require('glov/common/packet.js');
-const { perfCounterAdd } = require('glov/common/perfcounters.js');
-const util = require('glov/common/util.js');
-const { errorString } = util;
-const walltime = require('./walltime.js');
+} from 'glov/common/chunked_send';
+import * as dot_prop from 'glov/common/dot-prop';
+import * as md5 from 'glov/common/md5';
+import { isPacket } from 'glov/common/packet';
+import { perfCounterAdd } from 'glov/common/perfcounters';
+import * as EventEmitter from 'glov/common/tiny-events';
+import * as util from 'glov/common/util';
+import { errorString } from 'glov/common/util';
+import { fbGetLoginInfo } from './fbinstant';
+import * as local_storage from './local_storage';
+import { netDisconnectedRaw } from './net';
+import * as walltime from './walltime';
 
 // relevant events:
 //   .on('channel_data', cb(data [, mod_key, mod_value]));
