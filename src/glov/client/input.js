@@ -52,10 +52,45 @@ export let KEYS = {
   DOWN: 40,
   INS: 45,
   DEL: 46,
+
+  0: 48,
+  1: 49,
+  2: 50,
+  3: 51,
+  4: 52,
+  5: 53,
+  6: 54,
+  7: 55,
+  8: 56,
+  9: 57,
+
   A: 65,
+  B: 66,
+  C: 67,
   D: 68,
+  E: 69,
+  F: 70,
+  G: 71,
+  H: 72,
+  I: 73,
+  J: 74,
+  K: 75,
+  L: 76,
+  M: 77,
+  N: 78,
+  O: 79,
+  P: 80,
+  Q: 81,
+  R: 82,
   S: 83,
+  T: 84,
+  U: 85,
+  V: 86,
   W: 87,
+  X: 88,
+  Y: 89,
+  Z: 90,
+
   NUMPAD0: 96,
   NUMPAD1: 97,
   NUMPAD2: 98,
@@ -71,6 +106,20 @@ export let KEYS = {
   NUMPAD_SUBTRACT: 109,
   NUMPAD_DECIMAL_POINT: 110,
   NUMPAD_DIVIDE: 111,
+
+  F1: 112,
+  F2: 113,
+  F3: 114,
+  F4: 115,
+  F5: 116,
+  F6: 117,
+  F7: 118,
+  F8: 119,
+  F9: 120,
+  F10: 121,
+  F11: 122,
+  F12: 123,
+
   EQUALS: 187,
   COMMA: 188,
   MINUS: 189,
@@ -78,14 +127,6 @@ export let KEYS = {
   SLASH: 191,
   TILDE: 192,
 };
-(function () {
-  for (let ii = 1; ii <= 12; ++ii) {
-    KEYS[`F${ii}`] = 111 + ii;
-  }
-  for (let ii = 48; ii <= 90; ++ii) { // 0-9;A-Z
-    KEYS[String.fromCharCode(ii)] = ii;
-  }
-}());
 if (typeof Proxy === 'function') {
   // Catch referencing keys that are not in our map
   KEYS = new Proxy(KEYS, {
