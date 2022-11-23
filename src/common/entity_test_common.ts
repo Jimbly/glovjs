@@ -30,7 +30,8 @@ export type EntityTestDataCommon = {
 //   return true;
 // }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line max-len
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function entityTestCommonClass<T extends Constructor<EntityBaseCommon>>(base: T) {
   // Note: `base` is either `EntityBaseServer` or `EntityBaseClient`
   return class EntityTestCommon extends base {

@@ -70,7 +70,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     this.resetMoveTime(true);
   }
 
-  resetMoveTime(initial: boolean) {
+  resetMoveTime(initial: boolean): void {
     this.next_move_time = engine.frame_timestamp + 500 + random() * (500 + (initial ? AI_CLAIM_TIME : 0));
   }
 
@@ -95,17 +95,17 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     });
   }
 
-  erroredRecently() {
+  erroredRecently(): number {
     let dt = engine.frame_timestamp - this.error_time;
     return max(0, 1 - dt / 2000);
   }
 
-  activatedRecently() {
+  activatedRecently(): number {
     let dt = engine.frame_timestamp - this.my_activate_time;
     return max(0, 1 - dt / 2000);
   }
 
-  lastUpdatedBySomeoneElse() {
+  lastUpdatedBySomeoneElse(): boolean {
     if (!this.data.seq_ai_move) {
       return false;
     }
@@ -115,7 +115,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     return true;
   }
 
-  tickAI(dt: number) {
+  tickAI(dt: number): void {
     if (this.waiting || !this.in_view) {
       return;
     }
@@ -161,7 +161,7 @@ const account_ui = createAccountUI();
 let chat_ui: ReturnType<typeof chatUICreate>;
 
 let test_character = { pos: vec2(), rot: 0 };
-function onEntReady() {
+function onEntReady(): void {
   if (entity_manager.hasMyEnt()) {
     let my_ent = entity_manager.getMyEnt();
     let pos = my_ent.getData<[number,number]>('pos', [0,0]);
@@ -238,7 +238,7 @@ export function main(): void {
   let color_temp = vec4();
 
   const sprite_size = 48;
-  function initGraphics() {
+  function initGraphics(): void {
     particles.preloadParticleData(particle_data);
 
     sprite_entity = spriteCreate({
@@ -259,7 +259,7 @@ export function main(): void {
   let test_room: ClientChannelWorker | null = null;
 
   let impulse = vec2();
-  function playerMotion(dt: number) {
+  function playerMotion(dt: number): void {
     // Network send
     if (entity_manager.checkNet()) {
       return;
@@ -290,7 +290,7 @@ export function main(): void {
   }
 
   let last_ai_tick = engine.frame_timestamp;
-  function aiMotion(dt: number) {
+  function aiMotion(dt: number): void {
     if (engine.frame_timestamp < last_ai_tick + 200) {
       return;
     }
@@ -306,7 +306,7 @@ export function main(): void {
     }
   }
 
-  function getRoom() {
+  function getRoom(): void {
     if (!test_room && !netDisconnected()) { // includes not doing this if actively logging in
       test_room = netSubs().getChannel('enttest.test', true);
       assert(test_room);
@@ -318,7 +318,7 @@ export function main(): void {
     }
   }
 
-  function preLogout() {
+  function preLogout(): void {
     if (test_room) {
       assert(test_room.numSubscriptions());
       test_room.unsubscribe();
@@ -332,7 +332,7 @@ export function main(): void {
 
   let pad_controls_sprite = true;
   let was_active = false;
-  function test(dt: number) {
+  function test(dt: number): void {
     if (pad_controls_sprite) {
       spotSuppressPad();
     }
@@ -467,7 +467,7 @@ export function main(): void {
     entity_manager.actionListFlush();
   }
 
-  function testInit(dt: number) {
+  function testInit(dt: number): void {
     engine.setState(test);
     if (!ROOM_REQUIRES_LOGIN) {
       netSubs().onceConnected(getRoom);

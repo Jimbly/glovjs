@@ -38,7 +38,7 @@ let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
 
-function init(x: number, y: number, column_width: number) {
+function init(x: number, y: number, column_width: number): void {
   edit_box1 = editBoxCreate({
     x: x + column_width,
     y: y,

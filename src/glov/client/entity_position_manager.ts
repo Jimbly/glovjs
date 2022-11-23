@@ -113,11 +113,11 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     };
   }
 
-  private handleEntDelete(ent_id: EntityID) {
+  private handleEntDelete(ent_id: EntityID): void {
     delete this.per_ent_data[ent_id];
   }
 
-  private handleSubscribe() {
+  private handleSubscribe(): void {
     // initial connection or reconnect
     this.reinit();
   }
@@ -204,7 +204,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return dst;
   }
 
-  updateMyPos(character_pos: Vector, anim_state: string) {
+  updateMyPos(character_pos: Vector, anim_state: string): void {
     let pos_diff = !this.vsame(character_pos, this.last_send.pos);
     let entless = this.entity_manager.hasMyEnt();
     let state_diff = !entless && (anim_state !== this.last_send.anim_state);
@@ -240,7 +240,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
         if (state_diff) {
           data_assignments.state = this.last_send.anim_state;
         }
-        let handle_resp = (err: string | null) => {
+        let handle_resp = (err: string | null): void => {
           if (err) {
             throw err;
           }

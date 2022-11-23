@@ -192,7 +192,7 @@ class ClientEntityManagerImpl<
     this.received_ent_start = false;
   }
 
-  private finalizeDelete(ent_id: EntityID) {
+  private finalizeDelete(ent_id: EntityID): void {
     this.emit('ent_delete', ent_id);
     delete this.entities[ent_id];
   }
@@ -602,7 +602,7 @@ class ClientEntityManagerImpl<
     return Boolean(this.my_ent_id); // Maybe: && this.getEnt(this.my_ent_id));
   }
 
-  getMyEntID() {
+  getMyEntID(): EntityID {
     assert(this.my_ent_id);
     return this.my_ent_id;
   }
@@ -617,7 +617,7 @@ class ClientEntityManagerImpl<
   entitiesFind(
     predicate: (ent: Entity) => boolean,
     skip_fading_out?: boolean
-  ) {
+  ): Entity[] {
     let { entities } = this;
     let ret = [];
     for (let ent_id_string in entities) {

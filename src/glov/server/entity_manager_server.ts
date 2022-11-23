@@ -70,7 +70,7 @@ class VARecord<Entity extends EntityBaseServer> {
 function visibleAreaInit<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
->(sem: ServerEntityManager<Entity, Worker>, vaid: VAID, next?: ErrorCallback<never, string>) {
+>(sem: ServerEntityManager<Entity, Worker>, vaid: VAID, next?: ErrorCallback<never, string>): void {
   let va = sem.visible_areas[vaid];
   if (va) {
     if (va.loading) {
@@ -86,7 +86,7 @@ function visibleAreaInit<
   }
   let va2: VARecord<Entity> = va = sem.visible_areas[vaid] = new VARecord(next);
   sem.mem_usage.va.count++;
-  function done(err?: string) {
+  function done(err?: string): void {
     if (err) {
       delete sem.visible_areas[vaid];
     }
@@ -148,7 +148,7 @@ function loadPlayerEntity<
   client: SEMClient,
   player_uid: string | null,
   cb: NetErrorCallback<EntityID>
-) {
+): void {
   if (!player_uid) {
     assert(!client.loading);
     assert(!client.ent_id);
@@ -233,7 +233,7 @@ function newEntsInVA<
   }
 }
 
-function toSerializedStorage(ent: EntityBaseServer) {
+function toSerializedStorage(ent: EntityBaseServer): DataObject {
   return ent.toSerializedStorage();
 }
 
@@ -262,7 +262,7 @@ class SEMClientImpl {
   getUserData<T>(): T {
     return this.user_data as T;
   }
-  setUserData<T>(data: T) {
+  setUserData<T>(data: T): void {
     this.user_data = data;
   }
 }
@@ -480,7 +480,7 @@ class ServerEntityManagerImpl<
     this.mem_usage.clients.count--;
   }
 
-  deleteEntityInternal(ent: Entity) {
+  deleteEntityInternal(ent: Entity): void {
     // Note: unloadVA also deletes entities in a similar way
     let { entities: sem_entities } = this;
     let { current_vaid, id: ent_id } = ent;
@@ -578,7 +578,7 @@ class ServerEntityManagerImpl<
     }
     let results: undefined | ActionListResponse;
     asyncEach(actions, (action_data, next, idx) => {
-      function returnResult(err?: string | null, data?: unknown) {
+      function returnResult(err?: string | null, data?: unknown): void {
         if (data !== undefined || err) {
           results = results || [];
           if (!err) {
@@ -648,13 +648,13 @@ class ServerEntityManagerImpl<
     this.dirty(ent, field, null);
   }
 
-  vaRemoveFromUnseenSet(vaid: VAID, va: VARecord<Entity>) {
+  vaRemoveFromUnseenSet(vaid: VAID, va: VARecord<Entity>): void {
     assert(va.in_unseen_set);
     va.in_unseen_set = false;
     delete this.visible_areas_unseen[vaid];
     va.last_needed_timestamp = 0;
   }
-  vaAddToUnseenSet(vaid: VAID, va: VARecord<Entity>) {
+  vaAddToUnseenSet(vaid: VAID, va: VARecord<Entity>): void {
     assert(!va.in_unseen_set);
     va.last_needed_timestamp = this.last_server_time;
     va.in_unseen_set = true;
@@ -700,7 +700,7 @@ class ServerEntityManagerImpl<
     this.sendInitialEntsToClient(client, true, resp_func);
   }
 
-  private unloadVA(vaid: VAID) {
+  private unloadVA(vaid: VAID): void {
     // unload all relevant entities and other tracking structures
     let va = this.visible_areas[vaid];
     assert(va);
@@ -731,7 +731,7 @@ class ServerEntityManagerImpl<
   }
 
   last_unload_time: number = 0;
-  private unloadUnseenVAs() {
+  private unloadUnseenVAs(): void {
     let unload_time = this.last_server_time - this.va_unload_time;
     if (this.last_unload_time > unload_time) {
       // Did an unload recently, nothing this tick
@@ -749,7 +749,7 @@ class ServerEntityManagerImpl<
     }
   }
 
-  private flushChangesToDataStores() {
+  private flushChangesToDataStores(): void {
     if (this.flushing_changes) {
       return;
     }
@@ -760,7 +760,7 @@ class ServerEntityManagerImpl<
     this.flushing_changes = true;
     let left = 1;
     let self = this;
-    function done() {
+    function done(): void {
       if (!--left) {
         self.flushing_changes = false;
       }
@@ -886,7 +886,7 @@ class ServerEntityManagerImpl<
     } = client;
     let left = 1;
     let any_err: string | null = null;
-    function done(err?: string) {
+    function done(err?: string): void {
       if (!any_err && err) {
         any_err = err;
       }
@@ -1107,7 +1107,7 @@ class ServerEntityManagerImpl<
 
   update_per_va!: Partial<Record<VAID, PerVAUpdate>>;
 
-  private prepareUpdate(ent: Entity) {
+  private prepareUpdate(ent: Entity): void {
     let vaid = ent.current_vaid;
     assert.equal(vaid, ent.visibleAreaGet()); // Should have been updated upon call to .dirty()
 
@@ -1146,7 +1146,7 @@ class ServerEntityManagerImpl<
     ent.last_delete_reason = undefined;
   }
 
-  private prepareNonEntUpdates() {
+  private prepareNonEntUpdates(): void {
     let { update_per_va } = this;
     let any = false;
     for (let vaid in this.visible_area_broadcasts) {
@@ -1175,7 +1175,7 @@ class ServerEntityManagerImpl<
     }
   }
 
-  private gatherUpdates(client: SEMClient) {
+  private gatherUpdates(client: SEMClient): void {
     let { update_per_va } = this;
     let { visible_area_sees: needed_areas, known_entities } = client;
     let va_updates: PerVAUpdate[] | undefined;
@@ -1315,7 +1315,7 @@ class ServerEntityManagerImpl<
   entitiesFind(
     predicate: (ent: Entity) => boolean,
     skip_fading_out?: boolean
-  ) {
+  ): Entity[] {
     let { entities } = this;
     let ret = [];
     for (let ent_id_string in entities) {

@@ -115,7 +115,7 @@ export function main(): void {
   const PAD = input.PAD;
 
   const sprite_size = 64;
-  function initGraphics() {
+  function initGraphics(): void {
     particles.preloadParticleData(particle_data);
 
     soundLoad('test');
@@ -157,7 +157,7 @@ export function main(): void {
   let test_room: ClientChannelWorker | null = null;
   let test_character = { x: 0, y: 0, rot: 0 };
 
-  function playerMotion(dt: number) {
+  function playerMotion(dt: number): void {
     // Network send
     if (pos_manager.checkNet((pos: ROVec3) => {
       test_character.x = pos[0];
@@ -193,7 +193,7 @@ export function main(): void {
     pos_manager.updateMyPos(new Float64Array([test_character.x, test_character.y, test_character.rot]), 'idle');
   }
 
-  function getRoom() {
+  function getRoom(): void {
     if (!test_room) {
       test_room = netSubs().getChannel('multiplayer.test', true);
       pos_manager.reinit({
@@ -208,7 +208,7 @@ export function main(): void {
     }
   }
 
-  function preLogout() {
+  function preLogout(): void {
     if (test_room) {
       assert(test_room.numSubscriptions());
       test_room.unsubscribe();
@@ -222,7 +222,7 @@ export function main(): void {
 
   let pad_controls_sprite = true;
   let was_active = false;
-  function test(dt: number) {
+  function test(dt: number): void {
     if (pad_controls_sprite) {
       spotSuppressPad();
     }
@@ -296,7 +296,7 @@ export function main(): void {
     }
   }
 
-  function testInit(dt: number) {
+  function testInit(dt: number): void {
     engine.setState(test);
     if (!ROOM_REQUIRES_LOGIN) {
       getRoom();
