@@ -18,6 +18,8 @@ export let default_config_options = {
   master_ready_timeout: 60000,
   // Flags that are propagated from a user's public.permissions onto their per-message identity
   permission_flags: ['sysadmin'],
+  // What permission flags grant ability to use reserved words when renaming user and logging in
+  display_name_bypass_flags: ['sysadmin'],
 };
 
 let default_env_options = {

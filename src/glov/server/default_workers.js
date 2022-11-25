@@ -21,6 +21,7 @@ import { globalWorkerInit } from './global_worker.js';
 import * as master_worker from './master_worker.js';
 import * as metrics from './metrics.js';
 import * as random_names from './random_names.js';
+import { serverConfig } from './server_config';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
@@ -56,10 +57,21 @@ export function validExternalId(external_id) {
   return external_id.match(regex_valid_external_id);
 }
 
-function validDisplayName(display_name, is_sysadmin) {
+function getDisplayNameBypass(source) {
+  let display_name_bypass_flags = serverConfig().display_name_bypass_flags;
+  for (let ii = 0; ii < display_name_bypass_flags.length; ++ii) {
+    let flag = display_name_bypass_flags[ii];
+    if (source[flag]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
-    (!is_sysadmin && isReserved(display_name))
+    (!override && isReserved(display_name))
   ) {
     return false;
   }
@@ -185,7 +197,8 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!new_name) {
       return resp_func('Missing name');
     }
-    if (!validDisplayName(new_name, this.cmd_parse_source.sysadmin)) {
+    let display_name_bypass = getDisplayNameBypass(this.cmd_parse_source);
+    if (!validDisplayName(new_name, display_name_bypass)) {
       return resp_func('Invalid display name');
     }
     let old_name = this.getChannelData('public.display_name');
@@ -196,7 +209,7 @@ export class DefaultUserWorker extends ChannelWorker {
     let now = Date.now();
     let last_change = this.getChannelData('private.display_name_change');
     if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant &&
-      !this.cmd_parse_source.sysadmin
+      !display_name_bypass
     ) {
       return resp_func('You must wait 24h before changing your display name again');
     }
@@ -593,7 +606,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     let display_name = this.getChannelData('public.display_name');
-    if (!validDisplayName(display_name, this.getChannelData('public.permissions.sysadmin'))) {
+    let permissions = this.getChannelData('public.permissions', {});
+    let display_name_bypass = getDisplayNameBypass(permissions);
+    if (!validDisplayName(display_name, display_name_bypass)) {
       // Old data with no display_name, or valid display name rules have changed
       let new_display_name = this.user_id;
       if (!validDisplayName(new_display_name)) {
