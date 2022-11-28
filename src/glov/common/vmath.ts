@@ -18,10 +18,10 @@ export type Mat4 = Float32Array |
    number, number, number, number,
    number, number, number, number];
 
-export type Vec4 = [number, number, number, number] | Float32Array | Int32Array;
-export type Vec3 = [number, number, number] | Vec4;
-export type Vec2 = [number, number] | Vec3;
-export type Vec1 = [number] | Vec2;
+export type Vec4 = [number, number, number, number, ...number[]] | Float32Array | Int32Array;
+export type Vec3 = [number, number, number, ...number[]] | Float32Array | Int32Array;
+export type Vec2 = [number, number, ...number[]] | Float32Array | Int32Array;
+export type Vec1 = [number, ...number[]] | Float32Array | Int32Array;
 
 export type ROVec4 = Readonly<Vec4>;
 export type ROVec3 = Readonly<Vec3>;
