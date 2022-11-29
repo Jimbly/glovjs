@@ -15,9 +15,11 @@ function classProxyCreate() {
   function finalize(target_ctor) {
     assert(!expected_calls); // Otherwise, something referenced was a function not called (or called twice?)
     for (let key in static_data) {
+      assert(!target_ctor[key], `Duplicate class field ${key} defined in two files`);
       target_ctor[key] = static_data[key];
     }
     for (let key in prototype) {
+      assert(!target_ctor.prototype[key], `Duplicate class function ${key} defined in two files`);
       target_ctor.prototype[key] = prototype[key];
     }
     for (let ii = 0; ii < queued_funcs.length; ++ii) {
