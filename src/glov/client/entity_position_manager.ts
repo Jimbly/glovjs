@@ -25,8 +25,6 @@ interface EntityPositionManagerOpts {
   smooth_windows?: number; // how many windows behind we can be and only accelerate a little
   smooth_factor?: number; // how much faster to go in the smoothing window
 
-  speed?: number;
-
   entity_manager: ClientEntityManagerInterface;
 }
 
@@ -40,7 +38,7 @@ class PerEntData {
 
   constructor(ent_pos_manager: EntityPositionManager) {
     this.pos = ent_pos_manager.vec();
-    this.net_speed = ent_pos_manager.speed;
+    this.net_speed = 1;
     this.net_pos = ent_pos_manager.vec();
     this.impulse = ent_pos_manager.vec();
     this.net_state = 'idle';
@@ -63,7 +61,6 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   snap_factor: number;
   smooth_windows: number;
   smooth_factor: number;
-  speed: number;
 
   temp_vec: Vector;
   temp_delta: Vector;
@@ -87,7 +84,6 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.snap_factor = options.snap_factor || 1.0;
     this.smooth_windows = options.smooth_windows || 6.5;
     this.smooth_factor = options.smooth_factor || 1.2;
-    this.speed = options.speed || 1;
     this.entity_manager = options.entity_manager;
     this.entity_manager.on('ent_delete', this.handleEntDelete.bind(this));
     this.entity_manager.on('subscribe', this.handleSubscribe.bind(this));

@@ -216,7 +216,6 @@ export function main(): void {
     entity_manager,
     dim_pos: 2,
     dim_rot: 1,
-    speed: SPEED,
   });
 
   entity_manager.on('ent_ready', onEntReady);
