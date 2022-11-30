@@ -1349,8 +1349,8 @@ type TickableWorker = {
 export function entityManagerWorkerInit<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
->(ctor: typeof ChannelWorker): void {
-  if (!(ctor.prototype as TickableWorker).tick) {
+>(ctor: typeof ChannelWorker, no_tick?: boolean): void {
+  if (!no_tick && !(ctor.prototype as TickableWorker).tick) {
     // Add a default tick function if the worker does not have one
     (ctor.prototype as TickableWorker).tick = function tick(
       this: EntityManagerReadyWorker<Entity, Worker>,
