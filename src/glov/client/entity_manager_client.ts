@@ -235,6 +235,16 @@ class ClientEntityManagerImpl<
     return this.frame_wall_time;
   }
 
+  // Has own entity ID assigned, will be receiving updates
+  receivedEntStart(): boolean {
+    return this.received_ent_start;
+  }
+
+  // Has received all initial visible entities
+  receivedEntReady(): boolean {
+    return this.received_ent_ready;
+  }
+
   private onChannelSubscribe(data: unknown): void {
     // initial connection or reconnect
     this.reinitInternal();
