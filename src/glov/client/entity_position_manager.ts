@@ -14,8 +14,8 @@ const EPSILON = 0.01;
 type Vector = Float64Array;
 
 interface EntityPositionManagerAnimStateDef {
-  stopped?: (value: unknown) => boolean;
-  equal?: (a: unknown, b: unknown) => boolean;
+  stopped?: <T=unknown>(value: T) => boolean;
+  equal?: <T=unknown>(a: T, b: T) => boolean;
 }
 
 type AnimState = Partial<Record<string, unknown>>;
