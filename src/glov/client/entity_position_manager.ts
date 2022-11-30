@@ -202,7 +202,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
   updateMyPos(character_pos: Vector, anim_state: string): void {
     let pos_diff = !this.vsame(character_pos, this.last_send.pos);
-    let entless = this.entity_manager.hasMyEnt();
+    let entless = !this.entity_manager.hasMyEnt();
     let state_diff = !entless && (anim_state !== this.last_send.anim_state);
     if (pos_diff || state_diff) {
       // pos or anim_state changed
