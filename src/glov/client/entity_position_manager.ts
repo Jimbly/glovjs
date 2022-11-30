@@ -28,7 +28,7 @@ interface EntityPositionManagerOpts {
   entity_manager: ClientEntityManagerInterface;
 }
 
-class PerEntData {
+export class PerEntData {
   pos: Vector;
   net_speed: number;
   net_pos: Vector;
