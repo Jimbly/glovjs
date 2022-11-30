@@ -337,7 +337,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           // made it or passed it
           ped.pos[ii] = ped.net_pos[ii];
           ped.impulse[ii] = 0;
-        } else if (ii < this.dim_pos && ped.impulse[ii] > 0.01) {
+        } else if (ii < this.dim_pos && abs(ped.impulse[ii]) > 0.01) {
           // If positional (not rotation), we're not stopped
           stopped = false;
         }
