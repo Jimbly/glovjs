@@ -45,7 +45,7 @@ EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
   pos: { encoding: EntityFieldEncoding.Vec3 },
   type: { encoding: EntityFieldEncoding.Int },
   speed: { encoding: EntityFieldEncoding.Float, ephemeral: true },
-  state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
+  test_anim_state: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
   display_name: { encoding: EntityFieldEncoding.String, ephemeral: true },
   seq_ai_move: { encoding: EntityFieldEncoding.AnsiString, ephemeral: true },
 });
@@ -151,7 +151,7 @@ EntityTestServer.registerActions<EntityTestServer>([{
   allowed_data_assignments: {
     pos: 'array', // actually number[3]
     speed: 'number',
-    state: 'string',
+    test_anim_state: 'string',
   },
   self_only: true,
   handler: function (

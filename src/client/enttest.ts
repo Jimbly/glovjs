@@ -217,6 +217,11 @@ export function main(): void {
     entity_manager,
     dim_pos: 2,
     dim_rot: 1,
+    anim_state_defs: {
+      test_anim_state: {
+        stopped: (value: unknown): boolean => value === 'idle',
+      },
+    },
   });
 
   entity_manager.on('ent_ready', onEntReady);
@@ -259,7 +264,9 @@ export function main(): void {
   let test_room: ClientChannelWorker | null = null;
 
   let impulse = vec2();
-  let player_state = 'idle';
+  let player_state = {
+    test_anim_state: 'idle',
+  };
   function playerMotion(dt: number): void {
     // Network send
     if (entity_manager.checkNet()) {
@@ -278,7 +285,7 @@ export function main(): void {
     impulse[0] += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D);
     impulse[1] -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W);
     impulse[1] += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S);
-    player_state = v2length(impulse) > dt * 0.1 ? 'walk' : 'idle';
+    player_state.test_anim_state = v2length(impulse) > dt * 0.1 ? 'walk' : 'idle';
     v2addScale(test_character.pos, test_character.pos, impulse, SPEED);
 
     // let aim = v2sub(vec2(), input.mousePos(), test_character.pos);
@@ -392,7 +399,7 @@ export function main(): void {
         z: Z.SPRITES,
         rot: test_character.rot,
         color: color_self,
-        frame: player_state === 'idle' ? 1 : 3,
+        frame: player_state.test_anim_state === 'idle' ? 1 : 3,
       });
       // Draw view area
       ui.drawCircle(test_character.pos[0], test_character.pos[1], Z.SPRITES - 2, VIEW_DIST, 0.99, [1,1,1,0.5]);
@@ -428,7 +435,7 @@ export function main(): void {
           } else {
             v4copy(color_temp, color_player);
           }
-          frame = ped.anim_state === 'idle' ? 1 : 3;
+          frame = ped.anim_state.test_anim_state === 'idle' ? 1 : 3;
         } else {
           v4lerp(color_temp, ent.activatedRecently(), color_bot, color_bot_active);
           v4lerp(color_temp, ent.erroredRecently(), color_temp, color_bot_error);

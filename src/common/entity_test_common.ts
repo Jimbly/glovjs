@@ -15,7 +15,7 @@ export type EntityTestDataCommon = {
   type: EntityType;
   pos: [number, number, number];
   speed?: number;
-  state?: string;
+  test_anim_state?: string;
   display_name?: string;
   seq_ai_move?: string;
 } & EntityBaseDataCommon;

@@ -13,6 +13,13 @@ const EPSILON = 0.01;
 
 type Vector = Float64Array;
 
+interface EntityPositionManagerAnimStateDef {
+  stopped?: (value: unknown) => boolean;
+  equal?: (a: unknown, b: unknown) => boolean;
+}
+
+type AnimState = Partial<Record<string, unknown>>;
+
 interface EntityPositionManagerOpts {
   // These are applied directly from incoming options onto the entity position manager itself
 
@@ -24,6 +31,7 @@ interface EntityPositionManagerOpts {
   snap_factor?: number; // how many windows to snap in when we think we need to snap
   smooth_windows?: number; // how many windows behind we can be and only accelerate a little
   smooth_factor?: number; // how much faster to go in the smoothing window
+  anim_state_defs?: Partial<Record<string, EntityPositionManagerAnimStateDef>>;
 
   entity_manager: ClientEntityManagerInterface;
 }
@@ -33,16 +41,16 @@ export class PerEntData {
   net_speed: number;
   net_pos: Vector;
   impulse: Vector;
-  net_state: string;
-  anim_state: string;
+  net_anim_state: AnimState;
+  anim_state: AnimState;
 
   constructor(ent_pos_manager: EntityPositionManager) {
     this.pos = ent_pos_manager.vec();
     this.net_speed = 1;
     this.net_pos = ent_pos_manager.vec();
     this.impulse = ent_pos_manager.vec();
-    this.net_state = 'idle';
-    this.anim_state = 'idle';
+    this.net_anim_state = {};
+    this.anim_state = {};
   }
 }
 
@@ -61,13 +69,14 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   snap_factor: number;
   smooth_windows: number;
   smooth_factor: number;
+  anim_state_defs: Partial<Record<string, EntityPositionManagerAnimStateDef>>;
 
   temp_vec: Vector;
   temp_delta: Vector;
 
   last_send!: {
     pos: Vector;
-    anim_state: string;
+    anim_state: AnimState;
     sending: boolean;
     send_time: number;
     time: number;
@@ -84,6 +93,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.snap_factor = options.snap_factor || 1.0;
     this.smooth_windows = options.smooth_windows || 6.5;
     this.smooth_factor = options.smooth_factor || 1.2;
+    this.anim_state_defs = options.anim_state_defs || {};
     this.entity_manager = options.entity_manager;
     this.entity_manager.on('ent_delete', this.handleEntDelete.bind(this));
     this.entity_manager.on('subscribe', this.handleSubscribe.bind(this));
@@ -101,7 +111,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
     this.last_send = {
       pos: this.vec(-1),
-      anim_state: 'idle',
+      anim_state: {},
       sending: false,
       send_time: 0,
       time: 0,
@@ -200,10 +210,25 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return dst;
   }
 
-  updateMyPos(character_pos: Vector, anim_state: string): void {
+  stateDiff(a: AnimState, b: AnimState): null | Partial<Record<string, true>> {
+    let { anim_state_defs } = this;
+    let diff: null | Partial<Record<string, true>> = null;
+    for (let key in anim_state_defs) {
+      let def = anim_state_defs[key]!;
+      if (a[key] !== b[key] &&
+        (!def.equal || !def.equal(a[key], b[key]))
+      ) {
+        diff = diff || {};
+        diff[key] = true;
+      }
+    }
+    return diff;
+  }
+
+  updateMyPos(character_pos: Vector, anim_state: AnimState): void {
     let pos_diff = !this.vsame(character_pos, this.last_send.pos);
     let entless = !this.entity_manager.hasMyEnt();
-    let state_diff = !entless && (anim_state !== this.last_send.anim_state);
+    let state_diff = !entless && this.stateDiff(anim_state, this.last_send.anim_state);
     if (pos_diff || state_diff) {
       // pos or anim_state changed
       const now = getFrameTimestamp();
@@ -223,18 +248,19 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
         }
         this.last_send.send_time = now;
         this.vcopy(this.last_send.pos, character_pos);
-        this.last_send.anim_state = anim_state;
         let data_assignments: {
           pos?: number[];
-          state?: string;
           speed?: number;
-        } = {};
+        } & AnimState = {};
         if (pos_diff) {
           data_assignments.pos = this.arr(this.last_send.pos);
           data_assignments.speed = speed;
         }
         if (state_diff) {
-          data_assignments.state = this.last_send.anim_state;
+          for (let key in state_diff) {
+            data_assignments[key] = anim_state[key];
+            this.last_send.anim_state[key] = anim_state[key];
+          }
         }
         let handle_resp = (err: string | null): void => {
           if (err) {
@@ -274,17 +300,21 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   }
 
   private otherEntityPosChanged(ent_id: EntityID): void {
+    let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
     assert(ent);
     let ent_data = ent.data;
-    // Relevant fields on ent_data: pos, state
+    // Relevant fields on ent_data: pos, anything referenced by anim_state_defs
     let ped = this.per_ent_data[ent_id];
     if (!ped) {
       ped = this.per_ent_data[ent_id] = new PerEntData(this);
+      for (let key in anim_state_defs) {
+        ped.anim_state[key] = ent_data[key];
+      }
       this.vcopy(ped.pos, ent_data.pos as number[]);
     }
-    if (ent_data.state) {
-      ped.net_state = ent_data.state as string;
+    for (let key in anim_state_defs) {
+      ped.net_anim_state[key] = ent_data[key];
     }
     this.vcopy(ped.net_pos, ent_data.pos as number[]);
     ped.net_speed = ent_data.speed;
@@ -353,15 +383,29 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
       }
     }
 
-    const cur_is_run = ped.anim_state[0] === 'f' || ped.anim_state[0] === 'w';
-    const new_is_idle = ped.net_state[0] === 'i';
-    if (cur_is_run && new_is_idle && !stopped) {
-      // don't apply yet
-    } else {
-      ped.anim_state = ped.net_state;
-      // if (this.on_state_update) {
-      //   this.on_state_update(ent_id, ped.net_state);
-      // }
+    let { anim_state_defs } = this;
+    for (let key in anim_state_defs) {
+      if (ped.anim_state[key] !== ped.net_anim_state[key]) {
+        let def = anim_state_defs[key]!;
+        let apply_change = true;
+        if (def.stopped && !stopped) {
+          const cur_is_move = !def.stopped(ped.anim_state[key]);
+          const new_is_idle = def.stopped(ped.net_anim_state[key]);
+          if (cur_is_move && new_is_idle) {
+            // entity is still moving, and this new state is not moving related,
+            // don't apply yet
+            apply_change = false;
+          }
+        } else {
+          // Just apply - maybe should just do this in otherEntityPosChanged()?
+        }
+        if (apply_change) {
+          ped.anim_state[key] = ped.net_anim_state[key];
+          // if (this.on_state_update) {
+          //   this.on_state_update(ent_id, ped.net_state);
+          // }
+        }
+      }
     }
     return ped;
   }
