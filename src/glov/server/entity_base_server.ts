@@ -69,7 +69,7 @@ export type ActionHandler<Entity extends EntityBaseServer> = (
   resp_func: ErrorCallback<unknown, string>
 ) => void;
 
-export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | null;
+export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | 'object' | null;
 
 export type ActionDef<Entity extends EntityBaseServer> = {
   self_only: boolean;
