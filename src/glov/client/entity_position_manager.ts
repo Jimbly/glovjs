@@ -81,6 +81,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
   temp_vec: Vector;
   temp_delta: Vector;
+  sends_to_ignore!: number;
 
   last_send!: {
     pos: Vector;
@@ -117,6 +118,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
 
   reinit(): void {
     this.per_ent_data = {};
+    this.sends_to_ignore = 0;
 
     this.last_send = {
       pos: this.vec(-1),
@@ -234,7 +236,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return diff;
   }
 
-  updateMyPos(character_pos: Vector, anim_state: AnimState): void {
+  updateMyPos(character_pos: Vector, anim_state: AnimState, force?: boolean): void {
     let pos_diff = !this.vsame(character_pos, this.last_send.pos);
     let entless = !this.entity_manager.hasMyEnt();
     let state_diff = !entless && this.stateDiff(anim_state, this.last_send.anim_state);
@@ -242,9 +244,13 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
       // pos or anim_state changed
       const now = getFrameTimestamp();
       let send_time = entless ? this.entless_send_time : this.send_time;
-      if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > send_time)) {
+      if (!this.last_send.sending && (!this.last_send.time || now - this.last_send.time > send_time) || force) {
         // do send!
-        this.last_send.sending = true;
+        if (this.last_send.sending) {
+          ++this.sends_to_ignore;
+        } else {
+          this.last_send.sending = true;
+        }
         this.last_send.time = now;
         this.last_send.hrtime = engine.hrnow();
         let speed = 0;
@@ -275,13 +281,17 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           if (err) {
             return this.error_handler(err);
           }
-          this.last_send.sending = false;
-          let end = getFrameTimestamp();
-          let hrend = engine.hrnow();
-          let round_trip = hrend - this.last_send.hrtime;
-          if (round_trip > send_time) {
-            // hiccup, delay next send
-            this.last_send.time = end;
+          if (!this.sends_to_ignore) {
+            this.last_send.sending = false;
+            let end = getFrameTimestamp();
+            let hrend = engine.hrnow();
+            let round_trip = hrend - this.last_send.hrtime;
+            if (round_trip > send_time) {
+              // hiccup, delay next send
+              this.last_send.time = end;
+            }
+          } else {
+            --this.sends_to_ignore;
           }
         };
         if (this.entity_manager.hasMyEnt()) {
