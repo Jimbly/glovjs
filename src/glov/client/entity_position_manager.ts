@@ -32,8 +32,15 @@ interface EntityPositionManagerOpts {
   smooth_windows?: number; // how many windows behind we can be and only accelerate a little
   smooth_factor?: number; // how much faster to go in the smoothing window
   anim_state_defs?: Partial<Record<string, EntityPositionManagerAnimStateDef>>;
+  error_handler?: (err: string) => void;
 
   entity_manager: ClientEntityManagerInterface;
+}
+
+function defaultErrorHandler(err: string): void {
+  if (err !== 'ERR_FAILALL_DISCONNECT') {
+    throw err;
+  }
 }
 
 export class PerEntData {
@@ -70,6 +77,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   smooth_windows: number;
   smooth_factor: number;
   anim_state_defs: Partial<Record<string, EntityPositionManagerAnimStateDef>>;
+  error_handler: typeof defaultErrorHandler;
 
   temp_vec: Vector;
   temp_delta: Vector;
@@ -94,6 +102,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.smooth_windows = options.smooth_windows || 6.5;
     this.smooth_factor = options.smooth_factor || 1.2;
     this.anim_state_defs = options.anim_state_defs || {};
+    this.error_handler = options.error_handler || defaultErrorHandler;
     this.entity_manager = options.entity_manager;
     this.entity_manager.on('ent_delete', this.handleEntDelete.bind(this));
     this.entity_manager.on('subscribe', this.handleSubscribe.bind(this));
@@ -264,7 +273,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
         }
         let handle_resp = (err: string | null): void => {
           if (err) {
-            throw err;
+            return this.error_handler(err);
           }
           this.last_send.sending = false;
           let end = getFrameTimestamp();
