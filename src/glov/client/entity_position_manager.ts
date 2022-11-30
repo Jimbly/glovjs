@@ -261,6 +261,15 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           this.entity_manager.channel.send('move', data_assignments, handle_resp);
         }
       }
+    } else {
+      // Nothing has changed
+      if (!this.last_send.sending) {
+        // Flag send time so changes are batched, instead of immediately sending
+        // a state change plus (miniscule) movement, followed by a delay, followed
+        // by the actual movement.
+        // This also resets `send_time` so that speed is calculated more accurately
+        this.last_send.send_time = this.last_send.time = getFrameTimestamp();
+      }
     }
   }
 

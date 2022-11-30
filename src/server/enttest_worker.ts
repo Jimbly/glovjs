@@ -159,9 +159,12 @@ EntityTestServer.registerActions<EntityTestServer>([{
     { src, payload, data_assignments }: ActionHandlerParam,
     resp_func: ErrorCallback<never, string>
   ) {
+    let pos = data_assignments.pos as [number, number, number] | undefined;
     // Dirty the ent, apply their change to their VAID and VAIDs they see
-    v3copy(this.data.pos, data_assignments.pos as [number, number, number]);
-    this.dirtyVA('pos', 'move');
+    if (pos) {
+      v3copy(this.data.pos, pos);
+      this.dirtyVA('pos', 'move');
+    }
 
     let client = this.entity_manager.getClient(src.id);
     this.entity_manager.clientSetVisibleAreaSees(client, this.visibleAreaSees());
@@ -274,10 +277,12 @@ EntTestWorker.registerClientHandler('move', function (
   resp_func: ErrorCallback
 ) {
   assert(data.pos);
-  assert(data.pos.length === 3);
+  assert.equal(data.pos.length, 3);
 
   let client = this.entity_manager.getClient(src.id);
   let necd = client.getUserData<NonEntClientData>();
+  assert(necd.pos);
+  assert.equal(necd.pos.length, 3);
   v3copy(necd.pos, data.pos);
   this.entity_manager.clientSetVisibleAreaSees(client, visibleAreaSees(necd.pos, necd));
   resp_func();
