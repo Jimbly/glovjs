@@ -638,6 +638,11 @@ export class ChannelWorker {
         } // else, okay?
       }
     }
+    if (this.user_fields_to_subscribe) {
+      for (let ii = 0; ii < this.user_fields_to_subscribe.length; ++ii) {
+        field_list.push(this.user_fields_to_subscribe[ii]);
+      }
+    }
     this.subscribeOther(channel_id, field_list);
   }
 
@@ -653,6 +658,9 @@ export class ChannelWorker {
           }
         }
       }
+    }
+    if (this.workerOnChannelData) {
+      this.workerOnChannelData(source, data.key, data.value);
     }
   }
 
@@ -673,6 +681,9 @@ export class ChannelWorker {
           }
         }
       }
+    }
+    if (this.workerOnChannelData) {
+      this.workerOnChannelData(source, '', data);
     }
   }
 
@@ -872,9 +883,16 @@ export class ChannelWorker {
         continue;
       }
       let { field_map } = this.subscribers[channel_id];
-      if (!field_map || field_map[key]) {
-        ++count;
-        this.sendChannelMessage(channel_id, 'apply_channel_data', data);
+      let idx;
+      let key_to_check = key;
+      while (key_to_check) {
+        if (!field_map || field_map[key_to_check]) {
+          ++count;
+          this.sendChannelMessage(channel_id, 'apply_channel_data', data);
+          break;
+        }
+        idx = key_to_check.lastIndexOf('.');
+        key_to_check = idx === -1 ? '' : key_to_check.slice(0, idx);
       }
     }
     if (count && !was_q) {
@@ -1566,3 +1584,4 @@ ChannelWorker.prototype.permissive_client_set = false; // allow clients to set a
 ChannelWorker.prototype.allow_client_direct = {}; // default: none; but use client_handlers to more easily fill this
 ChannelWorker.prototype.no_datastore = false; // always assume datastore usage
 ChannelWorker.prototype.user_data_map = userDataMap({});
+ChannelWorker.prototype.user_fields_to_subscribe = [];
