@@ -103,19 +103,27 @@ export type EntityID = number;
 /*
  * Chat message data
  */
-export interface ChatMessageData {
-  id: string | undefined;
+export interface ChatMessageDataShared {
+  id?: string; // user_id or client_id (or undefined if not from a user)
   msg: string;
-  flags: number;
+  flags?: number;
+  display_name?: string;
+  style?: string; // If added by the worker
+}
+export interface ChatMessageDataSaved extends ChatMessageDataShared {
   ts: number;
-  display_name: string | undefined;
+}
+export interface ChatMessageDataBroadcast extends ChatMessageDataShared {
+  client_id?: string;
+  ent_id?: EntityID; // If from a worker with an EnityManager
+  quiet?: boolean; // Added at run-time on client
 }
 /*
  * Chat history data
  */
 export interface ChatHistoryData {
   idx: number;
-  msgs: ChatMessageData[];
+  msgs: ChatMessageDataSaved[];
 }
 
 /*
