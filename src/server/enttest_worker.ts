@@ -22,6 +22,7 @@ import {
   VAID,
 } from 'glov/server/entity_base_server';
 import {
+  JoinPayload,
   SEMClient,
   ServerEntityManager,
   createServerEntityManager,
@@ -120,11 +121,12 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   static loadPlayerEntityImpl = ((
     sem: ServerEntityManager<Entity, EntTestWorker>,
     src: ClientHandlerSource,
+    join_payload: JoinPayload,
     player_uid: string,
     cb: NetErrorCallback<Entity>
   ): void => {
     this.DEFAULT_PLAYER_DATA.pos = initialPos();
-    EntityBaseServer.loadPlayerEntityImpl.call(this, sem, src, player_uid,
+    EntityBaseServer.loadPlayerEntityImpl.call(this, sem, src, join_payload, player_uid,
       (err: null | string, ent_in?: EntityBaseServer) => {
         if (err) {
           return void cb(err);
@@ -201,7 +203,7 @@ class EntTestWorker extends ChannelWorker {
   constructor(channel_server: ChannelServer, channel_id: string, channel_data: DataObject) {
     super(channel_server, channel_id, channel_data);
 
-    this.entity_manager = createServerEntityManager({
+    this.entity_manager = createServerEntityManager<Entity, EntTestWorker>({
       worker: this,
       EntityCtor: EntityTestServer,
     });
@@ -212,11 +214,11 @@ class EntTestWorker extends ChannelWorker {
       if (src.user_id) {
         // logged in, get an entity
         /// Example: no persisted player data
-        // this.entity_manager.clientJoin(src, src.id);
-        this.entity_manager.clientJoin(src, src.user_id);
+        // this.entity_manager.clientJoin(src, src.id, null);
+        this.entity_manager.clientJoin(src, src.user_id, null);
       } else {
         // anonymous, no entity
-        this.entity_manager.clientJoin(src, null);
+        this.entity_manager.clientJoin(src, null, null);
       }
     }
   }
@@ -235,7 +237,7 @@ class EntTestWorker extends ChannelWorker {
     }
   }
 
-  semClientInitialVisibleAreaSees(sem_client: SEMClient): VAID[] {
+  semClientInitialVisibleAreaSees(join_payload: JoinPayload, sem_client: SEMClient): VAID[] {
     let ent = this.entity_manager.getEntityForClient(sem_client);
     if (ent) {
       return ent.visibleAreaSees();
