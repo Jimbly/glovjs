@@ -127,7 +127,7 @@ export type ClientEntityManager<Entity extends EntityBaseClient> =
 class ClientEntityManagerImpl<
   Entity extends EntityBaseClient
 > extends EventEmitter implements EntityManager<Entity>, ClientEntityManagerBaseOpts {
-  my_ent_id?: EntityID;
+  my_ent_id!: EntityID;
 
   on_broadcast!: (data: EntityManagerEvent) => void;
   EntityCtor!: typeof EntityBaseClient;
@@ -613,7 +613,6 @@ class ClientEntityManagerImpl<
   }
 
   getMyEntID(): EntityID {
-    assert(this.my_ent_id);
     return this.my_ent_id;
   }
 
