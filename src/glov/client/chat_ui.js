@@ -29,8 +29,8 @@ const { clamp, defaults, deprecate, matchAll } = require('glov/common/util.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
 deprecate(exports, 'create', 'chatUICreate');
 
-const FLAG_EMOTE = 1;
-const FLAG_USERCHAT = 2;
+export const CHAT_FLAG_EMOTE = 1;
+export const CHAT_FLAG_USERCHAT = 2;
 
 Z.CHAT = Z.CHAT || 500;
 Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
@@ -281,8 +281,8 @@ function notHidden(msg) {
 
 ChatUI.prototype.addMsgInternal = function (elem) {
   elem.timestamp = elem.timestamp || Date.now();
-  if (elem.flags & FLAG_USERCHAT) {
-    if (elem.flags & FLAG_EMOTE) {
+  if (elem.flags & CHAT_FLAG_USERCHAT) {
+    if (elem.flags & CHAT_FLAG_EMOTE) {
       elem.msg_text = `${elem.display_name} ${elem.msg}`;
     } else {
       elem.msg_text = `[${elem.display_name}] ${elem.msg}`;
@@ -358,7 +358,7 @@ ChatUI.prototype.onMsgJoin = function (data) {
     this.addChatFiltered({
       id: data.user_id || data.client_id,
       display_name: data.display_name || data.client_id,
-      flags: FLAG_EMOTE|FLAG_USERCHAT,
+      flags: CHAT_FLAG_EMOTE|CHAT_FLAG_USERCHAT,
       msg: 'joined the channel',
       style: 'join_leave',
     });
@@ -374,7 +374,7 @@ ChatUI.prototype.onMsgLeave = function (data) {
   this.addChatFiltered({
     id: data.user_id || data.client_id,
     display_name: data.display_name || data.client_id,
-    flags: FLAG_EMOTE|FLAG_USERCHAT,
+    flags: CHAT_FLAG_EMOTE|CHAT_FLAG_USERCHAT,
     msg: 'left the channel',
     style: 'join_leave',
   });
@@ -396,7 +396,7 @@ ChatUI.prototype.onMsgChat = function (data) {
     }
   }
   display_name = display_name || id;
-  flags = (flags || 0) | FLAG_USERCHAT;
+  flags = (flags || 0) | CHAT_FLAG_USERCHAT;
   this.addChatFiltered({
     id,
     display_name,
@@ -753,7 +753,7 @@ ChatUI.prototype.run = function (opts) {
               let last_msg = this.msgs[this.msgs.length - 1];
               if (last_msg) {
                 let msg = last_msg.msg;
-                if (msg && !(last_msg.flags & FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
+                if (msg && !(last_msg.flags & CHAT_FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
                   let numlines = last_msg.numlines;
                   tooltip_y -= font_height * numlines + SPACE_ABOVE_ENTRY;
                 }
@@ -882,12 +882,12 @@ ChatUI.prototype.run = function (opts) {
     let user_mouseover = false;
     let user_indent = 0;
     let did_user_context = false;
-    if ((msg.flags & FLAG_USERCHAT) && user_context_cb && msg.id && do_scroll_area) {
+    if ((msg.flags & CHAT_FLAG_USERCHAT) && user_context_cb && msg.id && do_scroll_area) {
       let nw = name_width[msg.display_name];
       if (!nw) {
         nw = name_width[msg.display_name] = ui.font.getStringWidth(styles.def, font_height, msg.display_name);
       }
-      if (!(msg.flags & FLAG_EMOTE)) {
+      if (!(msg.flags & CHAT_FLAG_EMOTE)) {
         if (!bracket_width) {
           bracket_width = ui.font.getStringWidth(styles.def, font_height, '[]');
         }
@@ -1189,7 +1189,7 @@ export function chatUICreate(params) {
       params.emote_cb(str);
     }
 
-    chat_ui.sendChat(FLAG_EMOTE, str);
+    chat_ui.sendChat(CHAT_FLAG_EMOTE, str);
   }
   cmd_parse.registerValue('volume_chat_joinleave', {
     type: cmd_parse.TYPE_FLOAT,
