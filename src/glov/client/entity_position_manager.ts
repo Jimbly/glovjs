@@ -107,7 +107,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.entity_manager = options.entity_manager;
     this.entity_manager.on('ent_delete', this.handleEntDelete.bind(this));
     this.entity_manager.on('subscribe', this.handleSubscribe.bind(this));
-    this.entity_manager.on('ent_update', this.otherEntityPosChanged.bind(this));
+    this.entity_manager.on('ent_update', this.otherEntityChanged.bind(this));
 
     this.reinit();
 
@@ -169,6 +169,13 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   arr(vec: Readonly<Vector>): number[] {
     let arr = new Array(this.n);
     for (let ii = 0; ii < this.n; ++ii) {
+      arr[ii] = vec[ii];
+    }
+    return arr;
+  }
+  arrPos(vec: Readonly<Vector>): number[] {
+    let arr = new Array(this.dim_pos);
+    for (let ii = 0; ii < this.dim_pos; ++ii) {
       arr[ii] = vec[ii];
     }
     return arr;
@@ -237,8 +244,9 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   }
 
   updateMyPos(character_pos: Vector, anim_state: AnimState, force?: boolean): void {
-    let pos_diff = !this.vsame(character_pos, this.last_send.pos);
     let entless = !this.entity_manager.hasMyEnt();
+    let pos_diff = entless ? !this.vsamePos(character_pos, this.last_send.pos) :
+      !this.vsame(character_pos, this.last_send.pos);
     let state_diff = !entless && this.stateDiff(anim_state, this.last_send.anim_state);
     if (pos_diff || state_diff) {
       // pos or anim_state changed
@@ -268,8 +276,10 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           speed?: number;
         } & AnimState = {};
         if (pos_diff) {
-          data_assignments.pos = this.arr(this.last_send.pos);
-          data_assignments.speed = speed;
+          data_assignments.pos = entless ? this.arrPos(this.last_send.pos) : this.arr(this.last_send.pos);
+          if (!entless) {
+            data_assignments.speed = speed;
+          }
         }
         if (state_diff) {
           for (let key in state_diff) {
@@ -318,7 +328,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     }
   }
 
-  private otherEntityPosChanged(ent_id: EntityID): void {
+  private otherEntityChanged(ent_id: EntityID): void {
     let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
     assert(ent);
@@ -335,42 +345,45 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     for (let key in anim_state_defs) {
       ped.net_anim_state[key] = ent_data[key];
     }
-    this.vcopy(ped.net_pos, ent_data.pos as number[]);
-    ped.net_speed = ent_data.speed;
 
-    // Keep ped.pos[rot] within PI of ped.net_pos, so interpolation always goes the right way
-    for (let ii = 0; ii < this.dim_rot; ++ii) {
-      let jj = this.dim_pos + ii;
-      while (ped.pos[jj] > ped.net_pos[jj] + PI) {
-        ped.pos[jj] -= TWO_PI;
+    if (!this.vsame(ped.net_pos, ent_data.pos)) {
+      this.vcopy(ped.net_pos, ent_data.pos as number[]);
+      ped.net_speed = ent_data.speed;
+
+      // Keep ped.pos[rot] within PI of ped.net_pos, so interpolation always goes the right way
+      for (let ii = 0; ii < this.dim_rot; ++ii) {
+        let jj = this.dim_pos + ii;
+        while (ped.pos[jj] > ped.net_pos[jj] + PI) {
+          ped.pos[jj] -= TWO_PI;
+        }
+        while (ped.pos[jj] < ped.net_pos[jj] - PI) {
+          ped.pos[jj] += TWO_PI;
+        }
       }
-      while (ped.pos[jj] < ped.net_pos[jj] - PI) {
-        ped.pos[jj] += TWO_PI;
-      }
-    }
 
-    // This interpolation logic taken from Splody
-    // Doesn't do great with physics-based jumps though
-    const delta = this.vsub(this.temp_delta, ped.net_pos, ped.pos);
-    const dist = this.vlength(delta);
+      // This interpolation logic taken from Splody
+      // Doesn't do great with physics-based jumps though
+      const delta = this.vsub(this.temp_delta, ped.net_pos, ped.pos);
+      const dist = this.vlength(delta);
 
-    if (dist > 0) {
-      const time_to_dest = dist / ped.net_speed;
-      if (time_to_dest < this.send_time + this.window) {
-        // Would get there in the expected time, use this speed
-        this.vscale(ped.impulse, delta, ped.net_speed / dist);
-      } else if (time_to_dest < this.send_time + this.window * this.smooth_windows) { // 0.5s
-        // We'll could be there in under half a second, try to catch up smoothly
-        // Using provided speed is too slow, go faster, though no slower than we were going
-        // (in case this is the last of multiple delayed updates and the last update was going a tiny distance slowly)
-        const old_speed = this.vlength(ped.impulse);
-        const specified_speed = ped.net_speed;
-        const new_speed = max(specified_speed * this.smooth_factor, old_speed);
-        this.vscale(ped.impulse, delta, new_speed / dist);
-      } else {
-        // We're way far behind using the provided speed, attempt to get all the way there by the next few
-        // theoretical updates, this basically snaps if this is particularly small
-        this.vscale(ped.impulse, delta, 1 / (this.send_time + this.window * this.snap_factor));
+      if (dist > 0) {
+        const time_to_dest = dist / ped.net_speed;
+        if (time_to_dest < this.send_time + this.window) {
+          // Would get there in the expected time, use this speed
+          this.vscale(ped.impulse, delta, ped.net_speed / dist);
+        } else if (time_to_dest < this.send_time + this.window * this.smooth_windows) { // 0.5s
+          // We'll could be there in under half a second, try to catch up smoothly
+          // Using provided speed is too slow, go faster, though no slower than we were going
+          // (in case this is the last of multiple delayed updates and the last update was going a tiny distance slowly)
+          const old_speed = this.vlength(ped.impulse);
+          const specified_speed = ped.net_speed;
+          const new_speed = max(specified_speed * this.smooth_factor, old_speed);
+          this.vscale(ped.impulse, delta, new_speed / dist);
+        } else {
+          // We're way far behind using the provided speed, attempt to get all the way there by the next few
+          // theoretical updates, this basically snaps if this is particularly small
+          this.vscale(ped.impulse, delta, 1 / (this.send_time + this.window * this.snap_factor));
+        }
       }
     }
   }
@@ -395,7 +408,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           // made it or passed it
           ped.pos[ii] = ped.net_pos[ii];
           ped.impulse[ii] = 0;
-        } else if (ii < this.dim_pos && abs(ped.impulse[ii]) > 0.01) {
+        } else if (ii < this.dim_pos && abs(ped.impulse[ii]) > 0.001) {
           // If positional (not rotation), we're not stopped
           stopped = false;
         }
@@ -416,7 +429,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
             apply_change = false;
           }
         } else {
-          // Just apply - maybe should just do this in otherEntityPosChanged()?
+          // Just apply - maybe should just do this in otherEntityChanged()?
         }
         if (apply_change) {
           ped.anim_state[key] = ped.net_anim_state[key];
