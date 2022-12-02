@@ -31,6 +31,7 @@ import {
   objectToSet,
 } from 'glov/common/util';
 import {
+  JoinPayload,
   ServerEntityManagerInterface,
 } from './entity_manager_server';
 
@@ -435,6 +436,7 @@ export class EntityBaseServer extends EntityBaseCommon {
   >(
     sem: ServerEntityManagerInterface,
     src: ClientHandlerSource,
+    join_payload: JoinPayload,
     player_uid: string,
     cb: NetErrorCallback<Entity>,
   ): void {

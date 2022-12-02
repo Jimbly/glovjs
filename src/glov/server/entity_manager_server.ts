@@ -47,11 +47,13 @@ const { min } = Math;
 
 export const ENTITY_LOG_VERBOSE = false;
 
+export type JoinPayload = unknown;
+
 export interface EntityManagerReadyWorker<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > extends ChannelWorker {
-  semClientInitialVisibleAreaSees(client: SEMClient): VAID[];
+  semClientInitialVisibleAreaSees(join_payload: JoinPayload, client: SEMClient): VAID[];
   entity_manager: ServerEntityManager<Entity, Worker>;
 }
 
@@ -148,6 +150,7 @@ function loadPlayerEntity<
 >(
   sem: ServerEntityManager<Entity, Worker>,
   src: ClientHandlerSource,
+  join_payload: JoinPayload,
   client: SEMClient,
   player_uid: string | null,
   cb: NetErrorCallback<EntityID>
@@ -189,7 +192,7 @@ function loadPlayerEntity<
   sem.player_uid_to_client[player_uid] = client;
   client.player_uid = player_uid;
   client.loading = true;
-  sem.EntityCtor.loadPlayerEntityImpl(sem, src, player_uid, (err?: string | null, ent?: Entity) => {
+  sem.EntityCtor.loadPlayerEntityImpl(sem, src, join_payload, player_uid, (err?: string | null, ent?: Entity) => {
     client.loading = false;
     if (err || client.left_while_loading) {
       sem.clientLeave(client.client_id);
@@ -378,6 +381,7 @@ class ServerEntityManagerImpl<
       assert(this.schema[ii]);
     }
   }
+
   getClient(client_id: ClientID): SEMClient {
     let client = this.clients[client_id];
     assert(client);
@@ -416,6 +420,7 @@ class ServerEntityManagerImpl<
   clientJoin(
     src: ClientHandlerSource,
     player_uid: string | null,
+    join_payload: JoinPayload,
   ): void {
     let { id: client_id } = src;
     assert(!this.clients[client_id]);
@@ -423,7 +428,7 @@ class ServerEntityManagerImpl<
     this.mem_usage.clients.count++;
     let sub_id = this.worker.getSubscriberId(src.channel_id); // Just for logging for now?
 
-    loadPlayerEntity(this, src, client, player_uid, (err, ent_id) => {
+    loadPlayerEntity(this, src, join_payload, client, player_uid, (err, ent_id) => {
       if (err) {
         // Immediately failed, remove this client
         this.clientLeave(client_id);
@@ -439,7 +444,7 @@ class ServerEntityManagerImpl<
         sub_id,
       });
       // Join and initialize appropriate visible areas
-      this.clientSetVisibleAreaSeesInternal(client, this.worker.semClientInitialVisibleAreaSees(client));
+      this.clientSetVisibleAreaSeesInternal(client, this.worker.semClientInitialVisibleAreaSees(join_payload, client));
       this.sendInitialEntsToClient(client, false, () => {
         // By now, client has already received the initial update for all relevant
         //   entities (should include own entity, if they have one)
@@ -1336,9 +1341,7 @@ export function createServerEntityManager<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 >(
-  // TODO: figure out why callers error if this is `Worker` instead of `any`, any clean way around this?
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  options: ServerEntityManagerOpts<Entity, any>
+  options: ServerEntityManagerOpts<Entity, Worker>
 ): ServerEntityManager<Entity, Worker> {
   return new ServerEntityManagerImpl<Entity, Worker>(options);
 }
