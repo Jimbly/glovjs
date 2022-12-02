@@ -3,8 +3,10 @@
 
 import assert from 'assert';
 import { Packet } from 'glov/common/packet';
-import { DataObject } from 'glov/common/types';
 import { Vec2, Vec3 } from 'glov/common/vmath';
+import type { DataObject, EntityID } from 'glov/common/types';
+
+export type { EntityID };
 
 // Entity Action List Flags
 export const EALF_HAS_PREDICATE = 1<<0;
@@ -72,8 +74,6 @@ export const EntityFieldSpecial = {
 } as const;
 
 export type EntityManagerSchema = EntityFieldDefSerialized[];
-
-export type EntityID = number;
 
 export type ClientID = string;
 

@@ -98,6 +98,8 @@ export interface ServerPresenceData {
   payload: unknown;
 }
 
+export type EntityID = number;
+
 /*
  * Chat message data
  */
