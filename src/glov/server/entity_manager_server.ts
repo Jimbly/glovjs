@@ -99,7 +99,7 @@ function visibleAreaInit<
   }
   sem.vaAddToUnseenSet(vaid, va);
   sem.worker.log(`Initializing VisibleArea ${vaid}: Loading existing entities`);
-  sem.worker.getBulkChannelData(`ents.${vaid}`, null, function (err?: string, ent_data?: DataObject[]) {
+  sem.load_func(sem.worker, vaid, function (err?: string, ent_data?: DataObject[]) {
     if (err) {
       return void done(err);
     }
@@ -243,6 +243,25 @@ function toSerializedStorage(ent: EntityBaseServer): DataObject {
   return ent.toSerializedStorage();
 }
 
+export function entityManagerDefaultSaveEnts(
+  worker: ChannelWorker,
+  vaid: VAID,
+  ent_data: DataObject[],
+  done: () => void,
+): void {
+  worker.debug(`Saving ${ent_data.length} ent(s) for VA ${vaid}`);
+  worker.setBulkChannelData(`ents.${vaid}`, ent_data, done);
+}
+
+export function entityManagerDefaultLoadEnts(
+  worker: ChannelWorker,
+  vaid: VAID,
+  cb: (err?: string, ent_data?: DataObject[]) => void,
+): void {
+  worker.getBulkChannelData(`ents.${vaid}`, null, cb);
+}
+
+
 export type SEMClient = SEMClientImpl;
 class SEMClientImpl {
   client_id: ClientID;
@@ -273,7 +292,26 @@ class SEMClientImpl {
   }
 }
 
-interface ServerEntityManagerOpts<
+export type EntSaveFunc <
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+> = (
+  worker: Worker,
+  vaid: VAID,
+  ent_data: DataObject[],
+  done: () => void,
+) => void;
+
+export type EntLoadFunc <
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+> = (
+  worker: Worker,
+  vaid: VAID,
+  cb: (err?: string, ent_data?: DataObject[]) => void,
+) => void;
+
+export interface ServerEntityManagerOpts<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > {
@@ -282,6 +320,8 @@ interface ServerEntityManagerOpts<
   max_ents_per_tick?: number;
   va_unload_time?: number;
   save_time?: number;
+  load_func?: EntLoadFunc<Entity, Worker>;
+  save_func?: EntSaveFunc<Entity, Worker>;
 }
 
 export type ServerEntityManager<
@@ -323,6 +363,8 @@ class ServerEntityManagerImpl<
   max_ents_per_tick: number;
   va_unload_time: number;
   save_time: number;
+  load_func: EntLoadFunc<Entity, Worker>;
+  save_func: EntSaveFunc<Entity, Worker>;
   schema: EntityManagerSchema;
   all_client_fields: DirtyFields;
   mem_usage = {
@@ -349,6 +391,8 @@ class ServerEntityManagerImpl<
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.va_unload_time = options.va_unload_time || 10000;
     this.save_time = options.save_time || 10000;
+    this.load_func = options.load_func || entityManagerDefaultLoadEnts;
+    this.save_func = options.save_func || entityManagerDefaultSaveEnts;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];
@@ -824,8 +868,7 @@ class ServerEntityManagerImpl<
 
       ++left;
       let ent_data = ents.map(toSerializedStorage);
-      this.worker.debug(`Saving ${ent_data.length} ent(s) for VA ${vaid}`);
-      this.worker.setBulkChannelData(`ents.${vaid}`, ent_data, done);
+      this.save_func(this.worker, vaid, ent_data, done);
     }
 
     done();
