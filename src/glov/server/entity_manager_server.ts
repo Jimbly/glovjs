@@ -24,6 +24,8 @@ import {
 import { Packet, packetCreate } from 'glov/common/packet';
 import { EventEmitter } from 'glov/common/tiny-events';
 import {
+  ChatMessageDataBroadcast,
+  ChatMessageDataSaved,
   ClientHandlerSource,
   DataObject,
   ErrorCallback,
@@ -32,6 +34,7 @@ import {
 } from 'glov/common/types';
 import { callEach, logdata, nop } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker.js';
+import { ChattableWorker } from './chattable_worker.js';
 import {
   ActionHandlerParam,
   DirtyFields,
@@ -1340,6 +1343,21 @@ export function createServerEntityManager<
   return new ServerEntityManagerImpl<Entity, Worker>(options);
 }
 
+export function entityManagerChatDecorateData<
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+>(
+  worker: Worker,
+  data_saved: ChatMessageDataSaved,
+  data_broadcast: ChatMessageDataBroadcast,
+): void {
+  if (data_broadcast.client_id) {
+    let client = worker.entity_manager.getClient(data_broadcast.client_id);
+    if (client && client.ent_id) {
+      data_broadcast.ent_id = client.ent_id;
+    }
+  }
+}
 
 // TODO: should get this from ChannelWorker automatically after channel_worker.js is converted to TypeScript
 type TickableWorker = {
@@ -1349,19 +1367,29 @@ type TickableWorker = {
 export function entityManagerWorkerInit<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
->(ctor: typeof ChannelWorker, no_tick?: boolean): void {
-  if (!no_tick && !(ctor.prototype as TickableWorker).tick) {
+>(ctor: typeof ChannelWorker, no_proto_extend?: boolean): void {
+  if (!no_proto_extend && !(ctor.prototype as TickableWorker).tick) {
     // Add a default tick function if the worker does not have one
     (ctor.prototype as TickableWorker).tick = function tick(
-      this: EntityManagerReadyWorker<Entity, Worker>,
+      this: Worker,
       dt: number,
       server_time: number
     ): void {
       this.entity_manager.tick(dt, server_time);
     };
   }
+  if (!no_proto_extend && !(ctor.prototype as ChattableWorker).chatDecorateData) {
+    // Add a default chatDecorateData function if the worker does not have one
+    (ctor.prototype as ChattableWorker).chatDecorateData = function chatDecorateData(
+      this: Worker,
+      data_saved: ChatMessageDataSaved,
+      data_broadcast: ChatMessageDataBroadcast,
+    ): void {
+      entityManagerChatDecorateData(this, data_saved, data_broadcast);
+    };
+  }
   ctor.registerClientHandler('ent_action_list', function entityManagerHandleEntActionList(
-    this: EntityManagerReadyWorker<Entity, Worker>,
+    this: Worker,
     src: ClientHandlerSource,
     pak: Packet,
     resp_func: NetResponseCallback<ActionListResponse>
