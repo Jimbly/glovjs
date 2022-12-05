@@ -270,6 +270,10 @@ export function colorSetSetShades(rollover, down, disabled) {
   }
 }
 
+export function uiGetFontStyleFocused() {
+  return font_style_focused;
+}
+
 export function uiSetFontStyleFocused(new_style) {
   font_style_focused = new_style;
 }
