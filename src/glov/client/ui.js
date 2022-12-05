@@ -223,11 +223,11 @@ export let font_style_focused = glov_font.style(font_style_normal, {});
 
 export let font;
 export let title_font;
-export let sprites = {};
+export const sprites = {};
 
-export let color_button = makeColorSet([1,1,1,1]);
-export let color_panel = vec4(1, 1, 0.75, 1);
-export let modal_font_style = glov_font.styleColored(null, 0x000000ff);
+export const color_button = makeColorSet([1,1,1,1]);
+export const color_panel = vec4(1, 1, 0.75, 1);
+export const modal_font_style = glov_font.styleColored(null, 0x000000ff);
 
 let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
