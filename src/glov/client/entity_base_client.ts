@@ -37,6 +37,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   data_overrides: DataOverride[];
   fade: number | null;
   last_update_timestamp: number;
+  private is_me: boolean;
 
   constructor(ent_id: EntityID, entity_manager: ClientEntityManagerInterface) {
     super(ent_id, entity_manager);
@@ -46,6 +47,11 @@ export class EntityBaseClient extends EntityBaseCommon {
     this.data_overrides = [];
     this.seq_id = 0;
     this.last_update_timestamp = engine.frame_timestamp;
+    this.is_me = ent_id === entity_manager.my_ent_id;
+  }
+
+  isMe(): boolean {
+    return this.is_me;
   }
 
   getData<T>(field: string, deflt: T): T;
