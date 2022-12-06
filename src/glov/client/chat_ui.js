@@ -625,7 +625,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
             style: style,
             id: netUserId(),
             client_id: netClientId(),
-            display_name: netSubs().logged_in_display_name,
+            display_name: netSubs().getDisplayName(),
             flags,
           });
         } else {

@@ -195,6 +195,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.logged_in = false;
   this.login_credentials = null;
   this.logged_in_username = null;
+  this.logged_in_display_name = null;
   this.was_logged_in = false;
   this.logging_in = false;
   this.logging_out = false;
@@ -512,6 +513,10 @@ SubscriptionManager.prototype.getUserId = function () {
   return this.loggedIn();
 };
 
+SubscriptionManager.prototype.getDisplayName = function () {
+  return this.logged_in_display_name;
+};
+
 SubscriptionManager.prototype.getMyUserChannel = function () {
   let user_id = this.loggedIn();
   if (!user_id) {
@@ -745,6 +750,7 @@ SubscriptionManager.prototype.logout = function () {
       local_storage.set('password', undefined);
       this.logged_in = false;
       this.logged_in_username = null;
+      this.logged_in_display_name = null;
       this.was_logged_in = false;
       this.login_credentials = null;
       this.emit('logout');
