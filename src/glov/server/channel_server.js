@@ -1005,6 +1005,7 @@ export class ChannelServer {
     assert(!this.channel_types[channel_type]);
     this.channel_types[channel_type] = ctor;
     ctor.autocreate = options.autocreate;
+    assert(options.subid_regex);
     ctor.subid_regex = options.subid_regex;
 
     ctor.prototype.perf_prefix = `cw.${channel_type}.`;
