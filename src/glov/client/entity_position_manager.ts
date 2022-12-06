@@ -292,9 +292,6 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           }
         }
         let handle_resp = (err: string | null): void => {
-          if (err) {
-            return this.error_handler(err);
-          }
           if (!this.sends_to_ignore) {
             this.last_send.sending = false;
             let end = getFrameTimestamp();
@@ -307,17 +304,20 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           } else {
             --this.sends_to_ignore;
           }
+          if (err) {
+            return this.error_handler(err);
+          }
         };
-        if (this.entity_manager.hasMyEnt()) {
+        if (this.entity_manager.isEntless()) {
+          assert(this.entity_manager.channel);
+          this.entity_manager.channel.send('move', data_assignments, handle_resp);
+        } else {
           // send via entity
           let my_ent = this.entity_manager.getMyEnt();
           my_ent.actionSend({
             action_id: 'move',
             data_assignments,
           }, handle_resp);
-        } else {
-          assert(this.entity_manager.channel);
-          this.entity_manager.channel.send('move', data_assignments, handle_resp);
         }
       }
     } else {
