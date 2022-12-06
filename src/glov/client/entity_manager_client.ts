@@ -609,7 +609,11 @@ class ClientEntityManagerImpl<
   }
 
   hasMyEnt(): boolean {
-    return Boolean(this.my_ent_id); // Maybe: && this.getEnt(this.my_ent_id));
+    return Boolean(this.my_ent_id && this.getEnt(this.my_ent_id));
+  }
+
+  isEntless(): boolean {
+    return !this.my_ent_id;
   }
 
   getMyEntID(): EntityID {

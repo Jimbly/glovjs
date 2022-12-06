@@ -244,7 +244,11 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   }
 
   updateMyPos(character_pos: Vector, anim_state: AnimState, force?: boolean): void {
-    let entless = !this.entity_manager.hasMyEnt();
+    let entless = this.entity_manager.isEntless();
+    if (!entless && !this.entity_manager.hasMyEnt()) {
+      // Probably waiting to receive our entity (or, our entity was just deleted, but should already be 'entless')
+      return;
+    }
     let pos_diff = entless ? !this.vsamePos(character_pos, this.last_send.pos) :
       !this.vsame(character_pos, this.last_send.pos);
     let state_diff = !entless && this.stateDiff(anim_state, this.last_send.anim_state);
