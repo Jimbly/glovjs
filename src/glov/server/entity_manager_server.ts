@@ -178,6 +178,7 @@ function loadPlayerEntity<
 
     // Steal entity/player_uid
     client.player_uid = player_uid;
+    client.ever_had_ent_id = true;
     client.ent_id = old_client.ent_id;
     old_client.player_uid = null;
     old_client.ent_id = 0;
@@ -195,17 +196,27 @@ function loadPlayerEntity<
   sem.EntityCtor.loadPlayerEntityImpl(sem, src, join_payload, player_uid, (err?: string | null, ent?: Entity) => {
     client.loading = false;
     if (err || client.left_while_loading) {
+      if (ent) {
+        ent.releasePlayerEntity();
+      }
+
       sem.clientLeave(client.client_id);
       return void cb(err || 'ERR_LEFT_WHILE_LOADING');
     }
 
     assert(ent);
     assert.equal(client, sem.player_uid_to_client[player_uid]); // hasn't changed async while loading
+    if (client.removed_ent_while_loading) {
+      ent.releasePlayerEntity();
+      sem.clientRemoveEntityInternal(client, 'left_while_loading');
+      return void cb(null, 0);
+    }
     let ent_id = ++sem.last_ent_id;
     ent.id = /*ent.data.id = */ent_id;
     // ent.user_id = user_id; // not currently needed, but might be generally useful?
     ent.player_uid = player_uid;
     ent.is_player = true;
+    client.ever_had_ent_id = true;
     client.ent_id = ent_id;
     ent.fixupPostLoad();
 
@@ -267,9 +278,11 @@ class SEMClientImpl {
   client_id: ClientID;
   player_uid: string | null;
   ent_id: EntityID;
+  ever_had_ent_id: boolean;
   known_entities: Partial<Record<EntityID, true>>;
   loading: boolean;
   left_while_loading: boolean;
+  removed_ent_while_loading: boolean;
   visible_area_sees: VAID[];
   has_schema: boolean;
   user_data: unknown;
@@ -277,9 +290,11 @@ class SEMClientImpl {
     this.client_id = client_id;
     this.player_uid = null;
     this.ent_id = 0;
+    this.ever_had_ent_id = false;
     this.known_entities = {};
     this.loading = false;
     this.left_while_loading = false;
+    this.removed_ent_while_loading = false;
     this.visible_area_sees = [];
     this.has_schema = false;
   }
@@ -426,6 +441,10 @@ class ServerEntityManagerImpl<
     }
   }
 
+  hasClient(client_id: ClientID): boolean {
+    return Boolean(this.clients[client_id]);
+  }
+
   getClient(client_id: ClientID): SEMClient {
     let client = this.clients[client_id];
     assert(client);
@@ -461,6 +480,37 @@ class ServerEntityManagerImpl<
     resp_func(null, 'VisibleArea re-initialized');
   }
 
+  // Called on an entity-less, already joined, client
+  clientAddEntity(
+    src: ClientHandlerSource,
+    client: SEMClient,
+    player_uid: string | null,
+    join_payload: JoinPayload,
+    on_ent_load_cb: (ent: Entity) => void,
+  ): void {
+    assert(client);
+    let { client_id } = client;
+    assert.equal(this.clients[client_id], client);
+    assert(!client.loading);
+    let sub_id = this.worker.getSubscriberId(src.channel_id);
+    loadPlayerEntity(this, src, join_payload, client, player_uid, (err, ent_id) => {
+      if (err) {
+        // Just leave them entity-less?
+        this.worker.logSrc(src, `${client_id}: clientAddEntity failed: ${err}`);
+        return;
+      }
+      assert(ent_id);
+      let ent = this.entities[ent_id];
+      assert(ent);
+      on_ent_load_cb(ent);
+      this.worker.debugSrc(src, `${client_id}: clientAddEntity success: ent_id=${ent_id}, sub_id="${sub_id}"`);
+      this.worker.sendChannelMessage(`client.${client_id}`, 'ent_id_change', {
+        ent_id,
+        sub_id,
+      });
+    });
+  }
+
   clientJoin(
     src: ClientHandlerSource,
     player_uid: string | null,
@@ -470,8 +520,7 @@ class ServerEntityManagerImpl<
     assert(!this.clients[client_id]);
     let client = this.clients[client_id] = new SEMClientImpl(client_id);
     this.mem_usage.clients.count++;
-    let sub_id = this.worker.getSubscriberId(src.channel_id); // Just for logging for now?
-
+    let sub_id = this.worker.getSubscriberId(src.channel_id);
     loadPlayerEntity(this, src, join_payload, client, player_uid, (err, ent_id) => {
       if (err) {
         // Immediately failed, remove this client
@@ -480,6 +529,7 @@ class ServerEntityManagerImpl<
         // TODO: send error to client?
         return;
       }
+
       this.worker.debugSrc(src, `${client_id}: clientJoin success: ent_id=${ent_id}, sub_id="${sub_id}"`);
       // Immediately let client know their entity ID, and notify that they are
       //   now receiving entity updates (will not yet have own entity yet, though)
@@ -510,6 +560,13 @@ class ServerEntityManagerImpl<
       return;
     }
     this.clientSetVisibleAreaSeesInternal(client, []);
+    this.clientRemoveEntityInternal(client, 'disconnect');
+    delete this.clients[client.client_id];
+    this.mem_usage.clients.count--;
+  }
+
+  clientRemoveEntityInternal(client: SEMClient, reason: string): void {
+    // Remove the client's entity, but keep the client joined and receiving updates
     let { player_uid, ent_id } = client;
     if (player_uid) {
       if (ent_id) {
@@ -519,7 +576,7 @@ class ServerEntityManagerImpl<
           ent.savePlayerEntity(nop);
         }
         ent.releasePlayerEntity();
-        this.deleteEntity(ent_id, 'disconnect');
+        this.deleteEntity(ent_id, reason);
 
         client.ent_id = 0;
       }
@@ -528,8 +585,21 @@ class ServerEntityManagerImpl<
         client.player_uid = null;
       }
     }
-    delete this.clients[client.client_id];
-    this.mem_usage.clients.count--;
+  }
+
+  clientRemoveEntity(client: SEMClient, reason: string): void {
+    if (client.loading) {
+      client.removed_ent_while_loading = true;
+      // clientRemoveEntityInternal() will be called when loading flag is cleared
+      return;
+    }
+    this.clientRemoveEntityInternal(client, reason);
+    let channel_id = `client.${client.client_id}`;
+    let sub_id = this.worker.getSubscriberId(channel_id);
+    this.worker.sendChannelMessage(channel_id, 'ent_id_change', {
+      ent_id: 0,
+      sub_id,
+    });
   }
 
   deleteEntityInternal(ent: Entity): void {
@@ -645,7 +715,12 @@ class ServerEntityManagerImpl<
         let { id: client_id } = src;
         let client = this.clients[client_id];
         if (!client || !client.ent_id) {
-          this.worker.warnSrc(src, `${src.id}: ent_action_list:${action_data.action_id}: ERR_NO_ENTITY`);
+          let msg = `${src.id}: ent_action_list:${action_data.action_id}: ERR_NO_ENTITY`;
+          if (client && client.ever_had_ent_id) {
+            this.worker.debugSrc(src, msg);
+          } else {
+            this.worker.warnSrc(src, msg);
+          }
           return void returnResult('ERR_NO_ENTITY');
         }
         action_data.ent_id = client.ent_id;

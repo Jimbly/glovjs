@@ -157,6 +157,7 @@ class ClientEntityManagerImpl<
     netSubs().onChannelMsg(options.channel_type, 'ent_broadcast', this.onBroadcast.bind(this));
     netSubs().onChannelMsg(options.channel_type, 'ent_start', this.onEntStart.bind(this));
     netSubs().onChannelMsg(options.channel_type, 'ent_ready', this.onEntReady.bind(this));
+    netSubs().onChannelMsg(options.channel_type, 'ent_id_change', this.onEntIdChange.bind(this));
     netSubs().onChannelEvent(options.channel_type, 'subscribe', this.onChannelSubscribe.bind(this));
 
     this.reinit(options);
@@ -507,6 +508,12 @@ class ClientEntityManagerImpl<
       this.my_ent_id = data.ent_id;
       this.received_ent_start = true;
       this.emit('ent_start');
+    } // else may have been from a previous connection
+  }
+
+  private onEntIdChange(data: { ent_id: EntityID; sub_id: string }): void {
+    if (data.sub_id === this.subscription_id) {
+      this.my_ent_id = data.ent_id;
     } // else may have been from a previous connection
   }
 
