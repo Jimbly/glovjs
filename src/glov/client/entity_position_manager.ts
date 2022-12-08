@@ -5,6 +5,7 @@ import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityID } from 'glov/common/entity_base_common';
 import { sign } from 'glov/common/util';
 import { ClientEntityManagerInterface } from './entity_manager_client';
+import { PingData, registerPingProvider } from './perf_net';
 
 const { abs, floor, max, PI, sqrt } = Math;
 
@@ -78,6 +79,8 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   smooth_factor: number;
   anim_state_defs: Partial<Record<string, EntityPositionManagerAnimStateDef>>;
   error_handler: typeof defaultErrorHandler;
+  ping_time: number = 0;
+  ping_time_time: number = 0;
 
   temp_vec: Vector;
   temp_delta: Vector;
@@ -297,6 +300,8 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
             let end = getFrameTimestamp();
             let hrend = engine.hrnow();
             let round_trip = hrend - this.last_send.hrtime;
+            this.ping_time = round_trip;
+            this.ping_time_time = end;
             if (round_trip > send_time) {
               // hiccup, delay next send
               this.last_send.time = end;
@@ -446,8 +451,25 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return ped;
   }
 
+  getPing(): PingData | null {
+    const max_age = 2000;
+    if (!this.ping_time_time) {
+      return null;
+    }
+    let age = getFrameTimestamp() - this.ping_time_time;
+    if (age > max_age) {
+      return null;
+    }
+    return {
+      ping: this.ping_time,
+      fade: 1 - age / max_age,
+    };
+  }
+
 }
 
 export function entityPositionManagerCreate(options: EntityPositionManagerOpts): EntityPositionManager {
-  return new EntityPositionManagerImpl(options);
+  let ret = new EntityPositionManagerImpl(options);
+  registerPingProvider(ret.getPing.bind(ret));
+  return ret;
 }
