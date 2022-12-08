@@ -35,6 +35,7 @@ const settings = require('./settings.js');
 const { spriteChainedStart, spriteChainedStop } = require('./sprites.js');
 const ui = require('./ui.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
+require('./perf_net.js');
 
 const METRIC_PAD = 2;
 
