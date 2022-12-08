@@ -3,6 +3,8 @@ import { cmd_parse } from './cmds';
 import * as perf from './perf';
 import * as settings from './settings';
 
+const { min } = Math;
+
 type StatsType = typeof wsstats;
 type StatsTracking = StatsType & {
   dm: number;
@@ -43,3 +45,34 @@ perf.addMetric({
     'up: ': bandwidth.bind(null, wsstats_out, last_wsstats_out),
   },
 });
+
+let ping_providers = 0;
+export type PingData = {
+  ping: number;
+  fade: number;
+};
+export function registerPingProvider(fn: () => PingData | null): void {
+  ++ping_providers;
+  let suffix = ping_providers === 1 ? '' : `${ping_providers}`;
+
+  settings.register({
+    [`show_ping${suffix}`]: {
+      default_value: 0,
+      type: cmd_parse.TYPE_INT,
+      range: [0,1],
+    },
+  });
+  perf.addMetric({
+    name: `ping${suffix}`,
+    show_stat: `show_ping${suffix}`,
+    labels: {
+      'ping: ': () => {
+        let pt = fn();
+        if (!pt || pt.fade < 0.001) {
+          return '';
+        }
+        return { value: `${pt.ping.toFixed(1)}`, alpha: min(1, pt.fade * 3) };
+      },
+    },
+  });
+}

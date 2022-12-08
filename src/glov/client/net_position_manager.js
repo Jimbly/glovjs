@@ -1,43 +1,16 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
+import * as util from 'glov/common/util';
+import * as glov_engine from './engine';
+import * as net from './net';
+import { netDisconnected } from './net';
+import { registerPingProvider } from './perf_net';
 
-/* eslint-disable import/order */
-const { cmd_parse } = require('./cmds.js');
-const glov_engine = require('./engine.js');
-const net = require('./net.js');
-const { netDisconnected } = net;
-const perf = require('./perf.js');
-const settings = require('./settings.js');
-const util = require('glov/common/util.js');
 const { abs, floor, max, min, PI, sqrt } = Math;
+
 const TWO_PI = PI * 2;
 const EPSILON = 0.01;
 
-let the;
-
-settings.register({
-  show_ping: {
-    default_value: 0,
-    type: cmd_parse.TYPE_INT,
-    range: [0,1],
-  },
-});
-perf.addMetric({
-  name: 'ping',
-  show_stat: 'show_ping',
-  labels: {
-    'ping: ': () => {
-      if (!the) {
-        return '';
-      }
-      let pt = the.getPing(2000);
-      if (!pt || pt.fade < 0.001) {
-        return '';
-      }
-      return { value: `${pt.ping.toFixed(1)}`, alpha: min(1, pt.fade * 3) };
-    },
-  },
-});
 const valid_options = [
   // Numeric parameters
   'dim_pos', 'dim_rot', // dimensions
@@ -163,7 +136,6 @@ NetPositionManager.prototype.vscale = function (dst, a, scalar) {
 
 NetPositionManager.prototype.reinit = function (options) {
   this.deinit();
-  the = this;
 
   options = options || {};
   this.per_client_data = {};
@@ -303,7 +275,8 @@ NetPositionManager.prototype.updateMyPos = function (character_pos, anim_state, 
   }
 };
 
-NetPositionManager.prototype.getPing = function (max_age) {
+NetPositionManager.prototype.getPing = function () {
+  const max_age = 2000;
   if (!this.ping_time_time) {
     return null;
   }
@@ -441,7 +414,9 @@ NetPositionManager.prototype.smooth_factor = 1.2; // how much faster to go in th
 
 
 export function create(options) {
-  return new NetPositionManager(options);
+  let ret = new NetPositionManager(options);
+  registerPingProvider(ret.getPing.bind(ret));
+  return ret;
 }
 
 
