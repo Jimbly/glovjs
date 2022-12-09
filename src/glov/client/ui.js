@@ -47,6 +47,7 @@ const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
+const { sliderSetDefaultShrink } = require('./slider.js');
 const { soundLoad, soundPlay } = require('./sound.js');
 const {
   SPOT_DEFAULT_BUTTON,
@@ -379,6 +380,9 @@ function uiStartup(param) {
 
   if (ui_sprites.color_set_shades) {
     colorSetSetShades(...ui_sprites.color_set_shades);
+  }
+  if (ui_sprites.slider_params) {
+    sliderSetDefaultShrink(...ui_sprites.slider_params);
   }
 
   if (sprites.button_rollover && color_set_shades[1] !== 1) {
