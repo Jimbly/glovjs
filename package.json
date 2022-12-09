@@ -28,7 +28,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "eslint-plugin-html": "^7.1.0",
     "express": "^4.17.1",
     "express-static-gzip": "^2.0.5",
     "fs-store": "^0.3.2",
@@ -64,6 +63,7 @@
     "browser-sync": "^2.26.7",
     "console-api": "0.0.5",
     "eslint": "^7.32.0",
+    "eslint-plugin-html": "^7.1.0",
     "eslint-plugin-import": "^2.26.0",
     "glov": "file:./src/glov",
     "glov-build": "1.0.37",
