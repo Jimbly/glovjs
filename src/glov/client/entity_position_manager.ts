@@ -45,12 +45,12 @@ function defaultErrorHandler(err: string): void {
 }
 
 export class PerEntData {
-  pos: Vector;
-  net_speed: number;
-  net_pos: Vector;
-  impulse: Vector;
-  net_anim_state: AnimState;
-  anim_state: AnimState;
+  pos: Vector; // Current interpolated position
+  net_speed: number; // Last network received speed
+  net_pos: Vector; // Last network received position
+  impulse: Vector; // Calculated impulse to interpolate with
+  net_anim_state: AnimState; // Last received app-specific anim states
+  anim_state: AnimState; // Current interpolated app-specific anim states
 
   constructor(ent_pos_manager: EntityPositionManager) {
     this.pos = ent_pos_manager.vec();
