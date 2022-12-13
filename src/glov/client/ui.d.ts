@@ -188,6 +188,7 @@ export interface ButtonImageParamBase extends ButtonParam {
   img_rect?: ROVec4;
   left_align?: boolean;
   img_color?: ROVec4;
+  z_inc?: number;
   color1?: ROVec4;
   rotation?: number;
   flip?: boolean;

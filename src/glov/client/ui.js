@@ -925,7 +925,7 @@ function buttonImageDraw(param, state, focused) {
   let draw_param = {
     x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
     y: param.y + pad_top + img_origin[1] * img_h,
-    z: param.z + Z_MIN_INC,
+    z: param.z + (param.z_inc || Z_MIN_INC),
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
