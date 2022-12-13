@@ -414,16 +414,39 @@ export function secondsSince2020() {
   return floor(Date.now() / 1000) - 1577836800;
 }
 
-export function dateToSafeLocaleString(date) {
+export function dateToSafeLocaleString(date, date_only) {
   // Uses toString as a fallback since some browsers do not properly detect default locale.
   let date_text;
   try {
-    date_text = date.toLocaleString();
+    date_text = date_only ? date.toLocaleDateString() : date.toLocaleString();
   } catch (e) {
     console.error(e, '(Using toString as fallback)');
-    date_text = date.toString();
+    date_text = date_only ? date.toDateString() : date.toString();
   }
   return date_text;
+}
+
+export function msToTimeString(duration, opts) {
+  opts = opts || {};
+  let ms = duration % 1000;
+  let s;
+  let m;
+  let h;
+  s = duration - ms;
+  s %= (60 * 1000);
+  m = (duration - ms - s);
+  m %= (60 * 60 * 1000);
+  h = duration - ms - s - m;
+  h /= 60 * 60 * 1000;
+  m /= 60 * 1000;
+  s /= 1000;
+
+  return `${
+    h ? `${h}:` : ''}${
+    h && m < 10 ? '0': ''}${m}:${
+    s < 10 ? '0' : ''}${s}${
+    opts.hide_ms ? '' : `.${ms < 10 ? '00' : ms < 100 ? '0' : ''}${ms}`
+  }`;
 }
 
 let sw = {}; // Stop words map
