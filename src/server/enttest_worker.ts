@@ -305,7 +305,7 @@ EntTestWorker.registerClientHandler('resetva', function (
     pos = necd.pos;
   }
   let vaid = visibleAreaGet(pos);
-  this.infoSrc(src, `Reseting VAID ${vaid}`);
+  this.infoSrc(src, `Resetting VAID ${vaid}`);
   this.entity_manager.visibleAreaReset(vaid, resp_func);
 });
 
