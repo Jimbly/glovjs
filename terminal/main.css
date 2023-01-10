@@ -120,6 +120,8 @@ canvas {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
+  background: white;
+  border-width: 1px;
 }
 
 .glovui_link {
