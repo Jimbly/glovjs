@@ -412,7 +412,10 @@ export function applyCopy(params) {
     source = framebufferEnd({ filter_linear: params.filter_linear, need_depth: params.need_depth });
   }
   params.shader = params.shader || 'copy';
-  params.params = shader_params_default;
+  params.params = params.params ? {
+    ...shader_params_default,
+    ...params.params,
+  } : shader_params_default;
   if (Array.isArray(source)) {
     params.texs = source;
   } else {
