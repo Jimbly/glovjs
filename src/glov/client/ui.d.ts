@@ -76,7 +76,7 @@ export function setProvideUserStringDefaultMessages(success_msg: Text, failure_m
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
 export type BaseSoundKey = 'button_click' | 'rollover';
-export function bindSounds(sounds?: Partial<Record<string, SoundID | SoundID[]>>): void;
+export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[]>>): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
