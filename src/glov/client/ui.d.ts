@@ -28,7 +28,10 @@ export function addHook(draw: UIHookFn, click: UIHookFn): void;
 export function getUIElemData<T, P>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
-export const modal_font_style: FontStyle;
+export function uiFontStyleNormal(): FontStyle;
+export function uiFontStyleFocused(): FontStyle;
+export function uiFontStyleDisabled(): FontStyle;
+export function uiFontStyleModal(): FontStyle;
 export interface UISprites {
   button: UISprite;
   button_rollover: null | UISprite;

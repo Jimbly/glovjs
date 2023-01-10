@@ -42,7 +42,7 @@ import {
   spotSubPush,
 } from './spot.js';
 import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
-import { playUISound } from './ui.js';
+import { playUISound, uiFontStyleFocused, uiFontStyleNormal } from './ui.js';
 import * as glov_ui from './ui.js';
 
 let glov_markup = null; // Not ported
@@ -786,7 +786,7 @@ class GlovDropDown extends SelectionBoxBase {
     }, glov_ui.sprites.menu_header, COLORS[root_spot_ret.spot_state]);
     let align = (display.centered ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HLEFT) |
       glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER;
-    font.drawSizedAligned(root_spot_ret.focused ? glov_ui.font_style_focused : glov_ui.font_style_normal,
+    font.drawSizedAligned(root_spot_ret.focused ? uiFontStyleFocused() : uiFontStyleNormal(),
       x + display.xpad, y, z + 2,
       font_height, align,
       width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
