@@ -66,7 +66,7 @@
     "eslint-plugin-html": "^7.1.0",
     "eslint-plugin-import": "^2.26.0",
     "glov": "file:./src/glov",
-    "glov-build": "1.0.37",
+    "glov-build": "1.0.39",
     "glov-build-babel": "1.0.4",
     "glov-build-browserify": "1.0.6",
     "glov-build-concat": "1.0.10",
