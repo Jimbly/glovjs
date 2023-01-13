@@ -1230,6 +1230,35 @@ export function loadsPending() {
   return textures.load_count + soundLoading() + models.load_count;
 }
 
+let on_load_metrics = [];
+export function onLoadMetrics(cb) {
+  on_load_metrics.push(cb);
+}
+
+onLoadMetrics((obj) => {
+  console.log([
+    'Load time summary',
+    `  ${obj.time_js_load}ms JS load`,
+    `  ${obj.time_js_init}ms JS init`,
+    `  ${obj.time_resource_load}ms resource load`,
+    `${obj.time_total}ms total`
+  ].join('\n'));
+});
+
+function loadingFinished() {
+  let now = Date.now();
+  let time_js_load = window.time_load_onload - window.time_load_start;
+  let time_js_init = window.time_load_init - window.time_load_onload;
+  let time_resource_load = now - window.time_load_init;
+  let time_total = now - window.time_load_start;
+  callEach(on_load_metrics, null, {
+    time_js_load,
+    time_js_init,
+    time_resource_load,
+    time_total,
+  });
+}
+
 function loading() {
   let load_count = loadsPending();
   let elem_loading_text = document.getElementById('loading_text');
@@ -1243,6 +1272,7 @@ function loading() {
     postTick({
       ticks: 2,
       fn: function () {
+        loadingFinished();
         let loading_elem = document.getElementById('loading');
         if (loading_elem) {
           loading_elem.style.visibility = 'hidden';

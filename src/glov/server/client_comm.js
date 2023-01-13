@@ -21,6 +21,7 @@ const { isPacket } = require('glov/common/packet.js');
 const { logdata, merge } = require('glov/common/util.js');
 const { isProfane, profanityCommonStartup } = require('glov/common/words/profanity_common.js');
 const metrics = require('./metrics.js');
+const { metricsStats } = metrics;
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const random_names = require('./random_names.js');
 // const {
@@ -832,6 +833,25 @@ function onProfile(client, data, resp_func) {
   });
 }
 
+const LOAD_TIME_METRICS = [
+  'time_js_load',
+  'time_js_init',
+  'time_resource_load',
+  'time_total',
+];
+function onLoadMetrics(client, data, resp_func) {
+  if (!data) {
+    return void resp_func();
+  }
+  for (let ii = 0; ii < LOAD_TIME_METRICS.length; ++ii) {
+    let field = LOAD_TIME_METRICS[ii];
+    if (typeof data[field] === 'number') {
+      metricsStats(`clientload_${field}`, data[field]);
+    }
+  }
+  resp_func();
+}
+
 function onCmdParseAuto(client, pak, resp_func) {
   let cmd = pak.readString();
   let { client_channel } = client;
@@ -892,6 +912,7 @@ export function init(channel_server_in) {
   ws_server.onMsg('cmd_parse_list_client', onCmdParseListClient);
   ws_server.onMsg('perf_fetch', onPerfFetch);
   ws_server.onMsg('profile', onProfile);
+  ws_server.onMsg('load_metrics', onLoadMetrics);
 
   ws_server.onMsg('upload_start', uploadOnStart);
   ws_server.onMsg('upload_chunk', uploadOnChunk);

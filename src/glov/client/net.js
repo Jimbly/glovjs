@@ -46,6 +46,12 @@ export function init(params) {
       client.checkDisconnect();
       subs.tick(dt);
     });
+
+    params.engine.onLoadMetrics((obj) => {
+      subs.onceConnected(() => {
+        client.send('load_metrics', obj);
+      });
+    });
   }
 }
 
