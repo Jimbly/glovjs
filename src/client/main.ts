@@ -3,18 +3,30 @@
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
-import * as engine from 'glov/client/engine.js';
-import { netInit } from 'glov/client/net.js';
-import { spriteSetGet } from 'glov/client/sprite_sets.js';
+import mat4LookAt from 'gl-mat4/lookAt';
+import * as engine from 'glov/client/engine';
+import mat4ScaleRotateTranslate from 'glov/client/mat4ScaleRotateTranslate';
+import {
+  modelLoad,
+  modelStartup,
+} from 'glov/client/models';
+import { netInit } from 'glov/client/net';
+import { qRotateZ, quat } from 'glov/client/quat';
+import { spriteSetGet } from 'glov/client/sprite_sets';
 import {
   Sprite,
   spriteCreate,
-} from 'glov/client/sprites.js';
+} from 'glov/client/sprites';
+import {
+  textureBind,
+  textureError,
+} from 'glov/client/textures';
 import {
   print,
   scaleSizes,
   setFontHeight,
-} from 'glov/client/ui.js';
+} from 'glov/client/ui';
+import { mat4, zaxis, zero_vec } from 'glov/common/vmath';
 
 const { sin } = Math;
 
@@ -31,7 +43,12 @@ function init(): void {
   sprite_test = spriteCreate({
     name: 'test',
   });
+  modelStartup();
 }
+
+let mat_view = mat4();
+let mat_obj = mat4();
+let rot = quat();
 
 function statePlay(dt: number): void {
   print(null,10,10,1, 'Test!');
@@ -41,6 +58,21 @@ function statePlay(dt: number): void {
     w: 10,
     h: 10,
   });
+
+  engine.start3DRendering();
+  mat4LookAt(mat_view, [5,4,3], zero_vec, zaxis);
+  engine.setGlobalMatrices(mat_view);
+  qRotateZ(rot, rot, engine.frame_dt * 0.001);
+  textureBind(0, textureError());
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [1,1,0.03]);
+  let box = modelLoad('box');
+  box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [0,0,0]);
+  box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [1,0,0.01]);
+  box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [0,1,0.02]);
+  box.draw({ mat: mat_obj });
 }
 
 export function main(): void {
@@ -52,7 +84,7 @@ export function main(): void {
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
-  let pixely = 'on';
+  let pixely = 'off';
   let font_def;
   let ui_sprites;
   let pixel_perfect = 0;
