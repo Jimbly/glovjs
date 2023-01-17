@@ -3,11 +3,18 @@
 const local_storage = require('glov/client/local_storage.js');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
+import * as mat4LookAt from 'gl-mat4/lookAt';
 import * as engine from 'glov/client/engine.js';
+import * as mat4ScaleRotateTranslate from 'glov/client/mat4ScaleRotateTranslate.js';
+import * as models from 'glov/client/models.js';
+import { modelStartup } from 'glov/client/models.js';
 import * as net from 'glov/client/net.js';
+import { qRotateZ, quat } from 'glov/client/quat.js';
 import { spriteSetGet } from 'glov/client/sprite_sets.js';
 import { createSprite } from 'glov/client/sprites.js';
+import * as textures from 'glov/client/textures.js';
 import * as ui from 'glov/client/ui.js';
+import { mat4, zaxis, zero_vec } from 'glov/common/vmath.js';
 
 const { sin } = Math;
 
@@ -24,7 +31,12 @@ function init() {
   sprites.test = createSprite({
     name: 'test',
   });
+  modelStartup();
 }
+
+let mat_view = mat4();
+let mat_obj = mat4();
+let rot = quat();
 
 function statePlay(dt) {
   ui.print(null,10,10,1, 'Test!');
@@ -34,6 +46,20 @@ function statePlay(dt) {
     w: 10,
     h: 10,
   });
+
+  engine.start3DRendering();
+  mat4LookAt(mat_view, [5,4,3], zero_vec, zaxis);
+  engine.setGlobalMatrices(mat_view);
+  qRotateZ(rot, rot, engine.frame_dt * 0.001);
+  textures.bind(0, textures.textures.error);
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [1,1,0.03]);
+  models.models.box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [0,0,0]);
+  models.models.box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [1,0,0.01]);
+  models.models.box.draw({ mat: mat_obj });
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, [0,1,0.02]);
+  models.models.box.draw({ mat: mat_obj });
 }
 
 export function main() {
@@ -45,7 +71,7 @@ export function main() {
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
-  let pixely = 'on';
+  let pixely = 'off';
   let font;
   let ui_sprites;
   if (pixely === 'strict') {
