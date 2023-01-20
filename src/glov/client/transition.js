@@ -373,7 +373,7 @@ export function randomTransition(fade_time_scale) {
     // case 4:
     //   if (!logo) {
     //     GlovTextureLoadOptions options;
-    //     options.clamp_s = options.clamp_t = true;
+    //     options.wrap_s = options.wrap_t = gl.CLAMP_TO_EDGE;
     //     logo = GlovTextures::loadtex("data/SampleLogoTransition.png", &options);
     //   }
     //   glovTransitionQueue(Z_TRANSITION_FINAL, glovTransitionLogoZoom(500, logo));
