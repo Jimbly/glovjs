@@ -153,12 +153,13 @@ export class EntityBaseClient extends EntityBaseCommon {
     }
   }
 
-  actionSend<T=unknown>(action: ActionMessageParam, resp_func: NetErrorCallback<T>): void {
+  actionSend<T=unknown>(action: ActionMessageParam, resp_func?: NetErrorCallback<T>): void {
     (action as ClientActionMessageParam).ent = this;
-    this.entity_manager.actionSendQueued(action as ClientActionMessageParam, resp_func as NetErrorCallback<unknown>);
+    this.entity_manager.actionSendQueued(action as ClientActionMessageParam,
+      resp_func as NetErrorCallback<unknown> | undefined);
   }
 
-  applyBatchUpdate<T=unknown>(update: BatchUpdateParam, resp_func: NetErrorCallback<T>): void {
+  applyBatchUpdate<T=unknown>(update: BatchUpdateParam, resp_func?: NetErrorCallback<T>): void {
     let { field, action_id, payload, data_assignments } = update;
     assert(data_assignments);
     assert(!update.predicate);

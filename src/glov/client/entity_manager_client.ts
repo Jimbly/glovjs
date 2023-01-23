@@ -532,7 +532,7 @@ class ClientEntityManagerImpl<
 
   private handleActionListResult(
     action_list: ClientActionMessageParam[],
-    resp_list: NetErrorCallback<unknown>[],
+    resp_list: (NetErrorCallback<unknown> | undefined)[],
     err: string | null,
     resp?: ActionListResponse,
   ): void {
@@ -571,7 +571,7 @@ class ClientEntityManagerImpl<
 
   action_list_queue: {
     action_list: ClientActionMessageParam[];
-    resp_list: NetErrorCallback<unknown>[];
+    resp_list: (NetErrorCallback<unknown> | undefined)[];
   } | null = null;
 
   actionListFlush(): void {
@@ -599,7 +599,7 @@ class ClientEntityManagerImpl<
 
   actionSendQueued(
     action: ClientActionMessageParam,
-    resp_func: NetErrorCallback<unknown>,
+    resp_func?: NetErrorCallback<unknown>,
   ): void {
     if (!this.action_list_queue) {
       this.action_list_queue = {
