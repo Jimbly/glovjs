@@ -18,7 +18,7 @@ module.exports = function (config) {
       PLATFORM: 'web',
       ENV: 'entity',
     },
-    zip: false,
+    zip: true,
   });
 
   // Spine support

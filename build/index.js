@@ -5,8 +5,11 @@ const path = require('path');
 const { asyncEachSeries } = require('glov-async');
 const gb = require('glov-build');
 const babel = require('glov-build-babel');
+const imagemin = require('glov-build-imagemin');
 const preresolve = require('glov-build-preresolve');
 const sourcemap = require('glov-build-sourcemap');
+const imagemin_optipng = require('imagemin-optipng');
+const imagemin_zopfli = require('imagemin-zopfli');
 const argv = require('minimist')(process.argv.slice(2));
 const Replacer = require('regexp-sourcemaps');
 
@@ -152,6 +155,14 @@ gb.task({
 for (let ii = 0; ii < config.client_register_cbs.length; ++ii) {
   config.client_register_cbs[ii](gb);
 }
+
+gb.task({
+  name: 'client_png',
+  input: config.client_png,
+  type: gb.SINGLE,
+  target: 'dev',
+  func: copy,
+});
 
 gb.task({
   name: 'server_static',
@@ -395,6 +406,7 @@ function addStarStarJSON(a) {
 let client_tasks = [
   ...config.extra_client_tasks,
   'client_static',
+  'client_png',
   'client_css',
   'client_fsdata',
   ...bundle_tasks,
@@ -550,6 +562,14 @@ function noBundleTasks(elem) {
   return true;
 }
 
+function noPNGTask(elem) {
+  if (elem.split(':')[0] === 'client_png') {
+    return false;
+  }
+  return true;
+}
+
+
 let zip_tasks = [];
 config.extra_index.forEach(function (elem) {
   if (!elem.zip) {
@@ -617,11 +637,25 @@ gb.task({
 });
 
 gb.task({
+  name: 'build.prod.png',
+  input: [
+    'client_png:**',
+  ],
+  target: 'prod',
+  ...imagemin({
+    plugins: [
+      imagemin_optipng(config.optipng),
+      imagemin_zopfli(config.zopfli),
+    ],
+  }),
+});
+
+gb.task({
   name: 'build.prod.compress',
   input: [
     ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.uglify:**',
-    ...client_input_globs.filter(noBundleTasks),
+    ...client_input_globs.filter(noBundleTasks).filter(noPNGTask),
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
@@ -638,11 +672,11 @@ gb.task({
 
 gb.task({
   name: 'build.prod.client',
-  deps: ['build.prod.compress', 'build.zip'],
+  deps: ['build.prod.compress', 'build.prod.png', 'build.zip'],
 });
 gb.task({
   name: 'build',
-  deps: ['build.prod.package', 'build.prod.server', 'build.prod.compress', 'build.zip'],
+  deps: ['build.prod.package', 'build.prod.server', 'build.prod.client'],
 });
 
 // Default development task

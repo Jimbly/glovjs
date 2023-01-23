@@ -18,12 +18,15 @@ module.exports = {
   client_html_index: ['**/client/index.html'],
   extra_client_html: [],
   client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
+  client_png: [
+    'client/**/*.png',
+  ],
   client_static: [
     'client/**/*.webm',
     'client/**/*.mp3',
     'client/**/*.wav',
     'client/**/*.ogg',
-    'client/**/*.png',
+    // 'client/**/*.png',
     'client/**/*.jpg',
     'client/**/*.glb',
     'client/**/*.ico',
@@ -71,5 +74,21 @@ module.exports = {
   ],
   client_register_cbs: [],
   preresolve_params: { modules: { glov: 'glov' } },
+  optipng: {
+    //   Note: always lossless, safe to use with anything
+    optimizationLevel: 3, // 0...7
+    bitDepthReduction: true,
+    colorTypeReduction: true,
+    paletteReduction: true,
+    interlaced: false,
+    errorRecovery: true,
+  },
+  zopfli: {
+    //   Note: always lossless, safe to use with anything
+    transparent: false, // allow altering hidden colors of transparent pixels
+    '8bit': false,
+    iterations: 15,
+    more: false,
+  },
 };
 require('./config.project.js')(module.exports);
