@@ -569,6 +569,20 @@ function noPNGTask(elem) {
   return true;
 }
 
+gb.task({
+  name: 'build.prod.png',
+  input: [
+    'client_png:**',
+  ],
+  target: 'prod',
+  ...imagemin({
+    plugins: [
+      imagemin_optipng(config.optipng),
+      imagemin_zopfli(config.zopfli),
+    ],
+  }),
+});
+
 
 let zip_tasks = [];
 config.extra_index.forEach(function (elem) {
@@ -580,7 +594,8 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      ...client_input_globs_base.filter(noBundleTasks),
+      ...client_input_globs_base.filter(noBundleTasks).filter(noPNGTask),
+      'build.prod.png:**',
       ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
       'build.prod.uglify:**',
       ...config.extra_client_html,
@@ -634,20 +649,6 @@ gb.task({
       });
     }, done);
   },
-});
-
-gb.task({
-  name: 'build.prod.png',
-  input: [
-    'client_png:**',
-  ],
-  target: 'prod',
-  ...imagemin({
-    plugins: [
-      imagemin_optipng(config.optipng),
-      imagemin_zopfli(config.zopfli),
-    ],
-  }),
 });
 
 gb.task({
