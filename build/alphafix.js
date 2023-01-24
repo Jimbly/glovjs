@@ -3,7 +3,7 @@ const gb = require('glov-build');
 const micromatch = require('micromatch');
 const { pngRead, pngWrite } = require('./png.js');
 
-const { floor, round } = Math;
+const { abs, floor, round } = Math;
 
 // Photoshop writes pixels with 0 alpha but a bright white color, which causes
 // interpolation errors - instead spread the nearest non-alpha color.
@@ -40,6 +40,11 @@ module.exports = function (globs) {
         todo.push(ii);
       }
     }
+    if (!todo.length) {
+      job.out(file);
+      return void done();
+    }
+    let diff = 0;
     let did_anything = true;
     while (did_anything) {
       did_anything = false;
@@ -81,9 +86,15 @@ module.exports = function (globs) {
           todo[ii] = todo[todo.length - 1];
           todo.pop();
           done.push(idx);
-          data[idx*4] = round(r/c);
-          data[idx*4+1] = round(g/c);
-          data[idx*4+2] = round(b/c);
+          r = round(r/c);
+          g = round(g/c);
+          b = round(b/c);
+          diff += abs(data[idx*4] - r);
+          diff += abs(data[idx*4+1] - g);
+          diff += abs(data[idx*4+2] - b);
+          data[idx*4] = r;
+          data[idx*4+1] = g;
+          data[idx*4+2] = b;
         }
       }
       for (let ii = 0; ii < done.length; ++ii) {
@@ -92,10 +103,15 @@ module.exports = function (globs) {
     }
 
     let buffer = pngWrite(pngin);
-    job.out({
-      relative: file.relative,
-      contents: buffer,
-    });
+    if (!diff && buffer.length > file.contents.length) {
+      // No change, and output is larger, output original
+      job.out(file);
+    } else {
+      job.out({
+        relative: file.relative,
+        contents: buffer,
+      });
+    }
     done();
   }
   return {
