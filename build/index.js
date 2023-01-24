@@ -13,6 +13,7 @@ const imagemin_zopfli = require('imagemin-zopfli');
 const argv = require('minimist')(process.argv.slice(2));
 const Replacer = require('regexp-sourcemaps');
 
+const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
 const compress = require('./compress.js');
 const config = require('./config.js');
@@ -159,9 +160,8 @@ for (let ii = 0; ii < config.client_register_cbs.length; ++ii) {
 gb.task({
   name: 'client_png',
   input: config.client_png,
-  type: gb.SINGLE,
   target: 'dev',
-  func: copy,
+  ...alphafix(config.client_png_alphafix),
 });
 
 gb.task({

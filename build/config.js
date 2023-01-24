@@ -21,6 +21,11 @@ module.exports = {
   client_png: [
     'client/**/*.png',
   ],
+  client_png_alphafix: [
+    '**',
+    '!client/spine/**/*.png', // Already has appropriate color channel
+    '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
+  ],
   client_static: [
     'client/**/*.webm',
     'client/**/*.mp3',
