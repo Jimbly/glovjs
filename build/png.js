@@ -13,14 +13,23 @@ function pngRead(file_contents) {
   } catch (e) {
     if (e.toString().indexOf('at end of stream') !== -1) {
       // Chrome stated adding an extra 0?!
-      let extra = 0;
-      while (file_contents[file_contents.length - 1 - extra] === 0) {
-        ++extra;
-      }
-      try {
-        img = PNG.sync.read(file_contents.slice(0, -extra));
-      } catch (e2) {
-        return { err: e2 };
+      // Also, Photoshop sometimes adds an entire extra PNG file?!
+      // Slice down to the expected location derived from IEND (repeatedly, in case that's part of a zlib string)
+      let contents = file_contents;
+      while (true) {
+        let idx = contents.lastIndexOf('IEND');
+        if (idx === -1) {
+          // something else at the end
+          return { err: e };
+          break;
+        }
+        contents = contents.slice(0, idx + 8);
+        try {
+          img = PNG.sync.read(contents);
+          break;
+        } catch (e2) {
+          contents = contents.slice(0, idx);
+        }
       }
     } else {
       return { err: e };
