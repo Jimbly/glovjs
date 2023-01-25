@@ -1,12 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
-import { UnimplementedData } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
+import { SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -22,7 +22,7 @@ export interface UIBox extends Box {
 export interface UIBoxColored extends UIBox {
   color?: ROVec4;
 }
-export type UIHookFn = (param: UIBox) => void;
+export type UIHookFn = (param: UIBox & { hook: HookList }) => void;
 export function addHook(draw: UIHookFn, click: UIHookFn): void;
 // TODO: how to say that P must also be `{ key: string } | { x: number, y: number }`?
 export function getUIElemData<T, P>(type: string, param: P, allocator: (param: P)=>T) : T;
@@ -116,7 +116,7 @@ export interface TooltipParam {
   tooltip_above?: boolean;
   tooltip_auto_above_offset?: number;
   pixel_scale?: number;
-  tooltip: TooltipValue;
+  tooltip: TooltipValue | null;
 }
 export function drawTooltip(param: TooltipParam): void;
 export interface TooltipBoxParam {
@@ -137,48 +137,26 @@ export interface ProgressBarParam extends UIBoxColored {
 }
 export function progressBar(param: ProgressBarParam): void;
 
-// TODO: implement/move to spot.js
-export type SpotParam = UnimplementedData;
-// TODO: implement/move to spot.js
-declare enum SpotState {
-  SPOT_STATE_REGULAR = 1,
-  SPOT_STATE_DOWN = 2,
-  SPOT_STATE_FOCUSED = 3,
-  SPOT_STATE_DISABLED = 4,
-}
 export type EventCallback = (event: Event) => void;
 export type HookList = string | string[];
 export type ButtonStateString = 'regular' | 'down' | 'rollover' | 'disabled';
-export type ButtonRet = {
-  // from SpotRet:
-  ret: number;
-  focused: boolean;
+export type ButtonRet = SpotRet & {
   // ui.button-specific
   state: ButtonStateString;
 };
-export interface ButtonParam extends Partial<TooltipParam> {
+export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
+  // importantly: everything in SpotParam
   x: number;
   y: number;
   z?: number;
-  w?: number;
-  h?: number;
-  key?: string;
   draw_only?: boolean;
   draw_only_mouseover?: boolean;
-  def?: SpotParam;
   color?: ROVec4;
-  disabled?: boolean;
-  disabled_focusable?: boolean;
   rollover_quiet?: boolean;
   colors?: ColorSet;
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
-  in_event_cb?: EventCallback | null;
-  hook?: HookList;
-  pad_focusable?: boolean;
   base_name?: string;
-  drag_over?: boolean;
-  // Also: everything in SpotParam (Move to spot.js and extend interface when converted to TS)
 }
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
@@ -205,7 +183,7 @@ export interface ButtonImageParam2 extends ButtonImageParamBase {
 export type ButtonImageParam = ButtonImageParam1 | ButtonImageParam2;
 export function buttonShared(param: ButtonParam): ButtonRet;
 export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): void;
-export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotState): void;
+export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotStateEnum): void;
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
 export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
@@ -384,7 +362,7 @@ type UISpriteSet = {
   progress_bar_trough?: UISpriteDef;
 };
 export const internal : {
-  checkHooks(param: { hook?: string }, click: boolean): void;
+  checkHooks(param: { hook?: HookList }, click: boolean): void;
   cleanupDOMElems(): void;
   uiEndFrame(): void;
   uiSetFonts(new_font: Font, new_title_font?: Font): void;

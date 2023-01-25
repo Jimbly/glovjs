@@ -126,7 +126,7 @@ export type SpotKeyable = (SpotKeyableKeyed | SpotKeyableAuto) & {
   key_computed?: string;
 };
 
-type SpotRet = {
+export type SpotRet = {
   focused: boolean; // focused by any means
   kb_focused: boolean; // focused for the purpose of receiving keyboard input (focused and no other sticky focus)
   spot_state: SpotStateEnum;
@@ -150,7 +150,7 @@ type SpotComputedFields = {
 export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFields {
   def: SpotParamBase; // inherit all undefined SpotParamBase members from this
   tooltip?: TooltipValue | null;
-  hook?: string;
+  hook?: HookList;
 }
 
 export interface SpotSubParam extends Box, SpotComputedFields {
@@ -224,6 +224,7 @@ import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
   EventCallback,
+  HookList,
   TooltipBoxParam,
   TooltipValue,
   drawLine,
