@@ -1,4 +1,4 @@
-import type { ROVec4, Vec4 } from 'glov/common/vmath';
+import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
   BLEND_ALPHA = 0,
@@ -19,7 +19,7 @@ export interface Texture {
 export interface SpriteUIData {
   widths: number[]; heights: number[];
   wh: number[]; hw: number[];
-  rects: Vec4[];
+  rects: ROVec4[];
   aspect: number[] | null;
   total_w: number; total_h: number;
 }
@@ -29,15 +29,15 @@ export interface SpriteDrawParams {
   frame?: number;
   rot?: number;
   uvs?: number[];
-  color?: Vec4 | ROVec4;
+  color?: ROVec4;
   shader?: unknown;
-  shader_params?: Partial<Record<string, number[]>>;
+  shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
 }
 export interface Sprite {
   uidata?: SpriteUIData;
   uvs: number[];
   draw: (params: SpriteDrawParams) => void;
-  drawDualTint: (params: SpriteDrawParams & { color1: Vec4 }) => void;
+  drawDualTint: (params: SpriteDrawParams & { color1: ROVec4 }) => void;
   texs: Texture[];
 }
 export interface UISprite extends Sprite {
