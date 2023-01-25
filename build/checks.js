@@ -73,7 +73,7 @@ module.exports = function (filename) {
 
   requireVersions({
     'nodejs': '16.13.0',
-    'glov-build': '1.0.36',
+    'glov-build': '1.0.40',
     'glov-build-browserify': '1.0.6',
     'glov-build-concat': '1.0.10',
     'glov-build-preresolve': '1.2.0',

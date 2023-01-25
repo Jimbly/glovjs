@@ -5,6 +5,7 @@ const path = require('path');
 const { asyncEachSeries } = require('glov-async');
 const gb = require('glov-build');
 const babel = require('glov-build-babel');
+const gbcache = require('glov-build-cache');
 const imagemin = require('glov-build-imagemin');
 const preresolve = require('glov-build-preresolve');
 const sourcemap = require('glov-build-sourcemap');
@@ -161,7 +162,10 @@ gb.task({
   name: 'client_png',
   input: config.client_png,
   target: 'dev',
-  ...alphafix(config.client_png_alphafix),
+  ...gbcache({
+    key: 'alphafix',
+    version: 1,
+  }, alphafix(config.client_png_alphafix)),
 });
 
 gb.task({
@@ -575,12 +579,15 @@ gb.task({
     'client_png:**',
   ],
   target: 'prod',
-  ...imagemin({
+  ...gbcache({
+    key: 'imagemin',
+    version: 1,
+  }, imagemin({
     plugins: [
       imagemin_optipng(config.optipng),
       imagemin_zopfli(config.zopfli),
     ],
-  }),
+  })),
 });
 
 
