@@ -954,12 +954,13 @@ ChatUI.prototype.run = function (opts) {
       });
     }
     // Previously: mouseDownEdge because by the time the Up happens, the chat text might not be here anymore
+    let longpress = input.longPress({ x, y, w: wrap_w, h });
     click = click || input.click({ x, y, w: wrap_w, h });
     if (did_user_context) {
       click = null;
     }
-    if (click) {
-      if (click.button === 2) {
+    if (click || longpress) {
+      if (longpress || click.button === 2) {
         ui.provideUserString('Chat Text', is_url || line);
       } else if (is_url) {
         self.cmdParseInternal(`url ${url_label}`);
