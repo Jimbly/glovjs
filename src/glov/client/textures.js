@@ -79,6 +79,10 @@ function unbindAll(target) {
   }
 }
 
+export function textureWhite() {
+  return textures.white;
+}
+
 export function bind(unit, tex) {
   tex.last_use = frame_timestamp;
   // May or may not change the unit
