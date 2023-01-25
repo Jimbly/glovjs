@@ -66,7 +66,7 @@ export function localStorageSet(key: string, value: unknown): void {
   }
 }
 
-export function localStorageSetJSON(key: string, value: unknown): void {
+export function localStorageSetJSON<T = unknown>(key: string, value: T): void {
   localStorageSet(key, JSON.stringify(value));
 }
 
