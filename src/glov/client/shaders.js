@@ -1,6 +1,10 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+// Legacy APIs
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.create = shaderCreate;
+
 export const MAX_SEMANTIC = 5;
 
 /* eslint-disable import/order */
@@ -260,7 +264,7 @@ Shader.prototype.compile = function () {
   }
 };
 
-export function create(filename) {
+export function shaderCreate(filename) {
   if (typeof filename === 'object') {
     return new Shader(filename);
   }
@@ -504,11 +508,11 @@ export function startup(_globals) {
   globals = _globals;
   globals_used = {};
 
-  error_fp = create('shaders/error.fp');
+  error_fp = shaderCreate('shaders/error.fp');
   if (engine.webgl2) {
-    error_fp_webgl2 = create('shaders/error_gl2.fp');
+    error_fp_webgl2 = shaderCreate('shaders/error_gl2.fp');
   }
-  error_vp = create('shaders/error.vp');
+  error_vp = shaderCreate('shaders/error.vp');
 
   filewatchOn('.fp', onShaderChange);
   filewatchOn('.vp', onShaderChange);
