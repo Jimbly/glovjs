@@ -235,7 +235,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     this.entity_manager.dirtySub(this, field, index);
   }
 
-  dirtyVA(field: string, delete_reason: string): void {
+  dirtyVA(field: string, delete_reason: string | null): void {
     this.entity_manager.dirty(this, field, delete_reason);
   }
 
