@@ -14,7 +14,7 @@ import * as net from 'glov/client/net';
 import { netSubs } from 'glov/client/net';
 import * as net_position_manager from 'glov/client/net_position_manager';
 import * as particles from 'glov/client/particles';
-import * as shaders from 'glov/client/shaders';
+import { shaderCreate } from 'glov/client/shaders';
 import { socialInit } from 'glov/client/social';
 import { soundLoad } from 'glov/client/sound';
 import { spotSuppressPad } from 'glov/client/spot';
@@ -101,7 +101,7 @@ export function main(): void {
   // alternatively, set DefaultUserWorker.prototype.rich_presence = false on the server.
   socialInit();
 
-  const test_shader = shaders.create('shaders/test.fp');
+  const test_shader = shaderCreate('shaders/test.fp');
 
   // const font = engine.font;
 
