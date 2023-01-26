@@ -114,8 +114,7 @@ function entActionAppend<Entity extends EntityBaseClient>(
         pak.writeInt(field_id);
       } else {
         pak.writeInt(field_id);
-        // TODO: maybe need an optional non-differential decoder here?
-        encoder(ent, pak, value);
+        encoder(ent, pak, value, false);
       }
     }
     pak.writeInt(EntityFieldSpecial.Terminate);

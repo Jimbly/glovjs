@@ -98,19 +98,23 @@ function visibleAreaInit<
     callEach(va2.loading, va2.loading = null, err);
   }
   sem.vaAddToUnseenSet(vaid, va);
-  sem.worker.log(`Initializing VisibleArea ${vaid}: Loading existing entities`);
+  if (ENTITY_LOG_VERBOSE) {
+    sem.worker.debug(`Initializing VisibleArea ${vaid}: Loading existing entities`);
+  }
   sem.load_func(sem.worker, vaid, function (err?: string, ent_data?: DataObject[]) {
     if (err) {
       return void done(err);
     }
     if (!ent_data) {
       // initial load of VA
-      sem.worker.log(`Initializing VisibleArea ${vaid}: No existing data, asking worker to initialize`);
+      sem.worker.debug(`Initializing VisibleArea ${vaid}: No existing data, asking worker to initialize`);
       // Want to at least save an empty ent_data[] so that the next load is not consider initial
       sem.visible_areas_need_save[vaid] = true;
       sem.emit('visible_area_init', vaid);
     } else {
-      sem.worker.log(`Initializing VisibleArea ${vaid}: Loaded ${ent_data.length} entities`);
+      if (ENTITY_LOG_VERBOSE || ent_data.length) {
+        sem.worker.debug(`Initializing VisibleArea ${vaid}: Loaded ${ent_data.length} entities`);
+      }
       for (let ii = 0; ii < ent_data.length; ++ii) {
         // Same as addEntityFromSerialized(), but does not flag `visible_areas_need_save`
         let ent_id = ++sem.last_ent_id;
@@ -1124,7 +1128,7 @@ class ServerEntityManagerImpl<
           for (let index = 0; index < value.length; ++index) {
             pak.writeInt(index + 1);
             let sub_value = value[index];
-            encoder(ent, pak, sub_value);
+            encoder(ent, pak, sub_value, false);
           }
           pak.writeInt(0);
         } else { // EntityFieldSub.Record
@@ -1134,7 +1138,7 @@ class ServerEntityManagerImpl<
             let key = keys[ii];
             let sub_value = (value as DataObject)[key];
             pak.writeAnsiString(key);
-            encoder(ent, pak, sub_value);
+            encoder(ent, pak, sub_value, false);
           }
           pak.writeAnsiString('');
         }
@@ -1143,7 +1147,7 @@ class ServerEntityManagerImpl<
           debug.push(field);
         }
         pak.writeInt(field_id);
-        encoder(ent, pak, value);
+        encoder(ent, pak, value, false);
       }
     }
     if (debug_out) {
@@ -1201,7 +1205,7 @@ class ServerEntityManagerImpl<
               assert(isFinite(index));
               pak.writeInt(index + 1);
               let sub_value = value[index];
-              encoder(ent, pak, sub_value);
+              encoder(ent, pak, sub_value, true);
             }
           }
           pak.writeInt(0);
@@ -1210,7 +1214,7 @@ class ServerEntityManagerImpl<
           for (let key in dirty_sub) {
             let sub_value = (value as DataObject)[key];
             pak.writeAnsiString(key);
-            encoder(ent, pak, sub_value);
+            encoder(ent, pak, sub_value, true);
           }
           pak.writeAnsiString('');
         }
@@ -1220,7 +1224,7 @@ class ServerEntityManagerImpl<
           pak.writeInt(field_id);
         } else {
           pak.writeInt(field_id);
-          encoder(ent, pak, value);
+          encoder(ent, pak, value, true);
         }
       }
     }

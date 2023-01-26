@@ -10,7 +10,6 @@ import { PingData, registerPingProvider } from './perf_net';
 const { abs, floor, max, PI, sqrt } = Math;
 
 const TWO_PI = PI * 2;
-const EPSILON = 0.01;
 
 type Vector = Float64Array;
 
@@ -26,6 +25,8 @@ interface EntityPositionManagerOpts {
 
   dim_pos?: number; // number of components to be interpolated as-is
   dim_rot?: number; // number of components to be interpolated with 2PI wrapping
+  tol_pos?: number; // tolerance for sending positional changes
+  tol_rot?: number; // tolerance for sending rotational changes
   send_time?: number; // how often to send position updates
   entless_send_time?: number; // if applicable, if we are entityless, how often to send position updates
   window?: number; // maximum expected variation in time between updates; ms
@@ -70,6 +71,8 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   dim_pos: number;
   dim_rot: number;
   n: number;
+  tol_pos: number;
+  tol_rot: number;
 
   send_time: number;
   entless_send_time: number;
@@ -99,6 +102,8 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.dim_pos = options.dim_pos || 2;
     this.dim_rot = options.dim_rot || 0;
     this.n = this.dim_pos + this.dim_rot;
+    this.tol_pos = options.tol_pos || 0.01;
+    this.tol_rot = options.tol_rot || 0.1;
     this.send_time = options.send_time || 200;
     this.entless_send_time = options.entless_send_time || 1000;
     this.window = options.window || 200;
@@ -184,8 +189,13 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return arr;
   }
   vsame(a: Readonly<Vector>, b: Readonly<Vector>): boolean {
-    for (let ii = 0; ii < this.n; ++ii) {
-      if (abs(a[ii] - b[ii]) > EPSILON) {
+    for (let ii = 0; ii < this.dim_pos; ++ii) {
+      if (abs(a[ii] - b[ii]) > this.tol_pos) {
+        return false;
+      }
+    }
+    for (let ii = this.dim_pos; ii < this.n; ++ii) {
+      if (abs(a[ii] - b[ii]) > this.tol_rot) {
         return false;
       }
     }
@@ -193,7 +203,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   }
   vsamePos(a: Readonly<Vector> | Readonly<number[]>, b: Readonly<Vector> | Readonly<number[]>): boolean {
     for (let ii = 0; ii < this.dim_pos; ++ii) {
-      if (abs(a[ii] - b[ii]) > EPSILON) {
+      if (abs(a[ii] - b[ii]) > this.tol_pos) {
         return false;
       }
     }

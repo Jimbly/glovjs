@@ -37,13 +37,19 @@ export type EntityFieldEncoder<Entity extends EntityBaseCommon> = (
   ent: Entity,
   pak: Packet,
   value: unknown,
+  // If is_diff is true, the receiver will have already received either the most
+  //   recent diff, or a full update (which may have been a more up-to-date value
+  //   than the most recent diff, but never older).
+  // OK: Send only the fields that have changed since the last diff
+  // NOT OK: Send a numerical difference from the last diff
+  is_diff: boolean,
 ) => void;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type EntityFieldDecoder<Entity extends EntityBaseCommon> = (
   // ent: Entity,
   pak: Packet,
-  old_value: unknown
+  old_value: unknown // Note: on client->server encodings (data_assignmenets), old_value is always `null`
 ) => unknown;
 
 
