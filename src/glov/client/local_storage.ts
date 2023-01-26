@@ -70,6 +70,8 @@ export function localStorageSetJSON<T = unknown>(key: string, value: T): void {
   localStorageSet(key, JSON.stringify(value));
 }
 
+export function localStorageGetJSON<T = unknown>(key: string, def: T): T;
+export function localStorageGetJSON<T = unknown>(key: string, def?: T): T | undefined;
 export function localStorageGetJSON<T = unknown>(key: string, def?: T): T | undefined {
   let value = localStorageGet(key);
   if (value === undefined) {
