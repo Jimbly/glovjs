@@ -71,6 +71,7 @@ function getDisplayNameBypass(source) {
 function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
+    email_regex.test(display_name) ||
     (!override && isReserved(display_name))
   ) {
     return false;
