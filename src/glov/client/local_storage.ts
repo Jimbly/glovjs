@@ -86,16 +86,16 @@ export function localStorageGetJSON<T = unknown>(key: string, def?: T): T | unde
 export function localStorageClearAll(key_prefix?: string): void {
   let prefix = new RegExp(`^${storage_prefix}_${key_prefix || ''}`, 'u');
   if (lsd) {
-    let keysToRemove = [];
+    let keys_to_remove = [];
     for (let i = 0; i < lsd.length; i++) {
       let key = lsd.key(i);
       assert(key);
       if (key.match(prefix)) {
-        keysToRemove.push(key);
+        keys_to_remove.push(key);
       }
     }
-    for (let i = 0; i < keysToRemove.length; i++) {
-      lsd.removeItem(keysToRemove[i]);
+    for (let i = 0; i < keys_to_remove.length; i++) {
+      lsd.removeItem(keys_to_remove[i]);
     }
   }
   for (let key in lsd_overlay) {

@@ -98,8 +98,8 @@ export function readyDataCheck(plat: Platform, ver: string): ReadyDataCheckRetur
   if (!isVersionUpToDate(plat, ver)) {
     extra_data.update_available = true;
   }
-  let versionSupport = getVersionSupport(plat, ver);
-  switch (versionSupport) {
+  let version_support = getVersionSupport(plat, ver);
+  switch (version_support) {
     case VersionSupport.Supported:
       return { err: null, extra_data };
     case VersionSupport.Obsolete:
