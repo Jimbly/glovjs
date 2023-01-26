@@ -171,6 +171,12 @@ export class EntityBaseClient extends EntityBaseCommon {
     this.actionSend(action_data, resp_func);
   }
 
+  hasPendingBatchUpdate(): boolean {
+    for (let key in this.data_overrides) {
+      return true;
+    }
+    return false;
+  }
 
   // Expected to be overridden by app
   onDelete(reason: string): number {
