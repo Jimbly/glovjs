@@ -820,7 +820,7 @@ function onProfile(client, data, resp_func) {
     if (err) {
       throw err;
     }
-    let uid = buf.toString('base64');
+    let uid = buf.toString('base64').replace(/[+/]/g, 'A');
     let log_data = {
       ...data,
       ...client_channel.ids,
