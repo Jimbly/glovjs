@@ -95,7 +95,7 @@ function visibleAreaInit<
     if (err) {
       delete sem.visible_areas[vaid];
     }
-    callEach(va2.loading, va2.loading = null, err);
+    callEach(va2.loading, va2.loading = null, err || null);
   }
   sem.vaAddToUnseenSet(vaid, va);
   if (ENTITY_LOG_VERBOSE) {
