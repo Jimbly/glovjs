@@ -31,23 +31,23 @@ interface SoundLoadOpts {
 // Workaround to have interface to Howl object available (alongside glov_load_opts).
 interface HowlSound {
   glov_load_opts: SoundLoadOpts;
-  play: (sprite?: string | number, volume?: number) => number;
-  stop: (id?: number) => HowlSound;
-  volume: (vol?: number, id?: number) => void;
-  seek: (seek?: number, id?: number) => HowlSound | number;
-  playing: (id?: number) => boolean;
-  duration: (id?: number) => number;
+  play(sprite?: string | number, volume?: number): number;
+  stop(id?: number): HowlSound;
+  volume(vol?: number, id?: number): void;
+  seek(seek?: number, id?: number): HowlSound | number;
+  playing(id?: number): boolean;
+  duration(id?: number): number;
 }
 
 // Sound wrapper returned by soundPlay to external code
 export interface GlovSoundSetUp {
   name: string;
-  stop: (id: number) => HowlSound;
-  volume: (vol: number) => void;
-  playing: (id?: number) => boolean;
-  duration: (id?: number) => number;
-  location: () => number;
-  fade: (target_volume: number, time: number) => void;
+  stop(id: number): HowlSound;
+  volume(vol: number): void;
+  playing(id?: number): boolean;
+  duration(id?: number): number;
+  location(): number;
+  fade(target_volume: number, time: number): void;
 }
 
 // Placeholder to track reference to sound whenever it's played
@@ -77,7 +77,7 @@ interface Fade {
   id: number;
   time: number;
   volume: number;
-  settingsVolume: () => number;
+  settingsVolume(): number;
 }
 
 let sounds : Record<string, HowlSound> = {};

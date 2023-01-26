@@ -10,7 +10,7 @@ export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
 export interface Texture {
-  destroy: () => void;
+  destroy(): void;
 }
 
 /**
@@ -36,8 +36,8 @@ export interface SpriteDrawParams {
 export interface Sprite {
   uidata?: SpriteUIData;
   uvs: number[];
-  draw: (params: SpriteDrawParams) => void;
-  drawDualTint: (params: SpriteDrawParams & { color1: ROVec4 }) => void;
+  draw(params: SpriteDrawParams): void;
+  drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
   texs: Texture[];
 }
 export interface UISprite extends Sprite {

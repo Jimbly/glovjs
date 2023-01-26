@@ -22,9 +22,9 @@ const CHAT_DATA_KEY = 'private.chat';
 export interface ChattableWorker extends ChannelWorker {
   chat_msg_timestamps?: FIFO< { timestamp: number; id: string }>;
   chat_records_map?: Partial<Record<string, { timestamp: number; id: string }>>;
-  chatFilter?: (source: ClientHandlerSource, msg: string) => string | null;
-  chatDecorateData?: (data_saved: ChatMessageDataSaved, data_broadcast: ChatMessageDataBroadcast) => void;
-  chatCooldownFilter?: (source: ClientHandlerSource) => boolean;
+  chatFilter?(source: ClientHandlerSource, msg: string): string | null;
+  chatDecorateData?(data_saved: ChatMessageDataSaved, data_broadcast: ChatMessageDataBroadcast): void;
+  chatCooldownFilter?(source: ClientHandlerSource): boolean;
 }
 
 export function chatGetCooldown(worker: ChannelWorker): number {

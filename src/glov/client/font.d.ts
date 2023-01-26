@@ -129,14 +129,14 @@ export interface Font {
 
   // Constants and utility functions are replicated on all font instances as well:
   ALIGN: typeof ALIGN;
-  style: typeof fontStyle;
-  styleAlpha: typeof fontStyleAlpha;
-  styleColored: typeof fontStyleColored;
+  style(base: FontStyle | null, param: FontStyleParam): FontStyle;
+  styleAlpha(base: FontStyle | null, alpha: number): FontStyle;
+  styleColored(base: FontStyle | null, color: RGBA): FontStyle;
 }
 
 export function fontCreate(font_info: unknown, texture_name: string): Font;
 
 // Legacy interfaces
-export const style: typeof fontStyle;
-export const styleAlpha: typeof fontStyleAlpha;
-export const styleColored: typeof fontStyleColored;
+export function style(base: FontStyle | null, param: FontStyleParam): FontStyle;
+export function styleAlpha(base: FontStyle | null, alpha: number): FontStyle;
+export function styleColored(base: FontStyle | null, color: RGBA): FontStyle;

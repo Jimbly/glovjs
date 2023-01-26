@@ -18,14 +18,14 @@ declare module 'glov/client/global' {
     }
 
     // GLOV ui.js
-    let Z: Record<string, number>;
+    const Z: Record<string, number>;
     // GL context
     let gl: WebGLRenderingContext | WebGL2RenderingContext;
     // GLOV profiler
-    const profilerStart: (name: string) => void;
-    const profilerStop: (name?: string) => void;
-    const profilerStopStart: (name: string) => void;
-    const profilerStartFunc: () => void;
-    const profilerStopFunc: () => void;
+    function profilerStart(name: string): void;
+    function profilerStop(name?: string): void;
+    function profilerStopStart(name: string): void;
+    function profilerStartFunc(): void;
+    function profilerStopFunc(): void;
   }
 }

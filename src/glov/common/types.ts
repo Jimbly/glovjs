@@ -77,7 +77,7 @@ export interface CmdDef {
   prefix_usage_with_help?: boolean;
   access_show?: string[];
   access_run?: string[];
-  func: (str: string, resp_func: CmdRespFunc) => void;
+  func(str: string, resp_func: CmdRespFunc): void;
 }
 
 /**
