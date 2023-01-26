@@ -37,6 +37,7 @@ export enum Platform {
   Android = 'android',
   FBInstant = 'fbinstant',
   IOS = 'ios',
+  MSStart = 'msstart',
   Web = 'web',
   Yandex = 'yandex',
 }
