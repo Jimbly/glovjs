@@ -1,3 +1,8 @@
+// TODO: move when converted to TypeScript
+import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
+// TODO: move when converted to TypeScript
+import type { shaderCreate } from 'glov/client/shaders';
+type Shader = ReturnType<typeof shaderCreate>;
 import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
@@ -30,14 +35,31 @@ export interface SpriteDrawParams {
   rot?: number;
   uvs?: number[];
   color?: ROVec4;
-  shader?: unknown;
+  shader?: Shader;
   shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
+}
+type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
+export interface SpriteDraw3DParams {
+  frame?: number;
+  pos: ROVec3; // 3D world position
+  offs?: ROVec2; // 2D offset (-x/-y is upper left), in world scale
+  size: ROVec2; // 2D w;h; in world scale
+  uvs?: ROVec4;
+  blend?: BlendMode;
+  color?: ROVec4;
+  doublesided?: boolean;
+  shader?: Shader;
+  shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
+  bucket?: BucketType;
+  facing?: number;
+  vshader: Shader;
 }
 export interface Sprite {
   uidata?: SpriteUIData;
   uvs: number[];
   draw(params: SpriteDrawParams): void;
   drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
+  draw3D(params: SpriteDraw3DParams): void;
   texs: Texture[];
 }
 export interface UISprite extends Sprite {
