@@ -171,7 +171,7 @@ function getQuadIndexBuf(quad_count) {
   return quad_index_buf;
 }
 
-export function createIndices(idxs) {
+export function geomCreateIndices(idxs) {
   let ret = {
     ibo: gl.createBuffer(),
     ibo_size: idxs.length,
@@ -478,11 +478,11 @@ GeomMultiQuads.prototype.dispose = function () {
   this.geoms = null;
 };
 
-export function create(format, verts, idxs, mode) {
+export function geomCreate(format, verts, idxs, mode) {
   return new Geom(format, verts, idxs, mode);
 }
 
-export function createQuads(format, verts, fixed_size) {
+export function geomCreateQuads(format, verts, fixed_size) {
   let format_info = formatInfo(format);
   assert(fixed_size || verts instanceof Uint8Array); // only one handled by GeomMultiQuads for now
   let vert_count = verts.length / format_info.elem_count;
@@ -492,6 +492,11 @@ export function createQuads(format, verts, fixed_size) {
   return new Geom(format, verts, null, QUADS);
 }
 
-export function startup() {
+export function geomStartup() {
   // Nothing for now.
 }
+
+// Legacy APIs
+exports.createIndices = geomCreateIndices;
+exports.create = geomCreate;
+exports.createQuads = geomCreateQuads;

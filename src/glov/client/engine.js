@@ -31,7 +31,7 @@ const {
 const glov_font = require('./font.js');
 const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
-const geom = require('./geom.js');
+const { geomResetState, geomStartup } = require('./geom.js');
 const input = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
@@ -723,7 +723,7 @@ export function fixNatives(is_startup) {
 }
 
 function resetState() {
-  // Only geom.geomResetState appears to have been strictly needed to work around
+  // Only geomResetState appears to have been strictly needed to work around
   //  a bug on Chrome 71, but doing the rest of this to be safe.
   profilerStart('resetState');
   profilerStart('textures');
@@ -731,7 +731,7 @@ function resetState() {
   profilerStopStart('shaders');
   shadersResetState();
   profilerStopStart('geom;gl');
-  geom.geomResetState();
+  geomResetState();
 
   // These should already be true:
   blendModeReset(true);
@@ -1155,7 +1155,7 @@ export function startup(params) {
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths
 
   textures.startup();
-  geom.startup();
+  geomStartup();
   shadersStartup({
     light_diffuse,
     light_dir_ws,
