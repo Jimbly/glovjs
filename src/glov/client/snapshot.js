@@ -18,7 +18,7 @@ const {
   blendModeSet,
   BLEND_ALPHA,
 } = sprites;
-const textures = require('./textures.js');
+const { textureCreateForCapture } = require('./textures.js');
 const {
   mat4,
   vec3,
@@ -95,8 +95,8 @@ export function snapshot(param) {
   let name = param.name || `snapshot_${++last_snapshot_idx}`;
   let auto_unload = param.on_unload;
   let texs = param.sprite && param.sprite.texs || [
-    textures.createForCapture(`${name}(0)`, auto_unload),
-    textures.createForCapture(`${name}(1)`, auto_unload)
+    textureCreateForCapture(`${name}(0)`, auto_unload),
+    textureCreateForCapture(`${name}(1)`, auto_unload)
   ];
 
   param.viewport = [0, 0, param.w, param.h];

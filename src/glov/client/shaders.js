@@ -24,7 +24,7 @@ const engine = require('./engine.js');
 const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
 const { matchAll, nop } = require('glov/common/util.js');
-const { texturesUnloadDynamic } = require('./textures.js');
+const { textureUnloadDynamic } = require('./textures.js');
 const { webFSGetFile } = require('./webfs.js');
 
 let last_id = 0;
@@ -475,7 +475,7 @@ function shaderReload() {
     for (let ii = 0; ii < shaders.length; ++ii) {
       shaders[ii].compile();
     }
-    texturesUnloadDynamic();
+    textureUnloadDynamic();
   }
 }
 

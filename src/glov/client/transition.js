@@ -10,7 +10,7 @@ const { framebufferCapture, framebufferStart, framebufferEnd, temporaryTextureCl
 const { floor, min, pow, random } = Math;
 const sprites = require('./sprites.js');
 const { shaderCreate } = require('./shaders.js');
-const textures = require('./textures.js');
+const { textureCreateForCapture } = require('./textures.js');
 const glov_ui = require('./ui.js');
 const { easeOut } = require('glov/common/util.js');
 const { unit_vec, vec4 } = require('glov/common/vmath.js');
@@ -47,7 +47,7 @@ function GlovTransition(z, func) {
 function transitionCapture(trans) {
   // Warning: Slow on iOS
   assert(!trans.capture);
-  trans.capture = textures.createForCapture();
+  trans.capture = textureCreateForCapture();
   framebufferCapture(trans.capture);
 }
 

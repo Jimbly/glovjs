@@ -42,8 +42,7 @@ const {
   blendModeReset,
   blendModeSet,
 } = sprites;
-const textures = require('./textures.js');
-const { cmpTextureArray } = textures;
+const { textureCmpArray, textureBindArray } = require('./textures.js');
 
 let mat_vp;
 let mat_view = mat4();
@@ -373,7 +372,7 @@ function commitAndFlush() {
     if (do_blending) {
       blendModeSet(state.blend);
     }
-    textures.bindArray(state.texs);
+    textureBindArray(state.texs);
     ++geom_stats.draw_calls_dyn;
     gl.drawElements(sprite_geom.mode, end - start, gl.UNSIGNED_SHORT, start * 2);
   }
@@ -403,7 +402,7 @@ function drawSetup(do_blend) {
 
 function drawElem(elem) {
   if (!batch_state ||
-    cmpTextureArray(elem.texs, batch_state.texs) ||
+    textureCmpArray(elem.texs, batch_state.texs) ||
     elem.shader !== batch_state.shader ||
     elem.vshader !== batch_state.vshader ||
     elem.shader_params !== batch_state.shader_params ||
@@ -476,7 +475,7 @@ function cmpOpaue(a, b) {
   if (d) {
     return d;
   }
-  d = cmpTextureArray(a.texs, b.texs);
+  d = textureCmpArray(a.texs, b.texs);
   if (d) {
     return d;
   }

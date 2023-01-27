@@ -16,7 +16,7 @@ const {
   shadersPrelink,
 } = require('./shaders.js');
 const { spriteQueueFn } = require('./sprites.js');
-const textures = require('./textures.js');
+const { textureBindArray, textureWhite } = require('./textures.js');
 const { vec2, vec3, vec4, v4set } = require('glov/common/vmath.js');
 
 const shader_data = {
@@ -341,7 +341,7 @@ function applyEffect(effect, view_w, view_h) {
   // copy_uv_scale[1] = target_h / effect.coord_source.height;
 
   shadersBind(getShader('vp_copy'), getShader(effect.shader), effect.params);
-  textures.bindArray(effect.texs);
+  textureBindArray(effect.texs);
   quad_geom.draw();
 }
 
@@ -647,7 +647,7 @@ export function clearAlpha() {
     gl.disable(gl.DEPTH_TEST);
   }
   gl.colorMask(false, false, false, true);
-  applyCopy({ source: textures.textures.white, no_framebuffer: true });
+  applyCopy({ source: textureWhite(), no_framebuffer: true });
   gl.colorMask(true, true, true, true);
   if (old_dt) {
     gl.enable(gl.DEPTH_TEST);

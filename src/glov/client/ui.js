@@ -75,7 +75,7 @@ const {
   spriteChainedStop,
   spriteCreate,
 } = glov_sprites;
-const textures = require('./textures.js');
+const { TEXTURE_FORMAT } = require('./textures.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v3scale, unit_vec } = require('glov/common/vmath.js');
@@ -1598,7 +1598,7 @@ function initCircleSprite() {
   sprites.circle = spriteCreate({
     url: 'circle',
     width: CIRCLE_SIZE, height: CIRCLE_SIZE,
-    format: textures.format.R8,
+    format: TEXTURE_FORMAT.R8,
     data,
     filter_min: gl.LINEAR,
     filter_mag: gl.LINEAR,
@@ -1642,7 +1642,7 @@ export function drawHollowCircle(x, y, z, r, spread, color, blend) {
     sprites.hollow_circle = spriteCreate({
       url: 'hollow_circle',
       width: CIRCLE_SIZE, height: CIRCLE_SIZE,
-      format: textures.format.R8,
+      format: TEXTURE_FORMAT.R8,
       data,
       filter_min: gl.LINEAR,
       filter_mag: gl.LINEAR,
@@ -1705,7 +1705,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
     sprites[tex_key] = spriteCreate({
       url: tex_key,
       width: LINE_TEX_W, height: LINE_TEX_H,
-      format: textures.format.R8,
+      format: TEXTURE_FORMAT.R8,
       data,
       filter_min: gl.LINEAR,
       filter_mag: gl.LINEAR,
@@ -1829,7 +1829,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
     sprites.cone = spriteCreate({
       url: 'cone',
       width: CONE_SIZE, height: CONE_SIZE,
-      format: textures.format.R8,
+      format: TEXTURE_FORMAT.R8,
       data,
       filter_min: gl.LINEAR,
       filter_mag: gl.LINEAR,

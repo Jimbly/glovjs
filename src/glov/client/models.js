@@ -20,7 +20,7 @@ const {
   shadersBind,
   shadersPrelink,
 } = require('./shaders.js');
-const textures = require('./textures.js');
+const { textureBind, textureLoad } = require('./textures.js');
 const { vec4 } = require('glov/common/vmath.js');
 const { webFSGetFile } = require('./webfs.js');
 
@@ -98,7 +98,7 @@ Model.prototype.parse = function (glb_data) {
             wrap_s: sampler_def.wrapS,
             wrap_t: sampler_def.wrapT,
           };
-          texture = textures.load(params);
+          texture = textureLoad(params);
         }
       }
       let format = [];
@@ -172,7 +172,7 @@ Model.prototype.draw = function (mat) {
   for (let ii = 0; ii < objs.length; ++ii) {
     let obj = objs[ii];
     if (obj.texture) {
-      textures.bind(0, obj.texture);
+      textureBind(0, obj.texture);
     }
     obj.geom.draw();
   }

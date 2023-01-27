@@ -58,8 +58,15 @@ const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const { spotEndInput } = require('./spot.js');
 const { blendModeReset, spriteDraw, spriteStartup } = require('./sprites.js');
-const textures = require('./textures.js');
-const { texturesTick } = textures;
+const {
+  textureBind,
+  textureDefaultFilters,
+  textureError,
+  textureLoadCount,
+  textureResetState,
+  textureStartup,
+  textureTick,
+} = require('./textures.js');
 const glov_transition = require('./transition.js');
 const {
   drawRect,
@@ -727,7 +734,7 @@ function resetState() {
   //  a bug on Chrome 71, but doing the rest of this to be safe.
   profilerStart('resetState');
   profilerStart('textures');
-  textures.texturesResetState();
+  textureResetState();
   profilerStopStart('shaders');
   shadersResetState();
   profilerStopStart('geom;gl');
@@ -862,7 +869,7 @@ function tick(timestamp) {
 
   resetState();
 
-  textures.bind(0, textures.textures.error);
+  textureBind(0, textureError());
 
   fontTick();
   camera2d.tickCamera2D();
@@ -974,7 +981,7 @@ function tick(timestamp) {
 
   input.endFrame();
   resetEffects();
-  texturesTick();
+  textureTick();
 
   for (let ii = post_tick.length - 1; ii >= 0; --ii) {
     if (!--post_tick[ii].ticks) {
@@ -1154,7 +1161,7 @@ export function startup(params) {
   gl.clearColor(0, 0.1, 0.2, 1);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths
 
-  textures.startup();
+  textureStartup();
   geomStartup();
   shadersStartup({
     light_diffuse,
@@ -1183,10 +1190,10 @@ export function startup(params) {
   glov_particles = require('./particles.js').create();
 
   if (is_pixely) {
-    textures.defaultFilters(gl.NEAREST, gl.NEAREST);
+    textureDefaultFilters(gl.NEAREST, gl.NEAREST);
     settings.runTimeDefault('render_scale_mode', 1);
   } else {
-    textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
+    textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   }
 
   assert(params.font);
@@ -1233,7 +1240,7 @@ export function startup(params) {
 }
 
 export function loadsPending() {
-  return textures.load_count + soundLoading() + models.load_count;
+  return textureLoadCount() + soundLoading() + models.load_count;
 }
 
 let on_load_metrics = [];

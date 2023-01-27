@@ -11,7 +11,7 @@ const { errorReportDetailsString } = require('./error_report.js');
 const net = require('./net.js');
 const { netClient, netDisconnected } = net;
 const { SEMANTIC } = require('./shaders.js');
-const textures = require('./textures.js');
+const { textureGetAll } = require('./textures.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
 
 window.cmd = function (str) {
@@ -32,10 +32,11 @@ cmd_parse.register({
   cmd: 'texmem',
   help: 'Displays texture memory usage',
   func: function (str, resp_func) {
-    let keys = Object.keys(textures.textures);
-    keys = keys.filter((a) => textures.textures[a].gpu_mem > 1024);
-    keys.sort((a, b) => textures.textures[a].gpu_mem - textures.textures[b].gpu_mem);
-    resp_func(null, keys.map((a) => `${byteFormat(textures.textures[a].gpu_mem)} ${a}`).join('\n'));
+    let all_textures = textureGetAll();
+    let keys = Object.keys(all_textures);
+    keys = keys.filter((a) => all_textures[a].gpu_mem > 1024);
+    keys.sort((a, b) => all_textures[a].gpu_mem - all_textures[b].gpu_mem);
+    resp_func(null, keys.map((a) => `${byteFormat(all_textures[a].gpu_mem)} ${a}`).join('\n'));
   }
 });
 

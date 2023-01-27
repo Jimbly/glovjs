@@ -19,7 +19,7 @@ const { max, min, round } = Math;
 const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, spriteDataAlloc } = sprites;
-const textures = require('./textures.js');
+const { textureLoad } = require('./textures.js');
 const { clamp } = require('glov/common/util.js');
 const {
   v3scale,
@@ -314,7 +314,7 @@ function techParamsGet() {
 function GlovFont(font_info, texture_name) {
   assert(font_info.font_size !== 0); // Got lost somewhere
 
-  this.texture = textures.load({
+  this.texture = textureLoad({
     url: `img/${texture_name}.png`,
     filter_min: font_info.noFilter ? gl.NEAREST : gl.LINEAR,
     filter_mag: font_info.noFilter ? gl.NEAREST : gl.LINEAR,

@@ -25,8 +25,11 @@ const { dynGeomQueueSprite } = require('./dyn_geom.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
-const textures = require('./textures.js');
-const { cmpTextureArray } = textures;
+const {
+  textureCmpArray,
+  textureBindArray,
+  textureLoad,
+} = require('./textures.js');
 const {
   SEMANTIC,
   shaderCreate,
@@ -632,7 +635,7 @@ function commitAndFlush() {
     if (last_blend_mode !== state.blend) {
       blendModeSet(state.blend);
     }
-    textures.bindArray(state.texs);
+    textureBindArray(state.texs);
     ++geom_stats.draw_calls_sprite;
     gl.drawElements(sprite_geom.mode, (end - start) * 3 / 2, gl.UNSIGNED_SHORT, start * 3);
   }
@@ -700,7 +703,7 @@ function drawElem(elem) {
     count++;
   } else {
     if (!batch_state ||
-      cmpTextureArray(elem.texs, batch_state.texs) ||
+      textureCmpArray(elem.texs, batch_state.texs) ||
       elem.shader !== batch_state.shader ||
       elem.shader_params !== batch_state.shader_params ||
       elem.blend !== batch_state.blend
@@ -846,7 +849,7 @@ function Sprite(params) {
       assert(params.name);
       this.texs = [];
       for (let ii = 0; ii < params.layers; ++ii) {
-        this.texs.push(textures.load({
+        this.texs.push(textureLoad({
           url: `img/${params.name}_${ii}${ext}`,
           filter_min: params.filter_min,
           filter_mag: params.filter_mag,
@@ -855,7 +858,7 @@ function Sprite(params) {
         }));
       }
     } else if (params.name) {
-      this.texs.push(textures.load({
+      this.texs.push(textureLoad({
         url: `img/${params.name}${ext}`,
         filter_min: params.filter_min,
         filter_mag: params.filter_mag,
@@ -864,7 +867,7 @@ function Sprite(params) {
       }));
     } else {
       assert(params.url);
-      this.texs.push(textures.load(params));
+      this.texs.push(textureLoad(params));
     }
   }
 

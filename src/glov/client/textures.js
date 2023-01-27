@@ -2,23 +2,27 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
-exports.textureLoad = load;
-
-/* eslint-disable import/order */
-const assert = require('assert');
-const engine = require('./engine.js');
-const { filewatchOn } = require('./filewatch.js');
-const local_storage = require('./local_storage.js');
-const settings = require('./settings.js');
-const { shadersSetGLErrorReportDetails } = require('./shaders.js');
-const urlhash = require('./urlhash.js');
-const { callEach, isPowerOfTwo, nextHighestPowerOfTwo, ridx } = require('glov/common/util.js');
+import * as assert from 'assert';
+import {
+  callEach,
+  isPowerOfTwo,
+  nextHighestPowerOfTwo,
+  ridx,
+} from 'glov/common/util';
+import * as engine from './engine';
+import { filewatchOn } from './filewatch';
+import * as local_storage from './local_storage';
+import * as settings from './settings';
+import { shadersSetGLErrorReportDetails } from './shaders';
+import * as urlhash from './urlhash';
 
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 
-export let textures = {};
-export let load_count = 0;
+const textures = {};
+let load_count = 0;
+export function textureLoadCount() {
+  return load_count;
+}
 let aniso = 4;
 let max_aniso = 0;
 let aniso_enum;
@@ -35,7 +39,7 @@ const cube_faces = [
   { target: 'TEXTURE_CUBE_MAP_POSITIVE_Z', pos: [2,1] },
 ];
 
-export const format = {
+export const TEXTURE_FORMAT = {
   R8: { count: 1 },
   RGB8: { count: 3 },
   RGBA8: { count: 4 },
@@ -43,7 +47,7 @@ export const format = {
   DEPTH24: { count: 1 },
 };
 
-export function defaultFilters(min, mag) {
+export function textureDefaultFilters(min, mag) {
   default_filter_min = min;
   default_filter_mag = mag;
 }
@@ -79,18 +83,25 @@ function unbindAll(target) {
   }
 }
 
+export function textureGetAll() {
+  return textures;
+}
+
 export function textureWhite() {
   return textures.white;
 }
+export function textureError() {
+  return textures.error;
+}
 
-export function bind(unit, tex) {
+export function textureBind(unit, tex) {
   tex.last_use = frame_timestamp;
   // May or may not change the unit
   bindHandle(unit, tex.target, tex.eff_handle);
 }
 
 // hot path inlined for perf
-export function bindArray(texs) {
+export function textureBindArray(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
     let tex = texs[ii];
     tex.last_use = frame_timestamp;
@@ -106,7 +117,7 @@ export function bindArray(texs) {
   }
 }
 
-export function cmpTextureArray(texsa, texsb) {
+export function textureCmpArray(texsa, texsb) {
   let d = texsa.length - texsb.length;
   if (d) {
     return d;
@@ -120,7 +131,7 @@ export function cmpTextureArray(texsa, texsb) {
   return 0;
 }
 
-export function isArrayBound(texs) {
+export function textureIsArrayBound(texs) {
   for (let ii = 0; ii < texs.length; ++ii) {
     let tex = texs[ii];
     let handle = tex.eff_handle;
@@ -131,7 +142,7 @@ export function isArrayBound(texs) {
   return true;
 }
 
-export function texturesResetState() {
+export function textureResetState() {
   bound_unit = -1;
   if (engine.webgl2) {
     unbindAll(gl.TEXTURE_2D_ARRAY);
@@ -176,7 +187,7 @@ function Texture(params) {
     auto_unload_textures.push(this);
   }
 
-  this.format = params.format || format.RGBA8;
+  this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
   if (params.data) {
     let err = this.updateData(params.width, params.height, params.data);
@@ -406,7 +417,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     }
     let err_details = '';
     if (img) {
-      tex.format = format.RGBA8;
+      tex.format = TEXTURE_FORMAT.RGBA8;
       if (filter) {
         img = filter(tex, img);
       }
@@ -555,7 +566,7 @@ function create(params) {
 }
 
 let last_temporary_id = 0;
-export function createForCapture(unique_name, auto_unload) {
+export function textureCreateForCapture(unique_name, auto_unload) {
   let name = unique_name || `screen_temporary_tex_${++last_temporary_id}`;
   assert(!textures[name]);
   let texture = create({
@@ -563,7 +574,7 @@ export function createForCapture(unique_name, auto_unload) {
     filter_mag: gl.NEAREST,
     wrap_s: gl.CLAMP_TO_EDGE,
     wrap_t: gl.CLAMP_TO_EDGE,
-    format: format.RGB8,
+    format: TEXTURE_FORMAT.RGB8,
     name,
     auto_unload,
   });
@@ -572,7 +583,7 @@ export function createForCapture(unique_name, auto_unload) {
   return texture;
 }
 
-export function createForDepthCapture(unique_name, tex_format) {
+export function textureCreateForDepthCapture(unique_name, tex_format) {
   let name = unique_name || `screen_temporary_tex_${++last_temporary_id}`;
   assert(!textures[name]);
   let texture = create({
@@ -588,7 +599,7 @@ export function createForDepthCapture(unique_name, tex_format) {
   return texture;
 }
 
-export function load(params) {
+export function textureLoad(params) {
   let key = params.name = params.name || params.url;
   assert(key);
   let tex = textures[key];
@@ -599,7 +610,7 @@ export function load(params) {
   return tex;
 }
 
-export function cname(key) {
+export function textureCname(key) {
   let idx = key.lastIndexOf('/');
   if (idx !== -1) {
     key = key.slice(idx+1);
@@ -610,10 +621,10 @@ export function cname(key) {
   }
   return key.toLowerCase();
 }
-export function findTexForReplacement(search_key) {
-  search_key = cname(search_key);
+export function textureFindForReplacement(search_key) {
+  search_key = textureCname(search_key);
   for (let key in textures) {
-    let compare_key = cname(key);
+    let compare_key = textureCname(key);
     if (compare_key === search_key) {
       return textures[key];
     }
@@ -622,7 +633,7 @@ export function findTexForReplacement(search_key) {
 }
 
 let tick_next_tex = 0;
-export function texturesTick() {
+export function textureTick() {
   frame_timestamp = engine.frame_timestamp;
   let len = auto_unload_textures.length;
   if (!len) {
@@ -640,7 +651,7 @@ export function texturesTick() {
   }
 }
 
-export function texturesUnloadDynamic() {
+export function textureUnloadDynamic() {
   while (auto_unload_textures.length) {
     auto_unload_textures[0].destroy();
   }
@@ -661,17 +672,17 @@ export function textureSupportsDepth() {
   return depth_supported;
 }
 
-export function startup() {
+export function textureStartup() {
 
   default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
   default_filter_mag = gl.LINEAR;
 
-  format.R8.internal_type = gl.LUMINANCE;
-  format.R8.gl_type = gl.UNSIGNED_BYTE;
-  format.RGB8.internal_type = gl.RGB;
-  format.RGB8.gl_type = gl.UNSIGNED_BYTE;
-  format.RGBA8.internal_type = gl.RGBA;
-  format.RGBA8.gl_type = gl.UNSIGNED_BYTE;
+  TEXTURE_FORMAT.R8.internal_type = gl.LUMINANCE;
+  TEXTURE_FORMAT.R8.gl_type = gl.UNSIGNED_BYTE;
+  TEXTURE_FORMAT.RGB8.internal_type = gl.RGB;
+  TEXTURE_FORMAT.RGB8.gl_type = gl.UNSIGNED_BYTE;
+  TEXTURE_FORMAT.RGBA8.internal_type = gl.RGBA;
+  TEXTURE_FORMAT.RGBA8.gl_type = gl.UNSIGNED_BYTE;
 
   let UNSIGNED_INT_24_8;
   if (engine.webgl2) {
@@ -685,12 +696,12 @@ export function startup() {
     }
   }
   if (depth_supported) {
-    format.DEPTH16.internal_type = engine.webgl2 ? gl.DEPTH_COMPONENT16 : gl.DEPTH_COMPONENT;
-    format.DEPTH16.format = gl.DEPTH_COMPONENT;
-    format.DEPTH16.gl_type = gl.UNSIGNED_SHORT;
-    format.DEPTH24.internal_type = engine.webgl2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL;
-    format.DEPTH24.format = gl.DEPTH_STENCIL;
-    format.DEPTH24.gl_type = UNSIGNED_INT_24_8;
+    TEXTURE_FORMAT.DEPTH16.internal_type = engine.webgl2 ? gl.DEPTH_COMPONENT16 : gl.DEPTH_COMPONENT;
+    TEXTURE_FORMAT.DEPTH16.format = gl.DEPTH_COMPONENT;
+    TEXTURE_FORMAT.DEPTH16.gl_type = gl.UNSIGNED_SHORT;
+    TEXTURE_FORMAT.DEPTH24.internal_type = engine.webgl2 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_STENCIL;
+    TEXTURE_FORMAT.DEPTH24.format = gl.DEPTH_STENCIL;
+    TEXTURE_FORMAT.DEPTH24.gl_type = UNSIGNED_INT_24_8;
   }
 
   let ext_anisotropic = (
@@ -703,11 +714,11 @@ export function startup() {
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
   }
 
-  handle_error = load({
+  handle_error = textureLoad({
     name: 'error',
     width: 2, height: 2,
     nozoom: true,
-    format: format.RGBA8,
+    format: TEXTURE_FORMAT.RGBA8,
     filter_mag: gl.NEAREST,
     data: new Uint8Array([
       255, 20, 147, 255,
@@ -717,11 +728,11 @@ export function startup() {
     ]),
   }).handle;
 
-  handle_loading = load({
+  handle_loading = textureLoad({
     name: 'loading',
     width: 2, height: 2,
     nozoom: true,
-    format: format.RGBA8,
+    format: TEXTURE_FORMAT.RGBA8,
     data: new Uint8Array([
       127, 127, 127, 255,
       0, 0, 0, 255,
@@ -730,11 +741,11 @@ export function startup() {
     ]),
   }).handle;
 
-  load({
+  textureLoad({
     name: 'white',
     width: 2, height: 2,
     nozoom: true,
-    format: format.RGBA8,
+    format: TEXTURE_FORMAT.RGBA8,
     data: new Uint8Array([
       255, 255, 255, 255,
       255, 255, 255, 255,
@@ -743,11 +754,11 @@ export function startup() {
     ]),
   });
 
-  load({
+  textureLoad({
     name: 'invisible',
     width: 2, height: 2,
     nozoom: true,
-    format: format.RGBA8,
+    format: TEXTURE_FORMAT.RGBA8,
     data: new Uint8Array([
       0, 0, 0, 0,
       0, 0, 0, 0,
@@ -758,3 +769,18 @@ export function startup() {
 
   filewatchOn('.png', textureReload);
 }
+
+// Legacy API
+exports.format = TEXTURE_FORMAT;
+exports.defaultFilters = textureDefaultFilters;
+exports.texturesUnloadDynamic = textureUnloadDynamic;
+exports.bind = textureBind;
+exports.bindArray = textureBindArray;
+exports.load = textureLoad;
+exports.cmpTextureArray = textureCmpArray;
+exports.isArrayBound = textureIsArrayBound;
+exports.createForCapture = textureCreateForCapture;
+exports.createForDepthCapture = textureCreateForDepthCapture;
+exports.cname = textureCname;
+exports.findTexForReplacement = textureFindForReplacement;
+exports.textures = textures;

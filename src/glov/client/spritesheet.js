@@ -1,7 +1,7 @@
 const { vec4 } = require('glov/common/vmath.js');
 const { engineStartupFunc } = require('./engine.js');
 const { createSprite } = require('./sprites.js');
-const textures = require('./textures.js');
+const { textureLoad } = require('./textures.js');
 
 export function spritesheetRegister(runtime_data) {
   // Create with dummy data, will load later
@@ -11,13 +11,13 @@ export function spritesheetRegister(runtime_data) {
   engineStartupFunc(function () {
     if (runtime_data.layers) {
       for (let idx = 0; idx < runtime_data.layers; ++idx) {
-        let tex = textures.load({
+        let tex = textureLoad({
           url: `img/${runtime_data.name}_${idx}.png`,
         });
         runtime_data.sprite.texs.push(tex);
       }
     } else {
-      let tex = textures.load({
+      let tex = textureLoad({
         url: `img/${runtime_data.name}.png`,
       });
       runtime_data.sprite.texs.push(tex);

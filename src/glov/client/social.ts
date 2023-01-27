@@ -26,7 +26,7 @@ import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
 import { netDisconnected, netSubs } from './net';
 import { Sprite, spriteCreate } from './sprites';
-import * as textures from './textures';
+import { textureLoad } from './textures';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -373,7 +373,7 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
   }
 
   if (url) {
-    let tex = textures.load({
+    let tex = textureLoad({
       url: url,
       filter_min: gl.LINEAR_MIPMAP_LINEAR,
       filter_mag: gl.LINEAR,
