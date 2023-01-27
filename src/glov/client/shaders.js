@@ -1,26 +1,9 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-// Legacy APIs
-// eslint-disable-next-line @typescript-eslint/no-use-before-define
-exports.create = shaderCreate;
-
 export const MAX_SEMANTIC = 5;
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const engine = require('./engine.js');
-const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
-const { filewatchOn } = require('./filewatch.js');
-const { matchAll, nop } = require('glov/common/util.js');
-const { texturesUnloadDynamic } = require('./textures.js');
-const { webFSGetFile } = require('./webfs.js');
-
-let last_id = 0;
-
-let bound_prog = null;
-
-export const semantic = {
+export const SEMANTIC = {
   'ATTR0': 0,
   'POSITION': 0,
   'ATTR1': 1,
@@ -34,6 +17,19 @@ export const semantic = {
   'ATTR4': 4,
   'TEXCOORD_1': 4,
 };
+
+/* eslint-disable import/order */
+const assert = require('assert');
+const engine = require('./engine.js');
+const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
+const { filewatchOn } = require('./filewatch.js');
+const { matchAll, nop } = require('glov/common/util.js');
+const { texturesUnloadDynamic } = require('./textures.js');
+const { webFSGetFile } = require('./webfs.js');
+
+let last_id = 0;
+
+let bound_prog = null;
 
 export let globals;
 let globals_used;
@@ -85,7 +81,7 @@ export function shadersResetState() {
   gl.useProgram(null);
 }
 
-export function setGLErrorReportDetails() {
+export function shadersSetGLErrorReportDetails() {
   // Set some debug details we might want
   let details = {
     max_fragment_uniform_vectors: gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),
@@ -113,7 +109,7 @@ let reported_shader_errors = false;
 function reportShaderError(non_fatal, err) {
   function doReport() {
     report_queued = false;
-    setGLErrorReportDetails();
+    shadersSetGLErrorReportDetails();
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
     reported_shader_errors = true;
     if (!shader_errors_any_fatal) {
@@ -224,8 +220,8 @@ Shader.prototype.compile = function () {
   if (type === gl.VERTEX_SHADER) {
     this.attributes = matchAll(text, vp_attr_regex);
     // Ensure they are known names so we can give them indices
-    // Add to semantic[] above as needed
-    this.attributes.forEach((v) => assert(semantic[v] !== undefined));
+    // Add to SEMANTIC[] above as needed
+    this.attributes.forEach((v) => assert(SEMANTIC[v] !== undefined));
   } else {
     this.samplers = matchAll(text, sampler_regex);
     // Ensure all samplers end in a unique number
@@ -314,7 +310,7 @@ function link(vp, fp, on_error) {
   gl.attachShader(prog.handle, fp.shader);
   // call this for all relevant semantic
   for (let ii = 0; ii < vp.attributes.length; ++ii) {
-    gl.bindAttribLocation(prog.handle, semantic[vp.attributes[ii]], vp.attributes[ii]);
+    gl.bindAttribLocation(prog.handle, SEMANTIC[vp.attributes[ii]], vp.attributes[ii]);
   }
   gl.linkProgram(prog.handle);
 
@@ -407,7 +403,7 @@ function autoLink(vp, fp, on_error) {
   return prog;
 }
 
-export function bind(vp, fp, params) {
+export function shadersBind(vp, fp, params) {
   let prog = vp.programs[fp.id];
   if (!prog) {
     prog = autoLink(vp, fp);
@@ -438,11 +434,11 @@ export function bind(vp, fp, params) {
   }
 }
 
-export function prelink(vp, fp, params = {}, on_error) {
+export function shadersPrelink(vp, fp, params = {}, on_error) {
   let prog = autoLink(vp, fp, on_error);
   // In theory, only need to link, not bind, but let's push it through the pipe as far as it can to be safe.
   if (prog.valid) {
-    bind(vp, fp, params);
+    shadersBind(vp, fp, params);
   }
   return prog.valid;
 }
@@ -483,12 +479,12 @@ function shaderReload() {
   }
 }
 
-export function handleDefinesChanged() {
+export function shadersHandleDefinesChanged() {
   applyDefines();
   shaderReload();
 }
 
-export function setInternalDefines(new_values) {
+export function shadersSetInternalDefines(new_values) {
   for (let key in new_values) {
     if (new_values[key]) {
       internal_defines[key] = new_values[key];
@@ -496,14 +492,14 @@ export function setInternalDefines(new_values) {
       delete internal_defines[key];
     }
   }
-  handleDefinesChanged();
+  shadersHandleDefinesChanged();
 }
 
 function onShaderChange(filename) {
   shaderReload();
 }
 
-export function startup(_globals) {
+export function shadersStartup(_globals) {
   applyDefines();
   globals = _globals;
   globals_used = {};
@@ -518,7 +514,7 @@ export function startup(_globals) {
   filewatchOn('.vp', onShaderChange);
 }
 
-export function addGlobal(key, vec) {
+export function shadersAddGlobal(key, vec) {
   assert(!globals[key]);
   assert(!globals_used[key]); // A shader has already been prelinked referencing this global
   globals[key] = vec;
@@ -526,3 +522,10 @@ export function addGlobal(key, vec) {
     assert(isFinite(vec[ii]));
   }
 }
+
+// Legacy APIs
+exports.create = shaderCreate;
+exports.semantic = SEMANTIC;
+exports.addGlobal = shadersAddGlobal;
+exports.bind = shadersBind;
+exports.prelink = shadersPrelink;

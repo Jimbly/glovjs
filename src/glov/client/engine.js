@@ -48,6 +48,12 @@ const { profilerUIStartup } = require('./profiler_ui.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
 const shaders = require('./shaders.js');
+const {
+  shadersAddGlobal,
+  shadersHandleDefinesChanged,
+  shadersStartup,
+  shadersResetState,
+} = require('./shaders.js');
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const { spotEndInput } = require('./spot.js');
@@ -139,7 +145,7 @@ export function addViewSpaceGlobal(name) {
   assert.equal(ws_vec.length, 3);
   let vs_name = `${name}_vs`;
   let vs_vec = vec3();
-  shaders.addGlobal(vs_name, vs_vec);
+  shadersAddGlobal(vs_name, vs_vec);
   view_space_globals.push({
     vs: vs_vec,
     ws: ws_vec,
@@ -253,7 +259,7 @@ export function definesChanged() {
       break;
     }
   }
-  shaders.handleDefinesChanged();
+  shadersHandleDefinesChanged();
 }
 export function definesClearAll() {
   let any_changed = false;
@@ -723,7 +729,7 @@ function resetState() {
   profilerStart('textures');
   textures.texturesResetState();
   profilerStopStart('shaders');
-  shaders.shadersResetState();
+  shadersResetState();
   profilerStopStart('geom;gl');
   geom.geomResetState();
 
@@ -1150,7 +1156,7 @@ export function startup(params) {
 
   textures.startup();
   geom.startup();
-  shaders.startup({
+  shadersStartup({
     light_diffuse,
     light_dir_ws,
     ambient: light_ambient,

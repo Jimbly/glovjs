@@ -9,7 +9,12 @@ const engine = require('./engine.js');
 const { renderWidth, renderHeight } = engine;
 const { framebufferEnd, framebufferStart, framebufferTopOfFrame } = require('./framebuffer.js');
 const geom = require('./geom.js');
-const shaders = require('./shaders.js');
+const {
+  SEMANTIC,
+  shaderCreate,
+  shadersBind,
+  shadersPrelink,
+} = require('./shaders.js');
 const { spriteQueueFn } = require('./sprites.js');
 const textures = require('./textures.js');
 const { vec2, vec3, vec4, v4set } = require('glov/common/vmath.js');
@@ -49,9 +54,9 @@ function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
     if (elem.fp) {
-      elem.shader = shaders.create(elem.fp);
+      elem.shader = shaderCreate(elem.fp);
     } else {
-      elem.shader = shaders.create(elem.vp);
+      elem.shader = shaderCreate(elem.vp);
     }
   }
   return elem.shader;
@@ -76,7 +81,7 @@ function startup() {
   inited = true;
 
   quad_geom = geom.create(
-    [[shaders.semantic.POSITION, gl.FLOAT, 2, false]],
+    [[SEMANTIC.POSITION, gl.FLOAT, 2, false]],
     new Float32Array([
       0, 0,
       1, 0,
@@ -335,7 +340,7 @@ function applyEffect(effect, view_w, view_h) {
   // copy_uv_scale[0] = target_w / effect.coord_source.width;
   // copy_uv_scale[1] = target_h / effect.coord_source.height;
 
-  shaders.bind(getShader('vp_copy'), getShader(effect.shader), effect.params);
+  shadersBind(getShader('vp_copy'), getShader(effect.shader), effect.params);
   textures.bindArray(effect.texs);
   quad_geom.draw();
 }
@@ -651,6 +656,6 @@ export function clearAlpha() {
 
 export function effectsStartup(prelink_effects) {
   prelink_effects.forEach((name) => {
-    shaders.prelink(getShader('vp_copy'), getShader(name));
+    shadersPrelink(getShader('vp_copy'), getShader(name));
   });
 }

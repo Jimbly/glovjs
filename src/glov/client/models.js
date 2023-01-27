@@ -14,7 +14,12 @@ const glb_parser = require('./glb/parser.js');
 const { ATTRIBUTE_TYPE_TO_COMPONENTS } = require('./glb/gltf-type-utils.js');
 const renderer = require('./engine.js');
 const { fetch } = require('./fetch.js');
-const shaders = require('./shaders.js');
+const {
+  SEMANTIC,
+  shaderCreate,
+  shadersBind,
+  shadersPrelink,
+} = require('./shaders.js');
 const textures = require('./textures.js');
 const { vec4 } = require('glov/common/vmath.js');
 const { webFSGetFile } = require('./webfs.js');
@@ -27,9 +32,9 @@ export let default_vshader;
 export let default_fshader;
 
 function initShaders() {
-  default_vshader = shaders.create('shaders/default.vp');
-  default_fshader = shaders.create('shaders/default.fp');
-  shaders.prelink(default_vshader, default_fshader);
+  default_vshader = shaderCreate('shaders/default.vp');
+  default_fshader = shaderCreate('shaders/default.fp');
+  shadersPrelink(default_vshader, default_fshader);
 }
 
 function Model(url) {
@@ -105,7 +110,7 @@ Model.prototype.parse = function (glb_data) {
         if (skip_attr[attr]) {
           continue;
         }
-        assert(shaders.semantic[attr] !== undefined);
+        assert(SEMANTIC[attr] !== undefined);
         let accessor = glb_json.accessors[primitives.attributes[attr]];
         assert.equal(accessor.componentType, 5126); // F32
         let geom_format = gl.FLOAT;
@@ -117,7 +122,7 @@ Model.prototype.parse = function (glb_data) {
         } else {
           assert.equal(vert_count, my_vert_count);
         }
-        format.push([shaders.semantic[attr], geom_format, geom_count]);
+        format.push([SEMANTIC[attr], geom_format, geom_count]);
         let buffer = glb.getBuffer(accessor);
         buffers.push(buffer);
         bidx.push(0);
@@ -160,7 +165,7 @@ Model.prototype.parse = function (glb_data) {
 
 Model.prototype.draw = function (mat) {
   renderer.updateMatrices(mat); // before setting shader
-  shaders.bind(default_vshader, default_fshader, {
+  shadersBind(default_vshader, default_fshader, {
     color: vec4(1, 1, 1, 1),
   });
   let objs = this.data.objs;

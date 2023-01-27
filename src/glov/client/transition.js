@@ -9,7 +9,7 @@ const { applyCopy, effectsQueue, effectsIsFinal } = require('./effects.js');
 const { framebufferCapture, framebufferStart, framebufferEnd, temporaryTextureClaim } = require('./framebuffer.js');
 const { floor, min, pow, random } = Math;
 const sprites = require('./sprites.js');
-const shaders = require('./shaders.js');
+const { shaderCreate } = require('./shaders.js');
 const textures = require('./textures.js');
 const glov_ui = require('./ui.js');
 const { easeOut } = require('glov/common/util.js');
@@ -32,7 +32,7 @@ const shader_data = {
 function getShader(key) {
   let elem = shader_data[key];
   if (!elem.shader) {
-    elem.shader = shaders.create(elem.fp);
+    elem.shader = shaderCreate(elem.fp);
   }
   return elem.shader;
 }

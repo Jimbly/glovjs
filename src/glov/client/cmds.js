@@ -10,7 +10,7 @@ const engine = require('./engine.js');
 const { errorReportDetailsString } = require('./error_report.js');
 const net = require('./net.js');
 const { netClient, netDisconnected } = net;
-const shaders = require('./shaders.js');
+const { SEMANTIC } = require('./shaders.js');
 const textures = require('./textures.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
 
@@ -50,7 +50,7 @@ cmd_parse.register({
 });
 
 function validDefine(str) {
-  if (shaders.semantic[str]) {
+  if (SEMANTIC[str]) {
     return false;
   }
   return str.match(/^[A-Z][A-Z0-9_]*$/);

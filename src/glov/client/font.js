@@ -16,7 +16,7 @@ const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { max, min, round } = Math;
 // const settings = require('./settings.js');
-const shaders = require('./shaders.js');
+const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, spriteDataAlloc } = sprites;
 const textures = require('./textures.js');
@@ -1034,14 +1034,14 @@ function fontShadersInit() {
   if (font_shaders.font_aa) {
     return;
   }
-  font_shaders.font_aa = shaders.create('shaders/font_aa.fp');
-  font_shaders.font_aa_glow = shaders.create('shaders/font_aa_glow.fp');
-  font_shaders.font_aa_outline = shaders.create('shaders/font_aa_outline.fp');
-  font_shaders.font_aa_outline_glow = shaders.create('shaders/font_aa_outline_glow.fp');
-  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa);
-  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_glow);
-  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline);
-  shaders.prelink(sprites.sprite_vshader, font_shaders.font_aa_outline_glow);
+  font_shaders.font_aa = shaderCreate('shaders/font_aa.fp');
+  font_shaders.font_aa_glow = shaderCreate('shaders/font_aa_glow.fp');
+  font_shaders.font_aa_outline = shaderCreate('shaders/font_aa_outline.fp');
+  font_shaders.font_aa_outline_glow = shaderCreate('shaders/font_aa_outline_glow.fp');
+  shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa);
+  shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_glow);
+  shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_outline);
+  shadersPrelink(sprites.sprite_vshader, font_shaders.font_aa_outline_glow);
 }
 
 export function fontCreate(font_info, texture_name) {

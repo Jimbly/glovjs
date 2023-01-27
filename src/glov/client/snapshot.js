@@ -11,7 +11,7 @@ const engine = require('./engine.js');
 const { framebufferCapture } = require('./framebuffer.js');
 const mat4LookAt = require('gl-mat4/lookAt');
 const { max, PI, tan } = Math;
-const shaders = require('./shaders.js');
+const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { spriteCreate } = require('glov/client/sprites.js');
 const {
@@ -160,6 +160,6 @@ export function snapshot(param) {
 }
 
 export function snapshotStartup() {
-  snapshot_shader = shaders.create('shaders/snapshot.fp');
-  shaders.prelink(sprites.sprite_vshader, snapshot_shader);
+  snapshot_shader = shaderCreate('shaders/snapshot.fp');
+  shadersPrelink(sprites.sprite_vshader, snapshot_shader);
 }

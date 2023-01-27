@@ -30,7 +30,12 @@ const engine = require('./engine.js');
 const { engineStartupFunc, setGlobalMatrices } = engine;
 const geom = require('./geom.js');
 const { ceil, max, min } = Math;
-const shaders = require('./shaders.js');
+const {
+  SEMANTIC,
+  shaderCreate,
+  shadersBind,
+  shadersPrelink,
+} = require('./shaders.js');
 const sprites = require('./sprites.js');
 const {
   BLEND_ALPHA,
@@ -361,7 +366,7 @@ function commitAndFlush() {
     let batch = batches[ii];
     let { state, start, end } = batch;
     if (last_bound_shader !== state.shader || last_bound_vshader !== state.vshader || state.shader_params) {
-      shaders.bind(state.vshader, state.shader, state.shader_params || sprite3d_shader_params);
+      shadersBind(state.vshader, state.shader, state.shader_params || sprite3d_shader_params);
       last_bound_shader = state.shader;
       last_bound_vshader = state.vshader;
     }
@@ -387,9 +392,9 @@ function drawSetup(do_blend) {
   if (!sprite_geom) {
     sprite_geom = geom.create([
       // needs to be multiple of 4 elements, for best performance
-      [shaders.semantic.POSITION, gl.FLOAT, 4, false], // 1 unused
-      [shaders.semantic.COLOR, gl.FLOAT, 4, false],
-      [shaders.semantic.TEXCOORD, gl.FLOAT, 4, false], // 2 unused
+      [SEMANTIC.POSITION, gl.FLOAT, 4, false], // 1 unused
+      [SEMANTIC.COLOR, gl.FLOAT, 4, false],
+      [SEMANTIC.TEXCOORD, gl.FLOAT, 4, false], // 2 unused
     ], [], [], geom.TRIANGLES);
     sprite_buffer_vert = new Float32Array(1024);
     sprite_buffer_idx = new Uint16Array(1024);
@@ -522,9 +527,9 @@ export function dynGeomDrawAlpha() {
 
 function dynGeomStartup() {
   geom_stats = geom.stats;
-  sprite3d_vshader = shaders.create('shaders/sprite3d.vp');
+  sprite3d_vshader = shaderCreate('shaders/sprite3d.vp');
   sprite_fshader = sprites.sprite_fshader;
-  shaders.prelink(sprite3d_vshader, sprite_fshader);
+  shadersPrelink(sprite3d_vshader, sprite_fshader);
   mat_vp = engine.mat_vp;
 }
 engineStartupFunc(dynGeomStartup);

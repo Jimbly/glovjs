@@ -27,7 +27,12 @@ const geom = require('./geom.js');
 const { cos, max, min, round, sin } = Math;
 const textures = require('./textures.js');
 const { cmpTextureArray } = textures;
-const shaders = require('./shaders.js');
+const {
+  SEMANTIC,
+  shaderCreate,
+  shadersBind,
+  shadersPrelink,
+} = require('./shaders.js');
 const { deprecate, nextHighestPowerOfTwo } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
@@ -619,7 +624,7 @@ function commitAndFlush() {
     let batch = batches[ii];
     let { state, start, end } = batch;
     if (last_bound_shader !== state.shader || state.shader_params) {
-      shaders.bind(sprite_vshader,
+      shadersBind(sprite_vshader,
         state.shader || sprite_fshader,
         state.shader_params || sprite_shader_params);
       last_bound_shader = state.shader;
@@ -653,9 +658,9 @@ function drawSetup() {
 
   if (!sprite_geom) {
     sprite_geom = geom.create([
-      [shaders.semantic.POSITION, gl.FLOAT, 2, false],
-      [shaders.semantic.COLOR, gl.FLOAT, 4, false],
-      [shaders.semantic.TEXCOORD, gl.FLOAT, 2, false],
+      [SEMANTIC.POSITION, gl.FLOAT, 2, false],
+      [SEMANTIC.COLOR, gl.FLOAT, 4, false],
+      [SEMANTIC.TEXCOORD, gl.FLOAT, 2, false],
     ], [], null, geom.QUADS);
     sprite_buffer = new Float32Array(1024);
     sprite_buffer_len = sprite_buffer.length / 8;
@@ -971,9 +976,9 @@ export function spriteStartup() {
   geom_stats = geom.stats;
   clip_space[2] = -1;
   clip_space[3] = 1;
-  sprite_vshader = shaders.create('shaders/sprite.vp');
-  sprite_fshader = shaders.create('shaders/sprite.fp');
-  sprite_dual_fshader = shaders.create('shaders/sprite_dual.fp');
-  shaders.prelink(sprite_vshader, sprite_fshader);
-  shaders.prelink(sprite_vshader, sprite_dual_fshader);
+  sprite_vshader = shaderCreate('shaders/sprite.vp');
+  sprite_fshader = shaderCreate('shaders/sprite.fp');
+  sprite_dual_fshader = shaderCreate('shaders/sprite_dual.fp');
+  shadersPrelink(sprite_vshader, sprite_fshader);
+  shadersPrelink(sprite_vshader, sprite_dual_fshader);
 }

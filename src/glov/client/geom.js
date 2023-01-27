@@ -211,7 +211,7 @@ function formatInfo(format) {
   return format.info;
 }
 
-// format is [shaders.semantic.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
+// format is [shaders.SEMANTIC.foo, gl.FLOAT/UNSIGNED_BYTE/etc, count, normalized]
 function Geom(format, verts, idxs, mode) {
   this.mode = mode || TRIANGLES;
   this.format = format;
