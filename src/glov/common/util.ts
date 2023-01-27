@@ -62,7 +62,7 @@ export function merge<A, B>(dest: A, src: B): A & B {
   return dest as (A & B);
 }
 
-export function has(obj: DataObject, field: string): boolean {
+export function has<T>(obj: T, field: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, field);
 }
 
