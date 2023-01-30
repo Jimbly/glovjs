@@ -610,6 +610,12 @@ class ServerEntityManagerImpl<
     let { id: ent_id } = ent;
     let { entities: va_entities } = va;
     let { entities: sem_entities } = this;
+    if (ent.in_dirty_list) {
+      let idx = this.dirty_list.indexOf(ent);
+      assert(idx !== -1);
+      this.dirty_list.splice(idx, 1);
+      ent.in_dirty_list = false;
+    }
     delete sem_entities[ent_id];
     delete va_entities[ent_id];
     this.mem_usage.entities.count--;
