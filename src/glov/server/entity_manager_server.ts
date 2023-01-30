@@ -633,11 +633,12 @@ class ServerEntityManagerImpl<
     let ent = this.entities[ent_id];
     assert(ent);
     let { last_vaid } = ent;
-    assert(last_vaid !== undefined);
-    let dels = this.ent_deletes[last_vaid] = this.ent_deletes[last_vaid] || [];
-    dels.push([ent_id, reason]);
-    if (!ent.is_player) {
-      this.visible_areas_need_save[last_vaid] = true;
+    if (last_vaid !== undefined) { // has had an update sent
+      let dels = this.ent_deletes[last_vaid] = this.ent_deletes[last_vaid] || [];
+      dels.push([ent_id, reason]);
+      if (!ent.is_player) {
+        this.visible_areas_need_save[last_vaid] = true;
+      }
     }
 
     this.deleteEntityInternal(ent);
