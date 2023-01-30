@@ -88,6 +88,7 @@ function actionDefDefaults<Entity extends EntityBaseServer>(
   action_def: Partial<ActionDefOpts<Entity>>
 ): asserts action_def is ActionDef<EntityBaseServer> {
   if (has(action_def, 'handler')) {
+    // Has a handler member, but it's `undefined`, likely but with caller
     assert(action_def.handler, `Undefined function set for action ${action_def.action_id}`);
   }
   if (action_def.self_only === undefined) {
@@ -319,6 +320,9 @@ export class EntityBaseServer extends EntityBaseCommon {
         next();
       },
     ], (err?: string | null) => {
+      if (err) {
+        this.warnSrc(src, `Action ${action_id} failed "${err}"`);
+      }
       resp_func(err || null, result);
     });
   }
