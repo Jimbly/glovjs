@@ -606,16 +606,20 @@ class ServerEntityManagerImpl<
     });
   }
 
-  deleteEntityInternal(ent: Entity): void {
-    // Note: unloadVA also deletes entities in a similar way
-    let { entities: sem_entities } = this;
-    let { current_vaid, id: ent_id } = ent;
-    let va = this.visible_areas[current_vaid];
-    assert(va);
+  deleteEntityFinish(va: VARecord<Entity>, ent: Entity): void {
+    let { id: ent_id } = ent;
     let { entities: va_entities } = va;
+    let { entities: sem_entities } = this;
     delete sem_entities[ent_id];
     delete va_entities[ent_id];
     this.mem_usage.entities.count--;
+  }
+
+  deleteEntityInternal(ent: Entity): void {
+    let { current_vaid } = ent;
+    let va = this.visible_areas[current_vaid];
+    assert(va);
+    this.deleteEntityFinish(va, ent);
   }
 
   deleteEntity(ent_id: EntityID, reason: string): void {
@@ -839,7 +843,6 @@ class ServerEntityManagerImpl<
     assert(!this.visible_areas_need_save[vaid]);
     assert(!this.visible_area_broadcasts[vaid]);
     let { entities: va_entities } = va;
-    let { entities: sem_entities } = this;
     let count = 0;
     for (let ent_id_string in va_entities) {
       let ent = va_entities[ent_id_string]!;
@@ -849,10 +852,7 @@ class ServerEntityManagerImpl<
       let { current_vaid, last_vaid } = ent;
       assert.equal(current_vaid, vaid);
       assert.equal(current_vaid, last_vaid); // Shouldn't be mid-move if this is getting unloaded!
-      // inlined to avoid re-looking up the VA every time: this.deleteEntityInternal(ent);
-      delete sem_entities[ent_id_string];
-      delete va_entities[ent_id_string];
-      this.mem_usage.entities.count--;
+      this.deleteEntityFinish(va, ent);
       ++count;
     }
     delete this.visible_areas[vaid];
