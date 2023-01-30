@@ -1,6 +1,9 @@
 import assert from 'assert';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
+import { serverFilewatchOn } from './server_filewatch';
+
+import type { FSAPI } from 'glov/common/fsapi';
 import type { DataObject } from 'glov/common/types';
 
 const FS_BASEPATH = '../../client/';
@@ -34,4 +37,12 @@ export function serverFSGetFile<T extends ServerFSEntry>(filename: string, encod
 
 export function serverFSdeleteCached(filename: string): void {
   delete serverfs_cache[filename];
+}
+
+export function serverFSAPI(): FSAPI {
+  return {
+    getFileNames: serverFSGetFileNames,
+    getFile: serverFSGetFile,
+    filewatchOn: serverFilewatchOn,
+  };
 }

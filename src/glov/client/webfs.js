@@ -119,3 +119,11 @@ function webFSReload() {
 }
 
 filewatchOn('fsdata.js', webFSReload);
+
+export function webFSAPI() {
+  return {
+    getFileNames: webFSGetFileNames,
+    getFile: webFSGetFile,
+    filewatchOn: filewatchOn,
+  };
+}
