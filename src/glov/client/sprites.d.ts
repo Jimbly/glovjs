@@ -24,7 +24,7 @@ export interface Texture {
 export interface SpriteUIData {
   widths: number[]; heights: number[];
   wh: number[]; hw: number[];
-  rects: ROVec4[];
+  rects: ROVec4[]; // [u0, v0, u1, v1]
   aspect: number[] | null;
   total_w: number; total_h: number;
 }
@@ -33,12 +33,12 @@ export interface SpriteDrawParams {
   w?: number; h?: number;
   frame?: number;
   rot?: number;
-  uvs?: number[];
+  uvs?: number[]; // [u0, v0, u1, v1]
   color?: ROVec4;
   shader?: Shader;
   shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
 }
-type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
+export type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
 export interface SpriteDraw3DParams {
   frame?: number;
   pos: ROVec3; // 3D world position
@@ -54,7 +54,7 @@ export interface SpriteDraw3DParams {
   facing?: number;
   face_right?: ROVec3;
   face_down?: ROVec3;
-  vshader: Shader;
+  vshader?: Shader;
 }
 export interface Sprite {
   uidata?: SpriteUIData;
