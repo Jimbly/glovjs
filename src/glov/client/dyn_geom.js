@@ -8,6 +8,7 @@ export const FACE_XYZ = 1<<1;
 export const FACE_FRUSTUM = 1<<2;
 export const FACE_CAMERA = 1<<3;
 export const FACE_DEFAULT = FACE_XY|FACE_FRUSTUM;
+export const FACE_CUSTOM = 1<<4;
 
 
 const DYN_VERT_SIZE = 4*3;
@@ -209,7 +210,10 @@ export function dynGeomSpriteSetup(params) {
 
   let my_right;
   let my_down;
-  if (facing & FACE_XY) {
+  if (facing === FACE_CUSTOM) {
+    my_right = params.face_right;
+    my_down = params.face_down;
+  } else if (facing & FACE_XY) {
     my_right = right;
     my_down = down;
   } else if (facing & FACE_XYZ) {

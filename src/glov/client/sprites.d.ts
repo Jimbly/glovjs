@@ -52,6 +52,8 @@ export interface SpriteDraw3DParams {
   shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
   bucket?: BucketType;
   facing?: number;
+  face_right?: ROVec3;
+  face_down?: ROVec3;
   vshader: Shader;
 }
 export interface Sprite {
