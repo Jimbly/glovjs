@@ -149,6 +149,8 @@ class ClientEntityManagerImpl<
 
   frame_wall_time: number;
 
+  dummy_ent: Entity; // Used for a destination of applying diffs before getting a full update
+
   constructor(options: ClientEntityManagerOpts) {
     super();
     assert(options.channel_type);
@@ -160,6 +162,8 @@ class ClientEntityManagerImpl<
     netSubs().onChannelEvent(options.channel_type, 'subscribe', this.onChannelSubscribe.bind(this));
 
     this.reinit(options);
+
+    this.dummy_ent = new this.EntityCtor(-1, this) as Entity;
 
     this.field_decoders = this.EntityCtor.field_decoders;
     this.field_encoders = this.EntityCtor.field_encoders;
@@ -311,10 +315,14 @@ class ClientEntityManagerImpl<
     }
   }
 
-  private getEntityForUpdate(ent_id: EntityID): Entity {
+  private getEntityForUpdate(ent_id: EntityID, is_full_update: boolean): Entity {
     let ent = this.entities[ent_id];
     if (!ent) {
-      ent = this.entities[ent_id] = new this.EntityCtor(ent_id, this) as Entity;
+      if (is_full_update) {
+        ent = this.entities[ent_id] = new this.EntityCtor(ent_id, this) as Entity;
+      } else {
+        ent = this.dummy_ent;
+      }
     }
     if (ent.fading_out) {
       // was deleting, but got a new update on it (presumably was out of view, and came back), cancel delete
@@ -333,14 +341,14 @@ class ClientEntityManagerImpl<
     return ent;
   }
 
-  private readDiffFromPacket(ent_id: EntityID, pak: Packet, is_full_update: boolean): void {
+  private readDiffFromPacket(ent_id: EntityID, pak: Packet): void {
     let { field_defs, field_decoders } = this;
     assert(field_defs); // should have received this before receiving any diffs!
     // Get an entity to apply the diff to.  Note: this may allocate an entity
     //   that did not previously exist, and apply a meaningless diff, but we
     //   need to do so in order to advance through the packet.  Presumably there's
     //   a full update for this entity at the end of the packet for us.
-    let ent = this.getEntityForUpdate(ent_id);
+    let ent = this.getEntityForUpdate(ent_id, false);
     let data = ent.data as DataObject;
     let field_id: number;
     while ((field_id = pak.readInt())) {
@@ -402,8 +410,10 @@ class ClientEntityManagerImpl<
         }
       }
     }
-    ent.postEntUpdate();
-    this.emit('ent_update', ent.id, is_full_update);
+    if (ent !== this.dummy_ent) {
+      ent.postEntUpdate();
+      this.emit('ent_update', ent.id);
+    }
   }
 
   private initSchema(schema: EntityManagerSchema): void {
@@ -457,9 +467,9 @@ class ClientEntityManagerImpl<
       switch (cmd) {
         case EntityUpdateCmd.Full: {
           let ent_id = pak.readInt();
-          let ent = this.getEntityForUpdate(ent_id);
+          let ent = this.getEntityForUpdate(ent_id, true);
           this.initializeNewFullEnt(ent);
-          this.readDiffFromPacket(ent_id, pak, true);
+          this.readDiffFromPacket(ent_id, pak);
           let fade_in_time = ent.onCreate(is_initial);
           if (fade_in_time) {
             this.fadeInEnt(ent, fade_in_time);
@@ -467,7 +477,7 @@ class ClientEntityManagerImpl<
         } break;
         case EntityUpdateCmd.Diff: {
           let ent_id = pak.readInt();
-          this.readDiffFromPacket(ent_id, pak, false);
+          this.readDiffFromPacket(ent_id, pak);
         } break;
         case EntityUpdateCmd.Delete: {
           let ent_id = pak.readInt();

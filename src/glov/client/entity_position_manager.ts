@@ -347,7 +347,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     }
   }
 
-  private otherEntityChanged(ent_id: EntityID, is_full_update: boolean): void {
+  private otherEntityChanged(ent_id: EntityID): void {
     let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
     assert(ent);
@@ -359,11 +359,6 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
       for (let key in anim_state_defs) {
         ped.anim_state[key] = ent_data[key];
       }
-      this.vcopy(ped.pos, ent_data.pos as number[]);
-    } else if (is_full_update) {
-      // full update, but have a ped, we probably just applied a "diff" with
-      //   incorrect values (e.g. just one coordinate).
-      // Just take new pos as-is
       this.vcopy(ped.pos, ent_data.pos as number[]);
     }
     for (let key in anim_state_defs) {
