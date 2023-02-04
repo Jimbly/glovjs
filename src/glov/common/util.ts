@@ -466,6 +466,14 @@ export function msToTimeString(duration: number, opts?: { hide_ms?: boolean }): 
     opts.hide_ms ? '' : `.${ms < 10 ? '00' : ms < 100 ? '0' : ''}${ms}`
   }`;
 }
+/**
+ * Returns the string with removed symbols and punctuations
+ * @param {string} string String to filter out symbols
+ * @returns {string} New string without symbols and punctuations
+ */
+export function removeSymbols(string: string): string {
+  return string.replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
+}
 
 // Stop words map
 let sw = arrayToSet([
@@ -492,7 +500,7 @@ export function cleanupStringArray(string_array: string[]): string[] {
  */
 export function cleanStringSplit(string: string, pattern: string): string[] {
   // remove punctuations and symbols; e.g., 'In!@£$%^&*()_+sane Wo`{}[]|/?\'"rld;:<>s,.' = 'Insane Worlds'
-  const base = sanitize(string).replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,'').replace(/\s{1,}/g,' ');
+  const base = removeSymbols(sanitize(string));
   return cleanupStringArray(base.toLowerCase().split(pattern).map((s) => s.trim()));
 }
 
