@@ -509,9 +509,15 @@ export function dynGeomDrawOpaque() {
   queue = buckets[BUCKET_DECAL];
   if (queue.length) {
     queue.sort(cmpOpaue);
-    // TODO: depth write, etc
+    gl.enable(gl.BLEND);
+    gl.depthMask(false); // no depth writes
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(-2, 1);
     queueDraw(true, queue, 0, queue.length);
     queue.length = 0;
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
   }
   profilerStopFunc();
 }
