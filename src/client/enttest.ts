@@ -38,6 +38,7 @@ import {
 } from 'glov/common/vmath';
 
 import {
+  EntityTestDataCommon,
   EntityType,
   VA_SIZE,
   VIEW_DIST,
@@ -62,8 +63,8 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   error_time: number;
   home_point?: Vec2;
 
-  constructor(ent_id: EntityID, entity_manager: ClientEntityManager<EntityTestClient>) {
-    super(ent_id, entity_manager);
+  constructor(ent_id: EntityID, data: EntityTestDataCommon, entity_manager: ClientEntityManager<EntityTestClient>) {
+    super(ent_id, data, entity_manager);
     this.waiting = false;
     this.in_view = false;
     this.my_activate_time = -Infinity;

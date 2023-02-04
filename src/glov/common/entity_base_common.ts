@@ -129,10 +129,9 @@ export class EntityBaseCommon {
   data: EntityBaseDataCommon | DataObject;
   entity_manager: EntityManager;
 
-  constructor(ent_id: EntityID, entity_manager: EntityManager) {
+  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: EntityManager) {
     this.id = ent_id;
-    this.data = {};
-    // this.data.pos = [0,0];
+    this.data = data;
     this.entity_manager = entity_manager;
   }
 

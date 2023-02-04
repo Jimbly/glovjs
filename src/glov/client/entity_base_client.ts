@@ -7,6 +7,7 @@ import {
   ActionDataAssignments,
   ActionMessageParam,
   EntityBaseCommon,
+  EntityBaseDataCommon,
   EntityID,
 } from 'glov/common/entity_base_common';
 import { DataObject, NetErrorCallback } from 'glov/common/types';
@@ -39,8 +40,8 @@ export class EntityBaseClient extends EntityBaseCommon {
   last_update_timestamp: number;
   private is_me: boolean;
 
-  constructor(ent_id: EntityID, entity_manager: ClientEntityManagerInterface) {
-    super(ent_id, entity_manager);
+  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: ClientEntityManagerInterface) {
+    super(ent_id, data, entity_manager);
     this.fade = null;
     this.fading_out = false;
     this.fading_in = false;

@@ -7,6 +7,7 @@ import {
 import {
   ClientHandlerSource,
   DataObject,
+  EntityID,
   ErrorCallback,
   HandlerSource,
   NetErrorCallback,
@@ -98,6 +99,15 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   last_vaids?: VAID[];
   last_vaids_pos?: Vec2;
 
+  constructor(
+    ent_id: EntityID,
+    data: EntityTestDataCommon,
+    entity_manager: ServerEntityManager<EntityTestServer, EntTestWorker>
+  ) {
+    super(ent_id, data, entity_manager);
+    assert(this.data.pos);
+  }
+
   /// Example: no saved player data
   // static loadPlayerEntityImpl = ((
   //   sem: ServerEntityManager<Entity, EntTestWorker>,
@@ -106,12 +116,12 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   //   cb: NetErrorCallback<Entity>
   // ): void => {
   //   // Not loading anything
-  //   let ent = new this(-1, sem);
-  //   ent.fromSerialized({
+  //   let ent = new this(-1, {
   //     pos: initialPos(),
   //     type: EntityType.Player,
   //     display_name: src.display_name,
-  //   });
+  //   }, sem);
+  //   ent.finishDeserialize();
   //   cb(null, ent);
   // }) as typeof EntityBaseServer.loadPlayerEntityImpl;
   // savePlayerEntity(cb: () => void): void {

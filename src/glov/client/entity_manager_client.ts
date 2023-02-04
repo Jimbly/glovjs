@@ -10,6 +10,7 @@ import {
   EALF_HAS_ENT_ID,
   EALF_HAS_PAYLOAD,
   EALF_HAS_PREDICATE,
+  EntityBaseDataCommon,
   EntityFieldDecoder,
   EntityFieldDefCommon,
   EntityFieldEncoder,
@@ -149,7 +150,7 @@ class ClientEntityManagerImpl<
 
   frame_wall_time: number;
 
-  dummy_ent: Entity; // Used for a destination of applying diffs before getting a full update
+  dummy_ent_data?: EntityBaseDataCommon; // Used for a destination of applying diffs before getting a full update
 
   constructor(options: ClientEntityManagerOpts) {
     super();
@@ -162,8 +163,6 @@ class ClientEntityManagerImpl<
     netSubs().onChannelEvent(options.channel_type, 'subscribe', this.onChannelSubscribe.bind(this));
 
     this.reinit(options);
-
-    this.dummy_ent = new this.EntityCtor(-1, this) as Entity;
 
     this.field_decoders = this.EntityCtor.field_decoders;
     this.field_encoders = this.EntityCtor.field_encoders;
@@ -315,41 +314,21 @@ class ClientEntityManagerImpl<
     }
   }
 
-  private getEntityForUpdate(ent_id: EntityID, is_full_update: boolean): Entity {
+  private getEntDataForDiff(ent_id: EntityID): [EntityBaseDataCommon, Entity | null] {
     let ent = this.entities[ent_id];
-    if (!ent) {
-      if (is_full_update) {
-        ent = this.entities[ent_id] = new this.EntityCtor(ent_id, this) as Entity;
-      } else {
-        ent = this.dummy_ent;
-      }
+    if (ent) {
+      return [ent.data, ent];
     }
-    if (ent.fading_out) {
-      // was deleting, but got a new update on it (presumably was out of view, and came back), cancel delete
-      // TODO: start fade in from appropriate value (after getting full update
-      //   later in the packet and calling onCreate)
-      ent.fading_out = false;
-      ent.fade = null;
-      for (let jj = 0; jj < this.fading_ents.length; ++jj) {
-        let fade = this.fading_ents[jj];
-        if (fade.ent_id === ent_id) {
-          ridx(this.fading_ents, jj);
-          break;
-        }
-      }
+    if (!this.dummy_ent_data) {
+      this.dummy_ent_data = this.initializeNewFullEntData();
     }
-    return ent;
+    return [this.dummy_ent_data, null];
   }
 
-  private readDiffFromPacket(ent_id: EntityID, pak: Packet): void {
+  private readDiffFromPacket(ent_data: EntityBaseDataCommon, pak: Packet): void {
     let { field_defs, field_decoders } = this;
     assert(field_defs); // should have received this before receiving any diffs!
-    // Get an entity to apply the diff to.  Note: this may allocate an entity
-    //   that did not previously exist, and apply a meaningless diff, but we
-    //   need to do so in order to advance through the packet.  Presumably there's
-    //   a full update for this entity at the end of the packet for us.
-    let ent = this.getEntityForUpdate(ent_id, false);
-    let data = ent.data as DataObject;
+    let data = ent_data as DataObject;
     let field_id: number;
     while ((field_id = pak.readInt())) {
       let do_default = field_id === EntityFieldSpecial.Default;
@@ -410,10 +389,6 @@ class ClientEntityManagerImpl<
         }
       }
     }
-    if (ent !== this.dummy_ent) {
-      ent.postEntUpdate();
-      this.emit('ent_update', ent.id);
-    }
   }
 
   private initSchema(schema: EntityManagerSchema): void {
@@ -440,10 +415,10 @@ class ClientEntityManagerImpl<
     this.field_defs_by_name = field_defs_by_name;
   }
 
-  private initializeNewFullEnt(ent: Entity): void {
+  private initializeNewFullEntData(): EntityBaseDataCommon {
     let { field_defs } = this;
     assert(field_defs);
-    let data = ent.data as DataObject;
+    let data = {} as DataObject;
     for (let ii = 0; ii < field_defs.length; ++ii) {
       let def = field_defs[ii];
       if (!def) {
@@ -454,6 +429,35 @@ class ClientEntityManagerImpl<
         data[field_name] = default_value;
       }
     }
+    return data;
+  }
+
+  private instantiateEntFromFullUpdate(ent_id: EntityID, ent_data: EntityBaseDataCommon, is_initial: boolean): Entity {
+    let existing_ent = this.entities[ent_id];
+    if (existing_ent) {
+      assert(existing_ent.fading_out); // otherwise should have been deleted?
+      // was deleting, but got a new update on it (presumably was out of view, and came back), finish delete
+      // TODO: start fade in from appropriate value (after applying full update
+      //   later in the packet and calling onCreate)
+      existing_ent.fading_out = false;
+      existing_ent.fade = null;
+      for (let jj = 0; jj < this.fading_ents.length; ++jj) {
+        let fade = this.fading_ents[jj];
+        if (fade.ent_id === ent_id) {
+          ridx(this.fading_ents, jj);
+          this.finalizeDelete(ent_id);
+          break;
+        }
+      }
+      // Should be cleaned up at this point
+      assert(!this.entities[ent_id]);
+    }
+    let ent = this.entities[ent_id] = new this.EntityCtor(ent_id, ent_data, this) as Entity;
+    let fade_in_time = ent.onCreate(is_initial);
+    if (fade_in_time) {
+      this.fadeInEnt(ent, fade_in_time);
+    }
+    return ent;
   }
 
   private onEntUpdate(pak: Packet): void {
@@ -467,17 +471,24 @@ class ClientEntityManagerImpl<
       switch (cmd) {
         case EntityUpdateCmd.Full: {
           let ent_id = pak.readInt();
-          let ent = this.getEntityForUpdate(ent_id, true);
-          this.initializeNewFullEnt(ent);
-          this.readDiffFromPacket(ent_id, pak);
-          let fade_in_time = ent.onCreate(is_initial);
-          if (fade_in_time) {
-            this.fadeInEnt(ent, fade_in_time);
-          }
+          let ent_data = this.initializeNewFullEntData();
+          this.readDiffFromPacket(ent_data, pak);
+          let ent = this.instantiateEntFromFullUpdate(ent_id, ent_data, is_initial);
+          ent.postEntUpdate();
+          this.emit('ent_update', ent.id);
         } break;
         case EntityUpdateCmd.Diff: {
           let ent_id = pak.readInt();
-          this.readDiffFromPacket(ent_id, pak);
+          // Get an entity to apply the diff to.  Note: this may reference an entity
+          //   that does not yet exist, and apply a meaningless diff to `dummy_ent_data`, but we
+          //   need to do so in order to advance through the packet.  Presumably there's
+          //   a full update for this entity at the end of the packet for us.
+          let [ent_data, ent] = this.getEntDataForDiff(ent_id);
+          this.readDiffFromPacket(ent_data, pak);
+          if (ent) {
+            ent.postEntUpdate();
+            this.emit('ent_update', ent.id);
+          }
         } break;
         case EntityUpdateCmd.Delete: {
           let ent_id = pak.readInt();

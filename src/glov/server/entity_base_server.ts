@@ -7,6 +7,7 @@ import {
   ActionMessageParam,
   ClientID,
   EntityBaseCommon,
+  EntityBaseDataCommon,
   EntityFieldDecoder,
   EntityFieldDefCommon,
   EntityFieldEncoder,
@@ -121,8 +122,8 @@ export class EntityBaseServer extends EntityBaseCommon {
   last_vaid?: VAID;
   last_delete_reason?: string = undefined;
 
-  constructor(ent_id: EntityID, entity_manager: ServerEntityManagerInterface) {
-    super(ent_id, entity_manager);
+  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: ServerEntityManagerInterface) {
+    super(ent_id, data, entity_manager);
     this.is_player = false;
     this.in_dirty_list = false;
     this.need_save = false;
@@ -193,11 +194,6 @@ export class EntityBaseServer extends EntityBaseCommon {
     let client_id = this.getClientID();
     assert(client_id);
     this.entity_manager.worker.sendChannelMessage(`client.${client_id}`, 'ent_broadcast', data);
-  }
-
-  fromSerialized(ser: DataObject): void {
-    this.data = ser;
-    this.finishDeserialize();
   }
 
   // Serialized when saving to the data store
@@ -451,9 +447,9 @@ export class EntityBaseServer extends EntityBaseCommon {
       if (!data) {
         data = clone(this.DEFAULT_PLAYER_DATA);
       }
-      let ent = new this(-1, sem);
+      let ent = new this(-1, data, sem);
       ent.last_saved_data = JSON.stringify(data);
-      ent.fromSerialized(data);
+      ent.finishDeserialize();
       cb(null, ent as Entity);
     });
   }

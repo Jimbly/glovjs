@@ -118,8 +118,8 @@ function visibleAreaInit<
       for (let ii = 0; ii < ent_data.length; ++ii) {
         // Same as addEntityFromSerialized(), but does not flag `visible_areas_need_save`
         let ent_id = ++sem.last_ent_id;
-        let ent = new sem.EntityCtor(ent_id, sem) as Entity;
-        ent.fromSerialized(ent_data[ii]);
+        let ent = new sem.EntityCtor(ent_id, ent_data[ii], sem) as Entity;
+        ent.finishDeserialize();
         ent.fixupPostLoad();
         // Dirty flag should not be set: anyone who sees this VA must be waiting to send
         // initial ents anyway, do not need to send this entity to anyone
@@ -664,9 +664,9 @@ class ServerEntityManagerImpl<
 
   addEntityFromSerialized(data: DataObject): void {
     let ent_id = ++this.last_ent_id;
-    let ent = new this.EntityCtor(ent_id, this) as Entity;
+    let ent = new this.EntityCtor(ent_id, data, this) as Entity;
+    ent.finishDeserialize();
     assert(!ent.is_player);
-    ent.fromSerialized(data);
     ent.fixupPostLoad();
 
     this.addEntityInternal(ent);

@@ -36,10 +36,10 @@ export function entityTestCommonClass<T extends Constructor<EntityBaseCommon>>(b
   // Note: `base` is either `EntityBaseServer` or `EntityBaseClient`
   return class EntityTestCommon extends base {
     declare data: EntityTestDataCommon;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    constructor(...args: any[]) {
-      super(...args);
-      this.data.pos = [0,0,0];
-    }
+    // // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // constructor(...args: any[]) {
+    //   super(...args);
+    //   No data init here, client data comes from server.
+    // }
   };
 }
