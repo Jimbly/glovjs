@@ -164,6 +164,12 @@ export interface ChatIDs extends ClientHandlerSource {
   style?: string;
 }
 
+export type ClientIDs = {
+  user_id?: string;
+  display_name?: string;
+  roles?: Partial<Record<string, true>>;
+};
+
 export interface ClientChannelWorker {
   on(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
   removeListener(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
