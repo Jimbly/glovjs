@@ -321,7 +321,7 @@ export function logdata(data: unknown): string {
   return `${r.slice(0, 120-3)}...(${r.length})`;
 }
 
-export function isInteger(v: number): boolean {
+export function isInteger(v: unknown): v is number /* and an integer */ {
   return typeof v === 'number' && isFinite(v) && floor(v) === v;
 }
 
