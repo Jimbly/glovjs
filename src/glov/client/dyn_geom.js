@@ -177,7 +177,9 @@ let cam_down = vec3();
 let cam_pos = vec3();
 let right = vec3();
 let forward = vec3();
+let look_at_called = false;
 export function dynGeomLookAt(cam_pos_in, target_pos, up_in) {
+  look_at_called = true;
   v3copy(cam_pos, cam_pos_in);
   v3copy(up, up_in);
   v3scale(down, up, -1);
@@ -195,6 +197,7 @@ let temp = vec3();
 const xaxis = vec3(1,0,0);
 let target_right = vec3();
 export function dynGeomSpriteSetup(params) {
+  assert(look_at_called); // Must call dynGeomLookAt each frame!
   let {
     pos, // 3D world position
     shader, shader_params,
