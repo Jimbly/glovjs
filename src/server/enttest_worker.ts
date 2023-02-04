@@ -12,7 +12,13 @@ import {
   NetErrorCallback,
   isClientHandlerSource,
 } from 'glov/common/types';
-import { Vec2, Vec3, v2dist, v3copy } from 'glov/common/vmath';
+import {
+  Vec2,
+  Vec3,
+  v2copy,
+  v2dist,
+  v3copy,
+} from 'glov/common/vmath';
 import { ChannelServer, quietMessagesSet } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
@@ -275,17 +281,17 @@ EntTestWorker.registerClientHandler('spawn', function (
 EntTestWorker.registerClientHandler('move', function (
   this: EntTestWorker,
   src: HandlerSource,
-  data: { pos: [number, number, number] },
+  data: { pos: [number, number] },
   resp_func: ErrorCallback
 ) {
   assert(data.pos);
-  assert.equal(data.pos.length, 3);
+  assert.equal(data.pos.length, 2);
 
   let client = this.entity_manager.getClient(src.id);
   let necd = client.getUserData<NonEntClientData>();
   assert(necd.pos);
   assert.equal(necd.pos.length, 3);
-  v3copy(necd.pos, data.pos);
+  v2copy(necd.pos, data.pos);
   this.entity_manager.clientSetVisibleAreaSees(client, visibleAreaSees(necd.pos, necd));
   resp_func();
 });
