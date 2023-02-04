@@ -333,7 +333,7 @@ class ClientEntityManagerImpl<
     return ent;
   }
 
-  private readDiffFromPacket(ent_id: EntityID, pak: Packet): void {
+  private readDiffFromPacket(ent_id: EntityID, pak: Packet, is_full_update: boolean): void {
     let { field_defs, field_decoders } = this;
     assert(field_defs); // should have received this before receiving any diffs!
     // Get an entity to apply the diff to.  Note: this may allocate an entity
@@ -403,7 +403,7 @@ class ClientEntityManagerImpl<
       }
     }
     ent.postEntUpdate();
-    this.emit('ent_update', ent.id);
+    this.emit('ent_update', ent.id, is_full_update);
   }
 
   private initSchema(schema: EntityManagerSchema): void {
@@ -459,7 +459,7 @@ class ClientEntityManagerImpl<
           let ent_id = pak.readInt();
           let ent = this.getEntityForUpdate(ent_id);
           this.initializeNewFullEnt(ent);
-          this.readDiffFromPacket(ent_id, pak);
+          this.readDiffFromPacket(ent_id, pak, true);
           let fade_in_time = ent.onCreate(is_initial);
           if (fade_in_time) {
             this.fadeInEnt(ent, fade_in_time);
@@ -467,7 +467,7 @@ class ClientEntityManagerImpl<
         } break;
         case EntityUpdateCmd.Diff: {
           let ent_id = pak.readInt();
-          this.readDiffFromPacket(ent_id, pak);
+          this.readDiffFromPacket(ent_id, pak, false);
         } break;
         case EntityUpdateCmd.Delete: {
           let ent_id = pak.readInt();
