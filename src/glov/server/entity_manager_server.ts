@@ -118,7 +118,7 @@ function visibleAreaInit<
       for (let ii = 0; ii < ent_data.length; ++ii) {
         // Same as addEntityFromSerialized(), but does not flag `visible_areas_need_save`
         let ent_id = ++sem.last_ent_id;
-        let ent = new sem.EntityCtor(ent_id, ent_data[ii], sem) as Entity;
+        let ent = sem.create_func(ent_id, ent_data[ii], sem);
         ent.finishDeserialize();
         ent.fixupPostLoad();
         // Dirty flag should not be set: anyone who sees this VA must be waiting to send
@@ -197,7 +197,7 @@ function loadPlayerEntity<
   sem.player_uid_to_client[player_uid] = client;
   client.player_uid = player_uid;
   client.loading = true;
-  sem.EntityCtor.loadPlayerEntityImpl(sem, src, join_payload, player_uid, (err?: string | null, ent?: Entity) => {
+  sem.load_player_func(sem, src, join_payload, player_uid, (err?: string | null, ent?: Entity) => {
     client.loading = false;
     if (err || client.left_while_loading) {
       if (ent) {
@@ -311,7 +311,16 @@ class SEMClientImpl {
   }
 }
 
-export type EntSaveFunc <
+export type EntCreateFunc<
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+> = (
+  ent_id: EntityID,
+  data: DataObject,
+  entity_manager: ServerEntityManager<Entity, Worker>,
+) => Entity;
+
+export type EntSaveFunc<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > = (
@@ -321,7 +330,7 @@ export type EntSaveFunc <
   done: () => void,
 ) => void;
 
-export type EntLoadFunc <
+export type EntLoadFunc<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > = (
@@ -330,17 +339,30 @@ export type EntLoadFunc <
   cb: (err?: string, ent_data?: DataObject[]) => void,
 ) => void;
 
+export type EntLoadPlayerFunc<
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+> = (
+  sem: ServerEntityManager<Entity, Worker>,
+  src: ClientHandlerSource,
+  join_payload: JoinPayload,
+  player_uid: string,
+  cb: NetErrorCallback<Entity>,
+) => void;
+
 export interface ServerEntityManagerOpts<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > {
   worker: Worker;
-  EntityCtor: typeof EntityBaseServer;
+  create_func: EntCreateFunc<Entity, Worker>;
+  field_defs?: Partial<Record<string, EntityFieldDef>>;
   max_ents_per_tick?: number;
   va_unload_time?: number;
   save_time?: number;
   load_func?: EntLoadFunc<Entity, Worker>;
   save_func?: EntSaveFunc<Entity, Worker>;
+  load_player_func?: EntLoadPlayerFunc<Entity, Worker>;
 }
 
 export type ServerEntityManager<
@@ -364,7 +386,6 @@ class ServerEntityManagerImpl<
   implements EntityManager<Entity>
 { // eslint-disable-line brace-style
   worker: Worker;
-  EntityCtor: typeof EntityBaseServer;
   field_defs: Partial<Record<string, EntityFieldDef>>;
   field_defs_by_id: (EntityFieldDef|null)[];
 
@@ -382,8 +403,10 @@ class ServerEntityManagerImpl<
   max_ents_per_tick: number;
   va_unload_time: number;
   save_time: number;
+  create_func: EntCreateFunc<Entity, Worker>;
   load_func: EntLoadFunc<Entity, Worker>;
   save_func: EntSaveFunc<Entity, Worker>;
+  load_player_func: EntLoadPlayerFunc<Entity, Worker>;
   schema: EntityManagerSchema;
   all_client_fields: DirtyFields;
   mem_usage = {
@@ -405,13 +428,14 @@ class ServerEntityManagerImpl<
     super();
     this.worker = options.worker;
     (this.worker.default_mem_usage as DataObject).entity_manager = this.mem_usage;
-    this.EntityCtor = options.EntityCtor;
-    this.field_defs = this.EntityCtor.prototype.field_defs;
+    this.field_defs = options.field_defs || EntityBaseServer.field_defs;
+    this.create_func = options.create_func;
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.va_unload_time = options.va_unload_time || 10000;
     this.save_time = options.save_time || 10000;
     this.load_func = options.load_func || entityManagerDefaultLoadEnts;
     this.save_func = options.save_func || entityManagerDefaultSaveEnts;
+    this.load_player_func = options.load_player_func || EntityBaseServer.loadPlayerEntityImpl;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];
@@ -664,7 +688,7 @@ class ServerEntityManagerImpl<
 
   addEntityFromSerialized(data: DataObject): void {
     let ent_id = ++this.last_ent_id;
-    let ent = new this.EntityCtor(ent_id, data, this) as Entity;
+    let ent = this.create_func(ent_id, data, this);
     ent.finishDeserialize();
     assert(!ent.is_player);
     ent.fixupPostLoad();

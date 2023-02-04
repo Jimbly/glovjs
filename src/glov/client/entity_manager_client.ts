@@ -38,14 +38,24 @@ const walltime: () => number = require('./walltime.js');
 
 const { max, min, round } = Math;
 
-interface ClientEntityManagerBaseOpts {
+export type EntCreateFunc<
+  Entity extends EntityBaseClient,
+> = (
+  ent_id: EntityID,
+  data: DataObject,
+  entity_manager: ClientEntityManagerInterface,
+) => Entity;
+
+interface ClientEntityManagerBaseOpts<Entity extends EntityBaseClient> {
   on_broadcast?: (data: EntityManagerEvent) => void;
-  EntityCtor: typeof EntityBaseClient;
+  create_func: EntCreateFunc<Entity>;
+  field_encoders?: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<Entity>>>;
+  field_decoders?: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<Entity>>>;
 
   channel?: ClientChannelWorker;
 }
 
-interface ClientEntityManagerOpts extends ClientEntityManagerBaseOpts {
+export interface ClientEntityManagerOpts<Entity extends EntityBaseClient> extends ClientEntityManagerBaseOpts<Entity> {
   channel_type: string;
 }
 
@@ -59,10 +69,10 @@ interface FadingEnt {
   countdown_max: number;
 }
 
-interface EntityFieldDefClient extends EntityFieldDefCommon {
+interface EntityFieldDefClient<Entity extends EntityBaseClient> extends EntityFieldDefCommon {
   field_name: string;
   field_id: number;
-  encoder: EntityFieldEncoder<EntityBaseClient>;
+  encoder: EntityFieldEncoder<Entity>;
 }
 
 function entActionAppend<Entity extends EntityBaseClient>(
@@ -126,11 +136,11 @@ export type ClientEntityManager<Entity extends EntityBaseClient> =
   Readonly<ClientEntityManagerImpl<Entity>>; // Really want all non-functions private, not readonly...
 class ClientEntityManagerImpl<
   Entity extends EntityBaseClient
-> extends EventEmitter implements EntityManager<Entity>, ClientEntityManagerBaseOpts {
+> extends EventEmitter implements EntityManager<Entity>, ClientEntityManagerBaseOpts<Entity> {
   my_ent_id!: EntityID;
 
-  on_broadcast!: (data: EntityManagerEvent) => void;
-  EntityCtor!: typeof EntityBaseClient;
+  on_broadcast?: (data: EntityManagerEvent) => void;
+  create_func!: EntCreateFunc<Entity>;
   channel?: ClientChannelWorker;
 
   client_id?: ClientID;
@@ -140,10 +150,10 @@ class ClientEntityManagerImpl<
   entities!: Partial<Record<EntityID, Entity>>;
   fading_ents!: FadingEnt[];
 
-  field_defs?: (EntityFieldDefClient|null)[];
-  field_defs_by_name?: Partial<Record<string, EntityFieldDefClient>>;
-  field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<EntityBaseClient>>>;
-  field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<EntityBaseClient>>>;
+  field_defs?: (EntityFieldDefClient<Entity>|null)[];
+  field_defs_by_name?: Partial<Record<string, EntityFieldDefClient<Entity>>>;
+  field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<Entity>>>;
+  field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<Entity>>>;
 
   received_ent_ready!: boolean;
   received_ent_start!: boolean;
@@ -152,7 +162,7 @@ class ClientEntityManagerImpl<
 
   dummy_ent_data?: EntityBaseDataCommon; // Used for a destination of applying diffs before getting a full update
 
-  constructor(options: ClientEntityManagerOpts) {
+  constructor(options: ClientEntityManagerOpts<Entity>) {
     super();
     assert(options.channel_type);
     netSubs().onChannelMsg(options.channel_type, 'ent_update', this.onEntUpdate.bind(this));
@@ -164,15 +174,15 @@ class ClientEntityManagerImpl<
 
     this.reinit(options);
 
-    this.field_decoders = this.EntityCtor.field_decoders;
-    this.field_encoders = this.EntityCtor.field_encoders;
+    this.field_decoders = options.field_decoders || EntityBaseClient.field_decoders;
+    this.field_encoders = options.field_encoders || EntityBaseClient.field_encoders;
     this.frame_wall_time = walltime();
   }
 
-  reinit(options: Partial<ClientEntityManagerBaseOpts>): void {
+  reinit(options: Partial<ClientEntityManagerBaseOpts<Entity>>): void {
     this.deinit();
 
-    this.EntityCtor = options.EntityCtor || this.EntityCtor;
+    this.create_func = options.create_func || this.create_func;
     this.on_broadcast = options.on_broadcast || this.on_broadcast;
 
     // Never inheriting this over reinit()
@@ -261,6 +271,7 @@ class ClientEntityManagerImpl<
     if (!this.received_ent_start) {
       return;
     }
+    assert(this.on_broadcast);
     this.on_broadcast(data);
   }
 
@@ -392,8 +403,8 @@ class ClientEntityManagerImpl<
   }
 
   private initSchema(schema: EntityManagerSchema): void {
-    let field_defs: (EntityFieldDefClient|null)[] = [null];
-    let field_defs_by_name: Partial<Record<string, EntityFieldDefClient>> = {};
+    let field_defs: (EntityFieldDefClient<Entity>|null)[] = [null];
+    let field_defs_by_name: Partial<Record<string, EntityFieldDefClient<Entity>>> = {};
     let { field_encoders } = this;
     for (let ii = 0; ii < schema.length; ++ii) {
       let ser_def = schema[ii];
@@ -452,7 +463,7 @@ class ClientEntityManagerImpl<
       // Should be cleaned up at this point
       assert(!this.entities[ent_id]);
     }
-    let ent = this.entities[ent_id] = new this.EntityCtor(ent_id, ent_data, this) as Entity;
+    let ent = this.entities[ent_id] = this.create_func(ent_id, ent_data, this);
     let fade_in_time = ent.onCreate(is_initial);
     if (fade_in_time) {
       this.fadeInEnt(ent, fade_in_time);
@@ -551,7 +562,7 @@ class ClientEntityManagerImpl<
   }
 
   private handleActionListResult(
-    action_list: ClientActionMessageParam[],
+    action_list: ClientActionMessageParam<Entity>[],
     resp_list: (NetErrorCallback<unknown> | undefined)[],
     err: string | null,
     resp?: ActionListResponse,
@@ -590,7 +601,7 @@ class ClientEntityManagerImpl<
   }
 
   action_list_queue: {
-    action_list: ClientActionMessageParam[];
+    action_list: ClientActionMessageParam<Entity>[];
     resp_list: (NetErrorCallback<unknown> | undefined)[];
   } | null = null;
 
@@ -618,7 +629,7 @@ class ClientEntityManagerImpl<
   }
 
   actionSendQueued(
-    action: ClientActionMessageParam,
+    action: ClientActionMessageParam<Entity>,
     resp_func?: NetErrorCallback<unknown>,
   ): void {
     if (!this.action_list_queue) {
@@ -675,7 +686,7 @@ class ClientEntityManagerImpl<
 }
 
 export function clientEntityManagerCreate<Entity extends EntityBaseClient>(
-  options: ClientEntityManagerOpts
+  options: ClientEntityManagerOpts<Entity>
 ): ClientEntityManager<Entity> {
   return new ClientEntityManagerImpl(options);
 }

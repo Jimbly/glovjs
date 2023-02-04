@@ -379,7 +379,8 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 
-  declare field_defs: Partial<Record<string, EntityFieldDef>>; // on prototype, not instances
+  static field_defs: Partial<Record<string, EntityFieldDef>> = Object.create(null);
+  declare field_defs: Partial<Record<string, EntityFieldDef>>; // also on prototype (not on instances)
   private static last_field_id = EntityFieldSpecial.MAX - 1;
   static registerFieldDefs<DataObjectType>(defs: Record<keyof DataObjectType, EntityFieldDefOpts>): void;
   static registerFieldDefs(defs: Record<string, EntityFieldDefOpts>): void {
@@ -414,18 +415,19 @@ export class EntityBaseServer extends EntityBaseCommon {
       // Then also copy all other app-specific fields
       defaults(def_out, def_in);
 
-      assert(!this.prototype.field_defs[key]);
-      this.prototype.field_defs[key] = def_out;
+      assert(!this.field_defs[key]);
+      this.field_defs[key] = def_out;
     }
   }
 
-  declare action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>>; // on prototype, not instances
+  static action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>> = Object.create(null);
+  declare action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>>; // also on prototype (not on instances)
   static registerActions<Entity extends EntityBaseServer>(action_defs: ActionDefOpts<Entity>[]): void {
     action_defs.forEach((action_def) => {
       let { action_id } = action_def;
-      assert(!this.prototype.action_defs[action_id]);
+      assert(!this.action_defs[action_id]);
       actionDefDefaults(action_def);
-      this.prototype.action_defs[action_id] = action_def;
+      this.action_defs[action_id] = action_def;
     });
   }
 
@@ -455,14 +457,9 @@ export class EntityBaseServer extends EntityBaseCommon {
   }
 }
 
-EntityBaseServer.prototype.field_defs = Object.create(null);
-EntityBaseServer.registerFieldDefs({
-  // no longer on .data: id: { ephemeral: true },
+EntityBaseServer.prototype.field_defs = EntityBaseServer.field_defs;
+EntityBaseServer.prototype.action_defs = EntityBaseServer.action_defs;
 
-  // expect game to register pos/state/etc definitions as appropriate
-});
-
-EntityBaseServer.prototype.action_defs = Object.create(null);
 // Example, handler-less, permissive move and animation state
 // EntityBaseServer.registerActions([{
 //   action_id: 'move',

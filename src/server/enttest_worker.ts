@@ -101,7 +101,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
 
   constructor(
     ent_id: EntityID,
-    data: EntityTestDataCommon,
+    data: DataObject,
     entity_manager: ServerEntityManager<EntityTestServer, EntTestWorker>
   ) {
     super(ent_id, data, entity_manager);
@@ -109,7 +109,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   }
 
   /// Example: no saved player data
-  // static loadPlayerEntityImpl = ((
+  // static myLoadPlayerEntityImpl = ((
   //   sem: ServerEntityManager<Entity, EntTestWorker>,
   //   src: ClientHandlerSource,
   //   player_uid: string,
@@ -123,7 +123,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   //   }, sem);
   //   ent.finishDeserialize();
   //   cb(null, ent);
-  // }) as typeof EntityBaseServer.loadPlayerEntityImpl;
+  // });
   // savePlayerEntity(cb: () => void): void {
   //   // Not saving anything
   //   cb();
@@ -134,7 +134,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
     type: EntityType.Player,
     pos: [10,10,0],
   };
-  static loadPlayerEntityImpl = ((
+  static myLoadPlayerEntityImpl = ((
     sem: ServerEntityManager<Entity, EntTestWorker>,
     src: ClientHandlerSource,
     join_payload: JoinPayload,
@@ -153,7 +153,7 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
         cb(null, ent);
       }
     );
-  }) as typeof EntityBaseServer.loadPlayerEntityImpl;
+  });
 
   visibleAreaGet(): VAID {
     return floor(this.data.pos[0] / VA_SIZE) + floor(this.data.pos[1] / VA_SIZE) * 100;
@@ -213,6 +213,14 @@ interface NonEntClientData extends VAIDHolder {
   pos: Vec3;
 }
 
+function entCreate(
+  ent_id: EntityID,
+  data: DataObject,
+  entity_manager: ServerEntityManager<Entity, EntTestWorker>
+): Entity {
+  return new EntityTestServer(ent_id, data, entity_manager);
+}
+
 class EntTestWorker extends ChannelWorker {
   entity_manager: ServerEntityManager<Entity, EntTestWorker>;
 
@@ -221,7 +229,8 @@ class EntTestWorker extends ChannelWorker {
 
     this.entity_manager = createServerEntityManager<Entity, EntTestWorker>({
       worker: this,
-      EntityCtor: EntityTestServer,
+      create_func: entCreate,
+      load_player_func: EntityTestServer.myLoadPlayerEntityImpl,
     });
   }
 

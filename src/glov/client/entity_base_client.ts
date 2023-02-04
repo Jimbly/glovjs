@@ -22,8 +22,8 @@ type DataOverride = {
   data: Partial<Record<string, unknown>>;
 };
 
-export interface ClientActionMessageParam extends ActionMessageParam {
-  ent: EntityBaseClient;
+export interface ClientActionMessageParam<Entity extends EntityBaseClient=EntityBaseClient> extends ActionMessageParam {
+  ent: Entity;
 }
 
 interface BatchUpdateParam extends ActionMessageParam {

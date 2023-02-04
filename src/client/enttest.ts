@@ -21,7 +21,7 @@ import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
 import { EntityID } from 'glov/common/entity_base_common';
-import { ClientChannelWorker } from 'glov/common/types';
+import { ClientChannelWorker, DataObject } from 'glov/common/types';
 import {
   Vec2,
   Vec3,
@@ -38,7 +38,6 @@ import {
 } from 'glov/common/vmath';
 
 import {
-  EntityTestDataCommon,
   EntityType,
   VA_SIZE,
   VIEW_DIST,
@@ -63,7 +62,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   error_time: number;
   home_point?: Vec2;
 
-  constructor(ent_id: EntityID, data: EntityTestDataCommon, entity_manager: ClientEntityManager<EntityTestClient>) {
+  constructor(ent_id: EntityID, data: DataObject, entity_manager: ClientEntityManager<EntityTestClient>) {
     super(ent_id, data, entity_manager);
     this.waiting = false;
     this.in_view = false;
@@ -210,9 +209,11 @@ export function main(): void {
 
   chat_ui = chatUICreate({ max_len: 1000 });
 
-  entity_manager = clientEntityManagerCreate({
+  entity_manager = clientEntityManagerCreate<EntityTestClient>({
     channel_type: 'enttest',
-    EntityCtor: EntityTestClient,
+    create_func: (ent_id: EntityID, data: DataObject, em: typeof entity_manager) => {
+      return new EntityTestClient(ent_id, data, em);
+    },
   });
   entity_pos_manager = entityPositionManagerCreate({
     entity_manager,
