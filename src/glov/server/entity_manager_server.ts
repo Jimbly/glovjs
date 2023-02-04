@@ -515,6 +515,10 @@ class ServerEntityManagerImpl<
     });
   }
 
+  numClients(): number {
+    return this.mem_usage.clients.count;
+  }
+
   clientJoin(
     src: ClientHandlerSource,
     player_uid: string | null,
@@ -1484,9 +1488,11 @@ export function entityManagerChatDecorateData<
   data_broadcast: ChatMessageDataBroadcast,
 ): void {
   if (data_broadcast.client_id) {
-    let client = worker.entity_manager.getClient(data_broadcast.client_id);
-    if (client && client.ent_id) {
-      data_broadcast.ent_id = client.ent_id;
+    if (worker.entity_manager.hasClient(data_broadcast.client_id)) {
+      let client = worker.entity_manager.getClient(data_broadcast.client_id);
+      if (client.ent_id) {
+        data_broadcast.ent_id = client.ent_id;
+      }
     }
   }
 }
