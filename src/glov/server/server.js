@@ -194,9 +194,16 @@ export function startup(params) {
         for (let ii = 0; ii < files.length; ++ii) {
           let filename = files[ii];
           console.log(`File changed: ${filename}`);
-          ws_server.broadcast('filewatch', filename);
-          serverFilewatchTriggerChange(filename);
-          let m = filename.match(/(.*)\.ver\.json$/);
+          let shortname;
+          if (filename.startsWith('client/')) {
+            shortname = filename.replace(/^client\//, '');
+            ws_server.broadcast('filewatch', shortname);
+          } else {
+            assert(filename.startsWith('server/'));
+            shortname = filename.replace(/^server\//, '');
+          }
+          serverFilewatchTriggerChange(shortname);
+          let m = shortname.match(/(.*)\.ver\.json$/);
           if (m) {
             let file_base_name = m[1]; // e.g. 'app' or 'worker'
             updateBuildTimestamp(file_base_name);

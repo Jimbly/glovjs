@@ -58,6 +58,11 @@ module.exports = {
     'glov/common/words/*.gkg',
     'glov/common/words/*.txt',
   ],
+  fsdata_embed: ['.json'],
+  fsdata_strip: ['.json'],
+  // files in client/*, presumably bundled into fsdata, that should be placed in server/*
+  // Note: no files in base GLOV.js build, but input cannot be empty, so using dummy path
+  server_fsdata: ['client/does/not/exists/*'],
   default_defines: {
     PLATFORM: 'web',
     ENV: '',

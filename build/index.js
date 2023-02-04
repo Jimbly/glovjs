@@ -340,7 +340,7 @@ function registerBundle(param) {
       func: function (job, done) {
         if (server_process_container.proc) {
           let updated = job.getFilesUpdated();
-          updated = updated.map((a) => a.relative.replace(/^client\//, ''));
+          updated = updated.map((a) => a.relative);
           server_process_container.proc.send({ type: 'file_change', paths: updated });
         }
         done();
@@ -350,6 +350,44 @@ function registerBundle(param) {
   }
 }
 config.bundles.forEach(registerBundle);
+
+gb.task({
+  name: 'server_fsdata',
+  input: config.server_fsdata,
+  target: 'dev',
+  type: gb.SINGLE,
+  func: function (job, done) {
+    let file = job.getFile();
+    let server_name = file.relative.replace(/^client\//, 'server/');
+    job.out({
+      relative: server_name,
+      contents: file.contents,
+    });
+
+    done();
+  }
+});
+
+let server_hotreload_updated = null;
+gb.task({
+  name: 'server_hotreload',
+  input: 'server_fsdata:**',
+  type: gb.SINGLE,
+  init: function (next) {
+    server_hotreload_updated = [];
+    next();
+  },
+  func: function (job, done) {
+    server_hotreload_updated.push(job.getFile().relative);
+    done();
+  },
+  finish: function () {
+    if (server_process_container.proc) {
+      server_process_container.proc.send({ type: 'file_change', paths: server_hotreload_updated });
+    }
+    server_hotreload_updated = null;
+  },
+});
 
 const server_input_globs = [
   'server_static:**',
@@ -362,6 +400,11 @@ let server_port_https = argv.sport || process.env.sport || (server_port + 100);
 
 gb.task({
   name: 'run_server',
+  deps: [
+    // do not run until after these are done, but does not cause a hard reload
+    'server_fsdata',
+    'server_hotreload',
+  ],
   input: server_input_globs,
   ...exec({
     cwd: '.',
@@ -392,6 +435,8 @@ gb.task({
   input: config.client_fsdata,
   target: 'dev',
   ...webfs({
+    embed: config.fsdata_embed,
+    strip: config.fsdata_strip,
     base: 'client',
     output: 'client/fsdata.js',
   })
@@ -492,12 +537,12 @@ gb.task({
         // Very first run, but server is already up, make sure they know the
         //   client has been updated, if it was changed between the server
         //   being started and this task being run.
-        server_process_container.proc.send({ type: 'file_change', paths: ['app.ver.json'] });
+        server_process_container.proc.send({ type: 'file_change', paths: ['client/app.ver.json'] });
       }
 
     } else {
       let updated = job.getFilesUpdated();
-      updated = updated.map((a) => a.relative.replace(/^client\//, ''));
+      updated = updated.map((a) => a.relative);
       if (server_process_container.proc) {
         server_process_container.proc.send({ type: 'file_change', paths: updated });
       }
@@ -529,6 +574,7 @@ gb.task({
     // 'client_js_babel', // dep'd from client_bundle*
 
     'server_static',
+    'server_fsdata',
     'server_js_glov_preresolve',
     'server_json',
     ...client_tasks,
