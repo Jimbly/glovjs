@@ -240,6 +240,20 @@ Shader.prototype.compile = function () {
     assert(type_size[type_name]);
   });
   this.shader_source_text = text;
+
+  if (gl.isContextLost()) {
+    // will throw in gl.shaderSource on iOS or presumably error on other platforms
+    this.valid = false;
+    let error_text = this.error_text = 'Context lost';
+    if (this.defines_arr.length) {
+      filename += `(${this.defines_arr.join(',')})`;
+    }
+    console[this.non_fatal ? 'warn' : 'error'](`Error compiling ${filename}: ${error_text}`);
+    // Just silently fail, presumably context lost because the tab is being closed
+    // reportShaderError(this.non_fatal, `${filename}: ${error_text}`);
+    return;
+  }
+
   gl.shaderSource(this.shader, text);
   gl.compileShader(this.shader);
 
@@ -317,14 +331,21 @@ function link(vp, fp, on_error) {
   prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   if (!prog.valid) {
     let error_text = cleanShaderError(gl.getProgramInfoLog(prog.handle));
+    let report = true;
+    if (gl.isContextLost()) {
+      error_text = `(Context lost) ${error_text}`;
+      report = false;
+    }
     console.error(`Shader link error: ${error_text}`);
     // Currently, not calling on_error if `engine.DEBUG`, we want to see our
     //   shader errors immediately!
     if (on_error && (!engine.DEBUG || on_error === nop)) {
       on_error(error_text);
     } else {
-      reportShaderError(false, `Shader link error (${vp.filename} & ${fp.filename}):` +
-        ` ${error_text}`);
+      if (report) {
+        reportShaderError(false, `Shader link error (${vp.filename} & ${fp.filename}):` +
+          ` ${error_text}`);
+      }
     }
     prog.uniforms = [];
     return prog;
