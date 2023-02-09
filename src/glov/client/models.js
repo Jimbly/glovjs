@@ -25,6 +25,9 @@ const { vec4 } = require('glov/common/vmath.js');
 const { webFSGetFile } = require('./webfs.js');
 
 export let load_count = 0;
+export function modelLoadCount() {
+  return load_count;
+}
 
 export let models = {};
 
@@ -187,7 +190,7 @@ Model.prototype.drawGeom = function () {
   }
 };
 
-export function load(url) {
+export function modelLoad(url) {
   if (models[url]) {
     return models[url];
   }
@@ -197,8 +200,11 @@ export function load(url) {
   return model;
 }
 
-export function startup() {
+export function modelStartup() {
   initShaders();
   let model_box = models.box = new Model('box');
   model_box.parse(webFSGetFile('models/box_textured_embed.glb').buffer);
 }
+
+// Legacy APIs
+exports.load = modelLoad;

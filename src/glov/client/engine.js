@@ -41,7 +41,7 @@ const mat4Mul = require('gl-mat4/multiply');
 const mat4Transpose = require('gl-mat4/transpose');
 const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
-const models = require('./models.js');
+const { modelLoadCount, modelStartup } = require('./models.js');
 const perf = require('./perf.js');
 const { profilerFrameStart, profilerGarbageEstimate } = require('./profiler.js');
 const { profilerUIStartup } = require('./profiler_ui.js');
@@ -1181,7 +1181,7 @@ export function startup(params) {
   camera2d.startup();
   spriteStartup();
   input.startup(canvas, params);
-  models.startup();
+  modelStartup();
 
   window.addEventListener('blur', onBlur, false);
   window.addEventListener('focus', onFocus, false);
@@ -1240,7 +1240,7 @@ export function startup(params) {
 }
 
 export function loadsPending() {
-  return textureLoadCount() + soundLoading() + models.load_count;
+  return textureLoadCount() + soundLoading() + modelLoadCount();
 }
 
 let on_load_metrics = [];
