@@ -11,11 +11,9 @@ import {
   EALF_HAS_PAYLOAD,
   EALF_HAS_PREDICATE,
   EntityBaseDataCommon,
-  EntityFieldDecoder,
   EntityFieldDefCommon,
   EntityFieldEncoder,
   EntityFieldEncoding,
-  EntityFieldEncodingType,
   EntityFieldSpecial,
   EntityFieldSub,
   EntityID,
@@ -23,6 +21,8 @@ import {
   EntityManagerEvent,
   EntityManagerSchema,
   EntityUpdateCmd,
+  entity_field_decoders,
+  entity_field_encoders,
 } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { EventEmitter } from 'glov/common/tiny-events';
@@ -49,8 +49,6 @@ export type EntCreateFunc<
 interface ClientEntityManagerBaseOpts<Entity extends EntityBaseClient> {
   on_broadcast?: (data: EntityManagerEvent) => void;
   create_func: EntCreateFunc<Entity>;
-  field_encoders?: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<Entity>>>;
-  field_decoders?: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<Entity>>>;
 
   channel?: ClientChannelWorker;
 }
@@ -152,8 +150,6 @@ class ClientEntityManagerImpl<
 
   field_defs?: (EntityFieldDefClient<Entity>|null)[];
   field_defs_by_name?: Partial<Record<string, EntityFieldDefClient<Entity>>>;
-  field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<Entity>>>;
-  field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<Entity>>>;
 
   received_ent_ready!: boolean;
   received_ent_start!: boolean;
@@ -174,8 +170,6 @@ class ClientEntityManagerImpl<
 
     this.reinit(options);
 
-    this.field_decoders = options.field_decoders || EntityBaseClient.field_decoders;
-    this.field_encoders = options.field_encoders || EntityBaseClient.field_encoders;
     this.frame_wall_time = walltime();
   }
 
@@ -337,7 +331,7 @@ class ClientEntityManagerImpl<
   }
 
   private readDiffFromPacket(ent_data: EntityBaseDataCommon, pak: Packet): void {
-    let { field_defs, field_decoders } = this;
+    let { field_defs } = this;
     assert(field_defs); // should have received this before receiving any diffs!
     let data = ent_data as DataObject;
     let field_id: number;
@@ -351,7 +345,7 @@ class ClientEntityManagerImpl<
         assert(field_def, `Missing field_def in server-provided schema for field#"${field_id}"`); // catch coding bug
       }
       let { default_value, encoding, field_name, sub } = field_def;
-      let decoder = field_decoders[encoding];
+      let decoder = entity_field_decoders[encoding];
       if (!decoder) {
         assert(decoder, `Missing decoder for type ${field_def.encoding}`); // catch server<->client unable to comm
       }
@@ -405,12 +399,11 @@ class ClientEntityManagerImpl<
   private initSchema(schema: EntityManagerSchema): void {
     let field_defs: (EntityFieldDefClient<Entity>|null)[] = [null];
     let field_defs_by_name: Partial<Record<string, EntityFieldDefClient<Entity>>> = {};
-    let { field_encoders } = this;
     for (let ii = 0; ii < schema.length; ++ii) {
       let ser_def = schema[ii];
       let idx = ii + EntityFieldSpecial.MAX;
       let encoding = ser_def.e || EntityFieldEncoding.JSON;
-      let encoder = field_encoders[encoding];
+      let encoder = entity_field_encoders[encoding];
       assert(encoder);
       let def = field_defs[idx] = {
         encoding,

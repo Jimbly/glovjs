@@ -33,6 +33,7 @@ import {
   NetResponseCallback,
 } from 'glov/common/types';
 import { callEach, logdata, nop } from 'glov/common/util';
+import { entityServerDefaultLoadPlayerEntity, entity_field_defs } from 'glov/server/entity_base_server';
 import { ChannelWorker } from './channel_worker.js';
 import { ChattableWorker } from './chattable_worker.js';
 import {
@@ -356,7 +357,6 @@ export interface ServerEntityManagerOpts<
 > {
   worker: Worker;
   create_func: EntCreateFunc<Entity, Worker>;
-  field_defs?: Partial<Record<string, EntityFieldDef>>;
   max_ents_per_tick?: number;
   va_unload_time?: number;
   save_time?: number;
@@ -386,7 +386,6 @@ class ServerEntityManagerImpl<
   implements EntityManager<Entity>
 { // eslint-disable-line brace-style
   worker: Worker;
-  field_defs: Partial<Record<string, EntityFieldDef>>;
   field_defs_by_id: (EntityFieldDef|null)[];
 
   last_ent_id: EntityID = 0;
@@ -428,20 +427,19 @@ class ServerEntityManagerImpl<
     super();
     this.worker = options.worker;
     (this.worker.default_mem_usage as DataObject).entity_manager = this.mem_usage;
-    this.field_defs = options.field_defs || EntityBaseServer.field_defs;
     this.create_func = options.create_func;
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.va_unload_time = options.va_unload_time || 10000;
     this.save_time = options.save_time || 10000;
     this.load_func = options.load_func || entityManagerDefaultLoadEnts;
     this.save_func = options.save_func || entityManagerDefaultSaveEnts;
-    this.load_player_func = options.load_player_func || EntityBaseServer.loadPlayerEntityImpl;
+    this.load_player_func = options.load_player_func || entityServerDefaultLoadPlayerEntity;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];
-    let { field_defs, all_client_fields, field_defs_by_id } = this;
-    for (let key in field_defs) {
-      let field_def = field_defs[key]!;
+    let { all_client_fields, field_defs_by_id } = this;
+    for (let key in entity_field_defs) {
+      let field_def = entity_field_defs[key]!;
       if (!field_def.server_only) {
         assert(field_def.field_id);
         let index = field_def.field_id - EntityFieldSpecial.MAX;
@@ -1137,7 +1135,7 @@ class ServerEntityManagerImpl<
   }
 
   private addFullEntToPacket(pak: Packet, debug_out: string[] | null, ent: Entity): void {
-    let { field_defs, all_client_fields } = this;
+    let { all_client_fields } = this;
     pak.writeU8(EntityUpdateCmd.Full);
     pak.writeInt(ent.id);
 
@@ -1145,7 +1143,7 @@ class ServerEntityManagerImpl<
     let debug: string[] | null = debug_out ? [] : null;
 
     for (let field in all_client_fields) {
-      let field_def = field_defs[field];
+      let field_def = entity_field_defs[field];
       assert(field_def);
       let { field_id, sub, encoder, default_value } = field_def;
       assert(typeof field_id === 'number');
@@ -1192,7 +1190,6 @@ class ServerEntityManagerImpl<
   }
 
   private addDiffToPacket(per_va: PerVAUpdate, ent: Entity): boolean {
-    let { field_defs } = this;
     let data: DataObject = ent.data;
     let wrote_header = false;
     let pak!: Packet; // Initialized with wrote_header
@@ -1205,7 +1202,7 @@ class ServerEntityManagerImpl<
 
 
     for (let field in dirty_fields) {
-      let field_def = field_defs[field];
+      let field_def = entity_field_defs[field];
       assert(field_def);
       let { server_only, field_id, sub, encoder, default_value } = field_def;
       if (server_only) {

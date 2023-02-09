@@ -1,6 +1,9 @@
 // Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+export let entity_field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<EntityBaseCommon>>> = {};
+export let entity_field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<EntityBaseCommon>>> = {};
+
 import assert from 'assert';
 import { Packet } from 'glov/common/packet';
 import { Vec2, Vec3 } from 'glov/common/vmath';
@@ -140,32 +143,31 @@ export class EntityBaseCommon {
     return undefined;
   }
 
-  static field_encoders: Partial<Record<EntityFieldEncodingType, EntityFieldEncoder<EntityBaseCommon>>> = {};
-  static field_decoders: Partial<Record<EntityFieldEncodingType, EntityFieldDecoder<EntityBaseCommon>>> = {};
-  // Note: must be called _before_ registerFieldDefs()
-  static registerFieldEncoding<Entity extends EntityBaseCommon>(
-    data: Partial<Record<EntityFieldEncodingType, {
-      // encoder: on the CLIENT used for sending data_assigments
-      // decoder: on the CLIENT used for receiving full entity updates and entity diffs
-      // encoder: on the SERVER used for sending full entity updates and entity diffs
-      // decoder: on the SERVER used for receiving data_assignemnts (old_value always === null)
-      encoder: EntityFieldEncoder<Entity>;
-      decoder: EntityFieldDecoder<Entity>;
-    }>>
-  ): void {
-    for (let key_string in data) {
-      let key = Number(key_string) as EntityFieldEncodingType;
-      let pair = data[key]!;
-      let encoder = pair.encoder as EntityFieldEncoder<EntityBaseCommon>;
-      let decoder = pair.decoder as EntityFieldDecoder<EntityBaseCommon>;
-      assert(!this.field_encoders[key]);
-      this.field_encoders[key] = encoder;
-      this.field_decoders[key] = decoder;
-    }
+}
+
+// Note: must be called _before_ entityServerRegisterFieldDefs() on the server
+export function entityCommonRegisterFieldEncoding<Entity extends EntityBaseCommon>(
+  data: Partial<Record<EntityFieldEncodingType, {
+    // encoder: on the CLIENT used for sending data_assigments
+    // decoder: on the CLIENT used for receiving full entity updates and entity diffs
+    // encoder: on the SERVER used for sending full entity updates and entity diffs
+    // decoder: on the SERVER used for receiving data_assignemnts (old_value always === null)
+    encoder: EntityFieldEncoder<Entity>;
+    decoder: EntityFieldDecoder<Entity>;
+  }>>
+): void {
+  for (let key_string in data) {
+    let key = Number(key_string) as EntityFieldEncodingType;
+    let pair = data[key]!;
+    let encoder = pair.encoder as EntityFieldEncoder<EntityBaseCommon>;
+    let decoder = pair.decoder as EntityFieldDecoder<EntityBaseCommon>;
+    assert(!entity_field_encoders[key]);
+    entity_field_encoders[key] = encoder;
+    entity_field_decoders[key] = decoder;
   }
 }
 
-EntityBaseCommon.registerFieldEncoding({
+entityCommonRegisterFieldEncoding({
   // Using functions with names to get better callstacks
   /* eslint-disable func-name-matching */
   [EntityFieldEncoding.JSON]: {

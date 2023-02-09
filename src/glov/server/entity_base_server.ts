@@ -1,6 +1,8 @@
 // Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+export let entity_field_defs: Partial<Record<string, EntityFieldDef>> = Object.create(null);
+
 import assert from 'assert';
 import { asyncSeries } from 'glov-async';
 import {
@@ -16,6 +18,8 @@ import {
   EntityFieldSub,
   EntityID,
   EntityManagerEvent,
+  entity_field_decoders,
+  entity_field_encoders,
 } from 'glov/common/entity_base_common';
 import {
   ClientHandlerSource,
@@ -60,6 +64,47 @@ export interface EntityFieldDef extends EntityFieldDefCommon {
 }
 export type EntityFieldDefOpts = Partial<Exclude<EntityFieldDef, 'encoder'>>;
 
+let last_field_id = EntityFieldSpecial.MAX - 1;
+export function entityServerRegisterFieldDefs<DataObjectType>(
+  defs: Record<keyof DataObjectType, EntityFieldDefOpts>
+): void;
+export function entityServerRegisterFieldDefs(defs: Record<string, EntityFieldDefOpts>): void {
+  for (let key in defs) {
+    let def_in = defs[key];
+    // Construct an EntityFieldDef in a type-safe manner
+    let ephemeral = def_in.ephemeral || false;
+    let server_only = def_in.server_only || false;
+    let default_value = def_in.default_value;
+    let encoding = def_in.encoding || EntityFieldEncoding.JSON;
+    let encoder = entity_field_encoders[encoding];
+    assert(encoder, `Missing encoder for type ${encoding} referenced by field ${key}`);
+    let decoder = entity_field_decoders[encoding];
+    assert(decoder);
+    let sub = def_in.sub || EntityFieldSub.None;
+    if (sub) {
+      assert(default_value === undefined, 'Default values not supported for Records/Arrays');
+    }
+    let field_id = server_only ? -1 : ++last_field_id;
+    let def_out: EntityFieldDef = {
+      ephemeral,
+      server_only,
+      encoding,
+      default_value,
+      sub,
+      encoder,
+      decoder,
+      field_id,
+      field_name: key,
+    };
+
+    // Then also copy all other app-specific fields
+    defaults(def_out, def_in);
+
+    assert(!entity_field_defs[key]);
+    entity_field_defs[key] = def_out;
+  }
+}
+
 export interface ActionHandlerParam extends WithRequired<ActionMessageParam, 'data_assignments' | 'self' | 'ent_id'> {
   src: ClientHandlerSource;
   predicate?: { field: string; expected_value: string }; // expected_value no longer optional
@@ -96,6 +141,18 @@ function actionDefDefaults<Entity extends EntityBaseServer>(
     action_def.self_only = true;
   }
   action_def.allowed_data_assignments = objectToSet(action_def.allowed_data_assignments);
+}
+
+let entity_action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>> = Object.create(null);
+export function entityServerRegisterActions<Entity extends EntityBaseServer>(
+  action_defs: ActionDefOpts<Entity>[]
+): void {
+  action_defs.forEach((action_def) => {
+    let { action_id } = action_def;
+    assert(!entity_action_defs[action_id]);
+    actionDefDefaults(action_def);
+    entity_action_defs[action_id] = action_def;
+  });
 }
 
 interface PlayerEntity extends EntityBaseServer {
@@ -198,10 +255,10 @@ export class EntityBaseServer extends EntityBaseCommon {
 
   // Serialized when saving to the data store
   toSerializedStorage(): DataObject {
-    let { data, field_defs } = this;
+    let { data } = this;
     let ret: DataObject = {};
     for (let key in data) {
-      let field_def = field_defs[key];
+      let field_def = entity_field_defs[key];
       if (!field_def) {
         assert(field_def, `Missing field definition for ${key}`);
       }
@@ -240,7 +297,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     let { action_id, ent_id, predicate, self, /*payload, */data_assignments, src } = action_data;
 
     // Validate
-    let action_def = this.action_defs[action_id];
+    let action_def = entity_action_defs[action_id];
     if (!action_def) {
       this.errorSrc(src, `Received invalid action_id=${action_id}`);
       return void resp_func('ERR_INVALID_ACTION');
@@ -343,7 +400,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     let data = this.data as DataObject;
     let sub_value = data[field] as (unknown[] | DataObject);
     if (!sub_value) {
-      let field_def = this.field_defs[field];
+      let field_def = entity_field_defs[field];
       assert(field_def);
       let { sub } = field_def;
       assert(sub);
@@ -379,89 +436,34 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 
-  static field_defs: Partial<Record<string, EntityFieldDef>> = Object.create(null);
-  declare field_defs: Partial<Record<string, EntityFieldDef>>; // also on prototype (not on instances)
-  private static last_field_id = EntityFieldSpecial.MAX - 1;
-  static registerFieldDefs<DataObjectType>(defs: Record<keyof DataObjectType, EntityFieldDefOpts>): void;
-  static registerFieldDefs(defs: Record<string, EntityFieldDefOpts>): void {
-    for (let key in defs) {
-      let def_in = defs[key];
-      // Construct an EntityFieldDef in a type-safe manner
-      let ephemeral = def_in.ephemeral || false;
-      let server_only = def_in.server_only || false;
-      let default_value = def_in.default_value;
-      let encoding = def_in.encoding || EntityFieldEncoding.JSON;
-      let encoder = this.field_encoders[encoding];
-      assert(encoder, `Missing encoder for type ${encoding} referenced by field ${key}`);
-      let decoder = this.field_decoders[encoding];
-      assert(decoder);
-      let sub = def_in.sub || EntityFieldSub.None;
-      if (sub) {
-        assert(default_value === undefined, 'Default values not supported for Records/Arrays');
-      }
-      let field_id = server_only ? -1 : ++this.last_field_id;
-      let def_out: EntityFieldDef = {
-        ephemeral,
-        server_only,
-        encoding,
-        default_value,
-        sub,
-        encoder,
-        decoder,
-        field_id,
-        field_name: key,
-      };
-
-      // Then also copy all other app-specific fields
-      defaults(def_out, def_in);
-
-      assert(!this.field_defs[key]);
-      this.field_defs[key] = def_out;
+}
+// Optional app-specific override
+// cb(err, constructed entity)
+export function entityServerDefaultLoadPlayerEntity<
+  Entity extends EntityBaseServer,
+>(
+  sem: ServerEntityManagerInterface,
+  src: ClientHandlerSource,
+  join_payload: JoinPayload,
+  player_uid: string,
+  cb: NetErrorCallback<Entity>,
+): void {
+  sem.worker.getBulkChannelData(`pent.${player_uid}`, null, (err: null | string, data: DataObject) => {
+    if (err) {
+      return void cb(err);
     }
-  }
-
-  static action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>> = Object.create(null);
-  declare action_defs: Partial<Record<string, ActionDef<EntityBaseServer>>>; // also on prototype (not on instances)
-  static registerActions<Entity extends EntityBaseServer>(action_defs: ActionDefOpts<Entity>[]): void {
-    action_defs.forEach((action_def) => {
-      let { action_id } = action_def;
-      assert(!this.action_defs[action_id]);
-      actionDefDefaults(action_def);
-      this.action_defs[action_id] = action_def;
-    });
-  }
-
-  // Optional app-specific override
-  // cb(err, constructed entity)
-  static loadPlayerEntityImpl<
-    Entity extends EntityBaseServer,
-  >(
-    sem: ServerEntityManagerInterface,
-    src: ClientHandlerSource,
-    join_payload: JoinPayload,
-    player_uid: string,
-    cb: NetErrorCallback<Entity>,
-  ): void {
-    sem.worker.getBulkChannelData(`pent.${player_uid}`, null, (err: null | string, data: DataObject) => {
-      if (err) {
-        return void cb(err);
-      }
-      if (!data) {
-        data = clone(this.DEFAULT_PLAYER_DATA);
-      }
-      let ent = new this(-1, data, sem);
-      ent.last_saved_data = JSON.stringify(data);
-      ent.finishDeserialize();
-      cb(null, ent as Entity);
-    });
-  }
+    if (!data) {
+      data = clone(EntityBaseServer.DEFAULT_PLAYER_DATA);
+    }
+    let ent = sem.create_func(-1, data, sem);
+    ent.last_saved_data = JSON.stringify(data);
+    ent.finishDeserialize();
+    cb(null, ent as Entity);
+  });
 }
 
-EntityBaseServer.prototype.field_defs = EntityBaseServer.field_defs;
-EntityBaseServer.prototype.action_defs = EntityBaseServer.action_defs;
-
 // Example, handler-less, permissive move and animation state
-// EntityBaseServer.registerActions([{
+// entityServerRegisterActions([{
 //   action_id: 'move',
 //   self_only: false,
 //   allowed_data_assignments: {
