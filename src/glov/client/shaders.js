@@ -21,7 +21,12 @@ export const SEMANTIC = {
 /* eslint-disable import/order */
 const assert = require('assert');
 const engine = require('./engine.js');
-const { errorReportClear, errorReportSetDetails, glovErrorReport } = require('./error_report.js');
+const {
+  errorReportClear,
+  errorReportSetDetails,
+  errorReportSetDynamicDetails,
+  glovErrorReport,
+} = require('./error_report.js');
 const { filewatchOn } = require('./filewatch.js');
 const { matchAll, nop } = require('glov/common/util.js');
 const { textureUnloadDynamic } = require('./textures.js');
@@ -91,7 +96,6 @@ export function shadersSetGLErrorReportDetails() {
     vendor: gl.getParameter(gl.VENDOR),
     renderer: gl.getParameter(gl.RENDERER),
     webgl: engine.webgl2 ? 2 : 1,
-    context_lost: gl.isContextLost(),
   };
   let debug_info = gl.getExtension('WEBGL_debug_renderer_info');
   if (debug_info) {
@@ -102,6 +106,13 @@ export function shadersSetGLErrorReportDetails() {
     errorReportSetDetails(key, details[key]);
   }
 }
+
+errorReportSetDynamicDetails('context_lost', function () {
+  if (gl && gl.isContextLost()) {
+    return '1';
+  }
+  return '';
+});
 
 let report_queued = false;
 let shader_errors;
