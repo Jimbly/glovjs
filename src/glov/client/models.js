@@ -166,11 +166,19 @@ Model.prototype.parse = function (glb_data) {
   };
 };
 
-Model.prototype.draw = function (mat) {
+const default_shader_params = {
+  color: vec4(1, 1, 1, 1),
+};
+Model.prototype.draw = function (param) {
+  let {
+    mat,
+    vshader,
+    fshader,
+    shader_params,
+  } = param;
+  assert(mat); // old API was just a `mat` as a single param
   renderer.updateMatrices(mat); // before setting shader
-  shadersBind(default_vshader, default_fshader, {
-    color: vec4(1, 1, 1, 1),
-  });
+  shadersBind(vshader || default_vshader, fshader || default_fshader, shader_params || default_shader_params);
   let objs = this.data.objs;
   for (let ii = 0; ii < objs.length; ++ii) {
     let obj = objs[ii];
