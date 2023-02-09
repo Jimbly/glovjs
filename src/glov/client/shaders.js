@@ -329,20 +329,24 @@ function link(vp, fp, on_error) {
     handle: gl.createProgram(),
     uniforms: null,
   };
+  let error_text;
   if (!prog.handle) {
-    assert(false, `gl.createProgram() returned ${prog.handle}${gl.createProgram() ? ', retry would succeed' : ''}`);
-  }
-  gl.attachShader(prog.handle, vp.shader);
-  gl.attachShader(prog.handle, fp.shader);
-  // call this for all relevant semantic
-  for (let ii = 0; ii < vp.attributes.length; ++ii) {
-    gl.bindAttribLocation(prog.handle, SEMANTIC[vp.attributes[ii]], vp.attributes[ii]);
-  }
-  gl.linkProgram(prog.handle);
+    // Presumably due to context loss?
+    error_text = `gl.createProgram() returned ${prog.handle}`;
+    prog.valid = false;
+  } else {
+    gl.attachShader(prog.handle, vp.shader);
+    gl.attachShader(prog.handle, fp.shader);
+    // call this for all relevant semantic
+    for (let ii = 0; ii < vp.attributes.length; ++ii) {
+      gl.bindAttribLocation(prog.handle, SEMANTIC[vp.attributes[ii]], vp.attributes[ii]);
+    }
+    gl.linkProgram(prog.handle);
 
-  prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
+    prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
+  }
   if (!prog.valid) {
-    let error_text = cleanShaderError(gl.getProgramInfoLog(prog.handle));
+    error_text = error_text || cleanShaderError(gl.getProgramInfoLog(prog.handle));
     let report = true;
     if (gl.isContextLost()) {
       error_text = `(Context lost) ${error_text}`;
