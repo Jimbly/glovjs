@@ -433,7 +433,8 @@ class ServerEntityManagerImpl<
     this.save_time = options.save_time || 10000;
     this.load_func = options.load_func || entityManagerDefaultLoadEnts;
     this.save_func = options.save_func || entityManagerDefaultSaveEnts;
-    this.load_player_func = options.load_player_func || entityServerDefaultLoadPlayerEntity;
+    this.load_player_func = options.load_player_func || entityServerDefaultLoadPlayerEntity.bind(null, {}) as
+      EntLoadPlayerFunc<Entity, Worker>;
     this.schema = [];
     this.all_client_fields = {};
     this.field_defs_by_id = [null];

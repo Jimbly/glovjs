@@ -27,6 +27,9 @@ import {
   ActionHandlerParam,
   EntityBaseServer,
   VAID,
+  entityServerDefaultLoadPlayerEntity,
+  entityServerRegisterActions,
+  entityServerRegisterFieldDefs,
 } from 'glov/server/entity_base_server';
 import {
   JoinPayload,
@@ -49,7 +52,7 @@ type Entity = EntityTestServer;
 type EntityTestDataServer = {
 } & EntityTestDataCommon;
 
-EntityBaseServer.registerFieldDefs<EntityTestDataServer>({
+entityServerRegisterFieldDefs<EntityTestDataServer>({
   pos: { encoding: EntityFieldEncoding.Vec3 },
   type: { encoding: EntityFieldEncoding.Int },
   speed: { encoding: EntityFieldEncoding.Float, ephemeral: true },
@@ -108,53 +111,6 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
     assert(this.data.pos);
   }
 
-  /// Example: no saved player data
-  // static myLoadPlayerEntityImpl = ((
-  //   sem: ServerEntityManager<Entity, EntTestWorker>,
-  //   src: ClientHandlerSource,
-  //   player_uid: string,
-  //   cb: NetErrorCallback<Entity>
-  // ): void => {
-  //   // Not loading anything
-  //   let ent = new this(-1, {
-  //     pos: initialPos(),
-  //     type: EntityType.Player,
-  //     display_name: src.display_name,
-  //   }, sem);
-  //   ent.finishDeserialize();
-  //   cb(null, ent);
-  // });
-  // savePlayerEntity(cb: () => void): void {
-  //   // Not saving anything
-  //   cb();
-  // }
-
-  /// Example: default player data saving/loading, add current display name upon load
-  static DEFAULT_PLAYER_DATA = {
-    type: EntityType.Player,
-    pos: [10,10,0],
-  };
-  static myLoadPlayerEntityImpl = ((
-    sem: ServerEntityManager<Entity, EntTestWorker>,
-    src: ClientHandlerSource,
-    join_payload: JoinPayload,
-    player_uid: string,
-    cb: NetErrorCallback<Entity>
-  ): void => {
-    this.DEFAULT_PLAYER_DATA.pos = initialPos();
-    EntityBaseServer.loadPlayerEntityImpl.call(this, sem, src, join_payload, player_uid,
-      (err: null | string, ent_in?: EntityBaseServer) => {
-        if (err) {
-          return void cb(err);
-        }
-        assert(ent_in);
-        let ent = ent_in as Entity;
-        ent.data.display_name = src.display_name;
-        cb(null, ent);
-      }
-    );
-  });
-
   visibleAreaGet(): VAID {
     return floor(this.data.pos[0] / VA_SIZE) + floor(this.data.pos[1] / VA_SIZE) * 100;
   }
@@ -164,7 +120,55 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   }
 }
 
-EntityTestServer.registerActions<EntityTestServer>([{
+/// Example: no saved player data
+// function entLoadPlayer(
+//   sem: ServerEntityManager<Entity, EntTestWorker>,
+//   src: ClientHandlerSource,
+//   player_uid: string,
+//   cb: NetErrorCallback<Entity>
+// ): void {
+//   // Not loading anything
+//   let ent = new EntityTestServer(-1, {
+//     pos: initialPos(),
+//     type: EntityType.Player,
+//     display_name: src.display_name,
+//   }, sem);
+//   ent.finishDeserialize();
+//   cb(null, ent);
+// }
+// savePlayerEntity(cb: () => void): void {
+//   // Not saving anything
+//   cb();
+// }
+
+/// Example: default player data saving/loading, add current display name upon load
+let default_player_data = {
+  type: EntityType.Player,
+  pos: [10,10,0],
+};
+
+function entLoadPlayer(
+  sem: ServerEntityManager<Entity, EntTestWorker>,
+  src: ClientHandlerSource,
+  join_payload: JoinPayload,
+  player_uid: string,
+  cb: NetErrorCallback<Entity>
+): void {
+  default_player_data.pos = initialPos();
+  entityServerDefaultLoadPlayerEntity(default_player_data, sem, src, join_payload, player_uid,
+    (err: null | string, ent_in?: EntityBaseServer) => {
+      if (err) {
+        return void cb(err);
+      }
+      assert(ent_in);
+      let ent = ent_in as Entity;
+      ent.data.display_name = src.display_name;
+      cb(null, ent);
+    }
+  );
+}
+
+entityServerRegisterActions<EntityTestServer>([{
   action_id: 'move',
   allowed_data_assignments: {
     pos: 'array', // actually number[3]
@@ -230,7 +234,7 @@ class EntTestWorker extends ChannelWorker {
     this.entity_manager = createServerEntityManager<Entity, EntTestWorker>({
       worker: this,
       create_func: entCreate,
-      load_player_func: EntityTestServer.myLoadPlayerEntityImpl,
+      load_player_func: entLoadPlayer,
     });
   }
 

@@ -165,10 +165,6 @@ export type DirtyFields = Partial<Record<string, true>>;
 export class EntityBaseServer extends EntityBaseCommon {
   declare entity_manager: ServerEntityManagerInterface;
 
-  static DEFAULT_PLAYER_DATA = {
-    // pos: [0,0]
-  };
-
   is_player: boolean;
   in_dirty_list: boolean;
   dirty_fields: DirtyFields;
@@ -442,6 +438,7 @@ export class EntityBaseServer extends EntityBaseCommon {
 export function entityServerDefaultLoadPlayerEntity<
   Entity extends EntityBaseServer,
 >(
+  default_data: DataObject,
   sem: ServerEntityManagerInterface,
   src: ClientHandlerSource,
   join_payload: JoinPayload,
@@ -453,7 +450,7 @@ export function entityServerDefaultLoadPlayerEntity<
       return void cb(err);
     }
     if (!data) {
-      data = clone(EntityBaseServer.DEFAULT_PLAYER_DATA);
+      data = clone(default_data);
     }
     let ent = sem.create_func(-1, data, sem);
     ent.last_saved_data = JSON.stringify(data);
