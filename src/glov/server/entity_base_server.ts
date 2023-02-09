@@ -171,7 +171,7 @@ export class EntityBaseServer extends EntityBaseCommon {
   dirty_sub_fields: Partial<Record<string, DirtyFields>>;
   need_save: boolean;
   player_uid?: string; // Only for player-type entities
-  current_vaid!: VAID; // Initially set in finishDeserialize()
+  current_vaid!: VAID; // Initially set in finishCreation()
   last_vaid?: VAID;
   last_delete_reason?: string = undefined;
 
@@ -268,7 +268,8 @@ export class EntityBaseServer extends EntityBaseCommon {
     return ret;
   }
 
-  finishDeserialize(): void {
+  // Needs to be called after child class's constructor finishes, not in base class's constructor
+  finishCreation(): void {
     this.current_vaid = this.visibleAreaGet();
   }
 
@@ -452,10 +453,9 @@ export function entityServerDefaultLoadPlayerEntity<
     if (!data) {
       data = clone(default_data);
     }
-    let ent = sem.create_func(-1, data, sem);
+    let ent = sem.createEntity(data);
     ent.last_saved_data = JSON.stringify(data);
-    ent.finishDeserialize();
-    cb(null, ent as Entity);
+    cb(null, ent);
   });
 }
 

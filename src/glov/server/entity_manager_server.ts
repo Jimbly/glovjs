@@ -118,9 +118,7 @@ function visibleAreaInit<
       }
       for (let ii = 0; ii < ent_data.length; ++ii) {
         // Same as addEntityFromSerialized(), but does not flag `visible_areas_need_save`
-        let ent_id = ++sem.last_ent_id;
-        let ent = sem.create_func(ent_id, ent_data[ii], sem);
-        ent.finishDeserialize();
+        let ent = sem.createEntity(ent_data[ii]);
         ent.fixupPostLoad();
         // Dirty flag should not be set: anyone who sees this VA must be waiting to send
         // initial ents anyway, do not need to send this entity to anyone
@@ -216,13 +214,12 @@ function loadPlayerEntity<
       sem.clientRemoveEntityInternal(client, 'left_while_loading');
       return void cb(null, 0);
     }
-    let ent_id = ++sem.last_ent_id;
-    ent.id = /*ent.data.id = */ent_id;
+    assert(ent.id > 0);
     // ent.user_id = user_id; // not currently needed, but might be generally useful?
     ent.player_uid = player_uid;
     ent.is_player = true;
     client.ever_had_ent_id = true;
-    client.ent_id = ent_id;
+    client.ent_id = ent.id;
     ent.fixupPostLoad();
 
     sem.addEntityInternal(ent);
@@ -230,7 +227,7 @@ function loadPlayerEntity<
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(sem, ent);
 
-    cb(null, ent_id);
+    cb(null, ent.id);
   });
 }
 
@@ -685,10 +682,14 @@ class ServerEntityManagerImpl<
     this.mem_usage.entities.count++;
   }
 
+  createEntity(data: DataObject): Entity {
+    let ent = this.create_func(++this.last_ent_id, data, this);
+    ent.finishCreation();
+    return ent;
+  }
+
   addEntityFromSerialized(data: DataObject): void {
-    let ent_id = ++this.last_ent_id;
-    let ent = this.create_func(ent_id, data, this);
-    ent.finishDeserialize();
+    let ent = this.createEntity(data);
     assert(!ent.is_player);
     ent.fixupPostLoad();
 
