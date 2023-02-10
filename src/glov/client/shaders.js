@@ -121,15 +121,17 @@ let reported_shader_errors = false;
 function reportShaderError(non_fatal, err) {
   function doReport() {
     report_queued = false;
-    shadersSetGLErrorReportDetails();
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
-    reported_shader_errors = true;
-    if (!shader_errors_any_fatal) {
-      glovErrorReport(false, msg, 'shaders.js');
-    } else {
-      assert(false, msg);
-    }
     shader_errors = null;
+    if (!gl.isContextLost()) {
+      shadersSetGLErrorReportDetails();
+      reported_shader_errors = true;
+      if (!shader_errors_any_fatal) {
+        glovErrorReport(false, msg, 'shaders.js');
+      } else {
+        assert(false, msg);
+      }
+    }
   }
   if (!report_queued) {
     setTimeout(doReport, 1000);
