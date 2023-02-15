@@ -11,7 +11,12 @@ if (!self.profilerStart) {
   };
 }
 
-const assert = require('assert');
+import assert from 'assert';
+import {
+  webFSApplyReload,
+  webFSGetData,
+  webFSStartup,
+} from './webfs.js';
 
 export function sendmsg(id, data, transfer) {
   postMessage({ id, data }, transfer);
@@ -99,6 +104,14 @@ addHandler('busy', function (data) {
 
 addHandler('timing_enable', function (data) {
   timing_enabled = data;
+});
+
+addHandler('webfs_data', function (data) {
+  if (webFSGetData()) {
+    webFSApplyReload(data);
+  } else {
+    webFSStartup(data);
+  }
 });
 
 sendmsg('log', 'WebWorker communication initialized');

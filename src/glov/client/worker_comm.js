@@ -1,6 +1,8 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+import { webFSGetData, webFSSetToWorkerCB } from './webfs';
+
 /* globals Worker */
 
 // Do not require anything significant from this file, so it loads super quickly
@@ -64,6 +66,10 @@ function allocWorker(idx, worker_filename) {
   worker.onmessage = workerOnMessage.bind(null, workers.length);
   worker.onerror = workerOnError;
   workers.push(worker);
+
+  if (webFSGetData()) {
+    sendmsg(idx, 'webfs_data', webFSGetData());
+  }
 }
 
 export function setNumWorkers(max_workers, worker_filename) {
@@ -93,6 +99,10 @@ export function startup(worker_filename, debug_names_in) {
       sendmsg(source, 'busy', 1000);
     }
   });
+  webFSSetToWorkerCB(function (fs) {
+    sendmsg(ALL, 'webfs_data', fs);
+  });
+
   allocWorker(0, worker_filename);
 }
 

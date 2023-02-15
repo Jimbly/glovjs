@@ -1050,7 +1050,7 @@ export function startup(params) {
   fixNatives(true);
 
   assert(window.glov_webfs, 'Failed to load fsdata.js');
-  webFSStartup(window.glov_webfs);
+  webFSStartup(window.glov_webfs, urlhash.getURLBase());
 
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
