@@ -4,7 +4,11 @@ const { filewatchOn, filewatchTriggerChange } = require('./filewatch.js');
 const urlhash = require('./urlhash.js');
 const { clone, deepEqual } = require('glov/common/util.js');
 
-let fs = window.glov_webfs || {};
+let fs;
+export function webFSStartup(fs_in) {
+  fs = fs_in || {};
+}
+
 let decoded = {};
 let used = {};
 let active_reload = false; // after an active reload, do data cloning to better detect which files changed
@@ -33,6 +37,7 @@ function decode(data) {
 }
 
 export function webFSGetFileNames(directory) {
+  assert(fs);
   let ret = [];
   for (let filename in fs) {
     if (filename.startsWith(directory)) {
@@ -43,12 +48,12 @@ export function webFSGetFileNames(directory) {
 }
 
 export function webFSGetFile(filename, encoding) {
+  assert(fs);
   let ret = decoded[filename];
   if (ret) {
     return ret;
   }
   used[filename] = true;
-  assert(window.glov_webfs, 'Failed to load fsdata.js');
   let data = fs[filename];
   assert(data, `Error loading file: ${filename}`);
   if (encoding === 'jsobj') {
@@ -67,6 +72,7 @@ export function webFSGetFile(filename, encoding) {
 }
 
 export function webFSExists(filename) {
+  assert(fs);
   return Boolean(fs[filename]);
 }
 
@@ -86,6 +92,7 @@ export function webFSReportUnused(ignore_regex) {
 }
 
 function webFSReload() {
+  // Note: only called in main thread, not in workers
   active_reload = true;
   window.glov_webfs = null;
   let scriptTag = document.createElement('script');

@@ -2,6 +2,8 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+import { webFSStartup } from './webfs.js';
+
 /* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
@@ -1046,6 +1048,9 @@ export function engineStartupFunc(func) {
 
 export function startup(params) {
   fixNatives(true);
+
+  assert(window.glov_webfs, 'Failed to load fsdata.js');
+  webFSStartup(window.glov_webfs);
 
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
