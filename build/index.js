@@ -575,6 +575,14 @@ gb.task({
 });
 
 gb.task({
+  name: 'test',
+  ...testRunner({
+    input_server: 'server_js_glov_preresolve',
+    input_client: 'client_intermediate',
+  }),
+});
+
+gb.task({
   name: 'nop',
   type: gb.SINGLE,
   input: 'does_not_exist',
@@ -595,6 +603,7 @@ gb.task({
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     (argv.nolint || argv.lint === false) ? 'nop' : 'check_typescript',
+    (argv.nolint || argv.lint === false) ? 'nop' : 'test',
     'gulpish-client_html',
     'client_js_warnings',
   ],
@@ -745,14 +754,6 @@ gb.task({
 gb.task({
   name: 'build',
   deps: ['build.prod.package', 'build.prod.server', 'build.prod.client'],
-});
-
-gb.task({
-  name: 'test',
-  ...testRunner({
-    input_server: 'server_js_glov_preresolve',
-    input_client: 'client_intermediate',
-  }),
 });
 
 // Default development task

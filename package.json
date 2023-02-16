@@ -22,8 +22,7 @@
     "cache": "node build build.prod.png --cache-rebuild",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
     "test_watch": "nodemon -w build -- build test --watch",
-    "test": "node build test",
-    "lint": "node build lint"
+    "test": "node build lint test"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
   "contributors": [
