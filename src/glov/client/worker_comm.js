@@ -7,8 +7,6 @@
 // Maybe need to add a separate bootstrap if we need to require much.
 const assert = require('assert');
 
-require('not_worker'); // This module cannot be required from a worker bundle
-
 let workers = [];
 
 export function numWorkers() {
