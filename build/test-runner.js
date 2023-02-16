@@ -78,8 +78,8 @@ module.exports = function test(opts) {
       'server_js_test',
     ],
     input: [
-      'client_js_test:**/tests/**/*.js',
-      'server_js_test:**/tests/**/*.js',
+      'client_js_test:**/tests/**/test*.js',
+      'server_js_test:**/tests/**/test*.js',
     ],
     type: gb.SINGLE,
     read: false,
