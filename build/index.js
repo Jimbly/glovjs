@@ -22,6 +22,7 @@ const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const json5 = require('./json5.js');
+const testRunner = require('./test-runner.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const uglifyrc = require('./uglifyrc.js');
@@ -35,6 +36,8 @@ process.env.BROWSERSLIST_IGNORE_OLD_DATA = 1;
 
 const targets = {
   dev: path.join(__dirname, '../dist/game/build.dev'),
+  test_server: path.join(__dirname, '../dist/game/build.test/server'),
+  test_client: path.join(__dirname, '../dist/game/build.test/client'),
   prod: path.join(__dirname, '../dist/game/build.prod'),
 };
 const SOURCE_DIR = path.join(__dirname, '../src/');
@@ -105,8 +108,19 @@ gb.task({
 
 gb.task({
   name: 'server_js_glov_preresolve',
-  target: 'dev',
   ...preresolve({ ...config.preresolve_params, source: 'server_js' }),
+});
+
+gb.task({
+  name: 'server_js_notest',
+  target: 'dev',
+  input: [
+    'server_js_glov_preresolve:**',
+    'server_js_glov_preresolve:!**/test.js*',
+    'server_js_glov_preresolve:!**/tests/**',
+  ],
+  type: gb.SINGLE,
+  func: copy,
 });
 
 gb.task({
@@ -391,7 +405,7 @@ gb.task({
 
 const server_input_globs = [
   'server_static:**',
-  'server_js_glov_preresolve:**',
+  'server_js_notest:**',
   'server_json:**',
 ];
 
@@ -575,7 +589,7 @@ gb.task({
 
     'server_static',
     'server_fsdata',
-    'server_js_glov_preresolve',
+    'server_js_notest',
     'server_json',
     ...client_tasks,
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
@@ -731,6 +745,14 @@ gb.task({
 gb.task({
   name: 'build',
   deps: ['build.prod.package', 'build.prod.server', 'build.prod.client'],
+});
+
+gb.task({
+  name: 'test',
+  ...testRunner({
+    input_server: 'server_js_glov_preresolve',
+    input_client: 'client_intermediate',
+  }),
 });
 
 // Default development task

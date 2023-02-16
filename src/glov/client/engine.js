@@ -12,8 +12,6 @@ let startup_funcs = [];
 
 exports.require = require; // For browser console debugging
 
-require('not_worker'); // This module cannot be required from a worker bundle
-
 const assert = require('assert');
 const { is_ios_safari } = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');

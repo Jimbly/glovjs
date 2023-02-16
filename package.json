@@ -21,6 +21,8 @@
     "build": "node build build",
     "cache": "node build build.prod.png --cache-rebuild",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
+    "test_watch": "nodemon -w build -- build test --watch",
+    "test": "node build test",
     "lint": "node build lint"
   },
   "author": "Jimb Esser (https://github.com/Jimbly)",
@@ -67,7 +69,7 @@
     "eslint-plugin-html": "^7.1.0",
     "eslint-plugin-import": "^2.26.0",
     "glov": "file:./src/glov",
-    "glov-build": "1.0.40",
+    "glov-build": "1.0.42",
     "glov-build-babel": "1.0.4",
     "glov-build-browserify": "1.0.6",
     "glov-build-cache": "1.0.0",
