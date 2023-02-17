@@ -271,7 +271,8 @@ export function lineLineIntersect(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2): boole
 //     o.__proto__ = p; // eslint-disable-line no-proto
 //     return o;
 //   };
-export function inherits(ctor: Constructor, superCtor: Constructor): void {
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function inherits(ctor: Constructor | Function, superCtor: Constructor | Function): void {
   // From Node.js
   assert(typeof superCtor === 'function');
   let ctor_proto_orig = ctor.prototype;
