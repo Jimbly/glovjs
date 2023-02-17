@@ -1,5 +1,5 @@
 
-type FilewatchCB = (filename: string) => void;
+export type FilewatchCB = (filename: string) => void;
 
 export type FSAPI = {
   getFileNames(directory: string): string[];
