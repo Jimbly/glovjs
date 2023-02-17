@@ -1,12 +1,12 @@
 /* global location */
 
 export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random()).slice(2,8)}`;
+let error_report_details = {};
+let error_report_dynamic_details = {};
 
-/* eslint-disable import/order */
 import { getAPIPath } from 'glov/client/environments';
-
-const { fetch } = require('./fetch.js');
-const { PLATFORM } = require('./client_config.js');
+import { PLATFORM } from './client_config';
+import { fetch } from './fetch';
 
 let error_report_disabled = false;
 
@@ -19,8 +19,6 @@ export function errorReportIgnoreUncaughtPromises() {
   ignore_promises = true;
 }
 
-let error_report_details = {};
-let error_report_dynamic_details = {};
 export function errorReportSetDetails(key, value) {
   if (value) {
     error_report_details[key] = escape(String(value));
