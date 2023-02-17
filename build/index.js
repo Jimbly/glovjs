@@ -329,7 +329,7 @@ const WORKER_BAN_DEPS = {
 };
 let bundle_tasks = [];
 function registerBundle(param) {
-  const { entrypoint, deps, is_worker, do_version, do_reload } = param;
+  const { entrypoint, deps, is_worker, do_version, do_reload, ban_deps } = param;
   let name = `client_bundle_${entrypoint.replace('/', '_')}`;
   let out = `client/${entrypoint}.bundle.js`;
   appBundle({
@@ -345,7 +345,7 @@ function registerBundle(param) {
     task_accum: bundle_tasks,
     do_version,
     bundle_uglify_opts: argv['dev-mangle'] ? prod_uglify_opts : null,
-    ban_deps: is_worker ? WORKER_BAN_DEPS : null,
+    ban_deps: ban_deps || (is_worker ? WORKER_BAN_DEPS : null),
   });
   if (do_reload) {
     // Add an early sync task, letting the server know we should reload these files
