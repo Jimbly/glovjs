@@ -43,7 +43,7 @@ Examples: [test-util.ts](https://github.com/Jimbly/glovjs/blob/master/src/glov/t
 Though TDD is often not a good fit with a lot of game development, it's still sometimes quite useful when working on various subsystems, as long as it's relatively painless to integrate and maintain.
 
 Adding a new test:
-* Create a new file with a name starting with `test-` in the appropriate `tests/` folder, this would be one of `src/client/tests/`, `src/common/tests/`, `src/server/tests/` or the `src/glov/` equivalent if testing an engine module.
+* Create a new file with a name starting with `test-` in the appropriate `tests/` folder, this would be one of `src/tests/client/`, `src/tests/common/`, `src/tests/server/` or the `src/glov/tests/` equivalent if testing an engine module.
   * Any files _not_ starting with `test-` are not ran by the test runner (e.g. helper modules used across multiple tests)
 * The only requirement within a test file is to `import 'glov/[client|server]/test'`, this will trigger the code such that test dependencies are automatically tracked and the appropriate tests will be re-ran when a dependency changes.  `glov/client/test` also includes some minimal mocking of a browser-like environment so that front-end modules can be imported without crashing (this may be expanded over time, but is preferrably kept minimal to avoid the multi-second penalty per test that some fully featured browser mocking entails).
 * Tests are simply executed via Node.js and are considered to fail if there is any output to `stderr` or if the process returns an error code (so, any crash or error message will trigger a test failure)
