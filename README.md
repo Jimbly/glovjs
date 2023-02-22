@@ -34,3 +34,24 @@ Notes:
 * To use MP3 audio files, convert all .wav to .mp3 at the end of development, call engine.startup with `{ sound: { ext_list: ['mp3', 'wav'] } }`
 * Before publishing a project, edit the meta tags in index.html, place a 1200x630px cover image for use on Facebook and Twitter shares.
 
+
+Test-Driven Development support
+===============================
+
+Though TDD is often not a good fit with a lot of game development, it's still sometimes quite useful when working on various subsystems, as long as it's relatively painless to integrate and maintain.
+
+Adding a new test:
+* Create a new file with a name starting with `test-` in the appropriate `tests/` folder, this would be one of `src/client/tests/`, `src/common/tests/`, `src/server/tests/` or the `src/glov/` equivalent if testing an engine module.
+  * Any files _not_ starting with `test-` are not ran by the test runner (e.g. helper modules used across multiple tests)
+* The only requirement within a test file is to `import 'glov/[client|server]/test'`, this will trigger the code such that test dependencies are automatically tracked and the appropriate tests will be re-ran when a dependency changes.  `glov/client/test` also includes some minimal mocking of a browser-like environment so that front-end modules can be imported without crashing.
+* Tests are simply executed via Node.js and are considered to fail if there is any output to `stderr` or if the process returns an error code (so, any crash or error message will trigger a test failure)
+* In the test file itself, simply add the code you want tested (e.g. using `assert()`)
+
+Individual tests are ran through the build system with all of the inherent features/advantages/caveats therein:
+* Test are ran on the post-Babel (post-TypeScript) source files, so should catch any issues that may arise from that process
+  * For any tests in a `common/` folder, these same test will be ran twice, once in the client context, once in the server context, since the Babelified files are potentially quite different.
+* Tests _only_ run when their dependencies change (and only if the build system knows it was a dependency)
+  * If any build task has failed, it's error message is repeated at the end of the build process even if it didn't immediately run, so you will keep seeing the test errors until they are resolved
+  * If you're changing a file and your test is not re-running, check to ensure you `import`'d `glov/server/test`, perhaps the dependencies were not being tracked
+* Tests automatically time out after 5 seconds, though ideally each test should take mere milliseconds.  If a test is timing out, it's most likely that some resource was left active and Node.js was not exiting cleanly (e.g. a `setInterval` or similar).
+
