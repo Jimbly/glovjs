@@ -141,6 +141,13 @@ module.exports = function test(opts) {
         if (did_err) {
           job.log('Test process output follows:');
           console.log(`${stdout ? `${stdout}\n\n` : ''}${stderr}`);
+        } else {
+          if (stdout) {
+            job.log('Test succeeded, process stdout follows:');
+            stdout.split('\n').forEach(job.log.bind(job));
+          } else {
+            job.log('Test succeeded.');
+          }
         }
         if (!deps || !deps.length) {
           return void done();
