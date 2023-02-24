@@ -1,13 +1,12 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-import { webFSGetData, webFSSetToWorkerCB } from './webfs';
-
 /* globals Worker */
 
 // Do not require anything significant from this file, so it loads super quickly
 // Maybe need to add a separate bootstrap if we need to require much.
-const assert = require('assert');
+import assert from 'assert';
+import { webFSGetData, webFSSetToWorkerCB } from './webfs';
 
 let workers = [];
 

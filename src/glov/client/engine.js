@@ -2,8 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
-import { webFSStartup } from './webfs.js';
-
 /* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
@@ -86,6 +84,7 @@ const {
   mat3, mat4,
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
 } = require('glov/common/vmath.js');
+const { webFSStartup } = require('./webfs.js');
 
 export let canvas;
 export let webgl2;
