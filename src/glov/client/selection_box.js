@@ -42,7 +42,12 @@ import {
   spotSubPush,
 } from './spot.js';
 import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
-import { playUISound, uiFontStyleFocused, uiFontStyleNormal } from './ui.js';
+import {
+  getUIElemData,
+  playUISound,
+  uiFontStyleFocused,
+  uiFontStyleNormal,
+} from './ui.js';
 import * as glov_ui from './ui.js';
 
 let glov_markup = null; // Not ported
@@ -295,6 +300,19 @@ class SelectionBoxBase {
 
   getSelected() {
     return this.items[this.selected];
+  }
+
+  setSelected(tag_or_index) {
+    if (typeof tag_or_index === 'number') {
+      assert(tag_or_index < this.items.length);
+      this.selected = tag_or_index;
+    } else {
+      for (let ii = 0; ii < this.items.length; ++ii) {
+        if (this.items[ii].tag === tag_or_index) {
+          this.selected = ii;
+        }
+      }
+    }
   }
 
   handleInitialSelection() {
@@ -654,6 +672,10 @@ class GlovSelectionBox extends SelectionBoxBase {
     // nothing
   }
 
+  isDropdownVisible() {
+    return false;
+  }
+
   run(params) {
     this.applyParams(params);
     let { x, y, z, entry_height, ctx } = this;
@@ -694,6 +716,10 @@ class GlovDropDown extends SelectionBoxBase {
     // Run-time state
     this.dropdown_visible = false;
     this.last_selected = undefined;
+  }
+
+  isDropdownVisible() {
+    return this.dropdown_visible;
   }
 
   focus() {
@@ -862,4 +888,19 @@ export function dropDownCreate(params) {
     font = glov_ui.font;
   }
   return new GlovDropDown(params);
+}
+
+export function dropDown(param, current) {
+  // let dropdown = getUIElemData<SelectionBox, SelectionBoxOpts>('dropdown', param, dropDownCreate);
+  let dropdown = getUIElemData('dropdown', param, dropDownCreate);
+  if (!dropdown.isDropdownVisible()) {
+    dropdown.setSelected(current);
+  }
+  let old_selected = dropdown.getSelected();
+  dropdown.run();
+  if (old_selected !== dropdown.getSelected()) {
+    return dropdown.getSelected();
+  } else {
+    return null;
+  }
 }

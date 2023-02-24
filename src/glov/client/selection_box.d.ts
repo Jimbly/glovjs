@@ -93,7 +93,12 @@ export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
 
   isSelected(tag_or_index: string | number): boolean;
   getSelected(): MenuItem;
+  setSelected(tag_or_index: string | number): void;
+  isDropdownVisible(): boolean;
 }
 
 export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;
 export function dropDownCreate(params?: SelectionBoxOpts): SelectionBox;
+
+// Pure immediate-mode API; returns a MenuItem only if the selection has changed
+export function dropDown(param: SelectionBoxOpts, current: string | number): MenuItem | null;
