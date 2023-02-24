@@ -252,6 +252,10 @@ class ClientEntityManagerImpl<
     return this.received_ent_ready;
   }
 
+  getSubscriptionId(): string {
+    return this.subscription_id || netClientId();
+  }
+
   private onChannelSubscribe(data: unknown): void {
     // initial connection or reconnect
     this.reinitInternal();
