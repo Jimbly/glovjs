@@ -166,6 +166,11 @@ let fs = new DummyFS<TypeDef>({
   },
 });
 
+let reload_called = '';
+function onReload(type_id: string): void {
+  reload_called = type_id;
+}
+
 assert(!init_called_yet);
 factory.initialize({
   name: 'Test',
@@ -173,6 +178,7 @@ factory.initialize({
   directory: 'foo',
   ext: '.def',
   Ctor: BaseClass,
+  reload_cb: onReload,
 });
 assert(init_called_yet);
 
@@ -185,6 +191,7 @@ let quux = factory.allocate('quux', {});
 assert.equal(bar.type_id, 'bar');
 assert.equal(baz.type_id, 'baz');
 assert.equal(qux.type_id, 'qux');
+assert.equal(quux.type_id, 'quux');
 
 // Got constructor parameter
 assert.equal(bar.data.is_bar, true);
@@ -226,3 +233,19 @@ assert(qux.method3);
 assert.equal(qux.method3(), PROP2_DEFAULT);
 assert(quux.method3);
 assert.equal(quux.method3(), PROP2_QUUX);
+
+// Reload
+assert(!reload_called);
+// trigger reload
+fs.applyNewFile('foo/qux.def', {
+  // simple, no traits
+});
+assert.equal(reload_called, 'qux');
+// baz should not have changed
+assert.equal(baz.method1(7), PROP1_DEFAULT + 7);
+// existing qux should not have changed, maintains state
+assert.equal(qux.prop1, PROP1_CHANGER);
+assert.equal(qux.method2(7), STATE1_INIT + 7 + PROP1_CHANGER + 3);
+let newqux = factory.allocate('qux', {});
+// new qux should have new properties
+assert.equal(newqux.prop1, PROP1_DEFAULT);

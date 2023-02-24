@@ -158,6 +158,7 @@ function factory(${factory_param_names.join(',')}) {
       }
     }
 
+    // Note: this.ctors[type_id] may already exist, if this is during a reload
     this.ctors[type_id] = Ctor as unknown as Constructor<TBaseClass>;
   }
 
@@ -167,8 +168,9 @@ function factory(${factory_param_names.join(',')}) {
     directory: string;
     ext: string;
     Ctor: Constructor<TBaseClass>;
+    reload_cb: (type_id: string) => void;
   }): void {
-    let { name, fs, directory, ext, Ctor } = params;
+    let { name, fs, directory, ext, Ctor, reload_cb } = params;
     this.name = name;
     let filenames = fs.getFileNames(directory).filter((a) => a.endsWith(ext));
     let seen_typeids: Record<string, string> = {};
@@ -184,7 +186,15 @@ function factory(${factory_param_names.join(',')}) {
       this.buildConstructor(filename, Ctor, type_id, type_def);
     }
 
-    // TODO: handle reload
+    fs.filewatchOn(ext, (filename: string) => {
+      if (!filename.startsWith(directory)) {
+        return;
+      }
+      let type_id = fileBaseName(filename);
+      let type_def = fs.getFile<TypeDef>(filename, 'jsobj');
+      this.buildConstructor(filename, Ctor, type_id, type_def);
+      reload_cb?.(type_id);
+    });
   }
 
   private ctors: Partial<Record<string, Constructor<TBaseClass>>> = {};
