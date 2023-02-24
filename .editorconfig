@@ -14,5 +14,8 @@ insert_final_newline = true
 [*.js]
 insert_final_newline = true
 
+[*.yaml]
+insert_final_newline = true
+
 [*.json]
 insert_final_newline = true
