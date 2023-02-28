@@ -1,7 +1,7 @@
 import assert from 'assert';
 
 import { FSAPI, fileBaseName } from './fsapi';
-import { clone, inherits } from './util';
+import { clone, defaultsDeep, inherits } from './util';
 import type { DataObject } from './types';
 
 export type TraitedBaseClass = {
@@ -45,6 +45,12 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
   registerTrait<TOpts, TState=never>(trait_id: string, opts: TraitOpts<TBaseClass, TOpts, TState>): void {
     assert(!this.traits[trait_id]);
     this.traits[trait_id] = opts as TraitOpts<TBaseClass, OpaqueOpt, OpaqueState>;
+  }
+
+  extendTrait<TOpts, TState=never>(trait_id: string, opts: TraitOpts<TBaseClass, TOpts, TState>): void {
+    let existing = this.traits[trait_id];
+    assert(existing);
+    this.traits[trait_id] = defaultsDeep(opts, existing);
   }
 
   name?: string;
@@ -135,9 +141,10 @@ function factory(${factory_param_names.join(',')}) {
           proto[opt_key] = trait_def.default_opts;
         }
       } else {
-        if (num_custom_opts > 0) {
-          assert(false, `${filename}: Specifies opts for trait that takes none: "${trait_ref.id}"`);
-        }
+        // Not doing this check: Some traits may have opts used on the client, but not on the server
+        // if (num_custom_opts > 0) {
+        //   assert(false, `${filename}: Specifies opts for trait that takes none: "${trait_ref.id}"`);
+        // }
       }
     }
 

@@ -85,6 +85,8 @@ factory.registerTrait<StatefulMethodOpts, StatefulMethodState>('stateful_method'
   methods: {
     method2: statefulMethod,
   },
+});
+factory.extendTrait<StatefulMethodOpts, StatefulMethodState>('stateful_method', {
   default_opts: {
     state1_init: STATE1_INIT,
   },
