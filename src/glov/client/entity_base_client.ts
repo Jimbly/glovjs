@@ -8,7 +8,6 @@ import {
   ActionMessageParam,
   EntityBaseCommon,
   EntityBaseDataCommon,
-  EntityID,
 } from 'glov/common/entity_base_common';
 import { DataObject, NetErrorCallback } from 'glov/common/types';
 import {
@@ -38,21 +37,19 @@ export class EntityBaseClient extends EntityBaseCommon {
   data_overrides: DataOverride[];
   fade: number | null;
   last_update_timestamp: number;
-  private is_me: boolean;
 
-  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: ClientEntityManagerInterface) {
-    super(ent_id, data, entity_manager);
+  constructor(data: EntityBaseDataCommon) {
+    super(data);
     this.fade = null;
     this.fading_out = false;
     this.fading_in = false;
     this.data_overrides = [];
     this.seq_id = 0;
     this.last_update_timestamp = engine.frame_timestamp;
-    this.is_me = ent_id === entity_manager.my_ent_id;
   }
 
   isMe(): boolean {
-    return this.is_me;
+    return this.id === this.entity_manager.my_ent_id;
   }
 
   getData<T>(field: string, deflt: T): T;

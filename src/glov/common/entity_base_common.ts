@@ -128,14 +128,12 @@ export type EntityBaseDataCommon = {
 };
 
 export class EntityBaseCommon {
-  id: EntityID;
+  id!: EntityID; // Set by EntityManager
   data: EntityBaseDataCommon | DataObject;
-  entity_manager: EntityManager;
+  entity_manager!: EntityManager; // Set by EntityManager
 
-  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: EntityManager) {
-    this.id = ent_id;
+  constructor(data: EntityBaseDataCommon) {
     this.data = data;
-    this.entity_manager = entity_manager;
   }
 
   getData<T>(field: string): T | undefined {

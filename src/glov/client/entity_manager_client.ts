@@ -40,11 +40,7 @@ const { max, min, round } = Math;
 
 export type EntCreateFunc<
   Entity extends EntityBaseClient,
-> = (
-  ent_id: EntityID,
-  data: DataObject,
-  entity_manager: ClientEntityManagerInterface,
-) => Entity;
+> = (data: DataObject) => Entity;
 
 interface ClientEntityManagerBaseOpts<Entity extends EntityBaseClient> {
   on_broadcast?: (data: EntityManagerEvent) => void;
@@ -460,7 +456,9 @@ class ClientEntityManagerImpl<
       // Should be cleaned up at this point
       assert(!this.entities[ent_id]);
     }
-    let ent = this.entities[ent_id] = this.create_func(ent_id, ent_data, this);
+    let ent = this.entities[ent_id] = this.create_func(ent_data);
+    ent.id = ent_id;
+    ent.entity_manager = this;
     let fade_in_time = ent.onCreate(is_initial);
     if (fade_in_time) {
       this.fadeInEnt(ent, fade_in_time);

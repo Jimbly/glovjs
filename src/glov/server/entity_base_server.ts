@@ -16,7 +16,6 @@ import {
   EntityFieldEncoding,
   EntityFieldSpecial,
   EntityFieldSub,
-  EntityID,
   EntityManagerEvent,
   entity_field_decoders,
   entity_field_encoders,
@@ -175,8 +174,8 @@ export class EntityBaseServer extends EntityBaseCommon {
   last_vaid?: VAID;
   last_delete_reason?: string = undefined;
 
-  constructor(ent_id: EntityID, data: EntityBaseDataCommon, entity_manager: ServerEntityManagerInterface) {
-    super(ent_id, data, entity_manager);
+  constructor(data: EntityBaseDataCommon) {
+    super(data);
     this.is_player = false;
     this.in_dirty_list = false;
     this.need_save = false;

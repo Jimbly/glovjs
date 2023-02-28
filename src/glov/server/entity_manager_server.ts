@@ -313,9 +313,7 @@ export type EntCreateFunc<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
 > = (
-  ent_id: EntityID,
   data: DataObject,
-  entity_manager: ServerEntityManager<Entity, Worker>,
 ) => Entity;
 
 export type EntSaveFunc<
@@ -683,7 +681,9 @@ class ServerEntityManagerImpl<
   }
 
   createEntity(data: DataObject): Entity {
-    let ent = this.create_func(++this.last_ent_id, data, this);
+    let ent = this.create_func(data);
+    ent.id = ++this.last_ent_id;
+    ent.entity_manager = this;
     ent.finishCreation();
     return ent;
   }
