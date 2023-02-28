@@ -31,6 +31,7 @@ import {
   ErrorCallback,
   NetErrorCallback,
   NetResponseCallback,
+  isDataObject,
 } from 'glov/common/types';
 import { callEach, logdata, nop } from 'glov/common/util';
 import { entityServerDefaultLoadPlayerEntity, entity_field_defs } from 'glov/server/entity_base_server';
@@ -257,21 +258,48 @@ function toSerializedStorage(ent: EntityBaseServer): DataObject {
 }
 
 export function entityManagerDefaultSaveEnts(
+  serialized_ent_version: number,
   worker: ChannelWorker,
   vaid: VAID,
   ent_data: DataObject[],
   done: () => void,
 ): void {
   worker.debug(`Saving ${ent_data.length} ent(s) for VA ${vaid}`);
-  worker.setBulkChannelData(`ents.${vaid}`, ent_data, done);
+  let ser_data = {
+    ver: serialized_ent_version,
+    ents: ent_data,
+  };
+  worker.setBulkChannelData(`ents.${vaid}`, ser_data, done);
 }
 
 export function entityManagerDefaultLoadEnts(
+  serialized_ent_version: number,
   worker: ChannelWorker,
   vaid: VAID,
   cb: (err?: string, ent_data?: DataObject[]) => void,
 ): void {
-  worker.getBulkChannelData(`ents.${vaid}`, null, cb);
+  worker.getBulkChannelData(`ents.${vaid}`, null, function (err?: string, data?: unknown) {
+    if (err) {
+      return cb(err);
+    }
+    if (!data) {
+      return cb();
+    }
+    if (Array.isArray(data)) {
+      data = {
+        ver: 0,
+        ents: data,
+      };
+    }
+    assert(isDataObject(data));
+    assert(typeof data.ver === 'number');
+    if (data.ver !== serialized_ent_version) {
+      worker.debug(`Dropping old version (${data.ver}) ents for VisibleArea ${vaid}`);
+      return cb();
+    }
+    assert(Array.isArray(data.ents));
+    cb(undefined, data.ents);
+  });
 }
 
 
@@ -358,6 +386,7 @@ export interface ServerEntityManagerOpts<
   load_func?: EntLoadFunc<Entity, Worker>;
   save_func?: EntSaveFunc<Entity, Worker>;
   load_player_func?: EntLoadPlayerFunc<Entity, Worker>;
+  serialized_ent_version?: number;
 }
 
 export type ServerEntityManager<
@@ -426,8 +455,8 @@ class ServerEntityManagerImpl<
     this.max_ents_per_tick = options.max_ents_per_tick || 100;
     this.va_unload_time = options.va_unload_time || 10000;
     this.save_time = options.save_time || 10000;
-    this.load_func = options.load_func || entityManagerDefaultLoadEnts;
-    this.save_func = options.save_func || entityManagerDefaultSaveEnts;
+    this.load_func = options.load_func || entityManagerDefaultLoadEnts.bind(null, options.serialized_ent_version || 0);
+    this.save_func = options.save_func || entityManagerDefaultSaveEnts.bind(null, options.serialized_ent_version || 0);
     this.load_player_func = options.load_player_func || entityServerDefaultLoadPlayerEntity.bind(null, {}) as
       EntLoadPlayerFunc<Entity, Worker>;
     this.schema = [];
