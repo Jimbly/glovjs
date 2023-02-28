@@ -70,9 +70,35 @@ export interface UISprite extends Sprite {
 /**
  * Client Sprite creation parameters
  */
-export type SpriteParam = {
-  // TODO
+export type SpriteParamBase = {
+  origin?: ROVec2;
+  size?: ROVec2;
+  color?: ROVec4;
+  uvs?: ROVec4;
+  ws?: number[]; // (relative) widths/heights for calculating frames within a sprite sheet / atlas
+  hs?: number[];
+  shader?: Shader;
 };
+export type TextureOptions = {
+  filter_min?: number;
+  filter_mag?: number;
+  wrap_s?: number;
+  wrap_t?: number;
+};
+export type SpriteParam = SpriteParamBase & ({
+  texs: Texture[];
+} | {
+  tex: Texture;
+} | (TextureOptions & {
+  layers: number;
+  name: string;
+  ext?: string;
+} | {
+  name: string;
+  ext?: string;
+} | {
+  url: string;
+}));
 
 export function spriteQueuePush(): void;
 export function spriteQueuePop(): void;
