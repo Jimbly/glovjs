@@ -7,7 +7,6 @@ import {
 import {
   ClientHandlerSource,
   DataObject,
-  EntityID,
   ErrorCallback,
   HandlerSource,
   NetErrorCallback,
@@ -103,11 +102,9 @@ class EntityTestServer extends entityTestCommonClass(EntityBaseServer) implement
   last_vaids_pos?: Vec2;
 
   constructor(
-    ent_id: EntityID,
     data: DataObject,
-    entity_manager: ServerEntityManager<EntityTestServer, EntTestWorker>
   ) {
-    super(ent_id, data, entity_manager);
+    super(data);
     assert(this.data.pos);
   }
 
@@ -218,11 +215,9 @@ interface NonEntClientData extends VAIDHolder {
 }
 
 function entCreate(
-  ent_id: EntityID,
   data: DataObject,
-  entity_manager: ServerEntityManager<Entity, EntTestWorker>
 ): Entity {
-  return new EntityTestServer(ent_id, data, entity_manager);
+  return new EntityTestServer(data);
 }
 
 class EntTestWorker extends ChannelWorker {

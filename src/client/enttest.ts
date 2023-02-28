@@ -20,7 +20,6 @@ import { spotSuppressPad } from 'glov/client/spot';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { uiHandlingNav } from 'glov/client/ui';
-import { EntityID } from 'glov/common/entity_base_common';
 import { ClientChannelWorker, DataObject } from 'glov/common/types';
 import {
   Vec2,
@@ -62,8 +61,8 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   error_time: number;
   home_point?: Vec2;
 
-  constructor(ent_id: EntityID, data: DataObject, entity_manager: ClientEntityManager<EntityTestClient>) {
-    super(ent_id, data, entity_manager);
+  constructor(data: DataObject) {
+    super(data);
     this.waiting = false;
     this.in_view = false;
     this.my_activate_time = -Infinity;
@@ -211,8 +210,8 @@ export function main(): void {
 
   entity_manager = clientEntityManagerCreate<EntityTestClient>({
     channel_type: 'enttest',
-    create_func: (ent_id: EntityID, data: DataObject, em: typeof entity_manager) => {
-      return new EntityTestClient(ent_id, data, em);
+    create_func: (data: DataObject) => {
+      return new EntityTestClient(data);
     },
   });
   entity_pos_manager = entityPositionManagerCreate({
