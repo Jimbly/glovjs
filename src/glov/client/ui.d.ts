@@ -161,6 +161,9 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
   font_height?: number;
+  font_style_normal?: FontStyle;
+  font_style_focused?: FontStyle;
+  font_style_disabled?: FontStyle;
   align?: ALIGN;
 }
 export interface ButtonImageParamBase extends ButtonParam {

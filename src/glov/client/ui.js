@@ -902,7 +902,9 @@ export function buttonTextDraw(param, state, focused) {
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   let disabled = state === 'disabled';
   font.drawSizedAligned(
-    disabled ? font_style_disabled : focused ? font_style_focused : font_style_normal,
+    disabled ? param.font_style_disabled || font_style_disabled :
+    focused ? param.font_style_focused || font_style_focused :
+    param.font_style_normal || font_style_normal,
     param.x + hpad, param.y, param.z + 0.1,
     param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
   profilerStopFunc();
