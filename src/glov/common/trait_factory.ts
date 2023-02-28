@@ -14,7 +14,7 @@ export type TraitOpts<TBaseClass extends TraitedBaseClass, TOpts, TState=never> 
   properties?: Partial<Record<keyof TBaseClass, unknown>>; // Properties placed on the root of the entity
   default_opts?: TOpts;
   init_prototype?: (opts: TOpts) => void; // Called during load after WebGL/etc initialized
-  alloc_state?: (opts: TOpts) => TState;
+  alloc_state?: (opts: TOpts, obj: TBaseClass) => TState;
   // maybe: exported_opts?: string[]; // opts that are exported onto the root of the entity
 };
 
@@ -81,7 +81,7 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
         let pname = `s${factory_param_names.length}`;
         factory_param_names.push(pname);
         factory_param_values.push(trait_def.alloc_state);
-        state_init.push(`this.${trait_ref.id}_state=${pname}(this.${trait_ref.id}_opts);`);
+        state_init.push(`this.${trait_ref.id}_state=${pname}(this.${trait_ref.id}_opts, this);`);
       }
     }
 
