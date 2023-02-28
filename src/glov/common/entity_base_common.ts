@@ -117,10 +117,11 @@ export type EntityManagerEvent = {
 
 export interface EntityManager<Entity extends EntityBaseCommon = EntityBaseCommon> {
   entities: Partial<Record<EntityID, Entity>>;
-  entitiesFind: (
+  entitiesFind(
     predicate: (ent: Entity) => boolean,
     skip_fading_out?: boolean
-  ) => Entity[];
+  ): Entity[];
+  entitiesReload(predicate?: (ent: Entity) => boolean): Entity[];
 }
 
 export type EntityBaseDataCommon = {

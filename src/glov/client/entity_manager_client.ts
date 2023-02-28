@@ -678,6 +678,26 @@ class ClientEntityManagerImpl<
     }
     return ret;
   }
+
+  entitiesReload(predicate?: (ent: Entity) => boolean): Entity[] {
+    let { entities } = this;
+    let ret = [];
+    for (let ent_id_string in entities) {
+      let ent = entities[ent_id_string]!;
+      if (predicate && !predicate(ent)) {
+        continue;
+      }
+      let new_ent = this.create_func(ent.data);
+      new_ent.id = ent.id;
+      new_ent.entity_manager = this;
+      // Invalidate old ent
+      ent.id = 0;
+      ent.entity_manager = null!;
+      entities[ent_id_string] = new_ent;
+      ret.push(new_ent);
+    }
+    return ret;
+  }
 }
 
 export function clientEntityManagerCreate<Entity extends EntityBaseClient>(
