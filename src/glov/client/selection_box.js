@@ -302,16 +302,24 @@ class SelectionBoxBase {
     return this.items[this.selected];
   }
 
-  setSelected(tag_or_index) {
+  findIndex(tag_or_index) {
     if (typeof tag_or_index === 'number') {
       assert(tag_or_index < this.items.length);
-      this.selected = tag_or_index;
+      return tag_or_index;
     } else {
       for (let ii = 0; ii < this.items.length; ++ii) {
         if (this.items[ii].tag === tag_or_index) {
-          this.selected = ii;
+          return ii;
         }
       }
+    }
+    return -1;
+  }
+
+  setSelected(tag_or_index) {
+    let idx = this.findIndex(tag_or_index);
+    if (idx !== -1) {
+      this.selected = idx;
     }
   }
 
@@ -890,18 +898,30 @@ export function dropDownCreate(params) {
   return new GlovDropDown(params);
 }
 
-export function dropDown(param, current) {
+export function dropDown(param, current, opts) {
+  opts = opts || {};
+  param.auto_reset = false; // Handled every frame here automatically
+  let { suppress_return_during_dropdown } = opts;
   // let dropdown = getUIElemData<SelectionBox, SelectionBoxOpts>('dropdown', param, dropDownCreate);
   let dropdown = getUIElemData('dropdown', param, dropDownCreate);
   if (!dropdown.isDropdownVisible()) {
     dropdown.setSelected(current);
   }
   dropdown.applyParams(param);
-  let old_selected = dropdown.getSelected();
-  dropdown.run();
-  if (old_selected !== dropdown.getSelected()) {
-    return dropdown.getSelected();
+  let old_selected;
+  if (suppress_return_during_dropdown) {
+    let old_idx = dropdown.findIndex(current);
+    old_selected = old_idx === -1 ? null : dropdown.items[old_idx];
   } else {
-    return null;
+    old_selected = dropdown.getSelected();
   }
+  dropdown.run();
+  if (suppress_return_during_dropdown && dropdown.was_clicked ||
+    !suppress_return_during_dropdown
+  ) {
+    if (old_selected !== dropdown.getSelected()) {
+      return dropdown.getSelected();
+    }
+  }
+  return null;
 }

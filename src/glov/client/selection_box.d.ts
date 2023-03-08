@@ -102,4 +102,7 @@ export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;
 export function dropDownCreate(params?: SelectionBoxOpts): SelectionBox;
 
 // Pure immediate-mode API; returns a MenuItem only if the selection has changed
-export function dropDown(param: SelectionBoxOpts, current: string | number): MenuItem | null;
+export type DropDownOpts = {
+  suppress_return_during_dropdown: boolean;
+};
+export function dropDown(param: SelectionBoxOpts, current: string | number, opts?: DropDownOpts): MenuItem | null;
