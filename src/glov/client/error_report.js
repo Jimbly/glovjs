@@ -115,6 +115,9 @@ let filtered_errors = new RegExp([
   'wsWhitelisted',
   '#darkcss',
   'chrome://userjs',
+  'worker-hammerhead',
+  'ammerhead-browser',
+  'isFeatureBroken',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
