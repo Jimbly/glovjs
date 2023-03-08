@@ -18,18 +18,24 @@ function labelFromURL(url) {
 
 export function fetch(params, cb) {
   cb = once(cb);
-  let { method, url, response_type, label } = params;
+  let { method, url, response_type, label, body, headers = {}, timeout } = params;
   method = method || 'GET';
   assert(url);
   label = label || labelFromURL(url);
   let xhr = new XMLHttpRequest();
   xhr.open(method, url, true);
+  if (timeout) {
+    xhr.timeout = timeout;
+  }
   if (response_type && response_type !== 'json') {
     xhr.responseType = response_type;
   }
+  for (let header in headers) {
+    xhr.setRequestHeader(header, headers[header]);
+  }
   xhr.onload = function () {
     profilerStart(`fetch_onload:${label}`);
-    if (xhr.status !== 200 && xhr.status !== 0) {
+    if ((xhr.status !== 0 && xhr.status < 200) || xhr.status >= 300) {
       let text;
       try {
         text = xhr.responseText;
@@ -69,5 +75,13 @@ export function fetch(params, cb) {
     cb(ERR_CONNECTION);
     profilerStop();
   };
-  xhr.send(null);
+  if (body !== undefined) {
+    if (typeof body === 'object') {
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      body = JSON.stringify(body);
+    } else {
+      body = String(body);
+    }
+  }
+  xhr.send(body);
 }
