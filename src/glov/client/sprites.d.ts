@@ -59,6 +59,7 @@ export interface SpriteDraw3DParams {
 export interface Sprite {
   uidata?: SpriteUIData;
   uvs: number[];
+  origin: ROVec2;
   draw(params: SpriteDrawParams): void;
   drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
   draw3D(params: SpriteDraw3DParams): void;
