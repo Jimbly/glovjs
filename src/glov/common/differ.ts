@@ -84,6 +84,7 @@ function walk(diff: Diff, path_pre: string, data_old: unknown, data_new: unknown
       diff.push([path_pre, data_new]);
       return data_new;
     }
+    return data_old;
   }
 }
 
@@ -114,14 +115,17 @@ class DifferImpl {
     let diff: Diff = [];
     let data_next = walk(diff, '', this.data_last, data);
     if (diff.length) {
-      this.historyPush();
       this.data_last = data_next;
+      this.historyPush();
     }
+    // extra verification:
+    // assert(deepEqual(this.data_last, data));
+    // assert(deepEqual(this.history[(this.history_idx - 1) % this.history_size], data));
     return diff;
   }
 
   canUndo(): boolean {
-    return this.history_idx > 0;
+    return this.history_idx > 1 && this.history_max - this.history_idx < this.history_size - 2;
   }
   canRedo(): boolean {
     return this.history_idx <= this.history_max;
@@ -129,22 +133,22 @@ class DifferImpl {
   undo(): [Diff, unknown] {
     assert(this.canUndo());
     --this.history_idx;
-    let ret = this.history[this.history_idx];
+    let ret = this.history[(this.history_idx - 1) % this.history_size];
     let diff: Diff = [];
     walk(diff, '', this.data_last, ret);
     assert(diff.length);
     this.data_last = ret;
-    return [diff, ret];
+    return [diff, clone(ret)];
   }
   redo(): [Diff, unknown] {
     assert(this.canRedo());
     ++this.history_idx;
-    let ret = this.history[this.history_idx];
+    let ret = this.history[(this.history_idx - 1) % this.history_size];
     let diff: Diff = [];
     walk(diff, '', this.data_last, ret);
     assert(diff.length);
     this.data_last = ret;
-    return [diff, ret];
+    return [diff, clone(ret)];
   }
 }
 
