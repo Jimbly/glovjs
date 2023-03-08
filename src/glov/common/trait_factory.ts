@@ -210,6 +210,10 @@ function factory(${factory_param_names.join(',')}) {
     return Boolean(this.ctors[type_id]);
   }
 
+  getTypes(): string[] {
+    return Object.keys(this.ctors);
+  }
+
   allocate(type_id: string, data: TCtorParam): TBaseClass {
     let Ctor = this.ctors[type_id];
     if (!Ctor) {
