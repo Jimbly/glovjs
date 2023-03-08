@@ -57,6 +57,7 @@ export interface SpotParamBase {
   touch_focuses: boolean; // first touch focuses (on touch devices), showing tooltip, etc, second activates the button
   disabled_focusable: boolean; // allow focusing even if disabled (e.g. to show tooltip)
   hotkey: number | null; // optional keyboard hotkey
+  hotkeys: number[] | null; // optional keyboard hotkeys
   hotpad: number | null; // optional gamepad button
   // (silently) ensures we have the focus this frame (e.g. if dragging a slider, the slider
   // should retain focus even without mouseover)
@@ -87,6 +88,7 @@ export const SPOT_DEFAULT = {
   touch_focuses: false,
   disabled_focusable: true,
   hotkey: null,
+  hotkeys: null,
   hotpad: null,
   focus_steal: false,
   sticky_focus: false,
@@ -1256,11 +1258,19 @@ export function spot(param: SpotParam): SpotRet {
   }
   if (!disabled) {
     const hotkey = param.hotkey === undefined ? def.hotkey : param.hotkey;
+    const hotkeys = param.hotkeys === undefined ? def.hotkeys : param.hotkeys;
     const hotpad = param.hotpad === undefined ? def.hotpad : param.hotpad;
-    if (hotkey) {
+    if (hotkey || hotkeys) {
       let key_opts = in_event_cb ? { in_event_cb } : null;
-      if (keyDownEdge(hotkey, key_opts)) {
+      if (hotkey && keyDownEdge(hotkey, key_opts)) {
         button_activate = true;
+      }
+      if (hotkeys) {
+        for (let ii = 0; ii < hotkeys.length; ++ii) {
+          if (keyDownEdge(hotkeys[ii], key_opts)) {
+            button_activate = true;
+          }
+        }
       }
     }
     if (hotpad) {
