@@ -13,6 +13,7 @@ import { is_firefox } from './browser';
 import { cmd_parse } from './cmds';
 import { fbInstantOnPause } from './fbinstant';
 import { filewatchOn } from './filewatch';
+import { textureCname } from './textures';
 import * as urlhash from './urlhash';
 
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
@@ -152,6 +153,38 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
 }
 
 export type SoundID = string | { file: string; volume: number };
+
+export function soundFindForReplacement(filename: string): string | null {
+  if (sounds[filename]) {
+    return filename;
+  }
+  for (let key in sounds) {
+    if (textureCname(key) === filename) {
+      return key;
+    }
+  }
+  return null;
+}
+
+export function soundReplaceFromDataURL(key: string, dataurl: string): void {
+  let existing = sounds[key];
+  assert(existing);
+  let opts = existing.glov_load_opts;
+  const { loop } = opts;
+  let sound = new Howl({
+    src: dataurl,
+    html5: false,
+    loop: Boolean(loop),
+    volume: 0,
+    onload: function () {
+      sound.glov_load_opts = opts;
+      sounds[key] = sound;
+    },
+    onloaderror: function (id: unknown, err: string, extra: unknown) {
+      console.error(`Error loading sound ${key}: ${err}`);
+    },
+  });
+}
 
 export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb?: ErrorCallback<never, string>): void {
   opts = opts || {};
