@@ -896,6 +896,7 @@ export function dropDown(param, current) {
   if (!dropdown.isDropdownVisible()) {
     dropdown.setSelected(current);
   }
+  dropdown.applyParams(param);
   let old_selected = dropdown.getSelected();
   dropdown.run();
   if (old_selected !== dropdown.getSelected()) {
