@@ -387,7 +387,6 @@ const base_ui_sprites = {
 function uiStartup(param) {
   font = param.font;
   title_font = param.title_font || font;
-  let overrides = param.ui_sprites;
   KEYS = glov_input.KEYS;
   PAD = glov_input.PAD;
 
@@ -397,10 +396,9 @@ function uiStartup(param) {
   };
 
   for (let key in ui_sprites) {
-    let base_elem = base_ui_sprites[key];
-    if (typeof base_elem === 'object' && !Array.isArray(base_elem)) {
-      let override = overrides && overrides[key];
-      loadUISprite2(key, override === undefined ? base_elem : override);
+    let elem = ui_sprites[key];
+    if (typeof elem === 'object' && !Array.isArray(elem)) {
+      loadUISprite2(key, elem);
     }
   }
   sprites.button_regular = sprites.button;
