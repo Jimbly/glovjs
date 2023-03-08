@@ -1,6 +1,8 @@
 import assert from 'assert';
+import { Express, NextFunction, Request, Response } from 'express';
 import { Platform, getPlatformValues, isValidPlatform } from 'glov/common/enums';
 import { CmdRespFunc } from 'glov/common/types';
+import { ChannelServer } from './channel_server';
 import { ChannelServerWorker } from './channel_server_worker';
 import { GlobalWorker } from './global_worker';
 import {
@@ -9,6 +11,7 @@ import {
 } from './server_globals';
 import {
   VersionSupport,
+  getAllFallbackEnvironments,
   getFallbackEnvironment,
   getVersionSupport,
   isValidVersion,
@@ -125,7 +128,7 @@ function readyDataOnData(csworker: ChannelServerWorker, ready_data: ReadyData | 
 //////////////////////////////////////////////////////////////////////////
 // Initialization
 
-export function readyDataInit(): void {
+export function readyDataInit(channel_server: ChannelServer, app: Express): void {
   serverGlobalsRegister<ReadyData>(READY_DATA_KEY, {
     on_data: readyDataOnData,
     cmds: [{
@@ -154,4 +157,10 @@ export function readyDataInit(): void {
       func: cmdSetFallbackEnvironment,
     }],
   });
+
+  app.get('/api/fallback_environments', function (req: Request, res: Response, next: NextFunction) {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(getAllFallbackEnvironments()));
+  });
+
 }

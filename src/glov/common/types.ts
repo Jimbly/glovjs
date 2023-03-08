@@ -155,6 +155,7 @@ export interface ClientHandlerSource extends HandlerSource {
   access?: true;
   direct?: true;
   sysadmin?: true;
+  elevated?: number;
 }
 export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
   return src.type === 'client';

@@ -534,6 +534,7 @@ GlovFont.prototype.dims = function (style, w, indent, size, text) {
   return {
     w: max_x1,
     h: numlines * size,
+    numlines,
   };
 };
 

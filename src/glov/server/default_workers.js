@@ -601,6 +601,9 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.getChannelData('private.password')) {
       return resp_func('ERR_USER_NOT_FOUND');
     }
+    if (this.getChannelData('public.banned')) {
+      return resp_func('ERR_ACCOUNT_BANNED');
+    }
     if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
     }
@@ -622,10 +625,15 @@ export class DefaultUserWorker extends ChannelWorker {
 
     this.setChannelData('private.login_time', Date.now());
     metrics.add('user.login', 1);
+    metrics.add('user.login_pass', 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleLoginExternal(src, data, resp_func) {
     //Should the authentication step happen here instead?
+
+    if (this.getChannelData('public.banned')) {
+      return resp_func('ERR_ACCOUNT_BANNED');
+    }
     if (!this.getChannelData('private.external')) {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);

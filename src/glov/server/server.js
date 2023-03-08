@@ -160,7 +160,7 @@ export function startup(params) {
   });
 
   ipBanInit();
-  readyDataInit();
+  readyDataInit(channel_server, app);
 
   channel_server.init({
     exchange,
