@@ -8,6 +8,8 @@ import type { Vec2 } from './vmath';
 
 const { abs, floor, min, max, random, round, pow, sqrt } = Math;
 
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function nop(): void {
   // empty
 }

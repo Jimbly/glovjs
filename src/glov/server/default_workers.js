@@ -12,7 +12,7 @@ import {
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
-import { deprecate, sanitize } from 'glov/common/util.js';
+import { EMAIL_REGEX, deprecate, sanitize } from 'glov/common/util.js';
 import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 
 import { channelServerWorkerInit } from './channel_server_worker.js';
@@ -27,7 +27,6 @@ deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
-const email_regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FRIENDS = 100;
 const FRIENDS_DATA_KEY = 'private.friends';
 
@@ -71,7 +70,7 @@ function getDisplayNameBypass(source) {
 function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
-    email_regex.test(display_name) ||
+    EMAIL_REGEX.test(display_name) ||
     (!override && isReserved(display_name))
   ) {
     return false;
@@ -653,7 +652,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!data.password) {
       return resp_func('Missing password');
     }
-    if (this.require_email && !email_regex.test(data.email)) {
+    if (this.require_email && !EMAIL_REGEX.test(data.email)) {
       return resp_func('Email invalid');
     }
     if (!validDisplayName(data.display_name)) {
