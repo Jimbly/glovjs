@@ -113,6 +113,16 @@ export class DefaultUserWorker extends ChannelWorker {
     this.presence_data = {}; // client_id -> data
     this.presence_idx = 0;
     this.my_clients = {};
+
+    // Migration logic for engine-level fields
+    if (this.exists()) {
+      let creation_time_old = this.getChannelData('private.creation_time');
+      if (creation_time_old) {
+        this.setChannelData('public.creation_time', creation_time_old);
+        this.setChannelData('private.creation_time', undefined);
+      }
+    }
+
   }
 
   migrateFriendsList(legacy_friends) {
@@ -675,10 +685,10 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validDisplayName(public_data.display_name)) { // If from external auth
       public_data.display_name = random_names.get();
     }
+    public_data.creation_time = Date.now();
     private_data.password = data.password;
     private_data.email = data.email;
     private_data.creation_ip = data.ip;
-    private_data.creation_time = Date.now();
     private_data.login_ip = data.ip;
     private_data.login_ua = data.ua;
     private_data.login_time = Date.now();
@@ -687,6 +697,7 @@ export class DefaultUserWorker extends ChannelWorker {
     metrics.add('user.create', 1);
     return resp_func(null, this.getChannelData('public'));
   }
+
   handleSetChannelData(src, key, value) {
     let err = this.defaultHandleSetChannelData(src, key, value);
     if (err) {
