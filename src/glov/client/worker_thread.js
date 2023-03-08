@@ -26,6 +26,20 @@ export function debugmsg(msg, clear) {
   sendmsg('debugmsg', { msg, clear });
 }
 
+// Catch errors not happening inside handlers' try/catch
+self.addEventListener('error', function (evt) {
+  if (evt.error) {
+    // Manually "cloning" the Error object, because it's toJSON (or some other
+    //   serialization logic) strips the relevant bits on MacOS Safari.
+    // Just send the fields we need for bootstrap.js's handling
+    sendmsg('error', {
+      message: evt.error.message,
+      stack: evt.error.stack,
+    });
+    evt.preventDefault();
+  }
+});
+
 let handlers = [];
 export function addHandler(id, cb) {
   assert(!handlers[id]);
@@ -112,6 +126,35 @@ addHandler('webfs_data', function (data) {
   } else {
     webFSStartup(data);
   }
+});
+
+addHandler('assert_now', function () {
+  assert(false);
+});
+
+addHandler('assert_later', function () {
+  setTimeout(function assertLater() {
+    assert(false);
+  }, 100);
+});
+
+addHandler('crash_now', function () {
+  let obj = null;
+  obj.foo.bar++;
+});
+
+addHandler('crash_later', function () {
+  setTimeout(function crashLater() {
+    let obj = null;
+    obj.foo.bar++;
+  }, 100);
+});
+
+addHandler('reject_now', function () {
+  // eslint-disable-next-line no-new
+  new Promise((resolve, reject) => {
+    reject(new Error('client_worker_reject_now'));
+  });
 });
 
 sendmsg('log', 'WebWorker communication initialized');
