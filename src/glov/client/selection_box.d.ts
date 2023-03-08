@@ -1,11 +1,11 @@
 import { Vec4 } from 'glov/common/vmath';
-import { FontStyle } from './font';
+import { FontStyle, Text } from './font';
 import { Sprite } from './sprites';
 
 export type EngineStateFunc = (dt: number) => void;
 
 export interface MenuItem {
-  name?: string; // name to display
+  name?: Text; // name to display
   state?: EngineStateFunc; // state to set upon selection (SimpleMenu only)
   cb?: () => void; // callback to call upon selection (SimpleMenu only)
   value?: number | string;
@@ -28,7 +28,7 @@ export interface MenuItem {
   selection_alpha?: number;
 }
 
-export type MenuItemEntry = string | MenuItem;
+export type MenuItemEntry = Text | MenuItem;
 
 export interface SelectionBoxDrawItemParams {
   item_idx: number;
@@ -89,6 +89,7 @@ export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
 export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   readonly display: SelectionBoxDisplay; // always fully realized (non-Partial) after being applied
 
+  applyParams(params?: SelectionBoxOpts): void;
   run(params?: SelectionBoxOpts): number;
 
   isSelected(tag_or_index: string | number): boolean;
