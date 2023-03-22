@@ -71,14 +71,6 @@ function copy(job, done) {
 }
 
 gb.task({
-  name: 'client_static',
-  input: config.client_static,
-  type: gb.SINGLE,
-  target: 'dev',
-  func: copy,
-});
-
-gb.task({
   name: 'client_css',
   input: config.client_css,
   type: gb.SINGLE,
@@ -462,6 +454,14 @@ gb.task({
     base: 'client',
     output: 'client/fsdata.js',
   })
+});
+
+gb.task({
+  name: 'client_static',
+  input: config.client_static,
+  type: gb.SINGLE,
+  target: 'dev',
+  func: copy,
 });
 
 function addStarStar(a) {
