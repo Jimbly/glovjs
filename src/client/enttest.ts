@@ -8,7 +8,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { EntityBaseClient } from 'glov/client/entity_base_client';
-import { ClientEntityManager, clientEntityManagerCreate } from 'glov/client/entity_manager_client';
+import { ClientEntityManagerInterface, clientEntityManagerCreate } from 'glov/client/entity_manager_client';
 import { EntityPositionManager, entityPositionManagerCreate } from 'glov/client/entity_position_manager';
 import * as glov_font from 'glov/client/font';
 import * as input from 'glov/client/input';
@@ -53,7 +53,7 @@ Z.SPRITES = 10;
 const AI_CLAIM_TIME = 2000;
 
 class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
-  declare entity_manager: ClientEntityManager<EntityTestClient>;
+  declare entity_manager: ClientEntityManagerInterface<EntityTestClient>;
 
   next_move_time!: number;
   in_view: boolean;
@@ -109,7 +109,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
     if (!this.data.seq_ai_move) {
       return false;
     }
-    if (this.data.seq_ai_move.startsWith(this.entity_manager.sub_id_prefix)) {
+    if (this.data.seq_ai_move.startsWith(this.entity_manager.getSubscriptionIdPrefix())) {
       return false;
     }
     return true;
@@ -143,7 +143,7 @@ class EntityTestClient extends entityTestCommonClass(EntityBaseClient) {
   }
 }
 
-let entity_manager: ClientEntityManager<EntityTestClient>;
+let entity_manager: ClientEntityManagerInterface<EntityTestClient>;
 let entity_pos_manager: EntityPositionManager;
 
 const ROOM_REQUIRES_LOGIN = false;
@@ -431,7 +431,7 @@ export function main(): void {
         let { pos } = ped;
         let frame;
         if (ent.data.type === EntityType.Player) {
-          if (ent_id === entity_manager.my_ent_id) {
+          if (ent_id === entity_manager.getMyEntID()) {
             v4copy(color_temp, color_self_shadow);
           } else {
             v4copy(color_temp, color_player);
