@@ -140,6 +140,10 @@ export function framebufferStart(opts) {
   assert(!cur_tex);
   assert(!cur_depth);
   let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, force_tex } = opts;
+  if (!width) {
+    width = renderWidth();
+    height = renderHeight();
+  }
   ++num_passes;
   cur_depth = null;
   if (force_tex) {
