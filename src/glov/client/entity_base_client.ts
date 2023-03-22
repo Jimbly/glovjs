@@ -49,7 +49,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   }
 
   isMe(): boolean {
-    return this.id === this.entity_manager.my_ent_id;
+    return this.id === this.entity_manager.getMyEntID();
   }
 
   getData<T>(field: string, deflt: T): T;
@@ -72,8 +72,8 @@ export class EntityBaseClient extends EntityBaseCommon {
   }
   setDataOverride(field: string, data: Partial<Record<string, unknown>>): string | undefined {
     let field_start = this.getData<string>(field);
-    let sub_id_prefix = this.entity_manager.sub_id_prefix;
-    let field_new = `${sub_id_prefix}${++this.seq_id}`;
+    let sub_id = this.entity_manager.getSubscriptionId();
+    let field_new = `${sub_id}:${++this.seq_id}`;
     // Also predict this change
     data[field] = field_new;
     this.data_overrides.push({
@@ -188,7 +188,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   //   just seeing now) as opposed to a brand new entity
   onCreate(is_initial: boolean): number {
     // Returns how many milliseconds to keep the entity in a fading_in state
-    return is_initial && !this.entity_manager.received_ent_ready ? 0 : 250;
+    return is_initial && !this.entity_manager.isReady() ? 0 : 250;
   }
 
 }

@@ -324,8 +324,7 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
           }
         };
         if (this.entity_manager.isEntless()) {
-          assert(this.entity_manager.channel);
-          this.entity_manager.channel.send('move', data_assignments, handle_resp);
+          this.entity_manager.channelSend('move', data_assignments, handle_resp);
         } else {
           // send via entity
           let my_ent = this.entity_manager.getMyEnt();

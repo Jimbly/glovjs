@@ -54,7 +54,36 @@ export interface ClientEntityManagerOpts<Entity extends EntityBaseClient> extend
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ClientEntityManagerInterface = ClientEntityManager<any>;
+export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=any> extends EntityManager<Entity> {
+  reinit(options: Partial<ClientEntityManagerBaseOpts<Entity>>): void;
+  getEnt(ent_id: EntityID): Entity | undefined;
+  hasMyEnt(): boolean;
+  getMyEntID(): EntityID;
+  getMyEnt(): Entity;
+  getSubscriptionId(): string;
+  getSubscriptionIdPrefix(): string;
+  isReady(): boolean;
+  isEntless(): boolean;
+  tick(): void;
+  checkNet(): boolean;
+  isOnline(): boolean;
+
+  // Online only
+  actionSendQueued(
+    action: ClientActionMessageParam<Entity>,
+    resp_func?: NetErrorCallback<unknown>,
+  ): void;
+  actionListFlush(): void;
+  channelSend(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
+
+  // Offline only
+  addEntityFromSerialized(data: DataObject): Entity;
+  setMyEntID(id: EntityID): void;
+
+  // EventEmitter:
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on<T extends any[]>(type: string, fn: (...args: T) => void): void;
+}
 
 interface FadingEnt {
   is_out: boolean; // fading out? otherwise, is fading in
@@ -70,7 +99,7 @@ interface EntityFieldDefClient<Entity extends EntityBaseClient> extends EntityFi
 }
 
 function entActionAppend<Entity extends EntityBaseClient>(
-  entity_manager: ClientEntityManager<Entity>,
+  entity_manager: ClientEntityManagerImpl<Entity>,
   ent: Entity,
   pak: Packet,
   action_data: ActionMessageParam
@@ -126,11 +155,11 @@ function entActionAppend<Entity extends EntityBaseClient>(
   }
 }
 
-export type ClientEntityManager<Entity extends EntityBaseClient> =
-  Readonly<ClientEntityManagerImpl<Entity>>; // Really want all non-functions private, not readonly...
 class ClientEntityManagerImpl<
   Entity extends EntityBaseClient
-> extends EventEmitter implements EntityManager<Entity>, ClientEntityManagerBaseOpts<Entity> {
+> extends EventEmitter implements EntityManager<Entity>,
+    ClientEntityManagerBaseOpts<Entity>,
+    ClientEntityManagerInterface<Entity> {
   my_ent_id!: EntityID;
 
   on_broadcast?: (data: EntityManagerEvent) => void;
@@ -243,13 +272,11 @@ class ClientEntityManagerImpl<
     return this.received_ent_start;
   }
 
-  // Has received all initial visible entities
-  receivedEntReady(): boolean {
-    return this.received_ent_ready;
-  }
-
   getSubscriptionId(): string {
     return this.subscription_id || netClientId();
+  }
+  getSubscriptionIdPrefix(): string {
+    return this.sub_id_prefix;
   }
 
   private onChannelSubscribe(data: unknown): void {
@@ -525,6 +552,7 @@ class ClientEntityManagerImpl<
     } // else may have been from a previous connection?
   }
 
+  // Has received all initial visible entities
   isReady(): boolean {
     return this.received_ent_ready;
   }
@@ -637,6 +665,11 @@ class ClientEntityManagerImpl<
     this.action_list_queue.resp_list.push(resp_func);
   }
 
+  channelSend(msg: string, data?: unknown, resp_func?: NetErrorCallback): void {
+    assert(this.channel);
+    this.channel.send(msg, data, resp_func);
+  }
+
   getEnt(ent_id: EntityID): Entity | undefined {
     return this.entities[ent_id];
   }
@@ -698,10 +731,21 @@ class ClientEntityManagerImpl<
     }
     return ret;
   }
+
+  isOnline(): boolean {
+    return true;
+  }
+
+  addEntityFromSerialized(): Entity {
+    assert(false, 'Offline only');
+  }
+  setMyEntID(): void {
+    assert(false, 'Offline only');
+  }
 }
 
 export function clientEntityManagerCreate<Entity extends EntityBaseClient>(
   options: ClientEntityManagerOpts<Entity>
-): ClientEntityManager<Entity> {
+): ClientEntityManagerInterface<Entity> {
   return new ClientEntityManagerImpl(options);
 }
