@@ -283,6 +283,13 @@ export function v3addScale(out: Vec3, a: ROVec3, b: ROVec3, s: number): Vec3 {
   return out;
 }
 
+export function v3iAddScale(inout: Vec3, b: ROVec3, s: number): Vec3 {
+  inout[0] += b[0] * s;
+  inout[1] += b[1] * s;
+  inout[2] += b[2] * s;
+  return inout;
+}
+
 export function v3angle(a: ROVec3, b: ROVec3): number {
   let mag = sqrt(
     (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]) *
