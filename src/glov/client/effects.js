@@ -323,6 +323,7 @@ function applyEffect(effect, view_w, view_h) {
       clear_color: effect.clear_color,
       viewport,
       final,
+      need_depth: effect.need_depth_begin,
     });
   } else {
     clip_space[0] = 2.0;
@@ -333,6 +334,7 @@ function applyEffect(effect, view_w, view_h) {
     framebufferStart({
       width: view_w, height: view_h,
       final,
+      need_depth: effect.need_depth_begin,
     });
   }
   // clip_space[2] = -1.0;
