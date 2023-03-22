@@ -5,7 +5,7 @@ import { dotPropDelete, dotPropSet } from './dot-prop';
 
 const { max } = Math;
 
-export type DiffElem = [string, unknown];
+export type DiffElem = [string, unknown?];
 export type Diff = DiffElem[];
 
 export function typeof2(obj: unknown): 'null' | 'undefined' | 'number' | 'string' | 'object' | 'array' | 'boolean' {
@@ -35,8 +35,12 @@ function walk(diff: Diff, path_pre: string, data_old: unknown, data_new: unknown
   let type = typeof2(data_old);
   if (type !== typeof2(data_new)) {
     // Types changed, probably one is now undefined
-    data_new = clone(data_new);
-    diff.push([path_pre, data_new]);
+    if (data_new === undefined) {
+      diff.push([path_pre]);
+    } else {
+      data_new = clone(data_new);
+      diff.push([path_pre, data_new]);
+    }
     return data_new;
   }
 

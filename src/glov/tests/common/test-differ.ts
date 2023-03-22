@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { differCreate } from 'glov/common/differ';
+import { diffApply, differCreate } from 'glov/common/differ';
 import { clone, deepEqual } from 'glov/common/util';
 import 'glov/server/test';
 
@@ -97,3 +97,23 @@ while (differ.canRedo()) {
   [diff, last_obj] = differ.redo();
 }
 assert.equal((last_obj as typeof obj).a, 5);
+
+// Test deletes; test diff being serialized to JSON
+obj = { a: [{ b: 1, c: null }] };
+let copy = clone(obj);
+differ = differCreate(obj, { history_size: HIST_SIZE });
+delete obj.a[0].b;
+diff = clone(differ.update(obj));
+assert.equal(diff.length, 1);
+assert.equal(diff[0][0], 'a.0.b');
+assert.equal(diff[0][1], undefined);
+diffApply(copy, diff);
+assert.deepStrictEqual(copy, obj);
+
+delete obj.a[0].c;
+diff = clone(differ.update(obj));
+assert.equal(diff.length, 1);
+assert.equal(diff[0][0], 'a.0.c');
+assert.equal(diff[0][1], undefined);
+diffApply(copy, diff);
+assert.deepStrictEqual(copy, obj);
