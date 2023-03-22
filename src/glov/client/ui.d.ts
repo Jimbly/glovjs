@@ -235,6 +235,7 @@ export interface ModalDialogParamBase<CB> {
   y0?: number;
   tick?: ModalDialogTickCallback;
   buttons?: Partial<Record<string, ModalDialogButton<CB>>>;
+  no_fullscreen_zoom?: boolean;
 }
 
 export type ModalDialogParam = ModalDialogParamBase<() => void>;

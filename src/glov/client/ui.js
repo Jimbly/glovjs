@@ -1117,7 +1117,7 @@ function modalDialogRun() {
   let general_scale = 1;
   let exit_lock = true;
   let num_lines;
-  if (virtual_size[0] > 0.05 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
+  if (!modal_dialog.no_fullscreen_zoom && virtual_size[0] > 0.05 * camera2d.h() && camera2d.w() > camera2d.h() * 2) {
     // If a 24-pt font is more than 5% of the camera height, we're probably super-wide-screen
     // on a mobile device due to keyboard being visible
     fullscreen_mode = true;
