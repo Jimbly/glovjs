@@ -669,6 +669,7 @@ function onTouchChange(event) {
 
   let new_count = ct.length;
   let old_count = 0;
+  let first_valid_touch;
   // Look for press and movement
   for (let ii = 0; ii < ct.length; ++ii) {
     let touch = ct[ii];
@@ -682,6 +683,9 @@ function onTouchChange(event) {
       // getting "Permission denied to access property "pageX" rarely on Firefox, simply ignore
       --new_count;
       continue;
+    }
+    if (!first_valid_touch) {
+      first_valid_touch = touch;
     }
 
     let last_touch = touches[touch.identifier];
@@ -741,11 +745,10 @@ function onTouchChange(event) {
       v2copy(mouse_pos, released_touch.cur_pos);
       mouse_pos_is_touch = true;
     } else if (new_count === 1) {
-      let touch = ct[0];
       if (!old_count) {
         mouse_down[0] = true;
       }
-      v2set(mouse_pos, touch.pageX, touch.pageY);
+      v2set(mouse_pos, first_valid_touch.pageX, first_valid_touch.pageY);
       mouse_pos_is_touch = true;
     } else if (new_count > 1) {
       // multiple touches, release mouse_down without emitting click
