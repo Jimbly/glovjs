@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 
-import type { DataObject } from './types';
+import type { DataObject, ErrorCallback } from './types';
 import type { Vec2 } from './vmath';
 
 const { abs, floor, min, max, random, round, pow, sqrt } = Math;
@@ -555,4 +555,55 @@ export function deprecate(exports: Partial<Record<string, unknown>>, field: stri
       return undefined;
     }
   });
+}
+
+let nextTick = typeof process !== 'undefined' ?
+  process.nextTick :
+  typeof window !== 'undefined' && window.setImmediate ? window.setImmediate :
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (fn: (...args: any[]) => void) => setTimeout(fn, 1);
+
+export function callbackify<T>(f: () => Promise<T>): (next: ErrorCallback<T>) => void;
+export function callbackify<T, P1>(f: (p1: P1) => Promise<T>): (p1: P1, next: ErrorCallback<T>) => void;
+export function callbackify<T, P1, P2>(
+  f: (p1: P1, p2: P2) => Promise<T>
+): (p1: P1, p2: P2, next: ErrorCallback<T>) => void;
+export function callbackify<T, P1, P2, P3>(
+  f: (p1: P1, p2: P2, p3: P3) => Promise<T>
+): (p1: P1, p2: P2, p3: P3, next: ErrorCallback<T>) => void;
+export function callbackify<T, P1, P2, P3, P4>(
+  f: (p1: P1, p2: P2, p3: P3, p4: P4) => Promise<T>
+): (p1: P1, p2: P2, p3: P3, p4: P4, next: ErrorCallback<T>) => void;
+
+// Turns a promise-generating function into a callback-style function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function callbackify(f: (...args: any[]) => Promise<unknown>): (...args: any[]) => void {
+  return function (this: unknown) {
+    let cb = arguments[arguments.length - 1]; // eslint-disable-line prefer-rest-params
+    assert.equal(typeof cb, 'function');
+    let args = Array.prototype.slice.call(arguments, 0, -1); // eslint-disable-line prefer-rest-params
+    let p = f.apply(this, args); // eslint-disable-line @typescript-eslint/no-invalid-this
+    p.then((result) => {
+      if (cb) {
+        // escape promise so it doesn't catch and re-throw the error!
+        nextTick(cb.bind(this, null, result)); // eslint-disable-line @typescript-eslint/no-invalid-this
+        cb = null;
+      }
+    }).catch((err) => {
+      if (cb) {
+        nextTick(cb.bind(this, err)); // eslint-disable-line @typescript-eslint/no-invalid-this
+        cb = null;
+      }
+    });
+  };
+}
+
+// Wraps a callback so that it escapes implicit try/catches from callbacks fired
+//   within Promises.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function unpromisify<P extends any[], T=never>(f: (this: T, ...args: P) => void): (this: T, ...args: P) => void {
+  return function (this: T): void {
+  // eslint-disable-next-line @typescript-eslint/no-invalid-this, prefer-rest-params, @typescript-eslint/no-explicit-any
+    nextTick((f as any).apply.bind(f, this, arguments));
+  };
 }
