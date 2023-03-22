@@ -41,6 +41,10 @@ function ClientChannelWorker(subs, channel_id, base_handlers, base_event_listene
 }
 util.inherits(ClientChannelWorker, EventEmitter);
 
+ClientChannelWorker.prototype.getChannelID = function () {
+  return this.channel_id;
+};
+
 ClientChannelWorker.prototype.emit = function (event) {
   // Using `arguments` instead of rest params because Babel is generating pretty
   //   bloated code and this is a hot path.
