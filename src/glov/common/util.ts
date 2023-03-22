@@ -447,6 +447,19 @@ export function dateToSafeLocaleString(date: Date, date_only: boolean): string {
   return date_text;
 }
 
+export function dateToFileTimestamp(date: Date): string {
+  function pad(value: number): string {
+    return `${value < 10 ? 0 : ''}${value}`;
+  }
+  let year = date.getFullYear();
+  let month = pad(date.getMonth() + 1);
+  let day = pad(date.getDate());
+  let hours = pad(date.getHours());
+  let minutes = pad(date.getMinutes());
+  let seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day} ${hours}_${minutes}_${seconds}`;
+}
+
 export function msToTimeString(duration: number, opts?: { hide_ms?: boolean }): string {
   opts = opts || {};
   let ms = duration % 1000;
