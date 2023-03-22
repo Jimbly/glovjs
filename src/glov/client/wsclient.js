@@ -14,7 +14,7 @@ const { min, random } = Math;
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
 const wscommon = require('glov/common/wscommon.js');
-const { wsHandleMessage } = wscommon;
+const { netDelaySet, wsHandleMessage } = wscommon;
 const { PLATFORM, getAbilityReload } = require('glov/client/client_config.js');
 
 // let net_time = 0;
@@ -141,6 +141,9 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   client.secret = data.secret;
   if (data.build) {
     client.onBuildTimestamp(data.build);
+  }
+  if (data.net_delay) {
+    netDelaySet(data.net_delay[0], data.net_delay[1]);
   }
   // Fire subscription_manager connect handler
   assert(client.handlers.connect);

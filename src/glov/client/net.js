@@ -11,7 +11,6 @@ const { filewatchStartup } = require('./filewatch.js');
 const { packetEnableDebug } = require('glov/common/packet.js');
 const subscription_manager = require('./subscription_manager.js');
 const wsclient = require('./wsclient.js');
-const wscommon = require('glov/common/wscommon.js');
 const WSClient = wsclient.WSClient;
 
 let client;
@@ -26,9 +25,6 @@ export function init(params) {
     if (!params.no_packet_debug) {
       console.log('PacketDebug: ON');
       packetEnableDebug(true);
-    }
-    if (!params.no_net_delay) {
-      wscommon.netDelaySet();
     }
   }
   client = new WSClient(params.path);

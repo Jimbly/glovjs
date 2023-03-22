@@ -10,7 +10,7 @@ import { isPacket } from 'glov/common/packet';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
 import * as wscommon from 'glov/common/wscommon.js';
-const { wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
+const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 import * as WebSocket from 'ws';
 
 import { ipBanReady, ipBanned } from './ip_ban';
@@ -138,7 +138,7 @@ function logBigFilter(client, msg, data) {
   return true; // always accept
 }
 
-WSServer.prototype.init = function (server, server_https, no_timeout) {
+WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
   let ws_server = this;
   ws_server.wss = new WebSocket.Server({ noServer: true, maxPayload: 1024*1024 });
 
@@ -247,6 +247,9 @@ WSServer.prototype.init = function (server, server_https, no_timeout) {
       build: this.app_build_timestamp,
       restarting: ws_server.restarting,
     };
+    if (dev) {
+      cack_data.net_delay = netDelayGet();
+    }
     ws_server.emit('cack_data', cack_data, client);
 
     client.send('cack', cack_data);

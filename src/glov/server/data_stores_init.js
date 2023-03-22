@@ -33,7 +33,7 @@ export function dataStoresInit(data_stores) {
   }
   if (!data_stores.bulk) {
     data_stores.bulk = data_store.create('data_store/bulk');
-    if (argv.dev) {
+    if (argv.dev && argv['net-delay'] !== false) {
       data_stores.bulk = data_store_limited.create(data_stores.bulk, 1000, 1000, 250);
     }
   } else if (server_config.do_mirror) {
