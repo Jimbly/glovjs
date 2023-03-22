@@ -373,7 +373,7 @@ export function matchAll(str: string, re: RegExp): string[] {
 
 export function callEach<T extends unknown[]>(
   arr: ((...fargs: T) => void)[] | null | undefined,
-  pre_clear?: null | undefined | boolean, // `boolean` for `delete foo.cbs`
+  pre_clear?: null | undefined | boolean | never[], // `boolean` for `delete foo.cbs`
   ...args: T
 ): void {
   if (arr && arr.length) {
