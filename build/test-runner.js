@@ -144,7 +144,9 @@ module.exports = function test(opts) {
         } else {
           if (stdout) {
             job.log('Test succeeded, process stdout follows:');
-            stdout.split('\n').forEach(job.log.bind(job));
+            stdout.split('\n').forEach(function (line) {
+              job.log(line);
+            });
           } else {
             job.log('Test succeeded.');
           }
