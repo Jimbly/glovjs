@@ -117,6 +117,7 @@ let filtered_errors = new RegExp([
   'chrome://userjs',
   'worker-hammerhead',
   'ammerhead-browser',
+  'hammerhead',
   'isFeatureBroken',
 ].join('|'));
 
