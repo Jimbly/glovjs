@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+import { dataError } from './data_error';
 import { FSAPI, fileBaseName } from './fsapi';
 import { clone, defaultsDeep, inherits } from './util';
 import type { DataObject } from './types';
@@ -75,7 +76,8 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
       assert(trait_ref.id, 'Trait reference missing id');
       let trait_def = this.traits[trait_ref.id];
       if (!trait_def) {
-        assert(trait_def, `${filename}: References unknown trait type "${trait_ref.id}"`);
+        dataError(`${filename}: References unknown trait type "${trait_ref.id}"`);
+        continue;
       }
       if (trait_def.alloc_state) {
         let pname = `s${factory_param_names.length}`;
@@ -116,7 +118,10 @@ function factory(${factory_param_names.join(',')}) {
       let trait_ref = traits[ii];
       assert(trait_ref.id); // Checked above
       let trait_def = this.traits[trait_ref.id];
-      assert(trait_def); // Checked above
+      if (!trait_def) {
+        // Checked above
+        continue;
+      }
       // Properties
       for (let key in trait_def.properties) {
         proto[key] = trait_def.properties[key];
@@ -158,7 +163,9 @@ function factory(${factory_param_names.join(',')}) {
       let trait_ref = traits[ii];
       assert(trait_ref.id); // Checked above
       let trait_def = this.traits[trait_ref.id];
-      assert(trait_def); // Checked above
+      if (!trait_def) {
+        continue; // Checked above
+      }
       if (trait_def.init_prototype) {
         let opt_key = `${trait_ref.id}_opts`;
         trait_def.init_prototype(proto[opt_key]);

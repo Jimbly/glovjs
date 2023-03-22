@@ -17,6 +17,7 @@ const { is_ios_safari } = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
+const { dataErrorQueueEnable } = require('glov/common/data_error.js');
 const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
 const {
@@ -1059,6 +1060,10 @@ export function startup(params) {
   });
   if (params.error_report === false) {
     glovErrorReportDisableSubmit();
+  }
+
+  if (DEBUG) {
+    dataErrorQueueEnable(true);
   }
 
   if (DEBUG && !window.spector) {

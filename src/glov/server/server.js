@@ -8,6 +8,11 @@ global.profilerStart = global.profilerStop = global.profilerStopStart = function
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
+import {
+  dataErrorOnError,
+  dataErrorQueueEnable,
+  dataErrorQueueGet,
+} from 'glov/common/data_error';
 import { packetEnableDebug } from 'glov/common/packet';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
@@ -99,6 +104,10 @@ export function sendToBuildClients(msg, data) {
   }
 }
 
+function onDataError(err) {
+  sendToBuildClients('data_errors', [err]);
+}
+
 export function startup(params) {
   log.startup();
 
@@ -134,6 +143,8 @@ export function startup(params) {
     if (argv['net-delay'] !== false) {
       netDelaySet();
     }
+    dataErrorQueueEnable(true);
+    dataErrorOnError(onDataError);
   }
   if (server_config.log && server_config.log.load_log) {
     channel_server.load_log = true;
@@ -219,6 +230,10 @@ export function startup(params) {
     client.gbstate_enable = pak.readBool();
     if (client.gbstate_enable) {
       client.send('gbstate', gbstate);
+      let data_errors = dataErrorQueueGet();
+      if (data_errors.length) {
+        client.send('data_errors', data_errors);
+      }
     }
     resp_func();
   });
