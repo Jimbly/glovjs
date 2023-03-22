@@ -160,6 +160,7 @@ export function vec4ColorFromIntColor(v, c) {
   v[1] = ((c >> 16) & 0xFF) / 255;
   v[2] = ((c >> 8) & 0xFF) / 255;
   v[3] = (c & 0xFF) / 255;
+  return v;
 }
 
 function vec4ColorFromIntColorPreMultiplied(v, c) {

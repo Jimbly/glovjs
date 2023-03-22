@@ -45,7 +45,7 @@ export enum ALIGN {
 
 export function fontSetDefaultSize(h: number): void;
 export function intColorFromVec4Color(v: Vec4): RGBA;
-export function vec4ColorFromIntColor(v: Vec4, c: RGBA): void;
+export function vec4ColorFromIntColor(v: Vec4, c: RGBA): Vec4;
 
 interface FontDrawOpts {
   style?: FontStyle;
