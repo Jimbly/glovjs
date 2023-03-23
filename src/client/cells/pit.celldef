@@ -1,0 +1,29 @@
+---
+open_vis: true
+ascii_char: '*'
+map_view_detail_frame_visited: 21
+blocks_pathing_if_visited: true
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: pit_closed
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: whitebox
+    tile: solid
+visuals_visited:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: pit_open
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: whitebox
+    tile: solid
+default_events:
+- floor_pit 1

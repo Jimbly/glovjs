@@ -1,0 +1,15 @@
+#pragma WebGL2
+precision highp float;
+
+#include "crawler_common.vp"
+
+attribute vec2 TEXCOORD;
+
+// output
+varying vec2 interp_texcoord;
+// varying vec3 interp_pos_ws;
+
+void main(void) {
+  interp_texcoord = TEXCOORD;
+  doPosAndFog();
+}

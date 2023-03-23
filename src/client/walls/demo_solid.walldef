@@ -1,0 +1,8 @@
+---
+open_move: false
+open_vis: false
+visuals:
+- type: simple_wall
+  opts:
+    spritesheet: demo
+    tile: brick_dark0

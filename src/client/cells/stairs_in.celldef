@@ -1,0 +1,10 @@
+---
+open_vis: true
+advertised_wall: stairs_in
+ascii_char: '>'
+special_pos: stairs_in
+map_view_detail_frame: 7
+auto_evict: true
+# code: 'CELL_STAIRS_IN'
+default_events:
+- floor_delta -1

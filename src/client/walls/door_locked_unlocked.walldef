@@ -1,0 +1,11 @@
+---
+open_move: true
+open_vis: false
+map_view_wall_frame_north: 26
+map_view_wall_frame_east: 25
+build_hide: true
+visuals:
+- type: simple_wall
+  opts:
+    spritesheet: whitebox
+    tile: door_unlocked

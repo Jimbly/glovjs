@@ -1,0 +1,45 @@
+---
+open_vis: true
+default_wall: solid
+
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: demo
+    tile: cobble_blood1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: demo
+    tile: grey_dirt0
+
+corners: # pillars and floor/ceiling details
+  # one:
+  # - pass: details
+  #   type: simple_pillar
+  #   opts:
+  #     quadrants: 1
+  #     spritesheet: demo
+  #     tile: brick_brown0
+  # two:
+  # - pass: details
+  #   type: simple_pillar
+  #   opts:
+  #     quadrants: 2
+  #     spritesheet: demo
+  #     tile: brick_brown0
+  # three:
+  # - pass: details
+  #   type: simple_pillar
+  #   opts:
+  #     quadrants: 3
+  #     spritesheet: demo
+  #     tile: brick_brown0
+  four:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 4
+      spritesheet: demo
+      tile: brick_brown0

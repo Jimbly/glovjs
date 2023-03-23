@@ -1,0 +1,11 @@
+---
+open_move: true
+open_vis: true
+advertise_other_side: true
+map_view_wall_frame_north: 5
+map_view_wall_frame_east: 4
+visuals:
+  type: simple_wall
+  opts:
+    spritesheet: demo
+    tile: dngn_open_door

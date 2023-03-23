@@ -1,0 +1,9 @@
+---
+open_move: true
+open_vis: false
+advertise_other_side: true
+visuals:
+  type: simple_wall
+  opts:
+    spritesheet: demo
+    tile: dngn_closed_door

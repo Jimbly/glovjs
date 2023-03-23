@@ -1,5 +1,5 @@
 {
-  "name": "glovjs",
+  "name": "glovjs-crawler",
   "version": "0.1.0",
   "description": "Template for a JavaScript game project using GLOV.js",
   "main": "server/index.js",

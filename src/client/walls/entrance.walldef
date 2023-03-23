@@ -1,0 +1,8 @@
+---
+open_move: true
+open_vis: false
+visuals:
+  type: simple_wall
+  opts:
+    spritesheet: whitebox
+    tile: up

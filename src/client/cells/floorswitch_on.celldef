@@ -1,0 +1,22 @@
+---
+open_vis: true
+build_hide: true
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: solid
+- pass: default
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: solid
+    scale: 0.5
+    color: '#0F0'
+    detail_layer: 1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: whitebox
+    tile: solid
