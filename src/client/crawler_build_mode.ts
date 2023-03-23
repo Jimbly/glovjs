@@ -859,7 +859,9 @@ function showPaintPalette({
   y += (col_width + 1) * 2;
   let { entries } = palette;
   for (let ii = 0; ii < PALETTE_SIZE; ++ii) {
-    let [type, id] = entries[ii] || [null, null];
+    let entry = entries[ii] || [null, null];
+    let type: 'wall' | 'cell' | 'spawn' | null = entry[0];
+    let id = entry[1];
     let label;
     let pair: DescPair | null = null;
     if (type === 'cell') {
@@ -890,6 +892,7 @@ function showPaintPalette({
       });
       label = `[${type}]\n${desc.id}`;
     } else {
+      type = null;
       label = '?';
     }
     let ret;
