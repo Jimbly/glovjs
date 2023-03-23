@@ -1,0 +1,17 @@
+---
+open_move: false
+open_vis: true
+default_wall: demo_walldetail1
+map_view_detail_frame: 8
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: demo
+    tile: [dngn_open_sea, dngn_open_sea2]
+    times: 500
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: demo
+    tile: grey_dirt0

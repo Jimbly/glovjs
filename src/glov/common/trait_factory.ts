@@ -40,6 +40,7 @@ function pascalCase(a: string): string {
 
 export type TraitFactory<TBaseClass extends TraitedBaseClass, TCtorParam> = TraitFactoryImpl<TBaseClass, TCtorParam>;
 class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
+  ignore_unknown_traits: boolean = false;
 
   traits: Partial<Record<string, TraitOpts<TBaseClass, OpaqueOpt, OpaqueState>>> = {};
 
@@ -76,7 +77,9 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
       assert(trait_ref.id, 'Trait reference missing id');
       let trait_def = this.traits[trait_ref.id];
       if (!trait_def) {
-        dataError(`${filename}: References unknown trait type "${trait_ref.id}"`);
+        if (!this.ignore_unknown_traits) {
+          dataError(`${filename}: References unknown trait type "${trait_ref.id}"`);
+        }
         continue;
       }
       if (trait_def.alloc_state) {
@@ -183,8 +186,10 @@ function factory(${factory_param_names.join(',')}) {
     ext: string;
     Ctor: Constructor<TBaseClass>;
     reload_cb: (type_id: string) => void;
+    ignore_unknown_traits?: boolean;
   }): void {
-    let { name, fs, directory, ext, Ctor, reload_cb } = params;
+    let { name, fs, directory, ext, Ctor, reload_cb, ignore_unknown_traits } = params;
+    this.ignore_unknown_traits = ignore_unknown_traits || false;
     this.name = name;
     let filenames = fs.getFileNames(directory).filter((a) => a.endsWith(ext));
     let seen_typeids: Record<string, string> = {};

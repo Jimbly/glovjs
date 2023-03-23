@@ -1,0 +1,52 @@
+---
+properties:
+  do_split: false # Maybe just use non-high-res version instead?
+traits:
+- id: player
+- id: drawable
+  biasL: [-0.25, 0.25]
+  biasF: [-0.25, 0]
+  biasR: [-0.3, 0.4]
+- id: drawable_sprite
+  anim_data:
+    idle:
+      frames: [0]
+      times: 1000
+    death:
+      frames: [0]
+      times: 1000
+    pit:
+      frames: [0]
+      times: 1000
+  sprite_data:
+    name: player2
+    layers: 2
+    filter_min: LINEAR_MIPMAP_LINEAR
+    filter_mag: LINEAR
+    ws: [256]
+    hs: [256]
+    origin: [0.5, 1]
+  scale: 0.65
+  # Old, pixely player; needs default split_dist
+  #   sprite_data:
+  #     name: player
+  #     filter_min: NEAREST
+  #     filter_mag: NEAREST
+  #     origin: [0.5, 1]
+  #   scale: 1
+  tint_colors:
+  - - '#E0F058' # Pants
+    - '#E098B0' # Skin
+    - '#802048' # Clothes
+  - - '#586838'
+    - '#D89048'
+    - '#A85848'
+  - - '#d8a848'
+    - '#b89038'
+    - '#803808'
+  - - '#b86878'
+    - '#d86868'
+    - '#e0a858'
+  - - '#80b068'
+    - '#a8b068'
+    - '#688020'

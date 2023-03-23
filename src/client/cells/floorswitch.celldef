@@ -1,0 +1,29 @@
+---
+open_vis: true
+map_view_detail_frame: 28
+default_props:
+- key_cell
+default_events:
+- key_set
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: solid
+- pass: default
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: solid
+    scale: 0.5
+    color: '#F00'
+    detail_layer: 1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: whitebox
+    tile: solid
+replace:
+  - func: KEY
+    name: floorswitch_on

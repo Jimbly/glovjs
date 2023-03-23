@@ -1,0 +1,22 @@
+---
+open_vis: true
+build_hide: true
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: demo
+    tile: cobble_blood1
+- pass: default
+  type: simple_floor
+  opts:
+    spritesheet: demo
+    tile: dngn_mirrored_wall
+    scale: 0.5
+    color: '#555'
+    detail_layer: 1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: demo
+    tile: grey_dirt0

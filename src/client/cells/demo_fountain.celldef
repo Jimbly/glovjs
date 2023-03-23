@@ -1,0 +1,24 @@
+---
+open_move: false
+open_vis: true
+ascii_char: 'f'
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: demo
+    tile: cobble_blood1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: demo
+    tile: grey_dirt0
+- type: simple_billboard
+  opts:
+    spritesheet: demo
+    tile: [dngn_blood_fountain, dngn_blood_fountain2]
+    width: 0.5
+    height: 0.5 # 0..1
+    offs: [0, 0, 0]
+    face_camera: true # Otherwise faces frustum
+    do_split: true

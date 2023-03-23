@@ -1,0 +1,37 @@
+#pragma WebGL
+
+// per-vertex input
+attribute vec4 POSITION;
+
+varying vec2 interp_fog_param;
+uniform vec3 player_pos;
+
+// per-drawcall input
+uniform mat4 mat_m;
+uniform mat4 mat_vp;
+
+// vec4 fog_params = vec4(0.005, 0.0005, 500.0, 0.0);
+uniform vec4 fog_params;
+vec3 fog_color = vec3(0.0);
+
+// Fog from https://iquilezles.org/www/articles/fog/fog.htm
+vec2 calcFog(in vec4 pos_ws)
+{
+  highp float distance = length(pos_ws.xy - player_pos.xy);
+  float be = fog_params.x; // 0.003;
+  float bi = fog_params.y; // 0.001;
+  distance = max(0.0, distance - fog_params.z);
+  // float fogAmount = 1.0 - exp( -distance*b );
+  float extColor = exp(-distance*be);
+  float insColor = 1.0 - exp(-distance*bi);
+  return vec2(insColor, extColor);
+}
+
+void doPosAndFog() {
+  vec3 pos = POSITION.xyz;
+  vec4 pos_ws = mat_m * vec4(pos, 1.0);
+  // interp_pos_ws = pos_ws.xyz;
+  interp_fog_param = calcFog(pos_ws);
+  gl_Position = mat_vp * pos_ws;
+  //gl_Position = mvp * vec4(pos, 1.0);
+}

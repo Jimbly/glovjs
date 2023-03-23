@@ -1,0 +1,12 @@
+---
+open_move: false
+open_vis: false
+ascii_char: '|-'
+map_view_wall_frame_north: 3
+map_view_wall_frame_east: 2
+map_view_wall_frame_priority: -1
+visuals:
+  type: simple_wall
+  opts:
+    spritesheet: whitebox
+    tile: solid

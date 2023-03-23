@@ -1,0 +1,16 @@
+---
+cell_swaps:
+  open: demo_open
+  floorswitch: demo_floorswitch
+  floorswitch_on: demo_floorswitch_on
+wall_swaps:
+  door: demo_door
+  door_oneway: demo_door
+  door_locked: demo_door_locked
+  door_locked_unlocked: demo_door_locked_unlocked
+  entrance: demo_entrance
+  secret_door: demo_secret_door
+  secret_door_unvisited: demo_secret_door
+  solid: demo_solid
+  stairs_in: demo_stairs_in
+  stairs_out: demo_stairs_out

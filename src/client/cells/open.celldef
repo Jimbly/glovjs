@@ -1,0 +1,45 @@
+---
+open_vis: true
+default_wall: solid
+
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    spritesheet: whitebox
+    tile: solid
+- pass: bg
+  type: simple_ceiling
+  opts:
+    spritesheet: whitebox
+    tile: solid
+
+corners: # pillars and floor/ceiling details
+  one:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 1
+      spritesheet: whitebox
+      tile: pillar1
+  two:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 2
+      spritesheet: whitebox
+      tile: pillar2
+  three:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 3
+      spritesheet: whitebox
+      tile: pillar3
+  four:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 4
+      spritesheet: whitebox
+      tile: pillar4

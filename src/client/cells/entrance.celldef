@@ -1,0 +1,10 @@
+---
+open_vis: true
+advertised_wall: entrance
+ascii_char: '@'
+special_pos: stairs_in
+map_view_detail_frame: 7
+auto_evict: true
+# code: 'CELL_ENTRANCE'
+default_events:
+- floor_delta -1

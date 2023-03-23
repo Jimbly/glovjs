@@ -1,0 +1,22 @@
+// Portions Copyright 2022 Jimb Esser (https://github.com/Jimbly/)
+// Released under MIT License: https://opensource.org/licenses/MIT
+#pragma WebGL2
+precision highp float;
+
+#include "crawler_common.vp"
+
+// per-vertex input
+attribute vec4 COLOR;
+attribute vec4 TEXCOORD;
+
+// output
+varying lowp vec4 interp_color;
+varying vec2 interp_texcoord;
+
+void main(void) {
+  interp_texcoord = TEXCOORD.xy;
+  interp_color = COLOR;
+  vec4 pos_ws = vec4(POSITION.xyz, 1.0);
+  interp_fog_param = calcFog(pos_ws);
+  gl_Position = mat_vp * pos_ws;
+}

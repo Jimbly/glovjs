@@ -1,0 +1,11 @@
+---
+open_move: true
+open_vis: true
+map_view_wall_frame_north: 26
+map_view_wall_frame_east: 25
+build_hide: true
+visuals:
+- type: simple_wall
+  opts:
+    spritesheet: demo
+    tile: dngn_open_door

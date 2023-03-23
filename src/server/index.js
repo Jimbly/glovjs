@@ -8,6 +8,7 @@ const { permTokenWorkerInit } = require('glov/server/perm_token_worker.js');
 const { setupRequestHeaders } = require('glov/server/request_utils.js');
 const glov_server = require('glov/server/server.js');
 const argv = require('minimist')(process.argv.slice(2));
+const { crawlerWorkerInit } = require('./crawler_worker.js');
 
 let app = express();
 let server = http.createServer(app);
@@ -45,6 +46,8 @@ glov_server.startup({
 
 // Opt-in to the permissions token system (Note: make sure config/server.json:forward_depth is correct!)
 permTokenWorkerInit(glov_server.channel_server, app);
+
+crawlerWorkerInit(glov_server.channel_server);
 
 let port = argv.port || process.env.port || 3000;
 

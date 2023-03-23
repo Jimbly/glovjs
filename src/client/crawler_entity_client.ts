@@ -1,0 +1,421 @@
+import assert from 'assert';
+import {
+  ClientEntityManagerInterface,
+  clientEntityManagerCreate,
+} from 'glov/client/entity_manager_client';
+import { offlineEntityManagerCreate } from 'glov/client/entity_manager_offline';
+import {
+  EntityPositionManager,
+  entityPositionManagerCreate,
+} from 'glov/client/entity_position_manager';
+import { spineCreate } from 'glov/client/spine';
+import { spriteAnimationCreate } from 'glov/client/sprite_animation';
+import { spriteCreate } from 'glov/client/sprites';
+import * as ui from 'glov/client/ui';
+import { webFSAPI } from 'glov/client/webfs';
+import {
+  ActionMessageParam,
+} from 'glov/common/entity_base_common';
+import { TraitFactory, traitFactoryCreate } from 'glov/common/trait_factory';
+import {
+  DataObject,
+  EntityID,
+  NetErrorCallback,
+} from 'glov/common/types';
+import { plural } from 'glov/common/util';
+import {
+  ROVec2,
+  ROVec4,
+} from 'glov/common/vmath';
+import {
+  EntityCrawlerDataCommon,
+  entSamePos,
+} from '../common/crawler_entity_common';
+import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
+import {
+  DrawableOpts,
+  DrawableSpineOpts,
+  DrawableSpineState,
+  DrawableSpriteOpts,
+  DrawableSpriteState,
+  EntityDrawableSpine,
+  EntityDrawableSprite,
+  drawableDraw,
+  drawableSpineDraw2D,
+  drawableSpineDrawSub,
+  drawableSpriteDraw2D,
+  drawableSpriteDrawSub,
+} from './crawler_render_entities';
+import { statusPush } from './status';
+
+import type { CrawlerState } from '../common/crawler_state';
+import type { EntityBaseClient } from 'glov/client/entity_base_client';
+import type { UIBoxColored } from 'glov/client/ui';
+
+export type EntityDraw2DOpts = UIBoxColored;
+
+export type EntityDrawOpts = {
+  dt: number;
+  game_state: CrawlerState;
+  pos: ROVec2;
+  zoffs: number;
+  angle: number;
+  color: ROVec4;
+  use_near: boolean;
+};
+
+export type EntityOnDeleteSubParam = {
+  reason: string;
+  countdown_max: number; // inout
+};
+
+export type Floater = {
+  start: number;
+  msg: string;
+};
+
+
+export interface EntityCrawlerClient extends EntityBaseClient {
+  data: EntityCrawlerDataCommon;
+  type_id: string; // will be constant on the prototype
+
+  delete_reason?: string;
+  floaters?: Floater[];
+
+  isEnemy(): boolean;
+  draw2D(param: EntityDraw2DOpts): void;
+  draw?: (param: EntityDrawOpts) => void;
+  onDelete(reason: string): number;
+  onDeleteSub?: (param: EntityOnDeleteSubParam) => void;
+  triggerAnimation?: (anim: string) => void;
+
+  // On prototype properties:
+  do_split: boolean;
+  is_player: boolean;
+  is_enemy: boolean;
+}
+
+type Entity = EntityCrawlerClient;
+
+let my_ent_id: EntityID;
+let entity_manager_online: ClientEntityManagerInterface<Entity>;
+let entity_manager_offline: ClientEntityManagerInterface<Entity>;
+let entity_manager: ClientEntityManagerInterface<Entity>;
+let entity_pos_manager_online: EntityPositionManager;
+let entity_pos_manager_offline: EntityPositionManager;
+let entity_pos_manager: EntityPositionManager;
+
+
+export function crawlerEntClientDefaultDraw2D(this: EntityCrawlerClient, param: EntityDraw2DOpts): void {
+  ui.font.draw({
+    x: param.x, y: param.y, z: param.z,
+    w: param.w, h: param.h,
+    size: Math.min(param.w, param.h),
+    align: ui.font.ALIGN.HCENTER,
+    text: '?',
+  });
+}
+
+export function crawlerEntClientDefaultOnDelete(this: EntityCrawlerClient, reason: string): number {
+  let countdown_max = 250;
+  this.delete_reason = reason;
+  if (reason === 'killed') {
+    this.data.stats.hp = 0;
+  }
+
+  if (this.onDeleteSub) {
+    let param: EntityOnDeleteSubParam = {
+      reason,
+      countdown_max,
+    };
+    this.onDeleteSub(param);
+    countdown_max = param.countdown_max;
+  }
+
+  return countdown_max;
+}
+
+export function crawlerEntityManager(): ClientEntityManagerInterface<Entity> {
+  return entity_manager;
+}
+
+export function crawlerEntityManagerOnline(): ClientEntityManagerInterface<Entity> {
+  return entity_manager_online;
+}
+
+export function entityPosManager(): EntityPositionManager {
+  return entity_pos_manager;
+}
+
+export function isOnline(): boolean {
+  return entity_manager.isOnline();
+}
+
+export function myEntID(): EntityID {
+  return my_ent_id;
+}
+
+export function crawlerMyEnt(): Entity {
+  let ent = entity_manager.entities[my_ent_id];
+  assert(ent);
+  return ent;
+}
+
+export function crawlerMyEntOptional(): Entity | undefined {
+  return entity_manager.entities[my_ent_id];
+}
+
+export function crawlerMyActionSend<T>(param: ActionMessageParam, resp_func?: NetErrorCallback<T>): void {
+  crawlerMyEnt().actionSend(param, resp_func);
+}
+
+export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
+  pos: [number, number] | ROVec2,
+  floor_id: number,
+  skip_fading_out:boolean
+): Entity[] {
+  return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
+}
+
+function onlyEnemies(ent: Entity): boolean {
+  // TODO: Property assigned by trait "blocks_player"
+  return ent.isEnemy();
+}
+export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boolean): null | EntityID {
+  // if (engine.DEBUG && keyDown(KEYS.ALT)) {
+  //   return null;
+  // }
+  let ent_list = crawlerEntitiesAt(entity_manager, pos, floor_id, skip_fading_out);
+  ent_list = ent_list.filter(onlyEnemies);
+  if (!ent_list.length) {
+    return null;
+  }
+  return ent_list[0].id;
+}
+
+
+export function crawlerEntitiesOnEntStart(): void {
+  my_ent_id = entity_manager.getMyEntID();
+  assert.equal(typeof my_ent_id, 'number');
+}
+
+function lookupGLDefine(id: string | number | undefined): number | undefined {
+  if (id === undefined) {
+    return undefined;
+  }
+  assert(typeof id === 'string');
+  let ret = (gl as unknown as DataObject)[id];
+  assert(typeof ret === 'number');
+  return ret;
+}
+
+function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void {
+  crawlerEntityTraitsCommonStartup(ent_factory);
+  ent_factory.registerTrait<DrawableOpts>('drawable', {
+    methods: {
+      draw: drawableDraw,
+    },
+    default_opts: {
+      lod_bias: [-4, 0],
+      biasL: [-0.2, 0.25],
+      biasF: [-0.25, 0],
+      biasR: [-0.3, 0.4],
+      biasIn: [0.35, 0],
+    },
+  });
+
+  ent_factory.registerTrait<DrawableSpriteOpts, DrawableSpriteState>('drawable_sprite', {
+    methods: {
+      draw2D: drawableSpriteDraw2D,
+      drawSub: drawableSpriteDrawSub,
+      onDeleteSub: function (this: EntityDrawableSprite, param: EntityOnDeleteSubParam): void {
+        let anim = this.drawable_sprite_state.anim;
+        let { reason } = param;
+        if (reason === 'killed') {
+          anim.setState('death');
+          param.countdown_max = 1000;
+        } else if (reason === 'pit') {
+          anim.setState('pit');
+        } else if (reason === 'pickup') {
+          anim.setState('pickup');
+        }
+      },
+      triggerAnimation: function (this: EntityDrawableSprite, anim: string): void {
+        this.drawable_sprite_state.anim.setState(anim);
+      },
+    },
+    default_opts: {
+      anim_data: {
+        idle: {
+          frames: [0],
+          times: 1000,
+        },
+      },
+      sprite_data: {
+        name: 'required',
+        ws: [1],
+        hs: [1],
+        filter_min: 'LINEAR_MIPMAP_LINEAR',
+        filter_mag: 'LINEAR',
+        origin: [0.5, 1],
+      },
+      scale: 0.75,
+      sprite: null!,
+    },
+    init_prototype: function (opts: DrawableSpriteOpts) {
+      opts.sprite_data.filter_min = lookupGLDefine(opts.sprite_data.filter_min);
+      opts.sprite_data.filter_mag = lookupGLDefine(opts.sprite_data.filter_mag);
+      opts.sprite_data.wrap_s = lookupGLDefine(opts.sprite_data.wrap_s);
+      opts.sprite_data.wrap_t = lookupGLDefine(opts.sprite_data.wrap_t);
+      opts.sprite = spriteCreate(opts.sprite_data);
+      if (opts.sprite_near_data) {
+        opts.sprite_near_data.filter_min = lookupGLDefine(opts.sprite_near_data.filter_min);
+        opts.sprite_near_data.filter_mag = lookupGLDefine(opts.sprite_near_data.filter_mag);
+        opts.sprite_near_data.wrap_s = lookupGLDefine(opts.sprite_near_data.wrap_s);
+        opts.sprite_near_data.wrap_t = lookupGLDefine(opts.sprite_near_data.wrap_t);
+        opts.sprite_near = spriteCreate(opts.sprite_near_data);
+      }
+    },
+    alloc_state: function (opts: DrawableSpriteOpts, ent: Entity) {
+      let anim = spriteAnimationCreate(opts.anim_data);
+      anim.setState(ent.data.state || 'idle');
+      let ret: DrawableSpriteState = {
+        anim,
+        anim_update_frame: 0,
+      };
+      return ret;
+    },
+  });
+
+  ent_factory.registerTrait<DrawableSpineOpts, DrawableSpineState>('drawable_spine', {
+    methods: {
+      draw2D: drawableSpineDraw2D,
+      drawSub: drawableSpineDrawSub,
+      onDeleteSub: function (this: EntityDrawableSpine, param: EntityOnDeleteSubParam): void {
+        let { reason } = param;
+        if (reason === 'killed') {
+          this.drawable_spine_state.spine.setAnimation(0, 'death');
+          param.countdown_max = 1000;
+        } else if (reason === 'pit') {
+          // not implemented: this.spine.setAnimation(0, 'pit');
+        } else if (reason === 'pickup') {
+          // not implemented: this.spine.setAnimation(0, 'pickup');
+        }
+      },
+      triggerAnimation: function (this: EntityDrawableSpine, anim: string): void {
+        this.drawable_spine_state.spine.setAnimation(1, anim);
+      },
+    },
+    default_opts: {
+      spine_data: {
+        skel: 'required',
+        atlas: 'required',
+        mix: {},
+        anim: 'idle',
+      },
+      scale: 0.0015,
+      offs: [0, 0],
+    },
+    alloc_state: function (opts: DrawableSpineOpts, ent: Entity) {
+      let spine = spineCreate(opts.spine_data);
+      spine.setAnimation(0, ent.data.state || 'idle');
+      let ret: DrawableSpineState = {
+        spine,
+        anim_update_frame: 0,
+      };
+      return ret;
+    },
+  });
+}
+
+export type SpawnDesc = {
+  id: string;
+  example_ent: EntityCrawlerClient;
+};
+export type SpawnDescs = Partial<Record<string, SpawnDesc>>;
+let spawn_descs: SpawnDescs;
+export function crawlerGetSpawnDescs(): SpawnDescs {
+  return spawn_descs;
+}
+
+let ent_factory: TraitFactory<Entity, DataObject>;
+
+const example_ent_data = { pos: [0, 0, 0] };
+
+function onEntDefReload(type_id: string): void {
+  let reloaded = entity_manager ? entity_manager.entitiesReload((ent: Entity) => {
+    return ent.type_id === type_id;
+  }) : [];
+  spawn_descs[type_id] = {
+    id: type_id,
+    example_ent: ent_factory.allocate(type_id, example_ent_data),
+  };
+  if (reloaded.length) {
+    statusPush(`Reloaded ${reloaded.length} "${type_id}" ${plural(reloaded.length, 'ent')}`);
+  }
+}
+
+function entCreate(data: DataObject): Entity {
+  let type_id = data.type;
+  assert(typeof type_id === 'string');
+  return ent_factory.allocate(type_id, data);
+}
+
+export function crawlerEntitiesInit(online: boolean): void {
+  if (online) {
+    entity_manager = entity_manager_online;
+    entity_pos_manager = entity_pos_manager_online;
+  } else {
+    entity_manager = entity_manager_offline;
+    entity_pos_manager = entity_pos_manager_offline;
+  }
+}
+
+export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawlerClient>(param: {
+  ent_factory?: TraitFactory<Entity, DataObject>;
+  name?: string;
+  Ctor: Constructor<TBaseClass>;
+  channel_type?: string;
+}): void {
+  if (param.ent_factory) {
+    ent_factory = param.ent_factory;
+  } else {
+    ent_factory = traitFactoryCreate<Entity, DataObject>();
+  }
+  crawlerTraitsInit(ent_factory);
+
+  ent_factory.initialize({
+    name: param.name || 'EntityCrawlerClient',
+    fs: webFSAPI(),
+    directory: 'entities',
+    ext: '.entdef',
+    Ctor: param.Ctor,
+    reload_cb: onEntDefReload,
+  });
+
+  spawn_descs = {};
+  ent_factory.getTypes().forEach((type_id) => {
+    spawn_descs[type_id] = {
+      id: type_id,
+      example_ent: ent_factory.allocate(type_id, example_ent_data),
+    };
+  });
+
+  entity_manager_online = clientEntityManagerCreate({
+    channel_type: param.channel_type || 'crawl',
+    create_func: entCreate,
+  });
+  entity_pos_manager_online = entityPositionManagerCreate({
+    entity_manager: entity_manager_online,
+    dim_pos: 2, dim_rot: 1,
+    // speed: 1/WALK_TIME,
+  });
+  entity_manager_offline = offlineEntityManagerCreate({
+    create_func: entCreate,
+  });
+  entity_pos_manager_offline = entityPositionManagerCreate({
+    entity_manager: entity_manager_offline,
+    dim_pos: 2, dim_rot: 1,
+    // speed: 1/WALK_TIME,
+  });
+}

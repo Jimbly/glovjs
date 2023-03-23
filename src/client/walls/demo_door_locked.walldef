@@ -1,0 +1,14 @@
+---
+open_move: false
+open_vis: false
+advertise_other_side: true
+map_view_wall_frame_north: 35
+map_view_wall_frame_east: 34
+visuals:
+- type: simple_wall
+  opts:
+    spritesheet: demo
+    tile: dngn_locked_door
+replace:
+  - func: KEY
+    name: door_locked_unlocked
