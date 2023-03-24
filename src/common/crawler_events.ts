@@ -127,7 +127,7 @@ function parseRot(s: string): DirType | null | undefined {
 }
 
 crawlerScriptRegisterEvent({
-  key: 'floor_abs', // x y [rot]
+  key: 'floor_abs', // floor x y [rot]
   when: CrawlerScriptWhen.POST,
   map_icon: CrawlerScriptEventMapIcon.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {

@@ -422,8 +422,8 @@ export function crawlerMapViewDraw(
     }
   }
 
+  let vis_entities = {} as Partial<Record<number, boolean>>;
   if (!level_gen_test && !build_mode) {
-    let vis_entities = {} as Partial<Record<number, boolean>>;
     for (let ent_id in entities) {
       let ent = entities[ent_id]!;
       if (ent.isEnemy() && !ent.fading_out) {
@@ -451,7 +451,9 @@ export function crawlerMapViewDraw(
         }
       }
     }
+  }
 
+  if (!level_gen_test) {
     if (fullscreen) {
       if (input.mouseMoved() || input.mouseDownAnywhere()) {
         moved_since_fullscreen = true;
@@ -461,46 +463,66 @@ export function crawlerMapViewDraw(
       let my = floor((y1 - mouse_pos[1] + MAP_STEP_SIZE + 0.5) / MAP_STEP_SIZE);
       let mouse_cell = level.getCell(mx, my);
       if (mouse_cell && moved_since_fullscreen) { // && mouse_cell.visible_bits) {
-        let path = pathFind(level, self_x, self_y, self_dir, mx, my, full_vis);
-        if (path) {
-          for (let ii = 0; ii < path.length; ++ii) {
-            let idx = path[ii];
-            let frame = ii === path.length - 1 ? level.cells[idx].isVisiblePit() ? 24 : 23 : 22;
-            if (vis_entities[idx]) {
-              frame = 24;
+        let mouse_frame: number | null = null;
+        if (build_mode) {
+          // teleport
+          if (mouse_cell.desc.open_move) {
+            mouse_frame = 23;
+            if (input.click({
+              max_dist: Infinity, // allow drag in touch mode
+            })) {
+              mapViewSetActive(false);
+              crawlerController().floorAbsolute(game_state.floor_id, mx, my);
             }
-            let cx = idx % level.w;
-            let cy = (idx - cx) / level.w;
-            map_sprite.draw({
-              x: x0 + cx * MAP_STEP_SIZE,
-              y: y1 - cy * MAP_STEP_SIZE,
-              z: z - 0.01,
-              w: MAP_TILE_SIZE,
-              h: MAP_TILE_SIZE,
-              frame,
-            });
-            if (frame === 24) {
-              break;
-            }
-          }
-          if (input.click({
-            max_dist: Infinity, // allow drag in touch mode
-          })) {
-            pathTo(mx, my);
+          } else {
+            mouse_frame = 24; // error
           }
         } else {
+          // pathfind
+          let path = pathFind(level, self_x, self_y, self_dir, mx, my, full_vis);
+          if (path) {
+            for (let ii = 0; ii < path.length; ++ii) {
+              let idx = path[ii];
+              let frame = ii === path.length - 1 ? level.cells[idx].isVisiblePit() ? 24 : 23 : 22;
+              if (vis_entities[idx]) {
+                frame = 24;
+              }
+              let cx = idx % level.w;
+              let cy = (idx - cx) / level.w;
+              map_sprite.draw({
+                x: x0 + cx * MAP_STEP_SIZE,
+                y: y1 - cy * MAP_STEP_SIZE,
+                z: z - 0.01,
+                w: MAP_TILE_SIZE,
+                h: MAP_TILE_SIZE,
+                frame,
+              });
+              if (frame === 24) {
+                break;
+              }
+            }
+            if (input.click({
+              max_dist: Infinity, // allow drag in touch mode
+            })) {
+              pathTo(mx, my);
+            }
+          } else {
+            mouse_frame = 24; // error
+          }
+        }
+        if (mouse_frame) {
           map_sprite.draw({
             x: x0 + mx * MAP_STEP_SIZE,
             y: y1 - my * MAP_STEP_SIZE,
             z: z - 0.01,
             w: MAP_TILE_SIZE,
             h: MAP_TILE_SIZE,
-            frame: 24,
+            frame: mouse_frame,
           });
         }
       }
       if (input.click()) {
-        engine.defines.MAP_VIEW = !engine.defines.MAP_VIEW;
+        mapViewToggle();
       }
     }
   }

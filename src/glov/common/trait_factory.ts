@@ -57,6 +57,8 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
 
   name?: string;
 
+  BaseCtor?: Constructor<TBaseClass>;
+
   private buildConstructor(
     filename: string,
     BaseCtor: Constructor<TBaseClass>,
@@ -65,6 +67,7 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
   ): void {
     const cap_classes = typeof window === 'undefined';
     let name = `${this.name}${pascalCase(type_id)}`;
+    this.BaseCtor = BaseCtor;
 
     // First, gather any state allocation that needs to be in the constructor
     let traits = type_def.traits || [];
@@ -228,10 +231,15 @@ function factory(${factory_param_names.join(',')}) {
 
   allocate(type_id: string, data: TCtorParam): TBaseClass {
     let Ctor = this.ctors[type_id];
+    let ret;
     if (!Ctor) {
-      assert(Ctor, `Missing constructor for ${this.name} type "${type_id}"`);
+      dataError(`Missing constructor for ${this.name} type "${type_id}"`);
+      assert(this.BaseCtor);
+      ret = new this.BaseCtor(data);
+      ret.type_id = type_id;
+    } else {
+      ret = new Ctor(data);
     }
-    let ret = new Ctor(data);
     assert.equal(ret.type_id, type_id); // Otherwise caller probably forgot a `declare` prefix
     return ret;
   }

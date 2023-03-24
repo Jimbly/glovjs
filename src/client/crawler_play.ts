@@ -223,7 +223,7 @@ function crawlerFlushVisData(force: boolean): void {
   }
 }
 
-export function crawlerSaveGame(): void {
+export function crawlerSaveGame(slot: string): void {
   crawlerFlushVisData(true);
   let { entities } = crawlerEntityManager();
   let ent_list: DataObject[] = [];
@@ -234,7 +234,7 @@ export function crawlerSaveGame(): void {
   local_game_data.entities = ent_list;
   local_game_data.script_data = script_api.localDataGet();
 
-  localStorageSetJSON<SavedGameData>('savedgame', local_game_data);
+  localStorageSetJSON<SavedGameData>(`savedgame_${slot}`, local_game_data);
 }
 
 type LocalVisData = {
@@ -341,6 +341,21 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
   }
 }
 
+let want_new_game = false;
+export function crawlerPlayWantNewGame(): void {
+  want_new_game = true;
+}
+
+function crawlerLoadGame(slot: string): void {
+  // Just script data, not doing entities or player, etc
+  local_game_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}`, {});
+  if (want_new_game) {
+    want_new_game = false;
+    local_game_data = {};
+  }
+  script_api.localDataSet(local_game_data.script_data || {});
+}
+
 function getLevelForFloorFromServer(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
   let pak = crawl_room.pak('get_level');
   pak.writeInt(floor_id);
@@ -366,15 +381,19 @@ function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSer
   });
 }
 
-export function crawlerPlayInitShared(online: boolean): void {
+export function crawlerPlayInitShared(online: boolean, online_only_for_build: boolean): void {
   if (!online) {
     buildModeSetActive(false);
   }
 
   entityPosManager().reinit();
 
-  script_api = crawlerScriptAPIClientCreate(online);
+  script_api = crawlerScriptAPIClientCreate(online && !online_only_for_build);
   script_api.setCrawlerState(game_state);
+
+  if (online && online_only_for_build) {
+    crawlerLoadGame('build');
+  }
 
   controller = new CrawlerController({
     online,
@@ -419,26 +438,18 @@ export function crawlerPlayInitOnlineLate(): void {
   controller.initFromMyEnt();
 }
 
-let want_new_game = false;
-export function crawlerPlayWantNewGame(): void {
-  want_new_game = true;
-}
-
 export function crawlerPlayInitOfflineLate(param: {
+  slot: string;
   new_player_data: DataObject;
   loading_state: (dt: number) => void;
   next_state: (dt: number) => void;
 }): void {
-  const { new_player_data, loading_state, next_state } = param;
+  const { slot, new_player_data, loading_state, next_state } = param;
   let player_ent: Entity | null = null;
   let entity_manager = crawlerEntityManager();
 
   // Load or init game
-  local_game_data = localStorageGetJSON<SavedGameData>('savedgame', {});
-  if (want_new_game) {
-    want_new_game = false;
-    local_game_data = {};
-  }
+  crawlerLoadGame(slot);
 
   // Initialize entities
   if (local_game_data.entities) {
@@ -449,7 +460,6 @@ export function crawlerPlayInitOfflineLate(param: {
       }
     }
   }
-  script_api.localDataSet(local_game_data.script_data || {});
 
   let need_init_pos = false;
   if (!player_ent) {

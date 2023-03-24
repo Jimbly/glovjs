@@ -42,17 +42,10 @@ import {
 import {
   crawlerLoadData,
 } from '../common/crawler_state';
-// import {
-//   aiDoFloor,
-//   aiOnPlayerMoved,
-//   aiSetFrameWallTime,
-// } from './ai';
+import {
+  aiDoFloor, aiTraitsClientStartup,
+} from './ai';
 // import './client_cmds';
-// import {
-//   clientEntitiesStartup,
-//   entityManager,
-//   myEnt,
-// } from './client_entities';
 import { buildModeActive, buildModeSetActive, crawlerBuildModeUI } from './crawler_build_mode';
 import {
   crawlerCommStart,
@@ -98,7 +91,7 @@ import {
   CrawlerScriptAPIClient,
 } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
-import { EntityDemoClient } from './entity_demo_client';
+import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
 import {
   game_height,
@@ -169,10 +162,12 @@ function pauseMenu(): void {
       pause_menu_up = false;
     },
   }, {
-    name: isOnline() ? 'Exit to Menu' : 'Save and Exit',
+    name: 'Save and Exit',
     cb: function () {
       if (!isOnline()) {
-        crawlerSaveGame();
+        crawlerSaveGame('1');
+      } else {
+        crawlerSaveGame('build');
       }
       urlhash.go('');
     },
@@ -442,7 +437,7 @@ function drawEntitiesPrep(): void {
 
 export function play(dt: number): void {
   profilerStartFunc();
-  // let game_state = crawlerGameState();
+  let game_state = crawlerGameState();
   if (crawlerCommWant()) {
     // Must have been disconnected?
     crawlerCommStart();
@@ -451,7 +446,6 @@ export function play(dt: number): void {
   profilerStart('top');
   crawlerEntityManager().tick();
   frame_wall_time = max(frame_wall_time, walltime()); // strictly increasing
-  // aiSetFrameWallTime(frame_wall_time);
 
   const map_view = mapViewActive();
   if (!(map_view || isMenuUp() || pause_menu_up)) {
@@ -493,8 +487,8 @@ export function play(dt: number): void {
 
   if (!loading_level && !buildModeActive()) {
     script_api.is_visited = true; // Always visited for AI
-    // aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
-    //   settings.ai_pause || engine.defines.LEVEL_GEN || pause_menu_up, script_api);
+    aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
+      settings.ai_pause || engine.defines.LEVEL_GEN || pause_menu_up, script_api);
   }
 
   if (crawlerCommWant()) {
@@ -519,7 +513,7 @@ function onInitPos(): void {
 }
 
 function playInitShared(online: boolean): void {
-  crawlerPlayInitShared(online);
+  crawlerPlayInitShared(online, true);
   script_api = crawlerScriptAPI();
   controller = crawlerController();
 
@@ -538,6 +532,7 @@ function playInitOffline(): void {
   playInitShared(false);
 
   crawlerPlayInitOfflineLate({
+    slot: '1',
     new_player_data: {
       type: 'player',
       pos: [0, 0, 0],
@@ -565,7 +560,7 @@ export function playStartup(): void {
     play_init_offline: playInitOffline,
   });
   let ent_factory = traitFactoryCreate<Entity, DataObject>();
-  // aiTraitsClientStartup(ent_factory);
+  aiTraitsClientStartup(ent_factory);
   crawlerEntityTraitsClientStartup({
     ent_factory: ent_factory as unknown as TraitFactory<EntityCrawlerClient, DataObject>,
     name: 'EntityDemoClient',
