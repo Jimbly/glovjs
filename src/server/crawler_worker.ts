@@ -1,5 +1,5 @@
 const LEVEL_VERSION = 1;
-const EXPORT_PATH = null; // Set this to export on every build action: './src/client/levels/';
+const EXPORT_PATH = './src/client/levels/';
 
 import assert from 'assert';
 import fs from 'fs';
@@ -117,6 +117,13 @@ export class CrawlerWorker<
 
   levelFallbackProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
     // Can be overridden by app
+    if (EXPORT_PATH) {
+      let file = `${EXPORT_PATH}/empty.json`;
+      if (fs.existsSync(file)) {
+        let data = fs.readFileSync(file, 'utf8');
+        return void cb(JSON.parse(data));
+      }
+    }
     let level = createLevel();
     level.alloc(16, 16);
     cb(level.serialize());
