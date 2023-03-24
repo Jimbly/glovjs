@@ -19,7 +19,7 @@ traits:
       frames: [0]
       times: 1000
   sprite_data:
-    name: player2
+    name: sprites/player2
     layers: 2
     filter_min: LINEAR_MIPMAP_LINEAR
     filter_mag: LINEAR
