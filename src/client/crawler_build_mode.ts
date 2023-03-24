@@ -492,6 +492,10 @@ function setCellEx(
   if (target_cell.events && !target_cell.events.length) {
     delete target_cell.events;
   }
+
+  if (cell_desc.special_pos) {
+    level.special_pos[cell_desc.special_pos] = [tx, ty, dirMod(dir + 2)];
+  }
 }
 
 function toggleWithSelected(): void {
