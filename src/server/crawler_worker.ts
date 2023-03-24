@@ -141,15 +141,24 @@ export class CrawlerWorker<
     if (!EXPORT_PATH) {
       return this.levelProviderDataStore(floor_id, cb);
     }
+    // First try on-disk
     let file = `${EXPORT_PATH}level${floor_id}.json`;
     fs.readFile(file, 'utf8', (err, data?: string) => {
       if (!err && data) {
-        let parsed = JSON.parse(data);
+        let parsed;
+        try {
+          parsed = JSON.parse(data);
+        } catch (ex) {
+          // ignored
+          console.error(ex);
+          console.error('Loading from datastore instead');
+        }
         if (parsed && parsed.special_pos) {
           return cb(parsed as CrawlerLevelSerialized);
         }
       }
-      this.levelFallbackProvider(floor_id, cb);
+      // Nothing on disk, or disk load failed, load from data store
+      this.levelProviderDataStore(floor_id, cb);
     });
   }
 
@@ -160,12 +169,11 @@ export class CrawlerWorker<
     do_export: boolean
   ): void {
     let level_data = pre_serialized || level.serialize();
-    if (!EXPORT_PATH) {
-      this.setBulkChannelData(`level${floor_id}`, {
-        ver: LEVEL_VERSION,
-        level: level_data,
-      });
-    }
+    // Write to data store even if exporting to disk, exporting to disk may corrupt/error, is not robust
+    this.setBulkChannelData(`level${floor_id}`, {
+      ver: LEVEL_VERSION,
+      level: level_data,
+    });
     if (EXPORT_PATH && do_export) {
       // Also export somewhere else as JSON for easy integration
       if (!fs.existsSync(EXPORT_PATH)) {

@@ -8,20 +8,20 @@ traits:
 - id: drawable_sprite
   anim_data:
     idle:
-      frames: [4]
+      frames: [0]
       times: 10000
   sprite_data:
-    name: enemy/itch/villagers
-    ws: [64, 64, 64, 64, 64, 64, 64, 64, 64, 64]
-    hs: [70, 70, 70, 70]
+    name: sprites/ultimo
+    ws: [40, 40, 40, 40]
+    hs: [40, 40, 40, 40]
     filter_min: LINEAR_MIPMAP_LINEAR
     filter_mag: LINEAR
-    origin: [0.5, 1]
+    origin: [0.5, 0.9]
   sprite_near_data:
-    name: enemy/itch/villagers2 # same thing, different filtering
-    ws: [64, 64, 64, 64, 64, 64, 64, 64, 64, 64]
-    hs: [70, 70, 70, 70]
+    name: sprites/ultimo2 # same thing, different filtering
+    ws: [40, 40, 40, 40]
+    hs: [40, 40, 40, 40]
     filter_min: NEAREST
     filter_mag: NEAREST
-    origin: [0.5, 1]
+    origin: [0.5, 0.9]
   scale: 0.62
