@@ -480,6 +480,9 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
   for (let ped_idx = 0; ped_idx < ped_list.length; ++ped_idx) {
     let [ped, ent] = ped_list[ped_idx];
     let pos = ped.pos as unknown as Vec2;
+    if (!ent.draw) {
+      continue;
+    }
 
     if (!passesSplitCheck(ent_set, ent.do_split, v2distSq(pos, game_state.pos))) {
       continue;
@@ -509,7 +512,6 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       }
     }
 
-    assert(ent.draw);
     ent.draw({
       dt,
       game_state,

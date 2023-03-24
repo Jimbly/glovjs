@@ -118,7 +118,7 @@ export class CrawlerWorker<
   levelFallbackProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
     // Can be overridden by app
     if (EXPORT_PATH) {
-      let file = `${EXPORT_PATH}/empty.json`;
+      let file = `${EXPORT_PATH}empty.json`;
       if (fs.existsSync(file)) {
         let data = fs.readFileSync(file, 'utf8');
         return void cb(JSON.parse(data));
@@ -129,10 +129,25 @@ export class CrawlerWorker<
     cb(level.serialize());
   }
 
-  levelProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
+  levelProviderDataStore(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
     this.getBulkChannelData(`level${floor_id}`, null, (err?: string, data?: DataObject) => {
       if (!err && data && data.ver && data.ver === LEVEL_VERSION) {
         return cb(data.level as CrawlerLevelSerialized);
+      }
+      this.levelFallbackProvider(floor_id, cb);
+    });
+  }
+  levelProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
+    if (!EXPORT_PATH) {
+      return this.levelProviderDataStore(floor_id, cb);
+    }
+    let file = `${EXPORT_PATH}level${floor_id}.json`;
+    fs.readFile(file, 'utf8', (err, data?: string) => {
+      if (!err && data) {
+        let parsed = JSON.parse(data);
+        if (parsed && parsed.special_pos) {
+          return cb(parsed as CrawlerLevelSerialized);
+        }
       }
       this.levelFallbackProvider(floor_id, cb);
     });
@@ -145,10 +160,12 @@ export class CrawlerWorker<
     do_export: boolean
   ): void {
     let level_data = pre_serialized || level.serialize();
-    this.setBulkChannelData(`level${floor_id}`, {
-      ver: LEVEL_VERSION,
-      level: level_data,
-    });
+    if (!EXPORT_PATH) {
+      this.setBulkChannelData(`level${floor_id}`, {
+        ver: LEVEL_VERSION,
+        level: level_data,
+      });
+    }
     if (EXPORT_PATH && do_export) {
       // Also export somewhere else as JSON for easy integration
       if (!fs.existsSync(EXPORT_PATH)) {

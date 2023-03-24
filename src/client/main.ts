@@ -1,6 +1,6 @@
 /*eslint global-require:off, comma-spacing:error*/
 import * as local_storage from 'glov/client/local_storage.js'; // eslint-disable-line import/order
-local_storage.setStoragePrefix('inky-spire'); // Before requiring anything else that might load from this
+local_storage.setStoragePrefix('crawler'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
 import { chatUICreate } from 'glov/client/chat_ui';

@@ -9,7 +9,6 @@ import {
   NetErrorCallback,
 } from 'glov/common/types.js';
 import { EntityCrawlerDataCommon, entSamePos } from '../common/crawler_entity_common';
-// import { AI_CLAIM_TIME } from './ai';
 import {
   EntityCrawlerClient,
   EntityDraw2DOpts,
@@ -18,6 +17,7 @@ import {
   Floater,
   crawlerEntClientDefaultDraw2D,
   crawlerEntClientDefaultOnDelete,
+  crawlerEntityManager,
 } from './crawler_entity_client';
 
 import type { JSVec3 } from '../common/crawler_state';
@@ -31,6 +31,10 @@ export function entitiesAt(cem: ClientEntityManagerInterface<EntityDemoClient>,
   skip_fading_out:boolean
 ): EntityDemoClient[] {
   return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
+}
+
+export function entityManager(): ClientEntityManagerInterface<EntityDemoClient> {
+  return crawlerEntityManager() as ClientEntityManagerInterface<EntityDemoClient>;
 }
 
 export type StatsData = {

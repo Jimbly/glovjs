@@ -14,3 +14,4 @@ wall_swaps:
   solid: demo_solid
   stairs_in: demo_stairs_in
   stairs_out: demo_stairs_out
+  floorswitch: demo_floorswitch

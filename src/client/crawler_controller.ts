@@ -452,6 +452,18 @@ export class CrawlerController {
       script_api.setLevel(game_state.level!);
       script_api.setPos(cur.pos);
       let blocked = game_state.level!.wallsBlock(cur.pos, next.action_dir, script_api);
+      if ((blocked & BLOCK_MOVE) && build_mode) {
+        let wall_desc = game_state.level!.getCell(cur.pos[0], cur.pos[1])!.walls[next.action_dir];
+        if (wall_desc.replace) {
+          for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
+            let desc = wall_desc.replace[ii].desc;
+            if (desc.open_move) {
+              // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
+              blocked &= ~BLOCK_MOVE;
+            }
+          }
+        }
+      }
       if (blocked & BLOCK_MOVE) {
         action_type = ACTION_BUMP;
       } else if (blocked & BLOCK_VIS) { // any door
