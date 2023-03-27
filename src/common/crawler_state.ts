@@ -88,7 +88,6 @@ export type VstyleDesc = {
 };
 export type VstyleDescs = Partial<Record<string, VstyleDesc>>;
 export type CrawlerStateParams = {
-  entity_manager: EntityManager<Entity>;
   level_provider: (floor_id: number, cb: LevelSerCB) => void;
 };
 
@@ -109,7 +108,6 @@ export const VIS_VISITED = 8;
 import assert from 'assert';
 import { base64CharTable } from 'glov/common/base64';
 import { dataError } from 'glov/common/data_error';
-import { EntityManager } from 'glov/common/entity_base_common';
 import { FSAPI, fileBaseName } from 'glov/common/fsapi';
 import { DataObject } from 'glov/common/types';
 import { callEach, clone, empty } from 'glov/common/util';
@@ -120,14 +118,9 @@ import {
 } from 'glov/common/vmath';
 import { CrawlerScriptAPI, getEffWall } from './crawler_script';
 
-import type { EntityCrawlerClient } from 'client/crawler_entity_client';
-import type { EntityCrawlerServer } from 'server/crawler_entity_server';
-
 export type JSVec2 = [number, number];
 export type JSVec3 = [number, number, number];
 export type JSVec4 = [number, number, number, number];
-
-type Entity = EntityCrawlerClient | EntityCrawlerServer;
 
 let descs: {
   wall: WallDescs;
@@ -836,7 +829,6 @@ type LevelCB = (level: CrawlerLevel) => void;
 type LevelSerCB = (level_data: CrawlerLevelSerialized) => void;
 
 export class CrawlerState {
-  entity_manager: EntityManager<Entity>;
   level_provider: (floor_id: number, cb: LevelSerCB) => void;
 
   pos = vec2(1,1); // Interpolated current position
@@ -846,8 +838,6 @@ export class CrawlerState {
   levels!: CrawlerLevel[];
 
   constructor(params: CrawlerStateParams) {
-    assert(params.entity_manager);
-    this.entity_manager = params.entity_manager;
     this.level_provider = params.level_provider;
     this.resetAllLevels();
   }
