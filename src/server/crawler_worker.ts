@@ -93,10 +93,13 @@ export class CrawlerWorker<
         player_uid: string,
         cb: NetErrorCallback<Entity>,
       ) => {
-        entityServerDefaultLoadPlayerEntity<Entity>({
-          type: 'player',
-          floor: 0,
-        }, sem, src, join_payload, player_uid, cb);
+        this.game_state.getLevelForFloorAsync(0, (level: CrawlerLevel) => {
+          entityServerDefaultLoadPlayerEntity<Entity>({
+            type: 'player',
+            floor: 0,
+            pos: level.special_pos.stairs_in,
+          }, sem, src, join_payload, player_uid, cb);
+        });
       },
     });
     this.initCrawlerStateBase();

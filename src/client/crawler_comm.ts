@@ -57,7 +57,7 @@ export function crawlerCommWant(): boolean {
   if (desired_channel === 'local') {
     return false;
   }
-  return !netClient().connected;
+  return Boolean(!netClient().connected && desired_channel);
 }
 
 function defaultSendJoin(room: ClientChannelWorker, cb: NetErrorCallback): void {
