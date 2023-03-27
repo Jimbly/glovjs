@@ -17,8 +17,8 @@ traits:
     filter_min: LINEAR_MIPMAP_LINEAR
     filter_mag: LINEAR
     origin: [0.5, 0.9]
-  sprite_near_data:
-    name: sprites/ultimo2 # same thing, different filtering
+  sprite_near_data: # same thing, different filtering
+    name: sprites/ultimo
     ws: [40, 40, 40, 40]
     hs: [40, 40, 40, 40]
     filter_min: NEAREST
