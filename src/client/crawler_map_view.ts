@@ -9,7 +9,6 @@ import {
   spriteCreate,
 } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
-import { EntityManager } from 'glov/common/entity_base_common';
 import {
   ROVec4,
   rovec4,
@@ -37,7 +36,7 @@ import {
 } from '../common/crawler_state';
 import { pathFind } from '../common/pathfind';
 import { buildModeActive } from './crawler_build_mode';
-import { EntityCrawlerClient } from './crawler_entity_client';
+import { crawlerEntityManager } from './crawler_entity_client';
 import { crawlerController, crawlerSetLevelGenMode } from './crawler_play';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 
@@ -118,7 +117,7 @@ export function crawlerMapViewDraw(
     // still loading
     return;
   }
-  let entity_manager = game_state.entity_manager as EntityManager<EntityCrawlerClient>;
+  let entity_manager = crawlerEntityManager();
   if (input.keyDownEdge(input.KEYS.F4)) {
     engine.defines.FULL_VIS = !engine.defines.FULL_VIS;
   }

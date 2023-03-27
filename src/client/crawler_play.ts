@@ -410,7 +410,6 @@ export function crawlerPlayInitOfflineEarly(): void {
   crawlerEntitiesInit(false);
 
   game_state = createCrawlerState({
-    entity_manager: crawlerEntityManager(),
     level_provider: getLevelForFloorFromWebFS,
   });
 
@@ -423,7 +422,6 @@ export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
   crawlerEntitiesInit(true);
   crawl_room = room;
   game_state = createCrawlerState({
-    entity_manager: crawlerEntityManager(),
     level_provider: getLevelForFloorFromServer,
   });
   crawlerEntityManager().reinit({

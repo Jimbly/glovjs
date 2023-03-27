@@ -110,7 +110,6 @@ export class CrawlerWorker<
     this.entity_manager.on('visible_area_load', this.visibleAreaLoad.bind(this));
     this.entity_manager.on('visible_area_init', this.visibleAreaInit.bind(this));
     this.game_state = createCrawlerState({
-      entity_manager: this.entity_manager,
       level_provider: this.levelProvider.bind(this),
     });
     this.script_api = this.scriptAPICreate();
