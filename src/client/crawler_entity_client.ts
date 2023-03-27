@@ -224,7 +224,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
       biasL: [-0.2, 0.25],
       biasF: [-0.25, 0],
       biasR: [-0.3, 0.4],
-      biasIn: [0.35, 0],
+      biasIn: [0, 0.3, 0.25],
     },
   });
 

@@ -95,7 +95,7 @@ export type DrawableOpts = {
   biasL: [number, number];
   biasF: [number, number];
   biasR: [number, number];
-  biasIn: [number, number]; // Not relevant for monsters, just one value will do?
+  biasIn: [number, number, number]; // Not relevant for monsters, just one value will do?
 };
 
 export type TextureOptionsAsStrings = {
@@ -350,6 +350,8 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
   // Blend against in-same-cell weights
   bias_phys = lerp(bweight_in, biasIn[0], bias_phys);
   bias_view = lerp(bweight_in, biasIn[1], bias_view);
+  let bias_in_offs = lerp(bweight_in, biasIn[2], 0);
+  let bias_in_sign = lerp(abs(view_vec[0]), -1, 1);
   // if (drawableDraw.debug !== frame_index) {
   //   drawableDraw.debug = frame_index;
   //   drawableDraw.debug_idx = 0;
@@ -364,7 +366,7 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
   // Offset `bias_vew` towards view plane
   v2addScale(draw_pos, draw_pos, view_vec, bias_view * DIM);
   // If in the same cell, alternate offsetting to the right as well
-  v2addScale(draw_pos, draw_pos, right_vec, (1 - bweight_in) * abs(view_vec[0]) * DIM * 0.35);
+  v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
 
   let shader_params: Partial<Record<string, ROVec2|ROVec3|ROVec4|number[]>> = {
     lod_bias,
