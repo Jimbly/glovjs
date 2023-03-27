@@ -13,6 +13,7 @@ import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import { spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { webFSAPI } from 'glov/client/webfs';
+import { dataError } from 'glov/common/data_error';
 import {
   ActionMessageParam,
 } from 'glov/common/entity_base_common';
@@ -205,7 +206,10 @@ function lookupGLDefine(id: string | number | undefined): number | undefined {
   }
   assert(typeof id === 'string');
   let ret = (gl as unknown as DataObject)[id];
-  assert(typeof ret === 'number');
+  if (typeof ret !== 'number') {
+    dataError(`Unknown OpenGL define "${id}"`);
+    return undefined;
+  }
   return ret;
 }
 
