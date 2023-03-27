@@ -436,7 +436,7 @@ function setCellEx(
     }
     level.initial_entities.push({
       type: cell_desc.default_spawn,
-      pos: [tx, ty],
+      pos: [tx, ty, dirMod(dir + 2)],
     });
   }
   // Remove old default props
@@ -619,7 +619,7 @@ function toggleWithSelected(): void {
       initial_entities = level.initial_entities = [];
     }
     let found = false;
-    let cell_pos: [number, number] = [tx, ty];
+    let cell_pos: [number, number, number] = [tx, ty, dirMod(dir + 2)];
     for (let ii = initial_entities.length - 1; ii >= 0; --ii) {
       let ent_ser = initial_entities[ii];
       let epos = ent_ser.pos as JSVec3;
