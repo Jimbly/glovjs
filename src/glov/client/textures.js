@@ -222,6 +222,12 @@ function bindForced(tex) {
   bindHandle(0, target, tex.handle);
 }
 
+export function textureFilterKey(params) {
+  let filter_min = params.filter_min || default_filter_min;
+  let filter_mag = params.filter_mag || default_filter_mag;
+  return filter_min + filter_mag * 10000;
+}
+
 Texture.prototype.setSamplerState = function (params) {
   let target = this.target;
   bindForced(this);

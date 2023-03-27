@@ -29,6 +29,7 @@ const {
   textureCmpArray,
   textureBindArray,
   textureLoad,
+  textureFilterKey,
 } = require('./textures.js');
 const {
   SEMANTIC,
@@ -859,7 +860,7 @@ function Sprite(params) {
       }
     } else if (params.name) {
       this.texs.push(textureLoad({
-        url: `img/${params.name}${ext}`,
+        url: `img/${params.name}${ext}#${textureFilterKey(params)}`,
         filter_min: params.filter_min,
         filter_mag: params.filter_mag,
         wrap_s: params.wrap_s,
