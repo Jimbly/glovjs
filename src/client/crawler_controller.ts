@@ -904,22 +904,46 @@ export class CrawlerController {
     // Old: forward attacks: let forward_frame = entityBlocks(game_state.floor_id, temp_pos, true) ? 11 : 1;
     let forward_frame = 1;
     if (show_buttons) {
+      let keys_turn_left = [KEYS.Q];
+      let keys_forward = [KEYS.W];
+      let keys_turn_right = [KEYS.E];
+      let keys_left = [KEYS.A];
+      let keys_back = [KEYS.S];
+      let keys_right = [KEYS.D];
+      if (!build_mode) {
+        keys_turn_left.push(KEYS.NUMPAD7);
+        keys_forward.push(KEYS.NUMPAD8);
+        keys_turn_right.push(KEYS.NUMPAD9);
+        keys_left.push(KEYS.NUMPAD4);
+        keys_back.push(KEYS.NUMPAD2, KEYS.NUMPAD5);
+        keys_right.push(KEYS.NUMPAD6);
+      }
+      let pad_turn_left: number[] = [];
+      let pad_forward: number[] = [];
+      let pad_turn_right: number[] = [];
+      let pad_left: number[] = [];
+      let pad_back: number[] = [];
+      let pad_right: number[] = [];
       if (uiHandlingNav()) {
         // hotkeys, but no nav keys
-        button(0, 0, 0, 'turn_left', [KEYS.Q], []);
-        button(1, 0, forward_frame, 'forward', [KEYS.W], []);
-        button(2, 0, 2, 'turn_right', [KEYS.E], []);
-        button(0, 1, 3, 'left', [KEYS.A], []);
-        button(1, 1, 4, 'back', [KEYS.S], []);
-        button(2, 1, 5, 'right', [KEYS.D], []);
       } else {
-        button(0, 0, 0, 'turn_left', [KEYS.Q, KEYS.LEFT], [PAD.LEFT]);
-        button(1, 0, forward_frame, 'forward', [KEYS.UP, KEYS.W], [PAD.UP]);
-        button(2, 0, 2, 'turn_right', [KEYS.E, KEYS.RIGHT], [PAD.RIGHT]);
-        button(0, 1, 3, 'left', [KEYS.A], [PAD.LEFT_BUMPER]);
-        button(1, 1, 4, 'back', [KEYS.DOWN, KEYS.S], [PAD.DOWN]);
-        button(2, 1, 5, 'right', [KEYS.D], [PAD.RIGHT_BUMPER]);
+        keys_turn_left.push(KEYS.LEFT);
+        keys_forward.push(KEYS.UP);
+        keys_turn_right.push(KEYS.RIGHT);
+        keys_back.push(KEYS.DOWN);
+        pad_turn_left.push(PAD.LEFT);
+        pad_forward.push(PAD.UP);
+        pad_turn_right.push(PAD.RIGHT);
+        pad_left.push(PAD.LEFT_BUMPER);
+        pad_back.push(PAD.DOWN);
+        pad_right.push(PAD.RIGHT_BUMPER);
       }
+      button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left);
+      button(1, 0, forward_frame, 'forward', keys_forward, pad_forward);
+      button(2, 0, 2, 'turn_right', keys_turn_right, pad_turn_right);
+      button(0, 1, 3, 'left', keys_left, pad_left);
+      button(1, 1, 4, 'back', keys_back, pad_back);
+      button(2, 1, 5, 'right', keys_right, pad_right);
     }
 
     if (no_move) {
