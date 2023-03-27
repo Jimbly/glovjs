@@ -54,7 +54,6 @@ class OfflineEntityManagerImpl<
   entities!: Partial<Record<EntityID, Entity>>;
   fading_ents!: FadingEnt[];
 
-  received_ent_ready!: boolean;
   received_ent_start!: boolean;
 
   frame_wall_time: number;
@@ -80,7 +79,6 @@ class OfflineEntityManagerImpl<
     this.entities = {};
     this.fading_ents = [];
     this.my_ent_id = 0;
-    this.received_ent_ready = false;
     this.received_ent_start = false;
   }
 
@@ -139,7 +137,7 @@ class OfflineEntityManagerImpl<
 
   // Has received all initial visible entities
   isReady(): boolean {
-    return this.received_ent_ready;
+    return true;
   }
 
   getSubscriptionId(): string {
@@ -232,10 +230,6 @@ class OfflineEntityManagerImpl<
   }
 
   checkNet(): boolean {
-    if (!this.received_ent_ready) {
-      // Not yet ready, do nothing
-      return true;
-    }
     return false;
   }
 

@@ -396,7 +396,6 @@ export function crawlerPlayInitShared(online: boolean, online_only_for_build: bo
   }
 
   controller = new CrawlerController({
-    online,
     game_state,
     entity_manager: crawlerEntityManager(),
     script_api,

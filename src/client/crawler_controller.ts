@@ -167,20 +167,17 @@ export type PlayerMotionParam = {
 
 export class CrawlerController {
   game_state: CrawlerState;
-  online: boolean;
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
   script_api: CrawlerScriptAPIClient;
   on_init_level?: (floor_id: number) => void;
   flush_vis_data?: (force: boolean) => void;
   constructor(param: {
-    online: boolean;
     game_state: CrawlerState;
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
     script_api: CrawlerScriptAPIClient;
     on_init_level?: (floor_id: number) => void;
     flush_vis_data?: (force: boolean) => void;
   }) {
-    this.online = param.online;
     this.game_state = param.game_state;
     this.entity_manager = param.entity_manager;
     this.script_api = param.script_api;
@@ -234,7 +231,7 @@ export class CrawlerController {
   }
 
   canRun(): boolean {
-    if (this.online && this.entity_manager.checkNet()) {
+    if (this.entity_manager.checkNet()) {
       return false;
     }
     return true;
@@ -533,7 +530,7 @@ export class CrawlerController {
     resp_func?: NetErrorCallback
   ): void {
     let my_ent = this.myEnt();
-    if (this.online) {
+    if (this.entity_manager.isOnline()) {
       my_ent.applyBatchUpdate({
         field: CrawlerController.PLAYER_MOVE_FIELD,
         action_id,
@@ -553,7 +550,7 @@ export class CrawlerController {
     resp_func: NetErrorCallback
   ): void {
     let my_ent = this.myEnt();
-    if (this.online) {
+    if (this.entity_manager.isOnline()) {
       my_ent.applyBatchUpdate({
         field: CrawlerController.PLAYER_MOVE_FIELD,
         action_id: 'floorchange',
@@ -660,7 +657,7 @@ export class CrawlerController {
           this.fade_override = 0;
           throw err;
         }
-        if (!this.online) {
+        if (!this.entity_manager.isOnline()) {
           this.onFloorChangeAck();
         }
         // else: floorchange_ack will be delivered momentarily
