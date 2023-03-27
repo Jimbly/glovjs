@@ -2357,14 +2357,16 @@
       "type": "demo_shopkeeper",
       "pos": [
         5,
-        13
+        13,
+        0
       ]
     },
     {
       "type": "demo_wander",
       "pos": [
         3,
-        9
+        9,
+        2
       ]
     }
   ],
