@@ -397,6 +397,7 @@ export function crawlerEntitiesInit(mode: OnlineMode): void {
     entity_manager = entity_manager_offline;
     entity_pos_manager = entity_pos_manager_offline;
   }
+  my_ent_id = entity_manager.getMyEntID();
 }
 
 export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawlerClient>(param: {
