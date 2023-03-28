@@ -428,7 +428,7 @@ export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
     channel: room,
     on_broadcast: on_broadcast,
   });
-  play_init_online(room);
+  play_init_online(room); // Calls crawlerPlayInitShared()
 }
 
 export function crawlerPlayInitOnlineLate(): void {
@@ -480,7 +480,7 @@ export function crawlerPlayInitOfflineLate(param: {
 
 export function crawlerPlayInitOffline(): void {
   crawlerPlayInitOfflineEarly();
-  play_init_offline();
+  play_init_offline(); // Calls crawlerPlayInitShared() and crawlerPlayInitOfflineLate()
 }
 
 let level_generator_test: LevelGenerator;

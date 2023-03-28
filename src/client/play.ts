@@ -87,9 +87,6 @@ import {
   crawlerRenderEntitiesPrep,
   crawlerRenderEntitiesStartup,
 } from './crawler_render_entities';
-import {
-  CrawlerScriptAPIClient,
-} from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
@@ -130,7 +127,6 @@ let loading_level = false;
 
 let controller: CrawlerController;
 
-let script_api: CrawlerScriptAPIClient;
 let pause_menu_up = false;
 
 let button_sprites: Record<ButtonStateString, Sprite>;
@@ -374,6 +370,7 @@ function playCrawl(): void {
     mapViewToggle();
   }
   let game_state = crawlerGameState();
+  let script_api = crawlerScriptAPI();
   if (frame_map_view) {
     if (engine.defines.LEVEL_GEN) {
       if (levelGenTest(game_state)) {
@@ -486,6 +483,7 @@ export function play(dt: number): void {
   crawlerRenderFrame();
 
   if (!loading_level && !buildModeActive()) {
+    let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
     aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
       settings.ai_pause || engine.defines.LEVEL_GEN || pause_menu_up, script_api);
@@ -514,7 +512,6 @@ function onInitPos(): void {
 
 function playInitShared(online: boolean): void {
   crawlerPlayInitShared(online, true);
-  script_api = crawlerScriptAPI();
   controller = crawlerController();
 
   controller.setOnPlayerMove(onPlayerMove);
