@@ -58,6 +58,7 @@ import {
   crawlerEntityManager,
   crawlerEntityTraitsClientStartup,
   crawlerMyEnt,
+  isLocal,
   isOnline,
 } from './crawler_entity_client';
 import {
@@ -166,6 +167,14 @@ function pauseMenu(): void {
       urlhash.go('');
     },
   }];
+  if (isLocal()) {
+    items.push({
+      name: 'Exit without saving',
+      cb: function () {
+        urlhash.go('');
+      },
+    });
+  }
   pause_menu.run({ items });
 
   ui.menuUp();
