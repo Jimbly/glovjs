@@ -24,6 +24,7 @@ import {
 } from 'glov/client/sprites';
 import { textureSupportsDepth, textureWhite } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
+import * as urlhash from 'glov/client/urlhash';
 import { getURLBase } from 'glov/client/urlhash';
 import { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
@@ -49,17 +50,19 @@ import {
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
-import { buildModeSetActive } from './crawler_build_mode';
 import { CrawlerController } from './crawler_controller';
 import {
   EntityCrawlerClient,
+  OnlineMode,
   crawlerEntitiesInit,
   crawlerEntitiesOnEntStart,
   crawlerEntityManager,
   crawlerMyActionSend,
   crawlerMyEnt,
   entityPosManager,
+  isLocal,
   isOnline,
+  isOnlineOnly,
 } from './crawler_entity_client';
 import {
   FOV,
@@ -203,7 +206,7 @@ function crawlerFlushVisData(force: boolean): void {
 
   if (str !== last_saved_vis_string[game_state.floor_id]) {
     last_saved_vis_string[game_state.floor_id] = str;
-    if (!isOnline()) {
+    if (isLocal()) {
       local_game_data.vis_data = local_game_data.vis_data || {};
       local_game_data.vis_data[game_state.floor_id] = str;
       return;
@@ -223,7 +226,14 @@ function crawlerFlushVisData(force: boolean): void {
   }
 }
 
-export function crawlerSaveGame(slot: string): void {
+urlhash.register({
+  key: 'slot',
+  push: true,
+});
+
+
+export function crawlerSaveGame(): void {
+  let slot = urlhash.get('slot') || '1';
   crawlerFlushVisData(true);
   let { entities } = crawlerEntityManager();
   let ent_list: DataObject[] = [];
@@ -251,7 +261,7 @@ export function crawlerInitVisData(floor_id: number): void {
     // Assume it's already applied to the level too?
     return;
   }
-  if (!isOnline()) {
+  if (isLocal()) {
     let data = local_game_data.vis_data?.[floor_id];
     if (data) {
       last_saved_vis_string[floor_id] = data;
@@ -308,7 +318,7 @@ cmd_parse.register({
 });
 
 function beforeUnload(): void {
-  if (game_state?.level && isOnline()) {
+  if (game_state?.level && isOnlineOnly()) {
     let str = game_state.level.getVisString();
     if (str !== last_saved_vis_string[game_state.floor_id]) {
       localStorageSetJSON<LocalVisData>('last_vis_data', {
@@ -322,7 +332,7 @@ function beforeUnload(): void {
 
 function crawlerOnInitHaveLevel(floor_id: number): void {
   crawlerInitVisData(floor_id);
-  if (!isOnline()) {
+  if (isLocal()) {
     if (!local_game_data.floors_inited || !local_game_data.floors_inited[floor_id]) {
       assert(game_state.floor_id === floor_id);
       let level = game_state.level;
@@ -332,6 +342,7 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
       if (level.initial_entities) {
         let initial_entities = clone(level.initial_entities);
         let entity_manager = crawlerEntityManager();
+        assert(!entity_manager.isOnline());
         for (let ii = 0; ii < initial_entities.length; ++ii) {
           initial_entities[ii].floor = floor_id;
           entity_manager.addEntityFromSerialized(initial_entities[ii]);
@@ -346,14 +357,36 @@ export function crawlerPlayWantNewGame(): void {
   want_new_game = true;
 }
 
-function crawlerLoadGame(slot: string): void {
-  // Just script data, not doing entities or player, etc
+function crawlerLoadGame(new_player_data: DataObject): boolean {
+  let entity_manager = crawlerEntityManager();
+  let slot = urlhash.get('slot') || '1';
   local_game_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}`, {});
   if (want_new_game) {
     want_new_game = false;
     local_game_data = {};
   }
   script_api.localDataSet(local_game_data.script_data || {});
+
+  // Initialize entities
+  let player_ent: Entity | null = null;
+  if (local_game_data.entities) {
+    for (let ii = 0; ii < local_game_data.entities.length; ++ii) {
+      let ent = entity_manager.addEntityFromSerialized(local_game_data.entities[ii]);
+      if (ent.is_player) {
+        player_ent = ent;
+      }
+    }
+  }
+
+  let need_init_pos = false;
+  if (!player_ent) {
+    need_init_pos = true;
+    player_ent = entity_manager.addEntityFromSerialized(new_player_data);
+  }
+  entity_manager.setMyEntID(player_ent.id);
+  crawlerEntitiesOnEntStart();
+
+  return need_init_pos;
 }
 
 function getLevelForFloorFromServer(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
@@ -381,19 +414,11 @@ function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSer
   });
 }
 
-export function crawlerPlayInitShared(online: boolean, online_only_for_build: boolean): void {
-  if (!online) {
-    buildModeSetActive(false);
-  }
-
+export function crawlerPlayInitShared(online: boolean): void {
   entityPosManager().reinit();
 
-  script_api = crawlerScriptAPIClientCreate(online && !online_only_for_build);
+  script_api = crawlerScriptAPIClientCreate(online);
   script_api.setCrawlerState(game_state);
-
-  if (online && online_only_for_build) {
-    crawlerLoadGame('build');
-  }
 
   controller = new CrawlerController({
     game_state,
@@ -407,7 +432,7 @@ export function crawlerPlayInitShared(online: boolean, online_only_for_build: bo
 }
 
 export function crawlerPlayInitOfflineEarly(): void {
-  crawlerEntitiesInit(false);
+  crawlerEntitiesInit(OnlineMode.OFFLINE);
 
   game_state = createCrawlerState({
     level_provider: getLevelForFloorFromWebFS,
@@ -419,7 +444,7 @@ export function crawlerPlayInitOfflineEarly(): void {
 }
 
 export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
-  crawlerEntitiesInit(true);
+  crawlerEntitiesInit(OnlineMode.ONLINE_ONLY);
   crawl_room = room;
   game_state = createCrawlerState({
     level_provider: getLevelForFloorFromServer,
@@ -436,42 +461,21 @@ export function crawlerPlayInitOnlineLate(): void {
 }
 
 export function crawlerPlayInitOfflineLate(param: {
-  slot: string;
   new_player_data: DataObject;
   loading_state: (dt: number) => void;
   next_state: (dt: number) => void;
 }): void {
-  const { slot, new_player_data, loading_state, next_state } = param;
-  let player_ent: Entity | null = null;
-  let entity_manager = crawlerEntityManager();
+  const { new_player_data, loading_state, next_state } = param;
 
   // Load or init game
-  crawlerLoadGame(slot);
-
-  // Initialize entities
-  if (local_game_data.entities) {
-    for (let ii = 0; ii < local_game_data.entities.length; ++ii) {
-      let ent = entity_manager.addEntityFromSerialized(local_game_data.entities[ii]);
-      if (ent.is_player) {
-        player_ent = ent;
-      }
-    }
-  }
-
-  let need_init_pos = false;
-  if (!player_ent) {
-    need_init_pos = true;
-    player_ent = entity_manager.addEntityFromSerialized(new_player_data);
-  }
-  entity_manager.setMyEntID(player_ent.id);
-  crawlerEntitiesOnEntStart();
+  let need_init_pos = crawlerLoadGame(new_player_data);
 
   // Load and init current floor
   engine.setState(loading_state);
   let floor_id = crawlerMyEnt().data.floor;
   game_state.getLevelForFloorAsync(floor_id, (level: CrawlerLevel) => {
     if (need_init_pos) {
-      v3copy(player_ent!.data.pos, level.special_pos.stairs_in);
+      v3copy(crawlerMyEnt().data.pos, level.special_pos.stairs_in);
     }
     engine.setState(next_state);
     controller.initFromMyEnt();
@@ -519,7 +523,7 @@ export function crawlerSetLevelGenMode(new_value: boolean): void {
   if (engine.defines.LEVEL_GEN) {
     crawlerInitBuildModeLevelGenerator();
   } else {
-    // TODO: gets out of sync with server, causes error
+    // TODO: position gets out of sync with server, causes error
     game_state.level_provider = isOnline() ? getLevelForFloorFromServer : getLevelForFloorFromWebFS;
     game_state.getLevelForFloorAsync(game_state.floor_id, () => {
       game_state.setLevelActive(game_state.floor_id);

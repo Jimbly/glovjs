@@ -93,6 +93,13 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
         seq_player_move: 'string',
       },
     }, {
+      action_id: 'ai_move',
+      self_only: false,
+      allowed_data_assignments: {
+        seq_ai_update: 'string',
+        pos: 'array',
+      },
+    }, {
       action_id: 'set_vis_data',
       handler: function (this: EntityCrawlerServer, { payload }, resp_func) {
         let { data, floor: floor_id } = (payload as { data: string; floor: number });

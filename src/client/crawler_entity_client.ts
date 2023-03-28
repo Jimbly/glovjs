@@ -1,3 +1,9 @@
+export enum OnlineMode {
+  OFFLINE = 0,
+  ONLINE_BUILD,
+  ONLINE_ONLY,
+}
+
 import assert from 'assert';
 import {
   ClientEntityManagerInterface,
@@ -52,6 +58,8 @@ import { statusPush } from './status';
 import type { CrawlerState } from '../common/crawler_state';
 import type { EntityBaseClient } from 'glov/client/entity_base_client';
 import type { UIBoxColored } from 'glov/client/ui';
+
+let online_mode: OnlineMode;
 
 export type EntityDraw2DOpts = UIBoxColored;
 
@@ -148,8 +156,23 @@ export function entityPosManager(): EntityPositionManager {
   return entity_pos_manager;
 }
 
-export function isOnline(): boolean {
-  return entity_manager.isOnline();
+// Always online (data saved online), or currently online due to build mode (data saved locally)
+export function isOnline(): OnlineMode {
+  return online_mode;
+}
+
+// Always online (data saved online)
+export function isOnlineOnly(): boolean {
+  return online_mode === OnlineMode.ONLINE_ONLY;
+}
+
+// Data saved locally (but, may currently be in online-mode if in build mode)
+export function isLocal(): boolean {
+  return !isOnlineOnly();
+}
+
+export function onlineMode(): OnlineMode {
+  return online_mode;
 }
 
 export function myEntID(): EntityID {
@@ -365,8 +388,9 @@ function entCreate(data: DataObject): Entity {
   return ent_factory.allocate(type_id, data);
 }
 
-export function crawlerEntitiesInit(online: boolean): void {
-  if (online) {
+export function crawlerEntitiesInit(mode: OnlineMode): void {
+  online_mode = mode;
+  if (mode) {
     entity_manager = entity_manager_online;
     entity_pos_manager = entity_pos_manager_online;
   } else {

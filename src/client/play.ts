@@ -140,7 +140,6 @@ function myEnt(): Entity {
 //   return crawlerEntityManager() as ClientEntityManagerInterface<Entity>;
 // }
 
-
 const PAUSE_MENU_W = 100;
 let pause_menu: SimpleMenu;
 function pauseMenu(): void {
@@ -158,12 +157,10 @@ function pauseMenu(): void {
       pause_menu_up = false;
     },
   }, {
-    name: 'Save and Exit',
+    name: isOnline() ? 'Return to Title' : 'Save and Exit',
     cb: function () {
       if (!isOnline()) {
-        crawlerSaveGame('1');
-      } else {
-        crawlerSaveGame('build');
+        crawlerSaveGame();
       }
       urlhash.go('');
     },
@@ -511,7 +508,7 @@ function onInitPos(): void {
 }
 
 function playInitShared(online: boolean): void {
-  crawlerPlayInitShared(online, true);
+  crawlerPlayInitShared(online);
   controller = crawlerController();
 
   controller.setOnPlayerMove(onPlayerMove);
@@ -529,7 +526,6 @@ function playInitOffline(): void {
   playInitShared(false);
 
   crawlerPlayInitOfflineLate({
-    slot: '1',
     new_player_data: {
       type: 'player',
       pos: [0, 0, 0],
