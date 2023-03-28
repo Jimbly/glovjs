@@ -46,7 +46,7 @@ import {
   aiDoFloor, aiTraitsClientStartup,
 } from './ai';
 // import './client_cmds';
-import { buildModeActive, buildModeSetActive, crawlerBuildModeUI } from './crawler_build_mode';
+import { buildModeActive, crawlerBuildModeUI } from './crawler_build_mode';
 import {
   crawlerCommStart,
   crawlerCommWant,
@@ -68,6 +68,7 @@ import {
   mapViewToggle,
 } from './crawler_map_view';
 import {
+  crawlerBuildModeActivate,
   crawlerController,
   crawlerGameState,
   crawlerPlayInitOfflineLate,
@@ -334,8 +335,8 @@ function playCrawl(): void {
   //   inventory_up = !inventory_up;
   // }
 
-  if (isOnline() && keyUpEdge(KEYS.B)) {
-    buildModeSetActive(!build_mode);
+  if (keyUpEdge(KEYS.B)) {
+    crawlerBuildModeActivate(!build_mode);
   }
 
   if (up_edge.menu) {
@@ -343,7 +344,7 @@ function playCrawl(): void {
       if (mapViewActive()) {
         mapViewSetActive(false);
       } else if (build_mode) {
-        buildModeSetActive(false);
+        crawlerBuildModeActivate(false);
       } else {
         // close whatever other menu
       }
@@ -448,7 +449,7 @@ export function play(dt: number): void {
 
   profilerStopStart('chat');
   getChatUI().run({
-    hide: map_view || pause_menu_up,
+    hide: map_view || pause_menu_up || !isOnline(),
     x: 3,
     y: 196,
     border: 2,

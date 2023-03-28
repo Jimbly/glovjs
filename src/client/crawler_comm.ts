@@ -13,6 +13,7 @@ import {
 } from './crawler_entity_client';
 import {
   crawlerController,
+  crawlerPlayInitHybridBuild,
   crawlerPlayInitOffline,
   crawlerPlayInitOnlineEarly,
   crawlerPlayInitOnlineLate,
@@ -37,6 +38,15 @@ let lobby_state: EngineState;
 let play_state: EngineState;
 let chat_ui: ChatUI | null = null;
 
+let want_offline_build: boolean = false;
+
+function effectiveDesiredChannel(): string | null {
+  if (want_offline_build) {
+    return 'build';
+  }
+  return desired_channel;
+}
+
 export function crawlerRoom(): ClientChannelWorker | null {
   return crawler_room;
 }
@@ -51,13 +61,13 @@ export function getChatUI(): ChatUI {
 }
 
 export function crawlerCommWant(): boolean {
-  if (desired_channel !== current_channel) {
+  if (effectiveDesiredChannel() !== current_channel) {
     return true;
   }
-  if (desired_channel === 'local') {
+  if (effectiveDesiredChannel() === 'local') {
     return false;
   }
-  return Boolean(!netClient().connected && desired_channel);
+  return Boolean(!netClient().connected && effectiveDesiredChannel());
 }
 
 function defaultSendJoin(room: ClientChannelWorker, cb: NetErrorCallback): void {
@@ -66,12 +76,16 @@ function defaultSendJoin(room: ClientChannelWorker, cb: NetErrorCallback): void 
 let join_func: typeof defaultSendJoin;
 
 let join_data: { room: ClientChannelWorker; channel_subid: string } | null = null;
-function join(channel_subid: string): void {
+function join(channel_subid: string, for_offline_build: boolean): ClientChannelWorker {
   assert(channel_subid);
-  assert(!current_channel);
+  assert(!current_channel || current_channel === 'local');
   let room = netSubs().getChannel(`${channel_type}.${channel_subid}`, true);
   room.onceSubscribe(() => {
-    crawlerPlayInitOnlineEarly(room);
+    if (for_offline_build) {
+      crawlerPlayInitHybridBuild(room);
+    } else {
+      crawlerPlayInitOnlineEarly(room);
+    }
   });
 
   join_data = {
@@ -84,6 +98,7 @@ function join(channel_subid: string): void {
       state = STATE_NONE;
     }
   });
+  return room;
 }
 
 function onEntStart(): void {
@@ -127,22 +142,23 @@ function crawlerCommHandshake(): void {
 
   if (netSubs().loggedIn() && netClient().connected) {
     if (state === STATE_NONE && netSubs().loggedIn() && netClient().connected) {
-      if (!desired_channel) {
+      let eff_desired_channel = effectiveDesiredChannel();
+      if (!eff_desired_channel) {
         engine.setState(lobby_state);
         return;
       }
       state = STATE_JOINING;
-      join(desired_channel);
+      join(eff_desired_channel, want_offline_build);
     }
 
     if (state === STATE_JOINED) {
-      if (desired_channel !== current_channel) {
+      if (effectiveDesiredChannel() !== current_channel) {
         state = STATE_LEAVING;
         assert(current_channel);
         leave(current_channel);
       } else {
         engine.setState(play_state);
-        crawlerPlayInitOnlineLate();
+        crawlerPlayInitOnlineLate(want_offline_build);
       }
     }
   }
@@ -164,6 +180,10 @@ function startLocalCrawl(): void {
 }
 
 export function crawlerCommStart(): void {
+  if (engine.stateActive(crawlerCommHandshake)) {
+    return;
+  }
+  want_offline_build = false; // TODO: auto-start build mode?
   if (desired_channel === 'local') {
     startLocalCrawl();
   } else {
@@ -186,6 +206,17 @@ urlhash.register({
 
 function crawlerCommOnFloorchangeAck(): void {
   crawlerController().onFloorChangeAck();
+}
+
+export function crawlerCommStartBuildComm(): ClientChannelWorker {
+  assert.equal(desired_channel, 'local');
+  want_offline_build = true;
+  let eff_desired = effectiveDesiredChannel();
+  assert(eff_desired);
+
+  engine.setState(crawlerCommHandshake);
+  let room = netSubs().getChannel(`${channel_type}.${eff_desired}`, false);
+  return room;
 }
 
 
