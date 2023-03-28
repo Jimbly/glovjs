@@ -72,7 +72,7 @@ module.exports = function (filename) {
   prettyInterface();
 
   requireVersions({
-    'nodejs': '16.13.0',
+    // 'nodejs': '16.13.0',
     'glov-build': '1.0.42',
     'glov-build-browserify': '1.0.8',
     'glov-build-cache': '1.1.0',
