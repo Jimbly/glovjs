@@ -1,5 +1,6 @@
 
 import * as engine from 'glov/client/engine.js';
+import { localStorageGet } from 'glov/client/local_storage.js';
 import { netSubs } from 'glov/client/net.js';
 import * as ui from 'glov/client/ui.js';
 import * as urlhash from 'glov/client/urlhash.js';
@@ -37,26 +38,33 @@ function title(dt: number): void {
   ui.print(null, x, y, Z.UI, 'Crawler Demo');
   x += 10;
   y += ui.font_height + 2;
+  for (let ii = 0; ii < 3; ++ii) {
+    let slot = ii + 1;
+    ui.print(null, x, y, Z.UI, `Slot ${slot}`);
+    if (ui.buttonText({
+      x, y: y + ui.button_height, text: 'Load Game',
+      disabled: !localStorageGet(`savedgame_${slot}`)
+    })) {
+      urlhash.go(`?c=local&slot=${slot}`);
+    }
+    if (ui.buttonText({
+      x, y: y + ui.button_height * 2 + 2, text: 'New Game',
+    })) {
+      crawlerPlayWantNewGame();
+      urlhash.go(`?c=local&slot=${slot}`);
+    }
+    x += ui.button_width + 2;
+  }
+  x = 10;
+  y += ui.button_height * 3 + 6;
   if (netSubs().loggedIn()) {
     if (ui.buttonText({
-      x, y, text: 'Build Mode',
+      x, y, text: 'Online Test',
     })) {
       urlhash.go('?c=build');
     }
     y += ui.button_height + 2;
   }
-  if (ui.buttonText({
-    x, y, text: 'New Game',
-  })) {
-    crawlerPlayWantNewGame();
-    urlhash.go('?c=local');
-  }
-  if (ui.buttonText({
-    x: x + ui.button_width + 2, y, text: 'Load Game',
-  })) {
-    urlhash.go('?c=local');
-  }
-  y += ui.button_height + 2;
   if (crawlerCommWant()) {
     crawlerCommStart();
   }
