@@ -50,6 +50,8 @@ import {
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
+import { buildModeSetActive } from './crawler_build_mode';
+import { crawlerCommStartBuildComm } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
   EntityCrawlerClient,
@@ -63,6 +65,7 @@ import {
   isLocal,
   isOnline,
   isOnlineOnly,
+  onlineMode,
 } from './crawler_entity_client';
 import {
   FOV,
@@ -105,11 +108,13 @@ export function crawlerGameState(): CrawlerState {
   return game_state;
 }
 
-let crawl_room: ClientChannelWorker;
+let crawl_room: ClientChannelWorker | null = null;
 export function crawlerRoom(): ClientChannelWorker {
+  assert(crawl_room);
   return crawl_room;
 }
 export function crawlerRoomID(): string {
+  assert(crawl_room);
   return crawl_room.getChannelID();
 }
 
@@ -390,6 +395,7 @@ function crawlerLoadGame(new_player_data: DataObject): boolean {
 }
 
 function getLevelForFloorFromServer(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
+  assert(crawl_room);
   let pak = crawl_room.pak('get_level');
   pak.writeInt(floor_id);
   pak.send(function (err: string | null, data?: CrawlerLevelSerialized) {
@@ -414,6 +420,47 @@ function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSer
   });
 }
 
+export function crawlerPlayInitHybridBuild(room: ClientChannelWorker): void {
+  assert(!crawl_room);
+  crawl_room = room;
+  crawlerEntityManager().reinit({
+    channel: room,
+    on_broadcast: on_broadcast,
+  });
+  game_state.resetAllLevels();
+  game_state.getLevelForFloorAsync(game_state.floor_id, () => {
+    game_state.setLevelActive(game_state.floor_id);
+    controller.initPosFromLevelDebug();
+  });
+}
+
+export function crawlerBuildModeActivate(build_mode: boolean): void {
+  buildModeSetActive(build_mode);
+  if (build_mode) {
+    if (game_state.level_provider === getLevelForFloorFromWebFS) {
+      // One-time switch to server-provided levels and connect to the room
+      assert(!crawl_room);
+      crawlerCommStartBuildComm();
+      game_state.level_provider = getLevelForFloorFromServer;
+    }
+    if (onlineMode() === OnlineMode.OFFLINE) {
+      crawlerEntitiesInit(OnlineMode.ONLINE_BUILD);
+      controller.buildModeSwitch({
+        entity_manager: crawlerEntityManager(),
+      });
+    } else {
+      assert.equal(onlineMode(), OnlineMode.ONLINE_ONLY);
+    }
+  } else {
+    if (onlineMode() === OnlineMode.ONLINE_BUILD) {
+      crawlerEntitiesInit(OnlineMode.OFFLINE);
+      controller.buildModeSwitch({
+        entity_manager: crawlerEntityManager(),
+      });
+    }
+  }
+}
+
 export function crawlerPlayInitShared(online: boolean): void {
   entityPosManager().reinit();
 
@@ -432,7 +479,9 @@ export function crawlerPlayInitShared(online: boolean): void {
 }
 
 export function crawlerPlayInitOfflineEarly(): void {
+  crawl_room = null;
   crawlerEntitiesInit(OnlineMode.OFFLINE);
+  crawlerBuildModeActivate(false); // TODO: switch to build mode immediately
 
   game_state = createCrawlerState({
     level_provider: getLevelForFloorFromWebFS,
@@ -456,8 +505,10 @@ export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
   play_init_online(room); // Calls crawlerPlayInitShared()
 }
 
-export function crawlerPlayInitOnlineLate(): void {
-  controller.initFromMyEnt();
+export function crawlerPlayInitOnlineLate(online_only_for_build: boolean): void {
+  if (!online_only_for_build) {
+    controller.initFromMyEnt();
+  }
 }
 
 export function crawlerPlayInitOfflineLate(param: {
@@ -490,6 +541,7 @@ export function crawlerPlayInitOffline(): void {
 let level_generator_test: LevelGenerator;
 export function crawlerInitBuildModeLevelGenerator(): LevelGenerator {
   if (!level_generator_test) {
+    assert(crawl_room);
     let room_public_data = crawl_room.getChannelData('public') as { seed: string };
     level_generator_test = levelGeneratorCreate({
       seed: room_public_data.seed,

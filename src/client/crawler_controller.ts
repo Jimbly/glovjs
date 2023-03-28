@@ -195,6 +195,12 @@ export class CrawlerController {
     this.on_init_pos = fn;
   }
 
+  buildModeSwitch(param: {
+    entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
+  }): void {
+    this.entity_manager = param.entity_manager;
+  }
+
 
   cam_pos: Vec3 = vec3(0, 0, 0.5);
   mode: 'modeCrawl' | 'modeFreecam' = 'modeCrawl';

@@ -9,6 +9,7 @@ import {
 } from 'glov/common/differ';
 import { clone } from 'glov/common/util';
 import { ChannelWorker } from 'glov/server/channel_worker';
+import { chattableWorkerInit } from 'glov/server/chattable_worker';
 import {
   VAID,
   entityServerDefaultLoadPlayerEntity,
@@ -364,6 +365,8 @@ export function crawlerWorkerInit(channel_server: ChannelServer): void {
     this.entity_manager.clientJoin(src, user_id, null);
     resp_func();
   });
+
+  chattableWorkerInit(CrawlerWorker);
 
   channel_server.registerChannelWorker('crawl', CrawlerWorker, {
     autocreate: true,
