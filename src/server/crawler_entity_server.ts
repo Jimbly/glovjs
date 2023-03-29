@@ -6,6 +6,7 @@ import { isInteger, plural } from 'glov/common/util';
 import { v3copy } from 'glov/common/vmath';
 import {
   EntityBaseServer,
+  VAID,
   entityServerRegisterActions,
   entityServerRegisterFieldDefs,
 } from 'glov/server/entity_base_server';
@@ -29,6 +30,19 @@ export interface EntityCrawlerServer extends EntityBaseServer {
   is_player: boolean;
   is_enemy: boolean;
 }
+class EntityCrawlerServerImpl extends EntityBaseServer implements EntityCrawlerServer {
+  declare data: EntityCrawlerDataServer;
+  declare type_id: string; // will be constant on the prototype
+
+  // On prototype properties:
+  declare is_player: boolean;
+  declare is_enemy: boolean;
+
+  visibleAreaGet(): VAID {
+    return this.data.floor as number || 0;
+  }
+}
+
 
 type Entity = EntityCrawlerServer;
 
@@ -174,7 +188,7 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
     fs: serverFSAPI(),
     directory: 'entities',
     ext: '.entdef',
-    Ctor: param.Ctor || EntityBaseServer as Constructor<TBaseClass>,
+    Ctor: param.Ctor || EntityCrawlerServerImpl as Constructor<TBaseClass>,
     reload_cb: onEntDefReload,
     ignore_unknown_traits: true,
   });

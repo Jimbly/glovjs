@@ -6,6 +6,11 @@ import type { ROVec2 } from 'glov/common/vmath';
 const { abs } = Math;
 const EPSILON = 0.01;
 
+export type CrawlerJoinPayload = {
+  pos?: JSVec3; // Only set if joining from hybrid offline build mode
+  floor_id?: number;
+};
+
 export interface EntityCrawlerDataCommon extends EntityBaseDataCommon {
   type: string;
   pos: JSVec3;

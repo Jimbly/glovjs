@@ -6,6 +6,8 @@ import { netClient, netSubs } from 'glov/client/net';
 import * as ui from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { ClientChannelWorker, NetErrorCallback } from 'glov/common/types';
+import { CrawlerJoinPayload } from '../common/crawler_entity_common';
+import { JSVec3 } from '../common/crawler_state';
 import { buildModeOnBuildOp } from './crawler_build_mode';
 import {
   crawlerEntitiesOnEntStart,
@@ -13,6 +15,7 @@ import {
 } from './crawler_entity_client';
 import {
   crawlerController,
+  crawlerGameState,
   crawlerPlayInitHybridBuild,
   crawlerPlayInitOffline,
   crawlerPlayInitOnlineEarly,
@@ -70,12 +73,25 @@ export function crawlerCommWant(): boolean {
   return Boolean(!netClient().connected && effectiveDesiredChannel());
 }
 
-function defaultSendJoin(room: ClientChannelWorker, cb: NetErrorCallback): void {
-  room.send('ent_join', null, cb);
+type JoinData = {
+  room: ClientChannelWorker;
+  channel_subid: string;
+  pos?: JSVec3; // only set if joining for hybrid/offline build
+  floor_id?: number;
+};
+
+function defaultSendJoin(join_data: JoinData, cb: NetErrorCallback): void {
+  let payload: CrawlerJoinPayload = {};
+  if (join_data.pos) {
+    assert(typeof join_data.floor_id === 'number');
+    payload.pos = join_data.pos;
+    payload.floor_id = join_data.floor_id;
+  }
+  join_data.room.send('ent_join', payload, cb);
 }
 let join_func: typeof defaultSendJoin;
 
-let join_data: { room: ClientChannelWorker; channel_subid: string } | null = null;
+let join_data: JoinData | null = null;
 function join(channel_subid: string, for_offline_build: boolean): ClientChannelWorker {
   assert(channel_subid);
   assert(!current_channel || current_channel === 'local');
@@ -92,7 +108,12 @@ function join(channel_subid: string, for_offline_build: boolean): ClientChannelW
     room,
     channel_subid,
   };
-  join_func(room, function (err) {
+  if (for_offline_build) {
+    join_data.floor_id = crawlerGameState().floor_id;
+    let { last_pos, last_rot } = crawlerController();
+    join_data.pos = [last_pos[0], last_pos[1], last_rot];
+  }
+  join_func(join_data, function (err) {
     if (err) {
       last_err = err;
       state = STATE_NONE;
