@@ -38,7 +38,6 @@ let last_err: string | null = null;
 let channel_type: string;
 export type EngineState = (dt: number) => void;
 let lobby_state: EngineState;
-let play_state: EngineState;
 let chat_ui: ChatUI | null = null;
 
 let want_offline_build: boolean = false;
@@ -178,7 +177,6 @@ function crawlerCommHandshake(): void {
         assert(current_channel);
         leave(current_channel);
       } else {
-        engine.setState(play_state);
         crawlerPlayInitOnlineLate(want_offline_build);
       }
     }
@@ -244,14 +242,12 @@ export function crawlerCommStartBuildComm(): ClientChannelWorker {
 export function crawlerCommStartup(param: {
   channel_type?: string;
   lobby_state: EngineState;
-  play_state: EngineState;
   title_func: (value: string) => string;
   join_func?: typeof defaultSendJoin;
   chat_ui?: ChatUI;
 }): void {
   channel_type = param.channel_type || 'crawl';
   lobby_state = param.lobby_state;
-  play_state = param.play_state;
   title_func = param.title_func;
   join_func = param.join_func || defaultSendJoin;
   chat_ui = param.chat_ui || null;

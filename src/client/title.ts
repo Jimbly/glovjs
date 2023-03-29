@@ -8,7 +8,6 @@ import { createAccountUI } from './account_ui.js';
 import { crawlerCommStart, crawlerCommStartup, crawlerCommWant } from './crawler_comm.js';
 import { crawlerPlayWantNewGame } from './crawler_play.js';
 import * as main from './main.js';
-import { play } from './play.js';
 
 
 type AccountUI = ReturnType<typeof createAccountUI>;
@@ -79,7 +78,6 @@ export function titleInit(dt: number): void {
 export function titleStartup(): void {
   crawlerCommStartup({
     lobby_state: titleInit,
-    play_state: play,
     title_func: (value: string) => `Crawler Demo | "${value}"`,
     chat_ui: main.chat_ui,
   });

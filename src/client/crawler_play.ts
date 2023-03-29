@@ -123,9 +123,11 @@ export function crawlerController(): CrawlerController {
   return controller;
 }
 
+export type EngineState = (dt: number) => void;
+let play_state: EngineState;
 let on_broadcast: ((data: EntityManagerEvent) => void) | undefined;
-let play_init_online: (room: ClientChannelWorker) => void;
-let play_init_offline: () => void;
+let play_init_online: ((room: ClientChannelWorker) => void) | undefined;
+let play_init_offline: (() => void) | undefined;
 
 let setting_pixely: 0 | 1 | 2 | 3;
 
@@ -471,7 +473,7 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
   }
 }
 
-export function crawlerPlayInitShared(online: boolean): void {
+function crawlerPlayInitShared(online: boolean): void {
   entityPosManager().reinit();
 
   script_api = crawlerScriptAPIClientCreate(online);
@@ -512,21 +514,26 @@ export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
     channel: room,
     on_broadcast: on_broadcast,
   });
-  play_init_online(room); // Calls crawlerPlayInitShared()
+  crawlerPlayInitShared(true);
+  play_init_online?.(room);
 }
 
 export function crawlerPlayInitOnlineLate(online_only_for_build: boolean): void {
+  engine.setState(play_state);
   if (!online_only_for_build) {
     controller.initFromMyEnt();
   }
 }
 
-export function crawlerPlayInitOfflineLate(param: {
+export type CrawlerOfflineData = {
   new_player_data: DataObject;
-  loading_state: (dt: number) => void;
-  next_state: (dt: number) => void;
-}): void {
-  const { new_player_data, loading_state, next_state } = param;
+  loading_state: EngineState;
+};
+let offline_data: CrawlerOfflineData | undefined;
+
+function crawlerPlayInitOfflineLate(): void {
+  assert(offline_data);
+  const { new_player_data, loading_state } = offline_data;
 
   // Load or init game
   let need_init_pos = crawlerLoadGame(new_player_data);
@@ -538,14 +545,16 @@ export function crawlerPlayInitOfflineLate(param: {
     if (need_init_pos) {
       v3copy(crawlerMyEnt().data.pos, level.special_pos.stairs_in);
     }
-    engine.setState(next_state);
+    engine.setState(play_state);
     controller.initFromMyEnt();
   });
 }
 
 export function crawlerPlayInitOffline(): void {
   crawlerPlayInitOfflineEarly();
-  play_init_offline(); // Calls crawlerPlayInitShared() and crawlerPlayInitOfflineLate()
+  crawlerPlayInitShared(false);
+  play_init_offline?.();
+  crawlerPlayInitOfflineLate();
 }
 
 let level_generator_test: LevelGenerator;
@@ -718,12 +727,16 @@ export function crawlerRenderFrame(): void {
 
 export function crawlerPlayStartup(param: {
   on_broadcast?: (data: EntityManagerEvent) => void;
-  play_init_online: (room: ClientChannelWorker) => void;
-  play_init_offline: () => void;
+  play_init_online?: (room: ClientChannelWorker) => void;
+  play_init_offline?: () => void;
+  offline_data?: CrawlerOfflineData;
+  play_state: EngineState;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
   play_init_offline = param.play_init_offline;
+  offline_data = param.offline_data;
+  play_state = param.play_state;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');
