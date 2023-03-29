@@ -429,11 +429,7 @@ export function crawlerPlayInitHybridBuild(room: ClientChannelWorker): void {
   });
   game_state.resetAllLevels();
   last_saved_vis_string = {};
-  game_state.getLevelForFloorAsync(game_state.floor_id, () => {
-    game_state.setLevelActive(game_state.floor_id);
-    crawlerInitVisData(game_state.floor_id);
-    controller.initPos(false); // Keeps current position off of game_state.pos/angle
-  });
+  controller.reloadLevel();
 }
 
 export function crawlerBuildModeActivate(build_mode: boolean): void {

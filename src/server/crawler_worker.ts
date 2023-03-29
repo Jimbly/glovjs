@@ -8,6 +8,7 @@ import {
   diffApply,
 } from 'glov/common/differ';
 import { clone } from 'glov/common/util';
+import { v3copy } from 'glov/common/vmath';
 import { ChannelWorker } from 'glov/server/channel_worker';
 import { chattableWorkerInit } from 'glov/server/chattable_worker';
 import {
@@ -40,7 +41,10 @@ import {
   crawlerScriptAPIServerCreate,
 } from './crawler_script_api_server';
 
-import type { BuildModeOp } from '../common/crawler_entity_common';
+import type {
+  BuildModeOp,
+  CrawlerJoinPayload,
+} from '../common/crawler_entity_common';
 import type { ActionListResponse } from 'glov/common/entity_base_common';
 import type { Packet } from 'glov/common/packet';
 import type {
@@ -94,12 +98,22 @@ export class CrawlerWorker<
         player_uid: string,
         cb: NetErrorCallback<Entity>,
       ) => {
+        let payload = join_payload as CrawlerJoinPayload;
         this.game_state.getLevelForFloorAsync(0, (level: CrawlerLevel) => {
           entityServerDefaultLoadPlayerEntity<Entity>({
             type: 'player',
             floor: 0,
             pos: level.special_pos.stairs_in,
-          }, sem, src, join_payload, player_uid, cb);
+          }, sem, src, join_payload, player_uid, function (err: null | string, ent?: Entity) {
+            if (ent && payload.pos) {
+              // This is only for transitioning from offline-play to online-build mode for the first time in a session
+              assert(typeof payload.floor_id === 'number');
+              v3copy(ent.data.pos, payload.pos);
+              ent.data.floor = payload.floor_id;
+              ent.finishCreation();
+            }
+            cb(err, ent);
+          });
         });
       },
     });
@@ -357,12 +371,12 @@ export function crawlerWorkerInit(channel_server: ChannelServer): void {
   CrawlerWorker.registerClientHandler('ent_join', function (
     this: DummyWorker,
     src: ClientHandlerSource,
-    pak: Packet,
+    payload: CrawlerJoinPayload,
     resp_func: NetResponseCallback
   ): void {
     let { user_id } = src;
     assert(user_id);
-    this.entity_manager.clientJoin(src, user_id, null);
+    this.entity_manager.clientJoin(src, user_id, payload);
     resp_func();
   });
 

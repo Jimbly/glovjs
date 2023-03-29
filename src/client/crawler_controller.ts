@@ -195,10 +195,25 @@ export class CrawlerController {
     this.on_init_pos = fn;
   }
 
+  updateEntAfterBuildModeSwitch(): void {
+    let my_online_ent = this.entity_manager.getMyEnt();
+    if (my_online_ent.data.floor !== this.game_state.floor_id) {
+      this.applyPlayerFloorChange([this.last_pos[0], this.last_pos[1], this.last_rot], this.game_state.floor_id,
+        undefined, () => {
+          // ignore
+        });
+    } else {
+      this.applyPlayerMove('move_debug', [this.last_pos[0], this.last_pos[1], this.last_rot]);
+    }
+  }
+
   buildModeSwitch(param: {
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
   }): void {
     this.entity_manager = param.entity_manager;
+    if (this.entity_manager.hasMyEnt()) {
+      this.updateEntAfterBuildModeSwitch();
+    }
   }
 
 
@@ -250,9 +265,9 @@ export class CrawlerController {
   moveBlockLoadingLevel(): boolean {
     return this.loading_level;
   }
-  initHaveLevel(floor_id: number): void {
+  initHaveLevel(floor_id: number, from_my_ent: boolean): void {
     this.game_state.setLevelActive(floor_id);
-    this.initPos(true);
+    this.initPos(from_my_ent);
     if (this.on_init_level) {
       this.on_init_level(floor_id);
     }
@@ -266,7 +281,20 @@ export class CrawlerController {
     this.loading_level = true;
     this.game_state.getLevelForFloorAsync(floor_id, () => {
       this.loading_level = false;
-      this.initHaveLevel(floor_id);
+      this.initHaveLevel(floor_id, true);
+    });
+  }
+
+  // For hybrid build transition
+  reloadLevel(): void {
+    let floor_id = this.game_state.floor_id;
+    assert(floor_id >= 0);
+    this.setFadeOverride(1);
+    this.setMoveBlocker(this.moveBlockLoadingLevel.bind(this));
+    this.loading_level = true;
+    this.game_state.getLevelForFloorAsync(floor_id, () => {
+      this.loading_level = false;
+      this.initHaveLevel(floor_id, false);
     });
   }
 
@@ -280,7 +308,7 @@ export class CrawlerController {
     this.transitioning_floor = false;
     this.fade_override = 0;
     assert(this.entity_manager.hasMyEnt());
-    this.initHaveLevel(this.myEnt().getData<number>('floor')!);
+    this.initHaveLevel(this.myEnt().getData<number>('floor')!, true);
     return true;
   }
 
