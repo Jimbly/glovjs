@@ -407,16 +407,28 @@ function getLevelForFloorFromServer(floor_id: number, cb: (level: CrawlerLevelSe
   });
 }
 
-function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
-  let url = `${getURLBase()}/levels/level${floor_id}.json`;
+function fetchLevel(filename: string, cb: (err?: string, data?: CrawlerLevelSerialized) => void): void {
+  let url = `${getURLBase()}/levels/${filename}.json`;
   fetch({
     url,
     response_type: 'json',
   }, (err?: string, data?: unknown) => {
+    cb(err, data as CrawlerLevelSerialized);
+  });
+}
+
+function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
+  let url = `${getURLBase()}/levels/level${floor_id}.json`;
+  fetchLevel(`level${floor_id}`, (err?: string, data?: CrawlerLevelSerialized) => {
     if (err) {
-      throw new Error(`Error loading "${url}": ${err}`);
+      return fetchLevel('empty', (err?: string, data2?: CrawlerLevelSerialized) => {
+        if (err) {
+          throw new Error(`Error loading "${url}": ${err}`);
+        }
+        cb(data2!);
+      });
     }
-    cb(data as CrawlerLevelSerialized);
+    cb(data!);
   });
 }
 
