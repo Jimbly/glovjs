@@ -72,8 +72,6 @@ import {
   crawlerBuildModeActivate,
   crawlerController,
   crawlerGameState,
-  crawlerPlayInitOfflineLate,
-  crawlerPlayInitShared,
   crawlerPlayStartup,
   crawlerRenderFrame,
   crawlerRenderFramePrep,
@@ -518,7 +516,6 @@ function onInitPos(): void {
 }
 
 function playInitShared(online: boolean): void {
-  crawlerPlayInitShared(online);
   controller = crawlerController();
 
   controller.setOnPlayerMove(onPlayerMove);
@@ -534,22 +531,11 @@ function playOfflineLoading(): void {
 
 function playInitOffline(): void {
   playInitShared(false);
-
-  crawlerPlayInitOfflineLate({
-    new_player_data: {
-      type: 'player',
-      pos: [0, 0, 0],
-      floor: 0,
-      stats: { hp: 10, hp_max: 10 },
-    },
-    loading_state: playOfflineLoading,
-    next_state: play,
-  });
 }
 
-function playInitEarly(spire_room: ClientChannelWorker): void {
+function playInitEarly(room: ClientChannelWorker): void {
 
-  // let room_public_data = spire_room.getChannelData('public') as { seed: string };
+  // let room_public_data = room.getChannelData('public') as { seed: string };
   // game_state.setSeed(room_public_data.seed);
 
   playInitShared(true);
@@ -561,6 +547,16 @@ export function playStartup(): void {
     // on_broadcast: onBroadcast,
     play_init_online: playInitEarly,
     play_init_offline: playInitOffline,
+    offline_data: {
+      new_player_data: {
+        type: 'player',
+        pos: [0, 0, 0],
+        floor: 0,
+        stats: { hp: 10, hp_max: 10 },
+      },
+      loading_state: playOfflineLoading,
+    },
+    play_state: play,
   });
   let ent_factory = traitFactoryCreate<Entity, DataObject>();
   aiTraitsClientStartup(ent_factory);
