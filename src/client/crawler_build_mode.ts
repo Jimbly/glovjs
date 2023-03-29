@@ -1400,6 +1400,15 @@ export function crawlerBuildModeUI(frame: Box): void {
     }
     y += ui.button_height + 2;
 
+    if (ui.buttonText({
+      x, y, z,
+      font,
+      text: 'Reset Visibility',
+    })) {
+      getChatUI().cmdParse('reset_vis_data');
+    }
+    y += ui.button_height + 2;
+
   }
 
   x = 5;
