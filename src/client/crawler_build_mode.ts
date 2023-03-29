@@ -152,8 +152,10 @@ function buildModeFinishUndoRedo(diff: Diff, level_data: CrawlerLevelSerialized)
       }
     });
     // Apply locally
+    let vis_str = level.getVisString();
     level.deserialize(level_data);
     level.finalize();
+    level.applyVisString(vis_str);
     // Re-set this as active to get vstyle updates applies
     game_state.setLevelActive(last_floor);
   }
@@ -233,10 +235,12 @@ export function buildModeOnBuildOp(data: BuildModeOp, resp_func: ErrorCallback):
     return;
   }
   let level = game_state.getLevelForFloorExisting(floor_id);
+  let vis_str = level.getVisString();
   let level_data = level.serialize();
   diffApply(level_data, diff);
   level.deserialize(level_data);
   level.finalize();
+  level.applyVisString(vis_str);
   if (floor_id === game_state.floor_id) {
     // Re-set this as active to get vstyle updates applies
     game_state.setLevelActive(floor_id);
