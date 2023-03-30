@@ -5,6 +5,7 @@ export enum OnlineMode {
 }
 
 import assert from 'assert';
+import { cmd_parse } from 'glov/client/cmds';
 import {
   ClientEntityManagerInterface,
   clientEntityManagerCreate,
@@ -25,6 +26,7 @@ import {
 } from 'glov/common/entity_base_common';
 import { TraitFactory, traitFactoryCreate } from 'glov/common/trait_factory';
 import {
+  CmdRespFunc,
   DataObject,
   EntityID,
   NetErrorCallback,
@@ -399,6 +401,54 @@ export function crawlerEntitiesInit(mode: OnlineMode): void {
   }
   my_ent_id = entity_manager.getMyEntID();
 }
+
+cmd_parse.register({
+  cmd: 'entset',
+  help: '(Debug) Set entity field on self',
+  func: function (param: string, resp_func: CmdRespFunc) {
+    let ent = crawlerMyEnt();
+    if (!ent) {
+      return resp_func('Missing entity');
+    }
+    let idx = param.indexOf(' ');
+    if (idx === -1) {
+      return resp_func('Expected syntax: /entset field JsonValue');
+    }
+    let field = param.slice(0, idx);
+    let value_str = param.slice(idx + 1);
+    let value;
+    try {
+      if (value_str === 'undefined') {
+        value = null;
+      } else {
+        value = JSON.parse(value_str);
+      }
+    } catch (e) {
+      return resp_func('Expected syntax: /entset field JsonValue');
+    }
+
+    let data_assignments: DataObject = {};
+    data_assignments[field] = value;
+
+    ent.actionSend({
+      action_id: 'set_debug',
+      data_assignments,
+    }, resp_func);
+  }
+});
+cmd_parse.register({
+  cmd: 'entget',
+  help: '(Debug) Get entity field from self',
+  func: function (param: string, resp_func: CmdRespFunc) {
+    let ent = crawlerMyEnt();
+    if (!ent) {
+      return resp_func('Missing entity');
+    }
+    let field = param;
+    resp_func(null, `"${field}" = ${JSON.stringify(field ? ent.getData(field) : ent.data)}`);
+  }
+});
+
 
 export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawlerClient>(param: {
   ent_factory?: TraitFactory<Entity, DataObject>;
