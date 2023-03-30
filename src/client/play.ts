@@ -10,6 +10,7 @@ import {
   keyDownEdge,
   keyUpEdge,
 } from 'glov/client/input';
+import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import { SimpleMenu, simpleMenuCreate } from 'glov/client/simple_menu';
 import {
@@ -108,6 +109,7 @@ const { floor, max, min, round } = Math;
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
   export let show_fps: 0 | 1;
+  export let volume: number;
 }
 
 // const ATTACK_WINDUP_TIME = 1000;
@@ -140,7 +142,7 @@ function myEnt(): Entity {
 //   return crawlerEntityManager() as ClientEntityManagerInterface<Entity>;
 // }
 
-const PAUSE_MENU_W = 100;
+const PAUSE_MENU_W = 160;
 let pause_menu: SimpleMenu;
 function pauseMenu(): void {
   if (!pause_menu) {
@@ -151,11 +153,18 @@ function pauseMenu(): void {
       width: PAUSE_MENU_W,
     });
   }
-  let items = [{
+  let items: MenuItem[] = [{
     name: 'Return to game',
     cb: function () {
       pause_menu_up = false;
     },
+  }, {
+    name: 'Volume',
+    //plus_minus: true,
+    slider: true,
+    value_inc: 0.05,
+    value_min: 0,
+    value_max: 1,
   }, {
     name: isOnline() ? 'Return to Title' : 'Save and Exit',
     cb: function () {
@@ -173,7 +182,17 @@ function pauseMenu(): void {
       },
     });
   }
-  pause_menu.run({ items });
+
+  let volume_item = items[1];
+  volume_item.value = settings.volume;
+  volume_item.name = `Volume: ${(settings.volume * 100).toFixed(0)}`;
+
+  pause_menu.run({
+    slider_w: 80,
+    items,
+  });
+
+  settings.set('volume', pause_menu.getItem(1).value);
 
   ui.menuUp();
 }
