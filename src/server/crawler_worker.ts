@@ -1,5 +1,5 @@
 const LEVEL_VERSION = 1;
-const EXPORT_PATH = './src/client/levels/';
+const EXPORT_PATH = null; // './src/client/levels/';
 
 import assert from 'assert';
 import fs from 'fs';
