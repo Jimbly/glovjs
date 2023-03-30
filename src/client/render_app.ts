@@ -41,7 +41,7 @@ export function renderAppStartup(): void {
       demo: spritesheet_crawlertest,
       whitebox: spritesheet_whitebox,
     },
-    split_dist: 1.8,
+    split_dist: 2.8,
     angle_offs: 0, // 9.5,
     pos_offs: vec2(0/*0.3*/, -0.95),
   });
