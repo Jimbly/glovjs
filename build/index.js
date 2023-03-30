@@ -407,6 +407,7 @@ const server_input_globs = [
   'server_static:**',
   'server_js_notest:**',
   'server_json:**',
+  'server_fsdata:**',
 ];
 
 let server_port = argv.port || process.env.port || 3000;
