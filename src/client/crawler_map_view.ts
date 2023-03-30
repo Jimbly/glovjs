@@ -202,7 +202,9 @@ export function crawlerMapViewDraw(
         tex_offs: vec2(uoffs, -22/32),
       },
     });
+  }
 
+  if (!fullscreen) {
     ui.font.drawSizedAligned(null, x, y + 1, z + 1, ui.font_height,
       ui.font.ALIGN.HCENTER, w, 0, `Floor ${game_state.floor_id}`);
   }

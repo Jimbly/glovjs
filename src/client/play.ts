@@ -268,13 +268,14 @@ function playCrawl(): void {
   let compass_h = show_compass ? 11 : 0;
   let minimap_h = minimap_display_h + compass_h;
 
-  if (!frame_map_view && build_mode && !controller.ignoreGameplay()) {
+  if (build_mode && !controller.ignoreGameplay()) {
     let build_y = MINIMAP_Y + minimap_h + 2;
     crawlerBuildModeUI({
       x: MINIMAP_X,
       y: build_y,
       w: game_width - MINIMAP_X - 2,
       h: MOVE_BUTTONS_Y0 - build_y - 2,
+      map_view: frame_map_view,
     });
   }
 
