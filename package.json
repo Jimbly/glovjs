@@ -20,7 +20,7 @@
     "clean": "node build clean",
     "build": "node build build",
     "cache": "node build build.prod.png --cache-rebuild",
-    "prod": "node build build && node dist/game/build.prod/server/index.js --master",
+    "prod": "node build build && node dist/game/build.prod/server/index.js --master --port 4021",
     "test_watch": "nodemon -w build -- build test --watch",
     "test": "node build lint test"
   },
