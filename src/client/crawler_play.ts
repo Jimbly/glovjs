@@ -50,7 +50,7 @@ import {
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
-import { buildModeSetActive } from './crawler_build_mode';
+import { buildModeActive, buildModeSetActive } from './crawler_build_mode';
 import { crawlerCommStartBuildComm } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
@@ -493,7 +493,6 @@ function crawlerPlayInitShared(online: boolean): void {
 export function crawlerPlayInitOfflineEarly(): void {
   crawl_room = null;
   crawlerEntitiesInit(OnlineMode.OFFLINE);
-  crawlerBuildModeActivate(false); // TODO: switch to build mode immediately
 
   game_state = createCrawlerState({
     level_provider: getLevelForFloorFromWebFS,
@@ -547,6 +546,10 @@ function crawlerPlayInitOfflineLate(): void {
     }
     engine.setState(play_state);
     controller.initFromMyEnt();
+
+    if (buildModeActive()) {
+      crawlerBuildModeActivate(true);
+    }
   });
 }
 
