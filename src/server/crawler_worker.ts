@@ -134,12 +134,10 @@ export class CrawlerWorker<
 
   levelFallbackProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
     // Can be overridden by app
-    if (EXPORT_PATH) {
-      let file = `${EXPORT_PATH}empty.json`;
-      if (fs.existsSync(file)) {
-        let data = fs.readFileSync(file, 'utf8');
-        return void cb(JSON.parse(data));
-      }
+    let file = `${EXPORT_PATH || './src/client/levels/'}empty.json`;
+    if (fs.existsSync(file)) {
+      let data = fs.readFileSync(file, 'utf8');
+      return void cb(JSON.parse(data));
     }
     let level = createLevel();
     level.alloc(16, 16);
