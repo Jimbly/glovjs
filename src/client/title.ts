@@ -10,6 +10,8 @@ import { crawlerPlayWantNewGame } from './crawler_play.js';
 import * as main from './main.js';
 
 
+const { max } = Math;
+
 type AccountUI = ReturnType<typeof createAccountUI>;
 
 let account_ui: AccountUI;
@@ -18,8 +20,10 @@ function title(dt: number): void {
   main.chat_ui.run({
     hide: true,
   });
+
+  let y = 40;
   if (engine.DEBUG || true) {
-    account_ui.showLogin({
+    let next_y = account_ui.showLogin({
       x: 10,
       y: 10,
       pad: 2,
@@ -30,9 +34,10 @@ function title(dt: number): void {
       button_width: ui.button_width,
       font_height_small: ui.font_height,
     });
+
+    y = max(next_y + 2, y);
   }
 
-  let y = 40;
   let x = 10;
   ui.print(null, x, y, Z.UI, 'Crawler Demo');
   x += 10;

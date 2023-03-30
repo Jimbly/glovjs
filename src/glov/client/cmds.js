@@ -86,26 +86,6 @@ cmd_parse.register({
   }
 });
 
-cmd_parse.register({
-  cmd: 'csr',
-  access_run: ['sysadmin'],
-  help: '(Admin) Run a command as another user',
-  usage: '$HELP\n  /csr UserID command\n' +
-    'Example: /csr jimbly gems -100',
-  func: function (str, resp_func) {
-    let idx = str.indexOf(' ');
-    if (idx === -1) {
-      return void resp_func('Invalid number of arguments');
-    }
-    let user_id = str.slice(0, idx);
-    let cmd = str.slice(idx + 1);
-    let pak = net.subs.getChannelImmediate(`user.${user_id}`).pak('csr_admin_to_user');
-    pak.writeJSON(cmd_parse.last_access);
-    pak.writeString(cmd);
-    pak.send(resp_func);
-  }
-});
-
 function cmdDesc(cmd_data) {
   return `/${cmd_data.cmd} - ${cmd_data.help}`;
 }

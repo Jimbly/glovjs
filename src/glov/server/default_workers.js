@@ -803,6 +803,7 @@ export class DefaultUserWorker extends ChannelWorker {
   handleCSRAdminToUser(src, pak, resp_func) {
     let access = pak.readJSON();
     let cmd = pak.readString();
+    let desired_client_id = pak.readAnsiString();
     if (!this.exists()) {
       return void resp_func('ERR_INVALID_USER');
     }
@@ -822,10 +823,15 @@ export class DefaultUserWorker extends ChannelWorker {
       // not found
       // find a client worker for this user
       let to_use;
-      for (let channel_id in this.my_clients) {
-        to_use = channel_id;
-        if (channel_id !== src.channel_id) {
-          break;
+      let desired_channel_id = desired_client_id ? `client.${desired_client_id}` : '';
+      if (desired_channel_id && this.my_clients[desired_channel_id]) {
+        to_use = desired_channel_id;
+      } else {
+        for (let channel_id in this.my_clients) {
+          to_use = channel_id;
+          if (channel_id !== src.channel_id) {
+            break;
+          }
         }
       }
       if (!to_use) {
