@@ -1238,7 +1238,7 @@ function resizeLevel(dx: number, dy: number): void {
 }
 
 
-export function crawlerBuildModeUI(frame: Box): void {
+export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   let game_state = crawlerGameState();
   let level = game_state.level;
   if (!level) {
@@ -1255,6 +1255,17 @@ export function crawlerBuildModeUI(frame: Box): void {
     // toggleWall();
     toggleWithSelected();
   }
+  if (keyDownEdge(KEYS.EQUALS)) {
+    getChatUI().cmdParse(`floor ${game_state.floor_id + 1}`);
+  }
+  if (keyDownEdge(KEYS.MINUS) && game_state.floor_id !== 0) {
+    getChatUI().cmdParse(`floor ${game_state.floor_id - 1}`);
+  }
+
+  if (frame.map_view) {
+    return;
+  }
+
   let { x, y, w, h } = frame;
   const x0 = x;
   const x1 = x + w;
@@ -1422,12 +1433,14 @@ export function crawlerBuildModeUI(frame: Box): void {
   }
   (settings.build_mode_help ? [
     'BUILD MODE',
+    '[B] - Toggle Build Mode',
     '[SPACE] - Toggle cell/wall with selected',
     build_tab === BuildTab.Paint ? '[NUMPAD/1-9] - Select cell/wall from palette' : '',
     build_tab === BuildTab.Paint ? '  Double-select or shift-click to redefine palette' : '',
     '[ALT+1-3] - Change tab',
     '[CTRL+Z/Y] - Undo/Redo',
     '[M] - Map',
+    '[+/-] - Change floor',
     '[F1] - Toggle this help',
     '[F2] - Toggle freecam',
   ] : ['BUILD MODE (F1 Help)']).forEach((text) => {
