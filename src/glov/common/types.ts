@@ -183,6 +183,7 @@ export interface ClientChannelWorker {
   getChannelID(): string;
   pak(msg: string): Packet;
   send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
+  cmdParse(cmd: string, resp_func: CmdRespFunc): void;
   readonly data: {
     public?: unknown;
   };

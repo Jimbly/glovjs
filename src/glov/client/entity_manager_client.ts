@@ -79,6 +79,7 @@ export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=an
   // Offline only
   addEntityFromSerialized(data: DataObject): Entity;
   setMyEntID(id: EntityID): void;
+  deleteEntity(ent_id: EntityID, reason: string) : void;
 
   // EventEmitter:
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,6 +345,10 @@ class ClientEntityManagerImpl<
     } else {
       this.finalizeDelete(ent_id);
     }
+  }
+
+  deleteEntity(ent_id: EntityID, reason: string) : void {
+    assert(false, 'Offline only');
   }
 
   private getEntDataForDiff(ent_id: EntityID): [EntityBaseDataCommon, Entity | null] {

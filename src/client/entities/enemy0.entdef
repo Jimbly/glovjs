@@ -1,6 +1,4 @@
 ---
-properties:
-  do_split: false
 traits:
 - id: enemy
 # - id: stats_default

@@ -212,6 +212,10 @@ class OfflineEntityManagerImpl<
     }
   }
 
+  deleteEntity(ent_id: EntityID, reason: string) : void {
+    this.deleteEntityInternal(ent_id, reason);
+  }
+
   // private onEntReady(): void {
   //   if (this.received_ent_start) {
   //     this.received_ent_ready = true;

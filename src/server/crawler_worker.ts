@@ -312,8 +312,8 @@ CrawlerWorker.registerClientHandler('build', function (
 });
 
 CrawlerWorker.registerCmds([{
-  cmd: 'floor_reset',
-  help: 'Resets floor',
+  cmd: 'floor_reset_worker',
+  access_show: ['hidden'],
   func: function (this: DummyWorker, data: string, resp_func: ErrorCallback<string>): void {
     let ent = this.cmdFindEnt();
     if (!ent) {
@@ -326,10 +326,8 @@ CrawlerWorker.registerCmds([{
     this.entity_manager.visibleAreaReset(ent.data.floor, resp_func);
   },
 }, {
-  cmd: 'spawn',
-  help: 'Spawns an entity of the specified type',
-  prefix_usage_with_help: true,
-  usage: '/spawn [type_id]',
+  cmd: 'spawn_worker',
+  access_show: ['hidden'],
   func: function (this: DummyWorker, str: string, resp_func: CmdRespFunc) {
     let ent = this.cmdFindEnt();
     if (!ent) {

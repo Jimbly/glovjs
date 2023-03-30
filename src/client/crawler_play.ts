@@ -47,6 +47,9 @@ import {
   CrawlerLevel,
   CrawlerLevelSerialized,
   CrawlerState,
+  DX,
+  DY,
+  JSVec3,
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
@@ -337,6 +340,21 @@ function beforeUnload(): void {
   }
 }
 
+function populateLevelFromInitialEntities(floor_id: number, level: CrawlerLevel): number {
+  let ret = 0;
+  if (level.initial_entities) {
+    let initial_entities = clone(level.initial_entities);
+    let entity_manager = crawlerEntityManager();
+    assert(!entity_manager.isOnline());
+    for (let ii = 0; ii < initial_entities.length; ++ii) {
+      initial_entities[ii].floor = floor_id;
+      entity_manager.addEntityFromSerialized(initial_entities[ii]);
+      ++ret;
+    }
+  }
+  return ret;
+}
+
 function crawlerOnInitHaveLevel(floor_id: number): void {
   crawlerInitVisData(floor_id);
   if (isLocal()) {
@@ -346,18 +364,58 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
       assert(level);
       local_game_data.floors_inited = local_game_data.floors_inited || {};
       local_game_data.floors_inited[floor_id] = true;
-      if (level.initial_entities) {
-        let initial_entities = clone(level.initial_entities);
-        let entity_manager = crawlerEntityManager();
-        assert(!entity_manager.isOnline());
-        for (let ii = 0; ii < initial_entities.length; ++ii) {
-          initial_entities[ii].floor = floor_id;
-          entity_manager.addEntityFromSerialized(initial_entities[ii]);
-        }
-      }
+      populateLevelFromInitialEntities(floor_id, level);
     }
   }
 }
+
+cmd_parse.register({
+  cmd: 'floor_reset',
+  help: 'Resets floor',
+  func: function (str: string, resp_func: CmdRespFunc): void {
+    if (isOnlineOnly()) {
+      return crawlerRoom().cmdParse(`floor_reset_worker ${str}`, resp_func);
+    }
+    let floor_id = game_state.floor_id;
+    let level = game_state.level;
+    assert(level);
+    level.resetState();
+    let entity_manager = crawlerEntityManager();
+    let ents = entity_manager.entitiesFind((ent) => ent.data.floor === floor_id, true);
+    let count = 0;
+    for (let ii = 0; ii < ents.length; ++ii) {
+      let ent = ents[ii];
+      if (!ent.is_player) {
+        ++count;
+        entity_manager.deleteEntity(ent.id, 'reset');
+      }
+    }
+    let added = populateLevelFromInitialEntities(floor_id, level);
+    resp_func(null, `${count} entities deleted, ${added} entities spawned`);
+  },
+});
+cmd_parse.register({
+  cmd: 'spawn',
+  help: 'Spawns an entity of the specified type',
+  prefix_usage_with_help: true,
+  usage: '/spawn [type_id]',
+  func: function (str: string, resp_func: CmdRespFunc) {
+    if (isOnlineOnly()) {
+      return crawlerRoom().cmdParse(`spawn_worker ${str}`, resp_func);
+    }
+    let ent = crawlerMyEnt();
+    let my_pos = ent.getData<JSVec3>('pos')!;
+    let ent_data = {
+      type: str || 'enemy0',
+      floor: ent.data.floor,
+      pos: [my_pos[0] + DX[my_pos[2]], my_pos[1] + DY[my_pos[2]], 0],
+    };
+    let entity_manager = crawlerEntityManager();
+    entity_manager.addEntityFromSerialized(ent_data);
+
+    resp_func();
+  }
+});
 
 let want_new_game = false;
 export function crawlerPlayWantNewGame(): void {
@@ -490,7 +548,7 @@ function crawlerPlayInitShared(online: boolean): void {
   last_saved_vis_string = {};
 }
 
-export function crawlerPlayInitOfflineEarly(): void {
+function crawlerPlayInitOfflineEarly(): void {
   crawl_room = null;
   crawlerEntitiesInit(OnlineMode.OFFLINE);
 
