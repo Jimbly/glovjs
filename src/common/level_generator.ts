@@ -1120,7 +1120,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   };
   level.gen_data = gen_data;
 
-  level.setVstyle('spire');
+  level.setVstyle('demo');
 
   return level;
 }
