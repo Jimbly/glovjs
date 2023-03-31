@@ -24,7 +24,10 @@ import {
 } from '../common/crawler_state';
 import { crawlerRoom } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
-import { crawlerMyEnt } from './crawler_entity_client';
+import {
+  OnlineMode,
+  crawlerMyEnt,
+} from './crawler_entity_client';
 import { statusSet } from './status';
 
 export type CrawlerScriptLocalData = {
@@ -141,6 +144,20 @@ class CrawlerScriptAPIClientNetwork extends CrawlerScriptAPIClientBase implement
   }
 }
 
+class CrawlerScriptAPIClientNetworkDummy extends CrawlerScriptAPIClientNetwork {
+  keyClear(key: string): void {
+    let room = crawlerRoom();
+    assert(room);
+    room.setChannelData(`public.keys.${key}`, undefined);
+  }
+  keySet(key: string): void {
+    assert(!key.startsWith('u:'), 'User-scoped keys not supported');
+    let room = crawlerRoom();
+    assert(room);
+    room.setChannelData(`public.keys.${key}`, true);
+  }
+}
+
 class CrawlerScriptAPIClientLocal extends CrawlerScriptAPIClientBase implements CrawlerScriptAPIClient {
   keyClear(key: string): void {
     this.predicted_keys[key] = false;
@@ -172,9 +189,18 @@ class CrawlerScriptAPIClientLocal extends CrawlerScriptAPIClientBase implements 
   }
 }
 
-export function crawlerScriptAPIClientCreate(online: boolean): CrawlerScriptAPIClient {
-  if (online) {
-    return new CrawlerScriptAPIClientNetwork();
+let dummy_server = false;
+export function crawlerScriptAPIDummyServer(is_dummy: boolean): void {
+  dummy_server = is_dummy;
+}
+
+export function crawlerScriptAPIClientCreate(online_mode: OnlineMode): CrawlerScriptAPIClient {
+  if (online_mode === OnlineMode.ONLINE_ONLY) {
+    if (dummy_server) {
+      return new CrawlerScriptAPIClientNetworkDummy();
+    } else {
+      return new CrawlerScriptAPIClientNetwork();
+    }
   } else {
     return new CrawlerScriptAPIClientLocal();
   }

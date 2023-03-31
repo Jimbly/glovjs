@@ -257,6 +257,7 @@ CrawlerWorker.prototype.emit_join_leave_events = true;
 CrawlerWorker.prototype.require_login = true;
 CrawlerWorker.prototype.auto_destroy = true;
 CrawlerWorker.prototype.overrides_constructor = false;
+CrawlerWorker.prototype.permissive_client_set = true; // For keySet dummy on client, etc
 
 entityManagerWorkerInit(CrawlerWorker);
 

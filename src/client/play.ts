@@ -88,6 +88,7 @@ import {
   crawlerRenderEntitiesPrep,
   crawlerRenderEntitiesStartup,
 } from './crawler_render_entities';
+import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
@@ -563,6 +564,7 @@ function playInitEarly(room: ClientChannelWorker): void {
 
 export function playStartup(): void {
   ({ font } = ui);
+  crawlerScriptAPIDummyServer(true); // No script API running on server
   crawlerPlayStartup({
     // on_broadcast: onBroadcast,
     play_init_online: playInitEarly,

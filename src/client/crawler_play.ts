@@ -532,10 +532,10 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
   }
 }
 
-function crawlerPlayInitShared(online: boolean): void {
+function crawlerPlayInitShared(): void {
   entityPosManager().reinit();
 
-  script_api = crawlerScriptAPIClientCreate(online);
+  script_api = crawlerScriptAPIClientCreate(onlineMode());
   script_api.setCrawlerState(game_state);
 
   controller = new CrawlerController({
@@ -573,7 +573,7 @@ export function crawlerPlayInitOnlineEarly(room: ClientChannelWorker): void {
     channel: room,
     on_broadcast: on_broadcast,
   });
-  crawlerPlayInitShared(true);
+  crawlerPlayInitShared();
   play_init_online?.(room);
 }
 
@@ -615,7 +615,7 @@ function crawlerPlayInitOfflineLate(): void {
 
 export function crawlerPlayInitOffline(): void {
   crawlerPlayInitOfflineEarly();
-  crawlerPlayInitShared(false);
+  crawlerPlayInitShared();
   play_init_offline?.();
   crawlerPlayInitOfflineLate();
 }
