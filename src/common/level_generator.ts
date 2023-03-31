@@ -1276,7 +1276,7 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
     let enemy_type = rand.range(3);
     initial_entities.push({
       type: `enemy${enemy_type}`,
-      pos: [xx,yy],
+      pos: [xx,yy,0],
     });
   }
   level.initial_entities = initial_entities;
