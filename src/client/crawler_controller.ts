@@ -81,6 +81,7 @@ import {
 } from './crawler_render';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
+import { statusPush } from './status';
 
 const { PI, abs, cos, random, round, sin } = Math;
 
@@ -484,6 +485,9 @@ export class CrawlerController {
       script_api.setPos(cur.pos);
       let blocked = game_state.level!.wallsBlock(cur.pos, next.action_dir, script_api);
       if ((blocked & BLOCK_MOVE) && build_mode) {
+        if (!(blocked & BLOCK_VIS)) {
+          blocked &= ~BLOCK_MOVE;
+        }
         let wall_desc = game_state.level!.getCell(cur.pos[0], cur.pos[1])!.walls[next.action_dir];
         if (wall_desc.replace) {
           for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
@@ -493,6 +497,9 @@ export class CrawlerController {
               blocked &= ~BLOCK_MOVE;
             }
           }
+        }
+        if (!(blocked & BLOCK_MOVE)) {
+          statusPush('Build mode open_move bypassed');
         }
       }
       if (blocked & BLOCK_MOVE) {
