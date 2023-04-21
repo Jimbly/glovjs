@@ -35,3 +35,11 @@ export function getAbilityReload(): boolean {
 export function setAbilityReload(value: boolean): void {
   override_ability_reload = ability_reload && value;
 }
+
+let ability_chat = true;
+export function getAbilityChat(): boolean {
+  return ability_chat;
+}
+export function setAbilityChat(value: boolean): void {
+  ability_chat = value;
+}

@@ -5,6 +5,7 @@ const assert = require('assert');
 const { asyncParallel } = require('glov-async');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
+const { getAbilityChat } = require('./client_config.js');
 const engine = require('./engine.js');
 const glov_font = require('./font.js');
 const { isFriend } = require('./social.js');
@@ -421,6 +422,9 @@ ChatUI.prototype.focus = function () {
 };
 
 ChatUI.prototype.runLate = function () {
+  if (!getAbilityChat()) {
+    return;
+  }
   this.did_run_late = true;
   if (input.keyDownEdge(input.KEYS.RETURN)) {
     this.focus();
@@ -646,6 +650,9 @@ ChatUI.prototype.setZOverride = function (z) {
 ChatUI.prototype.run = function (opts) {
   const UI_SCALE = ui.font_height / 24;
   opts = opts || {};
+  if (!getAbilityChat()) {
+    opts.hide = true;
+  }
   const border = opts.border || this.border || (8 * UI_SCALE);
   const SPACE_ABOVE_ENTRY = border;
   const scroll_grow = opts.scroll_grow || 0;
