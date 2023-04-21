@@ -332,10 +332,11 @@ export function toNumber(v: string): number {
   return Number(v);
 }
 
-export function randomNot(not_value: number, max_value: number): number {
+export function randomNot(not_value: number, min_value: number, max_value: number): number {
   let new_value;
+  let range = max_value - min_value;
   do {
-    new_value = floor(random() * max_value);
+    new_value = floor(min_value + random() * range);
   } while (new_value === not_value);
   return new_value;
 }

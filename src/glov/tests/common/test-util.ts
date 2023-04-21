@@ -5,6 +5,7 @@ import {
   dateToFileTimestamp,
   empty,
   once,
+  randomNot,
 } from 'glov/common/util';
 import 'glov/server/test';
 
@@ -55,6 +56,17 @@ asyncSeries([
     assert(dateToFileTimestamp(d) === '9999-12-31 23_59_59');
     d = new Date(1900, 0, 1, 0, 0, 0);
     assert(dateToFileTimestamp(d) === '1900-01-01 00_00_00');
+    next();
+  },
+  function testRandomNot(next) {
+    let v = 2;
+    for (let ii = 0; ii < 10; ++ii) {
+      let v2 = randomNot(v, 2, 4);
+      assert(v2 !== v);
+      assert(v2 >= 2);
+      assert(v2 < 4);
+      v = v2;
+    }
     next();
   },
 ], function (err) {
