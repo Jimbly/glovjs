@@ -1,29 +1,29 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-disable import/order */
-const assert = require('assert');
-const { asyncParallel } = require('glov-async');
-const camera2d = require('./camera2d.js');
-const { cmd_parse } = require('./cmds.js');
-const { getAbilityChat } = require('./client_config.js');
-const engine = require('./engine.js');
-const glov_font = require('./font.js');
-const { isFriend } = require('./social.js');
-const input = require('./input.js');
-const { link } = require('./link.js');
-const local_storage = require('./local_storage.js');
-const { getStringIfLocalizable } = require('./localization.js');
+
+import assert from 'assert';
+import { asyncParallel } from 'glov-async';
+import { clamp, defaults, deprecate, matchAll } from 'glov/common/util';
+import { v3copy, vec4 } from 'glov/common/vmath';
+import * as camera2d from './camera2d';
+import { getAbilityChat } from './client_config';
+import { cmd_parse } from './cmds';
+import * as engine from './engine';
+import * as glov_font from './font';
+import * as input from './input';
+import { link } from './link';
+import * as local_storage from './local_storage';
+import { getStringIfLocalizable } from './localization';
+import { netClient, netClientId, netSubs, netUserId } from './net';
+import { scrollAreaCreate } from './scroll_area';
+import * as settings from './settings';
+import { isFriend } from './social';
+import { spotUnfocus } from './spot';
+import * as ui from './ui';
+import { profanityFilter, profanityStartup } from './words/profanity';
+
 const { ceil, floor, max, min, round } = Math;
-const { netClient, netClientId, netSubs, netUserId } = require('./net.js');
-const { profanityFilter, profanityStartup } = require('./words/profanity.js');
-const { scrollAreaCreate } = require('./scroll_area.js');
-const settings = require('./settings.js');
-const {
-  spotUnfocus,
-} = require('./spot.js');
-const ui = require('./ui.js');
-const { clamp, defaults, deprecate, matchAll } = require('glov/common/util.js');
-const { vec4, v3copy } = require('glov/common/vmath.js');
+
 deprecate(exports, 'create', 'chatUICreate');
 
 export const CHAT_FLAG_EMOTE = 1;
