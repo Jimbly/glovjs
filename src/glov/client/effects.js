@@ -17,7 +17,7 @@ const {
 } = require('./shaders.js');
 const { spriteQueueFn } = require('./sprites.js');
 const { textureBindArray, textureWhite } = require('./textures.js');
-const { vec2, vec3, vec4, v4set } = require('glov/common/vmath.js');
+const { vec3, vec4, v4set } = require('glov/common/vmath.js');
 
 const shader_data = {
   vp_copy: {
@@ -65,7 +65,7 @@ function getShader(key) {
 
 let inited = false;
 let clip_space = vec4(2, 2, -1, -1);
-let copy_uv_scale = vec2(1, 1);
+let copy_uv_scale = vec4(1, 1, 0, 0);
 let shader_params_default = {
   clip_space,
   copy_uv_scale,
