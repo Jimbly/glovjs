@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { min, round } = Math;
 const score_system = require('./score.js');
 const { scrollAreaCreate } = require('./scroll_area.js');
@@ -37,6 +38,7 @@ export function scoresDraw({
   color_me_background,
   color_line,
 }) {
+  assert(color_me_background[3] === 1);
   if (!font) {
     ({ font } = ui);
   }
