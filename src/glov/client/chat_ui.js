@@ -1225,8 +1225,10 @@ export function chatUICreate(params) {
   });
   cmd_parse.register({
     cmd: 'me',
-    help: 'Emote',
-    usage: '$HELP\n  Example: /me jumps up and down!',
+    help: 'Sends a message emoting an action. Can also perform animated emotes.',
+    usage: '$HELP\n  Example: /me jumps up and down!\n' +
+    '    /me waves\n' +
+    '    /me sits',
     func: emote,
   });
   // Also alias /em
