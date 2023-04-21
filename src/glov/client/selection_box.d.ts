@@ -96,6 +96,8 @@ export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   getSelected(): MenuItem;
   setSelected(tag_or_index: string | number): void;
   isDropdownVisible(): boolean;
+  wasClicked(): boolean;
+  wasRightClicked(): boolean;
 }
 
 export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;

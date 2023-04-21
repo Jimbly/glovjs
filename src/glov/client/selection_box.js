@@ -291,6 +291,14 @@ class SelectionBoxBase {
     }
   }
 
+  wasClicked() {
+    return this.was_clicked;
+  }
+
+  wasRightClicked() {
+    return this.was_right_clicked;
+  }
+
   isSelected(tag_or_index) {
     if (typeof tag_or_index === 'number') {
       return this.selected === tag_or_index;
