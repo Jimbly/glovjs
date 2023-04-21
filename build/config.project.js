@@ -81,4 +81,14 @@ module.exports = function (config) {
     config.client_png.push('client_spritesheets:**');
     //config.extra_client_tasks.push('client_spritesheets');
   });
+
+  config.extra_index = [{
+    name: 'itch',
+    defines: {
+      ...config.default_defines,
+      PLATFORM: 'web',
+    },
+    zip: true,
+  }];
+
 };
