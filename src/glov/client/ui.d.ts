@@ -340,6 +340,7 @@ export function setModalSizes(
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
+export function uiSetPanelColor(color: ROVec4): void;
 
 type UISpriteSet = {
   color_set_shades?: [number, number, number];

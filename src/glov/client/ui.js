@@ -78,7 +78,7 @@ const {
 const { TEXTURE_FORMAT } = require('./textures.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
-const { vec2, vec4, v3scale, unit_vec } = require('glov/common/vmath.js');
+const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
 
 deprecate(exports, 'slider_dragging', 'slider.js:sliderIsDragging()');
 deprecate(exports, 'slider_rollover', 'slider.js:sliderIsFocused()');
@@ -304,6 +304,10 @@ export function uiGetFontStyleFocused() {
 
 export function uiSetFontStyleFocused(new_style) {
   font_style_focused = new_style;
+}
+
+export function uiSetPanelColor(color) {
+  v4copy(color_panel, color);
 }
 
 export function loadUISprite(name, ws, hs) {
