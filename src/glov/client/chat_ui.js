@@ -513,7 +513,7 @@ function drawHelpTooltip(param) {
   let tooltip = param.tooltip;
   let num_pages = 1;
   let h = param.font_height;
-  let eff_tooltip_pad = ui.tooltip_pad * 0.5;
+  let eff_tooltip_pad = floor(ui.tooltip_pad * 0.5);
   let num_per_page = min(TOOLTIP_MIN_PAGE_SIZE, max(1, floor((param.y - camera2d.y0() - eff_tooltip_pad) / h) - 1));
   if (tooltip.length > 20) {
     let text = tooltip.join('\n');
