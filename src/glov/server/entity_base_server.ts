@@ -120,6 +120,7 @@ export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | 'ob
 export type ActionDef<Entity extends EntityBaseServer> = {
   self_only: boolean;
   allowed_data_assignments: Partial<Record<string, DataAssignmentType>>;
+  allow_any_assignment?: boolean;
   handler?: ActionHandler<Entity>;
 };
 
@@ -139,6 +140,7 @@ function actionDefDefaults<Entity extends EntityBaseServer>(
   if (action_def.self_only === undefined) {
     action_def.self_only = true;
   }
+  action_def.allow_any_assignment = action_def.allow_any_assignment || false;
   action_def.allowed_data_assignments = objectToSet(action_def.allowed_data_assignments);
 }
 
@@ -299,7 +301,7 @@ export class EntityBaseServer extends EntityBaseCommon {
       return void resp_func('ERR_INVALID_ACTION');
     }
 
-    let { allowed_data_assignments, self_only, handler } = action_def;
+    let { allowed_data_assignments, allow_any_assignment, self_only, handler } = action_def;
 
     if (self) {
       assert.equal(ent_id, this.id);
@@ -326,7 +328,9 @@ export class EntityBaseServer extends EntityBaseCommon {
     for (let key in data_assignments) {
       let allowed_type = allowed_data_assignments[key];
       let provided_type = Array.isArray(data_assignments[key]) ? 'array' : typeof data_assignments[key];
-      if (allowed_type === null && data_assignments[key] === null) {
+      if (allow_any_assignment) {
+        // OK
+      } else if (allowed_type === null && data_assignments[key] === null) {
         // OK
       } else if (!allowed_type) {
         this.errorSrc(src, `Action ${action_id} attempted to set disallowed field "${key}"`);
