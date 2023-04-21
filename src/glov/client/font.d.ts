@@ -59,7 +59,7 @@ interface FontDrawOpts {
   text: string | LocalizableString;
 }
 
-type FontLineWrapCallback = (x0: number, linenume: number, line: string, x1: number) => void;
+type FontLineWrapCallback = (x0: number, linenum: number, line: string, x1: number) => void;
 type Text = string | LocalizableString;
 
 export interface Font {
