@@ -240,6 +240,10 @@ class GlovSimpleMenu {
   getSelectedItem() {
     return this.sel_box.items[this.selected];
   }
+
+  getItem(index) {
+    return this.sel_box.items[index];
+  }
 }
 
 export function simpleMenuCreate(params) {
