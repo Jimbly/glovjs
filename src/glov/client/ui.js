@@ -1216,13 +1216,13 @@ function modalDialogRun() {
     let pressed = 0;
     if (eff_button_keys) {
       for (let jj = 0; jj < eff_button_keys.key.length; ++jj) {
-        pressed += glov_input.keyDownEdge(eff_button_keys.key[jj], cur_button.in_event_cb);
+        pressed += glov_input.keyUpEdge(eff_button_keys.key[jj], cur_button.in_event_cb);
         if (eff_button_keys.key[jj] === tick_key) {
           pressed++;
         }
       }
       for (let jj = 0; jj < eff_button_keys.pad.length; ++jj) {
-        pressed += glov_input.padButtonDownEdge(eff_button_keys.pad[jj]);
+        pressed += glov_input.padButtonUpEdge(eff_button_keys.pad[jj]);
       }
     }
     if (click_anywhere && ii === 0 && glov_input.click()) {
@@ -1251,7 +1251,7 @@ function modalDialogRun() {
       let eff_button_keys = button_keys[key.toLowerCase()];
       if (eff_button_keys && eff_button_keys.low_key) {
         for (let jj = 0; jj < eff_button_keys.low_key.length; ++jj) {
-          if (glov_input.keyDownEdge(eff_button_keys.low_key[jj], buttons[key].in_event_cb) ||
+          if (glov_input.keyUpEdge(eff_button_keys.low_key[jj], buttons[key].in_event_cb) ||
           eff_button_keys.low_key[jj] === tick_key) {
             did_button = ii;
           }
