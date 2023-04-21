@@ -16,6 +16,7 @@ const Replacer = require('regexp-sourcemaps');
 
 const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
+const autosound = require('./autosound.js');
 const compress = require('./compress.js');
 const config = require('./config.js');
 const eslint = require('./eslint.js');
@@ -465,6 +466,13 @@ gb.task({
   func: copy,
 });
 
+gb.task({
+  name: 'client_autosound',
+  input: config.client_autosound,
+  target: 'dev',
+  ...autosound(config.client_autosound_config),
+});
+
 function addStarStar(a) {
   return `${a}:**`;
 }
@@ -477,6 +485,7 @@ function addStarStarJSON(a) {
 
 let client_tasks = [
   ...config.extra_client_tasks,
+  'client_autosound',
   'client_static',
   'client_png',
   'client_css',

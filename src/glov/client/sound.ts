@@ -93,8 +93,9 @@ let num_loading = 0;
 
 const default_params = {
   // Note: as of Firefox v71 (2019), all major browsers support MP3
-  ext_list: ['mp3', 'wav'], // (recommended) try loading .mp3 versions first, then fallback to .wav
+  // ext_list: ['mp3', 'wav'], // (recommended) try loading .mp3 versions first, then fallback to .wav
   //  also covers all browsers: ['webm', 'mp3']
+  ext_list: ['ogg', 'mp3'], // (recommended) autosound build task => ogg and mp3 from wav, load ogg first (smaller)
   fade_rate: DEFAULT_FADE_RATE,
 };
 let sound_params: {

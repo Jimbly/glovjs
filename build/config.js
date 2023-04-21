@@ -26,10 +26,13 @@ module.exports = {
     '!client/spine/**/*.png', // Already has appropriate color channel
     '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
   ],
+  client_autosound: [
+    'client/sounds/**/*.wav',
+    'client/sounds/**/*.mp3',
+  ],
+  client_autosound_config: null, // default: wav to 512kb, mp3 at 128kbps, ogg
   client_static: [
     'client/**/*.webm',
-    'client/**/*.mp3',
-    'client/**/*.wav',
     'client/**/*.ogg',
     // 'client/**/*.png',
     'client/**/*.jpg',
