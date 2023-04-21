@@ -700,6 +700,9 @@ gb.task({
   deps: zip_tasks,
 });
 
+for (let ii = 0; ii < config.register_late_cbs.length; ++ii) {
+  config.register_late_cbs[ii](gb);
+}
 
 const package_files = ['package.json', 'package-lock.json'];
 function timestamp(list) {

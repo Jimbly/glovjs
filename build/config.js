@@ -83,6 +83,7 @@ module.exports = {
     'client_js_uglify:**',
   ],
   client_register_cbs: [],
+  register_late_cbs: [],
   preresolve_params: { modules: { glov: 'glov' } },
   optipng: {
     //   Note: always lossless, safe to use with anything
