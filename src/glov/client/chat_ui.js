@@ -611,7 +611,9 @@ ChatUI.prototype.isFocused = function () {
 ChatUI.prototype.sendChat = function (flags, text) {
   if (!netClient().connected) {
     this.addChatError('Cannot chat: Disconnected');
-  } else if (!this.channel || !netSubs().loggedIn() && !netSubs().allow_anon) {
+  } else if (!this.channel) {
+    this.addChatError('Cannot chat: Must be in a channel');
+  } else if (!netSubs().loggedIn() && !netSubs().allow_anon) {
     this.addChatError('Cannot chat: Must be logged in');
   } else if (text.length > this.max_len) {
     this.addChatError('Chat message too long');
