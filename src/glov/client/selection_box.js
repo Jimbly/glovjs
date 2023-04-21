@@ -912,10 +912,10 @@ export function dropDown(param, current, opts) {
   let { suppress_return_during_dropdown } = opts;
   // let dropdown = getUIElemData<SelectionBox, SelectionBoxOpts>('dropdown', param, dropDownCreate);
   let dropdown = getUIElemData('dropdown', param, dropDownCreate);
+  dropdown.applyParams(param);
   if (!dropdown.isDropdownVisible()) {
     dropdown.setSelected(current);
   }
-  dropdown.applyParams(param);
   let old_selected;
   if (suppress_return_during_dropdown) {
     let old_idx = dropdown.findIndex(current);
