@@ -664,13 +664,19 @@ export function textureUnloadDynamic() {
 }
 
 function textureReload(filename) {
-  let tex = textures[filename];
-  if (tex && tex.url) {
-    tex.for_reload = true;
-    tex.loadURL(`${tex.url}?rl=${Date.now()}`);
-    return true;
+  let ret = false;
+  let prefix = `${filename}#`;
+  for (let key in textures) {
+    if (key === filename || key.startsWith(prefix)) {
+      let tex = textures[key];
+      if (tex.url) {
+        tex.for_reload = true;
+        tex.loadURL(`${tex.url}?rl=${Date.now()}`);
+        ret = true;
+      }
+    }
   }
-  return false;
+  return ret;
 }
 
 let depth_supported;
