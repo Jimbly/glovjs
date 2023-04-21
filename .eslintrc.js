@@ -173,6 +173,11 @@ module.exports = {
         "object",
         "type",
       ],
+      "pathGroups": [{
+        "pattern": "glov/**",
+        "group": "internal"
+      }],
+      "pathGroupsExcludedImportTypes": ["type"],
       "warnOnUnassignedImports": true,
       "alphabetize": {
         "order": "asc",
