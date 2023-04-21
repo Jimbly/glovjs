@@ -20,7 +20,9 @@ export interface Packet {
   writeString(value: string): void;
   readAnsiString(): string;
   writeAnsiString(value: string): void;
+  readJSON<T>(): T;
   readJSON(): unknown;
+  writeJSON<T>(value: T): void;
   writeJSON(value: unknown): void;
   readBool(): boolean;
   writeBool(value: boolean): void;
