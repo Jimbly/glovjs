@@ -1,6 +1,8 @@
 import type { FriendData } from './friends_data';
 import type { Packet } from './packet';
 
+export type VoidFunc = () => void;
+
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
  * @template T - The type of information held by the object, defaults to unknown.
@@ -175,7 +177,7 @@ export interface ClientChannelWorker {
   on(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
   removeListener(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
   onSubscribe(cb: (data: unknown) => void): void;
-  onceSubscribe(cb: ((data: DataObject) => void) | (() => void)): void;
+  onceSubscribe(cb: ((data: DataObject) => void) | VoidFunc): void;
   numSubscriptions(): number;
   unsubscribe(): void;
   getChannelData<T>(key: string, default_value: T): T;
