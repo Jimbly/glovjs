@@ -86,6 +86,7 @@
     "gulp-zip": "^5.0.2",
     "imagemin-optipng": "^8.0.0",
     "imagemin-zopfli": "^7.0.0",
+    "js-yaml": "^4.1.0",
     "lazypipe": "^1.0.1",
     "micromatch": "^4.0.2",
     "nodemon": "^1.19.1",
