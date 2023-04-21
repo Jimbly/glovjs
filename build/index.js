@@ -469,7 +469,10 @@ gb.task({
   name: 'client_autosound',
   input: config.client_autosound,
   target: 'dev',
-  ...autosound(config.client_autosound_config),
+  ...gbcache({
+    key: 'autosound',
+    version: 1,
+  }, autosound(config.client_autosound_config)),
 });
 
 function addStarStar(a) {
