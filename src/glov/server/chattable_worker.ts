@@ -96,6 +96,26 @@ export function sendChat(
   return null;
 }
 
+function denyChat(
+  worker: ChattableWorker,
+  source: ChatIDs,
+  err: string,
+  msg: string,
+  time_left?: string | number
+): string {
+  let { user_id, channel_id, display_name } = source; // user_id is falsey if not logged in
+  let id = user_id || channel_id;
+  worker.logSrc(source,
+    `suppressed chat from ${id} ("${display_name}") (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
+  if (err === 'ERR_ACCOUNT_AGE') {
+    return `Your account is too recent to chat in this world. Wait ${time_left} before writing again.`;
+  }
+  if (err === 'ERR_COOLDOWN') {
+    return `This world has chat slow mode enabled. Wait ${time_left} seconds before writting again.`;
+  }
+  return err;
+}
+
 function chatReceive(
   worker: ChattableWorker,
   source: ChatIDs,
@@ -118,9 +138,7 @@ function chatReceive(
   if (worker.chatFilter) {
     let err = worker.chatFilter(source, msg);
     if (err) {
-      worker.logSrc(source,
-        `denied chat from ${id} ("${display_name}") (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
-      return err;
+      return denyChat(worker, source, err, msg);
     }
   }
 
@@ -133,7 +151,7 @@ function chatReceive(
     if (time_elapsed_seconds < minimum_account_age_minutes * 60) {
       let seconds_left = minimum_account_age_minutes * 60 - time_elapsed_seconds;
       let time_left = seconds_left < 60 ? `${seconds_left} seconds` : secondsToFriendlyString(seconds_left);
-      return `Your account is too recent to chat in this world. Wait ${time_left} before writing again.`;
+      return denyChat(worker, source, 'ERR_ACCOUNT_AGE', msg, time_left);
     }
   }
 
@@ -159,7 +177,7 @@ function chatReceive(
     if (last) {
       let time_elapsed = ts - last.timestamp;
       let time_left = Math.ceil(cooldown - time_elapsed * 0.001);
-      return `This world has chat slow mode enabled. Wait ${time_left} seconds before writting again.`;
+      return denyChat(worker, source, 'ERR_COOLDOWN', msg, time_left);
     }
     last = worker.chat_records_map[id] = {
       timestamp: ts,
@@ -169,9 +187,7 @@ function chatReceive(
   }
   let err = sendChat(worker, id, client_id, display_name, flags, msg);
   if (err) {
-    worker.logSrc(source,
-      `suppressed chat from ${id} ("${display_name}") (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
-    return err;
+    return denyChat(worker, source, err, msg);
   }
   // Log entire, non-truncated chat string
   worker.logSrc(source, `chat from ${id} ("${display_name}") (${channel_id}): ${JSON.stringify(msg)}`);
