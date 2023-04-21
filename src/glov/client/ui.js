@@ -1239,6 +1239,7 @@ function modalDialogRun() {
       h: eff_button_height,
       text: but_label,
       auto_focus: ii === 0,
+      focus_steal: keys.length === 1 && !modal_dialog.tick,
     }, cur_button))) {
       did_button = ii;
     }
