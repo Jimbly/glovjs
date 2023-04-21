@@ -223,6 +223,10 @@ export function inputTouchMode() {
   return touch_mode;
 }
 
+export function inputPadMode() {
+  return pad_mode;
+}
+
 export function inputEatenMouse() {
   return input_eaten_mouse;
 }
