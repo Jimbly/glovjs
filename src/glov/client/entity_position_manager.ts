@@ -7,7 +7,7 @@ import { sign } from 'glov/common/util';
 import { ClientEntityManagerInterface } from './entity_manager_client';
 import { PingData, registerPingProvider } from './perf_net';
 
-const { abs, floor, max, PI, sqrt } = Math;
+const { abs, max, PI, sqrt } = Math;
 
 const TWO_PI = PI * 2;
 
@@ -221,10 +221,8 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     this.vsub(this.temp_vec, a, b);
     for (let ii = 0; ii < this.dim_rot; ++ii) {
       let jj = this.dim_pos + ii;
-      let d = abs(this.temp_vec[jj]);
-      if (d > PI) {
-        this.temp_vec[jj] = d - floor((d + PI) / TWO_PI) * TWO_PI;
-      }
+      let delta = this.temp_vec[jj] % TWO_PI;
+      this.temp_vec[jj] = 2 * delta % TWO_PI - delta;
     }
     return this.vlength(this.temp_vec);
   }
