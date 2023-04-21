@@ -6,7 +6,8 @@ import assert from 'assert';
 import type { DataObject, ErrorCallback } from './types';
 import type { Vec2 } from './vmath';
 
-const { abs, floor, min, max, random, round, pow, sqrt } = Math;
+const { PI, abs, floor, min, max, random, round, pow, sqrt } = Math;
+const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -159,6 +160,20 @@ export function lerp(a: number, v0: number, v1: number): number {
   return (1 - a) * v0 + a * v1;
 }
 
+export function shortAngleDist(a0: number, a1: number): number {
+  let delta = (a1 - a0) % TWO_PI;
+  return 2 * delta % TWO_PI - delta;
+}
+
+export function lerpAngle(t: number, a0: number, a1: number): number {
+  let r = a0 + shortAngleDist(a0, a1) * t;
+  if (r < 0) {
+    r += TWO_PI;
+  }
+  return r;
+}
+
+
 export function mix(v0: number, v1: number, a: number): number { // GLSL semantics
   return (1 - a) * v0 + a * v1;
 }
@@ -203,6 +218,10 @@ export function fract(a: number): number {
 
 export function nearSame(a: number, b: number, tol: number): boolean {
   return abs(b - a) <= tol;
+}
+
+export function nearSameAngle(a: number, b: number, tol: number): boolean {
+  return abs(shortAngleDist(a, b)) <= tol;
 }
 
 export function titleCase(str: string): string {

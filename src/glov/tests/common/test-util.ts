@@ -4,10 +4,14 @@ import { DataObject } from 'glov/common/types';
 import {
   dateToFileTimestamp,
   empty,
+  lerpAngle,
+  nearSameAngle,
   once,
   randomNot,
 } from 'glov/common/util';
 import 'glov/server/test';
+
+const { PI } = Math;
 
 asyncSeries([
   function testOnce(next) {
@@ -49,6 +53,23 @@ asyncSeries([
       bar?: string;
     }
     assert(!empty(new Foo4() as unknown as DataObject));
+    next();
+  },
+  function testLerpAngle(next) {
+    const E = 0.00001;
+    const ANGLES = [0, 0.1, PI/3, PI/2, PI, PI * 3/2, PI * 2];
+    for (let ii = 0; ii < ANGLES.length; ++ii) {
+      let a0 = ANGLES[ii];
+      for (let jj = ii; jj < ANGLES.length; ++jj) {
+        let a1 = ANGLES[jj];
+        assert(nearSameAngle(lerpAngle(0, a0, a1), a0, E));
+        assert(nearSameAngle(lerpAngle(0, a1, a0), a1, E));
+        assert(nearSameAngle(lerpAngle(1, a0, a1), a1, E));
+        assert(nearSameAngle(lerpAngle(1, a1, a0), a0, E));
+      }
+    }
+    assert(nearSameAngle(lerpAngle(0.5, 0, 0.2), 0.1, E));
+    assert(nearSameAngle(lerpAngle(0.5, 0, PI*2-0.2), PI*2-0.1, E));
     next();
   },
   function testDateToFileTimestamp(next) {
