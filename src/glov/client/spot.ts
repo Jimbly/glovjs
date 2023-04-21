@@ -4,6 +4,10 @@ import {
   ButtonIndex,
 } from './input_constants';
 
+export const SPOT_NAVTYPE_SIMPLE = 0; // just arrows
+export const SPOT_NAVTYPE_EXTENDED = 1; // also WASD, numpad, etc
+export type SpotNavtypeEnum = typeof SPOT_NAVTYPE_SIMPLE | typeof SPOT_NAVTYPE_EXTENDED;
+
 export const SPOT_NAV_NONE = 0;
 export const SPOT_NAV_LEFT = 1;
 export const SPOT_NAV_UP = 2;
@@ -345,6 +349,164 @@ export function spotUnfocus(): void {
   focus_is_sticky = false;
   focus_key_nonsticky = null;
   pad_mode = false;
+}
+
+type SpotNavKeysEntry = {
+  keys?: number[];
+  pads?: number[];
+  shift_keys?: number[];
+  unshift_keys?: number[];
+};
+type SpotNavKeys = Record<SpotNavEnum, SpotNavKeysEntry>;
+const spot_nav_keys_base: SpotNavKeys = {
+  [SPOT_NAV_LEFT]: {
+    pads: [PAD.LEFT],
+  },
+  [SPOT_NAV_UP]: {
+    pads: [PAD.UP],
+  },
+  [SPOT_NAV_RIGHT]: {
+    pads: [PAD.RIGHT],
+  },
+  [SPOT_NAV_DOWN]: {
+    pads: [PAD.DOWN],
+  },
+  [SPOT_NAV_PREV]: {
+    shift_keys: [KEYS.TAB],
+    pads: [PAD.LEFT_BUMPER],
+  },
+  [SPOT_NAV_NEXT]: {
+    pads: [PAD.RIGHT_BUMPER],
+    unshift_keys: [KEYS.TAB],
+  },
+};
+const spot_nav_keys_simple: SpotNavKeys = {
+  [SPOT_NAV_LEFT]: {
+    keys: [KEYS.LEFT],
+    pads: spot_nav_keys_base[SPOT_NAV_LEFT].pads,
+  },
+  [SPOT_NAV_UP]: {
+    keys: [KEYS.UP],
+    pads: spot_nav_keys_base[SPOT_NAV_UP].pads,
+  },
+  [SPOT_NAV_RIGHT]: {
+    keys: [KEYS.RIGHT],
+    pads: spot_nav_keys_base[SPOT_NAV_RIGHT].pads,
+  },
+  [SPOT_NAV_DOWN]: {
+    keys: [KEYS.DOWN],
+    pads: spot_nav_keys_base[SPOT_NAV_DOWN].pads,
+  },
+  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
+  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
+};
+const spot_nav_keys_extended: SpotNavKeys = {
+  [SPOT_NAV_LEFT]: {
+    keys: spot_nav_keys_simple[SPOT_NAV_LEFT].keys!.concat([KEYS.A, KEYS.NUMPAD4]),
+    pads: spot_nav_keys_simple[SPOT_NAV_LEFT].pads,
+  },
+  [SPOT_NAV_UP]: {
+    keys: spot_nav_keys_simple[SPOT_NAV_UP].keys!.concat([KEYS.W, KEYS.NUMPAD8]),
+    pads: spot_nav_keys_simple[SPOT_NAV_UP].pads,
+  },
+  [SPOT_NAV_RIGHT]: {
+    keys: spot_nav_keys_simple[SPOT_NAV_RIGHT].keys!.concat([KEYS.D, KEYS.NUMPAD6]),
+    pads: spot_nav_keys_simple[SPOT_NAV_RIGHT].pads,
+  },
+  [SPOT_NAV_DOWN]: {
+    keys: spot_nav_keys_simple[SPOT_NAV_DOWN].keys!.concat([KEYS.S, KEYS.NUMPAD5, KEYS.NUMPAD2]),
+    pads: spot_nav_keys_simple[SPOT_NAV_DOWN].pads,
+  },
+  [SPOT_NAV_PREV]: spot_nav_keys_base[SPOT_NAV_PREV],
+  [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
+};
+function keyDownShifted(key: number): boolean {
+  return keyDown(KEYS.SHIFT) && keyDownEdge(key);
+}
+function keyDownUnshifted(key: number): boolean {
+  return !keyDown(KEYS.SHIFT) && keyDownEdge(key);
+}
+function compileSpotNavKeysEntry(entry: SpotNavKeysEntry): () => boolean {
+  let fns: ((() => boolean) | (() => number))[] = [];
+  if (entry.keys) {
+    for (let ii = 0; ii < entry.keys.length; ++ii) {
+      fns.push(keyDownEdge.bind(null, entry.keys[ii]));
+    }
+  }
+  if (entry.pads) {
+    for (let ii = 0; ii < entry.pads.length; ++ii) {
+      fns.push(padButtonDownEdge.bind(null, entry.pads[ii]));
+    }
+  }
+  if (entry.shift_keys) {
+    for (let ii = 0; ii < entry.shift_keys.length; ++ii) {
+      fns.push(keyDownShifted.bind(null, entry.shift_keys[ii]));
+    }
+  }
+  if (entry.unshift_keys) {
+    for (let ii = 0; ii < entry.unshift_keys.length; ++ii) {
+      fns.push(keyDownUnshifted.bind(null, entry.unshift_keys[ii]));
+    }
+  }
+  return function () {
+    for (let ii = 0; ii < fns.length; ++ii) {
+      if (fns[ii]()) {
+        return true;
+      }
+    }
+    return false;
+  };
+}
+type SpotNavKeysCompiled = Record<SpotNavEnum, () => boolean>;
+function compileSpotNavKeys(keys: SpotNavKeys): SpotNavKeysCompiled {
+  return {
+    [SPOT_NAV_LEFT]: compileSpotNavKeysEntry(keys[SPOT_NAV_LEFT]),
+    [SPOT_NAV_UP]: compileSpotNavKeysEntry(keys[SPOT_NAV_UP]),
+    [SPOT_NAV_RIGHT]: compileSpotNavKeysEntry(keys[SPOT_NAV_RIGHT]),
+    [SPOT_NAV_DOWN]: compileSpotNavKeysEntry(keys[SPOT_NAV_DOWN]),
+    [SPOT_NAV_PREV]: compileSpotNavKeysEntry(keys[SPOT_NAV_PREV]),
+    [SPOT_NAV_NEXT]: compileSpotNavKeysEntry(keys[SPOT_NAV_NEXT]),
+  };
+}
+const compiled_nav_base = compileSpotNavKeys(spot_nav_keys_base);
+const compiled_nav_simple = compileSpotNavKeys(spot_nav_keys_simple);
+const compiled_nav_extended = compileSpotNavKeys(spot_nav_keys_extended);
+let spot_nav_type: SpotNavtypeEnum;
+let spot_nav_keys: SpotNavKeysCompiled;
+export function spotSetNavtype(type: SpotNavtypeEnum): void {
+  spot_nav_type = type;
+  spot_nav_keys = (type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+}
+spotSetNavtype(SPOT_NAVTYPE_EXTENDED);
+function resetNavKeys(): void {
+  spot_nav_keys = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+}
+let suppress_kb_nav_this_frame = false;
+
+export function spotSuppressKBNav(left_right: boolean, up_down: boolean): void {
+  suppress_kb_nav_this_frame = true;
+  assert(left_right);
+  let active = (spot_nav_type === SPOT_NAVTYPE_SIMPLE) ? compiled_nav_simple : compiled_nav_extended;
+  if (up_down) {
+    spot_nav_keys = {
+      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
+      [SPOT_NAV_UP]: compiled_nav_base[SPOT_NAV_UP],
+      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
+      [SPOT_NAV_DOWN]: compiled_nav_base[SPOT_NAV_DOWN],
+      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
+      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
+    };
+  } else {
+    // just left/right arrows, but still all text input keys
+    spot_nav_keys = {
+      [SPOT_NAV_LEFT]: compiled_nav_base[SPOT_NAV_LEFT],
+      [SPOT_NAV_UP]: compiled_nav_simple[SPOT_NAV_UP],
+      [SPOT_NAV_RIGHT]: compiled_nav_base[SPOT_NAV_RIGHT],
+      [SPOT_NAV_DOWN]: compiled_nav_simple[SPOT_NAV_DOWN],
+      [SPOT_NAV_PREV]: active[SPOT_NAV_PREV],
+      [SPOT_NAV_NEXT]: active[SPOT_NAV_NEXT],
+    };
+  }
 }
 
 
@@ -816,6 +978,10 @@ export function spotEndOfFrame(): void {
   frame_spots = [];
   frame_autofocus_spots = {};
   async_activate_key = null;
+  if (!suppress_kb_nav_this_frame) {
+    resetNavKeys();
+  }
+  suppress_kb_nav_this_frame = false;
 }
 
 function frameSpotsPush(param: SpotListElem): void {
@@ -915,23 +1081,7 @@ function keyCheck(nav_dir: SpotNavEnum): boolean {
   if (suppress_pad) {
     return false;
   }
-  switch (nav_dir) {
-    case SPOT_NAV_LEFT:
-      return keyDownEdge(KEYS.LEFT) || padButtonDownEdge(PAD.LEFT);
-    case SPOT_NAV_UP:
-      return keyDownEdge(KEYS.UP) || padButtonDownEdge(PAD.UP);
-    case SPOT_NAV_RIGHT:
-      return keyDownEdge(KEYS.RIGHT) || padButtonDownEdge(PAD.RIGHT);
-    case SPOT_NAV_DOWN:
-      return keyDownEdge(KEYS.DOWN) || padButtonDownEdge(PAD.DOWN);
-    case SPOT_NAV_PREV:
-      return keyDown(KEYS.SHIFT) && keyDownEdge(KEYS.TAB) || padButtonDownEdge(PAD.LEFT_BUMPER);
-    case SPOT_NAV_NEXT:
-      return !keyDown(KEYS.SHIFT) && keyDownEdge(KEYS.TAB) || padButtonDownEdge(PAD.RIGHT_BUMPER);
-    default:
-      assert(false);
-  }
-  return false;
+  return spot_nav_keys[nav_dir]();
 }
 
 type SpotParamWithOut = SpotParam & {

@@ -21,7 +21,8 @@ export interface EditBoxOptsAll {
   esc_clears: boolean;
   multiline: number;
   autocomplete: boolean;
-  custom_nav: Partial<Record<number, null>>;
+  suppress_up_down: boolean;
+  // custom_nav: Partial<Record<number, null>>;
 }
 
 export type EditBoxOpts = Partial<EditBoxOptsAll>;
