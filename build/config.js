@@ -100,5 +100,6 @@ module.exports = {
     iterations: 15,
     more: false,
   },
+  browsersync_queryparams: '', // e.g. '?D=FOO'
 };
 require('./config.project.js')(module.exports);

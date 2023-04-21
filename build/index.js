@@ -510,9 +510,9 @@ gb.task({
       assert(old_open);
       utils.opnWrapper = (url, name, instance) => {
         if (instance.options.get('open') === 'target') {
-          url = bs_target;
+          url = `${bs_target}${config.browsersync_queryparams}`;
         } else if (instance.options.get('open') === 'target_https') {
-          url = bs_target_https;
+          url = `${bs_target_https}${config.browsersync_queryparams}`;
         }
         old_open(url, name, instance);
       };
@@ -529,7 +529,7 @@ gb.task({
       bs.init({
         // informs browser-sync to proxy our app which would run at the following location
         proxy: {
-          target: bs_target,
+          target: `${bs_target}${config.browsersync_queryparams}`,
           ws: true,
           proxyReq: [
             function (proxyReq) {
