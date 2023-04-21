@@ -10,6 +10,7 @@ export type SpriteAnimationParamEntry = {
   times: number | number[];
   times_random?: number | number[];
   init_time?: number; // random offset into animation to initialize to
+  random_init_frame?: boolean;
   loop?: boolean; // default true
   transition_to?: string;
 };
@@ -22,6 +23,7 @@ type SpriteAnimationData = {
   times_random?: number[];
   init_time?: number;
   total_time: number;
+  random_init_frame: boolean;
   loop: boolean;
   transition_to?: string;
 };
@@ -70,6 +72,7 @@ class SpriteAnimationImpl {
         for (let ii = 0; ii < anim.times.length; ++ii) {
           anim.total_time += anim.times[ii];
         }
+        anim.random_init_frame = anim.random_init_frame || false;
         if (anim.loop === undefined) {
           anim.loop = true;
         }
@@ -106,7 +109,11 @@ class SpriteAnimationImpl {
     } else {
       this.time = 0;
     }
-    this.setFrameIndex(0);
+    let init_frame = 0;
+    if (this.anim.random_init_frame) {
+      init_frame = floor(random() * this.anim.frames.length);
+    }
+    this.setFrameIndex(init_frame);
     return this;
   }
 
