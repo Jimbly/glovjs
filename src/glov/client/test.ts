@@ -10,6 +10,7 @@ class MockElementDebug {
 let debug: MockElementDebug;
 
 class MockLocation {
+  protocol = 'mock';
   href = 'mock';
 }
 
@@ -38,5 +39,7 @@ glob.navigator = new MockNavigator();
 glob.BUILD_TIMESTAMP = String(Date.now());
 
 assert(!glob.document);
-glob.document = new MockDocument();
+let document = new MockDocument();
+glob.document = document;
+glob.location = document.location;
 glob.window = glob;
