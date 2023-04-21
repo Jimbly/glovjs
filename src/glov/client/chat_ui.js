@@ -1247,5 +1247,61 @@ export function chatUICreate(params) {
       resp_func();
     },
   });
+  cmd_parse.register({
+    cmd: 'csr_all',
+    access_run: ['sysadmin'],
+    help: '(Admin) Run a command as all users in the current channel',
+    prefix_usage_with_help: true,
+    usage: '  /csr_all command\n' +
+      'Example: /csr_all me bows down',
+    func: function (str, resp_func) {
+      let clients = chat_ui.channel.getChannelData('public.clients', {});
+      let count = 0;
+      for (let client_id in clients) {
+        let ids = clients[client_id].ids;
+        if (ids?.user_id) {
+          let cmd = str;
+          let pak = netSubs().getChannelImmediate(`user.${ids.user_id}`).pak('csr_admin_to_user');
+          pak.writeJSON(cmd_parse.last_access);
+          pak.writeString(cmd);
+          pak.writeAnsiString(client_id);
+          pak.send(chat_ui.handle_cmd_parse);
+          ++count;
+        }
+      }
+      resp_func(null, `Sent command to ${count} user(s)`);
+    }
+  });
+  cmd_parse.register({
+    cmd: 'csr',
+    access_run: ['sysadmin'],
+    help: '(Admin) Run a command as another user',
+    usage: '$HELP\n  /csr UserID command\n' +
+      'Example: /csr jimbly gems -100',
+    func: function (str, resp_func) {
+      let idx = str.indexOf(' ');
+      if (idx === -1) {
+        return void resp_func('Invalid number of arguments');
+      }
+      let user_id = str.slice(0, idx);
+      let desired_client_id = '';
+      let clients = chat_ui.channel.getChannelData('public.clients', {});
+      for (let client_id in clients) {
+        let ids = clients[client_id].ids;
+        if (ids?.user_id === user_id) {
+          desired_client_id = client_id;
+        }
+      }
+
+      let cmd = str.slice(idx + 1);
+      let pak = netSubs().getChannelImmediate(`user.${user_id}`).pak('csr_admin_to_user');
+      pak.writeJSON(cmd_parse.last_access);
+      pak.writeString(cmd);
+      pak.writeAnsiString(desired_client_id);
+      pak.send(resp_func);
+    }
+  });
+
+
   return chat_ui;
 }
