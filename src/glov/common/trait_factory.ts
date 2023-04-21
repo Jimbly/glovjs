@@ -3,7 +3,7 @@ import assert from 'assert';
 import { dataError } from './data_error';
 import { FSAPI, fileBaseName } from './fsapi';
 import { clone, defaultsDeep, inherits } from './util';
-import type { DataObject } from './types';
+import type { DataObject, DeepPartial } from './types';
 
 export type TraitedBaseClass = {
   type_id: string; // will be constant on the prototype
@@ -49,7 +49,7 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
     this.traits[trait_id] = opts as TraitOpts<TBaseClass, OpaqueOpt, OpaqueState>;
   }
 
-  extendTrait<TOpts, TState=never>(trait_id: string, opts: TraitOpts<TBaseClass, TOpts, TState>): void {
+  extendTrait<TOpts, TState=never>(trait_id: string, opts: DeepPartial<TraitOpts<TBaseClass, TOpts, TState>>): void {
     let existing = this.traits[trait_id];
     assert(existing);
     this.traits[trait_id] = defaultsDeep(opts, existing);
