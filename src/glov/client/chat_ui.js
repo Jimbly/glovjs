@@ -625,7 +625,7 @@ ChatUI.prototype.sendChat = function (flags, text) {
       if (err) {
         if (err === 'ERR_ECHO') {
           let roles = this.channel?.data?.public?.clients[netClientId()]?.ids?.roles;
-          let style = this.classifyRole(roles, true);
+          let style = this.classifyRole && this.classifyRole(roles, true);
           this.onMsgChat({
             msg: text,
             style: style,
