@@ -638,6 +638,7 @@ class ClientEntityManagerImpl<
       return;
     }
     assert(this.channel);
+    assert(this.channel.numSubscriptions());
     let { action_list, resp_list } = this.action_list_queue;
     this.action_list_queue = null;
     let pak = this.channel.pak('ent_action_list');
@@ -660,6 +661,7 @@ class ClientEntityManagerImpl<
     action: ClientActionMessageParam<Entity>,
     resp_func?: NetErrorCallback<unknown>,
   ): void {
+    assert(this.channel?.numSubscriptions());
     if (!this.action_list_queue) {
       this.action_list_queue = {
         action_list: [],
@@ -672,6 +674,7 @@ class ClientEntityManagerImpl<
 
   channelSend(msg: string, data?: unknown, resp_func?: NetErrorCallback): void {
     assert(this.channel);
+    assert(this.channel.numSubscriptions());
     this.channel.send(msg, data, resp_func);
   }
 
