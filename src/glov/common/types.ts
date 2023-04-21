@@ -199,3 +199,7 @@ export interface UserChannel extends ClientChannelWorker {
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;
+
+export type DeepPartial<T> = T extends DataObject ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
