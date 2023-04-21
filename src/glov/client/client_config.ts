@@ -8,10 +8,11 @@ export const PLATFORM_WEB = PLATFORM === Platform.Web;
 export const PLATFORM_FBINSTANT = PLATFORM === Platform.FBInstant;
 export const PLATFORM_ANDROID = PLATFORM === Platform.Android;
 export const PLATFORM_IOS = PLATFORM === Platform.IOS;
+export const PLATFORM_YANDEX = PLATFORM === Platform.Yandex;
 export const PLATFORM_MSSTART = PLATFORM === Platform.MSStart;
 export const PLATFORM_MOBILE = PLATFORM_ANDROID || PLATFORM_IOS;
 
-assert(PLATFORM_WEB || PLATFORM_FBINSTANT || PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_MSSTART);
+assert(PLATFORM_WEB || PLATFORM_FBINSTANT || PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_YANDEX || PLATFORM_MSSTART);
 
 // Type
 // TODO: Allow other platforms to set MODE_DEVELOPMENT through a parameter
