@@ -1,6 +1,6 @@
 const assert = require('assert');
 const path = require('path');
-const { asyncEach } = require('glov-async');
+const { asyncEach, asyncLimiter } = require('glov-async');
 const gb = require('glov-build');
 
 const { max, min } = Math;
@@ -65,6 +65,7 @@ module.exports = function (options) {
 
   let wav;
   let mp3_decoder;
+  let mp3_limiter;
   let VorbisEncoder;
   let lamejs;
   function autosoundInit(next) {
@@ -82,6 +83,7 @@ module.exports = function (options) {
     }
 
     if (options.inputs.includes('mp3')) {
+      mp3_limiter = asyncLimiter(1);
       import('mpg123-decoder').then(function (mpg123_decoder) {
         const { MPEGDecoder } = mpg123_decoder;
         mp3_decoder = new MPEGDecoder();
@@ -92,6 +94,13 @@ module.exports = function (options) {
     } else {
       next();
     }
+  }
+
+  function acquireMP3Encoder(next) {
+    mp3_limiter(function (release) {
+      next();
+      mp3_decoder.reset().then(release, release);
+    });
   }
 
   function autosound(job, done) {
@@ -144,68 +153,69 @@ module.exports = function (options) {
         return void done();
       }
 
-      // Read input
-      let decode_ret;
-      if (my_ext === 'mp3') {
-        decode_ret = mp3_decoder.decode(file.contents);
-      } else {
-        assert.equal(my_ext, 'wav');
-        decode_ret = wav.decode(file.contents);
-      }
-      let channels = decode_ret.channelData;
-      let nch = channels.length;
-      let sample_rate = decode_ret.sampleRate;
-      let audio_buffer = new AudioBufferF32(channels, sample_rate);
-
-      if (options.outputs.includes('ogg') && !ext_exists.ogg) {
-        let encoder = new VorbisEncoder(sample_rate, nch, options.ogg_quality, {});
-        encoder.encodeFrom(audio_buffer);
-        let blob = encoder.finish();
-        assert(blob.my_buf);
-        job.out({
-          relative: `${base_name}.ogg`,
-          contents: blob.my_buf,
-        });
+      function readInput(next) {
+        if (my_ext === 'mp3') {
+          acquireMP3Encoder(function () {
+            next(mp3_decoder.decode(file.contents));
+          });
+        } else {
+          assert.equal(my_ext, 'wav');
+          next(wav.decode(file.contents));
+        }
       }
 
-      if (options.outputs.includes('wav') && !ext_exists.wav) {
-        // Assuming 16-bit, single channel, 2 bytes per sample, plus header
-        let wav_size = audio_buffer.length * 2 + 44;
-        if (wav_size <= options.wav_max_size) {
-          let wavbuf = wav.encode(steroToMono(channels), { sampleRate: sample_rate, float: false, bitDepth: 16 });
+      readInput(function (decode_ret) {
+        let channels = decode_ret.channelData;
+        let nch = channels.length;
+        let sample_rate = decode_ret.sampleRate;
+        let audio_buffer = new AudioBufferF32(channels, sample_rate);
+
+        if (options.outputs.includes('ogg') && !ext_exists.ogg) {
+          let encoder = new VorbisEncoder(sample_rate, nch, options.ogg_quality, {});
+          encoder.encodeFrom(audio_buffer);
+          let blob = encoder.finish();
+          assert(blob.my_buf);
           job.out({
-            relative: `${base_name}.wav`,
-            contents: wavbuf,
+            relative: `${base_name}.ogg`,
+            contents: blob.my_buf,
           });
         }
-      }
 
-      if (options.outputs.includes('mp3') && !ext_exists.mp3) {
-        let mp3_chunks = [];
-        let mp3encoder = new lamejs.Mp3Encoder(nch, sample_rate, options.mp3_kbps);
-        let channels_s16 = channels.map(convertF32toS16);
-        if (nch === 1) {
-          mp3_chunks.push(mp3encoder.encodeBuffer(channels_s16[0]));
-        } else {
-          mp3_chunks.push(mp3encoder.encodeBuffer(channels_s16[0], channels_s16[1]));
+        if (options.outputs.includes('wav') && !ext_exists.wav) {
+          // Assuming 16-bit, single channel, 2 bytes per sample, plus header
+          let wav_size = audio_buffer.length * 2 + 44;
+          if (wav_size <= options.wav_max_size) {
+            let wavbuf = wav.encode(steroToMono(channels), { sampleRate: sample_rate, float: false, bitDepth: 16 });
+            job.out({
+              relative: `${base_name}.wav`,
+              contents: wavbuf,
+            });
+          }
         }
-        // Get end part of mp3
-        let mp3Tmp = mp3encoder.flush();
-        if (mp3Tmp.length) {
-          mp3_chunks.push(mp3Tmp);
-        }
-        let mp3_data = Buffer.concat(mp3_chunks.map((i8) => new Uint8Array(i8.buffer, 0, i8.byteLength)));
-        job.out({
-          relative: `${base_name}.mp3`,
-          contents: mp3_data,
-        });
-      }
 
-      if (my_ext === 'mp3') {
-        mp3_decoder.reset().then(done, done);
-      } else {
+        if (options.outputs.includes('mp3') && !ext_exists.mp3) {
+          let mp3_chunks = [];
+          let mp3encoder = new lamejs.Mp3Encoder(nch, sample_rate, options.mp3_kbps);
+          let channels_s16 = channels.map(convertF32toS16);
+          if (nch === 1) {
+            mp3_chunks.push(mp3encoder.encodeBuffer(channels_s16[0]));
+          } else {
+            mp3_chunks.push(mp3encoder.encodeBuffer(channels_s16[0], channels_s16[1]));
+          }
+          // Get end part of mp3
+          let mp3Tmp = mp3encoder.flush();
+          if (mp3Tmp.length) {
+            mp3_chunks.push(mp3Tmp);
+          }
+          let mp3_data = Buffer.concat(mp3_chunks.map((i8) => new Uint8Array(i8.buffer, 0, i8.byteLength)));
+          job.out({
+            relative: `${base_name}.mp3`,
+            contents: mp3_data,
+          });
+        }
+
         done();
-      }
+      });
     });
   }
 
