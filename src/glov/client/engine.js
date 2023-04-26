@@ -111,6 +111,8 @@ export let render_height;
 //eslint-disable-next-line @typescript-eslint/no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
 
+urlhash.register({ key: 'nocoop' }); // needed if server is using request_utils:setupRequestHeaders
+
 export let ZFAR;
 export let ZNEAR;
 export let fov_y = 1;
