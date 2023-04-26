@@ -75,7 +75,7 @@ module.exports = function (options) {
     }
     if (options.outputs.includes('ogg')) {
       // eslint-disable-next-line global-require
-      VorbisEncoder = require('vorbis-encoder-js').encoder;
+      VorbisEncoder = require('@jimbly/vorbis-encoder-js').encoder;
     }
     if (options.outputs.includes('mp3')) {
       // eslint-disable-next-line global-require

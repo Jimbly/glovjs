@@ -53,6 +53,7 @@
     "@jimbly/babel-plugin-transform-modules-simple-commonjs": "0.0.3",
     "@jimbly/howler": "0.0.9",
     "@jimbly/spine-core": "^4.0.27",
+    "@jimbly/vorbis-encoder-js": "0.0.1",
     "@types/express": "^4.17.13",
     "@types/node": "^16.9.6",
     "@types/request": "^2.48.7",
@@ -95,8 +96,7 @@
     "pngjs": "^6.0.0",
     "regexp-sourcemaps": "^1.0.1",
     "typescript": "4.4.3",
-    "uglify-js": "3.14.2",
-    "vorbis-encoder-js": "^1.0.2"
+    "uglify-js": "3.14.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.1"
