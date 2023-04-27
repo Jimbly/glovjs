@@ -802,19 +802,19 @@ export function playStartup(): void {
   };
   button_sprites = {
     regular: spriteCreate({
-      name: 'buttons/buttons',
+      name: 'crawler_buttons/buttons',
       ...button_param,
     }),
     down: spriteCreate({
-      name: 'buttons/buttons_down',
+      name: 'crawler_buttons/buttons_down',
       ...button_param,
     }),
     rollover: spriteCreate({
-      name: 'buttons/buttons_rollover',
+      name: 'crawler_buttons/buttons_rollover',
       ...button_param,
     }),
     disabled: spriteCreate({
-      name: 'buttons/buttons_disabled',
+      name: 'crawler_buttons/buttons_disabled',
       ...button_param,
     }),
   };
@@ -826,19 +826,19 @@ export function playStartup(): void {
   };
   button_sprites_notext = {
     regular: spriteCreate({
-      name: 'buttons/buttons_notext',
+      name: 'crawler_buttons/buttons_notext',
       ...button_param,
     }),
     down: spriteCreate({
-      name: 'buttons/buttons_notext_down',
+      name: 'crawler_buttons/buttons_notext_down',
       ...button_param,
     }),
     rollover: spriteCreate({
-      name: 'buttons/buttons_notext_rollover',
+      name: 'crawler_buttons/buttons_notext_rollover',
       ...button_param,
     }),
     disabled: spriteCreate({
-      name: 'buttons/buttons_notext_disabled',
+      name: 'crawler_buttons/buttons_notext_disabled',
       ...button_param,
     }),
   };
@@ -856,18 +856,18 @@ export function playStartup(): void {
     hs: [2, 4, 2],
   };
   let healthbar_bg = spriteCreate({
-    name: 'healthbar_bg',
+    name: 'crawler_healthbar_bg',
     ...bar_param,
   });
   bar_sprites = {
     healthbar: {
       bg: healthbar_bg,
       hp: spriteCreate({
-        name: 'healthbar_hp',
+        name: 'crawler_healthbar_hp',
         ...bar_param,
       }),
       empty: spriteCreate({
-        name: 'healthbar_empty',
+        name: 'crawler_healthbar_empty',
         ...bar_param,
       }),
     },

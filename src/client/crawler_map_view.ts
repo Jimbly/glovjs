@@ -632,7 +632,7 @@ export function crawlerMapViewStartup(param: {
     merge(build_mode_entity_icons, param.build_mode_entity_icons);
   }
   map_sprite = spriteCreate({
-    name: 'map_tileset',
+    name: 'crawler_map_tileset',
     ws: [7,7,7,7,7,7,7,7,7],
     hs: [7,7,7,7,7,7,7,7,7],
     filter_min: gl.NEAREST,
@@ -640,7 +640,7 @@ export function crawlerMapViewStartup(param: {
   });
   compass_border_w = param.compass_border_w || 6;
   compass_sprite = spriteCreate({
-    name: 'compass',
+    name: 'crawler_compass',
     ws: [160,compass_border_w,compass_border_w,256-compass_border_w-compass_border_w-160],
     hs: [11,11,10],
     filter_min: gl.NEAREST,
