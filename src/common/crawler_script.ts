@@ -4,15 +4,12 @@ import { ROVec2 } from 'glov/common/vmath';
 import {
   CellDesc,
   CrawlerCell,
-  CrawlerCellEvent,
   CrawlerLevel,
   DIR_CELL,
   DirType,
   DirTypeOrCell,
   WallDesc,
 } from './crawler_state';
-
-const { max } = Math;
 
 export type RandProvider = {
   random(): number;
@@ -24,9 +21,10 @@ export type CrawlerScriptAPI = {
   keySet(key: string): void;
   keyGet(key: string): boolean;
   status(key: string, message: string): void;
+  dialog(key: string, param?: string): void;
   getRand(): RandProvider;
   getFloor(): number;
-  floorDelta(delta: number, pos_key: string): void;
+  floorDelta(delta: number, pos_key: string, keep_rot: boolean): void;
   floorAbsolute(floor_id: number, x: number, y: number, rot?: DirType): void;
   startPit(floor_id: number, pos_key?: string, pos_pair?: [number, number, DirType]): void;
   forceMove(dir: DirType): void;
@@ -88,16 +86,21 @@ export enum CrawlerScriptWhen {
 }
 export enum CrawlerScriptEventMapIcon {
   NONE=0,
+  SHOP1=8,
+  SHOP2=9,
+  SHOP3=10,
+  X=24,
   QUESTION=27,
   EXCLAIMATION=28,
 }
 
 export type CrawlerScriptEvent = (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => void;
+export type CrawlerScriptMapIconCB = (api: CrawlerScriptAPI, param: string) => CrawlerScriptEventMapIcon;
 export type CrawlerScriptEventInfo = {
   key: string;
   func: CrawlerScriptEvent;
   when: CrawlerScriptWhen; // Default = PRE
-  map_icon: CrawlerScriptEventMapIcon; // Default = NONE
+  map_icon: CrawlerScriptEventMapIcon | CrawlerScriptMapIconCB; // Default = NONE
 };
 export type CrawlerScriptEventInfoParam = WithRequired<Partial<CrawlerScriptEventInfo>, 'key' | 'func'>;
 let event_funcs: Partial<Record<string, CrawlerScriptEventInfo>> = {};
@@ -134,14 +137,6 @@ export function crawlerScriptRunEvents(
   }
 }
 
-export function crawlerScriptEventsGetIcon(events: CrawlerCellEvent[]): CrawlerScriptEventMapIcon {
-  let ret = CrawlerScriptEventMapIcon.NONE;
-  for (let ii = 0; ii < events.length; ++ii) {
-    let event = events[ii];
-    let { id } = event;
-    if (event_funcs[id]) {
-      ret = max(ret, event_funcs[id]!.map_icon);
-    }
-  }
-  return ret;
+export function crawlerScriptEventFunc(id: string): CrawlerScriptEventInfo | null {
+  return event_funcs[id] || null;
 }

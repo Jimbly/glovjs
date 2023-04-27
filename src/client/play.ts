@@ -1,7 +1,9 @@
+import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import {
   ALIGN,
   Font,
+  fontStyle,
 } from 'glov/client/font';
 import * as input from 'glov/client/input';
 import {
@@ -9,6 +11,7 @@ import {
   PAD,
   keyDownEdge,
   keyUpEdge,
+  padButtonUpEdge,
 } from 'glov/client/input';
 import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
@@ -24,19 +27,16 @@ import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
   isMenuUp,
+  playUISound,
 } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import walltime from 'glov/client/walltime';
 import { webFSAPI } from 'glov/client/webfs';
 import {
-  TraitFactory,
-  traitFactoryCreate,
-} from 'glov/common/trait_factory';
-import {
   ClientChannelWorker,
-  DataObject,
   EntityID,
 } from 'glov/common/types';
+import { clamp } from 'glov/common/util';
 import {
   Vec2,
 } from 'glov/common/vmath';
@@ -47,7 +47,7 @@ import {
   aiDoFloor, aiTraitsClientStartup,
 } from './ai';
 // import './client_cmds';
-import { buildModeActive, crawlerBuildModeUI } from './crawler_build_mode';
+import { buildModeActive, buildModeOverlayActive, crawlerBuildModeUI } from './crawler_build_mode';
 import {
   crawlerCommStart,
   crawlerCommWant,
@@ -55,10 +55,11 @@ import {
 } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
-  EntityCrawlerClient,
+  crawlerEntityClientStartupEarly,
   crawlerEntityManager,
   crawlerEntityTraitsClientStartup,
   crawlerMyEnt,
+  crawlerMyEntOptional,
   isLocal,
   isOnline,
 } from './crawler_entity_client';
@@ -73,7 +74,9 @@ import {
   crawlerBuildModeActivate,
   crawlerController,
   crawlerGameState,
+  crawlerPlayInitOffline,
   crawlerPlayStartup,
+  crawlerPlayWantMode,
   crawlerRenderFrame,
   crawlerRenderFramePrep,
   crawlerSaveGame,
@@ -90,6 +93,7 @@ import {
 } from './crawler_render_entities';
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
+import { dialogMoveLocked, dialogReset, dialogRun, dialogStartup } from './dialog_system';
 import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
 import {
@@ -101,6 +105,7 @@ import {
 import { levelGenTest } from './level_gen_test';
 import { renderAppStartup, renderResetFilter } from './render_app';
 import {
+  statusPush,
   statusTick,
 } from './status';
 
@@ -110,7 +115,9 @@ const { floor, max, min, round } = Math;
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
   export let show_fps: 0 | 1;
-  export let volume: number;
+  export let volume_sound: number;
+  export let volume_music: number;
+  export let turn_toggle: 0 | 1;
 }
 
 // const ATTACK_WINDUP_TIME = 1000;
@@ -118,8 +125,11 @@ const MINIMAP_RADIUS = 3;
 const MINIMAP_X = 261;
 const MINIMAP_Y = 3;
 const MINIMAP_W = 5+7*(MINIMAP_RADIUS*2 + 1);
+const COMPASS_X = MINIMAP_X;
+const COMPASS_Y = MINIMAP_Y + MINIMAP_W;
 const VIEWPORT_X0 = 3;
 const VIEWPORT_Y0 = 3;
+const PLAY_ALLOW_CONSOLE = engine.DEBUG;
 
 type Entity = EntityDemoClient;
 
@@ -134,9 +144,29 @@ let pause_menu_up = false;
 
 let button_sprites: Record<ButtonStateString, Sprite>;
 let button_sprites_down: Record<ButtonStateString, Sprite>;
+let button_sprites_notext: Record<ButtonStateString, Sprite>;
+let button_sprites_notext_down: Record<ButtonStateString, Sprite>;
+type BarSprite = {
+  bg: Sprite;
+  hp: Sprite;
+  empty: Sprite;
+};
+let bar_sprites: {
+  healthbar: BarSprite;
+};
 
-function myEnt(): Entity {
+const style_text = fontStyle(null, {
+  color: 0xFFFFFFff,
+  outline_width: 4,
+  outline_color: 0x000000ff,
+});
+
+export function myEnt(): Entity {
   return crawlerMyEnt() as Entity;
+}
+
+export function myEntOptional(): Entity | undefined {
+  return crawlerMyEntOptional() as Entity | undefined;
 }
 
 // function entityManager(): ClientEntityManagerInterface<Entity> {
@@ -148,8 +178,8 @@ let pause_menu: SimpleMenu;
 function pauseMenu(): void {
   if (!pause_menu) {
     pause_menu = simpleMenuCreate({
-      x: (game_width - PAUSE_MENU_W)/2,
-      y: 80,
+      x: floor((game_width - PAUSE_MENU_W)/2),
+      y: 50,
       z: Z.MODAL + 2,
       width: PAUSE_MENU_W,
     });
@@ -160,21 +190,42 @@ function pauseMenu(): void {
       pause_menu_up = false;
     },
   }, {
-    name: 'Volume',
-    //plus_minus: true,
+    name: 'SFX Vol',
     slider: true,
     value_inc: 0.05,
     value_min: 0,
     value_max: 1,
   }, {
+    name: 'Mus Vol',
+    slider: true,
+    value_inc: 0.05,
+    value_min: 0,
+    value_max: 1,
+  }, {
+    name: `Turn: ${settings.turn_toggle ? 'A/S/4/6/←/→': 'Q/E/7/9/LB/RB'}`,
+    cb: () => {
+      settings.set('turn_toggle', 1 - settings.turn_toggle);
+    },
+  }];
+  if (isLocal()) {
+    items.push({
+      name: 'Save game',
+      cb: function () {
+        crawlerSaveGame('manual');
+        statusPush('Game saved.');
+        pause_menu_up = false;
+      },
+    });
+  }
+  items.push({
     name: isOnline() ? 'Return to Title' : 'Save and Exit',
     cb: function () {
       if (!isOnline()) {
-        crawlerSaveGame();
+        crawlerSaveGame('manual');
       }
       urlhash.go('');
     },
-  }];
+  });
   if (isLocal()) {
     items.push({
       name: 'Exit without saving',
@@ -185,19 +236,73 @@ function pauseMenu(): void {
   }
 
   let volume_item = items[1];
-  volume_item.value = settings.volume;
-  volume_item.name = `Volume: ${(settings.volume * 100).toFixed(0)}`;
+  volume_item.value = settings.volume_sound;
+  volume_item.name = `SFX Vol: ${(settings.volume_sound * 100).toFixed(0)}`;
+  volume_item = items[2];
+  volume_item.value = settings.volume_music;
+  volume_item.name = `Mus Vol: ${(settings.volume_music * 100).toFixed(0)}`;
 
   pause_menu.run({
     slider_w: 80,
     items,
   });
 
-  settings.set('volume', pause_menu.getItem(1).value);
+  settings.set('volume_sound', pause_menu.getItem(1).value);
+  settings.set('volume_music', pause_menu.getItem(2).value);
 
   ui.menuUp();
 }
 
+function drawBar(
+  bar: BarSprite,
+  x: number, y: number, z: number,
+  w: number, h: number,
+  p: number,
+): void {
+  const MIN_VIS_W = 4;
+  let full_w = round(p * w);
+  if (p > 0 && p < 1) {
+    full_w = clamp(full_w, MIN_VIS_W, w - MIN_VIS_W/2);
+  }
+  let empty_w = w - full_w;
+  ui.drawBox({
+    x, y, z,
+    w, h,
+  }, bar.bg, 1);
+  if (full_w) {
+    ui.drawBox({
+      x, y,
+      w: full_w, h,
+      z: z + 1,
+    }, bar.hp, 1);
+  }
+  if (empty_w) {
+    let temp_x = x + full_w;
+    if (full_w) {
+      temp_x -= 2;
+      empty_w += 2;
+    }
+    ui.drawBox({
+      x: temp_x, y,
+      w: empty_w, h,
+      z: z + 1,
+    }, bar.empty, 1);
+  }
+}
+
+export function drawHealthBar(
+  x: number, y: number, z: number,
+  w: number, h: number,
+  hp: number, hp_max: number,
+  show_text: boolean
+): void {
+  drawBar(bar_sprites.healthbar, x, y, z, w, h, hp / hp_max);
+  if (show_text) {
+    font.drawSizedAligned(style_text, x, y + (settings.pixely > 1 ? 0.5 : 0), z+2,
+      8, ALIGN.HVCENTERFIT,
+      w, h, `${hp}`);
+  }
+}
 function moveBlocked(): boolean {
   return false;
 }
@@ -232,12 +337,12 @@ function moveBlockDead(): boolean {
   let z = Z.UI;
 
   font.drawSizedAligned(null,
-    x + w/2, y + h/2 - 16, z,
+    x + floor(w/2), y + floor(h/2) - 16, z,
     ui.font_height, ALIGN.HCENTER|ALIGN.VBOTTOM,
     0, 0, 'You have died.');
 
   if (ui.buttonText({
-    x: x + w/2 - ui.button_width/2, y: y + h/2, z,
+    x: x + floor(w/2 - ui.button_width/2), y: y + floor(h/2), z,
     text: 'Respawn',
   })) {
     controller.goToFloor(0, 'stairs_in', 'respawn');
@@ -248,8 +353,13 @@ function moveBlockDead(): boolean {
 
 const BUTTON_W = 26;
 
-const MOVE_BUTTONS_X0 = 261;
+const MOVE_BUTTONS_X0 = MINIMAP_X;
 const MOVE_BUTTONS_Y0 = 179;
+
+
+function useNoText(): boolean {
+  return input.inputTouchMode() || input.inputPadMode() || settings.turn_toggle;
+}
 
 function playCrawl(): void {
   profilerStartFunc();
@@ -262,15 +372,36 @@ function playCrawl(): void {
     menu: 0,
   } as Record<ValidKeys, number>;
 
+  let dt = getScaledFrameDt();
+
+  const frame_map_view = mapViewActive();
+  const is_fullscreen_ui = false; // any game-mode fullscreen UIs up?
+  let dialog_viewport = {
+    x: VIEWPORT_X0 + 8,
+    w: render_width - 16,
+    y: VIEWPORT_Y0,
+    h: render_height + 4,
+    z: Z.STATUS,
+    pad_top: 2,
+    pad_bottom: 4,
+  };
+  if (is_fullscreen_ui || frame_map_view) {
+    dialog_viewport.x = 0;
+    dialog_viewport.w = game_width;
+    dialog_viewport.y = 0;
+    dialog_viewport.h = game_height - 3;
+  }
+  dialogRun(dt, dialog_viewport);
+
   const build_mode = buildModeActive();
-  let frame_map_view = mapViewActive();
+  let locked_dialog = dialogMoveLocked();
+  const overlay_menu_up = pause_menu_up; // || inventory_up
   let minimap_display_h = build_mode ? BUTTON_W : MINIMAP_W;
   let show_compass = !build_mode;
   let compass_h = show_compass ? 11 : 0;
-  let minimap_h = minimap_display_h + compass_h;
 
   if (build_mode && !controller.ignoreGameplay()) {
-    let build_y = MINIMAP_Y + minimap_h + 2;
+    let build_y = MINIMAP_Y + minimap_display_h + 2;
     crawlerBuildModeUI({
       x: MINIMAP_X,
       y: build_y,
@@ -301,12 +432,17 @@ function playCrawl(): void {
       no_visible_ui = false;
       if (frame_map_view) {
         z = Z.MAP + 1;
-      }
-      if (pause_menu_up) {
+      } else if (pause_menu_up) {
         z = Z.MODAL + 1;
+      } else {
+        z = Z.MENUBUTTON;
       }
     } else {
-      my_disabled = my_disabled || pause_menu_up;
+      if (overlay_menu_up && toggled_down) {
+        no_visible_ui = true;
+      } else {
+        my_disabled = my_disabled || overlay_menu_up;
+      }
     }
     let ret = crawlerOnScreenButton({
       x: button_x0 + (BUTTON_W + 2) * rx,
@@ -319,7 +455,9 @@ function playCrawl(): void {
       no_visible_ui,
       do_up_edge: true,
       disabled: my_disabled,
-      button_sprites: toggled_down ? button_sprites_down : button_sprites,
+      button_sprites: useNoText() ?
+        toggled_down ? button_sprites_notext_down : button_sprites_notext :
+        toggled_down ? button_sprites_down : button_sprites,
     });
     // down_edge[key] += ret.down_edge;
     down[key] += ret.down;
@@ -330,26 +468,23 @@ function playCrawl(): void {
   // Escape / open/close menu button - *before* pauseMenu()
   button_x0 = 317;
   button_y0 = 3;
-  let menu_up = frame_map_view || build_mode || pause_menu_up;
+  let menu_up = frame_map_view || build_mode || overlay_menu_up;
   let menu_keys = [KEYS.ESC];
-  button(0, 0, menu_up ? 10 : 6, 'menu', menu_keys, [PAD.BACK]);
+  let menu_pads = [PAD.START];
+  if (menu_up) {
+    menu_pads.push(PAD.B, PAD.BACK);
+  }
+  button(0, 0, menu_up ? 10 : 6, 'menu', menu_keys, menu_pads);
+  // if (!build_mode) {
+  //   button(0, 1, 7, 'inv', [KEYS.I], [PAD.Y], inventory_up);
+  //   if (up_edge.inv) {
+  //     inventory_up = !inventory_up;
+  //   }
+  // }
 
   if (pause_menu_up) {
     pauseMenu();
   }
-
-  controller.doPlayerMotion({
-    dt: getScaledFrameDt(),
-    button_x0: MOVE_BUTTONS_X0,
-    button_y0: MOVE_BUTTONS_Y0,
-    no_visible_ui: frame_map_view,
-    button_w: BUTTON_W,
-    button_sprites,
-    disable_move: moveBlocked() || pause_menu_up,
-    show_buttons: true,
-    do_debug_move: engine.defines.LEVEL_GEN || build_mode,
-    show_debug: Boolean(settings.show_fps),
-  });
 
   button_x0 = MOVE_BUTTONS_X0;
   button_y0 = MOVE_BUTTONS_Y0;
@@ -363,18 +498,39 @@ function playCrawl(): void {
   //   inventory_up = !inventory_up;
   // }
 
+  controller.doPlayerMotion({
+    dt,
+    button_x0: MOVE_BUTTONS_X0,
+    button_y0: build_mode ? game_height - 16 : MOVE_BUTTONS_Y0,
+    no_visible_ui: frame_map_view,
+    button_w: build_mode ? 6 : BUTTON_W,
+    button_sprites: useNoText() ? button_sprites_notext : button_sprites,
+    disable_move: moveBlocked() || overlay_menu_up,
+    disable_player_impulse: Boolean(locked_dialog),
+    show_buttons: !locked_dialog,
+    do_debug_move: engine.defines.LEVEL_GEN || build_mode,
+    show_debug: settings.show_fps ? { x: VIEWPORT_X0, y: VIEWPORT_Y0 + (build_mode ? 3 : 0) } : null,
+  });
+
+  button_x0 = MOVE_BUTTONS_X0;
+  button_y0 = MOVE_BUTTONS_Y0;
+
   if (keyUpEdge(KEYS.B)) {
     crawlerBuildModeActivate(!build_mode);
+    // inventory_up = false;
   }
 
   if (up_edge.menu) {
     if (menu_up) {
-      if (mapViewActive()) {
+      if (build_mode && mapViewActive()) {
         mapViewSetActive(false);
+        // but stay in build mode
       } else if (build_mode) {
         crawlerBuildModeActivate(false);
       } else {
-        // close whatever other menu
+        // close everything
+        mapViewSetActive(false);
+        // inventory_up = false;
       }
       pause_menu_up = false;
     } else {
@@ -392,9 +548,11 @@ function playCrawl(): void {
       mapViewToggle();
     }
   }
-  if (!pause_menu_up && keyDownEdge(KEYS.M)) {
+  if (!overlay_menu_up && (keyDownEdge(KEYS.M) || padButtonUpEdge(PAD.BACK))) {
+    playUISound('button_click');
     mapViewToggle();
   }
+  // inventoryMenu();
   let game_state = crawlerGameState();
   let script_api = crawlerScriptAPI();
   if (frame_map_view) {
@@ -404,13 +562,15 @@ function playCrawl(): void {
       }
     }
     crawlerMapViewDraw(game_state, 0, 0, game_width, game_height, 0, Z.MAP,
-      engine.defines.LEVEL_GEN, script_api, pause_menu_up);
+      engine.defines.LEVEL_GEN, script_api, overlay_menu_up,
+      floor((game_width - MINIMAP_W)/2), 2); // note: compass ignored, compass_h = 0 above
   } else {
     crawlerMapViewDraw(game_state, MINIMAP_X, MINIMAP_Y, MINIMAP_W, minimap_display_h, compass_h, Z.MAP,
-      false, script_api, pause_menu_up);
+      false, script_api, overlay_menu_up,
+      COMPASS_X, COMPASS_Y);
   }
 
-  statusTick(VIEWPORT_X0, VIEWPORT_Y0, Z.STATUS, render_width, render_height);
+  statusTick(dialog_viewport);
 
   profilerStopFunc();
 }
@@ -471,20 +631,28 @@ export function play(dt: number): void {
   frame_wall_time = max(frame_wall_time, walltime()); // strictly increasing
 
   const map_view = mapViewActive();
-  if (!(map_view || isMenuUp() || pause_menu_up)) {
+  let overlay_menu_up = pause_menu_up || dialogMoveLocked(); // || inventory_up
+  if (overlay_menu_up || isMenuUp()) {
+    controller.cancelQueuedMoves();
+  }
+  if (!(map_view || isMenuUp() || overlay_menu_up)) {
     spotSuppressPad();
   }
 
   profilerStopStart('chat');
-  getChatUI().run({
-    hide: map_view || pause_menu_up || !isOnline(),
-    x: 3,
-    y: 196,
-    border: 2,
-    scroll_grow: 2,
-    always_scroll: !map_view,
-    cuddly_scroll: true,
-  });
+  let do_chat = PLAY_ALLOW_CONSOLE || isOnline();
+  if (do_chat) {
+    let hide_chat = map_view || overlay_menu_up || !isOnline() || buildModeOverlayActive();
+    getChatUI().run({
+      hide: hide_chat,
+      x: 3,
+      y: game_height - getChatUI().h,
+      border: 2,
+      scroll_grow: 2,
+      always_scroll: !hide_chat,
+      cuddly_scroll: true,
+    });
+  }
   profilerStopStart('mid');
 
   if (keyDownEdge(KEYS.F3)) {
@@ -512,7 +680,8 @@ export function play(dt: number): void {
     let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
     aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
-      settings.ai_pause || engine.defines.LEVEL_GEN || pause_menu_up, script_api);
+      settings.ai_pause || engine.defines.LEVEL_GEN || overlay_menu_up ||
+      dialogMoveLocked(), script_api);
   }
 
   if (crawlerCommWant()) {
@@ -521,7 +690,9 @@ export function play(dt: number): void {
 
   crawlerEntityManager().actionListFlush();
 
-  getChatUI().runLate();
+  if (do_chat) {
+    getChatUI().runLate();
+  }
   profilerStop();
   profilerStopFunc();
 }
@@ -543,6 +714,8 @@ function playInitShared(online: boolean): void {
   controller.setOnInitPos(onInitPos);
 
   pause_menu_up = false;
+  // inventory_up = false;
+  dialogReset();
 }
 
 
@@ -562,6 +735,29 @@ function playInitEarly(room: ClientChannelWorker): void {
   playInitShared(true);
 }
 
+export function autosave(): void {
+  crawlerSaveGame('auto');
+  statusPush('Auto-saved.');
+}
+
+export function restartFromLastSave(): void {
+  crawlerPlayWantMode('recent');
+  crawlerPlayInitOffline();
+}
+
+settings.register({
+  ai_pause: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0, 1],
+  },
+  turn_toggle: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0, 1],
+  },
+});
+
 export function playStartup(): void {
   ({ font } = ui);
   crawlerScriptAPIDummyServer(true); // No script API running on server
@@ -579,11 +775,13 @@ export function playStartup(): void {
       loading_state: playOfflineLoading,
     },
     play_state: play,
+    // on_init_level_offline: initLevel,
+    default_vstyle: 'demo',
   });
-  let ent_factory = traitFactoryCreate<Entity, DataObject>();
-  aiTraitsClientStartup(ent_factory);
+  crawlerEntityClientStartupEarly();
+  aiTraitsClientStartup();
+  // appTraitsStartup();
   crawlerEntityTraitsClientStartup({
-    ent_factory: ent_factory as unknown as TraitFactory<EntityCrawlerClient, DataObject>,
     name: 'EntityDemoClient',
     Ctor: EntityDemoClient,
   });
@@ -626,8 +824,66 @@ export function playStartup(): void {
     rollover: button_sprites.rollover,
     disabled: button_sprites.disabled,
   };
+  button_sprites_notext = {
+    regular: spriteCreate({
+      name: 'buttons/buttons_notext',
+      ...button_param,
+    }),
+    down: spriteCreate({
+      name: 'buttons/buttons_notext_down',
+      ...button_param,
+    }),
+    rollover: spriteCreate({
+      name: 'buttons/buttons_notext_rollover',
+      ...button_param,
+    }),
+    disabled: spriteCreate({
+      name: 'buttons/buttons_notext_disabled',
+      ...button_param,
+    }),
+  };
+  button_sprites_notext_down = {
+    regular: button_sprites_notext.down,
+    down: button_sprites_notext.regular,
+    rollover: button_sprites_notext.rollover,
+    disabled: button_sprites_notext.disabled,
+  };
+
+  let bar_param = {
+    filter_min: gl.NEAREST,
+    filter_mag: gl.NEAREST,
+    ws: [2, 4, 2],
+    hs: [2, 4, 2],
+  };
+  let healthbar_bg = spriteCreate({
+    name: 'healthbar_bg',
+    ...bar_param,
+  });
+  bar_sprites = {
+    healthbar: {
+      bg: healthbar_bg,
+      hp: spriteCreate({
+        name: 'healthbar_hp',
+        ...bar_param,
+      }),
+      empty: spriteCreate({
+        name: 'healthbar_empty',
+        ...bar_param,
+      }),
+    },
+  };
 
   renderAppStartup();
+  dialogStartup({
+    font,
+    // text_style_cb: dialogTextStyle,
+  });
   crawlerLoadData(webFSAPI());
-  crawlerMapViewStartup();
+  crawlerMapViewStartup({
+    allow_pathfind: true,
+    // color_rollover: dawnbringer.colors[8],
+    build_mode_entity_icons: {},
+    // style_map_name: fontStyle(...)
+    compass_border_w: 6,
+  });
 }

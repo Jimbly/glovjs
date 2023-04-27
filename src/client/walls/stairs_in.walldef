@@ -1,6 +1,7 @@
 ---
 open_move: true
 open_vis: false
+build_hide: true
 map_view_wall_frames_from: 'door'
 visuals:
   type: simple_wall

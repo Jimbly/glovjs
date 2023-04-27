@@ -68,14 +68,18 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
   declare do_split: boolean;
   declare is_player: boolean;
   declare is_enemy: boolean;
+  declare ai_move_min_time: number;
+  declare ai_move_rand_time: number;
 
-  constructor(data: DataObject) {
-    super(data);
-    if (!this.data.pos) {
-      this.data.pos = [0,0,0];
+  constructor(data_in: DataObject) {
+    super(data_in);
+    let data = this.data;
+
+    if (!data.pos) {
+      data.pos = [0,0,0];
     }
-    while (this.data.pos.length < 3) {
-      this.data.pos.push(0);
+    while (data.pos.length < 3) {
+      data.pos.push(0);
     }
     this.floaters = [];
     this.aiResetMoveTime(true);
@@ -97,11 +101,11 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
   }
   ai_next_move_time!: number;
   aiResetMoveTime(initial: boolean): void {
-    this.ai_next_move_time = getFrameTimestamp() + 500 + random() * 500;
+    this.ai_next_move_time = getFrameTimestamp() + this.ai_move_min_time + random() * this.ai_move_rand_time;
   }
 
   isAlive(): boolean {
-    return true;
+    return this.data.stats ? this.data.stats.hp > 0 : true;
   }
 
   isEnemy(): boolean {
@@ -118,3 +122,5 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
 EntityDemoClient.prototype.draw2D = crawlerEntClientDefaultDraw2D;
 EntityDemoClient.prototype.onDelete = crawlerEntClientDefaultOnDelete;
 EntityDemoClient.prototype.do_split = true;
+EntityDemoClient.prototype.ai_move_min_time = 500;
+EntityDemoClient.prototype.ai_move_rand_time = 500;

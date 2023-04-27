@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { isInteger } from 'glov/common/util';
+import { isInteger, merge } from 'glov/common/util';
 import {
   CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
@@ -15,6 +15,19 @@ import {
   dirMod,
 } from './crawler_state';
 
+export type DialogIconFunc = (param: string, script_api: CrawlerScriptAPI) => CrawlerScriptEventMapIcon;
+let DIALOG_ICONS: Partial<Record<string, DialogIconFunc>> = {};
+export function dialogIconsRegister(data: Record<string, DialogIconFunc>): void {
+  merge(DIALOG_ICONS, data);
+}
+export function dialogMapIcon(id: string, param: string, script_api: CrawlerScriptAPI): CrawlerScriptEventMapIcon {
+  let dlg = DIALOG_ICONS[id];
+  if (!dlg) {
+    return CrawlerScriptEventMapIcon.NONE;
+  }
+  return dlg(param || '', script_api);
+}
+
 
 crawlerScriptRegisterFunc('KEY', function (
   script_api: CrawlerScriptAPI, cell: CrawlerCell, dir: DirTypeOrCell
@@ -25,6 +38,12 @@ crawlerScriptRegisterFunc('KEY', function (
     let neighbor = script_api.getCellRelative(dir);
     if (neighbor) {
       key_name = neighbor.getKeyNameForWall(dirMod(dir + 2));
+    }
+    if (!key_name) {
+      key_name = cell.getKeyNameForWall(DIR_CELL);
+    }
+    if (!key_name && neighbor) {
+      key_name = neighbor.getKeyNameForWall(DIR_CELL);
     }
   }
   return script_api.keyGet(key_name || 'missingkey');
@@ -90,7 +109,7 @@ crawlerScriptRegisterEvent({
 });
 
 crawlerScriptRegisterEvent({
-  key: 'floor_delta', // 1/-1 [special_pos_key]
+  key: 'floor_delta', // 1/-1 [keeprot] [special_pos_key]
   when: CrawlerScriptWhen.POST,
   map_icon: CrawlerScriptEventMapIcon.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
@@ -100,12 +119,18 @@ crawlerScriptRegisterEvent({
       api.status('stairs', 'This is where you came in, try to find the stairs down instead.');
       return;
     }
-    let special_pos = params[1] || (delta < 0 ? 'stairs_out' : 'stairs_in');
-    if (!delta || !isInteger(delta) || params.length > 2) {
-      api.status('floor_delta', '"floor_delta" event requires a parameter in the form: +/-N [special_key]');
+    let idx = 1;
+    let keep_rot = false;
+    if (params[idx] === 'keeprot') {
+      keep_rot = true;
+      idx++;
+    }
+    let special_pos = params[idx++] || (delta < 0 ? 'stairs_out' : 'stairs_in');
+    if (!delta || !isInteger(delta) || params.length > idx) {
+      api.status('floor_delta', '"floor_delta" event requires a parameter in the form: +/-N [keeprot] [special_key]');
       return;
     }
-    api.floorDelta(delta, special_pos);
+    api.floorDelta(delta, special_pos, keep_rot);
   },
 });
 
@@ -144,9 +169,7 @@ crawlerScriptRegisterEvent({
       return;
     }
     if (rot === null) {
-      api.status('floor_abs', '"floor_abs" event requires a parameter in the form: floor#|same x y [rot]' +
-        ' (invalid rot)');
-      return;
+      rot = undefined;
     }
     api.floorAbsolute(floor_id, x, y, rot);
   },
@@ -201,5 +224,44 @@ crawlerScriptRegisterEvent({
       return;
     }
     api.forceMove(rot);
+  },
+});
+
+crawlerScriptRegisterEvent({
+  key: 'sign',
+  when: CrawlerScriptWhen.PRE,
+  map_icon: CrawlerScriptEventMapIcon.NONE,
+  func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
+    api.dialog('sign', param || '...');
+  },
+});
+
+crawlerScriptRegisterEvent({
+  key: 'dialog', // id [string parameter]
+  when: CrawlerScriptWhen.PRE,
+  map_icon: (api: CrawlerScriptAPI, param: string) => {
+    let idx = param.indexOf(' ');
+    let id = param;
+    if (idx !== -1) {
+      id = param.slice(0, idx);
+      param = param.slice(idx + 1);
+    } else {
+      param = '';
+    }
+    return dialogMapIcon(id, param, api);
+  },
+  func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
+    if (!param) {
+      return api.status('dialog', 'Missing dialog ID');
+    }
+    let idx = param.indexOf(' ');
+    let id = param;
+    if (idx !== -1) {
+      id = param.slice(0, idx);
+      param = param.slice(idx + 1);
+    } else {
+      param = '';
+    }
+    api.dialog(id, param);
   },
 });

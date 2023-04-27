@@ -53,6 +53,10 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
 
 let ent_factory: TraitFactory<Entity, DataObject>;
 
+export function crawlerEntFactory<T extends Entity=Entity>(): TraitFactory<T, DataObject> {
+  return ent_factory as TraitFactory<T, DataObject>;
+}
+
 export function crawlerEntityAlloc(data: DataObject): Entity {
   let type_id = data.type;
   assert(typeof type_id === 'string');
@@ -72,12 +76,19 @@ function onEntDefReload(type_id: string): void {
   }
 }
 
+export function crawlerEntityServerStarupEarly(): void {
+  ent_factory = traitFactoryCreate<Entity, DataObject>();
+  crawlerTraitsInit(ent_factory);
+}
+
 export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawlerServer>(param: {
-  ent_factory?: TraitFactory<Entity, DataObject>;
   name?: string;
   Ctor?: Constructor<TBaseClass>;
   doing_own_net?: boolean;
 }): void {
+  if (!ent_factory) {
+    crawlerEntityServerStarupEarly();
+  }
   if (!param.doing_own_net) {
     entityServerRegisterFieldDefs<EntityCrawlerDataServer>({
       type: { encoding: EntityFieldEncoding.AnsiString },
@@ -179,13 +190,6 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
       }
     }]);
   }
-
-  if (param.ent_factory) {
-    ent_factory = param.ent_factory;
-  } else {
-    ent_factory = traitFactoryCreate<Entity, DataObject>();
-  }
-  crawlerTraitsInit(ent_factory);
 
   ent_factory.initialize({
     name: param.name || 'EntityCrawlerServer',

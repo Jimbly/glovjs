@@ -1,4 +1,5 @@
 import assert from 'assert';
+import * as engine from 'glov/client/engine';
 import {
   getFrameDt,
   getFrameIndex,
@@ -11,11 +12,13 @@ import {
   keyDownEdge,
   padButtonDown,
 } from 'glov/client/input';
+import * as settings from 'glov/client/settings';
 import { Sprite } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
   modalDialog,
+  playUISound,
   uiHandlingNav,
 } from 'glov/client/ui';
 import { EntityID, NetErrorCallback } from 'glov/common/types';
@@ -24,6 +27,7 @@ import {
   easeIn,
   easeInOut,
   lerp,
+  lerpAngle,
   sign,
 } from 'glov/common/util';
 import {
@@ -83,10 +87,12 @@ import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { statusPush } from './status';
 
-const { PI, abs, cos, random, round, sin } = Math;
+const { PI, abs, cos, max, random, round, sin } = Math;
 
 const WALK_TIME = 500;
 const ROT_TIME = 250;
+
+const FORCE_FACE_TIME = ROT_TIME;
 
 const half_vec = rovec3(0.5, 0.5, 0.5);
 const pit_times = [150, 400];
@@ -158,8 +164,9 @@ export type PlayerMotionParam = {
   button_y0: number;
   no_visible_ui: boolean;
   show_buttons: boolean;
-  show_debug: boolean;
+  show_debug: { x: number; y: number } | null;
   disable_move: boolean;
+  disable_player_impulse: boolean;
   button_w: number;
   button_sprites: Record<ButtonStateString, Sprite>;
   dt: number;
@@ -171,12 +178,14 @@ export class CrawlerController {
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
   script_api: CrawlerScriptAPIClient;
   on_init_level?: (floor_id: number) => void;
+  on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
   constructor(param: {
     game_state: CrawlerState;
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
     script_api: CrawlerScriptAPIClient;
     on_init_level?: (floor_id: number) => void;
+    on_enter_cell?: (pos: Vec2) => void;
     flush_vis_data?: (force: boolean) => void;
   }) {
     this.game_state = param.game_state;
@@ -184,11 +193,12 @@ export class CrawlerController {
     this.script_api = param.script_api;
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
+    this.on_enter_cell = param.on_enter_cell;
     this.script_api.setController(this);
   }
 
-  on_player_move?: (old_pos: Vec2, new_pos: Vec2) => void;
-  setOnPlayerMove(fn: (old_pos: Vec2, new_pos: Vec2) => void): void {
+  on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
+  setOnPlayerMove(fn: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void): void {
     this.on_player_move = fn;
   }
   on_init_pos?: (pos: Vec2, rot: DirType) => void;
@@ -328,7 +338,7 @@ export class CrawlerController {
       return;
     }
 
-    if (keyDownEdge(KEYS.F2)) {
+    if ((engine.DEBUG || buildModeActive()) && keyDownEdge(KEYS.F2)) {
       this.mode = this.mode === 'modeFreecam' ? 'modeCrawl' : 'modeFreecam';
       if (this.mode === 'modeCrawl') {
         v2floor(this.game_state.pos, this.freecam_pos);
@@ -355,15 +365,15 @@ export class CrawlerController {
 
     if (param.show_debug && !this.getTransitioningFloor()) {
       const { game_state, entity_manager } = this;
-      let y = 0;
+      let { x, y } = param.show_debug;
       let z = Z.DEBUG;
       let my_ent = entity_manager.hasMyEnt() ? entity_manager.getMyEnt() : null;
-      ui.print(null, 0, y, z, `Pos: ${game_state.pos[0]},${game_state.pos[1]}` +
+      ui.print(null, x, y, z, `Pos: ${game_state.pos[0]},${game_state.pos[1]}` +
         `  Floor: ${my_ent?.data.floor}`);
       y += ui.font_height;
-      ui.print(null, 0, y, z, `Angle: ${(game_state.angle / PI * 180).toFixed(0)}`);
+      ui.print(null, x, y, z, `Angle: ${(game_state.angle / PI * 180).toFixed(0)}`);
       y += ui.font_height;
-      ui.print(null, 0, y, z, `Angle Idx: ${this.moveEffRot()}`);
+      ui.print(null, x, y, z, `Angle Idx: ${this.moveEffRot()}`);
       y += ui.font_height;
     }
   }
@@ -448,6 +458,20 @@ export class CrawlerController {
     }
   }
 
+  getCellInFront(): CrawlerCell | null {
+    const { game_state, last_pos, last_rot, script_api } = this;
+    const { level } = game_state;
+    assert(level);
+    script_api.setLevel(level);
+    script_api.setPos(last_pos);
+    if (!this.isMoving() && !(level.wallsBlock(last_pos, last_rot, script_api) & BLOCK_VIS)) {
+      v2add(temp_pos, last_pos, DXY[last_rot]);
+      return !buildModeActive() && level.getCell(temp_pos[0], temp_pos[1]) || null;
+    } else {
+      return null;
+    }
+  }
+
   startMove(dir: DirType): MoveState {
     return this.pushImpulseState(DXY[dir], this.moveEffRot(), ACTION_MOVE, dir);
   }
@@ -499,7 +523,7 @@ export class CrawlerController {
           }
         }
         if (!(blocked & BLOCK_MOVE)) {
-          statusPush('Build mode open_move bypassed');
+          statusPush('Build mode open_move bypassed').fade();
         }
       }
       if (blocked & BLOCK_MOVE) {
@@ -544,10 +568,7 @@ export class CrawlerController {
           }
         }
       } else {
-        script_api.is_visited = true; // Always visited for AI
-        if (this.on_player_move) {
-          this.on_player_move(cur.pos, new_pos);
-        }
+        this.onPlayerMove(cur.pos, new_pos, next.action_dir);
         this.pushInterpState(new_pos, next.rot, action_type, next);
         let action_id = do_debug_move ? 'move_debug' : 'move';
         let new_pos_triplet: JSVec3 = [new_pos[0], new_pos[1], next.rot];
@@ -561,6 +582,30 @@ export class CrawlerController {
       this.pushInterpState(cur.pos, next.rot, action_type, next);
       let action_id = do_debug_move ? 'move_debug' : 'move';
       this.applyPlayerMove(action_id, [cur.pos[0], cur.pos[1], next.rot]);
+    }
+  }
+
+  onPlayerMove(old_pos: Vec2, new_pos: Vec2, move_dir: DirType): void {
+    let { game_state } = this;
+    let level = game_state.level!;
+    let cell1 = level.getCell(old_pos[0], old_pos[1]);
+    let wall1 = cell1 && cell1.walls[move_dir];
+    let cell2 = level.getCell(new_pos[0], new_pos[1]);
+    let wall2 = cell2 && cell2.walls[dirMod(move_dir + 2)];
+    if (wall1 && wall1.swapped.sound_id) {
+      playUISound(wall1.swapped.sound_id);
+    } else if (wall2 && wall2.swapped.sound_id) {
+      playUISound(wall2.swapped.sound_id);
+    }
+
+    if (cell2 && cell2.desc.swapped.sound_id === null) {
+      // no sound
+    } else {
+      playUISound(cell2 && cell2.desc.swapped.sound_id || 'footstep');
+    }
+
+    if (this.on_player_move) {
+      this.on_player_move(old_pos, new_pos, move_dir);
     }
   }
 
@@ -674,7 +719,8 @@ export class CrawlerController {
     new_floor_id: number,
     special_pos_key?: string,
     reason?: string,
-    specific_pos?: JSVec3
+    specific_pos?: JSVec3,
+    keep_rot?: boolean,
   ): void {
     assert(!this.transitioning_floor);
     this.transitioning_floor = true;
@@ -686,6 +732,10 @@ export class CrawlerController {
     this.game_state.getLevelForFloorAsync(new_floor_id, (level: CrawlerLevel) => {
       let new_pos: JSVec3 = specific_pos ?
         specific_pos : level.special_pos[special_pos_key || 'stairs_in'] || level.special_pos.stairs_in;
+      if (keep_rot) {
+        let cur_rot = this.myEnt().data.pos[2];
+        new_pos = [new_pos[0], new_pos[1], cur_rot];
+      }
 
       let cell = level.getCell(new_pos[0], new_pos[1]); // may be -1 => null cell
       if (!cell || !cell.desc.open_vis) {
@@ -706,11 +756,11 @@ export class CrawlerController {
     });
   }
 
-  floorDelta(delta: number, special_pos_key: string): void {
+  floorDelta(delta: number, special_pos_key: string, keep_rot: boolean): void {
     let floor_id = this.myEnt().data.floor;
     assert.equal(typeof floor_id, 'number');
     assert(floor_id + delta >= 0);
-    this.goToFloor(floor_id + delta, special_pos_key);
+    this.goToFloor(floor_id + delta, special_pos_key, undefined, undefined, keep_rot);
   }
 
   floorAbsolute(floor_id: number, x: number, y: number, rot?: DirType): void {
@@ -724,6 +774,9 @@ export class CrawlerController {
     while (this.interp_queue.length > 1) {
       this.interp_queue.pop();
     }
+    this.impulse_queue = [];
+  }
+  cancelQueuedMoves(): void {
     this.impulse_queue = [];
   }
 
@@ -825,11 +878,14 @@ export class CrawlerController {
         });
       }
     }
-    if (new_cell && new_cell.events && !buildModeActive()) {
-      assert(new_cell.events.length);
-      script_api.setLevel(game_state.level!);
-      script_api.setPos(cur_move_pos);
-      crawlerScriptRunEvents(script_api, new_cell, CrawlerScriptWhen.POST);
+    if (new_cell && !buildModeActive()) {
+      if (new_cell.events) {
+        assert(new_cell.events.length);
+        script_api.setLevel(game_state.level!);
+        script_api.setPos(cur_move_pos);
+        crawlerScriptRunEvents(script_api, new_cell, CrawlerScriptWhen.POST);
+      }
+      this.on_enter_cell?.(cur_move_pos);
     }
   }
 
@@ -870,6 +926,14 @@ export class CrawlerController {
     }
   }
 
+  applyForceFace(game_state: CrawlerState, dt: number): void {
+    let ffw = this.forceFaceUpdateWeight(dt);
+    if (ffw) {
+      assert(typeof this.force_face_dir === 'number');
+      game_state.angle = lerpAngle(ffw, game_state.angle, this.force_face_dir * PI/2);
+    }
+  }
+
   modeCrawl(param: PlayerMotionParam): void {
     const {
       button_x0,
@@ -879,6 +943,7 @@ export class CrawlerController {
       button_sprites,
       show_buttons,
       disable_move,
+      disable_player_impulse,
     } = param;
     let dt = param.dt;
     const {
@@ -891,6 +956,10 @@ export class CrawlerController {
     const build_mode = buildModeActive();
 
     let no_move = this.hasMoveBlocker() || disable_move;
+
+    if (disable_player_impulse) {
+      this.path_to = null;
+    }
 
     let down = {
       forward: 0,
@@ -929,7 +998,7 @@ export class CrawlerController {
         pads,
         no_visible_ui,
         do_up_edge: false,
-        disabled: no_move,
+        disabled: no_move || disable_player_impulse,
         button_sprites,
       });
       down_edge[key] += ret.down_edge;
@@ -965,6 +1034,8 @@ export class CrawlerController {
       if (uiHandlingNav()) {
         // hotkeys, but no nav keys
       } else {
+        keys_turn_right.push(KEYS.RIGHT);
+        keys_back.push(KEYS.DOWN);
         keys_turn_left.push(KEYS.LEFT);
         keys_forward.push(KEYS.UP);
         keys_turn_right.push(KEYS.RIGHT);
@@ -976,6 +1047,25 @@ export class CrawlerController {
         pad_back.push(PAD.DOWN);
         pad_right.push(PAD.RIGHT_BUMPER);
       }
+      if (settings.turn_toggle) {
+        let t = keys_turn_left;
+        keys_turn_left = keys_left;
+        keys_left = t;
+        t = keys_turn_right;
+        keys_turn_right = keys_right;
+        keys_right = t;
+        t = pad_turn_left;
+        pad_turn_left = pad_left;
+        pad_left = t;
+        t = pad_turn_right;
+        pad_turn_right = pad_right;
+        pad_right = t;
+      }
+      if (!uiHandlingNav()) {
+        // not affected by turn_toggle
+        keys_turn_left.push(KEYS.LEFT);
+        keys_forward.push(KEYS.UP);
+      }
       button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left);
       button(1, 0, forward_frame, 'forward', keys_forward, pad_forward);
       button(2, 0, 2, 'turn_right', keys_turn_right, pad_turn_right);
@@ -986,6 +1076,12 @@ export class CrawlerController {
 
     if (no_move) {
       this.fade_alpha = this.fade_override;
+      // Apply rot interpolation
+      if (!this.loading_level) {
+        let cur = this.queueTail();
+        game_state.angle = cur.rot * PI/2;
+        this.applyForceFace(game_state, dt);
+      }
       return;
     }
 
@@ -1190,6 +1286,7 @@ export class CrawlerController {
       v2copy(game_state.pos, cur.pos);
       game_state.angle = cur.rot * PI/2;
     }
+    this.applyForceFace(game_state, dt);
     assert(instantaneous_move);
     assert(instantaneous_move.pos);
 
@@ -1204,6 +1301,9 @@ export class CrawlerController {
     assert(move_for_abs_pos.pos);
     if (!v2same(move_for_abs_pos.pos, last_pos)) {
       this.playerMoveFinish(level, inst_cell, move_for_abs_pos.pos);
+      if (disable_player_impulse) {
+        this.cancelAllMoves();
+      }
     }
 
     this.flagCellNextToUsVisible(instantaneous_move.pos);
@@ -1251,6 +1351,52 @@ export class CrawlerController {
     }
     this.freecam_pitch += dp * 0.004;
     this.freecam_pitch = clamp(this.freecam_pitch, -PI/2 + 0.001, PI/2 - 0.001);
+  }
+
+  force_face_dir: DirType | null = null;
+  force_face_counter: number = 0;
+  force_face_starting = false;
+  forceFaceDir(dir: DirType | null): void {
+    if (dir !== null) {
+      if (dir !== this.force_face_dir) {
+        if (this.force_face_dir !== null && this.force_face_counter) {
+          // let it finish first
+        } else if (this.force_face_dir !== null && this.force_face_starting) {
+          // fade out first
+          this.force_face_counter = FORCE_FACE_TIME;
+          this.force_face_starting = false;
+        } else {
+          this.force_face_dir = dir;
+          this.force_face_counter = FORCE_FACE_TIME;
+          this.force_face_starting = true;
+        }
+      }
+    } else if (this.force_face_dir !== null) {
+      if (!this.force_face_starting) {
+        // already fading out
+      } else if (this.force_face_counter) {
+        // let it finish first
+      } else {
+        // Start fading out
+        this.force_face_counter = FORCE_FACE_TIME;
+        this.force_face_starting = false;
+      }
+    }
+  }
+  forceFaceUpdateWeight(dt: number): number {
+    this.force_face_counter = max(0, this.force_face_counter - dt);
+    if (this.force_face_dir === null) {
+      return 0;
+    } else if (this.force_face_starting) {
+      return 1 - this.force_face_counter / FORCE_FACE_TIME;
+    } else {
+      if (!this.force_face_counter) {
+        this.force_face_dir = null;
+        return 0;
+      } else {
+        return this.force_face_counter / FORCE_FACE_TIME;
+      }
+    }
   }
 
   getRenderPrepParam(): RenderPrepParam {

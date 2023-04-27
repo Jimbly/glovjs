@@ -32,6 +32,7 @@ export type WallDesc = {
   open_vis: boolean;
   open_move: boolean;
   advertise_other_side: boolean;
+  sound_id?: string;
   build_hide?: boolean;
   is_secret?: boolean; // Not allowed for pathfinding, not shown on map, until traversed
   map_view_wall_frame_north?: number;
@@ -53,6 +54,7 @@ export type CellDesc = {
   open_vis: boolean;
   advertised_wall?: string; // This indicates a special door coming into it, but also that it's a special "zone"
   advertised_wall_desc?: WallDesc;
+  sound_id?: string | null; // for footsteps / play upon player enter; default 'footstep'
   default_wall?: string;
   default_wall_desc: WallDesc;
   default_spawn?: string;
@@ -85,6 +87,10 @@ export type VstyleDesc = {
   id: string;
   cell_swaps: Partial<Record<string, string>>;
   wall_swaps: Partial<Record<string, string>>;
+  fog_params: Vec3;
+  fog_color: Vec3;
+  background_color: Vec3;
+  background_img?: string;
 };
 export type VstyleDescs = Partial<Record<string, VstyleDesc>>;
 export type CrawlerStateParams = {
@@ -110,13 +116,16 @@ import { base64CharTable } from 'glov/common/base64';
 import { dataError } from 'glov/common/data_error';
 import { FSAPI, fileBaseName } from 'glov/common/fsapi';
 import { DataObject } from 'glov/common/types';
-import { callEach, clone, empty } from 'glov/common/util';
+import { callEach, clone, empty, ridx } from 'glov/common/util';
 import {
+  ROVec2,
   Vec2,
+  Vec3,
   v2set,
   vec2,
+  vec3,
 } from 'glov/common/vmath';
-import { CrawlerScriptAPI, getEffWall } from './crawler_script';
+import { CrawlerScriptAPI, getEffCell, getEffWall } from './crawler_script';
 
 export type JSVec2 = [number, number];
 export type JSVec3 = [number, number, number];
@@ -400,11 +409,16 @@ let identity_vstyle: VstyleDesc = {
   id: '',
   cell_swaps: {},
   wall_swaps: {},
+  fog_params: vec3(0.003, 0.001, 800.0),
+  background_color: vec3(0,0,0),
+  fog_color: vec3(0,0,0),
 };
 
 export type CrawlerLevelState = {
   // Nothing for now, may want this later, though?
 };
+
+export type CrawlerLevelPaths = Record<string, DirType[]>; // `x,y` -> dir[]
 
 export type CrawlerLevelSerialized = {
   special_pos: Partial<Record<string, JSVec3>>;
@@ -416,6 +430,8 @@ export type CrawlerLevelSerialized = {
   state?: CrawlerLevelState;
   vstyle: string;
   seed: string;
+  props?: CrawlerCellProps;
+  paths?: CrawlerLevelPaths;
 };
 
 export class CrawlerLevel {
@@ -436,6 +452,8 @@ export class CrawlerLevel {
   initial_entities?: DataObject[];
   initial_state?: CrawlerLevelState;
   state: CrawlerLevelState = {};
+  props: CrawlerCellProps = {};
+  paths: CrawlerLevelPaths = {};
   default_open_cell = descs.cell.open;
   vstyle: VstyleDesc = identity_vstyle;
   seed: string = 'dummyseed';
@@ -603,7 +621,7 @@ export class CrawlerLevel {
     // console.log(this.toDebugString());
   }
 
-  wallsBlock(pos: Vec2, dir: DirType, script_api: CrawlerScriptAPI): BlockType {
+  wallsBlock(pos: ROVec2, dir: DirType, script_api: CrawlerScriptAPI): BlockType {
     let cur_cell = this.getCell(pos[0], pos[1]);
     let ret = BLOCK_OPEN; // 0
     if (cur_cell) {
@@ -612,8 +630,11 @@ export class CrawlerLevel {
         ret |= BLOCK_MOVE;
       } else {
         let neighbor_cell = this.getCell(pos[0] + DX[dir], pos[1] + DY[dir]);
-        if (neighbor_cell && !neighbor_cell.desc.open_move) {
-          ret |= BLOCK_MOVE;
+        if (neighbor_cell) {
+          let cell_desc = getEffCell(script_api, neighbor_cell);
+          if (!cell_desc.open_move) {
+            ret |= BLOCK_MOVE;
+          }
         }
       }
       if (!wall_desc.open_vis) { // e.g. doors
@@ -686,6 +707,8 @@ export class CrawlerLevel {
       state: this.state,
       vstyle: this.vstyle.id,
       seed: this.seed,
+      props: this.props,
+      paths: this.paths,
     };
   }
 
@@ -696,6 +719,8 @@ export class CrawlerLevel {
     this.initial_entities = data.initial_entities;
     this.initial_state = data.initial_state;
     this.state = data.state || {};
+    this.props = data.props || {};
+    this.paths = data.paths || {};
     this.seed = data.seed;
     let { cells } = this;
     for (let idx = 0; idx < w * h; ++idx) {
@@ -822,6 +847,66 @@ export class CrawlerLevel {
       return null;
     }
     return this.cells[y * this.w + x];
+  }
+
+  setProp(key: string, value: CrawlerCellPropValue | undefined): void {
+    if (value === undefined) {
+      delete this.props[key];
+    } else {
+      this.props[key] = value;
+    }
+  }
+  getProp(key: string): CrawlerCellPropValue | undefined {
+    return this.props && this.props[key];
+  }
+
+  togglePath(x: number, y: number, dir: DirType): void {
+    let x2 = x + DX[dir];
+    let y2 = y + DY[dir];
+    if (x2 < x || x2 === x && y2 < y) {
+      // Key is always lexographically first
+      let t = x;
+      x = x2;
+      x2 = t;
+      t = y;
+      y = y2;
+      y2 = t;
+      dir = dirMod(dir + 2);
+    }
+    if (x2 >= 0 && y2 >= 0 && x2 < this.w && y2 < this.h) {
+      let key = `${x},${y}`;
+      let list = this.paths[key];
+      if (!list) {
+        list = this.paths[key] = [];
+      }
+      for (let ii = 0; ii < list.length; ++ii) {
+        if (list[ii] === dir) {
+          ridx(list, ii);
+          return;
+        }
+      }
+      list.push(dir);
+    }
+  }
+
+  getPathsForMap(x: number, y: number): DirType[] {
+    let key = `${x},${y}`;
+    return this.paths[key] || [];
+  }
+  getPaths(x: number, y: number): DirType[] {
+    let key = `${x},${y}`;
+    let ret = this.paths[key] || [];
+    let west = this.paths[`${x-1},${y}`];
+    if (west && west.includes(EAST)) {
+      ret = ret.slice(0);
+      ret.push(WEST);
+    }
+    let south = this.paths[`${x},${y-1}`];
+    if (south && south.includes(NORTH)) {
+      ret = ret.slice(0);
+      ret.push(SOUTH);
+    }
+    return ret;
   }
 }
 
@@ -998,6 +1083,9 @@ function vstyleLoad(filename: string): VstyleDesc {
   vstyle_desc.id = id;
   vstyle_desc.cell_swaps = vstyle_desc.cell_swaps || {};
   vstyle_desc.wall_swaps = vstyle_desc.wall_swaps || {};
+  vstyle_desc.background_color = vstyle_desc.background_color || identity_vstyle.background_color;
+  vstyle_desc.fog_params = vstyle_desc.fog_params || identity_vstyle.fog_params;
+  vstyle_desc.fog_color = vstyle_desc.fog_color || identity_vstyle.fog_color;
   return vstyle_desc;
 }
 
@@ -1026,8 +1114,12 @@ function celltypeFinalizeReferences(): void {
         let { name } = replace;
         assert(name);
         let target = descs.cell[name];
-        assert(target);
-        replace.desc = target;
+        if (!target) {
+          dataError(`Referencing unknown cell type "${name}" in replace in "${id}"`);
+          replace.desc = descs.cell.open;
+        } else {
+          replace.desc = target;
+        }
       }
     }
   }

@@ -1,4 +1,11 @@
 ---
+fog_color: '#191c0e'
+background_color: '#191c0e'
+# background_img: backdrop_demo
+fog_params:
+- 0.003
+- 0.0005
+- 800.0
 cell_swaps:
   open: demo_open
   floorswitch: demo_floorswitch

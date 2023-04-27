@@ -15,6 +15,7 @@ import {
   EntityPositionManager,
   entityPositionManagerCreate,
 } from 'glov/client/entity_position_manager';
+import { netSubs } from 'glov/client/net';
 import { spineCreate } from 'glov/client/spine';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import { spriteCreate } from 'glov/client/sprites';
@@ -133,6 +134,9 @@ export function crawlerEntClientDefaultOnDelete(this: EntityCrawlerClient, reaso
   if (reason === 'killed') {
     this.data.stats.hp = 0;
   }
+  if (reason === 'respawn') {
+    countdown_max = 0;
+  }
 
   if (this.onDeleteSub) {
     let param: EntityOnDeleteSubParam = {
@@ -148,6 +152,10 @@ export function crawlerEntClientDefaultOnDelete(this: EntityCrawlerClient, reaso
 
 export function crawlerEntityManager(): ClientEntityManagerInterface<Entity> {
   return entity_manager;
+}
+
+export function crawlerEntityManagerOffline(): ClientEntityManagerInterface<Entity> {
+  return entity_manager_offline;
 }
 
 export function crawlerEntityManagerOnline(): ClientEntityManagerInterface<Entity> {
@@ -280,6 +288,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
           times: 1000,
         },
       },
+      hybrid: false,
       sprite_data: {
         name: 'required',
         ws: [1],
@@ -297,12 +306,19 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
       opts.sprite_data.wrap_s = lookupGLDefine(opts.sprite_data.wrap_s);
       opts.sprite_data.wrap_t = lookupGLDefine(opts.sprite_data.wrap_t);
       opts.sprite = spriteCreate(opts.sprite_data);
-      if (opts.sprite_near_data) {
-        opts.sprite_near_data.filter_min = lookupGLDefine(opts.sprite_near_data.filter_min);
-        opts.sprite_near_data.filter_mag = lookupGLDefine(opts.sprite_near_data.filter_mag);
-        opts.sprite_near_data.wrap_s = lookupGLDefine(opts.sprite_near_data.wrap_s);
-        opts.sprite_near_data.wrap_t = lookupGLDefine(opts.sprite_near_data.wrap_t);
-        opts.sprite_near = spriteCreate(opts.sprite_near_data);
+      if (opts.sprite_data.filter_min !== gl.NEAREST) {
+        opts.sprite_near = spriteCreate({
+          ...opts.sprite_data,
+          filter_min: gl.NEAREST,
+          filter_mag: gl.NEAREST,
+        });
+      }
+      if (opts.hybrid) {
+        assert(opts.sprite_near);
+        opts.sprite_hybrid = spriteCreate({
+          ...opts.sprite_data,
+          texs: [opts.sprite.texs[0], opts.sprite_near.texs[0]],
+        });
       }
     },
     alloc_state: function (opts: DrawableSpriteOpts, ent: Entity) {
@@ -368,6 +384,10 @@ export function crawlerGetSpawnDescs(): SpawnDescs {
 }
 
 let ent_factory: TraitFactory<Entity, DataObject>;
+
+export function crawlerEntFactory<T extends Entity=Entity>(): TraitFactory<T, DataObject> {
+  return ent_factory as TraitFactory<T, DataObject>;
+}
 
 const example_ent_data = { pos: [0, 0, 0] };
 
@@ -449,19 +469,18 @@ cmd_parse.register({
   }
 });
 
+export function crawlerEntityClientStartupEarly(): void {
+  ent_factory = traitFactoryCreate<Entity, DataObject>();
+  crawlerTraitsInit(ent_factory);
+}
+
 
 export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawlerClient>(param: {
-  ent_factory?: TraitFactory<Entity, DataObject>;
   name?: string;
   Ctor: Constructor<TBaseClass>;
   channel_type?: string;
 }): void {
-  if (param.ent_factory) {
-    ent_factory = param.ent_factory;
-  } else {
-    ent_factory = traitFactoryCreate<Entity, DataObject>();
-  }
-  crawlerTraitsInit(ent_factory);
+  assert(ent_factory);
 
   ent_factory.initialize({
     name: param.name || 'EntityCrawlerClient',
@@ -480,15 +499,17 @@ export function crawlerEntityTraitsClientStartup<TBaseClass extends EntityCrawle
     };
   });
 
-  entity_manager_online = clientEntityManagerCreate({
-    channel_type: param.channel_type || 'crawl',
-    create_func: entCreate,
-  });
-  entity_pos_manager_online = entityPositionManagerCreate({
-    entity_manager: entity_manager_online,
-    dim_pos: 2, dim_rot: 1,
-    // speed: 1/WALK_TIME,
-  });
+  if (netSubs()) {
+    entity_manager_online = clientEntityManagerCreate({
+      channel_type: param.channel_type || 'crawl',
+      create_func: entCreate,
+    });
+    entity_pos_manager_online = entityPositionManagerCreate({
+      entity_manager: entity_manager_online,
+      dim_pos: 2, dim_rot: 1,
+      // speed: 1/WALK_TIME,
+    });
+  }
   entity_manager_offline = offlineEntityManagerCreate({
     create_func: entCreate,
   });

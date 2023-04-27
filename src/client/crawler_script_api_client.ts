@@ -28,6 +28,7 @@ import {
   OnlineMode,
   crawlerMyEnt,
 } from './crawler_entity_client';
+import { dialog } from './dialog_system';
 import { statusSet } from './status';
 
 export type CrawlerScriptLocalData = {
@@ -42,6 +43,8 @@ export interface CrawlerScriptAPIClient extends CrawlerScriptAPI {
 
   localDataSet(data: CrawlerScriptLocalData): void;
   localDataGet(): CrawlerScriptLocalData;
+
+  pos: [number, number];
 }
 
 class CrawlerScriptAPIClientBase {
@@ -85,6 +88,9 @@ class CrawlerScriptAPIClientBase {
   status(key: string, message: string): void {
     statusSet(key, message);
   }
+  dialog(key: string, param?: string): void {
+    dialog(key, param);
+  }
   getRand(): RandProvider {
     if (this.need_reseed) {
       this.need_reseed = false;
@@ -92,8 +98,8 @@ class CrawlerScriptAPIClientBase {
     }
     return this.rand;
   }
-  floorDelta(delta: number, pos_key: string): void {
-    this.controller.floorDelta(delta, pos_key);
+  floorDelta(delta: number, pos_key: string, keep_rot: boolean): void {
+    this.controller.floorDelta(delta, pos_key, keep_rot);
   }
 
   floorAbsolute(floor_id: number, x: number, y: number, rot?: DirType): void {

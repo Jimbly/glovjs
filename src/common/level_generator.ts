@@ -1120,8 +1120,6 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   };
   level.gen_data = gen_data;
 
-  level.setVstyle('demo');
-
   return level;
 }
 
@@ -1311,17 +1309,19 @@ function connectLevel(
   assert(false);
 }
 
-export type LevelGeneratorParam = { seed: string };
+export type LevelGeneratorParam = { seed: string; default_vstyle: string };
 export type LevelGenerator = LevelGeneratorImpl;
 class LevelGeneratorImpl {
   spire_seed: string;
   seed_override: string | null = null;
   level_gen_params: GenParamsWrapBrogue | null = null; // use defaults
   levels: CrawlerLevel[];
+  default_vstyle: string;
 
   provider: (floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void) => void;
   constructor(param: LevelGeneratorParam) {
     this.spire_seed = param.seed;
+    this.default_vstyle = param.default_vstyle;
     this.provider = this.provideLevel.bind(this);
     this.levels = [];
   }
@@ -1333,9 +1333,10 @@ class LevelGeneratorImpl {
   getLevelGenerated(floor_id: number): CrawlerLevel {
     assert(isFinite(floor_id));
     if (!this.levels[floor_id]) {
-      this.levels[floor_id] = generateLevel(floor_id,
+      let level = this.levels[floor_id] = generateLevel(floor_id,
         `${this.seed_override || this.spire_seed}_f${floor_id}`,
         this.level_gen_params);
+      level.setVstyle(this.default_vstyle);
     }
     return this.levels[floor_id];
   }

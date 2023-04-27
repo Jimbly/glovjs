@@ -69,46 +69,48 @@ export function crawlerOnScreenButton(param: {
     down: 0,
     up_edge: 0,
   };
-  if (!no_visible_ui) {
-    if (input.mouseDownEdge(button_param)) {
-      nav_ret.down_edge++;
-    }
-    let { spot_state, ret } = spot(button_param);
-    if (spot_state === SPOT_STATE_DOWN) {
-      nav_ret.down += engine.frame_dt;
-    }
-    state = spot_state;
-    if (do_up_edge) {
-      nav_ret.up_edge+=ret;
-    }
-  }
-  for (let ii = 0; ii < keys.length; ++ii) {
-    if (keyDownEdge(keys[ii])) {
-      nav_ret.down_edge++;
-    }
-    if (keyDown(keys[ii])) {
-      nav_ret.down++;
-    }
-    if (keyUpEdge(keys[ii])) {
-      if (do_up_edge && !disabled) {
-        nav_ret.up_edge++;
-        spotSetPadMode(true);
-        playUISound('button_click');
+  if (!disabled) {
+    if (!no_visible_ui) {
+      if (input.mouseDownEdge(button_param)) {
+        nav_ret.down_edge++;
+      }
+      let { spot_state, ret } = spot(button_param);
+      if (spot_state === SPOT_STATE_DOWN) {
+        nav_ret.down += engine.frame_dt;
+      }
+      state = spot_state;
+      if (do_up_edge) {
+        nav_ret.up_edge+=ret;
       }
     }
-  }
-  for (let ii = 0; ii < pads.length; ++ii) {
-    if (padButtonDownEdge(pads[ii])) {
-      nav_ret.down_edge++;
+    for (let ii = 0; ii < keys.length; ++ii) {
+      if (keyDownEdge(keys[ii])) {
+        nav_ret.down_edge++;
+      }
+      if (keyDown(keys[ii])) {
+        nav_ret.down++;
+      }
+      if (keyUpEdge(keys[ii])) {
+        if (do_up_edge && !disabled) {
+          nav_ret.up_edge++;
+          spotSetPadMode(true);
+          playUISound('button_click');
+        }
+      }
     }
-    if (padButtonDown(pads[ii])) {
-      nav_ret.down++;
-    }
-    if (padButtonUpEdge(pads[ii])) {
-      if (do_up_edge && !disabled) {
-        nav_ret.up_edge++;
-        spotSetPadMode(true);
-        playUISound('button_click');
+    for (let ii = 0; ii < pads.length; ++ii) {
+      if (padButtonDownEdge(pads[ii])) {
+        nav_ret.down_edge++;
+      }
+      if (padButtonDown(pads[ii])) {
+        nav_ret.down++;
+      }
+      if (padButtonUpEdge(pads[ii])) {
+        if (do_up_edge && !disabled) {
+          nav_ret.up_edge++;
+          spotSetPadMode(true);
+          playUISound('button_click');
+        }
       }
     }
   }

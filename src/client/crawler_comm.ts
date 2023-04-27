@@ -69,7 +69,7 @@ export function crawlerCommWant(): boolean {
   if (effectiveDesiredChannel() === 'local') {
     return false;
   }
-  return Boolean(!netClient().connected && effectiveDesiredChannel());
+  return netSubs() && Boolean(!netClient().connected && effectiveDesiredChannel());
 }
 
 type JoinData = {
@@ -159,9 +159,16 @@ function crawlerCommReconnect(): void {
 }
 
 function crawlerCommHandshake(): void {
-
-  if (netSubs().loggedIn() && netClient().connected) {
-    if (state === STATE_NONE && netSubs().loggedIn() && netClient().connected) {
+  if (state === STATE_NONE) {
+    let eff_desired_channel = effectiveDesiredChannel();
+    if (!eff_desired_channel) {
+      engine.setState(lobby_state);
+      return;
+    }
+  }
+  let eff_connected = current_channel === 'local' || netSubs().loggedIn() && netClient().connected;
+  if (eff_connected) {
+    if (state === STATE_NONE && eff_connected) {
       let eff_desired_channel = effectiveDesiredChannel();
       if (!eff_desired_channel) {
         engine.setState(lobby_state);
@@ -195,6 +202,9 @@ function crawlerCommHandshake(): void {
 function startLocalCrawl(): void {
   current_channel = 'local';
   state = STATE_JOINED;
+  if (crawlerEntityManagerOnline()) {
+    crawlerEntityManagerOnline().reinit({}); // Also need to remove anything hanging around in case we switch to hybrid
+  }
   crawlerPlayInitOffline();
 }
 
@@ -252,9 +262,11 @@ export function crawlerCommStartup(param: {
   join_func = param.join_func || defaultSendJoin;
   chat_ui = param.chat_ui || null;
   desired_channel = urlhash.get('c') || null;
-  netSubs().on('connect', crawlerCommReconnect);
-  crawlerEntityManagerOnline().on('ent_start', onEntStart);
-  crawlerEntityManagerOnline().on('ent_ready', onEntReady);
-  netSubs().onChannelMsg(param.channel_type, 'floorchange_ack', crawlerCommOnFloorchangeAck);
-  netSubs().onChannelMsg(param.channel_type, 'build_op', buildModeOnBuildOp);
+  if (netSubs()) {
+    netSubs().on('connect', crawlerCommReconnect);
+    crawlerEntityManagerOnline().on('ent_start', onEntStart);
+    crawlerEntityManagerOnline().on('ent_ready', onEntReady);
+    netSubs().onChannelMsg(param.channel_type, 'floorchange_ack', crawlerCommOnFloorchangeAck);
+    netSubs().onChannelMsg(param.channel_type, 'build_op', buildModeOnBuildOp);
+  }
 }

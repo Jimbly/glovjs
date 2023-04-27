@@ -12,6 +12,7 @@ import * as settings from 'glov/client/settings';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import { spritesheetTextureOpts } from 'glov/client/spritesheet';
 import { textureDefaultFilters } from 'glov/client/textures';
+import { uiSetPanelColor } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
 // import './client_cmds.js'; // for side effects
 import { crawlerBuildModeStartup } from './crawler_build_mode';
@@ -20,14 +21,16 @@ import { game_height, game_width } from './globals';
 import { playStartup } from './play';
 import { titleInit, titleStartup } from './title';
 
+const { round } = Math;
+
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
 Z.CHAT = 60;
 Z.UI = 100;
-Z.STATUS = 100;
 Z.MAP = Z.UI + 5; // also minimap
-Z.FLOATERS = Z.UI + 25;
+Z.FLOATERS = 125;
+Z.STATUS = 140;
 Z.CHAT_FOCUSED = 100;
 
 let fonts: Font[] | undefined;
@@ -49,6 +52,32 @@ export function main(): void {
     });
   }
 
+  // Default style
+  if (!'simple hires') {
+    settings.set('pixely', 0);
+    settings.set('filter', 0);
+    settings.set('entity_split', 0);
+    settings.set('entity_nosplit_use_near', 1);
+  } else if (!'simple lowres') {
+    settings.set('pixely', 1);
+    settings.set('filter', 0);
+    settings.set('entity_split', 0);
+    settings.set('entity_nosplit_use_near', 1);
+  } else if (!'CRT filter') {
+    settings.set('pixely', 2);
+    settings.set('hybrid', 1);
+    settings.set('filter', 0);
+    settings.set('entity_split', 0);
+    settings.set('entity_nosplit_use_near', 1);
+  } else if ('split logic') {
+    settings.set('pixely', 1);
+    settings.set('filter', 0);
+    settings.set('entity_split', 1);
+  } else if (!'split logic filter') {
+    settings.set('pixely', 1);
+    settings.set('filter', 1);
+    settings.set('entity_split', 1);
+  }
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
@@ -62,17 +91,13 @@ export function main(): void {
     font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
   settings.set('use_fbos', 1); // Needed for our effects
-  // Default style
-  settings.set('pixely', 1);
-  settings.set('filter', 0);
-  settings.set('entity_split', 1);
 
   spritesheetTextureOpts('whitebox', { force_mipmaps: true });
 
   if (!engine.startup({
     game_width,
     game_height,
-    pixely: true,
+    pixely,
     font,
     viewport_postprocess: true,
     antialias: false,
@@ -102,6 +127,16 @@ export function main(): void {
       // scrollbar_handle_grabber: { name: 'scrollbar_handle_grabber', ws: [11], hs: [11] },
       // scrollbar_handle: { name: 'scrollbar_handle', ws: [11], hs: [3, 5, 3] },
     },
+    ui_sounds: {
+      button_click: 'button_click',
+      rollover: { file: 'rollover', volume: 0.25 },
+      user_join: 'user_join',
+      user_leave: 'user_leave',
+      msg_in: 'msg_in',
+      msg_err: 'msg_err',
+      msg_out_err: 'msg_out_err',
+      msg_out: 'msg_out',
+    },
   })) {
     return;
   }
@@ -111,6 +146,8 @@ export function main(): void {
     fontCreate(font_info_04b03x1, 'font/04b03_8x1'),
   ];
 
+  let build_font = fonts[0];
+
   gl.clearColor(0, 0, 0, 1);
 
   // Actually not too bad:
@@ -119,7 +156,10 @@ export function main(): void {
   }
 
   ui.scaleSizes(13 / 32);
+  ui.setModalSizes(0, round(game_width * 0.8), round(game_height * 0.23), 0, 0);
   ui.setFontHeight(8);
+  ui.setPanelPixelScale(1);
+  uiSetPanelColor([1, 1, 1, 1]);
   // ui.uiSetFontStyleFocused(fontStyle(ui.uiGetFontStyleFocused(), {
   //   outline_width: 2.5,
   //   outline_color: dawnbringer.font_colors[8],
@@ -134,9 +174,11 @@ export function main(): void {
     fade_time: [1000, 1000],
   });
 
-  crawlerBuildModeStartup(fonts[0]);
+  crawlerBuildModeStartup({
+    font: build_font,
+    button_height: 11,
+  });
   playStartup();
-  titleStartup();
-
   engine.setState(titleInit);
+  titleStartup();
 }

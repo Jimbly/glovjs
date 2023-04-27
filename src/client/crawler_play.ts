@@ -10,6 +10,7 @@ import {
   registerShader,
 } from 'glov/client/effects';
 import * as engine from 'glov/client/engine';
+import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { fetch } from 'glov/client/fetch';
 import { framebufferEnd } from 'glov/client/framebuffer';
 import {
@@ -22,7 +23,7 @@ import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
-import { textureSupportsDepth, textureWhite } from 'glov/client/textures';
+import { textureLoad, textureSupportsDepth, textureWhite } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { getURLBase } from 'glov/client/urlhash';
@@ -40,6 +41,7 @@ import {
   Vec4,
   v3copy,
   v4copy,
+  vec3,
   vec4,
 } from 'glov/common/vmath';
 import '../common/crawler_events'; // side effects: register events
@@ -50,6 +52,7 @@ import {
   DX,
   DY,
   JSVec3,
+  VstyleDesc,
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
@@ -62,7 +65,7 @@ import {
   crawlerEntitiesInit,
   crawlerEntitiesOnEntStart,
   crawlerEntityManager,
-  crawlerEntityManagerOnline,
+  crawlerEntityManagerOffline,
   crawlerMyActionSend,
   crawlerMyEnt,
   entityPosManager,
@@ -78,7 +81,10 @@ import {
   SPLIT_NEAR,
   crawlerCalc3DViewport,
   crawlerRenderDoSplit,
+  crawlerRenderGameViewAngle,
   crawlerRenderViewportGet,
+  crawlerSetFogColor,
+  crawlerSetFogParams,
   render,
 } from './crawler_render';
 import { crawlerRenderEntities } from './crawler_render_entities';
@@ -87,7 +93,7 @@ import {
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
 
-const { floor } = Math;
+const { PI, floor } = Math;
 
 type Entity = EntityCrawlerClient;
 
@@ -95,6 +101,10 @@ declare module 'glov/client/settings' {
   export let filter: 0 | 1;
   export let pixely: 0 | 1 | 2 | 3;
   export let entity_split: 0 | 1;
+  export let entity_nosplit_use_near: 0 | 1;
+  export let hybrid: 0 | 1;
+  export let hybrid_base: number;
+  export let hybrid_scalar: number;
   export let time_scale: number;
   export let use_fbos: 0 | 1;
 }
@@ -166,6 +176,26 @@ settings.register({
     type: cmd_parse.TYPE_INT,
     range: [0, 1],
   },
+  entity_nosplit_use_near: { // always should be 1, just remove?
+    default_value: 1,
+    type: cmd_parse.TYPE_INT,
+    range: [0, 1],
+  },
+  hybrid: {
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0, 1],
+  },
+  hybrid_base: {
+    default_value: 0.75,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [-1, 2],
+  },
+  hybrid_scalar: {
+    default_value: 0.125,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0, 1],
+  },
   time_scale: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
@@ -191,13 +221,21 @@ export function getScaledFrameDt(): number {
   return last_scaled_time;
 }
 
-type SavedGameData = {
+export type SavedGameData = {
   entities?: DataObject[];
   floors_inited?: Partial<Record<number, true>>;
   vis_data?: Partial<Record<number, string>>;
   script_data?: DataObject;
+  time_played?: number;
+  timestamp: number;
 };
-let local_game_data: SavedGameData = {};
+let local_game_data: SavedGameData = { timestamp: Date.now() };
+
+export function crawlerCurSavePlayTime(): number {
+  let now = Date.now();
+  let dt = now - local_game_data.timestamp;
+  return (local_game_data.time_played || 0) + dt;
+}
 
 let last_saved_vis_string: Partial<Record<number, string>>;
 let vis_string_save_in_progress = 0;
@@ -242,20 +280,30 @@ urlhash.register({
   push: true,
 });
 
-
-export function crawlerSaveGame(): void {
-  let slot = urlhash.get('slot') || '1';
+export function crawlerSaveGameGetData(): SavedGameData {
   crawlerFlushVisData(true);
   let { entities } = crawlerEntityManager();
   let ent_list: DataObject[] = [];
   for (let ent_id_str in entities) {
     let ent = entities[ent_id_str]!;
-    ent_list.push(ent.data as unknown as DataObject);
+    if (!ent.fading_out) {
+      ent_list.push(ent.data as unknown as DataObject);
+    }
   }
   local_game_data.entities = ent_list;
   local_game_data.script_data = script_api.localDataGet();
+  let now = Date.now();
+  if (local_game_data.timestamp) {
+    local_game_data.time_played = (local_game_data.time_played || 0) + (now - local_game_data.timestamp);
+  }
+  local_game_data.timestamp = now;
+  return local_game_data;
+}
 
-  localStorageSetJSON<SavedGameData>(`savedgame_${slot}`, local_game_data);
+export function crawlerSaveGame(mode: 'auto' | 'manual'): void {
+  let slot = urlhash.get('slot') || '1';
+  let data = crawlerSaveGameGetData();
+  localStorageSetJSON<SavedGameData>(`savedgame_${slot}.${mode}`, data);
 }
 
 type LocalVisData = {
@@ -341,11 +389,13 @@ function beforeUnload(): void {
   }
 }
 
-function populateLevelFromInitialEntities(floor_id: number, level: CrawlerLevel): number {
+function populateLevelFromInitialEntities(
+  entity_manager: ClientEntityManagerInterface,
+  floor_id: number, level: CrawlerLevel
+): number {
   let ret = 0;
   if (level.initial_entities) {
     let initial_entities = clone(level.initial_entities);
-    let entity_manager = crawlerEntityManager();
     assert(!entity_manager.isOnline());
     for (let ii = 0; ii < initial_entities.length; ++ii) {
       initial_entities[ii].floor = floor_id;
@@ -356,17 +406,23 @@ function populateLevelFromInitialEntities(floor_id: number, level: CrawlerLevel)
   return ret;
 }
 
+
+export type InitLevelFunc = ((entity_manager: ClientEntityManagerInterface,
+  floor_id: number, level: CrawlerLevel) => void);
+let on_init_level_offline: InitLevelFunc | null = null;
+
 function crawlerOnInitHaveLevel(floor_id: number): void {
   crawlerInitVisData(floor_id);
   if (isLocal()) {
+    let level = game_state.level;
+    assert(level);
     if (!local_game_data.floors_inited || !local_game_data.floors_inited[floor_id]) {
       assert(game_state.floor_id === floor_id);
-      let level = game_state.level;
-      assert(level);
       local_game_data.floors_inited = local_game_data.floors_inited || {};
       local_game_data.floors_inited[floor_id] = true;
-      populateLevelFromInitialEntities(floor_id, level);
+      populateLevelFromInitialEntities(crawlerEntityManagerOffline(), floor_id, level);
     }
+    on_init_level_offline?.(crawlerEntityManagerOffline(), floor_id, level);
   }
 }
 
@@ -381,7 +437,7 @@ cmd_parse.register({
     let level = game_state.level;
     assert(level);
     level.resetState();
-    let entity_manager = crawlerEntityManager();
+    let entity_manager = crawlerEntityManagerOffline();
     let ents = entity_manager.entitiesFind((ent) => ent.data.floor === floor_id, true);
     let count = 0;
     for (let ii = 0; ii < ents.length; ++ii) {
@@ -391,7 +447,7 @@ cmd_parse.register({
         entity_manager.deleteEntity(ent.id, 'reset');
       }
     }
-    let added = populateLevelFromInitialEntities(floor_id, level);
+    let added = populateLevelFromInitialEntities(entity_manager, floor_id, level);
     resp_func(null, `${count} entities deleted, ${added} entities spawned`);
   },
 });
@@ -423,13 +479,26 @@ export function crawlerPlayWantNewGame(): void {
   want_new_game = true;
 }
 
-function crawlerLoadGame(new_player_data: DataObject): boolean {
+let load_mode: 'auto' | 'manual' | 'recent' = 'recent';
+export function crawlerPlayWantMode(mode: 'auto' | 'manual' | 'recent'): void {
+  load_mode = mode;
+}
+
+export type CrawlerOfflineData = {
+  new_player_data: DataObject;
+  loading_state: EngineState;
+};
+let offline_data: CrawlerOfflineData | undefined;
+
+function crawlerLoadGame(data: SavedGameData): boolean {
+  assert(offline_data);
+  const { new_player_data } = offline_data;
+  local_game_data = data;
+  local_game_data.timestamp = Date.now();
   let entity_manager = crawlerEntityManager();
-  let slot = urlhash.get('slot') || '1';
-  local_game_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}`, {});
   if (want_new_game) {
     want_new_game = false;
-    local_game_data = {};
+    local_game_data = { timestamp: Date.now() };
   }
   script_api.localDataSet(local_game_data.script_data || {});
 
@@ -447,7 +516,7 @@ function crawlerLoadGame(new_player_data: DataObject): boolean {
   let need_init_pos = false;
   if (!player_ent) {
     need_init_pos = true;
-    player_ent = entity_manager.addEntityFromSerialized(new_player_data);
+    player_ent = entity_manager.addEntityFromSerialized(clone(new_player_data));
   }
   entity_manager.setMyEntID(player_ent.id);
   crawlerEntitiesOnEntStart();
@@ -505,9 +574,14 @@ export function crawlerPlayInitHybridBuild(room: ClientChannelWorker): void {
   controller.reloadLevel();
 }
 
+let was_pixely_2 = false;
 export function crawlerBuildModeActivate(build_mode: boolean): void {
   buildModeSetActive(build_mode);
   if (build_mode) {
+    if (settings.pixely === 2) {
+      was_pixely_2 = true;
+      settings.set('pixely', 3);
+    }
     if (game_state.level_provider === getLevelForFloorFromWebFS) {
       // One-time switch to server-provided levels and connect to the room
       assert(!crawl_room);
@@ -523,11 +597,16 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
       assert.equal(onlineMode(), OnlineMode.ONLINE_ONLY);
     }
   } else {
+    if (was_pixely_2) {
+      settings.set('pixely', 2);
+      was_pixely_2 = false;
+    }
     if (onlineMode() === OnlineMode.ONLINE_BUILD) {
       crawlerEntitiesInit(OnlineMode.OFFLINE);
       controller.buildModeSwitch({
         entity_manager: crawlerEntityManager(),
       });
+      crawlerSaveGame('manual');
     }
   }
 }
@@ -557,7 +636,6 @@ function crawlerPlayInitOfflineEarly(): void {
     level_provider: getLevelForFloorFromWebFS,
   });
 
-  crawlerEntityManagerOnline().reinit({}); // Also need to remove anything hanging around in case we switch to hybrid
   crawlerEntityManager().reinit({
     on_broadcast: on_broadcast,
   });
@@ -584,18 +662,12 @@ export function crawlerPlayInitOnlineLate(online_only_for_build: boolean): void 
   }
 }
 
-export type CrawlerOfflineData = {
-  new_player_data: DataObject;
-  loading_state: EngineState;
-};
-let offline_data: CrawlerOfflineData | undefined;
-
-function crawlerPlayInitOfflineLate(): void {
+function crawlerPlayInitOfflineLate(data: SavedGameData): void {
   assert(offline_data);
-  const { new_player_data, loading_state } = offline_data;
+  const { loading_state } = offline_data;
 
   // Load or init game
-  let need_init_pos = crawlerLoadGame(new_player_data);
+  let need_init_pos = crawlerLoadGame(data);
 
   // Load and init current floor
   engine.setState(loading_state);
@@ -613,20 +685,45 @@ function crawlerPlayInitOfflineLate(): void {
   });
 }
 
-export function crawlerPlayInitOffline(): void {
+export function crawlerLoadOfflineGame(data: SavedGameData): void {
   crawlerPlayInitOfflineEarly();
   crawlerPlayInitShared();
   play_init_offline?.();
-  crawlerPlayInitOfflineLate();
+  crawlerPlayInitOfflineLate(data);
+}
+
+export function crawlerPlayInitOffline(): void {
+  let slot = urlhash.get('slot') || '1';
+  let data_manual = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.manual`, { timestamp: 0 });
+  let data_auto = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.auto`, { timestamp: 0 });
+  let data;
+  if (load_mode === 'manual') {
+    data = data_manual;
+  } else if (load_mode === 'auto') {
+    data = data_auto;
+  } else {
+    if (data_manual.timestamp) {
+      if (data_auto.timestamp && data_auto.timestamp > data_manual.timestamp) {
+        data = data_auto;
+      } else {
+        data = data_manual;
+      }
+    } else {
+      data = data_auto;
+    }
+  }
+  crawlerLoadOfflineGame(data);
 }
 
 let level_generator_test: LevelGenerator;
+let default_vstyle: string;
 export function crawlerInitBuildModeLevelGenerator(): LevelGenerator {
   if (!level_generator_test) {
     assert(crawl_room);
     let room_public_data = crawl_room.getChannelData('public') as { seed: string };
     level_generator_test = levelGeneratorCreate({
       seed: room_public_data.seed,
+      default_vstyle,
     });
   }
   game_state.level_provider = level_generator_test.provider;
@@ -679,6 +776,8 @@ function uiClearColor(): void {
 
 
 let entity_split: boolean;
+let default_bg_color = vec3();
+let default_fog_params = vec3(0.003, 0.001, 800.0);
 export function crawlerRenderFramePrep(): void {
   let opts_3d: {
     fov: number;
@@ -711,8 +810,38 @@ export function crawlerRenderFramePrep(): void {
     // need depth buffer attachment
     opts_3d.need_depth = 'texture';
   }
-  gl.clearColor(0, 0, 0, 0);
+  let { level } = game_state;
+  let clear = default_bg_color;
+  let fog = default_bg_color;
+  let fog_params = default_fog_params;
+  let vstyle: VstyleDesc | null = null;
+  if (level) {
+    vstyle = level.vstyle;
+  }
+  if (vstyle) {
+    clear = vstyle.background_color;
+    fog = vstyle.fog_color;
+    fog_params = vstyle.fog_params;
+  }
+  gl.clearColor(clear[0], clear[1], clear[2], 0);
+  crawlerSetFogColor(fog);
+  crawlerSetFogParams(fog_params);
   engine.start3DRendering(opts_3d);
+  if (vstyle && vstyle.background_img) {
+    let tex = textureLoad({
+      url: `img/${vstyle.background_img}.png`,
+    });
+    if (tex.loaded) {
+      gl.disable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      let voffs = -crawlerRenderGameViewAngle() / PI * 2;
+      applyCopy({ source: tex, no_framebuffer: true, params: {
+        copy_uv_scale: [1, -tex.src_height / tex.height, voffs, -(1-tex.src_height / tex.height)],
+      } });
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthMask(true);
+    }
+  }
 
   uiClearColor();
 }
@@ -794,12 +923,16 @@ export function crawlerPlayStartup(param: {
   play_init_offline?: () => void;
   offline_data?: CrawlerOfflineData;
   play_state: EngineState;
+  on_init_level_offline?: InitLevelFunc;
+  default_vstyle?: string;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
   play_init_offline = param.play_init_offline;
   offline_data = param.offline_data;
   play_state = param.play_state;
+  default_vstyle = param.default_vstyle || 'demo';
+  on_init_level_offline = param.on_init_level_offline || null;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');

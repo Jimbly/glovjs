@@ -1,4 +1,5 @@
 import assert from 'assert';
+import * as camera2d from 'glov/client/camera2d';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import {
@@ -21,8 +22,10 @@ import {
   localStorageSet,
   localStorageSetJSON,
 } from 'glov/client/local_storage';
+import { ScrollArea, scrollAreaCreate } from 'glov/client/scroll_area';
 import {
   MenuItem,
+  SelectionBoxDisplay,
   dropDown,
 } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
@@ -47,7 +50,9 @@ import { BuildModeOp } from '../common/crawler_entity_common';
 import { crawlerScriptListEvents } from '../common/crawler_script';
 import {
   CellDesc,
+  CellDescs,
   CrawlerCell,
+  CrawlerCellEvent,
   CrawlerLevel,
   CrawlerLevelSerialized,
   DX,
@@ -55,6 +60,7 @@ import {
   DirType,
   JSVec3,
   WallDesc,
+  WallDescs,
   crawlerGetCellDesc,
   crawlerGetWallDesc,
   crawlerHasCellDesc,
@@ -67,6 +73,7 @@ import {
 import { getChatUI } from './crawler_comm';
 import {
   SpawnDesc,
+  SpawnDescs,
   crawlerEntityManager,
   crawlerGetSpawnDescs,
   crawlerMyEnt,
@@ -80,7 +87,7 @@ import {
 import { crawlerRenderGetThumbnail } from './crawler_render';
 import { statusPush } from './status';
 
-const { floor } = Math;
+const { floor, min } = Math;
 
 declare module 'glov/client/settings' {
   export let build_mode_help: 0 | 1;
@@ -105,7 +112,7 @@ export function buildModeSetActive(new_value: boolean): void {
 
 enum BuildTab {
   Paint = 'Pnt',
-  Spawn = 'Spwn',
+  Path = 'Path',
   Config = 'Cnfg',
 }
 
@@ -132,6 +139,10 @@ const DEFAULT_PALETTE: PaletteData = {
 const PALETTE_SIZE = 9;
 let palette = localStorageGetJSON<PaletteData>('build_palette', DEFAULT_PALETTE);
 let show_palette_config = false;
+
+export function buildModeOverlayActive(): boolean {
+  return build_mode && show_palette_config;
+}
 
 const serialize_opts = {};
 let last_floor: number;
@@ -502,6 +513,18 @@ function setCellEx(
   }
 }
 
+function togglePath(): void {
+  crawlerBuildModeBegin();
+  let my_ent = crawlerMyEnt();
+  let game_state = crawlerGameState();
+  let level = game_state.level;
+  assert(level);
+  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
+  let [myx, myy, dir] = pos;
+  level.togglePath(myx, myy, dir);
+  crawlerBuildModeCommit();
+}
+
 function toggleWithSelected(): void {
   let selected = palette.entries[palette.selected];
   if (!selected) {
@@ -602,7 +625,7 @@ function toggleWithSelected(): void {
       }
     } else {
       let neighbor_wall = target_cell?.walls[dirMod(dir + 2)];
-      if (selected_wall.advertise_other_side || neighbor_wall?.open_vis) {
+      if (selected_wall.advertise_other_side || neighbor_wall?.open_vis && !selected_wall.open_vis) {
         level.setWall(myx, myy, dir, selected_wall);
       } else {
         level.setWall(myx, myy, dir, selected_wall, null);
@@ -660,6 +683,7 @@ function buildModeSetVstyle(id: string): void {
 type DescPair = ['wall', WallDesc] | ['cell', CellDesc] | ['spawn', SpawnDesc];
 
 let font: Font;
+let button_height: number;
 const palette_style_base = fontStyle(null, {
   glow_xoffs: 2,
   glow_yoffs: 2,
@@ -734,15 +758,60 @@ function drawPaletteThumbnail(param: {
 const PALETTE_FONT_SCALE = 0.5;
 const THUMBNAIL_PAD = 1;
 
+let palette_config_scroll: ScrollArea;
+
+type PaletteConfigTab = 'all' | 'wall' | 'cell' | 'spawn';
+let palette_config_tab: PaletteConfigTab = (localStorageGet('pal_tab') as PaletteConfigTab) || 'all';
+
 function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
-  const x0 = 2;
-  const y0 = 2;
+  const x0 = camera2d.x0() + 2;
+  const y0 = camera2d.y0() + 2;
+  const w = x1 - x0;
+  const y1 = camera2d.y1() - 2;
   let x = x0;
-  let y = x0;
+  let y = y0;
   let z = Z.UI + 100;
-  let wall_descs = getWallDescs();
-  let cell_descs = getCellDescs();
-  let spawn_descs = crawlerGetSpawnDescs();
+
+  if (!palette_config_scroll) {
+    palette_config_scroll = scrollAreaCreate({
+      z,
+      background_color: null,
+      auto_hide: true,
+    });
+  }
+
+
+  const TAB_W = 60;
+  ['all', 'wall', 'cell', 'spawn'].forEach(function (tab_str, idx) {
+    let tab = tab_str as PaletteConfigTab;
+    if (button({
+      x: x + TAB_W * idx, y, z,
+      w: TAB_W, h: button_height,
+      disabled: palette_config_tab === tab,
+      base_name: palette_config_tab === tab ? 'buttonselected' : 'button',
+      text: tab,
+      font,
+      hotkey: keyDown(KEYS.ALT) ? KEYS['1'] + idx : undefined,
+    })) {
+      palette_config_tab = tab;
+      localStorageSet('pal_tab', tab);
+    }
+  });
+  y += button_height;
+
+  let scroll_y_start = y;
+  palette_config_scroll.begin({
+    x: x0, y, w, h: y1 - y, z,
+  });
+  x = 1;
+  y = 1;
+  const mapped_x1 = x1 - x0 - palette_config_scroll.barWidth() - 1;
+
+
+  let show_all = palette_config_tab === 'all';
+  let wall_descs: WallDescs = palette_config_tab === 'wall' || show_all ? getWallDescs() : {} as WallDescs;
+  let cell_descs: CellDescs = palette_config_tab === 'cell' || show_all ? getCellDescs() : {} as CellDescs;
+  let spawn_descs: SpawnDescs = palette_config_tab === 'spawn' || show_all ? crawlerGetSpawnDescs() : {};
   let all_descs: DescPair[] = [];
   let hide_walls: Partial<Record<string, true>> = {};
   let hide_cells: Partial<Record<string, true>> = {};
@@ -806,7 +875,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     let [type, desc] = pair;
     let id = desc.id;
     let key = `${type},${id}`;
-    let label = `[${type}]\n${id}${build_favorites[key] ? '*' : ''}`;
+    let label = `${show_all ? `[${type}]\n` : ''}${id}${build_favorites[key] ? '*' : ''}`;
     drawPaletteThumbnail({
       pair,
       x: x + THUMBNAIL_PAD, y: y + THUMBNAIL_PAD, z,
@@ -838,15 +907,21 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     }
 
     x += col_width + 1;
-    if (x + col_width > x1) {
-      x = x0;
+    if (x + col_width > mapped_x1) {
+      x = 1;
       y += col_width + 1;
     }
   }
-  y += col_width + 1;
-  const PANEL_PAD = 4;
+  if (x !== 1) {
+    y += col_width + 1;
+  }
+
+  palette_config_scroll.end(y);
+  y = min(scroll_y_start + y, y1);
+
+  const PANEL_PAD = 3;
   ui.panel({
-    x: x0 - PANEL_PAD, y: y0 - PANEL_PAD,
+    x: x0 - PANEL_PAD, y: y0 - PANEL_PAD, z: z - 1,
     w: x1 - x0 + PANEL_PAD * 2,
     h: y - y0 + PANEL_PAD * 2,
   });
@@ -951,9 +1026,18 @@ function showPaintPalette({
   return { x, y };
 }
 
+let last_event: CrawlerCellEvent | null = null;
+function setLastEvent(e: CrawlerCellEvent): void {
+  last_event = e;
+}
+let last_prop: { key: string; text: string };
+function setLastProp(prop: { key: string; text: string }): void {
+  last_prop = prop;
+}
+
 let event_items: MenuItem[];
 let default_event_name: string;
-let prop_key_items: MenuItem[] = [
+let cell_prop_key_items: MenuItem[] = [
   'key_cell',
   'key_north',
   'key_south',
@@ -961,6 +1045,37 @@ let prop_key_items: MenuItem[] = [
   'key_west',
   'new',
 ].map((name) => ({ name, tag: name }));
+let level_prop_key_items: MenuItem[] = [
+  'title',
+  'new',
+].map((name) => ({ name, tag: name }));
+
+function addProps(level_props?: string[], cell_props?: string[]): void {
+  if (level_props) {
+    let last = level_prop_key_items.pop();
+    for (let ii = 0; ii < level_props.length; ++ii) {
+      level_prop_key_items.push({
+        name: level_props[ii],
+        tag: level_props[ii],
+      });
+    }
+    level_prop_key_items.push(last!);
+  }
+  if (cell_props) {
+    let last = cell_prop_key_items.pop();
+    for (let ii = 0; ii < cell_props.length; ++ii) {
+      cell_prop_key_items.push({
+        name: cell_props[ii],
+        tag: cell_props[ii],
+      });
+    }
+    cell_prop_key_items.push(last!);
+  }
+}
+
+let dropdown_display: Partial<SelectionBoxDisplay> = {
+  xpad: 2,
+};
 
 function showCurrentCell(param: {
   level: CrawlerLevel;
@@ -977,13 +1092,13 @@ function showCurrentCell(param: {
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
   let font_height = ui.font_height * 0.75;
-  let my_cell = level.getCell(myx, myy)!;
+  let my_cell = level.getCell(myx, myy);
   let target_cell = level.getCell(tx, ty);
   font.draw({
     style: palette_style.wall,
     x, y, z,
     size: font_height,
-    text: `Wall: ${my_cell.walls[dir].id}`,
+    text: `Wall: ${my_cell && my_cell.walls[dir].id}`,
   });
   y += font_height + 1;
   if (target_cell) {
@@ -1008,7 +1123,11 @@ function showCurrentCell(param: {
       colors: colors_event,
     })) {
       crawlerBuildModeBegin();
-      target_cell.addEvent(default_event_name, '');
+      if (last_event) {
+        target_cell.addEvent(last_event.id, last_event.param);
+      } else {
+        target_cell.addEvent(default_event_name, '');
+      }
       crawlerBuildModeCommit();
     }
     if (buttonText({
@@ -1023,7 +1142,11 @@ function showCurrentCell(param: {
       colors: colors_prop,
     })) {
       crawlerBuildModeBegin();
-      target_cell.setProp('new', '');
+      if (last_prop && !target_cell.getProp(last_prop.key)) {
+        target_cell.setProp(last_prop.key, last_prop.text);
+      } else {
+        target_cell.setProp('new', '');
+      }
       crawlerBuildModeCommit();
     }
     y += font_height + 1;
@@ -1036,6 +1159,7 @@ function showCurrentCell(param: {
       for (let ii = 0; ii < events.length; ++ii) {
         let event = events[ii];
         let new_id = dropDown({
+          display: dropdown_display,
           x, y, z,
           width: w1,
           entry_height: font_height,
@@ -1068,6 +1192,7 @@ function showCurrentCell(param: {
                 crawlerBuildModeBegin();
                 event.param = text;
                 crawlerBuildModeCommit();
+                setLastEvent(event);
               },
               cancel: null,
             },
@@ -1102,11 +1227,12 @@ function showCurrentCell(param: {
         let prop_key = prop_keys[ii];
         let value = props[prop_key];
         let new_id = dropDown({
+          display: dropdown_display,
           x, y, z,
           width: w1,
           entry_height: font_height,
           font_height: font_height * 0.75,
-          items: prop_key_items,
+          items: cell_prop_key_items,
         }, prop_key, { suppress_return_during_dropdown: true });
         if (new_id) {
           crawlerBuildModeBegin();
@@ -1135,6 +1261,7 @@ function showCurrentCell(param: {
                 crawlerBuildModeBegin();
                 target_cell!.setProp(prop_key, text);
                 crawlerBuildModeCommit();
+                setLastProp({ key: prop_key, text });
               },
               cancel: null,
             },
@@ -1251,9 +1378,13 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     buildModeRedo();
   }
   if (keyDownEdge(KEYS.SPACE)) {
-    // toggleCell();
-    // toggleWall();
-    toggleWithSelected();
+    if (build_tab === BuildTab.Path) {
+      togglePath();
+    } else {
+      // toggleCell();
+      // toggleWall();
+      toggleWithSelected();
+    }
   }
   if (keyDownEdge(KEYS.EQUALS)) {
     getChatUI().cmdParse(`floor ${game_state.floor_id + 1}`);
@@ -1276,14 +1407,17 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   const num_columns = 3;
   const col_width = floor((w - num_columns + 1) / num_columns);
 
-  [BuildTab.Paint, BuildTab.Config].forEach((tab: BuildTab, idx: number) => {
+  [BuildTab.Paint, BuildTab.Path, BuildTab.Config].forEach((tab: BuildTab, idx: number) => {
     if (button({
       x, y, z,
       w: col_width,
+      h: button_height,
       disabled: build_tab === tab,
       base_name: build_tab === tab ? 'buttonselected' : 'button',
       text: tab,
-      hotkey: keyDown(KEYS.ALT) ? KEYS['1'] + idx : undefined,
+      hotkey: show_palette_config && build_tab === BuildTab.Paint ? undefined :
+        keyDown(KEYS.ALT) ? KEYS['1'] + idx : undefined,
+      font,
     })) {
       localStorageSet('build_tab', tab);
       build_tab = tab;
@@ -1292,9 +1426,9 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   });
 
   x = x0;
-  y += ui.button_height + 2;
+  y += button_height + 2;
 
-  if (build_tab === BuildTab.Paint || build_tab === BuildTab.Spawn) {
+  if (build_tab === BuildTab.Paint) {
     // Palette area
     ({ x, y } = showPaintPalette({
       level,
@@ -1316,15 +1450,17 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
 
     let new_vstyle = dropDown({
+      display: dropdown_display,
       auto_reset: false,
       x, y, z,
       width: w,
+      entry_height: button_height,
       items,
     }, level.vstyle.id || 'default');
     if (new_vstyle) {
       buildModeSetVstyle(new_vstyle.tag!);
     }
-    y += ui.button_height + 2;
+    y += button_height + 2;
 
     let font_height = ui.font_height * 0.75;
     let button_w = font_height;
@@ -1398,32 +1534,122 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
 
     if (ui.buttonText({
       x, y, z,
+      h: button_height,
       font,
       text: 'Generate Level',
     })) {
       mapViewSetActive(true);
       crawlerSetLevelGenMode(true);
     }
-    y += ui.button_height + 2;
+    y += button_height + 2;
 
     if (ui.buttonText({
       x, y, z,
+      h: button_height,
       font,
       text: 'Reset Entities',
     })) {
       getChatUI().cmdParse('floor_reset');
     }
-    y += ui.button_height + 2;
+    y += button_height + 2;
 
     if (ui.buttonText({
       x, y, z,
+      h: button_height,
       font,
       text: 'Reset Visibility',
     })) {
       getChatUI().cmdParse('reset_vis_data');
     }
-    y += ui.button_height + 2;
+    y += button_height + 2;
 
+    // Level Props
+    let btn_w = w * 0.2;
+    if (buttonText({
+      x: x + w - btn_w,
+      y, z,
+      w: btn_w,
+      font_height: font_height*0.75,
+      h: font_height,
+      font,
+      text: '+Prop',
+      font_style_normal: font_style_prop,
+      colors: colors_prop,
+    })) {
+      crawlerBuildModeBegin();
+      level.setProp('new', '');
+      crawlerBuildModeCommit();
+    }
+
+    y += font_height + 1;
+    let { props } = level;
+    let w1 = w * 0.4;
+    let x1b = x + w1 + 1;
+    let x2 = x + w - font_height;
+    let w2 = x2 - 1 - x1b;
+    let prop_keys = Object.keys(props);
+    for (let ii = 0; ii < prop_keys.length; ++ii) {
+      let prop_key = prop_keys[ii];
+      let value = props[prop_key];
+      let new_id = dropDown({
+        display: dropdown_display,
+        x, y, z,
+        width: w1,
+        entry_height: font_height,
+        font_height: font_height * 0.75,
+        items: level_prop_key_items,
+      }, prop_key, { suppress_return_during_dropdown: true });
+      if (new_id) {
+        crawlerBuildModeBegin();
+        level.setProp(prop_key, undefined);
+        level.setProp(String(new_id.name), value);
+        crawlerBuildModeCommit();
+      }
+
+      if (buttonText({
+        x: x1b,
+        y, z,
+        w: w2,
+        font_height: font_height*0.75,
+        h: font_height,
+        font,
+        text: value && String(value) || '...',
+        font_style_normal: font_style_prop,
+        colors: colors_prop,
+      })) {
+        modalTextEntry({
+          title: 'Level Property',
+          text: `Enter property value for "${prop_key}"`,
+          edit_text: String(value) || '',
+          buttons: {
+            ok: function (text: string) {
+              crawlerBuildModeBegin();
+              level!.setProp(prop_key, text);
+              crawlerBuildModeCommit();
+            },
+            cancel: null,
+          },
+        });
+      }
+
+      if (buttonText({
+        x: x + w - font_height,
+        y, z,
+        w: font_height,
+        font_height: font_height*0.75,
+        h: font_height,
+        font,
+        text: 'X',
+        font_style_normal: font_style_prop,
+        colors: colors_prop,
+      })) {
+        crawlerBuildModeBegin();
+        level.setProp(prop_key, undefined);
+        crawlerBuildModeCommit();
+      }
+
+      y += font_height + 1;
+    }
   }
 
   x = 5;
@@ -1434,7 +1660,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   (settings.build_mode_help ? [
     'BUILD MODE',
     '[B] - Toggle Build Mode',
-    '[SPACE] - Toggle cell/wall with selected',
+    build_tab === BuildTab.Path ? '[SPACE] - Toggle path (see map)' : '[SPACE] - Toggle cell/wall with selected',
     build_tab === BuildTab.Paint ? '[NUMPAD/1-9] - Select cell/wall from palette' : '',
     build_tab === BuildTab.Paint ? '  Double-select or shift-click to redefine palette' : '',
     '[ALT+1-3] - Change tab',
@@ -1454,12 +1680,19 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   });
 }
 
-export function crawlerBuildModeStartup(build_font?: Font): void {
-  font = build_font || ui.font;
+export function crawlerBuildModeStartup(params: {
+  font?: Font;
+  button_height?: number;
+  level_props?: string[];
+  cell_props?: string[];
+}): void {
+  font = params.font || ui.font;
+  button_height = params.button_height || ui.button_height;
   event_items = crawlerScriptListEvents().map((id: string) => ({
     name: id,
     tag: id,
   }));
+  addProps(params.level_props, params.cell_props);
   default_event_name = crawlerScriptListEvents()[0];
 }
 

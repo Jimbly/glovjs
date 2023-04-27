@@ -1,5 +1,9 @@
 import assert from 'assert';
 import * as engine from 'glov/client/engine';
+import {
+  FontStyle,
+  fontStyle,
+} from 'glov/client/font';
 import * as input from 'glov/client/input';
 import { shaderCreate } from 'glov/client/shaders';
 import {
@@ -10,19 +14,25 @@ import {
 } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import {
+  drawLine,
+} from 'glov/client/ui';
+import { merge } from 'glov/common/util';
+import {
   ROVec4,
   rovec4,
   vec2,
 } from 'glov/common/vmath';
 import {
+  CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
-  crawlerScriptEventsGetIcon,
+  crawlerScriptEventFunc,
   crawlerScriptRegisterFunc,
   getEffCell,
   getEffWall,
 } from '../common/crawler_script';
 import {
   CrawlerCell,
+  CrawlerCellEvent,
   CrawlerState,
   DX, DY,
   DirType,
@@ -47,10 +57,36 @@ const { floor, max, min, round, PI } = Math;
 let map_sprite: Sprite;
 let compass_sprite: Sprite;
 let sprite_mult: Shader;
+let allow_pathfind: boolean = true;
 
 const MAP_TILE_SIZE = 7;
 const MAP_STEP_SIZE = 6;
 const MAP_CENTER_OFFS = 3;
+
+let build_mode_entity_icons: Partial<Record<string, number>> = {
+  def: 19,
+};
+
+function crawlerScriptEventsGetIcon(api: CrawlerScriptAPI, events: CrawlerCellEvent[]): CrawlerScriptEventMapIcon {
+  let ret = CrawlerScriptEventMapIcon.NONE;
+  for (let ii = 0; ii < events.length; ++ii) {
+    let event = events[ii];
+    let { id, param } = event;
+    let func = crawlerScriptEventFunc(id);
+    if (func) {
+      let { map_icon } = func;
+      if (typeof map_icon === 'function') {
+        if (buildModeActive()) {
+          map_icon = CrawlerScriptEventMapIcon.NONE;
+        } else {
+          map_icon = map_icon(api, param || '');
+        }
+      }
+      ret = max(ret, map_icon);
+    }
+  }
+  return ret;
+}
 
 let map_view: boolean = engine.defines.MAP || false;
 export function mapViewActive(): boolean {
@@ -97,7 +133,16 @@ export function mapViewLastProgress(): number {
 
 let mouse_pos = vec2();
 let moved_since_fullscreen = false;
-let color_map_rollover = rovec4(1,1,1,1);
+let color_rollover = rovec4(1,1,1,1);
+let color_path = rovec4(1,0.5,0,1);
+
+let style_map_name: FontStyle | null = fontStyle(null, {
+  color: 0xFFFFFFff,
+  outline_width: 3,
+  outline_color: 0x000000ff,
+});
+
+let compass_border_w = 6;
 
 export function crawlerMapViewDraw(
   game_state: CrawlerState,
@@ -110,6 +155,8 @@ export function crawlerMapViewDraw(
   level_gen_test: boolean,
   script_api: CrawlerScriptAPIClient,
   button_disabled: boolean,
+  compass_x: number,
+  compass_y: number,
 ): void {
   const build_mode = buildModeActive();
   let { level } = game_state;
@@ -118,7 +165,7 @@ export function crawlerMapViewDraw(
     return;
   }
   let entity_manager = crawlerEntityManager();
-  if (input.keyDownEdge(input.KEYS.F4)) {
+  if (engine.DEBUG && input.keyDownEdge(input.KEYS.F4)) {
     engine.defines.FULL_VIS = !engine.defines.FULL_VIS;
   }
   let full_vis = engine.defines.FULL_VIS || build_mode;
@@ -126,13 +173,19 @@ export function crawlerMapViewDraw(
   let fullscreen = w === engine.game_width;
 
   if (!fullscreen) {
-    let { ret, state } = ui.buttonShared({
-      x, y, w, h: h + compass_h,
+    let hover_area = {
+      x, y, w, h,
       disabled: button_disabled,
-    });
+    };
+    if (compass_y === hover_area.y + hover_area.h) {
+      hover_area.h += compass_h;
+    }
+    let { ret, state } = ui.buttonShared(hover_area);
     if (state === 'rollover') {
-      ui.drawRect(x - 1, y - 1, x + w + 1, y + h + compass_h + 1,
-        Z.MAP - 1, color_map_rollover);
+      ui.drawRect(hover_area.x - 1, hover_area.y - 1,
+        hover_area.x + hover_area.w + 1,
+        hover_area.y + hover_area.h + 1,
+        Z.MAP - 1, color_rollover);
     }
     if (ret) {
       mapViewToggle();
@@ -151,9 +204,12 @@ export function crawlerMapViewDraw(
   let total_enemies = initial_entities.length;
   //last_progress = level.seen_cells/level.total_cells;
   last_progress = total_enemies ? max(0, 1 - (num_enemies / total_enemies)) : 1;
+  let floor_title = level.props.title || `Floor ${game_state.floor_id}`;
   if (fullscreen) {
-    ui.font.drawSizedAligned(null, x, y + 2, z + 1, ui.font_height,
-      ui.font.ALIGN.HCENTER, w, 0, `Floor ${game_state.floor_id}`);
+    if (style_map_name) {
+      ui.font.drawSizedAligned(style_map_name, x, y + 2, z + 1, ui.font_height,
+        ui.font.ALIGN.HCENTER, w, 0, floor_title);
+    }
     if (full_vis) {
       ui.font.drawSizedAligned(null, x, y + h - (ui.font_height + 2)*2, z + 1, ui.font_height,
         ui.font.ALIGN.HCENTER, w, 0, `${num_enemies}/${total_enemies}`);
@@ -170,6 +226,7 @@ export function crawlerMapViewDraw(
   if (compass_h) {
     moved_since_fullscreen = false;
     // draw compass rose underneath
+    let compass_w = w;
     let uoffs = (-game_state.angle / (2*PI)) * 92/256;
     while (uoffs < 0) {
       uoffs += 92/256;
@@ -177,36 +234,43 @@ export function crawlerMapViewDraw(
     uoffs = round(uoffs * 256) / 256;
     // overlays
     compass_sprite.draw({
-      x, y: y+h, z: z+1,
-      w: 6, h: compass_h,
+      x: compass_x, y: compass_y, z: z+3,
+      w: compass_border_w, h: compass_h,
       frame: 1,
     });
     compass_sprite.draw({
-      x: x + 54-6, y: y+h, z: z+1,
-      w: 6, h: compass_h,
+      x: compass_x + compass_w - compass_border_w,
+      y: compass_y,
+      z: z+3,
+      w: compass_border_w,
+      h: compass_h,
       frame: 2,
     });
     // background
     compass_sprite.draw({
-      x, y: y + h, z,
-      w, h: compass_h,
-      uvs: [uoffs, 11/32, 54/256+uoffs, 22/32],
+      x: compass_x,
+      y: compass_y,
+      z,
+      w: compass_w,
+      h: compass_h,
+      uvs: [uoffs, compass_h/32, compass_w/256+uoffs, compass_h*2/32],
     });
     // text
     compass_sprite.draw({
-      x, y: y + h, z: z + 2,
-      w, h: compass_h - 1,
-      uvs: [0, 22/32, 54/256, 1],
+      x: compass_x, y: compass_y, z: z + 2,
+      w: compass_w,
+      h: compass_h - 1,
+      uvs: [0, compass_h*2/32, compass_w/256, 1],
       shader: sprite_mult,
       shader_params: {
-        tex_offs: vec2(uoffs, -22/32),
+        tex_offs: vec2(uoffs, -compass_h*2/32),
       },
     });
   }
 
-  if (!fullscreen) {
-    ui.font.drawSizedAligned(null, x, y + 1, z + 1, ui.font_height,
-      ui.font.ALIGN.HCENTER, w, 0, `Floor ${game_state.floor_id}`);
+  if (!fullscreen && style_map_name) {
+    ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, ui.font_height,
+      ui.font.ALIGN.HCENTER, w, 0, floor_title);
   }
 
   spriteClipPush(z, x, y, w, h);
@@ -217,9 +281,9 @@ export function crawlerMapViewDraw(
   z += 0.1;
   if (fullscreen) {
     // full screen, center map
-    let xoffs = (w - (level.w + 2) * MAP_STEP_SIZE) / 2;
+    let xoffs = floor((w - (level.w + 2) * MAP_STEP_SIZE) / 2);
     x += xoffs;
-    y += (h - (level.h + 2) * MAP_STEP_SIZE) / 2;
+    y += floor((h - (level.h + 2) * MAP_STEP_SIZE) / 2);
     if (level_gen_test && xoffs > 0) {
       // offset to right
       x += round(xoffs * 0.75);
@@ -228,8 +292,8 @@ export function crawlerMapViewDraw(
     // mini
 
     // center on self
-    x -= round(game_state.pos[0] * MAP_STEP_SIZE - w/2 + MAP_STEP_SIZE * 1.5);
-    y -= round((level.h - game_state.pos[1])*MAP_STEP_SIZE - h/2 + MAP_STEP_SIZE * 0.5);
+    x -= round(game_state.pos[0] * MAP_STEP_SIZE - floor(w/2) + MAP_STEP_SIZE * 1.5);
+    y -= round((level.h - game_state.pos[1])*MAP_STEP_SIZE - floor(h/2) + MAP_STEP_SIZE * 0.5);
   }
   let x0 = x + MAP_STEP_SIZE;
   let y1 = y + level.h * MAP_STEP_SIZE;
@@ -284,7 +348,7 @@ export function crawlerMapViewDraw(
       }
       if (detail_visible && cell.events) {
         // Draw any event icons
-        let event_icon = crawlerScriptEventsGetIcon(cell.events);
+        let event_icon = crawlerScriptEventsGetIcon(script_api, cell.events);
         if (build_mode && !event_icon && !(detail && detail_visible)) {
           event_icon = CrawlerScriptEventMapIcon.QUESTION;
         }
@@ -410,6 +474,22 @@ export function crawlerMapViewDraw(
           });
         }
       }
+
+      if (build_mode) {
+        let paths = level.getPathsForMap(xx, yy);
+        for (let ii = 0; ii < paths.length; ++ii) {
+          let dir = paths[ii];
+          let x2 = xx + DX[dir];
+          let y2 = yy + DY[dir];
+          drawLine(
+            x0 + xx * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
+            y1 - yy * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
+            x0 + x2 * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
+            y1 - y2 * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
+            z+3, 0.5, 1,
+            color_path);
+        }
+      }
     }
   }
 
@@ -423,7 +503,7 @@ export function crawlerMapViewDraw(
         z: z - 0.01,
         w: MAP_TILE_SIZE,
         h: MAP_TILE_SIZE,
-        frame: 19,
+        frame: build_mode_entity_icons[ent.type as string] || build_mode_entity_icons.def,
       });
     }
   }
@@ -432,7 +512,7 @@ export function crawlerMapViewDraw(
   if (!level_gen_test && !build_mode) {
     for (let ent_id in entities) {
       let ent = entities[ent_id]!;
-      if (ent.isEnemy() && !ent.fading_out) {
+      if (ent.isEnemy() && !ent.fading_out && ent.data.floor === game_state.floor_id) {
         let [xx,yy] = ent.data.pos;
         let vis = false;
         if (full_vis) {
@@ -483,7 +563,7 @@ export function crawlerMapViewDraw(
           } else {
             mouse_frame = 24; // error
           }
-        } else {
+        } else if (allow_pathfind) {
           // pathfind
           let path = pathFind(level, self_x, self_y, self_dir, mx, my, full_vis);
           if (path) {
@@ -536,20 +616,32 @@ export function crawlerMapViewDraw(
   spriteClipPop();
 }
 
-export function crawlerMapViewStartup(color_rollover?: ROVec4): void {
-  if (color_rollover) {
-    color_map_rollover = color_rollover;
+export function crawlerMapViewStartup(param: {
+  allow_pathfind?: boolean;
+  color_rollover?: ROVec4;
+  build_mode_entity_icons?: Partial<Record<string, number>>;
+  style_map_name?: FontStyle | null;
+  compass_border_w?: number;
+}): void {
+  allow_pathfind = param.allow_pathfind ?? true;
+  color_rollover = param.color_rollover || color_rollover;
+  if (param.style_map_name !== undefined) {
+    style_map_name = param.style_map_name;
+  }
+  if (param.build_mode_entity_icons) {
+    merge(build_mode_entity_icons, param.build_mode_entity_icons);
   }
   map_sprite = spriteCreate({
     name: 'map_tileset',
     ws: [7,7,7,7,7,7,7,7,7],
-    hs: [7,7,7,7],
+    hs: [7,7,7,7,7,7,7,7,7],
     filter_min: gl.NEAREST,
     filter_mag: gl.NEAREST,
   });
+  compass_border_w = param.compass_border_w || 6;
   compass_sprite = spriteCreate({
     name: 'compass',
-    ws: [160,6,6,256-6-6-160],
+    ws: [160,compass_border_w,compass_border_w,256-compass_border_w-compass_border_w-160],
     hs: [11,11,10],
     filter_min: gl.NEAREST,
     filter_mag: gl.NEAREST,
