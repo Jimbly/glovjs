@@ -1087,9 +1087,6 @@ export function startup(params) {
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
 
-  glovErrorReportSetCrashCB(function () {
-    setTimeout(requestFrame, 1);
-  });
   if (params.error_report === false) {
     glovErrorReportDisableSubmit();
   }
@@ -1176,6 +1173,11 @@ export function startup(params) {
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
   }
+
+  glovErrorReportSetCrashCB(function () {
+    setTimeout(requestFrame, 1);
+  });
+
   let nocanvas = document.getElementById('nocanvas');
   if (verify(nocanvas)) {
     // hide the interior of the <canvas> elements, so that the get.webgl.org link is not focusable!
