@@ -38,8 +38,9 @@ class GlovSSFile implements SSFile {
   excl_group: Record<string, boolean>;
   excl_group_first: string;
   excl_group_debug: string;
+  tag_id?: string;
 
-  constructor(ss: GlovSoundScape, file: SSDataFile) {
+  constructor(ss: GlovSoundScape, file: SSDataFile, tag_id?: string) {
     this.file = `${ss.base_path}${file.file}`;
     if (typeof file.excl_group === 'string') {
       file.excl_group = [file.excl_group];
@@ -53,6 +54,9 @@ class GlovSSFile implements SSFile {
     }
     this.excl_group = map;
     this.fade_time = file.fade_time || ss.default_fade_time;
+    if (tag_id) {
+      this.tag_id = tag_id;
+    }
   }
 }
 
@@ -76,10 +80,10 @@ class GlovSSTagLayer implements SSTagLayer {
 
   priority: number;
 
-  constructor(ss: GlovSoundScape, layer: SSDataTagLayer, parent: SSLayer) {
+  constructor(ss: GlovSoundScape, layer: SSDataTagLayer, parent: SSLayer, tag_id: string) {
     this.files_map = {};
     this.files = layer.files.map((file) => {
-      let new_file = new GlovSSFile(ss, file);
+      let new_file = new GlovSSFile(ss, file, tag_id);
       this.files_map[new_file.file] = new_file;
       if (!ss.streaming) {
         soundLoad(file.file, { streaming: true });
@@ -153,7 +157,7 @@ class GlovSSParentLayer implements SSParentLayer {
     this.max_intensity = layer.max_intensity || DEFAULT_MAX_INTENSITY;
     this.tags = {};
     for (let tag in tags) {
-      this.tags[tag] = new GlovSSTagLayer(ss, tags[tag], this);
+      this.tags[tag] = new GlovSSTagLayer(ss, tags[tag], this, tag);
     }
     this.user_idx = ++ss.user_idx;
   }
@@ -595,7 +599,11 @@ export class GlovSoundScape implements SoundScape {
       for (let ii = 0; ii < active.length; ++ii) {
         let active_sound = active[ii];
         let filename = active_sound.file.file.substring(active_sound.file.file.lastIndexOf('/')+1);
-        let text = `  ${filename}\t `+
+        let text = '  ';
+        if (active_sound.file.tag_id) {
+          text += `[${active_sound.file.tag_id}]`;
+        }
+        text += ` ${filename}\t `+
         `  ${active_sound.file.excl_group ? active_sound.file.excl_group_debug : '*'} `;
         if (isPlaceholderSound(active_sound.sound)) {
           text += '  (Sound being streamed...)';
