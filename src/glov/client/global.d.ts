@@ -14,6 +14,7 @@ declare module 'glov/client/global' {
 
       // GLOV bootstrap
       debugmsg: (msg: string, clear: boolean) => void;
+      Z: Record<string, number>;
     }
 
     const BUILD_TIMESTAMP: string;
