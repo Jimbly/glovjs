@@ -563,7 +563,7 @@ export function drawVBox(coords, s, color) {
   spriteChainedStop();
 }
 
-export function drawBox(coords, s, pixel_scale, color) {
+export function drawBox(coords, s, pixel_scale, color, color1) {
   spriteChainedStart();
   let uidata = s.uidata;
   let scale = pixel_scale;
@@ -575,6 +575,9 @@ export function drawBox(coords, s, pixel_scale, color) {
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
+  if (color1) {
+    draw_box_param.color1 = color1;
+  }
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
@@ -587,7 +590,11 @@ export function drawBox(coords, s, pixel_scale, color) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
           draw_box_param.uvs = uidata.rects[jj * 3 + ii];
-          s.draw(draw_box_param);
+          if (color1) {
+            s.drawDualTint(draw_box_param);
+          } else {
+            s.draw(draw_box_param);
+          }
           y += my_h;
         }
       }
