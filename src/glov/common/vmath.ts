@@ -261,6 +261,24 @@ export function v2sub(out: Vec2, a: ROVec2, b: ROVec2): Vec2 {
   return out;
 }
 
+// line segment intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+let v2temp = vec2();
+export function v2linePointDist(p1: Vec2, p2: Vec2, test: Vec2): number {
+  v2sub(v2temp, p2, p1);
+  let line_len_sq = v2lengthSq(v2temp);
+  if (!line_len_sq) {
+    return v2dist(p1, test);
+  }
+  let u = ((test[0] - p1[0]) * v2temp[0] + (test[1] - p1[1]) * v2temp[1]) / line_len_sq;
+  if (u <= 0) {
+    return v2dist(p1, test);
+  } else if (u >= 1) {
+    return v2dist(p2, test);
+  }
+  v2addScale(v2temp, p1, v2temp, u);
+  return v2dist(v2temp, test);
+}
+
 
 export function v3add(out: Vec3, a: ROVec3, b: ROVec3): Vec3 {
   out[0] = a[0] + b[0];
