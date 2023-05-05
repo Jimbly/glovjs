@@ -606,7 +606,7 @@ function requestFrame(user_time) {
       setTimeout(tick, 1);
       frames_requested++;
     }
-  } else if (max_fps) {
+  } else if (max_fps && max_fps > settings.use_animation_frame) {
     let desired_delay = max(0, round(1000 / max_fps - (user_time || 0)));
     frames_requested++;
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -789,6 +789,8 @@ export function onExitBackground(fn) {
 export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
 
 let last_tick = 0;
+let last_tick_hr = 0;
+let frame_limit_time_left = 0;
 function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
@@ -822,6 +824,27 @@ function tick(timestamp) {
   // } else { // probably integer milliseconds since epoch, or nothing
   hrtime = hrnow();
   // }
+
+  let dt_raw = hrtime - last_tick_hr;
+  last_tick_hr = hrtime;
+  let max_fps = settings.max_fps;
+  if (max_fps && max_fps <= settings.use_animation_frame) {
+    // using requestAnimationFrame, need to apply max_fps ourselves
+    let frame_time = 1000 / max_fps - 0.1;
+    frame_limit_time_left -= dt_raw;
+    if (frame_limit_time_left > 0) {
+      // too early, skip this frame, do not count any of this time, pretend this frame never happened.
+      requestFrame();
+      profilerStop('top');
+      return profilerStop('tick');
+    }
+    frame_limit_time_left += frame_time;
+    if (frame_limit_time_left < 0) {
+      // more than two frames passed, don't accumulate extra frames
+      frame_limit_time_left = 0;
+    }
+  }
+
   let now = round(hrtime); // Code assumes integer milliseconds
   if (!last_tick) {
     last_tick = now;
