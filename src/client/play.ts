@@ -519,6 +519,9 @@ function playCrawl(): void {
 
   if (keyUpEdge(KEYS.B)) {
     crawlerBuildModeActivate(!build_mode);
+    if (crawlerCommWant()) {
+      return profilerStopFunc();
+    }
     // inventory_up = false;
   }
 

@@ -25,16 +25,18 @@ import type { ROVec2 } from 'glov/common/vmath';
 
 const { random } = Math;
 
-export function entitiesAt(cem: ClientEntityManagerInterface<EntityDemoClient>,
+type Entity = EntityDemoClient;
+
+export function entitiesAt(cem: ClientEntityManagerInterface<Entity>,
   pos: [number, number] | ROVec2,
   floor_id: number,
   skip_fading_out:boolean
-): EntityDemoClient[] {
+): Entity[] {
   return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
 }
 
-export function entityManager(): ClientEntityManagerInterface<EntityDemoClient> {
-  return crawlerEntityManager() as ClientEntityManagerInterface<EntityDemoClient>;
+export function entityManager(): ClientEntityManagerInterface<Entity> {
+  return crawlerEntityManager() as ClientEntityManagerInterface<Entity>;
 }
 
 export type StatsData = {
@@ -51,7 +53,7 @@ export type EntityDataClient = {
 
 
 export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerClient {
-  declare entity_manager: ClientEntityManagerInterface<EntityDemoClient>;
+  declare entity_manager: ClientEntityManagerInterface<Entity>;
   declare data: EntityDataClient;
 
   floaters: Floater[];
