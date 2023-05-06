@@ -103,7 +103,7 @@ export function main(): void {
     antialias: false,
     znear: 11,
     zfar: 2000,
-    do_borders: true,
+    do_borders: false,
     show_fps: false,
     ui_sprites: {
       ...spriteSetGet('pixely'),

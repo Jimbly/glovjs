@@ -17,20 +17,15 @@ import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import { SimpleMenu, simpleMenuCreate } from 'glov/client/simple_menu';
 import {
-  spotSuppressPad,
-} from 'glov/client/spot';
-import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
-  isMenuUp,
   playUISound,
 } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
-import walltime from 'glov/client/walltime';
 import { webFSAPI } from 'glov/client/webfs';
 import {
   ClientChannelWorker,
@@ -47,11 +42,13 @@ import {
   aiDoFloor, aiTraitsClientStartup,
 } from './ai';
 // import './client_cmds';
-import { buildModeActive, buildModeOverlayActive, crawlerBuildModeUI } from './crawler_build_mode';
+import {
+  buildModeActive,
+  crawlerBuildModeUI,
+} from './crawler_build_mode';
 import {
   crawlerCommStart,
   crawlerCommWant,
-  getChatUI,
 } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
@@ -74,26 +71,25 @@ import {
   crawlerBuildModeActivate,
   crawlerController,
   crawlerGameState,
+  crawlerPlayBottomOfFrame,
   crawlerPlayInitOffline,
   crawlerPlayStartup,
+  crawlerPlayTopOfFrame,
   crawlerPlayWantMode,
-  crawlerRenderFrame,
-  crawlerRenderFramePrep,
+  crawlerPrepAndRenderFrame,
   crawlerSaveGame,
   crawlerScriptAPI,
   getScaledFrameDt,
 } from './crawler_play';
 import {
   crawlerRenderViewportSet,
-  renderPrep,
 } from './crawler_render';
 import {
-  crawlerRenderEntitiesPrep,
   crawlerRenderEntitiesStartup,
 } from './crawler_render_entities';
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
-import { dialogMoveLocked, dialogReset, dialogRun, dialogStartup } from './dialog_system';
+import { dialogMoveLocked, dialogRun, dialogStartup } from './dialog_system';
 import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
 import {
@@ -129,13 +125,11 @@ const COMPASS_X = MINIMAP_X;
 const COMPASS_Y = MINIMAP_Y + MINIMAP_W;
 const VIEWPORT_X0 = 3;
 const VIEWPORT_Y0 = 3;
-const PLAY_ALLOW_CONSOLE = engine.DEBUG;
 
 type Entity = EntityDemoClient;
 
 let font: Font;
 
-let frame_wall_time = 0;
 let loading_level = false;
 
 let controller: CrawlerController;
@@ -364,6 +358,14 @@ function useNoText(): boolean {
 function playCrawl(): void {
   profilerStartFunc();
 
+  if (!controller.canRun()) {
+    return profilerStopFunc();
+  }
+
+  if (!controller.hasMoveBlocker() && !myEnt().isAlive()) {
+    controller.setMoveBlocker(moveBlockDead);
+  }
+
   let down = {
     menu: 0,
   };
@@ -575,85 +577,17 @@ function playCrawl(): void {
   profilerStopFunc();
 }
 
-function playerMotion(): void {
-  if (!controller.canRun()) {
-    return;
-  }
-
-  if (!controller.hasMoveBlocker() && !myEnt().isAlive()) {
-    controller.setMoveBlocker(moveBlockDead);
-  }
-
-  playCrawl();
-
-  if (settings.show_fps && !controller.getTransitioningFloor()) {
-    // Debug UI
-    // let y = ui.font_height * 3;
-    // let z = Z.DEBUG;
-    // ui.print(null, 0, y, z, `Walltime: ${frame_wall_time.toString().slice(-6)}`);
-    // y += ui.font_height;
-    // ui.print(null, 0, y, z, `Queue: ${queueLength()}${interp_queue[0].double_time ? ' double-time' : ''}`);
-    // y += ui.font_height;
-    // ui.print(null, 0, y, z, `Attack: ${frame_wall_time - queued_attack.start_time}/${queued_attack.windup}`);
-    // y += ui.font_height;
-  }
-}
-
-function drawEntitiesPrep(): void {
-  crawlerRenderEntitiesPrep();
-  let game_state = crawlerGameState();
-  let level = game_state.level;
-  if (!level) {
-    // eslint-disable-next-line no-useless-return
-    return; // still loading
-  }
-  // let game_entities = entityManager().entities;
-  // let ent_in_front = crawlerEntInFront();
-  // if (ent_in_front && myEnt().isAlive()) {
-  //   let target_ent = game_entities[ent_in_front]!;
-  //   drawEnemyStats(target_ent);
-  //   autoAttack(target_ent);
-  // } else {
-  //   autoAttack(null);
-  // }
-}
-
 export function play(dt: number): void {
-  profilerStartFunc();
   let game_state = crawlerGameState();
   if (crawlerCommWant()) {
     // Must have been disconnected?
     crawlerCommStart();
-    return profilerStopFunc();
+    return;
   }
-  profilerStart('top');
-  crawlerEntityManager().tick();
-  frame_wall_time = max(frame_wall_time, walltime()); // strictly increasing
 
-  const map_view = mapViewActive();
   let overlay_menu_up = pause_menu_up || dialogMoveLocked(); // || inventory_up
-  if (overlay_menu_up || isMenuUp()) {
-    controller.cancelQueuedMoves();
-  }
-  if (!(map_view || isMenuUp() || overlay_menu_up)) {
-    spotSuppressPad();
-  }
 
-  profilerStopStart('chat');
-  let do_chat = PLAY_ALLOW_CONSOLE || isOnline();
-  if (do_chat) {
-    let hide_chat = map_view || overlay_menu_up || !isOnline() || buildModeOverlayActive();
-    getChatUI().run({
-      hide: hide_chat,
-      x: 3,
-      y: game_height - getChatUI().h,
-      border: 2,
-      scroll_grow: 2,
-      always_scroll: !hide_chat,
-      cuddly_scroll: true,
-    });
-  }
-  profilerStopStart('mid');
+  crawlerPlayTopOfFrame(overlay_menu_up);
 
   if (keyDownEdge(KEYS.F3)) {
     settings.set('show_fps', 1 - settings.show_fps);
@@ -663,38 +597,18 @@ export function play(dt: number): void {
     renderResetFilter();
   }
 
-  profilerStopStart('playerMotion');
-  playerMotion();
+  playCrawl();
 
-  crawlerRenderFramePrep();
-
-  profilerStopStart('render prep');
-  renderPrep(controller.getRenderPrepParam());
-  drawEntitiesPrep();
-
-  controller.flushMapUpdate();
-
-  crawlerRenderFrame();
+  crawlerPrepAndRenderFrame();
 
   if (!loading_level && !buildModeActive()) {
     let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
     aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
-      settings.ai_pause || engine.defines.LEVEL_GEN || overlay_menu_up ||
-      dialogMoveLocked(), script_api);
+      settings.ai_pause || engine.defines.LEVEL_GEN || overlay_menu_up, script_api);
   }
 
-  if (crawlerCommWant()) {
-    crawlerCommStart();
-  }
-
-  crawlerEntityManager().actionListFlush();
-
-  if (do_chat) {
-    getChatUI().runLate();
-  }
-  profilerStop();
-  profilerStopFunc();
+  crawlerPlayBottomOfFrame();
 }
 
 function onPlayerMove(old_pos: Vec2, new_pos: Vec2): void {
@@ -715,7 +629,6 @@ function playInitShared(online: boolean): void {
 
   pause_menu_up = false;
   // inventory_up = false;
-  dialogReset();
 }
 
 
@@ -777,6 +690,14 @@ export function playStartup(): void {
     play_state: play,
     // on_init_level_offline: initLevel,
     default_vstyle: 'demo',
+    allow_offline_console: engine.DEBUG,
+    chat_ui_param: {
+      x: 3,
+      y_bottom: game_height,
+      border: 2,
+      scroll_grow: 2,
+      cuddly_scroll: true,
+    },
   });
   crawlerEntityClientStartupEarly();
   aiTraitsClientStartup();

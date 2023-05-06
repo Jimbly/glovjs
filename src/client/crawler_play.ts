@@ -19,12 +19,18 @@ import {
   localStorageSetJSON,
 } from 'glov/client/local_storage';
 import * as settings from 'glov/client/settings';
+import { spotSuppressPad } from 'glov/client/spot';
 import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
-import { textureLoad, textureSupportsDepth, textureWhite } from 'glov/client/textures';
+import {
+  textureLoad,
+  textureSupportsDepth,
+  textureWhite,
+} from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
+import { isMenuUp } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { getURLBase } from 'glov/client/urlhash';
 import { EntityManagerEvent } from 'glov/common/entity_base_common';
@@ -56,8 +62,17 @@ import {
   createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
-import { buildModeActive, buildModeSetActive } from './crawler_build_mode';
-import { crawlerCommStartBuildComm } from './crawler_comm';
+import {
+  buildModeActive,
+  buildModeOverlayActive,
+  buildModeSetActive,
+} from './crawler_build_mode';
+import {
+  crawlerCommStart,
+  crawlerCommStartBuildComm,
+  crawlerCommWant,
+  getChatUI,
+} from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
   EntityCrawlerClient,
@@ -74,6 +89,7 @@ import {
   isOnlineOnly,
   onlineMode,
 } from './crawler_entity_client';
+import { mapViewActive } from './crawler_map_view';
 import {
   FOV,
   SPLIT_ALL,
@@ -86,12 +102,17 @@ import {
   crawlerSetFogColor,
   crawlerSetFogParams,
   render,
+  renderPrep,
 } from './crawler_render';
-import { crawlerRenderEntities } from './crawler_render_entities';
+import {
+  crawlerRenderEntities,
+  crawlerRenderEntitiesPrep,
+} from './crawler_render_entities';
 import {
   CrawlerScriptAPIClient,
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
+import { dialogReset } from './dialog_system';
 
 const { PI, floor } = Math;
 
@@ -626,6 +647,8 @@ function crawlerPlayInitShared(): void {
   });
 
   last_saved_vis_string = {};
+
+  dialogReset();
 }
 
 function crawlerPlayInitOfflineEarly(): void {
@@ -844,6 +867,12 @@ export function crawlerRenderFramePrep(): void {
   }
 
   uiClearColor();
+
+  renderPrep(controller.getRenderPrepParam());
+
+  crawlerRenderEntitiesPrep();
+
+  controller.flushMapUpdate();
 }
 
 export function crawlerRenderFrame(): void {
@@ -917,6 +946,57 @@ export function crawlerRenderFrame(): void {
   }
 }
 
+export function crawlerPrepAndRenderFrame(): void {
+  crawlerRenderFramePrep();
+  crawlerRenderFrame();
+}
+
+export type ChatUIParam = { // TODO: Typescript: remove when chat_ui is migrated
+  border?: number;
+  scroll_grow?: number;
+  cuddly_scroll?: boolean;
+  x: number;
+  y_bottom: number;
+  z?: number;
+};
+let chat_ui_param: ChatUIParam;
+let allow_offline_console: boolean;
+let do_chat: boolean;
+export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
+  crawlerEntityManager().tick();
+
+  let map_view = mapViewActive();
+  if (overlay_menu_up || isMenuUp()) {
+    controller.cancelQueuedMoves();
+  }
+  if (!(map_view || isMenuUp() || overlay_menu_up)) {
+    spotSuppressPad();
+  }
+
+  let hide_chat = overlay_menu_up || map_view || buildModeOverlayActive() || !isOnline();
+  do_chat = allow_offline_console || isOnline() !== OnlineMode.OFFLINE;
+  if (do_chat) {
+    getChatUI().run({
+      ...chat_ui_param,
+      hide: hide_chat,
+      y: chat_ui_param.y_bottom - getChatUI().h,
+      always_scroll: !hide_chat,
+    });
+  }
+}
+
+export function crawlerPlayBottomOfFrame(): void {
+  if (crawlerCommWant()) {
+    crawlerCommStart();
+  }
+
+  crawlerEntityManager().actionListFlush();
+
+  if (do_chat) {
+    getChatUI().runLate();
+  }
+}
+
 export function crawlerPlayStartup(param: {
   on_broadcast?: (data: EntityManagerEvent) => void;
   play_init_online?: (room: ClientChannelWorker) => void;
@@ -925,6 +1005,8 @@ export function crawlerPlayStartup(param: {
   play_state: EngineState;
   on_init_level_offline?: InitLevelFunc;
   default_vstyle?: string;
+  allow_offline_console?: boolean;
+  chat_ui_param?: ChatUIParam;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
@@ -933,6 +1015,8 @@ export function crawlerPlayStartup(param: {
   play_state = param.play_state;
   default_vstyle = param.default_vstyle || 'demo';
   on_init_level_offline = param.on_init_level_offline || null;
+  allow_offline_console = param.allow_offline_console || false;
+  chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');
