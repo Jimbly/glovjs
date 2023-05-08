@@ -111,7 +111,7 @@ export type LocalStorageData = Partial<Record<string, string>>;
 
 export function localStorageExportAll(filter_prefix: string): LocalStorageData {
   let obj: LocalStorageData = {};
-  let prefix = new RegExp(`^${storage_prefix}_(${filter_prefix || ''}.*)`, 'u');
+  let prefix = new RegExp(`^${storage_prefix}_(${filter_prefix || ''}.*)`);
   if (lsd) {
     for (let i = 0; i < lsd.length; i++) {
       let key = lsd.key(i);
