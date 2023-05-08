@@ -1,7 +1,7 @@
 import assert from 'assert';
+import * as cmd_parse_mod from 'glov/common/cmd_parse';
 import { ErrorCallback } from 'glov/common/types';
 import { setAbilityReload } from './client_config';
-import { cmd_parse } from './cmds';
 import { netForceDisconnect } from './net';
 import * as urlhash from './urlhash';
 
@@ -53,6 +53,7 @@ export function getExternalTextureURL(url: string): string {
 
 export function environmentsInit<T extends EnvironmentConfig>(
   environments: Array<T>,
+  cmd_parse: ReturnType<typeof cmd_parse_mod.create>,
   default_environment_name?: string | undefined | null,
 ): void {
   all_environments = {};
