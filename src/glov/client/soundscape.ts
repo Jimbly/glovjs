@@ -158,6 +158,7 @@ class GlovSSParentLayer implements SSParentLayer {
     this.max_intensity = layer.max_intensity || DEFAULT_MAX_INTENSITY;
     this.tags = {};
     for (let tag in tags) {
+      ss.tags[tag] = false;
       this.tags[tag] = new GlovSSTagLayer(ss, tags[tag], this, tag);
     }
     this.user_idx = ++ss.user_idx;
@@ -258,8 +259,12 @@ export class GlovSoundScape implements SoundScape {
     let tag_time = this.tag_timer[tag];
     return tag_time && this.tag_tolerance - (engine.frame_timestamp - tag_time);
   }
-  setTag(tag: string, value: boolean): void {
-    this.tags[tag] = Boolean(this.tags[tag]); // So that debug info appears correctly
+  setTag(tag: string, value: boolean, force?: boolean): void {
+    if (force) {
+      this.tags[tag] = value;
+      delete this.tag_timer[tag];
+      return;
+    }
     if (this.tag_timer[tag]) {
       if (this.tags[tag] === value) {
         delete this.tag_timer[tag];
@@ -307,7 +312,7 @@ export class GlovSoundScape implements SoundScape {
     let { intensity, layer_state, layer_keys } = this;
 
     for (let tag in this.tag_timer) {
-      let tag_time = this.tag_timer[tag] as number;
+      let tag_time = this.tag_timer[tag]!;
       if (now > tag_time + this.tag_tolerance) {
         this.tags[tag] = !this.tags[tag];
         delete this.tag_timer[tag];
