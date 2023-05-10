@@ -1,7 +1,19 @@
 import assert from 'assert';
-import { diffApply, differCreate } from 'glov/common/differ';
+import {
+  Diff,
+  diffApply,
+  diffPacketRead,
+  diffPacketWrite,
+  differCreate,
+} from 'glov/common/differ';
+import { packetCreate } from 'glov/common/packet';
 import { clone, deepEqual } from 'glov/common/util';
 import 'glov/server/test';
+
+let seen_diffs: Diff[] = [];
+function track(diff: Diff): void {
+  seen_diffs.push(clone(diff));
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let obj: Record<string, any> = { a: 7, foo: 'bar', baz: { foobar: 7 } };
@@ -11,6 +23,7 @@ assert(!differ.canRedo());
 assert(deepEqual(obj, differ.data_last));
 obj.baz.qux = 8;
 let diff = differ.update(obj);
+track(diff);
 assert.equal(diff.length, 1);
 assert.equal(diff[0][0], 'baz.qux');
 assert.equal(diff[0][1], 8);
@@ -28,10 +41,12 @@ assert(!differ.canRedo());
 let old_obj = clone(obj);
 obj.a++;
 diff = differ.update(obj);
+track(diff);
 assert.equal(diff.length, 1);
 assert(deepEqual(obj, differ.data_last));
 
 diff = differ.update(obj);
+track(diff);
 assert.equal(diff.length, 0);
 assert(deepEqual(obj, differ.data_last));
 
@@ -59,6 +74,7 @@ obj = new_obj as typeof obj;
 // test modifying the returns from undo/redo
 obj.a++;
 diff = differ.update(obj);
+track(diff);
 assert.equal(diff.length, 1);
 assert(deepEqual(obj, differ.data_last));
 
@@ -104,6 +120,7 @@ let copy = clone(obj);
 differ = differCreate(obj, { history_size: HIST_SIZE });
 delete obj.a[0].b;
 diff = clone(differ.update(obj));
+track(diff);
 assert.equal(diff.length, 1);
 assert.equal(diff[0][0], 'a.0.b');
 assert.equal(diff[0][1], undefined);
@@ -112,8 +129,24 @@ assert.deepStrictEqual(copy, obj);
 
 delete obj.a[0].c;
 diff = clone(differ.update(obj));
+track(diff);
 assert.equal(diff.length, 1);
 assert.equal(diff[0][0], 'a.0.c');
 assert.equal(diff[0][1], undefined);
 diffApply(copy, diff);
 assert.deepStrictEqual(copy, obj);
+
+// Test encoding to/from packet
+let total_size = 0;
+for (let ii = 0; ii < seen_diffs.length; ++ii) {
+  diff = seen_diffs[ii];
+  let pak = packetCreate(0);
+  diffPacketWrite(pak, diff);
+  total_size += pak.totalSize();
+  pak.makeReadable();
+  let diff2 = diffPacketRead(pak);
+  assert.deepStrictEqual(diff, diff2);
+}
+if (false) {
+  console.log(`Packet diff size = ${total_size} (JSON=${JSON.stringify(seen_diffs).length})`);
+}

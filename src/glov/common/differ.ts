@@ -2,6 +2,7 @@ import assert from 'assert';
 import { DataObject, isDataObject } from 'glov/common/types';
 import { clone } from 'glov/common/util';
 import { dotPropDelete, dotPropSet } from './dot-prop';
+import { Packet } from './packet';
 
 const { max } = Math;
 
@@ -169,4 +170,27 @@ export function diffApply(data: DataObject, diff: Diff): void {
       dotPropSet(data, key, value);
     }
   }
+}
+
+export function diffPacketWrite(pak: Packet, diff: Diff): void {
+  for (let ii = 0; ii < diff.length; ++ii) {
+    let elem = diff[ii];
+    pak.writeAnsiString(elem[0]);
+    pak.writeJSON(elem[1]);
+  }
+  pak.writeAnsiString('');
+}
+
+export function diffPacketRead(pak: Packet): Diff {
+  let ret: Diff = [];
+  let key;
+  while ((key = pak.readAnsiString())) {
+    let value = pak.readJSON();
+    if (value === undefined) {
+      ret.push([key]);
+    } else {
+      ret.push([key, value]);
+    }
+  }
+  return ret;
 }
