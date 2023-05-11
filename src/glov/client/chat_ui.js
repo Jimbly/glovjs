@@ -1247,6 +1247,9 @@ export function chatUICreate(params) {
     usage: '  /csr_all command\n' +
       'Example: /csr_all me bows down',
     func: function (str, resp_func) {
+      if (!(chat_ui.channel && chat_ui.channel.numSubscriptions())) {
+        return void resp_func('Must be in a channel');
+      }
       let clients = chat_ui.channel.getChannelData('public.clients', {});
       let count = 0;
       for (let client_id in clients) {
@@ -1277,11 +1280,13 @@ export function chatUICreate(params) {
       }
       let user_id = str.slice(0, idx);
       let desired_client_id = '';
-      let clients = chat_ui.channel.getChannelData('public.clients', {});
-      for (let client_id in clients) {
-        let ids = clients[client_id].ids;
-        if (ids?.user_id === user_id) {
-          desired_client_id = client_id;
+      if (chat_ui.channel && chat_ui.channel.numSubscriptions()) {
+        let clients = chat_ui.channel.getChannelData('public.clients', {});
+        for (let client_id in clients) {
+          let ids = clients[client_id].ids;
+          if (ids?.user_id === user_id) {
+            desired_client_id = client_id;
+          }
         }
       }
 
