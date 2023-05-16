@@ -18,7 +18,6 @@ const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
 const autosound = require('./autosound.js');
 const compress = require('./compress.js');
-const config = require('./config.js');
 const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
@@ -48,6 +47,9 @@ gb.configure({
   targets,
   log_level: gb.LOG_INFO,
 });
+
+// eslint-disable-next-line import/order
+const config = require('./config.js')(gb);
 
 // Gets applied to the entire bundle
 const max_mangle = argv['max-mangle'];
@@ -160,10 +162,6 @@ gb.task({
   target: 'dev',
   ...json5({ beautify: true })
 });
-
-for (let ii = 0; ii < config.client_register_cbs.length; ++ii) {
-  config.client_register_cbs[ii](gb);
-}
 
 gb.task({
   name: 'client_png',
@@ -710,10 +708,6 @@ gb.task({
   name: 'build.zip',
   deps: zip_tasks,
 });
-
-for (let ii = 0; ii < config.register_late_cbs.length; ++ii) {
-  config.register_late_cbs[ii](gb);
-}
 
 const package_files = ['package.json', 'package-lock.json'];
 function timestamp(list) {
