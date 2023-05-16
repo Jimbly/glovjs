@@ -270,11 +270,26 @@ export function defineCausesReload(define) {
 }
 defineCausesReload('FORCEWEBGL2');
 defineCausesReload('NOWEBGL2');
+let define_change_cbs = {};
+export function defineOnChange(define, cb) {
+  let elem = define_change_cbs[define] = define_change_cbs[define] || {
+    value: defines[define],
+    cbs: [],
+  };
+  elem.cbs.push(cb);
+}
 export function definesChanged() {
   for (let key in reloading_defines) {
     if (defines[key] !== reloading_defines[key]) {
       urlhash.onURLChange(reloadSafe);
       break;
+    }
+  }
+  for (let key in define_change_cbs) {
+    let elem = define_change_cbs[key];
+    if (defines[key] !== elem.value) {
+      elem.value = defines[key];
+      callEach(elem.cbs);
     }
   }
   shadersHandleDefinesChanged();
