@@ -20,7 +20,7 @@ import * as util from 'glov/common/util';
 import { errorString } from 'glov/common/util';
 import { fbGetLoginInfo } from './fbinstant';
 import * as local_storage from './local_storage';
-import { netDisconnectedRaw } from './net';
+import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
 
 // relevant events:
@@ -439,14 +439,19 @@ SubscriptionManager.prototype.getServerTime = function () {
 
 SubscriptionManager.prototype.tick = function (dt) {
   this.server_time_interp += dt;
-  for (let channel_id in this.channels) {
-    let channel = this.channels[channel_id];
-    if (channel.immediate_subscribe) {
-      if (dt >= channel.immediate_subscribe) {
-        channel.immediate_subscribe = 0;
-        this.unsubscribe(channel_id);
-      } else {
-        channel.immediate_subscribe -= dt;
+  if (!netDisconnected()) {
+    // do not tick immediate subscriptions while disconnected *or* while logging in
+    //   as they will not be re-established (upon a disconnection) until *after*
+    //   login has finished.
+    for (let channel_id in this.channels) {
+      let channel = this.channels[channel_id];
+      if (channel.immediate_subscribe) {
+        if (dt >= channel.immediate_subscribe) {
+          channel.immediate_subscribe = 0;
+          this.unsubscribe(channel_id);
+        } else {
+          channel.immediate_subscribe -= dt;
+        }
       }
     }
   }
