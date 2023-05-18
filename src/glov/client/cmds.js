@@ -190,6 +190,8 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'disconnect',
   help: 'Forcibly disconnect WebSocket connection (Note: will auto-reconnect)',
+  prefix_usage_with_help: true,
+  usage: '/disconnect [disconnnect_duration [disconnect_delay]]',
   func: function (str, resp_func) {
     let socket = netClient()?.socket;
     if (!socket) {
@@ -198,7 +200,15 @@ cmd_parse.register({
     if (netDisconnected()) {
       return void resp_func('Not connected');
     }
-    socket.close();
+    let params = str.split(' ').map(Number);
+    let disconnect_duration = isFinite(params[0]) ? params[0] : 0;
+    let disconnect_delay = isFinite(params[1]) ? params[1] : 0;
+    netClient().retry_extra_delay = disconnect_duration;
+    if (disconnect_delay) {
+      setTimeout(socket.close.bind(socket), disconnect_delay);
+    } else {
+      socket.close();
+    }
     resp_func();
   },
 });

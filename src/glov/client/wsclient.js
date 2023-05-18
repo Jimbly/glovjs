@@ -42,6 +42,7 @@ export function WSClient(path, client_app) {
   this.disconnected = false;
   this.retry_scheduled = false;
   this.retry_count = 0;
+  this.retry_extra_delay = 0;
   this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
   this.idle_counter = 0;
@@ -230,7 +231,8 @@ WSClient.prototype.retryConnection = function () {
     assert(!client.socket);
     client.retry_scheduled = false;
     client.connect(true);
-  }, min(client.retry_count * client.retry_count * 100, 15000) * (0.75 + random() * 0.5));
+  }, min(client.retry_count * client.retry_count * 100, 15000) * (0.75 + random() * 0.5) + this.retry_extra_delay);
+  this.retry_extra_delay = 0;
 };
 
 WSClient.prototype.checkDisconnect = function () {
