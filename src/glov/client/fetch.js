@@ -37,10 +37,12 @@ export function fetch(params, cb) {
     profilerStart(`fetch_onload:${label}`);
     if ((xhr.status !== 0 && xhr.status < 200) || xhr.status >= 300) {
       let text;
-      try {
-        text = xhr.responseText;
-      } catch (e) {
-        // ignored
+      if (response_type !== 'arraybuffer') {
+        try {
+          text = xhr.responseText;
+        } catch (e) {
+          // ignored
+        }
       }
       cb(String(xhr.status), text || '');
     } else {
