@@ -5,9 +5,10 @@ const assert = require('assert');
 const { random, round } = Math;
 
 export const ERR_CONNECTION = 'ERR_CONNECTION';
+export const ERR_TIMEOUT = 'ERR_TIMEOUT';
 
 let fetch_delay = 0;
-let fetch_delay_rand = 50;
+let fetch_delay_rand = 0;
 export function fetchDelaySet(delay, rand) {
   fetch_delay = delay;
   fetch_delay_rand = rand;
@@ -45,12 +46,16 @@ export function fetch(params, cb) {
   if (timeout) {
     // Expect XHR timeout to work
     xhr.timeout = timeout;
-    // But, some evidence that sometimes it doesn't fire, so add a chained
-    //   timeout at double the time to make sure (double to give it a chance to
+    // But, in case it doesn't fire, add a chained timeout at double the
+    //   time to make sure (double to give it a chance to
     //   potentially fire a (late) success, in the case of stalls/hiccups/etc)
+    // Note: evidence `timeout` wasn't working was wrong - we were not attaching
+    //   a `ontimeout` handler.
     timer = setTimeout(function () {
       timer = setTimeout(function () {
-        done(ERR_CONNECTION);
+        profilerStart(`fetch_timeout:${label}`);
+        done(ERR_TIMEOUT);
+        profilerStop();
       }, timeout);
     }, timeout);
   }
@@ -102,6 +107,11 @@ export function fetch(params, cb) {
   xhr.onabort = xhr.onerror = () => {
     profilerStart(`fetch_onerror:${label}`);
     done(ERR_CONNECTION);
+    profilerStop();
+  };
+  xhr.ontimeout = function () {
+    profilerStart(`fetch_ontimeout:${label}`);
+    done(ERR_TIMEOUT);
     profilerStop();
   };
   if (body !== undefined) {
