@@ -8,6 +8,7 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 
 const engine = require('./engine.js');
 const { errorReportDetailsString } = require('./error_report.js');
+const { fetchDelaySet } = require('./fetch.js');
 const net = require('./net.js');
 const { netClient, netDisconnected } = net;
 const { SEMANTIC } = require('./shaders.js');
@@ -172,6 +173,7 @@ cmd_parse.register({
     if (str) {
       let params = str.split(' ');
       netDelaySet(Number(params[0]), Number(params[1]) || 0);
+      fetchDelaySet(Number(params[0]), Number(params[1]) || 0);
     }
     let cur = netDelayGet();
     resp_func(null, `Client NetDelay: ${cur[0]}+${cur[1]}`);

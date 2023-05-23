@@ -3,7 +3,16 @@
 const assert = require('assert');
 const { once } = require('glov/common/util.js');
 
+const { random, round } = Math;
+
 export const ERR_CONNECTION = 'ERR_CONNECTION';
+
+let fetch_delay = 0;
+let fetch_delay_rand = 50;
+export function fetchDelaySet(delay, rand) {
+  fetch_delay = delay;
+  fetch_delay_rand = rand;
+}
 
 const regex_with_host = /\/\/[^/]+\/([^?#]+)/;
 const regex_no_host = /([^?#]+)/;
@@ -85,5 +94,9 @@ export function fetch(params, cb) {
       body = String(body);
     }
   }
-  xhr.send(body);
+  if (fetch_delay || fetch_delay_rand) {
+    setTimeout(xhr.send.bind(xhr, body), fetch_delay + round(random() * fetch_delay_rand));
+  } else {
+    xhr.send(body);
+  }
 }

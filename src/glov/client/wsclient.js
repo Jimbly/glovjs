@@ -9,7 +9,11 @@ const ack = require('glov/common/ack.js');
 const { ackInitReceiver } = ack;
 const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
-const { fetch, ERR_CONNECTION } = require('./fetch.js');
+const {
+  ERR_CONNECTION,
+  fetch,
+  fetchDelaySet,
+} = require('./fetch.js');
 const { min, random } = Math;
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
@@ -154,6 +158,7 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   }
   if (data.net_delay) {
     netDelaySet(data.net_delay[0], data.net_delay[1]);
+    fetchDelaySet(data.net_delay[0], data.net_delay[1]);
   }
   // Fire subscription_manager connect handler
   assert(client.handlers.connect);
