@@ -1,7 +1,6 @@
 /* global XMLHttpRequest */
 
 const assert = require('assert');
-const { once } = require('glov/common/util.js');
 
 const { random, round } = Math;
 
@@ -26,7 +25,17 @@ function labelFromURL(url) {
 }
 
 export function fetch(params, cb) {
-  cb = once(cb);
+  let is_done = false;
+  let timer;
+  function done(err, response) {
+    if (is_done) {
+      return;
+    }
+    if (timer) {
+      clearTimeout(timer);
+    }
+    cb(err, response);
+  }
   let { method, url, response_type, label, body, headers = {}, timeout } = params;
   method = method || 'GET';
   assert(url);
@@ -34,7 +43,16 @@ export function fetch(params, cb) {
   let xhr = new XMLHttpRequest();
   xhr.open(method, url, true);
   if (timeout) {
+    // Expect XHR timeout to work
     xhr.timeout = timeout;
+    // But, some evidence that sometimes it doesn't fire, so add a chained
+    //   timeout at double the time to make sure (double to give it a chance to
+    //   potentially fire a (late) success, in the case of stalls/hiccups/etc)
+    timer = setTimeout(function () {
+      timer = setTimeout(function () {
+        done(ERR_CONNECTION);
+      }, timeout);
+    }, timeout);
   }
   if (response_type && response_type !== 'json') {
     xhr.responseType = response_type;
@@ -53,7 +71,7 @@ export function fetch(params, cb) {
           // ignored
         }
       }
-      cb(String(xhr.status), text || '');
+      done(String(xhr.status), text || '');
     } else {
       if (response_type === 'json') {
         let text;
@@ -64,26 +82,26 @@ export function fetch(params, cb) {
         } catch (e) {
           console.error(`Received invalid JSON response from ${url}: ${text || '<empty response>'}`);
           // Probably internal server error or such as the server is restarting
-          cb(e);
+          done(e);
           profilerStop();
           return;
         }
-        cb(null, obj);
+        done(null, obj);
       } else if (response_type === 'arraybuffer') {
         if (xhr.response) {
-          cb(null, xhr.response);
+          done(null, xhr.response);
         } else {
-          cb('empty response');
+          done('empty response');
         }
       } else {
-        cb(null, xhr.responseText);
+        done(null, xhr.responseText);
       }
     }
     profilerStop();
   };
-  xhr.onerror = () => {
+  xhr.onabort = xhr.onerror = () => {
     profilerStart(`fetch_onerror:${label}`);
-    cb(ERR_CONNECTION);
+    done(ERR_CONNECTION);
     profilerStop();
   };
   if (body !== undefined) {
