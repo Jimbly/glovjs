@@ -32,6 +32,7 @@ export function fetch(params, cb) {
     if (is_done) {
       return;
     }
+    is_done = true;
     if (timer) {
       clearTimeout(timer);
     }
