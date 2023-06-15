@@ -108,7 +108,7 @@ export function shadersSetGLErrorReportDetails() {
 }
 
 errorReportSetDynamicDetails('context_lost', function () {
-  if (gl && gl.isContextLost()) {
+  if (window.gl && gl.isContextLost()) {
     return '1';
   }
   return '';
