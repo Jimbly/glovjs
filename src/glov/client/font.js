@@ -40,6 +40,7 @@ const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, spriteDataAlloc } = sprites;
 const { textureLoad } = require('./textures.js');
+const { unicode_replacement_chars } = require('glov/common/font_data');
 const { clamp } = require('glov/common/util.js');
 const {
   v3scale,
@@ -546,6 +547,13 @@ GlovFont.prototype.infoFromChar = function (c) {
   }
   if (c >= 9 && c <= 13) { // characters that String.trim() strip
     return this.whitespace_character;
+  }
+  let ascii = unicode_replacement_chars[c];
+  if (ascii) {
+    ret = this.char_infos[ascii];
+    if (ret) {
+      return ret;
+    }
   }
   // no char info, not whitespace, show replacement even if ascii, control code
   return this.replacement_character;
