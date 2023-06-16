@@ -16,6 +16,7 @@ export const LINE_ALIGN: number;
 export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
 export function makeColorSet(color: ROVec4): ColorSet;
+export function colorSetMakeCustom(regular: ROVec4, rollover: ROVec4, down: ROVec4, disabled: ROVec4): ColorSet;
 export interface UIBox extends Box {
   z?: number;
 }
@@ -341,6 +342,7 @@ export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;
+export function uiSetButtonColorSet(color_set: ColorSet): void;
 
 type UISpriteSet = {
   color_set_shades?: [number, number, number];

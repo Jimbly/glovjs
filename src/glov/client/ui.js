@@ -88,6 +88,7 @@ deprecate(exports, 'bindSounds', 'uiBindSounds');
 deprecate(exports, 'modal_font_style', 'uiFontStyleModal()');
 deprecate(exports, 'font_style_noraml', 'uiFontStyleNoraml()');
 deprecate(exports, 'font_style_focused', 'uiFontStyleFocused()');
+deprecate(exports, 'color_button', 'uiSetButtonColorSet()');
 
 
 const MODAL_DARKEN = 0.75;
@@ -125,6 +126,15 @@ export function makeColorSet(color) {
   color_sets.push(ret);
   applyColorSet(ret);
   return ret;
+}
+
+export function colorSetMakeCustom(regular, rollover, down, disabled) {
+  return {
+    regular,
+    rollover,
+    down,
+    disabled,
+  };
 }
 
 let hooks = [];
@@ -253,7 +263,10 @@ export let font;
 export let title_font;
 export const sprites = {};
 
-export const color_button = makeColorSet([1,1,1,1]);
+let color_button = makeColorSet([1,1,1,1]);
+export function uiSetButtonColorSet(color_button_in) {
+  color_button = color_button_in;
+}
 export const color_panel = vec4(1, 1, 0.75, 1);
 
 
