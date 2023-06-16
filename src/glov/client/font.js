@@ -7,6 +7,26 @@ exports.styleColored = fontStyleColored; // eslint-disable-line @typescript-esli
 exports.styleAlpha = fontStyleAlpha; // eslint-disable-line @typescript-eslint/no-use-before-define
 exports.create = fontCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
 
+export const ALIGN = {
+  HLEFT: 0,
+  HCENTER: 1,
+  HRIGHT: 2,
+  HMASK: 3,
+
+  VTOP: 0 << 2,
+  VCENTER: 1 << 2,
+  VBOTTOM: 2 << 2,
+  VMASK: 3 << 2,
+
+  HFIT: 1 << 4,
+  HWRAP: 1 << 5,
+
+  HCENTERFIT: 1 | (1 << 4),
+  HRIGHTFIT: 2 | (1 << 4),
+  HVCENTER: 1 | (1 << 2), // to avoid doing bitwise ops elsewhere
+  HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
+};
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -67,26 +87,6 @@ font_style = glov_font.style(null, {
 //   SINGLE: 0,
 //   GRADIENT: 1,
 // };
-
-export const ALIGN = {
-  HLEFT: 0,
-  HCENTER: 1,
-  HRIGHT: 2,
-  HMASK: 3,
-
-  VTOP: 0 << 2,
-  VCENTER: 1 << 2,
-  VBOTTOM: 2 << 2,
-  VMASK: 3 << 2,
-
-  HFIT: 1 << 4,
-  HWRAP: 1 << 5,
-
-  HCENTERFIT: 1 | (1 << 4),
-  HRIGHTFIT: 2 | (1 << 4),
-  HVCENTER: 1 | (1 << 2), // to avoid doing bitwise ops elsewhere
-  HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
-};
 
 const ALIGN_NEEDS_WIDTH = ALIGN.HMASK | ALIGN.HFIT;
 
