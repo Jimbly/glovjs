@@ -39,3 +39,9 @@ export interface EditBox extends Readonly<EditBoxOptsAll> {
 }
 
 export function editBoxCreate(params?: EditBoxOpts): EditBox;
+
+// Pure immediate-mode API
+export function editBox<T extends string|number=string|number>(params: EditBoxOpts, current: T): {
+  result: EditBoxResult;
+  text: T;
+};

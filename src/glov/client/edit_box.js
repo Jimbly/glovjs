@@ -27,7 +27,7 @@ const {
   spotSuppressKBNav,
 } = require('./spot.js');
 const glov_ui = require('./ui.js');
-const { uiGetDOMElem } = require('./ui.js');
+const { getUIElemData, uiGetDOMElem } = require('./ui.js');
 
 let form_hook_registered = false;
 let active_edit_box;
@@ -349,4 +349,15 @@ GlovUIEditBox.prototype.CANCEL = 'cancel';
 
 export function editBoxCreate(params) {
   return new GlovUIEditBox(params);
+}
+
+export function editBox(params, current) {
+  let edit_box = getUIElemData('edit_box', params, editBoxCreate);
+  let result = edit_box.run(params);
+
+  return {
+    result,
+    text: edit_box.getText(),
+    edit_box,
+  };
 }
