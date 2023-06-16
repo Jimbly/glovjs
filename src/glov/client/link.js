@@ -32,6 +32,11 @@ export function linkGetDefaultStyle() {
   return style_link_default;
 }
 
+export function linkSetDefaultStyle(style_link, style_link_hover) {
+  style_link_default = style_link;
+  style_link_hover_default = style_link_hover;
+}
+
 let state_cache = {};
 let good_url = /https?:\/\//;
 
