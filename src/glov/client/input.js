@@ -351,15 +351,34 @@ function eventlog(event) {
   console.log(`${engine.frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
 }
 
+let allow_all_events = false;
+export function inputAllowAllEvents(allow) {
+  allow_all_events = allow;
+}
+
+function isInputElement(target) {
+  return target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+    target.tagName === 'LABEL' || target.tagName === 'VIDEO');
+}
+
 function letWheelEventThrough(event) {
   // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
-  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL');
+  return allow_all_events || isInputElement(event.target);
 }
 
 function letEventThrough(event) {
-  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL' || String(event.target.className).includes('noglov'));
+  if (!event.target || allow_all_events || event.glov_do_not_cancel) {
+    return true;
+  }
+  // Going to an input or related element
+  return isInputElement(event.target) ||
+    String(event.target.className).includes('noglov');
+  /* Not doing this: this causes legitimate clicks (e.g. when an edit box is focused)
+      to be lost, instead, relying on `allow_all_events` when an HTML UI is active.
+    // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
+    document.activeElement && event.target !== document.activeElement &&
+    (isInputElement(document.activeElement) ||
+      String(document.activeElement.className).includes('noglov'));*/
 }
 
 function ignored(event) {
