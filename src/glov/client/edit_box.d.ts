@@ -14,7 +14,8 @@ export interface EditBoxOptsAll {
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;
-  onetime_focus: boolean;
+  // internal state: onetime_focus: boolean;
+  focus_steal: boolean;
   auto_unfocus: boolean;
   initial_select: boolean;
   spellcheck: boolean;

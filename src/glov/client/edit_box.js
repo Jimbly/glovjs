@@ -90,6 +90,7 @@ class GlovUIEditBox {
     this.initial_focus = false;
     this.onetime_focus = false;
     this.auto_unfocus = false;
+    this.focus_steal = false;
     this.initial_select = false;
     this.spellcheck = true;
     this.esc_clears = true;
@@ -213,6 +214,10 @@ class GlovUIEditBox {
 
   run(params) {
     this.applyParams(params);
+    if (this.focus_steal) {
+      this.focus_steal = false;
+      this.focus();
+    }
 
     let is_reset = false;
     if (!verify(this.last_frame !== engine.frame_index)) {
