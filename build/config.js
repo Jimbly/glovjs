@@ -38,6 +38,7 @@ module.exports = {
     'client/**/*.jpg',
     'client/**/*.glb',
     'client/**/*.ico',
+    'client/**/*.ttf',
     '!**/unused/**',
     '!client/sounds/Bfxr/**',
     // 'client/**/vendor/**',
