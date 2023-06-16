@@ -41,9 +41,10 @@ let params = {};
 let title_transformer;
 
 let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove search and anchor
-if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
-  page_base += '?';
-}
+// This used to be here, but doesn't make sense (why would it be `foo.com/file.html?` but not `foo.com/?`?
+// if (!page_base.endsWith('/')) { // e.g. http://foo.bar/index.html
+//   page_base += '?';
+// }
 // Removes index.html et all
 let url_base = page_base.replace(/[^/]*$/,'');
 let on_change = [];
