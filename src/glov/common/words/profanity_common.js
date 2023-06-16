@@ -5,13 +5,18 @@
 
 const assert = require('assert');
 const { max } = Math;
+const { unicode_replacement_chars } = require('glov/common/font_data');
 
 const trans_src = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+';
 const trans_dst = '4bcd3fgh1jk1mn0pqr57uvwxy24bcd3fgh1jk1mn0pqr57uvwxy201234567897';
 const trans_src_regex = /[a-zA-Z0-9+]+/g;
 let trans_lookup = {};
+function cannonizeCharacter(c) {
+  c = unicode_replacement_chars[c] || c;
+  return trans_lookup[c] || c;
+}
 function canonize(str) {
-  return str.split('').map((c) => (trans_lookup[c] || c)).join('');
+  return str.split('').map(cannonizeCharacter).join('');
 }
 
 function rot13(str) {
