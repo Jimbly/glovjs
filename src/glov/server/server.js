@@ -72,24 +72,26 @@ function updateBuildTimestamp(base_name, is_startup) {
     }
     console.info(`Build timestamp for "${base_name}"${old_timestamp ? ' changed to' : ''}: ${obj.ver}`);
     last_build_timestamp[base_name] = obj.ver;
+    ws_server.setAppBuildTimestamp(base_name, obj.ver);
     if (base_name === 'app') {
       errorReportsSetAppBuildTimestamp(obj.ver);
-      ws_server.setAppBuildTimestamp(obj.ver);
-      if (!is_startup) {
+    }
+    if (!is_startup) {
+      if (base_name === 'app') {
         // Do a broadcast message so people get a few seconds of warning
         ws_server.broadcast('chat_broadcast', {
           src: 'system',
           msg: 'New client version deployed, reloading momentarily...'
         });
-        if (argv.dev) {
-          // immediate
-          ws_server.broadcast('build', last_build_timestamp.app);
-        } else {
-          // delay by 15 seconds, the server may also be about to be restarted
-          setTimeout(function () {
-            ws_server.broadcast('build', last_build_timestamp.app);
-          }, 15000);
-        }
+      }
+      if (argv.dev) {
+        // immediate
+        ws_server.broadcast('build', { app: base_name, ver: last_build_timestamp.app });
+      } else {
+        // delay by 15 seconds, the server may also be about to be restarted
+        setTimeout(function () {
+          ws_server.broadcast('build', { app: base_name, ver: last_build_timestamp.app });
+        }, 15000);
       }
     }
   });

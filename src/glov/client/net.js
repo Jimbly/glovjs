@@ -27,7 +27,7 @@ export function init(params) {
       packetEnableDebug(true);
     }
   }
-  client = new WSClient(params.path);
+  client = new WSClient(params.path, params.client_app);
   subs = subscription_manager.create(client, params.cmd_parse);
   subs.auto_create_user = Boolean(params.auto_create_user);
   subs.no_auto_login = Boolean(params.no_auto_login);

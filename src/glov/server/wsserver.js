@@ -98,7 +98,7 @@ function WSServer() {
   this.clients = Object.create(null);
   this.handlers = {};
   this.restarting = undefined;
-  this.app_build_timestamp = 0;
+  this.app_build_timestamp = { app: 0 };
   this.restart_filter = null;
   this.onMsg('ping', util.nop);
   packetLogInit(this);
@@ -241,10 +241,12 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
       build: client.client_build,
     });
 
+    let query = requestGetQuery(req);
+    let client_app = query.app || 'app';
     let cack_data = {
       id: client.client_id,
       secret: client.secret,
-      build: this.app_build_timestamp,
+      build: this.app_build_timestamp[client_app],
       restarting: ws_server.restarting,
     };
     if (dev) {
@@ -254,7 +256,6 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
 
     client.send('cack', cack_data);
 
-    let query = requestGetQuery(req);
     let reconnect_id = Number(query.reconnect);
     if (reconnect_id) {
       // we're reconnecting an existing client, immediately disconnect the old one
@@ -343,8 +344,9 @@ WSServer.prototype.broadcast = function (msg, data) {
   return this.broadcastPacket(pak);
 };
 
-WSServer.prototype.setAppBuildTimestamp = function (ver) {
-  this.app_build_timestamp = ver;
+WSServer.prototype.setAppBuildTimestamp = function (app, ver) {
+  assert(ver);
+  this.app_build_timestamp[app] = ver;
 };
 
 export function isClient(obj) {

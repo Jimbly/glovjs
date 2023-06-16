@@ -32,7 +32,7 @@ export const ERR_CLIENT_VERSION_OLD = 'ERR_CLIENT_VERSION_OLD';
 
 exports.CURRENT_VERSION = 0;
 
-export function WSClient(path) {
+export function WSClient(path, client_app) {
   this.id = null;
   this.my_ids = {}; // set of all IDs I've been during this session
   this.handlers = {};
@@ -47,6 +47,7 @@ export function WSClient(path) {
   this.idle_counter = 0;
   this.last_send_time = Date.now();
   this.connect_error = ERR_CONNECTING;
+  this.client_app = client_app || 'app';
   ackInitReceiver(this);
 
   if (path) {
@@ -108,7 +109,11 @@ function whenServerReady(cb) {
   doit();
 }
 
-WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
+WSClient.prototype.onBuildTimestamp = function (obj) {
+  if (obj.app !== this.client_app) {
+    return;
+  }
+  let build_timestamp = obj.ver;
   if (build_timestamp !== BUILD_TIMESTAMP) {
     if (this.on_build_timestamp_mismatch) {
       this.on_build_timestamp_mismatch();
