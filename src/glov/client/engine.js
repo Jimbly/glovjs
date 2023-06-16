@@ -32,6 +32,7 @@ const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const { geomResetState, geomStartup } = require('./geom.js');
 const input = require('./input.js');
+const { inputAllowAllEvents } = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
 const mat4Copy = require('gl-mat4/copy');
@@ -136,9 +137,17 @@ export const border_color = vec4(0, 0, 0, 1);
 export let border_clear_color = vec4(0, 0, 0, 1);
 
 let no_render = false;
+let dirty_render = false;
+let render_frames_needed = 3;
+
+export function renderNeeded(frames) {
+  // default 3 frames - 1 gets eaten immediately, one to show the result of the input, one to get back to steady state
+  render_frames_needed = max(render_frames_needed, frames || 3);
+}
 
 export function disableRender(new_value) {
   no_render = new_value;
+  inputAllowAllEvents(no_render);
   if (no_render) {
     cleanupDOMElems();
   }
@@ -339,6 +348,7 @@ export function setState(new_state) {
   } else {
     app_state = new_state;
   }
+  renderNeeded();
 }
 
 export function stateActive(test_state) {
@@ -782,6 +792,26 @@ function tick(timestamp) {
   profilerStart('tick');
   profilerStart('top');
   frames_requested--;
+
+  if (render_frames_needed) {
+    --render_frames_needed;
+  }
+  if (dirty_render && !render_frames_needed) {
+    resetEffects();
+    input.tickInputInactive();
+    last_tick_cpu = 0;
+    for (let ii = post_tick.length - 1; ii >= 0; --ii) {
+      if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
+        post_tick[ii].fn();
+        ridx(post_tick, ii);
+      }
+    }
+    requestFrame();
+    profilerStop();
+    return profilerStop('tick');
+  }
+
+
   // if (timestamp < 1e12) { // high resolution timer
   //   this ends up being a value way back in time, relative to what hrnow() returns,
   //   and even back in time relative to input events already dispatched,
@@ -1241,6 +1271,7 @@ export function startup(params) {
   if (params.show_fps !== undefined) {
     settings.show_fps = params.show_fps;
   }
+  dirty_render = Boolean(params.dirty_render);
 
   periodiclyRequestFrame();
   return true;
@@ -1285,6 +1316,7 @@ function loading() {
   if (elem_loading_text) {
     elem_loading_text.innerText = `Loading (${load_count})...`;
   }
+  renderNeeded();
   if (!load_count) {
     is_loading = false;
     app_state = after_loading_state;
@@ -1293,6 +1325,7 @@ function loading() {
       ticks: 2,
       fn: function () {
         loadingFinished();
+        renderNeeded();
         let loading_elem = document.getElementById('loading');
         if (loading_elem) {
           loading_elem.style.visibility = 'hidden';

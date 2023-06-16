@@ -178,6 +178,7 @@ const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
+const { renderNeeded } = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const { abs, max, min, sqrt } = Math;
@@ -414,6 +415,7 @@ export function inputLastTime() {
 function onUserInput() {
   soundResume();
   last_input_time = Date.now();
+  renderNeeded();
 }
 
 function releaseAllKeysDown(evt) {
@@ -426,6 +428,7 @@ function releaseAllKeysDown(evt) {
 }
 
 function onKeyUp(event) {
+  renderNeeded();
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
   if (!letEventThrough(event)) {
@@ -496,6 +499,7 @@ let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
 function onMouseMove(event, no_stop) {
+  renderNeeded();
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
   if (!letEventThrough(event) && !no_stop && event.button !== 3) {
@@ -652,6 +656,7 @@ function onMouseUp(event) {
 }
 
 function onWheel(event) {
+  renderNeeded();
   let saved = mouse_moved; // don't trigger mouseMoved()
   onMouseMove(event, true);
   mouse_moved = saved;
@@ -781,6 +786,7 @@ function onTouchChange(event) {
 }
 
 function onBlurOrFocus(evt) {
+  renderNeeded();
   protectUnload(false);
   releaseAllKeysDown(evt);
 }
