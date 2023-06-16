@@ -196,16 +196,21 @@ export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | n
 
 export function print(style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
-export interface LabelParam extends UIBox {
+export type LabelParam = Partial<TooltipBoxParam> & {
+  x: number;
+  y: number;
+  z?: number;
+  w?: number;
+  h?: number;
   style?: FontStyle;
   style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;
   text?: Text;
-  tooltip?: Text;
-}
-export function label(param: LabelParam): void;
+  tooltip?: TooltipValue;
+};
+export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
 

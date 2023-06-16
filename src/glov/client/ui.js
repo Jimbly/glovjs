@@ -41,7 +41,7 @@ const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
-const { fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
+const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
@@ -1068,7 +1068,7 @@ export function print(style, x, y, z, text) {
 
 export function label(param) {
   profilerStartFunc();
-  let { style, x, y, align, w, h, text, tooltip } = param;
+  let { style, x, y, align, w, h, text, tooltip, tooltip_above } = param;
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
@@ -1079,12 +1079,27 @@ export function label(param) {
   if (tooltip) {
     if (!w) {
       w = use_font.getStringWidth(style, size, text);
+      if (align & ALIGN.HRIGHT) {
+        x -= w;
+      } else if (align & ALIGN.HCENTER) {
+        x -= w/2;
+      }
+    }
+    if (!h) {
+      h = size;
+      if (align & ALIGN.VBOTTOM) {
+        y -= h;
+      } else if (align & ALIGN.VCENTER) {
+        y -= h/2;
+      }
     }
     assert(isFinite(w));
     assert(isFinite(h));
     let spot_ret = spot({
       x, y, w, h,
       tooltip: tooltip,
+      tooltip_width: param.tooltip_width,
+      tooltip_above,
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
@@ -1097,14 +1112,16 @@ export function label(param) {
       }
     }
   }
+  let text_w = 0;
   if (text) {
     if (align) {
-      use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+      text_w = use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
     } else {
-      use_font.drawSized(style, x, y, z, size, text);
+      text_w = use_font.drawSized(style, x, y, z, size, text);
     }
   }
   profilerStopFunc();
+  return w || text_w;
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
