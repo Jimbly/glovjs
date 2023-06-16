@@ -1689,6 +1689,7 @@ const LINE_U0 = 0.5/LINE_TEX_W;
 const LINE_U1 = (LINE_MIDP + 0.5) / LINE_TEX_W;
 const LINE_U2 = 1 - LINE_U1; // 1 texel away from LINE_U1
 const LINE_U3 = 1 - 0.5/LINE_TEX_W;
+let line_last_shader_param = { param0: [0,0] };
 export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   if (mode === undefined) {
     mode = default_line_mode;
@@ -1780,7 +1781,13 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   step_end = 1 + precise * (step_end - 1);
   let A = 1.0 / (step_end - step_start);
   let B = -step_start * A;
-  let shader_param = { param0: [A, B] };
+  let shader_param;
+  if (line_last_shader_param.param0[0] !== A ||
+    line_last_shader_param.param0[1] !== B
+  ) {
+    line_last_shader_param = { param0: [A, B] };
+  }
+  shader_param = line_last_shader_param;
 
   glov_sprites.queueraw4(texs,
     x1 + tangx, y1 + tangy,
