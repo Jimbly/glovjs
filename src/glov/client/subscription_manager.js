@@ -84,6 +84,10 @@ ClientChannelWorker.prototype.numSubscriptions = function () {
   return this.subscriptions;
 };
 
+ClientChannelWorker.prototype.isFullySubscribed = function () {
+  return this.got_subscribe;
+};
+
 ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
   console.log(`got channel_data(${this.channel_id}):  ${JSON.stringify(data)}`);
   this.data = data;

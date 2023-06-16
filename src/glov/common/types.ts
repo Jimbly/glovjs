@@ -168,6 +168,7 @@ export interface ChatIDs extends ClientHandlerSource {
 }
 
 export type ClientIDs = {
+  client_id: string;
   user_id?: string;
   display_name?: string;
   roles?: Partial<Record<string, true>>;
@@ -179,12 +180,14 @@ export interface ClientChannelWorker {
   onSubscribe(cb: (data: unknown) => void): void;
   onceSubscribe(cb: ((data: DataObject) => void) | VoidFunc): void;
   numSubscriptions(): number;
+  isFullySubscribed(): boolean;
   unsubscribe(): void;
   getChannelData<T>(key: string, default_value: T): T;
   getChannelData(key: string): unknown;
   getChannelID(): string;
   setChannelData(key: string, value: unknown, skip_predict?: boolean, resp_func?: NetErrorCallback): void;
   pak(msg: string): Packet;
+  send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
   send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
   cmdParse(cmd: string, resp_func: CmdRespFunc): void;
   readonly data: {
