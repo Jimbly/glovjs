@@ -39,6 +39,10 @@ const STATUS_TIME = 5000;
 export let ws_server;
 export let channel_server;
 
+export function getChannelServer() {
+  return channel_server;
+}
+
 let last_status = '';
 function displayStatus() {
   setTimeout(displayStatus, STATUS_TIME);
