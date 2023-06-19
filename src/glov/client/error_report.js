@@ -119,6 +119,9 @@ let filtered_errors = new RegExp([
   'ammerhead-browser',
   'hammerhead',
   'isFeatureBroken',
+  'PureRead',
+  'uv\\.handler\\.js',
+  'dashawn\\.cf',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
