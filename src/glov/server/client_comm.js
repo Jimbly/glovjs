@@ -1,45 +1,44 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const {
+import * as assert from 'assert';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import {
+  MAX_CLIENT_UPLOAD_SIZE,
   chunkedReceiverCleanup,
   chunkedReceiverFinish,
   chunkedReceiverInit,
   chunkedReceiverOnChunk,
   chunkedReceiverStart,
-  MAX_CLIENT_UPLOAD_SIZE,
-} = require('glov/common/chunked_send.js');
-const client_worker = require('./client_worker.js');
-const { channelServerPak, channelServerSend, quietMessage } = require('./channel_server.js');
-const crypto = require('crypto');
-const { regex_valid_username } = require('./default_workers.js');
-const { logDumpJSON, logSubscribeClient, logUnsubscribeClient } = require('./log.js');
-const fs = require('fs');
-const { isPacket } = require('glov/common/packet.js');
-const { logdata, merge } = require('glov/common/util.js');
-const { isProfane, profanityCommonStartup } = require('glov/common/words/profanity_common.js');
-const metrics = require('./metrics.js');
-const { metricsStats } = metrics;
-const { perfCounterAdd } = require('glov/common/perfcounters.js');
-const random_names = require('./random_names.js');
-// const {
-//   appleSignInInit,
-//   appleSignInValidateToken,
-// } = require('./signin_with_apple_validator.js');
-const {
+} from 'glov/common/chunked_send';
+import {
+  // ID_PROVIDER_APPLE,
+  ID_PROVIDER_FB_GAMING,
+  ID_PROVIDER_FB_INSTANT,
+} from 'glov/common/enums';
+import { isPacket } from 'glov/common/packet';
+import { perfCounterAdd } from 'glov/common/perfcounters';
+import { logdata, merge } from 'glov/common/util';
+import { isProfane, profanityCommonStartup } from 'glov/common/words/profanity_common';
+import { channelServerPak, channelServerSend, quietMessage } from './channel_server';
+import * as client_worker from './client_worker';
+import { regex_valid_username } from './default_workers';
+import {
   facebookGetASIDFromLoginDataAsync,
   facebookGetPayloadFromSignedData,
   facebookGetPlayerIdFromASIDAsync,
   facebookGetUserFieldsFromASIDAsync,
   facebookUtilsInit,
-} = require('./facebook_utils.js');
-const {
-  // ID_PROVIDER_APPLE,
-  ID_PROVIDER_FB_GAMING,
-  ID_PROVIDER_FB_INSTANT,
-} = require('glov/common/enums.js');
+} from './facebook_utils';
+import { logDumpJSON, logSubscribeClient, logUnsubscribeClient } from './log';
+import * as metrics from './metrics';
+import { metricsStats } from './metrics';
+import * as random_names from './random_names';
+// import {
+//   appleSignInInit,
+//   appleSignInValidateToken,
+// } from './signin_with_apple_validator';
 
 
 // Note: this object is both filtering wsclient -> wsserver messages and client->channel messages
