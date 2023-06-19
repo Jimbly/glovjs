@@ -282,6 +282,7 @@ class GlovUIEditBox {
       } else {
         this.input = null;
       }
+      this.last_autocomplete = null;
       this.submitted = false;
       this.elem = elem;
     } else {
