@@ -275,7 +275,12 @@ function updateHistoryCommit() {
   profilerStart('updateHistoryCommit');
   scheduled = false;
   last_history_set_time = Date.now();
-  let url = `${page_base}${last_history_str}`;
+  let mid = '';
+  if (!page_base.endsWith('/') && last_history_str && !last_history_str.startsWith('?')) {
+    // a page_base like `foo.com/index.html` and a route url like `user/foo`, delineate them
+    mid = '?';
+  }
+  let url = `${page_base}${mid}${last_history_str}`;
   if (url.endsWith('?')) {
     url = url.slice(0, -1);
   }
@@ -364,7 +369,7 @@ export function route(route_string) {
     keys.push(match);
     return '([^/&?]+)';
   });
-  let regex = new RegExp(`^${base}(?:$|\\?)`);
+  let regex = new RegExp(`^\\??${base}(?:$|\\?)`);
   routeEx({
     route_string,
     regex,
@@ -375,7 +380,7 @@ export function route(route_string) {
 // For a route that has no parameters, e.g. `foo.html`
 // Needs an associated key already registered, then set(key, '1') and set(key, '') enter and leave this route
 export function routeFixed(route_string, key) {
-  let regex = new RegExp(`^${route_string}(?:$|\\?)`);
+  let regex = new RegExp(`^\\??${route_string}(?:$|\\?)`);
   routeEx({
     route_string,
     regex,
