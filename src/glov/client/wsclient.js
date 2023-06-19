@@ -52,6 +52,7 @@ export function WSClient(path, client_app) {
   this.idle_counter = 0;
   this.last_send_time = Date.now();
   this.connect_error = ERR_CONNECTING;
+  this.update_available = false;
   this.client_app = client_app || 'app';
   ackInitReceiver(this);
 
@@ -262,15 +263,15 @@ WSClient.prototype.connect = function (for_reconnect) {
     let response_data = jsonParseResponse(response);
     let status = response_data?.status;
     let redirect_environment = response_data?.redirect_environment;
-    let update_available = response_data?.update_available;
-    let should_reload = update_available && getAbilityReload();
+    this.update_available = response_data?.update_available;
+    let should_reload = this.update_available && getAbilityReload();
 
     assert(this.ready_check_in_progress);
     this.ready_check_in_progress = false;
     this.connect_error = ERR_CONNECTING;
 
     if (!err && !redirect_environment && !should_reload) {
-      if (update_available) {
+      if (this.update_available) {
         // TODO: Inform the user that a new version is available,
         // even though the current version is still supported
       }
