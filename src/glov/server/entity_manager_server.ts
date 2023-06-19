@@ -218,7 +218,11 @@ function loadPlayerEntity<
     assert(ent.id > 0);
     // ent.user_id = user_id; // not currently needed, but might be generally useful?
     ent.player_uid = player_uid;
-    ent.is_player = true;
+    if (!ent.is_player) {
+      // If the caller is using a TraitFactory, this should already be true on
+      //   the prototype, if not, add it to the object.
+      ent.is_player = true;
+    }
     client.ever_had_ent_id = true;
     client.ent_id = ent.id;
     ent.fixupPostLoad();
