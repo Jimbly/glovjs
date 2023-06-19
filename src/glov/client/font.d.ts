@@ -121,7 +121,9 @@ export interface Font {
     line_cb: FontLineWrapCallback
   ): number;
   numLines(style: FontStyle | null, w: number, indent: number, size: number, text: Text): number;
-  dims(style: FontStyle | null, w: number, indent: number, size: number, text: Text): { w: number; h: number };
+  dims(style: FontStyle | null, w: number, indent: number, size: number, text: Text): {
+    w: number; h: number; numlines: number;
+  };
 
   getCharacterWidth(style: FontStyle | null, x_size: number, c: number): number;
 
