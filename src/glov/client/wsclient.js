@@ -57,7 +57,7 @@ export function WSClient(path, client_app) {
   this.connect(false);
 
   this.onMsg('cack', this.onConnectAck.bind(this));
-  this.onMsg('build', this.onBuildTimestamp.bind(this));
+  this.onMsg('build', this.onBuildChange.bind(this));
   this.onMsg('error', this.onError.bind(this));
 }
 
@@ -109,11 +109,15 @@ function whenServerReady(cb) {
   doit();
 }
 
-WSClient.prototype.onBuildTimestamp = function (obj) {
+WSClient.prototype.onBuildChange = function (obj) {
+  // (primarily) development-time dynamic build version change, reload if it's our app that changed
   if (obj.app !== this.client_app) {
     return;
   }
-  let build_timestamp = obj.ver;
+  this.onBuildTimestamp(obj.ver);
+};
+
+WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
   if (build_timestamp !== BUILD_TIMESTAMP) {
     if (this.on_build_timestamp_mismatch) {
       this.on_build_timestamp_mismatch();
