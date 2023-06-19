@@ -23,11 +23,14 @@ const exec = require('./exec.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const json5 = require('./json5.js');
 const testRunner = require('./test-runner.js');
+const texproc = require('./texproc.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const uglifyrc = require('./uglifyrc.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
+const yamlproc = require('./yamlproc.js');
+const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
 
 require('./checks.js')(__filename);
 
@@ -166,11 +169,34 @@ gb.task({
 gb.task({
   name: 'client_png',
   input: config.client_png,
-  target: 'dev',
   ...gbcache({
     key: 'alphafix',
     version: 1,
   }, alphafix(config.client_png_alphafix)),
+});
+
+gb.task({
+  name: 'client_texopt',
+  input: ['client/img/**/*.texopt'],
+  ...yamlproc(),
+});
+
+gb.task({
+  name: 'client_texproc',
+  input: 'client_png:**',
+  deps: ['client_texopt'],
+  ...texproc(),
+});
+
+gb.task({
+  name: 'client_texproc_output',
+  input: [
+    'client_texproc:**',
+    'client_texproc:!**/*.tflag',
+  ],
+  type: gb.SINGLE,
+  target: 'dev',
+  func: copy,
 });
 
 gb.task({
@@ -487,7 +513,7 @@ let client_tasks = [
   ...config.extra_client_tasks,
   'client_autosound',
   'client_static',
-  'client_png',
+  'client_texproc_output',
   'client_css',
   'client_fsdata',
   ...bundle_tasks,
@@ -653,19 +679,27 @@ function noBundleTasks(elem) {
   return true;
 }
 
-function noPNGTask(elem) {
-  if (elem.split(':')[0] === 'client_png') {
+function noTextureTask(elem) {
+  if (elem.split(':')[0] === 'client_texproc_output') {
     return false;
   }
   return true;
 }
 
 gb.task({
+  name: 'build.prod.pngextract',
+  input: [
+    'client_texproc_output:**/*.txp',
+  ],
+  ...texPackExtractPNG(),
+});
+
+gb.task({
   name: 'build.prod.png',
   input: [
-    'client_png:**',
+    'client_texproc_output:**/*.png',
+    'build.prod.pngextract:**',
   ],
-  target: 'prod',
   ...gbcache({
     key: 'imagemin',
     version: 1,
@@ -675,6 +709,52 @@ gb.task({
       imagemin_zopfli(config.zopfli),
     ],
   })),
+});
+
+gb.task({
+  name: 'build.prod.pngpack',
+  input: [
+    'build.prod.png:**',
+  ],
+  ...texPackRecombinePNG(),
+});
+
+// Texture pipeline summary:
+//   client_png
+//     -> combines all source pngs from source data, generated, combined, etc, does alpha fixing
+//   client_texproc - input of client_png
+//     -> based on .texopt settings, generates compressed and packed textures plus tflags
+//     -> passes through other png files
+//   client_texproc_output
+//     -> filters out the tflags and outputs all these to dev
+// (Production build only pipeline)
+//   build.prod.pngextract
+//     -> extracts TXPs to individual PNGs for optimization
+//   build.prod.png
+//     -> compresses all PNGs (either individuals or those extracted in previous task)
+//   build.prod.pngpack
+//     -> repacks PNGs to TXPs, passes through other pngs
+//   build.prod.texfinal
+//     -> gathers all final images needed for prod zip tasks an also outputs to prod:
+//       all outputs from build.prod.pngpack
+//       all non-txp, non-png, non-tflag outputs of client_texproc (gpu textures, maybe jpegs later, etc)
+//         Or, maybe they should be pass-through from build.prod.pngextract->etc?
+//         There are not yet any of these, all `texproc()` outputs are currently PNGs or PNG-containing TXPs
+
+gb.task({
+  name: 'build.prod.texfinal',
+  input: [
+    // All final compressed .PNGs, all re-packed .TXPs
+    'build.prod.pngpack:**',
+    // all non-txp, non-png, non-tflag outputs of client_texproc (gpu textures, maybe jpegs later, etc)
+    'client_texproc:**',
+    'client_texproc:!**/*.png',
+    'client_texproc:!**/*.txp',
+    'client_texproc:!**/*.tflag',
+  ],
+  target: 'prod',
+  type: gb.SINGLE,
+  func: copy,
 });
 
 
@@ -688,8 +768,8 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      ...client_input_globs_base.filter(noBundleTasks).filter(noPNGTask),
-      'build.prod.png:**',
+      ...client_input_globs_base.filter(noBundleTasks).filter(noTextureTask),
+      'build.prod.texfinal:**',
       ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
       'build.prod.uglify:**',
       ...config.extra_client_html,
@@ -749,7 +829,7 @@ gb.task({
   input: [
     ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.uglify:**',
-    ...client_input_globs.filter(noBundleTasks).filter(noPNGTask),
+    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask),
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
@@ -769,7 +849,7 @@ gb.task({
 
 gb.task({
   name: 'build.prod.client',
-  deps: ['build.prod.compress', 'build.prod.png', 'build.zip'],
+  deps: ['build.prod.compress', 'build.prod.texfinal', 'build.zip'],
 });
 gb.task({
   name: 'build',
