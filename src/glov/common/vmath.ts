@@ -423,6 +423,13 @@ export function v3iMax(inout: Vec3, b: ROVec3): Vec3 {
   return inout;
 }
 
+export function v3min(out: Vec3, a: ROVec3, b: ROVec3): Vec3 {
+  out[0] = min(a[0], b[0]);
+  out[1] = min(a[1], b[1]);
+  out[2] = min(a[2], b[2]);
+  return out;
+}
+
 export function v3iMin(inout: Vec3, b: ROVec3): Vec3 {
   inout[0] = min(inout[0], b[0]);
   inout[1] = min(inout[1], b[1]);
