@@ -584,6 +584,7 @@ function checkResize() {
 
     // For the next 10 frames, make sure font size is correct
     need_repos = 10;
+    renderNeeded();
   }
   if (is_ios_safari && (window.visualViewport || need_repos)) {
     // we have accurate view information, or screen was just rotated / resized
