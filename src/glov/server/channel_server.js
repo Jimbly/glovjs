@@ -686,7 +686,7 @@ export class ChannelServer {
       if (client) {
         if (data.sysadmin) { // Send to system admins only
           let { client_channel } = client;
-          if (!client_channel || !client_channel.ids || !client_channel.ids.sysadmin) {
+          if (!client_channel || !client_channel.ids || !(client_channel.ids.sysadmin || client_channel.ids.csr)) {
             continue;
           }
         }

@@ -153,7 +153,7 @@ function defaultGetRoles() {
     let user_channel = netSubs().getMyUserChannel();
     user_public_data = user_channel.data && user_channel.data.public;
     if (user_public_data?.permissions?.sysadmin) {
-      return { sysadmin: 1 };
+      return { sysadmin: 1, csr: 1 };
     }
   }
   return {};
@@ -1277,9 +1277,10 @@ export function chatUICreate(params) {
   });
   cmd_parse.register({
     cmd: 'csr',
-    access_run: ['sysadmin'],
-    help: '(Admin) Run a command as another user',
-    usage: '$HELP\n  /csr UserID command\n' +
+    access_run: ['csr'],
+    help: '(CSR) Run a command as another user',
+    prefix_usage_with_help: true,
+    usage: '  /csr UserID command\n' +
       'Example: /csr jimbly gems -100',
     func: function (str, resp_func) {
       let idx = str.indexOf(' ');

@@ -814,7 +814,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.exists()) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (!src.sysadmin) {
+    if (!src.sysadmin && !src.csr) {
       return void resp_func('ERR_ACCESS_DENIED');
     }
     // first, try running here on a (potentially offline) user

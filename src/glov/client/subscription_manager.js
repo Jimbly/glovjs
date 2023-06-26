@@ -605,11 +605,16 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     this.was_logged_in = true;
     let user_channel = this.getMyUserChannel(); // auto-subscribe to it
     user_channel.onceSubscribe(() => {
-      if (!this.did_master_subscribe && user_channel.getChannelData('public.permissions.sysadmin')) {
+      if (!this.did_master_subscribe) {
         // For cmd_parse access
-        this.did_master_subscribe = true;
-        this.subscribe('master.master');
-        this.subscribe('global.global');
+        let perms = user_channel.getChannelData('public.permissions', {});
+        if (perms.sysadmin) {
+          this.subscribe('master.master');
+        }
+        if (perms.sysadmin || perms.csr) {
+          this.did_master_subscribe = true;
+          this.subscribe('global.global');
+        }
       }
     });
 
@@ -753,7 +758,11 @@ SubscriptionManager.prototype.logout = function () {
   //   currently, clean up those we can, assert we have no others
   if (this.did_master_subscribe) {
     this.did_master_subscribe = false;
-    this.unsubscribe('master.master');
+    let user_channel = this.getMyUserChannel(); // auto-subscribe to it
+    let perms = user_channel && user_channel.getChannelData('public.permissions', {});
+    if (perms && perms.sysadmin) {
+      this.unsubscribe('master.master');
+    }
     this.unsubscribe('global.global');
   }
   for (let channel_id in this.channels) {
