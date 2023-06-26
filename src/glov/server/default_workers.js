@@ -638,6 +638,13 @@ export class DefaultUserWorker extends ChannelWorker {
     return resp_func(null, this.getChannelData('public'));
   }
   handleLoginExternal(src, data, resp_func) {
+    if (this.channel_server.restarting) {
+      if (!this.getChannelData('public.permissions.sysadmin')) {
+        // Maybe black-hole like other messages instead?
+        return resp_func('ERR_RESTARTING');
+      }
+    }
+
     //Should the authentication step happen here instead?
 
     if (this.getChannelData('public.banned')) {
