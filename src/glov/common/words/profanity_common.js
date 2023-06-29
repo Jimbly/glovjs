@@ -5,12 +5,12 @@
 
 const assert = require('assert');
 const { max } = Math;
-const { unicode_replacement_chars } = require('glov/common/font_data');
 
 const trans_src = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+';
 const trans_dst = '4bcd3fgh1jk1mn0pqr57uvwxy24bcd3fgh1jk1mn0pqr57uvwxy201234567897';
-const trans_src_regex = /[a-zA-Z0-9+]+/g;
+const trans_src_regex = /\S+/g;
 let trans_lookup = {};
+const unicode_replacement_chars = {};
 function cannonizeCharacter(c) {
   c = unicode_replacement_chars[c] || c;
   return trans_lookup[c] || c;
@@ -67,6 +67,14 @@ export function profanityCommonStartup(filter_gkg, exceptions_txt) {
   data = exceptions_txt.split('\n').filter((a) => a);
   for (let ii = 0; ii < data.length; ++ii) {
     delete profanity[canonize(data[ii])];
+  }
+}
+
+export function profanitySetReplacementChars(replacement_chars) {
+  assert(replacement_chars);
+  for (let char_code_str in replacement_chars) {
+    let target = replacement_chars[char_code_str];
+    unicode_replacement_chars[String.fromCharCode(Number(char_code_str))] = String.fromCharCode(target);
   }
 }
 

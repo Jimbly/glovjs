@@ -40,7 +40,6 @@ const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
 const { BLEND_ALPHA, BLEND_PREMULALPHA, spriteChainedStart, spriteChainedStop, spriteDataAlloc } = sprites;
 const { textureLoad } = require('./textures.js');
-const { unicode_replacement_chars } = require('glov/common/font_data');
 const { clamp } = require('glov/common/util.js');
 const {
   v3scale,
@@ -540,6 +539,7 @@ GlovFont.prototype.dims = function (style, w, indent, size, text) {
   };
 };
 
+let unicode_replacement_chars;
 GlovFont.prototype.infoFromChar = function (c) {
   let ret = this.char_infos[c];
   if (ret) {
@@ -548,11 +548,13 @@ GlovFont.prototype.infoFromChar = function (c) {
   if (c >= 9 && c <= 13) { // characters that String.trim() strip
     return this.whitespace_character;
   }
-  let ascii = unicode_replacement_chars[c];
-  if (ascii) {
-    ret = this.char_infos[ascii];
-    if (ret) {
-      return ret;
+  if (unicode_replacement_chars) {
+    let ascii = unicode_replacement_chars[c];
+    if (ascii) {
+      ret = this.char_infos[ascii];
+      if (ret) {
+        return ret;
+      }
     }
   }
   // no char info, not whitespace, show replacement even if ascii, control code
@@ -1064,4 +1066,8 @@ export function fontTick() {
   tech_params_cache.length = 0;
   tech_params_pool_idx = 0;
   techParamsAlloc();
+}
+
+export function fontSetReplacementChars(replacement_chars) {
+  unicode_replacement_chars = replacement_chars;
 }

@@ -45,7 +45,9 @@ module.exports = function (gb) {
       // 'client/**/vendor/**',
       // 'client/manifest.json',
     ],
-    client_vendor: ['client/**/vendor/**'],
+    client_single_min: [
+      'glov/common/replacement_chars.js',
+    ],
     compress_files: [
       'client/**',
       '!**/*.png',

@@ -19,8 +19,13 @@ import {
 } from 'glov/common/enums';
 import { isPacket } from 'glov/common/packet';
 import { perfCounterAdd } from 'glov/common/perfcounters';
+import { unicode_replacement_chars } from 'glov/common/replacement_chars';
 import { logdata, merge } from 'glov/common/util';
-import { isProfane, profanityCommonStartup } from 'glov/common/words/profanity_common';
+import {
+  isProfane,
+  profanityCommonStartup,
+  profanitySetReplacementChars,
+} from 'glov/common/words/profanity_common';
 import { channelServerPak, channelServerSend, quietMessage } from './channel_server';
 import * as client_worker from './client_worker';
 import { regex_valid_username } from './default_workers';
@@ -871,6 +876,7 @@ export function init(channel_server_in) {
   // appleSignInInit();
   profanityCommonStartup(fs.readFileSync(`${__dirname}/../common/words/filter.gkg`, 'utf8'),
     fs.readFileSync(`${__dirname}/../common/words/exceptions.txt`, 'utf8'));
+  profanitySetReplacementChars(unicode_replacement_chars);
 
   channel_server = channel_server_in;
   let ws_server = channel_server.ws_server;

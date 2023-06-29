@@ -23,6 +23,7 @@ const exec = require('./exec.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const json5 = require('./json5.js');
 const testRunner = require('./test-runner.js');
+const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
 const texproc = require('./texproc.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
@@ -30,7 +31,6 @@ const uglifyrc = require('./uglifyrc.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 const yamlproc = require('./yamlproc.js');
-const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
 
 require('./checks.js')(__filename);
 
@@ -490,6 +490,29 @@ gb.task({
 });
 
 gb.task({
+  name: 'client_single_min_pre',
+  input: config.client_single_min,
+  ...uglify({ no_sourcemap: true }, {}),
+});
+
+gb.task({
+  name: 'client_single_min',
+  input: 'client_single_min_pre:**',
+  type: gb.SINGLE,
+  target: 'dev',
+  func: function (job, done) {
+    let file = job.getFile();
+    let min_name = file.relative.replace(/^(.*\/)([^/]+)\.js$/, 'client/$2.min.js');
+    job.out({
+      relative: min_name,
+      contents: file.contents,
+    });
+
+    done();
+  },
+});
+
+gb.task({
   name: 'client_autosound',
   input: config.client_autosound,
   target: 'dev',
@@ -513,6 +536,7 @@ let client_tasks = [
   ...config.extra_client_tasks,
   'client_autosound',
   'client_static',
+  'client_single_min',
   'client_texproc_output',
   'client_css',
   'client_fsdata',

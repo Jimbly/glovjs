@@ -87,6 +87,7 @@ const {
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
+const { profanityStartupLate } = require('./words/profanity.js');
 
 export let canvas;
 export let webgl2;
@@ -1351,6 +1352,7 @@ function loadingFinished() {
     time_resource_load,
     time_total,
   });
+  profanityStartupLate();
 }
 
 function loading() {
