@@ -555,9 +555,12 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     let header = dv.getUint32(header_offs, true);
     header_offs += 4;
     if (header !== TEXPACK_MAGIC) {
-      return void next('Invalid header');
+      return void next('TXP: Invalid header');
     }
     let num_images = dv.getUint32(header_offs, true);
+    if (num_images > 32) {
+      return void next('TXP: Data out of bounds');
+    }
     header_offs += 4;
     let txp_flags = dv.getUint32(header_offs, true);
     header_offs += 4;
@@ -586,11 +589,17 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       if (txp_flags & FORMAT_PNG) {
         tasks.push(decodeLevelPNG.bind(null, level, data_offs, len));
       } else {
-        assert(false, `Unknown format ${txp_flags}`);
+        return void next(`TXP: Unknown format ${txp_flags}`);
       }
       data_offs += len;
     }
-    assert.equal(data_offs, arraybuffer.byteLength);
+    if (data_offs !== arraybuffer.byteLength) {
+      if (data_offs > arraybuffer.byteLength) {
+        return void next(`TXP: Unexpected end of file (${data_offs} > ${arraybuffer.byteLength})`);
+      } else {
+        assert(false, `TXP: Unexpected end of file (${data_offs} != ${arraybuffer.byteLength})`);
+      }
+    }
     asyncSeries(tasks, function (err) {
       next(err, mipmaps[0], mipmaps);
     });
