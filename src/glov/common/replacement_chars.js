@@ -2435,7 +2435,7 @@
     4820: 39,
     4821: 39,
     4822: 39,
-    4961: 32,
+    // 4961: 32, // Not Whitespace by JS definition
     4962: 46,
     4963: 44,
     4964: 59,
@@ -3643,11 +3643,11 @@
     8200: 32,
     8201: 32,
     8202: 32,
-    8203: 32,
-    8204: 32,
-    8205: 32,
-    8206: 32,
-    8207: 32,
+    // 8203: 32, // Not whitespace by JS definition
+    // 8204: 32, // Not whitespace by JS definition
+    // 8205: 32, // Not whitespace by JS definition
+    // 8206: 32, // Not whitespace by JS definition
+    // 8207: 32, // Not whitespace by JS definition
     8208: 45,
     8209: 45,
     8210: 45,
@@ -4478,7 +4478,7 @@
     10201: 84,
     10216: 60,
     10217: 62,
-    10240: 32,
+    // 10240: 32, // Not whitespace by JS definition
     10241: 97,
     10242: 49,
     10243: 98,
@@ -4782,7 +4782,7 @@
     12641: 45,
     12642: 45,
     12643: 105,
-    12644: 32,
+    // 12644: 32, // Not whitespace by JS definition
     12645: 110,
     12646: 110,
     12647: 110,

@@ -74,7 +74,16 @@ export function profanitySetReplacementChars(replacement_chars) {
   assert(replacement_chars);
   for (let char_code_str in replacement_chars) {
     let target = replacement_chars[char_code_str];
-    unicode_replacement_chars[String.fromCharCode(Number(char_code_str))] = String.fromCharCode(target);
+    target = String.fromCharCode(target);
+    let source = String.fromCharCode(Number(char_code_str));
+    if (target === ' ') {
+      if (source.trim() !== '') {
+        // Replacing with space, but Javascript does not treat it as whitespace, do not allow
+        console.log(`Invalid whitespace replacement character: ${char_code_str}`);
+        continue;
+      }
+    }
+    unicode_replacement_chars[source] = target;
   }
 }
 
