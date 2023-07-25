@@ -84,6 +84,8 @@ export interface ScrollArea extends Readonly<ScrollAreaOptsAll> {
   getScrollPos(): number;
   keyboardScroll(): void;
   end(h: number): void;
+  // h is height of visible area
+  scrollIntoFocus(miny: number, maxy: number, h: number): void;
 }
 
 let temp_pos = vec2();
@@ -127,6 +129,7 @@ class ScrollAreaInternal implements ScrollArea {
   was_disabled = false;
   scrollbar_visible = false;
   last_max_value = 0;
+  ignore_this_fram_drag = false;
 
   constructor(params?: ScrollAreaOpts) {
     params = params || {};
@@ -184,6 +187,7 @@ class ScrollAreaInternal implements ScrollArea {
     let camera_new_y1 = camera_new_y0 + camera_orig_y1 - camera_orig_y0;
     camera2d.push();
     camera2d.set(camera_new_x0, camera_new_y0, camera_new_x1, camera_new_y1);
+    this.ignore_this_fram_drag = false;
   }
 
   // Includes overscroll - actual visible scroll pos for this frame
@@ -246,9 +250,14 @@ class ScrollAreaInternal implements ScrollArea {
     }
 
     let maxvalue = max(h - this.h+1, 0);
-    if (this.scroll_pos >= maxvalue) {
-      // internal height must have shrunk
+    if (this.scroll_pos > maxvalue) {
+      // internal height must have shrunk, or we otherwise scrolled farther than allowed
+      let extra = this.scroll_pos - maxvalue;
       this.scroll_pos = max(0, maxvalue);
+      if (this.overscroll < 0) {
+        // Remove any overscroll that corresponds to this extra (e.g. from scrollIntoFocus)
+        this.overscroll = min(this.overscroll + extra, 0);
+      }
     }
 
     let was_at_bottom = this.scroll_pos === this.last_max_value;
@@ -466,7 +475,7 @@ class ScrollAreaInternal implements ScrollArea {
 
       // handle dragging the scroll area background
       let drag = input.drag({ x: this.x, y: this.y, w: this.w - bar_w, h: this.h, button: 0, min_dist: this.min_dist });
-      if (drag) {
+      if (drag && !this.ignore_this_fram_drag) {
         // Drag should not steal focus
         // This also fixes an interaction with chat_ui where clicking on the chat background (which causes
         //   a flicker of a drag) would cause pointer lock to be lost
@@ -551,6 +560,7 @@ class ScrollAreaInternal implements ScrollArea {
       // Make it smooth/bouncy a bit
       this.overscroll = old_scroll_pos - this.scroll_pos;
     }
+    this.ignore_this_fram_drag = true;
   }
 
   scrollToEnd(): void {
