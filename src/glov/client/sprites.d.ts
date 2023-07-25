@@ -15,6 +15,10 @@ export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
 export interface Texture {
+  width: number;
+  height: number;
+  src_width: number;
+  src_height: number;
   destroy(): void;
 }
 
