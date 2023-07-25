@@ -34,6 +34,7 @@ export type CollapsagoriesStartParam = {
   view_y: number;
   view_h: number;
   header_h: number;
+  parent_scroll?: ScrollArea;
 } & SpotKeyable;
 
 export type CollapsagoriesHeaderParam<T> = {
@@ -42,7 +43,7 @@ export type CollapsagoriesHeaderParam<T> = {
   z?: number;
   w: number;
   draw?: (param: CollapsagoriesHeaderDrawParam<T>) => void; // Only optional if T = CollapsagoriesDrawDefaultParam
-  parent_scroll?: ScrollArea;
+  earlydraw?: (param: CollapsagoriesHeaderDrawParam<T>) => void; // Only optional if T = CollapsagoriesDrawDefaultParam
 } & T;
 
 export type CollapsagoriesHeaderDrawParam<T> = T & {
@@ -92,6 +93,7 @@ class CollapsagoriesImpl {
   view_y1!: number;
   clipper_active: boolean = false;
   key!: string;
+  parent_scroll?: ScrollArea;
   start(param: CollapsagoriesStartParam): void {
     this.key = spotKey(param);
     this.num_headers = param.num_headers;
@@ -99,15 +101,16 @@ class CollapsagoriesImpl {
     this.header_h = param.header_h;
     this.view_y0 = param.view_y;
     this.view_y1 = param.view_y + param.view_h;
+    this.parent_scroll = param.parent_scroll;
   }
   header<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {
     if (this.clipper_active) {
       spriteClipPop();
       this.clipper_active = false;
     }
-    let { x, y, w, parent_scroll } = param;
+    let { x, y, w, earlydraw } = param;
     let header_real_y = y;
-    const { header_h } = this;
+    const { header_h, parent_scroll } = this;
     let z = param.z || Z.UI;
     let draw: (param: CollapsagoriesHeaderDrawParam<T>) => void;
     draw = param.draw || collapsagoriesDrawDefault as unknown as typeof draw;
@@ -120,6 +123,13 @@ class CollapsagoriesImpl {
     }
     --this.num_headers;
 
+    let p2 = param as unknown as CollapsagoriesHeaderDrawParam<T>;
+    p2.y = y;
+    p2.h = header_h;
+    if (earlydraw) {
+      earlydraw(p2);
+    }
+
     let spot_param = {
       key: `${this.key}.${this.headers_done}`,
       def: SPOT_DEFAULT_BUTTON,
@@ -131,10 +141,6 @@ class CollapsagoriesImpl {
       let desired_scroll_pos = header_real_y - this.headers_done * header_h;
       parent_scroll.scrollIntoFocus(desired_scroll_pos, desired_scroll_pos, 0);
     }
-    // consume drag events on headers
-    let p2 = param as unknown as CollapsagoriesHeaderDrawParam<T>;
-    p2.y = y;
-    p2.h = header_h;
     p2.ret = spot_ret;
     draw(p2);
 
