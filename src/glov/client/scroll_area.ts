@@ -28,7 +28,7 @@ import {
 import { spriteClipPop, spriteClipPush } from './sprites.js';
 import * as ui from './ui.js';
 
-const { max, min, round } = Math;
+const { abs, max, min, round } = Math;
 
 // TODO: move FocusableElement to appropriate TS file after conversion (probably input)
 interface FocusableElement {
@@ -271,6 +271,9 @@ class ScrollAreaInternal implements ScrollArea {
       if (dt >= this.overscroll_delay) {
         this.overscroll_delay = 0;
         this.overscroll *= max(1 - dt * 0.008, 0);
+        if (abs(this.overscroll) < 0.001) {
+          this.overscroll = 0;
+        }
       } else {
         this.overscroll_delay -= dt;
       }
