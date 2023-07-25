@@ -45,6 +45,9 @@ export interface UISprites {
   slider: UISprite;
   slider_handle: UISprite;
 
+  collapsagories: UISprite;
+  collapsagories_rollover: UISprite;
+
   scrollbar_bottom: UISprite;
   scrollbar_trough: UISprite;
   scrollbar_top: UISprite;

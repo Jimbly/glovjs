@@ -399,6 +399,9 @@ const base_ui_sprites = {
   scrollbar_handle: { ws: [64], hs: [24, 16, 24] },
   progress_bar: { ws: [48, 32, 48], hs: [128] },
   progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
+
+  collapsagories: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_rollover: { ws: [4, 8, 4], hs: [64] },
 };
 
 function uiStartup(param) {

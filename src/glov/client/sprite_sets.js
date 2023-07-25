@@ -31,6 +31,9 @@ const sprite_sets = {
     scrollbar_handle: { name: 'pixely/scrollbar_handle', ws: [11], hs: [3, 7, 3] },
     progress_bar: { name: 'pixely/progress_bar', ws: [3, 7, 3], hs: [13] },
     progress_bar_trough: { name: 'pixely/progress_bar_trough', ws: [3, 7, 3], hs: [13] },
+
+    collapsagories: { name: 'pixely/collapsagories', ws: [4, 5, 4], hs: [13] },
+    collapsagories_rollover: { name: 'pixely/collapsagories_rollover', ws: [4, 5, 4], hs: [13] },
   },
 };
 

@@ -3,6 +3,7 @@
 
 import assert from 'assert';
 import { vec4 } from 'glov/common/vmath';
+import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker.js';
 import { EditBox, editBoxCreate } from './edit_box';
 import * as engine from './engine.js';
@@ -20,7 +21,7 @@ import { slider } from './slider.js';
 import * as ui from './ui.js';
 import { getURLBase } from './urlhash.js';
 
-const { ceil, max, random } = Math;
+const { ceil, random } = Math;
 
 let demo_menu: SimpleMenu;
 let demo_menu_up = false;
@@ -176,21 +177,58 @@ export function run(x: number, y: number, z: number): void {
     color: test_color,
   });
 
+  let scroll_area_h = ui.font_height * 16 + pad;
+  let scroll_area_w = 100;
   test_scroll_area.begin({
     x: x + column_width + 4 + line_height,
-    y: y + 4,
+    y: y - 2,
     z,
-    w: 100,
-    h: ui.font_height * 8 + pad,
+    w: scroll_area_w,
+    h: scroll_area_h,
   });
-  let internal_y = 2;
+  let internal_y = 0;
+  scroll_area_w -= test_scroll_area.barWidth();
+
+  let header_h = 13;
+  collapsagoriesStart({
+    key: 'ui_test_cats',
+    num_headers: 3,
+    view_y: test_scroll_area.getScrollPos(),
+    view_h: scroll_area_h,
+    header_h,
+  });
+  collapsagoriesHeader({
+    x: 0, y: internal_y, z, w: scroll_area_w,
+    text: 'Values',
+    text_height: ui.font_height,
+    parent_scroll: test_scroll_area,
+  });
+  internal_y += header_h + pad;
+
   internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    ui.font_height, ALIGN.HWRAP|ALIGN.HFIT, 100 - test_scroll_area.barWidth() - 2, 0,
+    ui.font_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
     `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
   internal_y += ui.font_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
   internal_y += ui.font_height + pad;
+
+  ui.progressBar({
+    x: 2,
+    y: internal_y, z,
+    w: 60, h: ui.button_height,
+    progress: slider_value,
+  });
+  internal_y += ui.button_height + pad;
+
+  collapsagoriesHeader({
+    x: 0, y: internal_y, z, w: scroll_area_w,
+    text: 'Widgets',
+    text_height: ui.font_height,
+    parent_scroll: test_scroll_area,
+  });
+  internal_y += header_h + pad;
+
   linkText({ x: 2, y: internal_y, text: 'Ext URL', url: 'https://github.com/jimbly/glovjs' });
   if (linkText({ x: column_width/2, y: internal_y, text: 'Int URL',
     internal: true,
@@ -204,6 +242,15 @@ export function run(x: number, y: number, z: number): void {
     assert(false);
   }
   internal_y += ui.button_height + pad;
+
+  collapsagoriesHeader({
+    x: 0, y: internal_y, z, w: scroll_area_w,
+    text: 'Misc',
+    text_height: ui.font_height,
+    parent_scroll: test_scroll_area,
+  });
+  internal_y += header_h + pad;
+
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
     internal_y += ui.font_height + pad;
@@ -216,6 +263,7 @@ export function run(x: number, y: number, z: number): void {
     --test_lines;
   }
   internal_y += ui.button_height + pad;
+  collapsagoriesStop();
   test_scroll_area.end(internal_y);
   ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
     w: test_scroll_area.w + pad * 2, h: test_scroll_area.h + pad * 2 });
@@ -225,19 +273,13 @@ export function run(x: number, y: number, z: number): void {
   y += test_select1.run({ x, y, z });
   y += test_dropdown.run({ x, y, z });
 
-  y = max(y, test_scroll_area.y + test_scroll_area.h + pad);
+  //y = max(y, test_scroll_area.y + test_scroll_area.h + pad);
   slider_value = slider(slider_value, {
     x, y, z,
     min: 0,
     max: 2,
   });
   ui.print(null, x + ui.button_width + pad, y, z, `${slider_value.toFixed(2)}`);
-  ui.progressBar({
-    x: x + ui.button_width + pad * 2 + ui.font_height * 2,
-    y, z,
-    w: 60, h: ui.button_height,
-    progress: slider_value,
-  });
   y += ui.button_height;
 }
 
