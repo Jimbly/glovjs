@@ -6,7 +6,7 @@ import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
-import { SpotParam, SpotRet, SpotStateEnum } from './spot';
+import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -25,8 +25,7 @@ export interface UIBoxColored extends UIBox {
 }
 export type UIHookFn = (param: UIBox & { hook: HookList }) => void;
 export function addHook(draw: UIHookFn, click: UIHookFn): void;
-// TODO: how to say that P must also be `{ key: string } | { x: number, y: number }`?
-export function getUIElemData<T, P>(type: string, param: P, allocator: (param: P)=>T) : T;
+export function getUIElemData<T, P extends SpotKeyable>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
 export function uiFontStyleNormal(): FontStyle;
