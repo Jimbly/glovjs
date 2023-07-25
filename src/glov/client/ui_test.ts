@@ -196,12 +196,12 @@ export function run(x: number, y: number, z: number): void {
     view_y: test_scroll_area.getScrollPos(),
     view_h: scroll_area_h,
     header_h,
+    parent_scroll: test_scroll_area,
   });
   collapsagoriesHeader({
     x: 0, y: internal_y, z, w: scroll_area_w,
     text: 'Values',
     text_height: ui.font_height,
-    parent_scroll: test_scroll_area,
   });
   internal_y += header_h + pad;
 
@@ -225,7 +225,6 @@ export function run(x: number, y: number, z: number): void {
     x: 0, y: internal_y, z, w: scroll_area_w,
     text: 'Widgets',
     text_height: ui.font_height,
-    parent_scroll: test_scroll_area,
   });
   internal_y += header_h + pad;
 
@@ -247,7 +246,6 @@ export function run(x: number, y: number, z: number): void {
     x: 0, y: internal_y, z, w: scroll_area_w,
     text: 'Misc',
     text_height: ui.font_height,
-    parent_scroll: test_scroll_area,
   });
   internal_y += header_h + pad;
 
