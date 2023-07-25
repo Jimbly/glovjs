@@ -495,15 +495,23 @@ function clipCoordsDom(x, y, w, h) {
   return xywh;
 }
 
+let active_scissor = null;
+function scissorSet(scissor) {
+  if (!active_scissor) {
+    gl.enable(gl.SCISSOR_TEST);
+  }
+  gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+  active_scissor = scissor;
+}
+function scisssorClear() {
+  gl.disable(gl.SCISSOR_TEST);
+  active_scissor = null;
+}
+
 export function spriteClip(z_start, z_end, x, y, w, h) {
   let scissor = clipCoordsScissor(x, y, w, h);
-  spriteQueueFn(z_start - 0.01, () => {
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
-  });
-  spriteQueueFn(z_end - 0.01, () => {
-    gl.disable(gl.SCISSOR_TEST);
-  });
+  spriteQueueFn(z_start - 0.01, scissorSet.bind(null, scissor));
+  spriteQueueFn(z_end - 0.01, scisssorClear);
 }
 
 let clip_stack = [];
@@ -524,9 +532,7 @@ export function spriteClipPush(z, x, y, w, h) {
 
 export function spriteClipPop() {
   assert(spriteClipped());
-  spriteQueueFn(Z.TOOLTIP - 0.1, () => {
-    gl.disable(gl.SCISSOR_TEST);
-  });
+  spriteQueueFn(Z.TOOLTIP - 0.1, scisssorClear);
   let { z, scissor } = clip_stack.pop();
   let sprites = sprite_queue;
   spriteQueuePop(true);
@@ -537,14 +543,17 @@ export function spriteClipPop() {
     camera2d.setInputClipping(null);
   }
   spriteQueueFn(z, () => {
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+    let prev_scissor = active_scissor;
+    scissorSet(scissor);
     spriteQueuePush();
     sprite_queue = sprites;
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     spriteDraw();
     spriteQueuePop();
-    // done at Z.TOOLTIP: gl.disable(gl.SCISSOR_TEST);
+    // already done at Z.TOOLTIP within spriteDraw(): scisssorClear();
+    if (prev_scissor) {
+      scissorSet(prev_scissor);
+    }
   });
 }
 
@@ -744,6 +753,10 @@ function drawElem(elem) {
 function finishDraw() {
   commitAndFlush();
   blendModeReset();
+}
+
+export function spriteDrawReset() {
+  active_scissor = null;
 }
 
 export function spriteDraw() {

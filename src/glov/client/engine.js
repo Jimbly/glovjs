@@ -57,7 +57,12 @@ const {
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const { spotEndInput } = require('./spot.js');
-const { blendModeReset, spriteDraw, spriteStartup } = require('./sprites.js');
+const {
+  blendModeReset,
+  spriteDraw,
+  spriteDrawReset,
+  spriteStartup,
+} = require('./sprites.js');
 const {
   textureBind,
   textureDefaultFilters,
@@ -727,6 +732,7 @@ export function startSpriteRendering() {
   gl.enable(gl.BLEND);
   gl.disable(gl.DEPTH_TEST);
   gl.depthMask(false);
+  spriteDrawReset();
 }
 
 export function projectionZBias(dist, at_z) {
