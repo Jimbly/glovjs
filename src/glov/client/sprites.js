@@ -852,6 +852,26 @@ export function buildRects(ws, hs, tex) {
   };
 }
 
+function flipRectHoriz(a) {
+  return vec4(a[0], a[3], a[2], a[1]);
+}
+
+export function spriteFlippedUVsApplyHFlip(spr) {
+  if (!spr.uidata.rects_orig) {
+    spr.uidata.rects_orig = spr.uidata.rects;
+  }
+  if (!spr.uidata.rects_flipped) {
+    spr.uidata.rects_flipped = spr.uidata.rects.map(flipRectHoriz);
+  }
+  spr.uidata.rects = spr.uidata.rects_flipped;
+}
+
+export function spriteFlippedUVsRestore(spr) {
+  if (spr.uidata.rects_orig) {
+    spr.uidata.rects = spr.uidata.rects_orig;
+  }
+}
+
 function Sprite(params) {
   this.lazy_load = null;
 

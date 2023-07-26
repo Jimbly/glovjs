@@ -124,6 +124,8 @@ export function spriteDrawPartial(z: number): void;
 export function spriteCreate(param: SpriteParam): Sprite;
 export function spriteStartup(): void;
 
+export function spriteFlippedUVsApplyHFlip(spr: Sprite): void;
+export function spriteFlippedUVsRestore(spr: Sprite): void;
 
 // TODO: export with appropriate types
 // export type Shader = { _opaque: 'Shader' };
