@@ -1,6 +1,7 @@
 /* eslint-disable import/order */
 const camera2d = require('./camera2d.js');
 const engine = require('./engine.js');
+const { renderNeeded } = engine;
 const glov_font = require('./font.js');
 const { min } = Math;
 const { scrollAreaCreate } = require('./scroll_area.js');
@@ -21,16 +22,19 @@ Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
 
 function onGBState(state) {
   gbstate = state;
+  renderNeeded();
 }
 
 function onServerError(err) {
   server_error = err;
+  renderNeeded();
 }
 
 function onDataErrors(err_list) {
   for (let ii = 0; ii < err_list.length; ++ii) {
     dataErrorEx(err_list[ii]);
   }
+  renderNeeded();
 }
 
 const PAD = 4;
