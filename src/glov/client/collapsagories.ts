@@ -4,6 +4,7 @@
 import assert from 'assert';
 import {
   ROVec4,
+  v4mul,
   vec4,
 } from 'glov/common/vmath';
 import {
@@ -29,6 +30,7 @@ import {
 import {
   drawHBox,
   getUIElemData,
+  uiGetButtonRolloverColor,
 } from './ui';
 import * as ui from './ui';
 
@@ -70,13 +72,28 @@ export type CollapsagoriesDrawDefaultParam = {
 
 const collapsagories_default_header_style = fontStyleColored(null, 0x000000ff);
 
+let temp_color_bar = vec4();
 export function collapsagoriesDrawDefault(param: CollapsagoriesHeaderDrawParam<CollapsagoriesDrawDefaultParam>): void {
-  const { x, y, z, w, h, text, text_height, bar_color, font_style } = param;
+  const { x, y, z, w, h, text, text_height, font_style } = param;
+  let { bar_color } = param;
   let { text_pad } = param;
   if (text_pad === undefined) {
     text_pad = round(text_height * 0.2);
   }
-  drawHBox(param, param.ret.focused ? ui.sprites.collapsagories_rollover : ui.sprites.collapsagories, bar_color);
+  let spr = ui.sprites.collapsagories;
+  if (param.ret.focused) {
+    if (ui.sprites.collapsagories_rollover) {
+      spr = ui.sprites.collapsagories_rollover;
+    } else {
+      if (bar_color) {
+        v4mul(temp_color_bar, bar_color, uiGetButtonRolloverColor());
+        bar_color = temp_color_bar;
+      } else {
+        bar_color = uiGetButtonRolloverColor();
+      }
+    }
+  }
+  drawHBox(param, spr, bar_color);
   ui.title_font.draw({
     style: font_style || collapsagories_default_header_style,
     x: x + text_pad, y, w, h,

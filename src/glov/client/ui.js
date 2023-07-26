@@ -267,6 +267,9 @@ let color_button = makeColorSet([1,1,1,1]);
 export function uiSetButtonColorSet(color_button_in) {
   color_button = color_button_in;
 }
+export function uiGetButtonRolloverColor() {
+  return color_button.rollover;
+}
 export const color_panel = vec4(1, 1, 0.75, 1);
 
 

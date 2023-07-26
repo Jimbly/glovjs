@@ -46,7 +46,7 @@ export interface UISprites {
   slider_handle: UISprite;
 
   collapsagories: UISprite;
-  collapsagories_rollover: UISprite;
+  collapsagories_rollover: null | UISprite;
   collapsagories_shadow_down: UISprite;
   collapsagories_shadow_up: null | UISprite;
 
@@ -352,6 +352,7 @@ export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;
 export function uiSetButtonColorSet(color_set: ColorSet): void;
+export function uiGetButtonRolloverColor(): ROVec4;
 
 type UISpriteSet = {
   color_set_shades?: [number, number, number];
