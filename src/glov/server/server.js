@@ -14,6 +14,7 @@ import {
   dataErrorQueueGet,
 } from 'glov/common/data_error';
 import { packetEnableDebug } from 'glov/common/packet';
+import { callEach } from 'glov/common/util';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
 const argv = minimist(process.argv.slice(2));
@@ -246,6 +247,11 @@ export function startup(params) {
   updateBuildTimestamp('app', true);
 }
 
+let on_panic = [];
+export function onpanic(cb) {
+  on_panic.push(cb);
+}
+
 export function panic(...message) {
   if (message && message.length === 1 && message[0] instanceof Error) {
     console.error(message[0]);
@@ -254,6 +260,7 @@ export function panic(...message) {
     console.error(new Error(message)); // So Stackdriver error reporting catches it
   }
   console.error('Process exiting due to panic');
+  callEach(on_panic);
   process.stderr.write(String(message), () => {
     console.error('Process exiting due to panic (2)'); // May not be seen due to buffering, but useful if it is seen
     process.exit(1);

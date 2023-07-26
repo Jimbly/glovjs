@@ -29,7 +29,7 @@ const os = require('os');
 const { isPacket, packetCreate, packetDefaultFlags } = require('glov/common/packet.js');
 const path = require('path');
 const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
-const { panic, sendToBuildClients } = require('./server.js');
+const { onpanic, panic, sendToBuildClients } = require('./server.js');
 const { processUID } = require('./server_config.js');
 const { callEach, clone, cloneShallow, identity, logdata, once } = require('glov/common/util.js');
 const { inspect } = require('util');
@@ -97,6 +97,21 @@ function formatLocalError(e) {
   return lines.join('\n');
 }
 
+let outstanding_sends = {}; // msg -> [count, size]
+function logOutstandingSends() {
+  let keys = Object.keys(outstanding_sends);
+  if (keys.length) {
+    let msg = [];
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
+      let pair = outstanding_sends[key];
+      msg.push(`${key}:${pair[0]}/${pair[1]}`);
+    }
+    console.error(`Outstanding message exchange sends: ${msg.join(', ')}`);
+  }
+}
+onpanic(logOutstandingSends);
+
 function channelServerSendFinish(pak, err, resp_func) {
   if (resp_func) {
     // This function will get called twice if we have a network disconnect
@@ -156,7 +171,26 @@ function channelServerSendFinish(pak, err, resp_func) {
       }
     };
   }
+  let pak_total_size = pak.totalSize();
+  let out_track_pair = outstanding_sends[msg];
+  if (!out_track_pair) {
+    outstanding_sends[msg] = out_track_pair = [1,pak_total_size];
+  } else {
+    out_track_pair[0]++;
+    out_track_pair[1] += pak_total_size;
+  }
+  let complete_called = false;
+  function onSendComplete() {
+    assert(!complete_called);
+    complete_called = true;
+    out_track_pair[0]--;
+    out_track_pair[1] -= pak_total_size;
+    if (!out_track_pair[0]) {
+      delete outstanding_sends[msg];
+    }
+  }
   function finalError(err) {
+    onSendComplete();
     if (ack_resp_pkt_id) {
       // Callback will never be dispatched through ack.js, remove the callback here
       delete source.resp_cbs[ack_resp_pkt_id];
@@ -180,6 +214,7 @@ function channelServerSendFinish(pak, err, resp_func) {
     }
     return channel_server.exchange.publish(dest, pak, function (err) {
       if (!err) {
+        onSendComplete();
         // Sent successfully, resp_func called when other side ack's.
         if (pak.no_local_bypass) {
           delete pak.no_local_bypass;
