@@ -528,7 +528,7 @@ export function drawHBox(coords, s, color) {
   spriteChainedStart();
   let uidata = s.uidata;
   let x = coords.x;
-  let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
+  let ws = [uidata.wh[0] * coords.h, 0, (uidata.wh[2] || 0) * coords.h];
   if (coords.no_min_width && ws[0] + ws[2] > coords.w) {
     let scale = coords.w / (ws[0] + ws[2]);
     ws[0] *= scale;
@@ -562,7 +562,7 @@ export function drawHBox(coords, s, color) {
 export function drawVBox(coords, s, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  let hs = [uidata.hw[0] * coords.w, 0, uidata.hw[2] * coords.w];
+  let hs = [uidata.hw[0] * coords.w, 0, (uidata.hw[2] || 0) * coords.w];
   let y = coords.y;
   hs[1] = max(0, coords.h - hs[0] - hs[2]);
   draw_box_param.x = coords.x;
