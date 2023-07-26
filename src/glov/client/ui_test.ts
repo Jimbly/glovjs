@@ -192,6 +192,7 @@ export function run(x: number, y: number, z: number): void {
   let header_h = 13;
   collapsagoriesStart({
     key: 'ui_test_cats',
+    x: 0, z, w: scroll_area_w,
     num_headers: 3,
     view_y: test_scroll_area.getScrollPos(),
     view_h: scroll_area_h,
@@ -199,7 +200,7 @@ export function run(x: number, y: number, z: number): void {
     parent_scroll: test_scroll_area,
   });
   collapsagoriesHeader({
-    x: 0, y: internal_y, z, w: scroll_area_w,
+    y: internal_y,
     text: 'Values',
     text_height: ui.font_height,
   });
@@ -222,7 +223,7 @@ export function run(x: number, y: number, z: number): void {
   internal_y += ui.button_height + pad;
 
   collapsagoriesHeader({
-    x: 0, y: internal_y, z, w: scroll_area_w,
+    y: internal_y,
     text: 'Widgets',
     text_height: ui.font_height,
   });
@@ -243,7 +244,7 @@ export function run(x: number, y: number, z: number): void {
   internal_y += ui.button_height + pad;
 
   collapsagoriesHeader({
-    x: 0, y: internal_y, z, w: scroll_area_w,
+    y: internal_y, w: 8, x: 7, z: 7,
     text: 'Misc',
     text_height: ui.font_height,
   });

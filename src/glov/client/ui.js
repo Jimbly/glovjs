@@ -402,6 +402,8 @@ const base_ui_sprites = {
 
   collapsagories: { ws: [4, 8, 4], hs: [64] },
   collapsagories_rollover: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_shadow_down: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_shadow_up: null,
 };
 
 function uiStartup(param) {

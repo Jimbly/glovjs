@@ -47,6 +47,8 @@ export interface UISprites {
 
   collapsagories: UISprite;
   collapsagories_rollover: UISprite;
+  collapsagories_shadow_down: UISprite;
+  collapsagories_shadow_up: null | UISprite;
 
   scrollbar_bottom: UISprite;
   scrollbar_trough: UISprite;

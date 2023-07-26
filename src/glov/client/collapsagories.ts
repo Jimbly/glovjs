@@ -2,7 +2,10 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { ROVec4 } from 'glov/common/vmath';
+import {
+  ROVec4,
+  vec4,
+} from 'glov/common/vmath';
 import {
   ALIGN,
   FontStyle,
@@ -20,6 +23,8 @@ import {
 import {
   spriteClipPop,
   spriteClipPush,
+  spriteFlippedUVsApplyHFlip,
+  spriteFlippedUVsRestore,
 } from './sprites';
 import {
   drawHBox,
@@ -27,9 +32,12 @@ import {
 } from './ui';
 import * as ui from './ui';
 
-const { round } = Math;
+const { min, round } = Math;
 
 export type CollapsagoriesStartParam = {
+  x: number;
+  z?: number;
+  w: number;
   num_headers: number;
   view_y: number;
   view_h: number;
@@ -38,10 +46,7 @@ export type CollapsagoriesStartParam = {
 } & SpotKeyable;
 
 export type CollapsagoriesHeaderParam<T> = {
-  x: number;
   y: number;
-  z?: number;
-  w: number;
   draw?: (param: CollapsagoriesHeaderDrawParam<T>) => void; // Only optional if T = CollapsagoriesDrawDefaultParam
   earlydraw?: (param: CollapsagoriesHeaderDrawParam<T>) => void; // Only optional if T = CollapsagoriesDrawDefaultParam
 } & T;
@@ -82,6 +87,8 @@ export function collapsagoriesDrawDefault(param: CollapsagoriesHeaderDrawParam<C
   });
 }
 
+let temp_color_fade = vec4(1,1,1,1);
+
 export type Collapsagories = CollapsagoriesImpl;
 class CollapsagoriesImpl {
   // constructor() {
@@ -94,6 +101,11 @@ class CollapsagoriesImpl {
   clipper_active: boolean = false;
   key!: string;
   parent_scroll?: ScrollArea;
+  did_shadow_up: boolean = false;
+  need_shadow_down: number = 0;
+  x!: number;
+  z!: number;
+  w!: number;
   start(param: CollapsagoriesStartParam): void {
     this.key = spotKey(param);
     this.num_headers = param.num_headers;
@@ -102,30 +114,67 @@ class CollapsagoriesImpl {
     this.view_y0 = param.view_y;
     this.view_y1 = param.view_y + param.view_h;
     this.parent_scroll = param.parent_scroll;
+    this.did_shadow_up = false;
+    this.need_shadow_down = 0;
+    this.x = param.x;
+    this.z = param.z || Z.UI;
+    this.w = param.w;
+  }
+  private drawShadowDown(): void {
+    if (this.need_shadow_down) {
+      const { x, z, w, header_h } = this;
+      let spr = ui.sprites.collapsagories_shadow_down;
+      temp_color_fade[3] = this.need_shadow_down;
+      drawHBox({
+        x, y: this.view_y0, w, h: header_h, z: z - 0.1,
+      }, spr, temp_color_fade);
+      this.need_shadow_down = 0;
+    }
   }
   header<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {
     if (this.clipper_active) {
       spriteClipPop();
       this.clipper_active = false;
     }
-    let { x, y, w, earlydraw } = param;
+    let { y, earlydraw } = param;
     let header_real_y = y;
-    const { header_h, parent_scroll } = this;
-    let z = param.z || Z.UI;
+    const { x, z, w, header_h, parent_scroll } = this;
     let draw: (param: CollapsagoriesHeaderDrawParam<T>) => void;
     draw = param.draw || collapsagoriesDrawDefault as unknown as typeof draw;
     if (y < this.view_y0) {
+      let offs = this.view_y0 - y;
       y = this.view_y0;
       this.view_y0 += header_h;
+      this.need_shadow_down = min(1, offs / header_h);
+    } else {
+      this.drawShadowDown();
     }
-    if (y > this.view_y1 - this.num_headers * header_h) {
-      y = this.view_y1 - this.num_headers * header_h;
+    let max_y = this.view_y1 - this.num_headers * header_h;
+    if (y > max_y) {
+      let offs = y - max_y;
+      y = max_y;
+      if (!this.did_shadow_up) {
+        this.did_shadow_up = true;
+        temp_color_fade[3] = min(1, offs / header_h);
+        let spr = ui.sprites.collapsagories_shadow_up;
+        if (!spr) {
+          spr = ui.sprites.collapsagories_shadow_down;
+          spriteFlippedUVsApplyHFlip(spr);
+        }
+        drawHBox({
+          x, y: y - header_h, w, h: header_h, z: z - 0.1,
+        }, spr, temp_color_fade);
+        spriteFlippedUVsRestore(spr);
+      }
     }
     --this.num_headers;
 
     let p2 = param as unknown as CollapsagoriesHeaderDrawParam<T>;
+    p2.x = x;
     p2.y = y;
+    p2.z = z;
     p2.h = header_h;
+    p2.w = w;
     if (earlydraw) {
       earlydraw(p2);
     }
@@ -148,10 +197,10 @@ class CollapsagoriesImpl {
     let yend = this.view_y1 - this.num_headers * header_h;
     let ret;
     if (ystart >= yend) {
-      spriteClipPush(z + 0.9, x, ystart, w, 0);
+      spriteClipPush(z - 1, x, ystart, w, 0);
       ret = false;
     } else {
-      spriteClipPush(z + 0.9, x, ystart, w, yend - ystart);
+      spriteClipPush(z - 1, x, ystart, w, yend - ystart);
       ret = true;
     }
     this.clipper_active = true;
@@ -159,6 +208,7 @@ class CollapsagoriesImpl {
     return ret;
   }
   stop(): void {
+    this.drawShadowDown();
     if (this.clipper_active) {
       spriteClipPop();
       this.clipper_active = false;

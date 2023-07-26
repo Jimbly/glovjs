@@ -34,6 +34,7 @@ const sprite_sets = {
 
     collapsagories: { name: 'pixely/collapsagories', ws: [4, 5, 4], hs: [13] },
     collapsagories_rollover: { name: 'pixely/collapsagories_rollover', ws: [4, 5, 4], hs: [13] },
+    collapsagories_shadow_down: { name: 'pixely/collapsagories_shadow_down', ws: [1, 2, 1], hs: [13] },
   },
 };
 
