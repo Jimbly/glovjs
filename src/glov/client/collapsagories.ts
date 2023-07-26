@@ -34,7 +34,7 @@ import {
 } from './ui';
 import * as ui from './ui';
 
-const { min, round } = Math;
+const { abs, min, round } = Math;
 
 export type CollapsagoriesStartParam = {
   x: number;
@@ -120,6 +120,7 @@ class CollapsagoriesImpl {
   parent_scroll?: ScrollArea;
   did_shadow_up: boolean = false;
   need_shadow_down: number = 0;
+  scroll_idx: number = -1;
   x!: number;
   z!: number;
   w!: number;
@@ -158,11 +159,12 @@ class CollapsagoriesImpl {
     const { x, z, w, header_h, parent_scroll } = this;
     let draw: (param: CollapsagoriesHeaderDrawParam<T>) => void;
     draw = param.draw || collapsagoriesDrawDefault as unknown as typeof draw;
-    if (y < this.view_y0) {
-      let offs = this.view_y0 - y;
+    let top_offs = this.view_y0 - y;
+    let top_aligned = abs(top_offs) < 0.01;
+    if (top_offs > 0) {
       y = this.view_y0;
       this.view_y0 += header_h;
-      this.need_shadow_down = min(1, offs / header_h);
+      this.need_shadow_down = min(1, top_offs / header_h);
     } else {
       this.drawShadowDown();
     }
@@ -202,6 +204,19 @@ class CollapsagoriesImpl {
       x, y, w, h: header_h,
     };
     let spot_ret = spot(spot_param);
+    if (this.scroll_idx === this.headers_done) {
+      this.scroll_idx = -1;
+      spot_ret.ret++;
+    }
+    if (spot_ret.ret && top_aligned) {
+      if (!this.headers_done) {
+        // we're aligned, and we're the first, scroll the next instead
+        this.scroll_idx = this.headers_done + 1;
+      } else {
+        this.scroll_idx = this.headers_done - 1;
+      }
+      spot_ret.ret = 0;
+    }
     if (spot_ret.ret && parent_scroll) {
       // scroll parent
       let desired_scroll_pos = header_real_y - this.headers_done * header_h;
