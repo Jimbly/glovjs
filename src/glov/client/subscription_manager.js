@@ -30,6 +30,10 @@ function ClientChannelWorker(subs, channel_id, base_handlers, base_event_listene
   EventEmitter.call(this);
   this.subs = subs;
   this.channel_id = channel_id;
+  let m = channel_id.match(/^([^.]*)\.(.*)$/);
+  assert(m);
+  this.channel_type = m[1];
+  this.channel_subid = m[2];
   this.subscriptions = 0;
   this.subscribe_failed = false;
   this.got_subscribe = false;
@@ -153,7 +157,7 @@ ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predic
     dot_prop.set(this.data, key, value);
   }
   let q = value && value.q || undefined;
-  let pak = this.subs.client.pak('set_channel_data');
+  let pak = this.subs.client.pak('set_channel_data', `${this.channel_type}.set_channel_data`);
   pak.writeAnsiString(this.channel_id);
   pak.writeBool(q);
   pak.writeAnsiString(key);
@@ -172,7 +176,7 @@ ClientChannelWorker.prototype.onMsg = function (msg, cb) {
 };
 
 ClientChannelWorker.prototype.pak = function (msg) {
-  let pak = this.subs.client.pak('channel_msg');
+  let pak = this.subs.client.pak('channel_msg', `cm:${this.channel_type}.${msg}`);
   pak.writeAnsiString(this.channel_id);
   pak.writeAnsiString(msg);
   // pak.writeInt(flags);
@@ -185,7 +189,7 @@ ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth)
   this.subs.client.send('channel_msg', {
     channel_id: this.channel_id,
     msg, data,
-  }, resp_func);
+  }, `cm:${this.channel_type}.${msg}`, resp_func);
 };
 
 ClientChannelWorker.prototype.cmdParse = function (cmd, resp_func) {
@@ -299,7 +303,7 @@ SubscriptionManager.prototype.sendResubscribe = function () {
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
     if (channel.subscriptions) {
-      this.client.send('subscribe', channel_id, function (err) {
+      this.client.send('subscribe', channel_id, null, function (err) {
         if (err) {
           channel.subscribe_failed = true;
           console.error(`Error subscribing to ${channel_id}: ${err}`);
@@ -376,7 +380,7 @@ SubscriptionManager.prototype.fetchCmds = function () {
   let cmd_list = this.cmds_fetched_by_type;
   if (cmd_list && !cmd_list[channel_type]) {
     cmd_list[channel_type] = true;
-    this.client.send('cmd_parse_list_client', null, (err, resp) => {
+    this.client.send('cmd_parse_list_client', null, null, (err, resp) => {
       if (!err) {
         this.cmd_parse.addServerCommands(resp);
       }
@@ -516,7 +520,7 @@ SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
     channel.subscriptions++;
     if (!netDisconnectedRaw() && channel.subscriptions === 1) {
       channel.subscribe_failed = false;
-      this.client.send('subscribe', channel_id, function (err) {
+      this.client.send('subscribe', channel_id, null, function (err) {
         if (err) {
           channel.subscribe_failed = true;
           console.error(`Error subscribing to ${channel_id}: ${err}`);
@@ -648,13 +652,13 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
       if (netDisconnectedRaw()) {
         return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
       }
-      this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
+      this.client.send('login_facebook_instant', result, null, this.handleLoginResponse.bind(this, resp_func));
     });
   } else {
     this.client.send('login', {
       user_id: login_credentials.user_id,
       password: md5(this.client.secret + login_credentials.password),
-    }, this.handleLoginResponse.bind(this, resp_func));
+    }, null, this.handleLoginResponse.bind(this, resp_func));
   }
 };
 
@@ -664,7 +668,7 @@ SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) 
   }
   this.logging_in = true;
   this.logged_in = false;
-  return this.client.send('user_create', params, this.handleLoginResponse.bind(this, resp_func));
+  return this.client.send('user_create', params, null, this.handleLoginResponse.bind(this, resp_func));
 };
 
 function hashedPassword(user_id, password) {
@@ -778,7 +782,7 @@ SubscriptionManager.prototype.logout = function () {
   }
 
   this.logging_out = true;
-  this.client.send('logout', null, (err) => {
+  this.client.send('logout', null, null, (err) => {
     this.logging_out = false;
     if (!err) {
       local_storage.set('password', undefined);

@@ -18,11 +18,12 @@ const ACKFLAG_IS_RESP = 1<<3;
 const ACKFLAG_ERR = 1<<4;
 const ACKFLAG_DATA_JSON = 1<<5;
 // `receiver` is really the sender, here, but will receive any response
-export function ackWrapPakStart(pak, receiver, msg) {
+export function ackWrapPakStart(pak, receiver, msg, msg_debug_name) {
   let flags = 0;
 
   pak.ack_data = {
     receiver,
+    msg_dbg_name: msg_debug_name || msg,
   };
 
   if (typeof msg === 'number') {
@@ -65,6 +66,10 @@ export function ackWrapPakFinish(pak, err, resp_func) {
     resp_pak_id = pak.ack_data.resp_pak_id;
     assert(resp_pak_id);
     assert(pak.ack_data.receiver);
+    assert(pak.ack_data.msg_dbg_name);
+    let ack_name = `ack.${pak.ack_data.msg_dbg_name}`;
+    assert(!resp_func.ack_name || resp_func.ack_name === ack_name);
+    resp_func.ack_name = ack_name;
     pak.ack_data.receiver.resp_cbs[resp_pak_id] = resp_func;
   } else {
     pak.seek(pak.ack_data.resp_pak_id_offs);
@@ -114,7 +119,18 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
   let { err, data, msg, pak_id } = ackReadHeader(pak);
   if (receiver.logPacketDispatch) {
     perfCounterAddValue('net.recv_bytes.total', pak.totalSize());
-    let msg_name = typeof msg === 'number' ? 'ack' : msg;
+    let msg_name;
+    if (typeof msg === 'number') {
+      let cb = receiver.resp_cbs[msg];
+      assert(!cb || cb.ack_name);
+      if (cb && cb.ack_name) {
+        msg_name = cb.ack_name;
+      } else {
+        msg_name = 'ack';
+      }
+    } else {
+      msg_name = msg;
+    }
     perfCounterAddValue(`net.recv_bytes.${msg_name}`, pak.totalSize());
     receiver.logPacketDispatch(source, pak, pak_initial_offs, msg_name);
   }

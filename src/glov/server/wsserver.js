@@ -86,8 +86,8 @@ WSClient.prototype.onClose = function () {
 
 WSClient.prototype.send = wscommon.sendMessage;
 
-WSClient.prototype.pak = function (msg, ref_pak) {
-  return wsPak(msg, ref_pak, this);
+WSClient.prototype.pak = function (msg, ref_pak, msg_debug_name) {
+  return wsPak(msg, ref_pak, this, msg_debug_name);
 };
 
 function WSServer() {

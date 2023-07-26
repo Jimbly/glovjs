@@ -127,6 +127,7 @@ function channelServerSendFinish(pak, err, resp_func) {
     // Wrap this so we track if it was ack'd
     assert(source.resp_cbs[ack_resp_pkt_id]);
     assert.equal(source.resp_cbs[ack_resp_pkt_id], resp_func);
+    assert(resp_func.ack_name);
     source.resp_cbs[ack_resp_pkt_id] = function (err, resp) {
       // Acks may not be in order, so we just care about the highest id,
       // everything sent before that *must* have been dispatched, even if not
@@ -137,6 +138,7 @@ function channelServerSendFinish(pak, err, resp_func) {
       }
       resp_func(err, resp);
     };
+    source.resp_cbs[ack_resp_pkt_id].ack_name = resp_func.ack_name;
   } else {
     source.send_pkt_unackd[dest] = [pkt_idx, channel_server.server_time];
   }

@@ -18,7 +18,7 @@ import {
   ID_PROVIDER_FB_INSTANT,
 } from 'glov/common/enums';
 import { isPacket } from 'glov/common/packet';
-import { perfCounterAdd } from 'glov/common/perfcounters';
+import { perfCounterAdd, perfCounterAddValue } from 'glov/common/perfcounters';
 import { unicode_replacement_chars } from 'glov/common/replacement_chars';
 import { logdata, merge } from 'glov/common/util';
 import {
@@ -194,6 +194,14 @@ function onChannelMsg(client, data, resp_func) {
   }
   let client_channel = client.client_channel;
 
+  let debug_name = `cm:${channel_id.split('.')[0]}.${typeof msg === 'number' ? 'ack' : msg}`;
+  // re-attribute the packet size to the more detailed perf counter
+  let { pkg_log_last_size } = channel_server.ws_server;
+  assert(pkg_log_last_size);
+  perfCounterAddValue('net.recv_bytes.channel_msg', -pkg_log_last_size);
+  perfCounterAddValue(`net.recv_bytes.${debug_name}`, pkg_log_last_size);
+  perfCounterAdd(debug_name);
+
   if (!client_channel.isSubscribedTo(channel_id)) {
     if (channel_server.clientCanSendDirectWithoutSubscribe(channel_id)) {
       // let it through
@@ -233,7 +241,6 @@ function onChannelMsg(client, data, resp_func) {
       client.send('error', err);
     }
   };
-  perfCounterAdd(`cm.${channel_id.split('.')[0]}.${typeof msg === 'number' ? 'ack' : msg}`);
   resp_func.expecting_response = Boolean(old_resp_func);
   client_channel.ids = client_channel.ids_direct;
   channelServerSend(client_channel, channel_id, msg, null, payload, resp_func, true); // quiet since we already logged

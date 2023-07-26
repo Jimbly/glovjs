@@ -204,7 +204,7 @@ AccountUI.prototype.showLogin = function (param) {
         font_height: font_height_small,
         text: 'Random',
       })) {
-        net.client.send('random_name', null, function (ignored, data) {
+        net.client.send('random_name', null, null, function (ignored, data) {
           if (data) {
             edit_box_display_name.setText(data);
           }

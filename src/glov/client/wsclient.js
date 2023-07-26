@@ -7,6 +7,7 @@ import { getAPIPath, setCurrentEnvironment } from 'glov/client/environments';
 
 const ack = require('glov/common/ack.js');
 const { ackInitReceiver } = ack;
+const verify = require('glov/common/verify.js');
 const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
 const {
@@ -169,12 +170,17 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
 };
 
 
-WSClient.prototype.pak = function (msg) {
-  return wscommon.wsPak(msg, null, this);
+WSClient.prototype.pak = function (msg, msg_debug_name) {
+  return wscommon.wsPak(msg, null, this, msg_debug_name);
 };
 
-WSClient.prototype.send = function (msg, data, resp_func) {
-  wscommon.sendMessage.call(this, msg, data, resp_func);
+WSClient.prototype.send = function (msg, data, msg_debug_name, resp_func) {
+  if (!verify(typeof msg_debug_name !== 'function')) {
+    // Old API
+    resp_func = msg_debug_name;
+    msg_debug_name = null;
+  }
+  wscommon.sendMessage.call(this, msg, data, msg_debug_name, resp_func);
 };
 
 WSClient.prototype.onError = function (e) {
