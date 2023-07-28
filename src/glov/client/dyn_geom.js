@@ -424,7 +424,7 @@ function drawElem(elem) {
     // batch_state left alone
     if (sprite_buffer_vert.length !== MAX_VERT_ELEM_COUNT) {
       let cur_tris = sprite_buffer_vert.length / DYN_VERT_SIZE / 3;
-      let new_length = min(ceil(cur_tris * 1.25) * 3 * DYN_VERT_SIZE, MAX_VERT_ELEM_COUNT);
+      let new_length = min(max(num_floats, ceil(cur_tris * 1.25) * 3 * DYN_VERT_SIZE), MAX_VERT_ELEM_COUNT);
       sprite_buffer_vert = new Float32Array(new_length);
     }
   }
