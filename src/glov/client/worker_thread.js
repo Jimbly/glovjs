@@ -87,7 +87,7 @@ export function endWork() {
   }
 }
 
-onmessage = function (evt) {
+self.onmessage = function (evt) {
   // start work, end yield/idle
   startWork();
   evt = evt.data;
