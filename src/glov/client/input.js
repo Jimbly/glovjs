@@ -1598,7 +1598,9 @@ export function drag(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag) {
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag ||
+      touch_id === param.not_touch_id
+    ) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
@@ -1631,6 +1633,7 @@ export function drag(param) {
         start_time: touch_data.start_time,
         is_down_edge,
         down_time: touch_data.down_time,
+        touch_id,
       };
     }
   }
