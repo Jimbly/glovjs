@@ -94,7 +94,7 @@ export function setupVersionSupport(
       let platform = p as Platform;
       let v_str = platform_min_supported_versions[platform];
       v = v_str ? SemanticVersion.parse(v_str) : null;
-      assert(v && v.compareTo(current_ver) <= 0 && v.compareTo(min_ver) >= 0);
+      assert(v && v.compareTo(current_ver) <= 0);
       plat_min_vers[platform] = v;
     }
   }
