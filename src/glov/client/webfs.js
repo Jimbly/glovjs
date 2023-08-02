@@ -153,7 +153,7 @@ function webFSReload() {
       webFSApplyReload(window.glov_webfs);
     }
   };
-  document.getElementsByTagName('head')[0].appendChild(scriptTag);
+  document.head.appendChild(scriptTag);
 }
 
 export function webFSStartup(fs_in, base_url_for_reload_in) {
