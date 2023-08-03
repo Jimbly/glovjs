@@ -68,9 +68,7 @@ export function ackWrapPakFinish(pak, err, resp_func) {
     assert(pak.ack_data.receiver);
     assert(pak.ack_data.msg_dbg_name);
     let ack_name = `ack.${pak.ack_data.msg_dbg_name}`;
-    assert(!resp_func.ack_name || resp_func.ack_name === ack_name);
-    resp_func.ack_name = ack_name;
-    pak.ack_data.receiver.resp_cbs[resp_pak_id] = resp_func;
+    pak.ack_data.receiver.resp_cbs[resp_pak_id] = { func: resp_func, ack_name };
   } else {
     pak.seek(pak.ack_data.resp_pak_id_offs);
     pak.zeroInt();
@@ -106,7 +104,7 @@ export function failAll(receiver, err) {
   receiver.resp_cbs = {};
   receiver.responses_waiting = 0;
   for (let pak_id in cbs) {
-    cbs[pak_id](err);
+    cbs[pak_id].func(err);
   }
 }
 
@@ -121,10 +119,10 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
     perfCounterAddValue('net.recv_bytes.total', pak.totalSize());
     let msg_name;
     if (typeof msg === 'number') {
-      let cb = receiver.resp_cbs[msg];
-      assert(!cb || cb.ack_name);
-      if (cb && cb.ack_name) {
-        msg_name = cb.ack_name;
+      let pair = receiver.resp_cbs[msg];
+      assert(!pair || pair.ack_name);
+      if (pair && pair.ack_name) {
+        msg_name = pair.ack_name;
       } else {
         msg_name = 'ack';
       }
@@ -207,7 +205,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
     }
     delete receiver.resp_cbs[msg];
     profilerStart('response');
-    cb(err, data, respFunc);
+    cb.func(err, data, respFunc);
     profilerStop('response');
   } else {
     if (!msg) {
