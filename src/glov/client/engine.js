@@ -809,7 +809,9 @@ export function onExitBackground(fn) {
   exit_background_cb.push(fn);
 }
 
-export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
+export const hrnow = window.performance && window.performance.now ?
+  window.performance.now.bind(window.performance) :
+  Date.now.bind(Date);
 
 let last_tick = 0;
 let last_tick_hr = 0;
