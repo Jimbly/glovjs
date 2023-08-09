@@ -438,6 +438,10 @@ export class ChannelServer {
     this.restarting = false;
     this.server_time = 0;
     this.reportPerfCounters = this.reportPerfCounters.bind(this);
+    // Monotonicly increasing count of exchange pings. Can be used as a counter
+    //   for exchange-dependent operations (such as timeouts waiting for a response)
+    //   that increases directly proportionally to communication latency.
+    this.exchange_pings = 0;
   }
 
   // The master requested that we create a worker
@@ -791,10 +795,6 @@ export class ChannelServer {
       count: 0,
       countdown: 1, // ping immediately
     };
-    // Monotonicly increasing count of exchange pings. Can be used as a counter
-    //   for exchange-dependent operations (such as timeouts waiting for a response)
-    //   that increases directly proportionally to communication latency.
-    this.exchange_pings = 0;
     setTimeout(this.tick_func, this.tick_time);
     this.csworker.log('Channel server started');
   }

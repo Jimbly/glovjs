@@ -8,6 +8,7 @@ import {
   ChatMessageDataSaved,
   ClientHandlerSource,
   ErrorCallback,
+  NetResponseCallback,
 } from 'glov/common/types';
 import { sanitize, secondsToFriendlyString } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker';
@@ -206,7 +207,7 @@ export function handleChat(this: ChattableWorker,
 export function handleChatGet(this: ChattableWorker,
   source: ClientHandlerSource,
   data: void,
-  resp_func: ErrorCallback<ChatHistoryData | null>
+  resp_func: NetResponseCallback<ChatHistoryData | null>
 ): void {
   resp_func(null, chatGet(this));
 }

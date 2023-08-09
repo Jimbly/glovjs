@@ -36,11 +36,10 @@ function banSummary(entry: IPBanEntry): string {
 const IPBAN_KEY = 'public.ipban.banlist';
 
 function cmdIPBan(this: GlobalWorker, str: string, resp_func: CmdRespFunc): void {
-  // eslint-disable-next-line @typescript-eslint/no-shadow
-  let banlist = this.getChannelData(IPBAN_KEY, {});
+  let banlist = this.getChannelData<IPBanList>(IPBAN_KEY, {});
   let msgs = [];
   for (let ip in banlist) {
-    let entry = banlist[ip];
+    let entry = banlist[ip]!;
     if (entry.expires < Date.now()/1000) {
       msgs.push(`Auto-removed expired ban for ${ip} ${banSummary(entry)}`);
       this.setChannelData(`${IPBAN_KEY}.${escapeDots(ip)}`, undefined);
@@ -48,7 +47,7 @@ function cmdIPBan(this: GlobalWorker, str: string, resp_func: CmdRespFunc): void
   }
   if (!str) {
     for (let ip in banlist) {
-      msgs.push(`Ban ${ip} ${banSummary(banlist[ip])}`);
+      msgs.push(`Ban ${ip} ${banSummary(banlist[ip]!)}`);
     }
     if (!msgs.length) {
       msgs.push('No active IP bans');
@@ -76,7 +75,7 @@ function cmdIPBan(this: GlobalWorker, str: string, resp_func: CmdRespFunc): void
         entry = {
           expires: floor(expy/1000),
           created_at: floor(Date.now()/1000),
-          created_by: this.cmd_parse_source.user_id,
+          created_by: this.cmd_parse_source.user_id!,
         };
         this.setChannelData(`${IPBAN_KEY}.${escapeDots(ip)}`, entry);
         msgs.push(`Added ban for ${ip} ${banSummary(entry)}`);

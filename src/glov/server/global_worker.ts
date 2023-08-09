@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { CmdDef, HandlerSource, isClientHandlerSource } from 'glov/common/types';
 import { ChannelServer } from './channel_server';
-import { ChannelWorker } from './channel_worker';
+import { ChannelWorker, HandleNewClientOpts } from './channel_worker';
 
 // General purpose worker(s) for handling global state
 
@@ -10,7 +10,7 @@ export class GlobalWorker extends ChannelWorker {
   //   super(channel_server, channel_id, channel_data);
   // }
 
-  handleNewClient(src: HandlerSource, opts: unknown): string | null {
+  handleNewClient(src: HandlerSource, opts: HandleNewClientOpts): string | null {
     // Do not allow any subscriptions by anyone other than sysadmins to any global
     //   channels by default.
     // sysadmins probably subscribe only to get command completion

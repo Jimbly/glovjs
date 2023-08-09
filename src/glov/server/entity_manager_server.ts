@@ -282,7 +282,7 @@ export function entityManagerDefaultLoadEnts(
   vaid: VAID,
   cb: (err?: string, ent_data?: DataObject[]) => void,
 ): void {
-  worker.getBulkChannelData(`ents.${vaid}`, null, function (err?: string, data?: unknown) {
+  worker.getBulkChannelData(`ents.${vaid}`, null, function (err?: string | null, data?: unknown) {
     if (err) {
       return cb(err);
     }
@@ -510,7 +510,7 @@ class ServerEntityManagerImpl<
     return this.entities[client.ent_id];
   }
 
-  visibleAreaReset(vaid: VAID, resp_func: ErrorCallback<string>): void {
+  visibleAreaReset(vaid: VAID, resp_func: NetResponseCallback<string>): void {
     let old_va_check = this.visible_areas[vaid];
     if (!old_va_check) {
       return void resp_func('VisibleArea not loaded');
@@ -1604,7 +1604,7 @@ export function entityManagerWorkerInit<
       entityManagerChatDecorateData(this, data_saved, data_broadcast);
     };
   }
-  ctor.registerClientHandler('ent_action_list', function entityManagerHandleEntActionList(
+  ctor.registerClientHandler<Packet, ActionListResponse>('ent_action_list', function entityManagerHandleEntActionList(
     this: Worker,
     src: ClientHandlerSource,
     pak: Packet,

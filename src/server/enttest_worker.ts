@@ -10,6 +10,7 @@ import {
   ErrorCallback,
   HandlerSource,
   NetErrorCallback,
+  NetResponseCallback,
   isClientHandlerSource,
 } from 'glov/common/types';
 import {
@@ -285,7 +286,7 @@ EntTestWorker.registerClientHandler('spawn', function (
   this: EntTestWorker,
   src: HandlerSource,
   data: { pos: [number, number, number] },
-  resp_func: ErrorCallback
+  resp_func: NetResponseCallback
 ) {
   assert(data.pos);
   assert(data.pos.length === 3);
@@ -300,7 +301,7 @@ EntTestWorker.registerClientHandler('move', function (
   this: EntTestWorker,
   src: HandlerSource,
   data: { pos: [number, number] },
-  resp_func: ErrorCallback
+  resp_func: NetResponseCallback
 ) {
   assert(data.pos);
   assert.equal(data.pos.length, 2);
@@ -319,7 +320,7 @@ EntTestWorker.registerClientHandler('resetva', function (
   this: EntTestWorker,
   src: HandlerSource,
   data: unknown,
-  resp_func: ErrorCallback<string>
+  resp_func: NetResponseCallback<string>
 ) {
   let client = this.entity_manager.getClient(src.id);
   let ent = this.entity_manager.getEntityForClient(client);

@@ -3,11 +3,13 @@ import type { Packet } from './packet';
 
 export type VoidFunc = () => void;
 
+export type TSMap<T> = Partial<Record<string, T>>;
+
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
  * @template T - The type of information held by the object, defaults to unknown.
  */
-export type DataObject = Partial<Record<string, unknown>>;
+export type DataObject = TSMap<unknown>;
 
 export function isDataObject(value: unknown): value is DataObject {
   return value ? typeof value === 'object' && !Array.isArray(value) : false;
@@ -145,6 +147,7 @@ export interface HandlerSource {
   channel_id: string;
   id: string;
   type: string;
+  direct?: true;
 }
 
 /**
@@ -172,7 +175,7 @@ export type ClientIDs = {
   client_id: string;
   user_id?: string;
   display_name?: string;
-  roles?: Partial<Record<string, true>>;
+  roles?: TSMap<1>;
 };
 
 export interface ClientChannelWorker {
@@ -197,7 +200,7 @@ export interface ClientChannelWorker {
 }
 
 export interface UserChannel extends ClientChannelWorker {
-  presence_data: Partial<Record<string, ServerPresenceData>>;
+  presence_data: TSMap<ServerPresenceData>;
 }
 
 // TODO: Delete this type and all usages of it.
