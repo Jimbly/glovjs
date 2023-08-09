@@ -122,6 +122,9 @@ let filtered_errors = new RegExp([
   'PureRead',
   'uv\\.handler\\.js',
   'dashawn\\.cf',
+  'clearTransInfo', // WeChat
+  'firefoxSample',
+  'gourmetads',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
