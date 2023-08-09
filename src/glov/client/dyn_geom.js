@@ -512,7 +512,7 @@ export function dynGeomDrawOpaque() {
     gl.enable(gl.BLEND);
     gl.depthMask(false); // no depth writes
     gl.enable(gl.POLYGON_OFFSET_FILL);
-    gl.polygonOffset(-2, 1);
+    gl.polygonOffset(-0.01, -4);
     queueDraw(true, queue, 0, queue.length);
     queue.length = 0;
     gl.disable(gl.POLYGON_OFFSET_FILL);
