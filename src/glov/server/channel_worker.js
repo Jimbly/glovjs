@@ -1,8 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-require('./must_import.js')('channel_server.js', __filename);
+require('./must_import.js')('channel_server.js', __filename); // eslint-disable-line import/order
 
 export let cwstats = { msgs: 0, bytes: 0 };
 export let ERR_QUIET = 'ERR_QUIET';
@@ -17,17 +16,34 @@ export const UNACKED_PACKET_ASSUME_GOOD = AUTO_DESTROY_TIME/2; // <= AUTO_DESTRO
 const PACKET_INDEX_EXPIRE = UNACKED_PACKET_ASSUME_GOOD * 8;
 const PACKET_INDEX_CLEANUP = PACKET_INDEX_EXPIRE / 4;
 
-const ack = require('glov/common/ack.js');
-const { ackHandleMessage, ackInitReceiver, ackReadHeader } = ack;
-const assert = require('assert');
-const { channelServerPak, channelServerSend, PAK_HINT_NEWSEQ, PAK_ID_MASK } = require('./channel_server.js');
-const dot_prop = require('glov/common/dot-prop.js');
-const { ERR_NOT_FOUND } = require('./exchange.js');
-const { logEx } = require('./log.js');
+import assert from 'assert';
+import * as ack from 'glov/common/ack';
+import {
+  ackHandleMessage,
+  ackInitReceiver,
+  ackReadHeader,
+} from 'glov/common/ack';
+import * as dot_prop from 'glov/common/dot-prop';
+import { isPacket } from 'glov/common/packet';
+import {
+  callEach,
+  empty,
+  logdata,
+} from 'glov/common/util';
+import {
+  PAK_HINT_NEWSEQ,
+  PAK_ID_MASK,
+  channelServerPak,
+  channelServerSend,
+} from './channel_server';
+import { ERR_NOT_FOUND } from './exchange';
+import { logEx } from './log';
+import {
+  packetLog,
+  packetLogInit,
+} from './packet_log';
+
 const { min } = Math;
-const { isPacket } = require('glov/common/packet.js');
-const { packetLogInit, packetLog } = require('./packet_log.js');
-const { callEach, empty, logdata } = require('glov/common/util.js');
 
 // How long to wait before failing an out of order packet and running it anyway
 const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
