@@ -20,7 +20,10 @@ function init() {
       let debug_info = gltest.getExtension('WEBGL_debug_renderer_info');
       if (debug_info) {
         let renderer_unmasked = gltest.getParameter(debug_info.UNMASKED_RENDERER_WEBGL);
-        is_discrete_gpu = Boolean(renderer_unmasked && renderer_unmasked.match(/nvidia|radeon/i));
+        is_discrete_gpu = Boolean(renderer_unmasked && (
+          renderer_unmasked.match(/nvidia|radeon/i) ||
+          renderer_unmasked.match(/apple gpu/i) && is_mac_osx && !is_ios
+        ));
       }
     }
   } catch (e) {
