@@ -182,16 +182,16 @@ DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
   }, cb);
 };
 
-DataStoreShield.prototype.search = function (collection, search, type, cb) {
+DataStoreShield.prototype.search = function (collection, search, cb) {
   let self = this;
   metrics.add(self.metric_search, 1);
   perfCounterAdd(self.metric_search);
   dss_stats.search++;
   this.executeShielded('search', collection, RETRIES_SEARCH, TIMEOUT_SEARCH, (onDone) => {
-    self.data_store.search(collection, search, type, onDone);
+    self.data_store.search(collection, search, onDone);
   }, cb);
 };
 
-export function create(data_store, opts) {
+export function dataStoreShieldCreate(data_store, opts) {
   return new DataStoreShield(data_store, opts);
 }

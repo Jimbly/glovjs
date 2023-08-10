@@ -68,7 +68,7 @@ export function webFSGetFile(filename, encoding) {
   let data = fs[filename];
   assert(data, `Error loading file: ${filename}`);
   if (encoding === 'jsobj') {
-    assert(!Array.isArray(data));
+    assert(!Array.isArray(data) || !(data.length === 2 && typeof data[0] === 'number' && typeof data[1] === 'string'));
     ret = active_reload ? clone(data) : data;
   } else {
     assert(Array.isArray(data));
@@ -153,7 +153,7 @@ function webFSReload() {
       webFSApplyReload(window.glov_webfs);
     }
   };
-  document.getElementsByTagName('head')[0].appendChild(scriptTag);
+  document.head.appendChild(scriptTag);
 }
 
 export function webFSStartup(fs_in, base_url_for_reload_in) {

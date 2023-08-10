@@ -970,7 +970,7 @@ cmd_parse.register({
         ui.provideUserString('Profiler Snapshot', profile);
         resp_func();
       } else {
-        netClient().send('profile', profile, function (err, data) {
+        netClient().send('profile', profile, null, function (err, data) {
           if (data?.id) {
             ui.provideUserString('Profile submitted', `ID=${data.id}`);
             resp_func(null, `Profile submitted with ID=${data.id}`);

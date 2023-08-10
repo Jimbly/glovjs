@@ -423,6 +423,13 @@ export function v3iMax(inout: Vec3, b: ROVec3): Vec3 {
   return inout;
 }
 
+export function v3min(out: Vec3, a: ROVec3, b: ROVec3): Vec3 {
+  out[0] = min(a[0], b[0]);
+  out[1] = min(a[1], b[1]);
+  out[2] = min(a[2], b[2]);
+  return out;
+}
+
 export function v3iMin(inout: Vec3, b: ROVec3): Vec3 {
   inout[0] = min(inout[0], b[0]);
   inout[1] = min(inout[1], b[1]);
@@ -655,4 +662,11 @@ export function v4set(out: Vec4, a: number, b: number, c: number, d: number): Ve
 export function v4zero(out: Vec4): Vec4 {
   out[0] = out[1] = out[2] = out[3] = 0;
   return out;
+}
+
+export function mat4isFinite(m: Mat4): boolean {
+  return isFinite(m[0]) && isFinite(m[1]) && isFinite(m[2]) && isFinite(m[3]) &&
+    isFinite(m[4]) && isFinite(m[5]) && isFinite(m[6]) && isFinite(m[7]) &&
+    isFinite(m[8]) && isFinite(m[9]) && isFinite(m[10]) && isFinite(m[11]) &&
+    isFinite(m[12]) && isFinite(m[13]) && isFinite(m[14]) && isFinite(m[15]);
 }

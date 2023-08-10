@@ -14,7 +14,8 @@ export interface EditBoxOptsAll {
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;
-  onetime_focus: boolean;
+  // internal state: onetime_focus: boolean;
+  focus_steal: boolean;
   auto_unfocus: boolean;
   initial_select: boolean;
   spellcheck: boolean;
@@ -38,3 +39,9 @@ export interface EditBox extends Readonly<EditBoxOptsAll> {
 }
 
 export function editBoxCreate(params?: EditBoxOpts): EditBox;
+
+// Pure immediate-mode API
+export function editBox<T extends string|number=string|number>(params: EditBoxOpts, current: T): {
+  result: EditBoxResult;
+  text: T;
+};

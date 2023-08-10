@@ -20,7 +20,7 @@ import * as util from 'glov/common/util';
 import { errorString } from 'glov/common/util';
 import { fbGetLoginInfo } from './fbinstant';
 import * as local_storage from './local_storage';
-import { netDisconnectedRaw } from './net';
+import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
 
 // relevant events:
@@ -30,6 +30,10 @@ function ClientChannelWorker(subs, channel_id, base_handlers, base_event_listene
   EventEmitter.call(this);
   this.subs = subs;
   this.channel_id = channel_id;
+  let m = channel_id.match(/^([^.]*)\.(.*)$/);
+  assert(m);
+  this.channel_type = m[1];
+  this.channel_subid = m[2];
   this.subscriptions = 0;
   this.subscribe_failed = false;
   this.got_subscribe = false;
@@ -82,6 +86,10 @@ ClientChannelWorker.prototype.onceSubscribe = function (cb) {
 
 ClientChannelWorker.prototype.numSubscriptions = function () {
   return this.subscriptions;
+};
+
+ClientChannelWorker.prototype.isFullySubscribed = function () {
+  return this.got_subscribe;
 };
 
 ClientChannelWorker.prototype.handleChannelData = function (data, resp_func) {
@@ -149,7 +157,7 @@ ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predic
     dot_prop.set(this.data, key, value);
   }
   let q = value && value.q || undefined;
-  let pak = this.subs.client.pak('set_channel_data');
+  let pak = this.subs.client.pak('set_channel_data', `${this.channel_type}.set_channel_data`);
   pak.writeAnsiString(this.channel_id);
   pak.writeBool(q);
   pak.writeAnsiString(key);
@@ -168,7 +176,7 @@ ClientChannelWorker.prototype.onMsg = function (msg, cb) {
 };
 
 ClientChannelWorker.prototype.pak = function (msg) {
-  let pak = this.subs.client.pak('channel_msg');
+  let pak = this.subs.client.pak('channel_msg', `cm:${this.channel_type}.${msg}`);
   pak.writeAnsiString(this.channel_id);
   pak.writeAnsiString(msg);
   // pak.writeInt(flags);
@@ -181,7 +189,7 @@ ClientChannelWorker.prototype.send = function (msg, data, resp_func, old_fourth)
   this.subs.client.send('channel_msg', {
     channel_id: this.channel_id,
     msg, data,
-  }, resp_func);
+  }, `cm:${this.channel_type}.${msg}`, resp_func);
 };
 
 ClientChannelWorker.prototype.cmdParse = function (cmd, resp_func) {
@@ -284,6 +292,30 @@ SubscriptionManager.prototype.handleDisconnect = function (data) {
   this.emit('disconnect', data);
 };
 
+SubscriptionManager.prototype.sendResubscribe = function () {
+  assert(!this.logging_in);
+  assert(this.need_resub);
+  if (netDisconnectedRaw()) {
+    // Will re-send upon reconnect
+    return;
+  }
+  // (re-)subscribe to all channels
+  for (let channel_id in this.channels) {
+    let channel = this.channels[channel_id];
+    if (channel.subscriptions) {
+      this.client.send('subscribe', channel_id, null, function (err) {
+        if (err) {
+          channel.subscribe_failed = true;
+          console.error(`Error subscribing to ${channel_id}: ${err}`);
+          channel.emit('subscribe_fail', err);
+        }
+      });
+    }
+  }
+  this.emit('connect', this.need_resub.reconnect);
+  this.need_resub = null;
+};
+
 SubscriptionManager.prototype.handleConnect = function (data) {
   let reconnect = false;
   if (this.first_connect) {
@@ -291,6 +323,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
   } else {
     reconnect = true;
   }
+  this.need_resub = { reconnect };
   this.restarting = Boolean(data.restarting);
   this.cack_data = data;
   walltime.sync(data.time);
@@ -298,24 +331,6 @@ SubscriptionManager.prototype.handleConnect = function (data) {
   if (netDisconnectedRaw()) {
     // we got disconnected while trying to log in, we'll retry after reconnecting
     return;
-  }
-
-  let subs = this;
-  function resub() {
-    // (re-)subscribe to all channels
-    for (let channel_id in subs.channels) {
-      let channel = subs.channels[channel_id];
-      if (channel.subscriptions) {
-        subs.client.send('subscribe', channel_id, function (err) {
-          if (err) {
-            channel.subscribe_failed = true;
-            console.error(`Error subscribing to ${channel_id}: ${err}`);
-            channel.emit('subscribe_fail', err);
-          }
-        });
-      }
-    }
-    subs.emit('connect', reconnect);
   }
 
   if (this.logging_in) {
@@ -332,8 +347,6 @@ SubscriptionManager.prototype.handleConnect = function (data) {
           'user_id, password' :
           JSON.stringify(this.login_credentials);
         assert(false, `Login failed for ${credentials_str}: ${errorString(err)}`);
-      } else {
-        resub();
       }
     });
   } else if (!this.no_auto_login) {
@@ -352,10 +365,11 @@ SubscriptionManager.prototype.handleConnect = function (data) {
         // ignore error on auto-login
       });
     }
+  }
 
-    resub();
-  } else {
-    resub();
+  // If logging in, will happen later; if disconnected, maybe have already triggered as an error
+  if (!this.logging_in && this.need_resub) {
+    this.sendResubscribe();
   }
 
   this.fetchCmds();
@@ -366,7 +380,7 @@ SubscriptionManager.prototype.fetchCmds = function () {
   let cmd_list = this.cmds_fetched_by_type;
   if (cmd_list && !cmd_list[channel_type]) {
     cmd_list[channel_type] = true;
-    this.client.send('cmd_parse_list_client', null, (err, resp) => {
+    this.client.send('cmd_parse_list_client', null, null, (err, resp) => {
       if (!err) {
         this.cmd_parse.addServerCommands(resp);
       }
@@ -429,14 +443,19 @@ SubscriptionManager.prototype.getServerTime = function () {
 
 SubscriptionManager.prototype.tick = function (dt) {
   this.server_time_interp += dt;
-  for (let channel_id in this.channels) {
-    let channel = this.channels[channel_id];
-    if (channel.immediate_subscribe) {
-      if (dt >= channel.immediate_subscribe) {
-        channel.immediate_subscribe = 0;
-        this.unsubscribe(channel_id);
-      } else {
-        channel.immediate_subscribe -= dt;
+  if (!netDisconnected()) {
+    // do not tick immediate subscriptions while disconnected *or* while logging in
+    //   as they will not be re-established (upon a disconnection) until *after*
+    //   login has finished.
+    for (let channel_id in this.channels) {
+      let channel = this.channels[channel_id];
+      if (channel.immediate_subscribe) {
+        if (dt >= channel.immediate_subscribe) {
+          channel.immediate_subscribe = 0;
+          this.unsubscribe(channel_id);
+        } else {
+          channel.immediate_subscribe -= dt;
+        }
       }
     }
   }
@@ -501,7 +520,7 @@ SubscriptionManager.prototype.getChannel = function (channel_id, do_subscribe) {
     channel.subscriptions++;
     if (!netDisconnectedRaw() && channel.subscriptions === 1) {
       channel.subscribe_failed = false;
-      this.client.send('subscribe', channel_id, function (err) {
+      this.client.send('subscribe', channel_id, null, function (err) {
         if (err) {
           channel.subscribe_failed = true;
           console.error(`Error subscribing to ${channel_id}: ${err}`);
@@ -581,18 +600,25 @@ SubscriptionManager.prototype.userOnChannelData = function (expected_user_id, da
 
 SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, resp) {
   this.logging_in = false;
+  let evt = 'login_fail';
   if (!err) {
+    evt = 'login';
     this.logged_in_username = resp.user_id;
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
     this.was_logged_in = true;
     let user_channel = this.getMyUserChannel(); // auto-subscribe to it
     user_channel.onceSubscribe(() => {
-      if (!this.did_master_subscribe && user_channel.getChannelData('public.permissions.sysadmin')) {
+      if (!this.did_master_subscribe) {
         // For cmd_parse access
-        this.did_master_subscribe = true;
-        this.subscribe('master.master');
-        this.subscribe('global.global');
+        let perms = user_channel.getChannelData('public.permissions', {});
+        if (perms.sysadmin) {
+          this.subscribe('master.master');
+        }
+        if (perms.sysadmin || perms.csr) {
+          this.did_master_subscribe = true;
+          this.subscribe('global.global');
+        }
       }
     });
 
@@ -600,10 +626,14 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
       user_channel.on('channel_data', this.userOnChannelData.bind(this, this.logged_in_username));
       user_channel.subs_added_user_on_channel_data = true;
     }
-    this.emit('login');
-  } else {
-    this.emit('login_fail', err);
+    if (this.need_resub) {
+      this.sendResubscribe();
+    }
   }
+  if (this.need_resub) {
+    this.sendResubscribe();
+  }
+  this.emit(evt, err);
   resp_func(err);
 };
 
@@ -622,13 +652,13 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
       if (netDisconnectedRaw()) {
         return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
       }
-      this.client.send('login_facebook_instant', result, this.handleLoginResponse.bind(this, resp_func));
+      this.client.send('login_facebook_instant', result, null, this.handleLoginResponse.bind(this, resp_func));
     });
   } else {
     this.client.send('login', {
       user_id: login_credentials.user_id,
       password: md5(this.client.secret + login_credentials.password),
-    }, this.handleLoginResponse.bind(this, resp_func));
+    }, null, this.handleLoginResponse.bind(this, resp_func));
   }
 };
 
@@ -638,7 +668,7 @@ SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) 
   }
   this.logging_in = true;
   this.logged_in = false;
-  return this.client.send('user_create', params, this.handleLoginResponse.bind(this, resp_func));
+  return this.client.send('user_create', params, null, this.handleLoginResponse.bind(this, resp_func));
 };
 
 function hashedPassword(user_id, password) {
@@ -732,7 +762,11 @@ SubscriptionManager.prototype.logout = function () {
   //   currently, clean up those we can, assert we have no others
   if (this.did_master_subscribe) {
     this.did_master_subscribe = false;
-    this.unsubscribe('master.master');
+    let user_channel = this.getMyUserChannel(); // auto-subscribe to it
+    let perms = user_channel && user_channel.getChannelData('public.permissions', {});
+    if (perms && perms.sysadmin) {
+      this.unsubscribe('master.master');
+    }
     this.unsubscribe('global.global');
   }
   for (let channel_id in this.channels) {
@@ -748,7 +782,7 @@ SubscriptionManager.prototype.logout = function () {
   }
 
   this.logging_out = true;
-  this.client.send('logout', null, (err) => {
+  this.client.send('logout', null, null, (err) => {
     this.logging_out = false;
     if (!err) {
       local_storage.set('password', undefined);

@@ -32,6 +32,7 @@ const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const { geomResetState, geomStartup } = require('./geom.js');
 const input = require('./input.js');
+const { inputAllowAllEvents } = require('./input.js');
 const local_storage = require('./local_storage.js');
 const mat3FromMat4 = require('gl-mat3/fromMat4');
 const mat4Copy = require('gl-mat4/copy');
@@ -56,7 +57,12 @@ const {
 const { shaderDebugUIStartup } = require('./shader_debug_ui.js');
 const { soundLoading, soundStartup, soundTick } = require('./sound.js');
 const { spotEndInput } = require('./spot.js');
-const { blendModeReset, spriteDraw, spriteStartup } = require('./sprites.js');
+const {
+  blendModeReset,
+  spriteDraw,
+  spriteDrawReset,
+  spriteStartup,
+} = require('./sprites.js');
 const {
   textureBind,
   textureDefaultFilters,
@@ -86,6 +92,7 @@ const {
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
+const { profanityStartupLate } = require('./words/profanity.js');
 
 export let canvas;
 export let webgl2;
@@ -109,6 +116,8 @@ export let render_height;
 
 //eslint-disable-next-line @typescript-eslint/no-use-before-define
 export let defines = urlhash.register({ key: 'D', type: urlhash.TYPE_SET, change: definesChanged });
+
+urlhash.register({ key: 'nocoop' }); // needed if server is using request_utils:setupRequestHeaders
 
 export let ZFAR;
 export let ZNEAR;
@@ -136,9 +145,17 @@ export const border_color = vec4(0, 0, 0, 1);
 export let border_clear_color = vec4(0, 0, 0, 1);
 
 let no_render = false;
+let dirty_render = false;
+let render_frames_needed = 3;
+
+export function renderNeeded(frames) {
+  // default 3 frames - 1 gets eaten immediately, one to show the result of the input, one to get back to steady state
+  render_frames_needed = max(render_frames_needed, frames || 3);
+}
 
 export function disableRender(new_value) {
   no_render = new_value;
+  inputAllowAllEvents(no_render);
   if (no_render) {
     cleanupDOMElems();
   }
@@ -259,11 +276,26 @@ export function defineCausesReload(define) {
 }
 defineCausesReload('FORCEWEBGL2');
 defineCausesReload('NOWEBGL2');
+let define_change_cbs = {};
+export function defineOnChange(define, cb) {
+  let elem = define_change_cbs[define] = define_change_cbs[define] || {
+    value: defines[define],
+    cbs: [],
+  };
+  elem.cbs.push(cb);
+}
 export function definesChanged() {
   for (let key in reloading_defines) {
     if (defines[key] !== reloading_defines[key]) {
       urlhash.onURLChange(reloadSafe);
       break;
+    }
+  }
+  for (let key in define_change_cbs) {
+    let elem = define_change_cbs[key];
+    if (defines[key] !== elem.value) {
+      elem.value = defines[key];
+      callEach(elem.cbs);
     }
   }
   shadersHandleDefinesChanged();
@@ -339,6 +371,7 @@ export function setState(new_state) {
   } else {
     app_state = new_state;
   }
+  renderNeeded();
 }
 
 export function stateActive(test_state) {
@@ -557,6 +590,7 @@ function checkResize() {
 
     // For the next 10 frames, make sure font size is correct
     need_repos = 10;
+    renderNeeded();
   }
   if (is_ios_safari && (window.visualViewport || need_repos)) {
     // we have accurate view information, or screen was just rotated / resized
@@ -594,7 +628,7 @@ function requestFrame(user_time) {
       setTimeout(tick, 1);
       frames_requested++;
     }
-  } else if (max_fps) {
+  } else if (max_fps && max_fps > settings.use_animation_frame) {
     let desired_delay = max(0, round(1000 / max_fps - (user_time || 0)));
     frames_requested++;
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -698,6 +732,7 @@ export function startSpriteRendering() {
   gl.enable(gl.BLEND);
   gl.disable(gl.DEPTH_TEST);
   gl.depthMask(false);
+  spriteDrawReset();
 }
 
 export function projectionZBias(dist, at_z) {
@@ -774,14 +809,38 @@ export function onExitBackground(fn) {
   exit_background_cb.push(fn);
 }
 
-export const hrnow = window.performance ? window.performance.now.bind(window.performance) : Date.now.bind(Date);
+export const hrnow = window.performance && window.performance.now ?
+  window.performance.now.bind(window.performance) :
+  Date.now.bind(Date);
 
 let last_tick = 0;
+let last_tick_hr = 0;
+let frame_limit_time_left = 0;
 function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
   profilerStart('top');
   frames_requested--;
+
+  if (render_frames_needed) {
+    --render_frames_needed;
+  }
+  if (dirty_render && !render_frames_needed) {
+    resetEffects();
+    input.tickInputInactive();
+    last_tick_cpu = 0;
+    for (let ii = post_tick.length - 1; ii >= 0; --ii) {
+      if (post_tick[ii].inactive && !--post_tick[ii].ticks) {
+        post_tick[ii].fn();
+        ridx(post_tick, ii);
+      }
+    }
+    requestFrame();
+    profilerStop();
+    return profilerStop('tick');
+  }
+
+
   // if (timestamp < 1e12) { // high resolution timer
   //   this ends up being a value way back in time, relative to what hrnow() returns,
   //   and even back in time relative to input events already dispatched,
@@ -790,6 +849,27 @@ function tick(timestamp) {
   // } else { // probably integer milliseconds since epoch, or nothing
   hrtime = hrnow();
   // }
+
+  let dt_raw = hrtime - last_tick_hr;
+  last_tick_hr = hrtime;
+  let max_fps = settings.max_fps;
+  if (max_fps && max_fps <= settings.use_animation_frame) {
+    // using requestAnimationFrame, need to apply max_fps ourselves
+    let frame_time = 1000 / max_fps - 0.1;
+    frame_limit_time_left -= dt_raw;
+    if (frame_limit_time_left > 0) {
+      // too early, skip this frame, do not count any of this time, pretend this frame never happened.
+      requestFrame();
+      profilerStop('top');
+      return profilerStop('tick');
+    }
+    frame_limit_time_left += frame_time;
+    if (frame_limit_time_left < 0) {
+      // more than two frames passed, don't accumulate extra frames
+      frame_limit_time_left = 0;
+    }
+  }
+
   let now = round(hrtime); // Code assumes integer milliseconds
   if (!last_tick) {
     last_tick = now;
@@ -1055,9 +1135,6 @@ export function startup(params) {
   canvas = document.getElementById('canvas');
   safearea_elem = document.getElementById('safearea');
 
-  glovErrorReportSetCrashCB(function () {
-    setTimeout(requestFrame, 1);
-  });
   if (params.error_report === false) {
     glovErrorReportDisableSubmit();
   }
@@ -1144,6 +1221,11 @@ export function startup(params) {
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
   }
+
+  glovErrorReportSetCrashCB(function () {
+    setTimeout(requestFrame, 1);
+  });
+
   let nocanvas = document.getElementById('nocanvas');
   if (verify(nocanvas)) {
     // hide the interior of the <canvas> elements, so that the get.webgl.org link is not focusable!
@@ -1241,6 +1323,7 @@ export function startup(params) {
   if (params.show_fps !== undefined) {
     settings.show_fps = params.show_fps;
   }
+  dirty_render = Boolean(params.dirty_render);
 
   periodiclyRequestFrame();
   return true;
@@ -1277,6 +1360,7 @@ function loadingFinished() {
     time_resource_load,
     time_total,
   });
+  profanityStartupLate();
 }
 
 function loading() {
@@ -1285,6 +1369,7 @@ function loading() {
   if (elem_loading_text) {
     elem_loading_text.innerText = `Loading (${load_count})...`;
   }
+  renderNeeded();
   if (!load_count) {
     is_loading = false;
     app_state = after_loading_state;
@@ -1293,6 +1378,7 @@ function loading() {
       ticks: 2,
       fn: function () {
         loadingFinished();
+        renderNeeded();
         let loading_elem = document.getElementById('loading');
         if (loading_elem) {
           loading_elem.style.visibility = 'hidden';

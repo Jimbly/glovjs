@@ -41,7 +41,7 @@ const effects = require('./effects.js');
 const { effectsQueue } = effects;
 const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
-const { fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
+const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
@@ -88,6 +88,7 @@ deprecate(exports, 'bindSounds', 'uiBindSounds');
 deprecate(exports, 'modal_font_style', 'uiFontStyleModal()');
 deprecate(exports, 'font_style_noraml', 'uiFontStyleNoraml()');
 deprecate(exports, 'font_style_focused', 'uiFontStyleFocused()');
+deprecate(exports, 'color_button', 'uiSetButtonColorSet()');
 
 
 const MODAL_DARKEN = 0.75;
@@ -125,6 +126,15 @@ export function makeColorSet(color) {
   color_sets.push(ret);
   applyColorSet(ret);
   return ret;
+}
+
+export function colorSetMakeCustom(regular, rollover, down, disabled) {
+  return {
+    regular,
+    rollover,
+    down,
+    disabled,
+  };
 }
 
 let hooks = [];
@@ -253,7 +263,13 @@ export let font;
 export let title_font;
 export const sprites = {};
 
-export const color_button = makeColorSet([1,1,1,1]);
+let color_button = makeColorSet([1,1,1,1]);
+export function uiSetButtonColorSet(color_button_in) {
+  color_button = color_button_in;
+}
+export function uiGetButtonRolloverColor() {
+  return color_button.rollover;
+}
 export const color_panel = vec4(1, 1, 0.75, 1);
 
 
@@ -386,6 +402,11 @@ const base_ui_sprites = {
   scrollbar_handle: { ws: [64], hs: [24, 16, 24] },
   progress_bar: { ws: [48, 32, 48], hs: [128] },
   progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
+
+  collapsagories: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_rollover: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_shadow_down: { ws: [4, 8, 4], hs: [64] },
+  collapsagories_shadow_up: null,
 };
 
 function uiStartup(param) {
@@ -499,7 +520,9 @@ const base_ui_sounds = {
 export function uiBindSounds(_sounds) {
   sounds = defaults(_sounds || {}, base_ui_sounds);
   for (let key in sounds) {
-    soundLoad(sounds[key]);
+    if (sounds[key]) {
+      soundLoad(sounds[key]);
+    }
   }
 }
 
@@ -510,7 +533,7 @@ export function drawHBox(coords, s, color) {
   spriteChainedStart();
   let uidata = s.uidata;
   let x = coords.x;
-  let ws = [uidata.wh[0] * coords.h, 0, uidata.wh[2] * coords.h];
+  let ws = [uidata.wh[0] * coords.h, 0, (uidata.wh[2] || 0) * coords.h];
   if (coords.no_min_width && ws[0] + ws[2] > coords.w) {
     let scale = coords.w / (ws[0] + ws[2]);
     ws[0] *= scale;
@@ -544,7 +567,7 @@ export function drawHBox(coords, s, color) {
 export function drawVBox(coords, s, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  let hs = [uidata.hw[0] * coords.w, 0, uidata.hw[2] * coords.w];
+  let hs = [uidata.hw[0] * coords.w, 0, (uidata.hw[2] || 0) * coords.w];
   let y = coords.y;
   hs[1] = max(0, coords.h - hs[0] - hs[2]);
   draw_box_param.x = coords.x;
@@ -1053,7 +1076,7 @@ export function print(style, x, y, z, text) {
 
 export function label(param) {
   profilerStartFunc();
-  let { style, x, y, align, w, h, text, tooltip } = param;
+  let { style, x, y, align, w, h, text, tooltip, tooltip_above } = param;
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
@@ -1064,12 +1087,27 @@ export function label(param) {
   if (tooltip) {
     if (!w) {
       w = use_font.getStringWidth(style, size, text);
+      if (align & ALIGN.HRIGHT) {
+        x -= w;
+      } else if (align & ALIGN.HCENTER) {
+        x -= w/2;
+      }
+    }
+    if (!h) {
+      h = size;
+      if (align & ALIGN.VBOTTOM) {
+        y -= h;
+      } else if (align & ALIGN.VCENTER) {
+        y -= h/2;
+      }
     }
     assert(isFinite(w));
     assert(isFinite(h));
     let spot_ret = spot({
       x, y, w, h,
       tooltip: tooltip,
+      tooltip_width: param.tooltip_width,
+      tooltip_above,
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
@@ -1082,14 +1120,16 @@ export function label(param) {
       }
     }
   }
+  let text_w = 0;
   if (text) {
     if (align) {
-      use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+      text_w = use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
     } else {
-      use_font.drawSized(style, x, y, z, size, text);
+      text_w = use_font.drawSized(style, x, y, z, size, text);
     }
   }
   profilerStopFunc();
+  return w || text_w;
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
@@ -1676,6 +1716,7 @@ const LINE_U0 = 0.5/LINE_TEX_W;
 const LINE_U1 = (LINE_MIDP + 0.5) / LINE_TEX_W;
 const LINE_U2 = 1 - LINE_U1; // 1 texel away from LINE_U1
 const LINE_U3 = 1 - 0.5/LINE_TEX_W;
+let line_last_shader_param = { param0: [0,0] };
 export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   if (mode === undefined) {
     mode = default_line_mode;
@@ -1767,7 +1808,13 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   step_end = 1 + precise * (step_end - 1);
   let A = 1.0 / (step_end - step_start);
   let B = -step_start * A;
-  let shader_param = { param0: [A, B] };
+  let shader_param;
+  if (line_last_shader_param.param0[0] !== A ||
+    line_last_shader_param.param0[1] !== B
+  ) {
+    line_last_shader_param = { param0: [A, B] };
+  }
+  shader_param = line_last_shader_param;
 
   glov_sprites.queueraw4(texs,
     x1 + tangx, y1 + tangy,

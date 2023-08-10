@@ -29,7 +29,7 @@ const os = require('os');
 const { isPacket, packetCreate, packetDefaultFlags } = require('glov/common/packet.js');
 const path = require('path');
 const { perfCounterHistory, perfCounterTick } = require('glov/common/perfcounters.js');
-const { panic, sendToBuildClients } = require('./server.js');
+const { onpanic, panic, sendToBuildClients } = require('./server.js');
 const { processUID } = require('./server_config.js');
 const { callEach, clone, cloneShallow, identity, logdata, once } = require('glov/common/util.js');
 const { inspect } = require('util');
@@ -97,6 +97,21 @@ function formatLocalError(e) {
   return lines.join('\n');
 }
 
+let outstanding_sends = {}; // msg -> [count, size]
+function logOutstandingSends() {
+  let keys = Object.keys(outstanding_sends);
+  if (keys.length) {
+    let msg = [];
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
+      let pair = outstanding_sends[key];
+      msg.push(`${key}:${pair[0]}/${pair[1]}`);
+    }
+    console.error(`Outstanding message exchange sends: ${msg.join(', ')}`);
+  }
+}
+onpanic(logOutstandingSends);
+
 function channelServerSendFinish(pak, err, resp_func) {
   if (resp_func) {
     // This function will get called twice if we have a network disconnect
@@ -125,9 +140,11 @@ function channelServerSendFinish(pak, err, resp_func) {
   assert.equal(expecting_response, Boolean(ack_resp_pkt_id));
   if (expecting_response) {
     // Wrap this so we track if it was ack'd
-    assert(source.resp_cbs[ack_resp_pkt_id]);
-    assert.equal(source.resp_cbs[ack_resp_pkt_id], resp_func);
-    source.resp_cbs[ack_resp_pkt_id] = function (err, resp) {
+    let resp_pair = source.resp_cbs[ack_resp_pkt_id];
+    assert(resp_pair);
+    assert.equal(resp_pair.func, resp_func);
+    assert(resp_pair.ack_name);
+    resp_pair.func = function (err, resp) {
       // Acks may not be in order, so we just care about the highest id,
       // everything sent before that *must* have been dispatched, even if not
       // yet ack'd.  Similarly, don't reset to a lower id when a slow operation's
@@ -154,7 +171,26 @@ function channelServerSendFinish(pak, err, resp_func) {
       }
     };
   }
+  let pak_total_size = pak.totalSize();
+  let out_track_pair = outstanding_sends[msg];
+  if (!out_track_pair) {
+    outstanding_sends[msg] = out_track_pair = [1,pak_total_size];
+  } else {
+    out_track_pair[0]++;
+    out_track_pair[1] += pak_total_size;
+  }
+  let complete_called = false;
+  function onSendComplete() {
+    assert(!complete_called);
+    complete_called = true;
+    out_track_pair[0]--;
+    out_track_pair[1] -= pak_total_size;
+    if (!out_track_pair[0]) {
+      delete outstanding_sends[msg];
+    }
+  }
   function finalError(err) {
+    onSendComplete();
     if (ack_resp_pkt_id) {
       // Callback will never be dispatched through ack.js, remove the callback here
       delete source.resp_cbs[ack_resp_pkt_id];
@@ -178,6 +214,7 @@ function channelServerSendFinish(pak, err, resp_func) {
     }
     return channel_server.exchange.publish(dest, pak, function (err) {
       if (!err) {
+        onSendComplete();
         // Sent successfully, resp_func called when other side ack's.
         if (pak.no_local_bypass) {
           delete pak.no_local_bypass;
@@ -401,6 +438,10 @@ export class ChannelServer {
     this.restarting = false;
     this.server_time = 0;
     this.reportPerfCounters = this.reportPerfCounters.bind(this);
+    // Monotonicly increasing count of exchange pings. Can be used as a counter
+    //   for exchange-dependent operations (such as timeouts waiting for a response)
+    //   that increases directly proportionally to communication latency.
+    this.exchange_pings = 0;
   }
 
   // The master requested that we create a worker
@@ -686,7 +727,7 @@ export class ChannelServer {
       if (client) {
         if (data.sysadmin) { // Send to system admins only
           let { client_channel } = client;
-          if (!client_channel || !client_channel.ids || !client_channel.ids.sysadmin) {
+          if (!client_channel || !client_channel.ids || !(client_channel.ids.sysadmin || client_channel.ids.csr)) {
             continue;
           }
         }
@@ -754,10 +795,6 @@ export class ChannelServer {
       count: 0,
       countdown: 1, // ping immediately
     };
-    // Monotonicly increasing count of exchange pings. Can be used as a counter
-    //   for exchange-dependent operations (such as timeouts waiting for a response)
-    //   that increases directly proportionally to communication latency.
-    this.exchange_pings = 0;
     setTimeout(this.tick_func, this.tick_time);
     this.csworker.log('Channel server started');
   }

@@ -16,7 +16,8 @@ export function numWorkers() {
 
 let handlers = {};
 
-export const ALL = -1;
+export const WORKER_ALL = -1;
+module.exports.ALL = WORKER_ALL;
 
 // cb(worker_index, data)
 export function addHandler(msg, cb) {
@@ -24,15 +25,16 @@ export function addHandler(msg, cb) {
   handlers[msg] = cb;
 }
 
-export function sendmsg(worker_index, id, data, transfer) {
-  if (worker_index === ALL) {
+export function workerCommSendMsg(worker_index, id, data, transfer) {
+  if (worker_index === WORKER_ALL) {
     for (let ii = 0; ii < workers.length; ++ii) {
-      sendmsg(ii, id, data);
+      workerCommSendMsg(ii, id, data);
     }
   } else {
     workers[worker_index].postMessage({ id, data }, transfer);
   }
 }
+module.exports.sendmsg = workerCommSendMsg;
 
 function workerOnMessage(worker_index, evt) {
   evt = evt.data;
@@ -67,7 +69,7 @@ function allocWorker(idx, worker_filename) {
   workers.push(worker);
 
   if (webFSGetData()) {
-    sendmsg(idx, 'webfs_data', webFSGetData());
+    workerCommSendMsg(idx, 'webfs_data', webFSGetData());
   }
 }
 
@@ -95,11 +97,11 @@ export function startup(worker_filename, debug_names_in) {
   });
   addHandler('busy_done', function (source) {
     if (source < keep_busy) {
-      sendmsg(source, 'busy', 1000);
+      workerCommSendMsg(source, 'busy', 1000);
     }
   });
   webFSSetToWorkerCB(function (fs) {
-    sendmsg(ALL, 'webfs_data', fs);
+    workerCommSendMsg(WORKER_ALL, 'webfs_data', fs);
   });
 
   allocWorker(0, worker_filename);
@@ -107,7 +109,7 @@ export function startup(worker_filename, debug_names_in) {
 
 export function keepBusy(num_workers) {
   for (let ii = keep_busy; ii < num_workers; ++ii) {
-    sendmsg(ii, 'busy', 1000);
+    workerCommSendMsg(ii, 'busy', 1000);
   }
   keep_busy = num_workers;
 }

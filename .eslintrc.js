@@ -24,6 +24,8 @@ module.exports = {
     "profilerStopStart": true,
     // Our pre-processor defines
     "BUILD_TIMESTAMP": true,
+    // For Node types
+    "NodeJS": true,
     // Our global types
     "Constructor": true,
   },

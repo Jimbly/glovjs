@@ -15,6 +15,10 @@ export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
 export interface Texture {
+  width: number;
+  height: number;
+  src_width: number;
+  src_height: number;
   destroy(): void;
 }
 
@@ -64,6 +68,7 @@ export interface Sprite {
   drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
   draw3D(params: SpriteDraw3DParams): void;
   texs: Texture[];
+  lazyLoad(): number;
 }
 export interface UISprite extends Sprite {
   uidata: SpriteUIData;
@@ -90,16 +95,18 @@ export type SpriteParam = SpriteParamBase & ({
   texs: Texture[];
 } | {
   tex: Texture;
-} | (TextureOptions & {
+} | (TextureOptions & ({
   layers: number;
   name: string;
   ext?: string;
 } | {
   name: string;
   ext?: string;
+  lazy_load?: boolean;
 } | {
   url: string;
-}));
+  lazy_load?: boolean;
+})));
 
 export function spriteQueuePush(): void;
 export function spriteQueuePop(): void;
@@ -117,6 +124,8 @@ export function spriteDrawPartial(z: number): void;
 export function spriteCreate(param: SpriteParam): Sprite;
 export function spriteStartup(): void;
 
+export function spriteFlippedUVsApplyHFlip(spr: Sprite): void;
+export function spriteFlippedUVsRestore(spr: Sprite): void;
 
 // TODO: export with appropriate types
 // export type Shader = { _opaque: 'Shader' };

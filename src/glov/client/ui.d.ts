@@ -6,7 +6,7 @@ import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
-import { SpotParam, SpotRet, SpotStateEnum } from './spot';
+import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -16,6 +16,7 @@ export const LINE_ALIGN: number;
 export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
 export function makeColorSet(color: ROVec4): ColorSet;
+export function colorSetMakeCustom(regular: ROVec4, rollover: ROVec4, down: ROVec4, disabled: ROVec4): ColorSet;
 export interface UIBox extends Box {
   z?: number;
 }
@@ -24,8 +25,7 @@ export interface UIBoxColored extends UIBox {
 }
 export type UIHookFn = (param: UIBox & { hook: HookList }) => void;
 export function addHook(draw: UIHookFn, click: UIHookFn): void;
-// TODO: how to say that P must also be `{ key: string } | { x: number, y: number }`?
-export function getUIElemData<T, P>(type: string, param: P, allocator: (param: P)=>T) : T;
+export function getUIElemData<T, P extends SpotKeyable>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
 export function uiFontStyleNormal(): FontStyle;
@@ -44,6 +44,11 @@ export interface UISprites {
   menu_header: UISprite;
   slider: UISprite;
   slider_handle: UISprite;
+
+  collapsagories: UISprite;
+  collapsagories_rollover: null | UISprite;
+  collapsagories_shadow_down: UISprite;
+  collapsagories_shadow_up: null | UISprite;
 
   scrollbar_bottom: UISprite;
   scrollbar_trough: UISprite;
@@ -79,7 +84,7 @@ export function setProvideUserStringDefaultMessages(success_msg: Text, failure_m
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
 export type BaseSoundKey = 'button_click' | 'rollover';
-export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[]>>): void;
+export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[] | null>>): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
@@ -195,16 +200,21 @@ export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | n
 
 export function print(style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
-export interface LabelParam extends UIBox {
+export type LabelParam = Partial<TooltipBoxParam> & {
+  x: number;
+  y: number;
+  z?: number;
+  w?: number;
+  h?: number;
   style?: FontStyle;
   style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;
   text?: Text;
-  tooltip?: Text;
-}
-export function label(param: LabelParam): void;
+  tooltip?: TooltipValue;
+};
+export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
 
@@ -341,6 +351,8 @@ export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;
+export function uiSetButtonColorSet(color_set: ColorSet): void;
+export function uiGetButtonRolloverColor(): ROVec4;
 
 type UISpriteSet = {
   color_set_shades?: [number, number, number];

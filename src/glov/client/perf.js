@@ -320,7 +320,7 @@ function updatePerfProvider() {
   }
   if (channel_id) {
     perf_provider_data.in_flight = true;
-    netClient().send('perf_fetch', { channel_id, fields }, function (err, data) {
+    netClient().send('perf_fetch', { channel_id, fields }, null, function (err, data) {
       if (err) {
         console.error(`Error getting perf data: ${Object.keys(fields)}: ${err}`);
       }

@@ -22,7 +22,7 @@ let pid = process.pid;
 let puid = processUID();
 let logger = {};
 let raw_console = {};
-if (pid === 1 && process.env.PODNAME) {
+if (pid < 100 && process.env.PODNAME) {
   pid = process.env.PODNAME;
   let split = pid.split('-');
   let tail = split.pop();
@@ -36,6 +36,9 @@ if (pid === 1 && process.env.PODNAME) {
   } else if (split.length > 2) {
     // instance-foo-1234
     pid = `${split[0][0]}${tail}`;
+  }
+  if (process.pid !== 1) {
+    pid += `-${process.pid}`;
   }
   console.log(`Using fake logging PID of ${pid}`);
 }

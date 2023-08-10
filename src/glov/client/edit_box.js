@@ -27,7 +27,7 @@ const {
   spotSuppressKBNav,
 } = require('./spot.js');
 const glov_ui = require('./ui.js');
-const { uiGetDOMElem } = require('./ui.js');
+const { getUIElemData, uiGetDOMElem } = require('./ui.js');
 
 let form_hook_registered = false;
 let active_edit_box;
@@ -90,6 +90,7 @@ class GlovUIEditBox {
     this.initial_focus = false;
     this.onetime_focus = false;
     this.auto_unfocus = false;
+    this.focus_steal = false;
     this.initial_select = false;
     this.spellcheck = true;
     this.esc_clears = true;
@@ -213,6 +214,10 @@ class GlovUIEditBox {
 
   run(params) {
     this.applyParams(params);
+    if (this.focus_steal) {
+      this.focus_steal = false;
+      this.focus();
+    }
 
     let is_reset = false;
     if (!verify(this.last_frame !== engine.frame_index)) {
@@ -277,6 +282,7 @@ class GlovUIEditBox {
       } else {
         this.input = null;
       }
+      this.last_autocomplete = null;
       this.submitted = false;
       this.elem = elem;
     } else {
@@ -344,4 +350,15 @@ GlovUIEditBox.prototype.CANCEL = 'cancel';
 
 export function editBoxCreate(params) {
   return new GlovUIEditBox(params);
+}
+
+export function editBox(params, current) {
+  let edit_box = getUIElemData('edit_box', params, editBoxCreate);
+  let result = edit_box.run(params);
+
+  return {
+    result,
+    text: edit_box.getText(),
+    edit_box,
+  };
 }

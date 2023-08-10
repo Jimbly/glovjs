@@ -178,6 +178,7 @@ const { is_firefox, is_mac_osx } = require('./browser.js');
 const camera2d = require('./camera2d.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
+const { renderNeeded } = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const { abs, max, min, sqrt } = Math;
@@ -351,15 +352,34 @@ function eventlog(event) {
   console.log(`${engine.frame_index} ${event.type} ${pointerLocked()?'ptrlck':'unlckd'} ${pairs.join(',')}`);
 }
 
+let allow_all_events = false;
+export function inputAllowAllEvents(allow) {
+  allow_all_events = allow;
+}
+
+function isInputElement(target) {
+  return target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+    target.tagName === 'LABEL' || target.tagName === 'VIDEO');
+}
+
 function letWheelEventThrough(event) {
   // *not* checking for `noglov`, as links have these, and we want to capture scroll events even if mouse is over links
-  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL');
+  return allow_all_events || isInputElement(event.target);
 }
 
 function letEventThrough(event) {
-  return event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' ||
-    event.target.tagName === 'LABEL' || String(event.target.className).includes('noglov'));
+  if (!event.target || allow_all_events || event.glov_do_not_cancel) {
+    return true;
+  }
+  // Going to an input or related element
+  return isInputElement(event.target) ||
+    String(event.target.className).includes('noglov');
+  /* Not doing this: this causes legitimate clicks (e.g. when an edit box is focused)
+      to be lost, instead, relying on `allow_all_events` when an HTML UI is active.
+    // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
+    document.activeElement && event.target !== document.activeElement &&
+    (isInputElement(document.activeElement) ||
+      String(document.activeElement.className).includes('noglov'));*/
 }
 
 function ignored(event) {
@@ -395,6 +415,7 @@ export function inputLastTime() {
 function onUserInput() {
   soundResume();
   last_input_time = Date.now();
+  renderNeeded();
 }
 
 function releaseAllKeysDown(evt) {
@@ -407,6 +428,7 @@ function releaseAllKeysDown(evt) {
 }
 
 function onKeyUp(event) {
+  renderNeeded();
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
   if (!letEventThrough(event)) {
@@ -477,6 +499,7 @@ let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
 function onMouseMove(event, no_stop) {
+  renderNeeded();
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
   if (!letEventThrough(event) && !no_stop && event.button !== 3) {
@@ -633,6 +656,7 @@ function onMouseUp(event) {
 }
 
 function onWheel(event) {
+  renderNeeded();
   let saved = mouse_moved; // don't trigger mouseMoved()
   onMouseMove(event, true);
   mouse_moved = saved;
@@ -762,6 +786,7 @@ function onTouchChange(event) {
 }
 
 function onBlurOrFocus(evt) {
+  renderNeeded();
   protectUnload(false);
   releaseAllKeysDown(evt);
 }
@@ -1573,7 +1598,9 @@ export function drag(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag) {
+    if (!(button === ANY || button === touch_data.button) || touch_data.dispatched_drag ||
+      touch_id === param.not_touch_id
+    ) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
@@ -1606,6 +1633,7 @@ export function drag(param) {
         start_time: touch_data.start_time,
         is_down_edge,
         down_time: touch_data.down_time,
+        touch_id,
       };
     }
   }

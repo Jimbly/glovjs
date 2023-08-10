@@ -7,9 +7,14 @@ import { getAPIPath, setCurrentEnvironment } from 'glov/client/environments';
 
 const ack = require('glov/common/ack.js');
 const { ackInitReceiver } = ack;
+const verify = require('glov/common/verify.js');
 const assert = require('assert');
 const { errorReportSetDetails, session_uid } = require('./error_report.js');
-const { fetch, ERR_CONNECTION } = require('./fetch.js');
+const {
+  ERR_CONNECTION,
+  fetch,
+  fetchDelaySet,
+} = require('./fetch.js');
 const { min, random } = Math;
 const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
@@ -32,7 +37,7 @@ export const ERR_CLIENT_VERSION_OLD = 'ERR_CLIENT_VERSION_OLD';
 
 exports.CURRENT_VERSION = 0;
 
-export function WSClient(path) {
+export function WSClient(path, client_app) {
   this.id = null;
   this.my_ids = {}; // set of all IDs I've been during this session
   this.handlers = {};
@@ -42,11 +47,14 @@ export function WSClient(path) {
   this.disconnected = false;
   this.retry_scheduled = false;
   this.retry_count = 0;
+  this.retry_extra_delay = 0;
   this.disconnect_time = Date.now();
   this.last_receive_time = Date.now();
   this.idle_counter = 0;
   this.last_send_time = Date.now();
   this.connect_error = ERR_CONNECTING;
+  this.update_available = false;
+  this.client_app = client_app || 'app';
   ackInitReceiver(this);
 
   if (path) {
@@ -56,7 +64,7 @@ export function WSClient(path) {
   this.connect(false);
 
   this.onMsg('cack', this.onConnectAck.bind(this));
-  this.onMsg('build', this.onBuildTimestamp.bind(this));
+  this.onMsg('build', this.onBuildChange.bind(this));
   this.onMsg('error', this.onError.bind(this));
 }
 
@@ -108,6 +116,14 @@ function whenServerReady(cb) {
   doit();
 }
 
+WSClient.prototype.onBuildChange = function (obj) {
+  // (primarily) development-time dynamic build version change, reload if it's our app that changed
+  if (obj.app !== this.client_app) {
+    return;
+  }
+  this.onBuildTimestamp(obj.ver);
+};
+
 WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
   if (build_timestamp !== BUILD_TIMESTAMP) {
     if (this.on_build_timestamp_mismatch) {
@@ -144,6 +160,7 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
   }
   if (data.net_delay) {
     netDelaySet(data.net_delay[0], data.net_delay[1]);
+    fetchDelaySet(data.net_delay[0], data.net_delay[1]);
   }
   // Fire subscription_manager connect handler
   assert(client.handlers.connect);
@@ -153,12 +170,17 @@ WSClient.prototype.onConnectAck = function (data, resp_func) {
 };
 
 
-WSClient.prototype.pak = function (msg) {
-  return wscommon.wsPak(msg, null, this);
+WSClient.prototype.pak = function (msg, msg_debug_name) {
+  return wscommon.wsPak(msg, null, this, msg_debug_name);
 };
 
-WSClient.prototype.send = function (msg, data, resp_func) {
-  wscommon.sendMessage.call(this, msg, data, resp_func);
+WSClient.prototype.send = function (msg, data, msg_debug_name, resp_func) {
+  if (!verify(typeof msg_debug_name !== 'function')) {
+    // Old API
+    resp_func = msg_debug_name;
+    msg_debug_name = null;
+  }
+  wscommon.sendMessage.call(this, msg, data, msg_debug_name, resp_func);
 };
 
 WSClient.prototype.onError = function (e) {
@@ -221,7 +243,8 @@ WSClient.prototype.retryConnection = function () {
     assert(!client.socket);
     client.retry_scheduled = false;
     client.connect(true);
-  }, min(client.retry_count * client.retry_count * 100, 15000) * (0.75 + random() * 0.5));
+  }, min(client.retry_count * client.retry_count * 100, 15000) * (0.75 + random() * 0.5) + this.retry_extra_delay);
+  this.retry_extra_delay = 0;
 };
 
 WSClient.prototype.checkDisconnect = function () {
@@ -246,15 +269,15 @@ WSClient.prototype.connect = function (for_reconnect) {
     let response_data = jsonParseResponse(response);
     let status = response_data?.status;
     let redirect_environment = response_data?.redirect_environment;
-    let update_available = response_data?.update_available;
-    let should_reload = update_available && getAbilityReload();
+    this.update_available = response_data?.update_available;
+    let should_reload = this.update_available && getAbilityReload();
 
     assert(this.ready_check_in_progress);
     this.ready_check_in_progress = false;
     this.connect_error = ERR_CONNECTING;
 
     if (!err && !redirect_environment && !should_reload) {
-      if (update_available) {
+      if (this.update_available) {
         // TODO: Inform the user that a new version is available,
         // even though the current version is still supported
       }

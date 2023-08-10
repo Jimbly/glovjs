@@ -3,11 +3,13 @@ import type { Packet } from './packet';
 
 export type VoidFunc = () => void;
 
+export type TSMap<T> = Partial<Record<string, T>>;
+
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
  * @template T - The type of information held by the object, defaults to unknown.
  */
-export type DataObject = Partial<Record<string, unknown>>;
+export type DataObject = TSMap<unknown>;
 
 export function isDataObject(value: unknown): value is DataObject {
   return value ? typeof value === 'object' && !Array.isArray(value) : false;
@@ -145,6 +147,7 @@ export interface HandlerSource {
   channel_id: string;
   id: string;
   type: string;
+  direct?: true;
 }
 
 /**
@@ -157,6 +160,7 @@ export interface ClientHandlerSource extends HandlerSource {
   access?: true;
   direct?: true;
   sysadmin?: true;
+  csr?: true;
   elevated?: number;
 }
 export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
@@ -168,9 +172,10 @@ export interface ChatIDs extends ClientHandlerSource {
 }
 
 export type ClientIDs = {
+  client_id: string;
   user_id?: string;
   display_name?: string;
-  roles?: Partial<Record<string, true>>;
+  roles?: TSMap<1>;
 };
 
 export interface ClientChannelWorker {
@@ -179,12 +184,14 @@ export interface ClientChannelWorker {
   onSubscribe(cb: (data: unknown) => void): void;
   onceSubscribe(cb: ((data: DataObject) => void) | VoidFunc): void;
   numSubscriptions(): number;
+  isFullySubscribed(): boolean;
   unsubscribe(): void;
   getChannelData<T>(key: string, default_value: T): T;
   getChannelData(key: string): unknown;
   getChannelID(): string;
   setChannelData(key: string, value: unknown, skip_predict?: boolean, resp_func?: NetErrorCallback): void;
   pak(msg: string): Packet;
+  send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
   send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
   cmdParse(cmd: string, resp_func: CmdRespFunc): void;
   readonly data: {
@@ -193,7 +200,7 @@ export interface ClientChannelWorker {
 }
 
 export interface UserChannel extends ClientChannelWorker {
-  presence_data: Partial<Record<string, ServerPresenceData>>;
+  presence_data: TSMap<ServerPresenceData>;
 }
 
 // TODO: Delete this type and all usages of it.

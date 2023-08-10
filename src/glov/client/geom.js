@@ -471,6 +471,21 @@ GeomMultiQuads.prototype.draw = function () {
     this.geoms[ii].draw();
   }
 };
+GeomMultiQuads.prototype.drawSub = function (start, tri_count) {
+  for (let ii = 0; ii < this.geoms.length && tri_count; ++ii) {
+    let geom = this.geoms[ii];
+    let num_quads = geom.vert_count / 4;
+    if (start < num_quads * 6) {
+      let start_quad = start / 6;
+      let these = min(tri_count, (num_quads - start_quad) * 2);
+      geom.drawSub(start, these);
+      tri_count -= these;
+      start = 0;
+    } else {
+      start -= num_quads * 6;
+    }
+  }
+};
 GeomMultiQuads.prototype.dispose = function () {
   for (let ii = 0; ii < this.geoms.length; ++ii) {
     this.geoms[ii].dispose();

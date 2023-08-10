@@ -638,6 +638,13 @@ export class DefaultUserWorker extends ChannelWorker {
     return resp_func(null, this.getChannelData('public'));
   }
   handleLoginExternal(src, data, resp_func) {
+    if (this.channel_server.restarting) {
+      if (!this.getChannelData('public.permissions.sysadmin')) {
+        // Maybe black-hole like other messages instead?
+        return resp_func('ERR_RESTARTING');
+      }
+    }
+
     //Should the authentication step happen here instead?
 
     if (this.getChannelData('public.banned')) {
@@ -807,7 +814,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.exists()) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (!src.sysadmin) {
+    if (!src.sysadmin && !src.csr) {
       return void resp_func('ERR_ACCESS_DENIED');
     }
     // first, try running here on a (potentially offline) user

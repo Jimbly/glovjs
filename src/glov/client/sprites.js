@@ -38,7 +38,7 @@ const {
   shadersPrelink,
 } = require('./shaders.js');
 const { deprecate, nextHighestPowerOfTwo } = require('glov/common/util.js');
-const { vec2, vec4 } = require('glov/common/vmath.js');
+const { vec2, vec4, v4set } = require('glov/common/vmath.js');
 
 deprecate(exports, 'clip', 'spriteClip');
 deprecate(exports, 'clipped', 'spriteClipped');
@@ -444,6 +444,7 @@ export function queuesprite(
   sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
   pixel_perfect, blend,
 ) {
+  assert(!sprite.lazy_load); // Would be pretty easy to add support if needed
   color = color || sprite.color;
   qsp.sprite = sprite;
   qsp.x = x;
@@ -494,15 +495,23 @@ function clipCoordsDom(x, y, w, h) {
   return xywh;
 }
 
+let active_scissor = null;
+function scissorSet(scissor) {
+  if (!active_scissor) {
+    gl.enable(gl.SCISSOR_TEST);
+  }
+  gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+  active_scissor = scissor;
+}
+function scisssorClear() {
+  gl.disable(gl.SCISSOR_TEST);
+  active_scissor = null;
+}
+
 export function spriteClip(z_start, z_end, x, y, w, h) {
   let scissor = clipCoordsScissor(x, y, w, h);
-  spriteQueueFn(z_start - 0.01, () => {
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
-  });
-  spriteQueueFn(z_end - 0.01, () => {
-    gl.disable(gl.SCISSOR_TEST);
-  });
+  spriteQueueFn(z_start - 0.01, scissorSet.bind(null, scissor));
+  spriteQueueFn(z_end - 0.01, scisssorClear);
 }
 
 let clip_stack = [];
@@ -523,9 +532,7 @@ export function spriteClipPush(z, x, y, w, h) {
 
 export function spriteClipPop() {
   assert(spriteClipped());
-  spriteQueueFn(Z.TOOLTIP - 0.1, () => {
-    gl.disable(gl.SCISSOR_TEST);
-  });
+  spriteQueueFn(Z.TOOLTIP - 0.1, scisssorClear);
   let { z, scissor } = clip_stack.pop();
   let sprites = sprite_queue;
   spriteQueuePop(true);
@@ -536,14 +543,17 @@ export function spriteClipPop() {
     camera2d.setInputClipping(null);
   }
   spriteQueueFn(z, () => {
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+    let prev_scissor = active_scissor;
+    scissorSet(scissor);
     spriteQueuePush();
     sprite_queue = sprites;
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     spriteDraw();
     spriteQueuePop();
-    // done at Z.TOOLTIP: gl.disable(gl.SCISSOR_TEST);
+    // already done at Z.TOOLTIP within spriteDraw(): scisssorClear();
+    if (prev_scissor) {
+      scissorSet(prev_scissor);
+    }
   });
 }
 
@@ -745,6 +755,10 @@ function finishDraw() {
   blendModeReset();
 }
 
+export function spriteDrawReset() {
+  active_scissor = null;
+}
+
 export function spriteDraw() {
   profilerStart('sprites:draw');
   drawSetup();
@@ -838,16 +852,40 @@ export function buildRects(ws, hs, tex) {
   };
 }
 
+function flipRectHoriz(a) {
+  return vec4(a[0], a[3], a[2], a[1]);
+}
+
+export function spriteFlippedUVsApplyHFlip(spr) {
+  if (!spr.uidata.rects_orig) {
+    spr.uidata.rects_orig = spr.uidata.rects;
+  }
+  if (!spr.uidata.rects_flipped) {
+    spr.uidata.rects_flipped = spr.uidata.rects.map(flipRectHoriz);
+  }
+  spr.uidata.rects = spr.uidata.rects_flipped;
+}
+
+export function spriteFlippedUVsRestore(spr) {
+  if (spr.uidata.rects_orig) {
+    spr.uidata.rects = spr.uidata.rects_orig;
+  }
+}
+
 function Sprite(params) {
+  this.lazy_load = null;
+
   if (params.texs) {
     this.texs = params.texs;
   } else {
     let ext = params.ext || '.png';
     this.texs = [];
     if (params.tex) {
+      assert(!params.lazy_load);
       this.texs.push(params.tex);
     } else if (params.layers) {
       assert(params.name);
+      assert(!params.lazy_load); // Not currently supported for multi-layer sprites
       this.texs = [];
       for (let ii = 0; ii < params.layers; ++ii) {
         this.texs.push(textureLoad({
@@ -858,17 +896,25 @@ function Sprite(params) {
           wrap_t: params.wrap_t,
         }));
       }
-    } else if (params.name) {
-      this.texs.push(textureLoad({
-        url: `img/${params.name}${ext}#${textureFilterKey(params)}`,
-        filter_min: params.filter_min,
-        filter_mag: params.filter_mag,
-        wrap_s: params.wrap_s,
-        wrap_t: params.wrap_t,
-      }));
     } else {
-      assert(params.url);
-      this.texs.push(textureLoad(params));
+      let tex_param;
+      if (params.name) {
+        tex_param = {
+          url: `img/${params.name}${ext}#${textureFilterKey(params)}`,
+          filter_min: params.filter_min,
+          filter_mag: params.filter_mag,
+          wrap_s: params.wrap_s,
+          wrap_t: params.wrap_t,
+        };
+      } else {
+        assert(params.url);
+        tex_param = params;
+      }
+      if (params.lazy_load) {
+        this.lazy_load = tex_param;
+      } else {
+        this.texs.push(textureLoad(tex_param));
+      }
     }
   }
 
@@ -876,22 +922,68 @@ function Sprite(params) {
   this.size = params.size || vec2(1, 1);
   this.color = params.color || vec4(1,1,1,1);
   this.uvs = params.uvs || vec4(0, 0, 1, 1);
-  if (!params.uvs) {
-    // Fix up non-power-of-two textures
-    this.texs[0].onLoad((tex) => {
-      this.uvs[2] = tex.src_width / tex.width;
-      this.uvs[3] = tex.src_height / tex.height;
-    });
-  }
-
   if (params.ws) {
     this.uidata = buildRects(params.ws, params.hs);
-    this.texs[0].onLoad((tex) => {
-      this.uidata = buildRects(params.ws, params.hs, tex);
-    });
   }
   this.shader = params.shader || null;
+
+  let tex_on_load = (tex) => {
+    if (!params.uvs) {
+      // Fix up non-power-of-two textures
+      this.uvs[2] = tex.src_width / tex.width;
+      this.uvs[3] = tex.src_height / tex.height;
+    }
+    if (params.ws) {
+      this.uidata = buildRects(params.ws, params.hs, tex);
+    }
+  };
+  if (this.texs.length) {
+    this.texs[0].onLoad(tex_on_load);
+  } else {
+    this.tex_on_load = tex_on_load;
+  }
 }
+
+Sprite.prototype.lazyLoadInit = function () {
+  let tex = textureLoad({
+    ...this.lazy_load,
+    auto_unload: () => {
+      this.texs = [];
+    },
+  });
+  this.texs.push(tex);
+  this.loaded_at = 0;
+  if (tex.loaded) {
+    // already completely loaded
+    this.tex_on_load(tex);
+  } else {
+    tex.onLoad(() => {
+      this.loaded_at = engine.frame_timestamp;
+      this.tex_on_load(tex);
+    });
+  }
+};
+
+Sprite.prototype.lazyLoad = function () {
+  if (!this.texs.length) {
+    this.lazyLoadInit();
+  }
+  if (!this.texs[0].loaded) {
+    return 0;
+  }
+  if (!this.loaded_at) {
+    return 1;
+  }
+  let dt = engine.frame_timestamp - this.loaded_at;
+  let alpha = dt / 250;
+  if (alpha >= 1) {
+    this.loaded_at = 0;
+    return 1;
+  }
+  return alpha;
+};
+
+let temp_color = vec4();
 
 // params:
 //   required: x, y
@@ -900,10 +992,19 @@ Sprite.prototype.draw = function (params) {
   if (params.w === 0 || params.h === 0) {
     return null;
   }
+  let color = params.color || this.color;
+  if (this.lazy_load) {
+    let alpha = this.lazyLoad();
+    if (!alpha) {
+      return null;
+    }
+    if (alpha !== 1) {
+      color = v4set(temp_color, color[0], color[1], color[2], color[3] * alpha);
+    }
+  }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
   let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
-  let color = params.color || this.color;
   qsp.sprite = this;
   qsp.x = params.x;
   qsp.y = params.y;
@@ -932,9 +1033,29 @@ Sprite.prototype.drawDualTint = function (params) {
   return this.draw(params);
 };
 
+let temp_color_ul = vec4();
+let temp_color_ll = vec4();
+let temp_color_ur = vec4();
+let temp_color_lr = vec4();
 Sprite.prototype.draw4Color = function (params) {
   if (params.w === 0 || params.h === 0) {
     return null;
+  }
+  qsp.color_ul = params.color_ul;
+  qsp.color_ll = params.color_ll;
+  qsp.color_lr = params.color_lr;
+  qsp.color_ur = params.color_ur;
+  if (this.lazy_load) {
+    let alpha = this.lazyLoad();
+    if (!alpha) {
+      return null;
+    }
+    if (alpha !== 1) {
+      qsp.color_ul = v4set(temp_color_ul, qsp.color_ul[0], qsp.color_ul[1], qsp.color_ul[2], qsp.color_ul[3] * alpha);
+      qsp.color_ll = v4set(temp_color_ll, qsp.color_ll[0], qsp.color_ll[1], qsp.color_ll[2], qsp.color_ll[3] * alpha);
+      qsp.color_ur = v4set(temp_color_ur, qsp.color_ur[0], qsp.color_ur[1], qsp.color_ur[2], qsp.color_ur[3] * alpha);
+      qsp.color_lr = v4set(temp_color_lr, qsp.color_lr[0], qsp.color_lr[1], qsp.color_lr[2], qsp.color_lr[3] * alpha);
+    }
   }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
@@ -947,10 +1068,6 @@ Sprite.prototype.draw4Color = function (params) {
   qsp.h = h;
   qsp.rot = params.rot;
   qsp.uvs = uvs;
-  qsp.color_ul = params.color_ul;
-  qsp.color_ll = params.color_ll;
-  qsp.color_lr = params.color_lr;
-  qsp.color_ur = params.color_ur;
   qsp.shader = params.shader || this.shader;
   qsp.shader_params = params.shader_params;
   qsp.nozoom = params.nozoom;

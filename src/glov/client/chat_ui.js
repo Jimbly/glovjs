@@ -10,6 +10,7 @@ import { getAbilityChat } from './client_config';
 import { cmd_parse } from './cmds';
 import * as engine from './engine';
 import * as glov_font from './font';
+import { ALIGN } from './font';
 import * as input from './input';
 import { link } from './link';
 import * as local_storage from './local_storage';
@@ -152,7 +153,7 @@ function defaultGetRoles() {
     let user_channel = netSubs().getMyUserChannel();
     user_public_data = user_channel.data && user_channel.data.public;
     if (user_public_data?.permissions?.sysadmin) {
-      return { sysadmin: 1 };
+      return { sysadmin: 1, csr: 1 };
     }
   }
   return {};
@@ -544,7 +545,7 @@ function drawHelpTooltip(param) {
   if (num_pages > 1) {
     y -= h;
     ui.font.drawSizedAligned(help_font_style,
-      text_x, y, z+1, h, glov_font.ALIGN.HCENTER,
+      text_x, y, z+1, h, ALIGN.HCENTER,
       text_w, 0,
       `Page ${tooltip_page + 1} / ${num_pages}`);
     let pos = { x, y, w, h };
@@ -556,7 +557,11 @@ function drawHelpTooltip(param) {
   }
   for (let ii = tooltip.length - 1; ii >= 0; --ii) {
     let line = tooltip[ii];
-    y -= h;
+    if (param.wrap) {
+      y -= h * ui.font.numLines(style, text_w, 0, h, line);
+    } else {
+      y -= h;
+    }
     let idx = line.indexOf(' ');
     if (line[0] === '/' && idx !== -1 && param.do_selection) {
       // is a command
@@ -565,7 +570,7 @@ function drawHelpTooltip(param) {
       let cmd_w = ui.font.drawSized(help_font_style_cmd,
         text_x, y, z+1, h, cmd);
       ui.font.drawSizedAligned(help_font_style,
-        text_x + cmd_w, y, z+2, h, glov_font.ALIGN.HFIT,
+        text_x + cmd_w, y, z+2, h, ALIGN.HFIT,
         text_w - cmd_w, 0,
         help);
       let pos = { x, y, w, h };
@@ -577,7 +582,7 @@ function drawHelpTooltip(param) {
       }
     } else {
       ui.font.drawSizedAligned(style,
-        text_x, y, z+1, h, glov_font.ALIGN.HFIT,
+        text_x, y, z+1, h, param.wrap ? ALIGN.HWRAP : ALIGN.HFIT,
         text_w, 0,
         line);
     }
@@ -661,7 +666,7 @@ ChatUI.prototype.run = function (opts) {
       this.disconnected_message_top ? engine.game_height * 0.80 : camera2d.y0(),
       Z.DEBUG,
       ui.font_height,
-      this.disconnected_message_top ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HVCENTER,
+      this.disconnected_message_top ? ALIGN.HCENTER : ALIGN.HVCENTER,
       camera2d.w(), camera2d.h() * 0.20,
       `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
   }
@@ -713,7 +718,7 @@ ChatUI.prototype.run = function (opts) {
     y -= border + font_height + 1;
     if (!was_focused && opts.pointerlock && input.pointerLocked()) {
       // do not show edit box
-      ui.font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, glov_font.ALIGN.HFIT, inner_w, 0,
+      ui.font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, ALIGN.HFIT, inner_w, 0,
         '<Press Enter to chat>');
     } else {
       if (was_focused) {
@@ -731,6 +736,7 @@ ChatUI.prototype.run = function (opts) {
             if (autocomplete && autocomplete.length) {
               let first = autocomplete[0];
               let auto_text = [];
+              let wrap = false;
               for (let ii = 0; ii < autocomplete.length; ++ii) {
                 let elem = autocomplete[ii];
                 auto_text.push(`/${elem.cmd} - ${elem.help}`);
@@ -746,6 +752,7 @@ ChatUI.prototype.run = function (opts) {
                 } else {
                   auto_text = [first.help];
                 }
+                wrap = true;
               } else {
                 do_selection = true;
               }
@@ -766,6 +773,7 @@ ChatUI.prototype.run = function (opts) {
                 tooltip: auto_text,
                 do_selection,
                 font_height: min(font_height, camera2d.w() / 30),
+                wrap,
               });
               if (do_selection) {
                 // auto-completes to something different than we have typed
@@ -1247,6 +1255,9 @@ export function chatUICreate(params) {
     usage: '  /csr_all command\n' +
       'Example: /csr_all me bows down',
     func: function (str, resp_func) {
+      if (!(chat_ui.channel && chat_ui.channel.numSubscriptions())) {
+        return void resp_func('Must be in a channel');
+      }
       let clients = chat_ui.channel.getChannelData('public.clients', {});
       let count = 0;
       for (let client_id in clients) {
@@ -1266,9 +1277,10 @@ export function chatUICreate(params) {
   });
   cmd_parse.register({
     cmd: 'csr',
-    access_run: ['sysadmin'],
-    help: '(Admin) Run a command as another user',
-    usage: '$HELP\n  /csr UserID command\n' +
+    access_run: ['csr'],
+    help: '(CSR) Run a command as another user',
+    prefix_usage_with_help: true,
+    usage: '  /csr UserID command\n' +
       'Example: /csr jimbly gems -100',
     func: function (str, resp_func) {
       let idx = str.indexOf(' ');
@@ -1277,11 +1289,13 @@ export function chatUICreate(params) {
       }
       let user_id = str.slice(0, idx);
       let desired_client_id = '';
-      let clients = chat_ui.channel.getChannelData('public.clients', {});
-      for (let client_id in clients) {
-        let ids = clients[client_id].ids;
-        if (ids?.user_id === user_id) {
-          desired_client_id = client_id;
+      if (chat_ui.channel && chat_ui.channel.numSubscriptions()) {
+        let clients = chat_ui.channel.getChannelData('public.clients', {});
+        for (let client_id in clients) {
+          let ids = clients[client_id].ids;
+          if (ids?.user_id === user_id) {
+            desired_client_id = client_id;
+          }
         }
       }
 

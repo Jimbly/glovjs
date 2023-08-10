@@ -119,6 +119,12 @@ let filtered_errors = new RegExp([
   'ammerhead-browser',
   'hammerhead',
   'isFeatureBroken',
+  'PureRead',
+  'uv\\.handler\\.js',
+  'dashawn\\.cf',
+  'clearTransInfo', // WeChat
+  'firefoxSample',
+  'gourmetads',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
@@ -154,6 +160,13 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
     `&msg=${escape(msg)}${errorReportDetailsString()}`;
   if (submit_errors) {
     fetch({ method: 'POST', url }, () => { /* nop */ });
+
+    if (window.gtag) {
+      window.gtag('event', 'exception', {
+        description: msg,
+        fatal: is_fatal,
+      });
+    }
   }
   if (ignore_promises && msg.match(/Uncaught \(in promise\)/)) {
     return false;

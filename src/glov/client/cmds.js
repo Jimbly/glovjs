@@ -8,6 +8,7 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 
 const engine = require('./engine.js');
 const { errorReportDetailsString } = require('./error_report.js');
+const { fetchDelaySet } = require('./fetch.js');
 const net = require('./net.js');
 const { netClient, netDisconnected } = net;
 const { SEMANTIC } = require('./shaders.js');
@@ -172,6 +173,7 @@ cmd_parse.register({
     if (str) {
       let params = str.split(' ');
       netDelaySet(Number(params[0]), Number(params[1]) || 0);
+      fetchDelaySet(Number(params[0]), Number(params[1]) || 0);
     }
     let cur = netDelayGet();
     resp_func(null, `Client NetDelay: ${cur[0]}+${cur[1]}`);
@@ -190,6 +192,8 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'disconnect',
   help: 'Forcibly disconnect WebSocket connection (Note: will auto-reconnect)',
+  prefix_usage_with_help: true,
+  usage: '/disconnect [disconnnect_duration [disconnect_delay]]',
   func: function (str, resp_func) {
     let socket = netClient()?.socket;
     if (!socket) {
@@ -198,7 +202,15 @@ cmd_parse.register({
     if (netDisconnected()) {
       return void resp_func('Not connected');
     }
-    socket.close();
+    let params = str.split(' ').map(Number);
+    let disconnect_duration = isFinite(params[0]) ? params[0] : 0;
+    let disconnect_delay = isFinite(params[1]) ? params[1] : 0;
+    netClient().retry_extra_delay = disconnect_duration;
+    if (disconnect_delay) {
+      setTimeout(socket.close.bind(socket), disconnect_delay);
+    } else {
+      socket.close();
+    }
     resp_func();
   },
 });

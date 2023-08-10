@@ -14,6 +14,7 @@ import {
   dataErrorQueueGet,
 } from 'glov/common/data_error';
 import { packetEnableDebug } from 'glov/common/packet';
+import { callEach } from 'glov/common/util';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
 const argv = minimist(process.argv.slice(2));
@@ -38,6 +39,10 @@ const { netDelaySet } = wscommon;
 const STATUS_TIME = 5000;
 export let ws_server;
 export let channel_server;
+
+export function getChannelServer() {
+  return channel_server;
+}
 
 let last_status = '';
 function displayStatus() {
@@ -72,24 +77,26 @@ function updateBuildTimestamp(base_name, is_startup) {
     }
     console.info(`Build timestamp for "${base_name}"${old_timestamp ? ' changed to' : ''}: ${obj.ver}`);
     last_build_timestamp[base_name] = obj.ver;
+    ws_server.setAppBuildTimestamp(base_name, obj.ver);
     if (base_name === 'app') {
       errorReportsSetAppBuildTimestamp(obj.ver);
-      ws_server.setAppBuildTimestamp(obj.ver);
-      if (!is_startup) {
+    }
+    if (!is_startup) {
+      if (base_name === 'app') {
         // Do a broadcast message so people get a few seconds of warning
         ws_server.broadcast('chat_broadcast', {
           src: 'system',
           msg: 'New client version deployed, reloading momentarily...'
         });
-        if (argv.dev) {
-          // immediate
-          ws_server.broadcast('build', last_build_timestamp.app);
-        } else {
-          // delay by 15 seconds, the server may also be about to be restarted
-          setTimeout(function () {
-            ws_server.broadcast('build', last_build_timestamp.app);
-          }, 15000);
-        }
+      }
+      if (argv.dev) {
+        // immediate
+        ws_server.broadcast('build', { app: base_name, ver: last_build_timestamp.app });
+      } else {
+        // delay by 15 seconds, the server may also be about to be restarted
+        setTimeout(function () {
+          ws_server.broadcast('build', { app: base_name, ver: last_build_timestamp.app });
+        }, 15000);
       }
     }
   });
@@ -240,6 +247,11 @@ export function startup(params) {
   updateBuildTimestamp('app', true);
 }
 
+let on_panic = [];
+export function onpanic(cb) {
+  on_panic.push(cb);
+}
+
 export function panic(...message) {
   if (message && message.length === 1 && message[0] instanceof Error) {
     console.error(message[0]);
@@ -248,6 +260,7 @@ export function panic(...message) {
     console.error(new Error(message)); // So Stackdriver error reporting catches it
   }
   console.error('Process exiting due to panic');
+  callEach(on_panic);
   process.stderr.write(String(message), () => {
     console.error('Process exiting due to panic (2)'); // May not be seen due to buffering, but useful if it is seen
     process.exit(1);

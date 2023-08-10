@@ -87,12 +87,12 @@ export function endWork() {
   }
 }
 
-onmessage = function (evt) {
+self.onmessage = function (evt) {
   // start work, end yield/idle
   startWork();
   evt = evt.data;
   if (evt instanceof Object && evt.id) {
-    assert(handlers[evt.id]);
+    assert(handlers[evt.id], evt.id);
     try {
       handlers[evt.id](evt.data);
     } catch (e) {
