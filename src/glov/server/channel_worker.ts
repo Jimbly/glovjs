@@ -164,10 +164,11 @@ export type ChannelData<PrivType=DataObject, PubType=DataObject> = {
   public: PubType;
 };
 
+export type ChannelDataClients = TSMap<{
+  ids: ClientIDs;
+} & DataObject>;
 export type ChannelDataWithClients = ChannelData<DataObject, {
-  clients: TSMap<{
-    ids: ClientIDs;
-  } & DataObject>;
+  clients: ChannelDataClients;
 }>;
 
 type ChannelCoreIDs = {
@@ -230,7 +231,7 @@ type BulkCacheElem = {
   value?: Buffer | DataObject;
 };
 
-export type OnFlushCB = (err?: Error) => void;
+export type OnFlushCB = VoidFunc;
 
 export type HandlerFunction<P=never, R=never> = (
   source: HandlerSource,
@@ -1078,7 +1079,7 @@ export class ChannelWorker {
         if (on_flush && !err) {
           // We should absolutely never get an error here, but if we do, these
           //   on_flush callbacks will never be called.
-          callEach(on_flush, null, err);
+          callEach(on_flush);
         }
       });
     }
