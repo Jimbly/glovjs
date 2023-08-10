@@ -510,7 +510,7 @@ class ServerEntityManagerImpl<
     return this.entities[client.ent_id];
   }
 
-  visibleAreaReset(vaid: VAID, resp_func: NetResponseCallback<string>): void {
+  visibleAreaReset(vaid: VAID, resp_func: NetErrorCallback<string>): void {
     let old_va_check = this.visible_areas[vaid];
     if (!old_va_check) {
       return void resp_func('VisibleArea not loaded');
