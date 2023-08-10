@@ -166,7 +166,7 @@ export type DirtyFields = Partial<Record<string, true>>;
 export class EntityBaseServer extends EntityBaseCommon {
   declare entity_manager: ServerEntityManagerInterface;
 
-  declare is_player: boolean;
+  declare is_player: boolean; // on prototype
   in_dirty_list: boolean;
   dirty_fields: DirtyFields;
   dirty_sub_fields: Partial<Record<string, DirtyFields>>;
@@ -435,7 +435,6 @@ export class EntityBaseServer extends EntityBaseCommon {
     }
   }
 }
-
 EntityBaseServer.prototype.is_player = false;
 
 // Optional app-specific override
