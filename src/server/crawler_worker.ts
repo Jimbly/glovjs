@@ -51,7 +51,6 @@ import type {
   ClientHandlerSource,
   CmdRespFunc,
   DataObject,
-  ErrorCallback,
   NetErrorCallback,
   NetResponseCallback,
 } from 'glov/common/types';
@@ -145,7 +144,7 @@ export class CrawlerWorker<
   }
 
   levelProviderDataStore(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
-    this.getBulkChannelData(`level${floor_id}`, null, (err?: string, data?: DataObject) => {
+    this.getBulkChannelData(`level${floor_id}`, null, (err?: string | null, data?: DataObject) => {
       if (!err && data && data.ver && data.ver === LEVEL_VERSION) {
         return cb(data.level as CrawlerLevelSerialized);
       }
@@ -313,7 +312,7 @@ CrawlerWorker.registerClientHandler('build', function (
 CrawlerWorker.registerCmds([{
   cmd: 'floor_reset_worker',
   access_show: ['hidden'],
-  func: function (this: DummyWorker, data: string, resp_func: ErrorCallback<string>): void {
+  func: function (this: DummyWorker, data: string, resp_func: CmdRespFunc): void {
     let ent = this.cmdFindEnt();
     if (!ent) {
       return void resp_func('Could not find relevant entity');

@@ -18,7 +18,11 @@ import {
 import { netSubs } from 'glov/client/net';
 import { spineCreate } from 'glov/client/spine';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
-import { spriteCreate } from 'glov/client/sprites';
+import {
+  SpriteParamBase,
+  TextureOptions,
+  spriteCreate,
+} from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
 import { webFSAPI } from 'glov/client/webfs';
 import { dataError } from 'glov/common/data_error';
@@ -50,6 +54,7 @@ import {
   DrawableSpriteState,
   EntityDrawableSpine,
   EntityDrawableSprite,
+  TextureOptionsAsStrings,
   drawableDraw,
   drawableSpineDraw2D,
   drawableSpineDrawSub,
@@ -246,6 +251,15 @@ function lookupGLDefine(id: string | number | undefined): number | undefined {
   return ret;
 }
 
+function lookupGLDefines(
+  sprite_data: (TextureOptions | TextureOptionsAsStrings) & SpriteParamBase & { name: string }
+): asserts sprite_data is TextureOptions & SpriteParamBase & { name: string } {
+  sprite_data.filter_min = lookupGLDefine(sprite_data.filter_min);
+  sprite_data.filter_mag = lookupGLDefine(sprite_data.filter_mag);
+  sprite_data.wrap_s = lookupGLDefine(sprite_data.wrap_s);
+  sprite_data.wrap_t = lookupGLDefine(sprite_data.wrap_t);
+}
+
 function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void {
   crawlerEntityTraitsCommonStartup(ent_factory);
   ent_factory.registerTrait<DrawableOpts>('drawable', {
@@ -301,10 +315,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
       sprite: null!,
     },
     init_prototype: function (opts: DrawableSpriteOpts) {
-      opts.sprite_data.filter_min = lookupGLDefine(opts.sprite_data.filter_min);
-      opts.sprite_data.filter_mag = lookupGLDefine(opts.sprite_data.filter_mag);
-      opts.sprite_data.wrap_s = lookupGLDefine(opts.sprite_data.wrap_s);
-      opts.sprite_data.wrap_t = lookupGLDefine(opts.sprite_data.wrap_t);
+      lookupGLDefines(opts.sprite_data);
       opts.sprite = spriteCreate(opts.sprite_data);
       if (opts.sprite_data.filter_min !== gl.NEAREST) {
         opts.sprite_near = spriteCreate({
