@@ -442,6 +442,7 @@ export class ChannelServer {
     //   for exchange-dependent operations (such as timeouts waiting for a response)
     //   that increases directly proportionally to communication latency.
     this.exchange_pings = 0;
+    this.last_tick_timestamp = Date.now();
   }
 
   // The master requested that we create a worker
@@ -780,7 +781,6 @@ export class ChannelServer {
 
     this.tick_func = this.doTick.bind(this);
     this.tick_time = 250;
-    this.last_tick_timestamp = Date.now();
     this.last_server_time_send = 0;
     this.server_time_send_interval = 5000;
     this.load_report_time = 1; // report immediately

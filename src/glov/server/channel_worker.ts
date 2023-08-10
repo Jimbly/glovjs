@@ -1343,6 +1343,7 @@ export class ChannelWorker {
     return cache;
   }
 
+  getBulkChannelData<T>(obj_name: string, default_value: T, cb: NetErrorCallback<T>): void;
   getBulkChannelData(obj_name: string, default_value: unknown, cb: NetErrorCallback<DataObject>): void {
     let cache = this.getBulkCache(obj_name);
     if (cache.writing) {
