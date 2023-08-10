@@ -17,7 +17,7 @@ import { JSVec3 } from '../common/crawler_state';
 import type { EntityCrawlerDataCommon } from '../common/crawler_entity_common';
 
 type VisData = Partial<Record<number, string>>;
-type EntityCrawlerDataServer = EntityCrawlerDataCommon & {
+export type EntityCrawlerDataServer = EntityCrawlerDataCommon & {
   seq_player_move: string;
   vis_data?: VisData;
 };

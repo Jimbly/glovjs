@@ -144,7 +144,7 @@ export class CrawlerWorker<
   }
 
   levelProviderDataStore(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
-    this.getBulkChannelData(`level${floor_id}`, null, (err?: string | null, data?: DataObject) => {
+    this.getBulkChannelData(`level${floor_id}`, null, (err?: string | null, data?: DataObject | null) => {
       if (!err && data && data.ver && data.ver === LEVEL_VERSION) {
         return cb(data.level as CrawlerLevelSerialized);
       }

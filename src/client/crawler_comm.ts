@@ -72,7 +72,7 @@ export function crawlerCommWant(): boolean {
   return netSubs() && Boolean(!netClient().connected && effectiveDesiredChannel());
 }
 
-type JoinData = {
+export type JoinData = {
   room: ClientChannelWorker;
   channel_subid: string;
   pos?: JSVec3; // only set if joining for hybrid/offline build
