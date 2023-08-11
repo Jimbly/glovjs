@@ -1106,7 +1106,7 @@ export class ChannelServer {
       }
 
       // Built-in and default filters
-      if (ctor.prototype.maintain_client_list) {
+      if (ctor.prototype.maintain_client_list || ctor.prototype.workerOnChannelData) {
         addUnique(filters, 'channel_data', ChannelWorker.prototype.onChannelData);
         addUnique(filters, 'apply_channel_data', ChannelWorker.prototype.onApplyChannelData);
       }

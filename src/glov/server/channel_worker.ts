@@ -339,6 +339,7 @@ export class ChannelWorker {
   handleClientChanged?(src: ClientHandlerSource): void;
   workerOnChannelData?(src: HandlerSource, key: string, value: unknown): void;
   onUnhandledMessage?(src: HandlerSource, msg: string, data: unknown, resp_func: HandlerCallback): void;
+  tick?(dt: number, server_time: number): void;
 
   // on-prototype functions
   declare logPacketDispatch: (source: string, pak: Packet, buf_offs: number, msg: string) => void;
