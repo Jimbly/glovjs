@@ -14,6 +14,8 @@ import type { Packet } from 'glov/common/packet';
 import type { DataObject, HandlerCallback, HandlerSource, TSMap } from 'glov/common/types';
 import type { ChannelServer } from 'glov/server/channel_server'; // eslint-disable-line no-duplicate-imports
 
+const { floor, min } = Math;
+
 const argv = require('minimist')(process.argv.slice(2));
 
 quietMessagesSet(['loadtest_report', 'set_channel_data']);
@@ -33,7 +35,7 @@ glov_server.startup({
 });
 
 type LoadTestOpts = {
-  max_rate: number;
+  max_rate: number; // Per second
   parallel: number;
 };
 type LoadTestConf = {
@@ -58,7 +60,7 @@ class LoadTestMasterWorker extends ChannelWorker {
     this.data.public.on = true;
     this.data.public.opts = {
       max_rate: 0,
-      parallel: 1,
+      parallel: 100,
     };
   }
 
@@ -130,7 +132,7 @@ LoadTestMasterWorker.registerServerHandler('loadtest_opts', function (
   let new_opts = pak.readJSON() as DataObject;
   let opts = this.data.public.opts as DataObject;
   for (let key in new_opts) {
-    opts[key] = new_opts[key];
+    opts[key] = Number(new_opts[key]);
   }
   this.setChannelData('public.opts', opts);
   resp_func();
@@ -221,6 +223,7 @@ function loadTestReport(): void {
 setTimeout(loadTestReport, LOAD_TEST_REPORT_TIME);
 
 
+let sends_available = 0;
 type TargetStatus = {
   valid: boolean;
   in_flight: number;
@@ -228,16 +231,16 @@ type TargetStatus = {
 };
 function sendPing(status: TargetStatus, channel_id: string): void {
   ++status.in_flight;
+  --sends_available;
   test_worker.setChannelDataOnOther(channel_id, 'private.dummy', Math.random(), function () {
     --status.in_flight;
     ++local_stats.sent;
-    if (status.valid && !status.send_scheduled && status.in_flight < loadtest_conf!.opts.parallel) {
+    if (status.valid && !status.send_scheduled && status.in_flight < loadtest_conf!.opts.parallel &&
+      sends_available && loadtest_conf && loadtest_conf!.on
+    ) {
       status.send_scheduled = true;
-      // TODO: for some reason, on the local exchange, process.nextTick causes
-      //   setTimeouts to _never_ fire (always have something scheduled, I guess).
-      //process.nextTick(sendPingsToTarget.bind(null, status, channel_id));
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      setTimeout(sendPingsToTarget.bind(null, status, channel_id),1);
+      setImmediate(sendPingsToTarget.bind(null, status, channel_id));
     }
   });
 }
@@ -246,6 +249,7 @@ function sendPingsToTarget(status: TargetStatus, channel_id: string): void {
     return;
   }
   let to_send = loadtest_conf!.opts.parallel - status.in_flight;
+  to_send = min(to_send, sends_available);
   for (let ii = 0; ii < to_send; ++ii) {
     sendPing(status, channel_id);
   }
@@ -253,8 +257,23 @@ function sendPingsToTarget(status: TargetStatus, channel_id: string): void {
 }
 let target_status: TSMap<TargetStatus> = {};
 let LOAD_TEST_TICK_TIME = 100;
+let last_tick_time = Date.now();
+let sends_remainder = 0;
 function loadTestTick(): void {
+  let now = Date.now();
+  let dt = now - last_tick_time;
+  last_tick_time = now;
   if (loadtest_conf && loadtest_conf.on) {
+    // Update rate limit
+    if (loadtest_conf.opts.max_rate) {
+      let delta = dt / 1000 * loadtest_conf.opts.max_rate + sends_remainder;
+      let delta_int = floor(delta);
+      sends_available += delta_int;
+      sends_remainder = delta - delta_int;
+      sends_available = min(sends_available, loadtest_conf.opts.max_rate);
+    } else {
+      sends_available = Infinity;
+    }
     // do it
     let seen: TSMap<true> = {};
     for (let ii = 0; ii < loadtest_targets.length; ++ii) {
