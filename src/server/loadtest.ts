@@ -15,6 +15,7 @@ import type { Express, NextFunction, Request, Response } from 'express'; // esli
 import type { Packet } from 'glov/common/packet';
 import type { DataObject, HandlerCallback, HandlerSource, TSMap } from 'glov/common/types';
 import type { ChannelServer } from 'glov/server/channel_server'; // eslint-disable-line no-duplicate-imports
+import type { Mexchange } from 'glov/server/exchange';
 
 const { floor, min, random } = Math;
 
@@ -31,20 +32,10 @@ type LoadTestStats = {
   sent: number;
 };
 
-// TypeScript TODO: move when exchange.js and related are converted
-export type MessageExchangeHandler = (pak: Packet) => void;
-export type MessageExchange = {
-  register: (id: string, cb: MessageExchangeHandler, register_cb: (err: string | null) => void) => void;
-  replaceMessageHandler: (id: string, old_cb: MessageExchangeHandler, cb: MessageExchangeHandler) => void;
-  subscribe: (id: string, cb: MessageExchangeHandler, register_cb: (err: string | null) => void) => void;
-  unregister: (id: string, cb: MessageExchangeHandler) => void;
-  publish: (dest: string, pak: Packet, cb: (err: string | null) => void) => void;
-};
-
 export type GlovServerStartupOptions = {
   app: Express;
   server: http.Server;
-  exchange?: MessageExchange;
+  exchange?: Mexchange;
 };
 
 let startup_options = {

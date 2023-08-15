@@ -47,6 +47,8 @@ export interface Packet {
   ref(): void;
   seek(offs: number): void;
   totalSize(): number;
+
+  no_local_bypass?: true; // Internal-ish: poked by channel_server.js
 }
 
 export function packetCreate(flags?: PacketFlags, init_size?: number): Packet;

@@ -1,11 +1,25 @@
-// Portions Copyright 2021 Jimb Esser (https://github.com/Jimbly/)
+// Portions Copyright 2023 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-const assert = require('assert');
-const { isPacket, packetFromBuffer } = require('glov/common/packet.js');
+import assert from 'assert';
+import {
+  Packet,
+  isPacket,
+  packetFromBuffer,
+} from 'glov/common/packet';
 
-class ExchangeLocalBypass {
-  constructor(actual_exchange) {
+import type {
+  Mexchange,
+  MexchangeCompletionCB,
+  MexchangeHandler,
+} from './exchange';
+import type { TSMap } from 'glov/common/types';
+
+class ExchangeLocalBypass implements Mexchange {
+  queues: TSMap<MexchangeHandler> = {};
+  actual_exchange: Mexchange;
+
+  constructor(actual_exchange: Mexchange) {
     this.queues = {};
     this.actual_exchange = actual_exchange;
   }
@@ -13,7 +27,7 @@ class ExchangeLocalBypass {
   // register as an authoritative single handler
   // cb(message)
   // register_cb(err) if already exists
-  register(id, cb, register_cb) {
+  register(id: string, cb: MexchangeHandler, register_cb: MexchangeCompletionCB): void {
     assert(id);
     assert(cb);
     if (this.queues[id]) {
@@ -25,7 +39,7 @@ class ExchangeLocalBypass {
     this.actual_exchange.register(id, cb, register_cb);
   }
 
-  replaceMessageHandler(id, old_cb, cb) {
+  replaceMessageHandler(id: string, old_cb: MexchangeHandler, cb: MexchangeHandler): void {
     assert(id);
     assert(cb);
     assert(this.queues[id]);
@@ -36,11 +50,11 @@ class ExchangeLocalBypass {
 
   // subscribe to a broadcast-to-all channel
   // can *not* do a local bypass, the broadcasts must go to the actual exchange
-  subscribe(id, cb, register_cb) {
+  subscribe(id: string, cb: MexchangeHandler, register_cb: MexchangeCompletionCB): void {
     this.actual_exchange.subscribe(id, cb, register_cb);
   }
 
-  unregister(id, cb) {
+  unregister(id: string, cb: MexchangeCompletionCB): void {
     assert(this.queues[id]);
     delete this.queues[id];
     this.actual_exchange.unregister(id, cb);
@@ -48,7 +62,7 @@ class ExchangeLocalBypass {
 
   // pak and it's buffers are valid until cb() is called
   // cb(err)
-  publish(dest, pak, cb) {
+  publish(dest: string, pak: Packet, cb: MexchangeCompletionCB): void {
     assert(isPacket(pak));
 
     if (!this.queues[dest] || pak.no_local_bypass) {
@@ -60,18 +74,19 @@ class ExchangeLocalBypass {
     let buf_len = pak.getBufferLen();
     assert(buf_len);
     process.nextTick(() => {
-      if (!this.queues[dest]) {
+      let queue_cb = this.queues[dest];
+      if (!queue_cb) {
         // Unregistered just this tick?  Fall back to actual exchange
         return void this.actual_exchange.publish(dest, pak, cb);
       }
       let clone = packetFromBuffer(buf, buf_len, true);
-      this.queues[dest](clone);
+      queue_cb(clone);
       cb(null);
     });
   }
 }
 
-export function create(actual_exchange) {
+export function exchangeLocalBypassCreate(actual_exchange: Mexchange): Mexchange {
   assert(actual_exchange);
   return new ExchangeLocalBypass(actual_exchange);
 }

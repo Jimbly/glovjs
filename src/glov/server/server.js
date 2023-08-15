@@ -21,8 +21,8 @@ const argv = minimist(process.argv.slice(2));
 import glov_channel_server from './channel_server';
 import { dataStoresInit } from './data_stores_init';
 import { errorReportsInit, errorReportsSetAppBuildTimestamp } from './error_reports';
-import glov_exchange from './exchange';
-import exchange_local_bypass from './exchange_local_bypass';
+import { exchangeLocalCreate } from './exchange';
+import { exchangeLocalBypassCreate } from './exchange_local_bypass';
 import { idmapperWorkerInit } from './idmapper_worker';
 import { ipBanInit } from './ip_ban';
 import log from './log';
@@ -136,10 +136,10 @@ export function startup(params) {
   if (exchange) {
     if (server_config.do_exchange_local_bypass) {
       console.log('[EXCHANGE] Using local bypass');
-      exchange = exchange_local_bypass.create(exchange);
+      exchange = exchangeLocalBypassCreate(exchange);
     }
   } else {
-    exchange = glov_exchange.create();
+    exchange = exchangeLocalCreate();
   }
   channel_server = glov_channel_server.create();
   if (argv.dev) {
