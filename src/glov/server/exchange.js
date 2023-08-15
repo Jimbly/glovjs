@@ -4,6 +4,8 @@
 const assert = require('assert');
 const { isPacket, packetFromBuffer } = require('glov/common/packet.js');
 
+// TypeScript note: relevant types defined in loadtest.ts temporarily
+
 export const ERR_NOT_FOUND = 'ERR_NOT_FOUND';
 
 let queues = {};

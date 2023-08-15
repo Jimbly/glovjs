@@ -4,17 +4,19 @@ import assert from 'assert';
 import * as http from 'http';
 import express from 'express';
 import { dotPropSet } from 'glov/common/dot-prop';
+import { shuffleArray } from 'glov/common/rand_alea';
 import { quietMessagesSet } from 'glov/server/channel_server'; // before channel_worker
 import { ChannelData, ChannelWorker } from 'glov/server/channel_worker';
 import { requestIsLocalHost } from 'glov/server/request_utils';
 import * as glov_server from 'glov/server/server';
+import { loadTestInit } from './loadtest_project';
 
-import type { NextFunction, Request, Response } from 'express'; // eslint-disable-line no-duplicate-imports
+import type { Express, NextFunction, Request, Response } from 'express'; // eslint-disable-line no-duplicate-imports
 import type { Packet } from 'glov/common/packet';
 import type { DataObject, HandlerCallback, HandlerSource, TSMap } from 'glov/common/types';
 import type { ChannelServer } from 'glov/server/channel_server'; // eslint-disable-line no-duplicate-imports
 
-const { floor, min } = Math;
+const { floor, min, random } = Math;
 
 const argv = require('minimist')(process.argv.slice(2));
 
@@ -29,10 +31,30 @@ type LoadTestStats = {
   sent: number;
 };
 
-glov_server.startup({
+// TypeScript TODO: move when exchange.js and related are converted
+export type MessageExchangeHandler = (pak: Packet) => void;
+export type MessageExchange = {
+  register: (id: string, cb: MessageExchangeHandler, register_cb: (err: string | null) => void) => void;
+  replaceMessageHandler: (id: string, old_cb: MessageExchangeHandler, cb: MessageExchangeHandler) => void;
+  subscribe: (id: string, cb: MessageExchangeHandler, register_cb: (err: string | null) => void) => void;
+  unregister: (id: string, cb: MessageExchangeHandler) => void;
+  publish: (dest: string, pak: Packet, cb: (err: string | null) => void) => void;
+};
+
+export type GlovServerStartupOptions = {
+  app: Express;
+  server: http.Server;
+  exchange?: MessageExchange;
+};
+
+let startup_options = {
   app,
   server,
-});
+};
+
+loadTestInit(argv, startup_options);
+
+glov_server.startup(startup_options);
 
 type LoadTestOpts = {
   max_rate: number; // Per second
@@ -60,7 +82,7 @@ class LoadTestMasterWorker extends ChannelWorker {
     this.data.public.on = true;
     this.data.public.opts = {
       max_rate: 0,
-      parallel: 100,
+      parallel: 4,
     };
   }
 
@@ -212,7 +234,7 @@ function loadTestReport(): void {
         // Don't send to self, except if we're the only one (for development testing)
         loadtest_targets = loadtest_targets.filter((a) => a !== test_worker.channel_id);
       }
-      if (last_targets.join() !== loadtest_targets.join()) {
+      if (last_targets.join() !== loadtest_targets.join() && loadtest_targets.length < 8) {
         console.log(`Current targets: ${loadtest_targets}`);
       }
     }
@@ -232,7 +254,10 @@ type TargetStatus = {
 function sendPing(status: TargetStatus, channel_id: string): void {
   ++status.in_flight;
   --sends_available;
-  test_worker.setChannelDataOnOther(channel_id, 'private.dummy', Math.random(), function () {
+  test_worker.setChannelDataOnOther(channel_id, 'private.dummy', random(), function (err) {
+    if (err) {
+      console.error(`Error sending to ${channel_id}: ${err}`);
+    }
     --status.in_flight;
     ++local_stats.sent;
     if (status.valid && !status.send_scheduled && status.in_flight < loadtest_conf!.opts.parallel &&
@@ -259,6 +284,11 @@ let target_status: TSMap<TargetStatus> = {};
 let LOAD_TEST_TICK_TIME = 100;
 let last_tick_time = Date.now();
 let sends_remainder = 0;
+let rand = {
+  range: function (mx: number): number {
+    return floor(random() * mx);
+  }
+};
 function loadTestTick(): void {
   let now = Date.now();
   let dt = now - last_tick_time;
@@ -276,8 +306,13 @@ function loadTestTick(): void {
     }
     // do it
     let seen: TSMap<true> = {};
+    let order = [];
     for (let ii = 0; ii < loadtest_targets.length; ++ii) {
-      let target = loadtest_targets[ii];
+      order.push(ii);
+    }
+    shuffleArray(rand, order);
+    for (let ii = 0; ii < loadtest_targets.length; ++ii) {
+      let target = loadtest_targets[order[ii]];
       seen[target] = true;
       let status = target_status[target];
       if (!status) {
