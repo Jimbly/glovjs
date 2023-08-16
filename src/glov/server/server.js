@@ -22,6 +22,7 @@ import glov_channel_server from './channel_server';
 import { dataStoresInit } from './data_stores_init';
 import { errorReportsInit, errorReportsSetAppBuildTimestamp } from './error_reports';
 import { exchangeLocalCreate } from './exchange';
+import { exchangeGMXCreate } from './exchange_gmx_client';
 import { exchangeLocalBypassCreate } from './exchange_local_bypass';
 import { idmapperWorkerInit } from './idmapper_worker';
 import { ipBanInit } from './ip_ban';
@@ -131,6 +132,10 @@ export function startup(params) {
 
   if (metrics_impl) {
     metricsInit(metrics_impl);
+  }
+
+  if (!exchange && server_config.exchange_gmx) {
+    exchange = exchangeGMXCreate(server_config.exchange_gmx);
   }
 
   if (exchange) {

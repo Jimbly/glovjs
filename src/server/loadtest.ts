@@ -322,6 +322,7 @@ function loadTestTick(): void {
       if (!seen[target]) {
         status.valid = false;
         if (!status.in_flight) {
+          console.log(`Cleaned up old loadtest target ${target}`);
           delete target_status[target];
         }
       }

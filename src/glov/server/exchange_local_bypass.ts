@@ -54,7 +54,7 @@ class ExchangeLocalBypass implements Mexchange {
     this.actual_exchange.subscribe(id, cb, register_cb);
   }
 
-  unregister(id: string, cb: MexchangeCompletionCB): void {
+  unregister(id: string, cb?: MexchangeCompletionCB): void {
     assert(this.queues[id]);
     delete this.queues[id];
     this.actual_exchange.unregister(id, cb);

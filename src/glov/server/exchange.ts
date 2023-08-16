@@ -18,7 +18,7 @@ export type Mexchange = {
   register: (id: string, cb: MexchangeHandler, register_cb: MexchangeCompletionCB) => void;
   replaceMessageHandler: (id: string, old_cb: MexchangeHandler, cb: MexchangeHandler) => void;
   subscribe: (id: string, cb: MexchangeHandler, register_cb: MexchangeCompletionCB) => void;
-  unregister: (id: string, cb: MexchangeCompletionCB) => void;
+  unregister: (id: string, cb?: MexchangeCompletionCB) => void;
   publish: (dest: string, pak: Packet, cb: MexchangeCompletionCB) => void;
 };
 
@@ -60,7 +60,7 @@ class ExchangeLocal implements Mexchange {
     }, 30); // slight delay to force async behavior
   }
 
-  unregister(id: string, cb: MexchangeCompletionCB): void {
+  unregister(id: string, cb?: MexchangeCompletionCB): void {
     assert(this.queues[id]);
     process.nextTick(() => {
       assert(this.queues[id]);
@@ -75,7 +75,7 @@ class ExchangeLocal implements Mexchange {
   // cb(err)
   publish(dest: string, pak: Packet, cb: MexchangeCompletionCB): void {
     assert(isPacket(pak));
-    // Note: actually probably a Uint8Array, Buffer.from(buf.buffer,0,buf_len) will coerce to Buffer
+    // Note: actually probably a Uint8Array, Buffer.from(buf.buffer,buf.byteOffset,buf_len) will coerce to Buffer
     let buf = pak.getBuffer();
     let buf_len = pak.getBufferLen();
     assert(buf_len);

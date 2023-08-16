@@ -28,6 +28,7 @@ export interface Packet {
   writeBool(value: boolean): void;
   readBuffer(do_copy: boolean): Uint8Array;
   writeBuffer(value: Uint8Array): void;
+  appendBuffer(value: Uint8Array): void;
 
   append(other: Packet): void;
   appendRemaining(other: Packet): void;
@@ -52,6 +53,10 @@ export interface Packet {
 }
 
 export function packetCreate(flags?: PacketFlags, init_size?: number): Packet;
-export function packetFromBuffer(buf: Uint8Array, buf_len: number, need_copy?: boolean): Packet;
+export function packetFromBuffer(buf: Uint8Array | Buffer, buf_len: number, need_copy?: boolean): Packet;
 export function packetFromJSON(js_obj: unknown): Packet;
 export function isPacket(thing: unknown): thing is Packet;
+export function packetSizeInt(v: number): number;
+export function packetSizeAnsiString(v: string): number;
+export type PacketSpeculativeReadRet = { v: number; offs: number };
+export function packetReadIntFromBuffer(buf: Buffer, offs: number, buf_len: number): PacketSpeculativeReadRet | null;
