@@ -9,7 +9,6 @@ import { quietMessagesSet } from 'glov/server/channel_server'; // before channel
 import { ChannelData, ChannelWorker } from 'glov/server/channel_worker';
 import { requestIsLocalHost } from 'glov/server/request_utils';
 import * as glov_server from 'glov/server/server';
-import { loadTestInit } from './loadtest_project';
 
 import type { Express, NextFunction, Request, Response } from 'express'; // eslint-disable-line no-duplicate-imports
 import type { Packet } from 'glov/common/packet';
@@ -42,8 +41,6 @@ let startup_options = {
   app,
   server,
 };
-
-loadTestInit(argv, startup_options);
 
 glov_server.startup(startup_options);
 

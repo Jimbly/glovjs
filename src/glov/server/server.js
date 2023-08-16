@@ -21,8 +21,8 @@ const argv = minimist(process.argv.slice(2));
 import glov_channel_server from './channel_server';
 import { dataStoresInit } from './data_stores_init';
 import { errorReportsInit, errorReportsSetAppBuildTimestamp } from './error_reports';
-import { exchangeLocalCreate } from './exchange';
-import { exchangeGMXCreate } from './exchange_gmx_client';
+import { exchangeCreate } from './exchange';
+import { exchangeHashedCreate } from './exchange_hashed';
 import { exchangeLocalBypassCreate } from './exchange_local_bypass';
 import { idmapperWorkerInit } from './idmapper_worker';
 import { ipBanInit } from './ip_ban';
@@ -122,6 +122,7 @@ export function startup(params) {
   let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https } = params;
   assert(app);
   assert(server);
+  assert(!exchange, 'Exchange must now be registered by type and specified in default config');
 
   if (!data_stores) {
     data_stores = {};
@@ -134,17 +135,23 @@ export function startup(params) {
     metricsInit(metrics_impl);
   }
 
-  if (!exchange && server_config.exchange_gmx) {
-    exchange = exchangeGMXCreate(server_config.exchange_gmx);
+  if (!exchange) {
+    if (server_config.exchange_providers) {
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      server_config.exchange_providers.map((provider) => require(path.join('../..', provider)));
+    }
+    if (server_config.exchanges) {
+      let exchanges = server_config.exchanges.map(exchangeCreate);
+      console.log(`[EXCHANGE] Hashing between ${exchanges.length} exchanges`);
+      exchange = exchangeHashedCreate(exchanges);
+    } else {
+      exchange = exchangeCreate(server_config.exchange || {});
+    }
   }
 
-  if (exchange) {
-    if (server_config.do_exchange_local_bypass) {
-      console.log('[EXCHANGE] Using local bypass');
-      exchange = exchangeLocalBypassCreate(exchange);
-    }
-  } else {
-    exchange = exchangeLocalCreate();
+  if (!exchange.no_local_bypass && server_config.do_exchange_local_bypass) {
+    console.log('[EXCHANGE] Using local bypass');
+    exchange = exchangeLocalBypassCreate(exchange);
   }
   channel_server = glov_channel_server.create();
   if (argv.dev) {

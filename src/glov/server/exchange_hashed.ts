@@ -14,7 +14,7 @@ type MexchangeFKey = keyof Mexchange;
 const function_names: readonly MexchangeFKey[] =
   ['register', 'replaceMessageHandler', 'subscribe', 'unregister', 'publish'] as const;
 
-export function create(exchange_list: Mexchange[]): Mexchange {
+export function exchangeHashedCreate(exchange_list: Mexchange[]): Mexchange {
   assert(exchange_list);
   assert(exchange_list.length);
   // Hash comparison and performance: https://gist.github.com/Jimbly/328387ec1623909af935e133850e9ed6

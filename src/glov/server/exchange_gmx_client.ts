@@ -22,6 +22,7 @@ import {
   Mexchange,
   MexchangeCompletionCB,
   MexchangeHandler,
+  exchangeProviderRegister,
 } from './exchange';
 import {
   GMX_CMD_ACK,
@@ -36,7 +37,7 @@ import {
 } from './exchange_gmx_common';
 import { panic } from './server';
 
-import type { TSMap, VoidFunc } from 'glov/common/types';
+import type { DataObject, TSMap, VoidFunc } from 'glov/common/types';
 
 const GMX_ERR_STRINGS: Record<number, string> = {
   [GMX_ERR_ALREADY_EXISTS]: 'ERR_ALREADY_EXISTS',
@@ -54,8 +55,8 @@ class ExchangeGMX implements Mexchange {
   private ready_cbs: VoidFunc[] | null = [];
   private queues: TSMap<MexchangeHandler> = {};
   private broadcasts: TSMap<MexchangeHandler[]> = {};
-  private opts: net.NetConnectOpts;
-  constructor(opts: net.NetConnectOpts) {
+  private opts: net.TcpNetConnectOpts;
+  constructor(opts: net.TcpNetConnectOpts) {
     this.opts = opts;
 
     executeWithRetry(this.tryConnect.bind(this), connect_retry_options, (err?: string | null) => {
@@ -289,6 +290,11 @@ class ExchangeGMX implements Mexchange {
   }
 }
 
-export function exchangeGMXCreate(opts: net.NetConnectOpts): Mexchange {
-  return new ExchangeGMX(opts);
+function exchangeGMXCreate(opts: DataObject): Mexchange {
+  return new ExchangeGMX({
+    host: opts.host as string || 'localhost',
+    port: opts.port as number || 3005,
+  });
 }
+
+exchangeProviderRegister('gmx', exchangeGMXCreate);

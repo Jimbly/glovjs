@@ -10,7 +10,10 @@ import {
   packetFromBuffer,
 } from 'glov/common/packet';
 
-import type { TSMap } from 'glov/common/types';
+import type {
+  DataObject,
+  TSMap,
+} from 'glov/common/types';
 
 export type MexchangeHandler = (pak: Packet) => void;
 export type MexchangeCompletionCB = (err: string | null) => void;
@@ -20,9 +23,11 @@ export type Mexchange = {
   subscribe: (id: string, cb: MexchangeHandler, register_cb: MexchangeCompletionCB) => void;
   unregister: (id: string, cb?: MexchangeCompletionCB) => void;
   publish: (dest: string, pak: Packet, cb: MexchangeCompletionCB) => void;
+  no_local_bypass?: boolean;
 };
 
 class ExchangeLocal implements Mexchange {
+  no_local_bypass = true;
   queues: TSMap<MexchangeHandler> = {};
   broadcasts: TSMap<MexchangeHandler[]> = {};
 
@@ -100,6 +105,22 @@ class ExchangeLocal implements Mexchange {
   }
 }
 
-export function exchangeLocalCreate(): Mexchange {
+export type MexchangeProvider = (opts: DataObject) => Mexchange;
+let exchange_providers: TSMap<MexchangeProvider> = {};
+export function exchangeProviderRegister(type: string, provider: MexchangeProvider): void {
+  assert(!exchange_providers[type]);
+  exchange_providers[type] = provider;
+}
+
+function exchangeLocalCreate(): Mexchange {
   return new ExchangeLocal();
+}
+exchangeProviderRegister('local', exchangeLocalCreate);
+
+export function exchangeCreate(opts: DataObject & { type?: string }): Mexchange {
+  let type = opts.type || 'local';
+  let provider = exchange_providers[type];
+  assert(provider, `Unknown exchange provider "${type}"`);
+  console.log(`[EXCHANGE] Using "${type}"`);
+  return provider(opts);
 }
