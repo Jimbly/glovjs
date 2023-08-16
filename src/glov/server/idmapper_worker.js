@@ -1,17 +1,5 @@
 const { ChannelWorker } = require('./channel_worker.js');
-
-// General purpose worker(s) for handling global state
-
-const id_characters = '0123456789';
-function randNumericId(len) {
-  const chars_length = id_characters.length;
-  let r = [];
-  for (let i = 0; i < len; i++) {
-    let index = Math.floor(Math.random() * chars_length);
-    r.push(id_characters[index]);
-  }
-  return r.join('');
-}
+const { randNumericId } = require('./server_util.js');
 
 class IdMapperWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
