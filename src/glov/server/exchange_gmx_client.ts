@@ -51,6 +51,8 @@ const connect_retry_options: ExecuteWithRetryOptions = {
   log_prefix: 'ExchangeGMX Connect',
 };
 
+const CONNECT_TIMEOUT = 3000;
+
 class ExchangeGMX implements Mexchange {
   private ready_cbs: VoidFunc[] | null = [];
   private queues: TSMap<MexchangeHandler> = {};
@@ -72,7 +74,11 @@ class ExchangeGMX implements Mexchange {
   private tryConnect(cb: MexchangeCompletionCB): void {
     let did_cb = false;
     let had_error_connecting = false;
+    let connect_timeout: NodeJS.Timeout;
     let socket = net.connect(this.opts, () => { //'connect' listener
+      if (connect_timeout) {
+        clearTimeout(connect_timeout);
+      }
       //console.log('Socket connected to ' + host + ':' + port);
       if (!did_cb) {
         did_cb = true;
@@ -87,7 +93,7 @@ class ExchangeGMX implements Mexchange {
         had_error_connecting = true;
         did_cb = true;
         cb(err_str);
-      } else {
+      } else if (!had_error_connecting) {
         // error while already connected
         return panic(`GMX runtime error: ${err_str}`);
       }
@@ -99,6 +105,14 @@ class ExchangeGMX implements Mexchange {
         panic('GMX runtime disconnect');
       }
     });
+    connect_timeout = setTimeout(() => {
+      if (!did_cb) {
+        had_error_connecting = true;
+        socket.end();
+        did_cb = true;
+        cb('ERR_TIMEOUT');
+      }
+    }, CONNECT_TIMEOUT);
   }
 
   emitBuf(cmd: number, buf: Buffer, offs: number, buf_len: number): void {
