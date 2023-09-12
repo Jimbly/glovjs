@@ -1445,8 +1445,11 @@ function uiTick(dt) {
     }
     menu_up_time += dt;
     // Effects during modal dialogs
-    let factor = min(menu_up_time / 500, 1);
     if (glov_engine.postprocessing && !glov_engine.defines.NOPP) {
+      let factor = min(menu_up_time / 500, 1);
+      if (factor < 1) {
+        glov_engine.renderNeeded();
+      }
       // Note: this lerp used to be done later in the frame (during drawing, not queueing) a problem?
       let blur_factor = lerp(factor, params.blur[0], params.blur[1]);
       if (blur_factor) {
