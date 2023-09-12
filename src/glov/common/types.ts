@@ -68,6 +68,12 @@ export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
  */
 export type DefinedValueOf<T> = Exclude<T[keyof T], undefined>;
 
+/**
+ * Helper type to mark only one field of a type as optional.
+ */
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
+
+
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
