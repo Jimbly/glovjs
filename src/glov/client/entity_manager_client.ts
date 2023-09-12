@@ -662,6 +662,7 @@ class ClientEntityManagerImpl<
     resp_func?: NetErrorCallback<unknown>,
   ): void {
     assert(this.channel?.numSubscriptions());
+    assert(action.ent);
     if (!this.action_list_queue) {
       this.action_list_queue = {
         action_list: [],
