@@ -754,11 +754,15 @@ export function drawTooltip(param) {
   let w = tooltip_w - eff_tooltip_pad * 2;
   let dims = font.dims(font_style_modal, w, 0, font_height, tooltip);
   let above = param.tooltip_above;
+  let right = param.tooltip_right;
   if (!above && param.tooltip_auto_above_offset) {
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
   }
   let x = param.x;
   let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  if (right && param.tooltip_auto_right_offset) {
+    x += param.tooltip_auto_right_offset - eff_tooltip_w;
+  }
   if (x + eff_tooltip_w > camera2d.x1()) {
     x = camera2d.x1() - eff_tooltip_w;
   }
@@ -811,6 +815,8 @@ export function drawTooltipBox(param) {
     y: param.y + param.h + 2,
     tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
+    tooltip_auto_right_offset: param.w,
+    tooltip_right: param.tooltip_right,
     tooltip,
     tooltip_width: param.tooltip_width,
   });
@@ -1076,7 +1082,7 @@ export function print(style, x, y, z, text) {
 
 export function label(param) {
   profilerStartFunc();
-  let { style, x, y, align, w, h, text, tooltip, tooltip_above } = param;
+  let { style, x, y, align, w, h, text, tooltip, tooltip_above, tooltip_right } = param;
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
@@ -1108,6 +1114,7 @@ export function label(param) {
       tooltip: tooltip,
       tooltip_width: param.tooltip_width,
       tooltip_above,
+      tooltip_right,
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
