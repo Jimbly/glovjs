@@ -25,6 +25,8 @@ import { serverConfig } from './server_config';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
+const { floor, random } = Math;
+
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const MAX_FRIENDS = 100;
@@ -596,6 +598,26 @@ export class DefaultUserWorker extends ChannelWorker {
     // Also return display name and any other relevant info?
     return resp_func();
   }
+  checkAutoIPBan(login_ip) {
+    if (!this.getChannelData('private.auto_ip_ban')) {
+      return;
+    }
+    this.error(`Queuing delayed automatic IP ban for account ${this.user_id} from IP ${login_ip}`);
+    setTimeout(() => {
+      if (this.shutting_down) {
+        return;
+      }
+      this.error(`Executing automatic IP ban for account ${this.user_id} from IP ${login_ip}`);
+      let ids_saved = this.ids;
+      this.ids = { user_id: '$system', csr: 1 };
+      this.sendChannelMessage('global.global', 'cmdparse', `ipban ${login_ip}`, (err) => {
+        if (err) {
+          this.error(`Error executing automatic IP ban for account ${this.user_id} from IP ${login_ip}: ${err}`);
+        }
+      });
+      this.ids = ids_saved;
+    }, floor(3*60*1000 + random() * 2*60*1000));
+  }
   handleLogin(src, data, resp_func) {
     if (this.channel_server.restarting) {
       if (!this.getChannelData('public.permissions.sysadmin')) {
@@ -633,6 +655,7 @@ export class DefaultUserWorker extends ChannelWorker {
     }
 
     this.setChannelData('private.login_time', Date.now());
+    this.checkAutoIPBan(data.ip);
     metrics.add('user.login', 1);
     metrics.add('user.login_pass', 1);
     return resp_func(null, this.getChannelData('public'));
@@ -658,6 +681,7 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
     this.setChannelData(`private.login_${data.provider}`, data.provider_id);
+    this.checkAutoIPBan(data.ip);
     metrics.add('user.login', 1);
     metrics.add(`user.login_${data.provider}`, 1);
     return resp_func(null, this.getChannelData('public'));
