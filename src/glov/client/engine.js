@@ -89,6 +89,7 @@ const { callEach, clamp, nearSame, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
+  mat4isFinite,
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
@@ -178,6 +179,7 @@ export function addViewSpaceGlobal(name) {
 
 let mat_temp = mat4();
 export function setGlobalMatrices(_mat_view) {
+  assert(mat4isFinite(_mat_view));
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
   v3iNormalize(light_dir_ws);
@@ -191,6 +193,7 @@ export function setGlobalMatrices(_mat_view) {
 
 // Just set up mat_vp and mat_projection
 export function setMatVP(_mat_view) {
+  assert(mat4isFinite(_mat_view));
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
   mat4Copy(mat_view, _mat_view);
