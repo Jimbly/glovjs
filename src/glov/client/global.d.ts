@@ -18,6 +18,7 @@ declare module 'glov/client/global' {
     }
 
     const BUILD_TIMESTAMP: string;
+    const __funcname: string; // eslint-disable-line no-underscore-dangle
 
     // GLOV ui.js
     const Z: Record<string, number>;
