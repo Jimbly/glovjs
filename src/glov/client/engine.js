@@ -813,6 +813,10 @@ export function onExitBackground(fn) {
   exit_background_cb.push(fn);
 }
 
+export function dirtyRenderSet(value) {
+  dirty_render = value;
+}
+
 export const hrnow = window.performance && window.performance.now ?
   window.performance.now.bind(window.performance) :
   Date.now.bind(Date);
