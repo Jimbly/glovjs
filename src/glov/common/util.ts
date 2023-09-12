@@ -627,3 +627,8 @@ export function unpromisify<P extends any[], T=never>(f: (this: T, ...args: P) =
     nextTick((f as any).apply.bind(f, this, arguments));
   };
 }
+
+export function msToSS2020(milliseconds: number): number {
+  // Integer seconds since Jan 1st, 2020
+  return floor(milliseconds / 1000) - 1577836800;
+}
