@@ -1344,8 +1344,13 @@ export function startup(params) {
   return true;
 }
 
+let custom_loads_pending = 0;
+export function loadPendingDelta(delta) {
+  custom_loads_pending += delta;
+}
+
 export function loadsPending() {
-  return textureLoadCount() + soundLoading() + modelLoadCount();
+  return textureLoadCount() + soundLoading() + modelLoadCount() + custom_loads_pending;
 }
 
 let on_load_metrics = [];
