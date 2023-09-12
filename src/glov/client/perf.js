@@ -54,7 +54,13 @@ settings.register({
     label: 'Show FPS',
     default_value: engine.DEBUG ? 1 : 0,
     type: cmd_parse.TYPE_INT,
-    range: [0,4],
+    enum_lookup: {
+      OFF: 0,
+      ON: 1,
+      MSPF: 2,
+      CPU: 3,
+      GC: 4,
+    }
   },
   fps_graph: {
     label: 'FPS Graph',
