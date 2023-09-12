@@ -35,6 +35,10 @@ export function runTimeDefault(key, new_default) {
   }
 }
 
+export function settingIsModified(key) {
+  return modified[key];
+}
+
 let settings_stack = null;
 export function push(pairs) {
   assert(!settings_stack);
