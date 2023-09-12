@@ -175,3 +175,8 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
 }
 
 window.glov_error_report = glovErrorReport.bind(null, true);
+
+let early_err = window.glov_error_early;
+if (early_err) {
+  window.glov_error_report(early_err.msg, early_err.file, early_err.line, early_err.col);
+}

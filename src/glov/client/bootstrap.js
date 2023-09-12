@@ -65,6 +65,8 @@ window.onerror = function (e, file, line, col, errorobj) {
   let show = true;
   if (window.glov_error_report) {
     show = window.glov_error_report(msg, file, line, col);
+  } else if (!window.glov_error_early) {
+    window.glov_error_early = { msg, file, line, col };
   }
   if (show) {
     debug.innerText = `${msg}\n\nPlease report this error to the developer,` +
