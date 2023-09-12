@@ -367,13 +367,20 @@ function letWheelEventThrough(event) {
   return allow_all_events || isInputElement(event.target);
 }
 
+let event_filter = () => false;
+
+// `filter` returns true if the event should be allowed to propgate to the DOM, and not be sent to the engine
+export function inputSetEventFilter(filter) {
+  event_filter = filter;
+}
+
 function letEventThrough(event) {
   if (!event.target || allow_all_events || event.glov_do_not_cancel) {
     return true;
   }
   // Going to an input or related element
   return isInputElement(event.target) ||
-    String(event.target.className).includes('noglov');
+    String(event.target.className).includes('noglov') || event_filter(event);
   /* Not doing this: this causes legitimate clicks (e.g. when an edit box is focused)
       to be lost, instead, relying on `allow_all_events` when an HTML UI is active.
     // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
