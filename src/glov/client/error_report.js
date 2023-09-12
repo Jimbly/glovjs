@@ -125,6 +125,12 @@ let filtered_errors = new RegExp([
   'clearTransInfo', // WeChat
   'firefoxSample',
   'gourmetads',
+  'apstag', // Amazon Ad network on Safari
+  'otBannerSdk\\.js', // OneTrust (maybe when blocked by ad blocker/etc?)
+  'setOTDataLayer', // OneTrust
+  'otSDKStub', // OneTrust
+  'pubads_20', // Some third-party ad provider
+  'ima3\\.js', // Google ads
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
