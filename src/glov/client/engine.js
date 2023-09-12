@@ -1222,6 +1222,27 @@ export function startup(params) {
     // SamsungBrowser/1.1 - apparently has WebGL, but not requestAnimationFrame; also not binary WebSockets
     good = false;
   }
+  if (good) {
+    // ensure at least basic shaders compile
+    let shaders_supported = shadersStartup({
+      light_diffuse,
+      light_dir_ws,
+      ambient: light_ambient,
+      mat_m: mat_m,
+      mat_mv: mat_mv,
+      mat_vp: mat_vp,
+      mvp: mat_mvp,
+      mv_inv_trans: mat_mv_inv_transform,
+      mat_inv_view: mat_inv_view,
+      view: mat_view,
+      projection: mat_projection,
+      // projection_inverse,
+    });
+    if (!shaders_supported) {
+      good = false;
+    }
+  }
+
   if (!good) {
     // eslint-disable-next-line no-alert
     window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
@@ -1260,20 +1281,6 @@ export function startup(params) {
 
   textureStartup();
   geomStartup();
-  shadersStartup({
-    light_diffuse,
-    light_dir_ws,
-    ambient: light_ambient,
-    mat_m: mat_m,
-    mat_mv: mat_mv,
-    mat_vp: mat_vp,
-    mvp: mat_mvp,
-    mv_inv_trans: mat_mv_inv_transform,
-    mat_inv_view: mat_inv_view,
-    view: mat_view,
-    projection: mat_projection,
-    // projection_inverse,
-  });
   addViewSpaceGlobal('light_dir');
   camera2d.startup();
   spriteStartup();

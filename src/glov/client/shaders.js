@@ -551,6 +551,8 @@ export function shadersStartup(_globals) {
 
   filewatchOn('.fp', onShaderChange);
   filewatchOn('.vp', onShaderChange);
+
+  return error_fp.valid && error_vp.valid;
 }
 
 export function shadersAddGlobal(key, vec) {
