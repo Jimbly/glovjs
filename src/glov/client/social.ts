@@ -21,6 +21,7 @@ import {
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
+import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
@@ -172,6 +173,7 @@ function richPresenceSend(): void {
     pak.writeInt(last_presence.active);
     pak.writeAnsiString(last_presence.state);
     pak.writeJSON(last_presence.payload);
+    pak.writeAnsiString(abTestGetMetricsAndPlatform());
     pak.send();
   });
 }

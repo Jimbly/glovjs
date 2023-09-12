@@ -14,6 +14,7 @@ const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
 import * as WebSocket from 'ws';
 
 import { ipBanReady, ipBanned } from './ip_ban';
+import { keyMetricsAddTagged } from './key_metrics';
 import { logEx } from './log';
 import { packetLog, packetLogInit } from './packet_log';
 import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
@@ -35,6 +36,11 @@ function WSClient(ws_server, socket) {
   this.client_plat = query.plat;
   this.client_ver = query.ver;
   this.client_build = query.build;
+  // Note: client_tags only has client-scoped ABTest tags, not user-scoped (UserWorker gets those in rich presence)
+  this.client_tags = query.abt ? query.abt.split(',') : [];
+  if (this.client_plat) {
+    this.client_tags.push(this.client_plat);
+  }
   this.handlers = ws_server.handlers; // reference, not copy!
   this.connected = true;
   this.disconnected = false;
@@ -240,6 +246,8 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
       ver: client.client_ver,
       build: client.client_build,
     });
+
+    keyMetricsAddTagged('wsconnect', client.client_tags, 1);
 
     let query = requestGetQuery(req);
     let client_app = query.app || 'app';

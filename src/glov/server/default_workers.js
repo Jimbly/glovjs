@@ -8,18 +8,29 @@ import {
   ID_PROVIDER_APPLE,
   ID_PROVIDER_FB_GAMING,
   ID_PROVIDER_FB_INSTANT,
+  PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
-import { EMAIL_REGEX, deprecate, sanitize } from 'glov/common/util.js';
+import {
+  EMAIL_REGEX,
+  deprecate,
+  empty,
+  sanitize,
+} from 'glov/common/util.js';
 import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 
 import { channelServerWorkerInit } from './channel_server_worker.js';
 import { ChannelWorker } from './channel_worker.js';
 import { globalWorkerInit } from './global_worker.js';
+import {
+  keyMetricsStartup,
+  usertimeEnd,
+  usertimeStart,
+} from './key_metrics.js';
 import * as master_worker from './master_worker.js';
-import * as metrics from './metrics.js';
+import { metricsAdd } from './metrics.js';
 import * as random_names from './random_names.js';
 import { serverConfig } from './server_config';
 
@@ -115,6 +126,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.presence_data = {}; // client_id -> data
     this.presence_idx = 0;
     this.my_clients = {};
+    this.last_abtests = '';
+    this.last_usertime_active = false;
+    this.last_usertime_abtests = '';
 
     // Migration logic for engine-level fields
     if (this.exists()) {
@@ -656,8 +670,8 @@ export class DefaultUserWorker extends ChannelWorker {
 
     this.setChannelData('private.login_time', Date.now());
     this.checkAutoIPBan(data.ip);
-    metrics.add('user.login', 1);
-    metrics.add('user.login_pass', 1);
+    metricsAdd('user.login', 1);
+    metricsAdd('user.login_pass', 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleLoginExternal(src, data, resp_func) {
@@ -673,7 +687,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.getChannelData('public.banned')) {
       return resp_func('ERR_ACCOUNT_BANNED');
     }
-    if (!this.getChannelData('private.external')) {
+    if (!this.exists()) {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
     }
@@ -682,8 +696,8 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_time', Date.now());
     this.setChannelData(`private.login_${data.provider}`, data.provider_id);
     this.checkAutoIPBan(data.ip);
-    metrics.add('user.login', 1);
-    metrics.add(`user.login_${data.provider}`, 1);
+    metricsAdd('user.login', 1);
+    metricsAdd(`user.login_${data.provider}`, 1);
     return resp_func(null, this.getChannelData('public'));
   }
   handleCreate(src, data, resp_func) {
@@ -725,7 +739,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.login_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
-    metrics.add('user.create', 1);
+    metricsAdd('user.create', 1);
     return resp_func(null, this.getChannelData('public'));
   }
 
@@ -779,6 +793,34 @@ export class DefaultUserWorker extends ChannelWorker {
       }
     }
   }
+
+  updateUsertimeMetrics() {
+    let currently_active = false;
+    if (this.rich_presence) {
+      for (let channel_id in this.presence_data) {
+        let presence = this.presence_data[channel_id];
+        if (presence.active !== PRESENCE_INACTIVE) {
+          currently_active = true;
+          break;
+        }
+      }
+    } else {
+      currently_active = !empty(this.my_clients);
+    }
+
+    if (this.last_usertime_active && (
+      !currently_active || this.last_abtests !== this.last_usertime_abtests
+    )) {
+      this.last_usertime_active = false;
+      usertimeEnd(this.last_usertime_abtests);
+    }
+    if (!this.last_usertime_active && currently_active) {
+      this.last_usertime_active = true;
+      this.last_usertime_abtests = this.last_abtests;
+      usertimeStart(this.last_usertime_abtests);
+    }
+  }
+
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
       delete this.presence_data[src.channel_id];
@@ -787,6 +829,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.my_clients[src.channel_id]) {
       delete this.my_clients[src.channel_id];
     }
+    this.updateUsertimeMetrics();
   }
   handlePresenceGet(src, pak, resp_func) {
     if (!this.exists()) {
@@ -805,6 +848,13 @@ export class DefaultUserWorker extends ChannelWorker {
     let active = pak.readInt();
     let state = pak.readAnsiString(); // app-defined state
     let payload = pak.readJSON();
+    let abtests = '';
+    if (!pak.ended()) {
+      abtests = pak.readAnsiString();
+      if (active !== PRESENCE_INACTIVE) {
+        this.last_abtests = abtests;
+      }
+    }
     if (!this.rich_presence) {
       return void resp_func('ERR_NO_RICH_PRESENCE');
     }
@@ -818,10 +868,11 @@ export class DefaultUserWorker extends ChannelWorker {
         id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
         active,
         state,
-        payload
+        payload,
       };
     }
     this.updatePresence();
+    this.updateUsertimeMetrics();
     resp_func();
   }
   sendMessageToMyClients(message, payload, exclude_channel_id) {
@@ -980,4 +1031,5 @@ export function init(channel_server) {
   channelServerWorkerInit(channel_server);
   globalWorkerInit(channel_server);
   master_worker.init(channel_server);
+  keyMetricsStartup(channel_server);
 }

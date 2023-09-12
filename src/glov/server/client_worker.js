@@ -6,6 +6,7 @@ const assert = require('assert');
 const { ChannelWorker } = require('./channel_worker.js');
 const { chunkedSend } = require('glov/common/chunked_send.js');
 const { canonical } = require('glov/common/cmd_parse.js');
+const { keyMetricsAddTagged } = require('./key_metrics.js');
 const { logEx } = require('./log.js');
 const { isPacket } = require('glov/common/packet.js');
 const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
@@ -64,6 +65,7 @@ export class ClientWorker extends ChannelWorker {
     this.ids_base.display_name = resp_data.display_name;
     this.log_user_id = user_id;
     applyCustomIds(this.ids_base, resp_data);
+    keyMetricsAddTagged('login', this.client.client_tags, 1);
   }
 
   onLogoutInternal() {

@@ -304,6 +304,25 @@ WSClient.prototype.connect = function (for_reconnect) {
   });
 };
 
+let connect_url_params = '';
+let connect_url_extra = {};
+export function wsclientSetExtraParam(key, value) {
+  if (!value) {
+    delete connect_url_extra[key];
+  } else {
+    connect_url_extra[key] = value;
+  }
+  let pairs = [];
+  for (let walk in connect_url_extra) {
+    pairs.push(`${walk}=${connect_url_extra[walk]}`);
+  }
+  if (pairs.length) {
+    connect_url_params = `&${pairs.join('&')}`;
+  } else {
+    connect_url_params = '';
+  }
+}
+
 WSClient.prototype.connectAfterReady = function (for_reconnect) {
   let client = this;
 
@@ -313,7 +332,7 @@ WSClient.prototype.connectAfterReady = function (for_reconnect) {
     .replace(/api\/$/, 'ws'); // 'wss://foo.com/product/ws';
   path = `${path}?${getVersionUrlParams()}${
     for_reconnect && client.id && client.secret ? `&reconnect=${client.id}&secret=${client.secret}` : ''
-  }&sesuid=${session_uid}`;
+  }&sesuid=${session_uid}${connect_url_params}`;
   let socket = new WebSocket(path);
   socket.binaryType = 'arraybuffer';
   client.socket = socket;
