@@ -28,13 +28,22 @@ if (MODE_DEVELOPMENT) {
 }
 
 // Abilities
-const ability_reload = PLATFORM_WEB || PLATFORM_MSSTART;
+const ability_reload = PLATFORM_WEB || PLATFORM_MSSTART || PLATFORM_FBINSTANT;
 let override_ability_reload = ability_reload;
 export function getAbilityReload(): boolean {
   return override_ability_reload;
 }
 export function setAbilityReload(value: boolean): void {
   override_ability_reload = ability_reload && value;
+}
+
+const ability_reload_updates = PLATFORM_WEB || PLATFORM_MSSTART;
+let override_ability_reload_updates = ability_reload_updates;
+export function getAbilityReloadUpdates(): boolean {
+  return override_ability_reload_updates;
+}
+export function setAbilityReloadUpdates(value: boolean): void {
+  override_ability_reload_updates = ability_reload_updates && value;
 }
 
 let ability_chat = true;

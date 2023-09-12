@@ -261,8 +261,12 @@ export function reloadSafe() {
     try {
       window.top.location.reload();
     } catch (e) {
-      // Not good, but better than the alternatives, I guess
-      window.FBInstant.quit();
+      try {
+        document.location.reload();
+      } catch {
+        // Not good, but better than the alternatives, I guess
+        window.FBInstant.quit();
+      }
     }
   } else {
     document.location.reload();

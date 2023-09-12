@@ -20,7 +20,7 @@ const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
 const wscommon = require('glov/common/wscommon.js');
 const { netDelaySet, wsHandleMessage } = wscommon;
-const { PLATFORM, getAbilityReload } = require('glov/client/client_config.js');
+const { PLATFORM, getAbilityReloadUpdates } = require('glov/client/client_config.js');
 
 // let net_time = 0;
 // export function getNetTime() {
@@ -129,7 +129,7 @@ WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
     if (this.on_build_timestamp_mismatch) {
       this.on_build_timestamp_mismatch();
     } else {
-      if (getAbilityReload()) {
+      if (getAbilityReloadUpdates()) {
         console.error(`App build mismatch (server: ${build_timestamp}, client: ${BUILD_TIMESTAMP}), reloading`);
         whenServerReady(function () {
           if (window.reloadSafe) {
@@ -139,7 +139,7 @@ WSClient.prototype.onBuildTimestamp = function (build_timestamp) {
           }
         });
       } else {
-        // Not allowed to reload
+        // Not allowed to reload, or reloading would not get the new version anyway
         console.warn(`App build mismatch (server: ${build_timestamp}, client: ${BUILD_TIMESTAMP}), ignoring`);
       }
     }
@@ -202,7 +202,7 @@ WSClient.prototype.onMsg = function (msg, cb) {
 };
 
 WSClient.prototype.checkForNewAppBuild = function () {
-  if (!getAbilityReload()) {
+  if (!getAbilityReloadUpdates()) {
     // would do nothing with it, don't bother checking
     return;
   }
@@ -270,7 +270,7 @@ WSClient.prototype.connect = function (for_reconnect) {
     let status = response_data?.status;
     let redirect_environment = response_data?.redirect_environment;
     this.update_available = response_data?.update_available;
-    let should_reload = this.update_available && getAbilityReload();
+    let should_reload = this.update_available && getAbilityReloadUpdates();
 
     assert(this.ready_check_in_progress);
     this.ready_check_in_progress = false;

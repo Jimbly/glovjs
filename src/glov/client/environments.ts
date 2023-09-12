@@ -1,7 +1,7 @@
 import assert from 'assert';
 import * as cmd_parse_mod from 'glov/common/cmd_parse';
 import { ErrorCallback } from 'glov/common/types';
-import { setAbilityReload } from './client_config';
+import { setAbilityReloadUpdates } from './client_config';
 import { netForceDisconnect } from './net';
 import * as urlhash from './urlhash';
 
@@ -36,7 +36,7 @@ export function setCurrentEnvironment(environment_name: string | undefined | nul
   current_environment = (environment_name && all_environments[environment_name]) || default_environment;
   if (current_environment !== prev_environment) {
     applyEnvironment();
-    setAbilityReload(false);
+    setAbilityReloadUpdates(false);
     netForceDisconnect();
   }
 }
