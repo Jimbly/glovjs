@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { PLATFORM_FBINSTANT } from 'glov/client/client_config';
 import {
   chunkedReceiverFinish,
   chunkedReceiverFreeFile,
@@ -18,7 +17,6 @@ import { perfCounterAdd } from 'glov/common/perfcounters';
 import * as EventEmitter from 'glov/common/tiny-events';
 import * as util from 'glov/common/util';
 import { errorString } from 'glov/common/util';
-import { fbGetLoginInfo } from './fbinstant';
 import * as local_storage from './local_storage';
 import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
@@ -351,16 +349,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     });
   } else if (!this.no_auto_login) {
     // Try auto-login
-    let auto_login_enabled = PLATFORM_FBINSTANT;
-
-    if (auto_login_enabled) {
-      let login_cb = () => {
-        // ignore error on auto-login
-      };
-      if (PLATFORM_FBINSTANT) {
-        this.loginFacebook(login_cb);
-      }
-    } else if (local_storage.get('name') && local_storage.get('password')) {
+    if (local_storage.get('name') && local_storage.get('password')) {
       this.login(local_storage.get('name'), local_storage.get('password'), function () {
         // ignore error on auto-login
       });
@@ -644,22 +633,10 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   this.logging_in = true;
   this.logged_in = false;
 
-  if (login_credentials.fb) {
-    fbGetLoginInfo((err, result) => {
-      if (err) {
-        return void this.handleLoginResponse(resp_func, err);
-      }
-      if (netDisconnectedRaw()) {
-        return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
-      }
-      this.client.send('login_facebook_instant', result, null, this.handleLoginResponse.bind(this, resp_func));
-    });
-  } else {
-    this.client.send('login', {
-      user_id: login_credentials.user_id,
-      password: md5(this.client.secret + login_credentials.password),
-    }, null, this.handleLoginResponse.bind(this, resp_func));
-  }
+  this.client.send('login', {
+    user_id: login_credentials.user_id,
+    password: md5(this.client.secret + login_credentials.password),
+  }, null, this.handleLoginResponse.bind(this, resp_func));
 };
 
 SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) {
@@ -711,11 +688,6 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
       email: 'autocreate@glovjs.org',
     }, resp_func);
   });
-};
-
-SubscriptionManager.prototype.loginFacebook = function (resp_func) {
-  this.login_credentials = { fb: true };
-  return this.loginInternal(this.login_credentials, resp_func);
 };
 
 SubscriptionManager.prototype.userCreate = function (params, resp_func) {

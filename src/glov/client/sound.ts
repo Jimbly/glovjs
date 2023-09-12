@@ -12,7 +12,6 @@ import { callEach, defaults, ridx } from 'glov/common/util';
 import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
 import { onEnterBackground, onExitBackground } from './engine';
-import { fbInstantOnPause } from './fbinstant';
 import { filewatchOn } from './filewatch';
 import { textureCname } from './textures';
 import * as urlhash from './urlhash';
@@ -391,8 +390,6 @@ export function soundStartup(params: Partial<SoundSystemParams>): void {
   if (sound_params.fade_music_in_bg) {
     soundFadeMusicInBackground();
   }
-
-  fbInstantOnPause(soundPause);
 }
 
 export function soundResumed(): boolean {
