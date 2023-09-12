@@ -268,11 +268,20 @@ export function onURLChange(cb) {
   on_url_change = cb;
 }
 
+let history_update_deferred = false;
+export function historyDeferUpdate(defer) {
+  history_update_deferred = defer;
+}
+
 let last_history_set_time = 0;
 let scheduled = false;
 let need_push_state = false;
 function updateHistoryCommit() {
   profilerStart('updateHistoryCommit');
+  if (history_update_deferred) {
+    setTimeout(updateHistoryCommit, 1000);
+    return void profilerStop();
+  }
   scheduled = false;
   last_history_set_time = Date.now();
   let mid = '';
