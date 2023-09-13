@@ -575,7 +575,10 @@ export class DefaultUserWorker extends ChannelWorker {
       return void resp_func(null, {});
     }
 
-    this.sendChannelMessage('idmapper.idmapper', 'id_map_get_multiple_ids', { provider, provider_ids: friends_to_add },
+    this.sendChannelMessage(
+      'idmapper.idmapper',
+      'id_map_get_multiple_ids',
+      { provider, provider_ids: friends_to_add, get_deleted: true },
       (err, id_mappings) => {
         if (err) {
           this.error(`Error getting id maps for ${this.user_id} ${provider} friends: ${err}`);
@@ -643,6 +646,9 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Missing password');
     }
 
+    if (this.getChannelData('private.password_deleted')) {
+      return resp_func('ERR_ACCOUNT_MIGRATED');
+    }
     if (!this.getChannelData('private.password')) {
       return resp_func('ERR_USER_NOT_FOUND');
     }
@@ -672,7 +678,10 @@ export class DefaultUserWorker extends ChannelWorker {
     this.checkAutoIPBan(data.ip);
     metricsAdd('user.login', 1);
     metricsAdd('user.login_pass', 1);
-    return resp_func(null, this.getChannelData('public'));
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      email: this.getChannelData('private.email'),
+    });
   }
   handleLoginExternal(src, data, resp_func) {
     if (this.channel_server.restarting) {
@@ -684,6 +693,19 @@ export class DefaultUserWorker extends ChannelWorker {
 
     //Should the authentication step happen here instead?
 
+    assert(data.provider_ids);
+    for (let provider in data.provider_ids) {
+      let provider_id = data.provider_ids[provider];
+      let provider_key = `private.login_${provider}`;
+      let previous_id = this.getChannelData(provider_key);
+      if (previous_id) {
+        assert(provider_id === previous_id,
+          `Multiple external ids for user ${this.user_id} and provider ${provider}: ${previous_id}, ${provider_id}`);
+      } else {
+        this.setChannelData(provider_key, provider_id);
+      }
+    }
+
     if (this.getChannelData('public.banned')) {
       return resp_func('ERR_ACCOUNT_BANNED');
     }
@@ -694,11 +716,13 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
-    this.setChannelData(`private.login_${data.provider}`, data.provider_id);
     this.checkAutoIPBan(data.ip);
     metricsAdd('user.login', 1);
     metricsAdd(`user.login_${data.provider}`, 1);
-    return resp_func(null, this.getChannelData('public'));
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      email: this.getChannelData('private.email'),
+    });
   }
   handleCreate(src, data, resp_func) {
     if (this.exists()) {
@@ -732,7 +756,7 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     public_data.creation_time = Date.now();
     private_data.password = data.password;
-    private_data.email = data.email;
+    private_data.email = data.email || private_data.email;
     private_data.creation_ip = data.ip;
     private_data.login_ip = data.ip;
     private_data.login_ua = data.ua;
@@ -740,7 +764,58 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
     metricsAdd('user.create', 1);
-    return resp_func(null, this.getChannelData('public'));
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      first_session: true,
+      email: this.getChannelData('private.email'),
+    });
+  }
+
+  handleReplacePasswordWithExternal(src, { password, provider, provider_id, salt }, resp_func) {
+    if (!this.exists()) {
+      return resp_func('Account does not exists');
+    }
+    if (!password) {
+      return resp_func('Missing password');
+    }
+    if (!provider || !provider_id) {
+      return resp_func('Missing provider/provider_id', provider, provider_id);
+    }
+    let private_data = this.getChannelData('private');
+    if (md5(salt + private_data.password) !== password) {
+      return resp_func('Password mismatch');
+    }
+    private_data.password_deleted = private_data.password;
+    private_data.password = undefined;
+    private_data[`login_${provider}`] = provider_id;
+    private_data.external = true;
+    this.setChannelData('private', private_data);
+
+    return resp_func(null, true);
+  }
+
+  handleSetExternal(src, data, resp_func) {
+    if (!data.provider || !data.provider_id) {
+      return resp_func('Missing provider/provider_id', data.provider, data.provider_id);
+    }
+    this.setChannelData(`private.login_${data.provider}`, data.provider_id);
+    this.setChannelData('private.external', true);
+    return resp_func(null, true);
+  }
+
+  handleSetEmail(src, email, resp_func) {
+    if (!email) {
+      return resp_func('Missing email');
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return resp_func('Invalid email');
+    }
+    if (email === this.data.private.email) {
+      return resp_func(null, true);
+    }
+    this.logSrc(src, `Updating user ${this.user_id} email from ${this.data.private.email} to ${email}`);
+    this.setChannelData('private.email', email);
+    return resp_func(null, true);
   }
 
   handleSetChannelData(src, key, value) {
@@ -985,6 +1060,9 @@ let user_worker_init_data = {
     login: DefaultUserWorker.prototype.handleLogin,
     create: DefaultUserWorker.prototype.handleCreate,
     user_ping: DefaultUserWorker.prototype.handleUserPing,
+    replace_password_with_external: DefaultUserWorker.prototype.handleReplacePasswordWithExternal,
+    set_external: DefaultUserWorker.prototype.handleSetExternal,
+    set_email: DefaultUserWorker.prototype.handleSetEmail,
   },
   client_handlers: {
     friend_auto_update: DefaultUserWorker.prototype.handleFriendAutoUpdate,

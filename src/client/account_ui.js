@@ -152,18 +152,6 @@ AccountUI.prototype.showLogin = function (param) {
     login_message = 'Logging in...';
   } else if (net.subs.logging_out) {
     login_message = 'Logging out...';
-  } else if (!net.subs.loggedIn() && window.FBInstant) {
-    net.subs.loginFacebook(function (err) {
-      if (err) {
-        ui.modalDialog({
-          title: 'Facebook login Failed',
-          text: err,
-          buttons: {
-            'Cancel': null,
-          },
-        });
-      }
-    });
   } else if (!net.subs.loggedIn() && net.subs.auto_create_user &&
     !local_storage.get('did_auto_anon') && !local_storage.get('name')
   ) {
@@ -321,8 +309,7 @@ AccountUI.prototype.showLogin = function (param) {
       }
     }
   } else {
-    // FB Users can't logout
-    let show_logout = !window.FBInstant;
+    let show_logout = true;
     let user_id = net.subs.loggedIn();
     let user_channel = net.subs.getChannel(`user.${user_id}`);
     let display_name = user_channel.getChannelData('public.display_name') || user_id;
