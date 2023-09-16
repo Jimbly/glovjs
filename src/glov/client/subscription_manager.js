@@ -722,11 +722,12 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   }
   this.logging_in = true;
   this.logged_in = false;
+  this.login_credentials = login_credentials;
   if (login_credentials.creation_display_name !== undefined) {
     // Only used once, never use upon reconnect, auto-login, etc
-    delete login_credentials.creation_display_name;
+    this.login_credentials = cloneShallow(login_credentials);
+    delete this.login_credentials.creation_display_name;
   }
-  this.login_credentials = login_credentials;
 
   const { provider } = login_credentials;
   if (provider) {
