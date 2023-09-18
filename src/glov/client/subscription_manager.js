@@ -752,8 +752,9 @@ SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) 
 };
 
 function hashedPassword(user_id, password) {
-  if (password.split('$$')[0] === 'prehashed') {
-    password = password.split('$$')[1];
+  let split = password.split('$$');
+  if (split.length === 2 && split[0] === 'prehashed' && split[1].length === 32) {
+    password = split[1];
   } else {
     password = md5(md5(user_id.toLowerCase()) + password);
   }
