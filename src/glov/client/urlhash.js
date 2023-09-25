@@ -83,7 +83,11 @@ let routes = [];
 
 function queryString() {
   let href = String(document.location);
-  return href.slice(page_base.length);
+  href = href.slice(page_base.length);
+  if (href.includes('#')) {
+    href = href.slice(0, href.indexOf('#'));
+  }
+  return href;
 }
 
 const regex_value = /[^\w]\w+=([^&]+)/;
@@ -378,7 +382,7 @@ export function route(route_string) {
     keys.push(match);
     return '([^/&?]+)';
   });
-  let regex = new RegExp(`^\\??${base}(?:$|\\?)`);
+  let regex = new RegExp(`^\\??${base}(?:$|\\?|#)`);
   routeEx({
     route_string,
     regex,
@@ -389,7 +393,7 @@ export function route(route_string) {
 // For a route that has no parameters, e.g. `foo.html`
 // Needs an associated key already registered, then set(key, '1') and set(key, '') enter and leave this route
 export function routeFixed(route_string, key) {
-  let regex = new RegExp(`^\\??${route_string}(?:$|\\?)`);
+  let regex = new RegExp(`^\\??${route_string}(?:$|\\?|#)`);
   routeEx({
     route_string,
     regex,
@@ -402,7 +406,7 @@ export function register(opts) {
   assert(opts.key);
   assert(!params[opts.key]);
   opts.type = opts.type || TYPE_STRING;
-  let regex_search = `(?:[^\\w])${opts.key}=([^&]+)`;
+  let regex_search = `(?:[^\\w])${opts.key}=([^&#]+)`;
   let regex_type = '';
   if (opts.type === TYPE_SET) {
     regex_type = 'g';
