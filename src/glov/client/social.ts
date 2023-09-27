@@ -177,8 +177,10 @@ function richPresenceSend(): void {
     pak.send();
   });
 }
-export function richPresenceSet(active: number, state: string, payload?: unknown): void {
-  active = !active || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ? PRESENCE_INACTIVE : PRESENCE_ACTIVE;
+export function richPresenceSet(active_in: boolean, state: string, payload?: unknown): void {
+  let active: number = !active_in || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
+    PRESENCE_INACTIVE :
+    PRESENCE_ACTIVE;
   if (invisible) {
     active = PRESENCE_OFFLINE;
   }
