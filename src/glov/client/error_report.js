@@ -131,6 +131,11 @@ let filtered_errors = new RegExp([
   'otSDKStub', // OneTrust
   'pubads_20', // Some third-party ad provider
   'ima3\\.js', // Google ads
+  'TranslateService',
+  'bdTransJSBridge',
+  'ciuvoSDK',
+  'stubScriptElement',
+  'chrome://internal',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
