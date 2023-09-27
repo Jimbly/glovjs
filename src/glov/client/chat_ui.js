@@ -418,11 +418,8 @@ ChatUI.prototype.focus = function () {
 };
 
 ChatUI.prototype.runLate = function () {
-  if (!getAbilityChat()) {
-    return;
-  }
   this.did_run_late = true;
-  if (input.keyDownEdge(input.KEYS.RETURN)) {
+  if (getAbilityChat() && input.keyDownEdge(input.KEYS.RETURN)) {
     this.focus();
   }
   if (input.keyDownEdge(input.KEYS.SLASH) ||
