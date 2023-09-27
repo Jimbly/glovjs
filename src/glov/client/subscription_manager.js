@@ -687,7 +687,13 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
 
     if (err) {
       local_storage.set('login_external', this.login_provider = undefined);
-      this.serverLog(`authentication_failed_${provider}`, err);
+      this.serverLog(`authentication_failed_${provider}`, {
+        creation_mode: typeof creation_display_name === 'string',
+        email,
+        passlen: password && password.length,
+        external_data: Boolean(external_login_data),
+        err,
+      });
       return void this.handleLoginResponse(resp_func, err);
     }
 
