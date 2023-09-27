@@ -16,6 +16,9 @@ window.onerror = function (e, file, line, col, errorobj) {
     }
     msg = msg.slice(0, 600); // Not too huge
   }
+  if (typeof errorobj === 'string') {
+    msg = `${msg} ${errorobj}`;
+  }
   if (file || line > 0 || col > 0) {
     msg += `\n  at ${file}(${line}:${col})`;
   }
@@ -51,10 +54,12 @@ window.onerror = function (e, file, line, col, errorobj) {
   if (errorobj) {
     // Attempt to tack on any string members of the error object that may contain useful details
     try {
-      for (let key in errorobj) {
-        if (typeof errorobj[key] === 'string') {
-          if (key !== 'errortype') {
-            msg = `${msg}\n${key}=${errorobj[key]}`;
+      if (typeof errorobj === 'object') {
+        for (let key in errorobj) {
+          if (typeof errorobj[key] === 'string') {
+            if (key !== 'errortype') {
+              msg = `${msg}\n${key}=${errorobj[key]}`;
+            }
           }
         }
       }
