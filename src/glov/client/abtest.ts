@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { mashString } from 'glov/common/rand_alea';
 import { TSMap } from 'glov/common/types';
-import { PLATFORM } from './client_config';
+import { platformGetID } from './client_config';
 import {
   localStorageGet,
   localStorageSet,
@@ -76,7 +76,7 @@ function updateMetricsString(): void {
     }
   }
   metrics_string = data.join(',');
-  data.push(PLATFORM);
+  data.push(platformGetID());
   metrics_and_platform_string = data.join(',');
 }
 

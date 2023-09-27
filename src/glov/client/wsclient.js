@@ -20,7 +20,7 @@ const { perfCounterAdd } = require('glov/common/perfcounters.js');
 const urlhash = require('./urlhash.js');
 const wscommon = require('glov/common/wscommon.js');
 const { netDelaySet, wsHandleMessage } = wscommon;
-const { PLATFORM, getAbilityReloadUpdates } = require('glov/client/client_config.js');
+const { platformGetID, getAbilityReloadUpdates } = require('glov/client/client_config.js');
 
 // let net_time = 0;
 // export function getNetTime() {
@@ -77,7 +77,7 @@ WSClient.prototype.timeSinceDisconnect = function () {
 };
 
 function getVersionUrlParams() {
-  return `plat=${PLATFORM}&ver=${exports.CURRENT_VERSION}&build=${BUILD_TIMESTAMP}`;
+  return `plat=${platformGetID()}&ver=${exports.CURRENT_VERSION}&build=${BUILD_TIMESTAMP}`;
 }
 
 function jsonParseResponse(response) {

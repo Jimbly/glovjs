@@ -5,7 +5,7 @@ let error_report_details = {};
 let error_report_dynamic_details = {};
 
 import { getAPIPath } from 'glov/client/environments';
-import { PLATFORM } from './client_config';
+import { platformGetID } from './client_config';
 import { fetch } from './fetch';
 
 let error_report_disabled = false;
@@ -32,7 +32,7 @@ export function errorReportSetDynamicDetails(key, fn) {
 
 errorReportSetDetails('build', BUILD_TIMESTAMP);
 errorReportSetDetails('sesuid', session_uid);
-errorReportSetDetails('platform', PLATFORM);
+errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
 errorReportSetDynamicDetails('url', function () {

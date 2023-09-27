@@ -14,6 +14,14 @@ export const PLATFORM_MOBILE = PLATFORM_ANDROID || PLATFORM_IOS;
 
 assert(PLATFORM_WEB || PLATFORM_FBINSTANT || PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_YANDEX || PLATFORM_MSSTART);
 
+let override_platform = PLATFORM;
+export function platformOverrideID(id: Platform): void {
+  override_platform = id;
+}
+export function platformGetID(): Platform {
+  return override_platform;
+}
+
 // Type
 // TODO: Allow other platforms to set MODE_DEVELOPMENT through a parameter
 export const MODE_DEVELOPMENT = (PLATFORM_WEB || PLATFORM_FBINSTANT) &&
