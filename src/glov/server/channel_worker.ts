@@ -165,9 +165,10 @@ export type ChannelData<PrivType=DataObject, PubType=DataObject> = {
   public: PubType;
 };
 
-export type ChannelDataClients = TSMap<{
+export type ChannelDataClient = {
   ids: ClientIDs;
-} & DataObject>;
+} & DataObject;
+export type ChannelDataClients = TSMap<ChannelDataClient>;
 export type ChannelDataWithClients = ChannelData<DataObject, {
   clients: ChannelDataClients;
 }>;
