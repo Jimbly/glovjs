@@ -13,7 +13,7 @@ let trans_lookup = {};
 const unicode_replacement_chars = {};
 function cannonizeCharacter(c) {
   c = unicode_replacement_chars[c] || c;
-  return trans_lookup[c] || c;
+  return trans_lookup[c] || '';
 }
 function canonize(str) {
   return str.split('').map(cannonizeCharacter).join('');
