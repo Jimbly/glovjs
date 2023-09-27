@@ -36,6 +36,7 @@ export function isValidStringEnumValue<K extends string, V extends string>(
 export enum Platform {
   Android = 'android',
   FBInstant = 'fbinstant',
+  FBRooms = 'fbrooms', // only seen on the server
   IOS = 'ios',
   MSStart = 'msstart',
   Web = 'web',
