@@ -43,6 +43,7 @@ import {
   HandlerSource,
   NetErrorCallback,
   NetResponseCallback,
+  NumberBoolean,
   TSMap,
   UnimplementedData,
   VoidFunc,
@@ -227,7 +228,7 @@ type BatchedSetPair = [string, unknown] | [string];
 
 type BulkCacheElem = {
   bulk_obj_name: string;
-  writing: 0 | 1;
+  writing: NumberBoolean;
   value?: Buffer | DataObject;
 };
 
