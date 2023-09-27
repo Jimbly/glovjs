@@ -928,7 +928,9 @@ export function dropDown(param, current, opts) {
     !suppress_return_during_dropdown
   ) {
     if (old_selected !== dropdown.getSelected()) {
-      return dropdown.getSelected();
+      // Return input item (which may have additional data lost upon conversion
+      //   to a MenuItem), instead of `dropdown.getSelected()`
+      return param.items[dropdown.selected];
     }
   }
   return null;
