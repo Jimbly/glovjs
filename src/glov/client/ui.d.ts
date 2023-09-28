@@ -213,8 +213,8 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   z?: number;
   w?: number;
   h?: number;
-  style?: FontStyle; // TODO: rename to font_style, refactor all callers
-  style_focused?: FontStyle; // TODO: rename to font_style_focused, refactor all callers
+  font_style?: FontStyle;
+  font_style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;

@@ -1096,7 +1096,20 @@ export function print(font_style, x, y, z, text) {
 
 export function label(param) {
   profilerStartFunc();
-  let { style, x, y, align, w, h, text, tooltip, tooltip_above, tooltip_right } = param;
+  let {
+    font_style,
+    font_style_focused: label_font_style_focused,
+    x, y,
+    align,
+    w, h,
+    text,
+    tooltip,
+    tooltip_above,
+    tooltip_right,
+  } = param;
+  if (param.style) {
+    assert(!param.style.color); // Received a FontStyle, expecting (in the future) a UIStyle
+  }
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
@@ -1106,7 +1119,7 @@ export function label(param) {
   assert.equal(typeof text, 'string');
   if (tooltip) {
     if (!w) {
-      w = use_font.getStringWidth(style, size, text);
+      w = use_font.getStringWidth(font_style, size, text);
       if (align & ALIGN.HRIGHT) {
         x -= w;
       } else if (align & ALIGN.HCENTER) {
@@ -1132,8 +1145,8 @@ export function label(param) {
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
-      if (param.style_focused) {
-        style = param.style_focused;
+      if (label_font_style_focused) {
+        font_style = label_font_style_focused;
       } else {
         // No focused style provided, do a generic glow instead?
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -1144,9 +1157,9 @@ export function label(param) {
   let text_w = 0;
   if (text) {
     if (align) {
-      text_w = use_font.drawSizedAligned(style, x, y, z, size, align, w, h, text);
+      text_w = use_font.drawSizedAligned(font_style, x, y, z, size, align, w, h, text);
     } else {
-      text_w = use_font.drawSized(style, x, y, z, size, text);
+      text_w = use_font.drawSized(font_style, x, y, z, size, text);
     }
   }
   profilerStopFunc();
