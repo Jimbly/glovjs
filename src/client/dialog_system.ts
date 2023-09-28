@@ -14,7 +14,10 @@ import {
   padButtonDown,
 } from 'glov/client/input';
 import * as ui from 'glov/client/ui';
-import { UIBox } from 'glov/client/ui';
+import {
+  UIBox,
+  uiTextHeight,
+} from 'glov/client/ui';
 import { dataError } from 'glov/common/data_error';
 import { merge } from 'glov/common/util';
 import {
@@ -135,7 +138,8 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
 
   let num_buttons = buttons && buttons.length || 0;
   let buttons_h = num_buttons * ui.button_height + (num_buttons ? BUTTON_HEAD + (num_buttons - 1) * BUTTON_PAD : 0);
-  let size = ui.font_height;
+  const text_height = uiTextHeight();
+  let size = text_height;
   let style = text_style_cb(active_dialog);
   let dims = dimsSplit(style, w - HPAD * 2, size, text);
   let { lines } = dims;
@@ -203,7 +207,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   }
 
   temp_color[3] = alpha;
-  if (transient && dims.h === ui.font_height) {
+  if (transient && dims.h === text_height) {
     let text_w = dims.w;
     ui.panel({
       x: x + round((w - text_w)/2) - HPAD,

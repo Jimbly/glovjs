@@ -53,6 +53,7 @@ import {
   textureBindArray,
 } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
+import { uiTextHeight } from 'glov/client/ui';
 import { dataErrorEx } from 'glov/common/data_error';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
@@ -1248,7 +1249,7 @@ function calcVisibility(
     }
   }
   if (DEBUG_VIS) {
-    ui.font.drawSizedWrapped(null, 0, 0, 1, 256, 0, ui.font_height, log!.join('\n'));
+    ui.font.drawSizedWrapped(null, 0, 0, 1, 256, 0, uiTextHeight(), log!.join('\n'));
   }
 }
 

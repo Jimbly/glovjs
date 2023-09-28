@@ -4,6 +4,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import * as engine from 'glov/client/engine';
 import { netClient, netSubs } from 'glov/client/net';
 import * as ui from 'glov/client/ui';
+import { uiTextHeight } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { ClientChannelWorker, NetErrorCallback } from 'glov/common/types';
 import { CrawlerJoinPayload } from '../common/crawler_entity_common';
@@ -192,7 +193,7 @@ function crawlerCommHandshake(): void {
   let x = 20;
   let y = 20;
   ui.print(null, x, y, Z.UI, 'Negotiating connection...');
-  y += ui.font_height;
+  y += uiTextHeight();
   if (last_err) {
     ui.print(null, x, y, Z.UI, `Error: ${last_err}`);
   }

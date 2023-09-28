@@ -19,7 +19,7 @@ import {
   unit_quat,
 } from 'glov/client/quat';
 import * as settings from 'glov/client/settings';
-import * as ui from 'glov/client/ui';
+import { uiTextHeight } from 'glov/client/ui';
 import { EntityID } from 'glov/common/types';
 import {
   clamp,
@@ -606,7 +606,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
           font.drawSizedAligned(fontStyleAlpha(style_text, alpha),
             x,
             y + h/2 - float, Z.FLOATERS,
-            ui.font_height, ALIGN.HCENTER|ALIGN.VBOTTOM,
+            uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
             w, 0, floater.msg);
         }
       }

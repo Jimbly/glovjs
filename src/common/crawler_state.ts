@@ -356,7 +356,10 @@ export class CrawlerCell {
 
   deserialize(data: CrawlerCellSerialized): void {
     let desc = descs.cell[data.id];
-    assert(desc);
+    if (!desc) {
+      dataError(`Reference to unknown cell_desc "${data.id}"`);
+      desc = descs.cell.open;
+    }
     this.desc = desc;
     for (let ii = 0; ii < 4; ++ii) {
       let wdesc = descs.wall[data.walls[ii]];

@@ -15,6 +15,7 @@ import {
 import * as ui from 'glov/client/ui';
 import {
   drawLine,
+  uiTextHeight,
 } from 'glov/client/ui';
 import { merge } from 'glov/common/util';
 import {
@@ -172,6 +173,8 @@ export function crawlerMapViewDraw(
 
   let fullscreen = w === engine.game_width;
 
+  const text_height = uiTextHeight();
+
   if (!fullscreen) {
     let hover_area = {
       x, y, w, h,
@@ -207,18 +210,18 @@ export function crawlerMapViewDraw(
   let floor_title = level.props.title || `Floor ${game_state.floor_id}`;
   if (fullscreen) {
     if (style_map_name) {
-      ui.font.drawSizedAligned(style_map_name, x, y + 2, z + 1, ui.font_height,
+      ui.font.drawSizedAligned(style_map_name, x, y + 2, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, floor_title);
     }
     if (full_vis) {
-      ui.font.drawSizedAligned(null, x, y + h - (ui.font_height + 2)*2, z + 1, ui.font_height,
+      ui.font.drawSizedAligned(null, x, y + h - (text_height + 2)*2, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${num_enemies}/${total_enemies}`);
-      ui.font.drawSizedAligned(null, x, y + h - (ui.font_height + 2), z + 1, ui.font_height,
+      ui.font.drawSizedAligned(null, x, y + h - (text_height + 2), z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${level.seen_cells}/${level.total_cells}`);
     } else {
-      ui.font.drawSizedAligned(null, x, y + h - (ui.font_height + 2)*2, z + 1, ui.font_height,
+      ui.font.drawSizedAligned(null, x, y + h - (text_height + 2)*2, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${num_enemies} enemies remaining`);
-      ui.font.drawSizedAligned(null, x, y + h - (ui.font_height + 2), z + 1, ui.font_height,
+      ui.font.drawSizedAligned(null, x, y + h - (text_height + 2), z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${percLabel(level.seen_cells, level.total_cells)} explored`);
     }
   }
@@ -269,7 +272,7 @@ export function crawlerMapViewDraw(
   }
 
   if (!fullscreen && style_map_name) {
-    ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, ui.font_height,
+    ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, text_height,
       ui.font.ALIGN.HCENTER, w, 0, floor_title);
   }
 

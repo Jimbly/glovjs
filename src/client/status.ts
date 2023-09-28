@@ -2,7 +2,10 @@ import assert from 'assert';
 import { getFrameDt, getFrameIndex } from 'glov/client/engine';
 import { Font, FontStyle, fontStyleColored } from 'glov/client/font';
 import * as ui from 'glov/client/ui';
-import { UIBox } from 'glov/client/ui';
+import {
+  UIBox,
+  uiTextHeight,
+} from 'glov/client/ui';
 import { vec4 } from 'glov/common/vmath';
 
 const { round } = Math;
@@ -82,7 +85,7 @@ export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: numb
     if (msg.counter > msg.time_fade) {
       alpha = 1 - (msg.counter - msg.time_fade) / (msg.time_end - msg.time_fade);
     }
-    let size = ui.font_height;
+    let size = uiTextHeight();
     let dims = font.dims(msg.style, w, 0, size, msg.text);
     y -= pad_bottom + dims.h;
     font.draw({

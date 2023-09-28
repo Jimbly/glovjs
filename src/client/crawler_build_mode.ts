@@ -35,6 +35,7 @@ import {
   drawRect,
   makeColorSet,
   modalTextEntry,
+  uiTextHeight,
 } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
 import {
@@ -870,6 +871,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     return a[0] < b[0] ? -1 : 1;
   });
   let col_width = 32;
+  const text_height = uiTextHeight();
   for (let ii = 0; ii < all_descs.length; ++ii) {
     let pair = all_descs[ii];
     let [type, desc] = pair;
@@ -885,7 +887,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
       font,
       font_style_normal: type ? palette_style[type] : undefined,
       font_style_focused: type ? palette_style_focused[type] : undefined,
-      font_height: ui.font_height * PALETTE_FONT_SCALE,
+      font_height: text_height * PALETTE_FONT_SCALE,
       x, y, z,
       w: col_width, h: col_width,
       align: ALIGN.HWRAP|ALIGN.HVCENTER,
@@ -938,6 +940,7 @@ function showPaintPalette({
 }): {
   x : number; y: number;
 } {
+  const text_height = uiTextHeight();
   const y0 = y;
   y += (col_width + 1) * 2;
   let { entries } = palette;
@@ -984,7 +987,7 @@ function showPaintPalette({
       font,
       font_style_normal: type ? palette_style[type] : undefined,
       font_style_focused: type ? palette_style_focused[type] : undefined,
-      font_height: ui.font_height * PALETTE_FONT_SCALE,
+      font_height: text_height * PALETTE_FONT_SCALE,
       x, y, z,
       w: col_width, h: col_width,
       align: ALIGN.HWRAP|ALIGN.HVCENTER,
@@ -1091,7 +1094,7 @@ function showCurrentCell(param: {
   let [myx, myy, dir] = pos;
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
-  let font_height = ui.font_height * 0.75;
+  let font_height = uiTextHeight() * 0.75;
   let my_cell = level.getCell(myx, myy);
   let target_cell = level.getCell(tx, ty);
   font.draw({
@@ -1462,7 +1465,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
     y += button_height + 2;
 
-    let font_height = ui.font_height * 0.75;
+    let font_height = uiTextHeight() * 0.75;
     let button_w = font_height;
     let button_x = x + w - button_w * 2 - 1;
 
@@ -1670,7 +1673,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     '[F1] - Toggle this help',
     '[F2] - Toggle freecam',
   ] : ['BUILD MODE (F1 Help)']).forEach((text) => {
-    let fh = ui.font_height * 0.5;
+    let fh = uiTextHeight() * 0.5;
     font.draw({
       x, y, z,
       size: fh,
