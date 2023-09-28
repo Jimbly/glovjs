@@ -14,6 +14,7 @@ const {
   uiGetDOMElem,
 } = require('./ui.js');
 const ui = require('./ui.js');
+const { uiTextHeight } = require('./ui.js');
 const settings = require('./settings.js');
 const { SPOT_DEFAULT_BUTTON, spot, spotFocusSteal, spotKey } = require('./spot.js');
 
@@ -135,7 +136,7 @@ export function linkText(param) {
   let { style_link, style_link_hover, x, y, z, font_size, text, url, internal } = param;
   text = text || url;
   z = z || Z.UI;
-  font_size = font_size || ui.font_height;
+  font_size = font_size || uiTextHeight();
   // Also: any parameter to link(), e.g. url
   let w = ui.font.getStringWidth(style_link || style_link_default, font_size, text);
   let h = font_size;

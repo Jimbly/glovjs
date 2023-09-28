@@ -76,7 +76,7 @@ export interface SelectionBoxOptsAll {
   disabled: boolean; // default: false
   display: Partial<SelectionBoxDisplay>; // default: cloneShallow(default_display)
   scroll_height: number; // default: 0
-  font_height: number; // default: glov_ui.font_height
+  font_height: number; // default: uiTextHeight()
   entry_height: number; // default: glov_ui.button_height
   auto_reset: boolean; // default: true
   reset_selection: boolean; // default: false

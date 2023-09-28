@@ -8,6 +8,7 @@ import { Box } from './geom_types';
 import { SoundID } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
+import { UIStyle } from './uistyle';
 
 export type ColorSet = { _opaque: 'ColorSet' };
 export const Z: Partial<Record<string, number>>;
@@ -60,7 +61,8 @@ export interface UISprites {
   white: UISprite;
 }
 export const sprites: UISprites;
-export const font_height: number;
+export const font_height: number; // DEPRECATED: use uiStyleCurrent().text_height or uiTextHeight()
+export function uiTextHeight(): number;
 export const button_width: number;
 export const button_height: number;
 export const panel_pixel_scale: number;
@@ -166,6 +168,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
+  style?: UIStyle;
 }
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
@@ -202,7 +205,7 @@ export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
 export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | null;
 
-export function print(style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
+export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
 export type LabelParam = Partial<TooltipBoxParam> & {
   x: number;
@@ -210,8 +213,8 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   z?: number;
   w?: number;
   h?: number;
-  style?: FontStyle;
-  style_focused?: FontStyle;
+  font_style?: FontStyle;
+  font_style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;
@@ -250,6 +253,7 @@ export interface ModalDialogParamBase<CB> {
   tick?: ModalDialogTickCallback;
   buttons?: Partial<Record<string, ModalDialogButton<CB>>>;
   no_fullscreen_zoom?: boolean;
+  style?: UIStyle;
 }
 
 export type ModalDialogParam = ModalDialogParamBase<() => void>;
@@ -395,4 +399,5 @@ export const internal : {
     line_mode?: LineMode;
   }): void;
   uiTick(dt: number): void;
+  uiApplyStyle(style: UIStyle): void;
 };

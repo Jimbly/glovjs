@@ -4,12 +4,12 @@
 import assert from 'assert';
 import { vec4 } from 'glov/common/vmath';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
-import { colorPicker } from './color_picker.js';
+import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate } from './edit_box';
-import * as engine from './engine.js';
+import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
-import * as input from './input.js';
-import { linkText } from './link.js';
+import * as input from './input';
+import { linkText } from './link';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   SelectionBox,
@@ -17,9 +17,10 @@ import {
   selectionBoxCreate,
 } from './selection_box';
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';
-import { slider } from './slider.js';
-import * as ui from './ui.js';
-import { getURLBase } from './urlhash.js';
+import { slider } from './slider';
+import * as ui from './ui';
+import { uiTextHeight } from './ui';
+import { getURLBase } from './urlhash';
 
 const { ceil, random } = Math;
 
@@ -101,6 +102,7 @@ function init(x: number, y: number, column_width: number): void {
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
   z = z || Z.UI;
+  const text_height = uiTextHeight();
   let line_height = ui.button_height + 2;
   let column_width = ui.button_width + 8;
   if (inited !== `${x}_${y}_${column_width}`) {
@@ -177,7 +179,7 @@ export function run(x: number, y: number, z: number): void {
     color: test_color,
   });
 
-  let scroll_area_h = ui.font_height * 16 + pad;
+  let scroll_area_h = text_height * 16 + pad;
   let scroll_area_w = 100;
   test_scroll_area.begin({
     x: x + column_width + 4 + line_height,
@@ -202,17 +204,17 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesHeader({
     y: internal_y,
     text: 'Values',
-    text_height: ui.font_height,
+    text_height,
   });
   internal_y += header_h + pad;
 
   internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    ui.font_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
+    text_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
     `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
-  internal_y += ui.font_height + pad;
+  internal_y += text_height + pad;
   ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
-  internal_y += ui.font_height + pad;
+  internal_y += text_height + pad;
 
   ui.progressBar({
     x: 2,
@@ -225,7 +227,7 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesHeader({
     y: internal_y,
     text: 'Widgets',
-    text_height: ui.font_height,
+    text_height,
   });
   internal_y += header_h + pad;
 
@@ -236,7 +238,7 @@ export function run(x: number, y: number, z: number): void {
   ) {
     engine.defines.SPOT_DEBUG = !engine.defines.SPOT_DEBUG;
   }
-  internal_y += ui.font_height + pad;
+  internal_y += text_height + pad;
   internal_y += test_dropdown_large.run({ x: 2, y: internal_y, z: z + 1 }) + pad;
   if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
@@ -246,13 +248,13 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesHeader({
     y: internal_y, w: 8, x: 7, z: 7,
     text: 'Misc',
-    text_height: ui.font_height,
+    text_height,
   });
   internal_y += header_h + pad;
 
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);
-    internal_y += ui.font_height + pad;
+    internal_y += text_height + pad;
   }
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line', key: 'add_line' })) {
     ++test_lines;
@@ -289,8 +291,9 @@ export function runFontTest(x: number, y: number): void {
   const COLOR_INVISIBLE = 0x00000000;
   let z = Z.UI;
   const font: Font = ui.font;
+  const text_height = uiTextHeight();
 
-  let font_size = ui.font_height * 2;
+  let font_size = text_height * 2;
   font.drawSized(null, x, y, z, font_size, `Default ${font_size} ${random().toFixed(7)}`);
   y += font_size;
   font.drawSized(null, x, y, z, font_size / 2, `Default ${font_size / 2} Lorem ipsum dolor sit amet <[A|B]>`);

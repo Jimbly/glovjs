@@ -21,6 +21,7 @@ import * as settings from './settings';
 import { isFriend } from './social';
 import { spotUnfocus } from './spot';
 import * as ui from './ui';
+import { uiTextHeight } from './ui';
 import { profanityFilter, profanityStartup } from './words/profanity';
 
 const { ceil, floor, max, min, round } = Math;
@@ -184,7 +185,7 @@ function ChatUI(params) {
   this.max_lines = params.max_lines || 8; // Max shown when chat not active
   this.max_messages = params.max_messages || 1000; // Size of history kept
   this.max_len = params.max_len;
-  this.font_height = params.font_height || ui.font_height;
+  this.font_height = params.font_height || uiTextHeight();
   this.hide_disconnected_message = params.hide_disconnected_message || false;
   this.disconnected_message_top = params.disconnected_message_top || false;
   this.scroll_area = scrollAreaCreate({
@@ -647,7 +648,7 @@ ChatUI.prototype.setZOverride = function (z) {
 };
 
 ChatUI.prototype.run = function (opts) {
-  const UI_SCALE = ui.font_height / 24;
+  const UI_SCALE = uiTextHeight() / 24;
   opts = opts || {};
   if (!getAbilityChat()) {
     opts.hide = true;
@@ -665,7 +666,7 @@ ChatUI.prototype.run = function (opts) {
       camera2d.x0(),
       this.disconnected_message_top ? engine.game_height * 0.80 : camera2d.y0(),
       Z.DEBUG,
-      ui.font_height,
+      uiTextHeight(),
       this.disconnected_message_top ? ALIGN.HCENTER : ALIGN.HVCENTER,
       camera2d.w(), camera2d.h() * 0.20,
       `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);

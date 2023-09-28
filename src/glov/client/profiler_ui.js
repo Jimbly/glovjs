@@ -14,6 +14,7 @@ const input = require('./input.js');
 const { floor, max, min, round } = Math;
 const { netClient, netDisconnected } = require('./net.js');
 const ui = require('./ui.js');
+const { uiTextHeight } = require('./ui.js');
 const { perfGraphOverride, friendlyBytes } = require('./perf.js');
 const {
   HIST_SIZE,
@@ -629,7 +630,7 @@ function profilerUIRun() {
     bloat = profilerMeasureBloat();
   }
   if (engine.render_width) {
-    let scale = FONT_SIZE / ui.font_height;
+    let scale = FONT_SIZE / uiTextHeight();
     camera2d.set(0, 0, scale * engine.render_width, scale * engine.render_height);
     font_number_scale = 1;
     bar_w = scale;

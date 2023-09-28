@@ -47,6 +47,7 @@ import {
   playUISound,
   uiFontStyleFocused,
   uiFontStyleNormal,
+  uiTextHeight,
 } from './ui.js';
 import * as glov_ui from './ui.js';
 
@@ -252,7 +253,7 @@ class SelectionBoxBase {
     this.disabled = false;
     this.display = cloneShallow(default_display);
     this.scroll_height = 0;
-    this.font_height = glov_ui.font_height;
+    this.font_height = uiTextHeight();
     this.entry_height = glov_ui.button_height;
     this.auto_reset = true;
     this.reset_selection = false;

@@ -2,19 +2,19 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { clamp, merge } from 'glov/common/util.js';
-import verify from 'glov/common/verify.js';
+import { clamp, merge } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import { Vec4, vec2, vec4 } from 'glov/common/vmath';
-import * as camera2d from './camera2d.js';
-import * as engine from './engine.js';
-import { renderNeeded } from './engine.js';
+import * as camera2d from './camera2d';
+import * as engine from './engine';
+import { renderNeeded } from './engine';
 import { Box } from './geom_types';
-import * as input from './input.js';
+import * as input from './input';
 import {
   BUTTON_LEFT,
   KEYS,
   PAD,
-} from './input.js';
+} from './input';
 import {
   SPOT_DEFAULT_BUTTON,
   SPOT_STATE_DOWN,
@@ -24,9 +24,10 @@ import {
   spotSubBegin,
   spotSubEnd,
   spotUnfocus,
-} from './spot.js';
-import { spriteClipPop, spriteClipPush } from './sprites.js';
-import * as ui from './ui.js';
+} from './spot';
+import { spriteClipPop, spriteClipPush } from './sprites';
+import * as ui from './ui';
+import { uiTextHeight } from './ui';
 
 const { abs, max, min, round } = Math;
 
@@ -97,7 +98,7 @@ class ScrollAreaInternal implements ScrollArea {
   z = Z.UI;
   w = 10;
   h = 10;
-  rate_scroll_click = ui.font_height;
+  rate_scroll_click = uiTextHeight();
   pixel_scale = default_pixel_scale;
   top_pad = true;
   color = vec4(1,1,1,1);
