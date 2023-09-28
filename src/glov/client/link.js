@@ -4,7 +4,7 @@
 /* eslint-disable import/order */
 const assert = require('assert');
 const engine = require('./engine.js');
-const { style } = require('./font.js');
+const { fontStyle } = require('./font.js');
 const camera2d = require('./camera2d.js');
 const in_event = require('./in_event.js');
 const input = require('./input.js');
@@ -14,16 +14,16 @@ const {
   uiGetDOMElem,
 } = require('./ui.js');
 const ui = require('./ui.js');
-const { uiTextHeight } = require('./ui.js');
+const { uiStyleCurrent } = require('./uistyle.js');
 const settings = require('./settings.js');
 const { SPOT_DEFAULT_BUTTON, spot, spotFocusSteal, spotKey } = require('./spot.js');
 
-let style_link_default = style(null, {
+let style_link_default = fontStyle(null, {
   color: 0x5040FFff,
   outline_width: 1.0,
   outline_color: 0x00000020,
 });
-let style_link_hover_default = style(null, {
+let style_link_hover_default = fontStyle(null, {
   color: 0x0000FFff,
   outline_width: 1.0,
   outline_color: 0x00000020,
@@ -133,10 +133,11 @@ export function link(param) {
 }
 
 export function linkText(param) {
-  let { style_link, style_link_hover, x, y, z, font_size, text, url, internal } = param;
+  let { style_link, style_link_hover, x, y, z, style, font_size, text, url, internal } = param;
   text = text || url;
   z = z || Z.UI;
-  font_size = font_size || uiTextHeight();
+  style = style || uiStyleCurrent();
+  font_size = font_size || style.text_height;
   // Also: any parameter to link(), e.g. url
   let w = ui.font.getStringWidth(style_link || style_link_default, font_size, text);
   let h = font_size;
