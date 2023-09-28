@@ -5,8 +5,8 @@ import assert from 'assert';
 const { max } = Math;
 import * as ack from 'glov/common/ack.js';
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
-import { isValidPlatform } from 'glov/common/enums';
 import { isPacket } from 'glov/common/packet';
+import { platformIsValid } from 'glov/common/platform';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
 import * as wscommon from 'glov/common/wscommon.js';
@@ -166,7 +166,7 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
     let query = requestGetQuery(req);
     let plat = query.plat ?? null;
     let ver = query.ver ?? null;
-    let versionSupport = plat !== null && ver !== null && isValidPlatform(plat) && isValidVersion(ver) ?
+    let versionSupport = plat !== null && ver !== null && platformIsValid(plat) && isValidVersion(ver) ?
       getVersionSupport(plat, ver) :
       VersionSupport.Obsolete;
     if (versionSupport !== VersionSupport.Supported) {

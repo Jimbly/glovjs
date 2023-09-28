@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Platform } from 'glov/common/enums';
+import { PlatformID as Platform } from 'glov/common/platform';
 
 export class SemanticVersion {
   readonly major: number;

@@ -5,9 +5,6 @@ import assert from 'assert';
 import * as base32 from 'glov/common/base32';
 import * as dot_prop from 'glov/common/dot-prop';
 import {
-  ID_PROVIDER_APPLE,
-  ID_PROVIDER_FB_GAMING,
-  ID_PROVIDER_FB_INSTANT,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
 } from 'glov/common/enums.js';
@@ -54,15 +51,12 @@ export function validUserId(user_id) {
   return user_id?.match(regex_valid_user_id);
 }
 
-export function validProvider(provider) {
-  switch (provider) {
-    case ID_PROVIDER_APPLE:
-    case ID_PROVIDER_FB_GAMING:
-    case ID_PROVIDER_FB_INSTANT:
-      return true;
-    default:
-      return false;
-  }
+let valid_provider_ids = Object.create(null);
+export function registerValidIDProvider(key) {
+  valid_provider_ids[key] = true;
+}
+function validProvider(provider) {
+  return valid_provider_ids[provider] || false;
 }
 
 export function validExternalId(external_id) {
@@ -160,7 +154,7 @@ export class DefaultUserWorker extends ChannelWorker {
             friend = createFriendData(status);
             // Note: If the friend status is added-auto or removed, it must have been added through FB Instant,
             // so we can use its FB Instant id.
-            setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
+            setFriendExternalId(friend, 'fbi', fbinstant_friend_id);
           } else {
             // Unknown FB Instant friend id, so remove it and let it be re-added by the client.
             // This may cause occasional cases of manually removed friends to reappear as added-auto.

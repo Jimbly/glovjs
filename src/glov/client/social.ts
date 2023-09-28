@@ -4,10 +4,7 @@
 /* eslint-env browser */
 
 import assert from 'assert';
-import { PLATFORM_FBINSTANT } from 'glov/client/client_config';
 import {
-  ID_PROVIDER_FB_GAMING,
-  ID_PROVIDER_FB_INSTANT,
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
@@ -370,10 +367,14 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
   }
 
   let url = null;
-  if (PLATFORM_FBINSTANT) {
-    url = getExternalUserInfos(user_id)?.[ID_PROVIDER_FB_INSTANT]?.profile_picture_url;
-  } else {
-    url = getExternalUserInfos(user_id)?.[ID_PROVIDER_FB_GAMING]?.profile_picture_url;
+  let infos = getExternalUserInfos(user_id);
+  if (infos) {
+    for (let key in infos) {
+      if (infos[key] && infos[key].profile_picture_url) {
+        url = infos[key].profile_picture_url;
+        break;
+      }
+    }
   }
 
   if (url) {
