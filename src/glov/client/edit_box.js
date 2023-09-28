@@ -27,7 +27,11 @@ const {
   spotSuppressKBNav,
 } = require('./spot.js');
 const glov_ui = require('./ui.js');
-const { getUIElemData, uiGetDOMElem } = require('./ui.js');
+const {
+  getUIElemData,
+  uiGetDOMElem,
+  uiTextHeight,
+} = require('./ui.js');
 
 let form_hook_registered = false;
 let active_edit_box;
@@ -81,7 +85,7 @@ class GlovUIEditBox {
     this.w = glov_ui.button_width;
     this.type = 'text';
     // this.h = glov_ui.button_height;
-    this.font_height = glov_ui.font_height;
+    this.font_height = uiTextHeight();
     this.text = '';
     this.placeholder = '';
     this.max_len = 0;

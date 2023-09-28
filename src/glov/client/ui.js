@@ -31,6 +31,7 @@ export const internal = {
   uiSetFonts, // eslint-disable-line @typescript-eslint/no-use-before-define
   uiStartup, // eslint-disable-line @typescript-eslint/no-use-before-define
   uiTick, // eslint-disable-line @typescript-eslint/no-use-before-define
+  uiApplyStyle, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 
 /* eslint-disable import/order */
@@ -76,6 +77,11 @@ const {
   spriteCreate,
 } = glov_sprites;
 const { TEXTURE_FORMAT } = require('./textures.js');
+const {
+  uiStyleAlloc,
+  uiStyleDefault,
+  uiStyleSetDefault,
+} = require('./uistyle.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
@@ -94,6 +100,8 @@ deprecate(exports, 'color_button', 'uiSetButtonColorSet()');
 const MODAL_DARKEN = 0.75;
 let KEYS;
 let PAD;
+
+let ui_style_current;
 
 const menu_fade_params_default = {
   blur: [0.125, 0.865],
@@ -213,9 +221,11 @@ function doDesaturateEffect(saturation, brightness) {
   });
 }
 
+// DEPRECATED: use uiStyleCurrent().foo instead
+// exports.font_height;
+
 // overrideable default parameters
 export let button_height = 32;
-export let font_height = 24;
 export let button_width = 200;
 export let modal_button_width = 100;
 export let button_img_size = button_height;
@@ -257,6 +267,10 @@ export function uiFontStyleDisabled() {
 }
 export function uiFontStyleModal() {
   return font_style_modal;
+}
+
+export function uiTextHeight() {
+  return ui_style_current.text_height;
 }
 
 export let font;
@@ -752,7 +766,7 @@ export function drawTooltip(param) {
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad * 2;
-  let dims = font.dims(font_style_modal, w, 0, font_height, tooltip);
+  let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
   let right = param.tooltip_right;
   if (!above && param.tooltip_auto_above_offset) {
@@ -772,7 +786,7 @@ export function drawTooltip(param) {
   }
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(font_style_modal,
-    x + eff_tooltip_pad, y, z+1, w, 0, font_height,
+    x + eff_tooltip_pad, y, z+1, w, 0, ui_style_current.text_height,
     tooltip);
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
@@ -960,7 +974,7 @@ export function buttonText(param) {
   // param.z = param.z || Z.UI;
   param.w = param.w || button_width;
   param.h = param.h || button_height;
-  param.font_height = param.font_height || font_height;
+  param.font_height = param.font_height || ui_style_current.text_height;
 
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
@@ -1055,7 +1069,7 @@ export function button(param) {
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
-  param.font_height = param.font_height || font_height;
+  param.font_height = param.font_height || ui_style_current.text_height;
 
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
@@ -1076,8 +1090,8 @@ export function button(param) {
   return ret ? spot_ret : null;
 }
 
-export function print(style, x, y, z, text) {
-  return font.drawSized(style, x, y, z, font_height, text);
+export function print(font_style, x, y, z, text) {
+  return font.drawSized(font_style, x, y, z, ui_style_current.text_height, text);
 }
 
 export function label(param) {
@@ -1086,7 +1100,7 @@ export function label(param) {
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
-  let size = param.size || font_height;
+  let size = param.size || ui_style_current.text_height;
   assert(isFinite(x));
   assert(isFinite(y));
   assert.equal(typeof text, 'string');
@@ -1168,7 +1182,7 @@ let virtual_size = vec2();
 function modalDialogRun() {
   camera2d.domDeltaToVirtual(virtual_size, dom_requirement);
   let fullscreen_mode = false;
-  let eff_font_height = modal_dialog.font_height || font_height;
+  let eff_font_height = modal_dialog.font_height || ui_style_current.text_height;
   let eff_button_height = button_height;
   let pad = modal_pad;
   let vpad = modal_pad * 0.5;
@@ -1925,13 +1939,21 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
 }
 
 export function setFontHeight(_font_height) {
-  font_height = _font_height;
-  fontSetDefaultSize(font_height);
+  let new_style = uiStyleAlloc({
+    text_height: _font_height,
+  }, uiStyleDefault());
+  uiStyleSetDefault(new_style);
+}
+
+function uiApplyStyle(style) {
+  ui_style_current = style;
+  exports.font_height = style.text_height;
+  fontSetDefaultSize(style.text_height);
 }
 
 export function scaleSizes(scale) {
   button_height = round(32 * scale);
-  setFontHeight(round(24 * scale));
+  let text_height = round(24 * scale);
   button_width = round(200 * scale);
   button_img_size = button_height;
   modal_button_width = round(button_width / 2);
@@ -1944,6 +1966,11 @@ export function scaleSizes(scale) {
   panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
   scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
+
+  // calls `uiStyleApply()`:
+  uiStyleSetDefault(uiStyleAlloc({
+    text_height,
+  }));
 }
 
 export function setPanelPixelScale(scale) {

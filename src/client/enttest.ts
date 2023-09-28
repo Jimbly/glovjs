@@ -19,7 +19,10 @@ import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
-import { uiHandlingNav } from 'glov/client/ui';
+import {
+  uiHandlingNav,
+  uiTextHeight,
+} from 'glov/client/ui';
 import { ClientChannelWorker, DataObject } from 'glov/common/types';
 import {
   Vec2,
@@ -458,7 +461,7 @@ export function main(): void {
         if (ent.data.display_name) {
           ui.font.drawSizedAligned(glov_font.styleAlpha(glov_font.styleColored(null, 0x00000080), color_temp[3]),
             pos[0], pos[1] - 64, Z.SPRITES - 1,
-            ui.font_height, glov_font.ALIGN.HCENTER, 0, 0,
+            uiTextHeight(), glov_font.ALIGN.HCENTER, 0, 0,
             ent.data.display_name);
         }
       }

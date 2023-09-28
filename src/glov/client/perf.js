@@ -34,6 +34,7 @@ const { profilerUI } = require('./profiler_ui.js');
 const settings = require('./settings.js');
 const { spriteChainedStart, spriteChainedStop } = require('./sprites.js');
 const ui = require('./ui.js');
+const { uiTextHeight } = require('./ui.js');
 const { vec4, v3copy } = require('glov/common/vmath.js');
 require('./perf_net.js');
 
@@ -147,7 +148,8 @@ function friendlyCount(count) {
 function showMetric(y, metric) {
   let font = engine.font;
   let pad = METRIC_PAD;
-  let line_height = settings.render_scale_all < 1 ? ui.font_height / settings.render_scale_all : ui.font_height;
+  let font_height = uiTextHeight();
+  let line_height = settings.render_scale_all < 1 ? font_height / settings.render_scale_all : font_height;
   let METRIC_VALUE_WIDTH = line_height * (metric.width || 2.5);
   let x = camera2d.x1Real() - METRIC_VALUE_WIDTH - pad;
   let y0 = y;
@@ -396,7 +398,8 @@ export function draw() {
     let perf_data = updatePerfProvider() || {};
     let y = camera2d.y0Real();
     let y0 = y;
-    let line_height = settings.render_scale_all < 1 ? ui.font_height / settings.render_scale_all : ui.font_height;
+    let font_height = uiTextHeight();
+    let line_height = settings.render_scale_all < 1 ? font_height / settings.render_scale_all : font_height;
     let column_width = line_height * 6;
     let x0 = camera2d.x0Real();
     let x = x0 + column_width * 2;

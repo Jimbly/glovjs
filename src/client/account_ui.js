@@ -12,6 +12,7 @@ const { linkGetDefaultStyle, linkText } = require('glov/client/link.js');
 const { random, round } = Math;
 const net = require('glov/client/net.js');
 const ui = require('glov/client/ui.js');
+const { uiTextHeight } = require('glov/client/ui');
 const { vec4 } = require('glov/common/vmath.js');
 
 export function formatUserID(user_id, display_name) {
@@ -103,7 +104,7 @@ AccountUI.prototype.showLogin = function (param) {
     font_height, font_height_small, label_w,
     pad, status_bar,
   } = param;
-  font_height = font_height || ui.font_height;
+  font_height = font_height || uiTextHeight();
   font_height_small = font_height_small || font_height * 0.75;
   button_height = button_height || ui.button_height;
   button_width = button_width || 240;

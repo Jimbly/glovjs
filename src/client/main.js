@@ -20,7 +20,10 @@ import * as glov_sprites from 'glov/client/sprites.js';
 import { spriteCreate } from 'glov/client/sprites.js';
 import * as transition from 'glov/client/transition.js';
 import * as ui from 'glov/client/ui.js';
-import { uiHandlingNav } from 'glov/client/ui.js';
+import {
+  uiHandlingNav,
+  uiTextHeight,
+} from 'glov/client/ui.js';
 import * as ui_test from 'glov/client/ui_test.js';
 import { v4clone, v4copy, vec2, vec4 } from 'glov/common/vmath.js';
 import * as particle_data from './particle_data.js';
@@ -376,7 +379,7 @@ export function main() {
       glow_color: 0x000000ff,
     });
     ui.print(font_style,
-      test.character.x, test.character.y + (++font_test_idx * ui.font_height), Z.SPRITES,
+      test.character.x, test.character.y + (++font_test_idx * uiTextHeight()), Z.SPRITES,
       'Outline and Drop Shadow');
 
     let x = ui.button_height;
@@ -440,8 +443,8 @@ export function main() {
     }
     y += button_spacing;
 
-    font.drawSizedAligned(null, x, y, Z.UI, ui.font_height, font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
-    y += ui.font_height + 1;
+    font.drawSizedAligned(null, x, y, Z.UI, uiTextHeight(), font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
+    y += uiTextHeight() + 1;
 
     let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
     if (miniButton('3D', 'Toggles visibility of a 3D test', flagGet('3d_test'))) {

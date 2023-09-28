@@ -21,7 +21,10 @@ import { spotSuppressPad } from 'glov/client/spot';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
 import * as ui from 'glov/client/ui';
-import { uiHandlingNav } from 'glov/client/ui';
+import {
+  uiHandlingNav,
+  uiTextHeight,
+} from 'glov/client/ui';
 import { Packet } from 'glov/common/packet';
 import { ClientChannelWorker, DataObject, ErrorCallback } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
@@ -279,7 +282,7 @@ export function main(): void {
             });
             ui.font.drawSizedAligned(glov_font.styleColored(null, 0x00000080),
               pos[0], pos[1] - 64, Z.SPRITES - 1,
-              ui.font_height, glov_font.ALIGN.HCENTER, 0, 0,
+              uiTextHeight(), glov_font.ALIGN.HCENTER, 0, 0,
               ids.display_name || `client_${client_id}`);
           }
         }
