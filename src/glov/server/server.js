@@ -5,6 +5,8 @@ global.profilerStart = global.profilerStop = global.profilerStopStart = function
   // not yet profiling on server
 };
 
+let on_panic = [];
+
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
@@ -259,7 +261,6 @@ export function startup(params) {
   updateBuildTimestamp('app', true);
 }
 
-let on_panic = [];
 export function onpanic(cb) {
   on_panic.push(cb);
 }
