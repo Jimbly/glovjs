@@ -44,9 +44,6 @@ export function uiStyleAlloc(param: Partial<UIStyle>, parent?: UIStyle): UIStyle
   return new UIStyleImpl(param, parent);
 }
 
-ui_style_default = uiStyleAlloc(default_style_params_init);
-ui_style_current = ui_style_default;
-
 export function uiStyleDefault(): UIStyle {
   return ui_style_default;
 }
@@ -66,3 +63,5 @@ export function uiStyleSetDefault(style: UIStyle): void {
 
   uiStyleSetCurrent(style);
 }
+
+uiStyleSetDefault(uiStyleAlloc(default_style_params_init));
