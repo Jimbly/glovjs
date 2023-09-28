@@ -168,6 +168,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
+  style?: UIStyle;
 }
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
@@ -252,6 +253,7 @@ export interface ModalDialogParamBase<CB> {
   tick?: ModalDialogTickCallback;
   buttons?: Partial<Record<string, ModalDialogButton<CB>>>;
   no_fullscreen_zoom?: boolean;
+  style?: UIStyle;
 }
 
 export type ModalDialogParam = ModalDialogParamBase<() => void>;

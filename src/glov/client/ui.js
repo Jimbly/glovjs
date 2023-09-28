@@ -974,7 +974,7 @@ export function buttonText(param) {
   // param.z = param.z || Z.UI;
   param.w = param.w || button_width;
   param.h = param.h || button_height;
-  param.font_height = param.font_height || ui_style_current.text_height;
+  param.font_height = param.font_height || (param.style || ui_style_current).text_height;
 
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
@@ -1069,7 +1069,7 @@ export function button(param) {
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
-  param.font_height = param.font_height || ui_style_current.text_height;
+  param.font_height = param.font_height || (param.style || ui_style_current).text_height;
 
   let spot_ret = buttonShared(param);
   let { ret, state, focused } = spot_ret;
@@ -1182,7 +1182,7 @@ let virtual_size = vec2();
 function modalDialogRun() {
   camera2d.domDeltaToVirtual(virtual_size, dom_requirement);
   let fullscreen_mode = false;
-  let eff_font_height = modal_dialog.font_height || ui_style_current.text_height;
+  let eff_font_height = modal_dialog.font_height || (modal_dialog.style || ui_style_current).text_height;
   let eff_button_height = button_height;
   let pad = modal_pad;
   let vpad = modal_pad * 0.5;
