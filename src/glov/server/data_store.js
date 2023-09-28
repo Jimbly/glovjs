@@ -19,7 +19,12 @@ const { callEach, clone } = require('glov/common/util.js');
 // Shuffles the ordering of the keys in an Object, to simulate saving to data
 //   stores that do not use JavaScript Objects (which retain order) as a backing
 //   store.
-const DO_SHUFFLE = true;
+let do_shuffle = true;
+
+export function dataStoreDoShuffle(value) {
+  do_shuffle = value;
+}
+
 
 function shuffle(obj) {
   if (!obj) {
@@ -60,7 +65,7 @@ class DataStoreOneFile {
     ++ds_stats.get;
     setImmediate(() => {
       let obj = this.root_store.get(obj_name, default_value);
-      if (DO_SHUFFLE) {
+      if (do_shuffle) {
         obj = shuffle(obj);
       }
       cb(null, obj);
@@ -196,7 +201,7 @@ class DataStore {
               return void cb(err);
             }
             let obj = JSON.parse(buf);
-            if (DO_SHUFFLE) {
+            if (do_shuffle) {
               obj = shuffle(obj);
             }
             cb(null, obj);
@@ -205,7 +210,7 @@ class DataStore {
         let obj = store.get('data', default_value);
         if (obj && obj !== default_value) {
           obj = clone(obj);
-          if (DO_SHUFFLE) {
+          if (do_shuffle) {
             obj = shuffle(obj);
           }
         }

@@ -4,10 +4,7 @@
 /* eslint-env browser */
 
 import assert from 'assert';
-import { PLATFORM_FBINSTANT } from 'glov/client/client_config';
 import {
-  ID_PROVIDER_FB_GAMING,
-  ID_PROVIDER_FB_INSTANT,
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
@@ -21,6 +18,7 @@ import {
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
+import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
@@ -172,11 +170,14 @@ function richPresenceSend(): void {
     pak.writeInt(last_presence.active);
     pak.writeAnsiString(last_presence.state);
     pak.writeJSON(last_presence.payload);
+    pak.writeAnsiString(abTestGetMetricsAndPlatform());
     pak.send();
   });
 }
-export function richPresenceSet(active: number, state: string, payload?: unknown): void {
-  active = !active || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ? PRESENCE_INACTIVE : PRESENCE_ACTIVE;
+export function richPresenceSet(active_in: boolean, state: string, payload?: unknown): void {
+  let active: number = !active_in || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
+    PRESENCE_INACTIVE :
+    PRESENCE_ACTIVE;
   if (invisible) {
     active = PRESENCE_OFFLINE;
   }
@@ -366,10 +367,14 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
   }
 
   let url = null;
-  if (PLATFORM_FBINSTANT) {
-    url = getExternalUserInfos(user_id)?.[ID_PROVIDER_FB_INSTANT]?.profile_picture_url;
-  } else {
-    url = getExternalUserInfos(user_id)?.[ID_PROVIDER_FB_GAMING]?.profile_picture_url;
+  let infos = getExternalUserInfos(user_id);
+  if (infos) {
+    for (let key in infos) {
+      if (infos[key] && infos[key].profile_picture_url) {
+        url = infos[key].profile_picture_url;
+        break;
+      }
+    }
   }
 
   if (url) {

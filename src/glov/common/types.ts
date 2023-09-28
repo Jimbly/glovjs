@@ -68,6 +68,12 @@ export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] };
  */
 export type DefinedValueOf<T> = Exclude<T[keyof T], undefined>;
 
+/**
+ * Helper type to mark only one field of a type as optional.
+ */
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
+
+
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
@@ -166,6 +172,7 @@ export interface ClientHandlerSource extends HandlerSource {
 export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
   return src.type === 'client';
 }
+export type LoggedInClientHandlerSource = WithRequired<ClientHandlerSource, 'user_id' | 'display_name'>;
 
 export interface ChatIDs extends ClientHandlerSource {
   style?: string;
@@ -210,3 +217,5 @@ export type UnimplementedData = DataObject;
 export type DeepPartial<T> = T extends DataObject ? {
     [P in keyof T]?: DeepPartial<T[P]>;
 } : T;
+
+export type NumberBoolean = 0 | 1;

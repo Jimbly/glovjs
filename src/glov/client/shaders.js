@@ -114,13 +114,13 @@ errorReportSetDynamicDetails('context_lost', function () {
   return '';
 });
 
-let report_queued = false;
+let report_timeout = null;
 let shader_errors;
 let shader_errors_any_fatal;
 let reported_shader_errors = false;
 function reportShaderError(non_fatal, err) {
   function doReport() {
-    report_queued = false;
+    report_timeout = null;
     let msg = `Shader error(s):\n    ${shader_errors.join('\n    ')}`;
     shader_errors = null;
     if (!gl.isContextLost()) {
@@ -133,9 +133,8 @@ function reportShaderError(non_fatal, err) {
       }
     }
   }
-  if (!report_queued) {
-    setTimeout(doReport, 1000);
-    report_queued = true;
+  if (!report_timeout) {
+    report_timeout = setTimeout(doReport, 1000);
     shader_errors = [];
     shader_errors_any_fatal = false;
   }
@@ -551,6 +550,13 @@ export function shadersStartup(_globals) {
 
   filewatchOn('.fp', onShaderChange);
   filewatchOn('.vp', onShaderChange);
+
+  let valid = error_fp.valid && error_vp.valid;
+  if (!valid) {
+    // do _not_ send immediate error reports about these, we have an invalid context of some kind
+    clearTimeout(report_timeout);
+  }
+  return valid;
 }
 
 export function shadersAddGlobal(key, vec) {

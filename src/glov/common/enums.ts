@@ -5,10 +5,6 @@ export const PRESENCE_OFFLINE = 0; // for invisible, etc
 export const PRESENCE_ACTIVE = 1;
 export const PRESENCE_INACTIVE = 2;
 
-export const ID_PROVIDER_APPLE = 'apl';
-export const ID_PROVIDER_FB_GAMING = 'fbg';
-export const ID_PROVIDER_FB_INSTANT = 'fbi';
-
 export type NumberEnum<K extends string, V extends number> = Record<K, V> & Partial<Record<string, V | string>>;
 export type StringEnum<K extends string, V extends string> = Record<K, V>;
 
@@ -31,19 +27,4 @@ export function isValidStringEnumValue<K extends string, V extends string>(
     }
   }
   return false;
-}
-
-export enum Platform {
-  Android = 'android',
-  FBInstant = 'fbinstant',
-  IOS = 'ios',
-  MSStart = 'msstart',
-  Web = 'web',
-  Yandex = 'yandex',
-}
-export function getPlatformValues(): Platform[] {
-  return getStringEnumValues(Platform);
-}
-export function isValidPlatform(v: string | undefined | null): boolean {
-  return isValidStringEnumValue(Platform, v);
 }

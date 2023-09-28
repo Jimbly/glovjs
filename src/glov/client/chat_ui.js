@@ -245,6 +245,9 @@ function ChatUI(params) {
   if (netSubs()) {
     netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
   }
+
+  // for console debugging, overrides general (not forwarded to server, not access checked) version
+  window.cmd = this.cmdParse.bind(this);
 }
 
 ChatUI.prototype.setActiveSize = function (font_height, w) {
@@ -415,11 +418,8 @@ ChatUI.prototype.focus = function () {
 };
 
 ChatUI.prototype.runLate = function () {
-  if (!getAbilityChat()) {
-    return;
-  }
   this.did_run_late = true;
-  if (input.keyDownEdge(input.KEYS.RETURN)) {
+  if (getAbilityChat() && input.keyDownEdge(input.KEYS.RETURN)) {
     this.focus();
   }
   if (input.keyDownEdge(input.KEYS.SLASH) ||
@@ -463,7 +463,7 @@ ChatUI.prototype.cmdParse = function (str, cb) {
     (err, resp) => {
       this.handle_cmd_parse(err, resp);
       if (cb) {
-        cb(err);
+        cb(err, resp);
       }
     } :
     this.handle_cmd_parse;

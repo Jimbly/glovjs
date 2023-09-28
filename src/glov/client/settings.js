@@ -35,6 +35,10 @@ export function runTimeDefault(key, new_default) {
   }
 }
 
+export function settingIsModified(key) {
+  return modified[key];
+}
+
 let settings_stack = null;
 export function push(pairs) {
   assert(!settings_stack);
@@ -86,6 +90,7 @@ export function register(defs) {
       access_run: def.access_run,
       access_show: def.access_show,
       default_value: def.default_value,
+      enum_lookup: def.enum_lookup,
     });
   });
 }
@@ -122,7 +127,11 @@ register({
     label: 'Render Scale Mode',
     default_value: 0,
     type: cmd_parse.TYPE_INT,
-    range: [0,2],
+    enum_lookup: {
+      LINEAR: 0,
+      NEAREST: 1,
+      CRT: 2,
+    },
   },
   render_scale_all: {
     label: 'Render Scale (All)',

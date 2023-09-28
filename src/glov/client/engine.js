@@ -89,6 +89,7 @@ const { callEach, clamp, nearSame, ridx } = require('glov/common/util.js');
 const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
+  mat4isFinite,
   vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
@@ -178,6 +179,7 @@ export function addViewSpaceGlobal(name) {
 
 let mat_temp = mat4();
 export function setGlobalMatrices(_mat_view) {
+  assert(mat4isFinite(_mat_view));
   mat4Copy(mat_view, _mat_view);
   mat4Mul(mat_vp, mat_projection, mat_view);
   v3iNormalize(light_dir_ws);
@@ -191,6 +193,7 @@ export function setGlobalMatrices(_mat_view) {
 
 // Just set up mat_vp and mat_projection
 export function setMatVP(_mat_view) {
+  assert(mat4isFinite(_mat_view));
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
   mat4Copy(mat_view, _mat_view);
@@ -261,8 +264,12 @@ export function reloadSafe() {
     try {
       window.top.location.reload();
     } catch (e) {
-      // Not good, but better than the alternatives, I guess
-      window.FBInstant.quit();
+      try {
+        document.location.reload();
+      } catch {
+        // Not good, but better than the alternatives, I guess
+        window.FBInstant.quit();
+      }
     }
   } else {
     document.location.reload();
@@ -809,6 +816,10 @@ export function onExitBackground(fn) {
   exit_background_cb.push(fn);
 }
 
+export function dirtyRenderSet(value) {
+  dirty_render = value;
+}
+
 export const hrnow = window.performance && window.performance.now ?
   window.performance.now.bind(window.performance) :
   Date.now.bind(Date);
@@ -1214,6 +1225,27 @@ export function startup(params) {
     // SamsungBrowser/1.1 - apparently has WebGL, but not requestAnimationFrame; also not binary WebSockets
     good = false;
   }
+  if (good) {
+    // ensure at least basic shaders compile
+    let shaders_supported = shadersStartup({
+      light_diffuse,
+      light_dir_ws,
+      ambient: light_ambient,
+      mat_m: mat_m,
+      mat_mv: mat_mv,
+      mat_vp: mat_vp,
+      mvp: mat_mvp,
+      mv_inv_trans: mat_mv_inv_transform,
+      mat_inv_view: mat_inv_view,
+      view: mat_view,
+      projection: mat_projection,
+      // projection_inverse,
+    });
+    if (!shaders_supported) {
+      good = false;
+    }
+  }
+
   if (!good) {
     // eslint-disable-next-line no-alert
     window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
@@ -1252,20 +1284,6 @@ export function startup(params) {
 
   textureStartup();
   geomStartup();
-  shadersStartup({
-    light_diffuse,
-    light_dir_ws,
-    ambient: light_ambient,
-    mat_m: mat_m,
-    mat_mv: mat_mv,
-    mat_vp: mat_vp,
-    mvp: mat_mvp,
-    mv_inv_trans: mat_mv_inv_transform,
-    mat_inv_view: mat_inv_view,
-    view: mat_view,
-    projection: mat_projection,
-    // projection_inverse,
-  });
   addViewSpaceGlobal('light_dir');
   camera2d.startup();
   spriteStartup();
@@ -1329,8 +1347,13 @@ export function startup(params) {
   return true;
 }
 
+let custom_loads_pending = 0;
+export function loadPendingDelta(delta) {
+  custom_loads_pending += delta;
+}
+
 export function loadsPending() {
-  return textureLoadCount() + soundLoading() + modelLoadCount();
+  return textureLoadCount() + soundLoading() + modelLoadCount() + custom_loads_pending;
 }
 
 let on_load_metrics = [];

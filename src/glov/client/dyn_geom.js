@@ -27,10 +27,12 @@ const {
   vec3,
   zero_vec,
 } = require('glov/common/vmath.js');
+const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 const { engineStartupFunc, setGlobalMatrices } = engine;
 const geom = require('./geom.js');
 const { ceil, max, min } = Math;
+const settings = require('./settings.js');
 const {
   SEMANTIC,
   shaderCreate,
@@ -44,6 +46,21 @@ const {
   blendModeSet,
 } = sprites;
 const { textureCmpArray, textureBindArray } = require('./textures.js');
+
+settings.register({
+  gl_polygon_offset_a: {
+    default_value: 0.1,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0,100],
+    access_show: ['sysadmin'],
+  },
+  gl_polygon_offset_b: {
+    default_value: 4,
+    type: cmd_parse.TYPE_FLOAT,
+    range: [0,100],
+    access_show: ['sysadmin'],
+  },
+});
 
 let mat_vp;
 let mat_view = mat4();
@@ -512,7 +529,7 @@ export function dynGeomDrawOpaque() {
     gl.enable(gl.BLEND);
     gl.depthMask(false); // no depth writes
     gl.enable(gl.POLYGON_OFFSET_FILL);
-    gl.polygonOffset(-0.01, -4);
+    gl.polygonOffset(-settings.gl_polygon_offset_a, -settings.gl_polygon_offset_b);
     queueDraw(true, queue, 0, queue.length);
     queue.length = 0;
     gl.disable(gl.POLYGON_OFFSET_FILL);

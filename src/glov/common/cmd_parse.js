@@ -174,6 +174,40 @@ function formatRangeValue(type, value) {
   return ret;
 }
 
+function formatEnumValue(enum_lookup, value) {
+  if (enum_lookup) {
+    for (let key in enum_lookup) {
+      if (enum_lookup[key] === value) {
+        return key;
+      }
+    }
+  }
+  return value;
+}
+
+function lookupEnumValue(enum_lookup, str) {
+  str = str.toUpperCase();
+  let v = enum_lookup[str];
+  if (typeof v === 'number') {
+    return v;
+  }
+  let n = Number(str);
+  if (Object.values(enum_lookup).includes(n)) {
+    return n;
+  }
+  for (let key in enum_lookup) {
+    if (key.startsWith(str)) {
+      return enum_lookup[key];
+    }
+  }
+  return null;
+}
+
+const BOOLEAN_LOOKUP = {
+  OFF: 0,
+  ON: 1,
+};
+
 const CMD_STORAGE_PREFIX = 'cmd_parse_';
 
 // Optional param.on_change(is_startup:boolean)
@@ -182,6 +216,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
   assert(param.set || param.get);
   let label = param.label || cmd;
   let store = param.store && this.storage || false;
+  let enum_lookup = param.enum_lookup;
+  if (enum_lookup) {
+    assert.equal(param.type, TYPE_INT);
+  }
   let store_key = `${CMD_STORAGE_PREFIX}${canonical(cmd)}`;
   if (param.ver) {
     store_key += `_${param.ver}`;
@@ -210,38 +248,45 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       }
     }
   }
+  if (!enum_lookup && param.type === TYPE_INT &&
+    param.range && param.range[0] === 0 && param.range[1] === 1
+  ) {
+    enum_lookup = BOOLEAN_LOOKUP;
+  }
+  let param_label = TYPE_NAME[param.type];
+  if (enum_lookup) {
+    param_label = Object.keys(enum_lookup).join('|');
+  }
   let fn = (str, resp_func) => {
     function value() {
-      resp_func(null, `${label} = ${param.get()}`);
+      resp_func(null, `${label} = ${formatEnumValue(enum_lookup, param.get())}`);
     }
     function usage() {
-      resp_func(`Usage: /${cmd} ${TYPE_NAME[param.type]}`);
+      resp_func(`Usage: /${cmd} ${param_label}`);
     }
     if (!str) {
       if (param.get && param.set) {
         // More explicit help for these automatic value settings
-        let is_bool = param.type === TYPE_INT && param.range && param.range[0] === 0 && param.range[1] === 1;
         let help = [
           `${label}:`,
         ];
-        if (param.range) {
+        if (param.range && !(enum_lookup && param.type === TYPE_INT)) {
           help.push(`Valid range: [${formatRangeValue(param.type, param.range[0])}...` +
             `${formatRangeValue(param.type, param.range[1])}]`);
         }
         let cur_value = param.get();
-        if (is_bool) {
-          help.push(`To disable: /${cmd} 0`);
-          help.push(`To enable: /${cmd} 1`);
-        } else {
-          help.push(`To change: /${cmd} NewValue`);
-          help.push(`  example: /${cmd} ${param.range ?
-            cur_value === param.range[0] ? param.range[1] : param.range[0] : 1}`);
+        let value_example = param.range ?
+          cur_value === param.range[0] ? param.range[1] : param.range[0] : 1;
+        if (enum_lookup) {
+          value_example = Object.keys(enum_lookup)[0];
         }
+        help.push(`To change: /${cmd} ${param_label}`);
+        help.push(`  example: /${cmd} ${value_example}`);
         let def_value = param.default_value;
         if (def_value !== undefined) {
-          help.push(`Default value = ${def_value}${is_bool ? ` (${def_value ? 'Enabled' : 'Disabled'})`: ''}`);
+          help.push(`Default value = ${formatEnumValue(enum_lookup, def_value)}`);
         }
-        help.push(`Current value = ${cur_value}${is_bool ? ` (${cur_value ? 'Enabled' : 'Disabled'})`: ''}`);
+        help.push(`Current value = ${formatEnumValue(enum_lookup, cur_value)}`);
         return resp_func(null, help.join('\n'));
       } else if (param.get) {
         return value();
@@ -253,6 +298,12 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       return resp_func(`Usage: /${cmd}`);
     }
     let n = Number(str);
+    if (enum_lookup) {
+      n = lookupEnumValue(enum_lookup, str);
+      if (n === null) {
+        return usage();
+      }
+    }
     if (param.range) {
       if (n < param.range[0]) {
         n = param.range[0];
@@ -284,7 +335,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     if (param.get) {
       return value();
     } else {
-      return resp_func(null, `${label} udpated`);
+      return resp_func(null, `${label} updated`);
     }
   };
   this.register({
@@ -294,7 +345,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       `Set or display "${label}" value` :
       param.set ? `Set "${label}" value` : `Display "${label}" value`),
     usage: param.usage || ((param.get ? `Display "${label}" value\n  Usage: /${cmd}\n` : '') +
-      (param.set ? `Set "${label}" value\n  Usage: /${cmd} NewValue` : '')),
+      (param.set ? `Set "${label}" value\n  Usage: /${cmd} ${param_label}` : '')),
     prefix_usage_with_help: param.prefix_usage_with_help,
     access_show: param.access_show,
     access_run: param.access_run,

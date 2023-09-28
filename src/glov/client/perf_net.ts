@@ -16,7 +16,10 @@ settings.register({
   show_net: {
     default_value: 0,
     type: cmd_parse.TYPE_INT,
-    range: [0,2],
+    enum_lookup: {
+      OFF: 0,
+      ON: 2,
+    },
   },
 });
 let last_wsstats: StatsTracking = { msgs: 0, bytes: 0, time: Date.now(), dm: 0, db: 0 };

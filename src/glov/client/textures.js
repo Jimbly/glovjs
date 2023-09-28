@@ -759,6 +759,9 @@ Texture.prototype.captureStart = function (w, h) {
   this.capture = { w, h };
   if (this.fbo) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+  } else {
+    assert(w); // will assert in captureEnd:copyTexImage
+    assert(h);
   }
 };
 

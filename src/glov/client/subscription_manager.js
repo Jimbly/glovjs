@@ -2,7 +2,16 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { PLATFORM_FBINSTANT } from 'glov/client/client_config';
+import {
+  externalUsersAutoLoginFallbackProvider,
+  externalUsersAutoLoginProvider,
+  externalUsersCurrentUser,
+  externalUsersEmailPassLoginProvider,
+  externalUsersEnabled,
+  externalUsersLogIn,
+  externalUsersLogOut,
+  externalUsersSendEmailConfirmation,
+} from 'glov/client/external_users_client';
 import {
   chunkedReceiverFinish,
   chunkedReceiverFreeFile,
@@ -12,13 +21,13 @@ import {
   chunkedReceiverStart,
 } from 'glov/common/chunked_send';
 import * as dot_prop from 'glov/common/dot-prop';
+import { ERR_NO_USER_ID } from 'glov/common/external_users_common';
 import * as md5 from 'glov/common/md5';
 import { isPacket } from 'glov/common/packet';
 import { perfCounterAdd } from 'glov/common/perfcounters';
 import * as EventEmitter from 'glov/common/tiny-events';
 import * as util from 'glov/common/util';
-import { errorString } from 'glov/common/util';
-import { fbGetLoginInfo } from './fbinstant';
+import { cloneShallow } from 'glov/common/util';
 import * as local_storage from './local_storage';
 import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
@@ -205,7 +214,9 @@ function SubscriptionManager(client, cmd_parse) {
   this.client = client;
   this.channels = {};
   this.logged_in = false;
+  this.first_session = false;
   this.login_credentials = null;
+  this.logged_in_email = null;
   this.logged_in_username = null;
   this.logged_in_display_name = null;
   this.was_logged_in = false;
@@ -214,6 +225,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.auto_create_user = false;
   this.allow_anon = false;
   this.no_auto_login = false;
+  this.auto_login_error = undefined;
   this.cmd_parse = cmd_parse;
   if (cmd_parse) {
     this.cmds_fetched_by_type = {};
@@ -337,32 +349,44 @@ SubscriptionManager.prototype.handleConnect = function (data) {
     // already have a login in-flight, it should error before we try again
   } else if (this.was_logged_in) {
     // Try to re-connect to existing login
-    this.loginInternal(this.login_credentials, (err) => {
+    this.loginRetry((err) => {
       if (err && err === 'ERR_FAILALL_DISCONNECT') {
-        // we got disconnected while trying to log in, we'll retry after reconnection
+        // we got disconnected while trying to log in, we'll retry after reconnecting
       } else if (err) {
-        // Error logging in upon re-connection, no good way to handle this?
-        // TODO: Show some message to the user and prompt them to refresh?  Stay in "disconnected" state?
-        let credentials_str = this.login_credentials && this.login_credentials.password ?
-          'user_id, password' :
-          JSON.stringify(this.login_credentials);
-        assert(false, `Login failed for ${credentials_str}: ${errorString(err)}`);
+        this.auto_login_error = err;
       }
     });
   } else if (!this.no_auto_login) {
-    // Try auto-login
-    let auto_login_enabled = PLATFORM_FBINSTANT;
-
-    if (auto_login_enabled) {
-      let login_cb = () => {
-        // ignore error on auto-login
-      };
-      if (PLATFORM_FBINSTANT) {
-        this.loginFacebook(login_cb);
-      }
+    let auto_login_provider = externalUsersAutoLoginProvider(); // something like FBInstant - always auto logged in
+    let saved_provider;
+    if (auto_login_provider && externalUsersEnabled(auto_login_provider)) {
+      // Try auto-login but ignore any error
+      this.loginExternal({ provider: auto_login_provider }, (err) => {
+        if (err === ERR_NO_USER_ID && externalUsersAutoLoginFallbackProvider()) {
+          // Login was validated, but no user id exists, and was not auto-created,
+          //   send the credentials to the fallback provider to auto-create a user.
+          this.loginExternal({
+            provider: externalUsersAutoLoginFallbackProvider(),
+            external_login_data: cloneShallow(this.login_credentials.external_login_data),
+          }, (err) => {
+            this.auto_login_error = err;
+          });
+          return;
+        }
+        this.auto_login_error = err;
+      });
     } else if (local_storage.get('name') && local_storage.get('password')) {
-      this.login(local_storage.get('name'), local_storage.get('password'), function () {
-        // ignore error on auto-login
+      this.login(local_storage.get('name'), local_storage.get('password'), (err) => {
+        this.auto_login_error = err;
+      });
+    } else if ((saved_provider = local_storage.get('login_external'))) {
+      let credentials = { provider: saved_provider };
+      this.loginInternal(credentials, (err) => {
+        if (err) {
+          this.auto_login_error = err;
+          // if the server returns an error log out
+          externalUsersLogOut(saved_provider);
+        }
       });
     }
   }
@@ -540,6 +564,10 @@ SubscriptionManager.prototype.getDisplayName = function () {
   return this.logged_in_display_name;
 };
 
+SubscriptionManager.prototype.getLoginProvider = function () {
+  return this.login_provider;
+};
+
 SubscriptionManager.prototype.getMyUserChannel = function () {
   let user_id = this.loggedIn();
   if (!user_id) {
@@ -603,6 +631,8 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
   let evt = 'login_fail';
   if (!err) {
     evt = 'login';
+    this.first_session = Boolean(resp.first_session);
+    this.logged_in_email = resp.email;
     this.logged_in_username = resp.user_id;
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
@@ -637,27 +667,84 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
   resp_func(err);
 };
 
+SubscriptionManager.prototype.loginRetry = function (resp_func) {
+  this.loginInternal(this.login_credentials, resp_func);
+};
+
+SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, login_credentials, resp_func) {
+  const {
+    email, password, creation_display_name, external_login_data
+  } = login_credentials;
+  const login_options = {
+    user_initiated: true,
+    creation_display_name,
+    email,
+    password,
+    external_login_data
+  };
+  return void externalUsersLogIn(provider, login_options, (err, login_data) => {
+    this.login_credentials.external_login_data = login_data;
+
+    if (err) {
+      local_storage.set('login_external', this.login_provider = undefined);
+      this.serverLog(`authentication_failed_${provider}`, {
+        creation_mode: typeof creation_display_name === 'string',
+        email,
+        passlen: password && password.length,
+        external_data: Boolean(external_login_data),
+        err,
+      });
+      return void this.handleLoginResponse(resp_func, err);
+    }
+
+    local_storage.set('login_external', this.login_provider = provider);
+    local_storage.set('password', undefined);
+
+    externalUsersCurrentUser(provider, (err, user_info) => {
+      if (err) {
+        // Ignore the error, display_name is optional
+      }
+      if (netDisconnectedRaw()) {
+        return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
+      }
+      let request_data = {
+        provider,
+        validation_data: login_data.validation_data,
+        display_name: user_info?.name || '',
+      };
+      this.client.send('login_external', request_data, null, this.handleLoginResponse.bind(this, resp_func));
+    });
+  });
+};
+
+SubscriptionManager.prototype.sessionHashedPassword = function () {
+  assert(this.login_credentials.password);
+  return md5(this.client.secret + this.login_credentials.password);
+};
+
 SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_func) {
   if (this.logging_in) {
     return void resp_func('Login already in progress');
   }
   this.logging_in = true;
   this.logged_in = false;
+  this.login_credentials = login_credentials;
+  if (login_credentials.creation_display_name !== undefined) {
+    // Only used once, never use upon reconnect, auto-login, etc
+    this.login_credentials = cloneShallow(login_credentials);
+    delete this.login_credentials.creation_display_name;
+  }
 
-  if (login_credentials.fb) {
-    fbGetLoginInfo((err, result) => {
-      if (err) {
-        return void this.handleLoginResponse(resp_func, err);
-      }
-      if (netDisconnectedRaw()) {
-        return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
-      }
-      this.client.send('login_facebook_instant', result, null, this.handleLoginResponse.bind(this, resp_func));
-    });
+  const { provider } = login_credentials;
+  if (provider) {
+    this.loginInternalExternalUsers(provider, login_credentials, resp_func);
   } else {
+    const {
+      user_id,
+    } = login_credentials;
     this.client.send('login', {
-      user_id: login_credentials.user_id,
-      password: md5(this.client.secret + login_credentials.password),
+      user_id,
+      password: this.sessionHashedPassword(),
     }, null, this.handleLoginResponse.bind(this, resp_func));
   }
 };
@@ -672,8 +759,9 @@ SubscriptionManager.prototype.userCreateInternal = function (params, resp_func) 
 };
 
 function hashedPassword(user_id, password) {
-  if (password.split('$$')[0] === 'prehashed') {
-    password = password.split('$$')[1];
+  let split = password.split('$$');
+  if (split.length === 2 && split[0] === 'prehashed' && split[1].length === 32) {
+    password = split[1];
   } else {
     password = md5(md5(user_id.toLowerCase()) + password);
   }
@@ -694,12 +782,12 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
   if (hashed_password !== password) {
     local_storage.set('password', `prehashed$$${hashed_password}`);
   }
-  this.login_credentials = { user_id: username, password: hashed_password };
+  let credentials = { user_id: username, password: hashed_password };
   if (!this.auto_create_user) {
     // Just return result directly
-    return this.loginInternal(this.login_credentials, resp_func);
+    return this.loginInternal(credentials, resp_func);
   }
-  return this.loginInternal(this.login_credentials, (err, data) => {
+  return this.loginInternal(credentials, (err, data) => {
     if (!err || err !== 'ERR_USER_NOT_FOUND') {
       return void resp_func(err, data);
     }
@@ -713,9 +801,22 @@ SubscriptionManager.prototype.login = function (username, password, resp_func) {
   });
 };
 
-SubscriptionManager.prototype.loginFacebook = function (resp_func) {
-  this.login_credentials = { fb: true };
-  return this.loginInternal(this.login_credentials, resp_func);
+SubscriptionManager.prototype.loginEmailPass = function (credentials, resp_func) {
+  credentials = {
+    email: credentials.email,
+    password: credentials.password,
+    provider: externalUsersEmailPassLoginProvider(),
+    creation_display_name: credentials.creation_display_name,
+  };
+  return this.loginInternal(credentials, resp_func);
+};
+
+SubscriptionManager.prototype.loginExternal = function (credentials, resp_func) {
+  return this.loginInternal(cloneShallow(credentials), resp_func);
+};
+
+SubscriptionManager.prototype.sendActivationEmail = function (email, resp_func) {
+  return externalUsersSendEmailConfirmation(email, resp_func);
 };
 
 SubscriptionManager.prototype.userCreate = function (params, resp_func) {
@@ -786,6 +887,8 @@ SubscriptionManager.prototype.logout = function () {
     this.logging_out = false;
     if (!err) {
       local_storage.set('password', undefined);
+      local_storage.set('login_external', this.login_provider = undefined);
+      this.first_session = false;
       this.logged_in = false;
       this.logged_in_username = null;
       this.logged_in_display_name = null;
@@ -794,6 +897,10 @@ SubscriptionManager.prototype.logout = function () {
       this.emit('logout');
     }
   });
+};
+
+SubscriptionManager.prototype.isFirstSession = function () {
+  return this.first_session;
 };
 
 SubscriptionManager.prototype.serverLog = function (type, data) {

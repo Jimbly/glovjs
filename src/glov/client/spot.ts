@@ -1031,7 +1031,9 @@ export function spotSubPop(): void {
 
 export function spotSubBegin(param_in: SpotSubParam): void {
   assert(param_in.key);
-  assert(!focus_sub_rect); // no recursive nesting supported yet
+  if (focus_sub_rect) {
+    assert(!focus_sub_rect, `Recursive spot, parent:${focus_sub_rect.key}`); // no recursive nesting supported yet
+  }
   spotKey(param_in);
   let sub_rect = param_in as SpotSubInternal;
   sub_rect.is_sub_rect = true;

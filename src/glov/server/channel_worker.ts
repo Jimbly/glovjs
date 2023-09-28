@@ -43,6 +43,7 @@ import {
   HandlerSource,
   NetErrorCallback,
   NetResponseCallback,
+  NumberBoolean,
   TSMap,
   UnimplementedData,
   VoidFunc,
@@ -164,10 +165,12 @@ export type ChannelData<PrivType=DataObject, PubType=DataObject> = {
   public: PubType;
 };
 
+export type ChannelDataClient = {
+  ids: ClientIDs;
+} & DataObject;
+export type ChannelDataClients = TSMap<ChannelDataClient>;
 export type ChannelDataWithClients = ChannelData<DataObject, {
-  clients: TSMap<{
-    ids: ClientIDs;
-  } & DataObject>;
+  clients: ChannelDataClients;
 }>;
 
 type ChannelCoreIDs = {
@@ -226,11 +229,11 @@ type BatchedSetPair = [string, unknown] | [string];
 
 type BulkCacheElem = {
   bulk_obj_name: string;
-  writing: 0 | 1;
+  writing: NumberBoolean;
   value?: Buffer | DataObject;
 };
 
-export type OnFlushCB = (err?: Error) => void;
+export type OnFlushCB = VoidFunc;
 
 export type HandlerFunction<P=never, R=never> = (
   source: HandlerSource,
@@ -338,6 +341,7 @@ export class ChannelWorker {
   handleClientChanged?(src: ClientHandlerSource): void;
   workerOnChannelData?(src: HandlerSource, key: string, value: unknown): void;
   onUnhandledMessage?(src: HandlerSource, msg: string, data: unknown, resp_func: HandlerCallback): void;
+  tick?(dt: number, server_time: number): void;
 
   // on-prototype functions
   declare logPacketDispatch: (source: string, pak: Packet, buf_offs: number, msg: string) => void;
@@ -1078,7 +1082,7 @@ export class ChannelWorker {
         if (on_flush && !err) {
           // We should absolutely never get an error here, but if we do, these
           //   on_flush callbacks will never be called.
-          callEach(on_flush, null, err);
+          callEach(on_flush);
         }
       });
     }

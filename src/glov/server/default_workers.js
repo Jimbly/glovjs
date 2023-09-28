@@ -5,25 +5,35 @@ import assert from 'assert';
 import * as base32 from 'glov/common/base32';
 import * as dot_prop from 'glov/common/dot-prop';
 import {
-  ID_PROVIDER_APPLE,
-  ID_PROVIDER_FB_GAMING,
-  ID_PROVIDER_FB_INSTANT,
+  PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
-import { EMAIL_REGEX, deprecate, sanitize } from 'glov/common/util.js';
+import {
+  EMAIL_REGEX,
+  deprecate,
+  empty,
+  sanitize,
+} from 'glov/common/util.js';
 import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 
 import { channelServerWorkerInit } from './channel_server_worker.js';
 import { ChannelWorker } from './channel_worker.js';
 import { globalWorkerInit } from './global_worker.js';
+import {
+  keyMetricsStartup,
+  usertimeEnd,
+  usertimeStart,
+} from './key_metrics.js';
 import * as master_worker from './master_worker.js';
-import * as metrics from './metrics.js';
+import { metricsAdd } from './metrics.js';
 import * as random_names from './random_names.js';
 import { serverConfig } from './server_config';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
+
+const { floor, random } = Math;
 
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
@@ -41,15 +51,12 @@ export function validUserId(user_id) {
   return user_id?.match(regex_valid_user_id);
 }
 
-export function validProvider(provider) {
-  switch (provider) {
-    case ID_PROVIDER_APPLE:
-    case ID_PROVIDER_FB_GAMING:
-    case ID_PROVIDER_FB_INSTANT:
-      return true;
-    default:
-      return false;
-  }
+let valid_provider_ids = Object.create(null);
+export function registerValidIDProvider(key) {
+  valid_provider_ids[key] = true;
+}
+function validProvider(provider) {
+  return valid_provider_ids[provider] || false;
 }
 
 export function validExternalId(external_id) {
@@ -113,6 +120,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.presence_data = {}; // client_id -> data
     this.presence_idx = 0;
     this.my_clients = {};
+    this.last_abtests = '';
+    this.last_usertime_active = false;
+    this.last_usertime_abtests = '';
 
     // Migration logic for engine-level fields
     if (this.exists()) {
@@ -144,7 +154,7 @@ export class DefaultUserWorker extends ChannelWorker {
             friend = createFriendData(status);
             // Note: If the friend status is added-auto or removed, it must have been added through FB Instant,
             // so we can use its FB Instant id.
-            setFriendExternalId(friend, ID_PROVIDER_FB_INSTANT, fbinstant_friend_id);
+            setFriendExternalId(friend, 'fbi', fbinstant_friend_id);
           } else {
             // Unknown FB Instant friend id, so remove it and let it be re-added by the client.
             // This may cause occasional cases of manually removed friends to reappear as added-auto.
@@ -559,7 +569,10 @@ export class DefaultUserWorker extends ChannelWorker {
       return void resp_func(null, {});
     }
 
-    this.sendChannelMessage('idmapper.idmapper', 'id_map_get_multiple_ids', { provider, provider_ids: friends_to_add },
+    this.sendChannelMessage(
+      'idmapper.idmapper',
+      'id_map_get_multiple_ids',
+      { provider, provider_ids: friends_to_add, get_deleted: true },
       (err, id_mappings) => {
         if (err) {
           this.error(`Error getting id maps for ${this.user_id} ${provider} friends: ${err}`);
@@ -596,6 +609,26 @@ export class DefaultUserWorker extends ChannelWorker {
     // Also return display name and any other relevant info?
     return resp_func();
   }
+  checkAutoIPBan(login_ip) {
+    if (!this.getChannelData('private.auto_ip_ban')) {
+      return;
+    }
+    this.error(`Queuing delayed automatic IP ban for account ${this.user_id} from IP ${login_ip}`);
+    setTimeout(() => {
+      if (this.shutting_down) {
+        return;
+      }
+      this.error(`Executing automatic IP ban for account ${this.user_id} from IP ${login_ip}`);
+      let ids_saved = this.ids;
+      this.ids = { user_id: '$system', csr: 1 };
+      this.sendChannelMessage('global.global', 'cmdparse', `ipban ${login_ip}`, (err) => {
+        if (err) {
+          this.error(`Error executing automatic IP ban for account ${this.user_id} from IP ${login_ip}: ${err}`);
+        }
+      });
+      this.ids = ids_saved;
+    }, floor(3*60*1000 + random() * 2*60*1000));
+  }
   handleLogin(src, data, resp_func) {
     if (this.channel_server.restarting) {
       if (!this.getChannelData('public.permissions.sysadmin')) {
@@ -607,6 +640,9 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Missing password');
     }
 
+    if (this.getChannelData('private.password_deleted')) {
+      return resp_func('ERR_ACCOUNT_MIGRATED');
+    }
     if (!this.getChannelData('private.password')) {
       return resp_func('ERR_USER_NOT_FOUND');
     }
@@ -633,9 +669,13 @@ export class DefaultUserWorker extends ChannelWorker {
     }
 
     this.setChannelData('private.login_time', Date.now());
-    metrics.add('user.login', 1);
-    metrics.add('user.login_pass', 1);
-    return resp_func(null, this.getChannelData('public'));
+    this.checkAutoIPBan(data.ip);
+    metricsAdd('user.login', 1);
+    metricsAdd('user.login_pass', 1);
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      email: this.getChannelData('private.email'),
+    });
   }
   handleLoginExternal(src, data, resp_func) {
     if (this.channel_server.restarting) {
@@ -647,20 +687,36 @@ export class DefaultUserWorker extends ChannelWorker {
 
     //Should the authentication step happen here instead?
 
+    assert(data.provider_ids);
+    for (let provider in data.provider_ids) {
+      let provider_id = data.provider_ids[provider];
+      let provider_key = `private.login_${provider}`;
+      let previous_id = this.getChannelData(provider_key);
+      if (previous_id) {
+        assert(provider_id === previous_id,
+          `Multiple external ids for user ${this.user_id} and provider ${provider}: ${previous_id}, ${provider_id}`);
+      } else {
+        this.setChannelData(provider_key, provider_id);
+      }
+    }
+
     if (this.getChannelData('public.banned')) {
       return resp_func('ERR_ACCOUNT_BANNED');
     }
-    if (!this.getChannelData('private.external')) {
+    if (!this.exists()) {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
     }
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
-    this.setChannelData(`private.login_${data.provider}`, data.provider_id);
-    metrics.add('user.login', 1);
-    metrics.add(`user.login_${data.provider}`, 1);
-    return resp_func(null, this.getChannelData('public'));
+    this.checkAutoIPBan(data.ip);
+    metricsAdd('user.login', 1);
+    metricsAdd(`user.login_${data.provider}`, 1);
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      email: this.getChannelData('private.email'),
+    });
   }
   handleCreate(src, data, resp_func) {
     if (this.exists()) {
@@ -694,15 +750,66 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     public_data.creation_time = Date.now();
     private_data.password = data.password;
-    private_data.email = data.email;
+    private_data.email = data.email || private_data.email;
     private_data.creation_ip = data.ip;
     private_data.login_ip = data.ip;
     private_data.login_ua = data.ua;
     private_data.login_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
-    metrics.add('user.create', 1);
-    return resp_func(null, this.getChannelData('public'));
+    metricsAdd('user.create', 1);
+    return resp_func(null, {
+      public_data: this.getChannelData('public'),
+      first_session: true,
+      email: this.getChannelData('private.email'),
+    });
+  }
+
+  handleReplacePasswordWithExternal(src, { password, provider, provider_id, salt }, resp_func) {
+    if (!this.exists()) {
+      return resp_func('Account does not exists');
+    }
+    if (!password) {
+      return resp_func('Missing password');
+    }
+    if (!provider || !provider_id) {
+      return resp_func('Missing provider/provider_id', provider, provider_id);
+    }
+    let private_data = this.getChannelData('private');
+    if (md5(salt + private_data.password) !== password) {
+      return resp_func('Password mismatch');
+    }
+    private_data.password_deleted = private_data.password;
+    private_data.password = undefined;
+    private_data[`login_${provider}`] = provider_id;
+    private_data.external = true;
+    this.setChannelData('private', private_data);
+
+    return resp_func(null, true);
+  }
+
+  handleSetExternal(src, data, resp_func) {
+    if (!data.provider || !data.provider_id) {
+      return resp_func('Missing provider/provider_id', data.provider, data.provider_id);
+    }
+    this.setChannelData(`private.login_${data.provider}`, data.provider_id);
+    this.setChannelData('private.external', true);
+    return resp_func(null, true);
+  }
+
+  handleSetEmail(src, email, resp_func) {
+    if (!email) {
+      return resp_func('Missing email');
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return resp_func('Invalid email');
+    }
+    if (email === this.data.private.email) {
+      return resp_func(null, true);
+    }
+    this.logSrc(src, `Updating user ${this.user_id} email from ${this.data.private.email} to ${email}`);
+    this.setChannelData('private.email', email);
+    return resp_func(null, true);
   }
 
   handleSetChannelData(src, key, value) {
@@ -755,6 +862,34 @@ export class DefaultUserWorker extends ChannelWorker {
       }
     }
   }
+
+  updateUsertimeMetrics() {
+    let currently_active = false;
+    if (this.rich_presence) {
+      for (let channel_id in this.presence_data) {
+        let presence = this.presence_data[channel_id];
+        if (presence.active !== PRESENCE_INACTIVE) {
+          currently_active = true;
+          break;
+        }
+      }
+    } else {
+      currently_active = !empty(this.my_clients);
+    }
+
+    if (this.last_usertime_active && (
+      !currently_active || this.last_abtests !== this.last_usertime_abtests
+    )) {
+      this.last_usertime_active = false;
+      usertimeEnd(this.last_usertime_abtests);
+    }
+    if (!this.last_usertime_active && currently_active) {
+      this.last_usertime_active = true;
+      this.last_usertime_abtests = this.last_abtests;
+      usertimeStart(this.last_usertime_abtests);
+    }
+  }
+
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
       delete this.presence_data[src.channel_id];
@@ -763,6 +898,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.my_clients[src.channel_id]) {
       delete this.my_clients[src.channel_id];
     }
+    this.updateUsertimeMetrics();
   }
   handlePresenceGet(src, pak, resp_func) {
     if (!this.exists()) {
@@ -781,6 +917,13 @@ export class DefaultUserWorker extends ChannelWorker {
     let active = pak.readInt();
     let state = pak.readAnsiString(); // app-defined state
     let payload = pak.readJSON();
+    let abtests = '';
+    if (!pak.ended()) {
+      abtests = pak.readAnsiString();
+      if (active !== PRESENCE_INACTIVE) {
+        this.last_abtests = abtests;
+      }
+    }
     if (!this.rich_presence) {
       return void resp_func('ERR_NO_RICH_PRESENCE');
     }
@@ -794,10 +937,11 @@ export class DefaultUserWorker extends ChannelWorker {
         id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
         active,
         state,
-        payload
+        payload,
       };
     }
     this.updatePresence();
+    this.updateUsertimeMetrics();
     resp_func();
   }
   sendMessageToMyClients(message, payload, exclude_channel_id) {
@@ -910,6 +1054,9 @@ let user_worker_init_data = {
     login: DefaultUserWorker.prototype.handleLogin,
     create: DefaultUserWorker.prototype.handleCreate,
     user_ping: DefaultUserWorker.prototype.handleUserPing,
+    replace_password_with_external: DefaultUserWorker.prototype.handleReplacePasswordWithExternal,
+    set_external: DefaultUserWorker.prototype.handleSetExternal,
+    set_email: DefaultUserWorker.prototype.handleSetEmail,
   },
   client_handlers: {
     friend_auto_update: DefaultUserWorker.prototype.handleFriendAutoUpdate,
@@ -956,4 +1103,5 @@ export function init(channel_server) {
   channelServerWorkerInit(channel_server);
   globalWorkerInit(channel_server);
   master_worker.init(channel_server);
+  keyMetricsStartup(channel_server);
 }

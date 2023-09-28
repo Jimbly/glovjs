@@ -21,6 +21,7 @@ const { dss_stats } = require('./data_store_shield.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const fs = require('fs');
+const { keyMetricsFlush } = require('./key_metrics.js');
 const log = require('./log.js');
 const { logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
@@ -693,6 +694,7 @@ export class ChannelServer {
     this.csworker.log(`restarting = ${data}`);
     this.ws_server.restarting = this.restarting = data;
     if (this.restarting) {
+      keyMetricsFlush();
       logDowngradeErrors(true);
     } else {
       logDowngradeErrors(false);
@@ -1106,7 +1108,7 @@ export class ChannelServer {
       }
 
       // Built-in and default filters
-      if (ctor.prototype.maintain_client_list) {
+      if (ctor.prototype.maintain_client_list || ctor.prototype.workerOnChannelData) {
         addUnique(filters, 'channel_data', ChannelWorker.prototype.onChannelData);
         addUnique(filters, 'apply_channel_data', ChannelWorker.prototype.onApplyChannelData);
       }

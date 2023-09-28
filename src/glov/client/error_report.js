@@ -5,7 +5,7 @@ let error_report_details = {};
 let error_report_dynamic_details = {};
 
 import { getAPIPath } from 'glov/client/environments';
-import { PLATFORM } from './client_config';
+import { platformGetID } from './client_config';
 import { fetch } from './fetch';
 
 let error_report_disabled = false;
@@ -32,7 +32,7 @@ export function errorReportSetDynamicDetails(key, fn) {
 
 errorReportSetDetails('build', BUILD_TIMESTAMP);
 errorReportSetDetails('sesuid', session_uid);
-errorReportSetDetails('platform', PLATFORM);
+errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
 errorReportSetDynamicDetails('url', function () {
@@ -125,6 +125,17 @@ let filtered_errors = new RegExp([
   'clearTransInfo', // WeChat
   'firefoxSample',
   'gourmetads',
+  'apstag', // Amazon Ad network on Safari
+  'otBannerSdk\\.js', // OneTrust (maybe when blocked by ad blocker/etc?)
+  'setOTDataLayer', // OneTrust
+  'otSDKStub', // OneTrust
+  'pubads_20', // Some third-party ad provider
+  'ima3\\.js', // Google ads
+  'TranslateService',
+  'bdTransJSBridge',
+  'ciuvoSDK',
+  'stubScriptElement',
+  'chrome://internal',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
@@ -175,3 +186,8 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
 }
 
 window.glov_error_report = glovErrorReport.bind(null, true);
+
+let early_err = window.glov_error_early;
+if (early_err) {
+  window.glov_error_report(early_err.msg, early_err.file, early_err.line, early_err.col);
+}
