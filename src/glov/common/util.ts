@@ -204,6 +204,13 @@ export function ridx(arr: unknown[], idx: number): void {
   arr.pop();
 }
 
+export function tail<T>(arr: T[]): T | null {
+  if (!arr.length) {
+    return null;
+  }
+  return arr[arr.length - 1];
+}
+
 export function round100(a: number): number {
   return round(a * 100) / 100;
 }

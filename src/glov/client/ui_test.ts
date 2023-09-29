@@ -20,6 +20,11 @@ import { SimpleMenu, simpleMenuCreate } from './simple_menu';
 import { slider } from './slider';
 import * as ui from './ui';
 import { uiTextHeight } from './ui';
+import {
+  uiStyleAlloc,
+  uiStylePop,
+  uiStylePush,
+} from './uistyle';
 import { getURLBase } from './urlhash';
 
 const { ceil, random } = Math;
@@ -98,6 +103,8 @@ function init(x: number, y: number, column_width: number): void {
 
   test_scroll_area = scrollAreaCreate();
 }
+
+const style_half_height = uiStyleAlloc({ text_height: '50%' });
 
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
@@ -251,6 +258,15 @@ export function run(x: number, y: number, z: number): void {
     text_height,
   });
   internal_y += header_h + pad;
+
+  ui.label({ x: 2, y: internal_y, size: text_height * 0.5, text: 'Small text param size' });
+  internal_y += text_height * 0.5;
+  ui.label({ x: 2, y: internal_y, style: style_half_height, text: 'Small text param style' });
+  internal_y += style_half_height.text_height;
+  uiStylePush(style_half_height);
+  ui.label({ x: 2, y: internal_y, style: style_half_height, text: 'Small text push style' });
+  internal_y += uiTextHeight();
+  uiStylePop();
 
   for (let ii = 0; ii < test_lines; ++ii) {
     ui.print(font_style, 2, internal_y, z + 1, `Line #${ii}`);

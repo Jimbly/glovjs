@@ -78,9 +78,9 @@ const {
 } = glov_sprites;
 const { TEXTURE_FORMAT } = require('./textures.js');
 const {
-  uiStyleAlloc,
   uiStyleDefault,
-  uiStyleSetDefault,
+  uiStyleModify,
+  uiStyleTopOfFrame,
 } = require('./uistyle.js');
 const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
@@ -1108,12 +1108,13 @@ export function label(param) {
     tooltip_right,
   } = param;
   if (param.style) {
-    assert(!param.style.color); // Received a FontStyle, expecting (in the future) a UIStyle
+    assert(!param.style.color); // Received a FontStyle, expecting a UIStyle
   }
   text = getStringFromLocalizable(text);
   let use_font = param.font || font;
   let z = param.z || Z.UI;
-  let size = param.size || ui_style_current.text_height;
+  let style = param.style || ui_style_current;
+  let size = param.size || style.text_height;
   assert(isFinite(x));
   assert(isFinite(y));
   assert.equal(typeof text, 'string');
@@ -1514,6 +1515,7 @@ function uiTick(dt) {
   }
 
   spotTopOfFrame();
+  uiStyleTopOfFrame();
 
   if (modal_dialog) {
     modalDialogRun();
@@ -1952,10 +1954,9 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
 }
 
 export function setFontHeight(_font_height) {
-  let new_style = uiStyleAlloc({
+  uiStyleModify(uiStyleDefault(), {
     text_height: _font_height,
-  }, uiStyleDefault());
-  uiStyleSetDefault(new_style);
+  });
 }
 
 function uiApplyStyle(style) {
@@ -1981,9 +1982,9 @@ export function scaleSizes(scale) {
   scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
 
   // calls `uiStyleApply()`:
-  uiStyleSetDefault(uiStyleAlloc({
+  uiStyleModify(uiStyleDefault(), {
     text_height,
-  }));
+  });
 }
 
 export function setPanelPixelScale(scale) {

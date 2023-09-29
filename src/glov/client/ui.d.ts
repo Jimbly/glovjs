@@ -220,6 +220,7 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   align?: ALIGN;
   text?: Text;
   tooltip?: TooltipValue;
+  style?: UIStyle;
 };
 export function label(param: LabelParam): number;
 
