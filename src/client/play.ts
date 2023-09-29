@@ -24,6 +24,7 @@ import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
   playUISound,
+  uiTextHeight,
 } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { webFSAPI } from 'glov/client/webfs';
@@ -332,7 +333,7 @@ function moveBlockDead(): boolean {
 
   font.drawSizedAligned(null,
     x + floor(w/2), y + floor(h/2) - 16, z,
-    ui.font_height, ALIGN.HCENTER|ALIGN.VBOTTOM,
+    uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
     0, 0, 'You have died.');
 
   if (ui.buttonText({
