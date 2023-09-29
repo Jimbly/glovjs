@@ -22,6 +22,7 @@ import { isFriend } from './social';
 import { spotUnfocus } from './spot';
 import * as ui from './ui';
 import { uiTextHeight } from './ui';
+import { uiStyleCurrent } from './uistyle';
 import { profanityFilter, profanityStartup } from './words/profanity';
 
 const { ceil, floor, max, min, round } = Math;
@@ -174,6 +175,8 @@ function ChatUI(params) {
   });
   this.channel = null;
 
+  let style = params.style || uiStyleCurrent();
+
   this.on_join = this.onMsgJoin.bind(this);
   this.on_leave = this.onMsgLeave.bind(this);
   this.on_chat = this.onMsgChat.bind(this);
@@ -185,7 +188,7 @@ function ChatUI(params) {
   this.max_lines = params.max_lines || 8; // Max shown when chat not active
   this.max_messages = params.max_messages || 1000; // Size of history kept
   this.max_len = params.max_len;
-  this.font_height = params.font_height || uiTextHeight();
+  this.font_height = params.font_height || style.text_height;
   this.hide_disconnected_message = params.hide_disconnected_message || false;
   this.disconnected_message_top = params.disconnected_message_top || false;
   this.scroll_area = scrollAreaCreate({

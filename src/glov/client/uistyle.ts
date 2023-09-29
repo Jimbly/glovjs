@@ -1,5 +1,14 @@
+import assert from 'assert';
+import { tail } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import { internal as ui_internal } from './ui';
 const { uiApplyStyle } = ui_internal;
+
+import type { DataObject, TSMap } from 'glov/common/types';
+
+export type UIStyleDef = {
+  text_height?: number | string;
+};
 
 export type UIStyleFields = {
   // font: Font;
@@ -34,14 +43,97 @@ let ui_style_default: UIStyle;
 let ui_style_current: UIStyle;
 
 class UIStyleImpl implements UIStyleFields {
-  text_height: number;
-  constructor(params: Partial<UIStyle>, parent?: UIStyle) {
-    this.text_height = params.text_height ?? (parent ? parent.text_height : ui_style_default.text_height);
+  id_chain: string[];
+  text_height!: number;
+  constructor(id_chain: string[]) {
+    this.id_chain = id_chain;
   }
 }
 
-export function uiStyleAlloc(param: Partial<UIStyle>, parent?: UIStyle): UIStyle {
-  return new UIStyleImpl(param, parent);
+type UIStyleDefEntry = {
+  def: UIStyleDef;
+  deps: UIStyleImpl[];
+};
+let style_params: TSMap<UIStyleDefEntry> = Object.create(null);
+let style_param_auto_last_idx = 0;
+style_params.default = {
+  def: default_style_params_init,
+  deps: [],
+};
+
+function uiStyleApply(style: UIStyleImpl): void {
+  let id_chain = style.id_chain;
+  // TODO: do similar inheritance for every parameter
+  let text_height!: number;
+  for (let ii = 0; ii < id_chain.length; ++ii) {
+    let id = id_chain[ii];
+    let entry = style_params[id];
+    assert(entry);
+    let v = entry.def.text_height;
+    if (v !== undefined) {
+      if (typeof v === 'string') {
+        let m = v.match(/^(\d+)%$/);
+        assert(m);
+        text_height *= Number(m[1])/100;
+      } else {
+        assert.equal(typeof v, 'number');
+        text_height = v;
+      }
+    }
+    if (ii === 0) {
+      // First step, should always get valid values from the default style
+      assert(typeof text_height === 'number');
+    }
+  }
+  style.text_height = text_height;
+}
+
+// Potentially very slow!  Load-time/dev-time only
+export function uiStyleModify(style: UIStyle, params: UIStyleDef): void {
+  let id = tail((style as UIStyleImpl).id_chain);
+  assert(id);
+  let entry = style_params[id];
+  assert(entry);
+  let def = entry.def as DataObject;
+  for (let key in params) {
+    let v = (params as DataObject)[key];
+    if (v === undefined) {
+      delete def[key];
+    } else {
+      def[key] = v;
+    }
+  }
+  for (let ii = 0; ii < entry.deps.length; ++ii) {
+    uiStyleApply(entry.deps[ii]);
+  }
+}
+
+export type UIStyleReference = string | UIStyleDef;
+export function uiStyleAlloc(...args: UIStyleReference[]): UIStyle {
+  let id_chain: string[] = [];
+  id_chain.push('default');
+  for (let ii = 0; ii < args.length; ++ii) {
+    let v = args[ii];
+    let id: string;
+    if (typeof v === 'string') {
+      id = v;
+      assert(style_params[v]); // TODO: dataError instead
+    } else {
+      id = `$${++style_param_auto_last_idx})`;
+      style_params[id] = {
+        def: v,
+        deps: [],
+      };
+    }
+    id_chain.push(id);
+  }
+  let ret = new UIStyleImpl(id_chain);
+  uiStyleApply(ret);
+  for (let ii = 0; ii < id_chain.length; ++ii) {
+    let id = id_chain[ii];
+    style_params[id]!.deps.push(ret);
+  }
+  return ret;
 }
 
 export function uiStyleDefault(): UIStyle {
@@ -57,11 +149,28 @@ export function uiStyleSetCurrent(style: UIStyle): void {
   uiApplyStyle(ui_style_current);
 }
 
-export function uiStyleSetDefault(style: UIStyle): void {
-  ui_style_default = style;
-  // TODO: apply inheritance to all composite styles
+ui_style_default = uiStyleAlloc();
+uiStyleSetCurrent(ui_style_default);
 
+let style_stack: UIStyle[] = [];
+export function uiStylePush(style: UIStyle): void {
+  style_stack.push(ui_style_current);
   uiStyleSetCurrent(style);
 }
 
-uiStyleSetDefault(uiStyleAlloc(default_style_params_init));
+export function uiStylePop(): void {
+  let popped = style_stack.pop();
+  assert(popped);
+  uiStyleSetCurrent(popped);
+}
+
+let did_once = false;
+export function uiStyleTopOfFrame(): void {
+  if (style_stack.length) {
+    if (!did_once) {
+      did_once = true;
+      verify(!style_stack.length, 'Style stack push/pop mismatch');
+    }
+    style_stack.length = 0;
+  }
+}

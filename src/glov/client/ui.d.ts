@@ -61,7 +61,7 @@ export interface UISprites {
   white: UISprite;
 }
 export const sprites: UISprites;
-export const font_height: number; // DEPRECATED: use uiStyleCurrent().text_height or uiTextHeight()
+// DEPRECATED: export const font_height: number; // use uiStyleCurrent().text_height or uiTextHeight()
 export function uiTextHeight(): number;
 export const button_width: number;
 export const button_height: number;
@@ -220,6 +220,7 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   align?: ALIGN;
   text?: Text;
   tooltip?: TooltipValue;
+  style?: UIStyle;
 };
 export function label(param: LabelParam): number;
 
