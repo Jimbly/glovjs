@@ -61,7 +61,7 @@ style_params.default = {
   deps: [],
 };
 
-function uiStyleApply(style: UIStyleImpl): void {
+function uiStyleCompute(style: UIStyleImpl): void {
   let id_chain = style.id_chain;
   // TODO: do similar inheritance for every parameter
   let text_height!: number;
@@ -104,7 +104,11 @@ export function uiStyleModify(style: UIStyle, params: UIStyleDef): void {
     }
   }
   for (let ii = 0; ii < entry.deps.length; ++ii) {
-    uiStyleApply(entry.deps[ii]);
+    let style_walk = entry.deps[ii];
+    uiStyleCompute(style_walk);
+    if (style_walk === ui_style_current) {
+      uiApplyStyle(ui_style_current);
+    }
   }
 }
 
@@ -128,7 +132,7 @@ export function uiStyleAlloc(...args: UIStyleReference[]): UIStyle {
     id_chain.push(id);
   }
   let ret = new UIStyleImpl(id_chain);
-  uiStyleApply(ret);
+  uiStyleCompute(ret);
   for (let ii = 0; ii < id_chain.length; ++ii) {
     let id = id_chain[ii];
     style_params[id]!.deps.push(ret);
