@@ -955,6 +955,7 @@ export function spotTopOfFrame(): void {
     pad_mode = false;
   }
   sub_stack.length = 0;
+  focus_sub_rect = null;
 }
 
 export function spotSuppressPad(): void {
@@ -1032,7 +1033,10 @@ export function spotSubPop(): void {
 export function spotSubBegin(param_in: SpotSubParam): void {
   assert(param_in.key);
   if (focus_sub_rect) {
-    assert(!focus_sub_rect, `Recursive spot, parent:${focus_sub_rect.key}`); // no recursive nesting supported yet
+    // no recursive nesting supported yet
+    assert(!focus_sub_rect, `Recursive spot, parent:${focus_sub_rect.key},` +
+      ` self:${param_in.key},` +
+      ` same=${param_in === focus_sub_rect}`);
   }
   spotKey(param_in);
   let sub_rect = param_in as SpotSubInternal;
