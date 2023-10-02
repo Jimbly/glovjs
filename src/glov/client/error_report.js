@@ -136,6 +136,8 @@ let filtered_errors = new RegExp([
   'ciuvoSDK',
   'stubScriptElement',
   'chrome://internal',
+  'getElementById\\(\'items\'\\)',
+  'closeModal',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
