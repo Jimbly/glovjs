@@ -74,10 +74,14 @@ function getDisplayNameBypass(source) {
   return false;
 }
 
+// First character must not be a bracket (confusing messages with `/me`)
+const valid_display_name = /^[^[\]]/;
+
 function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
     EMAIL_REGEX.test(display_name) ||
+    !valid_display_name.test(display_name) ||
     (!override && isReserved(display_name))
   ) {
     return false;
