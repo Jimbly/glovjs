@@ -1248,7 +1248,12 @@ export function startup(params) {
 
   if (!good) {
     // eslint-disable-next-line no-alert
-    window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
+    window.alert(`${
+      window.gl ?
+        'Error initializing WebGL.\n' :
+        'Error initializing WebGL: your browser does not support WebGL or does not have it enabled.\n'}` +
+      'Try completely closing and re-opening the app or browser.' +
+      '  If the problem persists, try restarting your device.');
     document.getElementById('loading').style.visibility = 'hidden';
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;
