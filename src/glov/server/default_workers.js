@@ -633,6 +633,32 @@ export class DefaultUserWorker extends ChannelWorker {
       this.ids = ids_saved;
     }, floor(3*60*1000 + random() * 2*60*1000));
   }
+  handleLoginShared(data, resp_func) {
+    this.setChannelData('private.login_ip', data.ip);
+    this.setChannelData('private.login_ua', data.ua);
+    this.setChannelData('private.login_time', Date.now());
+
+    let display_name = this.getChannelData('public.display_name');
+    let permissions = this.getChannelData('public.permissions', {});
+    let display_name_bypass = getDisplayNameBypass(permissions);
+    if (!validDisplayName(display_name, display_name_bypass)) {
+      // Old data with no display_name, or valid display name rules have changed
+      let new_display_name = this.user_id;
+      if (!validDisplayName(new_display_name)) {
+        new_display_name = random_names.get();
+      }
+      this.log(`Invalid display name ("${display_name}") on user ${this.user_id}` +
+        ` detected, changing to "${new_display_name}"`);
+      this.setChannelData('public.display_name', new_display_name);
+    }
+    this.checkAutoIPBan(data.ip);
+    metricsAdd('user.login', 1);
+
+    resp_func(null, {
+      public_data: this.getChannelData('public'),
+      email: this.getChannelData('private.email'),
+    });
+  }
   handleLogin(src, data, resp_func) {
     if (this.channel_server.restarting) {
       if (!this.getChannelData('public.permissions.sysadmin')) {
@@ -656,30 +682,8 @@ export class DefaultUserWorker extends ChannelWorker {
     if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
     }
-    this.setChannelData('private.login_ip', data.ip);
-    this.setChannelData('private.login_ua', data.ua);
-    let display_name = this.getChannelData('public.display_name');
-    let permissions = this.getChannelData('public.permissions', {});
-    let display_name_bypass = getDisplayNameBypass(permissions);
-    if (!validDisplayName(display_name, display_name_bypass)) {
-      // Old data with no display_name, or valid display name rules have changed
-      let new_display_name = this.user_id;
-      if (!validDisplayName(new_display_name)) {
-        new_display_name = random_names.get();
-      }
-      this.log(`Invalid display name ("${display_name}") on user ${this.user_id}` +
-        ` detected, changing to "${new_display_name}"`);
-      this.setChannelData('public.display_name', new_display_name);
-    }
-
-    this.setChannelData('private.login_time', Date.now());
-    this.checkAutoIPBan(data.ip);
-    metricsAdd('user.login', 1);
     metricsAdd('user.login_pass', 1);
-    return resp_func(null, {
-      public_data: this.getChannelData('public'),
-      email: this.getChannelData('private.email'),
-    });
+    return this.handleLoginShared(data, resp_func);
   }
   handleLoginExternal(src, data, resp_func) {
     if (this.channel_server.restarting) {
@@ -711,16 +715,8 @@ export class DefaultUserWorker extends ChannelWorker {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
     }
-    this.setChannelData('private.login_ip', data.ip);
-    this.setChannelData('private.login_ua', data.ua);
-    this.setChannelData('private.login_time', Date.now());
-    this.checkAutoIPBan(data.ip);
-    metricsAdd('user.login', 1);
     metricsAdd(`user.login_${data.provider}`, 1);
-    return resp_func(null, {
-      public_data: this.getChannelData('public'),
-      email: this.getChannelData('private.email'),
-    });
+    return this.handleLoginShared(data, resp_func);
   }
   handleCreate(src, data, resp_func) {
     if (this.exists()) {
