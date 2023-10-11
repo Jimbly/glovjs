@@ -228,12 +228,12 @@ export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
 
-export interface ModalDialogButtonEx<CB> extends Partial<ButtonTextParam> {
+export interface ModalDialogButtonEx<CB> {
   cb?: CB | null;
   in_event_cb?: EventCallback | null;
   label?: Text;
 }
-export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB>;
+export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB> | Partial<ButtonTextParam | ButtonImageParam>;
 export type ModalDialogTickCallbackParams = {
   readonly x0: number;
   readonly x: number;
