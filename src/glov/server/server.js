@@ -118,6 +118,17 @@ function onDataError(err) {
   sendToBuildClients('data_errors', [err]);
 }
 
+let recent_filewatch = [];
+const FILEWATCH_RECENT_TIME = 10000;
+function filewatchClean() {
+  if (recent_filewatch.length) {
+    let now = Date.now();
+    while (recent_filewatch.length && recent_filewatch[0][0] < now - FILEWATCH_RECENT_TIME) {
+      recent_filewatch.shift();
+    }
+  }
+}
+
 export function startup(params) {
   log.startup();
 
@@ -217,11 +228,18 @@ export function startup(params) {
 
   let gbstate;
   if (argv.dev) {
+    ws_server.on('client', function (client) {
+      filewatchClean();
+      for (let ii = 0; ii < recent_filewatch.length; ++ii) {
+        client.send('filewatch', recent_filewatch[ii][1]);
+      }
+    });
     process.on('message', function (msg) {
       if (!msg) {
         return;
       }
       if (msg.type === 'file_change') {
+        filewatchClean();
         let files = msg.paths;
         for (let ii = 0; ii < files.length; ++ii) {
           let filename = files[ii];
@@ -229,6 +247,7 @@ export function startup(params) {
           let shortname;
           if (filename.startsWith('client/')) {
             shortname = filename.replace(/^client\//, '');
+            recent_filewatch.push([Date.now(), shortname]);
             ws_server.broadcast('filewatch', shortname);
           } else {
             assert(filename.startsWith('server/'));
