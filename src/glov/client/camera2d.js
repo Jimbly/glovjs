@@ -382,11 +382,15 @@ export function virtualToDom(dst, src) {
   }
 }
 
+let font_pixel_scale = 0.84; // approx for palanquin; use 0.970 for PerfectVGA
+export function setDOMFontPixelScale(scale) {
+  font_pixel_scale = scale;
+}
 export function virtualToFontSize(height) {
   if (render_width) {
-    return height / (data[6] * data[8]) * 0.84;
+    return height / (data[6] * data[8]) * font_pixel_scale;
   } else {
-    return height * data[5] / data[6] * 0.84;
+    return height * data[5] / data[6] * font_pixel_scale;
   }
 }
 
