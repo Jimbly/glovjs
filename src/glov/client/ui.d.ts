@@ -359,6 +359,12 @@ export function setModalSizes(
   pad: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
+export function setFontStyles(
+  normal?: FontStyle | null,
+  focused?: FontStyle | null,
+  modal?: FontStyle | null,
+  disabled?: FontStyle | null
+): void;
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;
