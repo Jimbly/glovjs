@@ -18,6 +18,14 @@ module.exports = function (config) {
       PLATFORM: 'web',
       ENV: 'entity',
     },
+    zip: false,
+  }, {
+    // example .zip for itch.io publishing
+    name: 'itch',
+    defines: {
+      ...config.default_defines,
+      PLATFORM: 'web',
+    },
     zip: true,
   });
 
