@@ -455,8 +455,8 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
 
   let yoffs = 0;
   let height = size * lines.length;
-  // eslint-disable-next-line default-case
-  switch (align & ALIGN.VMASK) {
+  let valign = align & ALIGN.VMASK;
+  switch (valign) { // eslint-disable-line default-case
     case ALIGN.VCENTER:
       yoffs = (h - height) / 2;
       if (this.integral) {
@@ -476,7 +476,7 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
     }
     yoffs += size;
   }
-  return yoffs;
+  return valign === ALIGN.VBOTTOM ? height : yoffs;
 };
 
 // returns height
