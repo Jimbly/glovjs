@@ -11,6 +11,21 @@ html, body {
   position: absolute;
 }
 
+/* replace textarea font with fixed-width
+@font-face {
+  font-family: 'perfectvga';
+  src: url('perfectvga.woff2') format('woff2'),
+       url('perfectvga.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+textarea {
+  font-family: perfectvga,"Lucida Console",Courier,monospace;
+}
+*/
+
+
 a {
   color: #DDF;
   -webkit-tap-highlight-color: rgba(0,0,0,0); /* Work around Safari leaving stuck tap highlights */
