@@ -169,6 +169,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
+  no_bg?: boolean;
   style?: UIStyle;
 }
 export interface ButtonTextParam extends ButtonParam {
