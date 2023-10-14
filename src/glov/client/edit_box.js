@@ -99,6 +99,7 @@ class GlovUIEditBox {
     this.initial_select = false;
     this.spellcheck = true;
     this.esc_clears = true;
+    this.esc_unfocuses = true;
     this.multiline = 0;
     this.suppress_up_down = false;
     this.autocomplete = false;
@@ -201,7 +202,7 @@ class GlovUIEditBox {
     if (focused) {
       setActive(this);
       let key_opt = (this.pointer_lock && !this.text) ? { in_event_cb: pointerLockEnter } : null;
-      if (keyUpEdge(KEYS.ESC, key_opt)) {
+      if ((this.esc_clears || this.esc_unfocuses) && keyUpEdge(KEYS.ESC, key_opt)) {
         if (this.text && this.esc_clears) {
           this.setText('');
         } else {

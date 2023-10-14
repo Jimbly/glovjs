@@ -20,6 +20,7 @@ export interface EditBoxOptsAll {
   initial_select: boolean;
   spellcheck: boolean;
   esc_clears: boolean;
+  esc_unfocuses: boolean;
   multiline: number;
   autocomplete: boolean;
   suppress_up_down: boolean;
