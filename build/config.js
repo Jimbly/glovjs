@@ -40,6 +40,8 @@ module.exports = function (gb) {
       'client/**/*.glb',
       'client/**/*.ico',
       'client/**/*.ttf',
+      'client/**/*.woff',
+      'client/**/*.woff2',
       '!**/unused/**',
       '!client/sounds/Bfxr/**',
       // 'client/**/vendor/**',
