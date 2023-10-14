@@ -30,6 +30,7 @@ const glov_ui = require('./ui.js');
 const {
   getUIElemData,
   uiGetDOMElem,
+  uiGetDOMTabIndex,
   uiTextHeight,
 } = require('./ui.js');
 
@@ -113,6 +114,7 @@ class GlovUIEditBox {
     this.pointer_lock = false;
     this.last_frame = 0;
     this.out = {}; // Used by spotFocusCheck
+    this.last_tab_index = -1;
   }
   applyParams(params) {
     if (!params) {
@@ -264,10 +266,8 @@ class GlovUIEditBox {
         if (this.multiline) {
           input.setAttribute('rows', this.multiline);
         }
-        input.setAttribute('tabindex', 2);
         elem.appendChild(input);
         let span = document.createElement('span');
-        span.setAttribute('tabindex', 3);
         this.postspan = span;
         elem.appendChild(span);
         input.value = this.text;
@@ -315,6 +315,16 @@ class GlovUIEditBox {
         this.last_autocomplete = this.autocomplete;
         this.input.setAttribute('autocomplete', this.autocomplete || `auto_off_${Math.random()}`);
       }
+
+      let tab_index1 = uiGetDOMTabIndex();
+      let tab_index2 = uiGetDOMTabIndex();
+      if (tab_index1 !== this.last_tab_index) {
+        this.last_tab_index = tab_index1;
+        this.input.setAttribute('tabindex', tab_index1);
+        this.postspan.setAttribute('tabindex', tab_index2);
+      }
+    } else {
+      this.last_tab_index = -1;
     }
 
     if (focused) {
