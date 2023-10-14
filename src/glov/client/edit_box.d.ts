@@ -45,4 +45,5 @@ export function editBoxCreate(params?: EditBoxOpts): EditBox;
 export function editBox<T extends string|number=string|number>(params: EditBoxOpts, current: T): {
   result: EditBoxResult;
   text: T;
+  edit_box: EditBox;
 };
