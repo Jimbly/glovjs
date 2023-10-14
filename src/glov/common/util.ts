@@ -639,3 +639,12 @@ export function msToSS2020(milliseconds: number): number {
   // Integer seconds since Jan 1st, 2020
   return floor(milliseconds / 1000) - 1577836800;
 }
+
+const whitespace_regex = /\s/;
+export function trimEnd(s: string): string {
+  let idx = s.length;
+  while (idx > 0 && s[idx-1].match(whitespace_regex)) {
+    --idx;
+  }
+  return s.slice(0, idx);
+}

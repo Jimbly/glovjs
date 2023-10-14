@@ -8,6 +8,7 @@ import {
   nearSameAngle,
   once,
   randomNot,
+  trimEnd,
 } from 'glov/common/util';
 import 'glov/server/test';
 
@@ -88,6 +89,13 @@ asyncSeries([
       assert(v2 < 4);
       v = v2;
     }
+    next();
+  },
+  function testTrimEnd(next) {
+    assert.equal(trimEnd('asdf  '), trimEnd('asdf'));
+    assert.equal(trimEnd('asdf \n '), trimEnd('asdf'));
+    assert.equal(trimEnd('  asdf \n '), trimEnd('  asdf'));
+    assert.equal(trimEnd(' \n asdf \n '), trimEnd(' \n asdf'));
     next();
   },
 ], function (err) {
