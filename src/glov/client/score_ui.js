@@ -29,6 +29,44 @@ export function drawCellDefault({
   let str = String(value);
   font.drawSizedAligned(use_style, x, y, z, size, align, w, h, str);
 }
+
+function assignRanks(scores, scoreToRow) {
+  if (scores.ranked) {
+    return;
+  }
+  scores.ranked = true;
+  let my_name = scoreGetPlayerName();
+  let found_me = false;
+  let prev_row = [];
+  for (let ii = 0; ii < scores.length; ++ii) {
+    let s = scores[ii];
+    let row = [];
+    scoreToRow(row, s.score);
+    let same = true;
+    for (let jj = row.length - 1; jj >= 0; --jj) {
+      if (prev_row[jj] !== row[jj]) {
+        same = false;
+        break;
+      }
+    }
+    if (same && ii) {
+      s.rank = scores[ii-1].rank;
+    } else {
+      s.rank = ii + 1;
+    }
+    prev_row = row;
+    if (!found_me && s.name === my_name) {
+      found_me = true;
+      let swap = ii;
+      while (swap && scores[swap-1].rank === s.rank) {
+        scores[swap] = scores[swap - 1];
+        scores[swap - 1] = s;
+        swap--;
+      }
+    }
+  }
+}
+
 export function scoresDraw({
   score_system,
   x, y, z,
@@ -57,6 +95,7 @@ export function scoresDraw({
       'Loading...');
     return y + height;
   }
+  assignRanks(scores, scoreToRow);
   if (!scores_scroll) {
     scores_scroll = scrollAreaCreate({
       w: width,
@@ -108,20 +147,22 @@ export function scoresDraw({
   let x_save = x;
   x = 0;
   y = 0;
-  let found_me = false;
   function drawScoreEntry(ii, s, use_style) {
     let row = [
-      ii === null ? '--' : `#${ii+1}`,
+      ii === null ? '--' : `#${s.rank}`,
       scoreFormatName(s),
     ];
     scoreToRow(row, s.score);
     drawSet(row, use_style);
   }
+  // draw scores
+  let my_name = scoreGetPlayerName();
+  let found_me = false;
   for (let ii = 0; ii < scores.length; ++ii) {
     let s = scores[ii % scores.length];
     let use_style = style_score;
     let drawme = false;
-    if (s.name === scoreGetPlayerName() && !found_me) {
+    if (s.name === my_name && !found_me) {
       use_style = style_me;
       found_me = true;
       drawme = true;
