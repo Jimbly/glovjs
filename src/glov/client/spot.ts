@@ -1122,6 +1122,10 @@ function spotFocusSetSilent(param: SpotParam): void {
   focus_key_nonsticky = null;
 }
 
+export function spotGetCurrentFocusKey(): string {
+  return [focus_key, focus_is_sticky, focus_key_nonsticky].join(';');
+}
+
 export function spotFocusSteal(param: SpotParam): void {
   const key = spotKey(param);
   spotlog('spotFocusSteal', key, false);
