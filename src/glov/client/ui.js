@@ -2007,5 +2007,5 @@ export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) 
 export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
   tooltip_width = _tooltip_width;
   tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
-  tooltip_pad = modal_pad / 2 * _tooltip_panel_pixel_scale;
+  tooltip_pad = round(modal_pad / 2 * _tooltip_panel_pixel_scale);
 }
