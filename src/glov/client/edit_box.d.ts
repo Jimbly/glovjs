@@ -1,3 +1,6 @@
+import type { FontStyle } from './font';
+import type { ROVec4 } from 'glov/common/vmath';
+
 export type EditBoxResult = null | 'submit' | 'cancel';
 
 export interface EditBoxOptsAll {
@@ -25,6 +28,15 @@ export interface EditBoxOptsAll {
   autocomplete: boolean;
   suppress_up_down: boolean;
   // custom_nav: Partial<Record<number, null>>;
+  canvas_render: null | {
+    // if set, will do custom canvas rendering instead of DOM rendering
+    // requires a fixed-width font and near-perfectly aligned font rendering (tweak setDOMFontPixelScale)
+    char_width: number;
+    char_height: number;
+    color_selection: ROVec4;
+    color_caret: ROVec4;
+    style_text: FontStyle;
+  };
 }
 
 export type EditBoxOpts = Partial<EditBoxOptsAll>;
@@ -34,6 +46,8 @@ export interface EditBox extends Readonly<EditBoxOptsAll> {
   getText(): string;
   setText(new_text: string | number): void;
   isFocused(): boolean;
+  hadOverflow(): boolean;
+  getSelection(): [[number, number], [number, number]]; // [column, row], [column, row]
 
   readonly SUBMIT: 'submit';
   readonly CANCEL: 'cancel';

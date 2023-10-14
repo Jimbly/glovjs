@@ -139,6 +139,36 @@ canvas {
   border-width: 1px;
 }
 
+.glovui_dynamic textarea.fixed {
+  resize: none;
+  overflow: hidden;
+  text-wrap: nowrap;
+
+  /* potentially useful for better blending if canvas_render is not an option:
+    background: rgba(1,1,1,0);
+    border: none;
+    outline: none;
+    color: #111;
+    caret-color:  #111;
+  */
+}
+.glovui_dynamic textarea.canvas_render {
+  resize: none;
+  background: rgba(1,1,1,0);
+  border: none;
+  outline: none;
+  overflow: hidden;
+  text-wrap: nowrap;
+
+  color: rgba(0,0,0,0);
+  caret-color: rgba(0,0,0,0);
+  /* debug alignment: color: rgba(255,0,255,0.5); */
+  /* debug alignment: caret-color: rgba(255,0,255,0.5); */
+}
+.glovui_dynamic textarea.canvas_render::selection {
+  color: rgba(0,0,0,0);
+}
+
 .glovui_link {
   display: block;
   height: 100%;
