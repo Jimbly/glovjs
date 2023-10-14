@@ -525,6 +525,10 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   dom_elems_issued++;
   return elem;
 }
+let dom_tab_index = 0;
+export function uiGetDOMTabIndex() {
+  return ++dom_tab_index;
+}
 
 const base_ui_sounds = {
   button_click: 'button_click',
@@ -1463,6 +1467,7 @@ function uiTick(dt) {
   linkTick();
 
   dom_elems_issued = 0;
+  dom_tab_index = 0;
 
   let pp_this_frame = false;
   if (modal_dialog || menu_up) {
