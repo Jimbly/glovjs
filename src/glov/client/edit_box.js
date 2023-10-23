@@ -364,6 +364,7 @@ class GlovUIEditBox {
     this_frame_edit_boxes.push(this);
     let elem = allow_focus && uiGetDOMElem(this.elem, true);
     if (elem !== this.elem) {
+      this.last_tab_index = -1;
       if (elem) {
         // new DOM element, initialize
         if (!form_hook_registered) {
