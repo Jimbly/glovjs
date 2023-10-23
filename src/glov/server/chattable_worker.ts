@@ -112,7 +112,7 @@ function denyChat(
     return `Your account is too recent to chat in this world. Wait ${time_left} before writing again.`;
   }
   if (err === 'ERR_COOLDOWN') {
-    return `This world has chat slow mode enabled. Wait ${time_left} seconds before writting again.`;
+    return `This world has chat slow mode enabled. Wait ${time_left} seconds before writing again.`;
   }
   return err;
 }
