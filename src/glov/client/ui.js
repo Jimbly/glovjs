@@ -273,6 +273,10 @@ export function uiTextHeight() {
   return ui_style_current.text_height;
 }
 
+export function uiButtonHeight() {
+  return button_height;
+}
+
 export let font;
 export let title_font;
 
