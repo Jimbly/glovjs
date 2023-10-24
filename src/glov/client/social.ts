@@ -11,10 +11,10 @@ import {
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
 import {
-  ClientPresenceData,
   ErrorCallback,
   FriendCmdResponse,
-  ServerPresenceData,
+  NetErrorCallback,
+  PresenceEntry,
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
@@ -46,7 +46,7 @@ export function friendIsBlocked(user_id: string): boolean {
   return value?.status === FriendStatus.Blocked;
 }
 
-function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<string>): void {
+function makeFriendCmdRequest(cmd: string, user_id: string, cb: NetErrorCallback<string>): void {
   user_id = user_id.toLowerCase();
   let requesting_user_id = netSubs().loggedIn();
   if (netDisconnected()) {
@@ -72,16 +72,16 @@ function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<st
   });
 }
 
-export function friendAdd(user_id: string, cb: ErrorCallback<string>): void {
+export function friendAdd(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_add', user_id, cb);
 }
-export function friendRemove(user_id: string, cb: ErrorCallback<string>): void {
+export function friendRemove(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_remove', user_id, cb);
 }
-export function friendBlock(user_id: string, cb: ErrorCallback<string>): void {
+export function friendBlock(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_block', user_id, cb);
 }
-export function friendUnblock(user_id: string, cb: ErrorCallback<string>): void {
+export function friendUnblock(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_unblock', user_id, cb);
 }
 
@@ -149,12 +149,13 @@ cmd_parse.registerValue('afk', {
   set: (v: number) => (afk = v),
 });
 
-function onPresence(this: { presence_data?: ServerPresenceData }, data: ServerPresenceData): void {
+function onPresence(this: { presence_data?: PresenceEntry }, data: PresenceEntry): void {
   let user_channel = this;
   user_channel.presence_data = data;
 }
 
-let last_presence: ClientPresenceData | null = null;
+type ClientPresenceState = Omit<PresenceEntry, 'id'>;
+let last_presence: ClientPresenceState | null = null;
 let send_queued = false;
 function richPresenceSend(): void {
   if (!netSubs().loggedIn() || !last_presence || send_queued) {
