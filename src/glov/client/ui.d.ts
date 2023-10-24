@@ -29,6 +29,8 @@ export function addHook(draw: UIHookFn, click: UIHookFn): void;
 export function getUIElemData<T, P extends SpotKeyable>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
+export function uiGetFont(): Font;
+export function uiGetTitleFont(): Font;
 export function uiFontStyleNormal(): FontStyle;
 export function uiFontStyleFocused(): FontStyle;
 export function uiFontStyleDisabled(): FontStyle;

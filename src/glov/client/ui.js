@@ -275,6 +275,14 @@ export function uiTextHeight() {
 
 export let font;
 export let title_font;
+
+export function uiGetFont() {
+  return font;
+}
+export function uiGetTitleFont() {
+  return title_font;
+}
+
 export const sprites = {};
 
 let color_button = makeColorSet([1,1,1,1]);
