@@ -147,6 +147,7 @@ class GlovUIEditBox {
       sel_end: 0,
     };
     this.last_tab_index = -1;
+    this.last_font_size = '';
     this.had_overflow = false;
   }
   applyParams(params) {
@@ -365,6 +366,7 @@ class GlovUIEditBox {
     let elem = allow_focus && uiGetDOMElem(this.elem, true);
     if (elem !== this.elem) {
       this.last_tab_index = -1;
+      this.last_font_size = '';
       if (elem) {
         // new DOM element, initialize
         if (!form_hook_registered) {
@@ -445,10 +447,10 @@ class GlovUIEditBox {
       elem.style.top = `${pos[1]}%`;
       let size = camera2d.htmlSize(this.w, 0);
       elem.style.width = `${size[0]}%`;
-      let old_fontsize = elem.style.fontSize || '?px';
 
       let new_fontsize = `${camera2d.virtualToFontSize(font_height).toFixed(8)}px`;
-      if (new_fontsize !== old_fontsize) {
+      if (new_fontsize !== this.last_font_size) {
+        this.last_font_size = new_fontsize;
         // elem.style.fontSize = new_fontsize;
         // Try slightly better smooth scaling from https://medium.com/autodesk-tlv/smooth-text-scaling-in-javascript-css-a817ae8cc4c9
         const preciseFontSize = camera2d.virtualToFontSize(font_height);  // Desired font size
@@ -459,6 +461,7 @@ class GlovUIEditBox {
         const scale = `translate(-50%, -50%)
                        scale(${s})
                        translate(50%, 50%)`;
+        this.input.style.width = `${(1/s*100).toFixed(8)}%`;
         elem.style.transform = scale;
       }
 
@@ -480,6 +483,7 @@ class GlovUIEditBox {
       }
     } else {
       this.last_tab_index = -1;
+      this.last_font_size = '';
     }
 
     if (focused) {

@@ -125,7 +125,6 @@ canvas {
 .glovui_dynamic {
   font-size: 1em;
   position: absolute;
-  text-align: center;
   opacity: 1.0;
   pointer-events: auto;
 }
