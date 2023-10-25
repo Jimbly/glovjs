@@ -535,7 +535,7 @@ class GlovUIEditBox {
         font.draw({
           style: style_text,
           height: font_height,
-          x, y: y + ii * char_height, z,
+          x, y: y + ii * char_height, z: z + 0.8,
           text: line,
         });
       }
