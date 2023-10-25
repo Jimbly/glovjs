@@ -4,6 +4,7 @@
 /* eslint-env browser */
 
 import assert from 'assert';
+import * as settings from 'glov/client/settings';
 import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
@@ -129,24 +130,45 @@ cmd_parse.register({
   },
 });
 
-let invisible = 0;
+export const SOCIAL_ONLINE = 1;
+export const SOCIAL_AFK = 2;
+export const SOCIAL_INVISIBLE = 3;
+export type SocialPresenceStatus = typeof SOCIAL_ONLINE | typeof SOCIAL_AFK | typeof SOCIAL_INVISIBLE;
+declare module 'glov/client/settings' {
+  let social_presence: SocialPresenceStatus;
+}
+settings.register({
+  social_presence: {
+    default_value: SOCIAL_ONLINE,
+    type: cmd_parse.TYPE_INT,
+    range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
+    access_show: ['hidden'],
+  },
+});
+
+export function socialPresenceStatusGet(): SocialPresenceStatus {
+  return settings.social_presence;
+}
+export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
+  settings.set('social_presence', value);
+}
+
 cmd_parse.registerValue('invisible', {
   type: cmd_parse.TYPE_INT,
   help: 'Hide rich presence information from other users',
   label: 'Invisible',
   range: [0,1],
-  get: () => invisible,
-  set: (v: number) => (invisible = v),
+  get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
+  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
 });
 
-let afk = 0;
 cmd_parse.registerValue('afk', {
   type: cmd_parse.TYPE_INT,
   help: 'Appear as idle to other users',
   label: 'AFK',
   range: [0,1],
-  get: () => afk,
-  set: (v: number) => (afk = v),
+  get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
+  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
 });
 
 function onPresence(this: { presence_data?: PresenceEntry }, data: PresenceEntry): void {
@@ -176,11 +198,18 @@ function richPresenceSend(): void {
   });
 }
 export function richPresenceSet(active_in: boolean, state: string, payload?: unknown): void {
-  let active: number = !active_in || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
-    PRESENCE_INACTIVE :
-    PRESENCE_ACTIVE;
-  if (invisible) {
-    active = PRESENCE_OFFLINE;
+  let active: number;
+  switch (socialPresenceStatusGet()) {
+    case SOCIAL_AFK:
+      active = PRESENCE_INACTIVE;
+      break;
+    case SOCIAL_INVISIBLE:
+      active = PRESENCE_OFFLINE;
+      break;
+    default:
+      active = !active_in || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
+        PRESENCE_INACTIVE :
+        PRESENCE_ACTIVE;
   }
   payload = payload || null;
   if (!last_presence ||

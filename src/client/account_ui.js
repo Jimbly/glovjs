@@ -11,6 +11,10 @@ const { click, KEYS, keyDownEdge } = require('glov/client/input.js');
 const { linkGetDefaultStyle, linkText } = require('glov/client/link.js');
 const { random, round } = Math;
 const net = require('glov/client/net.js');
+const {
+  SOCIAL_ONLINE,
+  socialPresenceStatusSet,
+} = require('glov/client/social');
 const ui = require('glov/client/ui.js');
 const { uiTextHeight } = require('glov/client/ui');
 const { vec4 } = require('glov/common/vmath.js');
@@ -72,6 +76,7 @@ AccountUI.prototype.playAsGuest = function (use_name) {
   }
   let pass = 'test';
   local_storage.set('name', name);
+  socialPresenceStatusSet(SOCIAL_ONLINE);
   this.edit_box_name.setText(name);
   net.subs.login(name, pass, function (err) {
     if (err) {
@@ -220,6 +225,7 @@ AccountUI.prototype.showLogin = function (param) {
 
       if (submit) {
         local_storage.set('name', edit_box_name.text);
+        socialPresenceStatusSet(SOCIAL_ONLINE);
         // do creation and log in!
         net.subs.userCreate({
           user_id: edit_box_name.text,
@@ -292,6 +298,7 @@ AccountUI.prototype.showLogin = function (param) {
 
       if (submit) {
         local_storage.set('name', edit_box_name.text);
+        socialPresenceStatusSet(SOCIAL_ONLINE);
         if (prelogin) {
           prelogin();
         }
