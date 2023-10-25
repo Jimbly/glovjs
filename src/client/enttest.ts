@@ -18,8 +18,12 @@ import * as particles from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
-import * as ui from 'glov/client/ui';
 import {
+  buttonText,
+  drawCircle,
+  drawLine,
+  uiButtonHeight,
+  uiGetFont,
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
@@ -372,7 +376,7 @@ export function main(): void {
 
       aiMotion(dt);
 
-      if (ui.buttonText({
+      if (buttonText({
         x: 0, y,
         text: 'Spawn Entity',
       })) {
@@ -381,15 +385,15 @@ export function main(): void {
         let pos = [test_character.pos[0] + sin(theta) * r, test_character.pos[1] + cos(theta) * r, 0];
         test_room.send('spawn', { pos });
       }
-      y += ui.button_height + 4;
+      y += uiButtonHeight() + 4;
 
-      if (ui.buttonText({
+      if (buttonText({
         x: 0, y,
         text: 'Reset Current VA',
       })) {
         test_room.send('resetva');
       }
-      y += ui.button_height + 4;
+      y += uiButtonHeight() + 4;
 
       sprite_game_bg.draw({
         x: 0, y: 0, z: Z.BACKGROUND,
@@ -406,20 +410,20 @@ export function main(): void {
         frame: player_state.test_anim_state === 'idle' ? 1 : 3,
       });
       // Draw view area
-      ui.drawCircle(test_character.pos[0], test_character.pos[1], Z.SPRITES - 2, VIEW_DIST, 0.99, [1,1,1,0.5]);
+      drawCircle(test_character.pos[0], test_character.pos[1], Z.SPRITES - 2, VIEW_DIST, 0.99, [1,1,1,0.5]);
       // Draw VisibleArea boundaries
       for (let xx = VA_SIZE; xx < game_width; xx+=VA_SIZE) {
-        ui.drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
+        drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
       }
       for (let yy = VA_SIZE; yy < game_height; yy+=VA_SIZE) {
-        ui.drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
+        drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.5]);
       }
       // Draw VisibleArea boundaries
       for (let xx = VA_SIZE/2; xx < game_width; xx+=VA_SIZE) {
-        ui.drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
+        drawLine(xx, 0, xx, game_height, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
       }
       for (let yy = VA_SIZE/2; yy < game_height; yy+=VA_SIZE) {
-        ui.drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
+        drawLine(0, yy, game_width, yy, Z.SPRITES - 3, 1, 1, [0,0,1,0.125]);
       }
 
       // Draw other entities
@@ -459,7 +463,7 @@ export function main(): void {
           frame,
         });
         if (ent.data.display_name) {
-          ui.font.drawSizedAligned(glov_font.styleAlpha(glov_font.styleColored(null, 0x00000080), color_temp[3]),
+          uiGetFont().drawSizedAligned(glov_font.styleAlpha(glov_font.styleColored(null, 0x00000080), color_temp[3]),
             pos[0], pos[1] - 64, Z.SPRITES - 1,
             uiTextHeight(), glov_font.ALIGN.HCENTER, 0, 0,
             ent.data.display_name);

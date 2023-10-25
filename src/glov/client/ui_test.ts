@@ -19,7 +19,11 @@ import {
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';
 import { slider } from './slider';
 import * as ui from './ui';
-import { uiTextHeight } from './ui';
+import {
+  uiButtonHeight,
+  uiButtonWidth,
+  uiTextHeight,
+} from './ui';
 import {
   uiStyleAlloc,
   uiStylePop,
@@ -110,8 +114,10 @@ export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
   z = z || Z.UI;
   const text_height = uiTextHeight();
-  let line_height = ui.button_height + 2;
-  let column_width = ui.button_width + 8;
+  const button_height = uiButtonHeight();
+  const button_width = uiButtonWidth();
+  let line_height = button_height + 2;
+  let column_width = button_width + 8;
   if (inited !== `${x}_${y}_${column_width}`) {
     init(x, y, column_width);
     inited = `${x}_${y}_${column_width}`;
@@ -119,7 +125,7 @@ export function run(x: number, y: number, z: number): void {
 
   if (demo_menu_up) {
     demo_result = '';
-    demo_menu.run({ x: x + ui.button_width, y: y + line_height, z: Z.MODAL });
+    demo_menu.run({ x: x + button_width, y: y + line_height, z: Z.MODAL });
     if (demo_menu.isSelected()) {
       if (demo_menu.isSelected('opt2')) {
         demo_result = 'Selected the second option';
@@ -162,7 +168,7 @@ export function run(x: number, y: number, z: number): void {
     edit_box2.setText('');
   }
 
-  if (ui.buttonText({ x: edit_box2.x + edit_box2.w + pad, y, z, text: '...', w: ui.button_height })) {
+  if (ui.buttonText({ x: edit_box2.x + edit_box2.w + pad, y, z, text: '...', w: button_height })) {
     ui.modalTextEntry({
       title: 'Type something',
       edit_text: edit_box2.getText(),
@@ -226,10 +232,10 @@ export function run(x: number, y: number, z: number): void {
   ui.progressBar({
     x: 2,
     y: internal_y, z,
-    w: 60, h: ui.button_height,
+    w: 60, h: button_height,
     progress: slider_value,
   });
-  internal_y += ui.button_height + pad;
+  internal_y += button_height + pad;
 
   collapsagoriesHeader({
     y: internal_y,
@@ -250,7 +256,7 @@ export function run(x: number, y: number, z: number): void {
   if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
   }
-  internal_y += ui.button_height + pad;
+  internal_y += button_height + pad;
 
   collapsagoriesHeader({
     y: internal_y, w: 8, x: 7, z: 7,
@@ -275,11 +281,11 @@ export function run(x: number, y: number, z: number): void {
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Add Line', key: 'add_line' })) {
     ++test_lines;
   }
-  internal_y += ui.button_height + pad;
+  internal_y += button_height + pad;
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line', key: 'remove_line' })) {
     --test_lines;
   }
-  internal_y += ui.button_height + pad;
+  internal_y += button_height + pad;
   collapsagoriesStop();
   test_scroll_area.end(internal_y);
   ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
@@ -296,8 +302,8 @@ export function run(x: number, y: number, z: number): void {
     min: 0,
     max: 2,
   });
-  ui.print(null, x + ui.button_width + pad, y, z, `${slider_value.toFixed(2)}`);
-  y += ui.button_height;
+  ui.print(null, x + button_width + pad, y, z, `${slider_value.toFixed(2)}`);
+  y += button_height;
 }
 
 export function runFontTest(x: number, y: number): void {
@@ -405,7 +411,7 @@ export function runFontTest(x: number, y: number): void {
     glow_xoffs: 0.25, glow_yoffs: 0.25, glow_inner: 0, glow_outer: 5, glow_color: 0x7F7F7Fff,
     color: COLOR_WHITE
   });
-  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, ALIGN.HFIT, ui.button_width * 2, 0,
+  font.drawSizedAligned(font_style_both2, x, y, z, font_size2, ALIGN.HFIT, uiButtonWidth() * 2, 0,
     'ALIGN.HFIT The quick brown fox jumps over the lazy dog');
   y += font_size2;
 

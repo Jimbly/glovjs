@@ -31,13 +31,14 @@ import {
   spotUnfocus,
   spotlog,
 } from './spot';
-import * as glov_ui from './ui';
 import {
   drawLine,
   drawRect,
   getUIElemData,
+  uiButtonWidth,
   uiGetDOMElem,
   uiGetDOMTabIndex,
+  uiGetFont,
   uiTextHeight,
 } from './ui';
 
@@ -108,9 +109,9 @@ class GlovUIEditBox {
     this.x = 0;
     this.y = 0;
     this.z = Z.UI; // actually in DOM, so above everything!
-    this.w = glov_ui.button_width;
+    this.w = uiButtonWidth();
     this.type = 'text';
-    // this.h = glov_ui.button_height;
+    // this.h = uiButtonHeight();
     this.font_height = uiTextHeight();
     this.text = '';
     this.placeholder = '';
@@ -505,7 +506,7 @@ class GlovUIEditBox {
 
     if (canvas_render) {
       const { char_width, char_height, color_selection, color_caret, style_text } = canvas_render;
-      let font = glov_ui.font;
+      let font = uiGetFont();
       let lines = text.split('\n');
       if (focused) {
         // draw selection

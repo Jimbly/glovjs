@@ -43,10 +43,14 @@ import {
 } from './spot.js';
 import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
 import {
+  drawHBox,
   getUIElemData,
   playUISound,
+  uiButtonHeight,
+  uiButtonWidth,
   uiFontStyleFocused,
   uiFontStyleNormal,
+  uiGetFont,
   uiTextHeight,
 } from './ui.js';
 import * as glov_ui from './ui.js';
@@ -85,12 +89,12 @@ export function selboxDefaultDrawItemBackground({
   image_set, color,
   image_set_extra, image_set_extra_alpha,
 }) {
-  glov_ui.drawHBox({ x, y, z, w, h },
+  drawHBox({ x, y, z, w, h },
     image_set, color);
   if (image_set_extra && image_set_extra_alpha) {
     v4copy(color_temp_fade, color);
     color_temp_fade[3] *= easeIn(image_set_extra_alpha, 2);
-    glov_ui.drawHBox({ x, y, z: z + 0.001, w, h },
+    drawHBox({ x, y, z: z + 0.001, w, h },
       image_set_extra, color_temp_fade);
   }
 }
@@ -248,13 +252,13 @@ class SelectionBoxBase {
     this.x = 0;
     this.y = 0;
     this.z = Z.UI;
-    this.width = glov_ui.button_width;
+    this.width = uiButtonWidth();
     this.items = [];
     this.disabled = false;
     this.display = cloneShallow(default_display);
     this.scroll_height = 0;
     this.font_height = uiTextHeight();
-    this.entry_height = glov_ui.button_height;
+    this.entry_height = uiButtonHeight();
     this.auto_reset = true;
     this.reset_selection = false;
     this.initial_selection = 0;
@@ -823,7 +827,7 @@ class GlovDropDown extends SelectionBoxBase {
         }
       }
     }
-    glov_ui.drawHBox({
+    drawHBox({
       x, y, z: z + 1,
       w: width, h: entry_height
     }, glov_ui.sprites.menu_header, COLORS[root_spot_ret.spot_state]);
@@ -895,14 +899,14 @@ GlovDropDown.prototype.nav_loop = true;
 
 export function selectionBoxCreate(params) {
   if (!font) {
-    font = glov_ui.font;
+    font = uiGetFont();
   }
   return new GlovSelectionBox(params);
 }
 
 export function dropDownCreate(params) {
   if (!font) {
-    font = glov_ui.font;
+    font = uiGetFont();
   }
   return new GlovDropDown(params);
 }

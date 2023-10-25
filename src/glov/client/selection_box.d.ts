@@ -71,13 +71,13 @@ export interface SelectionBoxOptsAll {
   x: number; // default: 0
   y: number; // default: 0
   z: number; // default: Z.UI
-  width: number; // default: glov_ui.button_width
+  width: number; // default: uiButtonWidth()
   items: MenuItemEntry[]; // default: []
   disabled: boolean; // default: false
   display: Partial<SelectionBoxDisplay>; // default: cloneShallow(default_display)
   scroll_height: number; // default: 0
   font_height: number; // default: uiTextHeight()
-  entry_height: number; // default: glov_ui.button_height
+  entry_height: number; // default: uiButtonHeight()
   auto_reset: boolean; // default: true
   reset_selection: boolean; // default: false
   initial_selection: number; // default: 0

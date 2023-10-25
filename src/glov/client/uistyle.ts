@@ -8,6 +8,8 @@ import type { DataObject, TSMap } from 'glov/common/types';
 
 export type UIStyleDef = {
   text_height?: number | string;
+  button_width?: number | string;
+  button_height?: number | string;
 };
 
 export type UIStyleFields = {
@@ -17,8 +19,8 @@ export type UIStyleFields = {
   // font_style_disabled: FontStyle;
   text_height: number;
   // text_align: ALIGN;
-  // button_width: number;
-  // button_height: number;
+  button_width: number;
+  button_height: number;
   // color sets - always a full set, and style defs could do single color for convenience and button param tints color
   // button_color_set: ColorSet;
   // button_img_regular: Sprite;
@@ -34,6 +36,8 @@ export type UIStyleFields = {
 
 const default_style_params_init: UIStyleFields = {
   text_height: 24,
+  button_width: 200,
+  button_height: 32,
 };
 
 
@@ -45,6 +49,8 @@ let ui_style_current: UIStyle;
 class UIStyleImpl implements UIStyleFields {
   id_chain: string[];
   text_height!: number;
+  button_width!: number;
+  button_height!: number;
   constructor(id_chain: string[]) {
     this.id_chain = id_chain;
   }
@@ -65,6 +71,8 @@ function uiStyleCompute(style: UIStyleImpl): void {
   let id_chain = style.id_chain;
   // TODO: do similar inheritance for every parameter
   let text_height!: number;
+  let button_width!: number;
+  let button_height!: number;
   for (let ii = 0; ii < id_chain.length; ++ii) {
     let id = id_chain[ii];
     let entry = style_params[id];
@@ -80,12 +88,38 @@ function uiStyleCompute(style: UIStyleImpl): void {
         text_height = v;
       }
     }
+    v = entry.def.button_width;
+    if (v !== undefined) {
+      if (typeof v === 'string') {
+        let m = v.match(/^(\d+)%$/);
+        assert(m);
+        button_width *= Number(m[1])/100;
+      } else {
+        assert.equal(typeof v, 'number');
+        button_width = v;
+      }
+    }
+    v = entry.def.button_height;
+    if (v !== undefined) {
+      if (typeof v === 'string') {
+        let m = v.match(/^(\d+)%$/);
+        assert(m);
+        button_height *= Number(m[1])/100;
+      } else {
+        assert.equal(typeof v, 'number');
+        button_height = v;
+      }
+    }
     if (ii === 0) {
       // First step, should always get valid values from the default style
       assert(typeof text_height === 'number');
+      assert(typeof button_width === 'number');
+      assert(typeof button_height === 'number');
     }
   }
   style.text_height = text_height;
+  style.button_width = button_width;
+  style.button_height = button_height;
 }
 
 // Potentially very slow!  Load-time/dev-time only

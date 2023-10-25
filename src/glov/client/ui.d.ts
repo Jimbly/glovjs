@@ -64,10 +64,11 @@ export interface UISprites {
 }
 export const sprites: UISprites;
 // DEPRECATED: export const font_height: number; // use uiStyleCurrent().text_height or uiTextHeight()
+// DEPRECATED: export const button_width: number;
+// DEPRECATED: export const button_height: number;
 export function uiTextHeight(): number;
-export const button_width: number;
-export const button_height: number;
 export function uiButtonHeight(): number;
+export function uiButtonWidth(): number;
 export const panel_pixel_scale: number;
 export function buttonWasFocused(): boolean;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;

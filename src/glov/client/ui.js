@@ -223,12 +223,11 @@ function doDesaturateEffect(saturation, brightness) {
 
 // DEPRECATED: use uiStyleCurrent().foo instead
 // exports.font_height;
+// export let button_height = 32;
+// export let button_width = 200;
 
 // overrideable default parameters
-export let button_height = 32;
-export let button_width = 200;
 export let modal_button_width = 100;
-export let button_img_size = button_height;
 export let modal_width = 600;
 export let modal_y0 = 200;
 export let modal_title_scale = 1.2;
@@ -272,9 +271,11 @@ export function uiFontStyleModal() {
 export function uiTextHeight() {
   return ui_style_current.text_height;
 }
-
 export function uiButtonHeight() {
-  return button_height;
+  return ui_style_current.button_height;
+}
+export function uiButtonWidth() {
+  return ui_style_current.button_width;
 }
 
 export let font;
@@ -988,8 +989,8 @@ export function buttonText(param) {
   assert(typeof param.text === 'string');
   // optional params
   // param.z = param.z || Z.UI;
-  param.w = param.w || button_width;
-  param.h = param.h || button_height;
+  param.w = param.w || ui_style_current.button_width;
+  param.h = param.h || ui_style_current.button_height;
   param.font_height = param.font_height || (param.style || ui_style_current).text_height;
 
   let spot_ret = buttonShared(param);
@@ -1053,8 +1054,8 @@ export function buttonImage(param) {
   assert(param.imgs || param.img && param.img.draw); // should be a sprite
   // optional params
   param.z = param.z || Z.UI;
-  param.w = param.w || button_img_size;
-  param.h = param.h || param.w || button_img_size;
+  param.w = param.w || ui_style_current.button_height;
+  param.h = param.h || param.w || ui_style_current.button_height;
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
 
@@ -1080,8 +1081,8 @@ export function button(param) {
   // optional params
   param.z = param.z || Z.UI;
   // w/h initialize differently than either buttonText or buttonImage
-  param.h = param.h || button_img_size;
-  param.w = param.w || button_width;
+  param.h = param.h || ui_style_current.button_height;
+  param.w = param.w || ui_style_current.button_width;
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
@@ -1213,7 +1214,7 @@ function modalDialogRun() {
   camera2d.domDeltaToVirtual(virtual_size, dom_requirement);
   let fullscreen_mode = false;
   let eff_font_height = modal_dialog.font_height || (modal_dialog.style || ui_style_current).text_height;
-  let eff_button_height = button_height;
+  let eff_button_height = ui_style_current.button_height;
   let pad = modal_pad;
   let vpad = modal_pad * 0.5;
   let general_scale = 1;
@@ -1979,14 +1980,15 @@ export function setFontHeight(_font_height) {
 function uiApplyStyle(style) {
   ui_style_current = style;
   exports.font_height = style.text_height;
+  exports.button_width = style.button_width;
+  exports.button_height = style.button_height;
   fontSetDefaultSize(style.text_height);
 }
 
 export function scaleSizes(scale) {
-  button_height = round(32 * scale);
+  let button_height = round(32 * scale);
   let text_height = round(24 * scale);
-  button_width = round(200 * scale);
-  button_img_size = button_height;
+  let button_width = round(200 * scale);
   modal_button_width = round(button_width / 2);
   modal_width = round(600 * scale);
   modal_y0 = round(200 * scale);
@@ -2001,6 +2003,8 @@ export function scaleSizes(scale) {
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
     text_height,
+    button_width,
+    button_height,
   });
 }
 
@@ -2009,7 +2013,7 @@ export function setPanelPixelScale(scale) {
 }
 
 export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) {
-  modal_button_width = _modal_button_width || round(button_width / 2);
+  modal_button_width = _modal_button_width || round(ui_style_current.button_width / 2);
   modal_width = width || 600;
   modal_y0 = y0 || 200;
   modal_title_scale = title_scale || 1.2;
