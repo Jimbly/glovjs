@@ -25,6 +25,7 @@ export interface EditBoxOptsAll {
   esc_clears: boolean;
   esc_unfocuses: boolean;
   multiline: number;
+  enforce_multiline: boolean;
   autocomplete: boolean;
   suppress_up_down: boolean;
   // custom_nav: Partial<Record<number, null>>;

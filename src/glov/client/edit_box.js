@@ -127,6 +127,7 @@ class GlovUIEditBox {
     this.esc_clears = true;
     this.esc_unfocuses = true;
     this.multiline = 0;
+    this.enforce_multiline = true;
     this.suppress_up_down = false;
     this.autocomplete = false;
     this.sticky_focus = true;
@@ -175,11 +176,11 @@ class GlovUIEditBox {
       this.last_valid_state.sel_end = input.selectionEnd;
       return;
     }
-    const { multiline, max_len } = this;
+    const { multiline, enforce_multiline, max_len } = this;
     // text has changed, validate
     let valid = true;
 
-    if (multiline && new_text.split('\n').length > multiline) {
+    if (enforce_multiline && multiline && new_text.split('\n').length > multiline) {
       // If trimming would help, trim the text, and update, preserving current selection
       // Otherwise, will revert to last good state
       // does trimming help?
@@ -337,6 +338,7 @@ class GlovUIEditBox {
       canvas_render,
       font_height,
       multiline,
+      enforce_multiline,
       max_len,
     } = this;
     if (this.focus_steal) {
@@ -417,7 +419,7 @@ class GlovUIEditBox {
           input.select();
         }
 
-        if (multiline || max_len) {
+        if (multiline && enforce_multiline || max_len) {
           // Do update _immediately_ so the DOM doesn't draw the invalid text, if possible
           const onChange = (e) => {
             this.updateText();
