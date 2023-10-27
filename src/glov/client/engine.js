@@ -62,6 +62,7 @@ const {
   spriteDraw,
   spriteDrawReset,
   spriteStartup,
+  spriteResetTopOfFrame,
 } = require('./sprites.js');
 const {
   textureBind,
@@ -959,6 +960,7 @@ function tick(timestamp) {
   }
 
   resetState();
+  spriteResetTopOfFrame();
 
   textureBind(0, textureError());
 

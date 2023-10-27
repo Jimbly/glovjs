@@ -550,6 +550,13 @@ export function spriteClip(z_start, z_end, x, y, w, h) {
 }
 
 let clip_stack = [];
+
+export function spriteResetTopOfFrame() {
+  // In case something crashed and leftover from last frame
+  clip_stack.length = 0;
+  sprite_queue_stack.length = 0;
+}
+
 export function spriteClipped() {
   return clip_stack.length > 0;
 }
