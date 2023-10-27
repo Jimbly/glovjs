@@ -13,7 +13,13 @@ const mat4LookAt = require('gl-mat4/lookAt');
 const { max, PI, tan } = Math;
 const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
-const { spriteCreate } = require('glov/client/sprites.js');
+const {
+  clipCoordsScissor,
+  scissorPop,
+  scissorPushIntersection,
+  spriteCreate,
+  spriteQueueFn,
+} = require('glov/client/sprites.js');
 const {
   blendModeSet,
   BLEND_ALPHA,
@@ -57,9 +63,9 @@ export function viewportRenderPrepare(param) {
   gl.enable(gl.CULL_FACE);
 
   engine.setViewport(viewport);
+  gl.clear(gl.DEPTH_BUFFER_BIT);
   camera2d.setNormalized();
-  gl.enable(gl.SCISSOR_TEST);
-  gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+  scissorPushIntersection(viewport);
 }
 
 export function viewportRenderFinish(param) {
@@ -73,6 +79,7 @@ export function viewportRenderFinish(param) {
   sprites.spriteQueuePop();
   engine.setViewport(viewport_save);
   engine.startSpriteRendering();
+  scissorPop();
 }
 
 
@@ -85,23 +92,9 @@ let capture_uvs = vec4(0, 1, 1, 0);
 const FOV = 15 / 180 * PI;
 const DIST_SCALE = 0.5 / tan(FOV / 2) * 1.1;
 let last_snapshot_idx = 0;
-// returns sprite
-// { w, h, pos, size, draw(), [rot], [sprite], [snapshot_backdrop] }
-export function snapshot(param) {
-  assert(!engine.had_3d_this_frame); // must be before general 3D init
 
+function snapshotSetupMats(param) {
   let camera_offset = param.camera_offset || OFFSET_GOLDEN;
-
-  let name = param.name || `snapshot_${++last_snapshot_idx}`;
-  let auto_unload = param.on_unload;
-  let texs = param.sprite && param.sprite.texs || [
-    textureCreateForCapture(`${name}(0)`, auto_unload),
-    textureCreateForCapture(`${name}(1)`, auto_unload)
-  ];
-
-  param.viewport = [0, 0, param.w, param.h];
-  viewportRenderPrepare(param);
-
   let max_dim = max(param.size[0], param.size[2]);
   let dist = max_dim * DIST_SCALE + param.size[1] / 2;
   engine.setupProjection(FOV, param.w, param.h, 0.1, dist * 2);
@@ -115,6 +108,25 @@ export function snapshot(param) {
   v3addScale(camera_pos, target_pos, camera_offset_rot, dist);
   mat4LookAt(view_mat, camera_pos, target_pos, zaxis);
   engine.setGlobalMatrices(view_mat);
+}
+
+
+// returns sprite
+// { w, h, pos, size, draw(), [rot], [sprite], [snapshot_backdrop] }
+export function snapshot(param) {
+  assert(!engine.had_3d_this_frame); // must be before general 3D init
+
+  let name = param.name || `snapshot_${++last_snapshot_idx}`;
+  let auto_unload = param.on_unload;
+  let texs = param.sprite && param.sprite.texs || [
+    textureCreateForCapture(`${name}(0)`, auto_unload),
+    textureCreateForCapture(`${name}(1)`, auto_unload)
+  ];
+
+  param.viewport = [0, 0, param.w, param.h];
+  viewportRenderPrepare(param);
+
+  snapshotSetupMats(param);
 
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -158,6 +170,34 @@ export function snapshot(param) {
   }
   return param.sprite;
 }
+
+export function snapshotDrawDynamic(param) {
+  let { x, y, z, w, h } = param;
+  assert(!param.snapshot_backdrop); // would just be a sprite draw, if needed
+  let viewport = clipCoordsScissor(x, y, w, h);
+  // camera2d.virtualToCanvas(snapshot_dynamic_ul, [x, y]);
+  // camera2d.virtualToCanvas(snapshot_dynamic_lr, [x + w, y + h]);
+  // w = snapshot_dynamic_lr[0] - snapshot_dynamic_ul[0];
+  // h = snapshot_dynamic_lr[1] - snapshot_dynamic_ul[1];
+  // param.viewport = [snapshot_dynamic_ul[0], engine.height - snapshot_dynamic_lr[1], w, h];
+  param.viewport = viewport;
+
+  spriteQueueFn(z, function () {
+
+    viewportRenderPrepare(param);
+
+    snapshotSetupMats(param);
+
+    param.draw();
+    if (alphaDrawListSize()) {
+      alphaDraw();
+      gl.depthMask(true);
+    }
+
+    viewportRenderFinish(param);
+  });
+}
+
 
 export function snapshotStartup() {
   snapshot_shader = shaderCreate('shaders/snapshot.fp');
