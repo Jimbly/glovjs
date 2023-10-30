@@ -110,6 +110,9 @@ function snapshotSetupMats(param) {
   engine.setGlobalMatrices(view_mat);
 }
 
+const vert_flip = {
+  copy_uv_scale: vec4(1, -1, 0, 0),
+};
 
 // returns sprite
 // { w, h, pos, size, draw(), [rot], [sprite], [snapshot_backdrop] }
@@ -133,7 +136,7 @@ export function snapshot(param) {
 
   if (param.snapshot_backdrop) {
     gl.depthMask(false);
-    effects.applyCopy({ source: param.snapshot_backdrop, no_framebuffer: true });
+    effects.applyCopy({ source: param.snapshot_backdrop.texs, no_framebuffer: true, params: vert_flip });
     gl.depthMask(true);
   }
   param.draw();
@@ -148,7 +151,7 @@ export function snapshot(param) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   if (param.snapshot_backdrop) {
     gl.depthMask(false);
-    effects.applyCopy({ source: param.snapshot_backdrop, no_framebuffer: true });
+    effects.applyCopy({ source: param.snapshot_backdrop.texs, no_framebuffer: true, params: vert_flip });
     gl.depthMask(true);
   }
   param.draw();
@@ -173,7 +176,11 @@ export function snapshot(param) {
 
 export function snapshotDrawDynamic(param) {
   let { x, y, z, w, h } = param;
-  assert(!param.snapshot_backdrop); // would just be a sprite draw, if needed
+  if (param.snapshot_backdrop) {
+    param.snapshot_backdrop.draw({
+      x, y, w, h, z: z - 0.01,
+    });
+  }
   let viewport = clipCoordsScissor(x, y, w, h);
   // camera2d.virtualToCanvas(snapshot_dynamic_ul, [x, y]);
   // camera2d.virtualToCanvas(snapshot_dynamic_lr, [x + w, y + h]);
