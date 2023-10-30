@@ -3,13 +3,13 @@
 
 let modified = {};
 exports.true = true; // for perf.js
+let change_cbs = {};
 
 const assert = require('assert');
 const { titleCase } = require('glov/common/util.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 
-let change_cbs = {};
 
 export function get(key) {
   return exports[key];
