@@ -965,6 +965,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.cmd_parse_source = { user_id: this.user_id }; // spoof as is from self
     for (let key in src) {
       access[key] = src[key];
+      if (key !== 'user_id') {
+        this.cmd_parse_source[key] = src[key];
+      }
     }
     this.access = access; // use caller's access credentials
     this.cmd_parse.handle(this, cmd, (err, resp) => {
