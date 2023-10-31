@@ -240,6 +240,17 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('public.display_name', new_name);
     if (!unimportant) {
       this.setChannelData('private.display_name_change', now);
+      // Save old name to history
+      let history = this.getChannelData('private.display_name_history', []);
+      let idx = history.indexOf(old_name);
+      if (idx !== -1) {
+        history.splice(idx, 1);
+      }
+      history.push(old_name);
+      if (history.length > 30) {
+        history.shift();
+      }
+      this.setChannelData('private.display_name_history', history);
     }
     return resp_func(null, 'Successfully renamed');
   }
