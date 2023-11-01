@@ -585,7 +585,7 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   assert(channel);
   assert(channel.subscriptions);
   channel.subscriptions--;
-  if (!channel.subscriptions) {
+  if (!channel.subscriptions && !channel.autosubscribed) {
     channel.got_subscribe = false;
   }
   if (!netDisconnectedRaw() && !channel.subscriptions && !channel.subscribe_failed) {
