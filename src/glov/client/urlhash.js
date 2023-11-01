@@ -121,7 +121,7 @@ function getValue(query_string, opts) {
 
 let last_history_str = null; // always re-set it on the first update
 
-function goInternal(query_string) { // with the '?'
+function goInternal(query_string, for_init) { // with the '?'
   // Update all values, except those hidden by what is currently in the query string
   let hidden = {};
   for (let key in params) {
@@ -144,7 +144,7 @@ function goInternal(query_string) { // with the '?'
     let new_value = getValue(query_string, opts);
     if (opts.type === TYPE_SET) {
       for (let v in new_value) {
-        if (!opts.value[v]) {
+        if (!opts.value[v] || for_init) {
           opts.value[v] = 1;
           dirty[key] = true;
         }
@@ -156,7 +156,7 @@ function goInternal(query_string) { // with the '?'
         }
       }
     } else {
-      if (new_value !== opts.value) {
+      if (new_value !== opts.value || for_init) {
         dirty[key] = true;
         opts.value = new_value;
       }
@@ -167,10 +167,10 @@ function goInternal(query_string) { // with the '?'
   for (let key in dirty) {
     let opts = params[key];
     if (opts.change) {
-      opts.change(opts.value);
+      opts.change(opts.value, for_init);
     }
   }
-  callEach(on_change);
+  callEach(on_change, for_init);
 }
 
 let eff_title;
@@ -263,7 +263,7 @@ function periodicRefreshTitle() {
 function onPopState() {
   let query_string = queryString();
   last_history_str = query_string;
-  goInternal(query_string);
+  goInternal(query_string, false);
   refreshTitle();
 }
 
@@ -358,6 +358,11 @@ export function startup(param) {
     refreshTitle();
     setTimeout(periodicRefreshTitle, 1000);
   }
+}
+
+// Optional: fire all relevant `change` callbacks for any parameters with values
+export function urlhashFireInitialChanges() {
+  goInternal(queryString(), true);
 }
 
 function routeEx(new_route) {
@@ -484,6 +489,6 @@ export function get(key) {
 }
 
 export function go(query_string) { // with the '?'
-  goInternal(query_string);
+  goInternal(query_string, false);
   updateHistory(true);
 }
