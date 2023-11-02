@@ -10,6 +10,7 @@ const { PI, abs, floor, min, max, random, round, pow, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const VALID_USER_ID_REGEX = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
 
 export function nop(): void {
   // empty

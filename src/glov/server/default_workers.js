@@ -12,6 +12,7 @@ import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
 import {
   EMAIL_REGEX,
+  VALID_USER_ID_REGEX,
   deprecate,
   empty,
   sanitize,
@@ -44,11 +45,10 @@ let access_token_fns;
 let access_token_regex;
 
 export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
-const regex_valid_user_id = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
 const regex_valid_external_id = /^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]*$/;
 
 export function validUserId(user_id) {
-  return user_id?.match(regex_valid_user_id);
+  return user_id?.match(VALID_USER_ID_REGEX);
 }
 
 let valid_provider_ids = Object.create(null);
@@ -1020,7 +1020,7 @@ let inited = false;
 let user_worker = DefaultUserWorker;
 let user_worker_init_data = {
   autocreate: true,
-  subid_regex: regex_valid_user_id,
+  subid_regex: VALID_USER_ID_REGEX,
   cmds: [{
     cmd: 'rename',
     help: 'Change display name',
