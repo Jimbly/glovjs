@@ -1599,6 +1599,7 @@ export function drag(param) {
     return null;
   }
   param = param || {};
+  let bounds_is_finite = param.w !== undefined && isFinite(param.w);
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   let min_dist = param.min_dist || 0;
@@ -1611,6 +1612,11 @@ export function drag(param) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
+      if (pointerLocked() && bounds_is_finite) {
+        // Likely just locked between frames and will get a drag on a wrong element at center of screen
+        // Generally, if pointer is locked, only non-positional drags are relevant
+        continue;
+      }
       camera2d.domDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
       let total = delta[0] + delta[1];
       if (total < min_dist) {
