@@ -18,6 +18,7 @@ export interface LoginOptions {
   user_initiated: boolean;
   email?: string;
   password?: string;
+  do_creation?: boolean;
   creation_display_name?: string | null;
   external_login_data?: LoginData;
 }

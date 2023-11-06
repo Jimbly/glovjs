@@ -368,6 +368,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
           this.loginExternal({
             provider: externalUsersAutoLoginFallbackProvider(),
             external_login_data: cloneShallow(this.login_credentials.external_login_data),
+            creation_display_name: this.login_credentials.creation_display_name,
           }, (err) => {
             this.auto_login_error = err;
           });
@@ -673,10 +674,11 @@ SubscriptionManager.prototype.loginRetry = function (resp_func) {
 
 SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, login_credentials, resp_func) {
   const {
-    email, password, creation_display_name, external_login_data
+    email, password, do_creation, creation_display_name, external_login_data
   } = login_credentials;
   const login_options = {
     user_initiated: true,
+    do_creation,
     creation_display_name,
     email,
     password,
@@ -688,7 +690,7 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
     if (err) {
       local_storage.set('login_external', this.login_provider = undefined);
       this.serverLog(`authentication_failed_${provider}`, {
-        creation_mode: typeof creation_display_name === 'string',
+        creation_mode: do_creation,
         email,
         passlen: password && password.length,
         external_data: Boolean(external_login_data),
@@ -712,6 +714,9 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
         validation_data: login_data.validation_data,
         display_name: user_info?.name || '',
       };
+      if (user_info?.name) {
+        this.login_credentials.creation_display_name = user_info.name;
+      }
       this.client.send('login_external', request_data, null, this.handleLoginResponse.bind(this, resp_func));
     });
   });
@@ -729,10 +734,10 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   this.logging_in = true;
   this.logged_in = false;
   this.login_credentials = login_credentials;
-  if (login_credentials.creation_display_name !== undefined) {
+  if (login_credentials.do_creation) {
     // Only used once, never use upon reconnect, auto-login, etc
     this.login_credentials = cloneShallow(login_credentials);
-    delete this.login_credentials.creation_display_name;
+    delete this.login_credentials.do_creation;
   }
 
   const { provider } = login_credentials;
@@ -806,6 +811,7 @@ SubscriptionManager.prototype.loginEmailPass = function (credentials, resp_func)
     email: credentials.email,
     password: credentials.password,
     provider: externalUsersEmailPassLoginProvider(),
+    do_creation: credentials.do_creation,
     creation_display_name: credentials.creation_display_name,
   };
   return this.loginInternal(credentials, resp_func);
