@@ -233,6 +233,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.base_handlers = {};
   this.channel_handlers = {}; // channel type -> msg -> handler
   this.channel_event_listeners = {}; // channel type -> event -> array of listeners
+  this.quiet_messages = Object.create(null);
 
   this.first_connect = true;
   this.server_time = 0;
@@ -413,13 +414,23 @@ SubscriptionManager.prototype.fetchCmds = function () {
   }
 };
 
+SubscriptionManager.prototype.quietMessagesSet = function (list) {
+  for (let ii = 0; ii < list.length; ++ii) {
+    this.quiet_messages[list[ii]] = true;
+  }
+};
+
+SubscriptionManager.prototype.quietMessage = function (msg, payload) {
+  return /*msg === 'set_user' && payload && payload.key === 'pos' || */this.quiet_messages[msg];
+};
+
 SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
   assert(isPacket(pak));
   let channel_id = pak.readAnsiString();
   let msg = pak.readAnsiString();
   let is_packet = pak.readBool();
   let data = is_packet ? pak : pak.readJSON();
-  if (!data || !data.q) {
+  if (!this.quietMessage(msg) && (!data || !data.q)) {
     let debug_msg;
     if (!is_packet) {
       debug_msg = JSON.stringify(data);
