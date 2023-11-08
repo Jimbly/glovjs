@@ -178,13 +178,17 @@ export class DefaultUserWorker extends ChannelWorker {
     return new_friends;
   }
 
+  did_migration_check = false;
   getFriendsList() {
     let friends = this.getChannelData(FRIENDS_DATA_KEY, {});
-    for (let user_id in friends) {
-      if (isLegacyFriendValue(friends[user_id])) {
-        friends = this.migrateFriendsList(friends);
+    if (!this.did_migration_check) {
+      this.did_migration_check = true;
+      for (let user_id in friends) {
+        if (isLegacyFriendValue(friends[user_id])) {
+          friends = this.migrateFriendsList(friends);
+        }
+        break;
       }
-      break;
     }
     return friends;
   }
