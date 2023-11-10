@@ -229,10 +229,10 @@ class CollapsagoriesImpl {
     let yend = this.view_y1 - this.num_headers * header_h;
     let ret;
     if (ystart >= yend) {
-      spriteClipPush(z - 1, x, ystart, w, 0);
+      spriteClipPush(z - 0.1, x, ystart, w, 0);
       ret = false;
     } else {
-      spriteClipPush(z - 1, x, ystart, w, yend - ystart);
+      spriteClipPush(z - 0.1, x, ystart, w, yend - ystart);
       ret = true;
     }
     this.clipper_active = true;
