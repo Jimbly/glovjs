@@ -467,7 +467,8 @@ function onKeyDown(event) {
   let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
-    code === KEYS.R && event.ctrlKey; // Chrome reload hotkey
+    code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
+    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey; // forward/back navigation
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
