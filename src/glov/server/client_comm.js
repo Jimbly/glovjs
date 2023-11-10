@@ -276,6 +276,7 @@ const invalid_names = {
   error: 1,
   info: 1,
   user: 1,
+  me: 1,
 };
 const regex_admin_username = /^(admin|mod_|gm_|moderator)/; // Might exist in the system, do not allow to be created
 function validUsername(user_id, allow_admin) {
