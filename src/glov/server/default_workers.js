@@ -218,6 +218,17 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData(`${FRIENDS_DATA_KEY}.${user_id}`, friend);
   }
 
+  canSeePresence(user_id, privacy_field) {
+    privacy_field = privacy_field || 'public.privacy_presence';
+    let privacy_presence = this.getChannelData(privacy_field, 0);
+    let status = this.getFriend(user_id)?.status;
+    if (privacy_presence) {
+      return status === FriendStatus.Added || status === FriendStatus.AddedAuto;
+    } else {
+      return status !== FriendStatus.Blocked;
+    }
+  }
+
   cmdRename(new_name, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return resp_func('ERR_INVALID_USER');
@@ -288,6 +299,7 @@ export class DefaultUserWorker extends ChannelWorker {
         // Return generic error
         return void resp_func(`User not found: ${user_id}`);
       }
+      let could_see_presence = this.canSeePresence(user_id);
       assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
       if (friend) {
         friend.status = FriendStatus.Added;
@@ -295,6 +307,9 @@ export class DefaultUserWorker extends ChannelWorker {
         friend = createFriendData(FriendStatus.Added);
       }
       this.setFriend(user_id, friend);
+      if (!could_see_presence && this.canSeePresence(user_id)) {
+        this.updatePresence(); // will send to everyone, but that's fine, should be uncommon...
+      }
       resp_func(null, { msg: `Friend added: ${user_id}`, friend });
     });
   }
@@ -320,6 +335,9 @@ export class DefaultUserWorker extends ChannelWorker {
       friend = undefined;
     }
     this.setFriend(user_id, friend);
+    if (!this.canSeePresence(user_id)) {
+      this.clearPresenceToUser(user_id);
+    }
     resp_func(null, { msg: `Friend removed: ${user_id}`, friend });
   }
   cmdFriendUnblock(user_id, resp_func) {
@@ -346,6 +364,9 @@ export class DefaultUserWorker extends ChannelWorker {
       friend = undefined;
     }
     this.setFriend(user_id, friend);
+    if (this.canSeePresence(user_id)) {
+      this.updatePresence(); // will send to everyone, but that's fine, should be uncommon...
+    }
     resp_func(null, { msg: `User unblocked: ${user_id}`, friend });
   }
   cmdFriendBlock(user_id, resp_func) {
@@ -387,6 +408,29 @@ export class DefaultUserWorker extends ChannelWorker {
       });
       this.clearPresenceToUser(user_id);
     });
+  }
+  cmdPrivacyPresence(data, resp_func) {
+    let source = this.cmd_parse_source;
+    if (source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    let cur_value = this.getChannelData('public.privacy_presence', 0);
+    if (data) {
+      let value = data === '1' || data.toUpperCase() === 'ON' ? 1 :
+        data === '0' || data.toUpperCase() === 'OFF' ? 0 :
+        undefined;
+      if (value === undefined) {
+        return void resp_func('Error parsing arguments');
+      }
+      if (value !== cur_value) {
+        this.logSrc(source, `Set privacy_presence=${value}`);
+        this.setChannelData('public.privacy_presence', value);
+        cur_value = value;
+        this.updatePresence(Boolean(cur_value));
+      }
+    }
+    resp_func(null, `privacy_presence = ${cur_value ? 'ON(1)' : 'OFF(0)'}` +
+      ` (${cur_value ? 'only friends' : 'anyone'} can see your rich presence)`);
   }
   cmdAccessToken(access_token/*: string*/, resp_func/*: HandlerCallback<UnimplementedData>*/) {
     let source = this.cmd_parse_source;
@@ -847,7 +891,7 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleNewClient(src, opts) {
     if (this.rich_presence && src.type === 'client' && this.presence_data) {
-      if (this.getFriend(src.user_id)?.status !== FriendStatus.Blocked) {
+      if (this.canSeePresence(src.user_id)) {
         this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
       }
     }
@@ -856,14 +900,15 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     return null;
   }
-  updatePresence() {
+  updatePresence(force_clear) {
     let clients = this.data.public.clients || {};
-    let friends = this.getFriendsList();
     for (let client_id in clients) {
       let client = clients[client_id];
       if (client.ids) {
-        if (friends[client.ids.user_id]?.status !== FriendStatus.Blocked) {
+        if (this.canSeePresence(client.ids.user_id)) {
           this.sendChannelMessage(`client.${client_id}`, 'presence', this.presence_data);
+        } else if (force_clear) {
+          this.sendChannelMessage(`client.${client_id}`, 'presence', {});
         }
       }
     }
@@ -922,8 +967,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.rich_presence) {
       return void resp_func('ERR_NO_RICH_PRESENCE');
     }
-    let friends = this.getFriendsList();
-    if (friends[src.user_id]?.status === FriendStatus.Blocked) {
+    if (!this.canSeePresence(src.user_id)) {
       return void resp_func(null, {});
     }
     resp_func(null, this.presence_data);
@@ -1050,6 +1094,13 @@ let user_worker_init_data = {
     cmd: 'friend_unblock',
     help: 'Reset a user to allow seeing your rich presence again',
     func: DefaultUserWorker.prototype.cmdFriendUnblock,
+  },{
+    cmd: 'privacy_presence',
+    help: 'Restrict rich presence to friends only',
+    prefix_usage_with_help: true,
+    usage: '  Allow anyone to see your rich presence: /privacy_presence OFF' +
+      '\n  Restrict so only friends see your rich presence: /privacy_presence ON',
+    func: DefaultUserWorker.prototype.cmdPrivacyPresence,
   },{
     cmd: 'access_token',
     help: 'Apply an access token',
