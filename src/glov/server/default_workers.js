@@ -219,6 +219,9 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 
   canSeePresence(user_id, privacy_field) {
+    if (user_id === this.user_id) {
+      return true;
+    }
     privacy_field = privacy_field || 'public.privacy_presence';
     let privacy_presence = this.getChannelData(privacy_field, 0);
     let status = this.getFriend(user_id)?.status;
