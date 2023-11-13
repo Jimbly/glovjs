@@ -1123,35 +1123,46 @@ export function label(param) {
     tooltip,
     tooltip_above,
     tooltip_right,
+    img,
+    frame,
+    img_color,
+    img_color_focused,
   } = param;
   if (param.style) {
     assert(!param.style.color); // Received a FontStyle, expecting a UIStyle
   }
-  text = getStringFromLocalizable(text);
-  let use_font = param.font || font;
   let z = param.z || Z.UI;
-  let style = param.style || ui_style_current;
-  let size = param.size || style.text_height;
   assert(isFinite(x));
   assert(isFinite(y));
-  assert.equal(typeof text, 'string');
+  let style = param.style || ui_style_current;
+  let use_font = param.font || font;
+  let size = param.size || style.text_height;
+  if (img) {
+    // nothing?  add alignment support?
+  } else {
+    assert(text !== undefined);
+    text = getStringFromLocalizable(text);
+    if (tooltip) {
+      if (!w) {
+        w = use_font.getStringWidth(font_style, size, text);
+        if (align & ALIGN.HRIGHT) {
+          x -= w;
+        } else if (align & ALIGN.HCENTER) {
+          x -= w/2;
+        }
+      }
+      if (!h) {
+        h = size;
+        if (align & ALIGN.VBOTTOM) {
+          y -= h;
+        } else if (align & ALIGN.VCENTER) {
+          y -= h/2;
+        }
+      }
+    }
+  }
+
   if (tooltip) {
-    if (!w) {
-      w = use_font.getStringWidth(font_style, size, text);
-      if (align & ALIGN.HRIGHT) {
-        x -= w;
-      } else if (align & ALIGN.HCENTER) {
-        x -= w/2;
-      }
-    }
-    if (!h) {
-      h = size;
-      if (align & ALIGN.VBOTTOM) {
-        y -= h;
-      } else if (align & ALIGN.VCENTER) {
-        y -= h/2;
-      }
-    }
     assert(isFinite(w));
     assert(isFinite(h));
     let spot_ret = spot({
@@ -1163,9 +1174,21 @@ export function label(param) {
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
-      if (label_font_style_focused) {
-        font_style = label_font_style_focused;
+      let need_focus_indicator = false;
+      if (img) {
+        if (img_color_focused) {
+          img_color = img_color_focused;
+        } else {
+          need_focus_indicator = true;
+        }
       } else {
+        if (label_font_style_focused) {
+          font_style = label_font_style_focused;
+        } else {
+          need_focus_indicator = true;
+        }
+      }
+      if (need_focus_indicator) {
         // No focused style provided, do a generic glow instead?
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
@@ -1173,11 +1196,19 @@ export function label(param) {
     }
   }
   let text_w = 0;
-  if (text) {
-    if (align) {
-      text_w = use_font.drawSizedAligned(font_style, x, y, z, size, align, w, h, text);
-    } else {
-      text_w = use_font.drawSized(font_style, x, y, z, size, text);
+  if (img) {
+    img.draw({
+      x, y, z, w, h,
+      color: img_color,
+      frame,
+    });
+  } else {
+    if (text) {
+      if (align) {
+        text_w = use_font.drawSizedAligned(font_style, x, y, z, size, align, w, h, text);
+      } else {
+        text_w = use_font.drawSized(font_style, x, y, z, size, text);
+      }
     }
   }
   profilerStopFunc();

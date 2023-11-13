@@ -213,21 +213,31 @@ export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | n
 
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
-export type LabelParam = Partial<TooltipBoxParam> & {
-  x: number;
-  y: number;
-  z?: number;
-  w?: number;
-  h?: number;
+export type LabelTextOptions = {
   font_style?: FontStyle;
   font_style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;
   text?: Text;
+};
+export type LabelImageOptions = {
+  w: number;
+  h: number;
+  img: Sprite;
+  frame?: number;
+  img_color?: ROVec4;
+  img_color_focused?: ROVec4;
+};
+export type LabelParam = Partial<TooltipBoxParam> & {
+  x: number;
+  y: number;
+  z?: number;
+  w?: number;
+  h?: number;
   tooltip?: TooltipValue;
   style?: UIStyle;
-};
+} & (LabelTextOptions | LabelImageOptions);
 export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
