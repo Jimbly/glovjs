@@ -209,7 +209,8 @@ export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotSta
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
 export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
-export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | null;
+export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
+export function button(param: ButtonGenericParam): ButtonRet | null;
 
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
@@ -247,7 +248,7 @@ export interface ModalDialogButtonEx<CB> {
   in_event_cb?: EventCallback | null;
   label?: Text;
 }
-export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB> | Partial<ButtonTextParam | ButtonImageParam>;
+export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB> | Partial<ButtonGenericParam>;
 export type ModalDialogTickCallbackParams = {
   readonly x0: number;
   readonly x: number;
