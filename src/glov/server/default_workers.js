@@ -699,6 +699,7 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
+    this.setChannelData('private.last_time', Date.now());
 
     let display_name = this.getChannelData('public.display_name');
     let permissions = this.getChannelData('public.permissions', {});
@@ -817,6 +818,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.login_ip = data.ip;
     private_data.login_ua = data.ua;
     private_data.login_time = Date.now();
+    private_data.last_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
     metricsAdd('user.create', 1);
@@ -955,6 +957,7 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
+      this.setChannelData('private.last_time', Date.now());
       delete this.presence_data[src.channel_id];
       this.updatePresence();
     }
@@ -993,8 +996,12 @@ export class DefaultUserWorker extends ChannelWorker {
       return void resp_func('ERR_INVALID_USER');
     }
     if (active === PRESENCE_OFFLINE) {
-      delete this.presence_data[src.channel_id];
+      if (this.presence_data[src.channel_id]) {
+        this.setChannelData('private.last_time', Date.now());
+        delete this.presence_data[src.channel_id];
+      }
     } else {
+      this.setChannelData('private.last_time', Date.now());
       this.presence_data[src.channel_id] = {
         id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
         active,
