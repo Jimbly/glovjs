@@ -38,7 +38,8 @@ const { floor, random } = Math;
 
 const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
-const MAX_FRIENDS = 100;
+const MAX_FRIENDS = 100; // manually added
+const MAX_RELATIONSHIPS = MAX_FRIENDS + 1000; // including blocked, auto-added, removed auto-added
 const FRIENDS_DATA_KEY = 'private.friends';
 
 let access_token_fns;
@@ -275,6 +276,17 @@ export class DefaultUserWorker extends ChannelWorker {
   cmdRenameRandom(ignored, resp_func) {
     return this.cmdRename(random_names.get(), resp_func);
   }
+  friendsListFull(all) {
+    let friends = this.getFriendsList();
+    let count = 0;
+    for (let user_id in friends) {
+      let friend = friends[user_id];
+      if (all || friend.status === FriendStatus.Added) {
+        ++count;
+      }
+    }
+    return count >= (all ? MAX_RELATIONSHIPS : MAX_FRIENDS);
+  }
   cmdFriendAdd(user_id, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
@@ -293,7 +305,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (friend?.status === FriendStatus.Added) {
       return void resp_func(`Already on friends list: ${user_id}`);
     }
-    if (Object.keys(friends).length >= MAX_FRIENDS) {
+    if (this.friendsListFull(false)) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
@@ -387,7 +399,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (friend?.status === FriendStatus.Blocked) {
       return void resp_func(`User already blocked: ${user_id}`);
     }
-    if (Object.keys(friends).length >= MAX_FRIENDS) {
+    if (this.friendsListFull(true)) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
