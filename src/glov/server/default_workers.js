@@ -969,7 +969,9 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
-      this.setChannelData('private.last_time', Date.now());
+      if (!this.channel_server.restarting) {
+        this.setChannelData('private.last_time', Date.now());
+      }
       delete this.presence_data[src.channel_id];
       this.updatePresence();
     }
@@ -1009,11 +1011,15 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     if (active === PRESENCE_OFFLINE) {
       if (this.presence_data[src.channel_id]) {
-        this.setChannelData('private.last_time', Date.now());
+        if (!this.channel_server.restarting) {
+          this.setChannelData('private.last_time', Date.now());
+        }
         delete this.presence_data[src.channel_id];
       }
     } else {
-      this.setChannelData('private.last_time', Date.now());
+      if (!this.channel_server.restarting) {
+        this.setChannelData('private.last_time', Date.now());
+      }
       this.presence_data[src.channel_id] = {
         id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
         active,
