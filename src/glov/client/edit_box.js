@@ -148,9 +148,13 @@ class GlovUIEditBox {
       sel_start: 0,
       sel_end: 0,
     };
+    this.resetCSSCaching();
+    this.had_overflow = false;
+  }
+  resetCSSCaching() {
     this.last_tab_index = -1;
     this.last_font_size = '';
-    this.had_overflow = false;
+    this.last_clip_path = '';
   }
   applyParams(params) {
     if (!params) {
@@ -170,6 +174,9 @@ class GlovUIEditBox {
   }
   updateText() {
     const { input } = this;
+    if (!input) {
+      return;
+    }
     let new_text = input.value;
     if (new_text === this.text) {
       this.last_valid_state.sel_start = input.selectionStart;
@@ -372,17 +379,17 @@ class GlovUIEditBox {
 
     const { text, x, y, z, w, h } = this;
 
-    if (allow_focus && !camera2d.clipTestRect({
+    let clipped_rect = {
       x, y, w, h
-    })) {
+    };
+    if (allow_focus && !camera2d.clipTestRect(clipped_rect)) {
       allow_focus = false;
     }
 
     this_frame_edit_boxes.push(this);
     let elem = allow_focus && uiGetDOMElem(this.elem, true);
     if (elem !== this.elem) {
-      this.last_tab_index = -1;
-      this.last_font_size = '';
+      this.resetCSSCaching();
       if (elem) {
         // new DOM element, initialize
         if (!form_hook_registered) {
@@ -455,14 +462,34 @@ class GlovUIEditBox {
       }
     }
     if (elem) {
-      let pos = camera2d.htmlPos(this.x, this.y);
+      let pos = camera2d.htmlPos(x, y);
       if (!this.spellcheck) {
         elem.spellcheck = false;
       }
       elem.style.left = `${pos[0]}%`;
       elem.style.top = `${pos[1]}%`;
-      let size = camera2d.htmlSize(this.w, 0);
+      let size = camera2d.htmlSize(w, h);
       elem.style.width = `${size[0]}%`;
+      elem.style.height = `${size[1]}%`;
+
+      let clip_path = '';
+      if (clipped_rect.x !== x ||
+        clipped_rect.y !== y ||
+        clipped_rect.w !== w ||
+        clipped_rect.h !== h
+      ) {
+        // partially clipped
+        let x0 = `${(clipped_rect.x - x)/w*100}%`;
+        let x1 = `${(clipped_rect.x + clipped_rect.w - x)/w*100}%`;
+        let y0 = `${(clipped_rect.y - y)/h*100}%`;
+        let y1 = `${(clipped_rect.y + clipped_rect.w - y)/h*100}%`;
+        clip_path = `polygon(${x0} ${y0}, ${x1} ${y0}, ${x1} ${y1}, ${x0} ${y1})`;
+      } else {
+        clip_path = '';
+      }
+      if (clip_path !== this.last_clip_path) {
+        elem.style.clipPath = this.last_clip_path = clip_path;
+      }
 
       let new_fontsize = `${camera2d.virtualToFontSize(font_height).toFixed(8)}px`;
       if (new_fontsize !== this.last_font_size) {
@@ -498,8 +525,7 @@ class GlovUIEditBox {
         this.postspan.setAttribute('tabindex', tab_index2);
       }
     } else {
-      this.last_tab_index = -1;
-      this.last_font_size = '';
+      this.resetCSSCaching();
     }
 
     if (focused) {
