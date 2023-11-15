@@ -139,6 +139,7 @@ let filtered_errors = new RegExp([
   'chrome://internal',
   'getElementById\\(\'items\'\\)',
   'closeModal',
+  'WeixinJSBridge',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
