@@ -370,6 +370,14 @@ class GlovUIEditBox {
       spotSuppressKBNav(true, Boolean(multiline || this.suppress_up_down));
     }
 
+    const { text, x, y, z, w, h } = this;
+
+    if (allow_focus && !camera2d.clipTestRect({
+      x, y, w, h
+    })) {
+      allow_focus = false;
+    }
+
     this_frame_edit_boxes.push(this);
     let elem = allow_focus && uiGetDOMElem(this.elem, true);
     if (elem !== this.elem) {
@@ -507,7 +515,6 @@ class GlovUIEditBox {
       // keyboard input is handled by the INPUT element, but allow mouse events to trickle
       eatAllKeyboardInput();
     }
-    const { text, x, y, z, w, h } = this;
     // Eat mouse events going to the edit box
     mouseConsumeClicks({ x, y, w, h });
 
