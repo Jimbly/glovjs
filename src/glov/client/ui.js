@@ -785,14 +785,17 @@ export function drawTooltip(param) {
   let w = tooltip_w - eff_tooltip_pad * 2;
   let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
-  let right = param.tooltip_right;
   if (!above && param.tooltip_auto_above_offset) {
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
   }
   let x = param.x;
   let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  let right = param.tooltip_right;
+  let center = param.tooltip_center;
   if (right && param.tooltip_auto_right_offset) {
     x += param.tooltip_auto_right_offset - eff_tooltip_w;
+  } else if (center && param.tooltip_auto_right_offset) {
+    x += (param.tooltip_auto_right_offset - eff_tooltip_w) / 2;
   }
   if (x + eff_tooltip_w > camera2d.x1()) {
     x = camera2d.x1() - eff_tooltip_w;
@@ -848,6 +851,7 @@ export function drawTooltipBox(param) {
     tooltip_above: param.tooltip_above,
     tooltip_auto_right_offset: param.w,
     tooltip_right: param.tooltip_right,
+    tooltip_center: param.tooltip_center,
     tooltip,
     tooltip_width: param.tooltip_width,
   });
@@ -1170,7 +1174,8 @@ export function label(param) {
       tooltip: tooltip,
       tooltip_width: param.tooltip_width,
       tooltip_above,
-      tooltip_right,
+      tooltip_right: tooltip_right || param.align & ALIGN.HRIGHT,
+      tooltip_center: param.align & ALIGN.HCENTER,
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {

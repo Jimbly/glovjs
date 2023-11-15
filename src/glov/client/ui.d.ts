@@ -129,6 +129,7 @@ export interface TooltipParam {
   tooltip_auto_above_offset?: number;
   tooltip_right?: boolean;
   tooltip_auto_right_offset?: number;
+  tooltip_center?: boolean;
   pixel_scale?: number;
   tooltip: TooltipValue | null;
 }
@@ -141,6 +142,7 @@ export interface TooltipBoxParam {
   tooltip_width?: number;
   tooltip_above?: boolean;
   tooltip_right?: boolean;
+  tooltip_center?: boolean;
   tooltip: Text | ((param:unknown) => (Text | null));
 }
 export function drawTooltipBox(param: TooltipBoxParam): void;
