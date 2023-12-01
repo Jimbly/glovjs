@@ -651,9 +651,14 @@ function requestFrame(user_time) {
 
 let mat_projection_10;
 export let had_3d_this_frame;
+let need_depth_this_frame;
 
 export function clearHad3DThisFrame() {
   had_3d_this_frame = false;
+}
+
+export function needDepthIn2D() {
+  need_depth_this_frame = true;
 }
 
 export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
@@ -689,6 +694,7 @@ export function start3DRendering(opts) {
   }
   setFOV(opts.fov || (settings.fov * PI / 180));
   had_3d_this_frame = true;
+  need_depth_this_frame = false;
   if (!opts.width && want_render_scale_3d_this_frame && !defines.NOCOPY) {
     had_render_scale_3d_this_frame = true;
     effectsPassAdd();
@@ -946,6 +952,7 @@ function tick(timestamp) {
 
   checkResize();
   had_3d_this_frame = false;
+  need_depth_this_frame = false;
   want_render_scale_3d_this_frame = false;
   had_render_scale_3d_this_frame = false;
   if (render_width) {
@@ -1028,7 +1035,7 @@ function tick(timestamp) {
         clear: true,
         clear_all: settings.render_scale_clear, // Not sure if this is ever faster in this case?
         final: effectsIsFinal(),
-        need_depth: false,
+        need_depth: need_depth_this_frame,
       });
     } else {
       framebufferStart({
@@ -1036,7 +1043,7 @@ function tick(timestamp) {
         height,
         clear: true,
         final: effectsIsFinal(),
-        need_depth: false,
+        need_depth: need_depth_this_frame,
       });
     }
   }
