@@ -128,7 +128,7 @@ function goInternal(query_string, for_init, skip_apply, route_only) {
   for (let key in params) {
     let opts = params[key];
     if (opts.hides) {
-      if (getValue(query_string, opts)) {
+      if (for_init ? opts.value : getValue(query_string, opts)) {
         for (let otherkey in opts.hides) {
           hidden[otherkey] = 1;
         }
@@ -142,7 +142,7 @@ function goInternal(query_string, for_init, skip_apply, route_only) {
       continue;
     }
     let opts = params[key];
-    let new_value = getValue(query_string, opts);
+    let new_value = for_init ? opts.value : getValue(query_string, opts);
     if (opts.type === TYPE_SET) {
       for (let v in new_value) {
         if (!opts.value[v] || for_init) {
@@ -376,7 +376,7 @@ export function startup(param) {
 
 // Optional: fire all relevant `change` callbacks for any parameters with values
 export function urlhashFireInitialChanges() {
-  goInternal(queryString(), true, false, false);
+  goInternal(null, true, false, false);
 }
 
 function routeEx(new_route) {
