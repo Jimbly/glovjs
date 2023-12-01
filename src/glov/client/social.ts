@@ -177,6 +177,10 @@ function onPresence(this: { presence_data?: PresenceEntry }, data: PresenceEntry
   user_channel.presence_data = data;
 }
 
+function onUnSubscribe(this: { presence_data?: PresenceEntry }): void {
+  delete this.presence_data;
+}
+
 type ClientPresenceState = Omit<PresenceEntry, 'id'>;
 let last_presence: ClientPresenceState | null = null;
 let send_queued = false;
@@ -497,4 +501,5 @@ export function socialInit(): void {
   });
 
   netSubs().onChannelMsg('user', 'presence', onPresence);
+  netSubs().onChannelEvent('user', 'unsubscribe', onUnSubscribe);
 }

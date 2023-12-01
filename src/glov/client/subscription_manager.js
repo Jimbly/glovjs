@@ -599,6 +599,7 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   channel.subscriptions--;
   if (!channel.subscriptions && !channel.autosubscribed) {
     channel.got_subscribe = false;
+    channel.emit('unsubscribe');
   }
   if (!netDisconnectedRaw() && !channel.subscriptions && !channel.subscribe_failed) {
     this.client.send('unsubscribe', channel_id);
