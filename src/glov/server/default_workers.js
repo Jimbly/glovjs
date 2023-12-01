@@ -5,8 +5,10 @@ import assert from 'assert';
 import * as base32 from 'glov/common/base32';
 import * as dot_prop from 'glov/common/dot-prop';
 import {
+  PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
+  PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
@@ -907,9 +909,10 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 
   handleNewClient(src, opts) {
-    if (this.rich_presence && src.type === 'client' && this.presence_data) {
-      if (this.canSeePresence(src.user_id)) {
-        this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
+    if (this.rich_presence && src.type === 'client') {
+      let presence_data = this.filteredPresenceData();
+      if (this.canSeePresence(src.user_id) && !empty(presence_data)) {
+        this.sendChannelMessage(src.channel_id, 'presence', presence_data);
       }
     }
     if (src.type === 'client' && src.user_id === this.user_id) {
@@ -917,13 +920,34 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     return null;
   }
+
+  filteredPresenceData() {
+    let best = null;
+    for (let channel_id in this.presence_data) {
+      let entry = this.presence_data[channel_id];
+      if (entry.active !== PRESENCE_OFFLINE && entry.active !== PRESENCE_OFFLINE_INACTIVE) {
+        if (!best ||
+          entry.active === PRESENCE_ACTIVE && best.active !== PRESENCE_ACTIVE ||
+          entry.active === best.active && entry.id > best.id
+        ) {
+          best = entry;
+        }
+      }
+    }
+    if (!best) {
+      return {};
+    }
+    return { the: best };
+  }
+
   updatePresence(force_clear) {
     let clients = this.data.public.clients || {};
+    let presence_data = this.filteredPresenceData();
     for (let client_id in clients) {
       let client = clients[client_id];
       if (client.ids) {
         if (this.canSeePresence(client.ids.user_id)) {
-          this.sendChannelMessage(`client.${client_id}`, 'presence', this.presence_data);
+          this.sendChannelMessage(`client.${client_id}`, 'presence', presence_data);
         } else if (force_clear) {
           this.sendChannelMessage(`client.${client_id}`, 'presence', {});
         }
@@ -945,7 +969,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence) {
       for (let channel_id in this.presence_data) {
         let presence = this.presence_data[channel_id];
-        if (presence.active !== PRESENCE_INACTIVE) {
+        if (presence.active !== PRESENCE_INACTIVE && presence.active !== PRESENCE_OFFLINE_INACTIVE) {
           currently_active = true;
           break;
         }
@@ -990,7 +1014,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.canSeePresence(src.user_id)) {
       return void resp_func(null, {});
     }
-    resp_func(null, this.presence_data);
+    resp_func(null, this.filteredPresenceData());
   }
   handlePresenceSet(src, pak, resp_func) {
     let active = pak.readInt();
@@ -1009,24 +1033,15 @@ export class DefaultUserWorker extends ChannelWorker {
     if (src.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (active === PRESENCE_OFFLINE) {
-      if (this.presence_data[src.channel_id]) {
-        if (!this.channel_server.restarting) {
-          this.setChannelData('private.last_time', Date.now());
-        }
-        delete this.presence_data[src.channel_id];
-      }
-    } else {
-      if (!this.channel_server.restarting) {
-        this.setChannelData('private.last_time', Date.now());
-      }
-      this.presence_data[src.channel_id] = {
-        id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
-        active,
-        state,
-        payload,
-      };
+    if (!this.channel_server.restarting) {
+      this.setChannelData('private.last_time', Date.now());
     }
+    this.presence_data[src.channel_id] = {
+      id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
+      active,
+      state,
+      payload,
+    };
     this.updatePresence();
     this.updateUsertimeMetrics();
     resp_func();

@@ -9,6 +9,7 @@ import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
+  PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
 import {
@@ -197,19 +198,25 @@ function richPresenceSend(): void {
     pak.send();
   });
 }
-export function richPresenceSet(active_in: boolean, state: string, payload?: unknown): void {
+export function richPresenceSet(active_in: number, state: string, payload?: unknown): void {
   let active: number;
   switch (socialPresenceStatusGet()) {
     case SOCIAL_AFK:
-      active = PRESENCE_INACTIVE;
+      active = active_in === PRESENCE_ACTIVE ? PRESENCE_INACTIVE : active_in;
       break;
     case SOCIAL_INVISIBLE:
       active = PRESENCE_OFFLINE;
       break;
     default:
-      active = !active_in || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
-        PRESENCE_INACTIVE :
-        PRESENCE_ACTIVE;
+      active = active_in;
+  }
+  let is_idle = (Date.now() - input.inputLastTime() > IDLE_TIME);
+  if (is_idle) {
+    if (active === PRESENCE_ACTIVE) {
+      active = PRESENCE_INACTIVE;
+    } else if (active === PRESENCE_OFFLINE) {
+      active = PRESENCE_OFFLINE_INACTIVE;
+    }
   }
   payload = payload || null;
   if (!last_presence ||
