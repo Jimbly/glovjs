@@ -157,6 +157,8 @@ export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFiel
   def: SpotParamBase; // inherit all undefined SpotParamBase members from this
   tooltip?: TooltipValue | null;
   hook?: HookList;
+  url?: string;
+  internal?: boolean; // For links (spots with `url`): default `true`
 }
 
 export interface SpotSubParam extends Box, SpotComputedFields {
@@ -226,6 +228,7 @@ import {
   mousePosIsTouch,
   padButtonDownEdge,
 } from './input.js';
+import { link } from './link';
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
@@ -1439,6 +1442,14 @@ export function spot(param: SpotParam): SpotRet {
       }
     }
     if (async_activate_key === param.key_computed) {
+      button_activate = true;
+    }
+  }
+  if (param.url) {
+    if (param.internal === undefined) {
+      param.internal = true;
+    }
+    if (link(param)) {
       button_activate = true;
     }
   }
