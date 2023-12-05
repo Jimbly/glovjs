@@ -43,6 +43,11 @@ const RETRIES_SEARCH = 3;
 const RETRY_DELAY_BASE = 5000;
 const ERR_TIMEOUT_FORCED_SHIELD = 'ERR_TIMEOUT_FORCED_SHIELD'; // Must be a unique error string
 
+let log_sets = false;
+export function dataStoreLogSets(log) {
+  log_sets = log;
+}
+
 function DataStoreShield(data_store, opts) {
   let { label } = opts;
   this.label = label;
@@ -157,6 +162,9 @@ DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
   metrics.add(self.metric_set, 1);
   perfCounterAdd(self.metric_set);
   dss_stats.set++;
+  if (log_sets) {
+    console.debug(`DATASTORESHIELD Set while restarting: ${this.label}:${obj_name}`);
+  }
   this.executeShielded('set', obj_name, RETRIES_WRITE, TIMEOUT_WRITE, (onDone) => {
     self.data_store.setAsync(obj_name, value, onDone);
   }, cb);
