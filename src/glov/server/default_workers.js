@@ -1023,15 +1023,15 @@ export class DefaultUserWorker extends ChannelWorker {
     let abtests = '';
     if (!pak.ended()) {
       abtests = pak.readAnsiString();
-      if (active !== PRESENCE_INACTIVE) {
-        this.last_abtests = abtests;
-      }
-    }
-    if (!this.rich_presence) {
-      return void resp_func('ERR_NO_RICH_PRESENCE');
     }
     if (src.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
+    }
+    if (abtests && active !== PRESENCE_INACTIVE) {
+      this.last_abtests = abtests;
+    }
+    if (!this.rich_presence) {
+      return void resp_func('ERR_NO_RICH_PRESENCE');
     }
     if (!this.channel_server.restarting) {
       this.setChannelData('private.last_time', Date.now());
