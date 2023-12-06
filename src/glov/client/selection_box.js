@@ -929,6 +929,7 @@ export function dropDown(param, current, opts) {
     old_selected = dropdown.getSelected();
   }
   dropdown.run();
+  opts.dropdown_visible = dropdown.isDropdownVisible();
   if (suppress_return_during_dropdown && dropdown.was_clicked ||
     !suppress_return_during_dropdown
   ) {
