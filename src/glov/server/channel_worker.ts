@@ -1002,6 +1002,9 @@ export class ChannelWorker {
   }
 
   commitData(): void {
+    if (this.no_datastore) {
+      return;
+    }
     // delay the commit until next frame, so multiple call of setChannelData get
     //   batched into a single atomic database write
     if (this.commit_queued) {
