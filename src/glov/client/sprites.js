@@ -8,6 +8,14 @@
 exports.createSprite = spriteCreate;
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.create = spriteCreate;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queueraw4color = spriteQueueRaw4Color;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queueraw4colorBuffer = spriteQueueRaw4ColorBuffer;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queueraw4 = spriteQueueRaw4;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queueraw = spriteQueueRaw;
 
 export const BlendMode = {
   BLEND_ALPHA: 0,
@@ -172,7 +180,7 @@ export function spriteQueueFn(z, fn) {
 
 // 4 arbitrary positions, colors, uvs
 // coordinates must be in counter-clockwise winding order
-export function queueraw4color(
+export function spriteQueueRaw4Color(
   texs,
   x0, y0, c0, u0, v0,
   x1, y1, c1, u1, v1,
@@ -233,12 +241,12 @@ export function queueraw4color(
 
 // 4 arbitrary positions
 // coordinates must be in counter-clockwise winding order
-export function queueraw4(
+export function spriteQueueRaw4(
   texs, x0, y0, x1, y1, x2, y2, x3, y3, z,
   u0, v0, u1, v1,
   color, shader, shader_params, blend
 ) {
-  return queueraw4color(texs,
+  return spriteQueueRaw4Color(texs,
     x0, y0, color, u0, v0,
     x1, y1, color, u0, v1,
     x2, y2, color, u1, v1,
@@ -271,7 +279,7 @@ export function queueSpriteData(elem, z) {
 
 // Expects a buffer in the form of:
 //   x, y, r, g, b, a, u, v, (x4)
-export function queueraw4colorBuffer(
+export function spriteQueueRaw4ColorBuffer(
   texs, buf,
   z, shader, shader_params, blend
 ) {
@@ -285,13 +293,12 @@ export function queueraw4colorBuffer(
   return elem;
 }
 
-
-export function queueraw(
+export function spriteQueueRaw(
   texs, x, y, z, w, h,
   u0, v0, u1, v1,
   color, shader, shader_params, blend
 ) {
-  return queueraw4color(texs,
+  return spriteQueueRaw4Color(texs,
     x, y, color, u0, v0,
     x, y + h, color, u0, v1,
     x + w, y + h, color, u1, v1,

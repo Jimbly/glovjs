@@ -66,7 +66,6 @@ const {
   spotTopOfFrame,
   spotUnfocus,
 } = require('./spot.js');
-const glov_sprites = require('./sprites.js');
 const {
   BLEND_PREMULALPHA,
   spriteClipped,
@@ -75,7 +74,9 @@ const {
   spriteChainedStart,
   spriteChainedStop,
   spriteCreate,
-} = glov_sprites;
+  spriteQueueRaw,
+  spriteQueueRaw4,
+} = require('./sprites.js');
 const { TEXTURE_FORMAT } = require('./textures.js');
 const {
   uiStyleDefault,
@@ -1715,7 +1716,7 @@ function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv
     blend = BLEND_PREMULALPHA;
     color = premulAlphaColor(color);
   }
-  glov_sprites.queueraw(sprite.texs,
+  spriteQueueRaw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
     tu0, tv0, tu1, tv1,
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
@@ -1909,7 +1910,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   }
   shader_param = line_last_shader_param;
 
-  glov_sprites.queueraw4(texs,
+  spriteQueueRaw4(texs,
     x1 + tangx, y1 + tangy,
     x1 - tangx, y1 - tangy,
     x0 - tangx, y0 - tangy,
@@ -1922,7 +1923,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
     // round caps (line3) - square caps (line2)
     let nx = dx * w/2;
     let ny = dy * w/2;
-    glov_sprites.queueraw4(texs,
+    spriteQueueRaw4(texs,
       x1 - tangx, y1 - tangy,
       x1 + tangx, y1 + tangy,
       x1 + tangx + nx, y1 + tangy + ny,
@@ -1930,7 +1931,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       z,
       LINE_U2, LINE_V1, LINE_U3, LINE_V0,
       color, glov_font.font_shaders.font_aa, shader_param, blend);
-    glov_sprites.queueraw4(texs,
+    spriteQueueRaw4(texs,
       x0 - tangx, y0 - tangy,
       x0 + tangx, y0 + tangy,
       x0 + tangx - nx, y0 + tangy - ny,
@@ -1997,7 +1998,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
   dy /= length;
   let tangx = -dy;
   let tangy = dx;
-  glov_sprites.queueraw4(sprites.cone.texs,
+  spriteQueueRaw4(sprites.cone.texs,
     x0 - tangx*w0, y0 - tangy*w0,
     x0 + tangx*w0, y0 + tangy*w0,
     x1 + tangx*w1, y1 + tangy*w1,

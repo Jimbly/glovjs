@@ -914,7 +914,7 @@ GlovFont.prototype.drawScaled = function () {
           let xx = x - rel_x_scale * padding4[0];
           let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
           // Below is inlined/optimized version of:
-          // queueraw(
+          // spriteQueueRaw(
           //   texs,
           //   xx, yy,
           //   z + z_advance * i, w, h,

@@ -22,7 +22,11 @@ import {
   temporaryTextureClaim,
 } from './framebuffer';
 import { shaderCreate } from './shaders';
-import * as sprites from './sprites';
+import {
+  spriteQueueRaw,
+  spriteQueueRaw4,
+  spriteQueueRaw4Color,
+} from './sprites';
 import { textureCreateForCapture } from './textures';
 import * as glov_ui from './ui';
 
@@ -146,7 +150,7 @@ function glovTransitionFadeFunc(fade_time, z, initial, ms_since_start, force_end
   let alpha = (1 - easeOut(progress, 2));
   let color = vec4(1, 1, 1, alpha);
   camera2d.setNormalized();
-  sprites.queueraw4([initial],
+  spriteQueueRaw4([initial],
     0, 0, 0, 1,
     1, 1, 1, 0,
     z,
@@ -246,7 +250,7 @@ function glovTransitionWipeFunc(wipe_time, wipe_angle, z, tex, ms_since_start, f
   points[2].v = lerp(points[2].y, uvs[0][1], uvs[1][1]);
   points[3].v = lerp(points[3].y, uvs[0][1], uvs[1][1]);
 
-  sprites.queueraw4color([tex],
+  spriteQueueRaw4Color([tex],
     points[0].x, points[0].y, unit_vec, points[0].u, points[0].v,
     points[3].x, points[3].y, unit_vec, points[3].u, points[3].v,
     points[2].x, points[2].y, unit_vec, points[2].u, points[2].v,
@@ -269,17 +273,17 @@ function glovTransitionSplitScreenFunc(time, border_width, slide_window, z, tex,
   let xoffs = progress;
   let v_half = uvs[0][1] + (uvs[1][1] - uvs[0][1]) / 2;
   if (slide_window) { // slide window
-    sprites.queueraw([tex], 0, 0, z, 1 - xoffs, 1 / 2,
+    spriteQueueRaw([tex], 0, 0, z, 1 - xoffs, 1 / 2,
       0, uvs[0][1], uvs[1][0] * (1 - progress), v_half,
       unit_vec);
-    sprites.queueraw([tex], 0 + xoffs, 1 / 2, z, 1 - xoffs, 1 / 2,
+    spriteQueueRaw([tex], 0 + xoffs, 1 / 2, z, 1 - xoffs, 1 / 2,
       uvs[1][0] * progress, v_half, uvs[1][0], uvs[1][1],
       unit_vec);
   } else { // slide image
-    sprites.queueraw([tex], 0 - xoffs, 0, z, 1, 1 / 2,
+    spriteQueueRaw([tex], 0 - xoffs, 0, z, 1, 1 / 2,
       uvs[0][0], uvs[0][1], uvs[1][0], v_half,
       unit_vec);
-    sprites.queueraw([tex], 0 + xoffs, 1 / 2, z, 1, 1 / 2,
+    spriteQueueRaw([tex], 0 + xoffs, 1 / 2, z, 1, 1 / 2,
       uvs[0][0], v_half, uvs[1][0], uvs[1][1],
       unit_vec);
   }
@@ -336,7 +340,7 @@ function glovTransitionPixelateFunc(time, z, tex, ms_since_start, force_end) {
     (tex.texSizeX - 1) / tex.width, (tex.texSizeY - 1) / tex.height);
 
 
-  sprites.queueraw(transition_pixelate_textures, 0, 0, z + 1, 1, 1,
+  spriteQueueRaw(transition_pixelate_textures, 0, 0, z + 1, 1, 1,
     0, 1, 1, 0,
     unit_vec, getShader('transition_pixelate'), {
       param0,
