@@ -19,6 +19,8 @@ export interface Texture {
   height: number;
   src_width: number;
   src_height: number;
+  loaded: boolean;
+  err?: string;
   destroy(): void;
 }
 
