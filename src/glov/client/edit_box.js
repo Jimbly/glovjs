@@ -190,11 +190,16 @@ class GlovUIEditBox {
             new_text = new_text.slice(0, -1);
           }
         }
-        let sel_start = input.selectionStart;
-        let sel_end = input.selectionEnd;
-        input.value = new_text;
-        input.selectionStart = sel_start;
-        input.selectionEnd = sel_end;
+        if (this.text === new_text) {
+          // we presumably just trimmed off what they inserted, treat as error
+          valid = false;
+        } else {
+          let sel_start = input.selectionStart;
+          let sel_end = input.selectionEnd;
+          input.value = new_text;
+          input.selectionStart = sel_start;
+          input.selectionEnd = sel_end;
+        }
       } else {
         valid = false;
       }
