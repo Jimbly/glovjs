@@ -129,8 +129,10 @@ export interface Font {
 
   getStringWidth(style: FontStyle | null, x_size: number, text: Text): number;
 
+  readonly integral: boolean;
+
   // Constants and utility functions are replicated on all font instances as well:
-  ALIGN: typeof ALIGN;
+  readonly ALIGN: typeof ALIGN;
   style(base: FontStyle | null, param: FontStyleParam): FontStyle;
   styleAlpha(base: FontStyle | null, alpha: number): FontStyle;
   styleColored(base: FontStyle | null, color: RGBA): FontStyle;
