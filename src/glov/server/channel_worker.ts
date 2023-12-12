@@ -1113,7 +1113,7 @@ export class ChannelWorker {
       let { field_map } = this.subscribers[channel_id]!;
       let idx;
       let key_to_check = key;
-      while (key_to_check) {
+      while (key_to_check || !field_map) { // eslint-disable-line no-unmodified-loop-condition
         if (!field_map || field_map[key_to_check]) {
           ++count;
           this.sendChannelMessage(channel_id, 'apply_channel_data', data);
@@ -1164,7 +1164,7 @@ export class ChannelWorker {
       // array was modified in-place
     }
     // only send public changes
-    if (key.startsWith('public.')) {
+    if (key.startsWith('public')) {
       let mod_data;
       if (need_create) {
         mod_data = { key, value: arr };
