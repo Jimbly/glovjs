@@ -426,6 +426,10 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
   return default_profile_image;
 }
 
+export function getDefaultUserProfileImage(): UserProfileImage {
+  return default_profile_image;
+}
+
 export function setDefaultUserProfileImage(image: UserProfileImage): void {
   default_profile_image = image;
 }
