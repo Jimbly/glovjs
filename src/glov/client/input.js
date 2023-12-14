@@ -20,6 +20,7 @@ let mouse_log = false;
 
 export const click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
 export const inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const inputDrag = drag; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const { deprecate } = require('glov/common/util.js');
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
