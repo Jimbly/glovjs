@@ -196,6 +196,9 @@ export interface ClientChannelWorker {
   readonly data: {
     public?: unknown;
   };
+  readonly channel_id: string;
+  readonly channel_type: string;
+  readonly channel_subid: string;
 }
 
 export interface UserChannel extends ClientChannelWorker {
