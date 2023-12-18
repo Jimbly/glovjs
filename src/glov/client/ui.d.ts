@@ -2,7 +2,7 @@
 /* globals HTMLElement, Event */
 
 import { ROVec4 } from 'glov/common/vmath';
-import { EditBoxOptsAll } from './edit_box';
+import { EditBoxOptsAll, EditBoxVisualLimit } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
@@ -282,6 +282,7 @@ export function modalDialog(param: ModalDialogParam): void;
 export interface ModalTextEntryParam extends ModalDialogParamBase<(text: string) => void> {
   edit_text?: EditBoxOptsAll['text'];
   max_len?: number;
+  max_visual_size?: EditBoxVisualLimit;
 }
 export function modalTextEntry(param: ModalTextEntryParam): void;
 

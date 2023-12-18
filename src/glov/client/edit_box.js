@@ -116,6 +116,7 @@ class GlovUIEditBox {
     this.text = '';
     this.placeholder = '';
     this.max_len = 0;
+    this.max_visual_size = null;
     this.zindex = null;
     this.uppercase = false;
     this.initial_focus = false;
@@ -160,12 +161,16 @@ class GlovUIEditBox {
     if (!params) {
       return;
     }
+    let old_text = this.text;
     for (let f in params) {
       this[f] = params[f];
     }
     if (this.text === undefined) {
       // do not trigger assert if `params` has a `text: undefined` member
       this.text = '';
+    }
+    if (params.text && params.text !== old_text) {
+      this.setText(params.text);
     }
     this.h = this.font_height;
   }
@@ -183,7 +188,7 @@ class GlovUIEditBox {
       this.last_valid_state.sel_end = input.selectionEnd;
       return;
     }
-    const { multiline, enforce_multiline, max_len } = this;
+    const { multiline, enforce_multiline, max_len, max_visual_size } = this;
     // text has changed, validate
     let valid = true;
 
@@ -212,12 +217,24 @@ class GlovUIEditBox {
       }
     }
 
-    if (max_len > 0) {
+    if (max_len > 0 || max_visual_size) {
+      // If just max_visual_size, use infinite max_len
+      let eff_max_len = max_len || Infinity;
       let lines = multiline ? new_text.split('\n') : [new_text];
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
-        if (line.length > max_len) {
-          if (trimEnd(line).length <= max_len) {
+        let over = line.length > eff_max_len;
+        if (max_visual_size && !over) {
+          over = uiGetFont().getStringWidth(null, max_visual_size.font_height, line) > max_visual_size.width;
+        }
+        let trim_over = over && trimEnd(line).length > eff_max_len;
+        if (max_visual_size && over && !trim_over) {
+          trim_over = uiGetFont().getStringWidth(null,
+            max_visual_size.font_height, trimEnd(line)) > max_visual_size.width;
+        }
+
+        if (over) {
+          if (!trim_over) {
             let old_line_end_pos = lines.slice(0, ii+1).join('\n').length;
             lines[ii] = trimEnd(line);
             let new_line_end_pos = lines.slice(0, ii+1).join('\n').length;
@@ -266,6 +283,32 @@ class GlovUIEditBox {
   }
   setText(new_text) {
     new_text = String(new_text);
+
+    // sanitize if appropriate
+    const { max_len, max_visual_size, multiline } = this;
+    let font = max_visual_size ? uiGetFont() : null;
+    if (max_len > 0 && max_visual_size) {
+      let lines = multiline ? new_text.split('\n') : [new_text];
+      for (let ii = 0; ii < lines.length; ++ii) {
+        let line = lines[ii];
+        if (max_len > 0) {
+          if (line.length > max_len) {
+            line = trimEnd(line);
+          }
+          if (line.length > max_len) {
+            line = line.slice(0, max_len);
+          }
+        }
+        if (max_visual_size) {
+          while (line.length && font.getStringWidth(null, max_visual_size.font_height, line) > max_visual_size.width) {
+            line = line.slice(0, line.length - 1);
+          }
+        }
+        lines[ii] = line;
+      }
+      new_text = lines.join('\n');
+    }
+
     if (this.input && this.input.value !== new_text) {
       this.input.value = new_text;
     }

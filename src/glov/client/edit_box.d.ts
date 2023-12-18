@@ -3,6 +3,11 @@ import type { ROVec4 } from 'glov/common/vmath';
 
 export type EditBoxResult = null | 'submit' | 'cancel';
 
+export type EditBoxVisualLimit = {
+  font_height: number;
+  width: number;
+};
+
 export interface EditBoxOptsAll {
   key: string;
   x: number;
@@ -14,6 +19,7 @@ export interface EditBoxOptsAll {
   text: string | number;
   placeholder: string;
   max_len: number;
+  max_visual_size: EditBoxVisualLimit;
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;

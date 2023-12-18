@@ -1436,6 +1436,7 @@ export function modalTextEntry(param) {
     initial_select: true,
     text: param.edit_text,
     max_len: param.max_len,
+    max_visual_size: param.max_visual_size,
     esc_clears: false,
   });
   let buttons = {};
