@@ -1252,8 +1252,12 @@ export function mouseOver(param) {
     for (let id in touches) {
       let touch = touches[id];
       if (checkPos(touch.cur_pos, pos_param)) {
-        touch.down_edge = 0;
-        touch.up_edge = 0;
+        if (touch.down_edge) {
+          touch.down_edge = 0;
+        }
+        if (touch.up_edge) {
+          touch.up_edge = 0;
+        }
         if (!param || !param.drag_target) {
           touch.dispatched = true;
         }
