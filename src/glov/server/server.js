@@ -35,6 +35,7 @@ import { metricsInit } from './metrics';
 import { readyDataInit } from './ready_data';
 import { serverConfig } from './server_config';
 import { serverFilewatchTriggerChange } from './server_filewatch';
+import { serverFontInit } from './server_font';
 import { shaderStatsInit } from './shader_stats';
 import glov_wsserver from './wsserver';
 const { netDelaySet } = wscommon;
@@ -132,10 +133,12 @@ function filewatchClean() {
 export function startup(params) {
   log.startup();
 
-  let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https } = params;
+  let { app, data_stores, exchange, metrics_impl, on_report_load, server, server_https, font } = params;
   assert(app);
   assert(server);
   assert(!exchange, 'Exchange must now be registered by type and specified in default config');
+
+  serverFontInit(font || 'palanquin32');
 
   if (!data_stores) {
     data_stores = {};

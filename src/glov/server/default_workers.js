@@ -13,6 +13,10 @@ import {
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
 import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_MAX_VISUAL_SIZE,
+} from 'glov/common/net_common';
+import {
   EMAIL_REGEX,
   VALID_USER_ID_REGEX,
   deprecate,
@@ -33,12 +37,12 @@ import * as master_worker from './master_worker.js';
 import { metricsAdd } from './metrics.js';
 import * as random_names from './random_names.js';
 import { serverConfig } from './server_config';
+import { serverFontValidWidth } from './server_font';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
 const { floor, random } = Math;
 
-const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
 const MAX_FRIENDS = 100; // manually added
 const MAX_RELATIONSHIPS = MAX_FRIENDS + 1000; // including blocked, auto-added, removed auto-added
@@ -83,6 +87,7 @@ const valid_display_name = /^[^[\]]/;
 function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
+    !serverFontValidWidth(display_name, DISPLAY_NAME_MAX_VISUAL_SIZE) ||
     EMAIL_REGEX.test(display_name) ||
     !valid_display_name.test(display_name) ||
     (!override && isReserved(display_name))

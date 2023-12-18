@@ -1,8 +1,9 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
+import { TextVisualLimit } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
-import { EditBoxOptsAll, EditBoxVisualLimit } from './edit_box';
+import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { SoundID } from './sound';
@@ -282,7 +283,7 @@ export function modalDialog(param: ModalDialogParam): void;
 export interface ModalTextEntryParam extends ModalDialogParamBase<(text: string) => void> {
   edit_text?: EditBoxOptsAll['text'];
   max_len?: number;
-  max_visual_size?: EditBoxVisualLimit;
+  max_visual_size?: TextVisualLimit;
 }
 export function modalTextEntry(param: ModalTextEntryParam): void;
 

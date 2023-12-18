@@ -1,12 +1,8 @@
 import type { FontStyle } from './font';
+import type { TextVisualLimit } from 'glov/common/types';
 import type { ROVec4 } from 'glov/common/vmath';
 
 export type EditBoxResult = null | 'submit' | 'cancel';
-
-export type EditBoxVisualLimit = {
-  font_height: number;
-  width: number;
-};
 
 export interface EditBoxOptsAll {
   key: string;
@@ -19,7 +15,7 @@ export interface EditBoxOptsAll {
   text: string | number;
   placeholder: string;
   max_len: number;
-  max_visual_size: EditBoxVisualLimit;
+  max_visual_size: TextVisualLimit;
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;

@@ -343,7 +343,7 @@ function GlovFont(font_info, texture_name) {
   this.char_infos = [];
   for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
     let char_info = font_info.char_infos[ii];
-    this.char_infos[font_info.char_infos[ii].c] = char_info;
+    this.char_infos[char_info.c] = char_info;
     char_info.xpad = char_info.xpad || 0;
     char_info.yoffs = char_info.yoffs || 0;
     char_info.w_pad_scale = (char_info.w + char_info.xpad) * char_info.scale;
