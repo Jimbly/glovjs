@@ -143,8 +143,13 @@ export class DefaultUserWorker extends ChannelWorker {
         this.setChannelData('public.creation_time', creation_time_old);
         this.setChannelData('private.creation_time', undefined);
       }
-    }
 
+      let password_deleted = this.getChannelData('private.password_deleted');
+      if (password_deleted && this.getChannelData('private.external')) {
+        this.setChannelData('private.password_deleted', undefined);
+        this.setChannelData('private.password', password_deleted);
+      }
+    }
   }
 
   migrateFriendsList(legacy_friends) {
@@ -739,6 +744,7 @@ export class DefaultUserWorker extends ChannelWorker {
     resp_func(null, {
       public_data: this.getChannelData('public'),
       email: this.getChannelData('private.email'),
+      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
     });
   }
   handleLogin(src, data, resp_func) {
@@ -752,7 +758,7 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Missing password');
     }
 
-    if (this.getChannelData('private.password_deleted')) {
+    if (this.getChannelData('private.external')) {
       return resp_func('ERR_ACCOUNT_MIGRATED');
     }
     if (!this.getChannelData('private.password')) {
@@ -793,6 +799,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.getChannelData('public.banned')) {
       return resp_func('ERR_ACCOUNT_BANNED');
     }
+
     if (!this.exists()) {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
@@ -845,7 +852,20 @@ export class DefaultUserWorker extends ChannelWorker {
       public_data: this.getChannelData('public'),
       first_session: true,
       email: this.getChannelData('private.email'),
+      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
     });
+  }
+
+  handleSetExternalPassword(src, { hash }, resp_func) {
+    if (src.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!this.getChannelData('private.external')) {
+      return void resp_func('ERR_NOT_EXTERNAL');
+    }
+    this.setChannelData('private.password', hash);
+    this.debugSrc(src, 'Replaced external password');
+    resp_func();
   }
 
   handleReplacePasswordWithExternal(src, { password, provider, provider_id, salt }, resp_func) {
@@ -862,8 +882,6 @@ export class DefaultUserWorker extends ChannelWorker {
     if (md5(salt + private_data.password) !== password) {
       return resp_func('Password mismatch');
     }
-    private_data.password_deleted = private_data.password;
-    private_data.password = undefined;
     private_data[`login_${provider}`] = provider_id;
     private_data.external = true;
     this.setChannelData('private', private_data);
@@ -1181,6 +1199,7 @@ let user_worker_init_data = {
     presence_get: DefaultUserWorker.prototype.handlePresenceGet,
     presence_set: DefaultUserWorker.prototype.handlePresenceSet,
     csr_admin_to_user: DefaultUserWorker.prototype.handleCSRAdminToUser,
+    set_external_password: DefaultUserWorker.prototype.handleSetExternalPassword,
   },
   access_tokens: {
     P: DefaultUserWorker.prototype.applyTokenPerm,

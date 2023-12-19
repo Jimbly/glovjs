@@ -672,6 +672,18 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     if (this.need_resub) {
       this.sendResubscribe();
     }
+
+    if (resp.hash && this.login_credentials?.password) {
+      let plaintext_password = this.login_credentials.password;
+      // If we didn't log in with password this time, must be a cookie/etc
+      if (plaintext_password) {
+        let hashed_salted_password = md5(md5(this.logged_in_username.toLowerCase()) + plaintext_password);
+        let onetime_hash = md5(this.client.secret + hashed_salted_password);
+        if (onetime_hash !== resp.hash) {
+          this.getMyUserChannel().send('set_external_password', { hash: hashed_salted_password });
+        }
+      }
+    }
   }
   if (this.need_resub) {
     this.sendResubscribe();
