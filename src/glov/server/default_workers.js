@@ -737,6 +737,7 @@ export class DefaultUserWorker extends ChannelWorker {
       this.log(`Invalid display name ("${display_name}") on user ${this.user_id}` +
         ` detected, changing to "${new_display_name}"`);
       this.setChannelData('public.display_name', new_display_name);
+      this.setChannelData('private.display_name_change', undefined); // reset cooldown
     }
     this.checkAutoIPBan(data.ip);
     metricsAdd('user.login', 1);
