@@ -999,7 +999,23 @@ ChatUI.prototype.run = function (opts) {
     }
     if (click || longpress) {
       if (longpress || click.button === 2) {
-        ui.provideUserString('Chat Text', is_url || line);
+        let base_text = is_url || line;
+        let buttons = {};
+        if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+          buttons['User ID'] = {
+            cb: function () {
+              ui.provideUserString('User ID', msg.id);
+            },
+          };
+        }
+        if (msg.msg !== base_text) {
+          buttons['Just message'] = {
+            cb: function () {
+              ui.provideUserString('Chat Text', msg.msg);
+            },
+          };
+        }
+        ui.provideUserString('Chat Text', base_text, buttons);
       } else if (is_url) {
         self.cmdParseInternal(`url ${url_label}`);
       }

@@ -1638,7 +1638,7 @@ export function copyTextToClipboard(text) {
   return ret;
 }
 
-export function provideUserString(title, str) {
+export function provideUserString(title, str, alt_buttons) {
   let copy_success = copyTextToClipboard(str);
   modalTextEntry({
     edit_w: 400,
@@ -1647,7 +1647,7 @@ export function provideUserString(title, str) {
     text: copy_success ?
       default_copy_success_msg :
       default_copy_failure_msg,
-    buttons: { ok: null },
+    buttons: { ...(alt_buttons || {}), ok: null },
   });
 }
 

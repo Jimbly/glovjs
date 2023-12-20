@@ -1,7 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
-import { TextVisualLimit } from 'glov/common/types';
+import {
+  TSMap,
+  TextVisualLimit,
+  VoidFunc,
+} from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
@@ -298,7 +302,7 @@ export interface MenuFadeParams {
 }
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
-export function provideUserString(title: Text, str: string): void;
+export function provideUserString(title: Text, str: string, alt_buttons?: TSMap<VoidFunc>): void;
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(
