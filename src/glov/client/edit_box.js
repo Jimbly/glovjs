@@ -224,19 +224,33 @@ class GlovUIEditBox {
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
         let over = line.length > eff_max_len;
+        let font = max_visual_size ? uiGetFont() : null;
         if (max_visual_size && !over) {
-          over = uiGetFont().getStringWidth(null, max_visual_size.font_height, line) > max_visual_size.width;
+          over = font.getStringWidth(null, max_visual_size.font_height, line) > max_visual_size.width;
         }
-        let trim_over = over && trimEnd(line).length > eff_max_len;
+        let trimmed = trimEnd(line);
+        let trim_over = over && trimmed.length > eff_max_len;
         if (max_visual_size && over && !trim_over) {
-          trim_over = uiGetFont().getStringWidth(null,
-            max_visual_size.font_height, trimEnd(line)) > max_visual_size.width;
+          trim_over = font.getStringWidth(null,
+            max_visual_size.font_height, trimmed) > max_visual_size.width;
+        }
+        if (max_visual_size && over && trim_over &&
+          // was it over by 2 or more characters?  Probably just pasted, do a truncate instead of reject
+          font.getStringWidth(null,
+            max_visual_size.font_height, line.slice(0, -2)) > max_visual_size.width
+        ) {
+          while (trimmed.length && font.getStringWidth(null,
+            max_visual_size.font_height, trimmed) > max_visual_size.width
+          ) {
+            trimmed = trimmed.slice(0, -1);
+            trim_over = false;
+          }
         }
 
         if (over) {
           if (!trim_over) {
             let old_line_end_pos = lines.slice(0, ii+1).join('\n').length;
-            lines[ii] = trimEnd(line);
+            lines[ii] = trimmed;
             let new_line_end_pos = lines.slice(0, ii+1).join('\n').length;
             new_text = lines.join('\n');
             let sel_start = input.selectionStart;
