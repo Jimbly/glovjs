@@ -463,11 +463,20 @@ export function secondsSince2020(): number {
   return floor(Date.now() / 1000) - 1577836800;
 }
 
-export function dateToSafeLocaleString(date: Date, date_only: boolean): string {
+export function dateToSafeLocaleString(date: Date, date_only: boolean, options?: {
+  weekday?: 'long' | 'short';
+  year?: 'numeric' | '2-digit';
+  month?: 'numeric' | '2-digit' | 'long' | 'short';
+  day?: 'numeric' | '2-digit';
+  hour?: 'numeric' | '2-digit';
+  minute?: 'numeric' | '2-digit';
+  second?: 'numeric' | '2-digit';
+  timeZoneName?: 'long' | 'short';
+}): string {
   // Uses toString as a fallback since some browsers do not properly detect default locale.
   let date_text;
   try {
-    date_text = date_only ? date.toLocaleDateString() : date.toLocaleString();
+    date_text = date_only ? date.toLocaleDateString(undefined, options) : date.toLocaleString(undefined, options);
   } catch (e) {
     console.error(e, '(Using toString as fallback)');
     date_text = date_only ? date.toDateString() : date.toString();
