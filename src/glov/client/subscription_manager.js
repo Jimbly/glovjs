@@ -625,6 +625,13 @@ SubscriptionManager.prototype.onLogin = function (cb) {
   }
 };
 
+SubscriptionManager.prototype.onceLoggedIn = function (cb) {
+  if (this.logged_in) {
+    return void cb();
+  }
+  this.once('login', cb);
+};
+
 SubscriptionManager.prototype.loggedIn = function () {
   return this.logging_out ? false : this.logged_in ? this.logged_in_username || 'missing_name' : false;
 };
