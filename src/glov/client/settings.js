@@ -91,6 +91,7 @@ export function register(defs) {
       access_show: def.access_show,
       default_value: def.default_value,
       enum_lookup: def.enum_lookup,
+      is_toggle: def.is_toggle,
     });
   });
 }

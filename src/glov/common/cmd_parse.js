@@ -224,6 +224,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
   if (param.ver) {
     store_key += `_${param.ver}`;
   }
+  let is_toggle = param.is_toggle;
+  if (is_toggle) {
+    assert(param.get && param.set && param.range);
+  }
   let store_data;
   if (store) {
     assert(param.set);
@@ -263,6 +267,13 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     }
     function usage() {
       resp_func(`Usage: /${cmd} ${param_label}`);
+    }
+    if (!str && is_toggle) {
+      if (param.get() === param.range[0]) {
+        str = String(param.range[1]);
+      } else {
+        str = String(param.range[0]);
+      }
     }
     if (!str) {
       if (param.get && param.set) {
