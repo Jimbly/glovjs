@@ -5,7 +5,11 @@ module.exports = function (gb) {
       '!**/*.d.ts',
       '!**/client/**/*',
     ],
-    server_static: ['**/glov/common/words/*.gkg', '**/glov/common/words/*.txt'],
+    server_static: [
+      '**/glov/common/words/*.gkg',
+      '**/glov/common/words/*.txt',
+      'client_json:client/img/font/*.json'
+    ],
     all_js_files: ['**/*.[jt]s', '!client/vendor/**/*'],
     client_js_files: [
       '**/*.[jt]s',
@@ -40,6 +44,8 @@ module.exports = function (gb) {
       'client/**/*.glb',
       'client/**/*.ico',
       'client/**/*.ttf',
+      'client/**/*.woff',
+      'client/**/*.woff2',
       '!**/unused/**',
       '!client/sounds/Bfxr/**',
       // 'client/**/vendor/**',

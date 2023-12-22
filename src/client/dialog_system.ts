@@ -13,9 +13,11 @@ import {
   mouseDownAnywhere,
   padButtonDown,
 } from 'glov/client/input';
-import * as ui from 'glov/client/ui';
 import {
   UIBox,
+  buttonText,
+  panel,
+  uiButtonHeight,
   uiTextHeight,
 } from 'glov/client/ui';
 import { dataError } from 'glov/common/data_error';
@@ -137,7 +139,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   }
 
   let num_buttons = buttons && buttons.length || 0;
-  let buttons_h = num_buttons * ui.button_height + (num_buttons ? BUTTON_HEAD + (num_buttons - 1) * BUTTON_PAD : 0);
+  let buttons_h = num_buttons * uiButtonHeight() + (num_buttons ? BUTTON_HEAD + (num_buttons - 1) * BUTTON_PAD : 0);
   const text_height = uiTextHeight();
   let size = text_height;
   let style = text_style_cb(active_dialog);
@@ -182,7 +184,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   if (text_full && !active_state.ff_down) {
     for (let ii = 0; ii < num_buttons; ++ii) {
       let button = buttons![ii];
-      if (ui.buttonText({
+      if (buttonText({
         auto_focus: ii === 0,
         focus_steal: ii === 0 && (num_buttons === 1 || !buttons_vis),
         text: button.label,
@@ -201,7 +203,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
           }
         }
       }
-      yy += ui.button_height + BUTTON_PAD;
+      yy += uiButtonHeight() + BUTTON_PAD;
     }
     active_state.buttons_vis = true;
   }
@@ -209,7 +211,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   temp_color[3] = alpha;
   if (transient && dims.h === text_height) {
     let text_w = dims.w;
-    ui.panel({
+    panel({
       x: x + round((w - text_w)/2) - HPAD,
       y: y - pad_top, z: z - 1,
       w: text_w + HPAD * 2,
@@ -217,7 +219,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
       color: temp_color,
     });
   } else {
-    ui.panel({
+    panel({
       x,
       y: y - pad_top, z: z - 1,
       w,

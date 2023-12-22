@@ -22,7 +22,9 @@ window.onerror = function (e, file, line, col, errorobj) {
   if (file || line > 0 || col > 0) {
     msg += `\n  at ${file}(${line}:${col})`;
   }
+  let got_stack = false;
   if (errorobj && errorobj.stack) {
+    got_stack = true;
     msg = `${errorobj.stack}`;
     if (errorobj.message) {
       if (msg.indexOf(errorobj.message) === -1) {
@@ -57,8 +59,11 @@ window.onerror = function (e, file, line, col, errorobj) {
       if (typeof errorobj === 'object') {
         for (let key in errorobj) {
           if (typeof errorobj[key] === 'string') {
-            if (key !== 'errortype') {
-              msg = `${msg}\n${key}=${errorobj[key]}`;
+            let value = errorobj[key];
+            if (key !== 'errortype' &&
+              !((key === 'stack' || key === 'message') && got_stack)
+            ) {
+              msg = `${msg}\n${key}=${value}`;
             }
           }
         }

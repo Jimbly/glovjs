@@ -1,6 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
+import {
+  TSMap,
+  TextVisualLimit,
+  VoidFunc,
+} from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
@@ -29,6 +34,8 @@ export function addHook(draw: UIHookFn, click: UIHookFn): void;
 export function getUIElemData<T, P extends SpotKeyable>(type: string, param: P, allocator: (param: P)=>T) : T;
 export const font: Font;
 export const title_font: Font;
+export function uiGetFont(): Font;
+export function uiGetTitleFont(): Font;
 export function uiFontStyleNormal(): FontStyle;
 export function uiFontStyleFocused(): FontStyle;
 export function uiFontStyleDisabled(): FontStyle;
@@ -62,9 +69,11 @@ export interface UISprites {
 }
 export const sprites: UISprites;
 // DEPRECATED: export const font_height: number; // use uiStyleCurrent().text_height or uiTextHeight()
+// DEPRECATED: export const button_width: number;
+// DEPRECATED: export const button_height: number;
 export function uiTextHeight(): number;
-export const button_width: number;
-export const button_height: number;
+export function uiButtonHeight(): number;
+export function uiButtonWidth(): number;
 export const panel_pixel_scale: number;
 export function buttonWasFocused(): boolean;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
@@ -85,6 +94,7 @@ export function setButtonsDefaultLabels(buttons_labels: ButtonLabels): void;
 export function setProvideUserStringDefaultMessages(success_msg: Text, failure_msg: Text): void;
 export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
+export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
 export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[] | null>>): void;
 export interface DrawHBoxParam extends UIBox {
@@ -124,6 +134,7 @@ export interface TooltipParam {
   tooltip_auto_above_offset?: number;
   tooltip_right?: boolean;
   tooltip_auto_right_offset?: number;
+  tooltip_center?: boolean;
   pixel_scale?: number;
   tooltip: TooltipValue | null;
 }
@@ -136,6 +147,7 @@ export interface TooltipBoxParam {
   tooltip_width?: number;
   tooltip_above?: boolean;
   tooltip_right?: boolean;
+  tooltip_center?: boolean;
   tooltip: Text | ((param:unknown) => (Text | null));
 }
 export function drawTooltipBox(param: TooltipBoxParam): void;
@@ -168,6 +180,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
+  no_bg?: boolean;
   style?: UIStyle;
 }
 export interface ButtonTextParam extends ButtonParam {
@@ -203,35 +216,46 @@ export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotSta
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
 export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
-export function button(param: ButtonTextParam | ButtonImageParam): ButtonRet | null;
+export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
+export function button(param: ButtonGenericParam): ButtonRet | null;
 
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
-export type LabelParam = Partial<TooltipBoxParam> & {
-  x: number;
-  y: number;
-  z?: number;
-  w?: number;
-  h?: number;
+export type LabelTextOptions = {
   font_style?: FontStyle;
   font_style_focused?: FontStyle;
   font?: Font;
   size?: number;
   align?: ALIGN;
   text?: Text;
+};
+export type LabelImageOptions = {
+  w: number;
+  h: number;
+  img: Sprite;
+  frame?: number;
+  img_color?: ROVec4;
+  img_color_focused?: ROVec4;
+};
+export type LabelParam = Partial<TooltipBoxParam> & {
+  x: number;
+  y: number;
+  z?: number;
+  w?: number;
+  h?: number;
   tooltip?: TooltipValue;
   style?: UIStyle;
-};
+} & (LabelTextOptions | LabelImageOptions);
 export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
 
-export interface ModalDialogButtonEx<CB> extends Partial<ButtonTextParam> {
+export interface ModalDialogButtonEx<CB> {
   cb?: CB | null;
   in_event_cb?: EventCallback | null;
   label?: Text;
 }
-export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB>;
+export type ModalDialogButton<CB> = null | CB | ModalDialogButtonEx<CB> | Partial<ButtonGenericParam>;
 export type ModalDialogTickCallbackParams = {
   readonly x0: number;
   readonly x: number;
@@ -263,6 +287,7 @@ export function modalDialog(param: ModalDialogParam): void;
 export interface ModalTextEntryParam extends ModalDialogParamBase<(text: string) => void> {
   edit_text?: EditBoxOptsAll['text'];
   max_len?: number;
+  max_visual_size?: TextVisualLimit;
 }
 export function modalTextEntry(param: ModalTextEntryParam): void;
 
@@ -277,7 +302,7 @@ export interface MenuFadeParams {
 }
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
-export function provideUserString(title: Text, str: string): void;
+export function provideUserString(title: Text, str: string, alt_buttons?: TSMap<VoidFunc>): void;
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(
@@ -357,6 +382,12 @@ export function setModalSizes(
   pad: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
+export function setFontStyles(
+  normal?: FontStyle | null,
+  focused?: FontStyle | null,
+  modal?: FontStyle | null,
+  disabled?: FontStyle | null
+): void;
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;

@@ -343,7 +343,7 @@ function GlovFont(font_info, texture_name) {
   this.char_infos = [];
   for (let ii = 0; ii < font_info.char_infos.length; ++ii) {
     let char_info = font_info.char_infos[ii];
-    this.char_infos[font_info.char_infos[ii].c] = char_info;
+    this.char_infos[char_info.c] = char_info;
     char_info.xpad = char_info.xpad || 0;
     char_info.yoffs = char_info.yoffs || 0;
     char_info.w_pad_scale = (char_info.w + char_info.xpad) * char_info.scale;
@@ -442,6 +442,9 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
   return drawn_width;
 };
 
+let tile_state = 0;
+let chained_outside = false;
+
 GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, size, align, w, h, text) {
   text = getStringFromLocalizable(text);
   assert(w > 0);
@@ -455,8 +458,8 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
 
   let yoffs = 0;
   let height = size * lines.length;
-  // eslint-disable-next-line default-case
-  switch (align & ALIGN.VMASK) {
+  let valign = align & ALIGN.VMASK;
+  switch (valign) { // eslint-disable-line default-case
     case ALIGN.VCENTER:
       yoffs = (h - height) / 2;
       if (this.integral) {
@@ -469,6 +472,9 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
   }
   align &= ~ALIGN.VMASK;
 
+  chained_outside = true;
+  tile_state = 0;
+  spriteChainedStart();
   for (let ii = 0; ii < lines.length; ++ii) {
     let line = lines[ii];
     if (line && line.trim()) {
@@ -476,7 +482,9 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
     }
     yoffs += size;
   }
-  return yoffs;
+  chained_outside = false;
+  spriteChainedStop();
+  return valign === ALIGN.VBOTTOM ? height : yoffs;
 };
 
 // returns height
@@ -794,7 +802,9 @@ GlovFont.prototype.drawScaled = function () {
   //   things look almost identical, just crisper
   let x_advance = this.calcXAdvance(xsc);
   let font_texel_scale = this.font_size / 32;
-  let tile_state = 0;
+  if (!chained_outside) {
+    tile_state = 0;
+  }
 
   let applied_style = this.applied_style;
 
@@ -841,7 +851,13 @@ GlovFont.prototype.drawScaled = function () {
   // same Z should be drawn in queue order, so not needed
   const z_advance = applied_style.glow_xoffs < 0 ? -0.0001 : 0; // 0.0001;
   if (!z_advance) {
-    spriteChainedStart();
+    if (!chained_outside) {
+      spriteChainedStart();
+    }
+  } else {
+    if (chained_outside) {
+      spriteChainedStop();
+    }
   }
 
   const has_glow_offs = applied_style.glow_xoffs || applied_style.glow_yoffs;
@@ -898,7 +914,7 @@ GlovFont.prototype.drawScaled = function () {
           let xx = x - rel_x_scale * padding4[0];
           let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
           // Below is inlined/optimized version of:
-          // queueraw(
+          // spriteQueueRaw(
           //   texs,
           //   xx, yy,
           //   z + z_advance * i, w, h,
@@ -964,7 +980,13 @@ GlovFont.prototype.drawScaled = function () {
     }
   }
   if (!z_advance) {
-    spriteChainedStop();
+    if (!chained_outside) {
+      spriteChainedStop();
+    }
+  } else {
+    if (chained_outside) {
+      spriteChainedStart();
+    }
   }
   profilerStopFunc();
   return x - _x;

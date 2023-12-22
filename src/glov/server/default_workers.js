@@ -5,13 +5,20 @@ import assert from 'assert';
 import * as base32 from 'glov/common/base32';
 import * as dot_prop from 'glov/common/dot-prop';
 import {
+  PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
+  PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
 import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_MAX_VISUAL_SIZE,
+} from 'glov/common/net_common';
+import {
   EMAIL_REGEX,
+  VALID_USER_ID_REGEX,
   deprecate,
   empty,
   sanitize,
@@ -30,25 +37,25 @@ import * as master_worker from './master_worker.js';
 import { metricsAdd } from './metrics.js';
 import * as random_names from './random_names.js';
 import { serverConfig } from './server_config';
+import { serverFontValidWidth } from './server_font';
 
 deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
 const { floor, random } = Math;
 
-const DISPLAY_NAME_MAX_LENGTH = 30;
 const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
-const MAX_FRIENDS = 100;
+const MAX_FRIENDS = 100; // manually added
+const MAX_RELATIONSHIPS = MAX_FRIENDS + 1000; // including blocked, auto-added, removed auto-added
 const FRIENDS_DATA_KEY = 'private.friends';
 
 let access_token_fns;
 let access_token_regex;
 
 export const regex_valid_username = /^[a-z][a-z0-9_]{1,32}$/;
-const regex_valid_user_id = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
 const regex_valid_external_id = /^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]*$/;
 
 export function validUserId(user_id) {
-  return user_id?.match(regex_valid_user_id);
+  return user_id?.match(VALID_USER_ID_REGEX);
 }
 
 let valid_provider_ids = Object.create(null);
@@ -74,10 +81,15 @@ function getDisplayNameBypass(source) {
   return false;
 }
 
+// First character must not be a bracket (confusing messages with `/me`)
+const valid_display_name = /^[^[\]]/;
+
 function validDisplayName(display_name, override) {
   if (!display_name || sanitize(display_name).trim() !== display_name ||
     isProfane(display_name) || display_name.length > DISPLAY_NAME_MAX_LENGTH ||
+    !serverFontValidWidth(display_name, DISPLAY_NAME_MAX_VISUAL_SIZE) ||
     EMAIL_REGEX.test(display_name) ||
+    !valid_display_name.test(display_name) ||
     (!override && isReserved(display_name))
   ) {
     return false;
@@ -131,8 +143,13 @@ export class DefaultUserWorker extends ChannelWorker {
         this.setChannelData('public.creation_time', creation_time_old);
         this.setChannelData('private.creation_time', undefined);
       }
-    }
 
+      let password_deleted = this.getChannelData('private.password_deleted');
+      if (password_deleted && this.getChannelData('private.external')) {
+        this.setChannelData('private.password_deleted', undefined);
+        this.setChannelData('private.password', password_deleted);
+      }
+    }
   }
 
   migrateFriendsList(legacy_friends) {
@@ -174,13 +191,17 @@ export class DefaultUserWorker extends ChannelWorker {
     return new_friends;
   }
 
+  did_migration_check = false;
   getFriendsList() {
     let friends = this.getChannelData(FRIENDS_DATA_KEY, {});
-    for (let user_id in friends) {
-      if (isLegacyFriendValue(friends[user_id])) {
-        friends = this.migrateFriendsList(friends);
+    if (!this.did_migration_check) {
+      this.did_migration_check = true;
+      for (let user_id in friends) {
+        if (isLegacyFriendValue(friends[user_id])) {
+          friends = this.migrateFriendsList(friends);
+        }
+        break;
       }
-      break;
     }
     return friends;
   }
@@ -210,6 +231,20 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData(`${FRIENDS_DATA_KEY}.${user_id}`, friend);
   }
 
+  canSeePresence(user_id, privacy_field) {
+    if (user_id === this.user_id) {
+      return true;
+    }
+    privacy_field = privacy_field || 'public.privacy_presence';
+    let privacy_presence = this.getChannelData(privacy_field, 0);
+    let status = this.getFriend(user_id)?.status;
+    if (privacy_presence) {
+      return status === FriendStatus.Added || status === FriendStatus.AddedAuto;
+    } else {
+      return status !== FriendStatus.Blocked;
+    }
+  }
+
   cmdRename(new_name, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
       return resp_func('ERR_INVALID_USER');
@@ -236,11 +271,33 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('public.display_name', new_name);
     if (!unimportant) {
       this.setChannelData('private.display_name_change', now);
+      // Save old name to history
+      let history = this.getChannelData('private.display_name_history', []);
+      let idx = history.indexOf(old_name);
+      if (idx !== -1) {
+        history.splice(idx, 1);
+      }
+      history.push(old_name);
+      if (history.length > 30) {
+        history.shift();
+      }
+      this.setChannelData('private.display_name_history', history);
     }
     return resp_func(null, 'Successfully renamed');
   }
   cmdRenameRandom(ignored, resp_func) {
     return this.cmdRename(random_names.get(), resp_func);
+  }
+  friendsListFull(all) {
+    let friends = this.getFriendsList();
+    let count = 0;
+    for (let user_id in friends) {
+      let friend = friends[user_id];
+      if (all || friend.status === FriendStatus.Added) {
+        ++count;
+      }
+    }
+    return count >= (all ? MAX_RELATIONSHIPS : MAX_FRIENDS);
   }
   cmdFriendAdd(user_id, resp_func) {
     if (this.cmd_parse_source.user_id !== this.user_id) {
@@ -260,7 +317,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (friend?.status === FriendStatus.Added) {
       return void resp_func(`Already on friends list: ${user_id}`);
     }
-    if (Object.keys(friends).length >= MAX_FRIENDS) {
+    if (this.friendsListFull(false)) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
@@ -269,6 +326,7 @@ export class DefaultUserWorker extends ChannelWorker {
         // Return generic error
         return void resp_func(`User not found: ${user_id}`);
       }
+      let could_see_presence = this.canSeePresence(user_id);
       assert(!this.shutting_down); // Took really long?  Need to override `isEmpty`
       if (friend) {
         friend.status = FriendStatus.Added;
@@ -276,6 +334,9 @@ export class DefaultUserWorker extends ChannelWorker {
         friend = createFriendData(FriendStatus.Added);
       }
       this.setFriend(user_id, friend);
+      if (!could_see_presence && this.canSeePresence(user_id)) {
+        this.updatePresence(); // will send to everyone, but that's fine, should be uncommon...
+      }
       resp_func(null, { msg: `Friend added: ${user_id}`, friend });
     });
   }
@@ -301,6 +362,9 @@ export class DefaultUserWorker extends ChannelWorker {
       friend = undefined;
     }
     this.setFriend(user_id, friend);
+    if (!this.canSeePresence(user_id)) {
+      this.clearPresenceToUser(user_id);
+    }
     resp_func(null, { msg: `Friend removed: ${user_id}`, friend });
   }
   cmdFriendUnblock(user_id, resp_func) {
@@ -327,6 +391,9 @@ export class DefaultUserWorker extends ChannelWorker {
       friend = undefined;
     }
     this.setFriend(user_id, friend);
+    if (this.canSeePresence(user_id)) {
+      this.updatePresence(); // will send to everyone, but that's fine, should be uncommon...
+    }
     resp_func(null, { msg: `User unblocked: ${user_id}`, friend });
   }
   cmdFriendBlock(user_id, resp_func) {
@@ -344,7 +411,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (friend?.status === FriendStatus.Blocked) {
       return void resp_func(`User already blocked: ${user_id}`);
     }
-    if (Object.keys(friends).length >= MAX_FRIENDS) {
+    if (this.friendsListFull(true)) {
       return void resp_func('Maximum friends list size exceeded');
     }
     this.pak(`user.${user_id}`, 'user_ping').send((err) => {
@@ -368,6 +435,29 @@ export class DefaultUserWorker extends ChannelWorker {
       });
       this.clearPresenceToUser(user_id);
     });
+  }
+  cmdPrivacyPresence(data, resp_func) {
+    let source = this.cmd_parse_source;
+    if (source.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    let cur_value = this.getChannelData('public.privacy_presence', 0);
+    if (data) {
+      let value = data === '1' || data.toUpperCase() === 'ON' ? 1 :
+        data === '0' || data.toUpperCase() === 'OFF' ? 0 :
+        undefined;
+      if (value === undefined) {
+        return void resp_func('Error parsing arguments');
+      }
+      if (value !== cur_value) {
+        this.logSrc(source, `Set privacy_presence=${value}`);
+        this.setChannelData('public.privacy_presence', value);
+        cur_value = value;
+        this.updatePresence(Boolean(cur_value));
+      }
+    }
+    resp_func(null, `privacy_presence = ${cur_value ? 'ON(1)' : 'OFF(0)'}` +
+      ` (${cur_value ? 'only friends' : 'anyone'} can see your rich presence)`);
   }
   cmdAccessToken(access_token/*: string*/, resp_func/*: HandlerCallback<UnimplementedData>*/) {
     let source = this.cmd_parse_source;
@@ -629,31 +719,12 @@ export class DefaultUserWorker extends ChannelWorker {
       this.ids = ids_saved;
     }, floor(3*60*1000 + random() * 2*60*1000));
   }
-  handleLogin(src, data, resp_func) {
-    if (this.channel_server.restarting) {
-      if (!this.getChannelData('public.permissions.sysadmin')) {
-        // Maybe black-hole like other messages instead?
-        return resp_func('ERR_RESTARTING');
-      }
-    }
-    if (!data.password) {
-      return resp_func('Missing password');
-    }
-
-    if (this.getChannelData('private.password_deleted')) {
-      return resp_func('ERR_ACCOUNT_MIGRATED');
-    }
-    if (!this.getChannelData('private.password')) {
-      return resp_func('ERR_USER_NOT_FOUND');
-    }
-    if (this.getChannelData('public.banned')) {
-      return resp_func('ERR_ACCOUNT_BANNED');
-    }
-    if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
-      return resp_func('Invalid password');
-    }
+  handleLoginShared(data, resp_func) {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
+    this.setChannelData('private.login_time', Date.now());
+    this.setChannelData('private.last_time', Date.now());
+
     let display_name = this.getChannelData('public.display_name');
     let permissions = this.getChannelData('public.permissions', {});
     let display_name_bypass = getDisplayNameBypass(permissions);
@@ -666,16 +737,42 @@ export class DefaultUserWorker extends ChannelWorker {
       this.log(`Invalid display name ("${display_name}") on user ${this.user_id}` +
         ` detected, changing to "${new_display_name}"`);
       this.setChannelData('public.display_name', new_display_name);
+      this.setChannelData('private.display_name_change', undefined); // reset cooldown
     }
-
-    this.setChannelData('private.login_time', Date.now());
     this.checkAutoIPBan(data.ip);
     metricsAdd('user.login', 1);
-    metricsAdd('user.login_pass', 1);
-    return resp_func(null, {
+
+    resp_func(null, {
       public_data: this.getChannelData('public'),
       email: this.getChannelData('private.email'),
+      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
     });
+  }
+  handleLogin(src, data, resp_func) {
+    if (this.channel_server.restarting) {
+      if (!this.getChannelData('public.permissions.sysadmin')) {
+        // Maybe black-hole like other messages instead?
+        return resp_func('ERR_RESTARTING');
+      }
+    }
+    if (!data.password) {
+      return resp_func('Missing password');
+    }
+
+    if (this.getChannelData('private.external')) {
+      return resp_func('ERR_ACCOUNT_MIGRATED');
+    }
+    if (!this.getChannelData('private.password')) {
+      return resp_func('ERR_USER_NOT_FOUND');
+    }
+    if (this.getChannelData('public.banned')) {
+      return resp_func('ERR_ACCOUNT_BANNED');
+    }
+    if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
+      return resp_func('Invalid password');
+    }
+    metricsAdd('user.login_pass', 1);
+    return this.handleLoginShared(data, resp_func);
   }
   handleLoginExternal(src, data, resp_func) {
     if (this.channel_server.restarting) {
@@ -703,20 +800,13 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.getChannelData('public.banned')) {
       return resp_func('ERR_ACCOUNT_BANNED');
     }
+
     if (!this.exists()) {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
     }
-    this.setChannelData('private.login_ip', data.ip);
-    this.setChannelData('private.login_ua', data.ua);
-    this.setChannelData('private.login_time', Date.now());
-    this.checkAutoIPBan(data.ip);
-    metricsAdd('user.login', 1);
     metricsAdd(`user.login_${data.provider}`, 1);
-    return resp_func(null, {
-      public_data: this.getChannelData('public'),
-      email: this.getChannelData('private.email'),
-    });
+    return this.handleLoginShared(data, resp_func);
   }
   handleCreate(src, data, resp_func) {
     if (this.exists()) {
@@ -755,6 +845,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.login_ip = data.ip;
     private_data.login_ua = data.ua;
     private_data.login_time = Date.now();
+    private_data.last_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
     metricsAdd('user.create', 1);
@@ -762,7 +853,20 @@ export class DefaultUserWorker extends ChannelWorker {
       public_data: this.getChannelData('public'),
       first_session: true,
       email: this.getChannelData('private.email'),
+      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
     });
+  }
+
+  handleSetExternalPassword(src, { hash }, resp_func) {
+    if (src.user_id !== this.user_id) {
+      return void resp_func('ERR_INVALID_USER');
+    }
+    if (!this.getChannelData('private.external')) {
+      return void resp_func('ERR_NOT_EXTERNAL');
+    }
+    this.setChannelData('private.password', hash);
+    this.debugSrc(src, 'Replaced external password');
+    resp_func();
   }
 
   handleReplacePasswordWithExternal(src, { password, provider, provider_id, salt }, resp_func) {
@@ -779,8 +883,6 @@ export class DefaultUserWorker extends ChannelWorker {
     if (md5(salt + private_data.password) !== password) {
       return resp_func('Password mismatch');
     }
-    private_data.password_deleted = private_data.password;
-    private_data.password = undefined;
     private_data[`login_${provider}`] = provider_id;
     private_data.external = true;
     this.setChannelData('private', private_data);
@@ -831,9 +933,10 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 
   handleNewClient(src, opts) {
-    if (this.rich_presence && src.type === 'client' && this.presence_data) {
-      if (this.getFriend(src.user_id)?.status !== FriendStatus.Blocked) {
-        this.sendChannelMessage(src.channel_id, 'presence', this.presence_data);
+    if (this.rich_presence && src.type === 'client') {
+      let presence_data = this.filteredPresenceData();
+      if (this.canSeePresence(src.user_id) && !empty(presence_data)) {
+        this.sendChannelMessage(src.channel_id, 'presence', presence_data);
       }
     }
     if (src.type === 'client' && src.user_id === this.user_id) {
@@ -841,14 +944,36 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     return null;
   }
-  updatePresence() {
+
+  filteredPresenceData() {
+    let best = null;
+    for (let channel_id in this.presence_data) {
+      let entry = this.presence_data[channel_id];
+      if (entry.active !== PRESENCE_OFFLINE && entry.active !== PRESENCE_OFFLINE_INACTIVE) {
+        if (!best ||
+          entry.active === PRESENCE_ACTIVE && best.active !== PRESENCE_ACTIVE ||
+          entry.active === best.active && entry.id > best.id
+        ) {
+          best = entry;
+        }
+      }
+    }
+    if (!best) {
+      return {};
+    }
+    return { the: best };
+  }
+
+  updatePresence(force_clear) {
     let clients = this.data.public.clients || {};
-    let friends = this.getFriendsList();
+    let presence_data = this.filteredPresenceData();
     for (let client_id in clients) {
       let client = clients[client_id];
       if (client.ids) {
-        if (friends[client.ids.user_id]?.status !== FriendStatus.Blocked) {
-          this.sendChannelMessage(`client.${client_id}`, 'presence', this.presence_data);
+        if (this.canSeePresence(client.ids.user_id)) {
+          this.sendChannelMessage(`client.${client_id}`, 'presence', presence_data);
+        } else if (force_clear) {
+          this.sendChannelMessage(`client.${client_id}`, 'presence', {});
         }
       }
     }
@@ -868,7 +993,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence) {
       for (let channel_id in this.presence_data) {
         let presence = this.presence_data[channel_id];
-        if (presence.active !== PRESENCE_INACTIVE) {
+        if (presence.active !== PRESENCE_INACTIVE && presence.active !== PRESENCE_OFFLINE_INACTIVE) {
           currently_active = true;
           break;
         }
@@ -892,6 +1017,9 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
+      if (!this.channel_server.restarting) {
+        this.setChannelData('private.last_time', Date.now());
+      }
       delete this.presence_data[src.channel_id];
       this.updatePresence();
     }
@@ -907,11 +1035,10 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.rich_presence) {
       return void resp_func('ERR_NO_RICH_PRESENCE');
     }
-    let friends = this.getFriendsList();
-    if (friends[src.user_id]?.status === FriendStatus.Blocked) {
+    if (!this.canSeePresence(src.user_id)) {
       return void resp_func(null, {});
     }
-    resp_func(null, this.presence_data);
+    resp_func(null, this.filteredPresenceData());
   }
   handlePresenceSet(src, pak, resp_func) {
     let active = pak.readInt();
@@ -920,26 +1047,25 @@ export class DefaultUserWorker extends ChannelWorker {
     let abtests = '';
     if (!pak.ended()) {
       abtests = pak.readAnsiString();
-      if (active !== PRESENCE_INACTIVE) {
-        this.last_abtests = abtests;
-      }
-    }
-    if (!this.rich_presence) {
-      return void resp_func('ERR_NO_RICH_PRESENCE');
     }
     if (src.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (active === PRESENCE_OFFLINE) {
-      delete this.presence_data[src.channel_id];
-    } else {
-      this.presence_data[src.channel_id] = {
-        id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
-        active,
-        state,
-        payload,
-      };
+    if (abtests && active !== PRESENCE_INACTIVE) {
+      this.last_abtests = abtests;
     }
+    if (!this.rich_presence) {
+      return void resp_func('ERR_NO_RICH_PRESENCE');
+    }
+    if (!this.channel_server.restarting) {
+      this.setChannelData('private.last_time', Date.now());
+    }
+    this.presence_data[src.channel_id] = {
+      id: ++this.presence_idx, // Timestamp would work too for ordering, but this is more concise
+      active,
+      state,
+      payload,
+    };
     this.updatePresence();
     this.updateUsertimeMetrics();
     resp_func();
@@ -965,6 +1091,9 @@ export class DefaultUserWorker extends ChannelWorker {
     this.cmd_parse_source = { user_id: this.user_id }; // spoof as is from self
     for (let key in src) {
       access[key] = src[key];
+      if (key !== 'user_id') {
+        this.cmd_parse_source[key] = src[key];
+      }
     }
     this.access = access; // use caller's access credentials
     this.cmd_parse.handle(this, cmd, (err, resp) => {
@@ -1006,7 +1135,7 @@ let inited = false;
 let user_worker = DefaultUserWorker;
 let user_worker_init_data = {
   autocreate: true,
-  subid_regex: regex_valid_user_id,
+  subid_regex: VALID_USER_ID_REGEX,
   cmds: [{
     cmd: 'rename',
     help: 'Change display name',
@@ -1032,6 +1161,13 @@ let user_worker_init_data = {
     cmd: 'friend_unblock',
     help: 'Reset a user to allow seeing your rich presence again',
     func: DefaultUserWorker.prototype.cmdFriendUnblock,
+  },{
+    cmd: 'privacy_presence',
+    help: 'Restrict rich presence to friends only',
+    prefix_usage_with_help: true,
+    usage: '  Allow anyone to see your rich presence: /privacy_presence OFF' +
+      '\n  Restrict so only friends see your rich presence: /privacy_presence ON',
+    func: DefaultUserWorker.prototype.cmdPrivacyPresence,
   },{
     cmd: 'access_token',
     help: 'Apply an access token',
@@ -1064,6 +1200,7 @@ let user_worker_init_data = {
     presence_get: DefaultUserWorker.prototype.handlePresenceGet,
     presence_set: DefaultUserWorker.prototype.handlePresenceSet,
     csr_admin_to_user: DefaultUserWorker.prototype.handleCSRAdminToUser,
+    set_external_password: DefaultUserWorker.prototype.handleSetExternalPassword,
   },
   access_tokens: {
     P: DefaultUserWorker.prototype.applyTokenPerm,

@@ -17,6 +17,7 @@ const { is_ios_safari } = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
+require('./engine_cmds.js');
 const { dataErrorQueueEnable } = require('glov/common/data_error.js');
 const effects = require('./effects.js');
 const { effectsReset, effectsTopOfFrame, effectsIsFinal, effectsPassAdd, effectsPassConsume } = effects;
@@ -62,6 +63,7 @@ const {
   spriteDraw,
   spriteDrawReset,
   spriteStartup,
+  spriteResetTopOfFrame,
 } = require('./sprites.js');
 const {
   textureBind,
@@ -301,8 +303,8 @@ export function definesChanged() {
   for (let key in define_change_cbs) {
     let elem = define_change_cbs[key];
     if (defines[key] !== elem.value) {
-      elem.value = defines[key];
       callEach(elem.cbs);
+      elem.value = defines[key];
     }
   }
   shadersHandleDefinesChanged();
@@ -649,9 +651,14 @@ function requestFrame(user_time) {
 
 let mat_projection_10;
 export let had_3d_this_frame;
+let need_depth_this_frame;
 
 export function clearHad3DThisFrame() {
   had_3d_this_frame = false;
+}
+
+export function needDepthIn2D() {
+  need_depth_this_frame = true;
 }
 
 export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
@@ -687,6 +694,7 @@ export function start3DRendering(opts) {
   }
   setFOV(opts.fov || (settings.fov * PI / 180));
   had_3d_this_frame = true;
+  need_depth_this_frame = false;
   if (!opts.width && want_render_scale_3d_this_frame && !defines.NOCOPY) {
     had_render_scale_3d_this_frame = true;
     effectsPassAdd();
@@ -944,6 +952,7 @@ function tick(timestamp) {
 
   checkResize();
   had_3d_this_frame = false;
+  need_depth_this_frame = false;
   want_render_scale_3d_this_frame = false;
   had_render_scale_3d_this_frame = false;
   if (render_width) {
@@ -959,6 +968,7 @@ function tick(timestamp) {
   }
 
   resetState();
+  spriteResetTopOfFrame();
 
   textureBind(0, textureError());
 
@@ -1025,7 +1035,7 @@ function tick(timestamp) {
         clear: true,
         clear_all: settings.render_scale_clear, // Not sure if this is ever faster in this case?
         final: effectsIsFinal(),
-        need_depth: false,
+        need_depth: need_depth_this_frame,
       });
     } else {
       framebufferStart({
@@ -1033,7 +1043,7 @@ function tick(timestamp) {
         height,
         clear: true,
         final: effectsIsFinal(),
-        need_depth: false,
+        need_depth: need_depth_this_frame,
       });
     }
   }
@@ -1248,7 +1258,12 @@ export function startup(params) {
 
   if (!good) {
     // eslint-disable-next-line no-alert
-    window.alert('Sorry, but your browser does not support WebGL or does not have it enabled.');
+    window.alert(`${
+      window.gl ?
+        'Error initializing WebGL.\n' :
+        'Error initializing WebGL: your browser does not support WebGL or does not have it enabled.\n'}` +
+      'Try completely closing and re-opening the app or browser.' +
+      '  If the problem persists, try restarting your device.');
     document.getElementById('loading').style.visibility = 'hidden';
     document.getElementById('nowebgl').style.visibility = 'visible';
     return false;

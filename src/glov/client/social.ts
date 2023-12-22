@@ -4,17 +4,19 @@
 /* eslint-env browser */
 
 import assert from 'assert';
+import * as settings from 'glov/client/settings';
 import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
+  PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
 import {
-  ClientPresenceData,
   ErrorCallback,
   FriendCmdResponse,
-  ServerPresenceData,
+  NetErrorCallback,
+  PresenceEntry,
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
@@ -46,7 +48,7 @@ export function friendIsBlocked(user_id: string): boolean {
   return value?.status === FriendStatus.Blocked;
 }
 
-function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<string>): void {
+function makeFriendCmdRequest(cmd: string, user_id: string, cb: NetErrorCallback<string>): void {
   user_id = user_id.toLowerCase();
   let requesting_user_id = netSubs().loggedIn();
   if (netDisconnected()) {
@@ -72,16 +74,16 @@ function makeFriendCmdRequest(cmd: string, user_id: string, cb: ErrorCallback<st
   });
 }
 
-export function friendAdd(user_id: string, cb: ErrorCallback<string>): void {
+export function friendAdd(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_add', user_id, cb);
 }
-export function friendRemove(user_id: string, cb: ErrorCallback<string>): void {
+export function friendRemove(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_remove', user_id, cb);
 }
-export function friendBlock(user_id: string, cb: ErrorCallback<string>): void {
+export function friendBlock(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_block', user_id, cb);
 }
-export function friendUnblock(user_id: string, cb: ErrorCallback<string>): void {
+export function friendUnblock(user_id: string, cb: NetErrorCallback<string>): void {
   makeFriendCmdRequest('friend_unblock', user_id, cb);
 }
 
@@ -129,32 +131,58 @@ cmd_parse.register({
   },
 });
 
-let invisible = 0;
+export const SOCIAL_ONLINE = 1;
+export const SOCIAL_AFK = 2;
+export const SOCIAL_INVISIBLE = 3;
+export type SocialPresenceStatus = typeof SOCIAL_ONLINE | typeof SOCIAL_AFK | typeof SOCIAL_INVISIBLE;
+declare module 'glov/client/settings' {
+  let social_presence: SocialPresenceStatus;
+}
+settings.register({
+  social_presence: {
+    default_value: SOCIAL_ONLINE,
+    type: cmd_parse.TYPE_INT,
+    range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
+    access_show: ['hidden'],
+  },
+});
+
+export function socialPresenceStatusGet(): SocialPresenceStatus {
+  return settings.social_presence;
+}
+export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
+  settings.set('social_presence', value);
+}
+
 cmd_parse.registerValue('invisible', {
   type: cmd_parse.TYPE_INT,
   help: 'Hide rich presence information from other users',
   label: 'Invisible',
   range: [0,1],
-  get: () => invisible,
-  set: (v: number) => (invisible = v),
+  get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
+  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
 });
 
-let afk = 0;
 cmd_parse.registerValue('afk', {
   type: cmd_parse.TYPE_INT,
   help: 'Appear as idle to other users',
   label: 'AFK',
   range: [0,1],
-  get: () => afk,
-  set: (v: number) => (afk = v),
+  get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
+  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
 });
 
-function onPresence(this: { presence_data?: ServerPresenceData }, data: ServerPresenceData): void {
+function onPresence(this: { presence_data?: PresenceEntry }, data: PresenceEntry): void {
   let user_channel = this;
   user_channel.presence_data = data;
 }
 
-let last_presence: ClientPresenceData | null = null;
+function onUnSubscribe(this: { presence_data?: PresenceEntry }): void {
+  delete this.presence_data;
+}
+
+type ClientPresenceState = Omit<PresenceEntry, 'id'>;
+let last_presence: ClientPresenceState | null = null;
 let send_queued = false;
 function richPresenceSend(): void {
   if (!netSubs().loggedIn() || !last_presence || send_queued) {
@@ -174,12 +202,25 @@ function richPresenceSend(): void {
     pak.send();
   });
 }
-export function richPresenceSet(active_in: boolean, state: string, payload?: unknown): void {
-  let active: number = !active_in || afk || (Date.now() - input.inputLastTime() > IDLE_TIME) ?
-    PRESENCE_INACTIVE :
-    PRESENCE_ACTIVE;
-  if (invisible) {
-    active = PRESENCE_OFFLINE;
+export function richPresenceSet(active_in: number, state: string, payload?: unknown): void {
+  let active: number;
+  switch (socialPresenceStatusGet()) {
+    case SOCIAL_AFK:
+      active = active_in === PRESENCE_ACTIVE ? PRESENCE_INACTIVE : active_in;
+      break;
+    case SOCIAL_INVISIBLE:
+      active = PRESENCE_OFFLINE;
+      break;
+    default:
+      active = active_in;
+  }
+  let is_idle = (Date.now() - input.inputLastTime() > IDLE_TIME);
+  if (is_idle) {
+    if (active === PRESENCE_ACTIVE) {
+      active = PRESENCE_INACTIVE;
+    } else if (active === PRESENCE_OFFLINE) {
+      active = PRESENCE_OFFLINE_INACTIVE;
+    }
   }
   payload = payload || null;
   if (!last_presence ||
@@ -396,6 +437,10 @@ export function getUserProfileImage(user_id: string): UserProfileImage {
   return default_profile_image;
 }
 
+export function getDefaultUserProfileImage(): UserProfileImage {
+  return default_profile_image;
+}
+
 export function setDefaultUserProfileImage(image: UserProfileImage): void {
   default_profile_image = image;
 }
@@ -456,4 +501,5 @@ export function socialInit(): void {
   });
 
   netSubs().onChannelMsg('user', 'presence', onPresence);
+  netSubs().onChannelEvent('user', 'unsubscribe', onUnSubscribe);
 }

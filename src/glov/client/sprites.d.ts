@@ -3,6 +3,7 @@ import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
 // TODO: move when converted to TypeScript
 import type { shaderCreate } from 'glov/client/shaders';
 type Shader = ReturnType<typeof shaderCreate>;
+import type { TSMap } from 'glov/common/types';
 import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
@@ -19,8 +20,12 @@ export interface Texture {
   height: number;
   src_width: number;
   src_height: number;
+  loaded: boolean;
+  err?: string;
   destroy(): void;
 }
+
+export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
 
 /**
  * Client Sprite class
@@ -40,7 +45,7 @@ export interface SpriteDrawParams {
   uvs?: number[]; // [u0, v0, u1, v1]
   color?: ROVec4;
   shader?: Shader;
-  shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
+  shader_params?: ShaderParams;
 }
 export type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
 export interface SpriteDraw3DParams {
@@ -53,7 +58,7 @@ export interface SpriteDraw3DParams {
   color?: ROVec4;
   doublesided?: boolean;
   shader?: Shader;
-  shader_params?: Partial<Record<string, number[]|ROVec1|ROVec2|ROVec3|ROVec4>>;
+  shader_params?: ShaderParams;
   bucket?: BucketType;
   facing?: number;
   face_right?: ROVec3;
@@ -127,14 +132,55 @@ export function spriteStartup(): void;
 export function spriteFlippedUVsApplyHFlip(spr: Sprite): void;
 export function spriteFlippedUVsRestore(spr: Sprite): void;
 
+export type SpriteData = { _opaque: 'SpriteData' }; // Maybe doesn't need to be opaque?
+
+// 4 arbitrary positions, colors, uvs
+// coordinates must be in counter-clockwise winding order
+export function spriteQueueRaw4Color(
+  texs: Texture[],
+  x0: number, y0: number, c0: ROVec4, u0: number, v0: number,
+  x1: number, y1: number, c1: ROVec4, u1: number, v1: number,
+  x2: number, y2: number, c2: ROVec4, u2: number, v2: number,
+  x3: number, y3: number, c3: ROVec4, u3: number, v3: number,
+  z: number,
+  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+): SpriteData;
+
+// Expects a buffer in the form of:
+//   x, y, r, g, b, a, u, v, (x4)
+export function spriteQueueRaw4ColorBuffer(
+  texs: Texture[],
+  buf: Float32Array/* length: 32*/,
+  z: number,
+  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+): SpriteData;
+
+// 4 arbitrary positions, 2 uvs
+// coordinates must be in counter-clockwise winding order
+export function spriteQueueRaw4(
+  texs: Texture[],
+  x0: number, y0: number,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  x3: number, y3: number,
+  z: number,
+  u0: number, v0: number, u1: number, v1: number,
+  color: ROVec4,
+  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+): SpriteData;
+
+export function spriteQueueRaw(
+  texs: Texture[],
+  x: number, y: number, z: number, w: number, h: number,
+  u0: number, v0: number, u1: number, v1: number,
+  color: ROVec4,
+  shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
+): SpriteData;
+
 // TODO: export with appropriate types
 // export type Shader = { _opaque: 'Shader' };
-// export function spriteDataAlloc(texs: Texture[], shader: Shader, shader_params, blend: BlendMode): void;
-// export function queueraw4color(
-// export function queueraw4(
+// export function spriteDataAlloc(texs: Texture[], shader: Shader, shader_params:ShaderParams, blend: BlendMode): void;
 // export function queueSpriteData(elem, z): void;
-// export function queueraw4colorBuffer(
-// export function queueraw(
 // export function queuesprite(
 // TODO: migrate to internal only?
 // export function blendModeSet(blend: BlendMode): void;

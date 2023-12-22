@@ -3,7 +3,13 @@
 
 import assert from 'assert';
 import { asyncParallel } from 'glov-async';
-import { clamp, defaults, deprecate, matchAll } from 'glov/common/util';
+import {
+  clamp,
+  dateToSafeLocaleString,
+  defaults,
+  deprecate,
+  matchAll,
+} from 'glov/common/util';
 import { v3copy, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
@@ -485,12 +491,31 @@ ChatUI.prototype.cmdParseInternal = function (str) {
   cmd_parse.handle(this.getAccessObj(), str, this.handle_cmd_parse_error);
 };
 
-function pad2(str) {
-  return `0${str}`.slice(-2);
-}
+// function pad2(str) {
+//   return `0${str}`.slice(-2);
+// }
+const DATE_FORMAT_OLD = {
+  year: 'numeric',
+  month: 'numeric',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: 'numeric',
+  second: undefined,
+};
+const DATE_FORMAT_RECENT = {
+  year: undefined,
+  month: 'numeric',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: 'numeric',
+  second: '2-digit',
+};
 function conciseDate(dt) {
-  return `${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())} ${pad2(dt.getHours())
-  }:${pad2(dt.getMinutes())}:${pad2(dt.getSeconds())}`;
+  let age = Date.now() - dt;
+  let is_old = age > 6*30*24*60*60*1000;
+  return dateToSafeLocaleString(dt, false, is_old ? DATE_FORMAT_OLD : DATE_FORMAT_RECENT);
+  // return `${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())} ${pad2(dt.getHours())
+  // }:${pad2(dt.getMinutes())}:${pad2(dt.getSeconds())}`;
 }
 let help_font_style = glov_font.styleColored(null, 0x000000ff);
 let help_font_style_cmd = glov_font.style(help_font_style, {
@@ -960,7 +985,7 @@ ChatUI.prototype.run = function (opts) {
         tooltip_pad: round(ui.tooltip_pad * 0.5),
         tooltip: is_url && !user_mouseover ?
           `Click to open ${url_label}` :
-          `Received${msg.id ? ` from "${msg.id}"` : ''} at ${conciseDate(new Date(msg.timestamp))}\n` +
+          `Received${msg.id ? ` from "${msg.id}"` : ''} on ${conciseDate(new Date(msg.timestamp))}\n` +
           'Right-click to copy message' +
           `${(user_mouseover ? '\nClick to view user info' : '')}`,
         pixel_scale: ui.tooltip_panel_pixel_scale * 0.5,
@@ -974,7 +999,23 @@ ChatUI.prototype.run = function (opts) {
     }
     if (click || longpress) {
       if (longpress || click.button === 2) {
-        ui.provideUserString('Chat Text', is_url || line);
+        let base_text = is_url || line;
+        let buttons = {};
+        if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+          buttons['User ID'] = {
+            cb: function () {
+              ui.provideUserString('User ID', msg.id);
+            },
+          };
+        }
+        if (msg.msg !== base_text) {
+          buttons['Just message'] = {
+            cb: function () {
+              ui.provideUserString('Chat Text', msg.msg);
+            },
+          };
+        }
+        ui.provideUserString('Chat Text', base_text, buttons);
       } else if (is_url) {
         self.cmdParseInternal(`url ${url_label}`);
       }

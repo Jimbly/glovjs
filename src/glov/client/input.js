@@ -20,6 +20,7 @@ let mouse_log = false;
 
 export const click = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
 export const inputClick = mouseUpEdge; // eslint-disable-line @typescript-eslint/no-use-before-define
+export const inputDrag = drag; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 const { deprecate } = require('glov/common/util.js');
 deprecate(exports, 'mouseDown', 'mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds');
@@ -467,7 +468,8 @@ function onKeyDown(event) {
   let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
-    code === KEYS.R && event.ctrlKey; // Chrome reload hotkey
+    code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
+    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey; // forward/back navigation
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
@@ -1250,8 +1252,12 @@ export function mouseOver(param) {
     for (let id in touches) {
       let touch = touches[id];
       if (checkPos(touch.cur_pos, pos_param)) {
-        touch.down_edge = 0;
-        touch.up_edge = 0;
+        if (touch.down_edge) {
+          touch.down_edge = 0;
+        }
+        if (touch.up_edge) {
+          touch.up_edge = 0;
+        }
         if (!param || !param.drag_target) {
           touch.dispatched = true;
         }
@@ -1599,6 +1605,7 @@ export function drag(param) {
     return null;
   }
   param = param || {};
+  let bounds_is_finite = param.w !== undefined && isFinite(param.w);
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   let min_dist = param.min_dist || 0;
@@ -1611,6 +1618,11 @@ export function drag(param) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
+      if (pointerLocked() && bounds_is_finite) {
+        // Likely just locked between frames and will get a drag on a wrong element at center of screen
+        // Generally, if pointer is locked, only non-positional drags are relevant
+        continue;
+      }
       camera2d.domDeltaToVirtual(delta, [touch_data.total/2, touch_data.total/2]);
       let total = delta[0] + delta[1];
       if (total < min_dist) {

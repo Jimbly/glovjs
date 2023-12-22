@@ -2,8 +2,14 @@
 import * as engine from 'glov/client/engine.js';
 import { localStorageGetJSON } from 'glov/client/local_storage.js';
 import { netSubs } from 'glov/client/net.js';
-import * as ui from 'glov/client/ui.js';
-import { uiTextHeight } from 'glov/client/ui.js';
+import {
+  buttonText,
+  modalDialog,
+  print,
+  uiButtonHeight,
+  uiButtonWidth,
+  uiTextHeight,
+} from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash.js';
 import { createAccountUI } from './account_ui.js';
 import {
@@ -40,7 +46,7 @@ function title(dt: number): void {
       label_w: 80,
       style: null,
       center: false,
-      button_width: ui.button_width,
+      button_width: uiButtonWidth(),
       font_height_small: uiTextHeight(),
     });
 
@@ -48,25 +54,25 @@ function title(dt: number): void {
   }
 
   let x = 10;
-  ui.print(null, x, y, Z.UI, 'Crawler Demo');
+  print(null, x, y, Z.UI, 'Crawler Demo');
   x += 10;
   y += uiTextHeight() + 2;
   for (let ii = 0; ii < 3; ++ii) {
     let slot = ii + 1;
     let manual_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.manual`, { timestamp: 0 });
-    ui.print(null, x, y, Z.UI, `Slot ${slot}`);
-    if (ui.buttonText({
-      x, y: y + ui.button_height, text: 'Load Game',
+    print(null, x, y, Z.UI, `Slot ${slot}`);
+    if (buttonText({
+      x, y: y + uiButtonHeight(), text: 'Load Game',
       disabled: !manual_data.timestamp
     })) {
       crawlerPlayWantMode('manual');
       urlhash.go(`?c=local&slot=${slot}`);
     }
-    if (ui.buttonText({
-      x, y: y + ui.button_height * 2 + 2, text: 'New Game',
+    if (buttonText({
+      x, y: y + uiButtonHeight() * 2 + 2, text: 'New Game',
     })) {
       if (manual_data.timestamp) {
-        ui.modalDialog({
+        modalDialog({
           text: 'This will overwrite your existing game when you next save.  Continue?',
           buttons: {
             yes: function () {
@@ -81,17 +87,17 @@ function title(dt: number): void {
         urlhash.go(`?c=local&slot=${slot}`);
       }
     }
-    x += ui.button_width + 2;
+    x += uiButtonWidth() + 2;
   }
   x = 10;
-  y += ui.button_height * 3 + 6;
+  y += uiButtonHeight() * 3 + 6;
   if (netSubs().loggedIn()) {
-    if (ui.buttonText({
+    if (buttonText({
       x, y, text: 'Online Test',
     })) {
       urlhash.go('?c=build');
     }
-    y += ui.button_height + 2;
+    y += uiButtonHeight() + 2;
   }
   if (crawlerCommWant()) {
     crawlerCommStart();

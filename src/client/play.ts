@@ -20,10 +20,14 @@ import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
-import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
+  buttonText,
+  drawBox,
+  menuUp,
   playUISound,
+  uiButtonWidth,
+  uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
@@ -245,7 +249,7 @@ function pauseMenu(): void {
   settings.set('volume_sound', pause_menu.getItem(1).value);
   settings.set('volume_music', pause_menu.getItem(2).value);
 
-  ui.menuUp();
+  menuUp();
 }
 
 function drawBar(
@@ -260,12 +264,12 @@ function drawBar(
     full_w = clamp(full_w, MIN_VIS_W, w - MIN_VIS_W/2);
   }
   let empty_w = w - full_w;
-  ui.drawBox({
+  drawBox({
     x, y, z,
     w, h,
   }, bar.bg, 1);
   if (full_w) {
-    ui.drawBox({
+    drawBox({
       x, y,
       w: full_w, h,
       z: z + 1,
@@ -277,7 +281,7 @@ function drawBar(
       temp_x -= 2;
       empty_w += 2;
     }
-    ui.drawBox({
+    drawBox({
       x: temp_x, y,
       w: empty_w, h,
       z: z + 1,
@@ -336,8 +340,8 @@ function moveBlockDead(): boolean {
     uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
     0, 0, 'You have died.');
 
-  if (ui.buttonText({
-    x: x + floor(w/2 - ui.button_width/2), y: y + floor(h/2), z,
+  if (buttonText({
+    x: x + floor(w/2 - uiButtonWidth()/2), y: y + floor(h/2), z,
     text: 'Respawn',
   })) {
     controller.goToFloor(0, 'stairs_in', 'respawn');
@@ -676,7 +680,7 @@ settings.register({
 });
 
 export function playStartup(): void {
-  ({ font } = ui);
+  font = uiGetFont();
   crawlerScriptAPIDummyServer(true); // No script API running on server
   crawlerPlayStartup({
     // on_broadcast: onBroadcast,

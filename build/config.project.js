@@ -1,5 +1,4 @@
 const gb = require('glov-build');
-
 const spritesheet = require('./spritesheet.js');
 const yamlproc = require('./yamlproc.js');
 

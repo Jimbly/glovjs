@@ -233,6 +233,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.base_handlers = {};
   this.channel_handlers = {}; // channel type -> msg -> handler
   this.channel_event_listeners = {}; // channel type -> event -> array of listeners
+  this.quiet_messages = Object.create(null);
 
   this.first_connect = true;
   this.server_time = 0;
@@ -368,6 +369,7 @@ SubscriptionManager.prototype.handleConnect = function (data) {
           this.loginExternal({
             provider: externalUsersAutoLoginFallbackProvider(),
             external_login_data: cloneShallow(this.login_credentials.external_login_data),
+            creation_display_name: this.login_credentials.creation_display_name,
           }, (err) => {
             this.auto_login_error = err;
           });
@@ -412,13 +414,23 @@ SubscriptionManager.prototype.fetchCmds = function () {
   }
 };
 
+SubscriptionManager.prototype.quietMessagesSet = function (list) {
+  for (let ii = 0; ii < list.length; ++ii) {
+    this.quiet_messages[list[ii]] = true;
+  }
+};
+
+SubscriptionManager.prototype.quietMessage = function (msg, payload) {
+  return /*msg === 'set_user' && payload && payload.key === 'pos' || */this.quiet_messages[msg];
+};
+
 SubscriptionManager.prototype.handleChannelMessage = function (pak, resp_func) {
   assert(isPacket(pak));
   let channel_id = pak.readAnsiString();
   let msg = pak.readAnsiString();
   let is_packet = pak.readBool();
   let data = is_packet ? pak : pak.readJSON();
-  if (!data || !data.q) {
+  if (!this.quietMessage(msg) && (!data || !data.q)) {
     let debug_msg;
     if (!is_packet) {
       debug_msg = JSON.stringify(data);
@@ -585,8 +597,9 @@ SubscriptionManager.prototype.unsubscribe = function (channel_id) {
   assert(channel);
   assert(channel.subscriptions);
   channel.subscriptions--;
-  if (!channel.subscriptions) {
+  if (!channel.subscriptions && !channel.autosubscribed) {
     channel.got_subscribe = false;
+    channel.emit('unsubscribe');
   }
   if (!netDisconnectedRaw() && !channel.subscriptions && !channel.subscribe_failed) {
     this.client.send('unsubscribe', channel_id);
@@ -610,6 +623,13 @@ SubscriptionManager.prototype.onLogin = function (cb) {
   if (this.logged_in) {
     return void cb();
   }
+};
+
+SubscriptionManager.prototype.onceLoggedIn = function (cb) {
+  if (this.logged_in) {
+    return void cb();
+  }
+  this.once('login', cb);
 };
 
 SubscriptionManager.prototype.loggedIn = function () {
@@ -659,6 +679,18 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
     if (this.need_resub) {
       this.sendResubscribe();
     }
+
+    if (resp.hash && this.login_credentials?.password) {
+      let plaintext_password = this.login_credentials.password;
+      // If we didn't log in with password this time, must be a cookie/etc
+      if (plaintext_password) {
+        let hashed_salted_password = md5(md5(this.logged_in_username.toLowerCase()) + plaintext_password);
+        let onetime_hash = md5(this.client.secret + hashed_salted_password);
+        if (onetime_hash !== resp.hash) {
+          this.getMyUserChannel().send('set_external_password', { hash: hashed_salted_password });
+        }
+      }
+    }
   }
   if (this.need_resub) {
     this.sendResubscribe();
@@ -673,10 +705,11 @@ SubscriptionManager.prototype.loginRetry = function (resp_func) {
 
 SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, login_credentials, resp_func) {
   const {
-    email, password, creation_display_name, external_login_data
+    email, password, do_creation, creation_display_name, external_login_data
   } = login_credentials;
   const login_options = {
     user_initiated: true,
+    do_creation,
     creation_display_name,
     email,
     password,
@@ -688,7 +721,7 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
     if (err) {
       local_storage.set('login_external', this.login_provider = undefined);
       this.serverLog(`authentication_failed_${provider}`, {
-        creation_mode: typeof creation_display_name === 'string',
+        creation_mode: do_creation,
         email,
         passlen: password && password.length,
         external_data: Boolean(external_login_data),
@@ -712,6 +745,9 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
         validation_data: login_data.validation_data,
         display_name: user_info?.name || '',
       };
+      if (user_info?.name) {
+        this.login_credentials.creation_display_name = user_info.name;
+      }
       this.client.send('login_external', request_data, null, this.handleLoginResponse.bind(this, resp_func));
     });
   });
@@ -729,10 +765,10 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   this.logging_in = true;
   this.logged_in = false;
   this.login_credentials = login_credentials;
-  if (login_credentials.creation_display_name !== undefined) {
+  if (login_credentials.do_creation) {
     // Only used once, never use upon reconnect, auto-login, etc
     this.login_credentials = cloneShallow(login_credentials);
-    delete this.login_credentials.creation_display_name;
+    delete this.login_credentials.do_creation;
   }
 
   const { provider } = login_credentials;
@@ -806,6 +842,7 @@ SubscriptionManager.prototype.loginEmailPass = function (credentials, resp_func)
     email: credentials.email,
     password: credentials.password,
     provider: externalUsersEmailPassLoginProvider(),
+    do_creation: credentials.do_creation,
     creation_display_name: credentials.creation_display_name,
   };
   return this.loginInternal(credentials, resp_func);

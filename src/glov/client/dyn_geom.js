@@ -12,6 +12,7 @@ export const FACE_CUSTOM = 1<<4;
 
 
 const DYN_VERT_SIZE = 4*3;
+const MAX_VERT_ELEM_COUNT = 65532 * DYN_VERT_SIZE; // strictly less than 65536, as index 65535 is special in WebGL2
 
 const assert = require('assert');
 const mat4LookAt = require('gl-mat4/lookAt');
@@ -135,6 +136,7 @@ const VERT_POOL_MAX_SIZE = vert_pool.map((a, idx) => min(POOL_UPPER_LIMIT, 1<<(1
 const TRI_POOL_MAX_SIZE = vert_pool.map((a, idx) => min(POOL_UPPER_LIMIT, 1<<(17-idx)));
 
 DynGeomData.prototype.allocVerts = function (num_verts) {
+  assert(num_verts * DYN_VERT_SIZE < MAX_VERT_ELEM_COUNT);
   this.num_verts = num_verts;
   let vert_pool_idx = log2(this.num_verts);
   assert(vert_pool_idx > 0);
@@ -358,7 +360,6 @@ let sprite_buffer_idx_batch_start = 0;
 let do_blending;
 let last_bound_shader;
 let last_bound_vshader;
-const MAX_VERT_ELEM_COUNT = 65532 * DYN_VERT_SIZE; // strictly less than 65536, as index 65535 is special in WebGL2
 let batches = [];
 function commit() {
   if (sprite_buffer_idx_cur === sprite_buffer_idx_batch_start) {

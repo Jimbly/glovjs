@@ -17,7 +17,7 @@ const { dataErrorQueueGet } = require('glov/common/data_error.js');
 const { cwstats, ChannelWorker, UNACKED_PACKET_ASSUME_GOOD } = require('./channel_worker.js');
 const client_comm = require('./client_comm.js');
 const { ds_stats, dataStoreMonitorFlush } = require('./data_store.js');
-const { dss_stats } = require('./data_store_shield.js');
+const { dss_stats, dataStoreLogSets } = require('./data_store_shield.js');
 const default_workers = require('./default_workers.js');
 const { ERR_NOT_FOUND } = require('./exchange.js');
 const fs = require('fs');
@@ -654,6 +654,7 @@ export class ChannelServer {
   monitorRestart() {
     if (!this.restarting) {
       this.monitor_restart_scheduled = false;
+      dataStoreLogSets(false);
       return;
     }
 
@@ -710,6 +711,9 @@ export class ChannelServer {
       setTimeout(() => {
         this.waiting_to_monitor_flush = false;
         dataStoreMonitorFlush();
+        if (this.restarting) {
+          dataStoreLogSets(true);
+        }
       }, 2000);
       if (!this.monitor_restart_scheduled) {
         this.monitor_restart_scheduled = true;

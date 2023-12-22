@@ -276,6 +276,7 @@ const invalid_names = {
   error: 1,
   info: 1,
   user: 1,
+  me: 1,
 };
 const regex_admin_username = /^(admin|mod_|gm_|moderator)/; // Might exist in the system, do not allow to be created
 function validUsername(user_id, allow_admin) {
@@ -316,6 +317,7 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
 
   let first_session;
   let email;
+  let hash;
   if (err) {
     client_channel.logCtx('info', `${login_message} failed: ${err}`);
   } else {
@@ -333,6 +335,7 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
 
     first_session = resp_data.first_session;
     email = resp_data.email;
+    hash = resp_data.hash;
   }
 
   return resp_func(err, {
@@ -340,6 +343,7 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
     email,
     user_id: client_channel.ids.user_id,
     display_name: client_channel.ids.display_name,
+    hash,
   });
 }
 
@@ -357,6 +361,7 @@ function channelServerExternalLoginSend(client, provider, provider_ids, user_id,
     display_name,
     ip: client.addr,
     ua: client.user_agent,
+    salt: client.secret,
   }, handleLoginResponse.bind(null, login_message, client, user_id, resp_func));
 }
 

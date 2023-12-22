@@ -66,7 +66,6 @@ const {
   spotTopOfFrame,
   spotUnfocus,
 } = require('./spot.js');
-const glov_sprites = require('./sprites.js');
 const {
   BLEND_PREMULALPHA,
   spriteClipped,
@@ -75,7 +74,9 @@ const {
   spriteChainedStart,
   spriteChainedStop,
   spriteCreate,
-} = glov_sprites;
+  spriteQueueRaw,
+  spriteQueueRaw4,
+} = require('./sprites.js');
 const { TEXTURE_FORMAT } = require('./textures.js');
 const {
   uiStyleDefault,
@@ -223,12 +224,11 @@ function doDesaturateEffect(saturation, brightness) {
 
 // DEPRECATED: use uiStyleCurrent().foo instead
 // exports.font_height;
+// export let button_height = 32;
+// export let button_width = 200;
 
 // overrideable default parameters
-export let button_height = 32;
-export let button_width = 200;
 export let modal_button_width = 100;
-export let button_img_size = button_height;
 export let modal_width = 600;
 export let modal_y0 = 200;
 export let modal_title_scale = 1.2;
@@ -272,9 +272,23 @@ export function uiFontStyleModal() {
 export function uiTextHeight() {
   return ui_style_current.text_height;
 }
+export function uiButtonHeight() {
+  return ui_style_current.button_height;
+}
+export function uiButtonWidth() {
+  return ui_style_current.button_width;
+}
 
 export let font;
 export let title_font;
+
+export function uiGetFont() {
+  return font;
+}
+export function uiGetTitleFont() {
+  return title_font;
+}
+
 export const sprites = {};
 
 let color_button = makeColorSet([1,1,1,1]);
@@ -525,6 +539,10 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   dom_elems_issued++;
   return elem;
 }
+let dom_tab_index = 0;
+export function uiGetDOMTabIndex() {
+  return ++dom_tab_index;
+}
 
 const base_ui_sounds = {
   button_click: 'button_click',
@@ -768,14 +786,17 @@ export function drawTooltip(param) {
   let w = tooltip_w - eff_tooltip_pad * 2;
   let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
-  let right = param.tooltip_right;
   if (!above && param.tooltip_auto_above_offset) {
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
   }
   let x = param.x;
   let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  let right = param.tooltip_right;
+  let center = param.tooltip_center;
   if (right && param.tooltip_auto_right_offset) {
     x += param.tooltip_auto_right_offset - eff_tooltip_w;
+  } else if (center && param.tooltip_auto_right_offset) {
+    x += (param.tooltip_auto_right_offset - eff_tooltip_w) / 2;
   }
   if (x + eff_tooltip_w > camera2d.x1()) {
     x = camera2d.x1() - eff_tooltip_w;
@@ -831,6 +852,7 @@ export function drawTooltipBox(param) {
     tooltip_above: param.tooltip_above,
     tooltip_auto_right_offset: param.w,
     tooltip_right: param.tooltip_right,
+    tooltip_center: param.tooltip_center,
     tooltip,
     tooltip_width: param.tooltip_width,
   });
@@ -972,8 +994,8 @@ export function buttonText(param) {
   assert(typeof param.text === 'string');
   // optional params
   // param.z = param.z || Z.UI;
-  param.w = param.w || button_width;
-  param.h = param.h || button_height;
+  param.w = param.w || ui_style_current.button_width;
+  param.h = param.h || ui_style_current.button_height;
   param.font_height = param.font_height || (param.style || ui_style_current).text_height;
 
   let spot_ret = buttonShared(param);
@@ -1037,8 +1059,8 @@ export function buttonImage(param) {
   assert(param.imgs || param.img && param.img.draw); // should be a sprite
   // optional params
   param.z = param.z || Z.UI;
-  param.w = param.w || button_img_size;
-  param.h = param.h || param.w || button_img_size;
+  param.w = param.w || ui_style_current.button_height;
+  param.h = param.h || param.w || ui_style_current.button_height;
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
 
@@ -1064,8 +1086,8 @@ export function button(param) {
   // optional params
   param.z = param.z || Z.UI;
   // w/h initialize differently than either buttonText or buttonImage
-  param.h = param.h || button_img_size;
-  param.w = param.w || button_width;
+  param.h = param.h || ui_style_current.button_height;
+  param.w = param.w || ui_style_current.button_width;
   param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
@@ -1106,35 +1128,46 @@ export function label(param) {
     tooltip,
     tooltip_above,
     tooltip_right,
+    img,
+    frame,
+    img_color,
+    img_color_focused,
   } = param;
   if (param.style) {
     assert(!param.style.color); // Received a FontStyle, expecting a UIStyle
   }
-  text = getStringFromLocalizable(text);
-  let use_font = param.font || font;
   let z = param.z || Z.UI;
-  let style = param.style || ui_style_current;
-  let size = param.size || style.text_height;
   assert(isFinite(x));
   assert(isFinite(y));
-  assert.equal(typeof text, 'string');
+  let style = param.style || ui_style_current;
+  let use_font = param.font || font;
+  let size = param.size || style.text_height;
+  if (img) {
+    // nothing?  add alignment support?
+  } else {
+    assert(text !== undefined);
+    text = getStringFromLocalizable(text);
+    if (tooltip) {
+      if (!w) {
+        w = use_font.getStringWidth(font_style, size, text);
+        if (align & ALIGN.HRIGHT) {
+          x -= w;
+        } else if (align & ALIGN.HCENTER) {
+          x -= w/2;
+        }
+      }
+      if (!h) {
+        h = size;
+        if (align & ALIGN.VBOTTOM) {
+          y -= h;
+        } else if (align & ALIGN.VCENTER) {
+          y -= h/2;
+        }
+      }
+    }
+  }
+
   if (tooltip) {
-    if (!w) {
-      w = use_font.getStringWidth(font_style, size, text);
-      if (align & ALIGN.HRIGHT) {
-        x -= w;
-      } else if (align & ALIGN.HCENTER) {
-        x -= w/2;
-      }
-    }
-    if (!h) {
-      h = size;
-      if (align & ALIGN.VBOTTOM) {
-        y -= h;
-      } else if (align & ALIGN.VCENTER) {
-        y -= h/2;
-      }
-    }
     assert(isFinite(w));
     assert(isFinite(h));
     let spot_ret = spot({
@@ -1142,13 +1175,26 @@ export function label(param) {
       tooltip: tooltip,
       tooltip_width: param.tooltip_width,
       tooltip_above,
-      tooltip_right,
+      tooltip_right: tooltip_right || param.align & ALIGN.HRIGHT,
+      tooltip_center: param.align & ALIGN.HCENTER,
       def: SPOT_DEFAULT_LABEL,
     });
     if (spot_ret.focused && spotPadMode()) {
-      if (label_font_style_focused) {
-        font_style = label_font_style_focused;
+      let need_focus_indicator = false;
+      if (img) {
+        if (img_color_focused) {
+          img_color = img_color_focused;
+        } else {
+          need_focus_indicator = true;
+        }
       } else {
+        if (label_font_style_focused) {
+          font_style = label_font_style_focused;
+        } else {
+          need_focus_indicator = true;
+        }
+      }
+      if (need_focus_indicator) {
         // No focused style provided, do a generic glow instead?
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
@@ -1156,11 +1202,19 @@ export function label(param) {
     }
   }
   let text_w = 0;
-  if (text) {
-    if (align) {
-      text_w = use_font.drawSizedAligned(font_style, x, y, z, size, align, w, h, text);
-    } else {
-      text_w = use_font.drawSized(font_style, x, y, z, size, text);
+  if (img) {
+    img.draw({
+      x, y, z, w, h,
+      color: img_color,
+      frame,
+    });
+  } else {
+    if (text) {
+      if (align) {
+        text_w = use_font.drawSizedAligned(font_style, x, y, z, size, align, w, h, text);
+      } else {
+        text_w = use_font.drawSized(font_style, x, y, z, size, text);
+      }
     }
   }
   profilerStopFunc();
@@ -1197,7 +1251,7 @@ function modalDialogRun() {
   camera2d.domDeltaToVirtual(virtual_size, dom_requirement);
   let fullscreen_mode = false;
   let eff_font_height = modal_dialog.font_height || (modal_dialog.style || ui_style_current).text_height;
-  let eff_button_height = button_height;
+  let eff_button_height = ui_style_current.button_height;
   let pad = modal_pad;
   let vpad = modal_pad * 0.5;
   let general_scale = 1;
@@ -1314,7 +1368,7 @@ function modalDialogRun() {
       did_button = ii;
     }
     let but_label = cur_button.label || buttons_default_labels[key_lower] || key;
-    if (buttonText(defaults({
+    if (button(defaults({
       key: `md_${key}`,
       x, y, z: Z.MODAL,
       w: eff_button_width,
@@ -1382,6 +1436,7 @@ export function modalTextEntry(param) {
     initial_select: true,
     text: param.edit_text,
     max_len: param.max_len,
+    max_visual_size: param.max_visual_size,
     esc_clears: false,
   });
   let buttons = {};
@@ -1463,6 +1518,7 @@ function uiTick(dt) {
   linkTick();
 
   dom_elems_issued = 0;
+  dom_tab_index = 0;
 
   let pp_this_frame = false;
   if (modal_dialog || menu_up) {
@@ -1582,7 +1638,7 @@ export function copyTextToClipboard(text) {
   return ret;
 }
 
-export function provideUserString(title, str) {
+export function provideUserString(title, str, alt_buttons) {
   let copy_success = copyTextToClipboard(str);
   modalTextEntry({
     edit_w: 400,
@@ -1591,7 +1647,7 @@ export function provideUserString(title, str) {
     text: copy_success ?
       default_copy_success_msg :
       default_copy_failure_msg,
-    buttons: { ok: null },
+    buttons: { ...(alt_buttons || {}), ok: null },
   });
 }
 
@@ -1661,7 +1717,7 @@ function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv
     blend = BLEND_PREMULALPHA;
     color = premulAlphaColor(color);
   }
-  glov_sprites.queueraw(sprite.texs,
+  spriteQueueRaw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
     tu0, tv0, tu1, tv1,
     color, glov_font.font_shaders.font_aa, spreadTechParams(spread), blend);
@@ -1855,7 +1911,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   }
   shader_param = line_last_shader_param;
 
-  glov_sprites.queueraw4(texs,
+  spriteQueueRaw4(texs,
     x1 + tangx, y1 + tangy,
     x1 - tangx, y1 - tangy,
     x0 - tangx, y0 - tangy,
@@ -1868,7 +1924,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
     // round caps (line3) - square caps (line2)
     let nx = dx * w/2;
     let ny = dy * w/2;
-    glov_sprites.queueraw4(texs,
+    spriteQueueRaw4(texs,
       x1 - tangx, y1 - tangy,
       x1 + tangx, y1 + tangy,
       x1 + tangx + nx, y1 + tangy + ny,
@@ -1876,7 +1932,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
       z,
       LINE_U2, LINE_V1, LINE_U3, LINE_V0,
       color, glov_font.font_shaders.font_aa, shader_param, blend);
-    glov_sprites.queueraw4(texs,
+    spriteQueueRaw4(texs,
       x0 - tangx, y0 - tangy,
       x0 + tangx, y0 + tangy,
       x0 + tangx - nx, y0 + tangy - ny,
@@ -1943,7 +1999,7 @@ export function drawCone(x0, y0, x1, y1, z, w0, w1, spread, color) {
   dy /= length;
   let tangx = -dy;
   let tangy = dx;
-  glov_sprites.queueraw4(sprites.cone.texs,
+  spriteQueueRaw4(sprites.cone.texs,
     x0 - tangx*w0, y0 - tangy*w0,
     x0 + tangx*w0, y0 + tangy*w0,
     x1 + tangx*w1, y1 + tangy*w1,
@@ -1962,14 +2018,15 @@ export function setFontHeight(_font_height) {
 function uiApplyStyle(style) {
   ui_style_current = style;
   exports.font_height = style.text_height;
+  exports.button_width = style.button_width;
+  exports.button_height = style.button_height;
   fontSetDefaultSize(style.text_height);
 }
 
 export function scaleSizes(scale) {
-  button_height = round(32 * scale);
+  let button_height = round(32 * scale);
   let text_height = round(24 * scale);
-  button_width = round(200 * scale);
-  button_img_size = button_height;
+  let button_width = round(200 * scale);
   modal_button_width = round(button_width / 2);
   modal_width = round(600 * scale);
   modal_y0 = round(200 * scale);
@@ -1984,6 +2041,8 @@ export function scaleSizes(scale) {
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
     text_height,
+    button_width,
+    button_height,
   });
 }
 
@@ -1992,7 +2051,7 @@ export function setPanelPixelScale(scale) {
 }
 
 export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) {
-  modal_button_width = _modal_button_width || round(button_width / 2);
+  modal_button_width = _modal_button_width || round(ui_style_current.button_width / 2);
   modal_width = width || 600;
   modal_y0 = y0 || 200;
   modal_title_scale = title_scale || 1.2;
@@ -2002,5 +2061,5 @@ export function setModalSizes(_modal_button_width, width, y0, title_scale, pad) 
 export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
   tooltip_width = _tooltip_width;
   tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
-  tooltip_pad = modal_pad / 2 * _tooltip_panel_pixel_scale;
+  tooltip_pad = round(modal_pad / 2 * _tooltip_panel_pixel_scale);
 }

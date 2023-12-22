@@ -35,9 +35,11 @@ import {
   drawRect,
   makeColorSet,
   modalTextEntry,
+  panel,
+  uiButtonHeight,
+  uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
-import * as ui from 'glov/client/ui';
 import {
   Diff,
   Differ,
@@ -922,7 +924,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
   y = min(scroll_y_start + y, y1);
 
   const PANEL_PAD = 3;
-  ui.panel({
+  panel({
     x: x0 - PANEL_PAD, y: y0 - PANEL_PAD, z: z - 1,
     w: x1 - x0 + PANEL_PAD * 2,
     h: y - y0 + PANEL_PAD * 2,
@@ -1474,7 +1476,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
       size: font_height,
       text: `Floor: ${game_state.floor_id}`,
     });
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x, y, z,
       w: button_w, h: button_w,
       text: '-',
@@ -1482,7 +1484,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     })) {
       getChatUI().cmdParse(`floor ${game_state.floor_id - 1}`);
     }
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x + button_w + 1, y, z,
       w: button_w, h: button_w,
       text: '+',
@@ -1496,7 +1498,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
       size: font_height,
       text: `Width: ${level.w}`,
     });
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x, y, z,
       w: button_w, h: button_w,
       text: '-',
@@ -1504,7 +1506,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     })) {
       resizeLevel(-1, 0);
     }
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x + button_w + 1, y, z,
       w: button_w, h: button_w,
       text: '+',
@@ -1518,7 +1520,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
       size: font_height,
       text: `Height: ${level.h}`,
     });
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x, y, z,
       w: button_w, h: button_w,
       text: '-',
@@ -1526,7 +1528,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     })) {
       resizeLevel(0, -1);
     }
-    if (ui.buttonText({
+    if (buttonText({
       x: button_x + button_w + 1, y, z,
       w: button_w, h: button_w,
       text: '+',
@@ -1535,7 +1537,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
     y += font_height + 2;
 
-    if (ui.buttonText({
+    if (buttonText({
       x, y, z,
       h: button_height,
       font,
@@ -1546,7 +1548,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
     y += button_height + 2;
 
-    if (ui.buttonText({
+    if (buttonText({
       x, y, z,
       h: button_height,
       font,
@@ -1556,7 +1558,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
     y += button_height + 2;
 
-    if (ui.buttonText({
+    if (buttonText({
       x, y, z,
       h: button_height,
       font,
@@ -1689,8 +1691,8 @@ export function crawlerBuildModeStartup(params: {
   level_props?: string[];
   cell_props?: string[];
 }): void {
-  font = params.font || ui.font;
-  button_height = params.button_height || ui.button_height;
+  font = params.font || uiGetFont();
+  button_height = params.button_height || uiButtonHeight();
   event_items = crawlerScriptListEvents().map((id: string) => ({
     name: id,
     tag: id,

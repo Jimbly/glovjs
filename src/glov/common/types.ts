@@ -91,22 +91,14 @@ export interface CmdDef {
 }
 
 /**
- * Client presence data
+ * Presence data
  */
-export interface ClientPresenceData {
+export type PresenceEntry<T=unknown> = {
   active: number;
   state: string;
-  payload: unknown;
-}
-/**
- * Server presence data
- */
-export interface ServerPresenceData {
-  id: number;
-  active: number;
-  state: string;
-  payload: unknown;
-}
+  id: number; // note: not sent from client -> server
+  payload?: T;
+};
 
 export type EntityID = number;
 
@@ -204,10 +196,13 @@ export interface ClientChannelWorker {
   readonly data: {
     public?: unknown;
   };
+  readonly channel_id: string;
+  readonly channel_type: string;
+  readonly channel_subid: string;
 }
 
 export interface UserChannel extends ClientChannelWorker {
-  presence_data: TSMap<ServerPresenceData>;
+  presence_data: TSMap<PresenceEntry>;
 }
 
 // TODO: Delete this type and all usages of it.
@@ -219,3 +214,8 @@ export type DeepPartial<T> = T extends DataObject ? {
 } : T;
 
 export type NumberBoolean = 0 | 1;
+
+export type TextVisualLimit = {
+  font_height: number;
+  width: number;
+};

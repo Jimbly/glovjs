@@ -144,7 +144,9 @@ export function linkText(param) {
   param.w = w;
   param.h = h;
   param.def = SPOT_DEFAULT_BUTTON;
+  delete param.url; // do *not* let spot() do link/URL handling, we do it ourselves below
   let spot_ret = spot(param);
+  param.url = url;
   let style_use = spot_ret.focused ?
     (style_link_hover || style_link_hover_default) :
     (style_link || style_link_default);

@@ -7,6 +7,7 @@ import {
   v4mul,
   vec4,
 } from 'glov/common/vmath';
+import { getFrameIndex } from './engine';
 import {
   ALIGN,
   FontStyle,
@@ -229,10 +230,10 @@ class CollapsagoriesImpl {
     let yend = this.view_y1 - this.num_headers * header_h;
     let ret;
     if (ystart >= yend) {
-      spriteClipPush(z - 1, x, ystart, w, 0);
+      spriteClipPush(z - 0.1, x, ystart, w, 0);
       ret = false;
     } else {
-      spriteClipPush(z - 1, x, ystart, w, yend - ystart);
+      spriteClipPush(z - 0.1, x, ystart, w, yend - ystart);
       ret = true;
     }
     this.clipper_active = true;
@@ -252,11 +253,14 @@ export function collapsagoriesCreate(): Collapsagories {
   return new CollapsagoriesImpl();
 }
 
+let active_elem_frame_index: number;
 let active_elem: CollapsagoriesImpl | null = null;
 export function collapsagoriesStart(param: CollapsagoriesStartParam): void {
-  assert(!active_elem);
+  let frame_index = getFrameIndex();
+  assert(!active_elem || active_elem_frame_index !== frame_index); // possibly left over from a previous frame
   active_elem = getUIElemData('collapsagories', param, collapsagoriesCreate);
   active_elem.start(param);
+  active_elem_frame_index = frame_index;
 }
 
 export function collapsagoriesHeader<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {

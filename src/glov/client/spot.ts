@@ -157,6 +157,8 @@ export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFiel
   def: SpotParamBase; // inherit all undefined SpotParamBase members from this
   tooltip?: TooltipValue | null;
   hook?: HookList;
+  url?: string;
+  internal?: boolean; // For links (spots with `url`): default `true`
 }
 
 export interface SpotSubParam extends Box, SpotComputedFields {
@@ -226,6 +228,7 @@ import {
   mousePosIsTouch,
   padButtonDownEdge,
 } from './input.js';
+import { link } from './link';
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
@@ -955,6 +958,7 @@ export function spotTopOfFrame(): void {
     pad_mode = false;
   }
   sub_stack.length = 0;
+  focus_sub_rect = null;
 }
 
 export function spotSuppressPad(): void {
@@ -1032,7 +1036,10 @@ export function spotSubPop(): void {
 export function spotSubBegin(param_in: SpotSubParam): void {
   assert(param_in.key);
   if (focus_sub_rect) {
-    assert(!focus_sub_rect, `Recursive spot, parent:${focus_sub_rect.key}`); // no recursive nesting supported yet
+    // no recursive nesting supported yet
+    assert(!focus_sub_rect, `Recursive spot, parent:${focus_sub_rect.key},` +
+      ` self:${param_in.key},` +
+      ` same=${param_in === focus_sub_rect}`);
   }
   spotKey(param_in);
   let sub_rect = param_in as SpotSubInternal;
@@ -1120,6 +1127,10 @@ function spotFocusSetSilent(param: SpotParam): void {
   const sticky_focus = param.sticky_focus === undefined ? def.sticky_focus : param.sticky_focus;
   focus_is_sticky = sticky_focus;
   focus_key_nonsticky = null;
+}
+
+export function spotGetCurrentFocusKey(): string {
+  return [focus_key, focus_is_sticky, focus_key_nonsticky].join(';');
 }
 
 export function spotFocusSteal(param: SpotParam): void {
@@ -1431,6 +1442,14 @@ export function spot(param: SpotParam): SpotRet {
       }
     }
     if (async_activate_key === param.key_computed) {
+      button_activate = true;
+    }
+  }
+  if (param.url) {
+    if (param.internal === undefined) {
+      param.internal = true;
+    }
+    if (link(param)) {
       button_activate = true;
     }
   }

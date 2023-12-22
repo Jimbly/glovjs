@@ -121,13 +121,14 @@ function getValue(query_string, opts) {
 
 let last_history_str = null; // always re-set it on the first update
 
-function goInternal(query_string) { // with the '?'
+// if `skip_apply` is set, we update the browser's URL/history, but do _not_ call any callbacks
+function goInternal(query_string, for_init, skip_apply, route_only) {
   // Update all values, except those hidden by what is currently in the query string
   let hidden = {};
   for (let key in params) {
     let opts = params[key];
     if (opts.hides) {
-      if (getValue(query_string, opts)) {
+      if (for_init ? opts.value : getValue(query_string, opts)) {
         for (let otherkey in opts.hides) {
           hidden[otherkey] = 1;
         }
@@ -141,13 +142,17 @@ function goInternal(query_string) { // with the '?'
       continue;
     }
     let opts = params[key];
-    let new_value = getValue(query_string, opts);
+    let new_value = for_init ? opts.value : getValue(query_string, opts);
     if (opts.type === TYPE_SET) {
       for (let v in new_value) {
-        if (!opts.value[v]) {
+        if (!opts.value[v] || for_init) {
           opts.value[v] = 1;
           dirty[key] = true;
         }
+      }
+      if (route_only && !opts.routes) {
+        // do not clear any existing querystring values from a route_only operation
+        continue;
       }
       for (let v in opts.value) {
         if (!new_value[v]) {
@@ -156,27 +161,32 @@ function goInternal(query_string) { // with the '?'
         }
       }
     } else {
-      if (new_value !== opts.value) {
+      if (route_only && !opts.routes && !new_value) {
+        // do not clear any existing querystring values from a route_only operation
+        continue;
+      }
+      if (new_value !== opts.value || for_init) {
         dirty[key] = true;
         opts.value = new_value;
       }
     }
   }
 
-  // Call all change callbacks
-  for (let key in dirty) {
-    let opts = params[key];
-    if (opts.change) {
-      opts.change(opts.value);
+  if (!skip_apply) {
+    // Call all change callbacks
+    for (let key in dirty) {
+      let opts = params[key];
+      if (opts.change) {
+        opts.change(opts.value, for_init);
+      }
     }
+    callEach(on_change, for_init);
   }
-  callEach(on_change);
 }
 
 let eff_title;
-function toString() {
+function toString(route_only) {
   eff_title = '';
-  let values = [];
   let hidden = {};
   for (let key in params) {
     let opts = params[key];
@@ -221,6 +231,7 @@ function toString() {
     }
     break;
   }
+  let values = [];
   for (let key in params) {
     if (hidden[key]) {
       continue;
@@ -243,11 +254,14 @@ function toString() {
     eff_title = title_transformer(eff_title);
   }
   eff_title = String(eff_title);
+  if (route_only) {
+    values = [];
+  }
   return `${root_value}${values.length ? '?' : ''}${values.join('&')}`;
 }
 
 export function refreshTitle() {
-  toString();
+  toString(false);
   if (eff_title && eff_title !== document.title) {
     document.title = eff_title;
   }
@@ -263,7 +277,7 @@ function periodicRefreshTitle() {
 function onPopState() {
   let query_string = queryString();
   last_history_str = query_string;
-  goInternal(query_string);
+  goInternal(query_string, false, false, false);
   refreshTitle();
 }
 
@@ -317,7 +331,7 @@ function updateHistoryCommit() {
   profilerStop();
 }
 function updateHistory(new_need_push_state) {
-  let new_str = toString();
+  let new_str = toString(false);
   if (last_history_str === new_str) {
     return;
   }
@@ -358,6 +372,11 @@ export function startup(param) {
     refreshTitle();
     setTimeout(periodicRefreshTitle, 1000);
   }
+}
+
+// Optional: fire all relevant `change` callbacks for any parameters with values
+export function urlhashFireInitialChanges() {
+  goInternal(null, true, false, false);
 }
 
 function routeEx(new_route) {
@@ -483,7 +502,20 @@ export function get(key) {
   return opts.value;
 }
 
-export function go(query_string) { // with the '?'
-  goInternal(query_string);
+export function getRouteString() {
+  return toString(true);
+}
+
+// query_string with the '?'
+export function go(query_string, skip_apply) {
+  goInternal(query_string, false, skip_apply, false);
+  updateHistory(true);
+}
+
+// apply primarily the route-based parts of the URL, leaving all (existing)
+// querystring-based ones alone, although this will also apply changes to
+// querystring-based values if passed in.
+export function goRoute(route_string, skip_apply) {
+  goInternal(route_string, false, skip_apply, true);
   updateHistory(true);
 }

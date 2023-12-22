@@ -3,7 +3,6 @@
 
 import assert from 'assert';
 import { clamp, merge } from 'glov/common/util';
-import verify from 'glov/common/verify';
 import { Vec4, vec2, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
@@ -172,7 +171,7 @@ class ScrollAreaInternal implements ScrollArea {
   begin(params?: ScrollAreaOpts): void {
     this.applyParams(params);
     let { x, y, w, h, z, id } = this;
-    verify(!this.began); // Checking mismatched begin/end
+    // verify(!this.began); // Checking mismatched begin/end - likely from previous frame crash though!
     this.began = true;
     spotSubBegin({ x, y, w, h, key: id });
     // Set up camera and clippers

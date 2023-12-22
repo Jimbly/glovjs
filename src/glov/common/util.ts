@@ -10,6 +10,7 @@ const { PI, abs, floor, min, max, random, round, pow, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const VALID_USER_ID_REGEX = /^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/;
 
 export function nop(): void {
   // empty
@@ -462,11 +463,20 @@ export function secondsSince2020(): number {
   return floor(Date.now() / 1000) - 1577836800;
 }
 
-export function dateToSafeLocaleString(date: Date, date_only: boolean): string {
+export function dateToSafeLocaleString(date: Date, date_only: boolean, options?: {
+  weekday?: 'long' | 'short';
+  year?: 'numeric' | '2-digit';
+  month?: 'numeric' | '2-digit' | 'long' | 'short';
+  day?: 'numeric' | '2-digit';
+  hour?: 'numeric' | '2-digit';
+  minute?: 'numeric' | '2-digit';
+  second?: 'numeric' | '2-digit';
+  timeZoneName?: 'long' | 'short';
+}): string {
   // Uses toString as a fallback since some browsers do not properly detect default locale.
   let date_text;
   try {
-    date_text = date_only ? date.toLocaleDateString() : date.toLocaleString();
+    date_text = date_only ? date.toLocaleDateString(undefined, options) : date.toLocaleString(undefined, options);
   } catch (e) {
     console.error(e, '(Using toString as fallback)');
     date_text = date_only ? date.toDateString() : date.toString();
@@ -638,4 +648,13 @@ export function unpromisify<P extends any[], T=never>(f: (this: T, ...args: P) =
 export function msToSS2020(milliseconds: number): number {
   // Integer seconds since Jan 1st, 2020
   return floor(milliseconds / 1000) - 1577836800;
+}
+
+const whitespace_regex = /\s/;
+export function trimEnd(s: string): string {
+  let idx = s.length;
+  while (idx > 0 && s[idx-1].match(whitespace_regex)) {
+    --idx;
+  }
+  return s.slice(0, idx);
 }
