@@ -9,6 +9,7 @@ const { alphaDraw, alphaDrawListSize, alphaListPush, alphaListPop } = require('.
 const effects = require('./effects.js');
 const engine = require('./engine.js');
 const { framebufferCapture } = require('./framebuffer.js');
+const mat4Copy = require('gl-mat4/copy');
 const mat4LookAt = require('gl-mat4/lookAt');
 const { max, PI, tan } = Math;
 const { shaderCreate, shadersPrelink } = require('./shaders.js');
@@ -45,10 +46,14 @@ export let OFFSET_GOLDEN = vec3(-1 / 1.618, -1, 1 / 1.618 / 1.618);
 let snapshot_shader;
 
 let viewport_save = vec4();
+let projection_save = mat4();
+let mat_view_save = mat4();
 
 export function viewportRenderPrepare(param) {
   const { pre, viewport } = param;
   v4copy(viewport_save, engine.viewport);
+  mat4Copy(projection_save, engine.mat_projection);
+  mat4Copy(mat_view_save, engine.mat_view);
   alphaListPush();
   sprites.spriteQueuePush();
   camera2d.push();
@@ -77,7 +82,9 @@ export function viewportRenderFinish(param) {
   alphaListPop();
   camera2d.pop();
   sprites.spriteQueuePop();
+  engine.setProjection(projection_save);
   engine.setViewport(viewport_save);
+  engine.setGlobalMatrices(mat_view_save);
   engine.startSpriteRendering();
   scissorPop();
 }

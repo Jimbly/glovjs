@@ -673,6 +673,11 @@ export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
   // );
 }
 
+export function setProjection(new_mat) {
+  mat4Copy(mat_projection, new_mat);
+  mat_projection_10 = mat_projection[10];
+}
+
 export function setZRange(znear, zfar) {
   ZNEAR = znear;
   ZFAR = zfar;
