@@ -144,6 +144,7 @@ export type ScoreSystemParam<ScoreType> = {
   asc: boolean;
   rel?: number;
   num_names?: number;
+  histogram?: boolean; // also fetch histogram data
 };
 type HighScoreListEntryRaw = {
   n?: string | string[]; // representative list of user display names
@@ -151,10 +152,17 @@ type HighScoreListEntryRaw = {
   c?: number; // count of users at this score
   r?: number; // rank, if not implicit
 };
+type HighScoreHistogramRaw = {
+  s: number; // start
+  b: number; // bucket_size
+  h: number[];
+};
 type HighScoreListRaw = {
   total: number;
   my_rank?: number;
+  my_score?: number;
   list: HighScoreListEntryRaw[];
+  histo?: HighScoreHistogramRaw;
 };
 export type HighScoreListEntry<ScoreType> = {
   names: string[];
@@ -163,10 +171,17 @@ export type HighScoreListEntry<ScoreType> = {
   rank: number;
   score: ScoreType;
 };
+export type HighScoreListHistogram = {
+  start: number;
+  bucket_size: number;
+  counts: number[];
+};
 export type HighScoreList<ScoreType> = {
   total: number;
   my_rank?: number;
+  my_score?: number;
   list: HighScoreListEntry<ScoreType>[];
+  histogram?: HighScoreListHistogram;
 };
 class ScoreSystemImpl<ScoreType> {
   score_to_value: (s: ScoreType) => number;
@@ -175,6 +190,7 @@ class ScoreSystemImpl<ScoreType> {
   asc: boolean;
   rel: number;
   num_names: number;
+  histogram: boolean;
   SCORE_KEY: string;
   LS_KEY: string;
   constructor(param: ScoreSystemParam<ScoreType>) {
@@ -183,6 +199,7 @@ class ScoreSystemImpl<ScoreType> {
     this.asc = param.asc;
     this.rel = param.rel || 20;
     this.num_names = param.num_names || 3;
+    this.histogram = param.histogram || false;
     let level_defs: LevelDefInternal<ScoreType>[] = [];
     if (typeof param.level_defs === 'number') {
       for (let level_idx = 0; level_idx < param.level_defs; ++level_idx) {
@@ -234,6 +251,7 @@ class ScoreSystemImpl<ScoreType> {
     let ret: HighScoreList<ScoreType> = {
       total: scores.total,
       my_rank: scores.my_rank,
+      my_score: scores.my_score,
       list: [],
     };
     let rank = 1;
@@ -275,6 +293,16 @@ class ScoreSystemImpl<ScoreType> {
       rank = this_rank + count;
     }
 
+    let { histo } = scores;
+    if (histo) {
+      let histogram: HighScoreListHistogram = {
+        start: histo.s,
+        bucket_size: histo.b,
+        counts: histo.h,
+      };
+      ret.histogram = histogram;
+    }
+
     this.high_scores[level_idx] = ret;
   }
   private makeURL(api: string, ld: LevelDef): string {
@@ -288,6 +316,9 @@ class ScoreSystemImpl<ScoreType> {
     }
     if (this.asc) {
       url += '&asc';
+    }
+    if (this.histogram) {
+      url += '&histo';
     }
     return url;
   }
