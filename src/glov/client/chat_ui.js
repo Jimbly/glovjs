@@ -167,6 +167,10 @@ function defaultGetRoles() {
   return {};
 }
 
+function filterIdentity(str) {
+  return str;
+}
+
 function ChatUI(params) {
   assert.equal(typeof params, 'object');
   assert.equal(typeof params.max_len, 'number');
@@ -251,6 +255,7 @@ function ChatUI(params) {
   });
   this.styles.join_leave = this.styles.system;
   this.classifyRole = params.classifyRole;
+  this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
 
   if (netSubs()) {
     netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
@@ -847,7 +852,7 @@ ChatUI.prototype.run = function (opts) {
             }
             this.history.add(text);
             if (netSubs()) {
-              netSubs().serverLog('cmd', text);
+              netSubs().serverLog('cmd', this.cmdLogFilter(text));
             }
             this.cmdParse(text.slice(1), (err) => {
               if (!err) {
