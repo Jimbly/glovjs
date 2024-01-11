@@ -3,6 +3,7 @@
 
 /* eslint-disable import/order */
 const assert = require('assert');
+const verify = require('glov/common/verify');
 const engine = require('./engine.js');
 const { fontStyle } = require('./font.js');
 const camera2d = require('./camera2d.js');
@@ -64,6 +65,7 @@ export function link(param) {
   if (!state) {
     state = state_cache[key] = { clicked: false };
   }
+  verify(state.frame !== engine.frame_index); // two links with the same key on the same frame
   state.frame = engine.frame_index;
 
   let rect = { x, y, w, h };
