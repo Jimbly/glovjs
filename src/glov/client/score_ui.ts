@@ -25,6 +25,7 @@ import { spriteClipPop, spriteClipPush } from './sprites';
 import * as ui from './ui';
 import {
   ButtonTextParam,
+  getUIElemData,
   uiButtonHeight,
 } from './ui';
 
@@ -40,7 +41,6 @@ export type ColumnDef = {
 let font: Font;
 
 let scores_edit_box: EditBox;
-let scores_scroll: ScrollArea;
 function getName(a: ColumnDef): string {
   return a.name;
 }
@@ -133,6 +133,8 @@ export type ScoresDrawParam<ScoreType> = {
   color_me_background: ROVec4;
   color_line: ROVec4;
   allow_rename: boolean;
+  no_header?: boolean;
+  scroll_key?: string;
 };
 
 const skipped_rank_column_def: ColumnDef = {
@@ -142,8 +144,6 @@ const skipped_rank_column_def: ColumnDef = {
 };
 
 let last_level_idx: number = -1;
-let scroll_h_last_frame = 0;
-let scroll_h_this_frame = 0;
 let force_show_rename = false;
 export function scoresDraw<ScoreType>({
   score_system,
@@ -159,6 +159,8 @@ export function scoresDraw<ScoreType>({
   color_me_background,
   color_line,
   allow_rename,
+  no_header,
+  scroll_key,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
   if (!font) {
@@ -173,11 +175,6 @@ export function scoresDraw<ScoreType>({
     scroll_origin = now;
   }
 
-  if (autoResetEachFrame('score_ui')) {
-    scroll_h_last_frame = scroll_h_this_frame;
-    scroll_h_this_frame = 0;
-  }
-
   const pad = size;
   const hpad = pad/2;
   const button_height = uiButtonHeight();
@@ -188,14 +185,27 @@ export function scoresDraw<ScoreType>({
       'Loading...');
     return y + height;
   }
-  if (!scores_scroll) {
-    scores_scroll = scrollAreaCreate({
-      w: width,
-      rate_scroll_click: line_height,
-      background_color: null,
-      auto_hide: true,
-    });
+  scroll_key = scroll_key || 'default';
+  type ScrollInfo = {
+    scroll_h_this_frame: number;
+    scroll_h_last_frame: number;
+    scroll_area: ScrollArea;
+  };
+  let scroll_info = getUIElemData('scorescroll', { key: scroll_key }, function (): ScrollInfo {
+    return {
+      scroll_h_this_frame: 0,
+      scroll_h_last_frame: 0,
+      scroll_area: scrollAreaCreate({
+        background_color: null,
+        auto_hide: true,
+      }),
+    };
+  });
+  if (autoResetEachFrame(`score_ui_${scroll_key}`)) {
+    scroll_info.scroll_h_last_frame = scroll_info.scroll_h_this_frame;
+    scroll_info.scroll_h_this_frame = 0;
   }
+  let scores_scroll = scroll_info.scroll_area;
   let vis_width = width - scores_scroll.barWidth();
   let widths_total = 0;
   for (let ii = 0; ii < columns.length; ++ii) {
@@ -221,14 +231,18 @@ export function scoresDraw<ScoreType>({
     }
     y += line_height;
   }
-  drawSet(columns.map(getName), style_header, true);
-  y += 2;
-  ui.drawLine(x, y, x+width, y, z, 1, 1, color_line);
-  y += 1;
+  if (!no_header) {
+    drawSet(columns.map(getName), style_header, true);
+    y += 2;
+    ui.drawLine(x, y, x+width, y, z, 1, 1, color_line);
+    y += 1;
+  }
   const scores_scroll_h = scroll_max_y - y;
   scores_scroll.begin({
     x, y,
+    w: width,
     h: scores_scroll_h,
+    rate_scroll_click: line_height,
   });
   let scroll_pos = round(scores_scroll.getScrollPos());
   let scroll_y0 = scroll_pos - line_height * 2;
@@ -321,8 +335,8 @@ export function scoresDraw<ScoreType>({
   }
   let set_pad = size / 2;
   y += set_pad/2;
-  scroll_h_this_frame = max(scroll_h_this_frame, y);
-  scores_scroll.end(max(scroll_h_last_frame, scroll_h_this_frame));
+  scroll_info.scroll_h_this_frame = max(scroll_info.scroll_h_this_frame, y);
+  scores_scroll.end(max(scroll_info.scroll_h_last_frame, scroll_info.scroll_h_this_frame));
   x = x_save;
   y = y_save + min(scores_scroll_h, y);
   y += set_pad/2;
