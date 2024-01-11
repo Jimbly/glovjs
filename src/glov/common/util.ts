@@ -658,3 +658,54 @@ export function trimEnd(s: string): string {
   }
   return s.slice(0, idx);
 }
+
+function isDigit(c: string): boolean {
+  return c >= '0' && c <= '9';
+}
+
+const char_code_0 = '0'.charCodeAt(0);
+export function cmpNumericSmart(a: string, b: string): number {
+  // smart compare numbers within strings
+  let ia = 0;
+  let ib = 0;
+  while (ia < a.length && ib < b.length) {
+    if (isDigit(a[ia])) {
+      if (isDigit(b[ib])) {
+        // compare numbers
+        let va = 0;
+        while (isDigit(a[ia])) {
+          va *= 10;
+          va += a.charCodeAt(ia++) - char_code_0;
+        }
+        let vb = 0;
+        while (isDigit(b[ib])) {
+          vb *= 10;
+          vb += b.charCodeAt(ib++) - char_code_0;
+        }
+        let d = va - vb;
+        if (d) {
+          return d;
+        }
+      } else {
+        // numbers before strings
+        return -1;
+      }
+    } else if (isDigit(b[ib])) {
+      return 1;
+    } else {
+      let d = a[ia].toLowerCase().charCodeAt(0) - b[ib].toLowerCase().charCodeAt(0);
+      if (d) {
+        return d;
+      }
+      ia++;
+      ib++;
+    }
+  }
+  if (ia < a.length) {
+    return 1;
+  } else if (ib < b.length) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
