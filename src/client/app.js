@@ -13,14 +13,7 @@ function onLoad() {
   called_once = true;
   window.time_load_onload = Date.now();
   require('glov/client/bootstrap.js');
-  // require('glov/client/worker_comm.js').startup(); // First, so it gets loading quickly (if workers required)
-  if (window.conf_env === 'multiplayer') {
-    require('./multiplayer.js').main();
-  } else if (window.conf_env === 'entity') {
-    require('./enttest.js').main();
-  } else {
-    require('./main.js').main();
-  }
+  require('./main.js').main();
   window.time_load_init = Date.now();
 }
 
