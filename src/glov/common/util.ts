@@ -650,6 +650,11 @@ export function msToSS2020(milliseconds: number): number {
   return floor(milliseconds / 1000) - 1577836800;
 }
 
+export function ss2020ToMS(ss2020: number): number {
+  // Integer seconds since Jan 1st, 2020
+  return (ss2020 + 1577836800) * 1000;
+}
+
 const whitespace_regex = /\s/;
 export function trimEnd(s: string): string {
   let idx = s.length;
