@@ -100,7 +100,8 @@ export function ipBanned(ip: string): boolean {
   if (entry && entry.expires*1000 > Date.now()) {
     return true;
   }
-  return banranges.check(ip);
+  let family = ip.includes(':') ? 'ipv6' as const : 'ipv4' as const;
+  return banranges.check(ip, family);
 }
 
 export function ipBanReady(): boolean {
