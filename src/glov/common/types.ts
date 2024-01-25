@@ -42,17 +42,25 @@ export type NetErrorCallback<T = never> = (
   result?: T
 ) => void;
 
-type NetResponseCallbackFn<T = never, E = unknown> = (
-  err?: E | undefined | null,
+type NetResponseCallbackCalledByUser<T = never> = (
+  err?: string | undefined | null,
   result?: T extends (never | void) ? never : (T | undefined | null),
-  resp_func?: NetErrorCallback
+  resp_func?: NetResponseCallbackCalledBySystem
 ) => void;
+
+// Type to use for parameters to system functions that only ever call with string | null
+export type NetResponseCallbackCalledBySystem<T = never> = (
+  err: string | null,
+  result?: T extends (never | void) ? never : T,
+  resp_func?: NetResponseCallback
+) => void;
+
 /**
  * Callback function type passed to any network message handlers: can use it to
  * send back a packet, an error, a result, as well as register a function to be
  * called in response to your response.
  */
-export interface NetResponseCallback<T = never> extends NetResponseCallbackFn<T, string> {
+export interface NetResponseCallback<T = never> extends NetResponseCallbackCalledByUser<T> {
   pak: () => Packet;
 }
 

@@ -44,6 +44,7 @@ import {
   HandlerSource,
   NetErrorCallback,
   NetResponseCallback,
+  NetResponseCallbackCalledBySystem,
   NumberBoolean,
   TSMap,
   UnimplementedData,
@@ -782,7 +783,9 @@ export class ChannelWorker {
   pak(dest: string, msg: string, ref_pak?: Packet | null, q?: 1 | undefined): Packet {
     return channelServerPak(this, dest, msg, ref_pak, q);
   }
-  setChannelDataOnOther(channel_id: string, key: string, value: unknown, resp_func: NetErrorCallback): void {
+  setChannelDataOnOther(channel_id: string, key: string, value: unknown,
+    resp_func: NetResponseCallbackCalledBySystem
+  ): void {
     let pak = this.pak(channel_id, 'set_channel_data');
     pak.writeBool(false);
     pak.writeAnsiString(key);
@@ -1180,7 +1183,7 @@ export class ChannelWorker {
     let value = pak.readJSON();
     this.setChannelDataInternal(source, key, value, q ? 1 : undefined, resp_func);
   }
-  setChannelData(key: string, value: unknown, q?: 1): void {
+  setChannelData<T=unknown>(key: string, value: T, q?: 1): void {
     this.setChannelDataInternal(this.core_ids, key, value, q);
   }
 
@@ -1481,23 +1484,23 @@ export class ChannelWorker {
     return ctx;
   }
 
-  debugSrc(src: HandlerSource, ...args: unknown[]): void {
+  debugSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'debug', `${this.channel_id}:`, ...args);
   }
 
-  infoSrc(src: HandlerSource, ...args: unknown[]): void {
+  infoSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'info', `${this.channel_id}:`, ...args);
   }
 
-  logSrc(src: HandlerSource, ...args: unknown[]): void {
+  logSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'log', `${this.channel_id}:`, ...args);
   }
 
-  warnSrc(src: HandlerSource, ...args: unknown[]): void {
+  warnSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'warn', `${this.channel_id}:`, ...args);
   }
 
-  errorSrc(src: HandlerSource, ...args: unknown[]): void {
+  errorSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'error', `${this.channel_id}:`, ...args);
   }
 

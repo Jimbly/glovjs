@@ -1,4 +1,4 @@
-import { NetErrorCallback } from './types';
+import type { NetResponseCallbackCalledBySystem } from './types';
 
 export const PACKET_DEBUG = 1;
 
@@ -32,7 +32,7 @@ export interface Packet {
 
   append(other: Packet): void;
   appendRemaining(other: Packet): void;
-  send<T=never>(resp_func?: NetErrorCallback<T>): void;
+  send<T=never>(resp_func?: NetResponseCallbackCalledBySystem<T>): void;
   ended(): boolean;
   updateFlags(flags: number): void;
   readFlags(): void;
