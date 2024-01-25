@@ -145,7 +145,7 @@ function channelServerSendFinish(pak, err, resp_func) {
     assert(resp_pair);
     assert.equal(resp_pair.func, resp_func);
     assert(resp_pair.ack_name);
-    resp_pair.func = function (err, resp) {
+    resp_pair.func = function (err, resp, resp_func_2) {
       // Acks may not be in order, so we just care about the highest id,
       // everything sent before that *must* have been dispatched, even if not
       // yet ack'd.  Similarly, don't reset to a lower id when a slow operation's
@@ -153,7 +153,7 @@ function channelServerSendFinish(pak, err, resp_func) {
       if (!source.send_pkt_ackd[dest] || pkt_idx > source.send_pkt_ackd[dest]) {
         source.send_pkt_ackd[dest] = pkt_idx;
       }
-      resp_func(err, resp);
+      resp_func(err, resp, resp_func_2);
     };
   } else {
     source.send_pkt_unackd[dest] = [pkt_idx, channel_server.server_time];
