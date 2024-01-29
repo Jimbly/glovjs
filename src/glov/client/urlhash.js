@@ -17,6 +17,7 @@
     push: true, // do a pushState instead of replaceState when this changes
     hide_values: { foo: true }, // do not add to URL if values is in the provided set
     route_only: true, // never show this value, but still use it to influence routes - use with routeFixed()
+    clear_on_route_change: true, // clear this value if a route-based URL is pushed, e.g. treat as part of a route
   });
   urlhash.set('pos', '3,4');
   urlhash.get('pos')
@@ -150,7 +151,7 @@ function goInternal(query_string, for_init, skip_apply, route_only) {
           dirty[key] = true;
         }
       }
-      if (route_only && !opts.routes) {
+      if (route_only && !(opts.routes || opts.clear_on_route_change)) {
         // do not clear any existing querystring values from a route_only operation
         continue;
       }
@@ -161,7 +162,7 @@ function goInternal(query_string, for_init, skip_apply, route_only) {
         }
       }
     } else {
-      if (route_only && !opts.routes && !new_value) {
+      if (route_only && !(opts.routes || opts.clear_on_route_change) && !new_value) {
         // do not clear any existing querystring values from a route_only operation
         continue;
       }
