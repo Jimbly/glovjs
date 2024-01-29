@@ -907,11 +907,11 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Invalid email');
     }
     if (email === this.data.private.email) {
-      return resp_func(null, true);
+      return resp_func();
     }
     this.logSrc(src, `Updating user ${this.user_id} email from ${this.data.private.email} to ${email}`);
     this.setChannelData('private.email', email);
-    return resp_func(null, true);
+    return resp_func();
   }
 
   handleSetChannelData(src, key, value) {
