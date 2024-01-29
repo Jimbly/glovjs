@@ -118,7 +118,9 @@ function channelServerSendFinish(pak, err, resp_func) {
     // This function will get called twice if we have a network disconnect
     //   (ERR_FAILALL_DISCONNECT triggered by ack.js) *and* a low-level failure
     //   (e.g. ERR_NOT_FOUND trying to send the message).
+    let saved_expecting_response = resp_func.expecting_response;
     resp_func = once(resp_func);
+    resp_func.expecting_response = saved_expecting_response;
   }
   let ack_resp_pkt_id = ackWrapPakFinish(pak, err, resp_func);
   let { source, dest, msg, pkt_idx_offs, no_create } = pak.cs_data;
