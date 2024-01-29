@@ -172,7 +172,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
     // the callback wants to send a response, and possibly get a response from that!
     if (!expecting_response) {
       // But, the other end is not expecting a response from this packet, black-hole it
-      if (resp_func) {
+      if (resp_func && resp_func.expecting_response !== false) {
         // We better not be expecting a response to our response!
         receiver.onError(`Sending a response to a packet (${msg}) that did not expect` +
           ' one, but we are expecting a response');
