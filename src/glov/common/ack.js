@@ -115,20 +115,20 @@ export function failAll(receiver, err) {
 export function ackHandleMessage(receiver, source, pak, send_func, pak_func, handle_func, filter_func) {
   let pak_initial_offs = pak.getOffset();
   let { err, data, msg, pak_id } = ackReadHeader(pak);
+  let msg_name;
+  if (typeof msg === 'number') {
+    let pair = receiver.resp_cbs[msg];
+    assert(!pair || pair.ack_name);
+    if (pair && pair.ack_name) {
+      msg_name = pair.ack_name;
+    } else {
+      msg_name = 'ack';
+    }
+  } else {
+    msg_name = msg;
+  }
   if (receiver.logPacketDispatch) {
     perfCounterAddValue('net.recv_bytes.total', pak.totalSize());
-    let msg_name;
-    if (typeof msg === 'number') {
-      let pair = receiver.resp_cbs[msg];
-      assert(!pair || pair.ack_name);
-      if (pair && pair.ack_name) {
-        msg_name = pair.ack_name;
-      } else {
-        msg_name = 'ack';
-      }
-    } else {
-      msg_name = msg;
-    }
     perfCounterAddValue(`net.recv_bytes.${msg_name}`, pak.totalSize());
     receiver.logPacketDispatch(source, pak, pak_initial_offs, msg_name);
   }
@@ -159,7 +159,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
         if (err === ERR_FAILALL_DISCONNECT) {
           // this is the result of a failAll() call, a response was not actually sent!
         } else {
-          (receiver.log ? receiver : console).log(`Response finally sent for ${msg
+          (receiver.log ? receiver : console).log(`Response finally sent for ${msg_name
           } after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
         }
       }
@@ -174,7 +174,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
       // But, the other end is not expecting a response from this packet, black-hole it
       if (resp_func && resp_func.expecting_response !== false) {
         // We better not be expecting a response to our response!
-        receiver.onError(`Sending a response to a packet (${msg}) that did not expect` +
+        receiver.onError(`Sending a response to a packet (${msg_name}) that did not expect` +
           ' one, but we are expecting a response');
         return;
       }
@@ -201,7 +201,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
   if (typeof msg === 'number') {
     let cb = receiver.resp_cbs[msg];
     if (!cb) {
-      return void receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
+      return void receiver.onError(`Received response to unknown packet with id ${msg_name} from ${source}`);
     }
     delete receiver.resp_cbs[msg];
     profilerStart('response');
@@ -223,7 +223,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
       timeout_id = setTimeout(function () {
         timeout_id = null;
         if (!respFunc.suppress_timeout) {
-          (receiver.log ? receiver : console).log(`Response not sent for ${msg
+          (receiver.log ? receiver : console).log(`Response not sent for ${msg_name
           } from ${source} after ${((Date.now() - start_time) / 1000).toFixed(1)}s`);
         }
       }, 15*1000);
