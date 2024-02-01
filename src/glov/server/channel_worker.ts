@@ -34,6 +34,7 @@ import {
   isPacket,
 } from 'glov/common/packet';
 import {
+  ChannelDataClients,
   ClientHandlerSource,
   ClientIDs,
   CmdDef,
@@ -165,10 +166,6 @@ export type ChannelData<PrivType=DataObject, PubType=DataObject> = {
   public: PubType;
 };
 
-export type ChannelDataClient = {
-  ids: ClientIDs;
-} & DataObject;
-export type ChannelDataClients = TSMap<ChannelDataClient>;
 export type ChannelDataWithClients = ChannelData<DataObject, {
   clients: ChannelDataClients;
 }>;

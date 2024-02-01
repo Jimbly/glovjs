@@ -176,6 +176,10 @@ export type ClientIDs = {
   display_name?: string;
   roles?: TSMap<1>;
 };
+export type ChannelDataClient = {
+  ids: ClientIDs;
+} & DataObject;
+export type ChannelDataClients = TSMap<ChannelDataClient>;
 
 export interface ClientChannelWorker {
   on(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
