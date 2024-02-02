@@ -85,10 +85,11 @@ function buildUITick() {
   const sub_w = w - PAD - scroll_area.barWidth();
   y = 0;
   z = Z.UI;
+  let indent = 0;
 
   function printLine(type, str) {
     str = str.replace(strip_ansi, '');
-    y += font.drawSizedWrapped(style, x, y, z, sub_w, 0, font_height,
+    y += font.drawSizedWrapped(style, x + indent, y, z, sub_w - indent, 0, font_height,
       `${type}: ${str}`);
   }
 
@@ -96,10 +97,11 @@ function buildUITick() {
     for (let task_name in gbstate.tasks) {
       let task = gbstate.tasks[task_name];
       x = 0;
+      indent = 0;
       font.drawSizedAligned(style_task, x, y, z, font_height, font.ALIGN.HLEFT, sub_w, 0,
         `${task_name}:`);
       y += font_height;
-      x += font_height;
+      indent += font_height;
       let printed_any = false;
       for (let job_name in task.jobs) {
         let job = task.jobs[job_name];
@@ -108,7 +110,7 @@ function buildUITick() {
           if (job_name.startsWith('source:')) {
             job_name = job_name.slice(7);
           }
-          y += font.drawSizedWrapped(style_job, x, y, z, sub_w, 0, font_height,
+          y += font.drawSizedWrapped(style_job, indent, y, z, sub_w, 0, font_height,
             job_name);
         }
         if (warnings) {
@@ -132,7 +134,7 @@ function buildUITick() {
   }
 
   if (server_error) {
-    x = 0;
+    x = indent = 0;
     font.drawSizedAligned(style_task, x, y, z, font_height, font.ALIGN.HLEFT, sub_w, 0,
       'Server Error:');
     y += font_height;
