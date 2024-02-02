@@ -6,7 +6,6 @@ const glov_font = require('./font.js');
 const { min } = Math;
 const { scrollAreaCreate } = require('./scroll_area.js');
 const ui = require('./ui.js');
-const { uiButtonHeight } = require('./ui.js');
 const net = require('./net.js');
 const {
   dataErrorEx,
@@ -150,10 +149,11 @@ function buildUITick() {
   scroll_area.end(y);
   y = scroll_y_start + min(max_h, y);
 
+  let button_h = font_height * 1.5;
   if (ui.buttonText({
-    x: x0 + w - uiButtonHeight(),
+    x: x0 + w - button_h,
     y: y0, z: Z.BUILD_ERRORS + 1,
-    w: uiButtonHeight(),
+    w: button_h, h: button_h,
     text: 'X',
   })) {
     gbstate = null;
