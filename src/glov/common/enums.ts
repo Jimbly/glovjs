@@ -6,6 +6,12 @@ export const PRESENCE_ACTIVE = 1;
 export const PRESENCE_INACTIVE = 2;
 // when invisible *and* idle; client -> server only, other clients should never see
 export const PRESENCE_OFFLINE_INACTIVE = 3;
+export function presenceActive(presence_value: number): boolean {
+  return !(presence_value === PRESENCE_INACTIVE || presence_value === PRESENCE_OFFLINE_INACTIVE);
+}
+export function presenceVisible(presence_value: number): boolean {
+  return !(presence_value === PRESENCE_OFFLINE || presence_value === PRESENCE_OFFLINE_INACTIVE);
+}
 
 export type NumberEnum<K extends string, V extends number> = Record<K, V> & Partial<Record<string, V | string>>;
 export type StringEnum<K extends string, V extends string> = Record<K, V>;
