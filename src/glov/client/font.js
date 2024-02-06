@@ -610,12 +610,15 @@ function endsWord(char_code) {
     char_code === 9; // '\t'
 }
 
+// line wrapping epsilon, don't wrap non-deterministically if scale and
+//  character widths are factors of display width
+const EPSILON = 0.0000000001;
 // line_cb(x0, int linenum, const char *line, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line_cb) {
   text = getStringFromLocalizable(text);
   assert(typeof align !== 'function'); // Old API had one less parameter
   const len = text.length;
-  const max_word_w = w - indent;
+  const max_word_w = w - indent + EPSILON;
   // "fit" mode: instead of breaking the too-long word, output it on a line of its own
   const hard_wrap_mode_fit = align & ALIGN.HFIT;
   const x_advance = this.calcXAdvance(xsc);
@@ -703,7 +706,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
       if (char_info) {
         let char_w = char_info.w_pad_scale * xsc + x_advance;
         word_w += char_w;
-        if (word_x0 + word_w <= w) { // would partially fit up to and including this letter
+        if (word_x0 + word_w <= w + EPSILON) { // would partially fit up to and including this letter
           word_slice = idx + 1;
           word_slice_w = word_w;
         }
