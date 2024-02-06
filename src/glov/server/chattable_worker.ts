@@ -1,4 +1,5 @@
 import { assert } from 'console';
+import { CHAT_FLAG_EMOTE } from 'glov/common/enums';
 import { FIFO, fifoCreate } from 'glov/common/fifo';
 import { Packet } from 'glov/common/packet';
 import {
@@ -14,7 +15,7 @@ import { sanitize, secondsToFriendlyString } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker';
 
 const CHAT_MAX_LEN = 1024; // Client must be set to this or fewer
-const CHAT_USER_FLAGS = 0x1;
+const CHAT_USER_FLAGS = CHAT_FLAG_EMOTE;
 const CHAT_MAX_MESSAGES = 50;
 
 const CHAT_COOLDOWN_DATA_KEY = 'public.chat_cooldown';
@@ -76,7 +77,7 @@ export function sendChat(
   }
   let last_idx = (chat.idx + CHAT_MAX_MESSAGES - 1) % CHAT_MAX_MESSAGES;
   let last_msg = chat.msgs[last_idx];
-  if (id && last_msg && last_msg.id === id && last_msg.msg === msg) {
+  if (id && last_msg && last_msg.id === id && last_msg.msg === msg && !(flags & ~CHAT_USER_FLAGS)) {
     return 'ERR_ECHO';
   }
   let ts = Date.now();

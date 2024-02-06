@@ -36,3 +36,6 @@ export function isValidStringEnumValue<K extends string, V extends string>(
   }
   return false;
 }
+
+export const CHAT_FLAG_EMOTE = 1;
+export const CHAT_FLAG_USERCHAT = 2; // Only used on client, not communicated

@@ -4,6 +4,10 @@
 import assert from 'assert';
 import { asyncParallel } from 'glov-async';
 import {
+  CHAT_FLAG_EMOTE,
+  CHAT_FLAG_USERCHAT,
+} from 'glov/common/enums';
+import {
   clamp,
   dateToSafeLocaleString,
   defaults,
@@ -34,9 +38,6 @@ import { profanityFilter, profanityStartup } from './words/profanity';
 const { ceil, floor, max, min, round } = Math;
 
 deprecate(exports, 'create', 'chatUICreate');
-
-export const CHAT_FLAG_EMOTE = 1;
-export const CHAT_FLAG_USERCHAT = 2;
 
 Z.CHAT = Z.CHAT || 500;
 Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
