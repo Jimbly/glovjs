@@ -1391,6 +1391,8 @@ export class ChannelWorker {
     });
   }
 
+  sendChannelMessage<T>(dest: string, msg: string, data: T, resp_func?: NetErrorCallback, q?: 1 | undefined): void;
+  sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, q?: 1 | undefined): void;
   sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, q?: 1 | undefined): void {
     channelServerSend(this, dest, msg, null, data, resp_func, q);
   }
