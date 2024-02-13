@@ -285,8 +285,13 @@ export function quietMessagesSet(list) {
     quiet_messages[list[ii]] = true;
   }
 }
+let quiet_message_user_keys = Object.create(null);
+quiet_message_user_keys.pos = true;
+export function quietMessagesSetUserKey(key) {
+  quiet_message_user_keys[key] = true;
+}
 export function quietMessage(msg, payload) {
-  return msg === 'set_user' && payload && payload.key === 'pos' || quiet_messages[msg];
+  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] || quiet_messages[msg];
 }
 
 // source is a ChannelWorker
