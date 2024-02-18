@@ -373,6 +373,7 @@ export function drawCone(
 ): void;
 export function setFontHeight(new_font_height: number): void;
 export function scaleSizes(scale: number): void;
+export function setButtonHeight(button_height: number): void;
 export function setPanelPixelScale(scale: number): void;
 export function setModalSizes(
   modal_button_width: number,

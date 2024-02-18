@@ -2024,8 +2024,15 @@ function uiApplyStyle(style) {
   fontSetDefaultSize(style.text_height);
 }
 
+export function setButtonHeight(button_height) {
+  panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
+  scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
+  uiStyleModify(uiStyleDefault(), {
+    button_height,
+  });
+}
+
 export function scaleSizes(scale) {
-  let button_height = round(32 * scale);
   let text_height = round(24 * scale);
   let button_width = round(200 * scale);
   modal_button_width = round(button_width / 2);
@@ -2035,16 +2042,15 @@ export function scaleSizes(scale) {
   modal_pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
-  scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
 
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
     text_height,
     button_width,
-    button_height,
   });
+  let button_height = round(32 * scale);
+  setButtonHeight(button_height);
 }
 
 export function setPanelPixelScale(scale) {
