@@ -303,6 +303,18 @@ class ScoreSystemImpl<ScoreType> {
       ret.histogram = histogram;
     }
 
+    if (!ret.my_rank) {
+      // No score on server, ensure things are consistent
+      let ld = this.level_defs[level_idx];
+      if (ld.local_score && ld.local_score.submitted && !ld.save_in_flight) {
+        // we submitted it, but it's no longer on the server, must be invalid, clear it locally
+        console.log(`score: ${ld.name}: fetched scores, but mine was not in it, deleting local score...`);
+        delete ld.local_score;
+        let key = `${this.LS_KEY}.score_${ld.name}`;
+        delete lsd[key];
+      }
+    }
+
     this.high_scores[level_idx] = ret;
   }
   private makeURL(api: string, ld: LevelDef): string {
