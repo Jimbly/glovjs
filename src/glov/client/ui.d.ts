@@ -382,6 +382,7 @@ export function setModalSizes(
   pad: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
+export function setTooltipTextOffset(tooltip_text_offs: number): void;
 export function setFontStyles(
   normal?: FontStyle | null,
   focused?: FontStyle | null,
