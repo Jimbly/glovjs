@@ -249,8 +249,9 @@ export function setScreen(no_dpi_aware) {
 // Sets virtual viewport equal to DOM coordinates, for debugging input events/etc
 export function setDOMMapped() {
   if (render_width) {
-    set(render_offset_x, render_offset_y_top,
-      screen_width - render_offset_x, screen_height - render_offset_y_top, true);
+    let f = 1 / engine.dom_to_canvas_ratio;
+    set(render_offset_x * f, render_offset_y_top * f,
+      (screen_width - render_offset_x) * f, (screen_height - render_offset_y_top) * f, true);
   } else {
     set(0, 0, screen_width / engine.dom_to_canvas_ratio, screen_height / engine.dom_to_canvas_ratio, true);
   }
