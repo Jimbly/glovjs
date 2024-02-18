@@ -20,8 +20,13 @@ html, body {
   font-style: normal;
 }
 
-textarea {
+textarea, input.canvas_render {
   font-family: perfectvga,"Lucida Console",Courier,monospace;
+}
+input.canvas_render {
+  /* Nudge up a bit, as it doesn't quite line up with parent element for unknown reasons */
+  position: relative;
+  top: -15%;
 }
 */
 
@@ -138,7 +143,10 @@ canvas {
   border-width: 1px;
 }
 
-.glovui_dynamic textarea.fixed {
+.glovui_dynamic .center {
+  text-align: center;
+}
+.glovui_dynamic .fixed {
   resize: none;
   overflow: hidden;
   text-wrap: nowrap;
@@ -151,7 +159,7 @@ canvas {
     caret-color:  #111;
   */
 }
-.glovui_dynamic textarea.canvas_render {
+.glovui_dynamic .canvas_render {
   resize: none;
   background: rgba(1,1,1,0);
   border: none;
@@ -164,7 +172,7 @@ canvas {
   /* debug alignment: color: rgba(255,0,255,0.5); */
   /* debug alignment: caret-color: rgba(255,0,255,0.5); */
 }
-.glovui_dynamic textarea.canvas_render::selection {
+.glovui_dynamic .canvas_render::selection {
   color: rgba(0,0,0,0);
 }
 
