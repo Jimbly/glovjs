@@ -163,9 +163,11 @@ export function main() {
   let pixely = flagGet('pixely', 'on');
   let font;
   let ui_sprites;
+  let pixel_perfect = 0;
   if (pixely === 'strict') {
     font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
     ui_sprites = spriteSetGet('pixely');
+    pixel_perfect = 1;
   } else if (pixely && pixely !== 'off') {
     font = { info: font_info_04b03x2, texture: 'font/04b03_8x2' };
     ui_sprites = spriteSetGet('pixely');
@@ -180,6 +182,7 @@ export function main() {
     font,
     viewport_postprocess: false,
     ui_sprites,
+    pixel_perfect,
   })) {
     return;
   }

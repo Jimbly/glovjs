@@ -5,7 +5,7 @@
 const assert = require('assert');
 const engine = require('./engine.js');
 
-const { max, round } = Math;
+const { max, floor, round } = Math;
 
 const safearea_pad = new Float32Array(4); // left, right, top, bottom
 // 0: x0_real
@@ -486,6 +486,24 @@ export function tickCamera2D() {
       render_offset_y_bottom = safearea_pad[3] + round(margin);
       render_viewport_w = eff_screen_width;
       render_viewport_h = round(eff_screen_height - margin * 2);
+    }
+    if (engine.render_pixel_perfect) {
+      let scalar = render_viewport_w / render_width;
+      let int_scalar = floor(scalar);
+      let fpart = scalar - int_scalar;
+      if (scalar > 1 && fpart <= engine.render_pixel_perfect) {
+        scalar = int_scalar;
+        let desired_width = render_width * scalar;
+        let xoffs = floor((render_viewport_w - desired_width)*0.5);
+        render_offset_x += xoffs;
+        render_viewport_w = desired_width;
+        let desired_height = round(render_height * scalar / pa);
+        let yoffs = render_viewport_h - desired_height;
+        let yoffs_top = floor(yoffs*0.5);
+        render_offset_y_top += yoffs_top;
+        render_offset_y_bottom += yoffs - yoffs_top;
+        render_viewport_h = desired_height;
+      }
     }
     viewport[2] = render_width;
     viewport[3] = render_height;
