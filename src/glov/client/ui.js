@@ -237,6 +237,7 @@ export let panel_pixel_scale = 32 / 13; // button_height / button pixel resoluti
 export let tooltip_panel_pixel_scale = panel_pixel_scale;
 export let tooltip_width = 400;
 export let tooltip_pad = 8;
+let tooltip_text_offs = 0;
 
 // export let font_style_focused = fontStyle(null, {
 //   color: 0x000000ff,
@@ -807,7 +808,7 @@ export function drawTooltip(param) {
   }
   let y = tooltip_y0 + eff_tooltip_pad;
   y += font.drawSizedWrapped(font_style_modal,
-    x + eff_tooltip_pad, y, z+1, w, 0, ui_style_current.text_height,
+    x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
     tooltip);
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
@@ -2023,8 +2024,15 @@ function uiApplyStyle(style) {
   fontSetDefaultSize(style.text_height);
 }
 
+export function setButtonHeight(button_height) {
+  panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
+  scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
+  uiStyleModify(uiStyleDefault(), {
+    button_height,
+  });
+}
+
 export function scaleSizes(scale) {
-  let button_height = round(32 * scale);
   let text_height = round(24 * scale);
   let button_width = round(200 * scale);
   modal_button_width = round(button_width / 2);
@@ -2034,16 +2042,15 @@ export function scaleSizes(scale) {
   modal_pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  panel_pixel_scale = button_height / sprites.panel.uidata.total_h; // button_height / panel pixel resolution
   tooltip_panel_pixel_scale = panel_pixel_scale;
-  scrollAreaSetPixelScale(button_height / sprites.button.uidata.total_h);
 
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
     text_height,
     button_width,
-    button_height,
   });
+  let button_height = round(32 * scale);
+  setButtonHeight(button_height);
 }
 
 export function setPanelPixelScale(scale) {
@@ -2062,4 +2069,9 @@ export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
   tooltip_width = _tooltip_width;
   tooltip_panel_pixel_scale = _tooltip_panel_pixel_scale;
   tooltip_pad = round(modal_pad / 2 * _tooltip_panel_pixel_scale);
+}
+
+// This is useful for some fonts if the UI uses primarily/entirely upper-case strings, to look more centered
+export function setTooltipTextOffset(_tooltip_text_offs) {
+  tooltip_text_offs = _tooltip_text_offs;
 }

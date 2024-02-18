@@ -23,12 +23,14 @@ export interface EditBoxOptsAll {
   focus_steal: boolean;
   auto_unfocus: boolean;
   initial_select: boolean;
+  select_on_focus: boolean;
   spellcheck: boolean;
   esc_clears: boolean;
   esc_unfocuses: boolean;
   multiline: number;
   enforce_multiline: boolean;
   autocomplete: boolean;
+  center: boolean;
   suppress_up_down: boolean;
   // custom_nav: Partial<Record<number, null>>;
   canvas_render: null | {

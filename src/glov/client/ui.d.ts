@@ -373,6 +373,7 @@ export function drawCone(
 ): void;
 export function setFontHeight(new_font_height: number): void;
 export function scaleSizes(scale: number): void;
+export function setButtonHeight(button_height: number): void;
 export function setPanelPixelScale(scale: number): void;
 export function setModalSizes(
   modal_button_width: number,
@@ -382,6 +383,7 @@ export function setModalSizes(
   pad: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
+export function setTooltipTextOffset(tooltip_text_offs: number): void;
 export function setFontStyles(
   normal?: FontStyle | null,
   focused?: FontStyle | null,

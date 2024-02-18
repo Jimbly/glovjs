@@ -131,6 +131,7 @@ class GlovUIEditBox {
     this.enforce_multiline = true;
     this.suppress_up_down = false;
     this.autocomplete = false;
+    this.center = false;
     this.sticky_focus = true;
     this.canvas_render = null;
     this.applyParams(params);
@@ -172,25 +173,50 @@ class GlovUIEditBox {
     if (params.text && params.text !== old_text) {
       this.setText(params.text);
     }
-    this.h = this.font_height;
+    this.h = (this.multiline || 1) * this.font_height;
   }
   getSelection() {
     return [charIdxToXY(this.text, this.input.selectionStart), charIdxToXY(this.text, this.input.selectionEnd)];
   }
+  setSelectionRange(sel_start, sel_end) {
+    // if (this.type === 'number') {
+    //   this.input.type = 'text';
+    // }
+    this.input.setSelectionRange(sel_start, sel_end);
+    // if (this.type === 'number') {
+    //   this.input.type = 'number';
+    // }
+  }
+
   updateText() {
     const { input } = this;
     if (!input) {
       return;
     }
     let new_text = input.value;
+    let saved_new_text = new_text;
+    let sel_start = input.selectionStart;
+    let sel_end = input.selectionEnd;
     if (new_text === this.text) {
-      this.last_valid_state.sel_start = input.selectionStart;
-      this.last_valid_state.sel_end = input.selectionEnd;
+      this.last_valid_state.sel_start = sel_start;
+      this.last_valid_state.sel_end = sel_end;
       return;
     }
     const { multiline, enforce_multiline, max_len, max_visual_size } = this;
     // text has changed, validate
     let valid = true;
+
+    let old_text = this.text;
+    function debug(msg) {
+      if (engine.defines.EDITBOX) {
+        console.log(`Editbox (multiline=${multiline}, max_len=${max_len}: ${engine.frame_index}: ${msg}`);
+        console.log(`  Old sel range = [${sel_start},${sel_end}]`);
+        console.log(`  New sel range = [${input.selectionStart},${input.selectionEnd}]`);
+        console.log(`  Old text         = ${JSON.stringify(old_text)}`);
+        console.log(`  Desired new text = ${JSON.stringify(saved_new_text)}`);
+        console.log(`  New text         = ${JSON.stringify(new_text)}`);
+      }
+    }
 
     if (enforce_multiline && multiline && new_text.split('\n').length > multiline) {
       // If trimming would help, trim the text, and update, preserving current selection
@@ -205,15 +231,15 @@ class GlovUIEditBox {
         if (this.text === new_text) {
           // we presumably just trimmed off what they inserted, treat as error
           valid = false;
+          debug('trimmed equal orig');
         } else {
-          let sel_start = input.selectionStart;
-          let sel_end = input.selectionEnd;
           input.value = new_text;
-          input.selectionStart = sel_start;
-          input.selectionEnd = sel_end;
+          this.setSelectionRange(sel_start, sel_end);
+          debug('trimming helped');
         }
       } else {
         valid = false;
+        debug('trimmed too long');
       }
     }
 
@@ -253,8 +279,6 @@ class GlovUIEditBox {
             lines[ii] = trimmed;
             let new_line_end_pos = lines.slice(0, ii+1).join('\n').length;
             new_text = lines.join('\n');
-            let sel_start = input.selectionStart;
-            let sel_end = input.selectionEnd;
             let shift = old_line_end_pos - new_line_end_pos;
             if (sel_start > old_line_end_pos) {
               sel_start -= shift;
@@ -267,10 +291,11 @@ class GlovUIEditBox {
               sel_end = new_line_end_pos;
             }
             input.value = new_text;
-            input.selectionStart = sel_start;
-            input.selectionEnd = sel_end;
+            this.setSelectionRange(sel_start, sel_end);
+            debug('over but not trim_over; updating text and sel');
           } else {
             valid = false;
+            debug('invalid: over');
           }
         }
       }
@@ -279,12 +304,12 @@ class GlovUIEditBox {
       // revert!
       this.had_overflow = true;
       input.value = this.text;
-      input.selectionStart = this.last_valid_state.sel_start;
-      input.selectionEnd = this.last_valid_state.sel_end;
+      this.setSelectionRange(this.last_valid_state.sel_start, this.last_valid_state.sel_end);
+      debug(`invalid: reset sel range to [${this.last_valid_state.sel_start}, ${this.last_valid_state.sel_end}]`);
     } else {
       this.text = new_text;
-      this.last_valid_state.sel_start = input.selectionStart;
-      this.last_valid_state.sel_end = input.selectionEnd;
+      this.last_valid_state.sel_start = sel_start;
+      this.last_valid_state.sel_end = sel_end;
     }
   }
   getText() {
@@ -331,6 +356,9 @@ class GlovUIEditBox {
   focus() {
     if (this.input) {
       this.input.focus();
+      if (this.select_on_focus) {
+        this.input.select();
+      }
       setActive(this);
     } else {
       this.onetime_focus = true;
@@ -355,9 +383,16 @@ class GlovUIEditBox {
     let dom_focused = this.input && document.activeElement === this.input;
     if (was_glov_focused !== focused) {
       // something external (from clicks/keys in GLOV) changed, apply it if it doesn't match
-      if (focused && !dom_focused && this.input) {
+      if (focused && !dom_focused) {
         spotlog('GLOV focused, DOM not, focusing', this);
-        this.input.focus();
+        if (this.input) {
+          this.input.focus();
+          if (this.select_on_focus) {
+            this.input.select();
+          }
+        } else {
+          this.onetime_focus = true;
+        }
       }
       if (!focused && dom_focused) {
         spotlog('DOM focused, GLOV not, and changed, blurring', this);
@@ -366,6 +401,9 @@ class GlovUIEditBox {
     } else if (dom_focused && !focused) {
       spotlog('DOM focused, GLOV not, stealing', this);
       spotFocusSteal(this);
+      if (this.input && this.select_on_focus) {
+        this.input.select();
+      }
       focused = true;
     } else if (!dom_focused && focused) {
       if (is_reset) {
@@ -465,8 +503,12 @@ class GlovUIEditBox {
         if (multiline && max_len) {
           classes.push('fixed');
         }
+        if (this.center) {
+          classes.push('center');
+        }
         input.className = classes.join(' ');
-        input.setAttribute('type', this.type);
+        // Use 'tel' instead of 'number', as it supports changing the selection
+        input.setAttribute('type', this.type === 'number' ? 'tel' : this.type);
         input.setAttribute('placeholder', getStringIfLocalizable(this.placeholder));
         if (max_len) {
           if (multiline) {
@@ -602,9 +644,25 @@ class GlovUIEditBox {
     mouseConsumeClicks({ x, y, w, h });
 
     if (canvas_render) {
+      const { center } = this;
       const { char_width, char_height, color_selection, color_caret, style_text } = canvas_render;
       let font = uiGetFont();
       let lines = text.split('\n');
+      // draw text
+      // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
+      let line_width = [];
+      for (let ii = 0; ii < lines.length; ++ii) {
+        let line = lines[ii];
+        let line_w = font.draw({
+          style: style_text,
+          height: font_height,
+          x, y: y + ii * char_height, z: z + 0.8,
+          w,
+          text: line,
+          align: center ? font.ALIGN.HCENTER : undefined,
+        });
+        line_width.push(line_w);
+      }
       if (focused) {
         // draw selection
         let selection = this.getSelection();
@@ -615,26 +673,20 @@ class GlovUIEditBox {
             let line = lines[jj];
             let selx0 = jj === first_row ? selection[0][0] : 0;
             let selx1 = jj === last_row ? selection[1][0] : line.length;
-            drawRect(x + char_width*selx0-1, y + jj * char_height,
-              x + char_width*selx1, y + (jj + 1) * char_height, z + 0.75, color_selection);
+            let xoffs = center ? (w - line_width[jj])/2 : 0;
+            drawRect(x + char_width*selx0-1 + xoffs, y + jj * char_height,
+              x + char_width*selx1 + xoffs, y + (jj + 1) * char_height, z + 0.75, color_selection);
           }
         } else {
           // draw caret
+          let jj = selection[1][1];
           let caret_x = x + char_width*selection[1][0] - 1;
-          drawLine(caret_x, y + char_height*selection[1][1],
-            caret_x, y + char_height*(selection[1][1] + 1) - 1, z + 0.5, 1, 1, color_caret);
+          if (center) {
+            caret_x += (w - line_width[jj])/2;
+          }
+          drawLine(caret_x, y + char_height*jj,
+            caret_x, y + char_height*(jj + 1) - 1, z + 0.5, 1, 1, color_caret);
         }
-      }
-      // draw text
-      // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
-      for (let ii = 0; ii < lines.length; ++ii) {
-        let line = lines[ii];
-        font.draw({
-          style: style_text,
-          height: font_height,
-          x, y: y + ii * char_height, z: z + 0.8,
-          text: line,
-        });
       }
     }
 
