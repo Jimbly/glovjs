@@ -742,6 +742,9 @@ export class DefaultUserWorker extends ChannelWorker {
       this.setChannelData('private.display_name_change', undefined); // reset cooldown
     }
     this.checkAutoIPBan(data.ip);
+    if (this.onUserLogin) {
+      this.onUserLogin(data);
+    }
     metricsAdd('user.login', 1);
 
     resp_func(null, {
