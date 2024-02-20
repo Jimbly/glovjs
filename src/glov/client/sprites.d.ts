@@ -67,10 +67,16 @@ export interface SpriteDraw3DParams {
 }
 export interface Sprite {
   uidata?: SpriteUIData;
-  uvs: number[];
+  uvs: ROVec4;
   origin: ROVec2;
   draw(params: SpriteDrawParams): void;
   drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
+  draw4Color(params: SpriteDrawParams & {
+    color_ul: ROVec4;
+    color_ll: ROVec4;
+    color_lr: ROVec4;
+    color_ur: ROVec4;
+  }): void;
   draw3D(params: SpriteDraw3DParams): void;
   texs: Texture[];
   lazyLoad(): number;
@@ -177,11 +183,24 @@ export function spriteQueueRaw(
   shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
 ): SpriteData;
 
+export function spriteQueueSprite(
+  sprite: Sprite,
+  x: number, y: number, z: number,
+  w: number, h: number, rot: number,
+  uvs: ROVec4,
+  color: ROVec4,
+  shader?: Shader,
+  shader_params?: ShaderParams,
+  nozoom?: boolean,
+  pixel_perfect?: boolean,
+  blend?: BlendMode,
+): SpriteData;
+
 // TODO: export with appropriate types
 // export type Shader = { _opaque: 'Shader' };
 // export function spriteDataAlloc(texs: Texture[], shader: Shader, shader_params:ShaderParams, blend: BlendMode): void;
 // export function queueSpriteData(elem, z): void;
-// export function queuesprite(
+
 // TODO: migrate to internal only?
 // export function blendModeSet(blend: BlendMode): void;
 // export function blendModeReset(force: boolean): void;

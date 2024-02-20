@@ -16,6 +16,8 @@ exports.queueraw4colorBuffer = spriteQueueRaw4ColorBuffer;
 exports.queueraw4 = spriteQueueRaw4;
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.queueraw = spriteQueueRaw;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queuesprite = spriteQueueSprite;
 
 export const BlendMode = {
   BLEND_ALPHA: 0,
@@ -447,7 +449,7 @@ function queuesprite4colorObj() {
   return elem;
 }
 
-export function queuesprite(
+export function spriteQueueSprite(
   sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
   pixel_perfect, blend,
 ) {
