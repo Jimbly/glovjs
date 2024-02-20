@@ -4,8 +4,22 @@ const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
 import * as engine from 'glov/client/engine';
-import * as glov_font from 'glov/client/font';
-import * as input from 'glov/client/input';
+import {
+  ALIGN,
+  fontStyle,
+  fontStyleColored,
+} from 'glov/client/font';
+import {
+  KEYS,
+  PAD,
+  inputClick,
+  keyDown,
+  keyDownEdge,
+  mouseDownOverBounds,
+  mouseOver,
+  padButtonDown,
+  padButtonDownEdge,
+} from 'glov/client/input';
 import * as net from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import * as settings from 'glov/client/settings';
@@ -243,10 +257,6 @@ export function main(): void {
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
 
-  // Cache KEYS
-  const KEYS = input.KEYS;
-  const PAD = input.PAD;
-
   const sprite_size = 64;
   function initGraphics(): void {
     particles.preloadParticleData(particle_data);
@@ -332,10 +342,10 @@ export function main(): void {
     test_character.dx = 0;
     test_character.dy = 0;
     if (!uiHandlingNav()) { // could do WASD regardless
-      test_character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-      test_character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
-      test_character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-      test_character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+      test_character.dx -= keyDown(KEYS.LEFT) + keyDown(KEYS.A) + padButtonDown(PAD.LEFT);
+      test_character.dx += keyDown(KEYS.RIGHT) + keyDown(KEYS.D) + padButtonDown(PAD.RIGHT);
+      test_character.dy -= keyDown(KEYS.UP) + keyDown(KEYS.W) + padButtonDown(PAD.UP);
+      test_character.dy += keyDown(KEYS.DOWN) + keyDown(KEYS.S) + padButtonDown(PAD.DOWN);
     }
     if (test_character.dx < 0) {
       sprites.animation.setState('idle_left');
@@ -363,12 +373,12 @@ export function main(): void {
       w: sprite_size,
       h: sprite_size,
     };
-    if (input.mouseDownOverBounds(bounds)) {
+    if (mouseDownOverBounds(bounds)) {
       v4copy(test_color_sprite, color_yellow);
-    } else if (input.click(bounds)) {
+    } else if (inputClick(bounds)) {
       v4copy(test_color_sprite, (test_color_sprite[2] === 0) ? color_white : color_red);
       soundPlay('test');
-    } else if (input.mouseOver(bounds)) {
+    } else if (mouseOver(bounds)) {
       v4copy(test_color_sprite, color_white);
       test_color_sprite[3] = 0.5;
     } else {
@@ -415,10 +425,10 @@ export function main(): void {
 
     let font_test_idx = 0;
 
-    print(glov_font.styleColored(null, 0x000000ff),
+    print(fontStyleColored(null, 0x000000ff),
       test_character.x, test_character.y + (++font_test_idx * 20), Z.SPRITES,
       'TEXT!');
-    let font_style = glov_font.style(null, {
+    let font_style = fontStyle(null, {
       outline_width: 1.0,
       outline_color: 0x800000ff,
       glow_xoffs: 3.25,
@@ -492,7 +502,7 @@ export function main(): void {
     }
     y += button_spacing;
 
-    font.drawSizedAligned(null, x, y, Z.UI, uiTextHeight(), font.ALIGN.HCENTER, uiButtonWidth(), 0, 'Tests');
+    font.drawSizedAligned(null, x, y, Z.UI, uiTextHeight(), ALIGN.HCENTER, uiButtonWidth(), 0, 'Tests');
     y += uiTextHeight() + 1;
 
     let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
@@ -569,7 +579,7 @@ export function main(): void {
     //     touch_state: input.touch_state,
     //   }, undefined, 2));
 
-    if (input.keyDownEdge(KEYS.ESC) || input.padButtonDownEdge(PAD.B)) {
+    if (keyDownEdge(KEYS.ESC) || padButtonDownEdge(PAD.B)) {
       pad_controls_sprite = !pad_controls_sprite;
     }
   }
