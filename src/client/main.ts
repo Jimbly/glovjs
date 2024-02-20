@@ -1,33 +1,71 @@
 /*eslint global-require:off*/
 // eslint-disable-next-line import/order
-const local_storage = require('glov/client/local_storage.js');
+const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
-import * as engine from 'glov/client/engine.js';
-import * as glov_font from 'glov/client/font.js';
-import * as input from 'glov/client/input.js';
-const { floor, sin } = Math;
-import * as net from 'glov/client/net.js';
-import * as particles from 'glov/client/particles.js';
-import * as settings from 'glov/client/settings.js';
-import { slider } from 'glov/client/slider.js';
-import { FADE_IN, FADE_OUT, soundLoad, soundPlay, soundPlayMusic } from 'glov/client/sound.js';
-import { spineCreate } from 'glov/client/spine.js';
-import { spotSuppressPad } from 'glov/client/spot.js';
-import { spriteAnimationCreate } from 'glov/client/sprite_animation.js';
-import { spriteSetGet } from 'glov/client/sprite_sets.js';
-import * as glov_sprites from 'glov/client/sprites.js';
-import { spriteCreate } from 'glov/client/sprites.js';
-import * as transition from 'glov/client/transition.js';
-import * as ui from 'glov/client/ui.js';
+import * as engine from 'glov/client/engine';
+import * as glov_font from 'glov/client/font';
+import * as input from 'glov/client/input';
+import * as net from 'glov/client/net';
+import * as particles from 'glov/client/particles';
+import * as settings from 'glov/client/settings';
+import { slider } from 'glov/client/slider';
 import {
+  FADE_IN,
+  FADE_OUT,
+  soundLoad,
+  soundPlay,
+  soundPlayMusic,
+} from 'glov/client/sound';
+import { spineCreate } from 'glov/client/spine';
+import { spotSuppressPad } from 'glov/client/spot';
+import {
+  SpriteAnimation,
+  spriteAnimationCreate,
+} from 'glov/client/sprite_animation';
+import { spriteSetGet } from 'glov/client/sprite_sets';
+import {
+  Sprite,
+  spriteCreate,
+  spriteQueueSprite,
+} from 'glov/client/sprites';
+import * as transition from 'glov/client/transition';
+import {
+  ButtonRet,
+  LINE_ALIGN,
+  LINE_CAP_ROUND,
+  LINE_CAP_SQUARE,
+  buttonText,
+  drawLine,
+  makeColorSet,
+  print,
+  scaleSizes,
+  setFontHeight,
+  uiButtonHeight,
+  uiButtonWidth,
   uiHandlingNav,
   uiTextHeight,
-} from 'glov/client/ui.js';
-import * as ui_test from 'glov/client/ui_test.js';
-import { v4clone, v4copy, vec2, vec4 } from 'glov/common/vmath.js';
-import * as particle_data from './particle_data.js';
-import { test3D } from './test_3d.js';
+} from 'glov/client/ui';
+import * as ui_test from 'glov/client/ui_test';
+import {
+  v4clone,
+  v4copy,
+  vec2,
+  vec4,
+} from 'glov/common/vmath';
+import * as particle_data from './particle_data';
+import { test3D } from './test_3d';
+
+import type { TSMap } from 'glov/common/types';
+
+const { floor, sin } = Math;
+
+// TODO: Migrate to TypeScript
+type Spine = ReturnType<typeof spineCreate>;
+declare module 'glov/client/settings' {
+  let render_scale: number;
+  let render_scale_all: number;
+}
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;
@@ -37,35 +75,43 @@ Z.UI_TEST = 200;
 
 // let app = exports;
 // Virtual viewport for our game logic
-export const game_width = 320;
-export const game_height = 240;
+const game_width = 320;
+const game_height = 240;
 
-export let sprites = {};
+type SpriteDict = {
+  test: Sprite[];
+  white: Sprite;
+  test_tint: Sprite;
+  game_bg: Sprite;
+  animation: SpriteAnimation;
+};
+let sprites: SpriteDict = {} as SpriteDict;
 
 const music_file = 'music_test.webm';
 
 // Persistent flags system for testing parameters
-let flags = {};
-function flagGet(key, dflt) {
+let flags: TSMap<boolean | string> = {};
+function flagGet<T=boolean>(key: string, dflt?: T): T;
+function flagGet(key: string, dflt?: boolean | string): boolean | string {
   if (flags[key] === undefined) {
     flags[key] = local_storage.getJSON(`flag_${key}`, dflt) || false;
   }
-  return flags[key];
+  return flags[key]!;
 }
-function flagToggle(key) {
+function flagToggle(key: string): void {
   flags[key] = !flagGet(key);
   local_storage.setJSON(`flag_${key}`, flags[key]);
 }
-function flagSet(key, value) {
+function flagSet(key: string, value: boolean | string): void {
   flags[key] = value;
   local_storage.setJSON(`flag_${key}`, flags[key]);
 }
 
 const color_white = vec4(1, 1, 1, 1);
-const colors_active = ui.makeColorSet(vec4(0.5, 1, 0.5, 1));
-const colors_inactive = ui.makeColorSet(vec4(0.5, 0.5, 0.5, 1));
+const colors_active = makeColorSet(vec4(0.5, 1, 0.5, 1));
+const colors_inactive = makeColorSet(vec4(0.5, 0.5, 0.5, 1));
 
-function perfTestSprites() {
+function perfTestSprites(): void {
   if (!sprites.test) {
     sprites.test = [
       spriteCreate({ name: 'test', size: vec2(1, 1), origin: vec2(0.5, 0.5) }),
@@ -89,14 +135,14 @@ function perfTestSprites() {
       let sprite = sprites.test[idx];
       for (let jj = 0; jj < subc; ++jj) {
         if (mode === 4) {
-          // glov_sprites.queueraw(sprite.texs,
+          // spriteQueueRaw(sprite.texs,
           //   Math.random() * game_width - 3, Math.random() * game_height - 3, z,
           //   6, 6, 0, 0, 1, 1, color_white);
-          glov_sprites.queuesprite(sprite,
+          spriteQueueSprite(sprite,
             Math.random() * game_width, Math.random() * game_height, z,
-            6 * sprite.size[0], 6 * sprite.size[1], 0, sprite.uvs, color_white);
+            6, 6, 0, sprite.uvs, color_white);
         } else {
-          sprites.test[idx].draw({
+          sprites.test[idx]!.draw({
             x: Math.random() * game_width,
             y: Math.random() * game_height,
             z,
@@ -122,7 +168,7 @@ function perfTestSprites() {
 
 const color_black = vec4(0,0,0,1);
 let line_precise = 1;
-function lineTest() {
+function lineTest(): void {
   const line_len = 20;
   let y_values = [
     20, 25.25, 30.5, 35.667,
@@ -137,21 +183,21 @@ function lineTest() {
     for (let jj = 0; jj < y_values.length; ++jj) {
       let x = x0 + jj * 2;
       let y = y_values[jj];
-      ui.drawLine(x, y, x + line_len, y, z, width, line_precise, color_black,
-        ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+      drawLine(x, y, x + line_len, y, z, width, line_precise, color_black,
+        LINE_ALIGN|LINE_CAP_SQUARE);
       z += 0.1;
-      ui.drawLine(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black,
-        ui.LINE_ALIGN|ui.LINE_CAP_ROUND);
+      drawLine(x, y, x + line_len, y + 4.5, z, width, line_precise, color_black,
+        LINE_ALIGN|LINE_CAP_ROUND);
       z += 0.1;
-      ui.drawLine(x, y, x, y + line_len / 2, z, width, line_precise, color_black,
-        ui.LINE_ALIGN|ui.LINE_CAP_SQUARE);
+      drawLine(x, y, x, y + line_len / 2, z, width, line_precise, color_black,
+        LINE_ALIGN|LINE_CAP_SQUARE);
       z += 0.1;
     }
   }
-  ui.drawLine(50, 72, 250, 200, z, 20, line_precise, color_black, ui.LINE_CAP_ROUND);
+  drawLine(50, 72, 250, 200, z, 20, line_precise, color_black, LINE_CAP_ROUND);
 }
 
-export function main() {
+export function main(): void {
   if (engine.DEBUG) {
     // Enable auto-reload, etc
     net.init({ engine });
@@ -161,38 +207,38 @@ export function main() {
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
   let pixely = flagGet('pixely', 'on');
-  let font;
+  let font_def;
   let ui_sprites;
   let pixel_perfect = 0;
   if (pixely === 'strict') {
-    font = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
+    font_def = { info: font_info_04b03x1, texture: 'font/04b03_8x1' };
     ui_sprites = spriteSetGet('pixely');
     pixel_perfect = 1;
   } else if (pixely && pixely !== 'off') {
-    font = { info: font_info_04b03x2, texture: 'font/04b03_8x2' };
+    font_def = { info: font_info_04b03x2, texture: 'font/04b03_8x2' };
     ui_sprites = spriteSetGet('pixely');
   } else {
-    font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
+    font_def = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
 
   if (!engine.startup({
     game_width,
     game_height,
     pixely,
-    font,
+    font: font_def,
     viewport_postprocess: false,
     ui_sprites,
     pixel_perfect,
   })) {
     return;
   }
-  font = engine.font;
+  let font = engine.font;
 
   // const font = engine.font;
 
   // Perfect sizes for pixely modes
-  ui.scaleSizes(13 / 32);
-  ui.setFontHeight(8);
+  scaleSizes(13 / 32);
+  setFontHeight(8);
 
   const color_red = vec4(1, 0, 0, 1);
   const color_yellow = vec4(1, 1, 0, 1);
@@ -202,7 +248,7 @@ export function main() {
   const PAD = input.PAD;
 
   const sprite_size = 64;
-  function initGraphics() {
+  function initGraphics(): void {
     particles.preloadParticleData(particle_data);
 
     soundLoad('test');
@@ -236,8 +282,8 @@ export function main() {
   }
 
   let spine_inited = false;
-  let spine_anim;
-  function spineInit() {
+  let spine_anim: Spine;
+  function spineInit(): void {
     spine_inited = true;
 
     spine_anim = spineCreate({
@@ -258,15 +304,15 @@ export function main() {
   let last_particles = 0;
   let pad_controls_sprite = false;
 
-  function test(dt) {
+  let test_color_sprite = v4clone(color_white);
+  let test_character = {
+    x: (Math.random() * (game_width - sprite_size - 200) + (sprite_size * 0.5) + 200),
+    y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
+    dx: 0,
+    dy: 0,
+  };
+  function test(dt: number): void {
     gl.clearColor(0, 0.72, 1, 1);
-    if (!test.color_sprite) {
-      test.color_sprite = v4clone(color_white);
-      test.character = {
-        x: (Math.random() * (game_width - sprite_size - 200) + (sprite_size * 0.5) + 200),
-        y: (Math.random() * (game_height - sprite_size) + (sprite_size * 0.5)),
-      };
-    }
     if (pad_controls_sprite) {
       spotSuppressPad();
     }
@@ -283,20 +329,20 @@ export function main() {
       lineTest();
     }
 
-    test.character.dx = 0;
-    test.character.dy = 0;
+    test_character.dx = 0;
+    test_character.dy = 0;
     if (!uiHandlingNav()) { // could do WASD regardless
-      test.character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
-      test.character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
-      test.character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
-      test.character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
+      test_character.dx -= input.keyDown(KEYS.LEFT) + input.keyDown(KEYS.A) + input.padButtonDown(PAD.LEFT);
+      test_character.dx += input.keyDown(KEYS.RIGHT) + input.keyDown(KEYS.D) + input.padButtonDown(PAD.RIGHT);
+      test_character.dy -= input.keyDown(KEYS.UP) + input.keyDown(KEYS.W) + input.padButtonDown(PAD.UP);
+      test_character.dy += input.keyDown(KEYS.DOWN) + input.keyDown(KEYS.S) + input.padButtonDown(PAD.DOWN);
     }
-    if (test.character.dx < 0) {
+    if (test_character.dx < 0) {
       sprites.animation.setState('idle_left');
       if (spine_anim) {
         spine_anim.setAnimation(0, 'run_left', true);
       }
-    } else if (test.character.dx > 0) {
+    } else if (test_character.dx > 0) {
       sprites.animation.setState('idle_right');
       if (spine_anim) {
         spine_anim.setAnimation(0, 'run', true);
@@ -309,25 +355,25 @@ export function main() {
       }
     }
 
-    test.character.x += test.character.dx * 0.05;
-    test.character.y += test.character.dy * 0.05;
+    test_character.x += test_character.dx * 0.05;
+    test_character.y += test_character.dy * 0.05;
     let bounds = {
-      x: test.character.x - sprite_size/2,
-      y: test.character.y - sprite_size/2,
+      x: test_character.x - sprite_size/2,
+      y: test_character.y - sprite_size/2,
       w: sprite_size,
       h: sprite_size,
     };
     if (input.mouseDownOverBounds(bounds)) {
-      v4copy(test.color_sprite, color_yellow);
+      v4copy(test_color_sprite, color_yellow);
     } else if (input.click(bounds)) {
-      v4copy(test.color_sprite, (test.color_sprite[2] === 0) ? color_white : color_red);
+      v4copy(test_color_sprite, (test_color_sprite[2] === 0) ? color_white : color_red);
       soundPlay('test');
     } else if (input.mouseOver(bounds)) {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 0.5;
+      v4copy(test_color_sprite, color_white);
+      test_color_sprite[3] = 0.5;
     } else {
-      v4copy(test.color_sprite, color_white);
-      test.color_sprite[3] = 1;
+      v4copy(test_color_sprite, color_white);
+      test_color_sprite[3] = 1;
     }
 
     // sprites.game_bg.draw({
@@ -340,13 +386,13 @@ export function main() {
       }
       spine_anim.update(dt * 2);
       spine_anim.draw({
-        x: test.character.x, y: test.character.y, z: Z.SPRITES,
+        x: test_character.x, y: test_character.y, z: Z.SPRITES,
         scale: 0.25,
       });
     } else {
       sprites.test_tint.drawDualTint({
-        x: test.character.x,
-        y: test.character.y,
+        x: test_character.x,
+        y: test_character.y,
         z: Z.SPRITES,
         color: [1, 1, 0, 1],
         color1: [1, 0, 1, 1],
@@ -356,21 +402,21 @@ export function main() {
 
     if (flagGet('4color')) {
       sprites.test_tint.draw4Color({
-        x: test.character.x,
-        y: test.character.y + 64,
+        x: test_character.x,
+        y: test_character.y + 64,
         z: Z.SPRITES,
-        c0: [1, 0, 0, 1],
-        c1: [0, 1, 0, 1],
-        c2: [0, 0, 1, 1],
-        c3: [1, 0, 1, 1],
+        color_ul: [1, 0, 0, 1],
+        color_ll: [0, 1, 0, 1],
+        color_lr: [0, 0, 1, 1],
+        color_ur: [1, 0, 1, 1],
         frame: sprites.animation.getFrame(),
       });
     }
 
     let font_test_idx = 0;
 
-    ui.print(glov_font.styleColored(null, 0x000000ff),
-      test.character.x, test.character.y + (++font_test_idx * 20), Z.SPRITES,
+    print(glov_font.styleColored(null, 0x000000ff),
+      test_character.x, test_character.y + (++font_test_idx * 20), Z.SPRITES,
       'TEXT!');
     let font_style = glov_font.style(null, {
       outline_width: 1.0,
@@ -381,35 +427,35 @@ export function main() {
       glow_outer: 5,
       glow_color: 0x000000ff,
     });
-    ui.print(font_style,
-      test.character.x, test.character.y + (++font_test_idx * uiTextHeight()), Z.SPRITES,
+    print(font_style,
+      test_character.x, test_character.y + (++font_test_idx * uiTextHeight()), Z.SPRITES,
       'Outline and Drop Shadow');
 
-    let x = ui.button_height;
-    let button_spacing = ui.button_height + 2;
+    let x = uiButtonHeight();
+    let button_spacing = uiButtonHeight() + 2;
     let y = game_height - 10 - button_spacing * 7;
-    let mini_button_w = floor((ui.button_width - 2) / 2);
+    let mini_button_w = floor((uiButtonWidth() - 2) / 2);
 
-    function miniButton(text, tooltip, active) {
-      let ret = ui.buttonText({
+    function miniButton(text: string, tooltip?: string, active?: boolean): ButtonRet | null {
+      let ret = buttonText({
         x, y, text, tooltip,
         w: mini_button_w,
         colors: active ? colors_active : colors_inactive,
       });
       x += 2 + mini_button_w;
-      if (x >= ui.button_width) {
-        x = ui.button_height;
+      if (x >= uiButtonWidth()) {
+        x = uiButtonHeight();
         y += button_spacing;
       }
       return ret;
     }
 
-    if (ui.buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
+    if (buttonText({ x, y, text: `Pixely: ${flagGet('pixely') || 'Off'}`,
       tooltip: 'Toggles pixely or regular mode (requires reload)' })
     ) {
-      if (flagGet('pixely') === 'strict') {
+      if (flagGet<string>('pixely') === 'strict') {
         flagSet('pixely', false);
-      } else if (flagGet('pixely') === 'on') {
+      } else if (flagGet<string>('pixely') === 'on') {
         flagSet('pixely', 'strict');
       } else {
         flagSet('pixely', 'on');
@@ -423,7 +469,7 @@ export function main() {
     y += button_spacing;
 
     let rs3d_disabled = !flagGet('3d_test') || engine.render_width;
-    if (ui.buttonText({ x, y, text: `RenderScale3D: ${rs3d_disabled ? '' : settings.render_scale}`,
+    if (buttonText({ x, y, text: `RenderScale3D: ${rs3d_disabled ? '' : settings.render_scale}`,
       tooltip: 'Changes render_scale',
       disabled: rs3d_disabled })
     ) {
@@ -435,7 +481,7 @@ export function main() {
     }
     y += button_spacing;
 
-    if (ui.buttonText({ x, y, text: `RenderScaleAll: ${settings.render_scale_all}`,
+    if (buttonText({ x, y, text: `RenderScaleAll: ${settings.render_scale_all}`,
       tooltip: 'Changes render_scale_all' })
     ) {
       if (settings.render_scale_all === 1) {
@@ -446,7 +492,7 @@ export function main() {
     }
     y += button_spacing;
 
-    font.drawSizedAligned(null, x, y, Z.UI, uiTextHeight(), font.ALIGN.HCENTER, ui.button_width, 0, 'Tests');
+    font.drawSizedAligned(null, x, y, Z.UI, uiTextHeight(), font.ALIGN.HCENTER, uiButtonWidth(), 0, 'Tests');
     y += uiTextHeight() + 1;
 
     let do_3d = flagGet('3d_test'); // before the toggle, so transition looks good
@@ -495,7 +541,7 @@ export function main() {
       if (engine.getFrameTimestamp() - last_particles > 1000) {
         last_particles = engine.getFrameTimestamp();
         engine.glov_particles.createSystem(particle_data.defs.explosion,
-          //[test.character.x, test.character.y, Z.PARTICLES]
+          //[test_character.x, test_character.y, Z.PARTICLES]
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
       }
@@ -512,8 +558,8 @@ export function main() {
 
     // Debuggin full canvas stretching
     // const camera2d = require('glov/client/camera2d.js');
-    // ui.drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
-    // ui.drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+    // drawLine(camera2d.x0(), camera2d.y0(), camera2d.x1(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
+    // drawLine(camera2d.x1(), camera2d.y0(), camera2d.x0(), camera2d.y1(), Z.BORDERS + 1, 1, 0.95,[1,0,1,0.5]);
 
     // Debugging touch state on mobile
     // const glov_camera2d = require('glov/client/camera2d.js');
@@ -528,7 +574,7 @@ export function main() {
     }
   }
 
-  function testInit(dt) {
+  function testInit(dt: number): void {
     engine.setState(test);
     if (flagGet('music')) {
       soundPlayMusic(music_file);
