@@ -49,8 +49,7 @@ const { floor, random } = Math;
 
 type Entity = EntityTestServer;
 
-type EntityTestDataServer = {
-} & EntityTestDataCommon;
+type EntityTestDataServer = Record<string, never> & EntityTestDataCommon;
 
 entityServerRegisterFieldDefs<EntityTestDataServer>({
   pos: { encoding: EntityFieldEncoding.Vec3 },
