@@ -836,10 +836,12 @@ GlovFont.prototype.drawScaled = function () {
   );
   let padding1 = max(0, applied_style.outline_width*font_texel_scale*avg_scale_font);
   const outer_scaled = applied_style.glow_outer*font_texel_scale;
-  padding4[0] = max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-  padding4[2] = max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-  padding4[1] = max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
-  padding4[3] = max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
+  let glow_xoffs = applied_style.glow_xoffs*font_texel_scale*xsc;
+  let glow_yoffs = applied_style.glow_yoffs*font_texel_scale*ysc;
+  padding4[0] = max(outer_scaled*xsc - glow_xoffs, padding1);
+  padding4[2] = max(outer_scaled*xsc + glow_xoffs, padding1);
+  padding4[1] = max(outer_scaled*ysc - glow_yoffs, padding1);
+  padding4[3] = max(outer_scaled*ysc + glow_yoffs, padding1);
 
   techParamsSet('param0', value);
   let value2 = temp_vec4_glow_params;
@@ -928,7 +930,7 @@ GlovFont.prototype.drawScaled = function () {
           let h = char_info.h * ysc2 + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let xx = x - rel_x_scale * padding4[0];
-          let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
+          let yy = y - rel_y_scale * padding4[1] + char_info.yoffs * ysc2;
           // Below is inlined/optimized version of:
           // spriteQueueRaw(
           //   texs,
