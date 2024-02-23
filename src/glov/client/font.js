@@ -146,6 +146,11 @@ GlovFontStyle.prototype.color = 0xFFFFFFff;
 // GlovFontStyle.prototype.colorLL = 0;
 // GlovFontStyle.prototype.color_mode = COLOR_MODE.SINGLE;
 
+// line wrapping epsilon, don't wrap non-deterministically if scale and
+//  character widths are factors of display width.  Also allow a width
+//  calculated from .wrapLines() to be used as a width passed to draw*aligned()
+const EPSILON = 0.0000000001;
+
 export const font_shaders = {};
 
 export function intColorFromVec4Color(v) {
@@ -390,7 +395,7 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
   let y_size = size;
   if (align & ALIGN_NEEDS_WIDTH) {
     let width = this.getStringWidth(style, x_size, text);
-    if ((align & ALIGN.HFIT) && width > w) {
+    if ((align & ALIGN.HFIT) && width > w + EPSILON) {
       let scale = w / width;
       x_size *= scale;
       width = w;
@@ -610,9 +615,6 @@ function endsWord(char_code) {
     char_code === 9; // '\t'
 }
 
-// line wrapping epsilon, don't wrap non-deterministically if scale and
-//  character widths are factors of display width
-const EPSILON = 0.0000000001;
 // line_cb(x0, int linenum, const char *line, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line_cb) {
   text = getStringFromLocalizable(text);
@@ -653,7 +655,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
       if (word_start !== idx) {
         let need_line_flush = false;
         // flush word, take care of space on next loop
-        if (word_x0 + word_w <= w) {
+        if (word_x0 + word_w <= w + EPSILON) {
           // fits fine, add to line, start new word
         } else if (word_w > max_word_w && !hard_wrap_mode_fit) {
           // even just this word alone won't fit, needs a hard wrap
