@@ -152,6 +152,7 @@ class CollapsagoriesImpl {
   }
   private last_header_y = 0;
   header<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {
+    assert(this.num_headers);
     if (this.clipper_active) {
       spriteClipPop();
       this.clipper_active = false;
