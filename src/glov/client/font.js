@@ -200,6 +200,16 @@ export function fontStyleColored(font_style, color) {
   });
 }
 
+export function fontStyleOutlined(font_style, outline_width, outline_color) {
+  let parent = font_style || glov_font_default_style;
+  outline_color = outline_color || parent.color;
+  return fontStyle(font_style, {
+    outline_width,
+    outline_color,
+  });
+}
+
+
 function colorAlpha(color, alpha) {
   alpha = clamp(round((color & 0xFF) * alpha), 0, 255);
   return color & 0xFFFFFF00 | alpha;
@@ -677,7 +687,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
           }
         } else {
           // won't fit, but fits on next line, soft wrap
-          if (line_end !== -1) {
+          if (line_end !== -1 || indent < 0 && line_x0 !== indent) {
             flushLine();
           }
         }
@@ -695,7 +705,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
 
         // we're now either still pointing at the space, or rewound to an earlier point
         continue;
-      } else {
+      } else if (c) {
         // process the space
         word_start = idx + 1;
         word_x0 += space_size;
@@ -717,6 +727,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
     ++idx;
   } while (idx <= len);
   if (line_end !== -1) {
+    line_x1 = word_x0; // include size of trailing whitespace
     flushLine();
   }
 

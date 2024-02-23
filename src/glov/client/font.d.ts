@@ -23,6 +23,8 @@ export type FontStyle = { _opaque: 'FontStyle' };
 export function fontStyle(base: FontStyle | null, param: FontStyleParam): FontStyle;
 export function fontStyleAlpha(base: FontStyle | null, alpha: number): FontStyle;
 export function fontStyleColored(base: FontStyle | null, color: RGBA): FontStyle;
+// if outline_color is not specified, inherits base color
+export function fontStyleOutlined(base: FontStyle | null, outline_width: number, outline_color?: RGBA): FontStyle;
 
 export enum ALIGN {
   HLEFT,

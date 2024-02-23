@@ -1,5 +1,6 @@
 // TODO: move when converted to TypeScript
 import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
+import type { Box } from './geom_types';
 // TODO: move when converted to TypeScript
 import type { shaderCreate } from 'glov/client/shaders';
 type Shader = ReturnType<typeof shaderCreate>;
@@ -126,6 +127,7 @@ export function spriteChainedStop(): void;
 export function spriteQueueFn(z: number, fn: () => void): void;
 export function spriteClip(z_start: number, z_end: number, x: number, y: number, w: number, h: number): void;
 export function spriteClipped(): boolean;
+export function spriteClippedViewport(): Box;
 export function spriteClipPush(z: number, x: number, y: number, w: number, h: number): void;
 export function spriteClipPop(): void;
 export function spriteClipPause(): void;

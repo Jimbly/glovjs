@@ -24,8 +24,8 @@ import { TSMap } from 'glov/common/types';
 
 let renderable_regex = /^\[([^\s\]=]+)=([^\s\]]+)( [^\]]+)?\](?!\()/;
 let renderable_param_regex = / ([^=]+)(?:=(?:"([^"]+)"|(\S+)))?/g;
-type RenderableParam = TSMap<number | string | true>;
-type RenderableContent = {
+export type RenderableParam = TSMap<number | string | true>;
+export type RenderableContent = {
   type: string;
   key: string;
   param?: RenderableParam;
@@ -85,9 +85,9 @@ let rules: Writeable<ParserRules> = {
   // 'list',
   // 'def',
   // 'table',
-  'newline',
+  // 'newline', // probably easy to support, what triggers it?
   'paragraph',
-  'escape',
+  'escape', // returns type "text"
   // 'tableSeparator',
   // 'autolink',
   // 'mailto',
@@ -98,19 +98,57 @@ let rules: Writeable<ParserRules> = {
   // 'refimage',
   'em',
   'strong',
-  'u',
+  // 'u',
   // 'del',
   // 'inlineCode',
-  'br',
+  // 'br', // probably easy to support, what triggers it?
   'text',
 ] as const).forEach((key) => (rules[key] = SimpleMarkdown.defaultRules[key]));
 
 let reBuiltParser = SimpleMarkdown.parserFor(rules);
-function mdParse(source: string): unknown {
-  let blockSource = `${source}\n\n`;
-  return reBuiltParser(blockSource, { inline: false });
+
+// export type MDASTBaseNode = {
+//   type: string;
+// };
+export type MDNodeParagraph = {
+  type: 'paragraph';
+  content: Array<MDASTNode>;
+};
+export type MDNodeText = {
+  type: 'text';
+  content: string;
+};
+export type MDNodeItalic = {
+  type: 'em';
+  content: Array<MDASTNode>;
+};
+export type MDNodeBold = {
+  type: 'strong';
+  content: Array<MDASTNode>;
+};
+export type MDNodeRenderable = {
+  type: 'renderable';
+  content: RenderableContent;
+};
+
+export type MDASTNode = MDNodeParagraph | MDNodeText | MDNodeItalic | MDNodeBold | MDNodeRenderable;
+export function mdNodeIsParagraph(node: MDASTNode): node is MDNodeParagraph {
+  return node.type === 'paragraph';
+}
+export function mdNodeIsText(node: MDASTNode): node is MDNodeText {
+  return node.type === 'text';
+}
+export function mdNodeIsItaltic(node: MDASTNode): node is MDNodeItalic {
+  return node.type === 'em';
+}
+export function mdNodeIsBold(node: MDASTNode): node is MDNodeBold {
+  return node.type === 'strong';
+}
+export function mdNodeIsRenderable(node: MDASTNode): node is MDNodeRenderable {
+  return node.type === 'renderable';
 }
 
-let tree = mdParse('FOO_BAR Here is [img=foo] [gt=ACCESS_AREA text="Access Areas"]' +
-  ' [p=1] [img=foo scale=3 nostretch] [world=1234/info] [emoji=smile] and an *em**b**tag*.');
-console.log(JSON.stringify(tree, undefined, 2));
+export function mdParse(source: string): Array<MDASTNode> {
+  let blockSource = `${source}\n\n`;
+  return reBuiltParser(blockSource, { inline: false }) as Array<MDASTNode>;
+}

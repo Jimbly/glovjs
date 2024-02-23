@@ -10,6 +10,7 @@ import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import * as input from './input';
 import { linkText } from './link';
+import { markdownAuto } from './markdown';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   SelectionBox,
@@ -208,12 +209,13 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesStart({
     key: 'ui_test_cats',
     x: 0, z, w: scroll_area_w,
-    num_headers: 3,
+    num_headers: 4,
     view_y: test_scroll_area.getScrollPos(),
     view_h: scroll_area_h,
     header_h,
     parent_scroll: test_scroll_area,
   });
+
   collapsagoriesHeader({
     y: internal_y,
     text: 'Values',
@@ -236,6 +238,40 @@ export function run(x: number, y: number, z: number): void {
     progress: slider_value,
   });
   internal_y += button_height + pad;
+
+  collapsagoriesHeader({
+    y: internal_y,
+    text: 'Markdown',
+    text_height,
+  });
+  internal_y += header_h + pad;
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: `Edit Box MD: ${edit_box1.getText()}+${edit_box2.getText()}`,
+  }).h + pad;
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: `# Lorem Markdownum
+
+## Qua *promissa*
+
+Lorem markdownum vestrae geminique asque comas; **muu siq**,
+inconsumpta? Quod siquid ferroque labores Cererisque praevia exacta patitur arge
+nec arborei timentem, ut crimina vidit.
+`,
+  }).h + pad;
 
   collapsagoriesHeader({
     y: internal_y,
