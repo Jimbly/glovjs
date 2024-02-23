@@ -278,7 +278,7 @@ function mdASTToBlock(tree: MDASTNode[], param: MarkdownParseParam): MDLayoutBlo
 }
 
 // Convert from text into a tree of blocks
-export function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
+function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
   let state = param as MDState;
   let { cache } = state;
   if (cache.parsed) {
@@ -304,7 +304,7 @@ function cmpDimsY(a: MDDrawBlock, b: MDDrawBlock): number {
 }
 
 // let each block determine their bounds and x/y/w/h values
-export function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void {
+function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void {
   let state = param as MDState;
   let { cache } = state;
   if (cache.layout) {
@@ -353,7 +353,12 @@ export function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam)
   profilerStopFunc();
 }
 
-// TODO: parse & layout can be one exported call, no reason to be separate?
+// Probably no reason to ever do parse & layout separately, so combine into one external call
+// In theory, could allow invalidating just the layout cache though!
+export function markdownPrep(param: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam): void {
+  markdownParse(param);
+  markdownLayout(param);
+}
 
 export type MarkdownDims = {
   w: number;
@@ -458,8 +463,7 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
   }
   let param2 = param as MarkdownAutoParam & MarkdownStateCached;
 
-  markdownParse(param2);
-  markdownLayout(param2);
+  markdownPrep(param2);
   let dims = markdownDims(param2);
   markdownDraw(param2);
 
