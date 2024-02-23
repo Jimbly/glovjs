@@ -408,7 +408,9 @@ export function runFontTest(x: number, y: number): void {
     glow_xoffs: 4, glow_yoffs: 4, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O1Il');
+  xx = x;
+  xx += font.drawSized(font_style_shadow, xx, y, z, font_size, 'Glow (Shadow) O0O1Il');
+  font.drawSized(null, xx, y, z, font_size, 'Aligned');
   y += font_size;
 
   const font_style_both = fontStyle(null, {
@@ -438,7 +440,8 @@ export function runFontTest(x: number, y: number): void {
   xx += font.drawSized(fontStyleAlpha(font_style_both, 0.25), xx, y, z, font_size, 'h ');
   xx += font.drawSized(font_style_both_soft_on_hard, xx, y, z, font_size, 'SoH ');
   xx += font.drawSized(font_style_both_hard_on_soft, xx, y, z, font_size, 'HoH ');
-  font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0');
+  xx += font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0 ');
+  font.drawSized(null, xx, y, z, font_size, 'A');
   y += font_size;
 
   let font_size2 = 32;
@@ -482,12 +485,14 @@ export function runFontTest(x: number, y: number): void {
       color: COLOR_WHITE
     });
     for (let ii = 1; ii <= 4; ii++) {
-      font.drawSizedAligned(
+      xx = x;
+      xx += font.drawSizedAligned(
         fontStyle(font_style_glow2, {
           // glow_inner: ii * 2 - 1,
           glow_outer: ii * 2,
         }), x, y, z, font_size2, ALIGN.HLEFT, 400, 0,
         `Glow outer ${ii * 2}`);
+      font.drawSized(null, xx, y, z, font_size2, 'A');
       y += font_size2;
     }
 
