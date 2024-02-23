@@ -111,6 +111,8 @@ function init(x: number, y: number, column_width: number): void {
 
 const style_half_height = uiStyleAlloc({ text_height: '50%' });
 
+let markdown_text: string;
+
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
   z = z || Z.UI;
@@ -255,6 +257,17 @@ export function run(x: number, y: number, z: number): void {
     align: ALIGN.HWRAP|ALIGN.HFIT,
     text: `Edit Box MD: ${edit_box1.getText()}+${edit_box2.getText()}`,
   }).h + pad;
+  if (!markdown_text) {
+    // For perf testing: set to 300000
+    markdown_text = new Array(3).join(`# Lorem Markdownum
+
+## Qua *promissa*
+
+Lorem markdownum vestrae geminique asque comas; **muu siq**,
+inconsumpta? Quod siquid ferroque labores Cererisque praevia exacta patitur arge
+nec arborei timentem, ut crimina vidit.
+`);
+  }
   internal_y += markdownAuto({
     font_style,
     x: 2,
@@ -263,14 +276,7 @@ export function run(x: number, y: number, z: number): void {
     w: scroll_area_w - 2,
     text_height,
     align: ALIGN.HWRAP|ALIGN.HFIT,
-    text: `# Lorem Markdownum
-
-## Qua *promissa*
-
-Lorem markdownum vestrae geminique asque comas; **muu siq**,
-inconsumpta? Quod siquid ferroque labores Cererisque praevia exacta patitur arge
-nec arborei timentem, ut crimina vidit.
-`,
+    text: markdown_text,
   }).h + pad;
 
   collapsagoriesHeader({

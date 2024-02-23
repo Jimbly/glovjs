@@ -33,7 +33,7 @@ import {
 } from './ui';
 import type { TSMap, WithRequired } from 'glov/common/types';
 
-const { max } = Math;
+const { floor, max } = Math;
 
 // Exported opaque types
 export type MarkdownCache = Record<string, never>;
@@ -73,8 +73,9 @@ export type MarkdownDrawParam = {
 type MDCache = {
   parsed?: MDLayoutBlock[];
   layout?: {
-    blocks: MDDrawBlock[];
+    blocks: MDDrawBlock[]; // sorted by y
     dims: MarkdownDims;
+    max_block_h: number;
   };
 };
 type MDState = {
@@ -162,6 +163,7 @@ class MDDrawBlockText implements MDDrawBlock {
   constructor(public dims: MDBlockTextLayout) {
   }
   draw(param: MDDrawParam): void {
+    profilerStart('MDDrawBlockText::draw');
     let lp = this.dims;
     lp.font.drawSizedAligned(lp.font_style,
       param.x + lp.x, param.y + lp.y, param.z,
@@ -187,6 +189,7 @@ class MDDrawBlockText implements MDDrawBlock {
         }
       }
     }
+    profilerStop();
   }
 }
 
@@ -281,9 +284,23 @@ export function markdownParse(param: MarkdownStateCached & MarkdownParseParam): 
   if (cache.parsed) {
     return;
   }
+  profilerStartFunc();
   let tree: MDASTNode[] = mdParse(getStringFromLocalizable(param.text));
   let blocks = cache.parsed = mdASTToBlock(tree, param);
   cache.parsed = blocks;
+  profilerStopFunc();
+}
+
+function cmpDimsY(a: MDDrawBlock, b: MDDrawBlock): number {
+  let d = a.dims.y - b.dims.y;
+  if (d !== 0) {
+    return d;
+  }
+  d = a.dims.x - b.dims.x;
+  if (d !== 0) {
+    return d;
+  }
+  return 0;
 }
 
 // let each block determine their bounds and x/y/w/h values
@@ -293,6 +310,7 @@ export function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam)
   if (cache.layout) {
     return;
   }
+  profilerStartFunc();
   let calc_param: MDLayoutCalcParam = {
     w: param.w || 0,
     h: param.h || 0,
@@ -312,22 +330,27 @@ export function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam)
   let draw_blocks: MDDrawBlock[] = [];
   let maxx = 0;
   let maxy = 0;
+  let max_block_h = 0;
   for (let ii = 0; ii < blocks.length; ++ii) {
     let arr = blocks[ii].layout(calc_param);
     for (let jj = 0; jj < arr.length; ++jj) {
       let block = arr[jj];
       maxx = max(maxx, block.dims.x + block.dims.w);
       maxy = max(maxy, block.dims.y + block.dims.h);
+      max_block_h = max(max_block_h, block.dims.h);
       draw_blocks.push(block);
     }
   }
+  draw_blocks.sort(cmpDimsY);
   cache.layout = {
     blocks: draw_blocks,
     dims: {
       w: maxx,
       h: maxy,
     },
+    max_block_h,
   };
+  profilerStopFunc();
 }
 
 // TODO: parse & layout can be one exported call, no reason to be separate?
@@ -344,7 +367,28 @@ export function markdownDims(param: MarkdownStateCached): MarkdownDims {
   return layout.dims;
 }
 
+// Find the index of the first block whose y is after the specified value
+function bsearch(blocks: MDDrawBlock[], y: number): number {
+  let start = 0;
+  let end = blocks.length - 1;
+
+  while (start < end) {
+    let mid = floor((start + end) / 2);
+
+    if (blocks[mid].dims.y <= y) {
+      // mid is not eligible, exclude it, look later
+      start = mid + 1;
+    } else {
+      // mid is eligible, include it, look earlier
+      end = mid;
+    }
+  }
+
+  return end;
+}
+
 export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): void {
+  profilerStartFunc();
   let state = param as MDState;
   let { cache } = state;
   let { layout } = cache;
@@ -359,21 +403,30 @@ export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): vo
   if (!viewport && spriteClipped()) {
     viewport = spriteClippedViewport();
   }
-  let { blocks } = layout;
-  for (let ii = 0; ii < blocks.length; ++ii) {
+  let { blocks, max_block_h } = layout;
+  let idx0 = 0;
+  let idx1 = blocks.length - 1;
+  if (viewport) {
+    // TODO: need to expand viewport (just vertically?) and "draw" any elements
+    //   that might receive focus despite being scrolled out of view.
+    // Also probably need a little padding for things like dropshadows on
+    //   fonts that extend past bounds?
+    idx0 = bsearch(blocks, viewport.y - y - max_block_h);
+    idx1 = bsearch(blocks, viewport.y + viewport.h - y);
+  }
+
+  for (let ii = idx0; ii <= idx1; ++ii) {
     let block = blocks[ii];
     let { dims } = block;
     if (!viewport || (
-      // TODO: need to expand viewport (just vertically?) and "draw" any elements
-      //   that might receive focus despite being scrolled out of view.
-      // Also probably need a little padding for things like dropshadows on
-      //   fonts that extend past bounds?
+      // exact viewport check (in case block h is smaller than max_block_h)
       x + dims.x + dims.w >= viewport.x && x + dims.x < viewport.x + viewport.w &&
       y + dims.y + dims.h >= viewport.y && y + dims.y < viewport.y + viewport.h
     )) {
       block.draw(draw_param);
     }
   }
+  profilerStopFunc();
 }
 
 type MarkdownAutoParam = MarkdownStateParam & MarkdownParseParam & MarkdownLayoutParam & MarkdownDrawParam;
@@ -383,20 +436,25 @@ function mdcAlloc(): MDCache {
 }
 
 export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
+  profilerStartFunc();
   let state = param as MarkdownStateCached as MDState;
   assert(!param.custom || state.cache); // any advanced parameters require the caller handling the caching
   let auto_cache = !state.cache;
   if (auto_cache) {
+    profilerStart('auto_cache');
+    // If there's time in here, if the string is long, is primary just the object lookup
+    // It can be completely alleviated just by not re-creating the same string each frame, though!
     let text = param.text = getStringFromLocalizable(param.text);
     let cache_key = [
-      text,
+      'mdc',
       param.w || 0,
       param.h || 0,
       param.text_height || uiTextHeight(),
       param.indent || 0,
       param.align || 0,
     ].join(':');
-    state.cache = getUIElemData('mdc', { key: cache_key }, mdcAlloc);
+    state.cache = getUIElemData(cache_key, { key: text }, mdcAlloc);
+    profilerStop();
   }
   let param2 = param as MarkdownAutoParam & MarkdownStateCached;
 
@@ -408,5 +466,6 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
   if (auto_cache) {
     delete param.cache;
   }
+  profilerStopFunc();
   return dims;
 }
