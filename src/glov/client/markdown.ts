@@ -221,8 +221,9 @@ class MDBlockText implements MDLayoutBlock {
       indent -= inset;
     }
     let ret: MDDrawBlock[] = [];
+    let text = this.content.replace(/\n/g, ' ');
     param.font.wrapLines(
-      param.font_style, w, indent, param.text_height, this.content.replace(/\n/g, ' '), param.align,
+      param.font_style, w, indent, param.text_height, text, param.align,
       (x0: number, linenum: number, line: string, x1: number) => {
         if (linenum > 0) {
           param.cursor.y += param.text_height;
@@ -244,6 +245,9 @@ class MDBlockText implements MDLayoutBlock {
     if (ret.length) {
       let tail = ret[ret.length - 1];
       param.cursor.x = tail.dims.x + tail.dims.w;
+    } else {
+      // all whitespace, just advance cursor
+      param.cursor.x += param.font.getStringWidth(param.font_style, param.text_height, text);
     }
     return ret;
   }

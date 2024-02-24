@@ -2,6 +2,7 @@ import assert from 'assert';
 import {
   MDASTNode,
   mdParse,
+  mdParseSetValidRenderables,
 } from 'glov/client/markdown_parse';
 
 function treeToText(tree: MDASTNode[]): string {
@@ -14,8 +15,10 @@ function treeToText(tree: MDASTNode[]): string {
       ret += `${treeToText(node.content)}\n`;
     } else if (node.type === 'em' || node.type === 'strong') {
       ret += `<${node.type}>${treeToText(node.content)}</${node.type}>`;
-    } else {
-      ret += `<unknown:${node.type}>`;
+    } else if (node.type === 'renderable') {
+      ret += `<${node.content.type}=${node.content.key}>`;
+    // } else {
+    //   ret += `<unknown:${node.type}>`;
     }
   }
   return ret;
@@ -37,3 +40,10 @@ assert.equal(treeToText(tree), 'a :f\n');
 
 tree = mdParse('a +.  f');
 assert.equal(treeToText(tree), 'a +.  f\n');
+
+tree = mdParse('[img=foo] *bar*');
+assert.equal(treeToText(tree), '[img=foo] <em>bar</em>\n');
+
+mdParseSetValidRenderables({ img: true });
+tree = mdParse('[img=foo] *bar*');
+assert.equal(treeToText(tree), '<img=foo> <em>bar</em>\n');
