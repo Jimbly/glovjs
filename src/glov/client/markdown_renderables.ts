@@ -14,13 +14,31 @@ import {
 } from './ui';
 
 import type { Box } from './geom_types';
-import type { TSMap } from 'glov/common/types';
+import type { Optional, TSMap } from 'glov/common/types';
 
 export function markdownRenderableAddDefault(key: string, renderable: MarkdownRenderable): void {
   markdown_default_renderables[key] = renderable;
 }
 
 export type MarkdownRenderable = (content: RenderableContent) => MDLayoutBlock;
+
+const EPSILON = 0.0000000001;
+export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 'x' | 'y'>): dims is Box {
+  let { cursor, text_height } = param;
+  if (cursor.x + dims.w > param.w + EPSILON && cursor.x !== cursor.line_x0) {
+    cursor.x = cursor.line_x0 = param.indent;
+    cursor.y += text_height;
+  }
+  if (cursor.x + dims.w > param.w + EPSILON) {
+    // still over, doesn't fit on a whole line, modify w (if caller listens to that)
+    dims.w = param.w - cursor.line_x0;
+  }
+  dims.x = cursor.x;
+  dims.y = cursor.y;
+  cursor.x += dims.w;
+  // TODO: if height > line_height, track this line's height on the cursor?
+  return true;
+}
 
 export type MarkdownImageParam = {
   sprite: Sprite;
@@ -33,9 +51,12 @@ export function markdownImageRegister(img_name: string, param: MarkdownImagePara
 }
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   key: string;
+  scale: number;
   constructor(content: RenderableContent) {
     this.key = content.key;
     this.dims = this;
+    let scale = content.param && content.param.scale;
+    this.scale = (scale && typeof scale === 'number') ? scale : 1;
   }
   // assigned during layout
   dims: Box;
@@ -45,8 +66,8 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   h!: number;
   img_data!: MarkdownImageParam;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
-    let { cursor, text_height } = param;
-    let h = this.h = text_height;
+    let { text_height } = param;
+    let h = this.h = text_height * this.scale;
     let img_data = this.img_data = allowed_images[this.key] || { sprite: ui_sprites.white };
     let { sprite, frame } = img_data;
     let aspect = 1;
@@ -56,15 +77,8 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       let tex = sprite.texs[0];
       aspect = tex.width / tex.height;
     }
-    let w = this.w = h * aspect;
-    // TODO: utility for this?
-    if (cursor.x + w > param.w && cursor.x !== cursor.line_x0) {
-      cursor.x = cursor.line_x0 = param.indent;
-      cursor.y += text_height;
-    }
-    this.x = cursor.x;
-    this.y = cursor.y;
-    cursor.x += w;
+    this.w = h * aspect;
+    markdownLayoutFit(param, this);
     return [this];
   }
   draw(param: MDDrawParam): void {
