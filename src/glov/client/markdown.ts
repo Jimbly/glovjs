@@ -124,6 +124,9 @@ class MDBlockParagraph implements MDLayoutBlock {
     return Array.prototype.concat.apply([], ret);
   }
 }
+function createParagraph(content: MDASTNode[], param: MarkdownParseParam): MDBlockParagraph {
+  return new MDBlockParagraph(content, param);
+}
 
 class MDBlockBold implements MDLayoutBlock {
   private content: MDLayoutBlock[];
@@ -144,6 +147,9 @@ class MDBlockBold implements MDLayoutBlock {
     param.font_style = old_style;
     return Array.prototype.concat.apply([], ret);
   }
+}
+function createBold(content: MDASTNode[], param: MarkdownParseParam): MDBlockBold {
+  return new MDBlockBold(content, param);
 }
 
 type MDBlockTextLayout = {
@@ -234,6 +240,9 @@ class MDBlockText implements MDLayoutBlock {
     return ret;
   }
 }
+function createText(content: string, param: MarkdownParseParam): MDBlockText {
+  return new MDBlockText(content, param);
+}
 
 class MDBlockRenderable implements MDLayoutBlock {
   constructor(private content: RenderableContent, param: MarkdownParseParam) {
@@ -244,13 +253,16 @@ class MDBlockRenderable implements MDLayoutBlock {
     return [];
   }
 }
+function createRenderable(content: RenderableContent, param: MarkdownParseParam): MDLayoutBlock {
+  return new MDBlockRenderable(content, param);
+}
 
-let block_constructors = {
-  paragraph: MDBlockParagraph,
-  text: MDBlockText,
-  strong: MDBlockBold,
-  em: MDBlockBold,
-  renderable: MDBlockRenderable,
+let block_factories = {
+  paragraph: createParagraph,
+  text: createText,
+  strong: createBold,
+  em: createBold,
+  renderable: createRenderable,
 };
 
 function mdASTToBlock(tree: MDASTNode[], param: MarkdownParseParam): MDLayoutBlock[] {
@@ -270,9 +282,9 @@ function mdASTToBlock(tree: MDASTNode[], param: MarkdownParseParam): MDLayoutBlo
         ++skip;
       }
     }
-    let Ctor = block_constructors[elem.type];
+    let factory = block_factories[elem.type];
     // @ts-expect-error elem.content is an intersection of types, but generic constructor expects a union of types
-    blocks.push(new Ctor(elem.content, param));
+    blocks.push(factory(elem.content, param));
   }
   return blocks;
 }
