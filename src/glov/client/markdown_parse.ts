@@ -2,7 +2,8 @@ import SimpleMarkdown, {
   ParserRule,
   ParserRules,
 } from 'glov/client/simple-markdown';
-import { TSMap } from 'glov/common/types';
+import { has } from 'glov/common/util';
+import type { TSMap } from 'glov/common/types';
 
 // Example from docs
 // let underline_rule = {
@@ -22,20 +23,31 @@ import { TSMap } from 'glov/common/types';
 //   },
 // };
 
-let renderable_regex = /^\[([^\s\]=]+)=([^\s\]]+)( [^\]]+)?\](?!\()/;
+let renderable_regex = /^\[([^\s\]=]+)=([^\s\]]*)( [^\]]+)?\](?!\()/;
 let renderable_param_regex = / ([^=]+)(?:=(?:"([^"]+)"|(\S+)))?/g;
 export type RenderableParam = TSMap<number | string | true>;
 export type RenderableContent = {
   type: string;
-  key: string;
+  key: string; // possibly empty string
   param?: RenderableParam;
 };
+let valid_renderables: TSMap<unknown> = {};
+export function mdParseSetValidRenderables(set: TSMap<unknown>): void {
+  valid_renderables = set;
+}
 let renderable_rule: ParserRule = {
   order: SimpleMarkdown.defaultRules.link.order - 0.5,
 
   // First we check whether a string matches
   match: function (source: string) {
-    return renderable_regex.exec(source);
+    let capture = renderable_regex.exec(source);
+    if (capture) {
+      let type = capture[1];
+      if (has(valid_renderables, type)) {
+        return capture;
+      }
+    }
+    return null;
   },
 
   // Then parse this string into a syntax node
@@ -132,21 +144,21 @@ export type MDNodeRenderable = {
 };
 
 export type MDASTNode = MDNodeParagraph | MDNodeText | MDNodeItalic | MDNodeBold | MDNodeRenderable;
-export function mdNodeIsParagraph(node: MDASTNode): node is MDNodeParagraph {
-  return node.type === 'paragraph';
-}
-export function mdNodeIsText(node: MDASTNode): node is MDNodeText {
-  return node.type === 'text';
-}
-export function mdNodeIsItaltic(node: MDASTNode): node is MDNodeItalic {
-  return node.type === 'em';
-}
-export function mdNodeIsBold(node: MDASTNode): node is MDNodeBold {
-  return node.type === 'strong';
-}
-export function mdNodeIsRenderable(node: MDASTNode): node is MDNodeRenderable {
-  return node.type === 'renderable';
-}
+// export function mdNodeIsParagraph(node: MDASTNode): node is MDNodeParagraph {
+//   return node.type === 'paragraph';
+// }
+// export function mdNodeIsText(node: MDASTNode): node is MDNodeText {
+//   return node.type === 'text';
+// }
+// export function mdNodeIsItaltic(node: MDASTNode): node is MDNodeItalic {
+//   return node.type === 'em';
+// }
+// export function mdNodeIsBold(node: MDASTNode): node is MDNodeBold {
+//   return node.type === 'strong';
+// }
+// export function mdNodeIsRenderable(node: MDASTNode): node is MDNodeRenderable {
+//   return node.type === 'renderable';
+// }
 
 export function mdParse(source: string): Array<MDASTNode> {
   let blockSource = `${source}\n\n`;

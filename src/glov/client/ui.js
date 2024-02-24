@@ -34,6 +34,8 @@ export const internal = {
   uiApplyStyle, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 
+export const sprites = {};
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -289,8 +291,6 @@ export function uiGetFont() {
 export function uiGetTitleFont() {
   return title_font;
 }
-
-export const sprites = {};
 
 let color_button = makeColorSet([1,1,1,1]);
 export function uiSetButtonColorSet(color_button_in) {

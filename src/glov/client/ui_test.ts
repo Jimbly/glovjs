@@ -11,6 +11,7 @@ import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import * as input from './input';
 import { linkText } from './link';
 import { markdownAuto } from './markdown';
+import { markdownImageRegister } from './markdown_renderables';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   SelectionBox,
@@ -19,6 +20,8 @@ import {
 } from './selection_box';
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';
 import { slider } from './slider';
+import { spriteCreate } from './sprites';
+import { TEXTURE_FORMAT } from './textures';
 import * as ui from './ui';
 import {
   uiButtonHeight,
@@ -32,7 +35,7 @@ import {
 } from './uistyle';
 import { getURLBase } from './urlhash';
 
-const { ceil, random } = Math;
+const { abs, ceil, random } = Math;
 
 let demo_menu: SimpleMenu;
 let demo_menu_up = false;
@@ -107,6 +110,34 @@ function init(x: number, y: number, column_width: number): void {
   });
 
   test_scroll_area = scrollAreaCreate();
+
+  // Create test texture for markdown use
+  {
+    const TEX_W = 32;
+    let data = new Uint8Array(TEX_W * TEX_W);
+    for (let yy = 0, idx=0; yy < TEX_W; ++yy) {
+      let fy = 1 - abs((yy - TEX_W/2) / (TEX_W/2));
+      for (let xx = 0; xx < TEX_W; ++xx, ++idx) {
+        let fx = 1 - abs((xx - TEX_W/2) / (TEX_W/2));
+        data[idx] = Math.max(fx, fy) * 255;
+      }
+    }
+    let sprite = spriteCreate({
+      url: 'ui_test_tex',
+      width: TEX_W,
+      height: TEX_W,
+      format: TEXTURE_FORMAT.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_mag: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+    });
+
+    markdownImageRegister('test', {
+      sprite,
+    });
+  }
 }
 
 const style_half_height = uiStyleAlloc({ text_height: '50%' });
@@ -211,35 +242,37 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesStart({
     key: 'ui_test_cats',
     x: 0, z, w: scroll_area_w,
-    num_headers: 4,
+    num_headers: 4 + (engine.defines.MD ? -1 : 0),
     view_y: test_scroll_area.getScrollPos(),
     view_h: scroll_area_h,
     header_h,
     parent_scroll: test_scroll_area,
   });
 
-  collapsagoriesHeader({
-    y: internal_y,
-    text: 'Values',
-    text_height,
-  });
-  internal_y += header_h + pad;
+  if (!engine.defines.MD) {
+    collapsagoriesHeader({
+      y: internal_y,
+      text: 'Values',
+      text_height,
+    });
+    internal_y += header_h + pad;
 
-  internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    text_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
-    `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
-  ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
-  internal_y += text_height + pad;
-  ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
-  internal_y += text_height + pad;
+    internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
+      text_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
+      `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
+    ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
+    internal_y += text_height + pad;
+    ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
+    internal_y += text_height + pad;
 
-  ui.progressBar({
-    x: 2,
-    y: internal_y, z,
-    w: 60, h: button_height,
-    progress: slider_value,
-  });
-  internal_y += button_height + pad;
+    ui.progressBar({
+      x: 2,
+      y: internal_y, z,
+      w: 60, h: button_height,
+      progress: slider_value,
+    });
+    internal_y += button_height + pad;
+  }
 
   collapsagoriesHeader({
     y: internal_y,
@@ -261,9 +294,9 @@ export function run(x: number, y: number, z: number): void {
     // For perf testing: set to 300000
     markdown_text = new Array(3).join(`# Lorem Markdownum
 
-## Qua *promissa*
+## Qua [img=test] *promissa*
 
-Lorem markdownum vestrae geminique asque comas; **muu siq**,
+Lorem mark[img=test]downum vestrae geminique asque comas; **muu siq**,
 inconsumpta? Quod siquid ferroque labores Cererisque praevia exacta patitur arge
 nec arborei timentem, ut crimina vidit.
 `);

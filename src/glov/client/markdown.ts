@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { has } from 'glov/common/util';
 import {
   vec4,
 } from 'glov/common/vmath';
@@ -17,7 +18,12 @@ import {
   MDASTNode,
   RenderableContent,
   mdParse,
+  mdParseSetValidRenderables,
 } from './markdown_parse';
+import {
+  MarkdownRenderable,
+  markdown_default_renderables,
+} from './markdown_renderables';
 import {
   spriteClipPause,
   spriteClipResume,
@@ -49,6 +55,7 @@ export type MarkdownCustomRenderable = {
 export type MarkdownParseParam = {
   text: Text;
   custom?: TSMap<MarkdownCustomRenderable>;
+  renderables?: TSMap<MarkdownRenderable>;
 };
 
 export type MarkdownLayoutParam = {
@@ -56,6 +63,7 @@ export type MarkdownLayoutParam = {
   font_style?: FontStyle;
   w?: number;
   h?: number;
+  // TODO: also need line_height here!  Get alignment/etc respecting that
   text_height?: number;
   indent?: number;
   align?: ALIGN;
@@ -82,7 +90,7 @@ type MDState = {
   cache: MDCache;
 };
 
-type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
+export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   cursor: {
     line_x0: number;
     x: number;
@@ -90,18 +98,18 @@ type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   };
 };
 
-type MDDrawParam = {
+export type MDDrawParam = {
   x: number;
   y: number;
   z: number;
 };
 
-interface MDDrawBlock {
+export interface MDDrawBlock {
   dims: Box;
   draw(param: MDDrawParam): void;
 }
 
-interface MDLayoutBlock {
+export interface MDLayoutBlock {
   layout(param: MDLayoutCalcParam): MDDrawBlock[];
 }
 
@@ -244,17 +252,16 @@ function createText(content: string, param: MarkdownParseParam): MDBlockText {
   return new MDBlockText(content, param);
 }
 
-class MDBlockRenderable implements MDLayoutBlock {
-  constructor(private content: RenderableContent, param: MarkdownParseParam) {
-    // let custom = param.custom || {};
-    // TODO
-  }
-  layout(param: MDLayoutCalcParam): MDDrawBlock[] {
-    return [];
-  }
-}
 function createRenderable(content: RenderableContent, param: MarkdownParseParam): MDLayoutBlock {
-  return new MDBlockRenderable(content, param);
+  let custom = param.custom || {};
+  let renderables = param.renderables || markdown_default_renderables;
+  let type = content.type;
+  if (has(custom, type)) {
+    let parameterized = custom[type]!;
+    type = parameterized.type;
+  }
+  assert(has(renderables, type)); // should have been filtered out during parsing otherwise
+  return renderables[type]!(content);
 }
 
 let block_factories = {
@@ -297,6 +304,16 @@ function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
     return;
   }
   profilerStartFunc();
+  let valid_renderables: TSMap<unknown> = (param.renderables ? param.renderables : markdown_default_renderables) || {};
+  if (param.custom) {
+    valid_renderables = {
+      ...valid_renderables,
+    };
+    for (let key in param.custom) {
+      valid_renderables[key] = true;
+    }
+  }
+  mdParseSetValidRenderables(valid_renderables);
   let tree: MDASTNode[] = mdParse(getStringFromLocalizable(param.text));
   let blocks = cache.parsed = mdASTToBlock(tree, param);
   cache.parsed = blocks;

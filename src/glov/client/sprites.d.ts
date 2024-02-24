@@ -4,7 +4,7 @@ import type { Box } from './geom_types';
 // TODO: move when converted to TypeScript
 import type { shaderCreate } from 'glov/client/shaders';
 type Shader = ReturnType<typeof shaderCreate>;
-import type { TSMap } from 'glov/common/types';
+import type { TSMap, UnimplementedData } from 'glov/common/types';
 import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
@@ -118,6 +118,11 @@ export type SpriteParam = SpriteParamBase & ({
 } | {
   url: string;
   lazy_load?: boolean;
+} | {
+  width: number;
+  height: number;
+  data: Uint8Array;
+  format: UnimplementedData; // TEXTURE_FORMAT enum
 })));
 
 export function spriteQueuePush(): void;
