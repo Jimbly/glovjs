@@ -182,27 +182,6 @@ class MDDrawBlockText implements MDDrawBlock {
     lp.font.drawSizedAligned(lp.font_style,
       param.x + lp.x, param.y + lp.y, param.z,
       lp.h, lp.align & NOT_WRAP, lp.w, lp.h, lp.text);
-    if (engine.defines.MD) {
-      let rect = {
-        x: param.x + lp.x,
-        y: param.y + lp.y,
-        z: Z.TOOLTIP,
-        w: lp.w, h: lp.h,
-        color: debug_color,
-      };
-      // mouseOver, but ignoring anything capturing it
-      let mp = mousePos();
-      if (mp[0] >= rect.x && mp[0] <= rect.x + rect.w && mp[1] >= rect.y && mp[1] <= rect.y + rect.h) {
-        let clip_pause = spriteClipped();
-        if (clip_pause) {
-          spriteClipPause();
-        }
-        drawRect2(rect);
-        if (clip_pause) {
-          spriteClipResume();
-        }
-      }
-    }
     profilerStop();
   }
 }
@@ -453,6 +432,11 @@ export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): vo
     idx1 = bsearch(blocks, viewport.y + viewport.h - y);
   }
 
+  let mouse_pos: [number, number];
+  if (engine.defines.MD) {
+    mouse_pos = mousePos();
+  }
+
   for (let ii = idx0; ii <= idx1; ++ii) {
     let block = blocks[ii];
     let { dims } = block;
@@ -462,6 +446,30 @@ export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): vo
       y + dims.y + dims.h >= viewport.y && y + dims.y < viewport.y + viewport.h
     )) {
       block.draw(draw_param);
+
+      if (engine.defines.MD) {
+        let rect = {
+          x: draw_param.x + dims.x,
+          y: draw_param.y + dims.y,
+          z: Z.TOOLTIP,
+          w: dims.w, h: dims.h,
+          color: debug_color,
+        };
+        // mouseOver, but ignoring anything capturing it
+        if (mouse_pos![0] >= rect.x && mouse_pos![0] <= rect.x + rect.w &&
+          mouse_pos![1] >= rect.y && mouse_pos![1] <= rect.y + rect.h
+        ) {
+          let clip_pause = spriteClipped();
+          if (clip_pause) {
+            spriteClipPause();
+          }
+          drawRect2(rect);
+          if (clip_pause) {
+            spriteClipResume();
+          }
+        }
+      }
+
     }
   }
   profilerStopFunc();
