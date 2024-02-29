@@ -79,6 +79,9 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
     }
     this.w = h * aspect;
     markdownLayoutFit(param, this);
+    // vertically center image
+    // if scale is > 1.0, we perhaps want some line height logic instead
+    this.y += (text_height - h) / 2;
     return [this];
   }
   draw(param: MDDrawParam): void {
