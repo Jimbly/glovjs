@@ -2,16 +2,26 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { vec4 } from 'glov/common/vmath';
+import { ROVec4, vec4 } from 'glov/common/vmath';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate } from './edit_box';
 import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import * as input from './input';
+import {
+  mouseOver,
+} from './input';
 import { linkText } from './link';
-import { markdownAuto } from './markdown';
-import { markdownImageRegister } from './markdown_renderables';
+import {
+  MDDrawBlock,
+  MDDrawParam,
+  MDLayoutBlock,
+  MDLayoutCalcParam,
+  markdownAuto,
+} from './markdown';
+import { RenderableContent } from './markdown_parse';
+import { markdownImageRegister, markdownLayoutFit } from './markdown_renderables';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   SelectionBox,
@@ -20,7 +30,7 @@ import {
 } from './selection_box';
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';
 import { slider } from './slider';
-import { spriteCreate } from './sprites';
+import { Sprite, spriteCreate } from './sprites';
 import { TEXTURE_FORMAT } from './textures';
 import * as ui from './ui';
 import {
@@ -35,7 +45,7 @@ import {
 } from './uistyle';
 import { getURLBase } from './urlhash';
 
-const { abs, ceil, random } = Math;
+const { abs, ceil, random, sin } = Math;
 
 let demo_menu: SimpleMenu;
 let demo_menu_up = false;
@@ -52,6 +62,7 @@ let test_scroll_area: ScrollArea;
 let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
+let test_markdown_sprite: Sprite;
 
 function init(x: number, y: number, column_width: number): void {
   edit_box1 = editBoxCreate({
@@ -122,7 +133,7 @@ function init(x: number, y: number, column_width: number): void {
         data[idx] = Math.max(fx, fy) * 255;
       }
     }
-    let sprite = spriteCreate({
+    test_markdown_sprite = spriteCreate({
       url: 'ui_test_tex',
       width: TEX_W,
       height: TEX_W,
@@ -135,7 +146,7 @@ function init(x: number, y: number, column_width: number): void {
     });
 
     markdownImageRegister('test', {
-      sprite,
+      sprite: test_markdown_sprite,
     });
   }
 }
@@ -290,6 +301,67 @@ export function run(x: number, y: number, z: number): void {
     align: ALIGN.HWRAP|ALIGN.HFIT,
     text: `Edit Box MD: ${edit_box1.getText()}+${edit_box2.getText()}`,
   }).h + pad;
+
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: 'A[custom=foo text="Foo Bar"]B',
+    renderables: {
+      // Not super efficient example: optimally first two functions should
+      //   return an instance of a class, but this is heavily cached, so doesn't
+      //   matter much except for type clarity.
+      custom: (content: RenderableContent): MDLayoutBlock => {
+        let text = String(content.param?.text || content.key);
+        return {
+          layout: (layout_param: MDLayoutCalcParam): MDDrawBlock[] => {
+            let w = font.getStringWidth(null, layout_param.text_height, text) +
+              layout_param.text_height * 0.25;
+            let dims = {
+              w,
+              h: layout_param.text_height,
+            };
+            assert(markdownLayoutFit(layout_param, dims));
+            let dims2 = dims; // workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+            return [{
+              dims,
+              draw: (draw_param: MDDrawParam): void => {
+                let rect = {
+                  x: draw_param.x + dims2.x,
+                  y: draw_param.y + dims2.y,
+                  w: dims.w,
+                  h: dims.h,
+                };
+                let color: ROVec4;
+                let v = sin(engine.getFrameTimestamp() * 0.01) * 0.5 + 0.5;
+                if (mouseOver(rect)) {
+                  color = [0.5 + v * 0.5, v*0.7, 0, 1];
+                } else {
+                  color = [v* 0.5, 0, v, 1];
+                }
+                test_markdown_sprite.draw({
+                  ...rect,
+                  z: draw_param.z,
+                  color,
+                });
+                font.draw({
+                  ...rect,
+                  z: draw_param.z + 0.1,
+                  align: ALIGN.HVCENTERFIT,
+                  text: text,
+                });
+              },
+            }];
+          },
+        };
+      },
+    },
+  }).h + pad;
+
   if (!markdown_text) {
     // For perf testing: set to 300000
     markdown_text = new Array(3).join(`# Lorem Markdownum
