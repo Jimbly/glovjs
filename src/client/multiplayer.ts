@@ -109,7 +109,10 @@ export function main(): void {
   // const font = engine.font;
 
   account_ui = createAccountUI();
-  chat_ui = chatUICreate({ max_len: 1000 });
+  chat_ui = chatUICreate({
+    max_len: 1000,
+    user_context_cb: ({ user_id }: { user_id: string }) => ui.provideUserString('User ID', user_id),
+  });
 
   const color_gray = vec4(0.5, 0.5, 0.5, 1);
 
