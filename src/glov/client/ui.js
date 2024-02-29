@@ -2042,7 +2042,6 @@ export function scaleSizes(scale) {
   modal_pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  tooltip_panel_pixel_scale = panel_pixel_scale;
 
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
@@ -2051,6 +2050,7 @@ export function scaleSizes(scale) {
   });
   let button_height = round(32 * scale);
   setButtonHeight(button_height);
+  tooltip_panel_pixel_scale = panel_pixel_scale; // panel_pixel_scale set in setButtonHeight()
 }
 
 export function setPanelPixelScale(scale) {
