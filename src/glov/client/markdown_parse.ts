@@ -30,6 +30,7 @@ export type RenderableContent = {
   type: string;
   key: string; // possibly empty string
   param?: RenderableParam;
+  orig_text: string; // should only be used for error handling
 };
 let valid_renderables: TSMap<unknown> = {};
 export function mdParseSetValidRenderables(set: TSMap<unknown>): void {
@@ -74,6 +75,7 @@ let renderable_rule: ParserRule = {
       type: capture[1],
       key: capture[2],
       param,
+      orig_text: capture[0],
     };
     return {
       content,

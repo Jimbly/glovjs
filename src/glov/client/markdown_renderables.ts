@@ -20,7 +20,8 @@ export function markdownRenderableAddDefault(key: string, renderable: MarkdownRe
   markdown_default_renderables[key] = renderable;
 }
 
-export type MarkdownRenderable = (content: RenderableContent) => MDLayoutBlock;
+// Note: renderable can return null (at parse time) and will be replaced with the original text
+export type MarkdownRenderable = (content: RenderableContent, data?: unknown) => (MDLayoutBlock | null);
 
 const EPSILON = 0.0000000001;
 export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 'x' | 'y'>): dims is Box {

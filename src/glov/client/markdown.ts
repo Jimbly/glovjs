@@ -239,12 +239,18 @@ function createRenderable(content: RenderableContent, param: MarkdownParseParam)
   let custom = param.custom || {};
   let renderables = param.renderables || markdown_default_renderables;
   let type = content.type;
+  let data: unknown | undefined;
   if (has(custom, type)) {
     let parameterized = custom[type]!;
     type = parameterized.type;
+    data = parameterized.data;
   }
   assert(has(renderables, type)); // should have been filtered out during parsing otherwise
-  return renderables[type]!(content);
+  let block = renderables[type]!(content, data);
+  if (block) {
+    return block;
+  }
+  return createText(content.orig_text, param);
 }
 
 let block_factories = {

@@ -154,6 +154,7 @@ function init(x: number, y: number, column_width: number): void {
 const style_half_height = uiStyleAlloc({ text_height: '50%' });
 
 let markdown_text: string;
+let markdown_cache = {};
 
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
@@ -310,12 +311,23 @@ export function run(x: number, y: number, z: number): void {
     w: scroll_area_w - 2,
     text_height,
     align: ALIGN.HWRAP|ALIGN.HFIT,
-    text: 'A[custom=foo text="Foo Bar"]B',
+    text: 'A[foo=bar text="Foo Bar"]B',
+    cache: markdown_cache,
+    custom: {
+      foo: {
+        type: 'blinker',
+        data: true
+      },
+    },
     renderables: {
       // Not super efficient example: optimally first two functions should
       //   return an instance of a class, but this is heavily cached, so doesn't
       //   matter much except for type clarity.
-      custom: (content: RenderableContent): MDLayoutBlock => {
+      blinker: (content: RenderableContent, data: unknown): MDLayoutBlock | null => {
+        if (!data) {
+          // this is not a valid generic renderable, only allowed via the custom tab with associated data
+          return null;
+        }
         let text = String(content.param?.text || content.key);
         return {
           layout: (layout_param: MDLayoutCalcParam): MDDrawBlock[] => {
