@@ -156,6 +156,20 @@ export function addHook(draw, click) {
   });
 }
 
+let per_frame_dom_alloc = [0,0,0,0,0,0,0];
+let per_frame_dom_suppress = 0;
+export function suppressNewDOMElemWarnings() {
+  per_frame_dom_suppress = glov_engine.frame_index + 1;
+}
+function uiElemAllocCheck() {
+  per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
+  let sum = 0;
+  for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
+    sum += per_frame_dom_alloc[ii];
+  }
+  assert(sum < per_frame_dom_alloc.length, 'Allocated new UI elements for too many consecutive frames');
+}
+
 let ui_elem_data = {};
 // Gets per-element state data that allows a paradigm of inter-frame state but
 //   without the caller being required to allocate a state container.
@@ -168,6 +182,7 @@ export function getUIElemData(type, param, allocator) {
   let elem_data = by_type[key];
   if (!elem_data) {
     elem_data = by_type[key] = allocator ? allocator(param) : {};
+    uiElemAllocCheck();
   }
   elem_data.frame_index = glov_engine.frame_index;
   return elem_data;
@@ -499,11 +514,6 @@ function uiStartup(param) {
 }
 
 let dynamic_text_elem;
-let per_frame_dom_alloc = [0,0,0,0,0,0,0];
-let per_frame_dom_suppress = 0;
-export function suppressNewDOMElemWarnings() {
-  per_frame_dom_suppress = glov_engine.frame_index + 1;
-}
 export function uiGetDOMElem(last_elem, allow_modal) {
   if (modal_dialog && !allow_modal) {
     // Note: this case is no longer needed for edit boxes (spot's focus logic
@@ -513,12 +523,7 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
     if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
-      per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
-      let sum = 0;
-      for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
-        sum += per_frame_dom_alloc[ii];
-      }
-      assert(sum < per_frame_dom_alloc.length, 'Allocated new DOM elements for too many consecutive frames');
+      uiElemAllocCheck();
     }
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
