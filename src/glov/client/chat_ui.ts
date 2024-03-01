@@ -28,6 +28,7 @@ import {
 import * as engine from './engine';
 import {
   ALIGN,
+  Font,
   FontStyle,
   fontStyle,
   fontStyleAlpha,
@@ -102,7 +103,7 @@ export type Roles = TSMap<1>;
 
 interface ChatMessage extends ChatMessageDataBroadcast {
   hidden?: boolean;
-  numlines: number;
+  msg_h: number;
   style: string;
   msg_text: string;
   timestamp: number;
@@ -486,6 +487,7 @@ class ChatUIImpl {
 
   private history: CmdHistory;
   private scroll_area: ScrollArea;
+  private font: Font;
 
   private on_join: ChatUIImpl['onMsgJoin']; // bound method
   private on_leave: ChatUIImpl['onMsgLeave']; // bound method
@@ -498,6 +500,7 @@ class ChatUIImpl {
   constructor(params: ChatUIParam) {
     assert.equal(typeof params, 'object');
     assert.equal(typeof params.max_len, 'number');
+    this.font = uiGetFont();
     this.edit_text_entry = editBoxCreate({
       placeholder: 'Chat',
       initial_focus: false,
@@ -585,32 +588,38 @@ class ChatUIImpl {
     (window as unknown as DataObject).cmd = this.cmdParse.bind(this);
   }
 
+  private calcMsgHeight(elem: ChatMessage): void {
+    let numlines = this.font.numLines((this.styles[elem.style] || this.styles.def),
+      this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
+    elem.msg_h = numlines * this.active_font_height;
+    this.total_h += elem.msg_h;
+  }
+
   private active_font_height!: number;
   private wrap_w!: number;
   private indent!: number;
   setActiveSize(font_height: number, w: number): void {
     let wrap_w = w - this.scroll_area.barWidth();
     if (this.active_font_height !== font_height || this.wrap_w !== wrap_w) {
-      let font = uiGetFont();
       this.active_font_height = font_height;
       this.indent = round(this.active_font_height/24 * 40);
       this.wrap_w = wrap_w;
-      // recalc numlines
-      this.total_lines = 0;
+      // recalc msg_h
+      this.total_h = 0;
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let elem = this.msgs[ii];
-        elem.numlines = font.numLines((this.styles[elem.style] || this.styles.def),
-          this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
-        this.total_lines += elem.numlines;
+        if (!elem.hidden) {
+          this.calcMsgHeight(elem);
+        }
       }
     }
   }
 
   private msgs!: ChatMessage[];
-  private total_lines!: number;
+  private total_h!: number;
   clearChat(): void {
     this.msgs = [];
-    this.total_lines = 0;
+    this.total_h = 0;
   }
 
   addMsgInternal(elem_in: ChatMessageDataBroadcast & { timestamp?: number }): void {
@@ -626,9 +635,7 @@ class ChatUIImpl {
     } else {
       elem.msg_text = elem.msg;
     }
-    elem.numlines = uiGetFont().numLines((this.styles[elem.style] || this.styles.def),
-      this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
-    this.total_lines += elem.numlines;
+    this.calcMsgHeight(elem);
     this.msgs.push(elem);
     let max_msgs = MAX_PER_STYLE[elem.style];
     if (max_msgs) {
@@ -639,14 +646,14 @@ class ChatUIImpl {
         if (elem2.style === elem.style && !elem2.hidden) {
           if (elem.id && elem2.id === elem.id) {
             elem2.hidden = true;
-            this.total_lines -= elem2.numlines;
-            elem2.numlines = 0;
+            this.total_h -= elem2.msg_h;
+            elem2.msg_h = 0;
           } else {
             --max_msgs;
             if (max_msgs <= 0) {
               elem2.hidden = true;
-              this.total_lines -= elem2.numlines;
-              elem2.numlines = 0;
+              this.total_h -= elem2.msg_h;
+              elem2.msg_h = 0;
               break;
             }
           }
@@ -657,9 +664,9 @@ class ChatUIImpl {
       this.msgs = this.msgs.filter(notHidden);
       if (this.msgs.length > this.max_messages * 1.25) {
         this.msgs.splice(0, this.msgs.length - this.max_messages);
-        this.total_lines = 0;
+        this.total_h = 0;
         for (let ii = 0; ii < this.msgs.length; ++ii) {
-          this.total_lines += this.msgs[ii].numlines;
+          this.total_h += this.msgs[ii].msg_h;
         }
       }
     }
@@ -874,7 +881,7 @@ class ChatUIImpl {
     const border = opts.border || this.border || (8 * UI_SCALE);
     const SPACE_ABOVE_ENTRY = border;
     const scroll_grow = opts.scroll_grow || 0;
-    let font = uiGetFont();
+    const { font } = this;
     if (netClient() && netClient().disconnected && !this.hide_disconnected_message) {
       font.drawSizedAligned(
         fontStyle(null, {
@@ -933,7 +940,7 @@ class ChatUIImpl {
       font_height *= font_scale;
     }
     const inner_w = outer_w - border + this.inner_width_adjust;
-    this.setActiveSize(font_height, inner_w); // may recalc numlines on each elem; updates wrap_w
+    this.setActiveSize(font_height, inner_w); // may recalc msg_h on each elem; updates wrap_w
     if (!hide_text_input) {
       anything_visible = true;
       y -= border + font_height + 1;
@@ -983,8 +990,7 @@ class ChatUIImpl {
                 if (last_msg) {
                   let msg = last_msg.msg;
                   if (msg && !(last_msg.flags & CHAT_FLAG_USERCHAT) && msg.slice(0, 7) === '[error]') {
-                    let numlines = last_msg.numlines;
-                    tooltip_y -= font_height * numlines + SPACE_ABOVE_ENTRY;
+                    tooltip_y -= last_msg.msg_h + SPACE_ABOVE_ENTRY;
                   }
                 }
 
@@ -1090,7 +1096,6 @@ class ChatUIImpl {
         return;
       }
       let line = msg.msg_text;
-      let numlines = msg.numlines;
       let url_check = do_scroll_area && url_match && matchAll(line, url_match);
       let msg_url: string | null = url_check && url_check.length === 1 && url_check[0] || null;
       let url_label = msg_url;
@@ -1100,7 +1105,7 @@ class ChatUIImpl {
           url_label = m[1];
         }
       }
-      let h = font_height * numlines;
+      let h = msg.msg_h;
       let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg) || msg_url);
       let text_w;
       let mouseover = false;
@@ -1220,7 +1225,7 @@ class ChatUIImpl {
     let now = Date.now();
     if (do_scroll_area) {
       // within scroll area, just draw visible parts
-      let scroll_internal_h = this.total_lines * font_height;
+      let scroll_internal_h = this.total_h;
       if (opts.cuddly_scroll) {
         let new_y = y1 - border;
         scroll_internal_h += new_y - y;
@@ -1237,7 +1242,7 @@ class ChatUIImpl {
         w: inner_w + clip_offs,
         h: scroll_external_h,
         focusable_elem: this.edit_text_entry,
-        auto_hide: this.total_lines <= 2,
+        auto_hide: this.total_h <= 2 * font_height,
       });
       let x_save = x;
       let y_save = y;
@@ -1247,7 +1252,7 @@ class ChatUIImpl {
       let y_max = y_min + scroll_external_h;
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let msg = this.msgs[ii];
-        let h = font_height * msg.numlines;
+        let h = msg.msg_h;
         if (y <= y_max && y + h >= y_min) {
           drawChatLine(msg, 1);
         }
@@ -1276,7 +1281,8 @@ class ChatUIImpl {
       }
     } else {
       // Just recent entries, fade them out over time
-      let { max_lines } = this;
+      const { max_lines } = this;
+      let max_h = max_lines * font_height;
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let msg = this.msgs[this.msgs.length - ii - 1];
         let age = now - msg.timestamp;
@@ -1284,13 +1290,12 @@ class ChatUIImpl {
         if (!alpha || msg.quiet) {
           break;
         }
-        let numlines = msg.numlines;
-        if (numlines > max_lines && ii) {
+        let msg_h = msg.msg_h;
+        if (msg_h > max_h && ii) {
           break;
         }
-        max_lines -= numlines;
-        let h = font_height * numlines;
-        y -= h;
+        max_h -= msg_h;
+        y -= msg_h;
         drawChatLine(msg, alpha);
       }
     }
