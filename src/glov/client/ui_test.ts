@@ -351,9 +351,9 @@ export function run(x: number, y: number, z: number): void {
                 let color: ROVec4;
                 let v = sin(engine.getFrameTimestamp() * 0.01) * 0.5 + 0.5;
                 if (mouseOver(rect)) {
-                  color = [0.5 + v * 0.5, v*0.7, 0, 1];
+                  color = [0.5 + v * 0.5, v*0.7, 0, draw_param.alpha];
                 } else {
-                  color = [v* 0.5, 0, v, 1];
+                  color = [v* 0.5, 0, v, draw_param.alpha];
                 }
                 test_markdown_sprite.draw({
                   ...rect,
@@ -361,6 +361,7 @@ export function run(x: number, y: number, z: number): void {
                   color,
                 });
                 font.draw({
+                  alpha: draw_param.alpha,
                   ...rect,
                   z: draw_param.z + 0.1,
                   align: ALIGN.HVCENTERFIT,

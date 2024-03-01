@@ -10,6 +10,7 @@ import {
   Font,
   FontStyle,
   Text,
+  fontStyleAlpha,
   fontStyleOutlined,
 } from './font';
 import { Box } from './geom_types';
@@ -74,6 +75,7 @@ export type MarkdownDrawParam = {
   x: number;
   y: number;
   z?: number;
+  alpha?: number;
   viewport?: Box | null;
 };
 
@@ -112,6 +114,7 @@ export type MDDrawParam = {
   x: number;
   y: number;
   z: number;
+  alpha: number;
 };
 
 export interface MDDrawBlock {
@@ -186,10 +189,20 @@ const NOT_WRAP = ~ALIGN.HWRAP;
 class MDDrawBlockText implements MDDrawBlock {
   constructor(public dims: MDBlockTextLayout) {
   }
+  alpha_font_style_cache?: FontStyle;
+  alpha_font_style_cache_value?: number;
   draw(param: MDDrawParam): void {
     profilerStart('MDDrawBlockText::draw');
     let lp = this.dims;
-    lp.font.drawSizedAligned(lp.font_style,
+    let style = lp.font_style;
+    if (param.alpha !== 1) {
+      if (this.alpha_font_style_cache_value !== param.alpha) {
+        this.alpha_font_style_cache_value = param.alpha;
+        this.alpha_font_style_cache = fontStyleAlpha(style, param.alpha);
+      }
+      style = this.alpha_font_style_cache!;
+    }
+    lp.font.drawSizedAligned(style,
       param.x + lp.x, param.y + lp.y, param.z,
       lp.h, lp.align & NOT_WRAP, lp.w, lp.h, lp.text);
     profilerStop();
@@ -454,11 +467,15 @@ export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): vo
   let { cache } = state;
   let { layout } = cache;
   assert(layout);
-  let { x, y } = param;
+  let { x, y, alpha } = param;
+  if (alpha === undefined) {
+    alpha = 1;
+  }
   let draw_param: MDDrawParam = {
     x,
     y,
     z: param.z || Z.UI,
+    alpha,
   };
   let { viewport } = param;
   if (!viewport && spriteClipped()) {

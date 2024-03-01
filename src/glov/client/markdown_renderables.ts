@@ -1,6 +1,11 @@
 export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
 
-import { ROVec4 } from 'glov/common/vmath';
+import {
+  ROVec4,
+  Vec4,
+  unit_vec,
+  vec4,
+} from 'glov/common/vmath';
 import {
   ALIGN,
   EPSILON,
@@ -88,17 +93,28 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
     this.y += (text_height - h) / 2;
     return [this];
   }
+  alpha_color_cache?: Vec4;
+  alpha_color_cache_value?: number;
   draw(param: MDDrawParam): void {
     let x = this.x + param.x;
     let y = this.y + param.y;
     let { img_data } = this;
+    let color = img_data.color;
+    if (param.alpha !== 1) {
+      if (param.alpha !== this.alpha_color_cache_value) {
+        this.alpha_color_cache_value = param.alpha;
+        color = color || unit_vec;
+        this.alpha_color_cache = vec4(color[0], color[1], color[2], color[3] * param.alpha);
+      }
+      color = this.alpha_color_cache!;
+    }
     img_data.sprite.draw({
       x, y,
       z: param.z,
       w: this.w,
       h: this.h,
       frame: img_data.frame,
-      color: img_data.color,
+      color,
     });
   }
 }
