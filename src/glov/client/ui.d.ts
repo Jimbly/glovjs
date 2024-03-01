@@ -267,6 +267,7 @@ export type ModalDialogTickCallbackParams = {
   readonly fullscreen_mode: boolean;
 };
 export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => string | void;
+export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {
   title?: Text;
   text?: Text;
@@ -276,7 +277,7 @@ export interface ModalDialogParamBase<CB> {
   button_width?: number;
   y0?: number;
   tick?: ModalDialogTickCallback;
-  buttons?: Partial<Record<string, ModalDialogButton<CB>>>;
+  buttons?: ModalDialogButtons<CB>;
   no_fullscreen_zoom?: boolean;
   style?: UIStyle;
 }
@@ -302,7 +303,7 @@ export interface MenuFadeParams {
 }
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
-export function provideUserString(title: Text, str: string, alt_buttons?: TSMap<VoidFunc>): void;
+export function provideUserString(title: Text, str: string, alt_buttons?: ModalDialogButtons): void;
 export function drawRect(x0: number, y0: number, x1: number, y1: number, z?: number, color?: ROVec4): void;
 export function drawRect2(param: UIBoxColored): void;
 export function drawRect4Color(
@@ -393,8 +394,11 @@ export function setFontStyles(
 export function uiGetFontStyleFocused(): FontStyle;
 export function uiSetFontStyleFocused(new_style: FontStyle): void;
 export function uiSetPanelColor(color: ROVec4): void;
+export function uiGetPanelColor(): ROVec4;
 export function uiSetButtonColorSet(color_set: ColorSet): void;
 export function uiGetButtonRolloverColor(): ROVec4;
+export function uiGetTooltipPad(): number;
+export function uiGetTooltipPanelPixelScale(): number;
 
 type UISpriteSet = {
   color_set_shades?: [number, number, number];

@@ -297,6 +297,13 @@ export function uiButtonWidth() {
   return ui_style_current.button_width;
 }
 
+export function uiGetTooltipPad() {
+  return tooltip_pad;
+}
+export function uiGetTooltipPanelPixelScale() {
+  return tooltip_panel_pixel_scale;
+}
+
 export let font;
 export let title_font;
 
@@ -368,6 +375,9 @@ export function uiSetFontStyleFocused(new_style) {
 
 export function uiSetPanelColor(color) {
   v4copy(color_panel, color);
+}
+export function uiGetPanelColor() {
+  return color_panel;
 }
 
 export function loadUISprite(name, ws, hs) {

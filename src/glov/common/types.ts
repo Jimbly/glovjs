@@ -189,34 +189,6 @@ export type ChannelDataClient = {
 } & DataObject;
 export type ChannelDataClients = TSMap<ChannelDataClient>;
 
-export interface ClientChannelWorker {
-  on(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
-  removeListener(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
-  onSubscribe(cb: (data: unknown) => void): void;
-  onceSubscribe(cb: ((data: DataObject) => void) | VoidFunc): void;
-  numSubscriptions(): number;
-  isFullySubscribed(): boolean;
-  unsubscribe(): void;
-  getChannelData<T>(key: string, default_value: T): T;
-  getChannelData(key: string): unknown;
-  getChannelID(): string;
-  setChannelData(key: string, value: unknown, skip_predict?: boolean, resp_func?: NetErrorCallback): void;
-  pak(msg: string): Packet;
-  send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
-  send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
-  cmdParse(cmd: string, resp_func: CmdRespFunc): void;
-  readonly data: {
-    public?: unknown;
-  };
-  readonly channel_id: string;
-  readonly channel_type: string;
-  readonly channel_subid: string;
-}
-
-export interface UserChannel extends ClientChannelWorker {
-  presence_data: TSMap<PresenceEntry>;
-}
-
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.
 export type UnimplementedData = DataObject;

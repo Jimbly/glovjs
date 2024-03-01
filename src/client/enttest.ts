@@ -12,8 +12,12 @@ import { ClientEntityManagerInterface, clientEntityManagerCreate } from 'glov/cl
 import { EntityPositionManager, entityPositionManagerCreate } from 'glov/client/entity_position_manager';
 import * as glov_font from 'glov/client/font';
 import * as input from 'glov/client/input';
-import * as net from 'glov/client/net';
-import { netDisconnected, netSubs } from 'glov/client/net';
+import {
+  ClientChannelWorker,
+  netDisconnected,
+  netInit,
+  netSubs,
+} from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
@@ -27,7 +31,7 @@ import {
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
-import { ClientChannelWorker, DataObject } from 'glov/common/types';
+import { DataObject } from 'glov/common/types';
 import {
   Vec2,
   Vec3,
@@ -186,7 +190,7 @@ const color_bot_active = vec4(1, 0.66, 0.25, 1);
 const color_bot_error = vec4(1, 0, 0, 1);
 
 export function main(): void {
-  net.init({
+  netInit({
     engine,
     cmd_parse,
     auto_create_user: false,

@@ -20,7 +20,7 @@ import {
   padButtonDown,
   padButtonDownEdge,
 } from 'glov/client/input';
-import * as net from 'glov/client/net';
+import { netInit } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import * as settings from 'glov/client/settings';
 import { slider } from 'glov/client/slider';
@@ -214,7 +214,7 @@ function lineTest(): void {
 export function main(): void {
   if (engine.DEBUG) {
     // Enable auto-reload, etc
-    net.init({ engine });
+    netInit({ engine });
   }
 
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');

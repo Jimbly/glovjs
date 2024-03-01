@@ -1,4 +1,5 @@
 import type { FontStyle } from './font';
+import type { FocusableElement } from './scroll_area';
 import type { TextVisualLimit } from 'glov/common/types';
 import type { ROVec4 } from 'glov/common/vmath';
 
@@ -42,11 +43,13 @@ export interface EditBoxOptsAll {
     color_caret: ROVec4;
     style_text: FontStyle;
   };
+  pointer_lock: boolean;
+  spatial_focus: boolean; // used by spot logic
 }
 
 export type EditBoxOpts = Partial<EditBoxOptsAll>;
 
-export interface EditBox extends Readonly<EditBoxOptsAll> {
+export interface EditBox extends Readonly<EditBoxOptsAll>, FocusableElement {
   run(params?: EditBoxOpts): EditBoxResult;
   getText(): string;
   setText(new_text: string | number): void;

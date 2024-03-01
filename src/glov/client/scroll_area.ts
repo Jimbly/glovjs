@@ -31,9 +31,9 @@ import { uiTextHeight } from './ui';
 const { abs, max, min, round } = Math;
 
 // TODO: move FocusableElement to appropriate TS file after conversion (probably input)
-interface FocusableElement {
+export interface FocusableElement {
   focus: () => void;
-  is_focused: boolean;
+  readonly is_focused: boolean;
 }
 
 const MAX_OVERSCROLL = 50;
@@ -86,6 +86,7 @@ export interface ScrollArea extends Readonly<ScrollAreaOptsAll> {
   end(h: number): void;
   // h is height of visible area
   scrollIntoFocus(miny: number, maxy: number, h: number): void;
+  scrollToEnd(): void;
 }
 
 let temp_pos = vec2();
