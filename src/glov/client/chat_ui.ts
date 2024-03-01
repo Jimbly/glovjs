@@ -43,6 +43,16 @@ import {
 } from './local_storage';
 import { getStringIfLocalizable } from './localization';
 import {
+  MarkdownCache,
+  MarkdownLayoutParam,
+  MarkdownParseParam,
+  MarkdownStateCached,
+  markdownDims,
+  markdownDraw,
+  markdownLayoutInvalidate,
+  markdownPrep,
+} from './markdown';
+import {
   ClientChannelWorker,
   ClientChannelWorkerData,
   netClient,
@@ -75,6 +85,7 @@ import {
   profanityStartup,
 } from './words/profanity';
 
+import type { Box } from './geom_types';
 import type {
   ChatHistoryData,
   ChatMessageDataBroadcast,
@@ -102,12 +113,14 @@ const MAX_PER_STYLE: TSMap<number> = {
 export type Roles = TSMap<1>;
 
 interface ChatMessage extends ChatMessageDataBroadcast {
-  hidden?: boolean;
-  msg_h: number;
   style: string;
   msg_text: string;
   timestamp: number;
   flags: number;
+  // calculated/run-time:
+  hidden?: boolean;
+  msg_h: number;
+  cache: MarkdownCache;
 }
 
 function messageFromUser(msg: ChatMessage): boolean {
@@ -589,9 +602,18 @@ class ChatUIImpl {
   }
 
   private calcMsgHeight(elem: ChatMessage): void {
-    let numlines = this.font.numLines((this.styles[elem.style] || this.styles.def),
-      this.wrap_w, this.indent, this.active_font_height, elem.msg_text);
-    elem.msg_h = numlines * this.active_font_height;
+    let mdstate: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam = {
+      font_style: this.styles[elem.style] || this.styles.def,
+      w: this.wrap_w,
+      indent: this.indent,
+      text_height: this.active_font_height,
+      cache: elem.cache,
+      align: ALIGN.HWRAP,
+      text: elem.msg_text,
+      renderables: {}, // by default, no renderables in chat (e.g. images)
+    };
+    markdownPrep(mdstate);
+    elem.msg_h = markdownDims(mdstate).h;
     this.total_h += elem.msg_h;
   }
 
@@ -609,6 +631,7 @@ class ChatUIImpl {
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let elem = this.msgs[ii];
         if (!elem.hidden) {
+          markdownLayoutInvalidate(elem);
           this.calcMsgHeight(elem);
         }
       }
@@ -624,6 +647,7 @@ class ChatUIImpl {
 
   addMsgInternal(elem_in: ChatMessageDataBroadcast & { timestamp?: number }): void {
     let elem = elem_in as ChatMessage;
+    elem.cache = {};
     elem.flags = elem.flags || 0;
     elem.timestamp = elem.timestamp || Date.now();
     if (elem.flags && (elem.flags & CHAT_FLAG_USERCHAT)) {
@@ -1090,6 +1114,7 @@ class ChatUIImpl {
     let bracket_width = 0;
     let name_width: TSMap<number> = {};
     let did_user_mouseover = false;
+    let viewport: Box;
     // Slightly hacky: uses `x` and `y` from the higher scope
     function drawChatLine(msg: ChatMessage, alpha: number): void {
       if (msg.hidden) {
@@ -1162,15 +1187,21 @@ class ChatUIImpl {
         click = link({ x: x + user_indent, y, w: wrap_w - user_indent, h, url: msg_url, internal: true });
       }
 
-      let style;
-      if (msg_url) {
-        style = mouseover && !user_mouseover ? styles.link_hover : styles.link;
-      } else {
-        style = styles[msg.style] || styles.def;
-      }
+      // TODO: handle at parse time
+      // let style;
+      // if (msg_url) {
+      //   style = mouseover && !user_mouseover ? styles.link_hover : styles.link;
+      // } else {
+      //   style = styles[msg.style] || styles.def;
+      // }
 
       // Draw the actual text
-      font.drawSizedWrapped(fontStyleAlpha(style, alpha), x, y, z + 1, wrap_w, self.indent, font_height, line);
+      markdownDraw({
+        x, y, z: z + 1,
+        cache: msg.cache,
+        viewport,
+        alpha,
+      });
 
       if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
         // Only show tooltip for user messages or links
@@ -1250,6 +1281,12 @@ class ChatUIImpl {
       y = 0;
       let y_min = this.scroll_area.getScrollPos();
       let y_max = y_min + scroll_external_h;
+      viewport = {
+        x: clip_offs,
+        y: y_min,
+        w: inner_w,
+        h: scroll_external_h,
+      };
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let msg = this.msgs[ii];
         let h = msg.msg_h;
@@ -1283,6 +1320,12 @@ class ChatUIImpl {
       // Just recent entries, fade them out over time
       const { max_lines } = this;
       let max_h = max_lines * font_height;
+      viewport = {
+        x,
+        y: y - max_h,
+        w: this.w,
+        h: max_h,
+      };
       for (let ii = 0; ii < this.msgs.length; ++ii) {
         let msg = this.msgs[this.msgs.length - ii - 1];
         let age = now - msg.timestamp;
