@@ -2,6 +2,10 @@ export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
 
 import { ROVec4 } from 'glov/common/vmath';
 import {
+  ALIGN,
+  EPSILON,
+} from './font';
+import {
   MDDrawBlock,
   MDDrawParam,
   MDLayoutBlock,
@@ -23,14 +27,13 @@ export function markdownRenderableAddDefault(key: string, renderable: MarkdownRe
 // Note: renderable can return null (at parse time) and will be replaced with the original text
 export type MarkdownRenderable = (content: RenderableContent, data?: unknown) => (MDLayoutBlock | null);
 
-const EPSILON = 0.0000000001;
 export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 'x' | 'y'>): dims is Box {
   let { cursor, text_height } = param;
-  if (cursor.x + dims.w > param.w + EPSILON && cursor.x !== cursor.line_x0) {
+  if (cursor.x + dims.w > param.w + EPSILON && cursor.x !== cursor.line_x0 && (param.align & ALIGN.HWRAP)) {
     cursor.x = cursor.line_x0 = param.indent;
     cursor.y += text_height;
   }
-  if (cursor.x + dims.w > param.w + EPSILON) {
+  if (cursor.x + dims.w > param.w + EPSILON && (param.align & ALIGN.HWRAP)) {
     // still over, doesn't fit on a whole line, modify w (if caller listens to that)
     dims.w = param.w - cursor.line_x0;
   }

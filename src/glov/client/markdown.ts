@@ -6,6 +6,7 @@ import {
 import * as engine from './engine';
 import {
   ALIGN,
+  EPSILON,
   Font,
   FontStyle,
   Text,
@@ -39,7 +40,7 @@ import {
 } from './ui';
 import type { TSMap, WithRequired } from 'glov/common/types';
 
-const { floor, max } = Math;
+const { floor, max, min } = Math;
 
 // Exported opaque types
 export type MarkdownCache = Record<string, never>;
@@ -89,6 +90,15 @@ type MDCache = {
 type MDState = {
   cache: MDCache;
 };
+
+export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
+  if (param.cache) {
+    let state = param as MDState;
+    if (state.cache.layout) {
+      delete state.cache.layout;
+    }
+  }
+}
 
 export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   cursor: {
@@ -190,43 +200,56 @@ class MDBlockText implements MDLayoutBlock {
   constructor(private content: string, param: MarkdownParseParam) {
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
-    let w = Infinity;
-    let indent = param.indent;
-    let line_x0 = param.cursor.x;
-    if (param.align & ALIGN.HWRAP) {
-      // Adjust in case we're mid-line, or already inset
-      let inset = param.cursor.x;
-      w = param.w - inset;
-      indent -= inset;
-    }
     let ret: MDDrawBlock[] = [];
     let text = this.content.replace(/\n/g, ' ');
-    param.font.wrapLines(
-      param.font_style, w, indent, param.text_height, text, param.align,
-      (x0: number, linenum: number, line: string, x1: number) => {
-        if (linenum > 0) {
-          param.cursor.y += param.text_height;
-          param.cursor.line_x0 = param.indent;
+    if (param.align & ALIGN.HWRAP) {
+      let line_x0 = param.cursor.x;
+      // Adjust in case we're mid-line, or already inset
+      let inset = param.cursor.x;
+      let w = param.w - inset;
+      let indent = param.indent - inset;
+      param.font.wrapLines(
+        param.font_style, w, indent, param.text_height, text, param.align,
+        (x0: number, linenum: number, line: string, x1: number) => {
+          if (linenum > 0) {
+            param.cursor.y += param.text_height;
+            param.cursor.line_x0 = param.indent;
+          }
+          let layout_param: MDBlockTextLayout = {
+            font: param.font,
+            font_style: param.font_style,
+            x: line_x0 + x0,
+            y: param.cursor.y,
+            h: param.text_height,
+            w: min(x1, w) - x0,
+            align: param.align,
+            text: line,
+          };
+          ret.push(new MDDrawBlockText(layout_param));
         }
-        let layout_param: MDBlockTextLayout = {
-          font: param.font,
-          font_style: param.font_style,
-          x: line_x0 + x0,
-          y: param.cursor.y,
-          h: param.text_height,
-          w: x1 - x0,
-          align: param.align,
-          text: line,
-        };
-        ret.push(new MDDrawBlockText(layout_param));
+      );
+      if (ret.length) {
+        let tail = ret[ret.length - 1];
+        param.cursor.x = tail.dims.x + tail.dims.w;
+      } else {
+        // all whitespace, just advance cursor
+        param.cursor.x += param.font.getStringWidth(param.font_style, param.text_height, text);
       }
-    );
-    if (ret.length) {
-      let tail = ret[ret.length - 1];
-      param.cursor.x = tail.dims.x + tail.dims.w;
     } else {
-      // all whitespace, just advance cursor
-      param.cursor.x += param.font.getStringWidth(param.font_style, param.text_height, text);
+      let str_w = param.font.getStringWidth(param.font_style, param.text_height, text);
+      let x0 = param.cursor.x;
+      let layout_param: MDBlockTextLayout = {
+        font: param.font,
+        font_style: param.font_style,
+        x: x0,
+        y: param.cursor.y,
+        h: param.text_height,
+        w: str_w,
+        align: param.align,
+        text,
+      };
+      ret.push(new MDDrawBlockText(layout_param));
+      param.cursor.x += str_w;
     }
     return ret;
   }
@@ -347,17 +370,32 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   assert(blocks);
   let draw_blocks: MDDrawBlock[] = [];
   let maxx = 0;
-  let maxy = 0;
-  let max_block_h = 0;
   for (let ii = 0; ii < blocks.length; ++ii) {
     let arr = blocks[ii].layout(calc_param);
     for (let jj = 0; jj < arr.length; ++jj) {
       let block = arr[jj];
       maxx = max(maxx, block.dims.x + block.dims.w);
-      maxy = max(maxy, block.dims.y + block.dims.h);
-      max_block_h = max(max_block_h, block.dims.h);
       draw_blocks.push(block);
     }
+  }
+  if ((calc_param.align & ALIGN.HFIT) && maxx > calc_param.w + EPSILON) {
+    let xscale = calc_param.w / maxx;
+    for (let ii = 0; ii < draw_blocks.length; ++ii) {
+      let block = draw_blocks[ii];
+      let x0 = block.dims.x;
+      let x1 = x0 + block.dims.w;
+      block.dims.x = x0 * xscale;
+      block.dims.w = (x1 - x0) * xscale;
+    }
+  }
+  maxx = 0;
+  let maxy = 0;
+  let max_block_h = 0;
+  for (let ii = 0; ii < draw_blocks.length; ++ii) {
+    let block = draw_blocks[ii];
+    maxx = max(maxx, block.dims.x + block.dims.w);
+    maxy = max(maxy, block.dims.y + block.dims.h);
+    max_block_h = max(max_block_h, block.dims.h);
   }
   draw_blocks.sort(cmpDimsY);
   cache.layout = {

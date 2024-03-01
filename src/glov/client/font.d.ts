@@ -44,6 +44,7 @@ export enum ALIGN {
   HVCENTER,
   HVCENTERFIT,
 }
+export const EPSILON: number;
 
 export function fontSetDefaultSize(h: number): void;
 export function intColorFromVec4Color(v: Vec4): RGBA;

@@ -27,6 +27,11 @@ export const ALIGN = {
   HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
 };
 
+// line wrapping epsilon, don't wrap non-deterministically if scale and
+//  character widths are factors of display width.  Also allow a width
+//  calculated from .wrapLines() to be used as a width passed to draw*aligned()
+export const EPSILON = 0.0000000001;
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -145,11 +150,6 @@ GlovFontStyle.prototype.color = 0xFFFFFFff;
 // GlovFontStyle.prototype.colorLR = 0;
 // GlovFontStyle.prototype.colorLL = 0;
 // GlovFontStyle.prototype.color_mode = COLOR_MODE.SINGLE;
-
-// line wrapping epsilon, don't wrap non-deterministically if scale and
-//  character widths are factors of display width.  Also allow a width
-//  calculated from .wrapLines() to be used as a width passed to draw*aligned()
-const EPSILON = 0.0000000001;
 
 export const font_shaders = {};
 
