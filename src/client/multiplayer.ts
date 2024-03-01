@@ -114,6 +114,8 @@ export function main(): void {
   account_ui = createAccountUI();
   chat_ui = chatUICreate({
     max_len: 1000,
+    url_match: /((?:https?:\/\/)[^/]+\/index_multiplayer\.html\?[^\s]*)/g,
+    url_info: /(\?[^\s]*)/,
     user_context_cb: ({ user_id }: { user_id: string }) => ui.provideUserString('User ID', user_id),
   });
 
