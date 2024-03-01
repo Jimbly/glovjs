@@ -8,17 +8,49 @@ import type {
   NetResponseCallbackCalledBySystem,
   PresenceEntry,
   TSMap,
-  UnimplementedData,
   VoidFunc,
+  WithRequired,
 } from 'glov/common/types';
+
+export type LoginCredentials = {
+  provider?: string;
+  external_login_data?: Record<string, unknown>;
+  user_id?: string;
+  password?: string;
+  creation_display_name?: string;
+  do_creation?: boolean;
+};
+
+export type UserCreateParam = {
+  user_id: string;
+  password: string;
+  password_confirm?: string;
+  email?: string;
+  display_name?: string;
+};
+
+export type LoginEmailPassParam = {
+  email: string;
+  password: string;
+  do_creation: boolean;
+  creation_display_name?: string | null;
+};
+
+export type LoginExternalParam = WithRequired<LoginCredentials, 'provider' | 'external_login_data'>;
 
 // Note: Partial definition, needs more filled in
 export type SubscriptionManager = {
   readonly auto_create_user: boolean;
   readonly no_auto_login: boolean;
   readonly allow_anon: boolean;
-  loggedIn(): string | false;
+  readonly logged_in_email: string | null;
+  readonly logging_in: boolean;
+  readonly logging_out: boolean;
+  readonly auto_login_error?: string;
+  loggedIn(): string | null;
+  getUserId(): string | null;
   getDisplayName(): string | null;
+  isFirstSession(): boolean;
 
   on(key: 'chat_broadcast', cb: (data: { src: string; msg: string })=> void): void;
   on(key: 'restarting', cb: (data: boolean)=> void): void;
@@ -30,9 +62,10 @@ export type SubscriptionManager = {
   //on(key: string, cb: (data: unknown)=> void): void;
 
   onLogin(cb: VoidFunc): void; // like `.on('login', cb)`, but also fires immediately if appropriate
+  onceLoggedIn(cb: VoidFunc): void; // like `.once('login', cb)`, but also fires immediately if appropriate
   onceConnected(cb: VoidFunc): void; // like `.once('connect', cb), but also fires immediately if appropriate
 
-  getChannel(channel_id: string, do_subscribe: boolean): ClientChannelWorker;
+  getChannel(channel_id: string, do_subscribe?: boolean): ClientChannelWorker;
   getChannelImmediate(channel_id: string, timeout?: number): ClientChannelWorker;
   getMyUserChannel(): ClientChannelWorker | null;
   sendCmdParse(cmd: string, resp_func: NetResponseCallbackCalledBySystem): void;
@@ -41,6 +74,25 @@ export type SubscriptionManager = {
   onChannelMsg<T=unknown>(channel_type: string, msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   // TODO: more specific channel event handler types (also for `ClientChannelWorker::on` below)
   onChannelEvent<T=unknown>(channel_type: string, msg: string, cb: (data: T) => void): void;
+
+  getLastLoginCredentials(): LoginCredentials;
+  userCreate(credentials: UserCreateParam, resp_func: ErrorCallback): void;
+  loginEmailPass(credentials: LoginEmailPassParam, resp_func: ErrorCallback): void;
+  loginExternal(credentials: LoginExternalParam, resp_func: ErrorCallback): void;
+  login(user_id: string, password: string, resp_func: ErrorCallback): void;
+  logout(): void;
+  loginRetry(resp_func: ErrorCallback): void;
+  sessionHashedPassword(): string;
+  sendActivationEmail(email: string, resp_func: ErrorCallback): void;
+};
+
+// Note: Partial definition, needs more filled in
+export type WSClient = {
+  send<R=never, P=null>(msg: string, data: P, msg_debug_name: string | null, resp_func: NetErrorCallback<R>): void;
+  send(msg: string, data?: unknown, msg_debug_name?: string | null, resp_func?: NetErrorCallback): void;
+  pak(msg: string): Packet;
+  readonly connected: boolean;
+  readonly disconnected: boolean;
 };
 
 type CmdParse = ReturnType<typeof cmd_parse_mod.create>;
@@ -63,9 +115,9 @@ export function netPostInit(cb: VoidFunc): void;
 export function netDisconnectedRaw(): boolean;
 export function netDisconnected(): boolean;
 export function netForceDisconnect(): void;
-export function netClient(): UnimplementedData;
+export function netClient(): WSClient;
 export function netClientId(): string;
-export function netUserId(): string | false;
+export function netUserId(): string | null;
 export function netSubs(): SubscriptionManager;
 
 export type ClientChannelWorkerData = {
@@ -97,6 +149,7 @@ export interface ClientChannelWorker<DataType extends ClientChannelWorkerData=Cl
   readonly channel_id: string;
   readonly channel_type: string;
   readonly channel_subid: string;
+  readonly channel_data_ver: number;
 }
 
 export interface UserChannel extends ClientChannelWorker {
