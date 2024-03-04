@@ -166,3 +166,7 @@ export function mdParse(source: string): Array<MDASTNode> {
   let blockSource = `${source}\n\n`;
   return reBuiltParser(blockSource, { inline: false }) as Array<MDASTNode>;
 }
+
+export function mdEscape(text: string): string {
+  return text.replace(/([\\[*_])/g, '\\$1');
+}

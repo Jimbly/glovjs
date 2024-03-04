@@ -46,6 +46,7 @@ import {
   MDLayoutBlock,
   MDLayoutCalcParam,
   MarkdownCache,
+  MarkdownDrawParam,
   MarkdownLayoutParam,
   MarkdownParseParam,
   MarkdownStateCached,
@@ -54,7 +55,10 @@ import {
   markdownLayoutInvalidate,
   markdownPrep,
 } from './markdown';
-import { RenderableContent } from './markdown_parse';
+import {
+  RenderableContent,
+  mdEscape,
+} from './markdown_parse';
 import {
   MarkdownRenderable,
   markdownLayoutFit,
@@ -108,6 +112,7 @@ import type {
   CmdRespFunc,
   DataObject,
   TSMap,
+  WithRequired,
 } from 'glov/common/types';
 
 const { ceil, floor, max, min, round } = Math;
@@ -134,8 +139,11 @@ interface ChatMessage extends ChatMessageDataBroadcast {
   // calculated/run-time:
   hidden?: boolean;
   msg_h: number;
+  msg_w: number;
+  chatsrc_tag: string;
   cache: MarkdownCache;
 }
+export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'>;
 
 function messageFromUser(msg: ChatMessage): boolean {
   return msg.style !== 'error' && msg.style !== 'system';
@@ -272,6 +280,17 @@ function defaultGetRoles(): Roles {
 
 function filterIdentity(str: string): string {
   return str;
+}
+
+export function decorateUserDefault(msg: ChatMessageUser): string {
+  let display_name_md: string = msg.display_name;
+  // recommended: escape markdown
+  display_name_md = mdEscape(display_name_md);
+  // recommended: different prefix for emotes
+  if (!(msg.flags && (msg.flags & CHAT_FLAG_EMOTE))) {
+    display_name_md = `\\[${display_name_md}]`;
+  }
+  return display_name_md;
 }
 
 function notHidden(msg: ChatMessage): boolean {
@@ -478,11 +497,11 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
   draw(param: MDDrawParam): void {
     profilerStart('MDRChatURL::draw');
     const { parent, dims } = this;
-    const { links_active } = parent;
+    const { chat_interactive } = parent;
     let style: FontStyle;
     let x = param.x + dims.x;
     let y = param.y + dims.y;
-    if (links_active) {
+    if (chat_interactive) {
       let spot_ret = spot({
         x, y,
         w: dims.w, h: dims.h,
@@ -493,7 +512,8 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
       });
       style = spot_ret.focused ? this.style_link_hover : this.style_link;
       if (spot_ret.focused || spot_ret.ret) {
-        parent.focus_handled = true;
+        parent.handled_rightclick = true; // link will eat it
+        parent.focus_tooltip = `Click to open ${this.url_label}`;
       }
       if (spot_ret.ret) {
         parent.cmdParseInternal(`url ${this.url_label}`);
@@ -511,6 +531,94 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
     this.font.drawSizedAligned(style,
       param.x + dims.x, param.y + dims.y, param.z,
       dims.h, this.align & NOT_WRAP, dims.w, dims.h, this.url_label);
+    profilerStop();
+  }
+}
+
+class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
+  constructor(
+    private msg: ChatMessageUser,
+    private parent: ChatUIImpl,
+  ) {
+    this.dims = this;
+  }
+  // assigned during layout
+  dims: Box;
+  x!: number;
+  y!: number;
+  w!: number;
+  h!: number;
+  submd_cache = {};
+  draw_param!: MarkdownStateCached & MarkdownDrawParam;
+  layout(param: MDLayoutCalcParam): MDDrawBlock[] {
+    const { parent } = this;
+    let user_name_md = parent.decorate_user_cb(this.msg);
+    let submd_param: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam = {
+      font: param.font,
+      font_style: param.font_style,
+      w: param.w,
+      h: param.h,
+      text_height: param.text_height,
+      indent: param.indent,
+      align: param.align,
+      cache: this.submd_cache,
+      text: user_name_md,
+    };
+    markdownPrep(submd_param);
+    let submd_dims = markdownDims(submd_param);
+    this.w = submd_dims.w;
+    this.h = submd_dims.h;
+    this.draw_param = {
+      x: 0, y: 0, z: 0, alpha: 0,
+      cache: this.submd_cache,
+    };
+    markdownLayoutFit(param, this);
+    return [this];
+  }
+  alpha_font_style_cache?: FontStyle;
+  alpha_font_style_cache_value?: number;
+  draw(param: MDDrawParam): void {
+    profilerStart('MDRChatSource::draw');
+    let x = param.x + this.x;
+    let y = param.y + this.y;
+    let z = param.z;
+    const { parent, draw_param, msg, dims } = this;
+    const { chat_interactive, user_context_cb } = parent;
+    if (chat_interactive) {
+      assert(user_context_cb);
+      assert(msg.id);
+      assert(msg.display_name);
+      let pos_param = {
+        x, y, w: dims.w, h: dims.h, button: 0,
+        z: z + 0.5,
+        peek: false,
+        color: color_user_rollover,
+      };
+      if (input.click(pos_param)) {
+        user_context_cb({
+          user_id: msg.id,
+        });
+      } else {
+        pos_param.peek = true; // don't block right-click, etc
+        let user_mouseover = input.mouseOver(pos_param);
+        if (parent.user_id_mouseover === msg.id) {
+          drawRect2({
+            ...pos_param,
+            color: color_same_user_rollover,
+          });
+        }
+        if (user_mouseover) {
+          parent.focus_tooltip = 'Click to view user info';
+          drawRect2(pos_param);
+          parent.user_id_mouseover = msg.id;
+        }
+      }
+    }
+    draw_param.x = x;
+    draw_param.y = y;
+    draw_param.z = z;
+    draw_param.alpha = param.alpha;
+    markdownDraw(draw_param);
     profilerStop();
   }
 }
@@ -549,6 +657,7 @@ export type ChatUIParam = {
 
   classifyRole?: (roles: Roles | undefined, always_true: true) => string; // Roles -> key to index `styles`
   cmdLogFilter?: (cmd: string) => string;
+  decorate_user_cb?: (msg: ChatMessageUser) => string;
 };
 
 export type ChatUIRunParam = Partial<{
@@ -584,7 +693,6 @@ class ChatUIImpl {
   private get_roles: () => Roles;
   private url_match?: RegExp;
   private url_info?: RegExp;
-  private user_context_cb?: (param: { user_id: string }) => void;
   private fade_start_time: [number, number];
   private fade_time: [number, number];
   private styles: Record<SystemStyles, FontStyle> & TSMap<FontStyle>;
@@ -600,15 +708,18 @@ class ChatUIImpl {
   private on_chat: ChatUIImpl['onMsgChat']; // bound method
   handle_cmd_parse: ChatUIImpl['handleCmdParse'];
   handle_cmd_parse_error: ChatUIImpl['handleCmdParseError'];
-  private user_id_mouseover: string | null = null;
   private z_override: number | null = null; // 1-frame Z override
   private renderables: TSMap<MarkdownRenderable> = {}; // by default, no renderables in chat (e.g. images)
 
-  links_active = false; // internal, for MDRChatURL
+  user_id_mouseover: string | null = null; // internal, for MDChatSource
+  user_context_cb?: (param: { user_id: string }) => void; // internal, for MDChatSource
+  decorate_user_cb: (msg: ChatMessageUser) => string; // internal, for MDRChatSource
+  chat_interactive = false; // internal, for MDRChatURL
   url_base: string; // internal, for MDRChatURL
   // focuse_handled gets set if MDRChatURL handles focus/click/right-click/etc,
   // maybe need more general solution for MD Renderables that handle focus?
-  focus_handled = false; // internal, for MDRChatURL
+  handled_rightclick = false; // internal, for MDRChat*
+  focus_tooltip: string = ''; // internal, for MDRChat*
 
   constructor(params: ChatUIParam) {
     assert.equal(typeof params, 'object');
@@ -696,10 +807,12 @@ class ChatUIImpl {
     this.styles.join_leave = this.styles.join_leave || this.styles.system;
     this.classifyRole = params.classifyRole;
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
+    this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
 
     if (this.url_match) {
       this.renderables.chaturl = this.createMDRChatURL.bind(this);
     }
+    this.renderables.chatsrc = this.createMDRChatSource.bind(this);
 
     if (netSubs()) {
       netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
@@ -723,6 +836,16 @@ class ChatUIImpl {
     return new MDRChatURL(key, this.styles.link, this.styles.link_hover, this);
   }
 
+  createMDRChatSource(
+    content: RenderableContent,
+    data: unknown
+  ): MDLayoutBlock | null {
+    if (!data) {
+      return null;
+    }
+    return new MDRChatSource(data as ChatMessageUser, this);
+  }
+
   private calcMsgHeight(elem: ChatMessage): void {
     let mdstate: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam = {
       font_style: this.styles[elem.style] || this.styles.def,
@@ -734,8 +857,18 @@ class ChatUIImpl {
       text: elem.msg_text,
       renderables: this.renderables,
     };
+    if (elem.chatsrc_tag) {
+      mdstate.custom = {
+        [elem.chatsrc_tag]: {
+          type: 'chatsrc',
+          data: elem,
+        }
+      };
+    }
     markdownPrep(mdstate);
-    elem.msg_h = markdownDims(mdstate).h;
+    let dims = markdownDims(mdstate);
+    elem.msg_h = dims.h;
+    elem.msg_w = dims.w;
     this.total_h += elem.msg_h;
   }
 
@@ -773,10 +906,16 @@ class ChatUIImpl {
     elem.flags = elem.flags || 0;
     elem.timestamp = elem.timestamp || Date.now();
     if (elem.flags && (elem.flags & CHAT_FLAG_USERCHAT)) {
-      if (elem.flags & CHAT_FLAG_EMOTE) {
-        elem.msg_text = `${elem.display_name} ${elem.msg}`;
+      assert(elem.display_name);
+      if (this.user_context_cb && elem.id) {
+        let chatsrc_tag = 'csrc1';
+        while (elem.msg.includes(chatsrc_tag) || elem.display_name.includes(chatsrc_tag)) {
+          chatsrc_tag = `csrc${String(Math.random()).slice(2)}`;
+        }
+        elem.chatsrc_tag = chatsrc_tag;
+        elem.msg_text = `[${chatsrc_tag}=] ${elem.msg}`;
       } else {
-        elem.msg_text = `[${elem.display_name}] ${elem.msg}`;
+        elem.msg_text = `${this.decorate_user_cb(elem as ChatMessageUser)} ${elem.msg}`;
       }
     } else {
       elem.msg_text = elem.msg;
@@ -1043,6 +1182,38 @@ class ChatUIImpl {
     this.z_override = z;
   }
 
+  private copyMessage(msg: ChatMessage): void {
+    let base_text = this.linkUnFilter(msg.msg_text);
+    if (msg.flags && (msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+      let display_name = msg.display_name || msg.id;
+      if (display_name.toLowerCase() !== msg.id.toLowerCase()) {
+        display_name = `${msg.id} (${display_name})`;
+      }
+      if (msg.flags && (msg.flags & CHAT_FLAG_EMOTE)) {
+        base_text = `${display_name} ${this.linkUnFilter(msg.msg)}`;
+      } else {
+        base_text = `[${display_name}] ${this.linkUnFilter(msg.msg)}`;
+      }
+    }
+    let just_message = this.linkUnFilter(msg.msg);
+    let buttons: ModalDialogButtons = {};
+    if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+      buttons['User ID'] = {
+        cb: function () {
+          provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+        },
+      };
+    }
+    if (just_message !== base_text) {
+      buttons['Just message'] = {
+        cb: function () {
+          provideUserString('Chat Text', just_message);
+        },
+      };
+    }
+    provideUserString('Chat Text', base_text, buttons);
+  }
+
   run(opts?: ChatUIRunParam): void {
     const UI_SCALE = uiTextHeight() / 24;
     opts = opts || {};
@@ -1255,12 +1426,10 @@ class ChatUIImpl {
     }
     y -= SPACE_ABOVE_ENTRY;
 
-    let { styles, wrap_w, user_context_cb } = this;
+    let { wrap_w } = this;
     let self = this;
     let do_scroll_area = is_focused || opts.always_scroll;
-    this.links_active = Boolean(do_scroll_area);
-    let bracket_width = 0;
-    let name_width: TSMap<number> = {};
+    this.chat_interactive = Boolean(do_scroll_area);
     let did_user_mouseover = false;
     let viewport: Box;
     // Slightly hacky: uses `x` and `y` from the higher scope
@@ -1268,59 +1437,21 @@ class ChatUIImpl {
       if (msg.hidden) {
         return;
       }
-      let line = msg.msg_text;
       let h = msg.msg_h;
       let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg));
-      let text_w;
       let mouseover = false;
       if (do_mouseover) {
-        text_w = font.getStringWidth(styles.def, font_height, line);
-        // mouseOver peek because we're doing it before checking for clicks
-        mouseover = input.mouseOver({ x, y, w: min(text_w, wrap_w), h, peek: true });
-      }
-      let user_mouseover = false;
-      let did_user_context = false;
-      if ((msg.flags & CHAT_FLAG_USERCHAT) && user_context_cb && msg.id && do_scroll_area) {
-        assert(msg.display_name);
-        let nw = name_width[msg.display_name];
-        if (!nw) {
-          nw = name_width[msg.display_name] = font.getStringWidth(styles.def, font_height, msg.display_name);
-        }
-        if (!(msg.flags & CHAT_FLAG_EMOTE)) {
-          if (!bracket_width) {
-            bracket_width = font.getStringWidth(styles.def, font_height, '[]');
-          }
-          nw += bracket_width;
-        }
-        let pos_param = {
-          x, y, w: min(nw, wrap_w), h: font_height, button: 0, peek: true,
-          z: z + 0.5,
-          color: color_user_rollover,
-        };
-        if (input.click(pos_param)) {
-          did_user_context = true;
-          user_context_cb({
-            user_id: msg.id, // Need any other msg. params?
-            // x: pos_param.x + pos_param.w,
-            // y: pos_param.y,
-          });
-        } else {
-          user_mouseover = input.mouseOver(pos_param);
-          if (self.user_id_mouseover === msg.id) {
-            drawRect2({
-              ...pos_param,
-              color: color_same_user_rollover,
-            });
-          }
-          if (user_mouseover) {
-            drawRect2(pos_param);
-            did_user_mouseover = true;
-            self.user_id_mouseover = msg.id;
-          }
-        }
+        mouseover = input.mouseOver({
+          x, y,
+          w: msg.msg_w,
+          h,
+          // mouseOver peek because we're doing it before checking for clicks
+          peek: true,
+        });
       }
 
-      self.focus_handled = false;
+      self.handled_rightclick = false;
+      self.focus_tooltip = '';
       // Draw the actual text
       markdownDraw({
         x, y, z: z + 1,
@@ -1331,7 +1462,7 @@ class ChatUIImpl {
 
       if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
         // Only show tooltip for user messages or links
-        (!msg.style || messageFromUser(msg))
+        (!msg.style || messageFromUser(msg) || self.focus_tooltip)
       ) {
         drawTooltip({
           x, y, z: Z.TOOLTIP,
@@ -1339,36 +1470,16 @@ class ChatUIImpl {
           tooltip_width: 450 * UI_SCALE,
           tooltip_pad: round(uiGetTooltipPad() * 0.5),
           tooltip: `Received${msg.id ? ` from "${msg.id}"` : ''} on ${conciseDate(new Date(msg.timestamp))}` +
-            `${(self.focus_handled ? '' : '\nRight-click to copy message')}` +
-            `${(user_mouseover ? '\nClick to view user info' : '')}`,
+            `${self.focus_tooltip ? `\n${self.focus_tooltip}` : ''}` +
+            `${!self.handled_rightclick ? '\nRight-click to copy message' : ''}`,
           pixel_scale: uiGetTooltipPanelPixelScale() * 0.5,
         });
       }
       // Previously: mouseDownEdge because by the time the Up happens, the chat text might not be here anymore
-      let longpress = input.longPress({ x, y, w: wrap_w, h });
-      let click = input.click({ x, y, w: wrap_w, h, button: 2 });
-      if (did_user_context) {
-        click = null;
-      }
+      let longpress = !self.handled_rightclick && input.longPress({ x, y, w: wrap_w, h });
+      let click = !self.handled_rightclick && input.click({ x, y, w: wrap_w, h, button: 2 });
       if (longpress || click) {
-        let base_text = self.linkUnFilter(line);
-        let just_message = self.linkUnFilter(msg.msg);
-        let buttons: ModalDialogButtons = {};
-        if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
-          buttons['User ID'] = {
-            cb: function () {
-              provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
-            },
-          };
-        }
-        if (just_message !== base_text) {
-          buttons['Just message'] = {
-            cb: function () {
-              provideUserString('Chat Text', just_message);
-            },
-          };
-        }
-        provideUserString('Chat Text', base_text, buttons);
+        self.copyMessage(msg);
       }
       anything_visible = true;
     }
