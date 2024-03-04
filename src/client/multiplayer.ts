@@ -28,6 +28,7 @@ import {
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
+import { getURLPageBase } from 'glov/client/urlhash';
 import { Packet } from 'glov/common/packet';
 import { DataObject, ErrorCallback } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
@@ -116,6 +117,7 @@ export function main(): void {
     max_len: 1000,
     url_match: /((?:https?:\/\/)[^/]+\/index_multiplayer\.html\?[^\s]*)/g,
     url_info: /(\?[^\s]*)/,
+    url_base: getURLPageBase(),
     user_context_cb: ({ user_id }: { user_id: string }) => ui.provideUserString('User ID', user_id),
   });
 

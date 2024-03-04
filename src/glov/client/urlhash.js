@@ -50,10 +50,12 @@ let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove se
 let url_base = page_base.replace(/[^/]*$/,'');
 let on_change = [];
 
+// e.g. http://site.com/ http://company.com/app/
 export function getURLBase() {
   return url_base;
 }
 
+// e.g. http://site.com/ http://company.com/app/ http://site.com/page.html (for multi-page apps)
 export function getURLPageBase() {
   return page_base;
 }

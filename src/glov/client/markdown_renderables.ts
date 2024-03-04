@@ -96,6 +96,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   alpha_color_cache?: Vec4;
   alpha_color_cache_value?: number;
   draw(param: MDDrawParam): void {
+    profilerStart('MDRImg::draw');
     let x = this.x + param.x;
     let y = this.y + param.y;
     let { img_data } = this;
@@ -116,6 +117,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       frame: img_data.frame,
       color,
     });
+    profilerStop();
   }
 }
 function createMDRImg(content: RenderableContent): MDRImg {

@@ -12,7 +12,6 @@ import {
   dateToSafeLocaleString,
   defaults,
   deprecate,
-  matchAll,
 } from 'glov/common/util';
 import {
   v3copy,
@@ -35,7 +34,6 @@ import {
   fontStyleColored,
 } from './font';
 import * as input from './input';
-import { link } from './link';
 import {
   getStoragePrefix,
   localStorageGetJSON,
@@ -43,6 +41,10 @@ import {
 } from './local_storage';
 import { getStringIfLocalizable } from './localization';
 import {
+  MDDrawBlock,
+  MDDrawParam,
+  MDLayoutBlock,
+  MDLayoutCalcParam,
   MarkdownCache,
   MarkdownLayoutParam,
   MarkdownParseParam,
@@ -52,6 +54,11 @@ import {
   markdownLayoutInvalidate,
   markdownPrep,
 } from './markdown';
+import { RenderableContent } from './markdown_parse';
+import {
+  MarkdownRenderable,
+  markdownLayoutFit,
+} from './markdown_renderables';
 import {
   ClientChannelWorker,
   ClientChannelWorkerData,
@@ -63,7 +70,11 @@ import {
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import * as settings from './settings';
 import { isFriend } from './social';
-import { spotUnfocus } from './spot';
+import {
+  SPOT_DEFAULT_BUTTON,
+  spot,
+  spotUnfocus,
+} from './spot';
 import {
   ModalDialogButtons,
   drawRect,
@@ -79,7 +90,10 @@ import {
   uiGetTooltipPanelPixelScale,
   uiTextHeight,
 } from './ui';
-import { UIStyle, uiStyleCurrent } from './uistyle';
+import {
+  UIStyle,
+  uiStyleCurrent,
+} from './uistyle';
 import {
   profanityFilter,
   profanityStartup,
@@ -423,6 +437,84 @@ function drawHelpTooltip(param: {
   return ret;
 }
 
+function urlKeyEscape(str: string): string {
+  str = str.replace(/]/g, ')').replace(/ /g, '%20');
+  return str;
+}
+
+const NOT_WRAP = ~ALIGN.HWRAP;
+class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
+  msg_url: string;
+  constructor(
+    private url_label: string,
+    private style_link: FontStyle,
+    private style_link_hover: FontStyle,
+    private parent: ChatUIImpl,
+  ) {
+    this.dims = this;
+    this.msg_url = `${parent.url_base}${url_label}`;
+  }
+  // assigned during layout
+  dims: Box;
+  x!: number;
+  y!: number;
+  w!: number;
+  h!: number;
+  font!: Font;
+  parent_font_style!: FontStyle;
+  align!: ALIGN;
+  layout(param: MDLayoutCalcParam): MDDrawBlock[] {
+    let { text_height, font, align, font_style } = param;
+    this.parent_font_style = font_style;
+    this.font = font;
+    this.align = align;
+    this.h = text_height;
+    this.w = font.getStringWidth(this.style_link, text_height, this.url_label);
+    markdownLayoutFit(param, this);
+    return [this];
+  }
+  alpha_font_style_cache?: FontStyle;
+  alpha_font_style_cache_value?: number;
+  draw(param: MDDrawParam): void {
+    profilerStart('MDRChatURL::draw');
+    const { parent, dims } = this;
+    const { links_active } = parent;
+    let style: FontStyle;
+    let x = param.x + dims.x;
+    let y = param.y + dims.y;
+    if (links_active) {
+      let spot_ret = spot({
+        x, y,
+        w: dims.w, h: dims.h,
+        sound_rollover: null,
+        def: SPOT_DEFAULT_BUTTON,
+        url: this.msg_url,
+        internal: true,
+      });
+      style = spot_ret.focused ? this.style_link_hover : this.style_link;
+      if (spot_ret.focused || spot_ret.ret) {
+        parent.focus_handled = true;
+      }
+      if (spot_ret.ret) {
+        parent.cmdParseInternal(`url ${this.url_label}`);
+      }
+    } else {
+      style = this.parent_font_style;
+      if (param.alpha !== 1) {
+        if (this.alpha_font_style_cache_value !== param.alpha) {
+          this.alpha_font_style_cache_value = param.alpha;
+          this.alpha_font_style_cache = fontStyleAlpha(style, param.alpha);
+        }
+        style = this.alpha_font_style_cache!;
+      }
+    }
+    this.font.drawSizedAligned(style,
+      param.x + dims.x, param.y + dims.y, param.z,
+      dims.h, this.align & NOT_WRAP, dims.w, dims.h, this.url_label);
+    profilerStop();
+  }
+}
+
 export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
 
 export type ChatUIParam = {
@@ -447,6 +539,7 @@ export type ChatUIParam = {
   get_roles?: () => Roles; // returns object for testing cmd access permissions
   url_match?: RegExp; // runs `/url match[1]` if clicked
   url_info?: RegExp; // Optional for grabbing the interesting portion of the URL for tooltip and /url
+  url_base?: string; // To prefix on URLs when creating HREFs for them
   user_context_cb?: (param: { user_id: string }) => void; // Cb called with { user_id } on click
 
   fade_start_time?: [number, number]; // [normal, hidden]; default [10000, 1000]
@@ -509,6 +602,13 @@ class ChatUIImpl {
   handle_cmd_parse_error: ChatUIImpl['handleCmdParseError'];
   private user_id_mouseover: string | null = null;
   private z_override: number | null = null; // 1-frame Z override
+  private renderables: TSMap<MarkdownRenderable> = {}; // by default, no renderables in chat (e.g. images)
+
+  links_active = false; // internal, for MDRChatURL
+  url_base: string; // internal, for MDRChatURL
+  // focuse_handled gets set if MDRChatURL handles focus/click/right-click/etc,
+  // maybe need more general solution for MD Renderables that handle focus?
+  focus_handled = false; // internal, for MDRChatURL
 
   constructor(params: ChatUIParam) {
     assert.equal(typeof params, 'object');
@@ -555,6 +655,10 @@ class ChatUIImpl {
     this.get_roles = defaultGetRoles;
     this.url_match = params.url_match;
     this.url_info = params.url_info;
+    this.url_base = params.url_base || '';
+    if (this.url_info) {
+      assert(this.url_base);
+    }
     this.user_context_cb = params.user_context_cb;
 
     this.fade_start_time = params.fade_start_time || [10000, 1000];
@@ -593,12 +697,30 @@ class ChatUIImpl {
     this.classifyRole = params.classifyRole;
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
 
+    if (this.url_match) {
+      this.renderables.chaturl = this.createMDRChatURL.bind(this);
+    }
+
     if (netSubs()) {
       netSubs().on('chat_broadcast', this.onChatBroadcast.bind(this));
     }
 
     // for console debugging, overrides general (not forwarded to server, not access checked) version
     (window as unknown as DataObject).cmd = this.cmdParse.bind(this);
+  }
+
+  createMDRChatURL(
+    content: RenderableContent
+  ): MDLayoutBlock | null {
+    let { key } = content;
+    if (!key) {
+      return null;
+    }
+    let { url_info } = this;
+    if (url_info && !url_info.test(key)) {
+      return null;
+    }
+    return new MDRChatURL(key, this.styles.link, this.styles.link_hover, this);
   }
 
   private calcMsgHeight(elem: ChatMessage): void {
@@ -610,7 +732,7 @@ class ChatUIImpl {
       cache: elem.cache,
       align: ALIGN.HWRAP,
       text: elem.msg_text,
-      renderables: {}, // by default, no renderables in chat (e.g. images)
+      renderables: this.renderables,
     };
     markdownPrep(mdstate);
     elem.msg_h = markdownDims(mdstate).h;
@@ -707,8 +829,33 @@ class ChatUIImpl {
     if (settings.profanity_filter && data.id !== (netUserId() || netClientId())) {
       data.msg = profanityFilter(data.msg);
     }
+    data.msg = this.linkFilter(data.msg);
     this.addMsgInternal(data);
   }
+
+  linkFilter(msg: string): string {
+    let { url_match, url_info } = this;
+    if (!url_match) {
+      return msg;
+    }
+    return msg.replace(url_match, (match: string, msg_url: string): string => {
+      let url_label = msg_url;
+      if (url_info) {
+        let m = msg_url.match(url_info);
+        if (m) {
+          url_label = m[1];
+        }
+      }
+      return `[chaturl=${urlKeyEscape(url_label)}]`;
+    });
+  }
+  linkUnFilter(msg: string): string {
+    // simplified version of `renderable_regex`
+    return msg.replace(/\[chaturl=([^\s\]]+)]/, (match, url) => {
+      return `${this.url_base}${url}`;
+    });
+  }
+
   onMsgJoin(data: ClientIDs): void {
     if (!settings.chat_show_join_leave) {
       return;
@@ -1108,9 +1255,10 @@ class ChatUIImpl {
     }
     y -= SPACE_ABOVE_ENTRY;
 
-    let { url_match, url_info, styles, wrap_w, user_context_cb } = this;
+    let { styles, wrap_w, user_context_cb } = this;
     let self = this;
     let do_scroll_area = is_focused || opts.always_scroll;
+    this.links_active = Boolean(do_scroll_area);
     let bracket_width = 0;
     let name_width: TSMap<number> = {};
     let did_user_mouseover = false;
@@ -1121,17 +1269,8 @@ class ChatUIImpl {
         return;
       }
       let line = msg.msg_text;
-      let url_check = do_scroll_area && url_match && matchAll(line, url_match);
-      let msg_url: string | null = url_check && url_check.length === 1 && url_check[0] || null;
-      let url_label = msg_url;
-      if (msg_url && url_info) {
-        let m = msg_url.match(url_info);
-        if (m) {
-          url_label = m[1];
-        }
-      }
       let h = msg.msg_h;
-      let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg) || msg_url);
+      let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg));
       let text_w;
       let mouseover = false;
       if (do_mouseover) {
@@ -1140,7 +1279,6 @@ class ChatUIImpl {
         mouseover = input.mouseOver({ x, y, w: min(text_w, wrap_w), h, peek: true });
       }
       let user_mouseover = false;
-      let user_indent = 0;
       let did_user_context = false;
       if ((msg.flags & CHAT_FLAG_USERCHAT) && user_context_cb && msg.id && do_scroll_area) {
         assert(msg.display_name);
@@ -1154,7 +1292,6 @@ class ChatUIImpl {
           }
           nw += bracket_width;
         }
-        user_indent = nw;
         let pos_param = {
           x, y, w: min(nw, wrap_w), h: font_height, button: 0, peek: true,
           z: z + 0.5,
@@ -1182,19 +1319,8 @@ class ChatUIImpl {
           }
         }
       }
-      let click;
-      if (msg_url) {
-        click = link({ x: x + user_indent, y, w: wrap_w - user_indent, h, url: msg_url, internal: true });
-      }
 
-      // TODO: handle at parse time
-      // let style;
-      // if (msg_url) {
-      //   style = mouseover && !user_mouseover ? styles.link_hover : styles.link;
-      // } else {
-      //   style = styles[msg.style] || styles.def;
-      // }
-
+      self.focus_handled = false;
       // Draw the actual text
       markdownDraw({
         x, y, z: z + 1,
@@ -1205,49 +1331,44 @@ class ChatUIImpl {
 
       if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
         // Only show tooltip for user messages or links
-        (!msg.style || messageFromUser(msg) || msg_url)
+        (!msg.style || messageFromUser(msg))
       ) {
         drawTooltip({
           x, y, z: Z.TOOLTIP,
           tooltip_above: true,
           tooltip_width: 450 * UI_SCALE,
           tooltip_pad: round(uiGetTooltipPad() * 0.5),
-          tooltip: msg_url && !user_mouseover ?
-            `Click to open ${url_label}` :
-            `Received${msg.id ? ` from "${msg.id}"` : ''} on ${conciseDate(new Date(msg.timestamp))}\n` +
-            'Right-click to copy message' +
+          tooltip: `Received${msg.id ? ` from "${msg.id}"` : ''} on ${conciseDate(new Date(msg.timestamp))}` +
+            `${(self.focus_handled ? '' : '\nRight-click to copy message')}` +
             `${(user_mouseover ? '\nClick to view user info' : '')}`,
           pixel_scale: uiGetTooltipPanelPixelScale() * 0.5,
         });
       }
       // Previously: mouseDownEdge because by the time the Up happens, the chat text might not be here anymore
       let longpress = input.longPress({ x, y, w: wrap_w, h });
-      click = click || input.click({ x, y, w: wrap_w, h });
+      let click = input.click({ x, y, w: wrap_w, h, button: 2 });
       if (did_user_context) {
         click = null;
       }
-      if (click || longpress) {
-        if (longpress || click.button === 2) {
-          let base_text = msg_url || line;
-          let buttons: ModalDialogButtons = {};
-          if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
-            buttons['User ID'] = {
-              cb: function () {
-                provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
-              },
-            };
-          }
-          if (msg.msg !== base_text) {
-            buttons['Just message'] = {
-              cb: function () {
-                provideUserString('Chat Text', msg.msg);
-              },
-            };
-          }
-          provideUserString('Chat Text', base_text, buttons);
-        } else if (msg_url) {
-          self.cmdParseInternal(`url ${url_label}`);
+      if (longpress || click) {
+        let base_text = self.linkUnFilter(line);
+        let just_message = self.linkUnFilter(msg.msg);
+        let buttons: ModalDialogButtons = {};
+        if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+          buttons['User ID'] = {
+            cb: function () {
+              provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+            },
+          };
         }
+        if (just_message !== base_text) {
+          buttons['Just message'] = {
+            cb: function () {
+              provideUserString('Chat Text', just_message);
+            },
+          };
+        }
+        provideUserString('Chat Text', base_text, buttons);
       }
       anything_visible = true;
     }
