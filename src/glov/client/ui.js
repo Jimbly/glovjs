@@ -162,12 +162,14 @@ export function suppressNewDOMElemWarnings() {
   per_frame_dom_suppress = glov_engine.frame_index + 1;
 }
 function uiElemAllocCheck() {
-  per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
-  let sum = 0;
-  for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
-    sum += per_frame_dom_alloc[ii];
+  if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
+    per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
+    let sum = 0;
+    for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
+      sum += per_frame_dom_alloc[ii];
+    }
+    assert(sum < per_frame_dom_alloc.length, 'Allocated new UI elements for too many consecutive frames');
   }
-  assert(sum < per_frame_dom_alloc.length, 'Allocated new UI elements for too many consecutive frames');
 }
 
 let ui_elem_data = {};
@@ -532,9 +534,7 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   }
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
-    if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
-      uiElemAllocCheck();
-    }
+    uiElemAllocCheck();
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
       dynamic_text_elem = document.getElementById('dynamic_text');
