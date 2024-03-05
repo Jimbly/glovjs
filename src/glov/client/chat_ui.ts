@@ -1190,9 +1190,10 @@ class ChatUIImpl {
     let base_text = this.linkUnFilter(msg.msg_text);
     if (msg.flags && (msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
       let display_name = msg.display_name || msg.id;
-      if (display_name.toLowerCase() !== msg.id.toLowerCase()) {
-        display_name = `${msg.id} (${display_name})`;
-      }
+      // Since there's a "User ID" button anyway, this isn't needed, just makes it messy?
+      // if (display_name.toLowerCase() !== msg.id.toLowerCase()) {
+      //   display_name = `${msg.id} (${display_name})`;
+      // }
       if (msg.flags && (msg.flags & CHAT_FLAG_EMOTE)) {
         base_text = `${display_name} ${this.linkUnFilter(msg.msg)}`;
       } else {
