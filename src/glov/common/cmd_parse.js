@@ -263,10 +263,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
   }
   let fn = (str, resp_func) => {
     function value() {
-      resp_func(null, `${label} = ${formatEnumValue(enum_lookup, param.get())}`);
+      resp_func(null, `${label} = **${formatEnumValue(enum_lookup, param.get())}**`);
     }
     function usage() {
-      resp_func(`Usage: /${cmd} ${param_label}`);
+      resp_func(`Usage: **/${cmd} ${param_label}**`);
     }
     if (!str && is_toggle) {
       if (param.get() === param.range[0]) {
@@ -291,13 +291,13 @@ CmdParse.prototype.registerValue = function (cmd, param) {
         if (enum_lookup) {
           value_example = Object.keys(enum_lookup)[0];
         }
-        help.push(`To change: /${cmd} ${param_label}`);
-        help.push(`  example: /${cmd} ${value_example}`);
+        help.push(`To change: **/${cmd} ${param_label}**`);
+        help.push(`  example: **/${cmd} ${value_example}**`);
         let def_value = param.default_value;
         if (def_value !== undefined) {
-          help.push(`Default value = ${formatEnumValue(enum_lookup, def_value)}`);
+          help.push(`Default value = **${formatEnumValue(enum_lookup, def_value)}**`);
         }
-        help.push(`Current value = ${formatEnumValue(enum_lookup, cur_value)}`);
+        help.push(`Current value = **${formatEnumValue(enum_lookup, cur_value)}**`);
         return resp_func(null, help.join('\n'));
       } else if (param.get) {
         return value();
@@ -306,7 +306,7 @@ CmdParse.prototype.registerValue = function (cmd, param) {
       }
     }
     if (!param.set) {
-      return resp_func(`Usage: /${cmd}`);
+      return resp_func(`Usage: **/${cmd}**`);
     }
     let n = Number(str);
     if (enum_lookup) {
@@ -353,10 +353,10 @@ CmdParse.prototype.registerValue = function (cmd, param) {
     cmd,
     func: fn,
     help: param.help || ((param.get && param.set) ?
-      `Set or display "${label}" value` :
-      param.set ? `Set "${label}" value` : `Display "${label}" value`),
-    usage: param.usage || ((param.get ? `Display "${label}" value\n  Usage: /${cmd}\n` : '') +
-      (param.set ? `Set "${label}" value\n  Usage: /${cmd} ${param_label}` : '')),
+      `Set or display *${label}* value` :
+      param.set ? `Set *${label}* value` : `Display *${label}* value`),
+    usage: param.usage || ((param.get ? `Display *${label}* value\n  Usage: **/${cmd}**\n` : '') +
+      (param.set ? `Set *${label}* value\n  Usage: **/${cmd} ${param_label}**` : '')),
     prefix_usage_with_help: param.prefix_usage_with_help,
     access_show: param.access_show,
     access_run: param.access_run,

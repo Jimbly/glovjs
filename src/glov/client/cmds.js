@@ -9,7 +9,7 @@ export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 export let safearea = [-1,-1,-1,-1];
 
 function cmdDesc(cmd_data) {
-  return `/${cmd_data.cmd} - ${cmd_data.help}`;
+  return `**/${cmd_data.cmd}** - ${cmd_data.help}`;
 }
 
 cmd_parse.register({
