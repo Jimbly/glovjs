@@ -637,6 +637,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
 }
 
 export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
+export type ChatUIParamStyles = Partial<Record<SystemStyles | string, FontStyle>>;
 
 export type ChatUIParam = {
   w?: number;
@@ -647,7 +648,7 @@ export type ChatUIParam = {
   font_height?: number;
   emote_cb?: (emote: string) => void;
   style?: UIStyle;
-  styles?: Partial<Record<SystemStyles | string, FontStyle>>;
+  styles?: ChatUIParamStyles;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
 
