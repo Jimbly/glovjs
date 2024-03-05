@@ -139,7 +139,7 @@ CmdParse.prototype.handle = function (self, str, resp_func) {
 
 CmdParse.prototype.register = function (param) {
   assert.equal(typeof param, 'object');
-  let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data } = param;
+  let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data, override } = param;
   assert(cmd);
   assert(func, `Missing function for command "${cmd}"`);
   let help_lower = String(help || '').toLowerCase();
@@ -153,7 +153,7 @@ CmdParse.prototype.register = function (param) {
     assert(access_show && access_show.length);
   }
   let canon = canonical(cmd);
-  assert(!this.cmds[canon], `Duplicate commands registered as "${canon}"`);
+  assert(!this.cmds[canon] || override, `Duplicate commands registered as "${canon}"`);
   this.cmds[canon] = {
     name: cmd,
     fn: func,
