@@ -613,6 +613,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
           parent.focus_tooltip = 'Click to view user info';
           drawRect2(pos_param);
           parent.user_id_mouseover = msg.id;
+          parent.did_user_id_mouseover = true;
         }
       }
     }
@@ -714,6 +715,7 @@ class ChatUIImpl {
   private renderables: TSMap<MarkdownRenderable> = {}; // by default, no renderables in chat (e.g. images)
 
   user_id_mouseover: string | null = null; // internal, for MDChatSource
+  did_user_id_mouseover = false; // internal, for MDChatSource
   user_context_cb?: (param: { user_id: string }) => void; // internal, for MDChatSource
   decorate_user_cb: (msg: ChatMessageUser) => string; // internal, for MDRChatSource
   chat_interactive = false; // internal, for MDRChatURL
@@ -1432,7 +1434,7 @@ class ChatUIImpl {
     let self = this;
     let do_scroll_area = is_focused || opts.always_scroll;
     this.chat_interactive = Boolean(do_scroll_area);
-    let did_user_mouseover = false;
+    this.did_user_id_mouseover = false;
     let viewport: Box;
     // Slightly hacky: uses `x` and `y` from the higher scope
     function drawChatLine(msg: ChatMessage, alpha: number): void {
@@ -1577,8 +1579,8 @@ class ChatUIImpl {
       }
     }
 
-    if (!did_user_mouseover) {
-      self.user_id_mouseover = null;
+    if (!this.did_user_id_mouseover) {
+      this.user_id_mouseover = null;
     }
 
     if (opts.pointerlock && is_focused && input.pointerLocked()) {
