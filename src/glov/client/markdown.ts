@@ -62,7 +62,7 @@ export type MarkdownParseParam = {
 
 export type MarkdownLayoutParam = {
   font?: Font;
-  font_style?: FontStyle;
+  font_style?: FontStyle | null;
   w?: number;
   h?: number;
   // TODO: also need line_height here!  Get alignment/etc respecting that
@@ -103,6 +103,7 @@ export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
 }
 
 export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
+  font_style: FontStyle; // not `null`
   cursor: {
     line_x0: number;
     x: number;
