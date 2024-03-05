@@ -25,6 +25,8 @@ export function fontStyleAlpha(base: FontStyle | null, alpha: number): FontStyle
 export function fontStyleColored(base: FontStyle | null, color: RGBA): FontStyle;
 // if outline_color is not specified, inherits base color
 export function fontStyleOutlined(base: FontStyle | null, outline_width: number, outline_color?: RGBA): FontStyle;
+// best attempt and making an existing style "bold"
+export function fontStyleBold(base: FontStyle | null, outline_width: number): FontStyle;
 
 export enum ALIGN {
   HLEFT,

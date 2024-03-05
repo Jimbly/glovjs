@@ -209,6 +209,30 @@ export function fontStyleOutlined(font_style, outline_width, outline_color) {
   });
 }
 
+export function fontStyleBold(font_style, outline_width) {
+  let parent = font_style || glov_font_default_style;
+  let outline_color = parent.color;
+  if (font_style.outline_width) {
+    // move to glow
+    let glow_w = outline_width + font_style.outline_width;
+    return fontStyle(font_style, {
+      outline_width,
+      outline_color,
+      glow_xoffs: 0,
+      glow_yoffs: 0,
+      glow_color: font_style.outline_color,
+      glow_inner: glow_w - 0.25,
+      glow_outer: glow_w + 0.25,
+    });
+  } else {
+    // just add outline
+    return fontStyle(font_style, {
+      outline_width,
+      outline_color,
+    });
+  }
+
+}
 
 function colorAlpha(color, alpha) {
   alpha = clamp(round((color & 0xFF) * alpha), 0, 255);

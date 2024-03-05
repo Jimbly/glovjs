@@ -11,7 +11,7 @@ import {
   FontStyle,
   Text,
   fontStyleAlpha,
-  fontStyleOutlined,
+  fontStyleBold,
 } from './font';
 import { Box } from './geom_types';
 import { mousePos } from './input';
@@ -159,7 +159,7 @@ class MDBlockBold implements MDLayoutBlock {
     // TODO (later): migrate to UIStyle and use a named "bold" style instead?
     // For now/as well: specify 3 font styles in param?
     let old_style = param.font_style;
-    param.font_style = fontStyleOutlined(old_style, 0.75);
+    param.font_style = fontStyleBold(old_style, 0.5);
 
     let ret: MDDrawBlock[][] = [];
     for (let ii = 0; ii < this.content.length; ++ii) {
