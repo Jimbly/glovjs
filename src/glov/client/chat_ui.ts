@@ -29,6 +29,7 @@ import {
   ALIGN,
   Font,
   FontStyle,
+  Text,
   fontStyle,
   fontStyleAlpha,
   fontStyleColored,
@@ -140,9 +141,12 @@ interface ChatMessage extends ChatMessageDataBroadcast {
   msg_h: number;
   msg_w: number;
   chatsrc_tag: string;
+  chatsrc_tooltip?: string;
   cache: MarkdownCache;
 }
-export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'>;
+export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'> & {
+  chatsrc_tooltip?: Text; // optionally set by decorators
+};
 
 function messageFromUser(msg: ChatMessage): boolean {
   return msg.style !== 'error' && msg.style !== 'system';
@@ -621,6 +625,9 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
         }
         if (user_mouseover) {
           parent.focus_tooltip = 'Click to view user info';
+          if (msg.chatsrc_tooltip) {
+            parent.focus_tooltip = `${msg.chatsrc_tooltip}\n${parent.focus_tooltip}`;
+          }
           drawRect2(pos_param);
           parent.user_id_mouseover = msg.id;
           parent.did_user_id_mouseover = true;
