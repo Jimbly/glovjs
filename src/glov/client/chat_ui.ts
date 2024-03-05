@@ -564,6 +564,8 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
       cache: this.submd_cache,
       text: user_name_md,
     };
+    // If this layout() function is being called, the parent's layout must have been invalidated, so do the same for us
+    markdownLayoutInvalidate(submd_param);
     markdownPrep(submd_param);
     let submd_dims = markdownDims(submd_param);
     this.w = submd_dims.w;
@@ -1688,6 +1690,7 @@ class ChatUIImpl {
       if (here.length || friends.length) {
         let msg = [];
         if (here.length) {
+          here = here.map(mdEscape);
           if (here.length > 10) {
             msg.push(`Other users already here: ${here.slice(0, 10).join(', ')} (and ${here.length - 10} more...)`);
           } else {
@@ -1695,7 +1698,7 @@ class ChatUIImpl {
           }
         }
         if (friends.length) {
-          msg.push(`Friends already here: ${friends.join(', ')}`);
+          msg.push(`Friends already here: ${friends.map(mdEscape).join(', ')}`);
         }
         this.addChatFiltered({
           msg: msg.join('\n'),
