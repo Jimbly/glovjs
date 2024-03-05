@@ -392,7 +392,41 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       draw_blocks.push(block);
     }
   }
+  if ((calc_param.align & ALIGN.HRIGHT) && draw_blocks.length) {
+    // Find rightmost block for every row
+    let row_h_est = calc_param.text_height / 2;
+    let row_start_idx = 0;
+    let last_dims = draw_blocks[0].dims;
+    for (let ii = 1; ii < draw_blocks.length + 1; ++ii) {
+      let is_last = ii === draw_blocks.length;
+      let do_wrap = is_last;
+      if (!is_last) {
+        let dims = draw_blocks[ii].dims;
+        let ymid = dims.y + dims.h / 2;
+        if (ymid > last_dims.y + last_dims.h / 2 + row_h_est &&
+          dims.x < last_dims.x + last_dims.w / 2
+        ) {
+          do_wrap = true;
+        }
+      }
+      if (do_wrap) {
+        // detected a wrap, align to the right
+        let xoffs = calc_param.w - (last_dims.x + last_dims.w);
+        if (xoffs > 0) {
+          for (let jj = row_start_idx; jj < ii; ++jj) {
+            let block = draw_blocks[jj];
+            block.dims.x += xoffs;
+          }
+        }
+        row_start_idx = ii;
+      }
+      if (!is_last) {
+        last_dims = draw_blocks[ii].dims;
+      }
+    }
+  }
   if ((calc_param.align & ALIGN.HFIT) && maxx > calc_param.w + EPSILON) {
+    // Note: this will only get hit for HFIT w/out HWRAP - the combo case should be covered in markdownLayoutFit
     let xscale = calc_param.w / maxx;
     for (let ii = 0; ii < draw_blocks.length; ++ii) {
       let block = draw_blocks[ii];
