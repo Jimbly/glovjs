@@ -138,11 +138,16 @@ class MDBlockParagraph implements MDLayoutBlock {
     for (let ii = 0; ii < this.content.length; ++ii) {
       ret.push(this.content[ii].layout(param));
     }
-    if ((param.align & ALIGN.HWRAP) && param.cursor.x !== param.cursor.line_x0) {
-      param.cursor.line_x0 = param.cursor.x = param.indent;
-      param.cursor.y += param.text_height;
+    if (param.align & ALIGN.HWRAP) {
+      if (param.cursor.x !== param.cursor.line_x0) {
+        param.cursor.line_x0 = param.cursor.x = param.indent;
+        param.cursor.y += param.text_height;
+      }
+      param.cursor.y += param.text_height * 0.5;
+    } else {
+      param.cursor.x += param.text_height * 0.25;
     }
-    param.cursor.y += param.text_height * 0.5;
+
     return Array.prototype.concat.apply([], ret);
   }
 }
@@ -215,7 +220,10 @@ class MDBlockText implements MDLayoutBlock {
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let ret: MDDrawBlock[] = [];
-    let text = this.content.replace(/\n/g, ' ');
+    let text = this.content;
+    if (!(param.align & ALIGN.HWRAP)) {
+      text = text.replace(/\n/g, ' ');
+    }
     if (param.align & ALIGN.HWRAP) {
       let line_x0 = param.cursor.x;
       // Adjust in case we're mid-line, or already inset
