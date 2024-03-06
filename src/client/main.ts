@@ -9,6 +9,7 @@ import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
 import * as net from 'glov/client/net';
 import * as settings from 'glov/client/settings';
+import { shadersSetInternalDefines } from 'glov/client/shaders';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import { spritesheetTextureOpts } from 'glov/client/spritesheet';
 import { textureDefaultFilters } from 'glov/client/textures';
@@ -17,6 +18,7 @@ import * as ui from 'glov/client/ui';
 // import './client_cmds.js'; // for side effects
 import { crawlerBuildModeStartup } from './crawler_build_mode';
 import { crawlerOnPixelyChange } from './crawler_play.js';
+import { crawlerRenderSetLODBiasRange } from './crawler_render';
 import { game_height, game_width } from './globals';
 import { playStartup } from './play';
 import { titleInit, titleStartup } from './title';
@@ -54,17 +56,15 @@ export function main(): void {
 
   // Default style
   let antialias = false;
-  let defines = {
-    SSAA4X: false,
-    TEST: false,
-  };
   let use_fbos = 1;
   let need_dfdxy = false;
   if ('AA hires') {
     need_dfdxy = true;
     antialias = true; // antialiases 3D geometry edges only
     use_fbos = 0;
-    defines.SSAA4X = true;
+    shadersSetInternalDefines({
+      SSAA4X: true,
+    });
     settings.set('pixely', 0);
     settings.set('filter', 0);
     settings.set('entity_split', 0);
@@ -75,8 +75,8 @@ export function main(): void {
     settings.set('entity_split', 0);
     settings.set('entity_nosplit_use_near', 1);
   } else if (!'lowres with mipmapping') {
-    // may also want to tweak global_lod_bias min/max to -2...-1?
     // also antilias=true & use_fbos=0 is potentially useful
+    crawlerRenderSetLODBiasRange(-3, -1.5);
     settings.set('pixely', 1);
     settings.set('filter', 2);
     settings.set('entity_split', 0);
@@ -84,7 +84,9 @@ export function main(): void {
   } else if (!'simple AA lowres') {
     antialias = true;
     use_fbos = 0;
-    defines.SSAA4X = true;
+    shadersSetInternalDefines({
+      SSAA4X: true,
+    });
     settings.set('pixely', 1);
     settings.set('filter', 0);
     settings.set('entity_split', 0);
@@ -103,10 +105,6 @@ export function main(): void {
     settings.set('pixely', 1);
     settings.set('filter', 1);
     settings.set('entity_split', 1);
-  }
-  let defkey: keyof typeof defines;
-  for (defkey in defines) {
-    engine.defines[defkey] = defines[defkey];
   }
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');

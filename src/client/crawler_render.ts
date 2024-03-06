@@ -135,6 +135,13 @@ export function crawlerRenderViewportGet(): Box {
   return crawler_viewport;
 }
 
+let lod_bias_min = -4;
+let lod_bias_max = -1;
+export function crawlerRenderSetLODBiasRange(mn: number, mx: number): void {
+  lod_bias_min = mn;
+  lod_bias_max = mx;
+}
+
 let upper_left = vec2();
 let lower_right = vec2();
 let view_size = vec2();
@@ -1292,7 +1299,9 @@ export function renderPrep(param: RenderPrepParam): void {
   let frame_dist = v3dist(last_pos, cam_pos_in);
   v3copy(last_pos, cam_pos_in);
   let frame_speed = frame_dist / engine.frame_dt;
-  global_lod_bias[0] = lerp(min(frame_speed / 0.002 , 1), -4, -1);
+  let factor = min(frame_speed / 0.002 , 1);
+  global_lod_bias[0] = lerp(factor, lod_bias_min, lod_bias_max);
+  global_lod_bias[1] = factor;
 
   v3scale(cam_pos, cam_pos_in, DIM);
   v3copy(player_pos, cam_pos);
