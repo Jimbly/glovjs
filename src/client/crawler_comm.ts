@@ -230,7 +230,7 @@ urlhash.register({
       crawlerCommStart();
     }
   },
-  title: (value: string) => title_func(value),
+  title: (value: string) => title_func?.(value),
   push: true,
 });
 
@@ -270,4 +270,5 @@ export function crawlerCommStartup(param: {
     netSubs().onChannelMsg(param.channel_type, 'floorchange_ack', crawlerCommOnFloorchangeAck);
     netSubs().onChannelMsg(param.channel_type, 'build_op', buildModeOnBuildOp);
   }
+  urlhash.refreshTitle();
 }
