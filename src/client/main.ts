@@ -53,12 +53,38 @@ export function main(): void {
   }
 
   // Default style
-  if (!'simple hires') {
+  let antialias = false;
+  let defines = {
+    SSAA4X: false,
+    TEST: false,
+  };
+  let use_fbos = 1;
+  let need_dfdxy = false;
+  if ('AA hires') {
+    need_dfdxy = true;
+    antialias = true; // antialiases 3D geometry edges only
+    use_fbos = 0;
+    defines.SSAA4X = true;
     settings.set('pixely', 0);
     settings.set('filter', 0);
     settings.set('entity_split', 0);
     settings.set('entity_nosplit_use_near', 1);
   } else if (!'simple lowres') {
+    settings.set('pixely', 1);
+    settings.set('filter', 0);
+    settings.set('entity_split', 0);
+    settings.set('entity_nosplit_use_near', 1);
+  } else if (!'lowres with mipmapping') {
+    // may also want to tweak global_lod_bias min/max to -2...-1?
+    // also antilias=true & use_fbos=0 is potentially useful
+    settings.set('pixely', 1);
+    settings.set('filter', 2);
+    settings.set('entity_split', 0);
+    settings.set('entity_nosplit_use_near', 1);
+  } else if (!'simple AA lowres') {
+    antialias = true;
+    use_fbos = 0;
+    defines.SSAA4X = true;
     settings.set('pixely', 1);
     settings.set('filter', 0);
     settings.set('entity_split', 0);
@@ -78,6 +104,10 @@ export function main(): void {
     settings.set('filter', 1);
     settings.set('entity_split', 1);
   }
+  let defkey: keyof typeof defines;
+  for (defkey in defines) {
+    engine.defines[defkey] = defines[defkey];
+  }
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
@@ -90,7 +120,7 @@ export function main(): void {
   } else {
     font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
-  settings.set('use_fbos', 1); // Needed for our effects
+  settings.set('use_fbos', use_fbos); // Needed for our effects
 
   spritesheetTextureOpts('whitebox', { force_mipmaps: true });
 
@@ -100,7 +130,7 @@ export function main(): void {
     pixely,
     font,
     viewport_postprocess: true,
-    antialias: false,
+    antialias,
     znear: 11,
     zfar: 2000,
     do_borders: false,
@@ -139,6 +169,9 @@ export function main(): void {
     },
   })) {
     return;
+  }
+  if (!engine.webgl2 && need_dfdxy) {
+    assert(gl.getExtension('OES_standard_derivatives'), 'GL_OES_standard_derivatives not supported!');
   }
   fonts = [
     fontCreate(font_info_palanquin32, 'font/palanquin32'),
