@@ -13,7 +13,7 @@ const spritesheet_whitebox = require('./img/whitebox');
 export function renderResetFilter(): void {
   let ss = {
     filter_min: settings.filter ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST,
-    filter_mag: settings.filter ? gl.LINEAR : gl.NEAREST,
+    filter_mag: settings.filter === 1 ? gl.LINEAR : gl.NEAREST,
     force_mipmaps: true,
   };
   spritesheet_whitebox.sprite.texs[0].setSamplerState(ss);

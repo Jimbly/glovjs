@@ -151,8 +151,10 @@ export function main(): void {
   gl.clearColor(0, 0, 0, 1);
 
   // Actually not too bad:
-  if (settings.filter) {
+  if (settings.filter === 1) {
     textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
+  } else if (settings.filter === 2) {
+    textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.NEAREST);
   }
 
   ui.scaleSizes(13 / 32);

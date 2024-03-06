@@ -119,7 +119,7 @@ const { PI, floor } = Math;
 type Entity = EntityCrawlerClient;
 
 declare module 'glov/client/settings' {
-  export let filter: 0 | 1;
+  export let filter: 0 | 1 | 2;
   export let pixely: 0 | 1 | 2 | 3;
   export let entity_split: 0 | 1;
   export let entity_nosplit_use_near: 0 | 1;
@@ -175,7 +175,7 @@ settings.register({
   filter: {
     default_value: 0, // 1 for spire, 0 for demo
     type: cmd_parse.TYPE_INT,
-    range: [0, 1],
+    range: [0, 2],
   },
   pixely: {
     default_value: 1,
