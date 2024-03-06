@@ -50,6 +50,7 @@ import {
   MarkdownLayoutParam,
   MarkdownParseParam,
   MarkdownStateCached,
+  markdownAuto,
   markdownDims,
   markdownDraw,
   markdownLayoutInvalidate,
@@ -424,10 +425,16 @@ function drawHelpTooltip(param: {
       let help = line.slice(idx);
       let cmd_w = font.drawSized(help_font_style_cmd,
         text_x, y, z+1, h, cmd);
-      font.drawSizedAligned(help_font_style,
-        text_x + cmd_w, y, z+2, h, ALIGN.HFIT,
-        text_w - cmd_w, 0,
-        help);
+      markdownAuto({
+        font_style: help_font_style,
+        x: text_x + cmd_w,
+        y,
+        z: z+2,
+        text_height: h,
+        align: ALIGN.HFIT,
+        w: text_w - cmd_w,
+        text: help
+      });
       let pos = { x, y, w, h };
       if (input.mouseUpEdge(pos)) { // up instead of down to prevent canvas capturing focus
         ret = cmd.slice(1);
@@ -436,10 +443,15 @@ function drawHelpTooltip(param: {
         drawRect(text_x + cmd_w + 4, y, x + w, y + h, z + 0.5, help_rollover_color2);
       }
     } else {
-      font.drawSizedAligned(style,
-        text_x, y, z+1, h, param.wrap ? ALIGN.HWRAP : ALIGN.HFIT,
-        text_w, 0,
-        line);
+      markdownAuto({
+        font_style: style,
+        x: text_x,
+        y, z: z+1,
+        text_height: h,
+        align: param.wrap ? ALIGN.HWRAP : ALIGN.HFIT,
+        w: text_w,
+        text: line
+      });
     }
   }
   y -= eff_tooltip_pad;
