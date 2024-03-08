@@ -755,7 +755,9 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
     flushLine();
   } else if (word_x0 !== line_x1) {
     line_x1 = word_x0; // include size of trailing whitespace, if any
-    line_cb(line_x0, linenum, '', line_x1);
+    if (line_cb) {
+      line_cb(line_x0, linenum, '', line_x1);
+    }
   }
 
   return linenum;
