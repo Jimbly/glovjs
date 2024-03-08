@@ -400,7 +400,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       draw_blocks.push(block);
     }
   }
-  if ((calc_param.align & ALIGN.HRIGHT) && draw_blocks.length) {
+  if ((calc_param.align & (ALIGN.HRIGHT | ALIGN.HCENTER)) && draw_blocks.length) {
     // Find rightmost block for every row
     let row_h_est = calc_param.text_height / 2;
     let row_start_idx = 0;
@@ -418,8 +418,11 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
         }
       }
       if (do_wrap) {
-        // detected a wrap, align to the right
+        // detected a wrap, do alignment
         let xoffs = calc_param.w - (last_dims.x + last_dims.w);
+        if (calc_param.align & ALIGN.HCENTER) {
+          xoffs *= 0.5;
+        }
         if (xoffs > 0) {
           for (let jj = row_start_idx; jj < ii; ++jj) {
             let block = draw_blocks[jj];
