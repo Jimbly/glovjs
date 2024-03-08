@@ -470,7 +470,8 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
 
 // Probably no reason to ever do parse & layout separately, so combine into one external call
 // In theory, could allow invalidating just the layout cache though!
-export function markdownPrep(param: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam): void {
+export type MarkdownPrepParam = MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam;
+export function markdownPrep(param: MarkdownPrepParam): void {
   markdownParse(param);
   markdownLayout(param);
 }
@@ -507,7 +508,8 @@ function bsearch(blocks: MDDrawBlock[], y: number): number {
   return end;
 }
 
-export function markdownDraw(param: MarkdownStateCached & MarkdownDrawParam): void {
+export type MarkdownDrawCachedParam = MarkdownStateCached & MarkdownDrawParam;
+export function markdownDraw(param: MarkdownDrawCachedParam): void {
   profilerStartFunc();
   let state = param as MDState;
   let { cache } = state;

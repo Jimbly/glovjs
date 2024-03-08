@@ -46,10 +46,8 @@ import {
   MDLayoutBlock,
   MDLayoutCalcParam,
   MarkdownCache,
-  MarkdownDrawParam,
-  MarkdownLayoutParam,
-  MarkdownParseParam,
-  MarkdownStateCached,
+  MarkdownDrawCachedParam,
+  MarkdownPrepParam,
   markdownAuto,
   markdownDims,
   markdownDraw,
@@ -561,11 +559,11 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
   w!: number;
   h!: number;
   submd_cache = {};
-  draw_param!: MarkdownStateCached & MarkdownDrawParam;
+  draw_param!: MarkdownDrawCachedParam;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     const { parent } = this;
     let user_name_md = parent.decorate_user_cb(this.msg);
-    let submd_param: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam = {
+    let submd_param: MarkdownPrepParam = {
       font: param.font,
       font_style: param.font_style,
       w: param.w,
@@ -863,7 +861,7 @@ class ChatUIImpl {
   }
 
   private calcMsgHeight(elem: ChatMessage): void {
-    let mdstate: MarkdownStateCached & MarkdownParseParam & MarkdownLayoutParam = {
+    let mdstate: MarkdownPrepParam = {
       font_style: this.styles[elem.style] || this.styles.def,
       w: this.wrap_w,
       indent: this.indent,
