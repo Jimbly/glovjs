@@ -1,6 +1,9 @@
 import assert from 'assert';
 import { clamp, plural } from 'glov/common/util';
-import { ROVec4 } from 'glov/common/vmath';
+import {
+  ROVec4,
+  unit_vec,
+} from 'glov/common/vmath';
 import { autoResetEachFrame } from './auto_reset';
 import { clipTestRect } from './camera2d';
 import { EditBox, editBoxCreate } from './edit_box';
@@ -131,7 +134,7 @@ export type ScoresDrawParam<ScoreType> = {
   style_me: FontStyle;
   style_header: FontStyle;
   color_me_background: ROVec4;
-  color_line: ROVec4;
+  color_line?: ROVec4;
   allow_rename: boolean;
   no_header?: boolean;
   scroll_key?: string;
@@ -234,7 +237,7 @@ export function scoresDraw<ScoreType>({
   if (!no_header) {
     drawSet(columns.map(getName), style_header, true);
     y += 2;
-    ui.drawLine(x, y, x+width, y, z, 1, 1, color_line);
+    ui.drawLine(x, y, x+width, y, z, 1, 1, color_line || unit_vec);
     y += 1;
   }
   const scores_scroll_h = scroll_max_y - y;
