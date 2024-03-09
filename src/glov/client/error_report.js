@@ -140,6 +140,7 @@ let filtered_errors = new RegExp([
   'getElementById\\(\'items\'\\)',
   'closeModal',
   'WeixinJSBridge',
+  '/prebid', // Some third-party ad provider
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {

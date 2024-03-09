@@ -17,6 +17,7 @@ import {
   FriendCmdResponse,
   NetErrorCallback,
   PresenceEntry,
+  TSMap,
 } from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
@@ -24,7 +25,12 @@ import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
-import { netDisconnected, netSubs } from './net';
+import {
+  ClientChannelWorker,
+  netDisconnected,
+  netSubs,
+  netUserId,
+} from './net';
 import { Sprite, spriteCreate } from './sprites';
 import { textureLoad } from './textures';
 
@@ -33,6 +39,10 @@ declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 const IDLE_TIME = 60000;
 
 let friend_list: FriendsData | null = null;
+
+export type ClientUserChannel<T=unknown> = ClientChannelWorker & {
+  presence_data?: TSMap<PresenceEntry<T>>;
+};
 
 export function friendsGet(): FriendsData {
   return friend_list ?? Object.create(null);
@@ -50,21 +60,24 @@ export function friendIsBlocked(user_id: string): boolean {
 
 function makeFriendCmdRequest(cmd: string, user_id: string, cb: NetErrorCallback<string>): void {
   user_id = user_id.toLowerCase();
-  let requesting_user_id = netSubs().loggedIn();
+  let requesting_user_id = netUserId();
   if (netDisconnected()) {
     return void cb('ERR_DISCONNECTED');
   }
   if (!requesting_user_id) {
     return void cb('ERR_NOT_LOGGED_IN');
   }
-  netSubs().getMyUserChannel().cmdParse(`${cmd} ${user_id}`, function (err: string, resp: FriendCmdResponse) {
+  let my_user_channel = netSubs().getMyUserChannel();
+  assert(my_user_channel);
+  my_user_channel.cmdParse(`${cmd} ${user_id}`, function (err?: string | null, resp?: FriendCmdResponse) {
     if (err) {
       return void cb(err);
-    } else if (requesting_user_id !== netSubs().loggedIn() || !friend_list) {
+    } else if (requesting_user_id !== netUserId() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return void cb('Invalid data');
     }
 
+    assert(resp);
     if (resp.friend) {
       friend_list[user_id] = resp.friend;
     } else {
@@ -172,12 +185,12 @@ cmd_parse.registerValue('afk', {
   set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
 });
 
-function onPresence(this: { presence_data?: PresenceEntry }, data: PresenceEntry): void {
+function onPresence(this: ClientUserChannel, data: TSMap<PresenceEntry>): void {
   let user_channel = this;
   user_channel.presence_data = data;
 }
 
-function onUnSubscribe(this: { presence_data?: PresenceEntry }): void {
+function onUnSubscribe(this: ClientUserChannel): void {
   delete this.presence_data;
 }
 
@@ -194,7 +207,7 @@ function richPresenceSend(): void {
     if (!netSubs().loggedIn() || !last_presence) {
       return;
     }
-    let pak = netSubs().getMyUserChannel().pak('presence_set');
+    let pak = netSubs().getMyUserChannel()!.pak('presence_set');
     pak.writeInt(last_presence.active);
     pak.writeAnsiString(last_presence.state);
     pak.writeJSON(last_presence.payload);
@@ -250,7 +263,7 @@ export function getExternalFriendInfos(user_id: string): Record<string, External
 }
 
 export function getExternalUserInfos(user_id: string): Record<string, ExternalUserInfo> | undefined {
-  if (user_id === netSubs().loggedIn()) {
+  if (user_id === netUserId()) {
     return getExternalCurrentUserInfos();
   } else {
     return getExternalFriendInfos(user_id);
@@ -270,8 +283,10 @@ function updateExternalFriendsOnServer(provider: string, to_add: ExternalUserInf
     return;
   }
 
-  let requesting_user_id = netSubs().loggedIn();
-  let pak = netSubs().getMyUserChannel().pak('friend_auto_update');
+  let requesting_user_id = netUserId();
+  let my_user_channel = netSubs().getMyUserChannel();
+  assert(my_user_channel);
+  let pak = my_user_channel.pak('friend_auto_update');
   pak.writeAnsiString(provider);
   for (let ii = 0; ii < to_add.length; ++ii) {
     pak.writeAnsiString(to_add[ii].external_id);
@@ -281,8 +296,8 @@ function updateExternalFriendsOnServer(provider: string, to_add: ExternalUserInf
     pak.writeAnsiString(to_remove[ii]);
   }
   pak.writeAnsiString('');
-  pak.send(function (err: string, resp: Record<string, FriendData>) {
-    if (requesting_user_id !== netSubs().loggedIn() || !friend_list) {
+  pak.send(function (err: string | null, resp?: Record<string, FriendData>) {
+    if (requesting_user_id !== netUserId() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err) {
@@ -364,9 +379,9 @@ function setExternalFriends(provider: string, provider_friends: ExternalUserInfo
 
 function requestExternalCurrentUser(provider: string,
   request_func: (cb: ErrorCallback<ExternalUserInfo>) => void): void {
-  let requesting_user_id = netSubs().loggedIn();
+  let requesting_user_id = netUserId();
   request_func((err, user_info) => {
-    if (requesting_user_id !== netSubs().loggedIn()) {
+    if (requesting_user_id !== netUserId()) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err || !user_info) {
@@ -380,9 +395,9 @@ function requestExternalCurrentUser(provider: string,
 
 function requestExternalFriends(provider: string,
   request_func: (cb: ErrorCallback<ExternalUserInfo[]>) => void): void {
-  let requesting_user_id = netSubs().loggedIn();
+  let requesting_user_id = netUserId();
   request_func((err, friends) => {
-    if (requesting_user_id !== netSubs().loggedIn() || !friend_list) {
+    if (requesting_user_id !== netUserId() || !friend_list) {
       // Logged out or switched user meanwhile, so ignore the result
       return;
     } else if (err || !friends) {
@@ -445,10 +460,10 @@ export function setDefaultUserProfileImage(image: UserProfileImage): void {
   default_profile_image = image;
 }
 
-let external_user_info_providers: Partial<Record<string, {
+let external_user_info_providers: TSMap<{
   get_current_user?: (cb: ErrorCallback<ExternalUserInfo>) => void;
   get_friends?: (cb: ErrorCallback<ExternalUserInfo[]>) => void;
-}>> = {};
+}> = {};
 
 export function registerExternalUserInfoProvider(
   provider: string,
@@ -457,7 +472,7 @@ export function registerExternalUserInfoProvider(
 ): void {
   if (get_current_user || get_friends) {
     assert(!friend_list);
-    assert(!netSubs()?.loggedIn());
+    assert(!netSubs().loggedIn());
 
     external_user_info_providers[provider] = { get_current_user, get_friends };
   } else {
@@ -469,17 +484,19 @@ export function registerExternalUserInfoProvider(
 export function socialInit(): void {
   netSubs().on('login', function () {
     let user_channel = netSubs().getMyUserChannel();
-    let user_id = netSubs().loggedIn();
+    let user_id = netUserId();
     richPresenceSend();
     friend_list = null;
     if (netDisconnected()) {
       return;
     }
-    user_channel.pak('friend_list').send((err: unknown, resp: FriendsData) => {
-      if (err || user_id !== netSubs().loggedIn()) {
+    assert(user_channel);
+    user_channel.pak('friend_list').send((err: string | null, resp?: FriendsData) => {
+      if (err || user_id !== netUserId()) {
         // disconnected, etc
         return;
       }
+      assert(resp);
       friend_list = resp;
 
       // Sync friend list with external providers' friends

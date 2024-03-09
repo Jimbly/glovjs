@@ -582,7 +582,7 @@ export function soundPlayStreaming(
   return played_sound;
 }
 
-export function soundPlayMusic(soundname: string, volume: number, transition: number): void {
+export function soundPlayMusic(soundname: string, volume?: number, transition?: number): void {
   if (settings.volume * settings.volume_music === 0) {
     return;
   }
@@ -599,7 +599,7 @@ export function soundPlayMusic(soundname: string, volume: number, transition: nu
       assert(sound);
       if (music[0].sound === sound) {
         // Same sound, just adjust volume, if required
-        music[0].target_volume = volume;
+        music[0].target_volume = volume!; // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
         if (!transition) {
           if (!volume) {
             sound.stop(music[0].id);
@@ -617,7 +617,7 @@ export function soundPlayMusic(soundname: string, volume: number, transition: nu
     }
     // fade out previous music, if any
     if (music[0].current_volume) {
-      if (transition & FADE_OUT) {
+      if (transition! & FADE_OUT) { // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
         // swap to position 1, start fadeout
         let temp = music[1];
         music[1] = music[0];
@@ -630,8 +630,8 @@ export function soundPlayMusic(soundname: string, volume: number, transition: nu
     }
     music[0].sound = sound;
     if (sound) {
-      music[0].target_volume = volume;
-      let start_vol = (transition & FADE_IN) ? 0 : volume;
+      music[0].target_volume = volume!; // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+      let start_vol = (transition! & FADE_IN) ? 0 : volume!; // !s are workaround TypeScript bug fixed in v5.4.0
       music[0].current_volume = start_vol;
       if (soundResumed()) {
         let sys_volume = start_vol * musicVolume() * volume_override * volume_music_override;

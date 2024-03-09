@@ -2,14 +2,26 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { vec4 } from 'glov/common/vmath';
+import { ROVec4, vec4 } from 'glov/common/vmath';
 import { collapsagoriesHeader, collapsagoriesStart, collapsagoriesStop } from './collapsagories';
 import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate } from './edit_box';
 import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
 import * as input from './input';
+import {
+  mouseOver,
+} from './input';
 import { linkText } from './link';
+import {
+  MDDrawBlock,
+  MDDrawParam,
+  MDLayoutBlock,
+  MDLayoutCalcParam,
+  markdownAuto,
+} from './markdown';
+import { RenderableContent } from './markdown_parse';
+import { markdownImageRegister, markdownLayoutFit } from './markdown_renderables';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   SelectionBox,
@@ -18,6 +30,8 @@ import {
 } from './selection_box';
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';
 import { slider } from './slider';
+import { Sprite, spriteCreate } from './sprites';
+import { TEXTURE_FORMAT } from './textures';
 import * as ui from './ui';
 import {
   uiButtonHeight,
@@ -31,7 +45,7 @@ import {
 } from './uistyle';
 import { getURLBase } from './urlhash';
 
-const { ceil, random } = Math;
+const { abs, ceil, random, sin } = Math;
 
 let demo_menu: SimpleMenu;
 let demo_menu_up = false;
@@ -48,6 +62,7 @@ let test_scroll_area: ScrollArea;
 let slider_value = 0.75;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
+let test_markdown_sprite: Sprite;
 
 function init(x: number, y: number, column_width: number): void {
   edit_box1 = editBoxCreate({
@@ -106,9 +121,40 @@ function init(x: number, y: number, column_width: number): void {
   });
 
   test_scroll_area = scrollAreaCreate();
+
+  // Create test texture for markdown use
+  {
+    const TEX_W = 32;
+    let data = new Uint8Array(TEX_W * TEX_W);
+    for (let yy = 0, idx=0; yy < TEX_W; ++yy) {
+      let fy = 1 - abs((yy - TEX_W/2) / (TEX_W/2));
+      for (let xx = 0; xx < TEX_W; ++xx, ++idx) {
+        let fx = 1 - abs((xx - TEX_W/2) / (TEX_W/2));
+        data[idx] = Math.max(fx, fy) * 255;
+      }
+    }
+    test_markdown_sprite = spriteCreate({
+      url: 'ui_test_tex',
+      width: TEX_W,
+      height: TEX_W,
+      format: TEXTURE_FORMAT.R8,
+      data,
+      filter_min: gl.LINEAR,
+      filter_mag: gl.LINEAR,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+    });
+
+    markdownImageRegister('test', {
+      sprite: test_markdown_sprite,
+    });
+  }
 }
 
 const style_half_height = uiStyleAlloc({ text_height: '50%' });
+
+let markdown_text: string;
+let markdown_cache = {};
 
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
@@ -208,34 +254,148 @@ export function run(x: number, y: number, z: number): void {
   collapsagoriesStart({
     key: 'ui_test_cats',
     x: 0, z, w: scroll_area_w,
-    num_headers: 3,
+    num_headers: 4 + (engine.defines.MD ? -1 : 0),
     view_y: test_scroll_area.getScrollPos(),
     view_h: scroll_area_h,
     header_h,
     parent_scroll: test_scroll_area,
   });
+
+  if (!engine.defines.MD) {
+    collapsagoriesHeader({
+      y: internal_y,
+      text: 'Values',
+      text_height,
+    });
+    internal_y += header_h + pad;
+
+    internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
+      text_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
+      `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
+    ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
+    internal_y += text_height + pad;
+    ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
+    internal_y += text_height + pad;
+
+    ui.progressBar({
+      x: 2,
+      y: internal_y, z,
+      w: 60, h: button_height,
+      progress: slider_value,
+    });
+    internal_y += button_height + pad;
+  }
+
   collapsagoriesHeader({
     y: internal_y,
-    text: 'Values',
+    text: 'Markdown',
     text_height,
   });
   internal_y += header_h + pad;
-
-  internal_y += font.drawSizedAligned(font_style, 2, internal_y, z + 1,
-    text_height, ALIGN.HWRAP|ALIGN.HFIT, scroll_area_w - 2, 0,
-    `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
-  ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
-  internal_y += text_height + pad;
-  ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
-  internal_y += text_height + pad;
-
-  ui.progressBar({
+  internal_y += markdownAuto({
+    font_style,
     x: 2,
-    y: internal_y, z,
-    w: 60, h: button_height,
-    progress: slider_value,
-  });
-  internal_y += button_height + pad;
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: `Edit Box MD: ${edit_box1.getText()}+${edit_box2.getText()}`,
+  }).h + pad;
+
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: 'A[foo=bar text="Foo Bar"]B',
+    cache: markdown_cache,
+    custom: {
+      foo: {
+        type: 'blinker',
+        data: true
+      },
+    },
+    renderables: {
+      // Not super efficient example: optimally first two functions should
+      //   return an instance of a class, but this is heavily cached, so doesn't
+      //   matter much except for type clarity.
+      blinker: (content: RenderableContent, data: unknown): MDLayoutBlock | null => {
+        if (!data) {
+          // this is not a valid generic renderable, only allowed via the custom tab with associated data
+          return null;
+        }
+        let text = String(content.param?.text || content.key);
+        return {
+          layout: (layout_param: MDLayoutCalcParam): MDDrawBlock[] => {
+            let w = font.getStringWidth(null, layout_param.text_height, text) +
+              layout_param.text_height * 0.25;
+            let dims = {
+              w,
+              h: layout_param.text_height,
+            };
+            assert(markdownLayoutFit(layout_param, dims));
+            let dims2 = dims; // workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+            return [{
+              dims,
+              draw: (draw_param: MDDrawParam): void => {
+                let rect = {
+                  x: draw_param.x + dims2.x,
+                  y: draw_param.y + dims2.y,
+                  w: dims.w,
+                  h: dims.h,
+                };
+                let color: ROVec4;
+                let v = sin(engine.getFrameTimestamp() * 0.01) * 0.5 + 0.5;
+                if (mouseOver(rect)) {
+                  color = [0.5 + v * 0.5, v*0.7, 0, draw_param.alpha];
+                } else {
+                  color = [v* 0.5, 0, v, draw_param.alpha];
+                }
+                test_markdown_sprite.draw({
+                  ...rect,
+                  z: draw_param.z,
+                  color,
+                });
+                font.draw({
+                  alpha: draw_param.alpha,
+                  ...rect,
+                  z: draw_param.z + 0.1,
+                  align: ALIGN.HVCENTERFIT,
+                  text: text,
+                });
+              },
+            }];
+          },
+        };
+      },
+    },
+  }).h + pad;
+
+  if (!markdown_text) {
+    // For perf testing: set to 300000
+    markdown_text = new Array(3).join(`# Lorem Markdownum
+
+## Qua [img=test] *promissa*
+
+Lorem mark[img=test]downum vestrae geminique asque comas; **muu siq**,
+inconsumpta? Quod siquid ferroque labores Cererisque praevia exacta patitur arge
+nec arborei timentem, ut crimina vidit.
+`);
+  }
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT,
+    text: markdown_text,
+  }).h + pad;
 
   collapsagoriesHeader({
     y: internal_y,
@@ -372,7 +532,9 @@ export function runFontTest(x: number, y: number): void {
     glow_xoffs: 4, glow_yoffs: 4, glow_inner: -2.5, glow_outer: 5, glow_color: COLOR_GREEN,
     color: COLOR_WHITE
   });
-  font.drawSized(font_style_shadow, x, y, z, font_size, 'Glow (Shadow) O0O1Il');
+  xx = x;
+  xx += font.drawSized(font_style_shadow, xx, y, z, font_size, 'Glow (Shadow) O0O1Il');
+  font.drawSized(null, xx, y, z, font_size, 'Aligned');
   y += font_size;
 
   const font_style_both = fontStyle(null, {
@@ -402,7 +564,8 @@ export function runFontTest(x: number, y: number): void {
   xx += font.drawSized(fontStyleAlpha(font_style_both, 0.25), xx, y, z, font_size, 'h ');
   xx += font.drawSized(font_style_both_soft_on_hard, xx, y, z, font_size, 'SoH ');
   xx += font.drawSized(font_style_both_hard_on_soft, xx, y, z, font_size, 'HoH ');
-  font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0');
+  xx += font.drawSized(font_style_both_soft_on_soft, xx, y, z, font_size, 'SoS 0O0 ');
+  font.drawSized(null, xx, y, z, font_size, 'A');
   y += font_size;
 
   let font_size2 = 32;
@@ -446,12 +609,14 @@ export function runFontTest(x: number, y: number): void {
       color: COLOR_WHITE
     });
     for (let ii = 1; ii <= 4; ii++) {
-      font.drawSizedAligned(
+      xx = x;
+      xx += font.drawSizedAligned(
         fontStyle(font_style_glow2, {
           // glow_inner: ii * 2 - 1,
           glow_outer: ii * 2,
         }), x, y, z, font_size2, ALIGN.HLEFT, 400, 0,
         `Glow outer ${ii * 2}`);
+      font.drawSized(null, xx, y, z, font_size2, 'A');
       y += font_size2;
     }
 

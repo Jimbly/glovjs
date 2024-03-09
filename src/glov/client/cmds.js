@@ -4,11 +4,12 @@
 // Must have NO internal dependencies, otherwise get circular dependencies between this, engine, and settings
 import * as cmd_parse_mod from 'glov/common/cmd_parse';
 import * as local_storage from './local_storage';
+import * as urlhash from './urlhash';
 export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
 export let safearea = [-1,-1,-1,-1];
 
 function cmdDesc(cmd_data) {
-  return `/${cmd_data.cmd} - ${cmd_data.help}`;
+  return `**/${cmd_data.cmd}** - ${cmd_data.help}`;
 }
 
 cmd_parse.register({
@@ -73,5 +74,18 @@ cmd_parse.register({
     }
     local_storage.setJSON('webgl2_disable', undefined);
     return resp_func(null, 'WebGL2 was disabled, will attempt to use it again on the next load');
+  },
+});
+
+cmd_parse.register({
+  cmd: 'url',
+  help: 'Opens an internal URL',
+  func: function (str, resp_func) {
+    // execute out-of-tick to prevent fighting with other things that may updating the url at the end of frame
+    setTimeout(() => {
+      profilerStart('/url');
+      urlhash.go(str); // .goRoute(str) is also a reasonable implementation depending on the context
+      profilerStop('/url');
+    }, 1);
   },
 });

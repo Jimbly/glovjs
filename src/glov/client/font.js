@@ -27,6 +27,11 @@ export const ALIGN = {
   HVCENTERFIT: 1 | (1 << 2) | (1 << 4), // to avoid doing bitwise ops elsewhere
 };
 
+// line wrapping epsilon, don't wrap non-deterministically if scale and
+//  character widths are factors of display width.  Also allow a width
+//  calculated from .wrapLines() to be used as a width passed to draw*aligned()
+export const EPSILON = 0.0000000001;
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -193,6 +198,40 @@ export function fontStyleColored(font_style, color) {
   return fontStyle(font_style, {
     color
   });
+}
+
+export function fontStyleOutlined(font_style, outline_width, outline_color) {
+  let parent = font_style || glov_font_default_style;
+  outline_color = outline_color || parent.color;
+  return fontStyle(font_style, {
+    outline_width,
+    outline_color,
+  });
+}
+
+export function fontStyleBold(font_style, outline_width) {
+  let parent = font_style || glov_font_default_style;
+  let outline_color = parent.color;
+  if (font_style.outline_width) {
+    // move to glow
+    let glow_w = outline_width + font_style.outline_width;
+    return fontStyle(font_style, {
+      outline_width,
+      outline_color,
+      glow_xoffs: 0,
+      glow_yoffs: 0,
+      glow_color: font_style.outline_color,
+      glow_inner: glow_w - 0.25,
+      glow_outer: glow_w + 0.25,
+    });
+  } else {
+    // just add outline
+    return fontStyle(font_style, {
+      outline_width,
+      outline_color,
+    });
+  }
+
 }
 
 function colorAlpha(color, alpha) {
@@ -390,7 +429,7 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
   let y_size = size;
   if (align & ALIGN_NEEDS_WIDTH) {
     let width = this.getStringWidth(style, x_size, text);
-    if ((align & ALIGN.HFIT) && width > w) {
+    if ((align & ALIGN.HFIT) && width > w + EPSILON) {
       let scale = w / width;
       x_size *= scale;
       width = w;
@@ -615,7 +654,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
   text = getStringFromLocalizable(text);
   assert(typeof align !== 'function'); // Old API had one less parameter
   const len = text.length;
-  const max_word_w = w - indent;
+  const max_word_w = w - indent + EPSILON;
   // "fit" mode: instead of breaking the too-long word, output it on a line of its own
   const hard_wrap_mode_fit = align & ALIGN.HFIT;
   const x_advance = this.calcXAdvance(xsc);
@@ -650,7 +689,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
       if (word_start !== idx) {
         let need_line_flush = false;
         // flush word, take care of space on next loop
-        if (word_x0 + word_w <= w) {
+        if (word_x0 + word_w <= w + EPSILON) {
           // fits fine, add to line, start new word
         } else if (word_w > max_word_w && !hard_wrap_mode_fit) {
           // even just this word alone won't fit, needs a hard wrap
@@ -672,7 +711,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
           }
         } else {
           // won't fit, but fits on next line, soft wrap
-          if (line_end !== -1) {
+          if (line_end !== -1 || indent < 0 && line_x0 !== indent) {
             flushLine();
           }
         }
@@ -690,7 +729,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
 
         // we're now either still pointing at the space, or rewound to an earlier point
         continue;
-      } else {
+      } else if (c) {
         // process the space
         word_start = idx + 1;
         word_x0 += space_size;
@@ -703,7 +742,7 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
       if (char_info) {
         let char_w = char_info.w_pad_scale * xsc + x_advance;
         word_w += char_w;
-        if (word_x0 + word_w <= w) { // would partially fit up to and including this letter
+        if (word_x0 + word_w <= w + EPSILON) { // would partially fit up to and including this letter
           word_slice = idx + 1;
           word_slice_w = word_w;
         }
@@ -712,7 +751,13 @@ GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line
     ++idx;
   } while (idx <= len);
   if (line_end !== -1) {
+    line_x1 = word_x0; // include size of trailing whitespace
     flushLine();
+  } else if (word_x0 !== line_x1) {
+    line_x1 = word_x0; // include size of trailing whitespace, if any
+    if (line_cb) {
+      line_cb(line_x0, linenum, '', line_x1);
+    }
   }
 
   return linenum;
@@ -820,10 +865,12 @@ GlovFont.prototype.drawScaled = function () {
   );
   let padding1 = max(0, applied_style.outline_width*font_texel_scale*avg_scale_font);
   const outer_scaled = applied_style.glow_outer*font_texel_scale;
-  padding4[0] = max(outer_scaled*xsc - applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-  padding4[2] = max(outer_scaled*xsc + applied_style.glow_xoffs*font_texel_scale*xsc, padding1);
-  padding4[1] = max(outer_scaled*ysc - applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
-  padding4[3] = max(outer_scaled*ysc + applied_style.glow_yoffs*font_texel_scale*ysc, padding1);
+  let glow_xoffs = applied_style.glow_xoffs*font_texel_scale*xsc;
+  let glow_yoffs = applied_style.glow_yoffs*font_texel_scale*ysc;
+  padding4[0] = max(outer_scaled*xsc - glow_xoffs, padding1);
+  padding4[2] = max(outer_scaled*xsc + glow_xoffs, padding1);
+  padding4[1] = max(outer_scaled*ysc - glow_yoffs, padding1);
+  padding4[3] = max(outer_scaled*ysc + glow_yoffs, padding1);
 
   techParamsSet('param0', value);
   let value2 = temp_vec4_glow_params;
@@ -912,7 +959,7 @@ GlovFont.prototype.drawScaled = function () {
           let h = char_info.h * ysc2 + (padding4[1] + padding4[3]) * rel_y_scale;
 
           let xx = x - rel_x_scale * padding4[0];
-          let yy = y - rel_y_scale * padding4[2] + char_info.yoffs * ysc2;
+          let yy = y - rel_y_scale * padding4[1] + char_info.yoffs * ysc2;
           // Below is inlined/optimized version of:
           // spriteQueueRaw(
           //   texs,

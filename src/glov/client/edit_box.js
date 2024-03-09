@@ -301,6 +301,29 @@ class GlovUIEditBox {
       }
     }
     if (!valid) {
+      let old_was_invalid = false;
+      if (max_len > 0 || max_visual_size) {
+        let eff_max_len = max_len || Infinity;
+        let lines = multiline ? this.text.split('\n') : [this.text];
+        for (let ii = 0; ii < lines.length; ++ii) {
+          let line = lines[ii];
+          if (line.length > eff_max_len) {
+            old_was_invalid = true;
+          }
+          if (max_visual_size && !old_was_invalid) {
+            old_was_invalid = uiGetFont().getStringWidth(null, max_visual_size.font_height, line) >
+              max_visual_size.width;
+          }
+        }
+      }
+      if (old_was_invalid) {
+        // we're invalid, but it was also invalid to start!  let edit through if shorter
+        if (new_text.length < this.text.length) {
+          valid = true;
+        }
+      }
+    }
+    if (!valid) {
       // revert!
       this.had_overflow = true;
       input.value = this.text;

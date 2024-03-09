@@ -1,9 +1,10 @@
 // TODO: move when converted to TypeScript
 import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
+import type { Box } from './geom_types';
 // TODO: move when converted to TypeScript
 import type { shaderCreate } from 'glov/client/shaders';
 type Shader = ReturnType<typeof shaderCreate>;
-import type { TSMap } from 'glov/common/types';
+import type { TSMap, UnimplementedData } from 'glov/common/types';
 import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
 
 export enum BlendMode {
@@ -67,10 +68,16 @@ export interface SpriteDraw3DParams {
 }
 export interface Sprite {
   uidata?: SpriteUIData;
-  uvs: number[];
+  uvs: ROVec4;
   origin: ROVec2;
   draw(params: SpriteDrawParams): void;
   drawDualTint(params: SpriteDrawParams & { color1: ROVec4 }): void;
+  draw4Color(params: SpriteDrawParams & {
+    color_ul: ROVec4;
+    color_ll: ROVec4;
+    color_lr: ROVec4;
+    color_ur: ROVec4;
+  }): void;
   draw3D(params: SpriteDraw3DParams): void;
   texs: Texture[];
   lazyLoad(): number;
@@ -111,6 +118,11 @@ export type SpriteParam = SpriteParamBase & ({
 } | {
   url: string;
   lazy_load?: boolean;
+} | {
+  width: number;
+  height: number;
+  data: Uint8Array;
+  format: UnimplementedData; // TEXTURE_FORMAT enum
 })));
 
 export function spriteQueuePush(): void;
@@ -120,6 +132,7 @@ export function spriteChainedStop(): void;
 export function spriteQueueFn(z: number, fn: () => void): void;
 export function spriteClip(z_start: number, z_end: number, x: number, y: number, w: number, h: number): void;
 export function spriteClipped(): boolean;
+export function spriteClippedViewport(): Box;
 export function spriteClipPush(z: number, x: number, y: number, w: number, h: number): void;
 export function spriteClipPop(): void;
 export function spriteClipPause(): void;
@@ -177,11 +190,24 @@ export function spriteQueueRaw(
   shader?: Shader, shader_params?: ShaderParams, blend?: BlendMode
 ): SpriteData;
 
+export function spriteQueueSprite(
+  sprite: Sprite,
+  x: number, y: number, z: number,
+  w: number, h: number, rot: number,
+  uvs: ROVec4,
+  color: ROVec4,
+  shader?: Shader,
+  shader_params?: ShaderParams,
+  nozoom?: boolean,
+  pixel_perfect?: boolean,
+  blend?: BlendMode,
+): SpriteData;
+
 // TODO: export with appropriate types
 // export type Shader = { _opaque: 'Shader' };
 // export function spriteDataAlloc(texs: Texture[], shader: Shader, shader_params:ShaderParams, blend: BlendMode): void;
 // export function queueSpriteData(elem, z): void;
-// export function queuesprite(
+
 // TODO: migrate to internal only?
 // export function blendModeSet(blend: BlendMode): void;
 // export function blendModeReset(force: boolean): void;

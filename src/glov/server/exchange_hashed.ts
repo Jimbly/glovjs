@@ -18,7 +18,7 @@ export function exchangeHashedCreate(exchange_list: Mexchange[]): Mexchange {
   assert(exchange_list);
   assert(exchange_list.length);
   // Hash comparison and performance: https://gist.github.com/Jimbly/328387ec1623909af935e133850e9ed6
-  let mult = 1 / 0xFFFFFFFF * exchange_list.length;
+  let mult = 1 / 0x100000000 * exchange_list.length;
   function hasher(str: string): number {
     assert(str && typeof str === 'string');
     let ret = mashString(str);

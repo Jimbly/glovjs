@@ -21,7 +21,9 @@ const safearea_pad = new Float32Array(4); // left, right, top, bottom
 // 10: y0
 // 11: x1
 // 12: y1
-export const data = new Float32Array(13);
+// 13: x1_real - x0_real (math done in double precision)
+// 14: y1_real - y0_real (math done in double precision)
+export const data = new Float32Array(15);
 
 let screen_width;
 let screen_height;
@@ -36,13 +38,13 @@ export let render_offset_y_bottom;
 
 function reapply() {
   if (render_width) {
-    data[4] = render_width / (data[2] - data[0]);
-    data[5] = render_height / (data[3] - data[1]);
-    data[7] = (data[2] - data[0]) / render_viewport_w;
-    data[8] = (data[3] - data[1]) / render_viewport_h;
+    data[4] = render_width / data[13];
+    data[5] = render_height / data[14];
+    data[7] = data[13] / render_viewport_w;
+    data[8] = data[14] / render_viewport_h;
   } else {
-    data[4] = screen_width / (data[2] - data[0]);
-    data[5] = screen_height / (data[3] - data[1]);
+    data[4] = screen_width / data[13];
+    data[5] = screen_height / data[14];
   }
 }
 
@@ -83,6 +85,8 @@ export function set(x0, y0, x1, y1, ignore_safe_area) {
     data[10] = data[1] = y0;
     data[11] = data[2] = x1;
     data[12] = data[3] = y1;
+    data[13] = x1 - x0;
+    data[14] = y1 - y0;
   } else {
     data[9] = x0;
     data[10] = y0;
@@ -90,10 +94,16 @@ export function set(x0, y0, x1, y1, ignore_safe_area) {
     data[12] = y1;
     let wscale = (x1 - x0) / safeScreenWidth();
     let hscale = (y1 - y0) / safeScreenHeight();
-    data[0] = x0 - safearea_pad[0] * wscale;
-    data[1] = y0 - safearea_pad[2] * hscale;
-    data[2] = x1 + safearea_pad[1] * wscale;
-    data[3] = y1 + safearea_pad[3] * hscale;
+    let x0_real = x0 - safearea_pad[0] * wscale;
+    let y0_real = y0 - safearea_pad[2] * hscale;
+    let x1_real = x1 + safearea_pad[1] * wscale;
+    let y1_real = y1 + safearea_pad[3] * hscale;
+    data[0] = x0_real;
+    data[1] = y0_real;
+    data[2] = x1_real;
+    data[3] = y1_real;
+    data[13] = x1_real - x0_real;
+    data[14] = y1_real - y0_real;
   }
 
   reapply();
@@ -270,10 +280,10 @@ export function y1Real() {
   return data[3];
 }
 export function wReal() {
-  return data[2] - data[0];
+  return data[13];
 }
 export function hReal() {
-  return data[3] - data[1];
+  return data[14];
 }
 export function x0() {
   return data[9];

@@ -633,7 +633,7 @@ SubscriptionManager.prototype.onceLoggedIn = function (cb) {
 };
 
 SubscriptionManager.prototype.loggedIn = function () {
-  return this.logging_out ? false : this.logged_in ? this.logged_in_username || 'missing_name' : false;
+  return this.logging_out ? null : this.logged_in ? this.logged_in_username || 'missing_name' : null;
 };
 
 SubscriptionManager.prototype.userOnChannelData = function (expected_user_id, data, key, value) {
@@ -652,7 +652,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
   if (!err) {
     evt = 'login';
     this.first_session = Boolean(resp.first_session);
-    this.logged_in_email = resp.email;
+    this.logged_in_email = resp.email || null;
     this.logged_in_username = resp.user_id;
     this.logged_in_display_name = resp.display_name;
     this.logged_in = true;
@@ -701,6 +701,10 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
 
 SubscriptionManager.prototype.loginRetry = function (resp_func) {
   this.loginInternal(this.login_credentials, resp_func);
+};
+
+SubscriptionManager.prototype.getLastLoginCredentials = function () {
+  return this.login_credentials;
 };
 
 SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, login_credentials, resp_func) {

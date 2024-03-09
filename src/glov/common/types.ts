@@ -42,17 +42,25 @@ export type NetErrorCallback<T = never> = (
   result?: T
 ) => void;
 
-type NetResponseCallbackFn<T = never, E = unknown> = (
-  err?: E | undefined | null,
+type NetResponseCallbackCalledByUser<T = never> = (
+  err?: string | undefined | null,
   result?: T extends (never | void) ? never : (T | undefined | null),
-  resp_func?: NetErrorCallback
+  resp_func?: NetResponseCallbackCalledBySystem
 ) => void;
+
+// Type to use for parameters to system functions that only ever call with string | null
+export type NetResponseCallbackCalledBySystem<T = never> = (
+  err: string | null,
+  result?: T extends (never | void) ? never : T,
+  resp_func?: NetResponseCallback
+) => void;
+
 /**
  * Callback function type passed to any network message handlers: can use it to
  * send back a packet, an error, a result, as well as register a function to be
  * called in response to your response.
  */
-export interface NetResponseCallback<T = never> extends NetResponseCallbackFn<T, string> {
+export interface NetResponseCallback<T = never> extends NetResponseCallbackCalledByUser<T> {
   pak: () => Packet;
 }
 
@@ -176,34 +184,10 @@ export type ClientIDs = {
   display_name?: string;
   roles?: TSMap<1>;
 };
-
-export interface ClientChannelWorker {
-  on(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
-  removeListener(key: string, cb: (data: DataObject, key: string, value: DataObject) => void): void;
-  onSubscribe(cb: (data: unknown) => void): void;
-  onceSubscribe(cb: ((data: DataObject) => void) | VoidFunc): void;
-  numSubscriptions(): number;
-  isFullySubscribed(): boolean;
-  unsubscribe(): void;
-  getChannelData<T>(key: string, default_value: T): T;
-  getChannelData(key: string): unknown;
-  getChannelID(): string;
-  setChannelData(key: string, value: unknown, skip_predict?: boolean, resp_func?: NetErrorCallback): void;
-  pak(msg: string): Packet;
-  send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
-  send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
-  cmdParse(cmd: string, resp_func: CmdRespFunc): void;
-  readonly data: {
-    public?: unknown;
-  };
-  readonly channel_id: string;
-  readonly channel_type: string;
-  readonly channel_subid: string;
-}
-
-export interface UserChannel extends ClientChannelWorker {
-  presence_data: TSMap<PresenceEntry>;
-}
+export type ChannelDataClient = {
+  ids: ClientIDs;
+} & DataObject;
+export type ChannelDataClients = TSMap<ChannelDataClient>;
 
 // TODO: Delete this type and all usages of it.
 // It is being used as a placeholder for data types that are not yet implemented.

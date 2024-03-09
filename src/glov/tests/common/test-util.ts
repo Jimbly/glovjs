@@ -2,6 +2,7 @@ import assert from 'assert';
 import { asyncSeries } from 'glov-async';
 import { DataObject } from 'glov/common/types';
 import {
+  cmpNumericSmart,
   dateToFileTimestamp,
   empty,
   lerpAngle,
@@ -96,6 +97,26 @@ asyncSeries([
     assert.equal(trimEnd('asdf \n '), trimEnd('asdf'));
     assert.equal(trimEnd('  asdf \n '), trimEnd('  asdf'));
     assert.equal(trimEnd(' \n asdf \n '), trimEnd(' \n asdf'));
+    next();
+  },
+  function testCmpNumericSmart(next) {
+    let arr = [
+      'Thing 2b',
+      'Thing 2',
+      'Thing 11',
+      'Thing 1',
+      '1',
+      'Z',
+    ];
+    arr.sort(cmpNumericSmart);
+    assert.equal(arr.join(','), [
+      '1',
+      'Thing 1',
+      'Thing 2',
+      'Thing 2b',
+      'Thing 11',
+      'Z',
+    ].join(','));
     next();
   },
 ], function (err) {

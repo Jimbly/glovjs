@@ -107,7 +107,7 @@ function evaluatePerUserABTests(): void {
 
 function abTestPostNetInit(): void {
   netSubs().on('login', function () {
-    user_id = netUserId();
+    user_id = netUserId() as string;
     evaluatePerUserABTests();
   });
   netSubs().on('logout', function () {

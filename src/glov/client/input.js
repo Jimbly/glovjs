@@ -1491,20 +1491,22 @@ export function mouseUpEdge(param) {
   let pos_param = mousePosParam(param);
   let button = pos_param.button;
   let max_click_dist = param.max_dist || 50; // TODO: relative to camera distance?
-  let dragged_too_far = false;
+  let click_invalid = false;
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
     if (touch_data.total > max_click_dist) {
       // Do *not* register in_event_cb, would fire even when we would disregard this click
-      dragged_too_far = true;
-      continue;
-    }
-    if (!touch_data.up_edge) {
+      click_invalid = true;
       continue;
     }
     if (touch_data.long_press_dispatched) {
       // If this touch has already triggered a long-press, do not additionally trigger a click
+      // also, invalidate in_event_cb
+      click_invalid = true;
+      continue;
+    }
+    if (!touch_data.up_edge) {
       continue;
     }
     if (!(button === ANY || button === touch_data.button)) {
@@ -1523,7 +1525,7 @@ export function mouseUpEdge(param) {
     }
   }
 
-  if (param.in_event_cb && !mouse_over_captured && !dragged_too_far) {
+  if (param.in_event_cb && !mouse_over_captured && !click_invalid) {
     // TODO: Maybe need to also pass along earlier exclusions?  Working okay for now though.
     if (!param.phys) {
       param.phys = {};

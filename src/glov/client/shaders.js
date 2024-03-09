@@ -481,7 +481,10 @@ export function shadersPrelink(vp, fp, params = {}, on_error) {
   return prog.valid;
 }
 
-const reserved = { WEBGL2: 1 };
+const reserved = {
+  WEBGL2: 1,
+  GL_FRAGMENT_PRECISION_HIGH: 1,
+};
 export function addReservedDefine(key) {
   reserved[key] = 1;
 }

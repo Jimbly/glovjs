@@ -34,6 +34,8 @@ export const internal = {
   uiApplyStyle, // eslint-disable-line @typescript-eslint/no-use-before-define
 };
 
+export const sprites = {};
+
 /* eslint-disable import/order */
 const assert = require('assert');
 const camera2d = require('./camera2d.js');
@@ -154,6 +156,22 @@ export function addHook(draw, click) {
   });
 }
 
+let per_frame_dom_alloc = [0,0,0,0,0,0,0];
+let per_frame_dom_suppress = 0;
+export function suppressNewDOMElemWarnings() {
+  per_frame_dom_suppress = glov_engine.frame_index + 1;
+}
+function uiElemAllocCheck() {
+  if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
+    per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
+    let sum = 0;
+    for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
+      sum += per_frame_dom_alloc[ii];
+    }
+    assert(sum < per_frame_dom_alloc.length, 'Allocated new UI elements for too many consecutive frames');
+  }
+}
+
 let ui_elem_data = {};
 // Gets per-element state data that allows a paradigm of inter-frame state but
 //   without the caller being required to allocate a state container.
@@ -166,6 +184,7 @@ export function getUIElemData(type, param, allocator) {
   let elem_data = by_type[key];
   if (!elem_data) {
     elem_data = by_type[key] = allocator ? allocator(param) : {};
+    uiElemAllocCheck();
   }
   elem_data.frame_index = glov_engine.frame_index;
   return elem_data;
@@ -280,6 +299,13 @@ export function uiButtonWidth() {
   return ui_style_current.button_width;
 }
 
+export function uiGetTooltipPad() {
+  return tooltip_pad;
+}
+export function uiGetTooltipPanelPixelScale() {
+  return tooltip_panel_pixel_scale;
+}
+
 export let font;
 export let title_font;
 
@@ -289,8 +315,6 @@ export function uiGetFont() {
 export function uiGetTitleFont() {
   return title_font;
 }
-
-export const sprites = {};
 
 let color_button = makeColorSet([1,1,1,1]);
 export function uiSetButtonColorSet(color_button_in) {
@@ -353,6 +377,9 @@ export function uiSetFontStyleFocused(new_style) {
 
 export function uiSetPanelColor(color) {
   v4copy(color_panel, color);
+}
+export function uiGetPanelColor() {
+  return color_panel;
 }
 
 export function loadUISprite(name, ws, hs) {
@@ -499,11 +526,6 @@ function uiStartup(param) {
 }
 
 let dynamic_text_elem;
-let per_frame_dom_alloc = [0,0,0,0,0,0,0];
-let per_frame_dom_suppress = 0;
-export function suppressNewDOMElemWarnings() {
-  per_frame_dom_suppress = glov_engine.frame_index + 1;
-}
 export function uiGetDOMElem(last_elem, allow_modal) {
   if (modal_dialog && !allow_modal) {
     // Note: this case is no longer needed for edit boxes (spot's focus logic
@@ -512,14 +534,7 @@ export function uiGetDOMElem(last_elem, allow_modal) {
   }
   if (dom_elems_issued >= dom_elems.length || !last_elem) {
     let elem = document.createElement('div');
-    if (glov_engine.DEBUG && !glov_engine.resizing() && glov_engine.frame_index > per_frame_dom_suppress) {
-      per_frame_dom_alloc[glov_engine.frame_index % per_frame_dom_alloc.length] = 1;
-      let sum = 0;
-      for (let ii = 0; ii < per_frame_dom_alloc.length; ++ii) {
-        sum += per_frame_dom_alloc[ii];
-      }
-      assert(sum < per_frame_dom_alloc.length, 'Allocated new DOM elements for too many consecutive frames');
-    }
+    uiElemAllocCheck();
     elem.setAttribute('class', 'glovui_dynamic');
     if (!dynamic_text_elem) {
       dynamic_text_elem = document.getElementById('dynamic_text');
@@ -947,7 +962,11 @@ export function buttonBackgroundDraw(param, state) {
       sprite = sprites[base_name];
     }
 
-    drawHBox(param, sprite, color);
+    if (sprite.uidata.rects.length === 9) {
+      drawBox(param, sprite, param.pixel_scale || 1, color);
+    } else {
+      drawHBox(param, sprite, color);
+    }
   }
   profilerStopFunc();
 }
@@ -2042,7 +2061,6 @@ export function scaleSizes(scale) {
   modal_pad = round(16 * scale);
   tooltip_width = round(400 * scale);
   tooltip_pad = round(8 * scale);
-  tooltip_panel_pixel_scale = panel_pixel_scale;
 
   // calls `uiStyleApply()`:
   uiStyleModify(uiStyleDefault(), {
@@ -2051,6 +2069,7 @@ export function scaleSizes(scale) {
   });
   let button_height = round(32 * scale);
   setButtonHeight(button_height);
+  tooltip_panel_pixel_scale = panel_pixel_scale; // panel_pixel_scale set in setButtonHeight()
 }
 
 export function setPanelPixelScale(scale) {

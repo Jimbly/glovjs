@@ -150,13 +150,16 @@ class CollapsagoriesImpl {
       this.need_shadow_down = 0;
     }
   }
+  private last_header_y = 0;
   header<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {
+    assert(this.num_headers);
     if (this.clipper_active) {
       spriteClipPop();
       this.clipper_active = false;
     }
     let { y, earlydraw } = param;
     let header_real_y = y;
+    this.last_header_y = y;
     const { x, z, w, header_h, parent_scroll } = this;
     let draw: (param: CollapsagoriesHeaderDrawParam<T>) => void;
     draw = param.draw || collapsagoriesDrawDefault as unknown as typeof draw;
@@ -240,6 +243,13 @@ class CollapsagoriesImpl {
     ++this.headers_done;
     return ret;
   }
+  scrollCurrentSectionIntoFocus(): void {
+    let { parent_scroll, last_header_y, header_h } = this;
+    if (parent_scroll) {
+      let desired_scroll_pos = last_header_y - (this.headers_done - 1) * header_h;
+      parent_scroll.scrollIntoFocus(desired_scroll_pos, desired_scroll_pos, 0);
+    }
+  }
   stop(): void {
     this.drawShadowDown();
     if (this.clipper_active) {
@@ -266,6 +276,11 @@ export function collapsagoriesStart(param: CollapsagoriesStartParam): void {
 export function collapsagoriesHeader<T=CollapsagoriesDrawDefaultParam>(param: CollapsagoriesHeaderParam<T>): boolean {
   assert(active_elem);
   return active_elem.header(param);
+}
+
+export function collapsagoriesScrollCurrentSectionIntoFocus(): void {
+  assert(active_elem);
+  active_elem.scrollCurrentSectionIntoFocus();
 }
 
 export function collapsagoriesStop(): void {

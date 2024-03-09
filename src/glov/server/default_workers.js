@@ -6,9 +6,8 @@ import * as base32 from 'glov/common/base32';
 import * as dot_prop from 'glov/common/dot-prop';
 import {
   PRESENCE_ACTIVE,
-  PRESENCE_INACTIVE,
-  PRESENCE_OFFLINE,
-  PRESENCE_OFFLINE_INACTIVE,
+  presenceActive,
+  presenceVisible,
 } from 'glov/common/enums.js';
 import { FriendStatus } from 'glov/common/friends_data.js';
 import * as md5 from 'glov/common/md5.js';
@@ -723,7 +722,10 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private.login_ip', data.ip);
     this.setChannelData('private.login_ua', data.ua);
     this.setChannelData('private.login_time', Date.now());
-    this.setChannelData('private.last_time', Date.now());
+    if (!this.rich_presence) {
+      // if we have rich presence, wait for that before setting the (potentially publicly visible) last_time
+      this.setChannelData('private.last_time', Date.now());
+    }
 
     let display_name = this.getChannelData('public.display_name');
     let permissions = this.getChannelData('public.permissions', {});
@@ -740,6 +742,9 @@ export class DefaultUserWorker extends ChannelWorker {
       this.setChannelData('private.display_name_change', undefined); // reset cooldown
     }
     this.checkAutoIPBan(data.ip);
+    if (this.onUserLogin) {
+      this.onUserLogin(data);
+    }
     metricsAdd('user.login', 1);
 
     resp_func(null, {
@@ -907,11 +912,11 @@ export class DefaultUserWorker extends ChannelWorker {
       return resp_func('Invalid email');
     }
     if (email === this.data.private.email) {
-      return resp_func(null, true);
+      return resp_func();
     }
     this.logSrc(src, `Updating user ${this.user_id} email from ${this.data.private.email} to ${email}`);
     this.setChannelData('private.email', email);
-    return resp_func(null, true);
+    return resp_func();
   }
 
   handleSetChannelData(src, key, value) {
@@ -949,7 +954,7 @@ export class DefaultUserWorker extends ChannelWorker {
     let best = null;
     for (let channel_id in this.presence_data) {
       let entry = this.presence_data[channel_id];
-      if (entry.active !== PRESENCE_OFFLINE && entry.active !== PRESENCE_OFFLINE_INACTIVE) {
+      if (presenceVisible(entry.active)) {
         if (!best ||
           entry.active === PRESENCE_ACTIVE && best.active !== PRESENCE_ACTIVE ||
           entry.active === best.active && entry.id > best.id
@@ -993,7 +998,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence) {
       for (let channel_id in this.presence_data) {
         let presence = this.presence_data[channel_id];
-        if (presence.active !== PRESENCE_INACTIVE && presence.active !== PRESENCE_OFFLINE_INACTIVE) {
+        if (presenceActive(presence.active)) {
           currently_active = true;
           break;
         }
@@ -1017,7 +1022,8 @@ export class DefaultUserWorker extends ChannelWorker {
 
   handleClientDisconnect(src) {
     if (this.rich_presence && this.presence_data[src.channel_id]) {
-      if (!this.channel_server.restarting) {
+      let entry = this.presence_data[src.channel_id];
+      if (!this.channel_server.restarting && presenceVisible(entry.active)) {
         this.setChannelData('private.last_time', Date.now());
       }
       delete this.presence_data[src.channel_id];
@@ -1051,13 +1057,13 @@ export class DefaultUserWorker extends ChannelWorker {
     if (src.user_id !== this.user_id) {
       return void resp_func('ERR_INVALID_USER');
     }
-    if (abtests && active !== PRESENCE_INACTIVE) {
+    if (abtests && presenceActive(active)) {
       this.last_abtests = abtests;
     }
     if (!this.rich_presence) {
       return void resp_func('ERR_NO_RICH_PRESENCE');
     }
-    if (!this.channel_server.restarting) {
+    if (!this.channel_server.restarting && presenceVisible(active)) {
       this.setChannelData('private.last_time', Date.now());
     }
     this.presence_data[src.channel_id] = {

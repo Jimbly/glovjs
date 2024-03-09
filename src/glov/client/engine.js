@@ -616,6 +616,7 @@ export function setViewport(xywh) {
   gl.viewport(xywh[0], xywh[1], xywh[2], xywh[3]);
 }
 
+const MAX_FRAME_TIME = 10000;
 let frames_requested = 0;
 function requestFrame(user_time) {
   let max_fps = settings.max_fps;
@@ -639,7 +640,7 @@ function requestFrame(user_time) {
       frames_requested++;
     }
   } else if (max_fps && max_fps > settings.use_animation_frame) {
-    let desired_delay = max(0, round(1000 / max_fps - (user_time || 0)));
+    let desired_delay = min(MAX_FRAME_TIME, max(0, round(1000 / max_fps - (user_time || 0))));
     frames_requested++;
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     setTimeout(tick, desired_delay);
@@ -671,6 +672,11 @@ export function setupProjection(use_fov_y, use_width, use_height, znear, zfar) {
   //   -(1 + mat_projection[8]) / mat_projection[0], // projection_matrix.m20) / projection_matrix.m00,
   //   -(1 + mat_projection[9]) / mat_projection[5] // projection_matrix.m21) / projection_matrix.m11
   // );
+}
+
+export function setProjection(new_mat) {
+  mat4Copy(mat_projection, new_mat);
+  mat_projection_10 = mat_projection[10];
 }
 
 export function setZRange(znear, zfar) {
@@ -875,7 +881,6 @@ function tick(timestamp) {
   let max_fps = settings.max_fps;
   if (max_fps && max_fps <= settings.use_animation_frame) {
     // using requestAnimationFrame, need to apply max_fps ourselves
-    let frame_time = 1000 / max_fps - 0.1;
     frame_limit_time_left -= dt_raw;
     if (frame_limit_time_left > 0) {
       // too early, skip this frame, do not count any of this time, pretend this frame never happened.
@@ -883,6 +888,7 @@ function tick(timestamp) {
       profilerStop('top');
       return profilerStop('tick');
     }
+    let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
     frame_limit_time_left += frame_time;
     if (frame_limit_time_left < 0) {
       // more than two frames passed, don't accumulate extra frames

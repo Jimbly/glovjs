@@ -45,7 +45,7 @@ cmd_parse.register({
 });
 
 function validDefine(str) {
-  if (SEMANTIC[str]) {
+  if (SEMANTIC[str] !== undefined) {
     return false;
   }
   return str.match(/^[A-Z][A-Z0-9_]*$/);

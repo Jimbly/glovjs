@@ -118,7 +118,9 @@ function channelServerSendFinish(pak, err, resp_func) {
     // This function will get called twice if we have a network disconnect
     //   (ERR_FAILALL_DISCONNECT triggered by ack.js) *and* a low-level failure
     //   (e.g. ERR_NOT_FOUND trying to send the message).
+    let saved_expecting_response = resp_func.expecting_response;
     resp_func = once(resp_func);
+    resp_func.expecting_response = saved_expecting_response;
   }
   let ack_resp_pkt_id = ackWrapPakFinish(pak, err, resp_func);
   let { source, dest, msg, pkt_idx_offs, no_create } = pak.cs_data;
@@ -145,7 +147,7 @@ function channelServerSendFinish(pak, err, resp_func) {
     assert(resp_pair);
     assert.equal(resp_pair.func, resp_func);
     assert(resp_pair.ack_name);
-    resp_pair.func = function (err, resp) {
+    resp_pair.func = function (err, resp, resp_func_2) {
       // Acks may not be in order, so we just care about the highest id,
       // everything sent before that *must* have been dispatched, even if not
       // yet ack'd.  Similarly, don't reset to a lower id when a slow operation's
@@ -153,7 +155,7 @@ function channelServerSendFinish(pak, err, resp_func) {
       if (!source.send_pkt_ackd[dest] || pkt_idx > source.send_pkt_ackd[dest]) {
         source.send_pkt_ackd[dest] = pkt_idx;
       }
-      resp_func(err, resp);
+      resp_func(err, resp, resp_func_2);
     };
   } else {
     source.send_pkt_unackd[dest] = [pkt_idx, channel_server.server_time];
@@ -283,8 +285,13 @@ export function quietMessagesSet(list) {
     quiet_messages[list[ii]] = true;
   }
 }
+let quiet_message_user_keys = Object.create(null);
+quiet_message_user_keys.pos = true;
+export function quietMessagesSetUserKey(key) {
+  quiet_message_user_keys[key] = true;
+}
 export function quietMessage(msg, payload) {
-  return msg === 'set_user' && payload && payload.key === 'pos' || quiet_messages[msg];
+  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] || quiet_messages[msg];
 }
 
 // source is a ChannelWorker

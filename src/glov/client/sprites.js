@@ -16,6 +16,8 @@ exports.queueraw4colorBuffer = spriteQueueRaw4ColorBuffer;
 exports.queueraw4 = spriteQueueRaw4;
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.queueraw = spriteQueueRaw;
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+exports.queuesprite = spriteQueueSprite;
 
 export const BlendMode = {
   BLEND_ALPHA: 0,
@@ -46,7 +48,12 @@ const {
   shadersPrelink,
 } = require('./shaders.js');
 const { deprecate, nextHighestPowerOfTwo } = require('glov/common/util.js');
-const { vec2, vec4, v4set } = require('glov/common/vmath.js');
+const {
+  vec2,
+  vec4,
+  v2set,
+  v4set,
+} = require('glov/common/vmath.js');
 
 deprecate(exports, 'clip', 'spriteClip');
 deprecate(exports, 'clipped', 'spriteClipped');
@@ -447,7 +454,7 @@ function queuesprite4colorObj() {
   return elem;
 }
 
-export function queuesprite(
+export function spriteQueueSprite(
   sprite, x, y, z, w, h, rot, uvs, color, shader, shader_params, nozoom,
   pixel_perfect, blend,
 ) {
@@ -566,6 +573,23 @@ export function spriteResetTopOfFrame() {
 
 export function spriteClipped() {
   return clip_stack.length > 0;
+}
+
+let clipped_viewport_temp_in = vec2();
+let clipped_viewport_temp_pos = vec2();
+let clipped_viewport_temp_wh = vec2();
+export function spriteClippedViewport() {
+  assert(clip_stack.length > 0);
+  let tail = clip_stack[clip_stack.length - 1];
+  camera2d.domToVirtual(clipped_viewport_temp_pos, tail.dom_clip);
+  v2set(clipped_viewport_temp_in, tail.dom_clip[2], tail.dom_clip[3]);
+  camera2d.domDeltaToVirtual(clipped_viewport_temp_wh, clipped_viewport_temp_in);
+  return {
+    x: clipped_viewport_temp_pos[0],
+    y: clipped_viewport_temp_pos[1],
+    w: clipped_viewport_temp_wh[0],
+    h: clipped_viewport_temp_wh[1],
+  };
 }
 
 export function spriteClipPush(z, x, y, w, h) {
