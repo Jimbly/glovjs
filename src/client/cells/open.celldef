@@ -22,6 +22,8 @@ corners: # pillars and floor/ceiling details
       quadrants: 1
       spritesheet: whitebox
       tile: pillar1
+      height: 1.375
+      offs: [0,0,-0.25]
   two:
   - pass: details
     type: simple_pillar
@@ -29,6 +31,8 @@ corners: # pillars and floor/ceiling details
       quadrants: 2
       spritesheet: whitebox
       tile: pillar2
+      height: 1.375
+      offs: [0,0,-0.25]
   three:
   - pass: details
     type: simple_pillar
@@ -36,6 +40,8 @@ corners: # pillars and floor/ceiling details
       quadrants: 3
       spritesheet: whitebox
       tile: pillar3
+      height: 1.375
+      offs: [0,0,-0.25]
   four:
   - pass: details
     type: simple_pillar
@@ -43,3 +49,5 @@ corners: # pillars and floor/ceiling details
       quadrants: 4
       spritesheet: whitebox
       tile: pillar4
+      height: 1.375
+      offs: [0,0,-0.25]
