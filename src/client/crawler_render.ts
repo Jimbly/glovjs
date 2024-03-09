@@ -545,7 +545,7 @@ function drawSimpleWall(
     v3iAddScale(temp_pos, wall_detail_offs, -detail_layer);
   }
   temp_pos[1] -= offs[0] * DIM + (1 - scale) * HDIM;
-  temp_pos[2] -= offs[1] * DIM + (1 - scale) * HDIM + (1 - height) * DIM;
+  temp_pos[2] -= -offs[1] * DIM + (1 - scale) * HDIM + (1 - height) * DIM;
   v2set(temp_size, DIM*scale, DIM*scale*height);
 
   if (vopts.force_rot !== undefined) {
@@ -583,14 +583,17 @@ function drawSimpleFiller(
   // pos[2] contains the height of the cell we're looking from
   // opts.neighbor_h contains the height of the cell we're looking at
   let { neighbor_h } = opts;
-  let hdiff = neighbor_h - pos[2];
-  if (is_ceiling && hdiff >= 0 || !is_ceiling && hdiff <= 0) {
+  let hdiff;
+  if (is_ceiling) {
+    let noffs = (offs[1] - 1) * DIM;
+    hdiff = pos[2] + noffs - neighbor_h;
+  } else {
+    hdiff = neighbor_h - pos[2];
+  }
+  if (hdiff <= 0) {
     // flat, or going down
     // or for a ceiling, flat or going up
     return;
-  }
-  if (is_ceiling) {
-    hdiff *= -1;
   }
 
   let height = hdiff / DIM; // (vopts.height || 1); // TODO: take vopts.height into account for ceilings?
