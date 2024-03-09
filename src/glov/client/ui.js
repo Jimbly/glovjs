@@ -962,7 +962,11 @@ export function buttonBackgroundDraw(param, state) {
       sprite = sprites[base_name];
     }
 
-    drawHBox(param, sprite, color);
+    if (sprite.uidata.rects.length === 9) {
+      drawBox(param, sprite, param.pixel_scale || 1, color);
+    } else {
+      drawHBox(param, sprite, color);
+    }
   }
   profilerStopFunc();
 }
