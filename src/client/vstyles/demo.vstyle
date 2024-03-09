@@ -11,6 +11,7 @@ cell_swaps:
   floorswitch: demo_floorswitch
   floorswitch_on: demo_floorswitch_on
 wall_swaps:
+  open: demo_open
   door: demo_door
   door_oneway: demo_door
   door_locked: demo_door_locked

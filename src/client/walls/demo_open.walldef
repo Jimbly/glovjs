@@ -1,0 +1,13 @@
+---
+open_move: true
+open_vis: true
+visuals:
+- type: simple_filler
+  opts:
+    spritesheet: demo
+    tile: grey_dirt0
+- type: simple_filler
+  opts:
+    spritesheet: demo
+    tile: cobble_blood1
+    offs: [0, 1]

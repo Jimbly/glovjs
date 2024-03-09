@@ -64,6 +64,7 @@ import {
   Vec3,
   Vec4,
   mat4,
+  rovec4,
   unit_vec,
   v2addScale,
   v2copy,
@@ -196,6 +197,7 @@ export type CrawlerDrawableOpts2 = {
   split_set: SplitSet;
   draw_dist_sq: number;
   no_blend: boolean;
+  neighbor_h: number;
 };
 export type CrawlerDrawable = (
   rot: ROVec4, pos: ROVec3,
@@ -494,6 +496,7 @@ const dummy_opts: CrawlerDrawableOpts2 = {
   split_set: SPLIT_ALL,
   draw_dist_sq: 0,
   no_blend: true,
+  neighbor_h: 0,
 };
 function simpleGetThumbnail(visual: VisualOpts | undefined, desc: WallDesc | CellDesc): CrawlerThumbnailPair {
   let [sprite, param] = simpleGetSpriteParam(visual, dummy_opts, desc.id, 'sprite');
@@ -555,6 +558,79 @@ function drawSimpleWall(
 
   sprite.draw3D({
     ...param,
+    pos: temp_pos,
+    size: temp_size,
+    face_right: temp_right,
+    face_down: wall_face_down,
+  });
+}
+
+const temp_uvs = vec4();
+const uv_identity = rovec4(0, 0, 1, 1);
+function drawSimpleFiller(
+  rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opts: CrawlerDrawableOpts2,
+  debug_id: string
+): void {
+  let [sprite, param] = simpleGetSpriteParam(visual, opts, debug_id, 'sprite');
+  if (!sprite) {
+    return;
+  }
+
+  let vopts = visual as unknown as SimpleDetailRenderOpts;
+  let offs = vopts.offs || [0,0];
+  let is_ceiling = offs[1] >= 0.5;
+
+  // pos[2] contains the height of the cell we're looking from
+  // opts.neighbor_h contains the height of the cell we're looking at
+  let { neighbor_h } = opts;
+  let hdiff = neighbor_h - pos[2];
+  if (is_ceiling && hdiff >= 0 || !is_ceiling && hdiff <= 0) {
+    // flat, or going down
+    // or for a ceiling, flat or going up
+    return;
+  }
+  if (is_ceiling) {
+    hdiff *= -1;
+  }
+
+  let height = hdiff / DIM; // (vopts.height || 1); // TODO: take vopts.height into account for ceilings?
+  let detail_layer = vopts.detail_layer || 0;
+
+  v3set(temp_pos, HDIM, HDIM, DIM);
+  if (detail_layer) {
+    v3iAddScale(temp_pos, wall_detail_offs, -detail_layer);
+  }
+  temp_pos[1] -= offs[0] * DIM;
+  if (is_ceiling) {
+    temp_pos[2] = offs[1] * DIM;
+    v4set(temp_uvs, 0, max(0, 1 - height), 1, 1);
+  } else {
+    temp_pos[2] = hdiff + offs[1] * DIM;
+    // TODO: really want to tile (need to draw multiple sprites!) not stretch, if height > 1
+    v4set(temp_uvs, 0, 0, 1, min(1, height));
+  }
+  v2set(temp_size, DIM, DIM*height);
+
+  if (vopts.force_rot !== undefined) {
+    rot = wall_rots[vopts.force_rot];
+  }
+
+  qTransformVec3(temp_pos, temp_pos, rot);
+  qTransformVec3(temp_right, wall_face_right, rot);
+  v3iAdd(temp_pos, pos);
+
+  let orig_uvs = uv_identity;
+  if (param && param.frame !== undefined) {
+    orig_uvs = sprite.uidata!.rects[param.frame];
+    param.frame = undefined;
+  }
+
+  v4set(temp_uvs, orig_uvs[0], orig_uvs[1] + (orig_uvs[3] - orig_uvs[1]) * temp_uvs[1], orig_uvs[2],
+    orig_uvs[1] + (orig_uvs[3] - orig_uvs[1]) * temp_uvs[3]);
+
+  sprite.draw3D({
+    ...param,
+    uvs: temp_uvs,
     pos: temp_pos,
     size: temp_size,
     face_right: temp_right,
@@ -674,7 +750,6 @@ type SimpleCornerFloorRenderOpts = {
   scale?: number;
 } & SimpleVisualOpts;
 
-const temp_uvs = vec4();
 function drawSimpleCornerFloor(
   rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opts: CrawlerDrawableOpts2,
   debug_id: string
@@ -882,6 +957,7 @@ function drawModel(rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opt
 }
 
 crawlerRenderRegisterDrawable('simple_wall', drawSimpleWall, simpleGetThumbnail);
+crawlerRenderRegisterDrawable('simple_filler', drawSimpleFiller, simpleGetThumbnail);
 crawlerRenderRegisterDrawable('simple_floor', drawSimpleFloor, simpleGetThumbnail);
 crawlerRenderRegisterDrawable('simple_ceiling', drawSimpleCeiling, defaultGetThumbnail); // do *not* provide a sprite
 crawlerRenderRegisterDrawable('simple_pillar', drawSimplePillar, defaultGetThumbnail);
@@ -943,12 +1019,14 @@ const opts_visible: CrawlerDrawableOpts2 = {
   split_set: SPLIT_ALL,
   draw_dist_sq: 0,
   no_blend: false,
+  neighbor_h: 0,
 };
 const opts_occluded: CrawlerDrawableOpts2 = {
   debug_visible: true,
   split_set: SPLIT_ALL,
   draw_dist_sq: 0,
   no_blend: false,
+  neighbor_h: 0,
 };
 function drawCell(
   game_state: CrawlerState,
@@ -978,7 +1056,7 @@ function drawCell(
     }
   }
   v2addScale(draw_pos, vhdim, pos, DIM);
-  draw_pos[2] = cell.h * DIM;
+  opts.neighbor_h = draw_pos[2] = cell.h * DIM;
   opts.split_set = split_set;
   opts.draw_dist_sq = v2distSq(pos, game_state.pos);
 
@@ -1002,6 +1080,8 @@ function drawCell(
     //let wall_desc = cell.walls[ii].swapped;
     let visuals = wall_desc.visuals_runtime[pass.name];
     if (visuals) {
+      let ncell = game_state.level!.getCell(cell.x + DX[ii], cell.y + DY[ii]);
+      opts.neighbor_h = ncell ? ncell.h * DIM : 0;
       for (let jj = 0; jj < visuals.length; ++jj) {
         let visual = visuals[jj];
         let drawable = drawables[visual.type];

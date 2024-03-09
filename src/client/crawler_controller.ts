@@ -350,6 +350,10 @@ export class CrawlerController {
       } else {
         v2add(this.freecam_pos, this.game_state.pos, half_vec);
         this.freecam_pos[2] = 0.5;
+        if (this.game_state.level) {
+          this.freecam_pos[2] += this.game_state.level.getInterpolatedHeight(
+            this.game_state.pos[0], this.game_state.pos[1]);
+        }
         this.freecam_angle = this.game_state.angle;
         this.freecam_pitch = 0;
       }
