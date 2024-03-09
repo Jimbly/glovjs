@@ -1,7 +1,7 @@
 #pragma WebGL2
 
 #ifndef WEBGL2
-#ifndef NOAA
+#if defined(SSAA4X) || defined(ANISOTROPYBASEDAA)
 #extension GL_OES_standard_derivatives : enable
 #endif
 #endif
