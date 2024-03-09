@@ -13,6 +13,7 @@ import {
   keyUpEdge,
   padButtonUpEdge,
 } from 'glov/client/input';
+import { ClientChannelWorker } from 'glov/client/net';
 import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import { SimpleMenu, simpleMenuCreate } from 'glov/client/simple_menu';
@@ -33,7 +34,6 @@ import {
 import * as urlhash from 'glov/client/urlhash';
 import { webFSAPI } from 'glov/client/webfs';
 import {
-  ClientChannelWorker,
   EntityID,
 } from 'glov/common/types';
 import { clamp } from 'glov/common/util';

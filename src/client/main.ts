@@ -7,7 +7,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
-import * as net from 'glov/client/net';
+import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
 import { spriteSetGet } from 'glov/client/sprite_sets';
@@ -46,7 +46,7 @@ export let chat_ui: ReturnType<typeof chatUICreate>;
 
 export function main(): void {
   if (engine.DEBUG || true) {
-    net.init({
+    netInit({
       engine,
       cmd_parse,
       auto_create_user: true,

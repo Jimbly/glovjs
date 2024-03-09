@@ -2,11 +2,15 @@
 import assert from 'assert';
 import { chatUICreate } from 'glov/client/chat_ui';
 import * as engine from 'glov/client/engine';
-import { netClient, netSubs } from 'glov/client/net';
+import {
+  ClientChannelWorker,
+  netClient,
+  netSubs,
+} from 'glov/client/net';
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
-import { ClientChannelWorker, NetErrorCallback } from 'glov/common/types';
+import { NetErrorCallback } from 'glov/common/types';
 import { CrawlerJoinPayload } from '../common/crawler_entity_common';
 import { JSVec3 } from '../common/crawler_state';
 import { buildModeOnBuildOp } from './crawler_build_mode';
@@ -267,8 +271,8 @@ export function crawlerCommStartup(param: {
     netSubs().on('connect', crawlerCommReconnect);
     crawlerEntityManagerOnline().on('ent_start', onEntStart);
     crawlerEntityManagerOnline().on('ent_ready', onEntReady);
-    netSubs().onChannelMsg(param.channel_type, 'floorchange_ack', crawlerCommOnFloorchangeAck);
-    netSubs().onChannelMsg(param.channel_type, 'build_op', buildModeOnBuildOp);
+    netSubs().onChannelMsg(channel_type, 'floorchange_ack', crawlerCommOnFloorchangeAck);
+    netSubs().onChannelMsg(channel_type, 'build_op', buildModeOnBuildOp);
   }
   urlhash.refreshTitle();
 }

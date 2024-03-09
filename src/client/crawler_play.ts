@@ -18,6 +18,7 @@ import {
   localStorageSet,
   localStorageSetJSON,
 } from 'glov/client/local_storage';
+import { ClientChannelWorker } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { spotSuppressPad } from 'glov/client/spot';
 import {
@@ -35,7 +36,6 @@ import * as urlhash from 'glov/client/urlhash';
 import { getURLBase } from 'glov/client/urlhash';
 import { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
-  ClientChannelWorker,
   CmdRespFunc,
   DataObject,
 } from 'glov/common/types';
