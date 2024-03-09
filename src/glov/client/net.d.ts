@@ -68,6 +68,7 @@ export type SubscriptionManager = {
   getChannel(channel_id: string, do_subscribe?: boolean): ClientChannelWorker;
   getChannelImmediate(channel_id: string, timeout?: number): ClientChannelWorker;
   getMyUserChannel(): ClientChannelWorker | null;
+  unsubscribe(channel_id: string): void;
   sendCmdParse(cmd: string, resp_func: NetResponseCallbackCalledBySystem): void;
   serverLog(type: string, data: string | DataObject): void;
 
