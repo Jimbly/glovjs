@@ -228,8 +228,8 @@ export class CrawlerController {
     }
   }
 
-
-  cam_pos: Vec3 = vec3(0, 0, 0.5);
+  cam_pos_z_offs = 0.5;
+  cam_pos: Vec3 = vec3(0, 0, 0);
   mode: 'modeCrawl' | 'modeFreecam' = 'modeCrawl';
   fade_override = 0;
   move_blocker: MoveBlocker | null = null;
@@ -799,10 +799,10 @@ export class CrawlerController {
       // pit open
     } else if (this.pit_stage === 1) {
       // fall down
-      this.cam_pos[2] = 0.5 - easeIn(pit_progress, 2);
+      this.cam_pos_z_offs = 0.5 - easeIn(pit_progress, 2);
       this.fade_override = clamp(pit_progress * 2 - 1, 0, 1);
     } else {
-      this.cam_pos[2] = 0.5;
+      this.cam_pos_z_offs = 0.5;
       this.goToFloor(this.pit_target_floor, this.pit_target_key, 'pit', this.pit_target_pos);
       // still returning true, because move_blocker is modified in the above call
     }
@@ -1413,7 +1413,11 @@ export class CrawlerController {
         map_update_this_frame: false,
       };
     } else {
-      v2add(this.cam_pos, this.game_state.pos, half_vec);
+      const { game_state } = this;
+      v2add(this.cam_pos, game_state.pos, half_vec);
+      const { level } = game_state;
+      assert(level);
+      this.cam_pos[2] = this.cam_pos_z_offs + level.getInterpolatedHeight(game_state.pos[0], game_state.pos[1]);
       return {
         game_state: this.game_state,
         script_api: this.script_api,

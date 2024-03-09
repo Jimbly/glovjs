@@ -978,7 +978,7 @@ function drawCell(
     }
   }
   v2addScale(draw_pos, vhdim, pos, DIM);
-  draw_pos[2] = 0;
+  draw_pos[2] = cell.h * DIM;
   opts.split_set = split_set;
   opts.draw_dist_sq = v2distSq(pos, game_state.pos);
 

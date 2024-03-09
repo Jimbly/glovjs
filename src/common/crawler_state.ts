@@ -116,7 +116,13 @@ import { base64CharTable } from 'glov/common/base64';
 import { dataError } from 'glov/common/data_error';
 import { FSAPI, fileBaseName } from 'glov/common/fsapi';
 import { DataObject } from 'glov/common/types';
-import { callEach, clone, empty, ridx } from 'glov/common/util';
+import {
+  callEach,
+  clone,
+  empty,
+  lerp,
+  ridx,
+} from 'glov/common/util';
 import {
   ROVec2,
   Vec2,
@@ -126,6 +132,8 @@ import {
   vec3,
 } from 'glov/common/vmath';
 import { CrawlerScriptAPI, getEffCell, getEffWall } from './crawler_script';
+
+const { ceil, floor } = Math;
 
 export type JSVec2 = [number, number];
 export type JSVec3 = [number, number, number];
@@ -286,6 +294,7 @@ export type CrawlerCellSerialized = {
   walls: [string, string, string, string];
   events?: CrawlerCellEvent[];
   props?: CrawlerCellProps;
+  h?: number;
 };
 
 function getID(desc: WallDesc | CellDesc): string {
@@ -320,8 +329,10 @@ export class CrawlerCell {
   corner_details?: (CornerDetailType | null)[];
   x: number;
   y: number;
+  h: number;
 
   constructor(xx: number, yy: number) {
+    this.h = 0;
     this.x = xx;
     this.y = yy;
     this.corner_pos = [
@@ -351,6 +362,9 @@ export class CrawlerCell {
     if (this.events) {
       ret.events = this.events;
     }
+    if (this.h) {
+      ret.h = this.h;
+    }
     return ret;
   }
 
@@ -372,6 +386,7 @@ export class CrawlerCell {
     }
     this.props = data.props;
     this.events = data.events;
+    this.h = data.h || 0;
   }
 
   setProp(key: string, value: CrawlerCellPropValue | undefined): void {
@@ -598,6 +613,36 @@ export class CrawlerLevel {
       }
     }
     cell.desc = cell_desc;
+  }
+
+  setHeight(x: number, y: number, h: number): void {
+    let cell = this.getCell(x, y);
+    assert(cell);
+    cell.h = h;
+  }
+
+  getInterpolatedHeight(x: number, y: number): number {
+    let cell_low = this.getCell(floor(x), floor(y));
+    let cell_high = this.getCell(ceil(x), ceil(y));
+    if (cell_low) {
+      if (cell_high && cell_high !== cell_low) {
+        // linear interpolate heights of cells, assume only moving in 8 cardinal directions
+        // (probably good enough?)
+        if (cell_low.x !== cell_high.x) {
+          let xweight = x - floor(x);
+          return lerp(xweight, cell_low.h, cell_high.h);
+        } else {
+          let yweight = y - floor(y);
+          return lerp(yweight, cell_low.h, cell_high.h);
+        }
+      } else {
+        return cell_low.h;
+      }
+    } else if (cell_high) {
+      return cell_high.h;
+    } else {
+      return 0;
+    }
   }
 
   finalize(): void {

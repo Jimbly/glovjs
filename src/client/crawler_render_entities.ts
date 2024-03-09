@@ -355,7 +355,7 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
 
   qRotateZ(billboard_quat, unit_quat, angle);
   v2addScale(draw_pos, vhdim, pos, DIM);
-  draw_pos[2] = zoffs * DIM;
+  draw_pos[2] = pos[2] * DIM + zoffs * DIM;
 
   // Determine bias amount based on whether they are in front or adjacent to us
   view_vec[0] = cos(game_state.angle);
@@ -524,6 +524,7 @@ export function crawlerRenderEntitiesPrep(): void {
 }
 
 let color_temp = vec4(1, 1, 1, 1);
+let draw_pos_temp = vec3();
 export function crawlerRenderEntities(ent_set: SplitSet): void {
   profilerStartFunc();
   // Draw other entities
@@ -568,11 +569,14 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         zoffs = easeOut(ent.fade, 2) - 1;
       }
     }
+    draw_pos_temp[0] = pos[0];
+    draw_pos_temp[1] = pos[1];
+    draw_pos_temp[2] = level.getInterpolatedHeight(pos[0], pos[1]);
 
     ent.draw({
       dt,
       game_state,
-      pos,
+      pos: draw_pos_temp,
       zoffs,
       angle: pos[2],
       color: color_temp,

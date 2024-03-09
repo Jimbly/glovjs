@@ -281,6 +281,10 @@ function openCell(myx: number, myy: number, dir: DirType, tx: number, ty: number
   let cell_desc = crawlerGetCellDesc(desired_cell || 'open');
   assert(cell_desc);
   level.setCell(tx, ty, cell_desc);
+  let my_cell = level.getCell(myx, myy);
+  if (my_cell) {
+    level.setHeight(tx, ty, my_cell.h);
+  }
   level.setWall(myx, myy, dir, getWallDescs().open!);
   // More generically: just prune any walls with orphaned corners?
   // If no wall to my left and to the left+ahead
@@ -540,6 +544,7 @@ function toggleWithSelected(): void {
   assert(level);
   let pos = my_ent.getData<[number, number, DirType]>('pos')!;
   let [myx, myy, dir] = pos;
+  let my_cell = level.getCell(myx, myy);
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
 
@@ -598,6 +603,9 @@ function toggleWithSelected(): void {
           // we're placing anything else, toggle it back to open
           let open_desc = crawlerGetCellDesc('open');
           level.setCell(tx, ty, open_desc);
+          if (my_cell) {
+            level.setHeight(tx, ty, my_cell.h);
+          }
           spawnRemove(level, tx, ty); // Also clear spawns
           eventsRemove(level, tx, ty); // And events
           // Also any walls that are our default wall, reset to the default wall
@@ -615,6 +623,9 @@ function toggleWithSelected(): void {
       } else {
         // different cell, replace
         setCellEx(level, myx, myy, dir, tx, ty, cell_desc);
+        if (my_cell) {
+          level.setHeight(tx, ty, my_cell.h);
+        }
       }
     }
   } else if (selected[0] === 'wall') {
@@ -669,6 +680,27 @@ function toggleWithSelected(): void {
   } else {
     assert(false);
   }
+
+  crawlerBuildModeCommit();
+}
+
+function adjustCellHeight(delta: number): void {
+  crawlerBuildModeBegin();
+  let my_ent = crawlerMyEnt();
+  let game_state = crawlerGameState();
+  let level = game_state.level;
+  assert(level);
+  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
+  let [myx, myy, dir] = pos;
+  let tx = myx + DX[dir];
+  let ty = myy + DY[dir];
+
+  let target_cell = level.getCell(tx, ty);
+  if (!target_cell) {
+    statusPush('Out of bounds');
+    return;
+  }
+  target_cell.h += delta / 16;
 
   crawlerBuildModeCommit();
 }
@@ -1155,11 +1187,20 @@ function showCurrentCell(param: {
       crawlerBuildModeCommit();
     }
     y += font_height + 1;
-    let { events, props } = target_cell;
+    let { h, events, props } = target_cell;
     let w1 = w * 0.4;
     let x1 = x + w1 + 1;
     let x2 = x + w - font_height;
     let w2 = x2 - 1 - x1;
+    if (h) {
+      font.draw({
+        style: palette_style.cell,
+        x, y, z,
+        size: font_height,
+        text: `Cell Height: ${h}`,
+      });
+      y += font_height + 1;
+    }
     if (events) {
       for (let ii = 0; ii < events.length; ++ii) {
         let event = events[ii];
@@ -1400,6 +1441,15 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
 
   if (frame.map_view) {
     return;
+  }
+
+  if (build_tab === BuildTab.Paint) {
+    if (keyDownEdge(KEYS.PAGEUP)) {
+      adjustCellHeight(1);
+    }
+    if (keyDownEdge(KEYS.PAGEDOWN)) {
+      adjustCellHeight(-1);
+    }
   }
 
   let { x, y, w, h } = frame;
@@ -1668,6 +1718,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     build_tab === BuildTab.Path ? '[SPACE] - Toggle path (see map)' : '[SPACE] - Toggle cell/wall with selected',
     build_tab === BuildTab.Paint ? '[NUMPAD/1-9] - Select cell/wall from palette' : '',
     build_tab === BuildTab.Paint ? '  Double-select or shift-click to redefine palette' : '',
+    build_tab === BuildTab.Paint ? '[PgUp/PgDn] - Adjust cell height' : '',
     '[ALT+1-3] - Change tab',
     '[CTRL+Z/Y] - Undo/Redo',
     '[M] - Map',

@@ -39,6 +39,7 @@ import {
 import { plural } from 'glov/common/util';
 import {
   ROVec2,
+  ROVec3,
   ROVec4,
 } from 'glov/common/vmath';
 import {
@@ -74,7 +75,7 @@ export type EntityDraw2DOpts = UIBoxColored;
 export type EntityDrawOpts = {
   dt: number;
   game_state: CrawlerState;
-  pos: ROVec2;
+  pos: ROVec3;
   zoffs: number;
   angle: number;
   color: ROVec4;
