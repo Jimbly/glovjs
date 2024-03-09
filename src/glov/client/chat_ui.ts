@@ -687,7 +687,7 @@ export type ChatUIRunParam = Partial<{
 export type ChatUI = ChatUIImpl;
 class ChatUIImpl {
   private w: number;
-  private h: number;
+  readonly h: number;
   private edit_text_entry: EditBox;
   channel: ClientChannelWorker | null = null;
   private on_chat_cb: ((msg: ChatMessageDataBroadcast) => void) | null = null;
@@ -1127,7 +1127,7 @@ class ChatUIImpl {
     return access_dummy;
   }
 
-  cmdParse(str: string, cb: CmdRespFunc): void {
+  cmdParse(str: string, cb?: CmdRespFunc): void {
     let handleResult: CmdRespFunc = cb ?
       (err, resp) => {
         this.handle_cmd_parse(err, resp);
