@@ -566,6 +566,7 @@ function toggleWithSelected(): void {
           level.setCell(tx, ty, crawlerGetCellDesc('solid'));
           spawnRemove(level, tx, ty); // Also clear spawns
           eventsRemove(level, tx, ty); // And events
+          level.setHeight(tx, ty, 0);
         } else if (target_cell.desc.advertised_wall_desc) {
           // open, but is a special zone
           if (cell_desc.advertised_wall_desc) {
@@ -576,6 +577,7 @@ function toggleWithSelected(): void {
             level.setCell(tx, ty, crawlerGetCellDesc('solid'));
             spawnRemove(level, tx, ty); // Also clear spawns
             eventsRemove(level, tx, ty); // And events
+            level.setHeight(tx, ty, 0);
           }
         } else {
           // already open, just open up the wall, do nothing with the cell
@@ -599,6 +601,7 @@ function toggleWithSelected(): void {
           level.setCell(tx, ty, crawlerGetCellDesc('solid'));
           spawnRemove(level, tx, ty); // Also clear spawns
           eventsRemove(level, tx, ty); // And events
+          level.setHeight(tx, ty, 0);
         } else {
           // we're placing anything else, toggle it back to open
           let open_desc = crawlerGetCellDesc('open');
