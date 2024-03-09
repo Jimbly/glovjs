@@ -87,6 +87,7 @@ import {
   vec3,
   vec4,
   zaxis,
+  zero_vec,
 } from 'glov/common/vmath';
 import { getEffCell, getEffWall } from '../common/crawler_script';
 import {
@@ -849,6 +850,7 @@ type SimplePillarRenderOpts = {
   roundness?: number;
   radius?: number;
   height?: number;
+  offs?: Vec3;
 };
 
 type SimplePillarOpts = SimpleVisualOpts & SimplePillarRenderOpts & {
@@ -927,10 +929,12 @@ function drawSimplePillar(
     let uvs = sprite.uidata!.rects[param.frame];
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
+  let offs = vopts.offs || zero_vec;
+  v3addScale(temp_pos, pos, offs, DIM);
 
   let params = opts.debug_visible ? param_occluded : param_visible;
   textureBindArray(sprite.texs);
-  mat4ScaleRotateTranslate(mat_obj, 1, rot, pos);
+  mat4ScaleRotateTranslate(mat_obj, 1, rot, temp_pos);
   engine.updateMatrices(mat_obj);
   shadersBind(crawlerRenderGetShader(ShaderType.ModelVertex), crawlerRenderGetShader(ShaderType.ModelFragment), params);
   geom.draw();
