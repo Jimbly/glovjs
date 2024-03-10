@@ -76,6 +76,7 @@ export function uiButtonHeight(): number;
 export function uiButtonWidth(): number;
 export const panel_pixel_scale: number;
 export function buttonWasFocused(): boolean;
+export function buttonLastSpotRet(): ButtonRet;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
 type UISpriteDef = {
@@ -179,6 +180,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   colors?: ColorSet;
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
+  y_offs?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
   no_bg?: boolean;
   style?: UIStyle;
@@ -218,6 +220,7 @@ export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
 export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
 export function button(param: ButtonGenericParam): ButtonRet | null;
+export function buttonSetDefaultYOffs(y_offs: Partial<Record<ButtonStateString, number>>): void;
 
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 

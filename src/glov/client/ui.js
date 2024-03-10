@@ -330,9 +330,14 @@ let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
 export let button_click = null; // on click, for callers to poll which mouse button, etc
+export let button_last_spot_ret = null;
 
 export function buttonWasFocused() {
   return button_focused;
+}
+
+export function buttonLastSpotRet() {
+  return button_last_spot_ret;
 }
 
 let modal_dialog = null;
@@ -895,6 +900,17 @@ export function progressBar(param) {
   }
 }
 
+
+let button_y_offs = {
+  regular: 0,
+  down: 0,
+  rollover: 0,
+  disabled: 0,
+};
+export function buttonSetDefaultYOffs(y_offs) {
+  merge(button_y_offs, y_offs);
+}
+
 // TODO: refactor so callers all use the new states 'focused'
 const SPOT_STATE_TO_UI_BUTTON_STATE = {
   [SPOT_STATE_REGULAR]: 'regular',
@@ -944,6 +960,7 @@ export function buttonShared(param) {
 
   button_focused = button_mouseover = spot_ret.focused;
   param.z += param.z_bias && param.z_bias[spot_ret.state] || 0;
+  button_last_spot_ret = spot_ret;
   profilerStopFunc();
   return spot_ret;
 }
@@ -994,12 +1011,13 @@ export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
   buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
+  let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let disabled = state === 'disabled';
   (param.font || font).drawSizedAligned(
     disabled ? param.font_style_disabled || font_style_disabled :
     focused ? param.font_style_focused || font_style_focused :
     param.font_style_normal || font_style_normal,
-    param.x + hpad, param.y, param.z + 0.1,
+    param.x + hpad, param.y + yoffs, param.z + 0.1,
     param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
   profilerStopFunc();
 }
@@ -1045,10 +1063,11 @@ function buttonImageDraw(param, state, focused) {
   let largest_w_vert = param.h * param.shrink * aspect;
   img_w = min(largest_w_horiz, largest_w_vert);
   img_h = img_w / aspect;
+  let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let pad_top = (param.h - img_h) / 2;
   let draw_param = {
     x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
-    y: param.y + pad_top + img_origin[1] * img_h,
+    y: param.y + pad_top + img_origin[1] * img_h + yoffs,
     z: param.z + (param.z_inc || Z_MIN_INC),
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
