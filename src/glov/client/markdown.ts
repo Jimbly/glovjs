@@ -73,6 +73,7 @@ export type MarkdownParseParam = {
 export type MarkdownLayoutParam = {
   font?: Font;
   font_style?: FontStyle | null;
+  font_style_bold?: FontStyle;
   w?: number;
   h?: number;
   // TODO: also need line_height here!  Get alignment/etc respecting that
@@ -112,8 +113,9 @@ export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
   }
 }
 
-export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
+export type MDLayoutCalcParam = Required<Omit<MarkdownLayoutParam, 'font_style_bold'>> & {
   font_style: FontStyle; // not `null`
+  font_style_bold?: FontStyle; // filled dynamically if needed
   cursor: {
     line_x0: number;
     x: number;
@@ -175,7 +177,10 @@ class MDBlockBold implements MDLayoutBlock {
     // TODO (later): migrate to UIStyle and use a named "bold" style instead?
     // For now/as well: specify 3 font styles in param?
     let old_style = param.font_style;
-    param.font_style = fontStyleBold(old_style, 0.5);
+    if (!param.font_style_bold) {
+      param.font_style_bold = fontStyleBold(old_style, 0.5);
+    }
+    param.font_style = param.font_style_bold;
 
     let ret: MDDrawBlock[][] = [];
     for (let ii = 0; ii < this.content.length; ++ii) {
