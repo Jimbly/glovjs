@@ -240,7 +240,7 @@ export type LabelImageOptions = {
   img_color?: ROVec4;
   img_color_focused?: ROVec4;
 };
-export type LabelParam = Partial<TooltipBoxParam> & {
+export type LabelBaseOptions = Partial<TooltipBoxParam> & {
   x: number;
   y: number;
   z?: number;
@@ -248,7 +248,10 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   h?: number;
   tooltip?: TooltipValue;
   style?: UIStyle;
-} & (LabelTextOptions | LabelImageOptions);
+};
+export type LabelTextParam = LabelBaseOptions & LabelTextOptions;
+export type LabelImageParam = LabelBaseOptions & LabelImageOptions;
+export type LabelParam = LabelTextParam | LabelImageParam;
 export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
