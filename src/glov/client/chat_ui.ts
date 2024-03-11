@@ -574,7 +574,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
       h: param.h,
       text_height: param.text_height,
       indent: param.indent,
-      align: param.align,
+      align: ALIGN.HFIT, // we definitely don't handle wrapping here!
       cache: this.submd_cache,
       text: user_name_md,
     };
