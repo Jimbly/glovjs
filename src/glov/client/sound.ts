@@ -562,7 +562,10 @@ export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean)
 }
 
 export function soundPlayStreaming(
-  soundname: string, volume: number, as_music: boolean, on_played_sound: (sound: GlovSoundSetUp | null) => void
+  soundname: string,
+  volume: number,
+  as_music: boolean,
+  on_played_sound?: (sound: GlovSoundSetUp | null) => void
 ): GlovSound | null {
   if (settings.volume * (as_music ? settings.volume_music : settings.volume_sound) === 0) {
     return null;
