@@ -1588,6 +1588,7 @@ class ChatUIImpl {
           break;
         }
       }
+      y = max(y, viewport.y);
     }
 
     if (!this.did_user_id_mouseover) {
