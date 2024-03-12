@@ -192,7 +192,7 @@ type MDBlockTextLayout = {
   text: string;
 };
 const debug_color = vec4(0,0,0,0.5);
-const NOT_WRAP = ~ALIGN.HWRAP;
+const NO_HALIGN = ALIGN.VTOP|ALIGN.VCENTER|ALIGN.VBOTTOM|ALIGN.HFIT;
 class MDDrawBlockText implements MDDrawBlock {
   constructor(public dims: MDBlockTextLayout) {
   }
@@ -211,7 +211,7 @@ class MDDrawBlockText implements MDDrawBlock {
     }
     lp.font.drawSizedAligned(style,
       param.x + lp.x, param.y + lp.y, param.z,
-      lp.h, lp.align & NOT_WRAP, lp.w, lp.h, lp.text);
+      lp.h, lp.align & NO_HALIGN, lp.w, lp.h, lp.text);
     profilerStop();
   }
 }
