@@ -161,6 +161,10 @@ ClientChannelWorker.prototype.getChannelData = function (key, default_value) {
   return dot_prop.get(this.data, key, default_value);
 };
 
+ClientChannelWorker.prototype.predictSetChannelData = function (key, value) {
+  dot_prop.set(this.data, key, value);
+};
+
 ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predict, resp_func) {
   if (!skip_predict) {
     dot_prop.set(this.data, key, value);

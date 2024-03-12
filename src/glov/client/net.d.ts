@@ -140,6 +140,7 @@ export interface ClientChannelWorker<DataType extends ClientChannelWorkerData=Cl
   getChannelData(key: string): unknown;
   getChannelID(): string;
   setChannelData(key: string, value: unknown, skip_predict?: boolean, resp_func?: NetErrorCallback): void;
+  predictSetChannelData(key: string, value: unknown): void;
   onMsg<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   removeMsgHandler<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   pak(msg: string): Packet;
