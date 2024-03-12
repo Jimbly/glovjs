@@ -397,6 +397,17 @@ nec arborei timentem, ut crimina vidit.
     text: markdown_text,
   }).h + pad;
 
+  internal_y += markdownAuto({
+    font_style,
+    x: 2,
+    y: internal_y,
+    z: z + 1,
+    w: scroll_area_w - 2,
+    text_height,
+    align: ALIGN.HWRAP|ALIGN.HFIT|ALIGN.HCENTER,
+    text: markdown_text,
+  }).h + pad;
+
   collapsagoriesHeader({
     y: internal_y,
     text: 'Widgets',
