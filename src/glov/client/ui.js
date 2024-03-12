@@ -533,7 +533,8 @@ function uiStartup(param) {
 
 let dynamic_text_elem;
 export function uiGetDOMElem(last_elem, allow_modal) {
-  if (modal_dialog && !allow_modal) {
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  if (isMenuUp() && !allow_modal) {
     // Note: this case is no longer needed for edit boxes (spot's focus logic
     //   handles this), but links still rely on this
     return null;
