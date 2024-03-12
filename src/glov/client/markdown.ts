@@ -12,6 +12,7 @@ import {
   Text,
   fontStyleAlpha,
   fontStyleBold,
+  fontStyleHash,
 } from './font';
 import { Box } from './geom_types';
 import { mousePos } from './input';
@@ -607,6 +608,7 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
       param.text_height || uiTextHeight(),
       param.indent || 0,
       param.align || 0,
+      param.font_style ? fontStyleHash(param.font_style) : 0,
     ].join(':');
     state.cache = getUIElemData(cache_key, { key: text }, mdcAlloc);
     profilerStop();

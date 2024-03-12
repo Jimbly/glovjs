@@ -28,6 +28,8 @@ export function fontStyleOutlined(base: FontStyle | null, outline_width: number,
 // best attempt and making an existing style "bold"
 export function fontStyleBold(base: FontStyle | null, outline_width: number): FontStyle;
 
+export function fontStyleHash(style: FontStyle): number;
+
 export enum ALIGN {
   HLEFT,
   HCENTER,
