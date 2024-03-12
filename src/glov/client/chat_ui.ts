@@ -1581,12 +1581,12 @@ class ChatUIImpl {
           break;
         }
         let msg_h = msg.msg_h;
-        if (msg_h > max_h && ii) {
-          break;
-        }
         max_h -= msg_h;
         y -= msg_h;
         drawChatLine(msg, alpha);
+        if (y <= viewport.y) {
+          break;
+        }
       }
     }
 
