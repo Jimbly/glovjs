@@ -333,6 +333,10 @@ SubscriptionManager.prototype.sendResubscribe = function () {
   this.need_resub = null;
 };
 
+SubscriptionManager.prototype.getCackAppData = function () {
+  return this.cack_data?.app_data || null;
+};
+
 SubscriptionManager.prototype.handleConnect = function (data) {
   let reconnect = false;
   if (this.first_connect) {

@@ -65,6 +65,8 @@ export type SubscriptionManager = {
   onceLoggedIn(cb: VoidFunc): void; // like `.once('login', cb)`, but also fires immediately if appropriate
   onceConnected(cb: VoidFunc): void; // like `.once('connect', cb), but also fires immediately if appropriate
 
+  getCackAppData(): DataObject | null;
+
   getChannel(channel_id: string, do_subscribe?: boolean): ClientChannelWorker;
   getChannelImmediate(channel_id: string, timeout?: number): ClientChannelWorker;
   getMyUserChannel(): ClientChannelWorker | null;
