@@ -295,6 +295,8 @@ export function modalDialog(param: ModalDialogParam): void;
 
 export interface ModalTextEntryParam extends ModalDialogParamBase<(text: string) => void> {
   edit_text?: EditBoxOptsAll['text'];
+  multiline?: number;
+  enforce_multiline?: boolean;
   max_len?: number;
   max_visual_size?: TextVisualLimit;
 }

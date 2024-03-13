@@ -1490,6 +1490,8 @@ export function modalTextEntry(param) {
     spellcheck: false,
     initial_select: true,
     text: param.edit_text,
+    multiline: param.multiline,
+    enforce_multiline: param.enforce_multiline,
     max_len: param.max_len,
     max_visual_size: param.max_visual_size,
     esc_clears: false,
@@ -1520,7 +1522,7 @@ export function modalTextEntry(param) {
       font_height: params.font_height,
     });
     if (!params.fullscreen_mode) {
-      params.y += params.font_height + modal_pad;
+      params.y += params.font_height * (param.multiline || 1) + modal_pad;
     }
     let ret;
     if (eb_ret === eb.SUBMIT) {
