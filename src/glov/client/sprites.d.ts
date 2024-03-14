@@ -131,7 +131,7 @@ export function spriteChainedStart(): void;
 export function spriteChainedStop(): void;
 export function spriteQueueFn(z: number, fn: () => void): void;
 export function spriteClip(z_start: number, z_end: number, x: number, y: number, w: number, h: number): void;
-export function spriteClipped(): boolean;
+export function spriteClipped(including_paused?: boolean): boolean;
 export function spriteClippedViewport(): Box;
 export function spriteClipPush(z: number, x: number, y: number, w: number, h: number): void;
 export function spriteClipPop(): void;
