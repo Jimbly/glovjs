@@ -49,12 +49,16 @@ export function chatSetMinimumAccountAge(worker: ChannelWorker, minutes: number)
   worker.setChannelData(CHAT_MINIMUM_ACCOUNT_AGE_KEY, minutes);
 }
 
-export function chatGet(worker: ChannelWorker): ChatHistoryData | null {
+function chatGet(worker: ChannelWorker): ChatHistoryData | null {
   return worker.getChannelData(CHAT_DATA_KEY, null);
 }
 
-export function chatClear(worker: ChannelWorker): void {
-  return worker.setChannelData(CHAT_DATA_KEY, null);
+export function chatClear(worker: ChannelWorker): boolean {
+  if (!worker.getChannelData(CHAT_DATA_KEY, null)) {
+    return false;
+  }
+  worker.setChannelData(CHAT_DATA_KEY, null);
+  return true;
 }
 
 export function sendChat(
