@@ -149,7 +149,7 @@ export interface TooltipBoxParam {
   tooltip_above?: boolean;
   tooltip_right?: boolean;
   tooltip_center?: boolean;
-  tooltip: Text | ((param:unknown) => (Text | null));
+  tooltip: TooltipValue;
 }
 export function drawTooltipBox(param: TooltipBoxParam): void;
 

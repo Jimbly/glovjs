@@ -155,10 +155,15 @@ type SpotComputedFields = {
 
 export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFields {
   def: SpotParamBase; // inherit all undefined SpotParamBase members from this
-  tooltip?: TooltipValue | null;
   hook?: HookList;
   url?: string;
   internal?: boolean; // For links (spots with `url`): default `true`
+  // from TooltipBoxParam
+  tooltip?: TooltipValue | null;
+  tooltip_width?: number;
+  tooltip_above?: boolean;
+  tooltip_right?: boolean;
+  tooltip_center?: boolean;
 }
 
 export interface SpotSubParam extends Box, SpotComputedFields {
