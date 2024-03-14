@@ -48,6 +48,7 @@ const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
+const { markdownAuto } = require('./markdown');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { sliderSetDefaultShrink } = require('./slider.js');
@@ -827,9 +828,22 @@ export function drawTooltip(param) {
     tooltip_y0 -= dims.h + eff_tooltip_pad * 2 + (param.tooltip_auto_above_offset || 0);
   }
   let y = tooltip_y0 + eff_tooltip_pad;
-  y += font.drawSizedWrapped(font_style_modal,
-    x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
-    tooltip);
+  if (param.tooltip_markdown === false) {
+    y += font.drawSizedWrapped(font_style_modal,
+      x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
+      tooltip);
+  } else {
+    y += markdownAuto({
+      font_style: font_style_modal,
+      x: x + eff_tooltip_pad,
+      y: y + tooltip_text_offs,
+      z: z+1,
+      w,
+      align: ALIGN.HWRAP,
+      text_height: ui_style_current.text_height,
+      text: tooltip
+    }).h;
+  }
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
 
@@ -876,6 +890,7 @@ export function drawTooltipBox(param) {
     tooltip_center: param.tooltip_center,
     tooltip,
     tooltip_width: param.tooltip_width,
+    tooltip_markdown: param.tooltip_markdown,
   });
 }
 
