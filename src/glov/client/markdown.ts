@@ -2,6 +2,7 @@ import assert from 'assert';
 import { has } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
+  unit_vec,
   vec4,
 } from 'glov/common/vmath';
 import * as engine from './engine';
@@ -29,12 +30,19 @@ import {
   markdown_default_renderables,
 } from './markdown_renderables';
 import {
+  SPOT_DEFAULT_LABEL,
+  spot,
+  spotPadMode,
+} from './spot';
+import {
   spriteClipPause,
   spriteClipResume,
   spriteClipped,
   spriteClippedViewport,
 } from './sprites';
 import {
+  LabelBaseOptions,
+  drawElipse,
   drawRect2,
   getUIElemData,
   uiFontStyleNormal,
@@ -641,5 +649,39 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
     delete param.cache;
   }
   profilerStopFunc();
+  return dims;
+}
+
+export function markdownLabel(param: MarkdownAutoParam & LabelBaseOptions): MarkdownDims {
+  let { tooltip } = param;
+  let dims = markdownAuto(param);
+  if (tooltip) {
+    let {
+      align,
+      x,
+      y,
+      z,
+      tooltip_above,
+      tooltip_right,
+    } = param;
+    z = z || Z.UI;
+    align = align || 0;
+    let w = param.w || dims.w;
+    let h = param.h || dims.h;
+    let spot_ret = spot({
+      x, y,
+      w, h,
+      tooltip: tooltip,
+      tooltip_width: param.tooltip_width,
+      tooltip_above,
+      tooltip_right: Boolean(tooltip_right || align & ALIGN.HRIGHT),
+      tooltip_center: Boolean(align & ALIGN.HCENTER),
+      def: SPOT_DEFAULT_LABEL,
+    });
+    if (spot_ret.focused && spotPadMode()) {
+      // No focused style support yet, do a generic glow instead?
+      drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+    }
+  }
   return dims;
 }
