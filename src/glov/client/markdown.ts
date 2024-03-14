@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { has } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import {
   vec4,
 } from 'glov/common/vmath';
@@ -393,11 +394,16 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   assert(blocks);
   let draw_blocks: MDDrawBlock[] = [];
   let maxx = 0;
+  let miny = Infinity;
+  let maxy = 0;
   for (let ii = 0; ii < blocks.length; ++ii) {
     let arr = blocks[ii].layout(calc_param);
     for (let jj = 0; jj < arr.length; ++jj) {
       let block = arr[jj];
-      maxx = max(maxx, block.dims.x + block.dims.w);
+      let dims = block.dims;
+      maxx = max(maxx, dims.x + dims.w);
+      maxy = max(maxy, dims.y + dims.h);
+      miny = min(miny, dims.y);
       draw_blocks.push(block);
     }
   }
@@ -448,8 +454,20 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       block.dims.w = (x1 - x0) * xscale;
     }
   }
+  if (draw_blocks.length && (calc_param.align & (ALIGN.VCENTER | ALIGN.VBOTTOM))) {
+    if (verify(calc_param.h)) {
+      let yoffs = calc_param.h - maxy;
+      if (calc_param.align & ALIGN.VCENTER) {
+        yoffs *= 0.5;
+      }
+      for (let ii = 0; ii < draw_blocks.length; ++ii) {
+        let block = draw_blocks[ii];
+        block.dims.y += yoffs;
+      }
+    }
+  }
   maxx = 0;
-  let maxy = 0;
+  maxy = 0;
   let max_block_h = 0;
   for (let ii = 0; ii < draw_blocks.length; ++ii) {
     let block = draw_blocks[ii];
