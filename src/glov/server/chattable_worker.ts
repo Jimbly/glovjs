@@ -23,8 +23,11 @@ const CHAT_MINIMUM_ACCOUNT_AGE_KEY = 'public.chat_minimum_account_age';
 const CHAT_DATA_KEY = 'private.chat';
 
 export interface ChattableWorker extends ChannelWorker {
+  // internal state, not implemented by caller
+  chat_max_messages?: number; // set by chatSetMaxMessages() if dynamic, or on prototype if static
   chat_msg_timestamps?: FIFO< { timestamp: number; id: string }>;
   chat_records_map?: Partial<Record<string, { timestamp: number; id: string }>>;
+  // APIs implemented by caller to modify ChattableWorker behavior
   chatFilter?(source: ClientHandlerSource, msg: string): string | null;
   chatDecorateData?(data_saved: ChatMessageDataSaved, data_broadcast: ChatMessageDataBroadcast): void;
   chatCooldownFilter?(source: ClientHandlerSource): boolean;
@@ -61,6 +64,39 @@ export function chatClear(worker: ChannelWorker): boolean {
   return true;
 }
 
+export function chatSetMaxMessages(worker: ChattableWorker, max_messages: number): void {
+  let chat = chatGet(worker);
+  if (chat) {
+    let { msgs, idx } = chat;
+    if (max_messages === msgs.length) {
+      // no change, and we've previously wrapped
+    } else if (idx === msgs.length && msgs.length < max_messages) {
+      // we've not wrapped, and the new limit is larger than our number of messages
+    } else {
+      // otherwise, need some fixup
+      // grab ordered list of messages
+      let new_list = [];
+      for (let ii = 0; ii < msgs.length; ++ii) {
+        let idx2 = (idx + ii) % msgs.length;
+        let elem = msgs[idx2];
+        if (elem && elem.msg) {
+          new_list.push(elem);
+        }
+      }
+      let new_idx = new_list.length;
+      if (max_messages < new_list.length) {
+        new_list = new_list.slice(-max_messages);
+        new_idx = 0;
+      }
+      worker.setChannelData<ChatHistoryData>(CHAT_DATA_KEY, {
+        idx: new_idx,
+        msgs: new_list,
+      });
+    }
+  }
+  worker.chat_max_messages = max_messages;
+}
+
 export function sendChat(
   worker: ChattableWorker,
   id: string | undefined,
@@ -79,7 +115,8 @@ export function sendChat(
       msgs: [],
     };
   }
-  let last_idx = (chat.idx + CHAT_MAX_MESSAGES - 1) % CHAT_MAX_MESSAGES;
+  let max_messages = (typeof worker.chat_max_messages === 'number') ? worker.chat_max_messages : CHAT_MAX_MESSAGES;
+  let last_idx = (chat.idx + max_messages - 1) % max_messages;
   let last_msg = chat.msgs[last_idx];
   if (id && last_msg && last_msg.id === id && last_msg.msg === msg && !(flags & ~CHAT_USER_FLAGS)) {
     return 'ERR_ECHO';
@@ -93,7 +130,7 @@ export function sendChat(
     worker.chatDecorateData(data_saved, data_broad);
   }
   chat.msgs[chat.idx] = data_saved;
-  chat.idx = (chat.idx + 1) % CHAT_MAX_MESSAGES;
+  chat.idx = (chat.idx + 1) % max_messages;
   // Setting whole 'chat' blob, since we re-serialize the whole metadata anyway
   if (!worker.channel_server.restarting) {
     worker.setChannelData(CHAT_DATA_KEY, chat);
