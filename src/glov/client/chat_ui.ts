@@ -672,6 +672,7 @@ export type ChatUIParam = {
   classifyRole?: (roles: Roles | undefined, always_true: true) => string; // Roles -> key to index `styles`
   cmdLogFilter?: (cmd: string) => string;
   decorate_user_cb?: (msg: ChatMessageUser) => string;
+  message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
 };
 
 export type ChatUIRunParam = Partial<{
@@ -729,6 +730,7 @@ class ChatUIImpl {
   did_user_id_mouseover = false; // internal, for MDChatSource
   user_context_cb?: (param: { user_id: string }) => void; // internal, for MDChatSource
   decorate_user_cb: (msg: ChatMessageUser) => string; // internal, for MDRChatSource
+  message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
   chat_interactive = false; // internal, for MDRChatURL
   url_base: string; // internal, for MDRChatURL
   // focuse_handled gets set if MDRChatURL handles focus/click/right-click/etc,
@@ -823,6 +825,7 @@ class ChatUIImpl {
     this.classifyRole = params.classifyRole;
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
+    this.message_pre_send_cb = params.message_pre_send_cb;
 
     if (this.url_match) {
       this.renderables.chaturl = this.createMDRChatURL.bind(this);
@@ -1158,16 +1161,20 @@ class ChatUIImpl {
     return this.edit_text_entry.isFocused();
   }
 
-  sendChat(flags: number, text: string): void {
-    if (!netClient() || !netClient().connected) {
-      this.addChatError('Cannot chat: Disconnected');
-    } else if (!this.channel) {
-      this.addChatError('Cannot chat: Must be in a channel');
-    } else if (!netSubs().loggedIn() && !netSubs().allow_anon) {
-      this.addChatError('Cannot chat: Must be logged in');
-    } else if (text.length > this.max_len) {
-      this.addChatError('Chat message too long');
-    } else {
+  sendChat(flags: number, text_in: string): void {
+    let do_send = (text: string | null): void => {
+      if (!text) {
+        return;
+      }
+      if (!netClient() || !netClient().connected) {
+        return this.addChatError('Cannot chat: Disconnected');
+      } else if (!this.channel) {
+        return this.addChatError('Cannot chat: Must be in a channel');
+      } else if (!netSubs().loggedIn() && !netSubs().allow_anon) {
+        return this.addChatError('Cannot chat: Must be logged in');
+      } else if (text.length > this.max_len) {
+        return this.addChatError('Chat message too long');
+      }
       let pak = this.channel.pak('chat');
       pak.writeInt(flags);
       pak.writeString(text);
@@ -1193,6 +1200,11 @@ class ChatUIImpl {
           }
         }
       });
+    };
+    if (this.message_pre_send_cb) {
+      this.message_pre_send_cb(flags, text_in, do_send);
+    } else {
+      do_send(text_in);
     }
   }
 
