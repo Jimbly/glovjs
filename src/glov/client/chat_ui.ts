@@ -845,8 +845,11 @@ class ChatUIImpl {
       return null;
     }
     let { url_info } = this;
-    if (url_info && !url_info.test(key)) {
-      return null;
+    if (url_info) {
+      let m = key.match(url_info);
+      if (!m || m[0] !== key) {
+        return null;
+      }
     }
     return new MDRChatURL(key, this.styles.link, this.styles.link_hover, this);
   }
