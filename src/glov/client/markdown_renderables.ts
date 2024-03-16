@@ -94,8 +94,10 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
     let img_data = this.img_data = allowed_images[this.key] || { sprite: ui_sprites.white };
     let { sprite, frame } = img_data;
     let aspect = 1;
-    if (typeof frame === 'number' && sprite.uidata && sprite.uidata.aspect) {
-      aspect = sprite.uidata.aspect[frame];
+    if (typeof frame === 'number' && sprite.uidata) {
+      if (sprite.uidata.aspect) {
+        aspect = sprite.uidata.aspect[frame];
+      }
     } else {
       let tex = sprite.texs[0];
       aspect = tex.width / tex.height;
