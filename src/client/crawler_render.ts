@@ -104,6 +104,7 @@ import {
 import type { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import type { Box } from 'glov/client/geom_types';
 import type { BucketType, Sprite, SpriteUIData } from 'glov/client/sprites';
+import type { SpriteSheet } from 'glov/client/spritesheet';
 
 type Geom = ReturnType<typeof geomCreateQuads>;
 type Shader = ReturnType<typeof shaderCreate>;
@@ -330,12 +331,6 @@ export function crawlerRenderStartup(): void {
   };
 }
 
-export type SpriteSheet = {
-  sprite: Sprite;
-  sprite_centered: Sprite;
-  sprite_centered_x: Sprite;
-  tiles: Partial<Record<string, number>>;
-};
 export type SpriteSheetSet = Partial<Record<string, SpriteSheet>> & { default: SpriteSheet };
 let spritesheets: SpriteSheetSet;
 
