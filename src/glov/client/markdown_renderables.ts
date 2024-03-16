@@ -1,6 +1,7 @@
 export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
 export let markdown_default_font_styles: TSMap<FontStyle> = {};
 
+import assert from 'assert';
 import {
   ROVec4,
   Vec4,
@@ -26,6 +27,7 @@ import {
 } from './ui';
 
 import type { Box } from './geom_types';
+import type { SpriteSheet } from './spritesheet';
 import type { Optional, TSMap } from 'glov/common/types';
 
 export function markdownRenderableAddDefault(key: string, renderable: MarkdownRenderable): void {
@@ -70,8 +72,20 @@ export type MarkdownImageParam = {
 };
 let allowed_images: TSMap<MarkdownImageParam> = Object.create(null);
 export function markdownImageRegister(img_name: string, param: MarkdownImageParam): void {
+  assert(!allowed_images[img_name]);
   allowed_images[img_name] = param;
 }
+
+export function markdownImageRegisterSpriteSheet(spritesheet: SpriteSheet): void {
+  let sprite = spritesheet.sprite;
+  for (let key in spritesheet.tiles) {
+    markdownImageRegister(key, {
+      sprite,
+      frame: spritesheet.tiles[key],
+    });
+  }
+}
+
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   key: string;
   scale: number;
