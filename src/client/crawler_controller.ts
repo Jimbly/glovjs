@@ -1420,8 +1420,9 @@ export class CrawlerController {
       const { game_state } = this;
       v2add(this.cam_pos, game_state.pos, half_vec);
       const { level } = game_state;
-      assert(level);
-      this.cam_pos[2] = this.cam_pos_z_offs + level.getInterpolatedHeight(game_state.pos[0], game_state.pos[1]);
+      if (level) {
+        this.cam_pos[2] = this.cam_pos_z_offs + level.getInterpolatedHeight(game_state.pos[0], game_state.pos[1]);
+      }
       return {
         game_state: this.game_state,
         script_api: this.script_api,
