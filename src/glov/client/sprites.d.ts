@@ -102,6 +102,7 @@ export type TextureOptions = {
   filter_mag?: number;
   wrap_s?: number;
   wrap_t?: number;
+  force_mipmaps?: boolean;
 };
 export type SpriteParam = SpriteParamBase & ({
   texs: Texture[];
