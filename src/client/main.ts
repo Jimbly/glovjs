@@ -7,6 +7,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
+import { markdown_default_renderables } from 'glov/client/markdown_renderables';
 import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
@@ -205,6 +206,7 @@ export function main(): void {
     outline_width: 3,
     fade_start_time: [10000, 5000],
     fade_time: [1000, 1000],
+    renderables: markdown_default_renderables, // use all system renderables
   });
 
   crawlerBuildModeStartup({
