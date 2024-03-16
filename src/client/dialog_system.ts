@@ -1,4 +1,6 @@
+import assert from 'assert';
 import {
+  ALIGN,
   Font,
   FontStyle,
   fontStyle,
@@ -14,9 +16,19 @@ import {
   padButtonDown,
 } from 'glov/client/input';
 import {
+  markdownAuto,
+  markdownDims,
+  markdownPrep,
+} from 'glov/client/markdown';
+import {
+  MDASTNode,
+  mdParse,
+} from 'glov/client/markdown_parse';
+import {
   UIBox,
   buttonText,
   panel,
+  suppressNewDOMElemWarnings,
   uiButtonHeight,
   uiTextHeight,
 } from 'glov/client/ui';
@@ -32,7 +44,7 @@ import { buildModeActive } from './crawler_build_mode';
 import { crawlerMyEnt } from './crawler_entity_client';
 import { crawlerScriptAPI } from './crawler_play';
 
-const { ceil, max, round } = Math;
+const { ceil, round } = Math;
 
 const FADE_TIME = 1000;
 
@@ -59,9 +71,8 @@ let active_state: DialogState;
 
 
 let temp_color = vec4(1, 1, 1, 1);
-let font: Font;
 
-let style_default = fontStyle(null, {});
+let style_default = fontStyle(null, { color: 0x000000ff });
 function dialogDefaultTextStyle(): FontStyle {
   return style_default;
 }
@@ -82,25 +93,81 @@ export function dialogMoveLocked(): boolean {
   return Boolean(active_dialog && !active_dialog.transient);
 }
 
-function dimsSplit(style: FontStyle, w: number, size: number, text: string): {
+function mdTruncate(tree: MDASTNode[], state: { cch: number }): string {
+  let ret = [];
+  for (let ii = 0; state.cch && ii < tree.length; ++ii) {
+    let elem = tree[ii];
+    if (elem.type === 'paragraph') {
+      ret.push(mdTruncate(elem.content, state));
+      if (!state.cch) {
+        break;
+      }
+      --state.cch;
+      ret.push('\n\n');
+    } else if (elem.type === 'strong' || elem.type === 'em') {
+      if (!--state.cch) {
+        break;
+      }
+      ret.push(elem.type === 'strong' ? '**' : '*');
+      ret.push(mdTruncate(elem.content, state));
+      ret.push(elem.type === 'strong' ? '**' : '*');
+    } else if (elem.type === 'text') {
+      if (elem.content.length >= state.cch) {
+        ret.push(elem.content.slice(0, state.cch));
+        state.cch = 0;
+        break;
+      }
+      ret.push(elem.content);
+      state.cch -= elem.content.length;
+    } else if (elem.type === 'renderable') {
+      if (!--state.cch) {
+        break;
+      }
+      ret.push(elem.content.orig_text);
+    } else {
+      // Some other markdown element, need to know how to truncate its contents
+      //   and restore the wrapping formatting.
+      assert(false);
+    }
+  }
+  return ret.join('');
+}
+
+type DimsSplitRet = {
   w: number;
   h: number;
-  numlines: number;
-  lines: string[];
-} {
-  let max_x1 = 0;
-  let lines: string[] = [];
-  function lineCallback(x0: number, linenum: number, line: string, x1: number): void {
-    max_x1 = max(max_x1, x1);
-    lines.push(line);
+  tree: MDASTNode[];
+};
+let dims_split_cache: {
+  text: string;
+  ret: DimsSplitRet;
+};
+function dimsSplit(style: FontStyle, align: ALIGN, w: number, size: number, text: string): DimsSplitRet {
+  if (dims_split_cache && dims_split_cache.text === text) {
+    return dims_split_cache.ret;
   }
-  let numlines = font.wrapLines(style, w, 0, size, text, 0, lineCallback);
-  return {
-    w: max_x1,
-    h: numlines * size,
-    numlines,
-    lines,
+  let md_param = {
+    cache: {},
+    font_style: style,
+    w,
+    text_height: size,
+    text: text,
+    align,
   };
+  markdownPrep(md_param);
+  let dims = markdownDims(md_param);
+  let tree = mdParse(text);
+
+  let ret: DimsSplitRet = {
+    w: dims.w,
+    h: dims.h,
+    tree,
+  };
+  dims_split_cache = {
+    text,
+    ret,
+  };
+  return ret;
 }
 
 
@@ -143,12 +210,24 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   const text_height = uiTextHeight();
   let size = text_height;
   let style = text_style_cb(active_dialog);
-  let dims = dimsSplit(style, w - HPAD * 2, size, text);
-  let { lines } = dims;
+  let align = transient ? ALIGN.HCENTER|ALIGN.HWRAP : ALIGN.HLEFT|ALIGN.HWRAP;
+  let dims = dimsSplit(style, align, w - HPAD * 2, size, text);
   y += h - dims.h - pad_bottom - buttons_h;
   let text_len = ceil(counter / 18);
-  let text_full = text_len >= (text.length + 20);
-  let align;
+  let text_definitely_full = text_len >= (text.length + 20);
+  let text_to_draw = text;
+  let text_full = text_definitely_full;
+  if (!text_definitely_full) {
+    let state = { cch: text_len };
+    let truncated = mdTruncate(dims.tree, state);
+    if (!state.cch) {
+      // was truncated
+      text_to_draw = truncated;
+      suppressNewDOMElemWarnings();
+    } else if (state.cch >= 20) {
+      text_full = true;
+    }
+  }
   if (!transient) {
     if (!text_full && !active_state.ff_down) {
       if (ff()) {
@@ -161,24 +240,19 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
       // Eat these keys until released
       active_state.ff_down = ff();
     }
-    align = font.ALIGN.HLEFT|font.ALIGN.HWRAP;
-  } else {
-    align = font.ALIGN.HCENTER|font.ALIGN.HWRAP;
   }
   let yy = y;
-  for (let ii = 0; ii < lines.length && text_len > 0; ++ii) {
-    let line = lines[ii];
-    font.draw({
-      style,
-      size,
-      x: x + HPAD, y: yy, z, w: w - HPAD * 2,
-      align,
-      text: text_len >= line.length ? line : line.slice(0, text_len),
-      alpha,
-    });
-    yy += size;
-    text_len -= line.length + 1;
-  }
+  markdownAuto({
+    font_style: style,
+    text_height: size,
+    x: x + HPAD,
+    y: yy,
+    z,
+    w: w - HPAD * 2,
+    align,
+    text: text_to_draw,
+    alpha,
+  });
   yy = y + dims.h + BUTTON_HEAD;
 
   if (text_full && !active_state.ff_down) {
@@ -282,6 +356,5 @@ export function dialogStartup(param: {
   font: Font;
   text_style_cb?: DialogTextStyleCB;
 }): void {
-  ({ font } = param);
   text_style_cb = param.text_style_cb || dialogDefaultTextStyle;
 }
