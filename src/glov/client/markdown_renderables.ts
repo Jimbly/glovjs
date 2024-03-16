@@ -1,4 +1,5 @@
 export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
+export let markdown_default_font_styles: TSMap<FontStyle> = {};
 
 import {
   ROVec4,
@@ -9,6 +10,8 @@ import {
 import {
   ALIGN,
   EPSILON,
+  FontStyle,
+  fontStyleColored,
 } from './font';
 import {
   MDDrawBlock,
@@ -28,6 +31,17 @@ import type { Optional, TSMap } from 'glov/common/types';
 export function markdownRenderableAddDefault(key: string, renderable: MarkdownRenderable): void {
   markdown_default_renderables[key] = renderable;
 }
+
+export function markdownSetColorStyle(idx: string | number, style: FontStyle): void {
+  markdown_default_font_styles[idx] = style;
+}
+export function markdownSetColorStyles(styles: FontStyle[]): void {
+  for (let ii = 0; ii < styles.length; ++ii) {
+    markdown_default_font_styles[ii] = styles[ii];
+  }
+}
+const default_palette = [0x000000ff, 0xff2020ff, 0x20ff20ff, 0x2020ffff, 0xffffffff];
+markdownSetColorStyles(default_palette.map((c) => fontStyleColored(null, c)));
 
 // Note: renderable can return null (at parse time) and will be replaced with the original text
 export type MarkdownRenderable = (content: RenderableContent, data?: unknown) => (MDLayoutBlock | null);
@@ -123,5 +137,53 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
 function createMDRImg(content: RenderableContent): MDRImg {
   return new MDRImg(content);
 }
-
 markdownRenderableAddDefault('img', createMDRImg);
+
+class MDRColorStart implements MDLayoutBlock {
+  key: string;
+  constructor(content: RenderableContent) {
+    this.key = content.key;
+  }
+  layout(param: MDLayoutCalcParam): MDDrawBlock[] {
+    let { font_styles, font_style_idx, font_style_stack } = param;
+    if (!font_style_stack) {
+      font_style_stack = param.font_style_stack = [];
+    }
+    font_style_stack.push(font_style_idx);
+    if (font_style_idx === this.key) {
+      // no change
+    } else {
+      let new_style = font_styles[this.key] || markdown_default_font_styles[this.key];
+      if (new_style) {
+        param.font_style_idx = this.key;
+        param.font_style = new_style;
+      }
+    }
+
+    return [];
+  }
+}
+markdownRenderableAddDefault('c', (content: RenderableContent) => new MDRColorStart(content));
+
+class MDRColorEnd implements MDLayoutBlock {
+  layout(param: MDLayoutCalcParam): MDDrawBlock[] {
+    let { font_styles, font_style_idx, font_style_stack } = param;
+    if (!font_style_stack || !font_style_stack.length) {
+      // stack underflow
+    } else {
+      let key = font_style_stack.pop()!;
+      if (font_style_idx === key) {
+        // nothing
+      } else {
+        let new_style = font_styles[key] || markdown_default_font_styles[key];
+        if (new_style) {
+          param.font_style_idx = key;
+          param.font_style = new_style;
+        }
+      }
+    }
+
+    return [];
+  }
+}
+markdownRenderableAddDefault('/c', (content: RenderableContent) => new MDRColorEnd());

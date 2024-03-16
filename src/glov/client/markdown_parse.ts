@@ -23,7 +23,7 @@ import type { TSMap } from 'glov/common/types';
 //   },
 // };
 
-let renderable_regex = /^\[([^\s\]=]+)=([^\s\]]*)( [^\]]+)?\](?!\()/;
+let renderable_regex = /^\[([^\s\]=]+)(=?[^\s\]]*)( [^\]]+)?\](?!\()/;
 let renderable_param_regex = / ([^=]+)(?:=(?:"([^"]+)"|(\S+)))?/g;
 export type RenderableParam = TSMap<number | string | true>;
 export type RenderableContent = {
@@ -44,6 +44,14 @@ let renderable_rule: ParserRule = {
     let capture = renderable_regex.exec(source);
     if (capture) {
       let type = capture[1];
+      if (capture[2].startsWith('=')) {
+        capture[2] = capture[2].slice(1);
+      } else {
+        // parameter-less only allowed for "closing" renderables
+        if (!type.startsWith('/')) {
+          return null;
+        }
+      }
       if (has(valid_renderables, type)) {
         return capture;
       }
