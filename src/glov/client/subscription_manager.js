@@ -161,6 +161,10 @@ ClientChannelWorker.prototype.getChannelData = function (key, default_value) {
   return dot_prop.get(this.data, key, default_value);
 };
 
+ClientChannelWorker.prototype.predictSetChannelData = function (key, value) {
+  dot_prop.set(this.data, key, value);
+};
+
 ClientChannelWorker.prototype.setChannelData = function (key, value, skip_predict, resp_func) {
   if (!skip_predict) {
     dot_prop.set(this.data, key, value);
@@ -327,6 +331,10 @@ SubscriptionManager.prototype.sendResubscribe = function () {
   }
   this.emit('connect', this.need_resub.reconnect);
   this.need_resub = null;
+};
+
+SubscriptionManager.prototype.getCackAppData = function () {
+  return this.cack_data?.app_data || null;
 };
 
 SubscriptionManager.prototype.handleConnect = function (data) {

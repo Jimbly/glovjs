@@ -5,6 +5,8 @@ export type VoidFunc = () => void;
 
 export type TSMap<T> = Partial<Record<string, T>>;
 
+export type ERR = string | undefined | null;
+
 /**
  * Data object type to be used when handling an object that contains some type of (possible unknown) information.
  * @template T - The type of information held by the object, defaults to unknown.
@@ -43,7 +45,7 @@ export type NetErrorCallback<T = never> = (
 ) => void;
 
 type NetResponseCallbackCalledByUser<T = never> = (
-  err?: string | undefined | null,
+  err?: ERR,
   result?: T extends (never | void) ? never : (T | undefined | null),
   resp_func?: NetResponseCallbackCalledBySystem
 ) => void;

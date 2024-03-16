@@ -150,6 +150,7 @@ GlovFontStyle.prototype.color = 0xFFFFFFff;
 // GlovFontStyle.prototype.colorLR = 0;
 // GlovFontStyle.prototype.colorLL = 0;
 // GlovFontStyle.prototype.color_mode = COLOR_MODE.SINGLE;
+GlovFontStyle.prototype.hash = 0; // filled dynamically
 
 export const font_shaders = {};
 
@@ -246,6 +247,22 @@ export function fontStyleAlpha(font_style, alpha) {
     glow_color: colorAlpha((font_style || glov_font_default_style).glow_color, alpha),
   });
 }
+
+// Returns a Float64, so pretty much anything is fine
+export function fontStyleHash(style) {
+  if (!style.hash) {
+    style.hash = style.color +
+      style.outline_width * 1007 +
+      style.outline_color * 3 +
+      style.glow_xoffs * 10007 +
+      style.glow_yoffs * 100007 +
+      style.glow_inner * 1000007 +
+      style.glow_outer * 10000007 +
+      style.glow_color * 7;
+  }
+  return style.hash;
+}
+
 
 let tech_params = null;
 let tech_params_dirty = false;

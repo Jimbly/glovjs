@@ -76,6 +76,7 @@ export function uiButtonHeight(): number;
 export function uiButtonWidth(): number;
 export const panel_pixel_scale: number;
 export function buttonWasFocused(): boolean;
+export function buttonLastSpotRet(): ButtonRet;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
 type UISpriteDef = {
@@ -135,6 +136,7 @@ export interface TooltipParam {
   tooltip_right?: boolean;
   tooltip_auto_right_offset?: number;
   tooltip_center?: boolean;
+  tooltip_markdown?: boolean; // defaults true
   pixel_scale?: number;
   tooltip: TooltipValue | null;
 }
@@ -148,7 +150,8 @@ export interface TooltipBoxParam {
   tooltip_above?: boolean;
   tooltip_right?: boolean;
   tooltip_center?: boolean;
-  tooltip: Text | ((param:unknown) => (Text | null));
+  tooltip_markdown?: boolean; // defaults true
+  tooltip: TooltipValue;
 }
 export function drawTooltipBox(param: TooltipBoxParam): void;
 
@@ -179,6 +182,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   colors?: ColorSet;
   sound?: string;
   z_bias?: Partial<Record<ButtonStateString, number>>;
+  y_offs?: Partial<Record<ButtonStateString, number>>;
   base_name?: string;
   no_bg?: boolean;
   style?: UIStyle;
@@ -218,6 +222,7 @@ export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
 export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
 export function button(param: ButtonGenericParam): ButtonRet | null;
+export function buttonSetDefaultYOffs(y_offs: Partial<Record<ButtonStateString, number>>): void;
 
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
@@ -237,7 +242,7 @@ export type LabelImageOptions = {
   img_color?: ROVec4;
   img_color_focused?: ROVec4;
 };
-export type LabelParam = Partial<TooltipBoxParam> & {
+export type LabelBaseOptions = Partial<TooltipBoxParam> & {
   x: number;
   y: number;
   z?: number;
@@ -245,7 +250,10 @@ export type LabelParam = Partial<TooltipBoxParam> & {
   h?: number;
   tooltip?: TooltipValue;
   style?: UIStyle;
-} & (LabelTextOptions | LabelImageOptions);
+};
+export type LabelTextParam = LabelBaseOptions & LabelTextOptions;
+export type LabelImageParam = LabelBaseOptions & LabelImageOptions;
+export type LabelParam = LabelTextParam | LabelImageParam;
 export function label(param: LabelParam): number;
 
 export function modalDialogClear(): void;
@@ -287,6 +295,8 @@ export function modalDialog(param: ModalDialogParam): void;
 
 export interface ModalTextEntryParam extends ModalDialogParamBase<(text: string) => void> {
   edit_text?: EditBoxOptsAll['text'];
+  multiline?: number;
+  enforce_multiline?: boolean;
   max_len?: number;
   max_visual_size?: TextVisualLimit;
 }

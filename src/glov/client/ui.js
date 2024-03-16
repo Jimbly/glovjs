@@ -48,6 +48,7 @@ const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
 const { linkTick } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
+const { markdownAuto } = require('./markdown');
 const { abs, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { sliderSetDefaultShrink } = require('./slider.js');
@@ -330,9 +331,14 @@ let sounds = {};
 export let button_mouseover = false; // for callers to poll the very last button
 export let button_focused = false; // for callers to poll the very last button
 export let button_click = null; // on click, for callers to poll which mouse button, etc
+export let button_last_spot_ret = null;
 
 export function buttonWasFocused() {
   return button_focused;
+}
+
+export function buttonLastSpotRet() {
+  return button_last_spot_ret;
 }
 
 let modal_dialog = null;
@@ -527,7 +533,8 @@ function uiStartup(param) {
 
 let dynamic_text_elem;
 export function uiGetDOMElem(last_elem, allow_modal) {
-  if (modal_dialog && !allow_modal) {
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  if (isMenuUp() && !allow_modal) {
     // Note: this case is no longer needed for edit boxes (spot's focus logic
     //   handles this), but links still rely on this
     return null;
@@ -822,9 +829,22 @@ export function drawTooltip(param) {
     tooltip_y0 -= dims.h + eff_tooltip_pad * 2 + (param.tooltip_auto_above_offset || 0);
   }
   let y = tooltip_y0 + eff_tooltip_pad;
-  y += font.drawSizedWrapped(font_style_modal,
-    x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
-    tooltip);
+  if (param.tooltip_markdown === false) {
+    y += font.drawSizedWrapped(font_style_modal,
+      x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
+      tooltip);
+  } else {
+    y += markdownAuto({
+      font_style: font_style_modal,
+      x: x + eff_tooltip_pad,
+      y: y + tooltip_text_offs,
+      z: z+1,
+      w,
+      align: ALIGN.HWRAP,
+      text_height: ui_style_current.text_height,
+      text: tooltip
+    }).h;
+  }
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
 
@@ -871,6 +891,7 @@ export function drawTooltipBox(param) {
     tooltip_center: param.tooltip_center,
     tooltip,
     tooltip_width: param.tooltip_width,
+    tooltip_markdown: param.tooltip_markdown,
   });
 }
 
@@ -893,6 +914,17 @@ export function progressBar(param) {
       def: SPOT_DEFAULT_LABEL,
     });
   }
+}
+
+
+let button_y_offs = {
+  regular: 0,
+  down: 0,
+  rollover: 0,
+  disabled: 0,
+};
+export function buttonSetDefaultYOffs(y_offs) {
+  merge(button_y_offs, y_offs);
 }
 
 // TODO: refactor so callers all use the new states 'focused'
@@ -944,6 +976,7 @@ export function buttonShared(param) {
 
   button_focused = button_mouseover = spot_ret.focused;
   param.z += param.z_bias && param.z_bias[spot_ret.state] || 0;
+  button_last_spot_ret = spot_ret;
   profilerStopFunc();
   return spot_ret;
 }
@@ -994,12 +1027,13 @@ export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
   buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
+  let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let disabled = state === 'disabled';
   (param.font || font).drawSizedAligned(
     disabled ? param.font_style_disabled || font_style_disabled :
     focused ? param.font_style_focused || font_style_focused :
     param.font_style_normal || font_style_normal,
-    param.x + hpad, param.y, param.z + 0.1,
+    param.x + hpad, param.y + yoffs, param.z + 0.1,
     param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
   profilerStopFunc();
 }
@@ -1045,10 +1079,11 @@ function buttonImageDraw(param, state, focused) {
   let largest_w_vert = param.h * param.shrink * aspect;
   img_w = min(largest_w_horiz, largest_w_vert);
   img_h = img_w / aspect;
+  let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let pad_top = (param.h - img_h) / 2;
   let draw_param = {
     x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
-    y: param.y + pad_top + img_origin[1] * img_h,
+    y: param.y + pad_top + img_origin[1] * img_h + yoffs,
     z: param.z + (param.z_inc || Z_MIN_INC),
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
@@ -1455,6 +1490,8 @@ export function modalTextEntry(param) {
     spellcheck: false,
     initial_select: true,
     text: param.edit_text,
+    multiline: param.multiline,
+    enforce_multiline: param.enforce_multiline,
     max_len: param.max_len,
     max_visual_size: param.max_visual_size,
     esc_clears: false,
@@ -1485,7 +1522,7 @@ export function modalTextEntry(param) {
       font_height: params.font_height,
     });
     if (!params.fullscreen_mode) {
-      params.y += params.font_height + modal_pad;
+      params.y += params.font_height * (param.multiline || 1) + modal_pad;
     }
     let ret;
     if (eb_ret === eb.SUBMIT) {

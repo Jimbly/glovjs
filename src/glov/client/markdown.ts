@@ -1,6 +1,8 @@
 import assert from 'assert';
 import { has } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import {
+  unit_vec,
   vec4,
 } from 'glov/common/vmath';
 import * as engine from './engine';
@@ -12,6 +14,7 @@ import {
   Text,
   fontStyleAlpha,
   fontStyleBold,
+  fontStyleHash,
 } from './font';
 import { Box } from './geom_types';
 import { mousePos } from './input';
@@ -27,12 +30,19 @@ import {
   markdown_default_renderables,
 } from './markdown_renderables';
 import {
+  SPOT_DEFAULT_LABEL,
+  spot,
+  spotPadMode,
+} from './spot';
+import {
   spriteClipPause,
   spriteClipResume,
   spriteClipped,
   spriteClippedViewport,
 } from './sprites';
 import {
+  LabelBaseOptions,
+  drawElipse,
   drawRect2,
   getUIElemData,
   uiFontStyleNormal,
@@ -63,6 +73,7 @@ export type MarkdownParseParam = {
 export type MarkdownLayoutParam = {
   font?: Font;
   font_style?: FontStyle | null;
+  font_style_bold?: FontStyle;
   w?: number;
   h?: number;
   // TODO: also need line_height here!  Get alignment/etc respecting that
@@ -102,8 +113,9 @@ export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
   }
 }
 
-export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
+export type MDLayoutCalcParam = Required<Omit<MarkdownLayoutParam, 'font_style_bold'>> & {
   font_style: FontStyle; // not `null`
+  font_style_bold?: FontStyle; // filled dynamically if needed
   cursor: {
     line_x0: number;
     x: number;
@@ -165,7 +177,10 @@ class MDBlockBold implements MDLayoutBlock {
     // TODO (later): migrate to UIStyle and use a named "bold" style instead?
     // For now/as well: specify 3 font styles in param?
     let old_style = param.font_style;
-    param.font_style = fontStyleBold(old_style, 0.5);
+    if (!param.font_style_bold) {
+      param.font_style_bold = fontStyleBold(old_style, 0.5);
+    }
+    param.font_style = param.font_style_bold;
 
     let ret: MDDrawBlock[][] = [];
     for (let ii = 0; ii < this.content.length; ++ii) {
@@ -191,7 +206,7 @@ type MDBlockTextLayout = {
   text: string;
 };
 const debug_color = vec4(0,0,0,0.5);
-const NOT_WRAP = ~ALIGN.HWRAP;
+const NO_HALIGN = ALIGN.VTOP|ALIGN.VCENTER|ALIGN.VBOTTOM|ALIGN.HFIT;
 class MDDrawBlockText implements MDDrawBlock {
   constructor(public dims: MDBlockTextLayout) {
   }
@@ -210,7 +225,7 @@ class MDDrawBlockText implements MDDrawBlock {
     }
     lp.font.drawSizedAligned(style,
       param.x + lp.x, param.y + lp.y, param.z,
-      lp.h, lp.align & NOT_WRAP, lp.w, lp.h, lp.text);
+      lp.h, lp.align & NO_HALIGN, lp.w, lp.h, lp.text);
     profilerStop();
   }
 }
@@ -392,11 +407,16 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   assert(blocks);
   let draw_blocks: MDDrawBlock[] = [];
   let maxx = 0;
+  let miny = Infinity;
+  let maxy = 0;
   for (let ii = 0; ii < blocks.length; ++ii) {
     let arr = blocks[ii].layout(calc_param);
     for (let jj = 0; jj < arr.length; ++jj) {
       let block = arr[jj];
-      maxx = max(maxx, block.dims.x + block.dims.w);
+      let dims = block.dims;
+      maxx = max(maxx, dims.x + dims.w);
+      maxy = max(maxy, dims.y + dims.h);
+      miny = min(miny, dims.y);
       draw_blocks.push(block);
     }
   }
@@ -447,8 +467,20 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       block.dims.w = (x1 - x0) * xscale;
     }
   }
+  if (draw_blocks.length && (calc_param.align & (ALIGN.VCENTER | ALIGN.VBOTTOM))) {
+    if (verify(calc_param.h)) {
+      let yoffs = calc_param.h - maxy;
+      if (calc_param.align & ALIGN.VCENTER) {
+        yoffs *= 0.5;
+      }
+      for (let ii = 0; ii < draw_blocks.length; ++ii) {
+        let block = draw_blocks[ii];
+        block.dims.y += yoffs;
+      }
+    }
+  }
   maxx = 0;
-  let maxy = 0;
+  maxy = 0;
   let max_block_h = 0;
   for (let ii = 0; ii < draw_blocks.length; ++ii) {
     let block = draw_blocks[ii];
@@ -607,6 +639,7 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
       param.text_height || uiTextHeight(),
       param.indent || 0,
       param.align || 0,
+      param.font_style ? fontStyleHash(param.font_style) : 0,
     ].join(':');
     state.cache = getUIElemData(cache_key, { key: text }, mdcAlloc);
     profilerStop();
@@ -621,5 +654,39 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
     delete param.cache;
   }
   profilerStopFunc();
+  return dims;
+}
+
+export function markdownLabel(param: MarkdownAutoParam & LabelBaseOptions): MarkdownDims {
+  let { tooltip } = param;
+  let dims = markdownAuto(param);
+  if (tooltip) {
+    let {
+      align,
+      x,
+      y,
+      z,
+      tooltip_above,
+      tooltip_right,
+    } = param;
+    z = z || Z.UI;
+    align = align || 0;
+    let w = param.w || dims.w;
+    let h = param.h || dims.h;
+    let spot_ret = spot({
+      x, y,
+      w, h,
+      tooltip: tooltip,
+      tooltip_width: param.tooltip_width,
+      tooltip_above,
+      tooltip_right: Boolean(tooltip_right || align & ALIGN.HRIGHT),
+      tooltip_center: Boolean(align & ALIGN.HCENTER),
+      def: SPOT_DEFAULT_LABEL,
+    });
+    if (spot_ret.focused && spotPadMode()) {
+      // No focused style support yet, do a generic glow instead?
+      drawElipse(x - w*0.25, y-h*0.25, x + w*1.25, y + h*1.25, z - 0.001, 0.5, unit_vec);
+    }
+  }
   return dims;
 }

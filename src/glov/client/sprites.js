@@ -571,8 +571,9 @@ export function spriteResetTopOfFrame() {
   sprite_queue_stack.length = 0;
 }
 
-export function spriteClipped() {
-  return clip_stack.length > 0;
+let clip_paused;
+export function spriteClipped(including_paused) {
+  return clip_stack.length > 0 && (including_paused || !clip_paused);
 }
 
 let clipped_viewport_temp_in = vec2();
@@ -604,7 +605,7 @@ export function spriteClipPush(z, x, y, w, h) {
 }
 
 export function spriteClipPop() {
-  assert(spriteClipped());
+  assert(spriteClipped(true));
   spriteQueueFn(Z.TOOLTIP - 0.1, scisssorClear);
   let { z, scissor } = clip_stack.pop();
   let sprites = sprite_queue;
@@ -627,10 +628,9 @@ export function spriteClipPop() {
   });
 }
 
-let clip_paused;
 export function spriteClipPause() {
   // Queue back into the root sprite queue
-  assert(spriteClipped());
+  assert(spriteClipped(true));
   assert(!clip_paused);
   clip_paused = true;
   spriteQueuePush(sprite_queue_stack[0]);
@@ -640,11 +640,11 @@ export function spriteClipPause() {
   clip_stack.push({ dom_clip: null });
 }
 export function spriteClipResume() {
-  assert(spriteClipped());
+  assert(spriteClipped(true));
   assert(clip_paused);
   clip_stack.pop(); // remove us
   clip_paused = false;
-  assert(spriteClipped());
+  assert(spriteClipped(true));
   let { dom_clip } = clip_stack[clip_stack.length - 1];
   spriteQueuePop(true);
   camera2d.setInputClipping(dom_clip);

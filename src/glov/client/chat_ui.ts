@@ -29,6 +29,7 @@ import {
   ALIGN,
   Font,
   FontStyle,
+  Text,
   fontStyle,
   fontStyleAlpha,
   fontStyleColored,
@@ -140,9 +141,12 @@ interface ChatMessage extends ChatMessageDataBroadcast {
   msg_h: number;
   msg_w: number;
   chatsrc_tag: string;
+  chatsrc_tooltip?: string;
   cache: MarkdownCache;
 }
-export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'>;
+export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'> & {
+  chatsrc_tooltip?: Text; // optionally set by decorators
+};
 
 function messageFromUser(msg: ChatMessage): boolean {
   return msg.style !== 'error' && msg.style !== 'system';
@@ -570,7 +574,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
       h: param.h,
       text_height: param.text_height,
       indent: param.indent,
-      align: param.align,
+      align: ALIGN.HFIT, // we definitely don't handle wrapping here!
       cache: this.submd_cache,
       text: user_name_md,
     };
@@ -621,6 +625,9 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
         }
         if (user_mouseover) {
           parent.focus_tooltip = 'Click to view user info';
+          if (msg.chatsrc_tooltip) {
+            parent.focus_tooltip = `${msg.chatsrc_tooltip}\n${parent.focus_tooltip}`;
+          }
           drawRect2(pos_param);
           parent.user_id_mouseover = msg.id;
           parent.did_user_id_mouseover = true;
@@ -637,6 +644,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
 }
 
 export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
+export type ChatUIParamStyles = Partial<Record<SystemStyles | string, FontStyle>>;
 
 export type ChatUIParam = {
   w?: number;
@@ -647,7 +655,7 @@ export type ChatUIParam = {
   font_height?: number;
   emote_cb?: (emote: string) => void;
   style?: UIStyle;
-  styles?: Partial<Record<SystemStyles | string, FontStyle>>;
+  styles?: ChatUIParamStyles;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
 
@@ -671,6 +679,7 @@ export type ChatUIParam = {
   classifyRole?: (roles: Roles | undefined, always_true: true) => string; // Roles -> key to index `styles`
   cmdLogFilter?: (cmd: string) => string;
   decorate_user_cb?: (msg: ChatMessageUser) => string;
+  message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
 };
 
 export type ChatUIRunParam = Partial<{
@@ -728,6 +737,7 @@ class ChatUIImpl {
   did_user_id_mouseover = false; // internal, for MDChatSource
   user_context_cb?: (param: { user_id: string }) => void; // internal, for MDChatSource
   decorate_user_cb: (msg: ChatMessageUser) => string; // internal, for MDRChatSource
+  message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
   chat_interactive = false; // internal, for MDRChatURL
   url_base: string; // internal, for MDRChatURL
   // focuse_handled gets set if MDRChatURL handles focus/click/right-click/etc,
@@ -822,6 +832,7 @@ class ChatUIImpl {
     this.classifyRole = params.classifyRole;
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
+    this.message_pre_send_cb = params.message_pre_send_cb;
 
     if (this.url_match) {
       this.renderables.chaturl = this.createMDRChatURL.bind(this);
@@ -844,8 +855,11 @@ class ChatUIImpl {
       return null;
     }
     let { url_info } = this;
-    if (url_info && !url_info.test(key)) {
-      return null;
+    if (url_info) {
+      let m = key.match(url_info);
+      if (!m || m[0] !== key) {
+        return null;
+      }
     }
     return new MDRChatURL(key, this.styles.link, this.styles.link_hover, this);
   }
@@ -1154,16 +1168,20 @@ class ChatUIImpl {
     return this.edit_text_entry.isFocused();
   }
 
-  sendChat(flags: number, text: string): void {
-    if (!netClient() || !netClient().connected) {
-      this.addChatError('Cannot chat: Disconnected');
-    } else if (!this.channel) {
-      this.addChatError('Cannot chat: Must be in a channel');
-    } else if (!netSubs().loggedIn() && !netSubs().allow_anon) {
-      this.addChatError('Cannot chat: Must be logged in');
-    } else if (text.length > this.max_len) {
-      this.addChatError('Chat message too long');
-    } else {
+  sendChat(flags: number, text_in: string): void {
+    let do_send = (text: string | null): void => {
+      if (!text) {
+        return;
+      }
+      if (!netClient() || !netClient().connected) {
+        return this.addChatError('Cannot chat: Disconnected');
+      } else if (!this.channel) {
+        return this.addChatError('Cannot chat: Must be in a channel');
+      } else if (!netSubs().loggedIn() && !netSubs().allow_anon) {
+        return this.addChatError('Cannot chat: Must be logged in');
+      } else if (text.length > this.max_len) {
+        return this.addChatError('Chat message too long');
+      }
       let pak = this.channel.pak('chat');
       pak.writeInt(flags);
       pak.writeString(text);
@@ -1189,6 +1207,11 @@ class ChatUIImpl {
           }
         }
       });
+    };
+    if (this.message_pre_send_cb) {
+      this.message_pre_send_cb(flags, text_in, do_send);
+    } else {
+      do_send(text_in);
     }
   }
 
@@ -1581,13 +1604,14 @@ class ChatUIImpl {
           break;
         }
         let msg_h = msg.msg_h;
-        if (msg_h > max_h && ii) {
-          break;
-        }
         max_h -= msg_h;
         y -= msg_h;
         drawChatLine(msg, alpha);
+        if (y <= viewport.y) {
+          break;
+        }
       }
+      y = max(y, viewport.y);
     }
 
     if (!this.did_user_id_mouseover) {
