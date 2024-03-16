@@ -1507,7 +1507,7 @@
       "events": [
         {
           "id": "dialog",
-          "param": "sign Hi *there*!  This is a test of the [c=1]Markdown[/c] broadcast system, including [img=foo]images[img=foo], **bold**, *italtics that's actually bold*."
+          "param": "sign *Hullo there!*  This is a test of [c=1]Mark[/c][c=2]down[/c], including [img=brick_brown0]images[img=crystal_wall11], line wrapping, and **bold**."
         }
       ]
     },

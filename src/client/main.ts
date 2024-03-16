@@ -7,7 +7,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
-import { markdown_default_renderables } from 'glov/client/markdown_renderables';
+import { markdownImageRegisterSpriteSheet, markdown_default_renderables } from 'glov/client/markdown_renderables';
 import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
@@ -23,6 +23,8 @@ import { crawlerRenderSetLODBiasRange } from './crawler_render';
 import { game_height, game_width } from './globals';
 import { playStartup } from './play';
 import { titleInit, titleStartup } from './title';
+
+const crawlertest = require('./img/crawlertest');
 
 const { round } = Math;
 
@@ -208,6 +210,8 @@ export function main(): void {
     fade_time: [1000, 1000],
     renderables: markdown_default_renderables, // use all system renderables
   });
+
+  markdownImageRegisterSpriteSheet(crawlertest);
 
   crawlerBuildModeStartup({
     font: build_font,
