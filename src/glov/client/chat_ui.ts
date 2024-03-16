@@ -9,6 +9,7 @@ import {
 } from 'glov/common/enums';
 import {
   clamp,
+  cloneShallow,
   dateToSafeLocaleString,
   defaults,
   deprecate,
@@ -656,6 +657,7 @@ export type ChatUIParam = {
   emote_cb?: (emote: string) => void;
   style?: UIStyle;
   styles?: ChatUIParamStyles;
+  renderables?: TSMap<MarkdownRenderable>;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
 
@@ -834,6 +836,9 @@ class ChatUIImpl {
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
     this.message_pre_send_cb = params.message_pre_send_cb;
 
+    if (params.renderables) {
+      this.renderables = cloneShallow(params.renderables);
+    }
     if (this.url_match) {
       this.renderables.chaturl = this.createMDRChatURL.bind(this);
     }
