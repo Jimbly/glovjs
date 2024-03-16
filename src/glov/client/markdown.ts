@@ -27,6 +27,7 @@ import {
 } from './markdown_parse';
 import {
   MarkdownRenderable,
+  markdown_default_font_styles,
   markdown_default_renderables,
 } from './markdown_renderables';
 import {
@@ -73,7 +74,10 @@ export type MarkdownParseParam = {
 export type MarkdownLayoutParam = {
   font?: Font;
   font_style?: FontStyle | null;
-  font_style_bold?: FontStyle;
+  // font style keys are the style_idx or with a `.bold` suffix
+  //   Example: `A[c=1]B*C*[/c]*D*` will use def, 1, 1.bold, def.bold
+  font_styles?: TSMap<FontStyle>;
+  font_style_idx?: number | string; // default: 'def'
   w?: number;
   h?: number;
   // TODO: also need line_height here!  Get alignment/etc respecting that
@@ -113,9 +117,11 @@ export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
   }
 }
 
-export type MDLayoutCalcParam = Required<Omit<MarkdownLayoutParam, 'font_style_bold'>> & {
+type FontStylesWithDefault = TSMap<FontStyle> & { def: FontStyle };
+export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   font_style: FontStyle; // not `null`
-  font_style_bold?: FontStyle; // filled dynamically if needed
+  font_styles: FontStylesWithDefault;
+  font_style_stack?: (string | number)[];
   cursor: {
     line_x0: number;
     x: number;
@@ -174,13 +180,18 @@ class MDBlockBold implements MDLayoutBlock {
     this.content = mdASTToBlock(content, param);
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
-    // TODO (later): migrate to UIStyle and use a named "bold" style instead?
-    // For now/as well: specify 3 font styles in param?
+    // TODO (later, maybe): migrate to UIStyle and use a named "bold" style instead?
     let old_style = param.font_style;
-    if (!param.font_style_bold) {
-      param.font_style_bold = fontStyleBold(old_style, 0.5);
+    let key = `${param.font_style_idx}.bold`;
+    let { font_styles } = param;
+    let bold_style = font_styles[key];
+    if (!bold_style) {
+      let base_style = font_styles[param.font_style_idx] ||
+        markdown_default_font_styles[param.font_style_idx] ||
+        font_styles.def;
+      bold_style = font_styles[key] = fontStyleBold(base_style, 0.5);
     }
-    param.font_style = param.font_style_bold;
+    param.font_style = bold_style;
 
     let ret: MDDrawBlock[][] = [];
     for (let ii = 0; ii < this.content.length; ++ii) {
@@ -389,6 +400,20 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     return;
   }
   profilerStartFunc();
+  let font_style = param.font_style || uiFontStyleNormal();
+  let font_styles: FontStylesWithDefault;
+  if (param.font_styles) {
+    if (param.font_styles.def) {
+      font_styles = param.font_styles as FontStylesWithDefault;
+    } else {
+      font_styles = {
+        def: font_style,
+        ...param.font_styles,
+      };
+    }
+  } else {
+    font_styles = { def: font_style };
+  }
   let calc_param: MDLayoutCalcParam = {
     w: param.w || 0,
     h: param.h || 0,
@@ -396,7 +421,9 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     indent: param.indent || 0,
     align: param.align || 0,
     font: param.font || uiGetFont(),
-    font_style: param.font_style || uiFontStyleNormal(),
+    font_style,
+    font_styles,
+    font_style_idx: param.font_style_idx || 'def',
     cursor: {
       line_x0: 0,
       x: 0,
