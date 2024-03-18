@@ -1,3 +1,5 @@
+/* globals HTMLCanvasElement, HTMLImageElement */
+
 // TODO: move when converted to TypeScript
 import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
 import type { Box } from './geom_types';
@@ -120,6 +122,7 @@ export type SpriteParam = SpriteParamBase & ({
   url: string;
   lazy_load?: boolean;
   soft_error?: boolean;
+  load_filter?: (tex: Texture, img: HTMLImageElement | HTMLCanvasElement) => HTMLImageElement | HTMLCanvasElement;
 } | {
   width: number;
   height: number;
