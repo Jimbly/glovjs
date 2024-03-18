@@ -69,10 +69,11 @@ export type MarkdownImageParam = {
   sprite: Sprite;
   frame?: number;
   color?: ROVec4;
+  override?: boolean;
 };
 let allowed_images: TSMap<MarkdownImageParam> = Object.create(null);
 export function markdownImageRegister(img_name: string, param: MarkdownImageParam): void {
-  assert(!allowed_images[img_name]);
+  assert(!allowed_images[img_name] || param.override);
   allowed_images[img_name] = param;
 }
 
@@ -84,6 +85,10 @@ export function markdownImageRegisterSpriteSheet(spritesheet: SpriteSheet): void
       frame: spritesheet.tiles[key],
     });
   }
+}
+
+function getImageData(key: string): MarkdownImageParam {
+  return allowed_images[key] || { sprite: ui_sprites.white };
 }
 
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
@@ -101,11 +106,10 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   y!: number;
   w!: number;
   h!: number;
-  img_data!: MarkdownImageParam;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let { text_height } = param;
     let h = this.h = text_height * this.scale;
-    let img_data = this.img_data = allowed_images[this.key] || { sprite: ui_sprites.white };
+    let img_data = getImageData(this.key);
     let { sprite, frame } = img_data;
     let aspect = 1;
     if (typeof frame === 'number' && sprite.uidata) {
@@ -129,7 +133,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
     profilerStart('MDRImg::draw');
     let x = this.x + param.x;
     let y = this.y + param.y;
-    let { img_data } = this;
+    let img_data = getImageData(this.key);
     let color = img_data.color;
     if (param.alpha !== 1) {
       if (param.alpha !== this.alpha_color_cache_value) {
