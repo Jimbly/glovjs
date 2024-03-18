@@ -978,6 +978,7 @@ function Sprite(params) {
           filter_mag: params.filter_mag,
           wrap_s: params.wrap_s,
           wrap_t: params.wrap_t,
+          soft_error: params.soft_error,
         };
       } else {
         assert(params.url);

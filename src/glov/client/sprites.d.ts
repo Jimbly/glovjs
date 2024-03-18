@@ -119,6 +119,7 @@ export type SpriteParam = SpriteParamBase & ({
 } | {
   url: string;
   lazy_load?: boolean;
+  soft_error?: boolean;
 } | {
   width: number;
   height: number;
