@@ -11,7 +11,10 @@ import { clamp, cloneShallow, easeIn, merge } from 'glov/common/util.js';
 import { v4copy, vec4 } from 'glov/common/vmath.js';
 import * as camera2d from './camera2d.js';
 import * as glov_engine from './engine.js';
-import * as glov_font from './font.js';
+import {
+  ALIGN,
+  fontStyle,
+} from './font';
 import {
   KEYS,
   PAD,
@@ -22,6 +25,7 @@ import {
   padButtonDownEdge,
 } from './input.js';
 import { link } from './link.js';
+import { markdownAuto } from './markdown';
 import { scrollAreaCreate } from './scroll_area.js';
 import {
   SPOT_DEFAULT_BUTTON,
@@ -55,25 +59,23 @@ import {
 } from './ui.js';
 import * as glov_ui from './ui.js';
 
-let glov_markup = null; // Not ported
-
 let last_key_id = 0;
 
 let font;
 
-const selbox_font_style_default = glov_font.style(null, {
+const selbox_font_style_default = fontStyle(null, {
   color: 0xDFDFDFff,
 });
 
-const selbox_font_style_selected = glov_font.style(null, {
+const selbox_font_style_selected = fontStyle(null, {
   color: 0xFFFFFFff,
 });
 
-const selbox_font_style_down = glov_font.style(null, {
+const selbox_font_style_down = fontStyle(null, {
   color: 0x000000ff,
 });
 
-const selbox_font_style_disabled = glov_font.style(null, {
+const selbox_font_style_disabled = fontStyle(null, {
   color: 0x808080ff,
 });
 
@@ -121,40 +123,52 @@ export function selboxDefaultDrawItemText({
       let x2 = x + display.xpad + display.tab_stop + pad;
       let w1 = display.tab_stop;
       let w2 = w - display.tab_stop - display.xpad * 2 - pad;
-      if (display.use_markup) {
-        let md = {};
-        md.align = glov_font.ALIGN.HFIT;
-        md.x_size = md.y_size = font_height;
-        md.w = w1;
-        md.h = 1;
-        md.style = style;
-        glov_markup.print(md, x1, y, text_z, pre);
-        md.w = w2;
-        glov_markup.print(md, x2, y, text_z, post);
+      if (display.use_markdown) {
+        markdownAuto({
+          font_style: style,
+          x: x1, y, z: text_z,
+          w: w1, h,
+          text_height: font_height,
+          align: ALIGN.HFIT | ALIGN.VCENTER,
+          text: pre,
+        });
+        markdownAuto({
+          font_style: style,
+          x: x2, y, z: text_z,
+          w: w1, h,
+          text_height: font_height,
+          align: ALIGN.HFIT | ALIGN.VCENTER,
+          text: post,
+        });
       } else {
         font.drawSizedAligned(style, x1, y, text_z, font_height,
-          glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
+          ALIGN.HFIT | ALIGN.VCENTER,
           w1, h, pre);
         font.drawSizedAligned(style, x2, y, text_z, font_height,
-          glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER,
+          ALIGN.HFIT | ALIGN.VCENTER,
           w2, h, post);
       }
     }
   }
   if (!did_tab) {
-    let md = {};
-    md.align = (item.centered || display.centered ? glov_font.ALIGN.HCENTERFIT : glov_font.ALIGN.HFIT) |
-      glov_font.ALIGN.VCENTER;
-    md.x_size = md.y_size = font_height;
-    md.w = w - display.xpad * 2;
-    md.h = h;
-    md.style = style;
-    let xx = x + display.xpad;
-    if (display.use_markup) {
-      glov_markup.print(md, xx, y, text_z, item.name);
+    let md = {
+      font_style: style,
+      x: x + display.xpad,
+      y,
+      z: text_z,
+      w: w - display.xpad * 2,
+      h,
+      text_height: font_height,
+      align: (item.centered || display.centered ? ALIGN.HCENTERFIT : ALIGN.HFIT) |
+        ALIGN.VCENTER,
+      text: item.name,
+    };
+
+    if (display.use_markdown) {
+      markdownAuto(md);
     } else {
-      font.drawSizedAligned(md.style, xx, y, text_z, md.x_size,
-        md.align, md.w, md.h, item.name);
+      font.drawSizedAligned(md.font_style, md.x, md.y, md.z, md.text_height,
+        md.align, md.w, md.h, md.text);
     }
   }
   // spriteListClipperPop();
@@ -189,7 +203,7 @@ export const default_display = {
   xpad: 8,
   selection_fade: Infinity, // alpha per millisecond
   // selection_highlight: null, // TODO: custom / better selection highlight for menus
-  use_markup: false, // always false, Markup not ported
+  use_markdown: false,
 };
 
 
@@ -831,13 +845,27 @@ class GlovDropDown extends SelectionBoxBase {
       x, y, z: z + 1,
       w: width, h: entry_height
     }, glov_ui.sprites.menu_header, COLORS[root_spot_ret.spot_state]);
-    let align = (display.centered ? glov_font.ALIGN.HCENTER : glov_font.ALIGN.HLEFT) |
-      glov_font.ALIGN.HFIT | glov_font.ALIGN.VCENTER;
-    font.drawSizedAligned(root_spot_ret.focused ? uiFontStyleFocused() : uiFontStyleNormal(),
-      x + display.xpad, y, z + 2,
-      font_height, align,
-      width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height, entry_height,
-      this.items[eff_selection].name);
+    let md = {
+      font_style: root_spot_ret.focused ? uiFontStyleFocused() : uiFontStyleNormal(),
+      x: x + display.xpad,
+      y,
+      z: z + 2,
+      w: width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height,
+      h: entry_height,
+      text_height: font_height,
+      align: (display.centered ? ALIGN.HCENTER : ALIGN.HLEFT) | ALIGN.HFIT | ALIGN.VCENTER,
+      text: this.items[eff_selection].name,
+    };
+    if (display.use_markdown) {
+      markdownAuto(md);
+    } else {
+      font.drawSizedAligned(md.font_style,
+        md.x, md.y, md.z,
+        md.text_height,
+        md.align,
+        md.w, md.h,
+        md.text);
+    }
     y += entry_height;
     yret = y + 2;
 
