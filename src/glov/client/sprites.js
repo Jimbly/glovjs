@@ -1040,6 +1040,10 @@ Sprite.prototype.lazyLoadInit = function () {
   }
 };
 
+Sprite.prototype.isLazyLoad = function () {
+  return Boolean(this.lazy_load);
+};
+
 Sprite.prototype.lazyLoad = function () {
   if (!this.texs.length) {
     this.lazyLoadInit();

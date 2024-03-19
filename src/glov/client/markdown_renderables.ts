@@ -2,6 +2,7 @@ export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
 export let markdown_default_font_styles: TSMap<FontStyle> = {};
 
 import assert from 'assert';
+import verify from 'glov/common/verify';
 import {
   ROVec4,
   Vec4,
@@ -73,6 +74,7 @@ export type MarkdownImageParam = {
 };
 let allowed_images: TSMap<MarkdownImageParam> = Object.create(null);
 export function markdownImageRegister(img_name: string, param: MarkdownImageParam): void {
+  assert(param.sprite);
   assert(!allowed_images[img_name] || param.override);
   allowed_images[img_name] = param;
 }
@@ -94,11 +96,14 @@ function getImageData(key: string): MarkdownImageParam {
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   key: string;
   scale: number;
+  aspect: number;
   constructor(content: RenderableContent) {
     this.key = content.key;
     this.dims = this;
     let scale = content.param && content.param.scale;
     this.scale = (scale && typeof scale === 'number') ? scale : 1;
+    let aspect = content.param && content.param.aspect;
+    this.aspect = (aspect && typeof aspect === 'number') ? aspect : 0;
   }
   // assigned during layout
   dims: Box;
@@ -117,8 +122,16 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
         aspect = sprite.uidata.aspect[frame];
       }
     } else {
-      let tex = sprite.texs[0];
-      aspect = tex.width / tex.height;
+      if (sprite.isLazyLoad()) {
+        // lazy-loaded images must have a in-markdown specified aspect ratio
+        verify(this.aspect);
+        aspect = this.aspect || 1;
+      } else if (this.aspect) {
+        aspect = this.aspect;
+      } else {
+        let tex = sprite.texs[0];
+        aspect = tex.width / tex.height;
+      }
     }
     this.w = h * aspect;
     markdownLayoutFit(param, this);

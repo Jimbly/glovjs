@@ -82,6 +82,7 @@ export interface Sprite {
   }): void;
   draw3D(params: SpriteDraw3DParams): void;
   texs: Texture[];
+  isLazyLoad(): boolean;
   lazyLoad(): number;
 }
 export interface UISprite extends Sprite {
