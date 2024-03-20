@@ -192,6 +192,7 @@ export function fontStyle(font_style, fields) {
   }
   ret.color_vec4 = color_vec4; // Restore
   vec4ColorFromIntColor(ret.color_vec4, ret.color);
+  ret.hash = 0;
   return ret;
 }
 
