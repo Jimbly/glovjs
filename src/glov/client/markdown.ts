@@ -380,6 +380,32 @@ function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
   profilerStopFunc();
 }
 
+export function markdownIsAllWhitespace(param: Omit<MarkdownParseParam, 'custom'>): boolean {
+  let valid_renderables: TSMap<unknown> = (param.renderables ? param.renderables : markdown_default_renderables) || {};
+  mdParseSetValidRenderables(valid_renderables);
+  function treeContainsNonWhitespace(tree: MDASTNode[]): boolean {
+    for (let ii = 0; ii < tree.length; ++ii) {
+      let node = tree[ii];
+      if (node.type === 'text') {
+        if (node.content.trim()) {
+          return true;
+        }
+      } else if (node.type === 'paragraph' || node.type === 'em' || node.type === 'strong') {
+        if (treeContainsNonWhitespace(node.content)) {
+          return true;
+        }
+      } else if (node.type === 'renderable') {
+        return true;
+      } else {
+        verify.unreachable(node);
+      }
+    }
+    return false;
+  }
+  let tree: MDASTNode[] = mdParse(getStringFromLocalizable(param.text));
+  return !treeContainsNonWhitespace(tree);
+}
+
 function cmpDimsY(a: MDDrawBlock, b: MDDrawBlock): number {
   let d = a.dims.y - b.dims.y;
   if (d !== 0) {

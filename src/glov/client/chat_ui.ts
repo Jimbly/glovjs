@@ -53,6 +53,7 @@ import {
   markdownAuto,
   markdownDims,
   markdownDraw,
+  markdownIsAllWhitespace,
   markdownLayoutInvalidate,
   markdownPrep,
 } from './markdown';
@@ -1421,7 +1422,7 @@ class ChatUIImpl {
         if (res === this.edit_text_entry.SUBMIT) {
           this.scroll_area.scrollToEnd();
           let text = this.edit_text_entry.getText().trim();
-          if (text) {
+          if (text && !markdownIsAllWhitespace({ text, renderables: this.renderables })) {
             let start_time = Date.now();
             this.edit_text_entry.setText('');
             if (text[0] === '/') {
@@ -1461,8 +1462,14 @@ class ChatUIImpl {
               spotUnfocus();
             }
           } else {
-            is_focused = false;
-            spotUnfocus();
+            if (this.edit_text_entry.getText()) {
+              // all whitespace, just clear
+              this.edit_text_entry.setText('');
+            } else {
+              // already empty, close chat
+              is_focused = false;
+              spotUnfocus();
+            }
           }
         }
       }
