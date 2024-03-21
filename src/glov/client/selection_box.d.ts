@@ -64,6 +64,7 @@ export interface SelectionBoxDisplay {
   tab_stop: number; // default: 0
   xpad: number; // default: 8
   selection_fade: number; // alpha per millisecond; default: Infinity
+  use_markdown: boolean; // default: false
 }
 
 export interface SelectionBoxOptsAll {

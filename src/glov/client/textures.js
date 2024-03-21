@@ -213,6 +213,7 @@ function Texture(params) {
   if (this.auto_unload) {
     auto_unload_textures.push(this);
   }
+  this.load_filter = params.load_filter || null;
 
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
@@ -228,7 +229,7 @@ function Texture(params) {
     if (params.url) {
       this.format = TEXTURE_FORMAT.RGBA8;
       this.url = params.url;
-      this.loadURL(params.url);
+      this.loadURL(params.url, this.load_filter);
     }
   }
 }
@@ -926,7 +927,7 @@ function textureReload(filename) {
     let tex = textures[key];
     if (tex.cname === cname && tex.url) {
       tex.for_reload = true;
-      tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`);
+      tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`, tex.load_filter);
       ret = true;
     }
   }

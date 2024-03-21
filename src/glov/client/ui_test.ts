@@ -100,12 +100,14 @@ function init(x: number, y: number, column_width: number): void {
   });
 
   test_select1 = selectionBoxCreate({
-    items: ['Apples', 'Bananas', 'Chameleon'],
+    display: { use_markdown: true },
+    items: ['Apples', 'Ba*nan*as', 'Chameleon'],
     z: Z.UI,
     width: column_width - 8,
   });
   test_dropdown = dropDownCreate({
-    items: ['Apples', 'Bananas', 'Chameleon', { name: 'Disabled', disabled: true }],
+    display: { use_markdown: true },
+    items: ['Apples', 'Ba*nan*as', 'Chameleon', { name: 'Disabled', disabled: true }],
     z: Z.UI,
     width: column_width - 8,
   });
@@ -274,7 +276,10 @@ export function run(x: number, y: number, z: number): void {
       `Edit Box Text: ${edit_box1.getText()}+${edit_box2.getText()}`) + pad;
     ui.print(font_style, 2, internal_y, z + 1, `Result: ${demo_result}`);
     internal_y += text_height + pad;
-    ui.print(font_style, 2, internal_y, z + 1, `Dropdown: ${test_dropdown.getSelected().name}`);
+    markdownAuto({
+      font_style, x: 2, y: internal_y, z: z + 1,
+      text: `Dropdown: ${test_dropdown.getSelected().name}`
+    });
     internal_y += text_height + pad;
 
     ui.progressBar({

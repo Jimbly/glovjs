@@ -967,6 +967,7 @@ function Sprite(params) {
           filter_mag: params.filter_mag,
           wrap_s: params.wrap_s,
           wrap_t: params.wrap_t,
+          load_filter: params.load_filter,
         }));
       }
     } else {
@@ -978,6 +979,8 @@ function Sprite(params) {
           filter_mag: params.filter_mag,
           wrap_s: params.wrap_s,
           wrap_t: params.wrap_t,
+          soft_error: params.soft_error,
+          load_filter: params.load_filter,
         };
       } else {
         assert(params.url);
@@ -1035,6 +1038,10 @@ Sprite.prototype.lazyLoadInit = function () {
       this.tex_on_load(tex);
     });
   }
+};
+
+Sprite.prototype.isLazyLoad = function () {
+  return Boolean(this.lazy_load);
 };
 
 Sprite.prototype.lazyLoad = function () {

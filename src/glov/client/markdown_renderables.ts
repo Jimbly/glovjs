@@ -2,6 +2,7 @@ export let markdown_default_renderables: TSMap<MarkdownRenderable> = {};
 export let markdown_default_font_styles: TSMap<FontStyle> = {};
 
 import assert from 'assert';
+import verify from 'glov/common/verify';
 import {
   ROVec4,
   Vec4,
@@ -69,10 +70,12 @@ export type MarkdownImageParam = {
   sprite: Sprite;
   frame?: number;
   color?: ROVec4;
+  override?: boolean;
 };
 let allowed_images: TSMap<MarkdownImageParam> = Object.create(null);
 export function markdownImageRegister(img_name: string, param: MarkdownImageParam): void {
-  assert(!allowed_images[img_name]);
+  assert(param.sprite);
+  assert(!allowed_images[img_name] || param.override);
   allowed_images[img_name] = param;
 }
 
@@ -86,14 +89,21 @@ export function markdownImageRegisterSpriteSheet(spritesheet: SpriteSheet): void
   }
 }
 
+function getImageData(key: string): MarkdownImageParam {
+  return allowed_images[key] || { sprite: ui_sprites.white };
+}
+
 class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   key: string;
   scale: number;
+  aspect: number;
   constructor(content: RenderableContent) {
     this.key = content.key;
     this.dims = this;
     let scale = content.param && content.param.scale;
     this.scale = (scale && typeof scale === 'number') ? scale : 1;
+    let aspect = content.param && content.param.aspect;
+    this.aspect = (aspect && typeof aspect === 'number') ? aspect : 0;
   }
   // assigned during layout
   dims: Box;
@@ -101,11 +111,10 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   y!: number;
   w!: number;
   h!: number;
-  img_data!: MarkdownImageParam;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let { text_height } = param;
     let h = this.h = text_height * this.scale;
-    let img_data = this.img_data = allowed_images[this.key] || { sprite: ui_sprites.white };
+    let img_data = getImageData(this.key);
     let { sprite, frame } = img_data;
     let aspect = 1;
     if (typeof frame === 'number' && sprite.uidata) {
@@ -113,8 +122,16 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
         aspect = sprite.uidata.aspect[frame];
       }
     } else {
-      let tex = sprite.texs[0];
-      aspect = tex.width / tex.height;
+      if (sprite.isLazyLoad()) {
+        // lazy-loaded images must have a in-markdown specified aspect ratio
+        verify(this.aspect);
+        aspect = this.aspect || 1;
+      } else if (this.aspect) {
+        aspect = this.aspect;
+      } else {
+        let tex = sprite.texs[0];
+        aspect = tex.width / tex.height;
+      }
     }
     this.w = h * aspect;
     markdownLayoutFit(param, this);
@@ -129,7 +146,7 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
     profilerStart('MDRImg::draw');
     let x = this.x + param.x;
     let y = this.y + param.y;
-    let { img_data } = this;
+    let img_data = getImageData(this.key);
     let color = img_data.color;
     if (param.alpha !== 1) {
       if (param.alpha !== this.alpha_color_cache_value) {
