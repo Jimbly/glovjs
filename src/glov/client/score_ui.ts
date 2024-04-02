@@ -366,6 +366,7 @@ export function scoresDraw<ScoreType>({
       button_param.x += scores_edit_box.w + size;
 
       let submit = scores_edit_box.run({
+        initial_focus: force_show_rename,
         x,
         y,
       }) === scores_edit_box.SUBMIT;
