@@ -27,6 +27,7 @@ import {
 } from './markdown_parse';
 import {
   MarkdownRenderable,
+  markdownLayoutFit,
   markdown_default_font_styles,
   markdown_default_renderables,
 } from './markdown_renderables';
@@ -52,7 +53,7 @@ import {
 } from './ui';
 import type { TSMap, WithRequired } from 'glov/common/types';
 
-const { floor, max, min } = Math;
+const { ceil, floor, max, min, round } = Math;
 
 // Exported opaque types
 export type MarkdownCache = Record<string, never>;
@@ -82,6 +83,7 @@ export type MarkdownLayoutParam = {
   h?: number;
   // TODO: also need line_height here!  Get alignment/etc respecting that
   text_height?: number;
+  line_height?: number;
   indent?: number;
   align?: ALIGN;
 };
@@ -159,11 +161,11 @@ class MDBlockParagraph implements MDLayoutBlock {
     if (param.align & ALIGN.HWRAP) {
       if (param.cursor.x !== param.cursor.line_x0) {
         param.cursor.line_x0 = param.cursor.x = param.indent;
-        param.cursor.y += param.text_height;
+        param.cursor.y += param.line_height;
       }
-      param.cursor.y += param.text_height * 0.5;
+      param.cursor.y += ceil(param.line_height * 0.5);
     } else {
-      param.cursor.x += param.text_height * 0.25;
+      param.cursor.x += ceil(param.text_height * 0.25);
     }
 
     return Array.prototype.concat.apply([], ret);
@@ -256,18 +258,22 @@ class MDBlockText implements MDLayoutBlock {
       let inset = param.cursor.x;
       let w = param.w - inset;
       let indent = param.indent - inset;
+      let yoffs = (param.line_height - param.text_height)/2;
+      if (param.font.integral) {
+        yoffs = floor(yoffs);
+      }
       param.font.wrapLines(
         param.font_style, w, indent, param.text_height, text, param.align,
         (x0: number, linenum: number, line: string, x1: number) => {
           if (linenum > 0) {
-            param.cursor.y += param.text_height;
+            param.cursor.y += param.line_height;
             param.cursor.line_x0 = param.indent;
           }
           let layout_param: MDBlockTextLayout = {
             font: param.font,
             font_style: param.font_style,
             x: line_x0 + x0,
-            y: param.cursor.y,
+            y: param.cursor.y + yoffs,
             h: param.text_height,
             w: min(x1, w) - x0,
             align: param.align,
@@ -285,19 +291,18 @@ class MDBlockText implements MDLayoutBlock {
       }
     } else {
       let str_w = param.font.getStringWidth(param.font_style, param.text_height, text);
-      let x0 = param.cursor.x;
       let layout_param: MDBlockTextLayout = {
+        x: -1, // filled below
+        y: -1, // filled below
         font: param.font,
         font_style: param.font_style,
-        x: x0,
-        y: param.cursor.y,
         h: param.text_height,
         w: str_w,
         align: param.align,
         text,
       };
+      markdownLayoutFit(param, layout_param);
       ret.push(new MDDrawBlockText(layout_param));
-      param.cursor.x += str_w;
     }
     return ret;
   }
@@ -440,10 +445,13 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   } else {
     font_styles = { def: font_style };
   }
+  let text_height = param.text_height || uiTextHeight();
+  let line_height = param.line_height || text_height;
   let calc_param: MDLayoutCalcParam = {
     w: param.w || 0,
     h: param.h || 0,
-    text_height: param.text_height || uiTextHeight(),
+    text_height,
+    line_height,
     indent: param.indent || 0,
     align: param.align || 0,
     font: param.font || uiGetFont(),
@@ -475,7 +483,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   }
   if ((calc_param.align & (ALIGN.HRIGHT | ALIGN.HCENTER)) && draw_blocks.length) {
     // Find rightmost block for every row
-    let row_h_est = calc_param.text_height / 2;
+    let row_h_est = calc_param.line_height / 2;
     let row_start_idx = 0;
     let last_dims = draw_blocks[0].dims;
     for (let ii = 1; ii < draw_blocks.length + 1; ++ii) {
@@ -495,6 +503,9 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
         let xoffs = calc_param.w - (last_dims.x + last_dims.w);
         if (calc_param.align & ALIGN.HCENTER) {
           xoffs *= 0.5;
+          if (calc_param.font.integral) {
+            xoffs = round(xoffs);
+          }
         }
         if (xoffs > 0) {
           for (let jj = row_start_idx; jj < ii; ++jj) {
@@ -525,6 +536,9 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       let yoffs = calc_param.h - maxy;
       if (calc_param.align & ALIGN.VCENTER) {
         yoffs *= 0.5;
+        if (calc_param.font.integral) {
+          yoffs = round(yoffs);
+        }
       }
       for (let ii = 0; ii < draw_blocks.length; ++ii) {
         let block = draw_blocks[ii];
@@ -690,6 +704,7 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
       param.w || 0,
       param.h || 0,
       param.text_height || uiTextHeight(),
+      param.line_height || param.text_height || uiTextHeight(),
       param.indent || 0,
       param.align || 0,
       param.font_style ? fontStyleHash(param.font_style) : 0,
