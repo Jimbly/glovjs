@@ -304,7 +304,7 @@ function notHidden(msg: ChatMessage): boolean {
 
 function toStr(val: unknown): string {
   val = getStringIfLocalizable(val);
-  return typeof val === 'string' ? val : JSON.stringify(val);
+  return typeof val === 'string' ? val : mdEscape(JSON.stringify(val));
 }
 
 let access_dummy = {
