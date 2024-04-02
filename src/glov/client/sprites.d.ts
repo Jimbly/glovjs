@@ -86,6 +86,7 @@ export interface Sprite {
   isLazyLoad(): boolean;
   lazyLoad(): number;
   getAspect(): number;
+  withOrigin(new_origin: ROVec2): Sprite;
 }
 export interface UISprite extends Sprite {
   uidata: SpriteUIData;

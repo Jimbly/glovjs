@@ -1028,6 +1028,25 @@ Sprite.prototype.getAspect = function () {
   return tex.src_width / tex.src_height;
 };
 
+Sprite.prototype.withOrigin = function (new_origin) {
+  let cache_v = String(new_origin[0] + new_origin[1] * 1007);
+  if (!this.origin_cache) {
+    this.origin_cache = {};
+  }
+  if (!this.origin_cache[cache_v]) {
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    let new_sprite = this.origin_cache[cache_v] = spriteCreate({
+      texs: this.texs,
+      origin: new_origin,
+      size: this.size,
+      color: this.color,
+      uvs: this.uvs,
+    });
+    new_sprite.uidata = this.uidata;
+  }
+  return this.origin_cache[cache_v];
+};
+
 Sprite.prototype.lazyLoadInit = function () {
   let tex = textureLoad({
     ...this.lazy_load,
