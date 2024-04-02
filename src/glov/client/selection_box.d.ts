@@ -8,6 +8,7 @@ export interface MenuItem {
   name?: Text; // name to display
   state?: EngineStateFunc; // state to set upon selection (SimpleMenu only)
   cb?: () => void; // callback to call upon selection (SimpleMenu only)
+  in_event_cb?: () => void; // callback to call upon selection (SimpleMenu only)
   value?: number | string;
   value_min?: number;
   value_max?: number;

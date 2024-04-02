@@ -234,6 +234,7 @@ export class GlovMenuItem {
     this.name = params.name || 'NO_NAME'; // name to display
     this.state = params.state || null; // state to set upon selection
     this.cb = params.cb || null; // callback to call upon selection
+    this.in_event_cb = params.in_event_cb || undefined;
     // TODO - cb function on value change?
     this.value = params.value === undefined ? null : params.value; // can be number or string
     this.value_min = params.value_min || 0;
@@ -534,6 +535,7 @@ class SelectionBoxBase {
           [SPOT_NAV_LEFT]: null,
         },
         auto_focus: item.auto_focus,
+        in_event_cb: item.in_event_cb,
       };
       if (ii === first_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
