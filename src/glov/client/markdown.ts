@@ -260,7 +260,7 @@ class MDBlockText implements MDLayoutBlock {
       let indent = param.indent - inset;
       let yoffs = (param.line_height - param.text_height)/2;
       if (param.font.integral) {
-        yoffs = floor(yoffs);
+        yoffs = round(yoffs);
       }
       param.font.wrapLines(
         param.font_style, w, indent, param.text_height, text, param.align,
