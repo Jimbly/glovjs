@@ -12,6 +12,7 @@ let debug: MockElementDebug;
 class MockLocation {
   protocol = 'mock';
   href = 'mock';
+  host = 'localhostmock';
 }
 
 class MockDocument {
