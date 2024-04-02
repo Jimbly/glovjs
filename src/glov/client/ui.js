@@ -987,7 +987,7 @@ export function buttonBackgroundDraw(param, state) {
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
   if (!param.no_bg) {
-    let base_name = param.base_name || 'button';
+    let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
     let sprite = sprites[sprite_name];
     // Note: was if (sprite) color = colors.regular for specific-sprite matches

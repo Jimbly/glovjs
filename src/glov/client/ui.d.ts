@@ -66,6 +66,11 @@ export interface UISprites {
   progress_bar: UISprite;
   progress_bar_trough: UISprite;
   white: UISprite;
+
+  squarebutton?: UISprite;
+  squarebutton_rollover?: null | UISprite;
+  squarebutton_down?: UISprite;
+  squarebutton_disabled?: UISprite;
 }
 export const sprites: UISprites;
 // DEPRECATED: export const font_height: number; // use uiStyleCurrent().text_height or uiTextHeight()
