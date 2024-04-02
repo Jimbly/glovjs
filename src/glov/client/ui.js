@@ -1181,6 +1181,7 @@ export function label(param) {
     w, h,
     text,
     tooltip,
+    tooltip_markdown,
     tooltip_above,
     tooltip_right,
     img,
@@ -1227,7 +1228,8 @@ export function label(param) {
     assert(isFinite(h));
     let spot_ret = spot({
       x, y, w, h,
-      tooltip: tooltip,
+      tooltip,
+      tooltip_markdown,
       tooltip_width: param.tooltip_width,
       tooltip_above,
       tooltip_right: tooltip_right || param.align & ALIGN.HRIGHT,
