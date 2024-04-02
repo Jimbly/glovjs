@@ -23,7 +23,7 @@ const { abs, floor, max, min, random } = Math;
 
 const DEFAULT_FADE_RATE = 0.001;
 
-interface SoundLoadOpts {
+export interface SoundLoadOpts {
   streaming?: boolean;
   for_reload?: boolean;
   loop?: boolean;
@@ -43,10 +43,10 @@ interface HowlSound {
 // Sound wrapper returned by soundPlay to external code
 export interface GlovSoundSetUp {
   name: string;
-  stop(id: number): HowlSound;
+  stop(): HowlSound;
   volume(vol: number): void;
-  playing(id?: number): boolean;
-  duration(id?: number): number;
+  playing(): boolean;
+  duration(): number;
   location(): number;
   fade(target_volume: number, time: number): void;
 }
@@ -482,7 +482,7 @@ export function soundTick(dt: number): void {
     if (fade.volume === fade.target_volume) {
       ridx(fades, ii);
       if (!fade.volume) {
-        fade.sound.stop(fade.id);
+        fade.sound.stop();
       }
     }
   }

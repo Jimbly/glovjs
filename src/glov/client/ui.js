@@ -576,7 +576,7 @@ export function uiBindSounds(_sounds) {
   sounds = defaults(_sounds || {}, base_ui_sounds);
   for (let key in sounds) {
     if (sounds[key]) {
-      soundLoad(sounds[key]);
+      soundLoad(sounds[key], sounds[key].opts);
     }
   }
 }

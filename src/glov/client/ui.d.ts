@@ -10,7 +10,7 @@ import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
-import { SoundID } from './sound';
+import { SoundID, SoundLoadOpts } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 import { UIStyle } from './uistyle';
@@ -97,7 +97,8 @@ export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
 export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
-export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[] | null>>): void;
+export type UISoundID = SoundID & { opts?: SoundLoadOpts };
+export function uiBindSounds(sounds?: Partial<Record<string, UISoundID | UISoundID[] | null>>): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
