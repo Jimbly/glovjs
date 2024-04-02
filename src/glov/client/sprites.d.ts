@@ -49,6 +49,7 @@ export interface SpriteDrawParams {
   color?: ROVec4;
   shader?: Shader;
   shader_params?: ShaderParams;
+  nozoom?: boolean;
 }
 export type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
 export interface SpriteDraw3DParams {
