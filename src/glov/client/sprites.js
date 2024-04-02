@@ -1020,6 +1020,14 @@ function Sprite(params) {
   }
 }
 
+Sprite.prototype.getAspect = function () {
+  let tex = this.texs[0];
+  if (!tex) {
+    return 1;
+  }
+  return tex.src_width / tex.src_height;
+};
+
 Sprite.prototype.lazyLoadInit = function () {
   let tex = textureLoad({
     ...this.lazy_load,
