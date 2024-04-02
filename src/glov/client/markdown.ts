@@ -126,6 +126,7 @@ export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   font_style_stack?: (string | number)[];
   cursor: {
     line_x0: number;
+    line_y1: number;
     x: number;
     y: number;
   };
@@ -247,56 +248,59 @@ class MDBlockText implements MDLayoutBlock {
   constructor(private content: string, param: MarkdownParseParam) {
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
+    let { cursor, line_height, text_height } = param;
     let ret: MDDrawBlock[] = [];
     let text = this.content;
     if (!(param.align & ALIGN.HWRAP)) {
       text = text.replace(/\n/g, ' ');
     }
     if (param.align & ALIGN.HWRAP) {
-      let line_x0 = param.cursor.x;
+      let line_x0 = cursor.x;
       // Adjust in case we're mid-line, or already inset
-      let inset = param.cursor.x;
+      let inset = cursor.x;
       let w = param.w - inset;
       let indent = param.indent - inset;
-      let yoffs = (param.line_height - param.text_height)/2;
+      let yoffs = (line_height - text_height)/2;
       if (param.font.integral) {
         yoffs = round(yoffs);
       }
       param.font.wrapLines(
-        param.font_style, w, indent, param.text_height, text, param.align,
+        param.font_style, w, indent, text_height, text, param.align,
         (x0: number, linenum: number, line: string, x1: number) => {
           if (linenum > 0) {
-            param.cursor.y += param.line_height;
-            param.cursor.line_x0 = param.indent;
+            cursor.y += line_height; // TODO: = cursor.line_y1 instead?
+            cursor.line_x0 = param.indent;
+            cursor.line_y1 = cursor.y;
           }
           let layout_param: MDBlockTextLayout = {
             font: param.font,
             font_style: param.font_style,
             x: line_x0 + x0,
-            y: param.cursor.y + yoffs,
-            h: param.text_height,
+            y: cursor.y + yoffs,
+            h: text_height,
             w: min(x1, w) - x0,
             align: param.align,
             text: line,
           };
+          cursor.line_y1 = max(cursor.line_y1, cursor.y + line_height);
           ret.push(new MDDrawBlockText(layout_param));
         }
       );
       if (ret.length) {
         let tail = ret[ret.length - 1];
-        param.cursor.x = tail.dims.x + tail.dims.w;
+        cursor.x = tail.dims.x + tail.dims.w;
       } else {
         // all whitespace, just advance cursor
-        param.cursor.x += param.font.getStringWidth(param.font_style, param.text_height, text);
+        cursor.x += param.font.getStringWidth(param.font_style, text_height, text);
       }
     } else {
-      let str_w = param.font.getStringWidth(param.font_style, param.text_height, text);
+      let str_w = param.font.getStringWidth(param.font_style, text_height, text);
       let layout_param: MDBlockTextLayout = {
         x: -1, // filled below
         y: -1, // filled below
         font: param.font,
         font_style: param.font_style,
-        h: param.text_height,
+        h: text_height,
         w: str_w,
         align: param.align,
         text,
@@ -460,6 +464,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     font_style_idx: param.font_style_idx || 'def',
     cursor: {
       line_x0: 0,
+      line_y1: 0,
       x: 0,
       y: 0,
     },
@@ -481,6 +486,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
       draw_blocks.push(block);
     }
   }
+  let bottom_pad = max(0, calc_param.cursor.line_y1 - maxy);
   if ((calc_param.align & (ALIGN.HRIGHT | ALIGN.HCENTER)) && draw_blocks.length) {
     // Find rightmost block for every row
     let row_h_est = calc_param.line_height / 2;
@@ -555,6 +561,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     maxy = max(maxy, block.dims.y + block.dims.h);
     max_block_h = max(max_block_h, block.dims.h);
   }
+  maxy += bottom_pad;
   draw_blocks.sort(cmpDimsY);
   cache.layout = {
     blocks: draw_blocks,

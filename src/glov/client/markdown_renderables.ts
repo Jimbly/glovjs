@@ -31,7 +31,7 @@ import type { Box } from './geom_types';
 import type { SpriteSheet } from './spritesheet';
 import type { Optional, TSMap } from 'glov/common/types';
 
-const { floor } = Math;
+const { floor, max } = Math;
 
 export function markdownRenderableAddDefault(key: string, renderable: MarkdownRenderable): void {
   markdown_default_renderables[key] = renderable;
@@ -55,7 +55,8 @@ export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 
   let { cursor, line_height } = param;
   if (cursor.x + dims.w > param.w + EPSILON && cursor.x !== cursor.line_x0 && (param.align & ALIGN.HWRAP)) {
     cursor.x = cursor.line_x0 = param.indent;
-    cursor.y += line_height;
+    cursor.y += line_height; // TODO: = cursor.line_y1 instead?
+    cursor.line_y1 = cursor.y;
   }
   if (cursor.x + dims.w > param.w + EPSILON && (param.align & ALIGN.HWRAP)) {
     // still over, doesn't fit on a whole line, modify w (if caller listens to that)
@@ -68,8 +69,10 @@ export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 
     if (param.font.integral) {
       dims.y = floor(dims.y);
     }
+    cursor.line_y1 = max(cursor.line_y1, cursor.y + line_height, dims.y + dims.h);
   } else {
     dims.y = cursor.y;
+    cursor.line_y1 = max(cursor.line_y1, cursor.y + line_height);
   }
   cursor.x += dims.w;
   // TODO: if height > line_height, track this line's height on the cursor?
