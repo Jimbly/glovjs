@@ -807,9 +807,12 @@ export function drawTooltip(param) {
   let tooltip_y0 = param.y;
   let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad * 2;
+  // TODO: dims (used if tooltip_above or tooltip_auto_above_offset or
+  //   tooltip_right) are potentially wrong for tooltips with markdown in them.
   let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
+    // TODO: support markdown dims
     above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
   }
   let x = param.x;
@@ -817,8 +820,10 @@ export function drawTooltip(param) {
   let right = param.tooltip_right;
   let center = param.tooltip_center;
   if (right && param.tooltip_auto_right_offset) {
+    // TODO: just use markdown align right instead
     x += param.tooltip_auto_right_offset - eff_tooltip_w;
   } else if (center && param.tooltip_auto_right_offset) {
+    // TODO: just use markdown align center instead
     x += (param.tooltip_auto_right_offset - eff_tooltip_w) / 2;
   }
   if (x + eff_tooltip_w > camera2d.x1()) {
@@ -834,7 +839,7 @@ export function drawTooltip(param) {
       x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
       tooltip);
   } else {
-    y += markdownAuto({
+    let mddims = markdownAuto({
       font_style: font_style_modal,
       x: x + eff_tooltip_pad,
       y: y + tooltip_text_offs,
@@ -843,7 +848,9 @@ export function drawTooltip(param) {
       align: ALIGN.HWRAP,
       text_height: ui_style_current.text_height,
       text: tooltip
-    }).h;
+    });
+    eff_tooltip_w = max(mddims.w + eff_tooltip_pad * 2, eff_tooltip_w);
+    y += mddims.h;
   }
   y += eff_tooltip_pad;
   let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
