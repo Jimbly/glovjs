@@ -45,7 +45,7 @@ import {
 } from './uistyle';
 import { getURLBase } from './urlhash';
 
-const { abs, ceil, random, sin } = Math;
+const { abs, ceil, max, random, round, sin } = Math;
 
 let demo_menu: SimpleMenu;
 let demo_menu_up = false;
@@ -157,6 +157,10 @@ const style_half_height = uiStyleAlloc({ text_height: '50%' });
 
 let markdown_text: string;
 let markdown_cache = {};
+let md_text_height: number = 8;
+let md_line_height: number = 8;
+let last_md_text_height: number = 8;
+let last_md_line_height: number = 8;
 
 export function run(x: number, y: number, z: number): void {
   const font: Font = ui.font;
@@ -296,14 +300,68 @@ export function run(x: number, y: number, z: number): void {
     text: 'Markdown',
     text_height,
   });
-  internal_y += header_h + pad;
+  internal_y += header_h;
+
+  font.draw({
+    x: 16,
+    y: internal_y + 2,
+    z: Z.UI + 20,
+    text: 'text_height',
+    color: 0x00000080,
+  });
+  font.draw({
+    x: button_width + 1,
+    y: internal_y + 2,
+    text: `${md_text_height}`,
+  });
+  md_text_height = round(slider(md_text_height, {
+    x: 0,
+    y: internal_y,
+    min: 1,
+    max: 16,
+    step: 1,
+  }));
+  if (md_text_height !== last_md_text_height) {
+    last_md_text_height = md_text_height;
+    md_line_height = max(md_line_height, md_text_height);
+    markdown_cache = {};
+  }
+  internal_y += button_height;
+
+  font.draw({
+    x: 16,
+    y: internal_y + 2,
+    z: Z.UI + 20,
+    text: 'line_height',
+    color: 0x00000080,
+  });
+  font.draw({
+    x: button_width + 1,
+    y: internal_y + 2,
+    text: `${md_line_height}`,
+  });
+  md_line_height = round(slider(md_line_height, {
+    x: 0,
+    y: internal_y,
+    min: 1,
+    max: 16,
+    step: 1,
+  }));
+  if (md_line_height !== last_md_line_height) {
+    last_md_line_height = md_line_height;
+    markdown_cache = {};
+  }
+  internal_y += button_height;
+  internal_y += pad;
+
   internal_y += markdownAuto({
     font_style,
     x: 2,
     y: internal_y,
     z: z + 1,
     w: scroll_area_w - 2,
-    text_height,
+    text_height: md_text_height,
+    line_height: md_line_height,
     align: ALIGN.HWRAP|ALIGN.HFIT,
     text: `Edit Box MD: ${edit_box1.getText()}+${edit_box2.getText()}`,
   }).h + pad;
@@ -314,7 +372,8 @@ export function run(x: number, y: number, z: number): void {
     y: internal_y,
     z: z + 1,
     w: scroll_area_w - 2,
-    text_height,
+    text_height: md_text_height,
+    line_height: md_line_height,
     align: ALIGN.HWRAP|ALIGN.HFIT,
     text: 'A[foo=bar text="Foo Bar"]B',
     cache: markdown_cache,
@@ -340,7 +399,7 @@ export function run(x: number, y: number, z: number): void {
               layout_param.text_height * 0.25;
             let dims = {
               w,
-              h: layout_param.text_height,
+              h: layout_param.line_height,
             };
             assert(markdownLayoutFit(layout_param, dims));
             let dims2 = dims; // workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
@@ -370,6 +429,7 @@ export function run(x: number, y: number, z: number): void {
                   ...rect,
                   z: draw_param.z + 0.1,
                   align: ALIGN.HVCENTERFIT,
+                  size: layout_param.text_height,
                   text: text,
                 });
               },
@@ -397,7 +457,8 @@ nec arborei timentem, ut crimina vidit.
     y: internal_y,
     z: z + 1,
     w: scroll_area_w - 2,
-    text_height,
+    text_height: md_text_height,
+    line_height: md_line_height,
     align: ALIGN.HWRAP|ALIGN.HFIT,
     text: markdown_text,
   }).h + pad;
@@ -408,7 +469,8 @@ nec arborei timentem, ut crimina vidit.
     y: internal_y,
     z: z + 1,
     w: scroll_area_w - 2,
-    text_height,
+    text_height: md_text_height,
+    line_height: md_line_height,
     align: ALIGN.HWRAP|ALIGN.HFIT|ALIGN.HCENTER,
     text: markdown_text,
   }).h + pad;
