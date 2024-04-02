@@ -157,7 +157,7 @@ export function addHook(draw, click) {
   });
 }
 
-let per_frame_dom_alloc = [0,0,0,0,0,0,0];
+let per_frame_dom_alloc = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 let per_frame_dom_suppress = 0;
 export function suppressNewDOMElemWarnings() {
   per_frame_dom_suppress = glov_engine.frame_index + 1;
