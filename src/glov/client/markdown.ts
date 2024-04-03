@@ -541,6 +541,7 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     if (verify(calc_param.h)) {
       let yoffs = calc_param.h - maxy;
       if (calc_param.align & ALIGN.VCENTER) {
+        yoffs -= miny;
         yoffs *= 0.5;
         if (calc_param.font.integral) {
           yoffs = round(yoffs);
