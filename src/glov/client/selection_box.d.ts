@@ -41,6 +41,7 @@ export interface SelectionBoxDrawItemParams {
   h: number;
   display: SelectionBoxDisplay;
   font_height: number;
+  line_height: number;
   style: FontStyle;
   image_set: Sprite;
   color: Vec4;
@@ -79,6 +80,7 @@ export interface SelectionBoxOptsAll {
   display: Partial<SelectionBoxDisplay>; // default: cloneShallow(default_display)
   scroll_height: number; // default: 0
   font_height: number; // default: uiTextHeight()
+  line_height: null | number; // null -> font_height (used for inline markdown image size)
   entry_height: number; // default: uiButtonHeight()
   auto_reset: boolean; // default: true
   reset_selection: boolean; // default: false

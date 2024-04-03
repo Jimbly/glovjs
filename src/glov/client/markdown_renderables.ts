@@ -126,9 +126,6 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
   h!: number;
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let { line_height } = param;
-    if (param.h && !(param.align & ALIGN.HWRAP) && this.scale === 1) {
-      line_height = param.h; // treat full height as line height
-    }
     let h = this.h = line_height * this.scale;
     let img_data = getImageData(this.key);
     let { sprite, frame } = img_data;
