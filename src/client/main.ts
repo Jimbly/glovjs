@@ -585,6 +585,7 @@ export function main(): void {
   }
 
   function testInit(dt: number): void {
+    // May want this: ensure we don't have extra images bundled? webFSReportUnused();
     engine.setState(test);
     if (flagGet('music')) {
       soundPlayMusic(music_file);

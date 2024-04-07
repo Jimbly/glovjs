@@ -476,6 +476,26 @@ gb.task({
   ...webfs({
     embed: config.fsdata_embed,
     strip: config.fsdata_strip,
+    sized_embed: config.fsdata_sized_embed,
+    base: 'client',
+    output: 'client/fsdata.js',
+  })
+});
+
+function prodTextureMap(glob) {
+  if (glob === 'client_texproc_output:**/*.png') {
+    return 'build.prod.texfinal:**/*.png';
+  }
+  return glob;
+}
+
+gb.task({
+  name: 'build.prod.client_fsdata',
+  input: config.client_fsdata.map(prodTextureMap),
+  ...webfs({
+    embed: config.fsdata_embed,
+    strip: config.fsdata_strip,
+    sized_embed: config.fsdata_sized_embed,
     base: 'client',
     output: 'client/fsdata.js',
   })
@@ -710,6 +730,13 @@ function noTextureTask(elem) {
   return true;
 }
 
+function noFSData(elem) {
+  if (elem.split(':')[0] === 'client_fsdata') {
+    return false;
+  }
+  return true;
+}
+
 gb.task({
   name: 'build.prod.pngextract',
   input: [
@@ -751,6 +778,8 @@ gb.task({
 //     -> passes through other png files
 //   client_texproc_output
 //     -> filters out the tflags and outputs all these to dev
+//   client_fsdata (to dev only)
+//     -> embeds any small textures appropriate for embedding
 // (Production build only pipeline)
 //   build.prod.pngextract
 //     -> extracts TXPs to individual PNGs for optimization
@@ -764,6 +793,8 @@ gb.task({
 //       all non-txp, non-png, non-tflag outputs of client_texproc (gpu textures, maybe jpegs later, etc)
 //         Or, maybe they should be pass-through from build.prod.pngextract->etc?
 //         There are not yet any of these, all `texproc()` outputs are currently PNGs or PNG-containing TXPs
+//   build.prod.client_fsdata
+//     -> embeds any small textures appropriate for embedding (sourced from minified textures)
 
 gb.task({
   name: 'build.prod.texfinal',
@@ -792,7 +823,7 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      ...client_input_globs_base.filter(noBundleTasks).filter(noTextureTask),
+      ...client_input_globs_base.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
       'build.prod.texfinal:**',
       ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
       'build.prod.uglify:**',
@@ -853,7 +884,8 @@ gb.task({
   input: [
     ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.uglify:**',
-    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask),
+    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
+    'build.prod.client_fsdata:**',
     ...config.extra_prod_inputs,
   ],
   target: 'prod',

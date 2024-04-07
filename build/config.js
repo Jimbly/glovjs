@@ -71,9 +71,16 @@ module.exports = function (gb) {
       'glov/common/words/*.gkg',
       'glov/common/words/*.txt',
       'client_texproc:**/*.tflag',
+      'client_texproc_output:**/*.png',
     ],
     fsdata_embed: ['.json', '.tflag'],
     fsdata_strip: ['.json'],
+    fsdata_sized_embed: {
+      globs: [
+        '**/*.png',
+      ],
+      max_size: 16*1024, // fine to be notably higher if the textures are actually used?
+    },
     // files in client/*, presumably bundled into fsdata, that should be placed in server/*
     // Note: no files in base GLOV.js build, but input cannot be empty, so using dummy path
     server_fsdata: ['client/does/not/exists/*'],

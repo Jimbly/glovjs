@@ -494,6 +494,16 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   function tryLoad(next) {
     profilerStart('Texture:tryLoad');
 
+    let did_next = false;
+    function done(err, img) {
+      profilerStart('Texture:onload');
+      if (!did_next) {
+        did_next = true;
+        next(err, img);
+      }
+      profilerStop();
+    }
+
     tflags = 0;
     let url_use = url;
 
@@ -503,6 +513,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       let ext_idx = url_use.lastIndexOf('.');
       assert(ext_idx !== -1);
       let filename_no_ext = url_use.slice(0, ext_idx);
+      let png_name = `${filename_no_ext}.png`;
       let tflag_file = `${filename_no_ext}.tflag`;
       if (webFSExists(tflag_file)) {
         tflags = webFSGetFile(tflag_file, 'jsobj');
@@ -511,20 +522,30 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
           url_use = `${filename_no_ext}.txp`;
         }
       }
+
+      if (webFSExists(png_name)) {
+        assert(!(tflags & FORMAT_PACK)); // not supported/tested, but should be trivial?
+
+        let view = webFSGetFile(png_name);
+        let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+        let img = new Image();
+        img.onload = function () {
+          URL.revokeObjectURL(url_object);
+          done(null, img);
+        };
+        img.onerror = function () {
+          URL.revokeObjectURL(url_object);
+          done('img decode error');
+        };
+        img.src = url_object;
+        profilerStop();
+        return;
+      }
+
       // When our browser's location has been changed from 'site.com/foo/' to
       //  'site.com/foo/bar/7' our relative image URLs are still relative to the
       //  base.  Maybe should set some meta tag to do this instead?
       url_use = `${urlhash.getURLBase()}${url_use}`;
-    }
-
-    let did_next = false;
-    function done(err, img) {
-      profilerStart('Texture:onload');
-      if (!did_next) {
-        did_next = true;
-        next(err, img);
-      }
-      profilerStop();
     }
 
     if (tflags & FORMAT_PACK) {
@@ -540,10 +561,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     img.onload = function () {
       done(null, img);
     };
-    function fail() {
+    img.onerror = function () {
       done('error', null);
-    }
-    img.onerror = fail;
+    };
     img.crossOrigin = 'anonymous';
     img.src = url_use;
     profilerStop();
