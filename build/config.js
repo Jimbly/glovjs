@@ -72,6 +72,7 @@ module.exports = function (gb) {
       'glov/common/words/*.txt',
       'client_texproc:**/*.tflag',
       'client_texproc_output:**/*.png',
+      'client_texproc_output:!**/favicon*.png',
     ],
     fsdata_embed: ['.json', '.tflag'],
     fsdata_strip: ['.json'],

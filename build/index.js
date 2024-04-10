@@ -483,10 +483,7 @@ gb.task({
 });
 
 function prodTextureMap(glob) {
-  if (glob === 'client_texproc_output:**/*.png') {
-    return 'build.prod.texfinal:**/*.png';
-  }
-  return glob;
+  return glob.replace('client_texproc_output', 'build.prod.texfinal');
 }
 
 gb.task({
