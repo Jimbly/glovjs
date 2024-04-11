@@ -821,6 +821,7 @@ config.extra_index.forEach(function (elem) {
     name,
     input: [
       ...client_input_globs_base.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
+      'build.prod.client_fsdata:**',
       'build.prod.texfinal:**',
       ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
       'build.prod.uglify:**',
