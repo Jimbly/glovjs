@@ -546,7 +546,7 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
     }
     this.font.drawSizedAligned(style,
       param.x + dims.x, param.y + dims.y, param.z,
-      dims.h, this.align & NOT_WRAP, dims.w, dims.h, this.url_label);
+      dims.h, this.align & NOT_WRAP | ALIGN.HFIT, dims.w, dims.h, this.url_label);
     profilerStop();
   }
 }
