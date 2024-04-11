@@ -46,7 +46,7 @@ const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
-const { linkTick } = require('./link.js');
+const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { markdownAuto } = require('./markdown');
 const { abs, floor, max, min, round, sqrt } = Math;
@@ -780,6 +780,7 @@ export function panel(param) {
   drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   if (param.eat_clicks) {
     glov_input.mouseOver(param);
+    linkObscureRect(param); // should this just happen for all non-peeking mouseOver() calls?
   }
 }
 

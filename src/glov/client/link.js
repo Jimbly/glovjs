@@ -19,6 +19,8 @@ const { uiStyleCurrent } = require('./uistyle.js');
 const settings = require('./settings.js');
 const { SPOT_DEFAULT_BUTTON, spot, spotFocusSteal, spotKey } = require('./spot.js');
 
+const { max, min } = Math;
+
 let style_link_default = fontStyle(null, {
   color: 0x5040FFff,
   outline_width: 1.0,
@@ -37,6 +39,68 @@ export function linkGetDefaultStyle() {
 export function linkSetDefaultStyle(style_link, style_link_hover) {
   style_link_default = style_link;
   style_link_hover_default = style_link_hover;
+}
+
+let link_blocks = [];
+export function linkObscureRect(box) {
+  if (!box.dom_pos) {
+    box.dom_pos = {};
+  }
+  camera2d.virtualToDomPosParam(box.dom_pos, box);
+  link_blocks.push(box.dom_pos);
+}
+
+function linkClipRect(rect) {
+  if (!rect.dom_pos) {
+    rect.dom_pos = {};
+  }
+  camera2d.virtualToDomPosParam(rect.dom_pos, rect);
+  let dom_pos = rect.dom_pos;
+  let ox0 = dom_pos.x;
+  let ox1 = ox0 + dom_pos.w;
+  let oy0 = dom_pos.y;
+  let oy1 = oy0 + dom_pos.h;
+  let x0 = ox0;
+  let x1 = ox1;
+  let y0 = oy0;
+  let y1 = oy1;
+  for (let ii = 0; ii < link_blocks.length; ++ii) {
+    let check = link_blocks[ii];
+    if (check.x <= x0 && check.x + check.w >= x1) {
+      if (check.y <= y0) {
+        y0 = max(y0, check.y + check.h);
+      }
+      if (check.y + check.h >= y1) {
+        y1 = min(y1, check.y);
+      }
+    }
+    if (check.y <= y0 && check.y + check.h >= y1) {
+      if (check.x <= x0) {
+        x0 = max(x0, check.x + check.w);
+      }
+      if (check.x + check.w >= x1) {
+        x1 = min(x1, check.x);
+      }
+    }
+  }
+  if (x1 <= x0 || y1 <= y0) {
+    return false;
+  }
+  if (x0 !== ox0 || x1 !== ox1) {
+    let ow = dom_pos.w;
+    let offs = (x0 - ox0) / ow;
+    let wscale = (x1 - x0) / ow;
+    rect.x += offs * rect.w;
+    rect.w *= wscale;
+  }
+  if (y0 !== oy0 || y1 !== oy1) {
+    let oh = dom_pos.h;
+    let offs = (y0 - oy0) / oh;
+    let hscale = (y1 - y0) / oh;
+    rect.y += offs * rect.h;
+    rect.h *= hscale;
+  }
+  return true;
 }
 
 let state_cache = {};
@@ -71,7 +135,7 @@ export function link(param) {
   let rect = { x, y, w, h };
 
   // TODO: use spot_ret.allow_focus instead of all of this?
-  if (camera2d.clipTestRect(rect) && !(settings.shader_debug || settings.show_profiler)) {
+  if (camera2d.clipTestRect(rect) && linkClipRect(rect) && !(settings.shader_debug || settings.show_profiler)) {
     // at least some is not clipped
     let elem = uiGetDOMElem(state.elem, allow_modal);
     if (elem !== state.elem) {
@@ -181,4 +245,5 @@ export function linkTick() {
       delete state_cache[key];
     }
   }
+  link_blocks.length = 0;
 }
