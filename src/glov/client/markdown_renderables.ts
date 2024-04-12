@@ -81,7 +81,7 @@ export function markdownLayoutFit(param: MDLayoutCalcParam, dims: Optional<Box, 
 
 export type MarkdownImageParam = {
   sprite: Sprite;
-  frame?: number;
+  frame?: number | string;
   color?: ROVec4;
   override?: boolean;
 };

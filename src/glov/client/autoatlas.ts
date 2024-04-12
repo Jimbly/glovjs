@@ -74,7 +74,7 @@ class AutoAtlasImp {
     let atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj');
     // Root default sprite, with frame-indexing
     let root_sprite = sprites.def = this.prealloc();
-    let root_rects: Vec4[] = [];
+    let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
     let root_aspect: number[] = [];
 
     // Make sprites for all named sprites
@@ -100,6 +100,7 @@ class AutoAtlasImp {
       let tile_uvs = sprite.uvs as Vec4;
       v4set(tile_uvs, x/w, y/h, (x+total_w)/w, (y+total_h)/h);
       root_rects.push(tile_uvs);
+      root_rects[tile_name] = tile_uvs;
 
       let wh = [];
       for (let ii = 0; ii < ws.length; ++ii) {
@@ -216,7 +217,7 @@ function autoAtlasReload(filename: string): void {
   atlas.doInit();
 }
 
-export function autoAtlas(atlas_name: string, img_name: string): Sprite {
+function autoAtlasGet(atlas_name: string): AutoAtlasImp {
   if (!atlases) {
     atlases = {};
     filewatchOn('.auat', autoAtlasReload);
@@ -225,5 +226,9 @@ export function autoAtlas(atlas_name: string, img_name: string): Sprite {
   if (!atlas) {
     atlas = atlases[atlas_name] = new AutoAtlasImp(atlas_name);
   }
-  return atlas.get(img_name);
+  return atlas;
+}
+
+export function autoAtlas(atlas_name: string, img_name: string): Sprite {
+  return autoAtlasGet(atlas_name).get(img_name);
 }

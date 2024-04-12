@@ -412,7 +412,7 @@ function requestExternalFriends(provider: string,
 export type UserProfileImage = {
   img: Sprite;
   img_color?: Vec4;
-  frame?: number;
+  frame?: number | string;
 };
 let profile_images: Record<string, UserProfileImage> = {};
 let default_profile_image: UserProfileImage;

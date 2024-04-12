@@ -1111,7 +1111,7 @@ Sprite.prototype.draw = function (params) {
   }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
-  let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
+  let uvs = ((params.frame !== undefined) ? this.uidata.rects[params.frame] : params.uvs) || this.uvs;
   qsp.sprite = this;
   qsp.x = params.x;
   qsp.y = params.y;

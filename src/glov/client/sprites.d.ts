@@ -38,14 +38,14 @@ export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
 export interface SpriteUIData {
   widths: number[]; heights: number[];
   wh: number[]; hw: number[];
-  rects: ROVec4[]; // [u0, v0, u1, v1]
+  rects: ROVec4[] | TSMap<ROVec4>; // [u0, v0, u1, v1]
   aspect: number[] | null;
   total_w: number; total_h: number;
 }
 export interface SpriteDrawParams {
   x: number; y: number; z?: number;
   w?: number; h?: number;
-  frame?: number;
+  frame?: number | string;
   rot?: number;
   uvs?: number[]; // [u0, v0, u1, v1]
   color?: ROVec4;
@@ -55,7 +55,7 @@ export interface SpriteDrawParams {
 }
 export type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
 export interface SpriteDraw3DParams {
-  frame?: number;
+  frame?: number | string;
   pos: ROVec3; // 3D world position
   offs?: ROVec2; // 2D offset (-x/-y is upper left), in world scale
   size: ROVec2; // 2D w;h; in world scale

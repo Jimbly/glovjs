@@ -204,7 +204,7 @@ export interface ButtonTextParam extends ButtonParam {
 }
 export interface ButtonImageParamBase extends ButtonParam {
   shrink?: number;
-  frame?: number;
+  frame?: number | string;
   img_rect?: ROVec4;
   left_align?: boolean;
   img_color?: ROVec4;
@@ -244,7 +244,7 @@ export type LabelImageOptions = {
   w: number;
   h: number;
   img: Sprite;
-  frame?: number;
+  frame?: number | string;
   img_color?: ROVec4;
   img_color_focused?: ROVec4;
 };
