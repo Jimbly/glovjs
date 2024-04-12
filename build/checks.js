@@ -76,7 +76,7 @@ module.exports = function (filename) {
     'glov-build': '1.0.43',
     'glov-build-browserify': '1.0.8',
     'glov-build-cache': '1.1.0',
-    'glov-build-concat': '1.0.11',
+    'glov-build-concat': '1.0.13',
     'glov-build-preresolve': '1.2.0',
     '@jimbly/howler': '0.0.9',
     '@jimbly/babel-plugin-transform-modules-simple-commonjs': '0.0.3',
