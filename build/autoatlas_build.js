@@ -189,7 +189,7 @@ module.exports = function () {
         y += row_height + pad * 2;
         maxy = y;
         if (any_error) {
-          return void done();
+          return;
         }
       }
 
