@@ -26,6 +26,8 @@ export interface Texture {
   loaded: boolean;
   err?: string;
   destroy(): void;
+  wrap_s: number;
+  wrap_t: number;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;

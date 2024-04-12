@@ -524,12 +524,19 @@ class ScrollAreaInternal implements ScrollArea {
     let trough_draw_height = trough_height + trough_draw_pad * 2;
     let trough_v0 = -trough_draw_pad / pixel_scale / scrollbar_trough.uidata.total_h;
     let trough_v1 = trough_v0 + trough_draw_height / pixel_scale / scrollbar_trough.uidata.total_h;
-    scrollbar_trough.draw({
-      x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
-      w: bar_w, h: trough_draw_height,
-      uvs: [scrollbar_trough.uvs[0], trough_v0, scrollbar_trough.uvs[2], trough_v1],
-      color: trough_color,
-    });
+    if (scrollbar_trough.texs[0].wrap_t === gl.REPEAT) {
+      scrollbar_trough.draw({
+        x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
+        w: bar_w, h: trough_draw_height,
+        uvs: [scrollbar_trough.uvs[0], trough_v0, scrollbar_trough.uvs[2], trough_v1],
+        color: trough_color,
+      });
+    } else {
+      ui.drawVBox({
+        x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
+        w: bar_w, h: trough_draw_height,
+      }, scrollbar_trough, trough_color);
+    }
 
     ui.drawVBox({
       x: bar_x0, y: handle_screenpos, z: this.z + 0.3,

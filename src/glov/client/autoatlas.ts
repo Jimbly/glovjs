@@ -167,6 +167,8 @@ class AutoAtlasImp {
       if (atlas_data.layers) {
         for (let idx = 0; idx < atlas_data.layers; ++idx) {
           let tex = textureLoad({
+            wrap_s: gl.CLAMP_TO_EDGE,
+            wrap_t: gl.CLAMP_TO_EDGE,
             ...opts,
             url: `img/atlas_${atlas_name}_${idx}.png`,
           });
@@ -174,6 +176,8 @@ class AutoAtlasImp {
         }
       } else {
         let tex = textureLoad({
+          wrap_s: gl.CLAMP_TO_EDGE,
+          wrap_t: gl.CLAMP_TO_EDGE,
           ...opts,
           url: `img/atlas_${atlas_name}.png`,
         });
@@ -206,7 +210,8 @@ function autoAtlasReload(filename: string): void {
   let atlas = atlases[filename];
   if (!atlas) {
     // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
-    return assert(false);
+    // will happen when doing git updates on atlases that are not currently active
+    return;
   }
   atlas.doInit();
 }

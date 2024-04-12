@@ -38,6 +38,7 @@ export const sprites = {};
 
 /* eslint-disable import/order */
 const assert = require('assert');
+const { autoAtlas } = require('./autoatlas');
 const camera2d = require('./camera2d.js');
 const { editBoxCreate, editBoxTick } = require('./edit_box.js');
 const effects = require('./effects.js');
@@ -405,6 +406,10 @@ export function loadUISprite2(name, param) {
     // skip it, assume not used
     return;
   }
+  if (param.atlas) {
+    sprites[name] = autoAtlas(param.atlas, param.name || name);
+    return;
+  }
   let wrap_s = gl.CLAMP_TO_EDGE;
   let wrap_t = param.wrap_t ? gl.REPEAT : gl.CLAMP_TO_EDGE;
   let sprite_param = {
@@ -443,31 +448,31 @@ const base_ui_sprites = {
 
   white: { url: 'white' },
 
-  button: { ws: [8, 112, 8], hs: [128] },
-  button_rollover: { ws: [8, 112, 8], hs: [128] },
-  button_down: { ws: [8, 112, 8], hs: [128] },
-  button_disabled: { ws: [8, 112, 8], hs: [128] },
-  panel: { ws: [32, 64, 32], hs: [32, 64, 32] },
+  button: { atlas: 'default' },
+  button_rollover: { atlas: 'default' },
+  button_down: { atlas: 'default' },
+  button_disabled: { atlas: 'default' },
+  panel: { atlas: 'default' },
 
-  menu_entry: { ws: [8, 112, 8], hs: [128] },
-  menu_selected: { ws: [8, 112, 8], hs: [128] },
-  menu_down: { ws: [8, 112, 8], hs: [128] },
-  menu_header: { ws: [8, 112, 136], hs: [128] },
-  slider: { ws: [56, 16, 56], hs: [128] },
-  // slider_notch: { ws: [3], hs: [13] },
-  slider_handle: { ws: [64], hs: [128] },
+  menu_entry: { atlas: 'default' },
+  menu_selected: { atlas: 'default' },
+  menu_down: { atlas: 'default' },
+  menu_header: { atlas: 'default' },
+  slider: { atlas: 'default' },
+  // slider_notch: { atlas: 'default' },
+  slider_handle: { atlas: 'default' },
 
-  scrollbar_bottom: { ws: [64], hs: [64] },
-  scrollbar_trough: { ws: [64], hs: [8], wrap_t: true },
-  scrollbar_top: { ws: [64], hs: [64] },
-  scrollbar_handle_grabber: { ws: [64], hs: [64] },
-  scrollbar_handle: { ws: [64], hs: [24, 16, 24] },
-  progress_bar: { ws: [48, 32, 48], hs: [128] },
-  progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
+  scrollbar_bottom: { atlas: 'default' },
+  scrollbar_trough: { atlas: 'default' },
+  scrollbar_top: { atlas: 'default' },
+  scrollbar_handle_grabber: { atlas: 'default' },
+  scrollbar_handle: { atlas: 'default' },
+  progress_bar: { atlas: 'default' },
+  progress_bar_trough: { atlas: 'default' },
 
-  collapsagories: { ws: [4, 8, 4], hs: [64] },
-  collapsagories_rollover: { ws: [4, 8, 4], hs: [64] },
-  collapsagories_shadow_down: { ws: [4, 8, 4], hs: [64] },
+  collapsagories: { atlas: 'default' },
+  collapsagories_rollover: { atlas: 'default' },
+  collapsagories_shadow_down: { atlas: 'default' },
   collapsagories_shadow_up: null,
 };
 
