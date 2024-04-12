@@ -1,15 +1,9 @@
 /* eslint max-len:off */
 
+const assert = require('assert');
 const gb = require('glov-build');
 const { max } = Math;
 const { pngAlloc, pngRead, pngWrite } = require('./png.js');
-
-const preamble = `const { vec4 } = require('glov/common/vmath.js');
-const { spritesheetRegister } = require('glov/client/spritesheet.js');
-module.exports = `;
-const postamble = `;
-spritesheetRegister(module.exports);
-`;
 
 function nextHighestPowerOfTwo(x) {
   --x;
@@ -22,6 +16,52 @@ function nextHighestPowerOfTwo(x) {
 function cmpFileKeys(a, b) {
   return a.localeCompare(b, 'en', { numeric: true });
 }
+
+let did_error = false;
+function parseRow(job, img, x0, y0, dx, dy) {
+  let ws = [];
+  let lastcoord = dx ? x0 : y0;
+  let lastv = false;
+  let { data, width, height } = img;
+  assert.equal(data.length, width * height * 4);
+  let xx = x0;
+  let yy = y0;
+  while (dx ? xx < width - 1 : yy < height - 1) {
+    let idx = (xx + yy * width) * 4;
+    let v;
+    let a = data[idx + 3];
+    if (!a) {
+      // transparent
+      v = false;
+    } else {
+      let r = data[idx];
+      let g = data[idx + 1];
+      let b = data[idx + 2];
+      if (a === 255 && !r && !g && !b) {
+        // black
+        v = true;
+      } else if (a === 255 && r === 255 && g === 255 && b === 255) {
+        // white
+        v = false;
+      } else {
+        if (!did_error) {
+          job.error(`Error parsing 9-patch file "${img.source_name}": found a pixel other than black, white, or invisible at ${xx},${yy}`);
+          did_error = true;
+        }
+      }
+    }
+    if (v !== lastv) {
+      ws.push((dx ? xx : yy) - lastcoord);
+      lastv = v;
+      lastcoord = (dx ? xx : yy);
+    }
+    xx += dx;
+    yy += dy;
+  }
+  ws.push((dx ? width : height) - 1 - lastcoord);
+  return ws;
+}
+
 
 module.exports = function () {
   function imgproc(job, done) {
@@ -46,6 +86,10 @@ module.exports = function () {
       let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.png$/);
       let atlas_name = m[1].toLowerCase();
       let img_name = m[2].toLowerCase();
+      let do_9patch = img_name.endsWith('.9');
+      if (do_9patch) {
+        img_name = img_name.slice(0, -2);
+      }
       m = img_name.match(/^(.*)_(\d+)$/);
       let idx = 0;
       if (m) {
@@ -55,8 +99,28 @@ module.exports = function () {
       let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {} };
       atlas_data.num_layers = max(atlas_data.num_layers, idx + 1);
       let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
+      let ws = [img.width];
+      let hs = [img.height];
+      did_error = false;
+      if (do_9patch) {
+        ws = parseRow(job, img, 1, 0, 1, 0);
+        hs = parseRow(job, img, 0, 1, 0, 1);
+        if (idx === 0 && false) {
+          // currently unused, but can parse the padding values from the 9-patch as well
+          img_data.padh = parseRow(job, img, 1, img.height - 1, 1, 0);
+          img_data.padv = parseRow(job, img, img.width - 1, 1, 0, 1);
+        }
+        let new_img = pngAlloc({ width: img.width - 2, height: img.height - 2, byte_depth: 4 });
+        img.bitblt(new_img, 1, 1, img.width - 2, img.height - 2, 0, 0);
+        img = new_img;
+      }
+      if (idx === 0) {
+        img_data.ws = ws;
+        img_data.hs = hs;
+      }
       img_data.imgs[idx] = img;
     }
+
     let atlas_keys = Object.keys(atlases);
 
     if (!atlas_keys.length) {
@@ -73,7 +137,7 @@ module.exports = function () {
 
       let runtime_data = {
         // name,
-        tiles: [], // [name, x, y, ws, hs]
+        tiles: [], // [name, x, y, ws, hs, padh, padv]
       };
       if (atlas_data.num_layers > 1) {
         runtime_data.layers = atlas_data.num_layers;
@@ -142,9 +206,13 @@ module.exports = function () {
       for (let ii = 0; ii < file_keys.length; ++ii) {
         let img_name = file_keys[ii];
         let img_data = file_data[img_name];
-        let { imgs, x, y } = img_data;
+        let { imgs, x, y, ws, hs, padh, padv } = img_data;
         let { width: imgw, height: imgh } = imgs[0];
-        runtime_data.tiles.push([img_name, x, y, [imgw], [imgh]]);
+        let tuple = [img_name, x, y, ws, hs];
+        if (padh) {
+          tuple.push(padh, padv);
+        }
+        runtime_data.tiles.push(tuple);
 
         for (let idx = 0; idx < imgs.length; ++idx) {
           let img = imgs[idx];
@@ -200,9 +268,8 @@ module.exports = function () {
     type: gb.ALL,
     func: imgproc,
     version: [
-      preamble,
-      postamble,
       cmpFileKeys,
+      parseRow,
     ],
   };
 };
