@@ -1151,7 +1151,11 @@ export function setFonts(new_font, title_font) {
 }
 
 export function engineStartupFunc(func) {
-  startup_funcs.push(func);
+  if (startup_funcs) {
+    startup_funcs.push(func);
+  } else {
+    func();
+  }
 }
 
 export function startup(params) {

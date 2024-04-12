@@ -25,6 +25,8 @@ module.exports = function (gb) {
     client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
     client_png: [
       'client/**/*.png',
+      '!client/atlases/**',
+      'client_autoatlas:**/*.png',
     ],
     client_png_alphafix: [
       '**',
@@ -73,8 +75,9 @@ module.exports = function (gb) {
       'client_texproc:**/*.tflag',
       'client_texproc_output:**/*.png',
       'client_texproc_output:!**/favicon*.png',
+      'client_autoatlas:**.auat',
     ],
-    fsdata_embed: ['.json', '.tflag'],
+    fsdata_embed: ['.json', '.tflag', '.auat'],
     fsdata_strip: ['.json'],
     fsdata_sized_embed: {
       globs: [

@@ -16,6 +16,7 @@ const Replacer = require('regexp-sourcemaps');
 
 const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
+const autoatlas = require('./autoatlas_build.js');
 const autosound = require('./autosound.js');
 const compress = require('./compress.js');
 const eslint = require('./eslint.js');
@@ -164,6 +165,12 @@ gb.task({
   input: config.server_json_files,
   target: 'dev',
   ...json5({ beautify: true })
+});
+
+gb.task({
+  name: 'client_autoatlas',
+  input: 'client/atlases/**/*.png',
+  ...autoatlas(),
 });
 
 gb.task({
