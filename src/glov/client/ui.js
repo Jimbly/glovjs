@@ -593,8 +593,11 @@ export function drawHBox(coords, s, color) {
     let scale = coords.w / (ws[0] + ws[2]);
     ws[0] *= scale;
     ws[2] *= scale;
-  } else {
+  } else if (uidata.wh[1]) {
     ws[1] = max(0, coords.w - ws[0] - ws[2]);
+  } else {
+    // no rects, do simple stretch
+    ws[0] = coords.w;
   }
   draw_box_param.y = coords.y;
   draw_box_param.z = coords.z;
