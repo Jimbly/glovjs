@@ -118,6 +118,11 @@ module.exports = function () {
         img_data.ws = ws;
         img_data.hs = hs;
       }
+      img.filename = img_file.relative;
+      if (img_data.imgs[idx]) {
+        job.error('Two atlas source files map to the same image:' +
+          ` ${img.filename} and ${img_data.imgs[idx].filename}`);
+      }
       img_data.imgs[idx] = img;
     }
 
