@@ -220,6 +220,6 @@ export function spriteQueueSprite(
 // export function queueSpriteData(elem, z): void;
 
 // TODO: migrate to internal only?
-// export function blendModeSet(blend: BlendMode): void;
-// export function blendModeReset(force: boolean): void;
+export function blendModeSet(blend: BlendMode): void;
+export function blendModeReset(force: boolean): void;
 // export function buildRects(ws, hs, tex): void;
