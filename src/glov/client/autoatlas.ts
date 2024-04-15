@@ -44,7 +44,7 @@ function spriteMakeError(sprite: Sprite): void {
 }
 
 class AutoAtlasImp {
-  sprites: TSMap<Sprite> = {};
+  sprites: TSMap<Sprite & { autoatlas_used?: boolean }> = {};
 
   // Create with dummy data, will load later
   texs: Texture[] = [];
@@ -62,7 +62,7 @@ class AutoAtlasImp {
   verifySprites(seen: TSMap<true>): void {
     let { sprites } = this;
     for (let img_name in sprites) {
-      if (!seen[img_name] && img_name !== 'def') {
+      if (sprites[img_name]!.autoatlas_used && !seen[img_name] && img_name !== 'def') {
         dataError(`AutoAtlas "${this.atlas_name}" does not contain image "${img_name}"`);
         spriteMakeError(sprites[img_name]!);
       }
@@ -201,6 +201,7 @@ class AutoAtlasImp {
         spriteMakeError(ret);
       }
     }
+    ret.autoatlas_used = true;
     return ret;
   }
 }
