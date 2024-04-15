@@ -18,6 +18,7 @@ export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
+export type HTMLImage = HTMLCanvasElement | HTMLImageElement;
 export interface Texture {
   width: number;
   height: number;
@@ -28,6 +29,11 @@ export interface Texture {
   destroy(): void;
   wrap_s: number;
   wrap_t: number;
+  updateData(
+    w: number, h: number,
+    data: Uint8Array | Uint8ClampedArray | HTMLImage,
+    per_mipmap_data?: HTMLImage[]
+  ): void;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
@@ -128,7 +134,7 @@ export type SpriteParam = SpriteParamBase & ({
   url: string;
   lazy_load?: boolean;
   soft_error?: boolean;
-  load_filter?: (tex: Texture, img: HTMLImageElement | HTMLCanvasElement) => HTMLImageElement | HTMLCanvasElement;
+  load_filter?: (tex: Texture, img: HTMLImage) => HTMLImage;
 } | {
   width: number;
   height: number;
