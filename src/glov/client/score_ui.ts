@@ -138,6 +138,7 @@ export type ScoresDrawParam<ScoreType> = {
   allow_rename: boolean;
   no_header?: boolean;
   scroll_key?: string;
+  rename_button_size?: number; // default 10 (in text height units)
 };
 
 const skipped_rank_column_def: ColumnDef = {
@@ -164,6 +165,7 @@ export function scoresDraw<ScoreType>({
   allow_rename,
   no_header,
   scroll_key,
+  rename_button_size,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
   if (!font) {
@@ -354,11 +356,12 @@ export function scoresDraw<ScoreType>({
     }
 
     let show_rename = my_name.startsWith('Anonymous') || !my_name || force_show_rename;
+    let button_size = show_rename && rename_button_size || 10;
     let button_param: ButtonTextParam = {
       x,
       y: y - size * 0.25,
       z,
-      w: size * 10,
+      w: size * button_size,
       h: button_height,
       text: force_show_rename && my_name === scores_edit_box.text ? 'Cancel' : my_name ? 'Update Name' : 'Set Name',
     };
