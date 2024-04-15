@@ -84,7 +84,8 @@ export function buttonWasFocused(): boolean;
 export function buttonLastSpotRet(): ButtonRet;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
-type UISpriteDef = {
+export type UISpriteDef = {
+  atlas?: string;
   name?: string;
   url?: string;
   ws?: number[];
@@ -440,6 +441,10 @@ type UISpriteSet = {
   scrollbar_handle?: UISpriteDef;
   progress_bar?: UISpriteDef;
   progress_bar_trough?: UISpriteDef;
+
+  collapsagories?: UISpriteDef;
+  collapsagories_rollover?: UISpriteDef;
+  collapsagories_shadow_down?: UISpriteDef;
 };
 export const internal : {
   checkHooks(param: { hook?: HookList }, click: boolean): void;
