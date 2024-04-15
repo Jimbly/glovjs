@@ -366,7 +366,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
     gl.texImage2D(this.target, 0, this.format.internal_type, this.width, this.height, 0,
       this.format.internal_type, this.format.gl_type, null);
   }
-  if (data instanceof Uint8Array) {
+  if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
     assert(!this.is_cube);
