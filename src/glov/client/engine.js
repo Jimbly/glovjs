@@ -905,7 +905,6 @@ function tick(timestamp) {
   frame_dt = dt;
   last_tick = now;
   frame_timestamp += dt;
-  ++frame_index;
   errorReportSetTimeAccum(frame_timestamp);
 
   fixNatives(false);
@@ -952,6 +951,9 @@ function tick(timestamp) {
     profilerStop();
     return profilerStop('tick');
   }
+
+  ++frame_index;
+
   if (in_background) {
     in_background = false;
     callEach(exit_background_cb);
