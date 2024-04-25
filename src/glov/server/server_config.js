@@ -23,6 +23,8 @@ export let default_config_options = {
   // Modules to import before creating exchanges
   // Using string template so that glov-build-preresolve doesn't munge it
   exchange_providers: [`glov${'/server/exchange_gmx_client'}`],
+  // How often to log and bucket perf_counters
+  perf_counter_bucket_time: 10000,
 };
 
 let default_env_options = {

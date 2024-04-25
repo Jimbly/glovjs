@@ -16,6 +16,7 @@ import {
   dataErrorQueueGet,
 } from 'glov/common/data_error';
 import { packetEnableDebug } from 'glov/common/packet';
+import { perfCounterSetBucketTime } from 'glov/common/perfcounters';
 import { callEach } from 'glov/common/util';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
@@ -150,6 +151,8 @@ export function startup(params) {
   if (metrics_impl) {
     metricsInit(metrics_impl);
   }
+
+  perfCounterSetBucketTime(server_config.perf_counter_bucket_time);
 
   if (!exchange) {
     if (server_config.exchange_providers) {
