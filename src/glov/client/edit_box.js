@@ -230,8 +230,17 @@ class GlovUIEditBox {
         }
         if (this.text === new_text) {
           // we presumably just trimmed off what they inserted, treat as error
-          valid = false;
-          debug('trimmed equal orig');
+          // Except, if the new selection point is valid, they probably inserted
+          //   a blank line at the end (and a *different* one got trimmed), so
+          //   let that through
+          if (sel_end <= new_text.length) {
+            input.value = new_text;
+            this.setSelectionRange(sel_start, sel_end);
+            debug('trimming helped to keep selection');
+          } else {
+            valid = false;
+            debug('trimmed equal orig');
+          }
         } else {
           input.value = new_text;
           this.setSelectionRange(sel_start, sel_end);
