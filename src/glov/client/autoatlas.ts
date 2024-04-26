@@ -19,6 +19,8 @@ import { webFSGetFile, webFSOnReady } from './webfs';
 
 import type { TSMap } from 'glov/common/types';
 
+type AutoAtlasBuildData = [string, number, number, number[], number[], number[] | undefined, number[] | undefined];
+
 let load_opts: TSMap<TextureOptions> = {};
 let hit_startup = false;
 export function autoAtlasTextureOpts(name: string, opts: TextureOptions): void {
@@ -81,7 +83,7 @@ class AutoAtlasImp {
     let { tiles, w, h } = atlas_data;
     let seen: TSMap<true> = {};
     for (let tile_id = 0; tile_id < tiles.length; ++tile_id) {
-      let [tile_name, x, y, ws, hs] = tiles[tile_id] as [string, number, number, number[], number[]];
+      let [tile_name, x, y, ws, hs, padh, padv] = tiles[tile_id] as AutoAtlasBuildData;
       seen[tile_name] = true;
       let total_w = 0;
       for (let jj = 0; jj < ws.length; ++jj) {
@@ -136,6 +138,8 @@ class AutoAtlasImp {
         hw,
         rects,
         aspect: non_square ? aspect : null,
+        padh,
+        padv,
         total_w,
         total_h,
       };

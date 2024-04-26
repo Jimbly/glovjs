@@ -811,21 +811,26 @@ export function drawTooltip(param) {
     spriteClipPause();
   }
 
+  let spuid = sprites.panel.uidata;
+  let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
   let tooltip_w = param.tooltip_width || tooltip_width;
   let z = param.z || Z.TOOLTIP;
   let tooltip_y0 = param.y;
-  let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
-  let w = tooltip_w - eff_tooltip_pad * 2;
+  let eff_tooltip_pad_left = param.tooltip_pad || (spuid.padh && spuid.padh[0]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_right = param.tooltip_pad || (spuid.padh && spuid.padh[2]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_top = param.tooltip_pad || (spuid.padv && spuid.padv[0]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_bottom = param.tooltip_pad || (spuid.padv && spuid.padv[2]) * pixel_scale || tooltip_pad;
+  let w = tooltip_w - eff_tooltip_pad_left - eff_tooltip_pad_right;
   // TODO: dims (used if tooltip_above or tooltip_auto_above_offset or
   //   tooltip_right) are potentially wrong for tooltips with markdown in them.
   let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
     // TODO: support markdown dims
-    above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
+    above = tooltip_y0 + dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom > camera2d.y1();
   }
   let x = param.x;
-  let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  let eff_tooltip_w = dims.w + eff_tooltip_pad_left + eff_tooltip_pad_right;
   let right = param.tooltip_right;
   let center = param.tooltip_center;
   if (right && param.tooltip_auto_right_offset) {
@@ -840,17 +845,17 @@ export function drawTooltip(param) {
   }
 
   if (above) {
-    tooltip_y0 -= dims.h + eff_tooltip_pad * 2 + (param.tooltip_auto_above_offset || 0);
+    tooltip_y0 -= dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom + (param.tooltip_auto_above_offset || 0);
   }
-  let y = tooltip_y0 + eff_tooltip_pad;
+  let y = tooltip_y0 + eff_tooltip_pad_top;
   if (param.tooltip_markdown === false) {
     y += font.drawSizedWrapped(font_style_modal,
-      x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
+      x + eff_tooltip_pad_left, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
       tooltip);
   } else {
     let mddims = markdownAuto({
       font_style: font_style_modal,
-      x: x + eff_tooltip_pad,
+      x: x + eff_tooltip_pad_left,
       y: y + tooltip_text_offs,
       z: z+1,
       w,
@@ -858,11 +863,10 @@ export function drawTooltip(param) {
       text_height: ui_style_current.text_height,
       text: tooltip
     });
-    eff_tooltip_w = max(mddims.w + eff_tooltip_pad * 2, eff_tooltip_w);
+    eff_tooltip_w = max(mddims.w + eff_tooltip_pad_left + eff_tooltip_pad_right, eff_tooltip_w);
     y += mddims.h;
   }
-  y += eff_tooltip_pad;
-  let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
+  y += eff_tooltip_pad_bottom;
 
   panel({
     x,
@@ -2146,6 +2150,7 @@ export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
 }
 
 // This is useful for some fonts if the UI uses primarily/entirely upper-case strings, to look more centered
+// DEPRECATED: use a 9-patch panel with padding instead
 export function setTooltipTextOffset(_tooltip_text_offs) {
   tooltip_text_offs = _tooltip_text_offs;
 }

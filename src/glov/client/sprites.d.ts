@@ -47,6 +47,8 @@ export interface SpriteUIData {
   rects: ROVec4[] | TSMap<ROVec4>; // [u0, v0, u1, v1]
   aspect: number[] | null;
   total_w: number; total_h: number;
+  padh?: number[];
+  padv?: number[];
 }
 export interface SpriteDrawParams {
   x: number; y: number; z?: number;

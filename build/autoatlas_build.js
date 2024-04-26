@@ -105,7 +105,7 @@ module.exports = function () {
       if (do_9patch) {
         ws = parseRow(job, img, 1, 0, 1, 0);
         hs = parseRow(job, img, 0, 1, 0, 1);
-        if (idx === 0 && false) {
+        if (idx === 0) {
           // currently unused, but can parse the padding values from the 9-patch as well
           img_data.padh = parseRow(job, img, 1, img.height - 1, 1, 0);
           img_data.padv = parseRow(job, img, img.width - 1, 1, 0, 1);
