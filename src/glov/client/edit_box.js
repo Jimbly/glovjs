@@ -113,6 +113,7 @@ class GlovUIEditBox {
     this.type = 'text';
     // this.h = uiButtonHeight();
     this.font_height = uiTextHeight();
+    this.last_set_text = '';
     this.text = '';
     this.placeholder = '';
     this.max_len = 0;
@@ -146,7 +147,6 @@ class GlovUIEditBox {
     this.last_frame = 0;
     this.out = {}; // Used by spotFocusCheck
     this.last_valid_state = {
-      // text: '', just use this.text!
       sel_start: 0,
       sel_end: 0,
     };
@@ -162,15 +162,12 @@ class GlovUIEditBox {
     if (!params) {
       return;
     }
-    let old_text = this.text;
     for (let f in params) {
-      this[f] = params[f];
+      if (f !== 'text') {
+        this[f] = params[f];
+      }
     }
-    if (this.text === undefined) {
-      // do not trigger assert if `params` has a `text: undefined` member
-      this.text = '';
-    }
-    if (params.text && params.text !== old_text) {
+    if (params.text && params.text !== this.last_set_text) {
       this.setText(params.text);
     }
     this.h = (this.multiline || 1) * this.font_height;
@@ -380,10 +377,18 @@ class GlovUIEditBox {
       new_text = lines.join('\n');
     }
 
-    if (this.input && this.input.value !== new_text) {
-      this.input.value = new_text;
+    let input = this.input;
+    if (input && input.value !== new_text) {
+      if (engine.defines.EDITBOX) {
+        console.log(`Editbox (multiline=${multiline}, max_len=${max_len}: ${engine.frame_index}: setText()`);
+        console.log(`  Sel range = [${input.selectionStart},${input.selectionEnd}]`);
+        console.log(`  Old text         = ${JSON.stringify(input.value)}`);
+        console.log(`  New text         = ${JSON.stringify(new_text)}`);
+      }
+      input.value = new_text;
     }
     this.text = new_text;
+    this.last_set_text = new_text;
   }
   focus() {
     if (this.input) {
@@ -590,6 +595,7 @@ class GlovUIEditBox {
     } else {
       if (this.input) {
         this.updateText();
+        this.last_set_text = this.text;
       }
     }
     if (elem) {
