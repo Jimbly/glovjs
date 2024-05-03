@@ -1655,6 +1655,7 @@ export function drag(param) {
         is_down_edge,
         down_time: touch_data.down_time,
         touch_id,
+        dropped: touch_data.up_edge,
       };
     }
   }
