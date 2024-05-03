@@ -448,6 +448,13 @@ function onUserCreate(client, data, resp_func) {
     client_channel.logCtx('info', 'user_create failed: Invalid username');
     return resp_func('Invalid username');
   }
+  if (user_id.endsWith('_')) {
+    // causes minorish problems with Markdown parsing, but these already exist
+    //   in the wild, so just stop new ones from being created, do not prevent
+    //   them from logging in, etc.
+    client_channel.logCtx('info', 'user_create failed: Invalid username');
+    return resp_func('Invalid username');
+  }
   user_id = user_id.toLowerCase();
 
   if (client_channel.ids.user_id) {
