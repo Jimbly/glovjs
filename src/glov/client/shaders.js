@@ -555,6 +555,12 @@ export function shadersStartup(_globals) {
   filewatchOn('.vp', onShaderChange);
 
   let valid = error_fp.valid && error_vp.valid;
+  if (valid) {
+    let prog = autoLink(error_vp, error_fp);
+    if (!prog || !prog.valid) {
+      valid = false;
+    }
+  }
   if (!valid) {
     // do _not_ send immediate error reports about these, we have an invalid context of some kind
     clearTimeout(report_timeout);
