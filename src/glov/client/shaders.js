@@ -347,6 +347,7 @@ function link(vp, fp, on_error) {
     prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   }
   if (!prog.valid) {
+    prog.uniforms = [];
     error_text = error_text || cleanShaderError(gl.getProgramInfoLog(prog.handle));
     let report = true;
     if (gl.isContextLost()) {
@@ -364,7 +365,6 @@ function link(vp, fp, on_error) {
           ` ${error_text}`);
       }
     }
-    prog.uniforms = [];
     return prog;
   }
 
