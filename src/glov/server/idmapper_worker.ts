@@ -94,7 +94,10 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapGetId(
     source: HandlerSource,
-    data: { provider: string; provider_id: string },
+    data: {
+      provider: string;
+      provider_id: string;
+    },
     resp_func: ErrorCallback<ProviderIdData>,
   ): void {
     let { provider, provider_id } = data;
@@ -114,7 +117,10 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapGetCreateId(
     source: HandlerSource,
-    data: { provider: string; provider_id: string },
+    data: {
+      provider: string;
+      provider_id: string;
+    },
     resp_func: ErrorCallback<ProviderIdData>,
   ): void {
     let { provider, provider_id } = data;
@@ -292,7 +298,12 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapAssociateIds(
     source: HandlerSource,
-    data: { provider: string; provider_id: string; user_id: string; set_deleted?: boolean },
+    data: {
+      provider: string;
+      provider_id: string;
+      user_id: string;
+      set_deleted?: boolean;
+    },
     resp_func: ErrorCallback<boolean>,
   ): void {
     let { provider, provider_id, user_id, set_deleted } = data;
