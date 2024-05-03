@@ -7,6 +7,7 @@ let error_report_dynamic_details = {};
 import { getAPIPath } from 'glov/client/environments';
 import { platformGetID } from './client_config';
 import { fetch } from './fetch';
+import { getStoragePrefix } from './local_storage';
 
 let error_report_disabled = false;
 
@@ -31,6 +32,7 @@ export function errorReportSetDynamicDetails(key, fn) {
 }
 
 errorReportSetDetails('build', BUILD_TIMESTAMP);
+errorReportSetDetails('project', getStoragePrefix());
 errorReportSetDetails('sesuid', session_uid);
 errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
@@ -82,6 +84,27 @@ export function glovErrorReportDisableSubmit() {
 let on_crash_cb = null;
 export function glovErrorReportSetCrashCB(cb) {
   on_crash_cb = cb;
+}
+
+// base like http://foo.com/bar/ (without index.html)
+let reporting_api_path = 'http://www.dashingstrike.com/reports/api/';
+if (window.location.host.indexOf('localhost') !== -1 ||
+  window.location.host.indexOf('staging') !== -1/* ||
+  window.location.host.indexOf('pink') !== -1*/
+) {
+  reporting_api_path = 'http://staging.dashingstrike.com/reports/api/';
+  // reporting_api_path = 'http://localhost:4022/api/';
+}
+if (window.location.href.startsWith('https://')) {
+  reporting_api_path = reporting_api_path.replace(/^http:/, 'https:');
+}
+
+let use_app_api_path = false;
+export function reportingUseAppAPIPath() {
+  use_app_api_path = true;
+}
+export function reportingAPIPath() {
+  return use_app_api_path ? getAPIPath() : reporting_api_path;
 }
 
 // Errors from plugins that we don't want to get reported to us, or show the user!
@@ -174,7 +197,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
     }
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = getAPIPath(); // base like http://foo.com/bar/ (without index.html)
+  let url = reportingAPIPath(); // base like http://foo.com/bar/ (without index.html)
   url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;

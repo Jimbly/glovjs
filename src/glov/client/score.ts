@@ -118,6 +118,10 @@ function withUserID(f: UserIDCB): void {
   );
 }
 
+export function scoreWithUserID(cb: UserIDCB): void {
+  withUserID(cb);
+}
+
 export type LevelName = string;
 export type LevelDef = {
   name?: LevelName;

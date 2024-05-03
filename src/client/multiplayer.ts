@@ -17,6 +17,7 @@ import {
 } from 'glov/client/net';
 import * as net_position_manager from 'glov/client/net_position_manager';
 import * as particles from 'glov/client/particles';
+import 'glov/client/report'; // for command testing
 import { shaderCreate } from 'glov/client/shaders';
 import { socialInit } from 'glov/client/social';
 import { soundLoad } from 'glov/client/sound';
