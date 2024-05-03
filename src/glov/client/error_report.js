@@ -141,6 +141,10 @@ let filtered_errors = new RegExp([
   'closeModal',
   'WeixinJSBridge',
   '/prebid', // Some third-party ad provider
+  'property: websredir', // unknown source, happens often for a couple users on Opera and Chrome
+  'property: googletag', // unknown source, Opera ad blocker?
+  'ResizeObserver loop', // unknown source, but isn't used by us
+  'nav_call_update_item_status',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
