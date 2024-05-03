@@ -755,6 +755,7 @@ Texture.prototype.allocFBO = function (w, h) {
   gl.texImage2D(this.target, 0, fbo_format, w, h, 0, fbo_format, gl.UNSIGNED_BYTE, null);
 
   this.fbo = gl.createFramebuffer();
+  assert(this.fbo); // If this is firing, it's probably due to context loss
   gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.handle, 0);
 
