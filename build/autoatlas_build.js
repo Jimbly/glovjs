@@ -109,6 +109,10 @@ module.exports = function () {
           // currently unused, but can parse the padding values from the 9-patch as well
           img_data.padh = parseRow(job, img, 1, img.height - 1, 1, 0);
           img_data.padv = parseRow(job, img, img.width - 1, 1, 0, 1);
+          if (img_data.padh.length === 1 && img_data.padv.length === 1) {
+            delete img_data.padh;
+            delete img_data.padv;
+          }
         }
         let new_img = pngAlloc({ width: img.width - 2, height: img.height - 2, byte_depth: 4 });
         img.bitblt(new_img, 1, 1, img.width - 2, img.height - 2, 0, 0);
