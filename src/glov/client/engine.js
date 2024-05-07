@@ -818,11 +818,15 @@ function resetState() {
   profilerStop('resetState');
 }
 
+let blurred = false;
 let in_background = false;
 let enter_background_cb = [];
 let exit_background_cb = [];
 export function isInBackground() {
   return in_background;
+}
+export function isInBackgroundOrBlurred() {
+  return in_background || blurred;
 }
 export function onEnterBackground(fn) {
   enter_background_cb.push(fn);
@@ -1107,7 +1111,6 @@ function tick(timestamp) {
   return profilerStop('tick');
 }
 
-let blurred = false;
 function onBlur(evt) {
   blurred = true;
 }
