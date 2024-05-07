@@ -29,9 +29,11 @@ export function reportSend(type: string, payload: DataObject): void {
   let last_time = last_report_time[type] || 0;
   if (now - last_time < RATE_LIMIT) {
     setTimeout(function () {
-      let payload2 = queued_report[type]!;
-      delete queued_report[type];
-      reportSend(type, payload2);
+      let payload2 = queued_report[type];
+      if (payload2) {
+        delete queued_report[type];
+        reportSend(type, payload2);
+      }
     }, RATE_LIMIT);
     queued_report[type] = payload;
     return;
@@ -65,6 +67,16 @@ export function reportSend(type: string, payload: DataObject): void {
       done,
     );
   });
+}
+
+export function reportFlush(type: string): void {
+  let payload = queued_report[type];
+  if (!payload) {
+    return;
+  }
+  delete queued_report[type];
+  last_report_time[type] = 0;
+  reportSend(type, payload);
 }
 
 cmd_parse.register({
