@@ -708,7 +708,26 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
 };
 
 SubscriptionManager.prototype.loginRetry = function (resp_func) {
-  this.loginInternal(this.login_credentials, resp_func);
+  this.loginInternal(this.login_credentials, (err) => {
+    this.auto_login_error = err;
+    if (err === ERR_NO_USER_ID && externalUsersAutoLoginFallbackProvider() &&
+      this.login_credentials.provider === externalUsersAutoLoginProvider() &&
+      externalUsersEnabled(externalUsersAutoLoginProvider())
+    ) {
+      // Login was validated, but no user id exists, and was not auto-created,
+      //   send the credentials to the fallback provider to auto-create a user.
+      this.loginExternal({
+        provider: externalUsersAutoLoginFallbackProvider(),
+        external_login_data: cloneShallow(this.login_credentials.external_login_data),
+        creation_display_name: this.login_credentials.creation_display_name,
+      }, (err) => {
+        this.auto_login_error = err;
+        resp_func(err);
+      });
+    } else {
+      resp_func(err);
+    }
+  });
 };
 
 SubscriptionManager.prototype.getLastLoginCredentials = function () {
@@ -774,6 +793,7 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   if (this.logging_in) {
     return void resp_func('Login already in progress');
   }
+  this.auto_login_error = null;
   this.logging_in = true;
   this.logged_in = false;
   this.login_credentials = login_credentials;
