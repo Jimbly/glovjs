@@ -72,6 +72,11 @@ export function shadersResetState() {
       for (let fpid in shader.programs) {
         let prog = shader.programs[fpid];
         //gl.useProgram(prog.handle);
+        if (prog.uniforms === null) {
+          // shouldn't be possible, but is happening on FireFox
+          assert(prog.uniforms, `prog.uniforms=null, valid=${prog.valid}, fpid=${fpid},` +
+            ` vp=${shader.filename}, handle=${Boolean(prog.handle)}`);
+        }
         for (let jj = 0; jj < prog.uniforms.length; ++jj) {
           let unif = prog.uniforms[jj];
           for (let kk = 0; kk < unif.size; ++kk) {
@@ -328,7 +333,7 @@ function link(vp, fp, on_error) {
   assert(!require_prelink);
   let prog = vp.programs[fp.id] = {
     handle: gl.createProgram(),
-    uniforms: null,
+    uniforms: [],
   };
   let error_text;
   if (!prog.handle) {
@@ -411,6 +416,7 @@ function link(vp, fp, on_error) {
     uniformSetValue(unif);
     return unif;
   }).filter((v) => v);
+  assert(prog.uniforms);
 
   for (let ii = 0; ii < fp.samplers.length; ++ii) {
     let name = fp.samplers[ii];
