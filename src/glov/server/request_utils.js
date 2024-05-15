@@ -119,6 +119,21 @@ export function requestIsLocalHost(req) {
 export function allowMapFromLocalhostOnly(app) {
   app.all('*.map', function (req, res, next) {
     if (requestIsLocalHost(req)) {
+      if (req.method === 'OPTIONS') {
+        // Attempt to support OPTIONS preflight requests for private network access
+        //   Doesn't seem to fix the problem with debugging in Discord, though :(
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        return void setOriginHeaders(req, res, function () {
+          if (req.headers['access-control-request-method']) {
+            res.setHeader('Access-Control-Allow-Methods', req.headers['access-control-request-method']);
+          }
+          if (req.headers['access-control-request-private-network']) {
+            res.setHeader('Access-Control-Allow-Private-Network', 'true');
+          }
+          res.writeHead(204);
+          res.end();
+        });
+      }
       return void next();
     }
     res.writeHead(403, { 'Content-Type': 'text/plain' });
