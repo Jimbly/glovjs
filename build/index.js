@@ -57,6 +57,9 @@ gb.configure({
 // eslint-disable-next-line import/order
 const config = require('./config.js')(gb);
 
+const server_port = argv.port || process.env.port || 3000;
+const server_port_https = argv.sport || process.env.sport || (server_port + 100);
+
 // Gets applied to the entire bundle
 const max_mangle = argv['max-mangle'];
 const prod_uglify_opts = {
@@ -425,6 +428,7 @@ function registerBundle(param) {
     do_version,
     bundle_uglify_opts: argv['dev-mangle'] ? prod_uglify_opts : null,
     ban_deps: ban_deps || (is_worker ? WORKER_BAN_DEPS : null),
+    sourcemap_host: `http://localhost:${server_port}/`,
   });
   if (do_reload) {
     // Add an early sync task, letting the server know we should reload these files
@@ -495,9 +499,6 @@ const server_input_globs = [
   'server_js_notest:**',
   'server_json:**',
 ];
-
-let server_port = argv.port || process.env.port || 3000;
-let server_port_https = argv.sport || process.env.sport || (server_port + 100);
 
 gb.task({
   name: 'run_server',
