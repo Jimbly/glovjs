@@ -28,6 +28,7 @@ import { perfCounterAdd } from 'glov/common/perfcounters';
 import * as EventEmitter from 'glov/common/tiny-events';
 import * as util from 'glov/common/util';
 import { cloneShallow } from 'glov/common/util';
+import { platformParameterGet } from './client_config';
 import * as local_storage from './local_storage';
 import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
@@ -771,10 +772,16 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
       if (netDisconnectedRaw()) {
         return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
       }
+
+      let display_name = user_info?.name || '';
+      if (platformParameterGet('random_creation_name')) {
+        display_name = ''; // Server side will generate randomised name for empty string
+      }
+
       let request_data = {
         provider,
         validation_data: login_data.validation_data,
-        display_name: user_info?.name || '',
+        display_name: display_name,
       };
       if (user_info?.name) {
         this.login_credentials.creation_display_name = user_info.name;

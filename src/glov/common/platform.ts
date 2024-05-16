@@ -9,6 +9,8 @@ export interface PlatformDef {
   reload: boolean;
   // reload_updates: whether or not calling document.reload() will cause us to get an updated version of the client
   reload_updates: boolean;
+  // random_creation_name: new users get a randomly generated name by default
+  random_creation_name: boolean;
 }
 /*
 Extend this like so:
@@ -61,4 +63,5 @@ platformRegister('web', {
   devmode: 'auto',
   reload: true,
   reload_updates: true,
+  random_creation_name: false,
 } as PlatformDef);
