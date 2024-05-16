@@ -484,6 +484,26 @@ Texture.prototype.onLoad = function (cb) {
 
 const createImageBitmap = callbackify(window.createImageBitmap);
 
+let blob_supported;
+function blobSupported() {
+  if (blob_supported !== undefined) {
+    return blob_supported;
+  }
+  if (typeof window.Blob === 'undefined') {
+    blob_supported = false;
+    return false;
+  }
+  try {
+    let view = new Uint8Array(4);
+    let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+    URL.revokeObjectURL(url_object);
+    blob_supported = true;
+  } catch (e) {
+    blob_supported = false;
+  }
+  return blob_supported;
+}
+
 const TEX_RETRY_COUNT = 4;
 Texture.prototype.loadURL = function loadURL(url, filter) {
   let tex = this;
@@ -523,7 +543,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         }
       }
 
-      if (webFSExists(png_name)) {
+      if (webFSExists(png_name) && blobSupported()) {
         assert(!(tflags & FORMAT_PACK)); // not supported/tested, but should be trivial?
 
         let view = webFSGetFile(png_name);
