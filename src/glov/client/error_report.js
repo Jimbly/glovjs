@@ -168,6 +168,7 @@ let filtered_errors = new RegExp([
   'property: googletag', // unknown source, Opera ad blocker?
   'ResizeObserver loop', // unknown source, but isn't used by us
   'nav_call_update_item_status',
+  'GetHTMLElementsAtPoint', // baiduboxapp
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
