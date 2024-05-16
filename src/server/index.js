@@ -5,7 +5,10 @@ import * as path from 'path';
 import * as express from 'express';
 import * as express_static_gzip from 'express-static-gzip';
 import { permTokenWorkerInit } from 'glov/server/perm_token_worker';
-import { setupRequestHeaders } from 'glov/server/request_utils';
+import {
+  requestLogEverything,
+  setupRequestHeaders,
+} from 'glov/server/request_utils';
 import * as glov_server from 'glov/server/server';
 import minimist from 'minimist';
 import { entTestWorkerInit } from './enttest_worker';
@@ -25,6 +28,9 @@ if (argv.dev) {
     };
     server_https = https.createServer(https_options, app);
   }
+}
+if (argv.requestlog) {
+  requestLogEverything(app);
 }
 setupRequestHeaders(app, {
   dev: argv.dev,

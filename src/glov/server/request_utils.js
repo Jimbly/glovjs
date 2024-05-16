@@ -232,3 +232,15 @@ export function setupRequestHeaders(app, { dev, allow_map }) {
   }
   app.use(setOriginHeaders);
 }
+
+export function requestLogEverything(app) {
+  let last_request_id = 0;
+  app.use((req, res, next) => {
+    let request_id = ++last_request_id;
+    console.debug(`${request_id}: ${req.method}, ${req.originalUrl}, `, req.headers);
+    res.on('close', () => {
+      console.debug(`${request_id}: ${res.statusCode}, outbound headers: `, res.getHeaders());
+    });
+    next();
+  });
+}
