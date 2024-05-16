@@ -258,25 +258,23 @@ export function releaseCanvas() {
   }
 }
 
+function reloadDefault() {
+  document.location.reload();
+}
+
+let reload_func = reloadDefault;
+
+export function engineSetReloadFunc(fn) {
+  reload_func = fn;
+}
+
 export function reloadSafe() {
   // Do not report any errors after this point
   errorReportDisable();
   // Release canvas to not leak memory on Firefox
   releaseCanvas();
-  if (window.FBInstant) {
-    try {
-      window.top.location.reload();
-    } catch (e) {
-      try {
-        document.location.reload();
-      } catch {
-        // Not good, but better than the alternatives, I guess
-        window.FBInstant.quit();
-      }
-    }
-  } else {
-    document.location.reload();
-  }
+
+  reload_func();
 }
 window.reloadSafe = reloadSafe;
 
