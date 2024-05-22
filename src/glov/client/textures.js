@@ -20,6 +20,7 @@ import * as engine from './engine';
 import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import * as local_storage from './local_storage';
+import { locateAsset } from './locate_asset';
 import * as settings from './settings';
 import { shadersSetGLErrorReportDetails } from './shaders';
 import * as urlhash from './urlhash';
@@ -504,6 +505,14 @@ function blobSupported() {
   return blob_supported;
 }
 
+function removeHash(url) {
+  let idx = url.indexOf('#');
+  if (idx === -1) {
+    return url;
+  }
+  return url.slice(0, idx);
+}
+
 const TEX_RETRY_COUNT = 4;
 Texture.prototype.loadURL = function loadURL(url, filter) {
   let tex = this;
@@ -562,6 +571,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         return;
       }
 
+      url_use = locateAsset(removeHash(url_use));
       // When our browser's location has been changed from 'site.com/foo/' to
       //  'site.com/foo/bar/7' our relative image URLs are still relative to the
       //  base.  Maybe should set some meta tag to do this instead?
@@ -951,14 +961,6 @@ export function textureUnloadDynamic() {
   while (auto_unload_textures.length) {
     auto_unload_textures[0].destroy();
   }
-}
-
-function removeHash(url) {
-  let idx = url.indexOf('#');
-  if (idx === -1) {
-    return url;
-  }
-  return url.slice(0, idx);
 }
 
 function textureReload(filename) {

@@ -16,6 +16,8 @@ const Replacer = require('regexp-sourcemaps');
 
 const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
+const assetHasherRewrite = require('./asset-hasher-rewrite.js');
+const assetHasher = require('./asset-hasher.js');
 const autoatlas = require('./autoatlas_build.js');
 const autosound = require('./autosound.js');
 const compress = require('./compress.js');
@@ -77,13 +79,15 @@ function copy(job, done) {
   done();
 }
 
-gb.task({
-  name: 'client_css',
-  input: config.client_css,
-  type: gb.SINGLE,
-  target: 'dev',
-  func: copy,
-});
+function addStarStar(a) {
+  return `${a}:**`;
+}
+function addStarStarJS(a) {
+  return `${a}:**.js`;
+}
+function addStarStarJSON(a) {
+  return `${a}:**.json`;
+}
 
 gb.task({
   name: 'server_js',
@@ -135,7 +139,7 @@ gb.task({
 gb.task({
   name: 'gulpish-client_html_default',
   input: config.client_html,
-  ...gulpish_tasks.client_html_default('dev', config.default_defines)
+  ...gulpish_tasks.client_html_default(true, config.default_defines)
 });
 
 let gulpish_client_html_tasks = ['gulpish-client_html_default'];
@@ -145,13 +149,24 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: config.client_html_index,
-    ...gulpish_tasks.client_html_custom('dev', elem)
+    ...gulpish_tasks.client_html_custom(true, elem)
   });
 });
 
 gb.task({
-  name: 'gulpish-client_html',
-  deps: gulpish_client_html_tasks,
+  name: 'html_assethash_rewrite',
+  input: [
+    ...gulpish_client_html_tasks.map(addStarStar),
+  ],
+  target: 'dev',
+  ...assetHasherRewrite({
+    hash_dep: 'asset_hash_dev',
+  }),
+});
+
+gb.task({
+  name: 'client_html',
+  deps: ['html_assethash_rewrite'],
 });
 
 gb.task({
@@ -507,7 +522,10 @@ gb.task({
 
 gb.task({
   name: 'client_static',
-  input: config.client_static,
+  input: [
+    ...config.client_static,
+    ...config.client_css,
+  ],
   type: gb.SINGLE,
   target: 'dev',
   func: copy,
@@ -546,33 +564,18 @@ gb.task({
   }, autosound(config.client_autosound_config)),
 });
 
-function addStarStar(a) {
-  return `${a}:**`;
-}
-function addStarStarJS(a) {
-  return `${a}:**.js`;
-}
-function addStarStarJSON(a) {
-  return `${a}:**.json`;
-}
-
 let client_tasks = [
   ...config.extra_client_tasks,
   'client_autosound',
   'client_static',
   'client_single_min',
   'client_texproc_output',
-  'client_css',
   'client_fsdata',
   ...bundle_tasks,
+  'client_html',
 ];
 
-let client_input_globs_base = client_tasks.map(addStarStar);
-
-let client_input_globs = [
-  ...client_input_globs_base,
-  ...gulpish_client_html_tasks.map(addStarStar),
-];
+let client_input_globs = client_tasks.map(addStarStar);
 
 
 let bs_target = `http://localhost:${server_port}`;
@@ -682,6 +685,20 @@ gb.task({
 });
 
 gb.task({
+  name: 'asset_hash_dev',
+  target: 'dev',
+  input: config.asset_hashed_files,
+  ...assetHasher({
+    need_rewrite: config.asset_hashed_files_need_rewrite,
+  }),
+});
+
+gb.task({
+  name: 'asset_hashing',
+  deps: ['asset_hash_dev'],
+});
+
+gb.task({
   name: 'build_deps',
   deps: [
     // 'client_json', // dep'd from client_bundle*
@@ -692,11 +709,12 @@ gb.task({
     'server_js_notest',
     'server_json',
     ...client_tasks,
+    'asset_hashing',
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     (argv.nolint || argv.lint === false) ? 'nop' : 'check_typescript',
     (argv.nolint || argv.lint === false) ? 'nop' : 'test',
-    'gulpish-client_html',
+    'client_html',
     'client_js_warnings',
   ],
 });
@@ -827,14 +845,15 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      ...client_input_globs_base.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
+      // TODO: maybe need to filter client_html task from client_input_globs?
+      ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
       'build.prod.client_fsdata:**',
       'build.prod.texfinal:**',
       ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
       'build.prod.uglify:**',
       ...config.extra_client_html,
       ...config.extra_zip_inputs,
-      `gulpish-client_html_${elem.name}:**`,
+      // `gulpish-client_html_${elem.name}:**`, // TODO: need index.html from the post-hashed version of this
     ],
     deps: ['build_deps'],
     ...gulpish_tasks.zip('prod', elem),

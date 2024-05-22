@@ -96,7 +96,8 @@
     "pngjs": "^6.0.0",
     "regexp-sourcemaps": "^1.0.1",
     "typescript": "4.4.3",
-    "uglify-js": "3.14.2"
+    "uglify-js": "3.14.2",
+    "xxhash-wasm": "^1.0.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.1"
