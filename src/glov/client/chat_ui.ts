@@ -1019,7 +1019,8 @@ class ChatUIImpl {
           url_label = m[1];
         }
       }
-      return `[chaturl=${urlKeyEscape(url_label)}]`;
+      // Replace only the captured group with the filtered link
+      return match.replace(msg_url, `[chaturl=${urlKeyEscape(url_label)}]`);
     });
   }
   linkUnFilter(msg: string): string {
