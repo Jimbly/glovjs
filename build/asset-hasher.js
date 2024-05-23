@@ -83,8 +83,12 @@ module.exports = function (opts) {
     for (let ii = 0; ii < phase2_files.length; ++ii) {
       let file = phase2_files[ii];
       // *Not* setting an asset_prefix, to deal with manifest.json now referencing
-      //   assets in the same folder as we're hashed to.  Does this need to be per-file?
-      let text = assetHasherRewriteInternal(job, '', file.contents, mappings);
+      //   assets in the same folder as we're hashed to.
+      // This is inherently doing something inconsistent compared to other uses
+      //   (the source paths are relative to a different folder than the mapped
+      //   paths), so may need something more complex if other files have
+      //   different behaviors (source is anything other than the root).
+      let text = assetHasherRewriteInternal(job, out_base, '', file, mappings);
       outputHashed({
         relative: file.relative,
         contents: Buffer.from(text),
@@ -93,18 +97,20 @@ module.exports = function (opts) {
     let map_file = `${out_dir}${ts}.js`;
     mappings['assets.js'] = `${ts}`;
     mappings.asset_dir = asset_dir;
-    let map_contents = `(function (glob) {
-var asset_mappings = glob.glov_asset_mappings = ${JSON.stringify(mappings)};
+    function mapContents(body) {
+      return `(function (glob) {
+var asset_mappings = glob.glov_asset_mappings = ${body};
 }(typeof window === 'undefined' ? module.exports : window));
 `;
+    }
     job.out({
       relative: map_file,
-      contents: map_contents,
+      contents: mapContents(JSON.stringify(mappings)),
     });
-    // also non-timestamped version for debugging (should NOT be loaded if everything is working)
+    // also non-timestamped, formatted version for debugging (should NOT be loaded if everything is working)
     job.out({
       relative: `${out_base}assets.js`,
-      contents: map_contents,
+      contents: mapContents(JSON.stringify(mappings, undefined, 2)),
     });
     // // TODO: maybe don't need this if we use the non-timestamped file above instead?
     // job.out({

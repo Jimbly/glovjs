@@ -687,7 +687,10 @@ gb.task({
 gb.task({
   name: 'asset_hash_dev',
   target: 'dev',
-  input: config.asset_hashed_files,
+  input: [
+    ...bundle_tasks.map(addStarStarJS),
+    ...config.asset_hashed_files,
+  ],
   ...assetHasher({
     need_rewrite: config.asset_hashed_files_need_rewrite,
   }),

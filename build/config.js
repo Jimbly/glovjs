@@ -89,6 +89,7 @@ module.exports = function (gb) {
     // Note: no files in base GLOV.js build, but input cannot be empty, so using dummy path
     server_fsdata: ['client/does/not/exists/*'],
     asset_hashed_files: [
+      'client_fsdata:**',
       'client_texproc_output:**',
       'client_static:**',
     ],
