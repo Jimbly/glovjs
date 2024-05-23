@@ -36,6 +36,13 @@ function alphabetizeKeys(obj) {
   return ret;
 }
 
+function mapContents(body) {
+  return `(function (glob) {
+var asset_mappings = glob.glov_asset_mappings = ${body};
+}(typeof window === 'undefined' ? module.exports : window));
+`;
+}
+
 module.exports = function (opts) {
   opts = opts || {};
   const max_length = opts.max_length || 8;
@@ -108,12 +115,6 @@ module.exports = function (opts) {
     mappings['assets.js'] = `${ts}`;
     mappings.asset_dir = asset_dir;
     mappings = alphabetizeKeys(mappings);
-    function mapContents(body) {
-      return `(function (glob) {
-var asset_mappings = glob.glov_asset_mappings = ${body};
-}(typeof window === 'undefined' ? module.exports : window));
-`;
-    }
     job.out({
       relative: map_file,
       contents: mapContents(JSON.stringify(mappings)),
@@ -123,14 +124,6 @@ var asset_mappings = glob.glov_asset_mappings = ${body};
       relative: `${out_base}assets.js`,
       contents: mapContents(JSON.stringify(mappings, undefined, 2)),
     });
-    // // TODO: maybe don't need this if we use the non-timestamped file above instead?
-    // job.out({
-    //   relative: `${out_dir}assets.ver.json`,
-    //   contents: JSON.stringify({
-    //     ver: ts,
-    //     fn: map_file,
-    //   }),
-    // });
     done();
   }
   return {
@@ -139,8 +132,25 @@ var asset_mappings = glob.glov_asset_mappings = ${body};
     func: assetHasher,
     version: [
       hashedName,
+      mapContents,
       assetHasherRewriteInternal,
       module.exports,
+    ],
+  };
+};
+
+module.exports.dummy = function () {
+  return {
+    type: gb.ALL,
+    func: function (job, done) {
+      job.out({
+        relative: 'client/assets.js',
+        contents: mapContents('{}'),
+      });
+      done();
+    },
+    version: [
+      mapContents,
     ],
   };
 };

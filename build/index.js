@@ -874,7 +874,7 @@ gb.task({
 
 // Everything that goes (on-disk) into a production build (before making .zips)
 gb.task({
-  name: 'build.prod.posthash',
+  name: 'prod.posthash',
   input: [
     'asset_hash_prod:**',
     'prod.html_assethash_rewrite:**',
@@ -888,6 +888,14 @@ gb.task({
   func: copy,
 });
 
+gb.task({
+  name: 'assets_dummy',
+  input: [
+    'prod.posthash:does_not_exist' // not actually a dep, just to make build system happy
+  ],
+  ...assetHasher.dummy(),
+});
+
 let zip_tasks = [];
 config.extra_index.forEach(function (elem) {
   if (!elem.zip) {
@@ -898,11 +906,14 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      // TODO: need to not have both hashed and original assets
-      'build.prod.posthash:**',
+      'prod.posthash:**',
+      'prod.posthash:!client/a/**',
+      'prod.posthash:!client/assets.js',
+      'prod.posthash:!**/*.html',
+      'assets_dummy:**',
       ...config.extra_client_html,
       ...config.extra_zip_inputs,
-      // `gulpish-client_html_${elem.name}:**`, // TODO: need index.html from the post-hashed version of this
+      `gulpish-client_html_${elem.name}:**`,
     ],
     deps: ['build_deps'],
     ...gulpish_tasks.zip('prod', elem),
@@ -955,7 +966,7 @@ gb.task({
 gb.task({
   name: 'build.prod.compress',
   input: [
-    'build.prod.posthash:**',
+    'prod.posthash:**',
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
