@@ -1,6 +1,8 @@
 import type { DataObject, TSMap } from 'glov/common/types';
 
-let asset_mappings = (window as unknown as DataObject).glov_asset_mappings as TSMap<string>;
+let asset_mappings = typeof window === 'undefined' ?
+  {} :
+  (window as unknown as DataObject).glov_asset_mappings as TSMap<string>;
 let asset_dir = asset_mappings && asset_mappings.asset_dir || '';
 
 export function locateAsset(name: string): string {
