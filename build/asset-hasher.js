@@ -26,6 +26,16 @@ function baseEncodeFactory(charset) {
 }
 const base62Encode = baseEncodeFactory('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
 
+function alphabetizeKeys(obj) {
+  let keys = Object.keys(obj);
+  keys.sort();
+  let ret = {};
+  for (let ii = 0; ii < keys.length; ++ii) {
+    ret[keys[ii]] = obj[keys[ii]];
+  }
+  return ret;
+}
+
 module.exports = function (opts) {
   opts = opts || {};
   const max_length = opts.max_length || 8;
@@ -97,6 +107,7 @@ module.exports = function (opts) {
     let map_file = `${out_dir}${ts}.js`;
     mappings['assets.js'] = `${ts}`;
     mappings.asset_dir = asset_dir;
+    mappings = alphabetizeKeys(mappings);
     function mapContents(body) {
       return `(function (glob) {
 var asset_mappings = glob.glov_asset_mappings = ${body};

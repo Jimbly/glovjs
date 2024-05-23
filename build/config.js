@@ -89,9 +89,15 @@ module.exports = function (gb) {
     // files in client/*, presumably bundled into fsdata, that should be placed in server/*
     // Note: no files in base GLOV.js build, but input cannot be empty, so using dummy path
     server_fsdata: ['client/does/not/exists/*'],
-    asset_hashed_files: [
+    asset_hashed_files_dev: [
       'client_fsdata:**',
       'client_texproc_output:**',
+    ],
+    asset_hashed_files_prod: [
+      'build.prod.client_fsdata:**',
+      'build.prod.texfinal:**',
+    ],
+    asset_hashed_files: [
       'client_static:**',
     ],
     asset_hashed_files_need_rewrite: [],

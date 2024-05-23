@@ -16,7 +16,6 @@ const Replacer = require('regexp-sourcemaps');
 
 const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
-const assetHasherRehash = require('./asset-hasher-rehash.js');
 const assetHasherRewrite = require('./asset-hasher-rewrite.js');
 const assetHasher = require('./asset-hasher.js');
 const autoatlas = require('./autoatlas_build.js');
@@ -158,9 +157,14 @@ config.extra_index.forEach(function (elem) {
 });
 
 gb.task({
+  name: 'client_html_pre_hash',
+  deps: gulpish_client_html_tasks,
+});
+
+gb.task({
   name: 'html_assethash_rewrite',
   input: [
-    ...gulpish_client_html_tasks.map(addStarStar),
+    'client_html_pre_hash:**',
   ],
   target: 'dev',
   ...assetHasherRewrite({
@@ -693,6 +697,7 @@ gb.task({
   target: 'dev',
   input: [
     ...bundle_tasks.map(addStarStarJS),
+    ...config.asset_hashed_files_dev,
     ...config.asset_hashed_files,
   ],
   ...assetHasher({
@@ -841,31 +846,46 @@ gb.task({
   func: copy,
 });
 
-function removeClientPrefix(s) {
-  assert(s.startsWith('client/'));
-  return s.slice('client/'.length);
+function noClientHTML(a) {
+  return !a.startsWith('client_html');
 }
 
-// Gather all things that need to be in a prod build (on-disk or in-zip)
-// and re-output them under their hashed names (contents may have changed due
-// to extra optimization on prod assets)
 gb.task({
-  name: 'build.prod.rehash',
+  name: 'asset_hash_prod',
   input: [
-    // TODO: maybe need to filter client_html task from client_input_globs?
-    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
+    'build.prod.uglify:**.js',
+    ...config.asset_hashed_files_prod,
+    ...config.asset_hashed_files,
+  ],
+  ...assetHasher({
+    need_rewrite: config.asset_hashed_files_need_rewrite,
+  }),
+});
+
+gb.task({
+  name: 'prod.html_assethash_rewrite',
+  input: [
+    'client_html_pre_hash:**',
+  ],
+  ...assetHasherRewrite({
+    hash_dep: 'asset_hash_prod',
+  }),
+});
+
+// Everything that goes (on-disk) into a production build (before making .zips)
+gb.task({
+  name: 'build.prod.posthash',
+  input: [
+    'asset_hash_prod:**',
+    'prod.html_assethash_rewrite:**',
+    'build.prod.uglify:**',
+    ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
     'build.prod.client_fsdata:**',
     'build.prod.texfinal:**',
-    ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
-    'build.prod.uglify:**',
+    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData).filter(noClientHTML),
   ],
-  ...assetHasherRehash({
-    hash_dep: 'asset_hash_dev',
-    use_hashed_version: [
-      'assets.js',
-      ...config.asset_hashed_files_need_rewrite.map(removeClientPrefix),
-    ],
-  }),
+  type: gb.SINGLE,
+  func: copy,
 });
 
 let zip_tasks = [];
@@ -879,7 +899,7 @@ config.extra_index.forEach(function (elem) {
     name,
     input: [
       // TODO: need to not have both hashed and original assets
-      'build.prod.rehash:**',
+      'build.prod.posthash:**',
       ...config.extra_client_html,
       ...config.extra_zip_inputs,
       // `gulpish-client_html_${elem.name}:**`, // TODO: need index.html from the post-hashed version of this
@@ -935,7 +955,7 @@ gb.task({
 gb.task({
   name: 'build.prod.compress',
   input: [
-    'build.prod.rehash:**',
+    'build.prod.posthash:**',
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
