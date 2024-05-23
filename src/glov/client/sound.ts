@@ -13,6 +13,7 @@ import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
 import { onEnterBackground, onExitBackground } from './engine';
 import { filewatchOn } from './filewatch';
+import { locateAsset } from './locate_asset';
 import * as settings from './settings';
 import { textureCname } from './textures';
 import * as urlhash from './urlhash';
@@ -242,20 +243,27 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
     preferred_ext = m[2];
   }
   let src = `sounds/${soundname}`;
-  let srcs : string[] = [];
-  let suffix = '';
-  if (opts.for_reload) {
-    suffix = `?rl=${Date.now()}`;
-  }
+  let srcs: string[] = [];
   if (preferred_ext) {
-    srcs.push(`${urlhash.getURLBase()}${src}.${preferred_ext}${suffix}`);
+    srcs.push(`${src}.${preferred_ext}`);
   }
   for (let ii = 0; ii < sound_params.ext_list.length; ++ii) {
     let ext = sound_params.ext_list[ii];
     if (ext !== preferred_ext) {
-      srcs.push(`${urlhash.getURLBase()}${src}.${ext}${suffix}`);
+      srcs.push(`${src}.${ext}`);
     }
   }
+
+  srcs = srcs.map((filename) => {
+    if (opts!.for_reload) { // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+      filename = `${filename}?rl=${Date.now()}`;
+    } else {
+      filename = locateAsset(filename);
+    }
+    filename = `${urlhash.getURLBase()}${filename}`;
+    return filename;
+  });
+
   // Try loading desired sound types one at a time.
   // Cannot rely on Howler's built-in support for this because it only continues
   //   through the list on *some* load errors, not all :(.

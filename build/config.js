@@ -99,6 +99,7 @@ module.exports = function (gb) {
     ],
     asset_hashed_files: [
       'client_static:**',
+      'client_autosound:**',
     ],
     asset_hashed_files_need_rewrite: [],
     default_defines: {
