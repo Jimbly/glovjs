@@ -20,6 +20,7 @@
     "clean": "node build clean",
     "build": "node build build",
     "cache": "node build build.prod.png client_autosound --cache-rebuild",
+    "build_watch": "nodemon -w build -- build build --watch",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
     "test_watch": "nodemon -w build -- build test --watch",
     "test": "node build lint test"

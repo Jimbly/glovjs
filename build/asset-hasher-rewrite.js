@@ -54,21 +54,32 @@ function assetHasherRewriteInternal(job, out_base, asset_prefix, file, mappings)
   return text;
 }
 
+function assetHasherLoadMappings(hash_dep, out_base, job, next) {
+  job.depAdd(`${hash_dep}:${out_base}assets.js`, function (err, assets_file) {
+    if (err) {
+      return void next(err);
+    }
+
+    let mappings = parseAssetsJS(job, assets_file.contents.toString('utf8'));
+    if (!mappings) {
+      return void next('Could not parse assets.js');
+    }
+
+    next(null, mappings);
+  });
+}
+
 module.exports = function (opts) {
   assert(opts);
   let { hash_dep } = opts;
   assert(hash_dep);
   const out_base = opts.out_base || 'client/';
   function assetHasherRewrite(job, done) {
-    job.depAdd(`${hash_dep}:${out_base}assets.js`, function (err, assets_file) {
+    assetHasherLoadMappings(hash_dep, out_base, job, function (err, mappings) {
       if (err) {
         return void done(err);
       }
 
-      let mappings = parseAssetsJS(job, assets_file.contents.toString('utf8'));
-      if (!mappings) {
-        return void done('Could not parse assets.js');
-      }
       let { asset_dir } = mappings;
       assert(asset_dir);
 
@@ -87,6 +98,7 @@ module.exports = function (opts) {
     func: assetHasherRewrite,
     version: [
       assetHasherRewriteInternal,
+      assetHasherLoadMappings,
       parseAssetsJS,
       module.exports,
     ],
@@ -94,3 +106,4 @@ module.exports = function (opts) {
   };
 };
 module.exports.assetHasherRewriteInternal = assetHasherRewriteInternal;
+module.exports.assetHasherLoadMappings = assetHasherLoadMappings;

@@ -58,6 +58,7 @@ module.exports = function (gb) {
     ],
     compress_files: [
       'client/**',
+      '!**/*.txp',
       '!**/*.png',
       '!**/*.jpg',
       '!**/*.mp3',

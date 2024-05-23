@@ -16,6 +16,7 @@ const Replacer = require('regexp-sourcemaps');
 
 const alphafix = require('./alphafix.js');
 const appBundle = require('./app-bundle.js');
+const assetHasherRehash = require('./asset-hasher-rehash.js');
 const assetHasherRewrite = require('./asset-hasher-rewrite.js');
 const assetHasher = require('./asset-hasher.js');
 const autoatlas = require('./autoatlas_build.js');
@@ -87,6 +88,9 @@ function addStarStarJS(a) {
 }
 function addStarStarJSON(a) {
   return `${a}:**.json`;
+}
+function addStarStarJSMap(a) {
+  return `${a}:**.js.map`;
 }
 
 gb.task({
@@ -727,6 +731,7 @@ if (argv['prod-uglify'] === false) {
     name: 'build.prod.uglify',
     input: [
       ...bundle_tasks.map(addStarStarJS),
+      ...bundle_tasks.map(addStarStarJSMap),
     ],
     type: gb.SINGLE,
     func: copy,
@@ -832,11 +837,36 @@ gb.task({
     'client_texproc:!**/*.txp',
     'client_texproc:!**/*.tflag',
   ],
-  target: 'prod',
   type: gb.SINGLE,
   func: copy,
 });
 
+function removeClientPrefix(s) {
+  assert(s.startsWith('client/'));
+  return s.slice('client/'.length);
+}
+
+// Gather all things that need to be in a prod build (on-disk or in-zip)
+// and re-output them under their hashed names (contents may have changed due
+// to extra optimization on prod assets)
+gb.task({
+  name: 'build.prod.rehash',
+  input: [
+    // TODO: maybe need to filter client_html task from client_input_globs?
+    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
+    'build.prod.client_fsdata:**',
+    'build.prod.texfinal:**',
+    ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
+    'build.prod.uglify:**',
+  ],
+  ...assetHasherRehash({
+    hash_dep: 'asset_hash_dev',
+    use_hashed_version: [
+      'assets.js',
+      ...config.asset_hashed_files_need_rewrite.map(removeClientPrefix),
+    ],
+  }),
+});
 
 let zip_tasks = [];
 config.extra_index.forEach(function (elem) {
@@ -848,12 +878,8 @@ config.extra_index.forEach(function (elem) {
   gb.task({
     name,
     input: [
-      // TODO: maybe need to filter client_html task from client_input_globs?
-      ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
-      'build.prod.client_fsdata:**',
-      'build.prod.texfinal:**',
-      ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
-      'build.prod.uglify:**',
+      // TODO: need to not have both hashed and original assets
+      'build.prod.rehash:**',
       ...config.extra_client_html,
       ...config.extra_zip_inputs,
       // `gulpish-client_html_${elem.name}:**`, // TODO: need index.html from the post-hashed version of this
@@ -909,10 +935,7 @@ gb.task({
 gb.task({
   name: 'build.prod.compress',
   input: [
-    ...bundle_tasks.map(addStarStarJSON), // things excluded in build.prod.uglify
-    'build.prod.uglify:**',
-    ...client_input_globs.filter(noBundleTasks).filter(noTextureTask).filter(noFSData),
-    'build.prod.client_fsdata:**',
+    'build.prod.rehash:**',
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
