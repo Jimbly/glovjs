@@ -66,18 +66,32 @@ module.exports = function (opts) {
       next();
     });
   }
+  let cache = {};
   function assetHasher(job, done) {
     let files = job.getFiles();
     let mappings = {};
     let ts = String(floor(Date.now()/1000));
-    // TODO: don't re-hash files that have not changed since last run (in this process)
     let have_output = {};
     function outputHashed(file) {
-      let hash = hasher.h64Raw(file.contents);
-      let hash_str = base62Encode(hash, max_length);
-      let source_name = file.relative.startsWith(strip_prefix) ?
-        file.relative.slice(strip_prefix.length) :
-        file.relative;
+      let cache_elem = cache[file.relative];
+      let hash_str;
+      let source_name;
+      if (file.timestamp && cache_elem && cache_elem.timestamp === file.timestamp) {
+        ({ hash_str, source_name } = cache_elem);
+      } else {
+        let hash = hasher.h64Raw(file.contents);
+        hash_str = base62Encode(hash, max_length);
+        source_name = file.relative.startsWith(strip_prefix) ?
+          file.relative.slice(strip_prefix.length) :
+          file.relative;
+        if (file.timestamp) {
+          cache[file.relative] = {
+            timestamp: file.timestamp,
+            hash_str,
+            source_name,
+          };
+        }
+      }
       mappings[source_name] = hash_str;
       let out_name = hashedName(hash_str, file.relative);
       if (!have_output[out_name]) {
@@ -119,11 +133,14 @@ module.exports = function (opts) {
       relative: map_file,
       contents: mapContents(JSON.stringify(mappings)),
     });
-    // also non-timestamped, formatted version for debugging (should NOT be loaded if everything is working)
+    // also non-timestamped, formatted version for debugging (should NOT be
+    // loaded at run-time if everything is working, but is loaded by other
+    // build steps)
     job.out({
       relative: `${out_base}assets.js`,
       contents: mapContents(JSON.stringify(mappings, undefined, 2)),
     });
+    // job.log(`${cache_hit} cache hits, ${cache_miss} misses`);
     done();
   }
   return {
