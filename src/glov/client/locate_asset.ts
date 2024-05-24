@@ -21,3 +21,8 @@ export function locateAsset(name: string): string {
   }
   return ret;
 }
+
+// Called in development before doing any reloads (as we don't reload asset_mappings)
+export function locateAssetDisableHashing(): void {
+  asset_mappings = {};
+}
