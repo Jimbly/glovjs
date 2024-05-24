@@ -72,12 +72,16 @@ module.exports = function (opts) {
     let mappings = {};
     let ts = String(floor(Date.now()/1000));
     let have_output = {};
+    let seen = {};
     function outputHashed(file) {
       let cache_elem = cache[file.relative];
+      seen[file.relative] = true;
       let hash_str;
       let source_name;
+      let is_unchanged;
       if (file.timestamp && cache_elem && cache_elem.timestamp === file.timestamp) {
         ({ hash_str, source_name } = cache_elem);
+        is_unchanged = true;
       } else {
         let hash = hasher.h64Raw(file.contents);
         hash_str = base62Encode(hash, max_length);
@@ -99,6 +103,7 @@ module.exports = function (opts) {
         job.out({
           relative: out_name,
           contents: file.contents,
+          is_unchanged,
         });
       }
     }
@@ -141,6 +146,11 @@ module.exports = function (opts) {
       contents: mapContents(JSON.stringify(mappings, undefined, 2)),
     });
     // job.log(`${cache_hit} cache hits, ${cache_miss} misses`);
+    for (let key in cache) {
+      if (!seen[key]) {
+        delete cache[key];
+      }
+    }
     done();
   }
   return {
