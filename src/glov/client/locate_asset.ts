@@ -26,3 +26,14 @@ export function locateAsset(name: string): string {
 export function locateAssetDisableHashing(): void {
   asset_mappings = {};
 }
+
+export function unlocatePaths(s: string | null | undefined): string {
+  let reverse_lookup = Object.create(null);
+  for (let key in asset_mappings) {
+    reverse_lookup[asset_mappings[key]!] = key;
+  }
+  return String(s).replace(new RegExp(`${asset_dir}/([a-zA-Z0-9]+)\\.\\w+`, 'g'), function (match, hash) {
+    let m = reverse_lookup[hash];
+    return m || match;
+  });
+}

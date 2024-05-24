@@ -8,6 +8,7 @@ import { getAPIPath } from 'glov/client/environments';
 import { platformGetID } from './client_config';
 import { fetch } from './fetch';
 import { getStoragePrefix } from './local_storage';
+import { unlocatePaths } from './locate_asset';
 
 let error_report_disabled = false;
 
@@ -172,6 +173,7 @@ let filtered_errors = new RegExp([
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
+  msg = unlocatePaths(msg);
   console.error(msg);
   if (on_crash_cb) {
     on_crash_cb();
@@ -199,7 +201,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = reportingAPIPath(); // base like http://foo.com/bar/ (without index.html)
-  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
+  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(unlocatePaths(file))}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;
   if (submit_errors) {
