@@ -1,3 +1,4 @@
+import * as assert from 'assert';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -36,6 +37,23 @@ setupRequestHeaders(app, {
   dev: argv.dev,
   allow_map: true,
 });
+
+function isDiscord(headers) {
+  return headers.referrer && headers.referrer.includes('discord') ||
+    headers['cf-worker'] && headers['cf-worker'].includes('discord');
+}
+
+if (argv.dev) {
+  // In dev, `index.html` is unhashed, but we need to serve the hashed version
+  //   to the Discord proxy, otherwise it'll never load the new files
+  app.get('/', function (req, res, next) {
+    if (isDiscord(req.headers)) {
+      assert(req.url.startsWith('/'));
+      req.url = `/index_hashed.html${req.url.slice(1)}`;
+    }
+    next();
+  });
+}
 
 app.use(express_static_gzip(path.join(__dirname, '../client/'), {
   enableBrotli: true,

@@ -168,15 +168,45 @@ gb.task({
   input: [
     'client_html_pre_hash:**',
   ],
-  target: 'dev',
   ...assetHasherRewrite({
     hash_dep: 'asset_hash_dev',
   }),
 });
 
 gb.task({
+  name: 'html_rename',
+  target: 'dev',
+  input: [
+    'html_assethash_rewrite:**',
+  ],
+  type: gb.SINGLE,
+  func: function (job, done) {
+    let file = job.getFile();
+    if (file.relative === 'client/index.html') {
+      job.out({
+        relative: 'client/index_hashed.html',
+        contents: file.contents,
+      });
+    } else {
+      job.out(file);
+    }
+    done();
+  },
+});
+
+gb.task({
+  name: 'html_web_unhashed',
+  target: 'dev',
+  input: [
+    'client_html_pre_hash:client/index.html',
+  ],
+  type: gb.SINGLE,
+  func: copy,
+});
+
+gb.task({
   name: 'client_html',
-  deps: ['html_assethash_rewrite'],
+  deps: ['html_rename', 'html_web_unhashed'],
 });
 
 gb.task({
