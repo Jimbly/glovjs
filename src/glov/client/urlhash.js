@@ -48,6 +48,10 @@ let page_base = (document.location.href || '').match(/^[^#?]+/)[0]; // remove se
 // }
 // Removes index.html et all
 let url_base = page_base.replace(/[^/]*$/,'');
+if (url_base.endsWith('/a/')) {
+  // Slightly hacky, if an index.html is stored forever in the hashed assets folder, adjust to deal with this
+  url_base = url_base.slice(0, -2);
+}
 let on_change = [];
 
 // e.g. http://site.com/ http://company.com/app/

@@ -158,7 +158,9 @@ config.extra_index.forEach(function (elem) {
 
 gb.task({
   name: 'client_html_pre_hash',
-  deps: gulpish_client_html_tasks,
+  type: gb.SINGLE,
+  input: gulpish_client_html_tasks.map(addStarStar),
+  func: copy,
 });
 
 gb.task({
@@ -706,11 +708,6 @@ gb.task({
 });
 
 gb.task({
-  name: 'asset_hashing',
-  deps: ['asset_hash_dev'],
-});
-
-gb.task({
   name: 'build_deps',
   deps: [
     // 'client_json', // dep'd from client_bundle*
@@ -721,7 +718,7 @@ gb.task({
     'server_js_notest',
     'server_json',
     ...client_tasks,
-    'asset_hashing',
+    'asset_hash_dev',
     (argv.nolint || argv.lint === false) ? 'nop' : 'eslint',
     // 'gulpish-eslint', // example, superseded by `eslint`
     (argv.nolint || argv.lint === false) ? 'nop' : 'check_typescript',
@@ -986,7 +983,7 @@ gb.task({
 
 gb.task({
   name: 'build.prod.client',
-  deps: ['build.prod.compress', 'build.prod.texfinal', 'build.zip'],
+  deps: ['build.prod.compress', 'build.prod.texfinal', 'build.zip', ...config.extra_prod_tasks],
 });
 gb.task({
   name: 'build',

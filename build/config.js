@@ -117,6 +117,7 @@ module.exports = function (gb) {
     }],
     extra_client_tasks: [],
     extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
+    extra_prod_tasks: [],
     extra_zip_inputs: [],
     client_intermediate_input: [
       'client_json:**',
