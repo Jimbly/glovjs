@@ -66,6 +66,17 @@ export function ipFromRequest(req) {
       } else {
         ip = forward_ip;
       }
+      let m = ip.match(regex_ipv4);
+      if (m) {
+        ip = m[1];
+      }
+      if (isLocalHost(ip)) { // eslint-disable-line @typescript-eslint/no-use-before-define
+        if (!skipWarn(req)) {
+          console.warn(`Received request with (likely spoofed) x-forwarded-for header "${header}"` +
+            ` from ${raw_ip} for ${req.url}`);
+        }
+        ip = `untrusted:${raw_ip}`;
+      }
     }
   } else {
     // No forward_depth specified, so, if we do see a x-forwarded-for header, then
