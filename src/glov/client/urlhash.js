@@ -60,8 +60,24 @@ export function getURLBase() {
 }
 
 // e.g. http://site.com/ http://company.com/app/ http://site.com/page.html (for multi-page apps)
+// Probably don't want this, call getLinkURL() instead
 export function getURLPageBase() {
   return page_base;
+}
+
+// given something like w/1234 or ?foo=bar, return http://site.com/w/1234 or http://site.com/?foo=bar
+//  or http://site.com/page.html?w/1234 or http://site.com/page.html?foo=bar appropriately
+export function getLinkURL(suburl) {
+  let mid = '';
+  if (!page_base.endsWith('/') && suburl && !suburl.startsWith('?')) {
+    // a page_base like `foo.com/index.html` and a route url like `user/foo`, delineate them
+    mid = '?';
+  }
+  let url = `${page_base}${mid}${suburl}`;
+  if (url.endsWith('?')) {
+    url = url.slice(0, -1);
+  }
+  return url;
 }
 
 export function onChange(cb) {
@@ -309,12 +325,7 @@ function updateHistoryCommit() {
   }
   scheduled = false;
   last_history_set_time = Date.now();
-  let mid = '';
-  if (!page_base.endsWith('/') && last_history_str && !last_history_str.startsWith('?')) {
-    // a page_base like `foo.com/index.html` and a route url like `user/foo`, delineate them
-    mid = '?';
-  }
-  let url = `${page_base}${mid}${last_history_str}`;
+  let url = getLinkURL(last_history_str);
   if (url.endsWith('?')) {
     url = url.slice(0, -1);
   }
