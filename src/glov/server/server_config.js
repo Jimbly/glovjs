@@ -4,6 +4,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const fs = require('fs');
 const json5 = require('json5');
+const { BlockList } = require('net');
 const path = require('path');
 const { defaultsDeep } = require('glov/common/util.js');
 
@@ -121,6 +122,39 @@ export function serverConfigStartup(code_defaults) {
     server_config = defaultsDeep(server_config, default_env_options[env]);
   }
   server_config = defaultsDeep(server_config, code_defaults);
+
+  if (server_config.forward_depth_override) {
+    for (let jj = 0; jj < server_config.forward_depth_override.length; ++jj) {
+      let override_config = server_config.forward_depth_override[jj];
+      assert.equal(typeof override_config.add, 'number');
+      assert(override_config.add >= 1);
+      assert(override_config.config);
+      let config_data;
+      if (typeof override_config.config === 'string') {
+        let override_path = path.join(__dirname, '../../server/config/', override_config.config);
+        // console.debug(`Loading forward_depth_override data from "${override_path}"`);
+        config_data = json5.parse(fs.readFileSync(override_path, 'utf8'));
+      } else {
+        config_data = override_config.config;
+      }
+      assert(config_data);
+      assert(config_data.ipv4_cidrs && Array.isArray(config_data.ipv4_cidrs));
+      assert(config_data.ipv6_cidrs && Array.isArray(config_data.ipv6_cidrs));
+      let blocklist = override_config.blocklist = new BlockList();
+      for (let ii = 0; ii < config_data.ipv4_cidrs.length; ++ii) {
+        let entry = config_data.ipv4_cidrs[ii];
+        let m = entry.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/);
+        assert(m, entry);
+        blocklist.addSubnet(m[1], Number(m[2]), 'ipv4');
+      }
+      for (let ii = 0; ii < config_data.ipv6_cidrs.length; ++ii) {
+        let entry = config_data.ipv6_cidrs[ii];
+        let m = entry.match(/^([\d:a-fA-F]+)\/(\d+)$/);
+        assert(m, entry);
+        blocklist.addSubnet(m[1], Number(m[2]), 'ipv6');
+      }
+    }
+  }
 }
 
 export function serverConfig() {

@@ -8,8 +8,9 @@ const url = require('url');
 
 // Options pulled in from serverConfig
 // how far behind proxies that reliably add x-forwarded-for headers are we?
-let forward_depth = serverConfig().forward_depth || 0;
-let forward_loose = serverConfig().forward_loose || false;
+const forward_depth = serverConfig().forward_depth || 0;
+const forward_loose = serverConfig().forward_loose || false;
+const forward_depth_override = serverConfig().forward_depth_override || [];
 
 function skipWarn(req) {
   if (forward_loose) {
@@ -24,7 +25,13 @@ function skipWarn(req) {
   return false;
 }
 
+let debug_ips = /^(?:(?:::1)|(?:::ffff:)?(?:127\.0\.0\.1))$/;
+function isLocalHostRaw(ip) {
+  return Boolean(ip.match(debug_ips));
+}
+
 const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
+const regex_is_ipv4 = /^\d+\.\d+\.\d+\.\d+$/;
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
   // console.log('Client connection headers ' + JSON.stringify(req.headers));
@@ -34,8 +41,10 @@ export function ipFromRequest(req) {
   }
 
   let raw_ip = req.client.remoteAddress || req.client.socket && req.client.socket.remoteAddress;
+  let last_ip = raw_ip;
   let ip = raw_ip;
   let header = req.headers['x-forwarded-for'];
+  let forward_list = (header || '').split(',');
   if (forward_depth) {
     // Security note: must check x-forwarded-for *only* if we know this request came from a
     //   reverse proxy, should warn if missing x-forwarded-for.
@@ -48,7 +57,6 @@ export function ipFromRequest(req) {
       }
       // Use raw IP
     } else {
-      let forward_list = (header || '').split(',');
       let forward_ip = (forward_list[forward_list.length - forward_depth] || '').trim();
       if (!forward_ip) {
         // forward_depth is incorrect, or someone is not getting the appropriate headers
@@ -70,15 +78,52 @@ export function ipFromRequest(req) {
       if (m) {
         ip = m[1];
       }
-      if (isLocalHost(ip)) { // eslint-disable-line @typescript-eslint/no-use-before-define
+      if (isLocalHostRaw(ip)) {
         if (!skipWarn(req)) {
           console.warn(`Received request with (likely spoofed) x-forwarded-for header "${header}"` +
             ` from ${raw_ip} for ${req.url}`);
         }
         ip = `untrusted:${raw_ip}`;
       }
+      if (!ip.startsWith('untrusted')) {
+        last_ip = ip;
+      }
     }
-  } else {
+  }
+
+  let eff_depth = forward_depth;
+  for (let ii = 0; ii < forward_depth_override.length; ++ii) {
+    let entry = forward_depth_override[ii];
+    let type = ip.startsWith('untrusted') ? 'untrusted' : ip.match(regex_is_ipv4) ? 'ipv4' : 'ipv6';
+    if (type !== 'untrusted' && entry.blocklist.check(ip, type)) {
+      eff_depth += entry.add;
+      let forward_ip = (forward_list[forward_list.length - eff_depth] || '').trim();
+      if (!forward_ip) {
+        // forward_dpeth_override is incorrect; or, someone with access to
+        //   those IPs spoofed traffic (e.g. using Cloudflare Workers)
+        // Use existing IP (of the proxy), as we have no additional data
+        console.warn(`Received request with insufficient x-forwarded-for header "${header}"` +
+          ` from ${raw_ip} for ${req.url}`);
+      } else {
+        ip = forward_ip;
+        let m = ip.match(regex_ipv4);
+        if (m) {
+          ip = m[1];
+        }
+        if (isLocalHostRaw(ip)) {
+          if (!skipWarn(req)) {
+            console.warn(`Received request with (likely spoofed) x-forwarded-for header "${header}"` +
+              ` from ${raw_ip} for ${req.url}`);
+          }
+          ip = `untrusted:${last_ip}`;
+        } else {
+          last_ip = ip;
+        }
+      }
+    }
+  }
+
+  if (eff_depth === 0 && header) {
     // No forward_depth specified, so, if we do see a x-forwarded-for header, then
     // this is either someone spoofing, or a forwarded request (e.g. from
     // browser-sync). Either way, do not trust it.
@@ -105,11 +150,10 @@ export function ipFromRequest(req) {
 }
 
 let cache = {};
-let debug_ips = /^(?:(?:::1)|(?:127\.0\.0\.1)(?::\d+)?)$/;
 export function isLocalHost(ip) {
   let cached = cache[ip];
   if (cached === undefined) {
-    cache[ip] = cached = Boolean(ip.match(debug_ips));
+    cache[ip] = cached = isLocalHostRaw(ip);
     if (cached) {
       console.info(`Allowing dev access from ${ip}`);
     } else {
