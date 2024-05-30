@@ -32,6 +32,7 @@ function isLocalHostRaw(ip) {
 
 const regex_ipv4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
 const regex_is_ipv4 = /^\d+\.\d+\.\d+\.\d+$/;
+let inaccurate_log = {};
 export function ipFromRequest(req) {
   // See getRemoteAddressFromRequest() for more implementation details, possibilities, proxying options
   // console.log('Client connection headers ' + JSON.stringify(req.headers));
@@ -92,6 +93,7 @@ export function ipFromRequest(req) {
   }
 
   let eff_depth = forward_depth;
+  let untrusted_source = null;
   for (let ii = 0; ii < forward_depth_override.length; ++ii) {
     let entry = forward_depth_override[ii];
     let type = ip.startsWith('untrusted') ? 'untrusted' : ip.match(regex_is_ipv4) ? 'ipv4' : 'ipv6';
@@ -117,9 +119,21 @@ export function ipFromRequest(req) {
           }
           ip = `untrusted:${last_ip}`;
         } else {
+          if (entry.untrusted && !untrusted_source) {
+            untrusted_source = last_ip;
+          }
           last_ip = ip;
         }
       }
+    }
+  }
+
+  if (untrusted_source && !ip.startsWith('untrusted')) {
+    let key = `${untrusted_source}->${ip}`;
+    if (!inaccurate_log[key]) {
+      inaccurate_log[key] = true;
+      console.debug(`Received request from potentially untrustworthy proxy ${untrusted_source},` +
+        ` using reported IP of ${ip}`);
     }
   }
 
