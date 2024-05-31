@@ -7,7 +7,7 @@ export const FADE_IN = 2;
 export const FADE = FADE_OUT + FADE_IN;
 
 import assert from 'assert';
-import { ErrorCallback } from 'glov/common/types';
+import { ErrorCallback, TSMap } from 'glov/common/types';
 import { callEach, defaults, ridx } from 'glov/common/util';
 import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
@@ -86,7 +86,7 @@ interface Fade {
   settingsVolume(): number;
 }
 
-let sounds : Record<string, HowlSound> = {};
+let sounds : TSMap<HowlSound> = {};
 let active_sfx_as_music: {
   sound: GlovSoundSetUp;
   play_volume: number;
@@ -111,7 +111,7 @@ const default_params: SoundSystemParams = {
 };
 let sound_params: SoundSystemParams;
 
-let last_played : Record<string, number> = {};
+let last_played : TSMap<number> = {};
 let frame_timestamp = 0;
 let fades : Fade[] = [];
 let music : GlovMusic[];
@@ -157,7 +157,8 @@ function soundVolume(): number {
   return settings.volume * settings.volume_sound;
 }
 
-let sounds_loading : Record<string, ErrorCallback<never, string>[]> = {};
+let sounds_load_failed: TSMap<SoundLoadOpts> = {};
+let sounds_loading : TSMap<ErrorCallback<never, string>[]> = {};
 let on_load_fail: (base: string) => void;
 export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
@@ -223,7 +224,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
   }
   if (sounds_loading[key]) {
     if (cb) {
-      sounds_loading[key].push(cb);
+      sounds_loading[key]!.push(cb);
     }
     return;
   }
@@ -232,6 +233,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
     cbs.push(cb);
   }
   sounds_loading[key] = cbs;
+  delete sounds_load_failed[key];
   let soundname = key;
   let m = soundname.match(/^(.*)\.(mp3|ogg|wav|webm)$/u);
   let preferred_ext;
@@ -263,6 +265,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
       if (on_load_fail) {
         on_load_fail(soundname);
       }
+      sounds_load_failed[key] = opts!;
       callEach(cbs, delete sounds_loading[key], 'Error loading sound');
       return;
     }
@@ -311,13 +314,23 @@ function soundReload(filename: string): void {
   if (!sound_name) {
     return;
   }
-  if (!sounds[sound_name]) {
-    console.log(`Reload trigged for non-existent sound: ${filename}`);
+  let existing_sound = sounds[sound_name];
+  let failed_sound_opts = sounds_load_failed[sound_name];
+  if (!existing_sound && !failed_sound_opts) {
+    console.log(`Reload triggered for non-existent sound: ${filename}`);
     return;
   }
-  let opts = sounds[sound_name].glov_load_opts;
-  opts.for_reload = true;
-  delete sounds[sound_name];
+  let opts: SoundLoadOpts;
+  if (existing_sound) {
+    opts = existing_sound.glov_load_opts;
+    opts.for_reload = true;
+    delete sounds[sound_name];
+  } else {
+    // failed to load previously, reload may work if file now exists
+    assert(failed_sound_opts);
+    opts = failed_sound_opts;
+    delete sounds_load_failed[sound_name];
+  }
   soundLoad(sound_name, opts);
 }
 
@@ -526,7 +539,7 @@ export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean)
     stop: sound.stop.bind(sound, id),
     playing: sound.playing.bind(sound, id), // not reliable if it hasn't started yet? :(
     location: () => { // get current location
-      let v = sound.seek(id);
+      let v = sound!.seek(id); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
       if (typeof v !== 'number') {
         // Howler sometimes returns `self` from `seek()`
         return 0;
@@ -536,7 +549,8 @@ export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean)
     duration: sound.duration.bind(sound, id),
     volume: (vol: number) => {
       played_sound.volume_current = vol;
-      sound.volume(vol * settingsVolume() * volume_override, id);
+      // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+      sound!.volume(vol * settingsVolume() * volume_override, id);
     },
     fade: (target_volume: number, time: number) => {
       let new_fade = {
