@@ -45,6 +45,9 @@ var asset_mappings = glob.glov_asset_mappings = ${body};
 
 module.exports = function (opts) {
   opts = opts || {};
+  if (!opts.enabled) {
+    return module.exports.dummy();
+  }
   const max_length = opts.max_length || 8;
   const out_base = opts.out_base || 'client/';
   const asset_dir = opts.asset_dir || 'a';

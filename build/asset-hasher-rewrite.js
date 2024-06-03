@@ -3,6 +3,11 @@ const path = require('path');
 const gb = require('glov-build');
 const { forwardSlashes } = gb;
 
+function copy(job, done) {
+  job.out(job.getFile());
+  done();
+}
+
 function parseAssetsJS(job, s) {
   try {
     let m = s.match(/mappings = (\{[^;]*\});/);
@@ -71,6 +76,12 @@ function assetHasherLoadMappings(hash_dep, out_base, job, next) {
 
 module.exports = function (opts) {
   assert(opts);
+  if (!opts.enabled) {
+    return {
+      type: gb.SINGLE,
+      func: copy,
+    };
+  }
   let { hash_dep } = opts;
   assert(hash_dep);
   const out_base = opts.out_base || 'client/';

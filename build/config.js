@@ -1,5 +1,6 @@
 module.exports = function (gb) {
   let config = {
+    asset_hashing: false, // Set to true if assets will be deployed via things like a write-once CDN with long caching
     server_js_files: [
       '**/*.[jt]s',
       '!**/*.d.ts',

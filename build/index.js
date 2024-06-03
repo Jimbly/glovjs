@@ -172,6 +172,7 @@ gb.task({
     'client_html_pre_hash:**',
   ],
   ...assetHasherRewrite({
+    enabled: config.asset_hashing,
     hash_dep: 'asset_hash_dev',
   }),
 });
@@ -734,6 +735,7 @@ gb.task({
     ...config.asset_hashed_files,
   ],
   ...assetHasher({
+    enabled: config.asset_hashing,
     need_rewrite: config.asset_hashed_files_need_rewrite,
   }),
 });
@@ -886,6 +888,7 @@ gb.task({
     ...config.asset_hashed_files,
   ],
   ...assetHasher({
+    enabled: config.asset_hashing,
     need_rewrite: config.asset_hashed_files_need_rewrite,
   }),
 });
@@ -896,6 +899,7 @@ gb.task({
     'client_html_pre_hash:**',
   ],
   ...assetHasherRewrite({
+    enabled: config.asset_hashing,
     hash_dep: 'asset_hash_prod',
   }),
 });
