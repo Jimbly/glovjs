@@ -13,15 +13,20 @@ import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
 import { onEnterBackground, onExitBackground } from './engine';
 import { filewatchOn } from './filewatch';
+import * as settings from './settings';
 import { textureCname } from './textures';
 import * as urlhash from './urlhash';
 
 const { Howl, Howler } = require('@jimbly/howler/src/howler.core.js');
-// TODO: Replace with "import * as settings" and replace settings.x with settings.get('x')
-const settings = require('./settings');
 const { abs, floor, max, min, random } = Math;
 
 const DEFAULT_FADE_RATE = 0.001;
+
+declare module 'glov/client/settings' {
+  let volume: number;
+  let volume_music: number;
+  let volume_sound: number;
+}
 
 export interface SoundLoadOpts {
   streaming?: boolean;
