@@ -43,7 +43,7 @@ function assetHasherRewriteInternal(job, out_base, asset_prefix, file, mappings)
       }
       return `"${use_prefix}${new_name}"`;
     } else {
-      if (match.match(/\.\w+$/)) {
+      if (match.match(/\.\w+$/) && !match.match(/^\d+\.\d+$/)) {
         // Warn on this, it's probably just something missing from asset_hashed_files
         // Fine to remove this if there are exceptions, though, mostly useful during boostrapping hashing
         job.warn(`References unhashed filename "${match}"`);
