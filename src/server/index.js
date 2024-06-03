@@ -1,15 +1,17 @@
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const path = require('path');
-const express = require('express');
-const express_static_gzip = require('express-static-gzip');
-const { permTokenWorkerInit } = require('glov/server/perm_token_worker.js');
-const { setupRequestHeaders } = require('glov/server/request_utils.js');
-const glov_server = require('glov/server/server.js');
-const argv = require('minimist')(process.argv.slice(2));
-const { entTestWorkerInit } = require('./enttest_worker.js');
-const { multiplayerWorkerInit } = require('./multiplayer_worker.js');
+import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
+import * as path from 'path';
+import * as express from 'express';
+import * as express_static_gzip from 'express-static-gzip';
+import { permTokenWorkerInit } from 'glov/server/perm_token_worker';
+import { setupRequestHeaders } from 'glov/server/request_utils';
+import * as glov_server from 'glov/server/server';
+import minimist from 'minimist';
+import { entTestWorkerInit } from './enttest_worker';
+import { multiplayerWorkerInit } from './multiplayer_worker';
+
+const argv = minimist(process.argv.slice(2));
 
 let app = express();
 let server = http.createServer(app);
