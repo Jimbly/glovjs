@@ -63,6 +63,7 @@ interface FontDrawOpts {
   w?: number; h?: number;
   align?: ALIGN;
   indent?: number;
+  rot?: number;
   text: string | LocalizableString;
 }
 
