@@ -146,6 +146,7 @@ export interface ClientChannelWorker<DataType extends ClientChannelWorkerData=Cl
   onMsg<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   removeMsgHandler<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   pak(msg: string): Packet;
+  send<P=null>(msg: string, data: P): void;
   send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
   send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
   cmdParse<T=string>(cmd: string, resp_func: NetErrorCallback<T>): void;
