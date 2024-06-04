@@ -42,6 +42,8 @@ import {
   uiTextHeight,
 } from './ui';
 
+const { round } = Math;
+
 let form_hook_registered = false;
 let active_edit_box;
 let active_edit_box_frame;
@@ -711,7 +713,7 @@ class GlovUIEditBox {
             let line = lines[jj];
             let selx0 = jj === first_row ? selection[0][0] : 0;
             let selx1 = jj === last_row ? selection[1][0] : line.length;
-            let xoffs = center ? (w - line_width[jj])/2 : 0;
+            let xoffs = center ? round((w - line_width[jj])/2) : 0;
             drawRect(x + char_width*selx0-1 + xoffs, y + jj * char_height,
               x + char_width*selx1 + xoffs, y + (jj + 1) * char_height, z + 0.75, color_selection);
           }
@@ -720,7 +722,7 @@ class GlovUIEditBox {
           let jj = selection[1][1];
           let caret_x = x + char_width*selection[1][0] - 1;
           if (center) {
-            caret_x += (w - line_width[jj])/2;
+            caret_x += round((w - line_width[jj])/2);
           }
           drawLine(caret_x, y + char_height*jj,
             caret_x, y + char_height*(jj + 1) - 1, z + 0.5, 1, 1, color_caret);
@@ -748,10 +750,12 @@ GlovUIEditBox.prototype.SUBMIT = 'submit';
 GlovUIEditBox.prototype.CANCEL = 'cancel';
 
 export function editBoxCreate(params) {
+  params.text = params.glov_initial_text;
   return new GlovUIEditBox(params);
 }
 
 export function editBox(params, current) {
+  params.glov_initial_text = current;
   let edit_box = getUIElemData('edit_box', params, editBoxCreate);
   let result = edit_box.run(params);
 
