@@ -130,10 +130,11 @@ export function ipFromRequest(req) {
 
   if (untrusted_source && !ip.startsWith('untrusted')) {
     let key = `${untrusted_source}->${ip}`;
+    ip = `${ip},${untrusted_source}`;
     if (!inaccurate_log[key]) {
       inaccurate_log[key] = true;
       console.debug(`Received request from potentially untrustworthy proxy ${untrusted_source},` +
-        ` using reported IP of ${ip}`);
+        ` using combined IP of ${ip}`);
     }
   }
 

@@ -702,6 +702,11 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!this.getChannelData('private.auto_ip_ban')) {
       return;
     }
+    if (login_ip.includes(',')) {
+      // Using left-most IP (should be accurate if proxy is trustworthy)
+      // Could potentially ban both IPs, but the other (proxy) IP changes with every single request on Cloudflare
+      login_ip = login_ip.split(',')[0];
+    }
     this.error(`Queuing delayed automatic IP ban for account ${this.user_id} from IP ${login_ip}`);
     setTimeout(() => {
       if (this.shutting_down) {

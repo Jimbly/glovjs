@@ -96,6 +96,10 @@ let banranges: BlockList;
 export function ipBanned(ip: string): boolean {
   assert(ip);
   assert(banlist);
+  let split = ip.split(',');
+  if (split.length > 1) {
+    return split.some(ipBanned);
+  }
   let entry = banlist[ip];
   if (entry && entry.expires*1000 > Date.now()) {
     return true;
