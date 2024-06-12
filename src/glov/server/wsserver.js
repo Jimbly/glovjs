@@ -2,6 +2,7 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
+import fs from 'fs';
 const { max } = Math;
 import * as ack from 'glov/common/ack.js';
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
@@ -10,7 +11,7 @@ import { platformIsValid } from 'glov/common/platform';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
 import * as wscommon from 'glov/common/wscommon.js';
-const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest } = wscommon;
+const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest, wsSetSendCB } = wscommon;
 import * as WebSocket from 'ws';
 
 import { ipBanReady, ipBanned } from './ip_ban';
@@ -19,6 +20,31 @@ import { logEx } from './log';
 import { packetLog, packetLogInit } from './packet_log';
 import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
 import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
+
+let ws_debug_log = null;
+
+function wsserverDebugOnSend(buf) {
+  ws_debug_log.write(`["S","${Buffer.from(buf).toString('base64')}"],\n`);
+}
+export function wsserverDebugLog() {
+  if (!ws_debug_log) {
+    console.log('Enabling wsdebug streaming');
+    ws_debug_log = fs.createWriteStream('wsdebug.json', 'utf8');
+    ws_debug_log.write('[\n');
+    wsSetSendCB(wsserverDebugOnSend);
+    return true;
+  } else {
+    console.log('Disabling wsdebug streaming: closing');
+    wsSetSendCB(null);
+    ws_debug_log.write(']\n');
+    ws_debug_log.on('close', function () {
+      console.log('Disabling wsdebug streaming: ended');
+    });
+    ws_debug_log.close();
+    ws_debug_log = null;
+    return false;
+  }
+}
 
 function WSClient(ws_server, socket) {
   events.EventEmitter.call(this);
@@ -199,6 +225,9 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
       client.onClose();
     });
     socket.on('message', function (data) {
+      if (ws_debug_log) {
+        ws_debug_log.write(`["R","${data.toString('base64')}"],\n`);
+      }
       if (client.disconnected) {
         // message received after disconnect!
         // ignore
