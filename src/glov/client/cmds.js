@@ -3,10 +3,10 @@
 
 import assert from 'assert';
 // Must have NO internal dependencies, otherwise get circular dependencies between this, engine, and settings
-import * as cmd_parse_mod from 'glov/common/cmd_parse';
+import { cmdParseCreate } from 'glov/common/cmd_parse';
 import * as local_storage from './local_storage';
 import * as urlhash from './urlhash';
-export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
+export let cmd_parse = cmdParseCreate({ storage: local_storage });
 export let safearea = [-1,-1,-1,-1];
 
 function cmdDesc(cmd_data) {

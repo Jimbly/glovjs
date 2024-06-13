@@ -1,9 +1,9 @@
 import assert from 'assert';
-import * as cmd_parse_mod from 'glov/common/cmd_parse';
-import { ErrorCallback } from 'glov/common/types';
 import { setAbilityReloadUpdates } from './client_config';
 import { netForceDisconnect } from './net';
 import * as urlhash from './urlhash';
+
+import type { CmdParse, CmdRespFunc } from 'glov/common/cmd_parse';
 
 export interface EnvironmentConfig {
   name: string;
@@ -53,7 +53,7 @@ export function getExternalTextureURL(url: string): string {
 
 export function environmentsInit<T extends EnvironmentConfig>(
   environments: Array<T>,
-  cmd_parse: ReturnType<typeof cmd_parse_mod.create> | null,
+  cmd_parse: CmdParse | null,
   default_environment_name?: string | undefined | null,
 ): void {
   all_environments = {};
@@ -89,7 +89,7 @@ export function environmentsInit<T extends EnvironmentConfig>(
       cmd: 'env',
       help: 'Alias for /environment',
       access_show: ['sysadmin'],
-      func: function (str: string, resp_func: ErrorCallback<string>) {
+      func: function (str: string, resp_func: CmdRespFunc) {
         cmd_parse.handle(this, `environment ${str}`, resp_func);
       },
     });

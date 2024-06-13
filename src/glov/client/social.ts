@@ -13,13 +13,6 @@ import {
   PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
-import {
-  ErrorCallback,
-  FriendCmdResponse,
-  NetErrorCallback,
-  PresenceEntry,
-  TSMap,
-} from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
 import { Vec4 } from 'glov/common/vmath';
 import { abTestGetMetricsAndPlatform } from './abtest';
@@ -34,6 +27,15 @@ import {
 } from './net';
 import { Sprite, spriteCreate } from './sprites';
 import { textureLoad } from './textures';
+
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
+import type {
+  ErrorCallback,
+  FriendCmdResponse,
+  NetErrorCallback,
+  PresenceEntry,
+  TSMap,
+} from 'glov/common/types';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -125,7 +127,7 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'friend_list',
   help: 'List all friends',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
+  func: function (str: string, resp_func: CmdRespFunc<string>) {
     if (!friend_list) {
       return void resp_func('Friends list not loaded');
     }
@@ -136,7 +138,7 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'friend_block_list',
   help: 'List all blocked users',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
+  func: function (str: string, resp_func: CmdRespFunc<string>) {
     if (!friend_list) {
       return void resp_func('Friends list not loaded');
     }

@@ -87,37 +87,6 @@ export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 // TODO: Implement the types below and move them to the appropriate files
 
 /**
- * CmdParse data
- */
-export type CmdRespFunc = ErrorCallback<string | unknown, string | null>;
-export interface CmdDef {
-  cmd?: string;
-  help?: string;
-  usage?: string;
-  prefix_usage_with_help?: boolean;
-  access_show?: string[];
-  access_run?: string[];
-  func(str: string, resp_func: CmdRespFunc): void;
-}
-
-export type CmdValueDef = {
-  type: number; // 0 | 1 | 2; // TYPE_INT / TYPE_FLOAT / TYPE_STRING
-  label?: string;
-  range?: [number, number]; // TYPE_INT or TYPE_FLOAT
-  store?: boolean;
-  ver?: number;
-  help?: string;
-  usage?: string;
-  prefix_usage_with_help?: boolean;
-  on_change?: (is_startup: boolean) => void;
-  access_run?: string[];
-  access_show?: string[];
-  default_value?: string | number;
-  enum_lookup?: TSMap<number>; // TYPE_INT only
-  is_toggle?: boolean;
-};
-
-/**
  * Presence data
  */
 export type PresenceEntry<T=unknown> = {

@@ -5,10 +5,6 @@ import {
   platformGetValidIDs,
   platformIsValid,
 } from 'glov/common/platform';
-import { CmdRespFunc } from 'glov/common/types';
-import { ChannelServer } from './channel_server';
-import { ChannelServerWorker } from './channel_server_worker';
-import { GlobalWorker } from './global_worker';
 import {
   serverGlobalsReady,
   serverGlobalsRegister,
@@ -23,6 +19,11 @@ import {
   setFallbackEnvironments,
   setLatestVersions,
 } from './version_management';
+
+import type { ChannelServer } from './channel_server';
+import type { ChannelServerWorker } from './channel_server_worker';
+import type { GlobalWorker } from './global_worker';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 interface ReadyData {
   latest_platform_versions?: Partial<Record<PlatformID, string>>;

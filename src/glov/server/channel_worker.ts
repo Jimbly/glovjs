@@ -23,7 +23,6 @@ import {
   ackInitReceiver,
   ackReadHeader,
 } from 'glov/common/ack';
-import * as cmd_parse_mod from 'glov/common/cmd_parse';
 import {
   dotPropDelete,
   dotPropGet,
@@ -37,7 +36,6 @@ import {
   ChannelDataClients,
   ClientHandlerSource,
   ClientIDs,
-  CmdDef,
   DataObject,
   ErrorCallback,
   HandlerCallback,
@@ -46,8 +44,8 @@ import {
   NetResponseCallback,
   NetResponseCallbackCalledBySystem,
   NumberBoolean,
+  Roles,
   TSMap,
-  UnimplementedData,
   VoidFunc,
   isClientHandlerSource,
   isDataObject,
@@ -71,9 +69,12 @@ import {
   packetLogInit,
 } from './packet_log';
 
-const { min } = Math;
+import type {
+  CmdDef,
+  CmdParse,
+} from 'glov/common/cmd_parse';
 
-type CmdParse = ReturnType<typeof cmd_parse_mod.create>;
+const { min } = Math;
 
 // How long to wait before failing an out of order packet and running it anyway
 const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
@@ -220,7 +221,7 @@ type CmdParseAutoRet = {
   err: string;
 } | {
   found: 1;
-  resp: UnimplementedData;
+  resp: unknown;
 };
 
 type BatchedSetPair = [string, unknown] | [string];
@@ -298,7 +299,7 @@ export class ChannelWorker {
   on_flush: OnFlushCB[] | null = null;
 
   cmd_parse_source!: ClientHandlerSource; // valid in any command parse handler
-  access?: TSMap<1>;
+  access?: Roles;
 
   declare last_sub_id: number; // Allocated as needed, depending on worker options
   declare attempting_shutdown: boolean; // Allocated as needed, depending on worker options
@@ -936,7 +937,7 @@ export class ChannelWorker {
     }
   }
 
-  onCmdParse(source: ClientHandlerSource, data: string, resp_func: HandlerCallback): void {
+  onCmdParse(source: ClientHandlerSource, data: string, resp_func: HandlerCallback<unknown>): void {
     this.setAccessObj(source);
     this.cmd_parse.handle(this, data, resp_func);
     this.cmd_parse_source = null!;
@@ -950,7 +951,7 @@ export class ChannelWorker {
       // Currently overriding, using access provided from client_comm (may be overridden with /csr access)
       this.access = access as TSMap<1>;
     }
-    this.cmd_parse.handle(this, cmd, (err: string | null, resp: UnimplementedData) => {
+    this.cmd_parse.handle(this, cmd, (err?: string | null, resp?: unknown) => {
       if (err && this.cmd_parse.was_not_found) {
         return resp_func(null, { found: 0, err });
       }

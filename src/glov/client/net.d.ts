@@ -1,4 +1,4 @@
-import type * as cmd_parse_mod from 'glov/common/cmd_parse';
+import type { CmdParse } from 'glov/common/cmd_parse';
 import type { Packet } from 'glov/common/packet';
 import type {
   ChannelDataClients,
@@ -97,8 +97,6 @@ export type WSClient = {
   readonly connected: boolean;
   readonly disconnected: boolean;
 };
-
-type CmdParse = ReturnType<typeof cmd_parse_mod.create>;
 
 export type NetInitParam = Partial<{
   ver: number;

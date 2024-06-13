@@ -1,21 +1,79 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const { isInteger } = require('./util.js');
-const { perfCounterAdd } = require('./perfcounters.js');
-
-export function canonical(cmd) {
-  return cmd.toLowerCase().replace(/[_.]/g, '');
-}
+import type { // eslint-disable-line import/order
+  ErrorCallback,
+  Roles,
+  TSMap,
+} from 'glov/common/types';
 
 export const TYPE_INT = 0;
 export const TYPE_FLOAT = 1;
 export const TYPE_STRING = 2;
+
+export type CmdParseType = typeof TYPE_INT | typeof TYPE_FLOAT | typeof TYPE_STRING;
+
+export type CmdRespFunc<T=string | unknown> = ErrorCallback<T, string | null>;
+export type CmdDef = {
+  cmd: string;
+  help?: string;
+  usage?: string;
+  prefix_usage_with_help?: boolean;
+  access_show?: string[];
+  access_run?: string[];
+  store_data?: {
+    store_key: string;
+    param: CmdValueDefBase;
+  };
+  override?: boolean; // Allows replacing a command registered earlier by an engine module
+  func(this: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): void;
+};
+
+type CmdDefRegistered = Omit<CmdDef, 'cmd' | 'func' | 'override'> & {
+  name: string;
+  fn(this: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): void;
+};
+
+type CmdValueDefBase<T=string|number> = {
+  type: CmdParseType;
+  label?: string;
+  range?: [number, number]; // TYPE_INT or TYPE_FLOAT
+  store?: boolean;
+  ver?: number;
+  help?: string;
+  usage?: string;
+  prefix_usage_with_help?: boolean;
+  on_change?: (is_startup: boolean) => void;
+  access_run?: string[];
+  access_show?: string[];
+  default_value?: string | number;
+  enum_lookup?: TSMap<number>; // TYPE_INT only
+  is_toggle?: boolean;
+  set?: (str: T) => void;
+  get?: () => T;
+};
+
+export type CmdValueDef = (
+  { type: typeof TYPE_INT } & CmdValueDefBase<number>
+) | (
+  { type: typeof TYPE_FLOAT } & CmdValueDefBase<number>
+) | (
+  { type: typeof TYPE_STRING } & CmdValueDefBase<string>
+);
+
+exports.create = cmdParseCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
+
+import assert from 'assert';
+import { perfCounterAdd } from './perfcounters';
+import { isInteger } from './util';
+
+export function canonical(cmd: string): string {
+  return cmd.toLowerCase().replace(/[_.]/g, '');
+}
+
 const TYPE_NAME = ['INTEGER', 'NUMBER', 'STRING'];
 
-export function defaultHandler(err, resp) {
+export function defaultHandler(err?: string | null, resp?: unknown): void {
   if (err) {
     console.error(err, resp);
   } else {
@@ -23,7 +81,7 @@ export function defaultHandler(err, resp) {
   }
 }
 
-function checkAccess(access, implied_access, list) {
+function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: string[]): boolean {
   if (list) {
     if (!access) {
       return false;
@@ -49,14 +107,14 @@ function checkAccess(access, implied_access, list) {
   return true;
 }
 
-function formatUsage(usage, help, prefix_help) {
+function formatUsage(usage?: string, help?: string, prefix_help?: boolean): string | undefined {
   return !usage ? undefined :
     prefix_help ? `${help}\n${usage}`:
     help ? String(usage).replace(/\$HELP/, help) :
     String(usage);
 }
 
-function formatRangeValue(type, value) {
+function formatRangeValue(type: CmdParseType, value: number | string): string {
   let ret = String(value);
   if (type === TYPE_FLOAT && !ret.includes('.')) {
     ret += '.00';
@@ -64,7 +122,7 @@ function formatRangeValue(type, value) {
   return ret;
 }
 
-function formatEnumValue(enum_lookup, value) {
+function formatEnumValue(enum_lookup: TSMap<number> | undefined, value: string | number): string | number {
   if (enum_lookup) {
     for (let key in enum_lookup) {
       if (enum_lookup[key] === value) {
@@ -75,7 +133,7 @@ function formatEnumValue(enum_lookup, value) {
   return value;
 }
 
-function lookupEnumValue(enum_lookup, str) {
+function lookupEnumValue(enum_lookup: TSMap<number>, str: string): number | null {
   str = str.toUpperCase();
   let v = enum_lookup[str];
   if (typeof v === 'number') {
@@ -87,50 +145,94 @@ function lookupEnumValue(enum_lookup, str) {
   }
   for (let key in enum_lookup) {
     if (key.startsWith(str)) {
-      return enum_lookup[key];
+      return enum_lookup[key]!;
     }
   }
   return null;
 }
 
-const BOOLEAN_LOOKUP = {
+const BOOLEAN_LOOKUP: TSMap<number> = {
   OFF: 0,
   ON: 1,
 };
 
 const CMD_STORAGE_PREFIX = 'cmd_parse_';
 
-function cmpCmd(a, b) {
+function cmpCmd(a: { cname: string }, b: { cname: string }): number {
   if (a.cname < b.cname) {
     return -1;
   }
   return 1;
 }
 
-class CmdParse {
-  constructor(params) {
+export type StorageProvider = {
+  setJSON<T = unknown>(key: string, value: T): void;
+  getJSON<T = unknown>(key: string, def?: T): T | undefined;
+  set(key: string, value: undefined): void; // to delete
+  localStorageExportAll(prefix: string): TSMap<string>;
+};
+
+export type CmdParseOpts = {
+  storage?: StorageProvider;
+};
+
+export type AccessContainer = {
+  access?: Roles | null;
+};
+
+export type CmdAutoCompleteEntry = {
+  cname: string;
+  cmd: string;
+  help: string;
+  usage?: string;
+};
+
+type CmdListEntry = {
+  name: string;
+  help?: string;
+  usage?: string;
+  access_show?: string[];
+  access_run?: string[];
+  prefix_usage_with_help?: boolean; // will be there on client commands, but already applied on server commands
+};
+
+export type CmdParse = CmdParseImpl;
+class CmdParseImpl {
+  declare TYPE_INT: typeof TYPE_INT;
+  declare TYPE_FLOAT: typeof TYPE_FLOAT;
+  declare TYPE_STRING: typeof TYPE_STRING;
+  declare canonical: typeof canonical;
+
+  private default_handler: CmdRespFunc = defaultHandler;
+  last_access: Roles | null = null;
+  was_not_found = false;
+  private storage?: StorageProvider;
+  private cmds: TSMap<CmdDefRegistered>;
+  private cmds_for_complete: TSMap<CmdListEntry>;
+  private implied_access: TSMap<Roles>;
+
+  constructor(params?: CmdParseOpts) {
     this.cmds = {};
     this.cmds_for_complete = this.cmds;
-    this.was_not_found = false;
-    this.storage = params && params.storage; // expects .setJSON(), .getJSON()
-    this.default_handler = defaultHandler;
-    this.last_access = null;
+    this.storage = params && params.storage;
     this.register({
       cmd: 'cmd_list',
       func: this.cmdList.bind(this),
       access_show: ['hidden'],
     });
     this.implied_access = {
-      sysadmin: { csr: true },
+      sysadmin: { csr: 1 },
     };
   }
 
-  cmdList(str, resp_func) {
+  private cmd_list?: TSMap<CmdListEntry>;
+  private cmdList(str: string, resp_func: CmdRespFunc<TSMap<CmdListEntry>>): void {
     if (!this.cmd_list) {
-      let list = this.cmd_list = {};
+      this.cmd_list = {};
+      let list = this.cmd_list;
       for (let cmd in this.cmds) {
-        let cmd_data = this.cmds[cmd];
-        let access = []; // combine for data compaction
+        let cmd_data = this.cmds[cmd]!;
+        let access: string[] = []; // combine for data compaction
         if (cmd_data.access_show) {
           access = access.concat(cmd_data.access_show);
         }
@@ -140,7 +242,7 @@ class CmdParse {
         if (access.indexOf('hidden') !== -1) {
           continue;
         }
-        let data = {
+        let data: CmdListEntry = {
           name: cmd_data.name,
           help: String(cmd_data.help),
         };
@@ -156,15 +258,15 @@ class CmdParse {
     resp_func(null, this.cmd_list);
   }
 
-  setDefaultHandler(fn) {
+  setDefaultHandler(fn: CmdRespFunc): void {
     assert(this.default_handler === defaultHandler); // Should only set this once
     this.default_handler = fn;
   }
-  checkAccess(access_list) {
+  checkAccess(access_list?: string[]): boolean {
     return checkAccess(this.last_access, this.implied_access, access_list);
   }
 
-  handle(self, str, resp_func) {
+  handle(self: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): boolean {
     resp_func = resp_func || this.default_handler;
     this.was_not_found = false;
     let m = str.match(/^([^\s]+)(?:\s+(.*))?$/);
@@ -174,7 +276,7 @@ class CmdParse {
     }
     let cmd = canonical(m[1]);
     let cmd_data = this.cmds[cmd];
-    this.last_access = self && self.access;
+    this.last_access = self && self.access || null;
     if (cmd_data && !this.checkAccess(cmd_data.access_run)) {
       // this.was_not_found = true;
       resp_func(`Access denied: "${m[1]}"`);
@@ -191,7 +293,7 @@ class CmdParse {
     return true;
   }
 
-  register(param) {
+  register(param: CmdDef): void {
     assert.equal(typeof param, 'object');
     let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data, override } = param;
     assert(cmd);
@@ -220,8 +322,8 @@ class CmdParse {
     };
   }
 
-  // Optional param.on_change(is_startup:boolean)
-  registerValue(cmd, param) {
+  registerValue(cmd: string, param_in: CmdValueDef): void {
+    let param: CmdValueDefBase = param_in as CmdValueDefBase;
     assert(TYPE_NAME[param.type] || !param.set);
     assert(param.set || param.get);
     let label = param.label || cmd;
@@ -240,12 +342,13 @@ class CmdParse {
     }
     let store_data;
     if (store) {
+      assert(this.storage);
       assert(param.set);
       store_data = {
         store_key,
         param,
       };
-      let init_value = this.storage.getJSON(store_key);
+      let init_value: string | number | undefined = this.storage.getJSON(store_key);
       if (init_value !== undefined) {
         // enforce stored values within current range
         if (param.range) {
@@ -271,18 +374,18 @@ class CmdParse {
     if (enum_lookup) {
       param_label = Object.keys(enum_lookup).join('|');
     }
-    let fn = (str, resp_func) => {
-      function value() {
-        resp_func(null, `${label} = **${formatEnumValue(enum_lookup, param.get())}**`);
+    let fn = (str: string, resp_func: CmdRespFunc): void => {
+      function value(): void {
+        resp_func(null, `${label} = **${formatEnumValue(enum_lookup, param.get!())}**`);
       }
-      function usage() {
+      function usage(): void {
         resp_func(`Usage: **/${cmd} ${param_label}**`);
       }
       if (!str && is_toggle) {
-        if (param.get() === param.range[0]) {
-          str = String(param.range[1]);
+        if (param.get!() === param.range![0]) {
+          str = String(param.range![1]);
         } else {
-          str = String(param.range[0]);
+          str = String(param.range![0]);
         }
       }
       if (!str) {
@@ -296,7 +399,7 @@ class CmdParse {
               `${formatRangeValue(param.type, param.range[1])}]`);
           }
           let cur_value = param.get();
-          let value_example = param.range ?
+          let value_example: string | number = param.range ?
             cur_value === param.range[0] ? param.range[1] : param.range[0] : 1;
           if (enum_lookup) {
             value_example = Object.keys(enum_lookup)[0];
@@ -320,10 +423,11 @@ class CmdParse {
       }
       let n = Number(str);
       if (enum_lookup) {
-        n = lookupEnumValue(enum_lookup, str);
-        if (n === null) {
+        let n_test: number | null = lookupEnumValue(enum_lookup, str);
+        if (n_test === null) {
           return usage();
         }
+        n = n_test;
       }
       if (param.range) {
         if (n < param.range[0]) {
@@ -332,7 +436,7 @@ class CmdParse {
           n = param.range[1];
         }
       }
-      let store_value = n;
+      let store_value: string | number = n;
       if (param.type === TYPE_INT) {
         if (!isInteger(n)) {
           return usage();
@@ -348,7 +452,7 @@ class CmdParse {
         param.set(str);
       }
       if (store) {
-        this.storage.setJSON(store_key, store_value);
+        this.storage!.setJSON(store_key, store_value);
       }
       if (param.on_change) {
         param.on_change(false);
@@ -374,7 +478,8 @@ class CmdParse {
     });
   }
 
-  resetSettings() {
+  resetSettings(): string[] {
+    assert(this.storage);
     let results = [];
     let all_saved_data = this.storage.localStorageExportAll(CMD_STORAGE_PREFIX);
     let count = 0;
@@ -421,7 +526,7 @@ class CmdParse {
   }
 
   // for auto-complete
-  addServerCommands(new_cmds) {
+  addServerCommands(new_cmds: TSMap<CmdListEntry>): void {
     let cmds = this.cmds_for_complete;
     if (this.cmds_for_complete === this.cmds) {
       cmds = this.cmds_for_complete = {};
@@ -431,21 +536,21 @@ class CmdParse {
     }
     for (let cname in new_cmds) {
       if (!cmds[cname]) {
-        cmds[cname] = new_cmds[cname];
+        cmds[cname] = new_cmds[cname]!;
       }
     }
   }
 
-  autoComplete(str, access) {
-    let list = [];
-    str = str.split(' ');
+  autoComplete(str_in: string, access: Roles | null): CmdAutoCompleteEntry[] {
+    let list: CmdAutoCompleteEntry[] = [];
+    let str = str_in.split(' ');
     let first_tok = canonical(str[0]);
     this.last_access = access;
     for (let cname in this.cmds_for_complete) {
       if (str.length === 1 && cname.slice(0, first_tok.length) === first_tok ||
         str.length > 1 && cname === first_tok
       ) {
-        let cmd_data = this.cmds_for_complete[cname];
+        let cmd_data = this.cmds_for_complete[cname]!;
         if (this.checkAccess(cmd_data.access_show) && this.checkAccess(cmd_data.access_run)) {
           list.push({
             cname,
@@ -461,12 +566,12 @@ class CmdParse {
   }
 }
 
-CmdParse.prototype.canonical = canonical;
+CmdParseImpl.prototype.canonical = canonical;
 
-CmdParse.prototype.TYPE_INT = TYPE_INT;
-CmdParse.prototype.TYPE_FLOAT = TYPE_FLOAT;
-CmdParse.prototype.TYPE_STRING = TYPE_STRING;
+CmdParseImpl.prototype.TYPE_INT = TYPE_INT;
+CmdParseImpl.prototype.TYPE_FLOAT = TYPE_FLOAT;
+CmdParseImpl.prototype.TYPE_STRING = TYPE_STRING;
 
-export function create(params) {
-  return new CmdParse(params);
+export function cmdParseCreate(params?: CmdParseOpts): CmdParse {
+  return new CmdParseImpl(params);
 }

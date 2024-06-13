@@ -1,6 +1,5 @@
 import assert from 'assert';
 import { BlockList } from 'net';
-import { CmdRespFunc } from 'glov/common/types';
 import { merge } from 'glov/common/util';
 import { ChannelServerWorker } from './channel_server_worker';
 import { GlobalWorker } from './global_worker';
@@ -8,6 +7,8 @@ import {
   serverGlobalsReady,
   serverGlobalsRegister,
 } from './server_globals';
+
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 const { floor } = Math;
 

@@ -107,12 +107,12 @@ import {
 } from './words/profanity';
 
 import type { Box } from './geom_types';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type {
   ChatHistoryData,
   ChatMessageDataBroadcast,
   ChatMessageDataSaved,
   ClientIDs,
-  CmdRespFunc,
   DataObject,
   Roles,
   TSMap,
