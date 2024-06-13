@@ -15,6 +15,7 @@ import { onEnterBackground, onExitBackground } from './engine';
 import { filewatchOn } from './filewatch';
 import { locateAsset } from './locate_asset';
 import * as settings from './settings';
+import { settingsRegister } from './settings';
 import { textureCname } from './textures';
 import * as urlhash from './urlhash';
 
@@ -126,23 +127,17 @@ let volume_override_target = 1;
 let volume_music_override = 1;
 let volume_music_override_target = 1;
 
-settings.register({
+settingsRegister({
   volume: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
     range: [0,1],
   },
-});
-
-settings.register({
   volume_music: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,
     range: [0,1],
   },
-});
-
-settings.register({
   volume_sound: {
     default_value: 1,
     type: cmd_parse.TYPE_FLOAT,

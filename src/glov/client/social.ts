@@ -5,6 +5,7 @@
 
 import assert from 'assert';
 import * as settings from 'glov/client/settings';
+import { settingsRegister, settingsSet } from 'glov/client/settings';
 import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
@@ -151,7 +152,7 @@ export type SocialPresenceStatus = typeof SOCIAL_ONLINE | typeof SOCIAL_AFK | ty
 declare module 'glov/client/settings' {
   let social_presence: SocialPresenceStatus;
 }
-settings.register({
+settingsRegister({
   social_presence: {
     default_value: SOCIAL_ONLINE,
     type: cmd_parse.TYPE_INT,
@@ -164,7 +165,7 @@ export function socialPresenceStatusGet(): SocialPresenceStatus {
   return settings.social_presence;
 }
 export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
-  settings.set('social_presence', value);
+  settingsSet('social_presence', value);
 }
 
 cmd_parse.registerValue('invisible', {

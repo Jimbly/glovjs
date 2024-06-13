@@ -1,7 +1,7 @@
 import { wsstats, wsstats_out } from 'glov/common/wscommon';
 import { cmd_parse } from './cmds';
 import * as perf from './perf';
-import * as settings from './settings';
+import { settingsRegister } from './settings';
 
 const { min } = Math;
 
@@ -12,7 +12,7 @@ type StatsTracking = StatsType & {
   time: number;
 };
 
-settings.register({
+settingsRegister({
   show_net: {
     default_value: 0,
     type: cmd_parse.TYPE_INT,
@@ -58,7 +58,7 @@ export function registerPingProvider(fn: () => PingData | null): void {
   ++ping_providers;
   let suffix = ping_providers === 1 ? '' : `${ping_providers}`;
 
-  settings.register({
+  settingsRegister({
     [`show_ping${suffix}`]: {
       default_value: 0,
       type: cmd_parse.TYPE_INT,

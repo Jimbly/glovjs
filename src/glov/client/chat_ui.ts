@@ -75,6 +75,7 @@ import {
 } from './net';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import * as settings from './settings';
+import { settingsRegister } from './settings';
 import { isFriend } from './social';
 import {
   SPOT_DEFAULT_BUTTON,
@@ -160,7 +161,7 @@ declare module 'glov/client/settings' {
   let profanity_filter: number;
 }
 
-settings.register({
+settingsRegister({
   chat_auto_unfocus: {
     default_value: 0,
     type: cmd_parse.TYPE_INT,
