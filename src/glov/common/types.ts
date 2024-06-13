@@ -197,11 +197,13 @@ export interface ChatIDs extends ClientHandlerSource {
   style?: string;
 }
 
+export type Roles = TSMap<1>;
+
 export type ClientIDs = {
   client_id: string;
   user_id?: string;
   display_name?: string;
-  roles?: TSMap<1>;
+  roles?: Roles;
 };
 export type ChannelDataClient = {
   ids: ClientIDs;

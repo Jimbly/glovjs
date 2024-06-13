@@ -114,6 +114,7 @@ import type {
   ClientIDs,
   CmdRespFunc,
   DataObject,
+  Roles,
   TSMap,
   WithRequired,
 } from 'glov/common/types';
@@ -131,8 +132,6 @@ const color_same_user_rollover = vec4(1, 1, 1, 0.25);
 const MAX_PER_STYLE: TSMap<number> = {
   join_leave: 3,
 };
-
-export type Roles = TSMap<1>;
 
 interface ChatMessage extends ChatMessageDataBroadcast {
   style: string;
