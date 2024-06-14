@@ -83,6 +83,13 @@ export type DefinedValueOf<T> = Exclude<T[keyof T], undefined>;
  */
 export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
+/**
+ * Helper type to filter only keys for values who match a given type
+ */
+export type KeysMatching<T, V> = Exclude<{
+  [K in keyof T]: T[K] extends V ? K : never
+}[keyof T], undefined>;
+
 
 // TODO: Implement the types below and move them to the appropriate files
 
