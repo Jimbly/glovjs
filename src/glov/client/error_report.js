@@ -170,6 +170,8 @@ let filtered_errors = new RegExp([
   'ResizeObserver loop', // unknown source, but isn't used by us
   'nav_call_update_item_status',
   'GetHTMLElementsAtPoint', // baiduboxapp
+  'ToolbarStatus',
+  'betal\\.org',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
