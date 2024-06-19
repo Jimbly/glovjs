@@ -183,6 +183,9 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
     // just logged and should not corrupt state.
+    if (msg.match(filtered_errors)) {
+      return false;
+    }
     ++crash_idx;
     let now = Date.now();
     let dt = now - last_error_time;
@@ -195,9 +198,6 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
       // frame, or this is a secondary error caused by the first, do not report it.
       // Could maybe hash the error message and just report each message once, and
       // flag errors as primary or secondary.
-      return false;
-    }
-    if (msg.match(filtered_errors)) {
       return false;
     }
   }
