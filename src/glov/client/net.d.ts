@@ -58,6 +58,7 @@ export type SubscriptionManager = {
   on(key: 'connect', cb: (is_reconnect: boolean) => void): void;
   on(key: 'login', cb: VoidFunc): void;
   on(key: 'logout', cb: VoidFunc): void;
+  on(key: 'prelogout', cb: VoidFunc): void;
   on(key: 'login_fail', cb: (err: string) => void): void;
   //on(key: string, cb: (data: unknown)=> void): void;
 

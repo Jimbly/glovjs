@@ -946,6 +946,7 @@ SubscriptionManager.prototype.logout = function () {
     }
     this.unsubscribe('global.global');
   }
+  this.emit('prelogout');
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
     if (channel.immediate_subscribe) {
