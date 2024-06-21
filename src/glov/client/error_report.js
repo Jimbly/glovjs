@@ -172,6 +172,7 @@ let filtered_errors = new RegExp([
   'GetHTMLElementsAtPoint', // baiduboxapp
   'ToolbarStatus',
   'betal\\.org',
+  'changeNetWork', // mobile Vivo
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
