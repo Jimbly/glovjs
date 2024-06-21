@@ -43,7 +43,7 @@ function assetHasherRewriteInternal(job, out_base, asset_prefix, file, mappings)
     }
     if (new_name) {
       let idx = match.lastIndexOf('.');
-      if (idx !== -1) {
+      if (idx !== -1 && !match.endsWith('.')) {
         new_name += match.slice(idx);
       }
       return `"${use_prefix}${new_name}"`;

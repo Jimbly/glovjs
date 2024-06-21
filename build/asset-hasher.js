@@ -127,7 +127,12 @@ module.exports = function (opts) {
       //   (the source paths are relative to a different folder than the mapped
       //   paths), so may need something more complex if other files have
       //   different behaviors (source is anything other than the root).
-      let text = assetHasherRewriteInternal(job, out_base, '', file, mappings);
+      // Also, adding special case for manifest.json needing to remap "." to ".."
+      let mappings_temp = {
+        ...mappings,
+        '.': '..',
+      };
+      let text = assetHasherRewriteInternal(job, out_base, '', file, mappings_temp);
       outputHashed({
         relative: file.relative,
         contents: Buffer.from(text),
