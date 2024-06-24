@@ -122,6 +122,7 @@ export interface ChatMessageDataBroadcast extends ChatMessageDataShared {
   client_id?: string;
   ent_id?: EntityID; // If from a worker with an EnityManager
   quiet?: boolean; // Added at run-time on client
+  err_echo?: boolean; // Added at run-time on client
 }
 /*
  * Chat history data

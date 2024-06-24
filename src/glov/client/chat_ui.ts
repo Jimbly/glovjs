@@ -140,6 +140,7 @@ interface ChatMessage extends ChatMessageDataBroadcast {
   flags: number;
   // calculated/run-time:
   hidden?: boolean;
+  err_echo?: boolean;
   msg_h: number;
   msg_w: number;
   chatsrc_tag: string;
@@ -1073,7 +1074,7 @@ class ChatUIImpl {
       this.on_chat_cb(data);
     }
     let { msg, style, id, display_name, flags } = data;
-    let { client_id, ts, quiet } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
+    let { client_id, ts, quiet, err_echo } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
     if (!quiet && client_id !== netClientId()) {
       if (this.volume_in) {
         playUISound('msg_in', this.volume_in);
@@ -1089,6 +1090,7 @@ class ChatUIImpl {
       flags,
       timestamp: ts,
       quiet,
+      err_echo,
     });
   }
   onChatBroadcast(data: {
@@ -1205,6 +1207,7 @@ class ChatUIImpl {
               client_id: netClientId(),
               display_name: netSubs().getDisplayName() || undefined,
               flags,
+              err_echo: true,
             });
           } else {
             this.addChatError(err);
