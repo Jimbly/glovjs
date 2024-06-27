@@ -21,6 +21,33 @@ import { packetLog, packetLogInit } from './packet_log';
 import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
 import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
 
+const DO_PER_MESSAGE_DEFLATE = true;
+
+const WSS_OPTS = {
+  noServer: true,
+  maxPayload: 1024*1024,
+  perMessageDeflate: DO_PER_MESSAGE_DEFLATE ? {
+    zlibDeflateOptions: {
+      // See zlib defaults.
+      // chunkSize: 1024, - default seems fine, probably 1024?
+      // memLevel: 7, - default seems fine, probably 7?
+      level: 5,
+    },
+    // zlibInflateOptions: {
+    //   chunkSize: 10 * 1024
+    // },
+    // Other options settable:
+    clientNoContextTakeover: true, // Defaults to negotiated value.
+    serverNoContextTakeover: true, // Defaults to negotiated value.
+    // setting these to false takes 3x the CPU, but reduces receive immensely, send slightly
+    // serverMaxWindowBits: 10, // Defaults to negotiated value.
+    // Below options specified as default values.
+    concurrencyLimit: 2, // Limits zlib concurrency for perf. - no impact on CPU/message
+    threshold: 512, // Size (in bytes) below which messages
+    // should not be compressed if context takeover is disabled.
+  } : false,
+};
+
 let ws_debug_log = null;
 
 function wsserverDebugOnSend(buf) {
@@ -172,7 +199,7 @@ function logBigFilter(client, msg, data) {
 
 WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
   let ws_server = this;
-  ws_server.wss = new WebSocket.Server({ noServer: true, maxPayload: 1024*1024 });
+  ws_server.wss = new WebSocket.Server(WSS_OPTS);
 
   // Doing my own upgrade handling to early-reject invalid protocol versions
   let onUpgrade = (req, socket, head) => {
