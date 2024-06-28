@@ -141,6 +141,7 @@ class GlovUIEditBox {
     assert.equal(typeof this.text, 'string');
 
     this.last_autocomplete = null;
+    this.last_placeholder = null;
     this.is_focused = false;
     this.elem = null;
     this.input = null;
@@ -548,7 +549,9 @@ class GlovUIEditBox {
         input.className = classes.join(' ');
         // Use 'tel' instead of 'number', as it supports changing the selection
         input.setAttribute('type', this.type === 'number' ? 'tel' : this.type);
-        input.setAttribute('placeholder', getStringIfLocalizable(this.placeholder));
+        let placeholder = getStringIfLocalizable(this.placeholder);
+        input.setAttribute('placeholder', placeholder);
+        this.last_placeholder = placeholder;
         if (max_len) {
           if (multiline) {
             input.setAttribute('cols', max_len);
@@ -592,6 +595,7 @@ class GlovUIEditBox {
         this.input = null;
       }
       this.last_autocomplete = null;
+      this.last_placeholder = null;
       this.submitted = false;
       this.elem = elem;
     } else {
@@ -655,6 +659,12 @@ class GlovUIEditBox {
         this.last_autocomplete = this.autocomplete;
         this.input.setAttribute('autocomplete', this.autocomplete || `auto_off_${Math.random()}`);
       }
+      let placeholder = getStringIfLocalizable(this.placeholder);
+      if (this.last_placeholder !== placeholder) {
+        this.input.setAttribute('placeholder', placeholder);
+        this.last_placeholder = placeholder;
+      }
+
 
       let tab_index1 = uiGetDOMTabIndex();
       let tab_index2 = uiGetDOMTabIndex();
