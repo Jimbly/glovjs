@@ -1640,6 +1640,7 @@ export class ChannelWorker {
       channel_worker.pkt_idx_timestamp[source] = channel_server.server_time;
       channel_worker.recv_pkt_idx[source] = pkt_idx;
     }
+    pak.ref(); // Add a ref count in case we need it in the exception handler
     try {
       ackHandleMessage(channel_worker, source, pak, function sendFunc(
         msg: string,
@@ -1672,6 +1673,7 @@ export class ChannelWorker {
         Buffer.from(pak.getBuffer()).toString('utf8', 0, min(max_len, 1000)))}`);
       channel_server.handleUncaughtError(e);
     }
+    pak.pool(); // Remove refcount for exception handler
   }
 
   dispatchPacket(pkt_idx: number, source: string, pak: Packet): void {
