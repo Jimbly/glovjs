@@ -219,7 +219,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.client = client;
   this.channels = {};
   this.logged_in = false;
-  this.first_session = false;
+  this.login_response_data = null;
   this.login_credentials = null;
   this.logged_in_email = null;
   this.logged_in_username = null;
@@ -660,7 +660,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
   let evt = 'login_fail';
   if (!err) {
     evt = 'login';
-    this.first_session = Boolean(resp.first_session);
+    this.login_response_data = resp;
     this.logged_in_email = resp.email || null;
     this.logged_in_username = resp.user_id;
     this.logged_in_display_name = resp.display_name;
@@ -965,7 +965,7 @@ SubscriptionManager.prototype.logout = function () {
     if (!err) {
       local_storage.set('password', undefined);
       local_storage.set('login_external', this.login_provider = undefined);
-      this.first_session = false;
+      this.login_response_data = null;
       this.logged_in = false;
       this.logged_in_username = null;
       this.logged_in_display_name = null;
@@ -976,8 +976,8 @@ SubscriptionManager.prototype.logout = function () {
   });
 };
 
-SubscriptionManager.prototype.isFirstSession = function () {
-  return this.first_session;
+SubscriptionManager.prototype.getLoginResponseData = function () {
+  return this.login_response_data || {};
 };
 
 SubscriptionManager.prototype.serverLog = function (type, data) {

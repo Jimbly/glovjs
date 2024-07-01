@@ -50,7 +50,7 @@ export type SubscriptionManager = {
   loggedIn(): string | null;
   getUserId(): string | null;
   getDisplayName(): string | null;
-  isFirstSession(): boolean;
+  getLoginResponseData(): DataObject;
 
   on(key: 'chat_broadcast', cb: (data: { src: string; msg: string })=> void): void;
   on(key: 'restarting', cb: (data: boolean)=> void): void;

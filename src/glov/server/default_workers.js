@@ -747,6 +747,10 @@ export class DefaultUserWorker extends ChannelWorker {
       this.setChannelData('private.display_name_change', undefined); // reset cooldown
     }
     this.checkAutoIPBan(data.ip);
+    data.resp_extra = {
+      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
+      email: this.getChannelData('private.email'),
+    };
     if (this.onUserLogin) {
       this.onUserLogin(data);
     }
@@ -754,8 +758,7 @@ export class DefaultUserWorker extends ChannelWorker {
 
     resp_func(null, {
       public_data: this.getChannelData('public'),
-      email: this.getChannelData('private.email'),
-      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
+      extra: data.resp_extra,
     });
   }
   handleLogin(src, data, resp_func) {
@@ -834,6 +837,7 @@ export class DefaultUserWorker extends ChannelWorker {
     return this.createShared(data, resp_func);
   }
   createShared(data, resp_func) {
+    data.resp_extra = {};
     if (this.onUserCreate) {
       let err = this.onUserCreate(data);
       if (err) {
@@ -859,11 +863,11 @@ export class DefaultUserWorker extends ChannelWorker {
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
     metricsAdd('user.create', 1);
+    data.resp_extra.email = this.getChannelData('private.email');
+    data.resp_extra.hash = data.password ? undefined : md5(data.salt + this.getChannelData('private.password'));
     return resp_func(null, {
       public_data: this.getChannelData('public'),
-      first_session: true,
-      email: this.getChannelData('private.email'),
-      hash: data.password ? undefined : md5(data.salt + this.getChannelData('private.password')),
+      extra: data.resp_extra,
     });
   }
 

@@ -315,9 +315,7 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
     return resp_func('Already logged in');
   }
 
-  let first_session;
-  let email;
-  let hash;
+  let extra;
   if (err) {
     client_channel.logCtx('info', `${login_message} failed: ${err}`);
   } else {
@@ -333,17 +331,13 @@ function handleLoginResponse(login_message, client, user_id, resp_func, err, res
     // Always subscribe client to own user
     onSubscribe(client, `user.${user_id}`);
 
-    first_session = resp_data.first_session;
-    email = resp_data.email;
-    hash = resp_data.hash;
+    extra = resp_data.extra;
   }
 
   return resp_func(err, {
-    first_session,
-    email,
+    ...extra, // email, hash, and app-specific things like first_session
     user_id: client_channel.ids.user_id,
     display_name: client_channel.ids.display_name,
-    hash,
   });
 }
 
