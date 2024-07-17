@@ -88,6 +88,8 @@ export type SubscriptionManager = {
   loginRetry(resp_func: ErrorCallback): void;
   sessionHashedPassword(): string;
   sendActivationEmail(email: string, resp_func: ErrorCallback): void;
+
+  quietMessagesSet(msgs: string[]): void;
 };
 
 // Note: Partial definition, needs more filled in
@@ -100,7 +102,7 @@ export type WSClient = {
 };
 
 export type NetInitParam = Partial<{
-  ver: number;
+  ver: number | string;
   no_packet_debug: boolean;
   path: string;
   client_app: string;

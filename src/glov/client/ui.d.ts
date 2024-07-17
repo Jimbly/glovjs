@@ -395,10 +395,10 @@ export function setButtonHeight(button_height: number): void;
 export function setPanelPixelScale(scale: number): void;
 export function setModalSizes(
   modal_button_width: number,
-  width: number,
-  y0: number,
-  title_scale: number,
-  pad: number,
+  width?: number,
+  y0?: number,
+  title_scale?: number,
+  pad?: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
 export function setTooltipTextOffset(tooltip_text_offs: number): void;

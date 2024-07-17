@@ -14,7 +14,7 @@ import {
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
 import { deepEqual } from 'glov/common/util';
-import { Vec4 } from 'glov/common/vmath';
+import { ROVec4 } from 'glov/common/vmath';
 import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
@@ -414,7 +414,7 @@ function requestExternalFriends(provider: string,
 
 export type UserProfileImage = {
   img: Sprite;
-  img_color?: Vec4;
+  img_color?: ROVec4;
   frame?: number | string;
 };
 let profile_images: Record<string, UserProfileImage> = {};
