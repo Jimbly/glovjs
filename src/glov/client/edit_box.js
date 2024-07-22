@@ -760,7 +760,9 @@ GlovUIEditBox.prototype.SUBMIT = 'submit';
 GlovUIEditBox.prototype.CANCEL = 'cancel';
 
 export function editBoxCreate(params) {
-  params.text = params.glov_initial_text;
+  if (params.glov_initial_text !== undefined) {
+    params.text = params.glov_initial_text;
+  }
   return new GlovUIEditBox(params);
 }
 
