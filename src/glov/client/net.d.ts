@@ -75,9 +75,10 @@ export type SubscriptionManager = {
   sendCmdParse(cmd: string, resp_func: NetResponseCallbackCalledBySystem): void;
   serverLog(type: string, data: string | DataObject): void;
 
-  onChannelMsg<T=unknown>(channel_type: string, msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
+  onChannelMsg<T=unknown>(channel_type: string | null,
+    msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   // TODO: more specific channel event handler types (also for `ClientChannelWorker::on` below)
-  onChannelEvent<T=unknown>(channel_type: string, msg: string, cb: (data: T) => void): void;
+  onChannelEvent<T=unknown>(channel_type: string | null, msg: string, cb: (data: T) => void): void;
 
   getLastLoginCredentials(): LoginCredentials;
   userCreate(credentials: UserCreateParam, resp_func: ErrorCallback): void;
@@ -90,7 +91,18 @@ export type SubscriptionManager = {
   sendActivationEmail(email: string, resp_func: ErrorCallback): void;
 
   quietMessagesSet(msgs: string[]): void;
+
+  uploadGetFile(file_id: string): { err: string } | ChunkedSendFileData;
+  uploadFreeFile(file_data: ChunkedSendFileData): void;
+  onUploadProgress(mime_type: string, cb: (progress: number, total: number) => void): void;
 };
+
+export type ChunkedSendFileData = {
+  dv: DataView;
+  mime_type: string;
+  buffer: Uint8Array;
+};
+export function isChunkedSendFileData(data: { err: string } | ChunkedSendFileData): data is ChunkedSendFileData;
 
 // Note: Partial definition, needs more filled in
 export type WSClient = {

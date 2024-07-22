@@ -103,3 +103,7 @@ export function netUserId() {
 export function netSubs() {
   return subs;
 }
+
+export function isChunkedSendFileData(data) {
+  return !data.err;
+}
