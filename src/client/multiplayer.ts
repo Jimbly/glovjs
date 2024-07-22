@@ -31,12 +31,14 @@ import {
 } from 'glov/client/ui';
 import { getURLPageBase } from 'glov/client/urlhash';
 import { Packet } from 'glov/common/packet';
-import { DataObject, ErrorCallback } from 'glov/common/types';
+import { DataObject } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
 
 import { ROVec3, v2sub, vec2, vec3, vec4 } from 'glov/common/vmath';
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
+
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
@@ -58,7 +60,7 @@ let chat_ui: ReturnType<typeof chatUICreate>;
 
 cmd_parse.register({
   cmd: 'bin_get',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
+  func: function (str: string, resp_func: CmdRespFunc<string>) {
     chat_ui.channel!.pak('bin_get').send(function (err?: string | null, pak?: Packet) {
       if (err) {
         return void resp_func(err);
@@ -70,7 +72,7 @@ cmd_parse.register({
 
 cmd_parse.register({
   cmd: 'bin_set',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
+  func: function (str: string, resp_func: CmdRespFunc<string>) {
     let pak = chat_ui.channel!.pak('bin_set');
     pak.writeBuffer(new Uint8Array(str.split(' ').map(toNumber)));
     pak.send(resp_func);

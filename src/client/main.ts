@@ -23,6 +23,7 @@ import {
 import { netInit } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import * as settings from 'glov/client/settings';
+import { settingsSet } from 'glov/client/settings';
 import { slider } from 'glov/client/slider';
 import {
   FADE_IN,
@@ -76,10 +77,6 @@ const { floor, sin } = Math;
 
 // TODO: Migrate to TypeScript
 type Spine = ReturnType<typeof spineCreate>;
-declare module 'glov/client/settings' {
-  let render_scale: number;
-  let render_scale_all: number;
-}
 
 window.Z = window.Z || {};
 Z.BACKGROUND = 1;
@@ -484,9 +481,9 @@ export function main(): void {
       disabled: rs3d_disabled })
     ) {
       if (settings.render_scale === 1) {
-        settings.set('render_scale', 0.25);
+        settingsSet('render_scale', 0.25);
       } else {
-        settings.set('render_scale', 1);
+        settingsSet('render_scale', 1);
       }
     }
     y += button_spacing;
@@ -495,9 +492,9 @@ export function main(): void {
       tooltip: 'Changes render_scale_all' })
     ) {
       if (settings.render_scale_all === 1) {
-        settings.set('render_scale_all', 0.5);
+        settingsSet('render_scale_all', 0.5);
       } else {
-        settings.set('render_scale_all', 1);
+        settingsSet('render_scale_all', 1);
       }
     }
     y += button_spacing;
