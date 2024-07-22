@@ -986,7 +986,7 @@ function tick(timestamp) {
   fontTick();
   camera2d.tickCamera2D();
   glov_transition.render(dt);
-  camera2d.setAspectFixed(game_width, game_height);
+  camera2d.setAspectFixedRespectPixelPerfect(game_width, game_height);
 
   profilerStopStart('mid');
 
@@ -1360,7 +1360,7 @@ export function startup(params) {
 
   callEach(startup_funcs, startup_funcs = null);
 
-  camera2d.setAspectFixed(game_width, game_height);
+  camera2d.setAspectFixedRespectPixelPerfect(game_width, game_height);
 
   if (params.state) {
     setState(params.state);
