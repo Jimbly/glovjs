@@ -548,7 +548,14 @@ class GlovUIEditBox {
         }
         input.className = classes.join(' ');
         // Use 'tel' instead of 'number', as it supports changing the selection
-        input.setAttribute('type', this.type === 'number' ? 'tel' : this.type);
+        let eff_type = this.type === 'number' ? 'tel' :
+          // Using 'search' gets around Android Chrome bug showing the password box all the time on regular inputs
+          this.type === 'text' && !this.autocomplete ? 'search' :
+          this.type;
+        input.setAttribute('type', eff_type);
+        if (eff_type === 'search' && this.type !== 'search') {
+          input.style['-webkit-appearance'] = 'none';
+        }
         let placeholder = getStringIfLocalizable(this.placeholder);
         input.setAttribute('placeholder', placeholder);
         this.last_placeholder = placeholder;
