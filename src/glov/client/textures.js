@@ -922,6 +922,8 @@ export function textureLoad(params) {
   let tex = textures[key];
   if (!tex) {
     tex = create(params);
+  } else {
+    assert(typeof params.auto_unload !== 'function'); // will never be called!
   }
   tex.last_use = frame_timestamp;
   return tex;
