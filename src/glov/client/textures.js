@@ -210,7 +210,10 @@ function Texture(params) {
   this.gpu_mem = 0;
   this.soft_error = params.soft_error || false;
   this.last_use = frame_timestamp;
-  this.auto_unload = params.auto_unload || false;
+  this.auto_unload = params.auto_unload ? [] : null;
+  if (typeof params.auto_unload === 'function') {
+    this.auto_unload.push(params.auto_unload);
+  }
   if (this.auto_unload) {
     auto_unload_textures.push(this);
   }
@@ -869,8 +872,10 @@ Texture.prototype.destroy = function () {
   this.width = this.height = 0;
   this.updateGPUMem();
   this.destroyed = true;
-  if (typeof auto_unload === 'function') {
-    auto_unload();
+  if (auto_unload) {
+    for (let ii = 0; ii < auto_unload.length; ++ii) {
+      auto_unload[ii]();
+    }
   }
   profilerStop('Texture:destroy');
 };
@@ -923,7 +928,10 @@ export function textureLoad(params) {
   if (!tex) {
     tex = create(params);
   } else {
-    assert(typeof params.auto_unload !== 'function'); // will never be called!
+    if (typeof params.auto_unload === 'function') {
+      assert(tex.auto_unload);
+      tex.auto_unload.push(params.auto_unload);
+    }
   }
   tex.last_use = frame_timestamp;
   return tex;
