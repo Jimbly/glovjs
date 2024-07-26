@@ -50,6 +50,21 @@ export function linkObscureRect(box) {
   link_blocks.push(box.dom_pos);
 }
 
+const STRICT_CHECKING = true; // if strict, we collapse the box if there's *any* overlap, not just complete
+// e.g. this shape of visible link:  will become this shape:  with no-strict it would be full:
+//         ..                             ..                        ..
+//         X.                             ..                        XX
+//         XX                             XX                        XX
+// Strict checking prevents _any_ accidental link clicks, at the expense of
+//  smaller A elements - should perhaps only be used for `internal`-flagged
+//  links that are doing their own (properly event-filter) non-link handling?
+function overlaps(x0, x1, x, w) {
+  if (STRICT_CHECKING) {
+    return x < x1 && x + w > x0;
+  } else {
+    return x <= x0 && x + w >= x1;
+  }
+}
 function linkClipRect(rect) {
   if (!rect.dom_pos) {
     rect.dom_pos = {};
@@ -66,7 +81,7 @@ function linkClipRect(rect) {
   let y1 = oy1;
   for (let ii = 0; ii < link_blocks.length; ++ii) {
     let check = link_blocks[ii];
-    if (check.x <= x0 && check.x + check.w >= x1) {
+    if (overlaps(x0, x1, check.x, check.w)) {
       if (check.y <= y0) {
         y0 = max(y0, check.y + check.h);
       }
@@ -74,7 +89,7 @@ function linkClipRect(rect) {
         y1 = min(y1, check.y);
       }
     }
-    if (check.y <= y0 && check.y + check.h >= y1) {
+    if (overlaps(y0, y1, check.y, check.h)) {
       if (check.x <= x0) {
         x0 = max(x0, check.x + check.w);
       }
