@@ -1076,6 +1076,10 @@ Sprite.prototype.lazyLoad = function () {
     this.lazyLoadInit();
   }
   if (!this.texs[0].loaded) {
+    // Still loading, don't let it be unloaded in the meantime though!
+    for (let ii = 0; ii < this.texs.length; ++ii) {
+      this.texs[ii].last_use = engine.frame_timestamp;
+    }
     return 0;
   }
   if (!this.loaded_at) {
