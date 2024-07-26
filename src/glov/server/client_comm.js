@@ -16,7 +16,7 @@ import { ERR_NO_USER_ID, ERR_UNAUTHORIZED } from 'glov/common/external_users_com
 import { isPacket } from 'glov/common/packet';
 import { perfCounterAdd, perfCounterAddValue } from 'glov/common/perfcounters';
 import { unicode_replacement_chars } from 'glov/common/replacement_chars';
-import { logdata, merge } from 'glov/common/util';
+import { logdata } from 'glov/common/util';
 import {
   isProfane,
   profanityCommonStartup,
@@ -491,9 +491,7 @@ function onRandomName(client, data, resp_func) {
 }
 
 function onLog(client, data, resp_func) {
-  let client_channel = client.client_channel;
-  merge(data, client_channel.ids);
-  merge(data, client.crash_data);
+  client.clientLogData(data);
   client.client_channel.logCtx('info', 'server_log', data);
   resp_func();
 }
@@ -617,7 +615,6 @@ export function init(channel_server_in) {
     client.client_channel.client = client;
     client.crash_data = {
       addr: client.addr,
-      user_agent: client.user_agent,
       plat: client.client_plat,
       ver: client.client_ver,
       build: client.client_build,

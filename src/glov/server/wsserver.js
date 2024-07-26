@@ -10,6 +10,7 @@ import { isPacket } from 'glov/common/packet';
 import { platformIsValid } from 'glov/common/platform';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
+const { merge } = util;
 import * as wscommon from 'glov/common/wscommon.js';
 const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest, wsSetSendCB } = wscommon;
 import * as WebSocket from 'ws';
@@ -112,6 +113,14 @@ WSClient.prototype.ctx = function () {
     ip: this.addr,
     user_id,
   };
+};
+
+WSClient.prototype.clientLogData = function (data) {
+  if (this.client_worker) {
+    merge(data, this.client_worker.ids);
+  }
+  merge(data, this.crash_data);
+  merge(data, this.ctx());
 };
 
 WSClient.prototype.logCtx = function (level, ...args) {
