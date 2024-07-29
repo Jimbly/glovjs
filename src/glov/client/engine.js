@@ -536,7 +536,7 @@ function safariTopSafeArea(view_w, view_h) {
     if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
       // Note: if user has scaling enabled, the padding required might be different
       //   but the same holds true for the safe area padding detected via CSS!
-      return 50 * (window.devicePixelRatio || 1); // seems to be 50pts on all devices
+      return 50; // seems to be 50pts on all devices
     }
   }
   return 0;
@@ -579,7 +579,7 @@ function checkResize() {
           safearea_elem.offsetLeft * dom_to_canvas_ratio,
           new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
           max(safearea_elem.offsetTop * dom_to_canvas_ratio,
-            safariTopSafeArea(view_w, view_h) * settings.render_scale_all),
+            safariTopSafeArea(view_w, view_h) * dom_to_canvas_ratio),
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
           safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);

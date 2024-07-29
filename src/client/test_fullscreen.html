@@ -254,7 +254,7 @@ input {
           if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
             // Note: if user has scaling enabled, the padding required might be different
             //   but the same holds true for the safe area padding detected via CSS!
-            return 50 * (window.devicePixelRatio || 1); // seems to be 50pts on all devices
+            return 50; // seems to be 50pts on all devices
           }
         }
         return 0;
