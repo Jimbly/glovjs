@@ -645,7 +645,7 @@ function checkResize() {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
           safearea_values[3] = 0;
         }
-        safearea_values[3] = max(safearea_values[3], safariBottomSafeArea(view_w, view_h) * dom_to_canvas_ratio);
+        safearea_values[3] = max(safearea_values[3], safariBottomSafeArea(view_w, view_h) * settings.render_scale_all);
       }
     }
   } else {

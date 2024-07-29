@@ -373,7 +373,7 @@ input {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
           safe_area_pad[3] = 0;
         }
-        safe_area_pad[3] = Math.max(safe_area_pad[3], safariBottomSafeArea(view_w, view_h));
+        safe_area_pad[3] = Math.max(safe_area_pad[3], safariBottomSafeArea(view_w, view_h) / css_to_real);
         var safe_area_css = [0,0,0,0];
         getSafeAreaFromCSS(safe_area_css);
         if (status && Date.now() - last_update_time > UPDATE_FREQ) {
