@@ -156,7 +156,10 @@ input {
         if (canvas) {
           canvas.addEventListener('touchstart', function (e) {
             if (e.target.tagName !== 'INPUT') {
-              e.preventDefault();
+              e.preventDefault(); // don't allow selecting, scrolling, zooming, etc
+              if (document.activeElement) {
+                document.activeElement.blur(); // allow unfocusing edit box
+              }
             }
           }, true);
         }
