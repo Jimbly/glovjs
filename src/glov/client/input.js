@@ -862,9 +862,6 @@ export function startup(_canvas, params) {
 
   handleTouches(canvas);
 
-  // For iOS, this is needed in test_fullscreen, but not here, for some reason
-  //window.addEventListener('gesturestart', ignored, false);
-
   window.addEventListener('beforeunload', beforeUnload, false);
 }
 
