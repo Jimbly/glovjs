@@ -124,8 +124,10 @@ input {
       var chrome_version_major = m && Number(m[1] || '0') || 0;
       var chrome_version_minor = m && m[2] && Number(m[2].slice(1) || '0') || 0;
 
+      var pos_fixed_canvas = false;
       (function () {
         if (is_ios && safari_version_major < 13) {
+          pos_fixed_canvas = true;
           // can't scroll, no visual viewport, this seems to help issues there
           // Note: canvas/content will be larger than the viewport, but at least the bottom
           //   will be aligned with the top of the keyboard after the scroll happens
@@ -333,8 +335,8 @@ input {
         var texttest = document.getElementById('texttest');
         var vv = window.visualViewport || {};
         var css_to_real = window.devicePixelRatio || 1;
-        var view_w = (vv.width || window.innerWidth);
-        var view_h = (vv.height || window.innerHeight);
+        var view_w = (vv.width || (pos_fixed_canvas ? canvas.clientWidth : window.innerWidth));
+        var view_h = (vv.height || (pos_fixed_canvas ? canvas.clientHeight : window.innerHeight));
         document.body.style.height = view_h + 'px';
         var safe_area_pad = [0,0,0,0]; // left, right, top, bottom
         getSafeAreaFromDOM(safe_area_pad, view_w, view_h);

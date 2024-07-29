@@ -574,6 +574,7 @@ let safearea_elem;
 let safearea_ignore_bottom = false;
 let safearea_values = [0,0,0,0];
 let last_safearea_values = [0,0,0,0];
+let pos_fixed_canvas = false;
 function checkResize() {
   profilerStart('checkResize');
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
@@ -581,8 +582,8 @@ function checkResize() {
   let vv = window.visualViewport || {};
   dom_to_canvas_ratio = window.devicePixelRatio || 1;
   dom_to_canvas_ratio *= settings.render_scale_all;
-  let view_w = (vv.width || window.innerWidth);
-  let view_h = (vv.height || window.innerHeight);
+  let view_w = (vv.width || (pos_fixed_canvas ? canvas.clientWidth : window.innerWidth));
+  let view_h = (vv.height || (pos_fixed_canvas ? canvas.clientHeight : window.innerHeight));
   isKeyboardUp(view_w, view_h);
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
@@ -1235,10 +1236,8 @@ export function startup(params) {
   safearea_ignore_bottom = params.safearea_ignore_bottom || false;
 
   // resize the canvas to fill browser window dynamically
-  window.addEventListener('resize', checkResize, false);
-  checkResize();
-
   if (is_ios && safari_version_major < 13) {
+    pos_fixed_canvas = true;
     // can't scroll, no visual viewport, this seems to help issues there
     // Note: canvas/content may be larger than the viewport, but at least the bottom
     //   will be aligned with the top of the keyboard after the scroll happens
@@ -1250,6 +1249,8 @@ export function startup(params) {
       content.style.position = 'fixed';
     }
   }
+  window.addEventListener('resize', checkResize, false);
+  checkResize();
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;
