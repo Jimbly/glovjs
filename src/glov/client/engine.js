@@ -15,8 +15,11 @@ exports.require = require; // For browser console debugging
 const assert = require('assert');
 const {
   is_ios,
+  is_ios_chrome,
   is_ios_safari,
+  is_ipad,
   safari_version_major,
+  safari_version_minor,
 } = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
@@ -541,6 +544,9 @@ function safariTopSafeArea(view_w, view_h) {
   }
   return 0;
 }
+function isPortrait(view_w, view_h) {
+  return view_h >= view_w * 0.8;
+}
 let kb_up_last_w = 0;
 let kb_up_last_h = 0;
 let kb_up_ret = false;
@@ -565,6 +571,32 @@ function isKeyboardUp(view_w, view_h) {
   kb_up_last_w = view_w;
   kb_up_last_h = view_h;
   return kb_up_ret;
+}
+function safariBottomSafeArea(view_w, view_h) {
+  // iOS === 15.0 doesn't respect safe area; 15.1 is offset
+  if (is_ios_safari && safari_version_major === 15 && safari_version_minor < 2 &&
+    isKeyboardUp(view_w, view_h) &&
+    isPortrait(view_w, view_h)
+  ) {
+    if (safari_version_minor === 0) {
+      // unknown whether or not this is correct on iPad, assuming needed now to be safe
+      return 52;
+    } else if (safari_version_minor === 1) {
+      if (!is_ipad) {
+        return 8; // v15.1
+      }
+    }
+  }
+  if (is_ios_chrome && is_ipad && safari_version_major >= 13 &&
+    isKeyboardUp(view_w, view_h)
+  ) {
+    // seen specific issue resolved by this on at least: 13.2/4 14.0/1/5 15.1/5 16.0/1/2/3
+    // v17 doesn't seem to (always?) have a fixed offset, is also buggy with
+    //   scroll pos, so let's add some safe area so it's more likely to be visible
+    // Note: v12 has no visual viewport, so we can't tell if the keyboard is up
+    return 44;
+  }
+  return 0;
 }
 
 let last_canvas_width;
@@ -613,6 +645,7 @@ function checkResize() {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
           safearea_values[3] = 0;
         }
+        safearea_values[3] = max(safearea_values[3], safariBottomSafeArea(view_w, view_h) * dom_to_canvas_ratio);
       }
     }
   } else {
