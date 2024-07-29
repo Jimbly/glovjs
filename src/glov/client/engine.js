@@ -496,6 +496,10 @@ const SAFARI_FULLSCREEN_ASPECT = (function () {
     return 0;
   }
   const SAFARI_DIMS = { // wxh : [fullscreen aspect]
+    // iPhone 12 Pro Max
+    '926,428': 926/428,
+    // iPhone 12
+    '844,390': 844/390,
     // iPhone XR
     // iPhone 11 Pro Max
     // iPhone XS Max
