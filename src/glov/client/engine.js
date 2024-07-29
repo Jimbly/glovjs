@@ -608,10 +608,14 @@ function checkResize() {
     need_repos = 10;
     renderNeeded();
   }
-  if (window.visualViewport && (is_ios_safari || true)) { // used to have: || need_repos
-    // we have accurate view information, or screen was just rotated / resized
-    // force scroll to top
-    window.scroll(0,0);
+  if (window.visualViewport && (is_ios_safari || true)) {
+    // Note: used to also have: || need_repos // or screen was just rotated / resized
+
+    // we have accurate view information, force scroll to top, always
+    // should maybe do this any time an edit box is not in focus as well
+    if (window.pageYOffset || window.document.body.scrollTop) {
+      window.scroll(0,0);
+    }
   }
   profilerStop('checkResize');
 }

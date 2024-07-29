@@ -367,10 +367,14 @@ input {
             ctx.fillRect(5,5,canvas.width-10,canvas.height-10);
           }
         }
-        if (is_ios_safari && window.visualViewport) {
+        if (window.visualViewport && (is_ios_safari || true)) {
           // we have accurate view information, force scroll to top, always
           // should maybe do this any time an edit box is not in focus as well
-          window.scroll(0,0);
+          // Also needed on Chrome on iOS
+          // Can't do this on iOS v12 (no visual viewport, don't know if keyboard is up, etc)
+          if (window.pageYOffset || window.document.body.scrollTop) {
+            window.scroll(0,0);
+          }
         }
         requestAnimationFrame(update);
       }
