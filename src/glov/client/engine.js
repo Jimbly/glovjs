@@ -13,7 +13,11 @@ let startup_funcs = [];
 exports.require = require; // For browser console debugging
 
 const assert = require('assert');
-const { is_ios_safari } = require('./browser.js');
+const {
+  is_ios,
+  is_ios_safari,
+  safari_version_major,
+} = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
@@ -604,7 +608,7 @@ function checkResize() {
     need_repos = 10;
     renderNeeded();
   }
-  if (is_ios_safari && (window.visualViewport || need_repos)) {
+  if (window.visualViewport && (is_ios_safari || true)) { // used to have: || need_repos
     // we have accurate view information, or screen was just rotated / resized
     // force scroll to top
     window.scroll(0,0);
@@ -1198,6 +1202,19 @@ export function startup(params) {
   // resize the canvas to fill browser window dynamically
   window.addEventListener('resize', checkResize, false);
   checkResize();
+
+  if (is_ios && safari_version_major < 13) {
+    // can't scroll, no visual viewport, this seems to help issues there
+    // Note: canvas/content may be larger than the viewport, but at least the bottom
+    //   will be aligned with the top of the keyboard after the scroll happens
+    if (canvas) {
+      canvas.style.position = 'fixed';
+    }
+    let content = document.getElementById('content');
+    if (content) {
+      content.style.position = 'fixed';
+    }
+  }
 
   let is_pixely = params.pixely && params.pixely !== 'off';
   antialias = params.antialias || !is_pixely && params.antialias !== false;

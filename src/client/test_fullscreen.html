@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html translate="no" class="notranslate">
+  <head>
+    <meta name="google" content="notranslate">
+    <title>Fullscreen test</title>
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,user-scalable=no,shrink-to-fit=no,maximum-scale=1.0,minimum-scale=1.0,viewport-fit=cover,interactive-widget=resizes-content">
+    <!-- interactive-widget=resizes-content is required for Chrome (at least v123) on Android, as `resizes-visual` uses the wrong values in landscape fullscreen with keyboard visible; Also fixes misplaced keyboard bug when toggling Fullscreen and Landscape on the same frame. -->
+    <style type="text/css">
+
+:root { /* for getSafeAreaFromCSS */
+  --sat: var(--discord-safe-area-inset-top, env(safe-area-inset-top));
+  --sar: var(--discord-safe-area-inset-right, env(safe-area-inset-right));
+  --sab: var(--discord-safe-area-inset-bottom, env(safe-area-inset-bottom));
+  --sal: var(--discord-safe-area-inset-left, env(safe-area-inset-left));
+}
+
+html, body {
+  touch-action: none; /* disables double-/triple-tap zoom on iOS */
+  background-color: black;
+  color: white;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow: hidden;
+  position: absolute;
+}
+
+#safearea { /* for getSafeAreaFromDOM */
+  display: block;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  left: var(--discord-safe-area-inset-left, env(safe-area-inset-left));
+  right: var(--discord-safe-area-inset-right, env(safe-area-inset-right));
+  top: var(--discord-safe-area-inset-top, env(safe-area-inset-top));
+  bottom: var(--discord-safe-area-inset-bottom, env(safe-area-inset-bottom));
+  position: absolute;
+  /*background: rgba(0,0,0,0.5);*/
+}
+
+#content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#canvas {
+  display: block; /* remove scrollbars */
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  /*width: 100vw;
+  height: 100vh;*/
+}
+
+#dynamic_text {
+  display: block; /* remove scrollbars */
+  overflow: hidden;
+  left: 0;
+  top: 0;
+  font-size: 1em;
+  color: black;
+  position: absolute;
+  width: 100%;
+  height: 100%
+}
+.glovui_dynamic {
+  pointer-events: auto;
+}
+input {
+  -webkit-appearance: none; /* Hides search icon in our "text" inputs */
+}
+
+#status {
+  color: #000;
+  text-shadow: 1px 1px 2px #ddd;
+}
+
+</style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="content">
+      <div id="safearea"></div>
+      <div id="dynamic_text">
+        <div style="position:relative; left: 50px; top:25px;">
+          <div id="status" tabindex="2"></div>
+          <div class="glovui_dynamic">
+            <button onclick="fullscreen()">Fullscreen</button> <button onclick="orient()">Orientation</button> <button onclick="fullscreen();orient()">Both</button>
+          </div>
+        </div>
+        <div id="texttest" style="position:absolute; left: 50px;" class="glovui_dynamic">
+          <input type="search"/>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* eslint indent:off, no-var:off, prefer-template:off, @typescript-eslint/no-unused-vars:off, eol-last:off */
+      /* eslint-env browser */
+      var ua = window.navigator.userAgent;
+      var is_ios = Boolean(!window.MSStream && ua.match(/iPad|iPhone|iPod/));
+      var is_ipad = Boolean(ua.match(/iPad/));
+      var is_webkit = Boolean(ua.match(/WebKit/i));
+      var is_ios_safari = is_ios && is_webkit && !ua.match(/CriOS/i);
+      var is_ios_chrome = is_ios && is_webkit && ua.match(/CriOS/i);
+      // var m = ua.match(/ersion\/(\d+)(?:\.(\d+))?/);
+      // var safari_version_major = is_ios_safari ? Number(m && m[1] || '0') : 0;
+      // var safari_version_minor = is_ios_safari ? Number(m && m[2] || '0') : 0;
+      var m = ua.match(/OS (\d+)(_\d+)?(_\d+)?\s/);
+      // Note: includes Chrome on iOS
+      var safari_version_major = (is_ios && m) ? Number(m[1] || '0') : 0;
+      var safari_version_minor = (is_ios && m) ? Number(m[2] && m[2].slice(1) || '0') : 0;
+      m = ua.match(/Chrome\/(\d+)(\.\d+)?(\.\d+)?/);
+      var is_chrome = Boolean(m); // but, excluding iOS Chrome, which is really Safari
+      var chrome_version_major = m && Number(m[1] || '0') || 0;
+      var chrome_version_minor = m && m[2] && Number(m[2].slice(1) || '0') || 0;
+
+      (function () {
+        if (is_ios && safari_version_major < 13) {
+          // can't scroll, no visual viewport, this seems to help issues there
+          // Note: canvas/content will be larger than the viewport, but at least the bottom
+          //   will be aligned with the top of the keyboard after the scroll happens
+          var canvas = document.getElementById('canvas');
+          if (canvas) {
+            canvas.style.position = 'fixed';
+          }
+          var content = document.getElementById('content');
+          if (content) {
+            content.style.position = 'fixed';
+          }
+        }
+      }());
+
+      // // note: was needed on iOS, doesn't help currently?
+      // window.addEventListener('gesturestart', function (e) {
+      //   e.preventDefault(); // don't allow selecting, scrolling, zooming, etc
+      // }, false);
+      // // doesn't help
+      // document.addEventListener('touchmove', function (event) {
+      //   event = event.originalEvent || event;
+      //   if (event.scale !== 1) {
+      //     event.preventDefault();
+      //   }
+      // }, false);
+      (function () {
+        var canvas = document.getElementById('canvas');
+        if (canvas) {
+          canvas.addEventListener('touchstart', function (e) {
+            if (e.target.tagName !== 'INPUT') {
+              e.preventDefault();
+            }
+          }, true);
+        }
+      }());
+
+      var is_fscreen = false;
+      function fullscreen() {
+        var html5 = ['requestFullscreen', 'exitFullscreen'];
+        var webkit = ['webkitRequestFullscreen', 'webkitExitFullscreen'];
+        var moz = ['mozRequestFullScreen', 'mozCancelFullScreen'];
+        var ms = ['msRequestFullscreen', 'msExitFullscreen'];
+        var vendor = (
+          (html5[1] in document && html5) ||
+          (webkit[1] in document && webkit) ||
+          (moz[1] in document && moz) ||
+          (ms[1] in document && ms) ||
+          []
+        );
+
+        is_fscreen = !is_fscreen;
+        if (is_fscreen) {
+          var element = document.documentElement;
+          element[vendor[0]]();
+        } else {
+          document[vendor[1]]();
+        }
+      }
+
+      var is_landscape = false;
+      function orient() {
+        var LANDSCAPE = 'landscape';
+        var PORTRAIT = 'portrait';
+        var screen = window.screen;
+        function enabled() {
+          return screen && screen.orientation;
+        }
+
+        if (enabled()) {
+          var new_orientation = is_landscape ? PORTRAIT : LANDSCAPE;
+          is_landscape = !is_landscape;
+          screen.orientation.lock(new_orientation);
+        }
+      }
+
+      // Test to see how quickly things update
+      // var requestAnimationFrame= function (fn) {
+      //   setTimeout(fn, 1000);
+      // };
+
+      function nearSame(a, b, tol) {
+        return Math.abs(a - b) < tol;
+      }
+      var SAFARI_FULLSCREEN_ASPECT = (function () {
+        var screen = window.screen;
+        if (!is_ios_safari || !screen) {
+          return 0;
+        }
+        var SAFARI_DIMS = { // wxh : [fullscreen aspect]
+          // iPhone 12 Pro Max
+          '926,428': 926/428,
+          // iPhone 12
+          '844,390': 844/390,
+          // iPhone XR
+          // iPhone 11 Pro Max
+          // iPhone XS Max
+          // iPhone 11
+          '896,414': 896/414,
+          // iPhone 11 Pro
+          // iPhone X (probably)
+          '812,375': 812/375,
+          // iPhone 8 Plus
+          '736,414': 736/414,
+          // iPhone 6s+
+          // iPhone 6+
+          '716,414': 736/414, // (screen.availWidth reports 20 less)
+          // iPhone 8
+          // iPhone 7 (10.1)
+          // iPhone 7 (11.4)
+          '667,375': 667/375,
+          // iPhone 6s
+          // iPhone 6
+          '647,375': 667/375, // (screen.availWidth reports 20 less)
+          // iPhone 5s
+          '548,320': 568/320, // (screen.availWidth reports 20 less)
+        };
+        var key = Math.max(screen.availWidth, screen.availHeight)+','+Math.min(screen.availWidth, screen.availHeight);
+        return SAFARI_DIMS[key] || 0;
+      }());
+      function safariTopSafeArea(view_w, view_h) {
+        // Detect if the URL bar is hidden, but should be a safe area
+        if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
+          // Note: if user has scaling enabled, the padding required might be different
+          //   but the same holds true for the safe area padding detected via CSS!
+          return 50; // seems to be 50pts on all devices
+        }
+        return 0;
+      }
+      // Get safe area by examining safe-area-inset padded element
+      function getSafeAreaFromDOM(out, view_w, view_h) {
+        var safearea = document.getElementById('safearea');
+        if (safearea && safearea.offsetWidth && safearea.offsetHeight) {
+          out[0] = safearea.offsetLeft;
+          out[1] = view_w - safearea.offsetWidth - safearea.offsetLeft;
+          out[2] = safearea.offsetTop;
+          out[3] = view_h - safearea.offsetHeight - safearea.offsetTop;
+        }
+      }
+      // Alternative way to get safe area, maybe more explicit, though less
+      // flexible if other things might adjust the position of the safe area element
+      function getCSSProp(ds, name) {
+        var val = ds.getPropertyValue(name);
+        if (!val) {
+          return 0;
+        }
+        return Number(val.slice(0, -2)) || 0;
+      }
+      function getSafeAreaFromCSS(out) {
+        if (window.getComputedStyle) {
+          var ds = window.getComputedStyle(document.documentElement);
+          out[0] = getCSSProp(ds, '--sal');
+          out[1] = getCSSProp(ds, '--sar');
+          out[2] = getCSSProp(ds, '--sat');
+          out[3] = getCSSProp(ds, '--sab');
+        }
+      }
+      function fmt(num) {
+        num = String(num);
+        var idx = num.indexOf('.');
+        if (idx !== -1) {
+          num = num.slice(0, idx + 3);
+        }
+        return num;
+      }
+
+      var last_update_time = 0;
+      var UPDATE_FREQ = 2000;
+      function update() {
+        var canvas = document.getElementById('canvas');
+        var status = document.getElementById('status');
+        var content = document.getElementById('content');
+        var texttest = document.getElementById('texttest');
+        var vv = window.visualViewport || {};
+        var css_to_real = window.devicePixelRatio || 1;
+        var view_w = (vv.width || window.innerWidth);
+        var view_h = (vv.height || window.innerHeight);
+        document.body.style.height = view_h + 'px';
+        var safe_area_pad = [0,0,0,0]; // left, right, top, bottom
+        getSafeAreaFromDOM(safe_area_pad, view_w, view_h);
+        safe_area_pad[2] = Math.max(safe_area_pad[2], safariTopSafeArea(view_w, view_h));
+        var safe_area_css = [0,0,0,0];
+        getSafeAreaFromCSS(safe_area_css);
+        if (status && Date.now() - last_update_time > UPDATE_FREQ) {
+          last_update_time = Date.now();
+          status.innerText = JSON.stringify({
+            view: fmt(view_w) + ' x ' + fmt(view_h),
+            screen_avail: [
+              window.screen.availLeft,
+              window.screen.availTop,
+              window.screen.availWidth,
+              window.screen.availHeight
+            ].map(fmt).join(', '),
+            is_ios_safari: is_ios ? [is_ios_safari, safari_version_major, safari_version_minor].join('.') : undefined,
+            chrome: is_chrome ? [chrome_version_major, chrome_version_minor].join('.') : undefined,
+            safe_area: safe_area_pad.join(', '),
+            safe_area_css: safe_area_css.join(', '),
+            // css_to_real: css_to_real,
+            window_inner_height: fmt(window.innerHeight),
+            visual_viewport_height: fmt(vv.height),
+            window_outer_height: fmt(window.outerHeight),
+            canvas_client_height: fmt(canvas.clientHeight),
+            doc_elem_client_height: fmt(document.documentElement.clientHeight),
+            body_client_height: fmt(document.body.clientHeight),
+            pageYOffset: window.pageYOffset || window.document.body.scrollTop,
+            ua: window.navigator.userAgent,
+          }, undefined, 2).replace(/"/g, '').replace(/,\n/g, '\n').slice(1, -1);
+        }
+
+        if (texttest) {
+          texttest.style.bottom = (safe_area_pad[3] + 8) + 'px';
+        }
+
+        if (canvas) {
+          canvas.width = Math.round(canvas.clientWidth * css_to_real) || 1;
+          canvas.height = Math.round(canvas.clientHeight * css_to_real) || 1;
+          var ctx = canvas.getContext('2d');
+          if (safe_area_pad[0] || safe_area_pad[1] || safe_area_pad[2] || safe_area_pad[3]) {
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            safe_area_pad[0] *= css_to_real;
+            safe_area_pad[1] *= css_to_real;
+            safe_area_pad[2] *= css_to_real;
+            safe_area_pad[3] *= css_to_real;
+            ctx.fillStyle = 'green';
+            ctx.fillRect(safe_area_pad[0], safe_area_pad[2],
+              canvas.width - safe_area_pad[0] - safe_area_pad[1],
+              canvas.height - safe_area_pad[2] - safe_area_pad[3]);
+            ctx.fillStyle = 'red';
+            ctx.fillRect(safe_area_pad[0] + 5, safe_area_pad[2] + 5,
+              canvas.width - safe_area_pad[0] - safe_area_pad[1] - 10,
+              canvas.height - safe_area_pad[2] - safe_area_pad[3] - 10);
+          } else {
+            ctx.fillStyle = 'green';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'red';
+            ctx.fillRect(5,5,canvas.width-10,canvas.height-10);
+          }
+        }
+        if (is_ios_safari && window.visualViewport) {
+          // we have accurate view information, force scroll to top, always
+          // should maybe do this any time an edit box is not in focus as well
+          window.scroll(0,0);
+        }
+        requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    </script>
+  </body>
+</html>
