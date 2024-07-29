@@ -541,7 +541,31 @@ function safariTopSafeArea(view_w, view_h) {
   }
   return 0;
 }
-
+let kb_up_last_w = 0;
+let kb_up_last_h = 0;
+let kb_up_ret = false;
+function isKeyboardUp(view_w, view_h) {
+  if (!is_ios) {
+    // probably logic is still valid, but not currently needed in other browsers?
+    return false;
+  }
+  if (view_w !== kb_up_last_w) {
+    // init, or just rotated, assume not up
+    kb_up_ret = false;
+  } else {
+    // same width
+    if (view_h < kb_up_last_h) {
+      // shrunk
+      kb_up_ret = true;
+    } else if (view_h > kb_up_last_h) {
+      // expanded
+      kb_up_ret = false;
+    }
+  }
+  kb_up_last_w = view_w;
+  kb_up_last_h = view_h;
+  return kb_up_ret;
+}
 
 let last_canvas_width;
 let last_canvas_height;
@@ -559,6 +583,7 @@ function checkResize() {
   dom_to_canvas_ratio *= settings.render_scale_all;
   let view_w = (vv.width || window.innerWidth);
   let view_h = (vv.height || window.innerHeight);
+  isKeyboardUp(view_w, view_h);
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
     last_body_height = view_h;
@@ -583,6 +608,10 @@ function checkResize() {
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
           safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
+        if (safearea_values[3] && is_ios && isKeyboardUp(view_w, view_h)) {
+          // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
+          safearea_values[3] = 0;
+        }
       }
     }
   } else {
