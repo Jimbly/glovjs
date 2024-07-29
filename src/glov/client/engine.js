@@ -555,10 +555,10 @@ function isKeyboardUp(view_w, view_h) {
     // probably logic is still valid, but not currently needed in other browsers?
     return false;
   }
-  if (view_w !== kb_up_last_w) {
+  if (!nearSame(view_w, kb_up_last_w, 5)) {
     // init, or just rotated, assume not up
     kb_up_ret = false;
-  } else {
+  } else if (!nearSame(view_h, kb_up_last_h, 5)) {
     // same width
     if (view_h < kb_up_last_h) {
       // shrunk
