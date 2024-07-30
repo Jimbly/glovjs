@@ -1517,6 +1517,7 @@ export function modalTextEntry(param) {
     max_len: param.max_len,
     max_visual_size: param.max_visual_size,
     esc_clears: false,
+    auto_unfocus: true,
   });
   let buttons = {};
   for (let key in param.buttons) {

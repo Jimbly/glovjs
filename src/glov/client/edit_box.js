@@ -124,7 +124,7 @@ class GlovUIEditBox {
     this.uppercase = false;
     this.initial_focus = false;
     this.onetime_focus = false;
-    this.auto_unfocus = false;
+    this.auto_unfocus = true;
     this.focus_steal = false;
     this.initial_select = false;
     this.spellcheck = true;
