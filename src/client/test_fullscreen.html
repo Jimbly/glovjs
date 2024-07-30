@@ -268,6 +268,9 @@ input {
       var kb_up_last_h = 0;
       var kb_up_ret = false;
       function isKeyboardUp(view_w, view_h) {
+        if (!view_w) {
+          return kb_up_ret;
+        }
         if (!is_ios) {
           // probably logic is still valid, but not currently needed in other browsers?
           return false;
@@ -293,7 +296,7 @@ input {
         // iOS === 15.0 doesn't respect safe area; 15.1 is offset
         // < 15.4 hasn't added `dvh` logic yet
         if (is_ios_safari && safari_version_major === 15 && safari_version_minor < 2 &&
-          isKeyboardUp(view_w, view_h) &&
+          isKeyboardUp() &&
           isPortrait(view_w, view_h)
         ) {
           if (safari_version_minor === 0) {
@@ -306,7 +309,7 @@ input {
           }
         }
         if (is_ios_chrome && is_ipad && safari_version_major >= 13 &&
-          isKeyboardUp(view_w, view_h)
+          isKeyboardUp()
         ) {
           // seen specific issue resolved by this on at least: 13.2/4 14.0/1/5 15.1/5 16.0/1/2/3
           // v17 doesn't seem to (always?) have a fixed offset, is also buggy with
@@ -369,7 +372,7 @@ input {
         getSafeAreaFromDOM(safe_area_pad, view_w, view_h);
         isKeyboardUp(view_w, view_h);
         safe_area_pad[2] = Math.max(safe_area_pad[2], safariTopSafeArea(view_w, view_h));
-        if (safe_area_pad[3] && is_ios && isKeyboardUp(view_w, view_h)) {
+        if (safe_area_pad[3] && is_ios && isKeyboardUp()) {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
           safe_area_pad[3] = 0;
         }

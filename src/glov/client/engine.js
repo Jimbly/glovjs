@@ -551,6 +551,9 @@ let kb_up_last_w = 0;
 let kb_up_last_h = 0;
 let kb_up_ret = false;
 function isKeyboardUp(view_w, view_h) {
+  if (!view_w) {
+    return kb_up_ret;
+  }
   if (!is_ios) {
     // probably logic is still valid, but not currently needed in other browsers?
     return false;
@@ -575,7 +578,7 @@ function isKeyboardUp(view_w, view_h) {
 function safariBottomSafeArea(view_w, view_h) {
   // iOS === 15.0 doesn't respect safe area; 15.1 is offset
   if (is_ios_safari && safari_version_major === 15 && safari_version_minor < 2 &&
-    isKeyboardUp(view_w, view_h) &&
+    isKeyboardUp() &&
     isPortrait(view_w, view_h)
   ) {
     if (safari_version_minor === 0) {
@@ -588,7 +591,7 @@ function safariBottomSafeArea(view_w, view_h) {
     }
   }
   if (is_ios_chrome && is_ipad && safari_version_major >= 13 &&
-    isKeyboardUp(view_w, view_h)
+    isKeyboardUp()
   ) {
     // seen specific issue resolved by this on at least: 13.2/4 14.0/1/5 15.1/5 16.0/1/2/3
     // v17 doesn't seem to (always?) have a fixed offset, is also buggy with
@@ -641,7 +644,7 @@ function checkResize() {
           // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
           //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
           safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
-        if (safearea_values[3] && is_ios && isKeyboardUp(view_w, view_h)) {
+        if (safearea_values[3] && is_ios && isKeyboardUp()) {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
           safearea_values[3] = 0;
         }
