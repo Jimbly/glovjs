@@ -551,6 +551,7 @@ function isPortrait(view_w, view_h) {
 let kb_up_last_w = 0;
 let kb_up_last_h = 0;
 let kb_up_ret = false;
+let kb_up_frame = 0;
 function isKeyboardUp(view_w, view_h) {
   if (!view_w) {
     return kb_up_ret;
@@ -574,6 +575,12 @@ function isKeyboardUp(view_w, view_h) {
   }
   kb_up_last_w = view_w;
   kb_up_last_h = view_h;
+  ++kb_up_frame;
+  if (kb_up_frame < 3) {
+    // window.innerHeight and related shrink during the first couple frames on iOS 12.1
+    //   if in landscape and there's a URL bar / other tabs open
+    kb_up_ret = false;
+  }
   return kb_up_ret;
 }
 function safariBottomSafeArea(view_w, view_h) {
