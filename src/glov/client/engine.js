@@ -534,7 +534,8 @@ const SAFARI_FULLSCREEN_ASPECT = (function () {
   return SAFARI_DIMS[key] || 0;
 }());
 function safariTopSafeArea(view_w, view_h) {
-  if (is_ios_safari && safari_version_major < 15) {
+  if (is_ios_safari && safari_version_major < 16) {
+    // Definitely needed on v14 and lower; seen this needed on v15.1 as well
     // Detect if the URL bar is hidden, but should be a safe area
     if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
       // Note: if user has scaling enabled, the padding required might be different
