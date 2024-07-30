@@ -99,7 +99,7 @@ const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
   mat4isFinite,
-  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
+  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4scale, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
 const { profanityStartupLate } = require('./words/profanity.js');
@@ -540,7 +540,7 @@ function safariTopSafeArea(view_w, view_h) {
     if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
       // Note: if user has scaling enabled, the padding required might be different
       //   but the same holds true for the safe area padding detected via CSS!
-      return 50; // seems to be 50pts on all devices
+      return 28; // seems to be visually around 50pts, but touch area of ~25 pts on all devices
     }
   }
   return 0;
@@ -610,24 +610,35 @@ function safariBottomSafeArea(view_w, view_h) {
   return 0;
 }
 
+// Get safe area by examining safe-area-inset padded element
+function getSafeAreaFromDOM(out, safearea, view_w, view_h) {
+  if (safearea && safearea.offsetWidth && safearea.offsetHeight) {
+    out[0] = safearea.offsetLeft;
+    out[1] = view_w - safearea.offsetWidth - safearea.offsetLeft;
+    // "view_h - window.innerHeight" is for iOS 12
+    out[2] = max(safearea.offsetTop, view_h - window.innerHeight);
+    out[3] = view_h - safearea.offsetHeight - safearea.offsetTop;
+  }
+}
+
 let last_canvas_width;
 let last_canvas_height;
 let last_body_height;
 let safearea_elem;
 let safearea_ignore_bottom = false;
-let safearea_values = [0,0,0,0];
-let last_safearea_values = [0,0,0,0];
-let pos_fixed_canvas = false;
+let safearea_dom = vec4();
+let safearea_canvas = vec4();
+let last_safearea_canvas = vec4();
 function checkResize() {
   profilerStart('checkResize');
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
   //   shrinking the viewport without changing the window height
-  let vv = window.visualViewport || {};
-  dom_to_canvas_ratio = window.devicePixelRatio || 1;
-  dom_to_canvas_ratio *= settings.render_scale_all;
-  let view_w = (vv.width || (pos_fixed_canvas ? canvas.clientWidth : window.innerWidth));
-  let view_h = (vv.height || (pos_fixed_canvas ? canvas.clientHeight : window.innerHeight));
-  isKeyboardUp(view_w, view_h);
+  let vv = window.visualViewport;
+  let dom_to_pixels = window.devicePixelRatio || 1;
+  dom_to_canvas_ratio = dom_to_pixels * settings.render_scale_all;
+  let view_w = vv ? vv.width : window.innerWidth;
+  let view_h = vv ? vv.height :
+    is_ios_safari && window.pageYOffset ? document.documentElement.clientHeight : window.innerHeight;
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
     last_body_height = view_h;
@@ -635,40 +646,39 @@ function checkResize() {
       document.body.style.height = `${view_h}px`;
     }
   }
+  // safearea_dom - left, right, top, bottom PADDING values
+  v4set(safearea_dom, 0, 0, 0, 0);
+  getSafeAreaFromDOM(safearea_dom, safearea_elem, view_w, view_h);
+  isKeyboardUp(view_w, view_h - safearea_dom[2] - safearea_dom[3]);
+  safearea_dom[2] = max(safearea_dom[2], safariTopSafeArea(view_w, view_h));
+  if (safearea_dom[3] && (
+    // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
+    is_ios && isKeyboardUp() ||
+    // General: Possibly ignoring bottom safe area by app request, it seems not
+    //  useful on iPhones (does not adjust when keyboard is up, only obscured in
+    //  the middle, if obeying left/right safe area)
+    safearea_ignore_bottom
+  )) {
+    safearea_dom[3] = 0;
+  }
+  safearea_dom[3] = max(safearea_dom[3], safariBottomSafeArea(view_w, view_h));
+
   let rect = canvas.getBoundingClientRect();
   let new_width = round(rect.width * dom_to_canvas_ratio) || 1;
   let new_height = round(rect.height * dom_to_canvas_ratio) || 1;
 
   if (cmds.safearea[0] === -1) {
-    if (safearea_elem) {
-      let sa_width = safearea_elem.offsetWidth;
-      let sa_height = safearea_elem.offsetHeight;
-      if (sa_width && sa_height) {
-        v4set(safearea_values,
-          safearea_elem.offsetLeft * dom_to_canvas_ratio,
-          new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
-          max(safearea_elem.offsetTop * dom_to_canvas_ratio,
-            safariTopSafeArea(view_w, view_h) * dom_to_canvas_ratio),
-          // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
-          //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
-          safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
-        if (safearea_values[3] && is_ios && isKeyboardUp()) {
-          // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
-          safearea_values[3] = 0;
-        }
-        safearea_values[3] = max(safearea_values[3], safariBottomSafeArea(view_w, view_h) * settings.render_scale_all);
-      }
-    }
+    v4scale(safearea_canvas, safearea_dom, dom_to_canvas_ratio);
   } else {
-    v4set(safearea_values,
+    v4set(safearea_canvas,
       new_width * clamp(cmds.safearea[0], 0, 25)/100,
       new_width * clamp(cmds.safearea[1], 0, 25)/100,
       new_height * clamp(cmds.safearea[2], 0, 25)/100,
       new_height * clamp(cmds.safearea[3], 0, 25)/100);
   }
-  if (!v4same(safearea_values, last_safearea_values)) {
-    v4copy(last_safearea_values, safearea_values);
-    camera2d.setSafeAreaPadding(safearea_values[0], safearea_values[1], safearea_values[2], safearea_values[3]);
+  if (!v4same(safearea_canvas, last_safearea_canvas)) {
+    v4copy(last_safearea_canvas, safearea_canvas);
+    camera2d.setSafeAreaPadding(safearea_canvas[0], safearea_canvas[1], safearea_canvas[2], safearea_canvas[3]);
     need_repos = max(need_repos, 1);
   }
 
@@ -1280,19 +1290,6 @@ export function startup(params) {
   safearea_ignore_bottom = params.safearea_ignore_bottom || false;
 
   // resize the canvas to fill browser window dynamically
-  if (is_ios && safari_version_major < 13) {
-    pos_fixed_canvas = true;
-    // can't scroll, no visual viewport, this seems to help issues there
-    // Note: canvas/content may be larger than the viewport, but at least the bottom
-    //   will be aligned with the top of the keyboard after the scroll happens
-    if (canvas) {
-      canvas.style.position = 'fixed';
-    }
-    let content = document.getElementById('content');
-    if (content) {
-      content.style.position = 'fixed';
-    }
-  }
   window.addEventListener('resize', checkResize, false);
   checkResize();
 

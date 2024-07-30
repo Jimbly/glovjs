@@ -108,6 +108,10 @@ input {
     <script>
       /* eslint indent:off, no-var:off, prefer-template:off, @typescript-eslint/no-unused-vars:off, eol-last:off */
       /* eslint-env browser */
+      var abs = Math.abs;
+      var max = Math.max;
+      var min = Math.min;
+      var round = Math.round;
       var ua = window.navigator.userAgent;
       var is_ios = Boolean(!window.MSStream && ua.match(/iPad|iPhone|iPod/));
       var is_ipad = Boolean(ua.match(/iPad/));
@@ -125,24 +129,6 @@ input {
       var is_chrome = Boolean(m); // but, excluding iOS Chrome, which is really Safari
       var chrome_version_major = m && Number(m[1] || '0') || 0;
       var chrome_version_minor = m && m[2] && Number(m[2].slice(1) || '0') || 0;
-
-      var pos_fixed_canvas = false;
-      (function () {
-        if (is_ios && safari_version_major < 13) {
-          pos_fixed_canvas = true;
-          // can't scroll, no visual viewport, this seems to help issues there
-          // Note: canvas/content will be larger than the viewport, but at least the bottom
-          //   will be aligned with the top of the keyboard after the scroll happens
-          var canvas = document.getElementById('canvas');
-          if (canvas) {
-            canvas.style.position = 'fixed';
-          }
-          var content = document.getElementById('content');
-          if (content) {
-            content.style.position = 'fixed';
-          }
-        }
-      }());
 
       // // note: was needed on iOS, doesn't help currently?
       // window.addEventListener('gesturestart', function (e) {
@@ -214,7 +200,7 @@ input {
       // };
 
       function nearSame(a, b, tol) {
-        return Math.abs(a - b) < tol;
+        return abs(a - b) < tol;
       }
       var SAFARI_FULLSCREEN_ASPECT = (function () {
         var screen = window.screen;
@@ -249,7 +235,7 @@ input {
           // iPhone 5s
           '548,320': 568/320, // (screen.availWidth reports 20 less)
         };
-        var key = Math.max(screen.availWidth, screen.availHeight)+','+Math.min(screen.availWidth, screen.availHeight);
+        var key = max(screen.availWidth, screen.availHeight)+','+min(screen.availWidth, screen.availHeight);
         return SAFARI_DIMS[key] || 0;
       }());
       function safariTopSafeArea(view_w, view_h) {
@@ -330,12 +316,13 @@ input {
         return 0;
       }
       // Get safe area by examining safe-area-inset padded element
-      function getSafeAreaFromDOM(out, view_w, view_h) {
-        var safearea = document.getElementById('safearea');
+      function getSafeAreaFromDOM(out, safearea, view_w, view_h) {
         if (safearea && safearea.offsetWidth && safearea.offsetHeight) {
           out[0] = safearea.offsetLeft;
           out[1] = view_w - safearea.offsetWidth - safearea.offsetLeft;
-          out[2] = safearea.offsetTop;
+          // view_h - window.innerHeight is for iOS 12
+          out[2] = max(safearea.offsetTop, view_h - window.innerHeight);
+          // out[2] = safearea.offsetTop;
           out[3] = view_h - safearea.offsetHeight - safearea.offsetTop;
         }
       }
@@ -370,25 +357,27 @@ input {
       var UPDATE_FREQ = 2000;
       function update() {
         var canvas = document.getElementById('canvas');
+        var safearea = document.getElementById('safearea');
         var status = document.getElementById('status');
         var content = document.getElementById('content');
         var texttest = document.getElementById('texttest');
-        var vv = window.visualViewport || {};
-        var css_to_real = window.devicePixelRatio || 1;
-        var view_w = (vv.width || (pos_fixed_canvas ? canvas.clientWidth : window.innerWidth));
-        var view_h = (vv.height || (pos_fixed_canvas ? canvas.clientHeight : window.innerHeight));
+        var vv = window.visualViewport;
+        var dom_to_pixels = window.devicePixelRatio || 1;
+        var view_w = vv ? vv.width : window.innerWidth;
+        var view_h = vv ? vv.height :
+          is_ios_safari && window.pageYOffset ? document.documentElement.clientHeight : window.innerHeight;
         document.body.style.height = view_h + 'px';
-        var safe_area_pad = [0,0,0,0]; // left, right, top, bottom
-        getSafeAreaFromDOM(safe_area_pad, view_w, view_h);
-        isKeyboardUp(view_w, view_h);
-        safe_area_pad[2] = Math.max(safe_area_pad[2], safariTopSafeArea(view_w, view_h));
-        if (safe_area_pad[3] && is_ios && isKeyboardUp()) {
+        var safearea_dom = [0,0,0,0]; // left, right, top, bottom
+        getSafeAreaFromDOM(safearea_dom, safearea, view_w, view_h);
+        isKeyboardUp(view_w, view_h - safearea_dom[2] - safearea_dom[3]);
+        safearea_dom[2] = max(safearea_dom[2], safariTopSafeArea(view_w, view_h));
+        if (safearea_dom[3] && is_ios && isKeyboardUp()) {
           // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
-          safe_area_pad[3] = 0;
+          safearea_dom[3] = 0;
         }
-        safe_area_pad[3] = Math.max(safe_area_pad[3], safariBottomSafeArea(view_w, view_h));
-        var safe_area_css = [0,0,0,0];
-        getSafeAreaFromCSS(safe_area_css);
+        safearea_dom[3] = max(safearea_dom[3], safariBottomSafeArea(view_w, view_h));
+        var safearea_css = [0,0,0,0];
+        getSafeAreaFromCSS(safearea_css);
         if (status && Date.now() - last_update_time > UPDATE_FREQ) {
           last_update_time = Date.now();
           status.innerText = JSON.stringify({
@@ -401,12 +390,12 @@ input {
             ].map(fmt).join(', '),
             is_ios_safari: is_ios ? [is_ios_safari, safari_version_major, safari_version_minor].join('.') : undefined,
             chrome: is_chrome ? [chrome_version_major, chrome_version_minor].join('.') : undefined,
-            safe_area: safe_area_pad.join(', '),
-            safe_area_css: safe_area_css.join(', '),
-            css_to_real: css_to_real,
+            safearea_dom: safearea_dom.join(', '),
+            safearea_css: safearea_css.join(', '),
+            dom_to_pixels: dom_to_pixels,
             kb_up: kb_up_ret,
             window_inner_height: fmt(window.innerHeight),
-            visual_viewport_height: fmt(vv.height),
+            visual_viewport_height: fmt(vv && vv.height),
             window_outer_height: fmt(window.outerHeight),
             canvas_client_height: fmt(canvas.clientHeight),
             doc_elem_client_height: fmt(document.documentElement.clientHeight),
@@ -417,28 +406,30 @@ input {
         }
 
         if (texttest) {
-          texttest.style.bottom = (safe_area_pad[3] + 8) + 'px';
+          texttest.style.bottom = (safearea_dom[3] + 8) + 'px';
         }
 
         if (canvas) {
-          canvas.width = Math.round(canvas.clientWidth * css_to_real) || 1;
-          canvas.height = Math.round(canvas.clientHeight * css_to_real) || 1;
+          canvas.width = round(canvas.clientWidth * dom_to_pixels) || 1;
+          canvas.height = round(canvas.clientHeight * dom_to_pixels) || 1;
           var ctx = canvas.getContext('2d');
-          if (safe_area_pad[0] || safe_area_pad[1] || safe_area_pad[2] || safe_area_pad[3]) {
+          if (safearea_dom[0] || safearea_dom[1] || safearea_dom[2] || safearea_dom[3]) {
             ctx.fillStyle = 'blue';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            safe_area_pad[0] *= css_to_real;
-            safe_area_pad[1] *= css_to_real;
-            safe_area_pad[2] *= css_to_real;
-            safe_area_pad[3] *= css_to_real;
+            var safearea_canvas = [
+              safearea_dom[0] * dom_to_pixels,
+              safearea_dom[1] * dom_to_pixels,
+              safearea_dom[2] * dom_to_pixels,
+              safearea_dom[3] * dom_to_pixels,
+            ];
             ctx.fillStyle = 'green';
-            ctx.fillRect(safe_area_pad[0], safe_area_pad[2],
-              canvas.width - safe_area_pad[0] - safe_area_pad[1],
-              canvas.height - safe_area_pad[2] - safe_area_pad[3]);
+            ctx.fillRect(safearea_canvas[0], safearea_canvas[2],
+              canvas.width - safearea_canvas[0] - safearea_canvas[1],
+              canvas.height - safearea_canvas[2] - safearea_canvas[3]);
             ctx.fillStyle = 'red';
-            ctx.fillRect(safe_area_pad[0] + 5, safe_area_pad[2] + 5,
-              canvas.width - safe_area_pad[0] - safe_area_pad[1] - 10,
-              canvas.height - safe_area_pad[2] - safe_area_pad[3] - 10);
+            ctx.fillRect(safearea_canvas[0] + 5, safearea_canvas[2] + 5,
+              canvas.width - safearea_canvas[0] - safearea_canvas[1] - 10,
+              canvas.height - safearea_canvas[2] - safearea_canvas[3] - 10);
           } else {
             ctx.fillStyle = 'green';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
