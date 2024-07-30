@@ -8,6 +8,7 @@ import { colorPicker } from './color_picker';
 import { EditBox, editBoxCreate } from './edit_box';
 import * as engine from './engine';
 import { ALIGN, Font, FontStyle, fontStyle, fontStyleAlpha } from './font';
+import { fscreenActive, fscreenEnter, fscreenExit } from './fscreen';
 import * as input from './input';
 import {
   mouseOver,
@@ -523,6 +524,9 @@ nec arborei timentem, ut crimina vidit.
   if (ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Remove Line', key: 'remove_line' })) {
     --test_lines;
   }
+  internal_y += button_height + pad;
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Fullscreen',
+    in_event_cb: fscreenActive() ? fscreenExit : fscreenEnter });
   internal_y += button_height + pad;
   collapsagoriesStop();
   test_scroll_area.end(internal_y);
