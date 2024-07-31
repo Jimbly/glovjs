@@ -16,6 +16,7 @@ import {
   KEYS,
   eatAllKeyboardInput,
   inputClick,
+  inputTouchMode,
   keyDownEdge,
   keyUpEdge,
   mouseConsumeClicks,
@@ -70,6 +71,32 @@ function setActive(edit_box) {
 
 export function editBoxAnyActive() {
   return active_edit_box && active_edit_box_frame >= engine.frame_index - 1;
+}
+
+let osk_elem;
+let osk_timeout;
+function showOnscreenKeyboardCleanup() {
+  if (osk_timeout) {
+    clearTimeout(osk_timeout);
+    osk_timeout = null;
+    document.body.removeChild(osk_elem);
+    osk_elem = null;
+  }
+}
+function showOnscreenKeyboardInEvent() {
+  // Derived from: https://stackoverflow.com/questions/71826145/show-keyboard-on-input-focus-without-user-action
+  if (!osk_elem) {
+    osk_elem = document.createElement('input');
+    osk_elem.setAttribute('type', 'search');
+    osk_elem.setAttribute('style', 'position: fixed; top: -100px; left: -100px;');
+    document.body.appendChild(osk_elem);
+    osk_timeout = setTimeout(showOnscreenKeyboardCleanup, 1000);
+  }
+  osk_elem.focus();
+}
+
+export function showOnscreenKeyboard() {
+  return inputTouchMode() || true ? showOnscreenKeyboardInEvent : undefined;
 }
 
 function formHook(ev) {
@@ -396,6 +423,7 @@ class GlovUIEditBox {
   focus() {
     if (this.input) {
       this.input.focus();
+      showOnscreenKeyboardCleanup();
       if (this.select_on_focus) {
         this.input.select();
       }
@@ -427,6 +455,7 @@ class GlovUIEditBox {
         spotlog('GLOV focused, DOM not, focusing', this);
         if (this.input) {
           this.input.focus();
+          showOnscreenKeyboardCleanup();
           if (this.select_on_focus) {
             this.input.select();
           }
@@ -491,6 +520,7 @@ class GlovUIEditBox {
     if (this.focus_steal) {
       this.focus_steal = false;
       this.focus();
+      showOnscreenKeyboardCleanup();
     }
 
     let is_reset = false;
@@ -580,6 +610,7 @@ class GlovUIEditBox {
         this.input = input;
         if (this.initial_focus || this.onetime_focus) {
           input.focus();
+          showOnscreenKeyboardCleanup();
           setActive(this);
           this.onetime_focus = false;
         }
