@@ -74,7 +74,7 @@ export function executeWithRetry<T = unknown, E = unknown>(
         // If there was an error, try again if we have not exceeded max retries
         if (attempts === max_retries) {
           // Return the error if we have exceeded max retries
-          (quiet ? console.info : console.error)(`[RETRY] ${log_prefix} | [Retries exhausted] | ${err}`);
+          console[quiet ? 'info' : 'error'](`[RETRY] ${log_prefix} | [Retries exhausted] | ${err}`);
           if (metricsAdd && !no_metrics) {
             metricsAdd(`retry.${metric}.fail`, 1);
           }
@@ -84,7 +84,7 @@ export function executeWithRetry<T = unknown, E = unknown>(
         if (metricsAdd && !no_metrics) {
           metricsAdd(`retry.${metric}`, 1);
         }
-        (quiet ? console.info : console.warn)(`[RETRY] ${log_prefix} | [${attempts}] | ${err}`);
+        console[quiet ? 'info' : 'warn'](`[RETRY] ${log_prefix} | [${attempts}] | ${err}`);
         perfCounterAdd(`retry.${log_prefix}`);
 
         // Delay before next attempt with added jitter factor to the duration
