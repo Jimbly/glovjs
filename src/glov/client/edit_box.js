@@ -760,7 +760,7 @@ class GlovUIEditBox {
           for (let jj = first_row; jj <= last_row; ++jj) {
             let line = lines[jj];
             let selx0 = jj === first_row ? selection[0][0] : 0;
-            let selx1 = jj === last_row ? selection[1][0] : line.length;
+            let selx1 = jj === last_row ? selection[1][0] : line && line.length || 1;
             let xoffs = center ? round((w - line_width[jj])/2) : 0;
             drawRect(x + char_width*selx0-1 + xoffs, y + jj * char_height,
               x + char_width*selx1 + xoffs, y + (jj + 1) * char_height, z + 0.75, color_selection);
