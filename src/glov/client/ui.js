@@ -1176,8 +1176,10 @@ export function button(param) {
   let saved_w = param.w;
   let saved_x = param.x;
   param.no_bg = true;
-  param.x += param.h * param.shrink;
-  param.w -= param.h * param.shrink;
+  let img_size = param.h * param.shrink;
+  let img_pad = param.h * (1 - param.shrink) / 2;
+  param.x += img_pad + img_size;
+  param.w -= img_pad + img_size;
   buttonTextDraw(param, state, focused);
 
   param.no_bg = saved_no_bg;
