@@ -1358,7 +1358,28 @@ class ChatUIImpl {
     }
     const inner_w = outer_w - border + this.inner_width_adjust;
     this.setActiveSize(font_height, inner_w); // may recalc msg_h on each elem; updates wrap_w
-    if (!hide_text_input) {
+    if (hide_text_input) {
+      if (this.extra_buttons) {
+        // Allow responding to hotkeys/etc, but should not show any buttons
+        // there is no visible place for this.
+        let extra_button_pre_state: ExtraButtonsPreState = {
+          button_h: 0,
+          has_channel: Boolean(this.channel),
+          hide_input: true,
+          input_focused: was_focused,
+          total_w: 0,
+        };
+        this.extra_buttons.pre_cb(extra_button_pre_state);
+        assert(!extra_button_pre_state.total_w);
+        let extra_button_state: ExtraButtonsState = {
+          ...extra_button_pre_state,
+          x: 0,
+          y: 0,
+          z: z + 1,
+        };
+        this.extra_buttons.cb(extra_button_state);
+      }
+    } else {
       anything_visible = true;
       y -= border;
 
