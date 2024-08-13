@@ -144,6 +144,9 @@ class MDRImg implements MDLayoutBlock, MDDrawBlock, Box {
       } else {
         let tex = sprite.texs[0];
         aspect = tex.width / tex.height;
+        if (sprite.uvs) {
+          aspect *= (sprite.uvs[2] - sprite.uvs[0]) / (sprite.uvs[3] - sprite.uvs[1]);
+        }
       }
     }
     this.w = h * aspect;
