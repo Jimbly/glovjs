@@ -449,7 +449,7 @@ export class DefaultUserWorker extends ChannelWorker {
         return void resp_func('Error parsing arguments');
       }
       if (value !== cur_value) {
-        this.logSrc(source, `Set privacy_presence=${value}`);
+        this.debugSrc(source, `Set privacy_presence=${value}`);
         this.setChannelData('public.privacy_presence', value);
         cur_value = value;
         this.updatePresence(Boolean(cur_value));
