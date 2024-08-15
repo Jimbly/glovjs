@@ -63,7 +63,7 @@ import {
   channelServerSend,
 } from './channel_server';
 import { ERR_NOT_FOUND } from './exchange';
-import { logEx } from './log';
+import { logCat, logEx } from './log';
 import {
   packetLog,
   packetLogInit,
@@ -1470,6 +1470,27 @@ export class ChannelWorker {
 
   error(...args: unknown[]): void {
     logEx(this.ctx(), 'error', `${this.channel_id}:`, ...args);
+  }
+
+  // _technically_ msg could be an object, etc, but it's probably an error (forgot the cat) if so?
+  debugCat(cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctx(), cat, 'debug', `${this.channel_id}:`, msg, ...args);
+  }
+
+  infoCat(cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctx(), cat, 'info', `${this.channel_id}:`, msg, ...args);
+  }
+
+  logCat(cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctx(), cat, 'log', `${this.channel_id}:`, msg, ...args);
+  }
+
+  warnCat(cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctx(), cat, 'warn', `${this.channel_id}:`, msg, ...args);
+  }
+
+  errorCat(cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctx(), cat, 'error', `${this.channel_id}:`, msg, ...args);
   }
 
 

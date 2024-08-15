@@ -184,9 +184,6 @@ export function startup(params) {
     dataErrorQueueEnable(true);
     dataErrorOnError(onDataError);
   }
-  if (server_config.log && server_config.log.load_log) {
-    channel_server.load_log = true;
-  }
 
   ws_server = glov_wsserver.create(server, server_https, argv.timeout === false, argv.dev);
   ws_server.on('error', function (error, client) {

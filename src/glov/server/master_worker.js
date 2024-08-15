@@ -8,6 +8,7 @@ import { callEach, nop, plural } from 'glov/common/util';
 import { LOAD_REPORT_INTERVAL, channelServerSendNoCreate } from './channel_server';
 import { ChannelWorker } from './channel_worker';
 import { loadBiasMap } from './load_bias_map';
+import { logCategoryEnabled } from './log';
 import * as metrics from './metrics';
 import { readyDataCheck } from './ready_data';
 import { serverConfig } from './server_config';
@@ -161,11 +162,9 @@ class MasterWorker extends ChannelWorker {
     // Reset error counts
     cs.spawn_errors = 0;
 
-    if (this.channel_server.load_log) {
-      this.debug(`load from ${src.id}: ${cs.load_value.toFixed(0)} ` +
-        `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})` +
-        `${over.length ? ` (${over.join(',')})` : ''}`);
-    }
+    this.debugCat('load', `load from ${src.id}: ${cs.load_value.toFixed(0)} ` +
+      `(${load_cpu}/${load_host_cpu}/${load_mem}/${free_mem}/${msgs_per_s})` +
+      `${over.length ? ` (${over.join(',')})` : ''}`);
 
     resp_func();
 
@@ -577,6 +576,18 @@ class MasterWorker extends ChannelWorker {
     });
     resp_func();
   }
+  cmdLogCat(cat, resp_func) {
+    // let source = this.cmd_parse_source;
+    if (!cat) {
+      return void resp_func('Missing category.\nExample: /log_cat load');
+    }
+    let enabled = !logCategoryEnabled(cat);
+    this.sendChannelMessage('channel_server', 'log_cat', {
+      cat,
+      enabled,
+    });
+    resp_func(null, `Log category "${cat}" now ${enabled ? 'enabled' : 'disabled'}`);
+  }
   cmdChannelServerReportLoad(msg, resp_func) {
     this.channel_server.load_report_time = 1;
     resp_func();
@@ -658,7 +669,7 @@ class MasterWorker extends ChannelWorker {
       }
       this.sendChannelMessage('channel_server', 'master_stats', {
         num_channels: this.total_num_channels
-      }, null, !this.channel_server.load_log);
+      }, null, !logCategoryEnabled('load'));
     }
   }
 }
@@ -724,6 +735,11 @@ export function init(channel_server) {
       help: 'Broadcast a chat message to all users',
       access_run: ['sysadmin'],
       func: MasterWorker.prototype.cmdAdminBroadcast,
+    }, {
+      cmd: 'log_cat',
+      help: 'Toggles a log category on all servers',
+      access_run: ['sysadmin'],
+      func: MasterWorker.prototype.cmdLogCat,
     }],
     handlers: {
       load: MasterWorker.prototype.handleLoad,

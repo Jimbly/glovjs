@@ -23,7 +23,7 @@ const { ERR_NOT_FOUND } = require('./exchange.js');
 const fs = require('fs');
 const { keyMetricsFlush } = require('./key_metrics.js');
 const log = require('./log.js');
-const { logEx, logDowngradeErrors, logDumpJSON } = log;
+const { logCategoryEnable, logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
 const metrics = require('./metrics.js');
 const os = require('os');
@@ -441,7 +441,6 @@ export class ChannelServer {
     this.ds_store_bulk = null; // bulkdata store
     this.ds_store_meta = null; // metadata store
     this.master_stats = { num_channels: {} };
-    this.load_log = false;
     this.last_load_log = '';
     this.restarting = false;
     this.server_time = 0;
@@ -750,6 +749,10 @@ export class ChannelServer {
     }
   }
 
+  handleLogCat(data) {
+    logCategoryEnable(data.cat, data.enabled);
+  }
+
   clientIdFromWSClient(client) {
     return `${this.csuid}-${client.id}`;
   }
@@ -905,9 +908,7 @@ export class ChannelServer {
         // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
         `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.arrayBuffers)}/${mb(mu.external)}MB` +
         `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`;
-      if (this.load_log) {
-        this.csworker.log(this.last_load_log);
-      }
+      this.csworker.infoCat('load', this.last_load_log);
 
       // Report to master worker
       let pak = this.csworker.pak('master.master', 'load', null, 1);
@@ -944,9 +945,7 @@ export class ChannelServer {
   }
 
   reportPerfCounters(counters) {
-    if (this.load_log) {
-      this.csworker.info('perf_counters', counters);
-    }
+    this.csworker.infoCat('load', 'perf_counters', counters);
   }
 
   exchangePing(dt) {

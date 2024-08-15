@@ -42,6 +42,7 @@ if (pid < 100 && process.env.PODNAME) {
   }
   console.log(`Using fake logging PID of ${pid}`);
 }
+let log_categories = {}; // ON by default, if not specified
 
 const LOG_LEVELS = {
   debug: 'debug',
@@ -59,6 +60,14 @@ export function logDowngradeErrors(do_downgrade) {
   } else {
     delete level_map.error;
   }
+}
+
+export function logCategoryEnable(cat, enable) {
+  log_categories[cat] = Boolean(enable);
+}
+
+export function logCategoryEnabled(cat) {
+  return log_categories[cat] !== false;
 }
 
 let last_external_uid = 0;
@@ -99,6 +108,9 @@ function argProcessor(arg) {
 export function logEx(context, level, ...args) {
   assert(typeof context !== 'string');
   context = context || {};
+  if (context.cat && !logCategoryEnabled(context.cat)) {
+    return;
+  }
   level = LOG_LEVELS[level];
   assert(level);
   level = level_map[level] || level;
@@ -127,6 +139,14 @@ export function logEx(context, level, ...args) {
   context.message = message;
   context.uid = ++last_uid;
   logger.log(context);
+}
+
+export function logCat(context, cat, level, ...args) {
+  assert(typeof context !== 'string');
+  context = context || {};
+  context.cat = cat;
+  logEx(context, level, ...args);
+  delete context.cat;
 }
 
 // export function debug(...args) {
@@ -235,6 +255,11 @@ export function startup(params) {
   let server_config = serverConfig();
   let config_log = server_config.log || {};
   let level = config_log.level || 'debug';
+  if (config_log.cat) {
+    for (let key in config_log.cat) {
+      logCategoryEnable(key, config_log.cat[key]);
+    }
+  }
   if (params.transports) {
     options.transports = options.transports.concat(params.transports);
   } else {
@@ -276,11 +301,20 @@ export function startup(params) {
       } else {
         args.push(format.timestamp({ format: 'HH:mm:ss' }));
       }
+      let colorizer = format.colorize();
+      if (config_log.format === 'dev') {
+        args.push(format(function (data) {
+          if (data.metadata && data.metadata.cat) {
+            data.message = `${colorizer.colorize('silly', `[${data.metadata.cat}]`)} ${data.message}`;
+          }
+          return data;
+        })());
+      }
       if (config_log.pad_levels) {
         args.push(format.padLevels());
       }
       if (config_log.format === 'dev') {
-        args.push(format.colorize());
+        args.push(colorizer);
         args.push(
           // Just the payload
           format.printf(function (data) {

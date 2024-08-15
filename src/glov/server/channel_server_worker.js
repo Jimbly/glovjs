@@ -49,6 +49,7 @@ export function channelServerWorkerInit(channel_server) {
       master_stats: channelServerBroadcast('handleMasterStats'),
       restarting: channelServerBroadcast('handleRestarting'),
       chat_broadcast: channelServerBroadcast('handleChatBroadcast'),
+      log_cat: channelServerBroadcast('handleLogCat'),
       ping: channelServerBroadcast('handlePing'),
       eat_cpu: channelServerHandler('handleEatCPU'),
     },
