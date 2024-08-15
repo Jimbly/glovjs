@@ -179,13 +179,12 @@ function onChannelMsg(client, data, resp_func) {
       return;
     }
   }
-  let cat;
-  if (quietMessage(msg, payload)) {
-    if (!is_packet && typeof payload === 'object') {
-      payload.q = 1; // do not print later, either
-    }
-    cat = 'quiet';
-  }
+  let cat = quietMessage(msg, payload);
+  // Disabling this: doesn't work for packets, and is adding data to payloads
+  //   Also doesn't seem to be needed anymore?
+  // if (cat && !is_packet && payload && typeof payload === 'object') {
+  //   payload.q = cat; // do not print/respect cat later, either
+  // }
   client.client_channel.logDestCat(cat, channel_id, 'debug', `channel_msg ${msg} ${log}`);
   if (!channel_id) {
     if (is_packet) {
@@ -244,7 +243,8 @@ function onChannelMsg(client, data, resp_func) {
   };
   resp_func.expecting_response = Boolean(old_resp_func);
   client_channel.ids = client_channel.ids_direct;
-  channelServerSend(client_channel, channel_id, msg, null, payload, resp_func, true); // quiet since we already logged
+  channelServerSend(client_channel, channel_id, msg, null, payload, resp_func,
+    'redundant'); // quiet since we already logged
   client_channel.ids = client_channel.ids_base;
 }
 

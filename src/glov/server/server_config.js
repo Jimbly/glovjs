@@ -26,8 +26,15 @@ export let default_config_options = {
   exchange_providers: [`glov${'/server/exchange_gmx_client'}`],
   // How often to log and bucket perf_counters
   perf_counter_bucket_time: 10000,
+  // How often to display channelserver STATUS message
+  status_time: 5000,
+  // Which log categories should be disabled from being shown by default
   log: {
     cat: {
+      ping: false,
+      redundant: false,
+      clientlist: false,
+      entverbose: false,
       quiet: false, // do not show 'quiet' category messages by default
     },
   },

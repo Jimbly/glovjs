@@ -950,7 +950,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.rich_presence && src.type === 'client') {
       let presence_data = this.filteredPresenceData();
       if (this.canSeePresence(src.user_id) && !empty(presence_data)) {
-        this.sendChannelMessage(src.channel_id, 'presence', presence_data);
+        this.sendChannelMessage(src.channel_id, 'presence', presence_data, null, 'social');
       }
     }
     if (src.type === 'client' && src.user_id === this.user_id) {
@@ -985,9 +985,9 @@ export class DefaultUserWorker extends ChannelWorker {
       let client = clients[client_id];
       if (client.ids) {
         if (this.canSeePresence(client.ids.user_id)) {
-          this.sendChannelMessage(`client.${client_id}`, 'presence', presence_data);
+          this.sendChannelMessage(`client.${client_id}`, 'presence', presence_data, null, 'social');
         } else if (force_clear) {
-          this.sendChannelMessage(`client.${client_id}`, 'presence', {});
+          this.sendChannelMessage(`client.${client_id}`, 'presence', {}, null, 'social');
         }
       }
     }
@@ -997,7 +997,7 @@ export class DefaultUserWorker extends ChannelWorker {
     for (let client_id in clients) {
       let client = clients[client_id];
       if (client.ids && client.ids.user_id === user_id) {
-        this.sendChannelMessage(`client.${client_id}`, 'presence', {});
+        this.sendChannelMessage(`client.${client_id}`, 'presence', {}, null, 'social');
       }
     }
   }

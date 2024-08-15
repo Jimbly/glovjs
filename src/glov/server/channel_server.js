@@ -280,18 +280,28 @@ function channelServerPakSend(err, resp_func) {
 }
 
 let quiet_messages = Object.create(null);
-export function quietMessagesSet(list) {
+quiet_messages.friend_list = 'social';
+quiet_messages.ent_join = 'entverbose';
+quiet_messages.chat = 'chatverbose';
+export function quietMessagesSet(list, cat) {
   for (let ii = 0; ii < list.length; ++ii) {
-    quiet_messages[list[ii]] = true;
+    quiet_messages[list[ii]] = cat || 'quiet';
   }
 }
 let quiet_message_user_keys = Object.create(null);
-quiet_message_user_keys.pos = true;
-export function quietMessagesSetUserKey(key) {
-  quiet_message_user_keys[key] = true;
+quiet_message_user_keys.pos = 'quiet';
+export function quietMessagesSetUserKey(key, cat) {
+  quiet_message_user_keys[key] = cat || 'quiet';
+}
+let quiet_message_cmdparse = Object.create(null);
+quiet_message_cmdparse.cmd_list = 'quiet';
+export function quietMessagesSetCmdParse(key, cat) {
+  quiet_message_cmdparse[key] = cat || 'quiet';
 }
 export function quietMessage(msg, payload) {
-  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] || quiet_messages[msg];
+  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] ||
+    msg === 'cmdparse' && payload && quiet_message_cmdparse[payload] ||
+    quiet_messages[msg];
 }
 
 // source is a ChannelWorker
@@ -311,9 +321,12 @@ export function channelServerPak(source, dest, msg, ref_pak, qcat, debug_msg) {
       // Log user_id of the initiating user, if applicable
       ctx.user_id = source.log_user_id;
     }
+    if (!qcat) {
+      qcat = quietMessage(msg);
+    }
     if (typeof qcat === 'string') {
       ctx.cat = qcat;
-    } else if (qcat || quietMessage(msg)) {
+    } else if (qcat) {
       ctx.cat = 'quiet';
     }
     logEx(ctx, 'debug', `${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
@@ -969,7 +982,7 @@ export class ChannelServer {
       return;
     }
     this.exchange_ping.countdown = 0;
-    let pak = this.csworker.pak(this.csworker.channel_id, 'ping', null, true);
+    let pak = this.csworker.pak(this.csworker.channel_id, 'ping', null, 'ping');
     pak.no_local_bypass = true;
     let time = process.hrtime();
     pak.writeU32(time[0]);
@@ -1139,8 +1152,8 @@ export class ChannelServer {
   pakAsChannelServer(dest, msg) {
     return this.csworker.pak(dest, msg);
   }
-  sendAsChannelServer(dest, msg, data, resp_func) {
-    this.csworker.sendChannelMessage(dest, msg, data, resp_func);
+  sendAsChannelServer(dest, msg, data, resp_func, qcat) {
+    this.csworker.sendChannelMessage(dest, msg, data, resp_func, qcat);
   }
 
   getLocalChannelsByType(channel_type) {

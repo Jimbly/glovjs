@@ -41,7 +41,7 @@ import { shaderStatsInit } from './shader_stats';
 import glov_wsserver from './wsserver';
 const { netDelaySet } = wscommon;
 
-const STATUS_TIME = 5000;
+let status_time = 5000;
 export let ws_server;
 export let channel_server;
 
@@ -51,7 +51,7 @@ export function getChannelServer() {
 
 let last_status = '';
 function displayStatus() {
-  setTimeout(displayStatus, STATUS_TIME);
+  setTimeout(displayStatus, status_time);
   let status = channel_server.getStatus();
   if (status !== last_status) {
     console.info('STATUS', new Date().toISOString(), status);
@@ -153,6 +153,7 @@ export function startup(params) {
   }
 
   perfCounterSetBucketTime(server_config.perf_counter_bucket_time);
+  status_time = server_config.status_time || 5000;
 
   if (!exchange) {
     if (server_config.exchange_providers) {
@@ -227,7 +228,7 @@ export function startup(params) {
     shaderStatsInit(app);
   }
 
-  setTimeout(displayStatus, STATUS_TIME);
+  setTimeout(displayStatus, status_time);
 
   let gbstate;
   if (argv.dev) {

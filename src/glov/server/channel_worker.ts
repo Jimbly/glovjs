@@ -61,6 +61,7 @@ import {
   PAK_ID_MASK,
   channelServerPak,
   channelServerSend,
+  quietMessage,
 } from './channel_server';
 import { ERR_NOT_FOUND } from './exchange';
 import { logCat, logEx } from './log';
@@ -216,7 +217,7 @@ type ApplyChannelDataParam = {
 type EmitChannelDataParam = {
   key: string;
   value: unknown;
-  q?: 1;
+  q?: QCat;
 };
 
 type CmdParseAutoRet = {
@@ -538,7 +539,7 @@ export class ChannelWorker {
       };
 
       if (this.emit_join_leave_events && !opts.suppress_join) {
-        this.channelEmit('join', ids);
+        this.channelEmit('join', ids, undefined, 'chatverbose');
       }
 
       if (this.maintain_client_list) {
@@ -550,7 +551,7 @@ export class ChannelWorker {
           this.getRoles(client_src!, roles);
           ids.roles = roles;
         }
-        this.setChannelData(`public.clients.${src.id}.ids`, ids);
+        this.setChannelData(`public.clients.${src.id}.ids`, ids, 'clientlist');
         if (user_id && this.maintain_client_list_need_subscribe) {
           this.subscribeClientToUser(src.id, user_id);
         }
@@ -690,12 +691,12 @@ export class ChannelWorker {
       this.handleClientDisconnect(src, opts);
     }
     if (this.emit_join_leave_events && !opts.suppress_leave && is_client) {
-      this.channelEmit('leave', src);
+      this.channelEmit('leave', src, undefined, 'chatverbose');
     }
 
     if (this.maintain_client_list && is_client) {
       let user_id = this.getChannelData(`public.clients.${src.id}.ids.user_id`);
-      this.setChannelData(`public.clients.${src.id}`, undefined);
+      this.setChannelData(`public.clients.${src.id}`, undefined, 'clientlist');
       if (user_id && this.maintain_client_list_need_subscribe) {
         this.unsubscribeOther(`user.${user_id}`);
       }
@@ -794,9 +795,10 @@ export class ChannelWorker {
     return channelServerPak(this, dest, msg, ref_pak, qcat);
   }
   setChannelDataOnOther(channel_id: string, key: string, value: unknown,
-    resp_func: NetResponseCallbackCalledBySystem
+    resp_func: NetResponseCallbackCalledBySystem,
+    qcat?: QCat,
   ): void {
-    let pak = this.pak(channel_id, 'set_channel_data');
+    let pak = this.pak(channel_id, 'set_channel_data', null, qcat);
     pak.writeBool(false);
     pak.writeAnsiString(key);
     pak.writeJSON(value);
@@ -827,7 +829,7 @@ export class ChannelWorker {
           user_id,
           client_id,
           display_name: src.display_name,
-        });
+        }, 'clientlist');
       }
     }
     resp_func();
@@ -859,9 +861,9 @@ export class ChannelWorker {
             let mapped = this.user_data_map[key]!;
             let value = existing_client[mapped];
             if (value) {
-              this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
+              this.setChannelData(`public.clients.${client_id}.${mapped}`, value, 'clientlist');
             } else if (client[mapped]) {
-              this.setChannelData(`public.clients.${client_id}.${mapped}`, undefined);
+              this.setChannelData(`public.clients.${client_id}.${mapped}`, undefined, 'clientlist');
             }
           }
         } // else, okay?
@@ -906,7 +908,7 @@ export class ChannelWorker {
               let value = dotPropGet(data, key);
               if (value) {
                 let mapped = this.user_data_map[key];
-                this.setChannelData(`public.clients.${client_id}.${mapped}`, value);
+                this.setChannelData(`public.clients.${client_id}.${mapped}`, value, 'clientlist');
               }
             }
           }
@@ -968,24 +970,27 @@ export class ChannelWorker {
     });
   }
 
-  channelEmit(msg: string, data: unknown, except_client?: string): void {
+  channelEmit(msg: string, data: unknown, except_client?: string, q?: QCat): void {
     let count = 0;
-    let was_q: unknown = false;
-    if (data && isDataObject(data)) {
-      was_q = data.q;
-      data.q = 1;
+    if (!q) {
+      q = quietMessage(msg);
+    }
+    if (!q && data && isDataObject(data)) {
+      if (data.q) {
+        q = data.q as QCat;
+      }
     }
     for (let channel_id in this.subscribers) {
       if (channel_id === except_client) {
         continue;
       }
       ++count;
-      this.sendChannelMessage(channel_id, msg, data);
+      this.sendChannelMessage(channel_id, msg, data, undefined, 'quiet');
     }
     if (count) {
       let log_msg = `broadcast(${count}): ${msg} ${logdata(data)}`;
-      if (was_q) {
-        this.debugCat('quiet', log_msg);
+      if (q) {
+        this.debugCat(typeof q === 'string' ? q : 'quiet', log_msg);
       } else {
         this.debug(log_msg);
       }
@@ -997,7 +1002,7 @@ export class ChannelWorker {
       // deny
       return resp_func('ERR_NOT_ALLOWED');
     }
-    let q = false;
+    let q;
     let key = pak.readAnsiString();
     let value = pak.readJSON();
     let set_if = pak.readJSON();
@@ -1116,7 +1121,7 @@ export class ChannelWorker {
     // assert(key); No - key can be === 'public'
 
     let count = 0;
-    let was_q: undefined | 1;
+    let was_q: undefined | QCat;
     if (typeof data === 'object') {
       was_q = data.q;
       data.q = 1;
@@ -1131,7 +1136,7 @@ export class ChannelWorker {
       while (key_to_check || !field_map) { // eslint-disable-line no-unmodified-loop-condition
         if (!field_map || field_map[key_to_check]) {
           ++count;
-          this.sendChannelMessage(channel_id, 'apply_channel_data', data);
+          this.sendChannelMessage(channel_id, 'apply_channel_data', data, undefined, 'quiet');
           break;
         }
         idx = key_to_check.lastIndexOf('.');
@@ -1141,7 +1146,7 @@ export class ChannelWorker {
     if (count) {
       let msg = `broadcast(${count}): apply_channel_data ${logdata(data)}`;
       if (was_q) {
-        this.debugCat('quiet', msg);
+        this.debugCat(typeof was_q === 'string' ? was_q : 'quiet', msg);
       } else {
         this.debug(msg);
       }
@@ -1203,7 +1208,7 @@ export class ChannelWorker {
     let value = pak.readJSON();
     this.setChannelDataInternal(source, key, value, q ? 1 : undefined, resp_func);
   }
-  setChannelData<T=unknown>(key: string, value: T, q?: 1): void {
+  setChannelData<T=unknown>(key: string, value: T, q?: QCat): void {
     this.setChannelDataInternal(this.core_ids, key, value, q);
   }
 
@@ -1306,7 +1311,7 @@ export class ChannelWorker {
     source: HandlerSource,
     key: string,
     value: unknown,
-    q: 1 | undefined | false,
+    q?: QCat,
     resp_func?: HandlerCallback
   ): void {
     assert(typeof key === 'string');
@@ -1340,7 +1345,7 @@ export class ChannelWorker {
     if (key.startsWith('public')) {
       let data: EmitChannelDataParam = { key, value };
       if (q) {
-        data.q = 1;
+        data.q = q;
       }
       this.emitApplyChannelData(data);
     }
@@ -1545,6 +1550,26 @@ export class ChannelWorker {
 
   errorSrc(src: HandlerSource | ClientHandlerSource, ...args: unknown[]): void {
     logEx(this.ctxSrc(src), 'error', `${this.channel_id}:`, ...args);
+  }
+
+  debugSrcCat(src: HandlerSource | ClientHandlerSource, cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctxSrc(src), cat, 'debug', `${this.channel_id}:`, msg, ...args);
+  }
+
+  infoSrcCat(src: HandlerSource | ClientHandlerSource, cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctxSrc(src), cat, 'info', `${this.channel_id}:`, msg, ...args);
+  }
+
+  logSrcCat(src: HandlerSource | ClientHandlerSource, cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctxSrc(src), cat, 'log', `${this.channel_id}:`, msg, ...args);
+  }
+
+  warnSrcCat(src: HandlerSource | ClientHandlerSource, cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctxSrc(src), cat, 'warn', `${this.channel_id}:`, msg, ...args);
+  }
+
+  errorSrcCat(src: HandlerSource | ClientHandlerSource, cat: string, msg: string, ...args: unknown[]): void {
+    logCat(this.ctxSrc(src), cat, 'error', `${this.channel_id}:`, msg, ...args);
   }
 
   // Wraps `resp_func` so that it logs upon completion or failure

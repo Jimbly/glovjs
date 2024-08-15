@@ -148,7 +148,7 @@ function denyChat(
 ): string {
   let { user_id, channel_id, display_name } = source; // user_id is falsey if not logged in
   let id = user_id || channel_id;
-  worker.logSrc(source,
+  worker.logSrcCat(source, 'chat',
     `suppressed chat from ${id} ("${display_name}") (${channel_id}) (${err}): ${JSON.stringify(msg)}`);
   if (err === 'ERR_ACCOUNT_AGE') {
     return `Your account is too recent to chat in this world. Wait ${time_left} before writing again.`;
@@ -233,7 +233,7 @@ function chatReceive(
     return denyChat(worker, source, err, msg);
   }
   // Log entire, non-truncated chat string
-  worker.logSrc(source, `chat from ${id} ("${display_name}") (${channel_id}): ${JSON.stringify(msg)}`);
+  worker.logSrcCat(source, 'chat', `chat from ${id} ("${display_name}") (${channel_id}): ${JSON.stringify(msg)}`);
   return null;
 }
 
