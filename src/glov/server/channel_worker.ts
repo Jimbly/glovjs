@@ -585,54 +585,54 @@ export class ChannelWorker {
   autoDestroyStart(): void {
     let { channel_id, channel_server } = this;
     let self = this;
-    this.info('Empty time expired, starting auto-destroy, locking...');
+    this.infoCat('lifecycle', 'Empty time expired, starting auto-destroy, locking...');
     assert(this.registered);
     this.attempting_shutdown = true;
     function unlock(next?: VoidFunc): void {
       if (next) {
-        self.pak('master.master', 'master_unlock').send((err) => {
+        self.pak('master.master', 'master_unlock', null, 'lifecycle').send((err) => {
           assert(!err, err!);
           self.attempting_shutdown = false;
           next();
         });
       } else {
         // do *not* expect a response, we are gone.
-        self.pak('master.master', 'master_unlock').send();
+        self.pak('master.master', 'master_unlock', null, 'lifecycle').send();
         self.attempting_shutdown = false;
       }
     }
 
-    let pak = this.pak('master.master', 'master_lock');
+    let pak = this.pak('master.master', 'master_lock', null, 'lifecycle');
     pak.writeAnsiString(channel_server.csuid);
     pak.send((err) => {
       assert(!err, err!);
       if (!this.shouldShutdown()) {
-        this.info('locked, but no longer should shutdown, unlocking...');
+        this.infoCat('lifecycle', 'locked, but no longer should shutdown, unlocking...');
         unlock(() => {
           this.info('unlocked');
           self.checkAutoDestroy(false); // If we're empty again, need to check in a while
         });
         return;
       }
-      this.debug('locked, unregistering from exchange...');
+      this.debugCat('lifecycle', 'locked, unregistering from exchange...');
       channel_server.exchange.unregister(channel_id, (err: string | null) => {
         channel_server.last_worker = this;
         assert(!err, err!);
         if (!this.shouldShutdown()) {
           // abort!
-          this.info('unregistered from exchange, but no longer should shutdown, re-registering...');
+          this.infoCat('lifecycle', 'unregistered from exchange, but no longer should shutdown, re-registering...');
           channel_server.exchange.register(channel_id, this.handleMessage.bind(this), (err: string | null) => {
-            this.info('re-registered to exchange, unlocking...');
+            this.infoCat('lifecycle', 're-registered to exchange, unlocking...');
             assert(!err, err!); // master locked, so no one else should be able to create at this time
             unlock(() => {
-              this.info('unlocked');
+              this.infoCat('lifecycle', 'unlocked');
               self.checkAutoDestroy(false); // If we're empty again, need to check in a while
             });
           });
           return;
         }
         // unregistered, now actually finish shutdown and let the master know to unlock us
-        this.debug('unregistered, unlocking and finalizing shutdown');
+        this.debugCat('lifecycle', 'unregistered, unlocking and finalizing shutdown');
         unlock();
         channel_server.removeChannelLocal(channel_id, false);
         this.shutdownFinal();

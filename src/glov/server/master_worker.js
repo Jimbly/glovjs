@@ -260,7 +260,7 @@ class MasterWorker extends ChannelWorker {
       return void resp_func('ERR_NO_KNOWN_SERVERS');
     }
     let csid = best;
-    this.log(`${log_pre}Requesting spawn on ${csid}`);
+    this.logCat('lifecycle', `${log_pre}Requesting spawn on ${csid}`);
 
     let cc = this.channels_creating[channel_id] = {
       csid,
@@ -271,7 +271,7 @@ class MasterWorker extends ChannelWorker {
     let cs = this.known_servers[csid];
     // Register estimated load from spawning a new worker
     cs.load_new_estimate += LOAD_ESTIMATE[channel_type] || LOAD_ESTIMATE.def;
-    let pak = this.pak(`channel_server.${csid}`, 'worker_create', null, 1);
+    let pak = this.pak(`channel_server.${csid}`, 'worker_create', null, 'lifecycle');
     pak.writeAnsiString(channel_type);
     pak.writeAnsiString(subid);
     pak.send((err) => {
@@ -311,7 +311,7 @@ class MasterWorker extends ChannelWorker {
   handleMasterLock(src, pak, resp_func) {
     let channel_id = src.channel_id;
     let csid = pak.readAnsiString();
-    this.log(`locking ${channel_id} on ${csid}`);
+    this.logCat('lifecycle', `locking ${channel_id} on ${csid}`);
     if (!this.known_servers[csid]) {
       // Won't time out, but otherwise fine, if unexpected?
       // Probably happens if master worker restarts during another workers shutdown
@@ -340,7 +340,7 @@ class MasterWorker extends ChannelWorker {
   }
   handleMasterUnlock(src, pak, resp_func) {
     let channel_id = src.channel_id;
-    this.log(`unlocking ${channel_id}`);
+    this.logCat('lifecycle', `unlocking ${channel_id}`);
     assert(!this.channels_creating[channel_id]);
     let cl = this.channels_locked[channel_id];
     if (!cl) {
