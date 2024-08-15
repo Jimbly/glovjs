@@ -296,7 +296,7 @@ export function quietMessage(msg, payload) {
 
 // source is a ChannelWorker
 // dest is channel_id in the form of `type.id`
-export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
+export function channelServerPak(source, dest, msg, ref_pak, qcat, debug_msg) {
   assert(typeof dest === 'string' && dest);
   assert(typeof msg === 'string' || typeof msg === 'number');
   assert(source.channel_id);
@@ -311,7 +311,9 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
       // Log user_id of the initiating user, if applicable
       ctx.user_id = source.log_user_id;
     }
-    if (q || quietMessage(msg)) {
+    if (typeof qcat === 'string') {
+      ctx.cat = qcat;
+    } else if (qcat || quietMessage(msg)) {
       ctx.cat = 'quiet';
     }
     logEx(ctx, 'debug', `${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
@@ -339,9 +341,12 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   return pak;
 }
 
-export function channelServerSend(source, dest, msg, err, data, resp_func, q) {
+export function channelServerSend(source, dest, msg, err, data, resp_func, qcat) {
   let is_packet = isPacket(data);
-  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, q || data && data.q,
+  if (qcat === 1 || qcat === true || !qcat && data && data.q) {
+    qcat = 'quiet';
+  }
+  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, qcat,
     !is_packet ? `${err ? `err:${logdata(err)}` : ''} ${logdata(data)}` : null);
 
   if (!err) {
@@ -351,9 +356,12 @@ export function channelServerSend(source, dest, msg, err, data, resp_func, q) {
   pak.send(err, resp_func);
 }
 
-export function channelServerSendNoCreate(source, dest, msg, err, data, resp_func, q) {
+export function channelServerSendNoCreate(source, dest, msg, err, data, resp_func, qcat) {
   let is_packet = isPacket(data);
-  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, q || data && data.q,
+  if (qcat === 1 || qcat === true || !qcat && data && data.q) {
+    qcat = 'quiet';
+  }
+  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, qcat,
     !is_packet ? `${err ? `err:${logdata(err)}` : ''} ${logdata(data)}` : null);
   pak.cs_data.no_create = true;
 

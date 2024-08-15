@@ -74,6 +74,9 @@ import type {
   CmdParse,
 } from 'glov/common/cmd_parse';
 
+// Quiet flag or category string
+export type QCat = 1 | string;
+
 const { min } = Math;
 
 // How long to wait before failing an out of order packet and running it anyway
@@ -787,8 +790,8 @@ export class ChannelWorker {
       }
     }
   }
-  pak(dest: string, msg: string, ref_pak?: Packet | null, q?: 1 | undefined): Packet {
-    return channelServerPak(this, dest, msg, ref_pak, q);
+  pak(dest: string, msg: string, ref_pak?: Packet | null, qcat?: QCat): Packet {
+    return channelServerPak(this, dest, msg, ref_pak, qcat);
   }
   setChannelDataOnOther(channel_id: string, key: string, value: unknown,
     resp_func: NetResponseCallbackCalledBySystem
@@ -1408,10 +1411,10 @@ export class ChannelWorker {
     });
   }
 
-  sendChannelMessage<T>(dest: string, msg: string, data: T, resp_func?: NetErrorCallback, q?: 1 | undefined): void;
-  sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, q?: 1 | undefined): void;
-  sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, q?: 1 | undefined): void {
-    channelServerSend(this, dest, msg, null, data, resp_func, q);
+  sendChannelMessage<T>(dest: string, msg: string, data: T, resp_func?: NetErrorCallback, qcat?: QCat): void;
+  sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, qcat?: QCat): void;
+  sendChannelMessage(dest: string, msg: string, data?: unknown, resp_func?: NetErrorCallback, qcat?: QCat): void {
+    channelServerSend(this, dest, msg, null, data, resp_func, qcat);
   }
 
   // source has at least { channel_id, type, id }, possibly also .user_id and .display_name if type === 'client'
