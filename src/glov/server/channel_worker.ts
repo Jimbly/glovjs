@@ -573,7 +573,7 @@ export class ChannelWorker {
     this.sendChannelMessage(channel_id, 'channel_data', {
       public: out,
       sub_id: subscription_id,
-    });
+    }, undefined, 'subs');
 
     if (this.postNewClient) {
       this.postNewClient(src);
@@ -713,7 +713,7 @@ export class ChannelWorker {
     assert(Array.isArray(field_list));
     this.subscribe_counts[other_channel_id] = (this.subscribe_counts[other_channel_id] || 0) + 1;
     if (this.subscribe_counts[other_channel_id] !== 1) {
-      this.debug(`->${other_channel_id}: subscribe - already subscribed`);
+      this.debugCat('subs', `->${other_channel_id}: subscribe - already subscribed`);
       if (resp_func) {
         resp_func(null);
       }
@@ -727,7 +727,7 @@ export class ChannelWorker {
           this.warn(`->${other_channel_id} subscribe failed: ${err}, ignoring`);
           err = null;
         } else {
-          this.log(`->${other_channel_id} subscribe failed: ${err}`);
+          this.logCat('subs', `->${other_channel_id} subscribe failed: ${err}`);
         }
       }
       if (err) {
@@ -749,7 +749,7 @@ export class ChannelWorker {
           resp_func(null);
         }
       }
-    });
+    }, 'subs');
   }
   unsubscribeOther(other_channel_id: string): void {
     // Note: subscribe count will already be 0 if we called .subscribeOther and
@@ -757,12 +757,12 @@ export class ChannelWorker {
     // initiated request, such as after a force_unsub message, or a bug/timing issue.
     assert(this.channel_type === 'client' || this.subscribe_counts[other_channel_id] || this.had_subscribe_error);
     if (!this.subscribe_counts[other_channel_id]) {
-      this.log(`->${other_channel_id}: unsubscribe - failed: not subscribed`);
+      this.logCat('subs', `->${other_channel_id}: unsubscribe - failed: not subscribed`);
       return;
     }
     --this.subscribe_counts[other_channel_id]!;
     if (this.subscribe_counts[other_channel_id]) {
-      this.debug(`->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
+      this.debugCat('subs', `->${other_channel_id}: unsubscribe - still subscribed (refcount)`);
       return;
     }
 
@@ -780,7 +780,7 @@ export class ChannelWorker {
       } else {
         // succeeded, nothing special
       }
-    });
+    }, 'subs');
   }
   unsubscribeAll(): void {
     for (let channel_id in this.subscribe_counts) {
