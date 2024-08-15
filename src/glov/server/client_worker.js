@@ -343,16 +343,22 @@ export class ClientWorker extends ChannelWorker {
       ' run /ws_disconnect_repeated 0 to clear');
   }
 
-  logDest(channel_id, level, ...args) {
+  logDestCat(cat, channel_id, level, ...args) {
     let ctx = {
       client: this.client_id,
     };
+    if (cat) {
+      ctx.cat = cat;
+    }
     let ids = channel_id.split('.');
     ctx[ids[0]] = ids[1]; // set ctx.world: 1234, etc
     if (this.log_user_id) {
       ctx.user_id = this.log_user_id;
     }
     logEx(ctx, level, `${this.client_id}->${channel_id}:`, ...args);
+  }
+  logDest(channel_id, level, ...args) {
+    this.logDestCat(undefined, channel_id, level, ...args);
   }
   logCtx(level, ...args) {
     let ctx = {

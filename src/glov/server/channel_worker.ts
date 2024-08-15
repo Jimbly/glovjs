@@ -979,8 +979,13 @@ export class ChannelWorker {
       ++count;
       this.sendChannelMessage(channel_id, msg, data);
     }
-    if (count && !was_q) {
-      this.debug(`broadcast(${count}): ${msg} ${logdata(data)}`);
+    if (count) {
+      let log_msg = `broadcast(${count}): ${msg} ${logdata(data)}`;
+      if (was_q) {
+        this.debugCat('quiet', log_msg);
+      } else {
+        this.debug(log_msg);
+      }
     }
   }
 
@@ -1130,8 +1135,13 @@ export class ChannelWorker {
         key_to_check = idx === -1 ? '' : key_to_check.slice(0, idx);
       }
     }
-    if (count && !was_q) {
-      this.debug(`broadcast(${count}): apply_channel_data ${logdata(data)}`);
+    if (count) {
+      let msg = `broadcast(${count}): apply_channel_data ${logdata(data)}`;
+      if (was_q) {
+        this.debugCat('quiet', msg);
+      } else {
+        this.debug(msg);
+      }
     }
   }
 

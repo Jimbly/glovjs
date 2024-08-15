@@ -301,7 +301,7 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   assert(typeof msg === 'string' || typeof msg === 'number');
   assert(source.channel_id);
   assert(source.shutting_down < 2); // or already shut down - will be OOO and will not get responses!
-  if (!q && typeof msg === 'string' && !quietMessage(msg)) {
+  if (typeof msg === 'string') {
     let ctx = {};
     let ids = source.channel_id.split('.');
     ctx[ids[0]] = ids[1];
@@ -310,6 +310,9 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
     if (source.log_user_id) {
       // Log user_id of the initiating user, if applicable
       ctx.user_id = source.log_user_id;
+    }
+    if (q || quietMessage(msg)) {
+      ctx.cat = 'quiet';
     }
     logEx(ctx, 'debug', `${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
   }

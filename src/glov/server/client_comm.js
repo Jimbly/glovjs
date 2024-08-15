@@ -179,13 +179,14 @@ function onChannelMsg(client, data, resp_func) {
       return;
     }
   }
+  let cat;
   if (quietMessage(msg, payload)) {
     if (!is_packet && typeof payload === 'object') {
       payload.q = 1; // do not print later, either
     }
-  } else {
-    client.client_channel.logDest(channel_id, 'debug', `channel_msg ${msg} ${log}`);
+    cat = 'quiet';
   }
+  client.client_channel.logDestCat(cat, channel_id, 'debug', `channel_msg ${msg} ${log}`);
   if (!channel_id) {
     if (is_packet) {
       payload.pool();

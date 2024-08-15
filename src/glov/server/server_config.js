@@ -26,6 +26,11 @@ export let default_config_options = {
   exchange_providers: [`glov${'/server/exchange_gmx_client'}`],
   // How often to log and bucket perf_counters
   perf_counter_bucket_time: 10000,
+  log: {
+    cat: {
+      quiet: false, // do not show 'quiet' category messages by default
+    },
+  },
 };
 
 let default_env_options = {
