@@ -1145,6 +1145,7 @@ DefaultUserWorker.prototype.auto_destroy = true;
 DefaultUserWorker.prototype.require_email = true;
 DefaultUserWorker.prototype.rich_presence = true;
 DefaultUserWorker.prototype.maintain_client_list = true; // needed for rich_presence features
+DefaultUserWorker.prototype.user_data_map = null; // But, we don't need to track display names of people for that
 
 let inited = false;
 let user_worker = DefaultUserWorker;

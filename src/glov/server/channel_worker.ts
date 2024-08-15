@@ -301,6 +301,8 @@ export class ChannelWorker {
   cmd_parse_source!: ClientHandlerSource; // valid in any command parse handler
   access?: Roles;
 
+  maintain_client_list_need_subscribe: boolean;
+
   declare last_sub_id: number; // Allocated as needed, depending on worker options
   declare attempting_shutdown: boolean; // Allocated as needed, depending on worker options
   declare auto_destroy_check: boolean; // Allocated as needed, depending on worker options
@@ -321,7 +323,7 @@ export class ChannelWorker {
   declare allow_client_direct: TSMap<true>;
   // default: always assume datastore usage
   declare no_datastore: boolean;
-  declare user_data_map: TSMap<string>;
+  declare user_data_map: TSMap<string> | null;
   declare user_fields_to_subscribe: string[];
 
   // On-prototype from channel_server
@@ -374,6 +376,10 @@ export class ChannelWorker {
     // Handle modes that can be enabled via statics on prototype
     if (this.maintain_client_list) {
       this.data.public.clients = {};
+      this.maintain_client_list_need_subscribe = Boolean(this.user_data_map && !empty(this.user_data_map) ||
+        this.user_fields_to_subscribe && this.user_fields_to_subscribe.length);
+    } else {
+      this.maintain_client_list_need_subscribe = false;
     }
 
     this.default_mem_usage = {
@@ -542,7 +548,7 @@ export class ChannelWorker {
           ids.roles = roles;
         }
         this.setChannelData(`public.clients.${src.id}.ids`, ids);
-        if (user_id) {
+        if (user_id && this.maintain_client_list_need_subscribe) {
           this.subscribeClientToUser(src.id, user_id);
         }
       }
@@ -687,7 +693,7 @@ export class ChannelWorker {
     if (this.maintain_client_list && is_client) {
       let user_id = this.getChannelData(`public.clients.${src.id}.ids.user_id`);
       this.setChannelData(`public.clients.${src.id}`, undefined);
-      if (user_id) {
+      if (user_id && this.maintain_client_list_need_subscribe) {
         this.unsubscribeOther(`user.${user_id}`);
       }
     }
@@ -806,7 +812,7 @@ export class ChannelWorker {
       let client_elem = channel_data.public.clients[client_id];
       if (client_elem) {
         let old_ids = client_elem.ids || {};
-        if (old_ids.user_id !== user_id) {
+        if (old_ids.user_id !== user_id && this.maintain_client_list_need_subscribe) {
           if (old_ids.user_id) {
             this.unsubscribeOther(`user.${old_ids.user_id}`);
           }
@@ -825,7 +831,7 @@ export class ChannelWorker {
   }
 
   subscribeClientToUser(client_id: string, user_id: string): void {
-    assert(this.maintain_client_list);
+    assert(this.maintain_client_list && this.maintain_client_list_need_subscribe);
     let channel_id = `user.${user_id}`;
     let field_list = [];
     if (this.user_data_map) {
