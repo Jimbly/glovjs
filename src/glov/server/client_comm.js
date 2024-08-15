@@ -87,7 +87,7 @@ function onClientDisconnect(client) {
 }
 
 function onSubscribe(client, channel_id, resp_func) {
-  client.client_channel.logDest(channel_id, 'debug', 'subscribe');
+  // client.client_channel.logDest(channel_id, 'debug', 'subscribe');
   client.client_channel.subscribeOther(channel_id, ['*'], resp_func);
 }
 
