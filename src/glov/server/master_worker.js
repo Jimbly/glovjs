@@ -271,7 +271,7 @@ class MasterWorker extends ChannelWorker {
     let cs = this.known_servers[csid];
     // Register estimated load from spawning a new worker
     cs.load_new_estimate += LOAD_ESTIMATE[channel_type] || LOAD_ESTIMATE.def;
-    let pak = this.pak(`channel_server.${csid}`, 'worker_create');
+    let pak = this.pak(`channel_server.${csid}`, 'worker_create', null, 1);
     pak.writeAnsiString(channel_type);
     pak.writeAnsiString(subid);
     pak.send((err) => {

@@ -572,7 +572,7 @@ export class ChannelServer {
 
     cbs = this.channels_creating[channel_id] = [cb];
 
-    let pak = this.csworker.pak('master.master', 'worker_create_req');
+    let pak = this.csworker.pak('master.master', 'worker_create_req', null, 1);
     pak.writeAnsiString(channel_type);
     pak.writeAnsiString(subid);
     pak.send(function (err) {
