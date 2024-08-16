@@ -42,7 +42,12 @@ if (pid < 100 && process.env.PODNAME) {
   }
   console.log(`Using fake logging PID of ${pid}`);
 }
-let log_categories = {}; // ON by default, if not specified
+// ON by default, if not specified
+// entries can be:
+//  true: goes to console/regular transport
+//  false: only goes to local file (if config.local_log is enabled)
+//  null: goes nowhere, always
+let log_categories = {};
 
 const LOG_LEVELS = {
   debug: 'debug',
@@ -63,11 +68,15 @@ export function logDowngradeErrors(do_downgrade) {
 }
 
 export function logCategoryEnable(cat, enable) {
-  log_categories[cat] = Boolean(enable);
+  log_categories[cat] = enable === null ? null : Boolean(enable);
 }
 
 export function logCategoryEnabled(cat) {
-  return log_categories[cat] !== false;
+  let v = log_categories[cat];
+  if (v === undefined) {
+    v = true;
+  }
+  return v;
 }
 
 let last_external_uid = 0;
@@ -108,10 +117,15 @@ function argProcessor(arg) {
 export function logEx(context, level, ...args) {
   assert(typeof context !== 'string');
   context = context || {};
-  if (context.cat && !logCategoryEnabled(context.cat)) {
-    return;
+  let enabled;
+  if (context.cat && !(enabled = logCategoryEnabled(context.cat))) {
+    if (enabled === null) {
+      return;
+    }
+    level = 'silly';
+  } else {
+    level = LOG_LEVELS[level];
   }
-  level = LOG_LEVELS[level];
   assert(level);
   level = level_map[level] || level;
   metrics.add(`log.${level}`, 1);
@@ -255,6 +269,7 @@ export function startup(params) {
   let server_config = serverConfig();
   let config_log = server_config.log || {};
   let level = config_log.level || 'debug';
+  let file_level = 'silly'; // referenced above
   if (config_log.cat) {
     for (let key in config_log.cat) {
       logCategoryEnable(key, config_log.cat[key]);
@@ -271,15 +286,34 @@ export function startup(params) {
       //args.push(format.timestamp()); // doesn't seem to be needed
       args.push(stackdriverFormat());
       args.push(format.json());
-    } else {
       if (config_log.local_log) {
-        // Structured logging to disk in rotating files for local debugging
+        // Structured logging to disk in rotating files for local debugging at higher verbosity
+        // Note: likely saved to a non-persistent disk
         let local_format = format.combine(
           stackdriverLocalFormat(),
           format.json(),
         );
         options.transports.push(new winston.transports.DailyRotateFile({
-          level,
+          level: file_level,
+          filename: 'local-%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          dirname: 'logs',
+          maxSize: '1g',
+          maxFiles: 7, // will be lesser of 7 days and 7 GB
+          eol: '\n',
+          format: local_format,
+          zippedArchive: false,
+        }));
+      }
+    } else {
+      if (config_log.local_log) {
+        // Structured logging to disk in rotating files for local debugging at higher verbosity
+        let local_format = format.combine(
+          stackdriverLocalFormat(),
+          format.json(),
+        );
+        options.transports.push(new winston.transports.DailyRotateFile({
+          level: file_level,
           filename: 'server-%DATE%.log',
           datePattern: 'YYYY-MM-DD',
           dirname: 'logs',
@@ -288,7 +322,7 @@ export function startup(params) {
           format: local_format,
         }));
         options.transports.push(new SubscribedClientsTransport({
-          level,
+          level: file_level,
           format: local_format,
         }));
       }

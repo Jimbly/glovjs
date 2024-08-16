@@ -30,9 +30,11 @@ export let default_config_options = {
   status_time: 5000,
   // Which log categories should be disabled from being shown by default
   log: {
+    // Level shown to console / sent to Stackdriver / etc
+    level: 'debug',
     cat: {
-      ping: false,
-      redundant: false,
+      ping: null,
+      redundant: null,
       clientlist: false,
       entverbose: false,
       quiet: false, // do not show 'quiet' category messages by default
