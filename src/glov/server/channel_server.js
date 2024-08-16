@@ -935,7 +935,7 @@ export class ChannelServer {
       this.csworker.infoCat('load', this.last_load_log);
 
       // Report to master worker
-      let pak = this.csworker.pak('master.master', 'load', null, 'load');
+      let pak = this.csworker.pak('master.master', 'load', null, 'redundant');
       pak.writeInt(load_cpu);
       pak.writeInt(load_host_cpu);
       pak.writeInt(load_mem);
