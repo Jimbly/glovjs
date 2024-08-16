@@ -217,7 +217,7 @@ class MasterWorker extends ChannelWorker {
           this.debug(`${log_pre}executing deferred request: error ${err}`);
           return void resp_func(err);
         }
-        this.debug(`${log_pre}executing deferred request`);
+        this.debugCat('lifecycle', `${log_pre}executing deferred request`);
         assert(cs.last_load);
         this.handleWorkerCreateInternal(src, channel_type, subid, resp_func);
       });
@@ -792,7 +792,7 @@ export function masterInitApp(channel_server, app, argv) {
           }
           ready_cache_err = null;
           ready_check_in_flight = false;
-        });
+        }, 'lifecycle');
       }
     }
 
