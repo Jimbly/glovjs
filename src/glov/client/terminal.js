@@ -963,3 +963,58 @@ export function padLeft(str, width) {
   }
   return str;
 }
+
+// eslint-disable-next-line no-control-regex
+const match_ansi = /^\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/;
+// Word wrapping assuming `auto_crlf` and `ignore_newline_after_wrap`
+export function wordWrap(text, w) {
+  let ret = [];
+  let idx = 0;
+  let line_len = 0;
+  let in_control = false;
+  let control_ends = 0;
+  let line_start = 0;
+  let last_word_end = line_start;
+  let last_word_end_len = line_len;
+  for (; idx < text.length; ++idx) {
+    let c = text[idx];
+    if (c === '\u001b') {
+      let code = text.slice(idx).match(match_ansi);
+      if (code) {
+        in_control = true;
+        control_ends = idx + code[0].length;
+      }
+    } else if (in_control && idx === control_ends) {
+      in_control = false;
+    }
+    if (!in_control) {
+      if (c === '\n') {
+        ret.push(text.slice(line_start, idx));
+        line_start = idx + 1;
+        line_len = 0;
+        last_word_end = line_start;
+        last_word_end_len = line_len;
+      } else {
+        if (c === ' ') {
+          last_word_end = idx;
+          last_word_end_len = line_len;
+        }
+        ++line_len;
+        if (line_len > w) {
+          ret.push(text.slice(line_start, last_word_end));
+          line_start = last_word_end;
+          while (text[line_start] === ' ') {
+            ++line_start;
+          }
+          line_len = line_len - last_word_end_len + 1;
+          last_word_end = line_start;
+          last_word_end_len = line_len;
+        }
+      }
+    }
+  }
+  if (text.length !== line_start) {
+    ret.push(text.slice(line_start));
+  }
+  return ret.join('\n');
+}
