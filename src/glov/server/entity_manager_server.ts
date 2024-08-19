@@ -560,7 +560,7 @@ class ServerEntityManagerImpl<
       this.worker.sendChannelMessage(`client.${client_id}`, 'ent_id_change', {
         ent_id,
         sub_id,
-      }, undefined, 'ent');
+      }, undefined, 'entverbose');
     });
   }
 
