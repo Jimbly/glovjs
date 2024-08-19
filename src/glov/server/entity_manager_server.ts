@@ -1038,7 +1038,7 @@ class ServerEntityManagerImpl<
     deletes: EntDelete[][] | null,
   ): void {
     let debug: string[] | null = logCategoryEnabled('entverbose') ? [] : null;
-    let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 1);
+    let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 'redundant');
     pak.writeU8(EntityUpdateCmd.IsInitialList);
     if (!client.has_schema) {
       client.has_schema = true;
@@ -1403,7 +1403,7 @@ class ServerEntityManagerImpl<
     }
 
     if (va_updates || va_deletes || new_ents) {
-      let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 1);
+      let pak = this.worker.pak(`client.${client.client_id}`, 'ent_update', null, 'redundant');
       if (!client.has_schema) {
         client.has_schema = true;
         pak.writeU8(EntityUpdateCmd.Schema);
