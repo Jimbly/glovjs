@@ -5,6 +5,7 @@
 const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const fs = require('fs');
+const { asyncEachSeries } = require('glov-async');
 const metrics = require('./metrics.js');
 const path = require('path');
 const { processUID, serverConfig } = require('./server_config.js');
@@ -14,6 +15,12 @@ const winston = require('winston');
 const { format } = winston;
 const Transport = require('winston-transport');
 require('winston-daily-rotate-file');
+let fadvise;
+try {
+  fadvise = require('fadvise'); // eslint-disable-line global-require
+} catch (e) {
+  fadvise = null;
+}
 
 let log_dump_to_logger = true;
 let log_dir = './logs/';
@@ -176,6 +183,44 @@ export function logCat(context, cat, level, ...args) {
 //   logEx(null, 'error', ...args);
 // }
 
+// Attempt to remove logs from the "buffers/cache" pages on Linux
+// Taking up this memory causes load balancing / K8s OOM / monitoring issues,
+// and these are files that are never expected to be read.
+const BUFFER_FLUSH_TIME = 60*1000;
+function bufferFlush() {
+  fs.readdir(log_dir, function (err, files) {
+    if (err) {
+      files = [];
+    }
+    asyncEachSeries(files, function (filename, next) {
+      if (filename.startsWith('.')) {
+        return void next();
+      }
+      filename = path.join(log_dir, filename);
+      fs.stat(filename, function (err, stat) {
+        if (err) {
+          return void next();
+        }
+        let age = Date.now() - stat.mtimeMs;
+        if (age > 24*60*60*1000) {
+          // more than a day old, ignore
+          return void next();
+        }
+        fs.open(filename, 'r', function (err, fd) {
+          if (err) {
+            return void next();
+          }
+          fadvise.posix_fadvise(fd, 0, 0, fadvise.POSIX_FADV_DONTNEED);
+          fs.close(fd, function () {
+            next();
+          });
+        });
+      });
+    }, function (err_ignored) {
+      setTimeout(bufferFlush, BUFFER_FLUSH_TIME);
+    });
+  });
+}
 
 const { MESSAGE, LEVEL } = require('triple-beam');
 
@@ -266,6 +311,8 @@ export function startup(params) {
   inited = true;
   let options = { transports: [] };
 
+  let any_local_logging = false;
+
   let server_config = serverConfig();
   let config_log = server_config.log || {};
   let level = config_log.level || 'debug';
@@ -304,6 +351,7 @@ export function startup(params) {
           format: local_format,
           zippedArchive: false,
         }));
+        any_local_logging = true;
       }
     } else {
       if (config_log.local_log) {
@@ -321,6 +369,7 @@ export function startup(params) {
           eol: '\n',
           format: local_format,
         }));
+        any_local_logging = true;
         options.transports.push(new SubscribedClientsTransport({
           level: file_level,
           format: local_format,
@@ -400,6 +449,10 @@ export function startup(params) {
   if (!fs.existsSync(log_dir)) {
     console.info(`Creating ${log_dir}...`);
     fs.mkdirSync(log_dir);
+  }
+
+  if (any_local_logging && fadvise && !fadvise.failed_to_load) {
+    setTimeout(bufferFlush, BUFFER_FLUSH_TIME);
   }
 
   Object.keys(LOG_LEVELS).forEach(function (fn) {

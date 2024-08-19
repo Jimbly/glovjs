@@ -33,6 +33,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "express-static-gzip": "^2.0.5",
+    "fadvise": "^1.0.0",
     "fs-store": "^0.3.2",
     "fs-store-async": "^0.3.3",
     "gl-mat3": "^2.0.0",
