@@ -1578,7 +1578,9 @@ function releaseOldUIElemData() {
   for (let type in ui_elem_data) {
     let by_type = ui_elem_data[type];
     let any = false;
-    for (let key in by_type) {
+    let keys = Object.keys(by_type);
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
       let elem_data = by_type[key];
       if (elem_data.frame_index < glov_engine.frame_index - 1) {
         delete by_type[key];
