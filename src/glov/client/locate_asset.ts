@@ -11,6 +11,12 @@ export function locateAssetSetProxyPath(proxy_path_in: string): void {
   proxy_path = proxy_path_in;
 }
 
+let host_mappings: [string, string][] = [];
+export function locateAssetAddHostMapping(src: string, dest: string): void {
+  host_mappings.push([src, dest]);
+
+}
+
 export function locateAsset(name: string): string {
   if (!asset_mappings) {
     // shouldn't happen, but this should be safe as a fallback
@@ -18,8 +24,19 @@ export function locateAsset(name: string): string {
   }
   let m = asset_mappings[name];
   if (!m) {
-    if (proxy_path && !name.includes('://')) {
-      return `${proxy_path}${name}`;
+    if (name.includes('://')) {
+      // external/full path
+      for (let ii = 0; ii < host_mappings.length; ++ii) {
+        let pair = host_mappings[ii];
+        if (name.startsWith(pair[0])) {
+          name = pair[1] + name.slice(pair[0].length);
+        }
+      }
+    } else {
+      // internal/relative path
+      if (proxy_path) {
+        return `${proxy_path}${name}`;
+      }
     }
     return name;
   }

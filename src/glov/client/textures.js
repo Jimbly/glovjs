@@ -539,6 +539,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     tflags = 0;
     let url_use = url;
 
+    if (url_use.includes(':')) {
+      url_use = locateAsset(removeHash(url_use));
+    } // note: above line may make the below clause _also_ true
     if (!url_use.includes(':')) {
       // Additional logic for non-external textures
       // Fetching tflags in each load attempt, they may have changed/been reloaded in development
