@@ -55,7 +55,13 @@ class IdMapperWorker extends ChannelWorker {
   }
 
   setData<T>(ds_key: string, data: T, resp_func: ErrorCallback): void {
-    this.channel_server.ds_store_meta.setAsync(ds_key, data, resp_func);
+    this.channel_server.ds_store_meta.setAsync(ds_key, data, (err?: unknown) => {
+      if (err) {
+        this.error(`Error setting ${ds_key}: ${err} at`, new Error().stack);
+        throw err;
+      }
+      resp_func(err);
+    });
   }
 
   getNonDeletedProviderId(provider_id_ds_key: string, resp_func: ErrorCallback<ProviderIdData>): void {
