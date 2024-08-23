@@ -3,7 +3,7 @@
 
 require('./must_import.js')('channel_server.js', __filename); // eslint-disable-line import/order
 
-export let cwstats = { msgs: 0, bytes: 0 };
+export let cwstats = { msgs: 0, bytes: 0, inflight_set: 0 };
 export let ERR_QUIET = 'ERR_QUIET';
 
 const AUTO_DESTROY_TIME = 90000;
@@ -1083,6 +1083,7 @@ export class ChannelWorker {
 
       self.last_saved_data = data_to_compare;
       self.set_in_flight = true;
+      ++cwstats.inflight_set;
       let on_flush: OnFlushCB[] | null = null;
       if (self.on_flush) {
         on_flush = self.on_flush;
@@ -1093,6 +1094,7 @@ export class ChannelWorker {
         // Delay the next write
         setTimeout(function () {
           self.set_in_flight = false;
+          --cwstats.inflight_set;
 
           // data in memory was updated again in mid flight so we need to set to store again with the new data
           if (self.data_awaiting_set) {

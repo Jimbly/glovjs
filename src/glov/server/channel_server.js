@@ -695,7 +695,8 @@ export class ChannelServer {
     let send_stats = {
       get: stats.get - this.restart_last_stats.get,
       set: stats.set - this.restart_last_stats.set,
-      inflight_set: ds_stats.inflight_set + dss_stats.inflight_set + (this.waiting_to_monitor_flush ? 1 : 0),
+      inflight_set: ds_stats.inflight_set + dss_stats.inflight_set + (this.waiting_to_monitor_flush ? 1 : 0) +
+        cwstats.inflight_set,
     };
     let is_zeroes = !send_stats.get && !send_stats.set && !send_stats.inflight_set;
     if (this.force_shutdown) {
