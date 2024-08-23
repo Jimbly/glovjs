@@ -84,7 +84,9 @@ const { min } = Math;
 const OOO_PACKET_FAIL_PINGS = 15; // For testing this, disable pak_new_seq below?
 
 // Delay subsequent writes by at least 1.5 seconds
-const METADATA_COMMIT_RATELIMIT = 1500;
+const METADATA_COMMIT_RATELIMIT_MIN = 1500;
+// Delay writes by at most 20 seconds
+const METADATA_COMMIT_RATELIMIT_MAX = 20000;
 
 function throwErr(err?: Error): void {
   if (err) {
@@ -1037,6 +1039,29 @@ export class ChannelWorker {
     });
   }
 
+  shouldUseMinRateLimit(): boolean {
+    return Boolean(this.shutting_down || this.channel_server.restarting || this.on_flush);
+  }
+
+  waitForRateLimit(is_initial: boolean, fn: () => void): void {
+    let min_time = is_initial && this.on_flush ? 0 : METADATA_COMMIT_RATELIMIT_MIN;
+    let max_time = METADATA_COMMIT_RATELIMIT_MAX;
+    let start = Date.now();
+    let self = this;
+    // Poll every min_time to see if the time is elapsed, so that if the  shouldUseMinRateLimit()
+    //   changes, we respond quickly.
+    function tick(): void {
+      let dt = Date.now() - start;
+      let time = self.shouldUseMinRateLimit() ? min_time : max_time;
+      if (dt >= time) {
+        fn();
+      } else {
+        setTimeout(tick, min_time);
+      }
+    }
+    setTimeout(tick, min_time);
+  }
+
   commitDataActual(): void {
     const self = this;
     let data = this.data;
@@ -1071,19 +1096,21 @@ export class ChannelWorker {
 
     // Set data to store along with setting checks to make sure no more than one sets are in flight
     function safeSet(): void {
+      assert(self.set_in_flight);
       const incoming_data = self.data_awaiting_set;
+      assert(incoming_data);
       const data_to_compare = JSON.stringify(incoming_data);
       self.data_awaiting_set = null;
 
       // Do not write to datastore if nothing has changed
       if (data_to_compare === self.last_saved_data) {
+        self.set_in_flight = false;
+        --cwstats.inflight_set;
         callEach(self.on_flush, self.on_flush = null);
         return;
       }
 
       self.last_saved_data = data_to_compare;
-      self.set_in_flight = true;
-      ++cwstats.inflight_set;
       let on_flush: OnFlushCB[] | null = null;
       if (self.on_flush) {
         on_flush = self.on_flush;
@@ -1092,15 +1119,16 @@ export class ChannelWorker {
 
       self.channel_server.ds_store_meta.setAsync(self.store_path, incoming_data, function (err?: Error) {
         // Delay the next write
-        setTimeout(function () {
-          self.set_in_flight = false;
-          --cwstats.inflight_set;
-
+        self.waitForRateLimit(false, function () {
           // data in memory was updated again in mid flight so we need to set to store again with the new data
           if (self.data_awaiting_set) {
             safeSet();
+          } else {
+            assert(self.set_in_flight);
+            self.set_in_flight = false;
+            --cwstats.inflight_set;
           }
-        }, METADATA_COMMIT_RATELIMIT);
+        });
         if (err) {
           throwErr(err);
         }
@@ -1112,7 +1140,10 @@ export class ChannelWorker {
       });
     }
 
-    safeSet();
+    assert(!this.set_in_flight);
+    this.set_in_flight = true;
+    ++cwstats.inflight_set;
+    this.waitForRateLimit(true, safeSet);
   }
 
   emitApplyChannelData(data: EmitChannelDataParam): void {
