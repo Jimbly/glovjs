@@ -25,7 +25,10 @@ const { keyMetricsFlush } = require('./key_metrics.js');
 const log = require('./log.js');
 const { logCat, logCategoryEnable, logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
-const metrics = require('./metrics.js');
+const {
+  metricsAdd,
+  metricsSet,
+} = require('./metrics.js');
 const os = require('os');
 const { isPacket, packetCreate, packetDefaultFlags } = require('glov/common/packet.js');
 const path = require('path');
@@ -912,19 +915,19 @@ export class ChannelServer {
       this.exchange_ping.min = Infinity;
       this.exchange_ping.count = this.exchange_ping.total = this.exchange_ping.max = 0;
       // Report to metrics
-      metrics.set('load.cpu', load_cpu / 1000);
-      metrics.set('load.host_cpu', load_host_cpu / 1000);
-      metrics.set('load.mem', load_mem);
-      metrics.set('load.heap_used', mu.heapUsed/1024/1024);
-      //metrics.set('load.heap_total', mu.heapTotal/1024/1024);
-      metrics.set('load.free_mem', free_mem / 1000);
-      metrics.set('load.msgps.cw', msgs_per_s_cw);
-      metrics.set('load.msgps.ws', msgs_per_s_ws);
-      //metrics.set('load.msgps.total', msgs_per_s);
-      metrics.set('load.kbps.cw', kbytes_per_s_cw);
-      metrics.set('load.kbps.ws', kbytes_per_s_ws);
-      //metrics.set('load.kbps.total', kbytes_per_s);
-      metrics.set('load.exchange', ping_max);
+      metricsSet('load.cpu', load_cpu / 1000);
+      metricsSet('load.host_cpu', load_host_cpu / 1000);
+      metricsSet('load.mem', load_mem);
+      metricsSet('load.heap_used', mu.heapUsed/1024/1024);
+      //metricsSet('load.heap_total', mu.heapTotal/1024/1024);
+      metricsSet('load.free_mem', free_mem / 1000);
+      metricsSet('load.msgps.cw', msgs_per_s_cw);
+      metricsSet('load.msgps.ws', msgs_per_s_ws);
+      //metricsSet('load.msgps.total', msgs_per_s);
+      metricsSet('load.kbps.cw', kbytes_per_s_cw);
+      metricsSet('load.kbps.ws', kbytes_per_s_ws);
+      //metricsSet('load.kbps.total', kbytes_per_s);
+      metricsSet('load.exchange', ping_max);
       // Log
       this.last_load_log = `load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
         ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
@@ -1191,14 +1194,14 @@ export class ChannelServer {
       if (key.match(/^[a-zA-Z0-9-_]+$/)) {
         let count = clients_by_platform[key];
         sub_summary.push(`${key}:${count}`);
-        metrics.set(`clients.platform.${key}`, count);
+        metricsSet(`clients.platform.${key}`, count);
       }
     }
     for (let key in clients_by_ver) {
       if (key.match(/^[a-zA-Z0-9-_.]+$/)) {
         let count = clients_by_ver[key];
         sub_summary.push(`${key}:${count}`);
-        metrics.set(`clients.ver.${key.replace(/\./g, '_')}`, count);
+        metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count);
       }
     }
     lines.push(`Clients: ${num_clients}${sub_summary.length ? ` (${sub_summary.join(', ')})`: ''}`);
@@ -1214,7 +1217,7 @@ export class ChannelServer {
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
-      metrics.set(`count.${channel_type}`, num_channels[channel_type]);
+      metricsSet(`count.${channel_type}`, num_channels[channel_type]);
     }
     lines.push(`Channel Counts: ${channels.join(', ')}`);
     channels = [];
@@ -1280,7 +1283,7 @@ export class ChannelServer {
       msg: 'Server error occurred - check server logs'
     });
     sendToBuildClients('server_error', formatLocalError(e));
-    metrics.add('server_error', 1);
+    metricsAdd('server_error', 1);
   }
 }
 

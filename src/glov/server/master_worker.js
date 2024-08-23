@@ -9,7 +9,7 @@ import { LOAD_REPORT_INTERVAL, channelServerSendNoCreate } from './channel_serve
 import { ChannelWorker } from './channel_worker';
 import { loadBiasMap } from './load_bias_map';
 import { logCategoryEnabled } from './log';
-import * as metrics from './metrics';
+import { metricsSet } from './metrics';
 import { readyDataCheck } from './ready_data';
 import { serverConfig } from './server_config';
 
@@ -60,7 +60,7 @@ class MasterWorker extends ChannelWorker {
     // Delay until we finish startup/registration
     channel_server.whenReady(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
     console.log('lifecycle_master_start');
-    metrics.set('server_error', 0); // "Clear" this upon deployment restart so we get new alerts if new errors happen
+    metricsSet('server_error', 0); // "Clear" this upon deployment restart so we get new alerts if new errors happen
   }
   getChanServData(id) {
     assert(id);
@@ -631,7 +631,7 @@ class MasterWorker extends ChannelWorker {
         }
       }
     }
-    metrics.set('master.available', count_available);
+    metricsSet('master.available', count_available);
     for (let channel_id in this.channels_creating) {
       let cc = this.channels_creating[channel_id];
       if (cc.created) {
@@ -665,7 +665,7 @@ class MasterWorker extends ChannelWorker {
     if (this.master_stats_countdown <= 0) {
       this.master_stats_countdown = MASTER_STATS_PERIOD;
       for (let channel_type in this.total_num_channels) {
-        metrics.set(`master.count.${channel_type}`, this.total_num_channels[channel_type]);
+        metricsSet(`master.count.${channel_type}`, this.total_num_channels[channel_type]);
       }
       this.sendChannelMessage('channel_server', 'master_stats', {
         num_channels: this.total_num_channels

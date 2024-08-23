@@ -6,7 +6,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const assert = require('assert');
 const fs = require('fs');
 const { asyncEachSeries } = require('glov-async');
-const metrics = require('./metrics.js');
+const { metricsAdd } = require('./metrics.js');
 const path = require('path');
 const { processUID, serverConfig } = require('./server_config.js');
 const { inspect } = require('util');
@@ -135,7 +135,7 @@ export function logEx(context, level, ...args) {
   }
   assert(level);
   level = level_map[level] || level;
-  metrics.add(`log.${level}`, 1);
+  metricsAdd(`log.${level}`, 1);
   context.level = level;
   // If 2 or more arguments and the last argument is an object, assume it is
   //   per-call metadata, and merge with context metadata
