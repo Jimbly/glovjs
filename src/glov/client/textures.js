@@ -19,7 +19,10 @@ import {
 import * as engine from './engine';
 import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
-import * as local_storage from './local_storage';
+import {
+  localStorageGetJSON,
+  localStorageSetJSON,
+} from './local_storage';
 import { locateAsset } from './locate_asset';
 import * as settings from './settings';
 import { shadersSetGLErrorReportDetails } from './shaders';
@@ -486,6 +489,12 @@ Texture.prototype.onLoad = function (cb) {
   }
 };
 
+let has_content_security_policy = localStorageGetJSON('has_csp', false);
+document.addEventListener('securitypolicyviolation', function () {
+  localStorageSetJSON('has_csp', true);
+  has_content_security_policy = true;
+});
+
 const createImageBitmap = callbackify(window.createImageBitmap);
 
 let blob_supported;
@@ -526,23 +535,24 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   function tryLoad(next) {
     profilerStart('Texture:tryLoad');
 
+    let url_use = url;
     let did_next = false;
     function done(err, img) {
       profilerStart('Texture:onload');
       if (!did_next) {
         did_next = true;
-        next(err, img);
+        next(err, img, url_use);
       }
       profilerStop();
     }
 
     tflags = 0;
-    let url_use = url;
 
     if (url_use.includes(':')) {
       url_use = locateAsset(removeHash(url_use));
     } // note: above line may make the below clause _also_ true
-    if (!url_use.includes(':')) {
+    let is_external = url_use.includes(':');
+    if (!is_external) {
       // Additional logic for non-external textures
       // Fetching tflags in each load attempt, they may have changed/been reloaded in development
       let ext_idx = url_use.lastIndexOf('.');
@@ -585,6 +595,16 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     }
 
     if (tflags & FORMAT_PACK) {
+      fetch({
+        url: url_use,
+        response_type: 'arraybuffer',
+      }, done);
+      profilerStop();
+      return;
+    }
+
+    if (is_external && blobSupported() && has_content_security_policy) {
+      // Use `fetch` to get around content security policy
       fetch({
         url: url_use,
         response_type: 'arraybuffer',
@@ -662,6 +682,22 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     });
   }
 
+  function decodeFetchedImage(arraybuffer, next) {
+    assert(arraybuffer instanceof ArrayBuffer);
+    let img_out = new Image();
+    let view = new Uint8Array(arraybuffer);
+    let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+    img_out.onload = function () {
+      URL.revokeObjectURL(url_object);
+      next(null, img_out);
+    };
+    img_out.onerror = function () {
+      URL.revokeObjectURL(url_object);
+      next('img load error');
+    };
+    img_out.src = url_object;
+  }
+
   // next(err, img, mipmaps)
   function prepImage(err, img, next) {
     if (err || !img) {
@@ -670,10 +706,14 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     if (tflags & FORMAT_PACK) {
       return void decodeTexturePack(img, next);
     }
+    let unpack_mips = tex.is_array && tex.packed_mips;
+    if (img instanceof ArrayBuffer) {
+      assert(!unpack_mips);
+      return void decodeFetchedImage(img, next);
+    }
     if (filter) {
       img = filter(tex, img);
     }
-    let unpack_mips = tex.is_array && tex.packed_mips;
     if (!unpack_mips) {
       return void next(null, img);
     }
@@ -727,7 +767,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
   ++load_count;
   let retries = 0;
-  function handleLoad(err, img) {
+  function handleLoad(err, img, url_use_debug) {
     if (tex.load_gen !== load_gen || tex.destroyed) {
       // someone else requested this texture to be loaded!  Or, it was already unloaded
       --load_count;
@@ -746,11 +786,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
           // Samsung Galaxy S6 gets 1281 on texture arrays
           // Note: Any failed image load (partial read of a bad png, etc) also results in 1281!
           if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') && engine.webgl2 && !engine.DEBUG) {
-            local_storage.setJSON('webgl2_disable', {
+            localStorageSetJSON('webgl2_disable', {
               ua: navigator.userAgent,
               ts: Date.now(),
             });
-            console.error(`Error loading array texture "${url}": ${err_details}, reloading without WebGL2..`);
+            console.error(`Error loading array texture "${url_use_debug}": ${err_details}, reloading without WebGL2..`);
             engine.reloadSafe();
             return;
           }
@@ -762,7 +802,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
           return;
         }
       }
-      let err_url = url && url.length > 200 ? `${url.slice(0, 200)}...` : url;
+      let err_url = url_use_debug && url_use_debug.length > 200 ? `${url_use_debug.slice(0, 200)}...` : url_use_debug;
       let err = `Error loading texture "${err_url}": ${err_details}`;
       retries++;
       if (retries > TEX_RETRY_COUNT) {

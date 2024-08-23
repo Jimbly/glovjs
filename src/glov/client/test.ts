@@ -23,6 +23,9 @@ class MockDocument {
     }
     return debug;
   }
+  addEventListener(event: string, callback: () => void): void {
+    // ignore
+  }
   location = new MockLocation();
 }
 
