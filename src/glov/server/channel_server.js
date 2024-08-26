@@ -1201,7 +1201,7 @@ export class ChannelServer {
       if (key.match(/^[a-zA-Z0-9-_.]+$/)) {
         let count = clients_by_ver[key];
         sub_summary.push(`${key}:${count}`);
-        metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count);
+        // metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count);
       }
     }
     lines.push(`Clients: ${num_clients}${sub_summary.length ? ` (${sub_summary.join(', ')})`: ''}`);
@@ -1217,7 +1217,7 @@ export class ChannelServer {
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
-      metricsSet(`count.${channel_type}`, num_channels[channel_type]);
+      // metricsSet(`count.${channel_type}`, num_channels[channel_type]);
     }
     lines.push(`Channel Counts: ${channels.join(', ')}`);
     channels = [];
