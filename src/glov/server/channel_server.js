@@ -915,19 +915,19 @@ export class ChannelServer {
       this.exchange_ping.min = Infinity;
       this.exchange_ping.count = this.exchange_ping.total = this.exchange_ping.max = 0;
       // Report to metrics
-      metricsSet('load.cpu', load_cpu / 1000);
-      metricsSet('load.host_cpu', load_host_cpu / 1000);
-      metricsSet('load.mem', load_mem);
-      metricsSet('load.heap_used', mu.heapUsed/1024/1024);
-      //metricsSet('load.heap_total', mu.heapTotal/1024/1024);
-      metricsSet('load.free_mem', free_mem / 1000);
-      metricsSet('load.msgps.cw', msgs_per_s_cw);
-      metricsSet('load.msgps.ws', msgs_per_s_ws);
-      //metricsSet('load.msgps.total', msgs_per_s);
-      metricsSet('load.kbps.cw', kbytes_per_s_cw);
-      metricsSet('load.kbps.ws', kbytes_per_s_ws);
-      //metricsSet('load.kbps.total', kbytes_per_s);
-      metricsSet('load.exchange', ping_max);
+      metricsSet('load.cpu', load_cpu / 1000, 'high');
+      metricsSet('load.host_cpu', load_host_cpu / 1000, 'med');
+      metricsSet('load.mem', load_mem, 'high');
+      metricsSet('load.heap_used', mu.heapUsed/1024/1024, 'high');
+      //metricsSet('load.heap_total', mu.heapTotal/1024/1024, 'med');
+      metricsSet('load.free_mem', free_mem / 1000, 'med');
+      metricsSet('load.msgps.cw', msgs_per_s_cw, 'med');
+      metricsSet('load.msgps.ws', msgs_per_s_ws, 'med');
+      //metricsSet('load.msgps.total', msgs_per_s, 'med');
+      metricsSet('load.kbps.cw', kbytes_per_s_cw, 'med');
+      metricsSet('load.kbps.ws', kbytes_per_s_ws, 'med');
+      //metricsSet('load.kbps.total', kbytes_per_s, 'med');
+      metricsSet('load.exchange', ping_max, 'high');
       // Log
       this.last_load_log = `load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
         ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
@@ -1194,14 +1194,14 @@ export class ChannelServer {
       if (key.match(/^[a-zA-Z0-9-_]+$/)) {
         let count = clients_by_platform[key];
         sub_summary.push(`${key}:${count}`);
-        metricsSet(`clients.platform.${key}`, count);
+        metricsSet(`clients.platform.${key}`, count, 'med');
       }
     }
     for (let key in clients_by_ver) {
       if (key.match(/^[a-zA-Z0-9-_.]+$/)) {
         let count = clients_by_ver[key];
         sub_summary.push(`${key}:${count}`);
-        // metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count);
+        // metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count, 'med');
       }
     }
     lines.push(`Clients: ${num_clients}${sub_summary.length ? ` (${sub_summary.join(', ')})`: ''}`);
@@ -1217,7 +1217,7 @@ export class ChannelServer {
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
-      // metricsSet(`count.${channel_type}`, num_channels[channel_type]);
+      // metricsSet(`count.${channel_type}`, num_channels[channel_type], 'med');
     }
     lines.push(`Channel Counts: ${channels.join(', ')}`);
     channels = [];
@@ -1283,7 +1283,7 @@ export class ChannelServer {
       msg: 'Server error occurred - check server logs'
     });
     sendToBuildClients('server_error', formatLocalError(e));
-    metricsAdd('server_error', 1);
+    metricsAdd('server_error', 1, 'high');
   }
 }
 

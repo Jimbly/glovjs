@@ -22,8 +22,8 @@ export interface ExecuteWithRetryOptions {
   no_metrics?: boolean;
 }
 
-let metricsAdd: ((label: string, value: number) => void) | undefined;
-export function setMetricsAdd(func: (label: string, value: number) => void): void {
+let metricsAdd: ((label: string, value: number, freq: 'high') => void) | undefined;
+export function setMetricsAdd(func: (label: string, value: number, freq: 'high') => void): void {
   metricsAdd = func;
 }
 
@@ -76,13 +76,13 @@ export function executeWithRetry<T = unknown, E = unknown>(
           // Return the error if we have exceeded max retries
           console[quiet ? 'info' : 'error'](`[RETRY] ${log_prefix} | [Retries exhausted] | ${err}`);
           if (metricsAdd && !no_metrics) {
-            metricsAdd(`retry.${metric}.fail`, 1);
+            metricsAdd(`retry.${metric}.fail`, 1, 'high');
           }
           return cb(err);
         }
 
         if (metricsAdd && !no_metrics) {
-          metricsAdd(`retry.${metric}`, 1);
+          metricsAdd(`retry.${metric}`, 1, 'high');
         }
         console[quiet ? 'info' : 'warn'](`[RETRY] ${log_prefix} | [${attempts}] | ${err}`);
         perfCounterAdd(`retry.${log_prefix}`);

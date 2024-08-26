@@ -65,7 +65,7 @@ export class ClientWorker extends ChannelWorker {
     this.ids_base.display_name = resp_data.public_data.display_name;
     this.log_user_id = user_id;
     applyCustomIds(this.ids_base, resp_data.public_data);
-    keyMetricsAddTagged('login', this.client.client_tags, 1);
+    keyMetricsAddTagged('login', this.client.client_tags, 1, 'low');
   }
 
   onLogoutInternal() {

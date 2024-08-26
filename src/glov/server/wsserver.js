@@ -312,7 +312,7 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
       build: client.client_build,
     });
 
-    keyMetricsAddTagged('wsconnect', client.client_tags, 1);
+    keyMetricsAddTagged('wsconnect', client.client_tags, 1, 'low');
 
     let query = requestGetQuery(req);
     let client_app = query.app || 'app';

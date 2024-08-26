@@ -1,6 +1,6 @@
 import { empty } from 'glov/common/util';
 import { logCategoryEnabled } from './log';
-import { metricsAdd } from './metrics';
+import { MetricFreq, metricsAdd } from './metrics';
 import { UserTimeAccumulator } from './usertime';
 
 import type { TSMap } from 'glov/common/types';
@@ -13,20 +13,20 @@ let usertime: UserTimeAccumulator;
 let accum: TSMap<number> = {};
 let last_log_time: number;
 
-export function keyMetricsAdd(metric: string, value: number): void {
-  metricsAdd(metric, value);
+export function keyMetricsAdd(metric: string, value: number, freq: MetricFreq): void {
+  metricsAdd(metric, value, freq);
   if (logCategoryEnabled('load')) {
     accum[metric] = (accum[metric] || 0) + value;
   }
 }
 
-export function keyMetricsAddTagged(metric: string, tags: string | string[], value: number): void {
-  keyMetricsAdd(metric, value);
+export function keyMetricsAddTagged(metric: string, tags: string | string[], value: number, freq: MetricFreq): void {
+  keyMetricsAdd(metric, value, freq);
   if (typeof tags === 'string') {
     tags = tags ? tags.split(',') : [];
   }
   for (let ii = 0; ii < tags.length; ++ii) {
-    keyMetricsAdd(`${metric}.${tags[ii]}`, value);
+    keyMetricsAdd(`${metric}.${tags[ii]}`, value, freq);
   }
 }
 

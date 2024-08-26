@@ -60,7 +60,8 @@ class MasterWorker extends ChannelWorker {
     // Delay until we finish startup/registration
     channel_server.whenReady(this.sendChannelMessage.bind(this, 'channel_server', 'master_startup'));
     console.log('lifecycle_master_start');
-    metricsSet('server_error', 0); // "Clear" this upon deployment restart so we get new alerts if new errors happen
+    // "Clear" `server_error` upon deployment restart so we get new alerts if new errors happen
+    metricsSet('server_error', 0, 'high');
   }
   getChanServData(id) {
     assert(id);
@@ -631,7 +632,7 @@ class MasterWorker extends ChannelWorker {
         }
       }
     }
-    metricsSet('master.available', count_available);
+    metricsSet('master.available', count_available, 'high');
     for (let channel_id in this.channels_creating) {
       let cc = this.channels_creating[channel_id];
       if (cc.created) {
@@ -665,7 +666,8 @@ class MasterWorker extends ChannelWorker {
     if (this.master_stats_countdown <= 0) {
       this.master_stats_countdown = MASTER_STATS_PERIOD;
       for (let channel_type in this.total_num_channels) {
-        metricsSet(`master.count.${channel_type}`, this.total_num_channels[channel_type]);
+        metricsSet(`master.count.${channel_type}`, this.total_num_channels[channel_type],
+          channel_type === 'client' ? 'high' : 'med');
       }
       this.sendChannelMessage('channel_server', 'master_stats', {
         num_channels: this.total_num_channels

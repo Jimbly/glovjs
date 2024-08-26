@@ -581,7 +581,7 @@ function onLoadMetrics(client, data, resp_func) {
   for (let ii = 0; ii < LOAD_TIME_METRICS.length; ++ii) {
     let field = LOAD_TIME_METRICS[ii];
     if (typeof data[field] === 'number') {
-      metricsStats(`clientload_${field}`, data[field]);
+      metricsStats(`clientload_${field}`, data[field], 'low');
     }
   }
   resp_func();

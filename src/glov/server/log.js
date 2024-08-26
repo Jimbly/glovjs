@@ -63,6 +63,10 @@ const LOG_LEVELS = {
   warn: 'warn',
   error: 'error',
 };
+const LOG_LEVEL_TO_METRIC_FREQ = { // default 'low'
+  warn: 'med',
+  error: 'high',
+};
 
 let level_map = {};
 
@@ -135,7 +139,7 @@ export function logEx(context, level, ...args) {
   }
   assert(level);
   level = level_map[level] || level;
-  metricsAdd(`log.${level}`, 1);
+  metricsAdd(`log.${level}`, 1, LOG_LEVEL_TO_METRIC_FREQ[level] || 'low');
   context.level = level;
   // If 2 or more arguments and the last argument is an object, assume it is
   //   per-call metadata, and merge with context metadata

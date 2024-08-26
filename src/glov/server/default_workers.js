@@ -754,7 +754,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (this.onUserLogin) {
       this.onUserLogin(data);
     }
-    metricsAdd('user.login', 1);
+    metricsAdd('user.login', 1, 'high');
 
     resp_func(null, {
       public_data: this.getChannelData('public'),
@@ -784,7 +784,7 @@ export class DefaultUserWorker extends ChannelWorker {
     if (md5(data.salt + this.getChannelData('private.password')) !== data.password) {
       return resp_func('Invalid password');
     }
-    metricsAdd('user.login_pass', 1);
+    metricsAdd('user.login_pass', 1, 'low');
     return this.handleLoginShared(data, resp_func);
   }
   handleLoginExternal(src, data, resp_func) {
@@ -818,7 +818,7 @@ export class DefaultUserWorker extends ChannelWorker {
       this.setChannelData('private.external', true);
       return this.createShared(data, resp_func);
     }
-    metricsAdd(`user.login_${data.provider}`, 1);
+    metricsAdd(`user.login_${data.provider}`, 1, 'low');
     return this.handleLoginShared(data, resp_func);
   }
   handleCreate(src, data, resp_func) {
@@ -862,7 +862,7 @@ export class DefaultUserWorker extends ChannelWorker {
     private_data.last_time = Date.now();
     this.setChannelData('private', private_data);
     this.setChannelData('public', public_data);
-    metricsAdd('user.create', 1);
+    metricsAdd('user.create', 1, 'high');
     data.resp_extra.email = this.getChannelData('private.email');
     data.resp_extra.hash = data.password ? undefined : md5(data.salt + this.getChannelData('private.password'));
     return resp_func(null, {
