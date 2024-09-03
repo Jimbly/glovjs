@@ -718,3 +718,7 @@ export function cmpNumericSmart(a: string, b: string): number {
     return 0;
   }
 }
+
+export function mdEscape(text: string): string {
+  return text.replace(/([\\[*_])/g, '\\$1');
+}
