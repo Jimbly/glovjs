@@ -1245,6 +1245,13 @@ export class ChannelWorker {
     this.setChannelDataInternal(this.core_ids, key, value, q);
   }
 
+  addChannelData(key: string, amount: number): number {
+    assert(amount);
+    let ret: number;
+    this.setChannelData(key, (ret = (this.getChannelData(key, 0) + amount)));
+    return ret;
+  }
+
   onGetChannelData(source: HandlerSource, data: string, resp_func: HandlerCallback<unknown>): void {
     // Do not deny this here, this is blocked by the allow_client_direct map
     // We want the client_comm functions to send this message if needed.
