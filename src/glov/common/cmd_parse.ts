@@ -26,6 +26,7 @@ export type CmdDef = {
     param: CmdValueDefBase;
   };
   override?: boolean; // Allows replacing a command registered earlier by an engine module
+  expose_global?: boolean; // expose the command on `window` for easy use, defaults true if !access_show/_run
   func(this: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): void;
 };
 
@@ -293,9 +294,56 @@ class CmdParseImpl {
     return true;
   }
 
+  exposeGlobal(cmd: string, override?: boolean): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    let func_name = cmd.replace(/_(.)/g, function (a, b) {
+      return b.toUpperCase();
+    });
+    type Funcs = TSMap<(a: string) => void>;
+    if ((window as unknown as Funcs)[func_name] && !override) {
+      return;
+    }
+    (window as unknown as Funcs)[func_name] = (...args) => {
+      let is_sync = true;
+      let sync_ret;
+      this.handle(undefined, `${cmd} ${args.join(' ')}`,
+        function (err?: string | null, resp?: unknown): void {
+          if (err) {
+            if (is_sync && !resp) {
+              sync_ret = err;
+            } else {
+              console.error(err, resp);
+            }
+          } else {
+            if (is_sync) {
+              sync_ret = resp;
+            } else {
+              console.info(resp);
+            }
+          }
+        }
+      );
+      is_sync = false;
+      return sync_ret;
+    };
+  }
+
   register(param: CmdDef): void {
     assert.equal(typeof param, 'object');
-    let { cmd, func, help, usage, prefix_usage_with_help, access_show, access_run, store_data, override } = param;
+    let {
+      cmd,
+      func,
+      help,
+      usage,
+      prefix_usage_with_help,
+      access_show,
+      access_run,
+      store_data,
+      override,
+      expose_global,
+    } = param;
     assert(cmd);
     assert(func, `Missing function for command "${cmd}"`);
     let help_lower = String(help || '').toLowerCase();
@@ -310,6 +358,12 @@ class CmdParseImpl {
     }
     let canon = canonical(cmd);
     assert(!this.cmds[canon] || override, `Duplicate commands registered as "${canon}"`);
+    if (expose_global === undefined) {
+      expose_global = !access_show && !access_run;
+    }
+    if (expose_global) {
+      this.exposeGlobal(cmd, override);
+    }
     this.cmds[canon] = {
       name: cmd,
       fn: func,
