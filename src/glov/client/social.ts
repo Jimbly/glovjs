@@ -103,50 +103,6 @@ export function friendUnblock(user_id: string, cb: NetErrorCallback<string>): vo
   makeFriendCmdRequest('friend_unblock', user_id, cb);
 }
 
-// Pass-through commands
-cmd_parse.register({
-  cmd: 'friend_add',
-  help: 'Add a friend',
-  func: friendAdd,
-});
-cmd_parse.register({
-  cmd: 'friend_remove',
-  help: 'Remove a friend',
-  func: friendRemove,
-});
-cmd_parse.register({
-  cmd: 'friend_block',
-  help: 'Block someone from seeing your rich presence, also removes from your friends list',
-  func: friendBlock,
-});
-cmd_parse.register({
-  cmd: 'friend_unblock',
-  help: 'Reset a user to allow seeing your rich presence again',
-  func: friendUnblock,
-});
-cmd_parse.register({
-  cmd: 'friend_list',
-  help: 'List all friends',
-  func: function (str: string, resp_func: CmdRespFunc<string>) {
-    if (!friend_list) {
-      return void resp_func('Friends list not loaded');
-    }
-    resp_func(null, Object.keys(friend_list).filter(isFriend).join(',') ||
-      'You have no friends');
-  },
-});
-cmd_parse.register({
-  cmd: 'friend_block_list',
-  help: 'List all blocked users',
-  func: function (str: string, resp_func: CmdRespFunc<string>) {
-    if (!friend_list) {
-      return void resp_func('Friends list not loaded');
-    }
-    resp_func(null, Object.keys(friend_list).filter(friendIsBlocked).join(',') ||
-      'You have no blocked users');
-  },
-});
-
 export const SOCIAL_ONLINE = 1;
 export const SOCIAL_AFK = 2;
 export const SOCIAL_INVISIBLE = 3;
@@ -154,14 +110,6 @@ export type SocialPresenceStatus = typeof SOCIAL_ONLINE | typeof SOCIAL_AFK | ty
 declare module 'glov/client/settings' {
   let social_presence: SocialPresenceStatus;
 }
-settingsRegister({
-  social_presence: {
-    default_value: SOCIAL_ONLINE,
-    type: cmd_parse.TYPE_INT,
-    range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
-    access_show: ['hidden'],
-  },
-});
 
 export function socialPresenceStatusGet(): SocialPresenceStatus {
   return settings.social_presence;
@@ -169,24 +117,6 @@ export function socialPresenceStatusGet(): SocialPresenceStatus {
 export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
   settingsSet('social_presence', value);
 }
-
-cmd_parse.registerValue('invisible', {
-  type: cmd_parse.TYPE_INT,
-  help: 'Hide rich presence information from other users',
-  label: 'Invisible',
-  range: [0,1],
-  get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
-  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
-});
-
-cmd_parse.registerValue('afk', {
-  type: cmd_parse.TYPE_INT,
-  help: 'Appear as idle to other users',
-  label: 'AFK',
-  range: [0,1],
-  get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
-  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
-});
 
 function onPresence(this: ClientUserChannel, data: TSMap<PresenceEntry>): void {
   let user_channel = this;
@@ -522,4 +452,76 @@ export function socialInit(): void {
 
   netSubs().onChannelMsg('user', 'presence', onPresence);
   netSubs().onChannelEvent('user', 'unsubscribe', onUnSubscribe);
+
+  // Pass-through commands
+  cmd_parse.register({
+    cmd: 'friend_add',
+    help: 'Add a friend',
+    func: friendAdd,
+  });
+  cmd_parse.register({
+    cmd: 'friend_remove',
+    help: 'Remove a friend',
+    func: friendRemove,
+  });
+  cmd_parse.register({
+    cmd: 'friend_block',
+    help: 'Block someone from seeing your rich presence, also removes from your friends list',
+    func: friendBlock,
+  });
+  cmd_parse.register({
+    cmd: 'friend_unblock',
+    help: 'Reset a user to allow seeing your rich presence again',
+    func: friendUnblock,
+  });
+  cmd_parse.register({
+    cmd: 'friend_list',
+    help: 'List all friends',
+    func: function (str: string, resp_func: CmdRespFunc<string>) {
+      if (!friend_list) {
+        return void resp_func('Friends list not loaded');
+      }
+      resp_func(null, Object.keys(friend_list).filter(isFriend).join(',') ||
+        'You have no friends');
+    },
+  });
+  cmd_parse.register({
+    cmd: 'friend_block_list',
+    help: 'List all blocked users',
+    func: function (str: string, resp_func: CmdRespFunc<string>) {
+      if (!friend_list) {
+        return void resp_func('Friends list not loaded');
+      }
+      resp_func(null, Object.keys(friend_list).filter(friendIsBlocked).join(',') ||
+        'You have no blocked users');
+    },
+  });
+
+  settingsRegister({
+    social_presence: {
+      default_value: SOCIAL_ONLINE,
+      type: cmd_parse.TYPE_INT,
+      range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
+      access_show: ['hidden'],
+    },
+  });
+
+  cmd_parse.registerValue('invisible', {
+    type: cmd_parse.TYPE_INT,
+    help: 'Hide rich presence information from other users',
+    label: 'Invisible',
+    range: [0,1],
+    get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
+    set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
+  });
+
+  cmd_parse.registerValue('afk', {
+    type: cmd_parse.TYPE_INT,
+    help: 'Appear as idle to other users',
+    label: 'AFK',
+    range: [0,1],
+    get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
+    set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
+  });
+
 }
