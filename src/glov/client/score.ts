@@ -3,11 +3,13 @@
 /* eslint-env browser */
 
 import assert from 'assert';
+import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { executeWithRetry } from 'glov/common/execute_with_retry';
 import {
   callEach,
   nop,
 } from 'glov/common/util';
+import { cmd_parse } from './cmds';
 import { fetch } from './fetch';
 
 import type {
@@ -46,6 +48,7 @@ if (window.location.host.indexOf('localhost') !== -1 ||
 if (window.location.href.startsWith('https://')) {
   score_host = score_host.replace(/^http:/, 'https:');
 }
+const friends_host = score_host.replace('scores.', 'friends.');
 export function scoreGetPlayerName(): string {
   return player_name;
 }
@@ -563,7 +566,7 @@ export function scoreUpdatePlayerName(new_player_name: string): void {
           try {
             err = JSON.parse(res).err || err;
           } catch (e) {
-            // ignoored
+            // ignored
           }
         }
         lsd[PLAYER_NAME_KEY] = player_name = old_name;
@@ -576,3 +579,38 @@ export function scoreUpdatePlayerName(new_player_name: string): void {
     });
   });
 }
+
+export function scoreFriendCodeGet(cb: (err: null | string, code: string) => void): void {
+  withUserID(function (user_id: string) {
+    fetch({
+      url: `${friends_host}/api/friendcodeget?userid=${user_id}`,
+    }, (err: string | undefined, res: string) => {
+      if (err) {
+        if (res) {
+          console.error(res);
+          try {
+            err = JSON.parse(res).err as string || err;
+          } catch (e) {
+            // ignored
+          }
+        }
+        cb(err, '');
+      } else {
+        try {
+          cb(null, JSON.parse(res).friendcode);
+        } catch (e) {
+          console.error(res);
+          cb('Error parsing response', '');
+        }
+      }
+    });
+  });
+}
+
+cmd_parse.register({
+  cmd: 'friend_code_get',
+  help: 'Displays one\'s own friend code',
+  func: function (param: string, resp_func: CmdRespFunc): void {
+    scoreFriendCodeGet(resp_func);
+  },
+});
