@@ -20,6 +20,7 @@ import type {
 
 const PLAYER_NAME_KEY = 'ld.player_name';
 const USERID_KEY = 'score.userid';
+const FRIENDS_KEY = 'score.friends';
 const SCORE_REFRESH_TIME = 5*60*1000; // also refreshes if we submit a new score, or forceRefreshScores() is called
 const SUBMIT_RATELIMIT = 5000; // Only kicks in if two are in-flight at the same time
 
@@ -36,6 +37,15 @@ let lsd = (function (): Partial<Record<string, string>> {
 
 if (lsd[PLAYER_NAME_KEY]) {
   player_name = lsd[PLAYER_NAME_KEY]!;
+}
+
+let friends_by_code: string[] = [];
+if (lsd[FRIENDS_KEY]) {
+  try {
+    friends_by_code = JSON.parse(lsd[FRIENDS_KEY]!) as string[];
+  } catch (e) {
+    // ignored
+  }
 }
 
 let score_host = 'http://scores.dashingstrike.com';
@@ -612,5 +622,47 @@ cmd_parse.register({
   help: 'Displays one\'s own friend code',
   func: function (param: string, resp_func: CmdRespFunc): void {
     scoreFriendCodeGet(resp_func);
+  },
+});
+
+cmd_parse.register({
+  cmd: 'friend_list',
+  help: 'List friends',
+  func: function (param: string, resp_func: CmdRespFunc): void {
+    resp_func(null, friends_by_code.join(', ') || 'You have no friends');
+  },
+});
+
+cmd_parse.register({
+  cmd: 'friend_add',
+  help: 'Add friend by friend code',
+  func: function (param: string, resp_func: CmdRespFunc): void {
+    let fc = param.trim().toUpperCase();
+    if (!fc) {
+      return resp_func('Missing friend code');
+    }
+    if (friends_by_code.includes(fc)) {
+      return resp_func(null, 'Friend already on list.');
+    }
+    friends_by_code.push(fc);
+    lsd[FRIENDS_KEY] = JSON.stringify(friends_by_code);
+    resp_func(null, 'Friend added');
+  },
+});
+
+cmd_parse.register({
+  cmd: 'friend_remove',
+  help: 'Remove friend by friend code',
+  func: function (param: string, resp_func: CmdRespFunc): void {
+    let fc = param.trim().toUpperCase();
+    if (!fc) {
+      return resp_func('Missing friend code');
+    }
+    if (!friends_by_code.includes(fc)) {
+      return resp_func(null, 'Friend not on list.');
+    }
+    friends_by_code.splice(friends_by_code.indexOf(fc), 1);
+    lsd[FRIENDS_KEY] = JSON.stringify(friends_by_code);
+    resp_func(null, 'Friend removed');
   },
 });
