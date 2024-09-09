@@ -74,7 +74,7 @@ export class UserTimeAccumulator {
         if (tag === 'total') {
           reporter(metric, total_seconds, 'med');
         } else {
-          reporter(`${metric}.${tag}`, total_seconds, 'med');
+          reporter(`${metric}.${tag}`, total_seconds, 'low');
         }
       }
       let remainder = total_time - total_seconds;
