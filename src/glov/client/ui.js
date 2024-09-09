@@ -1049,12 +1049,32 @@ export function buttonTextDraw(param, state, focused) {
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let disabled = state === 'disabled';
-  (param.font || font).drawSizedAligned(
-    disabled ? param.font_style_disabled || font_style_disabled :
+  let font_use = (param.font || font);
+  let font_style = disabled ? param.font_style_disabled || font_style_disabled :
     focused ? param.font_style_focused || font_style_focused :
-    param.font_style_normal || font_style_normal,
-    param.x + hpad, param.y + yoffs, param.z + 0.1,
-    param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
+    param.font_style_normal || font_style_normal;
+  let x = param.x + hpad;
+  let y = param.y + yoffs;
+  let z = param.z + 0.1;
+  let w = param.w - hpad * 2;
+  let align = param.align || glov_font.ALIGN.HVCENTERFIT;
+  let text_height = param.font_height;
+  if (param.markdown) {
+    markdownAuto({
+      font: font_use,
+      font_style,
+      x, y, z,
+      w, h: param.h,
+      align,
+      text_height,
+      text: param.text
+    });
+  } else {
+    font_use.drawSizedAligned(
+      font_style,
+      x, y, z,
+      text_height, align, w, param.h, param.text);
+  }
   profilerStopFunc();
 }
 

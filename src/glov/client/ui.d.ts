@@ -202,6 +202,7 @@ export interface ButtonTextParam extends ButtonParam {
   font_style_focused?: FontStyle;
   font_style_disabled?: FontStyle;
   align?: ALIGN;
+  markdown?: boolean; // defaults to false
 }
 export interface ButtonImageParamBase extends ButtonParam {
   shrink?: number;
