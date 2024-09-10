@@ -17,6 +17,8 @@ export function isDataObject(value: unknown): value is DataObject {
   return value ? typeof value === 'object' && !Array.isArray(value) : false;
 }
 
+export type EmptyObject = Record<string, never>;
+
 /**
  * Error callback accepting an error as the first parameter and a result as the second parameter.
  * Both parameters are optional.

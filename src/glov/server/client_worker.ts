@@ -3,23 +3,78 @@
 
 import assert from 'assert';
 import { chunkedSend } from 'glov/common/chunked_send';
-import { canonical } from 'glov/common/cmd_parse';
-import { isPacket } from 'glov/common/packet';
+import {
+  CmdDef,
+  CmdRespFunc,
+  canonical,
+} from 'glov/common/cmd_parse';
+import {
+  Packet,
+  isPacket,
+} from 'glov/common/packet';
 import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
-import { ChannelWorker } from './channel_worker';
+import { ApplyChannelDataParam, ChannelWorker } from './channel_worker';
 import { keyMetricsAddTagged } from './key_metrics';
 import { logEx } from './log';
 import { serverConfig } from './server_config';
 
-let cmd_parse_routes = {}; // cmd string -> worker type
+import type { ChannelServer } from './channel_server';
+import type {
+  create as wsServerCreate,
+} from './wsserver';
+import type {
+  ClientHandlerSource,
+  DataObject,
+  EmptyObject,
+  ErrorCallback,
+  HandlerCallback,
+  HandlerSource,
+  Roles,
+  TSMap,
+} from 'glov/common/types';
+
+// TODO: move to default_workers when converted to TypeScript
+export type BasePermissionsData = {
+  csr?: 1;
+  sysadmin?: 1;
+};
+export type BaseUserWorkerPublicData = {
+  creation_time: number;
+  permissions?: BasePermissionsData;
+  display_name?: string;
+};
+type WSClient = { // should be from wsserver.js
+  connected: boolean;
+  ws_server: ReturnType<typeof wsServerCreate>;
+  client_tags: string[];
+  pak(msg: string, pak_ref?: Packet | null): Packet;
+  send(msg: string, data?: unknown): void;
+};
+type LoginRespData = {
+  public_data: BaseUserWorkerPublicData;
+};
+export type WorkerInitData = { // should be from channel_server.js
+  autocreate: boolean;
+  subid_regex: RegExp;
+  filters: TSMap<(source: HandlerSource, data: ApplyChannelDataParam) => void>;
+  handlers: TSMap<
+    ((source: HandlerSource, data: unknown, resp_func: ErrorCallback<unknown>) => void) |
+    ((source: HandlerSource, data: Packet, resp_func: ErrorCallback<unknown>) => void)
+  >;
+  cmds: CmdDef[];
+};
+
+type IDs = TSMap<string|number> & ClientHandlerSource;
+
+let cmd_parse_routes: TSMap<string> = {}; // cmd string -> worker type
 
 let repeated_disconnect = 0;
-let permission_flags_map;
+let permission_flags_map: TSMap<true>;
 
-let permission_flags;
-function applyCustomIds(ids, user_data_public) {
+let permission_flags: string[];
+function applyCustomIds(ids: IDs, user_data_public: BaseUserWorkerPublicData | null): void {
   delete ids.elevated;
-  let perm = user_data_public?.permissions;
+  let perm = user_data_public?.permissions as DataObject;
   for (let ii = 0; ii < permission_flags.length; ++ii) {
     let f = permission_flags[ii];
     if (perm && perm[f]) {
@@ -30,17 +85,32 @@ function applyCustomIds(ids, user_data_public) {
   }
 }
 
+type CmdParseAutoResp = {
+  found: 1;
+  resp: unknown;
+} | {
+  found: 0;
+  resp: undefined;
+  err: string;
+};
+
 export class ClientWorker extends ChannelWorker {
-  constructor(channel_server, channel_id, channel_data) {
+  client_id: string;
+  client: WSClient;
+  ids_base: IDs;
+  ids_direct: IDs;
+  ids: IDs;
+  log_user_id: string | null = null;
+  constructor(channel_server: ChannelServer, channel_id: string, channel_data: EmptyObject) {
     super(channel_server, channel_id, channel_data);
     this.client_id = this.channel_subid; // 1234
-    this.client = null; // WSClient filled in by channel_server
+    this.client = null! as WSClient; // WSClient filled in by channel_server
     this.ids_base = {
       direct: undefined, // so it is iterated
-    };
+    } as IDs; // ?: doesn't have any of HandlerSource fields though?
     this.onLogoutInternal();
     this.ids_direct = new Proxy(this.ids_base, {
-      get: function (target, prop) {
+      get: function (target: IDs, prop: string) {
         if (prop === 'direct') {
           return true;
         }
@@ -59,7 +129,7 @@ export class ClientWorker extends ChannelWorker {
     }
   }
 
-  onLoginInternal(user_id, resp_data) {
+  onLoginInternal(user_id: string, resp_data: LoginRespData): void {
     this.ids_base.user_id = user_id;
     this.ids_base.display_name = resp_data.public_data.display_name;
     this.log_user_id = user_id;
@@ -67,7 +137,7 @@ export class ClientWorker extends ChannelWorker {
     keyMetricsAddTagged('login', this.client.client_tags, 1, 'low');
   }
 
-  onLogoutInternal() {
+  onLogoutInternal(): void {
     this.ids_base.user_id = undefined;
     // Just use the last value in the channel id (not unique, but relatively so)
     this.ids_base.display_name = `guest-${this.channel_subid.split('-').slice(-1)[0]}`;
@@ -75,11 +145,11 @@ export class ClientWorker extends ChannelWorker {
     this.log_user_id = null;
   }
 
-  onLogin(resp_data) {
+  onLogin(resp_data: LoginRespData): void {
     // overrideable
   }
 
-  onApplyChannelData(source, data) {
+  onApplyChannelData(source: HandlerSource, data: ApplyChannelDataParam): void {
     if (!this.ids.user_id) {
       // not logged in yet
       return;
@@ -89,7 +159,7 @@ export class ClientWorker extends ChannelWorker {
       return;
     }
     if (data.key === 'public.display_name') {
-      this.ids_base.display_name = data.value;
+      this.ids_base.display_name = data.value as string;
     }
     if (data.key.startsWith('public.permissions.')) {
       let f = data.key.slice('public.permissions.'.length);
@@ -102,7 +172,7 @@ export class ClientWorker extends ChannelWorker {
       }
     } else if (data.key === 'public.permissions') {
       for (let f in permission_flags_map) {
-        if (data.value && data.value[f]) {
+        if (data.value && (data.value as IDs)[f]) {
           this.ids_base[f] = 1;
         } else {
           delete this.ids_base[f];
@@ -111,17 +181,18 @@ export class ClientWorker extends ChannelWorker {
     }
   }
 
-  onForceKick(source, data) {
+  onForceKick(source: HandlerSource, data: unknown): void {
     assert(this.client.connected);
     this.logCtx('debug', `Disconnecting client ${this.client_id} due to force_kick message`);
     this.client.ws_server.disconnectClient(this.client);
   }
 
-  recentlyForceUnsubbed(channel_id) {
+  recent_force_unsub?: string;
+  recentlyForceUnsubbed(channel_id: string): boolean {
     return this.recent_force_unsub === channel_id;
   }
 
-  onForceUnsub(source, data) {
+  onForceUnsub(source: HandlerSource, data: unknown): void {
     let { channel_id } = source;
     this.logDest(channel_id, 'debug', `Unsubscribing client ${this.client_id} due to force_unsub message`);
     this.unsubscribeOther(channel_id);
@@ -133,11 +204,11 @@ export class ClientWorker extends ChannelWorker {
     this.recent_force_unsub = channel_id;
   }
 
-  onUpload(source, pak, resp_func) {
+  onUpload(source: HandlerSource, pak: Packet, resp_func: ErrorCallback<string>): void {
     pak.ref();
     let mime_type = pak.readAnsiString();
     let max_in_flight = pak.readInt();
-    let buffer = pak.readBuffer();
+    let buffer = pak.readBuffer(false);
     this.logCtx('debug', `sending chunked upload (${mime_type}, ` +
       `${buffer.length} bytes) from ${source.channel_id}`);
     chunkedSend({
@@ -145,7 +216,7 @@ export class ClientWorker extends ChannelWorker {
       mime_type,
       buffer,
       max_in_flight,
-    }, (err, id) => {
+    }, (err: string | undefined | null, id: string) => {
       pak.pool();
       if (err === 'ERR_FAILALL_DISCONNECT') {
         // client disconnected while in progress, nothing unusual
@@ -164,9 +235,9 @@ export class ClientWorker extends ChannelWorker {
     });
   }
 
-  onCSRUserToClientWorker(source, pak, resp_func) {
+  onCSRUserToClientWorker(source: HandlerSource, pak: Packet, resp_func: ErrorCallback<unknown>): void {
     let cmd = pak.readString();
-    let access = pak.readJSON(); // also has original source info in it, but that's fine?
+    let access = pak.readJSON() as IDs; // also has original source info in it, but that's fine?
     // first try to run on connected client
     if (!this.client.connected) {
       return void resp_func('ERR_CLIENT_DISCONNECTED');
@@ -174,7 +245,7 @@ export class ClientWorker extends ChannelWorker {
     pak = this.client.pak('csr_to_client');
     pak.writeString(cmd);
     pak.writeJSON(access);
-    pak.send((err, resp) => {
+    pak.send((err: string | null, resp?: CmdParseAutoResp) => {
       if (err || resp && resp.found) {
         return void resp_func(err, resp ? resp.resp : null);
       }
@@ -184,15 +255,16 @@ export class ClientWorker extends ChannelWorker {
       this.cmdParseAuto({
         cmd,
         access,
-      }, (err, resp2) => {
+      }, (err: string | undefined | null, resp2?: CmdParseAutoResp | null) => {
         resp_func(err, resp2 ? resp2.resp : null);
       });
     });
   }
 
-  onUnhandledMessage(source, msg, data, resp_func) {
+  onUnhandledMessage(source: HandlerSource, msg: string, data: unknown, resp_func_in: HandlerCallback): void {
     assert(this.client);
-    if (!resp_func.expecting_response) {
+    let resp_func = resp_func_in as HandlerCallback | null;
+    if (!(resp_func as unknown as DataObject).expecting_response) {
       resp_func = null;
     }
 
@@ -203,20 +275,24 @@ export class ClientWorker extends ChannelWorker {
       }
     }
 
-    let is_packet = isPacket(data);
-    let pak = this.client.pak('channel_msg', is_packet ? data : null);
-    pak.writeAnsiString(source.channel_id);
-    pak.writeAnsiString(msg);
-    pak.writeBool(is_packet);
-    if (is_packet) {
+    let pak: Packet;
+    if (isPacket(data)) {
+      pak = this.client.pak('channel_msg', data);
+      pak.writeAnsiString(source.channel_id);
+      pak.writeAnsiString(msg);
+      pak.writeBool(true);
       pak.appendRemaining(data);
     } else {
+      pak = this.client.pak('channel_msg');
+      pak.writeAnsiString(source.channel_id);
+      pak.writeAnsiString(msg);
+      pak.writeBool(false);
       pak.writeJSON(data);
     }
-    pak.send(resp_func);
+    pak.send(resp_func || undefined);
   }
 
-  onError(msg) {
+  onError(msg: string | Error): void {
     if (this.client.connected) {
       // This will throw an exception on the client!
       this.error('Unhandled error:', msg);
@@ -226,7 +302,10 @@ export class ClientWorker extends ChannelWorker {
     }
   }
 
-  cmdParseAuto(opts, resp_func) {
+  cmdParseAuto(opts: {
+    cmd: string;
+    access: IDs;
+  }, resp_func: CmdRespFunc<CmdParseAutoResp>): void {
     let { cmd, access } = opts;
     let space_idx = cmd.indexOf(' ');
     let cmd_base = canonical(space_idx === -1 ? cmd : cmd.slice(0, space_idx));
@@ -235,7 +314,7 @@ export class ClientWorker extends ChannelWorker {
     // First try on self
     let not_found = false;
     this.cmd_parse_source = this.ids;
-    this.access = access || this.ids;
+    this.access = (access || this.ids) as Roles;
     this.cmd_parse.handle(this, cmd, (err, resp) => {
       if (err && this.cmd_parse.was_not_found) {
         // this branch guaranteed to be synchronous
@@ -271,8 +350,8 @@ export class ClientWorker extends ChannelWorker {
     }
     let self = this;
     let idx = 0;
-    let last_err;
-    function tryNext() {
+    let last_err: string | undefined;
+    function tryNext(): void {
       if (!self.client.connected) {
         // Disconnected while routing, silently fail; probably already had a failall_disconnect error triggered
         return void resp_func();
@@ -288,7 +367,7 @@ export class ClientWorker extends ChannelWorker {
       let pak = self.pak(channel_id, 'cmdparse_auto');
       pak.writeString(cmd);
       pak.writeJSON(access);
-      pak.send(function (err, resp) {
+      pak.send(function (err, resp?: CmdParseAutoResp) {
         if (!route && !cmd_parse_routes[cmd_base] && resp && resp.found) {
           let target = channel_id.split('.')[0];
           cmd_parse_routes[cmd_base] = target;
@@ -307,7 +386,7 @@ export class ClientWorker extends ChannelWorker {
     tryNext();
   }
 
-  cmdNetDelayServer(str, resp_func) {
+  cmdNetDelayServer(str: string, resp_func: CmdRespFunc): void {
     if (str) {
       this.warnSrc(this.cmd_parse_source, `Setting NetDelay to ${str}`);
       let params = str.split(' ');
@@ -316,7 +395,7 @@ export class ClientWorker extends ChannelWorker {
     let cur = netDelayGet();
     resp_func(null, `Server NetDelay: ${cur[0]}+${cur[1]}`);
   }
-  cmdWSDisconnect(str, resp_func) {
+  cmdWSDisconnect(str: string, resp_func?: CmdRespFunc): void {
     let time = Number(str) || 0;
     if (resp_func) {
       resp_func(null, `Disconnecting in ${time}s...`);
@@ -328,7 +407,7 @@ export class ClientWorker extends ChannelWorker {
       }
     }, time * 1000);
   }
-  cmdWSDisconnectRepeated(str, resp_func) {
+  cmdWSDisconnectRepeated(str: string, resp_func: CmdRespFunc): void {
     let time = Number(str);
     if (!isFinite(time)) {
       return void resp_func('Usage: /ws_disconnect_repeated SECONDS');
@@ -342,8 +421,8 @@ export class ClientWorker extends ChannelWorker {
       ' run /ws_disconnect_repeated 0 to clear');
   }
 
-  logDestCat(cat, channel_id, level, ...args) {
-    let ctx = {
+  logDestCat(cat: string | undefined, channel_id: string, level: string, ...args: unknown[]): void {
+    let ctx: DataObject = {
       client: this.client_id,
     };
     if (cat) {
@@ -356,11 +435,11 @@ export class ClientWorker extends ChannelWorker {
     }
     logEx(ctx, level, `${this.client_id}->${channel_id}:`, ...args);
   }
-  logDest(channel_id, level, ...args) {
+  logDest(channel_id: string, level: string, ...args: unknown[]): void {
     this.logDestCat(undefined, channel_id, level, ...args);
   }
-  logCtx(level, ...args) {
-    let ctx = {
+  logCtx(level: string, ...args: unknown[]): void {
+    let ctx: DataObject = {
       client: this.client_id,
     };
     if (this.log_user_id) {
@@ -373,7 +452,7 @@ export class ClientWorker extends ChannelWorker {
 ClientWorker.prototype.no_datastore = true; // No datastore instances created here as no persistence is needed
 
 let inited = false;
-let client_worker_init_data = {
+let client_worker_init_data: WorkerInitData = {
   autocreate: false,
   subid_regex: /^[a-zA-Z0-9-]+$/,
   filters: {
@@ -403,29 +482,30 @@ let client_worker_init_data = {
     func: ClientWorker.prototype.cmdWSDisconnectRepeated,
   }],
 };
-let client_worker = ClientWorker;
-export function overrideClientWorker(new_client_worker, extra_data) {
+let client_worker: Constructor<ClientWorker> = ClientWorker;
+export function overrideClientWorker(new_client_worker: Constructor<ClientWorker>, extra_data: WorkerInitData): void {
   assert(!inited);
   client_worker = new_client_worker || client_worker;
+  let cwid_do = client_worker_init_data as DataObject;
   for (let key in extra_data) {
-    let v = extra_data[key];
+    let v = (extra_data as DataObject)[key]!;
     if (Array.isArray(v)) {
-      let dest = client_worker_init_data[key] = client_worker_init_data[key] || [];
+      let dest = cwid_do[key] = cwid_do[key] as unknown[] || [];
       for (let ii = 0; ii < v.length; ++ii) {
         dest.push(v[ii]);
       }
     } else if (typeof v === 'object') {
-      let dest = client_worker_init_data[key] = client_worker_init_data[key] || {};
+      let dest = cwid_do[key] = cwid_do[key] as TSMap<unknown> || {};
       for (let subkey in v) {
-        dest[subkey] = v[subkey];
+        dest[subkey] = (v as DataObject)[subkey]!;
       }
     } else {
-      client_worker_init_data[key] = v;
+      cwid_do[key] = v;
     }
   }
 }
 
-export function init(channel_server) {
+export function init(channel_server: ChannelServer): void {
   inited = true;
   permission_flags = serverConfig().permission_flags || [];
   permission_flags_map = {};

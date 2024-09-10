@@ -124,6 +124,7 @@ function setFriendExternalId(friend, provider, external_id) {
   friend.ids[provider] = external_id;
 }
 
+// Note: use BaseUserWorkerPublicData in client_worker.ts when converting this to TypeScript
 export class DefaultUserWorker extends ChannelWorker {
   constructor(channel_server, channel_id, channel_data) {
     super(channel_server, channel_id, channel_data);

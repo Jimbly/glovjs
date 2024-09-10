@@ -1072,6 +1072,7 @@ export class ChannelServer {
       filters: map of message to a function that is called before passing a message off to it's handler function
         useful for low-level messages that are handled internally ("apply_channel_data")
     }
+    Note: TypeScript declaration of WorkerInitData in client_worker.js
    */
   registerChannelWorker(channel_type, ctor, options_in) {
     if (options_in) {
