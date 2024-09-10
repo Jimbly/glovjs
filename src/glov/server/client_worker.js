@@ -1,16 +1,15 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const { ChannelWorker } = require('./channel_worker.js');
-const { chunkedSend } = require('glov/common/chunked_send.js');
-const { canonical } = require('glov/common/cmd_parse.js');
-const { keyMetricsAddTagged } = require('./key_metrics.js');
-const { logEx } = require('./log.js');
-const { isPacket } = require('glov/common/packet.js');
-const { netDelayGet, netDelaySet } = require('glov/common/wscommon.js');
-const { serverConfig } = require('./server_config.js');
+import assert from 'assert';
+import { chunkedSend } from 'glov/common/chunked_send';
+import { canonical } from 'glov/common/cmd_parse';
+import { isPacket } from 'glov/common/packet';
+import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
+import { ChannelWorker } from './channel_worker';
+import { keyMetricsAddTagged } from './key_metrics';
+import { logEx } from './log';
+import { serverConfig } from './server_config';
 
 let cmd_parse_routes = {}; // cmd string -> worker type
 
