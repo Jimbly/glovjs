@@ -33,7 +33,7 @@ import {
   NetResponseCallback,
   isDataObject,
 } from 'glov/common/types';
-import { callEach, logdata, nop } from 'glov/common/util';
+import { callEach, nop } from 'glov/common/util';
 import { entityServerDefaultLoadPlayerEntity, entity_field_defs } from 'glov/server/entity_base_server';
 import { ChannelWorker } from './channel_worker.js';
 import { ChattableWorker } from './chattable_worker.js';
@@ -770,7 +770,8 @@ class ServerEntityManagerImpl<
       actions.push(action_data);
     }
     if (logCategoryEnabled('entverbose')) {
-      this.worker.debugSrcCat(src, 'entverbose', `${src.id}: ent_action_list(${count}): ${logdata(actions)}`);
+      this.worker.debugSrcCat(src, 'entverbose', `${src.id}: ent_action_list(${count}):` +
+        ` ${JSON.stringify(actions).replace(/"/g, '')}`);
     }
     let any_error: string | undefined;
     let results: undefined | ActionListResponse;
