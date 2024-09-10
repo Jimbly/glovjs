@@ -344,11 +344,12 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     }
   }
 
-  private otherEntityChanged(ent_id: EntityID): void {
+  otherEntityChanged(ent_id: EntityID): void {
     let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
     assert(ent);
     let ent_data = ent.data;
+    let ent_pos = ent.getData('pos') as Vector;
     // Relevant fields on ent_data: pos, anything referenced by anim_state_defs
     let ped = this.per_ent_data[ent_id];
     if (!ped) {
@@ -356,14 +357,14 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
       for (let key in anim_state_defs) {
         ped.anim_state[key] = ent_data[key];
       }
-      this.vcopy(ped.pos, ent_data.pos as number[]);
+      this.vcopy(ped.pos, ent_pos);
     }
     for (let key in anim_state_defs) {
       ped.net_anim_state[key] = ent_data[key];
     }
 
-    if (!this.vsame(ped.net_pos, ent_data.pos)) {
-      this.vcopy(ped.net_pos, ent_data.pos as number[]);
+    if (!this.vsame(ped.net_pos, ent_pos)) {
+      this.vcopy(ped.net_pos, ent_pos);
       ped.net_speed = ent_data.speed;
 
       // Keep ped.pos[rot] within PI of ped.net_pos, so interpolation always goes the right way
