@@ -211,7 +211,7 @@ export type HandleNewClientOpts = {
   suppress_join: boolean; // May be modified by override handleNewClient
 };
 
-type ApplyChannelDataParam = {
+export type ApplyChannelDataParam = {
   key: string;
   value: unknown;
 };
