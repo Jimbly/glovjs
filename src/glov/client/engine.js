@@ -327,6 +327,10 @@ export function definesClearAll() {
   return any_changed;
 }
 
+export function debugDefineIsSet(define) {
+  return defines[define];
+}
+
 function normalizeRow(m, idx) {
   let len = m[idx]*m[idx] + m[idx+1]*m[idx+1] + m[idx+2]*m[idx+2];
   if (len > 0) {
