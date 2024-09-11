@@ -249,6 +249,12 @@ export function v2scale(out: Vec2, a: ROVec2, s: number): Vec2 {
   return out;
 }
 
+export function v2iScale(inout: Vec2, s: number): Vec2 {
+  inout[0] *= s;
+  inout[1] *= s;
+  return inout;
+}
+
 export function v2set(out: Vec2, a: number, b: number): Vec2 {
   out[0] = a;
   out[1] = b;
