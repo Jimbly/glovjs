@@ -733,7 +733,7 @@ class ServerEntityManagerImpl<
 
   handleActionList(src: ClientHandlerSource, pak: Packet, resp_func: NetResponseCallback<ActionListResponse>): void {
     let count = pak.readInt();
-    let actions = [];
+    let actions: ActionMessageParam[] = [];
     for (let ii = 0; ii < count; ++ii) {
       let flags = pak.readInt();
       let action_data = {} as ActionMessageParam;
@@ -772,9 +772,13 @@ class ServerEntityManagerImpl<
     if (logCategoryEnabled('entverbose')) {
       this.worker.debugSrcCat(src, 'entverbose', `${src.id}: ent_action_list(${count}): ${logdata(actions)}`);
     }
+    let any_error: string | undefined;
     let results: undefined | ActionListResponse;
     asyncEach(actions, (action_data, next, idx) => {
       function returnResult(err?: string | null, data?: unknown): void {
+        if (err) {
+          any_error = any_error || err;
+        }
         if (data !== undefined || err) {
           results = results || [];
           if (!err) {
@@ -808,6 +812,10 @@ class ServerEntityManagerImpl<
       (action_data as ActionHandlerParam).src = src;
       ent.handleAction(action_data as ActionHandlerParam, returnResult);
     }, (err?: string | null) => {
+      if (err || any_error) {
+        this.worker.infoSrc(src, `${src.id}: ent_action_list(${count}) error "${err || any_error}":` +
+          ` ${JSON.stringify(actions).replace(/"/g, '')}`);
+      }
       resp_func(err, results);
     });
   }
