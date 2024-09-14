@@ -722,3 +722,37 @@ export function cmpNumericSmart(a: string, b: string): number {
 export function mdEscape(text: string): string {
   return text.replace(/([\\[*_])/g, '\\$1');
 }
+
+type AsyncDictCacheInternal<T> = Partial<Record<string, {
+  in_flight?: Array<(value: T) => void>;
+  value?: T;
+}>>;
+let async_dict_caches: Record<string, Record<never, never>> = {};
+export function asyncDictionaryGet<T>(
+  cache_in: string | Record<never, never>, // {}
+  key: string,
+  get: (key: string, cb: (value: T) => void)=> void,
+  cb: (value: T) => void
+): void {
+  if (typeof cache_in === 'string') {
+    cache_in = async_dict_caches[cache_in] = async_dict_caches[cache_in] || {};
+  }
+  let cache = cache_in as AsyncDictCacheInternal<T>;
+  let elem = cache[key];
+  if (elem) {
+    if (elem.in_flight) {
+      elem.in_flight.push(cb);
+    } else {
+      cb(elem.value!);
+    }
+    return;
+  }
+  cache[key] = elem = {
+    in_flight: [cb],
+  };
+  get(key, function (value: T) {
+    assert(elem); // assert() is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+    elem.value = value;
+    callEach(elem.in_flight, elem.in_flight = undefined, value);
+  });
+}
