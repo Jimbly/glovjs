@@ -14,6 +14,7 @@ import {
   FontStyle,
 } from './font';
 import {
+  FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
   ScoreSystem,
   scoreFormatName,
@@ -139,6 +140,7 @@ export type ScoresDrawParam<ScoreType> = {
   no_header?: boolean;
   scroll_key?: string;
   rename_button_size?: number; // default 10 (in text height units)
+  friend_cat?: string;
 };
 
 const skipped_rank_column_def: ColumnDef = {
@@ -166,6 +168,7 @@ export function scoresDraw<ScoreType>({
   no_header,
   scroll_key,
   rename_button_size,
+  friend_cat,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
   if (!font) {
@@ -184,7 +187,7 @@ export function scoresDraw<ScoreType>({
   const hpad = pad/2;
   const button_height = uiButtonHeight();
   const scroll_max_y = y + height - (button_height + pad);
-  let scores = score_system.getHighScores(level_index);
+  let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
   if (!scores) {
     font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, height,
       'Loading...');

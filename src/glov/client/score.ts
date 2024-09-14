@@ -2,11 +2,14 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+export const FRIEND_CAT_FRIENDS = 'friends';
+export const FRIEND_CAT_GLOBAL = 'global';
+
 import assert from 'assert';
 import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { executeWithRetry } from 'glov/common/execute_with_retry';
 import {
-  callEach,
+  asyncDictionaryGet,
   nop,
 } from 'glov/common/util';
 import { cmd_parse } from './cmds';
@@ -15,12 +18,14 @@ import { fetch } from './fetch';
 import type {
   ErrorCallback,
   NetErrorCallback,
+  TSMap,
   VoidFunc,
 } from 'glov/common/types';
 
 const PLAYER_NAME_KEY = 'ld.player_name';
 const USERID_KEY = 'score.userid';
 const FRIENDS_KEY = 'score.friends';
+const FRIEND_SET_CACHE_KEY = 'score.fsc';
 const SCORE_REFRESH_TIME = 5*60*1000; // also refreshes if we submit a new score, or forceRefreshScores() is called
 const SUBMIT_RATELIMIT = 5000; // Only kicks in if two are in-flight at the same time
 
@@ -39,6 +44,7 @@ if (lsd[PLAYER_NAME_KEY]) {
   player_name = lsd[PLAYER_NAME_KEY]!;
 }
 
+let friend_cats: TSMap<string[]> = {};
 let friends_by_code: string[] = [];
 if (lsd[FRIENDS_KEY]) {
   try {
@@ -47,13 +53,16 @@ if (lsd[FRIENDS_KEY]) {
     // ignored
   }
 }
+friend_cats.friends = friends_by_code;
 
 let score_host = 'http://scores.dashingstrike.com';
+let score_use_staging = false;
 if (window.location.host.indexOf('localhost') !== -1 ||
   window.location.host.indexOf('staging') !== -1/* ||
   window.location.host.indexOf('pink') !== -1*/
 ) {
   score_host = 'http://scores.staging.dashingstrike.com';
+  score_use_staging = true;
 }
 if (window.location.href.startsWith('https://')) {
   score_host = score_host.replace(/^http:/, 'https:');
@@ -61,6 +70,9 @@ if (window.location.href.startsWith('https://')) {
 const friends_host = score_host.replace('scores.', 'friends.');
 export function scoreGetPlayerName(): string {
   return player_name;
+}
+export function scoreIsStaging(): boolean {
+  return score_use_staging;
 }
 
 function fetchJSON2<T>(url: string, cb: (err: string | undefined, o: T) => void): void {
@@ -85,7 +97,6 @@ function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | u
 
 let allocated_user_id: string | null = null;
 type UserIDCB = (user_id: string) => void;
-let user_id_fetch_cbs: UserIDCB[] | null = null;
 type UserAllocResponse = { userid: string };
 function withUserID(f: UserIDCB): void {
   if (allocated_user_id === null && lsd[USERID_KEY]) {
@@ -95,33 +106,66 @@ function withUserID(f: UserIDCB): void {
   if (allocated_user_id !== null) {
     return f(allocated_user_id);
   }
-  if (user_id_fetch_cbs !== null) {
-    user_id_fetch_cbs.push(f);
-    return;
-  }
-  user_id_fetch_cbs = [f];
-  let url = `${score_host}/api/useralloc`;
-  function fetchUserID(next: ErrorCallback<string, string>): void {
-    fetchJSON2Timeout<UserAllocResponse>(url, 20000, function (err: string | undefined, res: UserAllocResponse) {
+
+  asyncDictionaryGet<string>('score_user_id', 'the', function (key_the_ignored: string, cb: (value: string) => void) {
+    let url = `${score_host}/api/useralloc`;
+    function fetchUserID(next: ErrorCallback<string, string>): void {
+      fetchJSON2Timeout<UserAllocResponse>(url, 20000, function (err: string | undefined, res: UserAllocResponse) {
+        if (err) {
+          return next(err);
+        }
+        assert(res);
+        assert(res.userid);
+        assert.equal(typeof res.userid, 'string');
+        next(null, res.userid);
+      });
+    }
+    function done(err?: string | null, result?: string | null): void {
+      assert(!err);
+      assert(result);
+      allocated_user_id = result;
+      lsd[USERID_KEY] = result;
+      console.log(`Allocated new ScoreAPI UserID: "${allocated_user_id}"`);
+      cb(allocated_user_id);
+    }
+    executeWithRetry<string, string>(
+      fetchUserID, {
+        max_retries: Infinity,
+        inc_backoff_duration: 250,
+        max_backoff: 30000,
+        log_prefix: 'ScoreAPI UserID fetch',
+      },
+      done,
+    );
+  }, f);
+}
+
+export function scoreWithUserID(cb: UserIDCB): void {
+  withUserID(cb);
+}
+
+type FriendSetResponse = { friendset: string };
+function friendSetFetch(friend_set_key: string, cb: (friend_set_code: string) => void): void {
+  let url = `${friends_host}/api/friendsetget?${friend_set_key}`;
+  function fetchFriendSet(next: ErrorCallback<string, string>): void {
+    fetchJSON2Timeout<FriendSetResponse>(url, 20000, function (err: string | undefined, res: FriendSetResponse) {
       if (err) {
         return next(err);
       }
       assert(res);
-      assert(res.userid);
-      assert.equal(typeof res.userid, 'string');
-      next(null, res.userid);
+      assert(res.friendset);
+      assert.equal(typeof res.friendset, 'string');
+      next(null, res.friendset);
     });
   }
   function done(err?: string | null, result?: string | null): void {
     assert(!err);
     assert(result);
-    allocated_user_id = result;
-    lsd[USERID_KEY] = result;
-    console.log(`Allocated new ScoreAPI UserID: "${allocated_user_id}"`);
-    callEach(user_id_fetch_cbs, user_id_fetch_cbs = null, allocated_user_id);
+    console.log(`Looked up ScoreAPI FriendSet for "${friend_set_key}": "${result}"`);
+    cb(result);
   }
   executeWithRetry<string, string>(
-    fetchUserID, {
+    fetchFriendSet, {
       max_retries: Infinity,
       inc_backoff_duration: 250,
       max_backoff: 30000,
@@ -131,8 +175,42 @@ function withUserID(f: UserIDCB): void {
   );
 }
 
-export function scoreWithUserID(cb: UserIDCB): void {
-  withUserID(cb);
+// run-time cache - caches all queried in this process
+let friend_set_code_cache: TSMap<string> = {};
+// persistent cache - caches just one per friend_cat, populates run-time cache once at startup
+let friend_set_code_persistent_cache: TSMap<[string, string]> = {};
+if (lsd[FRIEND_SET_CACHE_KEY]) {
+  try {
+    friend_set_code_persistent_cache = JSON.parse(lsd[FRIEND_SET_CACHE_KEY]!) as TSMap<[string, string]>;
+    for (let key in friend_set_code_persistent_cache) {
+      let pair = friend_set_code_persistent_cache[key]!;
+      assert.equal(pair.length, 2);
+      friend_set_code_cache[pair[0]] = pair[1];
+    }
+  } catch (e) {
+    // ignored
+  }
+}
+function withFriendSet(friend_cat: string, cb: (friend_set_code: string) => void): void {
+  assert(allocated_user_id);
+  if (friend_cat === FRIEND_CAT_GLOBAL) {
+    // When fetching the global high score list, provide the user's friends' friend_set so
+    //   they can be highlighted (but not filtered)
+    friend_cat = FRIEND_CAT_FRIENDS;
+  }
+  let friend_codes = (friend_cats[friend_cat] || []).map((a) => `f=${a}`);
+  friend_codes.push(`u=${allocated_user_id}`);
+  friend_codes.sort();
+  let friend_set_key = friend_codes.join('&');
+  if (friend_set_code_cache[friend_set_key]) {
+    return cb(friend_set_code_cache[friend_set_key]!);
+  }
+  asyncDictionaryGet('friend_set_code', friend_set_key, friendSetFetch, function (friend_set_code: string) {
+    friend_set_code_cache[friend_set_key] = friend_set_code;
+    friend_set_code_persistent_cache[friend_cat] = [friend_set_key, friend_set_code];
+    lsd[FRIEND_SET_CACHE_KEY] = JSON.stringify(friend_set_code_persistent_cache);
+    cb(friend_set_code);
+  });
 }
 
 export type LevelName = string;
@@ -143,13 +221,17 @@ type ScoreTypeInternal<ScoreType> = ScoreType & {
   submitted?: boolean;
   payload?: string;
 };
+type HighScoreContainer<ScoreType> = {
+  last_refresh_time?: number;
+  refresh_in_flight?: boolean;
+  high_scores?: HighScoreList<ScoreType>;
+  high_scores_raw?: HighScoreListRaw;
+};
 type LevelDefInternal<ScoreType> = {
   name: LevelName;
   local_score?: ScoreTypeInternal<ScoreType>; // internal to score system
-  last_payload?: string;
-  last_refresh_time?: number;
-  refresh_in_flight?: boolean;
   save_in_flight?: boolean;
+  hs_by_cat: TSMap<HighScoreContainer<ScoreType>>;
 };
 export type ScoreSystem<T> = ScoreSystemImpl<T>;
 export type ScoreSystemParam<ScoreType> = {
@@ -222,12 +304,14 @@ class ScoreSystemImpl<ScoreType> {
       for (let level_idx = 0; level_idx < param.level_defs; ++level_idx) {
         level_defs.push({
           name: '', // name filled below
+          hs_by_cat: {},
         });
       }
     } else {
       for (let ii = 0; ii < param.level_defs.length; ++ii) {
         level_defs.push({
           name: param.level_defs[ii].name || '', // name filled below
+          hs_by_cat: {},
         });
       }
     }
@@ -249,20 +333,26 @@ class ScoreSystemImpl<ScoreType> {
     }
   }
 
-  high_scores: Partial<Record<number, HighScoreList<ScoreType>>> = {};
-  high_scores_raw: Partial<Record<number, HighScoreListRaw>> = {};
-  getHighScores(level_idx: number): HighScoreList<ScoreType> | null {
-    this.refreshScores(level_idx);
-    return this.high_scores[level_idx] || null;
+  getHighScores(level_idx: number, friend_cat: string): HighScoreList<ScoreType> | null {
+    this.refreshScores(level_idx, friend_cat);
+    return this.level_defs[level_idx].hs_by_cat[friend_cat]?.high_scores || null;
   }
 
-  private handleScoreResp(level_idx: number, scores: HighScoreListRaw): void {
-    this.high_scores_raw[level_idx] = scores;
-    this.formatScoreResp(level_idx);
+  private handleScoreResp(level_idx: number, friend_cat: string, scores: HighScoreListRaw): void {
+    let ld = this.level_defs[level_idx];
+    let bc = ld.hs_by_cat[friend_cat];
+    if (!bc) {
+      ld.hs_by_cat[friend_cat] = bc = {};
+    }
+    bc.high_scores_raw = scores;
+    this.formatScoreResp(level_idx, friend_cat);
   }
 
-  private formatScoreResp(level_idx: number): void {
-    let scores = this.high_scores_raw[level_idx];
+  private formatScoreResp(level_idx: number, friend_cat: string): void {
+    let ld = this.level_defs[level_idx];
+    let bc = ld.hs_by_cat[friend_cat];
+    assert(bc);
+    let scores = bc.high_scores_raw;
     assert(scores);
 
     let ret: HighScoreList<ScoreType> = {
@@ -322,7 +412,6 @@ class ScoreSystemImpl<ScoreType> {
 
     if (!ret.my_rank) {
       // No score on server, ensure things are consistent
-      let ld = this.level_defs[level_idx];
       if (ld.local_score && ld.local_score.submitted && !ld.save_in_flight) {
         // we submitted it, but it's no longer on the server, must be invalid, clear it locally
         console.log(`score: ${ld.name}: fetched scores, but mine was not in it, deleting local score...`);
@@ -332,13 +421,20 @@ class ScoreSystemImpl<ScoreType> {
       }
     }
 
-    this.high_scores[level_idx] = ret;
+    bc.high_scores = ret;
   }
-  private makeURL(api: string, ld: LevelDef): string {
+  last_friend_cat = FRIEND_CAT_GLOBAL;
+  private makeURL(api: string, ld: LevelDef, friend_cat: string, friend_set_code: string): string {
     assert(allocated_user_id);
     let url = `${score_host}/api/${api}?v2&key=${this.SCORE_KEY}.${ld.name}&userid=${allocated_user_id}`;
     if (this.rel) {
       url += `&rel=${this.rel}`;
+    }
+    if (friend_set_code) {
+      url += `&fs=${friend_set_code}`;
+      if (friend_cat !== FRIEND_CAT_GLOBAL) {
+        url += '&of';
+      }
     }
     if (this.num_names !== 3) {
       url += `&num_names=${this.num_names}`;
@@ -351,93 +447,102 @@ class ScoreSystemImpl<ScoreType> {
     }
     return url;
   }
-  private refreshScores(level_idx: number, changed_cb?: VoidFunc): void {
+  private refreshScores(level_idx: number, friend_cat: string, changed_cb?: VoidFunc): void {
+    this.last_friend_cat = friend_cat;
     let ld = this.level_defs[level_idx];
     if (!ld) {
       ld = this.level_defs[level_idx] = {
         name: String(level_idx),
+        hs_by_cat: {},
       };
     }
-    if (ld.refresh_in_flight) {
+    let bc = ld.hs_by_cat[friend_cat] = ld.hs_by_cat[friend_cat] || {};
+    if (bc.refresh_in_flight) {
       changed_cb?.();
       return;
     }
     let now = Date.now();
-    if (!ld.last_refresh_time || now - ld.last_refresh_time > SCORE_REFRESH_TIME) {
+    if (!bc.last_refresh_time || now - bc.last_refresh_time > SCORE_REFRESH_TIME) {
       // do it
     } else {
       changed_cb?.();
       return;
     }
-    ld.last_refresh_time = now;
-    ld.refresh_in_flight = true;
+    bc.last_refresh_time = now;
+    bc.refresh_in_flight = true;
     // Note: only technically need the `userid` if we have no locally saved
     //   score, are using `rel`, and expect to have a remotely saved score
     //   for our user ID (shouldn't actually ever happen on web)
     withUserID(() => {
-      let url = this.makeURL('scoreget', ld);
+      withFriendSet(friend_cat, (friend_set_code: string) => {
+        let url = this.makeURL('scoreget', ld, friend_cat, friend_set_code);
 
-      let my_score = ld.local_score ? this.score_to_value(ld.local_score) : null;
-      if (my_score) {
-        url += `&score=${my_score}`;
-      }
-      fetchJSON2(
-        url,
-        (err: string | undefined, scores: HighScoreListRaw) => {
-          ld.refresh_in_flight = false;
-          if (!err) {
-            this.handleScoreResp(level_idx, scores);
-          }
-          changed_cb?.();
+        let my_score = ld.local_score ? this.score_to_value(ld.local_score) : null;
+        if (my_score) {
+          url += `&score=${my_score}`;
         }
-      );
+        fetchJSON2(
+          url,
+          (err: string | undefined, scores: HighScoreListRaw) => {
+            bc.refresh_in_flight = false;
+            if (!err) {
+              this.handleScoreResp(level_idx, friend_cat, scores);
+            }
+            changed_cb?.();
+          }
+        );
+      });
     });
   }
 
-  forceRefreshScores(level_idx: number, timeout?: number): void {
+  forceRefreshScores(level_idx: number, friend_cat: string, timeout?: number): void {
     if (timeout === undefined) {
       timeout = 5000;
     }
     let ld = this.level_defs[level_idx];
-    if (ld.last_refresh_time && ld.last_refresh_time < Date.now() - timeout) {
+    let bc = ld.hs_by_cat[friend_cat] = ld.hs_by_cat[friend_cat] || {};
+    if (bc.last_refresh_time && bc.last_refresh_time < Date.now() - timeout) {
       // Old enough we can bump it up now
-      ld.last_refresh_time = 0;
+      bc.last_refresh_time = 0;
     }
-    this.refreshScores(level_idx);
+    this.refreshScores(level_idx, friend_cat);
   }
 
-  prefetchScores(level_idx: number): void {
-    this.refreshScores(level_idx);
+  prefetchScores(level_idx: number, friend_cat: string): void {
+    this.refreshScores(level_idx, friend_cat);
   }
 
   private submitScore(level_idx: number, score: ScoreType, payload?: string, cb?: NetErrorCallback): void {
     let ld = this.level_defs[level_idx];
     let high_score = this.score_to_value(score);
     withUserID(() => {
-      let url = this.makeURL('scoreset', ld);
-      url += `&score=${high_score}`;
-      if (player_name) {
-        url += `&name=${encodeURIComponent(player_name)}`;
-      }
-      if (payload) {
-        let payload_part = `&payload=${encodeURIComponent(payload)}`;
-        if (url.length + payload_part.length >= 2000) {
-          payload_part = '&payload="truncated"';
+      let friend_cat = this.last_friend_cat;
+      withFriendSet(friend_cat, (friend_set_code: string) => {
+        let url = this.makeURL('scoreset', ld, friend_cat, friend_set_code);
+        url += `&score=${high_score}`;
+        if (player_name) {
+          url += `&name=${encodeURIComponent(player_name)}`;
         }
-        url += payload_part;
-        // if (payload.includes('ForceNetError')) {
-        //   url = 'http://errornow.dashingstrike.com/scoreset/error';
-        // }
-      }
-      fetchJSON2(
-        url,
-        (err: string | undefined, scores: HighScoreListRaw) => {
-          if (!err) {
-            this.handleScoreResp(level_idx, scores);
+        if (payload) {
+          let payload_part = `&payload=${encodeURIComponent(payload)}`;
+          if (url.length + payload_part.length >= 2000) {
+            payload_part = '&payload="truncated"';
           }
-          cb?.(err || null);
-        },
-      );
+          url += payload_part;
+          // if (payload.includes('ForceNetError')) {
+          //   url = 'http://errornow.dashingstrike.com/scoreset/error';
+          // }
+        }
+        fetchJSON2(
+          url,
+          (err: string | undefined, scores: HighScoreListRaw) => {
+            if (!err) {
+              this.handleScoreResp(level_idx, friend_cat, scores);
+            }
+            cb?.(err || null);
+          },
+        );
+      });
     });
   }
 
@@ -509,35 +614,39 @@ class ScoreSystemImpl<ScoreType> {
   }
 
   onUpdatePlayerName(old_name: string): void {
-    for (let level_idx in this.high_scores_raw) {
-      let level_idx_number = Number(level_idx);
-      // Strip my old name from the cached responses
-      let scores = this.high_scores_raw[level_idx_number];
-      assert(scores);
-      if (scores.my_rank) {
-        let rank = 1;
-        for (let ii = 0; ii < scores.list.length; ++ii) {
-          let entry = scores.list[ii];
-          let count = entry.c || 1;
-          let this_rank = entry.r || rank;
-          if (this_rank === scores.my_rank) {
-            let n = entry.n;
-            if (n) {
-              if (typeof n === 'string') {
-                n = [n];
-              }
-              let idx = n.indexOf(old_name);
-              if (idx !== -1) {
-                n.splice(idx, 1);
-                entry.n = n;
+    for (let level_idx = 0; level_idx < this.level_defs.length; ++level_idx) {
+      let ld = this.level_defs[level_idx];
+      for (let friend_cat in ld.hs_by_cat) {
+        let scores = ld.hs_by_cat[friend_cat]!.high_scores_raw;
+        if (!scores) {
+          continue;
+        }
+        // Strip my old name from the cached responses
+        if (scores.my_rank) {
+          let rank = 1;
+          for (let ii = 0; ii < scores.list.length; ++ii) {
+            let entry = scores.list[ii];
+            let count = entry.c || 1;
+            let this_rank = entry.r || rank;
+            if (this_rank === scores.my_rank) {
+              let n = entry.n;
+              if (n) {
+                if (typeof n === 'string') {
+                  n = [n];
+                }
+                let idx = n.indexOf(old_name);
+                if (idx !== -1) {
+                  n.splice(idx, 1);
+                  entry.n = n;
+                }
               }
             }
+            rank = this_rank + count;
           }
-          rank = this_rank + count;
         }
+        // Reformat and add new name
+        this.formatScoreResp(level_idx, friend_cat);
       }
-      // Reformat and add new name
-      this.formatScoreResp(level_idx_number);
     }
   }
 }
@@ -588,6 +697,10 @@ export function scoreUpdatePlayerName(new_player_name: string): void {
       }
     });
   });
+}
+
+export function scoreFriendCatAdd(cat: string, list: string[]): void {
+  friend_cats[cat] = list;
 }
 
 export function scoreFriendCodeGet(cb: (err: null | string, code: string) => void): void {
