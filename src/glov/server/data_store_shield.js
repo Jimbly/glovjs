@@ -74,6 +74,7 @@ function DataStoreShield(data_store, opts) {
   this.metric_inflight_get = `${label}.inflight_get`;
   this.metric_inflight_search = `${label}.inflight_search`;
   this.metric_timing = `${label}.timing`;
+  this.metric_timing_search = `${label}.search_timing`;
   this.data_store = data_store;
   this.inflight_set = 0;
   this.inflight_get = 0;
@@ -114,7 +115,11 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
 
       if (err !== ERR_TIMEOUT_FORCED_SHIELD) { // If not already logged about
         let dt = Date.now() - start;
-        metricsStats(self.metric_timing, dt, 'high');
+        if (op === 'search') {
+          metricsStats(self.metric_timing_search, dt, 'low');
+        } else {
+          metricsStats(self.metric_timing, dt, 'high');
+        }
         if (dt > 15000) {
           console.warn(`DATASTORESHIELD(${op}:${uid}:${attempt}) Slow response for ${self.label}:${obj_name}` +
             ` (${(dt/1000).toFixed(1)}s elapsed)`);
