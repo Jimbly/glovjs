@@ -174,6 +174,7 @@ let filtered_errors = new RegExp([
   'betal\\.org',
   'changeNetWork', // mobile Vivo
   'CookieDeprecationLabel', // gtag
+  '__firefox__',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
