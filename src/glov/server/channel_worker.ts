@@ -1053,7 +1053,7 @@ export class ChannelWorker {
     function tick(): void {
       let dt = Date.now() - start;
       let time = self.shouldUseMinRateLimit() ? min_time : max_time;
-      if (dt >= time) {
+      if (dt >= time || !min_time) {
         fn();
       } else {
         setTimeout(tick, min_time);
