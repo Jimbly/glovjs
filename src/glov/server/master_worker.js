@@ -452,6 +452,7 @@ class MasterWorker extends ChannelWorker {
       this.restart_monitor_id = setTimeout(this.monitorRestart.bind(this), 1000);
     } else if (!new_value && this.restart_monitor_id) {
       clearTimeout(this.restart_monitor_id);
+      this.restart_monitor_id = null;
     }
   }
   cmdMasterRestartCountdown(value, resp_func) {
