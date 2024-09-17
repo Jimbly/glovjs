@@ -369,24 +369,23 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
     assert(ent);
-    let ent_data = ent.data;
     let ent_pos = ent.getData('pos') as Vector;
     // Relevant fields on ent_data: pos, anything referenced by anim_state_defs
     let ped = this.per_ent_data[ent_id];
     if (!ped) {
       ped = this.per_ent_data[ent_id] = new PerEntData(this);
       for (let key in anim_state_defs) {
-        ped.anim_state[key] = ent_data[key];
+        ped.anim_state[key] = ent.getData(key);
       }
       this.vcopy(ped.pos, ent_pos);
     }
     for (let key in anim_state_defs) {
-      ped.net_anim_state[key] = ent_data[key];
+      ped.net_anim_state[key] = ent.getData(key);
     }
 
     if (!this.vsame(ped.net_pos, ent_pos)) {
       this.vcopy(ped.net_pos, ent_pos);
-      ped.net_speed = ent_data.speed;
+      ped.net_speed = ent.getData('speed');
 
       // Keep ped.pos[rot] within PI of ped.net_pos, so interpolation always goes the right way
       for (let ii = 0; ii < this.dim_rot; ++ii) {
