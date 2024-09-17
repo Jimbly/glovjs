@@ -61,6 +61,17 @@ export class PerEntData {
     this.net_anim_state = {};
     this.anim_state = {};
   }
+
+  toDebug(ent_pos_manager: EntityPositionManager): string {
+    return [
+      `pos: ${ent_pos_manager.vdebug(this.pos)}`,
+      `net_pos: ${ent_pos_manager.vdebug(this.net_pos)}`,
+      `impulse: ${ent_pos_manager.vdebug(this.impulse)}`,
+      `net_speed: ${typeof this.net_speed === 'number' ? this.net_speed.toFixed(3) : this.net_speed}`,
+      `anim_state: ${Object.entries(this.anim_state).map((a) => a.join(':')).join(', ')}`,
+      `net_anim_state: ${Object.entries(this.net_anim_state).map((a) => a.join(':')).join(', ')}`,
+    ].join('\n');
+  }
 }
 
 export type EntityPositionManager = EntityPositionManagerImpl;
@@ -159,6 +170,16 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
     return this.per_ent_data[ent_id];
   }
 
+  vdebug(vec: Readonly<Vector>): string {
+    let ret = [];
+    for (let ii = 0; ii < this.dim_pos; ++ii) {
+      ret.push(vec[ii].toFixed(3));
+    }
+    for (let ii = 0; ii < this.dim_rot; ++ii) {
+      ret.push((vec[this.dim_pos + ii] * 180 / PI).toFixed(0));
+    }
+    return ret.join(',');
+  }
   vec(fill?: number): Vector {
     let r = new Float64Array(this.n);
     if (fill) {
