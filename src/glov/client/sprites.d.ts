@@ -56,6 +56,7 @@ export interface SpriteDrawParams {
   frame?: number | string;
   rot?: number;
   uvs?: ROVec4; // [u0, v0, u1, v1]
+  blend?: BlendMode;
   color?: ROVec4;
   shader?: Shader;
   shader_params?: ShaderParams;
