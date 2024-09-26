@@ -390,11 +390,15 @@ export class EntityBaseServer extends EntityBaseCommon {
         }
       },
       (next) => {
-        // If action was successful, apply data changes
-        // (should include setting the expected field)
-        for (let key in data_assignments) {
-          let value = data_assignments[key];
-          this.setData(key, value);
+        if (!this.entity_manager.entities[this.id]) {
+          // we've been deleted (in the handler), do not set any data
+        } else {
+          // If action was successful, apply data changes
+          // (should include setting the expected field)
+          for (let key in data_assignments) {
+            let value = data_assignments[key];
+            this.setData(key, value);
+          }
         }
         next();
       },
