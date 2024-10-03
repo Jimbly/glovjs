@@ -719,7 +719,7 @@ class ServerEntityManagerImpl<
     return ent;
   }
 
-  addEntityFromSerialized(data: DataObject): void {
+  addEntityFromSerialized(data: DataObject): Entity {
     let ent = this.createEntity(data);
     assert(!ent.is_player);
     ent.fixupPostLoad();
@@ -729,6 +729,7 @@ class ServerEntityManagerImpl<
 
     // Add to dirty list so full update gets sent to all subscribers
     addToDirtyList(this, ent);
+    return ent;
   }
 
   handleActionList(src: ClientHandlerSource, pak: Packet, resp_func: NetResponseCallback<ActionListResponse>): void {
