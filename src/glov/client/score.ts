@@ -618,7 +618,7 @@ export function scoreFriendCodeGet(cb: (err: null | string, code: string) => voi
 }
 
 cmd_parse.register({
-  cmd: 'friend_code_get',
+  cmd: 'score_friend_code_get',
   help: 'Displays one\'s own friend code',
   func: function (param: string, resp_func: CmdRespFunc): void {
     scoreFriendCodeGet(resp_func);
@@ -626,7 +626,7 @@ cmd_parse.register({
 });
 
 cmd_parse.register({
-  cmd: 'friend_list',
+  cmd: 'score_friend_list',
   help: 'List friends',
   func: function (param: string, resp_func: CmdRespFunc): void {
     resp_func(null, friends_by_code.join(', ') || 'You have no friends');
@@ -634,7 +634,7 @@ cmd_parse.register({
 });
 
 cmd_parse.register({
-  cmd: 'friend_add',
+  cmd: 'score_friend_add',
   help: 'Add friend by friend code',
   func: function (param: string, resp_func: CmdRespFunc): void {
     let fc = param.trim().toUpperCase();
@@ -651,7 +651,7 @@ cmd_parse.register({
 });
 
 cmd_parse.register({
-  cmd: 'friend_remove',
+  cmd: 'score_friend_remove',
   help: 'Remove friend by friend code',
   func: function (param: string, resp_func: CmdRespFunc): void {
     let fc = param.trim().toUpperCase();
