@@ -34,7 +34,7 @@ export interface ExternalUsersClient {
   getFriends?(cb: ErrorCallback<ExternalUserInfo[], string>): void;
   getPartyId?(cb: ErrorCallback<string, string>): void;
   sendRecoverEmail?(email: string, cb: ErrorCallback<string, string>): void;
-  checkEmailVerified?(cb: ErrorCallback<string, string>): void;
+  checkEmailVerified?(cb: ErrorCallback<boolean, string>): void;
 }
 
 const invalid_provider = {
@@ -96,7 +96,7 @@ export function externalUsersSendEmailConfirmation(email: string, cb: ErrorCallb
   client.sendActivationEmail(email, cb);
 }
 
-export function externalUsersCheckEmailVerified(cb: ErrorCallback<string, string>): void {
+export function externalUsersCheckEmailVerified(cb: ErrorCallback<boolean, string>): void {
   assert(setup_email_pass_login_provider);
   const client = getClient(setup_email_pass_login_provider);
   assert(client.checkEmailVerified);

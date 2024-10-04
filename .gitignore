@@ -13,3 +13,4 @@ Bfxr
 *.00?
 config/*.json
 .DS_Store
+wsdebug.json

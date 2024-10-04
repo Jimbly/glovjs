@@ -5,27 +5,37 @@ let modified = {};
 exports.true = true; // for perf.js
 let change_cbs = {};
 
+/* eslint @typescript-eslint/no-use-before-define: ["error",{functions:false}]*/
+// Old API
+exports.get = settingsGet;
+exports.set = settingsSet;
+exports.setAsync = settingsSetAsync;
+exports.runTimeDefault = settingsRunTimeDefault;
+exports.push = settingsPush;
+exports.pop = settingsPop;
+exports.register = settingsRegister;
+
 const assert = require('assert');
 const { titleCase } = require('glov/common/util.js');
 const { cmd_parse } = require('./cmds.js');
 const engine = require('./engine.js');
 
 
-export function get(key) {
+export function settingsGet(key) {
   return exports[key];
 }
 
-export function set(key, value) {
+export function settingsSet(key, value) {
   if (exports[key] !== value) {
     cmd_parse.handle(null, `${key} ${value}`, null); // uses default cmd_parse handler
   }
 }
 
-export function setAsync(key, value) {
-  engine.postTick({ fn: set.bind(null, key, value) });
+export function settingsSetAsync(key, value) {
+  engine.postTick({ fn: settingsSet.bind(null, key, value) });
 }
 
-export function runTimeDefault(key, new_default) {
+export function settingsRunTimeDefault(key, new_default) {
   assert(!change_cbs[key]); // If so, we set `default_clear_on` below, and may have discarded a desired setting.
   // Set a default value that cannot be determined at load time
   // Only set if this has never been modified
@@ -40,7 +50,7 @@ export function settingIsModified(key) {
 }
 
 let settings_stack = null;
-export function push(pairs) {
+export function settingsPush(pairs) {
   assert(!settings_stack);
   settings_stack = {};
   for (let key in pairs) {
@@ -53,7 +63,7 @@ export function push(pairs) {
   }
 }
 
-export function pop() {
+export function settingsPop() {
   assert(settings_stack);
   for (let key in settings_stack) {
     exports[key] = settings_stack[key];
@@ -65,7 +75,7 @@ export function pop() {
   settings_stack = null;
 }
 
-export function register(defs) {
+export function settingsRegister(defs) {
   Object.keys(defs).forEach(function (key) {
     let def = defs[key];
     exports[key] = def.default_value;
@@ -96,7 +106,7 @@ export function register(defs) {
   });
 }
 
-register({
+settingsRegister({
   max_fps: {
     label: 'Maximum frame rate (FPS)',
     prefix_usage_with_help: true,

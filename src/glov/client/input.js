@@ -183,6 +183,7 @@ const { renderNeeded } = require('./engine.js');
 const in_event = require('./in_event.js');
 const local_storage = require('./local_storage.js');
 const { abs, max, min, sqrt } = Math;
+const { normalizeWheel } = require('./normalize_mousewheel.js');
 const pointer_lock = require('./pointer_lock.js');
 const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
@@ -669,10 +670,10 @@ function onWheel(event) {
   let saved = mouse_moved; // don't trigger mouseMoved()
   onMouseMove(event, true);
   mouse_moved = saved;
-  let delta = -event.deltaY || event.wheelDelta || -event.detail;
+  let normalized = normalizeWheel(event);
   wheel_events.push({
     pos: [event.pageX, event.pageY],
-    delta: delta > 0 ? 1 : -1,
+    delta: -normalized.pixel_y/100,
     dispatched: false,
   });
 
@@ -860,9 +861,6 @@ export function startup(_canvas, params) {
   window.addEventListener('focus', onBlurOrFocus, false);
 
   handleTouches(canvas);
-
-  // For iOS, this is needed in test_fullscreen, but not here, for some reason
-  //window.addEventListener('gesturestart', ignored, false);
 
   window.addEventListener('beforeunload', beforeUnload, false);
 }
@@ -1655,6 +1653,7 @@ export function drag(param) {
         is_down_edge,
         down_time: touch_data.down_time,
         touch_id,
+        dropped: touch_data.up_edge,
       };
     }
   }

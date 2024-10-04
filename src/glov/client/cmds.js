@@ -1,11 +1,12 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+import assert from 'assert';
 // Must have NO internal dependencies, otherwise get circular dependencies between this, engine, and settings
-import * as cmd_parse_mod from 'glov/common/cmd_parse';
+import { cmdParseCreate } from 'glov/common/cmd_parse';
 import * as local_storage from './local_storage';
 import * as urlhash from './urlhash';
-export let cmd_parse = cmd_parse_mod.create({ storage: local_storage });
+export let cmd_parse = cmdParseCreate({ storage: local_storage });
 export let safearea = [-1,-1,-1,-1];
 
 function cmdDesc(cmd_data) {
@@ -87,5 +88,36 @@ cmd_parse.register({
       urlhash.go(str); // .goRoute(str) is also a reasonable implementation depending on the context
       profilerStop('/url');
     }, 1);
+  },
+});
+
+cmd_parse.register({
+  cmd: 'client_crash',
+  help: '(Debug) - Crash on the client',
+  access_show: ['sysadmin'],
+  func: function (str, resp_func) {
+    let foo;
+    foo.bar++;
+  }
+});
+
+cmd_parse.register({
+  cmd: 'client_assert',
+  help: '(Debug) - Fail an assert on the client',
+  access_show: ['sysadmin'],
+  func: function (str, resp_func) {
+    assert(false);
+  },
+});
+
+cmd_parse.register({
+  cmd: 'client_reject_now',
+  help: '(Debug) - Fail an unhandled promise rejection on the client (Error, sync)',
+  access_show: ['sysadmin'],
+  func: function (str, resp_func) {
+    // eslint-disable-next-line no-new
+    new Promise((resolve, reject) => {
+      reject(new Error('client_reject_now'));
+    });
   },
 });

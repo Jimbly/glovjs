@@ -55,7 +55,13 @@ class IdMapperWorker extends ChannelWorker {
   }
 
   setData<T>(ds_key: string, data: T, resp_func: ErrorCallback): void {
-    this.channel_server.ds_store_meta.setAsync(ds_key, data, resp_func);
+    this.channel_server.ds_store_meta.setAsync(ds_key, data, (err?: unknown) => {
+      if (err) {
+        this.error(`Error setting ${ds_key}: ${err} at`, new Error().stack);
+        throw err;
+      }
+      resp_func(err);
+    });
   }
 
   getNonDeletedProviderId(provider_id_ds_key: string, resp_func: ErrorCallback<ProviderIdData>): void {
@@ -94,7 +100,10 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapGetId(
     source: HandlerSource,
-    data: { provider: string; provider_id: string },
+    data: {
+      provider: string;
+      provider_id: string;
+    },
     resp_func: ErrorCallback<ProviderIdData>,
   ): void {
     let { provider, provider_id } = data;
@@ -114,7 +123,10 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapGetCreateId(
     source: HandlerSource,
-    data: { provider: string; provider_id: string },
+    data: {
+      provider: string;
+      provider_id: string;
+    },
     resp_func: ErrorCallback<ProviderIdData>,
   ): void {
     let { provider, provider_id } = data;
@@ -292,7 +304,12 @@ class IdMapperWorker extends ChannelWorker {
    */
   handleIdMapAssociateIds(
     source: HandlerSource,
-    data: { provider: string; provider_id: string; user_id: string; set_deleted?: boolean },
+    data: {
+      provider: string;
+      provider_id: string;
+      user_id: string;
+      set_deleted?: boolean;
+    },
     resp_func: ErrorCallback<boolean>,
   ): void {
     let { provider, provider_id, user_id, set_deleted } = data;

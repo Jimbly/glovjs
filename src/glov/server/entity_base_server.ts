@@ -26,6 +26,7 @@ import {
   ErrorCallback,
   HandlerSource,
   NetErrorCallback,
+  TSMap,
   WithRequired,
 } from 'glov/common/types';
 import {
@@ -290,6 +291,7 @@ export class EntityBaseServer extends EntityBaseCommon {
     this.entity_manager.dirty(this, field, delete_reason);
   }
 
+  private action_async_locks?: TSMap<string>;
   handleAction(action_data: ActionHandlerParam, resp_func: NetErrorCallback<unknown>): void {
     let { action_id, ent_id, predicate, self, /*payload, */data_assignments, src } = action_data;
 
@@ -322,6 +324,11 @@ export class EntityBaseServer extends EntityBaseCommon {
           return void resp_func('ERR_FIELD_MISMATCH');
         }
       }
+      if (this.action_async_locks && this.action_async_locks[field]) {
+        this.debugSrc(src, `Rejecting action ${action_id} ` +
+          `due to field "${field}" has outstanding async lock "${this.action_async_locks[field]}"`);
+        return void resp_func('ERR_ASYNC_LOCK');
+      }
     }
 
     for (let key in data_assignments) {
@@ -349,25 +356,49 @@ export class EntityBaseServer extends EntityBaseCommon {
           if (!data_assignments) {
             data_assignments = action_data.data_assignments = {}; // in case the handler wants to add some
           }
-          let is_async = true;
+          let is_async: boolean | 'unknown' = 'unknown';
           handler.call(this, action_data, (err?: string | null, data?: unknown) => {
-            is_async = false;
+            if (is_async === true) {
+              if (predicate) {
+                let { field } = predicate;
+                let next_value = data_assignments[field];
+                assert(next_value && typeof next_value === 'string');
+                assert(this.action_async_locks);
+                assert.equal(next_value, this.action_async_locks[field]);
+                delete this.action_async_locks[field];
+              }
+            } else {
+              is_async = false;
+            }
             result = data;
             next(err);
           });
           if (is_async) {
-            assert(!predicate); // Otherwise, predicate is checked and applied non-atomically
+            is_async = true;
+            if (predicate) {
+              // Lock based on the predicated field until this action completes, otherwise
+              // some other action could pass its predicate and apply changes out of order
+              let { field } = predicate;
+              let next_value = data_assignments[field];
+              assert(next_value && typeof next_value === 'string');
+              this.action_async_locks = this.action_async_locks || {};
+              this.action_async_locks[field] = next_value;
+            }
           }
         } else {
           next();
         }
       },
       (next) => {
-        // If action was successful, apply data changes
-        // (should include setting the expected field)
-        for (let key in data_assignments) {
-          let value = data_assignments[key];
-          this.setData(key, value);
+        if (!this.entity_manager.entities[this.id]) {
+          // we've been deleted (in the handler), do not set any data
+        } else {
+          // If action was successful, apply data changes
+          // (should include setting the expected field)
+          for (let key in data_assignments) {
+            let value = data_assignments[key];
+            this.setData(key, value);
+          }
         }
         next();
       },

@@ -7,6 +7,8 @@ let error_report_dynamic_details = {};
 import { getAPIPath } from 'glov/client/environments';
 import { platformGetID } from './client_config';
 import { fetch } from './fetch';
+import { getStoragePrefix } from './local_storage';
+import { unlocatePaths } from './locate_asset';
 
 let error_report_disabled = false;
 
@@ -31,6 +33,7 @@ export function errorReportSetDynamicDetails(key, fn) {
 }
 
 errorReportSetDetails('build', BUILD_TIMESTAMP);
+errorReportSetDetails('project', getStoragePrefix());
 errorReportSetDetails('sesuid', session_uid);
 errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
@@ -82,6 +85,27 @@ export function glovErrorReportDisableSubmit() {
 let on_crash_cb = null;
 export function glovErrorReportSetCrashCB(cb) {
   on_crash_cb = cb;
+}
+
+// base like http://foo.com/bar/ (without index.html)
+let reporting_api_path = 'http://www.dashingstrike.com/reports/api/';
+if (window.location.host.indexOf('localhost') !== -1 ||
+  window.location.host.indexOf('staging') !== -1/* ||
+  window.location.host.indexOf('pink') !== -1*/
+) {
+  reporting_api_path = 'http://staging.dashingstrike.com/reports/api/';
+  // reporting_api_path = 'http://localhost:4022/api/';
+}
+if (window.location.href.startsWith('https://')) {
+  reporting_api_path = reporting_api_path.replace(/^http:/, 'https:');
+}
+
+let use_app_api_path = false;
+export function reportingUseAppAPIPath() {
+  use_app_api_path = true;
+}
+export function reportingAPIPath() {
+  return use_app_api_path ? getAPIPath() : reporting_api_path;
 }
 
 // Errors from plugins that we don't want to get reported to us, or show the user!
@@ -141,9 +165,20 @@ let filtered_errors = new RegExp([
   'closeModal',
   'WeixinJSBridge',
   '/prebid', // Some third-party ad provider
+  'property: websredir', // unknown source, happens often for a couple users on Opera and Chrome
+  'property: googletag', // unknown source, Opera ad blocker?
+  'ResizeObserver loop', // unknown source, but isn't used by us
+  'nav_call_update_item_status',
+  'GetHTMLElementsAtPoint', // baiduboxapp
+  'ToolbarStatus',
+  'betal\\.org',
+  'changeNetWork', // mobile Vivo
+  'CookieDeprecationLabel', // gtag
+  '__firefox__',
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
+  msg = unlocatePaths(msg);
   console.error(msg);
   if (on_crash_cb) {
     on_crash_cb();
@@ -151,6 +186,9 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
     // just logged and should not corrupt state.
+    if (msg.match(filtered_errors)) {
+      return false;
+    }
     ++crash_idx;
     let now = Date.now();
     let dt = now - last_error_time;
@@ -165,13 +203,10 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
       // flag errors as primary or secondary.
       return false;
     }
-    if (msg.match(filtered_errors)) {
-      return false;
-    }
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
-  let url = getAPIPath(); // base like http://foo.com/bar/ (without index.html)
-  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(file)}` +
+  let url = reportingAPIPath(); // base like http://foo.com/bar/ (without index.html)
+  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(unlocatePaths(file))}` +
     `&line=${line||0}&col=${col||0}` +
     `&msg=${escape(msg)}${errorReportDetailsString()}`;
   if (submit_errors) {

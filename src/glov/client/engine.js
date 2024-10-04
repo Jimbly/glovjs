@@ -13,7 +13,14 @@ let startup_funcs = [];
 exports.require = require; // For browser console debugging
 
 const assert = require('assert');
-const { is_ios_safari } = require('./browser.js');
+const {
+  is_ios,
+  is_ios_chrome,
+  is_ios_safari,
+  is_ipad,
+  safari_version_major,
+  safari_version_minor,
+} = require('./browser.js');
 const { buildUIStartup } = require('./build_ui.js');
 const camera2d = require('./camera2d.js');
 const cmds = require('./cmds.js');
@@ -92,7 +99,7 @@ const verify = require('glov/common/verify.js');
 const {
   mat3, mat4,
   mat4isFinite,
-  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4set,
+  vec3, vec4, v3mulMat4, v3iNormalize, v4copy, v4same, v4scale, v4set,
 } = require('glov/common/vmath.js');
 const { webFSStartup } = require('./webfs.js');
 const { profanityStartupLate } = require('./words/profanity.js');
@@ -258,25 +265,23 @@ export function releaseCanvas() {
   }
 }
 
+function reloadDefault() {
+  document.location.reload();
+}
+
+let reload_func = reloadDefault;
+
+export function engineSetReloadFunc(fn) {
+  reload_func = fn;
+}
+
 export function reloadSafe() {
   // Do not report any errors after this point
   errorReportDisable();
   // Release canvas to not leak memory on Firefox
   releaseCanvas();
-  if (window.FBInstant) {
-    try {
-      window.top.location.reload();
-    } catch (e) {
-      try {
-        document.location.reload();
-      } catch {
-        // Not good, but better than the alternatives, I guess
-        window.FBInstant.quit();
-      }
-    }
-  } else {
-    document.location.reload();
-  }
+
+  reload_func();
 }
 window.reloadSafe = reloadSafe;
 
@@ -320,6 +325,10 @@ export function definesClearAll() {
     definesChanged();
   }
   return any_changed;
+}
+
+export function debugDefineIsSet(define) {
+  return defines[define];
 }
 
 function normalizeRow(m, idx) {
@@ -498,6 +507,10 @@ const SAFARI_FULLSCREEN_ASPECT = (function () {
     return 0;
   }
   const SAFARI_DIMS = { // wxh : [fullscreen aspect]
+    // iPhone 12 Pro Max
+    '926,428': 926/428,
+    // iPhone 12
+    '844,390': 844/390,
     // iPhone XR
     // iPhone 11 Pro Max
     // iPhone XS Max
@@ -525,32 +538,111 @@ const SAFARI_FULLSCREEN_ASPECT = (function () {
   return SAFARI_DIMS[key] || 0;
 }());
 function safariTopSafeArea(view_w, view_h) {
-  // Detect if the URL bar is hidden, but should be a safe area
-  if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
-    // Note: if user has scaling enabled, the padding required might be different
-    //   but the same holds true for the safe area padding detected via CSS!
-    return 50 * (window.devicePixelRatio || 1); // seems to be 50pts on all devices
+  if (is_ios_safari && safari_version_major < 16) {
+    // Definitely needed on v14 and lower; seen this needed on v15.1 as well
+    // Detect if the URL bar is hidden, but should be a safe area
+    if (SAFARI_FULLSCREEN_ASPECT && nearSame(view_w/view_h, SAFARI_FULLSCREEN_ASPECT, 0.001)) {
+      // Note: if user has scaling enabled, the padding required might be different
+      //   but the same holds true for the safe area padding detected via CSS!
+      return 28; // seems to be visually around 50pts, but touch area of ~25 pts on all devices
+    }
+  }
+  return 0;
+}
+function isPortrait(view_w, view_h) {
+  return view_h >= view_w * 0.8;
+}
+let kb_up_last_w = 0;
+let kb_up_last_h = 0;
+let kb_up_ret = false;
+let kb_up_frame = 0;
+function isKeyboardUp(view_w, view_h) {
+  if (!view_w) {
+    return kb_up_ret;
+  }
+  if (!is_ios) {
+    // probably logic is still valid, but not currently needed in other browsers?
+    return false;
+  }
+  if (!nearSame(view_w, kb_up_last_w, 5)) {
+    // init, or just rotated, assume not up
+    kb_up_ret = false;
+  } else if (!nearSame(view_h, kb_up_last_h, 5)) {
+    // same width
+    if (view_h < kb_up_last_h) {
+      // shrunk
+      kb_up_ret = true;
+    } else if (view_h > kb_up_last_h) {
+      // expanded
+      kb_up_ret = false;
+    }
+  }
+  kb_up_last_w = view_w;
+  kb_up_last_h = view_h;
+  ++kb_up_frame;
+  if (kb_up_frame < 3) {
+    // window.innerHeight and related shrink during the first couple frames on iOS 12.1
+    //   if in landscape and there's a URL bar / other tabs open
+    kb_up_ret = false;
+  }
+  return kb_up_ret;
+}
+function safariBottomSafeArea(view_w, view_h) {
+  // iOS === 15.0 doesn't respect safe area; 15.1 is offset
+  if (is_ios_safari && safari_version_major === 15 && safari_version_minor < 2 &&
+    isKeyboardUp() &&
+    isPortrait(view_w, view_h)
+  ) {
+    if (safari_version_minor === 0) {
+      // unknown whether or not this is correct on iPad, assuming needed now to be safe
+      return 52;
+    } else if (safari_version_minor === 1) {
+      if (!is_ipad) {
+        return 8; // v15.1
+      }
+    }
+  }
+  if (is_ios_chrome && is_ipad && safari_version_major >= 13 &&
+    isKeyboardUp()
+  ) {
+    // seen specific issue resolved by this on at least: 13.2/4 14.0/1/5 15.1/5 16.0/1/2/3
+    // v17 doesn't seem to (always?) have a fixed offset, is also buggy with
+    //   scroll pos, so let's add some safe area so it's more likely to be visible
+    // Note: v12 has no visual viewport, so we can't tell if the keyboard is up
+    return 44;
   }
   return 0;
 }
 
+// Get safe area by examining safe-area-inset padded element
+function getSafeAreaFromDOM(out, safearea, view_w, view_h) {
+  if (safearea && safearea.offsetWidth && safearea.offsetHeight) {
+    out[0] = safearea.offsetLeft;
+    out[1] = view_w - safearea.offsetWidth - safearea.offsetLeft;
+    // "view_h - window.innerHeight" is for iOS 12
+    out[2] = max(safearea.offsetTop, view_h - window.innerHeight);
+    out[3] = view_h - safearea.offsetHeight - safearea.offsetTop;
+  }
+}
 
 let last_canvas_width;
 let last_canvas_height;
 let last_body_height;
 let safearea_elem;
 let safearea_ignore_bottom = false;
-let safearea_values = [0,0,0,0];
-let last_safearea_values = [0,0,0,0];
+let safearea_dom = vec4();
+let safearea_canvas = vec4();
+let last_safearea_canvas = vec4();
 function checkResize() {
   profilerStart('checkResize');
   // use VisualViewport on at least iOS Safari - deal with tabs and keyboard
   //   shrinking the viewport without changing the window height
-  let vv = window.visualViewport || {};
-  dom_to_canvas_ratio = window.devicePixelRatio || 1;
-  dom_to_canvas_ratio *= settings.render_scale_all;
-  let view_w = (vv.width || window.innerWidth);
-  let view_h = (vv.height || window.innerHeight);
+  let vv = window.visualViewport;
+  let dom_to_pixels = window.devicePixelRatio || 1;
+  dom_to_canvas_ratio = dom_to_pixels * settings.render_scale_all;
+  let view_w = vv ? vv.width : window.innerWidth;
+  let view_h = vv ? vv.height :
+    is_ios_safari && window.pageYOffset ? document.documentElement.clientHeight : window.innerHeight;
   if (view_h !== last_body_height) {
     // set this *before* getting canvas and safearea_elem dims below
     last_body_height = view_h;
@@ -558,35 +650,39 @@ function checkResize() {
       document.body.style.height = `${view_h}px`;
     }
   }
+  // safearea_dom - left, right, top, bottom PADDING values
+  v4set(safearea_dom, 0, 0, 0, 0);
+  getSafeAreaFromDOM(safearea_dom, safearea_elem, view_w, view_h);
+  isKeyboardUp(view_w, view_h - safearea_dom[2] - safearea_dom[3]);
+  safearea_dom[2] = max(safearea_dom[2], safariTopSafeArea(view_w, view_h));
+  if (safearea_dom[3] && (
+    // iOS 15.0: Keyboard is up, but safe area is not being removed, remove it.
+    is_ios && isKeyboardUp() ||
+    // General: Possibly ignoring bottom safe area by app request, it seems not
+    //  useful on iPhones (does not adjust when keyboard is up, only obscured in
+    //  the middle, if obeying left/right safe area)
+    safearea_ignore_bottom
+  )) {
+    safearea_dom[3] = 0;
+  }
+  safearea_dom[3] = max(safearea_dom[3], safariBottomSafeArea(view_w, view_h));
+
   let rect = canvas.getBoundingClientRect();
   let new_width = round(rect.width * dom_to_canvas_ratio) || 1;
   let new_height = round(rect.height * dom_to_canvas_ratio) || 1;
 
   if (cmds.safearea[0] === -1) {
-    if (safearea_elem) {
-      let sa_width = safearea_elem.offsetWidth;
-      let sa_height = safearea_elem.offsetHeight;
-      if (sa_width && sa_height) {
-        v4set(safearea_values,
-          safearea_elem.offsetLeft * dom_to_canvas_ratio,
-          new_width - (sa_width + safearea_elem.offsetLeft) * dom_to_canvas_ratio,
-          max(safearea_elem.offsetTop * dom_to_canvas_ratio,
-            safariTopSafeArea(view_w, view_h) * settings.render_scale_all),
-          // Note: Possibly ignoring bottom safe area, it seems not useful on iPhones (does not
-          //  adjust when keyboard is up, only obscured in the middle, if obeying left/right safe area)
-          safearea_ignore_bottom ? 0 : new_height - (sa_height + safearea_elem.offsetTop) * dom_to_canvas_ratio);
-      }
-    }
+    v4scale(safearea_canvas, safearea_dom, dom_to_canvas_ratio);
   } else {
-    v4set(safearea_values,
+    v4set(safearea_canvas,
       new_width * clamp(cmds.safearea[0], 0, 25)/100,
       new_width * clamp(cmds.safearea[1], 0, 25)/100,
       new_height * clamp(cmds.safearea[2], 0, 25)/100,
       new_height * clamp(cmds.safearea[3], 0, 25)/100);
   }
-  if (!v4same(safearea_values, last_safearea_values)) {
-    v4copy(last_safearea_values, safearea_values);
-    camera2d.setSafeAreaPadding(safearea_values[0], safearea_values[1], safearea_values[2], safearea_values[3]);
+  if (!v4same(safearea_canvas, last_safearea_canvas)) {
+    v4copy(last_safearea_canvas, safearea_canvas);
+    camera2d.setSafeAreaPadding(safearea_canvas[0], safearea_canvas[1], safearea_canvas[2], safearea_canvas[3]);
     need_repos = max(need_repos, 1);
   }
 
@@ -602,10 +698,14 @@ function checkResize() {
     need_repos = 10;
     renderNeeded();
   }
-  if (is_ios_safari && (window.visualViewport || need_repos)) {
-    // we have accurate view information, or screen was just rotated / resized
-    // force scroll to top
-    window.scroll(0,0);
+  if (window.visualViewport && (is_ios_safari || true)) {
+    // Note: used to also have: || need_repos // or screen was just rotated / resized
+
+    // we have accurate view information, force scroll to top, always
+    // should maybe do this any time an edit box is not in focus as well
+    if (window.pageYOffset || window.document.body.scrollTop) {
+      window.scroll(0,0);
+    }
   }
   profilerStop('checkResize');
 }
@@ -818,11 +918,15 @@ function resetState() {
   profilerStop('resetState');
 }
 
+let blurred = false;
 let in_background = false;
 let enter_background_cb = [];
 let exit_background_cb = [];
 export function isInBackground() {
   return in_background;
+}
+export function isInBackgroundOrBlurred() {
+  return in_background || blurred;
 }
 export function onEnterBackground(fn) {
   enter_background_cb.push(fn);
@@ -905,7 +1009,6 @@ function tick(timestamp) {
   frame_dt = dt;
   last_tick = now;
   frame_timestamp += dt;
-  ++frame_index;
   errorReportSetTimeAccum(frame_timestamp);
 
   fixNatives(false);
@@ -952,6 +1055,9 @@ function tick(timestamp) {
     profilerStop();
     return profilerStop('tick');
   }
+
+  ++frame_index;
+
   if (in_background) {
     in_background = false;
     callEach(exit_background_cb);
@@ -982,7 +1088,7 @@ function tick(timestamp) {
   fontTick();
   camera2d.tickCamera2D();
   glov_transition.render(dt);
-  camera2d.setAspectFixed(game_width, game_height);
+  camera2d.setAspectFixedRespectPixelPerfect(game_width, game_height);
 
   profilerStopStart('mid');
 
@@ -1105,7 +1211,6 @@ function tick(timestamp) {
   return profilerStop('tick');
 }
 
-let blurred = false;
 function onBlur(evt) {
   blurred = true;
 }
@@ -1151,7 +1256,11 @@ export function setFonts(new_font, title_font) {
 }
 
 export function engineStartupFunc(func) {
-  startup_funcs.push(func);
+  if (startup_funcs) {
+    startup_funcs.push(func);
+  } else {
+    func();
+  }
 }
 
 export function startup(params) {
@@ -1353,7 +1462,7 @@ export function startup(params) {
 
   callEach(startup_funcs, startup_funcs = null);
 
-  camera2d.setAspectFixed(game_width, game_height);
+  camera2d.setAspectFixedRespectPixelPerfect(game_width, game_height);
 
   if (params.state) {
     setState(params.state);

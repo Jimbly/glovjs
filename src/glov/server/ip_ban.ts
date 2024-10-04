@@ -1,6 +1,5 @@
 import assert from 'assert';
 import { BlockList } from 'net';
-import { CmdRespFunc } from 'glov/common/types';
 import { merge } from 'glov/common/util';
 import { ChannelServerWorker } from './channel_server_worker';
 import { GlobalWorker } from './global_worker';
@@ -8,6 +7,8 @@ import {
   serverGlobalsReady,
   serverGlobalsRegister,
 } from './server_globals';
+
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 const { floor } = Math;
 
@@ -96,6 +97,10 @@ let banranges: BlockList;
 export function ipBanned(ip: string): boolean {
   assert(ip);
   assert(banlist);
+  let split = ip.split(',');
+  if (split.length > 1) {
+    return split.some(ipBanned);
+  }
   let entry = banlist[ip];
   if (entry && entry.expires*1000 > Date.now()) {
     return true;

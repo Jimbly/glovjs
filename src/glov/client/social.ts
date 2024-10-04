@@ -5,6 +5,7 @@
 
 import assert from 'assert';
 import * as settings from 'glov/client/settings';
+import { settingsRegister, settingsSet } from 'glov/client/settings';
 import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
@@ -12,15 +13,8 @@ import {
   PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums';
 import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
-import {
-  ErrorCallback,
-  FriendCmdResponse,
-  NetErrorCallback,
-  PresenceEntry,
-  TSMap,
-} from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
-import { Vec4 } from 'glov/common/vmath';
+import { ROVec4 } from 'glov/common/vmath';
 import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
 import { ExternalUserInfo } from './external_user_info';
@@ -33,6 +27,15 @@ import {
 } from './net';
 import { Sprite, spriteCreate } from './sprites';
 import { textureLoad } from './textures';
+
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
+import type {
+  ErrorCallback,
+  FriendCmdResponse,
+  NetErrorCallback,
+  PresenceEntry,
+  TSMap,
+} from 'glov/common/types';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -100,50 +103,6 @@ export function friendUnblock(user_id: string, cb: NetErrorCallback<string>): vo
   makeFriendCmdRequest('friend_unblock', user_id, cb);
 }
 
-// Pass-through commands
-cmd_parse.register({
-  cmd: 'friend_add',
-  help: 'Add a friend',
-  func: friendAdd,
-});
-cmd_parse.register({
-  cmd: 'friend_remove',
-  help: 'Remove a friend',
-  func: friendRemove,
-});
-cmd_parse.register({
-  cmd: 'friend_block',
-  help: 'Block someone from seeing your rich presence, also removes from your friends list',
-  func: friendBlock,
-});
-cmd_parse.register({
-  cmd: 'friend_unblock',
-  help: 'Reset a user to allow seeing your rich presence again',
-  func: friendUnblock,
-});
-cmd_parse.register({
-  cmd: 'friend_list',
-  help: 'List all friends',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
-    if (!friend_list) {
-      return void resp_func('Friends list not loaded');
-    }
-    resp_func(null, Object.keys(friend_list).filter(isFriend).join(',') ||
-      'You have no friends');
-  },
-});
-cmd_parse.register({
-  cmd: 'friend_block_list',
-  help: 'List all blocked users',
-  func: function (str: string, resp_func: ErrorCallback<string>) {
-    if (!friend_list) {
-      return void resp_func('Friends list not loaded');
-    }
-    resp_func(null, Object.keys(friend_list).filter(friendIsBlocked).join(',') ||
-      'You have no blocked users');
-  },
-});
-
 export const SOCIAL_ONLINE = 1;
 export const SOCIAL_AFK = 2;
 export const SOCIAL_INVISIBLE = 3;
@@ -151,39 +110,13 @@ export type SocialPresenceStatus = typeof SOCIAL_ONLINE | typeof SOCIAL_AFK | ty
 declare module 'glov/client/settings' {
   let social_presence: SocialPresenceStatus;
 }
-settings.register({
-  social_presence: {
-    default_value: SOCIAL_ONLINE,
-    type: cmd_parse.TYPE_INT,
-    range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
-    access_show: ['hidden'],
-  },
-});
 
 export function socialPresenceStatusGet(): SocialPresenceStatus {
   return settings.social_presence;
 }
 export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
-  settings.set('social_presence', value);
+  settingsSet('social_presence', value);
 }
-
-cmd_parse.registerValue('invisible', {
-  type: cmd_parse.TYPE_INT,
-  help: 'Hide rich presence information from other users',
-  label: 'Invisible',
-  range: [0,1],
-  get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
-  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
-});
-
-cmd_parse.registerValue('afk', {
-  type: cmd_parse.TYPE_INT,
-  help: 'Appear as idle to other users',
-  label: 'AFK',
-  range: [0,1],
-  get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
-  set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
-});
 
 function onPresence(this: ClientUserChannel, data: TSMap<PresenceEntry>): void {
   let user_channel = this;
@@ -411,8 +344,8 @@ function requestExternalFriends(provider: string,
 
 export type UserProfileImage = {
   img: Sprite;
-  img_color?: Vec4;
-  frame?: number;
+  img_color?: ROVec4;
+  frame?: number | string;
 };
 let profile_images: Record<string, UserProfileImage> = {};
 let default_profile_image: UserProfileImage;
@@ -519,4 +452,76 @@ export function socialInit(): void {
 
   netSubs().onChannelMsg('user', 'presence', onPresence);
   netSubs().onChannelEvent('user', 'unsubscribe', onUnSubscribe);
+
+  // Pass-through commands
+  cmd_parse.register({
+    cmd: 'friend_add',
+    help: 'Add a friend',
+    func: friendAdd,
+  });
+  cmd_parse.register({
+    cmd: 'friend_remove',
+    help: 'Remove a friend',
+    func: friendRemove,
+  });
+  cmd_parse.register({
+    cmd: 'friend_block',
+    help: 'Block someone from seeing your rich presence, also removes from your friends list',
+    func: friendBlock,
+  });
+  cmd_parse.register({
+    cmd: 'friend_unblock',
+    help: 'Reset a user to allow seeing your rich presence again',
+    func: friendUnblock,
+  });
+  cmd_parse.register({
+    cmd: 'friend_list',
+    help: 'List all friends',
+    func: function (str: string, resp_func: CmdRespFunc<string>) {
+      if (!friend_list) {
+        return void resp_func('Friends list not loaded');
+      }
+      resp_func(null, Object.keys(friend_list).filter(isFriend).join(',') ||
+        'You have no friends');
+    },
+  });
+  cmd_parse.register({
+    cmd: 'friend_block_list',
+    help: 'List all blocked users',
+    func: function (str: string, resp_func: CmdRespFunc<string>) {
+      if (!friend_list) {
+        return void resp_func('Friends list not loaded');
+      }
+      resp_func(null, Object.keys(friend_list).filter(friendIsBlocked).join(',') ||
+        'You have no blocked users');
+    },
+  });
+
+  settingsRegister({
+    social_presence: {
+      default_value: SOCIAL_ONLINE,
+      type: cmd_parse.TYPE_INT,
+      range: [SOCIAL_ONLINE,SOCIAL_INVISIBLE],
+      access_show: ['hidden'],
+    },
+  });
+
+  cmd_parse.registerValue('invisible', {
+    type: cmd_parse.TYPE_INT,
+    help: 'Hide rich presence information from other users',
+    label: 'Invisible',
+    range: [0,1],
+    get: () => (settings.social_presence === SOCIAL_INVISIBLE ? 1 : 0),
+    set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_INVISIBLE : SOCIAL_ONLINE),
+  });
+
+  cmd_parse.registerValue('afk', {
+    type: cmd_parse.TYPE_INT,
+    help: 'Appear as idle to other users',
+    label: 'AFK',
+    range: [0,1],
+    get: () => (settings.social_presence === SOCIAL_AFK ? 1 : 0),
+    set: (v: number) => socialPresenceStatusSet(v ? SOCIAL_AFK : SOCIAL_ONLINE),
+  });
+
 }

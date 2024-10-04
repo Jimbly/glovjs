@@ -38,6 +38,7 @@ export const sprites = {};
 
 /* eslint-disable import/order */
 const assert = require('assert');
+const { autoAtlas } = require('./autoatlas');
 const camera2d = require('./camera2d.js');
 const { editBoxCreate, editBoxTick } = require('./edit_box.js');
 const effects = require('./effects.js');
@@ -46,7 +47,7 @@ const glov_engine = require('./engine.js');
 const glov_font = require('./font.js');
 const { ALIGN, fontSetDefaultSize, fontStyle, fontStyleColored } = glov_font;
 const glov_input = require('./input.js');
-const { linkTick } = require('./link.js');
+const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { markdownAuto } = require('./markdown');
 const { abs, floor, max, min, round, sqrt } = Math;
@@ -157,7 +158,7 @@ export function addHook(draw, click) {
   });
 }
 
-let per_frame_dom_alloc = [0,0,0,0,0,0,0];
+let per_frame_dom_alloc = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 let per_frame_dom_suppress = 0;
 export function suppressNewDOMElemWarnings() {
   per_frame_dom_suppress = glov_engine.frame_index + 1;
@@ -405,6 +406,10 @@ export function loadUISprite2(name, param) {
     // skip it, assume not used
     return;
   }
+  if (param.atlas) {
+    sprites[name] = autoAtlas(param.atlas, param.name || name);
+    return;
+  }
   let wrap_s = gl.CLAMP_TO_EDGE;
   let wrap_t = param.wrap_t ? gl.REPEAT : gl.CLAMP_TO_EDGE;
   let sprite_param = {
@@ -443,31 +448,31 @@ const base_ui_sprites = {
 
   white: { url: 'white' },
 
-  button: { ws: [8, 112, 8], hs: [128] },
-  button_rollover: { ws: [8, 112, 8], hs: [128] },
-  button_down: { ws: [8, 112, 8], hs: [128] },
-  button_disabled: { ws: [8, 112, 8], hs: [128] },
-  panel: { ws: [32, 64, 32], hs: [32, 64, 32] },
+  button: { atlas: 'default' },
+  button_rollover: { atlas: 'default' },
+  button_down: { atlas: 'default' },
+  button_disabled: { atlas: 'default' },
+  panel: { atlas: 'default' },
 
-  menu_entry: { ws: [8, 112, 8], hs: [128] },
-  menu_selected: { ws: [8, 112, 8], hs: [128] },
-  menu_down: { ws: [8, 112, 8], hs: [128] },
-  menu_header: { ws: [8, 112, 136], hs: [128] },
-  slider: { ws: [56, 16, 56], hs: [128] },
-  // slider_notch: { ws: [3], hs: [13] },
-  slider_handle: { ws: [64], hs: [128] },
+  menu_entry: { atlas: 'default' },
+  menu_selected: { atlas: 'default' },
+  menu_down: { atlas: 'default' },
+  menu_header: { atlas: 'default' },
+  slider: { atlas: 'default' },
+  // slider_notch: { atlas: 'default' },
+  slider_handle: { atlas: 'default' },
 
-  scrollbar_bottom: { ws: [64], hs: [64] },
-  scrollbar_trough: { ws: [64], hs: [8], wrap_t: true },
-  scrollbar_top: { ws: [64], hs: [64] },
-  scrollbar_handle_grabber: { ws: [64], hs: [64] },
-  scrollbar_handle: { ws: [64], hs: [24, 16, 24] },
-  progress_bar: { ws: [48, 32, 48], hs: [128] },
-  progress_bar_trough: { ws: [48, 32, 48], hs: [128] },
+  scrollbar_bottom: { atlas: 'default' },
+  scrollbar_trough: { atlas: 'default' },
+  scrollbar_top: { atlas: 'default' },
+  scrollbar_handle_grabber: { atlas: 'default' },
+  scrollbar_handle: { atlas: 'default' },
+  progress_bar: { atlas: 'default' },
+  progress_bar_trough: { atlas: 'default' },
 
-  collapsagories: { ws: [4, 8, 4], hs: [64] },
-  collapsagories_rollover: { ws: [4, 8, 4], hs: [64] },
-  collapsagories_shadow_down: { ws: [4, 8, 4], hs: [64] },
+  collapsagories: { atlas: 'default' },
+  collapsagories_rollover: { atlas: 'default' },
+  collapsagories_shadow_down: { atlas: 'default' },
   collapsagories_shadow_up: null,
 };
 
@@ -576,7 +581,7 @@ export function uiBindSounds(_sounds) {
   sounds = defaults(_sounds || {}, base_ui_sounds);
   for (let key in sounds) {
     if (sounds[key]) {
-      soundLoad(sounds[key]);
+      soundLoad(sounds[key], sounds[key].opts);
     }
   }
 }
@@ -593,8 +598,11 @@ export function drawHBox(coords, s, color) {
     let scale = coords.w / (ws[0] + ws[2]);
     ws[0] *= scale;
     ws[2] *= scale;
-  } else {
+  } else if (uidata.wh[1]) {
     ws[1] = max(0, coords.w - ws[0] - ws[2]);
+  } else {
+    // no rects, do simple stretch
+    ws[0] = coords.w;
   }
   draw_box_param.y = coords.y;
   draw_box_param.z = coords.z;
@@ -780,6 +788,7 @@ export function panel(param) {
   drawBox(param, param.sprite || sprites.panel, param.pixel_scale || panel_pixel_scale, color);
   if (param.eat_clicks) {
     glov_input.mouseOver(param);
+    linkObscureRect(param); // should this just happen for all non-peeking mouseOver() calls?
   }
 }
 
@@ -802,23 +811,33 @@ export function drawTooltip(param) {
     spriteClipPause();
   }
 
+  let spuid = sprites.panel.uidata;
+  let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
   let tooltip_w = param.tooltip_width || tooltip_width;
   let z = param.z || Z.TOOLTIP;
   let tooltip_y0 = param.y;
-  let eff_tooltip_pad = param.tooltip_pad || tooltip_pad;
-  let w = tooltip_w - eff_tooltip_pad * 2;
+  let eff_tooltip_pad_left = param.tooltip_pad || (spuid.padh && spuid.padh[0]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_right = param.tooltip_pad || (spuid.padh && spuid.padh[2]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_top = param.tooltip_pad || (spuid.padv && spuid.padv[0]) * pixel_scale || tooltip_pad;
+  let eff_tooltip_pad_bottom = param.tooltip_pad || (spuid.padv && spuid.padv[2]) * pixel_scale || tooltip_pad;
+  let w = tooltip_w - eff_tooltip_pad_left - eff_tooltip_pad_right;
+  // TODO: dims (used if tooltip_above or tooltip_auto_above_offset or
+  //   tooltip_right) are potentially wrong for tooltips with markdown in them.
   let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
-    above = tooltip_y0 + dims.h + eff_tooltip_pad * 2 > camera2d.y1();
+    // TODO: support markdown dims
+    above = tooltip_y0 + dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom > camera2d.y1();
   }
   let x = param.x;
-  let eff_tooltip_w = dims.w + eff_tooltip_pad * 2;
+  let eff_tooltip_w = dims.w + eff_tooltip_pad_left + eff_tooltip_pad_right;
   let right = param.tooltip_right;
   let center = param.tooltip_center;
   if (right && param.tooltip_auto_right_offset) {
+    // TODO: just use markdown align right instead
     x += param.tooltip_auto_right_offset - eff_tooltip_w;
   } else if (center && param.tooltip_auto_right_offset) {
+    // TODO: just use markdown align center instead
     x += (param.tooltip_auto_right_offset - eff_tooltip_w) / 2;
   }
   if (x + eff_tooltip_w > camera2d.x1()) {
@@ -826,27 +845,28 @@ export function drawTooltip(param) {
   }
 
   if (above) {
-    tooltip_y0 -= dims.h + eff_tooltip_pad * 2 + (param.tooltip_auto_above_offset || 0);
+    tooltip_y0 -= dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom + (param.tooltip_auto_above_offset || 0);
   }
-  let y = tooltip_y0 + eff_tooltip_pad;
+  let y = tooltip_y0 + eff_tooltip_pad_top;
   if (param.tooltip_markdown === false) {
     y += font.drawSizedWrapped(font_style_modal,
-      x + eff_tooltip_pad, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
+      x + eff_tooltip_pad_left, y + tooltip_text_offs, z+1, w, 0, ui_style_current.text_height,
       tooltip);
   } else {
-    y += markdownAuto({
+    let mddims = markdownAuto({
       font_style: font_style_modal,
-      x: x + eff_tooltip_pad,
+      x: x + eff_tooltip_pad_left,
       y: y + tooltip_text_offs,
       z: z+1,
       w,
       align: ALIGN.HWRAP,
       text_height: ui_style_current.text_height,
       text: tooltip
-    }).h;
+    });
+    eff_tooltip_w = max(mddims.w + eff_tooltip_pad_left + eff_tooltip_pad_right, eff_tooltip_w);
+    y += mddims.h;
   }
-  y += eff_tooltip_pad;
-  let pixel_scale = param.pixel_scale || tooltip_panel_pixel_scale;
+  y += eff_tooltip_pad_bottom;
 
   panel({
     x,
@@ -987,7 +1007,7 @@ export function buttonBackgroundDraw(param, state) {
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
   if (!param.no_bg) {
-    let base_name = param.base_name || 'button';
+    let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
     let sprite = sprites[sprite_name];
     // Note: was if (sprite) color = colors.regular for specific-sprite matches
@@ -1029,12 +1049,32 @@ export function buttonTextDraw(param, state, focused) {
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let disabled = state === 'disabled';
-  (param.font || font).drawSizedAligned(
-    disabled ? param.font_style_disabled || font_style_disabled :
+  let font_use = (param.font || font);
+  let font_style = disabled ? param.font_style_disabled || font_style_disabled :
     focused ? param.font_style_focused || font_style_focused :
-    param.font_style_normal || font_style_normal,
-    param.x + hpad, param.y + yoffs, param.z + 0.1,
-    param.font_height, param.align || glov_font.ALIGN.HVCENTERFIT, param.w - hpad * 2, param.h, param.text);
+    param.font_style_normal || font_style_normal;
+  let x = param.x + hpad;
+  let y = param.y + yoffs;
+  let z = param.z + 0.1;
+  let w = param.w - hpad * 2;
+  let align = param.align || glov_font.ALIGN.HVCENTERFIT;
+  let text_height = param.font_height;
+  if (param.markdown) {
+    markdownAuto({
+      font: font_use,
+      font_style,
+      x, y, z,
+      w, h: param.h,
+      align,
+      text_height,
+      text: param.text
+    });
+  } else {
+    font_use.drawSizedAligned(
+      font_style,
+      x, y, z,
+      text_height, align, w, param.h, param.text);
+  }
   profilerStopFunc();
 }
 
@@ -1156,8 +1196,10 @@ export function button(param) {
   let saved_w = param.w;
   let saved_x = param.x;
   param.no_bg = true;
-  param.x += param.h * param.shrink;
-  param.w -= param.h * param.shrink;
+  let img_size = param.h * param.shrink;
+  let img_pad = param.h * (1 - param.shrink) / 2;
+  param.x += img_pad + img_size;
+  param.w -= img_pad + img_size;
   buttonTextDraw(param, state, focused);
 
   param.no_bg = saved_no_bg;
@@ -1181,6 +1223,7 @@ export function label(param) {
     w, h,
     text,
     tooltip,
+    tooltip_markdown,
     tooltip_above,
     tooltip_right,
     img,
@@ -1227,7 +1270,8 @@ export function label(param) {
     assert(isFinite(h));
     let spot_ret = spot({
       x, y, w, h,
-      tooltip: tooltip,
+      tooltip,
+      tooltip_markdown,
       tooltip_width: param.tooltip_width,
       tooltip_above,
       tooltip_right: tooltip_right || param.align & ALIGN.HRIGHT,
@@ -1495,6 +1539,7 @@ export function modalTextEntry(param) {
     max_len: param.max_len,
     max_visual_size: param.max_visual_size,
     esc_clears: false,
+    auto_unfocus: true,
   });
   let buttons = {};
   for (let key in param.buttons) {
@@ -1553,7 +1598,9 @@ function releaseOldUIElemData() {
   for (let type in ui_elem_data) {
     let by_type = ui_elem_data[type];
     let any = false;
-    for (let key in by_type) {
+    let keys = Object.keys(by_type);
+    for (let ii = 0; ii < keys.length; ++ii) {
+      let key = keys[ii];
       let elem_data = by_type[key];
       if (elem_data.frame_index < glov_engine.frame_index - 1) {
         delete by_type[key];
@@ -2128,6 +2175,7 @@ export function setTooltipWidth(_tooltip_width, _tooltip_panel_pixel_scale) {
 }
 
 // This is useful for some fonts if the UI uses primarily/entirely upper-case strings, to look more centered
+// DEPRECATED: use a 9-patch panel with padding instead
 export function setTooltipTextOffset(_tooltip_text_offs) {
   tooltip_text_offs = _tooltip_text_offs;
 }

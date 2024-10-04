@@ -107,6 +107,7 @@ export function selboxDefaultDrawItemText({
   w, h,
   display,
   font_height,
+  line_height,
   style,
 }) {
   let text_z = z + 1;
@@ -129,6 +130,7 @@ export function selboxDefaultDrawItemText({
           x: x1, y, z: text_z,
           w: w1, h,
           text_height: font_height,
+          line_height,
           align: ALIGN.HFIT | ALIGN.VCENTER,
           text: pre,
         });
@@ -137,6 +139,7 @@ export function selboxDefaultDrawItemText({
           x: x2, y, z: text_z,
           w: w1, h,
           text_height: font_height,
+          line_height,
           align: ALIGN.HFIT | ALIGN.VCENTER,
           text: post,
         });
@@ -159,6 +162,7 @@ export function selboxDefaultDrawItemText({
       w: w - display.xpad * 2,
       h,
       text_height: font_height,
+      line_height,
       align: (item.centered || display.centered ? ALIGN.HCENTERFIT : ALIGN.HFIT) |
         ALIGN.VCENTER,
       text: item.name,
@@ -234,6 +238,7 @@ export class GlovMenuItem {
     this.name = params.name || 'NO_NAME'; // name to display
     this.state = params.state || null; // state to set upon selection
     this.cb = params.cb || null; // callback to call upon selection
+    this.in_event_cb = params.in_event_cb || undefined;
     // TODO - cb function on value change?
     this.value = params.value === undefined ? null : params.value; // can be number or string
     this.value_min = params.value_min || 0;
@@ -272,6 +277,7 @@ class SelectionBoxBase {
     this.display = cloneShallow(default_display);
     this.scroll_height = 0;
     this.font_height = uiTextHeight();
+    this.line_height = null;
     this.entry_height = uiButtonHeight();
     this.auto_reset = true;
     this.reset_selection = false;
@@ -481,11 +487,15 @@ class SelectionBoxBase {
       display,
       entry_height,
       font_height,
+      line_height,
       key,
       selected: old_sel,
       show_as_focused,
       width,
     } = this;
+    if (line_height === null) {
+      line_height = font_height;
+    }
     let { scroll_height } = ctx;
     let eff_width = width;
     const y_save = y;
@@ -534,6 +544,7 @@ class SelectionBoxBase {
           [SPOT_NAV_LEFT]: null,
         },
         auto_focus: item.auto_focus,
+        in_event_cb: item.in_event_cb,
       };
       if (ii === first_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
@@ -645,6 +656,7 @@ class SelectionBoxBase {
         image_set, color,
         image_set_extra, image_set_extra_alpha,
         font_height,
+        line_height,
         display,
         style,
       });
@@ -770,7 +782,10 @@ class GlovDropDown extends SelectionBoxBase {
 
   run(params) {
     this.applyParams(params);
-    let { x, y, z, width, font_height, entry_height, disabled, key, display, ctx } = this;
+    let { x, y, z, width, font_height, line_height, entry_height, disabled, key, display, ctx } = this;
+    if (line_height === null) {
+      line_height = font_height;
+    }
 
     this.handleInitialSelection();
 
@@ -853,6 +868,7 @@ class GlovDropDown extends SelectionBoxBase {
       w: width - display.xpad - glov_ui.sprites.menu_header.uidata.wh[2] * entry_height,
       h: entry_height,
       text_height: font_height,
+      line_height,
       align: (display.centered ? ALIGN.HCENTER : ALIGN.HLEFT) | ALIGN.HFIT | ALIGN.VCENTER,
       text: this.items[eff_selection].name,
     };

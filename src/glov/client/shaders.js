@@ -72,6 +72,11 @@ export function shadersResetState() {
       for (let fpid in shader.programs) {
         let prog = shader.programs[fpid];
         //gl.useProgram(prog.handle);
+        if (prog.uniforms === null) {
+          // shouldn't be possible, but is happening on FireFox
+          assert(prog.uniforms, `prog.uniforms=null, valid=${prog.valid}, fpid=${fpid},` +
+            ` vp=${shader.filename}, handle=${Boolean(prog.handle)}`);
+        }
         for (let jj = 0; jj < prog.uniforms.length; ++jj) {
           let unif = prog.uniforms[jj];
           for (let kk = 0; kk < unif.size; ++kk) {
@@ -328,7 +333,7 @@ function link(vp, fp, on_error) {
   assert(!require_prelink);
   let prog = vp.programs[fp.id] = {
     handle: gl.createProgram(),
-    uniforms: null,
+    uniforms: [],
   };
   let error_text;
   if (!prog.handle) {
@@ -347,6 +352,7 @@ function link(vp, fp, on_error) {
     prog.valid = gl.getProgramParameter(prog.handle, gl.LINK_STATUS);
   }
   if (!prog.valid) {
+    prog.uniforms = [];
     error_text = error_text || cleanShaderError(gl.getProgramInfoLog(prog.handle));
     let report = true;
     if (gl.isContextLost()) {
@@ -364,7 +370,6 @@ function link(vp, fp, on_error) {
           ` ${error_text}`);
       }
     }
-    prog.uniforms = [];
     return prog;
   }
 
@@ -411,6 +416,7 @@ function link(vp, fp, on_error) {
     uniformSetValue(unif);
     return unif;
   }).filter((v) => v);
+  assert(prog.uniforms);
 
   for (let ii = 0; ii < fp.samplers.length; ++ii) {
     let name = fp.samplers[ii];
@@ -555,6 +561,12 @@ export function shadersStartup(_globals) {
   filewatchOn('.vp', onShaderChange);
 
   let valid = error_fp.valid && error_vp.valid;
+  if (valid) {
+    let prog = autoLink(error_vp, error_fp);
+    if (!prog || !prog.valid) {
+      valid = false;
+    }
+  }
   if (!valid) {
     // do _not_ send immediate error reports about these, we have an invalid context of some kind
     clearTimeout(report_timeout);

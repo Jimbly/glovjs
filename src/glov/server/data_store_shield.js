@@ -23,9 +23,16 @@ export let dss_stats = {
 
 /* eslint-disable import/order */
 const assert = require('assert');
-const metrics = require('./metrics.js');
+const {
+  metricsAdd,
+  metricsSet,
+  metricsStats,
+} = require('./metrics.js');
 const { getUID } = require('./log.js');
-const { perfCounterAdd } = require('glov/common/perfcounters.js');
+const {
+  perfCounterAdd,
+  perfCounterAddValue,
+} = require('glov/common/perfcounters.js');
 
 // Write timeouts *very* high, because if we ever assume a write has failed when
 //  it's still in progress, that can lead to data corruption (earlier write
@@ -48,6 +55,14 @@ export function dataStoreLogSets(log) {
   log_sets = log;
 }
 
+function perfNamerDefault(obj_name) {
+  return obj_name.split('/')[0];
+}
+let perf_namer = perfNamerDefault;
+export function dataStoreSetPerfNamer(cb) {
+  perf_namer = cb;
+}
+
 function DataStoreShield(data_store, opts) {
   let { label } = opts;
   this.label = label;
@@ -59,6 +74,7 @@ function DataStoreShield(data_store, opts) {
   this.metric_inflight_get = `${label}.inflight_get`;
   this.metric_inflight_search = `${label}.inflight_search`;
   this.metric_timing = `${label}.timing`;
+  this.metric_timing_search = `${label}.search_timing`;
   this.data_store = data_store;
   this.inflight_set = 0;
   this.inflight_get = 0;
@@ -78,7 +94,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
   let uid = getUID();
   let metric_inflight = self[`metric_inflight_${op}`];
   let field_inflight = `inflight_${op}`;
-  metrics.set(metric_inflight, ++self[field_inflight]);
+  metricsSet(metric_inflight, ++self[field_inflight], 'med');
   ++dss_stats[field_inflight];
   let attempts = 0;
   function doAttempt() {
@@ -93,13 +109,17 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
         timeout = null;
       }
       if (err || cb_called) {
-        metrics.add(self.metric_errors, 1);
+        metricsAdd(self.metric_errors, 1, 'high');
         perfCounterAdd(self.metric_errors);
       }
 
       if (err !== ERR_TIMEOUT_FORCED_SHIELD) { // If not already logged about
         let dt = Date.now() - start;
-        metrics.stats(self.metric_timing, dt);
+        if (op === 'search') {
+          metricsStats(self.metric_timing_search, dt, 'low');
+        } else {
+          metricsStats(self.metric_timing, dt, 'high');
+        }
         if (dt > 15000) {
           console.warn(`DATASTORESHIELD(${op}:${uid}:${attempt}) Slow response for ${self.label}:${obj_name}` +
             ` (${(dt/1000).toFixed(1)}s elapsed)`);
@@ -136,7 +156,7 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
         }
         console.error(`DATASTORESHIELD(${op}:${uid}:${attempt}) retries exhausted, erroring`);
       }
-      metrics.set(metric_inflight, --self[field_inflight]);
+      metricsSet(metric_inflight, --self[field_inflight], 'med');
       --dss_stats[field_inflight];
       cb(err, ret);
     }
@@ -157,10 +177,21 @@ DataStoreShield.prototype.executeShielded = function (op, obj_name, max_retries,
   doAttempt();
 };
 
+function estimateSize(thing) {
+  if (thing instanceof Buffer || thing instanceof Uint8Array) {
+    return thing.length;
+  } else {
+    return JSON.stringify(thing).length;
+  }
+}
+
 DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
   let self = this;
-  metrics.add(self.metric_set, 1);
+  metricsAdd(self.metric_set, 1, 'low');
   perfCounterAdd(self.metric_set);
+  let obj_type = perf_namer(obj_name);
+  perfCounterAdd(`${self.metric_set}.count.${obj_type}`);
+  perfCounterAddValue(`${self.metric_set}.bytes.${obj_type}`, estimateSize(value));
   dss_stats.set++;
   if (log_sets) {
     console.debug(`DATASTORESHIELD Set while restarting: ${this.label}:${obj_name}`);
@@ -172,27 +203,41 @@ DataStoreShield.prototype.setAsync = function (obj_name, value, cb) {
 
 DataStoreShield.prototype.getAsync = function (obj_name, default_value, cb) {
   let self = this;
-  metrics.add(self.metric_get, 1);
+  metricsAdd(self.metric_get, 1, 'low');
   perfCounterAdd(self.metric_get);
+  let obj_type = perf_namer(obj_name);
+  perfCounterAdd(`${self.metric_get}.count.${obj_type}`);
   dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsync(obj_name, default_value, onDone);
-  }, cb);
+  }, function (err, result) {
+    if (!err && result) {
+      perfCounterAddValue(`${self.metric_get}.bytes.${obj_type}`, estimateSize(result));
+    }
+    cb(err, result);
+  });
 };
 
 DataStoreShield.prototype.getAsyncBuffer = function (obj_name, cb) {
   let self = this;
-  metrics.add(self.metric_get, 1);
+  metricsAdd(self.metric_get, 1, 'low');
   perfCounterAdd(self.metric_get);
+  let obj_type = perf_namer(obj_name);
+  perfCounterAdd(`${self.metric_get}.count.${obj_type}`);
   dss_stats.get++;
   this.executeShielded('get', obj_name, RETRIES_READ, TIMEOUT_READ, (onDone) => {
     self.data_store.getAsyncBuffer(obj_name, onDone);
-  }, cb);
+  }, function (err, result) {
+    if (!err && result) {
+      perfCounterAddValue(`${self.metric_get}.bytes.${obj_type}`, estimateSize(result));
+    }
+    cb(err, result);
+  });
 };
 
 DataStoreShield.prototype.search = function (collection, search, cb) {
   let self = this;
-  metrics.add(self.metric_search, 1);
+  metricsAdd(self.metric_search, 1, 'low');
   perfCounterAdd(self.metric_search);
   dss_stats.search++;
   this.executeShielded('search', collection, RETRIES_SEARCH, TIMEOUT_SEARCH, (onDone) => {

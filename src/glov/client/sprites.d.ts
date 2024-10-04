@@ -18,6 +18,7 @@ export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
 
+export type HTMLImage = HTMLCanvasElement | HTMLImageElement;
 export interface Texture {
   width: number;
   height: number;
@@ -26,6 +27,13 @@ export interface Texture {
   loaded: boolean;
   err?: string;
   destroy(): void;
+  wrap_s: number;
+  wrap_t: number;
+  updateData(
+    w: number, h: number,
+    data: Uint8Array | Uint8ClampedArray | HTMLImage,
+    per_mipmap_data?: HTMLImage[]
+  ): void;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
@@ -36,23 +44,27 @@ export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
 export interface SpriteUIData {
   widths: number[]; heights: number[];
   wh: number[]; hw: number[];
-  rects: ROVec4[]; // [u0, v0, u1, v1]
+  rects: ROVec4[] | TSMap<ROVec4>; // [u0, v0, u1, v1]
   aspect: number[] | null;
   total_w: number; total_h: number;
+  padh?: number[];
+  padv?: number[];
 }
 export interface SpriteDrawParams {
   x: number; y: number; z?: number;
   w?: number; h?: number;
-  frame?: number;
+  frame?: number | string;
   rot?: number;
-  uvs?: number[]; // [u0, v0, u1, v1]
+  uvs?: ROVec4; // [u0, v0, u1, v1]
+  blend?: BlendMode;
   color?: ROVec4;
   shader?: Shader;
   shader_params?: ShaderParams;
+  nozoom?: boolean;
 }
 export type BucketType = typeof BUCKET_OPAQUE | typeof BUCKET_DECAL | typeof BUCKET_ALPHA;
 export interface SpriteDraw3DParams {
-  frame?: number;
+  frame?: number | string;
   pos: ROVec3; // 3D world position
   offs?: ROVec2; // 2D offset (-x/-y is upper left), in world scale
   size: ROVec2; // 2D w;h; in world scale
@@ -84,6 +96,8 @@ export interface Sprite {
   texs: Texture[];
   isLazyLoad(): boolean;
   lazyLoad(): number;
+  getAspect(): number;
+  withOrigin(new_origin: ROVec2): Sprite;
 }
 export interface UISprite extends Sprite {
   uidata: SpriteUIData;
@@ -123,7 +137,7 @@ export type SpriteParam = SpriteParamBase & ({
   url: string;
   lazy_load?: boolean;
   soft_error?: boolean;
-  load_filter?: (tex: Texture, img: HTMLImageElement | HTMLCanvasElement) => HTMLImageElement | HTMLCanvasElement;
+  load_filter?: (tex: Texture, img: HTMLImage) => HTMLImage;
 } | {
   width: number;
   height: number;
@@ -215,6 +229,6 @@ export function spriteQueueSprite(
 // export function queueSpriteData(elem, z): void;
 
 // TODO: migrate to internal only?
-// export function blendModeSet(blend: BlendMode): void;
-// export function blendModeReset(force: boolean): void;
+export function blendModeSet(blend: BlendMode): void;
+export function blendModeReset(force: boolean): void;
 // export function buildRects(ws, hs, tex): void;

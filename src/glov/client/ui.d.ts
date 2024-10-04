@@ -10,7 +10,7 @@ import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
-import { SoundID } from './sound';
+import { SoundID, SoundLoadOpts } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 import { UIStyle } from './uistyle';
@@ -66,6 +66,11 @@ export interface UISprites {
   progress_bar: UISprite;
   progress_bar_trough: UISprite;
   white: UISprite;
+
+  squarebutton?: UISprite;
+  squarebutton_rollover?: null | UISprite;
+  squarebutton_down?: UISprite;
+  squarebutton_disabled?: UISprite;
 }
 export const sprites: UISprites;
 // DEPRECATED: export const font_height: number; // use uiStyleCurrent().text_height or uiTextHeight()
@@ -79,7 +84,8 @@ export function buttonWasFocused(): boolean;
 export function buttonLastSpotRet(): ButtonRet;
 export function colorSetSetShades(rollover: number, down: number, disabled: number): void;
 export function loadUISprite(name: string, ws: number[], hs: number[]): void;
-type UISpriteDef = {
+export type UISpriteDef = {
+  atlas?: string;
   name?: string;
   url?: string;
   ws?: number[];
@@ -97,7 +103,8 @@ export function suppressNewDOMElemWarnings(): void;
 export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
 export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
-export function uiBindSounds(sounds?: Partial<Record<string, SoundID | SoundID[] | null>>): void;
+export type UISoundID = SoundID & { opts?: SoundLoadOpts };
+export function uiBindSounds(sounds?: Partial<Record<string, UISoundID | UISoundID[] | null>>): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
@@ -195,10 +202,11 @@ export interface ButtonTextParam extends ButtonParam {
   font_style_focused?: FontStyle;
   font_style_disabled?: FontStyle;
   align?: ALIGN;
+  markdown?: boolean; // defaults to false
 }
 export interface ButtonImageParamBase extends ButtonParam {
   shrink?: number;
-  frame?: number;
+  frame?: number | string;
   img_rect?: ROVec4;
   left_align?: boolean;
   img_color?: ROVec4;
@@ -238,7 +246,7 @@ export type LabelImageOptions = {
   w: number;
   h: number;
   img: Sprite;
-  frame?: number;
+  frame?: number | string;
   img_color?: ROVec4;
   img_color_focused?: ROVec4;
 };
@@ -388,10 +396,10 @@ export function setButtonHeight(button_height: number): void;
 export function setPanelPixelScale(scale: number): void;
 export function setModalSizes(
   modal_button_width: number,
-  width: number,
-  y0: number,
-  title_scale: number,
-  pad: number,
+  width?: number,
+  y0?: number,
+  title_scale?: number,
+  pad?: number,
 ): void;
 export function setTooltipWidth(tooltip_width: number, tooltip_panel_pixel_scale: number): void;
 export function setTooltipTextOffset(tooltip_text_offs: number): void;
@@ -434,6 +442,10 @@ type UISpriteSet = {
   scrollbar_handle?: UISpriteDef;
   progress_bar?: UISpriteDef;
   progress_bar_trough?: UISpriteDef;
+
+  collapsagories?: UISpriteDef;
+  collapsagories_rollover?: UISpriteDef;
+  collapsagories_shadow_down?: UISpriteDef;
 };
 export const internal : {
   checkHooks(param: { hook?: HookList }, click: boolean): void;

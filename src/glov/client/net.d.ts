@@ -1,4 +1,4 @@
-import type * as cmd_parse_mod from 'glov/common/cmd_parse';
+import type { CmdParse } from 'glov/common/cmd_parse';
 import type { Packet } from 'glov/common/packet';
 import type {
   ChannelDataClients,
@@ -50,7 +50,7 @@ export type SubscriptionManager = {
   loggedIn(): string | null;
   getUserId(): string | null;
   getDisplayName(): string | null;
-  isFirstSession(): boolean;
+  getLoginResponseData(): DataObject;
 
   on(key: 'chat_broadcast', cb: (data: { src: string; msg: string })=> void): void;
   on(key: 'restarting', cb: (data: boolean)=> void): void;
@@ -58,6 +58,7 @@ export type SubscriptionManager = {
   on(key: 'connect', cb: (is_reconnect: boolean) => void): void;
   on(key: 'login', cb: VoidFunc): void;
   on(key: 'logout', cb: VoidFunc): void;
+  on(key: 'prelogout', cb: VoidFunc): void;
   on(key: 'login_fail', cb: (err: string) => void): void;
   //on(key: string, cb: (data: unknown)=> void): void;
 
@@ -74,9 +75,10 @@ export type SubscriptionManager = {
   sendCmdParse(cmd: string, resp_func: NetResponseCallbackCalledBySystem): void;
   serverLog(type: string, data: string | DataObject): void;
 
-  onChannelMsg<T=unknown>(channel_type: string, msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
+  onChannelMsg<T=unknown>(channel_type: string | null,
+    msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   // TODO: more specific channel event handler types (also for `ClientChannelWorker::on` below)
-  onChannelEvent<T=unknown>(channel_type: string, msg: string, cb: (data: T) => void): void;
+  onChannelEvent<T=unknown>(channel_type: string | null, msg: string, cb: (data: T) => void): void;
 
   getLastLoginCredentials(): LoginCredentials;
   userCreate(credentials: UserCreateParam, resp_func: ErrorCallback): void;
@@ -87,7 +89,20 @@ export type SubscriptionManager = {
   loginRetry(resp_func: ErrorCallback): void;
   sessionHashedPassword(): string;
   sendActivationEmail(email: string, resp_func: ErrorCallback): void;
+
+  quietMessagesSet(msgs: string[]): void;
+
+  uploadGetFile(file_id: string): { err: string } | ChunkedSendFileData;
+  uploadFreeFile(file_data: ChunkedSendFileData): void;
+  onUploadProgress(mime_type: string, cb: (progress: number, total: number) => void): void;
 };
+
+export type ChunkedSendFileData = {
+  dv: DataView;
+  mime_type: string;
+  buffer: Uint8Array;
+};
+export function isChunkedSendFileData(data: { err: string } | ChunkedSendFileData): data is ChunkedSendFileData;
 
 // Note: Partial definition, needs more filled in
 export type WSClient = {
@@ -98,10 +113,8 @@ export type WSClient = {
   readonly disconnected: boolean;
 };
 
-type CmdParse = ReturnType<typeof cmd_parse_mod.create>;
-
 export type NetInitParam = Partial<{
-  ver: number;
+  ver: number | string;
   no_packet_debug: boolean;
   path: string;
   client_app: string;
@@ -146,6 +159,7 @@ export interface ClientChannelWorker<DataType extends ClientChannelWorkerData=Cl
   onMsg<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   removeMsgHandler<T=unknown>(msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
   pak(msg: string): Packet;
+  send<P=null>(msg: string, data: P): void;
   send<R=never, P=null>(msg: string, data: P, resp_func: NetErrorCallback<R>): void;
   send(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
   cmdParse<T=string>(cmd: string, resp_func: NetErrorCallback<T>): void;

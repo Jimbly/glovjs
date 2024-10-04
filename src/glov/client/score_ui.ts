@@ -14,6 +14,7 @@ import {
   FontStyle,
 } from './font';
 import {
+  FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
   ScoreSystem,
   scoreFormatName,
@@ -138,6 +139,8 @@ export type ScoresDrawParam<ScoreType> = {
   allow_rename: boolean;
   no_header?: boolean;
   scroll_key?: string;
+  rename_button_size?: number; // default 10 (in text height units)
+  friend_cat?: string;
 };
 
 const skipped_rank_column_def: ColumnDef = {
@@ -164,6 +167,8 @@ export function scoresDraw<ScoreType>({
   allow_rename,
   no_header,
   scroll_key,
+  rename_button_size,
+  friend_cat,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
   if (!font) {
@@ -182,7 +187,7 @@ export function scoresDraw<ScoreType>({
   const hpad = pad/2;
   const button_height = uiButtonHeight();
   const scroll_max_y = y + height - (button_height + pad);
-  let scores = score_system.getHighScores(level_index);
+  let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
   if (!scores) {
     font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, height,
       'Loading...');
@@ -354,11 +359,12 @@ export function scoresDraw<ScoreType>({
     }
 
     let show_rename = my_name.startsWith('Anonymous') || !my_name || force_show_rename;
+    let button_size = show_rename && rename_button_size || 10;
     let button_param: ButtonTextParam = {
       x,
       y: y - size * 0.25,
       z,
-      w: size * 10,
+      w: size * button_size,
       h: button_height,
       text: force_show_rename && my_name === scores_edit_box.text ? 'Cancel' : my_name ? 'Update Name' : 'Set Name',
     };
@@ -366,6 +372,7 @@ export function scoresDraw<ScoreType>({
       button_param.x += scores_edit_box.w + size;
 
       let submit = scores_edit_box.run({
+        initial_focus: force_show_rename,
         x,
         y,
       }) === scores_edit_box.SUBMIT;

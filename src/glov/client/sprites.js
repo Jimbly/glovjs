@@ -1020,6 +1020,33 @@ function Sprite(params) {
   }
 }
 
+Sprite.prototype.getAspect = function () {
+  let tex = this.texs[0];
+  if (!tex) {
+    return 1;
+  }
+  return tex.src_width / tex.src_height;
+};
+
+Sprite.prototype.withOrigin = function (new_origin) {
+  let cache_v = String(new_origin[0] + new_origin[1] * 1007);
+  if (!this.origin_cache) {
+    this.origin_cache = {};
+  }
+  if (!this.origin_cache[cache_v]) {
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    let new_sprite = this.origin_cache[cache_v] = spriteCreate({
+      texs: this.texs,
+      origin: new_origin,
+      size: this.size,
+      color: this.color,
+      uvs: this.uvs,
+    });
+    new_sprite.uidata = this.uidata;
+  }
+  return this.origin_cache[cache_v];
+};
+
 Sprite.prototype.lazyLoadInit = function () {
   let tex = textureLoad({
     ...this.lazy_load,
@@ -1049,6 +1076,10 @@ Sprite.prototype.lazyLoad = function () {
     this.lazyLoadInit();
   }
   if (!this.texs[0].loaded) {
+    // Still loading, don't let it be unloaded in the meantime though!
+    for (let ii = 0; ii < this.texs.length; ++ii) {
+      this.texs[ii].last_use = engine.frame_timestamp;
+    }
     return 0;
   }
   if (!this.loaded_at) {
@@ -1084,7 +1115,7 @@ Sprite.prototype.draw = function (params) {
   }
   let w = (params.w || 1) * this.size[0];
   let h = (params.h || 1) * this.size[1];
-  let uvs = (typeof params.frame === 'number') ? this.uidata.rects[params.frame] : (params.uvs || this.uvs);
+  let uvs = ((params.frame !== undefined) ? this.uidata.rects[params.frame] : params.uvs) || this.uvs;
   qsp.sprite = this;
   qsp.x = params.x;
   qsp.y = params.y;

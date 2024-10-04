@@ -28,6 +28,8 @@ import { perfCounterAdd } from 'glov/common/perfcounters';
 import * as EventEmitter from 'glov/common/tiny-events';
 import * as util from 'glov/common/util';
 import { cloneShallow } from 'glov/common/util';
+import { platformParameterGet } from './client_config';
+import { session_uid } from './error_report';
 import * as local_storage from './local_storage';
 import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
@@ -218,7 +220,7 @@ function SubscriptionManager(client, cmd_parse) {
   this.client = client;
   this.channels = {};
   this.logged_in = false;
-  this.first_session = false;
+  this.login_response_data = null;
   this.login_credentials = null;
   this.logged_in_email = null;
   this.logged_in_username = null;
@@ -659,7 +661,7 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
   let evt = 'login_fail';
   if (!err) {
     evt = 'login';
-    this.first_session = Boolean(resp.first_session);
+    this.login_response_data = resp;
     this.logged_in_email = resp.email || null;
     this.logged_in_username = resp.user_id;
     this.logged_in_display_name = resp.display_name;
@@ -708,7 +710,26 @@ SubscriptionManager.prototype.handleLoginResponse = function (resp_func, err, re
 };
 
 SubscriptionManager.prototype.loginRetry = function (resp_func) {
-  this.loginInternal(this.login_credentials, resp_func);
+  this.loginInternal(this.login_credentials, (err) => {
+    this.auto_login_error = err;
+    if (err === ERR_NO_USER_ID && externalUsersAutoLoginFallbackProvider() &&
+      this.login_credentials.provider === externalUsersAutoLoginProvider() &&
+      externalUsersEnabled(externalUsersAutoLoginProvider())
+    ) {
+      // Login was validated, but no user id exists, and was not auto-created,
+      //   send the credentials to the fallback provider to auto-create a user.
+      this.loginExternal({
+        provider: externalUsersAutoLoginFallbackProvider(),
+        external_login_data: cloneShallow(this.login_credentials.external_login_data),
+        creation_display_name: this.login_credentials.creation_display_name,
+      }, (err) => {
+        this.auto_login_error = err;
+        resp_func(err);
+      });
+    } else {
+      resp_func(err);
+    }
+  });
 };
 
 SubscriptionManager.prototype.getLastLoginCredentials = function () {
@@ -752,10 +773,16 @@ SubscriptionManager.prototype.loginInternalExternalUsers = function (provider, l
       if (netDisconnectedRaw()) {
         return void this.handleLoginResponse(resp_func, 'ERR_DISCONNECTED');
       }
+
+      let display_name = user_info?.name || '';
+      if (platformParameterGet('random_creation_name')) {
+        display_name = ''; // Server side will generate randomised name for empty string
+      }
+
       let request_data = {
         provider,
         validation_data: login_data.validation_data,
-        display_name: user_info?.name || '',
+        display_name: display_name,
       };
       if (user_info?.name) {
         this.login_credentials.creation_display_name = user_info.name;
@@ -774,6 +801,7 @@ SubscriptionManager.prototype.loginInternal = function (login_credentials, resp_
   if (this.logging_in) {
     return void resp_func('Login already in progress');
   }
+  this.auto_login_error = null;
   this.logging_in = true;
   this.logged_in = false;
   this.login_credentials = login_credentials;
@@ -919,6 +947,7 @@ SubscriptionManager.prototype.logout = function () {
     }
     this.unsubscribe('global.global');
   }
+  this.emit('prelogout');
   for (let channel_id in this.channels) {
     let channel = this.channels[channel_id];
     if (channel.immediate_subscribe) {
@@ -937,7 +966,7 @@ SubscriptionManager.prototype.logout = function () {
     if (!err) {
       local_storage.set('password', undefined);
       local_storage.set('login_external', this.login_provider = undefined);
-      this.first_session = false;
+      this.login_response_data = null;
       this.logged_in = false;
       this.logged_in_username = null;
       this.logged_in_display_name = null;
@@ -948,13 +977,13 @@ SubscriptionManager.prototype.logout = function () {
   });
 };
 
-SubscriptionManager.prototype.isFirstSession = function () {
-  return this.first_session;
+SubscriptionManager.prototype.getLoginResponseData = function () {
+  return this.login_response_data || {};
 };
 
 SubscriptionManager.prototype.serverLog = function (type, data) {
   this.onceConnected(() => {
-    this.client.send('log', { type, data });
+    this.client.send('log', { type, data, sesuid: session_uid });
   });
 };
 

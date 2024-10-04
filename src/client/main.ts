@@ -10,6 +10,7 @@ import { Font, fontCreate } from 'glov/client/font';
 import { markdownImageRegisterSpriteSheet, markdown_default_renderables } from 'glov/client/markdown_renderables';
 import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
+import { settingsSet } from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import { spritesheetTextureOpts } from 'glov/client/spritesheet';
@@ -28,6 +29,7 @@ const crawlertest = require('./img/crawlertest');
 
 const { round } = Math;
 
+window.Z = window.Z || {};
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
@@ -68,46 +70,46 @@ export function main(): void {
     shadersSetInternalDefines({
       SSAA4X: true,
     });
-    settings.set('pixely', 0);
-    settings.set('filter', 0);
-    settings.set('entity_split', 0);
-    settings.set('entity_nosplit_use_near', 1);
+    settingsSet('pixely', 0);
+    settingsSet('filter', 0);
+    settingsSet('entity_split', 0);
+    settingsSet('entity_nosplit_use_near', 1);
   } else if (!'simple lowres') {
-    settings.set('pixely', 1);
-    settings.set('filter', 0);
-    settings.set('entity_split', 0);
-    settings.set('entity_nosplit_use_near', 1);
+    settingsSet('pixely', 1);
+    settingsSet('filter', 0);
+    settingsSet('entity_split', 0);
+    settingsSet('entity_nosplit_use_near', 1);
   } else if (!'lowres with mipmapping') {
     // also antilias=true & use_fbos=0 is potentially useful
     crawlerRenderSetLODBiasRange(-3, -1.5);
-    settings.set('pixely', 1);
-    settings.set('filter', 2);
-    settings.set('entity_split', 0);
-    settings.set('entity_nosplit_use_near', 1);
+    settingsSet('pixely', 1);
+    settingsSet('filter', 2);
+    settingsSet('entity_split', 0);
+    settingsSet('entity_nosplit_use_near', 1);
   } else if (!'simple AA lowres') {
     antialias = true;
     use_fbos = 0;
     shadersSetInternalDefines({
       SSAA4X: true,
     });
-    settings.set('pixely', 1);
-    settings.set('filter', 0);
-    settings.set('entity_split', 0);
-    settings.set('entity_nosplit_use_near', 1);
+    settingsSet('pixely', 1);
+    settingsSet('filter', 0);
+    settingsSet('entity_split', 0);
+    settingsSet('entity_nosplit_use_near', 1);
   } else if (!'CRT filter') {
-    settings.set('pixely', 2);
-    settings.set('hybrid', 1);
-    settings.set('filter', 0);
-    settings.set('entity_split', 0);
-    settings.set('entity_nosplit_use_near', 1);
+    settingsSet('pixely', 2);
+    settingsSet('hybrid', 1);
+    settingsSet('filter', 0);
+    settingsSet('entity_split', 0);
+    settingsSet('entity_nosplit_use_near', 1);
   } else if ('split logic') {
-    settings.set('pixely', 1);
-    settings.set('filter', 0);
-    settings.set('entity_split', 1);
+    settingsSet('pixely', 1);
+    settingsSet('filter', 0);
+    settingsSet('entity_split', 1);
   } else if (!'split logic filter') {
-    settings.set('pixely', 1);
-    settings.set('filter', 1);
-    settings.set('entity_split', 1);
+    settingsSet('pixely', 1);
+    settingsSet('filter', 1);
+    settingsSet('entity_split', 1);
   }
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
@@ -121,7 +123,7 @@ export function main(): void {
   } else {
     font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
-  settings.set('use_fbos', use_fbos); // Needed for our effects
+  settingsSet('use_fbos', use_fbos); // Needed for our effects
 
   spritesheetTextureOpts('whitebox', { force_mipmaps: true });
 
@@ -143,10 +145,10 @@ export function main(): void {
       // button_rollover: { name: 'button_rollover', ws: [3, 20, 3], hs: [26] },
       // button_down: { name: 'button_down', ws: [3, 20, 3], hs: [26] },
       // button_disabled: { name: 'button_disabled', ws: [3, 20, 3], hs: [26] },
-      buttonselected_regular: { name: 'pixely/buttonselected', ws: [4, 5, 4], hs: [13] },
-      buttonselected_down: { name: 'pixely/buttonselected_down', ws: [4, 5, 4], hs: [13] },
-      buttonselected_rollover: { name: 'pixely/buttonselected', ws: [4, 5, 4], hs: [13] },
-      buttonselected_disabled: { name: 'pixely/buttonselected_disabled', ws: [4, 5, 4], hs: [13] },
+      buttonselected_regular: { atlas: 'pixely', name: 'buttonselected' },
+      buttonselected_down: { atlas: 'pixely' },
+      buttonselected_rollover: { atlas: 'pixely', name: 'buttonselected' },
+      buttonselected_disabled: { atlas: 'pixely' },
       // panel: { name: 'panel', ws: [3, 2, 3], hs: [3, 10, 3] },
       // menu_entry: { name: 'menu_entry', ws: [4, 5, 4], hs: [13] },
       // menu_selected: { name: 'menu_selected', ws: [4, 5, 4], hs: [13] },

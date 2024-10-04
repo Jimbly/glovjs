@@ -1,5 +1,6 @@
 import type { FontStyle } from './font';
 import type { FocusableElement } from './scroll_area';
+import type { EventCallback } from 'glov/client/ui';
 import type { TextVisualLimit } from 'glov/common/types';
 import type { ROVec4 } from 'glov/common/vmath';
 
@@ -69,3 +70,5 @@ export function editBox<T extends string|number=string|number>(params: EditBoxOp
   text: T;
   edit_box: EditBox;
 };
+
+export function showOnscreenKeyboard(): EventCallback | undefined;

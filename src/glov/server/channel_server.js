@@ -23,9 +23,12 @@ const { ERR_NOT_FOUND } = require('./exchange.js');
 const fs = require('fs');
 const { keyMetricsFlush } = require('./key_metrics.js');
 const log = require('./log.js');
-const { logEx, logDowngradeErrors, logDumpJSON } = log;
+const { logCat, logCategoryEnable, logEx, logDowngradeErrors, logDumpJSON } = log;
 const { min, round } = Math;
-const metrics = require('./metrics.js');
+const {
+  metricsAdd,
+  metricsSet,
+} = require('./metrics.js');
 const os = require('os');
 const { isPacket, packetCreate, packetDefaultFlags } = require('glov/common/packet.js');
 const path = require('path');
@@ -280,28 +283,38 @@ function channelServerPakSend(err, resp_func) {
 }
 
 let quiet_messages = Object.create(null);
-export function quietMessagesSet(list) {
+quiet_messages.friend_list = 'social';
+quiet_messages.ent_join = 'entverbose';
+quiet_messages.chat = 'chatverbose';
+export function quietMessagesSet(list, cat) {
   for (let ii = 0; ii < list.length; ++ii) {
-    quiet_messages[list[ii]] = true;
+    quiet_messages[list[ii]] = cat || 'quiet';
   }
 }
 let quiet_message_user_keys = Object.create(null);
-quiet_message_user_keys.pos = true;
-export function quietMessagesSetUserKey(key) {
-  quiet_message_user_keys[key] = true;
+quiet_message_user_keys.pos = 'quiet';
+export function quietMessagesSetUserKey(key, cat) {
+  quiet_message_user_keys[key] = cat || 'quiet';
+}
+let quiet_message_cmdparse = Object.create(null);
+quiet_message_cmdparse.cmd_list = 'quiet';
+export function quietMessagesSetCmdParse(key, cat) {
+  quiet_message_cmdparse[key] = cat || 'quiet';
 }
 export function quietMessage(msg, payload) {
-  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] || quiet_messages[msg];
+  return msg === 'set_user' && payload && quiet_message_user_keys[payload.key] ||
+    msg === 'cmdparse' && payload && quiet_message_cmdparse[payload] ||
+    quiet_messages[msg];
 }
 
 // source is a ChannelWorker
 // dest is channel_id in the form of `type.id`
-export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
+export function channelServerPak(source, dest, msg, ref_pak, qcat, debug_msg) {
   assert(typeof dest === 'string' && dest);
   assert(typeof msg === 'string' || typeof msg === 'number');
   assert(source.channel_id);
   assert(source.shutting_down < 2); // or already shut down - will be OOO and will not get responses!
-  if (!q && typeof msg === 'string' && !quietMessage(msg)) {
+  if (typeof msg === 'string') {
     let ctx = {};
     let ids = source.channel_id.split('.');
     ctx[ids[0]] = ids[1];
@@ -310,6 +323,14 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
     if (source.log_user_id) {
       // Log user_id of the initiating user, if applicable
       ctx.user_id = source.log_user_id;
+    }
+    if (!qcat) {
+      qcat = quietMessage(msg);
+    }
+    if (typeof qcat === 'string') {
+      ctx.cat = qcat;
+    } else if (qcat) {
+      ctx.cat = 'quiet';
     }
     logEx(ctx, 'debug', `${source.channel_id}->${dest}: ${msg} ${debug_msg || '(pak)'}`);
   }
@@ -336,9 +357,12 @@ export function channelServerPak(source, dest, msg, ref_pak, q, debug_msg) {
   return pak;
 }
 
-export function channelServerSend(source, dest, msg, err, data, resp_func, q) {
+export function channelServerSend(source, dest, msg, err, data, resp_func, qcat) {
   let is_packet = isPacket(data);
-  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, q || data && data.q,
+  if (qcat === 1 || qcat === true || !qcat && data && data.q) {
+    qcat = 'quiet';
+  }
+  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, qcat,
     !is_packet ? `${err ? `err:${logdata(err)}` : ''} ${logdata(data)}` : null);
 
   if (!err) {
@@ -348,9 +372,12 @@ export function channelServerSend(source, dest, msg, err, data, resp_func, q) {
   pak.send(err, resp_func);
 }
 
-export function channelServerSendNoCreate(source, dest, msg, err, data, resp_func, q) {
+export function channelServerSendNoCreate(source, dest, msg, err, data, resp_func, qcat) {
   let is_packet = isPacket(data);
-  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, q || data && data.q,
+  if (qcat === 1 || qcat === true || !qcat && data && data.q) {
+    qcat = 'quiet';
+  }
+  let pak = channelServerPak(source, dest, msg, is_packet ? data : null, qcat,
     !is_packet ? `${err ? `err:${logdata(err)}` : ''} ${logdata(data)}` : null);
   pak.cs_data.no_create = true;
 
@@ -441,7 +468,6 @@ export class ChannelServer {
     this.ds_store_bulk = null; // bulkdata store
     this.ds_store_meta = null; // metadata store
     this.master_stats = { num_channels: {} };
-    this.load_log = false;
     this.last_load_log = '';
     this.restarting = false;
     this.server_time = 0;
@@ -536,7 +562,7 @@ export class ChannelServer {
         channel.registered = true; // Pre-registered
         self.local_channels[channel_id] = channel;
         self.exchange.replaceMessageHandler(channel_id, proxyMessageHandler, channel.handleMessage.bind(channel));
-        logEx(log_ctx, 'log', `Auto-created channel ${channel_id} (${queued_msgs.length} msgs queued)`);
+        logCat(log_ctx, 'lifecycle', 'log', `Auto-created channel ${channel_id} (${queued_msgs.length} msgs queued)`);
 
         // Dispatch queued messages
         for (let ii = 0; ii < queued_msgs.length; ++ii) {
@@ -573,7 +599,7 @@ export class ChannelServer {
 
     cbs = this.channels_creating[channel_id] = [cb];
 
-    let pak = this.csworker.pak('master.master', 'worker_create_req');
+    let pak = this.csworker.pak('master.master', 'worker_create_req', null, 'lifecycle');
     pak.writeAnsiString(channel_type);
     pak.writeAnsiString(subid);
     pak.send(function (err) {
@@ -672,7 +698,8 @@ export class ChannelServer {
     let send_stats = {
       get: stats.get - this.restart_last_stats.get,
       set: stats.set - this.restart_last_stats.set,
-      inflight_set: ds_stats.inflight_set + dss_stats.inflight_set + (this.waiting_to_monitor_flush ? 1 : 0),
+      inflight_set: ds_stats.inflight_set + dss_stats.inflight_set + (this.waiting_to_monitor_flush ? 1 : 0) +
+        cwstats.inflight_set,
     };
     let is_zeroes = !send_stats.get && !send_stats.set && !send_stats.inflight_set;
     if (this.force_shutdown) {
@@ -748,6 +775,10 @@ export class ChannelServer {
         client.send('chat_broadcast', data);
       }
     }
+  }
+
+  handleLogCat(data) {
+    logCategoryEnable(data.cat, data.enabled);
   }
 
   clientIdFromWSClient(client) {
@@ -884,19 +915,19 @@ export class ChannelServer {
       this.exchange_ping.min = Infinity;
       this.exchange_ping.count = this.exchange_ping.total = this.exchange_ping.max = 0;
       // Report to metrics
-      metrics.set('load.cpu', load_cpu / 1000);
-      metrics.set('load.host_cpu', load_host_cpu / 1000);
-      metrics.set('load.mem', load_mem);
-      metrics.set('load.heap_used', mu.heapUsed/1024/1024);
-      //metrics.set('load.heap_total', mu.heapTotal/1024/1024);
-      metrics.set('load.free_mem', free_mem / 1000);
-      metrics.set('load.msgps.cw', msgs_per_s_cw);
-      metrics.set('load.msgps.ws', msgs_per_s_ws);
-      //metrics.set('load.msgps.total', msgs_per_s);
-      metrics.set('load.kbps.cw', kbytes_per_s_cw);
-      metrics.set('load.kbps.ws', kbytes_per_s_ws);
-      //metrics.set('load.kbps.total', kbytes_per_s);
-      metrics.set('load.exchange', ping_max);
+      metricsSet('load.cpu', load_cpu / 1000, 'high');
+      metricsSet('load.host_cpu', load_host_cpu / 1000, 'med');
+      metricsSet('load.mem', load_mem, 'high');
+      metricsSet('load.heap_used', mu.heapUsed/1024/1024, 'high');
+      //metricsSet('load.heap_total', mu.heapTotal/1024/1024, 'med');
+      metricsSet('load.free_mem', free_mem / 1000, 'med');
+      metricsSet('load.msgps.cw', msgs_per_s_cw, 'med');
+      metricsSet('load.msgps.ws', msgs_per_s_ws, 'med');
+      //metricsSet('load.msgps.total', msgs_per_s, 'med');
+      metricsSet('load.kbps.cw', kbytes_per_s_cw, 'med');
+      metricsSet('load.kbps.ws', kbytes_per_s_ws, 'med');
+      //metricsSet('load.kbps.total', kbytes_per_s, 'med');
+      metricsSet('load.exchange', ping_max, 'high');
       // Log
       this.last_load_log = `load: cpu=${load_cpu/10}%, hostcpu=${load_host_cpu/10}%,` +
         ` mem=${load_mem}MB, osfree=${free_mem/10}%` +
@@ -905,12 +936,10 @@ export class ChannelServer {
         // Also maybe useful: mu.heapTotal/heapUsed (JS heap); mu.external/arrayBuffers (Buffers and ArrayBuffers)
         `; heap=${mb(mu.heapUsed)}/${mb(mu.heapTotal)}MB, external=${mb(mu.arrayBuffers)}/${mb(mu.external)}MB` +
         `; exchange ping=${us(ping_min)}/${us(ping_avg)}/${us(ping_max)}`;
-      if (this.load_log) {
-        this.csworker.log(this.last_load_log);
-      }
+      this.csworker.infoCat('load', this.last_load_log);
 
       // Report to master worker
-      let pak = this.csworker.pak('master.master', 'load', null, 1);
+      let pak = this.csworker.pak('master.master', 'load', null, 'redundant');
       pak.writeInt(load_cpu);
       pak.writeInt(load_host_cpu);
       pak.writeInt(load_mem);
@@ -944,9 +973,7 @@ export class ChannelServer {
   }
 
   reportPerfCounters(counters) {
-    if (this.load_log) {
-      this.csworker.info('perf_counters', counters);
-    }
+    this.csworker.infoCat('load', 'perf_counters', counters);
   }
 
   exchangePing(dt) {
@@ -959,7 +986,7 @@ export class ChannelServer {
       return;
     }
     this.exchange_ping.countdown = 0;
-    let pak = this.csworker.pak(this.csworker.channel_id, 'ping', null, true);
+    let pak = this.csworker.pak(this.csworker.channel_id, 'ping', null, 'ping');
     pak.no_local_bypass = true;
     let time = process.hrtime();
     pak.writeU32(time[0]);
@@ -1045,6 +1072,7 @@ export class ChannelServer {
       filters: map of message to a function that is called before passing a message off to it's handler function
         useful for low-level messages that are handled internally ("apply_channel_data")
     }
+    Note: TypeScript declaration of WorkerInitData in client_worker.js
    */
   registerChannelWorker(channel_type, ctor, options_in) {
     if (options_in) {
@@ -1129,8 +1157,8 @@ export class ChannelServer {
   pakAsChannelServer(dest, msg) {
     return this.csworker.pak(dest, msg);
   }
-  sendAsChannelServer(dest, msg, data, resp_func) {
-    this.csworker.sendChannelMessage(dest, msg, data, resp_func);
+  sendAsChannelServer(dest, msg, data, resp_func, qcat) {
+    this.csworker.sendChannelMessage(dest, msg, data, resp_func, qcat);
   }
 
   getLocalChannelsByType(channel_type) {
@@ -1167,14 +1195,14 @@ export class ChannelServer {
       if (key.match(/^[a-zA-Z0-9-_]+$/)) {
         let count = clients_by_platform[key];
         sub_summary.push(`${key}:${count}`);
-        metrics.set(`clients.platform.${key}`, count);
+        metricsSet(`clients.platform.${key}`, count, 'med');
       }
     }
     for (let key in clients_by_ver) {
       if (key.match(/^[a-zA-Z0-9-_.]+$/)) {
         let count = clients_by_ver[key];
         sub_summary.push(`${key}:${count}`);
-        metrics.set(`clients.ver.${key.replace(/\./g, '_')}`, count);
+        // metricsSet(`clients.ver.${key.replace(/\./g, '_')}`, count, 'med');
       }
     }
     lines.push(`Clients: ${num_clients}${sub_summary.length ? ` (${sub_summary.join(', ')})`: ''}`);
@@ -1190,7 +1218,7 @@ export class ChannelServer {
     let channels = [];
     for (let channel_type in num_channels) {
       channels.push(`${channel_type}: ${num_channels[channel_type]}`);
-      metrics.set(`count.${channel_type}`, num_channels[channel_type]);
+      // metricsSet(`count.${channel_type}`, num_channels[channel_type], 'med');
     }
     lines.push(`Channel Counts: ${channels.join(', ')}`);
     channels = [];
@@ -1256,7 +1284,7 @@ export class ChannelServer {
       msg: 'Server error occurred - check server logs'
     });
     sendToBuildClients('server_error', formatLocalError(e));
-    metrics.add('server_error', 1);
+    metricsAdd('server_error', 1, 'high');
   }
 }
 

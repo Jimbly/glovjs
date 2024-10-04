@@ -75,6 +75,7 @@ import {
 } from './net';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import * as settings from './settings';
+import { settingsRegister } from './settings';
 import { isFriend } from './social';
 import {
   SPOT_DEFAULT_BUTTON,
@@ -106,13 +107,14 @@ import {
 } from './words/profanity';
 
 import type { Box } from './geom_types';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type {
   ChatHistoryData,
   ChatMessageDataBroadcast,
   ChatMessageDataSaved,
   ClientIDs,
-  CmdRespFunc,
   DataObject,
+  Roles,
   TSMap,
   WithRequired,
 } from 'glov/common/types';
@@ -131,8 +133,6 @@ const MAX_PER_STYLE: TSMap<number> = {
   join_leave: 3,
 };
 
-export type Roles = TSMap<1>;
-
 interface ChatMessage extends ChatMessageDataBroadcast {
   style: string;
   msg_text: string;
@@ -140,6 +140,7 @@ interface ChatMessage extends ChatMessageDataBroadcast {
   flags: number;
   // calculated/run-time:
   hidden?: boolean;
+  err_echo?: boolean;
   msg_h: number;
   msg_w: number;
   chatsrc_tag: string;
@@ -160,7 +161,7 @@ declare module 'glov/client/settings' {
   let profanity_filter: number;
 }
 
-settings.register({
+settingsRegister({
   chat_auto_unfocus: {
     default_value: 0,
     type: cmd_parse.TYPE_INT,
@@ -304,7 +305,7 @@ function notHidden(msg: ChatMessage): boolean {
 
 function toStr(val: unknown): string {
   val = getStringIfLocalizable(val);
-  return typeof val === 'string' ? val : JSON.stringify(val);
+  return typeof val === 'string' ? val : mdEscape(JSON.stringify(val));
 }
 
 let access_dummy = {
@@ -546,7 +547,7 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
     }
     this.font.drawSizedAligned(style,
       param.x + dims.x, param.y + dims.y, param.z,
-      dims.h, this.align & NOT_WRAP, dims.w, dims.h, this.url_label);
+      dims.h, this.align & NOT_WRAP | ALIGN.HFIT, dims.w, dims.h, this.url_label);
     profilerStop();
   }
 }
@@ -648,6 +649,27 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
 export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
 export type ChatUIParamStyles = Partial<Record<SystemStyles | string, FontStyle>>;
 
+export type ExtraButtonsPreState = {
+  // state from chat_ui:
+  button_h: number;
+  has_channel: boolean; // chat UI is currently in a channel that can send/receive chat (not just debug console)
+  hide_input: boolean; // no text input element will be shown (e.g. pointer locked)
+  input_focused: boolean; // text input is focused (but hasn't run, don't do keybinds!)
+  // to be filled by pre_cb:
+  total_w: number;
+};
+
+export type ExtraButtonsState = ExtraButtonsPreState & {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type ChatUIExtraButtons = {
+  pre_cb: (state: ExtraButtonsPreState) => void;
+  cb: (state: ExtraButtonsState) => void;
+};
+
 export type ChatUIParam = {
   w?: number;
   h?: number; // excluding text entry
@@ -661,6 +683,7 @@ export type ChatUIParam = {
   renderables?: TSMap<MarkdownRenderable>;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
+  label_while_hidden?: Text;
 
   inner_width_adjust?: number;
   border?: number;
@@ -683,6 +706,7 @@ export type ChatUIParam = {
   cmdLogFilter?: (cmd: string) => string;
   decorate_user_cb?: (msg: ChatMessageUser) => string;
   message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
+  extra_buttons?: ChatUIExtraButtons;
 };
 
 export type ChatUIRunParam = Partial<{
@@ -709,6 +733,7 @@ class ChatUIImpl {
   private font_height: number;
   private hide_disconnected_message: boolean;
   private disconnected_message_top: boolean;
+  private label_while_hidden: Text;
   private inner_width_adjust: number;
   private border?: number;
   private volume_join_leave: number;
@@ -740,7 +765,8 @@ class ChatUIImpl {
   did_user_id_mouseover = false; // internal, for MDChatSource
   user_context_cb?: (param: { user_id: string }) => void; // internal, for MDChatSource
   decorate_user_cb: (msg: ChatMessageUser) => string; // internal, for MDRChatSource
-  message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
+  private message_pre_send_cb?: (flags: number, text: string, cb: (text: string | null) => void) => void;
+  private extra_buttons?: ChatUIExtraButtons;
   chat_interactive = false; // internal, for MDRChatURL
   url_base: string; // internal, for MDRChatURL
   // focuse_handled gets set if MDRChatURL handles focus/click/right-click/etc,
@@ -777,6 +803,7 @@ class ChatUIImpl {
     this.font_height = params.font_height || style.text_height;
     this.hide_disconnected_message = params.hide_disconnected_message || false;
     this.disconnected_message_top = params.disconnected_message_top || false;
+    this.label_while_hidden = params.label_while_hidden || '<Press Enter to chat>';
     this.scroll_area = scrollAreaCreate({
       background_color: null,
       auto_scroll: true,
@@ -836,6 +863,7 @@ class ChatUIImpl {
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
     this.message_pre_send_cb = params.message_pre_send_cb;
+    this.extra_buttons = params.extra_buttons;
 
     if (params.renderables) {
       this.renderables = cloneShallow(params.renderables);
@@ -1019,7 +1047,8 @@ class ChatUIImpl {
           url_label = m[1];
         }
       }
-      return `[chaturl=${urlKeyEscape(url_label)}]`;
+      // Replace only the captured group with the filtered link
+      return match.replace(msg_url, `[chaturl=${urlKeyEscape(url_label)}]`);
     });
   }
   linkUnFilter(msg: string): string {
@@ -1072,7 +1101,7 @@ class ChatUIImpl {
       this.on_chat_cb(data);
     }
     let { msg, style, id, display_name, flags } = data;
-    let { client_id, ts, quiet } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
+    let { client_id, ts, quiet, err_echo } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
     if (!quiet && client_id !== netClientId()) {
       if (this.volume_in) {
         playUISound('msg_in', this.volume_in);
@@ -1088,6 +1117,7 @@ class ChatUIImpl {
       flags,
       timestamp: ts,
       quiet,
+      err_echo,
     });
   }
   onChatBroadcast(data: {
@@ -1204,6 +1234,7 @@ class ChatUIImpl {
               client_id: netClientId(),
               display_name: netSubs().getDisplayName() || undefined,
               flags,
+              err_echo: true,
             });
           } else {
             this.addChatError(err);
@@ -1327,13 +1358,79 @@ class ChatUIImpl {
     }
     const inner_w = outer_w - border + this.inner_width_adjust;
     this.setActiveSize(font_height, inner_w); // may recalc msg_h on each elem; updates wrap_w
-    if (!hide_text_input) {
+    if (hide_text_input) {
+      if (this.extra_buttons) {
+        // Allow responding to hotkeys/etc, but should not show any buttons
+        // there is no visible place for this.
+        let extra_button_pre_state: ExtraButtonsPreState = {
+          button_h: 0,
+          has_channel: Boolean(this.channel),
+          hide_input: true,
+          input_focused: was_focused,
+          total_w: 0,
+        };
+        this.extra_buttons.pre_cb(extra_button_pre_state);
+        assert(!extra_button_pre_state.total_w);
+        let extra_button_state: ExtraButtonsState = {
+          ...extra_button_pre_state,
+          x: 0,
+          y: 0,
+          z: z + 1,
+        };
+        this.extra_buttons.cb(extra_button_state);
+      }
+    } else {
       anything_visible = true;
-      y -= border + font_height + 1;
-      if (!was_focused && opts.pointerlock && input.pointerLocked()) {
+      y -= border;
+
+      let input_width = inner_w - (opts.cuddly_scroll ? this.scroll_area.barWidth() + 1 + border : border);
+      let input_height = font_height;
+      let big_touch_chat_entry = input.touch_mode && !was_focused;
+      if (big_touch_chat_entry) {
+        input_height = font_height * 3;
+      }
+      y -= input_height + 1;
+
+      let hide_input = Boolean(!was_focused && opts.pointerlock && input.pointerLocked());
+      let extra_button_pre_state: ExtraButtonsPreState = {
+        button_h: input_height + 2,
+        has_channel: Boolean(this.channel),
+        hide_input,
+        input_focused: was_focused,
+
+        // filled by callback:
+        total_w: 0,
+      };
+      if (this.extra_buttons) {
+        this.extra_buttons.pre_cb(extra_button_pre_state);
+      }
+
+      // TODO: also add a "send chat" button here?
+
+      if (extra_button_pre_state.total_w) {
+        input_width -= extra_button_pre_state.total_w;
+      }
+      let extra_button_state: ExtraButtonsState = {
+        ...extra_button_pre_state,
+        x: x + input_width,
+        y,
+        z: z + 1,
+      };
+      if (this.extra_buttons) {
+        this.extra_buttons.cb(extra_button_state);
+        if (extra_button_state.total_w) {
+          input_width -= 4;
+        }
+      }
+
+      if (big_touch_chat_entry) {
+        input_width = min(input_width, font_height * 7);
+      }
+
+      if (hide_input) {
         // do not show edit box
-        font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, ALIGN.HFIT, inner_w, 0,
-          '<Press Enter to chat>');
+        font.drawSizedAligned(this.styles.def, x, y, z + 1, font_height, ALIGN.HFIT, input_width, 0,
+          this.label_while_hidden);
       } else {
         if (was_focused) {
           // Do auto-complete logic *before* edit box, so we can eat TAB without changing focus
@@ -1407,13 +1504,6 @@ class ChatUIImpl {
             this.edit_text_entry.setText(this.history.next(cur_text));
           }
           this.scroll_area.keyboardScroll();
-        }
-        let input_height = font_height;
-        let input_width = inner_w - (opts.cuddly_scroll ? this.scroll_area.barWidth() + 1 + border : border);
-        if (input.touch_mode && !was_focused) {
-          y -= font_height * 2;
-          input_height = font_height * 3;
-          input_width = font_height * 6;
         }
         let res = this.edit_text_entry.run({
           x, y, w: input_width, font_height: input_height, pointer_lock: opts.pointerlock

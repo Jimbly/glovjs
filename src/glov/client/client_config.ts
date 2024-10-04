@@ -1,5 +1,6 @@
 import assert from 'assert';
 import {
+  PlatformDef,
   PlatformID,
   platformIsValid,
   platformOverrideParameter,
@@ -18,6 +19,10 @@ export function platformGetID(): PlatformID {
   return override_platform;
 }
 
+export function platformParameterGet<T extends keyof PlatformDef>(parameter: T): PlatformDef[T] {
+  return platformParameter(platformGetID(), parameter);
+}
+
 const platform_devmode = platformParameter(PLATFORM, 'devmode');
 export const MODE_DEVELOPMENT = platform_devmode === 'on' || platform_devmode === 'auto' &&
   Boolean(String(document.location).match(/^https?:\/\/localhost/));
@@ -25,17 +30,17 @@ export const MODE_PRODUCTION = !MODE_DEVELOPMENT;
 
 // Abilities
 export function getAbilityReload(): boolean {
-  return platformParameter(platformGetID(), 'reload');
+  return platformParameterGet('reload');
 }
 export function setAbilityReload(value: boolean): void {
-  platformOverrideParameter('reload', platformParameter(platformGetID(), 'reload') && value);
+  platformOverrideParameter('reload', platformParameterGet('reload') && value);
 }
 
 export function getAbilityReloadUpdates(): boolean {
-  return platformParameter(platformGetID(), 'reload_updates');
+  return platformParameterGet('reload_updates');
 }
 export function setAbilityReloadUpdates(value: boolean): void {
-  platformOverrideParameter('reload_updates', platformParameter(platformGetID(), 'reload_updates') && value);
+  platformOverrideParameter('reload_updates', platformParameterGet('reload_updates') && value);
 }
 
 let ability_chat = true;

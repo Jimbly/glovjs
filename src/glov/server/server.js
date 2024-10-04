@@ -16,6 +16,7 @@ import {
   dataErrorQueueGet,
 } from 'glov/common/data_error';
 import { packetEnableDebug } from 'glov/common/packet';
+import { perfCounterSetBucketTime } from 'glov/common/perfcounters';
 import { callEach } from 'glov/common/util';
 import wscommon from 'glov/common/wscommon';
 import minimist from 'minimist';
@@ -40,7 +41,7 @@ import { shaderStatsInit } from './shader_stats';
 import glov_wsserver from './wsserver';
 const { netDelaySet } = wscommon;
 
-const STATUS_TIME = 5000;
+let status_time = 5000;
 export let ws_server;
 export let channel_server;
 
@@ -50,7 +51,7 @@ export function getChannelServer() {
 
 let last_status = '';
 function displayStatus() {
-  setTimeout(displayStatus, STATUS_TIME);
+  setTimeout(displayStatus, status_time);
   let status = channel_server.getStatus();
   if (status !== last_status) {
     console.info('STATUS', new Date().toISOString(), status);
@@ -151,6 +152,9 @@ export function startup(params) {
     metricsInit(metrics_impl);
   }
 
+  perfCounterSetBucketTime(server_config.perf_counter_bucket_time);
+  status_time = server_config.status_time || 5000;
+
   if (!exchange) {
     if (server_config.exchange_providers) {
       // eslint-disable-next-line global-require, import/no-dynamic-require
@@ -180,9 +184,6 @@ export function startup(params) {
     }
     dataErrorQueueEnable(true);
     dataErrorOnError(onDataError);
-  }
-  if (server_config.log && server_config.log.load_log) {
-    channel_server.load_log = true;
   }
 
   ws_server = glov_wsserver.create(server, server_https, argv.timeout === false, argv.dev);
@@ -227,7 +228,7 @@ export function startup(params) {
     shaderStatsInit(app);
   }
 
-  setTimeout(displayStatus, STATUS_TIME);
+  setTimeout(displayStatus, status_time);
 
   let gbstate;
   if (argv.dev) {

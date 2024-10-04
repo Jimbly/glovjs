@@ -182,6 +182,46 @@ export function setAspectFixed(w, h) {
   }
 }
 
+export function setAspectFixedRespectPixelPerfect(w, h) {
+  if (render_width || !engine.render_pixel_perfect) {
+    return void setAspectFixed(w, h);
+  }
+
+  let pa = engine.pixel_aspect;
+  let inv_aspect = h / pa / w;
+  let screen_w = safeScreenWidth();
+  let screen_h = safeScreenHeight();
+  let inv_desired_aspect = screen_h / screen_w;
+  let my_viewport_w = screen_w;
+  if (inv_aspect > inv_desired_aspect) {
+    my_viewport_w = w * pa / h * screen_h;
+  }
+  let scalar = my_viewport_w / w;
+  let int_scalar = floor(scalar);
+  let fpart = scalar - int_scalar;
+  if (scalar > 1 && fpart <= engine.render_pixel_perfect) {
+    // do pixel perfect
+  } else {
+    return void setAspectFixed(w, h);
+  }
+  // TODO: pixel_aspect is probably not supported correctly
+  scalar = int_scalar;
+  let desired_width = w * scalar;
+  let margin = screen_w - desired_width;
+  let left_margin_screen_px = floor(margin / 2);
+  let virtual_w = screen_w / scalar;
+  let left_margin = left_margin_screen_px / scalar;
+  let right_margin = virtual_w - w - left_margin;
+  let desired_height = round(h * scalar / pa);
+  margin = screen_h - desired_height;
+  let top_margin_screen_px = floor(margin / 2);
+  let virtual_h = screen_h / scalar;
+  let top_margin = top_margin_screen_px / scalar;
+  let bot_margin = virtual_h - h - top_margin;
+
+  set(-left_margin, -top_margin, w + right_margin, h + bot_margin, false);
+}
+
 // Primary drawing area at least W x H
 // But keep the aspect ratio of those things drawn to be correct
 // Similar to setAspectFixed() but keeps (0,0) in the upper left (all padding

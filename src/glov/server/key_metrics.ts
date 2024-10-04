@@ -1,6 +1,6 @@
 import { empty } from 'glov/common/util';
-import { metricsAdd } from './metrics';
-import { serverConfig } from './server_config';
+import { logCategoryEnabled } from './log';
+import { MetricFreq, metricsAdd } from './metrics';
 import { UserTimeAccumulator } from './usertime';
 
 import type { TSMap } from 'glov/common/types';
@@ -12,22 +12,21 @@ const LOG_TIME = 60000; // Much less frequent (long retention) logging (if enabl
 let usertime: UserTimeAccumulator;
 let accum: TSMap<number> = {};
 let last_log_time: number;
-let do_logging: boolean;
 
-export function keyMetricsAdd(metric: string, value: number): void {
-  metricsAdd(metric, value);
-  if (do_logging) {
+export function keyMetricsAdd(metric: string, value: number, freq: MetricFreq): void {
+  metricsAdd(metric, value, freq);
+  if (logCategoryEnabled('load')) {
     accum[metric] = (accum[metric] || 0) + value;
   }
 }
 
-export function keyMetricsAddTagged(metric: string, tags: string | string[], value: number): void {
-  keyMetricsAdd(metric, value);
+export function keyMetricsAddTagged(metric: string, tags: string | string[], value: number, freq: MetricFreq): void {
+  keyMetricsAdd(metric, value, freq);
   if (typeof tags === 'string') {
     tags = tags ? tags.split(',') : [];
   }
   for (let ii = 0; ii < tags.length; ++ii) {
-    keyMetricsAdd(`${metric}.${tags[ii]}`, value);
+    keyMetricsAdd(`${metric}.${tags[ii]}`, value, freq);
   }
 }
 
@@ -51,7 +50,7 @@ function keyMetricsTickInternal(): void {
     accumulators[ii].tick();
   }
 
-  if (do_logging) {
+  if (logCategoryEnabled('load')) {
     let now = Date.now();
     let time_since_log = now - last_log_time;
     if (time_since_log >= LOG_TIME) {
@@ -77,5 +76,4 @@ export function keyMetricsStartup(): void {
   last_log_time = Date.now();
   usertime = keyMetricsAccumulatorCreate('usertime');
   setTimeout(keyMetricsTick, TICK_TIME);
-  do_logging = Boolean(serverConfig().log?.load_log);
 }

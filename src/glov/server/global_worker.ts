@@ -1,6 +1,5 @@
 import assert from 'assert';
 import {
-  CmdDef,
   HandlerSource,
   TSMap,
   isClientHandlerSource,
@@ -11,6 +10,8 @@ import {
   ClientHandlerFunction,
   HandleNewClientOpts,
 } from './channel_worker';
+
+import type { CmdDef } from 'glov/common/cmd_parse';
 
 // General purpose worker(s) for handling global state
 

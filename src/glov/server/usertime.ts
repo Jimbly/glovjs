@@ -1,10 +1,11 @@
 import assert from 'assert';
 
+import type { MetricFreq } from './metrics';
 import type { TSMap } from 'glov/common/types';
 
 const { floor } = Math;
 
-export type MetricReporter = (metric: string, value: number) => void;
+export type MetricReporter = (metric: string, value: number, freq: MetricFreq) => void;
 
 // Tracks time attributed to users each with a set of tags, keeping track of
 // total time and time per tag.
@@ -71,9 +72,9 @@ export class UserTimeAccumulator {
       if (total_seconds) {
         log?.push(`${tag}=${total_seconds}`);
         if (tag === 'total') {
-          reporter(metric, total_seconds);
+          reporter(metric, total_seconds, 'med');
         } else {
-          reporter(`${metric}.${tag}`, total_seconds);
+          reporter(`${metric}.${tag}`, total_seconds, 'low');
         }
       }
       let remainder = total_time - total_seconds;
