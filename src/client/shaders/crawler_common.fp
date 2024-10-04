@@ -1,7 +1,7 @@
 #pragma WebGL2
 
 #ifndef WEBGL2
-#if defined(SSAA4X) || defined(ANISOTROPYBASEDAA)
+#if defined(SSAA4X) || defined(ANISOTROPYBASEDAA) || defined(DEMASTER)
 #extension GL_OES_standard_derivatives : enable
 #endif
 #endif
@@ -31,8 +31,38 @@ vec3 applyFogVS(in vec3 albedo) {
 }
 #endif
 
+vec4 color_edge = vec4(0.0, 0.0, 0.0, 1.0);
+vec4 color_wall = vec4(1.0, 1.0, 1.0, 1.0);
+
+mediump float brick(in vec2 coords) {
+  vec2 t0 = coords * vec2(128.0, 32.0);
+  t0 = t0 - fract(t0);
+  float v0 = t0.x + t0.y * 1024.0;
+  return v0;
+}
+
 mediump vec4 crawlerShader(vec4 color) {
-  #if defined(SSAA4X)
+  #if defined(DEMASTER)
+  // test of 2x1 bricks with procedural edge detection
+  vec2 dx = 1.01 * dFdx(interp_texcoord.xy);
+  vec2 dy = 1.01 * dFdy(interp_texcoord.xy);
+  float v0 = brick(interp_texcoord);
+  float v1 = brick(interp_texcoord + dx);
+  float v2 = brick(interp_texcoord + dy);
+  float v3 = brick(interp_texcoord + dx + dy);
+  vec4 texture0 = color_wall;
+  if (v0 != v1) {
+    if (v0 != v2) {
+      texture0 = color_edge;
+    } else if (v0 != v3) {
+      texture0 = color_edge;
+    }
+  } else if (v0 != v2) {
+    texture0 = color_edge;
+  }
+  //float v = fract((t0.x * 117.0 + t0.y * 217.0) / 256.0);
+  //texture0 = vec4(0.5 + v * 0.5, 0.0, 0.0, 1.);
+  #elif defined(SSAA4X)
   // simple 4x super sampled - if we want this, would be better to render to a 4x sized FBO and downsample, maybe?
   vec2 dx = dFdx(interp_texcoord.xy) * 0.5;
   vec2 dy = dFdy(interp_texcoord.xy) * 0.5;
