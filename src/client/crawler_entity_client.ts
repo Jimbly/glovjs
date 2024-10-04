@@ -31,7 +31,6 @@ import {
 } from 'glov/common/entity_base_common';
 import { TraitFactory, traitFactoryCreate } from 'glov/common/trait_factory';
 import {
-  CmdRespFunc,
   DataObject,
   EntityID,
   NetErrorCallback,
@@ -67,6 +66,7 @@ import { statusPush } from './status';
 import type { CrawlerState } from '../common/crawler_state';
 import type { EntityBaseClient } from 'glov/client/entity_base_client';
 import type { UIBoxColored } from 'glov/client/ui';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 let online_mode: OnlineMode;
 

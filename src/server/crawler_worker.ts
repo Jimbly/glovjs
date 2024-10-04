@@ -45,11 +45,11 @@ import type {
   BuildModeOp,
   CrawlerJoinPayload,
 } from '../common/crawler_entity_common';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type { ActionListResponse } from 'glov/common/entity_base_common';
 import type { Packet } from 'glov/common/packet';
 import type {
   ClientHandlerSource,
-  CmdRespFunc,
   DataObject,
   NetErrorCallback,
   NetResponseCallback,

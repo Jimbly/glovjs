@@ -16,6 +16,10 @@ import {
 import { ClientChannelWorker } from 'glov/client/net';
 import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
+import {
+  settingsRegister,
+  settingsSet,
+} from 'glov/client/settings';
 import { SimpleMenu, simpleMenuCreate } from 'glov/client/simple_menu';
 import {
   Sprite,
@@ -116,8 +120,6 @@ const { floor, max, min, round } = Math;
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
   export let show_fps: 0 | 1;
-  export let volume_sound: number;
-  export let volume_music: number;
   export let turn_toggle: 0 | 1;
 }
 
@@ -203,7 +205,7 @@ function pauseMenu(): void {
   }, {
     name: `Turn: ${settings.turn_toggle ? 'A/S/4/6/←/→': 'Q/E/7/9/LB/RB'}`,
     cb: () => {
-      settings.set('turn_toggle', 1 - settings.turn_toggle);
+      settingsSet('turn_toggle', 1 - settings.turn_toggle);
     },
   }];
   if (isLocal()) {
@@ -246,8 +248,8 @@ function pauseMenu(): void {
     items,
   });
 
-  settings.set('volume_sound', pause_menu.getItem(1).value);
-  settings.set('volume_music', pause_menu.getItem(2).value);
+  settingsSet('volume_sound', pause_menu.getItem(1).value as number);
+  settingsSet('volume_music', pause_menu.getItem(2).value as number);
 
   menuUp();
 }
@@ -598,10 +600,10 @@ export function play(dt: number): void {
   crawlerPlayTopOfFrame(overlay_menu_up);
 
   if (keyDownEdge(KEYS.F3)) {
-    settings.set('show_fps', 1 - settings.show_fps);
+    settingsSet('show_fps', 1 - settings.show_fps);
   }
   if (keyDownEdge(KEYS.F)) {
-    settings.set('filter', 1 - settings.filter);
+    settingsSet('filter', 1 - settings.filter);
     renderResetFilter();
   }
 
@@ -666,7 +668,7 @@ export function restartFromLastSave(): void {
   crawlerPlayInitOffline();
 }
 
-settings.register({
+settingsRegister({
   ai_pause: {
     default_value: 0,
     type: cmd_parse.TYPE_INT,

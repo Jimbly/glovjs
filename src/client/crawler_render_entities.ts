@@ -182,7 +182,7 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   ) {
     sprite = sprite_near;
   }
-  let frame = anim.getFrame();
+  let frame = anim.getFrame() as number;
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   let { w, h } = param;
   if (aspect < 1) {
@@ -251,7 +251,7 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     sprite = sprite_hybrid;
   }
   let shader = crawlerRenderGetShader(shader_type);
-  let frame = anim ? anim.getFrame() : 0;
+  let frame = anim ? anim.getFrame() as number : 0;
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   if (aspect !== 1) {
     v3copy(temp_pos, draw_pos);

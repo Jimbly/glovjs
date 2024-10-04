@@ -211,7 +211,7 @@ export type CrawlerThumbnailPair = [
   Sprite,
   {
     frame?: number;
-    uvs?: number[];
+    uvs?: ROVec4;
     color?: ROVec4;
   }
 ];
@@ -369,12 +369,12 @@ function frameFromAnim2(
   }
   if (t < blend_time) {
     idx = (idx + frames.length - 1) % frames.length;
-    let baseuv = uidata.rects[base_frame];
+    let baseuv = (uidata.rects as ROVec4[])[base_frame];
     let frame = spritesheet.tiles[frames[idx]];
     if (frame === undefined) {
       return;
     }
-    let ouruv = uidata.rects[frame];
+    let ouruv = (uidata.rects as ROVec4[])[frame];
     v2sub(out, ouruv, baseuv);
     out[2] = 1 - t / blend_time;
   } else {
@@ -620,7 +620,7 @@ function drawSimpleFiller(
 
   let orig_uvs = uv_identity;
   if (param && param.frame !== undefined) {
-    orig_uvs = sprite.uidata!.rects[param.frame];
+    orig_uvs = (sprite.uidata!.rects as ROVec4[])[param.frame];
     param.frame = undefined;
   }
 
@@ -770,7 +770,7 @@ function drawSimpleCornerFloor(
   v3iAdd(temp_pos, floor_detail_offs);
   v2set(temp_size, DIM*scale, DIM*scale);
 
-  let uvs = sprite.uidata!.rects[param.frame!];
+  let uvs = (sprite.uidata!.rects as ROVec4[])[param.frame!];
   if (quadrants === 4) {
     sprite.draw3D({
       ...param,
@@ -921,7 +921,7 @@ function drawSimplePillar(
   }
   let geom = pillar_geoms[key];
   if (!geom) {
-    let uvs = sprite.uidata!.rects[param.frame];
+    let uvs = (sprite.uidata!.rects as ROVec4[])[param.frame];
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
   let offs = vopts.offs || zero_vec;

@@ -30,6 +30,10 @@ import {
 } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import {
+  settingsRegister,
+  settingsSet,
+} from 'glov/client/settings';
+import {
   button,
   buttonText,
   drawRect,
@@ -40,6 +44,7 @@ import {
   uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
+import { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   Diff,
   Differ,
@@ -96,7 +101,7 @@ declare module 'glov/client/settings' {
   export let build_mode_help: 0 | 1;
 }
 
-settings.register({
+settingsRegister({
   build_mode_help: {
     default_value: 1,
     type: cmd_parse.TYPE_INT,
@@ -1713,7 +1718,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   x = 5;
   y = 5;
   if (keyDownEdge(KEYS.F1)) {
-    settings.set('build_mode_help', 1 - settings.build_mode_help);
+    settingsSet('build_mode_help', 1 - settings.build_mode_help);
   }
   (settings.build_mode_help ? [
     'BUILD MODE',
@@ -1758,7 +1763,7 @@ export function crawlerBuildModeStartup(params: {
 cmd_parse.register({
   cmd: 'vstyle',
   help: '(Build mode) change vstyle',
-  func: function (param: string, resp_func: ErrorCallback<string>) {
+  func: function (param: string, resp_func: CmdRespFunc<string>) {
     let game_state = crawlerGameState();
     let level = game_state.level;
     assert(level);
