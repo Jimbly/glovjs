@@ -34,7 +34,11 @@ import {
   isDataObject,
 } from 'glov/common/types';
 import { callEach, nop } from 'glov/common/util';
-import { entityServerDefaultLoadPlayerEntity, entity_field_defs } from 'glov/server/entity_base_server';
+import {
+  entityServerDefaultLoadPlayerEntity,
+  entity_field_defs,
+  logCatForEntityActionID,
+} from 'glov/server/entity_base_server';
 import { ChannelWorker } from './channel_worker.js';
 import { ChattableWorker } from './chattable_worker.js';
 import {
@@ -735,6 +739,7 @@ class ServerEntityManagerImpl<
   handleActionList(src: ClientHandlerSource, pak: Packet, resp_func: NetResponseCallback<ActionListResponse>): void {
     let count = pak.readInt();
     let actions: ActionMessageParam[] = [];
+    let log_cat = 'entverbose';
     for (let ii = 0; ii < count; ++ii) {
       let flags = pak.readInt();
       let action_data = {} as ActionMessageParam;
@@ -769,9 +774,10 @@ class ServerEntityManagerImpl<
         }
       }
       actions.push(action_data);
+      log_cat = logCatForEntityActionID(action_data.action_id) || log_cat;
     }
-    if (logCategoryEnabled('entverbose')) {
-      this.worker.debugSrcCat(src, 'entverbose', `${src.id}: ent_action_list(${count}):` +
+    if (logCategoryEnabled(log_cat)) {
+      this.worker.debugSrcCat(src, log_cat, `${src.id}: ent_action_list(${count}):` +
         ` ${JSON.stringify(actions).replace(/"/g, '')}`);
     }
     let any_error: string | undefined;

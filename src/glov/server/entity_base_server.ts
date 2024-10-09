@@ -120,6 +120,7 @@ export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | 'ob
 
 export type ActionDef<Entity extends EntityBaseServer> = {
   self_only: boolean;
+  log_cat?: string;
   allowed_data_assignments: Partial<Record<string, DataAssignmentType | DataAssignmentType[]>>;
   allow_any_assignment?: boolean;
   handler?: ActionHandler<Entity>;
@@ -163,6 +164,10 @@ interface PlayerEntity extends EntityBaseServer {
 }
 
 export type DirtyFields = Partial<Record<string, true>>;
+
+export function logCatForEntityActionID(action_id: string): string | undefined {
+  return entity_action_defs[action_id]?.log_cat;
+}
 
 export class EntityBaseServer extends EntityBaseCommon {
   declare entity_manager: ServerEntityManagerInterface;
