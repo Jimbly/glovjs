@@ -1,12 +1,10 @@
-/* eslint global-require:off */
-/* eslint-disable import/order */
+import assert from 'assert';
+import fs from 'fs';
+import { BlockList } from 'net';
+import path from 'path';
+import { defaultsDeep } from 'glov/common/util';
+import json5 from 'json5';
 const argv = require('minimist')(process.argv.slice(2));
-const assert = require('assert');
-const fs = require('fs');
-const json5 = require('json5');
-const { BlockList } = require('net');
-const path = require('path');
-const { defaultsDeep } = require('glov/common/util.js');
 
 let server_config;
 
