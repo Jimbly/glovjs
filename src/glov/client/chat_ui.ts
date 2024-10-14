@@ -1520,9 +1520,6 @@ class ChatUIImpl {
                 text = text.slice(1);
               }
               this.history.add(text);
-              if (netSubs()) {
-                netSubs().serverLog('cmd', this.cmdLogFilter(text));
-              }
               this.cmdParse(text.slice(1), (err) => {
                 if (!err) {
                   return;
@@ -1541,6 +1538,18 @@ class ChatUIImpl {
                   this.focus();
                 }
               });
+              if (netSubs()) {
+                let last_cmd_data = cmd_parse.getLastSuccessfulCmdData();
+                let param: DataObject = {
+                  text: this.cmdLogFilter(text),
+                  cs: last_cmd_data ? 1 : 0, // client success
+                };
+                if (last_cmd_data) {
+                  param.n = last_cmd_data.name;
+                  param.ar = last_cmd_data.access_run;
+                }
+                netSubs().serverLog('cmd', param);
+              }
             } else {
               this.sendChat(0, text);
             }
