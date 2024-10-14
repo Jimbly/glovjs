@@ -703,7 +703,7 @@ function checkResize() {
 
     // we have accurate view information, force scroll to top, always
     // should maybe do this any time an edit box is not in focus as well
-    if (window.pageYOffset || window.document.body.scrollTop) {
+    if (window.pageYOffset || window.document.body && window.document.body.scrollTop) {
       window.scroll(0,0);
     }
   }
