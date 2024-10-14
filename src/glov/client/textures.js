@@ -778,6 +778,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
     prepImage(err, img, function (err_prep, img_new, mipmaps) {
+      if (tex.load_gen !== load_gen || tex.destroyed) {
+        // someone else requested this texture to be loaded!  Or, it was already unloaded
+        --load_count;
+        return;
+      }
       img = img_new;
       let err_details = '';
       if (err_prep) {
