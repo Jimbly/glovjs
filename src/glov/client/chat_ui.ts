@@ -1196,6 +1196,22 @@ class ChatUIImpl {
     });
   }
 
+  cmdParseLogged(text: string, cb?: CmdRespFunc): void {
+    this.cmdParse(text, cb);
+    if (netSubs()) {
+      let last_cmd_data = cmd_parse.getLastSuccessfulCmdData();
+      let param: DataObject = {
+        text: this.cmdLogFilter(text),
+        cs: last_cmd_data ? 1 : 0, // client success
+      };
+      if (last_cmd_data) {
+        param.n = last_cmd_data.name;
+        param.ar = last_cmd_data.access_run;
+      }
+      netSubs().serverLog('cmd', param);
+    }
+  }
+
   cmdParseInternal(str: string): void {
     cmd_parse.handle(this.getAccessObj(), str, this.handle_cmd_parse_error);
   }
@@ -1520,7 +1536,7 @@ class ChatUIImpl {
                 text = text.slice(1);
               }
               this.history.add(text);
-              this.cmdParse(text.slice(1), (err) => {
+              this.cmdParseLogged(text.slice(1), (err) => {
                 if (!err) {
                   return;
                 }
@@ -1538,18 +1554,6 @@ class ChatUIImpl {
                   this.focus();
                 }
               });
-              if (netSubs()) {
-                let last_cmd_data = cmd_parse.getLastSuccessfulCmdData();
-                let param: DataObject = {
-                  text: this.cmdLogFilter(text),
-                  cs: last_cmd_data ? 1 : 0, // client success
-                };
-                if (last_cmd_data) {
-                  param.n = last_cmd_data.name;
-                  param.ar = last_cmd_data.access_run;
-                }
-                netSubs().serverLog('cmd', param);
-              }
             } else {
               this.sendChat(0, text);
             }
