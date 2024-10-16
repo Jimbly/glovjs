@@ -24,6 +24,9 @@ const sprite_sets = {
     // slider_notch: { atlas: 'pixely' },
     slider_handle: { atlas: 'pixely' },
 
+    checked: { atlas: 'pixely' },
+    unchecked: { atlas: 'pixely' },
+
     scrollbar_bottom: { atlas: 'pixely' },
     scrollbar_trough: { atlas: 'pixely' },
     scrollbar_top: { atlas: 'pixely' },

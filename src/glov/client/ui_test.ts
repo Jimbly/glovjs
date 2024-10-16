@@ -61,6 +61,7 @@ let test_dropdown: SelectionBox;
 let test_dropdown_large: SelectionBox;
 let test_scroll_area: ScrollArea;
 let slider_value = 0.75;
+let check_value = false;
 let test_lines = 10;
 let test_color = vec4(1,0,1,1);
 let test_markdown_sprite: Sprite;
@@ -495,6 +496,14 @@ nec arborei timentem, ut crimina vidit.
   if (ui.buttonText({ x: 2, y: internal_y, z, text: 'Disabled', tooltip: 'A disabled button', disabled: true })) {
     assert(false);
   }
+  internal_y += button_height + pad;
+
+  check_value = ui.checkbox(check_value, {
+    x: 2, y: internal_y, z, text: 'A _checkbox_',
+    markdown: true,
+    tooltip: `This checkbox is *${check_value ? '' : 'un'}checked*`,
+    tooltip_markdown: true,
+  });
   internal_y += button_height + pad;
 
   collapsagoriesHeader({

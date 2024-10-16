@@ -462,6 +462,9 @@ const base_ui_sprites = {
   // slider_notch: { atlas: 'default' },
   slider_handle: { atlas: 'default' },
 
+  checked: { atlas: 'default' },
+  unchecked: { atlas: 'default' },
+
   scrollbar_bottom: { atlas: 'default' },
   scrollbar_trough: { atlas: 'default' },
   scrollbar_top: { atlas: 'default' },
@@ -1307,6 +1310,81 @@ export function label(param) {
   }
   profilerStopFunc();
   return w || text_w;
+}
+
+export function checkbox(value, param) {
+  profilerStartFunc();
+
+  param.text = getStringFromLocalizable(param.text);
+
+  // required params
+  assert(typeof param.x === 'number');
+  assert(typeof param.y === 'number');
+  // optional params
+  // param.z = param.z || Z.UI;
+  let { text } = param;
+  param.h = param.h || ui_style_current.button_height;
+  param.w = param.w || (text ? ui_style_current.button_width : param.h);
+  param.font_height = param.font_height || (param.style || ui_style_current).text_height;
+  param.align = param.align || (ALIGN.VCENTER | ALIGN.HLEFT | ALIGN.HFIT);
+
+  // do focus / tooltip / action
+  if (buttonText({
+    ...param,
+    no_bg: true,
+    text: '',
+    tooltip: param.tooltip,
+  })) {
+    value = !value;
+  }
+  let spot_ret = button_last_spot_ret;
+  let focused = spot_ret.focused;
+  let base_name_checked = param.base_name_checked || 'checked';
+  let base_name_unchecked = param.base_name_checked || 'unchecked';
+
+  // draw button / check box / check mark
+  buttonSpotBackgroundDraw({
+    ...param,
+    w: param.h,
+    base_name: value ? base_name_checked : base_name_unchecked,
+  }, spot_ret.spot_state);
+
+  // draw text
+  if (text) {
+    let font_use = param.font || font;
+    let disabled = param.disabled;
+    let font_style = disabled ? param.font_style_disabled || font_style_disabled :
+      focused ? param.font_style_focused || font_style_focused :
+      param.font_style_normal || font_style_normal;
+    text = getStringFromLocalizable(text);
+    let text_height = param.font_height;
+    let xoffs = param.h + font_use.getCharacterWidth(font_style, text_height, 0x20);
+    let x = param.x + xoffs;
+    let y = param.y;
+    let z = param.z + 0.1;
+    let w = param.w - xoffs;
+    let h = param.h;
+    let align = param.align;
+    if (param.markdown) {
+      markdownAuto({
+        font: font_use,
+        font_style,
+        x, y, z,
+        w, h,
+        align,
+        text_height,
+        text: text
+      });
+    } else {
+      font_use.drawSizedAligned(
+        font_style,
+        x, y, z,
+        text_height, align, w, h, text);
+    }
+  }
+
+  profilerStopFunc();
+  return value;
 }
 
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
