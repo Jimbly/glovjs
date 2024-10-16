@@ -1331,7 +1331,7 @@ export function checkbox(value, param) {
   assert(typeof param.x === 'number');
   assert(typeof param.y === 'number');
   // optional params
-  // param.z = param.z || Z.UI;
+  param.z = param.z || Z.UI;
   let { text } = param;
   param.h = param.h || ui_style_current.button_height;
   param.w = param.w || (text ? ui_style_current.button_width : param.h);
