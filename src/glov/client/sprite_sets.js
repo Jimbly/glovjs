@@ -8,7 +8,7 @@ const sprite_sets = {
     button_disabled: { atlas: 'stone' },
   },
   pixely: {
-    color_set_shades: [1, 1, 1],
+    color_set_shades: [0.8, 1, 1],
     slider_params: [1, 1, 0.3],
 
     button: { atlas: 'pixely' },

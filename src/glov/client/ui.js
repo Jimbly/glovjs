@@ -116,7 +116,7 @@ const menu_fade_params_default = {
   z: Z.MODAL,
 };
 
-let color_set_shades = vec4(1, 1, 1, 1);
+let color_set_shades = vec4(1, 0.8, 1, 1);
 
 let color_sets = [];
 function applyColorSet(color_set) {
@@ -502,15 +502,16 @@ function uiStartup(param) {
     sliderSetDefaultShrink(...ui_sprites.slider_params);
   }
 
-  if (sprites.button_rollover && color_set_shades[1] !== 1) {
-    colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
-  }
-  if (sprites.button_down && color_set_shades[2] !== 1) {
-    colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
-  }
-  if (sprites.button_disabled && color_set_shades[3] !== 1) {
-    colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
-  }
+  // Not doing this, instead, ignoring the color shades when specific sprites exist
+  // if (sprites.button_rollover && color_set_shades[1] !== 1) {
+  //   colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
+  // }
+  // if (sprites.button_down && color_set_shades[2] !== 1) {
+  //   colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
+  // }
+  // if (sprites.button_disabled && color_set_shades[3] !== 1) {
+  //   colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
+  // }
 
   button_keys = {
     ok: { key: [KEYS.O], pad: [PAD.X], low_key: [KEYS.ESC] },
@@ -1010,8 +1011,9 @@ export function buttonBackgroundDraw(param, state) {
     let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
     let sprite = sprites[sprite_name];
-    // Note: was if (sprite) color = colors.regular for specific-sprite matches
-    if (!sprite) {
+    if (sprite) {
+      color = colors.regular;
+    } else {
       sprite = sprites[base_name];
     }
 
@@ -1026,20 +1028,7 @@ export function buttonBackgroundDraw(param, state) {
 
 export function buttonSpotBackgroundDraw(param, spot_state) {
   profilerStartFunc();
-  let state = SPOT_STATE_TO_UI_BUTTON_STATE[spot_state];
-  let colors = param.colors || color_button;
-  let color = button_last_color = param.color || colors[state];
-  if (!param.no_bg) {
-    let base_name = param.base_name || 'button';
-    let sprite_name = `${base_name}_${state}`;
-    let sprite = sprites[sprite_name];
-    // Note: was if (sprite) color = colors.regular for specific-sprite matches
-    if (!sprite) {
-      sprite = sprites[base_name];
-    }
-
-    drawHBox(param, sprite, color);
-  }
+  buttonBackgroundDraw(param, SPOT_STATE_TO_UI_BUTTON_STATE[spot_state]);
   profilerStopFunc();
 }
 
