@@ -620,6 +620,7 @@ export function init(channel_server_in) {
       ver: client.client_ver,
       build: client.client_build,
       ua: client.user_agent,
+      sesuid: client.client_sesuid,
     };
   });
   ws_server.on('cack_data', (cack_data) => {

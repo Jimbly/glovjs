@@ -90,6 +90,7 @@ function WSClient(ws_server, socket) {
   this.client_plat = query.plat;
   this.client_ver = query.ver;
   this.client_build = query.build;
+  this.client_sesuid = query.sesuid;
   // Note: client_tags only has client-scoped ABTest tags, not user-scoped (UserWorker gets those in rich presence)
   this.client_tags = query.abt ? query.abt.split(',') : [];
   if (this.client_plat) {

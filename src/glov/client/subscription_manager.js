@@ -29,7 +29,6 @@ import * as EventEmitter from 'glov/common/tiny-events';
 import * as util from 'glov/common/util';
 import { cloneShallow } from 'glov/common/util';
 import { platformParameterGet } from './client_config';
-import { session_uid } from './error_report';
 import * as local_storage from './local_storage';
 import { netDisconnected, netDisconnectedRaw } from './net';
 import * as walltime from './walltime';
@@ -983,7 +982,7 @@ SubscriptionManager.prototype.getLoginResponseData = function () {
 
 SubscriptionManager.prototype.serverLog = function (type, data) {
   this.onceConnected(() => {
-    this.client.send('log', { type, data, sesuid: session_uid });
+    this.client.send('log', { type, data });
   });
 };
 
