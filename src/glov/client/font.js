@@ -929,7 +929,7 @@ GlovFont.prototype.drawScaled = function () {
       ((applied_style.glow_outer - applied_style.glow_inner) * delta_per_source_pixel * font_texel_scale));
   } else {
     // Avoid sending `Infinity` to GPU
-    value2[2] = value[3] = 0;
+    value2[2] = value2[3] = 0;
   }
 
   v4scale(padding_in_font_space, padding4, 1 / avg_scale_font);
