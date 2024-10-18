@@ -381,6 +381,7 @@ function GlovFont(font_info, texture_name) {
   });
   this.textures = [this.texture];
   this.integral = Boolean(font_info.noFilter); // TODO: often only want this for pixely = strict modes?
+  this.hard_cutoff = this.integral; // Maybe only if also pixely-strict?
 
   this.font_info = font_info;
   this.font_size = font_info.font_size;
@@ -913,7 +914,13 @@ GlovFont.prototype.drawScaled = function () {
   padding4[1] = max(outer_scaled*ysc - glow_yoffs, padding1);
   padding4[3] = max(outer_scaled*ysc + glow_yoffs, padding1);
 
+  if (this.hard_cutoff) {
+    value[0] *= 512;
+    value[1] = value[1] * 512 - 255.5;
+    value[2] = value[2] * 512 - 255.5;
+  }
   techParamsSet('param0', value);
+
   let value2 = temp_vec4_glow_params;
   // Glow mult
   if (applied_style.glow_outer) {
