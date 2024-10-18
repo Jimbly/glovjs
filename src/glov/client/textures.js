@@ -67,6 +67,10 @@ export function textureDefaultFilters(min, mag) {
   default_filter_mag = mag;
 }
 
+export function textureDefaultIsNearest() {
+  return default_filter_mag === gl.NEAREST;
+}
+
 let bound_unit = null;
 let bound_tex = [];
 
