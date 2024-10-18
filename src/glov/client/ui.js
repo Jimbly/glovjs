@@ -825,12 +825,22 @@ export function drawTooltip(param) {
   let eff_tooltip_pad_top = param.tooltip_pad || (spuid.padv && spuid.padv[0]) * pixel_scale || tooltip_pad;
   let eff_tooltip_pad_bottom = param.tooltip_pad || (spuid.padv && spuid.padv[2]) * pixel_scale || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad_left - eff_tooltip_pad_right;
-  // TODO: dims (used if tooltip_above or tooltip_auto_above_offset or
-  //   tooltip_right) are potentially wrong for tooltips with markdown in them.
-  let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
+  let do_markdown = param.tooltip_markdown !== false;
+  let dims;
+  if (do_markdown) {
+    dims = markdownAuto({
+      font_style: font_style_modal,
+      w,
+      align: ALIGN.HWRAP,
+      text_height: ui_style_current.text_height,
+      text: tooltip,
+      no_draw: true,
+    });
+  } else {
+    dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
+  }
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
-    // TODO: support markdown dims
     above = tooltip_y0 + dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom > camera2d.y1();
   }
   let x = param.x;
