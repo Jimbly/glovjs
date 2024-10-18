@@ -691,7 +691,13 @@ export function markdownDraw(param: MarkdownDrawCachedParam): void {
   profilerStopFunc();
 }
 
-type MarkdownAutoParam = MarkdownStateParam & MarkdownParseParam & MarkdownLayoutParam & MarkdownDrawParam;
+type MarkdownAutoParamBase = MarkdownStateParam & MarkdownParseParam & MarkdownLayoutParam;
+type MarkdownAutoParamDraw = MarkdownAutoParamBase & MarkdownDrawParam;
+type MarkdownAutoParamNoDraw = MarkdownAutoParamBase & { no_draw: true };
+export type MarkdownAutoParam = MarkdownAutoParamDraw | MarkdownAutoParamNoDraw;
+function isAutoDrawParam(param: MarkdownAutoParam): param is MarkdownAutoParamDraw {
+  return !(param as MarkdownAutoParamNoDraw).no_draw;
+}
 
 function mdcAlloc(): MDCache {
   return {};
@@ -724,7 +730,9 @@ export function markdownAuto(param: MarkdownAutoParam): MarkdownDims {
 
   markdownPrep(param2);
   let dims = markdownDims(param2);
-  markdownDraw(param2);
+  if (isAutoDrawParam(param2)) {
+    markdownDraw(param2);
+  }
 
   if (auto_cache) {
     delete param.cache;
