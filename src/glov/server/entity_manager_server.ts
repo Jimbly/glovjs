@@ -1140,14 +1140,26 @@ class ServerEntityManagerImpl<
         }
         if (!other_ent) {
           // Presumably there is a delete queued, possibly in the VA we just left.
-          // Could look up why somewhere in ent_deletes, but presumably they're now
-          //   out of view anyway, so just sending 'unknown'
-          // TODO: This might go slightly wrong if there's an unrelated delete
-          //   right near us on the same frame we transition!  Maybe need to do
-          //   something smarter (either here or on the client when it next receives
-          //   an update packet)
-          dels.push([ent_id, 'unknown']);
-          delete known_entities[ent_id];
+          // If it's queued in a VA we're still in, let it get handled.
+          // This happens whenever our VAs changed and we're near a delete happening
+          let handled = false;
+          for (let ii = 0; ii < needed_areas.length && !handled; ++ii) {
+            let vaid = needed_areas[ii];
+            let va_deletes = this.ent_deletes[vaid];
+            if (va_deletes) {
+              for (let jj = 0; jj < va_deletes.length; ++jj) {
+                if (va_deletes[jj][0] === ent_id) {
+                  handled = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (!handled) {
+            // If not, presumably they're now out of view anyway, so just sending 'unknown'
+            dels.push([ent_id, 'unknown']);
+            delete known_entities[ent_id];
+          }
         } else {
           let { last_vaid, current_vaid } = other_ent;
           // Delete this entity if either the current or last VAID is in an area we no longer see.
