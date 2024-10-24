@@ -33,7 +33,11 @@ import {
   NetResponseCallback,
   isDataObject,
 } from 'glov/common/types';
-import { callEach, nop } from 'glov/common/util';
+import {
+  callEach,
+  deepEqual,
+  nop,
+} from 'glov/common/util';
 import {
   entityServerDefaultLoadPlayerEntity,
   entity_field_defs,
@@ -913,6 +917,9 @@ class ServerEntityManagerImpl<
   // Optional resp_func called when all full updates have been sent to the client,
   // but dirty ents still pending, likely including one's own entity.
   clientSetVisibleAreaSees(client: SEMClient, new_visible_areas: VAID[], resp_func?: NetErrorCallback<never>): void {
+    if (deepEqual(client.visible_area_sees, new_visible_areas)) {
+      return;
+    }
     this.clientSetVisibleAreaSeesInternal(client, new_visible_areas);
     this.sendInitialEntsToClient(client, true, resp_func);
   }
