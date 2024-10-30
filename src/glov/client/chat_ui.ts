@@ -1097,11 +1097,8 @@ class ChatUIImpl {
   }
 
   onMsgChat(data: ChatMessageDataBroadcast | ChatMessageDataSaved): void {
-    if (this.on_chat_cb) {
-      this.on_chat_cb(data);
-    }
     let { msg, style, id, display_name, flags } = data;
-    let { client_id, ts, quiet, err_echo } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
+    let { client_id, ent_id, ts, quiet, err_echo } = data as Partial<ChatMessageDataBroadcast & ChatMessageDataSaved>;
     if (!quiet && client_id !== netClientId()) {
       if (this.volume_in) {
         playUISound('msg_in', this.volume_in);
@@ -1109,7 +1106,9 @@ class ChatUIImpl {
     }
     display_name = display_name || id;
     flags = (flags || 0) | CHAT_FLAG_USERCHAT;
-    this.addChatFiltered({
+    let data_filtered = {
+      client_id,
+      ent_id,
       id,
       display_name,
       msg,
@@ -1118,7 +1117,11 @@ class ChatUIImpl {
       timestamp: ts,
       quiet,
       err_echo,
-    });
+    };
+    this.addChatFiltered(data_filtered);
+    if (this.on_chat_cb) {
+      this.on_chat_cb(data_filtered);
+    }
   }
   onChatBroadcast(data: {
     src: string;
