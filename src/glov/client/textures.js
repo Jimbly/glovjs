@@ -650,18 +650,36 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     let tasks = [];
     function decodeLevelPNG(level, offset, length, next) {
       let img_out = new Image();
-      let view = new Uint8Array(arraybuffer, offset, length);
-      let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
-      img_out.onload = function () {
-        URL.revokeObjectURL(url_object);
-        mipmaps[level] = img_out;
-        next();
-      };
-      img_out.onerror = function () {
-        URL.revokeObjectURL(url_object);
-        next('img load error');
-      };
-      img_out.src = url_object;
+      if (blobSupported()) {
+        let view = new Uint8Array(arraybuffer, offset, length);
+        let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+        img_out.onload = function () {
+          URL.revokeObjectURL(url_object);
+          mipmaps[level] = img_out;
+          next();
+        };
+        img_out.onerror = function () {
+          URL.revokeObjectURL(url_object);
+          next('img load error');
+        };
+        img_out.src = url_object;
+      } else {
+        img_out.onload = function () {
+          mipmaps[level] = img_out;
+          next();
+        };
+        img_out.onerror = function () {
+          next('img load error');
+        };
+        let src_str = ['data:image/png;base64,'];
+        for (let ii = 0; ii < length;) {
+          let sublen = Math.min(length - ii, 768);
+          let view = new Uint8Array(arraybuffer, offset + ii, sublen);
+          src_str.push(btoa(String.fromCharCode.apply(null, view)));
+          ii += sublen;
+        }
+        img_out.src = src_str.join('');
+      }
     }
     let data_offs = header_offs + num_images * 4;
     for (let level = 0; level < num_images; ++level) {
