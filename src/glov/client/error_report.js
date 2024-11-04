@@ -175,6 +175,7 @@ let filtered_errors = new RegExp([
   'betal\\.org',
   'changeNetWork', // mobile Vivo
   'CookieDeprecationLabel', // gtag
+  'googletagmanager', // gtag
   '__firefox__',
 ].join('|'));
 
