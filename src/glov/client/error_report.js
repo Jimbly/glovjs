@@ -177,6 +177,7 @@ let filtered_errors = new RegExp([
   'CookieDeprecationLabel', // gtag
   'googletagmanager', // gtag
   '__firefox__',
+  'ucbrowser_script'
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
