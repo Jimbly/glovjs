@@ -149,6 +149,10 @@ export class DefaultUserWorker extends ChannelWorker {
         this.setChannelData('private.password_deleted', undefined);
         this.setChannelData('private.password', password_deleted);
       }
+
+      if (this.getChannelData(`private.friends.${this.user_id}`)) {
+        this.setChannelData(`private.friends.${this.user_id}`, undefined);
+      }
     }
   }
 
