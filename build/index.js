@@ -25,6 +25,7 @@ const eslint = require('./eslint.js');
 const exec = require('./exec.js');
 const gulpish_tasks = require('./gulpish-tasks.js');
 const json5 = require('./json5.js');
+const sourcemapRemap = require('./sourcemap-remap.js');
 const testRunner = require('./test-runner.js');
 const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
 const texproc = require('./texproc.js');
@@ -770,6 +771,31 @@ if (argv['prod-uglify'] === false) {
     ],
     type: gb.SINGLE,
     func: copy,
+  });
+} else if (config.prod_build_version_file) {
+  gb.task({
+    name: 'build.prod.uglify.doit',
+    input: [
+      ...bundle_tasks.map(addStarStarJS),
+    ],
+    ...uglify({ inline: false }, prod_uglify_opts),
+  });
+  gb.task({
+    name: 'build.prod.uglify',
+    input: 'build.prod.uglify.doit:**',
+    deps: [config.prod_build_version_file.split(':')[0]],
+    ...sourcemapRemap(function (job, filename, next) {
+      job.depAdd(config.prod_build_version_file, function (err, ver_file) {
+        if (err) {
+          return void next(err);
+        }
+
+        let version = JSON.parse(ver_file.contents.toString()).ver;
+        assert(typeof version === 'string');
+
+        next(null, `http://localhost:3500/sourcemap/auto/${version}/${filename}`);
+      });
+    }),
   });
 } else {
   gb.task({

@@ -116,6 +116,7 @@ module.exports = function (gb) {
       do_version: 'client/app.ver.json',
       do_reload: true,
     }],
+    prod_build_version_file: 'client_bundle_app_ver:client/app.ver.json',
     extra_client_tasks: [],
     extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
     extra_prod_tasks: [],
