@@ -410,6 +410,9 @@ export class DefaultUserWorker extends ChannelWorker {
     if (!validUserId(user_id)) {
       return void resp_func('Invalid User ID');
     }
+    if (user_id === this.user_id) {
+      return void resp_func('Cannot block yourself');
+    }
     let friends = this.getFriendsList();
     let friend = friends[user_id];
     if (friend?.status === FriendStatus.Blocked) {
