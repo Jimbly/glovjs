@@ -1381,7 +1381,9 @@ export function keyDownEdge(keycode, opts) {
     return 0;
   }
   let r = ks.down_edge;
-  ks.down_edge = 0;
+  if (!opts || !opts.peek) {
+    ks.down_edge = 0;
+  }
   return r;
 }
 export function keyUpEdge(keycode, opts) {
@@ -1398,7 +1400,9 @@ export function keyUpEdge(keycode, opts) {
     return 0;
   }
   let r = ks.up_edge;
-  ks.up_edge = 0;
+  if (!opts || !opts.peek) {
+    ks.up_edge = 0;
+  }
   return r;
 }
 
