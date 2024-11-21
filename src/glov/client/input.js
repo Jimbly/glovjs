@@ -1677,7 +1677,9 @@ export function longPress(param) {
 
   for (let touch_id in touches) {
     let touch_data = touches[touch_id];
-    if (!(button === ANY || button === touch_data.button) || touch_data.long_press_dispatched) {
+    if (!(button === ANY || button === touch_data.button) || touch_data.long_press_dispatched ||
+      touch_data.button === POINTERLOCK
+    ) {
       continue;
     }
     if (checkPos(touch_data.start_pos, pos_param)) {
