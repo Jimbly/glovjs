@@ -1157,7 +1157,7 @@ class ChatUIImpl {
     this.addChat(`[error] ${toStr(err)}`, 'error');
   }
 
-  handleCmdParseError(err: unknown, resp: unknown): void {
+  handleCmdParseError(err: unknown, resp?: unknown): void {
     if (err) {
       this.addChatError(err);
     }
