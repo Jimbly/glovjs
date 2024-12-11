@@ -153,6 +153,8 @@ let filtered_errors = new RegExp([
   'otBannerSdk\\.js', // OneTrust (maybe when blocked by ad blocker/etc?)
   'setOTDataLayer', // OneTrust
   'otSDKStub', // OneTrust
+  'otTCF', // OneTrust
+  't\\.gvl', // OneTrust
   'pubads_20', // Some third-party ad provider
   'ima3\\.js', // Google ads
   'window\\.setDgResult', // likely from ad provider
@@ -174,7 +176,9 @@ let filtered_errors = new RegExp([
   'betal\\.org',
   'changeNetWork', // mobile Vivo
   'CookieDeprecationLabel', // gtag
+  'googletagmanager', // gtag
   '__firefox__',
+  'ucbrowser_script'
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
@@ -186,7 +190,7 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
     // just logged and should not corrupt state.
-    if (msg.match(filtered_errors)) {
+    if (msg.match(filtered_errors) || file && file.match(filtered_errors)) {
       return false;
     }
     ++crash_idx;

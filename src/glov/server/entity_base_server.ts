@@ -116,11 +116,12 @@ export type ActionHandler<Entity extends EntityBaseServer> = (
   resp_func: ErrorCallback<unknown, string>
 ) => void;
 
-export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | 'object' | null;
+export type DataAssignmentType = 'number' | 'string' | 'array' | 'boolean' | 'object' | 'null';
 
 export type ActionDef<Entity extends EntityBaseServer> = {
   self_only: boolean;
-  allowed_data_assignments: Partial<Record<string, DataAssignmentType>>;
+  log_cat?: string;
+  allowed_data_assignments: Partial<Record<string, DataAssignmentType | DataAssignmentType[]>>;
   allow_any_assignment?: boolean;
   handler?: ActionHandler<Entity>;
 };
@@ -163,6 +164,10 @@ interface PlayerEntity extends EntityBaseServer {
 }
 
 export type DirtyFields = Partial<Record<string, true>>;
+
+export function logCatForEntityActionID(action_id: string): string | undefined {
+  return entity_action_defs[action_id]?.log_cat;
+}
 
 export class EntityBaseServer extends EntityBaseCommon {
   declare entity_manager: ServerEntityManagerInterface;
@@ -333,18 +338,27 @@ export class EntityBaseServer extends EntityBaseCommon {
 
     for (let key in data_assignments) {
       let allowed_type = allowed_data_assignments[key];
-      let provided_type = Array.isArray(data_assignments[key]) ? 'array' : typeof data_assignments[key];
+      let value = data_assignments[key];
+      let provided_type: DataAssignmentType = value === null ? 'null' :
+        Array.isArray(value) ? 'array' :
+        typeof value as DataAssignmentType;
       if (allow_any_assignment) {
-        // OK
-      } else if (allowed_type === null && data_assignments[key] === null) {
         // OK
       } else if (!allowed_type) {
         this.errorSrc(src, `Action ${action_id} attempted to set disallowed field "${key}"`);
         return void resp_func('ERR_INVALID_ASSIGNMENT');
-      } else if (provided_type !== allowed_type) {
-        this.errorSrc(src, `Action ${action_id} attempted to set field "${key}"` +
-          ` to incorrect type (${provided_type})`);
-        return void resp_func('ERR_INVALID_ASSIGNMENT');
+      } else {
+        let ok = false;
+        if (Array.isArray(allowed_type)) {
+          ok = allowed_type.includes(provided_type);
+        } else {
+          ok = provided_type === allowed_type;
+        }
+        if (!ok) {
+          this.errorSrc(src, `Action ${action_id} attempted to set field "${key}"` +
+            ` to incorrect type (${provided_type})`);
+          return void resp_func('ERR_INVALID_ASSIGNMENT');
+        }
       }
     }
 

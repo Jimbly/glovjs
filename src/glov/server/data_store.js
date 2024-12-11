@@ -7,14 +7,16 @@ export let ds_stats = {
   inflight_set: 0,
 };
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const fs = require('fs');
-const FileStore = require('fs-store').FileStore;
-const { createFileStore } = require('fs-store-async');
-const mkdirp = require('mkdirp');
-const path = require('path');
-const { callEach, clone } = require('glov/common/util.js');
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { FileStore } from 'fs-store';
+import { createFileStore } from 'fs-store-async';
+import {
+  callEach,
+  clone,
+} from 'glov/common/util';
+import mkdirp from 'mkdirp';
 
 // Shuffles the ordering of the keys in an Object, to simulate saving to data
 //   stores that do not use JavaScript Objects (which retain order) as a backing

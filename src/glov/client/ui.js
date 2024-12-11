@@ -23,6 +23,7 @@ Z.FPSMETER = Z.FPSMETER || 10000;
 export const LINE_ALIGN = 1<<0;
 export const LINE_CAP_SQUARE = 1<<1;
 export const LINE_CAP_ROUND = 1<<2;
+export const LINE_NO_AA = 1<<3;
 
 export const internal = {
   checkHooks, // eslint-disable-line @typescript-eslint/no-use-before-define
@@ -71,6 +72,7 @@ const {
   spotUnfocus,
 } = require('./spot.js');
 const {
+  BLEND_ADDITIVE,
   BLEND_PREMULALPHA,
   spriteClipped,
   spriteClipPause,
@@ -116,7 +118,7 @@ const menu_fade_params_default = {
   z: Z.MODAL,
 };
 
-let color_set_shades = vec4(1, 1, 1, 1);
+let color_set_shades = vec4(1, 0.8, 1, 1);
 
 let color_sets = [];
 function applyColorSet(color_set) {
@@ -462,6 +464,9 @@ const base_ui_sprites = {
   // slider_notch: { atlas: 'default' },
   slider_handle: { atlas: 'default' },
 
+  checked: { atlas: 'default' },
+  unchecked: { atlas: 'default' },
+
   scrollbar_bottom: { atlas: 'default' },
   scrollbar_trough: { atlas: 'default' },
   scrollbar_top: { atlas: 'default' },
@@ -502,15 +507,16 @@ function uiStartup(param) {
     sliderSetDefaultShrink(...ui_sprites.slider_params);
   }
 
-  if (sprites.button_rollover && color_set_shades[1] !== 1) {
-    colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
-  }
-  if (sprites.button_down && color_set_shades[2] !== 1) {
-    colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
-  }
-  if (sprites.button_disabled && color_set_shades[3] !== 1) {
-    colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
-  }
+  // Not doing this, instead, ignoring the color shades when specific sprites exist
+  // if (sprites.button_rollover && color_set_shades[1] !== 1) {
+  //   colorSetSetShades(1, color_set_shades[2], color_set_shades[3]);
+  // }
+  // if (sprites.button_down && color_set_shades[2] !== 1) {
+  //   colorSetSetShades(color_set_shades[1], 1, color_set_shades[3]);
+  // }
+  // if (sprites.button_disabled && color_set_shades[3] !== 1) {
+  //   colorSetSetShades(color_set_shades[1], color_set_shades[2], 1);
+  // }
 
   button_keys = {
     ok: { key: [KEYS.O], pad: [PAD.X], low_key: [KEYS.ESC] },
@@ -821,12 +827,22 @@ export function drawTooltip(param) {
   let eff_tooltip_pad_top = param.tooltip_pad || (spuid.padv && spuid.padv[0]) * pixel_scale || tooltip_pad;
   let eff_tooltip_pad_bottom = param.tooltip_pad || (spuid.padv && spuid.padv[2]) * pixel_scale || tooltip_pad;
   let w = tooltip_w - eff_tooltip_pad_left - eff_tooltip_pad_right;
-  // TODO: dims (used if tooltip_above or tooltip_auto_above_offset or
-  //   tooltip_right) are potentially wrong for tooltips with markdown in them.
-  let dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
+  let do_markdown = param.tooltip_markdown !== false;
+  let dims;
+  if (do_markdown) {
+    dims = markdownAuto({
+      font_style: font_style_modal,
+      w,
+      align: ALIGN.HWRAP,
+      text_height: ui_style_current.text_height,
+      text: tooltip,
+      no_draw: true,
+    });
+  } else {
+    dims = font.dims(font_style_modal, w, 0, ui_style_current.text_height, tooltip);
+  }
   let above = param.tooltip_above;
   if (!above && param.tooltip_auto_above_offset) {
-    // TODO: support markdown dims
     above = tooltip_y0 + dims.h + eff_tooltip_pad_top + eff_tooltip_pad_bottom > camera2d.y1();
   }
   let x = param.x;
@@ -1010,8 +1026,9 @@ export function buttonBackgroundDraw(param, state) {
     let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
     let sprite = sprites[sprite_name];
-    // Note: was if (sprite) color = colors.regular for specific-sprite matches
-    if (!sprite) {
+    if (sprite) {
+      color = colors.regular;
+    } else {
       sprite = sprites[base_name];
     }
 
@@ -1026,20 +1043,7 @@ export function buttonBackgroundDraw(param, state) {
 
 export function buttonSpotBackgroundDraw(param, spot_state) {
   profilerStartFunc();
-  let state = SPOT_STATE_TO_UI_BUTTON_STATE[spot_state];
-  let colors = param.colors || color_button;
-  let color = button_last_color = param.color || colors[state];
-  if (!param.no_bg) {
-    let base_name = param.base_name || 'button';
-    let sprite_name = `${base_name}_${state}`;
-    let sprite = sprites[sprite_name];
-    // Note: was if (sprite) color = colors.regular for specific-sprite matches
-    if (!sprite) {
-      sprite = sprites[base_name];
-    }
-
-    drawHBox(param, sprite, color);
-  }
+  buttonBackgroundDraw(param, SPOT_STATE_TO_UI_BUTTON_STATE[spot_state]);
   profilerStopFunc();
 }
 
@@ -1320,6 +1324,81 @@ export function label(param) {
   return w || text_w;
 }
 
+export function checkbox(value, param) {
+  profilerStartFunc();
+
+  param.text = getStringFromLocalizable(param.text);
+
+  // required params
+  assert(typeof param.x === 'number');
+  assert(typeof param.y === 'number');
+  // optional params
+  param.z = param.z || Z.UI;
+  let { text } = param;
+  param.h = param.h || ui_style_current.button_height;
+  param.w = param.w || (text ? ui_style_current.button_width : param.h);
+  param.font_height = param.font_height || (param.style || ui_style_current).text_height;
+  param.align = param.align || (ALIGN.VCENTER | ALIGN.HLEFT | ALIGN.HFIT);
+
+  // do focus / tooltip / action
+  if (buttonText({
+    ...param,
+    no_bg: true,
+    text: '',
+    tooltip: param.tooltip,
+  })) {
+    value = !value;
+  }
+  let spot_ret = button_last_spot_ret;
+  let focused = spot_ret.focused;
+  let base_name_checked = param.base_name_checked || 'checked';
+  let base_name_unchecked = param.base_name_checked || 'unchecked';
+
+  // draw button / check box / check mark
+  buttonSpotBackgroundDraw({
+    ...param,
+    w: param.h,
+    base_name: value ? base_name_checked : base_name_unchecked,
+  }, spot_ret.spot_state);
+
+  // draw text
+  if (text) {
+    let font_use = param.font || font;
+    let disabled = param.disabled;
+    let font_style = disabled ? param.font_style_disabled || font_style_disabled :
+      focused ? param.font_style_focused || font_style_focused :
+      param.font_style_normal || font_style_normal;
+    text = getStringFromLocalizable(text);
+    let text_height = param.font_height;
+    let xoffs = param.h + font_use.getCharacterWidth(font_style, text_height, 0x20);
+    let x = param.x + xoffs;
+    let y = param.y;
+    let z = param.z + 0.1;
+    let w = param.w - xoffs;
+    let h = param.h;
+    let align = param.align;
+    if (param.markdown) {
+      markdownAuto({
+        font: font_use,
+        font_style,
+        x, y, z,
+        w, h,
+        align,
+        text_height,
+        text: text
+      });
+    } else {
+      font_use.drawSizedAligned(
+        font_style,
+        x, y, z,
+        text_height, align, w, h, text);
+    }
+  }
+
+  profilerStopFunc();
+  return value;
+}
+
 // Note: modal dialogs not really compatible with HTML overlay on top of the canvas!
 export function modalDialog(param) {
   param.title = getStringFromLocalizable(param.title);
@@ -1570,7 +1649,7 @@ export function modalTextEntry(param) {
       params.y += params.font_height * (param.multiline || 1) + modal_pad;
     }
     let ret;
-    if (eb_ret === eb.SUBMIT) {
+    if (eb_ret === eb.SUBMIT && !param.multiline) {
       ret = KEYS.O; // Do OK, Yes
     } else if (eb_ret === eb.CANCEL) {
       ret = KEYS.ESC; // Do Cancel, No
@@ -1816,10 +1895,22 @@ function premulAlphaColor(color) {
   temp_color[3] = color[3];
   return temp_color;
 }
+function premulAlphaAdditiveColor(color) {
+  temp_color[0] = color[0] * color[3];
+  temp_color[1] = color[1] * color[3];
+  temp_color[2] = color[2] * color[3];
+  temp_color[3] = 0;
+  return temp_color;
+}
 function drawElipseInternal(sprite, x0, y0, x1, y1, z, spread, tu0, tv0, tu1, tv1, color, blend) {
-  if (!blend && !glov_engine.defines.NOPREMUL) {
-    blend = BLEND_PREMULALPHA;
-    color = premulAlphaColor(color);
+  if (!glov_engine.defines.NOPREMUL) {
+    if (!blend) {
+      blend = BLEND_PREMULALPHA;
+      color = premulAlphaColor(color);
+    } else if (blend === BLEND_ADDITIVE) {
+      blend = BLEND_PREMULALPHA;
+      color = premulAlphaAdditiveColor(color);
+    }
   }
   spriteQueueRaw(sprite.texs,
     x0, y0, z, x1 - x0, y1 - y0,
@@ -2007,6 +2098,12 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   step_end = 1 + precise * (step_end - 1);
   let A = 1.0 / (step_end - step_start);
   let B = -step_start * A;
+
+  if (mode & LINE_NO_AA) {
+    A *= 512;
+    B = B * 512 - (512/2-0.5);
+  }
+
   let shader_param;
   if (line_last_shader_param.param0[0] !== A ||
     line_last_shader_param.param0[1] !== B

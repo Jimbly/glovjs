@@ -21,18 +21,17 @@ export let dss_stats = {
   inflight_search: 0,
 };
 
-/* eslint-disable import/order */
-const assert = require('assert');
-const {
+import assert from 'assert';
+import {
+  perfCounterAdd,
+  perfCounterAddValue,
+} from 'glov/common/perfcounters';
+import { getUID } from './log';
+import {
   metricsAdd,
   metricsSet,
   metricsStats,
-} = require('./metrics.js');
-const { getUID } = require('./log.js');
-const {
-  perfCounterAdd,
-  perfCounterAddValue,
-} = require('glov/common/perfcounters.js');
+} from './metrics';
 
 // Write timeouts *very* high, because if we ever assume a write has failed when
 //  it's still in progress, that can lead to data corruption (earlier write

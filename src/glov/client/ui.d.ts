@@ -21,6 +21,7 @@ export const Z_MIN_INC: number;
 export const LINE_ALIGN: number;
 export const LINE_CAP_SQUARE: number;
 export const LINE_CAP_ROUND: number;
+export const LINE_NO_AA: number;
 export function makeColorSet(color: ROVec4): ColorSet;
 export function colorSetMakeCustom(regular: ROVec4, rollover: ROVec4, down: ROVec4, disabled: ROVec4): ColorSet;
 export interface UIBox extends Box {
@@ -232,6 +233,13 @@ export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
 export function button(param: ButtonGenericParam): ButtonRet | null;
 export function buttonSetDefaultYOffs(y_offs: Partial<Record<ButtonStateString, number>>): void;
 
+
+type CheckboxParam = ButtonTextParam & {
+  base_name_checked?: string; // default 'checked'
+  base_name_unchecked?: string; // default 'unchecked'
+};
+export function checkbox(value: boolean, param: CheckboxParam): boolean;
+
 export function print(font_style: FontStyle | null, x: number, y: number, z: number, text: Text): number;
 
 export type LabelTextOptions = {
@@ -434,6 +442,15 @@ type UISpriteSet = {
   slider?: UISpriteDef;
   slider_notch?: UISpriteDef;
   slider_handle?: UISpriteDef;
+
+  checked?: UISpriteDef;
+  checked_rollover?: UISpriteDef;
+  checked_down?: UISpriteDef;
+  checked_disabled?: UISpriteDef;
+  unchecked?: UISpriteDef;
+  unchecked_rollover?: UISpriteDef;
+  unchecked_down?: UISpriteDef;
+  unchecked_disabled?: UISpriteDef;
 
   scrollbar_bottom?: UISpriteDef;
   scrollbar_trough?: UISpriteDef;

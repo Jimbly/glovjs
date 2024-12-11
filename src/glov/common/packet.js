@@ -20,12 +20,15 @@ const FLAG_PACKET_INTERNAL = PACKET_DEBUG | PACKET_RESERVED1 | PACKET_RESERVED2;
 // Internal, runtime-only (not serialized) flags < 8 bits
 const PACKET_UNOWNED_BUFFER = 1 << 8;
 
-/* eslint-disable import/order */
-const assert = require('assert');
+import assert from 'assert';
+import {
+  base64Decode,
+  base64Encode,
+} from './base64';
+import { deprecate, isInteger, log2 } from './util';
+// import { isInteger, log2 } from '../../build.dev/common/glov/util';
+
 const { max } = Math;
-const { deprecate, isInteger, log2 } = require('./util.js');
-// const { isInteger, log2 } = require('../../build.dev/common/glov/util.js');
-const { base64Encode, base64Decode } = require('./base64.js');
 
 deprecate(exports, 'default_flags');
 

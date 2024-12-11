@@ -164,6 +164,7 @@ export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFiel
   tooltip_above?: boolean;
   tooltip_right?: boolean;
   tooltip_center?: boolean;
+  tooltip_markdown?: boolean;
 }
 
 export interface SpotSubParam extends Box, SpotComputedFields {

@@ -211,6 +211,7 @@ class CmdParseImpl {
   private cmds: TSMap<CmdDefRegistered>;
   private cmds_for_complete: TSMap<CmdListEntry>;
   private implied_access: TSMap<Roles>;
+  private last_cmd_data?: CmdDefRegistered;
 
   constructor(params?: CmdParseOpts) {
     this.cmds = {};
@@ -270,6 +271,7 @@ class CmdParseImpl {
   handle(self: AccessContainer | undefined, str: string, resp_func: CmdRespFunc): boolean {
     resp_func = resp_func || this.default_handler;
     this.was_not_found = false;
+    this.last_cmd_data = undefined;
     let m = str.match(/^([^\s]+)(?:\s+(.*))?$/);
     if (!m) {
       resp_func('Missing command');
@@ -290,8 +292,13 @@ class CmdParseImpl {
       return false;
     }
     perfCounterAdd(`cmd.${cmd}`);
+    this.last_cmd_data = cmd_data;
     cmd_data.fn.call(self, m[2] || '', resp_func);
     return true;
+  }
+
+  getLastSuccessfulCmdData(): CmdDefRegistered | undefined {
+    return this.last_cmd_data;
   }
 
   exposeGlobal(cmd: string, override?: boolean): void {
@@ -523,7 +530,8 @@ class CmdParseImpl {
       help: param.help || ((param.get && param.set) ?
         `Set or display *${label}* value` :
         param.set ? `Set *${label}* value` : `Display *${label}* value`),
-      usage: param.usage || ((param.get ? `Display *${label}* value\n  Usage: **/${cmd}**\n` : '') +
+      usage: param.usage || ((param.get ? `${param.is_toggle ? 'Toggle' : 'Display'} *${label}* value\n` +
+        `  Usage: **/${cmd}**\n` : '') +
         (param.set ? `Set *${label}* value\n  Usage: **/${cmd} ${param_label}**` : '')),
       prefix_usage_with_help: param.prefix_usage_with_help,
       access_show: param.access_show,

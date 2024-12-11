@@ -1,10 +1,9 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const { serverConfig } = require('./server_config.js');
-const querystring = require('querystring');
-const url = require('url');
+import querystring from 'querystring';
+import url from 'url';
+import { serverConfig } from './server_config';
 
 // Options pulled in from serverConfig
 // how far behind proxies that reliably add x-forwarded-for headers are we?

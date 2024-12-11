@@ -1,20 +1,19 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import { inspect } from 'util';
+import { asyncEachSeries } from 'glov-async';
+import { ridx } from 'glov/common/util';
+import * as winston from 'winston';
+import { format } from 'winston';
+import 'winston-daily-rotate-file';
+import Transport from 'winston-transport';
+import { metricsAdd } from './metrics';
+import { processUID, serverConfig } from './server_config';
 const argv = require('minimist')(process.argv.slice(2));
-const assert = require('assert');
-const fs = require('fs');
-const { asyncEachSeries } = require('glov-async');
-const { metricsAdd } = require('./metrics.js');
-const path = require('path');
-const { processUID, serverConfig } = require('./server_config.js');
-const { inspect } = require('util');
-const { ridx } = require('glov/common/util.js');
-const winston = require('winston');
-const { format } = winston;
-const Transport = require('winston-transport');
-require('winston-daily-rotate-file');
 let fadvise;
 try {
   fadvise = require('fadvise'); // eslint-disable-line global-require

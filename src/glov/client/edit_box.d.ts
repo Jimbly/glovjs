@@ -72,3 +72,5 @@ export function editBox<T extends string|number=string|number>(params: EditBoxOp
 };
 
 export function showOnscreenKeyboard(): EventCallback | undefined;
+
+export function editBoxAnyActive(): boolean;

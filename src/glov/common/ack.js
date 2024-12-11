@@ -201,7 +201,7 @@ export function ackHandleMessage(receiver, source, pak, send_func, pak_func, han
   if (typeof msg === 'number') {
     let cb = receiver.resp_cbs[msg];
     if (!cb) {
-      return void receiver.onError(`Received response to unknown packet with id ${msg_name} from ${source}`);
+      return void receiver.onError(`Received response to unknown packet with id ${msg} from ${source}`);
     }
     delete receiver.resp_cbs[msg];
     profilerStart('response');

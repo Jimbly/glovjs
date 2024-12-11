@@ -33,8 +33,16 @@ import {
   NetResponseCallback,
   isDataObject,
 } from 'glov/common/types';
-import { callEach, nop } from 'glov/common/util';
-import { entityServerDefaultLoadPlayerEntity, entity_field_defs } from 'glov/server/entity_base_server';
+import {
+  callEach,
+  deepEqual,
+  nop,
+} from 'glov/common/util';
+import {
+  entityServerDefaultLoadPlayerEntity,
+  entity_field_defs,
+  logCatForEntityActionID,
+} from 'glov/server/entity_base_server';
 import { ChannelWorker } from './channel_worker.js';
 import { ChattableWorker } from './chattable_worker.js';
 import {
@@ -735,6 +743,7 @@ class ServerEntityManagerImpl<
   handleActionList(src: ClientHandlerSource, pak: Packet, resp_func: NetResponseCallback<ActionListResponse>): void {
     let count = pak.readInt();
     let actions: ActionMessageParam[] = [];
+    let log_cat = 'entverbose';
     for (let ii = 0; ii < count; ++ii) {
       let flags = pak.readInt();
       let action_data = {} as ActionMessageParam;
@@ -769,9 +778,10 @@ class ServerEntityManagerImpl<
         }
       }
       actions.push(action_data);
+      log_cat = logCatForEntityActionID(action_data.action_id) || log_cat;
     }
-    if (logCategoryEnabled('entverbose')) {
-      this.worker.debugSrcCat(src, 'entverbose', `${src.id}: ent_action_list(${count}):` +
+    if (logCategoryEnabled(log_cat)) {
+      this.worker.debugSrcCat(src, log_cat, `${src.id}: ent_action_list(${count}):` +
         ` ${JSON.stringify(actions).replace(/"/g, '')}`);
     }
     let any_error: string | undefined;
@@ -907,6 +917,9 @@ class ServerEntityManagerImpl<
   // Optional resp_func called when all full updates have been sent to the client,
   // but dirty ents still pending, likely including one's own entity.
   clientSetVisibleAreaSees(client: SEMClient, new_visible_areas: VAID[], resp_func?: NetErrorCallback<never>): void {
+    if (deepEqual(client.visible_area_sees, new_visible_areas)) {
+      return;
+    }
     this.clientSetVisibleAreaSeesInternal(client, new_visible_areas);
     this.sendInitialEntsToClient(client, true, resp_func);
   }
@@ -1134,14 +1147,26 @@ class ServerEntityManagerImpl<
         }
         if (!other_ent) {
           // Presumably there is a delete queued, possibly in the VA we just left.
-          // Could look up why somewhere in ent_deletes, but presumably they're now
-          //   out of view anyway, so just sending 'unknown'
-          // TODO: This might go slightly wrong if there's an unrelated delete
-          //   right near us on the same frame we transition!  Maybe need to do
-          //   something smarter (either here or on the client when it next receives
-          //   an update packet)
-          dels.push([ent_id, 'unknown']);
-          delete known_entities[ent_id];
+          // If it's queued in a VA we're still in, let it get handled.
+          // This happens whenever our VAs changed and we're near a delete happening
+          let handled = false;
+          for (let ii = 0; ii < needed_areas.length && !handled; ++ii) {
+            let vaid = needed_areas[ii];
+            let va_deletes = this.ent_deletes[vaid];
+            if (va_deletes) {
+              for (let jj = 0; jj < va_deletes.length; ++jj) {
+                if (va_deletes[jj][0] === ent_id) {
+                  handled = true;
+                  break;
+                }
+              }
+            }
+          }
+          if (!handled) {
+            // If not, presumably they're now out of view anyway, so just sending 'unknown'
+            dels.push([ent_id, 'unknown']);
+            delete known_entities[ent_id];
+          }
         } else {
           let { last_vaid, current_vaid } = other_ent;
           // Delete this entity if either the current or last VAID is in an area we no longer see.

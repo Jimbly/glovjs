@@ -4,13 +4,23 @@
 export let wsstats = { msgs: 0, bytes: 0 };
 export let wsstats_out = { msgs: 0, bytes: 0 };
 
-/* eslint-disable import/order */
-const ack = require('./ack.js');
-const assert = require('assert');
-const { ackHandleMessage, ackReadHeader, ackWrapPakStart, ackWrapPakPayload, ackWrapPakFinish } = ack;
+import assert from 'assert';
+import {
+  ackHandleMessage,
+  ackReadHeader,
+  ackWrapPakFinish,
+  ackWrapPakPayload,
+  ackWrapPakStart,
+} from './ack';
+import {
+  isPacket,
+  packetCreate,
+  packetDefaultFlags,
+  packetFromBuffer,
+} from './packet';
+import { perfCounterAddValue } from './perfcounters';
+
 const { random, round } = Math;
-const { isPacket, packetCreate, packetDefaultFlags, packetFromBuffer } = require('./packet.js');
-const { perfCounterAddValue } = require('./perfcounters.js');
 
 export const CONNECTION_TIMEOUT = 60000;
 export const PING_TIME = CONNECTION_TIMEOUT / 2;
