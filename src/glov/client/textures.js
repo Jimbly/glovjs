@@ -2,6 +2,10 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 /* eslint-env browser */
 
+// constants for use before the WebGL context is created
+export const GL_REPEAT = 0x2901;
+export const GL_CLAMP_TO_EDGE = 0x812f;
+
 import * as assert from 'assert';
 import { asyncParallel, asyncSeries } from 'glov-async';
 import {
