@@ -14,18 +14,11 @@ traits:
 - id: drawable_sprite
   anim_data:
     idle:
-      frames: [crystalwing]
+      frames: [goblin]
       times: 10000
   sprite_data:
     atlas: utumno
     filter_min: LINEAR_MIPMAP_LINEAR
     filter_mag: LINEAR
     origin: [0.5, 0.9]
-  scale: 0.75
-  simple_anim:
-    - period: 5000
-      # scale: [1, 1.15]
-      # easing: 2
-      offs:
-        - [0, -0.15]
-        - [0, 0]
+  scale: 0.62

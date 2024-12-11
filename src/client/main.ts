@@ -75,7 +75,7 @@ export function main(): void {
   let use_fbos = 1;
   let need_dfdxy = false;
   // @ts-expect-error truthy
-  if (!'AA hires pixel art') {
+  if ('AA hires pixel art') {
     need_dfdxy = true;
     antialias = true; // antialiases 3D geometry edges only
     use_fbos = 0;
@@ -87,7 +87,7 @@ export function main(): void {
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
   // @ts-expect-error truthy
-  } else if ('AA hires HD art') {
+  } else if (!'AA hires HD art') {
     antialias = true; // antialiases 3D geometry edges only
     settingsSet('pixely', 0);
     settingsSet('filter', 1);

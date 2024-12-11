@@ -2455,14 +2455,14 @@
     {
       "type": "enemy0",
       "pos": [
-        5,
-        11,
-        2
+        0,
+        9,
+        0
       ]
     }
   ],
   "state": {},
-  "vstyle": "",
+  "vstyle": "demo",
   "seed": "32845502",
   "props": {},
   "paths": {}
