@@ -499,6 +499,7 @@ const server_input_globs = [
   'server_static:**',
   'server_js_notest:**',
   'server_json:**',
+  'server_fsdata:**',
 ];
 
 gb.task({
