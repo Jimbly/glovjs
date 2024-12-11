@@ -1027,7 +1027,9 @@ export function buttonBackgroundDraw(param, state) {
     let sprite_name = `${base_name}_${state}`;
     let sprite = sprites[sprite_name];
     if (sprite) {
-      color = colors.regular;
+      if (!param.color) {
+        color = colors.regular;
+      }
     } else {
       sprite = sprites[base_name];
     }
