@@ -61,4 +61,5 @@ module.exports = function (config) {
     zip: true,
   }];
 
+  config.extra_server_tasks.push('server_fsdata');
 };

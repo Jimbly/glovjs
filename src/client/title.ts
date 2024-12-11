@@ -60,7 +60,8 @@ function title(dt: number): void {
   print(null, x, y, Z.UI, 'Crawler Demo');
   x += 10;
   y += uiTextHeight() + 2;
-  for (let ii = 0; ii < 3; ++ii) {
+  // @ts-expect-error truthy
+  for (let ii = 0; ii < 3 && !'onlinedemo'; ++ii) {
     let slot = ii + 1;
     let manual_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.manual`, { timestamp: 0 });
     print(null, x, y, Z.UI, `Slot ${slot}`);
@@ -93,7 +94,10 @@ function title(dt: number): void {
     x += uiButtonWidth() + 2;
   }
   x = 10;
-  y += uiButtonHeight() * 3 + 6;
+  // @ts-expect-error truthy
+  if (!'onlinedemo') {
+    y += uiButtonHeight() * 3 + 6;
+  }
   if (netSubs().loggedIn()) {
     if (buttonText({
       x, y, text: 'Online Test',
@@ -101,6 +105,10 @@ function title(dt: number): void {
       urlhash.go('?c=build');
     }
     y += uiButtonHeight() + 2;
+    // @ts-expect-error truthy
+    if ('onlinedemo') {
+      print(null, x, y, Z.UI, 'Hint: press [B] to enter Build Mode');
+    }
   }
   if (crawlerCommWant()) {
     crawlerCommStart();
