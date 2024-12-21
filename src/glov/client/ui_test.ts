@@ -15,6 +15,10 @@ import {
 } from './input';
 import { linkText } from './link';
 import {
+  localStorageGet,
+  localStorageSet,
+} from './local_storage';
+import {
   MDDrawBlock,
   MDDrawParam,
   MDLayoutBlock,
@@ -71,6 +75,7 @@ function init(x: number, y: number, column_width: number): void {
     x: x + column_width,
     y: y,
     w: column_width - 8,
+    text: localStorageGet('uitest.editbox1') || '',
   });
   edit_box2 = editBoxCreate({
     x: x + column_width + column_width,
@@ -218,6 +223,7 @@ export function run(x: number, y: number, z: number): void {
       },
     });
   }
+  localStorageSet('uitest.editbox1', edit_box1.getText());
   if (edit_box2.run() === edit_box2.SUBMIT) {
     edit_box2.setText('');
   }
