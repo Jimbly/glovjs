@@ -467,7 +467,7 @@ function onKeyDown(event) {
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
   let no_stop = letEventThrough(event) ||
-    code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
+    code >= KEYS.F4 && code <= KEYS.F12 || // Chrome debug hotkeys and Windows/Electron close window hotkey
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
     code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
     (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey; // forward/back navigation
