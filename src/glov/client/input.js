@@ -693,11 +693,11 @@ function onTouchChange(event) {
   // instead, but this works well enough.
   onUserInput();
   if (!touch_mode) {
-    local_storage.set('touch_mode', true);
+    local_storage.setJSON('touch_mode', true);
     touch_mode = true;
   }
   if (pad_mode) {
-    local_storage.set('pad_mode', false);
+    local_storage.setJSON('pad_mode', false);
     pad_mode = false;
   }
   if (event.cancelable !== false) {
@@ -893,7 +893,7 @@ function updatePadState(gpd, ps, b, padcode) {
     ps[padcode] = DOWN_EDGE;
     onUserInput();
     if (touch_mode) {
-      local_storage.set('touch_mode', false);
+      local_storage.setJSON('touch_mode', false);
       touch_mode = false;
     }
     if (!pad_mode) {
