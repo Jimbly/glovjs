@@ -496,11 +496,19 @@ gb.task({
   },
 });
 
-const server_input_globs = [
-  'server_static:**',
-  'server_js_notest:**',
-  'server_json:**',
+const server_tasks = [
+  'server_static',
+  'server_js_notest',
+  'server_json',
 ];
+const server_input_globs = server_tasks.map(addStarStar);
+
+// helper task usable by app build tasks that need to reload upon any server
+//   file changing (e.g. an Electron development task)
+gb.task({
+  name: 'server_dev_outputs',
+  deps: server_tasks,
+});
 
 gb.task({
   name: 'run_server',
@@ -620,6 +628,12 @@ let client_tasks = [
 
 let client_input_globs = client_tasks.map(addStarStar);
 
+// helper task usable by app build tasks that need to reload upon any client
+//   file changing (e.g. an Electron development task)
+gb.task({
+  name: 'client_dev_outputs',
+  deps: client_tasks,
+});
 
 let bs_target = `http://localhost:${server_port}`;
 let bs_target_https = `https://localhost:${server_port_https}`;
