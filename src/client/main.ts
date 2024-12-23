@@ -3,6 +3,7 @@
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
+import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
   ALIGN,
@@ -22,6 +23,13 @@ import {
 } from 'glov/client/input';
 import { netInit } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
+import {
+  ScoreSystem,
+  scoreAlloc,
+  scoreDebugFriendCode,
+  scoreDebugUserID,
+} from 'glov/client/score';
+import { scoresDraw } from 'glov/client/score_ui';
 import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
 import { slider } from 'glov/client/slider';
@@ -53,16 +61,20 @@ import {
   buttonText,
   drawLine,
   makeColorSet,
+  panel,
   print,
   scaleSizes,
   setFontHeight,
   uiButtonHeight,
   uiButtonWidth,
+  uiGetFont,
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
+import { clamp } from 'glov/common/util';
 import {
+  rovec4,
   v4clone,
   v4copy,
   vec2,
@@ -73,7 +85,7 @@ import { test3D } from './test_3d';
 
 import type { TSMap } from 'glov/common/types';
 
-const { floor, sin } = Math;
+const { max, floor, round, sin } = Math;
 
 // TODO: Migrate to TypeScript
 type Spine = ReturnType<typeof spineCreate>;
@@ -208,6 +220,130 @@ function lineTest(): void {
   drawLine(50, 72, 250, 200, z, 20, line_precise, color_black, LINE_CAP_ROUND);
 }
 
+type Score = {
+  a: number;
+  b: number;
+};
+const style_title = fontStyle(null, {
+  color: 0xFFFFFFff,
+  outline_width: 4,
+  outline_color: 0x000000ff,
+});
+const style_header = fontStyleColored(style_title, 0xFFFF80ff);
+const style_score = fontStyleColored(null, 0x222222ff);
+const style_me = fontStyleColored(null, 0xFFFF80ff);
+
+const ENCODE_A = 1000;
+let score_system: ScoreSystem<Score>;
+const SCORE_COLUMNS = [
+  // widths are just proportional, scaled relative to `width` passed in
+  { name: '', width: 3, align: ALIGN.HFIT | ALIGN.HRIGHT | ALIGN.VCENTER },
+  { name: 'Name', width: 8, align: ALIGN.HFIT | ALIGN.VCENTER },
+  { name: 'A', width: 4 },
+  { name: 'B', width: 4 },
+];
+function myScoreToRow(row: unknown[], score: Score): void {
+  row.push(score.a, score.b);
+}
+let my_score: Score = {
+  a: 1,
+  b: 1,
+};
+function scoresTest(): void {
+  if (!score_system) {
+    score_system = scoreAlloc({
+      score_to_value: (score: Score): number => {
+        return max(round(score.a), 0) * ENCODE_A + clamp(round(score.b), 0, ENCODE_A - 1);
+      },
+      value_to_score: (value: number): Score => {
+        let b = value % ENCODE_A;
+        value -= b;
+        let a = floor(value / ENCODE_A);
+        return { a, b };
+      },
+      level_defs: 1,
+      score_key: 'test',
+      asc: false,
+      rel: 8,
+      num_names: 3,
+      histogram: false,
+    });
+  }
+
+  let y = 10;
+  let font = uiGetFont();
+  let text_height = uiTextHeight();
+  let w = game_width / 2;
+  let x = game_width - w - 8;
+  let y0 = y;
+
+  // Testing: allow entering score
+  font.draw({
+    style: style_title,
+    x, y, w,
+    text: 'My score',
+    size: text_height,
+    align: ALIGN.HCENTER,
+  });
+  y += text_height + 2;
+  my_score.a = editBox<number>({
+    x, y, w: w/2 - 2,
+    type: 'number',
+  }, my_score.a).text;
+  my_score.b = editBox<number>({
+    x: x + w/2 + 2, y, w: w/2 - 2,
+    type: 'number',
+  }, my_score.b).text;
+  score_system.setScore(0, my_score);
+  y += uiButtonHeight() - 2;
+  font.draw({
+    color: 0x000000ff,
+    x, y, w,
+    align: ALIGN.HFIT,
+    text: `Score UID: ${scoreDebugUserID()}`,
+  });
+  y += text_height;
+  font.draw({
+    color: 0x000000ff,
+    x, y, w,
+    align: ALIGN.HFIT,
+    text: `Friend Code: ${scoreDebugFriendCode()}`,
+  });
+  y += text_height + 2;
+
+  // Demo: standard high score implementation
+  font.draw({
+    style: style_title,
+    x, y, w,
+    text: 'HIGH SCORES',
+    size: text_height * 2,
+    align: ALIGN.HCENTER,
+  });
+  y += text_height * 2 + 3;
+
+  y = scoresDraw<Score>({
+    score_system,
+    allow_rename: true,
+    x, y, width: w,
+    height: game_height - y,
+    z: Z.UI,
+    size: text_height,
+    line_height: text_height + 2,
+    level_index: 0,
+    columns: SCORE_COLUMNS,
+    scoreToRow: myScoreToRow,
+    style_score,
+    style_me,
+    style_header,
+    color_me_background: rovec4(0,0,0,1),
+    rename_button_size: 9,
+  });
+
+  panel({
+    x: x - 4, y: y0 - 4, w: w + 8, h: y - y0 + 8,
+  });
+}
+
 export function main(): void {
   if (engine.DEBUG) {
     // Enable auto-reload, etc
@@ -334,6 +470,9 @@ export function main(): void {
     }
     if (flagGet('lines')) {
       lineTest();
+    }
+    if (flagGet('scores')) {
+      scoresTest();
     }
 
     test_character.dx = 0;
@@ -517,6 +656,7 @@ export function main(): void {
       flagToggle('ui_test');
       if (flagGet('ui_test')) {
         flagSet('lines', false);
+        flagSet('scores', false);
       }
     }
 
@@ -524,6 +664,15 @@ export function main(): void {
       flagToggle('lines');
       if (flagGet('lines')) {
         flagSet('ui_test', false);
+        flagSet('scores', false);
+      }
+    }
+
+    if (miniButton('Scores', 'Toggles High Score testing', flagGet('scores'))) {
+      flagToggle('scores');
+      if (flagGet('scores')) {
+        flagSet('ui_test', false);
+        flagSet('lines', false);
       }
     }
 
