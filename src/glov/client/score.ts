@@ -196,7 +196,7 @@ if (lsd[FRIEND_SET_CACHE_KEY]) {
     // ignored
   }
 }
-function withFriendSet(friend_cat: string, cb: (friend_set_code: string) => void): void {
+function withFriendSet(friend_cat: string, cb: (friend_set_code: string | null) => void): void {
   assert(allocated_user_id);
   if (friend_cat === FRIEND_CAT_GLOBAL) {
     // When fetching the global high score list, provide the user's friends' friend_set so
@@ -204,6 +204,9 @@ function withFriendSet(friend_cat: string, cb: (friend_set_code: string) => void
     friend_cat = FRIEND_CAT_FRIENDS;
   }
   let friend_codes = (friend_cats[friend_cat] || []).map((a) => `f=${a}`);
+  if (!friend_codes.length) {
+    return cb(null);
+  }
   friend_codes.push(`u=${allocated_user_id}`);
   friend_codes.sort();
   let friend_set_key = friend_codes.join('&');
@@ -429,7 +432,7 @@ class ScoreSystemImpl<ScoreType> {
     bc.high_scores = ret;
   }
   last_friend_cat = FRIEND_CAT_GLOBAL;
-  private makeURL(api: string, ld: LevelDef, friend_cat: string, friend_set_code: string): string {
+  private makeURL(api: string, ld: LevelDef, friend_cat: string, friend_set_code: string | null): string {
     assert(allocated_user_id);
     let url = `${score_host}/api/${api}?v2&key=${this.SCORE_KEY}.${ld.name}&userid=${allocated_user_id}`;
     if (this.rel) {
@@ -479,7 +482,7 @@ class ScoreSystemImpl<ScoreType> {
     //   score, are using `rel`, and expect to have a remotely saved score
     //   for our user ID (shouldn't actually ever happen on web)
     withUserID(() => {
-      withFriendSet(friend_cat, (friend_set_code: string) => {
+      withFriendSet(friend_cat, (friend_set_code: string | null) => {
         let url = this.makeURL('scoreget', ld, friend_cat, friend_set_code);
 
         let my_score = ld.local_score ? this.score_to_value(ld.local_score) : null;
@@ -522,7 +525,7 @@ class ScoreSystemImpl<ScoreType> {
     let high_score = this.score_to_value(score);
     withUserID(() => {
       let friend_cat = this.last_friend_cat;
-      withFriendSet(friend_cat, (friend_set_code: string) => {
+      withFriendSet(friend_cat, (friend_set_code: string | null) => {
         let url = this.makeURL('scoreset', ld, friend_cat, friend_set_code);
         url += `&score=${high_score}`;
         if (player_name) {
