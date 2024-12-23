@@ -13,6 +13,7 @@ import {
   clone,
   nop,
 } from 'glov/common/util';
+import { MODE_DEVELOPMENT } from './client_config';
 import { cmd_parse } from './cmds';
 import { fetch } from './fetch';
 
@@ -58,7 +59,7 @@ friend_cats.friends = friends_by_code;
 
 let score_host = 'http://scores.dashingstrike.com';
 let score_use_staging = false;
-if (window.location.host.indexOf('localhost') !== -1 ||
+if (MODE_DEVELOPMENT ||
   window.location.host.indexOf('staging') !== -1/* ||
   window.location.host.indexOf('pink') !== -1*/
 ) {
