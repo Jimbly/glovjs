@@ -10,6 +10,7 @@ import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { executeWithRetry } from 'glov/common/execute_with_retry';
 import {
   asyncDictionaryGet,
+  clone,
   nop,
 } from 'glov/common/util';
 import { cmd_parse } from './cmds';
@@ -548,7 +549,7 @@ class ScoreSystemImpl<ScoreType> {
 
   private saveScore(level_idx: number, obj_in: ScoreType, payload?: string): void {
     let ld = this.level_defs[level_idx];
-    let obj = obj_in as ScoreTypeInternal<ScoreType>;
+    let obj = clone(obj_in as ScoreTypeInternal<ScoreType>);
     obj.payload = payload;
     ld.local_score = obj;
     let key = `${this.LS_KEY}.score_${ld.name}`;
