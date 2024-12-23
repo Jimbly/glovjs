@@ -7,6 +7,10 @@ import { platformParameterGet } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
+  getFrameTimestamp,
+  setState,
+} from 'glov/client/engine';
+import {
   ALIGN,
   fontStyle,
   fontStyleColored,
@@ -196,7 +200,7 @@ function lineTest(): void {
   const line_len = 20;
   let y_values = [
     20, 25.25, 30.5, 35.667,
-    45 + sin(engine.frame_timestamp * 0.001) * 5
+    45 + sin(getFrameTimestamp() * 0.001) * 5
   ];
   let widths = [0.5, 1, 1.5, 2, 4];
   let z = Z.UI;
@@ -695,8 +699,8 @@ export function main(): void {
     }
 
     if (flagGet('particles')) {
-      if (engine.getFrameTimestamp() - last_particles > 1000) {
-        last_particles = engine.getFrameTimestamp();
+      if (getFrameTimestamp() - last_particles > 1000) {
+        last_particles = getFrameTimestamp();
         engine.glov_particles.createSystem(particle_data.defs.explosion,
           //[test_character.x, test_character.y, Z.PARTICLES]
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
@@ -733,7 +737,7 @@ export function main(): void {
 
   function testInit(dt: number): void {
     // May want this: ensure we don't have extra images bundled? webFSReportUnused();
-    engine.setState(test);
+    setState(test);
     if (flagGet('music')) {
       soundPlayMusic(music_file);
     }
@@ -741,5 +745,5 @@ export function main(): void {
   }
 
   initGraphics();
-  engine.setState(testInit);
+  setState(testInit);
 }
