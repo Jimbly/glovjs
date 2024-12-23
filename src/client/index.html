@@ -17,7 +17,7 @@
       /* eslint-disable */
       window.time_load_start = Date.now();
       // Platform
-      window.conf_platform = '#{PLATFORM}';
+      window.conf_platform = window.conf_platform || '#{PLATFORM}';
       // Environment
       window.conf_env = '#{ENV}';
     </script>
