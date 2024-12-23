@@ -3,6 +3,7 @@
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
+import { platformParameterGet } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
@@ -345,7 +346,7 @@ function scoresTest(): void {
 }
 
 export function main(): void {
-  if (engine.DEBUG) {
+  if (platformParameterGet('reload_updates')) {
     // Enable auto-reload, etc
     netInit({ engine });
   }
