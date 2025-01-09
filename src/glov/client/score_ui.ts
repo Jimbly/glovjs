@@ -17,6 +17,7 @@ import {
   FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
   ScoreSystem,
+  scoreCanUpdatePlayerName,
   scoreFormatName,
   scoreGetPlayerName,
   scoreUpdatePlayerName,
@@ -348,7 +349,7 @@ export function scoresDraw<ScoreType>({
   x = x_save;
   y = y_save + min(scores_scroll_h, y);
   y += set_pad/2;
-  if (found_me && allow_rename) {
+  if (found_me && allow_rename && scoreCanUpdatePlayerName()) {
     if (!scores_edit_box) {
       scores_edit_box = editBoxCreate({
         z,

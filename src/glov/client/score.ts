@@ -10,12 +10,16 @@ import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { executeWithRetry } from 'glov/common/execute_with_retry';
 import {
   asyncDictionaryGet,
+  callEach,
   clone,
   nop,
 } from 'glov/common/util';
 import { MODE_DEVELOPMENT } from './client_config';
 import { cmd_parse } from './cmds';
 import { fetch } from './fetch';
+import {
+  score_user_provider_auto_web,
+} from './score_provider_autoweb';
 
 import type {
   ErrorCallback,
@@ -24,14 +28,12 @@ import type {
   VoidFunc,
 } from 'glov/common/types';
 
-const PLAYER_NAME_KEY = 'ld.player_name';
-const USERID_KEY = 'score.userid';
+const USERID_CACHE_KEY = 'score.idcache';
 const FRIENDS_KEY = 'score.friends';
 const FRIEND_SET_CACHE_KEY = 'score.fsc';
 const SCORE_REFRESH_TIME = 5*60*1000; // also refreshes if we submit a new score, or forceRefreshScores() is called
 const SUBMIT_RATELIMIT = 5000; // Only kicks in if two are in-flight at the same time
 
-let player_name: string = '';
 let lsd = (function (): Partial<Record<string, string>> {
   try {
     localStorage.setItem('test', 'test');
@@ -42,19 +44,23 @@ let lsd = (function (): Partial<Record<string, string>> {
   }
 }());
 
-if (lsd[PLAYER_NAME_KEY]) {
-  player_name = lsd[PLAYER_NAME_KEY]!;
+export function scoreLSD(): Partial<Record<string, string>> {
+  return lsd;
+}
+
+function scoreLSDParse<T>(key: string): T | undefined {
+  if (lsd[key]) {
+    try {
+      return JSON.parse(lsd[key]!) as T;
+    } catch (e) {
+      // ignored
+    }
+  }
+  return undefined;
 }
 
 let friend_cats: TSMap<string[]> = {};
-let friends_by_code: string[] = [];
-if (lsd[FRIENDS_KEY]) {
-  try {
-    friends_by_code = JSON.parse(lsd[FRIENDS_KEY]!) as string[];
-  } catch (e) {
-    // ignored
-  }
-}
+let friends_by_code: string[] = scoreLSDParse<string[]>(FRIENDS_KEY) || [];
 friend_cats.friends = friends_by_code;
 
 let score_host = 'http://scores.dashingstrike.com';
@@ -69,7 +75,15 @@ if (MODE_DEVELOPMENT ||
 if (window.location.href.startsWith('https://')) {
   score_host = score_host.replace(/^http:/, 'https:');
 }
-const friends_host = score_host.replace('scores.', 'friends.');
+const friends_host = score_host.replace('scores.', 'friends.').replace(':4005', ':4023');
+const auth_host = score_host.replace('scores.', 'auth.').replace(':4005', ':4024');
+export function scoreGetAuthHost(): string {
+  return auth_host;
+}
+export function scoreGetScoreHost(): string {
+  return score_host;
+}
+let player_name = '';
 export function scoreGetPlayerName(): string {
   return player_name;
 }
@@ -86,7 +100,7 @@ function fetchJSON2<T>(url: string, cb: (err: string | undefined, o: T) => void)
   });
 }
 
-function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | undefined, o: T) => void): void {
+export function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | undefined, o: T) => void): void {
   fetch({
     url: url,
     response_type: 'json',
@@ -96,45 +110,92 @@ function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | u
   });
 }
 
+export type ScoreUserInfo = {
+  user_id: string;
+  display_name: string | null;
+};
+
+export type ScoreUserProvider = {
+  provider_id: string;
+  // getUserID() - called once
+  getAccountInfo(cb: ErrorCallback<ScoreUserInfo, string>): void;
+  // getAuthToken() - called on every request (callee does caching/expiration)
+  getAuthToken(cb: ErrorCallback<string | null, string>): void;
+  // setName() - optional if provider allows renames to come from apps
+  setName: null | ((name: string) => void);
+};
+let score_user_provider = score_user_provider_auto_web;
+assert(score_user_provider);
+let has_requested_user = false;
+export function scoreUserProviderSet(provider: ScoreUserProvider): void {
+  assert(!has_requested_user);
+  score_user_provider = provider;
+}
+
 
 let allocated_user_id: string | null = null;
 export function scoreDebugUserID(): string | null {
   return allocated_user_id;
 }
 type UserIDCB = (user_id: string) => void;
-type UserAllocResponse = { userid: string };
+type ScoreIDCache = ScoreUserInfo & {
+  provider_id: string;
+};
 function withUserID(f: UserIDCB): void {
-  if (allocated_user_id === null && lsd[USERID_KEY]) {
-    allocated_user_id = lsd[USERID_KEY]!;
-    console.log(`Using existing ScoreAPI UserID: "${allocated_user_id}"`);
-  }
+  has_requested_user = true;
   if (allocated_user_id !== null) {
     return f(allocated_user_id);
   }
 
   asyncDictionaryGet<string>('score_user_id', 'the', function (key_the_ignored: string, cb: (value: string) => void) {
-    let url = `${score_host}/api/useralloc`;
-    function fetchUserID(next: ErrorCallback<string, string>): void {
-      fetchJSON2Timeout<UserAllocResponse>(url, 20000, function (err: string | undefined, res: UserAllocResponse) {
-        if (err) {
-          return next(err);
-        }
-        assert(res);
-        assert(res.userid);
-        assert.equal(typeof res.userid, 'string');
-        next(null, res.userid);
-      });
-    }
-    function done(err?: string | null, result?: string | null): void {
+
+    function done(err?: string | null, result?: ScoreUserInfo | null): void {
       assert(!err);
       assert(result);
-      allocated_user_id = result;
-      lsd[USERID_KEY] = result;
-      console.log(`Allocated new ScoreAPI UserID: "${allocated_user_id}"`);
+      assert(result.user_id);
+      allocated_user_id = result.user_id;
+      player_name = result.display_name || '';
+      let new_user = false;
+      let need_rename = false;
+
+      let old_cache = scoreLSDParse<ScoreIDCache>(USERID_CACHE_KEY) || null;
+      if (old_cache) {
+        let id_changed = old_cache.user_id !== result.user_id;
+        if (id_changed) {
+          new_user = true;
+        } else {
+          need_rename = Boolean(old_cache.display_name !== result.display_name);
+        }
+      } else {
+        new_user = true;
+      }
+      if (new_user) {
+        // new user on this device
+        // clear per-level score cache if user ID has changed
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        scoreClearScoreCache();
+        // could also submit a rename here, but it causes a spurious rename for _every_ new user, which 400s
+      }
+      let cache_data: ScoreIDCache = {
+        ...result,
+        provider_id: score_user_provider.provider_id,
+      };
+      lsd[USERID_CACHE_KEY] = JSON.stringify(cache_data);
+      console.log(`Using ScoreAPI UserID: "${allocated_user_id}", display name: "${player_name}"`);
       cb(allocated_user_id);
+
+      if (need_rename && result.display_name) {
+        // Send current name to the server
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        scoreUpdatePlayerNameInternal(player_name, function (err: string | null) {
+          if (err) {
+            console.error('Error updating score server with new name:', err);
+          }
+        });
+      }
     }
-    executeWithRetry<string, string>(
-      fetchUserID, {
+    executeWithRetry<ScoreUserInfo, string>(
+      score_user_provider.getAccountInfo.bind(score_user_provider), {
         max_retries: Infinity,
         inc_backoff_duration: 250,
         max_backoff: 30000,
@@ -147,6 +208,30 @@ function withUserID(f: UserIDCB): void {
 
 export function scoreWithUserID(cb: UserIDCB): void {
   withUserID(cb);
+}
+
+let auth_in_flight: null | ((auth: string) => void)[] = null;
+function withAuthToken(cb: (auth: string) => void): void {
+  if (auth_in_flight) {
+    auth_in_flight.push(cb);
+    return;
+  }
+  auth_in_flight = [cb];
+  function done(err?: string | null, result?: string | null): void {
+    assert(!err);
+    assert(result !== undefined);
+    let auth_param = result ? `&auth=${result}` : '';
+    callEach(auth_in_flight, auth_in_flight = null, auth_param);
+  }
+  executeWithRetry<string, string>(
+    score_user_provider.getAuthToken.bind(score_user_provider), {
+      max_retries: Infinity,
+      inc_backoff_duration: 250,
+      max_backoff: 30000,
+      log_prefix: 'ScoreAPI Auth token fetch',
+    },
+    done,
+  );
 }
 
 type FriendSetResponse = { friendset: string };
@@ -541,15 +626,17 @@ class ScoreSystemImpl<ScoreType> {
           //   url = 'http://errornow.dashingstrike.com/scoreset/error';
           // }
         }
-        fetchJSON2(
-          url,
-          (err: string | undefined, scores: HighScoreListRaw) => {
-            if (!err) {
-              this.handleScoreResp(level_idx, friend_cat, scores);
-            }
-            cb?.(err || null);
-          },
-        );
+        withAuthToken((auth: string) => {
+          fetchJSON2(
+            url + auth,
+            (err: string | undefined, scores: HighScoreListRaw) => {
+              if (!err) {
+                this.handleScoreResp(level_idx, friend_cat, scores);
+              }
+              cb?.(err || null);
+            },
+          );
+        });
       });
     });
   }
@@ -615,7 +702,7 @@ class ScoreSystemImpl<ScoreType> {
     let encoded = this.score_to_value(score) || 0;
     let encoded_local = ld.local_score && this.score_to_value(ld.local_score) || (this.asc ? Infinity : 0);
     if (this.asc ? encoded < encoded_local : encoded > encoded_local ||
-      encoded === encoded_local && !ld.local_score?.submitted
+      encoded === encoded_local && !ld.local_score?.submitted && !ld.save_in_flight
     ) {
       this.saveScore(level_idx, score, payload);
     }
@@ -657,15 +744,31 @@ class ScoreSystemImpl<ScoreType> {
       }
     }
   }
+
+  clearScoreCache(): void {
+    for (let level_idx = 0; level_idx < this.level_defs.length; ++level_idx) {
+      let ld = this.level_defs[level_idx];
+      if (ld.local_score && ld.local_score.submitted && !ld.save_in_flight) {
+        console.log(`score: ${ld.name}: clearing cached score ${JSON.stringify(ld.local_score)}...`);
+        delete ld.local_score;
+        let key = `${this.LS_KEY}.score_${ld.name}`;
+        delete lsd[key];
+      }
+    }
+  }
 }
 
 
+let need_clear_at_startup = false;
 let all_score_systems: ScoreSystem<any>[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 export function scoreAlloc<ScoreType>(param: ScoreSystemParam<ScoreType>): ScoreSystem<ScoreType> {
   withUserID(nop);
   let ret = new ScoreSystemImpl(param);
   all_score_systems.push(ret);
+  if (need_clear_at_startup) {
+    ret.clearScoreCache();
+  }
   return ret;
 }
 
@@ -673,7 +776,43 @@ export function scoreFormatName<ScoreType>(score: HighScoreListEntry<ScoreType>)
   return score.names_str;
 }
 
+export function scoreCanUpdatePlayerName(): boolean {
+  return Boolean(score_user_provider.setName);
+}
+
+// Just sends to server, no change to our state, call scoreUpdatePlayerName() for any run-time updates
+function scoreUpdatePlayerNameInternal(new_player_name: string, cb: (err: string | null) => void): void {
+  if (new_player_name) {
+    new_player_name = new_player_name.trim().slice(0, 64); // same logic as on server
+  }
+  if (!new_player_name) {
+    return cb(null);
+  }
+
+  withUserID((user_id: string) => {
+    let url = `${score_host}/api/userrename?userid=${user_id}&name=${encodeURIComponent(player_name)}`;
+    withAuthToken((auth: string) => {
+      fetch({
+        url: url + auth,
+      }, (err: string | undefined, res: string) => {
+        if (err) {
+          if (res) {
+            try {
+              err = JSON.parse(res).err || err;
+            } catch (e) {
+              // ignored
+            }
+          }
+          cb(err as string);
+        } else {
+          cb(null);
+        }
+      });
+    });
+  });
+}
 export function scoreUpdatePlayerName(new_player_name: string): void {
+  assert(score_user_provider.setName);
   if (new_player_name) {
     new_player_name = new_player_name.trim().slice(0, 64); // same logic as on server
   }
@@ -681,30 +820,25 @@ export function scoreUpdatePlayerName(new_player_name: string): void {
     return;
   }
   let old_name = player_name;
-  lsd[PLAYER_NAME_KEY] = player_name = new_player_name;
-
-  withUserID((user_id: string) => {
-    let url = `${score_host}/api/userrename?userid=${user_id}&name=${encodeURIComponent(player_name)}`;
-    fetch({
-      url,
-    }, (err: string | undefined, res: string) => {
-      if (err) {
-        if (res) {
-          try {
-            err = JSON.parse(res).err || err;
-          } catch (e) {
-            // ignored
-          }
-        }
-        lsd[PLAYER_NAME_KEY] = player_name = old_name;
-        alert(`Error updating player name: "${err}"`); // eslint-disable-line no-alert
-      } else {
-        for (let ii = 0; ii < all_score_systems.length; ++ii) {
-          all_score_systems[ii].onUpdatePlayerName(old_name);
-        }
+  player_name = new_player_name;
+  scoreUpdatePlayerNameInternal(new_player_name, function (err) {
+    if (err) {
+      player_name = old_name;
+      alert(`Error updating player name: "${err}"`); // eslint-disable-line no-alert
+    } else {
+      score_user_provider.setName!(new_player_name);
+      for (let ii = 0; ii < all_score_systems.length; ++ii) {
+        all_score_systems[ii].onUpdatePlayerName(old_name);
       }
-    });
+    }
   });
+}
+
+function scoreClearScoreCache(): void {
+  need_clear_at_startup = true;
+  for (let ii = 0; ii < all_score_systems.length; ++ii) {
+    all_score_systems[ii].clearScoreCache();
+  }
 }
 
 export function scoreFriendCatAdd(cat: string, list: string[]): void {
@@ -742,6 +876,7 @@ let debug_friend_code: string | null = null;
 let friend_code_query_sent = false;
 export function scoreDebugFriendCode(): string | null {
   if (!friend_code_query_sent) {
+    friend_code_query_sent = true;
     scoreFriendCodeGet(function (err, code) {
       debug_friend_code = err || code;
     });
