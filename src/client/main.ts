@@ -3,7 +3,7 @@
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
-import { platformParameterGet } from 'glov/client/client_config';
+import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
 import {
@@ -465,20 +465,39 @@ export function main(): void {
       spotSuppressPad();
     }
 
+    let status: string | null = null;
+    let status_others: TSMap<string> | null = null;
     if (flagGet('ui_test')) {
+      status = 'Testing UI';
+      status_others = {
+        steam_display: '#Test',
+      };
       // let clip_test = 30;
       // glov_sprites.clip(Z.UI_TEST - 10, Z.UI_TEST + 10, clip_test, clip_test, 320-clip_test * 2, 240-clip_test * 2);
       ui_test.run(10, 10, Z.UI_TEST);
     }
     if (flagGet('font_test')) {
+      status = 'Testing Fonts';
+      status_others = {
+        steam_display: '#Test',
+      };
       ui_test.runFontTest(105, 20);
     }
     if (flagGet('lines')) {
+      status = 'Lines, lines, lines';
+      status_others = {
+        steam_display: '#Test',
+      };
       lineTest();
     }
     if (flagGet('scores')) {
+      status = 'Looking at scores';
+      status_others = {
+        steam_display: '#Test',
+      };
       scoresTest();
     }
+    platformSetRichPresence(status, status_others);
 
     test_character.dx = 0;
     test_character.dy = 0;
