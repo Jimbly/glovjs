@@ -6,6 +6,7 @@ import {
   platformOverrideParameter,
   platformParameter,
 } from 'glov/common/platform';
+import type { TSMap } from 'glov/common/types';
 
 // Platform
 assert(platformIsValid(window.conf_platform));
@@ -49,4 +50,20 @@ export function getAbilityChat(): boolean {
 }
 export function setAbilityChat(value: boolean): void {
   ability_chat = value;
+}
+
+let last_status: string | null = null;
+let last_others: string;
+export function platformSetRichPresence(status: string | null, others: TSMap<string> | null): void {
+  let others_string = JSON.stringify(others);
+  if (status === last_status && others_string === last_others) {
+    return;
+  }
+  last_status = status;
+  last_others = others_string;
+  // Don't require at startup, has huge dependencies that will mess up boostrapping
+  const { errorReportSetDetails } = require('./error_report'); // eslint-disable-line global-require
+  errorReportSetDetails('rich_status', status);
+  errorReportSetDetails('rich_others', others ? others_string : null);
+  platformParameterGet('setRichPresence')?.(status, others);
 }

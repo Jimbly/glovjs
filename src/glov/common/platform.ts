@@ -1,4 +1,5 @@
 import assert from 'assert';
+import type { TSMap } from './types';
 
 export type PlatformID = string;
 
@@ -11,6 +12,9 @@ export interface PlatformDef {
   reload_updates: boolean;
   // random_creation_name: new users get a randomly generated name by default
   random_creation_name: boolean;
+  // setRichPresence: for platforms that support it
+  //   note: due to startup ordering, probably needs to be set via platformOverrideParameter()
+  setRichPresence?(status: string | null, others: TSMap<string> | null): void;
 }
 /*
 Extend this like so:
