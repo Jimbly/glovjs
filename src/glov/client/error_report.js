@@ -4,8 +4,8 @@ export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random())
 let error_report_details = {};
 let error_report_dynamic_details = {};
 
-import { getAPIPath } from 'glov/client/environments';
 import { platformGetID } from './client_config';
+import { getAPIPath } from './environments';
 import { fetch } from './fetch';
 import { getStoragePrefix } from './local_storage';
 import { unlocatePaths } from './locate_asset';
