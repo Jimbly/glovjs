@@ -33,6 +33,12 @@ window.onerror = function (e, file, line, col, errorobj) {
     }
     let origin = document.location.origin || '';
     if (origin) {
+      if (origin === 'file://') {
+        let full_location = String(document.location);
+        if (full_location.includes('app.asar')) {
+          origin = `${full_location.split('app.asar')[0]}app.asar/`;
+        }
+      }
       if (origin.slice(-1) !== '/') {
         origin += '/';
       }
