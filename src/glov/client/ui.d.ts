@@ -105,7 +105,8 @@ export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null
 export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
 export type UISoundID = SoundID & { opts?: SoundLoadOpts };
-export function uiBindSounds(sounds?: Partial<Record<string, UISoundID | UISoundID[] | null>>): void;
+export type UISounds = Partial<Record<string, UISoundID | UISoundID[] | null>>;
+export function uiBindSounds(sounds?: UISounds): void;
 export interface DrawHBoxParam extends UIBox {
   no_min_width?: boolean;
 }
