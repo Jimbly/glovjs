@@ -1,3 +1,5 @@
+require('./checks.js')(__filename);
+
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -35,8 +37,6 @@ const uglifyrc = require('./uglifyrc.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 const yamlproc = require('./yamlproc.js');
-
-require('./checks.js')(__filename);
 
 // Suppress nonsensical warning from `caniuse-lite` that shows up even when targeting Node
 process.env.BROWSERSLIST_IGNORE_OLD_DATA = 1;
