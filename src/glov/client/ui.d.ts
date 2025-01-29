@@ -24,6 +24,7 @@ export const LINE_CAP_ROUND: number;
 export const LINE_NO_AA: number;
 export function makeColorSet(color: ROVec4): ColorSet;
 export function colorSetMakeCustom(regular: ROVec4, rollover: ROVec4, down: ROVec4, disabled: ROVec4): ColorSet;
+export function colorSetGetField(color_set: ColorSet, field: ButtonStateString): ROVec4;
 export interface UIBox extends Box {
   z?: number;
 }

@@ -152,6 +152,10 @@ export function colorSetMakeCustom(regular, rollover, down, disabled) {
   };
 }
 
+export function colorSetGetField(color_set, field) {
+  return color_set[field];
+}
+
 let hooks = [];
 export function addHook(draw, click) {
   hooks.push({
