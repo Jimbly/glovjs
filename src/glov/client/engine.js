@@ -473,6 +473,12 @@ export function removeTickFunc(cb) {
   return false;
 }
 
+let pre_tick = [];
+// Allowed to do things like change game dims or pixelyStrict
+export function addPreTickFunc(cb) {
+  pre_tick.push(cb);
+}
+
 let post_tick = [];
 export function postTick(opts) {
   opts.ticks = opts.ticks || 1; // run in how many ticks?
@@ -1091,6 +1097,9 @@ function tick(timestamp) {
   need_depth_this_frame = false;
   want_render_scale_3d_this_frame = false;
   had_render_scale_3d_this_frame = false;
+
+  callEach(pre_tick);
+
   if (render_width) {
     // render_scale not supported with render_width, doesn't make much sense, just use render_width
     set3DRenderResolution(render_width, render_height);
