@@ -16,8 +16,8 @@ export type CmdParseType = typeof TYPE_INT | typeof TYPE_FLOAT | typeof TYPE_STR
 export type CmdRespFunc<T=string | unknown> = ErrorCallback<T, string | null>;
 export type CmdDef = {
   cmd: string;
-  help?: string;
-  usage?: string;
+  help?: Text;
+  usage?: Text;
   prefix_usage_with_help?: boolean;
   access_show?: string[];
   access_run?: string[];
@@ -41,8 +41,8 @@ type CmdValueDefBase<T=string|number> = {
   range?: [number, number]; // TYPE_INT or TYPE_FLOAT
   store?: boolean;
   ver?: number;
-  help?: string;
-  usage?: string;
+  help?: Text;
+  usage?: Text;
   prefix_usage_with_help?: boolean;
   on_change?: (is_startup: boolean) => void;
   access_run?: string[];
@@ -67,6 +67,7 @@ exports.create = cmdParseCreate; // eslint-disable-line @typescript-eslint/no-us
 import assert from 'assert';
 import { perfCounterAdd } from './perfcounters';
 import { isInteger } from './util';
+import type { Text } from 'glov/client/font';
 
 export function canonical(cmd: string): string {
   return cmd.toLowerCase().replace(/[_.]/g, '');
@@ -108,10 +109,10 @@ function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: 
   return true;
 }
 
-function formatUsage(usage?: string, help?: string, prefix_help?: boolean): string | undefined {
+function formatUsage(usage?: Text, help?: Text, prefix_help?: boolean): string | undefined {
   return !usage ? undefined :
     prefix_help ? `${help}\n${usage}`:
-    help ? String(usage).replace(/\$HELP/, help) :
+    help ? String(usage).replace(/\$HELP/, String(help)) :
     String(usage);
 }
 
@@ -190,8 +191,8 @@ export type CmdAutoCompleteEntry = {
 
 type CmdListEntry = {
   name: string;
-  help?: string;
-  usage?: string;
+  help?: Text;
+  usage?: Text;
   access_show?: string[];
   access_run?: string[];
   prefix_usage_with_help?: boolean; // will be there on client commands, but already applied on server commands
