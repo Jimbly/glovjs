@@ -401,14 +401,28 @@ function ignored(event) {
 
 let ctrl_checked = false;
 let unload_protected = false;
+let unload_override = null;
+export function inputOverrideUnload(cb) {
+  assert(!unload_override || !cb);
+  unload_override = cb;
+}
 function beforeUnload(e) {
-  if (unload_protected && ctrl_checked) {
+  let unload_msg;
+  if (unload_override) {
+    unload_msg = unload_override();
+    if (!unload_msg) {
+      // no prompt, just block the unload
+      e.preventDefault();
+      return;
+    }
+  }
+  if (unload_protected && ctrl_checked || unload_msg) {
     // Exit pointer lock if the browser didn't do that automatically
     pointerLockExit();
     // Cancel the event
     e.preventDefault();
     // Chrome requires returnValue to be set
-    e.returnValue = 'Are you sure you want to quit?';
+    e.returnValue = unload_msg || 'Are you sure you want to quit?';
   } else {
     engine.releaseCanvas();
   }
