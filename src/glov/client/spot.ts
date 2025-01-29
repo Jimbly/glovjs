@@ -207,6 +207,7 @@ const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
 import * as camera2d from './camera2d.js';
+import { platformParameterGet } from './client_config';
 import * as engine from './engine.js';
 import {
   FontStyle,
@@ -1471,6 +1472,9 @@ export function spot(param: SpotParam): SpotRet {
     const sound_button = param.sound_button === undefined ? def.sound_button : param.sound_button;
     if (sound_button) {
       playUISound(sound_button);
+    }
+    if (param.url) {
+      platformParameterGet('linkHandler')?.(param.url);
     }
   }
   if (out.focused && param.tooltip) {

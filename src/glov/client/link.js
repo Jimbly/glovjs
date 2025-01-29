@@ -4,6 +4,7 @@
 /* eslint-disable import/order */
 const assert = require('assert');
 const verify = require('glov/common/verify');
+const { platformParameterGet } = require('./client_config');
 const engine = require('./engine.js');
 const { fontStyle } = require('./font.js');
 const camera2d = require('./camera2d.js');
@@ -150,7 +151,9 @@ export function link(param) {
   let rect = { x, y, w, h };
 
   // TODO: use spot_ret.allow_focus instead of all of this?
-  if (camera2d.clipTestRect(rect) && linkClipRect(rect) && !(settings.shader_debug || settings.show_profiler)) {
+  if (camera2d.clipTestRect(rect) && linkClipRect(rect) && !(
+    settings.shader_debug || settings.show_profiler || platformParameterGet('linkHandler')
+  )) {
     // at least some is not clipped
     let elem = uiGetDOMElem(state.elem, allow_modal);
     if (elem !== state.elem) {
