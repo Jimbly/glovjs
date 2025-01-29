@@ -190,7 +190,9 @@ export function scoresDraw<ScoreType>({
   const scroll_max_y = y + height - (button_height + pad);
   let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
   if (!scores) {
-    font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, height,
+    // Note: using (scroll_max_y - y) instead of (height) for better centering in
+    //   QP2A, but not 100% sure this is the right solution.
+    font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, scroll_max_y - y,
       'Loading...');
     return y + height;
   }

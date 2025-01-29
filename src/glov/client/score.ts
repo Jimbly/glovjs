@@ -13,6 +13,7 @@ import {
   callEach,
   clone,
   nop,
+  plural,
 } from 'glov/common/util';
 import { MODE_DEVELOPMENT } from './client_config';
 import { cmd_parse } from './cmds';
@@ -29,7 +30,6 @@ import type {
 } from 'glov/common/types';
 
 const USERID_CACHE_KEY = 'score.idcache';
-const FRIENDS_KEY = 'score.friends';
 const FRIEND_SET_CACHE_KEY = 'score.fsc';
 const SCORE_REFRESH_TIME = 5*60*1000; // also refreshes if we submit a new score, or forceRefreshScores() is called
 const SUBMIT_RATELIMIT = 5000; // Only kicks in if two are in-flight at the same time
@@ -48,7 +48,7 @@ export function scoreLSD(): Partial<Record<string, string>> {
   return lsd;
 }
 
-function scoreLSDParse<T>(key: string): T | undefined {
+export function scoreLSDParse<T>(key: string): T | undefined {
   if (lsd[key]) {
     try {
       return JSON.parse(lsd[key]!) as T;
@@ -59,9 +59,8 @@ function scoreLSDParse<T>(key: string): T | undefined {
   return undefined;
 }
 
+// Map from FRIEND_CAT_FRIENDS and user-specified categories to arrays of friend codes/u=user_ids
 let friend_cats: TSMap<string[]> = {};
-let friends_by_code: string[] = scoreLSDParse<string[]>(FRIENDS_KEY) || [];
-friend_cats.friends = friends_by_code;
 
 let score_host = 'http://scores.dashingstrike.com';
 let score_use_staging = false;
@@ -113,6 +112,7 @@ export function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: str
 export type ScoreUserInfo = {
   user_id: string;
   display_name: string | null;
+  friends: string[]; // array of `FriendCode` or `u=user_id` strings; mutable by provider if changed
 };
 
 export type ScoreUserProvider = {
@@ -153,8 +153,10 @@ function withUserID(f: UserIDCB): void {
       assert(!err);
       assert(result);
       assert(result.user_id);
+      assert(result.friends); // possibly empty array, though
       allocated_user_id = result.user_id;
       player_name = result.display_name || '';
+      friend_cats[FRIEND_CAT_FRIENDS] = result.friends;
       let new_user = false;
       let need_rename = false;
 
@@ -281,6 +283,19 @@ if (lsd[FRIEND_SET_CACHE_KEY]) {
     // ignored
   }
 }
+let friend_set_dict_name = 'friend_set_code';
+function friendSetCacheWipe(): void {
+  friend_set_code_cache = {};
+  friend_set_code_persistent_cache = {};
+  delete lsd[FRIEND_SET_CACHE_KEY];
+  friend_set_dict_name += '2';
+}
+function providerFriendToParam(str: string): string {
+  if (str.startsWith('u=')) {
+    return str;
+  }
+  return `f=${str}`;
+}
 function withFriendSet(friend_cat: string, cb: (friend_set_code: string | null) => void): void {
   assert(allocated_user_id);
   if (friend_cat === FRIEND_CAT_GLOBAL) {
@@ -288,7 +303,7 @@ function withFriendSet(friend_cat: string, cb: (friend_set_code: string | null) 
     //   they can be highlighted (but not filtered)
     friend_cat = FRIEND_CAT_FRIENDS;
   }
-  let friend_codes = (friend_cats[friend_cat] || []).map((a) => `f=${a}`);
+  let friend_codes = (friend_cats[friend_cat] || []).map(providerFriendToParam);
   if (!friend_codes.length) {
     return cb(null);
   }
@@ -298,7 +313,7 @@ function withFriendSet(friend_cat: string, cb: (friend_set_code: string | null) 
   if (friend_set_code_cache[friend_set_key]) {
     return cb(friend_set_code_cache[friend_set_key]!);
   }
-  asyncDictionaryGet('friend_set_code', friend_set_key, friendSetFetch, function (friend_set_code: string) {
+  asyncDictionaryGet(friend_set_dict_name, friend_set_key, friendSetFetch, function (friend_set_code: string) {
     friend_set_code_cache[friend_set_key] = friend_set_code;
     friend_set_code_persistent_cache[friend_cat] = [friend_set_key, friend_set_code];
     lsd[FRIEND_SET_CACHE_KEY] = JSON.stringify(friend_set_code_persistent_cache);
@@ -422,7 +437,7 @@ class ScoreSystemImpl<ScoreType> {
           ld.name = String(level_idx);
         }
       }
-      this.getScore(level_idx); // fetch .local_score for updatePlayerName to take advantage of
+      this.loadLocalScore(level_idx); // fetch .local_score for updatePlayerName to take advantage of
     }
   }
 
@@ -481,7 +496,8 @@ class ScoreSystemImpl<ScoreType> {
       }
       let names_str = names.join(', ');
       if (count > names.length) {
-        names_str += `${names_str ? ', ' : ''}${count - names.length} ${names.length ? 'others' : 'users'}`;
+        let remaining = count - names.length;
+        names_str += `${names_str ? ', ' : ''}${remaining} ${plural(remaining, names.length ? 'other' : 'user')}`;
       }
       ret.list.push({
         score: this.value_to_score(entry.s),
@@ -578,6 +594,14 @@ class ScoreSystemImpl<ScoreType> {
           url,
           (err: string | undefined, scores: HighScoreListRaw) => {
             bc.refresh_in_flight = false;
+            if (err && scores && typeof scores === 'string' &&
+              (scores as string).includes('ERR_INVALID_FRIENDSETID')
+            ) {
+              // probably a staging friendset on prod or vice versa, kill the cache
+              console.error('Received ERR_INVALID_FRIENDSETID from server, wiping friend set cache');
+              friendSetCacheWipe();
+              // Could also automatically do 1 retry here, but it's probably fine
+            }
             if (!err) {
               this.handleScoreResp(level_idx, friend_cat, scores);
             }
@@ -647,7 +671,13 @@ class ScoreSystemImpl<ScoreType> {
     obj.payload = payload;
     ld.local_score = obj;
     let key = `${this.LS_KEY}.score_${ld.name}`;
-    lsd[key] = JSON.stringify(obj);
+    withUserID((user_id: string) => {
+      lsd[key] = JSON.stringify({
+        ...obj,
+        submitted: false,
+        user_id,
+      });
+    });
     if (ld.save_in_flight) {
       return;
     }
@@ -660,7 +690,13 @@ class ScoreSystemImpl<ScoreType> {
         }
         if (obj === ld.local_score) {
           if (!err) {
-            lsd[key] = JSON.stringify(obj);
+            withUserID((user_id: string) => {
+              lsd[key] = JSON.stringify({
+                ...obj,
+                submitted: true,
+                user_id,
+              });
+            });
           }
         } else {
           // new score in the meantime
@@ -677,22 +713,36 @@ class ScoreSystemImpl<ScoreType> {
     return Boolean(this.getScore(level_idx));
   }
 
-  getScore(level_idx: number): ScoreType | null {
+  private loadLocalScore(level_idx: number): void {
     let ld = this.level_defs[level_idx];
     if (ld.local_score) {
-      return ld.local_score; // allow calling each frame and getting cached version instead of spamming submits
+      return;
     }
     let key = `${this.LS_KEY}.score_${ld.name}`;
-    if (lsd[key]) {
-      let ret = JSON.parse(lsd[key]!);
-      if (!ret) {
-        return null;
+    let saved = lsd[key];
+    if (!saved) {
+      return;
+    }
+    let ret = JSON.parse(saved);
+    if (!ret) {
+      return;
+    }
+    withUserID((user_id: string) => {
+      if (ret.user_id !== user_id) {
+        return;
       }
       ld.local_score = ret;
       if (!ret.submitted) {
         this.saveScore(level_idx, ret, ret.payload);
       }
       return ret;
+    });
+  }
+
+  getScore(level_idx: number): ScoreType | null {
+    let ld = this.level_defs[level_idx];
+    if (ld.local_score) {
+      return ld.local_score; // allow calling each frame and getting cached version instead of spamming submits
     }
     return null;
   }
@@ -889,47 +939,5 @@ cmd_parse.register({
   help: 'Displays one\'s own friend code',
   func: function (param: string, resp_func: CmdRespFunc): void {
     scoreFriendCodeGet(resp_func);
-  },
-});
-
-cmd_parse.register({
-  cmd: 'score_friend_list',
-  help: 'List friends',
-  func: function (param: string, resp_func: CmdRespFunc): void {
-    resp_func(null, friends_by_code.join(', ') || 'You have no friends');
-  },
-});
-
-cmd_parse.register({
-  cmd: 'score_friend_add',
-  help: 'Add friend by friend code',
-  func: function (param: string, resp_func: CmdRespFunc): void {
-    let fc = param.trim().toUpperCase();
-    if (!fc) {
-      return resp_func('Missing friend code');
-    }
-    if (friends_by_code.includes(fc)) {
-      return resp_func(null, 'Friend already on list.');
-    }
-    friends_by_code.push(fc);
-    lsd[FRIENDS_KEY] = JSON.stringify(friends_by_code);
-    resp_func(null, 'Friend added');
-  },
-});
-
-cmd_parse.register({
-  cmd: 'score_friend_remove',
-  help: 'Remove friend by friend code',
-  func: function (param: string, resp_func: CmdRespFunc): void {
-    let fc = param.trim().toUpperCase();
-    if (!fc) {
-      return resp_func('Missing friend code');
-    }
-    if (!friends_by_code.includes(fc)) {
-      return resp_func(null, 'Friend not on list.');
-    }
-    friends_by_code.splice(friends_by_code.indexOf(fc), 1);
-    lsd[FRIENDS_KEY] = JSON.stringify(friends_by_code);
-    resp_func(null, 'Friend removed');
   },
 });
