@@ -646,6 +646,15 @@ class ClientEntityManagerImpl<
     assert(this.channel.numSubscriptions());
     let { action_list, resp_list } = this.action_list_queue;
     this.action_list_queue = null;
+    if (netDisconnected()) {
+      for (let ii = 0; ii < resp_list.length; ++ii) {
+        let cb = resp_list[ii];
+        if (cb) {
+          cb('ERR_DISCONNECTED');
+        }
+      }
+      return;
+    }
     let pak = this.channel.pak('ent_action_list');
     pak.writeInt(action_list.length);
     for (let ii = 0; ii < action_list.length; ++ii) {
