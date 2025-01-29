@@ -951,6 +951,10 @@ export const hrnow = window.performance && window.performance.now ?
   window.performance.now.bind(window.performance) :
   Date.now.bind(Date);
 
+let out_of_tick = false;
+export function isOutOfTick() {
+  return out_of_tick;
+}
 let last_tick = 0;
 let last_tick_hr = 0;
 let frame_limit_time_left = 0;
@@ -958,6 +962,7 @@ function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
   profilerStart('top');
+  out_of_tick = false;
   frames_requested--;
 
   if (render_frames_needed) {
@@ -975,6 +980,7 @@ function tick(timestamp) {
     }
     requestFrame();
     profilerStop();
+    out_of_tick = true;
     return profilerStop('tick');
   }
 
@@ -998,6 +1004,7 @@ function tick(timestamp) {
       // too early, skip this frame, do not count any of this time, pretend this frame never happened.
       requestFrame();
       profilerStop('top');
+      out_of_tick = true;
       return profilerStop('tick');
     }
     let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
@@ -1061,6 +1068,7 @@ function tick(timestamp) {
     }
     requestFrame();
     profilerStop();
+    out_of_tick = true;
     return profilerStop('tick');
   }
 
@@ -1216,6 +1224,7 @@ function tick(timestamp) {
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
   requestFrame(hrnow() - hrtime);
   profilerStop('bottom');
+  out_of_tick = true;
   return profilerStop('tick');
 }
 
