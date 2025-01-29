@@ -958,6 +958,10 @@ export function dropDownCreate(params) {
 export function dropDown(param, current, opts) {
   opts = opts || {};
   param.auto_reset = false; // Handled every frame here automatically
+  if (typeof current === 'string' && typeof param.items[0] === 'string') {
+    // string current, and string items, no tags, handle automatically
+    current = param.items.indexOf(current);
+  }
   let { suppress_return_during_dropdown } = opts;
   // let dropdown = getUIElemData<SelectionBox, SelectionBoxOpts>('dropdown', param, dropDownCreate);
   let dropdown = getUIElemData('dropdown', param, dropDownCreate);
