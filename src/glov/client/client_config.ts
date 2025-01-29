@@ -44,6 +44,10 @@ export function setAbilityReloadUpdates(value: boolean): void {
   platformOverrideParameter('reload_updates', platformParameterGet('reload_updates') && value);
 }
 
+export function getAbilityExit(): boolean {
+  return platformParameterGet('exit');
+}
+
 let ability_chat = true;
 export function getAbilityChat(): boolean {
   return ability_chat;
