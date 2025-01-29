@@ -1331,7 +1331,6 @@ class ChatUIImpl {
         uiTextHeight(),
         this.disconnected_message_top ? ALIGN.HCENTER : ALIGN.HVCENTER,
         camera2d.w(), camera2d.h() * 0.20,
-        // @ts-expect-error Remove after netClient has types defined
         `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
     }
 
