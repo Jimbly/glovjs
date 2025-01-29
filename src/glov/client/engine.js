@@ -451,6 +451,10 @@ let do_borders = true;
 let do_viewport_postprocess = false;
 let need_repos = 0;
 
+export function setDoBorders(new_value) {
+  do_borders = new_value;
+}
+
 export function resizing() {
   return need_repos;
 }
