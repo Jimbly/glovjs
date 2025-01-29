@@ -157,6 +157,7 @@ let filtered_errors = new RegExp([
   't\\.gvl', // OneTrust
   'pubads_20', // Some third-party ad provider
   'ima3\\.js', // Google ads
+  'fcKernelManager', // Google ads?
   'window\\.setDgResult', // likely from ad provider
   'TranslateService',
   'bdTransJSBridge',
@@ -178,7 +179,8 @@ let filtered_errors = new RegExp([
   'CookieDeprecationLabel', // gtag
   'googletagmanager', // gtag
   '__firefox__',
-  'ucbrowser_script'
+  'ucbrowser_script',
+  'kernel_loader', // Chromium OS
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
