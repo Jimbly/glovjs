@@ -385,6 +385,9 @@ export function getFrameDtActual() {
 
 let after_loading_state = null;
 export let is_loading = true;
+export function isLoading() {
+  return is_loading;
+}
 export function setState(new_state) {
   if (is_loading) {
     after_loading_state = new_state;
