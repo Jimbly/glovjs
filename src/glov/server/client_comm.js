@@ -16,7 +16,10 @@ import { ERR_NO_USER_ID, ERR_UNAUTHORIZED } from 'glov/common/external_users_com
 import { isPacket } from 'glov/common/packet';
 import { perfCounterAdd, perfCounterAddValue } from 'glov/common/perfcounters';
 import { unicode_replacement_chars } from 'glov/common/replacement_chars';
-import { logdata } from 'glov/common/util';
+import {
+  EMAIL_REGEX,
+  logdata,
+} from 'glov/common/util';
 import {
   isProfane,
   profanityCommonStartup,
@@ -408,6 +411,10 @@ function onLoginExternal(client, data, cb) {
     assert(valid_login_data);
     let external_user_id = valid_login_data.external_id;
     assert(external_user_id);
+    let { email, display_name: provider_display_name } = valid_login_data;
+    if (provider_display_name) {
+      display_name = provider_display_name;
+    }
 
     let userIdMappingHandler = getExternalUserIdMapper(provider);
     userIdMappingHandler(client_channel, valid_login_data, (err, user_id, providers_ids) => {
@@ -419,6 +426,15 @@ function onLoginExternal(client, data, cb) {
       }
       if (!user_id) {
         return void cb(ERR_NO_USER_ID);
+      }
+
+      if (EMAIL_REGEX.test(email)) {
+        const channel = `user.${user_id}`;
+        client_channel.sendChannelMessage(channel, 'set_email', email, (err_set_email) => {
+          if (err_set_email) {
+            client_channel.logCtx('error', `unable to set email ${email}: ${err_set_email}`);
+          }
+        });
       }
 
       // Handle the case where this function is not called with extra providers' ids
