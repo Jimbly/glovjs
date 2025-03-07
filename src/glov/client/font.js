@@ -650,6 +650,32 @@ GlovFont.prototype.infoFromChar = function (c) {
   return this.replacement_character;
 };
 
+const strip_opts_default = {
+  tab: true,
+  newline: true,
+};
+GlovFont.prototype.stripUnprintable = function (text, opts) {
+  opts = opts || strip_opts_default;
+  text = getStringFromLocalizable(text);
+  for (let ii = text.length - 1; ii >= 0; --ii) {
+    let code = text.charCodeAt(ii);
+    let strip = false;
+    if (code === 10) {
+      strip = opts.newline ? ' ' : false;
+    } else if (code === 9) {
+      strip = opts.tab ? ' ' : false;
+    } else if (code >= 10 && code <= 13) {
+      strip = ' ';
+    } else if (!this.char_infos[code]) {
+      strip = '?';
+    }
+    if (strip) {
+      text = `${text.slice(0, ii)}${strip}${text.slice(ii + 1)}`;
+    }
+  }
+  return text;
+};
+
 GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {
   assert.equal(typeof c, 'number');
   this.applyStyle(style);
