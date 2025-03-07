@@ -159,6 +159,7 @@ export interface TooltipBoxParam {
   tooltip_width?: number;
   tooltip_above?: boolean;
   tooltip_right?: boolean;
+  tooltip_left?: boolean;
   tooltip_center?: boolean;
   tooltip_markdown?: boolean; // defaults true
   tooltip: TooltipValue;
@@ -196,6 +197,7 @@ export interface ButtonParam extends Partial<TooltipParam>, Partial<SpotParam> {
   base_name?: string;
   no_bg?: boolean;
   style?: UIStyle;
+  tooltip_left?: boolean;
 }
 export interface ButtonTextParam extends ButtonParam {
   text: Text;
