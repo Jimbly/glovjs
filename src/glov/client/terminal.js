@@ -886,7 +886,7 @@ class GlovTerminal {
       if (cursor_blink) {
         ui.drawRect(cx, cy + char_height - draw_cursor[1] - 1,
           cx + char_width, cy + char_height - draw_cursor[0],
-          z + 0.75, palette[playback.fg]);
+          z + 0.75, palette[this.mod_head ? playback.fg : this.fg]);
       }
     }
     // Draw background rects
