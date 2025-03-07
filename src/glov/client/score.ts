@@ -17,6 +17,7 @@ import {
 } from 'glov/common/util';
 import { MODE_DEVELOPMENT } from './client_config';
 import { cmd_parse } from './cmds';
+import { errorReportSetDetails } from './error_report';
 import { fetch } from './fetch';
 import {
   score_user_provider_auto_web,
@@ -156,6 +157,9 @@ function withUserID(f: UserIDCB): void {
       assert(result.friends); // possibly empty array, though
       allocated_user_id = result.user_id;
       player_name = result.display_name || '';
+      errorReportSetDetails('score_id', allocated_user_id);
+      errorReportSetDetails('score_name', player_name);
+
       friend_cats[FRIEND_CAT_FRIENDS] = result.friends;
       let new_user = false;
       let need_rename = false;
@@ -871,9 +875,11 @@ export function scoreUpdatePlayerName(new_player_name: string): void {
   }
   let old_name = player_name;
   player_name = new_player_name;
+  errorReportSetDetails('score_name', player_name);
   scoreUpdatePlayerNameInternal(new_player_name, function (err) {
     if (err) {
       player_name = old_name;
+      errorReportSetDetails('score_name', player_name);
       alert(`Error updating player name: "${err}"`); // eslint-disable-line no-alert
     } else {
       score_user_provider.setName!(new_player_name);
