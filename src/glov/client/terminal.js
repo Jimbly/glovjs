@@ -803,6 +803,21 @@ class GlovTerminal {
     return ret;
   }
 
+  isAnimating() {
+    return Boolean(this.mod_head);
+  }
+  finishAnimating() {
+    while (this.mod_head) {
+      let mod = this.mod_head;
+      this.mod_head = mod.next;
+      if (!mod.next) {
+        this.mod_tail = null;
+      }
+      this.domod(this.buffer, mod);
+    }
+    this.mod_countdown = 0;
+  }
+
   render() {
     let dt = engine.getFrameDt();
     this.frame++;
