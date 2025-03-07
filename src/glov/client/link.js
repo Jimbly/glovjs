@@ -11,13 +11,12 @@ const in_event = require('./in_event.js');
 const input = require('./input.js');
 const { abs } = Math;
 const {
-  playUISound,
   uiGetDOMElem,
 } = require('./ui.js');
 const ui = require('./ui.js');
 const { uiStyleCurrent } = require('./uistyle.js');
 const settings = require('./settings.js');
-const { SPOT_DEFAULT_BUTTON, spot, spotFocusSteal, spotKey } = require('./spot.js');
+const { SPOT_DEFAULT_BUTTON, spot, spotKey } = require('./spot.js');
 
 const { max, min } = Math;
 
@@ -227,24 +226,14 @@ export function linkText(param) {
   param.w = w;
   param.h = h;
   param.def = SPOT_DEFAULT_BUTTON;
-  delete param.url; // do *not* let spot() do link/URL handling, we do it ourselves below
   let spot_ret = spot(param);
-  param.url = url;
   let style_use = spot_ret.focused ?
     (style_link_hover || style_link_hover_default) :
     (style_link || style_link_default);
   ui.font.drawSized(style_use, x, y, z, font_size, text);
   let underline_w = 1;
   ui.drawLine(x, y + h - underline_w, x + w, y + h - underline_w, z - 0.5, underline_w, 1, style_use.color_vec4);
-  let clicked = link(param);
-  if (clicked) {
-    const sound_button = param.sound_button === undefined ? param.def.sound_button : param.sound_button;
-    if (sound_button) {
-      playUISound(sound_button);
-    }
-    spotFocusSteal(param);
-  }
-  return clicked || spot_ret.ret;
+  return spot_ret.ret;
 }
 
 export function linkActivate(spot_key) {
