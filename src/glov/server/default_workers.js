@@ -922,6 +922,8 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 
   handleSetEmail(src, email, resp_func) {
+    // Note: intentionally allowing this even if !this.exists() - this message
+    //  may be sent _before_ the login_external message
     if (!email) {
       return resp_func('Missing email');
     }
