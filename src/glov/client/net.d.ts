@@ -5,6 +5,7 @@ import type {
   DataObject,
   ErrorCallback,
   NetErrorCallback,
+  NetResponseCallback,
   NetResponseCallbackCalledBySystem,
   PresenceEntry,
   TSMap,
@@ -79,7 +80,7 @@ export type SubscriptionManager = {
   serverLogSetExtraData(data: null | DataObject): void;
 
   onChannelMsg<T=unknown>(channel_type: string | null,
-    msg: string, cb: (data: T, resp_func: ErrorCallback) => void): void;
+    msg: string, cb: (data: T, resp_func: NetResponseCallback) => void): void;
   // TODO: more specific channel event handler types (also for `ClientChannelWorker::on` below)
   onChannelEvent<T=unknown>(channel_type: string | null, msg: string, cb: (data: T) => void): void;
 
