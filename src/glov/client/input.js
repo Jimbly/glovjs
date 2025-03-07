@@ -402,6 +402,8 @@ function ignored(event) {
 let ctrl_checked = false;
 let unload_protected = false;
 let unload_override = null;
+// cb() returns a string to display a message (actual message is ignored), or false
+//   to *not* block unload, or anything else to block the unload with a message
 export function inputOverrideUnload(cb) {
   assert(!unload_override || !cb);
   unload_override = cb;
@@ -410,7 +412,9 @@ function beforeUnload(e) {
   let unload_msg;
   if (unload_override) {
     unload_msg = unload_override();
-    if (!unload_msg) {
+    if (unload_msg === false) {
+      // do *not* block the unload
+    } else if (!unload_msg) {
       // no prompt, just block the unload
       e.preventDefault();
       return;
