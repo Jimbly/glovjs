@@ -736,13 +736,18 @@ class GlovUIEditBox {
       eatAllKeyboardInput();
     }
     // Eat mouse events going to the edit box
-    mouseConsumeClicks({ x, y, w, h });
+    if (allow_focus) {
+      mouseConsumeClicks(clipped_rect);
+    }
 
     if (canvas_render) {
       const { center } = this;
       const { char_width, char_height, color_selection, color_caret, style_text } = canvas_render;
       let font = uiGetFont();
       let lines = text.split('\n');
+      if (this.input && this.input.scrollTop !== 0) {
+        this.input.scrollTop = 0;
+      }
       // draw text
       // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
       let line_width = [];
