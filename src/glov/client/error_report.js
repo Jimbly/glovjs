@@ -4,9 +4,10 @@ export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random())
 let error_report_details = {};
 let error_report_dynamic_details = {};
 
-import { platformGetID } from './client_config';
+import { MODE_DEVELOPMENT, platformGetID } from './client_config';
 import { getAPIPath } from './environments';
 import { fetch } from './fetch';
+import { isbot } from './isbot';
 import { getStoragePrefix } from './local_storage';
 import { unlocatePaths } from './locate_asset';
 
@@ -77,7 +78,7 @@ export function errorReportClear() {
   window.debugmsg('', true);
 }
 
-let submit_errors = true;
+let submit_errors = !isbot();
 export function glovErrorReportDisableSubmit() {
   submit_errors = false;
 }
@@ -89,7 +90,7 @@ export function glovErrorReportSetCrashCB(cb) {
 
 // base like http://foo.com/bar/ (without index.html)
 let reporting_api_path = 'http://www.dashingstrike.com/reports/api/';
-if (window.location.host.indexOf('localhost') !== -1 ||
+if (MODE_DEVELOPMENT ||
   window.location.host.indexOf('staging') !== -1/* ||
   window.location.host.indexOf('pink') !== -1*/
 ) {
