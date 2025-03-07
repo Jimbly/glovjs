@@ -484,7 +484,8 @@ function onKeyDown(event) {
     code >= KEYS.F4 && code <= KEYS.F12 || // Chrome debug hotkeys and Windows/Electron close window hotkey
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
     code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
-    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey; // forward/back navigation
+    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey || // forward/back navigation
+    event.ctrlKey && code >= KEYS['0'] && code <= KEYS['9']; // Chrome tab switch hotkeys
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
