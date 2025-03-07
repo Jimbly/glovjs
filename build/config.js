@@ -46,6 +46,7 @@ module.exports = function (gb) {
       'client/**/*.jpg',
       'client/**/*.glb',
       'client/**/*.ico',
+      'client/**/*.icns',
       'client/**/*.ttf',
       'client/**/*.woff',
       'client/**/*.woff2',
