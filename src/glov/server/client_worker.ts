@@ -53,7 +53,7 @@ type WSClient = { // should be from wsserver.js
   pak(msg: string, pak_ref?: Packet | null): Packet;
   send(msg: string, data?: unknown): void;
 };
-type LoginRespData = {
+export type LoginRespData = {
   public_data: BaseUserWorkerPublicData;
 };
 export type WorkerInitData = { // should be from channel_server.js
@@ -67,7 +67,7 @@ export type WorkerInitData = { // should be from channel_server.js
   cmds: CmdDef[];
 };
 
-type IDs = TSMap<string|number> & ClientHandlerSource;
+export type IDs = TSMap<string|number> & ClientHandlerSource;
 
 let cmd_parse_routes: TSMap<string> = {}; // cmd string -> worker type
 
@@ -75,7 +75,7 @@ let repeated_disconnect = 0;
 let permission_flags_map: TSMap<true>;
 
 let permission_flags: string[];
-function applyCustomIds(ids: IDs, user_data_public: BaseUserWorkerPublicData | null): void {
+export function applyCustomIds(ids: IDs, user_data_public: BaseUserWorkerPublicData | null): void {
   delete ids.elevated;
   let perm = user_data_public?.permissions as DataObject;
   for (let ii = 0; ii < permission_flags.length; ++ii) {

@@ -50,6 +50,14 @@ function defaultUserIdMappingHandler(client_channel, valid_login_data, resp_func
     (err, result) => resp_func(err, result?.user_id));
 }
 
+export function defaultUserIdMappingAutoCreateHandler(client_channel, valid_login_data, resp_func) {
+  client_channel.sendChannelMessage(
+    'idmapper.idmapper',
+    'id_map_get_create_id',
+    { provider: valid_login_data.provider, provider_id: valid_login_data.external_id },
+    (err, result) => resp_func(err, result?.user_id));
+}
+
 let external_users_id_mapping_handlers = {};
 export function setExternalUserIdMapper(provider_id, handler) {
   external_users_id_mapping_handlers[provider_id] = handler;
@@ -384,7 +392,7 @@ function onLogin(client, data, resp_func) {
   }, handleLoginResponse.bind(null, 'login', client, user_id, resp_func));
 }
 
-function onLoginExternal(client, data, cb) {
+export function onLoginExternal(client, data, cb) {
   let client_channel = client.client_channel;
   assert(client_channel);
 
