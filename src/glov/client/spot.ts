@@ -207,7 +207,7 @@ const { abs, max } = Math;
 import verify from 'glov/common/verify';
 import { Vec2, Vec4 } from 'glov/common/vmath.js';
 import * as camera2d from './camera2d.js';
-import { platformParameterGet } from './client_config';
+import { platformGetID, platformParameterGet } from './client_config';
 import * as engine from './engine.js';
 import {
   FontStyle,
@@ -235,7 +235,10 @@ import {
   mousePosIsTouch,
   padButtonDownEdge,
 } from './input.js';
-import { link } from './link';
+import {
+  link,
+  linkActivate,
+} from './link';
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
@@ -431,7 +434,8 @@ const spot_nav_keys_extended: SpotNavKeys = {
   [SPOT_NAV_NEXT]: spot_nav_keys_base[SPOT_NAV_NEXT],
 };
 function keyDownShifted(key: number): boolean {
-  return keyDown(KEYS.SHIFT) && keyDownEdge(key);
+  // Use Ctrl+Tab on Electron since the Steam overlay will intercept shift+tab
+  return (keyDown(KEYS.SHIFT) || platformGetID() === 'electron' && keyDown(KEYS.CTRL)) && keyDownEdge(key);
 }
 function keyDownUnshifted(key: number): boolean {
   return !keyDown(KEYS.SHIFT) && keyDownEdge(key);
@@ -1456,8 +1460,13 @@ export function spot(param: SpotParam): SpotRet {
     if (param.internal === undefined) {
       param.internal = true;
     }
+    let was_activated = button_activate;
     if (link(param)) {
       button_activate = true;
+    }
+    if (param.internal === false && was_activated) {
+      // button was activated (via keyboard/gamepad/hotkeys), need to activate the link
+      linkActivate(param.key_computed);
     }
   }
   if (button_activate) {

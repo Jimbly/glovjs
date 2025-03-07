@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 /* eslint-disable import/order */
-const assert = require('assert');
 const verify = require('glov/common/verify');
 const { platformParameterGet } = require('./client_config');
 const engine = require('./engine.js');
@@ -217,7 +216,7 @@ export function link(param) {
 }
 
 export function linkText(param) {
-  let { style_link, style_link_hover, x, y, z, style, font_size, text, url, internal } = param;
+  let { style_link, style_link_hover, x, y, z, style, font_size, text, url } = param;
   text = text || url;
   z = z || Z.UI;
   style = style || uiStyleCurrent();
@@ -245,15 +244,14 @@ export function linkText(param) {
     }
     spotFocusSteal(param);
   }
-  if (spot_ret.ret && !internal) {
-    // activated (via keyboard or gamepad), and an external link, act as if we clicked it
-    let key = spotKey(param);
-    let state = state_cache[key];
-    assert(state);
-    assert(state.a_elem);
+  return clicked || spot_ret.ret;
+}
+
+export function linkActivate(spot_key) {
+  let state = state_cache[spot_key];
+  if (verify(state) && verify(state.a_elem)) {
     state.a_elem.click();
   }
-  return clicked || spot_ret.ret;
 }
 
 export function linkTick() {
