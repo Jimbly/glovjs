@@ -58,7 +58,12 @@ export function setAbilityChat(value: boolean): void {
 
 let last_status: string | null = null;
 let last_others: string;
+let sent_to_platform = false;
 export function platformSetRichPresence(status: string | null, others: TSMap<string> | null): void {
+  let set_fn = platformParameterGet('setRichPresence');
+  if (set_fn && !sent_to_platform) {
+    last_status = null;
+  }
   let others_string = JSON.stringify(others);
   if (status === last_status && others_string === last_others) {
     return;
@@ -69,5 +74,8 @@ export function platformSetRichPresence(status: string | null, others: TSMap<str
   const { errorReportSetDetails } = require('./error_report'); // eslint-disable-line global-require
   errorReportSetDetails('rich_status', status);
   errorReportSetDetails('rich_others', others ? others_string : null);
-  platformParameterGet('setRichPresence')?.(status, others);
+  if (set_fn) {
+    set_fn(status, others);
+    sent_to_platform = true;
+  }
 }
