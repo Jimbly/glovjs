@@ -1276,6 +1276,10 @@ export function setPixelyStrict(on) {
   }
 }
 
+export function setPixelPerfect(pixel_perfect) {
+  render_pixel_perfect = pixel_perfect;
+}
+
 export function getViewportPostprocess() {
   return do_viewport_postprocess;
 }
