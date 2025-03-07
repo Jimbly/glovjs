@@ -182,6 +182,7 @@ let filtered_errors = new RegExp([
   '__firefox__',
   'ucbrowser_script',
   'kernel_loader', // Chromium OS
+  'operation not permitted, watch', // Electron watch() API
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
