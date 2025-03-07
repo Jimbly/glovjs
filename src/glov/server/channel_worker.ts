@@ -40,6 +40,7 @@ import {
   ErrorCallback,
   HandlerCallback,
   HandlerSource,
+  LoggedInClientHandlerSource,
   NetErrorCallback,
   NetResponseCallback,
   NetResponseCallbackCalledBySystem,
@@ -245,8 +246,8 @@ export type HandlerFunction<P=never, R=never> = (
   data: P,
   resp_func: NetResponseCallback<R>
 ) => void;
-export type ClientHandlerFunction<P=never, R=never> = (
-  source: ClientHandlerSource,
+export type ClientHandlerFunction<P=never, R=never, S=ClientHandlerSource> = (
+  source: S,
   data: P,
   resp_func: NetResponseCallback<R>
 ) => void;
@@ -1923,6 +1924,16 @@ export class ChannelWorker {
     });
   }
   static registerClientHandler<P=never, R=never>(message: string, handler: ClientHandlerFunction<P, R>): void {
+    this.workerExtend({
+      client_handlers: {
+        [message]: handler,
+      },
+    });
+  }
+  // If require_login is used, this is safe
+  static registerLoggedInClientHandler<P=never, R=never>(
+    message: string, handler: ClientHandlerFunction<P, R, LoggedInClientHandlerSource>
+  ): void {
     this.workerExtend({
       client_handlers: {
         [message]: handler,
