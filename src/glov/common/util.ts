@@ -376,9 +376,9 @@ export function toArray(array_like: Float32Array | Int32Array | Uint8Array): num
   return Array.prototype.slice.call(array_like);
 }
 
-export function arrayToSet(array: number[]): Partial<Record<number, true>>;
-export function arrayToSet(array: string[]): Partial<Record<string, true>>;
-export function arrayToSet<T extends string | number>(array: T[]): Partial<Record<T, true>> {
+export function arrayToSet(array: Readonly<number[]>): Partial<Record<number, true>>;
+export function arrayToSet(array: Readonly<string[]>): Partial<Record<string, true>>;
+export function arrayToSet<T extends string | number>(array: Readonly<T[]>): Partial<Record<T, true>> {
   let ret = Object.create(null);
   for (let ii = 0; ii < array.length; ++ii) {
     ret[array[ii]] = true;
