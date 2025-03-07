@@ -443,11 +443,11 @@ export function soundTick(dt: number): void {
     return;
   }
   for (let i = 0; i < active_sfx_as_music.length; ++i) {
-    let { sound, play_volume, set_volume_when_played } = active_sfx_as_music[i];
+    let { sound, set_volume_when_played } = active_sfx_as_music[i];
     if (!sound.playing()) {
       ridx(active_sfx_as_music, i);
     } else if (set_volume_when_played !== musicVolume()) {
-      sound.volume(play_volume);
+      sound.volume((sound as GlovSoundSetUp & { volume_current: number }).volume_current);
       active_sfx_as_music[i].set_volume_when_played = musicVolume();
     }
   }
@@ -510,7 +510,7 @@ export function soundTick(dt: number): void {
 }
 
 export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean): GlovSoundSetUp | null {
-  volume = volume || 1;
+  volume = typeof volume === 'number' ? volume : 1;
   if (settings.volume * (as_music ? settings.volume_music : settings.volume_sound) === 0) {
     return null;
   }
