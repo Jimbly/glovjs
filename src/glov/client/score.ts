@@ -70,6 +70,7 @@ if (MODE_DEVELOPMENT ||
   window.location.host.indexOf('pink') !== -1*/
 ) {
   score_host = 'http://scores.staging.dashingstrike.com';
+  // score_host = 'http://localhost:4005';
   score_use_staging = true;
 }
 if (window.location.href.startsWith('https://')) {
@@ -91,21 +92,50 @@ export function scoreIsStaging(): boolean {
   return score_use_staging;
 }
 
+let time_async_start = 0;
+let time_async_finish = 0;
+let likely_offline = false;
+export function scoreLikelyOffline(): boolean {
+  // Assumes this is called per-frame to keep state updated
+  if (!time_async_start) {
+    // no data, assume online
+    return likely_offline;
+  }
+  if (time_async_finish > time_async_start) {
+    // known online
+    likely_offline = false;
+  } else if (time_async_start < Date.now() - 2000) {
+    // nothing in 2 seconds, assume offline until we get a response
+    likely_offline = true;
+  } // else, use whatever state we last saw
+  return likely_offline;
+}
+
 function fetchJSON2<T>(url: string, cb: (err: string | undefined, o: T) => void): void {
+  time_async_start = Date.now();
   fetch({
     url: url,
     response_type: 'json',
   }, (err: string | undefined, resp: unknown) => {
+    if (!err) {
+      time_async_finish = Date.now();
+      likely_offline = false;
+    }
     cb(err, resp as T);
   });
 }
 
 export function fetchJSON2Timeout<T>(url: string, timeout: number, cb: (err: string | undefined, o: T) => void): void {
+  time_async_start = Date.now();
   fetch({
     url: url,
     response_type: 'json',
     timeout,
   }, (err: string | undefined, resp: unknown) => {
+    if (!err) {
+      time_async_finish = Date.now();
+      likely_offline = false;
+    }
     cb(err, resp as T);
   });
 }
