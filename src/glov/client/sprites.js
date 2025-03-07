@@ -52,6 +52,7 @@ const {
   deprecate,
   nextHighestPowerOfTwo,
 } = require('glov/common/util.js');
+const verify = require('glov/common/verify');
 const {
   vec2,
   vec4,
@@ -518,7 +519,14 @@ function scissorSet(scissor) {
   if (!active_scissor) {
     gl.enable(gl.SCISSOR_TEST);
   }
-  gl.scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+  let [x, y, w, h] = scissor;
+  if (!verify(w >= 0)) {
+    w = 0;
+  }
+  if (!verify(h >= 0)) {
+    h = 0;
+  }
+  gl.scissor(x, y, w, h);
   active_scissor = scissor;
 }
 function scisssorClear() {
@@ -599,6 +607,8 @@ export function spriteClippedViewport() {
 
 export function spriteClipPush(z, x, y, w, h) {
   assert(clip_stack.length < 10); // probably leaking
+  verify(w >= 0);
+  verify(h >= 0);
   let scissor = clipCoordsScissor(x, y, w, h);
   let dom_clip = clipCoordsDom(x, y, w, h);
   camera2d.setInputClipping(dom_clip);
