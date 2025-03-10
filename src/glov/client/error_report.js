@@ -183,6 +183,7 @@ let filtered_errors = new RegExp([
   'ucbrowser_script',
   'kernel_loader', // Chromium OS
   'operation not permitted, watch', // Electron watch() API
+  'play\\(\\) request was interrupted by a call to pause\\(\\)', // likely from video ad provider
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {
