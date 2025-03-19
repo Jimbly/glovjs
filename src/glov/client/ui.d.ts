@@ -219,6 +219,7 @@ export interface ButtonImageParamBase extends ButtonParam {
   color1?: ROVec4;
   rotation?: number;
   flip?: boolean;
+  yoffs?: YOffs;
 }
 export interface ButtonImageParam1 extends ButtonImageParamBase {
   imgs: Sprite[];
@@ -235,7 +236,8 @@ export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;
 export type ButtonGenericParam = ButtonTextParam | ButtonImageParam;
 export function button(param: ButtonGenericParam): ButtonRet | null;
-export function buttonSetDefaultYOffs(y_offs: Partial<Record<ButtonStateString, number>>): void;
+export type YOffs = Partial<Record<ButtonStateString, number>>;
+export function buttonSetDefaultYOffs(y_offs: YOffs): void;
 
 
 type CheckboxParam = ButtonTextParam & {
