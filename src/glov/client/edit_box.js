@@ -819,6 +819,9 @@ export function editBoxCreate(params) {
 export function editBox(params, current) {
   params.glov_initial_text = current;
   let edit_box = getUIElemData('edit_box', params, editBoxCreate);
+  if (edit_box.last_set_text !== current) {
+    edit_box.setText(current);
+  }
   let result = edit_box.run(params);
 
   return {
