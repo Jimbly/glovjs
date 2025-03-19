@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 /* globals HTMLElement, Event */
 
 import {

@@ -1,8 +1,6 @@
 // Portions Copyright 2020 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-env browser */
-
 import assert from 'assert';
 import * as settings from 'glov/client/settings';
 import { settingsRegister, settingsSet } from 'glov/client/settings';

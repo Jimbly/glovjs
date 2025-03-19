@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-require('./must_import.js')('channel_server.js', __filename); // eslint-disable-line import/order
+require('./must_import.js')('channel_server.js', __filename);
 
 export let cwstats = { msgs: 0, bytes: 0, inflight_set: 0 };
 export let ERR_QUIET = 'ERR_QUIET';

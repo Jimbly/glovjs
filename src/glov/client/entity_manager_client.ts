@@ -87,7 +87,7 @@ export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=an
   deleteEntity(ent_id: EntityID, reason: string) : void;
 
   // EventEmitter:
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on<T extends any[]>(type: string, fn: (...args: T) => void): void;
 }
 

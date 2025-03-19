@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { asyncParallel } from 'glov-async';
 import {
   CHAT_FLAG_EMOTE,
   CHAT_FLAG_USERCHAT,
@@ -18,6 +17,7 @@ import {
   v3copy,
   vec4,
 } from 'glov/common/vmath';
+import { asyncParallel } from 'glov-async';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmd_parse } from './cmds';

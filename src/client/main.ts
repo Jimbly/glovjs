@@ -1,4 +1,4 @@
-/*eslint global-require:off*/
+/* eslint n/global-require:off */
 // eslint-disable-next-line import/order
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
@@ -91,7 +91,6 @@ import { test3D } from './test_3d';
 import type { TSMap } from 'glov/common/types';
 
 const { max, floor, round, sin } = Math;
-
 // TODO: Migrate to TypeScript
 type Spine = ReturnType<typeof spineCreate>;
 

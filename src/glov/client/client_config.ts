@@ -71,7 +71,7 @@ export function platformSetRichPresence(status: string | null, others: TSMap<str
   last_status = status;
   last_others = others_string;
   // Don't require at startup, has huge dependencies that will mess up boostrapping
-  const { errorReportSetDetails } = require('./error_report'); // eslint-disable-line global-require
+  const { errorReportSetDetails } = require('./error_report'); // eslint-disable-line n/global-require
   errorReportSetDetails('rich_status', status);
   errorReportSetDetails('rich_others', others ? others_string : null);
   if (set_fn) {

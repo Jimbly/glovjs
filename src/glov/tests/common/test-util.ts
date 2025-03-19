@@ -1,5 +1,4 @@
 import assert from 'assert';
-import { asyncSeries } from 'glov-async';
 import { DataObject } from 'glov/common/types';
 import {
   cmpNumericSmart,
@@ -13,6 +12,7 @@ import {
   trimEnd,
 } from 'glov/common/util';
 import 'glov/server/test';
+import { asyncSeries } from 'glov-async';
 
 const { PI } = Math;
 

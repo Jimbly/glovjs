@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-env browser */
 
+/* globals requestAnimationFrame, navigator -- browser globals */
 /* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
@@ -1462,7 +1462,7 @@ export function startup(params) {
   window.addEventListener('blur', onBlur, false);
   window.addEventListener('focus', onFocus, false);
 
-  /* eslint-disable global-require */
+  /* eslint-disable n/global-require */
   glov_particles = require('./particles.js').create();
 
   if (is_pixely) {

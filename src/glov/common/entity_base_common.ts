@@ -124,6 +124,7 @@ export interface EntityManager<Entity extends EntityBaseCommon = EntityBaseCommo
   entitiesReload(predicate?: (ent: Entity) => boolean): Entity[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type EntityBaseDataCommon = {
   // Nothing anymore (previously had `pos: number[]`)
 };

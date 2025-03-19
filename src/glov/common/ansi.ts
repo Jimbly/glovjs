@@ -27,7 +27,6 @@ export const ansi = { bg: {} } as (Record<AnsiColors, SFuncBright> & {
   'cyan',
   'white',
 ] as const).forEach(function (color, idx) {
-  // eslint-disable-next-line func-style
   let fn = function (str: string): string {
     return `${ESC}[${30 + idx}m${str}${ESC}[0m`;
   } as SFuncBright;

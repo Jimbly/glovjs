@@ -288,7 +288,7 @@ export function spotSetPadMode(new_mode: boolean): void {
 }
 
 export function spotlog(...args: unknown[]): void {
-  // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line global-require
+  // const { getFrameIndex } = require('./engine.js'); // eslint-disable-line n/global-require
   // console.log(`spotlog(${getFrameIndex()}): `, ...args);
 }
 
@@ -1261,7 +1261,7 @@ function spotSignalRet(param: SpotInternal): void {
   out.double_click = key === last_signal.key &&
     engine.frame_timestamp - last_signal.timestamp <
     // TODO: After input.js and settings.js are converted to TypeScript, remove type casts
-    (settings as unknown as { double_click_time:number }).double_click_time;
+    (settings as unknown as { double_click_time: number }).double_click_time;
   last_signal.key = key;
   last_signal.timestamp = engine.frame_timestamp;
   out.ret++;

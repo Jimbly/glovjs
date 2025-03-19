@@ -145,7 +145,7 @@ module.exports = function (gb) {
     },
     browsersync_queryparams: '', // e.g. '?D=FOO'
   };
-  // eslint-disable-next-line global-require
+  // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);
   return config;
 };

@@ -646,7 +646,7 @@ gb.task({
   version: Date.now(), // always runs once per process
   init: function (next) {
     if (!bs) {
-      // eslint-disable-next-line global-require
+      // eslint-disable-next-line n/global-require
       let utils = require('browser-sync/dist/utils.js');
       // hack the browser opening to go to the URL we want
       let old_open = utils.opnWrapper;
@@ -659,7 +659,7 @@ gb.task({
         }
         old_open(url, name, instance);
       };
-      // eslint-disable-next-line global-require
+      // eslint-disable-next-line n/global-require
       bs = require('browser-sync').create();
     }
     next();

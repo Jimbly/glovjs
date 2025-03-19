@@ -1,10 +1,21 @@
-/* eslint-disable prefer-spread, no-regex-spaces, @typescript-eslint/no-unused-vars, guard-for-in, no-console, no-var */
-/* eslint-disable indent,object-curly-spacing,quotes,max-len,valid-jsdoc,func-style,no-eq-null,prefer-template,operator-linebreak,operator-assignment,no-script-url,wrap-iife,no-underscore-dangle*/
-/* eslint-disable no-implicit-coercion,wrap-regex,space-before-function-paren */
+/* eslint-disable no-regex-spaces */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-var */
+/* eslint-disable @stylistic/indent */
+/* eslint-disable @stylistic/object-curly-spacing */
+/* eslint-disable @stylistic/quotes */
+/* eslint-disable @stylistic/max-len */
+/* eslint-disable func-style */
+/* eslint-disable no-eq-null */
+/* eslint-disable prefer-template */
+/* eslint-disable @stylistic/operator-linebreak */
+/* eslint-disable operator-assignment */
+/* eslint-disable @stylistic/wrap-iife */
+/* eslint-disable no-underscore-dangle*/
+/* eslint-disable no-implicit-coercion */
+/* eslint-disable @stylistic/wrap-regex */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable @typescript-eslint/consistent-indexed-object-style */
 
 /**
  * From: https://github.com/Khan/perseus/tree/main/packages/simple-markdown @ 1502859

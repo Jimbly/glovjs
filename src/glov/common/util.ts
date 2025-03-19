@@ -304,7 +304,7 @@ export function lineLineIntersect(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2): boole
 //     o.__proto__ = p; // eslint-disable-line no-proto
 //     return o;
 //   };
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export function inherits(ctor: Constructor | Function, superCtor: Constructor | Function): void {
   // From Node.js
   assert(typeof superCtor === 'function');
@@ -623,16 +623,16 @@ export function callbackify(f: (...args: any[]) => Promise<unknown>): (...args: 
     let cb = arguments[arguments.length - 1]; // eslint-disable-line prefer-rest-params
     assert.equal(typeof cb, 'function');
     let args = Array.prototype.slice.call(arguments, 0, -1); // eslint-disable-line prefer-rest-params
-    let p = f.apply(this, args); // eslint-disable-line @typescript-eslint/no-invalid-this
+    let p = f.apply(this, args);
     p.then((result) => {
       if (cb) {
         // escape promise so it doesn't catch and re-throw the error!
-        nextTick(cb.bind(this, null, result)); // eslint-disable-line @typescript-eslint/no-invalid-this
+        nextTick(cb.bind(this, null, result));
         cb = null;
       }
     }).catch((err) => {
       if (cb) {
-        nextTick(cb.bind(this, err)); // eslint-disable-line @typescript-eslint/no-invalid-this
+        nextTick(cb.bind(this, err));
         cb = null;
       }
     });
@@ -644,7 +644,7 @@ export function callbackify(f: (...args: any[]) => Promise<unknown>): (...args: 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function unpromisify<P extends any[], T=never>(f: (this: T, ...args: P) => void): (this: T, ...args: P) => void {
   return function (this: T): void {
-  // eslint-disable-next-line @typescript-eslint/no-invalid-this, prefer-rest-params, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
     nextTick((f as any).apply.bind(f, this, arguments));
   };
 }

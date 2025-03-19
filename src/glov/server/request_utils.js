@@ -219,6 +219,7 @@ export function safeString(str) {
 //   using Express or on low-level requests like `upgrade`s).
 export function requestGetQuery(req) {
   if (!req.query) {
+    // eslint-disable-next-line n/no-deprecated-api
     req.query = querystring.parse(url.parse(req.url).query);
   }
   return req.query;
@@ -264,6 +265,7 @@ function setOriginHeaders(req, res, next) {
 }
 
 function setCrossOriginHeadersAlways(req, res, next) {
+  // eslint-disable-next-line n/no-deprecated-api
   let pathname = url.parse(req.url).pathname;
   if (pathname.endsWith('/') || pathname.endsWith('.html') || pathname.endsWith('.js')) {
     // For developers: Set as "cross-origin isolated", for access to high resolution timers

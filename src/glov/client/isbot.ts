@@ -1,7 +1,7 @@
 // Minimal subset of `isbot@5.1.22` NPM module, plus ?bot=1 support
 
-/* eslint quotes:off,valid-jsdoc:off */
-/* globals navigator:true */
+/* eslint @stylistic/quotes:off */
+/* globals navigator */
 
 const fullPattern = [
   " daum[ /]",

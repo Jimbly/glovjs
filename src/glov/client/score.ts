@@ -1,6 +1,6 @@
 // Portions Copyright 2023 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-env browser */
+/* globals localStorage, alert */
 
 export const FRIEND_CAT_FRIENDS = 'friends';
 export const FRIEND_CAT_GLOBAL = 'global';

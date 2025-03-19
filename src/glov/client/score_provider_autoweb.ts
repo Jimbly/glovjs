@@ -1,4 +1,3 @@
-/* eslint-env browser */
 export const PROVIDER_AUTO_WEB = 'auto_web';
 
 import assert from 'assert';
