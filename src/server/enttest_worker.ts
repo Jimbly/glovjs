@@ -9,16 +9,16 @@ import {
   DataObject,
   ErrorCallback,
   HandlerSource,
+  isClientHandlerSource,
   NetErrorCallback,
   NetResponseCallback,
-  isClientHandlerSource,
 } from 'glov/common/types';
 import {
-  Vec2,
-  Vec3,
   v2copy,
   v2dist,
   v3copy,
+  Vec2,
+  Vec3,
 } from 'glov/common/vmath';
 import { ChannelServer, quietMessagesSet } from 'glov/server/channel_server';
 import { ChannelWorker } from 'glov/server/channel_worker';
@@ -26,24 +26,24 @@ import { chattableWorkerInit } from 'glov/server/chattable_worker';
 import {
   ActionHandlerParam,
   EntityBaseServer,
-  VAID,
   entityServerDefaultLoadPlayerEntity,
   entityServerRegisterActions,
   entityServerRegisterFieldDefs,
+  VAID,
 } from 'glov/server/entity_base_server';
 import {
+  createServerEntityManager,
+  entityManagerWorkerInit,
   JoinPayload,
   SEMClient,
   ServerEntityManager,
-  createServerEntityManager,
-  entityManagerWorkerInit,
 } from 'glov/server/entity_manager_server';
 import {
+  entityTestCommonClass,
   EntityTestDataCommon,
   EntityType,
   VA_SIZE,
   VIEW_DIST,
-  entityTestCommonClass,
 } from '../common/entity_test_common';
 const { floor, random } = Math;
 

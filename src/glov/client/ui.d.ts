@@ -1,8 +1,8 @@
 /* globals HTMLElement, Event */
 
 import {
-  TSMap,
   TextVisualLimit,
+  TSMap,
   VoidFunc,
 } from 'glov/common/types';
 import { ROVec4 } from 'glov/common/vmath';

@@ -6,8 +6,14 @@ export const FRIEND_CAT_FRIENDS = 'friends';
 export const FRIEND_CAT_GLOBAL = 'global';
 
 import assert from 'assert';
-import { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import { executeWithRetry } from 'glov/common/execute_with_retry';
+import type {
+  ErrorCallback,
+  NetErrorCallback,
+  TSMap,
+  VoidFunc,
+} from 'glov/common/types';
 import {
   asyncDictionaryGet,
   callEach,
@@ -22,13 +28,6 @@ import { fetch } from './fetch';
 import {
   score_user_provider_auto_web,
 } from './score_provider_autoweb';
-
-import type {
-  ErrorCallback,
-  NetErrorCallback,
-  TSMap,
-  VoidFunc,
-} from 'glov/common/types';
 
 const USERID_CACHE_KEY = 'score.idcache';
 const FRIEND_SET_CACHE_KEY = 'score.fsc';

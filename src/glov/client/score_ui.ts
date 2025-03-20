@@ -16,10 +16,10 @@ import {
 import {
   FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
-  ScoreSystem,
   scoreCanUpdatePlayerName,
   scoreFormatName,
   scoreGetPlayerName,
+  ScoreSystem,
   scoreUpdatePlayerName,
 } from './score';
 import {

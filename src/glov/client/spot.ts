@@ -215,8 +215,6 @@ import {
 } from './font.js';
 import { Box, Point2D } from './geom_types';
 import {
-  KEYS,
-  PAD,
   dragDrop,
   dragOver,
   inputClick,
@@ -224,6 +222,7 @@ import {
   inputTouchMode,
   keyDown,
   keyDownEdge,
+  KEYS,
   longPress,
   mouseButtonHadEdge,
   mouseDomPos,
@@ -233,6 +232,7 @@ import {
   mouseMoved,
   mouseOver,
   mousePosIsTouch,
+  PAD,
   padButtonDownEdge,
 } from './input.js';
 import {
@@ -242,14 +242,14 @@ import {
 import * as settings from './settings.js';
 import * as ui from './ui.js';
 import {
-  EventCallback,
-  HookList,
-  TooltipBoxParam,
-  TooltipValue,
   drawLine,
   drawRect,
   drawTooltipBox,
+  EventCallback,
+  HookList,
   playUISound,
+  TooltipBoxParam,
+  TooltipValue,
 } from './ui.js';
 const { checkHooks } = ui.internal;
 

@@ -13,6 +13,8 @@ import {
   soundResumed,
 } from './sound';
 import {
+  dataLayerHasMax,
+  SoundScape,
   SSDataFile,
   SSDataLayer,
   SSDataTagLayer,
@@ -23,8 +25,6 @@ import {
   SSSoundState,
   SSSoundStateBase,
   SSTagLayer,
-  SoundScape,
-  dataLayerHasMax,
 } from './soundscape_types';
 
 const { floor, max, min, random } = Math;

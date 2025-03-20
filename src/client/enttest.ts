@@ -8,7 +8,7 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { EntityBaseClient } from 'glov/client/entity_base_client';
-import { ClientEntityManagerInterface, clientEntityManagerCreate } from 'glov/client/entity_manager_client';
+import { clientEntityManagerCreate, ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { EntityPositionManager, entityPositionManagerCreate } from 'glov/client/entity_position_manager';
 import * as glov_font from 'glov/client/font';
 import * as input from 'glov/client/input';
@@ -33,8 +33,6 @@ import {
 } from 'glov/client/ui';
 import { DataObject } from 'glov/common/types';
 import {
-  Vec2,
-  Vec3,
   v2addScale,
   v2copy,
   v2dist,
@@ -43,15 +41,17 @@ import {
   v2set,
   v4copy,
   v4lerp,
+  Vec2,
   vec2,
+  Vec3,
   vec4,
 } from 'glov/common/vmath';
 
 import {
+  entityTestCommonClass,
   EntityType,
   VA_SIZE,
   VIEW_DIST,
-  entityTestCommonClass,
 } from '../common/entity_test_common';
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';

@@ -3,7 +3,7 @@
 
 import assert from 'assert';
 import { clamp, merge } from 'glov/common/util';
-import { Vec4, vec2, vec4 } from 'glov/common/vmath';
+import { vec2, Vec4, vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import { renderNeeded } from './engine';
@@ -15,10 +15,10 @@ import {
   PAD,
 } from './input';
 import {
+  spot,
   SPOT_DEFAULT_BUTTON,
   SPOT_STATE_DOWN,
   SPOT_STATE_FOCUSED,
-  spot,
   spotPadMode,
   spotSubBegin,
   spotSubEnd,

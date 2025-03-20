@@ -10,6 +10,8 @@ import {
   EALF_HAS_ENT_ID,
   EALF_HAS_PAYLOAD,
   EALF_HAS_PREDICATE,
+  entity_field_decoders,
+  entity_field_encoders,
   EntityBaseDataCommon,
   EntityFieldDefCommon,
   EntityFieldEncoder,
@@ -21,8 +23,6 @@ import {
   EntityManagerEvent,
   EntityManagerSchema,
   EntityUpdateCmd,
-  entity_field_decoders,
-  entity_field_encoders,
 } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { EventEmitter } from 'glov/common/tiny-events';

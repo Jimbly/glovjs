@@ -15,11 +15,11 @@ import {
   fontStyle,
 } from './font';
 import {
-  KEYS,
-  PAD,
   drag,
   keyDownEdge,
+  KEYS,
   mouseButtonHadUpEdge,
+  PAD,
   padButtonDown,
   padButtonDownEdge,
 } from './input.js';
@@ -27,6 +27,7 @@ import { link } from './link.js';
 import { markdownAuto } from './markdown';
 import { scrollAreaCreate } from './scroll_area.js';
 import {
+  spot,
   SPOT_DEFAULT_BUTTON,
   SPOT_NAV_DOWN,
   SPOT_NAV_LEFT,
@@ -36,7 +37,6 @@ import {
   SPOT_STATE_DOWN,
   SPOT_STATE_FOCUSED,
   SPOT_STATE_REGULAR,
-  spot,
   spotFocusSteal,
   spotPadMode,
   spotSubBegin,
@@ -44,7 +44,11 @@ import {
   spotSubPop,
   spotSubPush,
 } from './spot.js';
-import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
+import {
+  spriteClipPause,
+  spriteClipped,
+  spriteClipResume,
+} from './sprites.js';
 import {
   drawHBox,
   getUIElemData,

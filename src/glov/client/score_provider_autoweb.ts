@@ -1,18 +1,17 @@
 export const PROVIDER_AUTO_WEB = 'auto_web';
 
 import assert from 'assert';
-import { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { ErrorCallback } from 'glov/common/types';
 import { cmd_parse } from './cmds';
 import {
-  ScoreUserInfo,
-  ScoreUserProvider,
   fetchJSON2Timeout,
   scoreGetScoreHost,
   scoreLSD,
   scoreLSDParse,
+  ScoreUserInfo,
+  ScoreUserProvider,
 } from './score';
-
-import type { ErrorCallback } from 'glov/common/types';
 
 type UserAllocResponse = { userid: string };
 

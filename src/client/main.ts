@@ -16,23 +16,23 @@ import {
   fontStyleColored,
 } from 'glov/client/font';
 import {
-  KEYS,
-  PAD,
   inputClick,
   keyDown,
   keyDownEdge,
+  KEYS,
   mouseDownOverBounds,
   mouseOver,
+  PAD,
   padButtonDown,
   padButtonDownEdge,
 } from 'glov/client/input';
 import { netInit } from 'glov/client/net';
 import * as particles from 'glov/client/particles';
 import {
-  ScoreSystem,
   scoreAlloc,
   scoreDebugFriendCode,
   scoreDebugUserID,
+  ScoreSystem,
 } from 'glov/client/score';
 import { scoresDraw } from 'glov/client/score_ui';
 import * as settings from 'glov/client/settings';
@@ -60,11 +60,11 @@ import {
 import * as transition from 'glov/client/transition';
 import {
   ButtonRet,
+  buttonText,
+  drawLine,
   LINE_ALIGN,
   LINE_CAP_ROUND,
   LINE_CAP_SQUARE,
-  buttonText,
-  drawLine,
   makeColorSet,
   panel,
   print,
@@ -77,6 +77,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
+import type { TSMap } from 'glov/common/types';
 import { clamp } from 'glov/common/util';
 import {
   rovec4,
@@ -87,8 +88,6 @@ import {
 } from 'glov/common/vmath';
 import * as particle_data from './particle_data';
 import { test3D } from './test_3d';
-
-import type { TSMap } from 'glov/common/types';
 
 const { max, floor, round, sin } = Math;
 // TODO: Migrate to TypeScript

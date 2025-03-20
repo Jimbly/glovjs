@@ -4,27 +4,14 @@
 import assert from 'assert';
 import { chunkedSend } from 'glov/common/chunked_send';
 import {
+  canonical,
   CmdDef,
   CmdRespFunc,
-  canonical,
 } from 'glov/common/cmd_parse';
 import {
-  Packet,
   isPacket,
+  Packet,
 } from 'glov/common/packet';
-import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
-import { ApplyChannelDataParam, ChannelWorker } from './channel_worker';
-import { keyMetricsAddTagged } from './key_metrics';
-import {
-  logCat,
-  logEx,
-} from './log';
-import { serverConfig } from './server_config';
-
-import type { ChannelServer } from './channel_server';
-import type {
-  create as wsServerCreate,
-} from './wsserver';
 import type {
   ClientHandlerSource,
   DataObject,
@@ -35,6 +22,18 @@ import type {
   Roles,
   TSMap,
 } from 'glov/common/types';
+import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
+import type { ChannelServer } from './channel_server';
+import { ApplyChannelDataParam, ChannelWorker } from './channel_worker';
+import { keyMetricsAddTagged } from './key_metrics';
+import {
+  logCat,
+  logEx,
+} from './log';
+import { serverConfig } from './server_config';
+import type {
+  create as wsServerCreate,
+} from './wsserver';
 
 // TODO: move to default_workers when converted to TypeScript
 export type BasePermissionsData = {

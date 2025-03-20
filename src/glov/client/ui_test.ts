@@ -19,18 +19,18 @@ import {
   localStorageSet,
 } from './local_storage';
 import {
+  markdownAuto,
   MDDrawBlock,
   MDDrawParam,
   MDLayoutBlock,
   MDLayoutCalcParam,
-  markdownAuto,
 } from './markdown';
 import { RenderableContent } from './markdown_parse';
 import { markdownImageRegister, markdownLayoutFit } from './markdown_renderables';
 import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
-  SelectionBox,
   dropDownCreate,
+  SelectionBox,
   selectionBoxCreate,
 } from './selection_box';
 import { SimpleMenu, simpleMenuCreate } from './simple_menu';

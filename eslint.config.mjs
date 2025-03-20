@@ -45,7 +45,7 @@ export default [
 
       'import/order': [
         'error', {
-          'groups': [
+          groups: [
             'builtin',
             ['external', 'internal'],
             'parent',
@@ -54,15 +54,24 @@ export default [
             'object',
             'type',
           ],
-          'pathGroups': [{
-            'pattern': 'glov/**',
-            'group': 'internal',
+          pathGroups: [{
+            pattern: 'glov/**',
+            group: 'internal',
+          },{  // group type-only imports appropriately
+            pattern: '../**',
+            group: 'parent',
+          },{
+            pattern: './**',
+            group: 'sibling',
+          },{
+            pattern: '+([-_a-z])',
+            group: 'external',
           }],
-          'pathGroupsExcludedImportTypes': ['type'],
-          'warnOnUnassignedImports': true,
-          'alphabetize': {
-            'order': 'asc',
-            'caseInsensitive': false,
+          pathGroupsExcludedImportTypes: ['builtin'],
+          warnOnUnassignedImports: true,
+          alphabetize: {
+            order: 'asc',
+            caseInsensitive: true,
           },
         },
       ],
@@ -534,9 +543,9 @@ export default [
       'require-yield': 'error',
       'sort-imports': [
         'error', {
-          'ignoreCase': false,
-          'ignoreDeclarationSort': true,
-          'ignoreMemberSort': false,
+          ignoreCase: true,
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false,
         }
       ],
       'sort-keys': 'off',

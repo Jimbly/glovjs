@@ -13,8 +13,8 @@ import {
   TEXPACK_MAGIC,
 } from 'glov/common/texpack_common';
 import {
-  callEach,
   callbackify,
+  callEach,
   isPowerOfTwo,
   nextHighestPowerOfTwo,
   ridx,

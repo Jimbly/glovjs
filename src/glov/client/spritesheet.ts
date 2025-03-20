@@ -1,17 +1,17 @@
 import assert from 'assert';
 import { TSMap } from 'glov/common/types';
 import {
-  Vec4,
   vec2,
   vec4,
+  Vec4,
 } from 'glov/common/vmath';
 import { engineStartupFunc } from './engine';
 import {
   Sprite,
+  spriteCreate,
   SpriteUIData,
   Texture,
   TextureOptions,
-  spriteCreate,
 } from './sprites';
 import { textureLoad } from './textures';
 

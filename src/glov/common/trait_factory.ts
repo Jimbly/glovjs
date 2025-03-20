@@ -1,9 +1,9 @@
 import assert from 'assert';
 
 import { dataError } from './data_error';
-import { FSAPI, fileBaseName } from './fsapi';
-import { clone, defaultsDeep, inherits } from './util';
+import { fileBaseName, FSAPI } from './fsapi';
 import type { DataObject, DeepPartial } from './types';
+import { clone, defaultsDeep, inherits } from './util';
 
 export type TraitedBaseClass = {
   type_id: string; // will be constant on the prototype

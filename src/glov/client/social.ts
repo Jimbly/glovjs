@@ -4,18 +4,26 @@
 import assert from 'assert';
 import * as settings from 'glov/client/settings';
 import { settingsRegister, settingsSet } from 'glov/client/settings';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   PRESENCE_ACTIVE,
   PRESENCE_INACTIVE,
   PRESENCE_OFFLINE,
   PRESENCE_OFFLINE_INACTIVE,
 } from 'glov/common/enums';
-import { FriendData, FriendStatus, FriendsData } from 'glov/common/friends_data';
+import { FriendData, FriendsData, FriendStatus } from 'glov/common/friends_data';
+import type {
+  ErrorCallback,
+  FriendCmdResponse,
+  NetErrorCallback,
+  PresenceEntry,
+  TSMap,
+} from 'glov/common/types';
 import { deepEqual } from 'glov/common/util';
-import { ROVec4 } from 'glov/common/vmath';
+import type { ROVec4 } from 'glov/common/vmath';
 import { abTestGetMetricsAndPlatform } from './abtest';
 import { cmd_parse } from './cmds';
-import { ExternalUserInfo } from './external_user_info';
+import type { ExternalUserInfo } from './external_user_info';
 import * as input from './input';
 import {
   ClientChannelWorker,
@@ -25,15 +33,6 @@ import {
 } from './net';
 import { Sprite, spriteCreate } from './sprites';
 import { textureLoad } from './textures';
-
-import type { CmdRespFunc } from 'glov/common/cmd_parse';
-import type {
-  ErrorCallback,
-  FriendCmdResponse,
-  NetErrorCallback,
-  PresenceEntry,
-  TSMap,
-} from 'glov/common/types';
 
 declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 

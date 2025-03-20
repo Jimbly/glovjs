@@ -1,12 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-import type { // eslint-disable-line import/order
-  ErrorCallback,
-  Roles,
-  TSMap,
-} from 'glov/common/types';
-
 export const TYPE_INT = 0;
 export const TYPE_FLOAT = 1;
 export const TYPE_STRING = 2;
@@ -65,9 +59,14 @@ export type CmdValueDef = (
 exports.create = cmdParseCreate; // eslint-disable-line @typescript-eslint/no-use-before-define
 
 import assert from 'assert';
+import type { Text } from 'glov/client/font';
+import type {
+  ErrorCallback,
+  Roles,
+  TSMap,
+} from 'glov/common/types';
 import { perfCounterAdd } from './perfcounters';
 import { isInteger } from './util';
-import type { Text } from 'glov/client/font';
 
 export function canonical(cmd: string): string {
   return cmd.toLowerCase().replace(/[_.]/g, '');

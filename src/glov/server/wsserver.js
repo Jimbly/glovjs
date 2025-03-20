@@ -15,12 +15,12 @@ import * as wscommon from 'glov/common/wscommon.js';
 const { netDelayGet, wsHandleMessage, wsPak, wsPakSendDest, wsSetSendCB } = wscommon;
 import * as WebSocket from 'ws';
 
-import { ipBanReady, ipBanned } from './ip_ban';
+import { ipBanned, ipBanReady } from './ip_ban';
 import { keyMetricsAddTagged } from './key_metrics';
 import { logEx } from './log';
 import { packetLog, packetLogInit } from './packet_log';
 import { ipFromRequest, isLocalHost, requestGetQuery } from './request_utils';
-import { VersionSupport, getVersionSupport, isValidVersion } from './version_management';
+import { getVersionSupport, isValidVersion, VersionSupport } from './version_management';
 
 const DO_PER_MESSAGE_DEFLATE = true;
 

@@ -28,9 +28,9 @@ import {
   ClientHandlerSource,
   DataObject,
   ErrorCallback,
+  isDataObject,
   NetErrorCallback,
   NetResponseCallback,
-  isDataObject,
 } from 'glov/common/types';
 import {
   callEach,
@@ -38,8 +38,8 @@ import {
   nop,
 } from 'glov/common/util';
 import {
-  entityServerDefaultLoadPlayerEntity,
   entity_field_defs,
+  entityServerDefaultLoadPlayerEntity,
   logCatForEntityActionID,
 } from 'glov/server/entity_base_server';
 import { asyncEach } from 'glov-async';

@@ -30,15 +30,15 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import { getURLPageBase } from 'glov/client/urlhash';
-import { Packet } from 'glov/common/packet';
-import { DataObject } from 'glov/common/types';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { Packet } from 'glov/common/packet';
+import type { DataObject } from 'glov/common/types';
 import { toNumber } from 'glov/common/util';
 
 import { ROVec3, v2sub, vec2, vec3, vec4 } from 'glov/common/vmath';
 import { createAccountUI } from './account_ui';
 import * as particle_data from './particle_data';
 
-import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;

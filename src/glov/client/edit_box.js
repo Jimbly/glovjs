@@ -13,24 +13,24 @@ import { v2same } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import {
-  KEYS,
   eatAllKeyboardInput,
   inputClick,
   inputTouchMode,
   keyDownEdge,
+  KEYS,
   keyUpEdge,
   mouseConsumeClicks,
+  pointerLocked,
   pointerLockEnter,
   pointerLockExit,
-  pointerLocked,
 } from './input';
 import { getStringIfLocalizable } from './localization';
 import {
   spotFocusCheck,
   spotFocusSteal,
+  spotlog,
   spotSuppressKBNav,
   spotUnfocus,
-  spotlog,
 } from './spot';
 import {
   drawLine,

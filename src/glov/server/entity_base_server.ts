@@ -7,6 +7,8 @@ import assert from 'assert';
 import {
   ActionMessageParam,
   ClientID,
+  entity_field_decoders,
+  entity_field_encoders,
   EntityBaseCommon,
   EntityBaseDataCommon,
   EntityFieldDecoder,
@@ -16,8 +18,6 @@ import {
   EntityFieldSpecial,
   EntityFieldSub,
   EntityManagerEvent,
-  entity_field_decoders,
-  entity_field_encoders,
 } from 'glov/common/entity_base_common';
 import {
   ClientHandlerSource,

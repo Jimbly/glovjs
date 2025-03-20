@@ -16,11 +16,11 @@ import {
   DISPLAY_NAME_MAX_VISUAL_SIZE,
 } from 'glov/common/net_common';
 import {
-  EMAIL_REGEX,
-  VALID_USER_ID_REGEX,
   deprecate,
+  EMAIL_REGEX,
   empty,
   sanitize,
+  VALID_USER_ID_REGEX,
 } from 'glov/common/util.js';
 import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 

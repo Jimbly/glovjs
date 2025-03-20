@@ -23,14 +23,18 @@ import {
   ackInitReceiver,
   ackReadHeader,
 } from 'glov/common/ack';
+import type {
+  CmdDef,
+  CmdParse,
+} from 'glov/common/cmd_parse';
 import {
   dotPropDelete,
   dotPropGet,
   dotPropSet,
 } from 'glov/common/dot-prop';
 import {
-  Packet,
   isPacket,
+  Packet,
 } from 'glov/common/packet';
 import {
   ChannelDataClients,
@@ -40,6 +44,8 @@ import {
   ErrorCallback,
   HandlerCallback,
   HandlerSource,
+  isClientHandlerSource,
+  isDataObject,
   LoggedInClientHandlerSource,
   NetErrorCallback,
   NetResponseCallback,
@@ -48,8 +54,6 @@ import {
   Roles,
   TSMap,
   VoidFunc,
-  isClientHandlerSource,
-  isDataObject,
 } from 'glov/common/types';
 import {
   callEach,
@@ -58,10 +62,10 @@ import {
 } from 'glov/common/util';
 import {
   ChannelServer,
-  PAK_HINT_NEWSEQ,
-  PAK_ID_MASK,
   channelServerPak,
   channelServerSend,
+  PAK_HINT_NEWSEQ,
+  PAK_ID_MASK,
   quietMessage,
 } from './channel_server';
 import { ERR_NOT_FOUND } from './exchange';
@@ -71,10 +75,6 @@ import {
   packetLogInit,
 } from './packet_log';
 
-import type {
-  CmdDef,
-  CmdParse,
-} from 'glov/common/cmd_parse';
 
 // Quiet flag or category string
 export type QCat = 1 | string;

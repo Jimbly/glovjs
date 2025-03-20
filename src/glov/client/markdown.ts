@@ -1,4 +1,5 @@
 import assert from 'assert';
+import type { TSMap, WithRequired } from 'glov/common/types';
 import { has } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
@@ -11,47 +12,46 @@ import {
   EPSILON,
   Font,
   FontStyle,
-  Text,
   fontStyleAlpha,
   fontStyleBold,
   fontStyleHash,
+  Text,
 } from './font';
 import { Box } from './geom_types';
 import { mousePos } from './input';
 import { getStringFromLocalizable } from './localization';
 import {
   MDASTNode,
-  RenderableContent,
   mdParse,
   mdParseSetValidRenderables,
+  RenderableContent,
 } from './markdown_parse';
 import {
-  MarkdownRenderable,
-  markdownLayoutFit,
   markdown_default_font_styles,
   markdown_default_renderables,
+  markdownLayoutFit,
+  MarkdownRenderable,
 } from './markdown_renderables';
 import {
-  SPOT_DEFAULT_LABEL,
   spot,
+  SPOT_DEFAULT_LABEL,
   spotPadMode,
 } from './spot';
 import {
   spriteClipPause,
-  spriteClipResume,
   spriteClipped,
   spriteClippedViewport,
+  spriteClipResume,
 } from './sprites';
 import {
-  LabelBaseOptions,
   drawElipse,
   drawRect2,
   getUIElemData,
+  LabelBaseOptions,
   uiFontStyleNormal,
   uiGetFont,
   uiTextHeight,
 } from './ui';
-import type { TSMap, WithRequired } from 'glov/common/types';
 
 const { ceil, floor, max, min, round } = Math;
 

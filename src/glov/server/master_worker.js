@@ -5,7 +5,7 @@ export let LOAD_ESTIMATE = {
 import assert from 'assert';
 const { max } = Math;
 import { callEach, nop, plural } from 'glov/common/util';
-import { LOAD_REPORT_INTERVAL, channelServerSendNoCreate } from './channel_server';
+import { channelServerSendNoCreate, LOAD_REPORT_INTERVAL } from './channel_server';
 import { ChannelWorker } from './channel_worker';
 import { loadBiasMap } from './load_bias_map';
 import { logCategoryEnabled } from './log';
