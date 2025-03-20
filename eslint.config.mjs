@@ -457,13 +457,6 @@ export default [
       'no-restricted-globals': 'error',
       'no-restricted-imports': 'error',
       'no-restricted-properties': 'error',
-      'no-restricted-syntax': [
-        'error',
-        {
-          'selector': 'ForOfStatement',
-          'message': 'Use a different loop or method instead of for...of, it polyfills very poorly.'
-        }
-      ],
       'no-return-assign': 'error',
       'no-script-url': 'error',
       'no-self-assign': 'error',
@@ -681,6 +674,18 @@ export default [
     linterOptions: {
       reportUnusedDisableDirectives: 'error',
       reportUnusedInlineConfigs: 'off',
+    },
+  }, {
+    name: 'client-specific',
+    files: ['src/client/**', 'src/common/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          'selector': 'ForOfStatement',
+          'message': 'Use a different loop or method instead of for...of, it polyfills very poorly.'
+        }
+      ],
     },
   }, {
     name: 'js-specific',
