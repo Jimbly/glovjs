@@ -224,7 +224,7 @@ export function requestGetParsedURL(req) {
 //   using Express or on low-level requests like `upgrade`s).
 export function requestGetQuery(req) {
   if (!req.query) {
-    req.query = querystring.parse(requestGetParsedURL(req.url).query);
+    req.query = querystring.parse(requestGetParsedURL(req).query);
   }
   return req.query;
 }
@@ -269,7 +269,7 @@ function setOriginHeaders(req, res, next) {
 }
 
 function setCrossOriginHeadersAlways(req, res, next) {
-  let pathname = requestGetParsedURL(req.url).pathname;
+  let pathname = requestGetParsedURL(req).pathname;
   if (pathname.endsWith('/') || pathname.endsWith('.html') || pathname.endsWith('.js')) {
     // For developers: Set as "cross-origin isolated", for access to high resolution timers
     // Disclaimer: I have no idea what this does, other than allows high resolution timers on Chrome/Firefox
