@@ -8,6 +8,10 @@ import plugin_node from 'eslint-plugin-n';
 import tseslint from 'typescript-eslint';
 
 export default [
+  {
+    name: 'global ignores',
+    ignores: ['src/client/vendor/**'],
+  },
   eslint.configs.recommended, // 'eslint:recommended',
   ...tseslint.configs.recommended, // 'plugin:@typescript-eslint/recommended'
   ...tseslint.configs.stylistic,
@@ -188,23 +192,45 @@ export default [
         'error',
         2,
         {
-          'ArrayExpression': 'first',
-          'CallExpression': {
-            'arguments': 1, // JE 'first'
+          ArrayExpression: 'first', // default: 1
+          CallExpression: {
+            arguments: 1,
           },
-          'FunctionDeclaration': {
-            'parameters': 1, // JE 'first'
+          FunctionDeclaration: {
+            parameters: 1,
+            body: 1,
           },
-          'FunctionExpression': {
-            'parameters': 1, // JE 'first'
+          FunctionExpression: {
+            parameters: 1,
+            body: 1,
           },
-          'MemberExpression': 'off',
-          'ObjectExpression': 1, // 'first',
-          'SwitchCase': 1,
-          'flatTernaryExpressions': true, // JE
-          // JE: ignore inconsistent application to ternaries in object properties / function parameters:
-          'ignoredNodes': [
-            'ObjectExpression > Property > ConditionalExpression', 'CallExpression > ConditionalExpression'
+          StaticBlock: {
+            body: 1,
+          },
+          MemberExpression: 'off', // default: 1
+          ObjectExpression: 1,
+          SwitchCase: 1,
+          VariableDeclarator: 1,
+          outerIIFEBody: 1,
+          flatTernaryExpressions: true, // default: false
+          offsetTernaryExpressions: false,
+          offsetTernaryExpressionsOffsetCallExpressions: true,
+          ignoreComments: false,
+          ImportDeclaration: 1,
+          ignoredNodes: [
+            // JE: ignore inconsistent application to ternaries in object properties / function parameters:
+            'ObjectExpression > Property > ConditionalExpression',
+            'CallExpression > ConditionalExpression',
+            // JE: ignore inconsistent application to multi-line type literal return types on functions
+            'FunctionDeclaration > TSTypeAnnotation > TSTypeLiteral',
+            // JE: ignore inconsistent application when wrapping after a => on a type declaration; example:
+            // type Foo = (a: string) =>
+            //   (b: string) => string;
+            'TSTypeAliasDeclaration > TSFunctionType > TSTypeAnnotation > TSFunctionType',
+            // JE: ignore inconsistent application when wrapping after a : on a type declaration; example:
+            // const FOO:
+            //   string;
+            'VariableDeclaration > VariableDeclarator > Identifier > TSTypeAnnotation',
           ],
         }
       ],
@@ -431,6 +457,7 @@ export default [
       'no-implied-eval': 'error',
       'no-import-assign': 'error',
       'no-inline-comments': 'off',
+      'no-inner-declarations': 'error',
       'no-invalid-regexp': 'error',
       'no-irregular-whitespace': 'error',
       'no-iterator': 'error',
