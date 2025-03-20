@@ -109,7 +109,7 @@ export const score_user_provider_auto_web: ScoreUserProvider = {
       cb(null, {
         user_id: res.userid,
         display_name,
-        friends: friends_by_code!, // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+        friends: friends_by_code!,
       });
     });
   },

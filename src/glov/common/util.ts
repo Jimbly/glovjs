@@ -751,7 +751,6 @@ export function asyncDictionaryGet<T>(
     in_flight: [cb],
   };
   get(key, function (value: T) {
-    assert(elem); // assert() is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
     elem.value = value;
     callEach(elem.in_flight, elem.in_flight = undefined, value);
   });

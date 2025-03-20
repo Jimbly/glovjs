@@ -250,7 +250,7 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
   }
 
   srcs = srcs.map((filename) => {
-    if (opts!.for_reload) { // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+    if (opts.for_reload) {
       filename = `${filename}?rl=${Date.now()}`;
     } else {
       filename = locateAsset(filename);
@@ -544,9 +544,9 @@ export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean)
     location: (time?: number) => { // get current location
       let v;
       if (time !== undefined) {
-        v = sound!.seek(time, id); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+        v = sound.seek(time, id);
       } else {
-        v = sound!.seek(time, id); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+        v = sound.seek(time, id);
       }
       if (typeof v !== 'number') {
         // Howler sometimes returns `self` from `seek()`
@@ -557,8 +557,7 @@ export function soundPlay(soundid: SoundID, volume?: number, as_music?: boolean)
     duration: sound.duration.bind(sound, id),
     volume: (vol: number) => {
       played_sound.volume_current = vol;
-      // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
-      sound!.volume(vol * settingsVolume() * volume_override, id);
+      sound.volume(vol * settingsVolume() * volume_override, id);
     },
     fade: (target_volume: number, time: number) => {
       let new_fade = {
@@ -629,7 +628,7 @@ export function soundPlayMusic(soundname: string, volume?: number, transition?: 
       assert(sound);
       if (music[0].sound === sound) {
         // Same sound, just adjust volume, if required
-        music[0].target_volume = volume!; // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+        music[0].target_volume = volume;
         if (!transition) {
           if (!volume) {
             sound.stop(music[0].id);
@@ -647,7 +646,7 @@ export function soundPlayMusic(soundname: string, volume?: number, transition?: 
     }
     // fade out previous music, if any
     if (music[0].current_volume) {
-      if (transition! & FADE_OUT) { // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+      if (transition & FADE_OUT) {
         // swap to position 1, start fadeout
         let temp = music[1];
         music[1] = music[0];
@@ -660,8 +659,8 @@ export function soundPlayMusic(soundname: string, volume?: number, transition?: 
     }
     music[0].sound = sound;
     if (sound) {
-      music[0].target_volume = volume!; // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
-      let start_vol = (transition! & FADE_IN) ? 0 : volume!; // !s are workaround TypeScript bug fixed in v5.4.0
+      music[0].target_volume = volume;
+      let start_vol = (transition & FADE_IN) ? 0 : volume;
       music[0].current_volume = start_vol;
       if (soundResumed()) {
         let sys_volume = start_vol * musicVolume() * volume_override * volume_music_override;

@@ -1292,9 +1292,10 @@ class ChatUIImpl {
     let just_message = this.linkUnFilter(msg.msg);
     let buttons: ModalDialogButtons = {};
     if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+      let msg_id = msg.id;
       buttons['User ID'] = {
         cb: function () {
-          provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+          provideUserString('User ID', msg_id);
         },
       };
     }

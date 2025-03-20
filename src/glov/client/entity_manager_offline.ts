@@ -301,7 +301,7 @@ class OfflineEntityManagerImpl<
   }
 
   channelSend(): void {
-    assert(!'Online only');
+    assert(false, 'Online only');
   }
   action_queue: (()=>void)[] = [];
   actionSendQueued(

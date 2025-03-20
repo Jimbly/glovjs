@@ -410,13 +410,12 @@ export function run(x: number, y: number, z: number): void {
               h: layout_param.line_height,
             };
             assert(markdownLayoutFit(layout_param, dims));
-            let dims2 = dims; // workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
             return [{
               dims,
               draw: (draw_param: MDDrawParam): void => {
                 let rect = {
-                  x: draw_param.x + dims2.x,
-                  y: draw_param.y + dims2.y,
+                  x: draw_param.x + dims.x,
+                  y: draw_param.y + dims.y,
                   w: dims.w,
                   h: dims.h,
                 };
