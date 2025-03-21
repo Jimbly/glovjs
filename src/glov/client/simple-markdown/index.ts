@@ -1,21 +1,22 @@
-/* eslint-disable no-regex-spaces */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable no-var */
-/* eslint-disable @stylistic/indent */
-/* eslint-disable @stylistic/object-curly-spacing */
-/* eslint-disable @stylistic/quotes */
-/* eslint-disable @stylistic/max-len */
-/* eslint-disable func-style */
-/* eslint-disable no-eq-null */
-/* eslint-disable prefer-template */
-/* eslint-disable @stylistic/operator-linebreak */
-/* eslint-disable operator-assignment */
-/* eslint-disable @stylistic/wrap-iife */
-/* eslint-disable no-underscore-dangle*/
-/* eslint-disable no-implicit-coercion */
-/* eslint-disable @stylistic/wrap-regex */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/consistent-indexed-object-style */
+// Note: using eslint:off instead of eslint-disable because some projects may not have these warnings enabled
+/* eslint no-regex-spaces:off */
+/* eslint @typescript-eslint/no-unused-vars:off */
+/* eslint no-var:off */
+/* eslint @stylistic/indent:off */
+/* eslint @stylistic/object-curly-spacing:off */
+/* eslint @stylistic/quotes:off */
+/* eslint @stylistic/max-len:off */
+/* eslint func-style:off */
+/* eslint no-eq-null:off */
+/* eslint prefer-template:off */
+/* eslint @stylistic/operator-linebreak:off */
+/* eslint operator-assignment:off */
+/* eslint @stylistic/wrap-iife:off */
+/* eslint no-underscore-dangle:off */
+/* eslint no-implicit-coercion:off */
+/* eslint @stylistic/wrap-regex:off */
+/* eslint @typescript-eslint/no-explicit-any:off */
+/* eslint @typescript-eslint/consistent-indexed-object-style:off */
 
 /**
  * From: https://github.com/Khan/perseus/tree/main/packages/simple-markdown @ 1502859

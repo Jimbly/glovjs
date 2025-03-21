@@ -28,7 +28,11 @@ export default [
       'n/global-require': 'error',
       'n/handle-callback-err': 'error',
       'n/hashbang': 'error',
-      'n/no-deprecated-api': 'error',
+      'n/no-deprecated-api': [
+        'error', {
+          ignoreModuleItems: ['fs.exists'],
+        }
+      ],
       'n/no-exports-assign': 'error',
       'n/no-extraneous-import': 'off', // JE: false positives, also requires loading dependencies
       'n/no-extraneous-require': 'off', // JE: false positives, also requires loading dependencies
@@ -47,6 +51,7 @@ export default [
       'n/no-unsupported-features/node-builtins': 'off', // JE: fires on client files with any global name overlap
       'n/process-exit-as-throw': 'error',
 
+      'import/no-dynamic-require': 'error',
       'import/order': [
         'error', {
           groups: [
@@ -62,14 +67,17 @@ export default [
             pattern: 'glov/**',
             group: 'internal',
           },{  // group type-only imports appropriately
+            pattern: '+([-_a-z])',
+            group: 'external',
+          },{
+            pattern: '+([-_a-z@])/+([-_a-z])',
+            group: 'external',
+          },{
             pattern: '../**',
             group: 'parent',
           },{
             pattern: './**',
             group: 'sibling',
-          },{
-            pattern: '+([-_a-z])',
-            group: 'external',
           }],
           pathGroupsExcludedImportTypes: ['builtin'],
           warnOnUnassignedImports: true,
