@@ -4,6 +4,7 @@ import * as engine from './engine';
 import * as settings from './settings';
 import {
   GlovSound,
+  GlovSoundPlayOpts,
   GlovSoundSetUp,
   GlovSoundStreamedPlaceholder,
   isPlaceholderSound,
@@ -170,6 +171,10 @@ const DEFAULT_KILL_DELAY = 500;
 const DEFAULT_ADD_ALL = true;
 const MAX_SOUND_DELAY = 1000;
 const GLOV_PLAY_VOLUME = 1;
+const GLOV_PLAY_PARAM: GlovSoundPlayOpts = {
+  volume: GLOV_PLAY_VOLUME,
+  as_music: true,
+};
 const SILENT_VOLUME = 0.0001;
 
 export class GlovSoundScape implements SoundScape {
@@ -487,7 +492,7 @@ export class GlovSoundScape implements SoundScape {
         };
         let new_sound;
         if (this.streaming) {
-          new_sound = soundPlayStreaming(file.file, GLOV_PLAY_VOLUME, true, (played_sound: GlovSoundSetUp | null) => {
+          new_sound = soundPlayStreaming(file.file, GLOV_PLAY_PARAM, (played_sound: GlovSoundSetUp | null) => {
             if (played_sound) {
               let { name } = played_sound;
               active_state.sound = played_sound;
@@ -509,7 +514,7 @@ export class GlovSoundScape implements SoundScape {
             }
           });
         } else {
-          new_sound = soundPlay(file.file, GLOV_PLAY_VOLUME, true);
+          new_sound = soundPlay(file.file, GLOV_PLAY_PARAM);
         }
 
         if (!new_sound) {
