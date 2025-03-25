@@ -1,5 +1,6 @@
 const assert = require('assert');
 const child_process = require('child_process');
+const path = require('path');
 const { asyncEach } = require('glov-async');
 const gb = require('glov-build');
 
@@ -155,6 +156,10 @@ module.exports = function test(opts) {
           return void done();
         }
         asyncEach(deps, function (item, next) {
+          if (path.isAbsolute(item)) {
+            // absolute path dep, probably something npm-linked, not something we can handle here
+            return void next();
+          }
           let file_key = `${is_client ? 'client_js_test' : 'server_js_test'}:${item}`;
           // TODO: Want a read:false equivalent here too
           job.depAdd(file_key, next);
