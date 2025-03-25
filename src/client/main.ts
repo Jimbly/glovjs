@@ -113,7 +113,7 @@ type SpriteDict = {
 };
 let sprites: SpriteDict = {} as SpriteDict;
 
-const music_file = 'music_test.webm';
+const music_file = 'music_test.ogg';
 
 // Persistent flags system for testing parameters
 let flags: TSMap<boolean | string> = {};
