@@ -41,6 +41,7 @@ import { slider } from 'glov/client/slider';
 import {
   FADE_IN,
   FADE_OUT,
+  sound3DListener,
   soundLoad,
   soundPlay,
   soundPlayMusic,
@@ -523,19 +524,28 @@ export function main(): void {
       }
     }
 
-    test_character.x += test_character.dx * 0.05;
-    test_character.y += test_character.dy * 0.05;
+    test_character.x += test_character.dx * 0.25;
+    test_character.y += test_character.dy * 0.25;
     let bounds = {
       x: test_character.x - sprite_size/2,
       y: test_character.y - sprite_size/2,
       w: sprite_size,
       h: sprite_size,
     };
+    const SOUND_SIZE_SCALE = 0.1;
+    sound3DListener({ // 2D, screen centered, up coming out of the screen
+      pos: [test_character.x * SOUND_SIZE_SCALE, test_character.y * SOUND_SIZE_SCALE, 0],
+      forward: [0, -1, 0],
+      up: [0, 0, -1],
+    });
     if (mouseDownOverBounds(bounds)) {
       v4copy(test_color_sprite, color_yellow);
-    } else if (inputClick(bounds)) {
+    } else if (inputClick(bounds) || !uiHandlingNav() && keyDownEdge(KEYS.SPACE)) {
       v4copy(test_color_sprite, (test_color_sprite[2] === 0) ? color_white : color_red);
-      soundPlay('test');
+      soundPlay('test', {
+        // screen-centered sound
+        pos: [game_width/2 * SOUND_SIZE_SCALE, game_height/2 * SOUND_SIZE_SCALE, 0],
+      });
     } else if (mouseOver(bounds)) {
       v4copy(test_color_sprite, color_white);
       test_color_sprite[3] = 0.5;
