@@ -175,15 +175,44 @@ function bundlePair(opts) {
     let sourcemap_host_apply_task = `${subtask_name}_sourcemap_host`;
     gb.task({
       name: sourcemap_host_apply_task,
+      deps: [entrypoint_name],
       input: tasks.map((a) => `${a}:**`),
       target,
       ...sourcemapRemap(function (job, filename, next) {
         filename = `${sourcemap_host}${filename}`;
-        if (do_version) {
-          assert(opts.last_ver); // do we need to extract the version from the buffer?
-          filename = `${filename}?ver=${opts.last_ver}`;
+        function ensureVersion(next) {
+          if (opts.last_ver) {
+            return void next();
+          }
+          job.depAdd(`${entrypoint_name}:${out}`, function (err, dep) {
+            if (err) {
+              return void next(err);
+            }
+            // need to extract the version from the buffer, the bundling task must not have run in this process
+            let idx = dep.contents.indexOf('glov_build_version="');
+            if (idx === -1) {
+              return void next('Bundle with `do_version` failed: could not find' +
+                ' "window.glov_build_version=BUILD_TIMESTAMP;"');
+            }
+            let last_build_timestamp = dep.contents.slice(idx + 'glov_build_version='.length,
+              idx + 'glov_build_version=BUILD_TIMESTAMP'.length).toString();
+            let ver = Number(JSON.parse(last_build_timestamp));
+            assert(isFinite(ver));
+            opts.last_ver = ver;
+            next();
+          });
         }
-        next(null, filename);
+        if (do_version) {
+          ensureVersion(function (err) {
+            if (err) {
+              return void next(err);
+            }
+            filename = `${filename}?ver=${opts.last_ver}`;
+            next(null, filename);
+          });
+        } else {
+          next(null, filename);
+        }
       }),
     });
     tasks = [sourcemap_host_apply_task];
