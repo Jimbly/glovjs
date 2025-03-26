@@ -19,4 +19,9 @@ export function crawlerEntityTraitsCommonStartup(
       is_enemy: true,
     },
   });
+  ent_factory.registerTrait('blocks_player', {
+    properties: {
+      blocks_player: true,
+    },
+  });
 }

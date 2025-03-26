@@ -27,14 +27,15 @@ import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
 import {
   BUCKET_ALPHA,
   BUCKET_OPAQUE,
+  dynGeomLookAt,
   FACE_CAMERA,
   FACE_CUSTOM,
   FACE_FRUSTUM,
   FACE_XY,
-  dynGeomLookAt,
 } from 'glov/client/dyn_geom';
 import * as engine from 'glov/client/engine';
 import { geomCreateQuads } from 'glov/client/geom';
+import type { Box } from 'glov/client/geom_types';
 import mat4ScaleRotateTranslate from 'glov/client/mat4ScaleRotateTranslate';
 import { modelLoad } from 'glov/client/models';
 import {
@@ -49,21 +50,22 @@ import {
   shadersAddGlobal,
   shadersBind,
 } from 'glov/client/shaders';
+import type { BucketType, Sprite, SpriteUIData } from 'glov/client/sprites';
+import type { SpriteSheet } from 'glov/client/spritesheet';
 import {
   textureBindArray,
 } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
-import { dataErrorEx } from 'glov/common/data_error';
+import { dataError, dataErrorEx } from 'glov/common/data_error';
+import { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
+  JSVec4,
+  mat4,
   ROVec2,
   ROVec3,
   ROVec4,
-  Vec2,
-  Vec3,
-  Vec4,
-  mat4,
   rovec4,
   unit_vec,
   v2addScale,
@@ -83,8 +85,11 @@ import {
   v4copy,
   v4mul,
   v4set,
+  Vec2,
   vec2,
+  Vec3,
   vec3,
+  Vec4,
   vec4,
   zaxis,
   zero_vec,
@@ -100,11 +105,7 @@ import {
   VstyleDesc,
   WallDesc,
 } from '../common/crawler_state';
-
 import type { CrawlerScriptAPIClient } from './crawler_script_api_client';
-import type { Box } from 'glov/client/geom_types';
-import type { BucketType, Sprite, SpriteUIData } from 'glov/client/sprites';
-import type { SpriteSheet } from 'glov/client/spritesheet';
 
 type Geom = ReturnType<typeof geomCreateQuads>;
 type Shader = ReturnType<typeof shaderCreate>;
@@ -211,7 +212,7 @@ export type CrawlerThumbnailPair = [
   Sprite,
   {
     frame?: number;
-    uvs?: ROVec4;
+    uvs?: JSVec4;
     color?: ROVec4;
   }
 ];
@@ -276,11 +277,18 @@ export function crawlerRenderGetThumbnail(desc: CellDesc | WallDesc): CrawlerThu
     if (visuals) {
       for (let jj = 0; jj < visuals.length; ++jj) {
         let visual = visuals[jj];
-        let thumbnailgetter = thumbnailgetters[visual.type];
-        assert(thumbnailgetter);
-        let pair = thumbnailgetter(visual.opts, desc);
-        if (pair) {
-          ret.push(pair);
+        if (!visual.type) {
+          dataError(`desc "${desc.id}" missing "type" on visual`);
+        } else {
+          let thumbnailgetter = thumbnailgetters[visual.type];
+          if (!thumbnailgetter) {
+            dataError(`desc "${desc.id}", type "${visual.type}" unknown`);
+          } else {
+            let pair = thumbnailgetter(visual.opts, desc);
+            if (pair) {
+              ret.push(pair);
+            }
+          }
         }
       }
     }
@@ -334,6 +342,18 @@ export function crawlerRenderStartup(): void {
 export type SpriteSheetSet = Partial<Record<string, SpriteSheet>> & { default: SpriteSheet };
 let spritesheets: SpriteSheetSet;
 
+export function renderGetSpriteSheet(name: string, per_frame: boolean): SpriteSheet {
+  let ret = spritesheets[name];
+  if (!ret) {
+    dataErrorEx({
+      msg: `Unknown spritesheet "${name}"`,
+      per_frame,
+    });
+    ret = spritesheets.default;
+  }
+  return ret;
+}
+
 type SimpleVisualOpts = {
   spritesheet?: string;
   tile: string | string[];
@@ -369,12 +389,12 @@ function frameFromAnim2(
   }
   if (t < blend_time) {
     idx = (idx + frames.length - 1) % frames.length;
-    let baseuv = (uidata.rects as ROVec4[])[base_frame];
+    let baseuv = (uidata.rects as TSMap<ROVec4>)[base_frame]!;
     let frame = spritesheet.tiles[frames[idx]];
     if (frame === undefined) {
       return;
     }
-    let ouruv = (uidata.rects as ROVec4[])[frame];
+    let ouruv = (uidata.rects as TSMap<ROVec4>)[frame]!;
     v2sub(out, ouruv, baseuv);
     out[2] = 1 - t / blend_time;
   } else {
@@ -420,8 +440,7 @@ function simpleGetSpriteParam(
       bucket = BUCKET_ALPHA;
     }
     let spritesheet_name = visual_opts.spritesheet || 'default';
-    let spritesheet = spritesheets[spritesheet_name];
-    assert(spritesheet, spritesheet_name);
+    let spritesheet = renderGetSpriteSheet(spritesheet_name, true);
     let { tile, do_blend } = visual_opts;
     assert(tile);
     if (Array.isArray(tile)) {
@@ -620,7 +639,7 @@ function drawSimpleFiller(
 
   let orig_uvs = uv_identity;
   if (param && param.frame !== undefined) {
-    orig_uvs = (sprite.uidata!.rects as ROVec4[])[param.frame];
+    orig_uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame]!;
     param.frame = undefined;
   }
 
@@ -770,7 +789,7 @@ function drawSimpleCornerFloor(
   v3iAdd(temp_pos, floor_detail_offs);
   v2set(temp_size, DIM*scale, DIM*scale);
 
-  let uvs = (sprite.uidata!.rects as ROVec4[])[param.frame!];
+  let uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame!]!;
   if (quadrants === 4) {
     sprite.draw3D({
       ...param,
@@ -921,7 +940,7 @@ function drawSimplePillar(
   }
   let geom = pillar_geoms[key];
   if (!geom) {
-    let uvs = (sprite.uidata!.rects as ROVec4[])[param.frame];
+    let uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame]!;
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
   let offs = vopts.offs || zero_vec;
@@ -1310,9 +1329,15 @@ function calcVisibility(
     cell.visible_frame = frame_idx;
     let x = idx % w;
     let y = (idx - x) / w;
-    if (map_update_this_frame && !cell.visible_bits && v2distSq(pos, [x+0.5, y+0.5]) < VIS_RADIUS * VIS_RADIUS) {
-      cell.visible_bits |= VIS_SEEN;
-      level.seen_cells++;
+    if (map_update_this_frame && !(cell.visible_bits & VIS_SEEN) &&
+      v2distSq(pos, [x+0.5, y+0.5]) < VIS_RADIUS * VIS_RADIUS
+    ) {
+      if (cell.desc.open_vis) {
+        cell.visible_bits |= VIS_SEEN;
+        if (!cell.desc.auto_evict) {
+          level.seen_cells++;
+        }
+      }
     }
     for (let ii = 0 as DirType; ii < 4; ++ii) {
       let wall_desc = getEffWall(script_api, cell, ii).swapped; // needed?
@@ -1450,6 +1475,8 @@ export function render(
       }
     }
     opaqueDraw();
-    alphaDraw();
+    if (pass !== render_passes.length - 1) {
+      alphaDraw(); // sort these with entities
+    }
   }
 }

@@ -6,15 +6,15 @@ import { isInteger, plural } from 'glov/common/util';
 import { v3copy } from 'glov/common/vmath';
 import {
   EntityBaseServer,
-  VAID,
   entityServerRegisterActions,
   entityServerRegisterFieldDefs,
+  VAID,
 } from 'glov/server/entity_base_server';
 import * as glov_server from 'glov/server/server';
 import { serverFSAPI } from 'glov/server/serverfs';
+import type { EntityCrawlerDataCommon } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import { JSVec3 } from '../common/crawler_state';
-import type { EntityCrawlerDataCommon } from '../common/crawler_entity_common';
 
 type VisData = Partial<Record<number, string>>;
 export type EntityCrawlerDataServer = EntityCrawlerDataCommon & {
@@ -131,7 +131,7 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
     }, {
       action_id: 'set_vis_data',
       handler: function (this: EntityCrawlerServer, { payload }, resp_func) {
-        let { data, floor: floor_id } = (payload as { data: string; floor: number });
+        let { data, floor: floor_id } = payload as { data: string; floor: number };
         let vis_data = this.data.vis_data;
         if (!vis_data) {
           vis_data = this.data.vis_data = {};
@@ -144,7 +144,7 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
       action_id: 'get_vis_data',
       handler: function (this: EntityCrawlerServer, { payload }, resp_func) {
         let vis_data = this.data.vis_data;
-        let { floor: floor_id } = (payload as { floor: number });
+        let { floor: floor_id } = payload as { floor: number };
         resp_func(null, vis_data?.[floor_id] || '');
       }
     }, {

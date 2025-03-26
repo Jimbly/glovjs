@@ -8,7 +8,7 @@ function requireVersion(dep, required) {
     ver = process.versions.node;
   } else {
     try {
-      // eslint-disable-next-line n/global-require
+      // eslint-disable-next-line import/no-dynamic-require, n/global-require
       ver = require(`${dep}/package.json`).version;
     } catch (e) {
       return `"${dep}": missing`;

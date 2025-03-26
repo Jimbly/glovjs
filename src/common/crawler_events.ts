@@ -3,16 +3,16 @@ import { isInteger, merge } from 'glov/common/util';
 import {
   CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
-  CrawlerScriptWhen,
   crawlerScriptRegisterEvent,
   crawlerScriptRegisterFunc,
+  CrawlerScriptWhen,
 } from './crawler_script';
 import {
   CrawlerCell,
   DIR_CELL,
+  dirMod,
   DirType,
   DirTypeOrCell,
-  dirMod,
 } from './crawler_state';
 
 export type DialogIconFunc = (param: string, script_api: CrawlerScriptAPI) => CrawlerScriptEventMapIcon;

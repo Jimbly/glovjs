@@ -94,18 +94,19 @@ import {
 import { ridx } from 'glov/common/util';
 import {
   CellDesc,
+  crawlerGetCellDesc,
+  crawlerGetWallDesc,
   CrawlerLevel,
   CrawlerLevelSerialized,
-  DX, DY,
+  createLevel,
   DirType,
+  DX,
+  DY,
   EAST,
   NORTH,
   SOUTH,
-  WEST,
   WallDesc,
-  crawlerGetCellDesc,
-  crawlerGetWallDesc,
-  createLevel,
+  WEST,
 } from './crawler_state';
 
 type Rand = ReturnType<typeof randCreate>;

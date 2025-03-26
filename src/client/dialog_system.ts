@@ -6,13 +6,14 @@ import {
   fontStyle,
 } from 'glov/client/font';
 import {
-  KEYS,
-  PAD,
   eatAllInput,
+  inputClick,
   inputPadMode,
   inputTouchMode,
   keyDown,
+  KEYS,
   mouseDownAnywhere,
+  PAD,
   padButtonDown,
 } from 'glov/client/input';
 import {
@@ -24,11 +25,13 @@ import {
   MDASTNode,
   mdParse,
 } from 'glov/client/markdown_parse';
+import { Sprite } from 'glov/client/sprites';
 import {
-  UIBox,
   buttonText,
   panel,
+  PanelParam,
   suppressNewDOMElemWarnings,
+  UIBox,
   uiButtonHeight,
   uiTextHeight,
 } from 'glov/client/ui';
@@ -44,9 +47,11 @@ import { buildModeActive } from './crawler_build_mode';
 import { crawlerMyEnt } from './crawler_entity_client';
 import { crawlerScriptAPI } from './crawler_play';
 
-const { ceil, round } = Math;
+const { ceil, min, round } = Math;
 
 const FADE_TIME = 1000;
+const MS_PER_CHARACTER = 12;
+const MS_PER_CHARACTER_CENTERED = 6;
 
 export type DialogButton = {
   label: string;
@@ -55,8 +60,13 @@ export type DialogButton = {
 export type DialogParam = {
   name: string;
   text: string;
+  font_style?: FontStyle;
   transient?: boolean;
+  transient_long?: boolean;
+  custom_render?: (param: PanelParam) => void;
+  instant?: boolean;
   buttons?: DialogButton[];
+  panel_sprite?: Sprite;
 };
 
 let active_dialog: DialogParam | null = null;
@@ -73,8 +83,8 @@ let active_state: DialogState;
 let temp_color = vec4(1, 1, 1, 1);
 
 let style_default = fontStyle(null, { color: 0x000000ff });
-function dialogDefaultTextStyle(): FontStyle {
-  return style_default;
+function dialogDefaultTextStyle(param: DialogParam): FontStyle {
+  return param.font_style || style_default;
 }
 type DialogTextStyleCB = (dialog: DialogParam) => FontStyle;
 let text_style_cb: DialogTextStyleCB = dialogDefaultTextStyle;
@@ -85,7 +95,7 @@ function ff(): boolean {
     inputPadMode() && (
       padButtonDown(PAD.LEFT_TRIGGER) || padButtonDown(PAD.RIGHT_TRIGGER) ||
       padButtonDown(PAD.A) || padButtonDown(PAD.B)
-    ) || mouseDownAnywhere();
+    ) || mouseDownAnywhere() || inputClick();
 }
 
 
@@ -142,7 +152,14 @@ let dims_split_cache: {
   text: string;
   ret: DimsSplitRet;
 };
-function dimsSplit(style: FontStyle, align: ALIGN, w: number, size: number, text: string): DimsSplitRet {
+function dimsSplit(
+  style: FontStyle,
+  align: ALIGN,
+  w: number,
+  size: number,
+  line_height: number,
+  text: string
+): DimsSplitRet {
   if (dims_split_cache && dims_split_cache.text === text) {
     return dims_split_cache.ret;
   }
@@ -151,6 +168,7 @@ function dimsSplit(style: FontStyle, align: ALIGN, w: number, size: number, text
     font_style: style,
     w,
     text_height: size,
+    line_height,
     text: text,
     align,
   };
@@ -174,7 +192,9 @@ function dimsSplit(style: FontStyle, align: ALIGN, w: number, size: number, text
 const HPAD = 4;
 const BUTTON_HEAD = 4;
 const BUTTON_PAD = 1;
-export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_bottom: number }): boolean {
+export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_bottom: number },
+  suppress_transient: boolean,
+): boolean {
   if (buildModeActive()) {
     active_dialog = null;
   }
@@ -183,7 +203,11 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   if (!active_dialog) {
     return false;
   }
-  let { transient, text, name, buttons } = active_dialog;
+  let { transient, transient_long, custom_render, text, name, buttons, panel_sprite } = active_dialog;
+  if (transient && suppress_transient) {
+    active_dialog = null;
+    return false;
+  }
   if (name) {
     text = `${name}: ${text}`;
   }
@@ -192,7 +216,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   if (transient && !active_state.fade_time) {
     let my_pos = crawlerMyEnt().getData<JSVec3>('pos')!;
     if (!v2same(my_pos, active_state.pos)) {
-      active_state.fade_time = FADE_TIME;
+      active_state.fade_time = transient_long ? 3000 : FADE_TIME;
     }
   }
   let alpha = 1;
@@ -202,18 +226,19 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
       return false;
     }
     active_state.fade_time -= dt;
-    alpha = active_state.fade_time / FADE_TIME;
+    alpha = min(1, active_state.fade_time / FADE_TIME);
   }
 
   let num_buttons = buttons && buttons.length || 0;
   let buttons_h = num_buttons * uiButtonHeight() + (num_buttons ? BUTTON_HEAD + (num_buttons - 1) * BUTTON_PAD : 0);
   const text_height = uiTextHeight();
   let size = text_height;
+  let line_height = size;
   let style = text_style_cb(active_dialog);
   let align = transient ? ALIGN.HCENTER|ALIGN.HWRAP : ALIGN.HLEFT|ALIGN.HWRAP;
-  let dims = dimsSplit(style, align, w - HPAD * 2, size, text);
+  let dims = dimsSplit(style, align, w - HPAD * 2, size, line_height, text);
   y += h - dims.h - pad_bottom - buttons_h;
-  let text_len = ceil(counter / 18);
+  let text_len = ceil(counter / (transient ? MS_PER_CHARACTER_CENTERED : MS_PER_CHARACTER));
   let text_definitely_full = text_len >= (text.length + 20);
   let text_to_draw = text;
   let text_full = text_definitely_full;
@@ -245,6 +270,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   markdownAuto({
     font_style: style,
     text_height: size,
+    line_height,
     x: x + HPAD,
     y: yy,
     z,
@@ -283,24 +309,29 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   }
 
   temp_color[3] = alpha;
-  if (transient && dims.h === text_height) {
+  let panel_param: PanelParam;
+  if (transient && (dims.h === text_height || dims.h === line_height)) {
     let text_w = dims.w;
-    panel({
+    panel_param = {
       x: x + round((w - text_w)/2) - HPAD,
       y: y - pad_top, z: z - 1,
       w: text_w + HPAD * 2,
       h: dims.h + pad_top + pad_bottom,
       color: temp_color,
-    });
+      sprite: panel_sprite,
+    };
   } else {
-    panel({
+    panel_param = {
       x,
       y: y - pad_top, z: z - 1,
       w,
       h: dims.h + pad_top + pad_bottom + buttons_h,
       color: temp_color,
-    });
+      sprite: panel_sprite,
+    };
   }
+  custom_render?.(panel_param);
+  panel(panel_param);
 
   if (!transient) {
     eatAllInput();
@@ -313,6 +344,9 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
 export function dialogPush(param: DialogParam): void {
   active_dialog = param;
   active_state = new DialogState();
+  if (param.instant) {
+    active_state.counter += 10000000;
+  }
 }
 
 export function dialogReset(): void {

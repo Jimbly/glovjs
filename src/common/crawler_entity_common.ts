@@ -1,7 +1,7 @@
-import type { JSVec3 } from './crawler_state';
 import type { Diff } from 'glov/common/differ';
 import type { EntityBaseCommon, EntityBaseDataCommon } from 'glov/common/entity_base_common';
 import type { ROVec2 } from 'glov/common/vmath';
+import type { JSVec3 } from './crawler_state';
 
 const { abs } = Math;
 const EPSILON = 0.01;

@@ -4,23 +4,22 @@ import assert from 'assert';
 import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityManager } from 'glov/common/entity_base_common';
 import {
-  Vec2,
   v3copy,
+  Vec2,
 } from 'glov/common/vmath';
 import { entSamePos } from '../common/crawler_entity_common';
+import type { CrawlerScriptAPI } from '../common/crawler_script';
 import {
   BLOCK_OPEN,
   CrawlerState,
+  DirType,
   DX,
   DY,
-  DirType,
   JSVec2,
   JSVec3,
 } from '../common/crawler_state';
 import { crawlerEntFactory } from './crawler_entity_client';
 import { EntityDemoClient } from './entity_demo_client';
-
-import type { CrawlerScriptAPI } from '../common/crawler_script';
 
 const { floor, random } = Math;
 
@@ -66,26 +65,24 @@ export function entitiesAdjacentTo<T extends Entity>(
 }
 
 
-export type WanderOpts = {
-};
+export type WanderOpts = Record<never, never>;
 export type WanderState = {
   home_pos: JSVec3;
 };
 export type EntityWander = EntityDemoClient & {
   wander_state: WanderState;
   wander_opts: WanderOpts;
-  aiWander: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => void;
+  aiWander: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
 };
 
-export type PatrolOpts = {
-};
+export type PatrolOpts = Record<never, never>;
 export type PatrolState = {
   last_pos: JSVec3;
 };
 export type EntityPatrol = EntityDemoClient & {
   patrol_state: PatrolState;
   patrol_opts: PatrolOpts;
-  aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => void;
+  aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
 };
 
 
@@ -93,11 +90,15 @@ function ignoreErrors(): void {
   // nothing
 }
 
+function isEnemy(ent: Entity): boolean {
+  return ent.isEnemy();
+}
+
 export function aiTraitsClientStartup(): void {
   let ent_factory = crawlerEntFactory<Entity>();
   ent_factory.registerTrait<WanderOpts, WanderState>('wander', {
     methods: {
-      aiWander: function (this: EntityWander, game_state: CrawlerState, script_api: CrawlerScriptAPI) {
+      aiWander: function (this: EntityWander, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
         let pos = this.getData<JSVec3>('pos');
         assert(pos);
         let dir = floor(random() * 4) as DirType;
@@ -106,15 +107,16 @@ export function aiTraitsClientStartup(): void {
         let level = game_state.levels[floor_id];
         script_api.setPos(pos);
         if (level.wallsBlock(pos, dir, script_api) !== BLOCK_OPEN) {
-          return;
+          return false;
         }
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
         if (entitiesAt(this.entity_manager, new_pos, floor_id, true).length) {
-          return;
+          return false;
         }
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
         }, undefined, ignoreErrors);
+        return true;
       },
     },
     default_opts: {},
@@ -132,7 +134,7 @@ export function aiTraitsClientStartup(): void {
       ai_move_rand_time: 0,
     },
     methods: {
-      aiPatrol: function (this: EntityPatrol, game_state: CrawlerState, script_api: CrawlerScriptAPI) {
+      aiPatrol: function (this: EntityPatrol, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
         let pos = this.getData<JSVec3>('pos')!;
         let last_pos = this.patrol_state.last_pos;
         let floor_id = this.getData<number>('floor');
@@ -147,7 +149,7 @@ export function aiTraitsClientStartup(): void {
           });
         }
         if (!paths.length) {
-          return;
+          return false;
         }
 
 
@@ -157,14 +159,17 @@ export function aiTraitsClientStartup(): void {
         //   return;
         // }
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
-        if (entitiesAt(this.entity_manager, new_pos, floor_id, true).length) {
-          return;
+        let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
+        ents = ents.filter(isEnemy);
+        if (ents.length) {
+          return false;
         }
         v3copy(this.patrol_state.last_pos, pos);
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
           last_pos: pos,
         }, undefined, ignoreErrors);
+        return true;
       },
     },
     default_opts: {},
@@ -251,11 +256,12 @@ export function aiDoFloor(
       } // else it's been a while, do an update if we want
     }
     if (!no_move) {
-      if ((ent as EntityWander).aiWander) {
-        (ent as EntityWander).aiWander(game_state, script_api);
+      let moved = false;
+      if (!moved && (ent as EntityWander).aiWander) {
+        moved = (ent as EntityWander).aiWander(game_state, script_api);
       }
-      if ((ent as EntityPatrol).aiPatrol) {
-        (ent as EntityPatrol).aiPatrol(game_state, script_api);
+      if (!moved && (ent as EntityPatrol).aiPatrol) {
+        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api);
       }
     }
     ent.aiResetMoveTime(false);

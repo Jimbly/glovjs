@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
-import { BUCKET_ALPHA, FACE_XY } from 'glov/client/dyn_geom';
+import { BUCKET_ALPHA, BUCKET_OPAQUE, FACE_XY } from 'glov/client/dyn_geom';
 import {
   getFrameDt,
   getFrameIndex,
@@ -19,6 +19,9 @@ import {
   unit_quat,
 } from 'glov/client/quat';
 import * as settings from 'glov/client/settings';
+import type { spineCreate } from 'glov/client/spine';
+import type { SpriteAnimation, SpriteAnimationParam } from 'glov/client/sprite_animation';
+import type { Sprite, SpriteParamBase, TextureOptions } from 'glov/client/sprites';
 import { uiTextHeight } from 'glov/client/ui';
 import { EntityID } from 'glov/common/types';
 import {
@@ -27,12 +30,12 @@ import {
   easeOut,
   lerp,
   ridx,
+  sign,
 } from 'glov/common/util';
 import {
   ROVec2,
   ROVec3,
   ROVec4,
-  Vec2,
   v2addScale,
   v2dist,
   v2distSq,
@@ -43,39 +46,36 @@ import {
   v3copy,
   v3set,
   v4set,
+  Vec2,
   vec2,
   vec3,
   vec4,
 } from 'glov/common/vmath';
+import type { JSVec4 } from '../common/crawler_state';
 import { buildModeActive } from './crawler_build_mode';
 import {
+  crawlerEntityManager,
+  crawlerGetSpawnDescs,
   EntityCrawlerClient,
   EntityDraw2DOpts,
   EntityDrawOpts,
-  crawlerEntityManager,
-  crawlerGetSpawnDescs,
   entityPosManager,
   myEntID,
 } from './crawler_entity_client';
 import { crawlerController, crawlerGameState, getScaledFrameDt } from './crawler_play';
 import {
-  DIM,
-  HDIM,
-  SPLIT_NEAR,
-  ShaderType,
-  ShaderTypeEnum,
-  SplitSet,
   crawlerRenderGameViewAngle,
   crawlerRenderGetShader,
   crawlerRenderViewportGet,
+  DIM,
+  HDIM,
   passesSplitCheck,
   renderCamPos,
+  ShaderType,
+  ShaderTypeEnum,
+  SPLIT_NEAR,
+  SplitSet,
 } from './crawler_render';
-
-import type { JSVec4 } from '../common/crawler_state';
-import type { spineCreate } from 'glov/client/spine';
-import type { SpriteAnimation, SpriteAnimationParam } from 'glov/client/sprite_animation';
-import type { Sprite, SpriteParamBase, TextureOptions } from 'glov/client/sprites';
 
 const { ceil, floor } = Math;
 
@@ -118,6 +118,7 @@ export type DrawableSpriteOpts = {
   sprite_near?: Sprite; // assigned at load time
   sprite_hybrid?: Sprite; // assigned at load time
   scale: number;
+  do_alpha?: boolean;
   tint_colors?: [JSVec4, JSVec4, JSVec4][];
 };
 
@@ -182,13 +183,14 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   ) {
     sprite = sprite_near;
   }
-  let frame = anim.getFrame() as number;
+  let frame = anim.getFrame();
+  assert(typeof frame === 'number');
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   let { w, h } = param;
   if (aspect < 1) {
-    w = h * aspect;
+    w = h * aspect * sign(w);
   } else {
-    h = w * aspect;
+    h = abs(w / aspect);
   }
   sprite.draw({
     ...param,
@@ -251,7 +253,8 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     sprite = sprite_hybrid;
   }
   let shader = crawlerRenderGetShader(shader_type);
-  let frame = anim ? anim.getFrame() as number : 0;
+  let frame = anim ? anim.getFrame() : 0;
+  assert(typeof frame === 'number');
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   if (aspect !== 1) {
     v3copy(temp_pos, draw_pos);
@@ -263,7 +266,7 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     frame,
     color,
     size: [scale * DIM * aspect, scale * DIM],
-    bucket: BUCKET_ALPHA,
+    bucket: ent.drawable_sprite_opts.do_alpha === false ? BUCKET_OPAQUE : BUCKET_ALPHA,
     facing: FACE_XY,
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
     shader,
@@ -470,7 +473,7 @@ export function crawlerRenderEntitiesPrep(): void {
   }
 
   let controller = crawlerController();
-  ent_in_front = controller.getEntInFront();
+  ent_in_front = controller.getEntInFront(); // Note: only gets those that block players
 
   let build_mode = buildModeActive();
 

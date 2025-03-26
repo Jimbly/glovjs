@@ -3,49 +3,11 @@ const EXPORT_PATH = './src/client/levels/';
 
 import assert from 'assert';
 import fs from 'fs';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   Diff,
   diffApply,
 } from 'glov/common/differ';
-import { clone } from 'glov/common/util';
-import { v3copy } from 'glov/common/vmath';
-import { ChannelWorker } from 'glov/server/channel_worker';
-import { chattableWorkerInit } from 'glov/server/chattable_worker';
-import {
-  VAID,
-  entityServerDefaultLoadPlayerEntity,
-} from 'glov/server/entity_base_server';
-import {
-  EntityManagerReadyWorker,
-  SEMClient,
-  ServerEntityManager,
-  ServerEntityManagerInterface,
-  createServerEntityManager,
-  entityManagerWorkerInit,
-} from 'glov/server/entity_manager_server';
-import { serverFSAPI } from 'glov/server/serverfs';
-import {
-  CrawlerLevel,
-  CrawlerLevelSerialized,
-  CrawlerState,
-  DX,
-  DY,
-  JSVec3,
-  crawlerLoadData,
-  createCrawlerState,
-  createLevel,
-} from '../common/crawler_state';
-import { EntityCrawlerServer, crawlerEntityAlloc, crawlerEntityTraitsServerStartup } from './crawler_entity_server';
-import {
-  CrawlerScriptAPIServer,
-  crawlerScriptAPIServerCreate,
-} from './crawler_script_api_server';
-
-import type {
-  BuildModeOp,
-  CrawlerJoinPayload,
-} from '../common/crawler_entity_common';
-import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type { ActionListResponse } from 'glov/common/entity_base_common';
 import type { Packet } from 'glov/common/packet';
 import type {
@@ -54,7 +16,48 @@ import type {
   NetErrorCallback,
   NetResponseCallback,
 } from 'glov/common/types';
+import { clone } from 'glov/common/util';
+import { v3copy } from 'glov/common/vmath';
 import type { ChannelServer } from 'glov/server/channel_server';
+import { ChannelWorker } from 'glov/server/channel_worker';
+import { chattableWorkerInit } from 'glov/server/chattable_worker';
+import {
+  entityServerDefaultLoadPlayerEntity,
+  VAID,
+} from 'glov/server/entity_base_server';
+import {
+  createServerEntityManager,
+  EntityManagerReadyWorker,
+  entityManagerWorkerInit,
+  SEMClient,
+  ServerEntityManager,
+  ServerEntityManagerInterface,
+} from 'glov/server/entity_manager_server';
+import { serverFSAPI } from 'glov/server/serverfs';
+import type {
+  BuildModeOp,
+  CrawlerJoinPayload,
+} from '../common/crawler_entity_common';
+import {
+  CrawlerLevel,
+  CrawlerLevelSerialized,
+  crawlerLoadData,
+  CrawlerState,
+  createCrawlerState,
+  createLevel,
+  DX,
+  DY,
+  JSVec3,
+} from '../common/crawler_state';
+import {
+  crawlerEntityAlloc,
+  crawlerEntityTraitsServerStartup,
+  EntityCrawlerServer,
+} from './crawler_entity_server';
+import {
+  CrawlerScriptAPIServer,
+  crawlerScriptAPIServerCreate,
+} from './crawler_script_api_server';
 
 export class CrawlerWorker<
   Entity extends EntityCrawlerServer,

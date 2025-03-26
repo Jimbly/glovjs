@@ -1,4 +1,5 @@
-/*eslint global-require:off, comma-spacing:error*/
+/* eslint-disable n/global-require */
+/* eslint @stylistic/comma-spacing:error*/
 import * as local_storage from 'glov/client/local_storage.js'; // eslint-disable-line import/order
 local_storage.setStoragePrefix('crawler'); // Before requiring anything else that might load from this
 
@@ -7,7 +8,10 @@ import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
-import { markdownImageRegisterSpriteSheet, markdown_default_renderables } from 'glov/client/markdown_renderables';
+import {
+  markdown_default_renderables,
+  markdownImageRegisterSpriteSheet,
+} from 'glov/client/markdown_renderables';
 import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
@@ -63,6 +67,7 @@ export function main(): void {
   let antialias = false;
   let use_fbos = 1;
   let need_dfdxy = false;
+  // @ts-expect-error truthy
   if ('AA hires') {
     need_dfdxy = true;
     antialias = true; // antialiases 3D geometry edges only
@@ -74,11 +79,13 @@ export function main(): void {
     settingsSet('filter', 0);
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
+  // @ts-expect-error truthy
   } else if (!'simple lowres') {
     settingsSet('pixely', 1);
     settingsSet('filter', 0);
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
+  // @ts-expect-error truthy
   } else if (!'lowres with mipmapping') {
     // also antilias=true & use_fbos=0 is potentially useful
     crawlerRenderSetLODBiasRange(-3, -1.5);
@@ -86,6 +93,7 @@ export function main(): void {
     settingsSet('filter', 2);
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
+  // @ts-expect-error truthy
   } else if (!'simple AA lowres') {
     antialias = true;
     use_fbos = 0;
@@ -96,16 +104,19 @@ export function main(): void {
     settingsSet('filter', 0);
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
+  // @ts-expect-error truthy
   } else if (!'CRT filter') {
     settingsSet('pixely', 2);
     settingsSet('hybrid', 1);
     settingsSet('filter', 0);
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
+  // @ts-expect-error truthy
   } else if ('split logic') {
     settingsSet('pixely', 1);
     settingsSet('filter', 0);
     settingsSet('entity_split', 1);
+  // @ts-expect-error truthy
   } else if (!'split logic filter') {
     settingsSet('pixely', 1);
     settingsSet('filter', 1);

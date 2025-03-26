@@ -7,10 +7,10 @@ import {
 } from 'glov/client/font';
 import * as input from 'glov/client/input';
 import {
-  KEYS,
-  PAD,
   keyDownEdge,
+  KEYS,
   keyUpEdge,
+  PAD,
   padButtonUpEdge,
 } from 'glov/client/input';
 import { ClientChannelWorker } from 'glov/client/net';
@@ -400,7 +400,7 @@ function playCrawl(): void {
     dialog_viewport.y = 0;
     dialog_viewport.h = game_height - 3;
   }
-  dialogRun(dt, dialog_viewport);
+  dialogRun(dt, dialog_viewport, false);
 
   const build_mode = buildModeActive();
   let locked_dialog = dialogMoveLocked();

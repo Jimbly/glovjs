@@ -38,20 +38,21 @@ import * as ui from 'glov/client/ui';
 import { isMenuUp } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
 import { getURLBase } from 'glov/client/urlhash';
-import { CmdRespFunc } from 'glov/common/cmd_parse';
-import { EntityManagerEvent } from 'glov/common/entity_base_common';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
   DataObject,
 } from 'glov/common/types';
 import {
   callEach,
   clone,
+  mod,
 } from 'glov/common/util';
 import {
-  Vec4,
   v3copy,
   v4copy,
   vec3,
+  Vec4,
   vec4,
 } from 'glov/common/vmath';
 import '../common/crawler_events'; // side effects: register events
@@ -59,11 +60,11 @@ import {
   CrawlerLevel,
   CrawlerLevelSerialized,
   CrawlerState,
+  createCrawlerState,
   DX,
   DY,
   JSVec3,
   VstyleDesc,
-  createCrawlerState,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
 import {
@@ -79,34 +80,34 @@ import {
 } from './crawler_comm';
 import { CrawlerController } from './crawler_controller';
 import {
-  EntityCrawlerClient,
-  OnlineMode,
   crawlerEntitiesInit,
   crawlerEntitiesOnEntStart,
   crawlerEntityManager,
   crawlerEntityManagerOffline,
   crawlerMyActionSend,
   crawlerMyEnt,
+  EntityCrawlerClient,
   entityPosManager,
   isLocal,
   isOnline,
   isOnlineOnly,
+  OnlineMode,
   onlineMode,
 } from './crawler_entity_client';
 import { mapViewActive } from './crawler_map_view';
 import {
-  FOV,
-  SPLIT_ALL,
-  SPLIT_FAR,
-  SPLIT_NEAR,
   crawlerCalc3DViewport,
   crawlerRenderDoSplit,
   crawlerRenderGameViewAngle,
   crawlerRenderViewportGet,
   crawlerSetFogColor,
   crawlerSetFogParams,
+  FOV,
   render,
   renderPrep,
+  SPLIT_ALL,
+  SPLIT_FAR,
+  SPLIT_NEAR,
 } from './crawler_render';
 import {
   crawlerRenderEntities,
@@ -191,7 +192,8 @@ settingsRegister({
       }
       setTimeout(() => {
         setting_pixely = settings.pixely;
-        engine.setPixelyStrict(setting_pixely === 2);
+        engine.setPixelyStrict(setting_pixely === 1 || setting_pixely === 2);
+        engine.setViewportPostprocess(setting_pixely >= 2);
         callEach(on_pixely_change, null, setting_pixely);
       }, 1);
     },
@@ -261,6 +263,19 @@ export function crawlerCurSavePlayTime(): number {
   let dt = now - local_game_data.timestamp;
   return (local_game_data.time_played || 0) + dt;
 }
+
+export function crawlerSavePlayTime(mode: 'manual' | 'auto'): void {
+  let slot = urlhash.get('slot') || '1';
+  let save_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.${mode}`, { timestamp: 0 });
+  if (save_data.timestamp) {
+    let local_time = crawlerCurSavePlayTime();
+    if (!save_data.time_played || local_time > save_data.time_played) {
+      save_data.time_played = local_time;
+      localStorageSetJSON<SavedGameData>(`savedgame_${slot}.${mode}`, save_data);
+    }
+  }
+}
+
 
 let last_saved_vis_string: Partial<Record<number, string>>;
 let vis_string_save_in_progress = 0;
@@ -857,14 +872,39 @@ export function crawlerRenderFramePrep(): void {
   if (vstyle && vstyle.background_img) {
     let tex = textureLoad({
       url: `img/${vstyle.background_img}.png`,
+      wrap_s: gl.CLAMP_TO_EDGE,
+      wrap_t: gl.CLAMP_TO_EDGE,
+      // filter_mag: gl.NEAREST,
+      // filter_min: gl.NEAREST,
+      // force_mipmaps: false,
     });
     if (tex.loaded) {
       gl.disable(gl.DEPTH_TEST);
       gl.depthMask(false);
-      let voffs = -crawlerRenderGameViewAngle() / PI * 2;
+      let voffs = mod(-crawlerRenderGameViewAngle() / PI * 2, 1);
       applyCopy({ source: tex, no_framebuffer: true, params: {
-        copy_uv_scale: [1, -tex.src_height / tex.height, voffs, -(1-tex.src_height / tex.height)],
+        copy_uv_scale: [tex.src_width / tex.width, -tex.src_height / tex.height, voffs, tex.src_height / tex.height],
       } });
+      if (voffs) {
+        let viewport_save = engine.viewport.slice(0);
+        if (setting_pixely) {
+          let cv = crawlerRenderViewportGet();
+          engine.setViewport([cv.w * (1 - voffs), 0, cv.w * voffs, cv.h]);
+        } else {
+          let viewport = crawlerCalc3DViewport();
+          engine.setViewport([
+            viewport[0] + viewport[2] * (1 - voffs), viewport[1],
+            viewport[2] * voffs, viewport[3]
+          ]);
+        }
+        applyCopy({ source: tex, no_framebuffer: true, params: {
+          copy_uv_scale: [
+            tex.src_width / tex.width * voffs, -tex.src_height / tex.height,
+            0, tex.src_height / tex.height
+          ],
+        } });
+        engine.setViewport(viewport_save);
+      }
       gl.enable(gl.DEPTH_TEST);
       gl.depthMask(true);
     }

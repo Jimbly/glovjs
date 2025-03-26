@@ -10,10 +10,10 @@ import {
 } from 'glov/client/font';
 import { Box } from 'glov/client/geom_types';
 import {
-  KEYS,
-  PAD,
   keyDown,
   keyDownEdge,
+  KEYS,
+  PAD,
   padButtonDown,
 } from 'glov/client/input';
 import {
@@ -24,9 +24,9 @@ import {
 } from 'glov/client/local_storage';
 import { ScrollArea, scrollAreaCreate } from 'glov/client/scroll_area';
 import {
+  dropDown,
   MenuItem,
   SelectionBoxDisplay,
-  dropDown,
 } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import {
@@ -44,14 +44,14 @@ import {
   uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
-import { CmdRespFunc } from 'glov/common/cmd_parse';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   Diff,
-  Differ,
   diffApply,
+  Differ,
   differCreate,
 } from 'glov/common/differ';
-import { ErrorCallback } from 'glov/common/types';
+import type { NetResponseCallback } from 'glov/common/types';
 import { arrayToSet, ridx } from 'glov/common/util';
 import { v2same, vec4 } from 'glov/common/vmath';
 import { BuildModeOp } from '../common/crawler_entity_common';
@@ -61,30 +61,30 @@ import {
   CellDescs,
   CrawlerCell,
   CrawlerCellEvent,
-  CrawlerLevel,
-  CrawlerLevelSerialized,
-  DX,
-  DY,
-  DirType,
-  JSVec3,
-  WallDesc,
-  WallDescs,
   crawlerGetCellDesc,
   crawlerGetWallDesc,
   crawlerHasCellDesc,
   crawlerHasWallDesc,
+  CrawlerLevel,
+  CrawlerLevelSerialized,
   dirMod,
+  DirType,
+  DX,
+  DY,
   getCellDescs,
   getVstyles,
   getWallDescs,
+  JSVec3,
+  WallDesc,
+  WallDescs,
 } from '../common/crawler_state';
 import { getChatUI } from './crawler_comm';
 import {
-  SpawnDesc,
-  SpawnDescs,
   crawlerEntityManager,
   crawlerGetSpawnDescs,
   crawlerMyEnt,
+  SpawnDesc,
+  SpawnDescs,
 } from './crawler_entity_client';
 import { mapViewSetActive } from './crawler_map_view';
 import {
@@ -92,7 +92,7 @@ import {
   crawlerRoom,
   crawlerSetLevelGenMode,
 } from './crawler_play';
-import { crawlerRenderGetThumbnail } from './crawler_render';
+import { crawlerRenderGetThumbnail, crawlerRenderViewportGet } from './crawler_render';
 import { statusPush } from './status';
 
 const { floor, min } = Math;
@@ -244,7 +244,7 @@ export function crawlerBuildModeCommit(): void {
   }
 }
 
-export function buildModeOnBuildOp(data: BuildModeOp, resp_func: ErrorCallback): void {
+export function buildModeOnBuildOp(data: BuildModeOp, resp_func: NetResponseCallback): void {
   let { sub_id, floor: floor_id, diff } = data;
   if (sub_id === crawlerEntityManager().getSubscriptionId()) {
     return;
@@ -980,7 +980,8 @@ function showPaintPalette({
   x: number; y: number; z: number;
   x0: number; x1: number; col_width: number;
 }): {
-  x : number; y: number;
+  x: number;
+  y: number;
 } {
   const text_height = uiTextHeight();
   const y0 = y;
@@ -1265,7 +1266,8 @@ function showCurrentCell(param: {
           colors: colors_event,
         })) {
           crawlerBuildModeBegin();
-          events.splice(ii, 1);
+          let removed = events.splice(ii, 1)[0];
+          setLastEvent(removed);
           if (!events.length) {
             delete target_cell.events;
           }
@@ -1715,8 +1717,9 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
     }
   }
 
-  x = 5;
-  y = 5;
+  let viewport = crawlerRenderViewportGet();
+  x = viewport.x;
+  y = viewport.y;
   if (keyDownEdge(KEYS.F1)) {
     settingsSet('build_mode_help', 1 - settings.build_mode_help);
   }

@@ -9,6 +9,7 @@ import {
   padButtonUpEdge,
 } from 'glov/client/input';
 import {
+  spot,
   SPOT_DEFAULT_BUTTON,
   SPOT_DEFAULT_BUTTON_DISABLED,
   SPOT_STATE_DISABLED,
@@ -16,9 +17,8 @@ import {
   SPOT_STATE_FOCUSED,
   SPOT_STATE_REGULAR,
   SpotParam,
-  SpotStateEnum,
-  spot,
   spotSetPadMode,
+  SpotStateEnum,
 } from 'glov/client/spot';
 import {
   Sprite,

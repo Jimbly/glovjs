@@ -6,10 +6,10 @@ import {
 } from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import {
-  KEYS,
-  PAD,
   keyDown,
   keyDownEdge,
+  KEYS,
+  PAD,
   padButtonDown,
 } from 'glov/client/input';
 import * as settings from 'glov/client/settings';
@@ -32,8 +32,6 @@ import {
   sign,
 } from 'glov/common/util';
 import {
-  Vec2,
-  Vec3,
   rovec3,
   v2add,
   v2copy,
@@ -44,12 +42,14 @@ import {
   v2same,
   v2sub,
   v3copy,
+  Vec2,
   vec2,
+  Vec3,
   vec3,
 } from 'glov/common/vmath';
 import {
-  CrawlerScriptWhen,
   crawlerScriptRunEvents,
+  CrawlerScriptWhen,
   getEffWall,
 } from '../common/crawler_script';
 import {
@@ -59,10 +59,12 @@ import {
   CrawlerCell,
   CrawlerLevel,
   CrawlerState,
+  dirFromDelta,
+  dirMod,
+  DirType,
   DX,
   DXY,
   DY,
-  DirType,
   EAST,
   JSVec3,
   NORTH,
@@ -71,18 +73,17 @@ import {
   VIS_PASSED_NORTH,
   VIS_VISITED,
   WEST,
-  dirFromDelta,
-  dirMod,
 } from '../common/crawler_state';
 import { pathFind } from '../common/pathfind';
 import { buildModeActive } from './crawler_build_mode';
 import {
-  EntityCrawlerClient,
   entityBlocks,
+  EntityCrawlerClient,
 } from './crawler_entity_client';
+import { crawlerScriptAPI } from './crawler_play';
 import {
-  RenderPrepParam,
   crawlerRenderGetPosOffs,
+  RenderPrepParam,
 } from './crawler_render';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
@@ -1161,7 +1162,7 @@ export class CrawlerController {
       let cur = this.queueTail();
       assert(cur.pos);
       let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
-        this.path_to[0], this.path_to[1], build_mode);
+        this.path_to[0], this.path_to[1], build_mode, crawlerScriptAPI());
       if (!path || path.length === 1) {
         this.path_to = null;
       } else {

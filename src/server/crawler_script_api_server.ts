@@ -16,10 +16,10 @@ import {
   CrawlerLevel,
   CrawlerState,
   DIR_CELL,
-  DX,
-  DY,
   DirType,
   DirTypeOrCell,
+  DX,
+  DY,
 } from '../common/crawler_state';
 import { EntityCrawlerServer } from './crawler_entity_server';
 

@@ -114,7 +114,10 @@ export const VIS_VISITED = 8;
 import assert from 'assert';
 import { base64CharTable } from 'glov/common/base64';
 import { dataError } from 'glov/common/data_error';
-import { FSAPI, fileBaseName } from 'glov/common/fsapi';
+import {
+  fileBaseName,
+  FSAPI,
+} from 'glov/common/fsapi';
 import { DataObject } from 'glov/common/types';
 import {
   callEach,
@@ -122,18 +125,20 @@ import {
   empty,
   lerp,
   ridx,
+  sign,
 } from 'glov/common/util';
+import verify from 'glov/common/verify';
 import {
   ROVec2,
-  Vec2,
-  Vec3,
   v2set,
+  Vec2,
   vec2,
+  Vec3,
   vec3,
 } from 'glov/common/vmath';
 import { CrawlerScriptAPI, getEffCell, getEffWall } from './crawler_script';
 
-const { ceil, floor } = Math;
+const { abs, ceil, floor } = Math;
 
 export type JSVec2 = [number, number];
 export type JSVec3 = [number, number, number];
@@ -184,14 +189,20 @@ function crawlerApplyVstyle(vstyle: VstyleDesc): void {
   for (let key in descs.wall) {
     let wall_desc = descs.wall[key]!;
     let swapped = descs.wall[wall_swaps[key] || key];
-    assert(swapped);
-    wall_desc.swapped = swapped;
+    if (swapped) {
+      wall_desc.swapped = swapped;
+    } else {
+      dataError(`vstyle swaps "${key}" to unknown walldef: "${wall_swaps[key]}"`);
+    }
   }
   for (let key in descs.cell) {
     let cell_desc = descs.cell[key]!;
     let swapped = descs.cell[cell_swaps[key] || key];
-    assert(swapped);
-    cell_desc.swapped = swapped;
+    if (swapped) {
+      cell_desc.swapped = swapped;
+    } else {
+      dataError(`vstyle swaps "${key}" to unknown celldef: "${cell_swaps[key]}"`);
+    }
   }
 }
 
@@ -432,6 +443,7 @@ let identity_vstyle: VstyleDesc = {
   fog_color: vec3(0,0,0),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type CrawlerLevelState = {
   // Nothing for now, may want this later, though?
 };
@@ -457,9 +469,9 @@ export class CrawlerLevel {
     stairs_in: JSVec3;
     stairs_out: JSVec3;
   } = {
-    stairs_in: [1,1,2],
-    stairs_out: [1,1,2],
-  };
+      stairs_in: [1,1,2],
+      stairs_out: [1,1,2],
+    };
   seen_cells = 0;
   total_cells = 0;
   connected = false;
@@ -511,7 +523,9 @@ export class CrawlerLevel {
       if (v) {
         while (c && cell_idx < cells.length) {
           if (!cells[cell_idx].visible_bits) {
-            this.seen_cells++;
+            if (!cells[cell_idx].desc.auto_evict) {
+              this.seen_cells++;
+            }
           }
           cells[cell_idx++].visible_bits |= v;
           --c;
@@ -656,7 +670,9 @@ export class CrawlerLevel {
         if (!cell.desc.open_vis) {
           continue;
         }
-        ++total_cells;
+        if (!cell.desc.auto_evict) {
+          ++total_cells;
+        }
         for (let ii = 0 as DirType; ii < 4; ++ii) {
           floor_corners.push(floorOverlayCorner(this, xx, yy, cell, ii));
           corner_details.push(cornerDetailType(this, xx, yy, cell, ii));
@@ -690,6 +706,64 @@ export class CrawlerLevel {
       }
     }
     return ret as BlockType;
+  }
+
+  simpleVisCheck(pos0: ROVec2, pos1: ROVec2, script_api: CrawlerScriptAPI): boolean {
+    let max_steps = 100;
+    let ix = pos0[0];
+    let x0 = ix + 0.5;
+    let iy = pos0[1];
+    let y0 = iy + 0.5;
+    let targetx = pos1[0];
+    let targety = pos1[1];
+    let dx = targetx - ix;
+    let signdx = sign(dx);
+    const xdir = dx > 0 ? EAST : WEST;
+    let dy = targety - iy;
+    let signdy = sign(dy);
+    const ydir = dy > 0 ? NORTH : SOUTH;
+
+    while (ix !== targetx || iy !== targety) {
+      let nextx = ix + ((dx > 0) ? 1 : 0);
+      let nexty = iy + ((dy > 0) ? 1 : 0);
+      let xtime = dx ? (nextx - x0) / dx : Infinity;
+      let ytime = dy ? (nexty - y0) / dy : Infinity;
+      if (abs(xtime - ytime) < 0.0001) {
+        // do both
+        if (
+          !(this.wallsBlock([ix, iy], xdir, script_api) & BLOCK_VIS) &&
+          !(this.wallsBlock([ix + signdx, iy], ydir, script_api) & BLOCK_VIS)
+        ) {
+          // good
+        } else if (
+          !(this.wallsBlock([ix, iy], ydir, script_api) & BLOCK_VIS) &&
+          !(this.wallsBlock([ix, iy + signdy], xdir, script_api) & BLOCK_VIS)
+        ) {
+          // good
+        } else {
+          return false;
+        }
+        ix += signdx;
+        iy += signdy;
+      } else if (xtime < ytime) {
+        // do x
+        if (this.wallsBlock([ix, iy], xdir, script_api) & BLOCK_VIS) {
+          return false;
+        }
+        ix += signdx;
+      } else {
+        // do y
+        if (this.wallsBlock([ix, iy], ydir, script_api) & BLOCK_VIS) {
+          return false;
+        }
+        iy += signdy;
+      }
+      if (!--max_steps) {
+        verify(false);
+        return false;
+      }
+    }
+    return true;
   }
 
   fromASCII(source: string[]): void {

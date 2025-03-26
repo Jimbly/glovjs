@@ -18,9 +18,9 @@ import {
   crawlerCommWant,
 } from './crawler_comm.js';
 import {
-  SavedGameData,
   crawlerPlayWantMode,
   crawlerPlayWantNewGame,
+  SavedGameData,
 } from './crawler_play.js';
 import * as main from './main.js';
 

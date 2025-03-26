@@ -25,8 +25,8 @@ import {
 } from 'glov/common/vmath';
 import {
   CrawlerScriptAPI,
-  CrawlerScriptEventMapIcon,
   crawlerScriptEventFunc,
+  CrawlerScriptEventMapIcon,
   crawlerScriptRegisterFunc,
   getEffCell,
   getEffWall,
@@ -35,9 +35,9 @@ import {
   CrawlerCell,
   CrawlerCellEvent,
   CrawlerState,
-  DX, DY,
   DirType,
   DirTypeOrCell,
+  DX, DY,
   EAST,
   NORTH,
   SOUTH,
@@ -112,8 +112,10 @@ export function pathTo(target_x: number, target_y: number): void {
 
 function percLabel(cur: number, total: number): string {
   let perc = max(1, round(cur/total * 100));
-  if (cur !== total) {
+  if (cur < total) {
     perc = min(perc, 99);
+  } else if (cur > total) {
+    perc = 100;
   }
   return `${perc}%`;
 }
@@ -171,7 +173,7 @@ export function crawlerMapViewDraw(
   }
   let full_vis = engine.defines.FULL_VIS || build_mode;
 
-  let fullscreen = w === engine.game_width;
+  let fullscreen = w > engine.game_width / 2;
 
   const text_height = uiTextHeight();
 
@@ -199,7 +201,7 @@ export function crawlerMapViewDraw(
   let num_enemies = 0;
   for (let ent_id in entities) {
     let ent = entities[ent_id]!;
-    if (ent.isEnemy() && !ent.fading_out) {
+    if (ent.isEnemy() && !ent.fading_out && ent.data.floor === game_state.floor_id) {
       ++num_enemies;
     }
   }
@@ -220,7 +222,7 @@ export function crawlerMapViewDraw(
         ui.font.ALIGN.HCENTER, w, 0, `${level.seen_cells}/${level.total_cells}`);
     } else {
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2)*2, z + 1, text_height,
-        ui.font.ALIGN.HCENTER, w, 0, `${num_enemies} enemies remaining`);
+        ui.font.ALIGN.HCENTER, w, 0, `${num_enemies} ${num_enemies === 1 ? 'enemy' : 'enemies'} remaining`);
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2), z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${percLabel(level.seen_cells, level.total_cells)} explored`);
     }
@@ -271,9 +273,11 @@ export function crawlerMapViewDraw(
     });
   }
 
-  if (!fullscreen && style_map_name) {
-    ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, text_height,
-      ui.font.ALIGN.HCENTER, w, 0, floor_title);
+  if (!fullscreen) {
+    if (style_map_name) {
+      ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, text_height,
+        ui.font.ALIGN.HCENTER, w, 0, floor_title);
+    }
   }
 
   spriteClipPush(z, x, y, w, h);
@@ -351,6 +355,7 @@ export function crawlerMapViewDraw(
       }
       if (detail_visible && cell.events) {
         // Draw any event icons
+        script_api.setPos([xx, yy]);
         let event_icon = crawlerScriptEventsGetIcon(script_api, cell.events);
         if (build_mode && !event_icon && !(detail && detail_visible)) {
           event_icon = CrawlerScriptEventMapIcon.QUESTION;
@@ -568,7 +573,7 @@ export function crawlerMapViewDraw(
           }
         } else if (allow_pathfind) {
           // pathfind
-          let path = pathFind(level, self_x, self_y, self_dir, mx, my, full_vis);
+          let path = pathFind(level, self_x, self_y, self_dir, mx, my, full_vis, script_api);
           if (path) {
             for (let ii = 0; ii < path.length; ++ii) {
               let idx = path[ii];

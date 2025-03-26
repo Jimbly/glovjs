@@ -8,20 +8,19 @@ import {
   DataObject,
   NetErrorCallback,
 } from 'glov/common/types.js';
+import type { ROVec2 } from 'glov/common/vmath';
 import { EntityCrawlerDataCommon, entSamePos } from '../common/crawler_entity_common';
+import type { JSVec3 } from '../common/crawler_state';
 import {
+  crawlerEntClientDefaultDraw2D,
+  crawlerEntClientDefaultOnDelete,
+  crawlerEntityManager,
   EntityCrawlerClient,
   EntityDraw2DOpts,
   EntityDrawOpts,
   EntityOnDeleteSubParam,
   Floater,
-  crawlerEntClientDefaultDraw2D,
-  crawlerEntClientDefaultOnDelete,
-  crawlerEntityManager,
 } from './crawler_entity_client';
-
-import type { JSVec3 } from '../common/crawler_state';
-import type { ROVec2 } from 'glov/common/vmath';
 
 const { random } = Math;
 
@@ -70,6 +69,7 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
   declare do_split: boolean;
   declare is_player: boolean;
   declare is_enemy: boolean;
+  declare blocks_player: boolean;
   declare ai_move_min_time: number;
   declare ai_move_rand_time: number;
 

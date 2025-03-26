@@ -6,9 +6,10 @@ export enum OnlineMode {
 
 import assert from 'assert';
 import { cmd_parse } from 'glov/client/cmds';
+import type { EntityBaseClient } from 'glov/client/entity_base_client';
 import {
-  ClientEntityManagerInterface,
   clientEntityManagerCreate,
+  ClientEntityManagerInterface,
 } from 'glov/client/entity_manager_client';
 import { offlineEntityManagerCreate } from 'glov/client/entity_manager_offline';
 import {
@@ -19,12 +20,14 @@ import { netSubs } from 'glov/client/net';
 import { spineCreate } from 'glov/client/spine';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import {
+  spriteCreate,
   SpriteParamBase,
   TextureOptions,
-  spriteCreate,
 } from 'glov/client/sprites';
+import type { UIBoxColored } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
 import { webFSAPI } from 'glov/client/webfs';
+import { CmdRespFunc } from 'glov/common/cmd_parse';
 import { dataError } from 'glov/common/data_error';
 import {
   ActionMessageParam,
@@ -46,27 +49,24 @@ import {
   entSamePos,
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
+import type { CrawlerState } from '../common/crawler_state';
+import { renderGetSpriteSheet } from './crawler_render';
 import {
+  drawableDraw,
   DrawableOpts,
+  drawableSpineDraw2D,
+  drawableSpineDrawSub,
   DrawableSpineOpts,
   DrawableSpineState,
+  drawableSpriteDraw2D,
+  drawableSpriteDrawSub,
   DrawableSpriteOpts,
   DrawableSpriteState,
   EntityDrawableSpine,
   EntityDrawableSprite,
   TextureOptionsAsStrings,
-  drawableDraw,
-  drawableSpineDraw2D,
-  drawableSpineDrawSub,
-  drawableSpriteDraw2D,
-  drawableSpriteDrawSub,
 } from './crawler_render_entities';
 import { statusPush } from './status';
-
-import type { CrawlerState } from '../common/crawler_state';
-import type { EntityBaseClient } from 'glov/client/entity_base_client';
-import type { UIBoxColored } from 'glov/client/ui';
-import type { CmdRespFunc } from 'glov/common/cmd_parse';
 
 let online_mode: OnlineMode;
 
@@ -111,6 +111,7 @@ export interface EntityCrawlerClient extends EntityBaseClient {
   do_split: boolean;
   is_player: boolean;
   is_enemy: boolean;
+  blocks_player: boolean;
 }
 
 type Entity = EntityCrawlerClient;
@@ -217,16 +218,15 @@ export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
   return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
 }
 
-function onlyEnemies(ent: Entity): boolean {
-  // TODO: Property assigned by trait "blocks_player"
-  return ent.isEnemy();
+function onlyPlayerBlockers(ent: Entity): boolean {
+  return ent.blocks_player;
 }
 export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boolean): null | EntityID {
   // if (engine.DEBUG && keyDown(KEYS.ALT)) {
   //   return null;
   // }
   let ent_list = crawlerEntitiesAt(entity_manager, pos, floor_id, skip_fading_out);
-  ent_list = ent_list.filter(onlyEnemies);
+  ent_list = ent_list.filter(onlyPlayerBlockers);
   if (!ent_list.length) {
     return null;
   }
@@ -252,9 +252,19 @@ function lookupGLDefine(id: string | number | undefined): number | undefined {
   return ret;
 }
 
+type SpriteSpecSpriteSheet = { spritesheet: string };
+type SpriteSpecSprite = SpriteParamBase & { name: string };
+type SpriteSpec = SpriteSpecSprite | SpriteSpecSpriteSheet;
+
+function isSpriteSheetSpec(
+  sprite_data: TextureOptions & SpriteSpec
+): sprite_data is TextureOptions & SpriteSpecSpriteSheet {
+  return Boolean((sprite_data as SpriteSpecSpriteSheet).spritesheet);
+}
+
 function lookupGLDefines(
-  sprite_data: (TextureOptions | TextureOptionsAsStrings) & SpriteParamBase & { name: string }
-): asserts sprite_data is TextureOptions & SpriteParamBase & { name: string } {
+  sprite_data: (TextureOptions | TextureOptionsAsStrings) & SpriteSpec
+): asserts sprite_data is TextureOptions & SpriteSpec {
   sprite_data.filter_min = lookupGLDefine(sprite_data.filter_min);
   sprite_data.filter_mag = lookupGLDefine(sprite_data.filter_mag);
   sprite_data.wrap_s = lookupGLDefine(sprite_data.wrap_s);
@@ -317,20 +327,44 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
     },
     init_prototype: function (opts: DrawableSpriteOpts) {
       lookupGLDefines(opts.sprite_data);
-      opts.sprite = spriteCreate(opts.sprite_data);
-      if (opts.sprite_data.filter_min !== gl.NEAREST) {
-        opts.sprite_near = spriteCreate({
-          ...opts.sprite_data,
-          filter_min: gl.NEAREST,
-          filter_mag: gl.NEAREST,
-        });
-      }
-      if (opts.hybrid) {
-        assert(opts.sprite_near);
-        opts.sprite_hybrid = spriteCreate({
-          ...opts.sprite_data,
-          texs: [opts.sprite.texs[0], opts.sprite_near.texs[0]],
-        });
+
+      if (isSpriteSheetSpec(opts.sprite_data)) {
+        let spritesheet = renderGetSpriteSheet(opts.sprite_data.spritesheet, false);
+        opts.sprite = spritesheet.sprite.withOrigin(opts.sprite_data.origin!);
+        let tiles = spritesheet.tiles;
+        for (let key in opts.anim_data) {
+          let anim = opts.anim_data[key]!;
+          if (!Array.isArray(anim.frames)) {
+            anim.frames = [anim.frames] as string[] | number[];
+          }
+          for (let ii = 0; ii < anim.frames.length; ++ii) {
+            let frame_src = anim.frames[ii] as number | string;
+            if (typeof frame_src === 'string') {
+              let frame = tiles[frame_src.toLowerCase()];
+              if (frame === undefined) {
+                dataError(`Unknown anim frame "${frame_src}"`);
+                frame = 0;
+              }
+              anim.frames[ii] = frame;
+            }
+          }
+        }
+      } else {
+        opts.sprite = spriteCreate(opts.sprite_data);
+        if (opts.sprite_data.filter_min !== gl.NEAREST) {
+          opts.sprite_near = spriteCreate({
+            ...opts.sprite_data,
+            filter_min: gl.NEAREST,
+            filter_mag: gl.NEAREST,
+          });
+        }
+        if (opts.hybrid) {
+          assert(opts.sprite_near);
+          opts.sprite_hybrid = spriteCreate({
+            ...opts.sprite_data,
+            texs: [opts.sprite.texs[0], opts.sprite_near.texs[0]],
+          });
+        }
       }
     },
     alloc_state: function (opts: DrawableSpriteOpts, ent: Entity) {
