@@ -16,9 +16,10 @@ import {
 import {
   FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
-  ScoreSystem,
+  scoreCanUpdatePlayerName,
   scoreFormatName,
   scoreGetPlayerName,
+  ScoreSystem,
   scoreUpdatePlayerName,
 } from './score';
 import {
@@ -183,16 +184,12 @@ export function scoresDraw<ScoreType>({
     scroll_origin = now;
   }
 
+  let my_name = scoreGetPlayerName();
   const pad = size;
   const hpad = pad/2;
   const button_height = uiButtonHeight();
   const scroll_max_y = y + height - (button_height + pad);
-  let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
-  if (!scores) {
-    font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, height,
-      'Loading...');
-    return y + height;
-  }
+
   scroll_key = scroll_key || 'default';
   type ScrollInfo = {
     scroll_h_this_frame: number;
@@ -245,6 +242,37 @@ export function scoresDraw<ScoreType>({
     ui.drawLine(x, y, x+width, y, z, 1, 1, color_line || unit_vec);
     y += 1;
   }
+  function drawScoreEntry(ii: number | null, s: HighScoreListEntry<ScoreType>, use_style: FontStyle): void {
+    let row = [
+      ii === null ? '--' : `#${s.rank}`,
+      scoreFormatName(s),
+    ];
+    scoreToRow(row, s.score);
+    drawSet(row, use_style, false);
+  }
+
+  let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
+  if (!scores) {
+    // Note: using scroll_max_y instead of (y + height) for better centering in
+    //   QP2A, but not 100% sure this is the right solution.  Probably height is
+    //   wrong on QP2A?
+    let ymax = scroll_max_y;
+    font.drawSizedAligned(style_score, x, y, z, size, ALIGN.HVCENTERFIT, width, ymax - y,
+      'Loading...');
+
+    // However, if we have a locally saved score, still show that at the bottom!
+    let my_score = score_system.getScore(level_index);
+    if (my_score) {
+      let y_save2 = y;
+      y = ymax - line_height;
+      z += 20;
+      ui.drawRect(x, y, x + width - 2, y + line_height - 1, z - 1, color_me_background);
+      drawScoreEntry(null, { names_str: my_name, names: [my_name], score: my_score, rank: -1, count: 1 }, style_me);
+      z -= 20;
+      y = y_save2;
+    }
+    return ymax;
+  }
   const scores_scroll_h = scroll_max_y - y;
   scores_scroll.begin({
     x, y,
@@ -261,16 +289,7 @@ export function scoresDraw<ScoreType>({
   let x_save = x;
   x = 0;
   y = 0;
-  function drawScoreEntry(ii: number | null, s: HighScoreListEntry<ScoreType>, use_style: FontStyle): void {
-    let row = [
-      ii === null ? '--' : `#${s.rank}`,
-      scoreFormatName(s),
-    ];
-    scoreToRow(row, s.score);
-    drawSet(row, use_style, false);
-  }
   // draw scores
-  let my_name = scoreGetPlayerName();
   let found_me = false;
   let scores_list = scores.list;
   let next_rank = 1;
@@ -332,14 +351,23 @@ export function scoresDraw<ScoreType>({
     let y_save2 = y;
     if (y < scroll_min_visible_y) {
       y = scroll_min_visible_y;
-    } else if (y > scroll_max_visible_y) {
-      y = scroll_max_visible_y;
+    } else if (y > scroll_max_visible_y - line_height) {
+      y = scroll_max_visible_y - line_height;
     }
     z += 20;
-    ui.drawRect(x, y, x + width + 1, y + line_height - 1, z - 1, color_me_background);
+    ui.drawRect(x, y, x + width + 1, y + line_height*2 - 1, z - 1, color_me_background);
+    font.draw({
+      style: style_header,
+      x, y, z,
+      w: vis_width,
+      h: line_height,
+      align: ALIGN.HVCENTERFIT,
+      text: 'Cannot submit scores - likely offline'
+    });
+    y += line_height;
     drawScoreEntry(null, { names_str: my_name, names: [my_name], score: my_score, rank: -1, count: 1 }, style_me);
     z -= 20;
-    y = y_save2 + line_height;
+    y = y_save2 + line_height * 2;
   }
   let set_pad = size / 2;
   y += set_pad/2;
@@ -348,7 +376,7 @@ export function scoresDraw<ScoreType>({
   x = x_save;
   y = y_save + min(scores_scroll_h, y);
   y += set_pad/2;
-  if (found_me && allow_rename) {
+  if (found_me && allow_rename && scoreCanUpdatePlayerName()) {
     if (!scores_edit_box) {
       scores_edit_box = editBoxCreate({
         z,

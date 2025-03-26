@@ -2,11 +2,21 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { asyncParallel } from 'glov-async';
+import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   CHAT_FLAG_EMOTE,
   CHAT_FLAG_USERCHAT,
 } from 'glov/common/enums';
+import type {
+  ChatHistoryData,
+  ChatMessageDataBroadcast,
+  ChatMessageDataSaved,
+  ClientIDs,
+  DataObject,
+  Roles,
+  TSMap,
+  WithRequired,
+} from 'glov/common/types';
 import {
   clamp,
   cloneShallow,
@@ -18,6 +28,7 @@ import {
   v3copy,
   vec4,
 } from 'glov/common/vmath';
+import { asyncParallel } from 'glov-async';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
 import { cmd_parse } from './cmds';
@@ -29,12 +40,13 @@ import * as engine from './engine';
 import {
   ALIGN,
   Font,
-  FontStyle,
-  Text,
   fontStyle,
+  FontStyle,
   fontStyleAlpha,
   fontStyleColored,
+  Text,
 } from './font';
+import type { Box } from './geom_types';
 import * as input from './input';
 import {
   getStoragePrefix,
@@ -43,27 +55,27 @@ import {
 } from './local_storage';
 import { getStringIfLocalizable } from './localization';
 import {
+  markdownAuto,
+  MarkdownCache,
+  markdownDims,
+  markdownDraw,
+  MarkdownDrawCachedParam,
+  markdownIsAllWhitespace,
+  markdownLayoutInvalidate,
+  markdownPrep,
+  MarkdownPrepParam,
   MDDrawBlock,
   MDDrawParam,
   MDLayoutBlock,
   MDLayoutCalcParam,
-  MarkdownCache,
-  MarkdownDrawCachedParam,
-  MarkdownPrepParam,
-  markdownAuto,
-  markdownDims,
-  markdownDraw,
-  markdownIsAllWhitespace,
-  markdownLayoutInvalidate,
-  markdownPrep,
 } from './markdown';
 import {
-  RenderableContent,
   mdEscape,
+  RenderableContent,
 } from './markdown_parse';
 import {
-  MarkdownRenderable,
   markdownLayoutFit,
+  MarkdownRenderable,
 } from './markdown_renderables';
 import {
   ClientChannelWorker,
@@ -78,16 +90,16 @@ import * as settings from './settings';
 import { settingsRegister } from './settings';
 import { isFriend } from './social';
 import {
-  SPOT_DEFAULT_BUTTON,
   spot,
+  SPOT_DEFAULT_BUTTON,
   spotUnfocus,
 } from './spot';
 import {
-  ModalDialogButtons,
   drawRect,
   drawRect2,
   drawTooltip,
   isMenuUp,
+  ModalDialogButtons,
   panel,
   playUISound,
   provideUserString,
@@ -105,19 +117,6 @@ import {
   profanityFilter,
   profanityStartup,
 } from './words/profanity';
-
-import type { Box } from './geom_types';
-import type { CmdRespFunc } from 'glov/common/cmd_parse';
-import type {
-  ChatHistoryData,
-  ChatMessageDataBroadcast,
-  ChatMessageDataSaved,
-  ClientIDs,
-  DataObject,
-  Roles,
-  TSMap,
-  WithRequired,
-} from 'glov/common/types';
 
 const { ceil, floor, max, min, round } = Math;
 
@@ -1292,9 +1291,10 @@ class ChatUIImpl {
     let just_message = this.linkUnFilter(msg.msg);
     let buttons: ModalDialogButtons = {};
     if ((msg.flags & CHAT_FLAG_USERCHAT) && msg.id) {
+      let msg_id = msg.id;
       buttons['User ID'] = {
         cb: function () {
-          provideUserString('User ID', msg.id!); // ! is workaround TypeScript bug fixed in v5.4.0 TODO: REMOVE
+          provideUserString('User ID', msg_id);
         },
       };
     }
@@ -1331,7 +1331,6 @@ class ChatUIImpl {
         uiTextHeight(),
         this.disconnected_message_top ? ALIGN.HCENTER : ALIGN.HVCENTER,
         camera2d.w(), camera2d.h() * 0.20,
-        // @ts-expect-error Remove after netClient has types defined
         `Connection lost, attempting to reconnect (${(netClient().timeSinceDisconnect()/1000).toFixed(0)})...`);
     }
 

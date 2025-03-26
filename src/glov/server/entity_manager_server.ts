@@ -2,7 +2,6 @@
 // Released under MIT License: https://opensource.org/licenses/MIT
 
 import assert from 'assert';
-import { asyncEach } from 'glov-async';
 import {
   ActionListResponse,
   ActionMessageParam,
@@ -29,9 +28,9 @@ import {
   ClientHandlerSource,
   DataObject,
   ErrorCallback,
+  isDataObject,
   NetErrorCallback,
   NetResponseCallback,
-  isDataObject,
 } from 'glov/common/types';
 import {
   callEach,
@@ -39,10 +38,11 @@ import {
   nop,
 } from 'glov/common/util';
 import {
-  entityServerDefaultLoadPlayerEntity,
   entity_field_defs,
+  entityServerDefaultLoadPlayerEntity,
   logCatForEntityActionID,
 } from 'glov/server/entity_base_server';
+import { asyncEach } from 'glov-async';
 import { ChannelWorker } from './channel_worker.js';
 import { ChattableWorker } from './chattable_worker.js';
 import {
@@ -417,7 +417,7 @@ class ServerEntityManagerImpl<
 >
   extends EventEmitter
   implements EntityManager<Entity>
-{ // eslint-disable-line brace-style
+{ // eslint-disable-line @stylistic/brace-style
   worker: Worker;
   field_defs_by_id: (EntityFieldDef|null)[];
 

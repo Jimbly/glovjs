@@ -152,6 +152,10 @@ export function colorSetMakeCustom(regular, rollover, down, disabled) {
   };
 }
 
+export function colorSetGetField(color_set, field) {
+  return color_set[field];
+}
+
 let hooks = [];
 export function addHook(draw, click) {
   hooks.push({
@@ -849,9 +853,9 @@ export function drawTooltip(param) {
   let eff_tooltip_w = dims.w + eff_tooltip_pad_left + eff_tooltip_pad_right;
   let right = param.tooltip_right;
   let center = param.tooltip_center;
-  if (right && param.tooltip_auto_right_offset) {
+  if (right) {
     // TODO: just use markdown align right instead
-    x += param.tooltip_auto_right_offset - eff_tooltip_w;
+    x += (param.tooltip_auto_right_offset || 0) - eff_tooltip_w;
   } else if (center && param.tooltip_auto_right_offset) {
     // TODO: just use markdown align center instead
     x += (param.tooltip_auto_right_offset - eff_tooltip_w) / 2;
@@ -919,11 +923,11 @@ export function drawTooltipBox(param) {
   }
   drawTooltip({
     x: param.x,
-    y: param.y + param.h + 2,
+    y: param.y + (param.tooltip_left ? 0 : param.h + 2),
     tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
-    tooltip_auto_right_offset: param.w,
-    tooltip_right: param.tooltip_right,
+    tooltip_auto_right_offset: param.tooltip_left ? 0 : param.tooltip_auto_right_offset,
+    tooltip_right: param.tooltip_right || param.tooltip_left,
     tooltip_center: param.tooltip_center,
     tooltip,
     tooltip_width: param.tooltip_width,

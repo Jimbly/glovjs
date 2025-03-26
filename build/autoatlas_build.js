@@ -1,4 +1,4 @@
-/* eslint max-len:off */
+/* eslint-disable @stylistic/max-len */
 
 const assert = require('assert');
 const gb = require('glov-build');

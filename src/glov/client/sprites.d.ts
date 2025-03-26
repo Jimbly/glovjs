@@ -1,13 +1,13 @@
 /* globals HTMLCanvasElement, HTMLImageElement */
 
 // TODO: move when converted to TypeScript
-import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
-import type { Box } from './geom_types';
-// TODO: move when converted to TypeScript
 import type { shaderCreate } from 'glov/client/shaders';
 type Shader = ReturnType<typeof shaderCreate>;
 import type { TSMap, UnimplementedData, VoidFunc } from 'glov/common/types';
 import type { ROVec1, ROVec2, ROVec3, ROVec4 } from 'glov/common/vmath';
+// TODO: move when converted to TypeScript
+import type { BUCKET_ALPHA, BUCKET_DECAL, BUCKET_OPAQUE } from './dyn_geom';
+import type { Box } from './geom_types';
 
 export enum BlendMode {
   BLEND_ALPHA = 0,

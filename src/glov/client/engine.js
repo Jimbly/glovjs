@@ -1,7 +1,7 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-env browser */
 
+/* globals requestAnimationFrame, navigator -- browser globals */
 /* eslint-disable import/order */
 require('./bootstrap.js'); // Just in case it's not in app.js
 
@@ -385,6 +385,9 @@ export function getFrameDtActual() {
 
 let after_loading_state = null;
 export let is_loading = true;
+export function isLoading() {
+  return is_loading;
+}
 export function setState(new_state) {
   if (is_loading) {
     after_loading_state = new_state;
@@ -448,6 +451,10 @@ let do_borders = true;
 let do_viewport_postprocess = false;
 let need_repos = 0;
 
+export function setDoBorders(new_value) {
+  do_borders = new_value;
+}
+
 export function resizing() {
   return need_repos;
 }
@@ -464,6 +471,12 @@ export function removeTickFunc(cb) {
     return true;
   }
   return false;
+}
+
+let pre_tick = [];
+// Allowed to do things like change game dims or pixelyStrict
+export function addPreTickFunc(cb) {
+  pre_tick.push(cb);
 }
 
 let post_tick = [];
@@ -951,6 +964,10 @@ export const hrnow = window.performance && window.performance.now ?
   window.performance.now.bind(window.performance) :
   Date.now.bind(Date);
 
+let out_of_tick = false;
+export function isOutOfTick() {
+  return out_of_tick;
+}
 let last_tick = 0;
 let last_tick_hr = 0;
 let frame_limit_time_left = 0;
@@ -958,6 +975,7 @@ function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
   profilerStart('top');
+  out_of_tick = false;
   frames_requested--;
 
   if (render_frames_needed) {
@@ -975,6 +993,7 @@ function tick(timestamp) {
     }
     requestFrame();
     profilerStop();
+    out_of_tick = true;
     return profilerStop('tick');
   }
 
@@ -998,6 +1017,7 @@ function tick(timestamp) {
       // too early, skip this frame, do not count any of this time, pretend this frame never happened.
       requestFrame();
       profilerStop('top');
+      out_of_tick = true;
       return profilerStop('tick');
     }
     let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
@@ -1061,6 +1081,7 @@ function tick(timestamp) {
     }
     requestFrame();
     profilerStop();
+    out_of_tick = true;
     return profilerStop('tick');
   }
 
@@ -1076,6 +1097,9 @@ function tick(timestamp) {
   need_depth_this_frame = false;
   want_render_scale_3d_this_frame = false;
   had_render_scale_3d_this_frame = false;
+
+  callEach(pre_tick);
+
   if (render_width) {
     // render_scale not supported with render_width, doesn't make much sense, just use render_width
     set3DRenderResolution(render_width, render_height);
@@ -1216,6 +1240,7 @@ function tick(timestamp) {
   fpsgraph.history[(fpsgraph.index % PERF_HISTORY_SIZE) * 2 + 0] = last_tick_cpu;
   requestFrame(hrnow() - hrtime);
   profilerStop('bottom');
+  out_of_tick = true;
   return profilerStop('tick');
 }
 
@@ -1249,6 +1274,10 @@ export function setPixelyStrict(on) {
     render_width = undefined;
     render_height = undefined;
   }
+}
+
+export function setPixelPerfect(pixel_perfect) {
+  render_pixel_perfect = pixel_perfect;
 }
 
 export function getViewportPostprocess() {
@@ -1433,7 +1462,7 @@ export function startup(params) {
   window.addEventListener('blur', onBlur, false);
   window.addEventListener('focus', onFocus, false);
 
-  /* eslint-disable global-require */
+  /* eslint-disable n/global-require */
   glov_particles = require('./particles.js').create();
 
   if (is_pixely) {

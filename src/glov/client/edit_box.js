@@ -13,24 +13,24 @@ import { v2same } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import {
-  KEYS,
   eatAllKeyboardInput,
   inputClick,
   inputTouchMode,
   keyDownEdge,
+  KEYS,
   keyUpEdge,
   mouseConsumeClicks,
+  pointerLocked,
   pointerLockEnter,
   pointerLockExit,
-  pointerLocked,
 } from './input';
 import { getStringIfLocalizable } from './localization';
 import {
   spotFocusCheck,
   spotFocusSteal,
+  spotlog,
   spotSuppressKBNav,
   spotUnfocus,
-  spotlog,
 } from './spot';
 import {
   drawLine,
@@ -736,13 +736,18 @@ class GlovUIEditBox {
       eatAllKeyboardInput();
     }
     // Eat mouse events going to the edit box
-    mouseConsumeClicks({ x, y, w, h });
+    if (allow_focus) {
+      mouseConsumeClicks(clipped_rect);
+    }
 
     if (canvas_render) {
       const { center } = this;
       const { char_width, char_height, color_selection, color_caret, style_text } = canvas_render;
       let font = uiGetFont();
       let lines = text.split('\n');
+      if (this.input && this.input.scrollTop !== 0) {
+        this.input.scrollTop = 0;
+      }
       // draw text
       // TODO: maybe apply clipper here?  caller necessarily needs to set max_len and multiline appropriately, though.
       let line_width = [];
@@ -814,6 +819,9 @@ export function editBoxCreate(params) {
 export function editBox(params, current) {
   params.glov_initial_text = current;
   let edit_box = getUIElemData('edit_box', params, editBoxCreate);
+  if (edit_box.last_set_text !== current) {
+    edit_box.setText(current);
+  }
   let result = edit_box.run(params);
 
   return {

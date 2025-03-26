@@ -3,18 +3,17 @@
 import assert from 'assert';
 import * as http from 'http';
 import express from 'express';
+import type { Express, NextFunction, Request, Response } from 'express'; // eslint-disable-line no-duplicate-imports
 import { dotPropSet } from 'glov/common/dot-prop';
+import type { Packet } from 'glov/common/packet';
 import { shuffleArray } from 'glov/common/rand_alea';
+import type { DataObject, HandlerCallback, HandlerSource, TSMap } from 'glov/common/types';
 import { quietMessagesSet } from 'glov/server/channel_server'; // before channel_worker
+import type { ChannelServer } from 'glov/server/channel_server'; // eslint-disable-line no-duplicate-imports
 import { ChannelData, ChannelWorker } from 'glov/server/channel_worker';
+import type { Mexchange } from 'glov/server/exchange';
 import { requestIsLocalHost } from 'glov/server/request_utils';
 import * as glov_server from 'glov/server/server';
-
-import type { Express, NextFunction, Request, Response } from 'express'; // eslint-disable-line no-duplicate-imports
-import type { Packet } from 'glov/common/packet';
-import type { DataObject, HandlerCallback, HandlerSource, TSMap } from 'glov/common/types';
-import type { ChannelServer } from 'glov/server/channel_server'; // eslint-disable-line no-duplicate-imports
-import type { Mexchange } from 'glov/server/exchange';
 
 const { floor, min, random } = Math;
 

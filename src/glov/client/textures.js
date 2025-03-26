@@ -1,25 +1,25 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint-env browser */
+/* globals navigator */
 
 // constants for use before the WebGL context is created
 export const GL_REPEAT = 0x2901;
 export const GL_CLAMP_TO_EDGE = 0x812f;
 
 import * as assert from 'assert';
-import { asyncParallel, asyncSeries } from 'glov-async';
 import {
   FORMAT_PACK,
   FORMAT_PNG,
   TEXPACK_MAGIC,
 } from 'glov/common/texpack_common';
 import {
-  callEach,
   callbackify,
+  callEach,
   isPowerOfTwo,
   nextHighestPowerOfTwo,
   ridx,
 } from 'glov/common/util';
+import { asyncParallel, asyncSeries } from 'glov-async';
 import * as engine from './engine';
 import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';

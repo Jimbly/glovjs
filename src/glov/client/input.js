@@ -401,14 +401,32 @@ function ignored(event) {
 
 let ctrl_checked = false;
 let unload_protected = false;
+let unload_override = null;
+// cb() returns a string to display a message (actual message is ignored), or false
+//   to *not* block unload, or anything else to block the unload with a message
+export function inputOverrideUnload(cb) {
+  assert(!unload_override || !cb);
+  unload_override = cb;
+}
 function beforeUnload(e) {
-  if (unload_protected && ctrl_checked) {
+  let unload_msg;
+  if (unload_override) {
+    unload_msg = unload_override();
+    if (unload_msg === false) {
+      // do *not* block the unload
+    } else if (!unload_msg) {
+      // no prompt, just block the unload
+      e.preventDefault();
+      return;
+    }
+  }
+  if (unload_protected && ctrl_checked || unload_msg) {
     // Exit pointer lock if the browser didn't do that automatically
     pointerLockExit();
     // Cancel the event
     e.preventDefault();
     // Chrome requires returnValue to be set
-    e.returnValue = 'Are you sure you want to quit?';
+    e.returnValue = unload_msg || 'Are you sure you want to quit?';
   } else {
     engine.releaseCanvas();
   }
@@ -468,9 +486,11 @@ function onKeyDown(event) {
   let code = event.keyCode;
   let no_stop = letEventThrough(event) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
+    code === KEYS.F4 && (event.altKey || event.metaKey || event.ctrlKey) || // Windows/Electron close window hotkey
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
     code === KEYS.R && event.ctrlKey || // Chrome reload hotkey
-    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey; // forward/back navigation
+    (code === KEYS.LEFT || code === KEYS.RIGHT) && event.altKey || // forward/back navigation
+    event.ctrlKey && code >= KEYS['0'] && code <= KEYS['9']; // Chrome tab switch hotkeys
   if (!no_stop) {
     event.stopPropagation();
     event.preventDefault();
@@ -693,11 +713,11 @@ function onTouchChange(event) {
   // instead, but this works well enough.
   onUserInput();
   if (!touch_mode) {
-    local_storage.set('touch_mode', true);
+    local_storage.setJSON('touch_mode', true);
     touch_mode = true;
   }
   if (pad_mode) {
-    local_storage.set('pad_mode', false);
+    local_storage.setJSON('pad_mode', false);
     pad_mode = false;
   }
   if (event.cancelable !== false) {
@@ -893,7 +913,7 @@ function updatePadState(gpd, ps, b, padcode) {
     ps[padcode] = DOWN_EDGE;
     onUserInput();
     if (touch_mode) {
-      local_storage.set('touch_mode', false);
+      local_storage.setJSON('touch_mode', false);
       touch_mode = false;
     }
     if (!pad_mode) {

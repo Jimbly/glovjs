@@ -1,23 +1,22 @@
 import assert from 'assert';
 import { dataError } from 'glov/common/data_error';
+import type { TSMap } from 'glov/common/types';
 import {
-  Vec4,
   v4set,
+  Vec4,
   vec4,
 } from 'glov/common/vmath';
 import { engineStartupFunc } from './engine';
 import { filewatchOn } from './filewatch';
 import {
   Sprite,
+  spriteCreate,
   SpriteUIData,
   Texture,
   TextureOptions,
-  spriteCreate,
 } from './sprites';
 import { textureError, textureLoad } from './textures';
 import { webFSGetFile, webFSOnReady } from './webfs';
-
-import type { TSMap } from 'glov/common/types';
 
 type AutoAtlasBuildData = [string, number, number, number[], number[], number[] | undefined, number[] | undefined];
 

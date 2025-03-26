@@ -1,8 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 export const autoReset = autoResetSkippedFrames;
 
-import * as engine from './engine';
 import type { TSMap } from 'glov/common/types';
+import * as engine from './engine';
 
 let auto_reset_data: TSMap<number> = Object.create(null);
 export function autoResetSkippedFrames(key: string): boolean {

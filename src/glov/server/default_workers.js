@@ -16,11 +16,11 @@ import {
   DISPLAY_NAME_MAX_VISUAL_SIZE,
 } from 'glov/common/net_common';
 import {
-  EMAIL_REGEX,
-  VALID_USER_ID_REGEX,
   deprecate,
+  EMAIL_REGEX,
   empty,
   sanitize,
+  VALID_USER_ID_REGEX,
 } from 'glov/common/util.js';
 import { isProfane, isReserved } from 'glov/common/words/profanity_common.js';
 
@@ -922,6 +922,8 @@ export class DefaultUserWorker extends ChannelWorker {
   }
 
   handleSetEmail(src, email, resp_func) {
+    // Note: intentionally allowing this even if !this.exists() - this message
+    //  may be sent _before_ the login_external message
     if (!email) {
       return resp_func('Missing email');
     }

@@ -4,27 +4,14 @@
 import assert from 'assert';
 import { chunkedSend } from 'glov/common/chunked_send';
 import {
+  canonical,
   CmdDef,
   CmdRespFunc,
-  canonical,
 } from 'glov/common/cmd_parse';
 import {
-  Packet,
   isPacket,
+  Packet,
 } from 'glov/common/packet';
-import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
-import { ApplyChannelDataParam, ChannelWorker } from './channel_worker';
-import { keyMetricsAddTagged } from './key_metrics';
-import {
-  logCat,
-  logEx,
-} from './log';
-import { serverConfig } from './server_config';
-
-import type { ChannelServer } from './channel_server';
-import type {
-  create as wsServerCreate,
-} from './wsserver';
 import type {
   ClientHandlerSource,
   DataObject,
@@ -35,6 +22,18 @@ import type {
   Roles,
   TSMap,
 } from 'glov/common/types';
+import { netDelayGet, netDelaySet } from 'glov/common/wscommon';
+import type { ChannelServer } from './channel_server';
+import { ApplyChannelDataParam, ChannelWorker } from './channel_worker';
+import { keyMetricsAddTagged } from './key_metrics';
+import {
+  logCat,
+  logEx,
+} from './log';
+import { serverConfig } from './server_config';
+import type {
+  create as wsServerCreate,
+} from './wsserver';
 
 // TODO: move to default_workers when converted to TypeScript
 export type BasePermissionsData = {
@@ -53,7 +52,7 @@ type WSClient = { // should be from wsserver.js
   pak(msg: string, pak_ref?: Packet | null): Packet;
   send(msg: string, data?: unknown): void;
 };
-type LoginRespData = {
+export type LoginRespData = {
   public_data: BaseUserWorkerPublicData;
 };
 export type WorkerInitData = { // should be from channel_server.js
@@ -67,7 +66,7 @@ export type WorkerInitData = { // should be from channel_server.js
   cmds: CmdDef[];
 };
 
-type IDs = TSMap<string|number> & ClientHandlerSource;
+export type IDs = TSMap<string|number> & ClientHandlerSource;
 
 let cmd_parse_routes: TSMap<string> = {}; // cmd string -> worker type
 
@@ -75,7 +74,7 @@ let repeated_disconnect = 0;
 let permission_flags_map: TSMap<true>;
 
 let permission_flags: string[];
-function applyCustomIds(ids: IDs, user_data_public: BaseUserWorkerPublicData | null): void {
+export function applyCustomIds(ids: IDs, user_data_public: BaseUserWorkerPublicData | null): void {
   delete ids.elevated;
   let perm = user_data_public?.permissions as DataObject;
   for (let ii = 0; ii < permission_flags.length; ++ii) {

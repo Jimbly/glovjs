@@ -1,6 +1,6 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint no-bitwise:off, complexity:off, @typescript-eslint/no-shadow:off */
+/* eslint no-bitwise:off, @typescript-eslint/no-shadow:off */
 
 exports.style = fontStyle; // eslint-disable-line @typescript-eslint/no-use-before-define
 exports.styleColored = fontStyleColored; // eslint-disable-line @typescript-eslint/no-use-before-define
@@ -648,6 +648,32 @@ GlovFont.prototype.infoFromChar = function (c) {
   }
   // no char info, not whitespace, show replacement even if ascii, control code
   return this.replacement_character;
+};
+
+const strip_opts_default = {
+  tab: true,
+  newline: true,
+};
+GlovFont.prototype.stripUnprintable = function (text, opts) {
+  opts = opts || strip_opts_default;
+  text = getStringFromLocalizable(text);
+  for (let ii = text.length - 1; ii >= 0; --ii) {
+    let code = text.charCodeAt(ii);
+    let strip = false;
+    if (code === 10) {
+      strip = opts.newline ? ' ' : false;
+    } else if (code === 9) {
+      strip = opts.tab ? ' ' : false;
+    } else if (code >= 10 && code <= 13) {
+      strip = ' ';
+    } else if (!this.char_infos[code]) {
+      strip = '?';
+    }
+    if (strip) {
+      text = `${text.slice(0, ii)}${strip}${text.slice(ii + 1)}`;
+    }
+  }
+  return text;
 };
 
 GlovFont.prototype.getCharacterWidth = function (style, x_size, c) {

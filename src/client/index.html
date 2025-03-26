@@ -12,11 +12,12 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" sizes="48x48" href="favicon.png">
+
     <script>
-      /* eslint-disable */
       window.time_load_start = Date.now();
       // Platform
-      window.conf_platform = '#{PLATFORM}';
+      window.conf_platform = window.conf_platform || '#{PLATFORM}';
       // Environment
       window.conf_env = '#{ENV}';
     </script>

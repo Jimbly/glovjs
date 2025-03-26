@@ -4,9 +4,10 @@ export let session_uid = `${String(Date.now()).slice(-8)}${String(Math.random())
 let error_report_details = {};
 let error_report_dynamic_details = {};
 
-import { getAPIPath } from 'glov/client/environments';
-import { platformGetID } from './client_config';
+import { MODE_DEVELOPMENT, platformGetID } from './client_config';
+import { getAPIPath } from './environments';
 import { fetch } from './fetch';
+import { isbot } from './isbot';
 import { getStoragePrefix } from './local_storage';
 import { unlocatePaths } from './locate_asset';
 
@@ -77,7 +78,7 @@ export function errorReportClear() {
   window.debugmsg('', true);
 }
 
-let submit_errors = true;
+let submit_errors = !isbot();
 export function glovErrorReportDisableSubmit() {
   submit_errors = false;
 }
@@ -89,7 +90,7 @@ export function glovErrorReportSetCrashCB(cb) {
 
 // base like http://foo.com/bar/ (without index.html)
 let reporting_api_path = 'http://www.dashingstrike.com/reports/api/';
-if (window.location.host.indexOf('localhost') !== -1 ||
+if (MODE_DEVELOPMENT ||
   window.location.host.indexOf('staging') !== -1/* ||
   window.location.host.indexOf('pink') !== -1*/
 ) {
@@ -157,6 +158,7 @@ let filtered_errors = new RegExp([
   't\\.gvl', // OneTrust
   'pubads_20', // Some third-party ad provider
   'ima3\\.js', // Google ads
+  'fcKernelManager', // Google ads?
   'window\\.setDgResult', // likely from ad provider
   'TranslateService',
   'bdTransJSBridge',
@@ -178,7 +180,10 @@ let filtered_errors = new RegExp([
   'CookieDeprecationLabel', // gtag
   'googletagmanager', // gtag
   '__firefox__',
-  'ucbrowser_script'
+  'ucbrowser_script',
+  'kernel_loader', // Chromium OS
+  'operation not permitted, watch', // Electron watch() API
+  'play\\(\\) request was interrupted by a call to pause\\(\\)', // likely from video ad provider
 ].join('|'));
 
 export function glovErrorReport(is_fatal, msg, file, line, col) {

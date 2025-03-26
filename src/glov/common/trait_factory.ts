@@ -1,18 +1,18 @@
 import assert from 'assert';
 
 import { dataError } from './data_error';
-import { FSAPI, fileBaseName } from './fsapi';
-import { clone, defaultsDeep, inherits } from './util';
+import { fileBaseName, FSAPI } from './fsapi';
 import type { DataObject, DeepPartial } from './types';
+import { clone, defaultsDeep, inherits } from './util';
 
 export type TraitedBaseClass = {
   type_id: string; // will be constant on the prototype
 };
 
 export type TraitOpts<TBaseClass extends TraitedBaseClass, TOpts, TState=never> = {
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   methods?: Partial<Record<string, Function>>;
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   compound_methods?: Partial<Record<string, Function>>;
   properties?: Partial<Record<keyof TBaseClass, unknown>>; // Properties placed on the root of the entity
   default_opts?: TOpts;
@@ -78,7 +78,7 @@ class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
     let traits = type_def.traits || [];
     let state_init = [];
     let factory_param_names = ['BaseCtor'];
-    // eslint-disable-next-line @typescript-eslint/ban-types
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     let factory_param_values: Function[] = [BaseCtor];
     for (let ii = 0; ii < traits.length; ++ii) {
       let trait_ref = traits[ii];

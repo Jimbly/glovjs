@@ -1,4 +1,5 @@
 data_store/
+user/
 artifacts/
 node_modules/
 logs/
@@ -7,6 +8,7 @@ npm-debug.log
 build.dev/
 build.prod/
 build.test/
+build.electron/
 .gbstate/
 *.sublime-workspace
 Bfxr

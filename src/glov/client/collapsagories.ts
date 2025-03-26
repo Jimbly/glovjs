@@ -11,16 +11,16 @@ import { getFrameIndex } from './engine';
 import {
   ALIGN,
   FontStyle,
-  Text,
   fontStyleColored,
+  Text,
 } from './font';
 import { ScrollArea } from './scroll_area';
 import {
+  spot,
   SPOT_DEFAULT_BUTTON,
+  spotKey,
   SpotKeyable,
   SpotRet,
-  spot,
-  spotKey,
 } from './spot';
 import {
   spriteClipPop,

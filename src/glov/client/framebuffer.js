@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { nop } = require('glov/common/util');
+const verify = require('glov/common/verify');
 const { is_ios } = require('./browser.js');
 const { cmd_parse } = require('./cmds.js');
 const { applyCopy } = require('./effects.js');
@@ -193,11 +194,25 @@ export function framebufferStart(opts) {
   }
   if (need_scissor) { // Note: previously `&& !settings.use_fbos`, but that seems wrong, why was it there?
     gl.enable(gl.SCISSOR_TEST);
+    let x;
+    let y;
+    let w;
+    let h;
     if (viewport) {
-      gl.scissor(viewport[0], viewport[1], viewport[2], viewport[3]);
+      [x, y, w, h] = viewport;
     } else {
-      gl.scissor(0, 0, width, height);
+      x = 0;
+      y = 0;
+      w = width;
+      h = height;
     }
+    if (!verify(w > 0)) {
+      w = 0;
+    }
+    if (!verify(h > 0)) {
+      h = 0;
+    }
+    gl.scissor(x, y, w, h);
   } else {
     gl.disable(gl.SCISSOR_TEST);
   }

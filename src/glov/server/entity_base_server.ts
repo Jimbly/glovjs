@@ -4,10 +4,11 @@
 export let entity_field_defs: Partial<Record<string, EntityFieldDef>> = Object.create(null);
 
 import assert from 'assert';
-import { asyncSeries } from 'glov-async';
 import {
   ActionMessageParam,
   ClientID,
+  entity_field_decoders,
+  entity_field_encoders,
   EntityBaseCommon,
   EntityBaseDataCommon,
   EntityFieldDecoder,
@@ -17,8 +18,6 @@ import {
   EntityFieldSpecial,
   EntityFieldSub,
   EntityManagerEvent,
-  entity_field_decoders,
-  entity_field_encoders,
 } from 'glov/common/entity_base_common';
 import {
   ClientHandlerSource,
@@ -35,6 +34,7 @@ import {
   has,
   objectToSet,
 } from 'glov/common/util';
+import { asyncSeries } from 'glov-async';
 import {
   JoinPayload,
   ServerEntityManagerInterface,
@@ -128,7 +128,7 @@ export type ActionDef<Entity extends EntityBaseServer> = {
 
 export interface ActionDefOpts<Entity extends EntityBaseServer>
   extends Partial<ActionDef<Entity>>
-{
+{ // eslint-disable-line @stylistic/brace-style
   action_id: string;
 }
 

@@ -1,6 +1,5 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
-/* eslint complexity:off */
 
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
 exports.create = selectionBoxCreate;
@@ -16,11 +15,11 @@ import {
   fontStyle,
 } from './font';
 import {
-  KEYS,
-  PAD,
   drag,
   keyDownEdge,
+  KEYS,
   mouseButtonHadUpEdge,
+  PAD,
   padButtonDown,
   padButtonDownEdge,
 } from './input.js';
@@ -28,6 +27,7 @@ import { link } from './link.js';
 import { markdownAuto } from './markdown';
 import { scrollAreaCreate } from './scroll_area.js';
 import {
+  spot,
   SPOT_DEFAULT_BUTTON,
   SPOT_NAV_DOWN,
   SPOT_NAV_LEFT,
@@ -37,7 +37,6 @@ import {
   SPOT_STATE_DOWN,
   SPOT_STATE_FOCUSED,
   SPOT_STATE_REGULAR,
-  spot,
   spotFocusSteal,
   spotPadMode,
   spotSubBegin,
@@ -45,7 +44,11 @@ import {
   spotSubPop,
   spotSubPush,
 } from './spot.js';
-import { spriteClipPause, spriteClipResume, spriteClipped } from './sprites.js';
+import {
+  spriteClipPause,
+  spriteClipped,
+  spriteClipResume,
+} from './sprites.js';
 import {
   drawHBox,
   getUIElemData,
@@ -958,6 +961,10 @@ export function dropDownCreate(params) {
 export function dropDown(param, current, opts) {
   opts = opts || {};
   param.auto_reset = false; // Handled every frame here automatically
+  if (typeof current === 'string' && typeof param.items[0] === 'string') {
+    // string current, and string items, no tags, handle automatically
+    current = param.items.indexOf(current);
+  }
   let { suppress_return_during_dropdown } = opts;
   // let dropdown = getUIElemData<SelectionBox, SelectionBoxOpts>('dropdown', param, dropDownCreate);
   let dropdown = getUIElemData('dropdown', param, dropDownCreate);

@@ -46,6 +46,7 @@ module.exports = function (gb) {
       'client/**/*.jpg',
       'client/**/*.glb',
       'client/**/*.ico',
+      'client/**/*.icns',
       'client/**/*.ttf',
       'client/**/*.woff',
       'client/**/*.woff2',
@@ -116,6 +117,7 @@ module.exports = function (gb) {
       do_version: 'client/app.ver.json',
       do_reload: true,
     }],
+    prod_build_version_file: 'client_bundle_app_ver:client/app.ver.json',
     extra_client_tasks: [],
     extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
     extra_prod_tasks: [],
@@ -143,7 +145,7 @@ module.exports = function (gb) {
     },
     browsersync_queryparams: '', // e.g. '?D=FOO'
   };
-  // eslint-disable-next-line global-require
+  // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);
   return config;
 };
