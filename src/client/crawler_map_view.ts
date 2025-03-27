@@ -278,6 +278,16 @@ export function crawlerMapViewDraw(
       ui.font.drawSizedAligned(style_map_name, x, y + 1, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, floor_title);
     }
+    // Optional star for showing completion
+    // if (level.seen_cells === level.total_cells && !num_enemies && level.props.map_show_star) {
+    //   sprite_icons.draw({
+    //     x: x + w - 9 + 1,
+    //     y: y + h - 8 + 1,
+    //     z: z + 1,
+    //     w: 9, h: 8,
+    //     frame: FRAME_STAR,
+    //   });
+    // }
   }
 
   spriteClipPush(z, x, y, w, h);
