@@ -1,9 +1,13 @@
 export const AI_CLAIM_TIME = 2000;
 
 import assert from 'assert';
+import * as engine from 'glov/client/engine';
 import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityManager } from 'glov/common/entity_base_common';
+import { sign } from 'glov/common/util';
 import {
+  v2copy,
+  v2dist,
   v3copy,
   Vec2,
 } from 'glov/common/vmath';
@@ -12,6 +16,7 @@ import type { CrawlerScriptAPI } from '../common/crawler_script';
 import {
   BLOCK_OPEN,
   CrawlerState,
+  dirFromDelta,
   DirType,
   DX,
   DY,
@@ -20,8 +25,10 @@ import {
 } from '../common/crawler_state';
 import { crawlerEntFactory } from './crawler_entity_client';
 import { EntityDemoClient } from './entity_demo_client';
+import { myEnt } from './play';
+import { statusSet } from './status';
 
-const { floor, random } = Math;
+const { abs, floor, random } = Math;
 
 type Entity = EntityDemoClient;
 
@@ -83,6 +90,19 @@ export type EntityPatrol = EntityDemoClient & {
   patrol_state: PatrolState;
   patrol_opts: PatrolOpts;
   aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
+};
+
+export type HunterOpts = {
+  radius: number;
+};
+export type HunterState = {
+  has_target: boolean;
+  target_pos: JSVec3;
+};
+export type EntityHunter = EntityDemoClient & {
+  hunter_state: HunterState;
+  hunter_opts: HunterOpts;
+  aiHunt: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
 };
 
 
@@ -181,6 +201,135 @@ export function aiTraitsClientStartup(): void {
     }
   });
 
+  ent_factory.registerTrait<HunterOpts, HunterState>('hunter', {
+    properties: {
+      ai_move_min_time: 500,
+      ai_move_rand_time: 100,
+    },
+    default_opts: {
+      radius: 3,
+    },
+    methods: {
+      aiHunt: function (this: EntityHunter, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
+        // if they can see the player, update target pos to that pos
+        // if they have a target pos, attempt to move towards it
+        // if there's no clear path to target, give up
+
+        // in range?
+        let pos = this.getData<JSVec3>('pos')!;
+        let player_pos = myEnt().data.pos;
+        let floor_id = this.getData<number>('floor');
+        assert(typeof floor_id === 'number');
+        let level = game_state.levels[floor_id];
+        let distance = v2dist(player_pos, pos);
+        // let volume = lerp(min(distance/5, 1), 1, 0.25);
+        let can_see = false;
+        if (distance <= this.hunter_opts.radius) {
+
+          // can see?
+          if (level.simpleVisCheck(pos, player_pos, script_api)) {
+            if (!this.hunter_state.has_target) {
+              if (distance) {
+                if (engine.defines.HUNTER) {
+                  statusSet(`edbg${this.id}`, `${this.id}: New target: ${this.hunter_state.target_pos}`).counter = 500;
+                }
+                // playUISound('hunter_seen', volume);
+              }
+            } else if (v2dist(this.hunter_state.target_pos, player_pos)) {
+              if (engine.defines.HUNTER) {
+                statusSet(`edbg${this.id}`, `${this.id}: Target update: ${this.hunter_state.target_pos}`).counter = 500;
+              }
+            }
+            v2copy(this.hunter_state.target_pos, player_pos);
+            this.hunter_state.has_target = true;
+            can_see = true;
+          }
+        }
+
+        if (!this.hunter_state.has_target) {
+          return false;
+        }
+
+        let { target_pos } = this.hunter_state;
+
+        // head towards target
+        let dx = target_pos[0] - pos[0];
+        let dy = target_pos[1] - pos[1];
+        let tot = abs(dx) + abs(dy);
+        if (!tot) {
+          if (!can_see) {
+            if (engine.defines.HUNTER) {
+              statusSet(`edbg${this.id}`, `${this.id}: Reached last known target`).counter = 500;
+            }
+            // playUISound('hunter_lost', volume);
+          } else {
+            // at target, and player is there, don't move, combat should trigger
+            if (engine.defines.HUNTER) {
+              statusSet(`edbg${this.id}`, `${this.id}: On target`).counter = 500;
+            }
+          }
+          this.hunter_state.has_target = false;
+          return true;
+        }
+        let xdir: DirType;
+        if (dx) {
+          xdir = dirFromDelta([sign(dx), 0]);
+          if (level.wallsBlock(pos, xdir, script_api) !== BLOCK_OPEN) {
+            dx = 0;
+          }
+        }
+        let ydir: DirType;
+        if (dy) {
+          ydir = dirFromDelta([0, sign(dy)]);
+          if (level.wallsBlock(pos, ydir, script_api) !== BLOCK_OPEN) {
+            dy = 0;
+          }
+        }
+
+        tot = abs(dx) + abs(dy);
+        if (!tot) {
+          if (can_see) {
+            // keep the target
+            if (engine.defines.HUNTER) {
+              statusSet(`edbg${this.id}`, `${this.id}: Move wall blocked - can see`).counter = 500;
+            }
+          } else if (!can_see) {
+            // give up
+            if (engine.defines.HUNTER) {
+              statusSet(`edbg${this.id}`, `${this.id}: Move wall blocked - giving up`).counter = 500;
+            }
+            // playUISound('hunter_lost', volume);
+            this.hunter_state.has_target = false;
+          }
+          return true;
+        }
+        let do_x = random() * tot < abs(dx);
+        let dir = do_x ? xdir! : ydir!;
+        let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
+        let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
+        ents = ents.filter(isEnemy);
+        if (ents.length) {
+          if (engine.defines.HUNTER) {
+            statusSet(`edbg${this.id}`, `${this.id}: Move ent blocked`).counter = 500;
+          }
+          return false;
+        }
+        this.applyAIUpdate('ai_move', {
+          pos: new_pos,
+          last_pos: pos,
+        }, undefined, ignoreErrors);
+        return true;
+      },
+    },
+    alloc_state: function (opts: HunterOpts, ent: Entity) {
+      let ret: HunterState = {
+        target_pos: [0, 0, 0],
+        has_target: false,
+      };
+      return ret;
+    }
+  });
+
 }
 
 function isLivingPlayer(ent: Entity): boolean {
@@ -257,11 +406,14 @@ export function aiDoFloor(
     }
     if (!no_move) {
       let moved = false;
-      if (!moved && (ent as EntityWander).aiWander) {
-        moved = (ent as EntityWander).aiWander(game_state, script_api);
+      if (!moved && (ent as EntityHunter).aiHunt) {
+        moved = (ent as EntityHunter).aiHunt(game_state, script_api);
       }
       if (!moved && (ent as EntityPatrol).aiPatrol) {
         moved = (ent as EntityPatrol).aiPatrol(game_state, script_api);
+      }
+      if (!moved && (ent as EntityWander).aiWander) {
+        moved = (ent as EntityWander).aiWander(game_state, script_api);
       }
     }
     ent.aiResetMoveTime(false);
