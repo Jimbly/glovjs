@@ -8,7 +8,7 @@ export const FADE = FADE_OUT + FADE_IN;
 
 import assert from 'assert';
 import type { ErrorCallback, TSMap } from 'glov/common/types';
-import { callEach, defaults, ridx } from 'glov/common/util';
+import { callEach, defaults, empty, merge, ridx } from 'glov/common/util';
 import type { ROVec3 } from 'glov/common/vmath';
 import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
@@ -40,7 +40,7 @@ export interface SoundLoadOpts {
   loop?: boolean;
 }
 
-// @see https://github.com/goldfire/howler.js?tab=readme-ov-file#pannerattro-id
+// @see https://developer.mozilla.org/en-US/docs/Web/API/PannerNode
 type PannerAttr = {
   coneInnerAngle: number; // 360
   coneOuterAngle: number; // 360
@@ -141,6 +141,16 @@ let active_sfx_as_music: {
 }[] = [];
 let num_loading = 0;
 
+
+let default_panner_opts: Partial<PannerAttr> = {
+  panningModel: 'equalpower',
+};
+export function sound3DSetDefaultPanner(opts: Partial<PannerAttr>): void {
+  assert(empty(sounds));
+  assert(!num_loading);
+  merge(default_panner_opts, opts);
+}
+
 // Howler.usingWebAudio = false; // Disable WebAudio for testing HTML5 fallbacks
 
 export type SoundSystemParams = {
@@ -237,11 +247,11 @@ export function soundReplaceFromDataURL(key: string, dataurl: string): void {
   let opts = existing.glov_load_opts;
   const { loop } = opts;
   let sound: HowlSound = new Howl({
+    ...default_panner_opts,
     src: dataurl,
     html5: false,
     loop: Boolean(loop),
     volume: 0,
-    panningModel: 'equalpower',
     onload: function () {
       sound.glov_load_opts = opts;
       sounds[key] = sound;
@@ -335,11 +345,11 @@ export function soundLoad(soundid: SoundID | SoundID[], opts?: SoundLoadOpts, cb
     }
     let once = false;
     let sound: HowlSound = new Howl({
+      ...default_panner_opts,
       src: srcs.slice(idx),
       html5: Boolean(streaming),
       loop: Boolean(loop),
       volume: 0,
-      panningModel: 'equalpower',
       onload: function () {
         if (!once) {
           if (!streaming) {
