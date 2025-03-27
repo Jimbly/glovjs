@@ -29,6 +29,7 @@ export interface EntityCrawlerServer extends EntityBaseServer {
   // On prototype properties:
   is_player: boolean;
   is_enemy: boolean;
+  blocks_player: boolean;
 }
 class EntityCrawlerServerImpl extends EntityBaseServer implements EntityCrawlerServer {
   declare data: EntityCrawlerDataServer;
@@ -37,6 +38,7 @@ class EntityCrawlerServerImpl extends EntityBaseServer implements EntityCrawlerS
   // On prototype properties:
   declare is_player: boolean;
   declare is_enemy: boolean;
+  declare blocks_player: boolean;
 
   visibleAreaGet(): VAID {
     return this.data.floor as number || 0;
