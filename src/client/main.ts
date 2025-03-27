@@ -3,6 +3,7 @@
 const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
+import assert from 'assert';
 import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
@@ -54,6 +55,7 @@ import {
 } from 'glov/client/sprite_animation';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import {
+  BLEND_ADDITIVE,
   Sprite,
   spriteCreate,
   spriteQueueSprite,
@@ -63,6 +65,7 @@ import {
   ButtonRet,
   buttonText,
   drawLine,
+  drawRect,
   LINE_ALIGN,
   LINE_CAP_ROUND,
   LINE_CAP_SQUARE,
@@ -75,11 +78,27 @@ import {
   uiButtonWidth,
   uiGetFont,
   uiHandlingNav,
+  sprites as uisprites,
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
 import type { TSMap } from 'glov/common/types';
-import { clamp } from 'glov/common/util';
+import {
+  clamp,
+  clone,
+  easeIn,
+  easeInOut,
+  easeOut,
+  identity,
+  lerp,
+  tweenBounceOut,
+  tweenElasticIn,
+  tweenElasticInOut,
+  tweenElasticOut,
+  tweenExpoIn,
+  tweenExpoInOut,
+  tweenExpoOut,
+} from 'glov/common/util';
 import {
   rovec4,
   v4clone,
@@ -90,7 +109,7 @@ import {
 import * as particle_data from './particle_data';
 import { test3D } from './test_3d';
 
-const { max, floor, round, sin } = Math;
+const { ceil, cos, max, floor, PI, random, round, sin, sqrt } = Math;
 // TODO: Migrate to TypeScript
 type Spine = ReturnType<typeof spineCreate>;
 
@@ -222,6 +241,128 @@ function lineTest(): void {
     }
   }
   drawLine(50, 72, 250, 200, z, 20, line_precise, color_black, LINE_CAP_ROUND);
+}
+
+type TweenData = { x: number; y: number; rot: number; r: number; g: number; b: number };
+type TweenElem = {
+  prev: TweenData;
+  next: TweenData;
+};
+let tween_elems: TweenElem[];
+const TWEEN_MAX = 100;
+let tween_start = 0;
+const tween_time = 1500;
+type Easer = (v:number) => number;
+let easing: Easer = identity;
+const EASERS: Easer[] = [
+  identity,
+  (v) => easeIn(v, 2),
+  (v) => easeOut(v, 2),
+  (v) => easeInOut(v, 2),
+  tweenExpoIn,
+  tweenExpoOut,
+  tweenExpoInOut,
+  tweenElasticIn,
+  tweenElasticOut,
+  tweenElasticInOut,
+  tweenBounceOut,
+];
+function randomRGB(o: TweenData): void {
+  let r = random();
+  let rgb = floor(random() * 3);
+  if (rgb === 0) {
+    o.r = r;
+    o.g = 1 - r;
+    o.b = 1;
+  } else if (rgb === 1) {
+    o.r = 1;
+    o.g = r;
+    o.b = 1 - r;
+  } else if (rgb === 2) {
+    o.r = 1 - r;
+    o.g = 1;
+    o.b = r;
+  }
+}
+function tweenInit(): void {
+  tween_elems = [];
+  for (let ii = 0; ii < TWEEN_MAX; ++ii) {
+    let elem: TweenData = {
+      x: random(),
+      y: random(),
+      rot: random() * PI * 2,
+      r: 1, g: 1, b: 1,
+    };
+    randomRGB(elem);
+    tween_elems.push({
+      prev: elem,
+      next: clone(elem),
+    });
+  }
+}
+let temp_color = vec4(1, 1, 1, 1);
+function tweenTest(): void {
+  if (!tween_elems) {
+    tweenInit();
+  }
+  let t = (getFrameTimestamp() - tween_start) / tween_time;
+  let cycle = false;
+  if (t > 1) {
+    cycle = t > 1.5;
+    t = 1;
+  }
+  t = easing(t);
+  drawRect(1, 1, 119, 119, 99, [0,0,0,1]);
+  for (let ii = 0; ii < tween_elems.length; ++ii) {
+    let e = tween_elems[ii];
+    temp_color[0] = lerp(t, e.prev.r, e.next.r);
+    temp_color[1] = lerp(t, e.prev.g, e.next.g);
+    temp_color[2] = lerp(t, e.prev.b, e.next.b);
+    uisprites.white.draw({
+      x: 10 + 100 * lerp(t, e.prev.x, e.next.x),
+      y: 10 + 100 * lerp(t, e.prev.y, e.next.y),
+      z: 100,
+      w: 8,
+      h: 8,
+      rot: lerp(t, e.prev.rot, e.next.rot),
+      color: temp_color,
+      blend: BLEND_ADDITIVE,
+    });
+  }
+
+  if (cycle) {
+    tween_start = getFrameTimestamp();
+    // easing = EASERS[(EASERS.indexOf(easing) + 1) % EASERS.length];
+    easing = EASERS[floor(random() * EASERS.length)];
+    let style = floor(random() * 3);
+    let offs = floor(random() * TWEEN_MAX);
+    let radius = 0.2 + 0.3 * random();
+    let div = ceil(sqrt(TWEEN_MAX));
+    for (let ii = 0; ii < tween_elems.length; ++ii) {
+      let e = tween_elems[ii];
+      let temp = e.next;
+      e.next = e.prev;
+      e.prev = temp;
+      randomRGB(e.next);
+      e.next.rot = random() * 2 * PI;
+      switch (style) {
+        case 0:
+          e.next.x = random();
+          e.next.y = random();
+          break;
+        case 1:
+          e.next.x = 0.5 + radius * cos((ii + offs) / TWEEN_MAX * PI * 2);
+          e.next.y = 0.5 + radius * sin((ii + offs) / TWEEN_MAX * PI * 2);
+          break;
+        case 2:
+          e.next.x = floor(((ii + offs) % TWEEN_MAX) / div) / div;
+          e.next.y = ((ii + offs) % TWEEN_MAX) % div / div;
+          break;
+        default:
+          assert(false);
+      }
+    }
+  }
 }
 
 type Score = {
@@ -482,6 +623,13 @@ export function main(): void {
       };
       ui_test.runFontTest(105, 20);
     }
+    if (flagGet('tween_test')) {
+      status = 'Testing Fonts';
+      status_others = {
+        steam_display: '#Test',
+      };
+      tweenTest();
+    }
     if (flagGet('lines')) {
       status = 'Lines, lines, lines';
       status_others = {
@@ -621,7 +769,7 @@ export function main(): void {
         colors: active ? colors_active : colors_inactive,
       });
       x += 2 + mini_button_w;
-      if (x >= uiButtonWidth()) {
+      if (x >= uiButtonWidth() * 1.25) {
         x = uiButtonHeight();
         y += button_spacing;
       }
@@ -681,6 +829,11 @@ export function main(): void {
 
     if (miniButton('Font', 'Toggles visibility of general Font tests', flagGet('font_test'))) {
       flagToggle('font_test');
+      transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
+    }
+
+    if (miniButton('Tween', 'Toggles visibility of tweening test', flagGet('tween_test'))) {
+      flagToggle('tween_test');
       transition.queue(Z.TRANSITION_FINAL, transition.randomTransition());
     }
 
