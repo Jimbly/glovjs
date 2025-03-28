@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const gb = require('glov-build');
+const yaml = require('js-yaml');
 const { max } = Math;
 const { pngAlloc, pngRead, pngWrite } = require('./png.js');
 
@@ -65,27 +66,66 @@ function parseRow(job, img, x0, y0, dx, dy) {
 
 module.exports = function () {
   function imgproc(job, done) {
-    // TODO: get these options from a yaml-based config file in each atlas folder
-    const tile_horiz_regex = null;
-    const clamp_regex = /./;
-    let pad = 8; // opts.pad || 0;
-
     let files = job.getFiles();
 
-    const max_tex_size = 1024;
     let atlases = {};
     // TODO: smart caching of unchanged atlases, only read and output the changed ones
     for (let ii = 0; ii < files.length; ++ii) {
       let img_file = files[ii];
+      let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/);
+      let atlas_name = m[1].toLowerCase();
+      let img_name = m[2].toLowerCase();
+      let ext = m[3];
+      let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {} };
+      if (ext[0] === 'y') {
+        let config_data;
+        try {
+          config_data = yaml.load(img_file.contents.toString('utf8')) || {};
+        } catch (err) {
+          job.error(img_file, `Error parsing ${img_file.relative}: ${err}`);
+          return void done(err);
+        }
+        if (config_data.pad && typeof config_data.pad !== 'number') {
+          job.error(img_file, `pad must be number, found ${JSON.stringify(config_data.pad)}`);
+          delete config_data.pad;
+        }
+        if (config_data.max_tex_size && typeof config_data.max_tex_size !== 'number') {
+          job.error(img_file, `max_tex_size must be number, found ${JSON.stringify(config_data.max_tex_size)}`);
+          delete config_data.max_tex_size;
+        }
+        if (config_data.tile_horiz_regex) {
+          try {
+            config_data.tile_horiz_regex = new RegExp(config_data.tile_horiz_regex);
+          } catch (err) {
+            job.error(img_file, `error parsing RegExp tile_horiz_regex: ${JSON.stringify(config_data.tile_horiz_regex)}: ${err}`);
+            delete config_data.tile_horiz_regex;
+          }
+        }
+        if (config_data.tile_vert_regex) {
+          try {
+            config_data.tile_vert_regex = new RegExp(config_data.tile_vert_regex);
+          } catch (err) {
+            job.error(img_file, `error parsing RegExp tile_vert_regex: ${JSON.stringify(config_data.tile_vert_regex)}: ${err}`);
+            delete config_data.tile_vert_regex;
+          }
+        }
+        if (config_data.tile_regex) {
+          try {
+            config_data.tile_regex = new RegExp(config_data.tile_regex);
+          } catch (err) {
+            job.error(img_file, `error parsing RegExp tile_regex: ${JSON.stringify(config_data.tile_regex)}: ${err}`);
+            delete config_data.tile_regex;
+          }
+        }
+        atlas_data.config_data = config_data;
+        continue;
+      }
       let { err, img } = pngRead(img_file.contents);
       if (err) {
-        job.error(`Error reading ${img_file.relative}: ${err}`);
+        job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
         return void done(err);
       }
       img.source_name = img_file.relative;
-      let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.png$/);
-      let atlas_name = m[1].toLowerCase();
-      let img_name = m[2].toLowerCase();
       let do_9patch = img_name.endsWith('.9');
       if (do_9patch) {
         img_name = img_name.slice(0, -2);
@@ -96,7 +136,6 @@ module.exports = function () {
         img_name = m[1];
         idx = Number(m[2]);
       }
-      let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {} };
       atlas_data.num_layers = max(atlas_data.num_layers, idx + 1);
       let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
       let ws = [img.width];
@@ -139,7 +178,13 @@ module.exports = function () {
 
     function doAtlas(name) {
       let atlas_data = atlases[name];
-      let { file_data } = atlas_data;
+      let { file_data, config_data } = atlas_data;
+
+      const tile_horiz_regex = config_data?.tile_horiz_regex || null;
+      const tile_vert_regex = config_data?.tile_vert_regex || null;
+      const tile_regex = config_data?.tile_regex || null;
+      const pad = config_data?.pad || 8;
+      const max_tex_size = config_data?.max_tex_size || 1024;
 
       let file_keys = Object.keys(file_data);
       file_keys.sort(cmpFileKeys);
@@ -230,9 +275,9 @@ module.exports = function () {
           }
           let { data: outdata } = pngouts[idx];
           let { data: indata } = img;
-          let clamp = clamp_regex && clamp_regex.test(img_name);
-          let clamp_vert = clamp || tile_horiz_regex && tile_horiz_regex.test(img_name);
-          let clamp_horiz = clamp;
+          let clamp = !tile_regex?.test(img_name);
+          let clamp_vert = clamp && !tile_vert_regex?.test(img_name);
+          let clamp_horiz = clamp && !tile_horiz_regex?.test(img_name);
           for (let yy = -pad; yy < imgh + pad; ++yy) {
             let yyy;
             if (clamp_vert) {
