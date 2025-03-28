@@ -78,6 +78,7 @@ class AutoAtlasImp {
     let { tiles, w, h } = atlas_data;
     let seen: TSMap<true> = {};
     for (let tile_id = 0; tile_id < tiles.length; ++tile_id) {
+      let is_new = false;
       let [tile_name, x, y, ws, hs, padh, padv] = tiles[tile_id] as AutoAtlasBuildData;
       seen[tile_name] = true;
       let total_w = 0;
@@ -92,6 +93,7 @@ class AutoAtlasImp {
       let sprite = sprites[tile_name];
       if (!sprite) {
         sprite = sprites[tile_name] = this.prealloc();
+        is_new = true;
       }
       sprite.texs = texs;
       let tile_uvs = sprite.uvs as Vec4;
@@ -139,6 +141,9 @@ class AutoAtlasImp {
         total_h,
       };
       sprite.doReInit();
+      if (is_new && this.on_image) {
+        this.on_image(tile_name);
+      }
     }
 
     root_sprite.uidata = {
@@ -211,6 +216,13 @@ class AutoAtlasImp {
     ret.autoatlas_used = true;
     return ret;
   }
+
+  on_image: ((img_name: string) => void) | null = null;
+  onImage(cb: (img_name: string) => void): void {
+    assert(!this.on_image);
+    this.on_image = cb;
+    Object.keys(this.sprites).forEach(cb);
+  }
 }
 
 let atlases: TSMap<AutoAtlasImp>;
@@ -243,6 +255,10 @@ function autoAtlasGet(atlas_name: string): AutoAtlasImp {
     atlas = atlases[atlas_name] = new AutoAtlasImp(atlas_name);
   }
   return atlas;
+}
+
+export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => void): void {
+  autoAtlasGet(atlas_name).onImage(cb);
 }
 
 export function autoAtlas(atlas_name: string, img_name: string): Sprite {
