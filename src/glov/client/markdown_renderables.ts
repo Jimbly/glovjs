@@ -11,6 +11,10 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import {
+  autoAtlas,
+  autoAtlasOnImage,
+} from './autoatlas';
+import {
   ALIGN,
   EPSILON,
   FontStyle,
@@ -99,6 +103,14 @@ export function markdownImageRegisterSpriteSheet(spritesheet: SpriteSheet): void
       frame: spritesheet.tiles[key],
     });
   }
+}
+
+export function markdownImageRegisterAutoAtlas(atlas_name: string): void {
+  autoAtlasOnImage(atlas_name, function (img_name: string) {
+    markdownImageRegister(img_name, {
+      sprite: autoAtlas(atlas_name, img_name),
+    });
+  });
 }
 
 function getImageData(key: string): MarkdownImageParam {
