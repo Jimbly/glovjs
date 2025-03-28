@@ -53,6 +53,7 @@ import {
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import type { CrawlerState } from '../common/crawler_state';
+import { atlasAlias } from './crawler_render';
 import {
   drawableDraw,
   DrawableOpts,
@@ -286,7 +287,9 @@ function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): numbe
   if (isAutoAtlasSpec(sprite_data)) {
     assert(typeof frame === 'string');
     if (do_update || !ent.drawable_sprite_state.sprite) {
-      let base_sprite = autoAtlas(sprite_data.atlas, frame).withOrigin(sprite_data.origin!);
+      let atlas_name = atlasAlias(sprite_data.atlas);
+      let base_sprite = autoAtlas(atlas_name, frame).withOrigin(sprite_data.origin!);
+
       let sprite = base_sprite.withSamplerState(sprite_data);
       ent.drawable_sprite_state.sprite = sprite;
 

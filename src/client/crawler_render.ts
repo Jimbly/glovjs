@@ -338,6 +338,9 @@ export function crawlerRenderStartup(): void {
 }
 
 let atlas_aliases: TSMap<string> = {};
+export function atlasAlias(atlas_name: string): string {
+  return atlas_aliases[atlas_name] || atlas_name;
+}
 
 type SimpleVisualOpts = {
   atlas?: string;
@@ -425,7 +428,7 @@ function simpleGetSpriteParam(
       bucket = BUCKET_ALPHA;
     }
     let atlas_name = visual_opts.atlas || 'default';
-    atlas_name = atlas_aliases[atlas_name] || atlas_name;
+    atlas_name = atlasAlias(atlas_name);
     let { tile, do_blend } = visual_opts;
     assert(tile);
     if (Array.isArray(tile)) {
