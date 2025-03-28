@@ -229,7 +229,10 @@ gb.task({
 
 gb.task({
   name: 'client_autoatlas',
-  input: 'client/atlases/**/*.png',
+  input: [
+    'client/atlases/**/*.png',
+    'client/atlases/**/*.yaml',
+  ],
   ...autoatlas(),
 });
 
