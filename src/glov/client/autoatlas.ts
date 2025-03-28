@@ -239,9 +239,11 @@ function autoAtlasReload(filename: string): void {
 
 export function autoAtlasTextureOpts(atlas_name: string, opts: TextureOptions): void {
   load_opts[atlas_name] = opts;
-  let atlas = atlases[atlas_name];
-  if (atlas) {
-    atlas.setSamplerState(opts);
+  if (atlases) {
+    let atlas = atlases[atlas_name];
+    if (atlas) {
+      atlas.setSamplerState(opts);
+    }
   }
 }
 
