@@ -82,6 +82,7 @@ export interface SpriteDraw3DParams {
   vshader?: Shader;
 }
 export interface Sprite {
+  readonly uid: number;
   uidata?: SpriteUIData;
   uvs: ROVec4;
   origin: ROVec2;
