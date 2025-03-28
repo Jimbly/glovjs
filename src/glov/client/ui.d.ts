@@ -9,7 +9,7 @@ import { ROVec4 } from 'glov/common/vmath';
 import { EditBoxOptsAll } from './edit_box';
 import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
-import { SoundID, SoundLoadOpts } from './sound';
+import { GlovSoundPlayOpts, SoundID, SoundLoadOpts } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
 import { Sprite, UISprite } from './sprites';
 import { UIStyle } from './uistyle';
@@ -122,7 +122,7 @@ export function drawMultiPartBox(
   pixel_scale: number,
   color?: ROVec4,
 ): void;
-export function playUISound(name: string, volume?: number): void;
+export function playUISound(name: string, volume_or_opts?: number | GlovSoundPlayOpts): void;
 export function focusCanvas(): void;
 export function uiHandlingNav(): boolean;
 

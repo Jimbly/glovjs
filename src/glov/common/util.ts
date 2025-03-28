@@ -6,7 +6,7 @@ import assert from 'assert';
 import type { DataObject, ErrorCallback } from './types';
 import type { Vec2 } from './vmath';
 
-const { PI, abs, floor, min, max, random, round, pow, sqrt } = Math;
+const { PI, abs, floor, min, max, random, round, pow, sin, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,14 +43,59 @@ export function easeInOut(v: number, a: number): number {
   let va = pow(v, a);
   return va / (va + pow(1 - v, a));
 }
-
 export function easeIn(v: number, a: number): number {
   return 2 * easeInOut(0.5 * v, a);
 }
-
 export function easeOut(v: number, a: number): number {
   return 2 * easeInOut(0.5 + 0.5 * v, a) - 1;
 }
+
+// Extra easing types from pixijs-userland/animate - MIT Licensed
+// Exponential ease
+export function tweenExpoIn(v: number): number {
+  return (v === 0 ? 0 : pow(2, 10 * v - 10));
+}
+export function tweenExpoOut(v: number): number {
+  return (v === 1 ? 1 : 1 - pow(2, -10 * v));
+}
+export function tweenExpoInOut(v: number): number {
+  return v === 0 ? 0 : v === 1 ? 1 : v < 0.5 ? 0.5 * pow(2, 20 * v - 10) : 1 - 0.5 * pow(2, -20 * v + 10);
+}
+
+// Elastic ease - elastic back and forth a bit on the eased end
+export function tweenElasticIn(v: number): number {
+  return sin(13 * (PI / 2) * v) * pow(2, 10 * (v - 1));
+}
+export function tweenElasticOut(v: number): number {
+  return sin(-13 * (PI / 2) * (v + 1)) * pow(2, -10 * v) + 1;
+}
+export function tweenElasticInOut(v: number): number {
+  return v < 0.5 ?
+    0.5 * sin(13 * (PI / 2) * (2 * v)) * pow(2, 10 * (2 * v - 1)) :
+    0.5 * (sin(-13 * (PI / 2) * (2 * v - 1 + 1)) * pow(2, -10 * (2 * v - 1)) + 2);
+}
+// Bounce ease - bouncing back and forth a bit on the eased end - only tweanBounceOut feels useful
+export function tweenBounceOut(v: number): number {
+  if (v < 1 / 2.75) {
+    return 7.5625 * v * v;
+  } else if (v < 2 / 2.75) {
+    v -= 1.5 / 2.75;
+    return 7.5625 * v * v + 0.75;
+  } else if (v < 2.5 / 2.75) {
+    v -= 2.25 / 2.75;
+    return 7.5625 * v * v + 0.9375;
+  } else {
+    v -= 2.625 / 2.75;
+    return 7.5625 * v * v + 0.984375;
+  }
+}
+export function tweenBounceIn(v: number): number {
+  return 1 - tweenBounceOut(1 - v);
+}
+export function tweenBounceInOut(v: number): number {
+  return (v < 0.5 ? (1 - tweenBounceOut(1 - 2 * v)) / 2 : (1 + tweenBounceOut(2 * v - 1)) / 2);
+}
+
 
 export function clone<T>(obj: T): T {
   if (!obj) { // handle undefined

@@ -767,13 +767,13 @@ export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) 
   spriteChainedStop();
 }
 
-export function playUISound(name, volume) {
+export function playUISound(name, volume_or_opts) {
   profilerStartFunc();
   if (name === 'select') {
     name = 'button_click';
   }
   if (sounds[name]) {
-    soundPlay(sounds[name], volume);
+    soundPlay(sounds[name], volume_or_opts);
   }
   profilerStopFunc();
 }
