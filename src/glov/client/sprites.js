@@ -971,8 +971,10 @@ export function spriteFlippedUVsRestore(spr) {
   }
 }
 
+let last_sprite_uid = 0;
 function Sprite(params) {
   this.lazy_load = null;
+  this.uid = ++last_sprite_uid;
 
   if (params.texs) {
     this.texs = params.texs;
