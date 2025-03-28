@@ -59,6 +59,7 @@ import {
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
 import { dataError, dataErrorEx } from 'glov/common/data_error';
+import type { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
   JSVec4,
@@ -353,6 +354,8 @@ export function renderGetSpriteSheet(name: string, per_frame: boolean): SpriteSh
   return ret;
 }
 
+let atlas_aliases: TSMap<string> = {};
+
 type SimpleVisualOpts = {
   atlas?: string;
   tile: string | string[];
@@ -439,6 +442,7 @@ function simpleGetSpriteParam(
       bucket = BUCKET_ALPHA;
     }
     let atlas_name = visual_opts.atlas || 'default';
+    atlas_name = atlas_aliases[atlas_name] || atlas_name;
     let { tile, do_blend } = visual_opts;
     assert(tile);
     if (Array.isArray(tile)) {
@@ -1004,6 +1008,7 @@ let render_passes: RenderPass[];
 export function crawlerRenderInit(param: {
   passes: RenderPass[];
   spritesheets?: SpriteSheetSet;
+  atlas_aliases?: TSMap<string>;
   split_dist: number;
   angle_offs?: number;
   pos_offs?: Vec2;
@@ -1012,6 +1017,9 @@ export function crawlerRenderInit(param: {
   render_passes = passes;
   if (param.spritesheets) {
     spritesheets = param.spritesheets;
+  }
+  if (param.atlas_aliases) {
+    atlas_aliases = param.atlas_aliases;
   }
   split_dist_sq = param.split_dist * param.split_dist;
   angle_offs = (param.angle_offs || 0) * PI/180;

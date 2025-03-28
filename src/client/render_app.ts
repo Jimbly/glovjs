@@ -34,6 +34,9 @@ export function renderAppStartup(): void {
       name: 'default',
       need_split_near: true,
     }],
+    atlas_aliases: {
+      default: 'demo',
+    },
     split_dist: 2.8,
     angle_offs: 0, // 9.5,
     pos_offs: vec2(0/*0.3*/, -0.95),
