@@ -100,6 +100,7 @@ export interface Sprite {
   lazyLoad(): number;
   getAspect(): number;
   withOrigin(new_origin: ROVec2): Sprite;
+  withSamplerState(opts: TextureOptions): Sprite;
   onReInit(cb: VoidFunc): void;
   doReInit(): void;
 }
