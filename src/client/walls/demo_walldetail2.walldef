@@ -5,5 +5,5 @@ map_view_wall_frames_from: solid
 visuals:
   type: simple_wall
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: brick_dark5

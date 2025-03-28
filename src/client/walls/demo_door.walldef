@@ -5,5 +5,5 @@ advertise_other_side: true
 visuals:
   type: simple_wall
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: dngn_closed_door

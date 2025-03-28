@@ -7,5 +7,5 @@ build_hide: true
 visuals:
 - type: simple_wall
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: dngn_open_door

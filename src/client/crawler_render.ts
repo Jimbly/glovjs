@@ -21,6 +21,7 @@ export const ShaderType = {
 export type ShaderTypeEnum = typeof ShaderType[keyof typeof ShaderType];
 
 import assert from 'assert';
+import { autoAtlas } from 'glov/client/autoatlas';
 import { virtualToCanvas } from 'glov/client/camera2d';
 import { cmd_parse } from 'glov/client/cmds';
 import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
@@ -50,7 +51,7 @@ import {
   shadersAddGlobal,
   shadersBind,
 } from 'glov/client/shaders';
-import type { BucketType, Sprite, SpriteUIData } from 'glov/client/sprites';
+import type { BucketType, Sprite } from 'glov/client/sprites';
 import type { SpriteSheet } from 'glov/client/spritesheet';
 import {
   textureBindArray,
@@ -58,7 +59,6 @@ import {
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
 import { dataError, dataErrorEx } from 'glov/common/data_error';
-import { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
   JSVec4,
@@ -66,7 +66,6 @@ import {
   ROVec2,
   ROVec3,
   ROVec4,
-  rovec4,
   unit_vec,
   v2addScale,
   v2copy,
@@ -355,7 +354,7 @@ export function renderGetSpriteSheet(name: string, per_frame: boolean): SpriteSh
 }
 
 type SimpleVisualOpts = {
-  spritesheet?: string;
+  atlas?: string;
   tile: string | string[];
   times?: number | number[];
   total_time?: number; // set at runtime
@@ -375,10 +374,11 @@ function frameFromAnim(frames: string[], times: number[], total_time: number): s
   return frames[idx];
 }
 
+// Calculates a uv offset and blend amount into color.xyz for use in the shader
 function frameFromAnim2(
   out: Vec4,
-  uidata: SpriteUIData, base_frame: number,
-  spritesheet: SpriteSheet,
+  base_sprite: Sprite,
+  atlas_name: string,
   frames: string[], times: number[], total_time: number, blend_time: number
 ): void {
   assert.equal(frames.length, times.length);
@@ -389,12 +389,11 @@ function frameFromAnim2(
   }
   if (t < blend_time) {
     idx = (idx + frames.length - 1) % frames.length;
-    let baseuv = (uidata.rects as TSMap<ROVec4>)[base_frame]!;
-    let frame = spritesheet.tiles[frames[idx]];
-    if (frame === undefined) {
-      return;
-    }
-    let ouruv = (uidata.rects as TSMap<ROVec4>)[frame]!;
+    let baseuv = base_sprite.uvs;
+    let blend_tile = frames[idx];
+    let blend_sprite = autoAtlas(atlas_name, blend_tile);
+    assert(blend_sprite.texs === base_sprite.texs);
+    let ouruv = blend_sprite.uvs;
     v2sub(out, ouruv, baseuv);
     out[2] = 1 - t / blend_time;
   } else {
@@ -402,11 +401,12 @@ function frameFromAnim2(
   }
 }
 
+const origin_centered = vec2(0.5, 0.5);
+const origin_centered_x = vec2(0.5, 0);
 let temp_color = vec4();
 type SpriteParamPair = [
   Sprite,
   {
-    frame?: number;
     bucket: BucketType;
     shader: Shader;
     vshader: Shader;
@@ -422,7 +422,6 @@ function simpleGetSpriteParam(
   sprite_key: 'sprite' | 'sprite_centered' | 'sprite_centered_x',
 ): SpriteParamPair | readonly [null, null] {
   let sprite;
-  let frame;
   let color = opts.debug_visible ? color_hidden : unit_vec;
   let shader;
   let bucket: typeof BUCKET_OPAQUE | typeof BUCKET_ALPHA = BUCKET_OPAQUE;
@@ -439,8 +438,7 @@ function simpleGetSpriteParam(
     if (visual_opts.do_alpha) {
       bucket = BUCKET_ALPHA;
     }
-    let spritesheet_name = visual_opts.spritesheet || 'default';
-    let spritesheet = renderGetSpriteSheet(spritesheet_name, true);
+    let atlas_name = visual_opts.atlas || 'default';
     let { tile, do_blend } = visual_opts;
     assert(tile);
     if (Array.isArray(tile)) {
@@ -462,15 +460,12 @@ function simpleGetSpriteParam(
       }
       tile = frameFromAnim(tile, times, total_time);
     }
-    frame = spritesheet.tiles[tile];
-    if (frame === undefined) {
-      dataErrorEx({
-        msg: `Unknown frame ${spritesheet_name}: "${tile}" referenced in "${debug_id}"`,
-        per_frame: true,
-      });
-      frame = 0;
+    sprite = autoAtlas(atlas_name, tile);
+    if (sprite_key === 'sprite_centered') {
+      sprite = sprite.withOrigin(origin_centered);
+    } else if (sprite_key === 'sprite_centered_x') {
+      sprite = sprite.withOrigin(origin_centered_x);
     }
-    sprite = spritesheet[sprite_key];
     if (visual_opts.color) {
       color = v4mul(temp_color, color, visual_opts.color);
     }
@@ -488,16 +483,17 @@ function simpleGetSpriteParam(
       color = temp_color;
       frameFromAnim2(
         temp_color,
-        sprite.uidata!, frame,
-        spritesheet,
-        visual_opts.tile as string[], visual_opts.times as number[], visual_opts.total_time as number,
+        sprite,
+        atlas_name,
+        visual_opts.tile as string[],
+        visual_opts.times as number[],
+        visual_opts.total_time as number,
         do_blend);
       shader = crawlerRenderGetShader(ShaderType.SpriteBlendFragment);
     }
   }
 
   return [sprite, {
-    frame,
     bucket,
     shader: shader || crawlerRenderGetShader(ShaderType.SpriteFragment),
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
@@ -517,7 +513,6 @@ function simpleGetThumbnail(visual: VisualOpts | undefined, desc: WallDesc | Cel
   let [sprite, param] = simpleGetSpriteParam(visual, dummy_opts, desc.id, 'sprite');
   assert(sprite && param);
   return [sprite, {
-    frame: param.frame,
     color: param.color,
     // not shader/vshader: these are 3D shaders, not 2D shaders
   }];
@@ -581,15 +576,15 @@ function drawSimpleWall(
 }
 
 const temp_uvs = vec4();
-const uv_identity = rovec4(0, 0, 1, 1);
 function drawSimpleFiller(
   rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opts: CrawlerDrawableOpts2,
   debug_id: string
 ): void {
-  let [sprite, param] = simpleGetSpriteParam(visual, opts, debug_id, 'sprite');
-  if (!sprite) {
+  let pair = simpleGetSpriteParam(visual, opts, debug_id, 'sprite');
+  if (!pair[0]) {
     return;
   }
+  let [sprite, param] = pair;
 
   let vopts = visual as unknown as SimpleDetailRenderOpts;
   let offs = vopts.offs || [0,0];
@@ -637,11 +632,7 @@ function drawSimpleFiller(
   qTransformVec3(temp_right, wall_face_right, rot);
   v3iAdd(temp_pos, pos);
 
-  let orig_uvs = uv_identity;
-  if (param && param.frame !== undefined) {
-    orig_uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame]!;
-    param.frame = undefined;
-  }
+  let orig_uvs = sprite.uvs;
 
   v4set(temp_uvs, orig_uvs[0], orig_uvs[1] + (orig_uvs[3] - orig_uvs[1]) * temp_uvs[1], orig_uvs[2],
     orig_uvs[1] + (orig_uvs[3] - orig_uvs[1]) * temp_uvs[3]);
@@ -789,7 +780,7 @@ function drawSimpleCornerFloor(
   v3iAdd(temp_pos, floor_detail_offs);
   v2set(temp_size, DIM*scale, DIM*scale);
 
-  let uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame!]!;
+  let uvs = sprite.uvs;
   if (quadrants === 4) {
     sprite.draw3D({
       ...param,
@@ -802,7 +793,6 @@ function drawSimpleCornerFloor(
     temp_size[0] *= 0.5;
     v4copy(temp_uvs, uvs);
     temp_uvs[2] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
-    delete param.frame;
     sprite.draw3D({
       ...param,
       uvs: temp_uvs,
@@ -818,7 +808,6 @@ function drawSimpleCornerFloor(
     v4copy(temp_uvs, uvs);
     temp_uvs[2] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
     temp_uvs[1] = uvs[3] + (uvs[1] - uvs[3]) * 0.5;
-    delete param.frame;
     sprite.draw3D({
       ...param,
       uvs: temp_uvs,
@@ -831,7 +820,6 @@ function drawSimpleCornerFloor(
     temp_size[0] *= 0.5;
     v4copy(temp_uvs, uvs);
     temp_uvs[2] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
-    delete param.frame;
     sprite.draw3D({
       ...param,
       uvs: temp_uvs,
@@ -846,7 +834,6 @@ function drawSimpleCornerFloor(
     v4copy(temp_uvs, uvs);
     temp_uvs[0] = uvs[2] + (uvs[0] - uvs[2]) * 0.5;
     temp_uvs[3] = uvs[1] + (uvs[3] - uvs[1]) * 0.5;
-    delete param.frame;
     sprite.draw3D({
       ...param,
       uvs: temp_uvs,
@@ -931,16 +918,15 @@ function drawSimplePillar(
     return;
   }
   assert(param);
-  assert(typeof param.frame === 'number');
   let vopts = visual as unknown as SimplePillarOpts;
   let key = vopts.key;
   if (!key) {
     key = vopts.key = `${vopts.quadrants},${vopts.segments},${vopts.roundness},` +
-      `${vopts.radius},${vopts.height||1},${param.frame}`;
+      `${vopts.radius},${vopts.height||1},${sprite.uid}`;
   }
   let geom = pillar_geoms[key];
   if (!geom) {
-    let uvs = (sprite.uidata!.rects as TSMap<ROVec4>)[param.frame]!;
+    let uvs = sprite.uvs;
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
   let offs = vopts.offs || zero_vec;

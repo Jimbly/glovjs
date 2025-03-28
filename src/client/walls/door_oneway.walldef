@@ -8,5 +8,5 @@ map_view_wall_frame_west: 31
 visuals:
 - type: simple_wall
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: door

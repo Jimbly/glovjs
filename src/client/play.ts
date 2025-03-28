@@ -108,7 +108,7 @@ import {
   render_width,
 } from './globals';
 import { levelGenTest } from './level_gen_test';
-import { renderAppStartup, renderResetFilter } from './render_app';
+import { renderAppStartup } from './render_app';
 import {
   statusPush,
   statusTick,
@@ -604,7 +604,6 @@ export function play(dt: number): void {
   }
   if (keyDownEdge(KEYS.F)) {
     settingsSet('filter', 1 - settings.filter);
-    renderResetFilter();
   }
 
   playCrawl();

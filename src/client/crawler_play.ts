@@ -118,6 +118,7 @@ import {
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
 import { dialogReset } from './dialog_system';
+import { renderResetFilter } from './render_app';
 
 const { PI, floor } = Math;
 
@@ -181,6 +182,12 @@ settingsRegister({
     default_value: 0, // 1 for spire, 0 for demo
     type: cmd_parse.TYPE_INT,
     range: [0, 2],
+    on_change: function () {
+      if (!past_startup) {
+        return;
+      }
+      renderResetFilter();
+    },
   },
   pixely: {
     default_value: 1,

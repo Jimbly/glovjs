@@ -4,10 +4,10 @@ open_vis: true
 visuals:
 - type: simple_filler
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: grey_dirt0
 - type: simple_filler
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: cobble_blood1
     offs: [0, 1]

@@ -6,12 +6,12 @@ visuals:
 - pass: bg
   type: simple_floor
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: cobble_blood10
 - pass: bg
   type: simple_ceiling
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: grey_dirt0
 
 corners: # pillars and floor/ceiling details

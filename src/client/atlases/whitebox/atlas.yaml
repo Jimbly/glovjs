@@ -1,0 +1,6 @@
+---
+pad: 8
+tile_regex: null
+tile_horiz_regex: wall|door|exit
+tile_vert_regex: null
+max_tex_size: 1024

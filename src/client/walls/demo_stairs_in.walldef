@@ -5,5 +5,5 @@ map_view_wall_frames_from: 'door'
 visuals:
   type: simple_wall
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: dngn_enter_dis

@@ -5,12 +5,12 @@ visuals:
 - pass: bg
   type: simple_floor
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: cobble_blood1
 - pass: default
   type: simple_floor
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: dngn_mirrored_wall
     scale: 0.5
     color: '#555'
@@ -18,5 +18,5 @@ visuals:
 - pass: bg
   type: simple_ceiling
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: grey_dirt0

@@ -5,12 +5,12 @@ visuals:
 - pass: bg
   type: simple_floor
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: solid
 - pass: default
   type: simple_floor
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: solid
     scale: 0.5
     color: '#0F0'
@@ -18,5 +18,5 @@ visuals:
 - pass: bg
   type: simple_ceiling
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: solid

@@ -4,10 +4,10 @@ open_vis: true
 visuals:
 - type: simple_filler
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: solid
 - type: simple_filler
   opts:
-    spritesheet: whitebox
+    atlas: whitebox
     tile: solid
     offs: [0, 1]

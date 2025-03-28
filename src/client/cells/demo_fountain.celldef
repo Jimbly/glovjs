@@ -6,16 +6,16 @@ visuals:
 - pass: bg
   type: simple_floor
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: cobble_blood1
 - pass: bg
   type: simple_ceiling
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: grey_dirt0
 - type: simple_billboard
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: [dngn_blood_fountain, dngn_blood_fountain2]
     width: 0.5
     height: 0.5 # 0..1

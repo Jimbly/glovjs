@@ -10,7 +10,7 @@ import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
 import {
   markdown_default_renderables,
-  markdownImageRegisterSpriteSheet,
+  markdownImageRegisterAutoAtlas,
 } from 'glov/client/markdown_renderables';
 import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
@@ -28,8 +28,6 @@ import { crawlerRenderSetLODBiasRange } from './crawler_render';
 import { game_height, game_width } from './globals';
 import { playStartup } from './play';
 import { titleInit, titleStartup } from './title';
-
-const crawlertest = require('./img/crawlertest');
 
 const { round } = Math;
 
@@ -224,7 +222,7 @@ export function main(): void {
     renderables: markdown_default_renderables, // use all system renderables
   });
 
-  markdownImageRegisterSpriteSheet(crawlertest);
+  markdownImageRegisterAutoAtlas('demo');
 
   crawlerBuildModeStartup({
     font: build_font,

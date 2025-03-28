@@ -7,11 +7,11 @@ visuals:
 - pass: bg
   type: simple_floor
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: [dngn_open_sea, dngn_open_sea2]
     times: 500
 - pass: bg
   type: simple_ceiling
   opts:
-    spritesheet: demo
+    atlas: demo
     tile: grey_dirt0
