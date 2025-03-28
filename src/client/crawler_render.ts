@@ -62,7 +62,6 @@ import { dataError, dataErrorEx } from 'glov/common/data_error';
 import type { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
-  JSVec4,
   mat4,
   ROVec2,
   ROVec3,
@@ -212,7 +211,7 @@ export type CrawlerThumbnailPair = [
   Sprite,
   {
     frame?: number;
-    uvs?: JSVec4;
+    uvs?: ROVec4;
     color?: ROVec4;
   }
 ];
