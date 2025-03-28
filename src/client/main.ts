@@ -4,6 +4,7 @@ import * as local_storage from 'glov/client/local_storage.js'; // eslint-disable
 local_storage.setStoragePrefix('crawler'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
+import { autoAtlasTextureOpts } from 'glov/client/autoatlas';
 import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
@@ -17,7 +18,6 @@ import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
 import { spriteSetGet } from 'glov/client/sprite_sets';
-import { spritesheetTextureOpts } from 'glov/client/spritesheet';
 import { textureDefaultFilters } from 'glov/client/textures';
 import { uiSetPanelColor } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
@@ -134,7 +134,8 @@ export function main(): void {
   }
   settingsSet('use_fbos', use_fbos); // Needed for our effects
 
-  spritesheetTextureOpts('whitebox', { force_mipmaps: true });
+  autoAtlasTextureOpts('whitebox', { force_mipmaps: true });
+  autoAtlasTextureOpts('utumno', { force_mipmaps: true });
 
   if (!engine.startup({
     game_width,

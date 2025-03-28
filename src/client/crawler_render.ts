@@ -52,13 +52,12 @@ import {
   shadersBind,
 } from 'glov/client/shaders';
 import type { BucketType, Sprite } from 'glov/client/sprites';
-import type { SpriteSheet } from 'glov/client/spritesheet';
 import {
   textureBindArray,
 } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
-import { dataError, dataErrorEx } from 'glov/common/data_error';
+import { dataError } from 'glov/common/data_error';
 import type { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
@@ -336,21 +335,6 @@ export function crawlerRenderStartup(): void {
     fmodeltinted: shaderCreate('shaders/crawler_model_tinted.fp'),
     vmodel: shaderCreate('shaders/crawler_model.vp'),
   };
-}
-
-export type SpriteSheetSet = Partial<Record<string, SpriteSheet>> & { default: SpriteSheet };
-let spritesheets: SpriteSheetSet;
-
-export function renderGetSpriteSheet(name: string, per_frame: boolean): SpriteSheet {
-  let ret = spritesheets[name];
-  if (!ret) {
-    dataErrorEx({
-      msg: `Unknown spritesheet "${name}"`,
-      per_frame,
-    });
-    ret = spritesheets.default;
-  }
-  return ret;
 }
 
 let atlas_aliases: TSMap<string> = {};
@@ -1006,7 +990,6 @@ export type RenderPass = {
 let render_passes: RenderPass[];
 export function crawlerRenderInit(param: {
   passes: RenderPass[];
-  spritesheets?: SpriteSheetSet;
   atlas_aliases?: TSMap<string>;
   split_dist: number;
   angle_offs?: number;
@@ -1014,9 +997,6 @@ export function crawlerRenderInit(param: {
 }): void {
   let { passes } = param;
   render_passes = passes;
-  if (param.spritesheets) {
-    spritesheets = param.spritesheets;
-  }
   if (param.atlas_aliases) {
     atlas_aliases = param.atlas_aliases;
   }

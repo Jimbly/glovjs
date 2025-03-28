@@ -53,7 +53,6 @@ import {
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import type { CrawlerState } from '../common/crawler_state';
-import { renderGetSpriteSheet } from './crawler_render';
 import {
   drawableDraw,
   DrawableOpts,
@@ -255,19 +254,13 @@ function lookupGLDefine(id: string | number | undefined): number | undefined {
   return ret;
 }
 
-type SpriteSpecSpriteSheet = { spritesheet: string };
 type SpriteSpecSprite = SpriteParamBase & { name: string };
 type SpriteSpecAutoAtlas = {
   origin: ROVec2;
   atlas: string;
 };
-type SpriteSpec = SpriteSpecSprite | SpriteSpecSpriteSheet | SpriteSpecAutoAtlas;
+type SpriteSpec = SpriteSpecSprite | SpriteSpecAutoAtlas;
 
-function isSpriteSheetSpec(
-  sprite_data: TextureOptions & SpriteSpec
-): sprite_data is TextureOptions & SpriteSpecSpriteSheet {
-  return Boolean((sprite_data as SpriteSpecSpriteSheet).spritesheet);
-}
 function isAutoAtlasSpec(
   sprite_data: TextureOptions & SpriteSpec
 ): sprite_data is TextureOptions & SpriteSpecAutoAtlas {
@@ -401,28 +394,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
     init_prototype: function (opts: DrawableSpriteOpts) {
       lookupGLDefines(opts.sprite_data);
 
-      if (isSpriteSheetSpec(opts.sprite_data)) {
-        let spritesheet = renderGetSpriteSheet(opts.sprite_data.spritesheet, false);
-        opts.sprite = spritesheet.sprite.withOrigin(opts.sprite_data.origin!);
-        let tiles = spritesheet.tiles;
-        for (let key in opts.anim_data) {
-          let anim = opts.anim_data[key]!;
-          if (!Array.isArray(anim.frames)) {
-            anim.frames = [anim.frames] as string[] | number[];
-          }
-          for (let ii = 0; ii < anim.frames.length; ++ii) {
-            let frame_src = anim.frames[ii] as number | string;
-            if (typeof frame_src === 'string') {
-              let frame = tiles[frame_src.toLowerCase()];
-              if (frame === undefined) {
-                dataError(`Unknown anim frame "${frame_src}"`);
-                frame = 0;
-              }
-              anim.frames[ii] = frame;
-            }
-          }
-        }
-      } else if (isAutoAtlasSpec(opts.sprite_data)) {
+      if (isAutoAtlasSpec(opts.sprite_data)) {
         // filled in in drawableSpriteUpdateAnim
       } else {
         opts.sprite = spriteCreate(opts.sprite_data);
