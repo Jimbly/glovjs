@@ -118,7 +118,6 @@ import {
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
 import { dialogReset } from './dialog_system';
-import { renderResetFilter } from './render_app';
 
 const { PI, floor } = Math;
 
@@ -176,6 +175,10 @@ let on_pixely_change: ((pixely: number) => void)[] = [];
 export function crawlerOnPixelyChange(fn: (pixely: number) => void): void {
   on_pixely_change.push(fn);
 }
+let on_filter_change: ((filter: number) => void)[] = [];
+export function crawlerOnFilterChange(fn: (filter: number) => void): void {
+  on_filter_change.push(fn);
+}
 let past_startup = false;
 settingsRegister({
   filter: {
@@ -186,7 +189,7 @@ settingsRegister({
       if (!past_startup) {
         return;
       }
-      renderResetFilter();
+      callEach(on_filter_change, null, settings.filter);
     },
   },
   pixely: {

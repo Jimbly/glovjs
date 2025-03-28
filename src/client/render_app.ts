@@ -3,12 +3,13 @@ import * as settings from 'glov/client/settings';
 import {
   vec2,
 } from 'glov/common/vmath';
+import { crawlerOnFilterChange } from './crawler_play';
 import {
   crawlerRenderInit,
   crawlerRenderStartup,
 } from './crawler_render';
 
-export function renderResetFilter(): void {
+function renderResetFilter(): void {
   let ss = {
     filter_min: settings.filter ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST,
     filter_mag: settings.filter === 1 ? gl.LINEAR : gl.NEAREST,
@@ -42,5 +43,6 @@ export function renderAppStartup(): void {
     pos_offs: vec2(0/*0.3*/, -0.95),
   });
 
+  crawlerOnFilterChange(renderResetFilter);
   renderResetFilter();
 }
