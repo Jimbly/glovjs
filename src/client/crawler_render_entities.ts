@@ -127,6 +127,9 @@ export type DrawableSpriteState = {
   anim_update_frame: number;
   grow_at?: number;
   grow_time?: number;
+  sprite: Sprite;
+  sprite_near?: Sprite;
+  sprite_hybrid?: Sprite;
 };
 
 export type DrawableSpineOpts = {
@@ -156,6 +159,7 @@ export type EntityDrawable = Entity & {
 export type EntityDrawableSprite = Entity & {
   drawable_sprite_opts: DrawableSpriteOpts;
   drawable_sprite_state: DrawableSpriteState;
+  updateAnim: (dt: number) => number;
 };
 export type EntityDrawableSpine = Entity & {
   drawable_spine_opts: DrawableSpineOpts;
@@ -171,20 +175,14 @@ const { abs, atan2, min, cos, sin, sqrt, PI } = Math;
 
 export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDraw2DOpts): void {
   let ent = this;
-  let { anim } = ent.drawable_sprite_state;
-  if (ent.drawable_sprite_state.anim_update_frame !== getFrameIndex()) {
-    anim.update(getFrameDt());
-    ent.drawable_sprite_state.anim_update_frame = getFrameIndex();
-  }
-  let { sprite, sprite_near } = ent.drawable_sprite_opts;
+  let frame = ent.updateAnim(getFrameDt());
+  let { sprite, sprite_near } = ent.drawable_sprite_state;
   let use_near = true; // slightly better for 2D
   if (sprite_near && (use_near ||
     !settings.entity_split && settings.entity_nosplit_use_near)
   ) {
     sprite = sprite_near;
   }
-  let frame = anim.getFrame();
-  assert(typeof frame === 'number');
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   let { w, h } = param;
   if (aspect < 1) {
@@ -204,19 +202,15 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
 let temp_pos = vec3();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
+  let frame = ent.updateAnim(param.dt);
   let {
-    dt,
     use_near,
     shader_params,
     draw_pos,
     color,
   } = param;
-  let { anim, grow_at, grow_time } = ent.drawable_sprite_state;
-  if (ent.drawable_sprite_state.anim_update_frame !== getFrameIndex()) {
-    anim.update(dt);
-    ent.drawable_sprite_state.anim_update_frame = getFrameIndex();
-  }
-  let { scale, sprite, sprite_near, sprite_hybrid } = ent.drawable_sprite_opts;
+  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid } = ent.drawable_sprite_state;
+  let { scale } = ent.drawable_sprite_opts;
   if (grow_at) {
     assert(typeof grow_time === 'number');
     let t = getFrameTimestamp() - grow_at;
@@ -253,8 +247,6 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     sprite = sprite_hybrid;
   }
   let shader = crawlerRenderGetShader(shader_type);
-  let frame = anim ? anim.getFrame() : 0;
-  assert(typeof frame === 'number');
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   if (aspect !== 1) {
     v3copy(temp_pos, draw_pos);

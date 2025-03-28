@@ -269,7 +269,10 @@ function bindForced(tex) {
 export function textureFilterKey(params) {
   let filter_min = params.filter_min || default_filter_min;
   let filter_mag = params.filter_mag || default_filter_mag;
-  return filter_min + filter_mag * 10000;
+  let wrap_s = params.wrap_s || gl.REPEAT;
+  let wrap_t = params.wrap_t || gl.REPEAT;
+  let force_mipmaps = params.force_mipmaps ? 1 : 0;
+  return (((filter_min * 77 + filter_mag) * 77 + wrap_s) * 77 + wrap_t) * 77 + force_mipmaps;
 }
 
 Texture.prototype.setSamplerState = function (params) {

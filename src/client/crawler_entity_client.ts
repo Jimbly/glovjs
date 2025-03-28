@@ -5,7 +5,9 @@ export enum OnlineMode {
 }
 
 import assert from 'assert';
+import { autoAtlas } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
+import { getFrameIndex } from 'glov/client/engine';
 import type { EntityBaseClient } from 'glov/client/entity_base_client';
 import {
   clientEntityManagerCreate,
@@ -20,6 +22,7 @@ import { netSubs } from 'glov/client/net';
 import { spineCreate } from 'glov/client/spine';
 import { spriteAnimationCreate } from 'glov/client/sprite_animation';
 import {
+  Sprite,
   spriteCreate,
   SpriteParamBase,
   TextureOptions,
@@ -254,13 +257,82 @@ function lookupGLDefine(id: string | number | undefined): number | undefined {
 
 type SpriteSpecSpriteSheet = { spritesheet: string };
 type SpriteSpecSprite = SpriteParamBase & { name: string };
-type SpriteSpec = SpriteSpecSprite | SpriteSpecSpriteSheet;
+type SpriteSpecAutoAtlas = {
+  origin: ROVec2;
+  atlas: string;
+};
+type SpriteSpec = SpriteSpecSprite | SpriteSpecSpriteSheet | SpriteSpecAutoAtlas;
 
 function isSpriteSheetSpec(
   sprite_data: TextureOptions & SpriteSpec
 ): sprite_data is TextureOptions & SpriteSpecSpriteSheet {
   return Boolean((sprite_data as SpriteSpecSpriteSheet).spritesheet);
 }
+function isAutoAtlasSpec(
+  sprite_data: TextureOptions & SpriteSpec
+): sprite_data is TextureOptions & SpriteSpecAutoAtlas {
+  return Boolean((sprite_data as SpriteSpecAutoAtlas).atlas);
+}
+
+function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): number {
+  let ent = this;
+  let { anim } = ent.drawable_sprite_state;
+  let do_update = ent.drawable_sprite_state.anim_update_frame !== getFrameIndex();
+  if (do_update) {
+    let last_frame = anim.getFrame();
+    anim.update(dt);
+    if (last_frame === anim.getFrame()) {
+      do_update = false;
+    }
+    ent.drawable_sprite_state.anim_update_frame = getFrameIndex();
+  }
+  let frame = anim.getFrame();
+
+  let opts = ent.drawable_sprite_opts;
+  let sprite_data = opts.sprite_data as TextureOptions & SpriteSpec;
+  if (isAutoAtlasSpec(sprite_data)) {
+    assert(typeof frame === 'string');
+    if (do_update || !ent.drawable_sprite_state.sprite) {
+      let base_sprite = autoAtlas(sprite_data.atlas, frame).withOrigin(sprite_data.origin!);
+      let sprite = base_sprite.withSamplerState(sprite_data);
+      ent.drawable_sprite_state.sprite = sprite;
+
+      let sprite_near: Sprite | undefined;
+      if (sprite_data.filter_min !== gl.NEAREST) {
+        sprite_near = sprite.withSamplerState({
+          ...sprite_data,
+          filter_min: gl.NEAREST,
+          filter_mag: gl.NEAREST,
+        });
+        ent.drawable_sprite_state.sprite_near = sprite_near;
+      }
+      if (opts.hybrid) {
+        assert(sprite_near);
+        let sprite_hybrid = spriteCreate({
+          ...opts.sprite_data,
+          texs: [],
+        });
+        let doInit = (): void => {
+          sprite_hybrid.texs = [sprite.texs[0], sprite_near.texs[0]];
+          sprite_hybrid.uvs = sprite.uvs;
+          sprite_hybrid.uidata = sprite.uidata;
+          sprite_hybrid.doReInit(); // Allow chaining
+        };
+        sprite.onReInit(doInit);
+        sprite_near.onReInit(doInit);
+        doInit();
+
+        ent.drawable_sprite_state.sprite_hybrid = sprite_hybrid;
+      }
+
+    }
+    frame = 0;
+  }
+
+  assert(typeof frame === 'number');
+  return frame;
+}
+
 
 function lookupGLDefines(
   sprite_data: (TextureOptions | TextureOptionsAsStrings) & SpriteSpec
@@ -288,6 +360,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
 
   ent_factory.registerTrait<DrawableSpriteOpts, DrawableSpriteState>('drawable_sprite', {
     methods: {
+      updateAnim: drawableSpriteUpdateAnim,
       draw2D: drawableSpriteDraw2D,
       drawSub: drawableSpriteDrawSub,
       onDeleteSub: function (this: EntityDrawableSprite, param: EntityOnDeleteSubParam): void {
@@ -349,6 +422,8 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
             }
           }
         }
+      } else if (isAutoAtlasSpec(opts.sprite_data)) {
+        // filled in in drawableSpriteUpdateAnim
       } else {
         opts.sprite = spriteCreate(opts.sprite_data);
         if (opts.sprite_data.filter_min !== gl.NEAREST) {
@@ -373,6 +448,9 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
       let ret: DrawableSpriteState = {
         anim,
         anim_update_frame: 0,
+        sprite: opts.sprite,
+        sprite_near: opts.sprite_near,
+        sprite_hybrid: opts.sprite_hybrid,
       };
       return ret;
     },

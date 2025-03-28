@@ -110,7 +110,7 @@ export function main(): void {
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
   // @ts-expect-error truthy
-  } else if ('split logic') {
+  } else if (!'split logic') {
     settingsSet('pixely', 1);
     settingsSet('filter', 0);
     settingsSet('entity_split', 1);
