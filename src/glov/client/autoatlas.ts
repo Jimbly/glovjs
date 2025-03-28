@@ -22,10 +22,6 @@ type AutoAtlasBuildData = [string, number, number, number[], number[], number[] 
 
 let load_opts: TSMap<TextureOptions> = {};
 let hit_startup = false;
-export function autoAtlasTextureOpts(name: string, opts: TextureOptions): void {
-  assert(!hit_startup);
-  load_opts[name] = opts;
-}
 
 const uidata_error: SpriteUIData = {
   rects: [[0,0,1,1]],
@@ -192,6 +188,13 @@ class AutoAtlasImp {
     });
   }
 
+  setSamplerState(opts: TextureOptions): void {
+    for (let ii = 0; ii < this.texs.length; ++ii) {
+      let tex = this.texs[ii];
+      tex.setSamplerState(opts);
+    }
+  }
+
   constructor(public atlas_name: string) {
     webFSOnReady(this.doInit.bind(this));
   }
@@ -220,6 +223,14 @@ function autoAtlasReload(filename: string): void {
     return;
   }
   atlas.doInit();
+}
+
+export function autoAtlasTextureOpts(atlas_name: string, opts: TextureOptions): void {
+  load_opts[atlas_name] = opts;
+  let atlas = atlases[atlas_name];
+  if (atlas) {
+    atlas.setSamplerState(opts);
+  }
 }
 
 function autoAtlasGet(atlas_name: string): AutoAtlasImp {

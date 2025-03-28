@@ -34,6 +34,7 @@ export interface Texture {
     data: Uint8Array | Uint8ClampedArray | HTMLImage,
     per_mipmap_data?: HTMLImage[]
   ): void;
+  setSamplerState(opts: TextureOptions): void;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
