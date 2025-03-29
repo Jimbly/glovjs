@@ -1512,7 +1512,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "demo_shopkeeper_static",
       "walls": [
         "solid",
         "solid",
@@ -2364,6 +2364,14 @@
         7,
         9,
         2
+      ]
+    },
+    {
+      "type": "demo_shopkeeper",
+      "pos": [
+        1,
+        10,
+        3
       ]
     }
   ],

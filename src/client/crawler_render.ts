@@ -62,14 +62,17 @@ import type { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
   mat4,
+  rovec2,
   ROVec2,
   ROVec3,
   ROVec4,
   unit_vec,
+  v2add,
   v2addScale,
   v2copy,
   v2distSq,
   v2iRound,
+  v2scale,
   v2set,
   v2sub,
   v3add,
@@ -103,6 +106,7 @@ import {
   VstyleDesc,
   WallDesc,
 } from '../common/crawler_state';
+import { billboardBias, BillboardBiasOpts } from './crawler_billboard_bias';
 import type { CrawlerScriptAPIClient } from './crawler_script_api_client';
 
 type Geom = ReturnType<typeof geomCreateQuads>;
@@ -642,7 +646,9 @@ type SimpleBillboardRenderOpts = {
   width?: number;
   offs?: Vec3;
   face_camera?: boolean;
-} & SimpleVisualOpts;
+} & Partial<BillboardBiasOpts> & SimpleVisualOpts;
+let game_pos = vec2();
+let neg_one_half = rovec2(-0.5, -0.5);
 function drawSimpleBillboard(
   rot: ROVec4, pos: ROVec3, visual: VisualOpts | undefined, opts: CrawlerDrawableOpts2,
   debug_id: string,
@@ -667,6 +673,10 @@ function drawSimpleBillboard(
     v3copy(temp_pos, pos);
   }
   v3iAdd(temp_pos, [0, 0, temp_size[1]]);
+
+  v2scale(game_pos, pos, 1/DIM);
+  v2add(game_pos, game_pos, neg_one_half);
+  billboardBias(temp_pos, game_pos, vopts);
 
   sprite.draw3D({
     ...param,

@@ -1,0 +1,28 @@
+---
+open_move: true
+open_vis: true
+ascii_char: 'f'
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    atlas: demo
+    tile: cobble_blood1
+- pass: bg
+  type: simple_ceiling
+  opts:
+    atlas: demo
+    tile: grey_dirt0
+- type: simple_billboard
+  opts:
+    atlas: utumno
+    tile: [shopkeep]
+    width: 0.62
+    height: 0.62 # 0..1
+    offs: [0, 0, 0]
+    face_camera: false # Otherwise faces frustum
+    do_split: true
+    biasL: [-0.35, 0.32]
+    biasF: [0, -0.25]
+    biasR: [-0.25, 0.5]
+    biasIn: [0, 0.3, 0.25]

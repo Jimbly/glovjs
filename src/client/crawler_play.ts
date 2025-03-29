@@ -67,6 +67,7 @@ import {
   VstyleDesc,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
+import { billboardBiasPrep } from './crawler_billboard_bias';
 import {
   buildModeActive,
   buildModeOverlayActive,
@@ -921,6 +922,8 @@ export function crawlerRenderFramePrep(): void {
   }
 
   uiClearColor();
+
+  billboardBiasPrep(game_state);
 
   renderPrep(controller.getRenderPrepParam());
 

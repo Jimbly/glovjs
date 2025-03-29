@@ -28,7 +28,6 @@ import {
   clamp,
   easeIn,
   easeOut,
-  lerp,
   ridx,
   sign,
 } from 'glov/common/util';
@@ -39,10 +38,7 @@ import {
   v2addScale,
   v2dist,
   v2distSq,
-  v2iNormalize,
-  v2lengthSq,
   v2scale,
-  v2sub,
   v3set,
   v4set,
   Vec2,
@@ -51,6 +47,10 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import type { JSVec4 } from '../common/crawler_state';
+import {
+  billboardBias,
+  BillboardBiasOpts,
+} from './crawler_billboard_bias';
 import { buildModeActive } from './crawler_build_mode';
 import {
   crawlerEntityManager,
@@ -96,11 +96,7 @@ export type EntityDrawSubOpts = {
 
 export type DrawableOpts = {
   lod_bias: [number, number];
-  biasL: [number, number];
-  biasF: [number, number];
-  biasR: [number, number];
-  biasIn: [number, number, number]; // Not relevant for monsters, just one value will do?
-};
+} & BillboardBiasOpts;
 
 export type TextureOptionsAsStrings = {
   filter_min?: string;
@@ -170,7 +166,7 @@ export function isEntityDrawableSprite(ent: Entity): ent is EntityDrawableSprite
 }
 
 
-const { abs, atan2, min, cos, sin, sqrt, PI } = Math;
+const { abs, min } = Math;
 
 export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDraw2DOpts): void {
   let ent = this;
@@ -310,15 +306,11 @@ export function drawableSpineDrawSub(this: EntityDrawableSpine, param: EntityDra
 }
 
 let billboard_quat = quat();
-let v2temp = vec2();
-let view_vec = vec2();
-let right_vec = vec2();
 let draw_pos = vec3();
 let vhdim = vec3(HDIM, HDIM, HDIM);
 export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void {
   let {
     dt,
-    game_state,
     pos,
     zoffs,
     angle, // angle entity is facing
@@ -327,7 +319,7 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
   } = param;
   let ent = this;
 
-  let { biasL, biasF, biasR, biasIn, lod_bias } = ent.drawable_opts;
+  let { lod_bias } = ent.drawable_opts;
 
   // Ignore entity facing and just face camera
   // let dx = game_state.pos[0] - pos[0];
@@ -345,71 +337,7 @@ export function drawableDraw(this: EntityDrawable, param: EntityDrawOpts): void 
   v2addScale(draw_pos, vhdim, pos, DIM);
   draw_pos[2] = pos[2] * DIM + zoffs * DIM;
 
-  // Determine bias amount based on whether they are in front or adjacent to us
-  view_vec[0] = cos(game_state.angle);
-  view_vec[1] = sin(game_state.angle);
-  right_vec[0] = view_vec[1];
-  right_vec[1] = -view_vec[0];
-  let rel_angle = 0;
-  v2sub(v2temp, pos, game_state.pos);
-  let v2temp_len = sqrt(v2lengthSq(v2temp));
-  if (v2temp_len > 0.0001) {
-    rel_angle = atan2(v2temp[1], v2temp[0]) - game_state.angle;
-  }
-  while (rel_angle < -PI) {
-    rel_angle += PI * 2;
-  }
-  while (rel_angle > PI) {
-    rel_angle -= PI * 2;
-  }
-  // -90deg = off to the right
-  // 0deg = in front
-  // 90deg = off to the left
-  let bweight = rel_angle / (PI/2);
-  // Now -1 .. 1 (and -2 behind)
-  if (bweight > 1) {
-    bweight = 2 - bweight;
-  }
-  if (bweight < -1) {
-    bweight = -2 - bweight;
-  }
-  let bweight_in = 1;
-  if (v2temp_len < 0.95) {
-    bweight_in = v2temp_len/0.95;
-    // Blend Left/front/right smoothly to front values
-    // Not needed after bweight_in, it seems
-    //bweight = lerp(bweight_in, 0, bweight);
-  }
-  let weights = [0,0,0];
-  if (bweight < 0) { // to the right
-    weights[2] = easeIn(-bweight, 2);
-    weights[1] = 1 - weights[2];
-  } else {
-    weights[0] = easeIn(bweight, 2);
-    weights[1] = 1 - weights[0];
-  }
-  let bias_phys = weights[0] * biasL[0] + weights[1] * biasF[0] + weights[2] * biasR[0];
-  let bias_view = weights[0] * biasL[1] + weights[1] * biasF[1] + weights[2] * biasR[1];
-  // Blend against in-same-cell weights
-  bias_phys = lerp(bweight_in, biasIn[0], bias_phys);
-  bias_view = lerp(bweight_in, biasIn[1], bias_view);
-  let bias_in_offs = lerp(bweight_in, biasIn[2], 0);
-  let bias_in_sign = lerp(abs(view_vec[0]), -1, 1);
-  // if (drawableDraw.debug !== frame_index) {
-  //   drawableDraw.debug = frame_index;
-  //   drawableDraw.debug_idx = 0;
-  // }
-  // ui.print(null, 100, 100 + (drawableDraw.debug_idx++) * 16, 1000,
-  //   `${bweight.toFixed(5)} ${bias_phys.toFixed(5)} ${bias_view.toFixed(5)}`);
-
-  // Offset `bias_phys` towards player
-  v2sub(v2temp, draw_pos, renderCamPos());
-  v2iNormalize(v2temp);
-  v2addScale(draw_pos, draw_pos, v2temp, bias_phys * DIM);
-  // Offset `bias_vew` towards view plane
-  v2addScale(draw_pos, draw_pos, view_vec, bias_view * DIM);
-  // If in the same cell, alternate offsetting to the right as well
-  v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
+  billboardBias(draw_pos, pos, ent.drawable_opts);
 
   let shader_params: Partial<Record<string, ROVec2|ROVec3|ROVec4|number[]>> = {
     lod_bias,
