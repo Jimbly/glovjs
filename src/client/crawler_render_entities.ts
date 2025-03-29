@@ -43,7 +43,6 @@ import {
   v2lengthSq,
   v2scale,
   v2sub,
-  v3copy,
   v3set,
   v4set,
   Vec2,
@@ -199,7 +198,6 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   });
 }
 
-let temp_pos = vec3();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
   let frame = ent.updateAnim(param.dt);
@@ -248,11 +246,6 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
   }
   let shader = crawlerRenderGetShader(shader_type);
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
-  if (aspect !== 1) {
-    v3copy(temp_pos, draw_pos);
-    temp_pos[2] += (1/aspect - 1) * scale * DIM;
-    draw_pos = temp_pos;
-  }
   sprite.draw3D({
     pos: draw_pos,
     frame,
