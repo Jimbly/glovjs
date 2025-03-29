@@ -82,12 +82,12 @@ import { getChatUI } from './crawler_comm';
 import {
   crawlerEntityManager,
   crawlerGetSpawnDescs,
-  crawlerMyEnt,
   SpawnDesc,
   SpawnDescs,
 } from './crawler_entity_client';
 import { mapViewSetActive } from './crawler_map_view';
 import {
+  crawlerController,
   crawlerGameState,
   crawlerRoom,
   crawlerSetLevelGenMode,
@@ -318,12 +318,12 @@ function openCell(myx: number, myy: number, dir: DirType, tx: number, ty: number
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function toggleCell(): void {
   crawlerBuildModeBegin();
-  let my_ent = crawlerMyEnt();
   let game_state = crawlerGameState();
   let level = game_state.level;
   assert(level);
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
   let cell = level.getCell(tx, ty);
@@ -343,12 +343,12 @@ function toggleCell(): void {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function toggleWall(): void {
   crawlerBuildModeBegin();
-  let my_ent = crawlerMyEnt();
   let game_state = crawlerGameState();
   let level = game_state.level;
   assert(level);
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
   let cell = level.getCell(tx, ty);
@@ -527,12 +527,12 @@ function setCellEx(
 
 function togglePath(): void {
   crawlerBuildModeBegin();
-  let my_ent = crawlerMyEnt();
   let game_state = crawlerGameState();
   let level = game_state.level;
   assert(level);
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   level.togglePath(myx, myy, dir);
   crawlerBuildModeCommit();
 }
@@ -543,12 +543,12 @@ function toggleWithSelected(): void {
     return;
   }
   crawlerBuildModeBegin();
-  let my_ent = crawlerMyEnt();
   let game_state = crawlerGameState();
   let level = game_state.level;
   assert(level);
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   let my_cell = level.getCell(myx, myy);
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
@@ -694,12 +694,12 @@ function toggleWithSelected(): void {
 
 function adjustCellHeight(delta: number): void {
   crawlerBuildModeBegin();
-  let my_ent = crawlerMyEnt();
   let game_state = crawlerGameState();
   let level = game_state.level;
   assert(level);
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
 
@@ -1132,9 +1132,9 @@ function showCurrentCell(param: {
 }): { x: number; y: number } {
   let { x, y, z, w, level } = param;
   y += 2;
-  let my_ent = crawlerMyEnt();
-  let pos = my_ent.getData<[number, number, DirType]>('pos')!;
-  let [myx, myy, dir] = pos;
+  let controller = crawlerController();
+  let [myx, myy] = controller.getEffPos();
+  let dir = controller.getEffRot();
   let tx = myx + DX[dir];
   let ty = myy + DY[dir];
   let font_height = uiTextHeight() * 0.75;

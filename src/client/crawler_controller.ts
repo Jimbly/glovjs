@@ -32,6 +32,7 @@ import {
   sign,
 } from 'glov/common/util';
 import {
+  ROVec2,
   rovec3,
   v2add,
   v2copy,
@@ -128,6 +129,7 @@ interface PlayerController {
   handleHeldInputs(down: ControllerInputs): void;
 
   effRot(): DirType;
+  effPos(): ROVec2;
   isMoving(): boolean;
   startTurn(rot: DirType, double_time?: number): void;
   startMove(dir: DirType, double_time?: number): void;
@@ -247,6 +249,18 @@ class CrawlerControllerQueued implements PlayerController {
   }
   effRot(): DirType {
     return this.queueTail().rot;
+  }
+  effPos(): ROVec2 {
+    let cur = this.interp_queue[this.interp_queue.length - 1];
+    assert(cur.pos);
+    v2copy(temp_pos, cur.pos);
+    for (let ii = 0; ii < this.impulse_queue.length; ++ii) {
+      let elem = this.impulse_queue[ii];
+      if (isActionMove(elem)) {
+        v2add(temp_pos, temp_pos, elem.pos);
+      }
+    }
+    return temp_pos;
   }
 
   isMoving(): boolean {
@@ -827,6 +841,14 @@ export class CrawlerController {
     } else {
       return null;
     }
+  }
+
+  // where we're (eventually) interpolating to
+  getEffPos(): ROVec2 {
+    return this.player_controller.effPos();
+  }
+  getEffRot(): DirType {
+    return this.player_controller.effRot();
   }
 
   onPlayerMove(old_pos: Vec2, new_pos: Vec2, move_dir: DirType): void {
