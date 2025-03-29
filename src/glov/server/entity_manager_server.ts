@@ -918,7 +918,7 @@ class ServerEntityManagerImpl<
   // but dirty ents still pending, likely including one's own entity.
   clientSetVisibleAreaSees(client: SEMClient, new_visible_areas: VAID[], resp_func?: NetErrorCallback<never>): void {
     if (deepEqual(client.visible_area_sees, new_visible_areas)) {
-      return;
+      return resp_func?.(null);
     }
     this.clientSetVisibleAreaSeesInternal(client, new_visible_areas);
     this.sendInitialEntsToClient(client, true, resp_func);
