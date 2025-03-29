@@ -104,6 +104,41 @@ let temp_delta = vec2();
 
 export type MoveBlocker = () => boolean;
 
+type TickPositions = {
+  inst_pos: Vec2; // Where the camera is
+  inst_rot: DirType;
+  finished_pos: Vec2; // Where the player feels he is (not updated until after movement has finished)
+  finished_rot: DirType;
+};
+type TickParam = {
+  dt: number;
+  disable_move: boolean;
+  do_debug_move: boolean;
+};
+type ControllerInputs = {
+  forward: number;
+  left: number;
+  back: number;
+  right: number;
+  turn_left: number;
+  turn_right: number;
+};
+interface PlayerController {
+  tickMovement(param: TickParam): TickPositions;
+  handleHeldInputs(down: ControllerInputs): void;
+
+  effRot(): DirType;
+  isMoving(): boolean;
+  startTurn(rot: DirType, double_time?: number): void;
+  startMove(dir: DirType, double_time?: number): void;
+  startRelativeMove(dx: number, dy: number): void;
+  initPosSub(): void;
+  autoStartMove(rot: DirType, offs: number): void;
+  cancelAllMoves(): void;
+  cancelQueuedMoves(): void;
+  clearDoubleTime(): void;
+}
+
 const ACTION_NONE = 0;
 const ACTION_MOVE = 1;
 const ACTION_ROT = 2;
@@ -161,6 +196,376 @@ function isActionBump(move_state: MoveState): move_state is MoveStateActionBump 
 //   return move_state.action_type === ACTION_ROT;
 // }
 
+class CrawlerControllerQueued implements PlayerController {
+  interp_queue: MoveState[] = [];
+  impulse_queue: MoveState[] = [];
+  move_offs!: number;
+
+  constructor(public parent: CrawlerController) {
+  }
+
+  queueTail(): MoveState {
+    return this.impulse_queue.length ?
+      this.impulse_queue[this.impulse_queue.length - 1] :
+      this.interp_queue[this.interp_queue.length - 1];
+  }
+  queueLength(): number {
+    return this.interp_queue.length + this.impulse_queue.length;
+  }
+  pushImpulseState(
+    delta: Vec2 | null,
+    rot: DirType,
+    action_type: ActionType,
+    action_dir: (-1 | 1) | DirType
+  ): MoveState {
+    assert(action_type === ACTION_MOVE || action_type === ACTION_ROT);
+    assert(rot >= 0 && rot <= 3);
+    // console.log(
+    //   getFrameIndex(), `pushImpulseState ${action_type === ACTION_MOVE ? 'move' : 'rot'} ` +
+    //   `delta=${delta} rot=${rot} dir=${action_dir} ql=${this.interp_queue.length}+${this.impulse_queue.length}`,
+    //   new Error()
+    // );
+    let tail = this.queueTail();
+    let next = new MoveState(delta, rot, action_type, action_dir);
+    this.impulse_queue.push(next);
+    if (tail && tail.action_type === next.action_type && tail.action_dir === next.action_dir) {
+      // They're the same
+      let queue_length = this.queueLength();
+      if (queue_length > 3 || queue_length === 3 && this.move_offs < 0.5) {
+        tail.double_time = 1;
+      }
+    }
+    return next;
+  }
+  pushInterpState(pos: Vec2, rot: DirType, action_type: ActionType, impulse_elem: MoveState | null): MoveState {
+    let next = new MoveState(pos, rot, action_type, impulse_elem?.action_dir);
+    if (impulse_elem) {
+      next.double_time = impulse_elem.double_time;
+    }
+    this.interp_queue.push(next);
+    return next;
+  }
+  effRot(): DirType {
+    return this.queueTail().rot;
+  }
+
+  isMoving(): boolean {
+    if (this.queueLength() === 1) {
+      return false;
+    }
+    if (this.queueLength() === 2 && this.queueTail().action_type === ACTION_BUMP) {
+      return false;
+    }
+    return true;
+  }
+
+  startTurn(rot: DirType, double_time?: number): void {
+    let drot = rot - this.effRot();
+    if (drot > 2) {
+      drot -= 4; // 3 -> -1
+    } else if (drot < -2) {
+      drot += 4; // -3 -> 1
+    }
+    let elem = this.pushImpulseState(null, rot, ACTION_ROT, sign(drot));
+    if (double_time) {
+      elem.double_time = double_time;
+    }
+  }
+  startMove(dir: DirType, double_time?: number): void {
+    let elem = this.pushImpulseState(DXY[dir], this.effRot(), ACTION_MOVE, dir);
+    if (double_time) {
+      elem.double_time = double_time;
+    }
+  }
+  startRelativeMove(dx: number, dy: number): void {
+    let impulse_idx = this.effRot();
+    if (abs(dx) > abs(dy)) {
+      if (dx < 0) {
+        impulse_idx--;
+      } else {
+        impulse_idx++;
+      }
+    } else {
+      if (dy < 0) {
+        impulse_idx += 2;
+      }
+    }
+    impulse_idx = dirMod(impulse_idx + 4);
+    this.startMove(impulse_idx);
+  }
+
+  startQueuedMove(do_debug_move: boolean): void {
+    const { game_state, script_api } = this.parent;
+    const build_mode = buildModeActive();
+    assert.equal(this.interp_queue.length, 1);
+    assert(this.impulse_queue.length > 0);
+    let cur = this.interp_queue[0];
+    assert(cur.pos);
+    let next = this.impulse_queue.splice(0, 1)[0];
+    let action_type = next.action_type;
+    if (isActionMove(next)) {
+      let new_pos = v2add(vec2(), cur.pos, next.pos);
+      // check walls
+      assert(next.action_dir !== undefined);
+      script_api.setLevel(game_state.level!);
+      script_api.setPos(cur.pos);
+      let blocked = game_state.level!.wallsBlock(cur.pos, next.action_dir, script_api);
+      if ((blocked & BLOCK_MOVE) && build_mode) {
+        if (!(blocked & BLOCK_VIS)) {
+          blocked &= ~BLOCK_MOVE;
+        }
+        let wall_desc = game_state.level!.getCell(cur.pos[0], cur.pos[1])!.walls[next.action_dir];
+        if (wall_desc.replace) {
+          for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
+            let desc = wall_desc.replace[ii].desc;
+            if (desc.open_move) {
+              // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
+              blocked &= ~BLOCK_MOVE;
+            }
+          }
+        }
+        if (!(blocked & BLOCK_MOVE)) {
+          statusPush('Build mode open_move bypassed').fade();
+        }
+      }
+      if (blocked & BLOCK_MOVE) {
+        action_type = ACTION_BUMP;
+      } else if (blocked & BLOCK_VIS) { // any door
+        cur.double_time = 0;
+      }
+      // check destination
+      //let next_cell = game_state.level.getCell(new_pos[0], new_pos[1]);
+      let blocked_ent_id;
+      if (action_type !== ACTION_BUMP && !build_mode) {
+        blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
+        if (blocked_ent_id) {
+          action_type = ACTION_BUMP;
+        }
+      }
+
+      if (action_type === ACTION_BUMP) {
+        // Clear any queued impulse
+        this.impulse_queue.length = 0;
+        next.double_time = 0;
+        // Push the bump
+        let next_elem = this.pushInterpState(cur.pos, cur.rot, action_type, next);
+        next_elem.bump_pos = new_pos;
+        // Do an attack if appropriate
+        if (blocked_ent_id) {
+          let is_facing_ent = next.action_dir === cur.rot;
+          if ((blocked & BLOCK_VIS) && !(blocked & BLOCK_MOVE)) {
+            // Can't see through this wall, and there's a monster on the other side!
+            script_api.status('move_blocked', 'The door won\'t budge.');
+          } else if (!is_facing_ent) {
+            script_api.status('move_blocked', 'Something blocks your way.');
+          } else {
+            // TODO: Replace this with some kind of action
+            // let total_attack_time = attackTime(my_ent);
+            // queued_attack = {
+            //   ent_id: blocked_ent_id,
+            //   total_attack_time,
+            //   start_time: frame_wall_time,
+            //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
+            // };
+          }
+        }
+      } else {
+        this.parent.onPlayerMove(cur.pos, new_pos, next.action_dir);
+        this.pushInterpState(new_pos, next.rot, action_type, next);
+        let action_id = do_debug_move ? 'move_debug' : 'move';
+        let new_pos_triplet: JSVec3 = [new_pos[0], new_pos[1], next.rot];
+        this.parent.playerMoveStart(action_id, new_pos_triplet);
+        this.parent.applyPlayerMove(action_id, new_pos_triplet, this.parent.resyncPosOnError.bind(this.parent));
+      }
+    } else {
+      // Rotation, just apply
+      assert(next.rot >= 0 && next.rot <= 3);
+      this.parent.last_rot = next.rot;
+      this.pushInterpState(cur.pos, next.rot, action_type, next);
+      let action_id = do_debug_move ? 'move_debug' : 'move';
+      this.parent.applyPlayerMove(action_id, [cur.pos[0], cur.pos[1], next.rot]);
+    }
+  }
+
+  initPosSub(): void {
+    this.interp_queue = [];
+    this.impulse_queue = [];
+    this.move_offs = 0;
+    this.pushInterpState(this.parent.last_pos, this.parent.last_rot, ACTION_NONE, null);
+  }
+
+  autoStartMove(rot: DirType, offs: number) : void {
+    this.startMove(rot);
+    this.move_offs = offs;
+  }
+
+  cancelAllMoves(): void {
+    while (this.interp_queue.length > 1) {
+      this.interp_queue.pop();
+    }
+    this.impulse_queue = [];
+  }
+  cancelQueuedMoves(): void {
+    this.impulse_queue = [];
+  }
+
+  handleHeldInputs(down: {
+    turn_left: number;
+    turn_right: number;
+    left: number;
+    right: number;
+    forward: number;
+    back: number;
+  }): void {
+    let { interp_queue, impulse_queue } = this;
+    let eff_rot = this.effRot();
+    if (interp_queue.length + impulse_queue.length === 1) {
+      // Not currently doing any move
+      // Check for held rotation inputs
+      let drot = 0;
+      drot += down.turn_left;
+      drot -= down.turn_right;
+      let drot2 = sign(drot);
+      if (drot2) {
+        this.pushImpulseState(null, dirMod(eff_rot + drot2 + 4), ACTION_ROT, drot2);
+      }
+    }
+    if (this.queueLength() === 1 || this.queueLength() === 2 && interp_queue[0].double_time) {
+      // Not currently doing any move
+      // Or, we're continuing double-time movement
+      // Check for held movement inputs
+      let dx = 0;
+      dx += down.left;
+      dx -= down.right;
+      let dy = 0;
+      dy += down.forward;
+      dy -= down.back;
+      if (dx || dy) {
+        this.parent.startRelativeMove(dx, dy);
+      }
+    }
+  }
+
+  clearDoubleTime(): void {
+    let cur = this.queueTail();
+    cur.double_time = 0;
+  }
+
+  tickMovement(param: TickParam): TickPositions {
+    let { dt, disable_move, do_debug_move } = param;
+    let {
+      interp_queue,
+      impulse_queue,
+    } = this;
+    // tick movement queue
+    let easing = 2;
+    let do_once = true;
+    while (this.queueLength() > 1 && (dt || do_once)) {
+      do_once = false;
+      let cur = interp_queue[0];
+      if (interp_queue.length === 1) {
+        if (disable_move) {
+          assert(impulse_queue[0].action_type !== ACTION_ROT); // Old logic was maybe this, but never happens anyway?
+          break;
+        }
+        this.startQueuedMove(do_debug_move);
+      }
+      let next = interp_queue[1];
+      let tot_time = next.action_type === ACTION_MOVE ? WALK_TIME : ROT_TIME;
+      if (next.double_time && this.move_offs > 0.5 || cur.double_time && this.move_offs < 0.5) {
+        tot_time /= 2;
+        easing = this.move_offs > 0.5 ? next.double_time : cur.double_time;
+      }
+      let cur_time = this.move_offs * tot_time;
+      if (cur_time + dt >= tot_time) {
+        dt -= tot_time - cur_time;
+        this.move_offs = 0;
+        interp_queue.splice(0, 1); // same as interp_queue = this.interp_queue = [interp_queue[1]];
+        this.parent.map_update_this_frame = true;
+        dt = 0; // Not completely sure: finish only one move per frame, end this frame exactly on this end of move
+      } else {
+        this.move_offs = (cur_time + dt) / tot_time;
+        dt = 0;
+      }
+    }
+
+    // TODO: instead of us doing this logic, change the parent to look at game_state.pos and deduce the fading
+    // maybe, also, parent changes game_state.pos/angle?
+    let { game_state } = this.parent;
+    let level = game_state.level!;
+    let cur = interp_queue[0];
+    assert(cur.pos);
+    let cur_cell = level.getCell(cur.pos[0], cur.pos[1]);
+    let instantaneous_move;
+    if (interp_queue.length > 1) {
+      let next = interp_queue[1];
+      assert(next.pos);
+      assert(this.move_offs >= 0);
+      assert(this.move_offs <= 1);
+      let progress = easeInOut(this.move_offs, easing);
+      v2lerp(game_state.pos, progress, cur.pos, next.pos);
+      let cur_angle = cur.rot * PI / 2;
+      let next_angle = next.rot * PI / 2;
+      if (next_angle - cur_angle > PI) {
+        next_angle -= PI * 2;
+      } else if (cur_angle - next_angle > PI) {
+        next_angle += PI * 2;
+      }
+      game_state.angle = lerp(progress, cur_angle, next_angle);
+      if (isActionMove(next)) {
+        let pos_offs = crawlerRenderGetPosOffs();
+        let pos_through_door_angle = dirMod(cur.rot - next.action_dir + 4);
+
+        let alpha;
+        let cutoff = pos_through_door_angle === 0 ? (1 - pos_offs[1]) / 2 :
+          pos_through_door_angle === 2 ? (1 + pos_offs[1]) / 2 :
+          pos_through_door_angle === 3 ? (1 + pos_offs[0]) / 2 : (1 - pos_offs[0]) / 2;
+        if (progress < cutoff) {
+          instantaneous_move = cur;
+          alpha = progress / cutoff;
+        } else {
+          instantaneous_move = next;
+          alpha = 1 - (progress - cutoff) / (1 - cutoff);
+        }
+        if (cur_cell) {
+          let wall_type = getEffWall(this.parent.script_api, cur_cell, next.action_dir).swapped;
+          if (!wall_type.open_vis) {
+            // let next_cell = level.getCell(next.pos[0], next.pos[1]);
+            // this.fade_v = next_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_IN ? 1 : 0;
+            // this.fade_v = next_cell.type === CellType.STAIRS_IN || next_cell.type === CellType.STAIRS_OUT ||
+            //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
+            this.parent.fade_alpha = alpha;
+          }
+        }
+      } else if (isActionBump(next)) {
+        let p = (1 - abs(1 - progress * 2)) * 0.025;
+        v2lerp(game_state.pos, p, cur.pos, next.bump_pos);
+        instantaneous_move = cur;
+      } else {
+        if (progress < 0.5) {
+          instantaneous_move = cur;
+        } else {
+          instantaneous_move = next;
+        }
+      }
+    } else {
+      instantaneous_move = cur;
+      v2copy(game_state.pos, cur.pos);
+      game_state.angle = cur.rot * PI/2;
+    }
+    param.dt = dt;
+
+    assert(instantaneous_move.pos);
+    return {
+      inst_pos: instantaneous_move.pos,
+      inst_rot: instantaneous_move.rot,
+      finished_pos: cur.pos,
+      finished_rot: cur.rot,
+    };
+  }
+
+}
+
 export type PlayerMotionParam = {
   button_x0: number;
   button_y0: number;
@@ -182,6 +587,7 @@ export class CrawlerController {
   on_init_level?: (floor_id: number) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
+  player_controller: PlayerController;
   constructor(param: {
     game_state: CrawlerState;
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
@@ -196,6 +602,7 @@ export class CrawlerController {
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
     this.on_enter_cell = param.on_enter_cell;
+    this.player_controller = new CrawlerControllerQueued(this);
     this.script_api.setController(this);
   }
 
@@ -241,9 +648,6 @@ export class CrawlerController {
   last_pos!: Vec2;
   last_rot: DirType = 0;
   last_type: CellDesc | undefined;
-  interp_queue: MoveState[] = [];
-  impulse_queue: MoveState[] = [];
-  move_offs!: number;
   path_to: Vec2 | null = null;
   map_update_this_frame: boolean = false;
   pit_time!: number;
@@ -380,7 +784,7 @@ export class CrawlerController {
       y += text_height;
       ui.print(null, x, y, z, `Angle: ${(game_state.angle / PI * 180).toFixed(0)}`);
       y += text_height;
-      ui.print(null, x, y, z, `Angle Idx: ${this.moveEffRot()}`);
+      ui.print(null, x, y, z, `Angle Idx: ${this.player_controller.effRot()}`);
       y += text_height;
     }
   }
@@ -396,60 +800,6 @@ export class CrawlerController {
   pathTo(target_x: number, target_y: number): void {
     this.path_to = [target_x, target_y];
   }
-  queueTail(): MoveState {
-    return this.impulse_queue.length ?
-      this.impulse_queue[this.impulse_queue.length - 1] :
-      this.interp_queue[this.interp_queue.length - 1];
-  }
-  queueLength(): number {
-    return this.interp_queue.length + this.impulse_queue.length;
-  }
-  pushImpulseState(
-    delta: Vec2 | null,
-    rot: DirType,
-    action_type: ActionType,
-    action_dir: (-1 | 1) | DirType
-  ): MoveState {
-    assert(action_type === ACTION_MOVE || action_type === ACTION_ROT);
-    assert(rot >= 0 && rot <= 3);
-    // console.log(
-    //   getFrameIndex(), `pushImpulseState ${action_type === ACTION_MOVE ? 'move' : 'rot'} ` +
-    //   `delta=${delta} rot=${rot} dir=${action_dir} ql=${this.interp_queue.length}+${this.impulse_queue.length}`,
-    //   new Error()
-    // );
-    let tail = this.queueTail();
-    let next = new MoveState(delta, rot, action_type, action_dir);
-    this.impulse_queue.push(next);
-    if (tail && tail.action_type === next.action_type && tail.action_dir === next.action_dir) {
-      // They're the same
-      let queue_length = this.queueLength();
-      if (queue_length > 3 || queue_length === 3 && this.move_offs < 0.5) {
-        tail.double_time = 1;
-      }
-    }
-    return next;
-  }
-  pushInterpState(pos: Vec2, rot: DirType, action_type: ActionType, impulse_elem: MoveState | null): MoveState {
-    let next = new MoveState(pos, rot, action_type, impulse_elem?.action_dir);
-    if (impulse_elem) {
-      next.double_time = impulse_elem.double_time;
-    }
-    this.interp_queue.push(next);
-    return next;
-  }
-  moveEffRot(): DirType {
-    return this.queueTail().rot;
-  }
-
-  isMoving(): boolean {
-    if (this.queueLength() === 1) {
-      return false;
-    }
-    if (this.queueLength() === 2 && this.queueTail().action_type === ACTION_BUMP) {
-      return false;
-    }
-    return true;
-  }
 
   getEntInFront(): EntityID | null {
     const { game_state, last_pos, last_rot, script_api } = this;
@@ -457,7 +807,7 @@ export class CrawlerController {
     assert(level);
     script_api.setLevel(level);
     script_api.setPos(last_pos);
-    if (!this.isMoving() && !level.wallsBlock(last_pos, last_rot, script_api)) {
+    if (!this.player_controller.isMoving() && !level.wallsBlock(last_pos, last_rot, script_api)) {
       v2add(temp_pos, last_pos, DXY[last_rot]);
       return !buildModeActive() && entityBlocks(game_state.floor_id, temp_pos, false) || null;
     } else {
@@ -471,124 +821,11 @@ export class CrawlerController {
     assert(level);
     script_api.setLevel(level);
     script_api.setPos(last_pos);
-    if (!this.isMoving() && !(level.wallsBlock(last_pos, last_rot, script_api) & BLOCK_VIS)) {
+    if (!this.player_controller.isMoving() && !(level.wallsBlock(last_pos, last_rot, script_api) & BLOCK_VIS)) {
       v2add(temp_pos, last_pos, DXY[last_rot]);
       return !buildModeActive() && level.getCell(temp_pos[0], temp_pos[1]) || null;
     } else {
       return null;
-    }
-  }
-
-  startMove(dir: DirType): MoveState {
-    return this.pushImpulseState(DXY[dir], this.moveEffRot(), ACTION_MOVE, dir);
-  }
-  startRelativeMove(dx: number, dy: number): void {
-    let impulse_idx = this.moveEffRot();
-    if (abs(dx) > abs(dy)) {
-      if (dx < 0) {
-        impulse_idx--;
-      } else {
-        impulse_idx++;
-      }
-    } else {
-      if (dy < 0) {
-        impulse_idx += 2;
-      }
-    }
-    impulse_idx = dirMod(impulse_idx + 4);
-    this.startMove(impulse_idx);
-  }
-
-  startQueuedMove(do_debug_move: boolean): void {
-    const { game_state, script_api } = this;
-    const build_mode = buildModeActive();
-    assert.equal(this.interp_queue.length, 1);
-    assert(this.impulse_queue.length > 0);
-    let cur = this.interp_queue[0];
-    assert(cur.pos);
-    let next = this.impulse_queue.splice(0, 1)[0];
-    let action_type = next.action_type;
-    if (isActionMove(next)) {
-      let new_pos = v2add(vec2(), cur.pos, next.pos);
-      // check walls
-      assert(next.action_dir !== undefined);
-      script_api.setLevel(game_state.level!);
-      script_api.setPos(cur.pos);
-      let blocked = game_state.level!.wallsBlock(cur.pos, next.action_dir, script_api);
-      if ((blocked & BLOCK_MOVE) && build_mode) {
-        if (!(blocked & BLOCK_VIS)) {
-          blocked &= ~BLOCK_MOVE;
-        }
-        let wall_desc = game_state.level!.getCell(cur.pos[0], cur.pos[1])!.walls[next.action_dir];
-        if (wall_desc.replace) {
-          for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
-            let desc = wall_desc.replace[ii].desc;
-            if (desc.open_move) {
-              // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
-              blocked &= ~BLOCK_MOVE;
-            }
-          }
-        }
-        if (!(blocked & BLOCK_MOVE)) {
-          statusPush('Build mode open_move bypassed').fade();
-        }
-      }
-      if (blocked & BLOCK_MOVE) {
-        action_type = ACTION_BUMP;
-      } else if (blocked & BLOCK_VIS) { // any door
-        cur.double_time = 0;
-      }
-      // check destination
-      //let next_cell = game_state.level.getCell(new_pos[0], new_pos[1]);
-      let blocked_ent_id;
-      if (action_type !== ACTION_BUMP && !build_mode) {
-        blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
-        if (blocked_ent_id) {
-          action_type = ACTION_BUMP;
-        }
-      }
-
-      if (action_type === ACTION_BUMP) {
-        // Clear any queued impulse
-        this.impulse_queue.length = 0;
-        next.double_time = 0;
-        // Push the bump
-        let next_elem = this.pushInterpState(cur.pos, cur.rot, action_type, next);
-        next_elem.bump_pos = new_pos;
-        // Do an attack if appropriate
-        if (blocked_ent_id) {
-          let is_facing_ent = next.action_dir === cur.rot;
-          if ((blocked & BLOCK_VIS) && !(blocked & BLOCK_MOVE)) {
-            // Can't see through this wall, and there's a monster on the other side!
-            script_api.status('move_blocked', 'The door won\'t budge.');
-          } else if (!is_facing_ent) {
-            script_api.status('move_blocked', 'Something blocks your way.');
-          } else {
-            // TODO: Replace this with some kind of action
-            // let total_attack_time = attackTime(my_ent);
-            // queued_attack = {
-            //   ent_id: blocked_ent_id,
-            //   total_attack_time,
-            //   start_time: frame_wall_time,
-            //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
-            // };
-          }
-        }
-      } else {
-        this.onPlayerMove(cur.pos, new_pos, next.action_dir);
-        this.pushInterpState(new_pos, next.rot, action_type, next);
-        let action_id = do_debug_move ? 'move_debug' : 'move';
-        let new_pos_triplet: JSVec3 = [new_pos[0], new_pos[1], next.rot];
-        this.playerMoveStart(action_id, new_pos_triplet);
-        this.applyPlayerMove(action_id, new_pos_triplet, this.resyncPosOnError.bind(this));
-      }
-    } else {
-      // Rotation, just apply
-      assert(next.rot >= 0 && next.rot <= 3);
-      this.last_rot = next.rot;
-      this.pushInterpState(cur.pos, next.rot, action_type, next);
-      let action_id = do_debug_move ? 'move_debug' : 'move';
-      this.applyPlayerMove(action_id, [cur.pos[0], cur.pos[1], next.rot]);
     }
   }
 
@@ -679,14 +916,11 @@ export class CrawlerController {
     this.last_pos = cur_pos.slice(0) as Vec2;
     v2copy(prev_pos, this.last_pos);
     this.last_rot = cur_rot;
-    this.interp_queue = [];
-    this.impulse_queue = [];
     this.path_to = null;
-    this.move_offs = 0;
     if (this.on_init_pos) {
       this.on_init_pos(cur_pos, cur_rot);
     }
-    this.pushInterpState(cur_pos, cur_rot, ACTION_NONE, null);
+    this.player_controller.initPosSub();
     let cur_cell = game_state.level!.getCell(cur_pos[0], cur_pos[1]);
     if (cur_cell) {
       this.last_type = cur_cell.desc;
@@ -696,8 +930,7 @@ export class CrawlerController {
           if (cur_cell.walls[rot].open_move && from_my_ent &&
             game_state.level!.getCell(cur_pos[0] + DX[rot], cur_pos[1] + DY[rot])!.desc.open_move
           ) {
-            this.startMove(rot);
-            this.move_offs = 0.5;
+            this.player_controller.autoStartMove(rot, 0.5);
             break;
           }
         }
@@ -777,19 +1010,13 @@ export class CrawlerController {
     this.goToFloor(floor_id, undefined, undefined, [x, y, rot]);
   }
 
-  cancelAllMoves(): void {
-    while (this.interp_queue.length > 1) {
-      this.interp_queue.pop();
-    }
-    this.impulse_queue = [];
-  }
   cancelQueuedMoves(): void {
-    this.impulse_queue = [];
+    this.player_controller.cancelQueuedMoves();
   }
 
   forceMove(dir: DirType): void {
-    this.cancelAllMoves();
-    this.startMove(dir);
+    this.player_controller.cancelAllMoves();
+    this.player_controller.startMove(dir);
   }
 
   moveBlockPit(): boolean {
@@ -941,6 +1168,11 @@ export class CrawlerController {
     }
   }
 
+  startRelativeMove(dx: number, dy: number): void {
+    this.player_controller.startRelativeMove(dx, dy);
+    this.path_to = null;
+  }
+
   modeCrawl(param: PlayerMotionParam): void {
     const {
       button_x0,
@@ -955,8 +1187,6 @@ export class CrawlerController {
     let dt = param.dt;
     const {
       last_pos,
-      impulse_queue,
-      interp_queue,
       prev_pos,
       game_state,
     } = this;
@@ -968,7 +1198,7 @@ export class CrawlerController {
       this.path_to = null;
     }
 
-    let down = {
+    let down: ControllerInputs = {
       forward: 0,
       left: 0,
       back: 0,
@@ -976,7 +1206,7 @@ export class CrawlerController {
       turn_left: 0,
       turn_right: 0,
     };
-    type ValidKeys = keyof typeof down;
+    type ValidKeys = keyof ControllerInputs;
     let down_edge = {
       forward: 0,
       left: 0,
@@ -1085,23 +1315,22 @@ export class CrawlerController {
       this.fade_alpha = this.fade_override;
       // Apply rot interpolation
       if (!this.loading_level) {
-        let cur = this.queueTail();
-        game_state.angle = cur.rot * PI/2;
+        game_state.angle = this.last_rot * PI/2; // note: untested, was: `this.player_controller.effRot()`
         this.applyForceFace(game_state, dt);
       }
       return;
     }
 
-    let eff_rot = this.moveEffRot();
+    let eff_rot = this.player_controller.effRot();
     {
       let drot = down_edge.turn_left;
       drot -= down_edge.turn_right;
       while (drot) {
         let s = sign(drot);
         eff_rot = dirMod(eff_rot + s + 4);
-        this.pushImpulseState(null, eff_rot, ACTION_ROT, s);
-        drot -= s;
+        this.player_controller.startTurn(eff_rot);
         this.path_to = null;
+        drot -= s;
       }
     }
 
@@ -1114,53 +1343,27 @@ export class CrawlerController {
       dy -= down_edge.back;
       if (dx || dy) {
         this.startRelativeMove(dx, dy);
-        this.path_to = null;
       }
     }
 
+    this.player_controller.handleHeldInputs(down);
 
-    if (interp_queue.length + impulse_queue.length === 1) {
-      // Not currently doing any move
-      // Check for held rotation inputs
-      let drot = 0;
-      drot += down.turn_left;
-      drot -= down.turn_right;
-      let drot2 = sign(drot);
-      if (drot2) {
-        this.pushImpulseState(null, dirMod(eff_rot + drot2 + 4), ACTION_ROT, drot2);
-      }
-    }
-    if (this.queueLength() === 1 || this.queueLength() === 2 && interp_queue[0].double_time) {
-      // Not currently doing any move
-      // Or, we're continuing double-time movement
-      // Check for held movement inputs
-      let dx = 0;
-      dx += down.left;
-      dx -= down.right;
-      let dy = 0;
-      dy += down.forward;
-      dy -= down.back;
-      if (dx || dy) {
-        this.startRelativeMove(dx, dy);
-        this.path_to = null;
-      }
-    }
-
-    assert(interp_queue[0].pos);
-    if (this.queueLength() === 1 && !build_mode && entityBlocks(game_state.floor_id, interp_queue[0].pos, true) &&
-      !v2same(interp_queue[0].pos, prev_pos)
+    if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_pos, true) &&
+      !v2same(last_pos, prev_pos)
     ) {
       // We're standing over a blocking entity!  Move to where we were before
-      v2sub(temp_delta, prev_pos, interp_queue[0].pos);
-      this.pushImpulseState(temp_delta, this.moveEffRot(), ACTION_MOVE,
-        temp_delta[0] > 0 ? 0 : temp_delta[1] > 0 ? 1 : temp_delta[0] < 0 ? 2 : 3);
+      v2sub(temp_delta, prev_pos, last_pos);
+      let dir: DirType = temp_delta[0] > 0 ? 0 : temp_delta[1] > 0 ? 1 : temp_delta[0] < 0 ? 2 : 3;
+      this.player_controller.startMove(dir);
     }
 
     let level = game_state.level!;
-    if (this.queueLength() === 1 && this.path_to) {
+    if (!this.player_controller.isMoving() && this.path_to) {
       let { w } = level;
-      let cur = this.queueTail();
-      assert(cur.pos);
+      let cur = {
+        pos: last_pos,
+        rot: eff_rot,
+      };
       let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
         this.path_to[0], this.path_to[1], build_mode, crawlerScriptAPI());
       if (!path || path.length === 1) {
@@ -1185,135 +1388,44 @@ export class CrawlerController {
             drot = random() > 0.5 ? -1 : 1;
           }
           assert(drot === -1 || drot === 1);
-          this.pushImpulseState(null, dirMod(cur.rot + drot + 4), ACTION_ROT, drot).double_time = 2;
+          this.player_controller.startTurn(dirMod(cur.rot + drot + 4), 2);
         } else {
           if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true)) {
-            cur.double_time = 0;
+            this.player_controller.clearDoubleTime();
             this.path_to = null;
           } else {
             // move
-            let elem = this.startMove(cur.rot);
-            if (path.length > 2) {
-              elem.double_time = 1;
-            }
+            this.player_controller.startMove(cur.rot, path.length > 2 ? 1 : 0);
           }
         }
       }
     }
 
-    // tick movement queue
-    let easing = 2;
-    let do_once = true;
-    while (this.queueLength() > 1 && (dt || do_once)) {
-      do_once = false;
-      let cur = interp_queue[0];
-      if (interp_queue.length === 1) {
-        if (disable_move) {
-          assert(impulse_queue[0].action_type !== ACTION_ROT); // Old logic was maybe this, but never happens anyway?
-          break;
-        }
-        this.startQueuedMove(param.do_debug_move);
-      }
-      let next = interp_queue[1];
-      let tot_time = next.action_type === ACTION_MOVE ? WALK_TIME : ROT_TIME;
-      if (next.double_time && this.move_offs > 0.5 || cur.double_time && this.move_offs < 0.5) {
-        tot_time /= 2;
-        easing = this.move_offs > 0.5 ? next.double_time : cur.double_time;
-      }
-      let cur_time = this.move_offs * tot_time;
-      if (cur_time + dt >= tot_time) {
-        dt -= tot_time - cur_time;
-        this.move_offs = 0;
-        interp_queue.splice(0, 1); // same as interp_queue = this.interp_queue = [interp_queue[1]];
-        this.map_update_this_frame = true;
-        dt = 0; // Not completely sure: finish only one move per frame, end this frame exactly on this end of move
-      } else {
-        this.move_offs = (cur_time + dt) / tot_time;
-        dt = 0;
-      }
-    }
+    let tick_param = {
+      dt,
+      disable_move,
+      do_debug_move: param.do_debug_move,
+    };
+    let positions = this.player_controller.tickMovement(tick_param);
+    dt = tick_param.dt;
 
-    let cur = interp_queue[0];
-    assert(cur.pos);
-    let cur_cell = level.getCell(cur.pos[0], cur.pos[1]);
-    let instantaneous_move;
-    if (interp_queue.length > 1) {
-      let next = interp_queue[1];
-      assert(next.pos);
-      assert(this.move_offs >= 0);
-      assert(this.move_offs <= 1);
-      let progress = easeInOut(this.move_offs, easing);
-      v2lerp(game_state.pos, progress, cur.pos, next.pos);
-      let cur_angle = cur.rot * PI / 2;
-      let next_angle = next.rot * PI / 2;
-      if (next_angle - cur_angle > PI) {
-        next_angle -= PI * 2;
-      } else if (cur_angle - next_angle > PI) {
-        next_angle += PI * 2;
-      }
-      this.game_state.angle = lerp(progress, cur_angle, next_angle);
-      if (isActionMove(next)) {
-        let pos_offs = crawlerRenderGetPosOffs();
-        let pos_through_door_angle = dirMod(cur.rot - next.action_dir + 4);
-
-        let alpha;
-        let cutoff = pos_through_door_angle === 0 ? (1 - pos_offs[1]) / 2 :
-          pos_through_door_angle === 2 ? (1 + pos_offs[1]) / 2 :
-          pos_through_door_angle === 3 ? (1 + pos_offs[0]) / 2 : (1 - pos_offs[0]) / 2;
-        if (progress < cutoff) {
-          instantaneous_move = cur;
-          alpha = progress / cutoff;
-        } else {
-          instantaneous_move = next;
-          alpha = 1 - (progress - cutoff) / (1 - cutoff);
-        }
-        if (cur_cell) {
-          let wall_type = getEffWall(this.script_api, cur_cell, next.action_dir).swapped;
-          if (!wall_type.open_vis) {
-            // let next_cell = level.getCell(next.pos[0], next.pos[1]);
-            // this.fade_v = next_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_IN ? 1 : 0;
-            // this.fade_v = next_cell.type === CellType.STAIRS_IN || next_cell.type === CellType.STAIRS_OUT ||
-            //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
-            this.fade_alpha = alpha;
-          }
-        }
-      } else if (isActionBump(next)) {
-        let p = (1 - abs(1 - progress * 2)) * 0.025;
-        v2lerp(game_state.pos, p, cur.pos, next.bump_pos);
-        instantaneous_move = cur;
-      } else {
-        if (progress < 0.5) {
-          instantaneous_move = cur;
-        } else {
-          instantaneous_move = next;
-        }
-      }
-    } else {
-      instantaneous_move = cur;
-      v2copy(game_state.pos, cur.pos);
-      game_state.angle = cur.rot * PI/2;
-    }
     this.applyForceFace(game_state, dt);
-    assert(instantaneous_move);
-    assert(instantaneous_move.pos);
 
-    let inst_cell = level.getCell(instantaneous_move.pos[0], instantaneous_move.pos[1]);
+    let inst_cell = level.getCell(positions.inst_pos[0], positions.inst_pos[1]);
     if (inst_cell && inst_cell.desc.auto_evict) {
       // this.fade_v = inst_cell.type === STAIRS_IN ? 1 : 0;
       // this.fade_v = 1;
       this.fade_alpha = 1;
     }
 
-    let move_for_abs_pos = cur; // instantaneous_move
-    assert(move_for_abs_pos.pos);
-    if (!v2same(move_for_abs_pos.pos, last_pos)) {
-      this.playerMoveFinish(level, inst_cell, move_for_abs_pos.pos);
+    if (!v2same(positions.finished_pos, last_pos)) {
+      this.playerMoveFinish(level, inst_cell, positions.finished_pos);
       if (disable_player_impulse) {
-        this.cancelAllMoves();
+        this.player_controller.cancelAllMoves();
       }
     }
 
-    this.flagCellNextToUsVisible(instantaneous_move.pos);
+    this.flagCellNextToUsVisible(positions.inst_pos);
   }
 
   modeFreecam(param: PlayerMotionParam): void {
