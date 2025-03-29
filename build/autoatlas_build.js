@@ -1,10 +1,11 @@
 /* eslint-disable @stylistic/max-len */
 
 const assert = require('assert');
+const path = require('path');
 const gb = require('glov-build');
 const yaml = require('js-yaml');
-const { max } = Math;
-const { pngAlloc, pngRead, pngWrite } = require('./png.js');
+const { pngAlloc, pngRead, pngWrite } = require('./png');
+const { floor, max } = Math;
 
 function nextHighestPowerOfTwo(x) {
   --x;
@@ -64,7 +65,7 @@ function parseRow(job, img, x0, y0, dx, dy) {
 }
 
 
-module.exports = function () {
+module.exports = function (opts) {
   function imgproc(job, done) {
     let files = job.getFiles();
 
@@ -78,12 +79,16 @@ module.exports = function () {
       let ext = m[3];
       let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {} };
       if (ext[0] === 'y') {
+        if (img_name !== 'atlas') {
+          job.error(img_file, `Found unexpected yaml: "${img_file.relative}" (expected atlas.yaml or [image_name].yaml)`);
+          continue;
+        }
         let config_data;
         try {
           config_data = yaml.load(img_file.contents.toString('utf8')) || {};
         } catch (err) {
           job.error(img_file, `Error parsing ${img_file.relative}: ${err}`);
-          return void done(err);
+          continue;
         }
         if (config_data.pad && typeof config_data.pad !== 'number') {
           job.error(img_file, `pad must be number, found ${JSON.stringify(config_data.pad)}`);
@@ -123,7 +128,7 @@ module.exports = function () {
       let { err, img } = pngRead(img_file.contents);
       if (err) {
         job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
-        return void done(err);
+        continue;
       }
       img.source_name = img_file.relative;
       let do_9patch = img_name.endsWith('.9');
@@ -318,12 +323,117 @@ module.exports = function () {
     }
     done();
   }
+
+  function prepproc(job, done) {
+    let img_file = job.getFile();
+
+    let base_name = path.basename(img_file.relative);
+    let ext = path.extname(img_file.relative);
+    if (ext === '.yaml') {
+      if (base_name === 'atlas.yaml') {
+        // config file, just pass through
+        job.out(img_file);
+      }
+      // otherwise, presumably matches a .png, will be handled when the prep the png
+      return void done();
+    }
+    assert(ext === '.png');
+    let config_name = `${img_file.relative.slice(0, -ext.length)}.yaml`;
+    job.depAdd(config_name, function (err, depfile) {
+      if (err) {
+        // presumably config file doesn't exist, that's fine, pass the image through
+        job.out(img_file);
+        return void done();
+      }
+
+      let { err: img_err, img } = pngRead(img_file.contents);
+      if (img_err) {
+        job.error(img_file, `Error reading ${img_file.relative}: ${img_err}`);
+        return void done();
+      }
+
+      assert(depfile.contents);
+      let config_data;
+      try {
+        config_data = yaml.load(depfile.contents.toString('utf8')) || {};
+      } catch (err) {
+        job.error(depfile, `Error parsing ${depfile.relative}: ${err}`);
+        return void done();
+      }
+      let { tile_res, tiles_per_row, tiles } = config_data;
+      if (!tiles) {
+        job.error(depfile, 'Config file missing "tiles" member');
+        return void done();
+      }
+
+      if (!tiles_per_row && tile_res) {
+        tiles_per_row = floor(img.width / tile_res);
+      }
+      for (let key in tiles) {
+        let tile_def = tiles[key];
+        let source;
+        if (typeof tile_def === 'number') {
+          if (!tile_res) {
+            job.error(depfile, `Tile "${key}" specifies numerical tile, but config missing "tile_res"`);
+            continue;
+          }
+          source = [(tile_def % tiles_per_row) * tile_res, floor(tile_def / tiles_per_row) * tile_res, tile_res, tile_res];
+        } else if (Array.isArray(tile_def) && tile_def.length === 2) {
+          if (!tile_res) {
+            job.error(depfile, `Tile "${key}" specifies [x,y] without w,h, but config missing "tile_res"`);
+            continue;
+          }
+          source = [tile_def[0] * tile_res, tile_def[1] * tile_res, tile_res, tile_res];
+        } else if (Array.isArray(tile_def) && tile_def.length === 4) {
+          source = tile_def;
+        } else {
+          job.error(depfile, `Tile "${key}" specifies unrecognized definition of "${JSON.stringify(tile_def)}" (expected index, [x, y], or [x, y, w, h])`);
+          continue;
+        }
+        let img_out = pngAlloc({
+          width: source[2],
+          height: source[3],
+          byte_depth: 4,
+        });
+        try {
+          img.bitblt(img_out, source[0], source[1], source[2], source[3], 0, 0);
+        } catch (err) {
+          job.error(depfile, `${key}: Error copying image: "${err}"`);
+          continue;
+        }
+        job.out({
+          relative: `${path.dirname(img_file.relative)}/${key}.png`,
+          contents: pngWrite(img_out),
+        });
+      }
+      done();
+    });
+  }
+
+  let { name, input } = opts;
+
+  let prep_task = `${name}_prep`;
+  gb.task({
+    name: prep_task,
+    type: gb.SINGLE,
+    input: [
+      `${input}/**/*.png`,
+      `${input}/**/*.yaml`,
+    ],
+    func: prepproc,
+  });
+
   return {
+    name,
     type: gb.ALL,
     func: imgproc,
+    input: [
+      `${prep_task}:**`,
+    ],
     version: [
       cmpFileKeys,
       parseRow,
+      opts,
     ],
   };
 };
