@@ -84,15 +84,16 @@ export enum CrawlerScriptWhen {
   PRE,
   POST,
 }
-export enum CrawlerScriptEventMapIcon {
-  NONE=0,
-  SHOP1=8,
-  SHOP2=9,
-  SHOP3=10,
-  X=24,
-  QUESTION=27,
-  EXCLAIMATION=28,
-}
+export type CrawlerScriptEventMapIcon = string | null;
+export const CrawlerScriptEventMapIcons = {
+  NONE: null,
+  SHOP1: 'icon_shop1',
+  SHOP2: 'icon_shop2',
+  SHOP3: 'icon_shop3',
+  X: 'pathfind_bad',
+  QUESTION: 'icon_question',
+  EXCLAIMATION: 'icon_exclamation',
+};
 
 export type CrawlerScriptEvent = (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => void;
 export type CrawlerScriptMapIconCB = (api: CrawlerScriptAPI, param: string) => CrawlerScriptEventMapIcon;
@@ -110,7 +111,7 @@ export function crawlerScriptRegisterEvent(param: CrawlerScriptEventInfoParam): 
     key,
     func: param.func,
     when: param.when || CrawlerScriptWhen.PRE,
-    map_icon: param.map_icon || CrawlerScriptEventMapIcon.NONE,
+    map_icon: param.map_icon || CrawlerScriptEventMapIcons.NONE,
   };
   assert(!event_funcs[key]);
   event_funcs[key] = info;

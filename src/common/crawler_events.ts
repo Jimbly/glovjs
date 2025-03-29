@@ -3,6 +3,7 @@ import { isInteger, merge } from 'glov/common/util';
 import {
   CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
+  CrawlerScriptEventMapIcons,
   crawlerScriptRegisterEvent,
   crawlerScriptRegisterFunc,
   CrawlerScriptWhen,
@@ -23,7 +24,7 @@ export function dialogIconsRegister(data: Record<string, DialogIconFunc>): void 
 export function dialogMapIcon(id: string, param: string, script_api: CrawlerScriptAPI): CrawlerScriptEventMapIcon {
   let dlg = DIALOG_ICONS[id];
   if (!dlg) {
-    return CrawlerScriptEventMapIcon.NONE;
+    return CrawlerScriptEventMapIcons.NONE;
   }
   return dlg(param || '', script_api);
 }
@@ -53,7 +54,7 @@ crawlerScriptRegisterFunc('KEY', function (
 crawlerScriptRegisterEvent({
   key: 'key_set',
   when: CrawlerScriptWhen.PRE, // Must be PRE so that the if happens before the server applies it
-  // map_icon: CrawlerScriptEventMapIcon.EXCLAIMATION,
+  // map_icon: CrawlerScriptEventMapIcons.EXCLAMATION,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     if (!param && cell.props?.key_cell) {
       param = cell.props?.key_cell;
@@ -111,7 +112,7 @@ crawlerScriptRegisterEvent({
 crawlerScriptRegisterEvent({
   key: 'floor_delta', // 1/-1 [keeprot] [special_pos_key]
   when: CrawlerScriptWhen.POST,
-  map_icon: CrawlerScriptEventMapIcon.NONE,
+  map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     let params = param.split(' ');
     let delta = Number(params[0]);
@@ -154,7 +155,7 @@ function parseRot(s: string): DirType | null | undefined {
 crawlerScriptRegisterEvent({
   key: 'floor_abs', // floor x y [rot]
   when: CrawlerScriptWhen.POST,
-  map_icon: CrawlerScriptEventMapIcon.NONE,
+  map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     let params = param.split(' ');
     let floor_id = Number(params[0]);
@@ -178,7 +179,7 @@ crawlerScriptRegisterEvent({
 crawlerScriptRegisterEvent({
   key: 'floor_pit', // 1/-1 [special_pos_key | x y rot]
   when: CrawlerScriptWhen.POST,
-  map_icon: CrawlerScriptEventMapIcon.NONE,
+  map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     let params = param.split(' ');
     let delta = Number(params[0]);
@@ -216,7 +217,7 @@ crawlerScriptRegisterEvent({
 crawlerScriptRegisterEvent({
   key: 'move', // rot
   when: CrawlerScriptWhen.POST,
-  map_icon: CrawlerScriptEventMapIcon.NONE,
+  map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     let rot = parseRot(param);
     if (rot === null || rot === undefined) {
@@ -230,7 +231,7 @@ crawlerScriptRegisterEvent({
 crawlerScriptRegisterEvent({
   key: 'sign',
   when: CrawlerScriptWhen.PRE,
-  map_icon: CrawlerScriptEventMapIcon.NONE,
+  map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     api.dialog('sign', param || '...');
   },

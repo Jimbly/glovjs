@@ -2208,6 +2208,12 @@
         "solid",
         "open",
         "solid"
+      ],
+      "events": [
+        {
+          "id": "key_set",
+          "param": "test"
+        }
       ]
     },
     {

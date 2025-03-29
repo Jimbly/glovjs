@@ -35,10 +35,10 @@ export type WallDesc = {
   sound_id?: string;
   build_hide?: boolean;
   is_secret?: boolean; // Not allowed for pathfinding, not shown on map, until traversed
-  map_view_wall_frame_north?: number;
-  map_view_wall_frame_east?: number;
-  map_view_wall_frame_south?: number; // defaults to north's value if unspecified
-  map_view_wall_frame_west?: number; // defaults to east's value if unspecified
+  map_view_wall_frame_north?: string;
+  map_view_wall_frame_east?: string;
+  map_view_wall_frame_south?: string; // defaults to north's value if unspecified
+  map_view_wall_frame_west?: string; // defaults to east's value if unspecified
   map_view_wall_frame_priority: number; // For resolving a north and south abutting wall mismatch; default 0
   map_view_wall_frames_from?: string;
   visuals?: CrawlerVisualsInput;
@@ -61,8 +61,8 @@ export type CellDesc = {
   default_props?: string[];
   default_events?: string[];
   special_pos?: string;
-  map_view_detail_frame?: number;
-  map_view_detail_frame_visited?: number;
+  map_view_detail_frame?: string;
+  map_view_detail_frame_visited?: string;
   blocks_pathing_if_visited?: boolean;
   build_hide?: boolean;
   auto_evict?: boolean;

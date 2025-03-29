@@ -1,8 +1,8 @@
 ---
 open_move: true
 open_vis: true
-map_view_wall_frame_north: 26
-map_view_wall_frame_east: 25
+map_view_wall_frame_north: door_unlocked_horiz
+map_view_wall_frame_east: door_unlocked_vert
 build_hide: true
 visuals:
 - type: simple_wall

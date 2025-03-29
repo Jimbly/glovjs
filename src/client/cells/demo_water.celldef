@@ -2,7 +2,7 @@
 open_move: false
 open_vis: true
 default_wall: demo_walldetail1
-map_view_detail_frame: 8
+map_view_detail_frame: water
 visuals:
 - pass: bg
   type: simple_floor

@@ -2,8 +2,8 @@
 open_move: false
 open_vis: false
 advertise_other_side: true
-map_view_wall_frame_north: 35
-map_view_wall_frame_east: 34
+map_view_wall_frame_north: door_locked_horiz
+map_view_wall_frame_east: door_locked_vert
 visuals:
 - type: simple_wall
   opts:

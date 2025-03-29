@@ -1,6 +1,6 @@
 ---
 open_vis: true
-map_view_detail_frame: 28
+map_view_detail_frame: icon_exclamation
 visuals:
 - pass: bg
   type: simple_floor

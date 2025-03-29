@@ -1,7 +1,7 @@
 ---
 open_vis: true
 ascii_char: '*'
-map_view_detail_frame_visited: 21
+map_view_detail_frame_visited: pit
 blocks_pathing_if_visited: true
 visuals:
 - pass: bg
