@@ -1,0 +1,81 @@
+---
+open_vis: true
+default_wall: solid
+
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    atlas: spireish
+    tile: floor
+# - pass: bg
+#   type: simple_ceiling
+#   opts:
+#     atlas: demo
+#     tile: grey_dirt0
+
+corners: # pillars and floor/ceiling details
+  one:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 1
+      atlas: spireish
+      tile: pillar1
+      height: 1
+      offs: [0,0,0]
+  # - pass: details
+  #   type: simple_corner_floor
+  #   opts:
+  #     quadrants: 1
+  #     scale: 0.5
+  #     atlas: spireish
+  #     tile: door
+  two:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 2
+      atlas: spireish
+      tile: pillar2
+      height: 1
+      offs: [0,0,0]
+  # - pass: details
+  #   type: simple_corner_floor
+  #   opts:
+  #     quadrants: 2
+  #     scale: 0.5
+  #     atlas: spireish
+  #     tile: door
+  three:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 3
+      atlas: spireish
+      tile: pillar3
+      height: 1
+      offs: [0,0,0]
+  # - pass: details
+  #   type: simple_corner_floor
+  #   opts:
+  #     quadrants: 3
+  #     scale: 0.5
+  #     atlas: spireish
+  #     tile: door
+  four:
+  - pass: details
+    type: simple_pillar
+    opts:
+      quadrants: 4
+      atlas: spireish
+      tile: pillar4
+      height: 1
+      offs: [0,0,0]
+  # - pass: details
+  #   type: simple_corner_floor
+  #   opts:
+  #     quadrants: 4
+  #     scale: 0.5
+  #     atlas: spireish
+  #     tile: door

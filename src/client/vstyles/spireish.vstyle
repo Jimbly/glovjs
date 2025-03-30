@@ -1,0 +1,23 @@
+---
+fog_color: '#fff'
+background_color: '#fff'
+# background_img: backdrop_demo
+fog_params:
+- 0.003
+- 0.004
+- 400.0
+cell_swaps:
+  open: spireish_open
+wall_swaps:
+  # open: demo_open
+  door: spireish_door
+  door_oneway: spireish_door
+  # door_locked: demo_door_locked
+  # door_locked_unlocked: demo_door_locked_unlocked
+  entrance: spireish_stairs
+  # secret_door: demo_secret_door
+  # secret_door_unvisited: demo_secret_door
+  solid: spireish_solid
+  stairs_in: spireish_door
+  stairs_out: spireish_door
+  # floorswitch: demo_floorswitch

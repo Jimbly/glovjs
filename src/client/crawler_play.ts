@@ -203,7 +203,7 @@ settingsRegister({
       }
       setTimeout(() => {
         setting_pixely = settings.pixely;
-        engine.setPixelyStrict(setting_pixely === 1 || setting_pixely === 2);
+        engine.setPixelyStrict(setting_pixely === 2);
         engine.setViewportPostprocess(setting_pixely >= 2);
         callEach(on_pixely_change, null, setting_pixely);
       }, 1);

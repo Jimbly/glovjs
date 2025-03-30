@@ -1,0 +1,17 @@
+---
+traits:
+- id: drawable
+  biasL: [-0.35, 0.32]
+  biasF: [0, -0.25]
+  biasR: [-0.25, 0.5]
+- id: drawable_sprite
+  anim_data:
+    idle:
+      frames: [critter]
+      times: 10000
+  sprite_data:
+    atlas: spireish
+    filter_min: LINEAR_MIPMAP_LINEAR
+    filter_mag: LINEAR
+    origin: [0.5, 1]
+  scale: 0.62

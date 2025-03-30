@@ -999,6 +999,7 @@ export type RenderPass = {
   name: string;
   neighbor_draw?: boolean;
   need_split_near?: boolean;
+  alpha_blend: boolean;
 };
 let render_passes: RenderPass[];
 export function crawlerRenderInit(param: {
@@ -1453,6 +1454,11 @@ export function render(
     //   gl.enable(gl.DEPTH_TEST);
     //   gl.depthMask(true);
     // }
+    if (pass_data.alpha_blend) {
+      gl.enable(gl.BLEND); // note: gets turned off if alphaDraw() is called
+    } else {
+      gl.disable(gl.BLEND);
+    }
     for (let yy = 0; yy < h; ++yy) {
       for (let xx = 0; xx < w; ++xx) {
         v2set(cell_pos, xx, yy);

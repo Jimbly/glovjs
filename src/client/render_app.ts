@@ -18,6 +18,7 @@ function renderResetFilter(): void {
   autoAtlasTextureOpts('utumno', ss);
   autoAtlasTextureOpts('whitebox', ss);
   autoAtlasTextureOpts('demo', ss);
+  autoAtlasTextureOpts('spireish', ss);
 }
 
 export function renderAppStartup(): void {
@@ -27,14 +28,17 @@ export function renderAppStartup(): void {
     passes: [{
       // floor and ceiling
       name: 'bg',
+      alpha_blend: false,
     }, {
       // pillars and floor/ceiling details
       name: 'details',
       neighbor_draw: true,
+      alpha_blend: true,
     }, {
       // walls, details, with z-testing
       name: 'default',
       need_split_near: true,
+      alpha_blend: false,
     }],
     atlas_aliases: {
       default: 'demo',
