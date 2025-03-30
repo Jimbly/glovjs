@@ -677,6 +677,15 @@ class ClientEntityManagerImpl<
   ): void {
     assert(this.channel?.numSubscriptions());
     assert(action.ent);
+    if (action.data_assignments) {
+      // Ensure valid (will crash when sending later in the frame otherwise)
+      let { field_defs_by_name } = this;
+      assert(field_defs_by_name);
+      for (let key in action.data_assignments) {
+        let field_def = field_defs_by_name[key];
+        assert(field_def);
+      }
+    }
     if (!this.action_list_queue) {
       this.action_list_queue = {
         action_list: [],
