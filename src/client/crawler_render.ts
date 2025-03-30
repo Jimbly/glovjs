@@ -35,6 +35,7 @@ import {
   FACE_XY,
 } from 'glov/client/dyn_geom';
 import * as engine from 'glov/client/engine';
+import { filewatchOn } from 'glov/client/filewatch';
 import { geomCreateQuads } from 'glov/client/geom';
 import type { Box } from 'glov/client/geom_types';
 import mat4ScaleRotateTranslate from 'glov/client/mat4ScaleRotateTranslate';
@@ -322,6 +323,11 @@ export function crawlerSetFogParams(v: Vec3): void {
   v3copy(fog_params, v);
 }
 
+let any_texture_reloaded = false;
+function textureHasReloaded(): void {
+  any_texture_reloaded = true;
+}
+
 export function crawlerRenderStartup(): void {
   shadersAddGlobal('player_pos', player_pos);
   shadersAddGlobal('lod_bias', global_lod_bias);
@@ -339,6 +345,8 @@ export function crawlerRenderStartup(): void {
     fmodeltinted: shaderCreate('shaders/crawler_model_tinted.fp'),
     vmodel: shaderCreate('shaders/crawler_model.vp'),
   };
+
+  filewatchOn(/\.png$/, textureHasReloaded);
 }
 
 let atlas_aliases: TSMap<string> = {};
@@ -920,13 +928,13 @@ function drawSimplePillar(
   assert(param);
   let vopts = visual as unknown as SimplePillarOpts;
   let key = vopts.key;
-  if (!key) {
+  let uvs = sprite.uvs;
+  if (!key || any_texture_reloaded) {
     key = vopts.key = `${vopts.quadrants},${vopts.segments},${vopts.roundness},` +
-      `${vopts.radius},${vopts.height||1},${sprite.uid}`;
+      `${vopts.radius},${vopts.height||1},${uvs}`;
   }
   let geom = pillar_geoms[key];
   if (!geom) {
-    let uvs = sprite.uvs;
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
   let offs = vopts.offs || zero_vec;
