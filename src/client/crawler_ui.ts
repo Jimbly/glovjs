@@ -1,4 +1,5 @@
 import * as engine from 'glov/client/engine';
+import { Box } from 'glov/client/geom_types';
 import * as input from 'glov/client/input';
 import {
   keyDown,
@@ -53,8 +54,9 @@ export function crawlerOnScreenButton(param: {
   do_up_edge: boolean;
   disabled: boolean;
   button_sprites: Record<ButtonStateString, Sprite>;
+  touch_hotzone?: Box;
 }): CrawlerNavButtonRet {
-  const { x, y, z, w, h, frame, keys, pads, no_visible_ui, do_up_edge, disabled } = param;
+  const { x, y, z, w, h, frame, keys, pads, no_visible_ui, do_up_edge, disabled, touch_hotzone } = param;
   let button_param: SpotParam & ButtonParam & SpriteDrawParams = {
     def: disabled ? SPOT_DEFAULT_BUTTON_DISABLED : SPOT_DEFAULT_BUTTON,
     // pad_focusable: false,
@@ -81,6 +83,14 @@ export function crawlerOnScreenButton(param: {
       state = spot_state;
       if (do_up_edge) {
         nav_ret.up_edge+=ret;
+      }
+    }
+    if (touch_hotzone) {
+      if (input.mouseDownEdge(touch_hotzone)) {
+        playUISound('button_click');
+        nav_ret.down_edge++;
+      } else if (input.mouseDownMidClick(touch_hotzone)) {
+        nav_ret.down++;
       }
     }
     for (let ii = 0; ii < keys.length; ++ii) {

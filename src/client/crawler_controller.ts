@@ -5,6 +5,7 @@ import {
   getFrameIndex,
 } from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
+import { Box } from 'glov/client/geom_types';
 import {
   keyDown,
   keyDownEdge,
@@ -84,13 +85,14 @@ import {
 import { crawlerScriptAPI } from './crawler_play';
 import {
   crawlerRenderGetPosOffs,
+  crawlerRenderViewportGet,
   RenderPrepParam,
 } from './crawler_render';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { statusPush } from './status';
 
-const { PI, abs, cos, max, random, round, sin } = Math;
+const { PI, abs, cos, floor, max, random, round, sin } = Math;
 
 const WALK_TIME = 500;
 const ROT_TIME = 250;
@@ -1238,13 +1240,15 @@ export class CrawlerController {
       turn_right: 0,
     } as Record<ValidKeys, number>;
 
+    let disabled = no_move || disable_player_impulse;
     function button(
       rx: number, ry: number,
       frame: number,
       key: ValidKeys,
       keys: number[],
       pads: number[],
-      toggled_down?: boolean
+      toggled_down?: boolean,
+      touch_hotzone?: Box,
     ): void {
       let z;
       let ret = crawlerOnScreenButton({
@@ -1257,8 +1261,9 @@ export class CrawlerController {
         pads,
         no_visible_ui,
         do_up_edge: false,
-        disabled: no_move || disable_player_impulse,
+        disabled,
         button_sprites,
+        touch_hotzone,
       });
       down_edge[key] += ret.down_edge;
       down[key] += ret.down;
@@ -1321,11 +1326,42 @@ export class CrawlerController {
         keys_turn_left.push(KEYS.LEFT);
         keys_turn_right.push(KEYS.RIGHT);
       }
-      button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left);
-      button(1, 0, forward_frame, 'forward', keys_forward, pad_forward);
-      button(2, 0, 2, 'turn_right', keys_turn_right, pad_turn_right);
+
+      let left_hotzone: Box | undefined;
+      let forward_hotzone: Box | undefined;
+      let back_hotzone: Box | undefined;
+      let right_hotzone: Box | undefined;
+      if (!uiHandlingNav() && !disabled) {
+        // do touch controls on the viewport
+        let viewport = crawlerRenderViewportGet();
+        let leftright_w = floor(viewport.w * 0.24);
+        left_hotzone = {
+          ...viewport,
+          w: leftright_w,
+        };
+        right_hotzone = {
+          ...viewport,
+          x: viewport.x + viewport.w - leftright_w,
+          w: leftright_w,
+        };
+        forward_hotzone = {
+          x: left_hotzone.x + left_hotzone.w,
+          y: viewport.y,
+          w: viewport.w - left_hotzone.w - right_hotzone.w,
+          h: floor(viewport.h * 0.84),
+        };
+        back_hotzone = {
+          ...forward_hotzone,
+          y: forward_hotzone.y + forward_hotzone.h,
+          h: viewport.h - forward_hotzone.h,
+        };
+      }
+
+      button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left, false, left_hotzone);
+      button(1, 0, forward_frame, 'forward', keys_forward, pad_forward, false, forward_hotzone);
+      button(2, 0, 2, 'turn_right', keys_turn_right, pad_turn_right, false, right_hotzone);
       button(0, 1, 3, 'left', keys_left, pad_left);
-      button(1, 1, 4, 'back', keys_back, pad_back);
+      button(1, 1, 4, 'back', keys_back, pad_back, false, back_hotzone);
       button(2, 1, 5, 'right', keys_right, pad_right);
     }
 
