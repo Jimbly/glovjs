@@ -1293,11 +1293,7 @@ export class CrawlerController {
       if (uiHandlingNav()) {
         // hotkeys, but no nav keys
       } else {
-        keys_turn_right.push(KEYS.RIGHT);
-        keys_back.push(KEYS.DOWN);
-        keys_turn_left.push(KEYS.LEFT);
         keys_forward.push(KEYS.UP);
-        keys_turn_right.push(KEYS.RIGHT);
         keys_back.push(KEYS.DOWN);
         pad_turn_left.push(PAD.LEFT);
         pad_forward.push(PAD.UP);
@@ -1323,7 +1319,7 @@ export class CrawlerController {
       if (!uiHandlingNav()) {
         // not affected by turn_toggle
         keys_turn_left.push(KEYS.LEFT);
-        keys_forward.push(KEYS.UP);
+        keys_turn_right.push(KEYS.RIGHT);
       }
       button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left);
       button(1, 0, forward_frame, 'forward', keys_forward, pad_forward);
