@@ -114,8 +114,8 @@ function join(channel_subid: string, for_offline_build: boolean): ClientChannelW
   };
   if (for_offline_build) {
     join_data.floor_id = crawlerGameState().floor_id;
-    let { last_pos, last_rot } = crawlerController();
-    join_data.pos = [last_pos[0], last_pos[1], last_rot];
+    let { last_dest_pos, last_dest_rot } = crawlerController();
+    join_data.pos = [last_dest_pos[0], last_dest_pos[1], last_dest_rot];
   }
   join_func(join_data, function (err) {
     if (err) {

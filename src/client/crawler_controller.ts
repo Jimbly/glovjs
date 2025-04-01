@@ -3,6 +3,7 @@ import * as engine from 'glov/client/engine';
 import {
   getFrameDt,
   getFrameIndex,
+  getFrameTimestamp,
 } from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { Box } from 'glov/client/geom_types';
@@ -62,6 +63,7 @@ import {
   CrawlerLevel,
   CrawlerState,
   dirFromDelta,
+  dirFromMove,
   dirMod,
   DirType,
   DX,
@@ -96,6 +98,7 @@ const { PI, abs, cos, floor, max, random, round, sin } = Math;
 
 const WALK_TIME = 500;
 const ROT_TIME = 250;
+const FAST_TRAVEL_STEP_MIN_TIME = 200; // affects instant-step-ish controllers
 
 const FORCE_FACE_TIME = ROT_TIME;
 
@@ -108,15 +111,16 @@ let temp_delta = vec2();
 export type MoveBlocker = () => boolean;
 
 type TickPositions = {
-  inst_pos: Vec2; // Where the camera is
-  inst_rot: DirType;
+  dest_pos: Vec2; // Where the player is currently moving toward (already satisfied all checks / occupies in game logic)
+  dest_rot: DirType;
+  approx_pos: Vec2; // Where the camera is (centered)
+  approx_rot: DirType;
   finished_pos: Vec2; // Where the player feels he is (not updated until after movement has finished)
   finished_rot: DirType;
 };
 type TickParam = {
   dt: number;
   disable_move: boolean;
-  do_debug_move: boolean;
 };
 type ControllerInputs = {
   forward: number;
@@ -135,7 +139,6 @@ interface PlayerController {
   isMoving(): boolean;
   startTurn(rot: DirType, double_time?: number): void;
   startMove(dir: DirType, double_time?: number): void;
-  startRelativeMove(dx: number, dy: number): void;
   initPosSub(): void;
   autoStartMove(rot: DirType, offs: number): void;
   cancelAllMoves(): void;
@@ -293,24 +296,8 @@ class CrawlerControllerQueued implements PlayerController {
       elem.double_time = double_time;
     }
   }
-  startRelativeMove(dx: number, dy: number): void {
-    let impulse_idx = this.effRot();
-    if (abs(dx) > abs(dy)) {
-      if (dx < 0) {
-        impulse_idx--;
-      } else {
-        impulse_idx++;
-      }
-    } else {
-      if (dy < 0) {
-        impulse_idx += 2;
-      }
-    }
-    impulse_idx = dirMod(impulse_idx + 4);
-    this.startMove(impulse_idx);
-  }
 
-  startQueuedMove(do_debug_move: boolean): void {
+  startQueuedMove(): void {
     const { game_state, script_api } = this.parent;
     const build_mode = buildModeActive();
     assert.equal(this.interp_queue.length, 1);
@@ -386,20 +373,12 @@ class CrawlerControllerQueued implements PlayerController {
           }
         }
       } else {
-        this.parent.onPlayerMove(cur.pos, new_pos, next.action_dir);
         this.pushInterpState(new_pos, next.rot, action_type, next);
-        let action_id = do_debug_move ? 'move_debug' : 'move';
-        let new_pos_triplet: JSVec3 = [new_pos[0], new_pos[1], next.rot];
-        this.parent.playerMoveStart(action_id, new_pos_triplet);
-        this.parent.applyPlayerMove(action_id, new_pos_triplet, this.parent.resyncPosOnError.bind(this.parent));
       }
     } else {
       // Rotation, just apply
       assert(next.rot >= 0 && next.rot <= 3);
-      this.parent.last_rot = next.rot;
       this.pushInterpState(cur.pos, next.rot, action_type, next);
-      let action_id = do_debug_move ? 'move_debug' : 'move';
-      this.parent.applyPlayerMove(action_id, [cur.pos[0], cur.pos[1], next.rot]);
     }
   }
 
@@ -407,7 +386,7 @@ class CrawlerControllerQueued implements PlayerController {
     this.interp_queue = [];
     this.impulse_queue = [];
     this.move_offs = 0;
-    this.pushInterpState(this.parent.last_pos, this.parent.last_rot, ACTION_NONE, null);
+    this.pushInterpState(this.parent.last_finished_pos, this.parent.last_finished_rot, ACTION_NONE, null);
   }
 
   autoStartMove(rot: DirType, offs: number) : void {
@@ -468,7 +447,7 @@ class CrawlerControllerQueued implements PlayerController {
   }
 
   tickMovement(param: TickParam): TickPositions {
-    let { dt, disable_move, do_debug_move } = param;
+    let { dt, disable_move } = param;
     let {
       interp_queue,
       impulse_queue,
@@ -484,7 +463,7 @@ class CrawlerControllerQueued implements PlayerController {
           assert(impulse_queue[0].action_type !== ACTION_ROT); // Old logic was maybe this, but never happens anyway?
           break;
         }
-        this.startQueuedMove(do_debug_move);
+        this.startQueuedMove();
       }
       let next = interp_queue[1];
       let tot_time = next.action_type === ACTION_MOVE ? WALK_TIME : ROT_TIME;
@@ -497,7 +476,6 @@ class CrawlerControllerQueued implements PlayerController {
         dt -= tot_time - cur_time;
         this.move_offs = 0;
         interp_queue.splice(0, 1); // same as interp_queue = this.interp_queue = [interp_queue[1]];
-        this.parent.map_update_this_frame = true;
         dt = 0; // Not completely sure: finish only one move per frame, end this frame exactly on this end of move
       } else {
         this.move_offs = (cur_time + dt) / tot_time;
@@ -511,11 +489,13 @@ class CrawlerControllerQueued implements PlayerController {
     let level = game_state.level!;
     let cur = interp_queue[0];
     assert(cur.pos);
+    let dest = cur;
     let cur_cell = level.getCell(cur.pos[0], cur.pos[1]);
     let instantaneous_move;
     if (interp_queue.length > 1) {
       let next = interp_queue[1];
       assert(next.pos);
+      dest = next;
       assert(this.move_offs >= 0);
       assert(this.move_offs <= 1);
       let progress = easeInOut(this.move_offs, easing);
@@ -573,13 +553,141 @@ class CrawlerControllerQueued implements PlayerController {
 
     assert(instantaneous_move.pos);
     return {
-      inst_pos: instantaneous_move.pos,
-      inst_rot: instantaneous_move.rot,
+      dest_pos: dest.pos!,
+      dest_rot: dest.rot,
+      approx_pos: instantaneous_move.pos,
+      approx_rot: instantaneous_move.rot,
       finished_pos: cur.pos,
       finished_rot: cur.rot,
     };
   }
 
+}
+
+class CrawlerControllerInstantStep implements PlayerController {
+  protected pos: Vec2 = vec2();
+  protected rot!: DirType;
+
+  constructor(public parent: CrawlerController) {
+  }
+
+  initPosSub(): void {
+    v2copy(this.pos, this.parent.last_finished_pos);
+    this.rot = this.parent.last_finished_rot;
+  }
+  tickMovement(param: TickParam): TickPositions {
+    let { game_state } = this.parent;
+
+    v2copy(game_state.pos, this.pos);
+    game_state.angle = this.rot * PI / 2;
+
+    return {
+      dest_pos: this.pos,
+      dest_rot: this.rot,
+      approx_pos: this.pos,
+      approx_rot: this.rot,
+      finished_pos: this.pos,
+      finished_rot: this.rot,
+    };
+  }
+  handleHeldInputs(down: ControllerInputs): void {
+    // TODO
+  }
+
+  effRot(): DirType {
+    return this.rot;
+  }
+  effPos(): ROVec2 {
+    return this.pos;
+  }
+  isMoving(): boolean {
+    return false;
+  }
+  startTurn(rot: DirType, double_time?: number): void {
+    assert(rot >= 0 && rot <= 3);
+    this.rot = rot;
+  }
+  startMove(dir: DirType, double_time?: number): void {
+    // TODO: most of this logic is shared with the other controller, refactor!
+    const { game_state, script_api } = this.parent;
+    const build_mode = buildModeActive();
+    let new_pos = v2add(vec2(), this.pos, DXY[dir]);
+    // check walls
+    script_api.setLevel(game_state.level!);
+    script_api.setPos(this.pos);
+    let blocked = game_state.level!.wallsBlock(this.pos, dir, script_api);
+    if ((blocked & BLOCK_MOVE) && build_mode) {
+      if (!(blocked & BLOCK_VIS)) {
+        blocked &= ~BLOCK_MOVE;
+      }
+      let wall_desc = game_state.level!.getCell(this.pos[0], this.pos[1])!.walls[dir];
+      if (wall_desc.replace) {
+        for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
+          let desc = wall_desc.replace[ii].desc;
+          if (desc.open_move) {
+            // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
+            blocked &= ~BLOCK_MOVE;
+          }
+        }
+      }
+      if (!(blocked & BLOCK_MOVE)) {
+        statusPush('Build mode open_move bypassed').fade();
+      }
+    }
+    let bumped_something = false;
+    if (blocked & BLOCK_MOVE) {
+      bumped_something = true;
+    } else if (blocked & BLOCK_VIS) { // any door
+      // cur.double_time = 0;
+    }
+    // check destination
+    let blocked_ent_id;
+    if (!bumped_something && !build_mode) {
+      blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
+      if (blocked_ent_id) {
+        bumped_something = true;
+      }
+    }
+
+    if (bumped_something) {
+      // TODO: animate a bump towards `new_pos`? play sound?
+      // Do an attack if appropriate
+      if (blocked_ent_id) {
+        let is_facing_ent = dir === this.rot;
+        if ((blocked & BLOCK_VIS) && !(blocked & BLOCK_MOVE)) {
+          // Can't see through this wall, and there's a monster on the other side!
+          script_api.status('move_blocked', 'The door won\'t budge.');
+        } else if (!is_facing_ent) {
+          script_api.status('move_blocked', 'Something blocks your way.');
+        } else {
+          // TODO: Replace this with some kind of action
+          // let total_attack_time = attackTime(my_ent);
+          // queued_attack = {
+          //   ent_id: blocked_ent_id,
+          //   total_attack_time,
+          //   start_time: frame_wall_time,
+          //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
+          // };
+        }
+      } else {
+        script_api.status('move_blocked', '*BUMP*');
+      }
+    } else {
+      v2copy(this.pos, new_pos);
+    }
+  }
+  autoStartMove(rot: DirType, offs: number): void {
+    this.startMove(rot);
+  }
+  cancelAllMoves(): void {
+    // nop
+  }
+  cancelQueuedMoves(): void {
+    // nop
+  }
+  clearDoubleTime(): void {
+    // nop
+  }
 }
 
 export type PlayerMotionParam = {
@@ -611,6 +719,7 @@ export class CrawlerController {
     on_init_level?: (floor_id: number) => void;
     on_enter_cell?: (pos: Vec2) => void;
     flush_vis_data?: (force: boolean) => void;
+    controller_type?: string;
   }) {
     this.game_state = param.game_state;
     this.entity_manager = param.entity_manager;
@@ -618,7 +727,9 @@ export class CrawlerController {
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
     this.on_enter_cell = param.on_enter_cell;
-    this.player_controller = new CrawlerControllerQueued(this);
+    this.player_controller = param.controller_type === 'queued' ?
+      new CrawlerControllerQueued(this) :
+      new CrawlerControllerInstantStep(this);
     this.script_api.setController(this);
   }
 
@@ -634,12 +745,12 @@ export class CrawlerController {
   updateEntAfterBuildModeSwitch(): void {
     let my_online_ent = this.entity_manager.getMyEnt();
     if (my_online_ent.data.floor !== this.game_state.floor_id) {
-      this.applyPlayerFloorChange([this.last_pos[0], this.last_pos[1], this.last_rot], this.game_state.floor_id,
-        undefined, () => {
+      this.applyPlayerFloorChange([this.last_dest_pos[0], this.last_dest_pos[1], this.last_dest_rot],
+        this.game_state.floor_id, undefined, () => {
           // ignore
         });
     } else {
-      this.applyPlayerMove('move_debug', [this.last_pos[0], this.last_pos[1], this.last_rot]);
+      this.applyPlayerMove('move_debug', [this.last_dest_pos[0], this.last_dest_pos[1], this.last_dest_rot]);
     }
   }
 
@@ -661,10 +772,13 @@ export class CrawlerController {
   fade_alpha = 0;
   fade_v = 0;
   prev_pos = vec2();
-  last_pos!: Vec2;
-  last_rot: DirType = 0;
+  last_dest_pos!: Vec2;
+  last_dest_rot: DirType = 0;
+  last_finished_pos!: Vec2;
+  last_finished_rot: DirType = 0;
   last_type: CellDesc | undefined;
   path_to: Vec2 | null = null;
+  path_to_last_step = 0;
   map_update_this_frame: boolean = false;
   pit_time!: number;
   pit_stage!: number;
@@ -767,7 +881,7 @@ export class CrawlerController {
         let eff_angle_idx = (round(this.freecam_angle / (PI/2)) + 1024) % 4;
         this.game_state.angle = eff_angle_idx * PI/2;
         this.initPos(false);
-        this.applyPlayerMove('move_debug', [this.last_pos[0], this.last_pos[1], this.last_rot]);
+        this.applyPlayerMove('move_debug', [this.last_dest_pos[0], this.last_dest_pos[1], this.last_dest_rot]);
       } else {
         v2add(this.freecam_pos, this.game_state.pos, half_vec);
         this.freecam_pos[2] = 0.5;
@@ -818,13 +932,16 @@ export class CrawlerController {
   }
 
   getEntInFront(): EntityID | null {
-    const { game_state, last_pos, last_rot, script_api } = this;
+    if (this.player_controller.isMoving()) {
+      return null;
+    }
+    const { game_state, last_dest_pos, last_dest_rot, script_api } = this;
     const { level } = game_state;
     assert(level);
     script_api.setLevel(level);
-    script_api.setPos(last_pos);
-    if (!this.player_controller.isMoving() && !level.wallsBlock(last_pos, last_rot, script_api)) {
-      v2add(temp_pos, last_pos, DXY[last_rot]);
+    script_api.setPos(last_dest_pos);
+    if (!level.wallsBlock(last_dest_pos, last_dest_rot, script_api)) {
+      v2add(temp_pos, last_dest_pos, DXY[last_dest_rot]);
       return !buildModeActive() && entityBlocks(game_state.floor_id, temp_pos, false) || null;
     } else {
       return null;
@@ -832,13 +949,16 @@ export class CrawlerController {
   }
 
   getCellInFront(): CrawlerCell | null {
-    const { game_state, last_pos, last_rot, script_api } = this;
+    if (this.player_controller.isMoving()) {
+      return null;
+    }
+    const { game_state, last_dest_pos, last_dest_rot, script_api } = this;
     const { level } = game_state;
     assert(level);
     script_api.setLevel(level);
-    script_api.setPos(last_pos);
-    if (!this.player_controller.isMoving() && !(level.wallsBlock(last_pos, last_rot, script_api) & BLOCK_VIS)) {
-      v2add(temp_pos, last_pos, DXY[last_rot]);
+    script_api.setPos(last_dest_pos);
+    if (!(level.wallsBlock(last_dest_pos, last_dest_rot, script_api) & BLOCK_VIS)) {
+      v2add(temp_pos, last_dest_pos, DXY[last_dest_rot]);
       return !buildModeActive() && level.getCell(temp_pos[0], temp_pos[1]) || null;
     } else {
       return null;
@@ -853,32 +973,8 @@ export class CrawlerController {
     return this.player_controller.effRot();
   }
 
-  onPlayerMove(old_pos: Vec2, new_pos: Vec2, move_dir: DirType): void {
-    let { game_state } = this;
-    let level = game_state.level!;
-    let cell1 = level.getCell(old_pos[0], old_pos[1]);
-    let wall1 = cell1 && cell1.walls[move_dir];
-    let cell2 = level.getCell(new_pos[0], new_pos[1]);
-    let wall2 = cell2 && cell2.walls[dirMod(move_dir + 2)];
-    if (wall1 && wall1.swapped.sound_id) {
-      playUISound(wall1.swapped.sound_id);
-    } else if (wall2 && wall2.swapped.sound_id) {
-      playUISound(wall2.swapped.sound_id);
-    }
-
-    if (cell2 && cell2.desc.swapped.sound_id === null) {
-      // no sound
-    } else {
-      playUISound(cell2 && cell2.desc.swapped.sound_id || 'footstep');
-    }
-
-    if (this.on_player_move) {
-      this.on_player_move(old_pos, new_pos, move_dir);
-    }
-  }
-
   static PLAYER_MOVE_FIELD = 'seq_player_move';
-  applyPlayerMove(
+  private applyPlayerMove(
     action_id: string,
     new_pos: JSVec3,
     resp_func?: NetErrorCallback
@@ -937,9 +1033,11 @@ export class CrawlerController {
     }
     let cur_rot = dirMod(round(game_state.angle / (PI/2)) + 4);
     let cur_pos = v2iFloor(game_state.pos.slice(0) as Vec2);
-    this.last_pos = cur_pos.slice(0) as Vec2;
-    v2copy(prev_pos, this.last_pos);
-    this.last_rot = cur_rot;
+    this.last_dest_pos = cur_pos.slice(0) as Vec2;
+    v2copy(prev_pos, this.last_dest_pos);
+    this.last_dest_rot = cur_rot;
+    this.last_finished_pos = cur_pos.slice(0) as Vec2;
+    this.last_finished_rot = cur_rot;
     this.path_to = null;
     if (this.on_init_pos) {
       this.on_init_pos(cur_pos, cur_rot);
@@ -1077,41 +1175,40 @@ export class CrawlerController {
     this.move_blocker = this.moveBlockPit.bind(this);
   }
 
-  playerMoveFinish(level: CrawlerLevel, new_cell: CrawlerCell | null, cur_move_pos: Vec2): void {
-    const { last_pos, game_state, script_api } = this;
-    assert(cur_move_pos);
-    let prev_cell = level.getCell(last_pos[0], last_pos[1]);
+  playerMoveFinish(level: CrawlerLevel, new_cell: CrawlerCell | null): void {
+    const { prev_pos, game_state, script_api, last_finished_pos, last_dest_pos } = this;
+    v2copy(last_finished_pos, last_dest_pos);
+    let prev_cell = level.getCell(prev_pos[0], prev_pos[1]);
     if (new_cell) {
       new_cell.visible_bits |= VIS_VISITED;
-      if (last_pos[0] === cur_move_pos[0] + 1 && (
+      if (prev_pos[0] === last_dest_pos[0] + 1 && (
         new_cell.walls[EAST].is_secret || prev_cell?.walls[WEST].is_secret
       )) {
         new_cell.visible_bits |= VIS_PASSED_EAST;
-      } else if (last_pos[1] === cur_move_pos[1] + 1 && (
+      } else if (prev_pos[1] === last_dest_pos[1] + 1 && (
         new_cell.walls[NORTH].is_secret || prev_cell?.walls[SOUTH].is_secret
       )) {
         new_cell.visible_bits |= VIS_PASSED_NORTH;
       }
-      if (last_pos[0] === cur_move_pos[0] - 1 && (
+      if (prev_pos[0] === last_dest_pos[0] - 1 && (
         new_cell.walls[WEST].is_secret || prev_cell?.walls[EAST].is_secret
       )) {
-        let ncell = level.getCell(cur_move_pos[0] - 1, cur_move_pos[1]);
+        let ncell = level.getCell(last_dest_pos[0] - 1, last_dest_pos[1]);
         if (ncell) {
           assert.equal(ncell, prev_cell);
           ncell.visible_bits |= VIS_PASSED_EAST;
         }
-      } else if (last_pos[1] === cur_move_pos[1] - 1 && (
+      } else if (prev_pos[1] === last_dest_pos[1] - 1 && (
         new_cell.walls[SOUTH].is_secret || prev_cell?.walls[NORTH].is_secret
       )) {
-        let ncell = level.getCell(cur_move_pos[0], cur_move_pos[1] - 1);
+        let ncell = level.getCell(last_dest_pos[0], last_dest_pos[1] - 1);
         if (ncell) {
           assert.equal(ncell, prev_cell);
           ncell.visible_bits |= VIS_PASSED_NORTH;
         }
       }
     }
-    v2copy(this.prev_pos, last_pos);
-    v2copy(last_pos, cur_move_pos);
+    this.map_update_this_frame = true;
     let type = new_cell && new_cell.desc || level.default_open_cell;
     if (type !== this.last_type) {
       this.last_type = type;
@@ -1140,28 +1237,60 @@ export class CrawlerController {
       if (new_cell.events) {
         assert(new_cell.events.length);
         script_api.setLevel(game_state.level!);
-        script_api.setPos(cur_move_pos);
+        script_api.setPos(last_dest_pos);
         crawlerScriptRunEvents(script_api, new_cell, CrawlerScriptWhen.POST);
       }
-      this.on_enter_cell?.(cur_move_pos);
+      this.on_enter_cell?.(last_dest_pos);
     }
   }
 
-  playerMoveStart(action_id: string, new_pos: JSVec3): void {
+  playerMoveStart(action_id: string, new_pos: Vec2, new_rot: DirType): void {
     const { game_state, script_api } = this;
-    let new_cell = game_state.level!.getCell(new_pos[0], new_pos[1]);
-    if (new_cell && new_cell.events) {
-      assert(new_cell.events.length);
-      if (action_id === 'move_debug') {
-        script_api.status('build_event', `Note: no events run in ${buildModeActive() ? 'BUILD MODE' : 'debug'}`);
-      } else {
-        // TODO: if anything is predicted (keySet?) it should be cleared once the
-        //   server has also run the event
-        script_api.setLevel(game_state.level!);
-        script_api.setPos(new_pos);
-        crawlerScriptRunEvents(script_api, new_cell, CrawlerScriptWhen.PRE);
+
+    let old_pos = this.last_dest_pos;
+    let pos_changed = !v2same(old_pos, new_pos);
+    if (pos_changed) {
+      let move_dir = dirFromMove(old_pos, new_pos);
+      let level = game_state.level!;
+      let cell1 = level.getCell(old_pos[0], old_pos[1]);
+      let wall1 = cell1 && cell1.walls[move_dir];
+      let cell2 = level.getCell(new_pos[0], new_pos[1]);
+      let wall2 = cell2 && cell2.walls[dirMod(move_dir + 2)];
+      if (wall1 && wall1.swapped.sound_id) {
+        playUISound(wall1.swapped.sound_id);
+      } else if (wall2 && wall2.swapped.sound_id) {
+        playUISound(wall2.swapped.sound_id);
       }
+
+      if (cell2 && cell2.desc.swapped.sound_id === null) {
+        // no sound
+      } else {
+        playUISound(cell2 && cell2.desc.swapped.sound_id || 'footstep');
+      }
+
+      if (this.on_player_move) {
+        this.on_player_move(old_pos, new_pos, move_dir);
+      }
+
+      if (cell2 && cell2.events) {
+        assert(cell2.events.length);
+        if (action_id === 'move_debug') {
+          script_api.status('build_event', `Note: no events run in ${buildModeActive() ? 'BUILD MODE' : 'debug'}`);
+        } else {
+          // TODO: if anything is predicted (keySet?) it should be cleared once the
+          //   server has also run the event
+          script_api.setLevel(game_state.level!);
+          script_api.setPos(new_pos);
+          crawlerScriptRunEvents(script_api, cell2, CrawlerScriptWhen.PRE);
+        }
+      }
+
+      v2copy(this.prev_pos, this.last_dest_pos);
+      v2copy(this.last_dest_pos, new_pos);
     }
+
+    this.applyPlayerMove(action_id, [new_pos[0], new_pos[1], new_rot],
+      pos_changed ? this.resyncPosOnError.bind(this) : undefined);
   }
 
   flagCellNextToUsVisible(pos: Vec2): void {
@@ -1193,7 +1322,20 @@ export class CrawlerController {
   }
 
   startRelativeMove(dx: number, dy: number): void {
-    this.player_controller.startRelativeMove(dx, dy);
+    let impulse_idx = this.player_controller.effRot();
+    if (abs(dx) > abs(dy)) {
+      if (dx < 0) {
+        impulse_idx--;
+      } else {
+        impulse_idx++;
+      }
+    } else {
+      if (dy < 0) {
+        impulse_idx += 2;
+      }
+    }
+    impulse_idx = dirMod(impulse_idx + 4);
+    this.player_controller.startMove(impulse_idx);
     this.path_to = null;
   }
 
@@ -1210,7 +1352,8 @@ export class CrawlerController {
     } = param;
     let dt = param.dt;
     const {
-      last_pos,
+      last_dest_pos,
+      last_finished_pos,
       prev_pos,
       game_state,
     } = this;
@@ -1271,7 +1414,7 @@ export class CrawlerController {
     }
 
     // Check for intentional events
-    // v2add(temp_pos, last_pos, DXY[this.last_rot]);
+    // v2add(temp_pos, last_dest_pos, DXY[this.last_dest_rot]);
     // Old: forward attacks: let forward_frame = entityBlocks(game_state.floor_id, temp_pos, true) ? 11 : 1;
     let forward_frame = 1;
     if (show_buttons) {
@@ -1369,7 +1512,7 @@ export class CrawlerController {
       this.fade_alpha = this.fade_override;
       // Apply rot interpolation
       if (!this.loading_level) {
-        game_state.angle = this.last_rot * PI/2; // note: untested, was: `this.player_controller.effRot()`
+        game_state.angle = this.last_dest_rot * PI/2; // note: untested, was: `this.player_controller.effRot()`
         this.applyForceFace(game_state, dt);
       }
       return;
@@ -1402,20 +1545,20 @@ export class CrawlerController {
 
     this.player_controller.handleHeldInputs(down);
 
-    if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_pos, true) &&
-      !v2same(last_pos, prev_pos)
+    if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_dest_pos, true) &&
+      !v2same(last_dest_pos, prev_pos)
     ) {
       // We're standing over a blocking entity!  Move to where we were before
-      v2sub(temp_delta, prev_pos, last_pos);
-      let dir: DirType = temp_delta[0] > 0 ? 0 : temp_delta[1] > 0 ? 1 : temp_delta[0] < 0 ? 2 : 3;
-      this.player_controller.startMove(dir);
+      this.player_controller.startMove(dirFromMove(last_dest_pos, prev_pos));
     }
 
     let level = game_state.level!;
-    if (!this.player_controller.isMoving() && this.path_to) {
+    if (!this.player_controller.isMoving() && this.path_to &&
+      getFrameTimestamp() - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
+    ) {
       let { w } = level;
       let cur = {
-        pos: last_pos,
+        pos: last_dest_pos,
         rot: eff_rot,
       };
       let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
@@ -1423,6 +1566,7 @@ export class CrawlerController {
       if (!path || path.length === 1) {
         this.path_to = null;
       } else {
+        this.path_to_last_step = getFrameTimestamp();
         let next = path[1];
         let nx = next % w;
         let ny = (next - nx) / w;
@@ -1458,28 +1602,38 @@ export class CrawlerController {
     let tick_param = {
       dt,
       disable_move,
-      do_debug_move: param.do_debug_move,
     };
     let positions = this.player_controller.tickMovement(tick_param);
     dt = tick_param.dt;
 
     this.applyForceFace(game_state, dt);
 
-    let inst_cell = level.getCell(positions.inst_pos[0], positions.inst_pos[1]);
-    if (inst_cell && inst_cell.desc.auto_evict) {
-      // this.fade_v = inst_cell.type === STAIRS_IN ? 1 : 0;
+    let approx_cell = level.getCell(positions.approx_pos[0], positions.approx_pos[1]);
+    if (approx_cell && approx_cell.desc.auto_evict) {
+      // this.fade_v = approx_cell.type === STAIRS_IN ? 1 : 0;
       // this.fade_v = 1;
       this.fade_alpha = 1;
     }
 
-    if (!v2same(positions.finished_pos, last_pos)) {
-      this.playerMoveFinish(level, inst_cell, positions.finished_pos);
+    if (positions.dest_rot !== this.last_dest_rot || !v2same(positions.dest_pos, last_dest_pos)) {
+      let action_id = param.do_debug_move ? 'move_debug' : 'move';
+      this.playerMoveStart(action_id, positions.dest_pos, positions.dest_rot);
+    }
+
+    if (!v2same(positions.finished_pos, last_finished_pos)) {
+      assert(v2same(positions.finished_pos, last_dest_pos)); // if not, could
+      // force-update it, I guess? but probably someone failed to start a move
+      this.playerMoveFinish(level, approx_cell);
       if (disable_player_impulse) {
         this.player_controller.cancelAllMoves();
       }
     }
+    if (positions.finished_rot !== this.last_finished_rot) {
+      this.last_finished_rot = positions.finished_rot;
+      this.map_update_this_frame = true;
+    }
 
-    this.flagCellNextToUsVisible(positions.inst_pos);
+    this.flagCellNextToUsVisible(positions.approx_pos);
   }
 
   modeFreecam(param: PlayerMotionParam): void {

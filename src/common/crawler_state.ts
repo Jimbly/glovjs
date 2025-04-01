@@ -177,6 +177,17 @@ export function dirFromDelta(delta: Vec2): DirType {
     return SOUTH;
   }
 }
+export function dirFromMove(old_pos: Vec2, new_pos: Vec2): DirType {
+  if (new_pos[0] > old_pos[0]) {
+    return EAST;
+  } else if (new_pos[1] > old_pos[1]) {
+    return NORTH;
+  } else if (new_pos[0] < old_pos[0]) {
+    return WEST;
+  } else {
+    return SOUTH;
+  }
+}
 
 export function dirMod(v: number): DirType {
   return v % 4 as DirType;
