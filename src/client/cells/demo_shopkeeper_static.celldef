@@ -13,7 +13,8 @@ visuals:
   opts:
     atlas: demo
     tile: grey_dirt0
-- type: simple_billboard
+- pass: details
+  type: simple_billboard
   opts:
     atlas: utumno
     tile: [shopkeep]
