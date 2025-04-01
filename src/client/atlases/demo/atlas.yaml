@@ -1,0 +1,6 @@
+---
+pad: 8
+tile_regex: . # everything tiles
+tile_horiz_regex: wall|door|exit|brick_dark|lair # except these only horizontally
+tile_vert_regex: null
+max_tex_size: 1024

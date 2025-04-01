@@ -281,8 +281,8 @@ module.exports = function (opts) {
           let { data: outdata } = pngouts[idx];
           let { data: indata } = img;
           let clamp = !tile_regex?.test(img_name);
-          let clamp_vert = clamp && !tile_vert_regex?.test(img_name);
-          let clamp_horiz = clamp && !tile_horiz_regex?.test(img_name);
+          let clamp_vert = clamp && !tile_vert_regex?.test(img_name) || tile_regex && tile_horiz_regex?.test(img_name);
+          let clamp_horiz = clamp && !tile_horiz_regex?.test(img_name) || tile_regex && tile_vert_regex?.test(img_name);
           for (let yy = -pad; yy < imgh + pad; ++yy) {
             let yyy;
             if (clamp_vert) {
