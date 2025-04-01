@@ -229,8 +229,13 @@ export class CrawlerWorker<
       // sendNext();
 
       for (let ii = 0; ii < initial_entities.length; ++ii) {
-        initial_entities[ii].floor = floor;
-        this.entity_manager.addEntityFromSerialized(initial_entities[ii]);
+        let ent = initial_entities[ii];
+        ent.floor = floor;
+        assert(ent.pos && Array.isArray(ent.pos));
+        if (ent.pos.length < 3) {
+          ent.pos.push(0);
+        }
+        this.entity_manager.addEntityFromSerialized(ent);
       }
     });
   }
