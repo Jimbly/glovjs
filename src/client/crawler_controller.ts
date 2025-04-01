@@ -99,6 +99,9 @@ const { PI, abs, cos, floor, max, random, round, sin } = Math;
 const WALK_TIME = 500;
 const ROT_TIME = 250;
 const FAST_TRAVEL_STEP_MIN_TIME = 200; // affects instant-step-ish controllers
+const KEY_REPEAT_TIME_ROT = 500;
+const KEY_REPEAT_TIME_MOVE_DELAY = 500;
+const KEY_REPEAT_TIME_MOVE_RATE = 150;
 
 const FORCE_FACE_TIME = ROT_TIME;
 
@@ -132,7 +135,7 @@ type ControllerInputs = {
 };
 interface PlayerController {
   tickMovement(param: TickParam): TickPositions;
-  handleHeldInputs(down: ControllerInputs): void;
+  allowRepeatImmediately(): boolean;
 
   effRot(): DirType;
   effPos(): ROVec2;
@@ -141,9 +144,9 @@ interface PlayerController {
   startMove(dir: DirType, double_time?: number): void;
   initPosSub(): void;
   autoStartMove(rot: DirType, offs: number): void;
-  cancelAllMoves(): void;
-  cancelQueuedMoves(): void;
-  clearDoubleTime(): void;
+  cancelAllMoves?(): void;
+  cancelQueuedMoves?(): void;
+  clearDoubleTime?(): void;
 }
 
 type StartMoveData = {
@@ -440,41 +443,10 @@ class CrawlerControllerQueued implements PlayerController {
     this.impulse_queue = [];
   }
 
-  handleHeldInputs(down: {
-    turn_left: number;
-    turn_right: number;
-    left: number;
-    right: number;
-    forward: number;
-    back: number;
-  }): void {
-    let { interp_queue, impulse_queue } = this;
-    let eff_rot = this.effRot();
-    if (interp_queue.length + impulse_queue.length === 1) {
-      // Not currently doing any move
-      // Check for held rotation inputs
-      let drot = 0;
-      drot += down.turn_left;
-      drot -= down.turn_right;
-      let drot2 = sign(drot);
-      if (drot2) {
-        this.pushImpulseState(null, dirMod(eff_rot + drot2 + 4), ACTION_ROT, drot2);
-      }
-    }
-    if (this.queueLength() === 1 || this.queueLength() === 2 && interp_queue[0].double_time) {
-      // Not currently doing any move
-      // Or, we're continuing double-time movement
-      // Check for held movement inputs
-      let dx = 0;
-      dx += down.left;
-      dx -= down.right;
-      let dy = 0;
-      dy += down.forward;
-      dy -= down.back;
-      if (dx || dy) {
-        this.parent.startRelativeMove(dx, dy);
-      }
-    }
+  allowRepeatImmediately(): boolean {
+    // Not currently doing any move
+    // Or, we're continuing double-time movement
+    return Boolean(this.queueLength() === 1 || this.queueLength() === 2 && this.interp_queue[0].double_time);
   }
 
   clearDoubleTime(): void {
@@ -626,8 +598,8 @@ class CrawlerControllerInstantStep implements PlayerController {
       finished_rot: this.rot,
     };
   }
-  handleHeldInputs(down: ControllerInputs): void {
-    // TODO
+  allowRepeatImmediately(): boolean {
+    return false;
   }
 
   effRot(): DirType {
@@ -662,15 +634,6 @@ class CrawlerControllerInstantStep implements PlayerController {
   }
   autoStartMove(rot: DirType, offs: number): void {
     this.startMove(rot);
-  }
-  cancelAllMoves(): void {
-    // nop
-  }
-  cancelQueuedMoves(): void {
-    // nop
-  }
-  clearDoubleTime(): void {
-    // nop
   }
 }
 
@@ -763,6 +726,8 @@ export class CrawlerController {
   last_type: CellDesc | undefined;
   path_to: Vec2 | null = null;
   path_to_last_step = 0;
+  last_action_time = 0;
+  is_repeating = false;
   map_update_this_frame: boolean = false;
   pit_time!: number;
   pit_stage!: number;
@@ -1117,11 +1082,11 @@ export class CrawlerController {
   }
 
   cancelQueuedMoves(): void {
-    this.player_controller.cancelQueuedMoves();
+    this.player_controller.cancelQueuedMoves?.();
   }
 
   forceMove(dir: DirType): void {
-    this.player_controller.cancelAllMoves();
+    this.player_controller.cancelAllMoves?.();
     this.player_controller.startMove(dir);
   }
 
@@ -1306,6 +1271,7 @@ export class CrawlerController {
   }
 
   startRelativeMove(dx: number, dy: number): void {
+    this.last_action_time = getFrameTimestamp();
     let impulse_idx = this.player_controller.effRot();
     if (abs(dx) > abs(dy)) {
       if (dx < 0) {
@@ -1323,7 +1289,14 @@ export class CrawlerController {
     this.path_to = null;
   }
 
+  startTurn(target_dir: DirType): void {
+    this.last_action_time = getFrameTimestamp();
+    this.player_controller.startTurn(target_dir);
+    this.path_to = null;
+  }
+
   modeCrawl(param: PlayerMotionParam): void {
+    const frame_timestamp = getFrameTimestamp();
     const {
       button_x0,
       button_y0,
@@ -1509,8 +1482,7 @@ export class CrawlerController {
       while (drot) {
         let s = sign(drot);
         eff_rot = dirMod(eff_rot + s + 4);
-        this.player_controller.startTurn(eff_rot);
-        this.path_to = null;
+        this.startTurn(eff_rot);
         drot -= s;
       }
     }
@@ -1527,7 +1499,40 @@ export class CrawlerController {
       }
     }
 
-    this.player_controller.handleHeldInputs(down);
+    if (!this.player_controller.isMoving() &&
+      frame_timestamp - this.last_action_time >= KEY_REPEAT_TIME_ROT
+    ) {
+      // Not currently doing any move
+      // Check for held rotation inputs
+      let drot = 0;
+      drot += down.turn_left;
+      drot -= down.turn_right;
+      let drot2 = sign(drot);
+      if (drot2) {
+        eff_rot = dirMod(eff_rot + drot2 + 4);
+        this.startTurn(eff_rot);
+      }
+    }
+
+    let kb_repeat_rate = this.is_repeating ? KEY_REPEAT_TIME_MOVE_RATE : KEY_REPEAT_TIME_MOVE_DELAY;
+    if (!this.player_controller.isMoving() && frame_timestamp - this.last_action_time >= kb_repeat_rate ||
+      this.player_controller.allowRepeatImmediately()
+    ) {
+      // Check for held movement inputs
+      let dx = 0;
+      dx += down.left;
+      dx -= down.right;
+      let dy = 0;
+      dy += down.forward;
+      dy -= down.back;
+      if (dx || dy) {
+        this.is_repeating = true;
+        this.startRelativeMove(dx, dy);
+      }
+    }
+    if (!down.forward && !down.back && !down.left && !down.right) {
+      this.is_repeating = false;
+    }
 
     if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_dest_pos, true) &&
       !v2same(last_dest_pos, prev_pos)
@@ -1538,7 +1543,7 @@ export class CrawlerController {
 
     let level = game_state.level!;
     if (!this.player_controller.isMoving() && this.path_to &&
-      getFrameTimestamp() - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
+      frame_timestamp - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
     ) {
       let { w } = level;
       let cur = {
@@ -1550,7 +1555,7 @@ export class CrawlerController {
       if (!path || path.length === 1) {
         this.path_to = null;
       } else {
-        this.path_to_last_step = getFrameTimestamp();
+        this.path_to_last_step = frame_timestamp;
         let next = path[1];
         let nx = next % w;
         let ny = (next - nx) / w;
@@ -1573,7 +1578,7 @@ export class CrawlerController {
           this.player_controller.startTurn(dirMod(cur.rot + drot + 4), 2);
         } else {
           if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true)) {
-            this.player_controller.clearDoubleTime();
+            this.player_controller.clearDoubleTime?.();
             this.path_to = null;
           } else {
             // move
@@ -1609,7 +1614,7 @@ export class CrawlerController {
       // force-update it, I guess? but probably someone failed to start a move
       this.playerMoveFinish(level, approx_cell);
       if (disable_player_impulse) {
-        this.player_controller.cancelAllMoves();
+        this.player_controller.cancelAllMoves?.();
       }
     }
     if (positions.finished_rot !== this.last_finished_rot) {
