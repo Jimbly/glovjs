@@ -146,6 +146,88 @@ interface PlayerController {
   clearDoubleTime(): void;
 }
 
+type StartMoveData = {
+  bumped_something: boolean;
+  going_through_door: boolean;
+  bumped_entity: boolean;
+};
+function startMove(
+  parent: CrawlerController,
+  dir: DirType,
+  new_pos: Vec2,
+  new_rot: DirType,
+): StartMoveData {
+  const { game_state, script_api, last_dest_pos } = parent;
+  const build_mode = buildModeActive();
+
+  // check walls
+  script_api.setLevel(game_state.level!);
+  script_api.setPos(last_dest_pos);
+  let blocked = game_state.level!.wallsBlock(last_dest_pos, dir, script_api);
+  if ((blocked & BLOCK_MOVE) && build_mode) {
+    if (!(blocked & BLOCK_VIS)) {
+      blocked &= ~BLOCK_MOVE;
+    }
+    let wall_desc = game_state.level!.getCell(last_dest_pos[0], last_dest_pos[1])!.walls[dir];
+    if (wall_desc.replace) {
+      for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
+        let desc = wall_desc.replace[ii].desc;
+        if (desc.open_move) {
+          // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
+          blocked &= ~BLOCK_MOVE;
+        }
+      }
+    }
+    if (!(blocked & BLOCK_MOVE)) {
+      statusPush('Build mode open_move bypassed').fade();
+    }
+  }
+  let blocked_vis = Boolean(blocked & BLOCK_VIS);
+  let bumped_something = false;
+  let going_through_door = false;
+  if (blocked & BLOCK_MOVE) {
+    bumped_something = true;
+  } else if (blocked & BLOCK_VIS) { // any door
+    going_through_door = true;
+    // cur.double_time = 0;
+  }
+  // check destination
+  let blocked_ent_id;
+  let bumped_entity = false;
+  if (!bumped_something && !build_mode) {
+    blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
+    if (blocked_ent_id) {
+      bumped_something = true;
+      bumped_entity = true;
+    }
+  }
+  if (bumped_entity) {
+    // Do an attack if appropriate, or other default action
+    let is_facing_ent = dir === new_rot;
+    if (blocked_vis) {
+      // Can't see through this wall, and there's a monster on the other side!
+      script_api.status('move_blocked', 'The door won\'t budge.');
+    } else if (!is_facing_ent) {
+      script_api.status('move_blocked', 'Something blocks your way.');
+    } else {
+      // TODO: Replace this with some kind of action callback
+      // let total_attack_time = attackTime(my_ent);
+      // queued_attack = {
+      //   ent_id: blocked_ent_id,
+      //   total_attack_time,
+      //   start_time: frame_wall_time,
+      //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
+      // };
+    }
+  }
+  return {
+    bumped_something,
+    going_through_door,
+    bumped_entity,
+  };
+}
+
+
 const ACTION_NONE = 0;
 const ACTION_MOVE = 1;
 const ACTION_ROT = 2;
@@ -297,9 +379,8 @@ class CrawlerControllerQueued implements PlayerController {
     }
   }
 
+
   startQueuedMove(): void {
-    const { game_state, script_api } = this.parent;
-    const build_mode = buildModeActive();
     assert.equal(this.interp_queue.length, 1);
     assert(this.impulse_queue.length > 0);
     let cur = this.interp_queue[0];
@@ -308,70 +389,25 @@ class CrawlerControllerQueued implements PlayerController {
     let action_type = next.action_type;
     if (isActionMove(next)) {
       let new_pos = v2add(vec2(), cur.pos, next.pos);
-      // check walls
       assert(next.action_dir !== undefined);
-      script_api.setLevel(game_state.level!);
-      script_api.setPos(cur.pos);
-      let blocked = game_state.level!.wallsBlock(cur.pos, next.action_dir, script_api);
-      if ((blocked & BLOCK_MOVE) && build_mode) {
-        if (!(blocked & BLOCK_VIS)) {
-          blocked &= ~BLOCK_MOVE;
-        }
-        let wall_desc = game_state.level!.getCell(cur.pos[0], cur.pos[1])!.walls[next.action_dir];
-        if (wall_desc.replace) {
-          for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
-            let desc = wall_desc.replace[ii].desc;
-            if (desc.open_move) {
-              // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
-              blocked &= ~BLOCK_MOVE;
-            }
-          }
-        }
-        if (!(blocked & BLOCK_MOVE)) {
-          statusPush('Build mode open_move bypassed').fade();
-        }
-      }
-      if (blocked & BLOCK_MOVE) {
+      assert(v2same(this.parent.last_dest_pos, cur.pos));
+      const {
+        bumped_something,
+        going_through_door,
+      } = startMove(this.parent, next.action_dir, new_pos, cur.rot);
+      if (bumped_something) {
         action_type = ACTION_BUMP;
-      } else if (blocked & BLOCK_VIS) { // any door
+      } else if (going_through_door) {
         cur.double_time = 0;
       }
-      // check destination
-      //let next_cell = game_state.level.getCell(new_pos[0], new_pos[1]);
-      let blocked_ent_id;
-      if (action_type !== ACTION_BUMP && !build_mode) {
-        blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
-        if (blocked_ent_id) {
-          action_type = ACTION_BUMP;
-        }
-      }
 
-      if (action_type === ACTION_BUMP) {
+      if (bumped_something) {
         // Clear any queued impulse
         this.impulse_queue.length = 0;
         next.double_time = 0;
         // Push the bump
         let next_elem = this.pushInterpState(cur.pos, cur.rot, action_type, next);
         next_elem.bump_pos = new_pos;
-        // Do an attack if appropriate
-        if (blocked_ent_id) {
-          let is_facing_ent = next.action_dir === cur.rot;
-          if ((blocked & BLOCK_VIS) && !(blocked & BLOCK_MOVE)) {
-            // Can't see through this wall, and there's a monster on the other side!
-            script_api.status('move_blocked', 'The door won\'t budge.');
-          } else if (!is_facing_ent) {
-            script_api.status('move_blocked', 'Something blocks your way.');
-          } else {
-            // TODO: Replace this with some kind of action
-            // let total_attack_time = attackTime(my_ent);
-            // queued_attack = {
-            //   ent_id: blocked_ent_id,
-            //   total_attack_time,
-            //   start_time: frame_wall_time,
-            //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
-            // };
-          }
-        }
       } else {
         this.pushInterpState(new_pos, next.rot, action_type, next);
       }
@@ -608,68 +644,16 @@ class CrawlerControllerInstantStep implements PlayerController {
     this.rot = rot;
   }
   startMove(dir: DirType, double_time?: number): void {
-    // TODO: most of this logic is shared with the other controller, refactor!
-    const { game_state, script_api } = this.parent;
-    const build_mode = buildModeActive();
+    let { script_api } = this.parent;
     let new_pos = v2add(vec2(), this.pos, DXY[dir]);
-    // check walls
-    script_api.setLevel(game_state.level!);
-    script_api.setPos(this.pos);
-    let blocked = game_state.level!.wallsBlock(this.pos, dir, script_api);
-    if ((blocked & BLOCK_MOVE) && build_mode) {
-      if (!(blocked & BLOCK_VIS)) {
-        blocked &= ~BLOCK_MOVE;
-      }
-      let wall_desc = game_state.level!.getCell(this.pos[0], this.pos[1])!.walls[dir];
-      if (wall_desc.replace) {
-        for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
-          let desc = wall_desc.replace[ii].desc;
-          if (desc.open_move) {
-            // Build mode, and the wall blocks movement, but has a replace that doesn't, allow going through
-            blocked &= ~BLOCK_MOVE;
-          }
-        }
-      }
-      if (!(blocked & BLOCK_MOVE)) {
-        statusPush('Build mode open_move bypassed').fade();
-      }
-    }
-    let bumped_something = false;
-    if (blocked & BLOCK_MOVE) {
-      bumped_something = true;
-    } else if (blocked & BLOCK_VIS) { // any door
-      // cur.double_time = 0;
-    }
-    // check destination
-    let blocked_ent_id;
-    if (!bumped_something && !build_mode) {
-      blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
-      if (blocked_ent_id) {
-        bumped_something = true;
-      }
-    }
+    const {
+      bumped_something,
+      bumped_entity,
+    } = startMove(this.parent, dir, new_pos, this.rot);
 
     if (bumped_something) {
       // TODO: animate a bump towards `new_pos`? play sound?
-      // Do an attack if appropriate
-      if (blocked_ent_id) {
-        let is_facing_ent = dir === this.rot;
-        if ((blocked & BLOCK_VIS) && !(blocked & BLOCK_MOVE)) {
-          // Can't see through this wall, and there's a monster on the other side!
-          script_api.status('move_blocked', 'The door won\'t budge.');
-        } else if (!is_facing_ent) {
-          script_api.status('move_blocked', 'Something blocks your way.');
-        } else {
-          // TODO: Replace this with some kind of action
-          // let total_attack_time = attackTime(my_ent);
-          // queued_attack = {
-          //   ent_id: blocked_ent_id,
-          //   total_attack_time,
-          //   start_time: frame_wall_time,
-          //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
-          // };
-        }
-      } else {
+      if (!bumped_entity) {
         script_api.status('move_blocked', '*BUMP*');
       }
     } else {
