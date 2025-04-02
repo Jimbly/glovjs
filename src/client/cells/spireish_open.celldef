@@ -8,11 +8,11 @@ visuals:
   opts:
     atlas: spireish
     tile: floor
-# - pass: bg
-#   type: simple_ceiling
-#   opts:
-#     atlas: demo
-#     tile: grey_dirt0
+- pass: bg
+  type: simple_ceiling
+  opts:
+    atlas: spireish
+    tile: ceiling
 
 corners: # pillars and floor/ceiling details
   one:

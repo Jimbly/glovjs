@@ -1,0 +1,23 @@
+---
+open_move: true
+open_vis: true
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    atlas: spireish
+    tile: floor
+- pass: bg
+  type: simple_ceiling
+  opts:
+    atlas: spireish
+    tile: ceiling
+- pass: celldetails
+  type: simple_billboard
+  opts:
+    atlas: spireish
+    tile: detail1
+    width: 0.5
+    height: 0.5
+    offs: [0, 0, 0]
+    face_camera: true # Otherwise faces frustum

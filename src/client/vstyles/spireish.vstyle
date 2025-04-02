@@ -14,10 +14,10 @@ wall_swaps:
   door_oneway: spireish_door
   # door_locked: demo_door_locked
   # door_locked_unlocked: demo_door_locked_unlocked
-  entrance: spireish_stairs
+  entrance: spireish_stairs_in
   # secret_door: demo_secret_door
   # secret_door_unvisited: demo_secret_door
-  solid: spireish_solid
-  stairs_in: spireish_door
-  stairs_out: spireish_door
+  solid: spireish_solid1
+  stairs_in: spireish_stairs_in
+  stairs_out: spireish_stairs_out
   # floorswitch: demo_floorswitch

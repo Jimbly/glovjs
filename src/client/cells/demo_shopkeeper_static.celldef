@@ -13,7 +13,7 @@ visuals:
   opts:
     atlas: demo
     tile: grey_dirt0
-- pass: details
+- pass: celldetails
   type: simple_billboard
   opts:
     atlas: utumno

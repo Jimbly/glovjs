@@ -6,4 +6,4 @@ visuals:
   type: simple_wall
   opts:
     atlas: spireish
-    tile: stairs
+    tile: stairs_out

@@ -39,6 +39,11 @@ export function renderAppStartup(): void {
       name: 'default',
       need_split_near: true,
       alpha_blend: false,
+    }, {
+      // alpha-blended world details
+      name: 'celldetails',
+      neighbor_draw: false,
+      alpha_blend: true,
     }],
     atlas_aliases: {
       default: 'demo',

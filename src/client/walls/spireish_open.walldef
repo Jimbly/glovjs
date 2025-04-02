@@ -5,10 +5,10 @@ visuals:
 - type: simple_filler
   opts:
     atlas: spireish
-    tile: floor
+    tile: filler
 - type: simple_filler
   opts:
     atlas: spireish
-    tile: floor
+    tile: filler
     offs: [0, 1]
 

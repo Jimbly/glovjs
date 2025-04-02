@@ -5,4 +5,4 @@ visuals:
 - type: simple_wall
   opts:
     atlas: spireish
-    tile: wall
+    tile: solid2
