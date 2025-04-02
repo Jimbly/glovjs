@@ -1420,6 +1420,11 @@ function resizeLevel(dx: number, dy: number): void {
   crawlerBuildModeCommit();
 }
 
+let font_style_build_help = fontStyle(null, {
+  color: 0xFFFF80ff,
+  outline_color: 0x00000080,
+  outline_width: 2.5,
+});
 
 export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   let game_state = crawlerGameState();
@@ -1739,6 +1744,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   ] : ['BUILD MODE (F1 Help)']).forEach((text) => {
     let fh = uiTextHeight() * 0.5;
     font.draw({
+      style: font_style_build_help,
       x, y, z,
       size: fh,
       text,
