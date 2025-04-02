@@ -1617,7 +1617,7 @@
       "id": "open",
       "walls": [
         "open",
-        "solid",
+        "secret_door",
         "solid",
         "open"
       ]
@@ -1758,21 +1758,21 @@
       ]
     },
     {
-      "id": "solid",
+      "id": "open",
       "walls": [
-        "open",
+        "door_oneway",
+        "secret_door",
         "solid",
-        "open",
-        "solid"
+        "secret_door"
       ]
     },
     {
-      "id": "solid",
+      "id": "open",
       "walls": [
         "solid",
+        "door_oneway",
         "solid",
-        "open",
-        "solid"
+        "door_oneway"
       ]
     },
     {
@@ -1780,7 +1780,7 @@
       "walls": [
         "solid",
         "open",
-        "solid",
+        "door_oneway",
         "door"
       ]
     },
@@ -1907,7 +1907,7 @@
         "open",
         "open",
         "solid",
-        "solid"
+        "secret_door"
       ]
     },
     {

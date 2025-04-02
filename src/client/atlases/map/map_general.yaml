@@ -28,8 +28,8 @@ tiles:
 
   door_oneway_east: [0,3]
   door_oneway_north: [1,3]
-  door_oneway_south: [2,3]
-  door_oneway_west: [3,3]
+  door_oneway_west: [2,3]
+  door_oneway_south: [3,3]
 
   stairs_in: [0,4]
   stairs_out: [1,4]
