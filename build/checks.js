@@ -78,7 +78,7 @@ module.exports = function (filename) {
     'glov-build-cache': '1.1.0',
     'glov-build-concat': '1.0.13',
     'glov-build-preresolve': '1.2.0',
-    '@jimbly/howler': '0.1.3',
+    '@jimbly/howler': '0.1.7',
     '@jimbly/babel-plugin-transform-modules-simple-commonjs': '0.0.3',
   });
 };
