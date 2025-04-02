@@ -668,29 +668,38 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     this.rot_blend_from = this.rot;
     this.blends = [];
   }
+
+  is_blend_stopped = false;
+  isMoving(): boolean {
+    return this.is_blend_stopped;
+  }
+
   tickMovement(param: TickParam): TickPositions {
     let { dt } = param;
     let { game_state } = this.parent;
     let { blends } = this;
 
-    let had_blend_x = false;
-    let had_blend_y = false;
+    let had_blend_x = 0;
+    let had_blend_y = 0;
     let { blend_pos } = this;
     v2copy(blend_pos, this.pos_blend_from);
     let blend_rot = this.rot_blend_from;
+    this.is_blend_stopped = false;
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
       if (blend.action_type === ACTION_MOVE) {
         if (blend.delta_pos![0]) {
-          if (had_blend_y) {
+          if (had_blend_y || had_blend_x && had_blend_x !== blend.delta_pos![0]) {
+            this.is_blend_stopped = true;
             break;
           }
-          had_blend_x = true;
+          had_blend_x = blend.delta_pos![0];
         } else {
-          if (had_blend_x) {
+          if (had_blend_x || had_blend_y && had_blend_y !== blend.delta_pos![1]) {
+            this.is_blend_stopped = true;
             break;
           }
-          had_blend_y = true;
+          had_blend_y = blend.delta_pos![1];
         }
       }
       blend.t += dt * BLEND_RATE[blend.action_type];
@@ -725,8 +734,10 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       dest_rot: this.rot,
       approx_pos: this.approx_pos,
       approx_rot: dirMod(round(blend_rot) + 4),
-      finished_pos: this.pos_blend_from,
-      finished_rot: this.rot_blend_from,
+      // finished_pos: this.pos_blend_from,
+      // finished_rot: this.rot_blend_from,
+      finished_pos: this.pos,
+      finished_rot: this.rot,
     };
   }
 
@@ -754,7 +765,6 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     } = startMove(this.parent, dir, new_pos, this.rot);
 
     if (bumped_something) {
-      // TODO: animate a bump towards `new_pos`? play sound?
       if (!bumped_entity) {
         this.blends.push({
           t: 0,
@@ -1269,7 +1279,7 @@ export class CrawlerController {
     this.pit_target_floor = floor_id;
     this.pit_target_key = pos_key;
     this.pit_target_pos = pos_pair;
-    this.move_blocker = this.moveBlockPit.bind(this);
+    this.setMoveBlocker(this.moveBlockPit.bind(this));
   }
 
   playerMoveFinish(level: CrawlerLevel, finished_pos: Vec2): void {
