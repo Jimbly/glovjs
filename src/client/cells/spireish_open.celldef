@@ -63,15 +63,15 @@ corners: # pillars and floor/ceiling details
   #     scale: 0.5
   #     atlas: spireish
   #     tile: door
-  four:
-  - pass: details
-    type: simple_pillar
-    opts:
-      quadrants: 4
-      atlas: spireish
-      tile: pillar4
-      height: 1
-      offs: [0,0,0]
+  # four:
+  # - pass: details
+  #   type: simple_pillar
+  #   opts:
+  #     quadrants: 4
+  #     atlas: spireish
+  #     tile: pillar4
+  #     height: 1
+  #     offs: [0,0,0]
   # - pass: details
   #   type: simple_corner_floor
   #   opts:

@@ -9,7 +9,7 @@ fog_params:
 cell_swaps:
   open: spireish_open
 wall_swaps:
-  # open: demo_open
+  open: spireish_open
   door: spireish_door
   door_oneway: spireish_door
   # door_locked: demo_door_locked
