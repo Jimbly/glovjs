@@ -1431,7 +1431,7 @@ export class CrawlerController {
       let forward_hotzone: Box | undefined;
       let back_hotzone: Box | undefined;
       let right_hotzone: Box | undefined;
-      if (!uiHandlingNav() && !disabled) {
+      if (!uiHandlingNav() && !disabled && !build_mode) {
         // do touch controls on the viewport
         let viewport = crawlerRenderViewportGet();
         let leftright_w = floor(viewport.w * 0.24);
