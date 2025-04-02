@@ -674,7 +674,9 @@ function crawlerPlayInitShared(): void {
     script_api,
     on_init_level: crawlerOnInitHaveLevel,
     flush_vis_data: crawlerFlushVisData,
-    controller_type: 'queued',
+    // controller_type: 'queued',
+    // controller_type: 'instant',
+    controller_type: 'instantblend',
   });
 
   last_saved_vis_string = {};

@@ -37,6 +37,7 @@ import {
   ROVec2,
   rovec3,
   v2add,
+  v2addScale,
   v2copy,
   v2distSq,
   v2floor,
@@ -637,6 +638,117 @@ class CrawlerControllerInstantStep implements PlayerController {
   }
 }
 
+const BLEND_T = 250;
+class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
+  pos_blend_from = vec2();
+  rot_blend_from!: DirType;
+  blends: {
+    t: number; // 0...1
+    delta_pos?: Vec2;
+    finish_pos: Vec2;
+    delta_rot?: number;
+    finish_rot: DirType;
+  }[] = [];
+
+  blend_pos = vec2();
+  approx_pos = vec2();
+  initPosSub(): void {
+    v2copy(this.pos, this.parent.last_finished_pos);
+    this.rot = this.parent.last_finished_rot;
+    v2copy(this.pos_blend_from, this.pos);
+    this.rot_blend_from = this.rot;
+    this.blends = [];
+  }
+  tickMovement(param: TickParam): TickPositions {
+    let { dt } = param;
+    let { game_state } = this.parent;
+    let { blends } = this;
+
+    for (let ii = blends.length - 1; ii >= 0; --ii) {
+      let blend = blends[ii];
+      blend.t += dt/BLEND_T;
+      if (blend.t >= 1) {
+        v2copy(this.pos_blend_from, blend.finish_pos);
+        this.rot_blend_from = blend.finish_rot;
+        blends.splice(0, ii + 1);
+        break;
+      }
+    }
+    let { blend_pos } = this;
+    v2copy(blend_pos, this.pos_blend_from);
+    let blend_rot = this.rot_blend_from;
+    for (let ii = 0; ii < blends.length; ++ii) {
+      let blend = blends[ii];
+      let t = easeInOut(blend.t, 2);
+      if (blend.delta_pos) {
+        v2addScale(blend_pos, blend_pos, blend.delta_pos, t);
+      } else {
+        blend_rot += blend.delta_rot! * t;
+      }
+    }
+    v2copy(game_state.pos, blend_pos);
+    game_state.angle = blend_rot * PI / 2;
+
+    v2floor(this.approx_pos, blend_pos);
+    return {
+      dest_pos: this.pos,
+      dest_rot: this.rot,
+      approx_pos: this.approx_pos,
+      approx_rot: dirMod(round(blend_rot) + 4),
+      finished_pos: this.pos_blend_from,
+      finished_rot: this.rot_blend_from,
+    };
+  }
+
+  startTurn(rot: DirType, double_time?: number): void {
+    assert(rot >= 0 && rot <= 3);
+    let drot = rot - this.rot;
+    if (drot > 2) {
+      drot -= 4; // 3 -> -1
+    } else if (drot < -2) {
+      drot += 4; // -3 -> 1
+    }
+    this.rot = rot;
+    this.blends.push({
+      t: 0,
+      delta_rot: drot,
+      finish_pos: this.pos.slice(0) as Vec2,
+      finish_rot: this.rot,
+    });
+  }
+  startMove(dir: DirType, double_time?: number): boolean {
+    let { script_api } = this.parent;
+    let new_pos = v2add(vec2(), this.pos, DXY[dir]);
+    const {
+      bumped_something,
+      bumped_entity,
+    } = startMove(this.parent, dir, new_pos, this.rot);
+
+    if (bumped_something) {
+      // TODO: animate a bump towards `new_pos`? play sound?
+      if (!bumped_entity) {
+        script_api.status('move_blocked', '*BUMP*');
+      }
+      return false;
+    } else {
+      v2copy(this.pos, new_pos);
+      this.blends.push({
+        t: 0,
+        delta_pos: DXY[dir],
+        finish_pos: this.pos.slice(0) as Vec2,
+        finish_rot: this.rot,
+      });
+      return true;
+    }
+  }
+  autoStartMove(rot: DirType, offs: number): void {
+    if (this.startMove(rot)) {
+      let tail = this.blends[this.blends.length - 1];
+      tail.t += offs;
+    }
+  }
+}
+
 export type PlayerMotionParam = {
   button_x0: number;
   button_y0: number;
@@ -674,9 +786,11 @@ export class CrawlerController {
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
     this.on_enter_cell = param.on_enter_cell;
-    this.player_controller = param.controller_type === 'queued' ?
-      new CrawlerControllerQueued(this) :
-      new CrawlerControllerInstantStep(this);
+    this.player_controller = param.controller_type === 'instant' ?
+      new CrawlerControllerInstantStep(this) :
+      param.controller_type === 'instantblend' ?
+        new CrawlerControllerInstantBlend(this) :
+        new CrawlerControllerQueued(this);
     this.script_api.setController(this);
   }
 
