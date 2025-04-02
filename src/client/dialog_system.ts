@@ -362,6 +362,15 @@ let DIALOGS: Partial<Record<string, DialogFunc>> = {
       transient: true,
     });
   },
+  modal: function (param: string) {
+    dialogPush({
+      name: '',
+      text: param,
+      buttons: [{
+        label: 'Okay',
+      }],
+    });
+  },
   kbhint: function (param: string) {
     if (!inputTouchMode()) {
       dialogPush({
