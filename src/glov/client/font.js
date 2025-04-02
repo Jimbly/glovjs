@@ -557,24 +557,19 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
       size *= required_scale;
       // determine number of lines at that scale (round down)
       let scaled_max_lines = max(1, floor(h / size));
-      if (lines.length <= scaled_max_lines) {
-        // current split would work, use it at the new scale
-      } else {
-        // split into that many lines
-        // try wrapLines, if it produces too many lines, do another split method
-        lines = [];
-        line_xoffs = [];
-        // slightly underestimate the actual scale to get it to wrap well on the first try, HFIT will squish to fit
-        lines.length = this.wrapLines(style, w, indent, size * 0.8, text, align, (xoffs, linenum, line) => {
-          line_xoffs[linenum] = xoffs;
-          lines[linenum] = line;
-        });
-        if (lines.length > scaled_max_lines) {
-          // need to do something else
-          lines = splitLines(text, scaled_max_lines);
-          for (let ii = 0; ii < lines.length; ++ii) {
-            line_xoffs[ii] = ii === 0 ? 0 : indent;
-          }
+      // split into that many lines
+      // try wrapLines, if it produces too many lines, do another split method
+      lines = [];
+      line_xoffs = [];
+      lines.length = this.wrapLines(style, w, indent, size, text, align, (xoffs, linenum, line) => {
+        line_xoffs[linenum] = xoffs;
+        lines[linenum] = line;
+      });
+      if (lines.length > scaled_max_lines) {
+        // need to do something else
+        lines = splitLines(text, scaled_max_lines);
+        for (let ii = 0; ii < lines.length; ++ii) {
+          line_xoffs[ii] = ii === 0 ? 0 : indent;
         }
       }
       // draw each line with HFIT below
