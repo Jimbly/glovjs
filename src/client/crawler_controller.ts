@@ -1124,39 +1124,40 @@ export class CrawlerController {
     this.move_blocker = this.moveBlockPit.bind(this);
   }
 
-  playerMoveFinish(level: CrawlerLevel, new_cell: CrawlerCell | null): void {
-    const { prev_pos, game_state, script_api, last_finished_pos, last_dest_pos } = this;
-    v2copy(last_finished_pos, last_dest_pos);
-    let prev_cell = level.getCell(prev_pos[0], prev_pos[1]);
+  playerMoveFinish(level: CrawlerLevel, finished_pos: Vec2): void {
+    const { game_state, script_api, last_finished_pos } = this;
+    let new_cell = level.getCell(finished_pos[0], finished_pos[1]);
     if (new_cell) {
+      let prev_cell = level.getCell(last_finished_pos[0], last_finished_pos[1]);
       new_cell.visible_bits |= VIS_VISITED;
-      if (prev_pos[0] === last_dest_pos[0] + 1 && (
+      if (last_finished_pos[0] === finished_pos[0] + 1 && (
         new_cell.walls[EAST].is_secret || prev_cell?.walls[WEST].is_secret
       )) {
         new_cell.visible_bits |= VIS_PASSED_EAST;
-      } else if (prev_pos[1] === last_dest_pos[1] + 1 && (
+      } else if (last_finished_pos[1] === finished_pos[1] + 1 && (
         new_cell.walls[NORTH].is_secret || prev_cell?.walls[SOUTH].is_secret
       )) {
         new_cell.visible_bits |= VIS_PASSED_NORTH;
       }
-      if (prev_pos[0] === last_dest_pos[0] - 1 && (
+      if (last_finished_pos[0] === finished_pos[0] - 1 && (
         new_cell.walls[WEST].is_secret || prev_cell?.walls[EAST].is_secret
       )) {
-        let ncell = level.getCell(last_dest_pos[0] - 1, last_dest_pos[1]);
+        let ncell = level.getCell(finished_pos[0] - 1, finished_pos[1]);
         if (ncell) {
           assert.equal(ncell, prev_cell);
           ncell.visible_bits |= VIS_PASSED_EAST;
         }
-      } else if (prev_pos[1] === last_dest_pos[1] - 1 && (
+      } else if (last_finished_pos[1] === finished_pos[1] - 1 && (
         new_cell.walls[SOUTH].is_secret || prev_cell?.walls[NORTH].is_secret
       )) {
-        let ncell = level.getCell(last_dest_pos[0], last_dest_pos[1] - 1);
+        let ncell = level.getCell(finished_pos[0], finished_pos[1] - 1);
         if (ncell) {
           assert.equal(ncell, prev_cell);
           ncell.visible_bits |= VIS_PASSED_NORTH;
         }
       }
     }
+    v2copy(last_finished_pos, finished_pos);
     this.map_update_this_frame = true;
     let type = new_cell && new_cell.desc || level.default_open_cell;
     if (type !== this.last_type) {
@@ -1186,10 +1187,10 @@ export class CrawlerController {
       if (new_cell.events) {
         assert(new_cell.events.length);
         script_api.setLevel(game_state.level!);
-        script_api.setPos(last_dest_pos);
+        script_api.setPos(finished_pos);
         crawlerScriptRunEvents(script_api, new_cell, CrawlerScriptWhen.POST);
       }
-      this.on_enter_cell?.(last_dest_pos);
+      this.on_enter_cell?.(finished_pos);
     }
   }
 
@@ -1237,6 +1238,7 @@ export class CrawlerController {
       v2copy(this.prev_pos, this.last_dest_pos);
       v2copy(this.last_dest_pos, new_pos);
     }
+    this.last_dest_rot = new_rot;
 
     this.applyPlayerMove(action_id, [new_pos[0], new_pos[1], new_rot],
       pos_changed ? this.resyncPosOnError.bind(this) : undefined);
@@ -1610,9 +1612,9 @@ export class CrawlerController {
     }
 
     if (!v2same(positions.finished_pos, last_finished_pos)) {
-      assert(v2same(positions.finished_pos, last_dest_pos)); // if not, could
-      // force-update it, I guess? but probably someone failed to start a move
-      this.playerMoveFinish(level, approx_cell);
+      // This is not true for the instant+blend controller, may have started a second move before this one finished:
+      // assert(v2same(positions.finished_pos, last_dest_pos));
+      this.playerMoveFinish(level, positions.finished_pos);
       if (disable_player_impulse) {
         this.player_controller.cancelAllMoves?.();
       }
