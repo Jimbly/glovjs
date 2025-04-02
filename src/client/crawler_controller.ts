@@ -882,6 +882,7 @@ export class CrawlerController {
   path_to: Vec2 | null = null;
   path_to_last_step = 0;
   last_action_time = 0;
+  last_action_hash = 0; // dx + dy * 8 + rot * 64;
   is_repeating = false;
   map_update_this_frame: boolean = false;
   pit_time!: number;
@@ -1429,6 +1430,7 @@ export class CrawlerController {
 
   startRelativeMove(dx: number, dy: number): void {
     this.last_action_time = getFrameTimestamp();
+    this.last_action_hash = dx + dy * 8;
     let impulse_idx = this.player_controller.effRot();
     if (abs(dx) > abs(dy)) {
       if (dx < 0) {
@@ -1448,6 +1450,7 @@ export class CrawlerController {
 
   startTurn(target_dir: DirType): void {
     this.last_action_time = getFrameTimestamp();
+    this.last_action_hash = target_dir * 64;
     this.player_controller.startTurn(target_dir);
     this.path_to = null;
   }
@@ -1652,8 +1655,10 @@ export class CrawlerController {
       dy += down_edge.forward;
       dy -= down_edge.back;
       if (dx || dy) {
-        if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE) {
-          // Pressed a button again within the repeat period, assume double-tap, start repeating if held
+        if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE &&
+          this.last_action_hash === (dx + dy * 8)
+        ) {
+          // Pressed the same action again within the repeat period, double-tap, start repeating if held
           this.is_repeating = true;
         }
         this.startRelativeMove(dx, dy);
