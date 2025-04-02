@@ -638,7 +638,8 @@ class CrawlerControllerInstantStep implements PlayerController {
   }
 }
 
-const BLEND_T = 250;
+const BLEND_POS_T = 250;
+const BLEND_ROT_T = 150;
 class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   pos_blend_from = vec2();
   rot_blend_from!: DirType;
@@ -664,14 +665,22 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     let { game_state } = this.parent;
     let { blends } = this;
 
-    for (let ii = blends.length - 1; ii >= 0; --ii) {
+    for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
-      blend.t += dt/BLEND_T;
-      if (blend.t >= 1) {
-        v2copy(this.pos_blend_from, blend.finish_pos);
-        this.rot_blend_from = blend.finish_rot;
-        blends.splice(0, ii + 1);
-        break;
+      if (blend.delta_pos) {
+        blend.t += dt/BLEND_POS_T;
+        if (blend.t >= 1) {
+          v2copy(this.pos_blend_from, blend.finish_pos);
+          blends.splice(ii, 1);
+          --ii;
+        }
+      } else {
+        blend.t += dt/BLEND_ROT_T;
+        if (blend.t >= 1) {
+          this.rot_blend_from = blend.finish_rot;
+          blends.splice(ii, 1);
+          --ii;
+        }
       }
     }
     let { blend_pos } = this;
@@ -1611,6 +1620,10 @@ export class CrawlerController {
       dy += down_edge.forward;
       dy -= down_edge.back;
       if (dx || dy) {
+        if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE) {
+          // Pressed a button again within the repeat period, assume double-tap, start repeating if held
+          this.is_repeating = true;
+        }
         this.startRelativeMove(dx, dy);
       }
     }

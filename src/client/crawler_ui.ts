@@ -89,6 +89,7 @@ export function crawlerOnScreenButton(param: {
       if (input.mouseDownEdge(touch_hotzone)) {
         playUISound('button_click');
         nav_ret.down_edge++;
+        nav_ret.down++;
       } else if (input.mouseDownMidClick(touch_hotzone)) {
         nav_ret.down++;
       }
