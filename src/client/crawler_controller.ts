@@ -652,6 +652,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   rot_blend_from!: DirType;
   blends: {
     t: number; // 0...1
+    active?: boolean;
     action_type: ActionType;
     delta_pos?: Vec2;
     finish_pos?: Vec2;
@@ -673,17 +674,36 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     let { game_state } = this.parent;
     let { blends } = this;
 
+    let active = true;
+    let had_blend_x = false;
+    let had_blend_y = false;
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
-      blend.t += dt * BLEND_RATE[blend.action_type];
-      if (blend.t >= 1) {
-        if (blend.action_type === ACTION_MOVE) {
-          v2copy(this.pos_blend_from, blend.finish_pos!);
-        } else if (blend.action_type === ACTION_ROT) {
-          this.rot_blend_from = blend.finish_rot!;
+      if (blend.action_type === ACTION_MOVE) {
+        if (blend.delta_pos![0]) {
+          if (had_blend_y) {
+            active = false;
+          }
+          had_blend_x = true;
+        } else {
+          if (had_blend_x) {
+            active = false;
+          }
+          had_blend_y = true;
         }
-        blends.splice(ii, 1);
-        --ii;
+      }
+      blend.active = active;
+      if (active) {
+        blend.t += dt * BLEND_RATE[blend.action_type];
+        if (blend.t >= 1) {
+          if (blend.action_type === ACTION_MOVE) {
+            v2copy(this.pos_blend_from, blend.finish_pos!);
+          } else if (blend.action_type === ACTION_ROT) {
+            this.rot_blend_from = blend.finish_rot!;
+          }
+          blends.splice(ii, 1);
+          --ii;
+        }
       }
     }
     let { blend_pos } = this;
@@ -691,6 +711,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     let blend_rot = this.rot_blend_from;
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
+      if (!blend.active) {
+        break;
+      }
       let t = easeInOut(blend.t, 2);
       if (blend.action_type === ACTION_MOVE) {
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, t);
