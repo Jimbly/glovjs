@@ -38,6 +38,8 @@ declare let gl: WebGLRenderingContext | WebGL2RenderingContext;
 
 const IDLE_TIME = 60000;
 
+let did_social_init = false;
+
 let friend_list: FriendsData | null = null;
 
 export type ClientUserChannel<T=unknown> = ClientChannelWorker & {
@@ -112,7 +114,9 @@ export function socialPresenceStatusGet(): SocialPresenceStatus {
   return settings.social_presence;
 }
 export function socialPresenceStatusSet(value: SocialPresenceStatus): void {
-  settingsSet('social_presence', value);
+  if (did_social_init) {
+    settingsSet('social_presence', value);
+  }
 }
 
 function onPresence(this: ClientUserChannel, data: TSMap<PresenceEntry>): void {
@@ -412,6 +416,7 @@ export function registerExternalUserInfoProvider(
 
 // Init
 export function socialInit(): void {
+  did_social_init = true;
   netSubs().on('login', function () {
     let user_channel = netSubs().getMyUserChannel();
     let user_id = netUserId();
