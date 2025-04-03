@@ -1053,7 +1053,7 @@
       "id": "solid",
       "walls": [
         "open",
-        "open",
+        "solid",
         "open",
         "open"
       ]
@@ -1193,19 +1193,25 @@
     {
       "id": "open",
       "walls": [
-        "solid",
+        "stairs_out",
         "open",
         "entrance",
         "solid"
       ]
     },
     {
-      "id": "solid",
+      "id": "stairs_out",
       "walls": [
-        "open",
         "solid",
         "solid",
-        "open"
+        "door",
+        "solid"
+      ],
+      "events": [
+        {
+          "id": "floor_delta",
+          "param": "1"
+        }
       ]
     },
     {
@@ -1213,7 +1219,7 @@
       "walls": [
         "open",
         "solid",
-        "open",
+        "solid",
         "open"
       ]
     },
