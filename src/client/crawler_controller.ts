@@ -671,9 +671,8 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     this.blends = [];
   }
 
-  is_blend_stopped = false;
   isMoving(): boolean {
-    return this.is_blend_stopped;
+    return false;
   }
   isAnimating(): boolean {
     return this.blends.length > 0;
@@ -683,29 +682,11 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     let { game_state } = this.parent;
     let { blends } = this;
 
-    let had_blend_x = 0;
-    let had_blend_y = 0;
     let { blend_pos } = this;
     v2copy(blend_pos, this.pos_blend_from);
     let blend_rot = this.rot_blend_from;
-    this.is_blend_stopped = false;
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
-      if (blend.action_type === ACTION_MOVE) {
-        if (blend.delta_pos![0]) {
-          if (had_blend_y || had_blend_x && had_blend_x !== blend.delta_pos![0]) {
-            this.is_blend_stopped = true;
-            break;
-          }
-          had_blend_x = blend.delta_pos![0];
-        } else {
-          if (had_blend_x || had_blend_y && had_blend_y !== blend.delta_pos![1]) {
-            this.is_blend_stopped = true;
-            break;
-          }
-          had_blend_y = blend.delta_pos![1];
-        }
-      }
       blend.t += dt * BLEND_RATE[blend.action_type];
       if (blend.t >= 1) {
         if (blend.action_type === ACTION_MOVE) {
@@ -1040,6 +1021,21 @@ export type PlayerMotionParam = {
   do_debug_move: boolean;
 };
 
+function controllerFromType(type: string, parent: CrawlerController): PlayerController {
+  switch (type) {
+    case 'instant':
+      return new CrawlerControllerInstantStep(parent);
+    case 'instantblend':
+      return new CrawlerControllerInstantBlend(parent);
+    case 'queued2':
+      return new CrawlerControllerQueued2(parent);
+    case 'queued':
+      return new CrawlerControllerQueued(parent);
+    default:
+      assert(false, type);
+  }
+}
+
 export class CrawlerController {
   game_state: CrawlerState;
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
@@ -1047,7 +1043,8 @@ export class CrawlerController {
   on_init_level?: (floor_id: number) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
-  player_controller: PlayerController;
+  player_controller!: PlayerController;
+  controller_type!: string;
   constructor(param: {
     game_state: CrawlerState;
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
@@ -1063,13 +1060,7 @@ export class CrawlerController {
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
     this.on_enter_cell = param.on_enter_cell;
-    this.player_controller = param.controller_type === 'instant' ?
-      new CrawlerControllerInstantStep(this) :
-      param.controller_type === 'instantblend' ?
-        new CrawlerControllerInstantBlend(this) :
-        param.controller_type === 'queued2' ?
-          new CrawlerControllerQueued2(this) :
-          new CrawlerControllerQueued(this);
+    this.setControllerType(param.controller_type || 'queued');
     this.script_api.setController(this);
   }
 
@@ -1214,6 +1205,18 @@ export class CrawlerController {
       return false;
     }
     return this.player_controller.isAnimating();
+  }
+
+  getControllerType(): string {
+    return this.controller_type;
+  }
+  setControllerType(type: string): void {
+    let reinit = Boolean(this.controller_type);
+    this.controller_type = type;
+    this.player_controller = controllerFromType(type, this);
+    if (reinit) {
+      this.initPos(false);
+    }
   }
 
   doPlayerMotion(param: PlayerMotionParam): void {

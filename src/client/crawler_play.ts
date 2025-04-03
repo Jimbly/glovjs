@@ -677,7 +677,7 @@ function crawlerPlayInitShared(): void {
     controller_type: 'queued2', // working well
     // controller_type: 'queued', // old stand-by; maybe useful for real-time
     // controller_type: 'instant', // too hard
-    // controller_type: 'instantblend', // not great
+    // controller_type: 'instantblend', // goes through corners
   });
 
   last_saved_vis_string = {};
