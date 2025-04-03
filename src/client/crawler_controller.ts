@@ -98,8 +98,8 @@ import { statusPush } from './status';
 
 const { PI, abs, cos, floor, max, min, random, round, sin } = Math;
 
-const WALK_TIME = 500;
-const ROT_TIME = 250;
+const WALK_TIME = 250; // real-time/multiplayer may want: 500;
+const ROT_TIME = 150; // real-time/multiplayer may want: 250;
 const FAST_TRAVEL_STEP_MIN_TIME = 200; // affects instant-step-ish controllers
 const KEY_REPEAT_TIME_ROT = 500;
 const KEY_REPEAT_TIME_MOVE_DELAY = 500;
@@ -777,6 +777,14 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   }
 }
 
+const BLEND2_POS_T = WALK_TIME;
+const BLEND2_ROT_T = ROT_TIME;
+const BLEND2_RATE: Record<ActionType, number> = {
+  [ACTION_NONE]: 1,
+  [ACTION_MOVE]: 1/BLEND2_POS_T,
+  [ACTION_BUMP]: 1/BLEND2_POS_T,
+  [ACTION_ROT]: 1/BLEND2_ROT_T,
+};
 type Blend2 = {
   t: number; // 0...1
   started: boolean;
@@ -860,16 +868,25 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     this.cancelAllMoves();
   }
 
+  time_boost = 0;
   tickMovement(param: TickParam): TickPositions {
     let { dt } = param;
     let { game_state } = this.parent;
-    let { blends } = this;
+    let { blends, time_boost } = this;
 
     let had_blend_x = 0;
     let had_blend_y = 0;
     let { blend_pos } = this;
     v2copy(blend_pos, this.pos_blend_from);
     let blend_rot = this.rot_blend_from;
+    let max_accel = dt * 0.015;
+    if (this.is_blend_stopped) {
+      // we previously blocked due to perpendicular blending, accelerate time
+      time_boost = min(1.5, time_boost + max_accel);
+    } else {
+      time_boost = max(0, time_boost - max_accel);
+    }
+    this.time_boost = time_boost;
     this.is_blend_stopped = false;
     let did_start_finish = false;
     let finished_pos: Vec2 | null = null;
@@ -877,19 +894,21 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     let last_blend: Blend2 | null = null;
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
-      if (blend.action_type === ACTION_MOVE) {
-        if (blend.delta_pos![0]) {
-          if (had_blend_y || had_blend_x && had_blend_x !== blend.delta_pos![0]) {
-            this.is_blend_stopped = true;
-            break;
+      if (blend.t < 0.667) {
+        if (blend.action_type === ACTION_MOVE) {
+          if (blend.delta_pos![0]) {
+            if (had_blend_y || had_blend_x && had_blend_x !== blend.delta_pos![0]) {
+              this.is_blend_stopped = true;
+              break;
+            }
+            had_blend_x = blend.delta_pos![0];
+          } else {
+            if (had_blend_x || had_blend_y && had_blend_y !== blend.delta_pos![1]) {
+              this.is_blend_stopped = true;
+              break;
+            }
+            had_blend_y = blend.delta_pos![1];
           }
-          had_blend_x = blend.delta_pos![0];
-        } else {
-          if (had_blend_x || had_blend_y && had_blend_y !== blend.delta_pos![1]) {
-            this.is_blend_stopped = true;
-            break;
-          }
-          had_blend_y = blend.delta_pos![1];
         }
       }
       if (!blend.started && (!last_blend || last_blend.finished)) {
@@ -913,7 +932,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
         finished_pos = blend.finish_pos;
         finished_rot = blend.finish_rot;
       }
-      blend.t = min(1, blend.t + dt * BLEND_RATE[blend.action_type]);
+      blend.t = min(1, blend.t + dt * BLEND2_RATE[blend.action_type] * (1 + time_boost));
       if (blend.t === 1) {
         if (!blend.finished) {
           blend.finished = true;
