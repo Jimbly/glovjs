@@ -122,6 +122,7 @@ import { DataObject } from 'glov/common/types';
 import {
   callEach,
   clone,
+  easeInOut,
   empty,
   lerp,
   ridx,
@@ -647,24 +648,42 @@ export class CrawlerLevel {
   }
 
   getInterpolatedHeight(x: number, y: number): number {
-    let cell_low = this.getCell(floor(x), floor(y));
-    let cell_high = this.getCell(ceil(x), ceil(y));
-    if (cell_low) {
-      if (cell_high && cell_high !== cell_low) {
-        // linear interpolate heights of cells, assume only moving in 8 cardinal directions
-        // (probably good enough?)
-        if (cell_low.x !== cell_high.x) {
-          let xweight = x - floor(x);
-          return lerp(xweight, cell_low.h, cell_high.h);
-        } else {
-          let yweight = y - floor(y);
-          return lerp(yweight, cell_low.h, cell_high.h);
-        }
+    let x0 = floor(x);
+    let x1 = ceil(x);
+    let y0 = floor(y);
+    let y1 = ceil(y);
+    let cell00 = this.getCell(x0, y0);
+    let cell10 = this.getCell(x1, y0);
+    let cell01 = this.getCell(x0, y1);
+    let cell11 = this.getCell(x1, y1);
+    let yweight = easeInOut(y - floor(y), 2);
+    let v_at_x0: number | undefined;
+    if (cell00) {
+      if (cell01) {
+        v_at_x0 = lerp(yweight, cell00.h, cell01.h);
       } else {
-        return cell_low.h;
+        v_at_x0 = cell00.h;
       }
-    } else if (cell_high) {
-      return cell_high.h;
+    } else if (cell01) {
+      v_at_x0 = cell01.h;
+    }
+    let v_at_x1: number | undefined;
+    if (cell10) {
+      if (cell11) {
+        v_at_x1 = lerp(yweight, cell10.h, cell11.h);
+      } else {
+        v_at_x1 = cell10.h;
+      }
+    } else if (cell11) {
+      v_at_x1 = cell11.h;
+    }
+    if (v_at_x0 !== undefined && v_at_x1 !== undefined) {
+      let xweight = easeInOut(x - floor(x), 2);
+      return lerp(xweight, v_at_x0, v_at_x1);
+    } else if (v_at_x0 !== undefined) {
+      return v_at_x0;
+    } else if (v_at_x1 !== undefined) {
+      return v_at_x1;
     } else {
       return 0;
     }
