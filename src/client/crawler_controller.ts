@@ -713,7 +713,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     });
   }
   startMove(dir: DirType, double_time?: number): boolean {
-    let new_pos = v2add(vec2(), this.pos, DXY[dir]);
+    let { blends } = this;
+    let delta_pos = DXY[dir];
+    let new_pos = v2add(vec2(), this.pos, delta_pos);
     const {
       bumped_something,
       bumped_entity,
@@ -721,11 +723,16 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
 
     if (bumped_something) {
       if (!bumped_entity) {
-        this.blends.push({
-          t: 0,
-          action_type: ACTION_BUMP,
-          delta_pos: DXY[dir],
-        });
+        let tail = blends[blends.length - 1];
+        if (tail && tail.action_type === ACTION_BUMP && tail.delta_pos === delta_pos) {
+          // two identical bumps, just ignore, they may add up to penetrate a wall
+        } else {
+          blends.push({
+            t: 0,
+            action_type: ACTION_BUMP,
+            delta_pos,
+          });
+        }
       }
       return false;
     } else {
@@ -734,10 +741,10 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
         dir,
       };
       v2copy(this.pos, new_pos);
-      this.blends.push({
+      blends.push({
         t: 0,
         action_type: ACTION_MOVE,
-        delta_pos: DXY[dir],
+        delta_pos,
         finish_pos: this.pos.slice(0) as Vec2,
         transit,
       });
@@ -818,6 +825,12 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       if (bumped_something) {
         if (bumped_entity) {
           return false; // remove it
+        }
+        let { blends } = this;
+        let predecessor = blends[blends.indexOf(blend) - 1];
+        if (predecessor && predecessor.action_type === ACTION_BUMP && predecessor.delta_pos === blend.delta_pos) {
+          // two identical bumps, remove it, they may add up to penetrate a wall
+          return false;
         }
         // change it to a bump
         blend.started = true;
