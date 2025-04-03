@@ -98,8 +98,8 @@ import { statusPush } from './status';
 
 const { PI, abs, cos, floor, max, min, random, round, sin } = Math;
 
-const WALK_TIME = 250; // real-time/multiplayer may want: 500;
-const ROT_TIME = 150; // real-time/multiplayer may want: 250;
+const WALK_TIME = 500; // 250-500
+const ROT_TIME = 250; // 150-250
 const FAST_TRAVEL_STEP_MIN_TIME = 200; // affects instant-step-ish controllers
 const KEY_REPEAT_TIME_ROT = 500;
 const KEY_REPEAT_TIME_MOVE_DELAY = 500;
@@ -115,6 +115,11 @@ let temp_delta = vec2();
 
 export type MoveBlocker = () => boolean;
 
+type WallTransit = {
+  pos: Vec2;
+  dir: DirType;
+};
+
 type TickPositions = {
   dest_pos: Vec2; // Where the player is currently moving toward (already satisfied all checks / occupies in game logic)
   dest_rot: DirType;
@@ -122,6 +127,7 @@ type TickPositions = {
   approx_rot: DirType;
   finished_pos: Vec2; // Where the player feels he is (not updated until after movement has finished)
   finished_rot: DirType;
+  wall_transits: WallTransit[];
 };
 type TickParam = {
   dt: number;
@@ -492,15 +498,12 @@ class CrawlerControllerQueued implements PlayerController {
       }
     }
 
-    // TODO: instead of us doing this logic, change the parent to look at game_state.pos and deduce the fading
-    // maybe, also, parent changes game_state.pos/angle?
     let { game_state } = this.parent;
-    let level = game_state.level!;
     let cur = interp_queue[0];
     assert(cur.pos);
     let dest = cur;
-    let cur_cell = level.getCell(cur.pos[0], cur.pos[1]);
     let instantaneous_move;
+    let wall_transits: WallTransit[] = [];
     if (interp_queue.length > 1) {
       let next = interp_queue[1];
       assert(next.pos);
@@ -521,27 +524,18 @@ class CrawlerControllerQueued implements PlayerController {
         let pos_offs = crawlerRenderGetPosOffs();
         let pos_through_door_angle = dirMod(cur.rot - next.action_dir + 4);
 
-        let alpha;
         let cutoff = pos_through_door_angle === 0 ? (1 - pos_offs[1]) / 2 :
           pos_through_door_angle === 2 ? (1 + pos_offs[1]) / 2 :
           pos_through_door_angle === 3 ? (1 + pos_offs[0]) / 2 : (1 - pos_offs[0]) / 2;
         if (progress < cutoff) {
           instantaneous_move = cur;
-          alpha = progress / cutoff;
         } else {
           instantaneous_move = next;
-          alpha = 1 - (progress - cutoff) / (1 - cutoff);
         }
-        if (cur_cell) {
-          let wall_type = getEffWall(this.parent.script_api, cur_cell, next.action_dir).swapped;
-          if (!wall_type.open_vis) {
-            // let next_cell = level.getCell(next.pos[0], next.pos[1]);
-            // this.fade_v = next_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_IN ? 1 : 0;
-            // this.fade_v = next_cell.type === CellType.STAIRS_IN || next_cell.type === CellType.STAIRS_OUT ||
-            //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
-            this.parent.fade_alpha = alpha;
-          }
-        }
+        wall_transits.push({
+          pos: cur.pos,
+          dir: next.action_dir,
+        });
       } else if (isActionBump(next)) {
         let p = (1 - abs(1 - progress * 2)) * 0.025;
         v2lerp(game_state.pos, p, cur.pos, next.bump_pos);
@@ -568,9 +562,9 @@ class CrawlerControllerQueued implements PlayerController {
       approx_rot: instantaneous_move.rot,
       finished_pos: cur.pos,
       finished_rot: cur.rot,
+      wall_transits,
     };
   }
-
 }
 
 class CrawlerControllerInstantStep implements PlayerController {
@@ -597,6 +591,7 @@ class CrawlerControllerInstantStep implements PlayerController {
       approx_rot: this.rot,
       finished_pos: this.pos,
       finished_rot: this.rot,
+      wall_transits: [],
     };
   }
   allowRepeatImmediately(): boolean {
@@ -641,8 +636,8 @@ class CrawlerControllerInstantStep implements PlayerController {
   }
 }
 
-const BLEND_POS_T = 250;
-const BLEND_ROT_T = 150;
+const BLEND_POS_T = WALK_TIME;
+const BLEND_ROT_T = ROT_TIME;
 const BLEND_RATE: Record<ActionType, number> = {
   [ACTION_NONE]: 1,
   [ACTION_MOVE]: 1/BLEND_POS_T,
@@ -659,6 +654,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     finish_pos?: Vec2;
     delta_rot?: number;
     finish_rot?: DirType;
+    transit?: WallTransit;
   }[] = [];
 
   blend_pos = vec2();
@@ -685,6 +681,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     let { blend_pos } = this;
     v2copy(blend_pos, this.pos_blend_from);
     let blend_rot = this.rot_blend_from;
+
+    let wall_transits: WallTransit[] = [];
+
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
       blend.t += dt * BLEND_RATE[blend.action_type];
@@ -703,6 +702,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       let t = easeInOut(blend.t, 2);
       if (blend.action_type === ACTION_MOVE) {
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, t);
+        wall_transits.push(blend.transit!);
       } else if (blend.action_type === ACTION_ROT) {
         blend_rot += blend.delta_rot! * t;
       } else if (blend.action_type === ACTION_BUMP) {
@@ -723,6 +723,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       // finished_rot: this.rot_blend_from,
       finished_pos: this.pos,
       finished_rot: this.rot,
+      wall_transits,
     };
   }
 
@@ -759,12 +760,17 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       }
       return false;
     } else {
+      let transit: WallTransit = {
+        pos: this.pos.slice(0) as Vec2,
+        dir,
+      };
       v2copy(this.pos, new_pos);
       this.blends.push({
         t: 0,
         action_type: ACTION_MOVE,
         delta_pos: DXY[dir],
         finish_pos: this.pos.slice(0) as Vec2,
+        transit,
       });
       return true;
     }
@@ -795,6 +801,7 @@ type Blend2 = {
   finish_pos: Vec2;
   delta_rot?: number;
   finish_rot: DirType;
+  transit?: WallTransit;
 };
 class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   pos_blend_from = vec2();
@@ -892,6 +899,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     let finished_pos: Vec2 | null = null;
     let finished_rot: DirType = 0;
     let last_blend: Blend2 | null = null;
+    let wall_transits: WallTransit[] = [];
     for (let ii = 0; ii < blends.length; ++ii) {
       let blend = blends[ii];
       if (blend.t < 0.667) {
@@ -956,6 +964,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       let t = easeInOut(blend.t, 2);
       if (blend.action_type === ACTION_MOVE) {
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, t);
+        wall_transits.push(blend.transit!);
       } else if (blend.action_type === ACTION_ROT) {
         blend_rot += blend.delta_rot! * t;
       } else if (blend.action_type === ACTION_BUMP) {
@@ -980,6 +989,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       approx_rot: dirMod(round(blend_rot) + 4),
       finished_pos,
       finished_rot,
+      wall_transits,
     };
   }
 
@@ -1003,7 +1013,12 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     });
   }
   startMove(dir: DirType, double_time?: number): boolean {
-    let new_pos = v2add(vec2(), this.effPos(), DXY[dir]);
+    let cur_pos = this.effPos();
+    let transit: WallTransit = {
+      pos: cur_pos.slice(0) as Vec2,
+      dir,
+    };
+    let new_pos = v2add(vec2(), cur_pos, DXY[dir]);
     this.blends.push({
       t: 0,
       started: false,
@@ -1013,6 +1028,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       delta_pos: DXY[dir],
       finish_rot: this.effRot(),
       finish_pos: new_pos,
+      transit,
     });
     return true;
   }
@@ -1735,6 +1751,67 @@ export class CrawlerController {
     this.path_to = null;
   }
 
+  applyFade(positions: TickPositions): void {
+    let { game_state, script_api } = this;
+    let level = game_state.level!;
+    let { pos, angle } = game_state;
+    let { wall_transits } = positions;
+    let max_alpha = 0;
+    let pos_offs = crawlerRenderGetPosOffs();
+    let cur_angle_as_rot = angle / (PI/2);
+    for (let ii = 0; ii < wall_transits.length; ++ii) {
+      let transit = wall_transits[ii];
+      let cur_cell = level.getCell(transit.pos[0], transit.pos[1]);
+      if (!cur_cell) {
+        continue;
+      }
+      // let cur_angle = cur.rot * PI / 2;
+      let wall_type = getEffWall(script_api, cur_cell, transit.dir).swapped;
+      if (wall_type.open_vis) {
+        continue;
+      }
+      let pos_through_door_angle = dirMod(cur_angle_as_rot - transit.dir + 4);
+      let cutoff0 = (1 - pos_offs[1]) / 2;
+      let cutoff1 = (1 - pos_offs[0]) / 2;
+      let cutoff2 = (1 + pos_offs[1]) / 2;
+      let cutoff3 = (1 + pos_offs[0]) / 2;
+      let cutoff;
+      if (pos_through_door_angle < 1) {
+        cutoff = lerp(pos_through_door_angle, cutoff0, cutoff1);
+      } else if (pos_through_door_angle < 2) {
+        cutoff = lerp(pos_through_door_angle - 1, cutoff1, cutoff2);
+      } else if (pos_through_door_angle < 3) {
+        cutoff = lerp(pos_through_door_angle - 2, cutoff2, cutoff3);
+      } else {
+        cutoff = lerp(pos_through_door_angle - 3, cutoff3, cutoff0);
+      }
+      let progress;
+      if (transit.dir === EAST) {
+        progress = pos[0] - transit.pos[0];
+      } else if (transit.dir === NORTH) {
+        progress = pos[1] - transit.pos[1];
+      } else if (transit.dir === WEST) {
+        progress = transit.pos[0] - pos[0];
+      } else /* SOUTH */ {
+        progress = transit.pos[1] - pos[1];
+      }
+      progress = clamp(progress, 0, 1);
+      let alpha;
+      if (progress < cutoff) {
+        alpha = progress/cutoff;
+      } else {
+        alpha = 1 - (progress - cutoff) / (1 - cutoff);
+      }
+      max_alpha = max(max_alpha, alpha);
+
+      // let next_cell = level.getCell(next.pos[0], next.pos[1]);
+      // this.fade_v = next_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_IN ? 1 : 0;
+      // this.fade_v = next_cell.type === CellType.STAIRS_IN || next_cell.type === CellType.STAIRS_OUT ||
+      //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
+    }
+    this.fade_alpha = max_alpha;
+  }
+
   modeCrawl(param: PlayerMotionParam): void {
     const frame_timestamp = getFrameTimestamp();
     const {
@@ -2039,6 +2116,8 @@ export class CrawlerController {
     };
     let positions = this.player_controller.tickMovement(tick_param);
     dt = tick_param.dt;
+
+    this.applyFade(positions);
 
     this.applyForceFace(game_state, dt);
 
