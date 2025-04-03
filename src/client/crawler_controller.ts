@@ -42,8 +42,8 @@ import {
   v2distSq,
   v2floor,
   v2iFloor,
+  v2iRound,
   v2lerp,
-  v2round,
   v2same,
   v2sub,
   v3copy,
@@ -123,8 +123,6 @@ type WallTransit = {
 type TickPositions = {
   dest_pos: Vec2; // Where the player is currently moving toward (already satisfied all checks / occupies in game logic)
   dest_rot: DirType;
-  approx_pos: Vec2; // Where the camera is (centered)
-  approx_rot: DirType;
   finished_pos: Vec2; // Where the player feels he is (not updated until after movement has finished)
   finished_rot: DirType;
   wall_transits: WallTransit[];
@@ -502,7 +500,6 @@ class CrawlerControllerQueued implements PlayerController {
     let cur = interp_queue[0];
     assert(cur.pos);
     let dest = cur;
-    let instantaneous_move;
     let wall_transits: WallTransit[] = [];
     if (interp_queue.length > 1) {
       let next = interp_queue[1];
@@ -521,17 +518,6 @@ class CrawlerControllerQueued implements PlayerController {
       }
       game_state.angle = lerp(progress, cur_angle, next_angle);
       if (isActionMove(next)) {
-        let pos_offs = crawlerRenderGetPosOffs();
-        let pos_through_door_angle = dirMod(cur.rot - next.action_dir + 4);
-
-        let cutoff = pos_through_door_angle === 0 ? (1 - pos_offs[1]) / 2 :
-          pos_through_door_angle === 2 ? (1 + pos_offs[1]) / 2 :
-          pos_through_door_angle === 3 ? (1 + pos_offs[0]) / 2 : (1 - pos_offs[0]) / 2;
-        if (progress < cutoff) {
-          instantaneous_move = cur;
-        } else {
-          instantaneous_move = next;
-        }
         wall_transits.push({
           pos: cur.pos,
           dir: next.action_dir,
@@ -539,27 +525,16 @@ class CrawlerControllerQueued implements PlayerController {
       } else if (isActionBump(next)) {
         let p = (1 - abs(1 - progress * 2)) * 0.025;
         v2lerp(game_state.pos, p, cur.pos, next.bump_pos);
-        instantaneous_move = cur;
-      } else {
-        if (progress < 0.5) {
-          instantaneous_move = cur;
-        } else {
-          instantaneous_move = next;
-        }
       }
     } else {
-      instantaneous_move = cur;
       v2copy(game_state.pos, cur.pos);
       game_state.angle = cur.rot * PI/2;
     }
     param.dt = dt;
 
-    assert(instantaneous_move.pos);
     return {
       dest_pos: dest.pos!,
       dest_rot: dest.rot,
-      approx_pos: instantaneous_move.pos,
-      approx_rot: instantaneous_move.rot,
       finished_pos: cur.pos,
       finished_rot: cur.rot,
       wall_transits,
@@ -587,8 +562,6 @@ class CrawlerControllerInstantStep implements PlayerController {
     return {
       dest_pos: this.pos,
       dest_rot: this.rot,
-      approx_pos: this.pos,
-      approx_rot: this.rot,
       finished_pos: this.pos,
       finished_rot: this.rot,
       wall_transits: [],
@@ -658,7 +631,6 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   }[] = [];
 
   blend_pos = vec2();
-  approx_pos = vec2();
   initPosSub(): void {
     v2copy(this.pos, this.parent.last_finished_pos);
     this.rot = this.parent.last_finished_rot;
@@ -713,12 +685,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     v2copy(game_state.pos, blend_pos);
     game_state.angle = blend_rot * PI / 2;
 
-    v2round(this.approx_pos, blend_pos);
     return {
       dest_pos: this.pos,
       dest_rot: this.rot,
-      approx_pos: this.approx_pos,
-      approx_rot: dirMod(round(blend_rot) + 4),
       // finished_pos: this.pos_blend_from,
       // finished_rot: this.rot_blend_from,
       finished_pos: this.pos,
@@ -824,7 +793,6 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   }
 
   blend_pos = vec2();
-  approx_pos = vec2();
   initPosSub(): void {
     v2copy(this.pos, this.parent.last_finished_pos);
     this.rot = this.parent.last_finished_rot;
@@ -981,12 +949,9 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       finished_rot = this.rot_blend_from;
     }
 
-    v2round(this.approx_pos, blend_pos);
     return {
       dest_pos: this.pos,
       dest_rot: this.rot,
-      approx_pos: this.approx_pos,
-      approx_rot: dirMod(round(blend_rot) + 4),
       finished_pos,
       finished_rot,
       wall_transits,
@@ -1812,6 +1777,7 @@ export class CrawlerController {
     this.fade_alpha = max_alpha;
   }
 
+  approx_pos = vec2();
   modeCrawl(param: PlayerMotionParam): void {
     const frame_timestamp = getFrameTimestamp();
     const {
@@ -2121,7 +2087,15 @@ export class CrawlerController {
 
     this.applyForceFace(game_state, dt);
 
-    let approx_cell = level.getCell(positions.approx_pos[0], positions.approx_pos[1]);
+    let { approx_pos } = this;
+    v2copy(approx_pos, game_state.pos);
+    let ca = cos(game_state.angle) * 0.5;
+    let sa = sin(game_state.angle) * 0.5;
+    let pos_offs = crawlerRenderGetPosOffs();
+    approx_pos[0] += pos_offs[1] * ca + pos_offs[0] * sa;
+    approx_pos[1] += pos_offs[1] * sa - pos_offs[0] * ca;
+    v2iRound(approx_pos);
+    let approx_cell = level.getCell(approx_pos[0], approx_pos[1]);
     if (approx_cell && approx_cell.desc.auto_evict) {
       // this.fade_v = approx_cell.type === STAIRS_IN ? 1 : 0;
       // this.fade_v = 1;
@@ -2144,7 +2118,7 @@ export class CrawlerController {
       this.map_update_this_frame = true;
     }
 
-    this.flagCellNextToUsVisible(positions.approx_pos);
+    this.flagCellNextToUsVisible(temp_pos);
   }
 
   modeFreecam(param: PlayerMotionParam): void {
