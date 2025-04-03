@@ -1736,7 +1736,7 @@ export class CrawlerController {
     let level = game_state.level!;
     let { pos, angle } = game_state;
     let { wall_transits } = positions;
-    let max_alpha = 0;
+    let max_alpha = this.fade_override;
     let pos_offs = crawlerRenderGetPosOffs();
     let cur_angle_as_rot = angle / (PI/2);
     for (let ii = 0; ii < wall_transits.length; ++ii) {
@@ -2085,9 +2085,9 @@ export class CrawlerController {
       }
     } else {
       // no_move
-      this.fade_alpha = this.fade_override;
       this.player_controller.cancelQueuedMoves?.();
       if (this.loading_level) {
+        this.fade_alpha = this.fade_override;
         return;
       }
     }
