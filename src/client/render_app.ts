@@ -15,9 +15,15 @@ function renderResetFilter(): void {
     filter_mag: settings.filter === 1 ? gl.LINEAR : gl.NEAREST,
     force_mipmaps: true,
   };
-  autoAtlasTextureOpts('utumno', ss);
+  autoAtlasTextureOpts('utumno', {
+    filter_min: gl.NEAREST,
+    filter_mag: gl.NEAREST,
+  });
   autoAtlasTextureOpts('whitebox', ss);
-  autoAtlasTextureOpts('demo', ss);
+  autoAtlasTextureOpts('demo', {
+    filter_min: gl.NEAREST,
+    filter_mag: gl.NEAREST,
+  });
   autoAtlasTextureOpts('spireish', ss);
 }
 
