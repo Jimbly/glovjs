@@ -456,7 +456,9 @@ class CrawlerControllerQueued implements PlayerController {
   allowRepeatImmediately(): boolean {
     // Not currently doing any move
     // Or, we're continuing double-time movement
-    return Boolean(this.queueLength() === 1 || this.queueLength() === 2 && this.interp_queue[0].double_time);
+    return Boolean(this.queueLength() === 1 ||
+      this.queueLength() === 2 && this.interp_queue[0].double_time ||
+      this.queueLength() === 2 && this.move_offs > 0.45);
   }
 
   clearDoubleTime(): void {
@@ -583,11 +585,11 @@ class CrawlerControllerInstantStep implements PlayerController {
   isAnimating(): boolean {
     return false;
   }
-  startTurn(rot: DirType, double_time?: number): void {
+  startTurn(rot: DirType): void {
     assert(rot >= 0 && rot <= 3);
     this.rot = rot;
   }
-  startMove(dir: DirType, double_time?: number): void {
+  startMove(dir: DirType): void {
     let { script_api } = this.parent;
     let new_pos = v2add(vec2(), this.pos, DXY[dir]);
     const {
@@ -696,7 +698,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     };
   }
 
-  startTurn(rot: DirType, double_time?: number): void {
+  startTurn(rot: DirType): void {
     assert(rot >= 0 && rot <= 3);
     let drot = rot - this.rot;
     if (drot > 2) {
@@ -712,7 +714,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       finish_rot: this.rot,
     });
   }
-  startMove(dir: DirType, double_time?: number): boolean {
+  startMove(dir: DirType): boolean {
     let { blends } = this;
     let delta_pos = DXY[dir];
     let new_pos = v2add(vec2(), this.pos, delta_pos);
@@ -971,7 +973,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     };
   }
 
-  startTurn(rot: DirType, double_time?: number): void {
+  startTurn(rot: DirType): void {
     assert(rot >= 0 && rot <= 3);
     let drot = rot - this.effRot();
     if (drot > 2) {
@@ -990,7 +992,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       finish_pos: this.effPos().slice(0) as Vec2,
     });
   }
-  startMove(dir: DirType, double_time?: number): boolean {
+  startMove(dir: DirType): boolean {
     let cur_pos = this.effPos();
     let transit: WallTransit = {
       pos: cur_pos.slice(0) as Vec2,
