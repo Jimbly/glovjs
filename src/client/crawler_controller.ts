@@ -24,7 +24,7 @@ import {
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
-import { EntityID, NetErrorCallback } from 'glov/common/types';
+import { EntityID, NetErrorCallback, VoidFunc } from 'glov/common/types';
 import {
   clamp,
   easeIn,
@@ -96,7 +96,7 @@ import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { statusPush } from './status';
 
-const { PI, abs, cos, floor, max, random, round, sin } = Math;
+const { PI, abs, cos, floor, max, min, random, round, sin } = Math;
 
 const WALK_TIME = 500;
 const ROT_TIME = 250;
@@ -125,7 +125,6 @@ type TickPositions = {
 };
 type TickParam = {
   dt: number;
-  disable_move: boolean;
 };
 type ControllerInputs = {
   forward: number;
@@ -142,6 +141,7 @@ interface PlayerController {
   effRot(): DirType;
   effPos(): ROVec2;
   isMoving(): boolean;
+  isAnimating(): boolean;
   startTurn(rot: DirType, double_time?: number): void;
   startMove(dir: DirType, double_time?: number): void;
   initPosSub(): void;
@@ -365,6 +365,10 @@ class CrawlerControllerQueued implements PlayerController {
     return true;
   }
 
+  isAnimating(): boolean {
+    return this.queueLength() > 1;
+  }
+
   startTurn(rot: DirType, double_time?: number): void {
     let drot = rot - this.effRot();
     if (drot > 2) {
@@ -457,10 +461,9 @@ class CrawlerControllerQueued implements PlayerController {
   }
 
   tickMovement(param: TickParam): TickPositions {
-    let { dt, disable_move } = param;
+    let { dt } = param;
     let {
       interp_queue,
-      impulse_queue,
     } = this;
     // tick movement queue
     let easing = 2;
@@ -469,10 +472,6 @@ class CrawlerControllerQueued implements PlayerController {
       do_once = false;
       let cur = interp_queue[0];
       if (interp_queue.length === 1) {
-        if (disable_move) {
-          assert(impulse_queue[0].action_type !== ACTION_ROT); // Old logic was maybe this, but never happens anyway?
-          break;
-        }
         this.startQueuedMove();
       }
       let next = interp_queue[1];
@@ -613,6 +612,9 @@ class CrawlerControllerInstantStep implements PlayerController {
   isMoving(): boolean {
     return false;
   }
+  isAnimating(): boolean {
+    return false;
+  }
   startTurn(rot: DirType, double_time?: number): void {
     assert(rot >= 0 && rot <= 3);
     this.rot = rot;
@@ -673,7 +675,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   isMoving(): boolean {
     return this.is_blend_stopped;
   }
-
+  isAnimating(): boolean {
+    return this.blends.length > 0;
+  }
   tickMovement(param: TickParam): TickPositions {
     let { dt } = param;
     let { game_state } = this.parent;
@@ -792,6 +796,236 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   }
 }
 
+type Blend2 = {
+  t: number; // 0...1
+  started: boolean;
+  finished: boolean;
+  uncancelable: boolean;
+  action_type: ActionType;
+  delta_pos?: Vec2;
+  finish_pos: Vec2;
+  delta_rot?: number;
+  finish_rot: DirType;
+};
+class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
+  pos_blend_from = vec2();
+  rot_blend_from!: DirType;
+  blends: Blend2[] = [];
+
+  effRot(): DirType {
+    let { blends } = this;
+    if (!blends.length) {
+      return this.rot;
+    }
+    return blends[blends.length - 1].finish_rot;
+  }
+  effPos(): ROVec2 {
+    let { blends } = this;
+    if (!blends.length) {
+      return this.pos;
+    }
+    return blends[blends.length - 1].finish_pos;
+  }
+
+  blend_pos = vec2();
+  approx_pos = vec2();
+  initPosSub(): void {
+    v2copy(this.pos, this.parent.last_finished_pos);
+    this.rot = this.parent.last_finished_rot;
+    v2copy(this.pos_blend_from, this.pos);
+    this.rot_blend_from = this.rot;
+    this.blends = [];
+  }
+  is_blend_stopped = false;
+  isMoving(): boolean {
+    return this.is_blend_stopped;
+  }
+  isAnimating(): boolean {
+    return this.blends.length > 0;
+  }
+  startQueuedMove(blend: Blend2): boolean {
+    if (blend.action_type === ACTION_MOVE) {
+      let dir = dirFromDelta(blend.delta_pos!);
+      const {
+        bumped_something,
+        bumped_entity,
+      } = startMove(this.parent, dir, blend.finish_pos, blend.finish_rot);
+
+      if (bumped_something) {
+        if (bumped_entity) {
+          return false; // remove it
+        }
+        // change it to a bump
+        blend.started = true;
+        blend.action_type = ACTION_BUMP;
+        blend.finish_pos = this.pos.slice(0) as Vec2;
+      } else {
+        blend.started = true;
+        v2copy(this.pos, blend.finish_pos);
+      }
+    } else if (blend.action_type === ACTION_ROT) {
+      this.rot = blend.finish_rot;
+      blend.started = true;
+    } else {
+      assert(false);
+    }
+    return true;
+  }
+  cancelAllMoves(): void {
+    this.blends = this.blends.filter((blend) => blend.started || blend.uncancelable);
+    // also need to cancel un-finished blends?
+  }
+  cancelQueuedMoves(): void {
+    this.cancelAllMoves();
+  }
+
+  tickMovement(param: TickParam): TickPositions {
+    let { dt } = param;
+    let { game_state } = this.parent;
+    let { blends } = this;
+
+    let had_blend_x = 0;
+    let had_blend_y = 0;
+    let { blend_pos } = this;
+    v2copy(blend_pos, this.pos_blend_from);
+    let blend_rot = this.rot_blend_from;
+    this.is_blend_stopped = false;
+    let did_start_finish = false;
+    let finished_pos: Vec2 | null = null;
+    let finished_rot: DirType = 0;
+    let last_blend: Blend2 | null = null;
+    for (let ii = 0; ii < blends.length; ++ii) {
+      let blend = blends[ii];
+      if (blend.action_type === ACTION_MOVE) {
+        if (blend.delta_pos![0]) {
+          if (had_blend_y || had_blend_x && had_blend_x !== blend.delta_pos![0]) {
+            this.is_blend_stopped = true;
+            break;
+          }
+          had_blend_x = blend.delta_pos![0];
+        } else {
+          if (had_blend_x || had_blend_y && had_blend_y !== blend.delta_pos![1]) {
+            this.is_blend_stopped = true;
+            break;
+          }
+          had_blend_y = blend.delta_pos![1];
+        }
+      }
+      if (!blend.started && (!last_blend || last_blend.finished)) {
+        if (did_start_finish) {
+          this.is_blend_stopped = true;
+          break;
+        }
+        if (!this.startQueuedMove(blend)) {
+          this.cancelAllMoves();
+          break;
+        }
+        did_start_finish = true;
+      }
+      if (!blend.finished && !did_start_finish && ii !== blends.length - 1) {
+        // have something after us, let's finish this (cause end-of-move events
+        //   like pits to trigger) so we can start the next thing as soon as possible
+        blend.finished = true;
+        did_start_finish = true;
+      }
+      if (blend.finished) {
+        finished_pos = blend.finish_pos;
+        finished_rot = blend.finish_rot;
+      }
+      blend.t = min(1, blend.t + dt * BLEND_RATE[blend.action_type]);
+      if (blend.t === 1) {
+        if (!blend.finished) {
+          blend.finished = true;
+          did_start_finish = true;
+          finished_pos = blend.finish_pos;
+          finished_rot = blend.finish_rot;
+        }
+        if (ii === 0) {
+          if (blend.action_type === ACTION_MOVE) {
+            v2copy(this.pos_blend_from, blend.finish_pos!);
+            v2copy(blend_pos, this.pos_blend_from);
+          } else if (blend.action_type === ACTION_ROT) {
+            this.rot_blend_from = blend.finish_rot!;
+            blend_rot = this.rot_blend_from;
+          }
+          blends.splice(ii, 1);
+          --ii;
+          continue;
+        }
+      }
+      let t = easeInOut(blend.t, 2);
+      if (blend.action_type === ACTION_MOVE) {
+        v2addScale(blend_pos, blend_pos, blend.delta_pos!, t);
+      } else if (blend.action_type === ACTION_ROT) {
+        blend_rot += blend.delta_rot! * t;
+      } else if (blend.action_type === ACTION_BUMP) {
+        let p = (1 - abs(1 - t * 2)) * 0.025;
+        v2addScale(blend_pos, blend_pos, blend.delta_pos!, p);
+      }
+      last_blend = blend;
+    }
+    v2copy(game_state.pos, blend_pos);
+    game_state.angle = blend_rot * PI / 2;
+
+    if (!finished_pos) {
+      finished_pos = this.pos_blend_from;
+      finished_rot = this.rot_blend_from;
+    }
+
+    v2round(this.approx_pos, blend_pos);
+    return {
+      dest_pos: this.pos,
+      dest_rot: this.rot,
+      approx_pos: this.approx_pos,
+      approx_rot: dirMod(round(blend_rot) + 4),
+      finished_pos,
+      finished_rot,
+    };
+  }
+
+  startTurn(rot: DirType, double_time?: number): void {
+    assert(rot >= 0 && rot <= 3);
+    let drot = rot - this.effRot();
+    if (drot > 2) {
+      drot -= 4; // 3 -> -1
+    } else if (drot < -2) {
+      drot += 4; // -3 -> 1
+    }
+    this.blends.push({
+      t: 0,
+      started: false,
+      finished: false,
+      uncancelable: false,
+      action_type: ACTION_ROT,
+      delta_rot: drot,
+      finish_rot: rot,
+      finish_pos: this.effPos().slice(0) as Vec2,
+    });
+  }
+  startMove(dir: DirType, double_time?: number): boolean {
+    let new_pos = v2add(vec2(), this.effPos(), DXY[dir]);
+    this.blends.push({
+      t: 0,
+      started: false,
+      finished: false,
+      uncancelable: false,
+      action_type: ACTION_MOVE,
+      delta_pos: DXY[dir],
+      finish_rot: this.effRot(),
+      finish_pos: new_pos,
+    });
+    return true;
+  }
+  autoStartMove(rot: DirType, offs: number): void {
+    if (this.startMove(rot)) {
+      let tail = this.blends[this.blends.length - 1];
+      tail.uncancelable = true;
+      tail.t += offs;
+    }
+  }
+}
+
+
 export type PlayerMotionParam = {
   button_x0: number;
   button_y0: number;
@@ -833,7 +1067,9 @@ export class CrawlerController {
       new CrawlerControllerInstantStep(this) :
       param.controller_type === 'instantblend' ?
         new CrawlerControllerInstantBlend(this) :
-        new CrawlerControllerQueued(this);
+        param.controller_type === 'queued2' ?
+          new CrawlerControllerQueued2(this) :
+          new CrawlerControllerQueued(this);
     this.script_api.setController(this);
   }
 
@@ -971,6 +1207,13 @@ export class CrawlerController {
   }
   getFadeColor(): number {
     return this.fade_v;
+  }
+
+  controllerIsAnimating(): boolean {
+    if (this.mode !== 'modeCrawl') {
+      return false;
+    }
+    return this.player_controller.isAnimating();
   }
 
   doPlayerMotion(param: PlayerMotionParam): void {
@@ -1193,8 +1436,14 @@ export class CrawlerController {
   ): void {
     assert(!this.transitioning_floor);
     this.transitioning_floor = true;
-    this.fade_override = 1;
-    this.setMoveBlocker(() => this.transitioning_floor);
+    let runme: VoidFunc | null = null;
+    this.setMoveBlocker(() => {
+      if (!this.controllerIsAnimating()) {
+        this.fade_override = 1;
+      }
+      runme?.();
+      return this.transitioning_floor;
+    });
     if (this.flush_vis_data) {
       this.flush_vis_data(true);
     }
@@ -1211,17 +1460,24 @@ export class CrawlerController {
         // need initial position
         new_pos = level.special_pos.stairs_in;
       }
-      this.applyPlayerFloorChange([new_pos[0], new_pos[1], new_pos[2]], new_floor_id, reason, (err) => {
-        if (err) {
-          this.transitioning_floor = false;
-          this.fade_override = 0;
-          throw err;
+      // wait until this.controllerAnimating() is false before continuing
+      runme = () => {
+        if (this.controllerIsAnimating()) {
+          return;
         }
-        if (!this.entity_manager.isOnline()) {
-          this.onFloorChangeAck();
-        }
-        // else: floorchange_ack will be delivered momentarily
-      });
+        runme = null;
+        this.applyPlayerFloorChange([new_pos[0], new_pos[1], new_pos[2]], new_floor_id, reason, (err) => {
+          if (err) {
+            this.transitioning_floor = false;
+            this.fade_override = 0;
+            throw err;
+          }
+          if (!this.entity_manager.isOnline()) {
+            this.onFloorChangeAck();
+          }
+          // else: floorchange_ack will be delivered momentarily
+        });
+      };
     });
   }
 
@@ -1249,7 +1505,7 @@ export class CrawlerController {
   }
 
   moveBlockPit(): boolean {
-    this.pit_time += getFrameDt();
+    this.pit_time += this.controllerIsAnimating() ? 0 : getFrameDt();
     let pit_progress = this.pit_time / pit_times[this.pit_stage];
     if (pit_progress > 1) {
       pit_progress = 0;
@@ -1478,9 +1734,9 @@ export class CrawlerController {
     } = this;
     const build_mode = buildModeActive();
 
-    let no_move = this.hasMoveBlocker() || disable_move;
+    let no_move = this.hasMoveBlocker() || disable_move || disable_player_impulse;
 
-    if (disable_player_impulse) {
+    if (no_move) { // was: disable_player_impulse
       this.path_to = null;
     }
 
@@ -1627,138 +1883,137 @@ export class CrawlerController {
       button(2, 1, 5, 'right', keys_right, pad_right);
     }
 
-    if (no_move) {
-      this.fade_alpha = this.fade_override;
-      // Apply rot interpolation
-      if (!this.loading_level) {
-        game_state.angle = this.last_dest_rot * PI/2; // note: untested, was: `this.player_controller.effRot()`
-        this.applyForceFace(game_state, dt);
-      }
-      return;
-    }
-
-    let eff_rot = this.player_controller.effRot();
-    {
-      let drot = down_edge.turn_left;
-      drot -= down_edge.turn_right;
-      while (drot) {
-        let s = sign(drot);
-        eff_rot = dirMod(eff_rot + s + 4);
-        this.startTurn(eff_rot);
-        drot -= s;
-      }
-    }
-
-    {
-      let dx = 0;
-      dx += down_edge.left;
-      dx -= down_edge.right;
-      let dy = 0;
-      dy += down_edge.forward;
-      dy -= down_edge.back;
-      if (dx || dy) {
-        if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE &&
-          this.last_action_hash === (dx + dy * 8)
-        ) {
-          // Pressed the same action again within the repeat period, double-tap, start repeating if held
-          this.is_repeating = true;
-        }
-        this.startRelativeMove(dx, dy);
-      }
-    }
-
-    if (!this.player_controller.isMoving() &&
-      frame_timestamp - this.last_action_time >= KEY_REPEAT_TIME_ROT
-    ) {
-      // Not currently doing any move
-      // Check for held rotation inputs
-      let drot = 0;
-      drot += down.turn_left;
-      drot -= down.turn_right;
-      let drot2 = sign(drot);
-      if (drot2) {
-        eff_rot = dirMod(eff_rot + drot2 + 4);
-        this.startTurn(eff_rot);
-      }
-    }
-
-    let kb_repeat_rate = this.is_repeating ? KEY_REPEAT_TIME_MOVE_RATE : KEY_REPEAT_TIME_MOVE_DELAY;
-    if (!this.player_controller.isMoving() && frame_timestamp - this.last_action_time >= kb_repeat_rate ||
-      this.player_controller.allowRepeatImmediately()
-    ) {
-      // Check for held movement inputs
-      let dx = 0;
-      dx += down.left;
-      dx -= down.right;
-      let dy = 0;
-      dy += down.forward;
-      dy -= down.back;
-      if (dx || dy) {
-        this.is_repeating = true;
-        this.startRelativeMove(dx, dy);
-      }
-    }
-    if (!down.forward && !down.back && !down.left && !down.right) {
-      this.is_repeating = false;
-    }
-
-    if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_dest_pos, true) &&
-      !v2same(last_dest_pos, prev_pos)
-    ) {
-      // We're standing over a blocking entity!  Move to where we were before
-      this.player_controller.startMove(dirFromMove(last_dest_pos, prev_pos));
-    }
-
     let level = game_state.level!;
-    if (!this.player_controller.isMoving() && this.path_to &&
-      frame_timestamp - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
-    ) {
-      let { w } = level;
-      let cur = {
-        pos: last_dest_pos,
-        rot: eff_rot,
-      };
-      let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
-        this.path_to[0], this.path_to[1], build_mode, crawlerScriptAPI());
-      if (!path || path.length === 1) {
-        this.path_to = null;
-      } else {
-        this.path_to_last_step = frame_timestamp;
-        let next = path[1];
-        let nx = next % w;
-        let ny = (next - nx) / w;
-        let next_pos = [nx, ny] as const;
-        assert.equal(v2distSq(next_pos, cur.pos), 1);
-        v2sub(temp_delta, next_pos, cur.pos);
-        let need_dir = dirFromDelta(temp_delta);
-        if (need_dir !== cur.rot) {
-          // rotate
-          let drot = need_dir - cur.rot;
-          if (drot < -2) {
-            drot += 4;
-          } else if (drot > 2) {
-            drot -= 4;
+
+    if (!no_move) {
+      let eff_rot = this.player_controller.effRot();
+      {
+        let drot = down_edge.turn_left;
+        drot -= down_edge.turn_right;
+        while (drot) {
+          let s = sign(drot);
+          eff_rot = dirMod(eff_rot + s + 4);
+          this.startTurn(eff_rot);
+          drot -= s;
+        }
+      }
+
+      {
+        let dx = 0;
+        dx += down_edge.left;
+        dx -= down_edge.right;
+        let dy = 0;
+        dy += down_edge.forward;
+        dy -= down_edge.back;
+        if (dx || dy) {
+          if (frame_timestamp - this.last_action_time < KEY_REPEAT_TIME_MOVE_RATE &&
+            this.last_action_hash === (dx + dy * 8)
+          ) {
+            // Pressed the same action again within the repeat period, double-tap, start repeating if held
+            this.is_repeating = true;
           }
-          if (drot === -2 || drot === 2) {
-            drot = random() > 0.5 ? -1 : 1;
-          }
-          assert(drot === -1 || drot === 1);
-          this.player_controller.startTurn(dirMod(cur.rot + drot + 4), 2);
+          this.startRelativeMove(dx, dy);
+        }
+      }
+
+      if (!this.player_controller.isMoving() &&
+        frame_timestamp - this.last_action_time >= KEY_REPEAT_TIME_ROT
+      ) {
+        // Not currently doing any move
+        // Check for held rotation inputs
+        let drot = 0;
+        drot += down.turn_left;
+        drot -= down.turn_right;
+        let drot2 = sign(drot);
+        if (drot2) {
+          eff_rot = dirMod(eff_rot + drot2 + 4);
+          this.startTurn(eff_rot);
+        }
+      }
+
+      let kb_repeat_rate = this.is_repeating ? KEY_REPEAT_TIME_MOVE_RATE : KEY_REPEAT_TIME_MOVE_DELAY;
+      if (!this.player_controller.isMoving() && frame_timestamp - this.last_action_time >= kb_repeat_rate ||
+        this.player_controller.allowRepeatImmediately()
+      ) {
+        // Check for held movement inputs
+        let dx = 0;
+        dx += down.left;
+        dx -= down.right;
+        let dy = 0;
+        dy += down.forward;
+        dy -= down.back;
+        if (dx || dy) {
+          this.is_repeating = true;
+          this.startRelativeMove(dx, dy);
+        }
+      }
+      if (!down.forward && !down.back && !down.left && !down.right) {
+        this.is_repeating = false;
+      }
+
+      if (!this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_dest_pos, true) &&
+        !v2same(last_dest_pos, prev_pos)
+      ) {
+        // We're standing over a blocking entity!  Move to where we were before
+        this.player_controller.startMove(dirFromMove(last_dest_pos, prev_pos));
+      }
+
+      if (!this.player_controller.isMoving() && this.path_to &&
+        frame_timestamp - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
+      ) {
+        let { w } = level;
+        let cur = {
+          pos: last_dest_pos,
+          rot: eff_rot,
+        };
+        let path = pathFind(level, cur.pos[0], cur.pos[1], cur.rot,
+          this.path_to[0], this.path_to[1], build_mode, crawlerScriptAPI());
+        if (!path || path.length === 1) {
+          this.path_to = null;
         } else {
-          if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true)) {
-            this.player_controller.clearDoubleTime?.();
-            this.path_to = null;
+          this.path_to_last_step = frame_timestamp;
+          let next = path[1];
+          let nx = next % w;
+          let ny = (next - nx) / w;
+          let next_pos = [nx, ny] as const;
+          assert.equal(v2distSq(next_pos, cur.pos), 1);
+          v2sub(temp_delta, next_pos, cur.pos);
+          let need_dir = dirFromDelta(temp_delta);
+          if (need_dir !== cur.rot) {
+            // rotate
+            let drot = need_dir - cur.rot;
+            if (drot < -2) {
+              drot += 4;
+            } else if (drot > 2) {
+              drot -= 4;
+            }
+            if (drot === -2 || drot === 2) {
+              drot = random() > 0.5 ? -1 : 1;
+            }
+            assert(drot === -1 || drot === 1);
+            this.player_controller.startTurn(dirMod(cur.rot + drot + 4), 2);
           } else {
-            // move
-            this.player_controller.startMove(cur.rot, path.length > 2 ? 1 : 0);
+            if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true)) {
+              this.player_controller.clearDoubleTime?.();
+              this.path_to = null;
+            } else {
+              // move
+              this.player_controller.startMove(cur.rot, path.length > 2 ? 1 : 0);
+            }
           }
         }
+      }
+    } else {
+      // no_move
+      this.fade_alpha = this.fade_override;
+      this.player_controller.cancelQueuedMoves?.();
+      if (this.loading_level) {
+        return;
       }
     }
 
     let tick_param = {
       dt,
-      disable_move,
     };
     let positions = this.player_controller.tickMovement(tick_param);
     dt = tick_param.dt;
@@ -1778,10 +2033,8 @@ export class CrawlerController {
     }
 
     if (!v2same(positions.finished_pos, last_finished_pos)) {
-      // This is not true for the instant+blend controller, may have started a second move before this one finished:
-      // assert(v2same(positions.finished_pos, last_dest_pos));
       this.playerMoveFinish(level, positions.finished_pos);
-      if (disable_player_impulse) {
+      if (no_move) { // was: disable_player_impulse
         this.player_controller.cancelAllMoves?.();
       }
     }
