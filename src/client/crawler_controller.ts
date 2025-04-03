@@ -523,7 +523,7 @@ class CrawlerControllerQueued implements PlayerController {
           dir: next.action_dir,
         });
       } else if (isActionBump(next)) {
-        let p = (1 - abs(1 - progress * 2)) * 0.025;
+        let p = (1 - abs(1 - progress * 2)) * 0.024;
         v2lerp(game_state.pos, p, cur.pos, next.bump_pos);
       }
     } else {
@@ -678,7 +678,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
       } else if (blend.action_type === ACTION_ROT) {
         blend_rot += blend.delta_rot! * t;
       } else if (blend.action_type === ACTION_BUMP) {
-        let p = (1 - abs(1 - t * 2)) * 0.025;
+        let p = (1 - abs(1 - t * 2)) * 0.024;
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, p);
       }
     }
@@ -936,7 +936,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       } else if (blend.action_type === ACTION_ROT) {
         blend_rot += blend.delta_rot! * t;
       } else if (blend.action_type === ACTION_BUMP) {
-        let p = (1 - abs(1 - t * 2)) * 0.025;
+        let p = (1 - abs(1 - t * 2)) * 0.024;
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, p);
       }
       last_blend = blend;
