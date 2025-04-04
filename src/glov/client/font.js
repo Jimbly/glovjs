@@ -39,7 +39,7 @@ const { transformX, transformY } = require('./camera2d.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
 const { getStringFromLocalizable } = require('./localization.js');
-const { cos, sin, max, min, round } = Math;
+const { ceil, cos, floor, sin, max, min, round, sqrt } = Math;
 // const settings = require('./settings.js');
 const { shaderCreate, shadersPrelink } = require('./shaders.js');
 const sprites = require('./sprites.js');
@@ -500,6 +500,37 @@ GlovFont.prototype.drawSizedAligned = function (style, x, y, z, size, align, w, 
   return drawn_width;
 };
 
+function endsWord(char_code) {
+  return char_code === 32 || // ' '
+    char_code === 0 || // end of string
+    char_code === 10 || // '\n'
+    char_code === 9; // '\t'
+}
+
+// Attempts to split as evenly as possible into this many lines
+function splitLines(text, num_lines) {
+  let ret = [];
+  // Do last line first so first lines do not get HFIT squishing applied
+  for (let ii = num_lines - 1; ii > 0; --ii) {
+    let lines_left = ii + 1;
+    let desired_len = floor(text.length / lines_left);
+    let max_len = ceil(1.5 * desired_len);
+
+    let split_point = text.length - desired_len;
+    for (let idx = split_point; idx >= text.length - max_len; --idx) {
+      let c = text.charCodeAt(idx);
+      if (endsWord(c) || c === 45) { // '-'
+        split_point = idx + 1;
+        break;
+      }
+    }
+    ret[ii] = text.slice(split_point);
+    text = text.slice(0, split_point);
+  }
+  ret[0] = text;
+  return ret;
+}
+
 let tile_state = 0;
 let chained_outside = false;
 
@@ -513,6 +544,37 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
     line_xoffs[linenum] = xoffs;
     lines[linenum] = line;
   });
+
+  if ((align & ALIGN.HFIT) && h) {
+    if (lines.length * size > h) {
+      // also fit within the vertical bounds
+
+      let text_width = this.getStringWidth(style, size, text);
+      assert(text_width > w); // otherwise would not have wrapped
+      let text_area = text_width * size;
+      let bounds_area = w * h;
+      let required_scale = sqrt(min(1, bounds_area / text_area));
+      size *= required_scale;
+      // determine number of lines at that scale (round down)
+      let scaled_max_lines = max(1, floor(h / size));
+      // split into that many lines
+      // try wrapLines, if it produces too many lines, do another split method
+      lines = [];
+      line_xoffs = [];
+      lines.length = this.wrapLines(style, w, indent, size, text, align, (xoffs, linenum, line) => {
+        line_xoffs[linenum] = xoffs;
+        lines[linenum] = line;
+      });
+      if (lines.length > scaled_max_lines) {
+        // need to do something else
+        lines = splitLines(text, scaled_max_lines);
+        for (let ii = 0; ii < lines.length; ++ii) {
+          line_xoffs[ii] = ii === 0 ? 0 : indent;
+        }
+      }
+      // draw each line with HFIT below
+    }
+  }
 
   let yoffs = 0;
   let height = size * lines.length;
@@ -709,13 +771,6 @@ GlovFont.prototype.getSpaceSize = function (xsc) {
   let space_info = this.infoFromChar(32); // ' '
   return (space_info ? (space_info.w + space_info.xpad) * space_info.scale : this.font_size) * xsc;
 };
-
-function endsWord(char_code) {
-  return char_code === 32 || // ' '
-    char_code === 0 || // end of string
-    char_code === 10 || // '\n'
-    char_code === 9; // '\t'
-}
 
 // line_cb(x0, int linenum, const char *line, x1)
 GlovFont.prototype.wrapLinesScaled = function (w, indent, xsc, text, align, line_cb) {

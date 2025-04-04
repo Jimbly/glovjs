@@ -1057,6 +1057,7 @@ export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
   buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
+  let vpad = min(param.font_height * 0.17, param.h * 0.1);
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
   let disabled = state === 'disabled';
   let font_use = (param.font || font);
@@ -1064,9 +1065,10 @@ export function buttonTextDraw(param, state, focused) {
     focused ? param.font_style_focused || font_style_focused :
     param.font_style_normal || font_style_normal;
   let x = param.x + hpad;
-  let y = param.y + yoffs;
+  let y = param.y + yoffs + vpad;
   let z = param.z + 0.1;
   let w = param.w - hpad * 2;
+  let h = param.h - vpad * 2;
   let align = param.align || glov_font.ALIGN.HVCENTERFIT;
   let text_height = param.font_height;
   if (param.markdown) {
@@ -1074,7 +1076,7 @@ export function buttonTextDraw(param, state, focused) {
       font: font_use,
       font_style,
       x, y, z,
-      w, h: param.h,
+      w, h,
       align,
       text_height,
       text: param.text
@@ -1083,7 +1085,7 @@ export function buttonTextDraw(param, state, focused) {
     font_use.drawSizedAligned(
       font_style,
       x, y, z,
-      text_height, align, w, param.h, param.text);
+      text_height, align, w, h, param.text);
   }
   profilerStopFunc();
 }

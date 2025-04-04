@@ -542,6 +542,18 @@ nec arborei timentem, ut crimina vidit.
   ui.buttonText({ x: 2, y: internal_y, z: z + 1, text: 'Fullscreen',
     in_event_cb: fscreenActive() ? fscreenExit : fscreenEnter });
   internal_y += button_height + pad;
+
+  let long_msg = 'Lots of long text that needs to be wrapped on this button label that really' +
+      ' needs to be wrapped or otherwise dealt with in a reasonable way.';
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1,
+    align: ALIGN.HVCENTERFIT,
+    text: `HVCENTERFIT: ${long_msg}` });
+  internal_y += button_height + pad;
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1,
+    align: ALIGN.HWRAP | ALIGN.HVCENTERFIT,
+    text: `HWRAP|HVCENTERFIT: ${long_msg}` });
+  internal_y += button_height + pad;
+
   collapsagoriesStop();
   test_scroll_area.end(internal_y);
   ui.panel({ x: test_scroll_area.x - pad, y: test_scroll_area.y - pad, z: z - 1,
