@@ -20,6 +20,7 @@ module.exports = function (gb) {
     ],
     client_json_files: ['client/**/*.json', 'client/**/*.json5', '!client/vendor/**/*.json'],
     server_json_files: ['server/**/*.json', 'server/**/*.json5'],
+    test_json_files: ['tests/**/*.json'],
     client_html: ['client/**/*.html'],
     client_html_index: ['**/client/index.html'],
     extra_client_html: [],

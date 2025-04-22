@@ -228,6 +228,12 @@ gb.task({
 });
 
 gb.task({
+  name: 'test_json',
+  input: config.test_json_files,
+  ...json5({ beautify: true })
+});
+
+gb.task({
   ...autoatlas({
     name: 'client_autoatlas',
     input: 'client/atlases',
@@ -731,8 +737,15 @@ gb.task({
 gb.task({
   name: 'test',
   ...testRunner({
-    input_server: 'server_js_glov_preresolve',
-    input_client: 'client_intermediate',
+    input_server: [
+      'server_json:**',
+      'test_json:**',
+      'server_js_glov_preresolve:**',
+    ],
+    input_client: [
+      'test_json:**',
+      'client_intermediate:**',
+    ],
   }),
 });
 
