@@ -558,7 +558,21 @@ export function uiGetDOMElem(last_elem, allow_modal) {
     //   handles this), but links still rely on this
     return null;
   }
-  if (dom_elems_issued >= dom_elems.length || !last_elem) {
+  if (last_elem && dom_elems[dom_elems_issued] !== last_elem) {
+    let found = false;
+    for (let ii = dom_elems_issued + 1; ii < dom_elems.length; ++ii) {
+      if (dom_elems[ii] === last_elem) {
+        dom_elems[ii] = dom_elems[dom_elems_issued];
+        dom_elems[dom_elems_issued] = last_elem;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      last_elem = null;
+    }
+  }
+  if (!last_elem) {
     let elem = document.createElement('div');
     uiElemAllocCheck();
     elem.setAttribute('class', 'glovui_dynamic');
@@ -566,18 +580,15 @@ export function uiGetDOMElem(last_elem, allow_modal) {
       dynamic_text_elem = document.getElementById('dynamic_text');
     }
     dynamic_text_elem.appendChild(elem);
-    dom_elems.push(elem);
+    let old = dom_elems[dom_elems_issued];
+    dom_elems[dom_elems_issued] = elem;
+    if (old) {
+      dom_elems.push(old);
+    }
     last_elem = elem;
   }
-  if (dom_elems[dom_elems_issued] !== last_elem) {
-    for (let ii = dom_elems_issued + 1; ii < dom_elems.length; ++ii) {
-      if (dom_elems[ii] === last_elem) {
-        dom_elems[ii] = dom_elems[dom_elems_issued];
-        dom_elems[dom_elems_issued] = last_elem;
-      }
-    }
-  }
   let elem = dom_elems[dom_elems_issued];
+  assert(!last_elem || elem === last_elem);
   dom_elems_issued++;
   return elem;
 }
