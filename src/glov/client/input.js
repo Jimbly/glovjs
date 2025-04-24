@@ -1182,6 +1182,30 @@ export function eatAllKeyboardInput() {
   eatAllInput(true);
 }
 
+// Eats all regular keyboard input, leaving special things like alt/tab/esc/F1 alone,
+// but suppressing all hotkeys / in_event_cbs until the actual edit box
+export function inputEatForEditBoxEarly() {
+  for (let code in key_state_new) {
+    code = Number(code);
+    if (code >= KEYS.SPACE && code <= KEYS.NUMPAD_DIVIDE) {
+      let ks = key_state_new[code];
+      if (ks.state === UP) {
+        key_state_new[code] = null;
+        delete key_state_new[code];
+      } else {
+        ks.up_edge = 0;
+        ks.down_edge = 0;
+        ks.down_time = 0;
+      }
+    }
+  }
+  input_eaten_kb = true;
+}
+
+export function inputEatForEditBoxLate() {
+  input_eaten_kb = false;
+}
+
 // returns position mapped to current camera view
 export function mousePos(dst) {
   dst = dst || vec2();
@@ -1618,7 +1642,9 @@ export function mouseDownEdge(param) {
 // area - used to catch focus leaving an edit box without wanting to do what
 // a click would normally do.
 export function mouseConsumeClicks(param) {
-  if (no_active_touches) {
+  // skipping when pointerLocked because when we get locked between frames, this will kill the
+  // (persistent) pointer-locked "touch"'s position
+  if (no_active_touches || pointerLocked()) {
     return;
   }
   param = param || {};
