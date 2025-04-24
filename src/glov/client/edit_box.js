@@ -156,6 +156,7 @@ class GlovUIEditBox {
     this.max_visual_size = null;
     this.zindex = null;
     this.uppercase = false;
+    this.resize = true; // only applies to multi-line
     this.initial_focus = false;
     this.onetime_focus = false;
     this.auto_unfocus = true;
@@ -613,6 +614,9 @@ class GlovUIEditBox {
         input.value = this.text;
         if (this.uppercase) {
           input.style['text-transform'] = 'uppercase';
+        }
+        if (!this.resize) {
+          input.style.resize = 'none';
         }
         this.input = input;
         if (this.initial_focus || this.onetime_focus) {
