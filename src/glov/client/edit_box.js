@@ -43,7 +43,7 @@ import {
   uiTextHeight,
 } from './ui';
 
-const { round } = Math;
+const { floor, round } = Math;
 
 let form_hook_registered = false;
 let active_edit_box;
@@ -658,15 +658,9 @@ class GlovUIEditBox {
       }
     }
     if (elem) {
-      let pos = camera2d.htmlPos(x, y);
       if (!this.spellcheck) {
         elem.spellcheck = false;
       }
-      elem.style.left = `${pos[0]}%`;
-      elem.style.top = `${pos[1]}%`;
-      let size = camera2d.htmlSize(w, h);
-      elem.style.width = `${size[0]}%`;
-      elem.style.height = `${size[1]}%`;
 
       let clip_path = '';
       if (clipped_rect.x !== x ||
@@ -688,21 +682,28 @@ class GlovUIEditBox {
       }
 
       let new_fontsize = `${camera2d.virtualToFontSize(font_height).toFixed(8)}px`;
+      // Try slightly better smooth scaling from https://medium.com/autodesk-tlv/smooth-text-scaling-in-javascript-css-a817ae8cc4c9
+      const preciseFontSize = camera2d.virtualToFontSize(font_height);  // Desired font size
+      const roundedSize = floor(preciseFontSize);
+      const extra_scale = preciseFontSize / roundedSize; // Remaining scale
       if (new_fontsize !== this.last_font_size) {
         this.last_font_size = new_fontsize;
         // elem.style.fontSize = new_fontsize;
-        // Try slightly better smooth scaling from https://medium.com/autodesk-tlv/smooth-text-scaling-in-javascript-css-a817ae8cc4c9
-        const preciseFontSize = camera2d.virtualToFontSize(font_height);  // Desired font size
-        const roundedSize = Math.floor(preciseFontSize);
-        const s = preciseFontSize / roundedSize; // Remaining scale
         elem.style.fontSize = `${roundedSize}px`;
         //const translate = `translate(${pos.x}px, ${pos.y}px)`;
         const scale = `translate(-50%, -50%)
-                       scale(${s})
+                       scale(${extra_scale})
                        translate(50%, 50%)`;
-        this.input.style.width = `${(1/s*100).toFixed(8)}%`;
+        // this.input.style.width = `${(1/extra_scale*100).toFixed(8)}%`; - handled below, now
         elem.style.transform = scale;
       }
+
+      let pos = camera2d.htmlPos(x, y);
+      elem.style.left = `${pos[0]}%`;
+      elem.style.top = `${pos[1]}%`;
+      let size = camera2d.htmlSize(w, h);
+      elem.style.width = `${size[0]/extra_scale}%`;
+      elem.style.height = `${size[1]/extra_scale}%`;
 
 
       if (this.zindex) {
