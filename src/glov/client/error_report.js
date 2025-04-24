@@ -92,6 +92,17 @@ export function glovErrorReportSetCrashCB(cb) {
   on_crash_cb = cb;
 }
 
+let filter_cb = null;
+// cb(msg) => boolean (true means don't handle as an error)
+export function glovErrorReportTemporaryFilterSet(cb) {
+  filter_cb = cb;
+}
+export function glovErrorReportTemporaryFilterClear(cb) {
+  if (!cb || cb === filter_cb) {
+    filter_cb = null;
+  }
+}
+
 // base like http://foo.com/bar/ (without index.html)
 let reporting_api_path = 'http://www.dashingstrike.com/reports/api/';
 if (MODE_DEVELOPMENT ||
@@ -197,6 +208,9 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   console.error(msg);
   if (on_crash_cb) {
     on_crash_cb();
+  }
+  if (filter_cb && filter_cb(msg)) {
+    return false;
   }
   if (is_fatal) {
     // Only doing filtering and such on fatal errors, as non-fatal errors are
