@@ -605,7 +605,11 @@ class GlovUIEditBox {
           }
         }
         if (multiline) {
-          input.setAttribute('rows', multiline);
+          if (enforce_multiline) {
+            input.setAttribute('rows', multiline);
+          } else {
+            input.style.height = '100%';
+          }
         }
         elem.appendChild(input);
         let span = document.createElement('span');
