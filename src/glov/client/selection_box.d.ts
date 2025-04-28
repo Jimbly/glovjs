@@ -82,6 +82,7 @@ export interface SelectionBoxOptsAll {
   font_height: number; // default: uiTextHeight()
   line_height: null | number; // null -> font_height (used for inline markdown image size)
   entry_height: number; // default: uiButtonHeight()
+  entry_width: null | number; // default: width
   auto_reset: boolean; // default: true
   reset_selection: boolean; // default: false
   initial_selection: number; // default: 0

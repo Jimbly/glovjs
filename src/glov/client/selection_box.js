@@ -282,6 +282,7 @@ class SelectionBoxBase {
     this.font_height = uiTextHeight();
     this.line_height = null;
     this.entry_height = uiButtonHeight();
+    this.entry_width = null;
     this.auto_reset = true;
     this.reset_selection = false;
     this.initial_selection = 0;
@@ -495,13 +496,17 @@ class SelectionBoxBase {
       key,
       selected: old_sel,
       show_as_focused,
+      entry_width,
       width,
     } = this;
+    if (entry_width === null) {
+      entry_width = width;
+    }
     if (line_height === null) {
       line_height = font_height;
     }
     let { scroll_height } = ctx;
-    let eff_width = width;
+    let eff_entry_width = entry_width;
     const y_save = y;
     if (do_scroll) {
       this.sa.begin({
@@ -511,7 +516,7 @@ class SelectionBoxBase {
       });
       y = 0;
       x = 0;
-      eff_width = width - this.sa.barWidth();
+      eff_entry_width = entry_width - this.sa.barWidth();
     } else if (this.is_dropdown) {
       // Need a spot sub here so that navigation within elements does not target
       //   other elements that happen to be behind the dropdown
@@ -657,7 +662,7 @@ class SelectionBoxBase {
       display.draw_item_cb({
         item_idx: ii, item,
         x, y: y + yoffs, z: z + 1,
-        w: eff_width, h: entry_height,
+        w: eff_entry_width, h: entry_height,
         image_set, color,
         image_set_extra, image_set_extra_alpha,
         font_height,
