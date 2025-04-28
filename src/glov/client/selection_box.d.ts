@@ -87,6 +87,7 @@ export interface SelectionBoxOptsAll {
   initial_selection: number; // default: 0
   show_as_focused: number; // default: -1
   slider_w: number; // Only for SimpleMenus
+  touch_focuses: boolean;
 }
 
 export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;

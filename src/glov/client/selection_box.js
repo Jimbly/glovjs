@@ -286,6 +286,7 @@ class SelectionBoxBase {
     this.reset_selection = false;
     this.initial_selection = 0;
     this.show_as_focused = -1;
+    this.touch_focuses = false;
     this.applyParams(params);
 
     // Run-time inter-frame state
@@ -548,6 +549,7 @@ class SelectionBoxBase {
         },
         auto_focus: item.auto_focus,
         in_event_cb: item.in_event_cb,
+        touch_focuses: this.touch_focuses,
       };
       if (ii === first_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
