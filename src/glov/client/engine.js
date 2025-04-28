@@ -845,7 +845,9 @@ export function start3DRendering(opts) {
     final: effectsIsFinal(),
     need_depth: opts.need_depth || true,
     clear: true,
+    clear_color: opts.clear_color,
     clear_all: opts.clear_all === undefined ? settings.render_scale_clear : opts.clear_all,
+    clear_all_color: opts.clear_all_color,
     viewport: opts.viewport,
   });
 
