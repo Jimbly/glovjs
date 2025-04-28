@@ -559,6 +559,7 @@ class SelectionBoxBase {
         auto_focus: item.auto_focus,
         in_event_cb: item.in_event_cb,
         touch_focuses: this.touch_focuses,
+        sound_button: item.no_sound ? null : undefined,
       };
       if (ii === first_non_disabled_selection && this.nav_loop) {
         entry_spot_rect.custom_nav[SPOT_NAV_UP] = `${key}_${last_non_disabled_selection}`;
