@@ -50,6 +50,9 @@ export interface SelectionBoxDrawItemParams {
 }
 
 export type SelectionBoxDrawItemFunc = (params: SelectionBoxDrawItemParams) => void;
+export const selboxDefaultDrawItemBackground: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItemText: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItem: SelectionBoxDrawItemFunc;
 
 export interface SelectionBoxDisplay {
   style_default: FontStyle;
