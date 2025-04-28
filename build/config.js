@@ -144,6 +144,7 @@ module.exports = function (gb) {
       more: false,
     },
     browsersync_queryparams: '', // e.g. '?D=FOO'
+    autoatlas_ignore: ['someatlas:sometile'],
   };
   // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);

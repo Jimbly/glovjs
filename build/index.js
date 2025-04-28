@@ -230,7 +230,8 @@ gb.task({
 gb.task({
   ...autoatlas({
     name: 'client_autoatlas',
-    input: 'client/atlases'
+    input: 'client/atlases',
+    ignore: config.autoatlas_ignore,
   }),
 });
 
