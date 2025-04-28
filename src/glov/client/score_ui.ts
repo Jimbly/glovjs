@@ -7,7 +7,7 @@ import {
 import { autoResetEachFrame } from './auto_reset';
 import { clipTestRect } from './camera2d';
 import { EditBox, editBoxCreate } from './edit_box';
-import { getFrameTimestamp } from './engine';
+import { debugDefineIsSet, getFrameTimestamp } from './engine';
 import {
   ALIGN,
   Font,
@@ -292,6 +292,12 @@ export function scoresDraw<ScoreType>({
   // draw scores
   let found_me = false;
   let scores_list = scores.list;
+  if (debugDefineIsSet('SCORES')) {
+    scores_list = scores_list.concat(scores_list);
+    scores_list = scores_list.concat(scores_list);
+    scores_list = scores_list.concat(scores_list);
+    scores_list = scores_list.concat(scores_list);
+  }
   let next_rank = 1;
   for (let ii = 0; ii < scores_list.length; ++ii) {
     let s = scores_list[ii % scores_list.length];
