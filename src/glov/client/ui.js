@@ -700,6 +700,58 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   spriteChainedStop();
 }
 
+// Tiles in the repeating portions
+export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
+  spriteChainedStart();
+  let uidata = s.uidata;
+  let scale = pixel_scale;
+  let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
+  let tiling_w = uidata.widths[1] * scale;
+  ws[1] = max(0, coords.w - ws[0] - ws[2]);
+  let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
+  let tiling_h = uidata.heights[1] * scale;
+  hs[1] = max(0, coords.h - hs[0] - hs[2]);
+  let x = coords.x;
+  draw_box_param.z = coords.z;
+  draw_box_param.color = color;
+  draw_box_param.shader = null;
+  if (color1) {
+    draw_box_param.color1 = color1;
+  }
+  for (let ii = 0; ii < ws.length; ++ii) {
+    let my_w = ws[ii];
+    if (my_w) {
+      let tile_x = ii > 0 && ii < ws.length - 1 ?
+        max(1, round(my_w / tiling_w)) : 1;
+      draw_box_param.w = tile_x > 1 ? my_w / tile_x : my_w;
+      for (let xx = 0; xx < tile_x; ++xx) {
+        draw_box_param.x = x + xx * draw_box_param.w;
+        let y = coords.y;
+        for (let jj = 0; jj < hs.length; ++jj) {
+          let my_h = hs[jj];
+          if (my_h) {
+            let tile_y = jj > 0 && jj < hs.length - 1 ?
+              max(1, round(my_h / tiling_h)) : 1;
+            draw_box_param.h = tile_y > 1 ? my_h / tile_y : my_h;
+            draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+            for (let yy = 0; yy < tile_y; ++yy) {
+              draw_box_param.y = y + yy * draw_box_param.h;
+              if (color1) {
+                s.drawDualTint(draw_box_param);
+              } else {
+                s.draw(draw_box_param);
+              }
+            }
+          }
+          y += my_h;
+        }
+      }
+      x += my_w;
+    }
+  }
+  spriteChainedStop();
+}
+
 export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
   spriteChainedStart();
   let uidata = s.uidata;

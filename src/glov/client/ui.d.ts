@@ -113,6 +113,7 @@ export interface DrawHBoxParam extends UIBox {
 export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
 export function drawBox(coords: UIBox, s: Sprite, pixel_scale: number, color?: ROVec4, color1?: ROVec4): void;
+export function drawBoxTiled(coords: UIBox, s: Sprite, pixel_scale: number, color?: ROVec4, color1?: ROVec4): void;
 export function drawMultiPartBox(
   coords: UIBox,
   scaleable_data: {
