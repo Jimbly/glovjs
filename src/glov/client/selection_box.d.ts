@@ -98,6 +98,7 @@ export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
 
 export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   readonly display: SelectionBoxDisplay; // always fully realized (non-Partial) after being applied
+  readonly selected: number;
 
   applyParams(params?: SelectionBoxOpts): void;
   run(params?: SelectionBoxOpts): number;
