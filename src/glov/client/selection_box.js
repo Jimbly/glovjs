@@ -485,6 +485,10 @@ class SelectionBoxBase {
     }
   }
 
+  isFocused() {
+    return this.ctx.any_focused;
+  }
+
   doList(x, y, z, do_scroll, eff_selection) {
     let {
       ctx,

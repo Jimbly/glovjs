@@ -108,6 +108,7 @@ export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   isDropdownVisible(): boolean;
   wasClicked(): boolean;
   wasRightClicked(): boolean;
+  isFocused(): boolean;
 }
 
 export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;
