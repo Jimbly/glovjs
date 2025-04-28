@@ -13,10 +13,12 @@ export enum BlendMode {
   BLEND_ALPHA = 0,
   BLEND_ADDITIVE = 1,
   BLEND_PREMULALPHA = 2,
+  BLEND_MULTIPLY = 3,
 }
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
+export const BLEND_MULTIPLY = 3;
 
 export type HTMLImage = HTMLCanvasElement | HTMLImageElement;
 export interface Texture {

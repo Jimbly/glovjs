@@ -23,10 +23,12 @@ export const BlendMode = {
   BLEND_ALPHA: 0,
   BLEND_ADDITIVE: 1,
   BLEND_PREMULALPHA: 2,
+  BLEND_MULTIPLY: 3,
 };
 export const BLEND_ALPHA = 0;
 export const BLEND_ADDITIVE = 1;
 export const BLEND_PREMULALPHA = 2;
+export const BLEND_MULTIPLY = 3;
 
 /* eslint-disable import/order */
 const assert = require('assert');
@@ -695,6 +697,8 @@ export function blendModeSet(blend) {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     } else if (last_blend_mode === BLEND_PREMULALPHA) {
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    } else if (last_blend_mode === BLEND_MULTIPLY) {
+      gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
     } else {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
