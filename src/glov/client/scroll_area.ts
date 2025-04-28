@@ -64,6 +64,7 @@ interface ScrollAreaOptsAll extends Box {
   focusable_elem: FocusableElement | null; // Another element to call .focus() on if we think we are focused
   min_dist: number | undefined; // Minimum drag distance for background drag
   disabled: boolean;
+  clip_horiz_xpad: number;
 
   // Calculated (only once) if not set
   rate_scroll_wheel: number;
@@ -110,6 +111,7 @@ class ScrollAreaInternal implements ScrollArea {
   focusable_elem: FocusableElement | null = null;
   min_dist: number | undefined;
   disabled = false;
+  clip_horiz_xpad = 0;
 
   // Calculated (only once) if not set
   rate_scroll_wheel;
@@ -177,7 +179,7 @@ class ScrollAreaInternal implements ScrollArea {
     this.began = true;
     spotSubBegin({ x, y, w, h, key: id });
     // Set up camera and clippers
-    spriteClipPush(z + 0.05, x, y, w - this.barWidth(), h);
+    spriteClipPush(z + 0.05, x - this.clip_horiz_xpad, y, w - this.barWidth() + this.clip_horiz_xpad, h);
     let camera_orig_x0 = camera2d.x0();
     let camera_orig_x1 = camera2d.x1();
     let camera_orig_y0 = camera2d.y0();
