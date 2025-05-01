@@ -1842,6 +1842,7 @@ function cleanupDOMElems() {
     let elem = dom_elems.pop();
     dynamic_text_elem.removeChild(elem);
   }
+  dom_elems_issued = 0;
 }
 
 export function menuUp(param) {
