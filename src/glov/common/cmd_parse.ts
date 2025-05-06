@@ -197,8 +197,7 @@ type CmdListEntry = {
   prefix_usage_with_help?: boolean; // will be there on client commands, but already applied on server commands
 };
 
-export type CmdParse = CmdParseImpl;
-class CmdParseImpl {
+class CmdParse {
   declare TYPE_INT: typeof TYPE_INT;
   declare TYPE_FLOAT: typeof TYPE_FLOAT;
   declare TYPE_STRING: typeof TYPE_STRING;
@@ -627,13 +626,14 @@ class CmdParseImpl {
     return list; // .slice(0, 20); Maybe?
   }
 }
+export type { CmdParse };
 
-CmdParseImpl.prototype.canonical = canonical;
+CmdParse.prototype.canonical = canonical;
 
-CmdParseImpl.prototype.TYPE_INT = TYPE_INT;
-CmdParseImpl.prototype.TYPE_FLOAT = TYPE_FLOAT;
-CmdParseImpl.prototype.TYPE_STRING = TYPE_STRING;
+CmdParse.prototype.TYPE_INT = TYPE_INT;
+CmdParse.prototype.TYPE_FLOAT = TYPE_FLOAT;
+CmdParse.prototype.TYPE_STRING = TYPE_STRING;
 
 export function cmdParseCreate(params?: CmdParseOpts): CmdParse {
-  return new CmdParseImpl(params);
+  return new CmdParse(params);
 }

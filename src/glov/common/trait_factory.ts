@@ -40,8 +40,7 @@ function pascalCase(a: string): string {
   });
 }
 
-export type TraitFactory<TBaseClass extends TraitedBaseClass, TCtorParam> = TraitFactoryImpl<TBaseClass, TCtorParam>;
-class TraitFactoryImpl<TBaseClass extends TraitedBaseClass, TCtorParam> {
+class TraitFactory<TBaseClass extends TraitedBaseClass, TCtorParam> {
   ignore_unknown_traits: boolean = false;
   initialized: boolean = false;
 
@@ -271,10 +270,11 @@ function factory(${factory_param_names.join(',')}) {
     return Ctor;
   }
 }
+export type { TraitFactory };
 
 export function traitFactoryCreate<
   TBaseClass extends TraitedBaseClass,
   TCtorParam
 >(): TraitFactory<TBaseClass, TCtorParam> {
-  return new TraitFactoryImpl();
+  return new TraitFactory();
 }
