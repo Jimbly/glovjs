@@ -89,21 +89,18 @@ function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: 
     }
     for (let ii = 0; ii < list.length; ++ii) {
       let role = list[ii];
-      if (!access[role]) {
-        // Check for access via implied access
-        let ok = false;
-        for (let my_role in access) {
-          let extra = implied_access[my_role];
-          if (extra && extra[role]) {
-            ok = true;
-            break;
-          }
-        }
-        if (!ok) {
-          return false;
+      if (access[role]) {
+        return true;
+      }
+      // Check for access via implied access
+      for (let my_role in access) {
+        let extra = implied_access[my_role];
+        if (extra && extra[role]) {
+          return true;
         }
       }
     }
+    return false;
   }
   return true;
 }
