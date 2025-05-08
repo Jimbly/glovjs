@@ -13,6 +13,7 @@ import type {
   ChatMessageDataSaved,
   ClientIDs,
   DataObject,
+  Optional,
   Roles,
   TSMap,
   WithRequired,
@@ -960,7 +961,7 @@ class ChatUI {
     this.total_h = 0;
   }
 
-  addMsgInternal(elem_in: ChatMessageDataBroadcast & { timestamp?: number }): void {
+  addMsgInternal(elem_in: Optional<ChatMessageDataBroadcast, 'flags'> & { timestamp?: number }): void {
     let elem = elem_in as ChatMessage;
     elem.cache = {};
     elem.flags = elem.flags || 0;
@@ -1022,7 +1023,7 @@ class ChatUI {
     console.log(msg);
     this.addMsgInternal({ msg, style });
   }
-  addChatFiltered(data: ChatMessageDataBroadcast & { timestamp?: number }): void {
+  addChatFiltered(data: Optional<ChatMessageDataBroadcast, 'flags'> & { timestamp?: number }): void {
     data.msg = toStr(data.msg);
     console.log(`Chat from ${data.id}: ${data.msg}`);
     if (settings.profanity_filter && data.id !== (netUserId() || netClientId())) {

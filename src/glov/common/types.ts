@@ -131,7 +131,7 @@ export type EntityID = number;
 export interface ChatMessageDataShared {
   id?: string; // user_id or client_id (or undefined if not from a user)
   msg: string;
-  flags?: number;
+  flags: number;
   display_name?: string;
   style?: string; // If added by the worker
 }
