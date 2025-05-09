@@ -56,6 +56,38 @@ function chatGet(worker: ChannelWorker): ChatHistoryData | null {
   return worker.getChannelData(CHAT_DATA_KEY, null);
 }
 
+// Get the recent chat "context" for a specific user for moderation purposes
+// If not full_conversation, we just care about their messages
+export function chatGetModerationContext(worker: ChannelWorker, user_id: string, full_conversation: boolean): string[] {
+  let chat_history = worker.getChannelData<ChatHistoryData | null>(CHAT_DATA_KEY, null);
+  if (!chat_history) {
+    return [];
+  }
+
+  const max_count = 10;
+  let ret = [];
+  let seen_matching_user = false;
+  for (let ii = chat_history.msgs.length - 1; ii >= 0; --ii) {
+    let idx = (chat_history.idx + ii) % chat_history.msgs.length;
+    let elem = chat_history.msgs[idx];
+    if (elem && elem.msg) {
+      if (elem.id === user_id) {
+        seen_matching_user = true;
+      }
+      if (elem.id === user_id || full_conversation) {
+        if (!seen_matching_user) {
+          ret.length = 0; // Only keep one message past the offending user's last message, capture around that time
+        }
+        ret.push(`[${elem.id} (${elem.display_name})] ${elem.msg}`);
+        if (ret.length >= max_count) {
+          break;
+        }
+      }
+    }
+  }
+  return ret;
+}
+
 export function chatClear(worker: ChannelWorker): boolean {
   if (!worker.getChannelData(CHAT_DATA_KEY, null)) {
     return false;
