@@ -110,6 +110,15 @@ type MDState = {
   cache: MDCache;
 };
 
+export function markdownParseInvalidate(param: MarkdownStateParam): void {
+  if (param.cache) {
+    let state = param as MDState;
+    if (state.cache.parsed) {
+      delete state.cache.parsed;
+    }
+  }
+}
+
 export function markdownLayoutInvalidate(param: MarkdownStateParam): void {
   if (param.cache) {
     let state = param as MDState;
@@ -384,8 +393,7 @@ function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
   }
   mdParseSetValidRenderables(valid_renderables);
   let tree: MDASTNode[] = mdParse(getStringFromLocalizable(param.text));
-  let blocks = cache.parsed = mdASTToBlock(tree, param);
-  cache.parsed = blocks;
+  cache.parsed = mdASTToBlock(tree, param);
   profilerStopFunc();
 }
 

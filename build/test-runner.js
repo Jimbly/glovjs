@@ -49,9 +49,7 @@ module.exports = function test(opts) {
   gb.task({
     name: 'server_js_test',
     target: OUTPUT_SERVER,
-    input: [
-      `${input_server}:**`,
-    ],
+    input: input_server,
     type: gb.SINGLE,
     func: copy,
   });
@@ -61,7 +59,7 @@ module.exports = function test(opts) {
     target: OUTPUT_CLIENT,
     input: [
       'server_js_test:**/server/test.*',
-      `${input_client}:**`,
+      ...input_client,
     ],
     type: gb.SINGLE,
     func: copy,

@@ -50,6 +50,9 @@ export interface SelectionBoxDrawItemParams {
 }
 
 export type SelectionBoxDrawItemFunc = (params: SelectionBoxDrawItemParams) => void;
+export const selboxDefaultDrawItemBackground: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItemText: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItem: SelectionBoxDrawItemFunc;
 
 export interface SelectionBoxDisplay {
   style_default: FontStyle;
@@ -82,17 +85,20 @@ export interface SelectionBoxOptsAll {
   font_height: number; // default: uiTextHeight()
   line_height: null | number; // null -> font_height (used for inline markdown image size)
   entry_height: number; // default: uiButtonHeight()
+  entry_width: null | number; // default: width
   auto_reset: boolean; // default: true
   reset_selection: boolean; // default: false
   initial_selection: number; // default: 0
   show_as_focused: number; // default: -1
   slider_w: number; // Only for SimpleMenus
+  touch_focuses: boolean;
 }
 
 export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
 
 export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   readonly display: SelectionBoxDisplay; // always fully realized (non-Partial) after being applied
+  readonly selected: number;
 
   applyParams(params?: SelectionBoxOpts): void;
   run(params?: SelectionBoxOpts): number;
@@ -103,6 +109,7 @@ export interface SelectionBox extends Readonly<SelectionBoxOptsAll> {
   isDropdownVisible(): boolean;
   wasClicked(): boolean;
   wasRightClicked(): boolean;
+  isFocused(): boolean;
 }
 
 export function selectionBoxCreate(params?: SelectionBoxOpts): SelectionBox;

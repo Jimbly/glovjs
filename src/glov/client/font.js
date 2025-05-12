@@ -549,27 +549,39 @@ GlovFont.prototype.drawSizedAlignedWrapped = function (style, x, y, z, indent, s
     if (lines.length * size > h) {
       // also fit within the vertical bounds
 
-      let text_width = this.getStringWidth(style, size, text);
-      assert(text_width > w); // otherwise would not have wrapped
-      let text_area = text_width * size;
-      let bounds_area = w * h;
-      let required_scale = sqrt(min(1, bounds_area / text_area));
-      size *= required_scale;
-      // determine number of lines at that scale (round down)
-      let scaled_max_lines = max(1, floor(h / size));
-      // split into that many lines
-      // try wrapLines, if it produces too many lines, do another split method
-      lines = [];
-      line_xoffs = [];
-      lines.length = this.wrapLines(style, w, indent, size, text, align, (xoffs, linenum, line) => {
-        line_xoffs[linenum] = xoffs;
-        lines[linenum] = line;
-      });
-      if (lines.length > scaled_max_lines) {
-        // need to do something else
-        lines = splitLines(text, scaled_max_lines);
+      let by_linebreak = text.split('\n');
+      if (by_linebreak.length > 1) {
+        // input has carriage returns, just HFIT each line
+        size = min(size, h / by_linebreak.length);
+        lines = by_linebreak;
         for (let ii = 0; ii < lines.length; ++ii) {
           line_xoffs[ii] = ii === 0 ? 0 : indent;
+        }
+      } else {
+        let text_width = 0;
+        for (let ii = 0; ii < by_linebreak.length; ++ii) {
+          text_width = max(text_width, this.getStringWidth(style, size, by_linebreak[ii]));
+        }
+        let text_area = text_width * size * by_linebreak.length;
+        let bounds_area = w * h;
+        let required_scale = min(sqrt(min(1, bounds_area / text_area)), h / size / by_linebreak.length);
+        size *= required_scale;
+        // determine number of lines at that scale (round down)
+        let scaled_max_lines = max(1, floor(h / size));
+        // split into that many lines
+        // try wrapLines, if it produces too many lines, do another split method
+        lines = [];
+        line_xoffs = [];
+        lines.length = this.wrapLines(style, w, indent, size, text, align, (xoffs, linenum, line) => {
+          line_xoffs[linenum] = xoffs;
+          lines[linenum] = line;
+        });
+        if (lines.length > scaled_max_lines) {
+          // need to do something else
+          lines = splitLines(text, scaled_max_lines);
+          for (let ii = 0; ii < lines.length; ++ii) {
+            line_xoffs[ii] = ii === 0 ? 0 : indent;
+          }
         }
       }
       // draw each line with HFIT below

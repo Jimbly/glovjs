@@ -312,8 +312,7 @@ export function entityManagerDefaultLoadEnts(
 }
 
 
-export type SEMClient = SEMClientImpl;
-class SEMClientImpl {
+class SEMClient {
   client_id: ClientID;
   player_uid: string | null;
   ent_id: EntityID;
@@ -345,6 +344,7 @@ class SEMClientImpl {
     this.user_data = data;
   }
 }
+export type { SEMClient };
 
 export type EntCreateFunc<
   Entity extends EntityBaseServer,
@@ -583,7 +583,7 @@ class ServerEntityManagerImpl<
   ): void {
     let { id: client_id } = src;
     assert(!this.clients[client_id]);
-    let client = this.clients[client_id] = new SEMClientImpl(client_id);
+    let client = this.clients[client_id] = new SEMClient(client_id);
     this.mem_usage.clients.count++;
     let sub_id = this.worker.getSubscriberId(src.channel_id);
     loadPlayerEntity(this, src, join_payload, client, player_uid, (err, ent_id) => {

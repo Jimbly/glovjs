@@ -13,6 +13,7 @@ import type {
   ChatMessageDataSaved,
   ClientIDs,
   DataObject,
+  Optional,
   Roles,
   TSMap,
   WithRequired,
@@ -484,7 +485,7 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
     private url_label: string,
     private style_link: FontStyle,
     private style_link_hover: FontStyle,
-    private parent: ChatUIImpl,
+    private parent: ChatUI,
   ) {
     this.dims = this;
     this.msg_url = `${parent.url_base}${url_label}`;
@@ -554,7 +555,7 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
 class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
   constructor(
     private msg: ChatMessageUser,
-    private parent: ChatUIImpl,
+    private parent: ChatUI,
   ) {
     this.dims = this;
   }
@@ -719,8 +720,7 @@ export type ChatUIRunParam = Partial<{
   cuddly_scroll: boolean;
 }>;
 
-export type ChatUI = ChatUIImpl;
-class ChatUIImpl {
+class ChatUI {
   private w: number;
   readonly h: number;
   private edit_text_entry: EditBox;
@@ -752,11 +752,11 @@ class ChatUIImpl {
   private scroll_area: ScrollArea;
   private font: Font;
 
-  private on_join: ChatUIImpl['onMsgJoin']; // bound method
-  private on_leave: ChatUIImpl['onMsgLeave']; // bound method
-  private on_chat: ChatUIImpl['onMsgChat']; // bound method
-  handle_cmd_parse: ChatUIImpl['handleCmdParse'];
-  handle_cmd_parse_error: ChatUIImpl['handleCmdParseError'];
+  private on_join: ChatUI['onMsgJoin']; // bound method
+  private on_leave: ChatUI['onMsgLeave']; // bound method
+  private on_chat: ChatUI['onMsgChat']; // bound method
+  handle_cmd_parse: ChatUI['handleCmdParse'];
+  handle_cmd_parse_error: ChatUI['handleCmdParseError'];
   private z_override: number | null = null; // 1-frame Z override
   renderables: TSMap<MarkdownRenderable> = {}; // by default, no renderables in chat (e.g. images)
 
@@ -961,7 +961,7 @@ class ChatUIImpl {
     this.total_h = 0;
   }
 
-  addMsgInternal(elem_in: ChatMessageDataBroadcast & { timestamp?: number }): void {
+  addMsgInternal(elem_in: Optional<ChatMessageDataBroadcast, 'flags'> & { timestamp?: number }): void {
     let elem = elem_in as ChatMessage;
     elem.cache = {};
     elem.flags = elem.flags || 0;
@@ -1023,7 +1023,7 @@ class ChatUIImpl {
     console.log(msg);
     this.addMsgInternal({ msg, style });
   }
-  addChatFiltered(data: ChatMessageDataBroadcast & { timestamp?: number }): void {
+  addChatFiltered(data: Optional<ChatMessageDataBroadcast, 'flags'> & { timestamp?: number }): void {
     data.msg = toStr(data.msg);
     console.log(`Chat from ${data.id}: ${data.msg}`);
     if (settings.profanity_filter && data.id !== (netUserId() || netClientId())) {
@@ -1893,10 +1893,11 @@ class ChatUIImpl {
     });
   }
 }
+export type { ChatUI };
 
 export function chatUICreate(params: ChatUIParam): ChatUI {
   profanityStartup();
-  let chat_ui = new ChatUIImpl(params);
+  let chat_ui = new ChatUI(params);
   function emote(str: string, resp_func: CmdRespFunc): void {
     if (!str) {
       return void resp_func(null, 'Usage: /me does something.');

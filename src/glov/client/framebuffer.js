@@ -145,7 +145,7 @@ let cur_depth;
 export function framebufferStart(opts) {
   assert(!cur_tex);
   assert(!cur_depth);
-  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, force_tex } = opts;
+  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, clear_all_color, force_tex } = opts;
   if (!width) {
     width = renderWidth();
     height = renderHeight();
@@ -173,11 +173,13 @@ export function framebufferStart(opts) {
       }
     }
   }
-  if (clear_color) {
-    gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
-  }
   if (clear && clear_all) {
     // full clear, before setting viewport
+    if (clear_all_color) {
+      gl.clearColor(clear_all_color[0], clear_all_color[1], clear_all_color[2], clear_all_color[3]);
+    } else if (clear_color) {
+      gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    }
     gl.disable(gl.SCISSOR_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
   }
@@ -216,7 +218,10 @@ export function framebufferStart(opts) {
   } else {
     gl.disable(gl.SCISSOR_TEST);
   }
-  if (clear && !clear_all) {
+  if (clear && (!clear_all || clear_all_color)) {
+    if (clear_all_color && clear_color) {
+      gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    }
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
   }
 }

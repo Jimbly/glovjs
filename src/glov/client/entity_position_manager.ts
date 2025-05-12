@@ -74,8 +74,7 @@ export class PerEntData {
   }
 }
 
-export type EntityPositionManager = EntityPositionManagerImpl;
-class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
+class EntityPositionManager implements Required<EntityPositionManagerOpts> {
   per_ent_data!: Partial<Record<EntityID, PerEntData>>;
   entity_manager: ClientEntityManagerInterface;
 
@@ -495,9 +494,10 @@ class EntityPositionManagerImpl implements Required<EntityPositionManagerOpts> {
   }
 
 }
+export type { EntityPositionManager };
 
 export function entityPositionManagerCreate(options: EntityPositionManagerOpts): EntityPositionManager {
-  let ret = new EntityPositionManagerImpl(options);
+  let ret = new EntityPositionManager(options);
   registerPingProvider(ret.getPing.bind(ret));
   return ret;
 }

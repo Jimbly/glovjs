@@ -169,6 +169,7 @@ let filtered_errors = new RegExp([
   'closeModal',
   'WeixinJSBridge',
   '/prebid', // Some third-party ad provider
+  'loadGPT', // FRVR ads
   'property: websredir', // unknown source, happens often for a couple users on Opera and Chrome
   'property: googletag', // unknown source, Opera ad blocker?
   'ResizeObserver loop', // unknown source, but isn't used by us

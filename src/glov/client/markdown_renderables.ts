@@ -107,6 +107,9 @@ export function markdownImageRegisterSpriteSheet(spritesheet: SpriteSheet): void
 
 export function markdownImageRegisterAutoAtlas(atlas_name: string): void {
   autoAtlasOnImage(atlas_name, function (img_name: string) {
+    if (img_name === 'def') { // exists in every atlas
+      return;
+    }
     markdownImageRegister(img_name, {
       sprite: autoAtlas(atlas_name, img_name),
     });

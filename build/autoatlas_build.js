@@ -65,19 +65,78 @@ function parseRow(job, img, x0, y0, dx, dy) {
 }
 
 
+let png_cache = [];
+let used_generation = 0;
+const PNG_GENERATIONS = 4;
+function pngAllocTempReset() {
+  let any_used = false;
+  for (let ii = 0; ii < png_cache.length; ++ii) {
+    if (png_cache[ii].used) {
+      png_cache[ii].used = false;
+      any_used = true;
+    }
+  }
+  if (any_used) {
+    ++used_generation;
+    for (let ii = png_cache.length - 1; ii >= 0; --ii) {
+      if (!png_cache[ii].used && png_cache[ii].generation < used_generation - PNG_GENERATIONS) {
+        // console.log('pngAllocTemp freeing');
+        png_cache[ii] = png_cache[png_cache.length - 1];
+        png_cache.pop();
+      }
+    }
+  }
+}
+
+function pngAllocTemp(width, height, comment) {
+  for (let ii = 0; ii < png_cache.length; ++ii) {
+    if (!png_cache[ii].used && png_cache[ii].width === width && png_cache[ii].height === height) {
+      png_cache[ii].used = true;
+      png_cache[ii].generation = used_generation;
+      let ret = png_cache[ii].img;
+      for (let jj = 0; jj < ret.data.length; ++jj) {
+        ret.data[jj] = 0;
+      }
+      // console.log('pngAllocTemp', width, height, comment || 'unknown');
+      return ret;
+    }
+  }
+  let img = pngAlloc({ width, height, byte_depth: 4, comment: comment || 'pngAllocTemp' });
+  png_cache.push({
+    width,
+    height,
+    img,
+    used: true,
+    generate: used_generation,
+  });
+  return img;
+}
+
 module.exports = function (opts) {
+  let ignore_list = opts.ignore || [];
+  let ignore = Object.create(null);
+  for (let ii = 0; ii < ignore_list.length; ++ii) {
+    ignore[ignore_list[ii]] = true;
+  }
+  let output_cache = {};
+  let input_png_cache = {};
   function imgproc(job, done) {
     let files = job.getFiles();
+    let changed_files = job.getFilesUpdated();
 
     let atlases = {};
-    // TODO: smart caching of unchanged atlases, only read and output the changed ones
+    let seen_png = {};
     for (let ii = 0; ii < files.length; ++ii) {
       let img_file = files[ii];
       let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/);
       let atlas_name = m[1].toLowerCase();
       let img_name = m[2].toLowerCase();
       let ext = m[3];
-      let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {} };
+      let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {}, dirty: false };
+      let is_dirty = changed_files.includes(img_file);
+      if (is_dirty) {
+        atlas_data.dirty = true;
+      }
       if (ext[0] === 'y') {
         if (img_name !== 'atlas') {
           job.error(img_file, `Found unexpected yaml: "${img_file.relative}" (expected atlas.yaml or [image_name].yaml)`);
@@ -125,12 +184,7 @@ module.exports = function (opts) {
         atlas_data.config_data = config_data;
         continue;
       }
-      let { err, img } = pngRead(img_file.contents);
-      if (err) {
-        job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
-        continue;
-      }
-      img.source_name = img_file.relative;
+      seen_png[img_file.relative] = true;
       let do_9patch = img_name.endsWith('.9');
       if (do_9patch) {
         img_name = img_name.slice(0, -2);
@@ -142,29 +196,58 @@ module.exports = function (opts) {
         idx = Number(m[2]);
       }
       atlas_data.num_layers = max(atlas_data.num_layers, idx + 1);
-      let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
-      let ws = [img.width];
-      let hs = [img.height];
-      did_error = false;
-      if (do_9patch) {
-        ws = parseRow(job, img, 1, 0, 1, 0);
-        hs = parseRow(job, img, 0, 1, 0, 1);
-        if (idx === 0) {
-          // currently unused, but can parse the padding values from the 9-patch as well
-          img_data.padh = parseRow(job, img, 1, img.height - 1, 1, 0);
-          img_data.padv = parseRow(job, img, img.width - 1, 1, 0, 1);
-          if (img_data.padh.length === 1 && img_data.padv.length === 1) {
-            delete img_data.padh;
-            delete img_data.padv;
-          }
+
+      let img;
+      let ws;
+      let hs;
+      let padh;
+      let padv;
+      if (!is_dirty && input_png_cache[img_file.relative]) {
+        img = input_png_cache[img_file.relative];
+        ({ ws, hs, padh, padv } = img.cached_data);
+      } else {
+        let err;
+        ({ err, img } = pngRead(img_file.contents));
+        if (err) {
+          job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
+          continue;
         }
-        let new_img = pngAlloc({ width: img.width - 2, height: img.height - 2, byte_depth: 4 });
-        img.bitblt(new_img, 1, 1, img.width - 2, img.height - 2, 0, 0);
-        img = new_img;
+        ws = [img.width];
+        hs = [img.height];
+        if (do_9patch) {
+          did_error = false;
+          ws = parseRow(job, img, 1, 0, 1, 0);
+          hs = parseRow(job, img, 0, 1, 0, 1);
+          if (idx === 0) {
+            // currently unused, but can parse the padding values from the 9-patch as well
+            padh = parseRow(job, img, 1, img.height - 1, 1, 0);
+            padv = parseRow(job, img, img.width - 1, 1, 0, 1);
+            if (padh.length === 1 && padv.length === 1) {
+              padh = undefined;
+              padv = undefined;
+            }
+          }
+          let new_img = pngAlloc({ width: img.width - 2, height: img.height - 2, byte_depth: 4, comment: `9-patch:${img_name}` });
+          img.bitblt(new_img, 1, 1, img.width - 2, img.height - 2, 0, 0);
+          img = new_img;
+        }
+        img.cached_data = {
+          ws,
+          hs,
+          padh,
+          padv,
+        };
+        input_png_cache[img_file.relative] = img;
+        img.source_name = img_file.relative;
       }
+      let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
       if (idx === 0) {
         img_data.ws = ws;
         img_data.hs = hs;
+        if (padh) {
+          img_data.padh = padh;
+          img_data.padv = padv;
+        }
       }
       img.filename = img_file.relative;
       if (img_data.imgs[idx]) {
@@ -174,6 +257,25 @@ module.exports = function (opts) {
       img_data.imgs[idx] = img;
     }
 
+    // Flag atlases as dirty for deleted files
+    for (let ii = 0; ii < changed_files.length; ++ii) {
+      let img_file = changed_files[ii];
+      if (!img_file.contents) {
+        let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/);
+        let atlas_name = m[1].toLowerCase();
+        let atlas_data = atlases[atlas_name];
+        if (atlas_data) {
+          atlas_data.dirty = true;
+        }
+      }
+    }
+
+    for (let key in input_png_cache) {
+      if (!seen_png[key]) {
+        delete input_png_cache[key];
+      }
+    }
+
     let atlas_keys = Object.keys(atlases);
 
     if (!atlas_keys.length) {
@@ -181,9 +283,20 @@ module.exports = function (opts) {
       return void done();
     }
 
+    let seen = {};
     function doAtlas(name) {
       let atlas_data = atlases[name];
-      let { file_data, config_data } = atlas_data;
+      let { file_data, config_data, dirty } = atlas_data;
+      seen[name] = true;
+      if (!dirty) {
+        let cache = output_cache[name];
+        assert(cache);
+        for (let ii = 0; ii < cache.length; ++ii) {
+          job.out(cache[ii]);
+        }
+        return;
+      }
+      pngAllocTempReset();
 
       const tile_horiz_regex = config_data?.tile_horiz_regex || null;
       const tile_vert_regex = config_data?.tile_vert_regex || null;
@@ -193,6 +306,19 @@ module.exports = function (opts) {
 
       let file_keys = Object.keys(file_data);
       file_keys.sort(cmpFileKeys);
+      let file_keys_for_packing = file_keys.slice(0);
+      file_keys_for_packing.sort(function (a, b) {
+        let imga = file_data[a];
+        assert(imga);
+        let imgb = file_data[b];
+        assert(imgb);
+        // pack tallest first
+        let d = (imgb.imgs[0]?.height || 0) - (imga.imgs[0]?.height || 0);
+        if (d) {
+          return d;
+        }
+        return cmpFileKeys(a, b);
+      });
 
       let runtime_data = {
         // name,
@@ -210,8 +336,11 @@ module.exports = function (opts) {
         let y = 0;
         let row_height = 0;
         let any_error = false;
-        for (let ii = 0; ii < file_keys.length; ++ii) {
-          let img_name = file_keys[ii];
+        for (let ii = 0; ii < file_keys_for_packing.length; ++ii) {
+          let img_name = file_keys_for_packing[ii];
+          if (ignore[`${name}:${img_name}`]) {
+            continue;
+          }
           let img_data = file_data[img_name];
           let { imgs } = img_data;
           let img0 = imgs[0];
@@ -257,13 +386,16 @@ module.exports = function (opts) {
       let height = nextHighestPowerOfTwo(maxy);
       let pngouts = [];
       for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
-        pngouts.push(pngAlloc({ width, height, byte_depth: 4 }));
+        pngouts.push(pngAllocTemp(width, height, `output:${name}`));
       }
       runtime_data.w = width;
       runtime_data.h = height;
 
       for (let ii = 0; ii < file_keys.length; ++ii) {
         let img_name = file_keys[ii];
+        if (ignore[`${name}:${img_name}`]) {
+          continue;
+        }
         let img_data = file_data[img_name];
         let { imgs, x, y, ws, hs, padh, padv } = img_data;
         let { width: imgw, height: imgh } = imgs[0];
@@ -305,26 +437,38 @@ module.exports = function (opts) {
         }
       }
 
+      let out_list = [];
       for (let idx = 0; idx < pngouts.length; ++idx) {
         let pngout = pngouts[idx];
-        job.out({
+        out_list.push({
           relative: `client/img/atlas_${name}${atlas_data.num_layers > 1 ? `_${idx}` : ''}.png`,
           contents: pngWrite(pngout),
         });
       }
-      job.out({
+      out_list.push({
         relative: `client/${name}.auat`,
         contents: JSON.stringify(runtime_data),
       });
+      for (let ii = 0; ii < out_list.length; ++ii) {
+        job.out(out_list[ii]);
+      }
+      output_cache[name] = out_list;
+      pngAllocTempReset();
     }
 
     for (let key in atlases) {
       doAtlas(key);
     }
+    for (let key in output_cache) {
+      if (!seen[key]) {
+        delete output_cache[key];
+      }
+    }
     done();
   }
 
   function prepproc(job, done) {
+    pngAllocTempReset();
     let img_file = job.getFile();
 
     let base_name = path.basename(img_file.relative);
@@ -390,11 +534,11 @@ module.exports = function (opts) {
           job.error(depfile, `Tile "${key}" specifies unrecognized definition of "${JSON.stringify(tile_def)}" (expected index, [x, y], or [x, y, w, h])`);
           continue;
         }
-        let img_out = pngAlloc({
-          width: source[2],
-          height: source[3],
-          byte_depth: 4,
-        });
+        let img_out = pngAllocTemp(
+          source[2],
+          source[3],
+          `splitting:${img_file.relative}:${key}`
+        );
         try {
           img.bitblt(img_out, source[0], source[1], source[2], source[3], 0, 0);
         } catch (err) {
@@ -406,6 +550,7 @@ module.exports = function (opts) {
           contents: pngWrite(img_out),
         });
       }
+      pngAllocTempReset();
       done();
     });
   }
@@ -434,6 +579,7 @@ module.exports = function (opts) {
       cmpFileKeys,
       parseRow,
       opts,
+      ignore,
     ],
   };
 };

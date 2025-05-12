@@ -89,21 +89,18 @@ function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: 
     }
     for (let ii = 0; ii < list.length; ++ii) {
       let role = list[ii];
-      if (!access[role]) {
-        // Check for access via implied access
-        let ok = false;
-        for (let my_role in access) {
-          let extra = implied_access[my_role];
-          if (extra && extra[role]) {
-            ok = true;
-            break;
-          }
-        }
-        if (!ok) {
-          return false;
+      if (access[role]) {
+        return true;
+      }
+      // Check for access via implied access
+      for (let my_role in access) {
+        let extra = implied_access[my_role];
+        if (extra && extra[role]) {
+          return true;
         }
       }
     }
+    return false;
   }
   return true;
 }
@@ -197,8 +194,7 @@ type CmdListEntry = {
   prefix_usage_with_help?: boolean; // will be there on client commands, but already applied on server commands
 };
 
-export type CmdParse = CmdParseImpl;
-class CmdParseImpl {
+class CmdParse {
   declare TYPE_INT: typeof TYPE_INT;
   declare TYPE_FLOAT: typeof TYPE_FLOAT;
   declare TYPE_STRING: typeof TYPE_STRING;
@@ -627,13 +623,14 @@ class CmdParseImpl {
     return list; // .slice(0, 20); Maybe?
   }
 }
+export type { CmdParse };
 
-CmdParseImpl.prototype.canonical = canonical;
+CmdParse.prototype.canonical = canonical;
 
-CmdParseImpl.prototype.TYPE_INT = TYPE_INT;
-CmdParseImpl.prototype.TYPE_FLOAT = TYPE_FLOAT;
-CmdParseImpl.prototype.TYPE_STRING = TYPE_STRING;
+CmdParse.prototype.TYPE_INT = TYPE_INT;
+CmdParse.prototype.TYPE_FLOAT = TYPE_FLOAT;
+CmdParse.prototype.TYPE_STRING = TYPE_STRING;
 
 export function cmdParseCreate(params?: CmdParseOpts): CmdParse {
-  return new CmdParseImpl(params);
+  return new CmdParse(params);
 }

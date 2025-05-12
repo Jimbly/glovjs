@@ -553,6 +553,14 @@ nec arborei timentem, ut crimina vidit.
     align: ALIGN.HWRAP | ALIGN.HVCENTERFIT,
     text: `HWRAP|HVCENTERFIT: ${long_msg}` });
   internal_y += button_height + pad;
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1,
+    align: ALIGN.HWRAP | ALIGN.HVCENTERFIT,
+    text: 'HWRAP|HVCENTERFIT\nWith\nCarriage\nReturns' });
+  internal_y += button_height + pad;
+  ui.buttonText({ x: 2, y: internal_y, z: z + 1,
+    align: ALIGN.HWRAP | ALIGN.HVCENTERFIT,
+    text: 'HWRAP|HVCENTERFIT and also very long text eh what ya gonna do? lorem ipsum omgwtfbarbq\nWith\nCR' });
+  internal_y += button_height + pad;
 
   collapsagoriesStop();
   test_scroll_area.end(internal_y);
