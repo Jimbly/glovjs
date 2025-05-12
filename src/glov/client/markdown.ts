@@ -393,8 +393,7 @@ function markdownParse(param: MarkdownStateCached & MarkdownParseParam): void {
   }
   mdParseSetValidRenderables(valid_renderables);
   let tree: MDASTNode[] = mdParse(getStringFromLocalizable(param.text));
-  let blocks = cache.parsed = mdASTToBlock(tree, param);
-  cache.parsed = blocks;
+  cache.parsed = mdASTToBlock(tree, param);
   profilerStopFunc();
 }
 
