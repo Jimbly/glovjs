@@ -364,6 +364,17 @@ class EntityPositionManager implements Required<EntityPositionManagerOpts> {
     }
   }
 
+  otherEntitySnapPos(ent_id: EntityID): void {
+    let ent = this.entity_manager.getEnt(ent_id);
+    assert(ent);
+    let ent_pos = ent.getData('pos') as Vector;
+    // Relevant fields on ent_data: pos, anything referenced by anim_state_defs
+    let ped = this.per_ent_data[ent_id];
+    if (ped) {
+      this.vcopy(ped.pos, ent_pos);
+    }
+  }
+
   otherEntityChanged(ent_id: EntityID): void {
     let { anim_state_defs } = this;
     let ent = this.entity_manager.getEnt(ent_id);
