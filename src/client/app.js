@@ -12,6 +12,12 @@ function onLoad() {
   }
   called_once = true;
   window.time_load_onload = Date.now();
+
+  const { locateAssetSetProxyPath } = require('glov/client/locate_asset');
+  if (window.conf_platform === 'discord') {
+    locateAssetSetProxyPath('.proxy/');
+  }
+
   require('glov/client/bootstrap.js');
   require('./main.js').main();
   window.time_load_init = Date.now();

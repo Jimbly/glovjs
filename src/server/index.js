@@ -5,6 +5,7 @@ import * as https from 'https';
 import * as path from 'path';
 import * as express from 'express';
 import * as express_static_gzip from 'express-static-gzip';
+import { platformRegister } from 'glov/common/platform';
 import { permTokenWorkerInit } from 'glov/server/perm_token_worker';
 import {
   requestLogEverything,
@@ -13,6 +14,14 @@ import {
 import * as glov_server from 'glov/server/server';
 import minimist from 'minimist';
 import { crawlerWorkerInit } from './crawler_worker';
+
+platformRegister('discord', {
+  devmode: 'off',
+  reload: true,
+  reload_updates: true,
+  random_creation_name: true,
+  exit: false,
+});
 
 const argv = minimist(process.argv.slice(2));
 

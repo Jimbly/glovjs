@@ -3,11 +3,23 @@
 import * as local_storage from 'glov/client/local_storage.js'; // eslint-disable-line import/order
 local_storage.setStoragePrefix('crawler'); // Before requiring anything else that might load from this
 
+import { platformRegister } from 'glov/common/platform'; // eslint-disable-line import/order
+platformRegister('discord', {
+  devmode: 'off',
+  reload: true,
+  reload_updates: true,
+  random_creation_name: true,
+  exit: false,
+});
+
+
 import assert from 'assert';
 import { autoAtlasTextureOpts } from 'glov/client/autoatlas';
 import { ChatUI, chatUICreate } from 'glov/client/chat_ui';
+import { platformGetID } from 'glov/client/client_config';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
+import { environmentsInit } from 'glov/client/environments';
 import { Font, fontCreate } from 'glov/client/font';
 import {
   markdown_default_renderables,
@@ -21,6 +33,8 @@ import { spriteSetGet } from 'glov/client/sprite_sets';
 import { textureDefaultFilters } from 'glov/client/textures';
 import { uiSetPanelColor } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
+import { getURLBase } from 'glov/client/urlhash';
+import * as urlhash from 'glov/client/urlhash';
 import { v4copy, vec4 } from 'glov/common/vmath';
 // import './client_cmds.js'; // for side effects
 import { crawlerBuildModeStartup } from './crawler_build_mode';
@@ -64,6 +78,17 @@ export function chatUI(): ChatUI {
 }
 
 export function main(): void {
+  if (platformGetID() === 'discord') {
+    environmentsInit([{
+      name: 'discord',
+      api_path: `${getURLBase()}.proxy/api/`,
+    }], cmd_parse, 'discord');
+  }
+
+  if (!urlhash.get('c')) {
+    urlhash.set('c', 'build');
+  }
+
   if (engine.DEBUG || true) {
     netInit({
       engine,
