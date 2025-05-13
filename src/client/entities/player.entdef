@@ -26,6 +26,14 @@ traits:
     ws: [256]
     hs: [256]
     origin: [0.5, 1]
+  # sprite_data:
+  #   name: sprites/player
+  #   layers: 2
+  #   filter_min: NEAREST
+  #   filter_mag: NEAREST
+  #   ws: [84]
+  #   hs: [84]
+  #   origin: [0.5, 1]
   scale: 0.65
   tint_colors:
   - - '#E0F058' # Pants
