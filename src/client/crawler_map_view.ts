@@ -218,10 +218,15 @@ export function crawlerMapViewDraw(
   //last_progress = level.seen_cells/level.total_cells;
   last_progress = total_enemies ? max(0, 1 - (num_enemies / total_enemies)) : 1;
   let floor_title = level.props.title || `Floor ${game_state.floor_id}`;
+  let floor_subtitle = level.props.subtitle || '';
   if (fullscreen) {
     if (style_map_name) {
       ui.font.drawSizedAligned(style_map_name, x, y + 2, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, floor_title);
+      if (floor_subtitle) {
+        ui.font.drawSizedAligned(style_map_name, x, y + 2 + text_height + 2, z + 1, text_height * 0.75,
+          ui.font.ALIGN.HCENTER, w, 0, floor_subtitle);
+      }
     }
     if (full_vis) {
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2)*2, z + 1, text_height,
