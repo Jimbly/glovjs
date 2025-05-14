@@ -28,6 +28,7 @@ import { crawlerOnPixelyChange } from './crawler_play.js';
 import { crawlerRenderSetLODBiasRange } from './crawler_render';
 import { game_height, game_width } from './globals';
 import { playStartup } from './play';
+import { SOUND_DATA } from './sound_data';
 import { titleInit, titleStartup } from './title';
 
 const { round } = Math;
@@ -180,16 +181,7 @@ export function main(): void {
       // scrollbar_handle_grabber: { name: 'scrollbar_handle_grabber', ws: [11], hs: [11] },
       // scrollbar_handle: { name: 'scrollbar_handle', ws: [11], hs: [3, 5, 3] },
     },
-    ui_sounds: {
-      button_click: 'button_click',
-      rollover: { file: 'rollover', volume: 0.25 },
-      user_join: 'user_join',
-      user_leave: 'user_leave',
-      msg_in: 'msg_in',
-      msg_err: 'msg_err',
-      msg_out_err: 'msg_out_err',
-      msg_out: 'msg_out',
-    },
+    ui_sounds: SOUND_DATA,
   })) {
     return;
   }
