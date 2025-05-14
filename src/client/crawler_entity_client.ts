@@ -71,6 +71,8 @@ import {
 } from './crawler_render_entities';
 import { statusPush } from './status';
 
+const { random } = Math;
+
 let online_mode: OnlineMode;
 
 export type EntityDraw2DOpts = UIBoxColored;
@@ -435,6 +437,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
         sprite: opts.sprite,
         sprite_near: opts.sprite_near,
         sprite_hybrid: opts.sprite_hybrid,
+        anim_offs: random() * 120000,
       };
       return ret;
     },

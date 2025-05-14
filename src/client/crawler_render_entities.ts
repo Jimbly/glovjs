@@ -23,15 +23,20 @@ import type { spineCreate } from 'glov/client/spine';
 import type { SpriteAnimation, SpriteAnimationParam } from 'glov/client/sprite_animation';
 import type { Sprite, SpriteParamBase, TextureOptions } from 'glov/client/sprites';
 import { uiTextHeight } from 'glov/client/ui';
+import { dataErrorEx } from 'glov/common/data_error';
 import { EntityID } from 'glov/common/types';
 import {
   clamp,
   easeIn,
+  easeInOut,
   easeOut,
+  lerp,
   ridx,
   sign,
 } from 'glov/common/util';
 import {
+  JSVec2,
+  JSVec4,
   ROVec2,
   ROVec3,
   ROVec4,
@@ -39,6 +44,7 @@ import {
   v2dist,
   v2distSq,
   v2scale,
+  v2set,
   v3set,
   v4copy,
   v4set,
@@ -47,7 +53,6 @@ import {
   vec3,
   vec4,
 } from 'glov/common/vmath';
-import type { JSVec4 } from '../common/crawler_state';
 import {
   billboardBias,
   BillboardBiasOpts,
@@ -116,6 +121,12 @@ export type DrawableSpriteOpts = {
   scale: number;
   do_alpha?: boolean;
   tint_colors?: [JSVec4, JSVec4, JSVec4][];
+  simple_anim?: {
+    scale?: JSVec2;
+    offs?: [JSVec2, JSVec2];
+    period: number;
+    easing?: number;
+  }[];
 };
 
 export type DrawableSpriteState = {
@@ -123,6 +134,7 @@ export type DrawableSpriteState = {
   anim_update_frame: number;
   grow_at?: number;
   grow_time?: number;
+  anim_offs: number; // random offset assigned at creation
   sprite: Sprite;
   sprite_near?: Sprite;
   sprite_hybrid?: Sprite;
@@ -195,6 +207,7 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   });
 }
 
+let offs_temp = vec2();
 let color_temp2 = vec4();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
@@ -205,8 +218,8 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     draw_pos,
     color,
   } = param;
-  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid } = ent.drawable_sprite_state;
-  let { scale } = ent.drawable_sprite_opts;
+  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid, anim_offs } = ent.drawable_sprite_state;
+  let { scale, simple_anim } = ent.drawable_sprite_opts;
   if (grow_at) {
     assert(typeof grow_time === 'number');
     let t = getFrameTimestamp() - grow_at;
@@ -219,6 +232,50 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     v4copy(color_temp2, color);
     color_temp2[3] *= Math.max(0, 1 - (getFrameTimestamp() - ent.fade_out_at)/400);
     color = color_temp2;
+  }
+  let vscale = scale;
+  let hscale = scale;
+  v2set(offs_temp, 0, 0);
+  if (simple_anim && Array.isArray(simple_anim)) {
+    for (let ii = 0; ii < simple_anim.length; ++ii) {
+      let anim = simple_anim[ii];
+      let t = (getFrameTimestamp() + anim_offs) / anim.period % 1;
+      t = 2 * (t > 0.5 ? 1 - t : t);
+      let easing = anim.easing || 2.25;
+      let p = easeInOut(t, easing);
+      if (anim.scale) {
+        if (Array.isArray(anim.scale) && anim.scale.length === 2) {
+          hscale *= 1 + p * (anim.scale[0] - 1);
+          vscale *= 1 + p * (anim.scale[1] - 1);
+        } else {
+          dataErrorEx({
+            msg: `${ent.type_id}: simple_anim[n].scale must be an array of 2 numbers`,
+            per_frame: true,
+          });
+        }
+      }
+      let { offs } = anim;
+      if (offs) {
+        if (Array.isArray(offs) && offs.length === 2) {
+          let offs0 = offs[0];
+          let offs1 = offs[1];
+          if (Array.isArray(offs0) && offs0.length === 2 && Array.isArray(offs1) && offs1.length === 2) {
+            offs_temp[0] += lerp(p, offs0[0], offs1[0]);
+            offs_temp[1] += lerp(p, offs0[1], offs1[1]);
+          } else {
+            dataErrorEx({
+              msg: `${ent.type_id}: simple_anim[n].offs[n] must be an array of 2 numbers`,
+              per_frame: true,
+            });
+          }
+        } else {
+          dataErrorEx({
+            msg: `${ent.type_id}: simple_anim[n].offs must be an array of 2 arrays`,
+            per_frame: true,
+          });
+        }
+      }
+    }
   }
   if (sprite_near && (use_near ||
     !settings.entity_split && settings.entity_nosplit_use_near)
@@ -251,9 +308,10 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   sprite.draw3D({
     pos: draw_pos,
+    offs: v2scale(offs_temp, offs_temp, DIM),
     frame,
     color,
-    size: [scale * DIM * aspect, scale * DIM],
+    size: [hscale * DIM * aspect, vscale * DIM],
     bucket: ent.drawable_sprite_opts.do_alpha === false ? BUCKET_OPAQUE : BUCKET_ALPHA,
     facing: FACE_XY,
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
@@ -280,7 +338,6 @@ export function drawableSpineDraw2D(this: EntityDrawableSpine, param: EntityDraw
   });
 }
 
-let offs_temp = vec2();
 export function drawableSpineDrawSub(this: EntityDrawableSpine, param: EntityDrawSubOpts): void {
   let ent = this;
   let { spine } = ent.drawable_spine_state;
