@@ -238,11 +238,18 @@ export function setGameDims(w, h) {
 
 // Didn't need this for a while, but got slow on iOS recently :(
 // Better when using FBOs for postprocessing now, though!
-const postprocessing_reset_version = '5';
-export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version;
+const postprocessing_reset_version = '6';
+let postprocessing_allow_disable = true;
+export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version || true;
+export function postprocessNeverDisable() {
+  postprocessing_allow_disable = false;
+  postprocessing = true;
+}
 export function postprocessingAllow(allow) {
-  local_storage.set('glov_no_postprocessing', allow ? undefined : postprocessing_reset_version);
-  postprocessing = allow;
+  if (postprocessing_allow_disable) {
+    local_storage.set('glov_no_postprocessing', allow ? undefined : postprocessing_reset_version);
+    postprocessing = allow;
+  }
 }
 
 export function glCheckError() {
