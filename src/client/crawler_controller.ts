@@ -103,7 +103,7 @@ const ROT_TIME = 250; // 150-250
 const FAST_TRAVEL_STEP_MIN_TIME = 200; // affects instant-step-ish controllers
 const KEY_REPEAT_TIME_ROT = 500;
 const KEY_REPEAT_TIME_MOVE_DELAY = 500;
-const KEY_REPEAT_TIME_MOVE_RATE = 150;
+const KEY_REPEAT_TIME_MOVE_RATE = 200;
 
 const FORCE_FACE_TIME = ROT_TIME;
 
