@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { autoAtlas, autoAtlasTextureOpts } from 'glov/client/autoatlas';
+import * as camera2d from 'glov/client/camera2d';
 import * as engine from 'glov/client/engine';
 import {
   FontStyle,
@@ -307,10 +308,20 @@ export function crawlerMapViewDraw(
     // }
   }
 
-  spriteClipPush(z, x, y, w, h);
-  autoAtlas('map', 'bg').draw({
-    x, y, z, w, h,
-  });
+  if (fullscreen) {
+    camera2d.push();
+    camera2d.setNormalized();
+    autoAtlas('map', 'bg').draw({
+      x: 0, y: 0, z, w: 1, h: 1,
+    });
+    camera2d.pop();
+    spriteClipPush(z, x, y, w, h);
+  } else {
+    spriteClipPush(z, x, y, w, h);
+    autoAtlas('map', 'bg').draw({
+      x, y, z, w, h,
+    });
+  }
   z += 0.1;
   if (fullscreen) {
     // full screen, center map
