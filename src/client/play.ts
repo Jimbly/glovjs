@@ -14,7 +14,7 @@ import {
   PAD,
   padButtonUpEdge,
 } from 'glov/client/input';
-import { ClientChannelWorker } from 'glov/client/net';
+import { ClientChannelWorker, netSubs } from 'glov/client/net';
 import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import {
@@ -31,6 +31,7 @@ import {
   buttonText,
   drawBox,
   menuUp,
+  modalDialog,
   playUISound,
   uiButtonWidth,
   uiGetFont,
@@ -526,11 +527,18 @@ function playCrawl(): void {
   button_y0 = MOVE_BUTTONS_Y0;
 
   if (keyUpEdge(KEYS.B)) {
-    crawlerBuildModeActivate(!build_mode);
-    if (crawlerCommWant()) {
-      return profilerStopFunc();
+    if (!netSubs().loggedIn()) {
+      modalDialog({
+        text: 'Cannot enter build mode - not logged in',
+        buttons: { ok: null },
+      });
+    } else {
+      crawlerBuildModeActivate(!build_mode);
+      if (crawlerCommWant()) {
+        return profilerStopFunc();
+      }
+      // inventory_up = false;
     }
-    // inventory_up = false;
   }
 
   if (up_edge.menu) {
