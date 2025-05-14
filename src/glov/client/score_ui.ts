@@ -140,7 +140,9 @@ export type ScoresDrawParam<ScoreType> = {
   allow_rename: boolean;
   no_header?: boolean;
   scroll_key?: string;
+  rename_edit_width?: number; // default width / 2
   rename_button_size?: number; // default 10 (in text height units)
+  rename_button_offset?: number; // default -0.25 (in fraction of `size`)
   friend_cat?: string;
 };
 
@@ -168,7 +170,9 @@ export function scoresDraw<ScoreType>({
   allow_rename,
   no_header,
   scroll_key,
+  rename_edit_width,
   rename_button_size,
+  rename_button_offset,
   friend_cat,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
@@ -386,7 +390,7 @@ export function scoresDraw<ScoreType>({
     if (!scores_edit_box) {
       scores_edit_box = editBoxCreate({
         z,
-        w: width / 2,
+        w: rename_edit_width || width / 2,
         placeholder: 'Anonymous',
         max_len: 40,
       });
@@ -397,7 +401,7 @@ export function scoresDraw<ScoreType>({
     let button_size = show_rename && rename_button_size || 10;
     let button_param: ButtonTextParam = {
       x,
-      y: y - size * 0.25,
+      y: y + size * (rename_button_offset === undefined ? -0.25 : rename_button_offset),
       z,
       w: size * button_size,
       h: button_height,
