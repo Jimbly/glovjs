@@ -529,7 +529,8 @@ export function crawlerMapViewDraw(
   if (!level_gen_test && !build_mode) {
     for (let ent_id in entities) {
       let ent = entities[ent_id]!;
-      if (ent.isEnemy() && !ent.fading_out && ent.data.floor === game_state.floor_id) {
+      let icon = ent.map_icon;
+      if (icon && !ent.fading_out && ent.data.floor === game_state.floor_id) {
         let [xx,yy] = ent.data.pos;
         let vis = false;
         if (full_vis) {
@@ -543,7 +544,7 @@ export function crawlerMapViewDraw(
         if (vis) {
           // draw it
           vis_entities[xx + yy * level.w] = true;
-          autoAtlas('map', 'enemy').draw({
+          autoAtlas('map', icon).draw({
             x: x0 + xx * MAP_STEP_SIZE,
             y: y1 - yy * MAP_STEP_SIZE,
             z: z - 0.01,

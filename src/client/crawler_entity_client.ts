@@ -115,6 +115,7 @@ export interface EntityCrawlerClient extends EntityBaseClient {
   is_player: boolean;
   is_enemy: boolean;
   blocks_player: boolean;
+  map_icon?: string;
 }
 
 type Entity = EntityCrawlerClient;
@@ -216,7 +217,7 @@ export function crawlerMyActionSend<T>(param: ActionMessageParam, resp_func?: Ne
 export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
   pos: [number, number] | ROVec2,
   floor_id: number,
-  skip_fading_out:boolean
+  skip_fading_out: boolean
 ): Entity[] {
   return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
 }
