@@ -333,6 +333,7 @@ export interface MenuFadeParams {
   fallback_darken?: ROVec4;
   z?: number;
 }
+export function menuFadeParamsSetDefault(fade_params: MenuFadeParams): void;
 export function menuUp(param?: MenuFadeParams): void;
 export function copyTextToClipboard(text: string): boolean;
 export function provideUserString(title: Text, str: string, alt_buttons?: ModalDialogButtons): void;
