@@ -1,5 +1,5 @@
 import { assert } from 'console';
-import { CHAT_USER_FLAGS } from 'glov/common/enums';
+import { CHAT_FLAG_DO_ECHO, CHAT_USER_FLAGS } from 'glov/common/enums';
 import { FIFO, fifoCreate } from 'glov/common/fifo';
 import { Packet } from 'glov/common/packet';
 import {
@@ -149,9 +149,12 @@ export function sendChat(
   let max_messages = (typeof worker.chat_max_messages === 'number') ? worker.chat_max_messages : CHAT_MAX_MESSAGES;
   let last_idx = (chat.idx + max_messages - 1) % max_messages;
   let last_msg = chat.msgs[last_idx];
-  if (id && last_msg && last_msg.id === id && last_msg.msg === msg && !(flags & ~CHAT_USER_FLAGS)) {
+  if (id && last_msg && last_msg.id === id && last_msg.msg === msg &&
+    (!(flags & ~CHAT_USER_FLAGS) || (flags & CHAT_FLAG_DO_ECHO))
+  ) {
     return 'ERR_ECHO';
   }
+  flags &= ~CHAT_FLAG_DO_ECHO;
   let ts = Date.now();
   let data_saved: ChatMessageDataSaved = { id, msg, flags, ts, display_name };
   // Not broadcasting timestamp, so client will use local timestamp for smooth fading
