@@ -187,7 +187,8 @@ export function framebufferStart(opts) {
   if (viewport) {
     engine.setViewport(viewport);
     need_scissor = viewport[0] || viewport[1] || viewport[2] !== engine.width || viewport[3] !== engine.height;
-    if (clear_all) { // not sure this logically follows, but we want this anywhere we're clearing all currently
+    if (clear_all && !clear_all_color) {
+      // not sure this logically follows, but we want this anywhere we're clearing all currently
       need_scissor = false;
     }
   } else {
