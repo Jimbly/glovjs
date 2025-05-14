@@ -40,6 +40,7 @@ import {
   v2distSq,
   v2scale,
   v3set,
+  v4copy,
   v4set,
   Vec2,
   vec2,
@@ -194,6 +195,7 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   });
 }
 
+let color_temp2 = vec4();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
   let frame = ent.updateAnim(param.dt);
@@ -212,6 +214,11 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
       t /= grow_time;
       scale *= 1 + easeIn(1 - t, 2) * 0.5;
     }
+  }
+  if (ent.fade_out_at) {
+    v4copy(color_temp2, color);
+    color_temp2[3] *= Math.max(0, 1 - (getFrameTimestamp() - ent.fade_out_at)/400);
+    color = color_temp2;
   }
   if (sprite_near && (use_near ||
     !settings.entity_split && settings.entity_nosplit_use_near)

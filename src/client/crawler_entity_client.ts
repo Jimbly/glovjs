@@ -103,6 +103,8 @@ export interface EntityCrawlerClient extends EntityBaseClient {
   delete_reason?: string;
   floaters?: Floater[];
 
+  fade_out_at?: number;
+
   isEnemy(): boolean;
   draw2D(param: EntityDraw2DOpts): void;
   draw?: (param: EntityDrawOpts) => void;
