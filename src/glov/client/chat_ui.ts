@@ -6,6 +6,7 @@ import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   CHAT_FLAG_EMOTE,
   CHAT_FLAG_USERCHAT,
+  CHAT_USER_FLAGS,
 } from 'glov/common/enums';
 import type {
   ChatHistoryData,
@@ -1830,7 +1831,7 @@ class ChatUI {
           let elem = chat_history.msgs[idx] as ChatMessageDataBroadcast;
           if (elem && elem.msg) {
             elem.quiet = true;
-            if (elem.id && here_map[elem.id]) {
+            if (elem.id && here_map[elem.id] && !(elem.flags & ~CHAT_USER_FLAGS)) {
               elem.display_name = here_map[elem.id];
             }
             this.onMsgChat(elem);

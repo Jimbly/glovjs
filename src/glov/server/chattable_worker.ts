@@ -1,5 +1,5 @@
 import { assert } from 'console';
-import { CHAT_FLAG_EMOTE } from 'glov/common/enums';
+import { CHAT_USER_FLAGS } from 'glov/common/enums';
 import { FIFO, fifoCreate } from 'glov/common/fifo';
 import { Packet } from 'glov/common/packet';
 import {
@@ -15,7 +15,6 @@ import { sanitize, secondsToFriendlyString } from 'glov/common/util';
 import { ChannelWorker } from './channel_worker';
 
 const CHAT_MAX_LEN = 1024; // Client must be set to this or fewer
-const CHAT_USER_FLAGS = CHAT_FLAG_EMOTE;
 const CHAT_MAX_MESSAGES = 50;
 
 const CHAT_COOLDOWN_DATA_KEY = 'public.chat_cooldown';
