@@ -584,7 +584,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         if (elapsed < BLINK_TIME) {
           blink = min(blink, elapsed / BLINK_TIME);
         }
-        if (is_in_front) {
+        if (is_in_front && !crawlerController().controllerIsAnimating()) {
           let { x, y, w, h } = crawlerRenderViewportGet();
           let float = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 20;
           font.drawSizedAligned(fontStyleAlpha(style_text, alpha),
