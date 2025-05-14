@@ -233,7 +233,7 @@ export function crawlerMapViewDraw(
         ui.font.ALIGN.HCENTER, w, 0, `${num_enemies}/${total_enemies}`);
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2), z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${level.seen_cells}/${level.total_cells}`);
-    } else {
+    } else if (!level.props.noexplore) {
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2)*2, z + 1, text_height,
         ui.font.ALIGN.HCENTER, w, 0, `${num_enemies} ${num_enemies === 1 ? 'enemy' : 'enemies'} remaining`);
       ui.font.drawSizedAligned(null, x, y + h - (text_height + 2), z + 1, text_height,
