@@ -264,7 +264,8 @@ export class DefaultUserWorker extends ChannelWorker {
     if (new_name === old_name) {
       return resp_func('Name unchanged');
     }
-    let unimportant = new_name.toLowerCase() === old_name.toLowerCase();
+    let unimportant = new_name.toLowerCase() === old_name.toLowerCase() ||
+      old_name.match(/^anon\d+$/); // auto-generated anonymous guest user name
     let now = Date.now();
     let last_change = this.getChannelData('private.display_name_change');
     if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant &&
