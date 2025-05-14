@@ -1,5 +1,6 @@
 import { Vec4 } from 'glov/common/vmath';
 import { FontStyle, Text } from './font';
+import { ScrollAreaOpts } from './scroll_area';
 import { Sprite } from './sprites';
 
 export type EngineStateFunc = (dt: number) => void;
@@ -92,6 +93,7 @@ export interface SelectionBoxOptsAll {
   show_as_focused: number; // default: -1
   slider_w: number; // Only for SimpleMenus
   touch_focuses: boolean;
+  scroll_area_opts: ScrollAreaOpts; // Only valid at creation time
 }
 
 export type SelectionBoxOpts = Partial<SelectionBoxOptsAll>;
