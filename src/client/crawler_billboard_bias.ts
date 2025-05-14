@@ -1,4 +1,7 @@
+// import { getFrameIndex } from 'glov/client/engine';
+// import { print } from 'glov/client/ui';
 import {
+  clamp,
   easeIn,
   lerp,
 } from 'glov/common/util';
@@ -6,7 +9,10 @@ import {
   ROVec2,
   v2addScale,
   v2copy,
+  v2dot,
   v2iNormalize,
+  v2iScale,
+  v2length,
   v2lengthSq,
   v2sub,
   Vec2,
@@ -15,7 +21,7 @@ import {
 import type { CrawlerState } from '../common/crawler_state';
 import { DIM, renderCamPos } from './crawler_render';
 
-const { abs, atan2, cos, sin, sqrt, PI } = Math;
+const { abs, atan2, cos, sin, PI } = Math;
 
 let view_pos = vec2();
 let view_vec = vec2();
@@ -40,7 +46,7 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   // Determine bias amount based on whether they are in front or adjacent to us
   let rel_angle = 0;
   v2sub(v2temp, pos, view_pos);
-  let v2temp_len = sqrt(v2lengthSq(v2temp));
+  let v2temp_len = v2length(v2temp);
   if (v2temp_len > 0.0001) {
     rel_angle = atan2(v2temp[1], v2temp[0]) - view_angle;
   }
@@ -83,21 +89,53 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   bias_view = lerp(bweight_in, biasIn[1], bias_view);
   let bias_in_offs = lerp(bweight_in, biasIn[2], 0);
   let bias_in_sign = lerp(abs(view_vec[0]), -1, 1);
-  // if (billboardBias.debug !== getFrameIndex()) {
-  //   billboardBias.debug = getFrameIndex();
-  //   billboardBias.debug_idx = 0;
-  // }
-  // print(null, 100, 100 + (billboardBias.debug_idx++) * 16, 1000,
-  //   `${bweight.toFixed(5)} ${bias_phys.toFixed(5)} ${bias_view.toFixed(5)} ${pos}`);
-
   // Offset `bias_phys` towards player
   v2sub(v2temp, draw_pos, renderCamPos());
-  v2iNormalize(v2temp);
+  // Only normalize if relatively large, otherwise "towards the player" snaps as the player passes through the cell
+  v2iScale(v2temp, 2/DIM);
+  if (v2lengthSq(v2temp) > 1) {
+    v2iNormalize(v2temp);
+  }
+
   v2addScale(draw_pos, draw_pos, v2temp, bias_phys * DIM);
   // Offset `bias_vew` towards view plane
   v2addScale(draw_pos, draw_pos, view_vec, bias_view * DIM);
   // If in the same cell, alternate offsetting to the right as well
   v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
+
+  // If very close to view plane, offset away from camera
+  v2sub(v2temp, draw_pos, renderCamPos());
+  v2temp_len = v2length(v2temp);
+  let dist_to_view_plane = abs(v2dot(v2temp, view_vec)) / DIM;
+  let dist_to_camera = v2temp_len / DIM;
+  let need_blend = 1 - clamp((dist_to_camera - 0.5) / 0.25, 0, 1);
+  if (dist_to_view_plane < 0.75 && need_blend > 0) {
+    let final_rel_angle = 0;
+    if (v2temp_len > 0.0001) {
+      final_rel_angle = atan2(v2temp[1], v2temp[0]) - view_angle;
+      while (final_rel_angle < -PI) {
+        final_rel_angle += PI * 2;
+      }
+      while (final_rel_angle > PI) {
+        final_rel_angle -= PI * 2;
+      }
+    }
+    v2addScale(draw_pos, draw_pos, right_vec,
+      easeIn((1 - dist_to_view_plane/0.75) * need_blend, 2) * (final_rel_angle < 0 ? 1 : -1) * DIM);
+  }
+
+  // // @ts-expect-error debug
+  // if (billboardBias.debug !== getFrameIndex()) {
+  //   // @ts-expect-error debug
+  //   billboardBias.debug = getFrameIndex();
+  //   // @ts-expect-error debug
+  //   billboardBias.debug_idx = 0;
+  // }
+  // // @ts-expect-error debug
+  // print(null, 100, 100 + (billboardBias.debug_idx++) * 16, 1000,
+  //   `bw:${bweight.toFixed(3)} bwi:${bweight_in.toFixed(3)} d2vp:${dist_to_view_plane.toFixed(3)}` +
+  //   ` d2c:${dist_to_camera.toFixed(3)}` +
+  //   ` bis:${bias_in_sign.toFixed(1)} ${bias_phys.toFixed(5)} ${bias_view.toFixed(5)} ${pos}`);
 }
 
 export function billboardBiasPrep(game_state: CrawlerState): void {
