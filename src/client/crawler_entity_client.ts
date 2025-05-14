@@ -270,6 +270,11 @@ function isAutoAtlasSpec(
   return Boolean((sprite_data as SpriteSpecAutoAtlas).atlas);
 }
 
+let load_near_sprites = true;
+export function drawableSpriteLoadNear(load_near: boolean): void {
+  load_near_sprites = load_near;
+}
+
 function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): number {
   let ent = this;
   let { anim } = ent.drawable_sprite_state;
@@ -292,11 +297,11 @@ function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): numbe
       let atlas_name = atlasAlias(sprite_data.atlas);
       let base_sprite = autoAtlas(atlas_name, frame).withOrigin(sprite_data.origin!);
 
-      let sprite = base_sprite.withSamplerState(sprite_data);
+      let sprite = load_near_sprites ? base_sprite.withSamplerState(sprite_data) : base_sprite; // DCJAM: maybe hack?
       ent.drawable_sprite_state.sprite = sprite;
 
       let sprite_near: Sprite | undefined;
-      if (sprite_data.filter_min !== gl.NEAREST) {
+      if (sprite_data.filter_min !== gl.NEAREST && load_near_sprites) {
         sprite_near = sprite.withSamplerState({
           ...sprite_data,
           filter_min: gl.NEAREST,
