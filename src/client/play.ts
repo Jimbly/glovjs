@@ -582,11 +582,11 @@ function playCrawl(): void {
         controller.initPosFromLevelDebug();
       }
     }
-    crawlerMapViewDraw(game_state, 0, 0, game_width, game_height, 0, Z.MAP,
+    crawlerMapViewDraw(game_state, 0, 0, game_width, game_height, 0, 0, Z.MAP,
       engine.defines.LEVEL_GEN, script_api, overlay_menu_up,
       floor((game_width - MINIMAP_W)/2), 2); // note: compass ignored, compass_h = 0 above
   } else {
-    crawlerMapViewDraw(game_state, MINIMAP_X, MINIMAP_Y, MINIMAP_W, minimap_display_h, compass_h, Z.MAP,
+    crawlerMapViewDraw(game_state, MINIMAP_X, MINIMAP_Y, MINIMAP_W, minimap_display_h, 0, compass_h, Z.MAP,
       false, script_api, overlay_menu_up,
       COMPASS_X, COMPASS_Y);
   }

@@ -165,6 +165,7 @@ export function crawlerMapViewDraw(
   y: number,
   w: number,
   h: number,
+  compass_w: number,
   compass_h: number,
   z: number,
   level_gen_test: boolean,
@@ -249,7 +250,7 @@ export function crawlerMapViewDraw(
   if (compass_h) {
     moved_since_fullscreen = false;
     // draw compass rose underneath
-    let compass_w = w;
+    compass_w = compass_w || w;
     let uoffs = (-game_state.angle / (2*PI)) * 92/256;
     while (uoffs < 0) {
       uoffs += 92/256;
