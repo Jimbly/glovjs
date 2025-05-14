@@ -118,6 +118,10 @@ const menu_fade_params_default = {
   z: Z.MODAL,
 };
 
+export function menuFadeParamsSetDefault(fade_params) {
+  merge(menu_fade_params_default, fade_params);
+}
+
 let color_set_shades = vec4(1, 0.8, 1, 1);
 
 let color_sets = [];
