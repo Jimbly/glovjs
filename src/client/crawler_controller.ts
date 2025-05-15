@@ -1561,6 +1561,14 @@ export class CrawlerController {
     this.setMoveBlocker(this.moveBlockPit.bind(this));
   }
 
+  move_from_pos: Vec2 = vec2();
+  move_from_dir: DirType = 0;
+  getMoveFromPos(): Vec2 {
+    return this.move_from_pos; // valid in cell enter (post) events
+  }
+  getMoveFromDir(): DirType {
+    return this.move_from_dir; // valid in cell enter (post) events
+  }
   playerMoveFinish(level: CrawlerLevel, finished_pos: Vec2): void {
     const { game_state, script_api, last_finished_pos } = this;
     let new_cell = level.getCell(finished_pos[0], finished_pos[1]);
@@ -1594,6 +1602,8 @@ export class CrawlerController {
         }
       }
     }
+    v2copy(this.move_from_pos, last_finished_pos);
+    this.move_from_dir = dirFromDelta([finished_pos[0] - last_finished_pos[0], finished_pos[1] - last_finished_pos[1]]);
     v2copy(last_finished_pos, finished_pos);
     this.map_update_this_frame = true;
     let type = new_cell && new_cell.desc || level.default_open_cell;
