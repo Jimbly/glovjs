@@ -17,6 +17,7 @@ import {
 } from 'glov/client/input';
 import * as settings from 'glov/client/settings';
 import { Sprite } from 'glov/client/sprites';
+import { textureLoadCount } from 'glov/client/textures';
 import * as ui from 'glov/client/ui';
 import {
   ButtonStateString,
@@ -169,21 +170,22 @@ type StartMoveData = {
 function startMove(
   parent: CrawlerController,
   dir: DirType,
+  cur_pos: Vec2,
   new_pos: Vec2,
   new_rot: DirType,
 ): StartMoveData {
-  const { game_state, script_api, last_dest_pos } = parent;
+  const { game_state, script_api } = parent;
   const build_mode = buildModeActive();
 
   // check walls
   script_api.setLevel(game_state.level!);
-  script_api.setPos(last_dest_pos);
-  let blocked = game_state.level!.wallsBlock(last_dest_pos, dir, script_api);
+  script_api.setPos(cur_pos);
+  let blocked = game_state.level!.wallsBlock(cur_pos, dir, script_api);
   if ((blocked & BLOCK_MOVE) && build_mode) {
     if (!(blocked & BLOCK_VIS)) {
       blocked &= ~BLOCK_MOVE;
     }
-    let wall_desc = game_state.level!.getCell(last_dest_pos[0], last_dest_pos[1])!.walls[dir];
+    let wall_desc = game_state.level!.getCell(cur_pos[0], cur_pos[1])!.walls[dir];
     if (wall_desc.replace) {
       for (let ii = 0; ii < wall_desc.replace.length; ++ii) {
         let desc = wall_desc.replace[ii].desc;
@@ -402,11 +404,10 @@ class CrawlerControllerQueued implements PlayerController {
     if (isActionMove(next)) {
       let new_pos = v2add(vec2(), cur.pos, next.pos);
       assert(next.action_dir !== undefined);
-      assert(v2same(this.parent.last_dest_pos, cur.pos));
       const {
         bumped_something,
         going_through_door,
-      } = startMove(this.parent, next.action_dir, new_pos, cur.rot);
+      } = startMove(this.parent, next.action_dir, cur.pos, new_pos, cur.rot);
       if (bumped_something) {
         action_type = ACTION_BUMP;
       } else if (going_through_door) {
@@ -594,7 +595,7 @@ class CrawlerControllerInstantStep implements PlayerController {
     const {
       bumped_something,
       bumped_entity,
-    } = startMove(this.parent, dir, new_pos, this.rot);
+    } = startMove(this.parent, dir, this.pos, new_pos, this.rot);
 
     if (bumped_something) {
       // TODO: animate a bump towards `new_pos`? play sound?
@@ -720,7 +721,7 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
     const {
       bumped_something,
       bumped_entity,
-    } = startMove(this.parent, dir, new_pos, this.rot);
+    } = startMove(this.parent, dir, this.pos, new_pos, this.rot);
 
     if (bumped_something) {
       if (!bumped_entity) {
@@ -775,10 +776,12 @@ type Blend2 = {
   uncancelable: boolean;
   action_type: ActionType;
   delta_pos?: Vec2;
-  finish_pos: Vec2;
   delta_rot?: number;
   finish_rot: DirType;
   transit?: WallTransit;
+
+  // set after started:
+  finish_pos?: Vec2;
 };
 class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   pos_blend_from = vec2();
@@ -797,7 +800,14 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
     if (!blends.length) {
       return this.pos;
     }
-    return blends[blends.length - 1].finish_pos;
+    v2copy(temp_pos, this.pos);
+    for (let ii = 0; ii < blends.length; ++ii) {
+      let blend = blends[ii];
+      if (!blend.started && blend.action_type === ACTION_MOVE) {
+        v2add(temp_pos, temp_pos, blend.delta_pos!);
+      }
+    }
+    return temp_pos;
   }
 
   blend_pos = vec2();
@@ -818,10 +828,11 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   startQueuedMove(blend: Blend2): boolean {
     if (blend.action_type === ACTION_MOVE) {
       let dir = dirFromDelta(blend.delta_pos!);
+      let new_pos = v2add(vec2(), this.pos, blend.delta_pos!);
       const {
         bumped_something,
         bumped_entity,
-      } = startMove(this.parent, dir, blend.finish_pos, blend.finish_rot);
+      } = startMove(this.parent, dir, this.pos, new_pos, blend.finish_rot);
 
       if (bumped_something) {
         if (bumped_entity) {
@@ -834,16 +845,22 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
           return false;
         }
         // change it to a bump
+        blend.finish_pos = this.pos.slice(0) as Vec2;
         blend.started = true;
         blend.action_type = ACTION_BUMP;
-        blend.finish_pos = this.pos.slice(0) as Vec2;
       } else {
+        blend.transit = {
+          pos: this.pos.slice(0) as Vec2,
+          dir,
+        };
+        blend.finish_pos = new_pos;
         blend.started = true;
-        v2copy(this.pos, blend.finish_pos);
+        v2copy(this.pos, new_pos);
       }
     } else if (blend.action_type === ACTION_ROT) {
       this.rot = blend.finish_rot;
       blend.started = true;
+      blend.finish_pos = this.pos.slice(0) as Vec2;
     } else {
       assert(false);
     }
@@ -901,16 +918,27 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
           }
         }
       }
-      if (!blend.started && (!last_blend || last_blend.finished)) {
-        if (did_start_finish) {
+      if (!blend.started) {
+        // !textureLoadCount() is maybe a hack - it ensures we don't step out of the stairs while
+        //   the level art is still loading
+        if (textureLoadCount()) {
           this.is_blend_stopped = true;
           break;
         }
-        if (!this.startQueuedMove(blend)) {
-          this.cancelAllMoves();
+        if (!last_blend || last_blend.finished) {
+          if (did_start_finish) {
+            this.is_blend_stopped = true;
+            break;
+          }
+          if (!this.startQueuedMove(blend)) {
+            this.cancelAllMoves();
+            break;
+          }
+          did_start_finish = true;
+        } else {
+          this.is_blend_stopped = true;
           break;
         }
-        did_start_finish = true;
       }
       if (!blend.finished && !did_start_finish && ii !== blends.length - 1) {
         // have something after us, let's finish this (cause end-of-move events
@@ -919,7 +947,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
         did_start_finish = true;
       }
       if (blend.finished) {
-        finished_pos = blend.finish_pos;
+        finished_pos = blend.finish_pos!;
         finished_rot = blend.finish_rot;
       }
       blend.t = min(1, blend.t + dt * BLEND2_RATE[blend.action_type] * (1 + time_boost));
@@ -927,7 +955,7 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
         if (!blend.finished) {
           blend.finished = true;
           did_start_finish = true;
-          finished_pos = blend.finish_pos;
+          finished_pos = blend.finish_pos!;
           finished_rot = blend.finish_rot;
         }
         if (ii === 0) {
@@ -946,7 +974,8 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       let t = easeInOut(blend.t, 2);
       if (blend.action_type === ACTION_MOVE) {
         v2addScale(blend_pos, blend_pos, blend.delta_pos!, t);
-        wall_transits.push(blend.transit!);
+        assert(blend.transit);
+        wall_transits.push(blend.transit);
       } else if (blend.action_type === ACTION_ROT) {
         blend_rot += blend.delta_rot! * t;
       } else if (blend.action_type === ACTION_BUMP) {
@@ -988,16 +1017,9 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       action_type: ACTION_ROT,
       delta_rot: drot,
       finish_rot: rot,
-      finish_pos: this.effPos().slice(0) as Vec2,
     });
   }
   startMove(dir: DirType): boolean {
-    let cur_pos = this.effPos();
-    let transit: WallTransit = {
-      pos: cur_pos.slice(0) as Vec2,
-      dir,
-    };
-    let new_pos = v2add(vec2(), cur_pos, DXY[dir]);
     this.blends.push({
       t: 0,
       started: false,
@@ -1006,8 +1028,6 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
       action_type: ACTION_MOVE,
       delta_pos: DXY[dir],
       finish_rot: this.effRot(),
-      finish_pos: new_pos,
-      transit,
     });
     return true;
   }
