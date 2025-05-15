@@ -1053,6 +1053,7 @@ export type PlayerMotionParam = {
   button_sprites: Record<ButtonStateString, Sprite>;
   dt: number;
   do_debug_move: boolean;
+  show_hotkeys: boolean;
 };
 
 function controllerFromType(type: string, parent: CrawlerController): PlayerController {
@@ -1100,7 +1101,7 @@ export class CrawlerController {
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
     this.on_enter_cell = param.on_enter_cell;
-    this.setControllerType(param.controller_type || 'queued');
+    this.setControllerType(param.controller_type || 'queued2');
     this.script_api.setController(this);
   }
 
@@ -1839,6 +1840,7 @@ export class CrawlerController {
       show_buttons,
       disable_move,
       disable_player_impulse,
+      show_hotkeys,
     } = param;
     let dt = param.dt;
     const {
@@ -1897,6 +1899,8 @@ export class CrawlerController {
         disabled,
         button_sprites,
         touch_hotzone,
+        is_movement: !(key === 'turn_left' || key === 'turn_right'),
+        show_hotkeys,
       });
       down_edge[key] += ret.down_edge;
       down[key] += ret.down;

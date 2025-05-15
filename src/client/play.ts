@@ -469,6 +469,8 @@ function playCrawl(): void {
       button_sprites: useNoText() ?
         toggled_down ? button_sprites_notext_down : button_sprites_notext :
         toggled_down ? button_sprites_down : button_sprites,
+      is_movement: false,
+      show_hotkeys: false,
     });
     // down_edge[key] += ret.down_edge;
     down[key] += ret.down;
@@ -521,6 +523,7 @@ function playCrawl(): void {
     show_buttons: !locked_dialog,
     do_debug_move: engine.defines.LEVEL_GEN || build_mode,
     show_debug: settings.show_fps ? { x: VIEWPORT_X0, y: VIEWPORT_Y0 + (build_mode ? 3 : 0) } : null,
+    show_hotkeys: false,
   });
 
   button_x0 = MOVE_BUTTONS_X0;
