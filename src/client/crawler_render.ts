@@ -204,6 +204,7 @@ export type CrawlerDrawableOpts2 = {
   draw_dist_sq: number;
   no_blend: boolean;
   neighbor_h: number;
+  quadrant_hs?: number[]; // only for corners/pillars
 };
 export type CrawlerDrawable = (
   rot: ROVec4, pos: ROVec3,
@@ -534,6 +535,7 @@ const wall_face_right = vec3(0, -1, 0);
 const wall_face_down = vec3(0, 0, -1);
 const wall_detail_offs = vec3(FLOOR_DETAIL_Z * 2, 0, 0);
 let temp_pos = vec3();
+let temp_pos2 = vec3();
 let temp_right = vec3();
 let temp_down = vec3();
 let temp_size = vec2();
@@ -788,8 +790,85 @@ function drawSimpleCornerFloor(
   v3iAdd(temp_pos, floor_detail_offs);
   v2set(temp_size, DIM*scale, DIM*scale);
 
+  let { quadrant_hs } = opts;
+
   let uvs = sprite.uvs;
-  if (quadrants === 4) {
+  if (quadrant_hs) {
+    temp_size[0] *= 0.5;
+    temp_size[1] *= 0.5;
+    // TODO: this can be a loop?
+    // our cell
+    v3addScale(temp_pos2, temp_pos, temp_down, HDIM*scale);
+    temp_pos2[2] = quadrant_hs[0] + floor_detail_offs[2];
+    v4copy(temp_uvs, uvs);
+    temp_uvs[0] = uvs[0];
+    temp_uvs[1] = uvs[3] + (uvs[1] - uvs[3]) * 0.5;
+    temp_uvs[2] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
+    temp_uvs[3] = uvs[3];
+    sprite.draw3D({
+      ...param,
+      uvs: temp_uvs,
+      pos: temp_pos2,
+      size: temp_size,
+      face_right: temp_right,
+      face_down: temp_down,
+    });
+    if (quadrant_hs.length > 1) {
+      // north-west cell
+      v3copy(temp_pos2, temp_pos);
+      temp_pos2[2] = quadrant_hs[1] + floor_detail_offs[2];
+      v4copy(temp_uvs, uvs);
+      temp_uvs[0] = uvs[0];
+      temp_uvs[1] = uvs[1];
+      temp_uvs[2] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
+      temp_uvs[3] = uvs[3] + (uvs[1] - uvs[3]) * 0.5;
+      sprite.draw3D({
+        ...param,
+        uvs: temp_uvs,
+        pos: temp_pos2,
+        size: temp_size,
+        face_right: temp_right,
+        face_down: temp_down,
+      });
+    }
+    if (quadrant_hs.length > 2) {
+      // north-east cell
+      v3addScale(temp_pos2, temp_pos, temp_right, HDIM*scale);
+      temp_pos2[2] = quadrant_hs[2] + floor_detail_offs[2];
+      v4copy(temp_uvs, uvs);
+      temp_uvs[0] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
+      temp_uvs[1] = uvs[1];
+      temp_uvs[2] = uvs[2];
+      temp_uvs[3] = uvs[3] + (uvs[1] - uvs[3]) * 0.5;
+      sprite.draw3D({
+        ...param,
+        uvs: temp_uvs,
+        pos: temp_pos2,
+        size: temp_size,
+        face_right: temp_right,
+        face_down: temp_down,
+      });
+    }
+    if (quadrant_hs.length > 3) {
+      // east cell
+      v3addScale(temp_pos2, temp_pos, temp_down, HDIM*scale);
+      v3iAddScale(temp_pos2, temp_right, HDIM*scale);
+      temp_pos2[2] = quadrant_hs[3] + floor_detail_offs[2];
+      v4copy(temp_uvs, uvs);
+      temp_uvs[0] = uvs[0] + (uvs[2] - uvs[0]) * 0.5;
+      temp_uvs[1] = uvs[3] + (uvs[1] - uvs[3]) * 0.5;
+      temp_uvs[2] = uvs[2];
+      temp_uvs[3] = uvs[3];
+      sprite.draw3D({
+        ...param,
+        uvs: temp_uvs,
+        pos: temp_pos2,
+        size: temp_size,
+        face_right: temp_right,
+        face_down: temp_down,
+      });
+    }
+  } else if (quadrants === 4) {
     sprite.draw3D({
       ...param,
       pos: temp_pos,
@@ -1072,7 +1151,7 @@ function drawCell(
     }
   }
   v2addScale(draw_pos, vhdim, pos, DIM);
-  opts.neighbor_h = draw_pos[2] = cell.h * DIM;
+  let our_h = opts.neighbor_h = draw_pos[2] = cell.h * DIM;
   opts.split_set = split_set;
   opts.draw_dist_sq = v2distSq(pos, game_state.pos);
 
@@ -1113,11 +1192,65 @@ function drawCell(
       let style = cell.corner_details![ii];
       if (style) {
         let visuals = corners[style];
-        for (let jj = 0; jj < visuals.length; ++jj) {
-          let visual = visuals[jj];
-          let drawable = drawables[visual.type];
-          assert(drawable);
-          drawable(wall_rots[ii], draw_pos, visual.opts, opts, cell_desc.id);
+        if (visuals.length) {
+          // first, determine quadrant heights
+          // `0` is always our tile
+          // walls:
+          //
+          //   +-1-+
+          //   |   |
+          //   2   0
+          //   |   |
+          //   +-3-+
+          //
+          // corner #0 (NE corner): style=one/two/three/four
+          //     1 | 2   one:#### two: 1 |# three: 1   2
+          //     --+--       --+#        +#          +--
+          //     0 | 3       0 |#      0 |#        0 |##
+          // corner #1 (NW corner): style=one/two/three
+          // 2 | -   one:#### two: ##### three: 2 |##
+          // --+--       #+--      --+--          +--
+          // 1 | 0       #| 0      1   0        1   0
+          // corner #2 (SW corner): style=one/two/three
+          // - | 0
+          // --+--
+          // 2 | 1
+          // corner #3 (SE corner): style=one/two/three
+          //     0 | 1
+          //     --+--
+          //     - | 2
+
+          let quadrant_hs= [our_h];
+          if (style !== 'one') {
+            let dx_through = DX[ii];
+            let dy_through = DY[ii];
+            let dx_side = DX[(ii + 1) % 4];
+            let dy_side = DY[(ii + 1) % 4];
+            let ncell = game_state.level!.getCell(cell.x + dx_side, cell.y + dy_side);
+            quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+            if (style !== 'two') {
+              ncell = game_state.level!.getCell(cell.x + dx_side + dx_through, cell.y + dy_side + dy_through);
+              quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+              if (style === 'four') {
+                ncell = game_state.level!.getCell(cell.x + dx_through, cell.y + dy_through);
+                quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+              }
+            }
+          }
+          // quadrant_hs only supplied if they actually vary
+          opts.quadrant_hs = undefined;
+          for (let jj = 1; jj < quadrant_hs.length; ++jj) {
+            if (quadrant_hs[jj] !== our_h) {
+              opts.quadrant_hs = quadrant_hs;
+            }
+          }
+
+          for (let jj = 0; jj < visuals.length; ++jj) {
+            let visual = visuals[jj];
+            let drawable = drawables[visual.type];
+            assert(drawable);
+            drawable(wall_rots[ii], draw_pos, visual.opts, opts, cell_desc.id);
+          }
         }
       }
     }
