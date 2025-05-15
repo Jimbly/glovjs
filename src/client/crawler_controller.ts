@@ -155,6 +155,11 @@ interface PlayerController {
   clearDoubleTime?(): void;
 }
 
+let on_bump_entity: (ent_id: EntityID) => void;
+export function controllerOnBumpEntity(cb: (ent_id: EntityID) => void): void {
+  on_bump_entity = cb;
+}
+
 type StartMoveData = {
   bumped_something: boolean;
   going_through_door: boolean;
@@ -219,14 +224,7 @@ function startMove(
     } else if (!is_facing_ent) {
       script_api.status('move_blocked', 'Something blocks your way.');
     } else {
-      // TODO: Replace this with some kind of action callback
-      // let total_attack_time = attackTime(my_ent);
-      // queued_attack = {
-      //   ent_id: blocked_ent_id,
-      //   total_attack_time,
-      //   start_time: frame_wall_time,
-      //   windup: frame_wall_time + ATTACK_WINDUP_TIME,
-      // };
+      on_bump_entity?.(blocked_ent_id!);
     }
   }
   return {
