@@ -6,6 +6,7 @@ import {
   getFrameTimestamp,
 } from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
+import { fontStyle } from 'glov/client/font';
 import { Box } from 'glov/client/geom_types';
 import {
   keyDown,
@@ -1049,6 +1050,12 @@ function controllerFromType(type: string, parent: CrawlerController): PlayerCont
   }
 }
 
+const font_style_debug = fontStyle(null, {
+  color: 0xFFFFFFff,
+  outline_color: 0x000000ff,
+  outline_width: 2.5,
+});
+
 export class CrawlerController {
   game_state: CrawlerState;
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
@@ -1275,12 +1282,12 @@ export class CrawlerController {
       let z = Z.DEBUG;
       const text_height = uiTextHeight();
       let my_ent = entity_manager.hasMyEnt() ? entity_manager.getMyEnt() : null;
-      ui.print(null, x, y, z, `Pos: ${game_state.pos[0]},${game_state.pos[1]}` +
+      ui.print(font_style_debug, x, y, z, `Pos: ${game_state.pos[0]},${game_state.pos[1]}` +
         `  Floor: ${my_ent?.data.floor}`);
       y += text_height;
-      ui.print(null, x, y, z, `Angle: ${(game_state.angle / PI * 180).toFixed(0)}`);
+      ui.print(font_style_debug, x, y, z, `Angle: ${(game_state.angle / PI * 180).toFixed(0)}`);
       y += text_height;
-      ui.print(null, x, y, z, `Angle Idx: ${this.player_controller.effRot()}`);
+      ui.print(font_style_debug, x, y, z, `Angle Idx: ${this.player_controller.effRot()}`);
       y += text_height;
     }
   }
