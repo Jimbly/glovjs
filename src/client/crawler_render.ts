@@ -315,7 +315,7 @@ export function simpleFormat(): GeomFormatElem[] {
 let fog_params = vec4(0.003, 0.001, 800.0, 0.0);
 let fog_color = vec4(0, 0, 0, 0);
 
-export function crawlerSetFogColor(v: Vec3): void {
+export function crawlerSetFogColor(v: ROVec3): void {
   v3copy(fog_color, v);
 }
 
@@ -532,7 +532,7 @@ const FLOOR_DETAIL_Z = 0.025;
 
 const wall_face_right = vec3(0, -1, 0);
 const wall_face_down = vec3(0, 0, -1);
-const wall_detail_offs = vec3(FLOOR_DETAIL_Z, 0, 0);
+const wall_detail_offs = vec3(FLOOR_DETAIL_Z * 2, 0, 0);
 let temp_pos = vec3();
 let temp_right = vec3();
 let temp_down = vec3();
