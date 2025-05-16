@@ -10,7 +10,7 @@ type CrawlerVisual = {
   opts?: VisualOpts; // some type-specific opts
 };
 type CrawlerVisualsInput = CrawlerVisual | CrawlerVisual[];
-type CrawlerVisuals = Partial<Record<string, CrawlerVisual[]>>;
+export type CrawlerVisuals = Partial<Record<string, CrawlerVisual[]>>;
 
 const CORNER_DETAIL_TYPES = {
   one: true,
