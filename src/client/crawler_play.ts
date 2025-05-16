@@ -841,13 +841,16 @@ export function crawlerRenderFramePrep(): void {
   let opts_3d: {
     fov: number;
     clear_all: boolean;
+    clear_color?: Vec4;
+    clear_all_color?: Vec4;
     width?: number;
     height?: number;
     viewport?: Vec4;
     need_depth?: string;
   } = {
     fov: FOV,
-    clear_all: false,
+    clear_all: true,
+    clear_all_color: ui_clear_color,
   };
   entity_split = setting_pixely === 1 &&
     settings.entity_split && crawlerRenderDoSplit() &&
@@ -882,6 +885,7 @@ export function crawlerRenderFramePrep(): void {
     fog = vstyle.fog_color;
     fog_params = vstyle.fog_params;
   }
+  opts_3d.clear_color = [clear[0], clear[1], clear[2], 0];
   gl.clearColor(clear[0], clear[1], clear[2], 0);
   crawlerSetFogColor(fog);
   crawlerSetFogParams(fog_params);
