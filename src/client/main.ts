@@ -21,10 +21,14 @@ import { spriteSetGet } from 'glov/client/sprite_sets';
 import { textureDefaultFilters } from 'glov/client/textures';
 import { uiSetPanelColor } from 'glov/client/ui';
 import * as ui from 'glov/client/ui';
+import { v4copy, vec4 } from 'glov/common/vmath';
 // import './client_cmds.js'; // for side effects
 import { crawlerBuildModeStartup } from './crawler_build_mode';
 import { drawableSpriteLoadNear } from './crawler_entity_client';
-import { crawlerOnPixelyChange } from './crawler_play.js';
+import {
+  crawlerOnPixelyChange,
+  crawlerRenderSetUIClearColor,
+} from './crawler_play.js';
 import { crawlerRenderSetLODBiasRange } from './crawler_render';
 import { game_height, game_width } from './globals';
 import { playStartup } from './play';
@@ -41,7 +45,8 @@ Z.CHAT = 60;
 Z.UI = 100;
 Z.MAP = Z.UI + 5; // also minimap
 Z.FLOATERS = 125;
-Z.STATUS = 140;
+Z.DIALOG = 140;
+Z.STATUS = 160;
 Z.CHAT_FOCUSED = 100;
 
 let fonts: Font[] | undefined;
@@ -50,6 +55,8 @@ crawlerOnPixelyChange(function (new_value: number): void {
   assert(fonts);
   engine.setFonts(fonts[new_value] || fonts[2]);
 });
+
+const clear_color = vec4(0, 0, 0, 1);
 
 export let chat_ui: ReturnType<typeof chatUICreate>;
 
@@ -196,7 +203,10 @@ export function main(): void {
 
   let build_font = fonts[0];
 
-  gl.clearColor(0, 0, 0, 1);
+  gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+  v4copy(engine.border_clear_color, clear_color);
+  v4copy(engine.border_color, clear_color);
+  crawlerRenderSetUIClearColor(clear_color);
 
   // Actually not too bad:
   if (settings.filter === 1) {
