@@ -87,7 +87,7 @@ export type VstyleDesc = {
   id: string;
   cell_swaps: Partial<Record<string, string>>;
   wall_swaps: Partial<Record<string, string>>;
-  fog_params: Vec3;
+  fog_params: Vec3; // extinction rate, inscattering rate, initial distance
   fog_color: Vec3;
   background_color: Vec3;
   background_img?: string;
