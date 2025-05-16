@@ -406,6 +406,9 @@ cmd_parse.register({
     if (!str || floor_id === game_state.floor_id || !isFinite(floor_id)) {
       resp_func(null, `Floor = ${game_state.floor_id}`);
     } else {
+      if (controller.transitioning_floor) {
+        return resp_func('Already mid-transit');
+      }
       controller.goToFloor(floor_id, floor_id < game_state.floor_id! ? 'stairs_out' : 'stairs_in');
       resp_func(null, `Going to floor ${floor_id}`);
     }
