@@ -69,8 +69,8 @@ export function levelGenTest(game_state: CrawlerState): boolean {
   }
   //param('floor', 'floor', 0, 20, round, KEYS.COMMA, KEYS.PERIOD);
   param('seed', 'seed', 0, 100, round);
-  param('w', 'w', 4, 100, round);
-  param('h', 'h', 4, 100, round);
+  param('w', 'w', 11, 100, round);
+  param('h', 'h', 11, 100, round);
   param('rooms', 'max_rooms', 1, 500, round);
   for (let key in default_gen_params.brogue.odds) {
     param(key, `odds.${key}`, 0, 10, round);

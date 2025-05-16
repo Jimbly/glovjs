@@ -716,7 +716,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
     5 + rand.range(h - 10),
   ];
 
-  let first_room = generateRoomOrganic(rand, 10, 10, 10);
+  let first_room = generateRoomOrganic(rand, min(10, w - 4), min(10, h - 4), 10);
   first_room.has_entrance = true;
   placeRoom(first_room, entrance[0] - 5, entrance[1] - 5);
 
