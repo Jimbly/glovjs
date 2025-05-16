@@ -982,7 +982,7 @@ export function drawTooltipBox(param) {
     y: param.y + (param.tooltip_left ? 0 : param.h + 2),
     tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
-    tooltip_auto_right_offset: param.tooltip_left ? 0 : param.tooltip_auto_right_offset,
+    tooltip_auto_right_offset: param.tooltip_left ? 0 : param.tooltip_auto_right_offset || param.w,
     tooltip_right: param.tooltip_right || param.tooltip_left,
     tooltip_center: param.tooltip_center,
     tooltip,
