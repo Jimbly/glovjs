@@ -100,6 +100,7 @@ import {
 } from './crawler_render_entities';
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
+import { dialogNameRender } from './dialog_data';
 import { dialogMoveLocked, dialogRun, dialogStartup } from './dialog_system';
 import { EntityDemoClient, entityManager } from './entity_demo_client';
 // import { EntityDemoClient } from './entity_demo_client';
@@ -826,6 +827,7 @@ export function playStartup(): void {
   dialogStartup({
     font,
     // text_style_cb: dialogTextStyle,
+    name_render_cb: dialogNameRender,
   });
   crawlerLoadData(webFSAPI());
   crawlerMapViewStartup({

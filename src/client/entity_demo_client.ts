@@ -48,6 +48,8 @@ export type EntityDataClient = {
   state: string;
   floor: number;
   stats: StatsData;
+  // Player:
+  events_done?: Partial<Record<string, boolean>>;
 } & EntityCrawlerDataCommon;
 
 
