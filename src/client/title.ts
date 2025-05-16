@@ -1,7 +1,7 @@
 
-import * as engine from 'glov/client/engine.js';
-import { localStorageGetJSON } from 'glov/client/local_storage.js';
-import { netSubs } from 'glov/client/net.js';
+import * as engine from 'glov/client/engine';
+import { localStorageGetJSON } from 'glov/client/local_storage';
+import { netSubs } from 'glov/client/net';
 import {
   buttonText,
   modalDialog,
@@ -10,19 +10,20 @@ import {
   uiButtonWidth,
   uiTextHeight,
 } from 'glov/client/ui';
-import * as urlhash from 'glov/client/urlhash.js';
-import { createAccountUI } from './account_ui.js';
+import * as urlhash from 'glov/client/urlhash';
+import { createAccountUI } from './account_ui';
 import {
   crawlerCommStart,
   crawlerCommStartup,
   crawlerCommWant,
-} from './crawler_comm.js';
+} from './crawler_comm';
 import {
   crawlerPlayWantMode,
   crawlerPlayWantNewGame,
   SavedGameData,
-} from './crawler_play.js';
-import * as main from './main.js';
+} from './crawler_play';
+import * as main from './main';
+import { tickMusic } from './music';
 
 
 const { max } = Math;
@@ -35,6 +36,8 @@ function title(dt: number): void {
   main.chat_ui.run({
     hide: true,
   });
+
+  tickMusic(null);
 
   let y = 40;
   if (engine.DEBUG || true) {
