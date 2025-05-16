@@ -61,6 +61,9 @@ export function pathFind(
     cx: number,
     cy: number,
   ): void {
+    if (cell.desc.special_pos) { // probably always valid: don't path through special tiles, they'll exit!
+      return;
+    }
     let wall = getEffWall(script_api, cell, dir);
     if (!wall.open_move) {
       return;
