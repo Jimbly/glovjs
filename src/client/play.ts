@@ -109,6 +109,8 @@ import {
   game_width,
   render_height,
   render_width,
+  VIEWPORT_X0,
+  VIEWPORT_Y0,
 } from './globals';
 import { levelGenTest } from './level_gen_test';
 import { renderAppStartup } from './render_app';
@@ -133,8 +135,6 @@ const MINIMAP_Y = 3;
 const MINIMAP_W = 5+7*(MINIMAP_RADIUS*2 + 1);
 const COMPASS_X = MINIMAP_X;
 const COMPASS_Y = MINIMAP_Y + MINIMAP_W;
-const VIEWPORT_X0 = 3;
-const VIEWPORT_Y0 = 3;
 
 type Entity = EntityDemoClient;
 
