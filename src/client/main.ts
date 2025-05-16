@@ -37,7 +37,6 @@ import { titleInit, titleStartup } from './title';
 
 const { round } = Math;
 
-window.Z = window.Z || {};
 Z.BACKGROUND = 1;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
@@ -74,6 +73,7 @@ export function main(): void {
   let antialias = false;
   let use_fbos = 1;
   let need_dfdxy = false;
+
   // @ts-expect-error truthy
   if (!'AA hires pixel art') {
     need_dfdxy = true;
@@ -138,6 +138,7 @@ export function main(): void {
     settingsSet('filter', 1);
     settingsSet('entity_split', 1);
   }
+
   const font_info_04b03x2 = require('./img/font/04b03_8x2.json');
   const font_info_04b03x1 = require('./img/font/04b03_8x1.json');
   const font_info_palanquin32 = require('./img/font/palanquin32.json');
@@ -150,7 +151,7 @@ export function main(): void {
   } else {
     font = { info: font_info_palanquin32, texture: 'font/palanquin32' };
   }
-  settingsSet('use_fbos', use_fbos); // Needed for our effects
+  settingsSet('use_fbos', use_fbos); // If needed for our effects
 
   autoAtlasTextureOpts('whitebox', { force_mipmaps: true });
   autoAtlasTextureOpts('utumno', { force_mipmaps: true });
