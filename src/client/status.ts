@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { getFrameDt, getFrameIndex } from 'glov/client/engine';
 import { Font, FontStyle, fontStyleColored } from 'glov/client/font';
+import { markdownAuto } from 'glov/client/markdown';
 import * as ui from 'glov/client/ui';
 import {
   UIBox,
@@ -88,9 +89,9 @@ export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: numb
     let size = uiTextHeight();
     let dims = font.dims(msg.style, w, 0, size, msg.text);
     y -= pad_bottom + dims.h;
-    font.draw({
-      style: msg.style,
-      size,
+    markdownAuto({
+      font_style: msg.style,
+      text_height: size,
       x, y, z, w,
       align: font.ALIGN.HCENTER|font.ALIGN.HWRAP,
       text: msg.text,
