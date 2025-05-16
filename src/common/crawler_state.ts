@@ -91,6 +91,7 @@ export type VstyleDesc = {
   fog_color: Vec3;
   background_color: Vec3;
   background_img?: string;
+  background_size?: number;
 };
 export type VstyleDescs = Partial<Record<string, VstyleDesc>>;
 export type CrawlerStateParams = {

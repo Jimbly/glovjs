@@ -99,7 +99,6 @@ import { mapViewActive } from './crawler_map_view';
 import {
   crawlerCalc3DViewport,
   crawlerRenderDoSplit,
-  crawlerRenderGameViewAngle,
   crawlerRenderViewportGet,
   crawlerSetFogColor,
   crawlerSetFogParams,
@@ -885,6 +884,7 @@ export function crawlerRenderFramePrep(): void {
   crawlerSetFogParams(fog_params);
   engine.start3DRendering(opts_3d);
   if (vstyle && vstyle.background_img) {
+    let hsize = vstyle.background_size || 1;
     let tex = textureLoad({
       url: `img/${vstyle.background_img}.png`,
       wrap_s: gl.CLAMP_TO_EDGE,
@@ -896,20 +896,21 @@ export function crawlerRenderFramePrep(): void {
     if (tex.loaded) {
       gl.disable(gl.DEPTH_TEST);
       gl.depthMask(false);
-      let voffs = mod(-crawlerRenderGameViewAngle() / PI * 2, 1);
+      let voffs = mod(-game_state.angle / PI * 2 / hsize, 1);
       applyCopy({ source: tex, no_framebuffer: true, params: {
-        copy_uv_scale: [tex.src_width / tex.width, -tex.src_height / tex.height, voffs, tex.src_height / tex.height],
+        copy_uv_scale: [tex.src_width / tex.width / hsize, -tex.src_height / tex.height,
+                        voffs, tex.src_height / tex.height],
       } });
       if (voffs) {
         let viewport_save = engine.viewport.slice(0);
         if (setting_pixely) {
           let cv = crawlerRenderViewportGet();
-          engine.setViewport([cv.w * (1 - voffs), 0, cv.w * voffs, cv.h]);
+          engine.setViewport([cv.w * (1 - voffs) * hsize, 0, cv.w * voffs * hsize, cv.h]);
         } else {
           let viewport = crawlerCalc3DViewport();
           engine.setViewport([
-            viewport[0] + viewport[2] * (1 - voffs), viewport[1],
-            viewport[2] * voffs, viewport[3]
+            viewport[0] + viewport[2] * (1 - voffs) * hsize, viewport[1],
+            viewport[2] * voffs * hsize, viewport[3]
           ]);
         }
         applyCopy({ source: tex, no_framebuffer: true, params: {
