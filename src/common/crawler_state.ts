@@ -876,7 +876,7 @@ export class CrawlerLevel {
     this.seed = data.seed;
     let { cells } = this;
     for (let idx = 0; idx < w * h; ++idx) {
-      for (let xx = 0; xx < w; ++xx) {
+      if (data.cells[idx]) {
         cells[idx].deserialize(data.cells[idx]);
       }
     }
