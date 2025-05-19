@@ -230,14 +230,10 @@ class CmdParse {
       let list = this.cmd_list;
       for (let cmd in this.cmds) {
         let cmd_data = this.cmds[cmd]!;
-        let access: string[] = []; // combine for data compaction
-        if (cmd_data.access_show) {
-          access = access.concat(cmd_data.access_show);
+        if (cmd_data.access_show?.includes('hidden')) {
+          continue;
         }
-        if (cmd_data.access_run) {
-          access = access.concat(cmd_data.access_run);
-        }
-        if (access.indexOf('hidden') !== -1) {
+        if (cmd_data.access_run?.includes('hidden')) {
           continue;
         }
         let data: CmdListEntry = {
@@ -247,8 +243,11 @@ class CmdParse {
         if (cmd_data.usage) {
           data.usage = formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help);
         }
-        if (access.length) {
-          data.access_show = access;
+        if (cmd_data.access_run?.length) {
+          data.access_run = cmd_data.access_run;
+        }
+        if (cmd_data.access_show?.length) {
+          data.access_show = cmd_data.access_show;
         }
         list[cmd] = data;
       }
