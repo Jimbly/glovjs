@@ -80,5 +80,6 @@ module.exports = function (filename) {
     'glov-build-preresolve': '1.2.0',
     '@jimbly/howler': '0.1.7',
     '@jimbly/babel-plugin-transform-modules-simple-commonjs': '0.0.3',
+    'ws': '8.18.2',
   });
 };
