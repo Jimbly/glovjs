@@ -479,6 +479,10 @@ export function plural(number: number, label: string): string {
   return `${label}${number === 1 ? '' : 's'}`;
 }
 
+export function capitalize(s: string): string {
+  return s[0].toUpperCase() + s.slice(1);
+}
+
 export function secondsToFriendlyString(seconds: number, force_include_seconds?: boolean): string {
   let days = floor(seconds / (60*60*24));
   seconds -= days * 60*60*24;
