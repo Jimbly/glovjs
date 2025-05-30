@@ -22,9 +22,13 @@ export function errorReportIgnoreUncaughtPromises() {
   ignore_promises = true;
 }
 
+function escape2(str) {
+  return escape(str).replace(/\+/, '%2B');
+}
+
 export function errorReportSetDetails(key, value) {
   if (value) {
-    error_report_details[key] = escape(String(value));
+    error_report_details[key] = escape2(String(value));
   } else {
     delete error_report_details[key];
   }
@@ -40,7 +44,7 @@ errorReportSetDynamicDetails('platform', platformGetID);
 const time_start = Date.now();
 errorReportSetDetails('time_start', time_start);
 errorReportSetDynamicDetails('url', function () {
-  return escape(location.href);
+  return location.href;
 });
 errorReportSetDynamicDetails('time_up', function () {
   return Date.now() - time_start;
@@ -58,7 +62,7 @@ function getDynamicDetail(key) {
   if (!value && value !== 0) {
     return '';
   }
-  return `&${key}=${value}`;
+  return `&${key}=${escape2(value)}`;
 }
 export function errorReportDetailsString() {
   return `&${Object.keys(error_report_details)
@@ -217,9 +221,9 @@ export function glovErrorReport(is_fatal, msg, file, line, col) {
   }
   // Post to an error reporting endpoint that (probably) doesn't exist - it'll get in the logs anyway!
   let url = reportingAPIPath(); // base like http://foo.com/bar/ (without index.html)
-  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape(unlocatePaths(file))}` +
+  url += `${is_fatal ? 'errorReport' : 'errorLog'}?cidx=${crash_idx}&file=${escape2(unlocatePaths(file))}` +
     `&line=${line||0}&col=${col||0}` +
-    `&msg=${escape(msg)}${errorReportDetailsString()}`;
+    `&msg=${escape2(msg)}${errorReportDetailsString()}`;
   if (submit_errors) {
     fetch({ method: 'POST', url }, () => { /* nop */ });
 
