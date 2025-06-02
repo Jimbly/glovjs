@@ -296,6 +296,7 @@ export type ModalDialogTickCallbackParams = {
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
 };
+// Returns a hotkey, e.g. KEYS.Y, to activate one of the buttons
 export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => number | void;
 export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {
