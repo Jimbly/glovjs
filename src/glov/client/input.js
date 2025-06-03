@@ -707,7 +707,8 @@ function onWheel(event) {
   mouse_moved = saved;
   let normalized = normalizeWheel(event);
   wheel_events.push({
-    pos: [event.pageX, event.pageY],
+    // Note: must use `mouse_pos`, not `event.pageX`, if we're pointer locked, the position is updated
+    pos: [mouse_pos[0], mouse_pos[1]],
     delta: -normalized.pixel_y/100,
     dispatched: false,
   });
