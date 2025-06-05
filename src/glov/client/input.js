@@ -371,29 +371,43 @@ function letWheelEventThrough(event) {
 
 let event_filter = () => false;
 
-// `filter` returns true if the event should be allowed to propgate to the DOM, and not be sent to the engine
+// `filter` returns true if the event should be allowed to propgate to the DOM,
+// and (for mouse up/down events) not be sent to the engine
 export function inputSetEventFilter(filter) {
   event_filter = filter;
 }
 
+const EVENT_TO_ENGINE = 1<<0; // Note: only mouse-up/down events get filtered, all events otherwise got to-engine
+const EVENT_TO_DOM = 1<<1;
+const EVENT_TO_BOTH = EVENT_TO_ENGINE | EVENT_TO_DOM;
 function letEventThrough(event) {
   if (!event.target || allow_all_events || event.glov_do_not_cancel) {
-    return true;
+    return EVENT_TO_DOM;
   }
   // Going to an input or related element
-  return isInputElement(event.target) ||
-    String(event.target.className).includes('noglov') || event_filter(event);
-  /* Not doing this: this causes legitimate clicks (e.g. when an edit box is focused)
-      to be lost, instead, relying on `allow_all_events` when an HTML UI is active.
-    // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
-    document.activeElement && event.target !== document.activeElement &&
+  if (isInputElement(event.target) ||
+    String(event.target.className).includes('noglov') || event_filter(event)) {
+    return EVENT_TO_DOM;
+  }
+
+  /* Note: not preventing engine from handling this case, because it would cause
+     legitimate clicks (e.g. when an edit box is focused)
+     to be lost, instead, relying on `allow_all_events` when a full-screen HTML UI is active.
+  */
+  // or, one of those is focused, and going away from it (e.g. input elem focused, clicking on canvas)
+  // this also allows drag events that started in a text area to function (issue on Electron)
+  if (document.activeElement && event.target !== document.activeElement &&
     (isInputElement(document.activeElement) ||
-      String(document.activeElement.className).includes('noglov'));*/
+      String(document.activeElement.className).includes('noglov'))
+  ) {
+    return EVENT_TO_BOTH;
+  }
+  return EVENT_TO_ENGINE;
 }
 
 function ignored(event) {
   // eventlog(event);
-  if (!letEventThrough(event)) {
+  if (!(letEventThrough(event) & EVENT_TO_DOM)) {
     event.preventDefault();
     event.stopPropagation();
   }
@@ -458,7 +472,7 @@ function onKeyUp(event) {
   renderNeeded();
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
-  if (!letEventThrough(event)) {
+  if (!(letEventThrough(event) & EVENT_TO_DOM)) {
     event.stopPropagation();
     event.preventDefault();
   }
@@ -484,7 +498,7 @@ function onKeyUp(event) {
 function onKeyDown(event) {
   protectUnload(event.ctrlKey);
   let code = event.keyCode;
-  let no_stop = letEventThrough(event) ||
+  let no_stop = (letEventThrough(event) & EVENT_TO_DOM) ||
     code >= KEYS.F5 && code <= KEYS.F12 || // Chrome debug hotkeys
     code === KEYS.F4 && (event.altKey || event.metaKey || event.ctrlKey) || // Windows/Electron close window hotkey
     code === KEYS.I && (event.altKey && event.metaKey || event.ctrlKey && event.shiftKey) || // Safari, alternate Chrome
@@ -532,7 +546,7 @@ function onMouseMove(event, no_stop) {
   renderNeeded();
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
-  if (!letEventThrough(event) && !no_stop && event.button !== 3) {
+  if (!(letEventThrough(event) & EVENT_TO_DOM) && !no_stop && event.button !== 3) {
     event.preventDefault();
     event.stopPropagation();
     if (touch_mode) {
@@ -621,7 +635,7 @@ function onMouseDown(event) {
   }
   onMouseMove(event); // update mouse_pos
   onUserInput();
-  let no_click = letEventThrough(event);
+  let no_click = !(letEventThrough(event) & EVENT_TO_ENGINE);
 
   let button = event.button;
   mouse_down[button] = true;
@@ -663,7 +677,7 @@ function onMouseUp(event) {
     eventlog(event);
   }
   onMouseMove(event); // update mouse_pos
-  let no_click = letEventThrough(event);
+  let no_click = !(letEventThrough(event) & EVENT_TO_ENGINE);
   let button = event.button;
   if (mouse_down[button]) {
     let touch_id = `m${button}`;
