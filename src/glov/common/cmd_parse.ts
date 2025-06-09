@@ -105,9 +105,10 @@ function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: 
   return true;
 }
 
-export function formatUsage(usage?: Text, help?: Text, prefix_help?: boolean): string | undefined {
+export function formatUsage(cmd_data: CmdListEntry): string | undefined {
+  let { usage, prefix_usage_with_help, help } = cmd_data;
   return !usage ? undefined :
-    prefix_help ? `${help}\n${usage}`:
+    prefix_usage_with_help ? `${help}\n${usage}`:
     help ? String(usage).replace(/\$HELP/, String(help)) :
     String(usage);
 }
@@ -171,7 +172,7 @@ export type AccessContainer = {
   access?: Roles | null;
 };
 
-type CmdListEntry = {
+export type CmdListEntry = {
   name: string;
   help?: Text;
   usage?: Text;
@@ -227,7 +228,7 @@ class CmdParse {
           help: String(cmd_data.help),
         };
         if (cmd_data.usage) {
-          data.usage = formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help);
+          data.usage = formatUsage(cmd_data);
         }
         if (cmd_data.access_run?.length) {
           data.access_run = cmd_data.access_run;
