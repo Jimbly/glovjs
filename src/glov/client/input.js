@@ -380,7 +380,7 @@ export function inputSetEventFilter(filter) {
 const EVENT_TO_ENGINE = 1<<0; // Note: only mouse-up/down events get filtered, all events otherwise got to-engine
 const EVENT_TO_DOM = 1<<1;
 const EVENT_TO_BOTH = EVENT_TO_ENGINE | EVENT_TO_DOM;
-function letEventThrough(event) {
+function letEventThrough(event, no_dom_if_leaving) {
   if (!event.target || allow_all_events || event.glov_do_not_cancel) {
     return EVENT_TO_DOM;
   }
@@ -400,7 +400,15 @@ function letEventThrough(event) {
     (isInputElement(document.activeElement) ||
       String(document.activeElement.className).includes('noglov'))
   ) {
-    return EVENT_TO_BOTH;
+    if (no_dom_if_leaving) {
+      // for mouse down events leaving a focused input element, we do _not_ want
+      // them to go to the DOM, because it will unfocus the input element, which,
+      // if it's the Chat UI, will cause the element the user is trying to click
+      // on to disappear before the click (mouse up) even comes through.
+      return EVENT_TO_ENGINE;
+    } else {
+      return EVENT_TO_BOTH;
+    }
   }
   return EVENT_TO_ENGINE;
 }
@@ -542,11 +550,11 @@ let last_abs_move = 0;
 let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
-function onMouseMove(event, no_stop) {
+function onMouseMove(event, no_stop, no_dom_if_leaving) {
   renderNeeded();
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
-  if (!(letEventThrough(event) & EVENT_TO_DOM) && !no_stop && event.button !== 3) {
+  if (!(letEventThrough(event, no_dom_if_leaving) & EVENT_TO_DOM) && !no_stop && event.button !== 3) {
     event.preventDefault();
     event.stopPropagation();
     if (touch_mode) {
@@ -633,9 +641,9 @@ function onMouseDown(event) {
   if (mouse_log) {
     eventlog(event);
   }
-  onMouseMove(event); // update mouse_pos
+  onMouseMove(event, false, true); // update mouse_pos
   onUserInput();
-  let no_click = !(letEventThrough(event) & EVENT_TO_ENGINE);
+  let no_click = !(letEventThrough(event, true) & EVENT_TO_ENGINE);
 
   let button = event.button;
   mouse_down[button] = true;
@@ -883,7 +891,9 @@ export function startup(_canvas, params) {
   window.addEventListener('click', ignored, false);
   //window.addEventListener('click', eventlog, false);
   window.addEventListener('contextmenu', ignored, false);
-  window.addEventListener('mousemove', onMouseMove, false);
+  window.addEventListener('mousemove', function (event) {
+    onMouseMove(event);
+  }, false);
   window.addEventListener('mousedown', onMouseDown, false);
   window.addEventListener('mouseup', onMouseUp, false);
   if (window.WheelEvent) {
