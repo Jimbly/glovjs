@@ -1,8 +1,10 @@
 import {
+  DataError,
   dataErrorEx,
   dataErrorQueueClear,
   dataErrorQueueGet,
 } from 'glov/common/data_error';
+import { TSMap } from 'glov/common/types';
 import { plural } from 'glov/common/util';
 import { vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
@@ -13,7 +15,7 @@ import {
   netClient,
   netSubs,
 } from './net';
-import { scrollAreaCreate } from './scroll_area';
+import { ScrollArea, scrollAreaCreate } from './scroll_area';
 import {
   buttonText,
   drawLine,
@@ -25,22 +27,34 @@ import {
 
 const { min } = Math;
 
-let gbstate;
-let server_error;
+type GBStateTask = {
+  err?: string;
+  jobs?: TSMap<{
+    errors?: string[];
+    warnings?: string[];
+  }>;
+};
+type GBState = {
+  error_count?: number;
+  warning_count?: number;
+  tasks?: TSMap<GBStateTask>;
+};
+let gbstate: GBState | null = null;
+let server_error: string | null = null;
 
 Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
 
-function onGBState(state) {
+function onGBState(state: GBState): void {
   gbstate = state;
   renderNeeded();
 }
 
-function onServerError(err) {
+function onServerError(err: string | null): void {
   server_error = err;
   renderNeeded();
 }
 
-function onDataErrors(err_list) {
+function onDataErrors(err_list: DataError[]): void {
   for (let ii = 0; ii < err_list.length; ++ii) {
     dataErrorEx(err_list[ii]);
   }
@@ -56,8 +70,8 @@ const style_job = fontStyleColored(null, 0x2020FFff);
 const color_line = vec4(1,1,1,1);
 // eslint-disable-next-line no-control-regex
 const strip_ansi = /\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g;
-let scroll_area;
-function buildUITick() {
+let scroll_area: ScrollArea;
+function buildUITick(): void {
   let data_errors = dataErrorQueueGet();
   if (!gbstate && !server_error && !data_errors.length) {
     return;
@@ -78,7 +92,7 @@ function buildUITick() {
     `${error_count} ${plural(error_count, 'error')}, ` +
     `${warning_count} ${plural(warning_count, 'warning')}`);
   y += font_height + 1;
-  drawLine(x0 + w * 0.3, y, x0 + w * 0.7, y, z, 0.5, true, color_line);
+  drawLine(x0 + w * 0.3, y, x0 + w * 0.7, y, z, 0.5, 1, color_line);
   y += PAD;
 
   if (!scroll_area) {
@@ -99,7 +113,7 @@ function buildUITick() {
   z = Z.UI;
   let indent = 0;
 
-  function printLine(type, str) {
+  function printLine(type: string, str: string): void {
     str = str.replace(strip_ansi, '');
     y += font.drawSizedWrapped(style, x + indent, y, z, sub_w - indent, 0, font_height,
       `${type}: ${str}`);
@@ -107,7 +121,7 @@ function buildUITick() {
 
   if (gbstate) {
     for (let task_name in gbstate.tasks) {
-      let task = gbstate.tasks[task_name];
+      let task = gbstate.tasks[task_name]!;
       x = 0;
       indent = 0;
       font.drawSizedAligned(style_task, x, y, z, font_height, font.ALIGN.HLEFT, sub_w, 0,
@@ -116,7 +130,7 @@ function buildUITick() {
       indent += font_height;
       let printed_any = false;
       for (let job_name in task.jobs) {
-        let job = task.jobs[job_name];
+        let job = task.jobs[job_name]!;
         let { warnings, errors } = job;
         if (job_name !== 'all') {
           if (job_name.startsWith('source:')) {
@@ -183,7 +197,7 @@ function buildUITick() {
 
 }
 
-export function buildUIStartup() {
+export function buildUIStartup(): void {
   if (netClient() && engine.DEBUG) {
     netClient().onMsg('gbstate', onGBState);
     netClient().onMsg('server_error', onServerError);
