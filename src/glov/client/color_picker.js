@@ -1,21 +1,30 @@
 // Portions Copyright 2021 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
-/* eslint-disable import/order */
-const camera2d = require('./camera2d.js');
-const { hsvToRGB, rgbToHSV } = require('./hsv.js');
-const input = require('./input.js');
-const { min } = Math;
-const ui = require('./ui.js');
-const {
-  LINE_CAP_SQUARE,
-  uiButtonHeight,
+import { clamp } from 'glov/common/util';
+import { v3copy, vec3, vec4 } from 'glov/common/vmath';
+import * as camera2d from './camera2d';
+import { hsvToRGB, rgbToHSV } from './hsv';
+import * as input from './input';
+import {
+  spriteClipPause,
+  spriteClipped,
+  spriteClipResume,
+  spriteCreate,
+} from './sprites';
+import { TEXTURE_FORMAT } from './textures';
+import {
+  buttonImage,
   buttonWasFocused,
-} = ui;
-const { spriteClipped, spriteClipPause, spriteClipResume, spriteCreate } = require('./sprites.js');
-const { TEXTURE_FORMAT } = require('./textures.js');
-const { clamp } = require('glov/common/util.js');
-const { vec3, v3copy, vec4 } = require('glov/common/vmath.js');
+  drawLine,
+  getUIElemData,
+  LINE_CAP_SQUARE,
+  panel,
+  sprites as ui_sprites,
+  uiButtonHeight,
+} from './ui';
+
+const { min } = Math;
 
 let color_black = vec4(0,0,0,1);
 
@@ -84,7 +93,7 @@ function initTextures() {
 }
 
 export function colorPicker(param) {
-  let state = ui.getUIElemData('colorpicker', param, colorPickerAlloc);
+  let state = getUIElemData('colorpicker', param, colorPickerAlloc);
   let icon_h = param.icon_h || uiButtonHeight();
   let icon_w = param.icon_w || icon_h;
   let picker_h = param.picker_h || uiButtonHeight() * 4;
@@ -95,10 +104,10 @@ export function colorPicker(param) {
     v3copy(state.rgba, param.color);
   }
 
-  if (ui.buttonImage({
+  if (buttonImage({
     x, y, z,
     w: icon_w, h: icon_h,
-    img: ui.sprites.white,
+    img: ui_sprites.white,
     color: state.rgba,
   })) {
     if (!state.open) {
@@ -145,8 +154,8 @@ export function colorPicker(param) {
     }
     let hs_x = x + hsv[0]*hue_sat_w/360;
     let hs_y = y + (1-hsv[1])*picker_h;
-    ui.drawLine(hs_x - pad, hs_y, hs_x + pad, hs_y, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
-    ui.drawLine(hs_x, hs_y - pad, hs_x, hs_y + pad, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
+    drawLine(hs_x - pad, hs_y, hs_x + pad, hs_y, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
+    drawLine(hs_x, hs_y - pad, hs_x, hs_y + pad, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
     x += hue_sat_w + pad;
 
     hsvToRGB(state.color_hs, hsv[0], hsv[1], 1);
@@ -164,7 +173,7 @@ export function colorPicker(param) {
       hsv[2] = clamp(1 - (pos[1] - y) / val_param.h, 0, 1);
     }
     let v_y = y + (1-hsv[2])*picker_h;
-    ui.drawLine(x, v_y, x + val_w, v_y, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
+    drawLine(x, v_y, x + val_w, v_y, z + 1, 1, 1, color_black, LINE_CAP_SQUARE);
     x += val_w;
 
     hsvToRGB(state.rgba, state.hsv[0], state.hsv[1], state.hsv[2]);
@@ -175,7 +184,7 @@ export function colorPicker(param) {
       handled = true;
     }
     input.drag(panel_param);
-    ui.panel(panel_param);
+    panel(panel_param);
 
     if (clip_pause) {
       spriteClipResume();
