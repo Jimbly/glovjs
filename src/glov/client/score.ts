@@ -404,6 +404,7 @@ export type HighScoreListRaw = {
   my_score?: number;
   list: HighScoreListEntryRaw[];
   histo?: HighScoreHistogramRaw;
+  overloaded?: boolean;
 };
 export type HighScoreListEntry<ScoreType> = {
   names: string[];
@@ -423,6 +424,7 @@ export type HighScoreList<ScoreType> = {
   my_score?: number;
   list: HighScoreListEntry<ScoreType>[];
   histogram?: HighScoreListHistogram;
+  overloaded: boolean;
 };
 class ScoreSystemImpl<ScoreType> {
   score_to_value: (s: ScoreType) => number;
@@ -502,6 +504,7 @@ class ScoreSystemImpl<ScoreType> {
       my_rank: scores.my_rank,
       my_score: scores.my_score,
       list: [],
+      overloaded: scores.overloaded || false,
     };
     let rank = 1;
     for (let ii = 0; ii < scores.list.length; ++ii) {
@@ -586,6 +589,7 @@ class ScoreSystemImpl<ScoreType> {
       my_rank: undefined,
       my_score,
       list: [],
+      overloaded: false,
     };
     if (my_score !== undefined) {
       ret.total++;
