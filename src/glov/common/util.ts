@@ -202,6 +202,35 @@ export function deepAdd(dest: DataObject, src: DataObject): void {
   }
 }
 
+// Creates a deep clone of B, but attempts to preserve shared references from A
+// wherever structurally identical.
+// Expected usage: A is a previous snapshot of B, B has been modified, makes a
+// new snapshot that takes minimal additional memory.
+export function refclone<T>(a: T, b: T): T {
+  if (typeof b !== 'object' || !b) {
+    // primitive type
+    return b;
+  }
+
+  if (deepEqual(a, b)) {
+    return a;
+  }
+
+  if (Array.isArray(b)) {
+    let result: unknown[] = [];
+    for (let i = 0; i < b.length; i++) {
+      result[i] = refclone(a && (a as unknown[])[i], (b as unknown[])[i]);
+    }
+    return result as T;
+  }
+
+  let result: DataObject = {};
+  for (let key in b) {
+    result[key] = refclone(a && (a as DataObject)[key], (b as DataObject)[key]);
+  }
+  return result as T;
+}
+
 export function clamp(v: number, mn: number, mx: number): number {
   return min(max(mn, v), mx);
 }
