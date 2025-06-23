@@ -16,3 +16,7 @@ export function autoResetEachFrame(key: string): boolean {
   auto_reset_data[key] = engine.frame_index;
   return (last_value !== engine.frame_index);
 }
+
+export function autoResetForce(key: string): void {
+  delete auto_reset_data[key];
+}
