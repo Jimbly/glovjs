@@ -241,7 +241,7 @@ export function linkText(param) {
 
 export function linkActivate(spot_key) {
   let state = state_cache[spot_key];
-  if (verify(state) && verify(state.a_elem)) {
+  if (verify(state) && state.a_elem) {
     state.a_elem.click();
   }
 }
