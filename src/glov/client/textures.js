@@ -6,6 +6,14 @@
 export const GL_REPEAT = 0x2901;
 export const GL_CLAMP_TO_EDGE = 0x812f;
 
+export const TEXTURE_FORMAT = {
+  R8: { count: 1 },
+  RGB8: { count: 3 },
+  RGBA8: { count: 4 },
+  DEPTH16: { count: 1 },
+  DEPTH24: { count: 1 },
+};
+
 import * as assert from 'assert';
 import {
   FORMAT_PACK,
@@ -57,14 +65,6 @@ const cube_faces = [
   { target: 'TEXTURE_CUBE_MAP_NEGATIVE_Z', pos: [2,0] },
   { target: 'TEXTURE_CUBE_MAP_POSITIVE_Z', pos: [2,1] },
 ];
-
-export const TEXTURE_FORMAT = {
-  R8: { count: 1 },
-  RGB8: { count: 3 },
-  RGBA8: { count: 4 },
-  DEPTH16: { count: 1 },
-  DEPTH24: { count: 1 },
-};
 
 export function textureDefaultFilters(min, mag) {
   default_filter_min = min;
