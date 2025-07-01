@@ -121,7 +121,7 @@ export let antialias_unavailable;
 
 export let game_width;
 export let game_height;
-let game_aspect;
+let render_aspect;
 
 export let render_width;
 export let render_height;
@@ -215,15 +215,15 @@ export function setFOV(fov_min) {
   let w = width_3d;
   let h = height_3d;
   let aspect = w / h;
-  if (aspect > game_aspect) {
+  if (aspect >= render_aspect) {
     fov_y = fov_min;
     let rise = sin(fov_y / 2) / cos(fov_y / 2) * aspect;
     fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
   } else {
-    // Calculate what fov_x would be if the screen was game_aspect, then derive fov_y from that
-    let rise = sin(fov_min / 2) / cos(fov_min / 2) * game_aspect;
+    // Calculate what fov_x would be if the screen was render_aspect, then derive fov_y from that
+    let rise = sin(fov_min / 2) / cos(fov_min / 2) * render_aspect;
     fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
-    // Old method, just apply fov to x (it's the same thing, if game_aspect is 1.0)
+    // Old method, just apply fov to x (it's the same thing, if render_aspect is 1.0)
     // fov_x = fov_min;
     let rise2 = sin(fov_x / 2) / cos(fov_x / 2) / aspect;
     fov_y = 2 * asin(rise2 / sqrt(rise2 * rise2 + 1));
@@ -233,7 +233,6 @@ export function setFOV(fov_min) {
 export function setGameDims(w, h) {
   game_width = w;
   game_height = h;
-  game_aspect = game_width / game_height;
 }
 
 // Didn't need this for a while, but got slow on iOS recently :(
@@ -818,6 +817,7 @@ export function setZRange(znear, zfar) {
 function set3DRenderResolution(w, h) {
   width_3d = w;
   height_3d = h;
+  render_aspect = width_3d / height_3d;
 }
 
 let want_render_scale_3d_this_frame;
