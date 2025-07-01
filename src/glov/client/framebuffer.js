@@ -143,33 +143,47 @@ export function framebufferCapture(tex, w, h, filter_linear, wrap) {
 let cur_tex;
 let cur_depth;
 export function framebufferStart(opts) {
-  assert(!cur_tex);
-  assert(!cur_depth);
-  let { width, height, viewport, final, clear, need_depth, clear_all, clear_color, clear_all_color, force_tex } = opts;
+  let {
+    width,
+    height,
+    viewport,
+    final,
+    clear,
+    need_depth,
+    clear_all,
+    clear_color,
+    clear_all_color,
+    force_tex,
+    just_viewport,
+  } = opts;
   if (!width) {
     width = renderWidth();
     height = renderHeight();
   }
-  ++num_passes;
-  cur_depth = null;
-  if (force_tex) {
-    assert(viewport);
-    cur_tex = force_tex;
-    cur_tex.captureStart();
-  } else if (!final) {
-    cur_tex = framebufferCaptureStart(null, width, height, true);
-    if (settings.use_fbos) {
-      assert(cur_tex.fbo);
-      if (need_depth) {
-        if (need_depth === 'texture') {
-          cur_depth = bindTemporaryDepthbufferTexture(width, height);
+  if (!just_viewport) {
+    ++num_passes;
+    assert(!cur_tex);
+    assert(!cur_depth);
+    cur_depth = null;
+    if (force_tex) {
+      assert(viewport);
+      cur_tex = force_tex;
+      cur_tex.captureStart();
+    } else if (!final) {
+      cur_tex = framebufferCaptureStart(null, width, height, true);
+      if (settings.use_fbos) {
+        assert(cur_tex.fbo);
+        if (need_depth) {
+          if (need_depth === 'texture') {
+            cur_depth = bindTemporaryDepthbufferTexture(width, height);
+          } else {
+            bindTemporaryDepthbuffer(width, height);
+          }
         } else {
-          bindTemporaryDepthbuffer(width, height);
+          // testing: force unbind, in case one was left bound
+          // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, settings.fbo_depth16 ?
+          //   gl.DEPTH_ATTACHMENT : gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, null);
         }
-      } else {
-        // testing: force unbind, in case one was left bound
-        // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, settings.fbo_depth16 ?
-        //   gl.DEPTH_ATTACHMENT : gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, null);
       }
     }
   }
