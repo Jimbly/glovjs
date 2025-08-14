@@ -605,12 +605,11 @@ let draw_box_param = {
 };
 
 function scale9PatchDims(pixel_scale, target_width, widths) {
-  let ws = [];
+  // TODO: move this top part into uidata/atlas pre-calculations?
   let fixed_ws = 0;
   let stretch_ws = 0;
   for (let ii = 0; ii < widths.length; ++ii) {
-    let w = widths[ii] * pixel_scale;
-    ws.push(w);
+    let w = widths[ii];
     if (ii % 2) {
       stretch_ws += w;
     } else {
@@ -619,50 +618,47 @@ function scale9PatchDims(pixel_scale, target_width, widths) {
   }
   let fixedscale;
   let stretchscale;
-  if (fixed_ws > target_width) {
+  if (fixed_ws * pixel_scale > target_width) {
     // too large even with stretchable sections, shrink (non-uniformly)
     fixedscale = target_width / fixed_ws;
-    stretchscale = 0;
   } else {
-    fixedscale = 1;
-    stretchscale = (target_width - fixed_ws) / stretch_ws;
+    fixedscale = pixel_scale;
   }
-  for (let ii = 0; ii < ws.length; ++ii) {
-    if (ii % 2) {
-      ws[ii] *= stretchscale;
-    } else {
-      ws[ii] *= fixedscale;
-    }
-  }
-  return ws;
+  stretchscale = stretch_ws ? // avoid divide by 0 (result probably unused though)
+    (target_width - fixed_ws * fixedscale) / stretch_ws :
+    fixedscale;
+  return [fixedscale, stretchscale];
 }
 
 // Draws an arbitrary 9-patch (assumes upper left patch is not stretched)
 // pixel_scale is ignored if there's no stretchable portions in some dimension
+// Returns the padded bounds (or the whole rect, if they don't exist)
+// eslint-disable-next-line consistent-return
 export function draw9Patch(coords, s, pixel_scale, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  // non-strechable in one dimension?  Use that scale uniformly
-  if (uidata.heights.length === 1 && uidata.widths.length > 1) {
-    pixel_scale = coords.h / uidata.heights[0];
-  } else if (uidata.widths.length === 1 && uidata.heights.length > 1) {
-    pixel_scale = coords.w / uidata.widths[0];
+  let { widths, heights } = uidata;
+  // non-stretchable in one dimension?  Use that scale uniformly
+  if (uidata.heights.length === 1 && widths.length > 1) {
+    pixel_scale = coords.h / heights[0];
+  } else if (widths.length === 1 && heights.length > 1) {
+    pixel_scale = coords.w / widths[0];
   }
-  let ws = scale9PatchDims(pixel_scale, coords.w, uidata.widths);
-  let hs = scale9PatchDims(pixel_scale, coords.h, uidata.heights);
+  let hscales = scale9PatchDims(pixel_scale, coords.w, widths);
+  let vscales = scale9PatchDims(pixel_scale, coords.h, heights);
   let x = coords.x;
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
   draw_box_param.color1 = coords.color1 || null;
-  for (let ii = 0; ii < ws.length; ++ii) {
-    let my_w = ws[ii];
+  for (let ii = 0; ii < widths.length; ++ii) {
+    let my_w = widths[ii] * hscales[ii % 2];
     if (my_w) {
       draw_box_param.x = x;
       draw_box_param.w = my_w;
       let y = coords.y;
-      for (let jj = 0; jj < hs.length; ++jj) {
-        let my_h = hs[jj];
+      for (let jj = 0; jj < heights.length; ++jj) {
+        let my_h = heights[jj] * vscales[jj % 2];
         if (my_h) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
@@ -679,6 +675,21 @@ export function draw9Patch(coords, s, pixel_scale, color) {
     }
   }
   spriteChainedStop();
+
+  if (uidata.padh || uidata.padv) {
+    let ret = {};
+    if (uidata.padh && uidata.padh.length >= 2) {
+      let padhscales = scale9PatchDims(hscales[0], coords.w, uidata.padh);
+      ret.x = coords.x + uidata.padh[0] * padhscales[0];
+      ret.w = uidata.padh[1] * padhscales[1];
+    }
+    if (uidata.padv && uidata.padv.length >= 2) {
+      let padvscales = scale9PatchDims(vscales[0], coords.h, uidata.padv);
+      ret.y = coords.y + uidata.padv[0] * padvscales[0];
+      ret.h = uidata.padv[1] * padvscales[1];
+    }
+    return ret;
+  }
 }
 
 export function drawHBox(coords, s, color) {
@@ -1168,6 +1179,7 @@ export function buttonBackgroundDraw(param, state) {
   profilerStartFunc();
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
+  let ret;
   if (!param.no_bg) {
     let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
@@ -1180,16 +1192,16 @@ export function buttonBackgroundDraw(param, state) {
       sprite = sprites[base_name];
     }
 
-    if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
-      drawHBox(param, sprite, color);
-    } else if (sprite.uidata.rects.length === 9) {
-      // TODO: merge with below if drawBox is just calling draw9Patch anyway?
-      drawBox(param, sprite, param.pixel_scale || 1, color);
-    } else {
-      draw9Patch(param, sprite, param.pixel_scale || 1, color);
-    }
+    // if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
+    //   drawHBox(param, sprite, color);
+    // } else if (sprite.uidata.rects.length === 9) {
+    //   drawBox(param, sprite, param.pixel_scale || 1, color);
+    // } else {
+    ret = draw9Patch(param, sprite, param.pixel_scale || 1, color);
+    // }
   }
   profilerStopFunc();
+  return ret;
 }
 
 export function buttonSpotBackgroundDraw(param, spot_state) {
@@ -1200,7 +1212,7 @@ export function buttonSpotBackgroundDraw(param, spot_state) {
 
 export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
-  buttonBackgroundDraw(param, state);
+  let patch_pad = buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   let vpad = min(param.font_height * 0.17, param.h * 0.1);
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
@@ -1214,6 +1226,14 @@ export function buttonTextDraw(param, state, focused) {
   let z = param.z + 0.1;
   let w = param.w - hpad * 2;
   let h = param.h - vpad * 2;
+  if (patch_pad) {
+    if (patch_pad.x !== undefined) {
+      ({ x, w } = patch_pad);
+    }
+    if (patch_pad.y !== undefined) {
+      ({ y, h } = patch_pad);
+    }
+  }
   let align = param.align || glov_font.ALIGN.HVCENTERFIT;
   let text_height = param.font_height;
   if (param.markdown) {
