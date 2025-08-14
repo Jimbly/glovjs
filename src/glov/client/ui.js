@@ -614,7 +614,88 @@ export function uiBindSounds(_sounds) {
 let draw_box_param = {
   nozoom: true, // nozoom since different parts of the box get zoomed differently
 };
+
+function scale9PatchDims(pixel_scale, target_width, widths) {
+  let ws = [];
+  let fixed_ws = 0;
+  let stretch_ws = 0;
+  for (let ii = 0; ii < widths.length; ++ii) {
+    let w = widths[ii] * pixel_scale;
+    ws.push(w);
+    if (ii % 2) {
+      stretch_ws += w;
+    } else {
+      fixed_ws += w;
+    }
+  }
+  let fixedscale;
+  let stretchscale;
+  if (fixed_ws > target_width) {
+    // too large even with stretchable sections, shrink (non-uniformly)
+    fixedscale = target_width / fixed_ws;
+    stretchscale = 0;
+  } else {
+    fixedscale = 1;
+    stretchscale = (target_width - fixed_ws) / stretch_ws;
+  }
+  for (let ii = 0; ii < ws.length; ++ii) {
+    if (ii % 2) {
+      ws[ii] *= stretchscale;
+    } else {
+      ws[ii] *= fixedscale;
+    }
+  }
+  return ws;
+}
+
+// Draws an arbitrary 9-patch (assumes upper left patch is not stretched)
+// pixel_scale is ignored if there's no stretchable portions in some dimension
+export function draw9Patch(coords, s, pixel_scale, color) {
+  spriteChainedStart();
+  let uidata = s.uidata;
+  // non-strechable in one dimension?  Use that scale uniformly
+  if (uidata.heights.length === 1 && uidata.widths.length > 1) {
+    pixel_scale = coords.h / uidata.heights[0];
+  } else if (uidata.widths.length === 1 && uidata.heights.length > 1) {
+    pixel_scale = coords.w / uidata.widths[0];
+  }
+  let ws = scale9PatchDims(pixel_scale, coords.w, uidata.widths);
+  let hs = scale9PatchDims(pixel_scale, coords.h, uidata.heights);
+  let x = coords.x;
+  draw_box_param.z = coords.z;
+  draw_box_param.color = color;
+  draw_box_param.shader = null;
+  draw_box_param.color1 = coords.color1 || null;
+  for (let ii = 0; ii < ws.length; ++ii) {
+    let my_w = ws[ii];
+    if (my_w) {
+      draw_box_param.x = x;
+      draw_box_param.w = my_w;
+      let y = coords.y;
+      for (let jj = 0; jj < hs.length; ++jj) {
+        let my_h = hs[jj];
+        if (my_h) {
+          draw_box_param.y = y;
+          draw_box_param.h = my_h;
+          draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+          if (coords.color1) {
+            s.drawDualTint(draw_box_param);
+          } else {
+            s.draw(draw_box_param);
+          }
+          y += my_h;
+        }
+      }
+      x += my_w;
+    }
+  }
+  spriteChainedStop();
+}
+
 export function drawHBox(coords, s, color) {
+  if (1) {
+    return void draw9Patch(coords, s, panel_pixel_scale, color);
+  }
   spriteChainedStart();
   let uidata = s.uidata;
   let x = coords.x;
@@ -675,6 +756,12 @@ export function drawVBox(coords, s, color) {
 }
 
 export function drawBox(coords, s, pixel_scale, color, color1) {
+  if (color1) {
+    coords.color1 = color1; // old API
+  }
+  if (1) {
+    return void draw9Patch(coords, s, pixel_scale, color);
+  }
   spriteChainedStart();
   let uidata = s.uidata;
   let scale = pixel_scale;
@@ -686,9 +773,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
-  if (color1) {
-    draw_box_param.color1 = color1;
-  }
+  draw_box_param.color1 = coords.color1 || null;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
@@ -701,7 +786,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
           draw_box_param.uvs = uidata.rects[jj * 3 + ii];
-          if (color1) {
+          if (coords.color1) {
             s.drawDualTint(draw_box_param);
           } else {
             s.draw(draw_box_param);
@@ -717,6 +802,9 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
 
 // Tiles in the repeating portions
 export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
+  if (color1) {
+    coords.color1 = color1; // old API
+  }
   spriteChainedStart();
   let uidata = s.uidata;
   let scale = pixel_scale;
@@ -730,9 +818,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
-  if (color1) {
-    draw_box_param.color1 = color1;
-  }
+  draw_box_param.color1 = coords.color1 || null;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
@@ -751,7 +837,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
             draw_box_param.uvs = uidata.rects[jj * 3 + ii];
             for (let yy = 0; yy < tile_y; ++yy) {
               draw_box_param.y = y + yy * draw_box_param.h;
-              if (color1) {
+              if (coords.color1) {
                 s.drawDualTint(draw_box_param);
               } else {
                 s.draw(draw_box_param);
@@ -1105,10 +1191,13 @@ export function buttonBackgroundDraw(param, state) {
       sprite = sprites[base_name];
     }
 
-    if (sprite.uidata.rects.length === 9) {
+    if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
+      drawHBox(param, sprite, color);
+    } else if (sprite.uidata.rects.length === 9) {
+      // TODO: merge with below if drawBox is just calling draw9Patch anyway?
       drawBox(param, sprite, param.pixel_scale || 1, color);
     } else {
-      drawHBox(param, sprite, color);
+      draw9Patch(param, sprite, param.pixel_scale || 1, color);
     }
   }
   profilerStopFunc();
