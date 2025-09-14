@@ -24,6 +24,10 @@ function renderResetFilter(): void {
     filter_min: gl.NEAREST,
     filter_mag: gl.NEAREST,
   });
+  autoAtlasTextureOpts('dcex', {
+    filter_min: gl.NEAREST,
+    filter_mag: gl.NEAREST,
+  });
   autoAtlasTextureOpts('spireish', ss);
 }
 

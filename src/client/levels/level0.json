@@ -924,7 +924,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -966,18 +966,12 @@
       ]
     },
     {
-      "id": "pit",
+      "id": "open",
       "walls": [
         "open",
         "open",
         "solid",
         "solid"
-      ],
-      "events": [
-        {
-          "id": "floor_pit",
-          "param": "1"
-        }
       ]
     },
     {
@@ -996,12 +990,6 @@
         "open",
         "open",
         "solid"
-      ],
-      "events": [
-        {
-          "id": "dialog",
-          "param": "nametest"
-        }
       ]
     },
     {
@@ -1059,18 +1047,12 @@
       ]
     },
     {
-      "id": "pit",
+      "id": "open",
       "walls": [
         "solid",
         "open",
         "solid",
         "open"
-      ],
-      "events": [
-        {
-          "id": "floor_pit",
-          "param": "1"
-        }
       ]
     },
     {
@@ -1098,16 +1080,10 @@
         "open",
         "solid",
         "open"
-      ],
-      "events": [
-        {
-          "id": "move",
-          "param": "E"
-        }
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -1122,12 +1098,6 @@
         "open",
         "open",
         "open"
-      ],
-      "events": [
-        {
-          "id": "move",
-          "param": "W"
-        }
       ]
     },
     {
@@ -1146,27 +1116,15 @@
         "open",
         "solid",
         "open"
-      ],
-      "events": [
-        {
-          "id": "sign",
-          "param": "sign - watch out for pit"
-        }
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail5",
       "walls": [
         "open",
         "open",
         "open",
         "open"
-      ],
-      "events": [
-        {
-          "id": "dialog",
-          "param": "modal Modal dialog"
-        }
       ]
     },
     {
@@ -1241,7 +1199,7 @@
     {
       "id": "open",
       "walls": [
-        "stairs_out",
+        "solid",
         "open",
         "stairs_in",
         "open"
@@ -1275,15 +1233,9 @@
       "id": "open",
       "walls": [
         "open",
-        "open",
+        "dcex_arch",
         "solid",
         "open"
-      ],
-      "events": [
-        {
-          "id": "sign",
-          "param": "Forced Move"
-        }
       ]
     },
     {
@@ -1320,12 +1272,6 @@
         "solid",
         "open",
         "open"
-      ],
-      "events": [
-        {
-          "id": "sign",
-          "param": "Dialogs"
-        }
       ]
     },
     {
@@ -1335,12 +1281,6 @@
         "solid",
         "open",
         "open"
-      ],
-      "events": [
-        {
-          "id": "dialog",
-          "param": "kbhint Keyboard-only hint, press F11"
-        }
       ]
     },
     {
@@ -1389,7 +1329,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail1",
       "walls": [
         "open",
         "open",
@@ -1416,7 +1356,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -1434,12 +1374,12 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail3",
       "walls": [
         "solid",
         "open",
         "open",
-        "open"
+        "dcex_arch"
       ]
     },
     {
@@ -1560,7 +1500,16 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
+      "walls": [
+        "open",
+        "open",
+        "open",
+        "open"
+      ]
+    },
+    {
+      "id": "dcex_detail6",
       "walls": [
         "open",
         "open",
@@ -1576,16 +1525,6 @@
         "open",
         "open"
       ]
-    },
-    {
-      "id": "open",
-      "walls": [
-        "open",
-        "open",
-        "open",
-        "open"
-      ],
-      "h": 0.125
     },
     {
       "id": "open",
@@ -1598,7 +1537,7 @@
       "h": 0.25
     },
     {
-      "id": "open",
+      "id": "dcex_detail5",
       "walls": [
         "solid",
         "solid",
@@ -1719,7 +1658,7 @@
       "id": "open",
       "walls": [
         "open",
-        "solid",
+        "dcex_detail4",
         "open",
         "open"
       ]
@@ -1863,9 +1802,9 @@
       "id": "open",
       "walls": [
         "solid",
-        "door_locked",
+        "door",
         "solid",
-        "solid"
+        "dcex_detail4"
       ]
     },
     {
@@ -1980,7 +1919,7 @@
       "id": "open",
       "walls": [
         "open",
-        "solid",
+        "dcex_solid3",
         "open",
         "solid"
       ]
@@ -1998,7 +1937,7 @@
       "id": "open",
       "walls": [
         "open",
-        "solid",
+        "dcex_solid3",
         "open",
         "solid"
       ]
@@ -2009,7 +1948,7 @@
         "open",
         "open",
         "open",
-        "door_locked"
+        "door"
       ],
       "props": {
         "key_south": "door1"
@@ -2117,7 +2056,7 @@
     {
       "id": "open",
       "walls": [
-        "solid",
+        "dcex_solid3",
         "open",
         "solid",
         "open"
@@ -2135,9 +2074,9 @@
     {
       "id": "open",
       "walls": [
-        "solid",
+        "dcex_solid3",
         "open",
-        "solid",
+        "dcex_solid3",
         "open"
       ]
     },
@@ -2155,7 +2094,7 @@
       "walls": [
         "solid",
         "open",
-        "solid",
+        "dcex_solid3",
         "open"
       ]
     },
@@ -2273,7 +2212,7 @@
         "open",
         "solid",
         "open",
-        "solid"
+        "dcex_solid3"
       ],
       "events": [
         {
@@ -2286,22 +2225,20 @@
       "id": "open",
       "walls": [
         "open",
-        "demo_walldetail2",
+        "dcex_solid3",
         "open",
         "open"
       ]
     },
     {
-      "id": "floorswitch",
+      "id": "open",
       "walls": [
         "open",
         "solid",
         "open",
-        "solid"
+        "dcex_solid3"
       ],
-      "props": {
-        "key_cell": "door1"
-      },
+      "props": {},
       "events": [
         {
           "id": "key_clear",
@@ -2310,25 +2247,17 @@
       ]
     },
     {
-      "id": "floorswitch",
+      "id": "open",
       "walls": [
         "open",
         "solid",
         "open",
         "open"
       ],
-      "props": {
-        "key_cell": "door1"
-      },
-      "events": [
-        {
-          "id": "key_set",
-          "param": ""
-        }
-      ]
+      "props": {}
     },
     {
-      "id": "demo_fountain",
+      "id": "open",
       "walls": [
         "solid",
         "solid",
@@ -2429,15 +2358,15 @@
   ],
   "initial_entities": [
     {
-      "type": "demo_shopkeeper",
+      "type": "dcex_enemy4",
       "pos": [
         5,
         13,
-        0
+        2
       ]
     },
     {
-      "type": "demo_shopkeeper",
+      "type": "dcex_enemy1",
       "pos": [
         0,
         10,
@@ -2445,7 +2374,7 @@
       ]
     },
     {
-      "type": "demo_wander",
+      "type": "dcex_enemy3",
       "pos": [
         0,
         11,
@@ -2453,16 +2382,32 @@
       ]
     },
     {
-      "type": "enemy0",
+      "type": "dcex_enemy2",
       "pos": [
         5,
         11,
         2
       ]
+    },
+    {
+      "type": "dcex_enemy4",
+      "pos": [
+        6,
+        6,
+        1
+      ]
+    },
+    {
+      "type": "demo_wander",
+      "pos": [
+        11,
+        6,
+        2
+      ]
     }
   ],
   "state": {},
-  "vstyle": "",
+  "vstyle": "dcex",
   "seed": "32845502",
   "props": {},
   "paths": {}

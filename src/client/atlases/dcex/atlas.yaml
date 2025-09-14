@@ -1,0 +1,6 @@
+---
+pad: 4
+tile_regex: null # everything tiles
+tile_horiz_regex: null
+tile_vert_regex: null
+max_tex_size: 1024

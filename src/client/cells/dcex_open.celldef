@@ -1,0 +1,17 @@
+---
+open_vis: true
+default_wall: solid
+
+visuals:
+- pass: bg
+  type: simple_floor
+  opts:
+    atlas: dcex
+    tile: floor
+- pass: bg
+  type: simple_ceiling
+  opts:
+    atlas: dcex
+    tile: ceiling
+
+corners: # pillars and floor/ceiling details

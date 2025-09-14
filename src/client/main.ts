@@ -1,7 +1,7 @@
 /* eslint-disable n/global-require */
 /* eslint @stylistic/comma-spacing:error*/
 import * as local_storage from 'glov/client/local_storage.js'; // eslint-disable-line import/order
-local_storage.setStoragePrefix('crawler'); // Before requiring anything else that might load from this
+local_storage.setStoragePrefix('dcextest'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
 import { autoAtlasTextureOpts } from 'glov/client/autoatlas';
@@ -75,7 +75,7 @@ export function main(): void {
   let need_dfdxy = false;
 
   // @ts-expect-error truthy
-  if (!'AA hires pixel art') {
+  if ('AA hires pixel art') {
     need_dfdxy = true;
     antialias = true; // antialiases 3D geometry edges only
     use_fbos = 0;

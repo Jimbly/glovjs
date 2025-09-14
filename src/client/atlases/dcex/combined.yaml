@@ -1,0 +1,24 @@
+---
+tile_res: 12
+tiles:
+  solid1: [0, 0]
+  solid2: [1, 0]
+  solid3: [2, 0]
+  solid4: [3, 0]
+
+  door: [0, 1]
+  stairs_in: [1, 1]
+  stairs_out: [1, 1]
+  arch: [2, 1]
+  ceiling: [3, 1]
+
+  detail1: [0, 2]
+  detail2: [1, 2]
+  detail3: [2, 2]
+  detail4: [3, 2]
+
+  detail5: [0, 3]
+  detail6: [1, 3]
+  detail7: [2, 3]
+  floor: [3, 3]
+

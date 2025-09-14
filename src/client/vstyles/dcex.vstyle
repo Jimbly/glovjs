@@ -1,0 +1,23 @@
+---
+fog_color: '#191c0e'
+background_color: '#191c0e'
+# background_img: backdrop_dcex
+fog_params:
+- 0.003
+- 0.0005
+- 800.0
+cell_swaps:
+  open: dcex_open
+wall_swaps:
+  open: dcex_open
+  door: dcex_door
+  door_oneway: dcex_door
+  # door_locked: demo_door_locked
+  # door_locked_unlocked: demo_door_locked_unlocked
+  entrance: dcex_stairs_in
+  secret_door: dcex_secret_door
+  secret_door_unvisited: dcex_secret_door
+  solid: dcex_solid1
+  stairs_in: dcex_stairs_in
+  stairs_out: dcex_stairs_out
+  # floorswitch: dcex_floorswitch
