@@ -15,3 +15,10 @@ traits:
     filter_mag: LINEAR
     origin: [0.5, 1]
   scale: 1
+  simple_anim:
+    - period: 5000
+      scale: [1, 0.95]
+      # easing: 2
+      # offs:
+      #   - [0, -0.15]
+      #   - [0, 0]

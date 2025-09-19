@@ -6,7 +6,7 @@ visuals:
   type: simple_floor
   opts:
     atlas: dcex
-    tile: floor
+    tile: floor2
 - pass: bg
   type: simple_ceiling
   opts:

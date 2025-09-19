@@ -14,4 +14,11 @@ traits:
     filter_min: LINEAR_MIPMAP_LINEAR
     filter_mag: LINEAR
     origin: [0.5, 1]
-  scale: 0.62
+  scale: 0.75
+  simple_anim:
+    - period: 4000
+      scale: [1, 0.9]
+      # easing: 2
+      # offs:
+      #   - [0, -0.15]
+      #   - [0, 0]

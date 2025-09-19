@@ -1,6 +1,6 @@
 ---
-fog_color: '#191c0e'
-background_color: '#191c0e'
+fog_color: '#181425'
+background_color: '#181425'
 # background_img: backdrop_dcex
 fog_params:
 - 0.003

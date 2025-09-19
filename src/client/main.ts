@@ -87,7 +87,7 @@ export function main(): void {
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
   // @ts-expect-error truthy
-  } else if ('AA hires HD art') {
+  } else if (!'AA hires HD art') {
     antialias = true; // antialiases 3D geometry edges only
     settingsSet('pixely', 0);
     settingsSet('filter', 1);
@@ -121,7 +121,7 @@ export function main(): void {
     settingsSet('entity_split', 0);
     settingsSet('entity_nosplit_use_near', 1);
   // @ts-expect-error truthy
-  } else if (!'CRT filter') {
+  } else if ('CRT filter') {
     settingsSet('pixely', 2);
     settingsSet('hybrid', 1);
     settingsSet('filter', 0);
