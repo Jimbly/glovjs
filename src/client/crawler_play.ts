@@ -47,6 +47,7 @@ import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import type { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
   DataObject,
+  ErrorCallback,
 } from 'glov/common/types';
 import {
   callEach,
@@ -611,15 +612,30 @@ function fetchLevel(filename: string, cb: (err?: string, data?: CrawlerLevelSeri
   });
 }
 
+function levelFallbackProviderDefault(
+  floor_id: number,
+  cb: ErrorCallback<CrawlerLevelSerialized, string>,
+): void {
+  fetchLevel('empty', cb);
+}
+
+export type LevelProvider = (
+  floor_id: number,
+  cb: ErrorCallback<CrawlerLevelSerialized, string>,
+) => void;
+
+let level_fallback_provider: LevelProvider;
+
 function getLevelForFloorFromWebFS(floor_id: number, cb: (level: CrawlerLevelSerialized) => void): void {
   let url = `${getURLBase()}/levels/level${floor_id}.json`;
   fetchLevel(`level${floor_id}`, (err?: string, data?: CrawlerLevelSerialized) => {
     if (err) {
-      return fetchLevel('empty', (err?: string, data2?: CrawlerLevelSerialized) => {
+      return level_fallback_provider(floor_id, (err, data2) => {
         if (err) {
           throw new Error(`Error loading "${url}": ${err}`);
         }
-        cb(data2!);
+        assert(data2);
+        cb(data2);
       });
     }
     cb(data!);
@@ -1161,6 +1177,7 @@ export function crawlerPlayStartup(param: {
   allow_offline_console?: boolean;
   chat_ui_param?: CrawlerChatUIParam;
   turn_based_step?: () => void;
+  level_fallback_provider?: LevelProvider;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
@@ -1172,6 +1189,7 @@ export function crawlerPlayStartup(param: {
   allow_offline_console = param.allow_offline_console || false;
   chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
   turn_based_step = param.turn_based_step;
+  level_fallback_provider = param.level_fallback_provider || levelFallbackProviderDefault;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');
