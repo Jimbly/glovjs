@@ -32,6 +32,7 @@ import {
 import {
   ButtonParam,
   ButtonStateString,
+  getUIElemData,
   playUISound,
   uiGetFont,
 } from 'glov/client/ui';
@@ -71,6 +72,13 @@ const PADNAMES = [
   // '←',
   // '→',
 ];
+
+type ButtonState = {
+  seen_down_edge: boolean;
+};
+function allocButtonState(): ButtonState {
+  return { seen_down_edge: false };
+}
 
 export type CrawlerNavButtonRet = {
   down_edge: number;
@@ -133,7 +141,8 @@ export function crawlerOnScreenButton(param: {
     disabled,
     sound_button,
   };
-  // Deal with down edge, down time, rollover ourself, combined with key and pad handling
+  let button_state = getUIElemData('crawlerOnScreenButton', button_param, allocButtonState);
+  // Deal with down edge, down time, rollover ourselves, combined with key and pad handling
   let state: SpotStateEnum = SPOT_STATE_REGULAR;
   let nav_ret: CrawlerNavButtonRet = {
     down_edge: 0,
@@ -144,13 +153,14 @@ export function crawlerOnScreenButton(param: {
     if (!no_visible_ui) {
       if (input.mouseDownEdge(button_param)) {
         nav_ret.down_edge++;
+        button_state.seen_down_edge = true;
       }
       let { spot_state, ret } = spot(button_param);
       if (spot_state === SPOT_STATE_DOWN) {
         nav_ret.down += engine.frame_dt;
       }
       state = spot_state;
-      if (do_up_edge) {
+      if (do_up_edge && button_state.seen_down_edge) {
         nav_ret.up_edge+=ret;
       }
     }
@@ -163,7 +173,8 @@ export function crawlerOnScreenButton(param: {
           playUISound(sound_button);
           nav_ret.down_edge++;
           nav_ret.down++;
-        } else if (input.mouseDownMidClick(touch_hotzone)) {
+          button_state.seen_down_edge = true;
+        } else if (input.mouseDownMidClick(touch_hotzone) && button_state.seen_down_edge) {
           nav_ret.down++;
         }
       }
@@ -171,11 +182,12 @@ export function crawlerOnScreenButton(param: {
     for (let ii = 0; ii < keys.length; ++ii) {
       if (keyDownEdge(keys[ii])) {
         nav_ret.down_edge++;
+        button_state.seen_down_edge = true;
       }
       if (keyDown(keys[ii])) {
         nav_ret.down++;
       }
-      if (keyUpEdge(keys[ii])) {
+      if (keyUpEdge(keys[ii]) && button_state.seen_down_edge) {
         if (do_up_edge && !disabled) {
           nav_ret.up_edge++;
           spotSetPadMode(true);
@@ -186,11 +198,12 @@ export function crawlerOnScreenButton(param: {
     for (let ii = 0; ii < pads.length; ++ii) {
       if (padButtonDownEdge(pads[ii])) {
         nav_ret.down_edge++;
+        button_state.seen_down_edge = true;
       }
       if (padButtonDown(pads[ii])) {
         nav_ret.down++;
       }
-      if (padButtonUpEdge(pads[ii])) {
+      if (padButtonUpEdge(pads[ii]) && button_state.seen_down_edge) {
         if (do_up_edge && !disabled) {
           nav_ret.up_edge++;
           spotSetPadMode(true);
@@ -202,6 +215,13 @@ export function crawlerOnScreenButton(param: {
 
   if (disabled) {
     nav_ret.down_edge = nav_ret.up_edge = nav_ret.down = 0;
+  }
+
+  if (button_state.seen_down_edge && !nav_ret.down) {
+    button_state.seen_down_edge = false;
+  }
+  if (!button_state.seen_down_edge && nav_ret.down) {
+    nav_ret.down = 0;
   }
 
   if (nav_ret.down_edge || nav_ret.down) {
