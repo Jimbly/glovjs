@@ -194,16 +194,23 @@ function dimsSplit(
 }
 
 
-const HPAD = 4;
-const BUTTON_HEAD = 4;
 const BUTTON_PAD = 1;
-export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_bottom: number },
+export function dialogRun(
+  dt: number,
+  viewport: UIBox & {
+    pad_lr: number;
+    pad_top: number;
+    pad_bottom: number;
+    pad_bottom_with_buttons: number;
+  },
   suppress_transient: boolean,
 ): boolean {
   if (buildModeActive()) {
     active_dialog = null;
   }
-  let { x, y, w, h, z, pad_top, pad_bottom } = viewport;
+  let { x, y, w, h, z, pad_top, pad_bottom, pad_bottom_with_buttons, pad_lr } = viewport;
+  const HPAD = pad_lr; // default 4
+  const BUTTON_HEAD = HPAD;
   z = z || Z.DIALOG || Z.STATUS;
   if (!active_dialog) {
     return false;
@@ -237,6 +244,9 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   }
 
   let num_buttons = buttons && buttons.length || 0;
+  if (num_buttons) {
+    pad_bottom = pad_bottom_with_buttons;
+  }
   let buttons_h = num_buttons * uiButtonHeight() + (num_buttons ? BUTTON_HEAD + (num_buttons - 1) * BUTTON_PAD : 0);
   const text_height = uiTextHeight();
   let size = text_height;

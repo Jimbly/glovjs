@@ -401,6 +401,7 @@ function playCrawl(): void {
     z: Z.STATUS,
     pad_top: 2,
     pad_bottom: 4,
+    pad_bottom_with_buttons: 4,
     pad_lr: 4,
   };
   if (is_fullscreen_ui || frame_map_view) {
