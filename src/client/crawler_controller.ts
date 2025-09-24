@@ -1083,6 +1083,8 @@ export class CrawlerController {
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
   script_api: CrawlerScriptAPIClient;
   on_init_level?: (floor_id: number) => void;
+  on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
+  on_move_start?: (pos: Vec2) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
   player_controller!: PlayerController;
@@ -1092,6 +1094,8 @@ export class CrawlerController {
     entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
     script_api: CrawlerScriptAPIClient;
     on_init_level?: (floor_id: number) => void;
+    on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
+    on_move_start?: (pos: Vec2) => void;
     on_enter_cell?: (pos: Vec2) => void;
     flush_vis_data?: (force: boolean) => void;
     controller_type?: string;
@@ -1101,12 +1105,13 @@ export class CrawlerController {
     this.script_api = param.script_api;
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
+    this.on_player_move = param.on_player_move;
+    this.on_move_start = param.on_move_start;
     this.on_enter_cell = param.on_enter_cell;
     this.setControllerType(param.controller_type || 'queued2');
     this.script_api.setController(this);
   }
 
-  on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
   setOnPlayerMove(fn: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void): void {
     this.on_player_move = fn;
   }
@@ -1793,6 +1798,10 @@ export class CrawlerController {
 
     this.applyPlayerMove(action_id, [new_pos[0], new_pos[1], new_rot],
       pos_changed ? this.resyncPosOnError.bind(this) : undefined);
+
+    if (!buildModeActive() && pos_changed) {
+      this.on_move_start?.(new_pos);
+    }
   }
 
   flagCellNextToUsVisible(pos: Vec2): void {
