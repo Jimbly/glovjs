@@ -135,9 +135,13 @@ declare module 'glov/client/settings' {
 
 // const ATTACK_WINDUP_TIME = 1000;
 const MINIMAP_RADIUS = 3;
-const MINIMAP_X = 261;
+const MINIMAP_X = VIEWPORT_X0 + render_width + 2;
 const MINIMAP_Y = 3;
 const MINIMAP_W = 5+7*(MINIMAP_RADIUS*2 + 1);
+const MINIMAP_STEP_SIZE = 6;
+const MINIMAP_TILE_SIZE = MINIMAP_STEP_SIZE * 7/6;
+const FULLMAP_STEP_SIZE = MINIMAP_STEP_SIZE;
+const FULLMAP_TILE_SIZE = FULLMAP_STEP_SIZE * 7/6;
 const COMPASS_X = MINIMAP_X;
 const COMPASS_Y = MINIMAP_Y + MINIMAP_W;
 
@@ -593,13 +597,41 @@ function playCrawl(): void {
         controller.initPosFromLevelDebug();
       }
     }
-    crawlerMapViewDraw(game_state, 0, 0, game_width, game_height, 0, 0, Z.MAP,
-      engine.defines.LEVEL_GEN, script_api, overlay_menu_up,
-      floor((game_width - MINIMAP_W)/2), 2); // note: compass ignored, compass_h = 0 above
+    crawlerMapViewDraw({
+      game_state,
+      x: 0,
+      y: 0,
+      w: game_width,
+      h: game_height,
+      step_size: FULLMAP_STEP_SIZE,
+      tile_size: FULLMAP_TILE_SIZE,
+      compass_x: floor((game_width - MINIMAP_W)/2),
+      compass_y: 2,
+      compass_w: 0,
+      compass_h: 0, // note: compass ignored, compass_h = 0
+      z: Z.MAP,
+      level_gen_test: engine.defines.LEVEL_GEN,
+      script_api,
+      button_disabled: overlay_menu_up,
+    });
   } else {
-    crawlerMapViewDraw(game_state, MINIMAP_X, MINIMAP_Y, MINIMAP_W, minimap_display_h, 0, compass_h, Z.MAP,
-      false, script_api, overlay_menu_up,
-      COMPASS_X, COMPASS_Y);
+    crawlerMapViewDraw({
+      game_state,
+      x: MINIMAP_X,
+      y: MINIMAP_Y,
+      w: MINIMAP_W,
+      h: minimap_display_h,
+      step_size: MINIMAP_STEP_SIZE,
+      tile_size: MINIMAP_TILE_SIZE,
+      compass_x: COMPASS_X,
+      compass_y: COMPASS_Y,
+      compass_w: 0,
+      compass_h,
+      z: Z.MAP,
+      level_gen_test: false,
+      script_api,
+      button_disabled: overlay_menu_up,
+    });
   }
 
   statusTick(dialog_viewport);

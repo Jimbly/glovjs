@@ -62,10 +62,6 @@ let compass_sprite: Sprite;
 let sprite_mult: Shader;
 let allow_pathfind: boolean = true;
 
-const MAP_TILE_SIZE = 7;
-const MAP_STEP_SIZE = 6;
-const MAP_CENTER_OFFS = 3;
-
 let build_mode_entity_icons: Partial<Record<string, string>> = {
   def: 'spawner',
 };
@@ -160,21 +156,41 @@ let style_map_info: FontStyle | null = fontStyle(null, {
 
 let compass_border_w = 6;
 
-export function crawlerMapViewDraw(
-  game_state: CrawlerState,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  compass_w: number,
-  compass_h: number,
-  z: number,
-  level_gen_test: boolean,
-  script_api: CrawlerScriptAPIClient,
-  button_disabled: boolean,
-  compass_x: number,
-  compass_y: number,
-): void {
+export type CrawlerMapViewParam = {
+  game_state: CrawlerState;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  tile_size: number;
+  step_size: number;
+  compass_x: number;
+  compass_y: number;
+  compass_w: number;
+  compass_h: number; // if 0, compass is disabled
+  z: number;
+  level_gen_test: boolean;
+  script_api: CrawlerScriptAPIClient;
+  button_disabled: boolean;
+};
+
+export function crawlerMapViewDraw({
+  game_state,
+  x,
+  y,
+  w,
+  h,
+  compass_w,
+  compass_h,
+  z,
+  level_gen_test,
+  script_api,
+  button_disabled,
+  compass_x,
+  compass_y,
+  tile_size,
+  step_size,
+}: CrawlerMapViewParam): void {
   const build_mode = buildModeActive();
   let { level } = game_state;
   if (!level) {
@@ -327,9 +343,9 @@ export function crawlerMapViewDraw(
   z += 0.1;
   if (fullscreen) {
     // full screen, center map
-    let xoffs = floor((w - (level.w + 2) * MAP_STEP_SIZE) / 2);
+    let xoffs = floor((w - (level.w + 2) * step_size) / 2);
     x += xoffs;
-    y += floor((h - (level.h + 2) * MAP_STEP_SIZE) / 2);
+    y += floor((h - (level.h + 2) * step_size) / 2);
     if (level_gen_test && xoffs > 0) {
       // offset to right
       x += round(xoffs * 0.75);
@@ -338,21 +354,22 @@ export function crawlerMapViewDraw(
     // mini
 
     // center on self
-    x -= round(game_state.pos[0] * MAP_STEP_SIZE - floor(w/2) + MAP_STEP_SIZE * 1.5);
-    y -= round((level.h - game_state.pos[1])*MAP_STEP_SIZE - floor(h/2) + MAP_STEP_SIZE * 0.5);
+    x -= round(game_state.pos[0] * step_size - floor(w/2) + step_size * 1.5);
+    y -= round((level.h - game_state.pos[1])*step_size - floor(h/2) + step_size * 0.5);
   }
-  let x0 = x + MAP_STEP_SIZE;
-  let y1 = y + level.h * MAP_STEP_SIZE;
+  let x0 = x + step_size;
+  let y1 = y + level.h * step_size;
+  let center_offs = step_size / 2;
   // draw self
   let self_x = round(game_state.pos[0]);
   let self_y = round(game_state.pos[1]);
   let self_dir = (round(game_state.angle / (PI/2)) + 4) % 4 as DirType;
   autoAtlas('map', `playerdir${self_dir}`).draw({
-    x: x0 + self_x * MAP_STEP_SIZE,
-    y: y1 - self_y * MAP_STEP_SIZE,
+    x: x0 + self_x * step_size,
+    y: y1 - self_y * step_size,
     z: z + 1,
-    w: MAP_TILE_SIZE,
-    h: MAP_TILE_SIZE,
+    w: tile_size,
+    h: tile_size,
   });
   for (let yy = 0; yy < level.h; ++yy) {
     for (let xx = 0; xx < level.w; ++xx) {
@@ -382,11 +399,11 @@ export function crawlerMapViewDraw(
         }
         if (detail_visible) {
           autoAtlas('map', detail).draw({
-            x: x0 + xx * MAP_STEP_SIZE,
-            y: y1 - yy * MAP_STEP_SIZE,
+            x: x0 + xx * step_size,
+            y: y1 - yy * step_size,
             z: z - 0.01,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -399,32 +416,32 @@ export function crawlerMapViewDraw(
         }
         if (event_icon) {
           autoAtlas('map', event_icon).draw({
-            x: x0 + xx * MAP_STEP_SIZE,
-            y: y1 - yy * MAP_STEP_SIZE,
+            x: x0 + xx * step_size,
+            y: y1 - yy * step_size,
             z: z - 0.005,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
       // Floor
       if (full_vis && !cell_desc.open_vis) {
         autoAtlas('map', 'floor_solid').draw({
-          x: x0 + xx * MAP_STEP_SIZE,
-          y: y1 - yy * MAP_STEP_SIZE,
+          x: x0 + xx * step_size,
+          y: y1 - yy * step_size,
           z: z - 0.05,
-          w: MAP_TILE_SIZE,
-          h: MAP_TILE_SIZE,
+          w: tile_size,
+          h: tile_size,
         });
       } else if (visible || detail_visible) {
         let is_visible = cell.visible_frame === engine.frame_index - 1 || level_gen_test;
         let icon = is_visible ? 'floor_visible_lit' : 'floor_visible_unlit';
         autoAtlas('map', icon).draw({
-          x: x0 + xx * MAP_STEP_SIZE,
-          y: y1 - yy * MAP_STEP_SIZE,
+          x: x0 + xx * step_size,
+          y: y1 - yy * step_size,
           z: z - 0.05,
-          w: MAP_TILE_SIZE,
-          h: MAP_TILE_SIZE,
+          w: tile_size,
+          h: tile_size,
         });
       }
       // Walls
@@ -450,11 +467,11 @@ export function crawlerMapViewDraw(
         }
         if (frame) {
           autoAtlas('map', frame).draw({
-            x: x0 + xx * MAP_STEP_SIZE,
-            y: y1 - yy * MAP_STEP_SIZE - MAP_CENTER_OFFS,
+            x: x0 + xx * step_size,
+            y: y1 - yy * step_size - center_offs,
             z,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -480,11 +497,11 @@ export function crawlerMapViewDraw(
         }
         if (frame) {
           autoAtlas('map', frame).draw({
-            x: x0 + xx * MAP_STEP_SIZE + MAP_CENTER_OFFS,
-            y: y1 - yy * MAP_STEP_SIZE,
+            x: x0 + xx * step_size + center_offs,
+            y: y1 - yy * step_size,
             z,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -493,11 +510,11 @@ export function crawlerMapViewDraw(
         let wall = getEffWall(script_api, cell, WEST);
         if (wall.map_view_wall_frame_east) {
           autoAtlas('map', wall.map_view_wall_frame_west || wall.map_view_wall_frame_east).draw({
-            x: x0 + xx * MAP_STEP_SIZE - MAP_CENTER_OFFS,
-            y: y1 - yy * MAP_STEP_SIZE,
+            x: x0 + xx * step_size - center_offs,
+            y: y1 - yy * step_size,
             z,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -506,11 +523,11 @@ export function crawlerMapViewDraw(
         let wall = getEffWall(script_api, cell, SOUTH);
         if (wall.map_view_wall_frame_north) {
           autoAtlas('map', wall.map_view_wall_frame_south || wall.map_view_wall_frame_north).draw({
-            x: x0 + xx * MAP_STEP_SIZE,
-            y: y1 - yy * MAP_STEP_SIZE + MAP_CENTER_OFFS,
+            x: x0 + xx * step_size,
+            y: y1 - yy * step_size + center_offs,
             z,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -522,10 +539,10 @@ export function crawlerMapViewDraw(
           let x2 = xx + DX[dir];
           let y2 = yy + DY[dir];
           drawLine(
-            x0 + xx * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
-            y1 - yy * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
-            x0 + x2 * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
-            y1 - y2 * MAP_STEP_SIZE + MAP_CENTER_OFFS + 0.5,
+            x0 + xx * step_size + center_offs + 0.5,
+            y1 - yy * step_size + center_offs + 0.5,
+            x0 + x2 * step_size + center_offs + 0.5,
+            y1 - y2 * step_size + center_offs + 0.5,
             z+3, 0.5, 1,
             color_path);
         }
@@ -539,11 +556,11 @@ export function crawlerMapViewDraw(
       let [xx,yy] = ent.pos as [number, number];
       let frame = build_mode_entity_icons[ent.type as string] || build_mode_entity_icons.def!;
       autoAtlas('map', frame).draw({
-        x: x0 + xx * MAP_STEP_SIZE,
-        y: y1 - yy * MAP_STEP_SIZE,
+        x: x0 + xx * step_size,
+        y: y1 - yy * step_size,
         z: z - 0.01,
-        w: MAP_TILE_SIZE,
-        h: MAP_TILE_SIZE,
+        w: tile_size,
+        h: tile_size,
       });
     }
   }
@@ -571,11 +588,11 @@ export function crawlerMapViewDraw(
           // draw it
           vis_entities[xx + yy * level.w] = true;
           autoAtlas('map', icon).draw({
-            x: x0 + xx * MAP_STEP_SIZE,
-            y: y1 - yy * MAP_STEP_SIZE,
+            x: x0 + xx * step_size,
+            y: y1 - yy * step_size,
             z: z - 0.01,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -588,8 +605,8 @@ export function crawlerMapViewDraw(
         moved_since_fullscreen = true;
       }
       input.mousePos(mouse_pos);
-      let mx = floor((mouse_pos[0] - x0 - 0.5) / MAP_STEP_SIZE);
-      let my = floor((y1 - mouse_pos[1] + MAP_STEP_SIZE + 0.5) / MAP_STEP_SIZE);
+      let mx = floor((mouse_pos[0] - x0 - 0.5) / step_size);
+      let my = floor((y1 - mouse_pos[1] + step_size + 0.5) / step_size);
       let mouse_cell = level.getCell(mx, my);
       if (mouse_cell && moved_since_fullscreen) { // && mouse_cell.visible_bits) {
         let mouse_frame: string | null = null;
@@ -620,11 +637,11 @@ export function crawlerMapViewDraw(
               let cx = idx % level.w;
               let cy = (idx - cx) / level.w;
               autoAtlas('map', frame).draw({
-                x: x0 + cx * MAP_STEP_SIZE,
-                y: y1 - cy * MAP_STEP_SIZE,
+                x: x0 + cx * step_size,
+                y: y1 - cy * step_size,
                 z: z - 0.01,
-                w: MAP_TILE_SIZE,
-                h: MAP_TILE_SIZE,
+                w: tile_size,
+                h: tile_size,
               });
               if (frame === 'pathfind_bad') {
                 break;
@@ -641,11 +658,11 @@ export function crawlerMapViewDraw(
         }
         if (mouse_frame) {
           autoAtlas('map', mouse_frame).draw({
-            x: x0 + mx * MAP_STEP_SIZE,
-            y: y1 - my * MAP_STEP_SIZE,
+            x: x0 + mx * step_size,
+            y: y1 - my * step_size,
             z: z - 0.01,
-            w: MAP_TILE_SIZE,
-            h: MAP_TILE_SIZE,
+            w: tile_size,
+            h: tile_size,
           });
         }
       }
@@ -681,10 +698,12 @@ export function crawlerMapViewStartup(param: {
   if (param.build_mode_entity_icons) {
     merge(build_mode_entity_icons, param.build_mode_entity_icons);
   }
-  autoAtlasTextureOpts('map', {
-    filter_min: gl.NEAREST,
-    filter_mag: gl.NEAREST,
-  });
+  if (1) {
+    autoAtlasTextureOpts('map', {
+      filter_min: gl.NEAREST,
+      filter_mag: gl.NEAREST,
+    });
+  }
   compass_border_w = param.compass_border_w || 6;
   compass_sprite = spriteCreate({
     name: 'crawler_compass',
