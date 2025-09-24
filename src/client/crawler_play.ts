@@ -57,6 +57,7 @@ import {
   v3copy,
   v3lerp,
   v4copy,
+  Vec2,
   vec3,
   Vec4,
   vec4,
@@ -471,7 +472,10 @@ export type InitLevelFunc = ((entity_manager: ClientEntityManagerInterface,
   floor_id: number, level: CrawlerLevel) => void);
 let on_init_level_offline: InitLevelFunc | null = null;
 
+let need_turn_based_step = false;
+
 function crawlerOnInitHaveLevel(floor_id: number): void {
+  need_turn_based_step = false;
   crawlerInitVisData(floor_id);
   if (isLocal()) {
     let level = game_state.level;
@@ -671,6 +675,54 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
   }
 }
 
+
+let turn_based_step: (() => void) | undefined;
+let turn_based_step_threshold = 0.4;
+let turn_based_step_countdown = 0;
+
+function executeStep(): void {
+  if (need_turn_based_step) {
+    turn_based_step?.();
+    need_turn_based_step = false;
+  }
+}
+
+function crawlerTurnBasedTick(): void {
+  if (need_turn_based_step) {
+    if (turn_based_step_countdown) {
+      turn_based_step_countdown -= getScaledFrameDt();
+      if (turn_based_step_countdown <= 0) {
+        turn_based_step_countdown = 0;
+        executeStep();
+      }
+    } else if (!controller.controllerIsAnimating(turn_based_step_threshold)) {
+      executeStep();
+    }
+  }
+}
+
+export function crawlerTurnBasedScheduleStep(delay: number): void {
+  executeStep();
+  need_turn_based_step = true;
+  turn_based_step_countdown = delay;
+}
+
+function crawlerTurnBasedMovePreStart(/*old_pos, new_pos, move_dir*/): void {
+  executeStep();
+}
+
+function crawlerTurnBasedMoveStart(pos: Vec2): void {
+  executeStep();
+  need_turn_based_step = true;
+  turn_based_step_countdown = 0;
+  crawlerTurnBasedTick();
+}
+
+function crawlerTurnBasedMoveFinish(pos: Vec2): void {
+  // Finished a queued move, possibly because interrupted and starting a new one
+  executeStep();
+}
+
 function crawlerPlayInitShared(): void {
   entityPosManager().reinit();
 
@@ -681,7 +733,10 @@ function crawlerPlayInitShared(): void {
     game_state,
     entity_manager: crawlerEntityManager(),
     script_api,
+    on_player_move: crawlerTurnBasedMovePreStart,
     on_init_level: crawlerOnInitHaveLevel,
+    on_move_start: crawlerTurnBasedMoveStart,
+    on_enter_cell: crawlerTurnBasedMoveFinish,
     flush_vis_data: crawlerFlushVisData,
     controller_type: 'queued2', // working well
     // controller_type: 'queued', // old stand-by; maybe useful for real-time
@@ -1069,6 +1124,8 @@ export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
     spotSuppressPad();
   }
 
+  crawlerTurnBasedTick();
+
   let hide_chat = overlay_menu_up || map_view || buildModeOverlayActive() || !isOnline();
   do_chat = allow_offline_console || isOnline() !== OnlineMode.OFFLINE;
   if (do_chat) {
@@ -1103,6 +1160,7 @@ export function crawlerPlayStartup(param: {
   default_vstyle?: string;
   allow_offline_console?: boolean;
   chat_ui_param?: CrawlerChatUIParam;
+  turn_based_step?: () => void;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
@@ -1113,6 +1171,7 @@ export function crawlerPlayStartup(param: {
   on_init_level_offline = param.on_init_level_offline || null;
   allow_offline_console = param.allow_offline_console || false;
   chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
+  turn_based_step = param.turn_based_step;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });
   supports_frag_depth = engine.webgl2 || gl.getExtension('EXT_frag_depth');

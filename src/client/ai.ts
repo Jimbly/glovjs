@@ -371,7 +371,7 @@ export function aiDoFloor(
   game_state: CrawlerState,
   entity_manager: EntityManager<Entity>,
   defines: Partial<Record<string, true>>,
-  ai_pause: 0 | 1,
+  ai_pause: boolean,
   script_api: CrawlerScriptAPI,
 ): void {
   if (ai_pause) {
@@ -417,5 +417,47 @@ export function aiDoFloor(
       }
     }
     ent.aiResetMoveTime(false);
+  }
+}
+
+export function aiStepFloor(
+  floor_id: number,
+  game_state: CrawlerState,
+  entity_manager: EntityManager<Entity>,
+  defines: Partial<Record<string, true>>,
+  ai_pause: boolean,
+  script_api: CrawlerScriptAPI,
+): void {
+  if (ai_pause) {
+    return;
+  }
+  let entities = entity_manager.entities;
+  let level = game_state.levels[floor_id];
+  script_api.setLevel(level);
+  for (let ent_id in entities) {
+    let ent = entities[ent_id]!;
+    if (ent.data.floor !== floor_id || ent.fading_out) {
+      // not on current floor
+      continue;
+    }
+
+    let no_move = false;
+    if (ent.is_enemy && aiDoEnemy(game_state, ent, defines, script_api)) {
+      // not wandering/patrolling/etc
+      no_move = true;
+    }
+
+    if (!no_move) {
+      let moved = false;
+      if (!moved && (ent as EntityHunter).aiHunt && !defines?.PEACE) {
+        moved = (ent as EntityHunter).aiHunt(game_state, script_api);
+      }
+      if (!moved && (ent as EntityPatrol).aiPatrol) {
+        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api);
+      }
+      if (!moved && (ent as EntityWander).aiWander) {
+        moved = (ent as EntityWander).aiWander(game_state, script_api);
+      }
+    }
   }
 }
