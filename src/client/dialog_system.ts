@@ -57,6 +57,7 @@ const MS_PER_CHARACTER_CENTERED = 6;
 export type DialogButton = {
   label: string;
   cb?: string | (() => void);
+  hotkeys?: number[];
 };
 export type DialogParam = {
   name?: string;
@@ -291,6 +292,13 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
   if (text_full && !active_state.ff_down) {
     for (let ii = 0; ii < num_buttons; ++ii) {
       let button = buttons![ii];
+      let hotkeys = [];
+      if (ii < 10) {
+        hotkeys.push(KEYS['1'] + ii);
+      }
+      if (button.hotkeys) {
+        hotkeys = hotkeys.concat(button.hotkeys);
+      }
       if (buttonText({
         auto_focus: ii === 0,
         focus_steal: ii === 0 && (num_buttons === 1 || !buttons_vis),
@@ -300,6 +308,7 @@ export function dialogRun(dt: number, viewport: UIBox & { pad_top: number; pad_b
         y: yy,
         z,
         markdown: true,
+        hotkeys,
       })) {
         active_dialog = null;
         if (button.cb) {
