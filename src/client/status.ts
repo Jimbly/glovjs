@@ -1,15 +1,16 @@
 import assert from 'assert';
 import { getFrameDt, getFrameIndex } from 'glov/client/engine';
-import { Font, FontStyle, fontStyleColored } from 'glov/client/font';
+import { FontStyle, fontStyleColored } from 'glov/client/font';
 import { markdownAuto } from 'glov/client/markdown';
 import * as ui from 'glov/client/ui';
 import {
   UIBox,
+  uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
 import { vec4 } from 'glov/common/vmath';
 
-const { round } = Math;
+const { floor, ceil } = Math;
 
 class StatusMessage {
   counter = 0;
@@ -27,11 +28,9 @@ class StatusMessage {
   }
 }
 
-let font: Font;
 let msgs: StatusMessage[] | undefined;
 function statusReset(): void {
   msgs = [];
-  ({ font } = ui);
 }
 
 let style_status = fontStyleColored(null, 0x000000ff);
@@ -63,8 +62,12 @@ export function statusSet(key: string, text: string, style?: FontStyle): StatusM
 let last_frame: number;
 let temp_color = vec4(1, 1, 1, 1);
 
-export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: number }): void {
-  let { x, y, w, h, z, pad_top, pad_bottom } = viewport;
+export function statusTick(viewport: UIBox & {
+  pad_top: number;
+  pad_bottom: number;
+  pad_lr: number;
+}): void {
+  let { x, y, w, h, z, pad_top, pad_bottom, pad_lr } = viewport;
   z = z || Z.STATUS;
   let dt = getFrameDt();
   let frame = getFrameIndex();
@@ -73,6 +76,7 @@ export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: numb
   }
   last_frame = frame;
   assert(msgs);
+  const HPAD = pad_lr; // default 4
 
   y += h;
   for (let ii = msgs.length - 1; ii >= 0; --ii) {
@@ -87,6 +91,7 @@ export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: numb
       alpha = 1 - (msg.counter - msg.time_fade) / (msg.time_end - msg.time_fade);
     }
     let size = uiTextHeight();
+    let font = uiGetFont();
     let dims = font.dims(msg.style, w, 0, size, msg.text);
     y -= pad_bottom + dims.h;
     markdownAuto({
@@ -98,12 +103,14 @@ export function statusTick(viewport: UIBox & { pad_top: number; pad_bottom: numb
       alpha,
     });
     let text_w = dims.w;
-    text_w += 6;
+    text_w += HPAD * 2;
     temp_color[3] = alpha;
+    let x0 = x + floor((w - text_w)/2);
+    let x1 = x + ceil((w + text_w)/2);
     ui.panel({
-      x: x + round((w - text_w)/2) - 1,
+      x: x0,
       y: y - pad_top, z: z - 1,
-      w: text_w + 2,
+      w: x1 - x0,
       h: dims.h + pad_top + pad_bottom,
       color: temp_color,
     });
