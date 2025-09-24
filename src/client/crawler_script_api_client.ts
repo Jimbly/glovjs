@@ -107,8 +107,12 @@ class CrawlerScriptAPIClientBase {
     this.controller.floorAbsolute(floor_id, x, y, rot);
   }
 
-  startPit(floor_id: number, pos_key?: string, pos_pair?: [number, number, DirType]): void {
-    this.controller.fallThroughPit(floor_id, pos_key, pos_pair);
+  startPit(floor_id: number, pos_key?: string, x?: number, y?: number, rot?: DirType): void {
+    this.controller.fallThroughPit(floor_id, pos_key, x, y, rot);
+  }
+
+  startLadder(floor_id: number, is_up: boolean, x: number, y: number, rot?: DirType): void {
+    this.controller.ladderTransition(floor_id, is_up, x, y, rot);
   }
 
   forceMove(dir: DirType): void {

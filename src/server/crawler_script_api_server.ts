@@ -98,7 +98,11 @@ export class CrawlerScriptAPIServerImpl implements CrawlerScriptAPI {
     // Nothing: client handles this currently
   }
 
-  startPit(floor_id: number, pos_key?: string, pos_pair?: [number, number, DirType]): void {
+  startPit(floor_id: number, pos_key?: string, x?: number, y?: number, rot?: DirType): void {
+    // Nothing: client handles this currently
+  }
+
+  startLadder(floor_id: number, is_up: boolean, x: number, y: number, rot?: DirType): void {
     // Nothing: client handles this currently
   }
 

@@ -1,7 +1,6 @@
 import assert from 'assert';
 import * as engine from 'glov/client/engine';
 import {
-  getFrameDt,
   getFrameIndex,
   getFrameTimestamp,
 } from 'glov/client/engine';
@@ -31,6 +30,7 @@ import {
   clamp,
   easeIn,
   easeInOut,
+  easeOut,
   lerp,
   lerpAngle,
   sign,
@@ -88,7 +88,7 @@ import {
   entityBlocks,
   EntityCrawlerClient,
 } from './crawler_entity_client';
-import { crawlerScriptAPI } from './crawler_play';
+import { crawlerScriptAPI, getScaledFrameDt } from './crawler_play';
 import {
   crawlerRenderGetPosOffs,
   crawlerRenderViewportGet,
@@ -111,6 +111,7 @@ const FORCE_FACE_TIME = ROT_TIME;
 
 const half_vec = rovec3(0.5, 0.5, 0.5);
 const pit_times = [150, 400];
+const ladder_time = 400;
 
 let temp_pos = vec2();
 let temp_delta = vec2();
@@ -1155,8 +1156,6 @@ export class CrawlerController {
   last_action_hash = 0; // dx + dy * 8 + rot * 64;
   is_repeating = false;
   map_update_this_frame: boolean = false;
-  pit_time!: number;
-  pit_stage!: number;
   freecam_pos = vec3();
   freecam_angle = 0;
   freecam_pitch = 0;
@@ -1220,6 +1219,7 @@ export class CrawlerController {
     });
   }
 
+  post_floor_transition: VoidFunc | null = null;
   getTransitioningFloor(): boolean {
     return this.transitioning_floor;
   }
@@ -1231,6 +1231,9 @@ export class CrawlerController {
     this.fade_override = 0;
     assert(this.entity_manager.hasMyEnt());
     this.initHaveLevel(this.myEnt().getData<number>('floor')!, true);
+    let cb = this.post_floor_transition;
+    this.post_floor_transition = null;
+    cb?.();
     return true;
   }
 
@@ -1258,6 +1261,11 @@ export class CrawlerController {
     if (reinit) {
       this.initPos(false);
     }
+  }
+
+  teleport(new_pos: Vec2): void {
+    this.applyPlayerMove('teleport', [new_pos[0], new_pos[1], this.last_dest_rot]);
+    this.initPos(true);
   }
 
   doPlayerMotion(param: PlayerMotionParam): void {
@@ -1481,13 +1489,14 @@ export class CrawlerController {
     assert(!this.transitioning_floor);
     this.transitioning_floor = true;
     let runme: VoidFunc | null = null;
-    this.setMoveBlocker(() => {
+    let move_blocker = (): boolean => {
       if (!this.controllerIsAnimating()) {
         this.fade_override = 1;
       }
       runme?.();
-      return this.transitioning_floor;
-    });
+      return this.transitioning_floor || this.move_blocker !== move_blocker;
+    };
+    this.setMoveBlocker(move_blocker);
     if (this.flush_vis_data) {
       this.flush_vis_data(true);
     }
@@ -1514,6 +1523,7 @@ export class CrawlerController {
           if (err) {
             this.transitioning_floor = false;
             this.fade_override = 0;
+            this.post_floor_transition = null;
             throw err;
           }
           if (!this.entity_manager.isOnline()) {
@@ -1548,8 +1558,13 @@ export class CrawlerController {
     this.player_controller.startMove(dir);
   }
 
+  pit_time!: number;
+  pit_stage!: number;
+  pit_target_floor!: number;
+  pit_target_key?: string;
+  pit_target_pos?: JSVec3;
   moveBlockPit(): boolean {
-    this.pit_time += this.controllerIsAnimating() ? 0 : getFrameDt();
+    this.pit_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
     let pit_progress = this.pit_time / pit_times[this.pit_stage];
     if (pit_progress > 1) {
       pit_progress = 0;
@@ -1570,16 +1585,84 @@ export class CrawlerController {
     return true;
   }
 
-  pit_target_floor!: number;
-  pit_target_key?: string;
-  pit_target_pos?: JSVec3;
-  fallThroughPit(floor_id: number, pos_key?: string, pos_pair?: JSVec3): void {
+  fallThroughPit(floor_id: number, pos_key?: string, x?: number, y?: number, rot?: number): void {
     this.pit_stage = 0;
     this.pit_time = 0;
     this.pit_target_floor = floor_id;
     this.pit_target_key = pos_key;
-    this.pit_target_pos = pos_pair;
+    if (x !== undefined) {
+      if (rot === undefined) {
+        rot = this.myEnt().data.pos[2] as DirType;
+      }
+      this.pit_target_pos = [x, y!, rot];
+    } else {
+      this.pit_target_pos = undefined;
+    }
     this.setMoveBlocker(this.moveBlockPit.bind(this));
+  }
+
+  ladder_time!: number;
+  ladder_stage!: number;
+  ladder_target_floor!: number;
+  ladder_target_pos!: JSVec3;
+  ladder_is_up!: boolean;
+  moveBlockLadder(): boolean {
+    this.ladder_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
+    let ladder_progress = this.ladder_time / ladder_time;
+    if (ladder_progress > 1) {
+      ladder_progress = 0;
+      this.ladder_time = 0;
+      ++this.ladder_stage;
+    }
+    if (this.ladder_stage === 0) {
+      // move down/up
+      this.cam_pos_z_offs = 0.5 + easeIn(ladder_progress, 1.5) * 0.5 *
+        (this.ladder_is_up ? 1 : -1);
+      this.fade_override = clamp(easeOut(ladder_progress, 1.1), 0, 1);
+    } else {
+      this.cam_pos_z_offs = this.ladder_is_up ? 1 : 0;
+      this.post_floor_transition = () => {
+        this.cam_pos_z_offs = this.ladder_is_up ? 0 : 1;
+        this.fade_override = 1;
+        this.ladder_time = 0;
+        this.ladder_stage = 0;
+        this.setMoveBlocker(this.moveBlockLadderFinish.bind(this));
+      };
+      this.goToFloor(this.ladder_target_floor, undefined, undefined, this.ladder_target_pos);
+      // still returning true, because move_blocker is modified in the above call
+    }
+    return true;
+  }
+  moveBlockLadderFinish(): boolean {
+    this.ladder_time += this.controllerIsAnimating() ? 0 : getScaledFrameDt();
+    let ladder_progress = this.ladder_time / ladder_time;
+    if (ladder_progress > 1) {
+      ladder_progress = 0;
+      this.ladder_time = 0;
+      ++this.ladder_stage;
+    }
+    if (this.ladder_stage === 0) {
+      // move down/up
+      this.cam_pos_z_offs = (this.ladder_is_up ? 0 : 1) + easeOut(ladder_progress, 1.5) * 0.5 *
+        (this.ladder_is_up ? 1 : -1);
+      this.fade_override = clamp(easeIn(1 - ladder_progress, 1.1), 0, 1);
+      return true;
+    } else {
+      this.cam_pos_z_offs = 0.5;
+      return false;
+    }
+  }
+
+  ladderTransition(floor_id: number, is_up: boolean, x: number, y: number, rot?: DirType): void {
+    if (rot === undefined) {
+      rot = this.myEnt().data.pos[2] as DirType;
+    }
+    this.ladder_stage = 0;
+    this.ladder_time = 0;
+    this.ladder_is_up = is_up;
+    this.ladder_target_floor = floor_id;
+    this.ladder_target_pos = [x, y, rot];
+    this.setMoveBlocker(this.moveBlockLadder.bind(this));
   }
 
   move_from_pos: Vec2 = vec2();

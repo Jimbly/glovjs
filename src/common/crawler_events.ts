@@ -192,7 +192,7 @@ crawlerScriptRegisterEvent({
       return;
     }
     let special_pos: string | undefined;
-    let pos: [number, number, DirType] | undefined;
+    let pos: [number, number] | [number, number, DirType] | undefined;
     if (params.length <= 2) {
       special_pos = params[1] || (delta < 0 ? 'stairs_out' : 'stairs_in');
     } else {
@@ -205,12 +205,12 @@ crawlerScriptRegisterEvent({
         return;
       }
       if (rot === null || rot === undefined) {
-        api.status('floor_pit', '"floor_pit" event requires a parameter in the form: +/-N [special_key | x y rot]');
-        return;
+        pos = [x, y];
+      } else {
+        pos = [x, y, rot];
       }
-      pos = [x, y, rot];
     }
-    api.startPit(api.getFloor() + delta, special_pos, pos);
+    api.startPit(api.getFloor() + delta, special_pos, pos && pos[0], pos && pos[1], pos && pos[2]);
   },
 });
 

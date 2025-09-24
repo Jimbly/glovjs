@@ -26,7 +26,8 @@ export type CrawlerScriptAPI = {
   getFloor(): number;
   floorDelta(delta: number, pos_key: string, keep_rot: boolean): void;
   floorAbsolute(floor_id: number, x: number, y: number, rot?: DirType): void;
-  startPit(floor_id: number, pos_key?: string, pos_pair?: [number, number, DirType]): void;
+  startPit(floor_id: number, pos_key?: string, x?: number, y?: number, rot?: DirType): void;
+  startLadder(floor_id: number, is_up: boolean, x: number, y: number, rot?: DirType): void;
   forceMove(dir: DirType): void;
   getCellRelative(dir?: DirTypeOrCell): CrawlerCell | null;
 
