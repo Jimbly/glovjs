@@ -34,10 +34,11 @@ export type BillboardBiasOpts = {
   biasF: [number, number];
   biasR: [number, number];
   biasIn: [number, number, number]; // Not relevant for monsters, just one value will do?
+  bias_viewplane_offset?: boolean;
 };
 
 export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<BillboardBiasOpts>): void {
-  let { biasL, biasF, biasR, biasIn } = opts;
+  let { biasL, biasF, biasR, biasIn, bias_viewplane_offset } = opts;
 
   if (!biasL || !biasF || !biasR || !biasIn) {
     return;
@@ -103,25 +104,27 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   // If in the same cell, alternate offsetting to the right as well
   v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
 
-  // If very close to view plane, offset away from camera
-  v2sub(v2temp, draw_pos, renderCamPos());
-  v2temp_len = v2length(v2temp);
-  let dist_to_view_plane = abs(v2dot(v2temp, view_vec)) / DIM;
-  let dist_to_camera = v2temp_len / DIM;
-  let need_blend = 1 - clamp((dist_to_camera - 0.5) / 0.25, 0, 1);
-  if (dist_to_view_plane < 0.75 && need_blend > 0) {
-    let final_rel_angle = 0;
-    if (v2temp_len > 0.0001) {
-      final_rel_angle = atan2(v2temp[1], v2temp[0]) - view_angle;
-      while (final_rel_angle < -PI) {
-        final_rel_angle += PI * 2;
+  if (bias_viewplane_offset !== false) {
+    // If very close to view plane, offset away from camera
+    v2sub(v2temp, draw_pos, renderCamPos());
+    v2temp_len = v2length(v2temp);
+    let dist_to_view_plane = abs(v2dot(v2temp, view_vec)) / DIM;
+    let dist_to_camera = v2temp_len / DIM;
+    let need_blend = 1 - clamp((dist_to_camera - 0.5) / 0.25, 0, 1);
+    if (dist_to_view_plane < 0.75 && need_blend > 0) {
+      let final_rel_angle = 0;
+      if (v2temp_len > 0.0001) {
+        final_rel_angle = atan2(v2temp[1], v2temp[0]) - view_angle;
+        while (final_rel_angle < -PI) {
+          final_rel_angle += PI * 2;
+        }
+        while (final_rel_angle > PI) {
+          final_rel_angle -= PI * 2;
+        }
       }
-      while (final_rel_angle > PI) {
-        final_rel_angle -= PI * 2;
-      }
+      v2addScale(draw_pos, draw_pos, right_vec,
+        easeIn((1 - dist_to_view_plane/0.75) * need_blend, 2) * (final_rel_angle < 0 ? 1 : -1) * DIM);
     }
-    v2addScale(draw_pos, draw_pos, right_vec,
-      easeIn((1 - dist_to_view_plane/0.75) * need_blend, 2) * (final_rel_angle < 0 ? 1 : -1) * DIM);
   }
 
   // // @ts-expect-error debug
