@@ -1,7 +1,10 @@
 const { abs, atan2, floor, max, min, cos, round, sin, PI } = Math;
+const ASPECT = 1; // wall aspect ratio
 export const FOV = 68 * PI / 180;
-export const DIM = 200;
+export const DIM = 200; // horizontal / tile dimensions
+export const VDIM = floor(DIM / ASPECT);
 export const HDIM = DIM/2;
+export const HVDIM = floor(VDIM/2);
 
 export const SPLIT_ALL = 0;
 export const SPLIT_NEAR = 1;
@@ -40,6 +43,7 @@ import {
 import * as engine from 'glov/client/engine';
 import {
   setGlobalMatrices,
+  updateMatrices,
 } from 'glov/client/engine';
 import { filewatchOn } from 'glov/client/filewatch';
 import { geomCreateQuads } from 'glov/client/geom';
@@ -88,7 +92,7 @@ import {
   v3dist,
   v3iAdd,
   v3iAddScale,
-  v3scale,
+  v3mul,
   v3set,
   v4copy,
   v4mul,
@@ -139,12 +143,15 @@ let mat_obj = mat4();
 
 let frame_idx = 0;
 
-let crawler_viewport: Box;
-export function crawlerRenderViewportSet(val: Box): void {
+export type CrawlerViewport = Box & {
+  rot?: number;
+};
+let crawler_viewport: CrawlerViewport;
+export function crawlerRenderViewportSet(val: CrawlerViewport): void {
   crawler_viewport = val;
 }
 
-export function crawlerRenderViewportGet(): Box {
+export function crawlerRenderViewportGet(): CrawlerViewport {
   return crawler_viewport;
 }
 
@@ -560,13 +567,13 @@ function drawSimpleWall(
   let height = vopts.height || 1;
   let detail_layer = vopts.detail_layer || 0;
 
-  v3set(temp_pos, HDIM, HDIM, DIM);
+  v3set(temp_pos, HDIM, HDIM, VDIM);
   if (detail_layer) {
     v3iAddScale(temp_pos, wall_detail_offs, -detail_layer);
   }
   temp_pos[1] -= offs[0] * DIM + (1 - scale) * HDIM;
-  temp_pos[2] -= -offs[1] * DIM + (1 - scale) * HDIM + (1 - height) * DIM;
-  v2set(temp_size, DIM*scale, DIM*scale*height);
+  temp_pos[2] -= -offs[1] * VDIM + (1 - scale) * HVDIM + (1 - height) * VDIM;
+  v2set(temp_size, DIM*scale, VDIM*scale*height);
 
   if (vopts.force_rot !== undefined) {
     rot = wall_rots[vopts.force_rot];
@@ -605,7 +612,7 @@ function drawSimpleFiller(
   let { neighbor_h } = opts;
   let hdiff;
   if (is_ceiling) {
-    let noffs = (offs[1] - 1) * DIM;
+    let noffs = (offs[1] - 1) * VDIM;
     hdiff = pos[2] + noffs - neighbor_h;
   } else {
     hdiff = neighbor_h - pos[2];
@@ -616,23 +623,23 @@ function drawSimpleFiller(
     return;
   }
 
-  let height = hdiff / DIM; // (vopts.height || 1); // TODO: take vopts.height into account for ceilings?
+  let height = hdiff / VDIM; // (vopts.height || 1); // TODO: take vopts.height into account for ceilings?
   let detail_layer = vopts.detail_layer || 0;
 
-  v3set(temp_pos, HDIM, HDIM, DIM);
+  v3set(temp_pos, HDIM, HDIM, VDIM);
   if (detail_layer) {
     v3iAddScale(temp_pos, wall_detail_offs, -detail_layer);
   }
   temp_pos[1] -= offs[0] * DIM;
   if (is_ceiling) {
-    temp_pos[2] = offs[1] * DIM;
+    temp_pos[2] = offs[1] * VDIM;
     v4set(temp_uvs, 0, max(0, 1 - height), 1, 1);
   } else {
-    temp_pos[2] = hdiff + offs[1] * DIM;
+    temp_pos[2] = hdiff + offs[1] * VDIM;
     // TODO: really want to tile (need to draw multiple sprites!) not stretch, if height > 1
     v4set(temp_uvs, 0, 0, 1, min(1, height));
   }
-  v2set(temp_size, DIM, DIM*height);
+  v2set(temp_size, DIM, VDIM*height);
 
   if (vopts.force_rot !== undefined) {
     rot = wall_rots[vopts.force_rot];
@@ -680,9 +687,12 @@ function drawSimpleBillboard(
     offs,
     face_camera,
   } = vopts;
+  // Note: DIM, not VDIM, so that it's still square pixel aspect ratio?
   v2set(temp_size, DIM * (width || 1), DIM * (height || 1));
   if (offs) {
-    v3scale(temp_pos, offs, DIM);
+    temp_pos[0] = offs[0] * DIM;
+    temp_pos[1] = offs[1] * DIM;
+    temp_pos[2] = offs[2] * VDIM;
     qTransformVec3(temp_pos, temp_pos, rot);
     v3iAdd(temp_pos, pos);
   } else {
@@ -753,7 +763,7 @@ function drawSimpleCeiling(
   let offs = vopts.offs || [0,0];
   let detail_layer = vopts.detail_layer || 0;
 
-  v3add(temp_pos, pos, [-HDIM, -HDIM, DIM * height]);
+  v3add(temp_pos, pos, [-HDIM, -HDIM, VDIM * height]);
   if (detail_layer) {
     v3iAddScale(temp_pos, floor_detail_offs, -detail_layer);
   }
@@ -955,7 +965,7 @@ function createPillar(opts: SimplePillarRenderOpts, rect: ROVec4): Geom {
   const quadrants = opts.quadrants || 4;
   const pillar_segments = opts.segments || 16;
   const roundness = opts.roundness === undefined ? 1 : opts.roundness;
-  const height = (opts.height || 1) * DIM;
+  const height = (opts.height || 1) * VDIM;
   const q = quadrants/4;
   const pillar_radius = DIM * (opts.radius || 0.1);
   let num_quads = pillar_segments * q;
@@ -1023,12 +1033,14 @@ function drawSimplePillar(
     geom = pillar_geoms[key] = createPillar(vopts, uvs);
   }
   let offs = vopts.offs || zero_vec;
-  v3addScale(temp_pos, pos, offs, DIM);
+  temp_pos[0] = pos[0] + offs[0] * DIM;
+  temp_pos[1] = pos[1] + offs[1] * DIM;
+  temp_pos[2] = pos[2] + offs[2] * VDIM;
 
   let params = opts.debug_visible ? param_occluded : param_visible;
   textureBindArray(sprite.texs);
   mat4ScaleRotateTranslate(mat_obj, 1, rot, temp_pos);
-  engine.updateMatrices(mat_obj);
+  updateMatrices(mat_obj);
   shadersBind(crawlerRenderGetShader(ShaderType.ModelVertex), crawlerRenderGetShader(ShaderType.ModelFragment), params);
   geom.draw();
 }
@@ -1113,7 +1125,8 @@ export function crawlerRenderInit(param: {
 }
 
 let draw_pos = vec3(0,0,0);
-let vhdim = vec3(HDIM, HDIM, HDIM);
+let vhdim = vec3(HDIM, HDIM, HVDIM);
+let vdim = vec3(DIM, DIM, VDIM);
 
 const opts_visible: CrawlerDrawableOpts2 = {
   debug_visible: false,
@@ -1157,7 +1170,7 @@ function drawCell(
     }
   }
   v2addScale(draw_pos, vhdim, pos, DIM);
-  let our_h = opts.neighbor_h = draw_pos[2] = cell.h * DIM;
+  let our_h = opts.neighbor_h = draw_pos[2] = cell.h * VDIM;
   opts.split_set = split_set;
   opts.draw_dist_sq = v2distSq(pos, game_state.pos);
 
@@ -1182,7 +1195,7 @@ function drawCell(
     let visuals = wall_desc.visuals_runtime[pass.name];
     if (visuals) {
       let ncell = game_state.level!.getCell(cell.x + DX[ii], cell.y + DY[ii]);
-      opts.neighbor_h = ncell ? ncell.h * DIM : 0;
+      opts.neighbor_h = ncell ? ncell.h * VDIM : 0;
       for (let jj = 0; jj < visuals.length; ++jj) {
         let visual = visuals[jj];
         let drawable = drawables[visual.type];
@@ -1233,13 +1246,13 @@ function drawCell(
             let dx_side = DX[(ii + 1) % 4];
             let dy_side = DY[(ii + 1) % 4];
             let ncell = game_state.level!.getCell(cell.x + dx_side, cell.y + dy_side);
-            quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+            quadrant_hs.push(ncell ? ncell.h * VDIM : 0);
             if (style !== 'two') {
               ncell = game_state.level!.getCell(cell.x + dx_side + dx_through, cell.y + dy_side + dy_through);
-              quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+              quadrant_hs.push(ncell ? ncell.h * VDIM : 0);
               if (style === 'four') {
                 ncell = game_state.level!.getCell(cell.x + dx_through, cell.y + dy_through);
-                quadrant_hs.push(ncell ? ncell.h * DIM : 0);
+                quadrant_hs.push(ncell ? ncell.h * VDIM : 0);
               }
             }
           }
@@ -1502,7 +1515,7 @@ function calcVisibility(
 }
 
 let cam_pos = vec3();
-let target_pos = vec3(0, 0, HDIM);
+let target_pos = vec3(0, 0, HVDIM);
 let game_view_pos = vec2();
 let last_pos = vec3();
 export function renderCamPos(): ROVec3 {
@@ -1549,7 +1562,6 @@ export function renderPrep(param: RenderPrepParam): void {
   const {
     game_state,
     cam_pos: cam_pos_in,
-    angle,
     pitch,
     ignore_vis: ignore_vis_in,
     map_update_this_frame,
@@ -1562,6 +1574,8 @@ export function renderPrep(param: RenderPrepParam): void {
   }
   ignore_vis = ignore_vis_in;
 
+  const angle = param.angle + (crawler_viewport.rot || 0);
+
   // Fade LOD bias from -1 while moving to -4 while standing still
   let frame_dist = v3dist(last_pos, cam_pos_in);
   v3copy(last_pos, cam_pos_in);
@@ -1570,7 +1584,7 @@ export function renderPrep(param: RenderPrepParam): void {
   global_lod_bias[0] = lerp(factor, lod_bias_min, lod_bias_max);
   global_lod_bias[1] = factor;
 
-  v3scale(cam_pos, cam_pos_in, DIM);
+  v3mul(cam_pos, cam_pos_in, vdim);
   v3copy(player_pos, cam_pos);
 
   let ca = cos(angle);
@@ -1591,7 +1605,7 @@ export function renderPrep(param: RenderPrepParam): void {
 
   frame_idx = engine.frame_index;
   // same positional transformation logic, applied in game space, from player, not camera (if different (freeCam))
-  game_view_angle = game_state.angle;
+  game_view_angle = game_state.angle + (crawler_viewport.rot || 0);
   ca = cos(game_view_angle);
   sa = sin(game_view_angle);
   game_view_pos[0] = game_state.pos[0] + 0.5 + pos_offs[1] * 0.5 * ca + pos_offs[0] * 0.5 * sa;

@@ -19,7 +19,7 @@ import {
   vec2,
 } from 'glov/common/vmath';
 import type { CrawlerState } from '../common/crawler_state';
-import { DIM, renderCamPos } from './crawler_render';
+import { crawlerRenderViewportGet, DIM, renderCamPos } from './crawler_render';
 
 const { abs, atan2, cos, sin, PI } = Math;
 
@@ -140,7 +140,7 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
 
 export function billboardBiasPrep(game_state: CrawlerState): void {
   v2copy(view_pos, game_state.pos);
-  view_angle = game_state.angle;
+  view_angle = game_state.angle + (crawlerRenderViewportGet().rot || 0);
   view_vec[0] = cos(view_angle);
   view_vec[1] = sin(view_angle);
   right_vec[0] = view_vec[1];

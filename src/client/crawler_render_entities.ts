@@ -2,7 +2,6 @@ import assert from 'assert';
 import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
 import { BUCKET_ALPHA, BUCKET_OPAQUE, FACE_XY } from 'glov/client/dyn_geom';
 import {
-  getFrameDt,
   getFrameIndex,
   getFrameTimestamp,
 } from 'glov/client/engine';
@@ -183,7 +182,7 @@ const { abs, min } = Math;
 
 export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDraw2DOpts): void {
   let ent = this;
-  let frame = ent.updateAnim(getFrameDt());
+  let frame = ent.updateAnim(getScaledFrameDt());
   let { sprite, sprite_near } = ent.drawable_sprite_state;
   let use_near = true; // slightly better for 2D
   if (sprite_near && (use_near ||
@@ -324,7 +323,7 @@ export function drawableSpineDraw2D(this: EntityDrawableSpine, param: EntityDraw
   let ent = this;
   let { spine } = ent.drawable_spine_state;
   if (ent.drawable_spine_state.anim_update_frame !== getFrameIndex()) {
-    spine.update(getFrameDt());
+    spine.update(getScaledFrameDt());
     ent.drawable_spine_state.anim_update_frame = getFrameIndex();
   }
   let { scale: spine_scale, offs } = ent.drawable_spine_opts;
@@ -563,7 +562,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       use_near: ent_set === SPLIT_NEAR,
     });
 
-    if (ent.floaters) {
+    if (ent.floaters && !crawlerRenderViewportGet().rot) {
       // TODO: do floaters in 3D for all entities
       let is_in_front = ent.id === ent_in_front;
       let blink = 1;

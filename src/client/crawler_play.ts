@@ -10,6 +10,9 @@ import {
   effectsPassConsume,
   registerShader,
 } from 'glov/client/effects';
+import {
+  getFrameIndex,
+} from 'glov/client/engine';
 import * as engine from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import { fetch } from 'glov/client/fetch';
@@ -836,11 +839,10 @@ function uiClearColor(): void {
     ui_clear_color[3]);
 }
 
-
 let entity_split: boolean;
 let default_bg_color = vec3();
 let default_fog_params = vec3(0.003, 0.001, 800.0);
-export function crawlerRenderFramePrep(): void {
+export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
   let opts_3d: {
     fov: number;
     clear_all: boolean;
@@ -850,10 +852,12 @@ export function crawlerRenderFramePrep(): void {
     height?: number;
     viewport?: Vec4;
     need_depth?: string;
+    just_viewport?: boolean;
   } = {
     fov: FOV,
-    clear_all: true,
+    clear_all: !is_additional_viewport,
     clear_all_color: ui_clear_color,
+    just_viewport: is_additional_viewport,
   };
   entity_split = setting_pixely === 1 &&
     settings.entity_split && crawlerRenderDoSplit() &&
@@ -864,8 +868,10 @@ export function crawlerRenderFramePrep(): void {
     opts_3d.height = cv.h;
     effectsPassAdd();
   } else {
-    uiClearColor();
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (!is_additional_viewport) {
+      uiClearColor();
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
     let viewport = crawlerCalc3DViewport();
     opts_3d.width = viewport[2];
     opts_3d.height = viewport[3];
@@ -1023,7 +1029,7 @@ export function crawlerRenderFrame(): void {
       v3copy(fade_color, desired_fade_color);
       last_frame_did_fade = true;
     } else {
-      v3lerp(fade_color, engine.getFrameDt() * 0.001, fade_color, desired_fade_color);
+      v3lerp(fade_color, getScaledFrameDt() * 0.001, fade_color, desired_fade_color);
     }
     fade_color[3] = controller.getFadeAlpha();
 
@@ -1039,8 +1045,11 @@ export function crawlerRenderFrame(): void {
   }
 }
 
+let last_frame_idx = -1;
 export function crawlerPrepAndRenderFrame(): void {
-  crawlerRenderFramePrep();
+  let is_additional_viewport = last_frame_idx === getFrameIndex();
+  last_frame_idx = getFrameIndex();
+  crawlerRenderFramePrep(is_additional_viewport);
   crawlerRenderFrame();
 }
 
