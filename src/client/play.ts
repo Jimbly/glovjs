@@ -97,6 +97,7 @@ import {
 } from './crawler_play';
 import {
   crawlerRenderViewportSet,
+  renderViewportShear,
 } from './crawler_render';
 import {
   crawlerRenderEntitiesStartup,
@@ -633,6 +634,12 @@ export function play(dt: number): void {
 
   playCrawl();
 
+  if (0) {
+    let shear = clamp(input.mousePos()[0]/game_width* 2 - 1, -1, 1);
+    renderViewportShear(shear);
+  } else {
+    renderViewportShear(-0.2); // Game preference
+  }
   crawlerPrepAndRenderFrame();
 
   if (!loading_level && !buildModeActive()) {

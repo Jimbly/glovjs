@@ -93,6 +93,7 @@ import {
   crawlerRenderGetPosOffs,
   crawlerRenderViewportGet,
   RenderPrepParam,
+  renderViewportShearGet,
 } from './crawler_render';
 import { CrawlerScriptAPIClient } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
@@ -2385,7 +2386,17 @@ export class CrawlerController {
       v2add(this.cam_pos, game_state.pos, half_vec);
       const { level } = game_state;
       if (level) {
-        this.cam_pos[2] = this.cam_pos_z_offs + level.getInterpolatedHeight(game_state.pos[0], game_state.pos[1]);
+        let shear = renderViewportShearGet();
+        // map shear from -0.7...0.7 to -0.5...0.5
+        shear *= 5/7;
+        // normal: map 0..0.5..1
+        // shear=0.5 (camera effectively on floor): map 0.5..0.5..1
+        // shear=-0.5 (camera effectively on ceiling): map 0..0.5..0.5
+        let vs = [clamp(0 + shear, 0, 0.5), 0.5, clamp(1 + shear, 0.5, 1)];
+        let zoffs = this.cam_pos_z_offs < 0.5 ?
+          lerp(this.cam_pos_z_offs / 0.5, vs[0], vs[1]) :
+          lerp((this.cam_pos_z_offs - 0.5) / 0.5, vs[1], vs[2]);
+        this.cam_pos[2] = zoffs + level.getInterpolatedHeight(game_state.pos[0], game_state.pos[1]);
       }
       return {
         game_state: this.game_state,

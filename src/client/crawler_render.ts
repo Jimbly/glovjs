@@ -21,6 +21,9 @@ export const ShaderType = {
 export type ShaderTypeEnum = typeof ShaderType[keyof typeof ShaderType];
 
 import assert from 'assert';
+import mat4Identity from 'gl-mat4/identity';
+import mat4Mul from 'gl-mat4/multiply';
+import mat4Translate from 'gl-mat4/translate';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { virtualToCanvas } from 'glov/client/camera2d';
 import { cmd_parse } from 'glov/client/cmds';
@@ -35,6 +38,9 @@ import {
   FACE_XY,
 } from 'glov/client/dyn_geom';
 import * as engine from 'glov/client/engine';
+import {
+  setGlobalMatrices,
+} from 'glov/client/engine';
 import { filewatchOn } from 'glov/client/filewatch';
 import { geomCreateQuads } from 'glov/client/geom';
 import type { Box } from 'glov/client/geom_types';
@@ -1503,6 +1509,32 @@ export function renderCamPos(): ROVec3 {
   return cam_pos;
 }
 
+let viewport_shear = 0;
+// -1 = looking downward, 1 = looking upward
+export function renderViewportShear(amt: number): void {
+  viewport_shear = amt;
+}
+
+export function renderViewportShearGet(): number {
+  return viewport_shear;
+}
+
+let mat_temp1 = mat4();
+function applyShear(): void {
+  let mat_view = engine.mat_view;
+  mat4Identity(mat_temp1);
+  let offs_from_faced_wall = (1 - pos_offs[1]) * HDIM;
+  mat4Translate(mat_temp1, mat_temp1, [0, viewport_shear*offs_from_faced_wall, 0]);
+  mat4Mul(mat_view, mat_temp1, mat_view);
+  mat4Mul(mat_view, [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, viewport_shear, 1, 0,
+    0, 0, 0, 1,
+  ], mat_view);
+  setGlobalMatrices(mat_view);
+}
+
 let ignore_vis: boolean;
 export type RenderPrepParam = {
   game_state: CrawlerState;
@@ -1552,6 +1584,10 @@ export function renderPrep(param: RenderPrepParam): void {
   let sp = sin(pitch);
   v3set(target_pos, cam_pos[0] + ca * cp, cam_pos[1] + sa * cp, cam_pos[2] + sp);
   dynGeomLookAt(cam_pos, target_pos, zaxis);
+
+  if (viewport_shear) {
+    applyShear();
+  }
 
   frame_idx = engine.frame_index;
   // same positional transformation logic, applied in game space, from player, not camera (if different (freeCam))
