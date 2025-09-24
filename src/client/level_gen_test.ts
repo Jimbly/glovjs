@@ -8,7 +8,10 @@ import {
 import { dotPropGet, dotPropSet } from 'glov/common/dot-prop';
 import { clamp, clone } from 'glov/common/util';
 import { CrawlerState } from '../common/crawler_state';
-import { default_gen_params } from '../common/level_generator';
+import {
+  default_gen_params_brogue,
+  GenParamsWrapBrogue,
+} from '../common/levelgen_brogue';
 import {
   buildModeActive,
   crawlerBuildModeBegin,
@@ -21,7 +24,7 @@ const { round } = Math;
 let params = {
   //floor: 0,
   seed: 0,
-  ...clone(default_gen_params.brogue),
+  ...clone(default_gen_params_brogue),
 
   // More Moraff-y
   // w: 63,
@@ -72,7 +75,7 @@ export function levelGenTest(game_state: CrawlerState): boolean {
   param('w', 'w', 11, 100, round);
   param('h', 'h', 11, 100, round);
   param('rooms', 'max_rooms', 1, 500, round);
-  for (let key in default_gen_params.brogue.odds) {
+  for (let key in default_gen_params_brogue.odds) {
     param(key, `odds.${key}`, 0, 10, round);
   }
   param('hallway', 'hallway_chance', 0, 1, hundreds);
@@ -90,7 +93,7 @@ export function levelGenTest(game_state: CrawlerState): boolean {
     last_params = cur_params;
     let level_generator_test = crawlerInitBuildModeLevelGenerator();
     level_generator_test.seed_override = String(params.seed);
-    level_generator_test.level_gen_params = { type: 'brogue', brogue: clone(params) };
+    level_generator_test.setParams<GenParamsWrapBrogue>({ type: 'brogue', brogue: clone(params) });
     level_generator_test.resetAllLevels();
     if (buildModeActive()) {
       crawlerBuildModeBegin();
