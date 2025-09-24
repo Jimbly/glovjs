@@ -1313,7 +1313,7 @@ function showCurrentCell(param: {
           font_height: font_height*0.75,
           h: font_height,
           font,
-          text: value && String(value) || '...',
+          text: value === '' || value === null ? '...' : String(value),
           font_style_normal: font_style_prop,
           colors: colors_prop,
         })) {
@@ -1345,7 +1345,7 @@ function showCurrentCell(param: {
           colors: colors_prop,
         })) {
           crawlerBuildModeBegin();
-          setLastProp({ key: prop_key, text: value || '' });
+          setLastProp({ key: prop_key, text: value && String(value) || '' });
           target_cell.setProp(prop_key, undefined);
           crawlerBuildModeCommit();
         }
@@ -1693,7 +1693,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
         font_height: font_height*0.75,
         h: font_height,
         font,
-        text: value && String(value) || '...',
+        text: value === '' || value === null ? '...' : String(value),
         font_style_normal: font_style_prop,
         colors: colors_prop,
       })) {

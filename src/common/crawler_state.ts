@@ -304,7 +304,7 @@ function charFromCell(cell_desc: CellDesc): string {
   return cell_desc.ascii_char || ' ';
 }
 
-export type CrawlerCellPropValue = string; // | number | boolean;
+export type CrawlerCellPropValue = string | number; // | boolean;
 export type CrawlerCellProps = Partial<Record<string, CrawlerCellPropValue>>;
 
 

@@ -57,7 +57,7 @@ crawlerScriptRegisterEvent({
   // map_icon: CrawlerScriptEventMapIcons.EXCLAMATION,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     if (!param && cell.props?.key_cell) {
-      param = cell.props?.key_cell;
+      param = cell.props?.key_cell as string;
     }
     if (!param) {
       api.status('key_pickup', '"key_set" event requires a string parameter');
@@ -75,7 +75,7 @@ crawlerScriptRegisterEvent({
   when: CrawlerScriptWhen.PRE, // Must be PRE so that the if happens before the server applies it
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     if (!param && cell.props?.key_cell) {
-      param = cell.props?.key_cell;
+      param = cell.props?.key_cell as string;
     }
     if (!param) {
       api.status('key_pickup', '"key_clear" event requires a string parameter');
@@ -93,7 +93,7 @@ crawlerScriptRegisterEvent({
   when: CrawlerScriptWhen.PRE, // Must be PRE so that the if happens before the server applies it
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
     if (!param && cell.props?.key_cell) {
-      param = cell.props?.key_cell;
+      param = cell.props?.key_cell as string;
     }
     if (!param) {
       api.status('key_pickup', '"key_toggle" event requires a string parameter');

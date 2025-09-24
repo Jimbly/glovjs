@@ -611,7 +611,7 @@ export function play(dt: number): void {
 
   let overlay_menu_up = pause_menu_up || dialogMoveLocked(); // || inventory_up
 
-  tickMusic(game_state.level?.props.music || null); // || 'default_music'
+  tickMusic(game_state.level?.props.music as string || null); // || 'default_music'
   crawlerPlayTopOfFrame(overlay_menu_up);
 
   if (keyDownEdge(KEYS.F3)) {

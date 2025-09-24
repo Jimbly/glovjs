@@ -224,8 +224,8 @@ export function crawlerMapViewDraw(
   let total_enemies = initial_entities.length;
   //last_progress = level.seen_cells/level.total_cells;
   last_progress = total_enemies ? max(0, 1 - (num_enemies / total_enemies)) : 1;
-  let floor_title = level.props.title || `Floor ${game_state.floor_id}`;
-  let floor_subtitle = level.props.subtitle || '';
+  let floor_title = level.props.title as string || `Floor ${game_state.floor_id}`;
+  let floor_subtitle = level.props.subtitle as string || '';
   if (fullscreen) {
     if (style_map_name) {
       ui.font.drawSizedAligned(style_map_name, x, y + 2, z + 1, text_height,
