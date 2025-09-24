@@ -30,6 +30,15 @@ export type BuildModeOp = {
   diff: Diff;
 };
 
+export function entManhattanDistance(ent: EntityBaseCommon, pos: ROVec2): number {
+  let ent_pos = ent.getData('pos') as number[];
+  let r = 0;
+  for (let ii = 0; ii < 2; ++ii) {
+    r += abs(ent_pos[ii] - pos[ii]);
+  }
+  return r;
+}
+
 export function entSamePos(ent: EntityBaseCommon, pos: ROVec2): boolean {
   let ent_pos = ent.getData('pos') as number[];
   for (let ii = 0; ii < 2; ++ii) {
