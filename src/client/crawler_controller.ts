@@ -1041,6 +1041,39 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   }
 }
 
+export type ControllerHotzones = Record<'left' | 'right' | 'forward' | 'back', Box>;
+let touch_hotzones: ControllerHotzones;
+export function crawlerControllerTouchHotzonesAuto(): void {
+  let viewport = crawlerRenderViewportGet();
+  let leftright_w = floor(viewport.w * 0.24);
+  let left = {
+    ...viewport,
+    w: leftright_w,
+  };
+  let right = {
+    ...viewport,
+    x: viewport.x + viewport.w - leftright_w,
+    w: leftright_w,
+  };
+  let forward = {
+    x: left.x + left.w,
+    y: viewport.y,
+    w: viewport.w - left.w - right.w,
+    h: floor(viewport.h * 0.84),
+  };
+  let back = {
+    ...forward,
+    y: forward.y + forward.h,
+    h: viewport.h - forward.h,
+  };
+  touch_hotzones = {
+    left, right, forward, back,
+  };
+}
+
+export function crawlerControllerTouchHotzones(hotzones: ControllerHotzones): void {
+  touch_hotzones = hotzones;
+}
 
 export type PlayerMotionParam = {
   button_x0: number;
@@ -2062,28 +2095,7 @@ export class CrawlerController {
       let right_hotzone: Box | undefined;
       if (!uiHandlingNav() && !disabled && !build_mode) {
         // do touch controls on the viewport
-        let viewport = crawlerRenderViewportGet();
-        let leftright_w = floor(viewport.w * 0.24);
-        left_hotzone = {
-          ...viewport,
-          w: leftright_w,
-        };
-        right_hotzone = {
-          ...viewport,
-          x: viewport.x + viewport.w - leftright_w,
-          w: leftright_w,
-        };
-        forward_hotzone = {
-          x: left_hotzone.x + left_hotzone.w,
-          y: viewport.y,
-          w: viewport.w - left_hotzone.w - right_hotzone.w,
-          h: floor(viewport.h * 0.84),
-        };
-        back_hotzone = {
-          ...forward_hotzone,
-          y: forward_hotzone.y + forward_hotzone.h,
-          h: viewport.h - forward_hotzone.h,
-        };
+        ({ left: left_hotzone, right: right_hotzone, forward: forward_hotzone, back: back_hotzone } = touch_hotzones);
       }
 
       button(0, 0, 0, 'turn_left', keys_turn_left, pad_turn_left, false, left_hotzone);

@@ -61,7 +61,10 @@ import {
   crawlerCommStart,
   crawlerCommWant,
 } from './crawler_comm';
-import { CrawlerController } from './crawler_controller';
+import {
+  CrawlerController,
+  crawlerControllerTouchHotzonesAuto,
+} from './crawler_controller';
 import {
   crawlerEntityClientStartupEarly,
   crawlerEntityManager,
@@ -744,6 +747,7 @@ export function playStartup(): void {
     w: render_width,
     h: render_height,
   });
+  crawlerControllerTouchHotzonesAuto();
   // crawlerRenderSetUIClearColor(dawnbringer.colors[14]);
 
   let button_param = {
