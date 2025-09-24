@@ -1,6 +1,6 @@
 
 import assert from 'assert';
-import { chatUICreate } from 'glov/client/chat_ui';
+import { ChatUI } from 'glov/client/chat_ui';
 import * as engine from 'glov/client/engine';
 import {
   ClientChannelWorker,
@@ -26,8 +26,6 @@ import {
   crawlerPlayInitOnlineEarly,
   crawlerPlayInitOnlineLate,
 } from './crawler_play';
-
-export type ChatUI = ReturnType<typeof chatUICreate>;
 
 const STATE_NONE = 'none';
 const STATE_JOINING = 'joining';
@@ -158,7 +156,7 @@ function leave(channel_subid: string): void {
 }
 
 function crawlerCommReconnect(): void {
-  if (current_channel) {
+  if (current_channel && current_channel !== 'local') {
     leave(current_channel);
   }
 }

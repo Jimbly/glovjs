@@ -5,7 +5,7 @@ local_storage.setStoragePrefix('crawler'); // Before requiring anything else tha
 
 import assert from 'assert';
 import { autoAtlasTextureOpts } from 'glov/client/autoatlas';
-import { chatUICreate } from 'glov/client/chat_ui';
+import { ChatUI, chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { Font, fontCreate } from 'glov/client/font';
@@ -57,7 +57,11 @@ crawlerOnPixelyChange(function (new_value: number): void {
 
 const clear_color = vec4(0, 0, 0, 1);
 
-export let chat_ui: ReturnType<typeof chatUICreate>;
+export let chat_ui: ChatUI;
+
+export function chatUI(): ChatUI {
+  return chat_ui;
+}
 
 export function main(): void {
   if (engine.DEBUG || true) {
@@ -241,6 +245,8 @@ export function main(): void {
   crawlerBuildModeStartup({
     font: build_font,
     button_height: 11,
+    cell_props: [
+    ],
   });
   playStartup();
   engine.setState(titleInit);

@@ -1,6 +1,7 @@
 /* eslint comma-spacing:error */
 import assert from 'assert';
 import * as camera2d from 'glov/client/camera2d';
+import { ChatUIRunParam } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import {
   applyCopy,
@@ -1053,15 +1054,8 @@ export function crawlerPrepAndRenderFrame(): void {
   crawlerRenderFrame();
 }
 
-export type ChatUIParam = { // TODO: Typescript: remove when chat_ui is migrated
-  border?: number;
-  scroll_grow?: number;
-  cuddly_scroll?: boolean;
-  x: number;
-  y_bottom: number;
-  z?: number;
-};
-let chat_ui_param: ChatUIParam;
+export type CrawlerChatUIParam = ChatUIRunParam & { y_bottom: number };
+let chat_ui_param: CrawlerChatUIParam;
 let allow_offline_console: boolean;
 let do_chat: boolean;
 export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
@@ -1108,7 +1102,7 @@ export function crawlerPlayStartup(param: {
   on_init_level_offline?: InitLevelFunc;
   default_vstyle?: string;
   allow_offline_console?: boolean;
-  chat_ui_param?: ChatUIParam;
+  chat_ui_param?: CrawlerChatUIParam;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
