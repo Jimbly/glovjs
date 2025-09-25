@@ -6,6 +6,7 @@ import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   CHAT_FLAG_EMOTE,
   CHAT_FLAG_USERCHAT,
+  CHAT_USER_FLAGS,
 } from 'glov/common/enums';
 import type {
   ChatHistoryData,
@@ -32,6 +33,7 @@ import {
 import { asyncParallel } from 'glov-async';
 import * as camera2d from './camera2d';
 import { getAbilityChat } from './client_config';
+import { cmdAutoComplete } from './cmd_auto_complete';
 import { cmd_parse } from './cmds';
 import {
   EditBox,
@@ -1461,7 +1463,7 @@ class ChatUI {
           if (cur_text) {
             if (cur_text[0] === '/') {
               // do auto-complete
-              let autocomplete = cmd_parse.autoComplete(cur_text.slice(1), this.getAccessObj().access);
+              let autocomplete = cmdAutoComplete(cur_text.slice(1), this.getAccessObj().access);
               if (autocomplete && autocomplete.length) {
                 let first = autocomplete[0];
                 let auto_text = [];
@@ -1830,7 +1832,7 @@ class ChatUI {
           let elem = chat_history.msgs[idx] as ChatMessageDataBroadcast;
           if (elem && elem.msg) {
             elem.quiet = true;
-            if (elem.id && here_map[elem.id]) {
+            if (elem.id && here_map[elem.id] && !(elem.flags & ~CHAT_USER_FLAGS)) {
               elem.display_name = here_map[elem.id];
             }
             this.onMsgChat(elem);

@@ -16,6 +16,7 @@ import {
 import {
   FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
+  HighScoreListRaw,
   scoreCanUpdatePlayerName,
   scoreFormatName,
   scoreGetPlayerName,
@@ -144,6 +145,7 @@ export type ScoresDrawParam<ScoreType> = {
   rename_button_size?: number; // default 10 (in text height units)
   rename_button_offset?: number; // default -0.25 (in fraction of `size`)
   friend_cat?: string;
+  override_scores?: HighScoreListRaw;
 };
 
 const skipped_rank_column_def: ColumnDef = {
@@ -174,6 +176,7 @@ export function scoresDraw<ScoreType>({
   rename_button_size,
   rename_button_offset,
   friend_cat,
+  override_scores,
 }: ScoresDrawParam<ScoreType>): number {
   assert(color_me_background[3] === 1);
   if (!font) {
@@ -255,7 +258,12 @@ export function scoresDraw<ScoreType>({
     drawSet(row, use_style, false);
   }
 
-  let scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
+  let scores;
+  if (override_scores) {
+    scores = score_system.getHighScoresOverride(level_index, override_scores);
+  } else {
+    scores = score_system.getHighScores(level_index, friend_cat || FRIEND_CAT_GLOBAL);
+  }
   if (!scores) {
     // Note: using scroll_max_y instead of (y + height) for better centering in
     //   QP2A, but not 100% sure this is the right solution.  Probably height is

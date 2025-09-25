@@ -101,7 +101,7 @@ type ButtonLabels = BaseButtonLabels & ExtraButtonLabels;
 export function setButtonsDefaultLabels(buttons_labels: ButtonLabels): void;
 export function setProvideUserStringDefaultMessages(success_msg: Text, failure_msg: Text): void;
 export function suppressNewDOMElemWarnings(): void;
-export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
+export function uiGetDOMElem(last_elem: HTMLElement | null, allow_modal: boolean): null | HTMLElement;
 export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
 export type UISoundID = SoundID & { opts?: SoundLoadOpts };
@@ -296,6 +296,7 @@ export type ModalDialogTickCallbackParams = {
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
 };
+// Returns a hotkey, e.g. KEYS.Y, to activate one of the buttons
 export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => number | void;
 export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {

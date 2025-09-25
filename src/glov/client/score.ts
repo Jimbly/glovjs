@@ -4,6 +4,7 @@
 
 export const FRIEND_CAT_FRIENDS = 'friends';
 export const FRIEND_CAT_GLOBAL = 'global';
+export const FRIEND_CAT_JUSTME = 'justme';
 
 import assert from 'assert';
 import type { CmdRespFunc } from 'glov/common/cmd_parse';
@@ -386,18 +387,18 @@ export type ScoreSystemParam<ScoreType> = {
   num_names?: number;
   histogram?: boolean; // also fetch histogram data
 };
-type HighScoreListEntryRaw = {
+export type HighScoreListEntryRaw = {
   n?: string | string[]; // representative list of user display names
   s: number; // score value
   c?: number; // count of users at this score
   r?: number; // rank, if not implicit
 };
-type HighScoreHistogramRaw = {
+export type HighScoreHistogramRaw = {
   s: number; // start
   b: number; // bucket_size
   h: number[];
 };
-type HighScoreListRaw = {
+export type HighScoreListRaw = {
   total: number;
   my_rank?: number;
   my_score?: number;
@@ -565,6 +566,109 @@ class ScoreSystemImpl<ScoreType> {
 
     bc.high_scores = ret;
   }
+
+  getHighScoresOverride(level_idx: number, scores: HighScoreListRaw): HighScoreList<ScoreType> | null {
+    // Fetch "high scores" for just me to find my high score as known by the server
+    let my_high_score = this.getHighScores(level_idx, FRIEND_CAT_JUSTME);
+    let my_score = my_high_score?.my_score || undefined;
+    let my_name = scoreGetPlayerName();
+
+    if (!my_score) {
+      // also try local storage if it's there
+      let ld = this.level_defs[level_idx];
+      if (ld.local_score) {
+        my_score = this.score_to_value(ld.local_score);
+      }
+    }
+
+    let ret: HighScoreList<ScoreType> = {
+      total: scores.total,
+      my_rank: undefined,
+      my_score,
+      list: [],
+    };
+    if (my_score !== undefined) {
+      ret.total++;
+    }
+    let did_my_score = false;
+    let rank = 1;
+    let rank_offs = 0;
+    for (let ii = 0; ii < scores.list.length; ++ii) {
+      let entry = scores.list[ii];
+      let names = entry.n || [];
+      if (typeof names === 'string') {
+        names = [names];
+      } else {
+        names = names.slice(0);
+      }
+      let count = entry.c || 1;
+      if (!did_my_score && my_score && (this.asc && entry.s > my_score || !this.asc && entry.s < my_score)) {
+        // we passed my score, add an entry
+        ret.my_rank = rank;
+        ret.list.push({
+          score: this.value_to_score(my_score),
+          names: [my_name],
+          names_str: my_name,
+          count: 1,
+          rank,
+        });
+        rank_offs++;
+        rank++;
+        did_my_score = true;
+      }
+      let this_rank = (entry.r ? entry.r + rank_offs : 0) || rank;
+      if (entry.s === my_score) {
+        // Add own name is in list
+        names.unshift(my_name);
+        count++;
+        rank_offs++;
+        ret.my_rank = this_rank;
+        did_my_score = true;
+      }
+      if (!names.length) {
+        // If unknown names, add at least one "Anonymous" to the list, so no entry is name-less
+        names.push('Anonymous');
+      }
+      let names_str = names.join(', ');
+      if (count > names.length) {
+        let remaining = count - names.length;
+        names_str += `${names_str ? ', ' : ''}${remaining} ${plural(remaining, names.length ? 'other' : 'user')}`;
+      }
+      ret.list.push({
+        score: this.value_to_score(entry.s),
+        names,
+        names_str,
+        count,
+        rank: this_rank,
+      });
+      rank = this_rank + count;
+    }
+
+    if (!did_my_score && my_score) {
+      ret.my_rank = rank;
+      ret.list.push({
+        score: this.value_to_score(my_score),
+        names: [my_name],
+        names_str: my_name,
+        count: 1,
+        rank,
+      });
+    }
+
+    let { histo } = scores;
+    if (histo) {
+      let histogram: HighScoreListHistogram = {
+        start: histo.s,
+        bucket_size: histo.b,
+        counts: histo.h,
+      };
+      ret.histogram = histogram;
+    }
+
+    return ret;
+  }
+
+
   last_friend_cat = FRIEND_CAT_GLOBAL;
   private makeURL(api: string, ld: LevelDef, friend_cat: string, friend_set_code: string | null): string {
     assert(allocated_user_id);
@@ -574,9 +678,9 @@ class ScoreSystemImpl<ScoreType> {
     }
     if (friend_set_code) {
       url += `&fs=${friend_set_code}`;
-      if (friend_cat !== FRIEND_CAT_GLOBAL) {
-        url += '&of';
-      }
+    }
+    if (friend_cat !== FRIEND_CAT_GLOBAL) {
+      url += '&of';
     }
     if (this.num_names !== 3) {
       url += `&num_names=${this.num_names}`;

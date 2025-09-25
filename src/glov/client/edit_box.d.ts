@@ -21,6 +21,7 @@ export interface EditBoxOptsAll {
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;
+  resize: boolean; // only applies to multi-line edit boxes
   // internal state: onetime_focus: boolean;
   focus_steal: boolean;
   auto_unfocus: boolean;
