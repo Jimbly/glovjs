@@ -1287,6 +1287,10 @@ export function buttonText(param) {
   return ret ? spot_ret : null;
 }
 
+// Default `shrink` parameter to pad images within buttons, if the button
+//   does *not* have a 9-patch padding built in (shrink=1 in that case)
+const DEFAULT_SHRINK = 0.75;
+
 function buttonImageDraw(param, state, focused) {
   profilerStartFunc();
   let uvs = param.img_rect;
@@ -1294,7 +1298,7 @@ function buttonImageDraw(param, state, focused) {
   if (typeof param.frame === 'number') {
     uvs = img.uidata.rects[param.frame];
   }
-  buttonBackgroundDraw(param, state);
+  let patch_pad = buttonBackgroundDraw(param, state);
   let color = button_last_color;
   let img_origin = img.origin;
   let img_w = img.size[0];
@@ -1303,28 +1307,73 @@ function buttonImageDraw(param, state, focused) {
   if (typeof param.frame === 'number') {
     aspect = img.uidata.aspect ? img.uidata.aspect[param.frame] : 1;
   }
-  let largest_w_horiz = param.w * param.shrink;
-  let largest_w_vert = param.h * param.shrink * aspect;
-  img_w = min(largest_w_horiz, largest_w_vert);
-  img_h = img_w / aspect;
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
-  let pad_top = (param.h - img_h) / 2;
+
+  // old logic before patch_pad:
+  // let largest_w_horiz = param.w * (param.shrink || DEFAULT_SHRINK);
+  // let largest_w_vert = param.h * (param.shrink || DEFAULT_SHRINK) * aspect;
+  // let w = min(largest_w_horiz, largest_w_vert);
+  // let h = w / aspect;
+  // let pad_top = (param.h - h) / 2;
+  // let x = param.x + (param.left_align ? pad_top : (param.w - w) / 2);
+  // let y = param.y + pad_top;
+
+  // Calculate bounds in which the image should be contained
+  let bounds_x = param.x;
+  let bounds_w = param.w;
+  let shrink_x = param.shrink || DEFAULT_SHRINK;
+  if (patch_pad && patch_pad.x !== undefined) {
+    bounds_x = patch_pad.x;
+    bounds_w = patch_pad.w;
+    shrink_x = param.shrink || 1;
+  }
+  let bounds_y = param.y;
+  let bounds_h = param.h;
+  let shrink_y = param.shrink || DEFAULT_SHRINK;
+  if (patch_pad && patch_pad.y !== undefined) {
+    bounds_y = patch_pad.y;
+    bounds_h = patch_pad.h;
+    shrink_y = param.shrink || 1;
+  }
+  let bounds_dim = min(bounds_w, bounds_h);
+
+  if (shrink_x !== 1) {
+    let pad_left = bounds_dim * (1 - shrink_x) / 2;
+    bounds_x += pad_left;
+    bounds_w -= pad_left * 2;
+  }
+  if (shrink_y !== 1) {
+    let pad_top = bounds_dim * (1 - shrink_y) / 2;
+    bounds_y += pad_top;
+    bounds_h -= pad_top * 2;
+  }
+
+  let w = min(bounds_w, bounds_h * aspect);
+  let h = w / aspect;
+  let pad_top = (bounds_h - h) / 2;
+  let x = bounds_x + (param.left_align ? pad_top : (bounds_w - w) / 2);
+  let y = bounds_y + pad_top;
+
+  // adjust for sprite origin and custom offset
+  x += img_origin[0] * w;
+  y += img_origin[1] * h + yoffs;
+
   let draw_param = {
-    x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
-    y: param.y + pad_top + img_origin[1] * img_h + yoffs,
+    x,
+    y,
     z: param.z + (param.z_inc || Z_MIN_INC),
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
-    w: img_w / img.size[0],
-    h: img_h / img.size[1],
+    w: w / img.size[0],
+    h: h / img.size[1],
     uvs,
     rot: param.rotation,
   };
   if (param.flip) {
-    let { x, w } = draw_param;
-    draw_param.x = x + w;
-    draw_param.w = -w;
+    // TODO: doesn't handle non-standard origin correctly
+    draw_param.x += w;
+    draw_param.w *= -1;
   }
   if (param.color1) {
     img.drawDualTint(draw_param);
@@ -1344,7 +1393,6 @@ export function buttonImage(param) {
   param.z = param.z || Z.UI;
   param.w = param.w || ui_style_current.button_height;
   param.h = param.h || param.w || ui_style_current.button_height;
-  param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
 
   let spot_ret = buttonShared(param);
@@ -1371,7 +1419,6 @@ export function button(param) {
   // w/h initialize differently than either buttonText or buttonImage
   param.h = param.h || ui_style_current.button_height;
   param.w = param.w || ui_style_current.button_width;
-  param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
   param.font_height = param.font_height || (param.style || ui_style_current).text_height;
@@ -1384,8 +1431,8 @@ export function button(param) {
   let saved_w = param.w;
   let saved_x = param.x;
   param.no_bg = true;
-  let img_size = param.h * param.shrink;
-  let img_pad = param.h * (1 - param.shrink) / 2;
+  let img_size = param.h * (param.shrink || DEFAULT_SHRINK);
+  let img_pad = param.h * (1 - (param.shrink || DEFAULT_SHRINK)) / 2;
   param.x += img_pad + img_size;
   param.w -= img_pad + img_size;
   buttonTextDraw(param, state, focused);
