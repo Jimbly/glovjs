@@ -214,6 +214,7 @@ module.exports = function (opts) {
         }
         ws = [img.width];
         hs = [img.height];
+        img.source_name = img_file.relative;
         if (do_9patch) {
           did_error = false;
           ws = parseRow(job, img, 1, 0, 1, 0);
@@ -238,7 +239,6 @@ module.exports = function (opts) {
           padv,
         };
         input_png_cache[img_file.relative] = img;
-        img.source_name = img_file.relative;
       }
       let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
       if (idx === 0) {
