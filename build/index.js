@@ -508,6 +508,7 @@ const server_tasks = [
   'server_static',
   'server_js_notest',
   'server_json',
+  ...config.extra_server_tasks,
 ];
 const server_input_globs = server_tasks.map(addStarStar);
 

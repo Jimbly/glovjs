@@ -386,6 +386,25 @@ export function scoresDraw<ScoreType>({
     drawScoreEntry(null, { names_str: my_name, names: [my_name], score: my_score, rank: -1, count: 1 }, style_me);
     z -= 20;
     y = y_save2 + line_height * 2;
+  } else if (scores.overloaded) {
+    let y_save2 = y;
+    if (y < scroll_min_visible_y) {
+      y = scroll_min_visible_y;
+    } else if (y > scroll_max_visible_y - line_height) {
+      y = scroll_max_visible_y - line_height;
+    }
+    z += 20;
+    ui.drawRect(x, y, x + width + 1, y + line_height - 1, z - 1, color_me_background);
+    font.draw({
+      style: style_header,
+      x, y, z,
+      w: vis_width,
+      h: line_height,
+      align: ALIGN.HVCENTERFIT,
+      text: 'Leaderboards temporarily unavailable'
+    });
+    z -= 20;
+    y = y_save2 + line_height * 2;
   }
   let set_pad = size / 2;
   y += set_pad/2;

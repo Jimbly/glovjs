@@ -76,7 +76,7 @@
     "eslint-plugin-n": "^17.16.2",
     "glov-build": "1.0.50",
     "glov-build-babel": "1.0.4",
-    "glov-build-browserify": "1.0.8",
+    "glov-build-browserify": "1.0.10",
     "glov-build-cache": "1.1.0",
     "glov-build-concat": "1.0.14",
     "glov-build-imagemin": "^1.0.0",

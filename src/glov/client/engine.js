@@ -983,6 +983,9 @@ export function isOutOfTick() {
 let last_tick = 0;
 let last_tick_hr = 0;
 let frame_limit_time_left = 0;
+export let last_raw_tick_times = [];
+export let last_raw_tick_skipped = [];
+export let last_raw_tick_index = 0;
 function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
@@ -1021,6 +1024,10 @@ function tick(timestamp) {
 
   let dt_raw = hrtime - last_tick_hr;
   last_tick_hr = hrtime;
+  let last_raw_tick_index_use = last_raw_tick_index;
+  last_raw_tick_times[last_raw_tick_index_use] = dt_raw;
+  last_raw_tick_skipped[last_raw_tick_index_use] = false;
+  last_raw_tick_index = (last_raw_tick_index_use + 1) % 24;
   let max_fps = settings.max_fps;
   if (max_fps && max_fps <= settings.use_animation_frame) {
     // using requestAnimationFrame, need to apply max_fps ourselves
@@ -1030,6 +1037,7 @@ function tick(timestamp) {
       requestFrame();
       profilerStop('top');
       out_of_tick = true;
+      last_raw_tick_skipped[last_raw_tick_index_use] = true;
       return profilerStop('tick');
     }
     let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
