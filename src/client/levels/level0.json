@@ -1119,7 +1119,7 @@
       ]
     },
     {
-      "id": "dcex_detail5",
+      "id": "dcex_detail1",
       "walls": [
         "open",
         "open",
@@ -1199,7 +1199,7 @@
     {
       "id": "open",
       "walls": [
-        "solid",
+        "stairs_out",
         "open",
         "stairs_in",
         "open"
@@ -1404,7 +1404,7 @@
       "id": "solid",
       "walls": [
         "open",
-        "open",
+        "solid",
         "open",
         "solid"
       ]
@@ -1473,7 +1473,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -1482,7 +1482,7 @@
       ]
     },
     {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -1509,7 +1509,7 @@
       ]
     },
     {
-      "id": "dcex_detail6",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "open",
@@ -1537,9 +1537,9 @@
       "h": 0.25
     },
     {
-      "id": "dcex_detail5",
+      "id": "open",
       "walls": [
-        "solid",
+        "open",
         "solid",
         "open",
         "solid"
@@ -1547,6 +1547,16 @@
       "h": 0.5
     },
     {
+      "id": "dcex_detail1",
+      "walls": [
+        "solid",
+        "solid",
+        "open",
+        "solid"
+      ],
+      "h": 0.75
+    },
+    {
       "id": "solid",
       "walls": [
         "open",
@@ -1610,16 +1620,7 @@
       ]
     },
     {
-      "id": "solid",
-      "walls": [
-        "open",
-        "open",
-        "open",
-        "open"
-      ]
-    },
-    {
-      "id": "open",
+      "id": "dcex_detail2",
       "walls": [
         "open",
         "secret_door",
@@ -1628,10 +1629,10 @@
       ]
     },
     {
-      "id": "dcex_detail6",
+      "id": "dcex_detail2",
       "walls": [
         "open",
-        "secret_door",
+        "dcex_solid2",
         "open",
         "open"
       ]
@@ -1667,7 +1668,7 @@
       "id": "open",
       "walls": [
         "solid",
-        "solid",
+        "dcex_solid3",
         "open",
         "open"
       ]
@@ -1696,7 +1697,7 @@
         "open",
         "open",
         "open",
-        "open"
+        "solid"
       ]
     },
     {
@@ -1777,7 +1778,7 @@
         "solid",
         "door_oneway",
         "solid",
-        "secret_door"
+        "solid"
       ]
     },
     {
@@ -2366,26 +2367,10 @@
       ]
     },
     {
-      "type": "dcex_enemy1",
+      "type": "demo_wander",
       "pos": [
-        0,
-        10,
-        0
-      ]
-    },
-    {
-      "type": "dcex_enemy3",
-      "pos": [
-        0,
         11,
-        0
-      ]
-    },
-    {
-      "type": "dcex_enemy2",
-      "pos": [
-        5,
-        11,
+        6,
         2
       ]
     },
@@ -2395,22 +2380,6 @@
         6,
         6,
         1
-      ]
-    },
-    {
-      "type": "demo_wander",
-      "pos": [
-        11,
-        6,
-        2
-      ]
-    },
-    {
-      "type": "dcex_enemy2",
-      "pos": [
-        3,
-        11,
-        3
       ]
     }
   ],

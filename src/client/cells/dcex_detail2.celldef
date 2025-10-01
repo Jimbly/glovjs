@@ -6,12 +6,12 @@ visuals:
   type: simple_floor
   opts:
     atlas: dcex
-    tile: floor
+    tile: floor2
 - pass: bg
   type: simple_ceiling
   opts:
     atlas: dcex
-    tile: ceiling
+    tile: ceiling2
 - pass: celldetails
   type: simple_billboard
   opts:

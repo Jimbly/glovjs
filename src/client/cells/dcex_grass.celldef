@@ -12,6 +12,6 @@ visuals:
   type: simple_ceiling
   opts:
     atlas: dcex
-    tile: ceiling
+    tile: ceiling2
 
 corners: # pillars and floor/ceiling details
