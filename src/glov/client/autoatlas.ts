@@ -70,7 +70,7 @@ class AutoAtlasImp {
     let { sprites, atlas_name, texs } = this;
     let atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj');
     // Root default sprite, with frame-indexing
-    let root_sprite = sprites.def = this.prealloc();
+    let root_sprite = sprites.def = (sprites.def || this.prealloc());
     let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
     let root_aspect: number[] = [];
 
