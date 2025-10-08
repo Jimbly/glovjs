@@ -1,0 +1,22 @@
+---
+tile_res: 12
+tiles:
+  enemy1: [0, 0]
+  enemy2: [1, 0]
+  enemy3: [2, 0]
+  enemy4: [3, 0]
+
+  enemy5: [0, 1]
+  enemy6: [1, 1]
+  enemy7: [2, 1]
+  enemy8: [3, 1]
+
+  enemy9: [0, 2]
+  enemy10: [1, 2]
+  enemy11: [2, 2]
+  enemy12: [3, 2]
+
+  enemy13: [0, 3]
+  enemy14: [1, 3]
+  enemy15: [2, 3]
+  enemy16: [3, 3]
