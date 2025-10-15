@@ -1115,6 +1115,9 @@ Sprite.prototype.withSamplerState = function (opts) {
     });
     let doInit = () => {
       new_sprite.texs = this.texs.map((tex) => {
+        if (tex.name === 'error') {
+          return tex;
+        }
         assert(tex.url);
         return textureLoad({
           url: `${tex.url.split('#')[0]}#${cache_v}`,
