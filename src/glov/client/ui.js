@@ -51,7 +51,7 @@ const glov_input = require('./input.js');
 const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { markdownAuto } = require('./markdown');
-const { abs, floor, max, min, round, sqrt } = Math;
+const { abs, ceil, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { sliderSetDefaultShrink } = require('./slider.js');
 const { soundLoad, soundPlay } = require('./sound.js');
@@ -629,6 +629,7 @@ function scale9PatchDims(pixel_scale, target_width, widths) {
   }
   let fixedscale;
   let stretchscale;
+  pixel_scale = pixel_scale || 1;
   if (fixed_ws * pixel_scale > target_width) {
     // too large even with stretchable sections, shrink (non-uniformly)
     fixedscale = target_width / fixed_ws;
@@ -775,7 +776,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   }
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
   let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
@@ -811,14 +812,17 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   spriteChainedStop();
 }
 
+let temp_uvs = vec4();
 // Tiles in the repeating portions
+// coords.crop_last controls whether the remainder is stretched or cropped
 export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
   if (color1) {
     coords.color1 = color1; // old API
   }
+  let crop_last = coords.crop_last || false;
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   let tiling_w = uidata.widths[1] * scale;
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
@@ -833,21 +837,42 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
-      let tile_x = ii > 0 && ii < ws.length - 1 ?
-        max(1, round(my_w / tiling_w)) : 1;
-      draw_box_param.w = tile_x > 1 ? my_w / tile_x : my_w;
+      let is_tiling_x = ii > 0 && ii < ws.length - 1;
+      let tile_x = is_tiling_x ?
+        max(1, (crop_last ? ceil : round)(my_w / tiling_w)) : 1;
+      let sub_w = crop_last ? tile_x > 1 ? tiling_w : my_w :
+        tile_x > 1 ? my_w / tile_x : my_w;
+      draw_box_param.w = sub_w;
       for (let xx = 0; xx < tile_x; ++xx) {
-        draw_box_param.x = x + xx * draw_box_param.w;
+        draw_box_param.x = x + xx * sub_w;
+        if (crop_last && is_tiling_x && xx === tile_x - 1) {
+          draw_box_param.w = x + my_w - draw_box_param.x;
+        }
         let y = coords.y;
         for (let jj = 0; jj < hs.length; ++jj) {
           let my_h = hs[jj];
           if (my_h) {
-            let tile_y = jj > 0 && jj < hs.length - 1 ?
-              max(1, round(my_h / tiling_h)) : 1;
-            draw_box_param.h = tile_y > 1 ? my_h / tile_y : my_h;
+            let is_tiling_y = jj > 0 && jj < hs.length - 1;
+            let tile_y = is_tiling_y ?
+              max(1, (crop_last ? ceil : round)(my_h / tiling_h)) : 1;
+            let sub_h = crop_last ? tile_y > 1 ? tiling_h : my_h :
+              tile_y > 1 ? my_h / tile_y : my_h;
+            draw_box_param.h = sub_h;
             draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+            if (crop_last && is_tiling_x && xx === tile_x - 1) {
+              // last one, crop it
+              v4copy(temp_uvs, draw_box_param.uvs);
+              temp_uvs[2] = temp_uvs[0] + (temp_uvs[2] - temp_uvs[0]) * draw_box_param.w / tiling_w;
+              draw_box_param.uvs = temp_uvs;
+            }
             for (let yy = 0; yy < tile_y; ++yy) {
-              draw_box_param.y = y + yy * draw_box_param.h;
+              draw_box_param.y = y + yy * sub_h;
+              if (crop_last && is_tiling_y && yy === tile_y - 1) {
+                draw_box_param.h = y + my_h - draw_box_param.y;
+                v4copy(temp_uvs, draw_box_param.uvs);
+                temp_uvs[3] = temp_uvs[1] + (temp_uvs[3] - temp_uvs[1]) * draw_box_param.h / tiling_h;
+                draw_box_param.uvs = temp_uvs;
+              }
               if (coords.color1) {
                 s.drawDualTint(draw_box_param);
               } else {
@@ -867,7 +892,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
 export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
 
   let ws = [];
   let fixed_w_sum = 0;
@@ -1100,16 +1125,19 @@ export function drawTooltipBox(param) {
 }
 
 export function progressBar(param) {
-  drawHBox(param, sprites.progress_bar_trough, param.color_trough || param.color || unit_vec);
+  drawBox(param, sprites.progress_bar_trough, param.pixel_scale, param.color_trough || param.color || unit_vec);
   let progress = clamp(param.progress, 0, 1);
-  drawHBox({
-    x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
-    y: param.y,
-    z: (param.z || Z.UI) + Z_MIN_INC,
-    w: param.w * progress,
-    h: param.h,
-    no_min_width: true,
-  }, sprites.progress_bar, param.color || unit_vec);
+  if (progress) {
+    (param.tiled ? drawBoxTiled : drawBox)({
+      x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
+      y: param.y,
+      z: (param.z || Z.UI) + Z_MIN_INC,
+      w: param.w * progress,
+      h: param.h,
+      no_min_width: true,
+      crop_last: param.crop_last,
+    }, sprites.progress_bar, param.pixel_scale, param.color || unit_vec);
+  }
   if (param.tooltip) {
     spot({
       x: param.x, y: param.y,
@@ -1206,9 +1234,9 @@ export function buttonBackgroundDraw(param, state) {
     // if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
     //   drawHBox(param, sprite, color);
     // } else if (sprite.uidata.rects.length === 9) {
-    //   drawBox(param, sprite, param.pixel_scale || 1, color);
+    //   drawBox(param, sprite, param.pixel_scale, color);
     // } else {
-    ret = draw9Patch(param, sprite, param.pixel_scale || 1, color);
+    ret = draw9Patch(param, sprite, param.pixel_scale, color);
     // }
   }
   profilerStopFunc();
