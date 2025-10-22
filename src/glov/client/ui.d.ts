@@ -113,7 +113,10 @@ export interface DrawHBoxParam extends UIBox {
 export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
 export function drawBox(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
-export function drawBoxTiled(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
+export type UIBoxTiled = UIBox & {
+  crop_last?: boolean; // otherwise, default, stretch the last
+};
+export function drawBoxTiled(coords: UIBoxTiled, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
 export function drawMultiPartBox(
   coords: UIBox,
   scaleable_data: {
@@ -169,6 +172,8 @@ export function drawTooltipBox(param: TooltipBoxParam): void;
 export interface ProgressBarParam extends UIBoxColored {
   progress: number; // 0..1
   color_trough?: ROVec4;
+  tiled?: boolean;
+  crop_last?: boolean; // if tiled; otherwise, default, stretch the last
   centered?: boolean;
   tooltip?: Text;
 }
