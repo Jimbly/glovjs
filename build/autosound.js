@@ -98,7 +98,7 @@ module.exports = function (options) {
     }
   }
 
-  function acquireMP3Encoder(next) {
+  function acquireMP3Decoder(next) {
     mp3_limiter(function (release) {
       next();
       mp3_decoder.reset().then(release, release);
@@ -157,7 +157,7 @@ module.exports = function (options) {
 
       function readInput(next) {
         if (my_ext === 'mp3') {
-          acquireMP3Encoder(function () {
+          acquireMP3Decoder(function () {
             next(mp3_decoder.decode(file.contents));
           });
         } else {
