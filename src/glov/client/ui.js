@@ -629,6 +629,7 @@ function scale9PatchDims(pixel_scale, target_width, widths) {
   }
   let fixedscale;
   let stretchscale;
+  pixel_scale = pixel_scale || 1;
   if (fixed_ws * pixel_scale > target_width) {
     // too large even with stretchable sections, shrink (non-uniformly)
     fixedscale = target_width / fixed_ws;
@@ -775,7 +776,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   }
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
   let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
@@ -818,7 +819,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
   }
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   let tiling_w = uidata.widths[1] * scale;
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
@@ -867,7 +868,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
 export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
 
   let ws = [];
   let fixed_w_sum = 0;
@@ -1206,9 +1207,9 @@ export function buttonBackgroundDraw(param, state) {
     // if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
     //   drawHBox(param, sprite, color);
     // } else if (sprite.uidata.rects.length === 9) {
-    //   drawBox(param, sprite, param.pixel_scale || 1, color);
+    //   drawBox(param, sprite, param.pixel_scale, color);
     // } else {
-    ret = draw9Patch(param, sprite, param.pixel_scale || 1, color);
+    ret = draw9Patch(param, sprite, param.pixel_scale, color);
     // }
   }
   profilerStopFunc();
