@@ -4,10 +4,12 @@ JavaScript GLOV.js framework
 **Demos**
 * General feature test: [glovjs-playground](http://jimbly.github.io/glovjs/playground/)
 * Terminal module test: [glovjs-terminal](http://jimbly.github.io/glovjs/terminal/)
+* Multiplayer test: [glovjs-rooms](https://www.dashingstrike.com/rooms/)
 
 **Projects using this framework**
-* [Worlds FRVR](https://worlds.frvr.com/)
+* [QuantumPulse 2A (Steam)](https://store.steampowered.com/app/3175190/QuantumPulse_2A/)
 * [Most of my Ludum Dare entries](http://www.dashingstrike.com/games.html#ld)
+* [Worlds FRVR](https://worlds.frvr.com/)
 
 **Notes**
 * Files can be ES2020 (through Babel)
