@@ -7,7 +7,10 @@ const { max } = Math;
 import * as ack from 'glov/common/ack.js';
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 import { isPacket } from 'glov/common/packet';
-import { platformIsValid } from 'glov/common/platform';
+import {
+  platformFallbackGet,
+  platformIsValid,
+} from 'glov/common/platform';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
 const { merge } = util;
@@ -228,6 +231,9 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
 
     let query = requestGetQuery(req);
     let plat = query.plat ?? null;
+    if (plat && !platformIsValid(plat) && platformFallbackGet()) {
+      plat = platformFallbackGet();
+    }
     let ver = query.ver ?? null;
     let versionSupport = plat !== null && ver !== null && platformIsValid(plat) && isValidVersion(ver) ?
       getVersionSupport(plat, ver) :

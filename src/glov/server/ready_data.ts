@@ -2,6 +2,7 @@ import assert from 'assert';
 import type { Express, NextFunction, Request, Response } from 'express';
 import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
+  platformFallbackGet,
   platformGetValidIDs,
   PlatformID,
   platformIsValid,
@@ -98,6 +99,9 @@ export function readyDataCheck(plat: PlatformID, ver: string): ReadyDataCheckRet
     return { err: 'ERR_STARTUP' };
   }
 
+  if (!platformIsValid(plat) && platformFallbackGet()) {
+    plat = platformFallbackGet()!;
+  }
   if (!platformIsValid(plat) || !isValidVersion(ver)) {
     return { err: 'ERR_CLIENT_INVALID' };
   }
