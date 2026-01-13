@@ -1779,11 +1779,13 @@ class ChatUI {
     let friends: string[] = [];
     asyncParallel([
       (next) => {
-        channel.send('chat_get', null, (err?: string | null, data?: ChatHistoryData | null) => {
-          if (!err && data && data.msgs && data.msgs.length) {
-            chat_history = data;
-          }
-          next();
+        netSubs().onceConnected(function () {
+          channel.send('chat_get', null, (err?: string | null, data?: ChatHistoryData | null) => {
+            if (!err && data && data.msgs && data.msgs.length) {
+              chat_history = data;
+            }
+            next();
+          });
         });
       },
       (next) => {
