@@ -189,6 +189,9 @@ export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerS
   return src.type === 'client';
 }
 export type LoggedInClientHandlerSource = WithRequired<ClientHandlerSource, 'user_id' | 'display_name'>;
+export function isLoggedInClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
+  return Boolean(isClientHandlerSource(src) && src.user_id);
+}
 
 export interface ChatIDs extends ClientHandlerSource {
   style?: string;
