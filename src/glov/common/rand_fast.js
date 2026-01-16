@@ -1,6 +1,8 @@
 // Portions Copyright 2019 Jimb Esser (https://github.com/Jimbly/)
 // Released under MIT License: https://opensource.org/licenses/MIT
 
+const { imul } = Math;
+
 // RandSeed2
 // Derived from libGlov, MIT Licensed
 // Super-simple RNG.  2-3x faster than Alea, but probably some correlation in
@@ -55,10 +57,38 @@ export function randFastCreate(seed) {
 }
 
 // from https://www.shadertoy.com/view/wsXfDM
+// probably has lots of correlations
 const RND_A = 134775813;
 const RND_B = 1103515245;
 export function randSimpleSpatial(seed, x, y, z) {
   y += z * 10327;
 
   return (((((x ^ y) * RND_A) ^ (seed + x)) * (((RND_B * x) << 16) ^ (RND_B * y) - RND_A)) >>> 0) / 4294967295;
+}
+
+// Port of xxhash32, will be slower, but incredibly well behaved on all random number test suites
+const PRIME32_2 = 2246822519;
+const PRIME32_3 = 3266489917;
+const PRIME32_4 = 668265263;
+const PRIME32_5 = 374761393;
+export function randSpatialU32(x, y, z, w) {
+  // Use Math.imul for 32-bit multiplication
+  let h32 = (w + PRIME32_5 + imul(x, PRIME32_3));
+
+  h32 = imul((h32 << 17) | (h32 >>> 15), PRIME32_4);
+
+  h32 += imul(y, PRIME32_3);
+  h32 = imul((h32 << 17) | (h32 >>> 15), PRIME32_4);
+
+  h32 += imul(z, PRIME32_3);
+  h32 = imul((h32 << 17) | (h32 >>> 15), PRIME32_4);
+
+  h32 = imul(h32 ^ (h32 >>> 15), PRIME32_2);
+  h32 = imul(h32 ^ (h32 >>> 13), PRIME32_3);
+
+  return (h32 ^ (h32 >>> 16)) >>> 0;
+}
+
+export function randSpatial(seed, x, y, z) {
+  return randSpatialU32(x, y, z, seed) / 4294967295;
 }
