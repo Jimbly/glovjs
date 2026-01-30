@@ -10,6 +10,7 @@ import {
   once,
   randomNot,
   refclone,
+  spiralPos,
   trimEnd,
 } from 'glov/common/util';
 import 'glov/server/test';
@@ -176,7 +177,23 @@ asyncSeries([
       assert(C.foo.list[2] === A.foo.list[2]);
     }
     next();
-  }
+  },
+  function testSpiral(next) {
+    let seen: Record<string, true> = {};
+    for (let ii = 0; ii < 12*12; ++ii) {
+      let pair = spiralPos(ii);
+      let key = pair.join(',');
+      assert(!seen[key], key);
+      seen[key] = true;
+    }
+    for (let ii = -5; ii <= 5; ++ii) {
+      for (let jj = -5; jj <= 5; ++jj) {
+        let key = `${ii},${jj}`;
+        assert(seen[key], key);
+      }
+    }
+    next();
+  },
 ], function (err) {
   if (err) {
     throw err;

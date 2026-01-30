@@ -4,9 +4,9 @@
 import assert from 'assert';
 
 import type { DataObject, ErrorCallback } from './types';
-import type { Vec2 } from './vmath';
+import type { JSVec2, Vec2 } from './vmath';
 
-const { PI, abs, floor, min, max, random, round, pow, sin, sqrt } = Math;
+const { PI, abs, ceil, floor, min, max, random, round, pow, sin, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -832,4 +832,25 @@ export function asyncDictionaryGet<T>(
     elem.value = value;
     callEach(elem.in_flight, elem.in_flight = undefined, value);
   });
+}
+
+// Ulam space-filling spiral
+export function spiralPos(n: number): JSVec2 {
+  n++;
+  let k=ceil((sqrt(n)-1)/2);
+  let t=2*k+1;
+  let m=t*t;
+  t--;
+  if (n>=m-t) {
+    return [k-(m-n), k ? -k : 0];
+  }
+  m-=t;
+  if (n>=m-t) {
+    return [-k,-k+(m-n)];
+  }
+  m-=t;
+  if (n>=m-t) {
+    return [-k+(m-n),k];
+  }
+  return [k,k-(m-n-t)];
 }
