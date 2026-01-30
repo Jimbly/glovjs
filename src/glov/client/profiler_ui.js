@@ -41,6 +41,7 @@ const {
 } = require('./profiler.js');
 const settings = require('./settings.js');
 const { spriteChainedStart, spriteChainedStop } = require('./sprites.js');
+const { spotSuppressPad } = require('./spot.js');
 const { lerp } = require('glov/common/util.js');
 const { vec2, vec4 } = require('glov/common/vmath.js');
 
@@ -622,6 +623,12 @@ function buttonInit() {
     text: 'load',
   };
 }
+
+let need_pad_suppress = false;
+export function profilerSupressPad() {
+  need_pad_suppress = true;
+}
+
 function profilerUIRun() {
   profilerStart('profilerUIRun');
   profilerStart('top+buttons');
@@ -629,6 +636,12 @@ function profilerUIRun() {
   if (!loaded_profile && settings.profiler_hide_bloat) {
     bloat = profilerMeasureBloat();
   }
+
+  if (need_pad_suppress) {
+    spotSuppressPad();
+    need_pad_suppress = false;
+  }
+
   if (engine.render_width) {
     let scale = FONT_SIZE / uiTextHeight();
     camera2d.set(0, 0, scale * engine.render_width, scale * engine.render_height);
