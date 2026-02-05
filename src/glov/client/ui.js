@@ -674,7 +674,7 @@ export function draw9Patch(coords, s, pixel_scale, color) {
         if (my_h) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
-          draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+          draw_box_param.uvs = uidata.rects[jj * widths.length + ii];
           if (coords.color1) {
             s.drawDualTint(draw_box_param);
           } else {
