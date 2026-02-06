@@ -652,9 +652,9 @@ export function draw9Patch(coords, s, pixel_scale, color) {
   let { widths, heights } = uidata;
   // non-stretchable in one dimension?  Use that scale uniformly
   if (uidata.heights.length === 1 && widths.length > 1) {
-    pixel_scale = coords.h / heights[0];
+    pixel_scale = abs(coords.h) / heights[0];
   } else if (widths.length === 1 && heights.length > 1) {
-    pixel_scale = coords.w / widths[0];
+    pixel_scale = abs(coords.w) / widths[0];
   }
   let hscales = scale9PatchDims(pixel_scale, coords.w, widths);
   let vscales = scale9PatchDims(pixel_scale, coords.h, heights);
