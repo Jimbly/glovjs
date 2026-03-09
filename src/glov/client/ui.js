@@ -89,7 +89,7 @@ const {
   uiStyleModify,
   uiStyleTopOfFrame,
 } = require('./uistyle.js');
-const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
+const { clamp, clone, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
 
@@ -617,6 +617,8 @@ let draw_box_param = {
 
 function scale9PatchDims(pixel_scale, target_width, widths) {
   // TODO: move this top part into uidata/atlas pre-calculations?
+  let target_sign = sign(target_width);
+  target_width *= target_sign;
   let fixed_ws = 0;
   let stretch_ws = 0;
   for (let ii = 0; ii < widths.length; ++ii) {
@@ -639,7 +641,7 @@ function scale9PatchDims(pixel_scale, target_width, widths) {
   stretchscale = stretch_ws ? // avoid divide by 0 (result probably unused though)
     (target_width - fixed_ws * fixedscale) / stretch_ws :
     fixedscale;
-  return [fixedscale, stretchscale];
+  return [target_sign * fixedscale, target_sign * stretchscale];
 }
 
 // Draws an arbitrary 9-patch (assumes upper left patch is not stretched)
