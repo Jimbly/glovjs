@@ -248,6 +248,7 @@ export function buttonSetDefaultYOffs(y_offs: YOffs): void;
 type CheckboxParam = ButtonTextParam & {
   base_name_checked?: string; // default 'checked'
   base_name_unchecked?: string; // default 'unchecked'
+  text_xoffs?: number;
 };
 export function checkbox(value: boolean, param: CheckboxParam): boolean;
 

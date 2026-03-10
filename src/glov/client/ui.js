@@ -1613,7 +1613,7 @@ export function checkbox(value, param) {
   let spot_ret = button_last_spot_ret;
   let focused = spot_ret.focused;
   let base_name_checked = param.base_name_checked || 'checked';
-  let base_name_unchecked = param.base_name_checked || 'unchecked';
+  let base_name_unchecked = param.base_name_unchecked || 'unchecked';
 
   // draw button / check box / check mark
   buttonSpotBackgroundDraw({
@@ -1631,7 +1631,7 @@ export function checkbox(value, param) {
       param.font_style_normal || font_style_normal;
     text = getStringFromLocalizable(text);
     let text_height = param.font_height;
-    let xoffs = param.h + font_use.getCharacterWidth(font_style, text_height, 0x20);
+    let xoffs = param.text_xoffs || (param.h + font_use.getCharacterWidth(font_style, text_height, 0x20));
     let x = param.x + xoffs;
     let y = param.y;
     let z = param.z + 0.1;
