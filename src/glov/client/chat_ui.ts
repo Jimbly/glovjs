@@ -1675,13 +1675,13 @@ class ChatUI {
         y: scroll_y0, z,
         w: inner_w + clip_offs,
         h: scroll_external_h,
-        focusable_elem: this.edit_text_entry,
+        focusable_elem: hide_text_input ? null : this.edit_text_entry,
         auto_hide: this.total_h <= 2 * font_height,
       });
       let x_save = x;
       let y_save = y;
       x = clip_offs;
-      y = 0;
+      y = max(0, scroll_external_h - scroll_internal_h);
       let y_min = this.scroll_area.getScrollPos();
       let y_max = y_min + scroll_external_h;
       viewport = {
