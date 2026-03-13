@@ -24,7 +24,7 @@ import {
   spotSubEnd,
   spotUnfocus,
 } from './spot';
-import { spriteClipPop, spriteClipPush } from './sprites';
+import { spriteClipPop, spriteClipPush, UISprite } from './sprites';
 import { textureDefaultIsNearest } from './textures';
 import * as ui from './ui';
 import { uiTextHeight } from './ui';
@@ -47,6 +47,14 @@ function darken(color: Vec4, factor: number): Vec4 {
 let default_pixel_scale = 1;
 export function scrollAreaSetPixelScale(scale: number): void {
   default_pixel_scale = scale;
+}
+
+function spriteNonScalableHeight(s: UISprite): number {
+  let r = 0;
+  for (let ii = 0; ii < s.uidata.heights.length; ii += 2) {
+    r += s.uidata.heights[ii];
+  }
+  return r;
 }
 
 interface ScrollAreaOptsAll extends Box {
@@ -313,7 +321,7 @@ class ScrollAreaInternal implements ScrollArea {
     handle_pos = clamp(handle_pos, 0, 1);
     assert(isFinite(handle_pos));
     let handle_pixel_h = handle_h * (this.h - button_h_nopad * 2);
-    let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
+    let handle_pixel_min_h = spriteNonScalableHeight(scrollbar_handle) * pixel_scale;
     let trough_height = this.h - button_h * 2;
     handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, trough_height * 0.75));
     let handle_screenpos = this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h);
@@ -538,11 +546,11 @@ class ScrollAreaInternal implements ScrollArea {
         uvs: [scrollbar_trough.uvs[0], trough_v0, scrollbar_trough.uvs[2], trough_v1],
         color: trough_color,
       });
-    } else if (scrollbar_trough.uidata.heights.length === 3) {
-      ui.drawVBox({
+    } else if (scrollbar_trough.uidata.heights.length > 1) {
+      ui.drawBox({
         x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
         w: bar_w, h: trough_draw_height,
-      }, scrollbar_trough, trough_color);
+      }, scrollbar_trough, pixel_scale, trough_color);
     } else {
       scrollbar_trough.draw({
         x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
