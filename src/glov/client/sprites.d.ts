@@ -37,6 +37,7 @@ export interface Texture {
     per_mipmap_data?: HTMLImage[]
   ): void;
   setSamplerState(opts: TextureOptions): void;
+  onLoad(cb: (tex: Texture) => void): void;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
