@@ -146,16 +146,49 @@ function entActionAppend<Entity extends EntityBaseClient>(
     assert(field_defs_by_name);
     for (let key in data_assignments) {
       let field_def = field_defs_by_name[key];
-      assert(field_def);
+      let subfield: string | null = null;
+      if (!field_def) {
+        let pair = key.split('.');
+        if (pair.length === 2) {
+          field_def = field_defs_by_name[pair[0]];
+          subfield = pair[1];
+          assert(subfield);
+        }
+        assert(field_def);
+      }
       let { field_id, sub, default_value, encoder } = field_def;
-      assert(!sub); // TODO: support
       let value = data_assignments[key];
-      if (value === default_value || value === null && default_value === undefined) {
-        pak.writeInt(EntityFieldSpecial.Default);
+      if (sub) {
+        assert(subfield);
         pak.writeInt(field_id);
+        if (sub === EntityFieldSub.Array) {
+          let index_string = subfield;
+          if (index_string === 'length') {
+            assert(typeof value === 'number' && isFinite(value));
+            pak.writeInt(-1);
+            pak.writeInt(value);
+            assert(false); // not supported in setDataSub called later on server yet
+          } else {
+            let index = Number(index_string);
+            assert(isFinite(index));
+            pak.writeInt(index + 1);
+            encoder(ent, pak, value, false);
+          }
+          pak.writeInt(0);
+        } else { // EntityFieldSub.Record
+          pak.writeAnsiString(subfield);
+          encoder(ent, pak, value, false);
+          pak.writeAnsiString('');
+        }
       } else {
-        pak.writeInt(field_id);
-        encoder(ent, pak, value, false);
+        assert(subfield === null);
+        if (value === default_value || value === null && default_value === undefined) {
+          pak.writeInt(EntityFieldSpecial.Default);
+          pak.writeInt(field_id);
+        } else {
+          pak.writeInt(field_id);
+          encoder(ent, pak, value, false);
+        }
       }
     }
     pak.writeInt(EntityFieldSpecial.Terminate);
@@ -687,7 +720,16 @@ class ClientEntityManagerImpl<
       assert(field_defs_by_name);
       for (let key in action.data_assignments) {
         let field_def = field_defs_by_name[key];
-        assert(field_def);
+        if (!field_def) {
+          let pair = key.split('.');
+          if (pair.length === 2) {
+            field_def = field_defs_by_name[pair[0]];
+            assert(field_def);
+            assert(field_def.sub);
+            assert(pair[1]);
+          }
+          assert(field_def);
+        }
       }
     }
     if (!this.action_list_queue) {

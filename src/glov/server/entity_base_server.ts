@@ -414,7 +414,17 @@ export class EntityBaseServer extends EntityBaseCommon {
           // (should include setting the expected field)
           for (let key in data_assignments) {
             let value = data_assignments[key];
-            this.setData(key, value);
+            if (key.includes('.')) {
+              let pair = key.split('.');
+              assert.equal(pair.length, 2);
+              if (isFinite(Number(pair[1]))) {
+                this.setDataSub(pair[0], Number(pair[1]), value);
+              } else {
+                this.setDataSub(pair[0], pair[1], value);
+              }
+            } else {
+              this.setData(key, value);
+            }
           }
         }
         next();
