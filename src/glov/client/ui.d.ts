@@ -339,6 +339,7 @@ export interface MenuFadeParams {
   brightness?: [number, number];
   fallback_darken?: ROVec4;
   z?: number;
+  cb?: (z: number) => void;
 }
 export function menuFadeParamsSetDefault(fade_params: MenuFadeParams): void;
 export function menuUp(param?: MenuFadeParams): void;

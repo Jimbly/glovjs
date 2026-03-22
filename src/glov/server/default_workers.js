@@ -258,6 +258,7 @@ export class DefaultUserWorker extends ChannelWorker {
     }
     let display_name_bypass = getDisplayNameBypass(this.cmd_parse_source);
     if (!validDisplayName(new_name, display_name_bypass)) {
+      this.log(`Error renaming to "${new_name}": Invalid display name`);
       return resp_func('Invalid display name');
     }
     let old_name = this.getChannelData('public.display_name');
@@ -288,6 +289,7 @@ export class DefaultUserWorker extends ChannelWorker {
       }
       this.setChannelData('private.display_name_history', history);
     }
+    this.log(`Renamed to "${new_name}"`);
     return resp_func(null, 'Successfully renamed');
   }
   cmdRenameRandom(ignored, resp_func) {

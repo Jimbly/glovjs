@@ -132,7 +132,7 @@ Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 const color_user_rollover = vec4(1, 1, 1, 0.5);
 const color_same_user_rollover = vec4(1, 1, 1, 0.25);
 
-const MAX_PER_STYLE: TSMap<number> = {
+const MAX_PER_STYLE_DEFAULT: TSMap<number> = {
   join_leave: 3,
 };
 
@@ -645,7 +645,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
   }
 }
 
-export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
+export type SystemStyles = 'def' | 'self' | 'user' | 'error' | 'link' | 'link_hover' | 'system';
 export type ChatUIParamStyles = Partial<Record<SystemStyles | string, FontStyle>>;
 
 export type ExtraButtonsPreState = {
@@ -683,7 +683,10 @@ export type ChatUIParam = {
   renderables?: TSMap<MarkdownRenderable>;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
+  label_while_focused?: Text;
   label_while_hidden?: Text;
+  channel_join_message?: Text;
+  max_per_style?: TSMap<number>;
 
   inner_width_adjust?: number;
   border?: number;
@@ -735,6 +738,9 @@ class ChatUI {
   private hide_disconnected_message: boolean;
   private disconnected_message_top: boolean;
   private label_while_hidden: Text;
+  private label_while_focused: Text;
+  private channel_join_message: Text | null;
+  private max_per_style: TSMap<number>;
   private inner_width_adjust: number;
   private border?: number;
   private volume_join_leave: number;
@@ -806,7 +812,9 @@ class ChatUI {
     this.font_height = params.font_height || style.text_height;
     this.hide_disconnected_message = params.hide_disconnected_message || false;
     this.disconnected_message_top = params.disconnected_message_top || false;
+    this.label_while_focused = params.label_while_focused || 'Chat';
     this.label_while_hidden = params.label_while_hidden || '<Press Enter to chat>';
+    this.channel_join_message = params.channel_join_message || null;
     this.scroll_area = scrollAreaCreate({
       background_color: null,
       auto_scroll: true,
@@ -841,6 +849,16 @@ class ChatUI {
         outline_width,
         outline_color: 0x000000ff,
       }),
+      user: fontStyle(null, {
+        color: 0xEEBBCCff,
+        outline_width,
+        outline_color: 0x000000ff,
+      }),
+      self: fontStyle(null, {
+        color: 0xF7F7F7ff,
+        outline_width,
+        outline_color: 0x000000ff,
+      }),
       error: fontStyle(null, {
         color: 0xDD0000ff,
         outline_width,
@@ -871,6 +889,10 @@ class ChatUI {
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
     this.message_pre_send_cb = params.message_pre_send_cb;
     this.extra_buttons = params.extra_buttons;
+    this.max_per_style = {
+      ...MAX_PER_STYLE_DEFAULT,
+      ...(params.max_per_style || {}),
+    };
 
     if (params.renderables) {
       this.renderables = cloneShallow(params.renderables);
@@ -991,7 +1013,7 @@ class ChatUI {
     }
     this.calcMsgHeight(elem);
     this.msgs.push(elem);
-    let max_msgs = MAX_PER_STYLE[elem.style];
+    let max_msgs = this.max_per_style[elem.style];
     if (max_msgs) {
       // Remove any more than max
       // Also remove any for the same ID (want for 'join_leave', maybe not others?)
@@ -1109,6 +1131,13 @@ class ChatUI {
     if (!quiet && client_id !== netClientId()) {
       if (this.volume_in) {
         playUISound('msg_in', this.volume_in);
+      }
+    }
+    if (id && !style) {
+      if (id === netUserId()) {
+        style = 'self';
+      } else {
+        style = 'user';
       }
     }
     display_name = display_name || id;
@@ -1536,6 +1565,8 @@ class ChatUI {
           this.scroll_area.keyboardScroll();
         }
         let res = this.edit_text_entry.run({
+          placeholder: getStringIfLocalizable(this.edit_text_entry.isFocused() ?
+            this.label_while_focused : this.label_while_hidden),
           x, y, w: input_width, font_height: input_height, pointer_lock: opts.pointerlock
         });
         is_focused = this.isFocused();
@@ -1868,7 +1899,8 @@ class ChatUI {
       }
 
       // Then join message
-      this.addChat(`Joined channel ${this.channel.channel_id}`, 'join_leave');
+      this.addChat(getStringIfLocalizable(this.channel_join_message) ||
+        `Joined channel ${this.channel.channel_id}`, 'join_leave');
       // Then who's here now
       if (here.length || friends.length) {
         let msg = [];

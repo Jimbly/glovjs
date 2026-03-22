@@ -237,7 +237,7 @@ class GlovUIEditBox {
       this.last_valid_state.sel_end = sel_end;
       return;
     }
-    const { multiline, enforce_multiline, max_len, max_visual_size } = this;
+    const { multiline, enforce_multiline, max_len, max_visual_size, max_visual_size_font } = this;
     // text has changed, validate
     let valid = true;
 
@@ -294,7 +294,7 @@ class GlovUIEditBox {
       for (let ii = 0; ii < lines.length; ++ii) {
         let line = lines[ii];
         let over = line.length > eff_max_len;
-        let font = max_visual_size ? uiGetFont() : null;
+        let font = max_visual_size ? max_visual_size_font || uiGetFont() : null;
         if (max_visual_size && !over) {
           over = font.getStringWidth(null, max_visual_size.font_height, line) > max_visual_size.width;
         }

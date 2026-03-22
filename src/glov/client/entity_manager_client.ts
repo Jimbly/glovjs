@@ -80,6 +80,7 @@ export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=an
   ): void;
   actionListFlush(): void;
   channelSend(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
+  addClientOnlyEntityFromSerialized(data: DataObject): Entity;
 
   // Offline only
   addEntityFromSerialized(data: DataObject): Entity;
@@ -145,16 +146,49 @@ function entActionAppend<Entity extends EntityBaseClient>(
     assert(field_defs_by_name);
     for (let key in data_assignments) {
       let field_def = field_defs_by_name[key];
-      assert(field_def);
+      let subfield: string | null = null;
+      if (!field_def) {
+        let pair = key.split('.');
+        if (pair.length === 2) {
+          field_def = field_defs_by_name[pair[0]];
+          subfield = pair[1];
+          assert(subfield);
+        }
+        assert(field_def);
+      }
       let { field_id, sub, default_value, encoder } = field_def;
-      assert(!sub); // TODO: support
       let value = data_assignments[key];
-      if (value === default_value || value === null && default_value === undefined) {
-        pak.writeInt(EntityFieldSpecial.Default);
+      if (sub) {
+        assert(subfield);
         pak.writeInt(field_id);
+        if (sub === EntityFieldSub.Array) {
+          let index_string = subfield;
+          if (index_string === 'length') {
+            assert(typeof value === 'number' && isFinite(value));
+            pak.writeInt(-1);
+            pak.writeInt(value);
+            assert(false); // not supported in setDataSub called later on server yet
+          } else {
+            let index = Number(index_string);
+            assert(isFinite(index));
+            pak.writeInt(index + 1);
+            encoder(ent, pak, value, false);
+          }
+          pak.writeInt(0);
+        } else { // EntityFieldSub.Record
+          pak.writeAnsiString(subfield);
+          encoder(ent, pak, value, false);
+          pak.writeAnsiString('');
+        }
       } else {
-        pak.writeInt(field_id);
-        encoder(ent, pak, value, false);
+        assert(subfield === null);
+        if (value === default_value || value === null && default_value === undefined) {
+          pak.writeInt(EntityFieldSpecial.Default);
+          pak.writeInt(field_id);
+        } else {
+          pak.writeInt(field_id);
+          encoder(ent, pak, value, false);
+        }
       }
     }
     pak.writeInt(EntityFieldSpecial.Terminate);
@@ -353,7 +387,10 @@ class ClientEntityManagerImpl<
   }
 
   deleteEntity(ent_id: EntityID, reason: string) : void {
-    assert(false, 'Offline only');
+    let ent = this.entities[ent_id];
+    assert(ent);
+    assert(ent.id < 0, 'OfflineEntityManager or ClientOnlyEntity only');
+    this.deleteEntityInternal(ent_id, reason);
   }
 
   private getEntDataForDiff(ent_id: EntityID): [EntityBaseDataCommon, Entity | null] {
@@ -683,7 +720,16 @@ class ClientEntityManagerImpl<
       assert(field_defs_by_name);
       for (let key in action.data_assignments) {
         let field_def = field_defs_by_name[key];
-        assert(field_def);
+        if (!field_def) {
+          let pair = key.split('.');
+          if (pair.length === 2) {
+            field_def = field_defs_by_name[pair[0]];
+            assert(field_def);
+            assert(field_def.sub);
+            assert(pair[1]);
+          }
+          assert(field_def);
+        }
       }
     }
     if (!this.action_list_queue) {
@@ -766,6 +812,32 @@ class ClientEntityManagerImpl<
 
   isOnline(): boolean {
     return true;
+  }
+
+  last_local_ent_id = 0;
+  createLocalEntity(data: DataObject): Entity {
+    let ent = this.create_func(data);
+    ent.id = --this.last_local_ent_id;
+    ent.entity_manager = this;
+    // ent.finishCreation();
+    return ent;
+  }
+  addClientOnlyEntityFromSerialized(data: DataObject): Entity {
+    let ent = this.createLocalEntity(data);
+    // assert(!ent.is_player);
+    // ent.fixupPostLoad();
+    this.entities[ent.id] = ent;
+    // let fade_in_time = ent.onCreate(false);
+    // this.fadeInEnt(ent, fade_in_time); // no: flickers with fading out server ents when used for chests
+    this.emit('ent_update', ent.id);
+
+    // Probably want configurable: also delete oldest ones
+    const MAX_CLIENT_ENTS = 100;
+    let oldest_id = this.last_local_ent_id + MAX_CLIENT_ENTS;
+    if (oldest_id < 0 && this.entities[oldest_id]) {
+      this.deleteEntityInternal(oldest_id, 'prune');
+    }
+    return ent;
   }
 
   addEntityFromSerialized(): Entity {

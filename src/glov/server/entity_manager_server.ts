@@ -412,6 +412,16 @@ type PerVAUpdate = {
   debug: string[];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let entity_manager_for_constructor: ServerEntityManager<any, any>;
+
+export function entityManagerForConstructor<
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+>(): ServerEntityManager<Entity, Worker> {
+  return entity_manager_for_constructor;
+}
+
 class ServerEntityManagerImpl<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
@@ -733,6 +743,7 @@ class ServerEntityManagerImpl<
   }
 
   createEntity(data: DataObject): Entity {
+    entity_manager_for_constructor = this;
     let ent = this.create_func(data);
     ent.id = ++this.last_ent_id;
     ent.entity_manager = this;
@@ -785,9 +796,30 @@ class ServerEntityManagerImpl<
           let field_def = this.field_defs_by_id[field_id];
           assert(field_def);
           let { decoder, sub, field_name, default_value } = field_def;
-          assert(!sub); // TODO: support
-          let new_value = do_default ? default_value === undefined ? null : default_value : decoder(pak, null);
-          action_data.data_assignments[field_name] = new_value;
+
+          if (sub) {
+            assert(!do_default);
+            if (sub === EntityFieldSub.Array) {
+              let index;
+              while ((index = pak.readInt())) { // note: currently guaranteed to be exactly 1 of these
+                if (index === -1) {
+                  action_data.data_assignments[`${field_name}.length`] = pak.readInt();
+                } else {
+                  let new_value = decoder(pak, null);
+                  action_data.data_assignments[`${field_name}.${index}`] = new_value;
+                }
+              }
+            } else { // EntityFieldSub.Record
+              let key;
+              while ((key = pak.readAnsiString())) { // note: currently guaranteed to be exactly 1 of these
+                let new_value = decoder(pak, null);
+                action_data.data_assignments[`${field_name}.${key}`] = new_value === undefined ? null : new_value;
+              }
+            }
+          } else {
+            let new_value = do_default ? default_value === undefined ? null : default_value : decoder(pak, null);
+            action_data.data_assignments[field_name] = new_value;
+          }
         }
       }
       actions.push(action_data);
@@ -1576,6 +1608,7 @@ class ServerEntityManagerImpl<
   entitiesReload(predicate?: (ent: Entity) => boolean): Entity[] {
     let ret: Entity[] = [];
     // TODO: destroy and recreate all existing entities under new IDs, except for players?
+    // entity_manager_for_constructor = this;
     // let { entities } = this;
     // for (let ent_id_string in entities) {
     //   let ent = entities[ent_id_string]!;

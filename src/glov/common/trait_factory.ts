@@ -35,7 +35,7 @@ export type TypeDef = {
 };
 
 function pascalCase(a: string): string {
-  return a.replace(/((?:^|[-_])[a-z])/g, function (token) {
+  return a.replace(/((?:^|[-_])[a-z0-9])/g, function (token) {
     return token.toUpperCase().replace(/[-_]/g, '');
   });
 }

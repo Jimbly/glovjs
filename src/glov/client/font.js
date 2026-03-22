@@ -1037,6 +1037,13 @@ GlovFont.prototype.drawScaled = function () {
     value[0] *= 512;
     value[1] = value[1] * 512 - 255.5;
     value[2] = value[2] * 512 - 255.5;
+    // not 100% sure this is correct, but fixes hard outlines on pixely fonts
+    //   getting slightly cut off and therefore blending/antialiasing against
+    //   the background.
+    padding4[0] += 0.5;
+    padding4[1] += 0.5;
+    padding4[2] += 0.5;
+    padding4[3] += 0.5;
   }
   techParamsSet('param0', value);
 
