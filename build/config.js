@@ -146,6 +146,10 @@ module.exports = function (gb) {
       more: false,
     },
     browsersync_queryparams: '', // e.g. '?D=FOO'
+    autoatlas_input: [
+      'client/atlases/**/*.png',
+      'client/atlases/**/*.yaml',
+    ],
     autoatlas_ignore: ['someatlas:sometile'],
   };
   // eslint-disable-next-line n/global-require

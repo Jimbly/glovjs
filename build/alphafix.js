@@ -3,7 +3,7 @@ const gb = require('glov-build');
 const micromatch = require('micromatch');
 const { pngRead, pngWrite } = require('./png.js');
 
-const { abs, floor, round } = Math;
+const { floor, round } = Math;
 
 // Photoshop writes pixels with 0 alpha but a bright white color, which causes
 // interpolation errors - instead spread the nearest non-alpha color.

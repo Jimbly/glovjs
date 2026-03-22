@@ -89,7 +89,7 @@ const {
   uiStyleModify,
   uiStyleTopOfFrame,
 } = require('./uistyle.js');
-const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
+const { clamp, clone, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
 
@@ -617,6 +617,8 @@ let draw_box_param = {
 
 function scale9PatchDims(pixel_scale, target_width, widths) {
   // TODO: move this top part into uidata/atlas pre-calculations?
+  let target_sign = sign(target_width);
+  target_width *= target_sign;
   let fixed_ws = 0;
   let stretch_ws = 0;
   for (let ii = 0; ii < widths.length; ++ii) {
@@ -639,7 +641,7 @@ function scale9PatchDims(pixel_scale, target_width, widths) {
   stretchscale = stretch_ws ? // avoid divide by 0 (result probably unused though)
     (target_width - fixed_ws * fixedscale) / stretch_ws :
     fixedscale;
-  return [fixedscale, stretchscale];
+  return [target_sign * fixedscale, target_sign * stretchscale];
 }
 
 // Draws an arbitrary 9-patch (assumes upper left patch is not stretched)
@@ -652,9 +654,9 @@ export function draw9Patch(coords, s, pixel_scale, color) {
   let { widths, heights } = uidata;
   // non-stretchable in one dimension?  Use that scale uniformly
   if (uidata.heights.length === 1 && widths.length > 1) {
-    pixel_scale = coords.h / heights[0];
+    pixel_scale = abs(coords.h) / heights[0];
   } else if (widths.length === 1 && heights.length > 1) {
-    pixel_scale = coords.w / widths[0];
+    pixel_scale = abs(coords.w) / widths[0];
   }
   let hscales = scale9PatchDims(pixel_scale, coords.w, widths);
   let vscales = scale9PatchDims(pixel_scale, coords.h, heights);
@@ -674,7 +676,7 @@ export function draw9Patch(coords, s, pixel_scale, color) {
         if (my_h) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
-          draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+          draw_box_param.uvs = uidata.rects[jj * widths.length + ii];
           if (coords.color1) {
             s.drawDualTint(draw_box_param);
           } else {
@@ -1611,7 +1613,7 @@ export function checkbox(value, param) {
   let spot_ret = button_last_spot_ret;
   let focused = spot_ret.focused;
   let base_name_checked = param.base_name_checked || 'checked';
-  let base_name_unchecked = param.base_name_checked || 'unchecked';
+  let base_name_unchecked = param.base_name_unchecked || 'unchecked';
 
   // draw button / check box / check mark
   buttonSpotBackgroundDraw({
@@ -1629,7 +1631,7 @@ export function checkbox(value, param) {
       param.font_style_normal || font_style_normal;
     text = getStringFromLocalizable(text);
     let text_height = param.font_height;
-    let xoffs = param.h + font_use.getCharacterWidth(font_style, text_height, 0x20);
+    let xoffs = param.text_xoffs || (param.h + font_use.getCharacterWidth(font_style, text_height, 0x20));
     let x = param.x + xoffs;
     let y = param.y;
     let z = param.z + 0.1;
@@ -2274,7 +2276,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   let blend;
   if (!glov_engine.defines.NOPREMUL) {
     blend = BLEND_PREMULALPHA;
-    color = premulAlphaColor(color);
+    color = premulAlphaColor(color || unit_vec);
   }
 
   let tex_key = mode & LINE_CAP_ROUND ? 'line3' : 'line2';

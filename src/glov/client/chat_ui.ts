@@ -20,6 +20,7 @@ import type {
   WithRequired,
 } from 'glov/common/types';
 import {
+  arrayToSet,
   clamp,
   cloneShallow,
   dateToSafeLocaleString,
@@ -152,10 +153,6 @@ interface ChatMessage extends ChatMessageDataBroadcast {
 export type ChatMessageUser = WithRequired<ChatMessageDataBroadcast, 'display_name'> & {
   chatsrc_tooltip?: Text; // optionally set by decorators
 };
-
-function messageFromUser(msg: ChatMessage): boolean {
-  return msg.style !== 'error' && msg.style !== 'system';
-}
 
 declare module 'glov/client/settings' {
   let chat_auto_unfocus: number;
@@ -682,6 +679,7 @@ export type ChatUIParam = {
   emote_cb?: (emote: string) => void;
   style?: UIStyle;
   styles?: ChatUIParamStyles;
+  nonuser_styles?: string[];
   renderables?: TSMap<MarkdownRenderable>;
   hide_disconnected_message?: boolean;
   disconnected_message_top?: boolean;
@@ -701,6 +699,7 @@ export type ChatUIParam = {
 
   fade_start_time?: [number, number]; // [normal, hidden]; default [10000, 1000]
   fade_time?: [number, number]; // [normal, hidden]; default [1000, 500];
+  fade_active_min_alpha?: number | null; // if set, fade messages to this alpha even when the chat is active
 
   outline_width?: number;
 
@@ -715,6 +714,7 @@ export type ChatUIRunParam = Partial<{
   x: number;
   y: number;
   hide: boolean;
+  hide_input: boolean; // if hide=false, hide unfocused text input anyway
   border: number;
   scroll_grow: number;
   pointerlock: boolean;
@@ -746,7 +746,9 @@ class ChatUI {
   private url_info?: RegExp;
   private fade_start_time: [number, number];
   private fade_time: [number, number];
+  private fade_active_min_alpha: number | null;
   private styles: Record<SystemStyles, FontStyle> & TSMap<FontStyle>;
+  private nonuser_styles: TSMap<true>;
   private classifyRole?: (roles: Roles | undefined, always_true: true) => string;
   private cmdLogFilter: (cmd: string) => string;
 
@@ -829,6 +831,7 @@ class ChatUI {
 
     this.fade_start_time = params.fade_start_time || [10000, 1000];
     this.fade_time = params.fade_time || [1000, 500];
+    this.fade_active_min_alpha = params.fade_active_min_alpha ?? null;
 
     this.setActiveSize(this.font_height, this.w);
     let outline_width = params.outline_width || 1;
@@ -860,6 +863,9 @@ class ChatUI {
       }),
     });
     this.styles.join_leave = this.styles.join_leave || this.styles.system;
+    this.nonuser_styles = arrayToSet(params.nonuser_styles || []);
+    this.nonuser_styles.error = true;
+    this.nonuser_styles.system = true;
     this.classifyRole = params.classifyRole;
     this.cmdLogFilter = params.cmdLogFilter || filterIdentity;
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
@@ -1310,6 +1316,10 @@ class ChatUI {
     provideUserString('Chat Text', base_text, buttons);
   }
 
+  messageFromUser(msg: ChatMessage): boolean {
+    return !this.nonuser_styles[msg.style];
+  }
+
   run(opts?: ChatUIRunParam): void {
     const UI_SCALE = uiTextHeight() / 24;
     opts = opts || {};
@@ -1361,7 +1371,7 @@ class ChatUI {
     let is_focused = false;
     let font_height = this.font_height;
     let anything_visible = false;
-    let hide_light = (opts.hide || engine.defines.NOUI || !netSubs().loggedIn()) &&
+    let hide_light = (opts.hide_input || opts.hide || engine.defines.NOUI || !netSubs().loggedIn()) &&
       !was_focused ?
       1 : // must be numerical, used to index fade values
       0;
@@ -1595,7 +1605,8 @@ class ChatUI {
         return;
       }
       let h = msg.msg_h;
-      let do_mouseover = do_scroll_area && !input.mousePosIsTouch() && (!msg.style || messageFromUser(msg));
+      let do_mouseover = do_scroll_area && !input.mousePosIsTouch() &&
+        (!msg.style || self.messageFromUser(msg) || self.fade_active_min_alpha !== null);
       let mouseover = false;
       if (do_mouseover) {
         mouseover = input.mouseOver({
@@ -1605,6 +1616,9 @@ class ChatUI {
           // mouseOver peek because we're doing it before checking for clicks
           peek: true,
         });
+        if (mouseover && self.fade_active_min_alpha !== null) {
+          alpha = 1;
+        }
       }
 
       self.handled_rightclick = false;
@@ -1619,7 +1633,7 @@ class ChatUI {
 
       if (mouseover && (!do_scroll_area || y > self.scroll_area.getScrollPos() - font_height) &&
         // Only show tooltip for user messages or links
-        (!msg.style || messageFromUser(msg) || self.focus_tooltip)
+        (!msg.style || self.messageFromUser(msg) || self.focus_tooltip)
       ) {
         drawTooltip({
           x, y, z: Z.TOOLTIP,
@@ -1661,13 +1675,13 @@ class ChatUI {
         y: scroll_y0, z,
         w: inner_w + clip_offs,
         h: scroll_external_h,
-        focusable_elem: this.edit_text_entry,
+        focusable_elem: hide_text_input ? null : this.edit_text_entry,
         auto_hide: this.total_h <= 2 * font_height,
       });
       let x_save = x;
       let y_save = y;
       x = clip_offs;
-      y = 0;
+      y = max(0, scroll_external_h - scroll_internal_h);
       let y_min = this.scroll_area.getScrollPos();
       let y_max = y_min + scroll_external_h;
       viewport = {
@@ -1680,7 +1694,14 @@ class ChatUI {
         let msg = this.msgs[ii];
         let h = msg.msg_h;
         if (y <= y_max && y + h >= y_min) {
-          drawChatLine(msg, 1);
+          let age = now - msg.timestamp;
+          let alpha = 1;
+          if (this.fade_active_min_alpha !== null) {
+            alpha = 1 - clamp((age - this.fade_start_time[0]) /
+              this.fade_time[0], 0, 1) * (1 - this.fade_active_min_alpha);
+          }
+
+          drawChatLine(msg, alpha);
         }
         y += h;
       }
@@ -1779,11 +1800,13 @@ class ChatUI {
     let friends: string[] = [];
     asyncParallel([
       (next) => {
-        channel.send('chat_get', null, (err?: string | null, data?: ChatHistoryData | null) => {
-          if (!err && data && data.msgs && data.msgs.length) {
-            chat_history = data;
-          }
-          next();
+        netSubs().onceConnected(function () {
+          channel.send('chat_get', null, (err?: string | null, data?: ChatHistoryData | null) => {
+            if (!err && data && data.msgs && data.msgs.length) {
+              chat_history = data;
+            }
+            next();
+          });
         });
       },
       (next) => {

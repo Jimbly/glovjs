@@ -88,11 +88,12 @@ export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 /**
  * Helper type to filter only keys for values who exactly match a given type
  *
- * { a: string; b: string | number; c: number, d?: number; } yields:
+ * { a: string; b: string | number; c: number, d?: number; e?: string; } yields:
  * string -> a
  * string | number -> b
  * number -> c
  * number | undefined -> d
+ * string | undefined -> e
  */
 export type KeysMatching<T, V> = Exclude<{
   [K in keyof T]: [T[K]] extends [V] ? [V] extends [T[K]] ? K : never : never
@@ -101,11 +102,12 @@ export type KeysMatching<T, V> = Exclude<{
 /**
  * Helper type to filter only keys for values which could be assigned to a variable of a given type
  *
- * { a: string; b: string | number; c: number; d?: number; } yields:
+ * { a: string; b: string | number; c: number; d?: number; e?: string; } yields:
  * string -> a
  * string | number -> a | b | c
  * number -> c
  * number | undefined -> c | d
+ * string | undefined -> a | e
  */
 export type KeysMatchingLoose<T, V> = Exclude<{
   [K in keyof T]: T[K] extends V ? K : never
@@ -189,6 +191,9 @@ export function isClientHandlerSource(src: HandlerSource): src is ClientHandlerS
   return src.type === 'client';
 }
 export type LoggedInClientHandlerSource = WithRequired<ClientHandlerSource, 'user_id' | 'display_name'>;
+export function isLoggedInClientHandlerSource(src: HandlerSource): src is ClientHandlerSource {
+  return Boolean(isClientHandlerSource(src) && src.user_id);
+}
 
 export interface ChatIDs extends ClientHandlerSource {
   style?: string;

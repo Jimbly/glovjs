@@ -44,6 +44,16 @@ export function platformRegister(id: PlatformID, def: PlatformDef): void {
   platforms[id] = def;
 }
 
+// All unknown platforms will be treated as this (e.g. client can define new platforms without server updates)
+let platform_fallback: PlatformID | null = 'web';
+export function platformFallbackSet(fallback: PlatformID | null): void {
+  platform_fallback = fallback;
+}
+
+export function platformFallbackGet(): PlatformID | null {
+  return platform_fallback;
+}
+
 export function platformGetValidIDs(): PlatformID[] {
   return Object.keys(platforms);
 }
