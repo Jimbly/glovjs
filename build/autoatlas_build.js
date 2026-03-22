@@ -555,19 +555,19 @@ module.exports = function (opts) {
     });
   }
 
-  let { name, input } = opts;
+  let { name, inputs } = opts;
 
+  // Prep task: for images with matching .yaml, split them up
+  // Other images and atlas.yaml - just pass through
   let prep_task = `${name}_prep`;
   gb.task({
     name: prep_task,
     type: gb.SINGLE,
-    input: [
-      `${input}/**/*.png`,
-      `${input}/**/*.yaml`,
-    ],
+    input: inputs,
     func: prepproc,
   });
 
+  // Main task: combine an atlas per folder
   return {
     name,
     type: gb.ALL,
