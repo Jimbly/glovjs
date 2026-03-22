@@ -1,8 +1,9 @@
 const LEVEL_VERSION = 1;
-const EXPORT_PATH = './src/client/levels/';
 
 import assert from 'assert';
 import fs from 'fs';
+const CLIENT_DIR = fs.existsSync('./src/client') ? './src/client' : './client'; // production build
+export const EXPORT_PATH = `${CLIENT_DIR}/levels/`;
 import type { CmdRespFunc } from 'glov/common/cmd_parse';
 import {
   Diff,
@@ -136,7 +137,7 @@ export class CrawlerWorker<
 
   levelFallbackProvider(floor_id: number, cb: (level_data: CrawlerLevelSerialized)=> void): void {
     // Can be overridden by app
-    let file = `${EXPORT_PATH || './src/client/levels/'}empty.json`;
+    let file = `${EXPORT_PATH || `${CLIENT_DIR}/levels/`}empty.json`;
     if (fs.existsSync(file)) {
       let data = fs.readFileSync(file, 'utf8');
       return void cb(JSON.parse(data));
@@ -300,6 +301,9 @@ CrawlerWorker.registerClientHandler('build', function (
   pak: Packet,
   resp_func: NetResponseCallback<CrawlerLevelSerialized>
 ): void {
+  // if (!src.sysadmin) { // need better solution for this!
+  //   return void resp_func('ERR_ACCESS_DENIED');
+  // }
   let floor = pak.readInt();
   let level = this.game_state.getLevelForFloorExisting(floor);
   let diff: Diff = pak.readJSON() as Diff;
@@ -351,6 +355,7 @@ CrawlerWorker.registerCmds([{
   }
 }, {
   cmd: 'key_global',
+  access_show: ['sysadmin'],
   help: 'Show or toggle per-worker-scoped keys',
   func: function (this: DummyWorker, str: string, resp_func: CmdRespFunc) {
     if (!str) {
