@@ -2274,7 +2274,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   let blend;
   if (!glov_engine.defines.NOPREMUL) {
     blend = BLEND_PREMULALPHA;
-    color = premulAlphaColor(color);
+    color = premulAlphaColor(color || unit_vec);
   }
 
   let tex_key = mode & LINE_CAP_ROUND ? 'line3' : 'line2';
