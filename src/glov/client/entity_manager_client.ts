@@ -80,6 +80,7 @@ export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=an
   ): void;
   actionListFlush(): void;
   channelSend(msg: string, data?: unknown, resp_func?: NetErrorCallback): void;
+  addClientOnlyEntityFromSerialized(data: DataObject): Entity;
 
   // Offline only
   addEntityFromSerialized(data: DataObject): Entity;
@@ -353,7 +354,10 @@ class ClientEntityManagerImpl<
   }
 
   deleteEntity(ent_id: EntityID, reason: string) : void {
-    assert(false, 'Offline only');
+    let ent = this.entities[ent_id];
+    assert(ent);
+    assert(ent.id < 0, 'OfflineEntityManager or ClientOnlyEntity only');
+    this.deleteEntityInternal(ent_id, reason);
   }
 
   private getEntDataForDiff(ent_id: EntityID): [EntityBaseDataCommon, Entity | null] {
@@ -766,6 +770,32 @@ class ClientEntityManagerImpl<
 
   isOnline(): boolean {
     return true;
+  }
+
+  last_local_ent_id = 0;
+  createLocalEntity(data: DataObject): Entity {
+    let ent = this.create_func(data);
+    ent.id = --this.last_local_ent_id;
+    ent.entity_manager = this;
+    // ent.finishCreation();
+    return ent;
+  }
+  addClientOnlyEntityFromSerialized(data: DataObject): Entity {
+    let ent = this.createLocalEntity(data);
+    // assert(!ent.is_player);
+    // ent.fixupPostLoad();
+    this.entities[ent.id] = ent;
+    // let fade_in_time = ent.onCreate(false);
+    // this.fadeInEnt(ent, fade_in_time); // no: flickers with fading out server ents when used for chests
+    this.emit('ent_update', ent.id);
+
+    // Probably want configurable: also delete oldest ones
+    const MAX_CLIENT_ENTS = 100;
+    let oldest_id = this.last_local_ent_id + MAX_CLIENT_ENTS;
+    if (oldest_id < 0 && this.entities[oldest_id]) {
+      this.deleteEntityInternal(oldest_id, 'prune');
+    }
+    return ent;
   }
 
   addEntityFromSerialized(): Entity {
