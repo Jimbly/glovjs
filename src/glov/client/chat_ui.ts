@@ -132,7 +132,7 @@ Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 const color_user_rollover = vec4(1, 1, 1, 0.5);
 const color_same_user_rollover = vec4(1, 1, 1, 0.25);
 
-const MAX_PER_STYLE: TSMap<number> = {
+const MAX_PER_STYLE_DEFAULT: TSMap<number> = {
   join_leave: 3,
 };
 
@@ -686,6 +686,7 @@ export type ChatUIParam = {
   label_while_focused?: Text;
   label_while_hidden?: Text;
   channel_join_message?: Text;
+  max_per_style?: TSMap<number>;
 
   inner_width_adjust?: number;
   border?: number;
@@ -739,6 +740,7 @@ class ChatUI {
   private label_while_hidden: Text;
   private label_while_focused: Text;
   private channel_join_message: Text | null;
+  private max_per_style: TSMap<number>;
   private inner_width_adjust: number;
   private border?: number;
   private volume_join_leave: number;
@@ -877,6 +879,10 @@ class ChatUI {
     this.decorate_user_cb = params.decorate_user_cb || decorateUserDefault;
     this.message_pre_send_cb = params.message_pre_send_cb;
     this.extra_buttons = params.extra_buttons;
+    this.max_per_style = {
+      ...MAX_PER_STYLE_DEFAULT,
+      ...(params.max_per_style || {}),
+    };
 
     if (params.renderables) {
       this.renderables = cloneShallow(params.renderables);
@@ -997,7 +1003,7 @@ class ChatUI {
     }
     this.calcMsgHeight(elem);
     this.msgs.push(elem);
-    let max_msgs = MAX_PER_STYLE[elem.style];
+    let max_msgs = this.max_per_style[elem.style];
     if (max_msgs) {
       // Remove any more than max
       // Also remove any for the same ID (want for 'join_leave', maybe not others?)
