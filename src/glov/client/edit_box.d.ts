@@ -1,7 +1,7 @@
 import type { EventCallback } from 'glov/client/ui';
 import type { TextVisualLimit } from 'glov/common/types';
 import type { ROVec4 } from 'glov/common/vmath';
-import type { FontStyle } from './font';
+import type { Font, FontStyle } from './font';
 import type { FocusableElement } from './scroll_area';
 
 export type EditBoxResult = null | 'submit' | 'cancel';
@@ -18,6 +18,7 @@ export interface EditBoxOptsAll {
   placeholder: string;
   max_len: number;
   max_visual_size: TextVisualLimit;
+  max_visual_size_font: Font;
   zindex: null | number;
   uppercase: boolean;
   initial_focus: boolean;
