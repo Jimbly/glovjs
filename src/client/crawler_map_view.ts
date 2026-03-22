@@ -391,7 +391,7 @@ export function crawlerMapViewDraw({
           for (let ii = 0; ii < 4; ++ii) {
             let neighbor = level.getCell(xx + DX[ii], yy + DY[ii]);
             if (neighbor && neighbor.visible_bits &&
-              neighbor.walls[(ii+2)%4] === cell_desc.advertised_wall_desc
+              neighbor.walls[(ii+2)%4].is_advertised_by_cell // === cell_desc.advertised_wall_desc
             ) {
               detail_visible = true; // Draw the detail, and the floor, but not any thing else
             }
