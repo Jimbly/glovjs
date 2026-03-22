@@ -412,6 +412,16 @@ type PerVAUpdate = {
   debug: string[];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let entity_manager_for_constructor: ServerEntityManager<any, any>;
+
+export function entityManagerForConstructor<
+  Entity extends EntityBaseServer,
+  Worker extends EntityManagerReadyWorker<Entity, Worker>,
+>(): ServerEntityManager<Entity, Worker> {
+  return entity_manager_for_constructor;
+}
+
 class ServerEntityManagerImpl<
   Entity extends EntityBaseServer,
   Worker extends EntityManagerReadyWorker<Entity, Worker>,
@@ -733,6 +743,7 @@ class ServerEntityManagerImpl<
   }
 
   createEntity(data: DataObject): Entity {
+    entity_manager_for_constructor = this;
     let ent = this.create_func(data);
     ent.id = ++this.last_ent_id;
     ent.entity_manager = this;
@@ -1576,6 +1587,7 @@ class ServerEntityManagerImpl<
   entitiesReload(predicate?: (ent: Entity) => boolean): Entity[] {
     let ret: Entity[] = [];
     // TODO: destroy and recreate all existing entities under new IDs, except for players?
+    // entity_manager_for_constructor = this;
     // let { entities } = this;
     // for (let ent_id_string in entities) {
     //   let ent = entities[ent_id_string]!;
