@@ -512,6 +512,10 @@ export function capitalize(s: string): string {
   return s[0].toUpperCase() + s.slice(1);
 }
 
+export function upper<T extends string>(s: T): Uppercase<T> {
+  return s.toUpperCase() as Uppercase<T>;
+}
+
 export function secondsToFriendlyString(seconds: number, force_include_seconds?: boolean): string {
   let days = floor(seconds / (60*60*24));
   seconds -= days * 60*60*24;
