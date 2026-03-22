@@ -1447,7 +1447,7 @@ export function spot(param: SpotParam): SpotRet {
         }
       }
     }
-    if (hotpad) {
+    if (hotpad !== null) {
       if (padButtonDownEdge(hotpad)) {
         button_activate = true;
       }
