@@ -645,7 +645,7 @@ class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
   }
 }
 
-export type SystemStyles = 'def' | 'error' | 'link' | 'link_hover' | 'system';
+export type SystemStyles = 'def' | 'self' | 'user' | 'error' | 'link' | 'link_hover' | 'system';
 export type ChatUIParamStyles = Partial<Record<SystemStyles | string, FontStyle>>;
 
 export type ExtraButtonsPreState = {
@@ -846,6 +846,16 @@ class ChatUI {
     this.styles = defaults(params.styles || {}, {
       def: fontStyle(null, {
         color: 0xEEEEEEff,
+        outline_width,
+        outline_color: 0x000000ff,
+      }),
+      user: fontStyle(null, {
+        color: 0xEEBBCCff,
+        outline_width,
+        outline_color: 0x000000ff,
+      }),
+      self: fontStyle(null, {
+        color: 0xF7F7F7ff,
         outline_width,
         outline_color: 0x000000ff,
       }),
@@ -1121,6 +1131,13 @@ class ChatUI {
     if (!quiet && client_id !== netClientId()) {
       if (this.volume_in) {
         playUISound('msg_in', this.volume_in);
+      }
+    }
+    if (id && !style) {
+      if (id === netUserId()) {
+        style = 'self';
+      } else {
+        style = 'user';
       }
     }
     display_name = display_name || id;
