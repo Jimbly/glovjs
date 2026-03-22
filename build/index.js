@@ -236,7 +236,7 @@ gb.task({
 gb.task({
   ...autoatlas({
     name: 'client_autoatlas',
-    input: 'client/atlases',
+    inputs: config.autoatlas_input,
     ignore: config.autoatlas_ignore,
   }),
 });
@@ -508,6 +508,7 @@ const server_tasks = [
   'server_static',
   'server_js_notest',
   'server_json',
+  ...config.extra_server_tasks,
 ];
 const server_input_globs = server_tasks.map(addStarStar);
 

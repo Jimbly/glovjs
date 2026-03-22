@@ -24,7 +24,7 @@ import {
   spotSubEnd,
   spotUnfocus,
 } from './spot';
-import { spriteClipPop, spriteClipPush } from './sprites';
+import { spriteClipPop, spriteClipPush, UISprite } from './sprites';
 import { textureDefaultIsNearest } from './textures';
 import * as ui from './ui';
 import { uiTextHeight } from './ui';
@@ -49,11 +49,20 @@ export function scrollAreaSetPixelScale(scale: number): void {
   default_pixel_scale = scale;
 }
 
+function spriteNonScalableHeight(s: UISprite): number {
+  let r = 0;
+  for (let ii = 0; ii < s.uidata.heights.length; ii += 2) {
+    r += s.uidata.heights[ii];
+  }
+  return r;
+}
+
 interface ScrollAreaOptsAll extends Box {
   // configuration options
   z: number;
   // h: number (from Box) is height of visible area, not interior scrolled area
-  rate_scroll_click: number;
+  rate_scroll_click: number; // default uiTextHeight()
+  rate_scroll_wheel: number; // default rate_scroll_click * 2
   pixel_scale: number;
   top_pad: boolean; // set to false it the top/bottom "buttons" don't look like buttons
   color: Vec4;
@@ -67,7 +76,6 @@ interface ScrollAreaOptsAll extends Box {
   clip_horiz_xpad: number;
 
   // Calculated (only once) if not set
-  rate_scroll_wheel: number;
   rollover_color: Vec4;
   rollover_color_light: Vec4;
   disabled_color: Vec4;
@@ -100,7 +108,8 @@ class ScrollAreaInternal implements ScrollArea {
   z = Z.UI;
   w = 10;
   h = 10;
-  rate_scroll_click = uiTextHeight();
+  rate_scroll_click = 0;
+  rate_scroll_wheel = 0;
   pixel_scale = default_pixel_scale;
   top_pad = true;
   color = vec4(1,1,1,1);
@@ -114,7 +123,6 @@ class ScrollAreaInternal implements ScrollArea {
   clip_horiz_xpad = 0;
 
   // Calculated (only once) if not set
-  rate_scroll_wheel;
   rollover_color;
   rollover_color_light;
   disabled_color;
@@ -138,7 +146,6 @@ class ScrollAreaInternal implements ScrollArea {
   constructor(params?: ScrollAreaOpts) {
     params = params || {};
     this.applyParams(params);
-    this.rate_scroll_wheel = params.rate_scroll_wheel || this.rate_scroll_click * 2;
     this.rollover_color = params.rollover_color || darken(this.color, 0.75);
     this.rollover_color_light = params.rollover_color_light || darken(this.color, 0.95);
     // equality is used to detect if this gets used and prevent rollover
@@ -314,7 +321,7 @@ class ScrollAreaInternal implements ScrollArea {
     handle_pos = clamp(handle_pos, 0, 1);
     assert(isFinite(handle_pos));
     let handle_pixel_h = handle_h * (this.h - button_h_nopad * 2);
-    let handle_pixel_min_h = scrollbar_handle.uidata.total_h * pixel_scale;
+    let handle_pixel_min_h = spriteNonScalableHeight(scrollbar_handle) * pixel_scale;
     let trough_height = this.h - button_h * 2;
     handle_pixel_h = max(handle_pixel_h, min(handle_pixel_min_h, trough_height * 0.75));
     let handle_screenpos = this.y + button_h_nopad + handle_pos * (this.h - button_h_nopad * 2 - handle_pixel_h);
@@ -358,7 +365,9 @@ class ScrollAreaInternal implements ScrollArea {
       });
       if (wheel_delta) {
         this.overscroll_delay = OVERSCROLL_DELAY_WHEEL;
-        this.scroll_pos -= this.rate_scroll_wheel * wheel_delta;
+        let rate_scroll_click = (this.rate_scroll_click || uiTextHeight());
+        let rate_scroll_wheel = this.rate_scroll_wheel || rate_scroll_click * 2;
+        this.scroll_pos -= rate_scroll_wheel * wheel_delta;
         if (focused_sub_elem) {
           spotUnfocus();
         }
@@ -433,7 +442,7 @@ class ScrollAreaInternal implements ScrollArea {
       while (button_spot_ret.ret) {
         --button_spot_ret.ret;
         gained_focus = true;
-        this.scroll_pos -= this.rate_scroll_click;
+        this.scroll_pos -= (this.rate_scroll_click || uiTextHeight());
         this.consumed_click = true;
       }
       if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
@@ -445,7 +454,7 @@ class ScrollAreaInternal implements ScrollArea {
       while (button_spot_ret.ret) {
         --button_spot_ret.ret;
         gained_focus = true;
-        this.scroll_pos += this.rate_scroll_click;
+        this.scroll_pos += (this.rate_scroll_click || uiTextHeight());
         this.consumed_click = true;
       }
       if (button_spot_ret.spot_state === SPOT_STATE_DOWN) {
@@ -537,11 +546,11 @@ class ScrollAreaInternal implements ScrollArea {
         uvs: [scrollbar_trough.uvs[0], trough_v0, scrollbar_trough.uvs[2], trough_v1],
         color: trough_color,
       });
-    } else if (scrollbar_trough.uidata.heights.length === 3) {
-      ui.drawVBox({
+    } else if (scrollbar_trough.uidata.heights.length > 1) {
+      ui.drawBox({
         x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,
         w: bar_w, h: trough_draw_height,
-      }, scrollbar_trough, trough_color);
+      }, scrollbar_trough, pixel_scale, trough_color);
     } else {
       scrollbar_trough.draw({
         x: bar_x0, y: this.y + trough_draw_pad, z: this.z+0.1,

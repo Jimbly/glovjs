@@ -101,7 +101,7 @@ type ButtonLabels = BaseButtonLabels & ExtraButtonLabels;
 export function setButtonsDefaultLabels(buttons_labels: ButtonLabels): void;
 export function setProvideUserStringDefaultMessages(success_msg: Text, failure_msg: Text): void;
 export function suppressNewDOMElemWarnings(): void;
-export function uiGetDOMElem(last_elem: HTMLElement, allow_modal: boolean): null | HTMLElement;
+export function uiGetDOMElem(last_elem: HTMLElement | null, allow_modal: boolean): null | HTMLElement;
 export function uiGetDOMTabIndex(): number;
 export type BaseSoundKey = 'button_click' | 'rollover';
 export type UISoundID = SoundID & { opts?: SoundLoadOpts };
@@ -112,15 +112,18 @@ export interface DrawHBoxParam extends UIBox {
 }
 export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
-export function drawBox(coords: UIBox, s: Sprite, pixel_scale: number, color?: ROVec4, color1?: ROVec4): void;
-export function drawBoxTiled(coords: UIBox, s: Sprite, pixel_scale: number, color?: ROVec4, color1?: ROVec4): void;
+export function drawBox(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
+export type UIBoxTiled = UIBox & {
+  crop_last?: boolean; // otherwise, default, stretch the last
+};
+export function drawBoxTiled(coords: UIBoxTiled, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
 export function drawMultiPartBox(
   coords: UIBox,
   scaleable_data: {
     widths: number[];
     heights: number[];
   }, sprite: Sprite,
-  pixel_scale: number,
+  pixel_scale?: number,
   color?: ROVec4,
 ): void;
 export function playUISound(name: string, volume_or_opts?: number | GlovSoundPlayOpts): void;
@@ -169,6 +172,8 @@ export function drawTooltipBox(param: TooltipBoxParam): void;
 export interface ProgressBarParam extends UIBoxColored {
   progress: number; // 0..1
   color_trough?: ROVec4;
+  tiled?: boolean;
+  crop_last?: boolean; // if tiled; otherwise, default, stretch the last
   centered?: boolean;
   tooltip?: Text;
 }
@@ -243,6 +248,7 @@ export function buttonSetDefaultYOffs(y_offs: YOffs): void;
 type CheckboxParam = ButtonTextParam & {
   base_name_checked?: string; // default 'checked'
   base_name_unchecked?: string; // default 'unchecked'
+  text_xoffs?: number;
 };
 export function checkbox(value: boolean, param: CheckboxParam): boolean;
 
@@ -296,6 +302,7 @@ export type ModalDialogTickCallbackParams = {
   readonly font_height: number;
   readonly fullscreen_mode: boolean;
 };
+// Returns a hotkey, e.g. KEYS.Y, to activate one of the buttons
 export type ModalDialogTickCallback = (param: ModalDialogTickCallbackParams) => number | void;
 export type ModalDialogButtons<CB=VoidFunc> = TSMap<ModalDialogButton<CB>>;
 export interface ModalDialogParamBase<CB> {

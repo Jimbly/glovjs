@@ -191,7 +191,7 @@ WSClient.prototype.onError = function (e) {
   throw e;
 };
 
-// cb(client, data, resp_func)
+// cb(data, resp_func)
 WSClient.prototype.onMsg = function (msg, cb) {
   assert.ok(!this.handlers[msg]);
   this.handlers[msg] = function wrappedCallback(client, data, resp_func) {

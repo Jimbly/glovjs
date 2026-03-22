@@ -23,6 +23,8 @@ type AutoAtlasBuildData = [string, number, number, number[], number[], number[] 
 let load_opts: TSMap<TextureOptions> = {};
 let hit_startup = false;
 
+let swap_generation = 0;
+
 const uidata_error: SpriteUIData = {
   rects: [[0,0,1,1]],
   wh: [1],
@@ -70,7 +72,7 @@ class AutoAtlasImp {
     let { sprites, atlas_name, texs } = this;
     let atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj');
     // Root default sprite, with frame-indexing
-    let root_sprite = sprites.def = this.prealloc();
+    let root_sprite = sprites.def = (sprites.def || this.prealloc());
     let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
     let root_aspect: number[] = [];
 
@@ -189,8 +191,31 @@ class AutoAtlasImp {
         });
         texs.push(tex);
       }
+      for (let ii = 0; ii < texs.length; ++ii) {
+        texs[ii].onLoad(this.checkLoaded.bind(this));
+      }
       this.verifySprites(seen);
     });
+  }
+
+  is_loaded = false;
+  checkLoaded(): void {
+    let { texs } = this;
+    this.is_loaded = false;
+    if (!texs.length) {
+      return;
+    }
+    for (let ii = 0; ii < texs.length; ++ii) {
+      let tex = texs[ii];
+      if (!tex.loaded) {
+        return;
+      }
+    }
+    ++swap_generation; // since the atlas is loaded autoAtlas() may now return something different
+    this.is_loaded = true;
+  }
+  isLoaded(): boolean {
+    return this.is_loaded;
   }
 
   setSamplerState(opts: TextureOptions): void {
@@ -263,6 +288,28 @@ export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => v
   autoAtlasGet(atlas_name).onImage(cb);
 }
 
+let atlas_swaps: TSMap<string> = Object.create(null);
+
+export function autoAtlasSwapGeneration(): number {
+  return swap_generation;
+}
+
 export function autoAtlas(atlas_name: string, img_name: string): Sprite {
+  let dst = atlas_swaps[atlas_name];
+  if (dst) {
+    let swap = autoAtlasGet(dst);
+    if (swap.isLoaded()) {
+      if (swap.sprites[img_name]) {
+        return swap.get(img_name);
+      }
+    }
+  }
   return autoAtlasGet(atlas_name).get(img_name);
+}
+
+export function autoAtlasSwap(src: string, dest: string): void {
+  if (atlas_swaps[src] !== dest) {
+    atlas_swaps[src] = dest;
+    ++swap_generation;
+  }
 }

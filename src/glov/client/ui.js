@@ -51,7 +51,7 @@ const glov_input = require('./input.js');
 const { linkTick, linkObscureRect } = require('./link.js');
 const { getStringFromLocalizable } = require('./localization.js');
 const { markdownAuto } = require('./markdown');
-const { abs, floor, max, min, round, sqrt } = Math;
+const { abs, ceil, floor, max, min, round, sqrt } = Math;
 const { scrollAreaSetPixelScale } = require('./scroll_area.js');
 const { sliderSetDefaultShrink } = require('./slider.js');
 const { soundLoad, soundPlay } = require('./sound.js');
@@ -89,7 +89,7 @@ const {
   uiStyleModify,
   uiStyleTopOfFrame,
 } = require('./uistyle.js');
-const { clamp, clone, defaults, deprecate, lerp, merge } = require('glov/common/util.js');
+const { clamp, clone, defaults, deprecate, lerp, merge, sign } = require('glov/common/util.js');
 const { mat43, m43identity, m43mul } = require('./mat43.js');
 const { vec2, vec4, v4copy, v3scale, unit_vec } = require('glov/common/vmath.js');
 
@@ -558,7 +558,21 @@ export function uiGetDOMElem(last_elem, allow_modal) {
     //   handles this), but links still rely on this
     return null;
   }
-  if (dom_elems_issued >= dom_elems.length || !last_elem) {
+  if (last_elem && dom_elems[dom_elems_issued] !== last_elem) {
+    let found = false;
+    for (let ii = dom_elems_issued + 1; ii < dom_elems.length; ++ii) {
+      if (dom_elems[ii] === last_elem) {
+        dom_elems[ii] = dom_elems[dom_elems_issued];
+        dom_elems[dom_elems_issued] = last_elem;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      last_elem = null;
+    }
+  }
+  if (!last_elem) {
     let elem = document.createElement('div');
     uiElemAllocCheck();
     elem.setAttribute('class', 'glovui_dynamic');
@@ -566,18 +580,15 @@ export function uiGetDOMElem(last_elem, allow_modal) {
       dynamic_text_elem = document.getElementById('dynamic_text');
     }
     dynamic_text_elem.appendChild(elem);
-    dom_elems.push(elem);
+    let old = dom_elems[dom_elems_issued];
+    dom_elems[dom_elems_issued] = elem;
+    if (old) {
+      dom_elems.push(old);
+    }
     last_elem = elem;
   }
-  if (dom_elems[dom_elems_issued] !== last_elem) {
-    for (let ii = dom_elems_issued + 1; ii < dom_elems.length; ++ii) {
-      if (dom_elems[ii] === last_elem) {
-        dom_elems[ii] = dom_elems[dom_elems_issued];
-        dom_elems[dom_elems_issued] = last_elem;
-      }
-    }
-  }
   let elem = dom_elems[dom_elems_issued];
+  assert(!last_elem || elem === last_elem);
   dom_elems_issued++;
   return elem;
 }
@@ -603,7 +614,102 @@ export function uiBindSounds(_sounds) {
 let draw_box_param = {
   nozoom: true, // nozoom since different parts of the box get zoomed differently
 };
+
+function scale9PatchDims(pixel_scale, target_width, widths) {
+  // TODO: move this top part into uidata/atlas pre-calculations?
+  let target_sign = sign(target_width);
+  target_width *= target_sign;
+  let fixed_ws = 0;
+  let stretch_ws = 0;
+  for (let ii = 0; ii < widths.length; ++ii) {
+    let w = widths[ii];
+    if (ii % 2) {
+      stretch_ws += w;
+    } else {
+      fixed_ws += w;
+    }
+  }
+  let fixedscale;
+  let stretchscale;
+  pixel_scale = pixel_scale || 1;
+  if (fixed_ws * pixel_scale > target_width) {
+    // too large even with stretchable sections, shrink (non-uniformly)
+    fixedscale = target_width / fixed_ws;
+  } else {
+    fixedscale = pixel_scale;
+  }
+  stretchscale = stretch_ws ? // avoid divide by 0 (result probably unused though)
+    (target_width - fixed_ws * fixedscale) / stretch_ws :
+    fixedscale;
+  return [target_sign * fixedscale, target_sign * stretchscale];
+}
+
+// Draws an arbitrary 9-patch (assumes upper left patch is not stretched)
+// pixel_scale is ignored if there's no stretchable portions in some dimension
+// Returns the padded bounds (or the whole rect, if they don't exist)
+// eslint-disable-next-line consistent-return
+export function draw9Patch(coords, s, pixel_scale, color) {
+  spriteChainedStart();
+  let uidata = s.uidata;
+  let { widths, heights } = uidata;
+  // non-stretchable in one dimension?  Use that scale uniformly
+  if (uidata.heights.length === 1 && widths.length > 1) {
+    pixel_scale = abs(coords.h) / heights[0];
+  } else if (widths.length === 1 && heights.length > 1) {
+    pixel_scale = abs(coords.w) / widths[0];
+  }
+  let hscales = scale9PatchDims(pixel_scale, coords.w, widths);
+  let vscales = scale9PatchDims(pixel_scale, coords.h, heights);
+  let x = coords.x;
+  draw_box_param.z = coords.z;
+  draw_box_param.color = color;
+  draw_box_param.shader = null;
+  draw_box_param.color1 = coords.color1 || null;
+  for (let ii = 0; ii < widths.length; ++ii) {
+    let my_w = widths[ii] * hscales[ii % 2];
+    if (my_w) {
+      draw_box_param.x = x;
+      draw_box_param.w = my_w;
+      let y = coords.y;
+      for (let jj = 0; jj < heights.length; ++jj) {
+        let my_h = heights[jj] * vscales[jj % 2];
+        if (my_h) {
+          draw_box_param.y = y;
+          draw_box_param.h = my_h;
+          draw_box_param.uvs = uidata.rects[jj * widths.length + ii];
+          if (coords.color1) {
+            s.drawDualTint(draw_box_param);
+          } else {
+            s.draw(draw_box_param);
+          }
+          y += my_h;
+        }
+      }
+      x += my_w;
+    }
+  }
+  spriteChainedStop();
+
+  if (uidata.padh || uidata.padv) {
+    let ret = {};
+    if (uidata.padh && uidata.padh.length >= 2) {
+      let padhscales = scale9PatchDims(hscales[0], coords.w, uidata.padh);
+      ret.x = coords.x + uidata.padh[0] * padhscales[0];
+      ret.w = uidata.padh[1] * padhscales[1];
+    }
+    if (uidata.padv && uidata.padv.length >= 2) {
+      let padvscales = scale9PatchDims(vscales[0], coords.h, uidata.padv);
+      ret.y = coords.y + uidata.padv[0] * padvscales[0];
+      ret.h = uidata.padv[1] * padvscales[1];
+    }
+    return ret;
+  }
+}
+
 export function drawHBox(coords, s, color) {
+  if (1) {
+    return void draw9Patch(coords, s, panel_pixel_scale, color);
+  }
   spriteChainedStart();
   let uidata = s.uidata;
   let x = coords.x;
@@ -664,9 +770,15 @@ export function drawVBox(coords, s, color) {
 }
 
 export function drawBox(coords, s, pixel_scale, color, color1) {
+  if (color1) {
+    coords.color1 = color1; // old API
+  }
+  if (1) {
+    return void draw9Patch(coords, s, pixel_scale, color);
+  }
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
   let hs = [uidata.heights[0] * scale, 0, uidata.heights[2] * scale];
@@ -675,9 +787,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
-  if (color1) {
-    draw_box_param.color1 = color1;
-  }
+  draw_box_param.color1 = coords.color1 || null;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
@@ -690,7 +800,7 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
           draw_box_param.y = y;
           draw_box_param.h = my_h;
           draw_box_param.uvs = uidata.rects[jj * 3 + ii];
-          if (color1) {
+          if (coords.color1) {
             s.drawDualTint(draw_box_param);
           } else {
             s.draw(draw_box_param);
@@ -704,11 +814,17 @@ export function drawBox(coords, s, pixel_scale, color, color1) {
   spriteChainedStop();
 }
 
+let temp_uvs = vec4();
 // Tiles in the repeating portions
+// coords.crop_last controls whether the remainder is stretched or cropped
 export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
+  if (color1) {
+    coords.color1 = color1; // old API
+  }
+  let crop_last = coords.crop_last || false;
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
   let ws = [uidata.widths[0] * scale, 0, uidata.widths[2] * scale];
   let tiling_w = uidata.widths[1] * scale;
   ws[1] = max(0, coords.w - ws[0] - ws[2]);
@@ -719,28 +835,47 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
   draw_box_param.z = coords.z;
   draw_box_param.color = color;
   draw_box_param.shader = null;
-  if (color1) {
-    draw_box_param.color1 = color1;
-  }
+  draw_box_param.color1 = coords.color1 || null;
   for (let ii = 0; ii < ws.length; ++ii) {
     let my_w = ws[ii];
     if (my_w) {
-      let tile_x = ii > 0 && ii < ws.length - 1 ?
-        max(1, round(my_w / tiling_w)) : 1;
-      draw_box_param.w = tile_x > 1 ? my_w / tile_x : my_w;
+      let is_tiling_x = ii > 0 && ii < ws.length - 1;
+      let tile_x = is_tiling_x ?
+        max(1, (crop_last ? ceil : round)(my_w / tiling_w)) : 1;
+      let sub_w = crop_last ? tile_x > 1 ? tiling_w : my_w :
+        tile_x > 1 ? my_w / tile_x : my_w;
+      draw_box_param.w = sub_w;
       for (let xx = 0; xx < tile_x; ++xx) {
-        draw_box_param.x = x + xx * draw_box_param.w;
+        draw_box_param.x = x + xx * sub_w;
+        if (crop_last && is_tiling_x && xx === tile_x - 1) {
+          draw_box_param.w = x + my_w - draw_box_param.x;
+        }
         let y = coords.y;
         for (let jj = 0; jj < hs.length; ++jj) {
           let my_h = hs[jj];
           if (my_h) {
-            let tile_y = jj > 0 && jj < hs.length - 1 ?
-              max(1, round(my_h / tiling_h)) : 1;
-            draw_box_param.h = tile_y > 1 ? my_h / tile_y : my_h;
+            let is_tiling_y = jj > 0 && jj < hs.length - 1;
+            let tile_y = is_tiling_y ?
+              max(1, (crop_last ? ceil : round)(my_h / tiling_h)) : 1;
+            let sub_h = crop_last ? tile_y > 1 ? tiling_h : my_h :
+              tile_y > 1 ? my_h / tile_y : my_h;
+            draw_box_param.h = sub_h;
             draw_box_param.uvs = uidata.rects[jj * 3 + ii];
+            if (crop_last && is_tiling_x && xx === tile_x - 1) {
+              // last one, crop it
+              v4copy(temp_uvs, draw_box_param.uvs);
+              temp_uvs[2] = temp_uvs[0] + (temp_uvs[2] - temp_uvs[0]) * draw_box_param.w / tiling_w;
+              draw_box_param.uvs = temp_uvs;
+            }
             for (let yy = 0; yy < tile_y; ++yy) {
-              draw_box_param.y = y + yy * draw_box_param.h;
-              if (color1) {
+              draw_box_param.y = y + yy * sub_h;
+              if (crop_last && is_tiling_y && yy === tile_y - 1) {
+                draw_box_param.h = y + my_h - draw_box_param.y;
+                v4copy(temp_uvs, draw_box_param.uvs);
+                temp_uvs[3] = temp_uvs[1] + (temp_uvs[3] - temp_uvs[1]) * draw_box_param.h / tiling_h;
+                draw_box_param.uvs = temp_uvs;
+              }
+              if (coords.color1) {
                 s.drawDualTint(draw_box_param);
               } else {
                 s.draw(draw_box_param);
@@ -759,7 +894,7 @@ export function drawBoxTiled(coords, s, pixel_scale, color, color1) {
 export function drawMultiPartBox(coords, scaleable_data, s, pixel_scale, color) {
   spriteChainedStart();
   let uidata = s.uidata;
-  let scale = pixel_scale;
+  let scale = pixel_scale || 1;
 
   let ws = [];
   let fixed_w_sum = 0;
@@ -982,7 +1117,7 @@ export function drawTooltipBox(param) {
     y: param.y + (param.tooltip_left ? 0 : param.h + 2),
     tooltip_auto_above_offset: param.h + 4,
     tooltip_above: param.tooltip_above,
-    tooltip_auto_right_offset: param.tooltip_left ? 0 : param.tooltip_auto_right_offset,
+    tooltip_auto_right_offset: param.tooltip_left ? 0 : param.tooltip_auto_right_offset || param.w,
     tooltip_right: param.tooltip_right || param.tooltip_left,
     tooltip_center: param.tooltip_center,
     tooltip,
@@ -992,16 +1127,19 @@ export function drawTooltipBox(param) {
 }
 
 export function progressBar(param) {
-  drawHBox(param, sprites.progress_bar_trough, param.color_trough || param.color || unit_vec);
+  drawBox(param, sprites.progress_bar_trough, param.pixel_scale, param.color_trough || param.color || unit_vec);
   let progress = clamp(param.progress, 0, 1);
-  drawHBox({
-    x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
-    y: param.y,
-    z: (param.z || Z.UI) + Z_MIN_INC,
-    w: param.w * progress,
-    h: param.h,
-    no_min_width: true,
-  }, sprites.progress_bar, param.color || unit_vec);
+  if (progress) {
+    (param.tiled ? drawBoxTiled : drawBox)({
+      x: param.x + (param.centered ? param.w * (1-progress) * 0.5 : 0),
+      y: param.y,
+      z: (param.z || Z.UI) + Z_MIN_INC,
+      w: param.w * progress,
+      h: param.h,
+      no_min_width: true,
+      crop_last: param.crop_last,
+    }, sprites.progress_bar, param.pixel_scale, param.color || unit_vec);
+  }
   if (param.tooltip) {
     spot({
       x: param.x, y: param.y,
@@ -1082,6 +1220,7 @@ export function buttonBackgroundDraw(param, state) {
   profilerStartFunc();
   let colors = param.colors || color_button;
   let color = button_last_color = param.color || colors[state];
+  let ret;
   if (!param.no_bg) {
     let base_name = param.base_name || ((param.w/param.h < 1.5 && sprites.squarebutton) ? 'squarebutton' : 'button');
     let sprite_name = `${base_name}_${state}`;
@@ -1094,13 +1233,16 @@ export function buttonBackgroundDraw(param, state) {
       sprite = sprites[base_name];
     }
 
-    if (sprite.uidata.rects.length === 9) {
-      drawBox(param, sprite, param.pixel_scale || 1, color);
-    } else {
-      drawHBox(param, sprite, color);
-    }
+    // if (sprite.uidata.rects.length === 1 || sprite.uidata.rects.length === 3) {
+    //   drawHBox(param, sprite, color);
+    // } else if (sprite.uidata.rects.length === 9) {
+    //   drawBox(param, sprite, param.pixel_scale, color);
+    // } else {
+    ret = draw9Patch(param, sprite, param.pixel_scale, color);
+    // }
   }
   profilerStopFunc();
+  return ret;
 }
 
 export function buttonSpotBackgroundDraw(param, spot_state) {
@@ -1111,7 +1253,7 @@ export function buttonSpotBackgroundDraw(param, spot_state) {
 
 export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
-  buttonBackgroundDraw(param, state);
+  let patch_pad = buttonBackgroundDraw(param, state);
   let hpad = min(param.font_height * 0.25, param.w * 0.1);
   let vpad = min(param.font_height * 0.17, param.h * 0.1);
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
@@ -1125,6 +1267,14 @@ export function buttonTextDraw(param, state, focused) {
   let z = param.z + 0.1;
   let w = param.w - hpad * 2;
   let h = param.h - vpad * 2;
+  if (patch_pad) {
+    if (patch_pad.x !== undefined) {
+      ({ x, w } = patch_pad);
+    }
+    if (patch_pad.y !== undefined) {
+      ({ y, h } = patch_pad);
+    }
+  }
   let align = param.align || glov_font.ALIGN.HVCENTERFIT;
   let text_height = param.font_height;
   if (param.markdown) {
@@ -1167,6 +1317,10 @@ export function buttonText(param) {
   return ret ? spot_ret : null;
 }
 
+// Default `shrink` parameter to pad images within buttons, if the button
+//   does *not* have a 9-patch padding built in (shrink=1 in that case)
+const DEFAULT_SHRINK = 0.75;
+
 function buttonImageDraw(param, state, focused) {
   profilerStartFunc();
   let uvs = param.img_rect;
@@ -1174,7 +1328,7 @@ function buttonImageDraw(param, state, focused) {
   if (typeof param.frame === 'number') {
     uvs = img.uidata.rects[param.frame];
   }
-  buttonBackgroundDraw(param, state);
+  let patch_pad = buttonBackgroundDraw(param, state);
   let color = button_last_color;
   let img_origin = img.origin;
   let img_w = img.size[0];
@@ -1183,28 +1337,73 @@ function buttonImageDraw(param, state, focused) {
   if (typeof param.frame === 'number') {
     aspect = img.uidata.aspect ? img.uidata.aspect[param.frame] : 1;
   }
-  let largest_w_horiz = param.w * param.shrink;
-  let largest_w_vert = param.h * param.shrink * aspect;
-  img_w = min(largest_w_horiz, largest_w_vert);
-  img_h = img_w / aspect;
   let yoffs = (param.yoffs && param.yoffs[state] !== undefined) ? param.yoffs[state] : button_y_offs[state];
-  let pad_top = (param.h - img_h) / 2;
+
+  // old logic before patch_pad:
+  // let largest_w_horiz = param.w * (param.shrink || DEFAULT_SHRINK);
+  // let largest_w_vert = param.h * (param.shrink || DEFAULT_SHRINK) * aspect;
+  // let w = min(largest_w_horiz, largest_w_vert);
+  // let h = w / aspect;
+  // let pad_top = (param.h - h) / 2;
+  // let x = param.x + (param.left_align ? pad_top : (param.w - w) / 2);
+  // let y = param.y + pad_top;
+
+  // Calculate bounds in which the image should be contained
+  let bounds_x = param.x;
+  let bounds_w = param.w;
+  let shrink_x = param.shrink || DEFAULT_SHRINK;
+  if (patch_pad && patch_pad.x !== undefined) {
+    bounds_x = patch_pad.x;
+    bounds_w = patch_pad.w;
+    shrink_x = param.shrink || 1;
+  }
+  let bounds_y = param.y;
+  let bounds_h = param.h;
+  let shrink_y = param.shrink || DEFAULT_SHRINK;
+  if (patch_pad && patch_pad.y !== undefined) {
+    bounds_y = patch_pad.y;
+    bounds_h = patch_pad.h;
+    shrink_y = param.shrink || 1;
+  }
+  let bounds_dim = min(bounds_w, bounds_h);
+
+  if (shrink_x !== 1) {
+    let pad_left = bounds_dim * (1 - shrink_x) / 2;
+    bounds_x += pad_left;
+    bounds_w -= pad_left * 2;
+  }
+  if (shrink_y !== 1) {
+    let pad_top = bounds_dim * (1 - shrink_y) / 2;
+    bounds_y += pad_top;
+    bounds_h -= pad_top * 2;
+  }
+
+  let w = min(bounds_w, bounds_h * aspect);
+  let h = w / aspect;
+  let pad_top = (bounds_h - h) / 2;
+  let x = bounds_x + (param.left_align ? pad_top : (bounds_w - w) / 2);
+  let y = bounds_y + pad_top;
+
+  // adjust for sprite origin and custom offset
+  x += img_origin[0] * w;
+  y += img_origin[1] * h + yoffs;
+
   let draw_param = {
-    x: param.x + (param.left_align ? pad_top : (param.w - img_w) / 2) + img_origin[0] * img_w,
-    y: param.y + pad_top + img_origin[1] * img_h + yoffs,
+    x,
+    y,
     z: param.z + (param.z_inc || Z_MIN_INC),
     // use img_color if provided, use explicit tint if doing dual-tinting, otherwise button color
     color: param.img_color || param.color1 && param.color || color,
     color1: param.color1,
-    w: img_w / img.size[0],
-    h: img_h / img.size[1],
+    w: w / img.size[0],
+    h: h / img.size[1],
     uvs,
     rot: param.rotation,
   };
   if (param.flip) {
-    let { x, w } = draw_param;
-    draw_param.x = x + w;
-    draw_param.w = -w;
+    // TODO: doesn't handle non-standard origin correctly
+    draw_param.x += w;
+    draw_param.w *= -1;
   }
   if (param.color1) {
     img.drawDualTint(draw_param);
@@ -1224,7 +1423,6 @@ export function buttonImage(param) {
   param.z = param.z || Z.UI;
   param.w = param.w || ui_style_current.button_height;
   param.h = param.h || param.w || ui_style_current.button_height;
-  param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
 
   let spot_ret = buttonShared(param);
@@ -1251,7 +1449,6 @@ export function button(param) {
   // w/h initialize differently than either buttonText or buttonImage
   param.h = param.h || ui_style_current.button_height;
   param.w = param.w || ui_style_current.button_width;
-  param.shrink = param.shrink || 0.75;
   //param.img_rect; null -> full image
   param.left_align = true; // always left-align images
   param.font_height = param.font_height || (param.style || ui_style_current).text_height;
@@ -1264,8 +1461,8 @@ export function button(param) {
   let saved_w = param.w;
   let saved_x = param.x;
   param.no_bg = true;
-  let img_size = param.h * param.shrink;
-  let img_pad = param.h * (1 - param.shrink) / 2;
+  let img_size = param.h * (param.shrink || DEFAULT_SHRINK);
+  let img_pad = param.h * (1 - (param.shrink || DEFAULT_SHRINK)) / 2;
   param.x += img_pad + img_size;
   param.w -= img_pad + img_size;
   buttonTextDraw(param, state, focused);
@@ -1416,7 +1613,7 @@ export function checkbox(value, param) {
   let spot_ret = button_last_spot_ret;
   let focused = spot_ret.focused;
   let base_name_checked = param.base_name_checked || 'checked';
-  let base_name_unchecked = param.base_name_checked || 'unchecked';
+  let base_name_unchecked = param.base_name_unchecked || 'unchecked';
 
   // draw button / check box / check mark
   buttonSpotBackgroundDraw({
@@ -1434,7 +1631,7 @@ export function checkbox(value, param) {
       param.font_style_normal || font_style_normal;
     text = getStringFromLocalizable(text);
     let text_height = param.font_height;
-    let xoffs = param.h + font_use.getCharacterWidth(font_style, text_height, 0x20);
+    let xoffs = param.text_xoffs || (param.h + font_use.getCharacterWidth(font_style, text_height, 0x20));
     let x = param.x + xoffs;
     let y = param.y;
     let z = param.z + 0.1;
@@ -2079,7 +2276,7 @@ export function drawLine(x0, y0, x1, y1, z, w, precise, color, mode) {
   let blend;
   if (!glov_engine.defines.NOPREMUL) {
     blend = BLEND_PREMULALPHA;
-    color = premulAlphaColor(color);
+    color = premulAlphaColor(color || unit_vec);
   }
 
   let tex_key = mode & LINE_CAP_ROUND ? 'line3' : 'line2';

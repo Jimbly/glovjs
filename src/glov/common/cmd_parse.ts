@@ -105,9 +105,10 @@ function checkAccess(access: Roles | null, implied_access: TSMap<Roles>, list?: 
   return true;
 }
 
-function formatUsage(usage?: Text, help?: Text, prefix_help?: boolean): string | undefined {
+export function formatUsage(cmd_data: CmdListEntry): string | undefined {
+  let { usage, prefix_usage_with_help, help } = cmd_data;
   return !usage ? undefined :
-    prefix_help ? `${help}\n${usage}`:
+    prefix_usage_with_help ? `${help}\n${usage}`:
     help ? String(usage).replace(/\$HELP/, String(help)) :
     String(usage);
 }
@@ -156,13 +157,6 @@ const BOOLEAN_LOOKUP: TSMap<number> = {
 
 const CMD_STORAGE_PREFIX = 'cmd_parse_';
 
-function cmpCmd(a: { cname: string }, b: { cname: string }): number {
-  if (a.cname < b.cname) {
-    return -1;
-  }
-  return 1;
-}
-
 export type StorageProvider = {
   setJSON<T = unknown>(key: string, value: T): void;
   getJSON<T = unknown>(key: string, def?: T): T | undefined;
@@ -178,14 +172,7 @@ export type AccessContainer = {
   access?: Roles | null;
 };
 
-export type CmdAutoCompleteEntry = {
-  cname: string;
-  cmd: string;
-  help: string;
-  usage?: string;
-};
-
-type CmdListEntry = {
+export type CmdListEntry = {
   name: string;
   help?: Text;
   usage?: Text;
@@ -205,7 +192,7 @@ class CmdParse {
   was_not_found = false;
   private storage?: StorageProvider;
   private cmds: TSMap<CmdDefRegistered>;
-  private cmds_for_complete: TSMap<CmdListEntry>;
+  cmds_for_complete: TSMap<CmdListEntry>;
   private implied_access: TSMap<Roles>;
   private last_cmd_data?: CmdDefRegistered;
 
@@ -230,14 +217,10 @@ class CmdParse {
       let list = this.cmd_list;
       for (let cmd in this.cmds) {
         let cmd_data = this.cmds[cmd]!;
-        let access: string[] = []; // combine for data compaction
-        if (cmd_data.access_show) {
-          access = access.concat(cmd_data.access_show);
+        if (cmd_data.access_show?.includes('hidden')) {
+          continue;
         }
-        if (cmd_data.access_run) {
-          access = access.concat(cmd_data.access_run);
-        }
-        if (access.indexOf('hidden') !== -1) {
+        if (cmd_data.access_run?.includes('hidden')) {
           continue;
         }
         let data: CmdListEntry = {
@@ -245,10 +228,13 @@ class CmdParse {
           help: String(cmd_data.help),
         };
         if (cmd_data.usage) {
-          data.usage = formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help);
+          data.usage = formatUsage(cmd_data);
         }
-        if (access.length) {
-          data.access_show = access;
+        if (cmd_data.access_run?.length) {
+          data.access_run = cmd_data.access_run;
+        }
+        if (cmd_data.access_show?.length) {
+          data.access_show = cmd_data.access_show;
         }
         list[cmd] = data;
       }
@@ -597,30 +583,6 @@ class CmdParse {
         cmds[cname] = new_cmds[cname]!;
       }
     }
-  }
-
-  autoComplete(str_in: string, access: Roles | null): CmdAutoCompleteEntry[] {
-    let list: CmdAutoCompleteEntry[] = [];
-    let str = str_in.split(' ');
-    let first_tok = canonical(str[0]);
-    this.last_access = access;
-    for (let cname in this.cmds_for_complete) {
-      if (str.length === 1 && cname.slice(0, first_tok.length) === first_tok ||
-        str.length > 1 && cname === first_tok
-      ) {
-        let cmd_data = this.cmds_for_complete[cname]!;
-        if (this.checkAccess(cmd_data.access_show) && this.checkAccess(cmd_data.access_run)) {
-          list.push({
-            cname,
-            cmd: cmd_data.name,
-            help: String(cmd_data.help),
-            usage: formatUsage(cmd_data.usage, cmd_data.help, cmd_data.prefix_usage_with_help),
-          });
-        }
-      }
-    }
-    list.sort(cmpCmd);
-    return list; // .slice(0, 20); Maybe?
   }
 }
 export type { CmdParse };

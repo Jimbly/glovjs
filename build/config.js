@@ -120,6 +120,7 @@ module.exports = function (gb) {
     }],
     prod_build_version_file: 'client_bundle_app_ver:client/app.ver.json',
     extra_client_tasks: [],
+    extra_server_tasks: [],
     extra_prod_inputs: [], // Will bypass the production zip bundling, but still get in the raw production output
     extra_prod_tasks: [],
     extra_zip_inputs: [],
@@ -145,6 +146,10 @@ module.exports = function (gb) {
       more: false,
     },
     browsersync_queryparams: '', // e.g. '?D=FOO'
+    autoatlas_input: [
+      'client/atlases/**/*.png',
+      'client/atlases/**/*.yaml',
+    ],
     autoatlas_ignore: ['someatlas:sometile'],
   };
   // eslint-disable-next-line n/global-require

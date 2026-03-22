@@ -196,7 +196,7 @@ class MDBlockBold implements MDLayoutBlock {
     let old_style = param.font_style;
     let key = `${param.font_style_idx}.bold`;
     let { font_styles } = param;
-    let bold_style = font_styles[key];
+    let bold_style = font_styles[key] || markdown_default_font_styles[key];
     if (!bold_style) {
       let base_style = font_styles[param.font_style_idx] ||
         markdown_default_font_styles[param.font_style_idx] ||

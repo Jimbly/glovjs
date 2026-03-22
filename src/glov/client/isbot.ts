@@ -1,4 +1,4 @@
-// Minimal subset of `isbot@5.1.22` NPM module, plus ?bot=1 support
+// Minimal subset of `isbot@5.1.22` NPM module, plus ?bot=1 support, and old browser fixes
 
 /* eslint @stylistic/quotes:off */
 /* globals navigator */
@@ -8,10 +8,18 @@ const fullPattern = [
   " deusu/",
   " yadirectfetcher",
   "(?:^|[^g])news(?!sapphire)",
-  "(?<! (?:channel/|google/))google(?!(app|/google| pixel))",
-  "(?<! cu)bots?(?:\\b|_)",
-  "(?<!(?:lib))http",
-  "(?<![hg]m)score",
+
+  // Equivalent regexs without lookbehind so as to not crash on older browsers (Safari)
+  "^(?:(?! channel/| google/).)*google(?!(app|/google| pixel))",
+  "^(?:(?! cu).)*bots?(?:\\b|_)",
+  "^(?:(?!(?:lib)).)*http",
+  "^(?:(?![hg]m).)*score",
+  "^(?:(?!cam).)*scan",
+  // "(?<! channel/| google/)google(?!(app|/google| pixel))",
+  // "(?<! cu)bots?(?:\\b|_)",
+  // "(?<!(?:lib))http",
+  // "(?<![hg]m)score",
+
   "@[a-z][\\w-]+\\.",
   "\\(\\)",
   "\\.com\\b",

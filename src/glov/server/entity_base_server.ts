@@ -4,6 +4,7 @@
 export let entity_field_defs: Partial<Record<string, EntityFieldDef>> = Object.create(null);
 
 import assert from 'assert';
+import { dotPropGet } from 'glov/common/dot-prop';
 import {
   ActionMessageParam,
   ClientID,
@@ -26,6 +27,7 @@ import {
   HandlerSource,
   NetErrorCallback,
   TSMap,
+  VoidFunc,
   WithRequired,
 } from 'glov/common/types';
 import {
@@ -176,6 +178,7 @@ export class EntityBaseServer extends EntityBaseCommon {
   in_dirty_list: boolean;
   dirty_fields: DirtyFields;
   dirty_sub_fields: Partial<Record<string, DirtyFields>>;
+  upon_undirty?: VoidFunc[];
   need_save: boolean;
   player_uid?: string; // Only for player-type entities
   current_vaid!: VAID; // Initially set in finishCreation()
@@ -206,10 +209,10 @@ export class EntityBaseServer extends EntityBaseCommon {
     this.entity_manager.worker.errorSrc(src, ...args);
   }
 
-  getData<T>(field: string, deflt: T): T;
-  getData<T>(field: string): T | undefined;
-  getData(field: string, deflt?: unknown): unknown {
-    return (this.data as DataObject)[field];
+  getData<T>(path: string, deflt: T): T;
+  getData<T>(path: string): T | undefined;
+  getData(path: string, deflt?: unknown): unknown {
+    return path.includes('.') ? dotPropGet(this.data, path) : (this.data as DataObject)[path];
   }
 
   last_saved_data?: string;
@@ -478,6 +481,12 @@ export class EntityBaseServer extends EntityBaseCommon {
         this.dirtySub(field, index);
       }
     }
+  }
+
+  uponUndirty(cb: VoidFunc): void {
+    assert(this.in_dirty_list);
+    this.upon_undirty = this.upon_undirty || [];
+    this.upon_undirty.push(cb);
   }
 }
 EntityBaseServer.prototype.is_player = false;

@@ -779,6 +779,32 @@ GlovFont.prototype.getStringWidth = function (style, x_size, text) {
   return ret;
 };
 
+GlovFont.prototype.truncateToWidth = function (style, x_size, max_width, text) {
+  text = getStringFromLocalizable(text);
+
+  this.applyStyle(style);
+  let ret=0;
+  let xsc = x_size * this.inv_font_size;
+  let x_advance = this.calcXAdvance(xsc);
+  let elipsis_width = this.getStringWidth(style, x_size, '...');
+  let max_without_elipsis = max_width - elipsis_width;
+  let truncate_ret = 0;
+  for (let ii = 0; ii < text.length; ++ii) {
+    let c = text.charCodeAt(ii);
+    let char_info = this.infoFromChar(c);
+    if (char_info) {
+      ret += char_info.w_pad_scale * xsc + x_advance;
+      if (!truncate_ret && ret > max_without_elipsis) {
+        truncate_ret = ii;
+      }
+      if (ret > max_width) {
+        return `${text.slice(0, truncate_ret)}...`;
+      }
+    }
+  }
+  return text;
+};
+
 GlovFont.prototype.getSpaceSize = function (xsc) {
   let space_info = this.infoFromChar(32); // ' '
   return (space_info ? (space_info.w + space_info.xpad) * space_info.scale : this.font_size) * xsc;

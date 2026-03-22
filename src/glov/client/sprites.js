@@ -1115,6 +1115,9 @@ Sprite.prototype.withSamplerState = function (opts) {
     });
     let doInit = () => {
       new_sprite.texs = this.texs.map((tex) => {
+        if (tex.name === 'error') {
+          return tex;
+        }
         assert(tex.url);
         return textureLoad({
           url: `${tex.url.split('#')[0]}#${cache_v}`,
@@ -1290,6 +1293,24 @@ Sprite.prototype.draw3D = function (params) {
 
 export function spriteCreate(params) {
   return new Sprite(params);
+}
+
+let auto_unload_sprites = Object.create(null);
+export function spriteLoadLazy(params) {
+  assert(params.name);
+  assert(!params.auto_unload);
+  let key = `${params.name}#${textureFilterKey(params)}`;
+  let sprite = auto_unload_sprites[key];
+  if (!sprite) {
+    sprite = auto_unload_sprites[key] = spriteCreate({
+      ...params,
+      lazy_load: true,
+      auto_unload: function () {
+        delete auto_unload_sprites[key];
+      },
+    });
+  }
+  return sprite;
 }
 
 export function spriteStartup() {

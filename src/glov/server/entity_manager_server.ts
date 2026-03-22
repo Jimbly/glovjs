@@ -31,6 +31,7 @@ import {
   isDataObject,
   NetErrorCallback,
   NetResponseCallback,
+  VoidFunc,
 } from 'glov/common/types';
 import {
   callEach,
@@ -667,6 +668,18 @@ class ServerEntityManagerImpl<
     });
   }
 
+  private flagAsNotInDirtyList(ent: Entity): void {
+    ent.in_dirty_list = false;
+    if (ent.upon_undirty) {
+      // also queue callbacks to get called at the end of the current/next tick
+      this.after_update_cbs = this.after_update_cbs || [];
+      for (let ii = 0; ii < ent.upon_undirty.length; ++ii) {
+        this.after_update_cbs.push(ent.upon_undirty[ii]);
+      }
+      ent.upon_undirty = undefined;
+    }
+  }
+
   deleteEntityFinish(va: VARecord<Entity>, ent: Entity): void {
     let { id: ent_id } = ent;
     let { entities: va_entities } = va;
@@ -675,7 +688,7 @@ class ServerEntityManagerImpl<
       let idx = this.dirty_list.indexOf(ent);
       assert(idx !== -1);
       this.dirty_list.splice(idx, 1);
-      ent.in_dirty_list = false;
+      this.flagAsNotInDirtyList(ent);
     }
     delete sem_entities[ent_id];
     delete va_entities[ent_id];
@@ -1336,6 +1349,7 @@ class ServerEntityManagerImpl<
   }
 
   update_per_va!: Partial<Record<VAID, PerVAUpdate>>;
+  after_update_cbs?: VoidFunc[];
 
   private prepareUpdate(ent: Entity): void {
     let vaid = ent.current_vaid;
@@ -1372,8 +1386,8 @@ class ServerEntityManagerImpl<
     }
 
     // Clean up per-tick state
-    ent.in_dirty_list = false;
     ent.last_delete_reason = undefined;
+    this.flagAsNotInDirtyList(ent);
   }
 
   private prepareNonEntUpdates(): void {
@@ -1536,6 +1550,9 @@ class ServerEntityManagerImpl<
       this.unloadUnseenVAs();
     }
     this.flushChangesToDataStores();
+    if (this.after_update_cbs) {
+      callEach(this.after_update_cbs, this.after_update_cbs = undefined);
+    }
     this.update_per_va = null!; // only valid/used inside `tick()`, release references so they can be GC'd
   }
 

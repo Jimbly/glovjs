@@ -4,9 +4,9 @@
 import assert from 'assert';
 
 import type { DataObject, ErrorCallback } from './types';
-import type { Vec2 } from './vmath';
+import type { JSVec2, Vec2 } from './vmath';
 
-const { PI, abs, floor, min, max, random, round, pow, sin, sqrt } = Math;
+const { PI, abs, ceil, floor, min, max, random, round, pow, sin, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -200,6 +200,35 @@ export function deepAdd(dest: DataObject, src: DataObject): void {
       dest[key] = (dest_value || 0) + value;
     }
   }
+}
+
+// Creates a deep clone of B, but attempts to preserve shared references from A
+// wherever structurally identical.
+// Expected usage: A is a previous snapshot of B, B has been modified, makes a
+// new snapshot that takes minimal additional memory.
+export function refclone<T>(a: T, b: T): T {
+  if (typeof b !== 'object' || !b) {
+    // primitive type
+    return b;
+  }
+
+  if (deepEqual(a, b)) {
+    return a;
+  }
+
+  if (Array.isArray(b)) {
+    let result: unknown[] = [];
+    for (let i = 0; i < b.length; i++) {
+      result[i] = refclone(a && (a as unknown[])[i], (b as unknown[])[i]);
+    }
+    return result as T;
+  }
+
+  let result: DataObject = {};
+  for (let key in b) {
+    result[key] = refclone(a && (a as DataObject)[key], (b as DataObject)[key]);
+  }
+  return result as T;
 }
 
 export function clamp(v: number, mn: number, mx: number): number {
@@ -477,6 +506,14 @@ export function sanitize(str: string): string {
 
 export function plural(number: number, label: string): string {
   return `${label}${number === 1 ? '' : 's'}`;
+}
+
+export function capitalize(s: string): string {
+  return s[0].toUpperCase() + s.slice(1);
+}
+
+export function upper<T extends string>(s: T): Uppercase<T> {
+  return s.toUpperCase() as Uppercase<T>;
 }
 
 export function secondsToFriendlyString(seconds: number, force_include_seconds?: boolean): string {
@@ -799,4 +836,25 @@ export function asyncDictionaryGet<T>(
     elem.value = value;
     callEach(elem.in_flight, elem.in_flight = undefined, value);
   });
+}
+
+// Ulam space-filling spiral
+export function spiralPos(n: number): JSVec2 {
+  n++;
+  let k=ceil((sqrt(n)-1)/2);
+  let t=2*k+1;
+  let m=t*t;
+  t--;
+  if (n>=m-t) {
+    return [k-(m-n), k ? -k : 0];
+  }
+  m-=t;
+  if (n>=m-t) {
+    return [-k,-k+(m-n)];
+  }
+  m-=t;
+  if (n>=m-t) {
+    return [-k+(m-n),k];
+  }
+  return [k,k-(m-n-t)];
 }

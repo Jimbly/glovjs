@@ -9,6 +9,8 @@ import {
   nearSameAngle,
   once,
   randomNot,
+  refclone,
+  spiralPos,
   trimEnd,
 } from 'glov/common/util';
 import 'glov/server/test';
@@ -131,6 +133,65 @@ asyncSeries([
     assert.deepEqual(defaultsDeep({ a: { b: 1 } }, { a: 'string' }), { a: { b: 1 } });
     assert.deepEqual(defaultsDeep({ a: { b: 1 } }, { a: [1] }), { a: { b: 1 } });
     assert.deepEqual(defaultsDeep({ a: [2] }, { a: { b: 1 } }), { a: [2] });
+    next();
+  },
+  function testRefclone(next) {
+    {
+      let A = { list: [1, 2, 3] };
+      let B = { list: [1, 2, 3] } as DataObject;
+
+      let C = refclone(A, B);
+      assert(C === A);
+      B.foo = 'bar';
+      C = refclone(A, B);
+      assert(C !== A);
+      assert(C !== B);
+      assert(C.list !== B.list);
+      assert(C.list === A.list);
+    }
+
+    {
+      let A = { list: [1, 2, 3] };
+      let B = { list: [1, 2, 3, 4] };
+
+      let C = refclone(A, B);
+      assert(C.list !== A.list);
+      assert(C.list !== B.list);
+    }
+
+    {
+      let A = { foo: { list: [1, 2, { bar: 'baz' }] } };
+      let B = { foo: { list: [1, 2, { bar: 'baz' }] } };
+
+      let C = refclone(A, B);
+      assert(C === A);
+      (B as DataObject).bar = 'baz';
+      C = refclone(A, B);
+      assert(C !== A);
+      assert(C.foo === A.foo);
+      B.foo.list[0] = 2;
+      C = refclone(A, B);
+      assert(C !== A);
+      assert(C.foo.list !== A.foo.list);
+      assert(C.foo.list !== B.foo.list);
+      assert(C.foo.list[2] === A.foo.list[2]);
+    }
+    next();
+  },
+  function testSpiral(next) {
+    let seen: Record<string, true> = {};
+    for (let ii = 0; ii < 12*12; ++ii) {
+      let pair = spiralPos(ii);
+      let key = pair.join(',');
+      assert(!seen[key], key);
+      seen[key] = true;
+    }
+    for (let ii = -5; ii <= 5; ++ii) {
+      for (let jj = -5; jj <= 5; ++jj) {
+        let key = `${ii},${jj}`;
+        assert(seen[key], key);
+      }
+    }
     next();
   },
 ], function (err) {

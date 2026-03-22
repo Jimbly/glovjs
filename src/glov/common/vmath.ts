@@ -170,6 +170,10 @@ export function v2distSq(a: ROVec2, b: ROVec2): number {
     (a[1] - b[1]) * (a[1] - b[1]);
 }
 
+export function v2manhattanDist(a: ROVec2, b: ROVec2): number {
+  return abs(a[0] - b[0]) + abs(a[1] - b[1]);
+}
+
 export function v2div(out: Vec2, a: ROVec2, b: ROVec2): Vec2 {
   out[0] = a[0] / b[0];
   out[1] = a[1] / b[1];

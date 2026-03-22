@@ -118,6 +118,7 @@ export type WSClient = {
   readonly connect_error: string | null;
   readonly update_available: boolean;
   timeSinceDisconnect(): number;
+  onMsg<T=unknown, R=never>(msg: string, cb: (data: T, resp_func: NetResponseCallback<R>) => void): void;
 };
 
 export type NetInitParam = Partial<{

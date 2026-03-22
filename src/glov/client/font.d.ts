@@ -141,6 +141,7 @@ export interface Font {
   getCharacterWidth(style: FontStyle | null, x_size: number, c: number): number;
 
   getStringWidth(style: FontStyle | null, x_size: number, text: Text): number;
+  truncateToWidth(style: FontStyle | null, x_size: number, max_width: number, text: Text): string;
   stripUnprintable(text: Text, opts?: StripOpts): string;
 
   readonly integral: boolean;

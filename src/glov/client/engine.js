@@ -52,7 +52,7 @@ const mat4Perspective = require('gl-mat4/perspective');
 const { asin, cos, floor, min, max, PI, round, sin, sqrt } = Math;
 const { modelLoadCount, modelStartup } = require('./models.js');
 const perf = require('./perf.js');
-const { profilerFrameStart, profilerGarbageEstimate } = require('./profiler.js');
+const { profilerFrameStart, profilerGarbageEstimate, profilerMemSize } = require('./profiler.js');
 const { profilerUIStartup } = require('./profiler_ui.js');
 const { perfCounterTick } = require('glov/common/perfcounters.js');
 const settings = require('./settings.js');
@@ -121,7 +121,7 @@ export let antialias_unavailable;
 
 export let game_width;
 export let game_height;
-let game_aspect;
+let render_aspect;
 
 export let render_width;
 export let render_height;
@@ -215,15 +215,15 @@ export function setFOV(fov_min) {
   let w = width_3d;
   let h = height_3d;
   let aspect = w / h;
-  if (aspect > game_aspect) {
+  if (aspect >= render_aspect) {
     fov_y = fov_min;
     let rise = sin(fov_y / 2) / cos(fov_y / 2) * aspect;
     fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
   } else {
-    // Calculate what fov_x would be if the screen was game_aspect, then derive fov_y from that
-    let rise = sin(fov_min / 2) / cos(fov_min / 2) * game_aspect;
+    // Calculate what fov_x would be if the screen was render_aspect, then derive fov_y from that
+    let rise = sin(fov_min / 2) / cos(fov_min / 2) * render_aspect;
     fov_x = 2 * asin(rise / sqrt(rise * rise + 1));
-    // Old method, just apply fov to x (it's the same thing, if game_aspect is 1.0)
+    // Old method, just apply fov to x (it's the same thing, if render_aspect is 1.0)
     // fov_x = fov_min;
     let rise2 = sin(fov_x / 2) / cos(fov_x / 2) / aspect;
     fov_y = 2 * asin(rise2 / sqrt(rise2 * rise2 + 1));
@@ -233,7 +233,6 @@ export function setFOV(fov_min) {
 export function setGameDims(w, h) {
   game_width = w;
   game_height = h;
-  game_aspect = game_width / game_height;
 }
 
 // Didn't need this for a while, but got slow on iOS recently :(
@@ -421,6 +420,7 @@ let mspf_tick = 1000;
 let mspf_tick_accum = 0;
 // let net_time_accum = 0;
 let garbage_estimate = 0;
+let mem_estimate = 0;
 export const PERF_HISTORY_SIZE = 128;
 export let perf_state = window.glov_perf_state = {
   fpsgraph: {
@@ -443,6 +443,7 @@ perf.addMetric({
     'ms/f: ': () => mspf.toFixed(0),
     'cpu: ': () => mspf_tick.toFixed(0),
     'gc/f: ': () => (garbage_estimate ? garbage_estimate.toFixed(1) : ''),
+    'mem: ': () => (mem_estimate ? mem_estimate.toFixed(1) : ''),
     // 'net: ': () => net_time.toFixed(0),
   },
   data: fpsgraph, // contain .index and .history (stride of colors.length)
@@ -818,6 +819,7 @@ export function setZRange(znear, zfar) {
 function set3DRenderResolution(w, h) {
   width_3d = w;
   height_3d = h;
+  render_aspect = width_3d / height_3d;
 }
 
 let want_render_scale_3d_this_frame;
@@ -850,12 +852,13 @@ export function start3DRendering(opts) {
     width: backbuffer_width,
     height: backbuffer_height,
     final: effectsIsFinal(),
-    need_depth: opts.need_depth || true,
+    need_depth: opts.need_depth ?? true,
     clear: true,
     clear_color: opts.clear_color,
     clear_all: opts.clear_all === undefined ? settings.render_scale_clear : opts.clear_all,
     clear_all_color: opts.clear_all_color,
     viewport: opts.viewport,
+    just_viewport: opts.just_viewport,
   });
 
   setupProjection(fov_y, width_3d, height_3d, ZNEAR, ZFAR);
@@ -980,6 +983,9 @@ export function isOutOfTick() {
 let last_tick = 0;
 let last_tick_hr = 0;
 let frame_limit_time_left = 0;
+export let last_raw_tick_times = [];
+export let last_raw_tick_skipped = [];
+export let last_raw_tick_index = 0;
 function tick(timestamp) {
   profilerFrameStart();
   profilerStart('tick');
@@ -1018,6 +1024,10 @@ function tick(timestamp) {
 
   let dt_raw = hrtime - last_tick_hr;
   last_tick_hr = hrtime;
+  let last_raw_tick_index_use = last_raw_tick_index;
+  last_raw_tick_times[last_raw_tick_index_use] = dt_raw;
+  last_raw_tick_skipped[last_raw_tick_index_use] = false;
+  last_raw_tick_index = (last_raw_tick_index_use + 1) % 24;
   let max_fps = settings.max_fps;
   if (max_fps && max_fps <= settings.use_animation_frame) {
     // using requestAnimationFrame, need to apply max_fps ourselves
@@ -1027,6 +1037,7 @@ function tick(timestamp) {
       requestFrame();
       profilerStop('top');
       out_of_tick = true;
+      last_raw_tick_skipped[last_raw_tick_index_use] = true;
       return profilerStop('tick');
     }
     let frame_time = min(MAX_FRAME_TIME, 1000 / max_fps - 0.1);
@@ -1067,6 +1078,7 @@ function tick(timestamp) {
       mspf_tick = mspf_tick_accum / mspf_frame_count;
       mspf_tick_accum = 0;
       garbage_estimate = profilerGarbageEstimate() / 1024;
+      mem_estimate = profilerMemSize() / 1024 / 1024;
       // net_time = net_time_accum / mspf_frame_count;
       // net_time_accum = 0;
       mspf_frame_count = 0;

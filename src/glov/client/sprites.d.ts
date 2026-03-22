@@ -37,6 +37,7 @@ export interface Texture {
     per_mipmap_data?: HTMLImage[]
   ): void;
   setSamplerState(opts: TextureOptions): void;
+  onLoad(cb: (tex: Texture) => void): void;
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;
@@ -167,6 +168,7 @@ export function spriteClipResume(): void;
 export function spriteDraw(): void;
 export function spriteDrawPartial(z: number): void;
 export function spriteCreate(param: SpriteParam): Sprite;
+export function spriteLoadLazy(param: SpriteParam): Sprite;
 export function spriteStartup(): void;
 
 export function spriteFlippedUVsApplyHFlip(spr: Sprite): void;

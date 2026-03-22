@@ -151,6 +151,18 @@ if (!Math.sign) {
   };
 }
 
+if (!Math.imul) {
+  Math.imul = function imul(x, y) {
+    let xn = Number(x);
+    let yn = Number(y);
+    let xl = 0xFFFF & xn;
+    let xh = 0xFFFF & (xn >>> 16);
+    let yl = 0xFFFF & yn;
+    let yh = 0xFFFF & (yn >>> 16);
+    return (xl * yl + (xh * yl + xl * yh << 16 >>> 0)) >>> 0;
+  };
+}
+
 if (typeof window !== 'undefined') {
   if (!window.Intl) {
     window.Intl = {};

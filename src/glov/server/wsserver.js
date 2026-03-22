@@ -7,7 +7,10 @@ const { max } = Math;
 import * as ack from 'glov/common/ack.js';
 const { ackInitReceiver, ackWrapPakFinish, ackWrapPakPayload } = ack;
 import { isPacket } from 'glov/common/packet';
-import { platformIsValid } from 'glov/common/platform';
+import {
+  platformFallbackGet,
+  platformIsValid,
+} from 'glov/common/platform';
 import * as events from 'glov/common/tiny-events.js';
 import * as util from 'glov/common/util.js';
 const { merge } = util;
@@ -228,6 +231,9 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
 
     let query = requestGetQuery(req);
     let plat = query.plat ?? null;
+    if (plat && !platformIsValid(plat) && platformFallbackGet()) {
+      plat = platformFallbackGet();
+    }
     let ver = query.ver ?? null;
     let versionSupport = plat !== null && ver !== null && platformIsValid(plat) && isValidVersion(ver) ?
       getVersionSupport(plat, ver) :
@@ -261,7 +267,7 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
       // disable this for testing
       client.onClose();
     });
-    socket.on('message', function (data) {
+    socket.on('message', function (data, is_binary) {
       if (ws_debug_log) {
         ws_debug_log.write(`["R","${data.toString('base64')}"],\n`);
       }
@@ -277,11 +283,26 @@ WSServer.prototype.init = function (server, server_https, no_timeout, dev) {
           // This doesn't actually work for the packets we were receiving in
           //   production, they contain 0xFFFD characters, which means data has
           //   been lost, we cannot possibly make the data work.
+          // Also, `ws@8.0+` passes a Buffer + `is_binary=false` instead of a String.
           // if (typeof data === 'string') {
           //   client.logCtx('debug', `Received incorrect WebSocket data type (${typeof data}), auto-fixing...`);
           //   log_data = data;
           //   data = Buffer.from(data, 'binary');
           // }
+          if (!is_binary) {
+            let source = `client ${client.id}`;
+            client.log(`Received incorrect WebSocket data type from ${source} (${typeof data})`);
+            client.log(`Invalid WebSocket data: ${JSON.stringify(data.slice(0, 120).toString('utf8'))}` +
+              ` ${data.slice(0,120)}`);
+            if (!client.has_warned_about_text) {
+              // Send an generic error (still as binary, since if they got this far, they
+              //   must have received the binary `cack` successfully.
+              client.has_warned_about_text = true;
+              client.send('error', 'Server received non-binary WebSocket data.  ' +
+                'Likely cause is a proxy, VPN or something else intercepting and modifying network traffic.');
+            }
+            return;
+          }
           wsHandleMessage(client, data, ws_server.restarting && ws_server.restart_filter || logBigFilter);
         } catch (e) {
           e.source = client.ctx();

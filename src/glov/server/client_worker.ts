@@ -49,6 +49,7 @@ type WSClient = { // should be from wsserver.js
   connected: boolean;
   ws_server: ReturnType<typeof wsServerCreate>;
   client_tags: string[];
+  crash_data: TSMap<string>;
   pak(msg: string, pak_ref?: Packet | null): Packet;
   send(msg: string, data?: unknown): void;
 };
@@ -135,6 +136,7 @@ export class ClientWorker extends ChannelWorker {
     this.ids_base.user_id = user_id;
     this.ids_base.display_name = resp_data.public_data.display_name;
     this.log_user_id = user_id;
+    this.client.crash_data.user_id = user_id;
     applyCustomIds(this.ids_base, resp_data.public_data);
     keyMetricsAddTagged('login', this.client.client_tags, 1, 'low');
   }

@@ -29,10 +29,10 @@ const browserify_options_deps = {
   bundleExternal: true,
   builtins: {
     // super-simple replacements, if needed
-    assert: './src/glov/client/shims/assert.js',
-    buffer: './src/glov/client/shims/buffer.js',
-    // timers: './src/glov/client/shims/timers.js',
-    _process: './src/glov/client/shims/empty.js',
+    assert: 'glov/client/shims/assert.js',
+    buffer: 'glov/client/shims/buffer.js',
+    // timers: 'glov/client/shims/timers.js',
+    _process: 'glov/client/shims/empty.js',
   },
   transform: [
     ['babelify', babelify_opts_deps],

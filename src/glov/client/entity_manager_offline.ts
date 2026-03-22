@@ -3,6 +3,10 @@
 
 import assert from 'assert';
 import {
+  dotPropDelete,
+  dotPropSet,
+} from 'glov/common/dot-prop';
+import {
   EntityID,
   EntityManager,
   EntityManagerEvent,
@@ -315,9 +319,9 @@ class OfflineEntityManagerImpl<
       for (let key in action.data_assignments) {
         let value = action.data_assignments[key];
         if (value === null) {
-          delete data[key];
+          dotPropDelete(data, key);
         } else {
-          data[key] = value;
+          dotPropSet(data, key, value);
         }
       }
       this.emit('ent_update', ent.id);

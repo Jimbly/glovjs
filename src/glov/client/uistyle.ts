@@ -187,8 +187,7 @@ export function uiStyleSetCurrent(style: UIStyle): void {
   uiApplyStyle(ui_style_current);
 }
 
-ui_style_default = uiStyleAlloc();
-uiStyleSetCurrent(ui_style_default);
+ui_style_current = ui_style_default = uiStyleAlloc();
 
 let style_stack: UIStyle[] = [];
 export function uiStylePush(style: UIStyle): void {
@@ -211,4 +210,5 @@ export function uiStyleTopOfFrame(): void {
     }
     style_stack.length = 0;
   }
+  uiStyleSetCurrent(ui_style_current);
 }

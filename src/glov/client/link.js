@@ -165,6 +165,9 @@ export function link(param) {
         a_elem.className = 'glovui_link noglov';
         a_elem.setAttribute('target', '_blank');
         a_elem.setAttribute('href', url);
+        if (param.download) {
+          a_elem.setAttribute('download', param.download);
+        }
         // Make the element unfocusable, so that pressing enter at some point
         //   after clicking a link does not re-activate the link, additionally
         //   pressing tab should not (in the browser) focus these links.
@@ -238,7 +241,7 @@ export function linkText(param) {
 
 export function linkActivate(spot_key) {
   let state = state_cache[spot_key];
-  if (verify(state) && verify(state.a_elem)) {
+  if (verify(state) && state.a_elem) {
     state.a_elem.click();
   }
 }
