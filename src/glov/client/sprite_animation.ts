@@ -93,6 +93,30 @@ class SpriteAnimation {
     }
   }
 
+  hasState(state: string): boolean {
+    return Boolean(this.data[state]);
+  }
+
+  getState(): string | null {
+    return this.state;
+  }
+
+  // assuming two identically-timed animations, change the state without changing the progress through the animation
+  replaceState(state: string): SpriteAnimation {
+    if (state === this.state) {
+      return this;
+    }
+    if (!this.data[state]) {
+      console.error(`Tried to set anim state ${state} which does not exist`);
+      return this;
+    }
+    this.state = state;
+    this.anim = this.data[state]!;
+    // this.time = this.time;
+    this.setFrameIndex(this.anim_idx);
+    return this;
+  }
+
   setState(state: string, force?: boolean): SpriteAnimation {
     if (state === this.state && !force) {
       return this;
