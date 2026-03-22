@@ -42,10 +42,14 @@ deprecate(exports, 'handleChat', 'chattable_worker:handleChat');
 
 const { floor, random } = Math;
 
-const DISPLAY_NAME_WAITING_PERIOD = 23 * 60 * 60 * 1000;
+let display_name_waiting_period = 23 * 60 * 60 * 1000;
 const MAX_FRIENDS = 100; // manually added
 const MAX_RELATIONSHIPS = MAX_FRIENDS + 1000; // including blocked, auto-added, removed auto-added
 const FRIENDS_DATA_KEY = 'private.friends';
+
+export function displayNameChangeLimitSet(limit) {
+  display_name_waiting_period = limit;
+}
 
 let access_token_fns;
 let access_token_regex;
@@ -269,7 +273,7 @@ export class DefaultUserWorker extends ChannelWorker {
       old_name.match(/^anon\d+$/); // auto-generated anonymous guest user name
     let now = Date.now();
     let last_change = this.getChannelData('private.display_name_change');
-    if (last_change && now - last_change < DISPLAY_NAME_WAITING_PERIOD && !unimportant &&
+    if (last_change && now - last_change < display_name_waiting_period && !unimportant &&
       !display_name_bypass
     ) {
       return resp_func('You must wait 24h before changing your display name again');
