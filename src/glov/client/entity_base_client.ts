@@ -42,7 +42,7 @@ export interface ClientActionMessageParam<Entity extends EntityBaseClient=Entity
   ent: Entity;
 }
 
-interface BatchUpdateParam extends ActionMessageParam {
+export interface BatchUpdateParam extends ActionMessageParam {
   field: string;
 }
 
