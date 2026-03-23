@@ -487,15 +487,16 @@ export function aiDoFloor(
   }
 }
 
-export function aiStepFloor(
-  floor_id: number,
-  game_state: CrawlerState,
-  entity_manager: EntityManager<Entity>,
-  defines: Partial<Record<string, true>>,
-  ai_pause: boolean,
-  script_api: CrawlerScriptAPI,
-  filter?: (ent: Entity) => boolean,
-): void {
+export function aiStepFloor(params: {
+  floor_id: number;
+  game_state: CrawlerState;
+  entity_manager: EntityManager<Entity>;
+  defines: Partial<Record<string, true>>;
+  ai_pause: boolean;
+  script_api: CrawlerScriptAPI;
+  filter?: (ent: Entity) => boolean;
+}): void {
+  const { floor_id, game_state, entity_manager, defines, ai_pause, script_api, filter } = params;
   if (ai_pause) {
     return;
   }
