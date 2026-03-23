@@ -740,6 +740,15 @@ export class CrawlerLevel {
     return ret as BlockType;
   }
 
+  isSecretDoor(pos: ROVec2, dir: DirType, script_api: CrawlerScriptAPI): boolean {
+    let cur_cell = this.getCell(pos[0], pos[1]);
+    if (!cur_cell) {
+      return false;
+    }
+    let wall_desc = getEffWall(script_api, cur_cell, dir);
+    return Boolean(wall_desc.is_secret);
+  }
+
   simpleVisCheck(pos0: ROVec2, pos1: ROVec2, script_api: CrawlerScriptAPI): boolean {
     let max_steps = 100;
     let ix = pos0[0];
