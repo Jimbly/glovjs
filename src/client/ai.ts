@@ -454,6 +454,7 @@ export function aiStepFloor(
   defines: Partial<Record<string, true>>,
   ai_pause: boolean,
   script_api: CrawlerScriptAPI,
+  filter?: (ent: Entity) => boolean,
 ): void {
   if (ai_pause) {
     return;
@@ -463,8 +464,12 @@ export function aiStepFloor(
   script_api.setLevel(level);
   for (let ent_id in entities) {
     let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out) {
+    if (ent.data.floor !== floor_id || ent.fading_out || !ent.isAlive()) {
       // not on current floor
+      continue;
+    }
+
+    if (filter && !filter(ent)) {
       continue;
     }
 
