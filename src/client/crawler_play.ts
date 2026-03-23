@@ -3,6 +3,7 @@ import assert from 'assert';
 import * as camera2d from 'glov/client/camera2d';
 import { ChatUIRunParam } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
+import { dynGeomForward, dynGeomUp } from 'glov/client/dyn_geom';
 import {
   applyCopy,
   applyPixelyExpand,
@@ -29,6 +30,7 @@ import {
   settingsRegister,
   settingsSet,
 } from 'glov/client/settings';
+import { sound3DListener } from 'glov/client/sound';
 import { spotSuppressPad } from 'glov/client/spot';
 import {
   Sprite,
@@ -1025,7 +1027,14 @@ export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
 
   billboardBiasPrep(game_state);
 
-  renderPrep(controller.getRenderPrepParam());
+  let render_prep_param = controller.getRenderPrepParam();
+  renderPrep(render_prep_param);
+
+  sound3DListener({
+    pos: render_prep_param.cam_pos,
+    forward: dynGeomForward(),
+    up: dynGeomUp(),
+  });
 
   crawlerRenderEntitiesPrep();
 
