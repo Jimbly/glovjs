@@ -1,13 +1,16 @@
+import assert from 'assert';
 import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityBaseClient } from 'glov/client/entity_base_client';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
 import {
   ActionDataAssignments,
 } from 'glov/common/entity_base_common';
+import { TraitFactory } from 'glov/common/trait_factory';
 import {
   DataObject,
   NetErrorCallback,
 } from 'glov/common/types.js';
+import { clone } from 'glov/common/util';
 import type { ROVec2, ROVec3 } from 'glov/common/vmath';
 import { EntityCrawlerDataCommon, entSamePos } from '../common/crawler_entity_common';
 import type { JSVec3 } from '../common/crawler_state';
@@ -139,3 +142,27 @@ EntityClient.prototype.onDelete = crawlerEntClientDefaultOnDelete;
 EntityClient.prototype.do_split = true;
 EntityClient.prototype.ai_move_min_time = 500;
 EntityClient.prototype.ai_move_rand_time = 500;
+
+export function gameEntityTraitsClientStartup(
+  ent_factory: TraitFactory<EntityClient, DataObject> // | TraitFactory<EntityServer, DataObject>
+): void {
+  ent_factory.registerTrait<StatsData, undefined>('stats_default', {
+    default_opts: {} as StatsData, // moraff hack
+    alloc_state: function (opts: StatsData, ent: Entity) {
+      // TODO: use a callback that doesn't actually need to allocate any state on the entity?
+      if (!ent.data.stats) {
+        const stats = ent.data.stats = clone(opts);
+        assert(stats.hp);
+        // stats.hp_max = stats.hp;
+      }
+      return undefined;
+    }
+  });
+  // ent_factory.extendTrait('enemy', {
+  //   properties: {
+  //     blocks_player: true,
+  //   },
+  //   alloc_state: function (opts: unknown, ent: Entity) {
+  //   },
+  // });
+}

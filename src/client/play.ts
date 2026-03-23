@@ -67,6 +67,7 @@ import {
   crawlerControllerTouchHotzonesAuto,
 } from './crawler_controller';
 import {
+  crawlerEntFactory,
   crawlerEntityClientStartupEarly,
   crawlerEntityManager,
   crawlerEntityTraitsClientStartup,
@@ -107,8 +108,12 @@ import {
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { dialogNameRender } from './dialog_data';
-import { dialogMoveLocked, dialogRun, dialogStartup } from './dialog_system';
-import { EntityClient, entityManager } from './entity_game_client';
+import { dialogMoveLocked, dialogReset, dialogRun, dialogStartup } from './dialog_system';
+import {
+  EntityClient,
+  entityManager,
+  gameEntityTraitsClientStartup,
+} from './entity_game_client';
 import {
   game_height,
   game_width,
@@ -118,6 +123,7 @@ import {
   VIEWPORT_Y0,
 } from './globals';
 import { levelGenTest } from './level_gen_test';
+import { chatUI } from './main';
 import { tickMusic } from './music';
 import { renderAppStartup } from './render_app';
 import { SOUND_DATA } from './sound_data';
@@ -424,6 +430,7 @@ function playCrawl(): void {
     dialog_viewport.w = game_width;
     dialog_viewport.y = 0;
     dialog_viewport.h = game_height - 3;
+    dialog_viewport.z = Z.MODAL + 100;
   }
   dialogRun(dt, dialog_viewport, false);
 
@@ -553,10 +560,16 @@ function playCrawl(): void {
   button_x0 = MOVE_BUTTONS_X0;
   button_y0 = MOVE_BUTTONS_Y0;
 
-  if (keyUpEdge(KEYS.B)) {
+  let build_mode_allowed = engine.DEBUG || chatUI().getAccessObj().access?.sysadmin;
+  if (build_mode_allowed && keyUpEdge(KEYS.B)) {
     if (!netSubs().loggedIn()) {
       modalDialog({
         text: 'Cannot enter build mode - not logged in',
+        buttons: { ok: null },
+      });
+    } else if (!build_mode_allowed) {
+      modalDialog({
+        text: 'Cannot enter build mode - access denied',
         buttons: { ok: null },
       });
     } else {
@@ -748,6 +761,7 @@ export function restartFromLastSave(): void {
 
 settingsRegister({
   ai_pause: {
+    // access_show: ['sysadmin'],
     default_value: 0,
     type: cmd_parse.TYPE_INT,
     range: [0, 1],
@@ -758,6 +772,10 @@ settingsRegister({
     range: [0, 1],
   },
 });
+
+function initLevel(): void {
+  dialogReset();
+}
 
 export function playStartup(): void {
   font = uiGetFont();
@@ -776,7 +794,8 @@ export function playStartup(): void {
       loading_state: playOfflineLoading,
     },
     play_state: play,
-    // on_init_level_offline: initLevel,
+    on_init_level_offline: initLevel,
+    on_init_level_online: initLevel,
     default_vstyle: 'demo',
     allow_offline_console: engine.DEBUG,
     chat_ui_param: {
@@ -789,6 +808,8 @@ export function playStartup(): void {
   });
   crawlerEntityClientStartupEarly();
   aiTraitsClientStartup();
+  let ent_factory = crawlerEntFactory<Entity>();
+  gameEntityTraitsClientStartup(ent_factory);
   // appTraitsStartup();
   crawlerEntityTraitsClientStartup({
     name: 'EntityClient',
