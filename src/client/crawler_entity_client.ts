@@ -9,7 +9,7 @@ import { autoAtlas } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
 import { dynGeomForward } from 'glov/client/dyn_geom';
 import { getFrameIndex } from 'glov/client/engine';
-import type { EntityBaseClient } from 'glov/client/entity_base_client';
+import type { BatchUpdateParam, EntityBaseClient } from 'glov/client/entity_base_client';
 import {
   clientEntityManagerCreate,
   ClientEntityManagerInterface,
@@ -225,6 +225,10 @@ export function crawlerMyEntOptional(): Entity | undefined {
 
 export function crawlerMyActionSend<T>(param: ActionMessageParam, resp_func?: NetErrorCallback<T>): void {
   crawlerMyEnt().actionSend(param, resp_func);
+}
+
+export function crawlerMyApplyBatchUpdate<T>(update: BatchUpdateParam, resp_func?: NetErrorCallback<T>): void {
+  crawlerMyEnt().applyBatchUpdate(update, resp_func);
 }
 
 export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
