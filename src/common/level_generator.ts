@@ -78,7 +78,9 @@ class LevelGenerator {
       let level = this.levels[floor_id] = generateLevel(floor_id,
         `${this.seed_override || this.spire_seed}_f${floor_id}`,
         this.level_gen_params);
-      level.setVstyle(this.default_vstyle);
+      if (!level.vstyle) {
+        level.setVstyle(this.default_vstyle);
+      }
     }
     return this.levels[floor_id];
   }
