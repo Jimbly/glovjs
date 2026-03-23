@@ -94,6 +94,7 @@ import {
   crawlerPrepAndRenderFrame,
   crawlerSaveGame,
   crawlerScriptAPI,
+  crawlerTurnBasedMovePreStart,
   getScaledFrameDt,
 } from './crawler_play';
 import {
@@ -547,6 +548,7 @@ function playCrawl(): void {
     do_debug_move: engine.defines.LEVEL_GEN || build_mode,
     show_debug: settings.show_fps ? { x: VIEWPORT_X0, y: VIEWPORT_Y0 + (build_mode ? 3 : 0) } : null,
     show_hotkeys: false,
+    but_allow_rotate: false,
   });
 
   button_x0 = MOVE_BUTTONS_X0;
@@ -701,6 +703,7 @@ function onPlayerMove(old_pos: Vec2, new_pos: Vec2): void {
   // let game_state = crawlerGameState();
   // aiOnPlayerMoved(game_state, myEnt(), old_pos, new_pos,
   //   settings.ai_pause || engine.defines.LEVEL_GEN, script_api);
+  crawlerTurnBasedMovePreStart();
 }
 
 function onInitPos(): void {

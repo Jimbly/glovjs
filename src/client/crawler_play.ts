@@ -704,6 +704,7 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
 let turn_based_step: (() => void) | undefined;
 let turn_based_step_threshold = 0.4;
 let turn_based_step_countdown = 0;
+let turn_based_allowed: (() => boolean) | undefined;
 
 function executeStep(): void {
   if (need_turn_based_step) {
@@ -712,8 +713,19 @@ function executeStep(): void {
   }
 }
 
-function crawlerTurnBasedTick(): void {
+export function crawlerTurnBasedQueued(): boolean {
+  return need_turn_based_step;
+}
+
+export function crawlerTurnBasedClearQueue(): void {
+  need_turn_based_step = false;
+}
+
+export function crawlerTurnBasedTick(): void {
   if (need_turn_based_step) {
+    if (turn_based_allowed?.() === false) {
+      return;
+    }
     if (turn_based_step_countdown) {
       turn_based_step_countdown -= getScaledFrameDt();
       if (turn_based_step_countdown <= 0) {
@@ -727,25 +739,33 @@ function crawlerTurnBasedTick(): void {
 }
 
 export function crawlerTurnBasedScheduleStep(delay: number): void {
-  executeStep();
+  if (turn_based_allowed?.() !== false) {
+    executeStep();
+  }
   need_turn_based_step = true;
   turn_based_step_countdown = delay;
 }
 
-function crawlerTurnBasedMovePreStart(/*old_pos, new_pos, move_dir*/): void {
-  executeStep();
+export function crawlerTurnBasedMovePreStart(/*old_pos, new_pos, move_dir*/): void {
+  if (turn_based_allowed?.() !== false) {
+    executeStep();
+  }
 }
 
 function crawlerTurnBasedMoveStart(pos: Vec2): void {
-  executeStep();
+  if (turn_based_allowed?.() !== false) {
+    executeStep();
+  }
   need_turn_based_step = true;
-  turn_based_step_countdown = 0;
+  turn_based_step_countdown = 0; // fire as soon as we're done animating
   crawlerTurnBasedTick();
 }
 
-function crawlerTurnBasedMoveFinish(pos: Vec2): void {
+export function crawlerTurnBasedMoveFinish(pos: Vec2): void {
   // Finished a queued move, possibly because interrupted and starting a new one
-  executeStep();
+  if (turn_based_allowed?.() !== false) {
+    executeStep();
+  }
 }
 
 function crawlerPlayInitShared(): void {
@@ -758,6 +778,7 @@ function crawlerPlayInitShared(): void {
     game_state,
     entity_manager: crawlerEntityManager(),
     script_api,
+    on_pre_move: crawlerTurnBasedMovePreStart,
     on_player_move: crawlerTurnBasedMovePreStart,
     on_init_level: crawlerOnInitHaveLevel,
     on_move_start: crawlerTurnBasedMoveStart,
@@ -1194,6 +1215,7 @@ export function crawlerPlayStartup(param: {
   allow_offline_console?: boolean;
   chat_ui_param?: CrawlerChatUIParam;
   turn_based_step?: () => void;
+  turn_based_allowed?: () => boolean;
   level_fallback_provider?: LevelProvider;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
@@ -1207,6 +1229,7 @@ export function crawlerPlayStartup(param: {
   allow_offline_console = param.allow_offline_console || false;
   chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
   turn_based_step = param.turn_based_step;
+  turn_based_allowed = param.turn_based_allowed;
   level_fallback_provider = param.level_fallback_provider || levelFallbackProviderDefault;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });

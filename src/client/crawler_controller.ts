@@ -1085,7 +1085,7 @@ export type PlayerMotionParam = {
   show_debug: { x: number; y: number } | null;
   disable_move: boolean;
   but_allow_rotate: boolean; // if `disable_move` is true, still allow rotating
-  on_disabled_action: () => void;
+  on_disabled_action?: () => void;
   disable_player_impulse: boolean;
   button_w: number;
   button_sprites: Record<ButtonStateString, Sprite>;
