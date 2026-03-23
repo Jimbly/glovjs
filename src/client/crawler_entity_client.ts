@@ -7,6 +7,7 @@ export enum OnlineMode {
 import assert from 'assert';
 import { autoAtlas } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
+import { dynGeomForward } from 'glov/client/dyn_geom';
 import { getFrameIndex } from 'glov/client/engine';
 import type { EntityBaseClient } from 'glov/client/entity_base_client';
 import {
@@ -46,6 +47,7 @@ import {
   ROVec2,
   ROVec3,
   ROVec4,
+  vec2,
 } from 'glov/common/vmath';
 import {
   EntityCrawlerDataCommon,
@@ -71,7 +73,7 @@ import {
 } from './crawler_render_entities';
 import { statusPush } from './status';
 
-const { random } = Math;
+const { abs, random } = Math;
 
 let online_mode: OnlineMode;
 
@@ -279,11 +281,46 @@ export function drawableSpriteLoadNear(load_near: boolean): void {
   load_near_sprites = load_near;
 }
 
+// crawler-specific?
+const REL_DIRS = ['away', 'left', 'towards', 'right'];
+function lookToDir(angle_idx: number): string {
+  let forward = dynGeomForward();
+  let dir; // 0=+x, 1=+y, etc
+  if (abs(forward[0]) > abs(forward[1])) {
+    if (forward[0] > 0) {
+      dir = 0;
+    } else {
+      dir = 2;
+    }
+  } else {
+    if (forward[1] > 0) {
+      dir = 1;
+    } else {
+      dir = 3;
+    }
+  }
+  dir = (angle_idx - dir + 4) % 4;
+  return REL_DIRS[dir];
+}
+
 function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): number {
   let ent = this;
   let { anim } = ent.drawable_sprite_state;
   let do_update = ent.drawable_sprite_state.anim_update_frame !== getFrameIndex();
+  let opts = ent.drawable_sprite_opts;
+  let sprite_data = opts.sprite_data as TextureOptions & SpriteSpec;
   if (do_update) {
+    if (opts.anim_directional && this.data.pos) {
+      let existing_frame = anim.getState();
+      if (existing_frame !== null) {
+        let base_name = existing_frame.split('-')[0];
+        let dir = lookToDir(this.data.pos[2]);
+        let use_frame = `${base_name}-${dir}`;
+        if (anim.hasState(use_frame)) {
+          anim.replaceState(use_frame);
+        }
+      }
+    }
     let last_frame = anim.getFrame();
     anim.update(dt);
     if (last_frame === anim.getFrame()) {
@@ -293,11 +330,13 @@ function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): numbe
   }
   let frame = anim.getFrame();
 
-  let opts = ent.drawable_sprite_opts;
-  let sprite_data = opts.sprite_data as TextureOptions & SpriteSpec;
   if (isAutoAtlasSpec(sprite_data)) {
     assert(typeof frame === 'string');
+    if (frame === ent.drawable_sprite_state.autoatlas_last_frame) {
+      do_update = false;
+    }
     if (do_update || !ent.drawable_sprite_state.sprite) {
+      ent.drawable_sprite_state.autoatlas_last_frame = frame;
       let atlas_name = atlasAlias(sprite_data.atlas);
       let base_sprite = autoAtlas(atlas_name, frame).withOrigin(sprite_data.origin!);
 

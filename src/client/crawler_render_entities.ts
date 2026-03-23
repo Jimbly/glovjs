@@ -115,6 +115,7 @@ export type TextureOptionsAsStrings = {
 
 export type DrawableSpriteOpts = {
   anim_data: SpriteAnimationParam;
+  anim_directional?: boolean;
   hybrid: boolean;
   sprite_data: (TextureOptions | TextureOptionsAsStrings) & SpriteParamBase & { name: string };
   sprite: Sprite; // assigned at load time
@@ -147,6 +148,7 @@ export type DrawableSpriteState = {
   sprite_near?: Sprite;
   sprite_hybrid?: Sprite;
   sprite_shadow?: Sprite;
+  autoatlas_last_frame?: string;
 };
 
 export type DrawableSpineOpts = {
