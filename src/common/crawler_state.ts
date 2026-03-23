@@ -65,6 +65,7 @@ export type CellDesc = {
   map_view_detail_frame?: string;
   map_view_detail_frame_visited?: string;
   blocks_pathing_if_visited?: boolean;
+  procgen_replaceable?: boolean; // for level generators, is the equivalent of a generic "open" cell
   build_hide?: boolean;
   auto_evict?: boolean;
   debug_msg?: string;

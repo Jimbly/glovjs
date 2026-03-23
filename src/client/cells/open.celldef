@@ -1,7 +1,7 @@
 ---
 open_vis: true
 default_wall: solid
-
+procgen_replaceable: true
 visuals:
 - pass: bg
   type: simple_floor

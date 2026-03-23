@@ -3,8 +3,10 @@
 enum WallType {
   OPEN='open',
   DOOR='door',
-  SOLID='solid',
+  SOLID1='solid',
+  SOLID2='solid2',
   SECRET_DOOR='secret_door',
+  ARCH='arch',
 }
 
 enum CellType {
@@ -14,6 +16,8 @@ enum CellType {
   STAIRS_IN='stairs_in',
   STAIRS_OUT='stairs_out',
   ENTRANCE='entrance', // TODO: this should just come in as STAIRS_IN from the caller, and not need floor_id here!
+  DETAIL1='detail1',
+  DETAIL2='detail2',
 }
 
 export type GenParamsBrogue = {
@@ -24,6 +28,7 @@ export type GenParamsBrogue = {
   w: number;
   h: number;
   max_rooms: number;
+  var_rooms: number;
   shops: number;
   shop_cell_ids: string[];
   wall_ids: Record<WallType, string>;
@@ -31,10 +36,15 @@ export type GenParamsBrogue = {
   passageway_chance: number;
   pits_min: number;
   pits_random: number;
+  max_add_loops: number;
+  secret_add_loops: number;
+  detail1: number;
+  detail2: number;
   enemies_min: number;
   enemies_random: number;
   // auto-computed:
   odds_total?: number;
+  vstyles: string[];
 };
 
 export type GenParamsWrapBrogue = {
@@ -57,13 +67,16 @@ export const default_gen_params_brogue: GenParamsBrogue = {
   w: 33,
   h: 29,
   max_rooms: 40,
+  var_rooms: 4,
   shops: 0,
   shop_cell_ids: ['shop_1', 'shop_2', 'shop_3'],
   wall_ids: {
     [WallType.OPEN]: 'open',
     [WallType.DOOR]: 'door',
-    [WallType.SOLID]: 'solid',
+    [WallType.SOLID1]: 'solid',
+    [WallType.SOLID2]: 'solid',
     [WallType.SECRET_DOOR]: 'secret_door',
+    [WallType.ARCH]: 'door',
   },
   cell_ids: {
     [CellType.OPEN]: 'open',
@@ -72,12 +85,19 @@ export const default_gen_params_brogue: GenParamsBrogue = {
     [CellType.STAIRS_IN]: 'stairs_in',
     [CellType.STAIRS_OUT]: 'stairs_out',
     [CellType.ENTRANCE]: 'entrance',
+    [CellType.DETAIL1]: 'open',
+    [CellType.DETAIL2]: 'open',
   },
   passageway_chance: 1,
+  detail1: 0.07,
+  detail2: 0.03,
   pits_min: 0,
   pits_random: 0,
+  max_add_loops: 10,
+  secret_add_loops: 2,
   enemies_min: 20,
   enemies_random: 10,
+  vstyles: [],
 };
 
 import assert from 'assert';
@@ -87,6 +107,7 @@ import {
   shuffleArray,
 } from 'glov/common/rand_alea';
 import { ridx } from 'glov/common/util';
+import { JSVec2, JSVec3 } from 'glov/common/vmath';
 import {
   CellDesc,
   crawlerGetCellDesc,
@@ -129,6 +150,7 @@ type Room = number[] & {
   has_exit?: boolean;
   secret?: boolean;
   adj_secret?: number;
+  variant_disallowed?: boolean;
 };
 
 // 0 is not part of room (solid), >=1 is part of room (open)
@@ -581,6 +603,7 @@ function generateRoom(rand: Rand, gen_params: GenParamsBrogue, general_progress:
 type PrivateGenData = {
   work: Room;
   farthest_room: RoomID;
+  rooms: Room[];
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -604,7 +627,21 @@ function descsFromParams(params: GenParamsBrogue) {
 }
 
 function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBrogue): CrawlerLevel {
-  let { w, h, max_rooms, passageway_chance, shops, closets, secrets } = params;
+  let {
+    w,
+    h,
+    max_rooms,
+    var_rooms,
+    passageway_chance,
+    shops,
+    closets,
+    secrets,
+    detail1,
+    detail2,
+    vstyles,
+    max_add_loops,
+    secret_add_loops,
+  } = params;
   let rand = randCreate(mashString(seed));
   let last_room_id = 0;
   let work = roomTempBuffered(w, h);
@@ -650,12 +687,14 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   }
   let work_delta = [1,work.w,-1,-work.w];
   function findGoodPlace(room: Room): [number, number] | null {
+    // find empty cells adjacent to a filled cell
     let possible_places = [];
     for (let ii = 0; ii < work.length; ++ii) {
       if (work[ii]) {
         let ok = false;
         for (let jj = 0; jj < 4; ++jj) {
-          if (!work[ii + work_delta[jj]]) {
+          let test_idx = ii + work_delta[jj];
+          if (!work[test_idx]) {
             ok = true;
             break;
           }
@@ -689,7 +728,8 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
           for (let xx = 0; xx < room.w; ++xx) {
             if (room[xx + yy * room.w]) {
               // we're part of the room
-              if (work[room_x + xx + (room_y + yy) * work.w]) {
+              let test_idx = room_x + xx + (room_y + yy) * work.w;
+              if (work[test_idx]) {
                 // overlaps with part of another room
                 continue next_door;
               }
@@ -792,6 +832,10 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   }
   console.log(`Placed ${num_closets} closets`);
 
+  function solid(): WallType {
+    return rand.range(3) ? WallType.SOLID1 : WallType.SOLID2;
+  }
+
   // Generate walls between all rooms
   let wall_segments = [];
   for (let yy = 0; yy <= h; ++yy) {
@@ -799,7 +843,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
       let above = work[xx + 1 + yy * work.w];
       let below = work[xx + 1 + (yy + 1) * work.w];
       if (above !== below && hwalls[yy*w + xx].open_vis) {
-        hwalls[yy*w + xx] = wall_descs[WallType.SOLID];
+        hwalls[yy*w + xx] = wall_descs[solid()];
         wall_segments.push([xx,yy,SOUTH]);
       }
     }
@@ -809,7 +853,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
       let left = work[xx + (yy + 1) * work.w];
       let right = work[xx + 1 + (yy + 1) * work.w];
       if (left !== right && vwalls[xx*h + yy].open_vis) {
-        vwalls[xx*h + yy] = wall_descs[WallType.SOLID];
+        vwalls[xx*h + yy] = wall_descs[solid()];
         wall_segments.push([xx,yy,WEST]);
       }
     }
@@ -852,8 +896,6 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   updateRoomDist();
   num_tries = 500;
   let num_loops = 0;
-  let max_add_loops = 10;
-  let secret_add_loops = 2;
   const min_loop_dist = 4;
   while (num_tries && max_add_loops && wall_segments.length) {
     --num_tries;
@@ -925,7 +967,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
   }
   rooms[farthest_room].has_exit = true;
 
-  // Convert all but a couple secret rooms into closets
+  // Convert some closets into secret rooms
   closet_rooms = closet_rooms.filter((a) => {
     // Only potentially keep those that are still leaves
     let room = rooms[a];
@@ -985,7 +1027,9 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
     for (let jj = 0; jj < shop_opts.length && leafs.length; ++jj) {
       let tile = shop_opts[jj];
       let room_id = leafs.pop()![1];
-      rooms[room_id].need_doors = true;
+      let room = rooms[room_id];
+      room.need_doors = true;
+      room.variant_disallowed = true; // don't let shops get the variant cell types?
       room_tiles[room_id] = crawlerGetCellDesc(tile);
     }
   }
@@ -1015,7 +1059,8 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
     let room = rooms[ii];
     if (room.doors) {
       for (let kk = 0; kk < room.doors.length; ++kk) {
-        let [doorx, doory, tile] = room.doors[kk];
+        let door = room.doors[kk];
+        let [doorx, doory, tile] = door;
         tile = tile || WallType.DOOR;
         //let cell = cells[doorx + doory * w];
         let adjacent_room = rooms[work[doorx + doory * work.w]];
@@ -1055,8 +1100,11 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
           }
           if (ok) {
             new_wall = WallType.OPEN;
+            room.variant_disallowed = true;
+            adjacent_room.variant_disallowed = true;
           }
         }
+        door[2] = new_wall;
         let new_wall_desc = wall_descs[new_wall];
         if (dir === EAST) {
           vwalls[(nx-1)*h + ny-1] = new_wall_desc;
@@ -1086,6 +1134,7 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
       }
     }
   }
+
   for (let ii = 1; ii < rooms.length; ++ii) {
     // let room = rooms[ii];
     // DEBUG: Visualize door options
@@ -1110,10 +1159,86 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
     //   }
     // }
   }
+  // DEBUG: Visualize leaf rooms
+  // for (let yy = 0; yy < h; ++yy) {
+  //   for (let xx = 0; xx < w; ++xx) {
+  //     let cell = cells[xx + yy * w];
+  //     let room_id = work[xx + 1 + (yy + 1) * work.w];
+  //     if (room_id) {
+  //       let room = rooms[room_id];
+  //       if (room.adj.length === 1) {
+  //         cell.events = [{ id: 'test', param: '' }];
+  //       }
+  //     }
+  //   }
+  // }
 
   level.fillFromHVWalls(hwalls, vwalls);
 
+  // Convert some cells to detail floors
+  let detailable_cells = [];
+  for (let ii = 0; ii < cells.length; ++ii) {
+    let cell = cells[ii];
+    if (cell.desc.open_move && cell.desc.procgen_replaceable) {
+      detailable_cells.push(cell);
+    }
+  }
+  let num_detail1 = floor(detail1 * detailable_cells.length);
+  let num_detail2 = floor(detail2 * detailable_cells.length);
+  for (let ii = 0; ii < num_detail1 + num_detail2; ++ii) {
+    let idx = rand.range(detailable_cells.length);
+    let cell = detailable_cells[idx];
+    ridx(detailable_cells, idx);
+    cell.desc = cell_descs[ii < num_detail1 ? CellType.DETAIL1 : CellType.DETAIL2];
+  }
+
+  if (0) {
+    // Convert some rooms to variant-styled
+    // Note: this requires there to exist cell and wall defs named
+    // var_solid1, var_open, etc, for all used defs.
+    let variant_rooms = [];
+    for (let ii = 1; ii < rooms.length; ++ii) {
+      let room = rooms[ii];
+      if (room.variant_disallowed) {
+        continue;
+      }
+      variant_rooms.push(room);
+    }
+    shuffleArray(variant_rooms, rand);
+    const desired_size = 6;
+    variant_rooms.sort((a, b) => {
+      return abs(a.size! - desired_size) - abs(b.size! - desired_size);
+    });
+    variant_rooms = variant_rooms.slice(0, var_rooms);
+    let room_is_variant: Partial<Record<number, true>> = {};
+    for (let ii = 0; ii < variant_rooms.length; ++ii) {
+      let room = variant_rooms[ii];
+      room_is_variant[room.id] = true;
+    }
+    for (let yy = 0; yy < h; ++yy) {
+      for (let xx = 0; xx < w; ++xx) {
+        let cell = cells[xx + yy * w];
+        let room_id = work[xx + 1 + (yy + 1) * work.w];
+        if (!room_id || !room_is_variant[room_id]) {
+          continue;
+        }
+        if (cell.desc.procgen_replaceable) {
+          cell.desc = crawlerGetCellDesc(`var_${cell.desc.id}`);
+        }
+        for (let ii = 0; ii < cell.walls.length; ++ii) {
+          let wall_desc = cell.walls[ii];
+          cell.walls[ii] = crawlerGetWallDesc(`var_${wall_desc.id}`);
+        }
+      }
+    }
+  }
+
+  if (vstyles.length) {
+    level.setVstyle(vstyles[rand.range(vstyles.length)]);
+  }
+
   let gen_data: PrivateGenData = {
+    rooms,
     work,
     farthest_room,
   };
@@ -1125,11 +1250,15 @@ function generateLevelBrogue(floor_id: number, seed: string, params: GenParamsBr
 function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: string, params: GenParamsBrogue): void {
   let level = generator.getLevelGenerated(floor_id);
   let { w, h, cells } = level;
-  let { work, farthest_room } = level.gen_data as PrivateGenData;
+  let { work, farthest_room, rooms } = level.gen_data as PrivateGenData;
   let rand = randCreate(mashString(seed));
   let { enemies_min, enemies_random, pits_min, pits_random } = params;
 
   let { wall_descs, cell_descs } = descsFromParams(params);
+
+  function getRoomID(xx: number, yy: number): number {
+    return work[xx+1 + (yy+1) * work.w];
+  }
 
   // Place an entrance in room 1
   function getStairPos(room_id: RoomID): [number, number] {
@@ -1140,7 +1269,7 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
       outer:
       for (let xx = 0; xx < w; ++xx) {
         let cell = cells[xx + yy * w];
-        if (cell.desc !== cell_descs[CellType.OPEN] || work[xx+1 + (yy+1) * work.w] !== room_id) {
+        if (!cell.desc.procgen_replaceable || getRoomID(xx, yy) !== room_id) {
           // something special, or solid, or not the right room
           continue;
         }
@@ -1192,12 +1321,16 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
     }
   }
 
+  let initial_entities = [];
+  let no_monsters: Partial<Record<number, true>> = {};
+
   function placeStair(
     pair: readonly [number, number],
     cell_tile: CellType,
     try_push_back: boolean
   ): [number, number, DirType] {
     let cell = cells[pair[0] + pair[1]*w];
+    assert(cell.desc.procgen_replaceable);
     let opens: DirType[] = [];
     for (let ii = 0 as DirType; ii < 4; ++ii) {
       if (cell.walls[ii].open_vis) {
@@ -1206,31 +1339,39 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
     }
     assert(opens.length);
     let door = rand.range(opens.length);
-    let ret = opens[door];
+    let rot = opens[door];
     if (try_push_back) {
-      let back_dir = (ret + 2) % 4;
+      let back_dir = (rot + 2) % 4;
       // Can we push it back into the wall instead?
       let back_pos = [pair[0] + DX[back_dir], pair[1] + DY[back_dir]] as const;
       let back = level.getCell(back_pos[0], back_pos[1]);
       if (back && !back.desc.open_vis) {
         // Open it up, then spawn it back one
-        level.setCell(back_pos[0], back_pos[1], cell_descs[CellType.OPEN]);
-        level.setWall(back_pos[0], back_pos[1], ret, wall_descs[WallType.OPEN]);
+        level.setCell(back_pos[0], back_pos[1], cell.desc);
+        level.setWall(back_pos[0], back_pos[1], rot, wall_descs[WallType.OPEN]);
         return placeStair(back_pos, cell_tile, false);
       }
     }
     // Nope, place it here, surround it with walls and a door
+    let next_xx = pair[0] + DX[rot];
+    let next_yy = pair[1] + DY[rot];
+    let next_cell = level.getCell(next_xx, next_yy);
+    assert(next_cell);
     let cell_desc = cell_descs[cell_tile];
     assert(cell_desc.advertised_wall_desc);
     level.setCell(pair[0], pair[1], cell_desc);
     addDefaultEvents(pair[0], pair[1], cell_desc);
-    level.setWall(pair[0], pair[1], ret, cell_desc.advertised_wall_desc);
+    let wall_desc = cell_desc.advertised_wall_desc;
+    if (next_cell.desc.id.startsWith('var_')) {
+      wall_desc = crawlerGetWallDesc(`var_${wall_desc.id}`);
+    }
+    level.setWall(pair[0], pair[1], rot, wall_desc);
     ridx(opens, door);
     for (let ii = 0; ii < opens.length; ++ii) {
       let dir = opens[ii];
-      level.setWall(pair[0], pair[1], dir, wall_descs[WallType.SOLID]);
+      level.setWall(pair[0], pair[1], dir, wall_descs[WallType.SOLID1]);
     }
-    return [pair[0], pair[1], ret];
+    return [pair[0], pair[1], rot];
   }
   // TODO: use cell_desc.special_pos to populate level.special_pos
   level.special_pos.stairs_in = placeStair(getStairPos(1),
@@ -1240,11 +1381,24 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
   level.special_pos.stairs_out = placeStair(getStairPos(farthest_room),
     CellType.STAIRS_OUT, true);
 
+  function dist(x: number, y: number, pos: JSVec3): number {
+    return abs(x - pos[0]) + abs(y - pos[1]);
+  }
+
   let open_cells = [];
   for (let ii = 0; ii < cells.length; ++ii) {
     let cell = cells[ii];
-    if (cell.desc === cell_descs[CellType.OPEN]) {
-      open_cells.push(ii);
+    if (cell.desc.procgen_replaceable && !cell.events && !cell.props && !no_monsters[ii]) {
+      let xx = ii % w;
+      let yy = (ii - xx) / w;
+      let room_id = getRoomID(xx, yy);
+      let room = rooms[room_id];
+      if (!room) {
+        continue;
+      }
+      if (!room.has_entrance || dist(xx, yy, level.special_pos.stairs_in) > 3) {
+        open_cells.push(ii);
+      }
     }
   }
 
@@ -1263,7 +1417,6 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
 
   // Place monsters
   let num_enemies = enemies_min + rand.range(enemies_random);
-  let initial_entities = [];
   for (let ii = 0; ii < num_enemies && open_cells.length; ++ii) {
     let idx = rand.range(open_cells.length);
     let pos = open_cells[idx];
@@ -1276,6 +1429,7 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
       pos: [xx,yy,0],
     });
   }
+
   level.initial_entities = initial_entities;
 }
 
