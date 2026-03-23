@@ -109,8 +109,8 @@ export type EntityHunter = Entity & {
 };
 
 
-function ignoreErrors(): void {
-  // nothing
+function ignoreErrors(err: unknown): void {
+  console.log(`Ignoring error sending AI update: ${err}`);
 }
 
 function isEnemy(ent: Entity): boolean {
