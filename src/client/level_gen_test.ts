@@ -2,8 +2,9 @@ import * as glov_font from 'glov/client/font';
 import { keyDownEdge } from 'glov/client/input';
 import { slider } from 'glov/client/slider';
 import {
-  print,
   uiButtonHeight,
+  uiGetFont,
+  uiTextHeight,
 } from 'glov/client/ui';
 import { dotPropGet, dotPropSet } from 'glov/common/dot-prop';
 import { clamp, clone } from 'glov/common/util';
@@ -54,15 +55,25 @@ export function levelGenTest(game_state: CrawlerState): boolean {
   let y = -1;
   let w = 40;
   let z = Z.DEBUG + 10;
+  let h = uiButtonHeight() * 0.5;
+  let text_height = uiTextHeight() * 0.75;
 
   function param(
     shortname: string, key: string, min: number, max: number,
     proc: (v:number) => number, keydec?: number, keyinc?: number
   ): void {
     let value = dotPropGet(params, key);
-    dotPropSet(params, key, (value = proc(slider(value, { x, y, z, w, min, max }))));
-    print(style, x + w + 2, y + 4, z, `${value} : ${shortname}`);
-    y += uiButtonHeight();
+    dotPropSet(params, key, (value = proc(slider(value, { x, y, z, w, h, min, max }))));
+    uiGetFont().draw({
+      style,
+      size: text_height,
+      x: x + w + 2,
+      y, z,
+      h,
+      align: glov_font.ALIGN.VCENTER,
+      text: `${value} : ${shortname}`,
+    });
+    y += h;
     if (keydec && keyDownEdge(keydec)) {
       dotPropSet(params, key, clamp(value - 1, min, max));
     }
