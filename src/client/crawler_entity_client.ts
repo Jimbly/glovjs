@@ -41,6 +41,7 @@ import {
   DataObject,
   EntityID,
   NetErrorCallback,
+  TSMap,
 } from 'glov/common/types';
 import { plural } from 'glov/common/util';
 import {
@@ -580,6 +581,7 @@ export function crawlerEntitiesInit(mode: OnlineMode): void {
 cmd_parse.register({
   cmd: 'entset',
   help: '(Debug) Set entity field on self',
+  // access_show: ['sysadmin'],
   func: function (param: string, resp_func: CmdRespFunc) {
     let ent = crawlerMyEnt();
     if (!ent) {
@@ -614,6 +616,7 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'entget',
   help: '(Debug) Get entity field from self',
+  // access_show: ['sysadmin'],
   func: function (param: string, resp_func: CmdRespFunc) {
     let ent = crawlerMyEnt();
     if (!ent) {
@@ -623,6 +626,53 @@ cmd_parse.register({
     resp_func(null, `"${field}" = ${JSON.stringify(field ? ent.getData(field) : ent.data)}`);
   }
 });
+cmd_parse.register({
+  cmd: 'stat',
+  // access_show: ['sysadmin'],
+  help: 'Set or displays entity stats',
+  usage: 'Usage: /stat [ent_id] [statname [new_value]]',
+  prefix_usage_with_help: true,
+  func: function (str, resp_func) {
+    let params = str.split(' ');
+    if (params.length > 3) {
+      return void resp_func('Invalid number of parameters');
+    }
+    if (!str) {
+      params = [];
+    }
+    let ent_id = myEntID();
+    if (params.length > 0) {
+      if (Number(params[0]) && isFinite(Number(params[0]))) {
+        ent_id = Number(params[0]);
+        params.splice(0, 1);
+      }
+    }
+    let ent = crawlerEntityManager().entities[ent_id];
+    if (!ent) {
+      return void resp_func('ERR_INVALID_ENT_ID');
+    }
+    if (params.length === 2) {
+      // setting a value
+      let mod: TSMap<number> = {};
+      mod[params[0]] = Number(params[1]);
+      ent.actionSend({
+        action_id: 'stat_debug',
+        payload: mod,
+      }, function (err) {
+        resp_func(err, !err ? 'Stat set' : null);
+      });
+    } else {
+      // getting a stat or all stats
+      if (params.length === 1) {
+        resp_func(null, `Ent[${ent_id}].stats.${params[0]} =` +
+          ` ${JSON.stringify((ent.data.stats as DataObject)[params[0]])}`);
+      } else {
+        resp_func(null, `Ent[${ent_id}].stats = ${JSON.stringify(ent.data.stats)}`);
+      }
+    }
+  }
+});
+
 
 export function crawlerEntityClientStartupEarly(): void {
   ent_factory = traitFactoryCreate<Entity, DataObject>();
