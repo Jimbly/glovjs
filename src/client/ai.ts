@@ -76,7 +76,7 @@ export type WanderOpts = Record<never, never>;
 export type WanderState = {
   home_pos: JSVec3;
 };
-export type EntityWander = EntityDemoClient & {
+export type EntityWander = Entity & {
   wander_state: WanderState;
   wander_opts: WanderOpts;
   aiWander: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
@@ -86,7 +86,7 @@ export type PatrolOpts = Record<never, never>;
 export type PatrolState = {
   last_pos: JSVec3;
 };
-export type EntityPatrol = EntityDemoClient & {
+export type EntityPatrol = Entity & {
   patrol_state: PatrolState;
   patrol_opts: PatrolOpts;
   aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
@@ -99,7 +99,7 @@ export type HunterState = {
   has_target: boolean;
   target_pos: JSVec3;
 };
-export type EntityHunter = EntityDemoClient & {
+export type EntityHunter = Entity & {
   hunter_state: HunterState;
   hunter_opts: HunterOpts;
   aiHunt: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
