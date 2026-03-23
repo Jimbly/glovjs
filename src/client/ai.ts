@@ -252,13 +252,13 @@ export function aiTraitsClientStartup(): void {
             if (!this.hunter_state.has_target) {
               if (distance) {
                 if (engine.defines.HUNTER) {
-                  statusSet(`edbg${this.id}`, `${this.id}: New target: ${this.hunter_state.target_pos}`).counter = 500;
+                  statusSet(`edbg${this.id}`, `${this.id}: New target: ${player_pos}`).counter = 500;
                 }
                 // playUISound('hunter_seen', volume);
               }
             } else if (v2dist(this.hunter_state.target_pos, player_pos)) {
               if (engine.defines.HUNTER) {
-                statusSet(`edbg${this.id}`, `${this.id}: Target update: ${this.hunter_state.target_pos}`).counter = 500;
+                statusSet(`edbg${this.id}`, `${this.id}: Target update: ${player_pos}`).counter = 500;
               }
             }
             v2copy(this.hunter_state.target_pos, player_pos);
@@ -381,11 +381,11 @@ function aiDoEnemy(
   defines: Partial<Record<string, true>>,
   script_api: CrawlerScriptAPI,
 ): boolean {
-  let foe_near = foeNear(game_state, ent, script_api);
+  let target_ent = foeNear(game_state, ent, script_api);
   if (defines?.PEACE || defines?.AIPEACE) {
-    foe_near = null;
+    target_ent = null;
   }
-  if (!foe_near) {
+  if (!target_ent) {
     return false;
   }
 
@@ -410,7 +410,7 @@ export function aiDoFloor(
   script_api.setLevel(level);
   for (let ent_id in entities) {
     let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out) {
+    if (ent.data.floor !== floor_id || ent.fading_out || !ent.isAlive()) {
       // not on current floor
       continue;
     }
