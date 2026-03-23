@@ -61,6 +61,7 @@ const { floor, max, min, round, PI } = Math;
 let compass_sprite: Sprite;
 let sprite_mult: Shader;
 let allow_pathfind: boolean = true;
+let show_enemies_when_fewer_than = 0;
 
 let build_mode_entity_icons: Partial<Record<string, string>> = {
   def: 'spawner',
@@ -174,6 +175,11 @@ export type CrawlerMapViewParam = {
   button_disabled: boolean;
 };
 
+let last_num_enemies: [number, number] = [0, 0];
+export function mapViewLastNumEnemies(): [number, number] {
+  return last_num_enemies;
+}
+
 export function crawlerMapViewDraw({
   game_state,
   x,
@@ -218,9 +224,10 @@ export function crawlerMapViewDraw({
     }
     let { ret, state } = ui.buttonShared(hover_area);
     if (state === 'rollover') {
-      ui.drawRect(hover_area.x - 1, hover_area.y - 1,
-        hover_area.x + hover_area.w + 1,
-        hover_area.y + hover_area.h + 1,
+      const size = 1;
+      ui.drawRect(hover_area.x - size, hover_area.y - size,
+        hover_area.x + hover_area.w + size,
+        hover_area.y + hover_area.h + size,
         Z.MAP - 1, color_rollover);
     }
     if (ret) {
@@ -238,6 +245,7 @@ export function crawlerMapViewDraw({
   }
   let initial_entities = level.initial_entities || [];
   let total_enemies = initial_entities.length;
+  last_num_enemies = [num_enemies, total_enemies];
   //last_progress = level.seen_cells/level.total_cells;
   last_progress = total_enemies ? max(0, 1 - (num_enemies / total_enemies)) : 1;
   let floor_title = level.props.title as string || `Floor ${game_state.floor_id}`;
@@ -575,6 +583,9 @@ export function crawlerMapViewDraw({
         let vis = false;
         if (full_vis) {
           vis = true;
+        } else if (!level.props.noexplore && total_enemies && num_enemies < show_enemies_when_fewer_than) {
+          // last 3 ents visible
+          vis = true;
         } else {
           let cell = level.getCell(xx, yy);
           if (!cell || cell.visible_frame === engine.frame_index - 1 && cell.visible_bits) {
@@ -585,8 +596,9 @@ export function crawlerMapViewDraw({
           }
         }
         if (vis) {
-          // draw it
           vis_entities[xx + yy * level.w] = true;
+
+          // draw it
           autoAtlas('map', icon).draw({
             x: x0 + xx * step_size,
             y: y1 - yy * step_size,
@@ -684,6 +696,7 @@ export function crawlerMapViewStartup(param: {
   hide_name_on_minimap?: boolean;
   ents_visible_outside_fog_of_war?: boolean;
   compass_border_w?: number;
+  show_enemies_when_fewer_than?: number;
 }): void {
   allow_pathfind = param.allow_pathfind ?? true;
   hide_name_on_minimap = param.hide_name_on_minimap ?? false;
@@ -713,4 +726,5 @@ export function crawlerMapViewStartup(param: {
     filter_mag: gl.NEAREST,
   });
   sprite_mult = shaderCreate('shaders/sprite_mult.fp');
+  show_enemies_when_fewer_than = param.show_enemies_when_fewer_than || 0;
 }
