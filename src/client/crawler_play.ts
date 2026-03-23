@@ -88,7 +88,7 @@ import {
   crawlerCommWant,
   getChatUI,
 } from './crawler_comm';
-import { CrawlerController } from './crawler_controller';
+import { CrawlerController, crawlerControllerCreate } from './crawler_controller';
 import {
   crawlerEntitiesInit,
   crawlerEntitiesOnEntStart,
@@ -745,7 +745,7 @@ function crawlerPlayInitShared(): void {
   script_api = crawlerScriptAPIClientCreate(onlineMode());
   script_api.setCrawlerState(game_state);
 
-  controller = new CrawlerController({
+  controller = crawlerControllerCreate({
     game_state,
     entity_manager: crawlerEntityManager(),
     script_api,

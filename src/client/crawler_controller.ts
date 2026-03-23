@@ -1114,33 +1114,38 @@ const font_style_debug = fontStyle(null, {
   outline_width: 2.5,
 });
 
+export type CrawlerControllerConstructorParam = {
+  game_state: CrawlerState;
+  entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
+  script_api: CrawlerScriptAPIClient;
+  on_init_level?: (floor_id: number) => void;
+  on_pre_move?: () => void;
+  on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
+  on_move_start?: (pos: Vec2) => void;
+  on_enter_cell?: (pos: Vec2) => void;
+  flush_vis_data?: (force: boolean) => void;
+  controller_type?: string;
+};
+
 export class CrawlerController {
   game_state: CrawlerState;
   entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
   script_api: CrawlerScriptAPIClient;
   on_init_level?: (floor_id: number) => void;
+  on_pre_move?: () => void; // called immediately before _queuing_ a new movement
   on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
   on_move_start?: (pos: Vec2) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
   player_controller!: PlayerController;
   controller_type!: string;
-  constructor(param: {
-    game_state: CrawlerState;
-    entity_manager: ClientEntityManagerInterface<EntityCrawlerClient>;
-    script_api: CrawlerScriptAPIClient;
-    on_init_level?: (floor_id: number) => void;
-    on_player_move?: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void;
-    on_move_start?: (pos: Vec2) => void;
-    on_enter_cell?: (pos: Vec2) => void;
-    flush_vis_data?: (force: boolean) => void;
-    controller_type?: string;
-  }) {
+  constructor(param: CrawlerControllerConstructorParam) {
     this.game_state = param.game_state;
     this.entity_manager = param.entity_manager;
     this.script_api = param.script_api;
     this.flush_vis_data = param.flush_vis_data;
     this.on_init_level = param.on_init_level;
+    this.on_pre_move = param.on_pre_move;
     this.on_player_move = param.on_player_move;
     this.on_move_start = param.on_move_start;
     this.on_enter_cell = param.on_enter_cell;
@@ -1150,6 +1155,9 @@ export class CrawlerController {
 
   setOnPlayerMove(fn: (old_pos: Vec2, new_pos: Vec2, move_dir: DirType) => void): void {
     this.on_player_move = fn;
+  }
+  setOnEnterCell(fn: (new_pos: Vec2) => void): void {
+    this.on_enter_cell = fn;
   }
   on_init_pos?: (pos: Vec2, rot: DirType) => void;
   setOnInitPos(fn: (pos: Vec2, rot: DirType) => void): void {
@@ -2154,6 +2162,7 @@ export class CrawlerController {
             // Pressed the same action again within the repeat period, double-tap, start repeating if held
             this.is_repeating = true;
           }
+          this.on_pre_move?.();
           this.startRelativeMove(dx, dy);
         }
       }
@@ -2188,6 +2197,7 @@ export class CrawlerController {
         dy -= down.back;
         if (dx || dy) {
           this.is_repeating = true;
+          this.on_pre_move?.();
           this.startRelativeMove(dx, dy);
         }
       }
@@ -2207,6 +2217,7 @@ export class CrawlerController {
         !this.player_controller.isMoving() && this.path_to &&
         frame_timestamp - this.path_to_last_step > FAST_TRAVEL_STEP_MIN_TIME
       ) {
+        this.on_pre_move?.();
         let { w } = level;
         let cur = {
           pos: last_dest_pos,
@@ -2435,4 +2446,8 @@ export class CrawlerController {
     }
     return false;
   }
+}
+
+export function crawlerControllerCreate(param: CrawlerControllerConstructorParam): CrawlerController {
+  return new CrawlerController(param);
 }
