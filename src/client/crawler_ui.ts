@@ -1,5 +1,5 @@
 import * as engine from 'glov/client/engine';
-import { fontStyle } from 'glov/client/font';
+import { ALIGN, Font, FontStyle, fontStyle } from 'glov/client/font';
 import { Box } from 'glov/client/geom_types';
 import * as input from 'glov/client/input';
 import {
@@ -44,7 +44,7 @@ const SPOT_STATE_TO_UI_BUTTON_STATE: Record<SpotStateEnum, ButtonStateString> = 
   [SPOT_STATE_DISABLED]: 'disabled',
 };
 
-// TODO: allow overriding
+let hotkey_font: Font | null = null;
 let hotkey_font_style = fontStyle(null, {
   color: 0x000000ff,
   outline_color: 0xFFFFFFff,
@@ -53,6 +53,22 @@ let hotkey_font_style = fontStyle(null, {
 let hotkey_font_size = 6;
 let hotkey_font_pad_h = 2;
 let hotkey_font_pad_v = 3.2;
+let hotkey_font_align = ALIGN.HLEFT;
+export function crawerUISetHotkeyFont(
+  font: Font,
+  font_style: FontStyle,
+  font_size: number,
+  font_pad_h: number,
+  font_pad_v: number,
+  align: ALIGN,
+): void {
+  hotkey_font = font;
+  hotkey_font_style = font_style;
+  hotkey_font_size = font_size;
+  hotkey_font_pad_h = font_pad_h;
+  hotkey_font_pad_v = font_pad_v;
+  hotkey_font_align = align;
+}
 
 const PADNAMES = [
   'A',
@@ -63,8 +79,8 @@ const PADNAMES = [
   'RB',
   'LT',
   'RT',
-  'BACK',
-  'START',
+  'Back',
+  '▶', // START
   'LS',
   'RS',
   // '↑', // don't show these, should be obvious from the buttons
@@ -135,7 +151,7 @@ export function crawlerOnScreenButton(param: {
   let sound_button = is_movement ? 'button_click2' : 'button_click'; // DCJAM
   let button_param: SpotParam & ButtonParam & SpriteDrawParams = {
     def: disabled ? SPOT_DEFAULT_BUTTON_DISABLED : SPOT_DEFAULT_BUTTON,
-    // pad_focusable: false,
+    pad_focusable: false,
     frame,
     x, y, z, w, h,
     disabled,
@@ -230,8 +246,8 @@ export function crawlerOnScreenButton(param: {
   if (!no_visible_ui) {
     param.button_sprites[SPOT_STATE_TO_UI_BUTTON_STATE[state]].draw(button_param);
     if (visible_hotkey) {
-      uiGetFont().drawSized(hotkey_font_style, x + hotkey_font_pad_h, y + hotkey_font_pad_v,
-        (z || Z.UI) + 0.1, hotkey_font_size, visible_hotkey);
+      (hotkey_font || uiGetFont()).drawSizedAligned(hotkey_font_style, x + hotkey_font_pad_h, y + hotkey_font_pad_v,
+        (z || Z.UI) + 0.1, hotkey_font_size, hotkey_font_align, w, h, visible_hotkey);
     }
   }
   return nav_ret;
