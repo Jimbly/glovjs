@@ -155,6 +155,7 @@ type DimsSplitRet = {
 };
 let dims_split_cache: {
   text: string;
+  w: number;
   ret: DimsSplitRet;
 };
 function dimsSplit(
@@ -165,7 +166,7 @@ function dimsSplit(
   line_height: number,
   text: string
 ): DimsSplitRet {
-  if (dims_split_cache && dims_split_cache.text === text) {
+  if (dims_split_cache && dims_split_cache.text === text && dims_split_cache.w === w) {
     return dims_split_cache.ret;
   }
   let md_param = {
@@ -187,6 +188,7 @@ function dimsSplit(
     tree,
   };
   dims_split_cache = {
+    w,
     text,
     ret,
   };
