@@ -48,6 +48,7 @@ import type { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
   DataObject,
   ErrorCallback,
+  VoidFunc,
 } from 'glov/common/types';
 import {
   callEach,
@@ -409,6 +410,7 @@ export function crawlerInitVisData(floor_id: number): void {
 
 cmd_parse.register({
   cmd: 'floor',
+  // access_show: ['sysadmin'],
   help: 'Display or change floor',
   func: function (str: string, resp_func: CmdRespFunc) {
     let floor_id = Number(str);
@@ -472,6 +474,7 @@ function populateLevelFromInitialEntities(
 export type InitLevelFunc = ((entity_manager: ClientEntityManagerInterface,
   floor_id: number, level: CrawlerLevel) => void);
 let on_init_level_offline: InitLevelFunc | null = null;
+let on_init_level_online: VoidFunc | null = null;
 
 let need_turn_based_step = false;
 
@@ -488,11 +491,14 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
       populateLevelFromInitialEntities(crawlerEntityManagerOffline(), floor_id, level);
     }
     on_init_level_offline?.(crawlerEntityManagerOffline(), floor_id, level);
+  } else {
+    on_init_level_online?.();
   }
 }
 
 cmd_parse.register({
   cmd: 'floor_reset',
+  // access_show: ['sysadmin'],
   help: 'Resets floor',
   func: function (str: string, resp_func: CmdRespFunc): void {
     if (isOnlineOnly()) {
@@ -518,6 +524,7 @@ cmd_parse.register({
 });
 cmd_parse.register({
   cmd: 'spawn',
+  // access_show: ['sysadmin'],
   help: 'Spawns an entity of the specified type',
   prefix_usage_with_help: true,
   usage: '/spawn [type_id]',
@@ -1134,7 +1141,7 @@ export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
 
   let map_view = mapViewActive();
   if (overlay_menu_up || isMenuUp()) {
-    controller.cancelQueuedMoves();
+    controller.cancelQueuedMoves(false);
   }
   if (!(map_view || isMenuUp() || overlay_menu_up)) {
     spotSuppressPad();
@@ -1173,6 +1180,7 @@ export function crawlerPlayStartup(param: {
   offline_data?: CrawlerOfflineData;
   play_state: EngineState;
   on_init_level_offline?: InitLevelFunc;
+  on_init_level_online?: VoidFunc;
   default_vstyle?: string;
   allow_offline_console?: boolean;
   chat_ui_param?: CrawlerChatUIParam;
@@ -1186,6 +1194,7 @@ export function crawlerPlayStartup(param: {
   play_state = param.play_state;
   default_vstyle = param.default_vstyle || 'demo';
   on_init_level_offline = param.on_init_level_offline || null;
+  on_init_level_online = param.on_init_level_online || null;
   allow_offline_console = param.allow_offline_console || false;
   chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
   turn_based_step = param.turn_based_step;
