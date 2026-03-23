@@ -1085,6 +1085,7 @@ export type PlayerMotionParam = {
   show_debug: { x: number; y: number } | null;
   disable_move: boolean;
   but_allow_rotate: boolean; // if `disable_move` is true, still allow rotating
+  on_disabled_action: () => void;
   disable_player_impulse: boolean;
   button_w: number;
   button_sprites: Record<ButtonStateString, Sprite>;
@@ -1976,6 +1977,7 @@ export class CrawlerController {
       show_buttons,
       disable_move,
       but_allow_rotate,
+      on_disabled_action,
       disable_player_impulse,
       show_hotkeys,
     } = param;
@@ -1990,6 +1992,7 @@ export class CrawlerController {
 
     let no_move = this.hasMoveBlocker() || disable_move || disable_player_impulse;
     let no_rotate = this.hasMoveBlocker() || disable_player_impulse || disable_move && !but_allow_rotate;
+    let soft_disable = no_move && !(this.hasMoveBlocker() || disable_player_impulse) && on_disabled_action;
 
     if (no_move) { // was: disable_player_impulse
       this.path_to = null;
@@ -2118,12 +2121,12 @@ export class CrawlerController {
       }
 
       button(0, 0, 0, disabled_rotate, 'turn_left', keys_turn_left, pad_turn_left, false, left_hotzone);
-      button(1, 0, forward_frame, disabled_move, 'forward',
+      button(1, 0, forward_frame, soft_disable ? false : disabled_move, 'forward',
         keys_forward, pad_forward, false, forward_hotzone);
       button(2, 0, 2, disabled_rotate, 'turn_right', keys_turn_right, pad_turn_right, false, right_hotzone);
-      button(0, 1, 3, disabled_move, 'left', keys_left, pad_left);
-      button(1, 1, 4, disabled_move, 'back', keys_back, pad_back, false, back_hotzone);
-      button(2, 1, 5, disabled_move, 'right', keys_right, pad_right);
+      button(0, 1, 3, soft_disable ? false : disabled_move, 'left', keys_left, pad_left);
+      button(1, 1, 4, soft_disable ? false : disabled_move, 'back', keys_back, pad_back, false, back_hotzone);
+      button(2, 1, 5, soft_disable ? false : disabled_move, 'right', keys_right, pad_right);
     }
 
     let level = game_state.level!;
@@ -2135,7 +2138,7 @@ export class CrawlerController {
       this.fade_alpha = this.fade_override;
       return;
     }
-    if (!no_move || !no_rotate) {
+    if (!no_move || !no_rotate || soft_disable) {
       let eff_rot = this.player_controller.effRot();
       if (!no_rotate) {
         let drot = down_edge.turn_left;
@@ -2148,7 +2151,7 @@ export class CrawlerController {
         }
       }
 
-      if (!no_move) {
+      if (!no_move || soft_disable) {
         let dx = 0;
         dx += down_edge.left;
         dx -= down_edge.right;
@@ -2162,8 +2165,12 @@ export class CrawlerController {
             // Pressed the same action again within the repeat period, double-tap, start repeating if held
             this.is_repeating = true;
           }
-          this.on_pre_move?.();
-          this.startRelativeMove(dx, dy);
+          if (soft_disable) {
+            soft_disable();
+          } else {
+            this.on_pre_move?.();
+            this.startRelativeMove(dx, dy);
+          }
         }
       }
 
