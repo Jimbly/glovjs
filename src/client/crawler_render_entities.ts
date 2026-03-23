@@ -240,10 +240,14 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
       scale *= 1 + easeIn(1 - t, 2) * 0.5;
     }
   }
+  let force_alpha = false;
   if (ent.fade_out_at) {
     v4copy(color_temp2, color);
     color_temp2[3] *= Math.max(0, 1 - (getFrameTimestamp() - ent.fade_out_at)/400);
     color = color_temp2;
+  }
+  if (color[3] < 1) {
+    force_alpha = true;
   }
   let vscale = scale;
   let hscale = scale;
@@ -324,7 +328,7 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     frame,
     color,
     size: [hscale * DIM * aspect, vscale * DIM],
-    bucket: ent.drawable_sprite_opts.do_alpha === false ? BUCKET_OPAQUE : BUCKET_ALPHA,
+    bucket: ent.drawable_sprite_opts.do_alpha === false && !force_alpha ? BUCKET_OPAQUE : BUCKET_ALPHA,
     facing: FACE_XY,
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
     shader,
