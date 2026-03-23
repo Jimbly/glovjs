@@ -108,8 +108,7 @@ import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
 import { dialogNameRender } from './dialog_data';
 import { dialogMoveLocked, dialogRun, dialogStartup } from './dialog_system';
-import { EntityDemoClient, entityManager } from './entity_demo_client';
-// import { EntityDemoClient } from './entity_demo_client';
+import { EntityClient, entityManager } from './entity_game_client';
 import {
   game_height,
   game_width,
@@ -148,7 +147,7 @@ const FULLMAP_TILE_SIZE = FULLMAP_STEP_SIZE * 7/6;
 const COMPASS_X = MINIMAP_X;
 const COMPASS_Y = MINIMAP_Y + MINIMAP_W;
 
-type Entity = EntityDemoClient;
+type Entity = EntityClient;
 
 let font: Font;
 
@@ -792,8 +791,8 @@ export function playStartup(): void {
   aiTraitsClientStartup();
   // appTraitsStartup();
   crawlerEntityTraitsClientStartup({
-    name: 'EntityDemoClient',
-    Ctor: EntityDemoClient,
+    name: 'EntityClient',
+    Ctor: EntityClient,
   });
   crawlerRenderEntitiesStartup(font);
   crawlerRenderViewportSet({

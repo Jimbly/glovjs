@@ -24,7 +24,7 @@ import {
 import {
   entitiesAt,
   entityManager,
-} from './entity_demo_client';
+} from './entity_game_client';
 import {
   myEntOptional,
 } from './play';

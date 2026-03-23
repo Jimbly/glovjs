@@ -26,13 +26,13 @@ import {
   JSVec3,
 } from '../common/crawler_state';
 import { crawlerEntFactory } from './crawler_entity_client';
-import { EntityDemoClient } from './entity_demo_client';
+import { EntityClient } from './entity_game_client';
 import { myEnt } from './play';
 import { statusSet } from './status';
 
 const { abs, floor, random } = Math;
 
-type Entity = EntityDemoClient;
+type Entity = EntityClient;
 
 function randomFrom<T>(arr: T[]): T {
   return arr[floor(random() * arr.length)];
