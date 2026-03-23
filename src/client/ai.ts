@@ -150,6 +150,12 @@ export function aiTraitsClientStartup(): void {
           return false;
         }
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
+        if (level.getCell(new_pos[0], new_pos[1])?.props?.noai ||
+          level.getCell(new_pos[0], new_pos[1])?.events?.length
+        ) {
+          // avoid going onto events (e.g. stairs in/out)
+          return false;
+        }
         if (entitiesAt(this.entity_manager, new_pos, floor_id, true).length) {
           return false;
         }
@@ -304,11 +310,25 @@ export function aiTraitsClientStartup(): void {
           if (level.wallsBlock(pos, xdir, script_api) & BLOCK_MOVE) {
             dx = 0;
           }
+          let new_pos = [pos[0] + sign(dx), pos[1]];
+          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai ||
+            level.getCell(new_pos[0], new_pos[1])?.events?.length
+          ) {
+            // avoid going onto events (e.g. stairs in/out)
+            dx = 0;
+          }
         }
         let ydir: DirType;
         if (dy) {
           ydir = dirFromDelta([0, sign(dy)]);
           if (level.wallsBlock(pos, ydir, script_api) & BLOCK_MOVE) {
+            dy = 0;
+          }
+          let new_pos = [pos[0], pos[1] + sign(dy)];
+          if (level.getCell(new_pos[0], new_pos[1])?.props?.noai ||
+            level.getCell(new_pos[0], new_pos[1])?.events?.length
+          ) {
+            // avoid going onto events (e.g. stairs in/out)
             dy = 0;
           }
         }
@@ -330,17 +350,37 @@ export function aiTraitsClientStartup(): void {
           }
           return true;
         }
-        let do_x = random() * tot < abs(dx);
-        let dir = do_x ? xdir! : ydir!;
-        let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
-        let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
-        ents = ents.filter(isEnemy);
-        if (ents.length) {
+
+        if (dx) {
+          let new_pos: JSVec3 = [pos[0] + DX[xdir!], pos[1] + DY[xdir!], pos[2]];
+          let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
+          ents = ents.filter(isEnemy);
+          if (ents.length) {
+            dx = 0;
+          }
+        }
+        if (dy) {
+          let new_pos: JSVec3 = [pos[0] + DX[ydir!], pos[1] + DY[ydir!], pos[2]];
+          let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
+          ents = ents.filter(isEnemy);
+          if (ents.length) {
+            dy = 0;
+          }
+        }
+
+        tot = abs(dx) + abs(dy);
+        if (!tot) {
           if (engine.defines.HUNTER) {
             statusSet(`edbg${this.id}`, `${this.id}: Move ent blocked`).counter = 500;
           }
           return false;
         }
+        let do_x = random() * tot < abs(dx);
+        let dir = do_x ? xdir! : ydir!;
+        let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
+        // if (engine.defines.HUNTER) {
+        //   statusPush(`${this.id}: Moving from ${pos} to ${new_pos}`);
+        // }
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
           last_pos: pos,
