@@ -148,7 +148,7 @@ export function crawlerOnScreenButton(param: {
     }
   }
 
-  let sound_button = is_movement ? 'button_click2' : 'button_click'; // DCJAM
+  let sound_button = is_movement ? 'button_click2' : 'button_click';
   let button_param: SpotParam & ButtonParam & SpriteDrawParams = {
     def: disabled ? SPOT_DEFAULT_BUTTON_DISABLED : SPOT_DEFAULT_BUTTON,
     pad_focusable: false,

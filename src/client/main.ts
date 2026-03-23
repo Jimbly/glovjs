@@ -36,6 +36,7 @@ import { netInit } from 'glov/client/net';
 import * as settings from 'glov/client/settings';
 import { settingsSet } from 'glov/client/settings';
 import { shadersSetInternalDefines } from 'glov/client/shaders';
+import { SPOT_NAVTYPE_SIMPLE, spotSetNavtype } from 'glov/client/spot';
 import { spriteSetGet } from 'glov/client/sprite_sets';
 import { textureDefaultFilters } from 'glov/client/textures';
 import { uiSetPanelColor } from 'glov/client/ui';
@@ -58,6 +59,7 @@ import { titleInit, titleStartup } from './title';
 const { round } = Math;
 
 Z.BACKGROUND = 1;
+Z.CONTROLLER_FADE = 5;
 Z.SPRITES = 10;
 Z.PARTICLES = 20;
 Z.CHAT = 60;
@@ -129,7 +131,7 @@ export function main(): void {
   if (!'AA hires pixel art') {
     need_dfdxy = true;
     antialias = true; // antialiases 3D geometry edges only
-    use_fbos = 0;
+    use_fbos = 1;
     shadersSetInternalDefines({
       SSAA4X: true,
     });
@@ -260,8 +262,10 @@ export function main(): void {
   v4copy(engine.border_color, clear_color);
   crawlerRenderSetUIClearColor(clear_color);
 
-  // Actually not too bad:
-  if (settings.filter === 1) {
+  if (settings.filter === 0) {
+    textureDefaultFilters(gl.NEAREST, gl.NEAREST);
+  } else if (settings.filter === 1) {
+    // Actually not too bad:
     textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.LINEAR);
   } else if (settings.filter === 2) {
     textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR, gl.NEAREST);
@@ -288,6 +292,8 @@ export function main(): void {
   });
 
   markdownImageRegisterAutoAtlas('demo');
+
+  spotSetNavtype(SPOT_NAVTYPE_SIMPLE);
 
   crawlerBuildModeStartup({
     font: build_font,

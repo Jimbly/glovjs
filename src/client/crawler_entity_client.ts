@@ -5,7 +5,7 @@ export enum OnlineMode {
 }
 
 import assert from 'assert';
-import { autoAtlas } from 'glov/client/autoatlas';
+import { autoAtlas, autoAtlasSwapGeneration } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
 import { dynGeomForward } from 'glov/client/dyn_geom';
 import { getFrameIndex } from 'glov/client/engine';
@@ -156,7 +156,9 @@ export function crawlerEntClientDefaultOnDelete(this: EntityCrawlerClient, reaso
   let countdown_max = 250;
   this.delete_reason = reason;
   if (reason === 'killed') {
-    this.data.stats.hp = 0;
+    if (this.data.stats.hp > 0) {
+      this.data.stats.hp = 0;
+    }
   }
   if (reason === 'respawn') {
     countdown_max = 0;
@@ -345,6 +347,11 @@ function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): numbe
     if (frame === ent.drawable_sprite_state.autoatlas_last_frame) {
       do_update = false;
     }
+    let gen = autoAtlasSwapGeneration();
+    if (ent.drawable_sprite_state.atlas_swap_generation !== gen) {
+      do_update = true;
+      ent.drawable_sprite_state.atlas_swap_generation = gen;
+    }
     if (do_update || !ent.drawable_sprite_state.sprite) {
       ent.drawable_sprite_state.autoatlas_last_frame = frame;
       let atlas_name = atlasAlias(sprite_data.atlas);
@@ -453,6 +460,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
         origin: [0.5, 1],
       },
       scale: 0.75,
+      hflip_random: false,
       sprite: null!,
     },
     init_prototype: function (opts: DrawableSpriteOpts) {
@@ -492,6 +500,7 @@ function crawlerTraitsInit(ent_factory: TraitFactory<Entity, DataObject>): void 
         sprite_hybrid: opts.sprite_hybrid,
         anim_offs: random() * 120000,
         sprite_shadow: opts.sprite_shadow,
+        hflip: opts.hflip_random ? random() > 0.5 : false,
       };
       return ret;
     },

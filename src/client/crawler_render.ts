@@ -69,6 +69,7 @@ import {
 import * as ui from 'glov/client/ui';
 import { uiTextHeight } from 'glov/client/ui';
 import { dataError } from 'glov/common/data_error';
+import { randSpatial } from 'glov/common/rand_fast';
 import type { TSMap } from 'glov/common/types';
 import { isInteger, lerp, ridx } from 'glov/common/util';
 import {
@@ -127,7 +128,7 @@ const DX = [1,0,-1,0];
 const DY = [0,1,0,-1];
 
 const DEBUG_VIS = false;
-const VIS_RADIUS = 3;
+let vis_radius = 3;
 
 let wall_rots = [
   qRotateZ(quat(), unit_quat, 0),
@@ -145,6 +146,7 @@ let frame_idx = 0;
 
 export type CrawlerViewport = Box & {
   rot?: number;
+  flip_h?: boolean;
 };
 let crawler_viewport: CrawlerViewport;
 export function crawlerRenderViewportSet(val: CrawlerViewport): void {
@@ -153,6 +155,10 @@ export function crawlerRenderViewportSet(val: CrawlerViewport): void {
 
 export function crawlerRenderViewportGet(): CrawlerViewport {
   return crawler_viewport;
+}
+
+export function crawlerRenderVisRadiusSet(new_radius: number): void {
+  vis_radius = new_radius;
 }
 
 let lod_bias_min = -4;
@@ -1100,6 +1106,10 @@ export function crawlerRenderGetPosOffs(): ROVec2 {
   return pos_offs;
 }
 
+export function crawlerRenderSetPosOffs(new_val: ROVec2): void {
+  v2copy(pos_offs, new_val);
+}
+
 export type RenderPass = {
   name: string;
   neighbor_draw?: boolean;
@@ -1477,7 +1487,7 @@ function calcVisibility(
     let x = idx % w;
     let y = (idx - x) / w;
     if (map_update_this_frame && !(cell.visible_bits & VIS_SEEN) &&
-      v2distSq(pos, [x+0.5, y+0.5]) < VIS_RADIUS * VIS_RADIUS
+      v2distSq(pos, [x+0.5, y+0.5]) < vis_radius * vis_radius
     ) {
       if (cell.desc.open_vis) {
         cell.visible_bits |= VIS_SEEN;
@@ -1548,6 +1558,17 @@ function applyShear(): void {
   setGlobalMatrices(mat_view);
 }
 
+let screen_shake = 0;
+export function renderSetScreenShake(weight: number): void {
+  screen_shake = weight;
+}
+
+let camera_offs_3d = vec3();
+// temporary 3D offset (e.g. from hit/attack FX), in half cells (e.g. -1...1, if centered)
+export function renderSet3DOffset(offs: ROVec3): void {
+  v3copy(camera_offs_3d, offs);
+}
+
 let ignore_vis: boolean;
 export type RenderPrepParam = {
   game_state: CrawlerState;
@@ -1558,6 +1579,15 @@ export type RenderPrepParam = {
   map_update_this_frame: boolean;
   script_api: CrawlerScriptAPIClient;
 };
+function randSmoothed(period: number, x: number, y: number, z: number): number {
+  let t = engine.frame_timestamp / period;
+  let t0 = floor(t);
+  let t1 = t + 1;
+  let p = t - t0;
+  let v0 = randSpatial(t0, x, y, z);
+  let v1 = randSpatial(t1, x, y, z);
+  return lerp(p, v0, v1);
+}
 export function renderPrep(param: RenderPrepParam): void {
   const {
     game_state,
@@ -1586,11 +1616,21 @@ export function renderPrep(param: RenderPrepParam): void {
 
   v3mul(cam_pos, cam_pos_in, vdim);
   v3copy(player_pos, cam_pos);
+  v3iAddScale(cam_pos, camera_offs_3d, HDIM);
 
   let ca = cos(angle);
   let sa = sin(angle);
   cam_pos[0] += pos_offs[1] * HDIM * ca + pos_offs[0] * HDIM * sa;
   cam_pos[1] += pos_offs[1] * HDIM * sa - pos_offs[0] * HDIM * ca;
+
+  if (screen_shake) {
+    let r = randSmoothed(32, floor((crawler_viewport.rot || 0) / (PI/2)), 0, 0);
+    let mag = 20;
+    let ss = screen_shake * (-mag + r * mag * 2);
+    cam_pos[0] += sa * ss;
+    cam_pos[1] += ca * ss;
+  }
+
   let angle2 = angle + angle_offs;
   ca = cos(angle2);
   sa = sin(angle2);

@@ -29,11 +29,15 @@ let view_angle: number;
 let right_vec = vec2();
 let v2temp = vec2();
 
+export function billboardBiasViewVec(): ROVec2 {
+  return view_vec;
+}
+
 export type BillboardBiasOpts = {
   biasL: [number, number];
   biasF: [number, number];
   biasR: [number, number];
-  biasIn: [number, number, number]; // Not relevant for monsters, just one value will do?
+  biasIn: [number, number, number, number?]; // Not relevant for monsters, just one value will do?
   bias_viewplane_offset?: boolean;
 };
 
@@ -89,6 +93,7 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   bias_phys = lerp(bweight_in, biasIn[0], bias_phys);
   bias_view = lerp(bweight_in, biasIn[1], bias_view);
   let bias_in_offs = lerp(bweight_in, biasIn[2], 0);
+  let bias_in_voffs = lerp(bweight_in, biasIn[3] || 0, 0);
   let bias_in_sign = lerp(abs(view_vec[0]), -1, 1);
   // Offset `bias_phys` towards player
   v2sub(v2temp, draw_pos, renderCamPos());
@@ -103,6 +108,8 @@ export function billboardBias(draw_pos: Vec2, pos: ROVec2, opts: Partial<Billboa
   v2addScale(draw_pos, draw_pos, view_vec, bias_view * DIM);
   // If in the same cell, alternate offsetting to the right as well
   v2addScale(draw_pos, draw_pos, right_vec, bias_in_offs * bias_in_sign * DIM);
+  // Also optional vertical offset
+  draw_pos[2] += bias_in_voffs * DIM;
 
   if (bias_viewplane_offset !== false) {
     // If very close to view plane, offset away from camera

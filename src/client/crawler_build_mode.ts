@@ -52,7 +52,7 @@ import {
   differCreate,
 } from 'glov/common/differ';
 import type { NetResponseCallback } from 'glov/common/types';
-import { arrayToSet, ridx } from 'glov/common/util';
+import { arrayToSet, cmpNumericSmart, ridx } from 'glov/common/util';
 import { v2same, vec4 } from 'glov/common/vmath';
 import { BuildModeOp } from '../common/crawler_entity_common';
 import { crawlerScriptListEvents } from '../common/crawler_script';
@@ -151,6 +151,7 @@ const DEFAULT_PALETTE: PaletteData = {
   selected: 0,
 };
 const PALETTE_SIZE = 9;
+let palette_config_size: number;
 let palette = localStorageGetJSON<PaletteData>('build_palette', DEFAULT_PALETTE);
 let show_palette_config = false;
 
@@ -912,14 +913,11 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     if (!build_favorites[a_key] && build_favorites[b_key]) {
       return 1;
     }
-    if (a[1].id < b[1].id) {
-      return -1;
-    } else if (b[1].id < a[1].id) {
-      return 1;
+    if (a[1].id !== b[1].id) {
+      return cmpNumericSmart(a[1].id, b[1].id);
     }
     return a[0] < b[0] ? -1 : 1;
   });
-  let col_width = 32;
   const text_height = uiTextHeight();
   for (let ii = 0; ii < all_descs.length; ++ii) {
     let pair = all_descs[ii];
@@ -930,7 +928,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     drawPaletteThumbnail({
       pair,
       x: x + THUMBNAIL_PAD, y: y + THUMBNAIL_PAD, z,
-      w: col_width - THUMBNAIL_PAD * 2, h: col_width - THUMBNAIL_PAD * 2,
+      w: palette_config_size - THUMBNAIL_PAD * 2, h: palette_config_size - THUMBNAIL_PAD * 2,
     });
     if (button({
       font,
@@ -938,7 +936,7 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
       font_style_focused: type ? palette_style_focused[type] : undefined,
       font_height: text_height * PALETTE_FONT_SCALE,
       x, y, z,
-      w: col_width, h: col_width,
+      w: palette_config_size, h: palette_config_size,
       align: ALIGN.HWRAP|ALIGN.HVCENTER,
       text: label,
       base_name: palette.entries[palette.selected]?.join(',') === key ? 'buttonselected' : undefined,
@@ -957,14 +955,14 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
       }
     }
 
-    x += col_width + 1;
-    if (x + col_width > mapped_x1) {
+    x += palette_config_size + 1;
+    if (x + palette_config_size > mapped_x1) {
       x = 1;
-      y += col_width + 1;
+      y += palette_config_size + 1;
     }
   }
   if (x !== 1) {
-    y += col_width + 1;
+    y += palette_config_size + 1;
   }
 
   palette_config_scroll.end(y);
@@ -1104,6 +1102,7 @@ let level_prop_key_items: MenuItem[] = [
   'subtitle',
   'music',
   'noexplore',
+  'aipause',
   'new',
 ].map((name) => ({ name, tag: name }));
 
@@ -1768,12 +1767,14 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
 export function crawlerBuildModeStartup(params: {
   font?: Font;
   button_height?: number;
+  palette_config_size?: number;
   level_props?: string[];
   cell_props?: string[];
   height_steps?: number;
 }): void {
   font = params.font || uiGetFont();
   button_height = params.button_height || uiButtonHeight();
+  palette_config_size = params.palette_config_size || 32;
   event_items = crawlerScriptListEvents().map((id: string) => ({
     name: id,
     tag: id,

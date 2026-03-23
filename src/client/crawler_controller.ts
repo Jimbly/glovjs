@@ -150,6 +150,7 @@ interface PlayerController {
   effPos(): ROVec2;
   isMoving(): boolean;
   isAnimating(threshold: number): boolean;
+  hasUnfinishedMove(): boolean;
   startTurn(rot: DirType, double_time?: number): void;
   startMove(dir: DirType, double_time?: number): void;
   initPosSub(): void;
@@ -376,6 +377,11 @@ class CrawlerControllerQueued implements PlayerController {
     return this.queueLength() > 1;
   }
 
+  hasUnfinishedMove(): boolean {
+    // note: untested
+    return this.isAnimating(1);
+  }
+
   startTurn(rot: DirType, double_time?: number): void {
     let drot = rot - this.effRot();
     if (drot > 2) {
@@ -587,6 +593,9 @@ class CrawlerControllerInstantStep implements PlayerController {
   isAnimating(threshold: number): boolean {
     return false;
   }
+  hasUnfinishedMove(): boolean {
+    return false;
+  }
   startTurn(rot: DirType): void {
     assert(rot >= 0 && rot <= 3);
     this.rot = rot;
@@ -648,6 +657,9 @@ class CrawlerControllerInstantBlend extends CrawlerControllerInstantStep {
   }
   isAnimating(threshold: number): boolean {
     return this.blends.length > 0 && this.blends[this.blends.length - 1].t <= threshold;
+  }
+  hasUnfinishedMove(): boolean {
+    return false;
   }
   tickMovement(param: TickParam): TickPositions {
     let { dt } = param;
@@ -826,6 +838,9 @@ class CrawlerControllerQueued2 extends CrawlerControllerInstantStep {
   }
   isAnimating(threshold: number): boolean {
     return this.blends.length > 0 && this.blends[this.blends.length - 1].t <= threshold;
+  }
+  hasUnfinishedMove(): boolean {
+    return this.blends.length > 0 && !this.blends[this.blends.length - 1].finished;
   }
   startQueuedMove(blend: Blend2): boolean {
     if (blend.action_type === ACTION_MOVE) {
@@ -1125,6 +1140,7 @@ export type CrawlerControllerConstructorParam = {
   on_move_start?: (pos: Vec2) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
+  repeat_hasher?: (pos: ROVec2) => string | null;
   controller_type?: string;
 };
 
@@ -1138,6 +1154,7 @@ export class CrawlerController {
   on_move_start?: (pos: Vec2) => void;
   on_enter_cell?: (pos: Vec2) => void;
   flush_vis_data?: (force: boolean) => void;
+  repeat_hasher?: (pos: ROVec2) => string | null;
   player_controller!: PlayerController;
   controller_type!: string;
   constructor(param: CrawlerControllerConstructorParam) {
@@ -1145,6 +1162,7 @@ export class CrawlerController {
     this.entity_manager = param.entity_manager;
     this.script_api = param.script_api;
     this.flush_vis_data = param.flush_vis_data;
+    this.repeat_hasher = param.repeat_hasher;
     this.on_init_level = param.on_init_level;
     this.on_pre_move = param.on_pre_move;
     this.on_player_move = param.on_player_move;
@@ -1384,7 +1402,7 @@ export class CrawlerController {
   }
 
   getEntInFront(): EntityID | null {
-    if (this.player_controller.isMoving()) {
+    if (this.player_controller.isMoving() && false) {
       return null;
     }
     const { game_state, last_dest_pos, last_dest_rot, script_api } = this;
@@ -1877,7 +1895,14 @@ export class CrawlerController {
     }
   }
 
+  last_repeat_hash: string | null = null;
   startRelativeMove(dx: number, dy: number): void {
+    if (this.repeat_hasher) {
+      if (!this.player_controller.isMoving() && !this.player_controller.hasUnfinishedMove()) {
+        this.last_repeat_hash = this.repeat_hasher(this.last_dest_pos);
+      }
+    }
+
     this.last_action_time = getFrameTimestamp();
     this.last_action_hash = dx + dy * 8;
     let impulse_idx = this.player_controller.effRot();
@@ -1898,6 +1923,11 @@ export class CrawlerController {
   }
 
   startTurn(target_dir: DirType): void {
+    if (this.repeat_hasher) {
+      if (!this.player_controller.isMoving() && !this.player_controller.hasUnfinishedMove()) {
+        this.last_repeat_hash = this.repeat_hasher(this.last_dest_pos);
+      }
+    }
     this.last_action_time = getFrameTimestamp();
     this.last_action_hash = target_dir * 64;
     this.player_controller.startTurn(target_dir);
@@ -1963,6 +1993,20 @@ export class CrawlerController {
       //   cur_cell.type === CellType.STAIRS_IN || cur_cell.type === CellType.STAIRS_OUT ? 1 : 0;
     }
     this.fade_alpha = max_alpha;
+  }
+
+  checkRepeatHash(force: boolean): boolean {
+    if (!this.repeat_hasher) {
+      return true;
+    }
+
+    if (!force && this.player_controller.hasUnfinishedMove()) {
+      return true;
+    }
+
+    let repeat_hash = this.repeat_hasher(this.last_dest_pos);
+    let ret = !(repeat_hash !== null && repeat_hash !== this.last_repeat_hash);
+    return ret;
   }
 
   approx_pos = vec2();
@@ -2203,9 +2247,11 @@ export class CrawlerController {
         dy += down.forward;
         dy -= down.back;
         if (dx || dy) {
-          this.is_repeating = true;
-          this.on_pre_move?.();
-          this.startRelativeMove(dx, dy);
+          if (this.checkRepeatHash(false)) {
+            this.is_repeating = true;
+            this.on_pre_move?.();
+            this.startRelativeMove(dx, dy);
+          }
         }
       }
       if (!down.forward && !down.back && !down.left && !down.right) {
@@ -2257,7 +2303,7 @@ export class CrawlerController {
             assert(drot === -1 || drot === 1);
             this.player_controller.startTurn(dirMod(cur.rot + drot + 4), 2);
           } else {
-            if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true)) {
+            if (!build_mode && entityBlocks(game_state.floor_id, next_pos, true) || !this.checkRepeatHash(true)) {
               this.player_controller.clearDoubleTime?.();
               this.path_to = null;
             } else {
@@ -2303,6 +2349,10 @@ export class CrawlerController {
       this.playerMoveFinish(level, positions.finished_pos);
       if (no_move) { // was: disable_player_impulse
         this.player_controller.cancelAllMoves?.(but_allow_rotate && !no_rotate);
+      } else if (this.is_repeating) {
+        if (!this.checkRepeatHash(true)) {
+          this.player_controller.cancelAllMoves?.(but_allow_rotate && !no_rotate);
+        }
       }
     }
     if (positions.finished_rot !== this.last_finished_rot) {

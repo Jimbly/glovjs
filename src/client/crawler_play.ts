@@ -25,6 +25,7 @@ import {
   localStorageSetJSON,
 } from 'glov/client/local_storage';
 import { ClientChannelWorker } from 'glov/client/net';
+import { profilerSupressPad } from 'glov/client/profiler_ui';
 import * as settings from 'glov/client/settings';
 import {
   settingsRegister,
@@ -58,6 +59,7 @@ import {
   mod,
 } from 'glov/common/util';
 import {
+  ROVec2,
   v3copy,
   v3lerp,
   v4copy,
@@ -79,6 +81,7 @@ import {
   VstyleDesc,
 } from '../common/crawler_state';
 import { LevelGenerator, levelGeneratorCreate } from '../common/level_generator';
+import { entitiesAdjacentTo } from './ai';
 import { billboardBiasPrep } from './crawler_billboard_bias';
 import {
   buildModeActive,
@@ -86,12 +89,16 @@ import {
   buildModeSetActive,
 } from './crawler_build_mode';
 import {
+  crawlerCommReturnToTitle,
   crawlerCommStart,
   crawlerCommStartBuildComm,
   crawlerCommWant,
   getChatUI,
 } from './crawler_comm';
-import { CrawlerController, crawlerControllerCreate } from './crawler_controller';
+import {
+  CrawlerController,
+  crawlerControllerCreate,
+} from './crawler_controller';
 import {
   crawlerEntitiesInit,
   crawlerEntitiesOnEntStart,
@@ -130,8 +137,9 @@ import {
   crawlerScriptAPIClientCreate,
 } from './crawler_script_api_client';
 import { dialogReset } from './dialog_system';
+import { entityManager } from './entity_game_client';
 
-const { PI, max, floor } = Math;
+const { PI, max, floor, round } = Math;
 
 type Entity = EntityCrawlerClient;
 
@@ -281,6 +289,18 @@ export type SavedGameData = {
   timestamp: number;
 };
 let local_game_data: SavedGameData = { timestamp: Date.now() };
+
+export function myEntFromSavedData(data: SavedGameData): DataObject | null {
+  if (data.entities) {
+    for (let ii = 0; ii < data.entities.length; ++ii) {
+      let ent = data.entities[ii];
+      if (ent.type === 'player') {
+        return ent;
+      }
+    }
+  }
+  return null;
+}
 
 export function crawlerCurSavePlayTime(): number {
   let now = Date.now();
@@ -481,9 +501,11 @@ let on_init_level_offline: InitLevelFunc | null = null;
 let on_init_level_online: VoidFunc | null = null;
 
 let need_turn_based_step = false;
+let turn_based_step_reason: TurnBasedStepReason | null = null;
 
 function crawlerOnInitHaveLevel(floor_id: number): void {
   need_turn_based_step = false;
+  turn_based_step_reason = null;
   crawlerInitVisData(floor_id);
   if (isLocal()) {
     let level = game_state.level;
@@ -560,11 +582,12 @@ export function crawlerPlayWantMode(mode: 'auto' | 'manual' | 'recent'): void {
   load_mode = mode;
 }
 
-export type CrawlerOfflineData = {
+export type CrawlerOfflineData<AppEntity extends Entity> = {
   new_player_data: DataObject;
   loading_state: EngineState;
+  validate_player?: (me: AppEntity) => boolean;
 };
-let offline_data: CrawlerOfflineData | undefined;
+let offline_data: CrawlerOfflineData<Entity> | undefined;
 
 function crawlerLoadGame(data: SavedGameData): boolean {
   assert(offline_data);
@@ -703,15 +726,29 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
 }
 
 
-let turn_based_step: (() => void) | undefined;
+let turn_based_step: ((reason: TurnBasedStepReason) => void) | undefined;
 let turn_based_step_threshold = 0.4;
 let turn_based_step_countdown = 0;
 let turn_based_allowed: (() => boolean) | undefined;
+let turn_based_step_idx = 0;
+
+export function crawlerTurnBasedStepIndex(): number {
+  return turn_based_step_idx;
+}
+
+export function crawlerTurnBasedNeedsStep(): boolean {
+  return need_turn_based_step;
+}
 
 function executeStep(): void {
   if (need_turn_based_step) {
-    turn_based_step?.();
+    assert(turn_based_step_reason);
+    profilerStartFunc();
+    turn_based_step?.(turn_based_step_reason);
     need_turn_based_step = false;
+    turn_based_step_reason = null;
+    turn_based_step_idx++;
+    profilerStopFunc();
   }
 }
 
@@ -724,6 +761,11 @@ export function crawlerTurnBasedClearQueue(): void {
 }
 
 export function crawlerTurnBasedTick(): void {
+  if (engine.defines.AUTOSTEP && !need_turn_based_step) {
+    need_turn_based_step = true;
+    turn_based_step_countdown = 500;
+    turn_based_step_reason = 'move';
+  }
   if (need_turn_based_step) {
     if (turn_based_allowed?.() === false) {
       return;
@@ -740,11 +782,12 @@ export function crawlerTurnBasedTick(): void {
   }
 }
 
-export function crawlerTurnBasedScheduleStep(delay: number): void {
+export function crawlerTurnBasedScheduleStep(delay: number, reason: TurnBasedStepReason): void {
   if (turn_based_allowed?.() !== false) {
     executeStep();
   }
   need_turn_based_step = true;
+  turn_based_step_reason = reason;
   turn_based_step_countdown = delay;
 }
 
@@ -759,6 +802,7 @@ function crawlerTurnBasedMoveStart(pos: Vec2): void {
     executeStep();
   }
   need_turn_based_step = true;
+  turn_based_step_reason = 'move';
   turn_based_step_countdown = 0; // fire as soon as we're done animating
   crawlerTurnBasedTick();
 }
@@ -768,6 +812,32 @@ export function crawlerTurnBasedMoveFinish(pos: Vec2): void {
   if (turn_based_allowed?.() !== false) {
     executeStep();
   }
+}
+
+let engaged_pos: string | null = null;
+function crawlerRepeatHasher(pos: ROVec2): string | null {
+  let ents = entitiesAdjacentTo(game_state, entityManager(), game_state.floor_id, pos, crawlerScriptAPI());
+  ents = ents.filter(function (ent) {
+    return ent.isEnemy();
+  });
+  let ent_ids = ents.map(function (ent) {
+    return ent.id;
+  });
+  let pos_key = `${pos[0]},${pos[1]}`;
+  if (!ent_ids.length) {
+    if (engaged_pos) {
+      if (engaged_pos === pos_key) {
+        // we were engaged with an enemy here, presumably we just killed it, don't
+        // let key repeat cause us to walk away
+        return 'engaged';
+      }
+      engaged_pos = null;
+    }
+    return null;
+  }
+  engaged_pos = pos_key;
+  ent_ids.sort();
+  return ent_ids.join();
 }
 
 function crawlerPlayInitShared(): void {
@@ -786,6 +856,7 @@ function crawlerPlayInitShared(): void {
     on_move_start: crawlerTurnBasedMoveStart,
     on_enter_cell: crawlerTurnBasedMoveFinish,
     flush_vis_data: crawlerFlushVisData,
+    repeat_hasher: crawlerRepeatHasher,
     controller_type: 'queued2', // working well
     // controller_type: 'queued', // old stand-by; maybe useful for real-time
     // controller_type: 'instant', // too hard
@@ -837,6 +908,12 @@ function crawlerPlayInitOfflineLate(data: SavedGameData): void {
 
   // Load or init game
   let need_init_pos = crawlerLoadGame(data);
+
+  if (offline_data.validate_player?.(crawlerEntityManager().getMyEnt()) === false) {
+    // Needs an app-defined character/new game creation flow first
+    crawlerCommReturnToTitle();
+    return;
+  }
 
   // Load and init current floor
   engine.setState(loading_state);
@@ -946,7 +1023,22 @@ function uiClearColor(): void {
 let entity_split: boolean;
 let default_bg_color = vec3();
 let default_fog_params = vec3(0.003, 0.001, 800.0);
-export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
+export function crawlerRenderFramePrep(is_first_viewport: boolean, is_nonprimary_viewport: boolean): void {
+  let cv = crawlerRenderViewportGet();
+  let do_postprocess = false;
+  let ppw = cv.w;
+  let pph = cv.h;
+  if (setting_pixely) {
+    do_postprocess = true;
+  } else if (cv.flip_h) {
+    do_postprocess = true;
+    let ul = [0, 0];
+    let lr = [0, 0];
+    camera2d.virtualToCanvas(ul, [cv.x, cv.y]);
+    camera2d.virtualToCanvas(lr, [cv.x + cv.w, cv.y + cv.h]);
+    ppw = round(lr[0]) - round(ul[0]);
+    pph = round(lr[1]) - round(ul[1]);
+  }
   let opts_3d: {
     fov: number;
     clear_all: boolean;
@@ -959,20 +1051,19 @@ export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
     just_viewport?: boolean;
   } = {
     fov: FOV,
-    clear_all: !is_additional_viewport,
+    clear_all: is_first_viewport,
     clear_all_color: ui_clear_color,
-    just_viewport: is_additional_viewport,
+    just_viewport: !is_first_viewport && !do_postprocess,
   };
   entity_split = setting_pixely === 1 &&
     settings.entity_split && crawlerRenderDoSplit() &&
     textureSupportsDepth() && supports_frag_depth && settings.use_fbos;
-  if (setting_pixely) {
-    let cv = crawlerRenderViewportGet();
-    opts_3d.width = cv.w;
-    opts_3d.height = cv.h;
+  if (do_postprocess) {
+    opts_3d.width = ppw;
+    opts_3d.height = pph;
     effectsPassAdd();
   } else {
-    if (!is_additional_viewport) {
+    if (is_first_viewport) {
       uiClearColor();
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
@@ -1023,8 +1114,7 @@ export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
       } });
       if (voffs) {
         let viewport_save = engine.viewport.slice(0);
-        if (setting_pixely) {
-          let cv = crawlerRenderViewportGet();
+        if (do_postprocess) {
           engine.setViewport([cv.w * (1 - voffs) * hsize, 0, cv.w * voffs * hsize, cv.h]);
         } else {
           let viewport = crawlerCalc3DViewport();
@@ -1051,7 +1141,11 @@ export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
   billboardBiasPrep(game_state);
 
   let render_prep_param = controller.getRenderPrepParam();
-  renderPrep(render_prep_param);
+  let map_update_this_frame = render_prep_param.map_update_this_frame && !is_nonprimary_viewport;
+  renderPrep({
+    ...render_prep_param,
+    map_update_this_frame,
+  });
 
   sound3DListener({
     pos: render_prep_param.cam_pos,
@@ -1061,11 +1155,16 @@ export function crawlerRenderFramePrep(is_additional_viewport: boolean): void {
 
   crawlerRenderEntitiesPrep();
 
-  controller.flushMapUpdate();
+  if (map_update_this_frame) {
+    controller.flushMapUpdate();
+  }
 }
 
 let fade_color = vec4();
 let last_frame_did_fade = false;
+const flip_h_params = {
+  copy_uv_scale: vec4(-1, 1, 1, 0),
+};
 
 export function crawlerRenderFrame(): void {
   let cv = crawlerRenderViewportGet();
@@ -1128,6 +1227,19 @@ export function crawlerRenderFrame(): void {
     profilerStopStart('drawEntitiesAll');
     crawlerRenderEntities(SPLIT_ALL);
     profilerStopStart('bottom');
+    if (cv.flip_h) {
+      effectsPassConsume();
+      let viewport = crawlerCalc3DViewport();
+      applyCopy({
+        params: flip_h_params,
+        final: effectsIsFinal(),
+        clear: false,
+        clear_all: false,
+        viewport,
+      });
+      gl.disable(gl.SCISSOR_TEST); // who's leaving this on? effect into a viewport
+      engine.setViewport([0, 0, engine.width, engine.height]);
+    }
     gl.disable(gl.SCISSOR_TEST);
     engine.setViewport([0, 0, engine.width, engine.height]);
   }
@@ -1145,11 +1257,12 @@ export function crawlerRenderFrame(): void {
     fade_color[3] = controller.getFadeAlpha();
 
     if (settings.pixely) {
-      ui.drawRect(cv.x, cv.y, cv.x + cv.w + 0.07, cv.y + cv.h + 0.07, 2, fade_color);
+      ui.drawRect(cv.x, cv.y, cv.x + cv.w + 0.07, cv.y + cv.h + 0.07, Z.CONTROLLER_FADE, fade_color);
     } else {
       // Expand by half a pixel to deal with antialiasing, rounding, something?
       const expand = max(camera2d.wReal()/engine.width, camera2d.hReal()/engine.height) / 2;
-      ui.drawRect(cv.x - expand, cv.y - expand, cv.x + cv.w + expand, cv.y + cv.h + expand, 2, fade_color);
+      ui.drawRect(cv.x - expand, cv.y - expand, cv.x + cv.w + expand, cv.y + cv.h + expand,
+        Z.CONTROLLER_FADE, fade_color);
     }
   } else {
     last_frame_did_fade = false;
@@ -1157,16 +1270,19 @@ export function crawlerRenderFrame(): void {
 }
 
 let last_frame_idx = -1;
-export function crawlerPrepAndRenderFrame(): void {
-  let is_additional_viewport = last_frame_idx === getFrameIndex();
+export function crawlerPrepAndRenderFrame(is_nonprimary_viewport?: boolean): void {
+  let is_first_viewport = last_frame_idx !== getFrameIndex();
   last_frame_idx = getFrameIndex();
-  crawlerRenderFramePrep(is_additional_viewport);
+  is_nonprimary_viewport = is_nonprimary_viewport || false;
+  crawlerRenderFramePrep(is_first_viewport, is_nonprimary_viewport);
   crawlerRenderFrame();
 }
 
 export type CrawlerChatUIParam = ChatUIRunParam & { y_bottom: number };
 let chat_ui_param: CrawlerChatUIParam;
+let chat_ui_param_build_mode: CrawlerChatUIParam;
 let allow_offline_console: boolean;
+let chat_as_message_log: boolean;
 let do_chat: boolean;
 export function crawlerPlayTopOfFrame(overlay_menu_up: boolean, but_show_chat: boolean): void {
   crawlerEntityManager().tick();
@@ -1177,16 +1293,21 @@ export function crawlerPlayTopOfFrame(overlay_menu_up: boolean, but_show_chat: b
   }
   if (!(map_view || isMenuUp() || overlay_menu_up)) {
     spotSuppressPad();
+    profilerSupressPad();
   }
 
   crawlerTurnBasedTick();
 
-  let hide_chat = (overlay_menu_up && !but_show_chat) || map_view || buildModeOverlayActive() || !isOnline();
+  let hide_chat = (overlay_menu_up && !but_show_chat) ||
+    map_view ||
+    buildModeOverlayActive() ||
+    (!isOnline() && !chat_as_message_log);
   do_chat = allow_offline_console || isOnline() !== OnlineMode.OFFLINE;
   if (do_chat) {
     getChatUI().run({
-      ...chat_ui_param,
+      ...(buildModeActive() ? chat_ui_param_build_mode : chat_ui_param),
       hide: hide_chat,
+      hide_input: chat_as_message_log,
       y: chat_ui_param.y_bottom - getChatUI().h,
       always_scroll: !hide_chat,
     });
@@ -1205,31 +1326,41 @@ export function crawlerPlayBottomOfFrame(): void {
   }
 }
 
-export function crawlerPlayStartup(param: {
+export function crawlerPlaySetOfflineNewPlayerData(new_player_data: DataObject): void {
+  assert(offline_data);
+  offline_data.new_player_data = new_player_data;
+}
+
+
+export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   on_broadcast?: (data: EntityManagerEvent) => void;
   play_init_online?: (room: ClientChannelWorker) => void;
   play_init_offline?: () => void;
-  offline_data?: CrawlerOfflineData;
+  offline_data?: CrawlerOfflineData<AppEntity>;
   play_state: EngineState;
   on_init_level_offline?: InitLevelFunc;
   on_init_level_online?: VoidFunc;
   default_vstyle?: string;
   allow_offline_console?: boolean;
+  chat_as_message_log?: boolean;
   chat_ui_param?: CrawlerChatUIParam;
-  turn_based_step?: () => void;
+  chat_ui_param_build_mode?: CrawlerChatUIParam;
+  turn_based_step?: (reason: TurnBasedStepReason) => void;
   turn_based_allowed?: () => boolean;
   level_fallback_provider?: LevelProvider;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
   play_init_online = param.play_init_online;
   play_init_offline = param.play_init_offline;
-  offline_data = param.offline_data;
+  offline_data = param.offline_data as CrawlerOfflineData<Entity>;
   play_state = param.play_state;
   default_vstyle = param.default_vstyle || 'demo';
   on_init_level_offline = param.on_init_level_offline || null;
   on_init_level_online = param.on_init_level_online || null;
   allow_offline_console = param.allow_offline_console || false;
+  chat_as_message_log = param.chat_as_message_log || false;
   chat_ui_param = param.chat_ui_param || { x: 2, y_bottom: engine.game_height - 2, border: 2 };
+  chat_ui_param_build_mode = param.chat_ui_param_build_mode || chat_ui_param;
   turn_based_step = param.turn_based_step;
   turn_based_allowed = param.turn_based_allowed;
   level_fallback_provider = param.level_fallback_provider || levelFallbackProviderDefault;

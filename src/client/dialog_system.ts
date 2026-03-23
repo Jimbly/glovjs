@@ -315,7 +315,7 @@ export function dialogRun(
         auto_focus: ii === 0,
         focus_steal: ii === 0 && (num_buttons === 1 || !buttons_vis),
         text: button.label,
-        x: x + 4,
+        x: x + HPAD,
         w: w - HPAD * 2,
         y: yy,
         z,

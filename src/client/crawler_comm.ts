@@ -161,6 +161,11 @@ function crawlerCommReconnect(): void {
   }
 }
 
+export function crawlerCommReturnToTitle(): void {
+  engine.setState(lobby_state); // redundant?
+  urlhash.go('');
+}
+
 function crawlerCommHandshake(): void {
   if (state === STATE_NONE) {
     let eff_desired_channel = effectiveDesiredChannel();

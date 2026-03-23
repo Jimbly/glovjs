@@ -97,6 +97,7 @@ export class EntityClient extends EntityBaseClient implements EntityCrawlerClien
     this.floaters = [];
     this.aiResetMoveTime(true);
   }
+  static AI_UPDATE_FIELD = 'seq_ai_update';
   applyAIUpdate(
     action_id: string,
     data_assignments: ActionDataAssignments,
@@ -104,7 +105,7 @@ export class EntityClient extends EntityBaseClient implements EntityCrawlerClien
     resp_func?: NetErrorCallback,
   ): void {
     this.applyBatchUpdate({
-      field: 'seq_ai_update',
+      field: EntityClient.AI_UPDATE_FIELD,
       action_id,
       data_assignments,
       payload,

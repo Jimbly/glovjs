@@ -58,6 +58,7 @@ import {
 import {
   billboardBias,
   BillboardBiasOpts,
+  billboardBiasViewVec,
 } from './crawler_billboard_bias';
 import { buildModeActive } from './crawler_build_mode';
 import {
@@ -122,6 +123,7 @@ export type DrawableSpriteOpts = {
   sprite_near?: Sprite; // assigned at load time
   sprite_hybrid?: Sprite; // assigned at load time
   scale: number;
+  hflip_random: boolean;
   do_alpha?: boolean;
   tint_colors?: [JSVec4, JSVec4, JSVec4][];
   simple_anim?: {
@@ -141,13 +143,17 @@ export type DrawableSpriteOpts = {
 export type DrawableSpriteState = {
   anim: SpriteAnimation;
   anim_update_frame: number;
+  atlas_swap_generation?: number;
   grow_at?: number;
   grow_time?: number;
+  surge_at?: number;
+  surge_time?: number;
   anim_offs: number; // random offset assigned at creation
   sprite: Sprite;
   sprite_near?: Sprite;
   sprite_hybrid?: Sprite;
   sprite_shadow?: Sprite;
+  hflip: boolean;
   autoatlas_last_frame?: string;
 };
 
@@ -204,7 +210,7 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
   }
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   let { w, h } = param;
-  if (aspect < 1) {
+  if (aspect < w/h) {
     w = h * aspect * sign(w);
   } else {
     h = abs(w / aspect);
@@ -221,6 +227,8 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
 let offs_temp = vec2();
 let color_temp2 = vec4();
 let draw_pos_temp2 = vec3();
+let pos_temp = vec3();
+let uvs_temp = vec4();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
   let frame = ent.updateAnim(param.dt);
@@ -230,7 +238,18 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     draw_pos,
     color,
   } = param;
-  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid, anim_offs, sprite_shadow } = ent.drawable_sprite_state;
+  let {
+    grow_at,
+    grow_time,
+    surge_at,
+    surge_time,
+    sprite,
+    sprite_near,
+    sprite_hybrid,
+    anim_offs,
+    sprite_shadow,
+    hflip,
+  } = ent.drawable_sprite_state;
   let { scale, simple_anim } = ent.drawable_sprite_opts;
   if (grow_at) {
     assert(typeof grow_time === 'number');
@@ -238,6 +257,22 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     if (t < grow_time) {
       t /= grow_time;
       scale *= 1 + easeIn(1 - t, 2) * 0.5;
+    }
+  }
+  if (surge_at) {
+    assert(typeof surge_time === 'number');
+    let t = getFrameTimestamp() - surge_at;
+    if (t < surge_time) {
+      t /= surge_time;
+      if (t < 0.25) {
+        t = 1 - t / 0.25;
+      } else {
+        t = (t - 0.25) / 0.75;
+      }
+      let offs_toward = easeIn(1 - t, 2) * 0.45 * HDIM;
+      v3copy(pos_temp, draw_pos);
+      v2addScale(pos_temp, pos_temp, billboardBiasViewVec(), -offs_toward);
+      draw_pos = pos_temp;
     }
   }
   let force_alpha = false;
@@ -320,12 +355,15 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     shader_type = ShaderType.SpriteHybridFragment;
     sprite = sprite_hybrid;
   }
+  let uvs = (sprite.uidata!.rects as ROVec4[])[frame];
+  if (hflip) {
+    uvs = v4set(uvs_temp, uvs[2], uvs[1], uvs[0], uvs[3]);
+  }
   let shader = crawlerRenderGetShader(shader_type);
   let aspect = sprite.uidata && sprite.uidata.aspect ? sprite.uidata.aspect[frame] : 1;
   sprite.draw3D({
     pos: draw_pos,
     offs: v2scale(offs_temp, offs_temp, DIM),
-    frame,
     color,
     size: [hscale * DIM * aspect, vscale * DIM],
     bucket: ent.drawable_sprite_opts.do_alpha === false && !force_alpha ? BUCKET_OPAQUE : BUCKET_ALPHA,
@@ -333,6 +371,7 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
     shader,
     shader_params,
+    uvs,
   });
 
   if (sprite_shadow) {
@@ -608,6 +647,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         const FLOATER_TIME = 750; // not including fade
         const FLOATER_FADE = 250;
         const BLINK_TIME = 250;
+        let do_blink = floater.msg !== 'MISS';
         let alpha = 1;
         if (elapsed > FLOATER_TIME) {
           alpha = 1 - (elapsed - FLOATER_TIME) / FLOATER_FADE;
@@ -616,7 +656,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
             continue;
           }
         }
-        if (elapsed < BLINK_TIME) {
+        if (elapsed < BLINK_TIME && do_blink) {
           let p = elapsed / BLINK_TIME;
           if (p < blink) {
             blink = p;
@@ -652,7 +692,6 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       color: color_temp,
       use_near: ent_set === SPLIT_NEAR,
     });
-
   }
 
   opaqueDraw();
