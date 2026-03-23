@@ -14,12 +14,22 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/png" sizes="48x48" href="favicon.png">
 
-    <script>
+    <script>/* eslint-disable */
+    (function() {
       window.time_load_start = Date.now();
       // Platform
       window.conf_platform = window.conf_platform || '#{PLATFORM}';
+
+      var discordHostSuffix = 'discordsays.com';
+      var currentHost = window.location.host;
+      var isDiscord = currentHost.indexOf(discordHostSuffix, currentHost.length - discordHostSuffix.length) !== -1;
+      if (isDiscord) {
+        window.conf_platform = 'discord';
+      }
+
       // Environment
       window.conf_env = '#{ENV}';
+    }());
     </script>
 
     <link rel="stylesheet" type="text/css" href="main.css">

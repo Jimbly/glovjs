@@ -56,7 +56,7 @@ module.exports = function (config) {
     name: 'itch',
     defines: {
       ...config.default_defines,
-      PLATFORM: 'web',
+      PLATFORM: 'itch',
     },
     zip: true,
   }];
