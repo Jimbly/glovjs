@@ -117,6 +117,10 @@ export interface EntityCrawlerClient extends EntityBaseClient {
   onDeleteSub?: (param: EntityOnDeleteSubParam) => void;
   triggerAnimation?: (anim: string) => void;
 
+  draw_cb?: (param: {
+    pos: ROVec3;
+  }) => void;
+
   // On prototype properties:
   do_split: boolean;
   is_player: boolean;

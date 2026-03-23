@@ -352,6 +352,12 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
       shader_params,
     });
   }
+
+  if (ent.draw_cb) {
+    ent.draw_cb({
+      pos: draw_pos,
+    });
+  }
 }
 
 export function drawableSpineDraw2D(this: EntityDrawableSpine, param: EntityDraw2DOpts): void {
