@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { alphaDraw, opaqueDraw } from 'glov/client/draw_list';
-import { BUCKET_ALPHA, BUCKET_OPAQUE, FACE_XY } from 'glov/client/dyn_geom';
+import { BUCKET_ALPHA, BUCKET_OPAQUE, FACE_CUSTOM, FACE_XY } from 'glov/client/dyn_geom';
 import {
   getFrameIndex,
   getFrameTimestamp,
@@ -44,6 +44,7 @@ import {
   v2distSq,
   v2scale,
   v2set,
+  v3copy,
   v3set,
   v4copy,
   v4set,
@@ -51,6 +52,8 @@ import {
   vec2,
   vec3,
   vec4,
+  xaxis,
+  yaxis,
 } from 'glov/common/vmath';
 import {
   billboardBias,
@@ -126,6 +129,12 @@ export type DrawableSpriteOpts = {
     period: number;
     easing?: number;
   }[];
+  shadow?: {
+    atlas: string;
+    name: string;
+    scale?: number;
+  };
+  sprite_shadow?: Sprite; // assigned at load time
 };
 
 export type DrawableSpriteState = {
@@ -137,6 +146,7 @@ export type DrawableSpriteState = {
   sprite: Sprite;
   sprite_near?: Sprite;
   sprite_hybrid?: Sprite;
+  sprite_shadow?: Sprite;
 };
 
 export type DrawableSpineOpts = {
@@ -208,6 +218,7 @@ export function drawableSpriteDraw2D(this: EntityDrawableSprite, param: EntityDr
 
 let offs_temp = vec2();
 let color_temp2 = vec4();
+let draw_pos_temp2 = vec3();
 export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityDrawSubOpts): void {
   let ent = this;
   let frame = ent.updateAnim(param.dt);
@@ -217,7 +228,7 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     draw_pos,
     color,
   } = param;
-  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid, anim_offs } = ent.drawable_sprite_state;
+  let { grow_at, grow_time, sprite, sprite_near, sprite_hybrid, anim_offs, sprite_shadow } = ent.drawable_sprite_state;
   let { scale, simple_anim } = ent.drawable_sprite_opts;
   if (grow_at) {
     assert(typeof grow_time === 'number');
@@ -317,6 +328,28 @@ export function drawableSpriteDrawSub(this: EntityDrawableSprite, param: EntityD
     shader,
     shader_params,
   });
+
+  if (sprite_shadow) {
+    shader = crawlerRenderGetShader(ShaderType.SpriteFragment);
+    aspect = sprite_shadow.uidata && sprite_shadow.uidata.aspect ? sprite_shadow.uidata.aspect[frame] : 1;
+    v3copy(draw_pos_temp2, draw_pos);
+    draw_pos_temp2[2] += 0.05;
+    let shadow_scale = ent.drawable_sprite_opts.shadow!.scale || scale;
+    sprite_shadow.draw3D({
+      pos: draw_pos_temp2,
+      //offs: v2scale(offs_temp, offs_temp, DIM),
+      frame,
+      color,
+      size: [DIM * aspect * shadow_scale, DIM * shadow_scale],
+      bucket: BUCKET_OPAQUE,
+      facing: FACE_CUSTOM,
+      face_right: yaxis,
+      face_down: xaxis,
+      vshader: crawlerRenderGetShader(ShaderType.SpriteVertex),
+      shader,
+      shader_params,
+    });
+  }
 }
 
 export function drawableSpineDraw2D(this: EntityDrawableSpine, param: EntityDraw2DOpts): void {
