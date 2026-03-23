@@ -593,16 +593,6 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
     draw_pos_temp[1] = pos[1];
     draw_pos_temp[2] = level.getInterpolatedHeight(pos[0], pos[1]);
 
-    ent.draw({
-      dt,
-      game_state,
-      pos: draw_pos_temp,
-      zoffs,
-      angle: pos[2],
-      color: color_temp,
-      use_near: ent_set === SPLIT_NEAR,
-    });
-
     if (ent.floaters && !crawlerRenderViewportGet().rot) {
       // TODO: do floaters in 3D for all entities
       let is_in_front = ent.id === ent_in_front;
@@ -639,6 +629,17 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         v3set(color_temp, blink, blink, blink);
       }
     }
+
+    ent.draw({
+      dt,
+      game_state,
+      pos: draw_pos_temp,
+      zoffs,
+      angle: pos[2],
+      color: color_temp,
+      use_near: ent_set === SPLIT_NEAR,
+    });
+
   }
 
   opaqueDraw();
