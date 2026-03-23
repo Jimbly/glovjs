@@ -97,8 +97,22 @@ mediump vec4 crawlerShader(vec4 color) {
     discard;
 
   #ifdef TINTED
+  #if defined(SSAA4X)
+  vec4 texture1a = texture2D(tex1, interp_texcoord.xy);
+  vec4 texture1b = texture2D(tex1, interp_texcoord.xy + dx);
+  vec4 texture1c = texture2D(tex1, interp_texcoord.xy + dy);
+  vec4 texture1d = texture2D(tex1, interp_texcoord.xy + dx + dy);
+  texture0a.rgb *= mix(mix(mix(unit_vec, tint2, texture1a.b), tint1, texture1a.g), tint0, texture1a.r);
+  texture0b.rgb *= mix(mix(mix(unit_vec, tint2, texture1b.b), tint1, texture1b.g), tint0, texture1b.r);
+  texture0c.rgb *= mix(mix(mix(unit_vec, tint2, texture1c.b), tint1, texture1c.g), tint0, texture1c.r);
+  texture0d.rgb *= mix(mix(mix(unit_vec, tint2, texture1d.b), tint1, texture1d.g), tint0, texture1d.r);
+  texture0.rgb = 0.25 * (texture0a.rgb + texture0b.rgb + texture0c.rgb + texture0d.rgb);
+  albedo = color * texture0;
+  #else
   vec4 texture1 = texture2D(tex1, interp_texcoord.xy, lod_bias.x); // lod bias of -1 only if pixely=strict mode?
   albedo.rgb *= mix(mix(mix(unit_vec, tint2, texture1.b), tint1, texture1.g), tint0, texture1.r);
+  #endif
+
   #endif
 
   vec4 ret = albedo;
