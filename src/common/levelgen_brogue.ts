@@ -1371,6 +1371,11 @@ function connectLevelBrogue(generator: LevelGenerator, floor_id: number, seed: s
       let dir = opens[ii];
       level.setWall(pair[0], pair[1], dir, wall_descs[WallType.SOLID1]);
     }
+    // do not spawn monsters where the stairs dumps the player
+    no_monsters[next_xx + next_yy * w] = true;
+    // and do not allow monsters to wander directly in front of the stairs
+    next_cell.props = next_cell.props || {};
+    next_cell.props.noai = '1';
     return [pair[0], pair[1], rot];
   }
   // TODO: use cell_desc.special_pos to populate level.special_pos
