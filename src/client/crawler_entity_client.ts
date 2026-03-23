@@ -98,6 +98,7 @@ export type EntityOnDeleteSubParam = {
 export type Floater = {
   start: number;
   msg: string;
+  blink_good?: boolean;
 };
 
 

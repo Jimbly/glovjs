@@ -601,6 +601,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       // TODO: do floaters in 3D for all entities
       let is_in_front = ent.id === ent_in_front;
       let blink = 1;
+      let blink_good: boolean | undefined;
       for (let ii = ent.floaters.length - 1; ii >= 0; --ii) {
         let floater = ent.floaters[ii];
         let elapsed = getFrameTimestamp() - floater.start;
@@ -616,21 +617,29 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
           }
         }
         if (elapsed < BLINK_TIME) {
-          blink = min(blink, elapsed / BLINK_TIME);
+          let p = elapsed / BLINK_TIME;
+          if (p < blink) {
+            blink = p;
+            blink_good = floater.blink_good;
+          }
         }
-        if (is_in_front && !crawlerController().controllerIsAnimating()) {
+        if (is_in_front && !crawlerController().controllerIsAnimating() && floater.msg) {
           let { x, y, w, h } = crawlerRenderViewportGet();
           let float = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 20;
-          font.drawSizedAligned(fontStyleAlpha(style_text, alpha),
+          font.drawSizedAlignedWrapped(fontStyleAlpha(style_text, alpha),
             x,
-            y + h/2 - float, Z.FLOATERS,
+            y + h/2 - float, Z.FLOATERS, 0,
             uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
             w, 0, floater.msg);
         }
       }
       if (blink < 1) {
         blink = easeOut(blink, 2);
-        v3set(color_temp, blink, blink, blink);
+        if (blink_good) {
+          v3set(color_temp, blink, 2 - blink, blink);
+        } else {
+          v3set(color_temp, blink, blink, blink);
+        }
       }
     }
 
