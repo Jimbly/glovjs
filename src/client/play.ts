@@ -701,7 +701,7 @@ export function play(dt: number): void {
   }
   crawlerPrepAndRenderFrame();
 
-  if (!loading_level && !buildModeActive()) {
+  if (!loading_level && !buildModeActive() && game_state.floor_id >= 0) {
     let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
     aiDoFloor({

@@ -1,5 +1,8 @@
-
-import * as engine from 'glov/client/engine';
+import {
+  DEBUG,
+  debugDefineIsSet,
+  setState,
+} from 'glov/client/engine';
 import { localStorageGetJSON } from 'glov/client/local_storage';
 import { netSubs } from 'glov/client/net';
 import {
@@ -11,6 +14,9 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import * as urlhash from 'glov/client/urlhash';
+
+export const DEMO_AUTO_START = debugDefineIsSet('CHARCREATE') || false; // moraff demo
+
 import { createAccountUI } from './account_ui';
 import {
   crawlerCommStart,
@@ -26,11 +32,18 @@ import * as main from './main';
 import { tickMusic } from './music';
 
 
+const ALLOW_ONLINE = true;
+
 const { max } = Math;
 
 type AccountUI = ReturnType<typeof createAccountUI>;
 
 let account_ui: AccountUI;
+
+function startNewGame(slot: number): void {
+  crawlerPlayWantNewGame();
+  urlhash.go(`?c=local&slot=${slot}`);
+}
 
 function title(dt: number): void {
   main.chat_ui.run({
@@ -40,7 +53,7 @@ function title(dt: number): void {
   tickMusic(null);
 
   let y = 40;
-  if (engine.DEBUG || true) {
+  if (ALLOW_ONLINE || DEBUG) {
     let next_y = account_ui.showLogin({
       x: 10,
       y: 10,
@@ -79,22 +92,20 @@ function title(dt: number): void {
           text: 'This will overwrite your existing game when you next save.  Continue?',
           buttons: {
             yes: function () {
-              crawlerPlayWantNewGame();
-              urlhash.go(`?c=local&slot=${slot}`);
+              startNewGame(slot);
             },
             no: null,
           }
         });
       } else {
-        crawlerPlayWantNewGame();
-        urlhash.go(`?c=local&slot=${slot}`);
+        startNewGame(slot);
       }
     }
     x += uiButtonWidth() + 2;
   }
   x = 10;
   y += uiButtonHeight() * 3 + 6;
-  if (netSubs().loggedIn()) {
+  if (ALLOW_ONLINE && netSubs().loggedIn()) {
     if (buttonText({
       x, y, text: 'Online Test',
     })) {
@@ -109,8 +120,12 @@ function title(dt: number): void {
 
 export function titleInit(dt: number): void {
   account_ui = account_ui || createAccountUI();
-  engine.setState(title);
+  setState(title);
   title(dt);
+
+  if (DEMO_AUTO_START) {
+    startNewGame(1);
+  }
 }
 
 export function titleStartup(): void {
