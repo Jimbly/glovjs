@@ -8,7 +8,7 @@ import {
   DataObject,
   NetErrorCallback,
 } from 'glov/common/types.js';
-import type { ROVec2 } from 'glov/common/vmath';
+import type { ROVec2, ROVec3 } from 'glov/common/vmath';
 import { EntityCrawlerDataCommon, entSamePos } from '../common/crawler_entity_common';
 import type { JSVec3 } from '../common/crawler_state';
 import {
@@ -19,6 +19,7 @@ import {
   EntityDraw2DOpts,
   EntityDrawOpts,
   EntityOnDeleteSubParam,
+  entityPosManager,
   Floater,
 } from './crawler_entity_client';
 
@@ -29,7 +30,7 @@ type Entity = EntityDemoClient;
 export function entitiesAt(cem: ClientEntityManagerInterface<Entity>,
   pos: [number, number] | ROVec2,
   floor_id: number,
-  skip_fading_out:boolean
+  skip_fading_out: boolean
 ): Entity[] {
   return cem.entitiesFind((ent) => entSamePos(ent, pos) && ent.data.floor === floor_id, skip_fading_out);
 }
@@ -59,6 +60,11 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
 
   floaters: Floater[];
   delete_reason?: string;
+
+  draw_cb?: (param: {
+    pos: ROVec3;
+  }) => void;
+  draw_cb_frame = 0;
 
   declare onDelete: (reason: string) => number;
   declare draw2D: (param: EntityDraw2DOpts) => void;
@@ -94,11 +100,13 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
     payload?: unknown,
     resp_func?: NetErrorCallback,
   ): void {
-    this.actionSend({
+    this.applyBatchUpdate({
+      field: 'seq_ai_update',
       action_id,
       data_assignments,
       payload,
     }, resp_func);
+    entityPosManager().otherEntityChanged(this.id);
   }
   aiLastUpdatedBySomeoneElse(): boolean {
     return false;
@@ -109,7 +117,7 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
   }
 
   isAlive(): boolean {
-    return this.data.stats ? this.data.stats.hp > 0 : true;
+    return this.data.stats ? this.getData('stats.hp', 0) > 0 : true;
   }
 
   isEnemy(): boolean {
@@ -120,6 +128,9 @@ export class EntityDemoClient extends EntityBaseClient implements EntityCrawlerC
   }
 
   onCreate(is_initial: boolean): number {
+    if (!this.isAlive() && this.triggerAnimation) {
+      this.triggerAnimation('death');
+    }
     return is_initial ? 0 : 250;
   }
 }

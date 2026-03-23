@@ -107,7 +107,7 @@ import {
   shuffleArray,
 } from 'glov/common/rand_alea';
 import { ridx } from 'glov/common/util';
-import { JSVec2, JSVec3 } from 'glov/common/vmath';
+import { JSVec3 } from 'glov/common/vmath';
 import {
   CellDesc,
   crawlerGetCellDesc,

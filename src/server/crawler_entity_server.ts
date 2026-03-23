@@ -19,6 +19,7 @@ import { JSVec3 } from '../common/crawler_state';
 type VisData = Partial<Record<number, string>>;
 export type EntityCrawlerDataServer = EntityCrawlerDataCommon & {
   seq_player_move: string;
+  seq_ai_update: string;
   vis_data?: VisData;
 };
 
@@ -100,6 +101,7 @@ export function crawlerEntityTraitsServerStartup<TBaseClass extends EntityCrawle
       costume: { encoding: EntityFieldEncoding.Int },
       stats: { sub: EntityFieldSub.Record, encoding: EntityFieldEncoding.Int },
       seq_player_move: { encoding: EntityFieldEncoding.AnsiString },
+      seq_ai_update: { encoding: EntityFieldEncoding.AnsiString },
       vis_data: { server_only: true },
     });
 

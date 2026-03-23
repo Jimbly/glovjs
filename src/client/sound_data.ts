@@ -23,5 +23,4 @@ export const SOUND_DATA = {
   //   file: 'footstep/metal/metal_02',
   //   volume: 1,
   // }],
-};
 } satisfies Partial<Record<string, UISoundID | string | string[] | UISoundID[]>>;
