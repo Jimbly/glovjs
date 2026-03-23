@@ -238,7 +238,7 @@ export function aiTraitsClientStartup(): void {
 
         // in range?
         let pos = this.getData<JSVec3>('pos')!;
-        let player_pos = myEnt().data.pos;
+        let player_pos = myEnt().getData<JSVec3>('pos')!;
         let floor_id = this.getData<number>('floor');
         assert(typeof floor_id === 'number');
         let level = game_state.levels[floor_id];
@@ -367,7 +367,7 @@ function foeNear<T extends Entity>(game_state: CrawlerState, ent: T, script_api:
   // search, needs game_state, returns list of foes
   let ents: T[] = entitiesAdjacentTo(game_state,
     ent.entity_manager as unknown as EntityManager<T>,
-    ent.data.floor, ent.data.pos, script_api);
+    ent.data.floor, ent.getData('pos')!, script_api);
   ents = ents.filter(isLivingPlayer);
   if (ents.length) {
     return randomFrom(ents);
