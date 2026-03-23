@@ -25,6 +25,8 @@
     "cache": "node build build.prod.png client_autosound --cache-rebuild",
     "build_watch": "nodemon -w build -- build build --watch",
     "prod": "node build build && node dist/game/build.prod/server/index.js --master",
+    "depixel": "node build/depixel",
+    "depixel_watch": "nodemon -w build -- build/depixel --watch --verbose",
     "test_watch": "nodemon -w build -- build test --watch",
     "test": "node build lint test"
   },
@@ -70,6 +72,7 @@
     "babelify": "^10.0.0",
     "browser-sync": "^2.26.7",
     "console-api": "0.0.6",
+    "depixel": "^1.0.5",
     "eslint": "^9.22.0",
     "eslint-plugin-html": "^8.1.2",
     "eslint-plugin-import": "^2.31.0",

@@ -18,6 +18,9 @@ export interface EntityCrawlerDataCommon extends EntityBaseDataCommon {
   floor: number;
   costume?: number; // For drawablesprite with tint colors
   stats: { hp: number };
+
+  // AI state
+  seq_ai_update?: string;
 }
 
 export interface EntityCrawlerCommon extends EntityBaseCommon {

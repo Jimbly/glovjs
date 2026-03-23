@@ -61,4 +61,5 @@ module.exports = function (config) {
     zip: true,
   }];
 
+  config.autoatlas_input.push('client/atlases-autogen/**/*.png');
 };

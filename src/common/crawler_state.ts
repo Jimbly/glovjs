@@ -750,7 +750,21 @@ export class CrawlerLevel {
     return Boolean(wall_desc.is_secret);
   }
 
-  simpleVisCheck(pos0: ROVec2, pos1: ROVec2, script_api: CrawlerScriptAPI): boolean {
+  visBlockNormal(x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI): boolean {
+    return Boolean(this.wallsBlock([x, y], dir, script_api) & BLOCK_VIS);
+  }
+  visBlockSeeThroughDoors(x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI): boolean {
+    return (this.wallsBlock([x, y], dir, script_api) & (BLOCK_VIS|BLOCK_MOVE)) === (BLOCK_VIS|BLOCK_MOVE);
+  }
+
+  simpleVisCheck(
+    pos0: ROVec2,
+    pos1: ROVec2,
+    script_api: CrawlerScriptAPI,
+    vis_block?: 'visBlockNormal' | 'visBlockSeeThroughDoors'
+  ): boolean {
+    vis_block = vis_block || 'visBlockNormal';
+    let check = this[vis_block].bind(this);
     let max_steps = 100;
     let ix = pos0[0];
     let x0 = ix + 0.5;
@@ -773,13 +787,13 @@ export class CrawlerLevel {
       if (abs(xtime - ytime) < 0.0001) {
         // do both
         if (
-          !(this.wallsBlock([ix, iy], xdir, script_api) & BLOCK_VIS) &&
-          !(this.wallsBlock([ix + signdx, iy], ydir, script_api) & BLOCK_VIS)
+          !check(ix, iy, xdir, script_api) &&
+          !check(ix + signdx, iy, ydir, script_api)
         ) {
           // good
         } else if (
-          !(this.wallsBlock([ix, iy], ydir, script_api) & BLOCK_VIS) &&
-          !(this.wallsBlock([ix, iy + signdy], xdir, script_api) & BLOCK_VIS)
+          !check(ix, iy, ydir, script_api) &&
+          !check(ix, iy + signdy, xdir, script_api)
         ) {
           // good
         } else {
@@ -789,13 +803,13 @@ export class CrawlerLevel {
         iy += signdy;
       } else if (xtime < ytime) {
         // do x
-        if (this.wallsBlock([ix, iy], xdir, script_api) & BLOCK_VIS) {
+        if (check(ix, iy, xdir, script_api)) {
           return false;
         }
         ix += signdx;
       } else {
         // do y
-        if (this.wallsBlock([ix, iy], ydir, script_api) & BLOCK_VIS) {
+        if (check(ix, iy, ydir, script_api)) {
           return false;
         }
         iy += signdy;

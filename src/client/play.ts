@@ -704,8 +704,18 @@ export function play(dt: number): void {
   if (!loading_level && !buildModeActive()) {
     let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
-    aiDoFloor(game_state.floor_id, game_state, entityManager(), engine.defines,
-      settings.ai_pause || engine.defines.LEVEL_GEN || overlay_menu_up, script_api);
+    aiDoFloor({
+      floor_id: game_state.floor_id,
+      game_state,
+      entity_manager: entityManager(),
+      defines: engine.defines,
+      ai_pause: Boolean(settings.ai_pause || engine.defines.LEVEL_GEN || overlay_menu_up),
+      script_api,
+      distance_limit: Infinity,
+      payload: {
+        reason: 'realtime',
+      },
+    });
   }
 
   crawlerPlayBottomOfFrame();

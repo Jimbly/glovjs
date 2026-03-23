@@ -147,6 +147,8 @@ declare module 'glov/client/settings' {
   export let use_fbos: 0 | 1;
 }
 
+export type TurnBasedStepReason = 'move' | 'attack' | 'wait' | 'realtime'; // app could define/want others...
+
 let supports_frag_depth = false;
 let viewport_sprite: Sprite;
 

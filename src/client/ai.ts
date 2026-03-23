@@ -6,8 +6,10 @@ import { getFrameTimestamp } from 'glov/client/engine';
 import { EntityManager } from 'glov/common/entity_base_common';
 import { sign } from 'glov/common/util';
 import {
+  ROVec2,
   v2copy,
   v2dist,
+  v2manhattanDist,
   v3copy,
   Vec2,
 } from 'glov/common/vmath';
@@ -26,6 +28,7 @@ import {
   JSVec3,
 } from '../common/crawler_state';
 import { crawlerEntFactory } from './crawler_entity_client';
+import { TurnBasedStepReason } from './crawler_play';
 import { EntityClient } from './entity_game_client';
 import { myEnt } from './play';
 import { statusSet } from './status';
@@ -33,6 +36,10 @@ import { statusSet } from './status';
 const { abs, floor, random } = Math;
 
 type Entity = EntityClient;
+
+export type AIStepPayload = {
+  reason: TurnBasedStepReason;
+};
 
 function randomFrom<T>(arr: T[]): T {
   return arr[floor(random() * arr.length)];
@@ -52,7 +59,7 @@ export function entitiesAdjacentTo<T extends Entity>(
   game_state: CrawlerState,
   entity_manager: EntityManager<T>,
   floor_id: number,
-  pos: Vec2,
+  pos: ROVec2,
   script_api: CrawlerScriptAPI,
 ): T[] {
   let ret: T[] = [];
@@ -82,7 +89,7 @@ export type WanderState = {
 export type EntityWander = Entity & {
   wander_state: WanderState;
   wander_opts: WanderOpts;
-  aiWander: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
+  aiWander: (game_state: CrawlerState, script_api: CrawlerScriptAPI, payload: AIStepPayload) => boolean;
 };
 
 export type PatrolOpts = Record<never, never>;
@@ -92,20 +99,22 @@ export type PatrolState = {
 export type EntityPatrol = Entity & {
   patrol_state: PatrolState;
   patrol_opts: PatrolOpts;
-  aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
+  aiPatrol: (game_state: CrawlerState, script_api: CrawlerScriptAPI, payload: AIStepPayload) => boolean;
 };
 
 export type HunterOpts = {
   radius: number;
+  see_through_walls: boolean;
 };
 export type HunterState = {
   has_target: boolean;
   target_pos: JSVec3;
+  preferred_axis?: 'x' | 'y'; // note: not serialized
 };
 export type EntityHunter = Entity & {
   hunter_state: HunterState;
   hunter_opts: HunterOpts;
-  aiHunt: (game_state: CrawlerState, script_api: CrawlerScriptAPI) => boolean;
+  aiHunt: (game_state: CrawlerState, script_api: CrawlerScriptAPI, payload: AIStepPayload) => boolean;
 };
 
 
@@ -121,7 +130,19 @@ export function aiTraitsClientStartup(): void {
   let ent_factory = crawlerEntFactory<Entity>();
   ent_factory.registerTrait<WanderOpts, WanderState>('wander', {
     methods: {
-      aiWander: function (this: EntityWander, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
+      aiWander: function (
+        this: EntityWander,
+        game_state: CrawlerState,
+        script_api: CrawlerScriptAPI,
+        payload: AIStepPayload,
+      ): boolean {
+        profilerStartFunc();
+        if (random() < 0.25) {
+          // just do not wander 1 in 4 times
+          // TODO: app/entity override on this parameter?
+          profilerStopFunc();
+          return false;
+        }
         let pos = this.getData<JSVec3>('pos');
         assert(pos);
         let floor_id = this.getData<number>('floor');
@@ -147,6 +168,7 @@ export function aiTraitsClientStartup(): void {
         if (level.wallsBlock(pos, dir, script_api) & BLOCK_MOVE ||
           !was_from_pref && level.isSecretDoor(pos, dir, script_api)
         ) {
+          profilerStopFunc();
           return false;
         }
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
@@ -154,14 +176,17 @@ export function aiTraitsClientStartup(): void {
           level.getCell(new_pos[0], new_pos[1])?.events?.length
         ) {
           // avoid going onto events (e.g. stairs in/out)
+          profilerStopFunc();
           return false;
         }
         if (entitiesAt(this.entity_manager, new_pos, floor_id, true).length) {
+          profilerStopFunc();
           return false;
         }
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
         }, undefined, ignoreErrors);
+        profilerStopFunc();
         return true;
       },
     },
@@ -181,7 +206,13 @@ export function aiTraitsClientStartup(): void {
       ai_move_rand_time: 0,
     },
     methods: {
-      aiPatrol: function (this: EntityPatrol, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
+      aiPatrol: function (
+        this: EntityPatrol,
+        game_state: CrawlerState,
+        script_api: CrawlerScriptAPI,
+        payload: AIStepPayload,
+      ): boolean {
+        profilerStartFunc();
         let pos = this.getData<JSVec3>('pos')!;
         let last_pos = this.patrol_state.last_pos;
         let floor_id = this.getData<number>('floor');
@@ -196,6 +227,7 @@ export function aiTraitsClientStartup(): void {
           });
         }
         if (!paths.length) {
+          profilerStopFunc();
           return false;
         }
 
@@ -209,6 +241,7 @@ export function aiTraitsClientStartup(): void {
         let ents = entitiesAt(this.entity_manager, new_pos, floor_id, true);
         ents = ents.filter(isEnemy);
         if (ents.length) {
+          profilerStopFunc();
           return false;
         }
         v3copy(this.patrol_state.last_pos, pos);
@@ -216,6 +249,7 @@ export function aiTraitsClientStartup(): void {
           pos: new_pos,
           last_pos: pos,
         }, undefined, ignoreErrors);
+        profilerStopFunc();
         return true;
       },
     },
@@ -235,9 +269,16 @@ export function aiTraitsClientStartup(): void {
     },
     default_opts: {
       radius: 3,
+      see_through_walls: false,
     },
     methods: {
-      aiHunt: function (this: EntityHunter, game_state: CrawlerState, script_api: CrawlerScriptAPI): boolean {
+      aiHunt: function (
+        this: EntityHunter,
+        game_state: CrawlerState,
+        script_api: CrawlerScriptAPI,
+        payload: AIStepPayload,
+      ): boolean {
+        profilerStartFunc();
         // if they can see the player, update target pos to that pos
         // if they have a target pos, attempt to move towards it
         // if there's no clear path to target, give up
@@ -251,10 +292,13 @@ export function aiTraitsClientStartup(): void {
         let distance = v2dist(player_pos, pos);
         // let volume = lerp(min(distance/5, 1), 1, 0.25);
         let can_see = false;
-        if (distance <= this.hunter_opts.radius) {
+        const { radius, see_through_walls } = this.hunter_opts;
+        if (distance <= radius) {
 
           // can see?
-          if (level.simpleVisCheck(pos, player_pos, script_api)) {
+          if (level.simpleVisCheck(pos, player_pos, script_api,
+            see_through_walls ? 'visBlockSeeThroughDoors' : 'visBlockNormal')
+          ) {
             if (!this.hunter_state.has_target) {
               if (distance) {
                 if (engine.defines.HUNTER) {
@@ -274,6 +318,7 @@ export function aiTraitsClientStartup(): void {
         }
 
         if (!this.hunter_state.has_target) {
+          profilerStopFunc();
           return false;
         }
 
@@ -302,6 +347,7 @@ export function aiTraitsClientStartup(): void {
             }
           }
           this.hunter_state.has_target = false;
+          profilerStopFunc();
           return ret;
         }
         let xdir: DirType;
@@ -348,6 +394,7 @@ export function aiTraitsClientStartup(): void {
             // playUISound('hunter_lost', volume);
             this.hunter_state.has_target = false;
           }
+          profilerStopFunc();
           return true;
         }
 
@@ -373,9 +420,20 @@ export function aiTraitsClientStartup(): void {
           if (engine.defines.HUNTER) {
             statusSet(`edbg${this.id}`, `${this.id}: Move ent blocked`).counter = 500;
           }
+          profilerStopFunc();
           return false;
         }
         let do_x = random() * tot < abs(dx);
+        if (dx && dy) {
+          if (tot === 2 && !this.hunter_state.preferred_axis) {
+            // we're diagonal from them, they were probably in front of us a moment ago,
+            //   choose a preferred axis
+            this.hunter_state.preferred_axis = random() < 0.5 ? 'x' : 'y';
+          }
+          if (this.hunter_state.preferred_axis) {
+            do_x = this.hunter_state.preferred_axis === 'x';
+          } // else, we've never been close, just randomize based on major distance
+        }
         let dir = do_x ? xdir! : ydir!;
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
         // if (engine.defines.HUNTER) {
@@ -385,6 +443,7 @@ export function aiTraitsClientStartup(): void {
           pos: new_pos,
           last_pos: pos,
         }, undefined, ignoreErrors);
+        profilerStopFunc();
         return true;
       },
     },
@@ -420,43 +479,76 @@ function aiDoEnemy(
   ent: Entity,
   defines: Partial<Record<string, true>>,
   script_api: CrawlerScriptAPI,
+  payload: AIStepPayload,
 ): boolean {
+  profilerStartFunc();
   let target_ent = foeNear(game_state, ent, script_api);
   if (defines?.PEACE || defines?.AIPEACE) {
     target_ent = null;
   }
   if (!target_ent) {
+    profilerStopFunc();
     return false;
   }
 
+  // enemy turn-based attack logic goes here
+
+  profilerStopFunc();
   return true;
 }
 
 
-export function aiDoFloor(
-  floor_id: number,
-  game_state: CrawlerState,
-  entity_manager: EntityManager<Entity>,
-  defines: Partial<Record<string, true>>,
-  ai_pause: boolean,
-  script_api: CrawlerScriptAPI,
-): void {
+export function aiDoFloor(params: {
+  floor_id: number;
+  game_state: CrawlerState;
+  entity_manager: EntityManager<Entity>;
+  defines: Partial<Record<string, true>>;
+  ai_pause: boolean;
+  script_api: CrawlerScriptAPI;
+  filter?: (ent: Entity) => boolean;
+  distance_limit: number;
+  payload: AIStepPayload;
+}): void {
+  const {
+    floor_id,
+    game_state,
+    entity_manager,
+    defines,
+    ai_pause,
+    script_api,
+    filter,
+    distance_limit,
+    payload,
+  } = params;
   if (ai_pause) {
     return;
   }
   let frame_timestamp = getFrameTimestamp();
   let entities = entity_manager.entities;
   let level = game_state.levels[floor_id];
+  if (level.getProp('aipause')) {
+    return;
+  }
+  profilerStartFunc();
   script_api.setLevel(level);
+  let player_pos = myEnt().getData('pos')! as ROVec2;
   for (let ent_id in entities) {
     let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out || !ent.isAlive()) {
+    if (ent.data.floor !== floor_id || ent.fading_out || ent.is_player || !ent.isAlive()) {
       // not on current floor
       continue;
     }
 
+    if (v2manhattanDist(ent.data.pos, player_pos) > distance_limit) {
+      continue;
+    }
+
+    if (filter && !filter(ent)) {
+      continue;
+    }
+
     let no_move = false;
-    if (ent.is_enemy && aiDoEnemy(game_state, ent, defines, script_api)) {
+    if (ent.is_enemy && aiDoEnemy(game_state, ent, defines, script_api, payload)) {
       // not wandering/patrolling/etc
       no_move = true;
     }
@@ -474,17 +566,18 @@ export function aiDoFloor(
     if (!no_move) {
       let moved = false;
       if (!moved && (ent as EntityHunter).aiHunt) {
-        moved = (ent as EntityHunter).aiHunt(game_state, script_api);
+        moved = (ent as EntityHunter).aiHunt(game_state, script_api, payload);
       }
       if (!moved && (ent as EntityPatrol).aiPatrol) {
-        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api);
+        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api, payload);
       }
       if (!moved && (ent as EntityWander).aiWander) {
-        moved = (ent as EntityWander).aiWander(game_state, script_api);
+        moved = (ent as EntityWander).aiWander(game_state, script_api, payload);
       }
     }
     ent.aiResetMoveTime(false);
   }
+  profilerStopFunc();
 }
 
 export function aiStepFloor(params: {
@@ -495,18 +588,39 @@ export function aiStepFloor(params: {
   ai_pause: boolean;
   script_api: CrawlerScriptAPI;
   filter?: (ent: Entity) => boolean;
+  distance_limit: number;
+  payload: AIStepPayload;
 }): void {
-  const { floor_id, game_state, entity_manager, defines, ai_pause, script_api, filter } = params;
+  const {
+    floor_id,
+    game_state,
+    entity_manager,
+    defines,
+    ai_pause,
+    script_api,
+    filter,
+    distance_limit,
+    payload,
+  } = params;
   if (ai_pause) {
     return;
   }
   let entities = entity_manager.entities;
   let level = game_state.levels[floor_id];
+  if (level.getProp('aipause')) {
+    return;
+  }
+  profilerStartFunc();
   script_api.setLevel(level);
+  let player_pos = myEnt().getData('pos')! as ROVec2;
   for (let ent_id in entities) {
     let ent = entities[ent_id]!;
-    if (ent.data.floor !== floor_id || ent.fading_out || !ent.isAlive()) {
+    if (ent.data.floor !== floor_id || ent.fading_out || ent.is_player || !ent.isAlive()) {
       // not on current floor
+      continue;
+    }
+
+    if (v2manhattanDist(ent.data.pos, player_pos) > distance_limit) {
       continue;
     }
 
@@ -515,7 +629,7 @@ export function aiStepFloor(params: {
     }
 
     let no_move = false;
-    if (ent.is_enemy && aiDoEnemy(game_state, ent, defines, script_api)) {
+    if (ent.is_enemy && aiDoEnemy(game_state, ent, defines, script_api, payload)) {
       // not wandering/patrolling/etc
       no_move = true;
     }
@@ -523,14 +637,15 @@ export function aiStepFloor(params: {
     if (!no_move) {
       let moved = false;
       if (!moved && (ent as EntityHunter).aiHunt && !defines?.PEACE) {
-        moved = (ent as EntityHunter).aiHunt(game_state, script_api);
+        moved = (ent as EntityHunter).aiHunt(game_state, script_api, payload);
       }
       if (!moved && (ent as EntityPatrol).aiPatrol) {
-        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api);
+        moved = (ent as EntityPatrol).aiPatrol(game_state, script_api, payload);
       }
       if (!moved && (ent as EntityWander).aiWander) {
-        moved = (ent as EntityWander).aiWander(game_state, script_api);
+        moved = (ent as EntityWander).aiWander(game_state, script_api, payload);
       }
     }
   }
+  profilerStopFunc();
 }
