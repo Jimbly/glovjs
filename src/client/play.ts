@@ -44,6 +44,7 @@ import {
 } from 'glov/common/types';
 import { clamp } from 'glov/common/util';
 import {
+  JSVec3,
   Vec2,
 } from 'glov/common/vmath';
 import {
@@ -119,6 +120,7 @@ import {
 import { levelGenTest } from './level_gen_test';
 import { tickMusic } from './music';
 import { renderAppStartup } from './render_app';
+import { SOUND_DATA } from './sound_data';
 import {
   statusPush,
   statusTick,
@@ -362,6 +364,15 @@ function moveBlockDead(): boolean {
   }
 
   return true;
+}
+
+export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA): void {
+  let pos = ent.getData<JSVec3>('pos')!;
+
+  playUISound(sound_id, {
+    pos: [pos[0] + 0.5, pos[1] + 0.5, 0.5],
+    volume: 1,
+  });
 }
 
 const BUTTON_W = 26;

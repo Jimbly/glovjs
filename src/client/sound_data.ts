@@ -1,6 +1,6 @@
 import { UISoundID } from 'glov/client/ui';
 
-export const SOUND_DATA: Partial<Record<string, UISoundID | string | string[] | UISoundID[]>> = {
+export const SOUND_DATA = {
   // online multiplayer sounds, ignore these
   user_join: 'user_join',
   user_leave: 'user_leave',
@@ -24,3 +24,4 @@ export const SOUND_DATA: Partial<Record<string, UISoundID | string | string[] | 
   //   volume: 1,
   // }],
 };
+} satisfies Partial<Record<string, UISoundID | string | string[] | UISoundID[]>>;
