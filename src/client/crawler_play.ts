@@ -1136,7 +1136,7 @@ export type CrawlerChatUIParam = ChatUIRunParam & { y_bottom: number };
 let chat_ui_param: CrawlerChatUIParam;
 let allow_offline_console: boolean;
 let do_chat: boolean;
-export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
+export function crawlerPlayTopOfFrame(overlay_menu_up: boolean, but_show_chat: boolean): void {
   crawlerEntityManager().tick();
 
   let map_view = mapViewActive();
@@ -1149,7 +1149,7 @@ export function crawlerPlayTopOfFrame(overlay_menu_up: boolean): void {
 
   crawlerTurnBasedTick();
 
-  let hide_chat = overlay_menu_up || map_view || buildModeOverlayActive() || !isOnline();
+  let hide_chat = (overlay_menu_up && !but_show_chat) || map_view || buildModeOverlayActive() || !isOnline();
   do_chat = allow_offline_console || isOnline() !== OnlineMode.OFFLINE;
   if (do_chat) {
     getChatUI().run({
