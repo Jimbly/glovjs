@@ -64,7 +64,10 @@ import {
   dirMod,
 } from '../common/crawler_state';
 import {
-  aiDoFloor, aiTraitsClientStartup,
+  aiDoFloor,
+  aiStepFloor,
+  AIStepPayload,
+  aiTraitsClientStartup,
 } from './ai';
 import { blend } from './blend';
 // import './client_cmds';
@@ -109,7 +112,9 @@ import {
   crawlerSaveGame,
   crawlerScriptAPI,
   crawlerTurnBasedMovePreStart,
+  crawlerTurnBasedScheduleStep,
   getScaledFrameDt,
+  TurnBasedStepReason,
 } from './crawler_play';
 import {
   crawlerRenderViewportSet,
@@ -132,6 +137,7 @@ import {
   gameEntityTraitsClientStartup,
 } from './entity_game_client';
 import {
+  DEMO_TURN_BASED,
   game_height,
   game_width,
   MOVE_BUTTON_H,
@@ -220,6 +226,28 @@ export function myEntOptional(): Entity | undefined {
 
 function randInt(range: number): number {
   return floor(random() * range);
+}
+
+function aiStep(reason: TurnBasedStepReason): void {
+  // playUISound('button_click');
+  let game_state = crawlerGameState();
+  if (!buildModeActive()) {
+    let script_api = crawlerScriptAPI();
+    script_api.is_visited = true; // Always visited for AI
+    let payload: AIStepPayload = {
+      reason,
+    };
+    aiStepFloor({
+      floor_id: game_state.floor_id,
+      game_state,
+      entity_manager: entityManager(),
+      defines: engine.defines,
+      ai_pause: Boolean(settings.ai_pause || engine.defines.LEVEL_GEN),
+      script_api,
+      distance_limit: 9,
+      payload,
+    });
+  }
 }
 
 function drawBar(
@@ -569,7 +597,7 @@ function bumpEntityCallback(ent_id: EntityID): void {
   if (target_ent && target_ent.isAlive() && target_ent.isEnemy() && me.isAlive()) {
     addFloater(ent_id, 'POW!', '');
     attackSurgeAdd(target_ent.data.pos[0] - me.data.pos[0], target_ent.data.pos[1] - me.data.pos[1], 1);
-    // crawlerTurnBasedScheduleStep(250, 'attack');
+    crawlerTurnBasedScheduleStep(250, 'attack');
   }
 }
 
@@ -928,7 +956,7 @@ export function play(dt: number): void {
   renderSetScreenShake(screen_shake);
   crawlerPrepAndRenderFrame(false);
 
-  if (!buildModeActive() && game_state.floor_id >= 0) {
+  if (!buildModeActive() && game_state.floor_id >= 0 && !DEMO_TURN_BASED) {
     let script_api = crawlerScriptAPI();
     script_api.is_visited = true; // Always visited for AI
     aiDoFloor({
@@ -1024,6 +1052,7 @@ export function playStartup(): void {
     // on_broadcast: onBroadcast,
     play_init_online: playInitEarly,
     play_init_offline: playInitOffline,
+    turn_based_step: DEMO_TURN_BASED ? aiStep : undefined,
     offline_data: {
       new_player_data: {
         type: 'player',

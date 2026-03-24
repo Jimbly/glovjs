@@ -10,3 +10,5 @@ export const VIEWPORT_Y0 = 3;
 
 export const MOVE_BUTTON_W = 26;
 export const MOVE_BUTTON_H = MOVE_BUTTON_W;
+
+export const DEMO_TURN_BASED = false;
