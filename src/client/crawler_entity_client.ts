@@ -671,11 +671,11 @@ cmd_parse.register({
     }
     if (params.length === 2) {
       // setting a value
-      let mod: TSMap<number> = {};
-      mod[params[0]] = Number(params[1]);
+      let data_assignments: TSMap<number> = {};
+      data_assignments[`stats.${params[0]}`] = Number(params[1]);
       ent.actionSend({
-        action_id: 'stat_debug',
-        payload: mod,
+        action_id: 'set_debug',
+        data_assignments,
       }, function (err) {
         resp_func(err, !err ? 'Stat set' : null);
       });
