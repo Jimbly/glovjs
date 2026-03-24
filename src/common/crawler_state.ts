@@ -505,6 +505,9 @@ export class CrawlerLevel {
   // constructor() {
   // }
 
+  hasVstyle(): boolean {
+    return this.vstyle !== identity_vstyle;
+  }
 
   getVisString(): string {
     // Simple RLE
