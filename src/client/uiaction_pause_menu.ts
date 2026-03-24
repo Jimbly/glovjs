@@ -76,7 +76,7 @@ class PauseMenuAction extends UIAction {
       name: isOnline() ? 'Return to Title' : 'Save and Exit',
       cb: function () {
         if (!isOnline()) {
-          crawlerSaveGame('manual');
+          crawlerSaveGame('auto');
         }
         urlhash.go('');
       },

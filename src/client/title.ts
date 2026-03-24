@@ -76,12 +76,13 @@ function title(dt: number): void {
   for (let ii = 0; ii < 3; ++ii) {
     let slot = ii + 1;
     let manual_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.manual`, { timestamp: 0 });
+    let auto_data = localStorageGetJSON<SavedGameData>(`savedgame_${slot}.auto`, { timestamp: 0 });
     print(null, x, y, Z.UI, `Slot ${slot}`);
     if (buttonText({
       x, y: y + uiButtonHeight(), text: 'Load Game',
-      disabled: !manual_data.timestamp
+      disabled: !manual_data.timestamp && !auto_data.timestamp
     })) {
-      crawlerPlayWantMode('manual');
+      crawlerPlayWantMode('recent');
       urlhash.go(`?c=local&slot=${slot}`);
     }
     if (buttonText({

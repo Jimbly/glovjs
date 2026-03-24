@@ -720,7 +720,7 @@ export function crawlerBuildModeActivate(build_mode: boolean): void {
       controller.buildModeSwitch({
         entity_manager: crawlerEntityManager(),
       });
-      crawlerSaveGame('manual');
+      crawlerSaveGame('auto');
     }
   }
 }
