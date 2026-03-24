@@ -1,11 +1,10 @@
 ---
+properties:
+  display_name: Crystal Wing
 traits:
 - id: enemy
-# - id: stats_default
-#   hp: 10
-#   level: 1
-#   attack: 4
-#   defense: 4
+- id: stats_default
+  hp: 10
 - id: drawable
   biasL: [-0.25, 0.3]
   biasF: [0, -0.25]

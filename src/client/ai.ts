@@ -30,7 +30,7 @@ import {
 import { crawlerEntFactory } from './crawler_entity_client';
 import { TurnBasedStepReason } from './crawler_play';
 import { EntityClient } from './entity_game_client';
-import { myEnt } from './play';
+import { attackPlayer, myEnt } from './play';
 import { statusSet } from './status';
 
 const { abs, floor, random } = Math;
@@ -491,7 +491,10 @@ function aiDoEnemy(
     return false;
   }
 
-  // enemy turn-based attack logic goes here
+  // enemy attack logic goes here
+  if (random() < 0.01) {
+    attackPlayer(ent, target_ent, 'BAM!');
+  }
 
   profilerStopFunc();
   return true;

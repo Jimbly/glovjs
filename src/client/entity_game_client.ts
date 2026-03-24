@@ -44,6 +44,7 @@ export function entityManager(): ClientEntityManagerInterface<Entity> {
 
 export type StatsData = {
   hp: number;
+  hp_max: number;
 };
 
 export type EntityDataClient = {
@@ -83,6 +84,7 @@ export class EntityClient extends EntityBaseClient implements EntityCrawlerClien
   declare blocks_player: boolean;
   declare ai_move_min_time: number;
   declare ai_move_rand_time: number;
+  declare display_name?: string;
 
   constructor(data_in: DataObject) {
     super(data_in);
@@ -154,16 +156,16 @@ export function gameEntityTraitsClientStartup(
       if (!ent.data.stats) {
         const stats = ent.data.stats = clone(opts);
         assert(stats.hp);
-        // stats.hp_max = stats.hp;
+        stats.hp_max = stats.hp;
       }
       return undefined;
     }
   });
-  // ent_factory.extendTrait('enemy', {
-  //   properties: {
-  //     blocks_player: true,
-  //   },
-  //   alloc_state: function (opts: unknown, ent: Entity) {
-  //   },
-  // });
+  ent_factory.extendTrait('enemy', {
+    properties: {
+      blocks_player: true,
+    },
+    // alloc_state: function (opts: unknown, ent: Entity) {
+    // },
+  });
 }

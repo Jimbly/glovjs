@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { autoResetSkippedFrames } from 'glov/client/auto_reset';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
@@ -6,6 +7,7 @@ import {
   ALIGN,
   Font,
   fontStyle,
+  fontStyleAlpha,
 } from 'glov/client/font';
 import * as input from 'glov/client/input';
 import {
@@ -30,6 +32,7 @@ import {
   ButtonStateString,
   buttonText,
   drawBox,
+  drawRect2,
   modalDialog,
   playUISound,
   uiButtonWidth,
@@ -39,25 +42,31 @@ import {
 import { webFSAPI } from 'glov/client/webfs';
 import {
   EntityID,
+  TSMap,
 } from 'glov/common/types';
 import { clamp, easeIn, easeOut, ridx } from 'glov/common/util';
 import {
+  JSVec2,
   JSVec3,
   v3iAddScale,
   v3iNormalize,
   v3iScale,
   v3set,
+  v4set,
   Vec2,
   vec3,
   Vec3,
+  vec4,
 } from 'glov/common/vmath';
 import {
   CrawlerLevel,
   crawlerLoadData,
+  dirMod,
 } from '../common/crawler_state';
 import {
   aiDoFloor, aiTraitsClientStartup,
 } from './ai';
+import { blend } from './blend';
 // import './client_cmds';
 import {
   buildModeActive,
@@ -68,6 +77,7 @@ import {
   crawlerCommWant,
 } from './crawler_comm';
 import {
+  controllerOnBumpEntity,
   CrawlerController,
   crawlerControllerTouchHotzonesAuto,
 } from './crawler_controller';
@@ -108,7 +118,9 @@ import {
   renderViewportShear,
 } from './crawler_render';
 import {
+  crawlerEntInFront,
   crawlerRenderEntitiesStartup,
+  EntityDrawableSprite,
 } from './crawler_render_entities';
 import { crawlerScriptAPIDummyServer } from './crawler_script_api_client';
 import { crawlerOnScreenButton } from './crawler_ui';
@@ -142,7 +154,7 @@ import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
 import { pauseMenuActive, pauseMenuOpen } from './uiaction_pause_menu';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { floor, max, min, round } = Math;
+const { atan2, floor, max, min, random, round, PI } = Math;
 
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
@@ -196,6 +208,7 @@ const style_text = fontStyle(null, {
   outline_width: 4,
   outline_color: 0x000000ff,
 });
+const style_damage = style_text;
 
 export function myEnt(): Entity {
   return crawlerMyEnt() as Entity;
@@ -203,6 +216,10 @@ export function myEnt(): Entity {
 
 export function myEntOptional(): Entity | undefined {
   return crawlerMyEntOptional() as Entity | undefined;
+}
+
+function randInt(range: number): number {
+  return floor(random() * range);
 }
 
 function drawBar(
@@ -255,7 +272,127 @@ export function drawHealthBar(
       w, h, `${floor(hp)}`);
   }
 }
+
+const HP_BAR_W = 60;
+const HP_BAR_H = 12;
+const HP_X = VIEWPORT_X0 + floor((render_width - HP_BAR_W)/2);
+const HP_Y = VIEWPORT_Y0 + render_height - HP_BAR_H - 8;
+let color_temp = vec4();
+type IncomingDamage = {
+  start: number;
+  msg: string;
+  from: number; // 0 = front, 1 = right, 2 = back, etc
+  pos?: JSVec2;
+};
+let incoming_damage: IncomingDamage[] = [];
+const DAMAGE_HEIGHT = floor(render_height / 16);
+const DAMAGE_GRID_CELLS = 7;
+const DAMAGE_GRID_CELL_W = render_width / DAMAGE_GRID_CELLS;
+const DAMAGED_GRID_PREF: JSVec2[] = [
+  [floor(DAMAGE_GRID_CELLS/2), 1],
+  [DAMAGE_GRID_CELLS - 1, 2],
+  [floor(DAMAGE_GRID_CELLS/2), 1],
+  [0, 2],
+];
 let screen_shake = 0;
+function drawStatsOverViewport(): void {
+  let my_ent = myEnt();
+  assert(my_ent.isMe());
+  let { hp, hp_max } = my_ent.data.stats;
+  drawHealthBar(HP_X, HP_Y, my_ent.isAlive() ? Z.UI : Z.CONTROLLER_FADE - 3,
+    HP_BAR_W, HP_BAR_H, blend('myhp', hp), hp_max, true);
+
+  // Draw damage "floaters" on us, but on the UI layer
+  if (autoResetSkippedFrames('incoming_damage')) {
+    incoming_damage.length = 0;
+  }
+  let blink = 1;
+  let used_pos: undefined | TSMap<true>;
+  for (let ii = incoming_damage.length - 1; ii >= 0; --ii) {
+    let floater = incoming_damage[ii];
+    const { from } = floater;
+    let elapsed = engine.frame_timestamp - floater.start;
+    const FLOATER_TIME = 750; // not including fade
+    const FLOATER_FADE = 250;
+    const BLINK_TIME = 250;
+    let alpha = 1;
+    if (elapsed > FLOATER_TIME) {
+      alpha = 1 - (elapsed - FLOATER_TIME) / FLOATER_FADE;
+      if (alpha <= 0) {
+        ridx(incoming_damage, ii);
+        continue;
+      }
+    }
+
+    if (!floater.pos) {
+      if (!used_pos) {
+        used_pos = {};
+        for (let jj = 0; jj < incoming_damage.length; ++jj) {
+          let other = incoming_damage[jj];
+          if (other.pos) {
+            used_pos[other.pos.join(',')] = true;
+          }
+        }
+      }
+      let start_pos = DAMAGED_GRID_PREF[from];
+      if (!used_pos[start_pos.join(',')]) {
+        floater.pos = start_pos;
+      } else {
+        // choose an open position if something is already in the preferred spot
+        let tries = 5;
+        do {
+          let pos: JSVec2;
+          if (from === 0) {
+            pos = [
+              start_pos[0] + (randInt(5) - 2) / 2,
+              start_pos[1] + randInt(2),
+            ];
+          } else if (from === 1 || from === 3) {
+            pos = [
+              start_pos[0],
+              start_pos[1] - 2 + randInt(5),
+            ];
+          } else {
+            pos = [
+              start_pos[0] + (randInt(3) - 1)/2,
+              start_pos[1] - randInt(2),
+            ];
+          }
+          if (!used_pos[pos.join(',')] || --tries < 0) {
+            floater.pos = pos;
+            break;
+          }
+        } while (true);
+      }
+    }
+
+    if (elapsed < BLINK_TIME && floater.msg !== 'MISS') {
+      blink = min(blink, elapsed / BLINK_TIME);
+    }
+    let float = 0.5 + 0.5 * easeOut(min(elapsed / 250, 1), 2);
+    let floaty = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 10;
+    let posx = VIEWPORT_X0 + (floater.pos[0] + 0.5) * DAMAGE_GRID_CELL_W;
+    let posy = VIEWPORT_Y0 + render_height - (floater.pos[1] + 0.5) * DAMAGE_HEIGHT;
+    font.drawSizedAligned(fontStyleAlpha(style_damage, alpha),
+      posx - 400,
+      posy + floaty, Z.FLOATERS,
+      DAMAGE_HEIGHT * float, ALIGN.HVCENTER | ALIGN.HWRAP,
+      800, 0, floater.msg);
+  }
+  if (blink < 1) {
+    let v = easeOut(blink, 2);
+    v4set(color_temp, 1, 0, 0, 0.5 * (1 - v));
+    drawRect2({
+      x: VIEWPORT_X0,
+      y: VIEWPORT_Y0,
+      w: render_width,
+      h: render_height,
+      z: Z.UI - 5,
+      color: color_temp,
+    });
+    screen_shake = 1 - v;
+  }
+}
 
 let attack_surges: {
   delta: Vec3;
@@ -300,6 +437,47 @@ function calcAttackCameraOffs(): Vec3 {
   return attack_camera_offs;
 }
 
+const ENEMY_HP_BAR_W = render_width / 4;
+const ENEMY_HP_BAR_X = (render_width - ENEMY_HP_BAR_W)/2;
+const ENEMY_HP_BAR_Y = VIEWPORT_Y0 + 8;
+const ENEMY_HP_BAR_H = HP_BAR_H * 0.75;
+function drawEnemyStats(ent: Entity): void {
+  let stats = ent.data.stats;
+  if (!stats) {
+    return;
+  }
+  let { hp, hp_max } = stats;
+  let bar_h = ENEMY_HP_BAR_H;
+  let show_text = true;
+  drawHealthBar(ENEMY_HP_BAR_X, ENEMY_HP_BAR_Y, Z.UI, ENEMY_HP_BAR_W, bar_h,
+    blend(`enemyhp${ent.id}`, hp), hp_max, show_text);
+  if (ent.display_name) {
+    font.drawSizedAligned(style_text, ENEMY_HP_BAR_X, ENEMY_HP_BAR_Y + bar_h, Z.UI,
+      uiTextHeight(), ALIGN.HVCENTERFIT,
+      ENEMY_HP_BAR_W, bar_h, ent.display_name);
+  }
+}
+
+function doEngagedEnemy(): void {
+  let game_state = crawlerGameState();
+  let level = game_state.level;
+  if (
+    !level ||
+    crawlerController().controllerIsAnimating(0.75) ||
+    controller.transitioning_floor
+  ) {
+    return;
+  }
+  let entities = entityManager().entities;
+  let ent_in_front = crawlerEntInFront();
+  if (ent_in_front && myEnt().isAlive()) {
+    let target_ent = entities[ent_in_front]!;
+    if (target_ent) {
+      drawEnemyStats(target_ent);
+    }
+  }
+}
+
 function moveBlocked(): boolean {
   return false;
 }
@@ -332,6 +510,23 @@ export function autosave(): void {
   statusPush('Auto-saved.');
 }
 
+export function attackPlayer(source: Entity, target: Entity, message: string): void {
+  assert.equal(myEnt(), target);
+  let dx = source.data.pos[0] - target.data.pos[0];
+  let dy = source.data.pos[1] - target.data.pos[1];
+  let abs_angle = round(1 - atan2(dx, dy) / (PI/2));
+  let rot = dirMod(-abs_angle + crawlerController().getEffRot() + 8);
+  incoming_damage.push({
+    start: engine.frame_timestamp,
+    msg: message,
+    from: rot,
+  });
+
+  let dss = (source as unknown as EntityDrawableSprite).drawable_sprite_state;
+  dss.surge_at = engine.frame_timestamp;
+  dss.surge_time = 250;
+}
+
 function moveBlockDead(): boolean {
   controller.setFadeOverride(0.75);
 
@@ -351,6 +546,7 @@ function moveBlockDead(): boolean {
     x: x + floor(w/2 - uiButtonWidth()/2), y: y + floor(h/2), z,
     text: 'Respawn',
   })) {
+    myEnt().data.stats.hp = myEnt().data.stats.hp_max;
     controller.goToFloor(0, 'stairs_in', 'respawn');
   }
 
@@ -364,6 +560,17 @@ export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA)
     pos: [pos[0] + 0.5, pos[1] + 0.5, 0.5],
     volume: 1,
   });
+}
+
+function bumpEntityCallback(ent_id: EntityID): void {
+  let me = myEnt();
+  let all_entities = entityManager().entities;
+  let target_ent = all_entities[ent_id]!;
+  if (target_ent && target_ent.isAlive() && target_ent.isEnemy() && me.isAlive()) {
+    addFloater(ent_id, 'POW!', '');
+    attackSurgeAdd(target_ent.data.pos[0] - me.data.pos[0], target_ent.data.pos[1] - me.data.pos[1], 1);
+    // crawlerTurnBasedScheduleStep(250, 'attack');
+  }
 }
 
 const MOVE_BUTTONS_X0 = MINIMAP_X;
@@ -528,8 +735,8 @@ function playCrawl(): void {
   if (!frame_map_view) {
     if (!build_mode) {
       // Do game UI/stats here
-      // drawStatsOverViewport();
-      // doEngagedEnemy();
+      drawStatsOverViewport();
+      doEngagedEnemy();
       // crawlerButton(2, 0, inventory_frame, 'inventory', [KEYS.I], []);
     }
     // Do modal UIs here
@@ -936,6 +1143,8 @@ export function playStartup(): void {
       }),
     },
   };
+
+  controllerOnBumpEntity(bumpEntityCallback);
 
   renderAppStartup();
   dialogStartup({
