@@ -1,8 +1,7 @@
 export const AI_CLAIM_TIME = 2000;
 
 import assert from 'assert';
-import * as engine from 'glov/client/engine';
-import { getFrameTimestamp } from 'glov/client/engine';
+import { debugDefineIsSet, getFrameTimestamp } from 'glov/client/engine';
 import { EntityManager } from 'glov/common/entity_base_common';
 import { sign } from 'glov/common/util';
 import {
@@ -302,13 +301,13 @@ export function aiTraitsClientStartup(): void {
           ) {
             if (!this.hunter_state.has_target) {
               if (distance) {
-                if (engine.defines.HUNTER) {
+                if (debugDefineIsSet('HUNTER')) {
                   statusSet(`edbg${this.id}`, `${this.id}: New target: ${player_pos}`).counter = 500;
                 }
                 // playUISound('hunter_seen', volume);
               }
             } else if (v2dist(this.hunter_state.target_pos, player_pos)) {
-              if (engine.defines.HUNTER) {
+              if (debugDefineIsSet('HUNTER')) {
                 statusSet(`edbg${this.id}`, `${this.id}: Target update: ${player_pos}`).counter = 500;
               }
             }
@@ -332,7 +331,7 @@ export function aiTraitsClientStartup(): void {
         if (!tot) {
           let ret = true;
           if (!can_see) {
-            if (engine.defines.HUNTER) {
+            if (debugDefineIsSet('HUNTER')) {
               statusSet(`edbg${this.id}`, `${this.id}: Reached last known target`).counter = 500;
             }
             if ((this as unknown as EntityWander).wander_state) {
@@ -343,7 +342,7 @@ export function aiTraitsClientStartup(): void {
             ret = false; // trigger an immediate wander
           } else {
             // at target, and player is there, don't move, combat should trigger
-            if (engine.defines.HUNTER) {
+            if (debugDefineIsSet('HUNTER')) {
               statusSet(`edbg${this.id}`, `${this.id}: On target`).counter = 500;
             }
           }
@@ -384,12 +383,12 @@ export function aiTraitsClientStartup(): void {
         if (!tot) {
           if (can_see) {
             // keep the target
-            if (engine.defines.HUNTER) {
+            if (debugDefineIsSet('HUNTER')) {
               statusSet(`edbg${this.id}`, `${this.id}: Move wall blocked - can see`).counter = 500;
             }
           } else if (!can_see) {
             // give up
-            if (engine.defines.HUNTER) {
+            if (debugDefineIsSet('HUNTER')) {
               statusSet(`edbg${this.id}`, `${this.id}: Move wall blocked - giving up`).counter = 500;
             }
             // playUISound('hunter_lost', volume);
@@ -418,7 +417,7 @@ export function aiTraitsClientStartup(): void {
 
         tot = abs(dx) + abs(dy);
         if (!tot) {
-          if (engine.defines.HUNTER) {
+          if (debugDefineIsSet('HUNTER')) {
             statusSet(`edbg${this.id}`, `${this.id}: Move ent blocked`).counter = 500;
           }
           profilerStopFunc();
@@ -437,7 +436,7 @@ export function aiTraitsClientStartup(): void {
         }
         let dir = do_x ? xdir! : ydir!;
         let new_pos: JSVec3 = [pos[0] + DX[dir], pos[1] + DY[dir], pos[2]];
-        // if (engine.defines.HUNTER) {
+        // if (debugDefineIsSet('HUNTER')) {
         //   statusPush(`${this.id}: Moving from ${pos} to ${new_pos}`);
         // }
         this.applyAIUpdate('ai_move', {
