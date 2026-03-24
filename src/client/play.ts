@@ -203,9 +203,10 @@ let button_sprites_down: Record<ButtonStateString, Sprite>;
 let button_sprites_notext: Record<ButtonStateString, Sprite>;
 let button_sprites_notext_down: Record<ButtonStateString, Sprite>;
 type BarSprite = {
+  min_width?: number;
   bg: Sprite;
   hp: Sprite;
-  empty: Sprite;
+  empty?: Sprite;
 };
 let bar_sprites: {
   healthbar: BarSprite;
@@ -257,8 +258,9 @@ function drawBar(
   x: number, y: number, z: number,
   w: number, h: number,
   p: number,
-): void {
-  const MIN_VIS_W = 4;
+): number {
+  p = min(p, 1);
+  const MIN_VIS_W = bar.min_width || 4;
   let full_w = round(p * w);
   if (p > 0 && p < 1) {
     full_w = clamp(full_w, MIN_VIS_W, w - MIN_VIS_W/2);
@@ -275,7 +277,7 @@ function drawBar(
       z: z + 1,
     }, bar.hp, 1);
   }
-  if (empty_w) {
+  if (empty_w && bar.empty) {
     let temp_x = x + full_w;
     if (full_w) {
       temp_x -= 2;
@@ -287,6 +289,7 @@ function drawBar(
       z: z + 1,
     }, bar.empty, 1);
   }
+  return full_w;
 }
 
 export function drawHealthBar(
@@ -468,7 +471,7 @@ function calcAttackCameraOffs(): Vec3 {
 }
 
 const ENEMY_HP_BAR_W = render_width / 4;
-const ENEMY_HP_BAR_X = (render_width - ENEMY_HP_BAR_W)/2;
+const ENEMY_HP_BAR_X = VIEWPORT_X0 + (render_width - ENEMY_HP_BAR_W)/2;
 const ENEMY_HP_BAR_Y = VIEWPORT_Y0 + 8;
 const ENEMY_HP_BAR_H = HP_BAR_H * 0.75;
 function drawEnemyStats(ent: Entity): void {
@@ -476,11 +479,12 @@ function drawEnemyStats(ent: Entity): void {
   if (!stats) {
     return;
   }
-  let { hp, hp_max } = stats;
+  let hp = ent.getData('stats.hp', 0);
+  let hp_max = ent.getData('stats.hp_max', 0);
   let bar_h = ENEMY_HP_BAR_H;
   let show_text = true;
   drawHealthBar(ENEMY_HP_BAR_X, ENEMY_HP_BAR_Y, Z.UI, ENEMY_HP_BAR_W, bar_h,
-    blend(`enemyhp${ent.id}`, hp), hp_max, show_text);
+    hp ? blend(`enemyhp${ent.id}`, hp) : 0, hp_max, show_text);
   if (ent.display_name) {
     font.drawSizedAligned(style_text, ENEMY_HP_BAR_X, ENEMY_HP_BAR_Y + bar_h, Z.UI,
       uiTextHeight(), ALIGN.HVCENTERFIT,
@@ -513,7 +517,7 @@ function moveBlocked(): boolean {
 }
 
 // TODO: move into crawler_play?
-export function addFloater(ent_id: EntityID, message: string | null, anim: string): void {
+export function addFloater(ent_id: EntityID, message: string | null, anim?: string, blink_good?: boolean): void {
   let ent = crawlerEntityManager().getEnt(ent_id);
   if (ent) {
     if (message) {
@@ -523,9 +527,10 @@ export function addFloater(ent_id: EntityID, message: string | null, anim: strin
       ent.floaters.push({
         start: engine.frame_timestamp,
         msg: message,
+        blink_good,
       });
     }
-    if (ent.triggerAnimation) {
+    if (ent.triggerAnimation && anim) {
       ent.triggerAnimation(anim);
     }
   }
@@ -1008,7 +1013,6 @@ function playInitOffline(): void {
 }
 
 function playInitEarly(room: ClientChannelWorker): void {
-
   // let room_public_data = room.getChannelData('public') as { seed: string };
   // game_state.setSeed(room_public_data.seed);
 
