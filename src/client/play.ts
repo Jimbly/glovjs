@@ -1,4 +1,3 @@
-import assert from 'assert';
 import { autoResetSkippedFrames } from 'glov/client/auto_reset';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
@@ -18,13 +17,11 @@ import {
   padButtonUpEdge,
 } from 'glov/client/input';
 import { ClientChannelWorker, netSubs } from 'glov/client/net';
-import { MenuItem } from 'glov/client/selection_box';
 import * as settings from 'glov/client/settings';
 import {
   settingsRegister,
   settingsSet,
 } from 'glov/client/settings';
-import { SimpleMenu, simpleMenuCreate } from 'glov/client/simple_menu';
 import {
   Sprite,
   spriteCreate,
@@ -33,14 +30,12 @@ import {
   ButtonStateString,
   buttonText,
   drawBox,
-  menuUp,
   modalDialog,
   playUISound,
   uiButtonWidth,
   uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
-import * as urlhash from 'glov/client/urlhash';
 import { webFSAPI } from 'glov/client/webfs';
 import {
   EntityID,
@@ -83,8 +78,6 @@ import {
   crawlerEntityTraitsClientStartup,
   crawlerMyEnt,
   crawlerMyEntOptional,
-  isLocal,
-  isOnline,
 } from './crawler_entity_client';
 import {
   crawlerMapViewDraw,
@@ -129,6 +122,8 @@ import {
 import {
   game_height,
   game_width,
+  MOVE_BUTTON_H,
+  MOVE_BUTTON_W,
   render_height,
   render_width,
   VIEWPORT_X0,
@@ -143,6 +138,8 @@ import {
   statusPush,
   statusTick,
 } from './status';
+import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
+import { pauseMenuActive, pauseMenuOpen } from './uiaction_pause_menu';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { floor, max, min, round } = Math;
@@ -167,9 +164,6 @@ const COMPASS_X = MINIMAP_X;
 const COMPASS_Y = MINIMAP_Y + MINIMAP_H;
 const DO_COMPASS = true;
 const DO_MOVEMENT_BUTTONS = true;
-
-const BUTTON_W = 26;
-const BUTTON_H = BUTTON_W;
 
 const DIALOG_RECT = {
   x: VIEWPORT_X0 + 8,
@@ -209,122 +203,6 @@ export function myEnt(): Entity {
 
 export function myEntOptional(): Entity | undefined {
   return crawlerMyEntOptional() as Entity | undefined;
-}
-
-
-abstract class UIAction {
-  abstract tick(): void;
-  declare name: string;
-  declare is_overlay_menu: boolean;
-  declare is_fullscreen_ui: boolean;
-  declare esc_cancels: boolean;
-}
-UIAction.prototype.name = 'UnknownAction';
-UIAction.prototype.is_overlay_menu = false;
-UIAction.prototype.is_fullscreen_ui = false;
-UIAction.prototype.esc_cancels = false;
-
-let cur_action: UIAction | null = null;
-
-function uiAction(action: UIAction | null): void {
-  if (action) {
-    assert(!cur_action);
-    cur_action = action;
-  } else {
-    cur_action = null;
-  }
-}
-
-export function uiActionClear(): void {
-  uiAction(null);
-}
-
-const PAUSE_MENU_W = floor(160/346*game_width);
-let pause_menu: SimpleMenu;
-class PauseMenuAction extends UIAction {
-  tick(): void {
-    if (!pause_menu) {
-      pause_menu = simpleMenuCreate({
-        x: floor((game_width - PAUSE_MENU_W)/2),
-        y: 50,
-        z: Z.MODAL + 2,
-        width: PAUSE_MENU_W,
-      });
-    }
-    let items: MenuItem[] = [{
-      name: 'Return to game',
-      cb: function () {
-        uiActionClear();
-      },
-    }, {
-      name: 'SFX Vol',
-      slider: true,
-      value_inc: 0.05,
-      value_min: 0,
-      value_max: 1,
-    }, {
-      name: 'Mus Vol',
-      slider: true,
-      value_inc: 0.05,
-      value_min: 0,
-      value_max: 1,
-    }, {
-      name: `Turn: ${settings.turn_toggle ? 'A/S/4/6/←/→': 'Q/E/7/9/LB/RB'}`,
-      cb: () => {
-        settingsSet('turn_toggle', 1 - settings.turn_toggle);
-      },
-    }];
-    if (isLocal()) {
-      items.push({
-        name: 'Save game',
-        cb: function () {
-          crawlerSaveGame('manual');
-          statusPush('Game saved.');
-          uiActionClear();
-        },
-      });
-    }
-    items.push({
-      name: isOnline() ? 'Return to Title' : 'Save and Exit',
-      cb: function () {
-        if (!isOnline()) {
-          crawlerSaveGame('manual');
-        }
-        urlhash.go('');
-      },
-    });
-    if (isLocal()) {
-      items.push({
-        name: 'Exit without saving',
-        cb: function () {
-          urlhash.go('');
-        },
-      });
-    }
-
-    let volume_item = items[1];
-    volume_item.value = settings.volume_sound;
-    volume_item.name = `SFX Vol: ${(settings.volume_sound * 100).toFixed(0)}`;
-    volume_item = items[2];
-    volume_item.value = settings.volume_music;
-    volume_item.name = `Mus Vol: ${(settings.volume_music * 100).toFixed(0)}`;
-
-    pause_menu.run({
-      slider_w: floor(PAUSE_MENU_W/2),
-      items,
-    });
-
-    settingsSet('volume_sound', pause_menu.getItem(1).value as number);
-    settingsSet('volume_music', pause_menu.getItem(2).value as number);
-
-    menuUp();
-  }
-}
-PauseMenuAction.prototype.name = 'PauseMenu';
-PauseMenuAction.prototype.is_overlay_menu = true;
-
-function openPauseMenu(): void {
-  uiAction(new PauseMenuAction());
 }
 
 function drawBar(
@@ -519,7 +397,7 @@ function playCrawl(): void {
   let dt = getScaledFrameDt();
 
   const frame_map_view = mapViewActive();
-  const is_fullscreen_ui = cur_action?.is_fullscreen_ui;
+  const is_fullscreen_ui = uiActionCurrent()?.is_fullscreen_ui;
   let dialog_viewport = {
     ...DIALOG_RECT,
     z: Z.STATUS,
@@ -539,8 +417,8 @@ function playCrawl(): void {
 
   const build_mode = buildModeActive();
   let locked_dialog = dialogMoveLocked();
-  const overlay_menu_up = cur_action?.is_overlay_menu || is_dead || false;
-  let minimap_display_h = build_mode ? BUTTON_W : MINIMAP_H;
+  const overlay_menu_up = uiActionCurrent()?.is_overlay_menu || is_dead || false;
+  let minimap_display_h = build_mode ? MOVE_BUTTON_W : MINIMAP_H;
   let show_compass = !build_mode && DO_COMPASS;
   let compass_h = show_compass ? 11 : 0;
 
@@ -579,7 +457,7 @@ function playCrawl(): void {
       no_visible_ui = false;
       if (frame_map_view) {
         z = Z.MAP + 1;
-      } else if (cur_action?.name === 'PauseMenu') {
+      } else if (pauseMenuActive()) {
         z = Z.MODAL + 1;
       } else {
         z = Z.MENUBUTTON;
@@ -604,10 +482,10 @@ function playCrawl(): void {
     //   text: label,
     // });
     let ret = crawlerOnScreenButton({
-      x: button_x0 + (BUTTON_W + 2) * rx,
-      y: button_y0 + (BUTTON_H + 2) * ry,
+      x: button_x0 + (MOVE_BUTTON_W + 2) * rx,
+      y: button_y0 + (MOVE_BUTTON_H + 2) * ry,
       z,
-      w: BUTTON_W, h: BUTTON_H,
+      w: MOVE_BUTTON_W, h: MOVE_BUTTON_H,
       frame,
       keys,
       pads,
@@ -636,7 +514,7 @@ function playCrawl(): void {
     menu_pads.push(PAD.B, PAD.BACK);
   }
   crawlerButton(0, 0, menu_up ? 10 : 6,
-    'menu', menu_keys, menu_pads, cur_action?.name === 'PauseMenu');
+    'menu', menu_keys, menu_pads, pauseMenuActive());
   // if (!build_mode) {
   //   crawlerButton(0, 1, 7, 'inv', [KEYS.I], [PAD.Y], inventory_up);
   //   if (up_edge.inv) {
@@ -644,7 +522,7 @@ function playCrawl(): void {
   //   }
   // }
 
-  cur_action?.tick();
+  uiActionTick();
 
   // Note: moved earlier so player motion doesn't interrupt it
   if (!frame_map_view) {
@@ -673,7 +551,7 @@ function playCrawl(): void {
   //   if (cur_action) {
   //     uiActionClear();
   //   } else {
-  //     uiAction(new InventoryAction());
+  //     inventoryOpen();
   //   }
   // }
 
@@ -683,7 +561,7 @@ function playCrawl(): void {
     button_x0: MOVE_BUTTONS_X0,
     button_y0: MOVE_BUTTONS_Y0,
     no_visible_ui: frame_map_view || build_mode || !DO_MOVEMENT_BUTTONS,
-    button_w: BUTTON_W,
+    button_w: MOVE_BUTTON_W,
     button_sprites: useNoText() ? button_sprites_notext : button_sprites,
     disable_move: moveBlocked() || overlay_menu_up,
     disable_player_impulse: Boolean(locked_dialog),
@@ -726,18 +604,18 @@ function playCrawl(): void {
         // but stay in build mode
       } else if (build_mode) {
         crawlerBuildModeActivate(false);
-      } else if (cur_action?.esc_cancels) {
+      } else if (uiActionCurrent()?.esc_cancels) {
         uiActionClear();
       } else {
         // close everything
         mapViewSetActive(false);
         // inventory_up = false;
       }
-      if (cur_action?.name === 'PauseMenu') {
+      if (pauseMenuActive()) {
         uiActionClear();
       }
     } else {
-      openPauseMenu();
+      pauseMenuOpen();
     }
   }
 
@@ -806,7 +684,7 @@ export function play(dt: number): void {
 
   screen_shake = 0;
 
-  let overlay_menu_up = Boolean(cur_action?.is_overlay_menu || dialogMoveLocked());
+  let overlay_menu_up = Boolean(uiActionCurrent()?.is_overlay_menu || dialogMoveLocked());
 
   tickMusic(game_state.level?.props.music as string || null); // || 'default_music'
   crawlerPlayTopOfFrame(overlay_menu_up, false);
