@@ -51,7 +51,6 @@ import type { EntityManagerEvent } from 'glov/common/entity_base_common';
 import {
   DataObject,
   ErrorCallback,
-  VoidFunc,
 } from 'glov/common/types';
 import {
   callEach,
@@ -104,6 +103,7 @@ import {
   crawlerEntitiesOnEntStart,
   crawlerEntityManager,
   crawlerEntityManagerOffline,
+  crawlerEntityManagerOnline,
   crawlerMyActionSend,
   crawlerMyEnt,
   EntityCrawlerClient,
@@ -498,7 +498,7 @@ function populateLevelFromInitialEntities(
 export type InitLevelFunc = ((entity_manager: ClientEntityManagerInterface,
   floor_id: number, level: CrawlerLevel) => void);
 let on_init_level_offline: InitLevelFunc | null = null;
-let on_init_level_online: VoidFunc | null = null;
+let on_init_level_online: InitLevelFunc | null = null;
 
 let need_turn_based_step = false;
 let turn_based_step_reason: TurnBasedStepReason | null = null;
@@ -507,9 +507,9 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
   need_turn_based_step = false;
   turn_based_step_reason = null;
   crawlerInitVisData(floor_id);
+  let level = game_state.level;
+  assert(level);
   if (isLocal()) {
-    let level = game_state.level;
-    assert(level);
     if (!local_game_data.floors_inited || !local_game_data.floors_inited[floor_id]) {
       assert(game_state.floor_id === floor_id);
       local_game_data.floors_inited = local_game_data.floors_inited || {};
@@ -518,7 +518,7 @@ function crawlerOnInitHaveLevel(floor_id: number): void {
     }
     on_init_level_offline?.(crawlerEntityManagerOffline(), floor_id, level);
   } else {
-    on_init_level_online?.();
+    on_init_level_online?.(crawlerEntityManagerOnline(), floor_id, level);
   }
 }
 
@@ -1339,7 +1339,7 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   offline_data?: CrawlerOfflineData<AppEntity>;
   play_state: EngineState;
   on_init_level_offline?: InitLevelFunc;
-  on_init_level_online?: VoidFunc;
+  on_init_level_online?: InitLevelFunc;
   default_vstyle?: string;
   allow_offline_console?: boolean;
   chat_as_message_log?: boolean;
