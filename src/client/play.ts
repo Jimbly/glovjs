@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { autoResetSkippedFrames } from 'glov/client/auto_reset';
+import { autoAtlasSwap } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
 import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client';
@@ -166,6 +167,7 @@ declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
   export let show_fps: 0 | 1;
   export let turn_toggle: 0 | 1;
+  export let depixel: 0 | 1;
 }
 
 // const ATTACK_WINDUP_TIME = 1000;
@@ -1030,6 +1032,17 @@ settingsRegister({
     type: cmd_parse.TYPE_INT,
     range: [0, 1],
   },
+  depixel: {
+    is_toggle: true,
+    default_value: 0,
+    type: cmd_parse.TYPE_INT,
+    range: [0, 1],
+    on_change: function (is_startup: boolean): void {
+      if (!is_startup) {
+        applyAtlasSwaps(); // eslint-disable-line @typescript-eslint/no-use-before-define
+      }
+    },
+  },
 });
 
 cmd_parse.register({
@@ -1040,6 +1053,16 @@ cmd_parse.register({
     resp_func();
   },
 });
+
+function applyAtlasSwaps(): void {
+  let suffix = settings.depixel ? '-depixel' : '';
+  [
+    'demo',
+    'utumno',
+  ].forEach(function (base_name) {
+    autoAtlasSwap(base_name, `${base_name}${suffix}`);
+  });
+}
 
 function initLevel(cem: ClientEntityManagerInterface<Entity>, floor_id: number, level: CrawlerLevel): void {
   dialogReset();
@@ -1189,4 +1212,5 @@ export function playStartup(): void {
     // style_map_name: fontStyle(...)
     compass_border_w: 6,
   });
+  applyAtlasSwaps();
 }

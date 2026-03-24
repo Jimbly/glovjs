@@ -18,6 +18,7 @@ const {
 const scale = 8;
 const depixel_input = [
   'demo/*.png',
+  'utumno/*.png',
 ];
 
 const targets = {
