@@ -56,6 +56,7 @@ import {
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import type { CrawlerState } from '../common/crawler_state';
+import { CRAWLER_IS_ONLINE } from './crawler_config';
 import { atlasAlias } from './crawler_render';
 import {
   drawableDraw,
@@ -595,7 +596,7 @@ export function crawlerEntitiesInit(mode: OnlineMode): void {
 cmd_parse.register({
   cmd: 'entset',
   help: '(Debug) Set entity field on self',
-  // access_show: ['sysadmin'],
+  access_show: CRAWLER_IS_ONLINE ? ['sysadmin'] : undefined,
   func: function (param: string, resp_func: CmdRespFunc) {
     let ent = crawlerMyEnt();
     if (!ent) {
@@ -630,7 +631,7 @@ cmd_parse.register({
 cmd_parse.register({
   cmd: 'entget',
   help: '(Debug) Get entity field from self',
-  // access_show: ['sysadmin'],
+  access_show: CRAWLER_IS_ONLINE ? ['sysadmin'] : undefined,
   func: function (param: string, resp_func: CmdRespFunc) {
     let ent = crawlerMyEnt();
     if (!ent) {
@@ -642,7 +643,7 @@ cmd_parse.register({
 });
 cmd_parse.register({
   cmd: 'stat',
-  // access_show: ['sysadmin'],
+  access_show: CRAWLER_IS_ONLINE ? ['sysadmin'] : undefined,
   help: 'Set or displays entity stats',
   usage: 'Usage: /stat [ent_id] [statname [new_value]]',
   prefix_usage_with_help: true,

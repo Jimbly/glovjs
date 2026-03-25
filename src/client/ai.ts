@@ -26,10 +26,10 @@ import {
   JSVec2,
   JSVec3,
 } from '../common/crawler_state';
+import { CRAWLER_TURN_BASED } from './crawler_config';
 import { crawlerEntFactory } from './crawler_entity_client';
 import { TurnBasedStepReason } from './crawler_play';
 import { EntityClient } from './entity_game_client';
-import { DEMO_TURN_BASED } from './globals';
 import { attackPlayer, myEnt } from './play';
 import { statusSet } from './status';
 
@@ -492,7 +492,7 @@ function aiDoEnemy(
   }
 
   // enemy attack logic goes here
-  if (random() < 0.01 || DEMO_TURN_BASED) {
+  if (random() < 0.01 || CRAWLER_TURN_BASED) {
     attackPlayer(ent, target_ent, 'BAM!');
   }
 
