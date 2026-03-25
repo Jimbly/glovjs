@@ -865,7 +865,6 @@ function playCrawl(): void {
     playUISound('button_click');
     mapViewToggle();
   }
-  // inventoryMenu();
   let game_state = crawlerGameState();
   let script_api = crawlerScriptAPI();
   if (frame_map_view) {
@@ -917,12 +916,14 @@ function playCrawl(): void {
 }
 
 export function play(dt: number): void {
+  profilerStartFunc();
   let game_state = crawlerGameState();
   if (crawlerCommWant()) {
     // Must have been disconnected?
     crawlerCommStart();
-    return;
+    return profilerStopFunc();
   }
+  profilerStart('top');
 
   screen_shake = 0;
 
@@ -930,6 +931,8 @@ export function play(dt: number): void {
 
   tickMusic(game_state.level?.props.music as string || null); // || 'default_music'
   crawlerPlayTopOfFrame(overlay_menu_up, false);
+
+  profilerStopStart('mid');
 
   if (keyDownEdge(KEYS.F3)) {
     settingsSet('show_fps', 1 - settings.show_fps);
@@ -945,8 +948,10 @@ export function play(dt: number): void {
     statusPush(`Controller: ${types[type_idx]}`);
   }
 
+  profilerStopStart('playCrawl');
   playCrawl();
 
+  profilerStopStart('render');
   if (0) {
     let shear = clamp(input.mousePos()[0]/game_width* 2 - 1, -1, 1);
     renderViewportShear(shear);
@@ -981,6 +986,9 @@ export function play(dt: number): void {
   }
 
   crawlerPlayBottomOfFrame();
+
+  profilerStop();
+  profilerStopFunc();
 }
 
 function onPlayerMove(old_pos: Vec2, new_pos: Vec2): void {
