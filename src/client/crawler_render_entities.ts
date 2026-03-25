@@ -143,7 +143,6 @@ export type DrawableSpriteOpts = {
 export type DrawableSpriteState = {
   anim: SpriteAnimation;
   anim_update_frame: number;
-  atlas_swap_generation?: number;
   grow_at?: number;
   grow_time?: number;
   surge_at?: number;

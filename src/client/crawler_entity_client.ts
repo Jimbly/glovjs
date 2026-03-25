@@ -5,7 +5,7 @@ export enum OnlineMode {
 }
 
 import assert from 'assert';
-import { autoAtlas, autoAtlasSwapGeneration } from 'glov/client/autoatlas';
+import { autoAtlas } from 'glov/client/autoatlas';
 import { cmd_parse } from 'glov/client/cmds';
 import { dynGeomForward } from 'glov/client/dyn_geom';
 import { getFrameIndex } from 'glov/client/engine';
@@ -347,11 +347,6 @@ function drawableSpriteUpdateAnim(this: EntityDrawableSprite, dt: number): numbe
     assert(typeof frame === 'string');
     if (frame === ent.drawable_sprite_state.autoatlas_last_frame) {
       do_update = false;
-    }
-    let gen = autoAtlasSwapGeneration();
-    if (ent.drawable_sprite_state.atlas_swap_generation !== gen) {
-      do_update = true;
-      ent.drawable_sprite_state.atlas_swap_generation = gen;
     }
     if (do_update || !ent.drawable_sprite_state.sprite) {
       ent.drawable_sprite_state.autoatlas_last_frame = frame;

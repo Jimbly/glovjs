@@ -39,7 +39,7 @@ module.exports = function (hashes, task) {
     gb.task({
       ...task,
       name: subname,
-      version: [funcWrap, hashes, ...(task.version || [])],
+      version: [funcWrap, hashes, task.func, ...(task.version || [])],
       async: gb.ASYNC_FORK,
       init: assetHasherInit,
       func: funcWrap.bind(null, ii),
