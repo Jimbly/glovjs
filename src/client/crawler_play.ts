@@ -840,6 +840,7 @@ function crawlerRepeatHasher(pos: ROVec2): string | null {
   return ent_ids.join();
 }
 
+let do_repeat_hasher = false;
 function crawlerPlayInitShared(): void {
   entityPosManager().reinit();
 
@@ -856,7 +857,7 @@ function crawlerPlayInitShared(): void {
     on_move_start: crawlerTurnBasedMoveStart,
     on_enter_cell: crawlerTurnBasedMoveFinish,
     flush_vis_data: crawlerFlushVisData,
-    repeat_hasher: crawlerRepeatHasher,
+    repeat_hasher: do_repeat_hasher ? crawlerRepeatHasher : undefined,
     controller_type: 'queued2', // working well
     // controller_type: 'queued', // old stand-by; maybe useful for real-time
     // controller_type: 'instant', // too hard
@@ -1347,6 +1348,7 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   chat_ui_param_build_mode?: CrawlerChatUIParam;
   turn_based_step?: (reason: TurnBasedStepReason) => void;
   turn_based_allowed?: () => boolean;
+  do_repeat_hasher: boolean;
   level_fallback_provider?: LevelProvider;
 }): void {
   on_broadcast = param.on_broadcast || undefined;
@@ -1363,6 +1365,7 @@ export function crawlerPlayStartup<AppEntity extends Entity>(param: {
   chat_ui_param_build_mode = param.chat_ui_param_build_mode || chat_ui_param;
   turn_based_step = param.turn_based_step;
   turn_based_allowed = param.turn_based_allowed;
+  do_repeat_hasher = param.do_repeat_hasher;
   level_fallback_provider = param.level_fallback_provider || levelFallbackProviderDefault;
   window.addEventListener('beforeunload', beforeUnload, false);
   viewport_sprite = spriteCreate({ texs: [textureWhite()] });

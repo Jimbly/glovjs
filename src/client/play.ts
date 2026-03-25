@@ -1102,6 +1102,7 @@ export function playStartup(): void {
       cuddly_scroll: true,
     },
     chat_as_message_log: false,
+    do_repeat_hasher: DEMO_TURN_BASED,
   });
   crawlerEntityClientStartupEarly();
   let ent_factory = crawlerEntFactory<Entity>();
