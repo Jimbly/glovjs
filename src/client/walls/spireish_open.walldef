@@ -1,6 +1,7 @@
 ---
 open_move: true
 open_vis: true
+map_view_wall_frames_from: open
 visuals:
 - type: simple_filler
   opts:
