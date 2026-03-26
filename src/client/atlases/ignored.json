@@ -1,0 +1,12 @@
+{
+  "tiles": [
+    "demo/wide",
+    "demo/tall",
+    "demo/blocker",
+    "demo/crystal_wall11",
+    "demo/dngn_enter_shop",
+    "demo/lair0",
+    "demo/marble_wall7",
+    "utumno/skeleton"
+  ]
+}

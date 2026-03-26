@@ -93,6 +93,7 @@ import {
   crawlerSetLevelGenMode,
 } from './crawler_play';
 import { crawlerRenderGetThumbnail, crawlerRenderViewportGet } from './crawler_render';
+import { crawlerTextureWizard } from './crawler_texture_wizard';
 import { statusPush } from './status';
 
 const { floor, min, round } = Math;
@@ -1443,6 +1444,7 @@ export function crawlerBuildModeUI(frame: Box & { map_view: boolean }): void {
   if (!level) {
     return;
   }
+  crawlerTextureWizard();
   if (keyDownEdge(KEYS.Z) && keyDown(KEYS.CTRL)) {
     buildModeUndo();
   }

@@ -322,6 +322,41 @@ CrawlerWorker.registerClientHandler('build', function (
   resp_func();
 });
 
+CrawlerWorker.registerClientHandler('texture_wizard_ignore', function (
+  this: DummyWorker,
+  src: ClientHandlerSource,
+  data: { key: string },
+  resp_func: NetResponseCallback<CrawlerLevelSerialized>
+): void {
+  const filename = `${CLIENT_DIR}/atlases/ignored.json`;
+  let filedata = JSON.parse(fs.readFileSync(filename, 'utf8'));
+  if (!filedata.tiles.includes(data.key)) {
+    filedata.tiles.push(data.key);
+    fs.writeFileSync(filename, JSON.stringify(filedata, undefined, 2));
+  }
+  resp_func();
+});
+
+CrawlerWorker.registerClientHandler('texture_wizard_create', function (
+  this: DummyWorker,
+  src: ClientHandlerSource,
+  data: {
+    filename: string;
+    contents: string;
+  },
+  resp_func: NetResponseCallback<CrawlerLevelSerialized>
+): void {
+  if (CRAWLER_IS_ONLINE && !src.sysadmin) {
+    return void resp_func('ERR_ACCESS_DENIED');
+  }
+  const filename = `${CLIENT_DIR}/${data.filename}`;
+  if (fs.existsSync(filename)) {
+    return resp_func('File already exists');
+  }
+  fs.writeFileSync(filename, data.contents);
+  resp_func();
+});
+
 CrawlerWorker.registerCmds([{
   cmd: 'floor_reset_worker',
   access_show: ['hidden'],

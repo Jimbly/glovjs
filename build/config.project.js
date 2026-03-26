@@ -62,4 +62,5 @@ module.exports = function (config) {
   }];
 
   config.autoatlas_input.push('client/atlases-autogen/**/*.png');
+  config.client_fsdata.push('client/atlases/ignored.json');
 };
