@@ -51,7 +51,7 @@ import {
   crawlerRenderSetUIClearColor,
 } from './crawler_play.js';
 import { crawlerRenderSetLODBiasRange } from './crawler_render';
-import { game_height, game_width } from './globals';
+import { FONT_HEIGHT, game_height, game_width } from './globals';
 import { playStartup } from './play';
 import { SOUND_DATA } from './sound_data';
 import { titleInit, titleStartup } from './title';
@@ -273,7 +273,7 @@ export function main(): void {
 
   ui.scaleSizes(13 / 32);
   ui.setModalSizes(0, round(game_width * 0.8), round(game_height * 0.23), 0, 0);
-  ui.setFontHeight(8);
+  ui.setFontHeight(FONT_HEIGHT);
   ui.setPanelPixelScale(1);
   uiSetPanelColor([1, 1, 1, 1]);
   // ui.uiSetFontStyleFocused(fontStyle(ui.uiGetFontStyleFocused(), {
