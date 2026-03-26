@@ -64,6 +64,9 @@ for (let ii = 0; ii < filenames.length; ++ii) {
     let trait = traits[jj];
     if (trait.sprite_data) {
       let atlas = trait.sprite_data.atlas;
+      if (!atlas) {
+        continue;
+      }
       assert(trait.anim_data);
       for (let akey in trait.anim_data) {
         let rec = trait.anim_data[akey];
