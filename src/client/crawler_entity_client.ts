@@ -50,13 +50,13 @@ import {
   ROVec4,
   vec2,
 } from 'glov/common/vmath';
+import { CRAWLER_IS_ONLINE } from '../common/crawler_config';
 import {
   EntityCrawlerDataCommon,
   entSamePos,
 } from '../common/crawler_entity_common';
 import { crawlerEntityTraitsCommonStartup } from '../common/crawler_entity_traits_common';
 import type { CrawlerState } from '../common/crawler_state';
-import { CRAWLER_IS_ONLINE } from './crawler_config';
 import { atlasAlias } from './crawler_render';
 import {
   drawableDraw,

@@ -59,6 +59,7 @@ import {
   Vec3,
   vec4,
 } from 'glov/common/vmath';
+import { CRAWLER_IS_ONLINE, CRAWLER_TURN_BASED } from '../common/crawler_config';
 import {
   CrawlerLevel,
   crawlerLoadData,
@@ -80,7 +81,6 @@ import {
   crawlerCommStart,
   crawlerCommWant,
 } from './crawler_comm';
-import { CRAWLER_IS_ONLINE, CRAWLER_TURN_BASED } from './crawler_config';
 import {
   controllerOnBumpEntity,
   CrawlerController,

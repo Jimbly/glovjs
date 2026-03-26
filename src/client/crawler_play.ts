@@ -68,6 +68,7 @@ import {
   vec4,
   zero_vec,
 } from 'glov/common/vmath';
+import { CRAWLER_IS_ONLINE } from '../common/crawler_config';
 import '../common/crawler_events'; // side effects: register events
 import {
   CrawlerLevel,
@@ -94,7 +95,6 @@ import {
   crawlerCommWant,
   getChatUI,
 } from './crawler_comm';
-import { CRAWLER_IS_ONLINE } from './crawler_config';
 import {
   CrawlerController,
   crawlerControllerCreate,

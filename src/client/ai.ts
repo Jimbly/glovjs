@@ -12,6 +12,7 @@ import {
   v3copy,
   Vec2,
 } from 'glov/common/vmath';
+import { CRAWLER_TURN_BASED } from '../common/crawler_config';
 import { entSamePos } from '../common/crawler_entity_common';
 import type { CrawlerScriptAPI } from '../common/crawler_script';
 import {
@@ -26,7 +27,6 @@ import {
   JSVec2,
   JSVec3,
 } from '../common/crawler_state';
-import { CRAWLER_TURN_BASED } from './crawler_config';
 import { crawlerEntFactory } from './crawler_entity_client';
 import { TurnBasedStepReason } from './crawler_play';
 import { EntityClient } from './entity_game_client';

@@ -35,6 +35,7 @@ import {
   ServerEntityManagerInterface,
 } from 'glov/server/entity_manager_server';
 import { serverFSAPI } from 'glov/server/serverfs';
+import { CRAWLER_IS_ONLINE } from '../common/crawler_config';
 import type {
   BuildModeOp,
   CrawlerJoinPayload,
@@ -301,9 +302,9 @@ CrawlerWorker.registerClientHandler('build', function (
   pak: Packet,
   resp_func: NetResponseCallback<CrawlerLevelSerialized>
 ): void {
-  // if (!src.sysadmin) { // need better solution for this!
-  //   return void resp_func('ERR_ACCESS_DENIED');
-  // }
+  if (CRAWLER_IS_ONLINE && !src.sysadmin) {
+    return void resp_func('ERR_ACCESS_DENIED');
+  }
   let floor = pak.readInt();
   let level = this.game_state.getLevelForFloorExisting(floor);
   let diff: Diff = pak.readJSON() as Diff;
