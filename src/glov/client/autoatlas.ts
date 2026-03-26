@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { dataError } from 'glov/common/data_error';
 import type { TSMap, WithRequired } from 'glov/common/types';
-import { clone } from 'glov/common/util';
+import { callEach, clone } from 'glov/common/util';
 import {
   ROVec4,
   v4clone,
@@ -174,8 +174,8 @@ class AutoAtlasImp {
       };
       delete sprite.uidata_orig;
       sprite.doReInit();
-      if (is_new && this.on_image) {
-        this.on_image(tile_name);
+      if (is_new) {
+        callEach(this.on_image, null, tile_name);
       }
     }
 
@@ -341,10 +341,9 @@ class AutoAtlasImp {
     return ret;
   }
 
-  on_image: ((img_name: string) => void) | null = null;
+  on_image: ((img_name: string) => void)[] = [];
   onImage(cb: (img_name: string) => void): void {
-    assert(!this.on_image);
-    this.on_image = cb;
+    this.on_image.push(cb);
     Object.keys(this.sprites).forEach(cb);
   }
 }
