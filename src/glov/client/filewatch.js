@@ -1,4 +1,3 @@
-import assert from 'assert';
 import { locateAssetDisableHashing } from './locate_asset';
 
 let by_ext = {};
@@ -7,8 +6,8 @@ let by_match = [];
 // cb(filename)
 export function filewatchOn(ext_or_search, cb) {
   if (ext_or_search[0] === '.') {
-    assert(!by_ext[ext_or_search]);
-    by_ext[ext_or_search] = cb;
+    by_ext[ext_or_search] = by_ext[ext_or_search] || [];
+    by_ext[ext_or_search].push(cb);
   } else {
     by_match.push([ext_or_search, cb]);
   }
@@ -27,9 +26,12 @@ function onFileChange(filename) {
   let did_reload = false;
   if (ext_idx !== -1) {
     let ext = filename.slice(ext_idx);
-    if (by_ext[ext]) {
-      if (by_ext[ext](filename) !== false) {
-        did_reload = true;
+    let cbs = by_ext[ext];
+    if (cbs) {
+      for (let ii = 0; ii < cbs.length; ++ii) {
+        if (cbs[ii](filename) !== false) {
+          did_reload = true;
+        }
       }
     }
   }
