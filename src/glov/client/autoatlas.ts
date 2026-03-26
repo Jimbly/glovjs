@@ -1,7 +1,11 @@
 import assert from 'assert';
 import { dataError } from 'glov/common/data_error';
-import type { TSMap } from 'glov/common/types';
+import type { TSMap, WithRequired } from 'glov/common/types';
+import { clone } from 'glov/common/util';
 import {
+  ROVec4,
+  v4clone,
+  v4copy,
   v4set,
   Vec4,
   vec4,
@@ -20,10 +24,15 @@ import { webFSGetFile, webFSOnReady } from './webfs';
 
 type AutoAtlasBuildData = [string, number, number, number[], number[], number[] | undefined, number[] | undefined];
 
+type AutoAtlasBuildDataRoot = {
+  w: number;
+  h: number;
+  layers: number;
+  tiles: AutoAtlasBuildData[];
+};
+
 let load_opts: TSMap<TextureOptions> = {};
 let hit_startup = false;
-
-let swap_generation = 0;
 
 const uidata_error: SpriteUIData = {
   rects: [[0,0,1,1]],
@@ -42,18 +51,38 @@ function spriteMakeError(sprite: Sprite): void {
   sprite.uidata = uidata_error;
 }
 
+let atlas_swaps: TSMap<string> = Object.create(null);
+let atlases: TSMap<AutoAtlasImp>;
+
+type AutoAtlasSprite = WithRequired<Sprite, 'uidata'> & {
+  autoatlas_used?: boolean;
+  uidata_orig?: SpriteUIData;
+};
+
+function saveOrig(sprite: AutoAtlasSprite): void {
+  if (!sprite.uidata_orig) {
+    sprite.uidata_orig = clone(sprite.uidata);
+    let rects = [] as unknown as Vec4[] & TSMap<Vec4>;
+    for (let key in sprite.uidata.rects) {
+      let src = (sprite.uidata.rects as TSMap<Vec4>)[key]!;
+      rects[key] = v4clone(src);
+    }
+    sprite.uidata_orig.rects = rects;
+  }
+}
+
 class AutoAtlasImp {
-  sprites: TSMap<Sprite & { autoatlas_used?: boolean }> = {};
+  sprites: TSMap<AutoAtlasSprite> = {};
 
   // Create with dummy data, will load later
   texs: Texture[] = [];
-  prealloc(): Sprite {
+  prealloc(): AutoAtlasSprite {
     let sprite = spriteCreate({
       texs: this.texs,
       uvs: vec4(0, 0, 1, 1),
     });
     sprite.uidata = uidata_error;
-    return sprite;
+    return sprite as AutoAtlasSprite;
   }
 
   did_tex_load = false;
@@ -68,9 +97,10 @@ class AutoAtlasImp {
     }
   }
 
+  atlas_data?: AutoAtlasBuildDataRoot;
   doInit(): void {
     let { sprites, atlas_name, texs } = this;
-    let atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj');
+    let atlas_data = this.atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj') as AutoAtlasBuildDataRoot;
     // Root default sprite, with frame-indexing
     let root_sprite = sprites.def = (sprites.def || this.prealloc());
     let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
@@ -81,7 +111,7 @@ class AutoAtlasImp {
     let seen: TSMap<true> = {};
     for (let tile_id = 0; tile_id < tiles.length; ++tile_id) {
       let is_new = false;
-      let [tile_name, x, y, ws, hs, padh, padv] = tiles[tile_id] as AutoAtlasBuildData;
+      let [tile_name, x, y, ws, hs, padh, padv] = tiles[tile_id];
       seen[tile_name] = true;
       let total_w = 0;
       for (let jj = 0; jj < ws.length; ++jj) {
@@ -142,6 +172,7 @@ class AutoAtlasImp {
         total_w,
         total_h,
       };
+      delete sprite.uidata_orig;
       sprite.doReInit();
       if (is_new && this.on_image) {
         this.on_image(tile_name);
@@ -159,10 +190,12 @@ class AutoAtlasImp {
       wh: null!,
       hw: null!,
     };
+    delete root_sprite.uidata_orig;
 
     if (hit_startup) {
       this.verifySprites(seen);
     }
+    this.applySwaps();
 
     // Only issue texture load once at startup, not upon reload
     if (this.did_tex_load) {
@@ -198,6 +231,73 @@ class AutoAtlasImp {
     });
   }
 
+  applySwaps(): void {
+    let dst_name = atlas_swaps[this.atlas_name];
+    let dst = dst_name && atlases[dst_name];
+
+    let sprites_src = this.sprites;
+    let texs_src = this.texs;
+    let atlas_data_src = this.atlas_data;
+    assert(atlas_data_src);
+    let tiles_src = atlas_data_src.tiles;
+    let root_sprite = sprites_src.def;
+    assert(root_sprite);
+    function clearSwap(src_sprite: AutoAtlasSprite, tile_id: number, root_uidata_orig: SpriteUIData): void {
+      if (src_sprite.uidata_orig) {
+        src_sprite.uidata = src_sprite.uidata_orig;
+        delete src_sprite.uidata_orig;
+        src_sprite.texs = texs_src;
+        v4copy(src_sprite.uvs as Vec4, (root_uidata_orig!.rects as ROVec4[])[tile_id]);
+        src_sprite.doReInit();
+      }
+    }
+    if (!dst) {
+      let root_uidata_orig = root_sprite.uidata_orig;
+      if (!root_uidata_orig) {
+        return;
+      }
+      // clear any swaps
+      for (let tile_id = 0; tile_id < tiles_src.length; ++tile_id) {
+        let [tile_name] = tiles_src[tile_id];
+        let src_sprite = sprites_src[tile_name];
+        assert(src_sprite);
+        clearSwap(src_sprite, tile_id, root_uidata_orig);
+      }
+      delete root_sprite.uidata_orig;
+      return;
+    }
+    // apply swap
+    let texs_dst = dst.texs;
+    let atlas_data_dst = this.atlas_data;
+    assert(atlas_data_dst);
+    let sprites_dst = dst.sprites;
+    saveOrig(root_sprite);
+    let root_uidata = root_sprite.uidata;
+    let root_rects = root_uidata.rects as unknown as Vec4[] & TSMap<Vec4>;
+    let root_uidata_orig = root_sprite.uidata_orig;
+    assert(root_uidata_orig);
+    for (let tile_id = 0; tile_id < tiles_src.length; ++tile_id) {
+      let [tile_name] = tiles_src[tile_id];
+      let src_sprite = sprites_src[tile_name];
+      assert(src_sprite);
+      let dst_sprite = sprites_dst[tile_name];
+      if (!dst_sprite) {
+        clearSwap(src_sprite, tile_id, root_uidata_orig);
+        continue;
+      }
+      saveOrig(src_sprite);
+      // leaving most things alone, touch only UVs and texs
+      src_sprite.texs = texs_dst;
+      let tile_uvs = src_sprite.uvs as Vec4;
+      v4copy(tile_uvs, dst_sprite.uvs as Vec4);
+      src_sprite.uidata.rects = dst_sprite.uidata.rects;
+      root_rects[tile_id] = tile_uvs;
+      root_rects[tile_name] = tile_uvs;
+
+      src_sprite.doReInit();
+    }
+  }
+
   is_loaded = false;
   checkLoaded(): void {
     let { texs } = this;
@@ -211,7 +311,6 @@ class AutoAtlasImp {
         return;
       }
     }
-    ++swap_generation; // since the atlas is loaded autoAtlas() may now return something different
     this.is_loaded = true;
   }
   isLoaded(): boolean {
@@ -250,7 +349,6 @@ class AutoAtlasImp {
   }
 }
 
-let atlases: TSMap<AutoAtlasImp>;
 function autoAtlasReload(filename: string): void {
   filename = filename.slice(0, -5);
   let atlas = atlases[filename];
@@ -288,28 +386,18 @@ export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => v
   autoAtlasGet(atlas_name).onImage(cb);
 }
 
-let atlas_swaps: TSMap<string> = Object.create(null);
-
-export function autoAtlasSwapGeneration(): number {
-  return swap_generation;
-}
-
 export function autoAtlas(atlas_name: string, img_name: string): Sprite {
-  let dst = atlas_swaps[atlas_name];
-  if (dst) {
-    let swap = autoAtlasGet(dst);
-    if (swap.isLoaded()) {
-      if (swap.sprites[img_name]) {
-        return swap.get(img_name);
-      }
-    }
-  }
   return autoAtlasGet(atlas_name).get(img_name);
 }
 
 export function autoAtlasSwap(src: string, dest: string): void {
   if (atlas_swaps[src] !== dest) {
-    atlas_swaps[src] = dest;
-    ++swap_generation;
+    autoAtlasGet(dest);
+    if (dest === src || !dest) {
+      delete atlas_swaps[src];
+    } else {
+      atlas_swaps[src] = dest;
+    }
+    atlases[src]?.applySwaps();
   }
 }
