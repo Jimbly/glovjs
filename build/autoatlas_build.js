@@ -4,6 +4,7 @@ const assert = require('assert');
 const path = require('path');
 const gb = require('glov-build');
 const yaml = require('js-yaml');
+const { parse9Patch } = require('./9patch');
 const { pngAlloc, pngRead, pngWrite } = require('./png');
 const { floor, max } = Math;
 
@@ -18,52 +19,6 @@ function nextHighestPowerOfTwo(x) {
 function cmpFileKeys(a, b) {
   return a.localeCompare(b, 'en', { numeric: true });
 }
-
-let did_error = false;
-function parseRow(job, img, x0, y0, dx, dy) {
-  let ws = [];
-  let lastcoord = dx ? x0 : y0;
-  let lastv = false;
-  let { data, width, height } = img;
-  assert.equal(data.length, width * height * 4);
-  let xx = x0;
-  let yy = y0;
-  while (dx ? xx < width - 1 : yy < height - 1) {
-    let idx = (xx + yy * width) * 4;
-    let v;
-    let a = data[idx + 3];
-    if (!a) {
-      // transparent
-      v = false;
-    } else {
-      let r = data[idx];
-      let g = data[idx + 1];
-      let b = data[idx + 2];
-      if (a === 255 && !r && !g && !b) {
-        // black
-        v = true;
-      } else if (a === 255 && r === 255 && g === 255 && b === 255) {
-        // white
-        v = false;
-      } else {
-        if (!did_error) {
-          job.error(`Error parsing 9-patch file "${img.source_name}": found a pixel other than black, white, or invisible at ${xx},${yy}`);
-          did_error = true;
-        }
-      }
-    }
-    if (v !== lastv) {
-      ws.push((dx ? xx : yy) - lastcoord);
-      lastv = v;
-      lastcoord = (dx ? xx : yy);
-    }
-    xx += dx;
-    yy += dy;
-  }
-  ws.push((dx ? width : height) - 1 - lastcoord);
-  return ws;
-}
-
 
 let png_cache = [];
 let used_generation = 0;
@@ -215,22 +170,13 @@ module.exports = function (opts) {
         ws = [img.width];
         hs = [img.height];
         img.source_name = img_file.relative;
+
         if (do_9patch) {
-          did_error = false;
-          ws = parseRow(job, img, 1, 0, 1, 0);
-          hs = parseRow(job, img, 0, 1, 0, 1);
+          let ret = parse9Patch(job, img, img_name, idx !== 0);
+          ({ ws, hs, img } = ret);
           if (idx === 0) {
-            // currently unused, but can parse the padding values from the 9-patch as well
-            padh = parseRow(job, img, 1, img.height - 1, 1, 0);
-            padv = parseRow(job, img, img.width - 1, 1, 0, 1);
-            if (padh.length === 1 && padv.length === 1) {
-              padh = undefined;
-              padv = undefined;
-            }
+            ({ padh, padv } = ret);
           }
-          let new_img = pngAlloc({ width: img.width - 2, height: img.height - 2, byte_depth: 4, comment: `9-patch:${img_name}` });
-          img.bitblt(new_img, 1, 1, img.width - 2, img.height - 2, 0, 0);
-          img = new_img;
         }
         img.cached_data = {
           ws,
@@ -577,7 +523,7 @@ module.exports = function (opts) {
     ],
     version: [
       cmpFileKeys,
-      parseRow,
+      parse9Patch,
       opts,
       ignore,
     ],
