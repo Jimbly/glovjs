@@ -359,6 +359,14 @@ function autoAtlasReload(filename: string): void {
     return;
   }
   atlas.doInit();
+  for (let key in atlas_swaps) {
+    if (key === filename || atlas_swaps[key] === filename) {
+      let other = atlases[key];
+      if (other && other !== atlas) {
+        other.doInit();
+      }
+    }
+  }
 }
 
 export function autoAtlasTextureOpts(atlas_name: string, opts: TextureOptions): void {
