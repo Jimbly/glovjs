@@ -19,12 +19,6 @@ const {
 
 const { floor, round } = Math;
 
-const scale_globs = {
-  'demo/*.png': 8,
-  'utumno/*.png': 8,
-};
-const depixel_input = Object.keys(scale_globs);
-
 const targets = {
   out: path.join(__dirname, '../src/client/atlases-autogen'),
 };
@@ -35,6 +29,35 @@ gb.configure({
   targets,
   log_level: gb.LOG_INFO,
 });
+
+// eslint-disable-next-line import/order
+const config = require('./config.js')(gb, {
+  depixel_scales: {
+    'demo/*.png': 8,
+    'utumno/*.png': 8,
+  },
+  tiling_expand_pix: 4,
+  tiling_expand_rules: [
+    // auto rules:
+    //   if alpha on all 4 sides, do both alpha (will break with UI frames)
+    //   otherwise, if alpha on either vert side, do vert_clamp; same for horiz
+    //   otherwise, wrap
+    '**/*chest*:balpha',
+    '**/*wall*:hwrap,vclamp',
+    '**/*solid*:hwrap,vclamp',
+    '**/*door*:hwrap,vclamp',
+    '**/*stairs*:hwrap,vclamp',
+    '**/*arch*:hwrap,vclamp',
+    '**/*exit*:hwrap,vclamp',
+    '**/*enter*:hwrap,vclamp',
+    '**/*return*:hwrap,vclamp',
+    '**/*brick_dark*:hwrap,vclamp',
+    '**/*lair*:hwrap,vclamp',
+  ],
+});
+
+const scale_globs = config.depixel_scales;
+const depixel_input = Object.keys(scale_globs);
 
 gb.task({
   ...autoatlas({
@@ -48,24 +71,8 @@ gb.task({
   name: 'depixel-tiling-expand',
   input: ['depixel-atlas-prep:**'],
   ...tilingExpand({
-    pix: 4,
-    // auto rules:
-    //   if alpha on all 4 sides, do both alpha (will break with UI frames)
-    //   otherwise, if alpha on either vert side, do vert_clamp; same for horiz
-    //   otherwise, wrap
-    rules: [
-      '**/*chest*:balpha',
-      '**/*wall*:hwrap,vclamp',
-      '**/*solid*:hwrap,vclamp',
-      '**/*door*:hwrap,vclamp',
-      '**/*stairs*:hwrap,vclamp',
-      '**/*arch*:hwrap,vclamp',
-      '**/*exit*:hwrap,vclamp',
-      '**/*enter*:hwrap,vclamp',
-      '**/*return*:hwrap,vclamp',
-      '**/*brick_dark*:hwrap,vclamp',
-      '**/*lair*:hwrap,vclamp',
-    ],
+    pix: config.tiling_expand_pix,
+    rules: config.tiling_expand_rules,
   }),
 });
 
