@@ -1533,6 +1533,10 @@ export function renderCamPos(): ROVec3 {
   return cam_pos;
 }
 
+export function renderPlayerPos(): ROVec3 {
+  return player_pos;
+}
+
 let viewport_shear = 0;
 // -1 = looking downward, 1 = looking upward
 export function renderViewportShear(amt: number): void {
