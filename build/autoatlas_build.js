@@ -67,6 +67,178 @@ function pngAllocTemp(width, height, comment) {
   return img;
 }
 
+function packShelf(img_list, pad, max_tex_size) {
+  img_list.sort(function (imga, imgb) {
+    // pack tallest first
+    let d = (imgb.imgs[0].height || 0) - (imga.imgs[0].height || 0);
+    if (d) {
+      return d;
+    }
+    return cmpFileKeys(imga.img_name, imgb.img_name);
+  });
+  let maxx = 0;
+  let x = 0;
+  let y = 0;
+  let row_height = 0;
+  for (let ii = 0; ii < img_list.length; ++ii) {
+    let img_data = img_list[ii];
+    let { imgs } = img_data;
+    let img0 = imgs[0];
+    // Pack into output
+    if (x + img0.width + pad * 2 > max_tex_size) {
+      x = 0;
+      y += row_height;
+      row_height = 0;
+    }
+    row_height = max(row_height, img0.height + pad * 2);
+    img_data.x = x + pad;
+    img_data.y = y + pad;
+    x += img0.width + pad * 2;
+    maxx = max(maxx, x);
+  }
+  y += row_height + pad * 2;
+
+  return { width: maxx, height: y };
+}
+
+function packSkyline(img_list, pad, max_tex_size) {
+  img_list.sort(function (imga, imgb) {
+    // pack tallest first - TODO: try widest? biggest?
+    let d = (imgb.imgs[0].height || 0) - (imga.imgs[0].height || 0);
+    if (d) {
+      return d;
+    }
+    return cmpFileKeys(imga.img_name, imgb.img_name);
+  });
+
+  if (0) {
+    // naive reference implementation
+    let skyline = [];
+    for (let ii = 0; ii < max_tex_size; ++ii) {
+      skyline[ii] = 0;
+    }
+
+    let maxx = 0;
+    let maxy = 0;
+    for (let ii = 0; ii < img_list.length; ++ii) {
+      let img_data = img_list[ii];
+      let { imgs } = img_data;
+      let img0 = imgs[0];
+      // pack into output
+      let width = img0.width + pad * 2;
+      let height = img0.height + pad * 2;
+      let best_x = 0;
+      let best_y = Infinity;
+      for (let xx = 0; xx < max_tex_size - width; ++xx) {
+        // try to place at xx
+        let y = 0;
+        for (let xoffs = 0; xoffs < width && y < best_y; ++xoffs) {
+          y = max(y, skyline[xx + xoffs]);
+        }
+        if (y < best_y) {
+          best_x = xx;
+          best_y = y;
+        }
+      }
+      assert(isFinite(best_y));
+      img_data.x = best_x + pad;
+      img_data.y = best_y + pad;
+      maxx = max(maxx, best_x + width);
+      let y1 = best_y + height;
+      maxy = max(maxy, y1);
+      for (let xoffs = 0; xoffs < width; ++xoffs) {
+        skyline[best_x + xoffs] = y1;
+      }
+    }
+
+    return { width: maxx, height: maxy };
+  }
+
+  let skyline = [
+    // y, width
+    [0, max_tex_size],
+  ];
+
+  let maxx = 0;
+  let maxy = 0;
+  for (let ii = 0; ii < img_list.length; ++ii) {
+    let img_data = img_list[ii];
+    let { imgs } = img_data;
+    let img0 = imgs[0];
+    // pack into output
+    let width = img0.width + pad * 2;
+    let height = img0.height + pad * 2;
+    let best_x = 0;
+    let best_y = Infinity;
+    let best_idx = -1;
+    for (let idx = 0, x = 0; idx < skyline.length; ++idx) {
+      let y = skyline[idx][0];
+      let left = width;
+      let walk = idx;
+      while (left > 0 && walk < skyline.length) {
+        y = max(y, skyline[walk][0]);
+        left -= skyline[walk][1];
+        if (left > 0) {
+          ++walk;
+        }
+      }
+      if (left <= 0) {
+        if (y < best_y) {
+          best_idx = idx;
+          best_x = x;
+          best_y = y;
+        }
+      }
+      x += skyline[idx][1];
+    }
+    assert(isFinite(best_y));
+    img_data.x = best_x + pad;
+    img_data.y = best_y + pad;
+    maxx = max(maxx, best_x + width);
+    let y1 = best_y + height;
+    maxy = max(maxy, y1);
+    // update skyline
+    let left = width;
+    let idx = best_idx;
+    while (true) {
+      let elem = skyline[idx];
+      assert(y1 > elem[0]);
+      if (left === elem[1]) {
+        // perfect fit, done
+        elem[0] = y1;
+        break;
+      } else if (left < elem[1]) {
+        // split it and we're done
+        skyline.splice(idx + 1, 0, [elem[0], elem[1] - left]);
+        elem[0] = y1;
+        elem[1] = left;
+        break;
+      } else {
+        // bump it up, move on to the next one
+        elem[0] = y1;
+        left -= elem[1];
+        idx++;
+      }
+    }
+    // compress list (doesn't seem to help in my tests, but doesn't hurt, makes debugging easier)
+    let combine = 0;
+    let combine_len = 0;
+    while (idx >= 0 && skyline[idx][0] === y1) {
+      combine++;
+      combine_len += skyline[idx][1];
+      --idx;
+    }
+    if (combine > 1) {
+      ++idx;
+      skyline[idx][1] = combine_len;
+      skyline.splice(idx + 1, combine - 1);
+    }
+  }
+
+  return { width: maxx, height: maxy };
+}
+
+
 module.exports = function (opts) {
   let ignore_list = opts.ignore || [];
   let ignore = Object.create(null);
@@ -253,18 +425,6 @@ module.exports = function (opts) {
       let file_keys = Object.keys(file_data);
       file_keys.sort(cmpFileKeys);
       let file_keys_for_packing = file_keys.slice(0);
-      file_keys_for_packing.sort(function (a, b) {
-        let imga = file_data[a];
-        assert(imga);
-        let imgb = file_data[b];
-        assert(imgb);
-        // pack tallest first
-        let d = (imgb.imgs[0]?.height || 0) - (imga.imgs[0]?.height || 0);
-        if (d) {
-          return d;
-        }
-        return cmpFileKeys(a, b);
-      });
 
       let runtime_data = {
         // name,
@@ -274,62 +434,48 @@ module.exports = function (opts) {
         runtime_data.layers = atlas_data.num_layers;
       }
 
-      // Check input and pack output
-      let maxx = 0;
-      let maxy;
-      {
-        let x = 0;
-        let y = 0;
-        let row_height = 0;
-        let any_error = false;
-        for (let ii = 0; ii < file_keys_for_packing.length; ++ii) {
-          let img_name = file_keys_for_packing[ii];
-          if (ignore[`${name}:${img_name}`]) {
-            continue;
-          }
-          let img_data = file_data[img_name];
-          let { imgs } = img_data;
-          let img0 = imgs[0];
-          if (!img0) {
-            any_error = true;
-            job.error(`Image ${img_name} missing required base (_0) layer`);
-            continue;
-          }
-          // Check all layers are the same size
-          for (let idx = 1; idx < imgs.length; ++idx) {
-            let img = imgs[idx];
-            if (img) {
-              if (img.width !== img0.width ||
-                img.height !== img0.height
-              ) {
-                any_error = true;
-                job.error(`Image ${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
-                  ` does not match base layer (${img0.source_name}) resolution (${img0.width}x${img0.height})`);
-              }
+      // Check input
+      let any_error = false;
+      let imgs_for_packing = [];
+      for (let ii = 0; ii < file_keys_for_packing.length; ++ii) {
+        let img_name = file_keys_for_packing[ii];
+        if (ignore[`${name}:${img_name}`]) {
+          continue;
+        }
+        let img_data = file_data[img_name];
+        let { imgs } = img_data;
+        let img0 = imgs[0];
+        if (!img0) {
+          any_error = true;
+          job.error(`Image ${img_name} missing required base (_0) layer`);
+          continue;
+        }
+        // Check all layers are the same size
+        for (let idx = 1; idx < imgs.length; ++idx) {
+          let img = imgs[idx];
+          if (img) {
+            if (img.width !== img0.width ||
+              img.height !== img0.height
+            ) {
+              any_error = true;
+              job.error(`Image ${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
+                ` does not match base layer (${img0.source_name}) resolution (${img0.width}x${img0.height})`);
             }
           }
-          // Pack into output
-          if (x + img0.width + pad * 2 > max_tex_size) {
-            x = 0;
-            y += row_height;
-            row_height = 0;
-          }
-          row_height = max(row_height, img0.height + pad * 2);
-          img_data.x = x + pad;
-          img_data.y = y + pad;
-          x += img0.width + pad * 2;
-          maxx = max(maxx, x);
         }
-        y += row_height + pad * 2;
-        maxy = y;
-        if (any_error) {
-          return;
-        }
+        img_data.img_name = img_name;
+        imgs_for_packing.push(img_data);
+      }
+      if (any_error) {
+        return;
       }
 
+      // let { width, height } = packShelf(imgs_for_packing, pad, max_tex_size);
+      let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
+
       // Allocate actual images and copy into them
-      let width = nextHighestPowerOfTwo(maxx);
-      let height = nextHighestPowerOfTwo(maxy);
+      width = nextHighestPowerOfTwo(width);
+      height = nextHighestPowerOfTwo(height);
       let pngouts = [];
       for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
         pngouts.push(pngAllocTemp(width, height, `output:${name}`));
@@ -539,6 +685,8 @@ module.exports = function (opts) {
       parse9Patch,
       opts,
       ignore,
+      packShelf,
+      packSkyline,
     ],
   };
 };
