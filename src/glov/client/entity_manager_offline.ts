@@ -298,6 +298,7 @@ class OfflineEntityManagerImpl<
       // Invalidate old ent
       ent.id = 0;
       ent.entity_manager = null!;
+      new_ent.onCreate(false);
       entities[ent_id_string] = new_ent;
       ret.push(new_ent);
     }
