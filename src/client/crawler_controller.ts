@@ -1830,6 +1830,10 @@ export class CrawlerController {
         playUISound(wall1.swapped.sound_id);
       } else if (wall2 && wall2.swapped.sound_id) {
         playUISound(wall2.swapped.sound_id);
+      } else if (wall1 && wall1.sound_id) {
+        playUISound(wall1.sound_id);
+      } else if (wall2 && wall2.sound_id) {
+        playUISound(wall2.sound_id);
       }
 
       if (cell2 && cell2.desc.swapped.sound_id === null) {
