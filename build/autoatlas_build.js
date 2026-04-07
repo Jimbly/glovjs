@@ -67,40 +67,6 @@ function pngAllocTemp(width, height, comment) {
   return img;
 }
 
-function packShelf(img_list, pad, max_tex_size) {
-  img_list.sort(function (imga, imgb) {
-    // pack tallest first
-    let d = (imgb.imgs[0].height || 0) - (imga.imgs[0].height || 0);
-    if (d) {
-      return d;
-    }
-    return cmpFileKeys(imga.img_name, imgb.img_name);
-  });
-  let maxx = 0;
-  let x = 0;
-  let y = 0;
-  let row_height = 0;
-  for (let ii = 0; ii < img_list.length; ++ii) {
-    let img_data = img_list[ii];
-    let { imgs } = img_data;
-    let img0 = imgs[0];
-    // Pack into output
-    if (x + img0.width + pad * 2 > max_tex_size) {
-      x = 0;
-      y += row_height;
-      row_height = 0;
-    }
-    row_height = max(row_height, img0.height + pad * 2);
-    img_data.x = x + pad;
-    img_data.y = y + pad;
-    x += img0.width + pad * 2;
-    maxx = max(maxx, x);
-  }
-  y += row_height + pad * 2;
-
-  return { width: maxx, height: y };
-}
-
 function packSkyline(img_list, pad, max_tex_size) {
   img_list.sort(function (imga, imgb) {
     // pack tallest first - TODO: try widest? biggest?
@@ -110,49 +76,6 @@ function packSkyline(img_list, pad, max_tex_size) {
     }
     return cmpFileKeys(imga.img_name, imgb.img_name);
   });
-
-  if (0) {
-    // naive reference implementation
-    let skyline = [];
-    for (let ii = 0; ii < max_tex_size; ++ii) {
-      skyline[ii] = 0;
-    }
-
-    let maxx = 0;
-    let maxy = 0;
-    for (let ii = 0; ii < img_list.length; ++ii) {
-      let img_data = img_list[ii];
-      let { imgs } = img_data;
-      let img0 = imgs[0];
-      // pack into output
-      let width = img0.width + pad * 2;
-      let height = img0.height + pad * 2;
-      let best_x = 0;
-      let best_y = Infinity;
-      for (let xx = 0; xx < max_tex_size - width; ++xx) {
-        // try to place at xx
-        let y = 0;
-        for (let xoffs = 0; xoffs < width && y < best_y; ++xoffs) {
-          y = max(y, skyline[xx + xoffs]);
-        }
-        if (y < best_y) {
-          best_x = xx;
-          best_y = y;
-        }
-      }
-      assert(isFinite(best_y));
-      img_data.x = best_x + pad;
-      img_data.y = best_y + pad;
-      maxx = max(maxx, best_x + width);
-      let y1 = best_y + height;
-      maxy = max(maxy, y1);
-      for (let xoffs = 0; xoffs < width; ++xoffs) {
-        skyline[best_x + xoffs] = y1;
-      }
-    }
-
-    return { width: maxx, height: maxy };
-  }
 
   let skyline = [
     // y, width
@@ -470,7 +393,6 @@ module.exports = function (opts) {
         return;
       }
 
-      // let { width, height } = packShelf(imgs_for_packing, pad, max_tex_size);
       let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
 
       // Allocate actual images and copy into them
@@ -685,7 +607,6 @@ module.exports = function (opts) {
       parse9Patch,
       opts,
       ignore,
-      packShelf,
       packSkyline,
     ],
   };
