@@ -142,6 +142,11 @@ function textureWizardFindUnused(): void {
             add(atlas, rec.frames[kk], `ent:${filenames[ii]}`);
           }
         }
+        if (trait.shadow) {
+          if (trait.shadow.atlas) {
+            add(trait.shadow.atlas, trait.shadow.name, `ent:${filenames[ii]}:shadow`);
+          }
+        }
       }
     }
   }
