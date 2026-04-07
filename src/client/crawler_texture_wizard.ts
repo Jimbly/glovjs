@@ -156,9 +156,34 @@ function textureWizardFindUnused(): void {
   });
 }
 
+function findFloorCeiling(atlas: string, img: string): [string, string] {
+  let floorname = `${atlas}/${img.split('-')[0]}-floor`;
+  if (!all_images[floorname]) {
+    floorname = `${atlas}/floor`;
+    if (!all_images[floorname]) {
+      floorname = `${atlas}/${img.replace('detail', 'floor')}`;
+      if (!all_images[floorname]) {
+        floorname = `${atlas}/${img}`;
+      }
+    }
+  }
+  let ceilingname = `${atlas}/${img.split('-')[0]}-ceiling`;
+  if (!all_images[ceilingname]) {
+    ceilingname = `${atlas}/ceiling`;
+    if (!all_images[ceilingname]) {
+      ceilingname = `${atlas}/${img.replace('detail', 'ceiling')}`;
+      if (!all_images[ceilingname]) {
+        ceilingname = `${atlas}/${img}`;
+      }
+    }
+  }
+  return [floorname.split('/')[1], ceilingname.split('/')[1]];
+}
+
 const PAD = 4;
 let selected = 0;
-const MODES = ['wall', 'door', 'floor'/*, 'detail'*/, 'ent'] as const;
+let last_selected_key = '';
+const MODES = ['wall', 'door', 'floor', 'detail', 'ent'] as const;
 let selected_mode: typeof MODES[number] = '' as 'wall';
 let target_name = '';
 let flags: TSMap<boolean> = {};
@@ -186,6 +211,24 @@ export function crawlerTextureWizard(): void {
   const font = uiGetFont();
   const button_height = uiButtonHeight();
   const button_width = uiButtonWidth();
+  function reset(): void {
+    target_name = '';
+    flags = {};
+    if (selected_mode === 'wall') {
+      flags.solid = true;
+      flags.open_vis = false;
+    } else if (selected_mode === 'ent') {
+      flags.enemy = true;
+    } else if (selected_mode === 'detail') {
+      flags.solid = true;
+      flags.open_vis = true;
+    }
+  }
+  function selectMode(mode: typeof selected_mode): void {
+    selected_mode = mode;
+    reset();
+    last_selected_key = unused[selected];
+  }
   for (let ii = 0; ii < unused.length && y + button_height < viewport.y + viewport.h - PAD; ++ii) {
     let key = unused[ii];
     if (button({
@@ -195,10 +238,30 @@ export function crawlerTextureWizard(): void {
       disabled: selected === ii,
       align: ALIGN.HLEFT | ALIGN.HFIT | ALIGN.VCENTER,
       text: key,
-    })) {
+    }) || last_selected_key !== unused[selected]) {
       selected = ii;
+      last_selected_key = unused[selected];
       target_name = '';
-      flags = {};
+      if (key.endsWith('floor')) {
+        selectMode('floor');
+      } else if (key.match(/solid\d?$/)) {
+        selectMode('wall');
+      } else if (key.match(/secret$/)) {
+        selectMode('wall');
+        flags.solid = false;
+        flags.secret = true;
+      } else if (key.match(/window$/)) {
+        selectMode('wall');
+        flags.open_vis = true;
+      } else if (key.match(/stairs_(in|out)$/)) {
+        selectMode('door');
+      } else if (key.match(/door$/)) {
+        selectMode('door');
+      } else if (key.match(/detail\d?$/)) {
+        selectMode('detail');
+      } else {
+        selectMode('wall');
+      }
     }
     y += button_height;
   }
@@ -224,21 +287,21 @@ export function crawlerTextureWizard(): void {
     }
     y += button_height + PAD;
     let sub_w = floor((w - PAD * 3) / 4);
+    let xx = x;
+    let xx0 = x;
     MODES.forEach(function (mode, idx) {
       if (buttonText({
-        x: x + (sub_w + PAD) * idx,
+        x: xx,
         y, z, w: sub_w,
         text: mode,
         disabled: selected_mode === mode,
-      }) || !selected_mode) {
-        selected_mode = mode;
-        target_name = '';
-        flags = {};
-        if (selected_mode === 'wall') {
-          flags.solid = true;
-        } else if (selected_mode === 'ent') {
-          flags.enemy = true;
-        }
+      }) || !selected_mode || last_selected_key !== selected_key) {
+        selectMode(mode);
+      }
+      xx += sub_w + PAD;
+      if (idx % 4 === 3) {
+        xx = xx0;
+        y += button_height + PAD;
       }
     });
     y += button_height + PAD;
@@ -247,7 +310,7 @@ export function crawlerTextureWizard(): void {
       target_name = `${atlas}_${img}`;
       if (selected_mode === 'ent') {
         target_name = `entities/${target_name}.entdef`;
-      } else if (selected_mode === 'floor') {
+      } else if (selected_mode === 'floor' || selected_mode === 'detail') {
         target_name = `cells/${target_name}.celldef`;
       } else {
         target_name = `walls/${target_name}.walldef`;
@@ -280,6 +343,13 @@ export function crawlerTextureWizard(): void {
 
     if (selected_mode !== 'door' && selected_mode !== 'ent') {
       flag('solid');
+    }
+    if (selected_mode === 'wall') {
+      flag('open_vis');
+      flag('secret');
+    }
+    if (selected_mode === 'detail') {
+      flag('open_vis');
     }
     if (selected_mode === 'ent') {
       flag('enemy');
@@ -322,15 +392,18 @@ export function crawlerTextureWizard(): void {
         if (flags.solid) {
           data.push(
             'open_move: false',
-            'open_vis: false',
+            `open_vis: ${Boolean(flags.open_vis)}`,
             'map_view_wall_frames_from: solid',
           );
         } else {
           data.push(
             'open_move: true',
-            'open_vis: true',
-            'map_view_wall_frames_from: open',
+            `open_vis: ${Boolean(flags.open_vis)}`,
+            `map_view_wall_frames_from: ${flags.secret ? 'secret_door' : 'open'}`,
           );
+          if (flags.secret) {
+            data.push('is_secret: true');
+          }
         }
       } else if (selected_mode === 'door') {
         data.push(
@@ -345,6 +418,11 @@ export function crawlerTextureWizard(): void {
           'open_vis: true',
           'default_wall: solid',
         );
+      } else if (selected_mode === 'detail') {
+        data.push(
+          `open_move: ${!flags.solid}`,
+          `open_vis: ${Boolean(flags.open_vis)}`,
+        );
       }
       data.push('visuals:');
       if (selected_mode === 'floor') {
@@ -358,8 +436,34 @@ export function crawlerTextureWizard(): void {
           '  type: simple_ceiling',
           '  opts:',
           `    atlas: ${atlas}`,
-          `    tile: ${img}`,
+          `    tile: ${all_images[`${atlas}/${img.replace('floor', 'ceiling')}`] ?
+            img.replace('floor', 'ceiling') : img}`,
         );
+      } else if (selected_mode === 'detail') {
+        let pair = findFloorCeiling(atlas, img);
+        data.push(
+          '- pass: bg',
+          '  type: simple_floor',
+          '  opts:',
+          `    atlas: ${atlas}`,
+          `    tile: ${pair[0]}`,
+          '- pass: bg',
+          '  type: simple_ceiling',
+          '  opts:',
+          `    atlas: ${atlas}`,
+          `    tile: ${pair[1]}`,
+          '- pass: celldetails',
+          '  type: simple_billboard',
+          '  opts:',
+          `    atlas: ${atlas}`,
+          `    tile: ${img}`,
+          '    width: 0.5',
+          '    height: 0.5',
+          '    offs: [0, 0, 0]',
+          '    face_camera: false # Otherwise faces frustum',
+          '    do_alpha: true',
+        );
+
       } else {
         data.push(
           '- type: simple_wall',
