@@ -759,12 +759,15 @@ export class CrawlerLevel {
   visBlockSeeThroughDoors(x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI): boolean {
     return (this.wallsBlock([x, y], dir, script_api) & (BLOCK_VIS|BLOCK_MOVE)) === (BLOCK_VIS|BLOCK_MOVE);
   }
+  visBlockNoObstacles(x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI): boolean {
+    return Boolean(this.wallsBlock([x, y], dir, script_api));
+  }
 
   simpleVisCheck(
     pos0: ROVec2,
     pos1: ROVec2,
     script_api: CrawlerScriptAPI,
-    vis_block?: 'visBlockNormal' | 'visBlockSeeThroughDoors'
+    vis_block?: 'visBlockNormal' | 'visBlockSeeThroughDoors' | 'visBlockNoObstacles'
   ): boolean {
     vis_block = vis_block || 'visBlockNormal';
     let check = this[vis_block].bind(this);
