@@ -16,11 +16,12 @@ exports.tilingExpand = function (param) {
   pix = pix || 1;
   rules = rules || [];
   rules.push('**:bauto');
+  let globs = [];
   let modes = [];
   for (let ii = 0; ii < rules.length; ++ii) {
     let pair = rules[ii].split(':');
     assert.equal(pair.length, 2);
-    rules[ii] = pair[0];
+    globs.push(pair[0]);
     let mode = pair[1].split(',');
     assert(mode[0][0] === 'b' || mode.length === 2, `Invalid rule mode ${pair[1]}`);
     let horz;
@@ -49,11 +50,12 @@ exports.tilingExpand = function (param) {
     let horz;
     let vert;
     let { relative } = file;
-    for (let ii = 0; ii < rules.length; ++ii) {
-      if (micromatch(relative, rules[ii]).length) {
+    for (let ii = 0; ii < globs.length; ++ii) {
+      if (micromatch(relative, globs[ii]).length) {
         let mode = modes[ii];
         horz = horz || mode.horz;
         vert = vert || mode.vert;
+        break;
       }
     }
     assert(horz && vert); // should at least get auto
