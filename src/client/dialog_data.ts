@@ -35,15 +35,15 @@ const { round } = Math;
 const NAME_BOX_H = 14;
 const NAME_BOX_PAD = 6;
 
-function keyGet(name: string): boolean {
+export function keyGet(name: string): boolean {
   return crawlerScriptAPI().keyGet(name);
 }
 
-function keySet(name: string): void {
+export function keySet(name: string): void {
   crawlerScriptAPI().keySet(name);
 }
 
-function keyClear(name: string): void {
+export function keyClear(name: string): void {
   crawlerScriptAPI().keyClear(name);
 }
 
