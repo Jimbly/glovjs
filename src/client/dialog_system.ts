@@ -36,7 +36,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import { dataError } from 'glov/common/data_error';
-import { WithRequired } from 'glov/common/types';
+import { TSMap, WithRequired } from 'glov/common/types';
 import { merge } from 'glov/common/util';
 import {
   v2manhattanDist,
@@ -70,6 +70,7 @@ export type DialogParam = {
   instant?: boolean;
   buttons?: DialogButton[];
   panel_sprite?: Sprite;
+  flags?: TSMap<boolean>;
 };
 
 let active_dialog: DialogParam | null = null;
@@ -104,9 +105,16 @@ function ff(): boolean {
     ) || mouseDownAnywhere() || inputClick();
 }
 
+export function dialogActive(): boolean {
+  return Boolean(active_dialog);
+}
 
 export function dialogMoveLocked(): boolean {
   return Boolean(active_dialog && !active_dialog.transient);
+}
+
+export function dialogFlag(flag: string): boolean {
+  return Boolean(active_dialog && active_dialog.flags && active_dialog.flags[flag]);
 }
 
 function mdTruncate(tree: MDASTNode[], state: { cch: number }): string {
