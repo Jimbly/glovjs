@@ -118,7 +118,7 @@ export type EntityHunter = Entity & {
 };
 
 
-function ignoreErrors(err: unknown): void {
+export function aiIgnoreErrors(err: unknown): void {
   console.log(`Ignoring error sending AI update: ${err}`);
 }
 
@@ -185,7 +185,7 @@ export function aiTraitsClientStartup(): void {
         }
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
-        }, undefined, ignoreErrors);
+        }, undefined, aiIgnoreErrors);
         profilerStopFunc();
         return true;
       },
@@ -248,7 +248,7 @@ export function aiTraitsClientStartup(): void {
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
           last_pos: pos,
-        }, undefined, ignoreErrors);
+        }, undefined, aiIgnoreErrors);
         profilerStopFunc();
         return true;
       },
@@ -442,7 +442,7 @@ export function aiTraitsClientStartup(): void {
         this.applyAIUpdate('ai_move', {
           pos: new_pos,
           last_pos: pos,
-        }, undefined, ignoreErrors);
+        }, undefined, aiIgnoreErrors);
         profilerStopFunc();
         return true;
       },
@@ -637,7 +637,7 @@ export function aiStepFloor(params: {
       no_move = true;
     }
 
-    if (!no_move) {
+    if (!no_move && ent.isAlive()) {
       let moved = false;
       if (!moved && (ent as EntityHunter).aiHunt && !defines?.PEACE) {
         moved = (ent as EntityHunter).aiHunt(game_state, script_api, payload);
