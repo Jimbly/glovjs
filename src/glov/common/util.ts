@@ -6,7 +6,7 @@ import assert from 'assert';
 import type { DataObject, ErrorCallback } from './types';
 import type { JSVec2, Vec2 } from './vmath';
 
-const { PI, abs, ceil, floor, min, max, random, round, pow, sin, sqrt } = Math;
+const { PI, abs, ceil, exp, floor, min, max, random, round, pow, sin, sqrt } = Math;
 const TWO_PI = PI * 2;
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -252,6 +252,23 @@ export function lerpAngle(t: number, a0: number, a1: number): number {
   return r;
 }
 
+/**
+ * From Three.js:
+ * Smoothly interpolate a number from `x` to `y` in  a spring-like manner using a delta
+ * time to maintain frame rate independent movement. For details, see
+ * [Frame rate independent damping using lerp](http://www.rorydriscoll.com/2016/03/07/frame-rate-independent-damping-using-lerp/).
+ *
+ * @param {number} x - The current point.
+ * @param {number} y - The target point.
+ * @param {number} ms - The blending time in milliseconds (to reach 95% of the target)
+ * @param {number} dt - Delta time in milliseconds.
+ * @return {number} The interpolated value.
+ */
+export function damp(x: number, y: number, ms: number, dt: number): number {
+  let lambda = 2.995733 / ms; // reaches 95% in specified ms
+  // if we want to target 99%: use 4.605171 / ms;
+  return lerp(1 - exp(-lambda * dt), x, y);
+}
 
 export function mix(v0: number, v1: number, a: number): number { // GLSL semantics
   return (1 - a) * v0 + a * v1;

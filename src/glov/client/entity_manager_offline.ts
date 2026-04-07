@@ -298,6 +298,7 @@ class OfflineEntityManagerImpl<
       // Invalidate old ent
       ent.id = 0;
       ent.entity_manager = null!;
+      new_ent.onCreate(false);
       entities[ent_id_string] = new_ent;
       ret.push(new_ent);
     }
@@ -351,6 +352,12 @@ class OfflineEntityManagerImpl<
     // assert(!ent.is_player);
     // ent.fixupPostLoad();
     this.entities[ent.id] = ent;
+
+    let fade_in_time = ent.onCreate(true);
+    if (fade_in_time) {
+      this.fadeInEnt(ent, fade_in_time);
+    }
+
     this.emit('ent_update', ent.id);
     return ent;
   }

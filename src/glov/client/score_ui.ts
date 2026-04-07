@@ -13,6 +13,7 @@ import {
   Font,
   FontStyle,
 } from './font';
+import { markdownAuto } from './markdown';
 import {
   FRIEND_CAT_GLOBAL,
   HighScoreListEntry,
@@ -41,6 +42,7 @@ export type ColumnDef = {
   name: string;
   width: number;
   align?: number;
+  markdown?: boolean;
   draw?: (param: DrawCellParam) => void;
 };
 
@@ -76,7 +78,18 @@ export function drawCellDefault({
   }
 
   let str = String(value);
-  font.drawSizedAligned(use_style, x, y, z, size, align, w, h, str);
+  if (column.markdown) {
+    markdownAuto({
+      font_style: use_style,
+      text_height: size,
+      x, y, z,
+      align,
+      w, h,
+      text: str,
+    });
+  } else {
+    font.drawSizedAligned(use_style, x, y, z, size, align, w, h, str);
+  }
 }
 
 let scroll_origin = 0;

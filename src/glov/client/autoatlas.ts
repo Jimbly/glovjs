@@ -31,6 +31,8 @@ type AutoAtlasBuildDataRoot = {
   tiles: AutoAtlasBuildData[];
 };
 
+export type SpriteWithUIData = WithRequired<Sprite, 'uidata'>;
+
 let load_opts: TSMap<TextureOptions> = {};
 let hit_startup = false;
 
@@ -54,7 +56,7 @@ function spriteMakeError(sprite: Sprite): void {
 let atlas_swaps: TSMap<string> = Object.create(null);
 let atlases: TSMap<AutoAtlasImp>;
 
-type AutoAtlasSprite = WithRequired<Sprite, 'uidata'> & {
+type AutoAtlasSprite = SpriteWithUIData & {
   autoatlas_used?: boolean;
   uidata_orig?: SpriteUIData;
 };
@@ -328,7 +330,7 @@ class AutoAtlasImp {
     webFSOnReady(this.doInit.bind(this));
   }
 
-  get(img_name: string): Sprite {
+  get(img_name: string): SpriteWithUIData {
     let ret = this.sprites[img_name];
     if (!ret) {
       ret = this.sprites[img_name] = this.prealloc();
@@ -385,7 +387,7 @@ export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => v
   autoAtlasGet(atlas_name).onImage(cb);
 }
 
-export function autoAtlas(atlas_name: string, img_name: string): Sprite {
+export function autoAtlas(atlas_name: string, img_name: string): SpriteWithUIData {
   return autoAtlasGet(atlas_name).get(img_name);
 }
 

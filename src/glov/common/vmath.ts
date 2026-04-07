@@ -135,10 +135,22 @@ export function v2add(out: Vec2, a: ROVec2, b: ROVec2): Vec2 {
   return out;
 }
 
+export function v2iAdd(inout: Vec2, a: ROVec2): Vec2 {
+  inout[0] += a[0];
+  inout[1] += a[1];
+  return inout;
+}
+
 export function v2addScale(out: Vec2, a: ROVec2, b: ROVec2, s: number): Vec2 {
   out[0] = a[0] + b[0] * s;
   out[1] = a[1] + b[1] * s;
   return out;
+}
+
+export function v2iAddScale(inout: Vec2, a: ROVec2, s: number): Vec2 {
+  inout[0] += a[0] * s;
+  inout[1] += a[1] * s;
+  return inout;
 }
 
 export function v2angle(a: ROVec2, b: ROVec2): number {
@@ -618,6 +630,14 @@ export function v4add(out: Vec4, a: ROVec4, b: ROVec4): Vec4 {
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
   out[3] = a[3] + b[3];
+  return out;
+}
+
+export function v4addScale(out: Vec4, a: ROVec4, b: ROVec4, s: number): Vec4 {
+  out[0] = a[0] + b[0] * s;
+  out[1] = a[1] + b[1] * s;
+  out[2] = a[2] + b[2] * s;
+  out[3] = a[3] + b[3] * s;
   return out;
 }
 
