@@ -15,7 +15,7 @@ import {
   CrawlerScriptAPI,
   CrawlerScriptEventMapIcon,
 } from '../common/crawler_script';
-import { crawlerScriptAPI } from './crawler_play';
+import { crawlerController, crawlerScriptAPI } from './crawler_play';
 import {
   DialogParam,
   dialogPush,
@@ -147,6 +147,14 @@ dialogRegister({
         transient: true,
       });
     }
+  },
+  stairs_backup: function () {
+    crawlerController().forceMoveBackwards();
+    dialogPush({
+      transient: true,
+      transient_dist: 1,
+      text: 'This is where you came in, try to find the stairs down instead.',
+    });
   },
 });
 
