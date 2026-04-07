@@ -501,16 +501,26 @@ module.exports = function (opts) {
     });
   }
 
-  let { name, inputs } = opts;
+  let { name, inputs, only_prep } = opts;
 
   // Prep task: for images with matching .yaml, split them up
   // Other images and atlas.yaml - just pass through
-  let prep_task = `${name}_prep`;
-  gb.task({
-    name: prep_task,
+  let prep_task = {
     type: gb.SINGLE,
     input: inputs,
     func: prepproc,
+  };
+
+  if (only_prep) {
+    return {
+      ...prep_task,
+      name,
+    };
+  }
+  let prep_task_name = `${name}_prep`;
+  gb.task({
+    ...prep_task,
+    name: prep_task_name,
   });
 
   // Main task: combine an atlas per folder
@@ -519,7 +529,7 @@ module.exports = function (opts) {
     type: gb.ALL,
     func: imgproc,
     input: [
-      `${prep_task}:**`,
+      `${prep_task_name}:**`,
     ],
     version: [
       cmpFileKeys,
