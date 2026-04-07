@@ -119,6 +119,10 @@ class CrawlerScriptAPIClientBase {
     this.controller.forceMove(dir);
   }
 
+  turnTo(dir: DirType): void {
+    this.controller.turnTo(dir);
+  }
+
   getFloor(): number {
     return this.game_state.levels.indexOf(this.level);
   }

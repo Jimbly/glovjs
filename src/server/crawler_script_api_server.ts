@@ -110,6 +110,10 @@ export class CrawlerScriptAPIServerImpl implements CrawlerScriptAPI {
     // Nothing: client handles this currently
   }
 
+  turnTo(dir: DirType): void {
+    // Nothing: client handles this currently
+  }
+
   getFloor(): number {
     return this.game_state.levels.indexOf(this.level);
   }

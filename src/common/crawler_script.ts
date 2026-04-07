@@ -29,6 +29,7 @@ export type CrawlerScriptAPI = {
   startPit(floor_id: number, pos_key?: string, x?: number, y?: number, rot?: DirType): void;
   startLadder(floor_id: number, is_up: boolean, x: number, y: number, rot?: DirType): void;
   forceMove(dir: DirType): void;
+  turnTo(dir: DirType): void;
   getCellRelative(dir?: DirTypeOrCell): CrawlerCell | null;
 
   // Not for use in scripts, just for setup

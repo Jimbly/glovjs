@@ -2407,6 +2407,13 @@ export class CrawlerController {
     this.freecam_pitch = clamp(this.freecam_pitch, -PI/2 + 0.001, PI/2 - 0.001);
   }
 
+  turnTo(dir: DirType): void {
+    let cur_rot = this.getEffRot();
+    if (cur_rot !== dir) {
+      this.startTurn(dir);
+    }
+  }
+
   force_face_dir: DirType | null = null;
   force_face_counter: number = 0;
   force_face_starting = false;
