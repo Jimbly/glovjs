@@ -1126,7 +1126,7 @@
       "events": [
         {
           "id": "move",
-          "param": "W"
+          "param": "W face"
         }
       ]
     },

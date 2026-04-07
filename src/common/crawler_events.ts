@@ -219,10 +219,18 @@ crawlerScriptRegisterEvent({
   when: CrawlerScriptWhen.POST,
   map_icon: CrawlerScriptEventMapIcons.NONE,
   func: (api: CrawlerScriptAPI, cell: CrawlerCell, param: string) => {
+    let do_face = false;
+    if (param.endsWith(' face')) {
+      do_face = true;
+      param = param.slice(0, -5);
+    }
     let rot = parseRot(param);
     if (rot === null || rot === undefined) {
       api.status('move', '"move" event requires a single direction parameter 0-3 or NSEW');
       return;
+    }
+    if (do_face) {
+      api.turnTo(rot);
     }
     api.forceMove(rot);
   },
