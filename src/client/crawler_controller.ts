@@ -8,6 +8,7 @@ import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client'
 import { fontStyle } from 'glov/client/font';
 import { Box } from 'glov/client/geom_types';
 import {
+  inputTouchMode,
   keyDown,
   keyDownEdge,
   KEYS,
@@ -2155,7 +2156,11 @@ export class CrawlerController {
       let forward_hotzone: Box | undefined;
       let back_hotzone: Box | undefined;
       let right_hotzone: Box | undefined;
-      if (!uiHandlingNav() && !build_mode) {
+      if (!uiHandlingNav() && !build_mode &&
+        // Only do touch hotzone on touch devices - except always in development
+        //   so we catch any subtle bugs with input even ordering in dialogs and such
+        (inputTouchMode() || engine.DEBUG)
+      ) {
         // do touch controls on the viewport
         if (disabled_move && !disabled_rotate) {
           ({ left: left_hotzone, right: right_hotzone } = touch_hotzones);
