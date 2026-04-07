@@ -455,9 +455,12 @@ module.exports = function (opts) {
         job.error(depfile, 'Config file missing "tiles" member');
         return void done();
       }
+      if (tile_res && !Array.isArray(tile_res)) {
+        tile_res = [tile_res, tile_res];
+      }
 
       if (!tiles_per_row && tile_res) {
-        tiles_per_row = floor(img.width / tile_res);
+        tiles_per_row = floor(img.width / tile_res[0]);
       }
       for (let key in tiles) {
         let tile_def = tiles[key];
@@ -467,13 +470,13 @@ module.exports = function (opts) {
             job.error(depfile, `Tile "${key}" specifies numerical tile, but config missing "tile_res"`);
             continue;
           }
-          source = [(tile_def % tiles_per_row) * tile_res, floor(tile_def / tiles_per_row) * tile_res, tile_res, tile_res];
+          source = [(tile_def % tiles_per_row) * tile_res[0], floor(tile_def / tiles_per_row) * tile_res[1], tile_res[0], tile_res[1]];
         } else if (Array.isArray(tile_def) && tile_def.length === 2) {
           if (!tile_res) {
             job.error(depfile, `Tile "${key}" specifies [x,y] without w,h, but config missing "tile_res"`);
             continue;
           }
-          source = [tile_def[0] * tile_res, tile_def[1] * tile_res, tile_res, tile_res];
+          source = [tile_def[0] * tile_res[0], tile_def[1] * tile_res[1], tile_res[0], tile_res[1]];
         } else if (Array.isArray(tile_def) && tile_def.length === 4) {
           source = tile_def;
         } else {
