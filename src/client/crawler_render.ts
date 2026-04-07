@@ -732,7 +732,7 @@ function drawSimpleFloor(
 
   let vopts = visual as unknown as SimpleDetailRenderOpts;
   let scale = vopts.scale || 1;
-  let offs = vopts.offs || [0,0];
+  let offs = vopts.offs || [0,0,0];
   let detail_layer = vopts.detail_layer || 0;
 
   v3add(temp_pos, pos, [-HDIM, HDIM, 0]);
@@ -741,6 +741,7 @@ function drawSimpleFloor(
   }
   temp_pos[0] += offs[0] * DIM + (1 - scale) * HDIM;
   temp_pos[1] -= offs[1] * DIM + (1 - scale) * HDIM;
+  temp_pos[2] += (offs[2] || 0) * DIM;
   v2set(temp_size, DIM*scale, DIM*scale);
 
   sprite.draw3D({
