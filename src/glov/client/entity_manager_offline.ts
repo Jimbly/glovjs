@@ -352,6 +352,12 @@ class OfflineEntityManagerImpl<
     // assert(!ent.is_player);
     // ent.fixupPostLoad();
     this.entities[ent.id] = ent;
+
+    let fade_in_time = ent.onCreate(true);
+    if (fade_in_time) {
+      this.fadeInEnt(ent, fade_in_time);
+    }
+
     this.emit('ent_update', ent.id);
     return ent;
   }
