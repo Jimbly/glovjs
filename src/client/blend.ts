@@ -11,7 +11,7 @@ let blend_data: TSMap<{
   last_value: number;
 }> = {};
 
-export function blend(key: string, value: number): number {
+export function blend(key: string, value: number, time?: number): number {
   let bd = blend_data[key];
   if (!bd || autoResetSkippedFrames(key)) {
     bd = blend_data[key] = {
@@ -21,7 +21,7 @@ export function blend(key: string, value: number): number {
     };
   }
   let dt = engine.frame_timestamp - bd.blend_start;
-  let w = min(dt / 500, 1);
+  let w = min(dt / (time || 500), 1);
   let v = lerp(easeOut(w, 2), bd.blend_start_value, bd.last_value);
   if (value !== bd.last_value) {
     bd.blend_start_value = v;
