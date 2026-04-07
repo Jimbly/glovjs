@@ -643,6 +643,9 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
       for (let ii = ent.floaters.length - 1; ii >= 0; --ii) {
         let floater = ent.floaters[ii];
         let elapsed = getFrameTimestamp() - floater.start;
+        if (elapsed < 0) {
+          continue;
+        }
         const FLOATER_TIME = 750; // not including fade
         const FLOATER_FADE = 250;
         const BLINK_TIME = 250;
