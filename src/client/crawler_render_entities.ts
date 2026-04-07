@@ -532,7 +532,7 @@ export function crawlerRenderEntitiesPrep(): void {
   }
 
   let controller = crawlerController();
-  ent_in_front = controller.getEntInFront(); // Note: only gets those that block players
+  ent_in_front = controller.getEntInFront(false); // TODO: add param for this?
 
   let build_mode = buildModeActive();
 
