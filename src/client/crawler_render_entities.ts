@@ -9,9 +9,8 @@ import { PerEntData } from 'glov/client/entity_position_manager';
 import {
   ALIGN,
   Font,
-  fontStyle,
-  fontStyleAlpha,
 } from 'glov/client/font';
+import { markdownAuto } from 'glov/client/markdown';
 import {
   qRotateZ,
   quat,
@@ -84,16 +83,11 @@ import {
   SPLIT_NEAR,
   SplitSet,
 } from './crawler_render';
+import { style_floater } from './styles';
 
 const { ceil, floor } = Math;
 
 let font: Font;
-
-const style_text = fontStyle(null, {
-  color: 0xFFFFFFff,
-  outline_width: 4,
-  outline_color: 0x000000ff,
-});
 
 export type EntityDrawSubOpts = {
   dt: number;
@@ -668,11 +662,19 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
         if (is_in_front && !crawlerController().controllerIsAnimating() && floater.msg) {
           let { x, y, w, h } = crawlerRenderViewportGet();
           let float = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 20;
-          font.drawSizedAlignedWrapped(fontStyleAlpha(style_text, alpha),
+          let text_height = uiTextHeight();
+          markdownAuto({
+            font,
+            font_style: style_floater,
+            alpha,
             x,
-            y + h/2 - float, Z.FLOATERS, 0,
-            uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
-            w, 0, floater.msg);
+            y: y + h/2 - float - 400 + (floater.yoffs || 0) * text_height,
+            z: Z.FLOATERS,
+            w, h: 400,
+            text_height,
+            align: ALIGN.HCENTER|ALIGN.VBOTTOM,
+            text: floater.msg
+          });
         }
       }
       if (blink < 1) {

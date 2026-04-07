@@ -100,6 +100,7 @@ export type Floater = {
   start: number;
   msg: string;
   blink_good?: boolean;
+  yoffs?: number;
 };
 
 

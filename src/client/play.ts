@@ -161,7 +161,7 @@ import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
 import { pauseMenuActive, pauseMenuOpen } from './uiaction_pause_menu';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { atan2, floor, max, min, random, round, PI } = Math;
+const { atan2, exp, floor, max, min, random, round, PI } = Math;
 
 declare module 'glov/client/settings' {
   export let ai_pause: 0 | 1; // TODO: move to ai.ts
@@ -517,6 +517,7 @@ function moveBlocked(): boolean {
 }
 
 // TODO: move into crawler_play?
+const MSG_STEP_DELAY = 200; // set to non-zero to delay multiple floaters added at the same time
 export function addFloater(ent_id: EntityID, message: string | null, anim?: string, blink_good?: boolean): void {
   let ent = crawlerEntityManager().getEnt(ent_id);
   if (ent) {
@@ -524,10 +525,15 @@ export function addFloater(ent_id: EntityID, message: string | null, anim?: stri
       if (!ent.floaters) {
         ent.floaters = [];
       }
+      let start = engine.frame_timestamp;
+      if (ent.floaters.length) {
+        start = max(start, ent.floaters[ent.floaters.length - 1].start + MSG_STEP_DELAY);
+      }
       ent.floaters.push({
-        start: engine.frame_timestamp,
+        start,
         msg: message,
         blink_good,
+        yoffs: ent.floaters.length,
       });
     }
     if (ent.triggerAnimation && anim) {
