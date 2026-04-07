@@ -39,7 +39,7 @@ import { dataError } from 'glov/common/data_error';
 import { WithRequired } from 'glov/common/types';
 import { merge } from 'glov/common/util';
 import {
-  v2same,
+  v2manhattanDist,
   vec4,
 } from 'glov/common/vmath';
 import { CrawlerScriptAPI } from '../common/crawler_script';
@@ -65,6 +65,7 @@ export type DialogParam = {
   font_style?: FontStyle;
   transient?: boolean;
   transient_long?: boolean;
+  transient_dist?: number; // don't treat as moved until we've moved than this dist (default 0)
   custom_render?: (param: PanelParam) => void;
   instant?: boolean;
   buttons?: DialogButton[];
@@ -217,7 +218,7 @@ export function dialogRun(
   if (!active_dialog) {
     return false;
   }
-  let { transient, transient_long, custom_render, text, name, buttons, panel_sprite } = active_dialog;
+  let { transient, transient_long, transient_dist, custom_render, text, name, buttons, panel_sprite } = active_dialog;
   if (transient && suppress_transient) {
     active_dialog = null;
     return false;
@@ -231,7 +232,10 @@ export function dialogRun(
   let { buttons_vis, counter } = active_state;
   if (transient && !active_state.fade_time) {
     let my_pos = crawlerMyEnt().getData<JSVec3>('pos')!;
-    if (!v2same(my_pos, active_state.pos)) {
+    transient_dist = transient_dist || 0;
+    if (
+      v2manhattanDist(my_pos, active_state.pos) > transient_dist
+    ) {
       active_state.fade_time = transient_long ? 3000 : FADE_TIME;
     }
   }
