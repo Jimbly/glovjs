@@ -819,7 +819,7 @@ let engaged_pos: string | null = null;
 function crawlerRepeatHasher(pos: ROVec2): string | null {
   let ents = entitiesAdjacentTo(game_state, entityManager(), game_state.floor_id, pos, crawlerScriptAPI());
   ents = ents.filter(function (ent) {
-    return ent.isEnemy();
+    return ent.isEnemy() && ent.isAlive();
   });
   let ent_ids = ents.map(function (ent) {
     return ent.id;
