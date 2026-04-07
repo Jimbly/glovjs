@@ -925,7 +925,8 @@ function showPaintPaletteConfig(level: CrawlerLevel, x1: number): void {
     let [type, desc] = pair;
     let id = desc.id;
     let key = `${type},${id}`;
-    let label = `${show_all ? `[${type}]\n` : ''}${id}${build_favorites[key] ? '*' : ''}`;
+    let name = pair[0] === 'spawn' && pair[1].example_ent.display_name || id;
+    let label = `${show_all ? `[${type}]\n` : ''}${name}${build_favorites[key] ? '*' : ''}`;
     drawPaletteThumbnail({
       pair,
       x: x + THUMBNAIL_PAD, y: y + THUMBNAIL_PAD, z,
