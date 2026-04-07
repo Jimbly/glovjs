@@ -1406,6 +1406,9 @@ export class CrawlerController {
     if (this.player_controller.isMoving() && false) {
       return null;
     }
+    if (buildModeActive()) {
+      return null;
+    }
     const { game_state, last_dest_pos, last_dest_rot, script_api } = this;
     const { level } = game_state;
     assert(level);
