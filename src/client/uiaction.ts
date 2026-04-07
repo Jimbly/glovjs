@@ -3,8 +3,8 @@ import assert from 'assert';
 export abstract class UIAction {
   abstract tick(): void;
   declare name: string;
-  declare is_overlay_menu: boolean;
-  declare is_fullscreen_ui: boolean;
+  declare is_overlay_menu: boolean; // Interrupts other activity
+  declare is_fullscreen_ui: boolean; // Causes any dialogs to be centered on the screen, not the 3D viewport
   declare esc_cancels: boolean;
 }
 UIAction.prototype.name = 'UnknownAction';
