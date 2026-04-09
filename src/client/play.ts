@@ -7,7 +7,6 @@ import { ClientEntityManagerInterface } from 'glov/client/entity_manager_client'
 import {
   ALIGN,
   Font,
-  fontStyle,
   fontStyleAlpha,
 } from 'glov/client/font';
 import * as input from 'glov/client/input';
@@ -157,6 +156,10 @@ import {
   statusPush,
   statusTick,
 } from './status';
+import {
+  style_damage,
+  style_text,
+} from './styles';
 import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
 import { pauseMenuActive, pauseMenuOpen } from './uiaction_pause_menu';
 
@@ -211,13 +214,6 @@ type BarSprite = {
 let bar_sprites: {
   healthbar: BarSprite;
 };
-
-const style_text = fontStyle(null, {
-  color: 0xFFFFFFff,
-  outline_width: 4,
-  outline_color: 0x000000ff,
-});
-const style_damage = style_text;
 
 export function myEnt(): Entity {
   return crawlerMyEnt() as Entity;
