@@ -19,7 +19,7 @@
     "url": "git@github.com:Jimbly/glovjs.git"
   },
   "scripts": {
-    "start": "nodemon -w build -w ../glov-build/ -i build/depixel.js -- build default --watch",
+    "start": "nodemon -w build -w ../glov-build/ -i build/depixel.js -i build/depixel-config.project.js -- build default --watch",
     "clean": "node build clean",
     "build": "node build build",
     "cache": "node build build.prod.png client_autosound --cache-rebuild",
