@@ -732,6 +732,7 @@ let turn_based_step_threshold = 0.4;
 let turn_based_step_countdown = 0;
 let turn_based_allowed: (() => boolean) | undefined;
 let turn_based_step_idx = 0;
+let turn_based_step_skip = 0;
 
 export function crawlerTurnBasedStepIndex(): number {
   return turn_based_step_idx;
@@ -741,14 +742,22 @@ export function crawlerTurnBasedNeedsStep(): boolean {
   return need_turn_based_step;
 }
 
+export function crawlerTurnBasedSkipStep(): void {
+  turn_based_step_skip = 1;
+}
+
 function executeStep(): void {
   if (need_turn_based_step) {
     assert(turn_based_step_reason);
     profilerStartFunc();
-    turn_based_step?.(turn_based_step_reason);
+    if (turn_based_step_skip) {
+      --turn_based_step_skip;
+    } else {
+      turn_based_step?.(turn_based_step_reason);
+      turn_based_step_idx++;
+    }
     need_turn_based_step = false;
     turn_based_step_reason = null;
-    turn_based_step_idx++;
     profilerStopFunc();
   }
 }

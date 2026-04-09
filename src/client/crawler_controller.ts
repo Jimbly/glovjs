@@ -92,7 +92,11 @@ import {
   entityBlocks,
   EntityCrawlerClient,
 } from './crawler_entity_client';
-import { crawlerScriptAPI, getScaledFrameDt } from './crawler_play';
+import {
+  crawlerScriptAPI,
+  crawlerTurnBasedSkipStep,
+  getScaledFrameDt,
+} from './crawler_play';
 import {
   crawlerRenderGetPosOffs,
   crawlerRenderViewportGet,
@@ -1554,6 +1558,7 @@ export class CrawlerController {
           if (cur_cell.walls[rot].open_move && from_my_ent &&
             game_state.level!.getCell(cur_pos[0] + DX[rot], cur_pos[1] + DY[rot])!.desc.open_move
           ) {
+            crawlerTurnBasedSkipStep();
             this.player_controller.autoStartMove(rot, 0.5);
             break;
           }
