@@ -26,7 +26,7 @@ import {
   uiHandlingNav,
   uiTextHeight,
 } from 'glov/client/ui';
-import { EntityID, NetErrorCallback, VoidFunc } from 'glov/common/types';
+import { NetErrorCallback, VoidFunc } from 'glov/common/types';
 import {
   clamp,
   easeIn,
@@ -163,9 +163,11 @@ interface PlayerController {
   clearDoubleTime?(): void;
 }
 
-let on_bump_entity: (ent_id: EntityID) => void;
-export function controllerOnBumpEntity(cb: (ent_id: EntityID) => void): void {
-  on_bump_entity = cb;
+type Entity = EntityCrawlerClient;
+
+let on_bump_entity: (ent: Entity) => void;
+export function controllerOnBumpEntity<T extends Entity>(cb: (ent: T) => void): void {
+  on_bump_entity = cb as (ent: Entity) => void;
 }
 
 type StartMoveData = {
@@ -215,11 +217,11 @@ function startMove(
     // cur.double_time = 0;
   }
   // check destination
-  let blocked_ent_id;
+  let blocked_ent;
   let bumped_entity = false;
   if (!bumped_something && !build_mode) {
-    blocked_ent_id = entityBlocks(game_state.floor_id, new_pos, true);
-    if (blocked_ent_id) {
+    blocked_ent = entityBlocks(game_state.floor_id, new_pos, true);
+    if (blocked_ent) {
       bumped_something = true;
       bumped_entity = true;
     }
@@ -233,7 +235,7 @@ function startMove(
     } else if (!is_facing_ent) {
       script_api.status('move_blocked', 'Something blocks your way.');
     } else {
-      on_bump_entity?.(blocked_ent_id!);
+      on_bump_entity?.(blocked_ent!);
     }
   }
   return {
@@ -1408,7 +1410,7 @@ export class CrawlerController {
     this.path_to = [target_x, target_y];
   }
 
-  getEntInFront(include_non_blockers: boolean): EntityID | null {
+  getEntInFront(include_non_blockers: boolean): Entity | null {
     if (this.player_controller.isMoving() && false) {
       return null;
     }
@@ -1427,7 +1429,7 @@ export class CrawlerController {
         if (!ent_list.length) {
           return null;
         }
-        return ent_list[0].id;
+        return ent_list[0];
       } else {
         return entityBlocks(game_state.floor_id, temp_pos, false) || null;
       }

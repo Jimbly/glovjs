@@ -502,13 +502,9 @@ function doEngagedEnemy(): void {
   ) {
     return;
   }
-  let entities = entityManager().entities;
-  let ent_in_front = crawlerEntInFront();
-  if (ent_in_front && myEnt().isAlive()) {
-    let target_ent = entities[ent_in_front]!;
-    if (target_ent) {
-      drawEnemyStats(target_ent);
-    }
+  let target_ent = crawlerEntInFront<Entity>();
+  if (target_ent && myEnt().isAlive()) {
+    drawEnemyStats(target_ent);
   }
 }
 
@@ -603,12 +599,10 @@ export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA)
   });
 }
 
-function bumpEntityCallback(ent_id: EntityID): void {
+function bumpEntityCallback(target_ent: Entity): void {
   let me = myEnt();
-  let all_entities = entityManager().entities;
-  let target_ent = all_entities[ent_id]!;
   if (target_ent && target_ent.isAlive() && target_ent.isEnemy() && me.isAlive()) {
-    addFloater(ent_id, 'POW!', '');
+    addFloater(target_ent.id, 'POW!', '');
     attackSurgeAdd(target_ent.data.pos[0] - me.data.pos[0], target_ent.data.pos[1] - me.data.pos[1], 1);
     crawlerTurnBasedScheduleStep(250, 'attack');
   }

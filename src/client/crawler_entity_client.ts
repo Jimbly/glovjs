@@ -247,7 +247,7 @@ export function crawlerEntitiesAt(cem: ClientEntityManagerInterface<Entity>,
 function onlyPlayerBlockers(ent: Entity): boolean {
   return ent.blocks_player;
 }
-export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boolean): null | EntityID {
+export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boolean): null | Entity {
   // if (engine.DEBUG && keyDown(KEYS.ALT)) {
   //   return null;
   // }
@@ -256,7 +256,7 @@ export function entityBlocks(floor_id: number, pos: ROVec2, skip_fading_out: boo
   if (!ent_list.length) {
     return null;
   }
-  return ent_list[0].id;
+  return ent_list[0];
 }
 
 

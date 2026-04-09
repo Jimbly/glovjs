@@ -22,7 +22,6 @@ import type { SpriteAnimation, SpriteAnimationParam } from 'glov/client/sprite_a
 import type { Sprite, SpriteParamBase, TextureOptions } from 'glov/client/sprites';
 import { uiTextHeight } from 'glov/client/ui';
 import { dataErrorEx } from 'glov/common/data_error';
-import { EntityID } from 'glov/common/types';
 import {
   clamp,
   easeIn,
@@ -508,12 +507,12 @@ function cmpPeds(peda: PerEntDataPair, pedb: PerEntDataPair): number {
   return enta.id - entb.id;
 }
 
-let ent_in_front: EntityID | null = null;
+let ent_in_front: Entity | null = null;
 let ped_list: PerEntDataPair[];
 let build_mode_peds: PerEntData[] = [];
 
-export function crawlerEntInFront(): EntityID | null {
-  return ent_in_front;
+export function crawlerEntInFront<T extends Entity>(): T | null {
+  return ent_in_front as T;
 }
 
 export function crawlerRenderEntitiesPrep(): void {
@@ -631,7 +630,7 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
 
     if (ent.floaters && !crawlerRenderViewportGet().rot) {
       // TODO: do floaters in 3D for all entities
-      let is_in_front = ent.id === ent_in_front;
+      let is_in_front = ent === ent_in_front;
       let blink = 1;
       let blink_good: boolean | undefined;
       for (let ii = ent.floaters.length - 1; ii >= 0; --ii) {
