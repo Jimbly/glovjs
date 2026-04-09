@@ -338,7 +338,7 @@ export function aiTraitsClientStartup(): void {
               // Got there, can't see him, prefer wandering through doors if possible
               (this as unknown as EntityWander).wander_state.prefer_door = true;
             }
-            // playUISound('hunter_lost', volume);
+            // playSoundFromEnt(this, 'hunter_lost');
             ret = false; // trigger an immediate wander
           } else {
             // at target, and player is there, don't move, combat should trigger
@@ -391,7 +391,7 @@ export function aiTraitsClientStartup(): void {
             if (debugDefineIsSet('HUNTER')) {
               statusSet(`edbg${this.id}`, `${this.id}: Move wall blocked - giving up`).counter = 500;
             }
-            // playUISound('hunter_lost', volume);
+            // playSoundFromEnt(this, 'hunter_lost');
             this.hunter_state.has_target = false;
           }
           profilerStopFunc();
