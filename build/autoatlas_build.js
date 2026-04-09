@@ -396,8 +396,8 @@ module.exports = function (opts) {
       let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
 
       // Allocate actual images and copy into them
-      width = nextHighestPowerOfTwo(width);
-      height = nextHighestPowerOfTwo(height);
+      width = max(1, nextHighestPowerOfTwo(width));
+      height = max(1, nextHighestPowerOfTwo(height));
       let pngouts = [];
       for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
         pngouts.push(pngAllocTemp(width, height, `output:${name}`));
