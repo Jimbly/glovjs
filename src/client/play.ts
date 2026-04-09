@@ -1120,7 +1120,9 @@ export function playStartup(): void {
     name: 'EntityClient',
     Ctor: EntityClient,
   });
-  crawlerRenderEntitiesStartup(font);
+  crawlerRenderEntitiesStartup({
+    font
+  });
   crawlerRenderViewportSet({
     x: VIEWPORT_X0,
     y: VIEWPORT_Y0,

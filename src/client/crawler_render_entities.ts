@@ -515,6 +515,8 @@ export function crawlerEntInFront<T extends Entity>(): T | null {
   return ent_in_front as T;
 }
 
+let include_non_blockers_in_front = false;
+
 export function crawlerRenderEntitiesPrep(): void {
   ped_list = [];
   ent_in_front = null;
@@ -525,7 +527,7 @@ export function crawlerRenderEntitiesPrep(): void {
   }
 
   let controller = crawlerController();
-  ent_in_front = controller.getEntInFront(false); // TODO: add param for this?
+  ent_in_front = controller.getEntInFront(include_non_blockers_in_front);
 
   let build_mode = buildModeActive();
 
@@ -578,6 +580,7 @@ export function crawlerRenderEntitiesPrep(): void {
   ped_list.sort(cmpPeds);
 }
 
+let disable_internal_floaters = false;
 let color_temp = vec4(1, 1, 1, 1);
 let draw_pos_temp = vec3();
 export function crawlerRenderEntities(ent_set: SplitSet): void {
@@ -658,7 +661,9 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
             blink_good = floater.blink_good;
           }
         }
-        if (is_in_front && !crawlerController().controllerIsAnimating() && floater.msg) {
+        if (is_in_front && !crawlerController().controllerIsAnimating() && floater.msg &&
+          !disable_internal_floaters
+        ) {
           let { x, y, w, h } = crawlerRenderViewportGet();
           let float = easeOut(elapsed / (FLOATER_TIME + FLOATER_FADE), 2) * 20;
           let text_height = uiTextHeight();
@@ -702,6 +707,12 @@ export function crawlerRenderEntities(ent_set: SplitSet): void {
   profilerStopFunc();
 }
 
-export function crawlerRenderEntitiesStartup(font_in: Font): void {
-  font = font_in;
+export function crawlerRenderEntitiesStartup(params: {
+  font: Font;
+  include_non_blockers_in_front?: boolean;
+  disable_internal_floaters?: boolean;
+}): void {
+  font = params.font;
+  include_non_blockers_in_front = params.include_non_blockers_in_front || false;
+  disable_internal_floaters = params.disable_internal_floaters || false;
 }
