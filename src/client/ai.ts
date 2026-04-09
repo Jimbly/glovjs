@@ -3,6 +3,7 @@ export const AI_CLAIM_TIME = 2000;
 import assert from 'assert';
 import { debugDefineIsSet, getFrameTimestamp } from 'glov/client/engine';
 import { EntityManager } from 'glov/common/entity_base_common';
+import { TSMap } from 'glov/common/types';
 import { sign } from 'glov/common/util';
 import {
   ROVec2,
@@ -21,14 +22,15 @@ import {
   BLOCK_VIS,
   CrawlerState,
   dirFromDelta,
+  dirMod,
   DirType,
   DX,
   DY,
   JSVec2,
   JSVec3,
 } from '../common/crawler_state';
-import { crawlerEntFactory } from './crawler_entity_client';
-import { TurnBasedStepReason } from './crawler_play';
+import { crawlerEntFactory, EntityCrawlerClient } from './crawler_entity_client';
+import { crawlerGameState, crawlerScriptAPI, TurnBasedStepReason } from './crawler_play';
 import { EntityClient } from './entity_game_client';
 import { attackPlayer, myEnt } from './play';
 import { statusSet } from './status';
@@ -456,6 +458,64 @@ export function aiTraitsClientStartup(): void {
     }
   });
 
+}
+
+export function enemyVacate(ent_in: EntityCrawlerClient): void {
+  let ent = ent_in as Entity;
+  let { entity_manager } = ent;
+  let { entities } = entity_manager;
+
+  let blocked: TSMap<true> = {};
+  let { floor_id } = crawlerGameState();
+  let level = crawlerGameState().level!;
+  for (let ent_id_str in entities) {
+    let other = entities[ent_id_str]!;
+    if (other.data.floor === floor_id) {
+      let pos = other.data.pos;
+      blocked[`${pos[0]},${pos[1]}`] = true;
+    }
+  }
+
+  let preferred_dir = myEnt().data.pos[2];
+  let done: TSMap<true> = {};
+  let script_api = crawlerScriptAPI();
+  let todo: JSVec2[] = [];
+  function search(pos: JSVec2): void {
+    let key = `${pos[0]},${pos[1]}`;
+    if (done[key]) {
+      return;
+    }
+    done[key] = true;
+
+    for (let ii = 0; ii < 4; ++ii) {
+      let dir = dirMod(ii + preferred_dir);
+      if (!level.wallsBlock(pos, dir, script_api)) {
+        let nx = pos[0] + DX[dir];
+        let ny = pos[1] + DY[dir];
+        let nkey = `${nx},${ny}`;
+        if (!blocked[nkey]) {
+          // move here
+          todo.length = 0;
+          ent.applyAIUpdate('ai_move', {
+            pos: [nx, ny, ent.data.pos[2]],
+            last_pos: pos,
+          }, undefined, aiIgnoreErrors);
+          return;
+        } else {
+          // search here
+          if (!done[nkey]) {
+            todo.push([nx, ny]);
+          }
+        }
+      }
+    }
+  }
+  let { pos } = ent.data;
+  todo.push(pos as unknown as JSVec2);
+  while (todo.length) {
+    let next = todo.shift()!;
+    search(next);
+  }
 }
 
 function isLivingPlayer(ent: Entity): boolean {

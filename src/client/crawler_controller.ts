@@ -84,6 +84,7 @@ import {
   WEST,
 } from '../common/crawler_state';
 import { pathFind } from '../common/pathfind';
+import { enemyVacate } from './ai';
 import { buildModeActive } from './crawler_build_mode';
 import {
   crawlerEntitiesAt,
@@ -170,6 +171,13 @@ export function controllerOnBumpEntity<T extends Entity>(cb: (ent: T) => void): 
   on_bump_entity = cb as (ent: Entity) => void;
 }
 
+let allow_overlap_via_door = false;
+
+// Requires ai/enemyVacate to be functional (may need online support)
+export function controllerAllowOverlapViaDoorToVacate(allow: boolean): void {
+  allow_overlap_via_door = allow;
+}
+
 type StartMoveData = {
   bumped_something: boolean;
   going_through_door: boolean;
@@ -231,7 +239,11 @@ function startMove(
     let is_facing_ent = dir === new_rot;
     if (blocked_vis) {
       // Can't see through this wall, and there's a monster on the other side!
-      script_api.status('move_blocked', 'The door won\'t budge.');
+      if (allow_overlap_via_door) {
+        bumped_something = bumped_entity = false;
+      } else {
+        script_api.status('move_blocked', 'The door won\'t budge.');
+      }
     } else if (!is_facing_ent) {
       script_api.status('move_blocked', 'Something blocks your way.');
     } else {
@@ -2297,12 +2309,19 @@ export class CrawlerController {
         this.is_repeating = false;
       }
 
+      let blocked_ent;
       if (!no_move &&
-        !this.player_controller.isMoving() && !build_mode && entityBlocks(game_state.floor_id, last_dest_pos, true) &&
+        !this.player_controller.isMoving() && !build_mode &&
+        (blocked_ent = entityBlocks(game_state.floor_id, last_dest_pos, true)) &&
         !v2same(last_dest_pos, prev_pos)
       ) {
-        // We're standing over a blocking entity!  Move to where we were before
-        this.player_controller.startMove(dirFromMove(last_dest_pos, prev_pos));
+        if (allow_overlap_via_door) {
+          // We're standing over a blocking entity!  Move them somewhere else!
+          enemyVacate(blocked_ent);
+        } else {
+          // We're standing over a blocking entity!  Move to where we were before
+          this.player_controller.startMove(dirFromMove(last_dest_pos, prev_pos));
+        }
       }
 
       if (!no_move && !no_rotate &&
