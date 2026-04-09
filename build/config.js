@@ -1,4 +1,4 @@
-module.exports = function (gb, extra_config) {
+module.exports = function (gb) {
   let config = {
     asset_hashing: false, // Set to true if assets will be deployed via things like a write-once CDN with long caching
     server_js_files: [
@@ -151,7 +151,6 @@ module.exports = function (gb, extra_config) {
       'client/atlases/**/*.yaml',
     ],
     autoatlas_ignore: ['someatlas:sometile'],
-    ...(extra_config || {}),
   };
   // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);
