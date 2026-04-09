@@ -201,11 +201,11 @@ settingsRegister({
 });
 
 function musicVolume(): number {
-  return settings.volume * settings.volume_music;
+  return settings.volume * settings.volume_music * volume_override * volume_music_override;
 }
 
 function soundVolume(): number {
-  return settings.volume * settings.volume_sound;
+  return settings.volume * settings.volume_sound * volume_override;
 }
 
 let sounds_load_failed: TSMap<SoundLoadOpts> = {};
@@ -432,6 +432,10 @@ export function soundMusicResume(): void {
   skip_one_music_blend = true;
 }
 
+export function soundMusicOverrideVolume(volume: number): void {
+  volume_music_override_target = volume;
+}
+
 function soundFadeMusicInBackground(): void {
   let music_tick_timer: ReturnType<typeof setTimeout> | null = null;
   let last_time: number;
@@ -546,7 +550,7 @@ export function soundTick(dt: number): void {
       }
     }
     if (mus.sound) {
-      let sys_volume = mus.current_volume * musicVolume() * volume_override * volume_music_override;
+      let sys_volume = mus.current_volume * musicVolume();
       if (mus.need_play) {
         mus.need_play = false;
         mus.id = mus.sound.play(undefined, { volume: sys_volume });
@@ -635,11 +639,11 @@ export function soundPlay(
   }
   let settingsVolume = as_music ? musicVolume : soundVolume;
   let id = sound.play(undefined, {
-    volume: volume * settingsVolume() * volume_override,
+    volume: volume * settingsVolume(),
     pos,
     stereo,
   });
-  // sound.volume(volume * settingsVolume() * volume_override, id);
+  // sound.volume(volume * settingsVolume(), id);
   last_played[soundid] = frame_timestamp;
   let played_sound: GlovSoundSetUpInternal = {
     name: soundid,
@@ -662,7 +666,7 @@ export function soundPlay(
     duration: sound.duration.bind(sound, id),
     volume: (vol: number) => {
       played_sound.volume_current = vol;
-      sound.volume(vol * settingsVolume() * volume_override, id);
+      sound.volume(vol * settingsVolume(), id);
     },
     fade: (target_volume: number, time: number) => {
       let new_fade = {
@@ -747,7 +751,7 @@ export function soundPlayMusic(soundname: string, volume?: number, transition?: 
             sound.stop(music[0].id);
             music[0].sound = null;
           } else {
-            let sys_volume = music[0].sys_volume = volume * musicVolume() * volume_override * volume_music_override;
+            let sys_volume = music[0].sys_volume = volume * musicVolume();
             sound.volume(sys_volume, music[0].id);
             if (!sound.playing()) {
               sound.play(undefined, { volume: sys_volume });
@@ -776,7 +780,7 @@ export function soundPlayMusic(soundname: string, volume?: number, transition?: 
       let start_vol = (transition & FADE_IN) ? 0 : volume;
       music[0].current_volume = start_vol;
       if (soundResumed()) {
-        let sys_volume = start_vol * musicVolume() * volume_override * volume_music_override;
+        let sys_volume = start_vol * musicVolume();
         music[0].id = sound.play(undefined, { volume: sys_volume });
         // sound.volume(sys_volume, music[0].id);
         music[0].sys_volume = sys_volume;
