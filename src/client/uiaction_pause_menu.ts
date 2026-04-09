@@ -17,6 +17,7 @@ import { crawlerSaveGame } from './crawler_play';
 import {
   game_width,
 } from './globals';
+import { queueTransition } from './play';
 import { statusPush } from './status';
 import {
   uiAction,
@@ -79,6 +80,7 @@ class PauseMenuAction extends UIAction {
           crawlerSaveGame('auto');
         }
         urlhash.go('');
+        queueTransition();
       },
     });
     if (isLocal()) {
@@ -86,6 +88,7 @@ class PauseMenuAction extends UIAction {
         name: 'Exit without saving',
         cb: function () {
           urlhash.go('');
+          queueTransition();
         },
       });
     }

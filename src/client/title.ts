@@ -30,6 +30,7 @@ import {
 } from './crawler_play';
 import * as main from './main';
 import { tickMusic } from './music';
+import { queueTransition } from './play';
 
 
 const ALLOW_ONLINE = true;
@@ -43,6 +44,7 @@ let account_ui: AccountUI;
 function startNewGame(slot: number): void {
   crawlerPlayWantNewGame();
   urlhash.go(`?c=local&slot=${slot}`);
+  queueTransition();
 }
 
 function title(dt: number): void {
@@ -84,6 +86,7 @@ function title(dt: number): void {
     })) {
       crawlerPlayWantMode('recent');
       urlhash.go(`?c=local&slot=${slot}`);
+      queueTransition();
     }
     if (buttonText({
       x, y: y + uiButtonHeight() * 2 + 2, text: 'New Game',
