@@ -28,6 +28,7 @@ import {
   Sprite,
   spriteCreate,
 } from 'glov/client/sprites';
+import * as transition from 'glov/client/transition';
 import {
   ButtonStateString,
   buttonText,
@@ -223,12 +224,32 @@ export function myEntOptional(): Entity | undefined {
   return crawlerMyEntOptional() as Entity | undefined;
 }
 
-function randInt(range: number): number {
+export function queueTransition(): void {
+  if (engine.isOutOfTick()) {
+    return;
+  }
+  transition.queue(Z.TRANSITION_FINAL, transition.fade(200));
+}
+
+export function randInt(range: number): number {
   return floor(random() * range);
 }
 
+export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA): void {
+  let pos = ent.getData<JSVec3>('pos')!;
+
+  playUISound(sound_id, {
+    pos: [pos[0] + 0.5, pos[1] + 0.5, 0.5],
+    volume: 1,
+  });
+}
+
+export function playSound(sound_id: keyof typeof SOUND_DATA): void {
+  playUISound(sound_id);
+}
+
 function aiStep(reason: TurnBasedStepReason): void {
-  // playUISound('button_click');
+  // playSound('button_click');
   let game_state = crawlerGameState();
   if (!buildModeActive()) {
     let script_api = crawlerScriptAPI();
@@ -586,15 +607,6 @@ function moveBlockDead(): boolean {
   return true;
 }
 
-export function playSoundFromEnt(ent: Entity, sound_id: keyof typeof SOUND_DATA): void {
-  let pos = ent.getData<JSVec3>('pos')!;
-
-  playUISound(sound_id, {
-    pos: [pos[0] + 0.5, pos[1] + 0.5, 0.5],
-    volume: 1,
-  });
-}
-
 function bumpEntityCallback(target_ent: Entity): void {
   let me = myEnt();
   if (target_ent && target_ent.isAlive() && target_ent.isEnemy() && me.isAlive()) {
@@ -858,7 +870,7 @@ function playCrawl(): void {
   }
 
   if (!overlay_menu_up && (keyDownEdge(KEYS.M) || padButtonUpEdge(PAD.BACK))) {
-    playUISound('button_click');
+    playSound('button_click');
     mapViewToggle();
   }
   let game_state = crawlerGameState();
