@@ -299,7 +299,7 @@ export function aiTraitsClientStartup(): void {
 
           // can see?
           if (level.simpleVisCheck(pos, player_pos, script_api,
-            see_through_walls ? 'visBlockSeeThroughDoors' : 'visBlockNormal')
+            see_through_walls ? level.visBlockSeeThroughDoors : level.visBlockNormal)
           ) {
             if (!this.hunter_state.has_target) {
               if (distance) {

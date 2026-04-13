@@ -767,10 +767,9 @@ export class CrawlerLevel {
     pos0: ROVec2,
     pos1: ROVec2,
     script_api: CrawlerScriptAPI,
-    vis_block?: 'visBlockNormal' | 'visBlockSeeThroughDoors' | 'visBlockNoObstacles'
+    vis_block?: ((this: CrawlerLevel, x: number, y: number, dir: DirType, script_api: CrawlerScriptAPI) => boolean),
   ): boolean {
-    vis_block = vis_block || 'visBlockNormal';
-    let check = this[vis_block].bind(this);
+    let check = (vis_block || this.visBlockNormal).bind(this);
     let max_steps = 100;
     let ix = pos0[0];
     let x0 = ix + 0.5;
