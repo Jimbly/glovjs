@@ -974,7 +974,9 @@ export function spotTopOfFrame(): void {
 
 export function spotSuppressPad(): void {
   suppress_pad = true;
-  if (pad_mode && focus_key && !focus_is_sticky) {
+  // 4/26: added && !inputTouchMode() here because a touch-based focus automatically
+  //   sets pad_mode (see: 'touch_focus'), so this must not have been useful?
+  if (pad_mode && focus_key && !focus_is_sticky && !inputTouchMode()) {
     spotUnfocus();
     pad_mode = true; // but, keep pad_mode set
   }
