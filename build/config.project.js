@@ -59,7 +59,9 @@ module.exports = function (config) {
       PLATFORM: 'itch',
     },
     zip: true,
+    wrapper: 'itchlaunch.html',
   }];
+  config.extra_client_html = ['client/itchlaunch.html'];
 
   config.autoatlas_input.push('client/atlases-autogen/**/*.png');
   config.autoatlas_input.push('client/atlases-autogen/**/*.yaml');

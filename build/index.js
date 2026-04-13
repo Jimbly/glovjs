@@ -37,6 +37,7 @@ const uglifyrc = require('./uglifyrc.js');
 const warnMatch = require('./warn-match.js');
 const webfs = require('./webfs_build.js');
 const yamlproc = require('./yamlproc.js');
+const zip = require('./zip.js');
 
 // Suppress nonsensical warning from `caniuse-lite` that shows up even when targeting Node
 process.env.BROWSERSLIST_IGNORE_OLD_DATA = 1;
@@ -992,7 +993,7 @@ config.extra_index.forEach(function (elem) {
   let name = `build.zip.${elem.name}`;
   zip_tasks.push(name);
   gb.task({
-    name,
+    name: `${name}-prep`,
     input: [
       'prod.posthash:**',
       'prod.posthash:!client/a/**',
@@ -1004,8 +1005,42 @@ config.extra_index.forEach(function (elem) {
       `gulpish-client_html_${elem.name}:**`,
     ],
     deps: ['build_deps'],
-    ...gulpish_tasks.zip('prod', elem),
-    type: gb.ALL,
+    type: gb.SINGLE,
+    func: function (job, done) {
+      let file = job.getFile();
+      let { relative, contents } = file;
+      relative = relative.replace(/^client[/\\]?/, '');
+      if (relative === `index_${elem.name}.html`) {
+        if (elem.wrapper) {
+          relative = 'main.html';
+        } else {
+          relative = 'index.html';
+        }
+      } else if (elem.wrapper && relative === elem.wrapper) {
+        relative = 'index.html';
+      } else if (
+        relative === 'index.html' ||
+        relative.match(/^index_.*\.html$/) ||
+        relative.endsWith('.map')
+      ) {
+        return void done();
+      }
+      job.out({
+        relative,
+        contents,
+      });
+      done();
+    }
+  });
+  gb.task({
+    name,
+    input: [
+      `${name}-prep:**`,
+    ],
+    target: 'prod',
+    ...zip({
+      name: `client/${elem.name}.zip`,
+    }),
   });
 });
 if (!zip_tasks.length) {

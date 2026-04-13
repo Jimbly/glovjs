@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Itch Launch Wrapper</title>
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,user-scalable=no,shrink-to-fit=no,maximum-scale=1.0,minimum-scale=1.0,viewport-fit=cover,interactive-widget=resizes-content">
+    <meta charset="utf-8"/>
+
+    <style type="text/css">
+html, body {
+  touch-action: none; /* disables double-/triple-tap zoom on iOS */
+  background-color: rgba(0, 0, 0, 0);
+  color: white;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow: hidden;
+  position: absolute;
+}
+#content {
+  display: block; /* remove scrollbars */
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.vflex {
+  display: flex;
+  flex-direction: column;
+}
+.screenwrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+button {
+  height: auto;
+  padding: 0.4em 0.8em;
+  font-size: 120%;
+  align-items: center;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 33px;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  flex-direction: row;
+
+  background: #fa5c5c;
+  color: #FFFFFF;
+  border: 1px solid #fa5c5c;
+  border-radius: 6px;
+  box-shadow: rgba(0, 0, 0, 0.1) 1px 2px 4px;
+  outline: 0;
+}
+button:active, button:hover {
+  background-color: #FFFFFF;
+  background-position: 0 0;
+  color: #fa5c5c;
+  position: relative;
+  top: 2px;
+}
+
+button:active {
+  opacity: .5;
+}
+    </style>
+    <link rel="preload" href="main.css" as="style" />
+    <link rel="preload" href="app.bundle.js" as="script" />
+    <link rel="preload" href="app_deps.bundle.js" as="script" />
+    <link rel="preload" href="fsdata.js" as="script" />
+  </head>
+  <body>
+    <div id="content">
+      <div class="screenwrap vflex">
+        <div class="flexcenter" style="flex:1; text-align: center;">
+        </div>
+        <div class="flexcenter" style="text-align: center; width:100%;">
+          <a id=wrap target="_blank">
+          <button id="button">
+            <table border=0 cellspacing=0 cellpadding=0>
+            <tr><td valign="middle"><div style="height: 24px"><svg height="24" version="1.1" stroke-linejoin="round" fill="none" aria-hidden="" stroke-width="2" stroke-linecap="round" role="img" class="svgicon icon_play" viewBox="0 0 24 24" stroke="currentColor" width="24"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></div></td><td valign="middle">&nbsp;Launch Game</td></tr></table></button>
+          </a>
+        </div>
+        <div class="flexcenter" style="flex:1; text-align: center;">
+        </div>
+      </div>
+    </div>
+    <script>
+    document.getElementById('wrap').href = document.location.href
+      .replace('index.html', 'main.html')
+      .replace('itchlaunch.html', 'main.html');
+    </script>
+  </body>
+</html>
