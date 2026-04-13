@@ -48,6 +48,8 @@ exports.client_html_custom = function (target, elem) {
   });
 };
 
+// example, superseeded by zip logic in index.js and `build/zip.js`
+// unused in this project
 exports.zip = function (target, elem) {
   return gulpish(target, function (stream) {
     const gulpif = require('gulp-if');
