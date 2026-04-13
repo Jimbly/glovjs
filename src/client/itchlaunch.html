@@ -93,10 +93,18 @@ button:active {
         </div>
       </div>
     </div>
-    <script>
-    document.getElementById('wrap').href = document.location.href
-      .replace('index.html', 'main.html')
-      .replace('itchlaunch.html', 'main.html');
+    <script>/* eslint-disable */
+    (function () {
+      var target_url = document.location.href
+        .replace('index.html', 'main.html')
+        .replace('itchlaunch.html', 'main.html');
+      if ((window.navigator.appVersion || '').indexOf(' itch/') !== -1) {
+        // Itch.io app, just redirect
+        document.location = target_url;
+      } else {
+        document.getElementById('wrap').href = target_url;
+      }
+    }());
     </script>
   </body>
 </html>
