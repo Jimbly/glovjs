@@ -58,7 +58,7 @@ export function tickMusic(music_name: string | null, override_volume?: number): 
     return;
   }
 
-  soundMusicOverrideVolume(uiActionCurrent()?.dim_music ? 0.3 : 1);
+  soundMusicOverrideVolume(1 - (uiActionCurrent()?.dim_music || 0));
 
   if (playing_music_name !== music_name) {
     let cross = false;
