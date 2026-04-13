@@ -31,12 +31,10 @@ import {
 import * as transition from 'glov/client/transition';
 import {
   ButtonStateString,
-  buttonText,
   drawBox,
   drawRect2,
   modalDialog,
   playUISound,
-  uiButtonWidth,
   uiGetFont,
   uiTextHeight,
 } from 'glov/client/ui';
@@ -162,6 +160,7 @@ import {
   style_text,
 } from './styles';
 import { uiActionClear, uiActionCurrent, uiActionTick } from './uiaction';
+import { deadOpen } from './uiaction_dead';
 import { pauseMenuActive, pauseMenuOpen } from './uiaction_pause_menu';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -581,32 +580,6 @@ export function attackPlayer(source: Entity, target: Entity, message: string): v
   dss.surge_time = 250;
 }
 
-function moveBlockDead(): boolean {
-  controller.setFadeOverride(0.75);
-
-  const BORDER_PAD = 32;
-  let y = VIEWPORT_Y0;
-  let w = render_width - BORDER_PAD * 2;
-  let x = VIEWPORT_X0 + BORDER_PAD;
-  let h = render_height;
-  let z = Z.UI + 20;
-
-  font.drawSizedAligned(null,
-    x + floor(w/2), y + floor(h/2) - 16, z,
-    uiTextHeight(), ALIGN.HCENTER|ALIGN.VBOTTOM,
-    0, 0, 'You have died.');
-
-  if (buttonText({
-    x: x + floor(w/2 - uiButtonWidth()/2), y: y + floor(h/2), z,
-    text: 'Respawn',
-  })) {
-    myEnt().data.stats.hp = myEnt().data.stats.hp_max;
-    controller.goToFloor(0, 'stairs_in', 'respawn');
-  }
-
-  return true;
-}
-
 function bumpEntityCallback(target_ent: Entity): void {
   let me = myEnt();
   if (target_ent && target_ent.isAlive() && target_ent.isEnemy() && me.isAlive()) {
@@ -632,8 +605,11 @@ function playCrawl(): void {
   }
 
   const is_dead = !myEnt().isAlive();
-  if (!controller.hasMoveBlocker() && is_dead) {
-    controller.setMoveBlocker(moveBlockDead);
+  // if (!controller.hasMoveBlocker() && is_dead) {
+  //   controller.setMoveBlocker(moveBlockDead);
+  // }
+  if (!uiActionCurrent() && is_dead) {
+    deadOpen();
   }
 
   let down = {
@@ -667,7 +643,7 @@ function playCrawl(): void {
 
   const build_mode = buildModeActive();
   let locked_dialog = dialogMoveLocked();
-  const overlay_menu_up = uiActionCurrent()?.is_overlay_menu || is_dead || false;
+  const overlay_menu_up = uiActionCurrent()?.is_overlay_menu || false;
   let minimap_display_h = build_mode ? MOVE_BUTTON_W : MINIMAP_H;
   let show_compass = !build_mode && DO_COMPASS;
   let compass_h = show_compass ? 11 : 0;
@@ -697,9 +673,6 @@ function playCrawl(): void {
     pads: number[],
     toggled_down?: boolean
   ): void {
-    if (is_dead) {
-      return;
-    }
     let z = Z.UI;
     let no_visible_ui = frame_map_view;
     let my_disabled = disabled;
