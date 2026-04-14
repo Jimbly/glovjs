@@ -53,8 +53,8 @@ import {
   v3set,
   v4set,
   Vec2,
-  vec3,
   Vec3,
+  vec3,
   vec4,
 } from 'glov/common/vmath';
 import { CRAWLER_IS_ONLINE, CRAWLER_TURN_BASED } from '../common/crawler_config';
@@ -1095,8 +1095,8 @@ export function playStartup(): void {
   });
   crawlerEntityClientStartupEarly();
   let ent_factory = crawlerEntFactory<Entity>();
-  gameEntityTraitsClientStartup(ent_factory);
   aiTraitsClientStartup();
+  gameEntityTraitsCommonStartup(ent_factory);
   crawlerEntityTraitsClientStartup({
     name: 'EntityClient',
     Ctor: EntityClient,
