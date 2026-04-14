@@ -386,6 +386,11 @@ module.exports = function (opts) {
             }
           }
         }
+        if (img0.width + pad * 2 > max_tex_size) {
+          any_error = true;
+          job.error(`Image ${img_name} resolution (${img0.width}x${img0.height})` +
+            ` is larger than max_tex_size of ${max_tex_size}`);
+        }
         img_data.img_name = img_name;
         imgs_for_packing.push(img_data);
       }
