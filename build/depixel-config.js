@@ -4,6 +4,10 @@ module.exports = function (gb) {
       'demo/*.png': 8,
       'utumno/*.png': 8,
     },
+    depixel_msaa_scales: {
+      '**/*.png': 4,
+    },
+    depixel_input_excludes: [], // e.g. '!demo/foo**.png'
     tiling_expand_pix: 4,
     tiling_expand_rules: [
       // auto rules:
@@ -22,6 +26,7 @@ module.exports = function (gb) {
       '**/*brick_dark*:hwrap,vclamp',
       '**/*lair*:hwrap,vclamp',
     ],
+    tiling_input: ['depixel-atlas-prep:**'],
   };
   // eslint-disable-next-line n/global-require
   require('./depixel-config.project.js')(config, gb);

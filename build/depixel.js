@@ -34,7 +34,8 @@ gb.configure({
 const config = require('./depixel-config.js')(gb);
 
 const scale_globs = config.depixel_scales;
-const depixel_input = Object.keys(scale_globs);
+const scale_msaa_globs = config.depixel_msaa_scales;
+const depixel_input = Object.keys(scale_globs).concat(config.depixel_input_excludes);
 
 gb.task({
   ...autoatlas({
@@ -46,7 +47,7 @@ gb.task({
 
 gb.task({
   name: 'depixel-tiling-expand',
-  input: ['depixel-atlas-prep:**'],
+  input: config.tiling_input,
   ...tilingExpand({
     pix: config.tiling_expand_pix,
     rules: config.tiling_expand_rules,
@@ -90,7 +91,7 @@ gb.task(asyncHashed(8, {
   name: 'depixel-proc',
   input: ['depixel-alphafix:**'],
   type: gb.SINGLE,
-  version: [depixelScale, scale_globs, reduceByAverage],
+  version: [depixelScale, scale_globs, scale_msaa_globs, reduceByAverage],
   async: gb.ASYNC_FORK,
   func: function (job, done) {
     let file = job.getFile();
@@ -117,6 +118,11 @@ gb.task(asyncHashed(8, {
     }
     assert(scale !== -1);
     let intermed_scale = scale < 32 ? 4 : 1;
+    for (let key in scale_msaa_globs) {
+      if (micromatch(file.relative, key).length) {
+        intermed_scale = scale_msaa_globs[key];
+      }
+    }
     let scale1 = scale * intermed_scale;
     let intermed = depixelScale(img, {
       height: img.height * scale1,
