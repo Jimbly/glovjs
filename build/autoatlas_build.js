@@ -370,7 +370,7 @@ module.exports = function (opts) {
         let img0 = imgs[0];
         if (!img0) {
           any_error = true;
-          job.error(`Image ${img_name} missing required base (_0) layer`);
+          job.error(`Image ${name}/${img_name} missing required base (_0) layer`);
           continue;
         }
         // Check all layers are the same size
@@ -381,14 +381,14 @@ module.exports = function (opts) {
               img.height !== img0.height
             ) {
               any_error = true;
-              job.error(`Image ${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
+              job.error(`Image ${name}/${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
                 ` does not match base layer (${img0.source_name}) resolution (${img0.width}x${img0.height})`);
             }
           }
         }
         if (img0.width + pad * 2 > max_tex_size) {
           any_error = true;
-          job.error(`Image ${img_name} resolution (${img0.width}x${img0.height})` +
+          job.error(`Image ${name}/${img_name} resolution (${img0.width}x${img0.height})` +
             ` is larger than max_tex_size of ${max_tex_size}`);
         }
         img_data.img_name = img_name;
