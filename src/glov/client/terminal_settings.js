@@ -1,7 +1,8 @@
+const { ansi, padRight } = require('../common/ansi.js');
 const engine = require('./engine.js');
 const input = require('./input.js');
 const { KEYS } = require('./input.js');
-const { ansi, padRight, terminalCreate } = require('./terminal.js');
+const { terminalCreate } = require('./terminal.js');
 
 let settings_terminal;
 let base_terminal;
