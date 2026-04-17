@@ -828,6 +828,8 @@ export function start3DRendering(opts) {
   opts = opts || {};
   if (opts.width) {
     set3DRenderResolution(opts.width, opts.height);
+  } else if (!render_width) {
+    set3DRenderResolution(width, height);
   }
   setFOV(opts.fov || (settings.fov * PI / 180));
   had_3d_this_frame = true;
