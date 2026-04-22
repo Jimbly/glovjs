@@ -1,35 +1,39 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict"
-window.glov_build_version="1673321608019"
+window.glov_build_version="1776878226036"
 var called_once=false
-window.onload=function(){if(called_once)return
+function onLoad(){if(called_once)return
 called_once=true
+window.time_load_onload=Date.now()
 require("../glov/client/bootstrap.js")
-require("./terminal_test.js").main()}
+require("./terminal_test.js").main()
+window.time_load_init=Date.now()}window.addEventListener("DOMContentLoaded",onLoad)
+window.onload=onLoad
 
-},{"../glov/client/bootstrap.js":4,"./terminal_test.js":3}],2:[function(require,module,exports){
-module.exports={"font_size":16,"imageW":512,"imageH":256,"spread":4,"noFilter":1,"channels":1,"char_infos":[{"c":1,"x0":106,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":2,"x0":123,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":3,"x0":319,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":4,"x0":119,"y0":126,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":5,"x0":479,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":6,"x0":496,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":7,"x0":312,"y0":140,"yoffs":6,"xpad":3,"w":6,"h":4},{"c":8,"x0":4,"y0":4,"xpad":1,"w":8,"h":16},{"c":9,"x0":20,"y0":143,"yoffs":5,"xpad":2,"w":7,"h":6},{"c":10,"x0":21,"y0":4,"xpad":1,"w":8,"h":16},{"c":11,"x0":140,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":12,"x0":156,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":13,"x0":171,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":14,"x0":188,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":15,"x0":4,"y0":108,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":16,"x0":100,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":17,"x0":116,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":18,"x0":21,"y0":108,"yoffs":2,"xpad":2,"w":7,"h":9},{"c":19,"x0":205,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":20,"x0":221,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":21,"x0":486,"y0":4,"yoffs":1,"xpad":2,"w":7,"h":12},{"c":22,"x0":327,"y0":139,"yoffs":8,"xpad":2,"w":7,"h":4},{"c":23,"x0":238,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":24,"x0":254,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":25,"x0":270,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":26,"x0":117,"y0":143,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":27,"x0":133,"y0":142,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":28,"x0":343,"y0":139,"yoffs":6,"xpad":2,"w":7,"h":4},{"c":29,"x0":149,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":30,"x0":135,"y0":124,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":31,"x0":151,"y0":124,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":32,"xpad":9},{"c":33,"x0":286,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":34,"x0":359,"y0":139,"yoffs":1,"xpad":2,"w":7,"h":4},{"c":35,"x0":37,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":36,"x0":374,"y0":4,"xpad":2,"w":7,"h":14},{"c":37,"x0":335,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":38,"x0":301,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":39,"x0":375,"y0":139,"yoffs":1,"xpad":5,"w":4,"h":4},{"c":40,"x0":317,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":41,"x0":332,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":42,"x0":165,"y0":140,"yoffs":5,"xpad":1,"w":8,"h":5},{"c":43,"x0":182,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":44,"x0":388,"y0":139,"yoffs":9,"xpad":4,"w":5,"h":4},{"c":45,"x0":34,"y0":158,"yoffs":7,"xpad":2,"w":7,"h":1},{"c":46,"x0":499,"y0":135,"yoffs":10,"xpad":4,"w":5,"h":2},{"c":47,"x0":351,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":48,"x0":347,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":49,"x0":363,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":50,"x0":379,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":51,"x0":395,"y0":47,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":52,"x0":411,"y0":47,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":53,"x0":427,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":54,"x0":443,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":55,"x0":459,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":56,"x0":475,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":57,"x0":491,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":58,"x0":167,"y0":124,"yoffs":4,"xpad":4,"w":5,"h":7},{"c":59,"x0":367,"y0":106,"yoffs":4,"xpad":4,"w":5,"h":8},{"c":60,"x0":53,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":61,"x0":402,"y0":139,"yoffs":5,"xpad":2,"w":7,"h":4},{"c":62,"x0":69,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":63,"x0":4,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":64,"x0":85,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":65,"x0":20,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":66,"x0":36,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":67,"x0":52,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":68,"x0":68,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":69,"x0":84,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":70,"x0":100,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":71,"x0":116,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":72,"x0":132,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":73,"x0":148,"y0":68,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":74,"x0":163,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":75,"x0":179,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":76,"x0":195,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":77,"x0":211,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":78,"x0":227,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":79,"x0":243,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":80,"x0":259,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":81,"x0":4,"y0":29,"yoffs":2,"xpad":2,"w":7,"h":12},{"c":82,"x0":275,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":83,"x0":291,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":84,"x0":307,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":85,"x0":323,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":86,"x0":339,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":87,"x0":355,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":88,"x0":371,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":89,"x0":387,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":90,"x0":403,"y0":66,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":91,"x0":419,"y0":66,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":92,"x0":101,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":93,"x0":434,"y0":65,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":94,"x0":418,"y0":139,"xpad":2,"w":7,"h":4},{"c":95,"x0":50,"y0":158,"yoffs":13,"xpad":1,"w":8,"h":1},{"c":96,"x0":466,"y0":137,"yoffs":1,"xpad":3,"w":6,"h":3},{"c":97,"x0":181,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":98,"x0":449,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":99,"x0":197,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":100,"x0":465,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":101,"x0":213,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":102,"x0":481,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":103,"x0":497,"y0":65,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":104,"x0":4,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":105,"x0":20,"y0":89,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":106,"x0":407,"y0":4,"yoffs":2,"xpad":2,"w":7,"h":13},{"c":107,"x0":35,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":108,"x0":51,"y0":89,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":109,"x0":229,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":110,"x0":245,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":111,"x0":261,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":112,"x0":66,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":113,"x0":82,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":114,"x0":277,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":115,"x0":293,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":116,"x0":98,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":117,"x0":309,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":118,"x0":325,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":119,"x0":341,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":120,"x0":357,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":121,"x0":114,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":122,"x0":373,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":123,"x0":130,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":124,"x0":146,"y0":87,"yoffs":2,"xpad":4,"w":5,"h":10},{"c":125,"x0":160,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":126,"x0":4,"y0":159,"yoffs":1,"xpad":2,"w":7,"h":2},{"c":127,"x0":389,"y0":123,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":160,"xpad":9},{"c":161,"x0":176,"y0":87,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":162,"x0":132,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":163,"x0":148,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":165,"x0":191,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":170,"x0":36,"y0":143,"yoffs":2,"xpad":2,"w":7,"h":6},{"c":171,"x0":198,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":172,"x0":214,"y0":140,"yoffs":6,"xpad":2,"w":7,"h":5},{"c":176,"x0":434,"y0":139,"yoffs":1,"xpad":3,"w":6,"h":4},{"c":177,"x0":381,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":178,"x0":52,"y0":143,"yoffs":1,"xpad":2,"w":7,"h":6},{"c":181,"x0":207,"y0":87,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":183,"x0":67,"y0":158,"yoffs":7,"xpad":4,"w":5,"h":1},{"c":186,"x0":68,"y0":143,"yoffs":2,"xpad":3,"w":6,"h":6},{"c":187,"x0":230,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":188,"x0":423,"y0":4,"yoffs":1,"xpad":1,"w":8,"h":13},{"c":189,"x0":440,"y0":4,"yoffs":1,"xpad":2,"w":7,"h":13},{"c":191,"x0":223,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":196,"x0":164,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":197,"x0":20,"y0":29,"xpad":2,"w":7,"h":12},{"c":198,"x0":36,"y0":29,"xpad":2,"w":7,"h":12},{"c":199,"x0":52,"y0":29,"yoffs":2,"xpad":2,"w":7,"h":12},{"c":201,"x0":68,"y0":29,"xpad":2,"w":7,"h":12},{"c":209,"x0":84,"y0":29,"xpad":2,"w":7,"h":12},{"c":214,"x0":180,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":220,"x0":196,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":223,"x0":239,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":224,"x0":212,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":225,"x0":228,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":226,"x0":244,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":228,"x0":255,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":229,"x0":260,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":230,"x0":405,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":231,"x0":117,"y0":108,"yoffs":5,"xpad":2,"w":7,"h":9},{"c":232,"x0":276,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":233,"x0":292,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":234,"x0":308,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":235,"x0":271,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":236,"x0":324,"y0":29,"yoffs":1,"xpad":3,"w":6,"h":11},{"c":237,"x0":339,"y0":29,"yoffs":1,"xpad":3,"w":6,"h":11},{"c":238,"x0":354,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":239,"x0":287,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":241,"x0":303,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":242,"x0":370,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":243,"x0":386,"y0":27,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":244,"x0":402,"y0":27,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":246,"x0":319,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":247,"x0":246,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":249,"x0":418,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":250,"x0":434,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":251,"x0":450,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":252,"x0":335,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":255,"x0":456,"y0":4,"yoffs":2,"xpad":2,"w":7,"h":13},{"c":402,"x0":466,"y0":26,"yoffs":1,"xpad":1,"w":8,"h":11},{"c":915,"x0":351,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":920,"x0":367,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":931,"x0":383,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":934,"x0":399,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":937,"x0":415,"y0":85,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":945,"x0":421,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":948,"x0":431,"y0":85,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":949,"x0":447,"y0":84,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":960,"x0":437,"y0":121,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":963,"x0":453,"y0":121,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":964,"x0":397,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":966,"x0":133,"y0":106,"yoffs":3,"w":9,"h":9},{"c":8319,"x0":83,"y0":143,"yoffs":1,"xpad":2,"w":7,"h":6},{"c":8359,"x0":483,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":8729,"x0":20,"y0":158,"yoffs":7,"xpad":4,"w":5,"h":2},{"c":8730,"x0":499,"y0":25,"yoffs":1,"xpad":1,"w":8,"h":11},{"c":8734,"x0":262,"y0":140,"yoffs":5,"w":9,"h":5},{"c":8745,"x0":151,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8776,"x0":280,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":8801,"x0":469,"y0":120,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":8804,"x0":167,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8805,"x0":183,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8976,"x0":296,"y0":140,"yoffs":6,"xpad":2,"w":7,"h":5},{"c":8992,"x0":390,"y0":4,"yoffs":2,"xpad":1,"w":8,"h":14},{"c":8993,"x0":472,"y0":4,"xpad":4,"w":5,"h":13},{"c":9472,"x0":81,"y0":158,"yoffs":7,"w":9,"h":1},{"c":9474,"x0":38,"y0":4,"xpad":4,"w":5,"h":16},{"c":9484,"x0":199,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9488,"x0":217,"y0":106,"yoffs":7,"xpad":4,"w":5,"h":9},{"c":9492,"x0":413,"y0":106,"w":9,"h":8},{"c":9496,"x0":431,"y0":104,"xpad":4,"w":5,"h":8},{"c":9500,"x0":52,"y0":4,"w":9,"h":16},{"c":9508,"x0":70,"y0":4,"xpad":4,"w":5,"h":16},{"c":9516,"x0":231,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9524,"x0":445,"y0":104,"w":9,"h":8},{"c":9532,"x0":84,"y0":4,"w":9,"h":16},{"c":9552,"x0":481,"y0":136,"yoffs":5,"w":9,"h":3},{"c":9553,"x0":102,"y0":4,"xpad":2,"w":7,"h":16},{"c":9554,"x0":4,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9555,"x0":249,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9556,"x0":22,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9557,"x0":40,"y0":50,"yoffs":5,"xpad":4,"w":5,"h":11},{"c":9558,"x0":267,"y0":106,"yoffs":7,"xpad":2,"w":7,"h":9},{"c":9559,"x0":54,"y0":50,"yoffs":5,"xpad":2,"w":7,"h":11},{"c":9560,"x0":463,"y0":103,"w":9,"h":8},{"c":9561,"x0":481,"y0":102,"w":9,"h":8},{"c":9562,"x0":4,"y0":126,"w":9,"h":8},{"c":9563,"x0":22,"y0":126,"xpad":4,"w":5,"h":8},{"c":9564,"x0":36,"y0":126,"xpad":2,"w":7,"h":8},{"c":9565,"x0":52,"y0":126,"xpad":2,"w":7,"h":8},{"c":9566,"x0":118,"y0":4,"w":9,"h":16},{"c":9567,"x0":136,"y0":4,"w":9,"h":16},{"c":9568,"x0":154,"y0":4,"w":9,"h":16},{"c":9569,"x0":172,"y0":4,"xpad":4,"w":5,"h":16},{"c":9570,"x0":186,"y0":4,"xpad":2,"w":7,"h":16},{"c":9571,"x0":202,"y0":4,"xpad":2,"w":7,"h":16},{"c":9572,"x0":70,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9573,"x0":283,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9574,"x0":88,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9575,"x0":99,"y0":143,"yoffs":2,"w":9,"h":6},{"c":9576,"x0":68,"y0":126,"w":9,"h":8},{"c":9577,"x0":86,"y0":126,"w":9,"h":8},{"c":9578,"x0":218,"y0":4,"w":9,"h":16},{"c":9579,"x0":236,"y0":4,"w":9,"h":16},{"c":9580,"x0":254,"y0":4,"w":9,"h":16},{"c":9600,"x0":485,"y0":119,"w":9,"h":7},{"c":9604,"x0":301,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9608,"x0":272,"y0":4,"w":9,"h":16},{"c":9612,"x0":290,"y0":4,"xpad":5,"w":4,"h":16},{"c":9616,"x0":303,"y0":4,"w":9,"h":16},{"c":9617,"x0":321,"y0":4,"xpad":1,"w":8,"h":16},{"c":9618,"x0":338,"y0":4,"xpad":1,"w":9,"h":16},{"c":9619,"x0":356,"y0":4,"xpad":1,"w":9,"h":16},{"c":9632,"x0":4,"y0":143,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":9654,"x0":104,"y0":126,"yoffs":4,"xpad":1,"w":6,"h":8},{"c":9660,"x0":449,"y0":137,"yoffs":6,"xpad":1,"w":8,"h":4},{"c":65533,"x0":462,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":10}]}
+},{"../glov/client/bootstrap.js":6,"./terminal_test.js":3}],2:[function(require,module,exports){
+module.exports={"font_size":16,"imageW":512,"imageH":256,"spread":4,"noFilter":1,"channels":1,"char_infos":[{"c":1,"x0":106,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":2,"x0":123,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":3,"x0":319,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":4,"x0":119,"y0":126,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":5,"x0":479,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":6,"x0":496,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":7,"x0":312,"y0":140,"yoffs":6,"xpad":3,"w":6,"h":4},{"c":8,"x0":4,"y0":4,"xpad":1,"w":8,"h":16},{"c":9,"x0":20,"y0":143,"yoffs":5,"xpad":2,"w":7,"h":6},{"c":10,"x0":21,"y0":4,"xpad":1,"w":8,"h":16},{"c":11,"x0":140,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":12,"x0":156,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":13,"x0":171,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":14,"x0":188,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":15,"x0":4,"y0":108,"yoffs":3,"xpad":1,"w":8,"h":9},{"c":16,"x0":100,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":17,"x0":116,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":18,"x0":21,"y0":108,"yoffs":2,"xpad":2,"w":7,"h":9},{"c":19,"x0":205,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":20,"x0":221,"y0":49,"yoffs":2,"xpad":1,"w":8,"h":10},{"c":21,"x0":486,"y0":4,"yoffs":1,"xpad":2,"w":7,"h":12},{"c":22,"x0":327,"y0":139,"yoffs":8,"xpad":2,"w":7,"h":4},{"c":23,"x0":238,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":24,"x0":254,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":25,"x0":270,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":26,"x0":117,"y0":143,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":27,"x0":133,"y0":142,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":28,"x0":343,"y0":139,"yoffs":6,"xpad":2,"w":7,"h":4},{"c":29,"x0":149,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":30,"x0":135,"y0":124,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":31,"x0":151,"y0":124,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":32,"xpad":9},{"c":33,"x0":286,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":34,"x0":359,"y0":139,"yoffs":1,"xpad":2,"w":7,"h":4},{"c":35,"x0":37,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":36,"x0":374,"y0":4,"xpad":2,"w":7,"h":14},{"c":37,"x0":335,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":38,"x0":301,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":39,"x0":375,"y0":139,"yoffs":1,"xpad":5,"w":4,"h":4},{"c":40,"x0":317,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":41,"x0":332,"y0":49,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":42,"x0":165,"y0":140,"yoffs":5,"xpad":1,"w":8,"h":5},{"c":43,"x0":182,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":44,"x0":388,"y0":139,"yoffs":9,"xpad":4,"w":5,"h":4},{"c":45,"x0":48,"y0":158,"yoffs":7,"xpad":2,"w":7,"h":1},{"c":46,"x0":4,"y0":159,"yoffs":10,"xpad":4,"w":5,"h":2},{"c":47,"x0":351,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":48,"x0":347,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":49,"x0":363,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":50,"x0":379,"y0":49,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":51,"x0":395,"y0":47,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":52,"x0":411,"y0":47,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":53,"x0":427,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":54,"x0":443,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":55,"x0":459,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":56,"x0":475,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":57,"x0":491,"y0":46,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":58,"x0":167,"y0":124,"yoffs":4,"xpad":4,"w":5,"h":7},{"c":59,"x0":367,"y0":106,"yoffs":4,"xpad":4,"w":5,"h":8},{"c":60,"x0":53,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":61,"x0":402,"y0":139,"yoffs":5,"xpad":2,"w":7,"h":4},{"c":62,"x0":69,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":63,"x0":4,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":64,"x0":85,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":65,"x0":20,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":66,"x0":36,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":67,"x0":52,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":68,"x0":68,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":69,"x0":84,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":70,"x0":100,"y0":70,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":71,"x0":116,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":72,"x0":132,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":73,"x0":148,"y0":68,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":74,"x0":163,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":75,"x0":179,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":76,"x0":195,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":77,"x0":211,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":78,"x0":227,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":79,"x0":243,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":80,"x0":259,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":81,"x0":4,"y0":29,"yoffs":2,"xpad":2,"w":7,"h":12},{"c":82,"x0":275,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":83,"x0":291,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":84,"x0":307,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":85,"x0":323,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":86,"x0":339,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":87,"x0":355,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":88,"x0":371,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":89,"x0":387,"y0":68,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":90,"x0":403,"y0":66,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":91,"x0":419,"y0":66,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":92,"x0":101,"y0":108,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":93,"x0":434,"y0":65,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":94,"x0":418,"y0":139,"xpad":2,"w":7,"h":4},{"c":95,"x0":64,"y0":158,"yoffs":13,"xpad":1,"w":8,"h":1},{"c":96,"x0":483,"y0":136,"yoffs":1,"xpad":3,"w":6,"h":3},{"c":97,"x0":181,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":98,"x0":449,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":99,"x0":197,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":100,"x0":465,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":101,"x0":213,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":102,"x0":481,"y0":65,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":103,"x0":497,"y0":65,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":104,"x0":4,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":105,"x0":20,"y0":89,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":106,"x0":407,"y0":4,"yoffs":2,"xpad":2,"w":7,"h":13},{"c":107,"x0":35,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":108,"x0":51,"y0":89,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":109,"x0":229,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":110,"x0":245,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":111,"x0":261,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":112,"x0":66,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":113,"x0":82,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":114,"x0":277,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":115,"x0":293,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":116,"x0":98,"y0":89,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":117,"x0":309,"y0":124,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":118,"x0":325,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":119,"x0":341,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":120,"x0":357,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":121,"x0":114,"y0":89,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":122,"x0":373,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":123,"x0":130,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":124,"x0":146,"y0":87,"yoffs":2,"xpad":4,"w":5,"h":10},{"c":125,"x0":160,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":126,"x0":18,"y0":159,"yoffs":1,"xpad":2,"w":7,"h":2},{"c":127,"x0":389,"y0":123,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":160,"xpad":9},{"c":161,"x0":176,"y0":87,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":162,"x0":132,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":163,"x0":148,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":165,"x0":191,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":170,"x0":36,"y0":143,"yoffs":2,"xpad":2,"w":7,"h":6},{"c":171,"x0":198,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":172,"x0":214,"y0":140,"yoffs":6,"xpad":2,"w":7,"h":5},{"c":176,"x0":434,"y0":139,"yoffs":1,"xpad":3,"w":6,"h":4},{"c":177,"x0":381,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":178,"x0":52,"y0":143,"yoffs":1,"xpad":2,"w":7,"h":6},{"c":181,"x0":207,"y0":87,"yoffs":5,"xpad":2,"w":7,"h":10},{"c":183,"x0":81,"y0":158,"yoffs":7,"xpad":4,"w":5,"h":1},{"c":186,"x0":68,"y0":143,"yoffs":2,"xpad":3,"w":6,"h":6},{"c":187,"x0":230,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":188,"x0":423,"y0":4,"yoffs":1,"xpad":1,"w":8,"h":13},{"c":189,"x0":440,"y0":4,"yoffs":1,"xpad":2,"w":7,"h":13},{"c":191,"x0":223,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":196,"x0":164,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":197,"x0":20,"y0":29,"xpad":2,"w":7,"h":12},{"c":198,"x0":36,"y0":29,"xpad":2,"w":7,"h":12},{"c":199,"x0":52,"y0":29,"yoffs":2,"xpad":2,"w":7,"h":12},{"c":201,"x0":68,"y0":29,"xpad":2,"w":7,"h":12},{"c":209,"x0":84,"y0":29,"xpad":2,"w":7,"h":12},{"c":214,"x0":180,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":220,"x0":196,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":223,"x0":239,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":224,"x0":212,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":225,"x0":228,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":226,"x0":244,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":228,"x0":255,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":229,"x0":260,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":230,"x0":405,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":231,"x0":117,"y0":108,"yoffs":5,"xpad":2,"w":7,"h":9},{"c":232,"x0":276,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":233,"x0":292,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":234,"x0":308,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":235,"x0":271,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":236,"x0":324,"y0":29,"yoffs":1,"xpad":3,"w":6,"h":11},{"c":237,"x0":339,"y0":29,"yoffs":1,"xpad":3,"w":6,"h":11},{"c":238,"x0":354,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":239,"x0":287,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":241,"x0":303,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":242,"x0":370,"y0":29,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":243,"x0":386,"y0":27,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":244,"x0":402,"y0":27,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":246,"x0":319,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":247,"x0":246,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":249,"x0":418,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":250,"x0":434,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":251,"x0":450,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":252,"x0":335,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":255,"x0":456,"y0":4,"yoffs":2,"xpad":2,"w":7,"h":13},{"c":402,"x0":466,"y0":26,"yoffs":1,"xpad":1,"w":8,"h":11},{"c":915,"x0":351,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":920,"x0":367,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":931,"x0":383,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":934,"x0":399,"y0":87,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":937,"x0":415,"y0":85,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":945,"x0":421,"y0":123,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":948,"x0":431,"y0":85,"yoffs":2,"xpad":2,"w":7,"h":10},{"c":949,"x0":447,"y0":84,"yoffs":2,"xpad":3,"w":6,"h":10},{"c":960,"x0":437,"y0":121,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":963,"x0":453,"y0":121,"yoffs":5,"xpad":2,"w":7,"h":7},{"c":964,"x0":397,"y0":106,"yoffs":4,"xpad":2,"w":7,"h":8},{"c":966,"x0":133,"y0":106,"yoffs":3,"w":9,"h":9},{"c":8319,"x0":83,"y0":143,"yoffs":1,"xpad":2,"w":7,"h":6},{"c":8359,"x0":483,"y0":26,"yoffs":1,"xpad":2,"w":7,"h":11},{"c":8729,"x0":34,"y0":158,"yoffs":7,"xpad":4,"w":5,"h":2},{"c":8730,"x0":499,"y0":25,"yoffs":1,"xpad":1,"w":8,"h":11},{"c":8734,"x0":262,"y0":140,"yoffs":5,"w":9,"h":5},{"c":8745,"x0":151,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8776,"x0":280,"y0":140,"yoffs":5,"xpad":2,"w":7,"h":5},{"c":8801,"x0":469,"y0":120,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":8804,"x0":167,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8805,"x0":183,"y0":106,"yoffs":3,"xpad":2,"w":7,"h":9},{"c":8976,"x0":296,"y0":140,"yoffs":6,"xpad":2,"w":7,"h":5},{"c":8992,"x0":390,"y0":4,"yoffs":2,"xpad":1,"w":8,"h":14},{"c":8993,"x0":472,"y0":4,"xpad":4,"w":5,"h":13},{"c":9472,"x0":95,"y0":158,"yoffs":7,"w":9,"h":1},{"c":9474,"x0":38,"y0":4,"xpad":4,"w":5,"h":16},{"c":9484,"x0":199,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9488,"x0":217,"y0":106,"yoffs":7,"xpad":4,"w":5,"h":9},{"c":9492,"x0":413,"y0":106,"w":9,"h":8},{"c":9496,"x0":431,"y0":104,"xpad":4,"w":5,"h":8},{"c":9500,"x0":52,"y0":4,"w":9,"h":16},{"c":9508,"x0":70,"y0":4,"xpad":4,"w":5,"h":16},{"c":9516,"x0":231,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9524,"x0":445,"y0":104,"w":9,"h":8},{"c":9532,"x0":84,"y0":4,"w":9,"h":16},{"c":9552,"x0":498,"y0":135,"yoffs":5,"w":9,"h":3},{"c":9553,"x0":102,"y0":4,"xpad":2,"w":7,"h":16},{"c":9554,"x0":4,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9555,"x0":249,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9556,"x0":22,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9557,"x0":40,"y0":50,"yoffs":5,"xpad":4,"w":5,"h":11},{"c":9558,"x0":267,"y0":106,"yoffs":7,"xpad":2,"w":7,"h":9},{"c":9559,"x0":54,"y0":50,"yoffs":5,"xpad":2,"w":7,"h":11},{"c":9560,"x0":463,"y0":103,"w":9,"h":8},{"c":9561,"x0":481,"y0":102,"w":9,"h":8},{"c":9562,"x0":4,"y0":126,"w":9,"h":8},{"c":9563,"x0":22,"y0":126,"xpad":4,"w":5,"h":8},{"c":9564,"x0":36,"y0":126,"xpad":2,"w":7,"h":8},{"c":9565,"x0":52,"y0":126,"xpad":2,"w":7,"h":8},{"c":9566,"x0":118,"y0":4,"w":9,"h":16},{"c":9567,"x0":136,"y0":4,"w":9,"h":16},{"c":9568,"x0":154,"y0":4,"w":9,"h":16},{"c":9569,"x0":172,"y0":4,"xpad":4,"w":5,"h":16},{"c":9570,"x0":186,"y0":4,"xpad":2,"w":7,"h":16},{"c":9571,"x0":202,"y0":4,"xpad":2,"w":7,"h":16},{"c":9572,"x0":70,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9573,"x0":283,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9574,"x0":88,"y0":50,"yoffs":5,"w":9,"h":11},{"c":9575,"x0":99,"y0":143,"yoffs":2,"w":9,"h":6},{"c":9576,"x0":68,"y0":126,"w":9,"h":8},{"c":9577,"x0":86,"y0":126,"w":9,"h":8},{"c":9578,"x0":218,"y0":4,"w":9,"h":16},{"c":9579,"x0":236,"y0":4,"w":9,"h":16},{"c":9580,"x0":254,"y0":4,"w":9,"h":16},{"c":9600,"x0":485,"y0":119,"w":9,"h":7},{"c":9604,"x0":301,"y0":106,"yoffs":7,"w":9,"h":9},{"c":9608,"x0":272,"y0":4,"w":9,"h":16},{"c":9612,"x0":290,"y0":4,"xpad":5,"w":4,"h":16},{"c":9616,"x0":303,"y0":4,"w":9,"h":16},{"c":9617,"x0":321,"y0":4,"xpad":1,"w":8,"h":16},{"c":9618,"x0":338,"y0":4,"xpad":0,"w":9,"h":16},{"c":9619,"x0":356,"y0":4,"xpad":0,"w":9,"h":16},{"c":9632,"x0":4,"y0":143,"yoffs":4,"xpad":2,"w":7,"h":7},{"c":9650,"x0":449,"y0":137,"yoffs":6,"xpad":1,"w":8,"h":4},{"c":9654,"x0":104,"y0":126,"yoffs":4,"xpad":1,"w":6,"h":8},{"c":9660,"x0":466,"y0":137,"yoffs":6,"xpad":1,"w":8,"h":4},{"c":9664,"xpad":1},{"c":65533,"x0":462,"y0":84,"yoffs":3,"xpad":1,"w":8,"h":10}]}
 },{}],3:[function(require,module,exports){
 "use strict"
 exports.main=main
-var local_storage=require("../glov/client/local_storage.js")
+var local_storage=require("../glov/client/local_storage")
 local_storage.setStoragePrefix("glovjs-playground")
-var _glovClientEngineJs=require("../glov/client/engine.js")
-var engine=_glovClientEngineJs
-var _glovClientInputJs=require("../glov/client/input.js")
-var input=_glovClientInputJs
+var _glovClientEngine=require("../glov/client/engine")
+var engine=_glovClientEngine
+var _glovClientInput=require("../glov/client/input")
+var input=_glovClientInput
 var floor=Math.floor,random=Math.random,min=Math.min
-var _glovClientNetJs=require("../glov/client/net.js")
-var net=_glovClientNetJs
-var _glovClientTerminalJs=require("../glov/client/terminal.js")
-var ansi=_glovClientTerminalJs.ansi
-var padRight=_glovClientTerminalJs.padRight
-var terminalCreate=_glovClientTerminalJs.terminalCreate
-var _glovClientTerminal_settingsJs=require("../glov/client/terminal_settings.js")
-var terminalSettingsInit=_glovClientTerminal_settingsJs.terminalSettingsInit
-var terminalSettingsShow=_glovClientTerminal_settingsJs.terminalSettingsShow
-var _glovClientUiJs=require("../glov/client/ui.js")
-var ui=_glovClientUiJs
+var _glovClientNet=require("../glov/client/net")
+var net=_glovClientNet
+var _glovClientTerminal=require("../glov/client/terminal")
+var terminalCreate=_glovClientTerminal.terminalCreate
+var _glovClientTerminal_settings=require("../glov/client/terminal_settings")
+var terminalSettingsInit=_glovClientTerminal_settings.terminalSettingsInit
+var terminalSettingsShow=_glovClientTerminal_settings.terminalSettingsShow
+var _glovClientUi=require("../glov/client/ui")
+var ui=_glovClientUi
+var _glovCommonAnsi=require("../glov/common/ansi")
+var ansi=_glovCommonAnsi.ansi
+var padRight=_glovCommonAnsi.padRight
 window.Z=window.Z||{}
 Z.BACKGROUND=1
 Z.SPRITES=10
@@ -137,47 +141,313 @@ terminal.cells({x:MENU_X-2,y:MENU_Y-1,ws:[MENU_W],hs:[3],charset:2,header:" MENU
 engine.setState(menu)
 menu(dt)}engine.setState(menuInit)}
 
-},{"../glov/client/engine.js":13,"../glov/client/input.js":28,"../glov/client/local_storage.js":31,"../glov/client/net.js":35,"../glov/client/terminal.js":53,"../glov/client/terminal_settings.js":54,"../glov/client/ui.js":57,"./img/font/vga_16x1.json":2}],4:[function(require,module,exports){
+},{"../glov/client/engine":15,"../glov/client/input":31,"../glov/client/local_storage":35,"../glov/client/net":43,"../glov/client/terminal":63,"../glov/client/terminal_settings":64,"../glov/client/ui":67,"../glov/common/ansi":75,"./img/font/vga_16x1.json":2}],4:[function(require,module,exports){
 "use strict"
+exports.abTestGet=abTestGet
+exports.abTestGetMetrics=abTestGetMetrics
+exports.abTestGetMetricsAndPlatform=abTestGetMetricsAndPlatform
+exports.abTestRegister=abTestRegister
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var assert=require("assert")
+var _glovCommonRand_alea=require("../common/rand_alea")
+var mashString=_glovCommonRand_alea.mashString
+var _client_config=require("./client_config")
+var platformGetID=_client_config.platformGetID
+var _local_storage=require("./local_storage")
+var localStorageGet=_local_storage.localStorageGet
+var localStorageSet=_local_storage.localStorageSet
+var _net=require("./net")
+var netPostInit=_net.netPostInit
+var netSubs=_net.netSubs
+var netUserId=_net.netUserId
+var _wsclient=require("./wsclient")
+var wsclientSetExtraParam=_wsclient.wsclientSetExtraParam
+var floor=Math.floor
+var KEY_LOCAL_ID="abtests_id"
+var KEY_TEST_PREFIX="abtest."
+function evaluateSplitGroup(state,id){var values=state.values,name=state.name
+var local_key=""+KEY_TEST_PREFIX+state.name
+var new_value=null
+if(state.permanent){var _state$allowed_values
+var stored_value=localStorageGet(local_key)
+if(stored_value&&(state.values.includes(stored_value)||null!=(_state$allowed_values=state.allowed_values)&&_state$allowed_values.includes(stored_value)))new_value=stored_value}if(!new_value)new_value=values[floor(mashString(name+":"+id)/4294967296*values.length)]
+state.value=new_value
+null==state.cb||state.cb(state.value)
+if("client"===state.scope)localStorageSet(local_key,state.value)}var abtest_defs={}
+var metrics_string=""
+var metrics_and_platform_string=""
+function abTestGetMetrics(){return metrics_string}function abTestGetMetricsAndPlatform(){return metrics_and_platform_string}function updateMetricsString(){var data=[]
+for(var key in abtest_defs){var def=abtest_defs[key]
+if(def.metrics&&def.value)data.push(""+def.metrics+def.value)}metrics_string=data.join(",")
+data.push(platformGetID())
+metrics_and_platform_string=data.join(",")}function updateWSClient(){var data=[]
+for(var key in abtest_defs){var def=abtest_defs[key]
+if("client"===def.scope&&def.metrics)data.push(""+def.metrics+def.value)}wsclientSetExtraParam("abt",data.join(","))}var user_id=null
+function evaluatePerUserABTests(){assert(user_id)
+for(var key in abtest_defs){var state=abtest_defs[key]
+if("user"!==state.scope)continue
+evaluateSplitGroup(state,user_id)}updateMetricsString()}function abTestPostNetInit(){netSubs().on("login",function(){user_id=netUserId()
+evaluatePerUserABTests()})
+netSubs().on("logout",function(){user_id=null})}var local_id
+var did_startup=false
+function abTestStartup(){if(did_startup)return
+did_startup=true
+if(!(local_id=localStorageGet(KEY_LOCAL_ID)||"")){local_id="id"+Math.random()
+localStorageSet(KEY_LOCAL_ID,local_id)}netPostInit(abTestPostNetInit)}function abTestRegister(def){abTestStartup()
+var state=_extends({},def,{value:null})
+if("client"===(abtest_defs[state.name]=state).scope)evaluateSplitGroup(state,local_id)
+if("client"===state.scope&&state.metrics){assert(!netSubs())
+updateWSClient()
+updateMetricsString()}if("user"===state.scope){assert(!state.permanent)
+assert(!netSubs()||!netUserId())}}function abTestGet(name){var def=abtest_defs[name]
+assert(def)
+assert(null!==def.value)
+return def.value}
+
+},{"../common/rand_alea":89,"./client_config":10,"./local_storage":35,"./net":43,"./wsclient":73,"assert":undefined}],5:[function(require,module,exports){
+"use strict"
+exports.autoAtlas=autoAtlas
+exports.autoAtlasOnImage=autoAtlasOnImage
+exports.autoAtlasSwap=autoAtlasSwap
+exports.autoAtlasTextureOpts=autoAtlasTextureOpts
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var assert=require("assert")
+var _glovCommonData_error=require("../common/data_error")
+var dataError=_glovCommonData_error.dataError
+var _glovCommonUtil=require("../common/util")
+var callEach=_glovCommonUtil.callEach
+var clone=_glovCommonUtil.clone
+var _glovCommonVmath=require("../common/vmath")
+var v4clone=_glovCommonVmath.v4clone
+var v4copy=_glovCommonVmath.v4copy
+var v4set=_glovCommonVmath.v4set
+var vec4=_glovCommonVmath.vec4
+var _engine=require("./engine")
+var engineStartupFunc=_engine.engineStartupFunc
+var _filewatch=require("./filewatch")
+var filewatchOn=_filewatch.filewatchOn
+var _sprites=require("./sprites")
+var spriteCreate=_sprites.spriteCreate
+var _textures=require("./textures")
+var textureError=_textures.textureError
+var textureLoad=_textures.textureLoad
+var _webfs=require("./webfs")
+var webFSGetFile=_webfs.webFSGetFile
+var webFSOnReady=_webfs.webFSOnReady
+var load_opts={}
+var hit_startup=false
+var uidata_error={rects:[[0,0,1,1]],wh:[1],hw:[1],widths:[1],heights:[1],aspect:null,total_w:1,total_h:1}
+function spriteMakeError(sprite){v4set(sprite.uvs,0,0,1,1)
+sprite.texs=[textureError()]
+sprite.uidata=uidata_error}var atlas_swaps=Object.create(null)
+var atlases
+function saveOrig(sprite){if(!sprite.uidata_orig){sprite.uidata_orig=clone(sprite.uidata)
+var rects=[]
+for(var key in sprite.uidata.rects){var src=sprite.uidata.rects[key]
+rects[key]=v4clone(src)}sprite.uidata_orig.rects=rects}}var AutoAtlasImp=function(){var _proto=AutoAtlasImp.prototype
+_proto.prealloc=function prealloc(){var sprite=spriteCreate({texs:this.texs,uvs:vec4(0,0,1,1)})
+sprite.uidata=uidata_error
+return sprite}
+_proto.verifySprites=function verifySprites(seen){var sprites=this.sprites
+for(var img_name in sprites)if(sprites[img_name].autoatlas_used&&!seen[img_name]&&"def"!==img_name){dataError('AutoAtlas "'+this.atlas_name+'" does not contain image "'+img_name+'"')
+spriteMakeError(sprites[img_name])}}
+_proto.doInit=function doInit(){var _this=this
+var sprites=this.sprites,atlas_name=this.atlas_name,texs=this.texs
+var atlas_data=this.atlas_data=webFSGetFile(atlas_name+".auat","jsobj")
+var root_sprite=sprites.def=sprites.def||this.prealloc()
+var root_rects=[]
+var root_aspect=[]
+var tiles=atlas_data.tiles,w=atlas_data.w,h=atlas_data.h
+var seen={}
+for(var tile_id=0;tile_id<tiles.length;++tile_id){var is_new=false
+var _tiles$tile_id=tiles[tile_id],tile_name=_tiles$tile_id[0],x=_tiles$tile_id[1],y=_tiles$tile_id[2],ws=_tiles$tile_id[3],hs=_tiles$tile_id[4],padh=_tiles$tile_id[5],padv=_tiles$tile_id[6]
+seen[tile_name]=true
+var total_w=0
+for(var jj=0;jj<ws.length;++jj)total_w+=ws[jj]
+var total_h=0
+for(var _jj=0;_jj<hs.length;++_jj)total_h+=hs[_jj]
+root_aspect.push(total_w/total_h)
+var sprite=sprites[tile_name]
+if(!sprite){sprite=sprites[tile_name]=this.prealloc()
+is_new=true}sprite.texs=texs
+var tile_uvs=sprite.uvs
+v4set(tile_uvs,x/w,y/h,(x+total_w)/w,(y+total_h)/h)
+root_rects.push(tile_uvs)
+root_rects[tile_name]=tile_uvs
+var wh=[]
+for(var ii=0;ii<ws.length;++ii)wh.push(ws[ii]/total_h)
+var hw=[]
+for(var _ii=0;_ii<hs.length;++_ii)hw.push(hs[_ii]/total_w)
+var aspect=[]
+var non_square=false
+var yy=y
+var rects=[]
+for(var _jj2=0;_jj2<hs.length;++_jj2){var xx=x
+for(var _ii2=0;_ii2<ws.length;++_ii2){var r=vec4(xx/w,yy/h,(xx+ws[_ii2])/w,(yy+hs[_jj2])/h)
+rects.push(r)
+var asp=ws[_ii2]/hs[_jj2]
+if(1!==asp)non_square=true
+aspect.push(asp)
+xx+=ws[_ii2]}yy+=hs[_jj2]}sprite.uidata={widths:ws,heights:hs,wh:wh,hw:hw,rects:rects,aspect:non_square?aspect:null,padh:padh,padv:padv,total_w:total_w,total_h:total_h}
+delete sprite.uidata_orig
+sprite.doReInit()
+if(is_new)callEach(this.on_image,null,tile_name)}root_sprite.uidata={rects:root_rects,aspect:root_aspect,total_h:h,total_w:w,widths:null,heights:null,wh:null,hw:null}
+delete root_sprite.uidata_orig
+if(hit_startup)this.verifySprites(seen)
+this.applySwaps()
+if(this.did_tex_load)return
+this.did_tex_load=true
+engineStartupFunc(function(){hit_startup=true
+var opts=load_opts[atlas_name]||{}
+if(atlas_data.layers)for(var idx=0;idx<atlas_data.layers;++idx){var tex=textureLoad(_extends({wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE},opts,{url:"img/atlas_"+atlas_name+"_"+idx+".png"}))
+texs.push(tex)}else{var _tex=textureLoad(_extends({wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE},opts,{url:"img/atlas_"+atlas_name+".png"}))
+texs.push(_tex)}for(var _ii3=0;_ii3<texs.length;++_ii3)texs[_ii3].onLoad(_this.checkLoaded.bind(_this))
+_this.verifySprites(seen)})}
+_proto.applySwaps=function applySwaps(){var dst_name=atlas_swaps[this.atlas_name]
+var dst=dst_name&&atlases[dst_name]
+var sprites_src=this.sprites
+var texs_src=this.texs
+var atlas_data_src=this.atlas_data
+assert(atlas_data_src)
+var tiles_src=atlas_data_src.tiles
+var root_sprite=sprites_src.def
+assert(root_sprite)
+function clearSwap(src_sprite,tile_id,root_uidata_orig){if(src_sprite.uidata_orig){src_sprite.uidata=src_sprite.uidata_orig
+delete src_sprite.uidata_orig
+src_sprite.texs=texs_src
+v4copy(src_sprite.uvs,root_uidata_orig.rects[tile_id])
+src_sprite.doReInit()}}if(!dst){var _root_uidata_orig=root_sprite.uidata_orig
+if(!_root_uidata_orig)return
+for(var tile_id=0;tile_id<tiles_src.length;++tile_id){var src_sprite=sprites_src[tiles_src[tile_id][0]]
+assert(src_sprite)
+clearSwap(src_sprite,tile_id,_root_uidata_orig)}delete root_sprite.uidata_orig
+return}var texs_dst=dst.texs
+var atlas_data_dst=this.atlas_data
+assert(atlas_data_dst)
+var sprites_dst=dst.sprites
+saveOrig(root_sprite)
+var root_rects=root_sprite.uidata.rects
+var root_uidata_orig=root_sprite.uidata_orig
+assert(root_uidata_orig)
+for(var _tile_id=0;_tile_id<tiles_src.length;++_tile_id){var _tile_name=tiles_src[_tile_id][0]
+var _src_sprite=sprites_src[_tile_name]
+assert(_src_sprite)
+var dst_sprite=sprites_dst[_tile_name]
+if(!dst_sprite){clearSwap(_src_sprite,_tile_id,root_uidata_orig)
+continue}saveOrig(_src_sprite)
+_src_sprite.texs=texs_dst
+var tile_uvs=_src_sprite.uvs
+v4copy(tile_uvs,dst_sprite.uvs)
+_src_sprite.uidata.rects=dst_sprite.uidata.rects
+root_rects[_tile_id]=tile_uvs
+root_rects[_tile_name]=tile_uvs
+_src_sprite.doReInit()}}
+_proto.checkLoaded=function checkLoaded(){var texs=this.texs
+this.is_loaded=false
+if(!texs.length)return
+for(var ii=0;ii<texs.length;++ii)if(!texs[ii].loaded)return
+this.is_loaded=true}
+_proto.isLoaded=function isLoaded(){return this.is_loaded}
+_proto.setSamplerState=function setSamplerState(opts){for(var ii=0;ii<this.texs.length;++ii)this.texs[ii].setSamplerState(opts)}
+function AutoAtlasImp(atlas_name){this.sprites={}
+this.texs=[]
+this.did_tex_load=false
+this.atlas_data=void 0
+this.is_loaded=false
+this.on_image=[]
+this.atlas_name=atlas_name
+webFSOnReady(this.doInit.bind(this))}_proto.get=function get(img_name){var ret=this.sprites[img_name]
+if(!ret){ret=this.sprites[img_name]=this.prealloc()
+if(hit_startup){dataError('AutoAtlas "'+this.atlas_name+'" does not contain image "'+img_name+'"')
+spriteMakeError(ret)}}ret.autoatlas_used=true
+return ret}
+_proto.onImage=function onImage(cb){this.on_image.push(cb)
+Object.keys(this.sprites).forEach(cb)}
+return AutoAtlasImp}()
+function autoAtlasReload(filename){filename=filename.slice(0,-5)
+var atlas=atlases[filename]
+if(!atlas)return
+atlas.doInit()
+for(var key in atlas_swaps)if(key===filename||atlas_swaps[key]===filename){var other=atlases[key]
+if(other&&other!==atlas)other.doInit()}}function autoAtlasTextureOpts(atlas_name,opts){load_opts[atlas_name]=opts
+if(atlases){var atlas=atlases[atlas_name]
+if(atlas)atlas.setSamplerState(opts)}}function autoAtlasGet(atlas_name){if(!atlases){atlases={}
+filewatchOn(".auat",autoAtlasReload)}var atlas=atlases[atlas_name]
+if(!atlas)atlas=atlases[atlas_name]=new AutoAtlasImp(atlas_name)
+return atlas}function autoAtlasOnImage(atlas_name,cb){autoAtlasGet(atlas_name).onImage(cb)}function autoAtlas(atlas_name,img_name){return autoAtlasGet(atlas_name).get(img_name)}function autoAtlasSwap(src,dest){if(atlas_swaps[src]!==dest){var _atlases$src
+autoAtlasGet(dest)
+if(dest===src||!dest)delete atlas_swaps[src]
+else atlas_swaps[src]=dest
+null==(_atlases$src=atlases[src])||_atlases$src.applySwaps()}}
+
+},{"../common/data_error":80,"../common/util":93,"../common/vmath":95,"./engine":15,"./filewatch":21,"./sprites":61,"./textures":65,"./webfs":71,"assert":undefined}],6:[function(require,module,exports){
+"use strict"
+exports.setCrashMessage=setCrashMessage
 require("./polyfill.js")
-var debug=document.getElementById("debug")
+var _require=require("./isbot"),isbot=_require.isbot
+var crash_message="Please report this error to the developer, and then reload this page or restart the app."
+function setCrashMessage(msg){crash_message=msg}var debug=document.getElementById("debug")
 window.onerror=function(e,file,line,col,errorobj){var msg=String(e)
-if("[object Object]"===msg){try{msg=JSON.stringify(e)}catch(ignored){}msg=msg.slice(0,600)}if(file||line>0||col>0)msg+="\n  at "+file+"("+line+":"+col+")"
-if(errorobj&&errorobj.stack){msg=""+errorobj.stack
+if(msg.startsWith("[object ")){try{msg=JSON.stringify(e)}catch(ignored){}msg=msg.slice(0,600)}if("string"===typeof errorobj)msg=msg+" "+errorobj
+if(file||line>0||col>0)msg+="\n  at "+file+"("+line+":"+col+")"
+var got_stack=false
+if(errorobj&&errorobj.stack){got_stack=true
+msg=""+errorobj.stack
 if(errorobj.message)if(-1===msg.indexOf(errorobj.message))msg=errorobj.message+"\n"+msg
 var origin=document.location.origin||""
-if(origin){if("/"!==origin.slice(-1))origin+="/"
+if(origin){if("file://"===origin){var full_location=String(document.location)
+if(full_location.includes("app.asar"))origin=full_location.split("app.asar")[0]+"app.asar/"}if("/"!==origin.slice(-1))origin+="/"
 msg=msg.split(origin).join("")}msg=msg.replace(/\[\d+\]<\/?/g,"").replace(/\/</g,"").replace(/<?\/<?/g,"/").replace(/\n\//g,"\n").replace(/\n([^ ])/g,"\n  $1")}if(-1===msg.indexOf("Error:"))msg="Error: "+msg
-if(errorobj&&errorobj.type)if("unhandledrejection"===errorobj.type)msg="Uncaught (in promise) "+msg
-var show=true
+if(errorobj&&errorobj.errortype)if("unhandledrejection"===errorobj.errortype)msg="Uncaught (in promise) "+msg
+if(errorobj)try{if("object"===typeof errorobj)for(var key in errorobj)if("string"===typeof errorobj[key]){var value=errorobj[key]
+if("errortype"!==key&&!(("stack"===key||"message"===key)&&got_stack))msg=msg+"\n"+key+"="+value}}catch(ignored){}var show=true
 if(window.glov_error_report)show=window.glov_error_report(msg,file,line,col)
-if(show)debug.innerText=msg+"\n\nPlease report this error to the developer, and then reload this page or restart the app."}
+else if(!window.glov_error_early)window.glov_error_early={msg:msg,file:file,line:line,col:col}
+if(show){debug.innerText=msg+"\n\n"+crash_message
+if(isbot())try{var desc=document.getElementsByTagName("meta").Description.content
+if(desc){var crash_html=debug.innerHTML
+debug.innerHTML=desc+"<br><br>This browser may not fully support WebGL and encountered an error while loading the page."
+if(String(document.location).includes("verbose=1"))debug.innerHTML=debug.innerHTML+"<br><br>"+crash_html}}catch(err){}}}
 window.addEventListener("unhandledrejection",function(event){var errorobj=event.reason
 if(!errorobj)return
 if(!errorobj||"object"!==typeof errorobj)errorobj={stack:errorobj}
-errorobj.type=event.type
-window.onerror(event.reason,void 0,0,0,errorobj)})
+var file
+if(event.reason&&event.reason.srcElement&&event.reason.srcElement.src)file=event.reason.srcElement.src
+try{errorobj.errortype=event.type}catch(ignored){}window.onerror(event.reason,file,0,0,errorobj)})
 window.debugmsg=function(msg,clear){if(clear)debug.innerText=msg
 else debug.innerText+=msg+"\n"}
 window.profilerStart=window.profilerStop=window.profilerStopStart=function nop(){}
 
-},{"./polyfill.js":40}],5:[function(require,module,exports){
+},{"./isbot":33,"./polyfill.js":49}],7:[function(require,module,exports){
 "use strict"
-exports.is_windows_phone=exports.is_webkit=exports.is_mac_osx=exports.is_ios_safari=exports.is_ios=exports.is_firefox=exports.is_discrete_gpu=exports.is_android=void 0
+exports.safari_version_minor=exports.safari_version_major=exports.is_windows_phone=exports.is_webkit=exports.is_mac_osx_safari=exports.is_mac_osx=exports.is_itch_app=exports.is_ipad=exports.is_ios_safari=exports.is_ios_chrome=exports.is_ios=exports.is_firefox=exports.is_discrete_gpu=exports.is_android=void 0
 var ua=window.navigator.userAgent
 var is_mac_osx=ua.match(/Mac OS X/)
 exports.is_mac_osx=is_mac_osx
 var is_ios=!window.MSStream&&ua.match(/iPad|iPhone|iPod/)
 exports.is_ios=is_ios
-var is_windows_phone=ua.match(/windows phone/i)
-var is_android=!(exports.is_windows_phone=is_windows_phone)&&ua.match(/android/i)
-exports.is_android=is_android
+var is_ipad=Boolean(ua.match(/iPad/))
+exports.is_ipad=is_ipad
 var is_webkit=ua.match(/WebKit/i)
 exports.is_webkit=is_webkit
 var is_ios_safari=is_ios&&is_webkit&&!ua.match(/CriOS/i)
 exports.is_ios_safari=is_ios_safari
+var is_ios_chrome=is_ios&&is_webkit&&ua.match(/CriOS/i)
+exports.is_ios_chrome=is_ios_chrome
+var m=ua.match(/OS (\d+)(_\d+)?(_\d+)?\s/)
+var safari_version_major=is_ios&&m?Number(m[1]||"0"):0
+exports.safari_version_major=safari_version_major
+var safari_version_minor=is_ios&&m?Number(m[2]&&m[2].slice(1)||"0"):0
+exports.safari_version_minor=safari_version_minor
+var is_mac_osx_safari=void 0!==window.safari
+exports.is_mac_osx_safari=is_mac_osx_safari
+var is_windows_phone=ua.match(/windows phone/i)
+var is_android=!(exports.is_windows_phone=is_windows_phone)&&ua.match(/android/i)
+exports.is_android=is_android
 var is_firefox=ua.match(/Firefox/i)
 exports.is_firefox=is_firefox
+var is_itch_app=-1!==String(window.location.protocol).indexOf("itch")
+exports.is_itch_app=is_itch_app
 var is_discrete_gpu=false
 exports.is_discrete_gpu=is_discrete_gpu
 function init(){try{var canvas=document.createElement("canvas")
@@ -186,45 +456,70 @@ canvas.height=4
 var gltest=canvas.getContext("webgl")
 if(gltest){var debug_info=gltest.getExtension("WEBGL_debug_renderer_info")
 if(debug_info){var renderer_unmasked=gltest.getParameter(debug_info.UNMASKED_RENDERER_WEBGL)
-exports.is_discrete_gpu=is_discrete_gpu=Boolean(renderer_unmasked&&renderer_unmasked.match(/nvidia|radeon/i))}}}catch(e){}}init()
+exports.is_discrete_gpu=is_discrete_gpu=Boolean(renderer_unmasked&&(renderer_unmasked.match(/nvidia|radeon/i)||renderer_unmasked.match(/apple gpu/i)&&is_mac_osx&&!is_ios))}}}catch(e){}}init()
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict"
 exports.buildUIStartup=buildUIStartup
-var camera2d=require("./camera2d.js")
-var engine=require("./engine.js")
-var glov_font=require("./font.js")
+var _glovCommonData_error=require("../common/data_error")
+var dataErrorEx=_glovCommonData_error.dataErrorEx
+var dataErrorQueueClear=_glovCommonData_error.dataErrorQueueClear
+var dataErrorQueueGet=_glovCommonData_error.dataErrorQueueGet
+var _glovCommonUtil=require("../common/util")
+var plural=_glovCommonUtil.plural
+var _glovCommonVmath=require("../common/vmath")
+var vec4=_glovCommonVmath.vec4
+var _camera2d=require("./camera2d")
+var camera2d=_camera2d
+var _engine=require("./engine")
+var engine=_engine
+var _engine2=require("./engine")
+var renderNeeded=_engine2.renderNeeded
+var _font=require("./font")
+var fontStyleColored=_font.fontStyleColored
+var _net=require("./net")
+var netClient=_net.netClient
+var netSubs=_net.netSubs
+var _scroll_area=require("./scroll_area")
+var scrollAreaCreate=_scroll_area.scrollAreaCreate
+var _ui=require("./ui")
+var buttonText=_ui.buttonText
+var drawLine=_ui.drawLine
+var panel=_ui.panel
+var uiGetFont=_ui.uiGetFont
+var uiGetTitleFont=_ui.uiGetTitleFont
+var uiTextHeight=_ui.uiTextHeight
 var min=Math.min
-var _require=require("./scroll_area.js"),scrollAreaCreate=_require.scrollAreaCreate
-var ui=require("./ui.js")
-var net=require("./net.js")
-var _require2=require("../common/util.js"),plural=_require2.plural
-var _require3=require("../common/vmath.js"),vec4=_require3.vec4
-var gbstate
-var server_error
+var gbstate=null
+var server_error=null
 Z.BUILD_ERRORS=Z.BUILD_ERRORS||9900
-function onGBState(state){gbstate=state}function onServerError(err){server_error=err}var PAD=4
+function onGBState(state){gbstate=state
+renderNeeded()}function onServerError(err){server_error=err
+renderNeeded()}function onDataErrors(err_list){for(var ii=0;ii<err_list.length;++ii)dataErrorEx(err_list[ii])
+renderNeeded()}var PAD=4
 var color_panel=vec4(0,0,0,1)
-var style_title=glov_font.styleColored(null,4280295679)
-var style=glov_font.styleColored(null,3722305023)
-var style_task=glov_font.styleColored(null,14540287)
-var style_job=glov_font.styleColored(null,539033599)
+var style_title=fontStyleColored(null,4280295679)
+var style=fontStyleColored(null,3722305023)
+var style_task=fontStyleColored(null,14540287)
+var style_job=fontStyleColored(null,539033599)
 var color_line=vec4(1,1,1,1)
 var strip_ansi=/\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g
 var scroll_area
-function buildUITick(){if(!gbstate&&!server_error)return
+function buildUITick(){var data_errors=dataErrorQueueGet()
+if(!gbstate&&!server_error&&!data_errors.length)return
 var x0=camera2d.x0()+PAD
 var y0=camera2d.y0()+PAD
 var z=Z.BUILD_ERRORS
 var w=.75*camera2d.w()
-var font=ui.font,title_font=ui.title_font,font_height=ui.font_height
+var font_height=uiTextHeight()
+var font=uiGetFont()
+var title_font=uiGetTitleFont()
 var x=x0
 var y=y0
-var error_count=((null==gbstate?void 0:gbstate.error_count)||0)+(server_error?1:0)
+var error_count=((null==gbstate?void 0:gbstate.error_count)||0)+(server_error?1:0)+data_errors.length
 var warning_count=(null==gbstate?void 0:gbstate.warning_count)||0
 title_font.drawSizedAligned(style_title,x,y,z,font_height,font.ALIGN.HCENTERFIT,w,0,error_count+" "+plural(error_count,"error")+", "+warning_count+" "+plural(warning_count,"warning"))
-y+=font_height+1
-ui.drawLine(x0+.3*w,y,x0+.7*w,y,z,.5,true,color_line)
+drawLine(x0+.3*w,y+=font_height+1,x0+.7*w,y,z,.5,1,color_line)
 y+=PAD
 if(!scroll_area)scroll_area=scrollAreaCreate({z:z,background_color:null,auto_hide:true})
 var max_h=camera2d.y1()-PAD-y
@@ -233,34 +528,39 @@ scroll_area.begin({x:x,y:y,w:w,h:max_h})
 var sub_w=w-PAD-scroll_area.barWidth()
 y=0
 z=Z.UI
+var indent=0
 function printLine(type,str){str=str.replace(strip_ansi,"")
-y+=font.drawSizedWrapped(style,x,y,z,sub_w,0,font_height,type+": "+str)}if(gbstate)for(var task_name in gbstate.tasks){var task=gbstate.tasks[task_name]
-x=0
+y+=font.drawSizedWrapped(style,x+indent,y,z,sub_w-indent,0,font_height,type+": "+str)}if(gbstate)for(var task_name in gbstate.tasks){var task=gbstate.tasks[task_name]
+indent=x=0
 font.drawSizedAligned(style_task,x,y,z,font_height,font.ALIGN.HLEFT,sub_w,0,task_name+":")
 y+=font_height
-x+=font_height
+indent+=font_height
 var printed_any=false
 for(var job_name in task.jobs){var job=task.jobs[job_name]
 var warnings=job.warnings,errors=job.errors
 if("all"!==job_name){if(job_name.startsWith("source:"))job_name=job_name.slice(7)
-y+=font.drawSizedWrapped(style_job,x,y,z,sub_w,0,font_height,job_name)}if(warnings)for(var ii=0;ii<warnings.length;++ii){printLine("Warning",warnings[ii])
+y+=font.drawSizedWrapped(style_job,indent,y,z,sub_w,0,font_height,job_name)}if(warnings)for(var ii=0;ii<warnings.length;++ii){printLine("Warning",warnings[ii])
 printed_any=true}if(errors)for(var _ii=0;_ii<errors.length;++_ii){printLine("Error",errors[_ii])
 printed_any=true}}if(!printed_any&&task.err)printLine("Error",task.err)
-y+=PAD}if(server_error){x=0
+y+=PAD}if(server_error){x=indent=0
 font.drawSizedAligned(style_task,x,y,z,font_height,font.ALIGN.HLEFT,sub_w,0,"Server Error:")
 y+=font_height
 x+=font_height
-printLine("Server error",server_error)}scroll_area.end(y)
+printLine("Server error",server_error)}for(var _ii2=0;_ii2<data_errors.length;++_ii2){var msg=data_errors[_ii2].msg
+x=0
+printLine("Data error",msg)}scroll_area.end(y)
 y=scroll_y_start+min(max_h,y)
-if(ui.buttonText({x:x0+w-ui.button_height,y:y0,z:Z.BUILD_ERRORS+1,w:ui.button_height,text:"X"}))server_error=gbstate=null
-ui.panel({x:x0-PAD,y:y0-PAD,z:Z.BUILD_ERRORS-1,w:w+2*PAD,h:y-y0+2*PAD,color:color_panel})}function buildUIStartup(){if(net.client&&engine.DEBUG){net.client.onMsg("gbstate",onGBState)
-net.client.onMsg("server_error",onServerError)
-net.subs.on("connect",function(){var pak=net.client.pak("gbstate_enable")
+var button_h=1.5*font_height
+if(buttonText({x:x0+w-button_h,y:y0,z:Z.BUILD_ERRORS+1,w:button_h,h:button_h,text:"X"})){server_error=gbstate=null
+dataErrorQueueClear()}panel({x:x0-PAD,y:y0-PAD,z:Z.BUILD_ERRORS-1,w:w+2*PAD,h:y-y0+2*PAD,color:color_panel})}function buildUIStartup(){if(netClient()&&engine.DEBUG){netClient().onMsg("gbstate",onGBState)
+netClient().onMsg("server_error",onServerError)
+netClient().onMsg("data_errors",onDataErrors)
+netSubs().on("connect",function(){var pak=netClient().pak("gbstate_enable")
 pak.writeBool(true)
 pak.send()})
 engine.addTickFunc(buildUITick)}}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./engine.js":13,"./font.js":19,"./net.js":35,"./scroll_area.js":43,"./ui.js":57}],7:[function(require,module,exports){
+},{"../common/data_error":80,"../common/util":93,"../common/vmath":95,"./camera2d":9,"./engine":15,"./font":22,"./net":43,"./scroll_area":52,"./ui":67}],9:[function(require,module,exports){
 "use strict"
 exports.calcMap=calcMap
 exports.canvasToVirtual=canvasToVirtual
@@ -281,6 +581,8 @@ exports.screenAspect=screenAspect
 exports.set=set
 exports.setAspectFixed=setAspectFixed
 exports.setAspectFixed2=setAspectFixed2
+exports.setAspectFixedRespectPixelPerfect=setAspectFixedRespectPixelPerfect
+exports.setDOMFontPixelScale=setDOMFontPixelScale
 exports.setDOMMapped=setDOMMapped
 exports.setInputClipping=setInputClipping
 exports.setNormalized=setNormalized
@@ -297,6 +599,7 @@ exports.virtualToDomPosParam=virtualToDomPosParam
 exports.virtualToFontSize=virtualToFontSize
 exports.w=w
 exports.wReal=wReal
+exports.wouldDoPixelPerfect=wouldDoPixelPerfect
 exports.x0=x0
 exports.x0Real=x0Real
 exports.x1=x1
@@ -310,9 +613,9 @@ exports.yScale=yScale
 exports.zoom=zoom
 var assert=require("assert")
 var engine=require("./engine.js")
-var max=Math.max,round=Math.round
+var max=Math.max,floor=Math.floor,round=Math.round
 var safearea_pad=new Float32Array(4)
-var data=new Float32Array(13)
+var data=new Float32Array(15)
 exports.data=data
 var screen_width
 var screen_height
@@ -327,11 +630,11 @@ exports.render_offset_x=render_offset_x
 var render_offset_y_top
 var render_offset_y_bottom
 exports.render_offset_y_bottom=render_offset_y_bottom
-function reapply(){if(render_width){data[4]=render_width/(data[2]-data[0])
-data[5]=render_height/(data[3]-data[1])
-data[7]=(data[2]-data[0])/render_viewport_w
-data[8]=(data[3]-data[1])/render_viewport_h}else{data[4]=screen_width/(data[2]-data[0])
-data[5]=screen_height/(data[3]-data[1])}}function virtualToCanvas(dst,src){dst[0]=(src[0]-data[0])*data[4]
+function reapply(){if(render_width){data[4]=render_width/data[13]
+data[5]=render_height/data[14]
+data[7]=data[13]/render_viewport_w
+data[8]=data[14]/render_viewport_h}else{data[4]=screen_width/data[13]
+data[5]=screen_height/data[14]}}function virtualToCanvas(dst,src){dst[0]=(src[0]-data[0])*data[4]
 dst[1]=(src[1]-data[1])*data[5]}function transformX(x){return(x-data[0])*data[4]}function transformY(y){return(y-data[1])*data[5]}function canvasToVirtual(dst,src){dst[0]=src[0]/data[4]+data[0]
 dst[1]=src[1]/data[5]+data[1]}function safeScreenWidth(){return max(1,screen_width-safearea_pad[0]-safearea_pad[1])}function safeScreenHeight(){return max(1,screen_height-safearea_pad[2]-safearea_pad[3])}function set(x0,y0,x1,y1,ignore_safe_area){assert(isFinite(x0))
 assert(isFinite(y0))
@@ -340,16 +643,24 @@ assert(isFinite(y1))
 if(ignore_safe_area||render_width){data[9]=data[0]=x0
 data[10]=data[1]=y0
 data[11]=data[2]=x1
-data[12]=data[3]=y1}else{data[9]=x0
+data[12]=data[3]=y1
+data[13]=x1-x0
+data[14]=y1-y0}else{data[9]=x0
 data[10]=y0
 data[11]=x1
 data[12]=y1
 var wscale=(x1-x0)/safeScreenWidth()
 var hscale=(y1-y0)/safeScreenHeight()
-data[0]=x0-safearea_pad[0]*wscale
-data[1]=y0-safearea_pad[2]*hscale
-data[2]=x1+safearea_pad[1]*wscale
-data[3]=y1+safearea_pad[3]*hscale}reapply()}function setSafeAreaPadding(left,right,top,bottom){safearea_pad[0]=round(left)
+var x0_real=x0-safearea_pad[0]*wscale
+var y0_real=y0-safearea_pad[2]*hscale
+var x1_real=x1+safearea_pad[1]*wscale
+var y1_real=y1+safearea_pad[3]*hscale
+data[0]=x0_real
+data[1]=y0_real
+data[2]=x1_real
+data[3]=y1_real
+data[13]=x1_real-x0_real
+data[14]=y1_real-y0_real}reapply()}function setSafeAreaPadding(left,right,top,bottom){safearea_pad[0]=round(left)
 safearea_pad[1]=round(right)
 safearea_pad[2]=round(top)
 safearea_pad[3]=round(bottom)}function safeAreaPadding(){return safearea_pad}var stack=[]
@@ -370,7 +681,32 @@ set(-left_margin,0,w+(margin-left_margin),h,false)}else{var virtual_h=w*pa*inv_d
 var _virtual_to_screen=screen_h/virtual_h
 var _margin=virtual_h-h
 var top_margin=round(_margin*_virtual_to_screen/2)/_virtual_to_screen
-set(0,-top_margin,w,h+(_margin-top_margin),false)}}function setAspectFixed2(w,h){var pa=render_width?1:engine.pixel_aspect
+set(0,-top_margin,w,h+(_margin-top_margin),false)}}function wouldDoPixelPerfect(w,h,pixel_perfect_threshold){if(!pixel_perfect_threshold)return false
+var pa=engine.pixel_aspect
+var inv_aspect=h/pa/w
+var screen_w=safeScreenWidth()
+var screen_h=safeScreenHeight()
+var my_viewport_w=screen_w
+if(inv_aspect>screen_h/screen_w)my_viewport_w=w*pa/h*screen_h
+var scalar=my_viewport_w/w
+var int_scalar=floor(scalar)
+if(scalar>1&&scalar-int_scalar<=pixel_perfect_threshold)return true
+else return false}function setAspectFixedRespectPixelPerfect(w,h){if(render_width||!engine.render_pixel_perfect)return void setAspectFixed(w,h)
+var pa=engine.pixel_aspect
+var inv_aspect=h/pa/w
+var screen_w=safeScreenWidth()
+var screen_h=safeScreenHeight()
+var my_viewport_w=screen_w
+if(inv_aspect>screen_h/screen_w)my_viewport_w=w*pa/h*screen_h
+var scalar=my_viewport_w/w
+var int_scalar=floor(scalar)
+if(scalar>1&&scalar-int_scalar<=engine.render_pixel_perfect);else return void setAspectFixed(w,h)
+var margin=screen_w-w*(scalar=int_scalar)
+var left_margin=floor(margin/2)/scalar
+var right_margin=screen_w/scalar-w-left_margin
+var desired_height=round(h*scalar/pa)
+var top_margin=floor((margin=screen_h-desired_height)/2)/scalar
+set(-left_margin,-top_margin,w+right_margin,h+(screen_h/scalar-h-top_margin),false)}function setAspectFixed2(w,h){var pa=render_width?1:engine.pixel_aspect
 var inv_aspect=h/pa/w
 var inv_desired_aspect
 if(render_width)inv_desired_aspect=render_height/render_width
@@ -393,8 +729,8 @@ out[2]=dest_rect[2]+dest_vw/vw*(1-vx1)
 out[3]=dest_rect[3]+dest_vh/vh*(1-vy1)
 return out}function setNormalized(){set(0,0,1,1,true)}function setScreen(no_dpi_aware){if(render_width)set(0,0,render_width,render_height)
 else if(no_dpi_aware)set(0,0,safeScreenWidth(),safeScreenHeight())
-else set(0,0,safeScreenWidth()/engine.dom_to_canvas_ratio,safeScreenHeight()/engine.dom_to_canvas_ratio)}function setDOMMapped(){if(render_width)set(render_offset_x,render_offset_y_top,screen_width-render_offset_x,screen_height-render_offset_y_top,true)
-else set(0,0,screen_width/engine.dom_to_canvas_ratio,screen_height/engine.dom_to_canvas_ratio,true)}function x0Real(){return data[0]}function y0Real(){return data[1]}function x1Real(){return data[2]}function y1Real(){return data[3]}function wReal(){return data[2]-data[0]}function hReal(){return data[3]-data[1]}function x0(){return data[9]}function y0(){return data[10]}function x1(){return data[11]}function y1(){return data[12]}function w(){return data[11]-data[9]}function h(){return data[12]-data[10]}function xScale(){return data[4]}function yScale(){return data[5]}function htmlPos(x,y){if(render_width)return[((x-data[0])/data[7]+render_offset_x)/screen_width*100,((y-data[1])/data[8]+render_offset_y_top)/screen_height*100]
+else set(0,0,safeScreenWidth()/engine.dom_to_canvas_ratio,safeScreenHeight()/engine.dom_to_canvas_ratio)}function setDOMMapped(){if(render_width){var f=1/engine.dom_to_canvas_ratio
+set(render_offset_x*f,render_offset_y_top*f,(screen_width-render_offset_x)*f,(screen_height-render_offset_y_top)*f,true)}else set(0,0,screen_width/engine.dom_to_canvas_ratio,screen_height/engine.dom_to_canvas_ratio,true)}function x0Real(){return data[0]}function y0Real(){return data[1]}function x1Real(){return data[2]}function y1Real(){return data[3]}function wReal(){return data[13]}function hReal(){return data[14]}function x0(){return data[9]}function y0(){return data[10]}function x1(){return data[11]}function y1(){return data[12]}function w(){return data[11]-data[9]}function h(){return data[12]-data[10]}function xScale(){return data[4]}function yScale(){return data[5]}function htmlPos(x,y){if(render_width)return[((x-data[0])/data[7]+render_offset_x)/screen_width*100,((y-data[1])/data[8]+render_offset_y_top)/screen_height*100]
 else return[100*(x-data[0])/(data[2]-data[0]),100*(y-data[1])/(data[3]-data[1])]}function htmlSize(w,h){if(render_width)return[100*w/data[7]/screen_width,100*h/data[8]/screen_height]
 else return[100*w/(data[2]-data[0]),100*h/(data[3]-data[1])]}var input_clipping
 function setInputClipping(xywh){input_clipping=xywh}function domToVirtual(dst,src){var ret=true
@@ -409,8 +745,9 @@ if(render_width){input_clipping_virtual[2]=input_clipping[2]*data[6]*data[7]
 input_clipping_virtual[3]=input_clipping[3]*data[6]*data[8]}else{input_clipping_virtual[2]=input_clipping[2]*data[6]/data[4]
 input_clipping_virtual[3]=input_clipping[3]*data[6]/data[5]}}function virtualToDom(dst,src){if(render_width){dst[0]=(render_offset_x+(src[0]-data[0])/data[7])/data[6]
 dst[1]=(render_offset_y_top+(src[1]-data[1])/data[8])/data[6]}else{dst[0]=(src[0]-data[0])*data[4]/data[6]
-dst[1]=(src[1]-data[1])*data[5]/data[6]}}function virtualToFontSize(height){if(render_width)return height/(data[6]*data[8])*.84
-else return height*data[5]/data[6]*.84}function virtualToDomPosParam(dst,src){if(render_width){dst.x=(render_offset_x+(src.x-data[0])/data[7])/data[6]
+dst[1]=(src[1]-data[1])*data[5]/data[6]}}var font_pixel_scale=.84
+function setDOMFontPixelScale(scale){font_pixel_scale=scale}function virtualToFontSize(height){if(render_width)return height/(data[6]*data[8])*font_pixel_scale
+else return height*data[5]/data[6]*font_pixel_scale}function virtualToDomPosParam(dst,src){if(render_width){dst.x=(render_offset_x+(src.x-data[0])/data[7])/data[6]
 dst.w=src.w/data[7]/data[6]
 dst.y=(render_offset_y_top+(src.y-data[1])/data[8])/data[6]
 dst.h=src.h/data[8]/data[6]}else{dst.x=(src.x-data[0])*data[4]/data[6]
@@ -448,7 +785,18 @@ exports.render_offset_x=render_offset_x=safearea_pad[0]
 render_offset_y_top=safearea_pad[2]+round(_margin3)
 exports.render_offset_y_bottom=render_offset_y_bottom=safearea_pad[3]+round(_margin3)
 exports.render_viewport_w=render_viewport_w=eff_screen_width
-exports.render_viewport_h=render_viewport_h=round(eff_screen_height-2*_margin3)}viewport[2]=render_width
+exports.render_viewport_h=render_viewport_h=round(eff_screen_height-2*_margin3)}if(engine.render_pixel_perfect){var scalar=render_viewport_w/render_width
+var int_scalar=floor(scalar)
+if(scalar>1&&scalar-int_scalar<=engine.render_pixel_perfect){var desired_width=render_width*(scalar=int_scalar)
+var xoffs=floor(.5*(render_viewport_w-desired_width))
+exports.render_offset_x=render_offset_x+=xoffs
+exports.render_viewport_w=render_viewport_w=desired_width
+var desired_height=round(render_height*scalar/pa)
+var yoffs=render_viewport_h-desired_height
+var yoffs_top=floor(.5*yoffs)
+render_offset_y_top+=yoffs_top
+exports.render_offset_y_bottom=render_offset_y_bottom+=yoffs-yoffs_top
+exports.render_viewport_h=render_viewport_h=desired_height}}viewport[2]=render_width
 viewport[3]=render_height}else{render_width=render_height=0
 exports.render_offset_x=render_offset_x=0
 render_offset_y_top=0
@@ -458,82 +806,60 @@ screen_height=engine.height
 set(0,0,engine.width,engine.height)
 tickCamera2D()}
 
-},{"./engine.js":13,"assert":undefined}],8:[function(require,module,exports){
+},{"./engine.js":15,"assert":undefined}],10:[function(require,module,exports){
 "use strict"
-exports.PLATFORM_WEB=exports.PLATFORM_MOBILE=exports.PLATFORM_IOS=exports.PLATFORM_FBINSTANT=exports.PLATFORM_ANDROID=exports.PLATFORM=exports.MODE_PRODUCTION=exports.MODE_DEVELOPMENT=void 0
+exports.PLATFORM=exports.MODE_PRODUCTION=exports.MODE_DEVELOPMENT=void 0
+exports.getAbilityChat=getAbilityChat
+exports.getAbilityExit=getAbilityExit
 exports.getAbilityReload=getAbilityReload
+exports.getAbilityReloadUpdates=getAbilityReloadUpdates
+exports.platformGetID=platformGetID
+exports.platformOverrideID=platformOverrideID
+exports.platformParameterGet=platformParameterGet
+exports.platformSetRichPresence=platformSetRichPresence
+exports.setAbilityChat=setAbilityChat
 exports.setAbilityReload=setAbilityReload
+exports.setAbilityReloadUpdates=setAbilityReloadUpdates
 var assert=require("assert")
-var _glovCommonEnums=require("../common/enums")
-var Platform=_glovCommonEnums.Platform
-var isValidPlatform=_glovCommonEnums.isValidPlatform
-assert(isValidPlatform(window.conf_platform))
+var _glovCommonPlatform=require("../common/platform")
+var platformIsValid=_glovCommonPlatform.platformIsValid
+var platformOverrideParameter=_glovCommonPlatform.platformOverrideParameter
+var platformParameter=_glovCommonPlatform.platformParameter
+assert(platformIsValid(window.conf_platform))
 var PLATFORM=window.conf_platform
-var PLATFORM_WEB=(exports.PLATFORM=PLATFORM)===Platform.Web
-exports.PLATFORM_WEB=PLATFORM_WEB
-var PLATFORM_FBINSTANT=PLATFORM===Platform.FBInstant
-exports.PLATFORM_FBINSTANT=PLATFORM_FBINSTANT
-var PLATFORM_ANDROID=PLATFORM===Platform.Android
-exports.PLATFORM_ANDROID=PLATFORM_ANDROID
-var PLATFORM_IOS=PLATFORM===Platform.IOS
-exports.PLATFORM_IOS=PLATFORM_IOS
-var PLATFORM_MOBILE=PLATFORM_ANDROID||PLATFORM_IOS
-exports.PLATFORM_MOBILE=PLATFORM_MOBILE
-assert(PLATFORM_WEB||PLATFORM_FBINSTANT||PLATFORM_ANDROID||PLATFORM_IOS)
-var MODE_DEVELOPMENT=(PLATFORM_WEB||PLATFORM_FBINSTANT)&&Boolean(String(document.location).match(/^https?:\/\/localhost/))
+var override_platform=exports.PLATFORM=PLATFORM
+function platformOverrideID(id){override_platform=id}function platformGetID(){return override_platform}function platformParameterGet(parameter){return platformParameter(platformGetID(),parameter)}var platform_devmode=platformParameter(PLATFORM,"devmode")
+var MODE_DEVELOPMENT="on"===platform_devmode||"auto"===platform_devmode&&Boolean(String(document.location).match(/^https?:\/\/localhost/))
 var MODE_PRODUCTION=!(exports.MODE_DEVELOPMENT=MODE_DEVELOPMENT)
 exports.MODE_PRODUCTION=MODE_PRODUCTION
-if(MODE_DEVELOPMENT){var _window$webkit,_window$webkit$messag
-assert(PLATFORM_WEB||!window.FB)
-assert(PLATFORM_FBINSTANT||!window.FBInstant)
-assert(PLATFORM_ANDROID===Boolean(window.androidwrapper))
-assert(PLATFORM_IOS===Boolean(null==(_window$webkit=window.webkit)?void 0:null==(_window$webkit$messag=_window$webkit.messageHandlers)?void 0:_window$webkit$messag.iosWrapper))}var ability_reload=PLATFORM_WEB
-function getAbilityReload(){return ability_reload}function setAbilityReload(value){ability_reload=PLATFORM_WEB&&value}
+function getAbilityReload(){return platformParameterGet("reload")}function setAbilityReload(value){platformOverrideParameter("reload",platformParameterGet("reload")&&value)}function getAbilityReloadUpdates(){return platformParameterGet("reload_updates")}function setAbilityReloadUpdates(value){platformOverrideParameter("reload_updates",platformParameterGet("reload_updates")&&value)}function getAbilityExit(){return platformParameterGet("exit")}var ability_chat=true
+function getAbilityChat(){return ability_chat}function setAbilityChat(value){ability_chat=value}var last_status=null
+var last_others
+var sent_to_platform=false
+function platformSetRichPresence(status,others){var set_fn=platformParameterGet("setRichPresence")
+if(set_fn&&!sent_to_platform)last_status=null
+var others_string=JSON.stringify(others)
+if(status===last_status&&others_string===last_others)return
+last_status=status
+last_others=others_string
+var errorReportSetDetails=require("./error_report").errorReportSetDetails
+errorReportSetDetails("rich_status",status)
+errorReportSetDetails("rich_others",others?others_string:null)
+if(set_fn){set_fn(status,others)
+sent_to_platform=true}}
 
-},{"../common/enums":68,"assert":undefined}],9:[function(require,module,exports){
+},{"../common/platform":88,"./error_report":18,"assert":undefined}],11:[function(require,module,exports){
 "use strict"
-exports.cmd_parse=void 0
-exports.resetSettings=resetSettings
-exports.safearea=void 0
-var cmd_parse_mod=require("../common/cmd_parse.js")
-var local_storage=require("./local_storage.js")
-var cmd_parse=cmd_parse_mod.create({storage:local_storage})
+exports.safearea=exports.cmd_parse=void 0
+var assert=require("assert")
+var _glovCommonCmd_parse=require("../common/cmd_parse")
+var cmdParseCreate=_glovCommonCmd_parse.cmdParseCreate
+var _local_storage=require("./local_storage")
+var local_storage=_local_storage
+var _urlhash=require("./urlhash")
+var urlhash=_urlhash
+var cmd_parse=cmdParseCreate({storage:local_storage})
 exports.cmd_parse=cmd_parse
-var engine=require("./engine.js")
-var _require=require("./error_report.js"),errorReportDetailsString=_require.errorReportDetailsString
-var net=require("./net.js")
-var netClient=net.netClient,netDisconnected=net.netDisconnected
-var shaders=require("./shaders.js")
-var textures=require("./textures.js")
-var _require2=require("../common/wscommon.js"),netDelayGet=_require2.netDelayGet,netDelaySet=_require2.netDelaySet
-window.cmd=function(str){cmd_parse.handle(null,str,cmd_parse_mod.defaultHandler)}
-function byteFormat(bytes){if(bytes>85e4)return(bytes/1048576).toFixed(2)+"MB"
-if(bytes>850)return(bytes/1024).toFixed(2)+"KB"
-return bytes+"B"}cmd_parse.register({cmd:"texmem",help:"Displays texture memory usage",func:function func(str,resp_func){var keys=Object.keys(textures.textures);(keys=keys.filter(function(a){return textures.textures[a].gpu_mem>1024})).sort(function(a,b){return textures.textures[a].gpu_mem-textures.textures[b].gpu_mem})
-resp_func(null,keys.map(function(a){return byteFormat(textures.textures[a].gpu_mem)+" "+a}).join("\n"))}})
-cmd_parse.register({cmd:"gpumem",help:"Displays GPU memory usage summary",func:function func(str,resp_func){var gpu_mem=engine.perf_state.gpu_mem
-resp_func(null,byteFormat(gpu_mem.geom)+" Geo\n"+byteFormat(gpu_mem.tex)+" Tex\n"+byteFormat(gpu_mem.geom+gpu_mem.tex)+" Total")}})
-function validDefine(str){if(shaders.semantic[str])return false
-return str.match(/^[A-Z][A-Z0-9_]*$/)}cmd_parse.register({cmd:"d",help:"Toggles a debug define",func:function func(str,resp_func){if(!(str=str.toUpperCase().trim()))if(engine.definesClearAll())return void resp_func(null,"All debug defines cleared")
-else return void resp_func(null,"No debug defines active")
-if(!validDefine(str))return void resp_func("Invalid define specified")
-engine.defines[str]=!engine.defines[str]
-resp_func(null,"D="+str+" now "+(engine.defines[str]?"SET":"unset"))
-engine.definesChanged()}})
-cmd_parse.register({cmd:"renderer",help:"Displays current renderer",func:function func(str,resp_func){resp_func(null,"Renderer=WebGL"+(engine.webgl2?2:1))}})
-cmd_parse.register({cmd:"csr",access_run:["sysadmin"],help:"(Admin) Run a command as another user",usage:"$HELP\n  /csr UserID command\nExample: /csr jimbly gems -100",func:function func(str,resp_func){var idx=str.indexOf(" ")
-if(-1===idx)return void resp_func("Invalid number of arguments")
-var user_id=str.slice(0,idx)
-var cmd=str.slice(idx+1)
-var pak=net.subs.getChannelImmediate("user."+user_id).pak("csr_admin_to_user")
-pak.writeJSON(cmd_parse.last_access)
-pak.writeString(cmd)
-pak.send(resp_func)}})
-function cmdDesc(cmd_data){return"/"+cmd_data.cmd+" - "+cmd_data.help}cmd_parse.register({cmd:"help",help:"Searches commands",func:function func(str,resp_func){var list=cmd_parse.autoComplete("",this&&this.access)
-if(str){var str_cname=cmd_parse.canonical(str)
-var str_lc=str.toLowerCase()
-list=list.filter(function(cmd_data){return-1!==cmd_data.cname.indexOf(str_cname)||-1!==cmd_data.help.toLowerCase().indexOf(str_lc)})}if(!list.length)return void resp_func(null,'No commands found matching "'+str+'"')
-resp_func(null,list.map(cmdDesc).join("\n"))}})
 var safearea=[-1,-1,-1,-1]
 exports.safearea=safearea
 cmd_parse.registerValue("safe_area",{label:"Safe Area",type:cmd_parse.TYPE_STRING,usage:"Safe Area value: Use -1 for auto based on browser environment,\nor 0-25 for percentage of screen size\n  Usage: /safe_area [value]\n  Usage: /safe_area horizontal,vertical\n  Usage: /safe_area left,right,top,bottom",default_value:"-1",get:function get(){return-1===safearea[0]?"-1 (auto)":safearea.join(",")},set:function set(v){var keys=(v=String(v)).split(",")
@@ -544,32 +870,26 @@ for(var _ii=0;_ii<4;++_ii)if(!isFinite(safearea[_ii]))safearea[_ii]=-1},store:tr
 cmd_parse.register({cmd:"webgl2_auto",help:"Resets WebGL2 auto-detection",func:function func(str,resp_func){if(!local_storage.getJSON("webgl2_disable"))return resp_func(null,"WebGL2 is already being auto-detected")
 local_storage.setJSON("webgl2_disable",void 0)
 return resp_func(null,"WebGL2 was disabled, will attempt to use it again on the next load")}})
-cmd_parse.registerValue("postprocessing",{label:"Postprocessing",type:cmd_parse.TYPE_INT,help:"Enables/disables postprocessing",get:function get(){return engine.postprocessing?1:0},set:function set(v){return engine.postprocessingAllow(v)}})
-cmd_parse.register({cmd:"net_delay",help:"Sets/shows network delay values",usage:"$HELP\n/net_delay time_base time_rand",func:function func(str,resp_func){if(str){var params=str.split(" ")
-netDelaySet(Number(params[0]),Number(params[1])||0)}var cur=netDelayGet()
-resp_func(null,"Client NetDelay: "+cur[0]+"+"+cur[1])}})
-cmd_parse.register({cmd:"error_report_details",help:"Shows details submitted with any error report",access_show:["hidden"],func:function func(str,resp_func){resp_func(null,errorReportDetailsString())}})
-cmd_parse.register({cmd:"disconnect",help:"Forcibly disconnect WebSocket connection (Note: will auto-reconnect)",func:function func(str,resp_func){var _netClient
-var socket=null==(_netClient=netClient())?void 0:_netClient.socket
-if(!socket)return void resp_func("No socket")
-if(netDisconnected())return void resp_func("Not connected")
-socket.close()
-resp_func()}})
-function resetSettings(){var results=cmd_parse.resetSettings()
-if(engine.definesClearAll())results.push("Debug defines cleared")
-if(!results.length)return null
-results.push("Please restart the app or reload to page for the new settings to take effect.")
-return results.join("\n")}cmd_parse.register({cmd:"reset_settings",help:"Resets all settings and options to their defaults (Note: requires an app restart)",func:function func(str,resp_func){resp_func(null,resetSettings()||"No stored settings to reset")}})
+cmd_parse.register({cmd:"url",help:"Opens an internal URL",func:function func(str,resp_func){setTimeout(function(){profilerStart("/url")
+urlhash.go(str)
+profilerStop("/url")},1)}})
+cmd_parse.register({cmd:"client_crash",help:"(Debug) - Crash on the client",access_show:["sysadmin"],func:function func(str,resp_func){var foo
+foo.bar++}})
+cmd_parse.register({cmd:"client_assert",help:"(Debug) - Fail an assert on the client",access_show:["sysadmin"],func:function func(str,resp_func){assert(false)}})
+cmd_parse.register({cmd:"client_reject_now",help:"(Debug) - Fail an unhandled promise rejection on the client (Error, sync)",access_show:["sysadmin"],func:function func(str,resp_func){new Promise(function(resolve,reject){reject(new Error("client_reject_now"))})}})
 
-},{"../common/cmd_parse.js":65,"../common/wscommon.js":77,"./engine.js":13,"./error_report.js":15,"./local_storage.js":31,"./net.js":35,"./shaders.js":46,"./textures.js":55}],10:[function(require,module,exports){
+},{"../common/cmd_parse":78,"./local_storage":35,"./urlhash":69,"assert":undefined}],12:[function(require,module,exports){
 "use strict"
-exports.FACE_XYZ=exports.FACE_XY=exports.FACE_NONE=exports.FACE_FRUSTUM=exports.FACE_DEFAULT=exports.FACE_CAMERA=exports.BUCKET_OPAQUE=exports.BUCKET_DECAL=exports.BUCKET_ALPHA=void 0
+exports.FACE_XYZ=exports.FACE_XY=exports.FACE_NONE=exports.FACE_FRUSTUM=exports.FACE_DEFAULT=exports.FACE_CUSTOM=exports.FACE_CAMERA=exports.BUCKET_OPAQUE=exports.BUCKET_DECAL=exports.BUCKET_ALPHA=void 0
 exports.dynGeomAlloc=dynGeomAlloc
 exports.dynGeomDrawAlpha=dynGeomDrawAlpha
 exports.dynGeomDrawOpaque=dynGeomDrawOpaque
+exports.dynGeomForward=dynGeomForward
 exports.dynGeomLookAt=dynGeomLookAt
 exports.dynGeomQueueSprite=dynGeomQueueSprite
+exports.dynGeomRight=dynGeomRight
 exports.dynGeomSpriteSetup=dynGeomSpriteSetup
+exports.dynGeomUp=dynGeomUp
 exports.sprite3d_vshader=void 0
 var BUCKET_OPAQUE=1
 exports.BUCKET_OPAQUE=BUCKET_OPAQUE
@@ -589,20 +909,25 @@ var FACE_CAMERA=8
 exports.FACE_CAMERA=FACE_CAMERA
 var FACE_DEFAULT=FACE_XY|FACE_FRUSTUM
 exports.FACE_DEFAULT=FACE_DEFAULT
+var FACE_CUSTOM=16
+exports.FACE_CUSTOM=FACE_CUSTOM
 var DYN_VERT_SIZE=12
+var MAX_VERT_ELEM_COUNT=65532*DYN_VERT_SIZE
 var assert=require("assert")
 var mat4LookAt=require("gl-mat4/lookAt")
 var _require=require("../common/util.js"),log2=_require.log2,nextHighestPowerOfTwo=_require.nextHighestPowerOfTwo
-var _require2=require("../common/vmath.js"),mat4=_require2.mat4,v3addScale=_require2.v3addScale,v3copy=_require2.v3copy,v3cross=_require2.v3cross,v3iNormalize=_require2.v3iNormalize,v3scale=_require2.v3scale,v3sub=_require2.v3sub,vec3=_require2.vec3,zero_vec=_require2.zero_vec
+var _require2=require("../common/vmath.js"),mat4=_require2.mat4,v3addScale=_require2.v3addScale,v3copy=_require2.v3copy,v3cross=_require2.v3cross,v3iNormalize=_require2.v3iNormalize,v3scale=_require2.v3scale,v3sub=_require2.v3sub,vec3=_require2.vec3,xaxis=_require2.xaxis,zero_vec=_require2.zero_vec
+var _require3=require("./cmds.js"),cmd_parse=_require3.cmd_parse
 var engine=require("./engine.js")
 var engineStartupFunc=engine.engineStartupFunc,setGlobalMatrices=engine.setGlobalMatrices
 var geom=require("./geom.js")
 var ceil=Math.ceil,max=Math.max,min=Math.min
-var shaders=require("./shaders.js")
+var settings=require("./settings.js")
+var _require4=require("./shaders.js"),SEMANTIC=_require4.SEMANTIC,shaderCreate=_require4.shaderCreate,shadersBind=_require4.shadersBind,shadersPrelink=_require4.shadersPrelink
 var sprites=require("./sprites.js")
 var BLEND_ALPHA=sprites.BLEND_ALPHA,blendModeReset=sprites.blendModeReset,blendModeSet=sprites.blendModeSet
-var textures=require("./textures.js")
-var cmpTextureArray=textures.cmpTextureArray
+var _require5=require("./textures.js"),textureCmpArray=_require5.textureCmpArray,textureBindArray=_require5.textureBindArray
+settings.register({gl_polygon_offset_a:{default_value:.1,type:cmd_parse.TYPE_FLOAT,range:[0,100],access_show:["sysadmin"]},gl_polygon_offset_b:{default_value:4,type:cmd_parse.TYPE_FLOAT,range:[0,100],access_show:["sysadmin"]}})
 var mat_vp
 var mat_view=mat4()
 var geom_stats
@@ -644,7 +969,8 @@ tri_pool[0]=null
 var POOL_UPPER_LIMIT=4096
 var VERT_POOL_MAX_SIZE=vert_pool.map(function(a,idx){return min(POOL_UPPER_LIMIT,1<<14-idx)})
 var TRI_POOL_MAX_SIZE=vert_pool.map(function(a,idx){return min(POOL_UPPER_LIMIT,1<<17-idx)})
-DynGeomData.prototype.allocVerts=function(num_verts){this.num_verts=num_verts
+DynGeomData.prototype.allocVerts=function(num_verts){assert(num_verts*DYN_VERT_SIZE<MAX_VERT_ELEM_COUNT)
+this.num_verts=num_verts
 var vert_pool_idx=log2(this.num_verts)
 assert(vert_pool_idx>0)
 this.vert_pool_idx=vert_pool_idx
@@ -678,7 +1004,9 @@ var cam_down=vec3()
 var cam_pos=vec3()
 var right=vec3()
 var forward=vec3()
-function dynGeomLookAt(cam_pos_in,target_pos,up_in){v3copy(cam_pos,cam_pos_in)
+var look_at_called=false
+function dynGeomLookAt(cam_pos_in,target_pos,up_in){look_at_called=true
+v3copy(cam_pos,cam_pos_in)
 v3copy(up,up_in)
 v3scale(down,up,-1)
 v3sub(forward,target_pos,cam_pos)
@@ -688,17 +1016,18 @@ v3iNormalize(right)
 v3cross(cam_down,forward,right)
 v3iNormalize(cam_down)
 mat4LookAt(mat_view,cam_pos,target_pos,up)
-setGlobalMatrices(mat_view)}var temp=vec3()
-var xaxis=vec3(1,0,0)
+setGlobalMatrices(mat_view)}function dynGeomForward(){return forward}function dynGeomUp(){return up}function dynGeomRight(){return right}var temp=vec3()
 var target_right=vec3()
-function dynGeomSpriteSetup(params){var pos=params.pos,shader=params.shader,shader_params=params.shader_params,bucket=params.bucket,facing=params.facing,vshader=params.vshader
+function dynGeomSpriteSetup(params){assert(look_at_called)
+var pos=params.pos,shader=params.shader,shader_params=params.shader_params,bucket=params.bucket,facing=params.facing,vshader=params.vshader
 bucket=bucket||BUCKET_ALPHA
 shader=shader||sprite_fshader
 vshader=vshader||sprite3d_vshader
 shader_params=shader_params||null
 var my_right
 var my_down
-if((facing=void 0===facing?FACE_DEFAULT:facing)&FACE_XY){my_right=right
+if((facing=void 0===facing?FACE_DEFAULT:facing)===FACE_CUSTOM){my_right=params.face_right
+my_down=params.face_down}else if(facing&FACE_XY){my_right=right
 my_down=down}else if(facing&FACE_XYZ){my_right=right
 my_down=cam_down}else{my_right=xaxis
 my_down=down}if(my_right===right&&facing&FACE_CAMERA){v3sub(temp,pos,cam_pos)
@@ -767,7 +1096,6 @@ var sprite_buffer_idx_batch_start=0
 var do_blending
 var last_bound_shader
 var last_bound_vshader
-var MAX_VERT_ELEM_COUNT=65532*DYN_VERT_SIZE
 var batches=[]
 function commit(){if(sprite_buffer_idx_cur===sprite_buffer_idx_batch_start)return
 batches.push({state:batch_state,start:sprite_buffer_idx_batch_start,end:sprite_buffer_idx_cur})
@@ -782,20 +1110,20 @@ geom_stats.tris+=sprite_buffer_idx_cur/3
 geom_stats.verts+=num_verts
 for(var ii=0;ii<batches.length;++ii){var batch=batches[ii]
 var state=batch.state,start=batch.start,end=batch.end
-if(last_bound_shader!==state.shader||last_bound_vshader!==state.vshader||state.shader_params){shaders.bind(state.vshader,state.shader,state.shader_params||sprite3d_shader_params)
+if(last_bound_shader!==state.shader||last_bound_vshader!==state.vshader||state.shader_params){shadersBind(state.vshader,state.shader,state.shader_params||sprite3d_shader_params)
 last_bound_shader=state.shader
 last_bound_vshader=state.vshader}if(do_blending)blendModeSet(state.blend)
-textures.bindArray(state.texs);++geom_stats.draw_calls_dyn
+textureBindArray(state.texs);++geom_stats.draw_calls_dyn
 gl.drawElements(sprite_geom.mode,end-start,gl.UNSIGNED_SHORT,2*start)}batches.length=0
 sprite_buffer_idx_batch_start=sprite_buffer_idx_cur=sprite_buffer_vert_cur=0}function drawSetup(do_blend){do_blending=do_blend
 last_bound_vshader=last_bound_shader=-1
-if(!sprite_geom){sprite_geom=geom.create([[shaders.semantic.POSITION,gl.FLOAT,4,false],[shaders.semantic.COLOR,gl.FLOAT,4,false],[shaders.semantic.TEXCOORD,gl.FLOAT,4,false]],[],[],geom.TRIANGLES)
+if(!sprite_geom){sprite_geom=geom.create([[SEMANTIC.POSITION,gl.FLOAT,4,false],[SEMANTIC.COLOR,gl.FLOAT,4,false],[SEMANTIC.TEXCOORD,gl.FLOAT,4,false]],[],[],geom.TRIANGLES)
 sprite_buffer_vert=new Float32Array(1024)
-sprite_buffer_idx=new Uint16Array(1024)}}function drawElem(elem){if(!batch_state||cmpTextureArray(elem.texs,batch_state.texs)||elem.shader!==batch_state.shader||elem.vshader!==batch_state.vshader||elem.shader_params!==batch_state.shader_params||do_blending&&elem.blend!==batch_state.blend){commit()
+sprite_buffer_idx=new Uint16Array(1024)}}function drawElem(elem){if(!batch_state||textureCmpArray(elem.texs,batch_state.texs)||elem.shader!==batch_state.shader||elem.vshader!==batch_state.vshader||elem.shader_params!==batch_state.shader_params||do_blending&&elem.blend!==batch_state.blend){commit()
 batch_state=elem}var num_floats=elem.num_verts*DYN_VERT_SIZE
 if(sprite_buffer_vert_cur+num_floats>sprite_buffer_vert.length){commitAndFlush()
 if(sprite_buffer_vert.length!==MAX_VERT_ELEM_COUNT){var cur_tris=sprite_buffer_vert.length/DYN_VERT_SIZE/3
-var new_length=min(3*ceil(1.25*cur_tris)*DYN_VERT_SIZE,MAX_VERT_ELEM_COUNT)
+var new_length=min(max(num_floats,3*ceil(1.25*cur_tris)*DYN_VERT_SIZE),MAX_VERT_ELEM_COUNT)
 sprite_buffer_vert=new Float32Array(new_length)}}var num_idxs=3*elem.num_tris
 if(sprite_buffer_idx_cur+num_idxs>sprite_buffer_idx.length){commitAndFlush()
 var _cur_tris=sprite_buffer_idx.length/3
@@ -810,7 +1138,7 @@ drawElem(elem)
 elem.dispose()}finishDraw()}function cmpOpaue(a,b){var d=a.vshader.id-b.vshader.id
 if(d)return d
 if(d=a.shader.id-b.shader.id)return d
-if(d=cmpTextureArray(a.texs,b.texs))return d
+if(d=textureCmpArray(a.texs,b.texs))return d
 return a.uid-b.uid}function cmpAlpha(a,b){var d=b.sort_z-a.sort_z
 if(d)return d
 return a.uid-b.uid}function dynGeomDrawOpaque(){profilerStart("dynGeomDrawOpaque")
@@ -818,34 +1146,75 @@ var queue=buckets[BUCKET_OPAQUE]
 if(queue.length){queue.sort(cmpOpaue)
 queueDraw(false,queue,0,queue.length)
 queue.length=0}if((queue=buckets[BUCKET_DECAL]).length){queue.sort(cmpOpaue)
+gl.enable(gl.BLEND)
+gl.depthMask(false)
+gl.enable(gl.POLYGON_OFFSET_FILL)
+gl.polygonOffset(-settings.gl_polygon_offset_a,-settings.gl_polygon_offset_b)
 queueDraw(true,queue,0,queue.length)
-queue.length=0}profilerStop("dynGeomDrawOpaque")}function dynGeomDrawAlpha(){profilerStart("dynGeomDrawAlpha")
+queue.length=0
+gl.disable(gl.POLYGON_OFFSET_FILL)
+gl.depthMask(true)
+gl.disable(gl.BLEND)}profilerStop("dynGeomDrawOpaque")}function dynGeomDrawAlpha(){profilerStart("dynGeomDrawAlpha")
 assert(!buckets[BUCKET_OPAQUE].length)
 assert(!buckets[BUCKET_DECAL].length)
 var queue=buckets[BUCKET_ALPHA]
 if(queue.length){queue.sort(cmpAlpha)
 queueDraw(true,queue,0,queue.length)
 queue.length=0}profilerStop("dynGeomDrawAlpha")}function dynGeomStartup(){geom_stats=geom.stats
-exports.sprite3d_vshader=sprite3d_vshader=shaders.create("shaders/sprite3d.vp")
+exports.sprite3d_vshader=sprite3d_vshader=shaderCreate("shaders/sprite3d.vp")
 sprite_fshader=sprites.sprite_fshader
-shaders.prelink(sprite3d_vshader,sprite_fshader)
+shadersPrelink(sprite3d_vshader,sprite_fshader)
 mat_vp=engine.mat_vp}engineStartupFunc(dynGeomStartup)
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./engine.js":13,"./geom.js":21,"./shaders.js":46,"./sprites.js":51,"./textures.js":55,"assert":undefined,"gl-mat4/lookAt":undefined}],11:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./cmds.js":11,"./engine.js":15,"./geom.js":24,"./settings.js":53,"./shaders.js":55,"./sprites.js":61,"./textures.js":65,"assert":undefined,"gl-mat4/lookAt":undefined}],13:[function(require,module,exports){
 "use strict"
+exports.editBox=editBox
 exports.editBoxAnyActive=editBoxAnyActive
 exports.editBoxCreate=editBoxCreate
 exports.editBoxTick=editBoxTick
+exports.showOnscreenKeyboard=showOnscreenKeyboard
 exports.create=editBoxCreate
 var assert=require("assert")
-var verify=require("../common/verify.js")
-var camera2d=require("./camera2d.js")
-var engine=require("./engine.js")
-var _require=require("./input.js"),KEYS=_require.KEYS,eatAllKeyboardInput=_require.eatAllKeyboardInput,mouseConsumeClicks=_require.mouseConsumeClicks,keyDownEdge=_require.keyDownEdge,keyUpEdge=_require.keyUpEdge,pointerLockEnter=_require.pointerLockEnter,pointerLockExit=_require.pointerLockExit,pointerLocked=_require.pointerLocked,inputClick=_require.inputClick
-var _require2=require("./localization.js"),getStringIfLocalizable=_require2.getStringIfLocalizable
-var _require3=require("./spot.js"),SPOT_NAV_DOWN=_require3.SPOT_NAV_DOWN,SPOT_NAV_LEFT=_require3.SPOT_NAV_LEFT,SPOT_NAV_RIGHT=_require3.SPOT_NAV_RIGHT,SPOT_NAV_UP=_require3.SPOT_NAV_UP,spotFocusCheck=_require3.spotFocusCheck,spotFocusSteal=_require3.spotFocusSteal,spotUnfocus=_require3.spotUnfocus,spotlog=_require3.spotlog
-var glov_ui=require("./ui.js")
-var _require4=require("./ui.js"),uiGetDOMElem=_require4.uiGetDOMElem
+var _glovCommonUtil=require("../common/util")
+var clamp=_glovCommonUtil.clamp
+var trimEnd=_glovCommonUtil.trimEnd
+var _glovCommonVerify=require("../common/verify")
+var verify=_glovCommonVerify
+var _glovCommonVmath=require("../common/vmath")
+var v2same=_glovCommonVmath.v2same
+var _camera2d=require("./camera2d")
+var camera2d=_camera2d
+var _engine=require("./engine")
+var engine=_engine
+var _input=require("./input")
+var eatAllKeyboardInput=_input.eatAllKeyboardInput
+var inputClick=_input.inputClick
+var inputTouchMode=_input.inputTouchMode
+var keyDownEdge=_input.keyDownEdge
+var KEYS=_input.KEYS
+var keyUpEdge=_input.keyUpEdge
+var mouseConsumeClicks=_input.mouseConsumeClicks
+var pointerLocked=_input.pointerLocked
+var pointerLockEnter=_input.pointerLockEnter
+var pointerLockExit=_input.pointerLockExit
+var _localization=require("./localization")
+var getStringIfLocalizable=_localization.getStringIfLocalizable
+var _spot=require("./spot")
+var spotFocusCheck=_spot.spotFocusCheck
+var spotFocusSteal=_spot.spotFocusSteal
+var spotlog=_spot.spotlog
+var spotSuppressKBNav=_spot.spotSuppressKBNav
+var spotUnfocus=_spot.spotUnfocus
+var _ui=require("./ui")
+var drawLine=_ui.drawLine
+var drawRect=_ui.drawRect
+var getUIElemData=_ui.getUIElemData
+var uiButtonWidth=_ui.uiButtonWidth
+var uiGetDOMElem=_ui.uiGetDOMElem
+var uiGetDOMTabIndex=_ui.uiGetDOMTabIndex
+var uiGetFont=_ui.uiGetFont
+var uiTextHeight=_ui.uiTextHeight
+var floor=Math.floor,round=Math.round
 var form_hook_registered=false
 var active_edit_box
 var active_edit_box_frame
@@ -855,57 +1224,161 @@ function editBoxTick(){var expected_last_frame=engine.frame_index-1
 for(var ii=0;ii<last_frame_edit_boxes.length;++ii){var edit_box=last_frame_edit_boxes[ii]
 if(edit_box.last_frame<expected_last_frame)edit_box.unrun()}last_frame_edit_boxes=this_frame_edit_boxes
 this_frame_edit_boxes=[]}function setActive(edit_box){active_edit_box=edit_box
-active_edit_box_frame=engine.frame_index}function editBoxAnyActive(){return active_edit_box&&active_edit_box_frame>=engine.frame_index-1}function formHook(ev){ev.preventDefault()
+active_edit_box_frame=engine.frame_index
+var virt=[0,0]
+var REQ_PAD=20
+camera2d.domDeltaToVirtual(virt,[0,REQ_PAD])
+if(camera2d.y1()-(edit_box.y+edit_box.h)<virt[1])engine.setEditBoxNearBottom(REQ_PAD)}function editBoxAnyActive(){return active_edit_box&&active_edit_box_frame>=engine.frame_index-1}var osk_elem
+var osk_timeout
+function showOnscreenKeyboardCleanup(){if(osk_timeout){clearTimeout(osk_timeout)
+osk_timeout=null
+document.body.removeChild(osk_elem)
+osk_elem=null}}function showOnscreenKeyboardInEvent(){if(!osk_elem){(osk_elem=document.createElement("input")).setAttribute("type","search")
+osk_elem.setAttribute("style","position: fixed; top: -100px; left: -100px;")
+document.body.appendChild(osk_elem)
+osk_timeout=setTimeout(showOnscreenKeyboardCleanup,1e3)}osk_elem.focus()}function showOnscreenKeyboard(){return inputTouchMode()||true?showOnscreenKeyboardInEvent:void 0}function formHook(ev){ev.preventDefault()
 if(!editBoxAnyActive())return
 active_edit_box.submitted=true
 active_edit_box.updateText()
-if(active_edit_box.pointer_lock&&!active_edit_box.text)pointerLockEnter("edit_box_submit")}var last_key_id=0
-var GlovUIEditBox=function(){function GlovUIEditBox(params){var _this$custom_nav
-this.key="eb"+ ++last_key_id
+if(active_edit_box.pointer_lock&&!active_edit_box.text)pointerLockEnter("edit_box_submit")}function charIdxToXY(text,offset){offset=clamp(offset,0,text.length)
+var lines=text.split("\n")
+var linenum=0
+while(linenum<lines.length){var line=lines[linenum]
+if(offset<=line.length)return[offset,linenum]
+offset-=line.length
+assert(offset>0)
+offset--
+linenum++}verify(false)
+return[0,linenum]}var last_key_id=0
+var GlovUIEditBox=function(){function GlovUIEditBox(params){this.key="eb"+ ++last_key_id
 this.x=0
 this.y=0
 this.z=Z.UI
-this.w=glov_ui.button_width
+this.w=uiButtonWidth()
 this.type="text"
-this.font_height=glov_ui.font_height
+this.font_height=uiTextHeight()
+this.last_set_text=""
 this.text=""
 this.placeholder=""
 this.max_len=0
+this.max_visual_size=null
 this.zindex=null
 this.uppercase=false
+this.resize=true
 this.initial_focus=false
 this.onetime_focus=false
-this.auto_unfocus=false
+this.auto_unfocus=true
+this.focus_steal=false
 this.initial_select=false
 this.spellcheck=true
 this.esc_clears=true
+this.esc_unfocuses=true
 this.multiline=0
+this.enforce_multiline=true
+this.suppress_up_down=false
 this.autocomplete=false
-this.custom_nav=((_this$custom_nav={})[SPOT_NAV_LEFT]=null,_this$custom_nav[SPOT_NAV_RIGHT]=null,_this$custom_nav)
+this.center=false
 this.sticky_focus=true
+this.canvas_render=null
 this.applyParams(params)
 assert.equal(typeof this.text,"string")
 this.last_autocomplete=null
+this.last_placeholder=null
 this.is_focused=false
 this.elem=null
 this.input=null
 this.submitted=false
 this.pointer_lock=false
 this.last_frame=0
-this.out={}}var _proto=GlovUIEditBox.prototype
+this.out={}
+this.last_valid_state={sel_start:0,sel_end:0}
+this.resetCSSCaching()
+this.had_overflow=false}var _proto=GlovUIEditBox.prototype
+_proto.resetCSSCaching=function resetCSSCaching(){this.last_tab_index=-1
+this.last_font_size=""
+this.last_clip_path=""}
 _proto.applyParams=function applyParams(params){if(!params)return
-for(var f in params)this[f]=params[f]
-if(void 0===this.text)this.text=""
-this.h=this.font_height
-if(this.multiline&&void 0===this.custom_nav[SPOT_NAV_UP])this.custom_nav[SPOT_NAV_UP]=null
-if(this.multiline&&void 0===this.custom_nav[SPOT_NAV_DOWN])this.custom_nav[SPOT_NAV_DOWN]=null}
-_proto.updateText=function updateText(){this.text=this.input.value
-if(this.max_len>0)this.text=this.text.slice(0,this.max_len)}
+for(var f in params)if("text"!==f)this[f]=params[f]
+if(params.text&&params.text!==this.last_set_text)this.setText(params.text)
+this.h=(this.multiline||1)*this.font_height}
+_proto.getSelection=function getSelection(){return[charIdxToXY(this.text,this.input.selectionStart),charIdxToXY(this.text,this.input.selectionEnd)]}
+_proto.setSelectionRange=function setSelectionRange(sel_start,sel_end){this.input.setSelectionRange(sel_start,sel_end)}
+_proto.updateText=function updateText(){var input=this.input
+if(!input)return
+var new_text=input.value
+var saved_new_text=new_text
+var sel_start=input.selectionStart
+var sel_end=input.selectionEnd
+if(new_text===this.text){this.last_valid_state.sel_start=sel_start
+this.last_valid_state.sel_end=sel_end
+return}var multiline=this.multiline,enforce_multiline=this.enforce_multiline,max_len=this.max_len,max_visual_size=this.max_visual_size,max_visual_size_font=this.max_visual_size_font
+var valid=true
+var old_text=this.text
+function debug(msg){if(engine.defines.EDITBOX){console.log("Editbox (multiline="+multiline+", max_len="+max_len+": "+engine.frame_index+": "+msg)
+console.log("  Old sel range = ["+sel_start+","+sel_end+"]")
+console.log("  New sel range = ["+input.selectionStart+","+input.selectionEnd+"]")
+console.log("  Old text         = "+JSON.stringify(old_text))
+console.log("  Desired new text = "+JSON.stringify(saved_new_text))
+console.log("  New text         = "+JSON.stringify(new_text))}}if(enforce_multiline&&multiline&&new_text.split("\n").length>multiline)if(trimEnd(new_text).split("\n").length<=multiline){while(new_text.split("\n").length>multiline)if(new_text[new_text.length-1].match(/\s/))new_text=new_text.slice(0,-1)
+if(this.text===new_text)if(sel_end<=new_text.length){input.value=new_text
+this.setSelectionRange(sel_start,sel_end)
+debug("trimming helped to keep selection")}else{valid=false
+debug("trimmed equal orig")}else{input.value=new_text
+this.setSelectionRange(sel_start,sel_end)
+debug("trimming helped")}}else{valid=false
+debug("trimmed too long")}if(max_len>0||max_visual_size){var eff_max_len=max_len||Infinity
+var lines=multiline?new_text.split("\n"):[new_text]
+for(var ii=0;ii<lines.length;++ii){var line=lines[ii]
+var over=line.length>eff_max_len
+var font=max_visual_size?max_visual_size_font||uiGetFont():null
+if(max_visual_size&&!over)over=font.getStringWidth(null,max_visual_size.font_height,line)>max_visual_size.width
+var trimmed=trimEnd(line)
+var trim_over=over&&trimmed.length>eff_max_len
+if(max_visual_size&&over&&!trim_over)trim_over=font.getStringWidth(null,max_visual_size.font_height,trimmed)>max_visual_size.width
+if(max_visual_size&&over&&trim_over&&font.getStringWidth(null,max_visual_size.font_height,line.slice(0,-2))>max_visual_size.width)while(trimmed.length&&font.getStringWidth(null,max_visual_size.font_height,trimmed)>max_visual_size.width){trimmed=trimmed.slice(0,-1)
+trim_over=false}if(over)if(!trim_over){var old_line_end_pos=lines.slice(0,ii+1).join("\n").length
+lines[ii]=trimmed
+var new_line_end_pos=lines.slice(0,ii+1).join("\n").length
+new_text=lines.join("\n")
+var shift=old_line_end_pos-new_line_end_pos
+if(sel_start>old_line_end_pos)sel_start-=shift
+else if(sel_start>new_line_end_pos)sel_start=new_line_end_pos
+if(sel_end>=old_line_end_pos)sel_end-=shift
+else if(sel_end>new_line_end_pos)sel_end=new_line_end_pos
+input.value=new_text
+this.setSelectionRange(sel_start,sel_end)
+debug("over but not trim_over; updating text and sel")}else{valid=false
+debug("invalid: over")}}}if(!valid){var old_was_invalid=false
+if(max_len>0||max_visual_size){var _eff_max_len=max_len||Infinity
+var _lines=multiline?this.text.split("\n"):[this.text]
+for(var _ii=0;_ii<_lines.length;++_ii){var _line=_lines[_ii]
+if(_line.length>_eff_max_len)old_was_invalid=true
+if(max_visual_size&&!old_was_invalid)old_was_invalid=uiGetFont().getStringWidth(null,max_visual_size.font_height,_line)>max_visual_size.width}}if(old_was_invalid)if(new_text.length<this.text.length)valid=true}if(!valid){this.had_overflow=true
+input.value=this.text
+this.setSelectionRange(this.last_valid_state.sel_start,this.last_valid_state.sel_end)
+debug("invalid: reset sel range to ["+this.last_valid_state.sel_start+", "+this.last_valid_state.sel_end+"]")}else{this.text=new_text
+this.last_valid_state.sel_start=sel_start
+this.last_valid_state.sel_end=sel_end}}
 _proto.getText=function getText(){return this.text}
+_proto.hadOverflow=function hadOverflow(){var ret=this.had_overflow
+this.had_overflow=false
+return ret}
 _proto.setText=function setText(new_text){new_text=String(new_text)
-if(this.input)this.input.value=new_text
-this.text=new_text}
+var max_len=this.max_len,max_visual_size=this.max_visual_size,multiline=this.multiline
+var font=max_visual_size?uiGetFont():null
+if(max_len>0&&max_visual_size){var lines=multiline?new_text.split("\n"):[new_text]
+for(var ii=0;ii<lines.length;++ii){var line=lines[ii]
+if(max_len>0){if(line.length>max_len)line=trimEnd(line)
+if(line.length>max_len)line=line.slice(0,max_len)}if(max_visual_size)while(line.length&&font.getStringWidth(null,max_visual_size.font_height,line)>max_visual_size.width)line=line.slice(0,line.length-1)
+lines[ii]=line}new_text=lines.join("\n")}var input=this.input
+if(input&&input.value!==new_text){if(engine.defines.EDITBOX){console.log("Editbox (multiline="+multiline+", max_len="+max_len+": "+engine.frame_index+": setText()")
+console.log("  Sel range = ["+input.selectionStart+","+input.selectionEnd+"]")
+console.log("  Old text         = "+JSON.stringify(input.value))
+console.log("  New text         = "+JSON.stringify(new_text))}input.value=new_text}this.text=new_text
+this.last_set_text=new_text}
 _proto.focus=function focus(){if(this.input){this.input.focus()
+showOnscreenKeyboardCleanup()
+if(this.select_on_focus)this.input.select()
 setActive(this)}else this.onetime_focus=true
 spotFocusSteal(this)
 this.is_focused=true
@@ -916,66 +1389,133 @@ _proto.updateFocus=function updateFocus(is_reset){var was_glov_focused=this.is_f
 var spot_ret=spotFocusCheck(this)
 var focused=spot_ret.focused
 var dom_focused=this.input&&document.activeElement===this.input
-if(was_glov_focused!==focused){if(focused&&!dom_focused&&this.input){spotlog("GLOV focused, DOM not, focusing",this)
-this.input.focus()}if(!focused&&dom_focused){spotlog("DOM focused, GLOV not, and changed, blurring",this)
+if(was_glov_focused!==focused){if(focused&&!dom_focused){spotlog("GLOV focused, DOM not, focusing",this)
+if(this.input){this.input.focus()
+showOnscreenKeyboardCleanup()
+if(this.select_on_focus)this.input.select()}else this.onetime_focus=true}if(!focused&&dom_focused){spotlog("DOM focused, GLOV not, and changed, blurring",this)
 this.input.blur()}}else if(dom_focused&&!focused){spotlog("DOM focused, GLOV not, stealing",this)
 spotFocusSteal(this)
+if(this.input&&this.select_on_focus)this.input.select()
 focused=true}else if(!dom_focused&&focused)if(is_reset){this.onetime_focus=true
 spotlog("GLOV focused, DOM not, new edit box, focusing",this)}else if(document.activeElement===engine.canvas||document.activeElement===this.postspan){spotlog("GLOV focused, DOM canvas focused, unfocusing",this)
 spotUnfocus()}if(focused){setActive(this)
 var key_opt=this.pointer_lock&&!this.text?{in_event_cb:pointerLockEnter}:null
-if(keyUpEdge(KEYS.ESC,key_opt))if(this.text&&this.esc_clears)this.setText("")
+if((this.esc_clears||this.esc_unfocuses)&&keyUpEdge(KEYS.ESC,key_opt))if(this.text&&this.esc_clears)this.setText("")
 else{spotUnfocus()
 if(this.input)this.input.blur()
 focused=false
 this.canceled=true}}this.is_focused=focused
 return spot_ret}
-_proto.run=function run(params){this.applyParams(params)
-var is_reset=false
+_proto.run=function run(params){var _this=this
+this.applyParams(params)
+var canvas_render=this.canvas_render,font_height=this.font_height,multiline=this.multiline,enforce_multiline=this.enforce_multiline,max_len=this.max_len
+if(this.focus_steal){this.focus_steal=false
+this.focus()
+showOnscreenKeyboardCleanup()}var is_reset=false
 if(!verify(this.last_frame!==engine.frame_index))return null
 if(this.last_frame!==engine.frame_index-1){this.submitted=false
 is_reset=true}this.last_frame=engine.frame_index
 this.canceled=false
 var _this$updateFocus=this.updateFocus(is_reset),allow_focus=_this$updateFocus.allow_focus,focused=_this$updateFocus.focused
+if(focused)spotSuppressKBNav(true,Boolean(multiline||this.suppress_up_down))
+var text=this.text,x=this.x,y=this.y,z=this.z,w=this.w,h=this.h
+var clipped_rect={x:x,y:y,w:w,h:h}
+if(allow_focus&&!camera2d.clipTestRect(clipped_rect))allow_focus=false
 this_frame_edit_boxes.push(this)
 var elem=allow_focus&&uiGetDOMElem(this.elem,true)
-if(elem!==this.elem){if(elem){if(!form_hook_registered){form_hook_registered=true
+if(elem!==this.elem){this.resetCSSCaching()
+if(elem){if(!form_hook_registered){form_hook_registered=true
 var form=document.getElementById("dynform")
 if(form)form.addEventListener("submit",formHook,true)}elem.textContent=""
-var input=document.createElement(this.multiline?"textarea":"input")
-input.setAttribute("type",this.type)
-input.setAttribute("placeholder",getStringIfLocalizable(this.placeholder))
-if(this.max_len)input.setAttribute("maxLength",this.max_len)
-if(this.multiline)input.setAttribute("rows",this.multiline)
-input.setAttribute("tabindex",2)
+var input=document.createElement(multiline?"textarea":"input")
+var classes=[]
+if(canvas_render)classes.push("canvas_render")
+if(multiline&&max_len)classes.push("fixed")
+if(this.center)classes.push("center")
+input.className=classes.join(" ")
+var eff_type="number"===this.type?"tel":"text"===this.type&&!this.autocomplete?"search":this.type
+input.setAttribute("type",eff_type)
+if("search"===eff_type&&"search"!==this.type)input.style["-webkit-appearance"]="none"
+var placeholder=getStringIfLocalizable(this.placeholder)
+input.setAttribute("placeholder",placeholder)
+this.last_placeholder=placeholder
+if(max_len)if(multiline)input.setAttribute("cols",max_len)
+else input.setAttribute("maxLength",max_len)
+if(multiline)if(enforce_multiline)input.setAttribute("rows",multiline)
+else input.style.height="100%"
 elem.appendChild(input)
 var span=document.createElement("span")
-span.setAttribute("tabindex",3)
 this.postspan=span
 elem.appendChild(span)
 input.value=this.text
 if(this.uppercase)input.style["text-transform"]="uppercase"
+if(!this.resize)input.style.resize="none"
 this.input=input
 if(this.initial_focus||this.onetime_focus){input.focus()
+showOnscreenKeyboardCleanup()
 setActive(this)
-this.onetime_focus=false}if(this.initial_select)input.select()}else this.input=null
+this.onetime_focus=false}if(this.initial_select)input.select()
+if(multiline&&enforce_multiline||max_len){var onChange=function onChange(e){_this.updateText()
+return true}
+input.addEventListener("keyup",onChange)
+input.addEventListener("keydown",onChange)
+input.addEventListener("change",onChange)}}else this.input=null
+this.last_autocomplete=null
+this.last_placeholder=null
 this.submitted=false
-this.elem=elem}else if(this.input)this.updateText()
-if(elem){var pos=camera2d.htmlPos(this.x,this.y)
-if(!this.spellcheck)elem.spellcheck=false
+this.elem=elem}else if(this.input){this.updateText()
+this.last_set_text=this.text}if(elem){if(!this.spellcheck)elem.spellcheck=false
+var clip_path=""
+if(clipped_rect.x!==x||clipped_rect.y!==y||clipped_rect.w!==w||clipped_rect.h!==h){var x0=(clipped_rect.x-x)/w*100+"%"
+var x1=(clipped_rect.x+clipped_rect.w-x)/w*100+"%"
+var y0=(clipped_rect.y-y)/h*100+"%"
+var y1=(clipped_rect.y+clipped_rect.w-y)/h*100+"%"
+clip_path="polygon("+x0+" "+y0+", "+x1+" "+y0+", "+x1+" "+y1+", "+x0+" "+y1+")"}else clip_path=""
+if(clip_path!==this.last_clip_path)elem.style.clipPath=this.last_clip_path=clip_path
+var new_fontsize=camera2d.virtualToFontSize(font_height).toFixed(8)+"px"
+var preciseFontSize=camera2d.virtualToFontSize(font_height)
+var roundedSize=floor(preciseFontSize)
+var extra_scale=preciseFontSize/roundedSize
+if(new_fontsize!==this.last_font_size){this.last_font_size=new_fontsize
+elem.style.fontSize=roundedSize+"px"
+var scale="translate(-50%, -50%)\n                       scale("+extra_scale+")\n                       translate(50%, 50%)"
+elem.style.transform=scale}var pos=camera2d.htmlPos(x,y)
 elem.style.left=pos[0]+"%"
 elem.style.top=pos[1]+"%"
-var size=camera2d.htmlSize(this.w,0)
-elem.style.width=size[0]+"%"
-var old_fontsize=elem.style.fontSize||"?px"
-var new_fontsize=camera2d.virtualToFontSize(this.font_height).toFixed(0)+"px"
-if(new_fontsize!==old_fontsize)elem.style.fontSize=new_fontsize
+var size=camera2d.htmlSize(w,h)
+elem.style.width=size[0]/extra_scale+"%"
+elem.style.height=size[1]/extra_scale+"%"
 if(this.zindex)elem.style["z-index"]=this.zindex
 if(this.last_autocomplete!==this.autocomplete){this.last_autocomplete=this.autocomplete
-this.input.setAttribute("autocomplete",this.autocomplete||"auto_off_"+Math.random())}}if(focused){if(this.auto_unfocus)if(inputClick({peek:true}))spotUnfocus()
+this.input.setAttribute("autocomplete",this.autocomplete||"auto_off_"+Math.random())}var _placeholder=getStringIfLocalizable(this.placeholder)
+if(this.last_placeholder!==_placeholder){this.input.setAttribute("placeholder",_placeholder)
+this.last_placeholder=_placeholder}var tab_index1=uiGetDOMTabIndex()
+var tab_index2=uiGetDOMTabIndex()
+if(tab_index1!==this.last_tab_index){this.last_tab_index=tab_index1
+this.input.setAttribute("tabindex",tab_index1)
+this.postspan.setAttribute("tabindex",tab_index2)}}else this.resetCSSCaching()
+if(focused){if(this.auto_unfocus)if(inputClick({peek:true}))spotUnfocus()
 if(keyDownEdge(KEYS.ENTER))this.submitted=true
-eatAllKeyboardInput()}mouseConsumeClicks({x:this.x,y:this.y,w:this.w,h:this.h})
-if(this.submitted){this.submitted=false
+eatAllKeyboardInput()}if(allow_focus)mouseConsumeClicks(clipped_rect)
+if(canvas_render){var center=this.center
+var char_width=canvas_render.char_width,char_height=canvas_render.char_height,color_selection=canvas_render.color_selection,color_caret=canvas_render.color_caret,style_text=canvas_render.style_text
+var font=uiGetFont()
+var lines=text.split("\n")
+if(this.input&&0!==this.input.scrollTop)this.input.scrollTop=0
+var line_width=[]
+for(var ii=0;ii<lines.length;++ii){var line=lines[ii]
+var line_w=font.draw({style:style_text,height:font_height,x:x,y:y+ii*char_height,z:z+.8,w:w,text:line,align:center?font.ALIGN.HCENTER:void 0})
+line_width.push(line_w)}if(focused){var selection=this.getSelection()
+if(!v2same(selection[0],selection[1])){var first_row=selection[0][1]
+var last_row=selection[1][1]
+for(var jj=first_row;jj<=last_row;++jj){var _line2=lines[jj]
+var selx0=jj===first_row?selection[0][0]:0
+var selx1=jj===last_row?selection[1][0]:_line2&&_line2.length||1
+var xoffs=center?round((w-line_width[jj])/2):0
+drawRect(x+char_width*selx0-1+xoffs,y+jj*char_height,x+char_width*selx1+xoffs,y+(jj+1)*char_height,z+.75,color_selection)}}else{var _jj=selection[1][1]
+var caret_x=x+char_width*selection[1][0]-1
+if(center)caret_x+=round((w-line_width[_jj])/2)
+drawLine(caret_x,y+char_height*_jj,caret_x,y+char_height*(_jj+1)-1,z+.5,1,1,color_caret)}}}if(this.submitted){this.submitted=false
 return this.SUBMIT}if(this.canceled){this.canceled=false
 return this.CANCEL}return null}
 _proto.unrun=function unrun(){this.elem=null
@@ -983,9 +1523,13 @@ this.input=null}
 return GlovUIEditBox}()
 GlovUIEditBox.prototype.SUBMIT="submit"
 GlovUIEditBox.prototype.CANCEL="cancel"
-function editBoxCreate(params){return new GlovUIEditBox(params)}
+function editBoxCreate(params){if(void 0!==params.glov_initial_text)params.text=params.glov_initial_text
+return new GlovUIEditBox(params)}function editBox(params,current){params.glov_initial_text=current
+var edit_box=getUIElemData("edit_box",params,editBoxCreate)
+if(edit_box.last_set_text!==current)edit_box.setText(current)
+return{result:edit_box.run(params),text:edit_box.getText(),edit_box:edit_box}}
 
-},{"../common/verify.js":75,"./camera2d.js":7,"./engine.js":13,"./input.js":28,"./localization.js":32,"./spot.js":50,"./ui.js":57,"assert":undefined}],12:[function(require,module,exports){
+},{"../common/util":93,"../common/verify":94,"../common/vmath":95,"./camera2d":9,"./engine":15,"./input":31,"./localization":36,"./spot":60,"./ui":67,"assert":undefined}],14:[function(require,module,exports){
 "use strict"
 exports.additiveMatrix=additiveMatrix
 exports.applyColorMatrix=applyColorMatrix
@@ -997,6 +1541,7 @@ exports.brightnessScaleMatrix=brightnessScaleMatrix
 exports.clearAlpha=clearAlpha
 exports.contrastMatrix=contrastMatrix
 exports.effectsIsFinal=effectsIsFinal
+exports.effectsLastFramebuffer=effectsLastFramebuffer
 exports.effectsPassAdd=effectsPassAdd
 exports.effectsPassConsume=effectsPassConsume
 exports.effectsQueue=effectsQueue
@@ -1015,28 +1560,29 @@ var engine=require("./engine.js")
 var renderWidth=engine.renderWidth,renderHeight=engine.renderHeight
 var _require=require("./framebuffer.js"),framebufferEnd=_require.framebufferEnd,framebufferStart=_require.framebufferStart,framebufferTopOfFrame=_require.framebufferTopOfFrame
 var geom=require("./geom.js")
-var shaders=require("./shaders.js")
-var _require2=require("./sprites.js"),spriteQueueFn=_require2.spriteQueueFn
-var textures=require("./textures.js")
-var _require3=require("../common/vmath.js"),vec2=_require3.vec2,vec3=_require3.vec3,vec4=_require3.vec4,v4set=_require3.v4set
+var _require2=require("./shaders.js"),SEMANTIC=_require2.SEMANTIC,shaderCreate=_require2.shaderCreate,shadersBind=_require2.shadersBind,shadersPrelink=_require2.shadersPrelink
+var _require3=require("./sprites.js"),spriteQueueFn=_require3.spriteQueueFn
+var _require4=require("./textures.js"),textureBindArray=_require4.textureBindArray,textureWhite=_require4.textureWhite
+var _require5=require("../common/vmath.js"),vec3=_require5.vec3,vec4=_require5.vec4,v4set=_require5.v4set
 var shader_data={vp_copy:{vp:"shaders/effects_copy.vp"},copy:{fp:"shaders/effects_copy.fp"},pixely_expand:{fp:"shaders/pixely_expand.fp"},gaussian_blur:{fp:"shaders/effects_gaussian_blur.fp"},color_matrix:{fp:"shaders/effects_color_matrix.fp"}}
 function registerShader(key,obj){shader_data[key]=obj}function getShader(key){var elem=shader_data[key]
-if(!elem.shader)if(elem.fp)elem.shader=shaders.create(elem.fp)
-else elem.shader=shaders.create(elem.vp)
+if(!elem.shader)if(elem.fp)elem.shader=shaderCreate(elem.fp)
+else elem.shader=shaderCreate(elem.vp)
 return elem.shader}var inited=false
 var clip_space=vec4(2,2,-1,-1)
-var copy_uv_scale=vec2(1,1)
+var copy_uv_scale=vec4(1,1,0,0)
 var shader_params_default={clip_space:clip_space,copy_uv_scale:copy_uv_scale}
 var shader_params_color_matrix
 var shader_params_gaussian_blur
 var shader_params_pixely_expand
 var quad_geom
 function startup(){inited=true
-quad_geom=geom.create([[shaders.semantic.POSITION,gl.FLOAT,2,false]],new Float32Array([0,0,1,0,1,1,0,1]),null,geom.QUADS)
+quad_geom=geom.create([[SEMANTIC.POSITION,gl.FLOAT,2,false]],new Float32Array([0,0,1,0,1,1,0,1]),null,geom.QUADS)
 shader_params_color_matrix={clip_space:clip_space,copy_uv_scale:copy_uv_scale,colorMatrix:new Float32Array([0,0,0,0,0,0,0,0,0,0,0,0])}
 shader_params_gaussian_blur={clip_space:clip_space,copy_uv_scale:copy_uv_scale,sampleRadius:vec3(1,1,1),Gauss:new Float32Array([.93,.8,.7,.6,.5,.4,.3,.2,.1])}
 shader_params_pixely_expand={clip_space:clip_space,copy_uv_scale:copy_uv_scale,orig_pixel_size:vec4()}}var num_passes=0
-function effectsPassAdd(){++num_passes}function effectsPassConsume(){assert(num_passes);--num_passes}function doEffect(fn){effectsPassConsume()
+function effectsPassAdd(){++num_passes}function effectsPassConsume(){assert(num_passes);--num_passes}var last_framebuffer_source
+function effectsLastFramebuffer(){return last_framebuffer_source}function doEffect(fn){effectsPassConsume()
 fn()}function effectsQueue(z,fn){effectsPassAdd()
 spriteQueueFn(z,doEffect.bind(null,fn))}function effectsTopOfFrame(){num_passes=0
 framebufferTopOfFrame()}function effectsReset(){assert.equal(num_passes,0)}function effectsIsFinal(){return!num_passes}function grayScaleMatrix(dst){dst[0]=.2126
@@ -1102,24 +1648,24 @@ var _target_h=_viewport[3]
 view_h=view_h||_target_h
 clip_space[0]=2*(view_w=view_w||_target_w)/_target_w
 clip_space[1]=2*view_h/_target_h
-framebufferStart({clear:effect.clear,clear_all:effect.clear_all,clear_color:effect.clear_color,viewport:_viewport,final:final})}else{clip_space[0]=2
+framebufferStart({clear:effect.clear,clear_all:effect.clear_all,clear_color:effect.clear_color,viewport:_viewport,final:final,need_depth:effect.need_depth_begin})}else{clip_space[0]=2
 clip_space[1]=2
 view_w=view_w||renderWidth()
 view_h=view_h||renderHeight()
-framebufferStart({width:view_w,height:view_h,final:final})}shaders.bind(getShader("vp_copy"),getShader(effect.shader),effect.params)
-textures.bindArray(effect.texs)
+framebufferStart({width:view_w,height:view_h,final:final,need_depth:effect.need_depth_begin})}shadersBind(getShader("vp_copy"),getShader(effect.shader),effect.params)
+textureBindArray(effect.texs)
 quad_geom.draw()}function applyCopy(params){if(!inited)startup()
 var source=params.source
-if(!source)source=framebufferEnd({filter_linear:params.filter_linear,need_depth:params.need_depth})
-params.shader=params.shader||"copy"
+if(!source){source=framebufferEnd({filter_linear:params.filter_linear,need_depth:params.need_depth})
+last_framebuffer_source=source}params.shader=params.shader||"copy"
 params.params=params.params?_extends({},shader_params_default,params.params):shader_params_default
 if(Array.isArray(source))params.texs=source
 else params.texs=[source]
 applyEffect(params)}function applyPixelyExpand(params){if(!inited)startup()
 var source=params.source
 assert(!source)
-if(!source)source=framebufferEnd({filter_linear:true})
-var resx=source.width
+if(!source){source=framebufferEnd({filter_linear:true})
+last_framebuffer_source=source}var resx=source.width
 var resy=source.height
 var sampleRadius=(params.hblur||.25)/resx
 shader_params_gaussian_blur.sampleRadius[0]=sampleRadius
@@ -1136,6 +1682,7 @@ var vblur=framebufferEnd({filter_linear:true})
 v4set(shader_params_pixely_expand.orig_pixel_size,source.width,source.height,1/source.width,1/source.height)
 applyEffect({shader:"pixely_expand",params:shader_params_pixely_expand,texs:[source,hblur,vblur],clear:params.clear,clear_all:params.clear_all,clear_color:params.clear_color,viewport:params.viewport})}function applyGaussianBlur(params){if(!inited)startup()
 var source=framebufferEnd({filter_linear:true})
+last_framebuffer_source=source
 var max_size=params.max_size||512
 var min_size=params.min_size||128
 var inputTexture0=source
@@ -1156,6 +1703,7 @@ shader_params_gaussian_blur.sampleRadius[2]=params.glow||1
 applyEffect({shader:"gaussian_blur",params:shader_params_gaussian_blur,texs:[blur]})
 return true}function applyColorMatrix(params){if(!inited)startup()
 var source=framebufferEnd({filter_linear:true})
+last_framebuffer_source=source
 var matrix=params.colorMatrix
 var mout=shader_params_color_matrix.colorMatrix
 mout[0]=matrix[0]
@@ -1174,23 +1722,28 @@ applyEffect({shader:"color_matrix",params:shader_params_color_matrix,texs:[sourc
 return true}function clearAlpha(){var old_dt=gl.getParameter(gl.DEPTH_TEST)
 if(old_dt)gl.disable(gl.DEPTH_TEST)
 gl.colorMask(false,false,false,true)
-applyCopy({source:textures.textures.white,no_framebuffer:true})
+applyCopy({source:textureWhite(),no_framebuffer:true})
 gl.colorMask(true,true,true,true)
-if(old_dt)gl.enable(gl.DEPTH_TEST)}function effectsStartup(prelink_effects){prelink_effects.forEach(function(name){shaders.prelink(getShader("vp_copy"),getShader(name))})}
+if(old_dt)gl.enable(gl.DEPTH_TEST)}function effectsStartup(prelink_effects){prelink_effects.forEach(function(name){shadersPrelink(getShader("vp_copy"),getShader(name))})}
 
-},{"../common/vmath.js":76,"./engine.js":13,"./framebuffer.js":20,"./geom.js":21,"./shaders.js":46,"./sprites.js":51,"./textures.js":55,"assert":undefined}],13:[function(require,module,exports){
+},{"../common/vmath.js":95,"./engine.js":15,"./framebuffer.js":23,"./geom.js":24,"./shaders.js":55,"./sprites.js":61,"./textures.js":65,"assert":undefined}],15:[function(require,module,exports){
 "use strict"
 exports.ZNEAR=exports.ZFAR=exports.PERF_HISTORY_SIZE=exports.DEBUG=void 0
+exports.addPreTickFunc=addPreTickFunc
 exports.addTickFunc=addTickFunc
 exports.addViewSpaceGlobal=addViewSpaceGlobal
 exports.canvas=exports.border_color=exports.border_clear_color=exports.app_state=exports.antialias_unavailable=exports.antialias=void 0
 exports.clearHad3DThisFrame=clearHad3DThisFrame
+exports.debugDefineIsSet=debugDefineIsSet
 exports.defineCausesReload=defineCausesReload
+exports.defineOnChange=defineOnChange
 exports.defines=void 0
 exports.definesChanged=definesChanged
 exports.definesClearAll=definesClearAll
+exports.dirtyRenderSet=dirtyRenderSet
 exports.disableRender=disableRender
 exports.dom_to_canvas_ratio=void 0
+exports.engineSetReloadFunc=engineSetReloadFunc
 exports.engineStartupFunc=engineStartupFunc
 exports.fixNatives=fixNatives
 exports.game_width=exports.game_height=exports.frame_timestamp=exports.frame_index=exports.frame_dt=exports.fov_y=exports.fov_x=exports.font=void 0
@@ -1202,14 +1755,21 @@ exports.getViewportPostprocess=getViewportPostprocess
 exports.glCheckError=glCheckError
 exports.hrtime=exports.hrnow=exports.height=exports.had_3d_this_frame=exports.glov_particles=void 0
 exports.isInBackground=isInBackground
-exports.light_dir_ws=exports.light_diffuse=exports.light_ambient=exports.is_loading=void 0
+exports.isInBackgroundOrBlurred=isInBackgroundOrBlurred
+exports.isLoading=isLoading
+exports.isOutOfTick=isOutOfTick
+exports.light_dir_ws=exports.light_diffuse=exports.light_ambient=exports.last_raw_tick_times=exports.last_raw_tick_skipped=exports.last_raw_tick_index=exports.is_loading=void 0
+exports.loadPendingDelta=loadPendingDelta
 exports.loadsPending=loadsPending
 exports.mat_vp=exports.mat_view=exports.mat_projection=void 0
+exports.needDepthIn2D=needDepthIn2D
 exports.onEnterBackground=onEnterBackground
 exports.onExitBackground=onExitBackground
+exports.onLoadMetrics=onLoadMetrics
 exports.pixel_aspect=exports.perf_state=void 0
 exports.postRender=postRender
 exports.postTick=postTick
+exports.postprocessNeverDisable=postprocessNeverDisable
 exports.postprocessing=void 0
 exports.postprocessingAllow=postprocessingAllow
 exports.preSpriteRender=preSpriteRender
@@ -1218,15 +1778,20 @@ exports.releaseCanvas=releaseCanvas
 exports.reloadSafe=reloadSafe
 exports.removeTickFunc=removeTickFunc
 exports.renderHeight=renderHeight
+exports.renderNeeded=renderNeeded
 exports.renderWidth=renderWidth
-exports.render_width=exports.render_height=void 0
+exports.render_width=exports.render_pixel_perfect=exports.render_height=void 0
 exports.resizing=resizing
+exports.setDoBorders=setDoBorders
+exports.setEditBoxNearBottom=setEditBoxNearBottom
 exports.setFOV=setFOV
 exports.setFonts=setFonts
 exports.setGameDims=setGameDims
 exports.setGlobalMatrices=setGlobalMatrices
 exports.setMatVP=setMatVP
+exports.setPixelPerfect=setPixelPerfect
 exports.setPixelyStrict=setPixelyStrict
+exports.setProjection=setProjection
 exports.setState=setState
 exports.setViewport=setViewport
 exports.setViewportPostprocess=setViewportPostprocess
@@ -1244,20 +1809,22 @@ var DEBUG=client_config.MODE_DEVELOPMENT
 exports.DEBUG=DEBUG
 var startup_funcs=[]
 exports.require=require
-require("not_worker")
 var assert=require("assert")
-var _require=require("./browser.js"),is_ios_safari=_require.is_ios_safari
+var _require=require("./browser.js"),is_android=_require.is_android,is_ios=_require.is_ios,is_ios_chrome=_require.is_ios_chrome,is_ios_safari=_require.is_ios_safari,is_ipad=_require.is_ipad,safari_version_major=_require.safari_version_major,safari_version_minor=_require.safari_version_minor
 var _require2=require("./build_ui.js"),buildUIStartup=_require2.buildUIStartup
 var camera2d=require("./camera2d.js")
 var cmds=require("./cmds.js")
+require("./engine_cmds.js")
+var _require3=require("../common/data_error.js"),dataErrorQueueEnable=_require3.dataErrorQueueEnable
 var effects=require("./effects.js")
 var effectsReset=effects.effectsReset,effectsTopOfFrame=effects.effectsTopOfFrame,effectsIsFinal=effects.effectsIsFinal,effectsPassAdd=effects.effectsPassAdd,effectsPassConsume=effects.effectsPassConsume
-var _require3=require("./error_report.js"),errorReportDisable=_require3.errorReportDisable,errorReportSetTimeAccum=_require3.errorReportSetTimeAccum,errorReportSetDetails=_require3.errorReportSetDetails,glovErrorReportDisableSubmit=_require3.glovErrorReportDisableSubmit,glovErrorReportSetCrashCB=_require3.glovErrorReportSetCrashCB
+var _require4=require("./error_report.js"),errorReportDisable=_require4.errorReportDisable,errorReportSetTimeAccum=_require4.errorReportSetTimeAccum,errorReportSetDetails=_require4.errorReportSetDetails,glovErrorReportDisableSubmit=_require4.glovErrorReportDisableSubmit,glovErrorReportSetCrashCB=_require4.glovErrorReportSetCrashCB
 var glov_font=require("./font.js")
 var fontTick=glov_font.fontTick
-var _require4=require("./framebuffer.js"),framebufferStart=_require4.framebufferStart,framebufferEndOfFrame=_require4.framebufferEndOfFrame
-var geom=require("./geom.js")
+var _require5=require("./framebuffer.js"),framebufferStart=_require5.framebufferStart,framebufferEndOfFrame=_require5.framebufferEndOfFrame
+var _require6=require("./geom.js"),geomResetState=_require6.geomResetState,geomStartup=_require6.geomStartup
 var input=require("./input.js")
+var _require7=require("./input.js"),inputAllowAllEvents=_require7.inputAllowAllEvents
 var local_storage=require("./local_storage.js")
 var mat3FromMat4=require("gl-mat3/fromMat4")
 var mat4Copy=require("gl-mat4/copy")
@@ -1266,25 +1833,27 @@ var mat4Mul=require("gl-mat4/multiply")
 var mat4Transpose=require("gl-mat4/transpose")
 var mat4Perspective=require("gl-mat4/perspective")
 var asin=Math.asin,cos=Math.cos,floor=Math.floor,min=Math.min,max=Math.max,PI=Math.PI,round=Math.round,sin=Math.sin,sqrt=Math.sqrt
-var models=require("./models.js")
+var _require8=require("./models.js"),modelLoadCount=_require8.modelLoadCount,modelStartup=_require8.modelStartup
 var perf=require("./perf.js")
-var _require5=require("./profiler.js"),profilerFrameStart=_require5.profilerFrameStart,profilerGarbageEstimate=_require5.profilerGarbageEstimate
-var _require6=require("./profiler_ui.js"),profilerUIStartup=_require6.profilerUIStartup
-var _require7=require("../common/perfcounters.js"),perfCounterTick=_require7.perfCounterTick
+var _require9=require("./profiler.js"),profilerFrameStart=_require9.profilerFrameStart,profilerGarbageEstimate=_require9.profilerGarbageEstimate,profilerMemSize=_require9.profilerMemSize
+var _require0=require("./profiler_ui.js"),profilerUIStartup=_require0.profilerUIStartup
+var _require1=require("../common/perfcounters.js"),perfCounterTick=_require1.perfCounterTick
 var settings=require("./settings.js")
 var shaders=require("./shaders.js")
-var _require8=require("./shader_debug_ui.js"),shaderDebugUIStartup=_require8.shaderDebugUIStartup
-var _require9=require("./sound.js"),soundLoading=_require9.soundLoading,soundStartup=_require9.soundStartup,soundTick=_require9.soundTick
-var _require10=require("./spot.js"),spotEndInput=_require10.spotEndInput
-var _require11=require("./sprites.js"),blendModeReset=_require11.blendModeReset,spriteDraw=_require11.spriteDraw,spriteStartup=_require11.spriteStartup
-var textures=require("./textures.js")
-var texturesTick=textures.texturesTick
+var _require10=require("./shaders.js"),shadersAddGlobal=_require10.shadersAddGlobal,shadersHandleDefinesChanged=_require10.shadersHandleDefinesChanged,shadersStartup=_require10.shadersStartup,shadersResetState=_require10.shadersResetState
+var _require11=require("./shader_debug_ui.js"),shaderDebugUIStartup=_require11.shaderDebugUIStartup
+var _require12=require("./sound.js"),soundLoading=_require12.soundLoading,soundStartup=_require12.soundStartup,soundTick=_require12.soundTick
+var _require13=require("./spot.js"),spotEndInput=_require13.spotEndInput
+var _require14=require("./sprites.js"),blendModeReset=_require14.blendModeReset,spriteDraw=_require14.spriteDraw,spriteDrawReset=_require14.spriteDrawReset,spriteStartup=_require14.spriteStartup,spriteResetTopOfFrame=_require14.spriteResetTopOfFrame
+var _require15=require("./textures.js"),textureBind=_require15.textureBind,textureDefaultFilters=_require15.textureDefaultFilters,textureError=_require15.textureError,textureLoadCount=_require15.textureLoadCount,textureResetState=_require15.textureResetState,textureStartup=_require15.textureStartup,textureTick=_require15.textureTick
 var glov_transition=require("./transition.js")
-var _require12=require("./ui.js"),drawRect=_require12.drawRect,_require12$internal=_require12.internal,cleanupDOMElems=_require12$internal.cleanupDOMElems,uiEndFrame=_require12$internal.uiEndFrame,uiSetFonts=_require12$internal.uiSetFonts,uiStartup=_require12$internal.uiStartup,uiTick=_require12$internal.uiTick,uiBindSounds=_require12.uiBindSounds
+var _require16=require("./ui.js"),drawRect=_require16.drawRect,_require16$internal=_require16.internal,cleanupDOMElems=_require16$internal.cleanupDOMElems,uiEndFrame=_require16$internal.uiEndFrame,uiSetFonts=_require16$internal.uiSetFonts,uiStartup=_require16$internal.uiStartup,uiTick=_require16$internal.uiTick,uiBindSounds=_require16.uiBindSounds
 var urlhash=require("./urlhash.js")
-var _require13=require("../common/util.js"),callEach=_require13.callEach,clamp=_require13.clamp,nearSame=_require13.nearSame,ridx=_require13.ridx
+var _require17=require("../common/util.js"),callEach=_require17.callEach,clamp=_require17.clamp,nearSame=_require17.nearSame,ridx=_require17.ridx
 var verify=require("../common/verify.js")
-var _require14=require("../common/vmath.js"),mat3=_require14.mat3,mat4=_require14.mat4,vec3=_require14.vec3,vec4=_require14.vec4,v3mulMat4=_require14.v3mulMat4,v3iNormalize=_require14.v3iNormalize,v4copy=_require14.v4copy,v4same=_require14.v4same,v4set=_require14.v4set
+var _require18=require("../common/vmath.js"),mat3=_require18.mat3,mat4=_require18.mat4,mat4isFinite=_require18.mat4isFinite,vec3=_require18.vec3,vec4=_require18.vec4,v3mulMat4=_require18.v3mulMat4,v3iNormalize=_require18.v3iNormalize,v4copy=_require18.v4copy,v4same=_require18.v4same,v4scale=_require18.v4scale,v4set=_require18.v4set
+var _require19=require("./webfs.js"),webFSStartup=_require19.webFSStartup
+var _require20=require("./words/profanity.js"),profanityStartupLate=_require20.profanityStartupLate
 var canvas
 exports.canvas=canvas
 var webgl2
@@ -1299,6 +1868,8 @@ var width_3d
 var height_3d
 var pixel_aspect=1
 exports.pixel_aspect=pixel_aspect
+var render_pixel_perfect=0
+exports.render_pixel_perfect=render_pixel_perfect
 var dom_to_canvas_ratio=window.devicePixelRatio||1
 exports.dom_to_canvas_ratio=dom_to_canvas_ratio
 var antialias
@@ -1309,13 +1880,14 @@ var game_width
 exports.game_width=game_width
 var game_height
 exports.game_height=game_height
-var game_aspect
+var render_aspect
 var render_width
 exports.render_width=render_width
 var render_height
 exports.render_height=render_height
 var defines=urlhash.register({key:"D",type:urlhash.TYPE_SET,change:definesChanged})
 exports.defines=defines
+urlhash.register({key:"nocoop"})
 var ZFAR
 exports.ZFAR=ZFAR
 var ZNEAR
@@ -1351,48 +1923,58 @@ exports.border_color=border_color
 var border_clear_color=vec4(0,0,0,1)
 exports.border_clear_color=border_clear_color
 var no_render=false
-function disableRender(new_value){if(no_render=new_value)cleanupDOMElems()}var view_space_globals=[]
+var dirty_render=false
+var render_frames_needed=3
+function renderNeeded(frames){render_frames_needed=max(render_frames_needed,frames||3)}function disableRender(new_value){inputAllowAllEvents(no_render=new_value)
+if(no_render)cleanupDOMElems()}var view_space_globals=[]
 function addViewSpaceGlobal(name){var ws_name=name+"_ws"
 var ws_vec=shaders.globals[ws_name]
 assert(ws_vec)
 assert.equal(ws_vec.length,3)
 var vs_name=name+"_vs"
 var vs_vec=vec3()
-shaders.addGlobal(vs_name,vs_vec)
+shadersAddGlobal(vs_name,vs_vec)
 view_space_globals.push({vs:vs_vec,ws:ws_vec})}var mat_temp=mat4()
-function setGlobalMatrices(_mat_view){mat4Copy(mat_view,_mat_view)
+function setGlobalMatrices(_mat_view){assert(mat4isFinite(_mat_view))
+mat4Copy(mat_view,_mat_view)
 mat4Mul(mat_vp,mat_projection,mat_view)
 v3iNormalize(light_dir_ws)
 for(var ii=0;ii<view_space_globals.length;++ii){var vsg=view_space_globals[ii]
 v3mulMat4(vsg.vs,vsg.ws,mat_view)}mat4Invert(mat_temp,mat_view)
-mat3FromMat4(mat_inv_view,mat_temp)}function setMatVP(_mat_view){setupProjection(fov_y,width_3d,height_3d,ZNEAR,ZFAR)
+mat3FromMat4(mat_inv_view,mat_temp)}function setMatVP(_mat_view){assert(mat4isFinite(_mat_view))
+setupProjection(fov_y,width_3d,height_3d,ZNEAR,ZFAR)
 mat4Copy(mat_view,_mat_view)
 mat4Mul(mat_vp,mat_projection,mat_view)}function setFOV(fov_min){var aspect=width_3d/height_3d
-if(aspect>game_aspect){exports.fov_y=fov_y=fov_min
+if(aspect>=render_aspect){exports.fov_y=fov_y=fov_min
 var rise=sin(fov_y/2)/cos(fov_y/2)*aspect
-exports.fov_x=fov_x=2*asin(rise/sqrt(rise*rise+1))}else{var _rise=sin(fov_min/2)/cos(fov_min/2)*game_aspect
+exports.fov_x=fov_x=2*asin(rise/sqrt(rise*rise+1))}else{var _rise=sin(fov_min/2)/cos(fov_min/2)*render_aspect
 exports.fov_x=fov_x=2*asin(_rise/sqrt(_rise*_rise+1))
 var rise2=sin(fov_x/2)/cos(fov_x/2)/aspect
 exports.fov_y=fov_y=2*asin(rise2/sqrt(rise2*rise2+1))}}function setGameDims(w,h){exports.game_width=game_width=w
-exports.game_height=game_height=h
-game_aspect=game_width/game_height}var postprocessing_reset_version="5"
-var postprocessing=local_storage.get("glov_no_postprocessing")!==postprocessing_reset_version
+exports.game_height=game_height=h}var postprocessing_reset_version="6"
+var postprocessing_allow_disable=true
+var postprocessing=local_storage.get("glov_no_postprocessing")!==postprocessing_reset_version||true
 exports.postprocessing=postprocessing
-function postprocessingAllow(allow){local_storage.set("glov_no_postprocessing",allow?void 0:postprocessing_reset_version)
-exports.postprocessing=postprocessing=allow}function glCheckError(){var gl_err=gl.getError()
+function postprocessNeverDisable(){postprocessing_allow_disable=false
+exports.postprocessing=postprocessing=true}function postprocessingAllow(allow){if(postprocessing_allow_disable){local_storage.set("glov_no_postprocessing",allow?void 0:postprocessing_reset_version)
+exports.postprocessing=postprocessing=allow}}function glCheckError(){var gl_err=gl.getError()
 if(gl_err){console.error(gl_err)
 throw new Error(gl_err)}}function releaseCanvas(){try{if(gl){var ext=gl.getExtension("WEBGL_lose_context")
-if(ext)ext.loseContext()}}catch(ignored){}}function reloadSafe(){errorReportDisable()
+if(ext)ext.loseContext()}}catch(ignored){}}function reloadDefault(){document.location.reload()}var reload_func=reloadDefault
+function engineSetReloadFunc(fn){reload_func=fn}function reloadSafe(){errorReportDisable()
 releaseCanvas()
-if(window.FBInstant)try{window.top.location.reload()}catch(e){window.FBInstant.quit()}else document.location.reload()}window.reloadSafe=reloadSafe
+reload_func()}window.reloadSafe=reloadSafe
 var reloading_defines={}
 function defineCausesReload(define){reloading_defines[define]=defines[define]}defineCausesReload("FORCEWEBGL2")
 defineCausesReload("NOWEBGL2")
-function definesChanged(){for(var key in reloading_defines)if(defines[key]!==reloading_defines[key]){urlhash.onURLChange(reloadSafe)
-break}shaders.handleDefinesChanged()}function definesClearAll(){var any_changed=false
+var define_change_cbs={}
+function defineOnChange(define,cb){(define_change_cbs[define]=define_change_cbs[define]||{value:defines[define],cbs:[]}).cbs.push(cb)}function definesChanged(){for(var key in reloading_defines)if(defines[key]!==reloading_defines[key]){urlhash.onURLChange(reloadSafe)
+break}for(var _key in define_change_cbs){var elem=define_change_cbs[_key]
+if(defines[_key]!==elem.value){callEach(elem.cbs)
+elem.value=defines[_key]}}shadersHandleDefinesChanged()}function definesClearAll(){var any_changed=false
 for(var key in defines){defines[key]=false
 any_changed=true}if(any_changed)definesChanged()
-return any_changed}function normalizeRow(m,idx){var len=m[idx]*m[idx]+m[idx+1]*m[idx+1]+m[idx+2]*m[idx+2]
+return any_changed}function debugDefineIsSet(define){return defines[define]}function normalizeRow(m,idx){var len=m[idx]*m[idx]+m[idx+1]*m[idx+1]+m[idx+2]*m[idx+2]
 if(len>0){len=1/sqrt(len)
 m[idx]*=len
 m[idx+1]*=len
@@ -1418,8 +2000,9 @@ var this_frame_time_actual=0
 function getFrameDtActual(){return this_frame_time_actual}var after_loading_state=null
 var is_loading=true
 exports.is_loading=is_loading
-function setState(new_state){if(is_loading)after_loading_state=new_state
-else exports.app_state=app_state=new_state}function stateActive(test_state){if(is_loading)return after_loading_state===test_state
+function isLoading(){return is_loading}function setState(new_state){if(is_loading)after_loading_state=new_state
+else exports.app_state=app_state=new_state
+renderNeeded()}function stateActive(test_state){if(is_loading)return after_loading_state===test_state
 else return app_state===test_state}var mspf=1e3
 var mspf_update_time=0
 var mspf_frame_count=0
@@ -1427,18 +2010,20 @@ var last_tick_cpu=0
 var mspf_tick=1e3
 var mspf_tick_accum=0
 var garbage_estimate=0
+var mem_estimate=0
 var PERF_HISTORY_SIZE=128
 exports.PERF_HISTORY_SIZE=PERF_HISTORY_SIZE
 var perf_state=window.glov_perf_state={fpsgraph:{index:0,history:new Float32Array(2*PERF_HISTORY_SIZE)},gpu_mem:{tex:0,geom:0}}
 var fpsgraph=(exports.perf_state=perf_state).fpsgraph
-perf.addMetric({name:"fps",show_stat:"show_fps",show_graph:"fps_graph",labels:{"fps: ":function fps(){return(1e3/mspf).toFixed(1)},"ms/f: ":function msF(){return mspf.toFixed(0)},"cpu: ":function cpu(){return mspf_tick.toFixed(0)},"gc/f: ":function gcF(){return garbage_estimate?garbage_estimate.toFixed(1):""}},data:fpsgraph,line_scale_top:50,colors:[vec4(1,.925,.153,1),vec4(0,.894,.212,1)]},true)
+perf.addMetric({name:"fps",show_stat:"show_fps",show_graph:"fps_graph",labels:{"fps: ":function fps(){return(1e3/mspf).toFixed(1)},"ms/f: ":function msF(){return mspf.toFixed(0)},"cpu: ":function cpu(){return mspf_tick.toFixed(0)},"gc/f: ":function gcF(){return garbage_estimate?garbage_estimate.toFixed(1):""},"mem: ":function mem(){return mem_estimate?mem_estimate.toFixed(1):""}},data:fpsgraph,line_scale_top:50,colors:[vec4(1,.925,.153,1),vec4(0,.894,.212,1)]},true)
 var do_borders=true
 var do_viewport_postprocess=false
 var need_repos=0
-function resizing(){return need_repos}var app_tick_functions=[]
+function setDoBorders(new_value){do_borders=new_value}function resizing(){return need_repos}var app_tick_functions=[]
 function addTickFunc(cb){app_tick_functions.push(cb)}function removeTickFunc(cb){var idx=app_tick_functions.indexOf(cb)
 if(-1!==idx){app_tick_functions.splice(idx,1)
-return true}return false}var post_tick=[]
+return true}return false}var pre_tick=[]
+function addPreTickFunc(cb){pre_tick.push(cb)}var post_tick=[]
 function postTick(opts){opts.ticks=opts.ticks||1
 opts.inactive=opts.inactive||false
 assert.equal(typeof opts.fn,"function")
@@ -1449,60 +2034,92 @@ function postRender(fn){if(!post_render)post_render=[]
 post_render.push(fn)}function resetEffects(){effectsReset()
 framebufferEndOfFrame()}function renderWidth(){return render_width||width}function renderHeight(){return render_height||height}var SAFARI_FULLSCREEN_ASPECT=function(){var screen=window.screen
 if(!is_ios_safari||!screen)return 0
-return{"896,414":896/414,"812,375":812/375,"736,414":736/414,"716,414":736/414,"667,375":667/375,"647,375":667/375,"548,320":1.775}[max(screen.availWidth,screen.availHeight)+","+min(screen.availWidth,screen.availHeight)]||0}()
-function safariTopSafeArea(view_w,view_h){if(SAFARI_FULLSCREEN_ASPECT&&nearSame(view_w/view_h,SAFARI_FULLSCREEN_ASPECT,.001))return 50*(window.devicePixelRatio||1)
-return 0}var last_canvas_width
+return{"926,428":926/428,"844,390":844/390,"896,414":896/414,"812,375":812/375,"736,414":736/414,"716,414":736/414,"667,375":667/375,"647,375":667/375,"548,320":1.775}[max(screen.availWidth,screen.availHeight)+","+min(screen.availWidth,screen.availHeight)]||0}()
+function safariTopSafeArea(view_w,view_h){if(is_ios_safari&&safari_version_major<16)if(SAFARI_FULLSCREEN_ASPECT&&nearSame(view_w/view_h,SAFARI_FULLSCREEN_ASPECT,.001))return 28
+return 0}function isPortrait(view_w,view_h){return view_h>=.8*view_w}var kb_up_last_w=0
+var kb_up_last_h=0
+var kb_up_ret=false
+var kb_up_frame=0
+function isKeyboardUp(view_w,view_h){if(!view_w)return kb_up_ret
+if(!nearSame(view_w,kb_up_last_w,5))kb_up_ret=false
+else if(!nearSame(view_h,kb_up_last_h,5))if(view_h<kb_up_last_h)kb_up_ret=true
+else if(view_h>kb_up_last_h)kb_up_ret=false
+kb_up_last_w=view_w
+kb_up_last_h=view_h
+if(++kb_up_frame<3)kb_up_ret=false
+return kb_up_ret}function safariBottomSafeArea(view_w,view_h){if(is_ios_safari&&15===safari_version_major&&safari_version_minor<2&&isKeyboardUp()&&isPortrait(view_w,view_h))if(0===safari_version_minor)return 52
+else if(1===safari_version_minor)if(!is_ipad)return 8
+if(is_ios_chrome&&is_ipad&&safari_version_major>=13&&isKeyboardUp())return 44
+return 0}function getSafeAreaFromDOM(out,safearea,view_w,view_h){if(safearea&&safearea.offsetWidth&&safearea.offsetHeight){out[0]=safearea.offsetLeft
+out[1]=view_w-safearea.offsetWidth-safearea.offsetLeft
+out[2]=max(safearea.offsetTop,view_h-window.innerHeight)
+out[3]=view_h-safearea.offsetHeight-safearea.offsetTop}}var edit_box_near_bottom_frame=-1
+var edit_box_near_bottom_pad=0
+function setEditBoxNearBottom(required_padding_dom_coords){edit_box_near_bottom_frame=frame_index
+edit_box_near_bottom_pad=required_padding_dom_coords}var last_canvas_width
 var last_canvas_height
 var last_body_height
 var safearea_elem
 var safearea_ignore_bottom=false
-var safearea_values=[0,0,0,0]
-var last_safearea_values=[0,0,0,0]
+var safearea_dom=vec4()
+var safearea_canvas=vec4()
+var last_safearea_canvas=vec4()
 function checkResize(){profilerStart("checkResize")
-var vv=window.visualViewport||{}
-exports.dom_to_canvas_ratio=dom_to_canvas_ratio=window.devicePixelRatio||1
-exports.dom_to_canvas_ratio=dom_to_canvas_ratio*=settings.render_scale_all
-var view_w=vv.width||window.innerWidth
-var view_h=vv.height||window.innerHeight
+var vv=window.visualViewport
+var dom_to_pixels=window.devicePixelRatio||1
+exports.dom_to_canvas_ratio=dom_to_canvas_ratio=dom_to_pixels*settings.render_scale_all
+var view_w=vv?vv.width:window.innerWidth
+var view_h=vv?vv.height:is_ios_safari&&window.pageYOffset?document.documentElement.clientHeight:window.innerHeight
 if(view_h!==last_body_height){last_body_height=view_h
-if(document.body)document.body.style.height=view_h+"px"}var rect=canvas.getBoundingClientRect()
+if(document.body)document.body.style.height=view_h+"px"}v4set(safearea_dom,0,0,0,0)
+getSafeAreaFromDOM(safearea_dom,safearea_elem,view_w,view_h)
+isKeyboardUp(view_w,view_h-safearea_dom[2]-safearea_dom[3])
+safearea_dom[2]=max(safearea_dom[2],safariTopSafeArea(view_w,view_h))
+if(safearea_dom[3]&&(is_ios&&isKeyboardUp()||safearea_ignore_bottom))safearea_dom[3]=0
+safearea_dom[3]=max(safearea_dom[3],safariBottomSafeArea(view_w,view_h))
+if(edit_box_near_bottom_frame===frame_index-1&&is_android&&isKeyboardUp())safearea_dom[3]=max(safearea_dom[3],edit_box_near_bottom_pad)
+var rect=canvas.getBoundingClientRect()
 var new_width=round(rect.width*dom_to_canvas_ratio)||1
 var new_height=round(rect.height*dom_to_canvas_ratio)||1
-if(-1===cmds.safearea[0]){if(safearea_elem){var sa_width=safearea_elem.offsetWidth
-var sa_height=safearea_elem.offsetHeight
-if(sa_width&&sa_height)v4set(safearea_values,safearea_elem.offsetLeft*dom_to_canvas_ratio,new_width-(sa_width+safearea_elem.offsetLeft)*dom_to_canvas_ratio,max(safearea_elem.offsetTop*dom_to_canvas_ratio,safariTopSafeArea(view_w,view_h)*settings.render_scale_all),safearea_ignore_bottom?0:new_height-(sa_height+safearea_elem.offsetTop)*dom_to_canvas_ratio)}}else v4set(safearea_values,new_width*clamp(cmds.safearea[0],0,25)/100,new_width*clamp(cmds.safearea[1],0,25)/100,new_height*clamp(cmds.safearea[2],0,25)/100,new_height*clamp(cmds.safearea[3],0,25)/100)
-if(!v4same(safearea_values,last_safearea_values)){v4copy(last_safearea_values,safearea_values)
-camera2d.setSafeAreaPadding(safearea_values[0],safearea_values[1],safearea_values[2],safearea_values[3])
+if(-1===cmds.safearea[0])v4scale(safearea_canvas,safearea_dom,dom_to_canvas_ratio)
+else v4set(safearea_canvas,new_width*clamp(cmds.safearea[0],0,25)/100,new_width*clamp(cmds.safearea[1],0,25)/100,new_height*clamp(cmds.safearea[2],0,25)/100,new_height*clamp(cmds.safearea[3],0,25)/100)
+if(!v4same(safearea_canvas,last_safearea_canvas)){v4copy(last_safearea_canvas,safearea_canvas)
+camera2d.setSafeAreaPadding(safearea_canvas[0],safearea_canvas[1],safearea_canvas[2],safearea_canvas[3])
 need_repos=max(need_repos,1)}if(new_width!==last_canvas_width||new_height!==last_canvas_height){window.pixel_scale=dom_to_canvas_ratio
 last_canvas_width=canvas.width=new_width||1
 last_canvas_height=canvas.height=new_height||1
 exports.width=width=canvas.width
 exports.height=height=canvas.height
-need_repos=10}if(is_ios_safari&&(window.visualViewport||need_repos))window.scroll(0,0)
+need_repos=10
+renderNeeded()}if(window.visualViewport&&(is_ios_safari||true))if(window.pageYOffset||window.document.body&&window.document.body.scrollTop)window.scroll(0,0)
 profilerStop("checkResize")}var viewport=vec4(0,0,1,1)
 exports.viewport=viewport
 function setViewport(xywh){v4copy(viewport,xywh)
-gl.viewport(xywh[0],xywh[1],xywh[2],xywh[3])}var frames_requested=0
+gl.viewport(xywh[0],xywh[1],xywh[2],xywh[3])}var MAX_FRAME_TIME=1e4
+var frames_requested=0
 function requestFrame(user_time){var max_fps=settings.max_fps
 var desired_frames=max_fps>=250?10:1
 if(frames_requested>=desired_frames)return
 if(defines.SLOWLOAD&&is_loading)max_fps=2
 if(desired_frames>1)while(frames_requested<desired_frames){setTimeout(tick,1)
-frames_requested++}else if(max_fps){var desired_delay=max(0,round(1e3/max_fps-(user_time||0)))
+frames_requested++}else if(max_fps&&max_fps>settings.use_animation_frame){var desired_delay=min(MAX_FRAME_TIME,max(0,round(1e3/max_fps-(user_time||0))))
 frames_requested++
 setTimeout(tick,desired_delay)}else{frames_requested++
 requestAnimationFrame(tick)}}var mat_projection_10
 var had_3d_this_frame
 exports.had_3d_this_frame=had_3d_this_frame
-function clearHad3DThisFrame(){exports.had_3d_this_frame=had_3d_this_frame=false}function setupProjection(use_fov_y,use_width,use_height,znear,zfar){mat4Perspective(mat_projection,use_fov_y,use_width/use_height,znear,zfar)
+var need_depth_this_frame
+function clearHad3DThisFrame(){exports.had_3d_this_frame=had_3d_this_frame=false}function needDepthIn2D(){need_depth_this_frame=true}function setupProjection(use_fov_y,use_width,use_height,znear,zfar){mat4Perspective(mat_projection,use_fov_y,use_width/use_height,znear,zfar)
+mat_projection_10=mat_projection[10]}function setProjection(new_mat){mat4Copy(mat_projection,new_mat)
 mat_projection_10=mat_projection[10]}function setZRange(znear,zfar){exports.ZNEAR=ZNEAR=znear
 exports.ZFAR=ZFAR=zfar
-if(had_3d_this_frame)setupProjection(fov_y,width_3d,height_3d,ZNEAR,ZFAR)}function set3DRenderResolution(w,h){width_3d=w
-height_3d=h}var want_render_scale_3d_this_frame
+if(had_3d_this_frame)setupProjection(fov_y,width_3d,height_3d,ZNEAR,ZFAR)}function set3DRenderResolution(w,h){render_aspect=(width_3d=w)/(height_3d=h)}var want_render_scale_3d_this_frame
 var had_render_scale_3d_this_frame
-function start3DRendering(opts){if((opts=opts||{}).width)set3DRenderResolution(opts.width,opts.height)
+function start3DRendering(opts){var _opts$need_depth
+if((opts=opts||{}).width)set3DRenderResolution(opts.width,opts.height)
 setFOV(opts.fov||settings.fov*PI/180)
 exports.had_3d_this_frame=had_3d_this_frame=true
+need_depth_this_frame=false
 if(!opts.width&&want_render_scale_3d_this_frame&&!defines.NOCOPY){had_render_scale_3d_this_frame=true
 effectsPassAdd()}blendModeReset(true)
 gl.enable(gl.BLEND)
@@ -1511,7 +2128,7 @@ gl.depthMask(true)
 var backbuffer_width=width_3d
 var backbuffer_height=height_3d
 if(opts.viewport){backbuffer_width=render_width||width
-backbuffer_height=render_height||height}framebufferStart({width:backbuffer_width,height:backbuffer_height,final:effectsIsFinal(),need_depth:opts.need_depth||true,clear:true,clear_all:void 0===opts.clear_all?settings.render_scale_clear:opts.clear_all,viewport:opts.viewport})
+backbuffer_height=render_height||height}framebufferStart({width:backbuffer_width,height:backbuffer_height,final:effectsIsFinal(),need_depth:null!=(_opts$need_depth=opts.need_depth)?_opts$need_depth:true,clear:true,clear_color:opts.clear_color,clear_all:void 0===opts.clear_all?settings.render_scale_clear:opts.clear_all,clear_all_color:opts.clear_all_color,viewport:opts.viewport,just_viewport:opts.just_viewport})
 setupProjection(fov_y,width_3d,height_3d,ZNEAR,ZFAR)
 gl.enable(gl.CULL_FACE)}function renderScaleFinish(){if(defines.NOCOPY){gl.disable(gl.SCISSOR_TEST)
 v4set(viewport,0,0,width,height)
@@ -1521,7 +2138,8 @@ else effects.applyCopy({filter_linear:0===settings.render_scale_mode})}}function
 blendModeReset(true)
 gl.enable(gl.BLEND)
 gl.disable(gl.DEPTH_TEST)
-gl.depthMask(false)}function projectionZBias(dist,at_z){if(!dist){mat_projection[10]=mat_projection_10
+gl.depthMask(false)
+spriteDrawReset()}function projectionZBias(dist,at_z){if(!dist){mat_projection[10]=mat_projection_10
 return}var e=dist/(at_z*(at_z+dist))*.2
 e=max(e,2e-7)
 mat_projection[10]=mat_projection_10+e}function fixNatives(is_startup){var b=[]
@@ -1531,11 +2149,11 @@ errorReportSetDetails("had_native_"+a,typeof old_val)
 delete Array.prototype[a]
 Object.defineProperty(Array.prototype,a,{value:old_val,enumerable:false})}for(var _a in b)assert(false,"Array.prototype has unremovable member "+_a)}function resetState(){profilerStart("resetState")
 profilerStart("textures")
-textures.texturesResetState()
+textureResetState()
 profilerStopStart("shaders")
-shaders.shadersResetState()
+shadersResetState()
 profilerStopStart("geom;gl")
-geom.geomResetState()
+geomResetState()
 blendModeReset(true)
 gl.enable(gl.BLEND)
 gl.enable(gl.DEPTH_TEST)
@@ -1546,24 +2164,54 @@ gl.disable(gl.SCISSOR_TEST)
 gl.cullFace(gl.BACK)
 gl.viewport(0,0,width,height)
 profilerStop()
-profilerStop("resetState")}var in_background=false
+profilerStop("resetState")}var blurred=false
+var in_background=false
 var enter_background_cb=[]
 var exit_background_cb=[]
-function isInBackground(){return in_background}function onEnterBackground(fn){enter_background_cb.push(fn)}function onExitBackground(fn){exit_background_cb.push(fn)}var hrnow=window.performance?window.performance.now.bind(window.performance):Date.now.bind(Date)
+function isInBackground(){return in_background}function isInBackgroundOrBlurred(){return in_background||blurred}function onEnterBackground(fn){enter_background_cb.push(fn)}function onExitBackground(fn){exit_background_cb.push(fn)}function dirtyRenderSet(value){dirty_render=value}var hrnow=window.performance&&window.performance.now?window.performance.now.bind(window.performance):Date.now.bind(Date)
 exports.hrnow=hrnow
-var last_tick=0
+var out_of_tick=false
+function isOutOfTick(){return out_of_tick}var last_tick=0
+var last_tick_hr=0
+var frame_limit_time_left=0
+var last_raw_tick_times=[]
+exports.last_raw_tick_times=last_raw_tick_times
+var last_raw_tick_skipped=[]
+exports.last_raw_tick_skipped=last_raw_tick_skipped
+var last_raw_tick_index=0
+exports.last_raw_tick_index=last_raw_tick_index
 function tick(timestamp){profilerFrameStart()
 profilerStart("tick")
 profilerStart("top")
+out_of_tick=false
 frames_requested--
-exports.hrtime=hrtime=hrnow()
-var now=round(hrtime)
+if(render_frames_needed)--render_frames_needed
+if(dirty_render&&!render_frames_needed){resetEffects()
+input.tickInputInactive()
+last_tick_cpu=0
+for(var ii=post_tick.length-1;ii>=0;--ii)if(post_tick[ii].inactive&&!--post_tick[ii].ticks){post_tick[ii].fn()
+ridx(post_tick,ii)}requestFrame()
+profilerStop()
+out_of_tick=true
+return profilerStop("tick")}exports.hrtime=hrtime=hrnow()
+var dt_raw=hrtime-last_tick_hr
+last_tick_hr=hrtime
+var last_raw_tick_index_use=last_raw_tick_index
+last_raw_tick_times[last_raw_tick_index_use]=dt_raw
+last_raw_tick_skipped[last_raw_tick_index_use]=false
+exports.last_raw_tick_index=last_raw_tick_index=(last_raw_tick_index_use+1)%24
+var max_fps=settings.max_fps
+if(max_fps&&max_fps<=settings.use_animation_frame){if((frame_limit_time_left-=dt_raw)>0){requestFrame()
+profilerStop("top")
+out_of_tick=true
+last_raw_tick_skipped[last_raw_tick_index_use]=true
+return profilerStop("tick")}var frame_time=min(MAX_FRAME_TIME,1e3/max_fps-.1)
+if((frame_limit_time_left+=frame_time)<0)frame_limit_time_left=0}var now=round(hrtime)
 if(!last_tick)last_tick=now
 var dt=min(max(this_frame_time_actual=now-last_tick,1),250)
 exports.frame_dt=frame_dt=dt
 last_tick=now
 exports.frame_timestamp=frame_timestamp+=dt
-exports.frame_index=++frame_index
 errorReportSetTimeAccum(frame_timestamp)
 fixNatives(false)
 fpsgraph.history[fpsgraph.index%PERF_HISTORY_SIZE*2+1]=this_frame_time_actual
@@ -1575,28 +2223,33 @@ else{mspf=(now-mspf_update_time)/mspf_frame_count
 mspf_tick=mspf_tick_accum/mspf_frame_count
 mspf_tick_accum=0
 garbage_estimate=profilerGarbageEstimate()/1024
+mem_estimate=profilerMemSize()/1024/1024
 mspf_frame_count=0
 mspf_update_time=now}perfCounterTick(dt)
 effectsTopOfFrame()
 if(document.hidden||document.webkitHidden||no_render){resetEffects()
 input.tickInputInactive()
 last_tick_cpu=0
-for(var ii=post_tick.length-1;ii>=0;--ii)if(post_tick[ii].inactive&&!--post_tick[ii].ticks){post_tick[ii].fn()
-ridx(post_tick,ii)}requestFrame()
+for(var _ii=post_tick.length-1;_ii>=0;--_ii)if(post_tick[_ii].inactive&&!--post_tick[_ii].ticks){post_tick[_ii].fn()
+ridx(post_tick,_ii)}requestFrame()
 profilerStop()
-return profilerStop("tick")}if(in_background){in_background=false
+out_of_tick=true
+return profilerStop("tick")}exports.frame_index=++frame_index
+if(in_background){in_background=false
 callEach(exit_background_cb)}checkResize()
 exports.had_3d_this_frame=had_3d_this_frame=false
-had_render_scale_3d_this_frame=want_render_scale_3d_this_frame=false
+had_render_scale_3d_this_frame=want_render_scale_3d_this_frame=need_depth_this_frame=false
+callEach(pre_tick)
 if(render_width){set3DRenderResolution(render_width,render_height)
 effectsPassAdd()}else{width_3d=max(1,round(width*settings.render_scale))
 height_3d=max(1,round(height*settings.render_scale))
 if(width_3d!==width)want_render_scale_3d_this_frame=true}resetState()
-textures.bind(0,textures.textures.error)
+spriteResetTopOfFrame()
+textureBind(0,textureError())
 fontTick()
 camera2d.tickCamera2D()
 glov_transition.render(dt)
-camera2d.setAspectFixed(game_width,game_height)
+camera2d.setAspectFixedRespectPixelPerfect(game_width,game_height)
 profilerStopStart("mid")
 soundTick(dt)
 input.tickInput()
@@ -1615,13 +2268,13 @@ drawRect(camera2d.x0Real(),game_height,camera2d.x1Real(),camera2d.y1Real(),Z.BOR
 drawRect(camera2d.x0Real(),0,0,game_height,Z.BORDERS,border_color)
 drawRect(game_width,0,camera2d.x1Real(),game_height,Z.BORDERS,border_color)}perf.draw()
 profilerStopStart("app_state")
-for(var _ii=0;_ii<app_tick_functions.length;++_ii)app_tick_functions[_ii](dt)
+for(var _ii2=0;_ii2<app_tick_functions.length;++_ii2)app_tick_functions[_ii2](dt)
 if(app_state)app_state(dt)
 profilerStopStart("bottom")
 spotEndInput()
 glov_particles.tick(dt)
-if(had_3d_this_frame){if(had_render_scale_3d_this_frame)renderScaleFinish()}else if(render_width)framebufferStart({width:render_width,height:render_height,clear:true,clear_all:settings.render_scale_clear,final:effectsIsFinal(),need_depth:false})
-else framebufferStart({width:width,height:height,clear:true,final:effectsIsFinal(),need_depth:false})
+if(had_3d_this_frame){if(had_render_scale_3d_this_frame)renderScaleFinish()}else if(render_width)framebufferStart({width:render_width,height:render_height,clear:true,clear_all:settings.render_scale_clear,final:effectsIsFinal(),need_depth:need_depth_this_frame})
+else framebufferStart({width:width,height:height,clear:true,final:effectsIsFinal(),need_depth:need_depth_this_frame})
 if(pre_sprite_render)callEach(pre_sprite_render,pre_sprite_render=null)
 startSpriteRendering()
 spriteDraw()
@@ -1633,24 +2286,27 @@ var params={clear:true,clear_all:true,clear_color:border_clear_color,viewport:fi
 if(do_viewport_postprocess)effects.applyPixelyExpand(params)
 else effects.applyCopy(params)}input.endFrame()
 resetEffects()
-texturesTick()
-for(var _ii2=post_tick.length-1;_ii2>=0;--_ii2)if(!--post_tick[_ii2].ticks){post_tick[_ii2].fn()
-ridx(post_tick,_ii2)}last_tick_cpu=hrnow()-now
+textureTick()
+for(var _ii3=post_tick.length-1;_ii3>=0;--_ii3)if(!--post_tick[_ii3].ticks){post_tick[_ii3].fn()
+ridx(post_tick,_ii3)}last_tick_cpu=hrnow()-now
 fpsgraph.history[fpsgraph.index%PERF_HISTORY_SIZE*2+0]=last_tick_cpu
 requestFrame(hrnow()-hrtime)
 profilerStop("bottom")
-return profilerStop("tick")}var blurred=false
-function onBlur(evt){blurred=true}function onFocus(evt){blurred=false}function periodiclyRequestFrame(){requestFrame()
+out_of_tick=true
+return profilerStop("tick")}function onBlur(evt){blurred=true}function onFocus(evt){blurred=false}function periodiclyRequestFrame(){requestFrame()
 setTimeout(periodiclyRequestFrame,1e3)
 if(!in_background&&blurred)if(round(hrnow())-last_tick>400){in_background=true
 callEach(enter_background_cb)}}function setPixelyStrict(on){if(on){exports.render_width=render_width=game_width
 exports.render_height=render_height=game_height}else{exports.render_width=render_width=void 0
-exports.render_height=render_height=void 0}}function getViewportPostprocess(){return do_viewport_postprocess}function setViewportPostprocess(viewport_postprocess){do_viewport_postprocess=viewport_postprocess}function setFonts(new_font,title_font){exports.font=font=new_font
-uiSetFonts(new_font,title_font)}function engineStartupFunc(func){startup_funcs.push(func)}function startup(params){fixNatives(true)
+exports.render_height=render_height=void 0}}function setPixelPerfect(pixel_perfect){exports.render_pixel_perfect=render_pixel_perfect=pixel_perfect}function getViewportPostprocess(){return do_viewport_postprocess}function setViewportPostprocess(viewport_postprocess){do_viewport_postprocess=viewport_postprocess}function setFonts(new_font,title_font){exports.font=font=new_font
+uiSetFonts(new_font,title_font)}function engineStartupFunc(func){if(startup_funcs)startup_funcs.push(func)
+else func()}function startup(params){fixNatives(true)
+assert(window.glov_webfs,"Failed to load fsdata.js")
+webFSStartup(window.glov_webfs,urlhash.getURLBase())
 exports.canvas=canvas=document.getElementById("canvas")
 safearea_elem=document.getElementById("safearea")
-glovErrorReportSetCrashCB(function(){setTimeout(requestFrame,1)})
 if(false===params.error_report)glovErrorReportDisableSubmit()
+if(DEBUG)dataErrorQueueEnable(true)
 if(DEBUG&&!window.spector)Object.defineProperty(Number.prototype,"length",{get:function get(){assert(false,"Numbers do not have a length property")
 return}})
 safearea_ignore_bottom=params.safearea_ignore_bottom||false
@@ -1663,7 +2319,7 @@ var context_names=["webgl2","webgl","experimental-webgl"]
 var force_webgl1=defines.NOWEBGL2
 var disable_data=local_storage.getJSON("webgl2_disable")
 if(disable_data&&disable_data.ua===navigator.userAgent&&disable_data.ts>Date.now()-6048e5){console.log("Disabling WebGL2 because a previous run encountered a related error")
-force_webgl1=true}if(DEBUG&&!defines.FORCEWEBGL2){var rc=local_storage.getJSON("run_count",0)+1
+force_webgl1=true}if(DEBUG&&!(defines.FORCEWEBGL2||params.force_webgl2)){var rc=local_storage.getJSON("run_count",0)+1
 local_storage.setJSON("run_count",rc)
 if(rc%2)force_webgl1=true}if(force_webgl1)context_names.splice(0,1)
 var context_opts=[{antialias:antialias,powerPreference:powerPreference,alpha:false},{powerPreference:powerPreference,alpha:false},{antialias:antialias,alpha:false},{alpha:false},{}]
@@ -1674,10 +2330,12 @@ if(window.gl){if("webgl2"===context_names[i])exports.webgl2=webgl2=true
 if(antialias&&!context_opts[jj].antialias){exports.antialias_unavailable=antialias_unavailable=true
 exports.antialias=antialias=false}good=true
 break}}catch(e){}if(!window.requestAnimationFrame)good=false
-if(!good){window.alert("Sorry, but your browser does not support WebGL or does not have it enabled.")
+if(good)if(!shadersStartup({light_diffuse:light_diffuse,light_dir_ws:light_dir_ws,ambient:light_ambient,mat_m:mat_m,mat_mv:mat_mv,mat_vp:mat_vp,mvp:mat_mvp,mv_inv_trans:mat_mv_inv_transform,mat_inv_view:mat_inv_view,view:mat_view,projection:mat_projection}))good=false
+if(!good){window.alert((window.gl?"Error initializing WebGL.\n":"Error initializing WebGL: your browser does not support WebGL or does not have it enabled.\n")+"Try completely closing and re-opening the app or browser.  If the problem persists, try restarting your device.")
 document.getElementById("loading").style.visibility="hidden"
 document.getElementById("nowebgl").style.visibility="visible"
-return false}var nocanvas=document.getElementById("nocanvas")
+return false}glovErrorReportSetCrashCB(function(){setTimeout(requestFrame,1)})
+var nocanvas=document.getElementById("nocanvas")
 if(verify(nocanvas))nocanvas.style.visibility="hidden"
 console.log("Using WebGL"+(webgl2?2:1))
 assert(gl)
@@ -1688,23 +2346,23 @@ exports.ZFAR=ZFAR=params.zfar||1e4
 setPixelyStrict("strict"===params.pixely)
 if(params.viewport_postprocess)do_viewport_postprocess=true
 exports.pixel_aspect=pixel_aspect=params.pixel_aspect||1
+exports.render_pixel_perfect=render_pixel_perfect=params.pixel_perfect||0
 gl.depthFunc(gl.LEQUAL)
 gl.cullFace(gl.BACK)
 gl.clearColor(0,.1,.2,1)
 gl.pixelStorei(gl.UNPACK_ALIGNMENT,1)
-textures.startup()
-geom.startup()
-shaders.startup({light_diffuse:light_diffuse,light_dir_ws:light_dir_ws,ambient:light_ambient,mat_m:mat_m,mat_mv:mat_mv,mat_vp:mat_vp,mvp:mat_mvp,mv_inv_trans:mat_mv_inv_transform,mat_inv_view:mat_inv_view,view:mat_view,projection:mat_projection})
+textureStartup()
+geomStartup()
 addViewSpaceGlobal("light_dir")
 camera2d.startup()
 spriteStartup()
 input.startup(canvas,params)
-models.startup()
+modelStartup()
 window.addEventListener("blur",onBlur,false)
 window.addEventListener("focus",onFocus,false)
 exports.glov_particles=glov_particles=require("./particles.js").create()
-if(is_pixely){textures.defaultFilters(gl.NEAREST,gl.NEAREST)
-settings.runTimeDefault("render_scale_mode",1)}else textures.defaultFilters(gl.LINEAR_MIPMAP_LINEAR,gl.LINEAR)
+if(is_pixely){textureDefaultFilters(gl.NEAREST,gl.NEAREST)
+settings.runTimeDefault("render_scale_mode",1)}else textureDefaultFilters(gl.LINEAR_MIPMAP_LINEAR,gl.LINEAR)
 assert(params.font)
 params.font=exports.font=font=glov_font.create(params.font.info,params.font.texture)
 if(params.title_font)params.title_font=glov_font.create(params.title_font.info,params.title_font.texture)
@@ -1715,21 +2373,98 @@ buildUIStartup()
 shaderDebugUIStartup()
 profilerUIStartup()
 callEach(startup_funcs,startup_funcs=null)
-camera2d.setAspectFixed(game_width,game_height)
+camera2d.setAspectFixedRespectPixelPerfect(game_width,game_height)
 if(params.state)setState(params.state)
 if(void 0!==params.do_borders)do_borders=params.do_borders
 if(void 0!==params.show_fps)settings.show_fps=params.show_fps
+dirty_render=Boolean(params.dirty_render)
 periodiclyRequestFrame()
-return true}function loadsPending(){return textures.load_count+soundLoading()+models.load_count}function loading(){var load_count=loadsPending()
+return true}var custom_loads_pending=0
+function loadPendingDelta(delta){custom_loads_pending+=delta}function loadsPending(){return textureLoadCount()+soundLoading()+modelLoadCount()+custom_loads_pending}var on_load_metrics=[]
+function onLoadMetrics(cb){on_load_metrics.push(cb)}onLoadMetrics(function(obj){console.log(["Load time summary","  "+obj.time_js_load+"ms JS load","  "+obj.time_js_init+"ms JS init","  "+obj.time_resource_load+"ms resource load",obj.time_total+"ms total"].join("\n"))})
+function loadingFinished(){var now=Date.now()
+var time_js_load=window.time_load_onload-window.time_load_start
+var time_js_init=window.time_load_init-window.time_load_onload
+var time_resource_load=now-window.time_load_init
+var time_total=now-window.time_load_start
+callEach(on_load_metrics,null,{time_js_load:time_js_load,time_js_init:time_js_init,time_resource_load:time_resource_load,time_total:time_total})
+profanityStartupLate()}function loading(){var load_count=loadsPending()
 var elem_loading_text=document.getElementById("loading_text")
 if(elem_loading_text)elem_loading_text.innerText="Loading ("+load_count+")..."
+renderNeeded()
 if(!load_count){exports.is_loading=is_loading=false
 exports.app_state=app_state=after_loading_state
-postTick({ticks:2,fn:function fn(){var loading_elem=document.getElementById("loading")
+postTick({ticks:2,fn:function fn(){loadingFinished()
+renderNeeded()
+var loading_elem=document.getElementById("loading")
 if(loading_elem)loading_elem.style.visibility="hidden"}})}}exports.app_state=app_state=loading
 window.glov_engine=exports
 
-},{"../common/perfcounters.js":72,"../common/util.js":74,"../common/verify.js":75,"../common/vmath.js":76,"./bootstrap.js":4,"./browser.js":5,"./build_ui.js":6,"./camera2d.js":7,"./client_config.js":8,"./cmds.js":9,"./effects.js":12,"./error_report.js":15,"./font.js":19,"./framebuffer.js":20,"./geom.js":21,"./input.js":28,"./local_storage.js":31,"./models.js":34,"./particles.js":36,"./perf.js":37,"./profiler.js":41,"./profiler_ui.js":42,"./settings.js":44,"./shader_debug_ui.js":45,"./shaders.js":46,"./sound.js":49,"./spot.js":50,"./sprites.js":51,"./textures.js":55,"./transition.js":56,"./ui.js":57,"./urlhash.js":58,"assert":undefined,"gl-mat3/fromMat4":undefined,"gl-mat4/copy":undefined,"gl-mat4/invert":undefined,"gl-mat4/multiply":undefined,"gl-mat4/perspective":undefined,"gl-mat4/transpose":undefined,"not_worker":undefined}],14:[function(require,module,exports){
+},{"../common/data_error.js":80,"../common/perfcounters.js":87,"../common/util.js":93,"../common/verify.js":94,"../common/vmath.js":95,"./bootstrap.js":6,"./browser.js":7,"./build_ui.js":8,"./camera2d.js":9,"./client_config.js":10,"./cmds.js":11,"./effects.js":14,"./engine_cmds.js":16,"./error_report.js":18,"./font.js":22,"./framebuffer.js":23,"./geom.js":24,"./input.js":31,"./local_storage.js":35,"./models.js":42,"./particles.js":45,"./perf.js":46,"./profiler.js":50,"./profiler_ui.js":51,"./settings.js":53,"./shader_debug_ui.js":54,"./shaders.js":55,"./sound.js":59,"./spot.js":60,"./sprites.js":61,"./textures.js":65,"./transition.js":66,"./ui.js":67,"./urlhash.js":69,"./webfs.js":71,"./words/profanity.js":72,"assert":undefined,"gl-mat3/fromMat4":undefined,"gl-mat4/copy":undefined,"gl-mat4/invert":undefined,"gl-mat4/multiply":undefined,"gl-mat4/perspective":undefined,"gl-mat4/transpose":undefined}],16:[function(require,module,exports){
+"use strict"
+exports.resetSettings=resetSettings
+var _glovCommonCmd_parse=require("../common/cmd_parse")
+var cmd_parse_mod=_glovCommonCmd_parse
+var _glovCommonWscommon=require("../common/wscommon")
+var netDelayGet=_glovCommonWscommon.netDelayGet
+var netDelaySet=_glovCommonWscommon.netDelaySet
+var _cmds=require("./cmds")
+var cmd_parse=_cmds.cmd_parse
+var _engine=require("./engine")
+var engine=_engine
+var _error_report=require("./error_report")
+var errorReportDetailsString=_error_report.errorReportDetailsString
+var _fetch=require("./fetch")
+var fetchDelaySet=_fetch.fetchDelaySet
+var _net=require("./net")
+var netClient=_net.netClient
+var netDisconnected=_net.netDisconnected
+var _shaders=require("./shaders")
+var SEMANTIC=_shaders.SEMANTIC
+var _textures=require("./textures")
+var textureGetAll=_textures.textureGetAll
+var _ui=require("./ui")
+var modalDialog=_ui.modalDialog
+window.cmd=function(str){cmd_parse.handle(null,str,cmd_parse_mod.defaultHandler)}
+function byteFormat(bytes){if(bytes>85e4)return(bytes/1048576).toFixed(2)+"MB"
+if(bytes>850)return(bytes/1024).toFixed(2)+"KB"
+return bytes+"B"}cmd_parse.register({cmd:"texmem",help:"Displays texture memory usage",func:function func(str,resp_func){var all_textures=textureGetAll()
+var keys=Object.keys(all_textures);(keys=keys.filter(function(a){return all_textures[a].gpu_mem>1024})).sort(function(a,b){return all_textures[a].gpu_mem-all_textures[b].gpu_mem})
+resp_func(null,keys.map(function(a){return byteFormat(all_textures[a].gpu_mem)+" "+a}).join("\n"))}})
+cmd_parse.register({cmd:"gpumem",help:"Displays GPU memory usage summary",func:function func(str,resp_func){var gpu_mem=engine.perf_state.gpu_mem
+resp_func(null,byteFormat(gpu_mem.geom)+" Geo\n"+byteFormat(gpu_mem.tex)+" Tex\n"+byteFormat(gpu_mem.geom+gpu_mem.tex)+" Total")}})
+function validDefine(str){if(void 0!==SEMANTIC[str])return false
+return str.match(/^[A-Z][A-Z0-9_]*$/)}cmd_parse.register({cmd:"d",help:"Toggles a debug define",func:function func(str,resp_func){if(!(str=str.toUpperCase().trim()))if(engine.definesClearAll())return void resp_func(null,"All debug defines cleared")
+else return void resp_func(null,"No debug defines active")
+if(!validDefine(str))return void resp_func("Invalid define specified")
+engine.defines[str]=!engine.defines[str]
+resp_func(null,"D="+str+" now "+(engine.defines[str]?"SET":"unset"))
+engine.definesChanged()}})
+cmd_parse.register({cmd:"renderer",help:"Displays current renderer",func:function func(str,resp_func){resp_func(null,"Renderer=WebGL"+(engine.webgl2?2:1))}})
+cmd_parse.registerValue("postprocessing",{label:"Postprocessing",type:cmd_parse.TYPE_INT,help:"Enables/disables postprocessing",get:function get(){return engine.postprocessing?1:0},set:function set(v){return engine.postprocessingAllow(v)}})
+cmd_parse.register({cmd:"net_delay",help:"Sets/shows network delay values",usage:"$HELP\n/net_delay time_base time_rand",func:function func(str,resp_func){if(str){var params=str.split(" ")
+netDelaySet(Number(params[0]),Number(params[1])||0)
+fetchDelaySet(Number(params[0]),Number(params[1])||0)}var cur=netDelayGet()
+resp_func(null,"Client NetDelay: "+cur[0]+"+"+cur[1])}})
+cmd_parse.register({cmd:"error_report_details",help:"Shows details submitted with any error report",access_show:["hidden"],func:function func(str,resp_func){resp_func(null,errorReportDetailsString())}})
+cmd_parse.register({cmd:"disconnect",help:"Forcibly disconnect WebSocket connection (Note: will auto-reconnect)",prefix_usage_with_help:true,usage:"/disconnect [disconnnect_duration [disconnect_delay]]",func:function func(str,resp_func){var _netClient
+var socket=null==(_netClient=netClient())?void 0:_netClient.socket
+if(!socket)return void resp_func("No socket")
+if(netDisconnected())return void resp_func("Not connected")
+var params=str.split(" ").map(Number)
+var disconnect_duration=isFinite(params[0])?params[0]:0
+var disconnect_delay=isFinite(params[1])?params[1]:0
+netClient().retry_extra_delay=disconnect_duration
+if(disconnect_delay)setTimeout(socket.close.bind(socket),disconnect_delay)
+else socket.close()
+resp_func()}})
+function resetSettings(){var results=cmd_parse.resetSettings()
+if(engine.definesClearAll())results.push("Debug defines cleared")
+if(!results.length)return null
+results.push("Please restart the app or reload to page for the new settings to take effect.")
+return results.join("\n")}cmd_parse.register({cmd:"reset_settings",help:"Resets all settings and options to their defaults (Note: requires an app restart)",func:function func(str,resp_func){modalDialog({title:"Reset Settings",text:"This will reset all settings and options to their default values.  Some settings may not take effect until you reload the page or restart the app.  Really continue?",buttons:{yes:function yes(){resp_func(null,resetSettings()||"No stored settings to reset")},no:function no(){resp_func(null,"Settings NOT reset")}}})}})
+
+},{"../common/cmd_parse":78,"../common/wscommon":97,"./cmds":11,"./engine":15,"./error_report":18,"./fetch":20,"./net":43,"./shaders":55,"./textures":65,"./ui":67}],17:[function(require,module,exports){
 "use strict"
 exports.environmentsInit=environmentsInit
 exports.getAPIPath=getAPIPath
@@ -1739,9 +2474,7 @@ exports.getLinkBase=getLinkBase
 exports.setCurrentEnvironment=setCurrentEnvironment
 var assert=require("assert")
 var _client_config=require("./client_config")
-var setAbilityReload=_client_config.setAbilityReload
-var _cmds=require("./cmds")
-var cmd_parse=_cmds.cmd_parse
+var setAbilityReloadUpdates=_client_config.setAbilityReloadUpdates
 var _net=require("./net")
 var netForceDisconnect=_net.netForceDisconnect
 var _urlhash=require("./urlhash")
@@ -1757,8 +2490,8 @@ api_path=current_environment&&current_environment.api_path||link_base+"api/"
 texture_base=link_base.replace("//localhost:","//127.0.0.1:")}applyEnvironment()
 function getCurrentEnvironment(){return current_environment}function setCurrentEnvironment(environment_name){var prev_environment=current_environment
 if((current_environment=environment_name&&all_environments[environment_name]||default_environment)!==prev_environment){applyEnvironment()
-setAbilityReload(false)
-netForceDisconnect()}}function getLinkBase(){return link_base}function getAPIPath(){return api_path}function getExternalTextureURL(url){return url.match(/^.{2,7}:/)?url:""+texture_base+url}function environmentsInit(environments,default_environment_name){all_environments={}
+setAbilityReloadUpdates(false)
+netForceDisconnect()}}function getLinkBase(){return link_base}function getAPIPath(){return api_path}function getExternalTextureURL(url){return url.match(/^.{2,7}:/)?url:""+texture_base+url}function environmentsInit(environments,cmd_parse,default_environment_name){all_environments={}
 var all_names=[]
 for(var i=0,len=environments.length;i<len;i++){var env=environments[i]
 var env_name=env.name
@@ -1767,10 +2500,10 @@ all_environments[env_name]=env
 all_names.push(env_name)}current_environment=default_environment=default_environment_name&&all_environments[default_environment_name]||null
 applyEnvironment()
 if(!all_names.some(function(name){return"default"===name.toLowerCase()}))all_names.push("default")
-cmd_parse.registerValue("environment",{type:cmd_parse.TYPE_STRING,help:"Display or set the current client environment",usage:"Display the current client environment\n  Usage: /environment\nSet the current client environment ("+all_names.join(", ")+")\n  Usage: /environment <environment_name>",label:"Environment",get:function get(){return JSON.stringify(getCurrentEnvironment()||"default",null,2)},set:setCurrentEnvironment,access_show:["sysadmin"]})
-cmd_parse.register({cmd:"env",help:"Alias for /environment",access_show:["sysadmin"],func:function func(str,resp_func){cmd_parse.handle(this,"environment "+str,resp_func)}})}
+if(cmd_parse){cmd_parse.registerValue("environment",{type:cmd_parse.TYPE_STRING,help:"Display or set the current client environment",usage:"Display the current client environment\n  Usage: /environment\nSet the current client environment ("+all_names.join(", ")+")\n  Usage: /environment <environment_name>",label:"Environment",get:function get(){return JSON.stringify(getCurrentEnvironment()||"default",null,2)},set:setCurrentEnvironment,access_show:["sysadmin"]})
+cmd_parse.register({cmd:"env",help:"Alias for /environment",access_show:["sysadmin"],func:function func(str,resp_func){cmd_parse.handle(this,"environment "+str,resp_func)}})}if(document.location.pathname.match(/index\.\d+\.\d+\.\d+\.html$/))setAbilityReloadUpdates(false)}
 
-},{"./client_config":8,"./cmds":9,"./net":35,"./urlhash":58,"assert":undefined}],15:[function(require,module,exports){
+},{"./client_config":10,"./net":43,"./urlhash":69,"assert":undefined}],18:[function(require,module,exports){
 "use strict"
 exports.errorReportClear=errorReportClear
 exports.errorReportDetailsString=errorReportDetailsString
@@ -1782,181 +2515,217 @@ exports.errorReportSetTimeAccum=errorReportSetTimeAccum
 exports.glovErrorReport=glovErrorReport
 exports.glovErrorReportDisableSubmit=glovErrorReportDisableSubmit
 exports.glovErrorReportSetCrashCB=glovErrorReportSetCrashCB
+exports.glovErrorReportTemporaryFilterClear=glovErrorReportTemporaryFilterClear
+exports.glovErrorReportTemporaryFilterSet=glovErrorReportTemporaryFilterSet
 exports.hasCrashed=hasCrashed
+exports.reportingAPIPath=reportingAPIPath
+exports.reportingUseAppAPIPath=reportingUseAppAPIPath
 exports.session_uid=void 0
 var session_uid=""+String(Date.now()).slice(-8)+String(Math.random()).slice(2,8)
 exports.session_uid=session_uid
-var _glovClientEnvironments=require("./environments")
-var getAPIPath=_glovClientEnvironments.getAPIPath
-var _require=require("./fetch.js"),fetch=_require.fetch
-var _require2=require("./client_config.js"),PLATFORM=_require2.PLATFORM
+var error_report_details={}
+var error_report_dynamic_details={}
+var _client_config=require("./client_config")
+var MODE_DEVELOPMENT=_client_config.MODE_DEVELOPMENT
+var platformGetID=_client_config.platformGetID
+var _environments=require("./environments")
+var getAPIPath=_environments.getAPIPath
+var _fetch=require("./fetch")
+var fetch=_fetch.fetch
+var _isbot=require("./isbot")
+var isbot=_isbot.isbot
+var _local_storage=require("./local_storage")
+var getStoragePrefix=_local_storage.getStoragePrefix
+var _locate_asset=require("./locate_asset")
+var unlocatePaths=_locate_asset.unlocatePaths
 var error_report_disabled=false
 function errorReportDisable(){error_report_disabled=true}var ignore_promises=false
-function errorReportIgnoreUncaughtPromises(){ignore_promises=true}var error_report_details={}
-var error_report_dynamic_details={}
-function errorReportSetDetails(key,value){if(value)error_report_details[key]=escape(String(value))
-else delete error_report_details[key]}function errorReportSetDynamicDetails(key,fn){error_report_dynamic_details[key]=fn}errorReportSetDetails("build","1673321608019")
+function errorReportIgnoreUncaughtPromises(){ignore_promises=true}function escape2(str){return escape(str).replace(/\+/,"%2B")}function errorReportSetDetails(key,value){if(value)error_report_details[key]=escape2(String(value))
+else delete error_report_details[key]}function errorReportSetDynamicDetails(key,fn){error_report_dynamic_details[key]=fn}errorReportSetDetails("build","1776878226036")
+errorReportSetDetails("project",getStoragePrefix())
 errorReportSetDetails("sesuid",session_uid)
-errorReportSetDetails("platform",PLATFORM)
+errorReportSetDynamicDetails("platform",platformGetID)
 var time_start=Date.now()
 errorReportSetDetails("time_start",time_start)
-errorReportSetDynamicDetails("url",function(){return escape(location.href)})
+errorReportSetDynamicDetails("url",function(){return location.href})
 errorReportSetDynamicDetails("time_up",function(){return Date.now()-time_start})
 var time_accum=0
 function errorReportSetTimeAccum(new_value){time_accum=new_value}errorReportSetDynamicDetails("time_accum",function(){return time_accum})
 function getDynamicDetail(key){var value=error_report_dynamic_details[key]()
 if(!value&&0!==value)return""
-return"&"+key+"="+value}function errorReportDetailsString(){return"&"+Object.keys(error_report_details).map(function(k){return k+"="+error_report_details[k]}).join("&")+Object.keys(error_report_dynamic_details).map(getDynamicDetail).join("")}var last_error_time=0
+return"&"+key+"="+escape2(value)}function errorReportDetailsString(){return"&"+Object.keys(error_report_details).map(function(k){return k+"="+error_report_details[k]}).join("&")+Object.keys(error_report_dynamic_details).map(getDynamicDetail).join("")}var last_error_time=0
 var crash_idx=0
 function hasCrashed(){return crash_idx>0}function errorReportClear(){last_error_time=0
-window.debugmsg("",true)}var submit_errors=true
+window.debugmsg("",true)}var submit_errors=!isbot()
 function glovErrorReportDisableSubmit(){submit_errors=false}var on_crash_cb=null
-function glovErrorReportSetCrashCB(cb){on_crash_cb=cb}var filtered_errors=/avast_submit|vc_request_action|^Error: Script error\.$|^Error: Script error\.\n  at \(0:0\)$|^Error: null$|^Error: null\n  at null\(null:null\)$|getElementsByTagName\('video'\)|document\.getElementById\("search"\)|change_ua|chrome-extension|setConnectedRobot|Failed to (?:start|stop) the audio device|zaloJSV2|getCookie is not defined|originalPrompt|_AutofillCallbackHandler|sytaxError|bannerNight|privateSpecialRepair|__gCrWeb|\$wrap is not/
-function glovErrorReport(is_fatal,msg,file,line,col){console.error(msg)
+function glovErrorReportSetCrashCB(cb){on_crash_cb=cb}var filter_cb=null
+function glovErrorReportTemporaryFilterSet(cb){filter_cb=cb}function glovErrorReportTemporaryFilterClear(cb){if(!cb||cb===filter_cb)filter_cb=null}var reporting_api_path="http://www.dashingstrike.com/reports/api/"
+if(MODE_DEVELOPMENT||-1!==window.location.host.indexOf("staging"))reporting_api_path="http://staging.dashingstrike.com/reports/api/"
+if(window.location.href.startsWith("https://"))reporting_api_path=reporting_api_path.replace(/^http:/,"https:")
+var use_app_api_path=false
+function reportingUseAppAPIPath(){use_app_api_path=true}function reportingAPIPath(){return use_app_api_path?getAPIPath():reporting_api_path}var filtered_errors=new RegExp(["^Error: Script error\\.$","^Error: Script error\\.\n  at \\(0:0\\)$","^Error: null$","^Error: null\n  at null\\(null:null\\)$","avast_submit","vc_request_action","getElementsByTagName\\('video'\\)",'document\\.getElementById\\("search"\\)',"change_ua","chrome-extension","setConnectedRobot","Failed to (?:start|stop) the audio device","zaloJSV2","getCookie is not defined","originalPrompt","_AutofillCallbackHandler","sytaxError","bannerNight","privateSpecialRepair","__gCrWeb","\\$wrap is not","wsWhitelisted","#darkcss","chrome://userjs","worker-hammerhead","ammerhead-browser","hammerhead","isFeatureBroken","PureRead","uv\\.handler\\.js","dashawn\\.cf","clearTransInfo","firefoxSample","gourmetads","apstag","otBannerSdk\\.js","setOTDataLayer","otSDKStub","otTCF","t\\.gvl","pubads_20","ima3\\.js","fcKernelManager","window\\.setDgResult","TranslateService","bdTransJSBridge","ciuvoSDK","stubScriptElement","chrome://internal","getElementById\\('items'\\)","closeModal","WeixinJSBridge","/prebid","loadGPT","property: websredir","property: googletag","ResizeObserver loop","nav_call_update_item_status","GetHTMLElementsAtPoint","ToolbarStatus","betal\\.org","changeNetWork","CookieDeprecationLabel","googletagmanager","__firefox__","ucbrowser_script","kernel_loader","operation not permitted, watch","play\\(\\) request was interrupted by a call to pause\\(\\)","MutationObserver\\.observe\\.childList"].join("|"))
+function glovErrorReport(is_fatal,msg,file,line,col){msg=unlocatePaths(msg)
+console.error(msg)
 if(on_crash_cb)on_crash_cb()
-if(is_fatal){++crash_idx
+if(filter_cb&&filter_cb(msg))return false
+if(is_fatal){if(msg.match(filtered_errors)||file&&file.match(filtered_errors))return false;++crash_idx
 var now=Date.now()
 var dt=now-last_error_time
 last_error_time=now
 if(error_report_disabled)return false
-if(dt<3e4)return false
-if(msg.match(filtered_errors))return false}var url=getAPIPath()
-url+=(is_fatal?"errorReport":"errorLog")+"?cidx="+crash_idx+"&file="+escape(file)+"&line="+(line||0)+"&col="+(col||0)+"&msg="+escape(msg)+errorReportDetailsString()
-if(submit_errors)fetch({method:"POST",url:url},function(){})
-if(ignore_promises&&msg.match(/Uncaught \(in promise\)/))return false
+if(dt<3e4)return false}var url=reportingAPIPath()
+url+=(is_fatal?"errorReport":"errorLog")+"?cidx="+crash_idx+"&file="+escape2(unlocatePaths(file))+"&line="+(line||0)+"&col="+(col||0)+"&msg="+escape2(msg)+errorReportDetailsString()
+if(submit_errors){fetch({method:"POST",url:url},function(){})
+if(window.gtag)window.gtag("event","exception",{description:msg,fatal:is_fatal})}if(ignore_promises&&msg.match(/Uncaught \(in promise\)/))return false
 return true}window.glov_error_report=glovErrorReport.bind(null,true)
+var early_err=window.glov_error_early
+if(early_err)window.glov_error_report(early_err.msg,early_err.file,early_err.line,early_err.col)
 
-},{"./client_config.js":8,"./environments":14,"./fetch.js":17}],16:[function(require,module,exports){
+},{"./client_config":10,"./environments":17,"./fetch":20,"./isbot":33,"./local_storage":35,"./locate_asset":37}],19:[function(require,module,exports){
 "use strict"
-exports.canFollowOfficialPage=canFollowOfficialPage
-exports.canJoinOfficialGroup=canJoinOfficialGroup
-exports.canShowLiveStreamOverlay=canShowLiveStreamOverlay
-exports.fbGetAppScopedUserId=fbGetAppScopedUserId
-exports.fbGetLoginInfo=fbGetLoginInfo
-exports.fbInstantInit=fbInstantInit
-exports.fbInstantIsReady=fbInstantIsReady
-exports.fbInstantOnPause=fbInstantOnPause
-exports.onready=onready
-var _require=require("./social.js"),registerExternalUserInfoProvider=_require.registerExternalUserInfoProvider
-var urlhash=require("./urlhash.js")
-var local_storage=require("./local_storage.js")
-var _require2=require("../common/enums.js"),ID_PROVIDER_FB_INSTANT=_require2.ID_PROVIDER_FB_INSTANT
-var _require3=require("./error_report.js"),errorReportSetDynamicDetails=_require3.errorReportSetDynamicDetails
-var _require4=require("../common/util.js"),callEach=_require4.callEach,eatPossiblePromise=_require4.eatPossiblePromise
-var onreadycallbacks=[]
-function onready(callback){if(!onreadycallbacks)return void callback()
-onreadycallbacks.push(callback)}function fbInstantIsReady(){return null===onreadycallbacks}var fb_log=[]
-function fbInstantLogEvent(event){FBInstant.logEvent(event)
-fb_log.push(event)
-if(fb_log.length>10)fb_log.splice(0,1)}var hasSubscribedAlready=false
-function initSubscribe(callback,skipShortcut){skipShortcut=skipShortcut||false
-function handleSubscribeToBotComplete(){if(callback)setTimeout(callback,1)}function handleSubscribeToBotFailure(e){if(e&&"USER_INPUT"!==e.code)console.error("handleSubscribeToBotFailure",e)
-fbInstantLogEvent("bot_subscribe_failure")
-handleSubscribeToBotComplete()}function subscribeToBot(){console.warn("Window social trying to bot subscribe")
-if(-1!==FBInstant.getSupportedAPIs().indexOf("player.canSubscribeBotAsync"))FBInstant.player.canSubscribeBotAsync().then(function(canSubscribe){if(canSubscribe){fbInstantLogEvent("bot_subscribe_show")
-FBInstant.player.subscribeBotAsync().then(function(){fbInstantLogEvent("bot_subscribe_success")
-handleSubscribeToBotComplete()},handleSubscribeToBotFailure).catch(handleSubscribeToBotFailure)}else handleSubscribeToBotComplete()}).catch(handleSubscribeToBotFailure)
-else handleSubscribeToBotComplete()}function handleHomescreenComplete(){subscribeToBot()}function handleCreateShortcutFailure(e){console.error("handleCreateShortcutFailure",e)
-fbInstantLogEvent("homescreen_install_failure")
-handleHomescreenComplete()}var hasAddedToHomescreen=local_storage.get("instant.hasInstalledShortcut.v2")
-function createShortcut(){console.warn("Window social trying to create shortcut")
-if(-1!==FBInstant.getSupportedAPIs().indexOf("canCreateShortcutAsync")&&!hasAddedToHomescreen&&!hasSubscribedAlready){hasSubscribedAlready=true
-FBInstant.canCreateShortcutAsync().then(function(canCreateShortcut){if(canCreateShortcut){fbInstantLogEvent("homescreen_install_show")
-FBInstant.createShortcutAsync().then(function(){local_storage.set("instant.hasInstalledShortcut.v2",true)
-fbInstantLogEvent("homescreen_install_success")
-handleHomescreenComplete()},function(){fbInstantLogEvent("homescreen_install_useraborted")
-handleHomescreenComplete()}).catch(handleCreateShortcutFailure)}else handleHomescreenComplete()}).catch(handleCreateShortcutFailure)}else handleHomescreenComplete()}if(skipShortcut)subscribeToBot()
-else createShortcut()}var on_pause=[]
-function fbInstantOnPause(cb){on_pause.push(cb)}var can_follow_official_page=false
-var can_join_official_group=false
-var can_get_live_streams_overlay=false
-function fbGetLoginInfo(cb){onready(function(){window.FBInstant.player.getSignedPlayerInfoAsync().then(function(result){if(cb){cb(null,{signature:result.getSignature(),display_name:window.FBInstant.player.getName()})
-cb=null}}).catch(function(err){if(cb){cb(err)
-cb=null}})})}function mapPlayerToExternalUserInfo(player){return{external_id:player.getID(),name:player.getName(),profile_picture_url:player.getPhoto()}}function fbInstantGetPlayer(cb){onready(function(){var player=window.FBInstant.player
-cb(null,player?mapPlayerToExternalUserInfo(player):void 0)})}function fbInstantGetFriends(cb){onready(function(){window.FBInstant.player.getConnectedPlayersAsync().then(function(players){if(cb)cb(cb=null,null==players?void 0:players.map(mapPlayerToExternalUserInfo))}).catch(function(err){if(cb){var local_cb=cb
-cb=null
-local_cb(err)}})})}function fbGetAppScopedUserId(cb){onready(function(){window.FBInstant.player.getASIDAsync().then(function(asid){if(cb){cb(null,asid)
-cb=null}}).catch(function(err){if(cb){cb(err)
-cb=null}})})}function canFollowOfficialPage(){return window.FBInstant&&can_follow_official_page}function canJoinOfficialGroup(){return window.FBInstant&&can_join_official_group}function canShowLiveStreamOverlay(){return window.FBInstant&&can_get_live_streams_overlay}function fbInstantInit(){if(!window.FBInstant)return
-errorReportSetDynamicDetails("fblog",function(){return fb_log.join(",")})
-registerExternalUserInfoProvider(ID_PROVIDER_FB_INSTANT,fbInstantGetPlayer,fbInstantGetFriends)
-var left=1
-var fake_load_interval=setInterval(function(){left*=.9
-eatPossiblePromise(FBInstant.setLoadingProgress(100-100*left>>0))},100)
-FBInstant.initializeAsync().then(function(){var querystring=(FBInstant.getEntryPointData()||{}).querystring||{}
-for(var x in querystring)urlhash.set(x,querystring[x])
-clearInterval(fake_load_interval)
-FBInstant.startGameAsync().then(function(){callEach(onreadycallbacks,onreadycallbacks=null)
-console.log("Initializing FBInstant")
-initSubscribe(function(){console.log("All done initing FBInstant")
-window.FBInstant.community.canFollowOfficialPageAsync().then(function(state){can_follow_official_page=state}).catch(function(err){console.error(err)})
-window.FBInstant.community.canJoinOfficialGroupAsync().then(function(state){can_join_official_group=state}).catch(function(err){console.error(err)})
-window.FBInstant.community.canGetLiveStreamsAsync().then(function(state){can_get_live_streams_overlay=state}).catch(function(err){console.error(err)})})})}).catch(function(e){console.warn("FBInstant initializeAsync failed",e)})
-FBInstant.onPause(function(){callEach(on_pause)})}
-
-},{"../common/enums.js":68,"../common/util.js":74,"./error_report.js":15,"./local_storage.js":31,"./social.js":48,"./urlhash.js":58}],17:[function(require,module,exports){
-"use strict"
-exports.ERR_CONNECTION=void 0
-exports.fetch=fetch
+exports.externalUsersAutoLoginFallbackProvider=externalUsersAutoLoginFallbackProvider
+exports.externalUsersAutoLoginProvider=externalUsersAutoLoginProvider
+exports.externalUsersCheckEmailVerified=externalUsersCheckEmailVerified
+exports.externalUsersCurrentUser=externalUsersCurrentUser
+exports.externalUsersEmailPassLoginProvider=externalUsersEmailPassLoginProvider
+exports.externalUsersEnabled=externalUsersEnabled
+exports.externalUsersFriends=externalUsersFriends
+exports.externalUsersLogIn=externalUsersLogIn
+exports.externalUsersLogOut=externalUsersLogOut
+exports.externalUsersLoggedIn=externalUsersLoggedIn
+exports.externalUsersPartyId=externalUsersPartyId
+exports.externalUsersSendEmailConfirmation=externalUsersSendEmailConfirmation
+exports.externalUsersSendRecoverEmail=externalUsersSendRecoverEmail
+exports.externalUsersSetup=externalUsersSetup
+exports.externalUsersSetupProvider=externalUsersSetupProvider
 var assert=require("assert")
-var _require=require("../common/util.js"),once=_require.once
+var _glovCommonExternal_users_common=require("../common/external_users_common")
+var ERR_INVALID_PROVIDER=_glovCommonExternal_users_common.ERR_INVALID_PROVIDER
+var ERR_NOT_AVAILABLE=_glovCommonExternal_users_common.ERR_NOT_AVAILABLE
+var ERR_UNAUTHORIZED=_glovCommonExternal_users_common.ERR_UNAUTHORIZED
+var _social=require("./social")
+var registerExternalUserInfoProvider=_social.registerExternalUserInfoProvider
+var invalid_provider={getProvider:function getProvider(){assert(false)},enabled:function enabled(){return false},loggedIn:function loggedIn(){return false},logIn:function logIn(login_options,cb){cb(ERR_INVALID_PROVIDER)},logOut:function logOut(){},getCurrentUser:function getCurrentUser(cb){cb(ERR_INVALID_PROVIDER)}}
+var setup_clients={}
+var setup_auto_login_provider
+var setup_auto_login_fallback_provider
+var setup_email_pass_login_provider
+function getClient(provider){return setup_clients[provider]||invalid_provider}function externalUsersEnabled(provider){var client=setup_clients[provider]
+return client&&client.enabled()||false}function externalUsersLoggedIn(provider){var client=setup_clients[provider]
+return client&&client.loggedIn()||false}function externalUsersAutoLoginProvider(){return setup_auto_login_provider}function externalUsersAutoLoginFallbackProvider(){return setup_auto_login_fallback_provider}function externalUsersEmailPassLoginProvider(){return setup_email_pass_login_provider}function externalUsersSendEmailConfirmation(email,cb){assert(setup_email_pass_login_provider)
+var client=getClient(setup_email_pass_login_provider)
+assert(client.sendActivationEmail)
+client.sendActivationEmail(email,cb)}function externalUsersCheckEmailVerified(cb){assert(setup_email_pass_login_provider)
+var client=getClient(setup_email_pass_login_provider)
+assert(client.checkEmailVerified)
+client.checkEmailVerified(cb)}function externalUsersSendRecoverEmail(email,cb){assert(setup_email_pass_login_provider)
+var client=getClient(setup_email_pass_login_provider)
+assert(client.sendRecoverEmail)
+client.sendRecoverEmail(email,cb)}function externalUsersLogIn(provider,login_options,cb){getClient(provider).logIn(login_options,cb)}function externalUsersLogOut(provider){if(provider)getClient(provider).logOut()
+else for(var key in setup_clients)getClient(key).logOut()}function externalUsersCurrentUser(provider,cb){getClient(provider).getCurrentUser(cb)}function externalUsersFriends(provider,cb){var client=getClient(provider)
+if(client.getFriends)client.getFriends(cb)
+else cb(ERR_NOT_AVAILABLE)}function externalUsersPartyId(provider,cb){var client=getClient(provider)
+if(client.getPartyId)client.getPartyId(cb)
+else cb(ERR_NOT_AVAILABLE)}function externalUsersSetupProvider(client){var provider=client.getProvider()
+setup_clients[provider]=client
+registerExternalUserInfoProvider(provider,function(cb){if(client.loggedIn())client.getCurrentUser(cb)
+else cb(ERR_UNAUTHORIZED)},client.getFriends&&function(cb){if(client.loggedIn())client.getFriends(cb)
+else cb(ERR_UNAUTHORIZED)})}function externalUsersSetup(clients,auto_login_provider,auto_login_fallback_provider,email_pass_login_provider){setup_auto_login_provider=auto_login_provider
+setup_auto_login_fallback_provider=auto_login_fallback_provider
+setup_email_pass_login_provider=email_pass_login_provider
+clients.forEach(externalUsersSetupProvider)}
+
+},{"../common/external_users_common":83,"./social":58,"assert":undefined}],20:[function(require,module,exports){
+"use strict"
+exports.ERR_TIMEOUT=exports.ERR_CONNECTION=void 0
+exports.fetch=fetch
+exports.fetchDelaySet=fetchDelaySet
+var assert=require("assert")
+var random=Math.random,round=Math.round
 var ERR_CONNECTION="ERR_CONNECTION"
 exports.ERR_CONNECTION=ERR_CONNECTION
-var regex_with_host=/\/\/[^/]+\/([^?#]+)/
+var ERR_TIMEOUT="ERR_TIMEOUT"
+exports.ERR_TIMEOUT=ERR_TIMEOUT
+var fetch_delay=0
+var fetch_delay_rand=0
+function fetchDelaySet(delay,rand){fetch_delay=delay
+fetch_delay_rand=rand}var regex_with_host=/\/\/[^/]+\/([^?#]+)/
 var regex_no_host=/([^?#]+)/
 function labelFromURL(url){var m=url.match(regex_with_host)
 if(m)return m[1]
-return(m=url.match(regex_no_host))?m[1]:url}function fetch(params,cb){cb=once(cb)
-var method=params.method,url=params.url,response_type=params.response_type,label=params.label
+return(m=url.match(regex_no_host))?m[1]:url}function fetch(params,cb){var is_done=false
+var timer
+function done(err,response){if(is_done)return
+is_done=true
+if(timer)clearTimeout(timer)
+cb(err,response)}var method=params.method,url=params.url,response_type=params.response_type,label=params.label,body=params.body,_params$headers=params.headers,headers=void 0===_params$headers?{}:_params$headers,timeout=params.timeout
 method=method||"GET"
 assert(url)
 label=label||labelFromURL(url)
 var xhr=new XMLHttpRequest
 xhr.open(method,url,true)
-if(response_type&&"json"!==response_type)xhr.responseType=response_type
+if(timeout){xhr.timeout=timeout
+timer=setTimeout(function(){timer=setTimeout(function(){profilerStart("fetch_timeout:"+label)
+done(ERR_TIMEOUT)
+profilerStop()},timeout)},timeout)}if(response_type&&"json"!==response_type)xhr.responseType=response_type
+for(var header in headers)xhr.setRequestHeader(header,headers[header])
 xhr.onload=function(){profilerStart("fetch_onload:"+label)
-if(200!==xhr.status&&0!==xhr.status){var text
-try{text=xhr.responseText}catch(e){}cb(String(xhr.status),text||"")}else if("json"===response_type){var _text
+if(0!==xhr.status&&xhr.status<200||xhr.status>=300){var text
+if("arraybuffer"!==response_type)try{text=xhr.responseText}catch(e){}done(String(xhr.status),text||"")}else if("json"===response_type){var _text
 var obj
 try{_text=xhr.responseText
 obj=JSON.parse(_text)}catch(e){console.error("Received invalid JSON response from "+url+": "+(_text||"<empty response>"))
-cb(e)
+done(e)
 profilerStop()
-return}cb(null,obj)}else if("arraybuffer"===response_type)if(xhr.response)cb(null,xhr.response)
-else cb("empty response")
-else cb(null,xhr.responseText)
+return}done(null,obj)}else if("arraybuffer"===response_type)if(xhr.response)done(null,xhr.response)
+else done("empty response")
+else done(null,xhr.responseText)
 profilerStop()}
-xhr.onerror=function(){profilerStart("fetch_onerror:"+label)
-cb(ERR_CONNECTION)
+xhr.onabort=xhr.onerror=function(){profilerStart("fetch_onerror:"+label)
+done(ERR_CONNECTION)
 profilerStop()}
-xhr.send(null)}
+xhr.ontimeout=function(){profilerStart("fetch_ontimeout:"+label)
+done(ERR_TIMEOUT)
+profilerStop()}
+if(void 0!==body)if("object"===typeof body){xhr.setRequestHeader("Content-Type","application/json")
+body=JSON.stringify(body)}else body=String(body)
+if(fetch_delay||fetch_delay_rand)setTimeout(xhr.send.bind(xhr,body),fetch_delay+round(random()*fetch_delay_rand))
+else xhr.send(body)}
 
-},{"../common/util.js":74,"assert":undefined}],18:[function(require,module,exports){
+},{"assert":undefined}],21:[function(require,module,exports){
 "use strict"
 exports.filewatchMessageHandler=filewatchMessageHandler
 exports.filewatchOn=filewatchOn
 exports.filewatchStartup=filewatchStartup
 exports.filewatchTriggerChange=filewatchTriggerChange
-var assert=require("assert")
+var _locate_asset=require("./locate_asset")
+var locateAssetDisableHashing=_locate_asset.locateAssetDisableHashing
 var by_ext={}
 var by_match=[]
-function filewatchOn(ext_or_search,cb){if("."===ext_or_search[0]){assert(!by_ext[ext_or_search])
-by_ext[ext_or_search]=cb}else by_match.push([ext_or_search,cb])}var message_cb
+function filewatchOn(ext_or_search,cb){if("."===ext_or_search[0]){by_ext[ext_or_search]=by_ext[ext_or_search]||[]
+by_ext[ext_or_search].push(cb)}else by_match.push([ext_or_search,cb])}var message_cb
 function filewatchMessageHandler(cb){message_cb=cb}function onFileChange(filename){console.log("FileWatch change: "+filename)
+locateAssetDisableHashing()
 var ext_idx=filename.lastIndexOf(".")
 var did_reload=false
 if(-1!==ext_idx){var ext=filename.slice(ext_idx)
-if(by_ext[ext])if(false!==by_ext[ext](filename))did_reload=true}for(var ii=0;ii<by_match.length;++ii)if(filename.match(by_match[ii][0]))if(false!==by_match[ii][1](filename))did_reload=true
+var cbs=by_ext[ext]
+if(cbs)for(var ii=0;ii<cbs.length;++ii)if(false!==cbs[ii](filename))did_reload=true}for(var _ii=0;_ii<by_match.length;++_ii)if(filename.match(by_match[_ii][0]))if(false!==by_match[_ii][1](filename))did_reload=true
 if(message_cb&&did_reload)message_cb("Reloading: "+filename)}function filewatchTriggerChange(filename){onFileChange(filename)}function filewatchStartup(client){client.onMsg("filewatch",onFileChange)}
 
-},{"assert":undefined}],19:[function(require,module,exports){
+},{"./locate_asset":37}],22:[function(require,module,exports){
 "use strict"
-exports.ALIGN=void 0
+exports.EPSILON=exports.ALIGN=void 0
 exports.fontCreate=fontCreate
+exports.fontRotate=fontRotate
 exports.fontSetDefaultSize=fontSetDefaultSize
+exports.fontSetReplacementChars=fontSetReplacementChars
 exports.fontStyle=fontStyle
 exports.fontStyleAlpha=fontStyleAlpha
+exports.fontStyleBold=fontStyleBold
 exports.fontStyleColored=fontStyleColored
+exports.fontStyleHash=fontStyleHash
+exports.fontStyleOutlined=fontStyleOutlined
 exports.fontTick=fontTick
 exports.glov_font_default_style=exports.font_shaders=void 0
 exports.intColorFromVec4Color=intColorFromVec4Color
@@ -1965,21 +2734,24 @@ exports.style=fontStyle
 exports.styleColored=fontStyleColored
 exports.styleAlpha=fontStyleAlpha
 exports.create=fontCreate
+var ALIGN={HLEFT:0,HCENTER:1,HRIGHT:2,HMASK:3,VTOP:0,VCENTER:4,VBOTTOM:8,VMASK:12,HFIT:16,HWRAP:32,HCENTERFIT:17,HRIGHTFIT:18,HVCENTER:5,HVCENTERFIT:21}
+exports.ALIGN=ALIGN
+var EPSILON=1e-10
+exports.EPSILON=EPSILON
 var assert=require("assert")
 var camera2d=require("./camera2d.js")
 var _require=require("./camera2d.js"),transformX=_require.transformX,transformY=_require.transformY
 var engine=require("./engine.js")
 var geom=require("./geom.js")
 var _require2=require("./localization.js"),getStringFromLocalizable=_require2.getStringFromLocalizable
-var max=Math.max,min=Math.min,round=Math.round
-var shaders=require("./shaders.js")
+var ceil=Math.ceil,cos=Math.cos,floor=Math.floor,sin=Math.sin,max=Math.max,min=Math.min,round=Math.round,sqrt=Math.sqrt
+var _require3=require("./shaders.js"),shaderCreate=_require3.shaderCreate,shadersPrelink=_require3.shadersPrelink
 var sprites=require("./sprites.js")
 var BLEND_ALPHA=sprites.BLEND_ALPHA,BLEND_PREMULALPHA=sprites.BLEND_PREMULALPHA,spriteChainedStart=sprites.spriteChainedStart,spriteChainedStop=sprites.spriteChainedStop,spriteDataAlloc=sprites.spriteDataAlloc
-var textures=require("./textures.js")
-var _require3=require("../common/util.js"),clamp=_require3.clamp
-var _require4=require("../common/vmath.js"),v3scale=_require4.v3scale,v3set=_require4.v3set,vec4=_require4.vec4,v4copy=_require4.v4copy,v4scale=_require4.v4scale
-var ALIGN={HLEFT:0,HCENTER:1,HRIGHT:2,HMASK:3,VTOP:0,VCENTER:4,VBOTTOM:8,VMASK:12,HFIT:16,HWRAP:32,HCENTERFIT:17,HRIGHTFIT:18,HVCENTER:5,HVCENTERFIT:21}
-var ALIGN_NEEDS_WIDTH=(exports.ALIGN=ALIGN).HMASK|ALIGN.HFIT
+var _require4=require("./textures.js"),textureLoad=_require4.textureLoad
+var _require5=require("../common/util.js"),clamp=_require5.clamp
+var _require6=require("../common/vmath.js"),v3scale=_require6.v3scale,v3set=_require6.v3set,vec4=_require6.vec4,v4copy=_require6.v4copy,v4scale=_require6.v4scale
+var ALIGN_NEEDS_WIDTH=ALIGN.HMASK|ALIGN.HFIT
 function GlovFontStyle(){this.color_vec4=new Float32Array([1,1,1,1])}GlovFontStyle.prototype.outline_width=0
 GlovFontStyle.prototype.outline_color=0
 GlovFontStyle.prototype.glow_xoffs=0
@@ -1988,12 +2760,14 @@ GlovFontStyle.prototype.glow_inner=0
 GlovFontStyle.prototype.glow_outer=0
 GlovFontStyle.prototype.glow_color=0
 GlovFontStyle.prototype.color=4294967295
+GlovFontStyle.prototype.hash=0
 var font_shaders={}
 exports.font_shaders=font_shaders
 function intColorFromVec4Color(v){return(255*v[0]|0)<<24|(255*v[1]|0)<<16|(255*v[2]|0)<<8|255*v[3]|0}function vec4ColorFromIntColor(v,c){v[0]=(c>>24&255)/255
 v[1]=(c>>16&255)/255
 v[2]=(c>>8&255)/255
-v[3]=(255&c)/255}function vec4ColorFromIntColorPreMultiplied(v,c){var a=v[3]=(255&c)/255
+v[3]=(255&c)/255
+return v}function vec4ColorFromIntColorPreMultiplied(v,c){var a=v[3]=(255&c)/255
 v[0]=(c>>24&255)*(a*=1/255)
 v[1]=(c>>16&255)*a
 v[2]=(c>>8&255)*a}var glov_font_default_style=new GlovFontStyle
@@ -2004,7 +2778,11 @@ if(font_style)for(var f in font_style)ret[f]=font_style[f]
 for(var _f in fields)ret[_f]=fields[_f]
 ret.color_vec4=color_vec4
 vec4ColorFromIntColor(ret.color_vec4,ret.color)
-return ret}function fontStyleColored(font_style,color){return fontStyle(font_style,{color:color})}function colorAlpha(color,alpha){return 4294967040&color|(alpha=clamp(round((255&color)*alpha),0,255))}function fontStyleAlpha(font_style,alpha){return fontStyle(font_style,{color:colorAlpha((font_style||glov_font_default_style).color,alpha),outline_color:colorAlpha((font_style||glov_font_default_style).outline_color,alpha),glow_color:colorAlpha((font_style||glov_font_default_style).glow_color,alpha)})}var tech_params=null
+ret.hash=0
+return ret}function fontStyleColored(font_style,color){return fontStyle(font_style,{color:color})}function fontStyleOutlined(font_style,outline_width,outline_color){return fontStyle(font_style,{outline_width:outline_width,outline_color:outline_color=outline_color||(font_style||glov_font_default_style).color})}function fontStyleBold(font_style,outline_width){var outline_color=(font_style||glov_font_default_style).color
+if(font_style.outline_width){var glow_w=outline_width+font_style.outline_width
+return fontStyle(font_style,{outline_width:outline_width,outline_color:outline_color,glow_xoffs:0,glow_yoffs:0,glow_color:font_style.outline_color,glow_inner:glow_w-.25,glow_outer:glow_w+.25})}else return fontStyle(font_style,{outline_width:outline_width,outline_color:outline_color})}function colorAlpha(color,alpha){return 4294967040&color|(alpha=clamp(round((255&color)*alpha),0,255))}function fontStyleAlpha(font_style,alpha){return fontStyle(font_style,{color:colorAlpha((font_style||glov_font_default_style).color,alpha),outline_color:colorAlpha((font_style||glov_font_default_style).outline_color,alpha),glow_color:colorAlpha((font_style||glov_font_default_style).glow_color,alpha)})}function fontStyleHash(style){if(!style.hash)style.hash=style.color+1007*style.outline_width+3*style.outline_color+10007*style.glow_xoffs+100007*style.glow_yoffs+1000007*style.glow_inner+10000007*style.glow_outer+7*style.glow_color
+return style.hash}var tech_params=null
 var tech_params_dirty=false
 var tech_params_cache=[]
 var tech_params_cache_idx=0
@@ -2041,9 +2819,10 @@ if(tech_params_cache_idx===ii)tech_params_cache_idx=(tech_params_cache_idx+1)%4;
 return tech_params}tech_params_cache[tech_params_cache_idx]=tech_params
 tech_params_cache_idx=(tech_params_cache_idx+1)%4
 return tech_params}function GlovFont(font_info,texture_name){assert(0!==font_info.font_size)
-this.texture=textures.load({url:"img/"+texture_name+".png",filter_min:font_info.noFilter?gl.NEAREST:gl.LINEAR,filter_mag:font_info.noFilter?gl.NEAREST:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE})
+this.texture=textureLoad({url:"img/"+texture_name+".png",filter_min:font_info.noFilter?gl.NEAREST:gl.LINEAR,filter_mag:font_info.noFilter?gl.NEAREST:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE})
 this.textures=[this.texture]
 this.integral=Boolean(font_info.noFilter)
+this.hard_cutoff=this.integral
 this.font_info=font_info
 this.font_size=font_info.font_size
 this.inv_font_size=1/font_info.font_size
@@ -2053,7 +2832,7 @@ this.tex_h=font_info.imageH
 for(var ii=0;ii<font_info.char_infos.length;++ii){var char_info=font_info.char_infos[ii]
 char_info.scale=1/(char_info.sc||1)
 char_info.w=char_info.w||0}this.char_infos=[]
-for(var _ii=0;_ii<font_info.char_infos.length;++_ii){var _char_info=font_info.char_infos[_ii];(this.char_infos[font_info.char_infos[_ii].c]=_char_info).xpad=_char_info.xpad||0
+for(var _ii=0;_ii<font_info.char_infos.length;++_ii){var _char_info=font_info.char_infos[_ii];(this.char_infos[_char_info.c]=_char_info).xpad=_char_info.xpad||0
 _char_info.yoffs=_char_info.yoffs||0
 _char_info.w_pad_scale=(_char_info.w+_char_info.xpad)*_char_info.scale}this.replacement_character=this.infoFromChar(65533)
 if(!this.replacement_character)this.replacement_character=this.infoFromChar(63)
@@ -2076,7 +2855,7 @@ profilerStop("drawSizedAligned")
 return drawn_height}var x_size=size
 var y_size=size
 if(align&ALIGN_NEEDS_WIDTH){var width=this.getStringWidth(style,x_size,text)
-if(align&ALIGN.HFIT&&width>w){var scale=w/width
+if(align&ALIGN.HFIT&&width>w+EPSILON){var scale=w/width
 x_size*=scale
 width=w
 if(scale<.5){if((align&ALIGN.VMASK)!==ALIGN.VCENTER&&(align&ALIGN.VMASK)!==ALIGN.VBOTTOM)y+=.5*(y_size-y_size*scale*2)
@@ -2098,6 +2877,17 @@ dsp.text=text
 var drawn_width=this.drawScaled()
 profilerStop("drawSizedAligned")
 return drawn_width}
+function endsWord(char_code){return 32===char_code||0===char_code||10===char_code||9===char_code}function splitLines(text,num_lines){var ret=[]
+for(var ii=num_lines-1;ii>0;--ii){var lines_left=ii+1
+var desired_len=floor(text.length/lines_left)
+var max_len=ceil(1.5*desired_len)
+var split_point=text.length-desired_len
+for(var idx=split_point;idx>=text.length-max_len;--idx){var c=text.charCodeAt(idx)
+if(endsWord(c)||45===c){split_point=idx+1
+break}}ret[ii]=text.slice(split_point)
+text=text.slice(0,split_point)}ret[0]=text
+return ret}var tile_state=0
+var chained_outside=false
 GlovFont.prototype.drawSizedAlignedWrapped=function(style,x,y,z,indent,size,align,w,h,text){text=getStringFromLocalizable(text)
 assert(w>0)
 assert("string"!==typeof h)
@@ -2105,37 +2895,78 @@ var lines=[]
 var line_xoffs=[]
 lines.length=this.wrapLines(style,w,indent,size,text,align,function(xoffs,linenum,line){line_xoffs[linenum]=xoffs
 lines[linenum]=line})
-var yoffs=0
+if(align&ALIGN.HFIT&&h)if(lines.length*size>h){var by_linebreak=text.split("\n")
+if(by_linebreak.length>1){size=min(size,h/by_linebreak.length)
+lines=by_linebreak
+for(var ii=0;ii<lines.length;++ii)line_xoffs[ii]=0===ii?0:indent}else{var text_width=0
+for(var _ii2=0;_ii2<by_linebreak.length;++_ii2)text_width=max(text_width,this.getStringWidth(style,size,by_linebreak[_ii2]))
+var text_area=text_width*size*by_linebreak.length
+var required_scale=min(sqrt(min(1,w*h/text_area)),h/size/by_linebreak.length)
+var scaled_max_lines=max(1,floor(h/(size*=required_scale)))
+line_xoffs=[];(lines=[]).length=this.wrapLines(style,w,indent,size,text,align,function(xoffs,linenum,line){line_xoffs[linenum]=xoffs
+lines[linenum]=line})
+if(lines.length>scaled_max_lines){lines=splitLines(text,scaled_max_lines)
+for(var _ii3=0;_ii3<lines.length;++_ii3)line_xoffs[_ii3]=0===_ii3?0:indent}}}var yoffs=0
 var height=size*lines.length
-switch(align&ALIGN.VMASK){case ALIGN.VCENTER:yoffs=(h-height)/2
+var valign=align&ALIGN.VMASK
+switch(valign){case ALIGN.VCENTER:yoffs=(h-height)/2
 if(this.integral)yoffs|=0
 break
 case ALIGN.VBOTTOM:yoffs=h-height}align&=~ALIGN.VMASK
-for(var ii=0;ii<lines.length;++ii){var line=lines[ii]
-if(line&&line.trim())this.drawSizedAligned(style,x+line_xoffs[ii],y+yoffs,z,size,align,w-line_xoffs[ii],0,line)
-yoffs+=size}return yoffs}
+chained_outside=true
+tile_state=0
+spriteChainedStart()
+for(var _ii4=0;_ii4<lines.length;++_ii4){var line=lines[_ii4]
+if(line&&line.trim())this.drawSizedAligned(style,x+line_xoffs[_ii4],y+yoffs,z,size,align,w-line_xoffs[_ii4],0,line)
+yoffs+=size}chained_outside=false
+spriteChainedStop()
+return valign===ALIGN.VBOTTOM?height:yoffs}
 GlovFont.prototype.drawSizedColorWrapped=function(style,x,y,z,w,indent,size,color,text){return this.drawScaledWrapped(fontStyleColored(style,color),x,y,z,w,indent,size*this.inv_font_size,size*this.inv_font_size,text)}
 GlovFont.prototype.drawSizedWrapped=function(style,x,y,z,w,indent,size,text){return this.drawScaledWrapped(style,x,y,z,w,indent,size*this.inv_font_size,size*this.inv_font_size,text)}
 var default_size=24
-function fontSetDefaultSize(h){default_size=h}GlovFont.prototype.draw=function(param){var style=param.style,color=param.color,alpha=param.alpha,x=param.x,y=param.y,z=param.z,size=param.size,w=param.w,h=param.h,align=param.align,text=param.text,indent=param.indent
+function fontSetDefaultSize(h){default_size=h}var font_rot=0
+var font_rot_cos=0
+var font_rot_sin=0
+var font_rot_origin_x=0
+var font_rot_origin_y=0
+function fontRotate(rot,rot_origin_x,rot_origin_y){font_rot_cos=cos(font_rot=rot)
+font_rot_sin=sin(rot)
+font_rot_origin_x=transformX(rot_origin_x)
+font_rot_origin_y=transformY(rot_origin_y)}GlovFont.prototype.draw=function(param){var style=param.style,color=param.color,alpha=param.alpha,x=param.x,y=param.y,z=param.z,size=param.size,w=param.w,h=param.h,align=param.align,text=param.text,indent=param.indent,rot=param.rot
 if(color)style=fontStyleColored(style,color)
 if(void 0!==alpha)style=fontStyleAlpha(style,alpha)
 indent=indent||0
 size=size||default_size
 z=z||Z.UI
-if(align){if(align&ALIGN.HWRAP)return this.drawSizedAlignedWrapped(style,x,y,z,indent,size,align&~ALIGN.HWRAP,w,h,text)
-return this.drawSizedAligned(style,x,y,z,size,align,w||0,h||0,text)}else return this.drawSized(style,x,y,z,size,text)}
+if(rot)fontRotate(rot,x,y)
+var ret
+if(align)if(align&ALIGN.HWRAP)ret=this.drawSizedAlignedWrapped(style,x,y,z,indent,size,align&~ALIGN.HWRAP,w,h,text)
+else ret=this.drawSizedAligned(style,x,y,z,size,align,w||0,h||0,text)
+else ret=this.drawSized(style,x,y,z,size,text)
+if(rot)fontRotate(0)
+return ret}
 GlovFont.prototype.wrapLines=function(style,w,indent,size,text,align,line_cb){assert("number"!==typeof style)
 this.applyStyle(style)
 return this.wrapLinesScaled(w,indent,size*this.inv_font_size,text,align,line_cb)}
 GlovFont.prototype.numLines=function(style,w,indent,size,text){return this.wrapLines(style,w,indent,size,text,0)}
 GlovFont.prototype.dims=function(style,w,indent,size,text){var max_x1=0
 function lineCallback(ignored1,ignored2,line,x1){max_x1=max(max_x1,x1)}var numlines=this.wrapLines(style,w,indent,size,text,0,lineCallback)
-return{w:max_x1,h:numlines*size}}
+return{w:max_x1,h:numlines*size,numlines:numlines}}
+var unicode_replacement_chars
 GlovFont.prototype.infoFromChar=function(c){var ret=this.char_infos[c]
 if(ret)return ret
 if(c>=9&&c<=13)return this.whitespace_character
-return this.replacement_character}
+if(unicode_replacement_chars){var ascii=unicode_replacement_chars[c]
+if(ascii)if(ret=this.char_infos[ascii])return ret}return this.replacement_character}
+var strip_opts_default={tab:true,newline:true}
+GlovFont.prototype.stripUnprintable=function(text,opts){opts=opts||strip_opts_default
+for(var ii=(text=getStringFromLocalizable(text)).length-1;ii>=0;--ii){var code=text.charCodeAt(ii)
+var strip=false
+if(10===code)strip=opts.newline?" ":false
+else if(9===code)strip=opts.tab?" ":false
+else if(code>=10&&code<=13)strip=" "
+else if(!this.char_infos[code])strip="?"
+if(strip)text=""+text.slice(0,ii)+strip+text.slice(ii+1)}return text}
 GlovFont.prototype.getCharacterWidth=function(style,x_size,c){assert.equal(typeof c,"number")
 this.applyStyle(style)
 var char_info=this.infoFromChar(c)
@@ -2151,12 +2982,24 @@ var x_advance=this.calcXAdvance(xsc)
 for(var ii=0;ii<text.length;++ii){var c=text.charCodeAt(ii)
 var char_info=this.infoFromChar(c)
 if(char_info)ret+=char_info.w_pad_scale*xsc+x_advance}return ret}
+GlovFont.prototype.truncateToWidth=function(style,x_size,max_width,text){text=getStringFromLocalizable(text)
+this.applyStyle(style)
+var ret=0
+var xsc=x_size*this.inv_font_size
+var x_advance=this.calcXAdvance(xsc)
+var max_without_elipsis=max_width-this.getStringWidth(style,x_size,"...")
+var truncate_ret=0
+for(var ii=0;ii<text.length;++ii){var c=text.charCodeAt(ii)
+var char_info=this.infoFromChar(c)
+if(char_info){ret+=char_info.w_pad_scale*xsc+x_advance
+if(!truncate_ret&&ret>max_without_elipsis)truncate_ret=ii
+if(ret>max_width)return text.slice(0,truncate_ret)+"..."}}return text}
 GlovFont.prototype.getSpaceSize=function(xsc){var space_info=this.infoFromChar(32)
 return(space_info?(space_info.w+space_info.xpad)*space_info.scale:this.font_size)*xsc}
-function endsWord(char_code){return 32===char_code||0===char_code||10===char_code||9===char_code}GlovFont.prototype.wrapLinesScaled=function(w,indent,xsc,text,align,line_cb){text=getStringFromLocalizable(text)
+GlovFont.prototype.wrapLinesScaled=function(w,indent,xsc,text,align,line_cb){text=getStringFromLocalizable(text)
 assert("function"!==typeof align)
 var len=text.length
-var max_word_w=w-indent
+var max_word_w=w-indent+EPSILON
 var hard_wrap_mode_fit=align&ALIGN.HFIT
 var x_advance=this.calcXAdvance(xsc)
 var space_size=this.getSpaceSize(xsc)+x_advance
@@ -2176,25 +3019,26 @@ linenum++
 line_start=word_start
 line_end=line_x1=-1
 word_x0=line_x0=indent}do{var c=idx<len?text.charCodeAt(idx)||65533:0
-if(endsWord(c))if(word_start!==idx){var need_line_flush=false
-if(word_x0+word_w<=w);else if(word_w>max_word_w&&!hard_wrap_mode_fit){need_line_flush=true
+if(endsWord(c)){if(word_start!==idx){var need_line_flush=false
+if(word_x0+word_w<=w+EPSILON);else if(word_w>max_word_w&&!hard_wrap_mode_fit){need_line_flush=true
 if(-1===word_slice){if(-1!==line_end)flushLine()
 idx=line_start+1
 word_w=max_word_w}else{idx=word_slice
-word_w=word_slice_w}}else if(-1!==line_end)flushLine()
+word_w=word_slice_w}}else if(-1!==line_end||indent<0&&line_x0!==indent)flushLine()
 word_x0=line_x1=word_x0+word_w
 word_w=0
 word_start=line_end=idx
 word_slice=-1
 if(need_line_flush)flushLine()
-continue}else{word_start=idx+1
+continue}else if(c){word_start=idx+1
 word_x0+=space_size
-if(10===c)flushLine()}else{var char_info=this.infoFromChar(c)
+if(10===c)flushLine()}}else{var char_info=this.infoFromChar(c)
 if(char_info){var char_w=char_info.w_pad_scale*xsc+x_advance
-if(word_x0+(word_w+=char_w)<=w){word_slice=idx+1
+if(word_x0+(word_w+=char_w)<=w+EPSILON){word_slice=idx+1
 word_slice_w=word_w}}}++idx}while(idx<=len)
-if(-1!==line_end)flushLine()
-return linenum}
+if(-1!==line_end){line_x1=word_x0
+flushLine()}else if(word_x0!==line_x1){line_x1=word_x0
+if(line_cb)line_cb(line_x0,linenum,"",line_x1)}return linenum}
 GlovFont.prototype.drawScaledWrapped=function(style,x,y,z,w,indent,xsc,ysc,text){var _this=this
 if(null===text||void 0===text)text="(null)"
 assert(w>0)
@@ -2236,26 +3080,34 @@ var avg_scale_font=.5*(xsc+ysc)
 var avg_scale_combined=.5*(xsc*camera2d.data[4]+ysc*camera2d.data[5])
 var x_advance=this.calcXAdvance(xsc)
 var font_texel_scale=this.font_size/32
-var tile_state=0
+if(!chained_outside)tile_state=0
 var applied_style=this.applied_style
 var delta_per_source_pixel=.5/font_info.spread
 var delta_per_dest_pixel=delta_per_source_pixel/avg_scale_combined
 var value=v3set(temp_vec4_param0,1/delta_per_dest_pixel,-.5/delta_per_dest_pixel+.5,min(0,-.5/delta_per_dest_pixel+.5+applied_style.outline_width*font_texel_scale*avg_scale_combined))
 var padding1=max(0,applied_style.outline_width*font_texel_scale*avg_scale_font)
 var outer_scaled=applied_style.glow_outer*font_texel_scale
-padding4[0]=max(outer_scaled*xsc-applied_style.glow_xoffs*font_texel_scale*xsc,padding1)
-padding4[2]=max(outer_scaled*xsc+applied_style.glow_xoffs*font_texel_scale*xsc,padding1)
-padding4[1]=max(outer_scaled*ysc-applied_style.glow_yoffs*font_texel_scale*ysc,padding1)
-padding4[3]=max(outer_scaled*ysc+applied_style.glow_yoffs*font_texel_scale*ysc,padding1)
-techParamsSet("param0",value)
+var glow_xoffs=applied_style.glow_xoffs*font_texel_scale*xsc
+var glow_yoffs=applied_style.glow_yoffs*font_texel_scale*ysc
+padding4[0]=max(outer_scaled*xsc-glow_xoffs,padding1)
+padding4[2]=max(outer_scaled*xsc+glow_xoffs,padding1)
+padding4[1]=max(outer_scaled*ysc-glow_yoffs,padding1)
+padding4[3]=max(outer_scaled*ysc+glow_yoffs,padding1)
+if(this.hard_cutoff){value[0]*=512
+value[1]=512*value[1]-255.5
+value[2]=512*value[2]-255.5
+padding4[0]+=.5
+padding4[1]+=.5
+padding4[2]+=.5
+padding4[3]+=.5}techParamsSet("param0",value)
 var value2=temp_vec4_glow_params
 if(applied_style.glow_outer){value2[2]=1/((applied_style.glow_outer-applied_style.glow_inner)*delta_per_source_pixel*font_texel_scale)
-value2[3]=min(0,-(.5-applied_style.glow_outer*delta_per_source_pixel*font_texel_scale)/((applied_style.glow_outer-applied_style.glow_inner)*delta_per_source_pixel*font_texel_scale))}else value2[2]=value[3]=0
+value2[3]=min(0,-(.5-applied_style.glow_outer*delta_per_source_pixel*font_texel_scale)/((applied_style.glow_outer-applied_style.glow_inner)*delta_per_source_pixel*font_texel_scale))}else value2[2]=value2[3]=0
 v4scale(padding_in_font_space,padding4,1/avg_scale_font)
 for(var ii=0;ii<4;++ii)if(padding_in_font_space[ii]>font_info.spread){var sc=font_info.spread/padding_in_font_space[ii]
 padding4[ii]*=sc
 padding_in_font_space[ii]*=sc}var z_advance=applied_style.glow_xoffs<0?-1e-4:0
-if(!z_advance)spriteChainedStart()
+if(!z_advance){if(!chained_outside)spriteChainedStart()}else if(chained_outside)spriteChainedStop()
 var has_glow_offs=applied_style.glow_xoffs||applied_style.glow_yoffs
 if(!has_glow_offs){value2[0]=value2[1]=0
 techParamsSet("glow_params",value2)
@@ -2264,6 +3116,10 @@ var rel_y_scale=ysc/avg_scale_font
 var sort_y=transformY(y)
 var color=applied_style.color_vec4
 var shader=this.shader
+var turx
+var tury
+var tllx
+var tlly
 for(var i=0;i<len;i++){var c=text.charCodeAt(i)
 if(9===c){var tabsize=xsc*this.font_size*4
 x=(1+((x-_x)/tabsize|0))*tabsize+_x}else{var char_info=this.infoFromChar(c)
@@ -2285,51 +3141,65 @@ var v1=(char_info.y0+char_info.h+padding_in_font_space[3]*pad_scale)/tile_height
 var w=char_info.w*xsc2+(padding4[0]+padding4[2])*rel_x_scale
 var h=char_info.h*ysc2+(padding4[1]+padding4[3])*rel_y_scale
 var xx=x-rel_x_scale*padding4[0]
-var yy=y-rel_y_scale*padding4[2]+char_info.yoffs*ysc2
+var yy=y-rel_y_scale*padding4[1]+char_info.yoffs*ysc2
 var y1=yy+h
 var x1=xx+w
 var zz=z+z_advance*i
-var tx0=transformX(xx)
-var ty0=transformY(yy)
-var tx1=transformX(x1)
-var ty1=transformY(y1)
-var elem=spriteDataAlloc(texs,shader,tech_params,blend_mode)
+var tulx=transformX(xx)
+var tuly=transformY(yy)
+var tlrx=transformX(x1)
+var tlry=transformY(y1)
+if(font_rot){var tw=tlrx-tulx
+var th=tlry-tuly
+var relxoffs=tulx-font_rot_origin_x
+var relyoffs=tuly-font_rot_origin_y
+var cosw=font_rot_cos*tw
+var sinw=font_rot_sin*tw
+var sinh=font_rot_sin*th
+var cosh=font_rot_cos*th
+tllx=(tulx=font_rot_origin_x+relxoffs*font_rot_cos-relyoffs*font_rot_sin)-sinh
+tlly=(tuly=font_rot_origin_y+relxoffs*font_rot_sin+relyoffs*font_rot_cos)+cosh
+tlrx=(turx=tulx+cosw)-sinh
+tlry=(tury=tuly+sinw)+cosh}else{turx=tlrx
+tury=tuly
+tllx=tulx
+tlly=tlry}var elem=spriteDataAlloc(texs,shader,tech_params,blend_mode)
 var data=elem.data
-data[0]=tx0
-data[1]=ty0
+data[0]=tulx
+data[1]=tuly
 data[2]=color[0]
 data[3]=color[1]
 data[4]=color[2]
 data[5]=color[3]
 data[6]=u0
 data[7]=v0
-data[8]=tx0
-data[9]=ty1
+data[8]=tllx
+data[9]=tlly
 data[10]=color[0]
 data[11]=color[1]
 data[12]=color[2]
 data[13]=color[3]
 data[14]=u0
 data[15]=v1
-data[16]=tx1
-data[17]=ty1
+data[16]=tlrx
+data[17]=tlry
 data[18]=color[0]
 data[19]=color[1]
 data[20]=color[2]
 data[21]=color[3]
 data[22]=u1
 data[23]=v1
-data[24]=tx1
-data[25]=ty0
+data[24]=turx
+data[25]=tury
 data[26]=color[0]
 data[27]=color[1]
 data[28]=color[2]
 data[29]=color[3]
 data[30]=u1
 data[31]=v0
-elem.x=tx0
+elem.x=tulx
 elem.y=sort_y
-elem.queue(zz)}x+=(char_info.w+char_info.xpad)*xsc2+x_advance}}}if(!z_advance)spriteChainedStop()
+elem.queue(zz)}x+=(char_info.w+char_info.xpad)*xsc2+x_advance}}}if(!z_advance){if(!chained_outside)spriteChainedStop()}else if(chained_outside)spriteChainedStart()
 profilerStop("drawScaled")
 return x-_x}
 GlovFont.prototype.determineShader=function(){var outline=this.applied_style.outline_width&&255&this.applied_style.outline_color
@@ -2361,21 +3231,22 @@ GlovFont.prototype.style=fontStyle
 GlovFont.prototype.styleAlpha=fontStyleAlpha
 GlovFont.prototype.styleColored=fontStyleColored
 function fontShadersInit(){if(font_shaders.font_aa)return
-font_shaders.font_aa=shaders.create("shaders/font_aa.fp")
-font_shaders.font_aa_glow=shaders.create("shaders/font_aa_glow.fp")
-font_shaders.font_aa_outline=shaders.create("shaders/font_aa_outline.fp")
-font_shaders.font_aa_outline_glow=shaders.create("shaders/font_aa_outline_glow.fp")
-shaders.prelink(sprites.sprite_vshader,font_shaders.font_aa)
-shaders.prelink(sprites.sprite_vshader,font_shaders.font_aa_glow)
-shaders.prelink(sprites.sprite_vshader,font_shaders.font_aa_outline)
-shaders.prelink(sprites.sprite_vshader,font_shaders.font_aa_outline_glow)}function fontCreate(font_info,texture_name){fontShadersInit()
+font_shaders.font_aa=shaderCreate("shaders/font_aa.fp")
+font_shaders.font_aa_glow=shaderCreate("shaders/font_aa_glow.fp")
+font_shaders.font_aa_outline=shaderCreate("shaders/font_aa_outline.fp")
+font_shaders.font_aa_outline_glow=shaderCreate("shaders/font_aa_outline_glow.fp")
+shadersPrelink(sprites.sprite_vshader,font_shaders.font_aa)
+shadersPrelink(sprites.sprite_vshader,font_shaders.font_aa_glow)
+shadersPrelink(sprites.sprite_vshader,font_shaders.font_aa_outline)
+shadersPrelink(sprites.sprite_vshader,font_shaders.font_aa_outline_glow)}function fontCreate(font_info,texture_name){fontShadersInit()
 return new GlovFont(font_info,texture_name)}function fontTick(){tech_params_cache_idx=0
 tech_params_cache.length=0
 tech_params_pool_idx=0
-techParamsAlloc()}
+techParamsAlloc()}function fontSetReplacementChars(replacement_chars){unicode_replacement_chars=replacement_chars}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./engine.js":13,"./geom.js":21,"./localization.js":32,"./shaders.js":46,"./sprites.js":51,"./textures.js":55,"assert":undefined}],20:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./camera2d.js":9,"./engine.js":15,"./geom.js":24,"./localization.js":36,"./shaders.js":55,"./sprites.js":61,"./textures.js":65,"assert":undefined}],23:[function(require,module,exports){
 "use strict"
+exports.copyCanvasToClipboard=copyCanvasToClipboard
 exports.framebufferCapture=framebufferCapture
 exports.framebufferEnd=framebufferEnd
 exports.framebufferEndOfFrame=framebufferEndOfFrame
@@ -2385,14 +3256,16 @@ exports.framebufferTopOfFrame=framebufferTopOfFrame
 exports.framebufferUpdateCanvasForCapture=framebufferUpdateCanvasForCapture
 exports.temporaryTextureClaim=temporaryTextureClaim
 var assert=require("assert")
-var _require=require("./browser.js"),is_ios=_require.is_ios
-var _require2=require("./cmds.js"),cmd_parse=_require2.cmd_parse
-var _require3=require("./effects.js"),applyCopy=_require3.applyCopy
+var _require=require("../common/util"),nop=_require.nop
+var verify=require("../common/verify")
+var _require2=require("./browser.js"),is_ios=_require2.is_ios
+var _require3=require("./cmds.js"),cmd_parse=_require3.cmd_parse
+var _require4=require("./effects.js"),applyCopy=_require4.applyCopy
 var engine=require("./engine.js")
 var renderWidth=engine.renderWidth,renderHeight=engine.renderHeight
 var perf=require("./perf.js")
 var settings=require("./settings.js")
-var textures=require("./textures.js")
+var _require5=require("./textures.js"),TEXTURE_FORMAT=_require5.TEXTURE_FORMAT,textureCreateForCapture=_require5.textureCreateForCapture,textureCreateForDepthCapture=_require5.textureCreateForDepthCapture
 var last_num_passes=0
 var num_passes=0
 var temporary_textures={}
@@ -2406,9 +3279,11 @@ var is_fbo=possibly_fbo&&settings.use_fbos
 if(is_fbo)key+="_fbo"
 var temp=temporary_textures[key]
 if(!temp)temp=temporary_textures[key]={list:[],idx:0}
-if(temp.idx>=temp.list.length){var _tex=textures.createForCapture("temp_"+key+"_"+ ++last_temp_idx)
-if(is_fbo)_tex.allocFBO(w,h)
-temp.list.push(_tex)}return temp.list[temp.idx++]}function bindTemporaryDepthbuffer(w,h){var key=w+"_"+h
+if(temp.idx>=temp.list.length){var _tex=textureCreateForCapture("temp_"+key+"_"+ ++last_temp_idx)
+if(is_fbo){_tex.allocFBO(w,h)
+assert(_tex.fbo)}temp.list.push(_tex)}var tex=temp.list[temp.idx++]
+if(is_fbo)assert(tex.fbo)
+return tex}function bindTemporaryDepthbuffer(w,h){var key=w+"_"+h
 var temp=temporary_depthbuffers[key]
 if(!temp)temp=temporary_depthbuffers[key]={list:[],idx:0}
 if(temp.idx>=temp.list.length){var _depth_buffer=gl.createRenderbuffer()
@@ -2421,7 +3296,7 @@ temp.list.push({depth_buffer:_depth_buffer,attachment:_attachment})}var _temp$li
 gl.framebufferRenderbuffer(gl.FRAMEBUFFER,attachment,gl.RENDERBUFFER,depth_buffer)}function bindTemporaryDepthbufferTexture(w,h){var key=w+"_"+h
 var temp=temporary_depthtextures[key]
 if(!temp)temp=temporary_depthtextures[key]={list:[],idx:0}
-if(temp.idx>=temp.list.length){var _tex2=textures.createForDepthCapture("temp_"+key+"_"+ ++last_temp_idx,settings.fbo_depth16?textures.format.DEPTH16:textures.format.DEPTH24)
+if(temp.idx>=temp.list.length){var _tex2=textureCreateForDepthCapture("temp_"+key+"_"+ ++last_temp_idx,settings.fbo_depth16?TEXTURE_FORMAT.DEPTH16:TEXTURE_FORMAT.DEPTH24)
 _tex2.allocDepth(w,h)
 var _attachment2=settings.fbo_depth16?gl.DEPTH_ATTACHMENT:gl.DEPTH_STENCIL_ATTACHMENT
 temp.list.push({tex:_tex2,attachment:_attachment2})}var _temp$list$temp$idx2=temp.list[temp.idx++],tex=_temp$list$temp$idx2.tex,attachment=_temp$list$temp$idx2.attachment
@@ -2438,22 +3313,37 @@ tex.captureStart(w,h)
 return tex}function framebufferCapture(tex,w,h,filter_linear,wrap){(tex=framebufferCaptureStart(tex,w,h,false)).captureEnd(filter_linear,wrap)
 return tex}var cur_tex
 var cur_depth
-function framebufferStart(opts){assert(!cur_tex)
+function framebufferStart(opts){var width=opts.width,height=opts.height,viewport=opts.viewport,final=opts.final,clear=opts.clear,need_depth=opts.need_depth,clear_all=opts.clear_all,clear_color=opts.clear_color,clear_all_color=opts.clear_all_color,force_tex=opts.force_tex,just_viewport=opts.just_viewport
+if(!width){width=renderWidth()
+height=renderHeight()}if(!just_viewport){++num_passes
+assert(!cur_tex)
 assert(!cur_depth)
-var width=opts.width,height=opts.height,viewport=opts.viewport,final=opts.final,clear=opts.clear,need_depth=opts.need_depth,clear_all=opts.clear_all,clear_color=opts.clear_color,force_tex=opts.force_tex;++num_passes
 cur_depth=null
 if(force_tex){assert(viewport);(cur_tex=force_tex).captureStart()}else if(!final){cur_tex=framebufferCaptureStart(null,width,height,true)
-if(settings.use_fbos)if(need_depth)if("texture"===need_depth)cur_depth=bindTemporaryDepthbufferTexture(width,height)
-else bindTemporaryDepthbuffer(width,height)}if(clear_color)gl.clearColor(clear_color[0],clear_color[1],clear_color[2],clear_color[3])
-if(clear&&clear_all){gl.disable(gl.SCISSOR_TEST)
+if(settings.use_fbos){assert(cur_tex.fbo)
+if(need_depth)if("texture"===need_depth)cur_depth=bindTemporaryDepthbufferTexture(width,height)
+else bindTemporaryDepthbuffer(width,height)}}}if(clear&&clear_all){if(clear_all_color)gl.clearColor(clear_all_color[0],clear_all_color[1],clear_all_color[2],clear_all_color[3])
+else if(clear_color)gl.clearColor(clear_color[0],clear_color[1],clear_color[2],clear_color[3])
+gl.disable(gl.SCISSOR_TEST)
 gl.clear(gl.COLOR_BUFFER_BIT|(need_depth?gl.DEPTH_BUFFER_BIT:0))}var need_scissor
 if(viewport){engine.setViewport(viewport)
 need_scissor=viewport[0]||viewport[1]||viewport[2]!==engine.width||viewport[3]!==engine.height
-if(clear_all)need_scissor=false}else{engine.setViewport([0,0,width,height])
+if(clear_all&&!clear_all_color)need_scissor=false}else{engine.setViewport([0,0,width,height])
 need_scissor=width!==engine.width}if(need_scissor){gl.enable(gl.SCISSOR_TEST)
-if(viewport)gl.scissor(viewport[0],viewport[1],viewport[2],viewport[3])
-else gl.scissor(0,0,width,height)}else gl.disable(gl.SCISSOR_TEST)
-if(clear&&!clear_all)gl.clear(gl.COLOR_BUFFER_BIT|(need_depth?gl.DEPTH_BUFFER_BIT:0))}function framebufferEnd(opts){assert(cur_tex)
+var x
+var y
+var w
+var h
+if(viewport){x=viewport[0]
+y=viewport[1]
+w=viewport[2]
+h=viewport[3]}else{y=x=0
+w=width
+h=height}if(!verify(w>0))w=0
+if(!verify(h>0))h=0
+gl.scissor(x,y,w,h)}else gl.disable(gl.SCISSOR_TEST)
+if(clear&&(!clear_all||clear_all_color)){if(clear_all_color&&clear_color)gl.clearColor(clear_color[0],clear_color[1],clear_color[2],clear_color[3])
+gl.clear(gl.COLOR_BUFFER_BIT|(need_depth?gl.DEPTH_BUFFER_BIT:0))}}function framebufferEnd(opts){assert(cur_tex)
 var _opts=opts=opts||{},filter_linear=_opts.filter_linear,wrap=_opts.wrap,need_depth=_opts.need_depth
 assert.equal(Boolean(cur_depth),"texture"===need_depth)
 cur_tex.captureEnd(filter_linear,wrap)
@@ -2477,23 +3367,41 @@ else _temp.idx=0}for(var _key2 in temporary_depthtextures){var _temp2=temporary_
 if(reset_fbos)_temp2.idx=0
 if(!skip_release)while(_temp2.list.length>_temp2.idx)_temp2.list.pop().tex.destroy()
 if(!_temp2.list.length)delete temporary_depthtextures[_key2]
-else _temp2.idx=0}skip_release=reset_fbos=false}function framebufferUpdateCanvasForCapture(){if(cur_tex&&settings.use_fbos){var saved_tex=cur_tex
+else _temp2.idx=0}skip_release=reset_fbos=false}function framebufferUpdateCanvasForCapture(){if(cur_tex&&settings.use_fbos){assert(cur_tex.fbo)
+var saved_tex=cur_tex
 var saved_viewport=engine.viewport.slice(0)
 framebufferEnd()
 applyCopy({source:saved_tex,final:true,viewport:saved_viewport})
 framebufferStart({force_tex:saved_tex,viewport:saved_viewport})
-return saved_tex}else return{width:engine.viewport[2],height:engine.viewport[3]}}settings.register({show_passes:{label:"Show Postprocessing Passes",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},use_fbos:{label:"Use Framebuffer Objects for postprocessing",default_value:is_ios?1:0,type:cmd_parse.TYPE_INT,range:[0,1],ver:1},fbo_depth16:{label:"Use 16-bit depth buffers for offscreen rendering",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],on_change:resetFBOs},fbo_rgba:{label:"Use RGBA color buffers for offscreen rendering",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],on_change:resetFBOs}})
+return saved_tex}else return{width:engine.viewport[2],height:engine.viewport[3]}}var clipboard_copy_supported=true
+function clipboardGetPermission(next){var _navigator$permission
+if(!(null!=(_navigator$permission=navigator.permissions)&&_navigator$permission.query))return void next()
+var didnext=false
+function onceNext(result){if(didnext)return
+didnext=true
+if(result&&result.state&&"denied"===result.state){clipboard_copy_supported=false
+next("ERR_CLIPBOARD_ACCESS_DENIED")}else next()}try{navigator.permissions.query({name:"clipboard-write"}).then(onceNext,onceNext)}catch(e){onceNext()}}clipboardGetPermission(nop)
+function copyCanvasToClipboard(){if(false===clipboard_copy_supported)return
+function onError(err){console.error("Error copying to clipboard:",err)
+clipboard_copy_supported=false}engine.postRender(function(){var dims=framebufferUpdateCanvasForCapture()
+var canvas=engine.canvas
+if(dims.width!==canvas.width){(canvas=document.createElement("canvas")).width=dims.width
+canvas.height=dims.height
+canvas.getContext("2d").drawImage(engine.canvas,0,engine.canvas.height-dims.height,dims.width,dims.height,0,0,dims.width,dims.height)}if(!canvas.toBlob)return void onError("ERR_UNSUPPORTED")
+canvas.toBlob(function(blob){clipboardGetPermission(function(perm_err){if(perm_err)return void onError(perm_err)
+try{var maybe_promise=navigator.clipboard.write([new ClipboardItem({"image/png":blob})])
+if(maybe_promise&&maybe_promise.catch)maybe_promise.catch(onError)}catch(err){onError(err)}})},"image/png")})}settings.register({show_passes:{label:"Show Postprocessing Passes",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},use_fbos:{label:"Use Framebuffer Objects for postprocessing",default_value:is_ios?1:0,type:cmd_parse.TYPE_INT,range:[0,1],ver:1},fbo_depth16:{label:"Use 16-bit depth buffers for offscreen rendering",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],on_change:resetFBOs},fbo_rgba:{label:"Use RGBA color buffers for offscreen rendering",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],on_change:resetFBOs}})
 reset_fbos=false
 perf.addMetric({name:"passes",show_stat:"show_passes",labels:{"passes: ":function passes(){return last_num_passes.toString()}}})
 
-},{"./browser.js":5,"./cmds.js":9,"./effects.js":12,"./engine.js":13,"./perf.js":37,"./settings.js":44,"./textures.js":55,"assert":undefined}],21:[function(require,module,exports){
+},{"../common/util":93,"../common/verify":94,"./browser.js":7,"./cmds.js":11,"./effects.js":14,"./engine.js":15,"./perf.js":46,"./settings.js":53,"./textures.js":65,"assert":undefined}],24:[function(require,module,exports){
 "use strict"
 exports.TRIANGLE_FAN=exports.TRIANGLES=exports.QUADS=void 0
-exports.create=create
-exports.createIndices=createIndices
-exports.createQuads=createQuads
+exports.geomCreate=geomCreate
+exports.geomCreateIndices=geomCreateIndices
+exports.geomCreateQuads=geomCreateQuads
 exports.geomResetState=geomResetState
-exports.startup=startup
+exports.geomStartup=geomStartup
 exports.stats=void 0
 var assert=require("assert")
 var _require=require("./cmds.js"),cmd_parse=_require.cmd_parse
@@ -2550,7 +3458,7 @@ arr[ii++]=vidx++
 arr[ii++]=vidx++
 arr[ii++]=vidx++
 arr[ii++]=vidx++}gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,arr,gl.STATIC_DRAW)
-engine.perf_state.gpu_mem.geom+=2*quad_index_buf_len}return quad_index_buf}function createIndices(idxs){var ret={ibo:gl.createBuffer(),ibo_size:idxs.length}
+engine.perf_state.gpu_mem.geom+=2*quad_index_buf_len}return quad_index_buf}function geomCreateIndices(idxs){var ret={ibo:gl.createBuffer(),ibo_size:idxs.length}
 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ret.ibo)
 bound_index_buf=ret.ibo
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idxs,gl.STATIC_DRAW)
@@ -2676,14 +3584,22 @@ this.geoms=[]
 for(var idx=0;idx<vert_count;idx+=MAX_VERT_COUNT){var num_sub_verts=min(vert_count-idx,MAX_VERT_COUNT)
 var sub_data=new Uint8Array(verts.buffer,idx*ec,num_sub_verts*ec)
 this.geoms.push(new Geom(format,sub_data,null,QUADS))}}GeomMultiQuads.prototype.draw=function(){for(var ii=0;ii<this.geoms.length;++ii)this.geoms[ii].draw()}
+GeomMultiQuads.prototype.drawSub=function(start,tri_count){for(var ii=0;ii<this.geoms.length&&tri_count;++ii){var geom=this.geoms[ii]
+var num_quads=geom.vert_count/4
+if(start<6*num_quads){var these=min(tri_count,2*(num_quads-start/6))
+geom.drawSub(start,these)
+tri_count-=these
+start=0}else start-=6*num_quads}}
 GeomMultiQuads.prototype.dispose=function(){for(var ii=0;ii<this.geoms.length;++ii)this.geoms[ii].dispose()
 this.geoms=null}
-function create(format,verts,idxs,mode){return new Geom(format,verts,idxs,mode)}function createQuads(format,verts,fixed_size){var format_info=formatInfo(format)
+function geomCreate(format,verts,idxs,mode){return new Geom(format,verts,idxs,mode)}function geomCreateQuads(format,verts,fixed_size){var format_info=formatInfo(format)
 assert(fixed_size||verts instanceof Uint8Array)
 if(verts.length/format_info.elem_count>MAX_VERT_COUNT)return new GeomMultiQuads(format,verts)
-return new Geom(format,verts,null,QUADS)}function startup(){}
+return new Geom(format,verts,null,QUADS)}function geomStartup(){}exports.createIndices=geomCreateIndices
+exports.create=geomCreate
+exports.createQuads=geomCreateQuads
 
-},{"./cmds.js":9,"./engine.js":13,"./perf.js":37,"./settings.js":44,"./shaders.js":46,"assert":undefined}],22:[function(require,module,exports){
+},{"./cmds.js":11,"./engine.js":15,"./perf.js":46,"./settings.js":53,"./shaders.js":55,"assert":undefined}],25:[function(require,module,exports){
 "use strict"
 exports.decode=decode
 var charCache=new Array(128)
@@ -2699,7 +3615,7 @@ else if(String.fromCodePoint)codePt=(7&byte1)<<18|(63&array[i++])<<12|(63&array[
 else{codePt=63
 i+=3}result.push(charCache[codePt]||(charCache[codePt]=charFromCodePt(codePt)))}return result.join("")}
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict"
 exports.ATTRIBUTE_TYPE_TO_COMPONENTS=exports.ATTRIBUTE_COMPONENT_TYPE_TO_BYTE_SIZE=exports.ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY=void 0
 exports.getAccessorTypeFromSize=getAccessorTypeFromSize
@@ -2711,7 +3627,7 @@ exports.ATTRIBUTE_COMPONENT_TYPE_TO_BYTE_SIZE=ATTRIBUTE_COMPONENT_TYPE_TO_BYTE_S
 var ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY={5120:Int8Array,5121:Uint8Array,5122:Int16Array,5123:Uint16Array,5125:Uint32Array,5126:Float32Array}
 exports.ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY=ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict"
 var assert=require("assert")
 var _require=require("./unpack-glb-buffers.js"),unpackGLBBuffers=_require.unpackGLBBuffers
@@ -2777,7 +3693,7 @@ var img=new Image
 img.src=imageUrl
 return img};(module.exports=GLBParser).parse=function(data){return(new GLBParser).parse(data)}
 
-},{"./decode-utf8.js":22,"./gltf-type-utils.js":23,"./unpack-binary-json.js":25,"./unpack-glb-buffers.js":26,"assert":undefined}],25:[function(require,module,exports){
+},{"./decode-utf8.js":25,"./gltf-type-utils.js":26,"./unpack-binary-json.js":28,"./unpack-glb-buffers.js":29,"assert":undefined}],28:[function(require,module,exports){
 "use strict"
 exports.unpackBinaryJson=unpackBinaryJson
 function parseJSONPointer(value){if("string"===typeof value){if(0===value.indexOf("##/"))return value.slice(1)
@@ -2798,7 +3714,7 @@ for(var key in object)newObject[key]=unpackJsonArraysRecursive(object[key],topJs
 return newObject}return object}function unpackBinaryJson(json,buffers,options){if(void 0===options)options={}
 return unpackJsonArraysRecursive(json,json,buffers,options)}
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict"
 exports.unpackGLBBuffers=unpackGLBBuffers
 var assert=require("assert")
@@ -2836,7 +3752,7 @@ var bufferViews=json.bufferViews||[]
 for(var i=0;i<bufferViews.length;++i){var bufferView=bufferViews[i]
 assert(bufferView.byteLength>=0)}return{accessors:unpackAccessors(arrayBuffer,bufferViews,json),images:unpackImages(arrayBuffer,bufferViews,json)}}
 
-},{"./gltf-type-utils.js":23,"assert":undefined}],27:[function(require,module,exports){
+},{"./gltf-type-utils.js":26,"assert":undefined}],30:[function(require,module,exports){
 "use strict"
 exports.handle=handle
 exports.on=on
@@ -2851,14 +3767,14 @@ switch(type){case"keydown":case"keyup":if(list[event.keyCode])list[event.keyCode
 break
 case"mouseup":case"mousedown":var x=event.pageX
 var y=event.pageY
-var button=event.button
+var button=event.button||0
 for(var ii=0;ii<list.length;++ii){var elem=list[ii]
 var pos=elem[0]
 if(x>=pos.x&&x<pos.x+pos.w&&y>=pos.y&&y<pos.y+pos.h&&(pos.button<0||pos.button===button)){elem[1](type,event)
 break}}break
 default:assert(false)}}
 
-},{"assert":undefined}],28:[function(require,module,exports){
+},{"assert":undefined}],31:[function(require,module,exports){
 "use strict"
 exports.click=exports.PAD=exports.KEYS=void 0
 exports.debugGetMouseMoveX=debugGetMouseMoveX
@@ -2870,9 +3786,15 @@ exports.eatAllKeyboardInput=eatAllKeyboardInput
 exports.endFrame=endFrame
 exports.fakeTouchEvent=fakeTouchEvent
 exports.handleTouches=handleTouches
-exports.inputClick=void 0
+exports.inputAllowAllEvents=inputAllowAllEvents
+exports.inputDrag=exports.inputClick=void 0
+exports.inputEatForEditBoxEarly=inputEatForEditBoxEarly
+exports.inputEatForEditBoxLate=inputEatForEditBoxLate
 exports.inputEatenMouse=inputEatenMouse
 exports.inputLastTime=inputLastTime
+exports.inputOverrideUnload=inputOverrideUnload
+exports.inputPadMode=inputPadMode
+exports.inputSetEventFilter=inputSetEventFilter
 exports.inputTouchMode=inputTouchMode
 exports.keyDown=keyDown
 exports.keyDownEdge=keyDownEdge
@@ -2920,6 +3842,8 @@ var click=mouseUpEdge
 exports.click=click
 var inputClick=mouseUpEdge
 exports.inputClick=inputClick
+var inputDrag=drag
+exports.inputDrag=inputDrag
 var _require=require("../common/util.js"),deprecate=_require.deprecate
 deprecate(exports,"mouseDown","mouseDownAnywhere, mouseDownMidClick, mouseDownOverBounds")
 var _input_constants=require("./input_constants")
@@ -2937,15 +3861,17 @@ var _require2=require("./browser.js"),is_firefox=_require2.is_firefox,is_mac_osx
 var camera2d=require("./camera2d.js")
 var _require3=require("./cmds.js"),cmd_parse=_require3.cmd_parse
 var engine=require("./engine.js")
+var _require4=require("./engine.js"),renderNeeded=_require4.renderNeeded
 var in_event=require("./in_event.js")
 var local_storage=require("./local_storage.js")
 var abs=Math.abs,max=Math.max,min=Math.min,sqrt=Math.sqrt
+var _require5=require("./normalize_mousewheel.js"),normalizeWheel=_require5.normalizeWheel
 var pointer_lock=require("./pointer_lock.js")
 var settings=require("./settings.js")
-var _require4=require("./sound.js"),soundResume=_require4.soundResume
-var _require5=require("./spot.js"),spotMouseoverHook=_require5.spotMouseoverHook
-var _require6=require("../common/util.js"),empty=_require6.empty
-var _require7=require("../common/vmath.js"),vec2=_require7.vec2,v2add=_require7.v2add,v2copy=_require7.v2copy,v2lengthSq=_require7.v2lengthSq,v2set=_require7.v2set,v2scale=_require7.v2scale,v2sub=_require7.v2sub
+var _require6=require("./sound.js"),soundResume=_require6.soundResume
+var _require7=require("./spot.js"),spotMouseoverHook=_require7.spotMouseoverHook
+var _require8=require("../common/util.js"),empty=_require8.empty
+var _require9=require("../common/vmath.js"),vec2=_require9.vec2,v2add=_require9.v2add,v2copy=_require9.v2copy,v2lengthSq=_require9.v2lengthSq,v2set=_require9.v2set,v2scale=_require9.v2scale,v2sub=_require9.v2sub
 var pad_to_touch
 var canvas
 var key_state_new={}
@@ -2967,7 +3893,7 @@ var touch_mode=local_storage.getJSON("touch_mode",false)
 var pad_mode=!(exports.touch_mode=touch_mode)&&local_storage.getJSON("pad_mode",false)
 exports.pad_mode=pad_mode
 cmd_parse.registerValue("mouse_log",{type:cmd_parse.TYPE_INT,range:[0,1],get:function get(){return mouse_log},set:function set(v){return mouse_log=v}})
-function inputTouchMode(){return touch_mode}function inputEatenMouse(){return input_eaten_mouse}function eventTimestamp(event){if(event&&event.timeStamp){if(event.timeStamp<1e12!==engine.hrtime<1e12)return engine.hrtime
+function inputTouchMode(){return touch_mode}function inputPadMode(){return pad_mode}function inputEatenMouse(){return input_eaten_mouse}function eventTimestamp(event){if(event&&event.timeStamp){if(event.timeStamp<1e12!==engine.hrtime<1e12)return engine.hrtime
 return event.timeStamp}return engine.hrtime}function TouchData(pos,touch,button,event){this.delta=vec2()
 this.total=0
 this.cur_pos=pos.slice(0)
@@ -3013,24 +3939,39 @@ function eventlog(event){if(event===last_event)return
 var pairs=[]
 for(var k in last_event=event){var v=event[k]
 if(!v||"function"===typeof v||k.toUpperCase()===k||skip[k])continue
-pairs.push(k+":"+(v.id||v))}console.log(engine.frame_index+" "+event.type+" "+(pointerLocked()?"ptrlck":"unlckd")+" "+pairs.join(","))}function letWheelEventThrough(event){return event.target&&("INPUT"===event.target.tagName||"TEXTAREA"===event.target.tagName||"LABEL"===event.target.tagName)}function letEventThrough(event){return event.target&&("INPUT"===event.target.tagName||"TEXTAREA"===event.target.tagName||"LABEL"===event.target.tagName||String(event.target.className).includes("noglov"))}function ignored(event){if(!letEventThrough(event)){event.preventDefault()
+pairs.push(k+":"+(v.id||v))}console.log(engine.frame_index+" "+event.type+" "+(pointerLocked()?"ptrlck":"unlckd")+" "+pairs.join(","))}var allow_all_events=false
+function inputAllowAllEvents(allow){allow_all_events=allow}function isInputElement(target){return target&&("INPUT"===target.tagName||"TEXTAREA"===target.tagName||"LABEL"===target.tagName||"VIDEO"===target.tagName)}function letWheelEventThrough(event){return allow_all_events||isInputElement(event.target)}var event_filter=function event_filter(){return false}
+function inputSetEventFilter(filter){event_filter=filter}var EVENT_TO_ENGINE=1
+var EVENT_TO_DOM=2
+var EVENT_TO_BOTH=EVENT_TO_ENGINE|EVENT_TO_DOM
+function letEventThrough(event,no_dom_if_leaving){if(!event.target||allow_all_events||event.glov_do_not_cancel)return EVENT_TO_DOM
+if(isInputElement(event.target)||String(event.target.className).includes("noglov")||event_filter(event))return EVENT_TO_DOM
+if(document.activeElement&&event.target!==document.activeElement&&(isInputElement(document.activeElement)||String(document.activeElement.className).includes("noglov")))if(no_dom_if_leaving)return EVENT_TO_ENGINE
+else return EVENT_TO_BOTH
+return EVENT_TO_ENGINE}function ignored(event){if(!(letEventThrough(event)&EVENT_TO_DOM)){event.preventDefault()
 event.stopPropagation()}}var ctrl_checked=false
 var unload_protected=false
-function beforeUnload(e){if(unload_protected&&ctrl_checked){pointerLockExit()
+var unload_override=null
+function inputOverrideUnload(cb){assert(!unload_override||!cb)
+unload_override=cb}function beforeUnload(e){var unload_msg
+if(unload_override)if(false===(unload_msg=unload_override()));else if(!unload_msg){e.preventDefault()
+return}if(unload_protected&&ctrl_checked||unload_msg){pointerLockExit()
 e.preventDefault()
-e.returnValue="Are you sure you want to quit?"}else engine.releaseCanvas()}function protectUnload(enable){unload_protected=enable}var last_input_time=0
+e.returnValue=unload_msg||"Are you sure you want to quit?"}else engine.releaseCanvas()}function protectUnload(enable){unload_protected=enable}var last_input_time=0
 function inputLastTime(){return last_input_time}function onUserInput(){soundResume()
-last_input_time=Date.now()}function releaseAllKeysDown(evt){for(var code in key_state_new){var ks=key_state_new[code]
-if(ks.state===DOWN)ks.keyUp(evt)}}function onKeyUp(event){protectUnload(event.ctrlKey)
+last_input_time=Date.now()
+renderNeeded()}function releaseAllKeysDown(evt){for(var code in key_state_new){var ks=key_state_new[code]
+if(ks.state===DOWN)ks.keyUp(evt)}}function onKeyUp(event){renderNeeded()
+protectUnload(event.ctrlKey)
 var code=event.keyCode
-if(!letEventThrough(event)){event.stopPropagation()
+if(!(letEventThrough(event)&EVENT_TO_DOM)){event.stopPropagation()
 event.preventDefault()}if(code===KEYS.ESC&&pointerLocked())pointerLockExit()
 var ks=key_state_new[code]
 if(ks&&ks.state===DOWN)if(is_mac_osx&&"Meta"===event.key)releaseAllKeysDown(event)
 else ks.keyUp(event)
 in_event.handle("keyup",event)}function onKeyDown(event){protectUnload(event.ctrlKey)
 var code=event.keyCode
-if(!(letEventThrough(event)||code>=KEYS.F5&&code<=KEYS.F12||code===KEYS.I&&(event.altKey&&event.metaKey||event.ctrlKey&&event.shiftKey)||code===KEYS.R&&event.ctrlKey)){event.stopPropagation()
+if(!(letEventThrough(event)&EVENT_TO_DOM||code>=KEYS.F5&&code<=KEYS.F12||code===KEYS.F4&&(event.altKey||event.metaKey||event.ctrlKey)||code===KEYS.I&&(event.altKey&&event.metaKey||event.ctrlKey&&event.shiftKey)||code===KEYS.R&&event.ctrlKey||(code===KEYS.LEFT||code===KEYS.RIGHT)&&event.altKey||event.ctrlKey&&code>=KEYS["0"]&&code<=KEYS["9"])){event.stopPropagation()
 event.preventDefault()}onUserInput()
 var ks=key_state_new[code]
 if(!ks)ks=key_state_new[code]=new KeyData
@@ -3048,7 +3989,8 @@ var last_abs_move=0
 var last_abs_move_time=0
 var last_move_x=0
 var last_move_y=0
-function onMouseMove(event,no_stop){if(!letEventThrough(event)&&!no_stop&&3!==event.button){event.preventDefault()
+function onMouseMove(event,no_stop,no_dom_if_leaving){renderNeeded()
+if(!(letEventThrough(event,no_dom_if_leaving)&EVENT_TO_DOM)&&!no_stop&&3!==event.button){event.preventDefault()
 event.stopPropagation()
 if(touch_mode){local_storage.setJSON("touch_mode",false)
 exports.touch_mode=touch_mode=false}if(pad_mode){local_storage.setJSON("pad_mode",false)
@@ -3077,9 +4019,9 @@ if(any_movement)for(var button=POINTERLOCK;button<mouse_down.length;++button)if(
 if(touch_data){v2add(touch_data.delta,touch_data.delta,temp_delta)
 touch_data.total+=abs(temp_delta[0])+abs(temp_delta[1])
 v2copy(touch_data.cur_pos,mouse_pos)}}}function onMouseDown(event){if(mouse_log)eventlog(event)
-onMouseMove(event)
+onMouseMove(event,false,true)
 onUserInput()
-var no_click=letEventThrough(event)
+var no_click=!(letEventThrough(event,true)&EVENT_TO_ENGINE)
 var button=event.button
 mouse_down[button]=true
 var touch_id="m"+button
@@ -3096,33 +4038,36 @@ last_up_edges[1]=t
 v2copy(t.pos,touch_data.cur_pos)
 t.timestamp=timestamp}function onMouseUp(event){if(mouse_log)eventlog(event)
 onMouseMove(event)
-var no_click=letEventThrough(event)
+var no_click=!(letEventThrough(event)&EVENT_TO_ENGINE)
 var button=event.button
 if(mouse_down[button]){var touch_data=touches["m"+button]
 if(touch_data){v2copy(touch_data.cur_pos,mouse_pos)
 if(!no_click)registerMouseUpEdge(touch_data,eventTimestamp(event))
 touch_data.state=UP
 touch_data.down_time+=timeDelta(event,touch_data.origin_time)}delete mouse_down[button]}mouse_button_had_up_edge=mouse_button_had_edge=true
-if(!no_click)in_event.handle("mouseup",event)}function onWheel(event){var saved=mouse_moved
+if(!no_click)in_event.handle("mouseup",event)}function onWheel(event){renderNeeded()
+var saved=mouse_moved
 onMouseMove(event,true)
 mouse_moved=saved
-var delta=-event.deltaY||event.wheelDelta||-event.detail
-wheel_events.push({pos:[event.pageX,event.pageY],delta:delta>0?1:-1,dispatched:false})
+var normalized=normalizeWheel(event)
+wheel_events.push({pos:[mouse_pos[0],mouse_pos[1]],delta:-normalized.pixel_y/100,dispatched:false})
 if(!letWheelEventThrough(event)){event.stopPropagation()
 event.preventDefault()}}var touch_pos=vec2()
 var released_touch_id=0
 function onTouchChange(event){onUserInput()
-if(!touch_mode){local_storage.set("touch_mode",true)
-exports.touch_mode=touch_mode=true}if(pad_mode){local_storage.set("pad_mode",false)
+if(!touch_mode){local_storage.setJSON("touch_mode",true)
+exports.touch_mode=touch_mode=true}if(pad_mode){local_storage.setJSON("pad_mode",false)
 exports.pad_mode=pad_mode=false}if(false!==event.cancelable)event.preventDefault()
 var ct=event.touches
 var seen={}
 var new_count=ct.length
 var old_count=0
+var first_valid_touch
 for(var ii=0;ii<ct.length;++ii){var touch=ct[ii]
 try{if(!isFinite(touch.pageX)||!isFinite(touch.pageY)){--new_count
 continue}}catch(e){--new_count
-continue}var last_touch=touches[touch.identifier]
+continue}if(!first_valid_touch)first_valid_touch=touch
+var last_touch=touches[touch.identifier]
 v2set(touch_pos,touch.pageX,touch.pageY)
 if(!last_touch){(last_touch=touches[touch.identifier]=new TouchData(touch_pos,true,0,event)).down(event,true)
 mouse_button_had_edge=true
@@ -3149,10 +4094,10 @@ var new_id="r"+ ++released_touch_id
 delete touches[_id]
 touches[new_id]=_touch2}if(TOUCH_AS_MOUSE)if(1===old_count&&0===new_count){delete mouse_down[0]
 v2copy(mouse_pos,released_touch.cur_pos)
-mouse_pos_is_touch=true}else if(1===new_count){var _touch3=ct[0]
-if(!old_count)mouse_down[0]=true
-v2set(mouse_pos,_touch3.pageX,_touch3.pageY)
-mouse_pos_is_touch=true}else if(new_count>1)delete mouse_down[0]}function onBlurOrFocus(evt){protectUnload(false)
+mouse_pos_is_touch=true}else if(1===new_count){if(!old_count)mouse_down[0]=true
+v2set(mouse_pos,first_valid_touch.pageX,first_valid_touch.pageY)
+mouse_pos_is_touch=true}else if(new_count>1)delete mouse_down[0]}function onBlurOrFocus(evt){renderNeeded()
+protectUnload(false)
 releaseAllKeysDown(evt)}var ANALOG_MAP={}
 function genAnalogMap(){if(map_analog_to_dpad){ANALOG_MAP[PAD.LEFT]=[PAD.LSTICK_LEFT,PAD.RSTICK_LEFT]
 ANALOG_MAP[PAD.RIGHT]=[PAD.LSTICK_RIGHT,PAD.RSTICK_RIGHT]
@@ -3173,7 +4118,7 @@ window.removeEventListener("test",null,opts)}catch(e){passive_param=false}window
 window.addEventListener("keyup",onKeyUp,false)
 window.addEventListener("click",ignored,false)
 window.addEventListener("contextmenu",ignored,false)
-window.addEventListener("mousemove",onMouseMove,false)
+window.addEventListener("mousemove",function(event){onMouseMove(event)},false)
 window.addEventListener("mousedown",onMouseDown,false)
 window.addEventListener("mouseup",onMouseUp,false)
 if(window.WheelEvent)window.addEventListener("wheel",onWheel,passive_param)
@@ -3190,7 +4135,7 @@ if(!gpd){gpd=gamepad_data[idx]={id:idx,timestamp:0,sticks:new Array(NUM_STICKS)}
 for(var ii=0;ii<NUM_STICKS;++ii)gpd.sticks[ii]=vec2()
 pad_states[idx]={}}return gpd}function updatePadState(gpd,ps,b,padcode){if(b&&!ps[padcode]){ps[padcode]=DOWN_EDGE
 onUserInput()
-if(touch_mode){local_storage.set("touch_mode",false)
+if(touch_mode){local_storage.setJSON("touch_mode",false)
 exports.touch_mode=touch_mode=false}if(!pad_mode){local_storage.setJSON("pad_mode",true)
 exports.pad_mode=pad_mode=true}if(padcode===pad_to_touch){var touch_id="g"+gpd.id
 if(touches[touch_id]){setMouseToMid()
@@ -3272,7 +4217,11 @@ mouse_button_had_up_edge=mouse_button_had_edge=mouse_moved=input_eaten_mouse=fal
 ctrl_checked=false
 endFrame()}function eatAllInput(skip_mouse){endFrame(skip_mouse)
 if(!skip_mouse)input_eaten_mouse=mouse_over_captured=true
-input_eaten_kb=true}function eatAllKeyboardInput(){eatAllInput(true)}function mousePos(dst){dst=dst||vec2()
+input_eaten_kb=true}function eatAllKeyboardInput(){eatAllInput(true)}function inputEatForEditBoxEarly(){for(var code in key_state_new)if((code=Number(code))>=KEYS.SPACE&&code<=KEYS.NUMPAD_DIVIDE){var ks=key_state_new[code]
+if(ks.state===UP){key_state_new[code]=null
+delete key_state_new[code]}else{ks.up_edge=0
+ks.down_edge=0
+ks.down_time=0}}input_eaten_kb=true}function inputEatForEditBoxLate(){input_eaten_kb=false}function mousePos(dst){dst=dst||vec2()
 camera2d.domToVirtual(dst,mouse_pos)
 return dst}function mouseDomPos(){return mouse_pos}function mouseMoved(){return mouse_moved}function mouseButtonHadEdge(){return mouse_button_had_edge}function mouseButtonHadUpEdge(){return mouse_button_had_up_edge}var full_screen_pos_param={}
 function mousePosParamUnique(param){var pos_param=(param=param||full_screen_pos_param).mouse_pos_param
@@ -3302,8 +4251,8 @@ var pos_param=mousePosParamUnique(param=param||{})
 spotMouseoverHook(pos_param,param)
 if(mouse_over_captured||pointerLocked()&&!param.allow_pointerlock){profilerStop("mouseOver")
 return false}if(!param.peek&&!param.peek_touch)for(var id in touches){var touch=touches[id]
-if(checkPos(touch.cur_pos,pos_param)){touch.down_edge=0
-touch.up_edge=0
+if(checkPos(touch.cur_pos,pos_param)){if(touch.down_edge)touch.down_edge=0
+if(touch.up_edge)touch.up_edge=0
 if(!param||!param.drag_target)touch.dispatched=true}}var ret=false
 if(checkPos(mouse_pos,pos_param)){if(!param.peek&&!param.peek_over)mouse_over_captured=true
 ret=true}profilerStop("mouseOver")
@@ -3332,13 +4281,13 @@ if(opts&&opts.in_event_cb)in_event.on("keydown",keycode,opts.in_event_cb)
 var ks=key_state_new[keycode]
 if(!ks)return 0
 var r=ks.down_edge
-ks.down_edge=0
+if(!opts||!opts.peek)ks.down_edge=0
 return r}function keyUpEdge(keycode,opts){if(input_eaten_kb)return 0
 if(opts&&opts.in_event_cb)in_event.on("keyup",keycode,opts.in_event_cb)
 var ks=key_state_new[keycode]
 if(!ks)return 0
 var r=ks.up_edge
-ks.up_edge=0
+if(!opts||!opts.peek)ks.up_edge=0
 return r}function padGetAxes(out,stickindex,padindex){assert(stickindex>=0&&stickindex<NUM_STICKS)
 if(void 0===padindex){var sub=vec2()
 v2set(out,0,0)
@@ -3364,14 +4313,14 @@ if(input_eaten_mouse||!param.in_event_cb&&no_active_touches)return null
 var pos_param=mousePosParam(param)
 var button=pos_param.button
 var max_click_dist=param.max_dist||50
-var dragged_too_far=false
+var click_invalid=false
 for(var touch_id in touches){var touch_data=touches[touch_id]
-if(touch_data.total>max_click_dist){dragged_too_far=true
+if(touch_data.total>max_click_dist){click_invalid=true
+continue}if(touch_data.long_press_dispatched){click_invalid=true
 continue}if(!touch_data.up_edge)continue
-if(touch_data.long_press_dispatched)continue
 if(!(button===ANY||button===touch_data.button))continue
 if(checkPos(touch_data.cur_pos,pos_param)){if(!param.peek)touch_data.up_edge=0
-return{button:touch_data.button,pos:check_pos.slice(0),start_time:touch_data.start_time,was_double_click:wasDoubleClick(pos_param)}}}if(param.in_event_cb&&!mouse_over_captured&&!dragged_too_far){if(!param.phys)param.phys={}
+return{button:touch_data.button,pos:check_pos.slice(0),start_time:touch_data.start_time,was_double_click:wasDoubleClick(pos_param)}}}if(param.in_event_cb&&!mouse_over_captured&&!click_invalid){if(!param.phys)param.phys={}
 param.phys.button="number"===typeof param.in_event_button?param.in_event_button:button
 camera2d.virtualToDomPosParam(param.phys,pos_param)
 in_event.on("mouseup",param.phys,param.in_event_cb)}return null}function mouseDownEdge(param){param=param||{}
@@ -3384,7 +4333,7 @@ if(checkPos(touch_data.cur_pos,pos_param)){if(!param.peek)touch_data.down_edge=0
 return{button:touch_data.button,pos:check_pos.slice(0),start_time:touch_data.start_time}}}if(param.in_event_cb&&!mouse_over_captured){if(!param.phys)param.phys={}
 param.phys.button=button
 camera2d.virtualToDomPosParam(param.phys,pos_param)
-in_event.on("mousedown",param.phys,param.in_event_cb)}return null}function mouseConsumeClicks(param){if(no_active_touches)return
+in_event.on("mousedown",param.phys,param.in_event_cb)}return null}function mouseConsumeClicks(param){if(no_active_touches||pointerLocked())return
 var pos_param=mousePosParam(param=param||{})
 var button=pos_param.button
 for(var touch_id in touches){var touch_data=touches[touch_id]
@@ -3392,12 +4341,14 @@ if(!(button===ANY||button===touch_data.button)||touch_data.dispatched_drag)conti
 if(checkPos(touch_data.start_pos,pos_param)){touch_data.down_edge=0
 touch_data.start_pos[0]=touch_data.start_pos[1]=Infinity
 touch_data.total=Infinity}}}function drag(param){if(input_eaten_mouse||no_active_touches)return null
-var pos_param=mousePosParam(param=param||{})
+var bounds_is_finite=void 0!==(param=param||{}).w&&isFinite(param.w)
+var pos_param=mousePosParam(param)
 var button=pos_param.button
 var min_dist=param.min_dist||0
 for(var touch_id in touches){var touch_data=touches[touch_id]
-if(!(button===ANY||button===touch_data.button)||touch_data.dispatched_drag)continue
-if(checkPos(touch_data.start_pos,pos_param)){camera2d.domDeltaToVirtual(delta,[touch_data.total/2,touch_data.total/2])
+if(!(button===ANY||button===touch_data.button)||touch_data.dispatched_drag||touch_id===param.not_touch_id)continue
+if(checkPos(touch_data.start_pos,pos_param)){if(pointerLocked()&&bounds_is_finite)continue
+camera2d.domDeltaToVirtual(delta,[touch_data.total/2,touch_data.total/2])
 var total=delta[0]+delta[1]
 if(total<min_dist)continue
 if(!param.peek)touch_data.dispatched_drag=true
@@ -3407,13 +4358,13 @@ if(param.payload){touch_data.drag_payload=param.payload
 touch_data.drag_payload_frame=engine.frame_index}camera2d.domToVirtual(start_pos,touch_data.start_pos)
 camera2d.domToVirtual(cur_pos,touch_data.cur_pos)
 camera2d.domDeltaToVirtual(delta,touch_data.delta)
-return{cur_pos:cur_pos,start_pos:start_pos,delta:delta,total:total,button:touch_data.button,touch:touch_data.touch,start_time:touch_data.start_time,is_down_edge:is_down_edge,down_time:touch_data.down_time}}}return null}function longPress(param){if(input_eaten_mouse||no_active_touches)return null
+return{cur_pos:cur_pos,start_pos:start_pos,delta:delta,total:total,button:touch_data.button,touch:touch_data.touch,start_time:touch_data.start_time,is_down_edge:is_down_edge,down_time:touch_data.down_time,touch_id:touch_id,dropped:touch_data.up_edge}}}return null}function longPress(param){if(input_eaten_mouse||no_active_touches)return null
 var pos_param=mousePosParam(param=param||{})
 var button=pos_param.button
 var max_dist=param.long_press_max_dist||50
 var min_time=param.min_time||500
 for(var touch_id in touches){var touch_data=touches[touch_id]
-if(!(button===ANY||button===touch_data.button)||touch_data.long_press_dispatched)continue
+if(!(button===ANY||button===touch_data.button)||touch_data.long_press_dispatched||touch_data.button===POINTERLOCK)continue
 if(checkPos(touch_data.start_pos,pos_param)){camera2d.domDeltaToVirtual(delta,[touch_data.total/2,touch_data.total/2])
 var total=delta[0]+delta[1]
 if(total>max_dist)continue
@@ -3442,7 +4393,7 @@ if(checkPos(touch_data.cur_pos,pos_param)){if(!param.peek)touch_data.dispatched_
 camera2d.domToVirtual(cur_pos,touch_data.cur_pos)
 return{cur_pos:cur_pos,drag_payload:touch_data.drag_payload}}}return null}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./browser.js":5,"./camera2d.js":7,"./cmds.js":9,"./engine.js":13,"./in_event.js":27,"./input_constants":29,"./local_storage.js":31,"./pointer_lock.js":39,"./settings.js":44,"./sound.js":49,"./spot.js":50,"assert":undefined}],29:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./browser.js":7,"./camera2d.js":9,"./cmds.js":11,"./engine.js":15,"./in_event.js":30,"./input_constants":32,"./local_storage.js":35,"./normalize_mousewheel.js":44,"./pointer_lock.js":48,"./settings.js":53,"./sound.js":59,"./spot.js":60,"assert":undefined}],32:[function(require,module,exports){
 "use strict"
 exports.POINTERLOCK=exports.BUTTON_RIGHT=exports.BUTTON_POINTERLOCK=exports.BUTTON_MIDDLE=exports.BUTTON_LEFT=exports.BUTTON_ANY=exports.ANY=void 0
 var BUTTON_LEFT=0
@@ -3460,26 +4411,71 @@ exports.ANY=ANY
 var POINTERLOCK=BUTTON_POINTERLOCK
 exports.POINTERLOCK=POINTERLOCK
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
+"use strict"
+exports.isbot=isbot
+var fullPattern=[" daum[ /]"," deusu/"," yadirectfetcher","(?:^|[^g])news(?!sapphire)","^(?:(?! channel/| google/).)*google(?!(app|/google| pixel))","^(?:(?! cu).)*bots?(?:\\b|_)","^(?:(?!(?:lib)).)*http","^(?:(?![hg]m).)*score","^(?:(?!cam).)*scan","@[a-z][\\w-]+\\.","\\(\\)","\\.com\\b","\\btime/","\\|","^<","^[\\w \\.\\-\\(?:\\):%]+(?:/v?\\d+(?:\\.\\d+)?(?:\\.\\d{1,10})*?)?(?:,|$)","^[^ ]{50,}$","^\\d+\\b","^\\w*search\\b","^\\w+/[\\w\\(\\)]*$","^active","^ad muncher","^amaya","^avsdevicesdk/","^biglotron","^bot","^bw/","^clamav[ /]","^client/","^cobweb/","^custom","^ddg[_-]android","^discourse","^dispatch/\\d","^downcast/","^duckduckgo","^email","^facebook","^getright/","^gozilla/","^hobbit","^hotzonu","^hwcdn/","^igetter/","^jeode/","^jetty/","^jigsaw","^microsoft bits","^movabletype","^mozilla/5\\.0\\s[a-z\\.-]+$","^mozilla/\\d\\.\\d \\(compatible;?\\)$","^mozilla/\\d\\.\\d \\w*$","^navermailapp","^netsurf","^offline","^openai/","^owler","^php","^postman","^python","^rank","^read","^reed","^rest","^rss","^snapchat","^space bison","^svn","^swcd ","^taringa","^thumbor/","^track","^w3c","^webbandit/","^webcopier","^wget","^whatsapp","^wordpress","^xenu link sleuth","^yahoo","^yandex","^zdm/\\d","^zoom marketplace/","^{{.*}}$","adscanner/","analyzer","archive","ask jeeves/teoma","audit","bit\\.ly/","bluecoat drtr","browsex","burpcollaborator","capture","catch","check\\b","checker","chrome-lighthouse","chromeframe","classifier","cloudflare","convertify","cookiehubscan","crawl","cypress/","dareboost","datanyze","dejaclick","detect","dmbrowser","download","evc-batch/","exaleadcloudview","feed","firephp","functionize","gomezagent","headless","httrack","hubspot marketing grader","hydra","ibisbrowser","images","infrawatch","insight","inspect","iplabel","ips-agent","java(?!;)","jsjcw_scanner","library","linkcheck","mail\\.ru/","manager","measure","neustar wpm","node","nutch","offbyone","optimize","pageburst","pagespeed","parser","perl","phantomjs","pingdom","powermarks","preview","proxy","ptst[ /]\\d","reputation","resolver","retriever","rexx;","rigor","rss\\b","scanner\\.","scrape","server","sogou","sparkler/","speedcurve","spider","splash","statuscake","supercleaner","synapse","synthetic","tools","torrent","trace","transcoder","url","validator","virtuoso","wappalyzer","webglance","webkit2png","whatcms/","zgrab"].join("|")
+var naivePattern=/bot|crawl|http|lighthouse|scan|search|spider/i
+var pattern
+function getPattern(){if(pattern instanceof RegExp)return pattern
+try{pattern=new RegExp(fullPattern,"i")}catch(error){pattern=naivePattern}return pattern}function isbot(){var userAgent=navigator.userAgent
+return Boolean(userAgent)&&getPattern().test(userAgent)||String(document.location).includes("bot=1")}
+
+},{}],34:[function(require,module,exports){
 "use strict"
 exports.link=link
+exports.linkActivate=linkActivate
 exports.linkGetDefaultStyle=linkGetDefaultStyle
+exports.linkObscureRect=linkObscureRect
+exports.linkSetDefaultStyle=linkSetDefaultStyle
 exports.linkText=linkText
 exports.linkTick=linkTick
-var assert=require("assert")
+var verify=require("../common/verify")
+var _require=require("./client_config"),platformParameterGet=_require.platformParameterGet
 var engine=require("./engine.js")
-var _require=require("./font.js"),style=_require.style
+var _require2=require("./font.js"),fontStyle=_require2.fontStyle
 var camera2d=require("./camera2d.js")
 var in_event=require("./in_event.js")
 var input=require("./input.js")
 var abs=Math.abs
-var _require2=require("./ui.js"),uiGetDOMElem=_require2.uiGetDOMElem
+var _require3=require("./ui.js"),uiGetDOMElem=_require3.uiGetDOMElem
 var ui=require("./ui.js")
+var _require4=require("./uistyle.js"),uiStyleCurrent=_require4.uiStyleCurrent
 var settings=require("./settings.js")
-var _require3=require("./spot.js"),SPOT_DEFAULT_BUTTON=_require3.SPOT_DEFAULT_BUTTON,spot=_require3.spot,spotFocusSteal=_require3.spotFocusSteal,spotKey=_require3.spotKey
-var style_link_default=style(null,{color:1346437119,outline_width:1,outline_color:32})
-var style_link_hover_default=style(null,{color:65535,outline_width:1,outline_color:32})
-function linkGetDefaultStyle(){return style_link_default}var state_cache={}
+var _require5=require("./spot.js"),SPOT_DEFAULT_BUTTON=_require5.SPOT_DEFAULT_BUTTON,spot=_require5.spot,spotKey=_require5.spotKey
+var max=Math.max,min=Math.min
+var style_link_default=fontStyle(null,{color:1346437119,outline_width:1,outline_color:32})
+var style_link_hover_default=fontStyle(null,{color:65535,outline_width:1,outline_color:32})
+function linkGetDefaultStyle(){return style_link_default}function linkSetDefaultStyle(style_link,style_link_hover){style_link_default=style_link
+style_link_hover_default=style_link_hover}var link_blocks=[]
+function linkObscureRect(box){if(!box.dom_pos)box.dom_pos={}
+camera2d.virtualToDomPosParam(box.dom_pos,box)
+link_blocks.push(box.dom_pos)}var STRICT_CHECKING=true
+function overlaps(x0,x1,x,w){if(STRICT_CHECKING)return x<x1&&x+w>x0
+else return x<=x0&&x+w>=x1}function linkClipRect(rect){if(!rect.dom_pos)rect.dom_pos={}
+camera2d.virtualToDomPosParam(rect.dom_pos,rect)
+var dom_pos=rect.dom_pos
+var ox0=dom_pos.x
+var ox1=ox0+dom_pos.w
+var oy0=dom_pos.y
+var oy1=oy0+dom_pos.h
+var x0=ox0
+var x1=ox1
+var y0=oy0
+var y1=oy1
+for(var ii=0;ii<link_blocks.length;++ii){var check=link_blocks[ii]
+if(overlaps(x0,x1,check.x,check.w)){if(check.y<=y0)y0=max(y0,check.y+check.h)
+if(check.y+check.h>=y1)y1=min(y1,check.y)}if(overlaps(y0,y1,check.y,check.h)){if(check.x<=x0)x0=max(x0,check.x+check.w)
+if(check.x+check.w>=x1)x1=min(x1,check.x)}}if(x1<=x0||y1<=y0)return false
+if(x0!==ox0||x1!==ox1){var ow=dom_pos.w
+var offs=(x0-ox0)/ow
+var wscale=(x1-x0)/ow
+rect.x+=offs*rect.w
+rect.w*=wscale}if(y0!==oy0||y1!==oy1){var oh=dom_pos.h
+var _offs=(y0-oy0)/oh
+var hscale=(y1-y0)/oh
+rect.y+=_offs*rect.h
+rect.h*=hscale}return true}var state_cache={}
 var good_url=/https?:\/\//
 function preventFocus(evt){evt.preventDefault()
 if(evt.relatedTarget)evt.relatedTarget.focus()
@@ -3488,9 +4484,10 @@ if(!url.match(good_url))url=document.location.protocol+"//"+url
 var key=spotKey(param)
 var state=state_cache[key]
 if(!state)state=state_cache[key]={clicked:false}
+verify(state.frame!==engine.frame_index)
 state.frame=engine.frame_index
 var rect={x:x,y:y,w:w,h:h}
-if(camera2d.clipTestRect(rect)&&!(settings.shader_debug||settings.show_profiler)){var elem=uiGetDOMElem(state.elem,allow_modal)
+if(camera2d.clipTestRect(rect)&&linkClipRect(rect)&&!(settings.shader_debug||settings.show_profiler||platformParameterGet("linkHandler"))){var elem=uiGetDOMElem(state.elem,allow_modal)
 if(elem!==state.elem)if(state.elem=elem){elem.textContent=""
 var a_elem=document.createElement("a")
 a_elem.setAttribute("draggable",false)
@@ -3498,6 +4495,7 @@ a_elem.textContent=" "
 a_elem.className="glovui_link noglov"
 a_elem.setAttribute("target","_blank")
 a_elem.setAttribute("href",url)
+if(param.download)a_elem.setAttribute("download",param.download)
 a_elem.setAttribute("tabindex","-1")
 a_elem.addEventListener("focus",preventFocus)
 state.url=url
@@ -3518,10 +4516,11 @@ var size=camera2d.htmlSize(rect.w,rect.h)
 elem.style.width=size[0]+"%"
 elem.style.height=size[1]+"%"}}var clicked=state.clicked
 state.clicked=false
-return clicked}function linkText(param){var style_link=param.style_link,style_link_hover=param.style_link_hover,x=param.x,y=param.y,z=param.z,font_size=param.font_size,text=param.text,url=param.url,internal=param.internal
+return clicked}function linkText(param){var style_link=param.style_link,style_link_hover=param.style_link_hover,x=param.x,y=param.y,z=param.z,style=param.style,font_size=param.font_size,text=param.text,url=param.url
 text=text||url
 z=z||Z.UI
-font_size=font_size||ui.font_height
+style=style||uiStyleCurrent()
+font_size=font_size||style.text_height
 var w=ui.font.getStringWidth(style_link||style_link_default,font_size,text)
 var h=font_size
 param.w=w
@@ -3532,17 +4531,14 @@ var style_use=spot_ret.focused?style_link_hover||style_link_hover_default:style_
 ui.font.drawSized(style_use,x,y,z,font_size,text)
 var underline_w=1
 ui.drawLine(x,y+h-underline_w,x+w,y+h-underline_w,z-.5,underline_w,1,style_use.color_vec4)
-var clicked=link(param)
-if(clicked)spotFocusSteal(param)
-if(spot_ret.ret&&!internal){var key=spotKey(param)
-var state=state_cache[key]
-assert(state)
-assert(state.a_elem)
-state.a_elem.click()}return clicked||spot_ret.ret}function linkTick(){for(var key in state_cache)if(state_cache[key].frame!==engine.frame_index-1)delete state_cache[key]}
+return spot_ret.ret}function linkActivate(spot_key){var state=state_cache[spot_key]
+if(verify(state)&&state.a_elem)state.a_elem.click()}function linkTick(){for(var key in state_cache)if(state_cache[key].frame!==engine.frame_index-1)delete state_cache[key]
+link_blocks.length=0}
 
-},{"./camera2d.js":7,"./engine.js":13,"./font.js":19,"./in_event.js":27,"./input.js":28,"./settings.js":44,"./spot.js":50,"./ui.js":57,"assert":undefined}],31:[function(require,module,exports){
+},{"../common/verify":94,"./camera2d.js":9,"./client_config":10,"./engine.js":15,"./font.js":22,"./in_event.js":30,"./input.js":31,"./settings.js":53,"./spot.js":60,"./ui.js":67,"./uistyle.js":68}],35:[function(require,module,exports){
 "use strict"
 exports.getStoragePrefix=getStoragePrefix
+exports.localStorageAddExternalStore=localStorageAddExternalStore
 exports.localStorageClearAll=localStorageClearAll
 exports.localStorageExportAll=localStorageExportAll
 exports.localStorageGet=localStorageGet
@@ -3557,46 +4553,449 @@ var is_set=false
 function setStoragePrefix(prefix){if(is_set)return
 is_set=true
 storage_prefix=prefix}function getStoragePrefix(){assert(is_set)
-return storage_prefix}var lsd=function(){try{localStorage.setItem("test","test")
+return storage_prefix}var external_store=null
+function localStorageAddExternalStore(store){external_store=store}var lsd=function(){try{localStorage.setItem("test","test")
 localStorage.removeItem("test")
 return localStorage}catch(e){return null}}()
 var lsd_overlay={}
 function localStorageGet(key){assert(is_set)
-var ret=lsd_overlay[key=storage_prefix+"_"+key]||lsd&&lsd.getItem(key)
+var ret
+if(external_store&&external_store.test(key))ret=external_store.get(key)
+else ret=lsd_overlay[key=storage_prefix+"_"+key]||lsd&&lsd.getItem(key)
 if("undefined"===ret)ret=void 0
 else if(null===ret)ret=void 0
 return ret}function localStorageSet(key,value){assert(is_set)
-key=storage_prefix+"_"+key
-if(void 0===value||null===value){if(lsd)lsd.removeItem(key)
-delete lsd_overlay[key]}else{var str=String(value)
-lsd_overlay[key]=str
-try{if(lsd)lsd.setItem(key,str)}catch(e){}}}function localStorageSetJSON(key,value){localStorageSet(key,JSON.stringify(value))}function localStorageGetJSON(key,def){var value=localStorageGet(key)
+if(null===value)value=void 0
+var full_key=storage_prefix+"_"+key
+var unchanged=false
+var str
+if(void 0===value)delete lsd_overlay[full_key]
+else{str=String(value)
+if(lsd_overlay[full_key]===str)unchanged=true
+else lsd_overlay[full_key]=str}if(external_store&&external_store.test(key)){if(!unchanged)external_store.set(key,value)
+return}if(void 0===value){if(lsd)lsd.removeItem(full_key)
+delete lsd_overlay[full_key]}else if(!unchanged)try{if(lsd)lsd.setItem(full_key,str)}catch(e){}}function localStorageSetJSON(key,value){localStorageSet(key,JSON.stringify(value))}function localStorageGetJSON(key,def){var value=localStorageGet(key)
 if(void 0===value)return def
 try{return JSON.parse(value)}catch(e){}return def}function localStorageClearAll(key_prefix){var prefix=new RegExp("^"+storage_prefix+"_"+(key_prefix||""),"u")
-if(lsd){var keysToRemove=[]
-for(var i=0;i<lsd.length;i++){var key=lsd.key(i)
-assert(key)
-if(key.match(prefix))keysToRemove.push(key)}for(var _i=0;_i<keysToRemove.length;_i++)lsd.removeItem(keysToRemove[_i])}for(var _key in lsd_overlay)if(_key.match(prefix))delete lsd_overlay[_key]}function localStorageExportAll(filter_prefix){var obj={}
-var prefix=new RegExp("^"+storage_prefix+"_("+(filter_prefix||"")+".*)","u")
-if(lsd)for(var i=0;i<lsd.length;i++){var key=lsd.key(i)
-assert(key)
-var m=key.match(prefix)
-if(m){var v=lsd.getItem(key)
-if(v&&"undefined"!==v)obj[m[1]]=v}}for(var _key2 in lsd_overlay){var _m=_key2.match(prefix)
-if(_m)obj[_m[1]]=lsd_overlay[_key2]}return obj}function localStorageImportAll(serialized){localStorageClearAll()
-for(var key in serialized)localStorageSet(key,serialized[key])}exports.get=localStorageGet
+if(lsd){var keys_to_remove=[]
+for(var i=0;i<lsd.length;i++){var _key=lsd.key(i)
+assert(_key)
+if(_key.match(prefix))keys_to_remove.push(_key)}for(var _i=0;_i<keys_to_remove.length;_i++)lsd.removeItem(keys_to_remove[_i])}for(var _key2 in lsd_overlay)if(_key2.match(prefix))delete lsd_overlay[_key2]}function localStorageExportAll(filter_prefix){var obj={}
+var prefix=new RegExp("^"+storage_prefix+"_("+(filter_prefix||"")+".*)")
+if(lsd)for(var i=0;i<lsd.length;i++){var _key3=lsd.key(i)
+assert(_key3)
+var m=_key3.match(prefix)
+if(m){var v=lsd.getItem(_key3)
+if(v&&"undefined"!==v)obj[m[1]]=v}}for(var _key4 in lsd_overlay){var _m=_key4.match(prefix)
+if(_m)obj[_m[1]]=lsd_overlay[_key4]}return obj}function localStorageImportAll(serialized){localStorageClearAll()
+for(var _key5 in serialized)localStorageSet(_key5,serialized[_key5])}exports.get=localStorageGet
 exports.set=localStorageSet
 exports.setJSON=localStorageSetJSON
 exports.getJSON=localStorageGetJSON
 exports.clearAll=localStorageClearAll
 
-},{"assert":undefined}],32:[function(require,module,exports){
+},{"assert":undefined}],36:[function(require,module,exports){
 "use strict"
 exports.getStringFromLocalizable=getStringFromLocalizable
 exports.getStringIfLocalizable=getStringIfLocalizable
 function getStringFromLocalizable(s){return s&&s.toLocalString?s.toLocalString():s}function getStringIfLocalizable(s){return s&&s.toLocalString?s.toLocalString():s}
 
-},{}],33:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
+"use strict"
+exports.locateAsset=locateAsset
+exports.locateAssetAddHostMapping=locateAssetAddHostMapping
+exports.locateAssetDisableHashing=locateAssetDisableHashing
+exports.locateAssetSetProxyPath=locateAssetSetProxyPath
+exports.unlocatePaths=unlocatePaths
+var asset_mappings="undefined"===typeof window?{}:window.glov_asset_mappings
+var asset_dir=asset_mappings&&asset_mappings.asset_dir||""
+var lsd=function(){if("undefined"===typeof window)return{}
+try{localStorage.setItem("test","test")
+localStorage.removeItem("test")
+return localStorage}catch(e){return{}}}()
+var DISABLED_KEY="asset_hashing_disabled_until"
+if(Number(lsd[DISABLED_KEY])>Date.now()){console.log("Disabling asset mappings due to auto-reload.")
+asset_mappings={}}var proxy_path=""
+function locateAssetSetProxyPath(proxy_path_in){proxy_path=proxy_path_in}var host_mappings=[]
+function locateAssetAddHostMapping(src,dest){host_mappings.push([src,dest])}function locateAsset(name){if(!asset_mappings)return name
+var m=asset_mappings[name]
+if(!m){if(name.includes("://"))for(var ii=0;ii<host_mappings.length;++ii){var pair=host_mappings[ii]
+if(name.startsWith(pair[0]))name=pair[1]+name.slice(pair[0].length)}else if(proxy_path)return""+proxy_path+name
+return name}var ret=asset_dir+"/"+m
+var idx=name.lastIndexOf(".")
+if(-1!==idx)ret+=name.slice(idx)
+if(proxy_path)ret=""+proxy_path+ret
+return ret}function locateAssetDisableHashing(){asset_mappings={}
+lsd[DISABLED_KEY]=String(Date.now()+5e3)}function unlocatePaths(s){var reverse_lookup=Object.create(null)
+for(var key in asset_mappings)reverse_lookup[asset_mappings[key]]=key
+return String(s).replace(new RegExp(asset_dir+"/([a-zA-Z0-9]+)\\.\\w+","g"),function(match,hash){return reverse_lookup[hash]||match})}
+
+},{}],38:[function(require,module,exports){
+"use strict"
+exports.markdownAuto=markdownAuto
+exports.markdownDims=markdownDims
+exports.markdownDraw=markdownDraw
+exports.markdownIsAllWhitespace=markdownIsAllWhitespace
+exports.markdownLabel=markdownLabel
+exports.markdownLayoutInvalidate=markdownLayoutInvalidate
+exports.markdownParseInvalidate=markdownParseInvalidate
+exports.markdownPrep=markdownPrep
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var assert=require("assert")
+var _glovCommonUtil=require("../common/util")
+var has=_glovCommonUtil.has
+var verify=require("../common/verify")
+var _glovCommonVmath=require("../common/vmath")
+var unit_vec=_glovCommonVmath.unit_vec
+var vec4=_glovCommonVmath.vec4
+var _engine=require("./engine")
+var engine=_engine
+var _font=require("./font")
+var ALIGN=_font.ALIGN
+var EPSILON=_font.EPSILON
+var fontStyleAlpha=_font.fontStyleAlpha
+var fontStyleBold=_font.fontStyleBold
+var fontStyleHash=_font.fontStyleHash
+var _input=require("./input")
+var mousePos=_input.mousePos
+var _localization=require("./localization")
+var getStringFromLocalizable=_localization.getStringFromLocalizable
+var _markdown_parse=require("./markdown_parse")
+var mdParse=_markdown_parse.mdParse
+var mdParseSetValidRenderables=_markdown_parse.mdParseSetValidRenderables
+var _markdown_renderables=require("./markdown_renderables")
+var markdown_default_font_styles=_markdown_renderables.markdown_default_font_styles
+var markdown_default_renderables=_markdown_renderables.markdown_default_renderables
+var markdownLayoutFit=_markdown_renderables.markdownLayoutFit
+var _spot=require("./spot")
+var spot=_spot.spot
+var SPOT_DEFAULT_LABEL=_spot.SPOT_DEFAULT_LABEL
+var spotPadMode=_spot.spotPadMode
+var _sprites=require("./sprites")
+var spriteClipPause=_sprites.spriteClipPause
+var spriteClipped=_sprites.spriteClipped
+var spriteClippedViewport=_sprites.spriteClippedViewport
+var spriteClipResume=_sprites.spriteClipResume
+var _ui=require("./ui")
+var drawElipse=_ui.drawElipse
+var drawRect2=_ui.drawRect2
+var getUIElemData=_ui.getUIElemData
+var uiFontStyleNormal=_ui.uiFontStyleNormal
+var uiGetFont=_ui.uiGetFont
+var uiTextHeight=_ui.uiTextHeight
+var ceil=Math.ceil,floor=Math.floor,max=Math.max,min=Math.min
+function markdownParseInvalidate(param){if(param.cache){var state=param
+if(state.cache.parsed)delete state.cache.parsed}}function markdownLayoutInvalidate(param){if(param.cache){var state=param
+if(state.cache.layout)delete state.cache.layout}}var MDBlockParagraph=function(){function MDBlockParagraph(content,param){this.content=void 0
+this.content=mdASTToBlock(content,param)}MDBlockParagraph.prototype.layout=function layout(param){var ret=[]
+for(var ii=0;ii<this.content.length;++ii)ret.push(this.content[ii].layout(param))
+if(param.align&ALIGN.HWRAP){if(param.cursor.x!==param.cursor.line_x0){param.cursor.line_x0=param.cursor.x=param.indent
+param.cursor.y+=param.line_height}param.cursor.y+=ceil(.5*param.line_height)}else param.cursor.x+=ceil(.25*param.text_height)
+return Array.prototype.concat.apply([],ret)}
+return MDBlockParagraph}()
+function createParagraph(content,param){return new MDBlockParagraph(content,param)}var MDBlockBold=function(){function MDBlockBold(content,param){this.content=void 0
+this.content=mdASTToBlock(content,param)}MDBlockBold.prototype.layout=function layout(param){var old_style=param.font_style
+var key=param.font_style_idx+".bold"
+var font_styles=param.font_styles
+var bold_style=font_styles[key]||markdown_default_font_styles[key]
+if(!bold_style){var base_style=font_styles[param.font_style_idx]||markdown_default_font_styles[param.font_style_idx]||font_styles.def
+bold_style=font_styles[key]=fontStyleBold(base_style,.5)}param.font_style=bold_style
+var ret=[]
+for(var ii=0;ii<this.content.length;++ii)ret.push(this.content[ii].layout(param))
+param.font_style=old_style
+return Array.prototype.concat.apply([],ret)}
+return MDBlockBold}()
+function createBold(content,param){return new MDBlockBold(content,param)}var debug_color=vec4(0,0,0,.5)
+var NO_HALIGN=ALIGN.VTOP|ALIGN.VCENTER|ALIGN.VBOTTOM|ALIGN.HFIT
+var MDDrawBlockText=function(){function MDDrawBlockText(dims){this.alpha_font_style_cache=void 0
+this.alpha_font_style_cache_value=void 0
+this.dims=dims}MDDrawBlockText.prototype.draw=function draw(param){profilerStart("MDDrawBlockText::draw")
+var lp=this.dims
+var style=lp.font_style
+if(1!==param.alpha){if(this.alpha_font_style_cache_value!==param.alpha){this.alpha_font_style_cache_value=param.alpha
+this.alpha_font_style_cache=fontStyleAlpha(style,param.alpha)}style=this.alpha_font_style_cache}lp.font.drawSizedAligned(style,param.x+lp.x,param.y+lp.y,param.z,lp.h,lp.align&NO_HALIGN,lp.w,lp.h,lp.text)
+profilerStop()}
+return MDDrawBlockText}()
+var MDBlockText=function(){function MDBlockText(content,param){this.content=content}MDBlockText.prototype.layout=function layout(param){var cursor=param.cursor,line_height=param.line_height,text_height=param.text_height
+var ret=[]
+var text=this.content
+if(!(param.align&ALIGN.HWRAP))text=text.replace(/\n/g," ")
+if(param.align&ALIGN.HWRAP){var line_x0=cursor.x
+var inset=cursor.x
+var w=param.w-inset
+var indent=param.indent-inset
+var yoffs=(line_height-text_height)/2
+if(param.font.integral)yoffs=floor(yoffs)
+param.font.wrapLines(param.font_style,w,indent,text_height,text,param.align,function(x0,linenum,line,x1){if(linenum>0){cursor.y+=line_height
+cursor.line_x0=param.indent
+cursor.line_y1=cursor.y}var layout_param={font:param.font,font_style:param.font_style,x:line_x0+x0,y:cursor.y+yoffs,h:text_height,w:min(x1,w)-x0,align:param.align,text:line}
+cursor.line_y1=max(cursor.line_y1,cursor.y+line_height)
+ret.push(new MDDrawBlockText(layout_param))})
+if(ret.length){var tail=ret[ret.length-1]
+cursor.x=tail.dims.x+tail.dims.w}else cursor.x+=param.font.getStringWidth(param.font_style,text_height,text)}else{var str_w=param.font.getStringWidth(param.font_style,text_height,text)
+var layout_param={x:-1,y:-1,font:param.font,font_style:param.font_style,h:text_height,w:str_w,align:param.align,text:text}
+markdownLayoutFit(param,layout_param)
+ret.push(new MDDrawBlockText(layout_param))}return ret}
+return MDBlockText}()
+function createText(content,param){return new MDBlockText(content,param)}function createRenderable(content,param){var custom=param.custom||{}
+var renderables=param.renderables||markdown_default_renderables
+var type=content.type
+var data
+if(has(custom,type)){var parameterized=custom[type]
+type=parameterized.type
+data=parameterized.data}assert(has(renderables,type))
+var block=renderables[type](content,data)
+if(block)return block
+return createText(content.orig_text,param)}var block_factories={paragraph:createParagraph,text:createText,strong:createBold,em:createBold,renderable:createRenderable}
+function mdASTToBlock(tree,param){var blocks=[]
+var skip=0
+for(var ii=0;ii<tree.length;++ii){if(skip){--skip
+continue}var elem=tree[ii]
+if("text"===elem.type){var next_elem=void 0
+while((next_elem=tree[ii+skip+1])&&"text"===next_elem.type){elem.content+=next_elem.content;++skip}}var factory=block_factories[elem.type]
+blocks.push(factory(elem.content,param))}return blocks}function markdownParse(param){var cache=param.cache
+if(cache.parsed)return
+profilerStart("markdownParse")
+var valid_renderables=(param.renderables?param.renderables:markdown_default_renderables)||{}
+if(param.custom){valid_renderables=_extends({},valid_renderables)
+for(var key in param.custom)valid_renderables[key]=true}mdParseSetValidRenderables(valid_renderables)
+var tree=mdParse(getStringFromLocalizable(param.text))
+cache.parsed=mdASTToBlock(tree,param)
+profilerStop("markdownParse")}function markdownIsAllWhitespace(param){var valid_renderables=(param.renderables?param.renderables:markdown_default_renderables)||{}
+mdParseSetValidRenderables(valid_renderables)
+function treeContainsNonWhitespace(tree){for(var ii=0;ii<tree.length;++ii){var node=tree[ii]
+if("text"===node.type){if(node.content.trim())return true}else if("paragraph"===node.type||"em"===node.type||"strong"===node.type){if(treeContainsNonWhitespace(node.content))return true}else if("renderable"===node.type)return true
+else verify.unreachable(node)}return false}return!treeContainsNonWhitespace(mdParse(getStringFromLocalizable(param.text)))}function cmpDimsY(a,b){var d=a.dims.y-b.dims.y
+if(0!==d)return d
+if(0!==(d=a.dims.x-b.dims.x))return d
+return 0}function markdownLayout(param){var cache=param.cache
+if(cache.layout)return
+profilerStart("markdownLayout")
+var font_style=param.font_style||uiFontStyleNormal()
+var font_styles
+if(param.font_styles)if(param.font_styles.def)font_styles=param.font_styles
+else font_styles=_extends({def:font_style},param.font_styles)
+else font_styles={def:font_style}
+var text_height=param.text_height||uiTextHeight()
+var line_height=param.line_height||text_height
+var calc_param={w:param.w||0,h:param.h||0,text_height:text_height,line_height:line_height,indent:param.indent||0,align:param.align||0,font:param.font||uiGetFont(),font_style:font_style,font_styles:font_styles,font_style_idx:param.font_style_idx||"def",cursor:{line_x0:0,line_y1:0,x:0,y:0}}
+var blocks=cache.parsed
+assert(blocks)
+var draw_blocks=[]
+var maxx=0
+var miny=Infinity
+var maxy=0
+for(var ii=0;ii<blocks.length;++ii){var arr=blocks[ii].layout(calc_param)
+for(var jj=0;jj<arr.length;++jj){var block=arr[jj]
+var _dims=block.dims
+maxx=max(maxx,_dims.x+_dims.w)
+maxy=max(maxy,_dims.y+_dims.h)
+miny=min(miny,_dims.y)
+draw_blocks.push(block)}}var bottom_pad=max(0,calc_param.cursor.line_y1-maxy)
+if(calc_param.align&(ALIGN.HRIGHT|ALIGN.HCENTER)&&draw_blocks.length){var row_h_est=calc_param.line_height/2
+var row_start_idx=0
+var last_dims=draw_blocks[0].dims
+for(var _ii=1;_ii<draw_blocks.length+1;++_ii){var is_last=_ii===draw_blocks.length
+var do_wrap=is_last
+if(!is_last){var _dims2=draw_blocks[_ii].dims
+if(_dims2.y+_dims2.h/2>last_dims.y+last_dims.h/2+row_h_est&&_dims2.x<last_dims.x+last_dims.w/2)do_wrap=true}if(do_wrap){var xoffs=calc_param.w-(last_dims.x+last_dims.w)
+if(calc_param.align&ALIGN.HCENTER){xoffs*=.5
+if(calc_param.font.integral)xoffs=floor(xoffs)}if(xoffs>0)for(var _jj=row_start_idx;_jj<_ii;++_jj)draw_blocks[_jj].dims.x+=xoffs
+row_start_idx=_ii}if(!is_last)last_dims=draw_blocks[_ii].dims}}if(calc_param.align&ALIGN.HFIT&&maxx>calc_param.w+EPSILON){var xscale=calc_param.w/maxx
+for(var _ii2=0;_ii2<draw_blocks.length;++_ii2){var _block2=draw_blocks[_ii2]
+var x0=_block2.dims.x
+var x1=x0+_block2.dims.w
+_block2.dims.x=x0*xscale
+_block2.dims.w=(x1-x0)*xscale}}if(draw_blocks.length&&calc_param.align&(ALIGN.VCENTER|ALIGN.VBOTTOM))if(verify(calc_param.h)){var yoffs=calc_param.h-maxy
+if(calc_param.align&ALIGN.VCENTER){yoffs-=miny
+yoffs*=.5
+if(calc_param.font.integral)yoffs=floor(yoffs)}for(var _ii3=0;_ii3<draw_blocks.length;++_ii3)draw_blocks[_ii3].dims.y+=yoffs}var max_block_h=maxy=maxx=0
+for(var _ii4=0;_ii4<draw_blocks.length;++_ii4){var _block4=draw_blocks[_ii4]
+maxx=max(maxx,_block4.dims.x+_block4.dims.w)
+maxy=max(maxy,_block4.dims.y+_block4.dims.h)
+max_block_h=max(max_block_h,_block4.dims.h)}maxy+=bottom_pad
+draw_blocks.sort(cmpDimsY)
+cache.layout={blocks:draw_blocks,dims:{w:maxx,h:maxy},max_block_h:max_block_h}
+profilerStop("markdownLayout")}function markdownPrep(param){markdownParse(param)
+markdownLayout(param)}function markdownDims(param){var layout=param.cache.layout
+assert(layout)
+return layout.dims}function bsearch(blocks,y){var start=0
+var end=blocks.length-1
+while(start<end){var mid=floor((start+end)/2)
+if(blocks[mid].dims.y<=y)start=mid+1
+else end=mid}return end}function markdownDraw(param){profilerStart("markdownDraw")
+var layout=param.cache.layout
+assert(layout)
+var x=param.x,y=param.y,alpha=param.alpha
+if(void 0===alpha)alpha=1
+var draw_param={x:x,y:y,z:param.z||Z.UI,alpha:alpha}
+var viewport=param.viewport
+if(!viewport&&spriteClipped())viewport=spriteClippedViewport()
+var blocks=layout.blocks,max_block_h=layout.max_block_h
+var idx0=0
+var idx1=blocks.length-1
+if(viewport){idx0=bsearch(blocks,viewport.y-y-max_block_h)
+idx1=bsearch(blocks,viewport.y+viewport.h-y)}var mouse_pos
+if(engine.defines.MD)mouse_pos=mousePos()
+for(var ii=idx0;ii<=idx1;++ii){var block=blocks[ii]
+var _dims3=block.dims
+if(!viewport||x+_dims3.x+_dims3.w>=viewport.x&&x+_dims3.x<viewport.x+viewport.w&&y+_dims3.y+_dims3.h>=viewport.y&&y+_dims3.y<viewport.y+viewport.h){block.draw(draw_param)
+if(engine.defines.MD){var rect={x:draw_param.x+_dims3.x,y:draw_param.y+_dims3.y,z:Z.TOOLTIP,w:_dims3.w,h:_dims3.h,color:debug_color}
+if(mouse_pos[0]>=rect.x&&mouse_pos[0]<=rect.x+rect.w&&mouse_pos[1]>=rect.y&&mouse_pos[1]<=rect.y+rect.h){var clip_pause=spriteClipped()
+if(clip_pause)spriteClipPause()
+drawRect2(rect)
+if(clip_pause)spriteClipResume()}}}}profilerStop("markdownDraw")}function isAutoDrawParam(param){return!param.no_draw}function mdcAlloc(){return{}}function markdownAuto(param){profilerStart("markdownAuto")
+var state=param
+assert(!param.custom||state.cache)
+var auto_cache=!state.cache
+if(auto_cache){profilerStart("auto_cache")
+var text=param.text=getStringFromLocalizable(param.text)
+var cache_key=["mdc",param.w||0,param.h||0,param.text_height||uiTextHeight(),param.line_height||param.text_height||uiTextHeight(),param.indent||0,param.align||0,param.font_style?fontStyleHash(param.font_style):0].join(":")
+state.cache=getUIElemData(cache_key,{key:text},mdcAlloc)
+profilerStop()}var param2=param
+markdownPrep(param2)
+var dims=markdownDims(param2)
+if(isAutoDrawParam(param2))markdownDraw(param2)
+if(auto_cache)delete param.cache
+profilerStop("markdownAuto")
+return dims}function markdownLabel(param){var tooltip=param.tooltip
+var dims=markdownAuto(param)
+if(tooltip){var align=param.align,x=param.x,y=param.y,z=param.z,tooltip_above=param.tooltip_above,tooltip_right=param.tooltip_right
+z=z||Z.UI
+align=align||0
+var w=param.w||dims.w
+var h=param.h||dims.h
+if(spot({x:x,y:y,w:w,h:h,tooltip:tooltip,tooltip_width:param.tooltip_width,tooltip_above:tooltip_above,tooltip_right:Boolean(tooltip_right||align&ALIGN.HRIGHT),tooltip_center:Boolean(align&ALIGN.HCENTER),def:SPOT_DEFAULT_LABEL}).focused&&spotPadMode())drawElipse(x-.25*w,y-.25*h,x+1.25*w,y+1.25*h,z-.001,.5,unit_vec)}return dims}
+
+},{"../common/util":93,"../common/verify":94,"../common/vmath":95,"./engine":15,"./font":22,"./input":31,"./localization":36,"./markdown_parse":39,"./markdown_renderables":40,"./spot":60,"./sprites":61,"./ui":67,"assert":undefined}],39:[function(require,module,exports){
+"use strict"
+exports.mdEscape=mdEscape
+exports.mdParse=mdParse
+exports.mdParseSetValidRenderables=mdParseSetValidRenderables
+var SimpleMarkdown=require("./simple-markdown")
+var _glovCommonUtil=require("../common/util")
+var has=_glovCommonUtil.has
+var renderable_regex=/^\[([^\s\]=]+)(=?[^\s\]]*)( [^\]]+)?\](?!\()/
+var renderable_param_regex=/ ([^=]+)(?:=(?:"([^"]+)"|(\S+)))?/g
+var valid_renderables={}
+function mdParseSetValidRenderables(set){valid_renderables=set}var renderable_rule={order:SimpleMarkdown.defaultRules.link.order-.5,match:function match(source){var capture=renderable_regex.exec(source)
+if(capture){var type=capture[1]
+if(capture[2].startsWith("="))capture[2]=capture[2].slice(1)
+else if(!type.startsWith("/"))return null
+if(has(valid_renderables,type))return capture}return null},parse:function parse(capture,_parse,state){var param
+if(capture[3]){param={}
+capture[3].replace(renderable_param_regex,function(ignored){for(var _len=arguments.length,matches=new Array(_len>1?_len-1:0),_key=1;_key<_len;_key++)matches[_key-1]=arguments[_key]
+var key=matches[0],val_quoted=matches[1],val_basic=matches[2]
+var v=void 0!==val_quoted?val_quoted:void 0!==val_basic?val_basic:true
+if("string"===typeof v){var num=Number(v)
+if(isFinite(num))v=num}param[key]=v
+return""})}return{content:{type:capture[1],key:capture[2],param:param,orig_text:capture[0]}}}}
+var rules={renderable:renderable_rule};["paragraph","escape","em","strong","text"].forEach(function(key){return rules[key]=SimpleMarkdown.defaultRules[key]})
+var reBuiltParser=SimpleMarkdown.parserFor(rules)
+function mdParse(source){return reBuiltParser(source+"\n\n",{inline:false})}function mdEscape(text){return text.replace(/([\\[*_])/g,"\\$1")}
+
+},{"../common/util":93,"./simple-markdown":56}],40:[function(require,module,exports){
+"use strict"
+exports.markdownImageRegister=markdownImageRegister
+exports.markdownImageRegisterAutoAtlas=markdownImageRegisterAutoAtlas
+exports.markdownImageRegisterSpriteSheet=markdownImageRegisterSpriteSheet
+exports.markdownLayoutFit=markdownLayoutFit
+exports.markdownRenderableAddDefault=markdownRenderableAddDefault
+exports.markdownSetColorStyle=markdownSetColorStyle
+exports.markdownSetColorStyles=markdownSetColorStyles
+exports.markdown_default_renderables=exports.markdown_default_font_styles=void 0
+var markdown_default_renderables={}
+exports.markdown_default_renderables=markdown_default_renderables
+var markdown_default_font_styles={}
+exports.markdown_default_font_styles=markdown_default_font_styles
+var assert=require("assert")
+var verify=require("../common/verify")
+var _glovCommonVmath=require("../common/vmath")
+var unit_vec=_glovCommonVmath.unit_vec
+var vec4=_glovCommonVmath.vec4
+var _autoatlas=require("./autoatlas")
+var autoAtlas=_autoatlas.autoAtlas
+var autoAtlasOnImage=_autoatlas.autoAtlasOnImage
+var _font=require("./font")
+var ALIGN=_font.ALIGN
+var EPSILON=_font.EPSILON
+var fontStyleColored=_font.fontStyleColored
+var _ui=require("./ui")
+var ui_sprites=_ui.sprites
+var floor=Math.floor,max=Math.max
+function markdownRenderableAddDefault(key,renderable){markdown_default_renderables[key]=renderable}function markdownSetColorStyle(idx,style){markdown_default_font_styles[idx]=style}function markdownSetColorStyles(styles){for(var ii=0;ii<styles.length;++ii)markdown_default_font_styles[ii]=styles[ii]}var default_palette=[255,4280295679,553591039,539033599,4294967295]
+markdownSetColorStyles(default_palette.map(function(c){return fontStyleColored(null,c)}))
+function markdownLayoutFit(param,dims){var cursor=param.cursor,line_height=param.line_height
+if(cursor.x+dims.w>param.w+EPSILON&&cursor.x!==cursor.line_x0&&param.align&ALIGN.HWRAP){cursor.x=cursor.line_x0=param.indent
+cursor.y+=line_height
+cursor.line_y1=cursor.y}if(cursor.x+dims.w>param.w+EPSILON&&param.align&ALIGN.HWRAP)dims.w=param.w-cursor.line_x0
+dims.x=cursor.x
+if(dims.h!==line_height){dims.y=cursor.y+(line_height-dims.h)/2
+if(param.font.integral)dims.y=floor(dims.y)
+cursor.line_y1=max(cursor.line_y1,cursor.y+line_height,dims.y+dims.h)}else{dims.y=cursor.y
+cursor.line_y1=max(cursor.line_y1,cursor.y+line_height)}cursor.x+=dims.w
+return true}var allowed_images=Object.create(null)
+function markdownImageRegister(img_name,param){assert(param.sprite)
+assert(!allowed_images[img_name]||param.override)
+allowed_images[img_name]=param}function markdownImageRegisterSpriteSheet(spritesheet){var sprite=spritesheet.sprite
+for(var key in spritesheet.tiles)markdownImageRegister(key,{sprite:sprite,frame:spritesheet.tiles[key]})}function markdownImageRegisterAutoAtlas(atlas_name){autoAtlasOnImage(atlas_name,function(img_name){if("def"===img_name)return
+markdownImageRegister(img_name,{sprite:autoAtlas(atlas_name,img_name)})})}function getImageData(key){return allowed_images[key]||{sprite:ui_sprites.white}}var MDRImg=function(){function MDRImg(content){this.key=void 0
+this.scale=void 0
+this.aspect=void 0
+this.dims=void 0
+this.x=void 0
+this.y=void 0
+this.w=void 0
+this.h=void 0
+this.alpha_color_cache=void 0
+this.alpha_color_cache_value=void 0
+this.key=content.key
+this.dims=this
+var scale=content.param&&content.param.scale
+this.scale=scale&&"number"===typeof scale?scale:1
+var aspect=content.param&&content.param.aspect
+this.aspect=aspect&&"number"===typeof aspect?aspect:0}var _proto=MDRImg.prototype
+_proto.layout=function layout(param){var line_height=param.line_height
+var h=this.h=line_height*this.scale
+var img_data=getImageData(this.key)
+var sprite=img_data.sprite,frame=img_data.frame
+var aspect=1
+if("number"===typeof frame&&sprite.uidata){if(sprite.uidata.aspect)aspect=sprite.uidata.aspect[frame]}else if(sprite.isLazyLoad()){verify(this.aspect)
+aspect=this.aspect||1}else if(this.aspect)aspect=this.aspect
+else{var tex=sprite.texs[0]
+aspect=tex.width/tex.height
+if(sprite.uvs)aspect*=(sprite.uvs[2]-sprite.uvs[0])/(sprite.uvs[3]-sprite.uvs[1])}this.w=h*aspect
+markdownLayoutFit(param,this)
+return[this]}
+_proto.draw=function draw(param){profilerStart("MDRImg::draw")
+var x=this.x+param.x
+var y=this.y+param.y
+var img_data=getImageData(this.key)
+var color=img_data.color
+if(1!==param.alpha){if(param.alpha!==this.alpha_color_cache_value){this.alpha_color_cache_value=param.alpha
+color=color||unit_vec
+this.alpha_color_cache=vec4(color[0],color[1],color[2],color[3]*param.alpha)}color=this.alpha_color_cache}img_data.sprite.draw({x:x,y:y,z:param.z,w:this.w,h:this.h,frame:img_data.frame,color:color})
+profilerStop()}
+return MDRImg}()
+function createMDRImg(content){return new MDRImg(content)}markdownRenderableAddDefault("img",createMDRImg)
+var MDRColorStart=function(){function MDRColorStart(content){this.key=void 0
+this.key=content.key}MDRColorStart.prototype.layout=function layout(param){var font_styles=param.font_styles,font_style_idx=param.font_style_idx,font_style_stack=param.font_style_stack
+if(!font_style_stack)font_style_stack=param.font_style_stack=[]
+font_style_stack.push(font_style_idx)
+if(font_style_idx===this.key);else{var new_style=font_styles[this.key]||markdown_default_font_styles[this.key]
+if(new_style){param.font_style_idx=this.key
+param.font_style=new_style}}return[]}
+return MDRColorStart}()
+markdownRenderableAddDefault("c",function(content){return new MDRColorStart(content)})
+var MDRColorEnd=function(){function MDRColorEnd(){}MDRColorEnd.prototype.layout=function layout(param){var font_styles=param.font_styles,font_style_idx=param.font_style_idx,font_style_stack=param.font_style_stack
+if(!font_style_stack||!font_style_stack.length);else{var key=font_style_stack.pop()
+if(font_style_idx===key);else{var new_style=font_styles[key]||markdown_default_font_styles[key]
+if(new_style){param.font_style_idx=key
+param.font_style=new_style}}}return[]}
+return MDRColorEnd}()
+markdownRenderableAddDefault("/c",function(content){return new MDRColorEnd})
+
+},{"../common/verify":94,"../common/vmath":95,"./autoatlas":5,"./font":22,"./ui":67,"assert":undefined}],41:[function(require,module,exports){
 "use strict"
 exports.m43identity=m43identity
 exports.m43mul=m43mul
@@ -3649,37 +5048,39 @@ out[10]=b1*a9+b4*a10+b7*a11+b[10]
 out[11]=b2*a9+b5*a10+b8*a11+b[11]
 return out}
 
-},{}],34:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 "use strict"
-exports.default_vshader=exports.default_fshader=void 0
-exports.load=load
-exports.models=exports.load_count=void 0
-exports.startup=startup
+exports.load_count=exports.default_vshader=exports.default_fshader=void 0
+exports.modelLoad=modelLoad
+exports.modelLoadCount=modelLoadCount
+exports.modelStartup=modelStartup
+exports.models=void 0
 var assert=require("assert")
 var geom=require("./geom.js")
 var glb_parser=require("./glb/parser.js")
 var _require=require("./glb/gltf-type-utils.js"),ATTRIBUTE_TYPE_TO_COMPONENTS=_require.ATTRIBUTE_TYPE_TO_COMPONENTS
 var renderer=require("./engine.js")
-var _require2=require("./fetch.js"),fetch=_require2.fetch
-var shaders=require("./shaders.js")
-var textures=require("./textures.js")
-var _require3=require("../common/vmath.js"),vec4=_require3.vec4
-var _require4=require("./webfs.js"),webFSGetFile=_require4.webFSGetFile
+var _require2=require("./locate_asset.js"),locateAsset=_require2.locateAsset
+var _require3=require("./fetch.js"),fetch=_require3.fetch
+var _require4=require("./shaders.js"),SEMANTIC=_require4.SEMANTIC,shaderCreate=_require4.shaderCreate,shadersBind=_require4.shadersBind,shadersPrelink=_require4.shadersPrelink
+var _require5=require("./textures.js"),textureBind=_require5.textureBind,textureLoad=_require5.textureLoad
+var _require6=require("../common/vmath.js"),vec4=_require6.vec4
+var _require7=require("./webfs.js"),webFSGetFile=_require7.webFSGetFile
 var load_count=0
 exports.load_count=load_count
-var models={}
+function modelLoadCount(){return load_count}var models={}
 exports.models=models
 var default_vshader
 exports.default_vshader=default_vshader
 var default_fshader
 exports.default_fshader=default_fshader
-function initShaders(){exports.default_vshader=default_vshader=shaders.create("shaders/default.vp")
-exports.default_fshader=default_fshader=shaders.create("shaders/default.fp")
-shaders.prelink(default_vshader,default_fshader)}function Model(url){var idx=(this.url=url).lastIndexOf("/")
+function initShaders(){exports.default_vshader=default_vshader=shaderCreate("shaders/default.vp")
+exports.default_fshader=default_fshader=shaderCreate("shaders/default.fp")
+shadersPrelink(default_vshader,default_fshader)}function Model(url){var idx=(this.url=url).lastIndexOf("/")
 if(-1!==idx)this.base_url=url.slice(0,idx+1)
 else this.base_url=""}Model.prototype.load=function(){var _this=this
 exports.load_count=++load_count
-fetch({url:this.url,response_type:"arraybuffer"},function(err,array_buffer){exports.load_count=--load_count
+fetch({url:locateAsset(this.url),response_type:"arraybuffer"},function(err,array_buffer){exports.load_count=--load_count
 if(err)window.onerror("Model loading error","models.js",0,0,err)
 else try{_this.parse(array_buffer)}catch(e){window.onerror("Model loading error","models.js",0,0,e)}})}
 var skip_attr={TANGENT:true}
@@ -3696,13 +5097,13 @@ var texture_def=glb_json.textures&&glb_json.textures[bct.index]||{}
 var sampler_def=glb_json.samplers&&glb_json.samplers[texture_def.sampler]||{}
 var image=glb_json.images&&glb_json.images[texture_def.source]||{}
 if(image.uri){var params={url:""+this.base_url+image.uri,filter_mag:sampler_def.magFilter,filter_min:sampler_def.minFilter,wrap_s:sampler_def.wrapS,wrap_t:sampler_def.wrapT}
-texture=textures.load(params)}}var format=[]
+texture=textureLoad(params)}}var format=[]
 var buffers=[]
 var bidx=[]
 var total_size=0
 var vert_count=0
 for(var attr in primitives.attributes){if(skip_attr[attr])continue
-assert(void 0!==shaders.semantic[attr])
+assert(void 0!==SEMANTIC[attr])
 var _accessor=glb_json.accessors[primitives.attributes[attr]]
 assert.equal(_accessor.componentType,5126)
 var geom_format=gl.FLOAT
@@ -3711,7 +5112,7 @@ assert(geom_count)
 var my_vert_count=_accessor.count
 if(!vert_count)vert_count=my_vert_count
 else assert.equal(vert_count,my_vert_count)
-format.push([shaders.semantic[attr],geom_format,geom_count])
+format.push([SEMANTIC[attr],geom_format,geom_count])
 var buffer=glb.getBuffer(_accessor)
 buffers.push(buffer)
 bidx.push(0)
@@ -3725,75 +5126,110 @@ var idxs=glb.getBuffer(accessor)
 if(5125===accessor.componentType){assert(vert_count<65535)
 idxs=new Uint16Array(idxs)}else assert.equal(accessor.componentType,5123)
 objs.push({geom:geom.create(format,verts,idxs,primitives.mode),texture:texture})}}this.data={objs:objs}}
-Model.prototype.draw=function(mat){renderer.updateMatrices(mat)
-shaders.bind(default_vshader,default_fshader,{color:vec4(1,1,1,1)})
+var default_shader_params={color:vec4(1,1,1,1)}
+Model.prototype.draw=function(param){var mat=param.mat,vshader=param.vshader,fshader=param.fshader,shader_params=param.shader_params
+assert(mat)
+renderer.updateMatrices(mat)
+shadersBind(vshader||default_vshader,fshader||default_fshader,shader_params||default_shader_params)
 var objs=this.data.objs
 for(var ii=0;ii<objs.length;++ii){var obj=objs[ii]
-if(obj.texture)textures.bind(0,obj.texture)
+if(obj.texture)textureBind(0,obj.texture)
 obj.geom.draw()}}
 Model.prototype.drawGeom=function(){var objs=this.data.objs
 for(var ii=0;ii<objs.length;++ii)objs[ii].geom.draw()}
-function load(url){if(models[url])return models[url]
+function modelLoad(url){if(models[url])return models[url]
 var model=models[url]=new Model(url)
 model.data=models.box.data
 model.load()
-return model}function startup(){initShaders();(models.box=new Model("box")).parse(webFSGetFile("models/box_textured_embed.glb").buffer)}
+return model}function modelStartup(){initShaders();(models.box=new Model("box")).parse(webFSGetFile("models/box_textured_embed.glb").buffer)}exports.load=modelLoad
 
-},{"../common/vmath.js":76,"./engine.js":13,"./fetch.js":17,"./geom.js":21,"./glb/gltf-type-utils.js":23,"./glb/parser.js":24,"./shaders.js":46,"./textures.js":55,"./webfs.js":60,"assert":undefined}],35:[function(require,module,exports){
+},{"../common/vmath.js":95,"./engine.js":15,"./fetch.js":20,"./geom.js":24,"./glb/gltf-type-utils.js":26,"./glb/parser.js":27,"./locate_asset.js":37,"./shaders.js":55,"./textures.js":65,"./webfs.js":71,"assert":undefined}],43:[function(require,module,exports){
 "use strict"
 exports.buildString=buildString
 exports.init=init
+exports.isChunkedSendFileData=isChunkedSendFileData
 exports.netClient=netClient
 exports.netClientId=netClientId
 exports.netDisconnected=netDisconnected
 exports.netDisconnectedRaw=netDisconnectedRaw
 exports.netForceDisconnect=netForceDisconnect
+exports.netPostInit=netPostInit
 exports.netSubs=netSubs
 exports.netUserId=netUserId
+var _glovCommonUtilJs=require("../common/util.js")
+var callEach=_glovCommonUtilJs.callEach
 exports.netBuildString=buildString
 exports.netInit=init
 var _require=require("./filewatch.js"),filewatchStartup=_require.filewatchStartup
 var _require2=require("../common/packet.js"),packetEnableDebug=_require2.packetEnableDebug
 var subscription_manager=require("./subscription_manager.js")
 var wsclient=require("./wsclient.js")
-var wscommon=require("../common/wscommon.js")
 var WSClient=wsclient.WSClient
 var client
 var subs
-function init(params){if((params=params||{}).ver)wsclient.CURRENT_VERSION=params.ver
-if(String(document.location).match(/^https?:\/\/localhost/)){if(!params.no_packet_debug){console.log("PacketDebug: ON")
-packetEnableDebug(true)}if(!params.no_net_delay)wscommon.netDelaySet()}client=new WSClient(params.path);(subs=subscription_manager.create(client,params.cmd_parse)).auto_create_user=Boolean(params.auto_create_user)
+var post_net_init=[]
+function netPostInit(cb){if(post_net_init)post_net_init.push(cb)
+else cb()}function init(params){if((params=params||{}).ver)wsclient.CURRENT_VERSION=params.ver
+if(String(document.location).match(/^https?:\/\/localhost/))if(!params.no_packet_debug){console.log("PacketDebug: ON")
+packetEnableDebug(true)}client=new WSClient(params.path,params.client_app);(subs=subscription_manager.create(client,params.cmd_parse)).auto_create_user=Boolean(params.auto_create_user)
 subs.no_auto_login=Boolean(params.no_auto_login)
 subs.allow_anon=Boolean(params.allow_anon)
 window.subs=subs
 exports.subs=subs
 exports.client=client
+callEach(post_net_init,post_net_init=null)
 filewatchStartup(client)
-if(params.engine)params.engine.addTickFunc(function(dt){client.checkDisconnect()
-subs.tick(dt)})}var build_timestamp_string=new Date(Number("1673321608019")).toISOString().replace("T"," ").slice(5,-8)
+if(params.engine){params.engine.addTickFunc(function(dt){client.checkDisconnect()
+subs.tick(dt)})
+params.engine.onLoadMetrics(function(obj){subs.onceConnected(function(){client.send("load_metrics",obj)})})}}var build_timestamp_string=new Date(Number("1776878226036")).toISOString().replace("T"," ").slice(5,-8)
 function buildString(){return wsclient.CURRENT_VERSION?wsclient.CURRENT_VERSION+" ("+build_timestamp_string+")":build_timestamp_string}function netDisconnectedRaw(){return!client||!client.connected||client.disconnected||!client.socket||1!==client.socket.readyState}function netDisconnected(){return netDisconnectedRaw()||subs.logging_in}function netForceDisconnect(){var _client$socket
 if(subs)subs.was_logged_in=false
-null==client||(null==(_client$socket=client.socket)||(null==_client$socket.close||_client$socket.close()))}function netClient(){return client}function netClientId(){return client.id}function netUserId(){return subs.getUserId()}function netSubs(){return subs}
+null==client||(null==(_client$socket=client.socket)||(null==_client$socket.close||_client$socket.close()))}function netClient(){return client}function netClientId(){return client.id}function netUserId(){return subs.getUserId()}function netSubs(){return subs}function isChunkedSendFileData(data){return!data.err}
 
-},{"../common/packet.js":71,"../common/wscommon.js":77,"./filewatch.js":18,"./subscription_manager.js":52,"./wsclient.js":61}],36:[function(require,module,exports){
+},{"../common/packet.js":86,"../common/util.js":93,"./filewatch.js":21,"./subscription_manager.js":62,"./wsclient.js":73}],44:[function(require,module,exports){
+"use strict"
+exports.normalizeWheel=normalizeWheel
+var PIXEL_STEP=10
+var LINE_HEIGHT=40
+var PAGE_HEIGHT=800
+function normalizeWheel(event){var spin_x=0
+var spin_y=0
+var pixel_x=0
+var pixel_y=0
+if(event.detail)spin_y=event.detail
+if(event.wheelDelta)spin_y=-event.wheelDelta/120
+if(event.wheelDeltaY)spin_y=-event.wheelDeltaY/120
+if(event.wheelDeltaX)spin_x=-event.wheelDeltaX/120
+if("axis"in event&&event.axis===event.HORIZONTAL_AXIS){spin_x=spin_y
+spin_y=0}pixel_x=spin_x*PIXEL_STEP
+pixel_y=spin_y*PIXEL_STEP
+if("number"===typeof event.deltaY)pixel_y=event.deltaY
+if("number"===typeof event.deltaX)pixel_x=event.deltaX
+if((pixel_x||pixel_y)&&event.deltaMode)if(1===event.deltaMode){pixel_x*=LINE_HEIGHT
+pixel_y*=LINE_HEIGHT}else{pixel_x*=PAGE_HEIGHT
+pixel_y*=PAGE_HEIGHT}if(pixel_x&&!spin_x)spin_x=pixel_x<1?-1:1
+if(pixel_y&&!spin_y)spin_y=pixel_y<1?-1:1
+return{spin_x:spin_x,spin_y:spin_y,pixel_x:pixel_x,pixel_y:pixel_y}}
+
+},{}],45:[function(require,module,exports){
 "use strict"
 exports.create=create
 exports.preloadParticleData=preloadParticleData
 var assert=require("assert")
 var _require=require("../common/vmath.js"),vec2=_require.vec2,v2copy=_require.v2copy,v2lerp=_require.v2lerp,v2mul=_require.v2mul,vec3=_require.vec3,vec4=_require.vec4,v3add=_require.v3add,v4copy=_require.v4copy,v4lerp=_require.v4lerp,v4mul=_require.v4mul
 var sprites=require("./sprites.js")
-var textures=require("./textures.js")
+var _require2=require("./textures.js"),textureLoad=_require2.textureLoad
 var blend_map={alpha:sprites.BLEND_ALPHA,additive:sprites.BLEND_ADDITIVE}
 function preloadParticleData(particle_data){for(var key in particle_data.defs){var def=particle_data.defs[key]
 for(var part_name in def.particles){var part_def=def.particles[part_name]
-textures.load({url:"img/"+part_def.texture+".png"})}}}function normalizeValue(v){if(v instanceof Float32Array&&v.length>=2)return v
+textureLoad({url:"img/"+part_def.texture+".png"})}}}function normalizeValue(v){if(v instanceof Float32Array&&v.length>=2)return v
 else if("number"===typeof v)return vec2(v,0)
 else if(Array.isArray(v)||v instanceof Float32Array)return vec2(v[0]||0,v[1]||0)
 else return assert(false)}function normalizeValueVec(vec,length){assert(length)
 assert(Array.isArray(vec)||vec instanceof Float32Array)
 var ret=new Array(length)
 for(var ii=0;ii<length;++ii)ret[ii]=normalizeValue(vec[ii])
-return ret}function normalizeParticle(def,particle_manager){if(!def.normalized){var norm=def.normalized={blend:blend_map[def.blend]||sprites.BLEND_ALPHA,texture:textures.load({url:def.texture?"img/"+def.texture+".png":"img/glov/util_circle.png"}),color:normalizeValueVec(def.color||[1,1,1,1],4),color_track:null,size:normalizeValueVec(def.size||[1,1],2),size_track:null,accel:normalizeValueVec(def.accel||[0,0,0],3),rot:normalizeValue(def.rot||0),rot_vel:normalizeValue(def.rot||0),lifespan:normalizeValue(def.lifespan||1e3),kill_time_accel:normalizeValue(def.kill_time_accel||1)}
+return ret}function normalizeParticle(def,particle_manager){if(!def.normalized){var norm=def.normalized={blend:blend_map[def.blend]||sprites.BLEND_ALPHA,texture:textureLoad({url:def.texture?"img/"+def.texture+".png":"img/glov/util_circle.png"}),color:normalizeValueVec(def.color||[1,1,1,1],4),color_track:null,size:normalizeValueVec(def.size||[1,1],2),size_track:null,accel:normalizeValueVec(def.accel||[0,0,0],3),rot:normalizeValue(def.rot||0),rot_vel:normalizeValue(def.rot||0),lifespan:normalizeValue(def.lifespan||1e3),kill_time_accel:normalizeValue(def.kill_time_accel||1)}
 assert(norm.kill_time_accel[0]>=1)
 if(def.color_track&&def.color_track.length){assert(def.color_track.length>1)
 norm.color_track=[]
@@ -3923,7 +5359,7 @@ _proto2.shift=function shift(delta){for(var ii=0;ii<this.systems.length;++ii)thi
 return ParticleManager}()
 function create(){return new ParticleManager}
 
-},{"../common/vmath.js":76,"./sprites.js":51,"./textures.js":55,"assert":undefined}],37:[function(require,module,exports){
+},{"../common/vmath.js":95,"./sprites.js":61,"./textures.js":65,"assert":undefined}],46:[function(require,module,exports){
 "use strict"
 exports.addMetric=addMetric
 exports.draw=draw
@@ -3950,13 +5386,14 @@ var _require4=require("./profiler_ui.js"),profilerUI=_require4.profilerUI
 var settings=require("./settings.js")
 var _require5=require("./sprites.js"),spriteChainedStart=_require5.spriteChainedStart,spriteChainedStop=_require5.spriteChainedStop
 var ui=require("./ui.js")
-var _require6=require("../common/vmath.js"),vec4=_require6.vec4,v3copy=_require6.v3copy
+var _require6=require("./ui.js"),uiTextHeight=_require6.uiTextHeight
+var _require7=require("../common/vmath.js"),vec4=_require7.vec4,v3copy=_require7.v3copy
 require("./perf_net.js")
 var METRIC_PAD=2
 var bg_default=vec4(0,0,0,.5)
 var bg_mouse_over=vec4(0,0,0,.75)
 var bg_fade=vec4()
-settings.register({show_metrics:{default_value:1,type:cmd_parse.TYPE_INT,range:[0,1]},show_fps:{label:"Show FPS",default_value:engine.DEBUG?1:0,type:cmd_parse.TYPE_INT,range:[0,4]},fps_graph:{label:"FPS Graph",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},fps_window:{label:"FPS Time Window (seconds)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.001,120]},show_perf_counters:{default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},show_perf_memory:{default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],access_run:["sysadmin"]},perf_provider:{default_value:"client",type:cmd_parse.TYPE_STRING,usage:"Set the perf provider for /show_perf_counters and /show_perf_memory\n  CLIENT : show client values\n  AUTO : automatically determine appropriate server\n  user.1234 : use server hosting a particular worker",access_run:["sysadmin"]}})
+settings.register({show_metrics:{default_value:1,type:cmd_parse.TYPE_INT,range:[0,1]},show_fps:{label:"Show FPS",default_value:engine.DEBUG?1:0,type:cmd_parse.TYPE_INT,enum_lookup:{OFF:0,ON:1,MSPF:2,CPU:3,GC:4,MEM:5}},fps_graph:{label:"FPS Graph",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},fps_window:{label:"FPS Time Window (seconds)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.001,120]},show_perf_counters:{default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},show_perf_memory:{default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],access_run:["sysadmin"]},perf_provider:{default_value:"client",type:cmd_parse.TYPE_STRING,usage:"Set the perf provider for /show_perf_counters and /show_perf_memory\n  CLIENT : show client values\n  AUTO : automatically determine appropriate server\n  user.1234 : use server hosting a particular worker",access_run:["sysadmin"]}})
 cmd_parse.register({cmd:"fps",help:"Toggles FPS display",func:function func(str,resp_func){if(settings.show_fps&&settings.show_metrics||"0"===str)settings.set("show_fps",0)
 else{settings.set("show_fps",1)
 settings.set("show_metrics",1)}resp_func()}})
@@ -3968,7 +5405,8 @@ return(value/table[unit][0]).toFixed(2)+" "+table[unit][1]}var UNIT_BYTES=[[1,"b
 var UNIT_COUNT=[[1,""],[1e3,"k"],[1e6,"m"],[1e9,"g"]]
 function friendlyBytes(bytes){return friendlyUnit(UNIT_BYTES,bytes)}function friendlyCount(count){return friendlyUnit(UNIT_COUNT,count)}function showMetric(y,metric){var font=engine.font
 var pad=METRIC_PAD
-var line_height=settings.render_scale_all<1?ui.font_height/settings.render_scale_all:ui.font_height
+var font_height=uiTextHeight()
+var line_height=settings.render_scale_all<1?font_height/settings.render_scale_all:font_height
 var METRIC_VALUE_WIDTH=line_height*(metric.width||2.5)
 var x=camera2d.x1Real()-METRIC_VALUE_WIDTH-pad
 var y0=y
@@ -4042,7 +5480,7 @@ var channel_id
 if("auto"===provider)channel_id=auto_channel_cb()
 else if(provider.match(/^[^.]+\.[^.]+$/))channel_id=provider
 if(channel_id){perf_provider_data.in_flight=true
-netClient().send("perf_fetch",{channel_id:channel_id,fields:fields},function(err,data){if(err)console.error("Error getting perf data: "+Object.keys(fields)+": "+err)
+netClient().send("perf_fetch",{channel_id:channel_id,fields:fields},null,function(err,data){if(err)console.error("Error getting perf data: "+Object.keys(fields)+": "+err)
 perf_provider_data.data=data
 perf_provider_data.last_update=engine.frame_timestamp
 perf_provider_data.in_flight=false})}return perf_provider_data.data}function perfMemObjToLines(out,obj,prefix){for(var key in obj){var v=obj[key]
@@ -4063,7 +5501,8 @@ y_graph-=METRIC_PAD}}}if(settings.show_perf_counters||settings.show_perf_memory)
 var perf_data=updatePerfProvider()||{}
 var _y=camera2d.y0Real()
 var y0=_y
-var line_height=settings.render_scale_all<1?ui.font_height/settings.render_scale_all:ui.font_height
+var font_height=uiTextHeight()
+var line_height=settings.render_scale_all<1?font_height/settings.render_scale_all:font_height
 var column_width=6*line_height
 var x0=camera2d.x0Real()
 var x=x0+2*column_width
@@ -4090,7 +5529,7 @@ maxx=max(maxx,x+column_width*data.length)
 _y+=line_height}}ui.drawRect(x0,y0,maxx,_y,z-.1,bg_default)}camera2d.pop()
 graph_override=null}
 
-},{"../common/perfcounters.js":72,"../common/vmath.js":76,"./camera2d.js":7,"./cmds.js":9,"./engine.js":13,"./font.js":19,"./input.js":28,"./net.js":35,"./perf_net.js":38,"./profiler_ui.js":42,"./settings.js":44,"./sprites.js":51,"./ui.js":57}],38:[function(require,module,exports){
+},{"../common/perfcounters.js":87,"../common/vmath.js":95,"./camera2d.js":9,"./cmds.js":11,"./engine.js":15,"./font.js":22,"./input.js":31,"./net.js":43,"./perf_net.js":47,"./profiler_ui.js":51,"./settings.js":53,"./sprites.js":61,"./ui.js":67}],47:[function(require,module,exports){
 "use strict"
 exports.registerPingProvider=registerPingProvider
 var _glovCommonWscommon=require("../common/wscommon")
@@ -4101,9 +5540,9 @@ var cmd_parse=_cmds.cmd_parse
 var _perf=require("./perf")
 var perf=_perf
 var _settings=require("./settings")
-var settings=_settings
+var settingsRegister=_settings.settingsRegister
 var min=Math.min
-settings.register({show_net:{default_value:0,type:cmd_parse.TYPE_INT,range:[0,2]}})
+settingsRegister({show_net:{default_value:0,type:cmd_parse.TYPE_INT,enum_lookup:{OFF:0,ON:2}}})
 var last_wsstats={msgs:0,bytes:0,time:Date.now(),dm:0,db:0}
 var last_wsstats_out={msgs:0,bytes:0,time:Date.now(),dm:0,db:0}
 function bandwidth(stats,last){var now=Date.now()
@@ -4114,14 +5553,14 @@ last.bytes=stats.bytes
 if(now-last.time>2e3)last.time=now
 else last.time+=1e3}return(last.db/1024).toFixed(2)+" kb ("+last.dm+")"}perf.addMetric({name:"net",show_stat:"show_net",width:5,labels:{"down: ":bandwidth.bind(null,wsstats,last_wsstats),"up: ":bandwidth.bind(null,wsstats_out,last_wsstats_out)}})
 var ping_providers=0
-function registerPingProvider(fn){var _settings$register
+function registerPingProvider(fn){var _settingsRegister
 var suffix=1===++ping_providers?"":""+ping_providers
-settings.register(((_settings$register={})["show_ping"+suffix]={default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},_settings$register))
+settingsRegister(((_settingsRegister={})["show_ping"+suffix]={default_value:0,type:cmd_parse.TYPE_INT,range:[0,1]},_settingsRegister))
 perf.addMetric({name:"ping"+suffix,show_stat:"show_ping"+suffix,labels:{"ping: ":function ping(){var pt=fn()
 if(!pt||pt.fade<.001)return""
 return{value:""+pt.ping.toFixed(1),alpha:min(1,3*pt.fade)}}}})}
 
-},{"../common/wscommon":77,"./cmds":9,"./perf":37,"./settings":44}],39:[function(require,module,exports){
+},{"../common/wscommon":97,"./cmds":11,"./perf":46,"./settings":53}],48:[function(require,module,exports){
 "use strict"
 exports.enter=enter
 exports.exit=exit
@@ -4149,7 +5588,7 @@ document.addEventListener("pointerlockerror",onPointerLockError,false)
 document.addEventListener("mozpointerlockerror",onPointerLockError,false)
 document.addEventListener("webkitpointerlockerror",onPointerLockError,false)}
 
-},{"../common/util.js":74}],40:[function(require,module,exports){
+},{"../common/util.js":93}],49:[function(require,module,exports){
 "use strict"
 var typedarrays=[Int8Array,Uint8Array,Int16Array,Uint16Array,Int32Array,Uint32Array,Float32Array]
 if(!Uint8Array.prototype.slice)typedarrays.forEach(function(ArrayType){Object.defineProperty(ArrayType.prototype,"slice",{value:function value(begin,end){if(void 0===end)end=this.length
@@ -4167,8 +5606,9 @@ return this},sort:function sort(cmp){Array.prototype.sort.call(this,cmp||cmpDefa
 var _loop=function _loop(key){if(!Uint8Array.prototype[key])typedarrays.forEach(function(ArrayType){Object.defineProperty(ArrayType.prototype,key,{value:replacements[key]})})}
 for(var key in replacements)_loop(key)
 if(!String.prototype.endsWith){Object.defineProperty(String.prototype,"endsWith",{value:function value(test){return this.slice(-test.length)===test}})
-Object.defineProperty(String.prototype,"startsWith",{value:function value(test){return this.slice(0,test.length)===test}})}if(!String.prototype.includes)Object.defineProperty(String.prototype,"includes",{value:function value(search,start){return-1!==this.indexOf(search,start)}})
-if(!Array.prototype.includes)Object.defineProperty(Array.prototype,"includes",{value:function value(search,start){return-1!==this.indexOf(search,start)}})
+Object.defineProperty(String.prototype,"startsWith",{value:function value(test){return this.slice(0,test.length)===test}})}if(!String.prototype.includes)Object.defineProperty(String.prototype,"includes",{value:function value(search,start){return-1!==this.indexOf(search,start)},configurable:true})
+if(!Array.prototype.includes)Object.defineProperty(Array.prototype,"includes",{value:function value(search,start){for(var ii=start=void 0===start?0:start<0?this.length+start:start;ii<this.length;++ii)if(this[ii]===search)return true
+return false}})
 if(!Object.values)Object.values=function values(obj){return Object.keys(obj).map(function(k){return obj[k]})}
 if(!Object.entries)Object.entries=function entries(obj){var keys=Object.keys(obj)
 var ret=new Array(keys.length)
@@ -4177,12 +5617,17 @@ return ret}
 if(!Object.assign)Object.assign=function assign(target,source1){for(var argindex=1;argindex<arguments.length;++argindex){var source=arguments[argindex]
 for(var _key in source)target[_key]=source[_key]}return target}
 if(!Math.sign)Math.sign=function sign(a){return a<0?-1:a>0?1:0}
+if(!Math.imul)Math.imul=function imul(x,y){var xn=Number(x)
+var yn=Number(y)
+var xl=65535&xn
+var yl=65535&yn
+return xl*yl+((65535&xn>>>16)*yl+xl*(65535&yn>>>16)<<16>>>0)>>>0}
 if("undefined"!==typeof window){if(!window.Intl)window.Intl={}
 if(!window.Intl.NumberFormat){window.Intl.NumberFormat=function(){}
 window.Intl.NumberFormat.prototype.format=function(v){return String(v)}}if(!window.Intl.DateTimeFormat){window.Intl.DateTimeFormat=function(){}
 window.Intl.DateTimeFormat.prototype.format=function(v){return String(v)}}}
 
-},{}],41:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 "use strict"
 exports.MEM_DEPTH_DEFAULT=exports.HIST_TOT=exports.HIST_SIZE=exports.HIST_COMPONENTS=exports.HAS_MEMSIZE=void 0
 exports.profilerAvgMem=profilerAvgMem
@@ -4198,6 +5643,7 @@ exports.profilerMaxMem=profilerMaxMem
 exports.profilerMeasureBloat=profilerMeasureBloat
 exports.profilerMemDepthGet=profilerMemDepthGet
 exports.profilerMemDepthSet=profilerMemDepthSet
+exports.profilerMemSize=profilerMemSize
 exports.profilerNodeRoot=profilerNodeRoot
 exports.profilerNodeTick=profilerNodeTick
 exports.profilerPause=profilerPause
@@ -4265,7 +5711,7 @@ var paused=false
 var mem_depth=MEM_DEPTH_DEFAULT
 function memSizeChrome(){return performance.memory.usedJSHeapSize}function memSizeNop(){return 0}var memSize=HAS_MEMSIZE?memSizeChrome:memSizeNop
 var mem_is_high_res=10
-function profilerChildCallCount(node,with_mem,do_average){var walk=node.child
+function profilerMemSize(){return memSize()}function profilerChildCallCount(node,with_mem,do_average){var walk=node.child
 var count=0
 while(walk){if(do_average){var total=0
 var sum_count=0
@@ -4420,8 +5866,9 @@ if(warning)lines.push("",warning)
 lines.push("","")
 console.log(lines.join("\n"))}window.profilerDump=profilerDump
 
-},{"./engine.js":13,"./local_storage.js":31,"assert":undefined}],42:[function(require,module,exports){
+},{"./engine.js":15,"./local_storage.js":35,"assert":undefined}],51:[function(require,module,exports){
 "use strict"
+exports.profilerSupressPad=profilerSupressPad
 exports.profilerUI=profilerUI
 exports.profilerUIStartup=profilerUIStartup
 var camera2d=require("./camera2d.js")
@@ -4432,12 +5879,14 @@ var input=require("./input.js")
 var floor=Math.floor,max=Math.max,min=Math.min,round=Math.round
 var _require3=require("./net.js"),netClient=_require3.netClient,netDisconnected=_require3.netDisconnected
 var ui=require("./ui.js")
-var _require4=require("./perf.js"),perfGraphOverride=_require4.perfGraphOverride,friendlyBytes=_require4.friendlyBytes
-var _require5=require("./profiler.js"),HIST_SIZE=_require5.HIST_SIZE,HIST_COMPONENTS=_require5.HIST_COMPONENTS,HIST_TOT=_require5.HIST_TOT,HAS_MEMSIZE=_require5.HAS_MEMSIZE,MEM_DEPTH_DEFAULT=_require5.MEM_DEPTH_DEFAULT,profilerAvgTime=_require5.profilerAvgTime,profilerChildCallCount=_require5.profilerChildCallCount,profilerImport=_require5.profilerImport,profilerExport=_require5.profilerExport,profilerHistoryIndex=_require5.profilerHistoryIndex,profilerAvgMem=_require5.profilerAvgMem,profilerMaxMem=_require5.profilerMaxMem,profilerMeasureBloat=_require5.profilerMeasureBloat,profilerMemDepthGet=_require5.profilerMemDepthGet,profilerMemDepthSet=_require5.profilerMemDepthSet,profilerNodeTick=_require5.profilerNodeTick,profilerNodeRoot=_require5.profilerNodeRoot,profilerPause=_require5.profilerPause,profilerPaused=_require5.profilerPaused,profilerWalkTree=_require5.profilerWalkTree,profilerWarning=_require5.profilerWarning
+var _require4=require("./ui.js"),uiTextHeight=_require4.uiTextHeight
+var _require5=require("./perf.js"),perfGraphOverride=_require5.perfGraphOverride,friendlyBytes=_require5.friendlyBytes
+var _require6=require("./profiler.js"),HIST_SIZE=_require6.HIST_SIZE,HIST_COMPONENTS=_require6.HIST_COMPONENTS,HIST_TOT=_require6.HIST_TOT,HAS_MEMSIZE=_require6.HAS_MEMSIZE,MEM_DEPTH_DEFAULT=_require6.MEM_DEPTH_DEFAULT,profilerAvgTime=_require6.profilerAvgTime,profilerChildCallCount=_require6.profilerChildCallCount,profilerImport=_require6.profilerImport,profilerExport=_require6.profilerExport,profilerHistoryIndex=_require6.profilerHistoryIndex,profilerAvgMem=_require6.profilerAvgMem,profilerMaxMem=_require6.profilerMaxMem,profilerMeasureBloat=_require6.profilerMeasureBloat,profilerMemDepthGet=_require6.profilerMemDepthGet,profilerMemDepthSet=_require6.profilerMemDepthSet,profilerNodeTick=_require6.profilerNodeTick,profilerNodeRoot=_require6.profilerNodeRoot,profilerPause=_require6.profilerPause,profilerPaused=_require6.profilerPaused,profilerWalkTree=_require6.profilerWalkTree,profilerWarning=_require6.profilerWarning
 var settings=require("./settings.js")
-var _require6=require("./sprites.js"),spriteChainedStart=_require6.spriteChainedStart,spriteChainedStop=_require6.spriteChainedStop
-var _require7=require("../common/util.js"),lerp=_require7.lerp
-var _require8=require("../common/vmath.js"),vec2=_require8.vec2,vec4=_require8.vec4
+var _require7=require("./sprites.js"),spriteChainedStart=_require7.spriteChainedStart,spriteChainedStop=_require7.spriteChainedStop
+var _require8=require("./spot.js"),spotSuppressPad=_require8.spotSuppressPad
+var _require9=require("../common/util.js"),lerp=_require9.lerp
+var _require0=require("../common/vmath.js"),vec2=_require0.vec2,vec4=_require0.vec4
 Z.PROFILER=Z.PROFILER||9950
 var color_gpu=vec4(.5,.5,1,1)
 var loaded_profile=null
@@ -4651,11 +6100,13 @@ button_mem_inc={x:line_width+2*BUTTON_W/3,y:y,z:z,w:BUTTON_W/3,h:BUTTON_H,font_h
 button_max_fps={x:line_width,y:y+=BUTTON_H,z:z,w:BUTTON_W,h:BUTTON_H,font_height:BUTTON_FONT_HEIGHT}
 y+=BUTTON_H
 button_save={x:line_width,y:y+=LINE_HEIGHT,z:z,w:BUTTON_W/2,h:BUTTON_H,font_height:BUTTON_FONT_HEIGHT,text:"save"}
-button_load={x:line_width+BUTTON_W/2,y:y,z:z,w:BUTTON_W/2,h:BUTTON_H,font_height:BUTTON_FONT_HEIGHT,text:"load"}}function profilerUIRun(){profilerStart("profilerUIRun")
+button_load={x:line_width+BUTTON_W/2,y:y,z:z,w:BUTTON_W/2,h:BUTTON_H,font_height:BUTTON_FONT_HEIGHT,text:"load"}}var need_pad_suppress=false
+function profilerSupressPad(){need_pad_suppress=true}function profilerUIRun(){profilerStart("profilerUIRun")
 profilerStart("top+buttons")
 bloat=bloat_none
 if(!loaded_profile&&settings.profiler_hide_bloat)bloat=profilerMeasureBloat()
-if(engine.render_width){var scale=FONT_SIZE/ui.font_height
+if(need_pad_suppress){spotSuppressPad()
+need_pad_suppress=false}if(engine.render_width){var scale=FONT_SIZE/uiTextHeight()
 camera2d.set(0,0,scale*engine.render_width,scale*engine.render_height)
 font_number_scale=1
 bar_w=scale}else{camera2d.setScreen(true)
@@ -4765,52 +6216,59 @@ useLiveProfile()}function profilerUI(){if(engine.DEBUG&&input.keyUpEdge(input.KE
 if(settings.show_profiler)profilerUIRun()
 if(engine.DEBUG||settings.show_profiler);}cmd_parse.register({cmd:"profile",help:"Captures a performance profile for developer investigation",prefix_usage_with_help:true,usage:"Optionally delays for DELAY seconds before capturing the profile.\nUsage: /profile [DELAY]",func:function func(str,resp_func){function doit(){var profile=profilerExport()
 if(netDisconnected()){ui.provideUserString("Profiler Snapshot",profile)
-resp_func()}else netClient().send("profile",profile,function(err,data){if(null!=data&&data.id){ui.provideUserString("Profile submitted","ID="+data.id)
+resp_func()}else netClient().send("profile",profile,null,function(err,data){if(null!=data&&data.id){ui.provideUserString("Profile submitted","ID="+data.id)
 resp_func(null,"Profile submitted with ID="+data.id)}else resp_func(err,data)})}if(Number(str))setTimeout(doit,1e3*Number(str))
 else doit()}})
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./cmds.js":9,"./engine.js":13,"./font.js":19,"./input.js":28,"./net.js":35,"./perf.js":37,"./profiler.js":41,"./settings.js":44,"./sprites.js":51,"./ui.js":57}],43:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./camera2d.js":9,"./cmds.js":11,"./engine.js":15,"./font.js":22,"./input.js":31,"./net.js":43,"./perf.js":46,"./profiler.js":50,"./settings.js":53,"./spot.js":60,"./sprites.js":61,"./ui.js":67}],52:[function(require,module,exports){
 "use strict"
 exports.scrollAreaCreate=scrollAreaCreate
 exports.scrollAreaSetPixelScale=scrollAreaSetPixelScale
 function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
 for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var assert=require("assert")
-var _glovCommonUtilJs=require("../common/util.js")
-var clamp=_glovCommonUtilJs.clamp
-var merge=_glovCommonUtilJs.merge
-var verify=require("../common/verify.js")
+var _glovCommonUtil=require("../common/util")
+var clamp=_glovCommonUtil.clamp
+var merge=_glovCommonUtil.merge
 var _glovCommonVmath=require("../common/vmath")
 var vec2=_glovCommonVmath.vec2
 var vec4=_glovCommonVmath.vec4
-var _camera2dJs=require("./camera2d.js")
-var camera2d=_camera2dJs
-var _engineJs=require("./engine.js")
-var engine=_engineJs
-var _inputJs=require("./input.js")
-var input=_inputJs
-var _inputJs2=require("./input.js")
-var BUTTON_LEFT=_inputJs2.BUTTON_LEFT
-var KEYS=_inputJs2.KEYS
-var PAD=_inputJs2.PAD
-var _spotJs=require("./spot.js")
-var SPOT_DEFAULT_BUTTON=_spotJs.SPOT_DEFAULT_BUTTON
-var SPOT_STATE_DOWN=_spotJs.SPOT_STATE_DOWN
-var SPOT_STATE_FOCUSED=_spotJs.SPOT_STATE_FOCUSED
-var spot=_spotJs.spot
-var spotPadMode=_spotJs.spotPadMode
-var spotSubBegin=_spotJs.spotSubBegin
-var spotSubEnd=_spotJs.spotSubEnd
-var spotUnfocus=_spotJs.spotUnfocus
-var _spritesJs=require("./sprites.js")
-var spriteClipPop=_spritesJs.spriteClipPop
-var spriteClipPush=_spritesJs.spriteClipPush
-var _uiJs=require("./ui.js")
-var ui=_uiJs
-var max=Math.max,min=Math.min,round=Math.round
+var _camera2d=require("./camera2d")
+var camera2d=_camera2d
+var _engine=require("./engine")
+var engine=_engine
+var _engine2=require("./engine")
+var renderNeeded=_engine2.renderNeeded
+var _input=require("./input")
+var input=_input
+var _input2=require("./input")
+var BUTTON_LEFT=_input2.BUTTON_LEFT
+var KEYS=_input2.KEYS
+var PAD=_input2.PAD
+var _spot=require("./spot")
+var spot=_spot.spot
+var SPOT_DEFAULT_BUTTON=_spot.SPOT_DEFAULT_BUTTON
+var SPOT_STATE_DOWN=_spot.SPOT_STATE_DOWN
+var SPOT_STATE_FOCUSED=_spot.SPOT_STATE_FOCUSED
+var spotPadMode=_spot.spotPadMode
+var spotSubBegin=_spot.spotSubBegin
+var spotSubEnd=_spot.spotSubEnd
+var spotUnfocus=_spot.spotUnfocus
+var _sprites=require("./sprites")
+var spriteClipPop=_sprites.spriteClipPop
+var spriteClipPush=_sprites.spriteClipPush
+var _textures=require("./textures")
+var textureDefaultIsNearest=_textures.textureDefaultIsNearest
+var _ui=require("./ui")
+var ui=_ui
+var _ui2=require("./ui")
+var uiTextHeight=_ui2.uiTextHeight
+var abs=Math.abs,max=Math.max,min=Math.min,round=Math.round
 var MAX_OVERSCROLL=50
 var OVERSCROLL_DELAY_WHEEL=180
 function darken(color,factor){return vec4(color[0]*factor,color[1]*factor,color[2]*factor,color[3])}var default_pixel_scale=1
-function scrollAreaSetPixelScale(scale){default_pixel_scale=scale}var temp_pos=vec2()
+function scrollAreaSetPixelScale(scale){default_pixel_scale=scale}function spriteNonScalableHeight(s){var r=0
+for(var ii=0;ii<s.uidata.heights.length;ii+=2)r+=s.uidata.heights[ii]
+return r}var temp_pos=vec2()
 var last_scroll_area_id=0
 var ScrollAreaInternal=function(){function ScrollAreaInternal(params){this.id="sa:"+ ++last_scroll_area_id
 this.x=0
@@ -4818,7 +6276,8 @@ this.y=0
 this.z=Z.UI
 this.w=10
 this.h=10
-this.rate_scroll_click=ui.font_height
+this.rate_scroll_click=0
+this.rate_scroll_wheel=0
 this.pixel_scale=default_pixel_scale
 this.top_pad=true
 this.color=vec4(1,1,1,1)
@@ -4829,7 +6288,7 @@ this.no_disable=false
 this.focusable_elem=null
 this.min_dist=void 0
 this.disabled=false
-this.rate_scroll_wheel=void 0
+this.clip_horiz_xpad=0
 this.rollover_color=void 0
 this.rollover_color_light=void 0
 this.disabled_color=void 0
@@ -4846,8 +6305,8 @@ this.last_frame=0
 this.was_disabled=false
 this.scrollbar_visible=false
 this.last_max_value=0
+this.ignore_this_fram_drag=false
 this.applyParams(params=params||{})
-this.rate_scroll_wheel=params.rate_scroll_wheel||2*this.rate_scroll_click
 this.rollover_color=params.rollover_color||darken(this.color,.75)
 this.rollover_color_light=params.rollover_color_light||darken(this.color,.95)
 assert(this.rollover_color_light!==this.color)
@@ -4862,10 +6321,9 @@ _proto.consumedClick=function consumedClick(){return this.consumed_click}
 _proto.isVisible=function isVisible(){return this.scrollbar_visible}
 _proto.begin=function begin(params){this.applyParams(params)
 var x=this.x,y=this.y,w=this.w,h=this.h,z=this.z,id=this.id
-verify(!this.began)
 this.began=true
 spotSubBegin({x:x,y:y,w:w,h:h,key:id})
-spriteClipPush(z+.05,x,y,w-this.barWidth(),h)
+spriteClipPush(z+.05,x-this.clip_horiz_xpad,y,w-this.barWidth()+this.clip_horiz_xpad,h)
 var camera_orig_x0=camera2d.x0()
 var camera_orig_x1=camera2d.x1()
 var camera_orig_y0=camera2d.y0()
@@ -4875,7 +6333,8 @@ var camera_new_y0=-(y-camera_orig_y0)+this.getScrollPos()
 var camera_new_x1=camera_new_x0+camera_orig_x1-camera_orig_x0
 var camera_new_y1=camera_new_y0+camera_orig_y1-camera_orig_y0
 camera2d.push()
-camera2d.set(camera_new_x0,camera_new_y0,camera_new_x1,camera_new_y1)}
+camera2d.set(camera_new_x0,camera_new_y0,camera_new_x1,camera_new_y1)
+this.ignore_this_fram_drag=false}
 _proto.getScrollPos=function getScrollPos(){return round(this.scroll_pos+this.overscroll)}
 _proto.clampScrollPos=function clampScrollPos(){var clamped_pos=clamp(this.scroll_pos,0,this.last_max_value)
 if(this.scroll_pos<0)this.overscroll=max(this.scroll_pos,-MAX_OVERSCROLL)
@@ -4898,14 +6357,17 @@ camera2d.pop()
 spriteClipPop()
 if(focused_sub_elem&&spotPadMode())this.scrollIntoFocus(focused_sub_elem.y,focused_sub_elem.y+focused_sub_elem.h+1,this.h)
 var maxvalue=max(h-this.h+1,0)
-if(this.scroll_pos>=maxvalue)this.scroll_pos=max(0,maxvalue)
-var was_at_bottom=this.scroll_pos===this.last_max_value
+if(this.scroll_pos>maxvalue){var extra=this.scroll_pos-maxvalue
+this.scroll_pos=max(0,maxvalue)
+if(this.overscroll<0)this.overscroll=min(this.overscroll+extra,0)}var was_at_bottom=this.scroll_pos===this.last_max_value
 if(this.auto_scroll&&(this.last_frame!==engine.getFrameIndex()-1||this.last_internal_h!==h&&was_at_bottom)){this.overscroll=max(0,this.scroll_pos+this.overscroll-maxvalue)
 this.scroll_pos=maxvalue}this.last_internal_h=h
 this.last_frame=engine.getFrameIndex()
 if(this.overscroll){var dt=engine.getFrameDt()
 if(dt>=this.overscroll_delay){this.overscroll_delay=0
-this.overscroll*=max(1-.008*dt,0)}else this.overscroll_delay-=dt}var auto_hide=this.auto_hide,pixel_scale=this.pixel_scale,rollover_color=this.rollover_color,rollover_color_light=this.rollover_color_light
+this.overscroll*=max(1-.008*dt,0)
+if(abs(this.overscroll)<.001)this.overscroll=0}else this.overscroll_delay-=dt
+renderNeeded()}var auto_hide=this.auto_hide,pixel_scale=this.pixel_scale,rollover_color=this.rollover_color,rollover_color_light=this.rollover_color_light
 var _ui$sprites=ui.sprites,scrollbar_top=_ui$sprites.scrollbar_top,scrollbar_bottom=_ui$sprites.scrollbar_bottom,scrollbar_trough=_ui$sprites.scrollbar_trough,scrollbar_handle=_ui$sprites.scrollbar_handle,scrollbar_handle_grabber=_ui$sprites.scrollbar_handle_grabber
 var bar_w=scrollbar_top.uidata.total_w*pixel_scale
 var button_h=min(scrollbar_top.uidata.total_h*pixel_scale,this.h/3)
@@ -4917,10 +6379,11 @@ var handle_pos=this.h>=h?0:this.scroll_pos/(h-this.h)
 handle_pos=clamp(handle_pos,0,1)
 assert(isFinite(handle_pos))
 var handle_pixel_h=handle_h*(this.h-2*button_h_nopad)
-var handle_pixel_min_h=scrollbar_handle.uidata.total_h*pixel_scale
+var handle_pixel_min_h=spriteNonScalableHeight(scrollbar_handle)*pixel_scale
 var trough_height=this.h-2*button_h
 handle_pixel_h=max(handle_pixel_h,min(handle_pixel_min_h,.75*trough_height))
 var handle_screenpos=this.y+button_h_nopad+handle_pos*(this.h-2*button_h_nopad-handle_pixel_h)
+if(textureDefaultIsNearest())handle_screenpos=round(handle_screenpos)
 var top_color=this.color
 var bottom_color=this.color
 var handle_color=this.color
@@ -4934,7 +6397,9 @@ else disabled=true}var gained_focus=false
 if(this.was_disabled=disabled){trough_color=top_color=bottom_color=handle_color=this.disabled_color
 this.drag_start=null}else{var wheel_delta=input.mouseWheel({x:this.x,y:this.y,w:this.w,h:this.h})
 if(wheel_delta){this.overscroll_delay=OVERSCROLL_DELAY_WHEEL
-this.scroll_pos-=this.rate_scroll_wheel*wheel_delta
+var rate_scroll_click=this.rate_scroll_click||uiTextHeight()
+var rate_scroll_wheel=this.rate_scroll_wheel||2*rate_scroll_click
+this.scroll_pos-=rate_scroll_wheel*wheel_delta
 if(focused_sub_elem)spotUnfocus()}var handle_rect={x:bar_x0,y:handle_screenpos,w:bar_w,h:handle_pixel_h,button:0,spot_debug_ignore:true}
 var down=input.mouseDownEdge(handle_rect)
 if(down){this.grabbed_pos=down.pos[1]-handle_screenpos
@@ -4953,13 +6418,13 @@ var button_param_down=_extends({},button_param_up,{y:this.y+this.h-button_h})
 var button_spot_ret=spot(button_param_up)
 while(button_spot_ret.ret){--button_spot_ret.ret
 gained_focus=true
-this.scroll_pos-=this.rate_scroll_click
+this.scroll_pos-=this.rate_scroll_click||uiTextHeight()
 this.consumed_click=true}if(button_spot_ret.spot_state===SPOT_STATE_DOWN)top_color=rollover_color_light
 else if(button_spot_ret.spot_state===SPOT_STATE_FOCUSED)top_color=rollover_color
 button_spot_ret=spot(button_param_down)
 while(button_spot_ret.ret){--button_spot_ret.ret
 gained_focus=true
-this.scroll_pos+=this.rate_scroll_click
+this.scroll_pos+=this.rate_scroll_click||uiTextHeight()
 this.consumed_click=true}if(button_spot_ret.spot_state===SPOT_STATE_DOWN)bottom_color=rollover_color_light
 else if(button_spot_ret.spot_state===SPOT_STATE_FOCUSED)bottom_color=rollover_color
 var bar_param={key:"bar_"+this.id,x:bar_x0,y:this.y,w:bar_w,h:this.h,button:BUTTON_LEFT,sound_rollover:null,pad_focusable:false,def:SPOT_DEFAULT_BUTTON}
@@ -4968,7 +6433,7 @@ while(bar_spot_ret.ret){--bar_spot_ret.ret
 this.consumed_click=gained_focus=true
 if(bar_spot_ret.pos)if(bar_spot_ret.pos[1]>handle_screenpos+handle_pixel_h/2)this.scroll_pos+=this.h
 else this.scroll_pos-=this.h}var drag=input.drag({x:this.x,y:this.y,w:this.w-bar_w,h:this.h,button:0,min_dist:this.min_dist})
-if(drag){if(null===this.drag_start)this.drag_start=this.scroll_pos
+if(drag&&!this.ignore_this_fram_drag){if(null===this.drag_start)this.drag_start=this.scroll_pos
 this.scroll_pos=this.drag_start-drag.cur_pos[1]+drag.start_pos[1]
 this.consumed_click=true}else this.drag_start=null
 input.drag({x:this.x+this.w-bar_w,y:this.y,w:bar_w,h:this.h,button:0})}if(gained_focus&&this.focusable_elem)this.focusable_elem.focus()
@@ -4983,7 +6448,9 @@ var trough_draw_pad=button_h/2
 var trough_draw_height=trough_height+2*trough_draw_pad
 var trough_v0=-trough_draw_pad/pixel_scale/scrollbar_trough.uidata.total_h
 var trough_v1=trough_v0+trough_draw_height/pixel_scale/scrollbar_trough.uidata.total_h
-scrollbar_trough.draw({x:bar_x0,y:this.y+trough_draw_pad,z:this.z+.1,w:bar_w,h:trough_draw_height,uvs:[scrollbar_trough.uvs[0],trough_v0,scrollbar_trough.uvs[2],trough_v1],color:trough_color})
+if(scrollbar_trough.texs[0].wrap_t===gl.REPEAT)scrollbar_trough.draw({x:bar_x0,y:this.y+trough_draw_pad,z:this.z+.1,w:bar_w,h:trough_draw_height,uvs:[scrollbar_trough.uvs[0],trough_v0,scrollbar_trough.uvs[2],trough_v1],color:trough_color})
+else if(scrollbar_trough.uidata.heights.length>1)ui.drawBox({x:bar_x0,y:this.y+trough_draw_pad,z:this.z+.1,w:bar_w,h:trough_draw_height},scrollbar_trough,pixel_scale,trough_color)
+else scrollbar_trough.draw({x:bar_x0,y:this.y+trough_draw_pad,z:this.z+.1,w:bar_w,h:trough_draw_height,color:trough_color})
 ui.drawVBox({x:bar_x0,y:handle_screenpos,z:this.z+.3,w:bar_w,h:handle_pixel_h},scrollbar_handle,handle_color)
 var grabber_h=scrollbar_handle_grabber.uidata.total_h*pixel_scale
 scrollbar_handle_grabber.draw({x:bar_x0,y:handle_screenpos+(handle_pixel_h-grabber_h)/2,z:this.z+.4,w:bar_w,h:grabber_h,color:handle_color})}
@@ -4991,46 +6458,57 @@ _proto.scrollIntoFocus=function scrollIntoFocus(miny,maxy,h){var old_scroll_pos=
 var changed=false
 if((miny=max(miny,0))<this.scroll_pos){this.scroll_pos=miny
 changed=true}if((maxy-=h)>this.scroll_pos){this.scroll_pos=maxy
-changed=true}if(changed)this.overscroll=old_scroll_pos-this.scroll_pos}
+changed=true}if(changed)this.overscroll=old_scroll_pos-this.scroll_pos
+this.ignore_this_fram_drag=true}
 _proto.scrollToEnd=function scrollToEnd(){this.scroll_pos=this.last_max_value}
 _proto.resetScroll=function resetScroll(){this.scroll_pos=0
 this.overscroll=0}
 return ScrollAreaInternal}()
 function scrollAreaCreate(params){return new ScrollAreaInternal(params)}
 
-},{"../common/util.js":74,"../common/verify.js":75,"../common/vmath":76,"./camera2d.js":7,"./engine.js":13,"./input.js":28,"./spot.js":50,"./sprites.js":51,"./ui.js":57,"assert":undefined}],44:[function(require,module,exports){
+},{"../common/util":93,"../common/vmath":95,"./camera2d":9,"./engine":15,"./input":31,"./spot":60,"./sprites":61,"./textures":65,"./ui":67,"assert":undefined}],53:[function(require,module,exports){
 "use strict"
-exports.get=get
-exports.pop=pop
-exports.push=push
-exports.register=register
-exports.runTimeDefault=runTimeDefault
-exports.set=set
-exports.setAsync=setAsync
+exports.settingIsModified=settingIsModified
+exports.settingsGet=settingsGet
+exports.settingsPop=settingsPop
+exports.settingsPush=settingsPush
+exports.settingsRegister=settingsRegister
+exports.settingsRunTimeDefault=settingsRunTimeDefault
+exports.settingsSet=settingsSet
+exports.settingsSetAsync=settingsSetAsync
 var modified={}
 exports.true=true
+var change_cbs={}
+exports.get=settingsGet
+exports.set=settingsSet
+exports.setAsync=settingsSetAsync
+exports.runTimeDefault=settingsRunTimeDefault
+exports.push=settingsPush
+exports.pop=settingsPop
+exports.register=settingsRegister
 var assert=require("assert")
 var _require=require("../common/util.js"),titleCase=_require.titleCase
-var _require2=require("./cmds.js"),cmd_parse=_require2.cmd_parse
+var _require2=require("./browser.js"),is_mac_osx_safari=_require2.is_mac_osx_safari
+var _require3=require("./cmds.js"),cmd_parse=_require3.cmd_parse
 var engine=require("./engine.js")
-var change_cbs={}
-function get(key){return exports[key]}function set(key,value){if(exports[key]!==value)cmd_parse.handle(null,key+" "+value,null)}function setAsync(key,value){engine.postTick({fn:set.bind(null,key,value)})}function runTimeDefault(key,new_default){assert(!change_cbs[key])
-if(!modified[key])exports[key]=new_default}var settings_stack=null
-function push(pairs){assert(!settings_stack)
+function settingsGet(key){return exports[key]}function settingsSet(key,value){if(exports[key]!==value)cmd_parse.handle(null,key+" "+value,null)}function settingsSetAsync(key,value){engine.postTick({fn:settingsSet.bind(null,key,value)})}function settingsRunTimeDefault(key,new_default){assert(!change_cbs[key])
+if(!modified[key])exports[key]=new_default}function settingIsModified(key){return modified[key]}var settings_stack=null
+function settingsPush(pairs){assert(!settings_stack)
 settings_stack={}
 for(var key in pairs){settings_stack[key]=exports[key]
 exports[key]=pairs[key]
 var cb=change_cbs[key]
-if(cb)cb(false)}}function pop(){assert(settings_stack)
+if(cb)cb(false)}}function settingsPop(){assert(settings_stack)
 for(var key in settings_stack){exports[key]=settings_stack[key]
 var cb=change_cbs[key]
-if(cb)cb(false)}settings_stack=null}function register(defs){Object.keys(defs).forEach(function(key){var def=defs[key]
+if(cb)cb(false)}settings_stack=null}function settingsRegister(defs){Object.keys(defs).forEach(function(key){var def=defs[key]
 exports[key]=def.default_value
 if(def.on_change)change_cbs[key]=def.on_change
 cmd_parse.registerValue(key,{type:def.type,label:def.label||titleCase(key.replace(/_/g," ")),range:def.range,get:function get(){return exports[key]},set:function set(v){modified[key]=true
-exports[key]=v},store:false!==def.store,ver:def.ver,help:def.help,usage:def.usage,prefix_usage_with_help:def.prefix_usage_with_help,on_change:def.on_change,access_run:def.access_run,access_show:def.access_show,default_value:def.default_value})})}register({max_fps:{label:"Maximum frame rate (FPS)",prefix_usage_with_help:true,usage:"Display current maximum: /max_fps\nDisable maximum FPS limit: /max_fps 0 (highly recommended)\nSet maximum FPS limit: /max_fps 30\nDefault: /max_fps 0",default_value:0,type:cmd_parse.TYPE_FLOAT,ver:1},render_scale:{label:"Render Scale (3D)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.1,1]},render_scale_mode:{label:"Render Scale Mode",default_value:0,type:cmd_parse.TYPE_INT,range:[0,2]},render_scale_all:{label:"Render Scale (All)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.3333,4]},render_scale_clear:{label:"Render Scale Full Clear",default_value:1,type:cmd_parse.TYPE_INT,range:[0,1]},fov:{default_value:60,type:cmd_parse.TYPE_FLOAT,range:[1,100]},double_click_time:{default_value:500,type:cmd_parse.TYPE_INT,range:[0,2500]}})
+exports[key]=v},store:false!==def.store,ver:def.ver,help:def.help,usage:def.usage,prefix_usage_with_help:def.prefix_usage_with_help,on_change:def.on_change,access_run:def.access_run,access_show:def.access_show,default_value:def.default_value,enum_lookup:def.enum_lookup,is_toggle:def.is_toggle})})}var DEFAULT_MAX_FPS=is_mac_osx_safari?60:0
+settingsRegister({max_fps:{label:"Maximum frame rate (FPS)",prefix_usage_with_help:true,usage:"Display current maximum: /max_fps\nSet maximum FPS limit: /max_fps 30\nSet automatic by browser: /max_fps 0 (may be unresponsive)\nSet unlimited: /max_fps 1000 (may be unresponsive)\nDefault: /max_fps "+DEFAULT_MAX_FPS,default_value:DEFAULT_MAX_FPS,type:cmd_parse.TYPE_FLOAT,ver:2},use_animation_frame:{label:"Use requestAnimationFrame",help:"Use requestAnimationFrame for any max_fps values lower than this value.",prefix_usage_with_help:true,default_value:60,type:cmd_parse.TYPE_INT,range:[0,240]},render_scale:{label:"Render Scale (3D)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.1,1]},render_scale_mode:{label:"Render Scale Mode",default_value:0,type:cmd_parse.TYPE_INT,enum_lookup:{LINEAR:0,NEAREST:1,CRT:2}},render_scale_all:{label:"Render Scale (All)",default_value:1,type:cmd_parse.TYPE_FLOAT,range:[.3333,4]},render_scale_clear:{label:"Render Scale Full Clear",default_value:1,type:cmd_parse.TYPE_INT,range:[0,1]},fov:{default_value:60,type:cmd_parse.TYPE_FLOAT,range:[1,100]},double_click_time:{default_value:500,type:cmd_parse.TYPE_INT,range:[0,2500]}})
 
-},{"../common/util.js":74,"./cmds.js":9,"./engine.js":13,"assert":undefined}],45:[function(require,module,exports){
+},{"../common/util.js":93,"./browser.js":7,"./cmds.js":11,"./engine.js":15,"assert":undefined}],54:[function(require,module,exports){
 "use strict"
 exports.shaderDebugUIStartup=shaderDebugUIStartup
 var camera2d=require("./camera2d.js")
@@ -5044,8 +6522,9 @@ var _require3=require("./scroll_area.js"),scrollAreaCreate=_require3.scrollAreaC
 var _require4=require("./shaders.js"),shadersGetDebug=_require4.shadersGetDebug
 var settings=require("./settings.js")
 var ui=require("./ui.js")
-var _require5=require("../common/util.js"),errorString=_require5.errorString
-var _require6=require("../common/vmath.js"),vec4=_require6.vec4
+var _require5=require("./ui.js"),uiTextHeight=_require5.uiTextHeight
+var _require6=require("../common/util.js"),errorString=_require6.errorString
+var _require7=require("../common/vmath.js"),vec4=_require7.vec4
 Z.SHADER_DEBUG=Z.SHADER_DEBUG||900
 var SHADER_STATS_SERVER="http://localhost:3000/api/shaderstats"
 var shader_stats_cache={}
@@ -5069,7 +6548,8 @@ function shaderDebugUITick(){var PANEL_PAD=ui.tooltip_pad
 var x0=camera2d.x0()+PANEL_PAD
 var y0=camera2d.y0()+PANEL_PAD
 var z=Z.SHADER_DEBUG
-var font=ui.font,title_font=ui.title_font,font_height=ui.font_height
+var font=ui.font,title_font=ui.title_font
+var font_height=uiTextHeight()
 var w=20*font_height
 var x=x0
 var y=y0
@@ -5080,8 +6560,8 @@ scroll_area_source=scrollAreaCreate({z:z,background_color:null,auto_hide:true})}
 var score_w=.3*sub_w
 var subscore_w=score_w/2
 var button_w=sub_w-score_w-PAD
-font.draw({x:x+button_w+PAD,y:y+.5*ui.font_height,z:z,w:subscore_w-1,color:1077952767,size:.5*ui.font_height,text:"Ops",align:font.ALIGN.HCENTERFIT})
-font.draw({x:x+button_w+PAD+subscore_w+1,y:y+.5*ui.font_height,z:z,w:subscore_w-1,color:1077952767,size:.5*ui.font_height,text:"Bytes",align:font.ALIGN.HCENTERFIT})
+font.draw({x:x+button_w+PAD,y:y+.5*font_height,z:z,w:subscore_w-1,color:1077952767,size:.5*font_height,text:"Ops",align:font.ALIGN.HCENTERFIT})
+font.draw({x:x+button_w+PAD+subscore_w+1,y:y+.5*font_height,z:z,w:subscore_w-1,color:1077952767,size:.5*font_height,text:"Bytes",align:font.ALIGN.HCENTERFIT})
 y+=font_height+1
 ui.drawLine(x0+.3*w,y,x0+.7*w,y,z,.5,true,color_line)
 y+=PAD
@@ -5103,7 +6583,7 @@ font.draw({x:x+button_w+PAD,y:y,z:z,w:subscore_w-1,color:color,text:""+(null==(_
 font.draw({x:x+button_w+PAD+subscore_w+1,y:y,z:z,w:subscore_w-1,color:color,text:_stats.bin_size.toLocaleString(),align:font.ALIGN.HCENTERFIT})}y+=font_height}scroll_area.end(y)
 y=scroll_y_start+min(max_h,y)
 z=Z.SHADER_DEBUG
-var close_button_size=ui.font_height
+var close_button_size=font_height
 if(ui.buttonText({x:x0+w-close_button_size,y:y0,z:z+1,w:close_button_size,h:close_button_size,text:"X"}))settings.set("shader_debug",0)
 ui.panel({x:x0-PANEL_PAD,y:y0-PANEL_PAD,z:z-1,w:w+2*PANEL_PAD,h:y-y0+2*PANEL_PAD,color:color_panel})
 if(!selected_shader)return
@@ -5126,11 +6606,11 @@ var value=obj[key]
 var subpath=path?path+"."+key:key
 if("object"===typeof value)flatten(value,subpath)
 else{font.draw({x:x,y:y,z:z,w:sub_w,style:style,text:subpath+": "+value,align:font.ALIGN.HFIT})
-y+=ui.font_height}}}var stats=getShaderStats(shader.shader_source_text,shader.type===gl.FRAGMENT_SHADER?"frag":"vert")
+y+=font_height}}}var stats=getShaderStats(shader.shader_source_text,shader.type===gl.FRAGMENT_SHADER?"frag":"vert")
 if(!stats)y+=font.draw({x:x,y:y,z:z,w:w,style:style,text:"Loading shader stats...",align:font.ALIGN.HWRAP})
 else if(stats.err)y+=font.draw({x:x,y:y,z:z,w:sub_w,style:style_error,text:String(stats.err),align:font.ALIGN.HWRAP})
 else flatten(stats)
-var source_height=.5*ui.font_height
+var source_height=.5*font_height
 if(null!=stats&&stats.text){y+=PAD
 ui.drawLine(x+.3*w,y,x+.7*w,y,z,.5,true,color_line)
 y+=PAD/2
@@ -5159,36 +6639,35 @@ z=Z.SHADER_DEBUG
 ui.panel({x:x0-PANEL_PAD,y:y0-PANEL_PAD,z:z-1,w:w+2*PANEL_PAD,h:y-y0+2*PANEL_PAD,color:color_panel})}function shaderDebugUIStartup(){settings.register({shader_debug:{label:"Shader Debug",default_value:0,type:cmd_parse.TYPE_INT,range:[0,1],access_show:["sysadmin"],on_change:function on_change(){engine.removeTickFunc(shaderDebugUITick)
 if(settings.shader_debug)engine.addTickFunc(shaderDebugUITick)}}})}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./cmds.js":9,"./engine.js":13,"./fetch.js":17,"./font.js":19,"./input.js":28,"./scroll_area.js":43,"./settings.js":44,"./shaders.js":46,"./ui.js":57}],46:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./camera2d.js":9,"./cmds.js":11,"./engine.js":15,"./fetch.js":20,"./font.js":22,"./input.js":31,"./scroll_area.js":52,"./settings.js":53,"./shaders.js":55,"./ui.js":67}],55:[function(require,module,exports){
 "use strict"
-exports.MAX_SEMANTIC=void 0
-exports.addGlobal=addGlobal
+exports.SEMANTIC=exports.MAX_SEMANTIC=void 0
 exports.addReservedDefine=addReservedDefine
-exports.bind=bind
-exports.create=create
 exports.globals=void 0
-exports.handleDefinesChanged=handleDefinesChanged
-exports.prelink=prelink
-exports.semantic=void 0
-exports.setGLErrorReportDetails=setGLErrorReportDetails
-exports.setInternalDefines=setInternalDefines
+exports.shaderCreate=shaderCreate
+exports.shadersAddGlobal=shadersAddGlobal
+exports.shadersBind=shadersBind
 exports.shadersGetDebug=shadersGetDebug
+exports.shadersHandleDefinesChanged=shadersHandleDefinesChanged
+exports.shadersPrelink=shadersPrelink
 exports.shadersRequirePrelink=shadersRequirePrelink
 exports.shadersResetState=shadersResetState
-exports.startup=startup
+exports.shadersSetGLErrorReportDetails=shadersSetGLErrorReportDetails
+exports.shadersSetInternalDefines=shadersSetInternalDefines
+exports.shadersStartup=shadersStartup
 var MAX_SEMANTIC=5
 exports.MAX_SEMANTIC=MAX_SEMANTIC
+var SEMANTIC={ATTR0:0,POSITION:0,ATTR1:1,COLOR:1,COLOR_0:1,ATTR2:2,TEXCOORD:2,TEXCOORD_0:2,ATTR3:3,NORMAL:3,ATTR4:4,TEXCOORD_1:4}
+exports.SEMANTIC=SEMANTIC
 var assert=require("assert")
 var engine=require("./engine.js")
-var _require=require("./error_report.js"),errorReportClear=_require.errorReportClear,errorReportSetDetails=_require.errorReportSetDetails,glovErrorReport=_require.glovErrorReport
+var _require=require("./error_report.js"),errorReportClear=_require.errorReportClear,errorReportSetDetails=_require.errorReportSetDetails,errorReportSetDynamicDetails=_require.errorReportSetDynamicDetails,glovErrorReport=_require.glovErrorReport
 var _require2=require("./filewatch.js"),filewatchOn=_require2.filewatchOn
 var _require3=require("../common/util.js"),matchAll=_require3.matchAll,nop=_require3.nop
-var _require4=require("./textures.js"),texturesUnloadDynamic=_require4.texturesUnloadDynamic
+var _require4=require("./textures.js"),textureUnloadDynamic=_require4.textureUnloadDynamic
 var _require5=require("./webfs.js"),webFSGetFile=_require5.webFSGetFile
 var last_id=0
 var bound_prog=null
-var semantic={ATTR0:0,POSITION:0,ATTR1:1,COLOR:1,COLOR_0:1,ATTR2:2,TEXCOORD:2,TEXCOORD_0:2,ATTR3:3,NORMAL:3,ATTR4:4,TEXCOORD_1:4}
-exports.semantic=semantic
 var globals
 exports.globals=globals
 var globals_used
@@ -5204,23 +6683,25 @@ var include_regex=/\n#include "([^"]+)"/g
 var type_size={float:1,vec2:2,vec3:3,vec4:4,mat3:9,mat4:16}
 function loadInclude(filename){return'\n// from include "'+filename+'":\n'+webFSGetFile(filename,"text")+"\n"}function shadersResetState(){for(var ii=0;ii<shaders.length;++ii){var shader=shaders[ii]
 if(shader.programs)for(var fpid in shader.programs){var prog=shader.programs[fpid]
+if(null===prog.uniforms)assert(prog.uniforms,"prog.uniforms=null, valid="+prog.valid+", fpid="+fpid+", vp="+shader.filename+", handle="+Boolean(prog.handle))
 for(var jj=0;jj<prog.uniforms.length;++jj){var unif=prog.uniforms[jj]
 for(var kk=0;kk<unif.size;++kk)unif.value[kk]=NaN}}}bound_prog=null
-gl.useProgram(null)}function setGLErrorReportDetails(){var details={max_fragment_uniform_vectors:gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),max_varying_vectors:gl.getParameter(gl.MAX_VARYING_VECTORS),max_vertex_attribs:gl.getParameter(gl.MAX_VERTEX_ATTRIBS),max_vertex_uniform_vectors:gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),vendor:gl.getParameter(gl.VENDOR),renderer:gl.getParameter(gl.RENDERER),webgl:engine.webgl2?2:1}
+gl.useProgram(null)}function shadersSetGLErrorReportDetails(){var details={max_fragment_uniform_vectors:gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS),max_varying_vectors:gl.getParameter(gl.MAX_VARYING_VECTORS),max_vertex_attribs:gl.getParameter(gl.MAX_VERTEX_ATTRIBS),max_vertex_uniform_vectors:gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS),vendor:gl.getParameter(gl.VENDOR),renderer:gl.getParameter(gl.RENDERER),webgl:engine.webgl2?2:1}
 var debug_info=gl.getExtension("WEBGL_debug_renderer_info")
 if(debug_info){details.renderer_unmasked=gl.getParameter(debug_info.UNMASKED_RENDERER_WEBGL)
-details.vendor_unmasked=gl.getParameter(debug_info.UNMASKED_VENDOR_WEBGL)}for(var key in details)errorReportSetDetails(key,details[key])}var report_queued=false
+details.vendor_unmasked=gl.getParameter(debug_info.UNMASKED_VENDOR_WEBGL)}for(var key in details)errorReportSetDetails(key,details[key])}errorReportSetDynamicDetails("context_lost",function(){if(window.gl&&gl.isContextLost())return"1"
+return""})
+var report_timeout=null
 var shader_errors
 var shader_errors_any_fatal
 var reported_shader_errors=false
-function reportShaderError(non_fatal,err){function doReport(){report_queued=false
-setGLErrorReportDetails()
+function reportShaderError(non_fatal,err){function doReport(){report_timeout=null
 var msg="Shader error(s):\n    "+shader_errors.join("\n    ")
+shader_errors=null
+if(!gl.isContextLost()){shadersSetGLErrorReportDetails()
 reported_shader_errors=true
 if(!shader_errors_any_fatal)glovErrorReport(false,msg,"shaders.js")
-else assert(false,msg)
-shader_errors=null}if(!report_queued){setTimeout(doReport,1e3)
-report_queued=true
+else assert(false,msg)}}if(!report_timeout){report_timeout=setTimeout(doReport,1e3)
 shader_errors=[]
 shader_errors_any_fatal=false}shader_errors_any_fatal=shader_errors_any_fatal||!non_fatal
 shader_errors.push(err)}function parseIncludes(parent_name,text){var supplied_uniforms={}
@@ -5255,7 +6736,7 @@ var text=webFSGetFile(filename,"text")
 if(engine.webgl2&&text.includes("#pragma WebGL2"))header=type===gl.VERTEX_SHADER?webgl2_header_vp:webgl2_header_fp
 text=(text=parseIncludes(filename,text=""+header+global_defines+this.defines+text)).replace(/#pragma WebGL2?/g,"")
 if(type===gl.VERTEX_SHADER){this.attributes=matchAll(text,vp_attr_regex)
-this.attributes.forEach(function(v){return assert(void 0!==semantic[v])})}else{this.samplers=matchAll(text,sampler_regex)
+this.attributes.forEach(function(v){return assert(void 0!==SEMANTIC[v])})}else{this.samplers=matchAll(text,sampler_regex)
 var found=[]
 this.samplers.forEach(function(v){var num=Number(v.slice(-1))
 assert(!isNaN(num))
@@ -5264,16 +6745,20 @@ found[num]=true})}this.uniforms=matchAll(text,uniform_regex)
 this.uniforms.forEach(function(v){var type_name=v.split(" ")[0]
 assert(type_size[type_name])})
 this.shader_source_text=text
-gl.shaderSource(this.shader,text)
-gl.compileShader(this.shader)
-if(!gl.getShaderParameter(this.shader,gl.COMPILE_STATUS)){this.valid=false
-var error_text=this.error_text=cleanShaderError(gl.getShaderInfoLog(this.shader))
+if(gl.isContextLost()){this.valid=false
+var error_text=this.error_text="Context lost"
 if(this.defines_arr.length)filename+="("+this.defines_arr.join(",")+")"
 console[this.non_fatal?"warn":"error"]("Error compiling "+filename+": "+error_text)
-reportShaderError(this.non_fatal,filename+": "+error_text)
+return}gl.shaderSource(this.shader,text)
+gl.compileShader(this.shader)
+if(!gl.getShaderParameter(this.shader,gl.COMPILE_STATUS)){this.valid=false
+var _error_text=this.error_text=cleanShaderError(gl.getShaderInfoLog(this.shader))
+if(this.defines_arr.length)filename+="("+this.defines_arr.join(",")+")"
+console[this.non_fatal?"warn":"error"]("Error compiling "+filename+": "+_error_text)
+reportShaderError(this.non_fatal,filename+": "+_error_text)
 console.log(text.split("\n").map(function(line,idx){return idx+1+": "+line}).join("\n"))}else{this.valid=true
 if(this.error_text)delete this.error_text}}
-function create(filename){if("object"===typeof filename)return new Shader(filename)
+function shaderCreate(filename){if("object"===typeof filename)return new Shader(filename)
 return new Shader({filename:filename})}function uniformSetValue(unif){switch(unif.width){case 1:gl.uniform1fv(unif.location,unif.value)
 break
 case 2:gl.uniform2fv(unif.location,unif.value)
@@ -5288,18 +6773,20 @@ case 16:gl.uniformMatrix4fv(unif.location,false,unif.value)}}var require_prelink
 function shadersRequirePrelink(ensure){var old=require_prelink
 require_prelink=ensure
 return old}function link(vp,fp,on_error){assert(!require_prelink)
-var prog=vp.programs[fp.id]={handle:gl.createProgram(),uniforms:null}
-if(!prog.handle)assert(false,"gl.createProgram() returned "+prog.handle+(gl.createProgram()?", retry would succeed":""))
-gl.attachShader(prog.handle,vp.shader)
+var prog=vp.programs[fp.id]={handle:gl.createProgram(),uniforms:[]}
+var error_text
+if(!prog.handle){error_text="gl.createProgram() returned "+prog.handle
+prog.valid=false}else{gl.attachShader(prog.handle,vp.shader)
 gl.attachShader(prog.handle,fp.shader)
-for(var ii=0;ii<vp.attributes.length;++ii)gl.bindAttribLocation(prog.handle,semantic[vp.attributes[ii]],vp.attributes[ii])
+for(var ii=0;ii<vp.attributes.length;++ii)gl.bindAttribLocation(prog.handle,SEMANTIC[vp.attributes[ii]],vp.attributes[ii])
 gl.linkProgram(prog.handle)
-prog.valid=gl.getProgramParameter(prog.handle,gl.LINK_STATUS)
-if(!prog.valid){var error_text=cleanShaderError(gl.getProgramInfoLog(prog.handle))
-console.error("Shader link error: "+error_text)
+prog.valid=gl.getProgramParameter(prog.handle,gl.LINK_STATUS)}if(!prog.valid){prog.uniforms=[]
+error_text=error_text||cleanShaderError(gl.getProgramInfoLog(prog.handle))
+var report=true
+if(gl.isContextLost()){error_text="(Context lost) "+error_text
+report=false}console.error("Shader link error: "+error_text)
 if(on_error&&(!engine.DEBUG||on_error===nop))on_error(error_text)
-else reportShaderError(false,"Shader link error ("+vp.filename+" & "+fp.filename+"): "+error_text)
-prog.uniforms=[]
+else if(report)reportShaderError(false,"Shader link error ("+vp.filename+" & "+fp.filename+"): "+error_text)
 return prog}gl.useProgram(prog.handle)
 bound_prog=prog
 var uniforms=vp.uniforms.slice(0)
@@ -5318,6 +6805,7 @@ globals_used[name]=true
 var unif={name:name,size:size,width:width,count:count,value:new Float32Array(size),location:location,glob:glob}
 uniformSetValue(unif)
 return unif}).filter(function(v){return v})
+assert(prog.uniforms)
 for(var _ii2=0;_ii2<fp.samplers.length;++_ii2){var _name=fp.samplers[_ii2]
 var num=Number(_name.slice(-1))
 var location=gl.getUniformLocation(prog.handle,_name)
@@ -5325,7 +6813,7 @@ if(null!==location)gl.uniform1i(location,num)}return prog}function autoLink(vp,f
 if(!prog)prog=link(vp,fp,on_error)
 if(!prog.valid){if(!(prog=link(vp,error_fp,nop)).valid&&error_fp_webgl2)prog=link(vp,error_fp_webgl2,nop)
 if(!prog.valid)prog=link(error_vp,error_fp,nop)
-vp.programs[fp.id]=prog}return prog}function bind(vp,fp,params){var prog=vp.programs[fp.id]
+vp.programs[fp.id]=prog}return prog}function shadersBind(vp,fp,params){var prog=vp.programs[fp.id]
 if(!prog)prog=autoLink(vp,fp)
 if(prog!==bound_prog){bound_prog=prog
 gl.useProgram(prog.handle)}for(var ii=0;ii<prog.uniforms.length;++ii){var unif=prog.uniforms[ii]
@@ -5334,33 +6822,209 @@ if(!value)continue
 var diff=false
 for(var jj=0;jj<unif.size;++jj)if(value[jj]!==unif.value[jj]){diff=true
 break}if(diff){for(var _jj=0;_jj<unif.size;++_jj)unif.value[_jj]=value[_jj]
-uniformSetValue(unif)}}}function prelink(vp,fp,params,on_error){if(void 0===params)params={}
+uniformSetValue(unif)}}}function shadersPrelink(vp,fp,params,on_error){if(void 0===params)params={}
 var prog=autoLink(vp,fp,on_error)
-if(prog.valid)bind(vp,fp,params)
+if(prog.valid)shadersBind(vp,fp,params)
 return prog.valid}var reserved={WEBGL2:1}
 function addReservedDefine(key){reserved[key]=1}var internal_defines={}
-function applyDefines(){global_defines=Object.keys(engine.defines).filter(function(v){return!reserved[v]}).concat(Object.keys(internal_defines)).map(function(v){return"#define "+v+"\n"}).join("")}function shaderReload(){shadersRequirePrelink(false)
+function applyDefines(){global_defines=Object.keys(engine.defines).filter(function(v){return!reserved[v]&&!v.startsWith("GL_")}).concat(Object.keys(internal_defines)).map(function(v){return"#define "+v+"\n"}).join("")}function shaderReload(){shadersRequirePrelink(false)
 if(shaders.length){if(reported_shader_errors){errorReportClear()
 reported_shader_errors=false}gl.useProgram(null)
 for(var ii=0;ii<shaders.length;++ii){var programs=shaders[ii].programs
 if(programs){for(var id in programs)gl.deleteProgram(programs[id].handle)
 shaders[ii].programs={}}}for(var _ii3=0;_ii3<shaders.length;++_ii3)shaders[_ii3].compile()
-texturesUnloadDynamic()}}function handleDefinesChanged(){applyDefines()
-shaderReload()}function setInternalDefines(new_values){for(var key in new_values)if(new_values[key])internal_defines[key]=new_values[key]
+textureUnloadDynamic()}}function shadersHandleDefinesChanged(){applyDefines()
+shaderReload()}function shadersSetInternalDefines(new_values){for(var key in new_values)if(new_values[key])internal_defines[key]=new_values[key]
 else delete internal_defines[key]
-handleDefinesChanged()}function onShaderChange(filename){shaderReload()}function startup(_globals){applyDefines()
+shadersHandleDefinesChanged()}function onShaderChange(filename){shaderReload()}function shadersStartup(_globals){applyDefines()
 exports.globals=globals=_globals
 globals_used={}
-error_fp=create("shaders/error.fp")
-if(engine.webgl2)error_fp_webgl2=create("shaders/error_gl2.fp")
-error_vp=create("shaders/error.vp")
+error_fp=shaderCreate("shaders/error.fp")
+if(engine.webgl2)error_fp_webgl2=shaderCreate("shaders/error_gl2.fp")
+error_vp=shaderCreate("shaders/error.vp")
 filewatchOn(".fp",onShaderChange)
-filewatchOn(".vp",onShaderChange)}function addGlobal(key,vec){assert(!globals[key])
+filewatchOn(".vp",onShaderChange)
+var valid=error_fp.valid&&error_vp.valid
+if(valid){var prog=autoLink(error_vp,error_fp)
+if(!prog||!prog.valid)valid=false}if(!valid)clearTimeout(report_timeout)
+return valid}function shadersAddGlobal(key,vec){assert(!globals[key])
 assert(!globals_used[key])
 globals[key]=vec
-for(var ii=0;ii<vec.length;++ii)assert(isFinite(vec[ii]))}
+for(var ii=0;ii<vec.length;++ii)assert(isFinite(vec[ii]))}exports.create=shaderCreate
+exports.semantic=SEMANTIC
+exports.addGlobal=shadersAddGlobal
+exports.bind=shadersBind
+exports.prelink=shadersPrelink
 
-},{"../common/util.js":74,"./engine.js":13,"./error_report.js":15,"./filewatch.js":18,"./textures.js":55,"./webfs.js":60,"assert":undefined}],47:[function(require,module,exports){
+},{"../common/util.js":93,"./engine.js":15,"./error_report.js":18,"./filewatch.js":21,"./textures.js":65,"./webfs.js":71,"assert":undefined}],56:[function(require,module,exports){
+"use strict"
+var CR_NEWLINE_R=/\r\n?/g
+var TAB_R=/\t/g
+var FORMFEED_R=/\f/g
+var preprocess=function preprocess(source){return source.replace(CR_NEWLINE_R,"\n").replace(FORMFEED_R,"").replace(TAB_R,"    ")}
+var populateInitialState=function populateInitialState(givenState,defaultState){var state=givenState||{}
+if(null!=defaultState)for(var prop in defaultState)if(Object.prototype.hasOwnProperty.call(defaultState,prop))state[prop]=defaultState[prop]
+return state}
+var parserFor=function parserFor(rules,defaultState){var ruleList=Object.keys(rules).filter(function(type){var rule=rules[type]
+if(null==rule||null==rule.match)return false
+var order=rule.order
+if(("number"!==typeof order||!isFinite(order))&&"undefined"!==typeof console)console.warn("simple-markdown: Invalid order for rule `"+type+"`: "+String(order))
+return true})
+ruleList.sort(function(typeA,typeB){var ruleA=rules[typeA]
+var ruleB=rules[typeB]
+var orderA=ruleA.order
+var orderB=ruleB.order
+if(orderA!==orderB)return orderA-orderB
+var secondaryOrderA=ruleA.quality?0:1
+var secondaryOrderB=ruleB.quality?0:1
+if(secondaryOrderA!==secondaryOrderB)return secondaryOrderA-secondaryOrderB
+else if(typeA<typeB)return-1
+else if(typeA>typeB)return 1
+else return 0})
+var latestState
+var nestedParse=function nestedParse(source,state){var result=[]
+latestState=state=state||latestState
+while(source){var ruleType=null
+var rule=null
+var capture=null
+var quality=NaN
+var i=0
+var currRuleType=ruleList[0]
+var currRule=rules[currRuleType]
+do{var currOrder=currRule.order
+var prevCaptureStr=null==state.prevCapture?"":state.prevCapture[0]
+var currCapture=currRule.match(source,state,prevCaptureStr)
+if(currCapture){var currQuality=currRule.quality?currRule.quality(currCapture,state,prevCaptureStr):0
+if(!(currQuality<=quality)){ruleType=currRuleType
+rule=currRule
+capture=currCapture
+quality=currQuality}}currRuleType=ruleList[++i]
+currRule=rules[currRuleType]}while(currRule&&(!capture||currRule.order===currOrder&&currRule.quality))
+if(null==rule||null==capture)throw new Error("Could not find a matching rule for the below content. The rule with highest `order` should always match content provided to it. Check the definition of `match` for '"+ruleList[ruleList.length-1]+"'. It seems to not match the following source:\n"+source)
+if(capture.index)throw new Error("`match` must return a capture starting at index 0 (the current parse index). Did you forget a ^ at the start of the RegExp?")
+var parsed=rule.parse(capture,nestedParse,state)
+if(Array.isArray(parsed))Array.prototype.push.apply(result,parsed)
+else{if(null==parsed||"object"!==typeof parsed)throw new Error("parse() function returned invalid parse result: '"+parsed+"'")
+if(null==parsed.type)parsed.type=ruleType
+result.push(parsed)}state.prevCapture=capture
+source=source.substring(state.prevCapture[0].length)}return result}
+return function outerParse(source,state){if(!(latestState=populateInitialState(state,defaultState)).inline&&!latestState.disableAutoBlockNewlines)source+="\n\n"
+latestState.prevCapture=null
+return nestedParse(preprocess(source),latestState)}}
+var inlineRegex=function inlineRegex(regex){var match=function match(source,state,prevCapture){if(state.inline)return regex.exec(source)
+else return null}
+match.regex=regex
+return match}
+var blockRegex=function blockRegex(regex){var match=function match(source,state){if(state.inline)return null
+else return regex.exec(source)}
+match.regex=regex
+return match}
+var anyScopeRegex=function anyScopeRegex(regex){var match=function match(source,state){return regex.exec(source)}
+match.regex=regex
+return match}
+var UNESCAPE_URL_R=/\\([^0-9A-Za-z\s])/g
+var unescapeUrl=function unescapeUrl(rawUrlString){return rawUrlString.replace(UNESCAPE_URL_R,"$1")}
+var parseInline=function parseInline(parse,content,state){var isCurrentlyInline=state.inline||false
+state.inline=true
+var result=parse(content,state)
+state.inline=isCurrentlyInline
+return result}
+var parseBlock=function parseBlock(parse,content,state){var isCurrentlyInline=state.inline||false
+state.inline=false
+var result=parse(content+"\n\n",state)
+state.inline=isCurrentlyInline
+return result}
+var parseCaptureInline=function parseCaptureInline(capture,parse,state){return{content:parseInline(parse,capture[1],state)}}
+var ignoreCapture=function ignoreCapture(){return{}}
+var LIST_BULLET="(?:[*+-]|\\d+\\.)"
+var LIST_ITEM_PREFIX="( *)("+LIST_BULLET+") +"
+var LIST_ITEM_PREFIX_R=new RegExp("^"+LIST_ITEM_PREFIX)
+var LIST_ITEM_R=new RegExp(LIST_ITEM_PREFIX+"[^\\n]*(?:\\n(?!\\1"+LIST_BULLET+" )[^\\n]*)*(\n|$)","gm")
+var BLOCK_END_R=/\n{2,}$/
+var INLINE_CODE_ESCAPE_BACKTICKS_R=/^ (?= *`)|(` *) $/g
+var LIST_BLOCK_END_R=BLOCK_END_R
+var LIST_ITEM_END_R=/ *\n+$/
+var LIST_R=new RegExp("^( *)("+LIST_BULLET+") [\\s\\S]+?(?:\n{2,}(?! )(?!\\1"+LIST_BULLET+" )\\n*|\\s*\n*$)")
+var LIST_LOOKBEHIND_R=/(?:^|\n)( *)$/
+var TABLES=function(){var TABLE_ROW_SEPARATOR_TRIM=/^ *\| *| *\| *$/g
+var TABLE_CELL_END_TRIM=/ *$/
+var TABLE_RIGHT_ALIGN=/^ *-+: *$/
+var TABLE_CENTER_ALIGN=/^ *:-+: *$/
+var TABLE_LEFT_ALIGN=/^ *:-+ *$/
+var parseTableAlignCapture=function parseTableAlignCapture(alignCapture){if(TABLE_RIGHT_ALIGN.test(alignCapture))return"right"
+else if(TABLE_CENTER_ALIGN.test(alignCapture))return"center"
+else if(TABLE_LEFT_ALIGN.test(alignCapture))return"left"
+else return null}
+var parseTableAlign=function parseTableAlign(source,parse,state,trimEndSeparators){if(trimEndSeparators)source=source.replace(TABLE_ROW_SEPARATOR_TRIM,"")
+return source.trim().split("|").map(parseTableAlignCapture)}
+var parseTableRow=function parseTableRow(source,parse,state,trimEndSeparators){var prevInTable=state.inTable
+state.inTable=true
+var tableRow=parse(source.trim(),state)
+state.inTable=prevInTable
+var cells=[[]]
+tableRow.forEach(function(node,i){if("tableSeparator"===node.type){if(!trimEndSeparators||0!==i&&i!==tableRow.length-1)cells.push([])}else{if("text"===node.type&&(null==tableRow[i+1]||"tableSeparator"===tableRow[i+1].type))node.content=node.content.replace(TABLE_CELL_END_TRIM,"")
+cells[cells.length-1].push(node)}})
+return cells}
+var parseTableCells=function parseTableCells(source,parse,state,trimEndSeparators){return source.trim().split("\n").map(function(rowText){return parseTableRow(rowText,parse,state,trimEndSeparators)})}
+var parseTable=function parseTable(trimEndSeparators){return function(capture,parse,state){state.inline=true
+var header=parseTableRow(capture[1],parse,state,trimEndSeparators)
+var align=parseTableAlign(capture[2],parse,state,trimEndSeparators)
+var cells=parseTableCells(capture[3],parse,state,trimEndSeparators)
+state.inline=false
+return{type:"table",header:header,align:align,cells:cells}}}
+return{parseTable:parseTable(true),parseNpTable:parseTable(false),TABLE_REGEX:/^ *(\|.+)\n *\|( *[-:]+[-| :]*)\n((?: *\|.*(?:\n|$))*)\n*/,NPTABLE_REGEX:/^ *(\S.*\|.*)\n *([-:]+ *\|[-| :]*)\n((?:.*\|.*(?:\n|$))*)\n*/}}()
+var LINK_INSIDE="(?:\\[[^\\]]*\\]|[^\\[\\]]|\\](?=[^\\[]*\\]))*"
+var LINK_HREF_AND_TITLE="\\s*<?((?:\\([^)]*\\)|[^\\s\\\\]|\\\\.)*?)>?(?:\\s+['\"]([\\s\\S]*?)['\"])?\\s*"
+var AUTOLINK_MAILTO_CHECK_R=/mailto:/i
+var parseRef=function parseRef(capture,state,refNode){var ref=(capture[2]||capture[1]).replace(/\s+/g," ").toLowerCase()
+if(state._defs&&state._defs[ref]){var def=state._defs[ref]
+refNode.target=def.target
+refNode.title=def.title}state._refs=state._refs||{}
+state._refs[ref]=state._refs[ref]||[]
+state._refs[ref].push(refNode)
+return refNode}
+var currOrder=0
+var defaultRules={heading:{order:currOrder++,match:blockRegex(/^ *(#{1,6})([^\n]+?)#* *(?:\n *)+\n/),parse:function parse(capture,_parse,state){return{level:capture[1].length,content:parseInline(_parse,capture[2].trim(),state)}}},nptable:{order:currOrder++,match:blockRegex(TABLES.NPTABLE_REGEX),parse:TABLES.parseNpTable},lheading:{order:currOrder++,match:blockRegex(/^([^\n]+)\n *(=|-){3,} *(?:\n *)+\n/),parse:function parse(capture,_parse2,state){return{type:"heading",level:"="===capture[2]?1:2,content:parseInline(_parse2,capture[1],state)}}},hr:{order:currOrder++,match:blockRegex(/^( *[-*_]){3,} *(?:\n *)+\n/),parse:ignoreCapture},codeBlock:{order:currOrder++,match:blockRegex(/^(?:    [^\n]+\n*)+(?:\n *)+\n/),parse:function parse(capture,_parse3,state){return{lang:void 0,content:capture[0].replace(/^    /gm,"").replace(/\n+$/,"")}}},fence:{order:currOrder++,match:blockRegex(/^ *(`{3,}|~{3,}) *(?:(\S+) *)?\n([\s\S]+?)\n?\1 *(?:\n *)+\n/),parse:function parse(capture,_parse4,state){return{type:"codeBlock",lang:capture[2]||void 0,content:capture[3]}}},blockQuote:{order:currOrder++,match:blockRegex(/^( *>[^\n]+(\n[^\n]+)*\n*)+\n{2,}/),parse:function parse(capture,_parse5,state){return{content:_parse5(capture[0].replace(/^ *> ?/gm,""),state)}}},list:{order:currOrder++,match:function match(source,state){var prevCaptureStr=null==state.prevCapture?"":state.prevCapture[0]
+var isStartOfLineCapture=LIST_LOOKBEHIND_R.exec(prevCaptureStr)
+var isListBlock=state._list||!state.inline
+if(isStartOfLineCapture&&isListBlock){source=isStartOfLineCapture[1]+source
+return LIST_R.exec(source)}else return null},parse:function parse(capture,_parse6,state){var bullet=capture[2]
+var ordered=bullet.length>1
+var start=ordered?+bullet:void 0
+var items=capture[0].replace(LIST_BLOCK_END_R,"\n").match(LIST_ITEM_R)
+var lastItemWasAParagraph=false
+return{ordered:ordered,start:start,items:items.map(function(item,i){var prefixCapture=LIST_ITEM_PREFIX_R.exec(item)
+var space=prefixCapture?prefixCapture[0].length:0
+var spaceRegex=new RegExp("^ {1,"+space+"}","gm")
+var content=item.replace(spaceRegex,"").replace(LIST_ITEM_PREFIX_R,"")
+var isLastItem=i===items.length-1
+var thisItemIsAParagraph=-1!==content.indexOf("\n\n")||isLastItem&&lastItemWasAParagraph
+lastItemWasAParagraph=thisItemIsAParagraph
+var oldStateInline=state.inline
+var oldStateList=state._list
+state._list=true
+var adjustedContent
+if(thisItemIsAParagraph){state.inline=false
+adjustedContent=content.replace(LIST_ITEM_END_R,"\n\n")}else{state.inline=true
+adjustedContent=content.replace(LIST_ITEM_END_R,"")}var result=_parse6(adjustedContent,state)
+state.inline=oldStateInline
+state._list=oldStateList
+return result})}}},def:{order:currOrder++,match:blockRegex(/^ *\[([^\]]+)\]: *<?([^\s>]*)>?(?: +["(]([^\n]+)[")])? *\n(?: *\n)*/),parse:function parse(capture,_parse7,state){var def=capture[1].replace(/\s+/g," ").toLowerCase()
+var target=capture[2]
+var title=capture[3]
+if(state._refs&&state._refs[def])state._refs[def].forEach(function(refNode){refNode.target=target
+refNode.title=title})
+state._defs=state._defs||{}
+state._defs[def]={target:target,title:title}
+return{def:def,target:target,title:title}}},table:{order:currOrder++,match:blockRegex(TABLES.TABLE_REGEX),parse:TABLES.parseTable},newline:{order:currOrder++,match:blockRegex(/^(?:\n *)*\n/),parse:ignoreCapture},paragraph:{order:currOrder++,match:blockRegex(/^((?:[^\n]|\n(?! *\n))+)(?:\n *)+\n/),parse:parseCaptureInline},escape:{order:currOrder++,match:inlineRegex(/^\\([^0-9A-Za-z\s])/),parse:function parse(capture,_parse8,state){return{type:"text",content:capture[1]}}},tableSeparator:{order:currOrder++,match:function match(source,state){if(!state.inTable)return null
+return/^ *\| */.exec(source)},parse:function parse(){return{type:"tableSeparator"}}},autolink:{order:currOrder++,match:inlineRegex(/^<([^: >]+:\/[^ >]+)>/),parse:function parse(capture,_parse9,state){return{type:"link",content:[{type:"text",content:capture[1]}],target:capture[1]}}},mailto:{order:currOrder++,match:inlineRegex(/^<([^ >]+@[^ >]+)>/),parse:function parse(capture,_parse0,state){var address=capture[1]
+var target=capture[1]
+if(!AUTOLINK_MAILTO_CHECK_R.test(target))target="mailto:"+target
+return{type:"link",content:[{type:"text",content:address}],target:target}}},url:{order:currOrder++,match:inlineRegex(/^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/),parse:function parse(capture,_parse1,state){return{type:"link",content:[{type:"text",content:capture[1]}],target:capture[1],title:void 0}}},link:{order:currOrder++,match:inlineRegex(new RegExp("^\\[("+LINK_INSIDE+")\\]\\("+LINK_HREF_AND_TITLE+"\\)")),parse:function parse(capture,_parse10,state){return{content:_parse10(capture[1],state),target:unescapeUrl(capture[2]),title:capture[3]}}},image:{order:currOrder++,match:inlineRegex(new RegExp("^!\\[("+LINK_INSIDE+")\\]\\("+LINK_HREF_AND_TITLE+"\\)")),parse:function parse(capture,_parse11,state){return{alt:capture[1],target:unescapeUrl(capture[2]),title:capture[3]}}},reflink:{order:currOrder++,match:inlineRegex(new RegExp("^\\[("+LINK_INSIDE+")\\]\\s*\\[([^\\]]*)\\]")),parse:function parse(capture,_parse12,state){return parseRef(capture,state,{type:"link",content:_parse12(capture[1],state)})}},refimage:{order:currOrder++,match:inlineRegex(new RegExp("^!\\[("+LINK_INSIDE+")\\]\\s*\\[([^\\]]*)\\]")),parse:function parse(capture,_parse13,state){return parseRef(capture,state,{type:"image",alt:capture[1]})}},em:{order:currOrder,match:inlineRegex(new RegExp("^\\b_((?:__|\\\\[\\s\\S]|[^\\\\_])+?)_\\b|^\\*(?=\\S)((?:\\*\\*|\\\\[\\s\\S]|\\s+(?:\\\\[\\s\\S]|[^\\s\\*\\\\]|\\*\\*)|[^\\s\\*\\\\])+?)\\*(?!\\*)")),quality:function quality(capture){return capture[0].length+.2},parse:function parse(capture,_parse14,state){return{content:_parse14(capture[2]||capture[1],state)}}},strong:{order:currOrder,match:inlineRegex(/^\*\*((?:\\[\s\S]|[^\\])+?)\*\*(?!\*)/),quality:function quality(capture){return capture[0].length+.1},parse:parseCaptureInline},u:{order:currOrder++,match:inlineRegex(/^__((?:\\[\s\S]|[^\\])+?)__(?!_)/),quality:function quality(capture){return capture[0].length},parse:parseCaptureInline},del:{order:currOrder++,match:inlineRegex(/^~~(?=\S)((?:\\[\s\S]|~(?!~)|[^\s~\\]|\s(?!~~))+?)~~/),parse:parseCaptureInline},inlineCode:{order:currOrder++,match:inlineRegex(/^(`+)([\s\S]*?[^`])\1(?!`)/),parse:function parse(capture,_parse15,state){return{content:capture[2].replace(INLINE_CODE_ESCAPE_BACKTICKS_R,"$1")}}},br:{order:currOrder++,match:anyScopeRegex(/^ {2,}\n/),parse:ignoreCapture},text:{order:currOrder++,match:anyScopeRegex(/^[\s\S]+?(?=[^0-9A-Za-z\s\u00c0-\uffff]|\n\n| {2,}\n|\w+:\S|$)/),parse:function parse(capture,_parse16,state){return{content:capture[0]}}}}
+var SimpleMarkdown={defaultRules:defaultRules,parserFor:parserFor,inlineRegex:inlineRegex,blockRegex:blockRegex,anyScopeRegex:anyScopeRegex,parseInline:parseInline,parseBlock:parseBlock,preprocess:preprocess,unescapeUrl:unescapeUrl}
+module.exports=SimpleMarkdown
+
+},{}],57:[function(require,module,exports){
 "use strict"
 exports.slider=slider
 exports.sliderIsDragging=sliderIsDragging
@@ -5378,14 +7042,16 @@ var vec4=_glovCommonVmathJs.vec4
 var _inputJs=require("./input.js")
 var input=_inputJs
 var _spotJs=require("./spot.js")
+var spot=_spotJs.spot
 var SPOT_DEFAULT_BUTTON=_spotJs.SPOT_DEFAULT_BUTTON
 var SPOT_NAV_LEFT=_spotJs.SPOT_NAV_LEFT
 var SPOT_NAV_RIGHT=_spotJs.SPOT_NAV_RIGHT
-var spot=_spotJs.spot
 var _uiJs=require("./ui.js")
-var Z_MIN_INC=_uiJs.Z_MIN_INC
 var drawHBox=_uiJs.drawHBox
 var playUISound=_uiJs.playUISound
+var uiButtonHeight=_uiJs.uiButtonHeight
+var uiButtonWidth=_uiJs.uiButtonWidth
+var Z_MIN_INC=_uiJs.Z_MIN_INC
 var _uiJs2=require("./ui.js")
 var ui=_uiJs2
 var SPOT_DEFAULT_SLIDER=_extends({},SPOT_DEFAULT_BUTTON,{sound_button:null,custom_nav:((_custom_nav={})[SPOT_NAV_RIGHT]=null,_custom_nav[SPOT_NAV_LEFT]=null,_custom_nav)})
@@ -5403,8 +7069,8 @@ function sliderIsDragging(){return slider_dragging}function sliderIsFocused(){re
 assert("number"===typeof param.y)
 assert(param.min<param.max)
 param.z=param.z||Z.UI
-param.w=param.w||ui.button_width
-param.h=param.h||ui.button_height
+param.w=param.w||uiButtonWidth()
+param.h=param.h||uiButtonHeight()
 param.max_dist=param.max_dist||Infinity
 var vshrink=param.vshrink||slider_default_vshrink
 var handle_shrink=param.handle_shrink||slider_default_handle_shrink
@@ -5433,7 +7099,8 @@ input.mouseOver()
 slider_focused=slider_dragging=true}if(spot_ret.nav){playUISound("button_click")
 var step=param.step||(param.max-param.min)/16
 if(spot_ret.nav===SPOT_NAV_RIGHT)value=clamp(value+step,param.min,param.max)
-else if(spot_ret.nav===SPOT_NAV_LEFT)value=clamp(value-step,param.min,param.max)}var handle_x=param.x+xoffs+draggable_width*(value-param.min)/(param.max-param.min)-handle_w/2
+else if(spot_ret.nav===SPOT_NAV_LEFT)value=clamp(value-step,param.min,param.max)}var value_for_handle=clamp(value,param.min,param.max)
+var handle_x=param.x+xoffs+draggable_width*(value_for_handle-param.min)/(param.max-param.min)-handle_w/2
 var handle_y=param.y+param.h/2-handle_h/2
 var handle_color=color_slider_handle
 if(grabbed)handle_color=color_slider_handle_grab
@@ -5441,14 +7108,16 @@ else if(spot_ret.focused)handle_color=color_slider_handle_over
 ui.sprites.slider_handle.draw({x:handle_x,y:handle_y,z:param.z+Z_MIN_INC,w:handle_w,h:handle_h,color:handle_color,frame:0})
 return value}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./input.js":28,"./spot.js":50,"./ui.js":57,"assert":undefined}],48:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./input.js":31,"./spot.js":60,"./ui.js":67,"assert":undefined}],58:[function(require,module,exports){
 "use strict"
+exports.SOCIAL_ONLINE=exports.SOCIAL_INVISIBLE=exports.SOCIAL_AFK=void 0
 exports.friendAdd=friendAdd
 exports.friendBlock=friendBlock
 exports.friendIsBlocked=friendIsBlocked
 exports.friendRemove=friendRemove
 exports.friendUnblock=friendUnblock
 exports.friendsGet=friendsGet
+exports.getDefaultUserProfileImage=getDefaultUserProfileImage
 exports.getExternalCurrentUserInfos=getExternalCurrentUserInfos
 exports.getExternalFriendInfos=getExternalFriendInfos
 exports.getExternalUserInfos=getExternalUserInfos
@@ -5458,19 +7127,25 @@ exports.registerExternalUserInfoProvider=registerExternalUserInfoProvider
 exports.richPresenceSet=richPresenceSet
 exports.setDefaultUserProfileImage=setDefaultUserProfileImage
 exports.socialInit=socialInit
+exports.socialPresenceStatusGet=socialPresenceStatusGet
+exports.socialPresenceStatusSet=socialPresenceStatusSet
 var assert=require("assert")
-var _glovClientClient_config=require("./client_config")
-var PLATFORM_FBINSTANT=_glovClientClient_config.PLATFORM_FBINSTANT
+var _glovClientSettings=require("./settings")
+var settings=_glovClientSettings
+var _glovClientSettings2=require("./settings")
+var settingsRegister=_glovClientSettings2.settingsRegister
+var settingsSet=_glovClientSettings2.settingsSet
 var _glovCommonEnums=require("../common/enums")
-var ID_PROVIDER_FB_GAMING=_glovCommonEnums.ID_PROVIDER_FB_GAMING
-var ID_PROVIDER_FB_INSTANT=_glovCommonEnums.ID_PROVIDER_FB_INSTANT
 var PRESENCE_ACTIVE=_glovCommonEnums.PRESENCE_ACTIVE
 var PRESENCE_INACTIVE=_glovCommonEnums.PRESENCE_INACTIVE
 var PRESENCE_OFFLINE=_glovCommonEnums.PRESENCE_OFFLINE
+var PRESENCE_OFFLINE_INACTIVE=_glovCommonEnums.PRESENCE_OFFLINE_INACTIVE
 var _glovCommonFriends_data=require("../common/friends_data")
 var FriendStatus=_glovCommonFriends_data.FriendStatus
 var _glovCommonUtil=require("../common/util")
 var deepEqual=_glovCommonUtil.deepEqual
+var _abtest=require("./abtest")
+var abTestGetMetricsAndPlatform=_abtest.abTestGetMetricsAndPlatform
 var _cmds=require("./cmds")
 var cmd_parse=_cmds.cmd_parse
 var _input=require("./input")
@@ -5478,35 +7153,34 @@ var input=_input
 var _net=require("./net")
 var netDisconnected=_net.netDisconnected
 var netSubs=_net.netSubs
+var netUserId=_net.netUserId
 var _sprites=require("./sprites")
 var spriteCreate=_sprites.spriteCreate
 var _textures=require("./textures")
-var textures=_textures
+var textureLoad=_textures.textureLoad
 var IDLE_TIME=6e4
+var did_social_init=false
 var friend_list=null
 function friendsGet(){return null!=friend_list?friend_list:Object.create(null)}function isFriend(user_id){var value=null==friend_list?void 0:friend_list[user_id]
 return(null==value?void 0:value.status)===FriendStatus.Added||(null==value?void 0:value.status)===FriendStatus.AddedAuto}function friendIsBlocked(user_id){var value=null==friend_list?void 0:friend_list[user_id]
 return(null==value?void 0:value.status)===FriendStatus.Blocked}function makeFriendCmdRequest(cmd,user_id,cb){user_id=user_id.toLowerCase()
-var requesting_user_id=netSubs().loggedIn()
+var requesting_user_id=netUserId()
 if(netDisconnected())return void cb("ERR_DISCONNECTED")
 if(!requesting_user_id)return void cb("ERR_NOT_LOGGED_IN")
-netSubs().getMyUserChannel().cmdParse(cmd+" "+user_id,function(err,resp){if(err)return void cb(err)
-else if(requesting_user_id!==netSubs().loggedIn()||!friend_list)return void cb("Invalid data")
+var my_user_channel=netSubs().getMyUserChannel()
+assert(my_user_channel)
+my_user_channel.cmdParse(cmd+" "+user_id,function(err,resp){if(err)return void cb(err)
+else if(requesting_user_id!==netUserId()||!friend_list)return void cb("Invalid data")
+assert(resp)
 if(resp.friend)friend_list[user_id]=resp.friend
 else delete friend_list[user_id]
-cb(null,resp.msg)})}function friendAdd(user_id,cb){makeFriendCmdRequest("friend_add",user_id,cb)}function friendRemove(user_id,cb){makeFriendCmdRequest("friend_remove",user_id,cb)}function friendBlock(user_id,cb){makeFriendCmdRequest("friend_block",user_id,cb)}function friendUnblock(user_id,cb){makeFriendCmdRequest("friend_unblock",user_id,cb)}cmd_parse.register({cmd:"friend_add",help:"Add a friend",func:friendAdd})
-cmd_parse.register({cmd:"friend_remove",help:"Remove a friend",func:friendRemove})
-cmd_parse.register({cmd:"friend_block",help:"Block someone from seeing your rich presence, also removes from your friends list",func:friendBlock})
-cmd_parse.register({cmd:"friend_unblock",help:"Reset a user to allow seeing your rich presence again",func:friendUnblock})
-cmd_parse.register({cmd:"friend_list",help:"List all friends",func:function func(str,resp_func){if(!friend_list)return void resp_func("Friends list not loaded")
-resp_func(null,Object.keys(friend_list).filter(isFriend).join(",")||"You have no friends")}})
-cmd_parse.register({cmd:"friend_block_list",help:"List all blocked users",func:function func(str,resp_func){if(!friend_list)return void resp_func("Friends list not loaded")
-resp_func(null,Object.keys(friend_list).filter(friendIsBlocked).join(",")||"You have no blocked users")}})
-var invisible=0
-cmd_parse.registerValue("invisible",{type:cmd_parse.TYPE_INT,help:"Hide rich presence information from other users",label:"Invisible",range:[0,1],get:function get(){return invisible},set:function set(v){return invisible=v}})
-var afk=0
-cmd_parse.registerValue("afk",{type:cmd_parse.TYPE_INT,help:"Appear as idle to other users",label:"AFK",range:[0,1],get:function get(){return afk},set:function set(v){return afk=v}})
-function onPresence(data){this.presence_data=data}var last_presence=null
+cb(null,resp.msg)})}function friendAdd(user_id,cb){makeFriendCmdRequest("friend_add",user_id,cb)}function friendRemove(user_id,cb){makeFriendCmdRequest("friend_remove",user_id,cb)}function friendBlock(user_id,cb){makeFriendCmdRequest("friend_block",user_id,cb)}function friendUnblock(user_id,cb){makeFriendCmdRequest("friend_unblock",user_id,cb)}var SOCIAL_ONLINE=1
+exports.SOCIAL_ONLINE=SOCIAL_ONLINE
+var SOCIAL_AFK=2
+exports.SOCIAL_AFK=SOCIAL_AFK
+var SOCIAL_INVISIBLE=3
+exports.SOCIAL_INVISIBLE=SOCIAL_INVISIBLE
+function socialPresenceStatusGet(){return settings.social_presence}function socialPresenceStatusSet(value){if(did_social_init)settingsSet("social_presence",value)}function onPresence(data){this.presence_data=data}function onUnSubscribe(){delete this.presence_data}var last_presence=null
 var send_queued=false
 function richPresenceSend(){if(!netSubs().loggedIn()||!last_presence||send_queued)return
 send_queued=true
@@ -5516,23 +7190,31 @@ var pak=netSubs().getMyUserChannel().pak("presence_set")
 pak.writeInt(last_presence.active)
 pak.writeAnsiString(last_presence.state)
 pak.writeJSON(last_presence.payload)
-pak.send()})}function richPresenceSet(active,state,payload){active=!active||afk||Date.now()-input.inputLastTime()>IDLE_TIME?PRESENCE_INACTIVE:PRESENCE_ACTIVE
-if(invisible)active=PRESENCE_OFFLINE
+pak.writeAnsiString(abTestGetMetricsAndPlatform())
+pak.send()})}function richPresenceSet(active_in,state,payload){var active
+switch(socialPresenceStatusGet()){case SOCIAL_AFK:active=active_in===PRESENCE_ACTIVE?PRESENCE_INACTIVE:active_in
+break
+case SOCIAL_INVISIBLE:active=PRESENCE_OFFLINE
+break
+default:active=active_in}if(Date.now()-input.inputLastTime()>IDLE_TIME)if(active===PRESENCE_ACTIVE)active=PRESENCE_INACTIVE
+else if(active===PRESENCE_OFFLINE)active=PRESENCE_OFFLINE_INACTIVE
 payload=payload||null
 if(!last_presence||active!==last_presence.active||state!==last_presence.state||!deepEqual(last_presence.payload,payload)){last_presence={active:active,state:state,payload:payload}
 richPresenceSend()}}var external_current_users=Object.create(null)
 var external_friends=Object.create(null)
-function getExternalCurrentUserInfos(){return external_current_users}function getExternalFriendInfos(user_id){return external_friends[user_id]}function getExternalUserInfos(user_id){if(user_id===netSubs().loggedIn())return getExternalCurrentUserInfos()
+function getExternalCurrentUserInfos(){return external_current_users}function getExternalFriendInfos(user_id){return external_friends[user_id]}function getExternalUserInfos(user_id){if(user_id===netUserId())return getExternalCurrentUserInfos()
 else return getExternalFriendInfos(user_id)}function setExternalCurrentUser(provider,user_info){if(user_info)external_current_users[provider]=user_info
 else delete external_current_users[provider]}function updateExternalFriendsOnServer(provider,to_add,to_remove){if(0===to_add.length&&0===to_remove.length||netDisconnected())return
-var requesting_user_id=netSubs().loggedIn()
-var pak=netSubs().getMyUserChannel().pak("friend_auto_update")
+var requesting_user_id=netUserId()
+var my_user_channel=netSubs().getMyUserChannel()
+assert(my_user_channel)
+var pak=my_user_channel.pak("friend_auto_update")
 pak.writeAnsiString(provider)
 for(var ii=0;ii<to_add.length;++ii)pak.writeAnsiString(to_add[ii].external_id)
 pak.writeAnsiString("")
 for(var _ii=0;_ii<to_remove.length;++_ii)pak.writeAnsiString(to_remove[_ii])
 pak.writeAnsiString("")
-pak.send(function(err,resp){if(requesting_user_id!==netSubs().loggedIn()||!friend_list)return
+pak.send(function(err,resp){if(requesting_user_id!==netUserId()||!friend_list)return
 else if(err)return
 else if(!resp)return
 var friends_external_to_user_ids=Object.create(null)
@@ -5555,56 +7237,78 @@ external_friend_infos[provider]=provider_friend
 delete friends_external_to_user_ids[external_id]}else to_add.push(provider_friend)})
 var to_remove=[]
 for(var _external_id in friends_external_to_user_ids)to_remove.push(_external_id)
-if(0!==to_add.length||0!==to_remove.length)updateExternalFriendsOnServer(provider,to_add,to_remove)}function requestExternalCurrentUser(provider,request_func){var requesting_user_id=netSubs().loggedIn()
-request_func(function(err,user_info){if(requesting_user_id!==netSubs().loggedIn())return
+if(0!==to_add.length||0!==to_remove.length)updateExternalFriendsOnServer(provider,to_add,to_remove)}function requestExternalCurrentUser(provider,request_func){var requesting_user_id=netUserId()
+request_func(function(err,user_info){if(requesting_user_id!==netUserId())return
 else if(err||!user_info)return
-setExternalCurrentUser(provider,user_info)})}function requestExternalFriends(provider,request_func){var requesting_user_id=netSubs().loggedIn()
-request_func(function(err,friends){if(requesting_user_id!==netSubs().loggedIn()||!friend_list)return
+setExternalCurrentUser(provider,user_info)})}function requestExternalFriends(provider,request_func){var requesting_user_id=netUserId()
+request_func(function(err,friends){if(requesting_user_id!==netUserId()||!friend_list)return
 else if(err||!friends)return
 setExternalFriends(provider,friends)})}var profile_images={}
 var default_profile_image
 function getUserProfileImage(user_id){var image=profile_images[user_id]
 if(image)return image
 var url=null
-if(PLATFORM_FBINSTANT){var _getExternalUserInfos,_getExternalUserInfos2
-url=null==(_getExternalUserInfos=getExternalUserInfos(user_id))?void 0:null==(_getExternalUserInfos2=_getExternalUserInfos[ID_PROVIDER_FB_INSTANT])?void 0:_getExternalUserInfos2.profile_picture_url}else{var _getExternalUserInfos3,_getExternalUserInfos4
-url=null==(_getExternalUserInfos3=getExternalUserInfos(user_id))?void 0:null==(_getExternalUserInfos4=_getExternalUserInfos3[ID_PROVIDER_FB_GAMING])?void 0:_getExternalUserInfos4.profile_picture_url}if(url){var tex=textures.load({url:url,filter_min:gl.LINEAR_MIPMAP_LINEAR,filter_mag:gl.LINEAR,soft_error:true,auto_unload:function auto_unload(){return delete profile_images[user_id]}})
-if(tex&&tex.loaded)return image=profile_images[user_id]={img:spriteCreate({tex:tex})}}return default_profile_image}function setDefaultUserProfileImage(image){default_profile_image=image}var external_user_info_providers=Object.create(null)
-function registerExternalUserInfoProvider(provider,get_current_user,get_friends){if(get_current_user||get_friends){var _netSubs
-assert(!friend_list)
-assert(!(null!=(_netSubs=netSubs())&&_netSubs.loggedIn()))
-external_user_info_providers[provider]={get_current_user:get_current_user,get_friends:get_friends}}else delete external_user_info_providers[provider]}function socialInit(){netSubs().on("login",function(){var user_channel=netSubs().getMyUserChannel()
-var user_id=netSubs().loggedIn()
+var infos=getExternalUserInfos(user_id)
+if(infos)for(var key in infos)if(infos[key]&&infos[key].profile_picture_url){url=infos[key].profile_picture_url
+break}if(url){var tex=textureLoad({url:url,filter_min:gl.LINEAR_MIPMAP_LINEAR,filter_mag:gl.LINEAR,soft_error:true,auto_unload:function auto_unload(){return delete profile_images[user_id]}})
+if(tex&&tex.loaded)return image=profile_images[user_id]={img:spriteCreate({tex:tex})}}return default_profile_image}function getDefaultUserProfileImage(){return default_profile_image}function setDefaultUserProfileImage(image){default_profile_image=image}var external_user_info_providers={}
+function registerExternalUserInfoProvider(provider,get_current_user,get_friends){if(get_current_user||get_friends){assert(!friend_list)
+assert(!netSubs().loggedIn())
+external_user_info_providers[provider]={get_current_user:get_current_user,get_friends:get_friends}}else delete external_user_info_providers[provider]}function socialInit(){did_social_init=true
+netSubs().on("login",function(){var user_channel=netSubs().getMyUserChannel()
+var user_id=netUserId()
 richPresenceSend()
 friend_list=null
 if(netDisconnected())return
-user_channel.pak("friend_list").send(function(err,resp){if(err||user_id!==netSubs().loggedIn())return
+assert(user_channel)
+user_channel.pak("friend_list").send(function(err,resp){if(err||user_id!==netUserId())return
+assert(resp)
 friend_list=resp
-for(var provider in external_user_info_providers){var _external_user_info_p=external_user_info_providers[provider],get_current_user=_external_user_info_p.get_current_user,get_friends=_external_user_info_p.get_friends
+for(var provider in external_user_info_providers){var _ref=external_user_info_providers[provider],get_current_user=_ref.get_current_user,get_friends=_ref.get_friends
 if(get_current_user)requestExternalCurrentUser(provider,get_current_user)
 if(get_friends)requestExternalFriends(provider,get_friends)}})})
 netSubs().on("logout",function(){friend_list=null
 external_current_users=Object.create(null)
 external_friends=Object.create(null)})
-netSubs().onChannelMsg("user","presence",onPresence)}
+netSubs().onChannelMsg("user","presence",onPresence)
+netSubs().onChannelEvent("user","unsubscribe",onUnSubscribe)
+cmd_parse.register({cmd:"friend_add",help:"Add a friend",func:friendAdd})
+cmd_parse.register({cmd:"friend_remove",help:"Remove a friend",func:friendRemove})
+cmd_parse.register({cmd:"friend_block",help:"Block someone from seeing your rich presence, also removes from your friends list",func:friendBlock})
+cmd_parse.register({cmd:"friend_unblock",help:"Reset a user to allow seeing your rich presence again",func:friendUnblock})
+cmd_parse.register({cmd:"friend_list",help:"List all friends",func:function func(str,resp_func){if(!friend_list)return void resp_func("Friends list not loaded")
+resp_func(null,Object.keys(friend_list).filter(isFriend).join(",")||"You have no friends")}})
+cmd_parse.register({cmd:"friend_block_list",help:"List all blocked users",func:function func(str,resp_func){if(!friend_list)return void resp_func("Friends list not loaded")
+resp_func(null,Object.keys(friend_list).filter(friendIsBlocked).join(",")||"You have no blocked users")}})
+settingsRegister({social_presence:{default_value:SOCIAL_ONLINE,type:cmd_parse.TYPE_INT,range:[SOCIAL_ONLINE,SOCIAL_INVISIBLE],access_show:["hidden"]}})
+cmd_parse.registerValue("invisible",{type:cmd_parse.TYPE_INT,help:"Hide rich presence information from other users",label:"Invisible",range:[0,1],get:function get(){return settings.social_presence===SOCIAL_INVISIBLE?1:0},set:function set(v){return socialPresenceStatusSet(v?SOCIAL_INVISIBLE:SOCIAL_ONLINE)}})
+cmd_parse.registerValue("afk",{type:cmd_parse.TYPE_INT,help:"Appear as idle to other users",label:"AFK",range:[0,1],get:function get(){return settings.social_presence===SOCIAL_AFK?1:0},set:function set(v){return socialPresenceStatusSet(v?SOCIAL_AFK:SOCIAL_ONLINE)}})}
 
-},{"../common/enums":68,"../common/friends_data":69,"../common/util":74,"./client_config":8,"./cmds":9,"./input":28,"./net":35,"./sprites":51,"./textures":55,"assert":undefined}],49:[function(require,module,exports){
+},{"../common/enums":82,"../common/friends_data":84,"../common/util":93,"./abtest":4,"./cmds":11,"./input":31,"./net":43,"./settings":53,"./sprites":61,"./textures":65,"assert":undefined}],59:[function(require,module,exports){
 "use strict"
 exports.FADE_OUT=exports.FADE_IN=exports.FADE_DEFAULT=exports.FADE=void 0
 exports.fadesCount=fadesCount
 exports.isPlaceholderSound=isPlaceholderSound
+exports.sound3DListener=sound3DListener
+exports.sound3DSetDefaultPanner=sound3DSetDefaultPanner
+exports.soundFindForReplacement=soundFindForReplacement
 exports.soundLoad=soundLoad
 exports.soundLoading=soundLoading
+exports.soundMusicOverrideVolume=soundMusicOverrideVolume
+exports.soundMusicPause=soundMusicPause
+exports.soundMusicResume=soundMusicResume
 exports.soundOnLoadFail=soundOnLoadFail
 exports.soundPause=soundPause
 exports.soundPlay=soundPlay
 exports.soundPlayMusic=soundPlayMusic
 exports.soundPlayStreaming=soundPlayStreaming
+exports.soundReplaceFromDataURL=soundReplaceFromDataURL
 exports.soundResume=soundResume
 exports.soundResumed=soundResumed
 exports.soundStartup=soundStartup
 exports.soundTick=soundTick
-var FADE_DEFAULT=0
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var FADE_DEFAULT=0
 exports.FADE_DEFAULT=FADE_DEFAULT
 var FADE_OUT=1
 exports.FADE_OUT=FADE_OUT
@@ -5616,25 +7320,42 @@ var assert=require("assert")
 var _glovCommonUtil=require("../common/util")
 var callEach=_glovCommonUtil.callEach
 var defaults=_glovCommonUtil.defaults
+var empty=_glovCommonUtil.empty
+var merge=_glovCommonUtil.merge
 var ridx=_glovCommonUtil.ridx
 var _browser=require("./browser")
 var is_firefox=_browser.is_firefox
+var is_itch_app=_browser.is_itch_app
 var _cmds=require("./cmds")
 var cmd_parse=_cmds.cmd_parse
-var _fbinstant=require("./fbinstant")
-var fbInstantOnPause=_fbinstant.fbInstantOnPause
+var _engine=require("./engine")
+var onEnterBackground=_engine.onEnterBackground
+var onExitBackground=_engine.onExitBackground
 var _filewatch=require("./filewatch")
 var filewatchOn=_filewatch.filewatchOn
+var _locate_asset=require("./locate_asset")
+var locateAsset=_locate_asset.locateAsset
+var _settings=require("./settings")
+var settings=_settings
+var _settings2=require("./settings")
+var settingsRegister=_settings2.settingsRegister
+var _textures=require("./textures")
+var textureCname=_textures.textureCname
 var _urlhash=require("./urlhash")
 var urlhash=_urlhash
-var _require=require("@jimbly/howler/src/howler.core.js"),Howl=_require.Howl,Howler=_require.Howler
-var settings=require("./settings")
+var mod_howler=require("@jimbly/howler/src/howler.core.js")
+var Howl=mod_howler.Howl
+var Howler=mod_howler.Howler
+require("@jimbly/howler/src/plugins/howler.spatial.js")
 var abs=Math.abs,floor=Math.floor,max=Math.max,min=Math.min,random=Math.random
 var DEFAULT_FADE_RATE=.001
 function isPlaceholderSound(sound){return sound.is_placeholder}var sounds={}
 var active_sfx_as_music=[]
 var num_loading=0
-var default_params={ext_list:["mp3","wav"],fade_rate:DEFAULT_FADE_RATE}
+var default_panner_opts={panningModel:"equalpower"}
+function sound3DSetDefaultPanner(opts){assert(empty(sounds))
+assert(!num_loading)
+merge(default_panner_opts,opts)}var default_params={ext_list:["ogg","mp3"],fade_rate:DEFAULT_FADE_RATE,fade_music_in_bg:true}
 var sound_params
 var last_played={}
 var frame_timestamp=0
@@ -5642,12 +7363,22 @@ var fades=[]
 var music
 function fadesCount(){return fades.length}var volume_override=1
 var volume_override_target=1
-settings.register({volume:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]}})
-settings.register({volume_music:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]}})
-settings.register({volume_sound:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]}})
-function musicVolume(){return settings.volume*settings.volume_music}function soundVolume(){return settings.volume*settings.volume_sound}var sounds_loading={}
+var volume_music_override=1
+var volume_music_override_target=1
+settingsRegister({volume:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]},volume_music:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]},volume_sound:{default_value:1,type:cmd_parse.TYPE_FLOAT,range:[0,1]}})
+function musicVolume(){return settings.volume*settings.volume_music*volume_override*volume_music_override}function soundVolume(){return settings.volume*settings.volume_sound*volume_override}var sounds_load_failed={}
+var sounds_loading={}
 var on_load_fail
-function soundOnLoadFail(cb){on_load_fail=cb}function soundLoad(soundid,opts,cb){if((opts=opts||{}).streaming&&is_firefox)opts.streaming=false
+function soundOnLoadFail(cb){on_load_fail=cb}function sound3DListener(param){var pos=param.pos,forward=param.forward,up=param.up
+Howler.pos(pos[0],pos[1],pos[2])
+if(forward&&up)Howler.orientation(forward[0],forward[1],forward[2],up[0],up[1],up[2])}function soundFindForReplacement(filename){if(sounds[filename])return filename
+for(var key in sounds)if(textureCname(key)===filename)return key
+return null}function soundReplaceFromDataURL(key,dataurl){var existing=sounds[key]
+assert(existing)
+var opts=existing.glov_load_opts
+var loop=opts.loop
+var sound=new Howl(_extends({},default_panner_opts,{src:dataurl,html5:false,loop:Boolean(loop),volume:0,onload:function onload(){sound.glov_load_opts=opts
+sounds[key]=sound},onloaderror:function onloaderror(id,err,extra){console.error("Error loading sound "+key+": "+err)}}))}function soundLoad(soundid,opts,cb){if((opts=opts||{}).streaming&&(is_firefox||is_itch_app))opts.streaming=false
 var _opts=opts,streaming=_opts.streaming,loop=_opts.loop
 if(Array.isArray(soundid)){assert(!cb)
 for(var ii=0;ii<soundid.length;++ii)soundLoad(soundid[ii],opts)
@@ -5657,22 +7388,25 @@ return}if(sounds_loading[key]){if(cb)sounds_loading[key].push(cb)
 return}var cbs=[]
 if(cb)cbs.push(cb)
 sounds_loading[key]=cbs
+delete sounds_load_failed[key]
 var soundname=key
 var m=soundname.match(/^((?:[\0-\t\x0B\f\x0E-\u2027\u202A-\uD7FF\uE000-\uFFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF])*)\.(mp3|ogg|wav|webm)$/)
 var preferred_ext
 if(m){soundname=m[1]
 preferred_ext=m[2]}var src="sounds/"+soundname
 var srcs=[]
-var suffix=""
-if(opts.for_reload)suffix="?rl="+Date.now()
-if(preferred_ext)srcs.push(""+urlhash.getURLBase()+src+"."+preferred_ext+suffix)
+if(preferred_ext)srcs.push(src+"."+preferred_ext)
 for(var _ii=0;_ii<sound_params.ext_list.length;++_ii){var ext=sound_params.ext_list[_ii]
-if(ext!==preferred_ext)srcs.push(""+urlhash.getURLBase()+src+"."+ext+suffix)}function tryLoad(idx){if(idx===srcs.length){console.error("Error loading sound "+soundname+": All fallbacks exhausted, giving up")
+if(ext!==preferred_ext)srcs.push(src+"."+ext)}srcs=srcs.map(function(filename){if(opts.for_reload)filename=filename+"?rl="+Date.now()
+else filename=locateAsset(filename)
+return filename=""+urlhash.getURLBase()+filename})
+function tryLoad(idx){if(idx===srcs.length){console.error("Error loading sound "+soundname+": All fallbacks exhausted, giving up")
 if(on_load_fail)on_load_fail(soundname)
+sounds_load_failed[key]=opts
 callEach(cbs,delete sounds_loading[key],"Error loading sound")
 return}if(!streaming)++num_loading
 var once=false
-var sound=new Howl({src:srcs.slice(idx),html5:Boolean(streaming),loop:Boolean(loop),volume:0,onload:function onload(){if(!once){if(!streaming)--num_loading
+var sound=new Howl(_extends({},default_panner_opts,{src:srcs.slice(idx),html5:Boolean(streaming),loop:Boolean(loop),volume:0,onload:function onload(){if(!once){if(!streaming)--num_loading
 once=true
 sound.glov_load_opts=opts
 sounds[key]=sound
@@ -5680,50 +7414,77 @@ callEach(cbs,delete sounds_loading[key],null)}},onloaderror:function onloaderror
 else console.log("Error loading sound "+srcs[idx]+": "+err+", trying fallback...")
 if(!once){if(!streaming)--num_loading
 once=true
-tryLoad(idx+1)}}})}tryLoad(0)}function soundReload(filename){var name_match=filename.match(/^sounds\/([^.]+)\.\w+$/)
+tryLoad(idx+1)}}}))}tryLoad(0)}function soundReload(filename){var name_match=filename.match(/^sounds\/([^.]+)\.\w+$/)
 var sound_name=name_match&&name_match[1]
 if(!sound_name)return
-if(!sounds[sound_name]){console.log("Reload trigged for non-existent sound: "+filename)
-return}var opts=sounds[sound_name].glov_load_opts
-opts.for_reload=true
-delete sounds[sound_name]
-soundLoad(sound_name,opts)}function soundPause(){soundTick(volume_override=volume_override_target=0)}function soundResume(){volume_override_target=1
-Howler.manualUnlock()}function soundStartup(params){sound_params=defaults(params||{},default_params)
+var existing_sound=sounds[sound_name]
+var failed_sound_opts=sounds_load_failed[sound_name]
+if(!existing_sound&&!failed_sound_opts){console.log("Reload triggered for non-existent sound: "+filename)
+return}var opts
+if(existing_sound){(opts=existing_sound.glov_load_opts).for_reload=true
+delete sounds[sound_name]}else{assert(failed_sound_opts)
+opts=failed_sound_opts
+delete sounds_load_failed[sound_name]}soundLoad(sound_name,opts)}function soundPause(){soundTick(volume_override=volume_override_target=0)}function soundResume(){volume_override_target=1
+Howler.manualUnlock()}function soundMusicPause(){volume_music_override_target=0}var skip_one_music_blend=false
+function soundMusicResume(){volume_music_override_target=1
+skip_one_music_blend=true}function soundMusicOverrideVolume(volume){volume_music_override_target=volume}function soundFadeMusicInBackground(){var music_tick_timer=null
+var last_time
+function musicForceTick(){var now=Date.now()
+soundTick(now-last_time)
+last_time=now
+music_tick_timer=setTimeout(musicForceTick,100)}onEnterBackground(function(){soundMusicPause()
+last_time=Date.now()
+if(!music_tick_timer)music_tick_timer=setTimeout(musicForceTick,100)})
+onExitBackground(function(){soundMusicResume()
+if(music_tick_timer){clearTimeout(music_tick_timer)
+music_tick_timer=null}})}function soundStartup(params){sound_params=defaults(params||{},default_params)
 music=[]
 for(var ii=0;ii<2;++ii)music.push({sound:null,id:0,current_volume:0,target_volume:0,sys_volume:0,need_play:false})
 filewatchOn(".mp3",soundReload)
 filewatchOn(".ogg",soundReload)
 filewatchOn(".wav",soundReload)
 filewatchOn(".webm",soundReload)
-fbInstantOnPause(soundPause)}function soundResumed(){return!Howler.noAudio&&Howler.safeToPlay}function soundTick(dt){frame_timestamp+=dt
-if(volume_override!==volume_override_target){var delta=.004*dt
-if(volume_override<volume_override_target)volume_override=min(volume_override+delta,volume_override_target)
-else volume_override=max(volume_override-delta,volume_override_target)}if(!soundResumed())return
-for(var i=0;i<active_sfx_as_music.length;++i){var _active_sfx_as_music$=active_sfx_as_music[i],_sound=_active_sfx_as_music$.sound,play_volume=_active_sfx_as_music$.play_volume,set_volume_when_played=_active_sfx_as_music$.set_volume_when_played
-if(!_sound.playing())ridx(active_sfx_as_music,i)
-else if(set_volume_when_played!==musicVolume()){_sound.volume(play_volume)
+if(sound_params.fade_music_in_bg)soundFadeMusicInBackground()}function soundResumed(){return!Howler.noAudio&&Howler.safeToPlay}function blendOverride(dt,override,target){var delta=.001*dt
+if(override<target)override=min(override+delta,target)
+else override=max(override-delta,target)
+return override}function soundTick(dt){frame_timestamp+=dt
+if(volume_override!==volume_override_target)volume_override=blendOverride(dt,volume_override,volume_override_target)
+if(volume_music_override!==volume_music_override_target)if(skip_one_music_blend)skip_one_music_blend=false
+else volume_music_override=blendOverride(dt,volume_music_override,volume_music_override_target)
+if(!soundResumed())return
+for(var i=0;i<active_sfx_as_music.length;++i){var _active_sfx_as_music$=active_sfx_as_music[i],sound=_active_sfx_as_music$.sound,set_volume_when_played=_active_sfx_as_music$.set_volume_when_played
+if(!sound.playing())ridx(active_sfx_as_music,i)
+else if(set_volume_when_played!==musicVolume()){sound.volume(sound.volume_current)
 active_sfx_as_music[i].set_volume_when_played=musicVolume()}}var max_fade=dt*sound_params.fade_rate
 for(var ii=0;ii<music.length;++ii){var mus=music[ii]
 if(!mus.sound)continue
 var target=settings.volume*settings.volume_music===0?0:mus.target_volume
-if(mus.current_volume!==target){var _delta=target-mus.current_volume
-var fade_amt=min(abs(_delta),max_fade)
-if(_delta<0)mus.current_volume=max(target,mus.current_volume-fade_amt)
+if(mus.current_volume!==target){var delta=target-mus.current_volume
+var fade_amt=min(abs(delta),max_fade)
+if(delta<0)mus.current_volume=max(target,mus.current_volume-fade_amt)
 else mus.current_volume=min(target,mus.current_volume+fade_amt)
 if(!mus.target_volume&&!mus.current_volume){if(!mus.need_play)mus.sound.stop(mus.id)
-mus.sound=null}}if(mus.sound){var sys_volume=mus.current_volume*musicVolume()*volume_override
+mus.sound=null}}if(mus.sound){var sys_volume=mus.current_volume*musicVolume()
 if(mus.need_play){mus.need_play=false
-mus.id=mus.sound.play()
+mus.id=mus.sound.play(void 0,{volume:sys_volume})
 mus.sys_volume=-1}if(mus.sys_volume!==sys_volume){mus.sound.volume(sys_volume,mus.id)
-mus.sys_volume=sys_volume}}}for(var _ii2=fades.length-1;_ii2>=0;--_ii2){var fade=fades[_ii2]
-var _delta2=fade.target_volume-fade.volume
-var _fade_amt=min(abs(_delta2),fade.time?dt/fade.time:max_fade)
-if(_delta2<0)fade.volume=max(fade.target_volume,fade.volume-_fade_amt)
-else fade.volume=min(fade.target_volume,fade.volume+_fade_amt)
-fade.sound.volume(fade.volume)
-if(fade.volume===fade.target_volume){ridx(fades,_ii2)
-if(!fade.volume)fade.sound.stop(fade.id)}}}function soundPlay(soundid,volume,as_music){volume=volume||1
-if(settings.volume*(as_music?settings.volume_music:settings.volume_sound)===0)return null
+mus.sys_volume=sys_volume}}}for(var _ii2=fades.length-1;_ii2>=0;--_ii2){var _fade=fades[_ii2]
+var _delta=_fade.target_volume-_fade.volume
+var _fade_amt=min(abs(_delta),_fade.time?dt/_fade.time:max_fade)
+if(_delta<0)_fade.volume=max(_fade.target_volume,_fade.volume-_fade_amt)
+else _fade.volume=min(_fade.target_volume,_fade.volume+_fade_amt)
+_fade.sound.volume(_fade.volume)
+if(_fade.volume===_fade.target_volume){ridx(fades,_ii2)
+if(!_fade.volume)_fade.sound.stop()}}}function soundPlay(soundid,param,old_as_music){assert(void 0===old_as_music)
+var volume=1
+var as_music=false
+var pos
+var stereo
+if(void 0!==param)if("number"===typeof param)volume=param
+else{if(void 0!==param.volume)volume=param.volume
+if(void 0!==param.as_music)as_music=param.as_music
+pos=param.pos
+stereo=param.stereo}if(settings.volume*(as_music?settings.volume_music:settings.volume_sound)===0)return null
 if(!soundResumed())return null
 if(Array.isArray(soundid))soundid=soundid[floor(random()*soundid.length)]
 if("object"===typeof soundid){volume*=soundid.volume||1
@@ -5732,46 +7493,47 @@ if(!sound)return null
 var last_played_time=last_played[soundid]||-9e9
 if(frame_timestamp-last_played_time<45)return null
 var settingsVolume=as_music?musicVolume:soundVolume
-var id=sound.play(void 0,volume*settingsVolume()*volume_override)
+var id=sound.play(void 0,{volume:volume*settingsVolume(),pos:pos,stereo:stereo})
 last_played[soundid]=frame_timestamp
-var played_sound={name:soundid,volume_current:volume,stop:sound.stop.bind(sound,id),playing:sound.playing.bind(sound,id),location:function location(){var v=sound.seek(id)
+var played_sound={name:soundid,volume_current:volume,stop:sound.stop.bind(sound,id),playing:sound.playing.bind(sound,id),location:function location(time){var v
+if(void 0!==time)v=sound.seek(time,id)
+else v=sound.seek(time,id)
 if("number"!==typeof v)return 0
 return v},duration:sound.duration.bind(sound,id),volume:function volume(vol){played_sound.volume_current=vol
-sound.volume(vol*settingsVolume()*volume_override,id)},fade:function fade(target_volume,time){var new_fade={sound:played_sound,volume:played_sound.volume_current,target_volume:target_volume,id:id,time:time,settingsVolume:settingsVolume}
+sound.volume(vol*settingsVolume(),id)},fade:function fade(target_volume,time){var new_fade={sound:played_sound,volume:played_sound.volume_current,target_volume:target_volume,id:id,time:time,settingsVolume:settingsVolume}
 for(var ii=0;ii<fades.length;++ii)if(fades[ii].id===id){fades[ii]=new_fade
-return}fades.push(new_fade)}}
+return}fades.push(new_fade)},stereo:function stereo(pan){sound.stereo(pan,id)},pos:function pos(new_pos){sound.pos(new_pos[0],new_pos[1],new_pos[2],id)},orientation:function orientation(forward){sound.orientation(forward[0],forward[1],forward[2],id)}}
 if(as_music)active_sfx_as_music.push({sound:played_sound,play_volume:volume,set_volume_when_played:musicVolume()})
-return played_sound}function soundPlayStreaming(soundname,volume,as_music,on_played_sound){if(settings.volume*(as_music?settings.volume_music:settings.volume_sound)===0)return null
+return played_sound}function soundPlayStreaming(soundname,param,on_played_sound){if(settings.volume*(param.as_music?settings.volume_music:settings.volume_sound)===0)return null
 if(Array.isArray(soundname))soundname=soundname[floor(random()*soundname.length)]
 var played_sound={name:soundname,is_placeholder:true}
-soundLoad(soundname,{streaming:true,loop:false},function(err){if(!err){played_sound=soundPlay(soundname,volume,as_music)
+soundLoad(soundname,{streaming:true,loop:false},function(err){if(!err){played_sound=soundPlay(soundname,param)
 if(on_played_sound)on_played_sound(played_sound)}})
 return played_sound}function soundPlayMusic(soundname,volume,transition){if(settings.volume*settings.volume_music===0)return
 if(void 0===volume)volume=1
 transition=transition||FADE_DEFAULT
-soundLoad(soundname,{streaming:true,loop:true},function(err){assert(!err)
-var sound=sounds[soundname]
+soundLoad(soundname,{streaming:true,loop:true},function(err){var sound=null
+if(err);else{sound=sounds[soundname]
 assert(sound)
 if(music[0].sound===sound){music[0].target_volume=volume
 if(!transition)if(!volume){sound.stop(music[0].id)
-music[0].sound=null}else{var sys_volume=music[0].sys_volume=volume*musicVolume()*volume_override
+music[0].sound=null}else{var sys_volume=music[0].sys_volume=volume*musicVolume()
 sound.volume(sys_volume,music[0].id)
-if(!sound.playing())sound.play(void 0,sys_volume)}return}if(music[0].current_volume)if(transition&FADE_OUT){var temp=music[1]
+if(!sound.playing())sound.play(void 0,{volume:sys_volume})}return}}if(music[0].current_volume)if(transition&FADE_OUT){var temp=music[1]
 music[1]=music[0]
 music[0]=temp
 music[1].target_volume=0}if(music[0].sound)music[0].sound.stop(music[0].id)
-music[0].sound=sound
-music[0].target_volume=volume
+if(music[0].sound=sound){music[0].target_volume=volume
 var start_vol=transition&FADE_IN?0:volume
 music[0].current_volume=start_vol
-if(soundResumed()){var _sys_volume=start_vol*musicVolume()*volume_override
-music[0].id=sound.play(void 0,_sys_volume)
+if(soundResumed()){var _sys_volume=start_vol*musicVolume()
+music[0].id=sound.play(void 0,{volume:_sys_volume})
 music[0].sys_volume=_sys_volume
-music[0].need_play=false}else music[0].need_play=true})}function soundLoading(){return num_loading}
+music[0].need_play=false}else music[0].need_play=true}else music[0].target_volume=music[0].current_volume=0})}function soundLoading(){return num_loading}
 
-},{"../common/util":74,"./browser":5,"./cmds":9,"./fbinstant":16,"./filewatch":18,"./settings":44,"./urlhash":58,"@jimbly/howler/src/howler.core.js":undefined,"assert":undefined}],50:[function(require,module,exports){
+},{"../common/util":93,"./browser":7,"./cmds":11,"./engine":15,"./filewatch":21,"./locate_asset":37,"./settings":53,"./textures":65,"./urlhash":69,"@jimbly/howler/src/howler.core.js":undefined,"@jimbly/howler/src/plugins/howler.spatial.js":undefined,"assert":undefined}],60:[function(require,module,exports){
 "use strict"
-exports.SPOT_STATE_REGULAR=exports.SPOT_STATE_FOCUSED=exports.SPOT_STATE_DOWN=exports.SPOT_STATE_DISABLED=exports.SPOT_NAV_UP=exports.SPOT_NAV_RIGHT=exports.SPOT_NAV_PREV=exports.SPOT_NAV_NONE=exports.SPOT_NAV_NEXT=exports.SPOT_NAV_LEFT=exports.SPOT_NAV_DOWN=exports.SPOT_DEFAULT_LABEL=exports.SPOT_DEFAULT_BUTTON_DRAW_ONLY=exports.SPOT_DEFAULT_BUTTON_DISABLED=exports.SPOT_DEFAULT_BUTTON=exports.SPOT_DEFAULT=void 0
+exports.SPOT_STATE_REGULAR=exports.SPOT_STATE_FOCUSED=exports.SPOT_STATE_DOWN=exports.SPOT_STATE_DISABLED=exports.SPOT_NAV_UP=exports.SPOT_NAV_RIGHT=exports.SPOT_NAV_PREV=exports.SPOT_NAV_NONE=exports.SPOT_NAV_NEXT=exports.SPOT_NAV_LEFT=exports.SPOT_NAV_DOWN=exports.SPOT_NAVTYPE_SIMPLE=exports.SPOT_NAVTYPE_EXTENDED=exports.SPOT_DEFAULT_LABEL=exports.SPOT_DEFAULT_BUTTON_DRAW_ONLY=exports.SPOT_DEFAULT_BUTTON_DISABLED=exports.SPOT_DEFAULT_BUTTON=exports.SPOT_DEFAULT=void 0
 exports.spot=spot
 exports.spotAsyncActivateButton=spotAsyncActivateButton
 exports.spotEndInput=spotEndInput
@@ -5779,22 +7541,30 @@ exports.spotEndOfFrame=spotEndOfFrame
 exports.spotFocusCheck=spotFocusCheck
 exports.spotFocusSteal=spotFocusSteal
 exports.spotGet=spotGet
+exports.spotGetCurrentFocusKey=spotGetCurrentFocusKey
 exports.spotKey=spotKey
 exports.spotMouseoverHook=spotMouseoverHook
 exports.spotPadMode=spotPadMode
 exports.spotPadSuppressed=spotPadSuppressed
+exports.spotSetNavtype=spotSetNavtype
 exports.spotSetPadMode=spotSetPadMode
 exports.spotSubBegin=spotSubBegin
 exports.spotSubEnd=spotSubEnd
 exports.spotSubPop=spotSubPop
 exports.spotSubPush=spotSubPush
+exports.spotSuppressKBNav=spotSuppressKBNav
 exports.spotSuppressPad=spotSuppressPad
 exports.spotTopOfFrame=spotTopOfFrame
 exports.spotUnfocus=spotUnfocus
 exports.spotlog=spotlog
+var _spot_nav_keys_base,_spot_nav_keys_simple,_spot_nav_keys_extend
 function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
 for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var _input_constants=require("./input_constants")
 var BUTTON_ANY=_input_constants.BUTTON_ANY
+var SPOT_NAVTYPE_SIMPLE=0
+exports.SPOT_NAVTYPE_SIMPLE=SPOT_NAVTYPE_SIMPLE
+var SPOT_NAVTYPE_EXTENDED=1
+exports.SPOT_NAVTYPE_EXTENDED=SPOT_NAVTYPE_EXTENDED
 var SPOT_NAV_NONE=0
 exports.SPOT_NAV_NONE=SPOT_NAV_NONE
 var SPOT_NAV_LEFT=1
@@ -5818,7 +7588,7 @@ var SPOT_STATE_FOCUSED=3
 exports.SPOT_STATE_FOCUSED=SPOT_STATE_FOCUSED
 var SPOT_STATE_DISABLED=4
 exports.SPOT_STATE_DISABLED=SPOT_STATE_DISABLED
-var SPOT_DEFAULT={key:void 0,disabled:false,in_event_cb:null,drag_target:false,drag_over:false,button:BUTTON_ANY,is_button:false,button_long_press:false,pad_focusable:true,spatial_focus:true,auto_focus:false,long_press_focuses:true,sound_button:"button_click",sound_rollover:"rollover",touch_focuses:false,disabled_focusable:true,hotkey:null,hotpad:null,focus_steal:false,sticky_focus:false,custom_nav:null}
+var SPOT_DEFAULT={key:void 0,disabled:false,in_event_cb:null,drag_target:false,drag_over:false,button:BUTTON_ANY,is_button:false,button_long_press:false,pad_focusable:true,spatial_focus:true,auto_focus:false,long_press_focuses:true,sound_button:"button_click",sound_rollover:"rollover",touch_focuses:false,disabled_focusable:true,hotkey:null,hotkeys:null,hotpad:null,focus_steal:false,sticky_focus:false,custom_nav:null}
 var SPOT_DEFAULT_BUTTON=_extends({},exports.SPOT_DEFAULT=SPOT_DEFAULT,{is_button:true})
 exports.SPOT_DEFAULT_BUTTON=SPOT_DEFAULT_BUTTON
 var SPOT_DEFAULT_BUTTON_DISABLED=_extends({},SPOT_DEFAULT,{disabled:true,sound_rollover:null})
@@ -5832,13 +7602,14 @@ var abs=Math.abs,max=Math.max
 var verify=require("../common/verify")
 var _camera2dJs=require("./camera2d.js")
 var camera2d=_camera2dJs
+var _client_config=require("./client_config")
+var platformGetID=_client_config.platformGetID
+var platformParameterGet=_client_config.platformParameterGet
 var _engineJs=require("./engine.js")
 var engine=_engineJs
 var _fontJs=require("./font.js")
 var fontStyle=_fontJs.fontStyle
 var _inputJs=require("./input.js")
-var KEYS=_inputJs.KEYS
-var PAD=_inputJs.PAD
 var dragDrop=_inputJs.dragDrop
 var dragOver=_inputJs.dragOver
 var inputClick=_inputJs.inputClick
@@ -5846,6 +7617,7 @@ var inputEatenMouse=_inputJs.inputEatenMouse
 var inputTouchMode=_inputJs.inputTouchMode
 var keyDown=_inputJs.keyDown
 var keyDownEdge=_inputJs.keyDownEdge
+var KEYS=_inputJs.KEYS
 var longPress=_inputJs.longPress
 var mouseButtonHadEdge=_inputJs.mouseButtonHadEdge
 var mouseDomPos=_inputJs.mouseDomPos
@@ -5855,7 +7627,11 @@ var mouseDownMidClick=_inputJs.mouseDownMidClick
 var mouseMoved=_inputJs.mouseMoved
 var mouseOver=_inputJs.mouseOver
 var mousePosIsTouch=_inputJs.mousePosIsTouch
+var PAD=_inputJs.PAD
 var padButtonDownEdge=_inputJs.padButtonDownEdge
+var _link=require("./link")
+var link=_link.link
+var linkActivate=_link.linkActivate
 var _settingsJs=require("./settings.js")
 var settings=_settingsJs
 var _uiJs=require("./ui.js")
@@ -5907,7 +7683,29 @@ focus_is_sticky=sticky_focus
 focus_key_nonsticky=null}assert(param.dom_pos)
 return true}function spotUnfocus(){spotlog("spotUnfocus")
 focus_key_nonsticky=focus_key=null
-pad_mode=focus_is_sticky=false}var TARGET_QUAD=0
+pad_mode=focus_is_sticky=false}var spot_nav_keys_base=((_spot_nav_keys_base={})[SPOT_NAV_LEFT]={pads:[PAD.LEFT]},_spot_nav_keys_base[SPOT_NAV_UP]={pads:[PAD.UP]},_spot_nav_keys_base[SPOT_NAV_RIGHT]={pads:[PAD.RIGHT]},_spot_nav_keys_base[SPOT_NAV_DOWN]={pads:[PAD.DOWN]},_spot_nav_keys_base[SPOT_NAV_PREV]={shift_keys:[KEYS.TAB],pads:[PAD.LEFT_BUMPER]},_spot_nav_keys_base[SPOT_NAV_NEXT]={pads:[PAD.RIGHT_BUMPER],unshift_keys:[KEYS.TAB]},_spot_nav_keys_base)
+var spot_nav_keys_simple=((_spot_nav_keys_simple={})[SPOT_NAV_LEFT]={keys:[KEYS.LEFT],pads:spot_nav_keys_base[SPOT_NAV_LEFT].pads},_spot_nav_keys_simple[SPOT_NAV_UP]={keys:[KEYS.UP],pads:spot_nav_keys_base[SPOT_NAV_UP].pads},_spot_nav_keys_simple[SPOT_NAV_RIGHT]={keys:[KEYS.RIGHT],pads:spot_nav_keys_base[SPOT_NAV_RIGHT].pads},_spot_nav_keys_simple[SPOT_NAV_DOWN]={keys:[KEYS.DOWN],pads:spot_nav_keys_base[SPOT_NAV_DOWN].pads},_spot_nav_keys_simple[SPOT_NAV_PREV]=spot_nav_keys_base[SPOT_NAV_PREV],_spot_nav_keys_simple[SPOT_NAV_NEXT]=spot_nav_keys_base[SPOT_NAV_NEXT],_spot_nav_keys_simple)
+var spot_nav_keys_extended=((_spot_nav_keys_extend={})[SPOT_NAV_LEFT]={keys:spot_nav_keys_simple[SPOT_NAV_LEFT].keys.concat([KEYS.A,KEYS.NUMPAD4]),pads:spot_nav_keys_simple[SPOT_NAV_LEFT].pads},_spot_nav_keys_extend[SPOT_NAV_UP]={keys:spot_nav_keys_simple[SPOT_NAV_UP].keys.concat([KEYS.W,KEYS.NUMPAD8]),pads:spot_nav_keys_simple[SPOT_NAV_UP].pads},_spot_nav_keys_extend[SPOT_NAV_RIGHT]={keys:spot_nav_keys_simple[SPOT_NAV_RIGHT].keys.concat([KEYS.D,KEYS.NUMPAD6]),pads:spot_nav_keys_simple[SPOT_NAV_RIGHT].pads},_spot_nav_keys_extend[SPOT_NAV_DOWN]={keys:spot_nav_keys_simple[SPOT_NAV_DOWN].keys.concat([KEYS.S,KEYS.NUMPAD5,KEYS.NUMPAD2]),pads:spot_nav_keys_simple[SPOT_NAV_DOWN].pads},_spot_nav_keys_extend[SPOT_NAV_PREV]=spot_nav_keys_base[SPOT_NAV_PREV],_spot_nav_keys_extend[SPOT_NAV_NEXT]=spot_nav_keys_base[SPOT_NAV_NEXT],_spot_nav_keys_extend)
+function keyDownShifted(key){return(keyDown(KEYS.SHIFT)||"electron"===platformGetID()&&keyDown(KEYS.CTRL))&&keyDownEdge(key)}function keyDownUnshifted(key){return!keyDown(KEYS.SHIFT)&&keyDownEdge(key)}function compileSpotNavKeysEntry(entry){var fns=[]
+if(entry.keys)for(var ii=0;ii<entry.keys.length;++ii)fns.push(keyDownEdge.bind(null,entry.keys[ii]))
+if(entry.pads)for(var _ii=0;_ii<entry.pads.length;++_ii)fns.push(padButtonDownEdge.bind(null,entry.pads[_ii]))
+if(entry.shift_keys)for(var _ii2=0;_ii2<entry.shift_keys.length;++_ii2)fns.push(keyDownShifted.bind(null,entry.shift_keys[_ii2]))
+if(entry.unshift_keys)for(var _ii3=0;_ii3<entry.unshift_keys.length;++_ii3)fns.push(keyDownUnshifted.bind(null,entry.unshift_keys[_ii3]))
+return function(){for(var _ii4=0;_ii4<fns.length;++_ii4)if(fns[_ii4]())return true
+return false}}function compileSpotNavKeys(keys){var _ref
+return(_ref={})[SPOT_NAV_LEFT]=compileSpotNavKeysEntry(keys[SPOT_NAV_LEFT]),_ref[SPOT_NAV_UP]=compileSpotNavKeysEntry(keys[SPOT_NAV_UP]),_ref[SPOT_NAV_RIGHT]=compileSpotNavKeysEntry(keys[SPOT_NAV_RIGHT]),_ref[SPOT_NAV_DOWN]=compileSpotNavKeysEntry(keys[SPOT_NAV_DOWN]),_ref[SPOT_NAV_PREV]=compileSpotNavKeysEntry(keys[SPOT_NAV_PREV]),_ref[SPOT_NAV_NEXT]=compileSpotNavKeysEntry(keys[SPOT_NAV_NEXT]),_ref}var compiled_nav_base=compileSpotNavKeys(spot_nav_keys_base)
+var compiled_nav_simple=compileSpotNavKeys(spot_nav_keys_simple)
+var compiled_nav_extended=compileSpotNavKeys(spot_nav_keys_extended)
+var spot_nav_type
+var spot_nav_keys
+function spotSetNavtype(type){spot_nav_keys=(spot_nav_type=type)===SPOT_NAVTYPE_SIMPLE?compiled_nav_simple:compiled_nav_extended}spotSetNavtype(SPOT_NAVTYPE_EXTENDED)
+function resetNavKeys(){spot_nav_keys=spot_nav_type===SPOT_NAVTYPE_SIMPLE?compiled_nav_simple:compiled_nav_extended}var suppress_kb_nav_this_frame=false
+function spotSuppressKBNav(left_right,up_down){suppress_kb_nav_this_frame=true
+assert(left_right)
+var active=spot_nav_type===SPOT_NAVTYPE_SIMPLE?compiled_nav_simple:compiled_nav_extended
+if(up_down){var _spot_nav_keys
+spot_nav_keys=((_spot_nav_keys={})[SPOT_NAV_LEFT]=compiled_nav_base[SPOT_NAV_LEFT],_spot_nav_keys[SPOT_NAV_UP]=compiled_nav_base[SPOT_NAV_UP],_spot_nav_keys[SPOT_NAV_RIGHT]=compiled_nav_base[SPOT_NAV_RIGHT],_spot_nav_keys[SPOT_NAV_DOWN]=compiled_nav_base[SPOT_NAV_DOWN],_spot_nav_keys[SPOT_NAV_PREV]=active[SPOT_NAV_PREV],_spot_nav_keys[SPOT_NAV_NEXT]=active[SPOT_NAV_NEXT],_spot_nav_keys)}else{var _spot_nav_keys2
+spot_nav_keys=((_spot_nav_keys2={})[SPOT_NAV_LEFT]=compiled_nav_base[SPOT_NAV_LEFT],_spot_nav_keys2[SPOT_NAV_UP]=compiled_nav_simple[SPOT_NAV_UP],_spot_nav_keys2[SPOT_NAV_RIGHT]=compiled_nav_base[SPOT_NAV_RIGHT],_spot_nav_keys2[SPOT_NAV_DOWN]=compiled_nav_simple[SPOT_NAV_DOWN],_spot_nav_keys2[SPOT_NAV_PREV]=active[SPOT_NAV_PREV],_spot_nav_keys2[SPOT_NAV_NEXT]=active[SPOT_NAV_NEXT],_spot_nav_keys2)}}var TARGET_QUAD=0
 var TARGET_HALF=1
 var TARGET_ALL=2
 function findBestTargetInternal(nav,dom_pos,targets,precision,filter){var start_w2=dom_pos.w/2
@@ -5920,9 +7718,9 @@ var start_top=dom_pos.y
 var start_bottom=dom_pos.y+dom_pos.h
 var best=null
 var bestd
-for(var ii=0;ii<targets.length;++ii){var _param=targets[ii]
-if(!filter(_param))continue
-var target=_param.dom_pos
+for(var ii=0;ii<targets.length;++ii){var param=targets[ii]
+if(!filter(param))continue
+var target=param.dom_pos
 var d=void 0
 if(precision===TARGET_QUAD){var quadrant=void 0
 var target_right=target.x+target.w
@@ -5944,7 +7742,7 @@ else if(dy>0)quadrant=SPOT_NAV_DOWN
 else quadrant=SPOT_NAV_UP}if(quadrant!==nav)continue}else{var _dx=target.x+target.w/2-start_x
 var _dy=target.y+target.h/2-start_y
 d=abs(_dx)+abs(_dy)
-if(precision===TARGET_HALF)if(_dx<=0&&nav===SPOT_NAV_RIGHT||_dx>=0&&nav===SPOT_NAV_LEFT||_dy<=0&&nav===SPOT_NAV_DOWN||_dy>=0&&nav===SPOT_NAV_UP)continue}if(!best||d<bestd){best=_param
+if(precision===TARGET_HALF)if(_dx<=0&&nav===SPOT_NAV_RIGHT||_dx>=0&&nav===SPOT_NAV_LEFT||_dy<=0&&nav===SPOT_NAV_DOWN||_dy>=0&&nav===SPOT_NAV_UP)continue}if(!best||d<bestd){best=param
 bestd=d}}return best}var EPSILON=1e-5
 var debug_style
 function spotDebugList(show_all,list){if(!debug_style)debug_style=fontStyle(null,{color:255,outline_color:4294967244,outline_width:2})
@@ -5998,13 +7796,13 @@ focus_next_via[ii]=void 0}var start
 var pad_focusable_list=[]
 var prev
 var first_non_sub_rect
-for(var _ii=0;_ii<frame_spots.length;++_ii){var _param2=frame_spots[_ii]
-if(isSubRect(_param2)){if(!_param2.is_empty_sub_rect)pad_focusable_list.push(_param2)}else if(_param2.key_computed===focus_key){if(!focus_next[SPOT_NAV_PREV]&&prev)focus_next[SPOT_NAV_PREV]=prev
-start=_param2}else{var def=_param2.def||SPOT_DEFAULT
-if(void 0===_param2.pad_focusable?def.pad_focusable:_param2.pad_focusable){if(!first_non_sub_rect)first_non_sub_rect=_param2
-prev=_param2
-if(!focus_next[SPOT_NAV_NEXT]&&start)focus_next[SPOT_NAV_NEXT]=_param2
-if(void 0===_param2.spatial_focus?def.spatial_focus:_param2.spatial_focus)pad_focusable_list.push(_param2)}}}if(!focus_next[SPOT_NAV_PREV]&&prev)focus_next[SPOT_NAV_PREV]=prev
+for(var _ii5=0;_ii5<frame_spots.length;++_ii5){var param=frame_spots[_ii5]
+if(isSubRect(param)){if(!param.is_empty_sub_rect)pad_focusable_list.push(param)}else if(param.key_computed===focus_key){if(!focus_next[SPOT_NAV_PREV]&&prev)focus_next[SPOT_NAV_PREV]=prev
+start=param}else{var def=param.def||SPOT_DEFAULT
+if(void 0===param.pad_focusable?def.pad_focusable:param.pad_focusable){if(!first_non_sub_rect)first_non_sub_rect=param
+prev=param
+if(!focus_next[SPOT_NAV_NEXT]&&start)focus_next[SPOT_NAV_NEXT]=param
+if(void 0===param.spatial_focus?def.spatial_focus:param.spatial_focus)pad_focusable_list.push(param)}}}if(!focus_next[SPOT_NAV_PREV]&&prev)focus_next[SPOT_NAV_PREV]=prev
 if(!focus_next[SPOT_NAV_NEXT])focus_next[SPOT_NAV_NEXT]=first_non_sub_rect
 var precision_max
 var start_sub_rect
@@ -6014,8 +7812,8 @@ focus_pos.y=start.dom_pos.y
 focus_pos.w=start.dom_pos.w
 focus_pos.h=start.dom_pos.h
 precision_max=TARGET_HALF}else{start_sub_rect=null
-for(var _ii2=0;_ii2<frame_spots.length;++_ii2){var _param3=frame_spots[_ii2]
-if(isSubRect(_param3))if(contains(_param3.dom_pos,focus_pos))start_sub_rect=_param3}if(start_sub_rect)precision_max=TARGET_HALF
+for(var _ii6=0;_ii6<frame_spots.length;++_ii6){var _param=frame_spots[_ii6]
+if(isSubRect(_param))if(contains(_param.dom_pos,focus_pos))start_sub_rect=_param}if(start_sub_rect)precision_max=TARGET_HALF
 else precision_max=TARGET_ALL}for(var nav=1;nav<=SPOT_NAV_DOWN;++nav)for(var precision=0;precision<=precision_max;++precision){filter_not=null
 var best=findBestTargetFromSubRect(start_sub_rect,nav,focus_pos,pad_focusable_list,precision)
 if(best){focus_next[nav]=best
@@ -6027,21 +7825,24 @@ for(var key_string in custom_nav){var key=Number(key_string)
 var target=custom_nav[key]
 if(null===target||void 0===target)focus_next[key]=target
 else{if(!by_key){by_key={}
-for(var _ii3=0;_ii3<frame_spots.length;++_ii3){var _param4=frame_spots[_ii3]
-if(!isSubRect(_param4))by_key[_param4.key_computed]=_param4}}if(by_key[target])focus_next[key]=by_key[target]}}}}}function spotTopOfFrame(){if(mouseMoved()){var pos=mouseDomPos()
+for(var _ii7=0;_ii7<frame_spots.length;++_ii7){var _param2=frame_spots[_ii7]
+if(!isSubRect(_param2))by_key[_param2.key_computed]=_param2}}if(by_key[target])focus_next[key]=by_key[target]}}}}}function spotTopOfFrame(){if(mouseMoved()){var pos=mouseDomPos()
 focus_pos.x=pos[0]
 focus_pos.y=pos[1]
 focus_pos.w=0
 focus_pos.h=0}if(mouseDownEdge({peek:true}))pad_mode=false
-sub_stack.length=0}function spotSuppressPad(){suppress_pad=true
-if(pad_mode&&focus_key&&!focus_is_sticky){spotUnfocus()
+sub_stack.length=0
+focus_sub_rect=null}function spotSuppressPad(){suppress_pad=true
+if(pad_mode&&focus_key&&!focus_is_sticky&&!inputTouchMode()){spotUnfocus()
 pad_mode=true}}function spotPadSuppressed(){return suppress_pad}function spotEndOfFrame(){spotCalcNavTargets()
 last_frame_autofocus_spots=frame_autofocus_spots
 suppress_pad=false
 last_frame_spots=frame_spots
 frame_spots=[]
 frame_autofocus_spots={}
-async_activate_key=null}function frameSpotsPush(param){assert(param.dom_pos)
+async_activate_key=null
+if(!suppress_kb_nav_this_frame)resetNavKeys()
+suppress_kb_nav_this_frame=false}function frameSpotsPush(param){assert(param.dom_pos)
 verify(isFinite(param.dom_pos.x))
 verify(isFinite(param.dom_pos.y))
 verify(isFinite(param.dom_pos.w))
@@ -6057,7 +7858,7 @@ if(other_pos.x<=pos.x&&other_pos.x+other_pos.w>=pos.x+pos.w&&other_pos.y<=pos.y&
 focus_sub_rect=null}function spotSubPop(){var _verify=verify(sub_stack.pop())
 focus_sub_rect=_verify[0]
 focus_sub_rect_elem=_verify[1]}function spotSubBegin(param_in){assert(param_in.key)
-assert(!focus_sub_rect)
+if(focus_sub_rect)assert(!focus_sub_rect,"Recursive spot, parent:"+focus_sub_rect.key+", self:"+param_in.key+", same="+(param_in===focus_sub_rect))
 spotKey(param_in)
 var sub_rect=param_in
 sub_rect.is_sub_rect=true
@@ -6076,13 +7877,7 @@ area.only_mouseover=true
 area.pad_focusable=false
 if(engine.defines.SPOT_DEBUG)area.spot_debug_ignore=param.eat_clicks||param.spot_debug_ignore
 frameSpotsPush(area)}}function keyCheck(nav_dir){if(suppress_pad)return false
-switch(nav_dir){case SPOT_NAV_LEFT:return keyDownEdge(KEYS.LEFT)||padButtonDownEdge(PAD.LEFT)
-case SPOT_NAV_UP:return keyDownEdge(KEYS.UP)||padButtonDownEdge(PAD.UP)
-case SPOT_NAV_RIGHT:return keyDownEdge(KEYS.RIGHT)||padButtonDownEdge(PAD.RIGHT)
-case SPOT_NAV_DOWN:return keyDownEdge(KEYS.DOWN)||padButtonDownEdge(PAD.DOWN)
-case SPOT_NAV_PREV:return keyDown(KEYS.SHIFT)&&keyDownEdge(KEYS.TAB)||padButtonDownEdge(PAD.LEFT_BUMPER)
-case SPOT_NAV_NEXT:return!keyDown(KEYS.SHIFT)&&keyDownEdge(KEYS.TAB)||padButtonDownEdge(PAD.RIGHT_BUMPER)
-default:assert(false)}return false}function spotFocusCheckNavButtonsFocused(param){for(var ii=1;ii<SPOT_NAV_MAX;++ii){var elem=focus_next[ii]
+return spot_nav_keys[nav_dir]()}function spotFocusCheckNavButtonsFocused(param){for(var ii=1;ii<SPOT_NAV_MAX;++ii){var elem=focus_next[ii]
 if(void 0!==elem&&keyCheck(ii))if(elem)spotFocusSet(elem,false,false,"nav_focused")
 else param.out.nav=ii}}function spotFocusCheckNavButtonsUnfocused(param){for(var ii=1;ii<SPOT_NAV_MAX;++ii){var elem=focus_next[ii]
 if(elem&&elem.key_computed===param.key_computed&&keyCheck(ii))spotFocusSet(elem,false,false,"nav_unfocused")}}function spotFocusSetSilent(param){var key=spotKey(param)
@@ -6090,7 +7885,7 @@ var def=param.def||SPOT_DEFAULT
 focus_key=key
 var sticky_focus=void 0===param.sticky_focus?def.sticky_focus:param.sticky_focus
 focus_is_sticky=sticky_focus
-focus_key_nonsticky=null}function spotFocusSteal(param){spotlog("spotFocusSteal",spotKey(param),false)
+focus_key_nonsticky=null}function spotGetCurrentFocusKey(){return[focus_key,focus_is_sticky,focus_key_nonsticky].join(";")}function spotFocusSteal(param){spotlog("spotFocusSteal",spotKey(param),false)
 pad_mode=true
 spotFocusSetSilent(param)}function spotParamAddOut(param){if(!param.out)param.out={}}function spotParamAddPosCache(param){assert(param.key_computed)
 if(!param.dom_pos)param.dom_pos={}}function spotParamIsSpotInternal(param){}function spotFocusCheck(param){spotParamAddOut(param)
@@ -6175,32 +7970,38 @@ var button_activate=false
 if(focused){if(state===SPOT_STATE_REGULAR)state=SPOT_STATE_FOCUSED
 if(is_button&&!disabled&&kb_focused&&!suppress_pad){var key_opts=in_event_cb?{in_event_cb:in_event_cb}:null
 if(keyDownEdge(KEYS.SPACE,key_opts)||keyDownEdge(KEYS.RETURN,key_opts)||padButtonDownEdge(PAD.A))button_activate=true}}if(!disabled){var hotkey=void 0===param.hotkey?def.hotkey:param.hotkey
+var hotkeys=void 0===param.hotkeys?def.hotkeys:param.hotkeys
 var hotpad=void 0===param.hotpad?def.hotpad:param.hotpad
-if(hotkey)if(keyDownEdge(hotkey,in_event_cb?{in_event_cb:in_event_cb}:null))button_activate=true
-if(hotpad)if(padButtonDownEdge(hotpad))button_activate=true
-if(async_activate_key===param.key_computed)button_activate=true}if(button_activate){spotSignalRet(param)
+if(hotkey||hotkeys){var _key_opts=in_event_cb?{in_event_cb:in_event_cb}:null
+if(hotkey&&keyDownEdge(hotkey,_key_opts))button_activate=true
+if(hotkeys)for(var ii=0;ii<hotkeys.length;++ii)if(keyDownEdge(hotkeys[ii],_key_opts))button_activate=true}if(null!==hotpad)if(padButtonDownEdge(hotpad))button_activate=true
+if(async_activate_key===param.key_computed)button_activate=true}if(param.url){if(void 0===param.internal)param.internal=true
+var was_activated=button_activate
+if(link(param))button_activate=true
+if(false===param.internal&&was_activated)linkActivate(param.key_computed)}if(button_activate){spotSignalRet(param)
 out.button=0
 out.pos=null}out.focused=focused
 if(out.ret){state=SPOT_STATE_DOWN
 var sound_button=void 0===param.sound_button?def.sound_button:param.sound_button
-if(sound_button)playUISound(sound_button)}if(out.focused&&param.tooltip)drawTooltipBox(param)
+if(sound_button)playUISound(sound_button)
+if(param.url){var _platformParameterGet
+null==(_platformParameterGet=platformParameterGet("linkHandler"))||_platformParameterGet(param.url)}}if(out.focused&&param.tooltip)drawTooltipBox(param)
 checkHooks(param,Boolean(out.ret))
 out.spot_state=state
 profilerStop("spot")
 return out}
 
-},{"../common/verify":75,"./camera2d.js":7,"./engine.js":13,"./font.js":19,"./input.js":28,"./input_constants":29,"./settings.js":44,"./ui.js":57,"assert":undefined}],51:[function(require,module,exports){
+},{"../common/verify":94,"./camera2d.js":9,"./client_config":10,"./engine.js":15,"./font.js":22,"./input.js":31,"./input_constants":32,"./link":34,"./settings.js":53,"./ui.js":67,"assert":undefined}],61:[function(require,module,exports){
 "use strict"
-exports.BlendMode=exports.BLEND_PREMULALPHA=exports.BLEND_ALPHA=exports.BLEND_ADDITIVE=void 0
+exports.BlendMode=exports.BLEND_PREMULALPHA=exports.BLEND_MULTIPLY=exports.BLEND_ALPHA=exports.BLEND_ADDITIVE=void 0
 exports.blendModeReset=blendModeReset
 exports.blendModeSet=blendModeSet
 exports.buildRects=buildRects
+exports.clipCoordsScissor=clipCoordsScissor
 exports.queueSpriteData=queueSpriteData
-exports.queueraw=queueraw
-exports.queueraw4=queueraw4
-exports.queueraw4color=queueraw4color
-exports.queueraw4colorBuffer=queueraw4colorBuffer
-exports.queuesprite=queuesprite
+exports.scissorPop=scissorPop
+exports.scissorPush=scissorPush
+exports.scissorPushIntersection=scissorPushIntersection
 exports.spriteChainedStart=spriteChainedStart
 exports.spriteChainedStop=spriteChainedStop
 exports.spriteClip=spriteClip
@@ -6209,18 +8010,35 @@ exports.spriteClipPop=spriteClipPop
 exports.spriteClipPush=spriteClipPush
 exports.spriteClipResume=spriteClipResume
 exports.spriteClipped=spriteClipped
+exports.spriteClippedViewport=spriteClippedViewport
 exports.spriteCreate=spriteCreate
 exports.spriteDataAlloc=spriteDataAlloc
 exports.spriteDraw=spriteDraw
 exports.spriteDrawPartial=spriteDrawPartial
+exports.spriteDrawReset=spriteDrawReset
+exports.spriteFlippedUVsApplyHFlip=spriteFlippedUVsApplyHFlip
+exports.spriteFlippedUVsRestore=spriteFlippedUVsRestore
+exports.spriteLoadLazy=spriteLoadLazy
 exports.spriteQueueFn=spriteQueueFn
 exports.spriteQueuePop=spriteQueuePop
 exports.spriteQueuePush=spriteQueuePush
+exports.spriteQueueRaw=spriteQueueRaw
+exports.spriteQueueRaw4=spriteQueueRaw4
+exports.spriteQueueRaw4Color=spriteQueueRaw4Color
+exports.spriteQueueRaw4ColorBuffer=spriteQueueRaw4ColorBuffer
+exports.spriteQueueSprite=spriteQueueSprite
+exports.spriteResetTopOfFrame=spriteResetTopOfFrame
 exports.spriteStartup=spriteStartup
 exports.sprite_vshader=exports.sprite_fshader=void 0
-exports.createSprite=spriteCreate
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}exports.createSprite=spriteCreate
 exports.create=spriteCreate
-var BlendMode={BLEND_ALPHA:0,BLEND_ADDITIVE:1,BLEND_PREMULALPHA:2}
+exports.queueraw4color=spriteQueueRaw4Color
+exports.queueraw4colorBuffer=spriteQueueRaw4ColorBuffer
+exports.queueraw4=spriteQueueRaw4
+exports.queueraw=spriteQueueRaw
+exports.queuesprite=spriteQueueSprite
+var BlendMode={BLEND_ALPHA:0,BLEND_ADDITIVE:1,BLEND_PREMULALPHA:2,BLEND_MULTIPLY:3}
 exports.BlendMode=BlendMode
 var BLEND_ALPHA=0
 exports.BLEND_ALPHA=BLEND_ALPHA
@@ -6228,17 +8046,19 @@ var BLEND_ADDITIVE=1
 exports.BLEND_ADDITIVE=BLEND_ADDITIVE
 var BLEND_PREMULALPHA=2
 exports.BLEND_PREMULALPHA=BLEND_PREMULALPHA
+var BLEND_MULTIPLY=3
+exports.BLEND_MULTIPLY=BLEND_MULTIPLY
 var assert=require("assert")
 var camera2d=require("./camera2d.js")
 var _require=require("./dyn_geom.js"),dynGeomQueueSprite=_require.dynGeomQueueSprite
 var engine=require("./engine.js")
 var geom=require("./geom.js")
 var cos=Math.cos,max=Math.max,min=Math.min,round=Math.round,sin=Math.sin
-var textures=require("./textures.js")
-var cmpTextureArray=textures.cmpTextureArray
-var shaders=require("./shaders.js")
-var _require2=require("../common/util.js"),deprecate=_require2.deprecate,nextHighestPowerOfTwo=_require2.nextHighestPowerOfTwo
-var _require3=require("../common/vmath.js"),vec2=_require3.vec2,vec4=_require3.vec4
+var _require2=require("./textures.js"),textureCmpArray=_require2.textureCmpArray,textureBindArray=_require2.textureBindArray,textureLoad=_require2.textureLoad,textureFilterKey=_require2.textureFilterKey
+var _require3=require("./shaders.js"),SEMANTIC=_require3.SEMANTIC,shaderCreate=_require3.shaderCreate,shadersBind=_require3.shadersBind,shadersPrelink=_require3.shadersPrelink
+var _require4=require("../common/util.js"),callEach=_require4.callEach,deprecate=_require4.deprecate,nextHighestPowerOfTwo=_require4.nextHighestPowerOfTwo
+var verify=require("../common/verify")
+var _require5=require("../common/vmath.js"),vec2=_require5.vec2,vec4=_require5.vec4,v2set=_require5.v2set,v4set=_require5.v4set
 deprecate(exports,"clip","spriteClip")
 deprecate(exports,"clipped","spriteClipped")
 deprecate(exports,"clipPush","spriteClipPush")
@@ -6298,7 +8118,7 @@ if(a.blend===BLEND_ADDITIVE&&b.blend===BLEND_ADDITIVE)return 0
 if(a.y!==b.y)return a.y-b.y
 if(a.x!==b.x)return a.x-b.x
 return a.uid-b.uid}function spriteQueueFn(z,fn){assert(isFinite(z))
-sprite_queue.push({fn:fn,x:0,y:0,z:z,uid:++last_uid})}function queueraw4color(texs,x0,y0,c0,u0,v0,x1,y1,c1,u1,v1,x2,y2,c2,u2,v2,x3,y3,c3,u3,v3,z,shader,shader_params,blend){assert(isFinite(z))
+sprite_queue.push({fn:fn,x:0,y:0,z:z,uid:++last_uid})}function spriteQueueRaw4Color(texs,x0,y0,c0,u0,v0,x1,y1,c1,u1,v1,x2,y2,c2,u2,v2,x3,y3,c3,u3,v3,z,shader,shader_params,blend){assert(isFinite(z))
 var elem=spriteDataAlloc(texs,shader,shader_params,blend)
 var data=elem.data
 data[0]=(x0-camera2d.data[0])*camera2d.data[4]
@@ -6336,7 +8156,7 @@ data[31]=v3
 elem.x=data[0]
 elem.y=data[1]
 elem.queue(z)
-return elem}function queueraw4(texs,x0,y0,x1,y1,x2,y2,x3,y3,z,u0,v0,u1,v1,color,shader,shader_params,blend){return queueraw4color(texs,x0,y0,color,u0,v0,x1,y1,color,u0,v1,x2,y2,color,u1,v1,x3,y3,color,u1,v0,z,shader,shader_params,blend)}function queueSpriteData(elem,z){assert(isFinite(z))
+return elem}function spriteQueueRaw4(texs,x0,y0,x1,y1,x2,y2,x3,y3,z,u0,v0,u1,v1,color,shader,shader_params,blend){return spriteQueueRaw4Color(texs,x0,y0,color,u0,v0,x1,y1,color,u0,v1,x2,y2,color,u1,v1,x3,y3,color,u1,v0,z,shader,shader_params,blend)}function queueSpriteData(elem,z){assert(isFinite(z))
 var data=elem.data
 data[0]=(data[0]-camera2d.data[0])*camera2d.data[4]
 data[1]=(data[1]-camera2d.data[1])*camera2d.data[5]
@@ -6349,12 +8169,12 @@ data[25]=(data[25]-camera2d.data[1])*camera2d.data[5]
 elem.x=data[0]
 elem.y=data[1]
 elem.queue(z)
-return elem}function queueraw4colorBuffer(texs,buf,z,shader,shader_params,blend){assert(isFinite(z))
+return elem}function spriteQueueRaw4ColorBuffer(texs,buf,z,shader,shader_params,blend){assert(isFinite(z))
 var elem=spriteDataAlloc(texs,shader,shader_params,blend)
 var data=elem.data
 for(var ii=0;ii<32;++ii)data[ii]=buf[ii]
 queueSpriteData(elem,z)
-return elem}function queueraw(texs,x,y,z,w,h,u0,v0,u1,v1,color,shader,shader_params,blend){return queueraw4color(texs,x,y,color,u0,v0,x,y+h,color,u0,v1,x+w,y+h,color,u1,v1,x+w,y,color,u1,v0,z,shader,shader_params,blend)}var temp_uvs=vec4()
+return elem}function spriteQueueRaw(texs,x,y,z,w,h,u0,v0,u1,v1,color,shader,shader_params,blend){return spriteQueueRaw4Color(texs,x,y,color,u0,v0,x,y+h,color,u0,v1,x+w,y+h,color,u1,v1,x+w,y,color,u1,v0,z,shader,shader_params,blend)}var temp_uvs=vec4()
 function fillUVs(tex,w,h,nozoom,uvs){var ubias=0
 var vbias=0
 if(!nozoom&&!tex.nozoom){var zoom_level=max((uvs[2]-uvs[0])*tex.width/w,(uvs[3]-uvs[1])*tex.height/h)
@@ -6433,7 +8253,8 @@ data[29]=color_ur[3]
 data[30]=temp_uvs[2]
 data[31]=temp_uvs[1]
 elem.queue(z)
-return elem}function queuesprite(sprite,x,y,z,w,h,rot,uvs,color,shader,shader_params,nozoom,pixel_perfect,blend){color=color||sprite.color
+return elem}function spriteQueueSprite(sprite,x,y,z,w,h,rot,uvs,color,shader,shader_params,nozoom,pixel_perfect,blend){assert(!sprite.lazy_load)
+color=color||sprite.color
 qsp.sprite=sprite
 qsp.x=x
 qsp.y=y
@@ -6469,38 +8290,64 @@ xywh[0]=round(xywh[0])
 xywh[1]=round(xywh[1])
 xywh[2]=round(xywh[2])-xywh[0]
 xywh[3]=round(xywh[3])-xywh[1]
-return xywh}function spriteClip(z_start,z_end,x,y,w,h){var scissor=clipCoordsScissor(x,y,w,h)
-spriteQueueFn(z_start-.01,function(){gl.enable(gl.SCISSOR_TEST)
-gl.scissor(scissor[0],scissor[1],scissor[2],scissor[3])})
-spriteQueueFn(z_end-.01,function(){gl.disable(gl.SCISSOR_TEST)})}var clip_stack=[]
-function spriteClipped(){return clip_stack.length>0}function spriteClipPush(z,x,y,w,h){assert(clip_stack.length<10)
+return xywh}var active_scissor=null
+function scissorSet(scissor){if(!active_scissor)gl.enable(gl.SCISSOR_TEST)
+var x=scissor[0],y=scissor[1],w=scissor[2],h=scissor[3]
+if(!verify(w>=0))w=0
+if(!verify(h>=0))h=0
+gl.scissor(x,y,w,h)
+active_scissor=scissor}function scisssorClear(){gl.disable(gl.SCISSOR_TEST)
+active_scissor=null}var scissor_stack=[]
+function scissorPush(new_scissor){scissor_stack.push(active_scissor)
+if(new_scissor)scissorSet(new_scissor)
+else scisssorClear()}function scissorPushIntersection(new_scissor){scissor_stack.push(active_scissor)
+if(new_scissor)if(active_scissor){var x0=max(active_scissor[0],new_scissor[0])
+var x1=max(x0,min(active_scissor[0]+active_scissor[2],new_scissor[0]+new_scissor[2]))
+var y0=max(active_scissor[1],new_scissor[1])
+scissorSet([x0,y0,x1-x0,max(y0,min(active_scissor[1]+active_scissor[3],new_scissor[1]+new_scissor[3]))-y0])}else scissorSet(new_scissor)}function scissorPop(){var prev_scissor=scissor_stack.pop()
+if(prev_scissor)scissorSet(prev_scissor)
+else scisssorClear()}function spriteClip(z_start,z_end,x,y,w,h){var scissor=clipCoordsScissor(x,y,w,h)
+spriteQueueFn(z_start-.01,scissorSet.bind(null,scissor))
+spriteQueueFn(z_end-.01,scisssorClear)}var clip_stack=[]
+function spriteResetTopOfFrame(){clip_stack.length=0
+sprite_queue_stack.length=0}var clip_paused
+function spriteClipped(including_paused){return clip_stack.length>0&&(including_paused||!clip_paused)}var clipped_viewport_temp_in=vec2()
+var clipped_viewport_temp_pos=vec2()
+var clipped_viewport_temp_wh=vec2()
+function spriteClippedViewport(){assert(clip_stack.length>0)
+var tail=clip_stack[clip_stack.length-1]
+camera2d.domToVirtual(clipped_viewport_temp_pos,tail.dom_clip)
+v2set(clipped_viewport_temp_in,tail.dom_clip[2],tail.dom_clip[3])
+camera2d.domDeltaToVirtual(clipped_viewport_temp_wh,clipped_viewport_temp_in)
+return{x:clipped_viewport_temp_pos[0],y:clipped_viewport_temp_pos[1],w:clipped_viewport_temp_wh[0],h:clipped_viewport_temp_wh[1]}}function spriteClipPush(z,x,y,w,h){assert(clip_stack.length<10)
+verify(w>=0)
+verify(h>=0)
 var scissor=clipCoordsScissor(x,y,w,h)
 var dom_clip=clipCoordsDom(x,y,w,h)
 camera2d.setInputClipping(dom_clip)
 spriteQueuePush()
-clip_stack.push({z:z,scissor:scissor,dom_clip:dom_clip})}function spriteClipPop(){assert(spriteClipped())
-spriteQueueFn(Z.TOOLTIP-.1,function(){gl.disable(gl.SCISSOR_TEST)})
+clip_stack.push({z:z,scissor:scissor,dom_clip:dom_clip})}function spriteClipPop(){assert(spriteClipped(true))
+spriteQueueFn(Z.TOOLTIP-.1,scisssorClear)
 var _clip_stack$pop=clip_stack.pop(),z=_clip_stack$pop.z,scissor=_clip_stack$pop.scissor
 var sprites=sprite_queue
 spriteQueuePop(true)
 if(clip_stack.length){var dom_clip=clip_stack[clip_stack.length-1].dom_clip
 camera2d.setInputClipping(dom_clip)}else camera2d.setInputClipping(null)
-spriteQueueFn(z,function(){gl.enable(gl.SCISSOR_TEST)
-gl.scissor(scissor[0],scissor[1],scissor[2],scissor[3])
+spriteQueueFn(z,function(){scissorPush(scissor)
 spriteQueuePush()
 sprite_queue=sprites
 spriteDraw()
-spriteQueuePop()})}var clip_paused
-function spriteClipPause(){assert(spriteClipped())
+spriteQueuePop()
+scissorPop()})}function spriteClipPause(){assert(spriteClipped(true))
 assert(!clip_paused)
 clip_paused=true
 spriteQueuePush(sprite_queue_stack[0])
 camera2d.setInputClipping(null)
-clip_stack.push({dom_clip:null})}function spriteClipResume(){assert(spriteClipped())
+clip_stack.push({dom_clip:null})}function spriteClipResume(){assert(spriteClipped(true))
 assert(clip_paused)
 clip_stack.pop()
 clip_paused=false
-assert(spriteClipped())
+assert(spriteClipped(true))
 var dom_clip=clip_stack[clip_stack.length-1].dom_clip
 spriteQueuePop(true)
 camera2d.setInputClipping(dom_clip)}var batch_state
@@ -6517,6 +8364,7 @@ function commit(){if(sprite_buffer_idx===sprite_buffer_batch_start)return
 batches.push({state:batch_state,start:sprite_buffer_batch_start,end:sprite_buffer_idx})
 sprite_buffer_batch_start=sprite_buffer_idx}function blendModeSet(blend){if(last_blend_mode!==blend)if((last_blend_mode=blend)===BLEND_ADDITIVE)gl.blendFunc(gl.SRC_ALPHA,gl.ONE)
 else if(last_blend_mode===BLEND_PREMULALPHA)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA)
+else if(last_blend_mode===BLEND_MULTIPLY)gl.blendFunc(gl.ZERO,gl.SRC_COLOR)
 else gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA)}function blendModeReset(force){if(last_blend_mode!==BLEND_ALPHA||force){gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA)
 last_blend_mode=BLEND_ALPHA}}function commitAndFlush(){commit()
 if(!batches.length)return
@@ -6525,16 +8373,16 @@ sprite_geom.update(sprite_buffer,sprite_buffer_idx)
 sprite_geom.bind()
 for(var ii=0;ii<batches.length;++ii){var batch=batches[ii]
 var state=batch.state,start=batch.start,end=batch.end
-if(last_bound_shader!==state.shader||state.shader_params){shaders.bind(sprite_vshader,state.shader||sprite_fshader,state.shader_params||sprite_shader_params)
+if(last_bound_shader!==state.shader||state.shader_params){shadersBind(sprite_vshader,state.shader||sprite_fshader,state.shader_params||sprite_shader_params)
 last_bound_shader=state.shader}if(last_blend_mode!==state.blend)blendModeSet(state.blend)
-textures.bindArray(state.texs);++geom_stats.draw_calls_sprite
+textureBindArray(state.texs);++geom_stats.draw_calls_sprite
 gl.drawElements(sprite_geom.mode,3*(end-start)/2,gl.UNSIGNED_SHORT,3*start)}batches.length=0
 sprite_buffer_batch_start=sprite_buffer_idx=0}function drawSetup(){if(engine.defines.NOSPRITES)sprite_queue.length=0
 if(!sprite_queue.length)return
 clip_space[0]=2/engine.viewport[2]
 clip_space[1]=-2/engine.viewport[3]
 last_bound_shader=last_blend_mode=-1
-if(!sprite_geom){sprite_geom=geom.create([[shaders.semantic.POSITION,gl.FLOAT,2,false],[shaders.semantic.COLOR,gl.FLOAT,4,false],[shaders.semantic.TEXCOORD,gl.FLOAT,2,false]],[],null,geom.QUADS)
+if(!sprite_geom){sprite_geom=geom.create([[SEMANTIC.POSITION,gl.FLOAT,2,false],[SEMANTIC.COLOR,gl.FLOAT,4,false],[SEMANTIC.TEXCOORD,gl.FLOAT,2,false]],[],null,geom.QUADS)
 sprite_buffer=new Float32Array(1024)
 sprite_buffer_len=sprite_buffer.length/8}profilerStart("sort")
 sprite_queue.sort(cmpSprite)
@@ -6555,7 +8403,7 @@ assert.equal(sprite_buffer_batch_start,0)
 assert.equal(batches.length,0)
 clip_space[0]=2/engine.viewport[2]
 clip_space[1]=-2/engine.viewport[3]
-count++}else{if(!batch_state||cmpTextureArray(elem.texs,batch_state.texs)||elem.shader!==batch_state.shader||elem.shader_params!==batch_state.shader_params||elem.blend!==batch_state.blend){commit()
+count++}else{if(!batch_state||textureCmpArray(elem.texs,batch_state.texs)||elem.shader!==batch_state.shader||elem.shader_params!==batch_state.shader_params||elem.blend!==batch_state.blend){commit()
 batch_state=elem}do{if(sprite_buffer_idx+4>sprite_buffer_len){commitAndFlush()
 if(sprite_buffer_len!==MAX_VERT_COUNT)growSpriteBuffer()}var index=8*sprite_buffer_idx
 sprite_buffer_idx+=4
@@ -6565,7 +8413,8 @@ sprite_freelist.push(elem)
 var next=elem.next
 elem.next=null
 elem=next}while(elem)}return count}function finishDraw(){commitAndFlush()
-blendModeReset()}function spriteDraw(){profilerStart("sprites:draw")
+blendModeReset()}function spriteDrawReset(){if(active_scissor){gl.disable(gl.SCISSOR_TEST)
+active_scissor=null}}function spriteDraw(){profilerStart("sprites:draw")
 drawSetup()
 profilerStart("drawElem")
 for(var ii=0;ii<sprite_queue.length;++ii)drawElem(sprite_queue[ii])
@@ -6579,49 +8428,106 @@ for(var ii=0;ii<sprite_queue.length;++ii){var elem=sprite_queue[ii]
 if(elem.z>z){sprite_queue=sprite_queue.slice(ii)
 break}drawElem(elem)}profilerStop("drawElem")
 finishDraw()
-profilerStop("sprites:drawPartial")}function buildRects(ws,hs,tex){var rects=[]
+profilerStop("sprites:drawPartial")}function buildRects(ws,hs,tex){if("number"===typeof ws){ws=new Array(ws)
+for(var ii=0;ii<ws.length;++ii)ws[ii]=1}if("number"===typeof hs){hs=new Array(hs)
+for(var _ii=0;_ii<hs.length;++_ii)hs[_ii]=1}var rects=[]
 var total_w=0
-for(var ii=0;ii<ws.length;++ii)total_w+=ws[ii]
+for(var _ii2=0;_ii2<ws.length;++_ii2)total_w+=ws[_ii2]
 var total_h=0
-for(var _ii=0;_ii<hs.length;++_ii)total_h+=hs[_ii]
+for(var _ii3=0;_ii3<hs.length;++_ii3)total_h+=hs[_ii3]
 var tex_w
 var tex_h
 if(!tex||nextHighestPowerOfTwo(tex.src_width)===tex.width&&nextHighestPowerOfTwo(tex.src_height)===tex.height){tex_w=nextHighestPowerOfTwo(total_w)
 tex_h=nextHighestPowerOfTwo(total_h)}else{tex_w=total_w
 tex_h=total_h}var wh=[]
-for(var _ii2=0;_ii2<ws.length;++_ii2)wh.push(ws[_ii2]/total_h)
+for(var _ii4=0;_ii4<ws.length;++_ii4)wh.push(ws[_ii4]/total_h)
 var hw=[]
-for(var _ii3=0;_ii3<hs.length;++_ii3)hw.push(hs[_ii3]/total_w)
+for(var _ii5=0;_ii5<hs.length;++_ii5)hw.push(hs[_ii5]/total_w)
 var aspect=[]
 var non_square=false
 var y=0
 for(var jj=0;jj<hs.length;++jj){var x=0
-for(var _ii4=0;_ii4<ws.length;++_ii4){var r=vec4(x/tex_w,y/tex_h,(x+ws[_ii4])/tex_w,(y+hs[jj])/tex_h)
+for(var _ii6=0;_ii6<ws.length;++_ii6){var r=vec4(x/tex_w,y/tex_h,(x+ws[_ii6])/tex_w,(y+hs[jj])/tex_h)
 rects.push(r)
-var asp=ws[_ii4]/hs[jj]
+var asp=ws[_ii6]/hs[jj]
 if(1!==asp)non_square=true
 aspect.push(asp)
-x+=ws[_ii4]}y+=hs[jj]}return{widths:ws,heights:hs,wh:wh,hw:hw,rects:rects,aspect:non_square?aspect:null,total_w:total_w,total_h:total_h}}function Sprite(params){var _this=this
+x+=ws[_ii6]}y+=hs[jj]}return{widths:ws,heights:hs,wh:wh,hw:hw,rects:rects,aspect:non_square?aspect:null,total_w:total_w,total_h:total_h}}function flipRectHoriz(a){return vec4(a[0],a[3],a[2],a[1])}function spriteFlippedUVsApplyHFlip(spr){if(!spr.uidata.rects_orig)spr.uidata.rects_orig=spr.uidata.rects
+if(!spr.uidata.rects_flipped)spr.uidata.rects_flipped=spr.uidata.rects.map(flipRectHoriz)
+spr.uidata.rects=spr.uidata.rects_flipped}function spriteFlippedUVsRestore(spr){if(spr.uidata.rects_orig)spr.uidata.rects=spr.uidata.rects_orig}var last_sprite_uid=0
+function Sprite(params){var _this=this
+this.lazy_load=null
+this.uid=++last_sprite_uid
 if(params.texs)this.texs=params.texs
 else{var ext=params.ext||".png"
 this.texs=[]
-if(params.tex)this.texs.push(params.tex)
-else if(params.layers){assert(params.name)
+if(params.tex){assert(!params.lazy_load)
+this.texs.push(params.tex)}else if(params.layers){assert(params.name)
+assert(!params.lazy_load)
 this.texs=[]
-for(var ii=0;ii<params.layers;++ii)this.texs.push(textures.load({url:"img/"+params.name+"_"+ii+ext,filter_min:params.filter_min,filter_mag:params.filter_mag,wrap_s:params.wrap_s,wrap_t:params.wrap_t}))}else if(params.name)this.texs.push(textures.load({url:"img/"+params.name+ext,filter_min:params.filter_min,filter_mag:params.filter_mag,wrap_s:params.wrap_s,wrap_t:params.wrap_t}))
+for(var ii=0;ii<params.layers;++ii)this.texs.push(textureLoad({url:"img/"+params.name+"_"+ii+ext,filter_min:params.filter_min,filter_mag:params.filter_mag,wrap_s:params.wrap_s,wrap_t:params.wrap_t,force_mipmaps:params.force_mipmaps,load_filter:params.load_filter}))}else{var tex_param
+if(params.name)tex_param={url:"img/"+params.name+ext+"#"+textureFilterKey(params),filter_min:params.filter_min,filter_mag:params.filter_mag,wrap_s:params.wrap_s,wrap_t:params.wrap_t,force_mipmaps:params.force_mipmaps,soft_error:params.soft_error,load_filter:params.load_filter}
 else{assert(params.url)
-this.texs.push(textures.load(params))}}this.origin=params.origin||vec2(0,0)
+tex_param=params}if(params.lazy_load)this.lazy_load=tex_param
+else this.texs.push(textureLoad(tex_param))}}this.origin=params.origin||vec2(0,0)
 this.size=params.size||vec2(1,1)
 this.color=params.color||vec4(1,1,1,1)
 this.uvs=params.uvs||vec4(0,0,1,1)
-if(!params.uvs)this.texs[0].onLoad(function(tex){_this.uvs[2]=tex.src_width/tex.width
-_this.uvs[3]=tex.src_height/tex.height})
-if(params.ws){this.uidata=buildRects(params.ws,params.hs)
-this.texs[0].onLoad(function(tex){_this.uidata=buildRects(params.ws,params.hs,tex)})}this.shader=params.shader||null}Sprite.prototype.draw=function(params){if(0===params.w||0===params.h)return null
-var w=(params.w||1)*this.size[0]
-var h=(params.h||1)*this.size[1]
-var uvs="number"===typeof params.frame?this.uidata.rects[params.frame]:params.uvs||this.uvs
+if(params.ws)this.uidata=buildRects(params.ws,params.hs)
+this.shader=params.shader||null
+var tex_on_load=function tex_on_load(tex){if(!params.uvs){_this.uvs[2]=tex.src_width/tex.width
+_this.uvs[3]=tex.src_height/tex.height}if(params.ws)_this.uidata=buildRects(params.ws,params.hs,tex)}
+if(this.texs.length)this.texs[0].onLoad(tex_on_load)
+else this.tex_on_load=tex_on_load}Sprite.prototype.getAspect=function(){var tex=this.texs[0]
+if(!tex)return 1
+return tex.src_width/tex.src_height}
+Sprite.prototype.onReInit=function(cb){this.on_reinit=this.on_reinit||[]
+this.on_reinit.push(cb)}
+Sprite.prototype.doReInit=function(){if(this.on_reinit)callEach(this.on_reinit)}
+Sprite.prototype.withOrigin=function(new_origin){var _this2=this
+var cache_v=String(new_origin[0]+1007*new_origin[1])
+if(!this.origin_cache)this.origin_cache={}
+if(!this.origin_cache[cache_v]){var new_sprite=this.origin_cache[cache_v]=spriteCreate({texs:this.texs,origin:new_origin,size:this.size,color:this.color,uvs:this.uvs})
+var doInit=function doInit(){new_sprite.texs=_this2.texs
+new_sprite.uvs=_this2.uvs
+new_sprite.uidata=_this2.uidata
+new_sprite.doReInit()}
+this.onReInit(doInit)
+doInit()}return this.origin_cache[cache_v]}
+Sprite.prototype.withSamplerState=function(opts){var _this3=this
+var cache_v=textureFilterKey(opts)
+if(!this.sampler_cache)this.sampler_cache={}
+if(!this.sampler_cache[cache_v]){var new_sprite=this.sampler_cache[cache_v]=spriteCreate({texs:[],origin:this.origin,size:this.size,color:this.color,uvs:this.uvs})
+var doInit=function doInit(){new_sprite.texs=_this3.texs.map(function(tex){if("error"===tex.name)return tex
+assert(tex.url)
+return textureLoad({url:tex.url.split("#")[0]+"#"+cache_v,filter_min:opts.filter_min,filter_mag:opts.filter_mag,wrap_s:opts.wrap_s,wrap_t:opts.wrap_t,force_mipmaps:opts.force_mipmaps})})
+new_sprite.uvs=_this3.uvs
+new_sprite.uidata=_this3.uidata
+new_sprite.doReInit()}
+this.onReInit(doInit)
+doInit()}return this.sampler_cache[cache_v]}
+Sprite.prototype.lazyLoadInit=function(){var _this4=this
+var tex=textureLoad(_extends({},this.lazy_load,{auto_unload:function auto_unload(){_this4.texs=[]}}))
+this.texs.push(tex)
+this.loaded_at=0
+if(tex.loaded)this.tex_on_load(tex)
+else tex.onLoad(function(){_this4.loaded_at=engine.frame_timestamp
+_this4.tex_on_load(tex)})}
+Sprite.prototype.isLazyLoad=function(){return Boolean(this.lazy_load)}
+Sprite.prototype.lazyLoad=function(){if(!this.texs.length)this.lazyLoadInit()
+if(!this.texs[0].loaded){for(var ii=0;ii<this.texs.length;++ii)this.texs[ii].last_use=engine.frame_timestamp
+return 0}if(!this.loaded_at)return 1
+var alpha=(engine.frame_timestamp-this.loaded_at)/250
+if(alpha>=1){this.loaded_at=0
+return 1}return alpha}
+var temp_color=vec4()
+Sprite.prototype.draw=function(params){if(0===params.w||0===params.h)return null
 var color=params.color||this.color
+if(this.lazy_load){var alpha=this.lazyLoad()
+if(!alpha)return null
+if(1!==alpha)color=v4set(temp_color,color[0],color[1],color[2],color[3]*alpha)}var w=(params.w||1)*this.size[0]
+var h=(params.h||1)*this.size[1]
+var uvs=(void 0!==params.frame?this.uidata.rects[params.frame]:params.uvs)||this.uvs
 qsp.sprite=this
 qsp.x=params.x
 qsp.y=params.y
@@ -6643,8 +8549,21 @@ return queuesprite4colorObj(qsp)}
 Sprite.prototype.drawDualTint=function(params){params.shader=sprite_dual_fshader
 params.shader_params={color1:params.color1}
 return this.draw(params)}
+var temp_color_ul=vec4()
+var temp_color_ll=vec4()
+var temp_color_ur=vec4()
+var temp_color_lr=vec4()
 Sprite.prototype.draw4Color=function(params){if(0===params.w||0===params.h)return null
-var w=(params.w||1)*this.size[0]
+qsp.color_ul=params.color_ul
+qsp.color_ll=params.color_ll
+qsp.color_lr=params.color_lr
+qsp.color_ur=params.color_ur
+if(this.lazy_load){var alpha=this.lazyLoad()
+if(!alpha)return null
+if(1!==alpha){qsp.color_ul=v4set(temp_color_ul,qsp.color_ul[0],qsp.color_ul[1],qsp.color_ul[2],qsp.color_ul[3]*alpha)
+qsp.color_ll=v4set(temp_color_ll,qsp.color_ll[0],qsp.color_ll[1],qsp.color_ll[2],qsp.color_ll[3]*alpha)
+qsp.color_ur=v4set(temp_color_ur,qsp.color_ur[0],qsp.color_ur[1],qsp.color_ur[2],qsp.color_ur[3]*alpha)
+qsp.color_lr=v4set(temp_color_lr,qsp.color_lr[0],qsp.color_lr[1],qsp.color_lr[2],qsp.color_lr[3]*alpha)}}var w=(params.w||1)*this.size[0]
 var h=(params.h||1)*this.size[1]
 var uvs="number"===typeof params.frame?this.uidata.rects[params.frame]:params.uvs||this.uvs
 qsp.sprite=this
@@ -6655,10 +8574,6 @@ qsp.w=w
 qsp.h=h
 qsp.rot=params.rot
 qsp.uvs=uvs
-qsp.color_ul=params.color_ul
-qsp.color_ll=params.color_ll
-qsp.color_lr=params.color_lr
-qsp.color_ur=params.color_ur
 qsp.shader=params.shader||this.shader
 qsp.shader_params=params.shader_params
 qsp.nozoom=params.nozoom
@@ -6668,21 +8583,35 @@ return queuesprite4colorObj(qsp)}
 Sprite.prototype.draw3D=function(params){if("number"===typeof params.frame)params.uvs=this.uidata.rects[params.frame]
 else if(!params.uvs)params.uvs=this.uvs
 dynGeomQueueSprite(this,params)}
-function spriteCreate(params){return new Sprite(params)}function spriteStartup(){geom_stats=geom.stats
+function spriteCreate(params){return new Sprite(params)}var auto_unload_sprites=Object.create(null)
+function spriteLoadLazy(params){assert(params.name)
+assert(!params.auto_unload)
+var key=params.name+"#"+textureFilterKey(params)
+var sprite=auto_unload_sprites[key]
+if(!sprite)sprite=auto_unload_sprites[key]=spriteCreate(_extends({},params,{lazy_load:true,auto_unload:function auto_unload(){delete auto_unload_sprites[key]}}))
+return sprite}function spriteStartup(){geom_stats=geom.stats
 clip_space[2]=-1
 clip_space[3]=1
-exports.sprite_vshader=sprite_vshader=shaders.create("shaders/sprite.vp")
-exports.sprite_fshader=sprite_fshader=shaders.create("shaders/sprite.fp")
-sprite_dual_fshader=shaders.create("shaders/sprite_dual.fp")
-shaders.prelink(sprite_vshader,sprite_fshader)
-shaders.prelink(sprite_vshader,sprite_dual_fshader)}
+exports.sprite_vshader=sprite_vshader=shaderCreate("shaders/sprite.vp")
+exports.sprite_fshader=sprite_fshader=shaderCreate("shaders/sprite.fp")
+sprite_dual_fshader=shaderCreate("shaders/sprite_dual.fp")
+shadersPrelink(sprite_vshader,sprite_fshader)
+shadersPrelink(sprite_vshader,sprite_dual_fshader)}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./dyn_geom.js":10,"./engine.js":13,"./geom.js":21,"./shaders.js":46,"./textures.js":55,"assert":undefined}],52:[function(require,module,exports){
+},{"../common/util.js":93,"../common/verify":94,"../common/vmath.js":95,"./camera2d.js":9,"./dyn_geom.js":12,"./engine.js":15,"./geom.js":24,"./shaders.js":55,"./textures.js":65,"assert":undefined}],62:[function(require,module,exports){
 "use strict"
 exports.create=create
-var assert=require("assert")
-var _glovClientClient_config=require("./client_config")
-var PLATFORM_FBINSTANT=_glovClientClient_config.PLATFORM_FBINSTANT
+function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
+for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}var assert=require("assert")
+var _glovClientExternal_users_client=require("./external_users_client")
+var externalUsersAutoLoginFallbackProvider=_glovClientExternal_users_client.externalUsersAutoLoginFallbackProvider
+var externalUsersAutoLoginProvider=_glovClientExternal_users_client.externalUsersAutoLoginProvider
+var externalUsersCurrentUser=_glovClientExternal_users_client.externalUsersCurrentUser
+var externalUsersEmailPassLoginProvider=_glovClientExternal_users_client.externalUsersEmailPassLoginProvider
+var externalUsersEnabled=_glovClientExternal_users_client.externalUsersEnabled
+var externalUsersLogIn=_glovClientExternal_users_client.externalUsersLogIn
+var externalUsersLogOut=_glovClientExternal_users_client.externalUsersLogOut
+var externalUsersSendEmailConfirmation=_glovClientExternal_users_client.externalUsersSendEmailConfirmation
 var _glovCommonChunked_send=require("../common/chunked_send")
 var chunkedReceiverFinish=_glovCommonChunked_send.chunkedReceiverFinish
 var chunkedReceiverFreeFile=_glovCommonChunked_send.chunkedReceiverFreeFile
@@ -6692,6 +8621,8 @@ var chunkedReceiverOnChunk=_glovCommonChunked_send.chunkedReceiverOnChunk
 var chunkedReceiverStart=_glovCommonChunked_send.chunkedReceiverStart
 var _glovCommonDotProp=require("../common/dot-prop")
 var dot_prop=_glovCommonDotProp
+var _glovCommonExternal_users_common=require("../common/external_users_common")
+var ERR_NO_USER_ID=_glovCommonExternal_users_common.ERR_NO_USER_ID
 var _glovCommonMd=require("../common/md5")
 var md5=_glovCommonMd
 var _glovCommonPacket=require("../common/packet")
@@ -6703,18 +8634,22 @@ var EventEmitter=_glovCommonTinyEvents
 var _glovCommonUtil=require("../common/util")
 var util=_glovCommonUtil
 var _glovCommonUtil2=require("../common/util")
-var errorString=_glovCommonUtil2.errorString
-var _fbinstant=require("./fbinstant")
-var fbGetLoginInfo=_fbinstant.fbGetLoginInfo
+var cloneShallow=_glovCommonUtil2.cloneShallow
+var _client_config=require("./client_config")
+var platformParameterGet=_client_config.platformParameterGet
 var _local_storage=require("./local_storage")
 var local_storage=_local_storage
 var _net=require("./net")
+var netDisconnected=_net.netDisconnected
 var netDisconnectedRaw=_net.netDisconnectedRaw
 var _walltime=require("./walltime")
 var walltime=_walltime
 function ClientChannelWorker(subs,channel_id,base_handlers,base_event_listeners){EventEmitter.call(this)
 this.subs=subs
-this.channel_id=channel_id
+var m=(this.channel_id=channel_id).match(/^([^.]*)\.(.*)$/)
+assert(m)
+this.channel_type=m[1]
+this.channel_subid=m[2]
 this.subscriptions=0
 this.subscribe_failed=false
 this.got_subscribe=false
@@ -6723,6 +8658,7 @@ this.channel_data_ver=0
 this.handlers=Object.create(base_handlers)
 this.base_event_listeners=base_event_listeners
 this.data={}}util.inherits(ClientChannelWorker,EventEmitter)
+ClientChannelWorker.prototype.getChannelID=function(){return this.channel_id}
 ClientChannelWorker.prototype.emit=function(event){var args=arguments
 EventEmitter.prototype.emit.apply(this,args)
 if(this.base_event_listeners){var listeners=this.base_event_listeners[event]
@@ -6734,6 +8670,7 @@ ClientChannelWorker.prototype.onceSubscribe=function(cb){assert(this.subscriptio
 if(this.got_subscribe)cb(this.data)
 else this.once("subscribe",cb)}
 ClientChannelWorker.prototype.numSubscriptions=function(){return this.subscriptions}
+ClientChannelWorker.prototype.isFullySubscribed=function(){return this.got_subscribe}
 ClientChannelWorker.prototype.handleChannelData=function(data,resp_func){var _this=this
 console.log("got channel_data("+this.channel_id+"):  "+JSON.stringify(data))
 this.data=data;++this.channel_data_ver
@@ -6754,9 +8691,10 @@ if(void 0===value)dot_prop.delete(this.data.public,key)
 else dot_prop.set(this.data.public,key,value);++this.channel_data_ver
 this.emit("channel_data",this.data,"public."+key,value)}resp_func()}
 ClientChannelWorker.prototype.getChannelData=function(key,default_value){return dot_prop.get(this.data,key,default_value)}
+ClientChannelWorker.prototype.predictSetChannelData=function(key,value){dot_prop.set(this.data,key,value)}
 ClientChannelWorker.prototype.setChannelData=function(key,value,skip_predict,resp_func){if(!skip_predict)dot_prop.set(this.data,key,value)
 var q=value&&value.q||void 0
-var pak=this.subs.client.pak("set_channel_data")
+var pak=this.subs.client.pak("set_channel_data",this.channel_type+".set_channel_data")
 pak.writeAnsiString(this.channel_id)
 pak.writeBool(q)
 pak.writeAnsiString(key)
@@ -6766,20 +8704,22 @@ ClientChannelWorker.prototype.removeMsgHandler=function(msg,cb){assert(this.hand
 delete this.handlers[msg]}
 ClientChannelWorker.prototype.onMsg=function(msg,cb){assert(!this.handlers[msg]||this.handlers[msg]===cb)
 this.handlers[msg]=cb}
-ClientChannelWorker.prototype.pak=function(msg){var pak=this.subs.client.pak("channel_msg")
+ClientChannelWorker.prototype.pak=function(msg){var pak=this.subs.client.pak("channel_msg","cm:"+this.channel_type+"."+msg)
 pak.writeAnsiString(this.channel_id)
 pak.writeAnsiString(msg)
 return pak}
 ClientChannelWorker.prototype.send=function(msg,data,resp_func,old_fourth){assert(!resp_func||"function"===typeof resp_func)
 assert(!old_fourth)
-this.subs.client.send("channel_msg",{channel_id:this.channel_id,msg:msg,data:data},resp_func)}
+this.subs.client.send("channel_msg",{channel_id:this.channel_id,msg:msg,data:data},"cm:"+this.channel_type+"."+msg,resp_func)}
 ClientChannelWorker.prototype.cmdParse=function(cmd,resp_func){this.send("cmdparse",cmd,resp_func)}
 ClientChannelWorker.prototype.unsubscribe=function(){this.subs.unsubscribe(this.channel_id)}
 function SubscriptionManager(client,cmd_parse){EventEmitter.call(this)
 this.client=client
 this.channels={}
 this.logged_in=false
+this.login_response_data=null
 this.login_credentials=null
+this.logged_in_email=null
 this.logged_in_username=null
 this.logged_in_display_name=null
 this.was_logged_in=false
@@ -6788,10 +8728,12 @@ this.logging_out=false
 this.auto_create_user=false
 this.allow_anon=false
 this.no_auto_login=false
+this.auto_login_error=void 0
 if(this.cmd_parse=cmd_parse)this.cmds_fetched_by_type={}
 this.base_handlers={}
 this.channel_handlers={}
 this.channel_event_listeners={}
+this.quiet_messages=Object.create(null)
 this.first_connect=true
 this.server_time=0
 this.server_time_interp=0
@@ -6827,37 +8769,51 @@ this.emit("chat_broadcast",data)}
 SubscriptionManager.prototype.handleRestarting=function(data){this.restarting=data
 this.emit("restarting",data)}
 SubscriptionManager.prototype.handleDisconnect=function(data){this.emit("disconnect",data)}
-SubscriptionManager.prototype.handleConnect=function(data){var _this2=this
+SubscriptionManager.prototype.sendResubscribe=function(){var _this2=this
+assert(!this.logging_in)
+assert(this.need_resub)
+if(netDisconnectedRaw())return
+var _loop=function _loop(channel_id){var channel=_this2.channels[channel_id]
+if(channel.subscriptions)_this2.client.send("subscribe",channel_id,null,function(err){if(err){channel.subscribe_failed=true
+console.error("Error subscribing to "+channel_id+": "+err)
+channel.emit("subscribe_fail",err)}})}
+for(var channel_id in this.channels)_loop(channel_id)
+this.emit("connect",this.need_resub.reconnect)
+this.need_resub=null}
+SubscriptionManager.prototype.getCackAppData=function(){var _this$cack_data
+return(null==(_this$cack_data=this.cack_data)?void 0:_this$cack_data.app_data)||null}
+SubscriptionManager.prototype.handleConnect=function(data){var _this3=this
 var reconnect=false
 if(this.first_connect)this.first_connect=false
 else reconnect=true
+this.need_resub={reconnect:reconnect}
 this.restarting=Boolean(data.restarting)
 this.cack_data=data
 walltime.sync(data.time)
 if(netDisconnectedRaw())return
-var subs=this
-function resub(){var _loop=function _loop(channel_id){var channel=subs.channels[channel_id]
-if(channel.subscriptions)subs.client.send("subscribe",channel_id,function(err){if(err){channel.subscribe_failed=true
-console.error("Error subscribing to "+channel_id+": "+err)
-channel.emit("subscribe_fail",err)}})}
-for(var channel_id in subs.channels)_loop(channel_id)
-subs.emit("connect",reconnect)}if(this.logging_in);else if(this.was_logged_in)this.loginInternal(this.login_credentials,function(err){if(err&&"ERR_FAILALL_DISCONNECT"===err);else if(err){var credentials_str=_this2.login_credentials&&_this2.login_credentials.password?"user_id, password":JSON.stringify(_this2.login_credentials)
-assert(false,"Login failed for "+credentials_str+": "+errorString(err))}else resub()})
-else if(!this.no_auto_login){if(PLATFORM_FBINSTANT){var login_cb=function login_cb(){}
-if(PLATFORM_FBINSTANT)this.loginFacebook(login_cb)}else if(local_storage.get("name")&&local_storage.get("password"))this.login(local_storage.get("name"),local_storage.get("password"),function(){})
-resub()}else resub()
+if(this.logging_in);else if(this.was_logged_in)this.loginRetry(function(err){if(err&&"ERR_FAILALL_DISCONNECT"===err);else if(err)_this3.auto_login_error=err})
+else if(!this.no_auto_login){var auto_login_provider=externalUsersAutoLoginProvider()
+var saved_provider
+if(auto_login_provider&&externalUsersEnabled(auto_login_provider))this.loginExternal({provider:auto_login_provider},function(err){if(err===ERR_NO_USER_ID&&externalUsersAutoLoginFallbackProvider()){_this3.loginExternal({provider:externalUsersAutoLoginFallbackProvider(),external_login_data:cloneShallow(_this3.login_credentials.external_login_data),creation_display_name:_this3.login_credentials.creation_display_name},function(err){_this3.auto_login_error=err})
+return}_this3.auto_login_error=err})
+else if(local_storage.get("name")&&local_storage.get("password"))this.login(local_storage.get("name"),local_storage.get("password"),function(err){_this3.auto_login_error=err})
+else if(saved_provider=local_storage.get("login_external")){var credentials={provider:saved_provider}
+this.loginInternal(credentials,function(err){if(err){_this3.auto_login_error=err
+externalUsersLogOut(saved_provider)}})}}if(!this.logging_in&&this.need_resub)this.sendResubscribe()
 this.fetchCmds()}
-SubscriptionManager.prototype.fetchCmds=function(){var _this3=this
+SubscriptionManager.prototype.fetchCmds=function(){var _this4=this
 var channel_type="client"
 var cmd_list=this.cmds_fetched_by_type
 if(cmd_list&&!cmd_list[channel_type]){cmd_list[channel_type]=true
-this.client.send("cmd_parse_list_client",null,function(err,resp){if(!err)_this3.cmd_parse.addServerCommands(resp)})}}
+this.client.send("cmd_parse_list_client",null,null,function(err,resp){if(!err)_this4.cmd_parse.addServerCommands(resp)})}}
+SubscriptionManager.prototype.quietMessagesSet=function(list){for(var ii=0;ii<list.length;++ii)this.quiet_messages[list[ii]]=true}
+SubscriptionManager.prototype.quietMessage=function(msg,payload){return this.quiet_messages[msg]}
 SubscriptionManager.prototype.handleChannelMessage=function(pak,resp_func){assert(isPacket(pak))
 var channel_id=pak.readAnsiString()
 var msg=pak.readAnsiString()
 var is_packet=pak.readBool()
 var data=is_packet?pak:pak.readJSON()
-if(!data||!data.q){var debug_msg
+if(!this.quietMessage(msg)&&(!data||!data.q)){var debug_msg
 if(!is_packet)debug_msg=JSON.stringify(data)
 else if("function"===typeof data.contents)debug_msg=data.contents()
 else debug_msg="(pak)"
@@ -6874,15 +8830,15 @@ if(this.server_time<this.server_time_interp&&this.server_time>this.server_time_i
 walltime.sync(pak.readInt())}
 SubscriptionManager.prototype.getServerTime=function(){return this.server_time_interp}
 SubscriptionManager.prototype.tick=function(dt){this.server_time_interp+=dt
-for(var channel_id in this.channels){var channel=this.channels[channel_id]
+if(!netDisconnected())for(var channel_id in this.channels){var channel=this.channels[channel_id]
 if(channel.immediate_subscribe)if(dt>=channel.immediate_subscribe){channel.immediate_subscribe=0
 this.unsubscribe(channel_id)}else channel.immediate_subscribe-=dt}}
-SubscriptionManager.prototype.onUploadProgress=function(mime_type,cb){var _this4=this
+SubscriptionManager.prototype.onUploadProgress=function(mime_type,cb){var _this5=this
 if(!this.upload_progress_cbs)this.upload_progress_cbs={}
 assert(!this.upload_progress_cbs[mime_type])
 this.upload_progress_cbs[mime_type]=cb
 if(!this.chunked)this.chunked=chunkedReceiverInit("client_receive",Infinity)
-if(!this.chunked.on_progress)this.chunked.on_progress=function(progress,total,type){if(_this4.upload_progress_cbs[type])_this4.upload_progress_cbs[type](progress,total)}}
+if(!this.chunked.on_progress)this.chunked.on_progress=function(progress,total,type){if(_this5.upload_progress_cbs[type])_this5.upload_progress_cbs[type](progress,total)}}
 SubscriptionManager.prototype.handleUploadStart=function(pak,resp_func){if(!this.chunked)this.chunked=chunkedReceiverInit("client_receive",Infinity)
 chunkedReceiverStart(this.chunked,pak,resp_func)}
 SubscriptionManager.prototype.handleUploadChunk=function(pak,resp_func){chunkedReceiverOnChunk(this.chunked,pak,resp_func)}
@@ -6896,11 +8852,12 @@ var handlers=this.getBaseHandlers(channel_type)
 var event_listeners=this.channel_event_listeners[channel_type]
 channel=this.channels[channel_id]=new ClientChannelWorker(this,channel_id,handlers,event_listeners)}if(do_subscribe){channel.subscriptions++
 if(!netDisconnectedRaw()&&1===channel.subscriptions){channel.subscribe_failed=false
-this.client.send("subscribe",channel_id,function(err){if(err){channel.subscribe_failed=true
+this.client.send("subscribe",channel_id,null,function(err){if(err){channel.subscribe_failed=true
 console.error("Error subscribing to "+channel_id+": "+err)
 channel.emit("subscribe_fail",err)}})}}return channel}
 SubscriptionManager.prototype.getUserId=function(){return this.loggedIn()}
 SubscriptionManager.prototype.getDisplayName=function(){return this.logged_in_display_name}
+SubscriptionManager.prototype.getLoginProvider=function(){return this.login_provider}
 SubscriptionManager.prototype.getMyUserChannel=function(){var user_id=this.loggedIn()
 if(!user_id)return null
 var channel=this.getChannel("user."+user_id)
@@ -6910,8 +8867,8 @@ SubscriptionManager.prototype.unsubscribe=function(channel_id){var channel=this.
 assert(channel)
 assert(channel.subscriptions)
 channel.subscriptions--
-if(!channel.subscriptions)channel.got_subscribe=false
-if(!netDisconnectedRaw()&&!channel.subscriptions&&!channel.subscribe_failed)this.client.send("unsubscribe",channel_id)}
+if(!channel.subscriptions&&!channel.autosubscribed){channel.got_subscribe=false
+channel.emit("unsubscribe")}if(!netDisconnectedRaw()&&!channel.subscriptions&&!channel.subscribe_failed)this.client.send("unsubscribe",channel_id)}
 SubscriptionManager.prototype.getChannelImmediate=function(channel_id,timeout){timeout=timeout||6e4
 var channel=this.getChannel(channel_id)
 if(!channel.immediate_subscribe)this.subscribe(channel_id)
@@ -6919,47 +8876,83 @@ channel.immediate_subscribe=timeout
 return channel}
 SubscriptionManager.prototype.onLogin=function(cb){this.on("login",cb)
 if(this.logged_in)return void cb()}
-SubscriptionManager.prototype.loggedIn=function(){return this.logging_out?false:this.logged_in?this.logged_in_username||"missing_name":false}
+SubscriptionManager.prototype.onceLoggedIn=function(cb){if(this.logged_in)return void cb()
+this.once("login",cb)}
+SubscriptionManager.prototype.loggedIn=function(){return this.logging_out?null:this.logged_in?this.logged_in_username||"missing_name":null}
 SubscriptionManager.prototype.userOnChannelData=function(expected_user_id,data,key,value){if(expected_user_id!==this.getUserId())return
 if("public.display_name"===key)this.logged_in_display_name=value}
-SubscriptionManager.prototype.handleLoginResponse=function(resp_func,err,resp){var _this5=this
+SubscriptionManager.prototype.handleLoginResponse=function(resp_func,err,resp){var _this6=this
 this.logging_in=false
-if(!err){this.logged_in_username=resp.user_id
+var evt="login_fail"
+if(!err){var _this$login_credentia
+evt="login"
+this.login_response_data=resp
+this.logged_in_email=resp.email||null
+this.logged_in_username=resp.user_id
 this.logged_in_display_name=resp.display_name
 this.logged_in=true
 this.was_logged_in=true
 var user_channel=this.getMyUserChannel()
-user_channel.onceSubscribe(function(){if(!_this5.did_master_subscribe&&user_channel.getChannelData("public.permissions.sysadmin")){_this5.did_master_subscribe=true
-_this5.subscribe("master.master")
-_this5.subscribe("global.global")}})
+user_channel.onceSubscribe(function(){if(!_this6.did_master_subscribe){var perms=user_channel.getChannelData("public.permissions",{})
+if(perms.sysadmin)_this6.subscribe("master.master")
+if(perms.sysadmin||perms.csr){_this6.did_master_subscribe=true
+_this6.subscribe("global.global")}}})
 if(!user_channel.subs_added_user_on_channel_data){user_channel.on("channel_data",this.userOnChannelData.bind(this,this.logged_in_username))
-user_channel.subs_added_user_on_channel_data=true}this.emit("login")}else this.emit("login_fail",err)
+user_channel.subs_added_user_on_channel_data=true}if(this.need_resub)this.sendResubscribe()
+if(resp.hash&&null!=(_this$login_credentia=this.login_credentials)&&_this$login_credentia.password){var plaintext_password=this.login_credentials.password
+if(plaintext_password){var hashed_salted_password=md5(md5(this.logged_in_username.toLowerCase())+plaintext_password)
+if(md5(this.client.secret+hashed_salted_password)!==resp.hash)this.getMyUserChannel().send("set_external_password",{hash:hashed_salted_password})}}}if(this.need_resub)this.sendResubscribe()
+this.emit(evt,err)
 resp_func(err)}
-SubscriptionManager.prototype.loginInternal=function(login_credentials,resp_func){var _this6=this
-if(this.logging_in)return void resp_func("Login already in progress")
+SubscriptionManager.prototype.loginRetry=function(resp_func){var _this7=this
+this.loginInternal(this.login_credentials,function(err){if((_this7.auto_login_error=err)===ERR_NO_USER_ID&&externalUsersAutoLoginFallbackProvider()&&_this7.login_credentials.provider===externalUsersAutoLoginProvider()&&externalUsersEnabled(externalUsersAutoLoginProvider()))_this7.loginExternal({provider:externalUsersAutoLoginFallbackProvider(),external_login_data:cloneShallow(_this7.login_credentials.external_login_data),creation_display_name:_this7.login_credentials.creation_display_name},function(err){_this7.auto_login_error=err
+resp_func(err)})
+else resp_func(err)})}
+SubscriptionManager.prototype.getLastLoginCredentials=function(){return this.login_credentials}
+SubscriptionManager.prototype.loginInternalExternalUsers=function(provider,login_credentials,resp_func){var _this8=this
+var email=login_credentials.email,password=login_credentials.password,do_creation=login_credentials.do_creation,creation_display_name=login_credentials.creation_display_name,external_login_data=login_credentials.external_login_data
+return void externalUsersLogIn(provider,{user_initiated:true,do_creation:do_creation,creation_display_name:creation_display_name,email:email,password:password,external_login_data:external_login_data},function(err,login_data){_this8.login_credentials.external_login_data=login_data
+if(err){local_storage.set("login_external",_this8.login_provider=void 0)
+_this8.serverLog("authentication_failed_"+provider,{creation_mode:do_creation,email:email,passlen:password&&password.length,external_data:Boolean(external_login_data),err:err})
+return void _this8.handleLoginResponse(resp_func,err)}local_storage.set("login_external",_this8.login_provider=provider)
+local_storage.set("password",void 0)
+externalUsersCurrentUser(provider,function(err,user_info){if(err);if(netDisconnectedRaw())return void _this8.handleLoginResponse(resp_func,"ERR_DISCONNECTED")
+var display_name=(null==user_info?void 0:user_info.name)||""
+if(platformParameterGet("random_creation_name"))display_name=""
+var request_data={provider:provider,validation_data:login_data.validation_data,display_name:display_name}
+if(null!=user_info&&user_info.name)_this8.login_credentials.creation_display_name=user_info.name
+_this8.client.send("login_external",request_data,null,_this8.handleLoginResponse.bind(_this8,resp_func))})})}
+SubscriptionManager.prototype.sessionHashedPassword=function(){assert(this.login_credentials.password)
+return md5(this.client.secret+this.login_credentials.password)}
+SubscriptionManager.prototype.loginInternal=function(login_credentials,resp_func){if(this.logging_in)return void resp_func("Login already in progress")
+this.auto_login_error=null
 this.logging_in=true
 this.logged_in=false
-if(login_credentials.fb)fbGetLoginInfo(function(err,result){if(err)return void _this6.handleLoginResponse(resp_func,err)
-if(netDisconnectedRaw())return void _this6.handleLoginResponse(resp_func,"ERR_DISCONNECTED")
-_this6.client.send("login_facebook_instant",result,_this6.handleLoginResponse.bind(_this6,resp_func))})
-else this.client.send("login",{user_id:login_credentials.user_id,password:md5(this.client.secret+login_credentials.password)},this.handleLoginResponse.bind(this,resp_func))}
+if((this.login_credentials=login_credentials).do_creation){this.login_credentials=cloneShallow(login_credentials)
+delete this.login_credentials.do_creation}var provider=login_credentials.provider
+if(provider)this.loginInternalExternalUsers(provider,login_credentials,resp_func)
+else{var user_id=login_credentials.user_id
+this.client.send("login",{user_id:user_id,password:this.sessionHashedPassword()},null,this.handleLoginResponse.bind(this,resp_func))}}
 SubscriptionManager.prototype.userCreateInternal=function(params,resp_func){if(this.logging_in)return resp_func("Login already in progress")
 this.logging_in=true
 this.logged_in=false
-return this.client.send("user_create",params,this.handleLoginResponse.bind(this,resp_func))}
-function hashedPassword(user_id,password){if("prehashed"===password.split("$$")[0])password=password.split("$$")[1]
+return this.client.send("user_create",params,null,this.handleLoginResponse.bind(this,resp_func))}
+function hashedPassword(user_id,password){var split=password.split("$$")
+if(2===split.length&&"prehashed"===split[0]&&32===split[1].length)password=split[1]
 else password=md5(md5(user_id.toLowerCase())+password)
-return password}SubscriptionManager.prototype.login=function(username,password,resp_func){var _this7=this
+return password}SubscriptionManager.prototype.login=function(username,password,resp_func){var _this9=this
 if(!(username=(username||"").trim()))return resp_func("Missing username")
 if(!(password=(password||"").trim()))return resp_func("Missing password")
 var hashed_password=hashedPassword(username,password)
 if(hashed_password!==password)local_storage.set("password","prehashed$$"+hashed_password)
-this.login_credentials={user_id:username,password:hashed_password}
-if(!this.auto_create_user)return this.loginInternal(this.login_credentials,resp_func)
-return this.loginInternal(this.login_credentials,function(err,data){if(!err||"ERR_USER_NOT_FOUND"!==err)return void resp_func(err,data)
-_this7.userCreate({user_id:username,password:password,password_confirm:password,email:"autocreate@glovjs.org"},resp_func)})}
-SubscriptionManager.prototype.loginFacebook=function(resp_func){this.login_credentials={fb:true}
-return this.loginInternal(this.login_credentials,resp_func)}
+var credentials={user_id:username,password:hashed_password}
+if(!this.auto_create_user)return this.loginInternal(credentials,resp_func)
+return this.loginInternal(credentials,function(err,data){if(!err||"ERR_USER_NOT_FOUND"!==err)return void resp_func(err,data)
+_this9.userCreate({user_id:username,password:password,password_confirm:password,email:"autocreate@glovjs.org"},resp_func)})}
+SubscriptionManager.prototype.loginEmailPass=function(credentials,resp_func){credentials={email:credentials.email,password:credentials.password,provider:externalUsersEmailPassLoginProvider(),do_creation:credentials.do_creation,creation_display_name:credentials.creation_display_name}
+return this.loginInternal(credentials,resp_func)}
+SubscriptionManager.prototype.loginExternal=function(credentials,resp_func){return this.loginInternal(cloneShallow(credentials),resp_func)}
+SubscriptionManager.prototype.sendActivationEmail=function(email,resp_func){return externalUsersSendEmailConfirmation(email,resp_func)}
 SubscriptionManager.prototype.userCreate=function(params,resp_func){params.user_id=(params.user_id||"").trim()
 if(!params.user_id)return resp_func("Missing username")
 params.password=(params.password||"").trim()
@@ -6974,26 +8967,33 @@ if(hashed_password!==params.password)local_storage.set("password","prehashed$$"+
 if(hashed_password!==hashedPassword(params.user_id,params.password_confirm))return resp_func("Passwords do not match")
 this.login_credentials={user_id:params.user_id,password:hashed_password}
 return this.userCreateInternal({display_name:params.display_name||params.user_id,user_id:params.user_id,email:params.email,password:hashed_password},resp_func)}
-SubscriptionManager.prototype.logout=function(){var _this8=this
+SubscriptionManager.prototype.logout=function(){var _this0=this
 assert(this.logged_in)
 assert(!this.logging_in)
 assert(!this.logging_out)
 if(this.did_master_subscribe){this.did_master_subscribe=false
-this.unsubscribe("master.master")
-this.unsubscribe("global.global")}for(var channel_id in this.channels){var channel=this.channels[channel_id]
+var user_channel=this.getMyUserChannel()
+var perms=user_channel&&user_channel.getChannelData("public.permissions",{})
+if(perms&&perms.sysadmin)this.unsubscribe("master.master")
+this.unsubscribe("global.global")}this.emit("prelogout")
+for(var channel_id in this.channels){var channel=this.channels[channel_id]
 if(channel.immediate_subscribe){channel.immediate_subscribe=0
 this.unsubscribe(channel_id)}assert(!channel.subscriptions,"Remaining active subscription for "+channel_id)
 if(channel.autosubscribed)channel.autosubscribed=false}this.logging_out=true
-this.client.send("logout",null,function(err){_this8.logging_out=false
+this.client.send("logout",null,null,function(err){_this0.logging_out=false
 if(!err){local_storage.set("password",void 0)
-_this8.logged_in=false
-_this8.logged_in_username=null
-_this8.logged_in_display_name=null
-_this8.was_logged_in=false
-_this8.login_credentials=null
-_this8.emit("logout")}})}
-SubscriptionManager.prototype.serverLog=function(type,data){var _this9=this
-this.onceConnected(function(){_this9.client.send("log",{type:type,data:data})})}
+local_storage.set("login_external",_this0.login_provider=void 0)
+_this0.login_response_data=null
+_this0.logged_in=false
+_this0.logged_in_username=null
+_this0.logged_in_display_name=null
+_this0.was_logged_in=false
+_this0.login_credentials=null
+_this0.emit("logout")}})}
+SubscriptionManager.prototype.getLoginResponseData=function(){return this.login_response_data||{}}
+SubscriptionManager.prototype.serverLogSetExtraData=function(data){this.server_log_extra_data=data}
+SubscriptionManager.prototype.serverLog=function(type,data){var _this1=this
+this.onceConnected(function(){_this1.client.send("log",_extends({type:type,data:data},_this1.server_log_extra_data))})}
 SubscriptionManager.prototype.sendCmdParse=function(command,resp_func){var _this10=this
 this.onceConnected(function(){var pak=_this10.client.pak("cmd_parse_auto")
 pak.writeString(command)
@@ -7005,11 +9005,8 @@ this.cmd_parse.handle({access:access},cmd,function(err,resp){if(err&&_this11.cmd
 return resp_func(err,{found:1,resp:resp})})}
 function create(client,cmd_parse){return new SubscriptionManager(client,cmd_parse)}
 
-},{"../common/chunked_send":64,"../common/dot-prop":67,"../common/md5":70,"../common/packet":71,"../common/perfcounters":72,"../common/tiny-events":73,"../common/util":74,"./client_config":8,"./fbinstant":16,"./local_storage":31,"./net":35,"./walltime":59,"assert":undefined}],53:[function(require,module,exports){
+},{"../common/chunked_send":77,"../common/dot-prop":81,"../common/external_users_common":83,"../common/md5":85,"../common/packet":86,"../common/perfcounters":87,"../common/tiny-events":92,"../common/util":93,"./client_config":10,"./external_users_client":19,"./local_storage":35,"./net":43,"./walltime":70,"assert":undefined}],63:[function(require,module,exports){
 "use strict"
-exports.ansi=void 0
-exports.padLeft=padLeft
-exports.padRight=padRight
 exports.terminalCreate=terminalCreate
 var _assert=require("assert")
 var assert=_assert
@@ -7045,7 +9042,8 @@ var CharInfo=function CharInfo(fg,bg,attr){this.ch=" "
 this.fg=fg
 this.bg=bg
 this.attr=attr}
-var GlovTerminal=function(){function GlovTerminal(params){var _params$baud,_params$draw_cursor,_params$auto_scroll
+var default_palette=[vec4(0,0,0,1),vec4(0,0,42/63,1),vec4(0,42/64,0,1),vec4(0,42/64,42/63,1),vec4(42/64,0,0,1),vec4(42/64,0,42/63,1),vec4(42/64,21/64,0,1),vec4(42/64,42/64,42/63,1),vec4(18/64,18/64,18/63,1),vec4(21/64,21/64,1,1),vec4(21/64,63/64,21/63,1),vec4(21/64,63/64,1,1),vec4(63/64,21/64,21/63,1),vec4(63/64,21/64,1,1),vec4(63/64,63/64,21/63,1),vec4(63/64,63/64,1,1)]
+var GlovTerminal=function(){function GlovTerminal(params){var _params$baud,_params$draw_cursor,_params$auto_scroll,_params$auto_crlf,_params$ignore_newlin
 this.baud=null!=(_params$baud=(params=params||{}).baud)?_params$baud:9600
 this.frame=0
 this.draw_cursor=null!=(_params$draw_cursor=params.draw_cursor)?_params$draw_cursor:[1,4]
@@ -7070,19 +9068,22 @@ this.x0=0
 this.y0=0
 this.x1=this.w
 this.y1=this.h
-this.palette=params.palette||[vec4(0,0,0,1),vec4(0,0,42/63,1),vec4(0,42/64,0,1),vec4(0,42/64,42/63,1),vec4(42/64,0,0,1),vec4(42/64,0,42/63,1),vec4(42/64,21/64,0,1),vec4(42/64,42/64,42/63,1),vec4(18/64,18/64,18/63,1),vec4(21/64,21/64,1,1),vec4(21/64,63/64,21/63,1),vec4(21/64,63/64,1,1),vec4(63/64,21/64,21/63,1),vec4(63/64,21/64,1,1),vec4(63/64,63/64,21/63,1),vec4(63/64,63/64,1,1)]
+this.palette=params.palette||[]
+for(var ii=0;ii<default_palette.length;++ii)if(!this.palette[ii])this.palette[ii]=default_palette[ii]
 this.font_styles=[]
-for(var ii=0;ii<this.palette.length;++ii)this.font_styles.push(glov_font.style(null,{color:glov_font.intColorFromVec4Color(this.palette[ii])}))
+for(var _ii=0;_ii<this.palette.length;++_ii)this.font_styles.push(glov_font.style(null,{color:glov_font.intColorFromVec4Color(this.palette[_ii])}))
 this.char_width=params.char_width||9
 this.char_height=params.char_height||16
 this.font=params.font||engine.font
 this.auto_scroll=null!=(_params$auto_scroll=params.auto_scroll)?_params$auto_scroll:true
+this.auto_crlf=null!=(_params$auto_crlf=params.auto_crlf)?_params$auto_crlf:false
+this.ignore_newline_after_wrap=null!=(_params$ignore_newlin=params.ignore_newline_after_wrap)?_params$ignore_newlin:false
 this.buffer=new Array(this.h)
 this.prebuffer=new Array(this.h)
-for(var _ii=0;_ii<this.h;++_ii){this.buffer[_ii]=new Array(this.w)
-this.prebuffer[_ii]=new Array(this.w)
-for(var jj=0;jj<this.w;++jj){this.buffer[_ii][jj]=new CharInfo(this.fg,this.bg,this.attr)
-this.prebuffer[_ii][jj]=new CharInfo(this.fg,this.bg,this.attr)}}}var _proto=GlovTerminal.prototype
+for(var _ii2=0;_ii2<this.h;++_ii2){this.buffer[_ii2]=new Array(this.w)
+this.prebuffer[_ii2]=new Array(this.w)
+for(var jj=0;jj<this.w;++jj){this.buffer[_ii2][jj]=new CharInfo(this.fg,this.bg,this.attr)
+this.prebuffer[_ii2][jj]=new CharInfo(this.fg,this.bg,this.attr)}}}var _proto=GlovTerminal.prototype
 _proto.domod=function domod(buffer,mod){var mod_playback=buffer===this.buffer
 switch(mod.type){case MOD_CH:buffer[mod.y][mod.x].ch=mod.ch
 buffer[mod.y][mod.x].attr=mod.attr
@@ -7102,11 +9103,11 @@ for(var ii=0;ii<_row.length;++ii){_row[ii].fg=mod.fg
 _row[ii].bg=mod.bg
 _row[ii].ch=" "
 _row[ii].attr=0}}break
-case MOD_CLEAR:if(mod.sub_view)for(var _ii2=mod.sub_view.y;_ii2<mod.sub_view.y+mod.sub_view.h;++_ii2){var line=buffer[_ii2]
+case MOD_CLEAR:if(mod.sub_view)for(var _ii3=mod.sub_view.y;_ii3<mod.sub_view.y+mod.sub_view.h;++_ii3){var line=buffer[_ii3]
 for(var jj=mod.sub_view.x;jj<mod.sub_view.x+mod.sub_view.w;++jj){line[jj].attr=mod.attr
 line[jj].fg=mod.fg
 line[jj].bg=mod.bg
-line[jj].ch=" "}}else for(var _ii3=0;_ii3<this.h;++_ii3){var _line=buffer[_ii3]
+line[jj].ch=" "}}else for(var _ii4=0;_ii4<this.h;++_ii4){var _line=buffer[_ii4]
 for(var _jj=0;_jj<this.w;++_jj){_line[_jj].attr=mod.attr
 _line[_jj].fg=mod.fg
 _line[_jj].bg=mod.bg
@@ -7138,10 +9139,12 @@ _proto.offset=function offset(x,y){if("number"===typeof x)this.x+=x
 if("number"===typeof y)this.y+=y
 this.checkwrap()}
 _proto.autoScroll=function autoScroll(b){this.auto_scroll=b}
-_proto.checkwrap=function checkwrap(){if(this.x<this.x0)this.x=this.x0
+_proto.checkwrap=function checkwrap(){var ret=false
+if(this.x<this.x0)this.x=this.x0
 if(this.x>=this.x1){this.x=this.x0
-this.y++}if(this.y>=this.y1){this.y=this.y1-1
-if(this.auto_scroll)this.mod(MOD_SCROLL)}}
+this.y++
+ret=true}if(this.y>=this.y1){this.y=this.y1-1
+if(this.auto_scroll)this.mod(MOD_SCROLL)}return ret}
 _proto.cr=function cr(){this.x=this.x0
 this.checkwrap()}
 _proto.lf=function lf(){this.y++
@@ -7170,6 +9173,7 @@ this.x1=this.w
 this.y1=this.h}
 _proto.print=function print(params){this.moveto(params.x,params.y)
 this.color(params.fg,params.bg)
+var just_wrapped=false
 var text=params.text||""
 if(text&&!text.length)text=[text]
 if("string"===typeof text)text=text.split("")
@@ -7203,9 +9207,11 @@ else if(5===sub_code)this.attr|=ATTR.BLINK
 else if(7===sub_code)this.attr|=ATTR.REVERSE
 else{handled=false
 ii=ii_save}m=mode_regex2.exec(sub_str)}while(m)}else handled=false}else if("\n"===ch){handled=true;++ii
-this.lf()}else if("\r"===ch){handled=true;++ii
+if(this.ignore_newline_after_wrap&&just_wrapped)just_wrapped=false
+else if(this.auto_crlf)this.crlf()
+else this.lf()}else if("\r"===ch){handled=true;++ii
 this.cr()}if(!handled){if(this.x>=0&&this.x<this.w&&this.y>=0&&this.y<this.h)this.mod(MOD_CH,ch);++this.x
-this.checkwrap();++ii}}}
+just_wrapped=this.checkwrap();++ii}}}
 _proto.fill=function fill(params){var x=params.x||0
 var y=params.y||0
 var w=params.w||this.w
@@ -7288,9 +9294,9 @@ if("object"===typeof item)item=item.label
 max_w=max(max_w,item.length)}max_w+=pre_sel.length+post_sel.length
 var ret=-1
 this.menu_select_delta=1
-for(var _ii4=0;_ii4<items.length;++_ii4){var _item=items[_ii4]
+for(var _ii5=0;_ii5<items.length;++_ii5){var _item=items[_ii5]
 var effx=x
-var effy=y+_ii4
+var effy=y+_ii5
 var hotkey=void 0
 if("object"===typeof _item){effx=_item.x
 effy=_item.y
@@ -7299,17 +9305,17 @@ _item=_item.label}if(!hotkey){var m=_item.match(/\[([0-9A-Z])\]/)
 if(m)hotkey=m[1]}var param={x:this.render_x+effx*this.char_width,y:this.render_y+effy*this.char_height,w:max_w*this.char_width,h:this.char_height}
 var click=void 0
 if(click=input.click(param)){if(2===click.button)this.menu_select_delta=-1
-ret=this.menu_idx=_ii4}else if(input.mouseMoved()&&input.mouseOver(param))this.menu_idx=_ii4
-if(hotkey&&input.keyDownEdge(KEYS.A+hotkey.charCodeAt(0)-"A".charCodeAt(0)))ret=this.menu_idx=_ii4
-if((hotkey&&"0"===hotkey||1===items.length)&&input.keyDownEdge(KEYS.ESCAPE))ret=this.menu_idx=_ii4}this.menu_idx=(this.menu_idx+items.length)%items.length
+ret=this.menu_idx=_ii5}else if(input.mouseMoved()&&input.mouseOver(param))this.menu_idx=_ii5
+if(hotkey&&input.keyDownEdge(KEYS.A+hotkey.charCodeAt(0)-"A".charCodeAt(0)))ret=this.menu_idx=_ii5
+if((hotkey&&"0"===hotkey||1===items.length)&&input.keyDownEdge(KEYS.ESCAPE))ret=this.menu_idx=_ii5}this.menu_idx=(this.menu_idx+items.length)%items.length
 var left_select=false
 if(input.keyDownEdge(KEYS.SPACE)||input.keyDownEdge(KEYS.ENTER)||-1===ret&&(input.keyDownEdge(KEYS.D)||input.keyDownEdge(KEYS.RIGHT)||(left_select=input.keyDownEdge(KEYS.A)||input.keyDownEdge(KEYS.LEFT)))){ret=this.menu_idx
-if(left_select)this.menu_select_delta=-1}for(var _ii5=0;_ii5<items.length;++_ii5){var _item2=items[_ii5]
-var selected=_ii5===this.menu_idx
-var executing=_ii5===ret
+if(left_select)this.menu_select_delta=-1}for(var _ii6=0;_ii6<items.length;++_ii6){var _item2=items[_ii6]
+var selected=_ii6===this.menu_idx
+var executing=_ii6===ret
 var colors=executing?color_execute:selected?color_sel:color_unsel
 var _effx=x
-var _effy=y+_ii5
+var _effy=y+_ii6
 var eff_pre_sel=pre_sel
 var eff_pre_unsel=pre_unsel
 if("object"===typeof _item2){_effx=_item2.x
@@ -7321,6 +9327,11 @@ _item2=_item2.label}var _param={x:_effx,y:_effy,fg:colors.fg,bg:colors.bg}
 _param.text=""+(selected?eff_pre_sel:eff_pre_unsel)+_item2+(selected?post_sel:post_unsel)
 this.print(_param)}this.color(color_unsel.fg,color_unsel.bg)
 return ret}
+_proto.isAnimating=function isAnimating(){return Boolean(this.mod_head)}
+_proto.finishAnimating=function finishAnimating(){while(this.mod_head){var mod=this.mod_head
+this.mod_head=mod.next
+if(!mod.next)this.mod_tail=null
+this.domod(this.buffer,mod)}this.mod_countdown=0}
 _proto.render=function render(){var dt=engine.getFrameDt()
 this.frame++
 while(dt>=this.mod_countdown&&this.mod_head){dt-=this.mod_countdown
@@ -7350,41 +9361,31 @@ text.push(ch);++jj}text=text.join("")
 engine.font.drawSized(this.font_styles[fg],x+jj0*char_width,y+ii*char_height,z+.5,char_height,text)}}if(draw_cursor){var playback=this.playback
 var cx=x+(this.mod_head?playback.x:this.x)*char_width
 var cy=y+(this.mod_head?playback.y:this.y)*char_height
-if((engine.getFrameTimestamp()-playback.timestamp)%1e3<500)ui.drawRect(cx,cy+char_height-draw_cursor[1]-1,cx+char_width,cy+char_height-draw_cursor[0],z+.75,palette[playback.fg])}var box_x0=0
+if((engine.getFrameTimestamp()-playback.timestamp)%1e3<500)ui.drawRect(cx,cy+char_height-draw_cursor[1]-1,cx+char_width,cy+char_height-draw_cursor[0],z+.75,palette[this.mod_head?playback.fg:this.fg])}var box_x0=0
 var box_y0=0
 var last_x
 var last_y
 var box_color=buffer[0][0].bg
 function flush(){ui.drawRect(x+box_x0*char_width,y+box_y0*char_height,x+(last_x+1)*char_width,y+(last_y+1)*char_height,z,palette[box_color])
-if(box_y0!==last_y&&last_y!==w-1)ui.drawRect(x+(last_x+1)*char_width,y+box_y0*char_height,x+w*char_width,y+last_y*char_height,z,palette[box_color])}for(var _ii6=0;_ii6<h;++_ii6){var _line3=buffer[_ii6]
+if(box_y0!==last_y&&last_y!==w-1)ui.drawRect(x+(last_x+1)*char_width,y+box_y0*char_height,x+w*char_width,y+last_y*char_height,z,palette[box_color])}for(var _ii7=0;_ii7<h;++_ii7){var _line3=buffer[_ii7]
 for(var _jj3=0;_jj3<w;++_jj3){var color=_line3[_jj3].bg
 if(color!==box_color||box_x0>_jj3){flush()
 box_color=color
 box_x0=_jj3
-box_y0=_ii6}last_x=_jj3
-last_y=_ii6}}flush()}
+box_y0=_ii7}last_x=_jj3
+last_y=_ii7}}flush()}
 return GlovTerminal}()
-function terminalCreate(params){return new GlovTerminal(params)}var ansi={bg:{}}
-exports.ansi=ansi;["black","red","green","yellow","blue","magenta","cyan","white"].forEach(function(color,idx){ansi[color]=function(str){return ESC+"["+(30+idx)+"m"+str+ESC+"[0m"}
-ansi[color].bright=function(str){return ESC+"["+(30+idx)+";1m"+str+ESC+"[0m"}
-ansi.bg[color]=function(str){return ESC+"["+(40+idx)+"m"+str+ESC+"[0m"}})
-ansi.normal=function(str){return ESC+"[0m"+str}
-ansi.blink=function(str){return ESC+"[5m"+str+ESC+"[0m"}
-var strip_ansi=/\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g
-function padRight(str,width){var len=str.replace(strip_ansi,"").length
-if(len<width)str+=new Array(width-len+1).join(" ")
-return str}function padLeft(str,width){var len=str.replace(strip_ansi,"").length
-if(len<width)str=new Array(width-len+1).join(" ")+str
-return str}
+function terminalCreate(params){return new GlovTerminal(params)}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./engine.js":13,"./font.js":19,"./input.js":28,"./ui.js":57,"assert":undefined}],54:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./engine.js":15,"./font.js":22,"./input.js":31,"./ui.js":67,"assert":undefined}],64:[function(require,module,exports){
 "use strict"
 exports.terminalSettingsInit=terminalSettingsInit
 exports.terminalSettingsShow=terminalSettingsShow
+var _require=require("../common/ansi.js"),ansi=_require.ansi,padRight=_require.padRight
 var engine=require("./engine.js")
 var input=require("./input.js")
-var _require=require("./input.js"),KEYS=_require.KEYS
-var _require2=require("./terminal.js"),ansi=_require2.ansi,padRight=_require2.padRight,terminalCreate=_require2.terminalCreate
+var _require2=require("./input.js"),KEYS=_require2.KEYS
+var _require3=require("./terminal.js"),terminalCreate=_require3.terminalCreate
 var settings_terminal
 var base_terminal
 var settings_up=false
@@ -7407,50 +9408,83 @@ settings_terminal.fill({x:1,y:settings_terminal.h-1,w:settings_terminal.w-1,h:1,
 settings_terminal.fill({x:settings_terminal.w-1,y:1,w:1,h:settings_terminal.h-2,ch:"▓"})
 engine.addTickFunc(settingsOverlay)}
 
-},{"./engine.js":13,"./input.js":28,"./terminal.js":53}],55:[function(require,module,exports){
+},{"../common/ansi.js":75,"./engine.js":15,"./input.js":31,"./terminal.js":63}],65:[function(require,module,exports){
 "use strict"
-exports.bind=bind
-exports.bindArray=bindArray
-exports.cmpTextureArray=cmpTextureArray
-exports.cname=cname
-exports.createForCapture=createForCapture
-exports.createForDepthCapture=createForDepthCapture
-exports.defaultFilters=defaultFilters
-exports.findTexForReplacement=findTexForReplacement
-exports.format=void 0
-exports.isArrayBound=isArrayBound
-exports.load=load
-exports.load_count=void 0
-exports.startup=startup
+exports.TEXTURE_FORMAT=exports.GL_REPEAT=exports.GL_CLAMP_TO_EDGE=void 0
+exports.textureBind=textureBind
+exports.textureBindArray=textureBindArray
+exports.textureCmpArray=textureCmpArray
+exports.textureCname=textureCname
+exports.textureCreateForCapture=textureCreateForCapture
+exports.textureCreateForDepthCapture=textureCreateForDepthCapture
+exports.textureDefaultFilters=textureDefaultFilters
+exports.textureDefaultIsNearest=textureDefaultIsNearest
+exports.textureError=textureError
+exports.textureFilterKey=textureFilterKey
+exports.textureFindForReplacement=textureFindForReplacement
+exports.textureGetAll=textureGetAll
+exports.textureIsArrayBound=textureIsArrayBound
+exports.textureLoad=textureLoad
+exports.textureLoadCount=textureLoadCount
+exports.textureResetState=textureResetState
+exports.textureStartup=textureStartup
 exports.textureSupportsDepth=textureSupportsDepth
-exports.textures=void 0
-exports.texturesResetState=texturesResetState
-exports.texturesTick=texturesTick
-exports.texturesUnloadDynamic=texturesUnloadDynamic
-exports.textureLoad=load
-var assert=require("assert")
-var engine=require("./engine.js")
-var _require=require("./filewatch.js"),filewatchOn=_require.filewatchOn
-var local_storage=require("./local_storage.js")
-var settings=require("./settings.js")
-var _require2=require("./shaders.js"),setGLErrorReportDetails=_require2.setGLErrorReportDetails
-var urlhash=require("./urlhash.js")
-var _require3=require("../common/util.js"),callEach=_require3.callEach,isPowerOfTwo=_require3.isPowerOfTwo,nextHighestPowerOfTwo=_require3.nextHighestPowerOfTwo,ridx=_require3.ridx
+exports.textureTick=textureTick
+exports.textureUnloadDynamic=textureUnloadDynamic
+exports.textureWhite=textureWhite
+var GL_REPEAT=10497
+exports.GL_REPEAT=GL_REPEAT
+var GL_CLAMP_TO_EDGE=33071
+exports.GL_CLAMP_TO_EDGE=GL_CLAMP_TO_EDGE
+var TEXTURE_FORMAT={R8:{count:1},RGB8:{count:3},RGBA8:{count:4},DEPTH16:{count:1},DEPTH24:{count:1}}
+exports.TEXTURE_FORMAT=TEXTURE_FORMAT
+var _assert=require("assert")
+var assert=_assert
+var _glovCommonTexpack_common=require("../common/texpack_common")
+var FORMAT_PACK=_glovCommonTexpack_common.FORMAT_PACK
+var FORMAT_PNG=_glovCommonTexpack_common.FORMAT_PNG
+var TEXPACK_MAGIC=_glovCommonTexpack_common.TEXPACK_MAGIC
+var _glovCommonUtil=require("../common/util")
+var callbackify=_glovCommonUtil.callbackify
+var callEach=_glovCommonUtil.callEach
+var isPowerOfTwo=_glovCommonUtil.isPowerOfTwo
+var nextHighestPowerOfTwo=_glovCommonUtil.nextHighestPowerOfTwo
+var ridx=_glovCommonUtil.ridx
+var _glovAsync=require("glov-async")
+var asyncParallel=_glovAsync.asyncParallel
+var asyncSeries=_glovAsync.asyncSeries
+var _engine=require("./engine")
+var engine=_engine
+var _fetch=require("./fetch")
+var fetch=_fetch.fetch
+var _filewatch=require("./filewatch")
+var filewatchOn=_filewatch.filewatchOn
+var _local_storage=require("./local_storage")
+var localStorageGetJSON=_local_storage.localStorageGetJSON
+var localStorageSetJSON=_local_storage.localStorageSetJSON
+var _locate_asset=require("./locate_asset")
+var locateAsset=_locate_asset.locateAsset
+var _settings=require("./settings")
+var settings=_settings
+var _shaders=require("./shaders")
+var shadersSetGLErrorReportDetails=_shaders.shadersSetGLErrorReportDetails
+var _urlhash=require("./urlhash")
+var urlhash=_urlhash
+var _webfs=require("./webfs")
+var webFSExists=_webfs.webFSExists
+var webFSGetFile=_webfs.webFSGetFile
+var floor=Math.floor
 var TEX_UNLOAD_TIME=3e5
 var textures={}
-exports.textures=textures
 var load_count=0
-exports.load_count=load_count
-var aniso=4
+function textureLoadCount(){return load_count}var aniso=4
 var max_aniso=0
 var aniso_enum
 var default_filter_min
 var default_filter_mag
 var cube_faces=[{target:"TEXTURE_CUBE_MAP_NEGATIVE_X",pos:[0,1]},{target:"TEXTURE_CUBE_MAP_POSITIVE_X",pos:[0,0]},{target:"TEXTURE_CUBE_MAP_NEGATIVE_Y",pos:[1,0]},{target:"TEXTURE_CUBE_MAP_POSITIVE_Y",pos:[1,1]},{target:"TEXTURE_CUBE_MAP_NEGATIVE_Z",pos:[2,0]},{target:"TEXTURE_CUBE_MAP_POSITIVE_Z",pos:[2,1]}]
-var format={R8:{count:1},RGB8:{count:3},RGBA8:{count:4},DEPTH16:{count:1},DEPTH24:{count:1}}
-exports.format=format
-function defaultFilters(min,mag){default_filter_min=min
-default_filter_mag=mag}var bound_unit=null
+function textureDefaultFilters(min,mag){default_filter_min=min
+default_filter_mag=mag}function textureDefaultIsNearest(){return default_filter_mag===gl.NEAREST}var bound_unit=null
 var bound_tex=[]
 var handle_loading
 var handle_error
@@ -7460,28 +9494,34 @@ bound_unit=unit}}function bindHandle(unit,target,handle){if(bound_tex[unit]!==ha
 gl.bindTexture(target,handle)
 bound_tex[unit]=handle}}function unbindAll(target){for(var unit=0;unit<bound_tex.length;++unit){setUnit(unit)
 gl.bindTexture(target,target===gl.TEXTURE_2D?handle_loading:null)
-bound_tex[unit]=null}}function bind(unit,tex){tex.last_use=frame_timestamp
-bindHandle(unit,tex.target,tex.eff_handle)}function bindArray(texs){for(var ii=0;ii<texs.length;++ii){var tex=texs[ii]
+bound_tex[unit]=null}}function textureGetAll(){return textures}function textureWhite(){return textures.white}function textureError(){return textures.error}function textureBind(unit,tex){tex.last_use=frame_timestamp
+bindHandle(unit,tex.target,tex.eff_handle)}function textureBindArray(texs){for(var ii=0;ii<texs.length;++ii){var tex=texs[ii]
 tex.last_use=frame_timestamp
 var handle=tex.eff_handle
 if(bound_tex[ii]!==handle){if(ii!==bound_unit){gl.activeTexture(gl.TEXTURE0+ii)
 bound_unit=ii}gl.bindTexture(tex.target,handle)
-bound_tex[ii]=handle}}}function cmpTextureArray(texsa,texsb){var d=texsa.length-texsb.length
+bound_tex[ii]=handle}}}function textureCmpArray(texsa,texsb){var d=texsa.length-texsb.length
 if(d)return d
 for(var ii=0;ii<texsa.length;++ii)if(d=texsa[ii].id-texsb[ii].id)return d
-return 0}function isArrayBound(texs){for(var ii=0;ii<texs.length;++ii){var handle=texs[ii].eff_handle
-if(bound_tex[ii]!==handle)return false}return true}function texturesResetState(){bound_unit=-1
+return 0}function textureIsArrayBound(texs){for(var ii=0;ii<texs.length;++ii){var handle=texs[ii].eff_handle
+if(bound_tex[ii]!==handle)return false}return true}function textureResetState(){bound_unit=-1
 if(engine.webgl2)unbindAll(gl.TEXTURE_2D_ARRAY)
 unbindAll(gl.TEXTURE_2D)
-setUnit(0)}var auto_unload_textures=[]
+setUnit(0)}function textureCname(key){var idx=key.lastIndexOf("/")
+if(-1!==idx)key=key.slice(idx+1)
+if(-1!==(idx=key.indexOf(".")))key=key.slice(0,idx)
+return key.toLowerCase()}var auto_unload_textures=[]
 var last_id=0
 function Texture(params){this.id=++last_id
 this.name=params.name
+this.cname=textureCname(this.name)
 this.loaded=false
 this.load_fail=false
 this.target=params.target||gl.TEXTURE_2D
 this.is_array=this.target===gl.TEXTURE_2D_ARRAY
 this.is_cube=this.target===gl.TEXTURE_CUBE_MAP
+this.packed_mips=Boolean(params.packed_mips)
+if(this.packed_mips)assert(this.is_array)
 this.handle=gl.createTexture()
 this.eff_handle=handle_loading
 this.setSamplerState(params)
@@ -7492,14 +9532,17 @@ this.on_load=[]
 this.gpu_mem=0
 this.soft_error=params.soft_error||false
 this.last_use=frame_timestamp
-this.auto_unload=params.auto_unload||false
+this.auto_unload=params.auto_unload?[]:null
+if("function"===typeof params.auto_unload)this.auto_unload.push(params.auto_unload)
 if(this.auto_unload)auto_unload_textures.push(this)
-this.format=params.format||format.RGBA8
+this.load_filter=params.load_filter||null
+this.format=params.format||TEXTURE_FORMAT.RGBA8
 if(params.data){var err=this.updateData(params.width,params.height,params.data)
-if(err){setGLErrorReportDetails()
+if(err){shadersSetGLErrorReportDetails()
 assert(false,"Error loading "+params.name+": "+err)}}else{unbindAll(this.target)
-if(params.url){this.url=params.url
-this.loadURL(params.url)}}}Texture.prototype.updateGPUMem=function(){var new_size=this.width*this.height*this.format.count
+if(params.url){this.format=TEXTURE_FORMAT.RGBA8
+this.url=params.url
+this.loadURL(params.url,this.load_filter)}}}Texture.prototype.updateGPUMem=function(){var new_size=this.width*this.height*this.format.count
 if(this.mipmaps)new_size*=1.5
 var diff=new_size-this.gpu_mem
 engine.perf_state.gpu_mem.tex+=diff
@@ -7507,7 +9550,7 @@ this.gpu_mem=diff}
 function bindForced(tex){var target=tex.target
 setUnit(0)
 bound_tex[0]=null
-bindHandle(0,target,tex.handle)}Texture.prototype.setSamplerState=function(params){var target=this.target
+bindHandle(0,target,tex.handle)}function textureFilterKey(params){return 77*(77*(77*(77*(params.filter_min||default_filter_min)+(params.filter_mag||default_filter_mag))+(params.wrap_s||gl.REPEAT))+(params.wrap_t||gl.REPEAT))+(params.force_mipmaps?1:0)}Texture.prototype.setSamplerState=function(params){var target=this.target
 bindForced(this)
 this.filter_min=params.filter_min||default_filter_min
 this.filter_mag=params.filter_mag||default_filter_mag
@@ -7520,7 +9563,18 @@ gl.texParameteri(target,gl.TEXTURE_WRAP_T,this.wrap_t)
 this.mipmaps=this.filter_min>=9984&&this.filter_min<=9987||params.force_mipmaps
 if(max_aniso)if(this.mipmaps&&params.filter_mag!==gl.NEAREST)gl.texParameterf(gl.TEXTURE_2D,aniso_enum,aniso)
 else gl.texParameterf(gl.TEXTURE_2D,aniso_enum,1)}
-Texture.prototype.updateData=function updateData(w,h,data){profilerStart("Texture:updateData")
+Texture.prototype.uploadPackedTexArrayWithMips=function uploadPackedTexArrayWithMips(per_mipmap_data,tile_w,num_images,orig_img){var temp_canvas
+var level=0
+var last_w=tile_w
+while(last_w>=1){var img=per_mipmap_data[level]
+assert(img)
+gl.texImage3D(this.target,level,this.format.internal_type,last_w,last_w,num_images,0,this.format.internal_type,this.format.gl_type,0===level?orig_img:img)
+if(gl.getError()){(temp_canvas=temp_canvas||document.createElement("canvas")).width=last_w
+temp_canvas.height=last_w*num_images
+temp_canvas.getContext("2d").drawImage(img,0,0)
+gl.texImage3D(this.target,level,this.format.internal_type,last_w,last_w,num_images,0,this.format.internal_type,this.format.gl_type,temp_canvas)}level++
+last_w=floor(last_w/2)}assert(!per_mipmap_data[level])}
+Texture.prototype.updateData=function updateData(w,h,data,per_mipmap_data){profilerStart("Texture:updateData")
 assert(!this.destroyed)
 bindForced(this)
 this.last_use=frame_timestamp
@@ -7531,12 +9585,14 @@ this.height=h
 for(var ii=0;ii<10&&gl.getError();++ii);var np2=(!isPowerOfTwo(w)||!isPowerOfTwo(h))&&!this.is_array&&!this.is_cube&&!(!this.mipmaps&&this.wrap_s===gl.CLAMP_TO_EDGE&&this.wrap_t===gl.CLAMP_TO_EDGE)
 if(np2){this.width=nextHighestPowerOfTwo(w)
 this.height=nextHighestPowerOfTwo(h)
-gl.texImage2D(this.target,0,this.format.internal_type,this.width,this.height,0,this.format.internal_type,this.format.gl_type,null)}if(data instanceof Uint8Array){assert(data.length>=w*h*this.format.count)
+gl.texImage2D(this.target,0,this.format.internal_type,this.width,this.height,0,this.format.internal_type,this.format.gl_type,null)}if(data instanceof Uint8Array||data instanceof Uint8ClampedArray){assert(!per_mipmap_data)
+assert(data.length>=w*h*this.format.count)
 assert(!this.is_cube)
 if(this.is_array){var num_images=h/w
 gl.texImage3D(this.target,0,this.format.internal_type,w,w,num_images,0,this.format.internal_type,this.format.gl_type,data)}else if(np2)gl.texSubImage2D(this.target,0,0,0,w,h,this.format.internal_type,this.format.gl_type,data)
 else gl.texImage2D(this.target,0,this.format.internal_type,w,h,0,this.format.internal_type,this.format.gl_type,data)}else{if(!data.width){profilerStop()
-return"Missing width ("+data.width+') ("'+String(data).slice(0,100)+'")'}if(this.is_cube){assert.equal(2*w,3*h)
+return"Missing width ("+data.width+') ("'+String(data).slice(0,100)+'")'}if(this.is_cube){assert(!per_mipmap_data)
+assert.equal(2*w,3*h)
 var tex_size=h/2
 var canvas=document.createElement("canvas")
 canvas.width=tex_size
@@ -7544,18 +9600,24 @@ canvas.height=tex_size
 var ctx=canvas.getContext("2d")
 for(var _ii=0;_ii<cube_faces.length;++_ii){var face=cube_faces[_ii]
 ctx.drawImage(data,face.pos[0]*tex_size,face.pos[1]*tex_size,tex_size,tex_size,0,0,tex_size,tex_size)
-gl.texImage2D(gl[face.target],0,this.format.internal_type,this.format.internal_type,this.format.gl_type,canvas)}}else if(this.is_array){var _num_images=h/w
-gl.texImage3D(this.target,0,this.format.internal_type,w,w,_num_images,0,this.format.internal_type,this.format.gl_type,data)
+gl.texImage2D(gl[face.target],0,this.format.internal_type,this.format.internal_type,this.format.gl_type,canvas)}}else if(this.is_array&&per_mipmap_data){var tile_w=per_mipmap_data[0].width
+assert(per_mipmap_data[0].height%tile_w===0)
+var _num_images=per_mipmap_data[0].height/tile_w
+this.uploadPackedTexArrayWithMips(per_mipmap_data,tile_w,_num_images,data)}else if(this.is_array){assert(!per_mipmap_data)
+var _num_images2=h/w
+gl.texImage3D(this.target,0,this.format.internal_type,w,w,_num_images2,0,this.format.internal_type,this.format.gl_type,data)
 if(gl.getError()){var _canvas=document.createElement("canvas")
 _canvas.width=w
 _canvas.height=h
 _canvas.getContext("2d").drawImage(data,0,0)
-gl.texImage3D(this.target,0,this.format.internal_type,w,w,_num_images,0,this.format.internal_type,this.format.gl_type,_canvas)}}else if(np2){if(w!==this.width)gl.texSubImage2D(this.target,0,1,0,this.format.internal_type,this.format.gl_type,data)
+gl.texImage3D(this.target,0,this.format.internal_type,w,w,_num_images2,0,this.format.internal_type,this.format.gl_type,_canvas)}}else if(np2){assert(!per_mipmap_data)
+if(w!==this.width)gl.texSubImage2D(this.target,0,1,0,this.format.internal_type,this.format.gl_type,data)
 if(h!==this.height)gl.texSubImage2D(this.target,0,0,1,this.format.internal_type,this.format.gl_type,data)
-gl.texSubImage2D(this.target,0,0,0,this.format.internal_type,this.format.gl_type,data)}else gl.texImage2D(this.target,0,this.format.internal_type,this.format.internal_type,this.format.gl_type,data)}var err=null
+gl.texSubImage2D(this.target,0,0,0,this.format.internal_type,this.format.gl_type,data)}else{assert(!per_mipmap_data)
+gl.texImage2D(this.target,0,this.format.internal_type,this.format.internal_type,this.format.gl_type,data)}}var err=null
 var gl_err=gl.getError()
 if(gl_err)err="GLError("+gl_err+")"
-if(!err&&this.mipmaps){gl.generateMipmap(this.target)
+if(!err&&this.mipmaps&&!per_mipmap_data){gl.generateMipmap(this.target)
 if(gl_err=gl.getError())err="GLError("+gl_err+")"}if(!err){this.updateGPUMem()
 this.eff_handle=this.handle
 this.loaded=true
@@ -7563,46 +9625,150 @@ callEach(this.on_load,this.on_load=null,this)}profilerStop()
 return err}
 Texture.prototype.onLoad=function(cb){if(this.loaded)cb(this)
 else this.on_load.push(cb)}
-var TEX_RETRY_COUNT=4
+var has_content_security_policy=localStorageGetJSON("has_csp",false)
+document.addEventListener("securitypolicyviolation",function(){localStorageSetJSON("has_csp",true)
+has_content_security_policy=true})
+var createImageBitmap=callbackify(window.createImageBitmap)
+var blob_supported
+function blobSupported(){if(void 0!==blob_supported)return blob_supported
+if("undefined"===typeof window.Blob)return blob_supported=false
+try{var view=new Uint8Array(4)
+var url_object=URL.createObjectURL(new Blob([view],{type:"image/png"}))
+URL.revokeObjectURL(url_object)
+blob_supported=true}catch(e){blob_supported=false}return blob_supported}function removeHash(url){var idx=url.indexOf("#")
+if(-1===idx)return url
+return url.slice(0,idx)}var TEX_RETRY_COUNT=4
 Texture.prototype.loadURL=function loadURL(url,filter){var tex=this
 assert(!tex.destroyed)
-if(!url.match(/^.{2,7}:/))url=""+urlhash.getURLBase()+url
+var tflags
 var load_gen=tex.load_gen=(tex.load_gen||0)+1
 function tryLoad(next){profilerStart("Texture:tryLoad")
+var url_use=url
 var did_next=false
-function done(img){if(!did_next){did_next=true
-return void next(img)}}var img=new Image
-img.onload=function(){profilerStart("Texture:onload")
-done(img)
-profilerStop()}
-function fail(){done(null)}img.onerror=fail
+function done(err,img){profilerStart("Texture:onload")
+if(!did_next){did_next=true
+next(err,img,url_use)}profilerStop()}tflags=0
+if(url_use.includes(":"))url_use=locateAsset(removeHash(url_use))
+var is_external=url_use.includes(":")
+if(!is_external){var ext_idx=url_use.lastIndexOf(".")
+assert(-1!==ext_idx)
+var filename_no_ext=url_use.slice(0,ext_idx)
+var png_name=filename_no_ext+".png"
+var tflag_file=filename_no_ext+".tflag"
+if(webFSExists(tflag_file)){tflags=webFSGetFile(tflag_file,"jsobj")
+assert.equal(typeof tflags,"number")
+if(tflags&FORMAT_PACK)url_use=filename_no_ext+".txp"}if(webFSExists(png_name)&&blobSupported()){assert(!(tflags&FORMAT_PACK))
+var view=webFSGetFile(png_name)
+var url_object=URL.createObjectURL(new Blob([view],{type:"image/png"}))
+var _img=new Image
+_img.onload=function(){URL.revokeObjectURL(url_object)
+done(null,_img)}
+_img.onerror=function(){URL.revokeObjectURL(url_object)
+done("img decode error")}
+_img.src=url_object
+profilerStop()
+return}url_use=locateAsset(removeHash(url_use))
+url_use=""+urlhash.getURLBase()+url_use}if(tflags&FORMAT_PACK){fetch({url:url_use,response_type:"arraybuffer"},done)
+profilerStop()
+return}if(is_external&&blobSupported()&&has_content_security_policy){fetch({url:url_use,response_type:"arraybuffer"},done)
+profilerStop()
+return}var img=new Image
+img.onload=function(){done(null,img)}
+img.onerror=function(){done("error",null)}
 img.crossOrigin="anonymous"
-img.src=url
-profilerStop()}exports.load_count=++load_count
+img.src=url_use
+profilerStop()}function decodeTexturePack(arraybuffer,next){assert(arraybuffer instanceof ArrayBuffer)
+var dv=new DataView(arraybuffer)
+var header_offs=0
+var header=dv.getUint32(header_offs,true)
+header_offs+=4
+if(header!==TEXPACK_MAGIC)return void next("TXP: Invalid header")
+var num_images=dv.getUint32(header_offs,true)
+if(num_images>32)return void next("TXP: Data out of bounds")
+var txp_flags=dv.getUint32(header_offs+=4,true)
+var mipmaps=[]
+var tasks=[]
+function decodeLevelPNG(level,offset,length,next){var img_out=new Image
+if(blobSupported()){var view=new Uint8Array(arraybuffer,offset,length)
+var url_object=URL.createObjectURL(new Blob([view],{type:"image/png"}))
+img_out.onload=function(){URL.revokeObjectURL(url_object)
+mipmaps[level]=img_out
+next()}
+img_out.onerror=function(){URL.revokeObjectURL(url_object)
+next("img load error")}
+img_out.src=url_object}else{img_out.onload=function(){mipmaps[level]=img_out
+next()}
+img_out.onerror=function(){next("img load error")}
+var src_str=["data:image/png;base64,"]
+for(var ii=0;ii<length;){var sublen=Math.min(length-ii,768)
+var _view=new Uint8Array(arraybuffer,offset+ii,sublen)
+src_str.push(btoa(String.fromCharCode.apply(null,_view)))
+ii+=sublen}img_out.src=src_str.join("")}}var data_offs=(header_offs+=4)+4*num_images
+for(var level=0;level<num_images;++level){var len=dv.getUint32(header_offs,true)
+header_offs+=4
+if(txp_flags&FORMAT_PNG)tasks.push(decodeLevelPNG.bind(null,level,data_offs,len))
+else return void next("TXP: Unknown format "+txp_flags)
+data_offs+=len}if(data_offs!==arraybuffer.byteLength)if(data_offs>arraybuffer.byteLength)return void next("TXP: Unexpected end of file ("+data_offs+" > "+arraybuffer.byteLength+")")
+else assert(false,"TXP: Unexpected end of file ("+data_offs+" != "+arraybuffer.byteLength+")")
+asyncSeries(tasks,function(err){next(err,mipmaps[0],mipmaps)})}function decodeFetchedImage(arraybuffer,next){assert(arraybuffer instanceof ArrayBuffer)
+var img_out=new Image
+var view=new Uint8Array(arraybuffer)
+var url_object=URL.createObjectURL(new Blob([view],{type:"image/png"}))
+img_out.onload=function(){URL.revokeObjectURL(url_object)
+next(null,img_out)}
+img_out.onerror=function(){URL.revokeObjectURL(url_object)
+next("img load error")}
+img_out.src=url_object}function prepImage(err,img,next){if(err||!img)return void next(err||"error",img)
+if(tflags&FORMAT_PACK)return void decodeTexturePack(img,next)
+var unpack_mips=tex.is_array&&tex.packed_mips
+if(img instanceof ArrayBuffer){assert(!unpack_mips)
+return void decodeFetchedImage(img,next)}if(filter)img=filter(tex,img)
+if(!unpack_mips)return void next(null,img)
+var mipmaps=[]
+var tasks=[]
+var w=img.width
+var h=img.height
+var tile_w=2*w/3
+assert.equal(floor(tile_w),tile_w)
+var num_images=h/tile_w
+if(engine.defines.ARRAYNOMIP){img.width=tile_w
+img.height=num_images*tile_w
+return void next(null,img)}function getLevel(level,x,y,wh,next){createImageBitmap(img,x,y,wh,wh*num_images,{premultiplyAlpha:"none",colorSpaceConversion:"none"},function(err,result){if(err)return void next(err)
+mipmaps[level]=result
+next()})}var level=0
+var last_w=tile_w
+var next_y=0
+var next_x=0
+while(last_w>=1){tasks.push(getLevel.bind(null,level,next_x,next_y,last_w))
+if(next_x)next_y+=last_w*num_images
+else next_x=last_w
+last_w=floor(last_w/2);++level}asyncParallel(tasks,function(err){next(err,img,mipmaps)})}++load_count
 var retries=0
-function handleLoad(img){if(tex.load_gen!==load_gen||tex.destroyed){exports.load_count=--load_count
-return}var err_details=""
-if(img){tex.format=format.RGBA8
-if(filter)img=filter(tex,img)
-var _err=tex.updateData(img.width,img.height,img)
-if(_err){err_details=": "+_err
-if(tex.is_array&&("GLError(1282)"===_err||"GLError(1281)"===_err)&&engine.webgl2&&!engine.DEBUG){local_storage.setJSON("webgl2_disable",{ua:navigator.userAgent,ts:Date.now()})
-console.error('Error loading array texture "'+url+'"'+err_details+", reloading without WebGL2..")
+function handleLoad(err,img,url_use_debug){if(tex.load_gen!==load_gen||tex.destroyed){--load_count
+return}prepImage(err,img,function(err_prep,img_new,mipmaps){if(tex.load_gen!==load_gen||tex.destroyed){--load_count
+return}img=img_new
+var err_details=""
+if(err_prep)err_details=err_prep
+else if(img){var _err=tex.updateData(img.width,img.height,img,mipmaps)
+if(_err){err_details=String(_err)
+if(tex.is_array&&("GLError(1282)"===_err||"GLError(1281)"===_err)&&engine.webgl2&&!engine.DEBUG){localStorageSetJSON("webgl2_disable",{ua:navigator.userAgent,ts:Date.now()})
+console.error('Error loading array texture "'+url_use_debug+'": '+err_details+", reloading without WebGL2..")
 engine.reloadSafe()
-return}if(!tex.for_reload)retries=TEX_RETRY_COUNT}else{exports.load_count=--load_count
-return}}var err='Error loading texture "'+(url&&url.length>200?url.slice(0,200)+"...":url)+'"'+err_details
-if(++retries>TEX_RETRY_COUNT){exports.load_count=--load_count
+return}if(!tex.for_reload)retries=TEX_RETRY_COUNT}else{--load_count
+return}}var err='Error loading texture "'+(url_use_debug&&url_use_debug.length>200?url_use_debug.slice(0,200)+"...":url_use_debug)+'": '+err_details
+if(++retries>TEX_RETRY_COUNT){--load_count
 tex.eff_handle=handle_error
 tex.load_fail=true
-console.error(err+(err_details?"":", retries failed"))
+console.error(err+": "+err_details+", retries failed")
 if(tex.soft_error)tex.err="Load failed"
-else{setGLErrorReportDetails()
-assert(false,err)}return}console.error(err+", retrying... ")
-setTimeout(tryLoad.bind(null,handleLoad),100*retries*retries)}tryLoad(handleLoad)}
+else{shadersSetGLErrorReportDetails()
+assert(false,err)}return}console.error(err+": "+err_details+", retrying... ")
+setTimeout(tryLoad.bind(null,handleLoad),100*retries*retries)})}tryLoad(handleLoad)}
 Texture.prototype.allocFBO=function(w,h){var fbo_format=settings.fbo_rgba?gl.RGBA:gl.RGB
 bindForced(this)
 gl.texImage2D(this.target,0,fbo_format,w,h,0,fbo_format,gl.UNSIGNED_BYTE,null)
 this.fbo=gl.createFramebuffer()
+assert(this.fbo)
 gl.bindFramebuffer(gl.FRAMEBUFFER,this.fbo)
 gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,this.handle,0)
 this.last_use=frame_timestamp
@@ -7617,7 +9783,9 @@ this.src_height=this.height=h
 this.updateGPUMem()}
 Texture.prototype.captureStart=function(w,h){assert(!this.capture)
 this.capture={w:w,h:h}
-if(this.fbo)gl.bindFramebuffer(gl.FRAMEBUFFER,this.fbo)}
+if(this.fbo)gl.bindFramebuffer(gl.FRAMEBUFFER,this.fbo)
+else{assert(w)
+assert(h)}}
 Texture.prototype.captureEnd=function(filter_linear,wrap){assert(this.capture)
 var capture=this.capture
 this.capture=null
@@ -7647,68 +9815,82 @@ if(this.fbo){gl.bindFramebuffer(gl.FRAMEBUFFER,null)
 gl.deleteFramebuffer(this.fbo)}this.width=this.height=0
 this.updateGPUMem()
 this.destroyed=true
-if("function"===typeof auto_unload)auto_unload()
+if(auto_unload)for(var ii=0;ii<auto_unload.length;++ii)auto_unload[ii]()
 profilerStop("Texture:destroy")}
 function create(params){assert(params.name)
 var texture=new Texture(params)
 return textures[params.name]=texture}var last_temporary_id=0
-function createForCapture(unique_name,auto_unload){var name=unique_name||"screen_temporary_tex_"+ ++last_temporary_id
+function textureCreateForCapture(unique_name,auto_unload){var name=unique_name||"screen_temporary_tex_"+ ++last_temporary_id
 assert(!textures[name])
-var texture=create({filter_min:gl.NEAREST,filter_mag:gl.NEAREST,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,format:format.RGB8,name:name,auto_unload:auto_unload})
+var texture=create({filter_min:gl.NEAREST,filter_mag:gl.NEAREST,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,format:TEXTURE_FORMAT.RGB8,name:name,auto_unload:auto_unload})
 texture.loaded=true
 texture.eff_handle=texture.handle
-return texture}function createForDepthCapture(unique_name,tex_format){var name=unique_name||"screen_temporary_tex_"+ ++last_temporary_id
+return texture}function textureCreateForDepthCapture(unique_name,tex_format){var name=unique_name||"screen_temporary_tex_"+ ++last_temporary_id
 assert(!textures[name])
 var texture=create({filter_min:gl.NEAREST,filter_mag:gl.NEAREST,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,format:tex_format,name:name})
 texture.loaded=true
 texture.eff_handle=texture.handle
-return texture}function load(params){var key=params.name=params.name||params.url
+return texture}function textureLoad(params){var key=params.name=params.name||params.url
 assert(key)
 var tex=textures[key]
 if(!tex)tex=create(params)
-tex.last_use=frame_timestamp
-return tex}function cname(key){var idx=key.lastIndexOf("/")
-if(-1!==idx)key=key.slice(idx+1)
-if(-1!==(idx=key.indexOf(".")))key=key.slice(0,idx)
-return key.toLowerCase()}function findTexForReplacement(search_key){search_key=cname(search_key)
-for(var key in textures)if(cname(key)===search_key)return textures[key]
+else if("function"===typeof params.auto_unload){assert(tex.auto_unload)
+tex.auto_unload.push(params.auto_unload)}tex.last_use=frame_timestamp
+return tex}function textureFindForReplacement(search_key){search_key=textureCname(search_key)
+for(var key in textures)if(textures[key].cname===search_key)return textures[key]
 return null}var tick_next_tex=0
-function texturesTick(){frame_timestamp=engine.frame_timestamp
+function textureTick(){frame_timestamp=engine.frame_timestamp
 var len=auto_unload_textures.length
 if(!len)return
 if(tick_next_tex>=len)tick_next_tex=0
 var tex=auto_unload_textures[tick_next_tex]
 if(tex.last_use<frame_timestamp-TEX_UNLOAD_TIME){console.log("Unloading texture "+tex.name)
-tex.destroy()}else++tick_next_tex}function texturesUnloadDynamic(){while(auto_unload_textures.length)auto_unload_textures[0].destroy()}function textureReload(filename){var tex=textures[filename]
-if(tex&&tex.url){tex.for_reload=true
-tex.loadURL(tex.url+"?rl="+Date.now())
-return true}return false}var depth_supported
-function textureSupportsDepth(){return depth_supported}function startup(){default_filter_min=gl.LINEAR_MIPMAP_LINEAR
+tex.destroy()}else++tick_next_tex}function textureUnloadDynamic(){while(auto_unload_textures.length)auto_unload_textures[0].destroy()}function textureReload(filename){var ret=false
+var cname=textureCname(filename)
+for(var key in textures){var tex=textures[key]
+if(tex.cname===cname&&tex.url){tex.for_reload=true
+tex.loadURL(removeHash(tex.url)+"?rl="+Date.now(),tex.load_filter)
+ret=true}}return ret}var depth_supported
+function textureSupportsDepth(){return depth_supported}function textureStartup(){default_filter_min=gl.LINEAR_MIPMAP_LINEAR
 default_filter_mag=gl.LINEAR
-format.R8.internal_type=gl.LUMINANCE
-format.R8.gl_type=gl.UNSIGNED_BYTE
-format.RGB8.internal_type=gl.RGB
-format.RGB8.gl_type=gl.UNSIGNED_BYTE
-format.RGBA8.internal_type=gl.RGBA
-format.RGBA8.gl_type=gl.UNSIGNED_BYTE
+TEXTURE_FORMAT.R8.internal_type=gl.LUMINANCE
+TEXTURE_FORMAT.R8.gl_type=gl.UNSIGNED_BYTE
+TEXTURE_FORMAT.RGB8.internal_type=gl.RGB
+TEXTURE_FORMAT.RGB8.gl_type=gl.UNSIGNED_BYTE
+TEXTURE_FORMAT.RGBA8.internal_type=gl.RGBA
+TEXTURE_FORMAT.RGBA8.gl_type=gl.UNSIGNED_BYTE
 var UNSIGNED_INT_24_8
 if(engine.webgl2){depth_supported=true
 UNSIGNED_INT_24_8=gl.UNSIGNED_INT_24_8}else{var ext=gl.getExtension("WEBGL_depth_texture")
 if(ext){UNSIGNED_INT_24_8=ext.UNSIGNED_INT_24_8_WEBGL
-depth_supported=true}}if(depth_supported){format.DEPTH16.internal_type=engine.webgl2?gl.DEPTH_COMPONENT16:gl.DEPTH_COMPONENT
-format.DEPTH16.format=gl.DEPTH_COMPONENT
-format.DEPTH16.gl_type=gl.UNSIGNED_SHORT
-format.DEPTH24.internal_type=engine.webgl2?gl.DEPTH24_STENCIL8:gl.DEPTH_STENCIL
-format.DEPTH24.format=gl.DEPTH_STENCIL
-format.DEPTH24.gl_type=UNSIGNED_INT_24_8}var ext_anisotropic=gl.getExtension("EXT_texture_filter_anisotropic")||gl.getExtension("MOZ_EXT_texture_filter_anisotropic")||gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic")
+depth_supported=true}}if(depth_supported){TEXTURE_FORMAT.DEPTH16.internal_type=engine.webgl2?gl.DEPTH_COMPONENT16:gl.DEPTH_COMPONENT
+TEXTURE_FORMAT.DEPTH16.format=gl.DEPTH_COMPONENT
+TEXTURE_FORMAT.DEPTH16.gl_type=gl.UNSIGNED_SHORT
+TEXTURE_FORMAT.DEPTH24.internal_type=engine.webgl2?gl.DEPTH24_STENCIL8:gl.DEPTH_STENCIL
+TEXTURE_FORMAT.DEPTH24.format=gl.DEPTH_STENCIL
+TEXTURE_FORMAT.DEPTH24.gl_type=UNSIGNED_INT_24_8}var ext_anisotropic=gl.getExtension("EXT_texture_filter_anisotropic")||gl.getExtension("MOZ_EXT_texture_filter_anisotropic")||gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic")
 if(ext_anisotropic){aniso_enum=ext_anisotropic.TEXTURE_MAX_ANISOTROPY_EXT
-aniso=max_aniso=gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT)}handle_error=load({name:"error",width:2,height:2,nozoom:true,format:format.RGBA8,filter_mag:gl.NEAREST,data:new Uint8Array([255,20,147,255,255,0,0,255,255,255,255,255,255,20,147,255])}).handle
-handle_loading=load({name:"loading",width:2,height:2,nozoom:true,format:format.RGBA8,data:new Uint8Array([127,127,127,255,0,0,0,255,64,64,64,255,127,127,127,255])}).handle
-load({name:"white",width:2,height:2,nozoom:true,format:format.RGBA8,data:new Uint8Array([255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255])})
-load({name:"invisible",width:2,height:2,nozoom:true,format:format.RGBA8,data:new Uint8Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])})
-filewatchOn(".png",textureReload)}
+aniso=max_aniso=gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT)}handle_error=textureLoad({name:"error",width:2,height:2,nozoom:true,format:TEXTURE_FORMAT.RGBA8,filter_mag:gl.NEAREST,data:new Uint8Array([255,20,147,255,255,0,0,255,255,255,255,255,255,20,147,255])}).handle
+handle_loading=textureLoad({name:"loading",width:2,height:2,nozoom:true,format:TEXTURE_FORMAT.RGBA8,data:new Uint8Array([127,127,127,255,0,0,0,255,64,64,64,255,127,127,127,255])}).handle
+textureLoad({name:"white",width:2,height:2,nozoom:true,format:TEXTURE_FORMAT.RGBA8,data:new Uint8Array([255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255])})
+textureLoad({name:"invisible",width:2,height:2,nozoom:true,format:TEXTURE_FORMAT.RGBA8,data:new Uint8Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])})
+filewatchOn(".png",textureReload)
+filewatchOn(".jpg",textureReload)
+filewatchOn(".txp",textureReload)}exports.format=TEXTURE_FORMAT
+exports.defaultFilters=textureDefaultFilters
+exports.texturesUnloadDynamic=textureUnloadDynamic
+exports.bind=textureBind
+exports.bindArray=textureBindArray
+exports.load=textureLoad
+exports.cmpTextureArray=textureCmpArray
+exports.isArrayBound=textureIsArrayBound
+exports.createForCapture=textureCreateForCapture
+exports.createForDepthCapture=textureCreateForDepthCapture
+exports.cname=textureCname
+exports.findTexForReplacement=textureFindForReplacement
+exports.textures=textures
 
-},{"../common/util.js":74,"./engine.js":13,"./filewatch.js":18,"./local_storage.js":31,"./settings.js":44,"./shaders.js":46,"./urlhash.js":58,"assert":undefined}],56:[function(require,module,exports){
+},{"../common/texpack_common":91,"../common/util":93,"./engine":15,"./fetch":20,"./filewatch":21,"./local_storage":35,"./locate_asset":37,"./settings":53,"./shaders":55,"./urlhash":69,"./webfs":71,"assert":undefined,"glov-async":undefined}],66:[function(require,module,exports){
 "use strict"
 exports.REMOVE=exports.IMMEDIATE=exports.CONTINUE=void 0
 exports.active=active
@@ -7718,19 +9900,45 @@ exports.queue=queue
 exports.randomTransition=randomTransition
 exports.render=render
 exports.splitScreen=splitScreen
+exports.wipe=wipe
 var assert=require("assert")
-var camera2d=require("./camera2d.js")
-var glov_engine=require("./engine.js")
-var _require=require("./effects.js"),applyCopy=_require.applyCopy,effectsQueue=_require.effectsQueue,effectsIsFinal=_require.effectsIsFinal
-var _require2=require("./framebuffer.js"),framebufferCapture=_require2.framebufferCapture,framebufferStart=_require2.framebufferStart,framebufferEnd=_require2.framebufferEnd,temporaryTextureClaim=_require2.temporaryTextureClaim
-var floor=Math.floor,min=Math.min,pow=Math.pow,random=Math.random
-var sprites=require("./sprites.js")
-var shaders=require("./shaders.js")
-var textures=require("./textures.js")
-var glov_ui=require("./ui.js")
-var _require3=require("../common/util.js"),easeOut=_require3.easeOut
-var _require4=require("../common/vmath.js"),unit_vec=_require4.unit_vec,vec4=_require4.vec4
-var verify=require("../common/verify.js")
+var _glovCommonUtil=require("../common/util")
+var easeOut=_glovCommonUtil.easeOut
+var lerp=_glovCommonUtil.lerp
+var _glovCommonVerify=require("../common/verify")
+var verify=_glovCommonVerify
+var _glovCommonVmath=require("../common/vmath")
+var unit_vec=_glovCommonVmath.unit_vec
+var vec4=_glovCommonVmath.vec4
+var _camera2d=require("./camera2d")
+var camera2d=_camera2d
+var _effects=require("./effects")
+var applyCopy=_effects.applyCopy
+var effectsIsFinal=_effects.effectsIsFinal
+var effectsQueue=_effects.effectsQueue
+var _engine=require("./engine")
+var glov_engine=_engine
+var _engine2=require("./engine")
+var isOutOfTick=_engine2.isOutOfTick
+var _framebuffer=require("./framebuffer")
+var framebufferCapture=_framebuffer.framebufferCapture
+var framebufferEnd=_framebuffer.framebufferEnd
+var framebufferStart=_framebuffer.framebufferStart
+var temporaryTextureClaim=_framebuffer.temporaryTextureClaim
+var _shaders=require("./shaders")
+var shaderCreate=_shaders.shaderCreate
+var _sprites=require("./sprites")
+var spriteQueueRaw=_sprites.spriteQueueRaw
+var spriteQueueRaw4=_sprites.spriteQueueRaw4
+var spriteQueueRaw4Color=_sprites.spriteQueueRaw4Color
+var _textures=require("./textures")
+var textureCreateForCapture=_textures.textureCreateForCapture
+var _ui=require("./ui")
+var glov_ui=_ui
+var PI=Math.PI,abs=Math.abs,cos=Math.cos,floor=Math.floor,min=Math.min,pow=Math.pow,random=Math.random,sin=Math.sin,sqrt=Math.sqrt
+var SQRT1_2=sqrt(.5)
+var PI_4=PI/4
+var PI_2=PI/2
 var transitions=[]
 var IMMEDIATE="immediate"
 exports.IMMEDIATE=IMMEDIATE
@@ -7740,21 +9948,23 @@ var CONTINUE="continue"
 exports.CONTINUE=CONTINUE
 var shader_data={transition_pixelate:{fp:"shaders/transition_pixelate.fp"}}
 function getShader(key){var elem=shader_data[key]
-if(!elem.shader)elem.shader=shaders.create(elem.fp)
+if(!elem.shader)elem.shader=shaderCreate(elem.fp)
 return elem.shader}function GlovTransition(z,func){this.z=z
 this.capture=null
 this.func=func
 this.accum_time=0}function transitionCapture(trans){assert(!trans.capture)
-trans.capture=textures.createForCapture()
+trans.capture=textureCreateForCapture()
 framebufferCapture(trans.capture)}function transitionCaptureFramebuffer(trans){assert(!trans.capture)
 trans.capture=framebufferEnd()
 temporaryTextureClaim(trans.capture)
 if(trans.capture.fbo)applyCopy({source:trans.capture,final:effectsIsFinal()})
-else framebufferStart({width:trans.capture.width,height:trans.capture.height,final:effectsIsFinal()})}function queue(z,fn){assert(!glov_engine.had_3d_this_frame)
+else framebufferStart({width:trans.capture.width,height:trans.capture.height,final:effectsIsFinal()})}function queue(z,fn,ignore_duplicate){assert(!glov_engine.had_3d_this_frame)
 var immediate=false
 if(z===IMMEDIATE){immediate=true
-z=Z.TRANSITION_FINAL}for(var ii=0;ii<transitions.length;++ii){var _trans=transitions[ii]
-if(_trans.z===z)if(!verify(_trans.capture))return false}var trans=new GlovTransition(z,fn)
+z=Z.TRANSITION_FINAL}else assert(!isOutOfTick())
+for(var ii=0;ii<transitions.length;++ii){var _trans=transitions[ii]
+if(_trans.z===z)if(!_trans.capture){if(!ignore_duplicate)verify(_trans.capture)
+return false}}var trans=new GlovTransition(z,fn)
 transitions.push(trans)
 if(immediate)transitionCapture(trans)
 else effectsQueue(z+Z.TRANSITION_RANGE,transitionCaptureFramebuffer.bind(null,trans))
@@ -7771,7 +9981,45 @@ trans_idx--}}}function active(){return transitions.length}function glovTransitio
 var alpha=1-easeOut(progress,2)
 var color=vec4(1,1,1,alpha)
 camera2d.setNormalized()
-sprites.queueraw4([initial],0,0,0,1,1,1,1,0,z,0,1,1,0,color)
+spriteQueueRaw4([initial],0,0,0,1,1,1,1,0,z,0,1,1,0,color)
+if(force_end||1===progress)return REMOVE
+return CONTINUE}function glovTransitionWipeFunc(wipe_time,wipe_angle,z,tex,ms_since_start,force_end){var progress=min(ms_since_start/wipe_time,1)
+camera2d.setNormalized()
+var uvs=[[0,1],[1,0]]
+var points=[{},{},{},{}]
+for(var ii=0;ii<4;ii++){var x=1===ii||2===ii?1:0
+var y=ii>=2?1:0
+points[ii].x=x
+points[ii].y=y}wipe_angle-=PI/2
+while(wipe_angle>PI)wipe_angle-=2*PI
+while(wipe_angle<-PI)wipe_angle+=2*PI
+if(wipe_angle>=-PI_4&&wipe_angle<=PI_4){var x0=2*progress
+var x1=x0-sin(abs(wipe_angle))/SQRT1_2
+if(wipe_angle<0){points[0].x=x1
+points[3].x=x0}else{points[0].x=x0
+points[3].x=x1}points[1].x=points[2].x=2}else if(wipe_angle>=PI_2+PI_4||wipe_angle<=-PI_2-PI_4){var _x=1-2*progress
+var _x2=_x+sin(abs(wipe_angle))/SQRT1_2
+if(wipe_angle<0){points[1].x=_x2
+points[2].x=_x}else{points[1].x=_x
+points[2].x=_x2}points[0].x=points[3].x=-1}else if(wipe_angle>PI_4&&wipe_angle<=PI_2+PI_4){var y0=2*progress
+var offs=cos(wipe_angle)/SQRT1_2
+var y1=y0-abs(offs)
+if(offs>0){points[0].y=y0
+points[1].y=y1}else{points[0].y=y1
+points[1].y=y0}points[2].y=points[3].y=2}else{var _y=1-2*progress
+var _offs=cos(wipe_angle)/SQRT1_2
+var _y2=_y+abs(_offs)
+if(_offs>0){points[2].y=_y2
+points[3].y=_y}else{points[2].y=_y
+points[3].y=_y2}points[0].y=points[1].y=-1}points[0].u=lerp(points[0].x,uvs[0][0],uvs[1][0])
+points[1].u=lerp(points[1].x,uvs[0][0],uvs[1][0])
+points[2].u=lerp(points[2].x,uvs[0][0],uvs[1][0])
+points[3].u=lerp(points[3].x,uvs[0][0],uvs[1][0])
+points[0].v=lerp(points[0].y,uvs[0][1],uvs[1][1])
+points[1].v=lerp(points[1].y,uvs[0][1],uvs[1][1])
+points[2].v=lerp(points[2].y,uvs[0][1],uvs[1][1])
+points[3].v=lerp(points[3].y,uvs[0][1],uvs[1][1])
+spriteQueueRaw4Color([tex],points[0].x,points[0].y,unit_vec,points[0].u,points[0].v,points[3].x,points[3].y,unit_vec,points[3].u,points[3].v,points[2].x,points[2].y,unit_vec,points[2].u,points[2].v,points[1].x,points[1].y,unit_vec,points[1].u,points[1].v,z)
 if(force_end||1===progress)return REMOVE
 return CONTINUE}function glovTransitionSplitScreenFunc(time,border_width,slide_window,z,tex,ms_since_start,force_end){var border_color=vec4(1,1,1,1)
 var progress=easeOut(min(ms_since_start/time,1),2)
@@ -7779,9 +10027,9 @@ camera2d.setNormalized()
 var uvs=[[0,1],[1,0]]
 var xoffs=progress
 var v_half=uvs[0][1]+(uvs[1][1]-uvs[0][1])/2
-if(slide_window){sprites.queueraw([tex],0,0,z,1-xoffs,.5,0,uvs[0][1],uvs[1][0]*(1-progress),v_half,unit_vec)
-sprites.queueraw([tex],0+xoffs,.5,z,1-xoffs,.5,uvs[1][0]*progress,v_half,uvs[1][0],uvs[1][1],unit_vec)}else{sprites.queueraw([tex],0-xoffs,0,z,1,.5,uvs[0][0],uvs[0][1],uvs[1][0],v_half,unit_vec)
-sprites.queueraw([tex],0+xoffs,.5,z,1,.5,uvs[0][0],v_half,uvs[1][0],uvs[1][1],unit_vec)}var border_grow_progress=min(4*progress,1)
+if(slide_window){spriteQueueRaw([tex],0,0,z,1-xoffs,.5,0,uvs[0][1],uvs[1][0]*(1-progress),v_half,unit_vec)
+spriteQueueRaw([tex],0+xoffs,.5,z,1-xoffs,.5,uvs[1][0]*progress,v_half,uvs[1][0],uvs[1][1],unit_vec)}else{spriteQueueRaw([tex],0-xoffs,0,z,1,.5,uvs[0][0],uvs[0][1],uvs[1][0],v_half,unit_vec)
+spriteQueueRaw([tex],0+xoffs,.5,z,1,.5,uvs[0][0],v_half,uvs[1][0],uvs[1][1],unit_vec)}var border_grow_progress=min(4*progress,1)
 border_color[3]=border_grow_progress
 glov_ui.drawRect(0,.5-(border_width*=border_grow_progress),1-xoffs,.5,z+1,border_color)
 glov_ui.drawRect(1-xoffs-border_width,0,1-xoffs,.5,z+1,border_color)
@@ -7800,33 +10048,41 @@ if(progress>.5)effectsQueue(z,transitionPixelateCapture)
 var pixel_scale=pow(2,floor(8.9*(2*(progress>.5?1-progress:progress))))/1024*gd_width*render_scale
 var param0=vec4(tex.width/pixel_scale,tex.height/pixel_scale,pixel_scale/tex.width,pixel_scale/tex.height)
 var param1=vec4(.5/tex.width,.5/tex.height,(tex.texSizeX-1)/tex.width,(tex.texSizeY-1)/tex.height)
-sprites.queueraw(transition_pixelate_textures,0,0,z+1,1,1,0,1,1,0,unit_vec,getShader("transition_pixelate"),{param0:param0,param1:param1})
+spriteQueueRaw(transition_pixelate_textures,0,0,z+1,1,1,0,1,1,0,unit_vec,getShader("transition_pixelate"),{param0:param0,param1:param1})
 if(force_end||1===progress)return REMOVE
-return CONTINUE}function fade(fade_time){return glovTransitionFadeFunc.bind(null,fade_time)}function splitScreen(time,border_width,slide_window){border_width/=camera2d.w()
+return CONTINUE}function fade(fade_time){return glovTransitionFadeFunc.bind(null,fade_time)}function wipe(wipe_time,wipe_angle){return glovTransitionWipeFunc.bind(null,wipe_time,wipe_angle)}function splitScreen(time,border_width,slide_window){border_width/=camera2d.w()
 return glovTransitionSplitScreenFunc.bind(null,time,border_width,slide_window)}function pixelate(fade_time){return glovTransitionPixelateFunc.bind(null,fade_time)}function randomTransition(fade_time_scale){fade_time_scale=fade_time_scale||1
 switch(floor(3*random())){case 0:return fade(500*fade_time_scale)
 case 1:return splitScreen(250*fade_time_scale,2,false)
 case 2:return pixelate(750*fade_time_scale)
+case 3:return wipe(250*fade_time_scale,2*random()*PI)
 default:assert(0)}return null}
 
-},{"../common/util.js":74,"../common/verify.js":75,"../common/vmath.js":76,"./camera2d.js":7,"./effects.js":12,"./engine.js":13,"./framebuffer.js":20,"./shaders.js":46,"./sprites.js":51,"./textures.js":55,"./ui.js":57,"assert":undefined}],57:[function(require,module,exports){
+},{"../common/util":93,"../common/verify":94,"../common/vmath":95,"./camera2d":9,"./effects":14,"./engine":15,"./framebuffer":23,"./shaders":55,"./sprites":61,"./textures":65,"./ui":67,"assert":undefined}],67:[function(require,module,exports){
 "use strict"
-exports.Z_MIN_INC=exports.Z=exports.LINE_CAP_SQUARE=exports.LINE_CAP_ROUND=exports.LINE_ALIGN=void 0
+exports.Z_MIN_INC=exports.Z=exports.LINE_NO_AA=exports.LINE_CAP_SQUARE=exports.LINE_CAP_ROUND=exports.LINE_ALIGN=void 0
 exports.addHook=addHook
 exports.button=button
 exports.buttonBackgroundDraw=buttonBackgroundDraw
 exports.buttonImage=buttonImage
+exports.buttonLastSpotRet=buttonLastSpotRet
+exports.buttonSetDefaultYOffs=buttonSetDefaultYOffs
 exports.buttonShared=buttonShared
 exports.buttonSpotBackgroundDraw=buttonSpotBackgroundDraw
 exports.buttonText=buttonText
 exports.buttonTextDraw=buttonTextDraw
 exports.buttonWasFocused=buttonWasFocused
-exports.button_width=exports.button_mouseover=exports.button_last_color=exports.button_img_size=exports.button_height=exports.button_focused=exports.button_click=void 0
+exports.button_mouseover=exports.button_last_spot_ret=exports.button_last_color=exports.button_focused=exports.button_click=void 0
+exports.checkbox=checkbox
+exports.colorSetGetField=colorSetGetField
+exports.colorSetMakeCustom=colorSetMakeCustom
 exports.colorSetSetShades=colorSetSetShades
-exports.color_panel=exports.color_button=void 0
+exports.color_panel=void 0
 exports.copyTextToClipboard=copyTextToClipboard
 exports.createEditBox=createEditBox
+exports.draw9Patch=draw9Patch
 exports.drawBox=drawBox
+exports.drawBoxTiled=drawBoxTiled
 exports.drawCircle=drawCircle
 exports.drawCone=drawCone
 exports.drawElipse=drawElipse
@@ -7843,7 +10099,7 @@ exports.drawTooltip=drawTooltip
 exports.drawTooltipBox=drawTooltipBox
 exports.drawVBox=drawVBox
 exports.focusCanvas=focusCanvas
-exports.font_height=exports.font=void 0
+exports.font=void 0
 exports.getUIElemData=getUIElemData
 exports.internal=void 0
 exports.isMenuUp=isMenuUp
@@ -7851,6 +10107,7 @@ exports.label=label
 exports.loadUISprite=loadUISprite
 exports.loadUISprite2=loadUISprite2
 exports.makeColorSet=makeColorSet
+exports.menuFadeParamsSetDefault=menuFadeParamsSetDefault
 exports.menuUp=menuUp
 exports.menu_up=void 0
 exports.modalDialog=modalDialog
@@ -7864,25 +10121,39 @@ exports.print=print
 exports.progressBar=progressBar
 exports.provideUserString=provideUserString
 exports.scaleSizes=scaleSizes
+exports.setButtonHeight=setButtonHeight
 exports.setButtonsDefaultLabels=setButtonsDefaultLabels
 exports.setFontHeight=setFontHeight
 exports.setFontStyles=setFontStyles
 exports.setModalSizes=setModalSizes
 exports.setPanelPixelScale=setPanelPixelScale
 exports.setProvideUserStringDefaultMessages=setProvideUserStringDefaultMessages
+exports.setTooltipTextOffset=setTooltipTextOffset
 exports.setTooltipWidth=setTooltipWidth
 exports.sprites=void 0
 exports.suppressNewDOMElemWarnings=suppressNewDOMElemWarnings
 exports.tooltip_width=exports.tooltip_panel_pixel_scale=exports.tooltip_pad=exports.title_font=void 0
 exports.uiBindSounds=uiBindSounds
+exports.uiButtonHeight=uiButtonHeight
+exports.uiButtonWidth=uiButtonWidth
 exports.uiFontStyleDisabled=uiFontStyleDisabled
 exports.uiFontStyleFocused=uiFontStyleFocused
 exports.uiFontStyleModal=uiFontStyleModal
 exports.uiFontStyleNormal=uiFontStyleNormal
+exports.uiGetButtonRolloverColor=uiGetButtonRolloverColor
 exports.uiGetDOMElem=uiGetDOMElem
+exports.uiGetDOMTabIndex=uiGetDOMTabIndex
+exports.uiGetFont=uiGetFont
 exports.uiGetFontStyleFocused=uiGetFontStyleFocused
+exports.uiGetPanelColor=uiGetPanelColor
+exports.uiGetTitleFont=uiGetTitleFont
+exports.uiGetTooltipPad=uiGetTooltipPad
+exports.uiGetTooltipPanelPixelScale=uiGetTooltipPanelPixelScale
 exports.uiHandlingNav=uiHandlingNav
+exports.uiSetButtonColorSet=uiSetButtonColorSet
 exports.uiSetFontStyleFocused=uiSetFontStyleFocused
+exports.uiSetPanelColor=uiSetPanelColor
+exports.uiTextHeight=uiTextHeight
 var _SPOT_STATE_TO_UI_BUT
 function _extends(){return(_extends=Object.assign?Object.assign.bind():function(target){for(var i=1;i<arguments.length;i++){var source=arguments[i]
 for(var key in source)if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key]}return target}).apply(this,arguments)}window.Z=window.Z||{}
@@ -7904,30 +10175,36 @@ var LINE_CAP_SQUARE=2
 exports.LINE_CAP_SQUARE=LINE_CAP_SQUARE
 var LINE_CAP_ROUND=4
 exports.LINE_CAP_ROUND=LINE_CAP_ROUND
-var internal={checkHooks:checkHooks,cleanupDOMElems:cleanupDOMElems,uiEndFrame:uiEndFrame,uiSetFonts:uiSetFonts,uiStartup:uiStartup,uiTick:uiTick}
+var LINE_NO_AA=8
+exports.LINE_NO_AA=LINE_NO_AA
+var internal={checkHooks:checkHooks,cleanupDOMElems:cleanupDOMElems,uiEndFrame:uiEndFrame,uiSetFonts:uiSetFonts,uiStartup:uiStartup,uiTick:uiTick,uiApplyStyle:uiApplyStyle}
 exports.internal=internal
+var sprites={}
+exports.sprites=sprites
 var assert=require("assert")
+var _require=require("./autoatlas"),autoAtlas=_require.autoAtlas
 var camera2d=require("./camera2d.js")
-var _require=require("./edit_box.js"),editBoxCreate=_require.editBoxCreate,editBoxTick=_require.editBoxTick
+var _require2=require("./edit_box.js"),editBoxCreate=_require2.editBoxCreate,editBoxTick=_require2.editBoxTick
 var effects=require("./effects.js")
 var effectsQueue=effects.effectsQueue
 var glov_engine=require("./engine.js")
 var glov_font=require("./font.js")
-var fontSetDefaultSize=glov_font.fontSetDefaultSize,fontStyle=glov_font.fontStyle,fontStyleColored=glov_font.fontStyleColored
+var ALIGN=glov_font.ALIGN,fontSetDefaultSize=glov_font.fontSetDefaultSize,fontStyle=glov_font.fontStyle,fontStyleColored=glov_font.fontStyleColored
 var glov_input=require("./input.js")
-var _require2=require("./link.js"),linkTick=_require2.linkTick
-var _require3=require("./localization.js"),getStringFromLocalizable=_require3.getStringFromLocalizable
-var abs=Math.abs,floor=Math.floor,max=Math.max,min=Math.min,round=Math.round,sqrt=Math.sqrt
-var _require4=require("./scroll_area.js"),scrollAreaSetPixelScale=_require4.scrollAreaSetPixelScale
-var _require5=require("./slider.js"),sliderSetDefaultShrink=_require5.sliderSetDefaultShrink
-var _require6=require("./sound.js"),soundLoad=_require6.soundLoad,soundPlay=_require6.soundPlay
-var _require7=require("./spot.js"),SPOT_DEFAULT_BUTTON=_require7.SPOT_DEFAULT_BUTTON,SPOT_DEFAULT_BUTTON_DRAW_ONLY=_require7.SPOT_DEFAULT_BUTTON_DRAW_ONLY,SPOT_DEFAULT_LABEL=_require7.SPOT_DEFAULT_LABEL,SPOT_STATE_REGULAR=_require7.SPOT_STATE_REGULAR,SPOT_STATE_DOWN=_require7.SPOT_STATE_DOWN,SPOT_STATE_FOCUSED=_require7.SPOT_STATE_FOCUSED,SPOT_STATE_DISABLED=_require7.SPOT_STATE_DISABLED,spot=_require7.spot,spotEndOfFrame=_require7.spotEndOfFrame,spotKey=_require7.spotKey,spotPadMode=_require7.spotPadMode,spotPadSuppressed=_require7.spotPadSuppressed,spotTopOfFrame=_require7.spotTopOfFrame,spotUnfocus=_require7.spotUnfocus
-var glov_sprites=require("./sprites.js")
-var BLEND_PREMULALPHA=glov_sprites.BLEND_PREMULALPHA,spriteClipped=glov_sprites.spriteClipped,spriteClipPause=glov_sprites.spriteClipPause,spriteClipResume=glov_sprites.spriteClipResume,spriteChainedStart=glov_sprites.spriteChainedStart,spriteChainedStop=glov_sprites.spriteChainedStop,spriteCreate=glov_sprites.spriteCreate
-var textures=require("./textures.js")
-var _require8=require("../common/util.js"),clamp=_require8.clamp,clone=_require8.clone,defaults=_require8.defaults,deprecate=_require8.deprecate,lerp=_require8.lerp,merge=_require8.merge
-var _require9=require("./mat43.js"),mat43=_require9.mat43,m43identity=_require9.m43identity,m43mul=_require9.m43mul
-var _require10=require("../common/vmath.js"),vec2=_require10.vec2,vec4=_require10.vec4,v3scale=_require10.v3scale,unit_vec=_require10.unit_vec
+var _require3=require("./link.js"),linkTick=_require3.linkTick,linkObscureRect=_require3.linkObscureRect
+var _require4=require("./localization.js"),getStringFromLocalizable=_require4.getStringFromLocalizable
+var _require5=require("./markdown"),markdownAuto=_require5.markdownAuto
+var abs=Math.abs,ceil=Math.ceil,floor=Math.floor,max=Math.max,min=Math.min,round=Math.round,sqrt=Math.sqrt
+var _require6=require("./scroll_area.js"),scrollAreaSetPixelScale=_require6.scrollAreaSetPixelScale
+var _require7=require("./slider.js"),sliderSetDefaultShrink=_require7.sliderSetDefaultShrink
+var _require8=require("./sound.js"),soundLoad=_require8.soundLoad,soundPlay=_require8.soundPlay
+var _require9=require("./spot.js"),SPOT_DEFAULT_BUTTON=_require9.SPOT_DEFAULT_BUTTON,SPOT_DEFAULT_BUTTON_DRAW_ONLY=_require9.SPOT_DEFAULT_BUTTON_DRAW_ONLY,SPOT_DEFAULT_LABEL=_require9.SPOT_DEFAULT_LABEL,SPOT_STATE_REGULAR=_require9.SPOT_STATE_REGULAR,SPOT_STATE_DOWN=_require9.SPOT_STATE_DOWN,SPOT_STATE_FOCUSED=_require9.SPOT_STATE_FOCUSED,SPOT_STATE_DISABLED=_require9.SPOT_STATE_DISABLED,spot=_require9.spot,spotEndOfFrame=_require9.spotEndOfFrame,spotKey=_require9.spotKey,spotPadMode=_require9.spotPadMode,spotPadSuppressed=_require9.spotPadSuppressed,spotTopOfFrame=_require9.spotTopOfFrame,spotUnfocus=_require9.spotUnfocus
+var _require0=require("./sprites.js"),BLEND_ADDITIVE=_require0.BLEND_ADDITIVE,BLEND_PREMULALPHA=_require0.BLEND_PREMULALPHA,spriteClipped=_require0.spriteClipped,spriteClipPause=_require0.spriteClipPause,spriteClipResume=_require0.spriteClipResume,spriteChainedStart=_require0.spriteChainedStart,spriteChainedStop=_require0.spriteChainedStop,spriteCreate=_require0.spriteCreate,spriteQueueRaw=_require0.spriteQueueRaw,spriteQueueRaw4=_require0.spriteQueueRaw4
+var _require1=require("./textures.js"),TEXTURE_FORMAT=_require1.TEXTURE_FORMAT
+var _require10=require("./uistyle.js"),uiStyleDefault=_require10.uiStyleDefault,uiStyleModify=_require10.uiStyleModify,uiStyleTopOfFrame=_require10.uiStyleTopOfFrame
+var _require11=require("../common/util.js"),clamp=_require11.clamp,clone=_require11.clone,defaults=_require11.defaults,deprecate=_require11.deprecate,lerp=_require11.lerp,merge=_require11.merge,sign=_require11.sign
+var _require12=require("./mat43.js"),mat43=_require12.mat43,m43identity=_require12.m43identity,m43mul=_require12.m43mul
+var _require13=require("../common/vmath.js"),vec2=_require13.vec2,vec4=_require13.vec4,v4copy=_require13.v4copy,v3scale=_require13.v3scale,unit_vec=_require13.unit_vec
 deprecate(exports,"slider_dragging","slider.js:sliderIsDragging()")
 deprecate(exports,"slider_rollover","slider.js:sliderIsFocused()")
 deprecate(exports,"setSliderDefaultShrink","slider.js:sliderSetDefaultShrink()")
@@ -7936,11 +10213,13 @@ deprecate(exports,"bindSounds","uiBindSounds")
 deprecate(exports,"modal_font_style","uiFontStyleModal()")
 deprecate(exports,"font_style_noraml","uiFontStyleNoraml()")
 deprecate(exports,"font_style_focused","uiFontStyleFocused()")
+deprecate(exports,"color_button","uiSetButtonColorSet()")
 var MODAL_DARKEN=.75
 var KEYS
 var PAD
+var ui_style_current
 var menu_fade_params_default={blur:[.125,.865],saturation:[.5,.1],brightness:[1,1-MODAL_DARKEN],fallback_darken:vec4(0,0,0,MODAL_DARKEN),z:Z.MODAL}
-var color_set_shades=vec4(1,1,1,1)
+function menuFadeParamsSetDefault(fade_params){merge(menu_fade_params_default,fade_params)}var color_set_shades=vec4(1,.8,1,1)
 var color_sets=[]
 function applyColorSet(color_set){v3scale(color_set.regular,color_set.color,color_set_shades[0])
 v3scale(color_set.rollover,color_set.color,color_set_shades[1])
@@ -7949,14 +10228,19 @@ v3scale(color_set.disabled,color_set.color,color_set_shades[3])}function makeCol
 for(var field in ret)ret[field][3]=color[3]
 color_sets.push(ret)
 applyColorSet(ret)
-return ret}var hooks=[]
-function addHook(draw,click){hooks.push({draw:draw,click:click})}var ui_elem_data={}
+return ret}function colorSetMakeCustom(regular,rollover,down,disabled){return{regular:regular,rollover:rollover,down:down,disabled:disabled}}function colorSetGetField(color_set,field){return color_set[field]}var hooks=[]
+function addHook(draw,click){hooks.push({draw:draw,click:click})}var per_frame_dom_alloc=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+var per_frame_dom_suppress=0
+function suppressNewDOMElemWarnings(){per_frame_dom_suppress=glov_engine.frame_index+1}function uiElemAllocCheck(){if(glov_engine.DEBUG&&!glov_engine.resizing()&&glov_engine.frame_index>per_frame_dom_suppress){per_frame_dom_alloc[glov_engine.frame_index%per_frame_dom_alloc.length]=1
+var sum=0
+for(var ii=0;ii<per_frame_dom_alloc.length;++ii)sum+=per_frame_dom_alloc[ii]
+assert(sum<per_frame_dom_alloc.length,"Allocated new UI elements for too many consecutive frames")}}var ui_elem_data={}
 function getUIElemData(type,param,allocator){var key=spotKey(param)
 var by_type=ui_elem_data[type]
 if(!by_type)by_type=ui_elem_data[type]={}
 var elem_data=by_type[key]
-if(!elem_data)elem_data=by_type[key]=allocator?allocator(param):{}
-elem_data.frame_index=glov_engine.frame_index
+if(!elem_data){elem_data=by_type[key]=allocator?allocator(param):{}
+uiElemAllocCheck()}elem_data.frame_index=glov_engine.frame_index
 return elem_data}function doBlurEffect(factor){effects.applyGaussianBlur({blur:factor})}var desaturate_xform=mat43()
 var desaturate_tmp=mat43()
 function doDesaturateEffect(saturation,brightness){m43identity(desaturate_xform)
@@ -7964,16 +10248,8 @@ effects.saturationMatrix(desaturate_tmp,saturation)
 m43mul(desaturate_xform,desaturate_xform,desaturate_tmp)
 effects.brightnessScaleMatrix(desaturate_tmp,brightness)
 m43mul(desaturate_xform,desaturate_xform,desaturate_tmp)
-effects.applyColorMatrix({colorMatrix:desaturate_xform})}var button_height=32
-exports.button_height=button_height
-var font_height=24
-exports.font_height=font_height
-var button_width=200
-exports.button_width=button_width
-var modal_button_width=100
+effects.applyColorMatrix({colorMatrix:desaturate_xform})}var modal_button_width=100
 exports.modal_button_width=modal_button_width
-var button_img_size=button_height
-exports.button_img_size=button_img_size
 var modal_width=600
 exports.modal_width=modal_width
 var modal_y0=200
@@ -7989,6 +10265,7 @@ var tooltip_width=400
 exports.tooltip_width=tooltip_width
 var tooltip_pad=8
 exports.tooltip_pad=tooltip_pad
+var tooltip_text_offs=0
 var font_style_normal
 var font_style_focused
 var font_style_disabled
@@ -7997,15 +10274,12 @@ function setFontStyles(normal,focused,modal,disabled){font_style_normal=normal||
 font_style_focused=focused||fontStyle(font_style_normal,{})
 font_style_modal=modal||fontStyle(font_style_normal,{})
 font_style_disabled=disabled||fontStyleColored(font_style_normal,572662527)}setFontStyles()
-function uiFontStyleNormal(){return font_style_normal}function uiFontStyleFocused(){return font_style_focused}function uiFontStyleDisabled(){return font_style_modal}function uiFontStyleModal(){return font_style_modal}var font
+function uiFontStyleNormal(){return font_style_normal}function uiFontStyleFocused(){return font_style_focused}function uiFontStyleDisabled(){return font_style_modal}function uiFontStyleModal(){return font_style_modal}function uiTextHeight(){return ui_style_current.text_height}function uiButtonHeight(){return ui_style_current.button_height}function uiButtonWidth(){return ui_style_current.button_width}function uiGetTooltipPad(){return tooltip_pad}function uiGetTooltipPanelPixelScale(){return tooltip_panel_pixel_scale}var font
 exports.font=font
 var title_font
 exports.title_font=title_font
-var sprites={}
-exports.sprites=sprites
-var color_button=makeColorSet([1,1,1,1])
-exports.color_button=color_button
-var color_panel=vec4(1,1,.75,1)
+function uiGetFont(){return font}function uiGetTitleFont(){return title_font}var color_button=makeColorSet([1,1,1,1])
+function uiSetButtonColorSet(color_button_in){color_button=color_button_in}function uiGetButtonRolloverColor(){return color_button.rollover}var color_panel=vec4(1,1,.75,1)
 exports.color_panel=color_panel
 var sounds={}
 var button_mouseover=false
@@ -8014,7 +10288,9 @@ var button_focused=false
 exports.button_focused=button_focused
 var button_click=null
 exports.button_click=button_click
-function buttonWasFocused(){return button_focused}var modal_dialog=null
+var button_last_spot_ret=null
+exports.button_last_spot_ret=button_last_spot_ret
+function buttonWasFocused(){return button_focused}function buttonLastSpotRet(){return button_last_spot_ret}var modal_dialog=null
 var menu_up=false
 exports.menu_up=menu_up
 var menu_fade_params=merge({},menu_fade_params_default)
@@ -8029,60 +10305,98 @@ var default_copy_failure_msg="Copy to clipboard FAILED, please copy from below."
 function colorSetSetShades(rollover,down,disabled){color_set_shades[1]=rollover
 color_set_shades[2]=down
 color_set_shades[3]=disabled
-for(var ii=0;ii<color_sets.length;++ii)applyColorSet(color_sets[ii])}function uiGetFontStyleFocused(){return font_style_focused}function uiSetFontStyleFocused(new_style){font_style_focused=new_style}function loadUISprite(name,ws,hs){var wrap_s=gl.CLAMP_TO_EDGE
+for(var ii=0;ii<color_sets.length;++ii)applyColorSet(color_sets[ii])}function uiGetFontStyleFocused(){return font_style_focused}function uiSetFontStyleFocused(new_style){font_style_focused=new_style}function uiSetPanelColor(color){v4copy(color_panel,color)}function uiGetPanelColor(){return color_panel}function loadUISprite(name,ws,hs){var wrap_s=gl.CLAMP_TO_EDGE
 var wrap_t=gl.CLAMP_TO_EDGE
 sprites[name]=spriteCreate({name:"ui/"+name,ws:ws,hs:hs,wrap_s:wrap_s,wrap_t:wrap_t})}function loadUISprite2(name,param){if(null===param)return
-var wrap_s=gl.CLAMP_TO_EDGE
+if(param.atlas){sprites[name]=autoAtlas(param.atlas,param.name||name)
+return}var wrap_s=gl.CLAMP_TO_EDGE
 var wrap_t=param.wrap_t?gl.REPEAT:gl.CLAMP_TO_EDGE
 var sprite_param={ws:param.ws,hs:param.hs,wrap_s:wrap_s,wrap_t:wrap_t,layers:param.layers}
 if(param.url)sprite_param.url=param.url
 else sprite_param.name="ui/"+(param.name||name)
 sprites[name]=spriteCreate(sprite_param)}function uiSetFonts(new_font,new_title_font){exports.font=font=new_font
 exports.title_font=title_font=new_title_font||font}function setButtonsDefaultLabels(buttons_labels){for(var key in buttons_labels)buttons_default_labels[key.toLowerCase()]=buttons_labels[key]}function setProvideUserStringDefaultMessages(success_msg,failure_msg){default_copy_success_msg=success_msg
-default_copy_failure_msg=failure_msg}var base_ui_sprites={color_set_shades:[1,1,1],white:{url:"white"},button:{ws:[8,112,8],hs:[128]},button_rollover:{ws:[8,112,8],hs:[128]},button_down:{ws:[8,112,8],hs:[128]},button_disabled:{ws:[8,112,8],hs:[128]},panel:{ws:[32,64,32],hs:[32,64,32]},menu_entry:{ws:[8,112,8],hs:[128]},menu_selected:{ws:[8,112,8],hs:[128]},menu_down:{ws:[8,112,8],hs:[128]},menu_header:{ws:[8,112,136],hs:[128]},slider:{ws:[56,16,56],hs:[128]},slider_handle:{ws:[64],hs:[128]},scrollbar_bottom:{ws:[64],hs:[64]},scrollbar_trough:{ws:[64],hs:[8],wrap_t:true},scrollbar_top:{ws:[64],hs:[64]},scrollbar_handle_grabber:{ws:[64],hs:[64]},scrollbar_handle:{ws:[64],hs:[24,16,24]},progress_bar:{ws:[48,32,48],hs:[128]},progress_bar_trough:{ws:[48,32,48],hs:[128]}}
+default_copy_failure_msg=failure_msg}var base_ui_sprites={color_set_shades:[1,1,1],white:{url:"white"},button:{atlas:"default"},button_rollover:{atlas:"default"},button_down:{atlas:"default"},button_disabled:{atlas:"default"},panel:{atlas:"default"},menu_entry:{atlas:"default"},menu_selected:{atlas:"default"},menu_down:{atlas:"default"},menu_header:{atlas:"default"},slider:{atlas:"default"},slider_handle:{atlas:"default"},checked:{atlas:"default"},unchecked:{atlas:"default"},scrollbar_bottom:{atlas:"default"},scrollbar_trough:{atlas:"default"},scrollbar_top:{atlas:"default"},scrollbar_handle_grabber:{atlas:"default"},scrollbar_handle:{atlas:"default"},progress_bar:{atlas:"default"},progress_bar_trough:{atlas:"default"},collapsagories:{atlas:"default"},collapsagories_rollover:{atlas:"default"},collapsagories_shadow_down:{atlas:"default"},collapsagories_shadow_up:null}
 function uiStartup(param){exports.font=font=param.font
 exports.title_font=title_font=param.title_font||font
-var overrides=param.ui_sprites
 KEYS=glov_input.KEYS
 PAD=glov_input.PAD
 var ui_sprites=_extends({},base_ui_sprites,param.ui_sprites)
-for(var key in ui_sprites){var base_elem=base_ui_sprites[key]
-if("object"===typeof base_elem&&!Array.isArray(base_elem)){var override=overrides&&overrides[key]
-loadUISprite2(key,void 0===override?base_elem:override)}}sprites.button_regular=sprites.button
+for(var key in ui_sprites){var elem=ui_sprites[key]
+if("object"===typeof elem&&!Array.isArray(elem))loadUISprite2(key,elem)}sprites.button_regular=sprites.button
 if(ui_sprites.color_set_shades)colorSetSetShades.apply(void 0,ui_sprites.color_set_shades)
-if(ui_sprites.slider_params)sliderSetDefaultShrink.apply(void 0,ui_sprites.slider_params)
-if(sprites.button_rollover&&1!==color_set_shades[1])colorSetSetShades(1,color_set_shades[2],color_set_shades[3])
-if(sprites.button_down&&1!==color_set_shades[2])colorSetSetShades(color_set_shades[1],1,color_set_shades[3])
-if(sprites.button_disabled&&1!==color_set_shades[3])colorSetSetShades(color_set_shades[1],color_set_shades[2],1);(button_keys={ok:{key:[KEYS.O],pad:[PAD.X],low_key:[KEYS.ESC]},cancel:{key:[KEYS.ESC],pad:[PAD.B,PAD.Y]}}).yes=clone(button_keys.ok)
+if(ui_sprites.slider_params)sliderSetDefaultShrink.apply(void 0,ui_sprites.slider_params);(button_keys={ok:{key:[KEYS.O],pad:[PAD.X],low_key:[KEYS.ESC]},cancel:{key:[KEYS.ESC],pad:[PAD.B,PAD.Y]}}).yes=clone(button_keys.ok)
 button_keys.yes.key.push(KEYS.Y)
 button_keys.no=clone(button_keys.cancel)
 button_keys.no.key.push(KEYS.N)
 if(void 0!==param.line_mode)default_line_mode=param.line_mode
 else default_line_mode=LINE_ALIGN|LINE_CAP_ROUND
 scaleSizes(1)}var dynamic_text_elem
-var per_frame_dom_alloc=[0,0,0,0,0,0,0]
-var per_frame_dom_suppress=0
-function suppressNewDOMElemWarnings(){per_frame_dom_suppress=glov_engine.frame_index+1}function uiGetDOMElem(last_elem,allow_modal){if(modal_dialog&&!allow_modal)return null
-if(dom_elems_issued>=dom_elems.length||!last_elem){var _elem=document.createElement("div")
-if(glov_engine.DEBUG&&!glov_engine.resizing()&&glov_engine.frame_index>per_frame_dom_suppress){per_frame_dom_alloc[glov_engine.frame_index%per_frame_dom_alloc.length]=1
-var sum=0
-for(var ii=0;ii<per_frame_dom_alloc.length;++ii)sum+=per_frame_dom_alloc[ii]
-assert(sum<per_frame_dom_alloc.length,"Allocated new DOM elements for too many consecutive frames")}_elem.setAttribute("class","glovui_dynamic")
+function uiGetDOMElem(last_elem,allow_modal){if(isMenuUp()&&!allow_modal)return null
+if(last_elem&&dom_elems[dom_elems_issued]!==last_elem){var found=false
+for(var ii=dom_elems_issued+1;ii<dom_elems.length;++ii)if(dom_elems[ii]===last_elem){dom_elems[ii]=dom_elems[dom_elems_issued]
+dom_elems[dom_elems_issued]=last_elem
+found=true
+break}if(!found)last_elem=null}if(!last_elem){var _elem=document.createElement("div")
+uiElemAllocCheck()
+_elem.setAttribute("class","glovui_dynamic")
 if(!dynamic_text_elem)dynamic_text_elem=document.getElementById("dynamic_text")
 dynamic_text_elem.appendChild(_elem)
-dom_elems.push(_elem)
-last_elem=_elem}if(dom_elems[dom_elems_issued]!==last_elem)for(var _ii=dom_elems_issued+1;_ii<dom_elems.length;++_ii)if(dom_elems[_ii]===last_elem){dom_elems[_ii]=dom_elems[dom_elems_issued]
-dom_elems[dom_elems_issued]=last_elem}var elem=dom_elems[dom_elems_issued]
+var old=dom_elems[dom_elems_issued]
+dom_elems[dom_elems_issued]=_elem
+if(old)dom_elems.push(old)
+last_elem=_elem}var elem=dom_elems[dom_elems_issued]
+assert(!last_elem||elem===last_elem)
 dom_elems_issued++
-return elem}var base_ui_sounds={button_click:"button_click",rollover:"rollover"}
-function uiBindSounds(_sounds){for(var key in sounds=defaults(_sounds||{},base_ui_sounds))soundLoad(sounds[key])}var draw_box_param={nozoom:true}
-function drawHBox(coords,s,color){spriteChainedStart()
+return elem}var dom_tab_index=0
+function uiGetDOMTabIndex(){return++dom_tab_index}var base_ui_sounds={button_click:"button_click",rollover:"rollover"}
+function uiBindSounds(_sounds){for(var key in sounds=defaults(_sounds||{},base_ui_sounds))if(sounds[key])soundLoad(sounds[key],sounds[key].opts)}var draw_box_param={nozoom:true}
+function scale9PatchDims(pixel_scale,target_width,widths){var target_sign=sign(target_width)
+target_width*=target_sign
+var fixed_ws=0
+var stretch_ws=0
+for(var ii=0;ii<widths.length;++ii){var w=widths[ii]
+if(ii%2)stretch_ws+=w
+else fixed_ws+=w}var fixedscale
+if(fixed_ws*(pixel_scale=pixel_scale||1)>target_width)fixedscale=target_width/fixed_ws
+else fixedscale=pixel_scale
+return[target_sign*fixedscale,target_sign*(stretch_ws?(target_width-fixed_ws*fixedscale)/stretch_ws:fixedscale)]}function draw9Patch(coords,s,pixel_scale,color){spriteChainedStart()
+var uidata=s.uidata
+var widths=uidata.widths,heights=uidata.heights
+if(1===uidata.heights.length&&widths.length>1)pixel_scale=abs(coords.h)/heights[0]
+else if(1===widths.length&&heights.length>1)pixel_scale=abs(coords.w)/widths[0]
+var hscales=scale9PatchDims(pixel_scale,coords.w,widths)
+var vscales=scale9PatchDims(pixel_scale,coords.h,heights)
+var x=coords.x
+draw_box_param.z=coords.z
+draw_box_param.color=color
+draw_box_param.shader=null
+draw_box_param.color1=coords.color1||null
+for(var ii=0;ii<widths.length;++ii){var my_w=widths[ii]*hscales[ii%2]
+if(my_w){draw_box_param.x=x
+draw_box_param.w=my_w
+var y=coords.y
+for(var jj=0;jj<heights.length;++jj){var my_h=heights[jj]*vscales[jj%2]
+if(my_h){draw_box_param.y=y
+draw_box_param.h=my_h
+draw_box_param.uvs=uidata.rects[jj*widths.length+ii]
+if(coords.color1)s.drawDualTint(draw_box_param)
+else s.draw(draw_box_param)
+y+=my_h}}x+=my_w}}spriteChainedStop()
+if(uidata.padh||uidata.padv){var ret={}
+if(uidata.padh&&uidata.padh.length>=2){var padhscales=scale9PatchDims(hscales[0],coords.w,uidata.padh)
+ret.x=coords.x+uidata.padh[0]*padhscales[0]
+ret.w=uidata.padh[1]*padhscales[1]}if(uidata.padv&&uidata.padv.length>=2){var padvscales=scale9PatchDims(vscales[0],coords.h,uidata.padv)
+ret.y=coords.y+uidata.padv[0]*padvscales[0]
+ret.h=uidata.padv[1]*padvscales[1]}return ret}}function drawHBox(coords,s,color){if(1)return void draw9Patch(coords,s,panel_pixel_scale,color)
+spriteChainedStart()
 var uidata=s.uidata
 var x=coords.x
-var ws=[uidata.wh[0]*coords.h,0,uidata.wh[2]*coords.h]
+var ws=[uidata.wh[0]*coords.h,0,(uidata.wh[2]||0)*coords.h]
 if(coords.no_min_width&&ws[0]+ws[2]>coords.w){var scale=coords.w/(ws[0]+ws[2])
 ws[0]*=scale
-ws[2]*=scale}else ws[1]=max(0,coords.w-ws[0]-ws[2])
+ws[2]*=scale}else if(uidata.wh[1])ws[1]=max(0,coords.w-ws[0]-ws[2])
+else ws[0]=coords.w
 draw_box_param.y=coords.y
 draw_box_param.z=coords.z
 draw_box_param.h=coords.h
@@ -8096,7 +10410,7 @@ draw_box_param.uvs=uidata.rects[ii]
 if(coords.color1)s.drawDualTint(draw_box_param)
 else s.draw(draw_box_param)}x+=my_w}spriteChainedStop()}function drawVBox(coords,s,color){spriteChainedStart()
 var uidata=s.uidata
-var hs=[uidata.hw[0]*coords.w,0,uidata.hw[2]*coords.w]
+var hs=[uidata.hw[0]*coords.w,0,(uidata.hw[2]||0)*coords.w]
 var y=coords.y
 hs[1]=max(0,coords.h-hs[0]-hs[2])
 draw_box_param.x=coords.x
@@ -8109,9 +10423,11 @@ draw_box_param.y=y
 draw_box_param.h=my_h
 draw_box_param.uvs=uidata.rects[ii]
 s.draw(draw_box_param)
-y+=my_h}spriteChainedStop()}function drawBox(coords,s,pixel_scale,color){spriteChainedStart()
+y+=my_h}spriteChainedStop()}function drawBox(coords,s,pixel_scale,color,color1){if(color1)coords.color1=color1
+if(1)return void draw9Patch(coords,s,pixel_scale,color)
+spriteChainedStart()
 var uidata=s.uidata
-var scale=pixel_scale
+var scale=pixel_scale||1
 var ws=[uidata.widths[0]*scale,0,uidata.widths[2]*scale]
 ws[1]=max(0,coords.w-ws[0]-ws[2])
 var hs=[uidata.heights[0]*scale,0,uidata.heights[2]*scale]
@@ -8120,6 +10436,7 @@ var x=coords.x
 draw_box_param.z=coords.z
 draw_box_param.color=color
 draw_box_param.shader=null
+draw_box_param.color1=coords.color1||null
 for(var ii=0;ii<ws.length;++ii){var my_w=ws[ii]
 if(my_w){draw_box_param.x=x
 draw_box_param.w=my_w
@@ -8128,10 +10445,49 @@ for(var jj=0;jj<hs.length;++jj){var my_h=hs[jj]
 if(my_h){draw_box_param.y=y
 draw_box_param.h=my_h
 draw_box_param.uvs=uidata.rects[3*jj+ii]
-s.draw(draw_box_param)
-y+=my_h}}x+=my_w}}spriteChainedStop()}function drawMultiPartBox(coords,scaleable_data,s,pixel_scale,color){spriteChainedStart()
+if(coords.color1)s.drawDualTint(draw_box_param)
+else s.draw(draw_box_param)
+y+=my_h}}x+=my_w}}spriteChainedStop()}var temp_uvs=vec4()
+function drawBoxTiled(coords,s,pixel_scale,color,color1){if(color1)coords.color1=color1
+var crop_last=coords.crop_last||false
+spriteChainedStart()
 var uidata=s.uidata
-var scale=pixel_scale
+var scale=pixel_scale||1
+var ws=[uidata.widths[0]*scale,0,uidata.widths[2]*scale]
+var tiling_w=uidata.widths[1]*scale
+ws[1]=max(0,coords.w-ws[0]-ws[2])
+var hs=[uidata.heights[0]*scale,0,uidata.heights[2]*scale]
+var tiling_h=uidata.heights[1]*scale
+hs[1]=max(0,coords.h-hs[0]-hs[2])
+var x=coords.x
+draw_box_param.z=coords.z
+draw_box_param.color=color
+draw_box_param.shader=null
+draw_box_param.color1=coords.color1||null
+for(var ii=0;ii<ws.length;++ii){var my_w=ws[ii]
+if(my_w){var is_tiling_x=ii>0&&ii<ws.length-1
+var tile_x=is_tiling_x?max(1,(crop_last?ceil:round)(my_w/tiling_w)):1
+var sub_w=crop_last?tile_x>1?tiling_w:my_w:tile_x>1?my_w/tile_x:my_w
+draw_box_param.w=sub_w
+for(var xx=0;xx<tile_x;++xx){draw_box_param.x=x+xx*sub_w
+if(crop_last&&is_tiling_x&&xx===tile_x-1)draw_box_param.w=x+my_w-draw_box_param.x
+var y=coords.y
+for(var jj=0;jj<hs.length;++jj){var my_h=hs[jj]
+if(my_h){var is_tiling_y=jj>0&&jj<hs.length-1
+var tile_y=is_tiling_y?max(1,(crop_last?ceil:round)(my_h/tiling_h)):1
+var sub_h=crop_last?tile_y>1?tiling_h:my_h:tile_y>1?my_h/tile_y:my_h
+draw_box_param.h=sub_h
+draw_box_param.uvs=uidata.rects[3*jj+ii]
+if(crop_last&&is_tiling_x&&xx===tile_x-1){v4copy(temp_uvs,draw_box_param.uvs)
+temp_uvs[2]=temp_uvs[0]+(temp_uvs[2]-temp_uvs[0])*draw_box_param.w/tiling_w
+draw_box_param.uvs=temp_uvs}for(var yy=0;yy<tile_y;++yy){draw_box_param.y=y+yy*sub_h
+if(crop_last&&is_tiling_y&&yy===tile_y-1){draw_box_param.h=y+my_h-draw_box_param.y
+v4copy(temp_uvs,draw_box_param.uvs)
+temp_uvs[3]=temp_uvs[1]+(temp_uvs[3]-temp_uvs[1])*draw_box_param.h/tiling_h
+draw_box_param.uvs=temp_uvs}if(coords.color1)s.drawDualTint(draw_box_param)
+else s.draw(draw_box_param)}}y+=my_h}}x+=my_w}}spriteChainedStop()}function drawMultiPartBox(coords,scaleable_data,s,pixel_scale,color){spriteChainedStart()
+var uidata=s.uidata
+var scale=pixel_scale||1
 var ws=[]
 var fixed_w_sum=0
 var scaleable_sum=0
@@ -8150,9 +10506,9 @@ for(var ii=0;ii<ws.length;++ii){var my_w=ws[ii]
 if(my_w){var y=coords.y
 for(var jj=0;jj<hs.length;++jj){var my_h=hs[jj]
 if(my_h){s.draw({x:x,y:y,z:coords.z,color:color,w:my_w,h:my_h,uvs:uidata.rects[jj*ws.length+ii],nozoom:true})
-y+=my_h}}x+=my_w}}spriteChainedStop()}function playUISound(name,volume){profilerStart("playUISound")
+y+=my_h}}x+=my_w}}spriteChainedStop()}function playUISound(name,volume_or_opts){profilerStart("playUISound")
 if("select"===name)name="button_click"
-if(sounds[name])soundPlay(sounds[name],volume)
+if(sounds[name])soundPlay(sounds[name],volume_or_opts)
 profilerStop("playUISound")}function focusCanvas(){spotUnfocus()}function uiHandlingNav(){return menu_up||!spotPadSuppressed()}function panel(param){assert("number"===typeof param.x)
 assert("number"===typeof param.y)
 assert("number"===typeof param.w)
@@ -8161,7 +10517,8 @@ param.z=param.z||Z.UI-1
 param.eat_clicks=void 0===param.eat_clicks?true:param.eat_clicks
 var color=param.color||color_panel
 drawBox(param,param.sprite||sprites.panel,param.pixel_scale||panel_pixel_scale,color)
-if(param.eat_clicks)glov_input.mouseOver(param)}function drawTooltip(param){var tooltip=param.tooltip
+if(param.eat_clicks){glov_input.mouseOver(param)
+linkObscureRect(param)}}function drawTooltip(param){var tooltip=param.tooltip
 if("function"===typeof tooltip)if(!(tooltip=tooltip(param)))return
 tooltip=getStringFromLocalizable(tooltip)
 assert("number"===typeof param.x)
@@ -8169,28 +10526,42 @@ assert("number"===typeof param.y)
 assert("string"===typeof tooltip)
 var clip_pause=spriteClipped()
 if(clip_pause)spriteClipPause()
+var spuid=sprites.panel.uidata
+var pixel_scale=param.pixel_scale||tooltip_panel_pixel_scale
 var tooltip_w=param.tooltip_width||tooltip_width
 var z=param.z||Z.TOOLTIP
 var tooltip_y0=param.y
-var eff_tooltip_pad=param.tooltip_pad||tooltip_pad
-var w=tooltip_w-2*eff_tooltip_pad
-var dims=font.dims(font_style_modal,w,0,font_height,tooltip)
+var eff_tooltip_pad_left=param.tooltip_pad||(spuid.padh&&spuid.padh[0])*pixel_scale||tooltip_pad
+var eff_tooltip_pad_right=param.tooltip_pad||(spuid.padh&&spuid.padh[2])*pixel_scale||tooltip_pad
+var eff_tooltip_pad_top=param.tooltip_pad||(spuid.padv&&spuid.padv[0])*pixel_scale||tooltip_pad
+var eff_tooltip_pad_bottom=param.tooltip_pad||(spuid.padv&&spuid.padv[2])*pixel_scale||tooltip_pad
+var w=tooltip_w-eff_tooltip_pad_left-eff_tooltip_pad_right
+var dims
+if(false!==param.tooltip_markdown)dims=markdownAuto({font_style:font_style_modal,w:w,align:ALIGN.HWRAP,text_height:ui_style_current.text_height,text:tooltip,no_draw:true})
+else dims=font.dims(font_style_modal,w,0,ui_style_current.text_height,tooltip)
 var above=param.tooltip_above
-if(!above&&param.tooltip_auto_above_offset)above=tooltip_y0+dims.h+2*eff_tooltip_pad>camera2d.y1()
+if(!above&&param.tooltip_auto_above_offset)above=tooltip_y0+dims.h+eff_tooltip_pad_top+eff_tooltip_pad_bottom>camera2d.y1()
 var x=param.x
-var eff_tooltip_w=dims.w+2*eff_tooltip_pad
+var eff_tooltip_w=dims.w+eff_tooltip_pad_left+eff_tooltip_pad_right
+var right=param.tooltip_right
+var center=param.tooltip_center
+if(right)x+=(param.tooltip_auto_right_offset||0)-eff_tooltip_w
+else if(center&&param.tooltip_auto_right_offset)x+=(param.tooltip_auto_right_offset-eff_tooltip_w)/2
 if(x+eff_tooltip_w>camera2d.x1())x=camera2d.x1()-eff_tooltip_w
-if(above)tooltip_y0-=dims.h+2*eff_tooltip_pad+(param.tooltip_auto_above_offset||0)
-var y=tooltip_y0+eff_tooltip_pad
-y+=font.drawSizedWrapped(font_style_modal,x+eff_tooltip_pad,y,z+1,w,0,font_height,tooltip)
-panel({x:x,y:tooltip_y0,z:z,w:eff_tooltip_w,h:(y+=eff_tooltip_pad)-tooltip_y0,pixel_scale:param.pixel_scale||tooltip_panel_pixel_scale,eat_clicks:false})
+if(above)tooltip_y0-=dims.h+eff_tooltip_pad_top+eff_tooltip_pad_bottom+(param.tooltip_auto_above_offset||0)
+var y=tooltip_y0+eff_tooltip_pad_top
+if(false===param.tooltip_markdown)y+=font.drawSizedWrapped(font_style_modal,x+eff_tooltip_pad_left,y+tooltip_text_offs,z+1,w,0,ui_style_current.text_height,tooltip)
+else{var mddims=markdownAuto({font_style:font_style_modal,x:x+eff_tooltip_pad_left,y:y+tooltip_text_offs,z:z+1,w:w,align:ALIGN.HWRAP,text_height:ui_style_current.text_height,text:tooltip})
+eff_tooltip_w=max(mddims.w+eff_tooltip_pad_left+eff_tooltip_pad_right,eff_tooltip_w)
+y+=mddims.h}panel({x:x,y:tooltip_y0,z:z,w:eff_tooltip_w,h:(y+=eff_tooltip_pad_bottom)-tooltip_y0,pixel_scale:pixel_scale,eat_clicks:false})
 if(clip_pause)spriteClipResume()}function checkHooks(param,click){if(param.hook)for(var ii=0;ii<hooks.length;++ii){if(click)hooks[ii].click(param)
 hooks[ii].draw(param)}}function drawTooltipBox(param){var tooltip=param.tooltip
 if("function"===typeof tooltip)if(!(tooltip=tooltip(param)))return
-drawTooltip({x:param.x,y:param.y+param.h+2,tooltip_auto_above_offset:param.h+4,tooltip_above:param.tooltip_above,tooltip:tooltip,tooltip_width:param.tooltip_width})}function progressBar(param){drawHBox(param,sprites.progress_bar_trough,param.color_trough||param.color||unit_vec)
+drawTooltip({x:param.x,y:param.y+(param.tooltip_left?0:param.h+2),tooltip_auto_above_offset:param.h+4,tooltip_above:param.tooltip_above,tooltip_auto_right_offset:param.tooltip_left?0:param.tooltip_auto_right_offset||param.w,tooltip_right:param.tooltip_right||param.tooltip_left,tooltip_center:param.tooltip_center,tooltip:tooltip,tooltip_width:param.tooltip_width,tooltip_markdown:param.tooltip_markdown})}function progressBar(param){drawBox(param,sprites.progress_bar_trough,param.pixel_scale,param.color_trough||param.color||unit_vec)
 var progress=clamp(param.progress,0,1)
-drawHBox({x:param.x+(param.centered?param.w*(1-progress)*.5:0),y:param.y,z:(param.z||Z.UI)+Z_MIN_INC,w:param.w*progress,h:param.h,no_min_width:true},sprites.progress_bar,param.color||unit_vec)
-if(param.tooltip)spot({x:param.x,y:param.y,w:param.w,h:param.h,tooltip:param.tooltip,def:SPOT_DEFAULT_LABEL})}var SPOT_STATE_TO_UI_BUTTON_STATE=((_SPOT_STATE_TO_UI_BUT={})[SPOT_STATE_REGULAR]="regular",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_DOWN]="down",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_FOCUSED]="rollover",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_DISABLED]="disabled",_SPOT_STATE_TO_UI_BUT)
+if(progress)(param.tiled?drawBoxTiled:drawBox)({x:param.x+(param.centered?param.w*(1-progress)*.5:0),y:param.y,z:(param.z||Z.UI)+Z_MIN_INC,w:param.w*progress,h:param.h,no_min_width:true,crop_last:param.crop_last},sprites.progress_bar,param.pixel_scale,param.color||unit_vec)
+if(param.tooltip)spot({x:param.x,y:param.y,w:param.w,h:param.h,tooltip:param.tooltip,def:SPOT_DEFAULT_LABEL})}var button_y_offs={regular:0,down:0,rollover:0,disabled:0}
+function buttonSetDefaultYOffs(y_offs){merge(button_y_offs,y_offs)}var SPOT_STATE_TO_UI_BUTTON_STATE=((_SPOT_STATE_TO_UI_BUT={})[SPOT_STATE_REGULAR]="regular",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_DOWN]="down",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_FOCUSED]="rollover",_SPOT_STATE_TO_UI_BUT[SPOT_STATE_DISABLED]="disabled",_SPOT_STATE_TO_UI_BUT)
 var UISPOT_BUTTON_DISABLED=_extends({},SPOT_DEFAULT_BUTTON,{disabled:true,disabled_focusable:false,sound_rollover:null})
 function buttonShared(param){profilerStart("buttonShared")
 param.z=param.z||Z.UI
@@ -8204,67 +10575,93 @@ if(param.sound)param.sound_button=param.sound;(spot_ret=spot(param)).state=SPOT_
 if(spot_ret.ret){exports.button_click=button_click=spot_ret
 button_click.was_double_click=spot_ret.double_click}}exports.button_focused=button_focused=exports.button_mouseover=button_mouseover=spot_ret.focused
 param.z+=param.z_bias&&param.z_bias[spot_ret.state]||0
+exports.button_last_spot_ret=button_last_spot_ret=spot_ret
 profilerStop("buttonShared")
 return spot_ret}var button_last_color
 exports.button_last_color=button_last_color
 function buttonBackgroundDraw(param,state){profilerStart("buttonBackgroundDraw")
 var colors=param.colors||color_button
 var color=exports.button_last_color=button_last_color=param.color||colors[state]
-if(!param.no_bg){var base_name=param.base_name||"button"
+var ret
+if(!param.no_bg){var base_name=param.base_name||(param.w/param.h<1.5&&sprites.squarebutton?"squarebutton":"button")
 var sprite=sprites[base_name+"_"+state]
-if(!sprite)sprite=sprites[base_name]
-drawHBox(param,sprite,color)}profilerStop("buttonBackgroundDraw")}function buttonSpotBackgroundDraw(param,spot_state){profilerStart("buttonSpotBackgroundDraw")
-var state=SPOT_STATE_TO_UI_BUTTON_STATE[spot_state]
-var colors=param.colors||color_button
-var color=exports.button_last_color=button_last_color=param.color||colors[state]
-if(!param.no_bg){var base_name=param.base_name||"button"
-var sprite=sprites[base_name+"_"+state]
-if(!sprite)sprite=sprites[base_name]
-drawHBox(param,sprite,color)}profilerStop("buttonSpotBackgroundDraw")}function buttonTextDraw(param,state,focused){profilerStart("buttonTextDraw")
-buttonBackgroundDraw(param,state)
+if(sprite){if(!param.color)color=colors.regular}else sprite=sprites[base_name]
+ret=draw9Patch(param,sprite,param.pixel_scale,color)}profilerStop("buttonBackgroundDraw")
+return ret}function buttonSpotBackgroundDraw(param,spot_state){profilerStart("buttonSpotBackgroundDraw")
+buttonBackgroundDraw(param,SPOT_STATE_TO_UI_BUTTON_STATE[spot_state])
+profilerStop("buttonSpotBackgroundDraw")}function buttonTextDraw(param,state,focused){profilerStart("buttonTextDraw")
+var patch_pad=buttonBackgroundDraw(param,state)
 var hpad=min(.25*param.font_height,.1*param.w)
+var vpad=min(.17*param.font_height,.1*param.h)
+var yoffs=param.yoffs&&void 0!==param.yoffs[state]?param.yoffs[state]:button_y_offs[state]
 var disabled="disabled"===state
-font.drawSizedAligned(disabled?font_style_disabled:focused?font_style_focused:font_style_normal,param.x+hpad,param.y,param.z+.1,param.font_height,param.align||glov_font.ALIGN.HVCENTERFIT,param.w-2*hpad,param.h,param.text)
+var font_use=param.font||font
+var font_style=disabled?param.font_style_disabled||font_style_disabled:focused?param.font_style_focused||font_style_focused:param.font_style_normal||font_style_normal
+var x=param.x+hpad
+var y=param.y+yoffs+vpad
+var z=param.z+.1
+var w=param.w-2*hpad
+var h=param.h-2*vpad
+if(patch_pad){if(void 0!==patch_pad.x){x=patch_pad.x
+w=patch_pad.w}if(void 0!==patch_pad.y){y=patch_pad.y
+h=patch_pad.h}}var align=param.align||glov_font.ALIGN.HVCENTERFIT
+var text_height=param.font_height
+if(param.markdown)markdownAuto({font:font_use,font_style:font_style,x:x,y:y,z:z,w:w,h:h,align:align,text_height:text_height,text:param.text})
+else font_use.drawSizedAligned(font_style,x,y,z,text_height,align,w,h,param.text)
 profilerStop("buttonTextDraw")}function buttonText(param){profilerStart("buttonText")
 param.text=getStringFromLocalizable(param.text)
 assert("number"===typeof param.x)
 assert("number"===typeof param.y)
 assert("string"===typeof param.text)
-param.w=param.w||button_width
-param.h=param.h||button_height
-param.font_height=param.font_height||font_height
+param.w=param.w||ui_style_current.button_width
+param.h=param.h||ui_style_current.button_height
+param.font_height=param.font_height||(param.style||ui_style_current).text_height
 var spot_ret=buttonShared(param)
 var ret=spot_ret.ret
 buttonTextDraw(param,spot_ret.state,spot_ret.focused)
 profilerStop("buttonText")
-return ret?spot_ret:null}function buttonImageDraw(param,state,focused){profilerStart("buttonImageDraw")
+return ret?spot_ret:null}var DEFAULT_SHRINK=.75
+function buttonImageDraw(param,state,focused){profilerStart("buttonImageDraw")
 var uvs=param.img_rect
 var img=param.imgs&&param.imgs[state]||param.img
 if("number"===typeof param.frame)uvs=img.uidata.rects[param.frame]
-buttonBackgroundDraw(param,state)
+var patch_pad=buttonBackgroundDraw(param,state)
 var color=button_last_color
 var img_origin=img.origin
-var img_w=img.size[0]
-var img_h=img.size[1]
-var aspect=img_w/img_h
+var aspect=img.size[0]/img.size[1]
 if("number"===typeof param.frame)aspect=img.uidata.aspect?img.uidata.aspect[param.frame]:1
-var largest_w_horiz=param.w*param.shrink
-var largest_w_vert=param.h*param.shrink*aspect
-img_w=min(largest_w_horiz,largest_w_vert)
-var pad_top=(param.h-(img_h=img_w/aspect))/2
-var draw_param={x:param.x+(param.left_align?pad_top:(param.w-img_w)/2)+img_origin[0]*img_w,y:param.y+pad_top+img_origin[1]*img_h,z:param.z+(param.z_inc||Z_MIN_INC),color:param.img_color||param.color1&&param.color||color,color1:param.color1,w:img_w/img.size[0],h:img_h/img.size[1],uvs:uvs,rot:param.rotation}
-if(param.flip){var x=draw_param.x,w=draw_param.w
-draw_param.x=x+w
-draw_param.w=-w}if(param.color1)img.drawDualTint(draw_param)
+var yoffs=param.yoffs&&void 0!==param.yoffs[state]?param.yoffs[state]:button_y_offs[state]
+var bounds_x=param.x
+var bounds_w=param.w
+var shrink_x=param.shrink||DEFAULT_SHRINK
+if(patch_pad&&void 0!==patch_pad.x){bounds_x=patch_pad.x
+bounds_w=patch_pad.w
+shrink_x=param.shrink||1}var bounds_y=param.y
+var bounds_h=param.h
+var shrink_y=param.shrink||DEFAULT_SHRINK
+if(patch_pad&&void 0!==patch_pad.y){bounds_y=patch_pad.y
+bounds_h=patch_pad.h
+shrink_y=param.shrink||1}var bounds_dim=min(bounds_w,bounds_h)
+if(1!==shrink_x){var pad_left=bounds_dim*(1-shrink_x)/2
+bounds_x+=pad_left
+bounds_w-=2*pad_left}if(1!==shrink_y){var _pad_top=bounds_dim*(1-shrink_y)/2
+bounds_y+=_pad_top
+bounds_h-=2*_pad_top}var w=min(bounds_w,bounds_h*aspect)
+var h=w/aspect
+var pad_top=(bounds_h-h)/2
+var x=bounds_x+(param.left_align?pad_top:(bounds_w-w)/2)
+var y=bounds_y+pad_top
+var draw_param={x:x+=img_origin[0]*w,y:y+=img_origin[1]*h+yoffs,z:param.z+(param.z_inc||Z_MIN_INC),color:param.img_color||param.color1&&param.color||color,color1:param.color1,w:w/img.size[0],h:h/img.size[1],uvs:uvs,rot:param.rotation}
+if(param.flip){draw_param.x+=w
+draw_param.w*=-1}if(param.color1)img.drawDualTint(draw_param)
 else img.draw(draw_param)
 profilerStop("buttonImageDraw")}function buttonImage(param){profilerStart("buttonImage")
 assert("number"===typeof param.x)
 assert("number"===typeof param.y)
 assert(param.imgs||param.img&&param.img.draw)
 param.z=param.z||Z.UI
-param.w=param.w||button_img_size
-param.h=param.h||param.w||button_img_size
-param.shrink=param.shrink||.75
+param.w=param.w||ui_style_current.button_height
+param.h=param.h||param.w||ui_style_current.button_height
 var spot_ret=buttonShared(param)
 var ret=spot_ret.ret
 buttonImageDraw(param,spot_ret.state,spot_ret.focused)
@@ -8276,11 +10673,10 @@ assert("number"===typeof param.x)
 assert("number"===typeof param.y)
 assert(param.img&&param.img.draw)
 param.z=param.z||Z.UI
-param.h=param.h||button_img_size
-param.w=param.w||button_width
-param.shrink=param.shrink||.75
+param.h=param.h||ui_style_current.button_height
+param.w=param.w||ui_style_current.button_width
 param.left_align=true
-param.font_height=param.font_height||font_height
+param.font_height=param.font_height||(param.style||ui_style_current).text_height
 var spot_ret=buttonShared(param)
 var ret=spot_ret.ret,state=spot_ret.state,focused=spot_ret.focused
 buttonImageDraw(param,state,focused)
@@ -8288,29 +10684,72 @@ var saved_no_bg=param.no_bg
 var saved_w=param.w
 var saved_x=param.x
 param.no_bg=true
-param.x+=param.h*param.shrink
-param.w-=param.h*param.shrink
+var img_size=param.h*(param.shrink||DEFAULT_SHRINK)
+var img_pad=param.h*(1-(param.shrink||DEFAULT_SHRINK))/2
+param.x+=img_pad+img_size
+param.w-=img_pad+img_size
 buttonTextDraw(param,state,focused)
 param.no_bg=saved_no_bg
 param.w=saved_w
 param.x=saved_x
 profilerStop("button")
-return ret?spot_ret:null}function print(style,x,y,z,text){return font.drawSized(style,x,y,z,font_height,text)}function label(param){profilerStart("label")
-var style=param.style,x=param.x,y=param.y,align=param.align,w=param.w,h=param.h,text=param.text,tooltip=param.tooltip
-text=getStringFromLocalizable(text)
-var use_font=param.font||font
+return ret?spot_ret:null}function print(font_style,x,y,z,text){return font.drawSized(font_style,x,y,z,ui_style_current.text_height,text)}function label(param){profilerStart("label")
+var font_style=param.font_style,label_font_style_focused=param.font_style_focused,x=param.x,y=param.y,align=param.align,w=param.w,h=param.h,text=param.text,tooltip=param.tooltip,tooltip_markdown=param.tooltip_markdown,tooltip_above=param.tooltip_above,tooltip_right=param.tooltip_right,img=param.img,frame=param.frame,img_color=param.img_color,img_color_focused=param.img_color_focused
+if(param.style)assert(!param.style.color)
 var z=param.z||Z.UI
-var size=param.size||font_height
 assert(isFinite(x))
 assert(isFinite(y))
-assert.equal(typeof text,"string")
-if(tooltip){if(!w)w=use_font.getStringWidth(style,size,text)
-assert(isFinite(w))
+var style=param.style||ui_style_current
+var use_font=param.font||font
+var size=param.size||style.text_height
+if(img);else{assert(void 0!==text)
+text=getStringFromLocalizable(text)
+if(tooltip){if(!w){w=use_font.getStringWidth(font_style,size,text)
+if(align&ALIGN.HRIGHT)x-=w
+else if(align&ALIGN.HCENTER)x-=w/2}if(!h){h=size
+if(align&ALIGN.VBOTTOM)y-=h
+else if(align&ALIGN.VCENTER)y-=h/2}}}if(tooltip){assert(isFinite(w))
 assert(isFinite(h))
-if(spot({x:x,y:y,w:w,h:h,tooltip:tooltip,def:SPOT_DEFAULT_LABEL}).focused&&spotPadMode())if(param.style_focused)style=param.style_focused
-else drawElipse(x-.25*w,y-.25*h,x+1.25*w,y+1.25*h,z-.001,.5,unit_vec)}if(text)if(align)use_font.drawSizedAligned(style,x,y,z,size,align,w,h,text)
-else use_font.drawSized(style,x,y,z,size,text)
-profilerStop("label")}function modalDialog(param){param.title=getStringFromLocalizable(param.title)
+if(spot({x:x,y:y,w:w,h:h,tooltip:tooltip,tooltip_markdown:tooltip_markdown,tooltip_width:param.tooltip_width,tooltip_above:tooltip_above,tooltip_right:tooltip_right||param.align&ALIGN.HRIGHT,tooltip_center:param.align&ALIGN.HCENTER,def:SPOT_DEFAULT_LABEL}).focused&&spotPadMode()){var need_focus_indicator=false
+if(img)if(img_color_focused)img_color=img_color_focused
+else need_focus_indicator=true
+else if(label_font_style_focused)font_style=label_font_style_focused
+else need_focus_indicator=true
+if(need_focus_indicator)drawElipse(x-.25*w,y-.25*h,x+1.25*w,y+1.25*h,z-.001,.5,unit_vec)}}var text_w=0
+if(img)img.draw({x:x,y:y,z:z,w:w,h:h,color:img_color,frame:frame})
+else if(text)if(align)text_w=use_font.drawSizedAligned(font_style,x,y,z,size,align,w,h,text)
+else text_w=use_font.drawSized(font_style,x,y,z,size,text)
+profilerStop("label")
+return w||text_w}function checkbox(value,param){profilerStart("checkbox")
+param.text=getStringFromLocalizable(param.text)
+assert("number"===typeof param.x)
+assert("number"===typeof param.y)
+param.z=param.z||Z.UI
+var text=param.text
+param.h=param.h||ui_style_current.button_height
+param.w=param.w||(text?ui_style_current.button_width:param.h)
+param.font_height=param.font_height||(param.style||ui_style_current).text_height
+param.align=param.align||ALIGN.VCENTER|ALIGN.HLEFT|ALIGN.HFIT
+if(buttonText(_extends({},param,{no_bg:true,text:"",tooltip:param.tooltip})))value=!value
+var spot_ret=button_last_spot_ret
+var focused=spot_ret.focused
+var base_name_checked=param.base_name_checked||"checked"
+var base_name_unchecked=param.base_name_unchecked||"unchecked"
+buttonSpotBackgroundDraw(_extends({},param,{w:param.h,base_name:value?base_name_checked:base_name_unchecked}),spot_ret.spot_state)
+if(text){var font_use=param.font||font
+var font_style=param.disabled?param.font_style_disabled||font_style_disabled:focused?param.font_style_focused||font_style_focused:param.font_style_normal||font_style_normal
+text=getStringFromLocalizable(text)
+var text_height=param.font_height
+var xoffs=param.text_xoffs||param.h+font_use.getCharacterWidth(font_style,text_height,32)
+var x=param.x+xoffs
+var y=param.y
+var z=param.z+.1
+var w=param.w-xoffs
+var h=param.h
+var align=param.align
+if(param.markdown)markdownAuto({font:font_use,font_style:font_style,x:x,y:y,z:z,w:w,h:h,align:align,text_height:text_height,text:text})
+else font_use.drawSizedAligned(font_style,x,y,z,text_height,align,w,h,text)}profilerStop("checkbox")
+return value}function modalDialog(param){param.title=getStringFromLocalizable(param.title)
 param.text=""+(getStringFromLocalizable(param.text)||"")
 assert(!param.title||"string"===typeof param.title)
 assert(!param.text||"string"===typeof param.text)
@@ -8320,14 +10759,14 @@ modal_dialog=param}function modalDialogClear(){modal_dialog=null}var dom_require
 var virtual_size=vec2()
 function modalDialogRun(){camera2d.domDeltaToVirtual(virtual_size,dom_requirement)
 var fullscreen_mode=false
-var eff_font_height=modal_dialog.font_height||font_height
-var eff_button_height=button_height
+var eff_font_height=modal_dialog.font_height||(modal_dialog.style||ui_style_current).text_height
+var eff_button_height=ui_style_current.button_height
 var pad=modal_pad
 var vpad=.5*modal_pad
 var general_scale=1
 var exit_lock=true
 var num_lines
-if(virtual_size[0]>.05*camera2d.h()&&camera2d.w()>2*camera2d.h()){fullscreen_mode=true
+if(!modal_dialog.no_fullscreen_zoom&&virtual_size[0]>.05*camera2d.h()&&camera2d.w()>2*camera2d.h()){fullscreen_mode=true
 eff_button_height=eff_font_height
 vpad=pad=4
 var old_h=camera2d.h()
@@ -8364,14 +10803,14 @@ var key_lower=key.toLowerCase()
 var cur_button=buttons[key]=buttons[key]||{}
 var eff_button_keys=button_keys[key_lower]
 var pressed=0
-if(eff_button_keys){for(var jj=0;jj<eff_button_keys.key.length;++jj){pressed+=glov_input.keyDownEdge(eff_button_keys.key[jj],cur_button.in_event_cb)
-if(eff_button_keys.key[jj]===tick_key)pressed++}for(var _jj=0;_jj<eff_button_keys.pad.length;++_jj)pressed+=glov_input.padButtonDownEdge(eff_button_keys.pad[_jj])}if(click_anywhere&&0===ii&&glov_input.click())++pressed
+if(eff_button_keys){for(var jj=0;jj<eff_button_keys.key.length;++jj){pressed+=glov_input.keyUpEdge(eff_button_keys.key[jj],cur_button.in_event_cb)
+if(eff_button_keys.key[jj]===tick_key)pressed++}for(var _jj=0;_jj<eff_button_keys.pad.length;++_jj)pressed+=glov_input.padButtonUpEdge(eff_button_keys.pad[_jj])}if(click_anywhere&&0===ii&&glov_input.click())++pressed
 if(pressed)did_button=ii
 var but_label=cur_button.label||buttons_default_labels[key_lower]||key
-if(buttonText(defaults({key:"md_"+key,x:x,y:y,z:Z.MODAL,w:eff_button_width,h:eff_button_height,text:but_label,auto_focus:0===ii},cur_button)))did_button=ii
-x=round(x+pad+eff_button_width)}if(-1===did_button)for(var _ii2=0;_ii2<keys.length;++_ii2){var _key=keys[_ii2]
+if(button(defaults({key:"md_"+key,x:x,y:y,z:Z.MODAL,w:eff_button_width,h:eff_button_height,text:but_label,auto_focus:0===ii,focus_steal:1===keys.length&&!modal_dialog.tick},cur_button)))did_button=ii
+x=round(x+pad+eff_button_width)}if(-1===did_button)for(var _ii=0;_ii<keys.length;++_ii){var _key=keys[_ii]
 var _eff_button_keys=button_keys[_key.toLowerCase()]
-if(_eff_button_keys&&_eff_button_keys.low_key)for(var _jj2=0;_jj2<_eff_button_keys.low_key.length;++_jj2)if(glov_input.keyDownEdge(_eff_button_keys.low_key[_jj2],buttons[_key].in_event_cb)||_eff_button_keys.low_key[_jj2]===tick_key)did_button=_ii2}if(-1!==did_button){var _key2=keys[did_button]
+if(_eff_button_keys&&_eff_button_keys.low_key)for(var _jj2=0;_jj2<_eff_button_keys.low_key.length;++_jj2)if(glov_input.keyUpEdge(_eff_button_keys.low_key[_jj2],buttons[_key].in_event_cb)||_eff_button_keys.low_key[_jj2]===tick_key)did_button=_ii}if(-1!==did_button){var _key2=keys[did_button]
 playUISound("button_click")
 modal_dialog=null
 if(buttons[_key2].cb)buttons[_key2].cb()
@@ -8380,7 +10819,7 @@ y=round(y+vpad+pad)
 panel({x:x0,y:y0,z:Z.MODAL-1,w:eff_modal_width,h:(fullscreen_mode?camera2d.y1():y)-y0,pixel_scale:panel_pixel_scale*general_scale,color:panel_color})
 if(glov_input.pointerLocked()&&exit_lock)glov_input.pointerLockExit()
 glov_input.eatAllInput()
-if(fullscreen_mode)camera2d.pop()}function modalTextEntry(param){var eb=editBoxCreate({initial_focus:true,spellcheck:false,initial_select:true,text:param.edit_text,max_len:param.max_len,esc_clears:false})
+if(fullscreen_mode)camera2d.pop()}function modalTextEntry(param){var eb=editBoxCreate({initial_focus:true,spellcheck:false,initial_select:true,text:param.edit_text,multiline:param.multiline,enforce_multiline:param.enforce_multiline,max_len:param.max_len,max_visual_size:param.max_visual_size,esc_clears:false,auto_unfocus:true})
 var buttons={}
 for(var key in param.buttons){var cb=param.buttons[key]
 if(null!==cb&&"object"===typeof cb&&"cb"in cb)cb=param.buttons[key].cb
@@ -8389,40 +10828,45 @@ buttons[key]=defaults({cb:cb},param.buttons[key])}param.buttons=buttons
 param.text=""+(param.text||"")
 var old_tick=param.tick
 param.tick=function(params){var eb_ret=eb.run({x:params.x,y:params.y,w:params.avail_width||param.edit_w,font_height:params.font_height})
-if(!params.fullscreen_mode)params.y+=params.font_height+modal_pad
+if(!params.fullscreen_mode)params.y+=params.font_height*(param.multiline||1)+modal_pad
 var ret
-if(eb_ret===eb.SUBMIT)ret=KEYS.O
+if(eb_ret===eb.SUBMIT&&!param.multiline)ret=KEYS.O
 else if(eb_ret===eb.CANCEL)ret=KEYS.ESC
 if(old_tick)ret=old_tick(params)||ret
 return ret}
 modalDialog(param)}function createEditBox(param){return editBoxCreate(param)}var pp_bad_frames=0
 function isMenuUp(){return modal_dialog||menu_up}function releaseOldUIElemData(){for(var type in ui_elem_data){var by_type=ui_elem_data[type]
 var any=false
-for(var key in by_type)if(by_type[key].frame_index<glov_engine.frame_index-1)delete by_type[key]
-else any=true
-if(!any)delete ui_elem_data[type]}}function uiTick(dt){per_frame_dom_alloc[glov_engine.frame_index%per_frame_dom_alloc.length]=0
+var keys=Object.keys(by_type)
+for(var ii=0;ii<keys.length;++ii){var key=keys[ii]
+if(by_type[key].frame_index<glov_engine.frame_index-1)delete by_type[key]
+else any=true}if(!any)delete ui_elem_data[type]}}function uiTick(dt){per_frame_dom_alloc[glov_engine.frame_index%per_frame_dom_alloc.length]=0
 releaseOldUIElemData()
 editBoxTick()
 linkTick()
-dom_elems_issued=0
+dom_tab_index=dom_elems_issued=0
 var pp_this_frame=false
 if(modal_dialog||menu_up){var params=menu_fade_params
 if(!menu_up)params=menu_fade_params_default
-var factor=min((menu_up_time+=dt)/500,1)
-if(glov_engine.postprocessing&&!glov_engine.defines.NOPP){var blur_factor=lerp(factor,params.blur[0],params.blur[1])
+menu_up_time+=dt
+if(glov_engine.postprocessing&&!glov_engine.defines.NOPP){var factor=min(menu_up_time/500,1)
+if(factor<1)glov_engine.renderNeeded()
+var blur_factor=lerp(factor,params.blur[0],params.blur[1])
 if(blur_factor)effectsQueue(params.z-2,doBlurEffect.bind(null,blur_factor))
 var saturation=lerp(factor,params.saturation[0],params.saturation[1])
 var brightness=lerp(factor,params.brightness[0],params.brightness[1])
 if(1!==saturation||1!==brightness)effectsQueue(params.z-1,doDesaturateEffect.bind(null,saturation,brightness))
-pp_this_frame=true}else sprites.white.draw({x:camera2d.x0Real(),y:camera2d.y0Real(),z:params.z-2,color:params.fallback_darken,w:camera2d.wReal(),h:camera2d.hReal()})}else menu_up_time=0
+pp_this_frame=true}else sprites.white.draw({x:camera2d.x0Real(),y:camera2d.y0Real(),z:params.z-2,color:params.fallback_darken,w:camera2d.wReal(),h:camera2d.hReal()})
+null==params.cb||params.cb(params.z-2)}else menu_up_time=0
 exports.menu_up=menu_up=false
 if(!glov_engine.is_loading&&glov_engine.getFrameDtActual()>50&&pp_this_frame){if((pp_bad_frames=(pp_bad_frames||0)+1)>=6)glov_engine.postprocessingAllow(false)}else if(pp_bad_frames)pp_bad_frames=0
 spotTopOfFrame()
+uiStyleTopOfFrame()
 if(modal_dialog)modalDialogRun()}function uiEndFrame(){spotEndOfFrame()
 if(glov_input.click({x:-Infinity,y:-Infinity,w:Infinity,h:Infinity}))spotUnfocus()
 while(dom_elems_issued<dom_elems.length){var elem=dom_elems.pop()
 dynamic_text_elem.removeChild(elem)}}function cleanupDOMElems(){while(dom_elems.length){var elem=dom_elems.pop()
-dynamic_text_elem.removeChild(elem)}}function menuUp(param){merge(menu_fade_params,menu_fade_params_default)
+dynamic_text_elem.removeChild(elem)}dom_elems_issued=0}function menuUp(param){merge(menu_fade_params,menu_fade_params_default)
 if(param)merge(menu_fade_params,param)
 exports.menu_up=menu_up=true
 glov_input.eatAllInput()}function copyTextToClipboard(text){var textArea=document.createElement("textarea")
@@ -8441,8 +10885,8 @@ textArea.focus()
 textArea.select()
 var ret=false
 try{ret=document.execCommand("copy")}catch(err){}document.body.removeChild(textArea)
-return ret}function provideUserString(title,str){var copy_success=copyTextToClipboard(str)
-modalTextEntry({edit_w:400,edit_text:str.replace(/[\n\r]/g," "),title:title,text:copy_success?default_copy_success_msg:default_copy_failure_msg,buttons:{ok:null}})}var draw_rect_param={}
+return ret}function provideUserString(title,str,alt_buttons){var copy_success=copyTextToClipboard(str)
+modalTextEntry({edit_w:400,edit_text:str.replace(/[\n\r]/g," "),title:title,text:copy_success?default_copy_success_msg:default_copy_failure_msg,buttons:_extends({},alt_buttons||{},{ok:null})})}var draw_rect_param={}
 function drawRect(x0,y0,x1,y1,z,color){var mx=min(x0,x1)
 var my=min(y0,y1)
 var Mx=max(x0,x1)
@@ -8476,13 +10920,18 @@ function premulAlphaColor(color){temp_color[0]=color[0]*color[3]
 temp_color[1]=color[1]*color[3]
 temp_color[2]=color[2]*color[3]
 temp_color[3]=color[3]
-return temp_color}function drawElipseInternal(sprite,x0,y0,x1,y1,z,spread,tu0,tv0,tu1,tv1,color,blend){if(!blend&&!glov_engine.defines.NOPREMUL){blend=BLEND_PREMULALPHA
-color=premulAlphaColor(color)}glov_sprites.queueraw(sprite.texs,x0,y0,z,x1-x0,y1-y0,tu0,tv0,tu1,tv1,color,glov_font.font_shaders.font_aa,spreadTechParams(spread),blend)}function drawCircleInternal(sprite,x,y,z,r,spread,tu0,tv0,tu1,tv1,color,blend){drawElipseInternal(sprite,x-2*r+4*r*tu0,y-2*r+4*r*tv0,x-2*r+4*r*tu1,y-2*r+4*r*tv1,z,spread,tu0,tv0,tu1,tv1,color,blend)}function initCircleSprite(){var CIRCLE_SIZE=32
+return temp_color}function premulAlphaAdditiveColor(color){temp_color[0]=color[0]*color[3]
+temp_color[1]=color[1]*color[3]
+temp_color[2]=color[2]*color[3]
+temp_color[3]=0
+return temp_color}function drawElipseInternal(sprite,x0,y0,x1,y1,z,spread,tu0,tv0,tu1,tv1,color,blend){if(!glov_engine.defines.NOPREMUL)if(!blend){blend=BLEND_PREMULALPHA
+color=premulAlphaColor(color)}else if(blend===BLEND_ADDITIVE){blend=BLEND_PREMULALPHA
+color=premulAlphaAdditiveColor(color)}spriteQueueRaw(sprite.texs,x0,y0,z,x1-x0,y1-y0,tu0,tv0,tu1,tv1,color,glov_font.font_shaders.font_aa,spreadTechParams(spread),blend)}function drawCircleInternal(sprite,x,y,z,r,spread,tu0,tv0,tu1,tv1,color,blend){drawElipseInternal(sprite,x-2*r+4*r*tu0,y-2*r+4*r*tv0,x-2*r+4*r*tu1,y-2*r+4*r*tv1,z,spread,tu0,tv0,tu1,tv1,color,blend)}function initCircleSprite(){var CIRCLE_SIZE=32
 var data=new Uint8Array(CIRCLE_SIZE*CIRCLE_SIZE)
 var midp=(CIRCLE_SIZE-1)/2
 for(var i=0;i<CIRCLE_SIZE;i++)for(var j=0;j<CIRCLE_SIZE;j++){var d=sqrt((i-midp)*(i-midp)+(j-midp)*(j-midp))/midp
 var v=clamp(1-d,0,1)
-data[i+j*CIRCLE_SIZE]=255*v}sprites.circle=spriteCreate({url:"circle",width:CIRCLE_SIZE,height:CIRCLE_SIZE,format:textures.format.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}function drawElipse(x0,y0,x1,y1,z,spread,color,blend){if(!sprites.circle)initCircleSprite()
+data[i+j*CIRCLE_SIZE]=255*v}sprites.circle=spriteCreate({url:"circle",width:CIRCLE_SIZE,height:CIRCLE_SIZE,format:TEXTURE_FORMAT.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}function drawElipse(x0,y0,x1,y1,z,spread,color,blend){if(!sprites.circle)initCircleSprite()
 drawElipseInternal(sprites.circle,x0,y0,x1,y1,z,spread,0,0,1,1,color,blend)}function drawCircle(x,y,z,r,spread,color,blend){if(!sprites.circle)initCircleSprite()
 drawCircleInternal(sprites.circle,x,y,z,r,spread,0,0,1,1,color,blend)}function drawHollowCircle(x,y,z,r,spread,color,blend){if(!sprites.hollow_circle){var CIRCLE_SIZE=128
 var LINE_W=2
@@ -8492,7 +10941,7 @@ for(var i=0;i<CIRCLE_SIZE;i++)for(var j=0;j<CIRCLE_SIZE;j++){var d=sqrt((i-midp)
 var v=clamp(1-d,0,1)
 if(v>.5)v=1-v
 v+=LINE_W/CIRCLE_SIZE
-data[i+j*CIRCLE_SIZE]=255*v}sprites.hollow_circle=spriteCreate({url:"hollow_circle",width:CIRCLE_SIZE,height:CIRCLE_SIZE,format:textures.format.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}drawCircleInternal(sprites.hollow_circle,x,y,z,r,spread,0,0,1,1,color,blend)}var LINE_TEX_W=16
+data[i+j*CIRCLE_SIZE]=255*v}sprites.hollow_circle=spriteCreate({url:"hollow_circle",width:CIRCLE_SIZE,height:CIRCLE_SIZE,format:TEXTURE_FORMAT.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}drawCircleInternal(sprites.hollow_circle,x,y,z,r,spread,0,0,1,1,color,blend)}var LINE_TEX_W=16
 var LINE_TEX_H=16
 var LINE_MIDP=floor((LINE_TEX_H-1)/2)
 var LINE_V0=.5/LINE_TEX_H
@@ -8501,10 +10950,11 @@ var LINE_U0=.5/LINE_TEX_W
 var LINE_U1=(LINE_MIDP+.5)/LINE_TEX_W
 var LINE_U2=1-LINE_U1
 var LINE_U3=1-.5/LINE_TEX_W
+var line_last_shader_param={param0:[0,0]}
 function drawLine(x0,y0,x1,y1,z,w,precise,color,mode){if(void 0===mode)mode=default_line_mode
 var blend
 if(!glov_engine.defines.NOPREMUL){blend=BLEND_PREMULALPHA
-color=premulAlphaColor(color)}var tex_key=mode&LINE_CAP_ROUND?"line3":"line2"
+color=premulAlphaColor(color||unit_vec)}var tex_key=mode&LINE_CAP_ROUND?"line3":"line2"
 if(!sprites[tex_key]){var data=new Uint8Array(LINE_TEX_W*LINE_TEX_H)
 var i1=LINE_MIDP
 var i2=LINE_TEX_W-1-LINE_MIDP
@@ -8515,7 +10965,7 @@ data[i+j*LINE_TEX_W]=min(i_value,j_value)}}else for(var _j=0;_j<LINE_TEX_H;_j++)
 for(var _i4=0;_i4<LINE_TEX_W;_i4++){var id=_i4<i1?1-_i4/LINE_MIDP:_i4>=i2?(_i4-i2)/LINE_MIDP:0
 var dv=sqrt(id*id+_d*_d)
 dv=clamp(1-dv,0,1)
-data[_i4+_j*LINE_TEX_W]=round(255*dv)}}sprites[tex_key]=spriteCreate({url:tex_key,width:LINE_TEX_W,height:LINE_TEX_H,format:textures.format.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE})}var texs=sprites[tex_key].texs
+data[_i4+_j*LINE_TEX_W]=round(255*dv)}}sprites[tex_key]=spriteCreate({url:tex_key,width:LINE_TEX_W,height:LINE_TEX_H,format:TEXTURE_FORMAT.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE})}var texs=sprites[tex_key].texs
 var virtual_to_pixels=.5*(camera2d.data[4]+camera2d.data[5])
 var w_in_pixels=w*virtual_to_pixels
 var draw_w_pixels=w_in_pixels+4
@@ -8536,12 +10986,16 @@ x0+=xoffs
 x1+=xoffs}var step_start=1-(w_in_pixels+1)/draw_w_pixels
 var step_end=step_start+2/draw_w_pixels
 var A=1/((step_end=1+precise*(step_end-1))-step_start)
-var shader_param={param0:[A,-step_start*A]}
-glov_sprites.queueraw4(texs,x1+tangx,y1+tangy,x1-tangx,y1-tangy,x0-tangx,y0-tangy,x0+tangx,y0+tangy,z,LINE_U1,LINE_V0,LINE_U2,LINE_V1,color,glov_font.font_shaders.font_aa,shader_param,blend)
+var B=-step_start*A
+if(mode&LINE_NO_AA){A*=512
+B=512*B-255.5}var shader_param
+if(line_last_shader_param.param0[0]!==A||line_last_shader_param.param0[1]!==B)line_last_shader_param={param0:[A,B]}
+shader_param=line_last_shader_param
+spriteQueueRaw4(texs,x1+tangx,y1+tangy,x1-tangx,y1-tangy,x0-tangx,y0-tangy,x0+tangx,y0+tangy,z,LINE_U1,LINE_V0,LINE_U2,LINE_V1,color,glov_font.font_shaders.font_aa,shader_param,blend)
 if(mode&(LINE_CAP_ROUND|LINE_CAP_SQUARE)){var nx=dx*w/2
 var ny=dy*w/2
-glov_sprites.queueraw4(texs,x1-tangx,y1-tangy,x1+tangx,y1+tangy,x1+tangx+nx,y1+tangy+ny,x1-tangx+nx,y1-tangy+ny,z,LINE_U2,LINE_V1,LINE_U3,LINE_V0,color,glov_font.font_shaders.font_aa,shader_param,blend)
-glov_sprites.queueraw4(texs,x0-tangx,y0-tangy,x0+tangx,y0+tangy,x0+tangx-nx,y0+tangy-ny,x0-tangx-nx,y0-tangy-ny,z,LINE_U1,LINE_V1,LINE_U0,LINE_V0,color,glov_font.font_shaders.font_aa,shader_param,blend)}}function drawHollowRect(x0,y0,x1,y1,z,w,precise,color,mode){drawLine(x0,y0,x1,y0,z,w,precise,color,mode)
+spriteQueueRaw4(texs,x1-tangx,y1-tangy,x1+tangx,y1+tangy,x1+tangx+nx,y1+tangy+ny,x1-tangx+nx,y1-tangy+ny,z,LINE_U2,LINE_V1,LINE_U3,LINE_V0,color,glov_font.font_shaders.font_aa,shader_param,blend)
+spriteQueueRaw4(texs,x0-tangx,y0-tangy,x0+tangx,y0+tangy,x0+tangx-nx,y0+tangy-ny,x0-tangx-nx,y0-tangy-ny,z,LINE_U1,LINE_V1,LINE_U0,LINE_V0,color,glov_font.font_shaders.font_aa,shader_param,blend)}}function drawHollowRect(x0,y0,x1,y1,z,w,precise,color,mode){drawLine(x0,y0,x1,y0,z,w,precise,color,mode)
 drawLine(x1,y0,x1,y1,z,w,precise,color,mode)
 drawLine(x1,y1,x0,y1,z,w,precise,color,mode)
 drawLine(x0,y1,x0,y0,z,w,precise,color,mode)}function drawHollowRect2(param){drawHollowRect(param.x,param.y,param.x+param.w,param.y+param.h,param.z||Z.UI,param.line_width||1,param.precise||1,param.color||unit_vec)}function drawCone(x0,y0,x1,y1,z,w0,w1,spread,color){var blend
@@ -8555,16 +11009,19 @@ var d=0
 if(i>midp){_dx=(i-midp)/midp
 _dy=abs(j-midp)/midp
 d=_dx*sqrt(_dx*_dx+_dy*_dy)}var v=clamp(1-d,0,1)
-data[i+j*CONE_SIZE]=255*v}sprites.cone=spriteCreate({url:"cone",width:CONE_SIZE,height:CONE_SIZE,format:textures.format.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}var dx=x1-x0
+data[i+j*CONE_SIZE]=255*v}sprites.cone=spriteCreate({url:"cone",width:CONE_SIZE,height:CONE_SIZE,format:TEXTURE_FORMAT.R8,data:data,filter_min:gl.LINEAR,filter_mag:gl.LINEAR,wrap_s:gl.CLAMP_TO_EDGE,wrap_t:gl.CLAMP_TO_EDGE,origin:vec2(.5,.5)})}var dx=x1-x0
 var dy=y1-y0
 var length=sqrt(dx*dx+dy*dy)
 var tangx=-(dy/=length)
 var tangy=dx/=length
-glov_sprites.queueraw4(sprites.cone.texs,x0-tangx*w0,y0-tangy*w0,x0+tangx*w0,y0+tangy*w0,x1+tangx*w1,y1+tangy*w1,x1-tangx*w1,y1-tangy*w1,z,0,0,1,1,color,glov_font.font_shaders.font_aa,spreadTechParams(spread),blend)}function setFontHeight(_font_height){exports.font_height=font_height=_font_height
-fontSetDefaultSize(font_height)}function scaleSizes(scale){exports.button_height=button_height=round(32*scale)
-setFontHeight(round(24*scale))
-exports.button_width=button_width=round(200*scale)
-exports.button_img_size=button_img_size=button_height
+spriteQueueRaw4(sprites.cone.texs,x0-tangx*w0,y0-tangy*w0,x0+tangx*w0,y0+tangy*w0,x1+tangx*w1,y1+tangy*w1,x1-tangx*w1,y1-tangy*w1,z,0,0,1,1,color,glov_font.font_shaders.font_aa,spreadTechParams(spread),blend)}function setFontHeight(_font_height){uiStyleModify(uiStyleDefault(),{text_height:_font_height})}function uiApplyStyle(style){ui_style_current=style
+exports.font_height=style.text_height
+exports.button_width=style.button_width
+exports.button_height=style.button_height
+fontSetDefaultSize(style.text_height)}function setButtonHeight(button_height){exports.panel_pixel_scale=panel_pixel_scale=button_height/sprites.panel.uidata.total_h
+scrollAreaSetPixelScale(button_height/sprites.button.uidata.total_h)
+uiStyleModify(uiStyleDefault(),{button_height:button_height})}function scaleSizes(scale){var text_height=round(24*scale)
+var button_width=round(200*scale)
 exports.modal_button_width=modal_button_width=round(button_width/2)
 exports.modal_width=modal_width=round(600*scale)
 exports.modal_y0=modal_y0=round(200*scale)
@@ -8572,23 +11029,103 @@ exports.modal_title_scale=modal_title_scale=1.2
 exports.modal_pad=modal_pad=round(16*scale)
 exports.tooltip_width=tooltip_width=round(400*scale)
 exports.tooltip_pad=tooltip_pad=round(8*scale)
-exports.panel_pixel_scale=panel_pixel_scale=button_height/sprites.panel.uidata.total_h
-exports.tooltip_panel_pixel_scale=tooltip_panel_pixel_scale=panel_pixel_scale
-scrollAreaSetPixelScale(button_height/sprites.button.uidata.total_h)}function setPanelPixelScale(scale){exports.tooltip_panel_pixel_scale=tooltip_panel_pixel_scale=exports.panel_pixel_scale=panel_pixel_scale=scale}function setModalSizes(_modal_button_width,width,y0,title_scale,pad){exports.modal_button_width=modal_button_width=_modal_button_width||round(button_width/2)
+uiStyleModify(uiStyleDefault(),{text_height:text_height,button_width:button_width})
+setButtonHeight(round(32*scale))
+exports.tooltip_panel_pixel_scale=tooltip_panel_pixel_scale=panel_pixel_scale}function setPanelPixelScale(scale){exports.tooltip_panel_pixel_scale=tooltip_panel_pixel_scale=exports.panel_pixel_scale=panel_pixel_scale=scale}function setModalSizes(_modal_button_width,width,y0,title_scale,pad){exports.modal_button_width=modal_button_width=_modal_button_width||round(ui_style_current.button_width/2)
 exports.modal_width=modal_width=width||600
 exports.modal_y0=modal_y0=y0||200
 exports.modal_title_scale=modal_title_scale=title_scale||1.2
 exports.modal_pad=modal_pad=pad||modal_pad}function setTooltipWidth(_tooltip_width,_tooltip_panel_pixel_scale){exports.tooltip_width=tooltip_width=_tooltip_width
 exports.tooltip_panel_pixel_scale=tooltip_panel_pixel_scale=_tooltip_panel_pixel_scale
-exports.tooltip_pad=tooltip_pad=modal_pad/2*_tooltip_panel_pixel_scale}
+exports.tooltip_pad=tooltip_pad=round(modal_pad/2*_tooltip_panel_pixel_scale)}function setTooltipTextOffset(_tooltip_text_offs){tooltip_text_offs=_tooltip_text_offs}
 
-},{"../common/util.js":74,"../common/vmath.js":76,"./camera2d.js":7,"./edit_box.js":11,"./effects.js":12,"./engine.js":13,"./font.js":19,"./input.js":28,"./link.js":30,"./localization.js":32,"./mat43.js":33,"./scroll_area.js":43,"./slider.js":47,"./sound.js":49,"./spot.js":50,"./sprites.js":51,"./textures.js":55,"assert":undefined}],58:[function(require,module,exports){
+},{"../common/util.js":93,"../common/vmath.js":95,"./autoatlas":5,"./camera2d.js":9,"./edit_box.js":13,"./effects.js":14,"./engine.js":15,"./font.js":22,"./input.js":31,"./link.js":34,"./localization.js":36,"./markdown":38,"./mat43.js":41,"./scroll_area.js":52,"./slider.js":57,"./sound.js":59,"./spot.js":60,"./sprites.js":61,"./textures.js":65,"./uistyle.js":68,"assert":undefined}],68:[function(require,module,exports){
+"use strict"
+exports.uiStyleAlloc=uiStyleAlloc
+exports.uiStyleCurrent=uiStyleCurrent
+exports.uiStyleDefault=uiStyleDefault
+exports.uiStyleModify=uiStyleModify
+exports.uiStylePop=uiStylePop
+exports.uiStylePush=uiStylePush
+exports.uiStyleSetCurrent=uiStyleSetCurrent
+exports.uiStyleTopOfFrame=uiStyleTopOfFrame
+var assert=require("assert")
+var _glovCommonUtil=require("../common/util")
+var tail=_glovCommonUtil.tail
+var verify=require("../common/verify")
+var _ui=require("./ui")
+var ui_internal=_ui.internal
+var uiApplyStyle=ui_internal.uiApplyStyle
+var default_style_params_init={text_height:24,button_width:200,button_height:32}
+var ui_style_default
+var ui_style_current
+var UIStyleImpl=function UIStyleImpl(id_chain){this.id_chain=void 0
+this.text_height=void 0
+this.button_width=void 0
+this.button_height=void 0
+this.id_chain=id_chain}
+var style_params=Object.create(null)
+var style_param_auto_last_idx=0
+style_params.default={def:default_style_params_init,deps:[]}
+function uiStyleCompute(style){var id_chain=style.id_chain
+var text_height
+var button_width
+var button_height
+for(var ii=0;ii<id_chain.length;++ii){var id=id_chain[ii]
+var entry=style_params[id]
+assert(entry)
+var v=entry.def.text_height
+if(void 0!==v)if("string"===typeof v){var m=v.match(/^(\d+)%$/)
+assert(m)
+text_height*=Number(m[1])/100}else{assert.equal(typeof v,"number")
+text_height=v}if(void 0!==(v=entry.def.button_width))if("string"===typeof v){var _m=v.match(/^(\d+)%$/)
+assert(_m)
+button_width*=Number(_m[1])/100}else{assert.equal(typeof v,"number")
+button_width=v}if(void 0!==(v=entry.def.button_height))if("string"===typeof v){var _m2=v.match(/^(\d+)%$/)
+assert(_m2)
+button_height*=Number(_m2[1])/100}else{assert.equal(typeof v,"number")
+button_height=v}if(0===ii){assert("number"===typeof text_height)
+assert("number"===typeof button_width)
+assert("number"===typeof button_height)}}style.text_height=text_height
+style.button_width=button_width
+style.button_height=button_height}function uiStyleModify(style,params){var id=tail(style.id_chain)
+assert(id)
+var entry=style_params[id]
+assert(entry)
+var def=entry.def
+for(var key in params){var v=params[key]
+if(void 0===v)delete def[key]
+else def[key]=v}for(var ii=0;ii<entry.deps.length;++ii){var style_walk=entry.deps[ii]
+uiStyleCompute(style_walk)
+if(style_walk===ui_style_current)uiApplyStyle(ui_style_current)}}function uiStyleAlloc(){var id_chain=[]
+id_chain.push("default")
+for(var ii=0;ii<arguments.length;++ii){var v=ii<0||arguments.length<=ii?void 0:arguments[ii]
+var id=void 0
+if("string"===typeof v)assert(style_params[id=v])
+else{id="$"+ ++style_param_auto_last_idx+")"
+style_params[id]={def:v,deps:[]}}id_chain.push(id)}var ret=new UIStyleImpl(id_chain)
+uiStyleCompute(ret)
+for(var _ii=0;_ii<id_chain.length;++_ii){var _id=id_chain[_ii]
+style_params[_id].deps.push(ret)}return ret}function uiStyleDefault(){return ui_style_default}function uiStyleCurrent(){return ui_style_current}function uiStyleSetCurrent(style){uiApplyStyle(ui_style_current=style)}ui_style_current=ui_style_default=uiStyleAlloc()
+var style_stack=[]
+function uiStylePush(style){style_stack.push(ui_style_current)
+uiStyleSetCurrent(style)}function uiStylePop(){var popped=style_stack.pop()
+assert(popped)
+uiStyleSetCurrent(popped)}var did_once=false
+function uiStyleTopOfFrame(){if(style_stack.length){if(!did_once){did_once=true
+verify(!style_stack.length,"Style stack push/pop mismatch")}style_stack.length=0}uiStyleSetCurrent(ui_style_current)}
+
+},{"../common/util":93,"../common/verify":94,"./ui":67,"assert":undefined}],69:[function(require,module,exports){
 "use strict"
 exports.TYPE_STRING=exports.TYPE_SET=void 0
 exports.get=get
+exports.getLinkURL=getLinkURL
+exports.getRouteString=getRouteString
 exports.getURLBase=getURLBase
 exports.getURLPageBase=getURLPageBase
 exports.go=go
+exports.goRoute=goRoute
+exports.historyDeferUpdate=historyDeferUpdate
 exports.onChange=onChange
 exports.onURLChange=onURLChange
 exports.refreshTitle=refreshTitle
@@ -8598,6 +11135,7 @@ exports.routeFixed=routeFixed
 exports.set=set
 exports.setMulti=setMulti
 exports.startup=startup
+exports.urlhashFireInitialChanges=urlhashFireInitialChanges
 var assert=require("assert")
 var _require=require("../common/util.js"),callEach=_require.callEach
 var HISTORY_UPDATE_TIME=1e3
@@ -8608,17 +11146,23 @@ exports.TYPE_STRING=TYPE_STRING
 var params={}
 var title_transformer
 var page_base=(document.location.href||"").match(/^[^#?]+/)[0]
-if(!page_base.endsWith("/"))page_base+="?"
 var url_base=page_base.replace(/[^/]*$/,"")
+if(url_base.endsWith("/a/"))url_base=url_base.slice(0,-2)
 var on_change=[]
-function getURLBase(){return url_base}function getURLPageBase(){return page_base}function onChange(cb){on_change.push(cb)}function cmpNumKeys(a,b){var d=b.keys.length-a.keys.length
+function getURLBase(){return url_base}function getURLPageBase(){return page_base}function getLinkURL(suburl){var mid=""
+if(!page_base.endsWith("/")&&suburl&&!suburl.startsWith("?"))mid="?"
+var url=""+page_base+mid+suburl
+if(url.endsWith("?"))url=url.slice(0,-1)
+return url}function onChange(cb){on_change.push(cb)}function cmpNumKeys(a,b){var d=b.keys.length-a.keys.length
 if(d)return d
 for(var ii=0;ii<a.keys.length;++ii)if(a.keys[ii]<b.keys[ii])return-1
 else if(a.keys[ii]>b.keys[ii])return 1
 assert(false)
 return 0}var route_param_regex=/:(\w+)/g
 var routes=[]
-function queryString(){return String(document.location).slice(page_base.length)}var regex_value=/[^\w]\w+=([^&]+)/
+function queryString(){var href=String(document.location)
+if((href=href.slice(page_base.length)).includes("#"))href=href.slice(0,href.indexOf("#"))
+return href}var regex_value=/[^\w]\w+=([^&]+)/
 function getValue(query_string,opts){if(opts.routes)for(var ii=0;ii<opts.routes.length;++ii){var r=opts.routes[ii]
 var _m=query_string.match(r.regex)
 if(_m){if(r.value)return r.value
@@ -8627,19 +11171,20 @@ if(opts.type===TYPE_SET){var _r={}
 for(var _ii=0;_ii<m.length;++_ii){var m2=m[_ii].match(regex_value)
 assert(m2)
 _r[m2[1]]=1}return _r}else return m[1]||opts.def}var last_history_str=null
-function goInternal(query_string){var hidden={}
+function goInternal(query_string,for_init,skip_apply,route_only){var hidden={}
 for(var key in params){var opts=params[key]
-if(opts.hides)if(getValue(query_string,opts))for(var otherkey in opts.hides)hidden[otherkey]=1}var dirty={}
+if(opts.hides)if(for_init?opts.value:getValue(query_string,opts))for(var otherkey in opts.hides)hidden[otherkey]=1}var dirty={}
 for(var _key in params){if(hidden[_key])continue
 var _opts=params[_key]
-var new_value=getValue(query_string,_opts)
-if(_opts.type===TYPE_SET){for(var v in new_value)if(!_opts.value[v]){_opts.value[v]=1
-dirty[_key]=true}for(var _v in _opts.value)if(!new_value[_v]){delete _opts.value[_v]
-dirty[_key]=true}}else if(new_value!==_opts.value){dirty[_key]=true
-_opts.value=new_value}}for(var _key2 in dirty){var _opts2=params[_key2]
-if(_opts2.change)_opts2.change(_opts2.value)}callEach(on_change)}var eff_title
-function toString(){eff_title=""
-var values=[]
+var new_value=for_init?_opts.value:getValue(query_string,_opts)
+if(_opts.type===TYPE_SET){for(var v in new_value)if(!_opts.value[v]||for_init){_opts.value[v]=1
+dirty[_key]=true}if(route_only&&!(_opts.routes||_opts.clear_on_route_change))continue
+for(var _v in _opts.value)if(!new_value[_v]){delete _opts.value[_v]
+dirty[_key]=true}}else{if(route_only&&!(_opts.routes||_opts.clear_on_route_change)&&!new_value)continue
+if(new_value!==_opts.value||for_init){dirty[_key]=true
+_opts.value=new_value}}}if(!skip_apply){for(var _key2 in dirty){var _opts2=params[_key2]
+if(_opts2.change)_opts2.change(_opts2.value,for_init)}callEach(on_change,for_init)}}var eff_title
+function toString(route_only){eff_title=""
 var hidden={}
 for(var key in params){var opts=params[key]
 if(opts.hides&&opts.value)for(var otherkey in opts.hides)hidden[otherkey]=1}var root_value=""
@@ -8653,31 +11198,35 @@ if(!route_title&&_opts3.title)route_title=_opts3.title(_opts3.value)}for(var _jj
 if(params[_key4].route_only)hidden[_key4]=true}root_value=r.route_string.replace(route_param_regex,function(ignored,key){hidden[key]=true
 return String(params[key].value)})
 if(!eff_title&&route_title)eff_title=route_title
-break}for(var _key5 in params){if(hidden[_key5])continue
+break}var values=[]
+for(var _key5 in params){if(hidden[_key5])continue
 var _opts4=params[_key5]
 if(_opts4.type===TYPE_SET)for(var v in _opts4.value)values.push(_key5+"="+v)
 else if(!_opts4.hide_values[_opts4.value]){values.push(_key5+"="+_opts4.value)
 if(!eff_title&&_opts4.title)eff_title=_opts4.title(_opts4.value)}}if(title_transformer)eff_title=title_transformer(eff_title)
 eff_title=String(eff_title)
-return root_value+(values.length?"?":"")+values.join("&")}function refreshTitle(){toString()
+if(route_only)values=[]
+return root_value+(values.length?"?":"")+values.join("&")}function refreshTitle(){toString(false)
 if(eff_title&&eff_title!==document.title)document.title=eff_title}function periodicRefreshTitle(){profilerStart("periodicRefreshTitle")
 refreshTitle()
 setTimeout(periodicRefreshTitle,1e3)
 profilerStop()}function onPopState(){var query_string=queryString()
-goInternal(last_history_str=query_string)
+goInternal(last_history_str=query_string,false,false,false)
 refreshTitle()}var on_url_change
-function onURLChange(cb){on_url_change=cb}var last_history_set_time=0
+function onURLChange(cb){on_url_change=cb}var history_update_deferred=false
+function historyDeferUpdate(defer){history_update_deferred=defer}var last_history_set_time=0
 var scheduled=false
 var need_push_state=false
 function updateHistoryCommit(){profilerStart("updateHistoryCommit")
-scheduled=false
+if(history_update_deferred){setTimeout(updateHistoryCommit,1e3)
+return void profilerStop()}scheduled=false
 last_history_set_time=Date.now()
-var url=""+page_base+last_history_str
+var url=getLinkURL(last_history_str)
 if(url.endsWith("?"))url=url.slice(0,-1)
 try{if(need_push_state){need_push_state=false
 window.history.pushState(void 0,eff_title,url)}else window.history.replaceState(void 0,eff_title,url)}catch(e){}if(eff_title)document.title=eff_title
 if(on_url_change)on_url_change()
-profilerStop()}function updateHistory(new_need_push_state){var new_str=toString()
+profilerStop()}function updateHistory(new_need_push_state){var new_str=toString(false)
 if(last_history_str===new_str)return
 need_push_state=need_push_state||new_need_push_state
 last_history_str=new_str
@@ -8690,7 +11239,7 @@ if(!(title_transformer=param.title_transformer)&&(param.title_suffix||param.titl
 title_transformer=function title_transformer(title){if(title_suffix&&title)return title+" | "+title_suffix
 return title||title_default||title_suffix}}updateHistory(false)
 if(title_transformer){refreshTitle()
-setTimeout(periodicRefreshTitle,1e3)}}function routeEx(new_route){var keys=new_route.keys
+setTimeout(periodicRefreshTitle,1e3)}}function urlhashFireInitialChanges(){goInternal(null,true,false,false)}function routeEx(new_route){var keys=new_route.keys
 for(var ii=0;ii<keys.length;++ii){var opts=params[keys[ii]]
 assert(opts)
 opts.routes=opts.routes||[]
@@ -8699,10 +11248,10 @@ opts.value=getValue(queryString(),opts)}routes.push(new_route)
 routes.sort(cmpNumKeys)}function route(route_string){var keys=[]
 var base=route_string.replace(route_param_regex,function(ignored,match){keys.push(match)
 return"([^/&?]+)"})
-routeEx({route_string:route_string,regex:new RegExp("^"+base+"(?:$|\\?)"),keys:keys})}function routeFixed(route_string,key){routeEx({route_string:route_string,regex:new RegExp("^"+route_string+"(?:$|\\?)"),value:"1",keys:[key]})}function register(opts){assert(opts.key)
+routeEx({route_string:route_string,regex:new RegExp("^\\??"+base+"(?:$|\\?|#)"),keys:keys})}function routeFixed(route_string,key){routeEx({route_string:route_string,regex:new RegExp("^\\??"+route_string+"(?:$|\\?|#)"),value:"1",keys:[key]})}function register(opts){assert(opts.key)
 assert(!params[opts.key])
 opts.type=opts.type||TYPE_STRING
-var regex_search="(?:[^\\w])"+opts.key+"=([^&]+)"
+var regex_search="(?:[^\\w])"+opts.key+"=([^&#]+)"
 var regex_type=""
 if(opts.type===TYPE_SET)regex_type="g"
 else{opts.def=opts.def||""
@@ -8728,36 +11277,49 @@ if(opts.value!==value){opts.value=value
 any=true
 push=push||opts.push}}if(any)updateHistory(push)}function get(key){var opts=params[key]
 assert(opts)
-return opts.value}function go(query_string){goInternal(query_string)
+return opts.value}function getRouteString(){return toString(true)}function go(query_string,skip_apply){goInternal(query_string,false,skip_apply,false)
+updateHistory(true)}function goRoute(route_string,skip_apply){goInternal(route_string,false,skip_apply,true)
 updateHistory(true)}
 
-},{"../common/util.js":74,"assert":undefined}],59:[function(require,module,exports){
+},{"../common/util.js":93,"assert":undefined}],70:[function(require,module,exports){
 "use strict"
-var floor=Math.floor,min=Math.min
+var _require=require("../common/util"),msToSS2020=_require.msToSS2020
+var min=Math.min
 var offs=0
 function now(){return Date.now()+offs}module.exports=exports=now
 exports.now=now
 var first=true
 exports.sync=function(server_time){if(first)offs=server_time-Date.now()
 else offs=min(offs,server_time-Date.now())}
-function toSS2020(milliseconds){return floor(milliseconds/1e3)-1577836800}exports.toSS2020=toSS2020
-exports.seconds=function(){return toSS2020(now())}
+exports.seconds=function(){return msToSS2020(now())}
 
-},{}],60:[function(require,module,exports){
+},{"../common/util":93}],71:[function(require,module,exports){
 "use strict"
+exports.webFSAPI=webFSAPI
+exports.webFSApplyReload=webFSApplyReload
 exports.webFSExists=webFSExists
+exports.webFSGetData=webFSGetData
 exports.webFSGetFile=webFSGetFile
 exports.webFSGetFileNames=webFSGetFileNames
+exports.webFSOnReady=webFSOnReady
 exports.webFSReportUnused=webFSReportUnused
+exports.webFSSetToWorkerCB=webFSSetToWorkerCB
+exports.webFSStartup=webFSStartup
 var assert=require("assert")
-var _require=require("./filewatch.js"),filewatchOn=_require.filewatchOn,filewatchTriggerChange=_require.filewatchTriggerChange
-var urlhash=require("./urlhash.js")
-var _require2=require("../common/util.js"),clone=_require2.clone,deepEqual=_require2.deepEqual
-var fs=window.glov_webfs||{}
+var _glovCommonUtil=require("../common/util")
+var callEach=_glovCommonUtil.callEach
+var clone=_glovCommonUtil.clone
+var deepEqual=_glovCommonUtil.deepEqual
+var _filewatch=require("./filewatch")
+var filewatchOn=_filewatch.filewatchOn
+var filewatchTriggerChange=_filewatch.filewatchTriggerChange
+var fs
 var decoded={}
 var used={}
 var active_reload=false
-function decode(data){var len=data[0]
+var on_ready=[]
+function webFSOnReady(cb){if(fs)cb()
+else on_ready.push(cb)}function decode(data){var len=data[0]
 var str=data[1]
 var u8=new Uint8Array(len)
 var idxo=0
@@ -8767,52 +11329,97 @@ if(126===byte)byte=0
 else if(27===byte)byte=str.charCodeAt(idxi++)
 u8[idxo++]=byte}assert.equal(idxi,str.length)
 assert.equal(idxo,len)
-return u8}function webFSGetFileNames(directory){var ret=[]
+return u8}function webFSGetFileNames(directory){assert(fs)
+var ret=[]
 for(var filename in fs)if(filename.startsWith(directory))ret.push(filename)
-return ret}function webFSGetFile(filename,encoding){var ret=decoded[filename]
+return ret}function webFSGetFile(filename,encoding){assert(fs)
+var ret=decoded[filename]
 if(ret)return ret
 used[filename]=true
-assert(window.glov_webfs,"Failed to load fsdata.js")
 var data=fs[filename]
 assert(data,"Error loading file: "+filename)
-if("jsobj"===encoding){assert(!Array.isArray(data))
+if("jsobj"===encoding){assert(!Array.isArray(data)||!(2===data.length&&"number"===typeof data[0]&&"string"===typeof data[1]))
 ret=active_reload?clone(data):data}else{assert(Array.isArray(data))
 if("text"===encoding)ret=data[1]
-else ret=decode(data)}return decoded[filename]=ret}function webFSExists(filename){return Boolean(fs[filename])}function webFSReportUnused(ignore_regex){ignore_regex=ignore_regex||/\.(fp|vp)$/
+else ret=decode(data)}return decoded[filename]=ret}function webFSExists(filename){assert(fs)
+return Boolean(fs[filename])}function webFSReportUnused(ignore_regex){ignore_regex=ignore_regex||/\.(fp|vp)$/
 var tot_size=0
 for(var filename in fs)if(!used[filename]&&!filename.match(ignore_regex)){console.warn("WebFS file bundled but unreferenced: "+filename)
-tot_size+=fs[filename][0]}if(tot_size)console.warn("WebFS wasting "+tot_size+" bytes")}function webFSReload(){active_reload=true
-window.glov_webfs=null
-var scriptTag=document.createElement("script")
-scriptTag.src=urlhash.getURLBase()+"fsdata.js?rl="+Date.now()
-scriptTag.onload=function(){if(window.glov_webfs){var old_fs=fs
-fs=window.glov_webfs
+tot_size+=fs[filename][0]}if(tot_size)console.warn("WebFS wasting "+tot_size+" bytes")}var webfs_to_worker_cb
+function webFSSetToWorkerCB(cb){webfs_to_worker_cb=cb}function webFSGetData(){return fs}function webFSApplyReload(fs_in){var old_fs=fs
+fs=fs_in
+if(webfs_to_worker_cb)webfs_to_worker_cb(fs)
 decoded={}
 used={}
 for(var key in fs){var old_value=old_fs[key]
 var new_value=fs[key]
 if(Array.isArray(old_value)){for(var ii=0;ii<new_value.length;++ii)if(!old_value||new_value[ii]!==old_value[ii]){filewatchTriggerChange(key)
-break}}else if(!deepEqual(old_value,new_value))filewatchTriggerChange(key)}}}
-document.getElementsByTagName("head")[0].appendChild(scriptTag)}filewatchOn("fsdata.js",webFSReload)
+break}}else if(!deepEqual(old_value,new_value))filewatchTriggerChange(key)}for(var _key in old_fs)if(!fs[_key])filewatchTriggerChange(_key)}var base_url_for_reload
+function webFSReload(){active_reload=true
+window.glov_webfs=null
+var scriptTag=document.createElement("script")
+scriptTag.src=base_url_for_reload+"fsdata.js?rl="+Date.now()
+scriptTag.onload=function(){if(window.glov_webfs)webFSApplyReload(window.glov_webfs)}
+document.head.appendChild(scriptTag)}function webFSStartup(fs_in,base_url_for_reload_in){fs=fs_in||{}
+if(base_url_for_reload_in){base_url_for_reload=base_url_for_reload_in
+filewatchOn("fsdata.js",webFSReload)}if(webfs_to_worker_cb)webfs_to_worker_cb(fs)
+callEach(on_ready,on_ready=null)}function webFSAPI(){return{getFileNames:webFSGetFileNames,getFile:webFSGetFile,filewatchOn:filewatchOn}}
 
-},{"../common/util.js":74,"./filewatch.js":18,"./urlhash.js":58,"assert":undefined}],61:[function(require,module,exports){
+},{"../common/util":93,"./filewatch":21,"assert":undefined}],72:[function(require,module,exports){
+"use strict"
+exports.profanityFilter=profanityFilter
+exports.profanityStartup=profanityStartup
+exports.profanityStartupLate=profanityStartupLate
+var _glovClientFont=require("../font")
+var fontSetReplacementChars=_glovClientFont.fontSetReplacementChars
+var _glovClientLocate_asset=require("../locate_asset")
+var locateAsset=_glovClientLocate_asset.locateAsset
+var _glovClientUrlhash=require("../urlhash")
+var getURLBase=_glovClientUrlhash.getURLBase
+var _glovClientWebfs=require("../webfs")
+var webFSGetFile=_glovClientWebfs.webFSGetFile
+var _glovCommonRand_alea=require("../../common/rand_alea")
+var mashString=_glovCommonRand_alea.mashString
+var _glovCommonRand_fast=require("../../common/rand_fast")
+var randFastCreate=_glovCommonRand_fast.randFastCreate
+var _glovCommonWordsProfanity_common=require("../../common/words/profanity_common")
+var profanityCommonStartup=_glovCommonWordsProfanity_common.profanityCommonStartup
+var profanityFilterCommon=_glovCommonWordsProfanity_common.profanityFilterCommon
+var profanitySetReplacementChars=_glovCommonWordsProfanity_common.profanitySetReplacementChars
+var non_profanity
+function profanityStartup(){non_profanity=webFSGetFile("words/replacements.txt","text").split("\n").filter(function(a){return a})
+profanityCommonStartup(webFSGetFile("words/filter.gkg","text"),webFSGetFile("words/exceptions.txt","text"))}function profanityStartupLate(){var scriptTag=document.createElement("script")
+scriptTag.src=""+getURLBase()+locateAsset("replacement_chars.min.js")
+scriptTag.onload=function(){if(window.unicode_replacement_chars){profanitySetReplacementChars(window.unicode_replacement_chars)
+fontSetReplacementChars(window.unicode_replacement_chars)}}
+document.getElementsByTagName("head")[0].appendChild(scriptTag)}var rand=randFastCreate()
+var last_word
+function randWord(){if(-1===last_word||1===non_profanity.length)last_word=rand.range(non_profanity.length)
+else{var choice=rand.range(non_profanity.length-1)
+last_word=choice<last_word?choice:choice+1}return non_profanity[last_word]}function profanityFilter(user_str){last_word=-1
+rand.seed=mashString(user_str)
+return profanityFilterCommon(user_str,randWord)}
+
+},{"../../common/rand_alea":89,"../../common/rand_fast":90,"../../common/words/profanity_common":96,"../font":22,"../locate_asset":37,"../urlhash":69,"../webfs":71}],73:[function(require,module,exports){
 "use strict"
 exports.ERR_RESTARTING=exports.ERR_CONNECTING=exports.ERR_CLIENT_VERSION_OLD=exports.ERR_CLIENT_VERSION_NEW=void 0
 exports.WSClient=WSClient
+exports.wsclientSetExtraParam=wsclientSetExtraParam
 var _glovClientEnvironments=require("./environments")
 var getAPIPath=_glovClientEnvironments.getAPIPath
 var setCurrentEnvironment=_glovClientEnvironments.setCurrentEnvironment
 var ack=require("../common/ack.js")
 var ackInitReceiver=ack.ackInitReceiver
+var verify=require("../common/verify.js")
 var assert=require("assert")
 var _require=require("./error_report.js"),errorReportSetDetails=_require.errorReportSetDetails,session_uid=_require.session_uid
-var _require2=require("./fetch.js"),fetch=_require2.fetch,ERR_CONNECTION=_require2.ERR_CONNECTION
+var _require2=require("./fetch.js"),ERR_CONNECTION=_require2.ERR_CONNECTION,fetch=_require2.fetch,fetchDelaySet=_require2.fetchDelaySet
 var min=Math.min,random=Math.random
 var _require3=require("../common/perfcounters.js"),perfCounterAdd=_require3.perfCounterAdd
 var urlhash=require("./urlhash.js")
 var wscommon=require("../common/wscommon.js")
-var wsHandleMessage=wscommon.wsHandleMessage
-var _require4=require("./client_config.js"),PLATFORM=_require4.PLATFORM,getAbilityReload=_require4.getAbilityReload
+var netDelaySet=wscommon.netDelaySet,wsHandleMessage=wscommon.wsHandleMessage
+var _require4=require("./client_config.js"),platformGetID=_require4.platformGetID,getAbilityReloadUpdates=_require4.getAbilityReloadUpdates
 var ERR_CONNECTING="ERR_CONNECTING"
 exports.ERR_CONNECTING=ERR_CONNECTING
 var ERR_RESTARTING="ERR_RESTARTING"
@@ -8822,7 +11429,7 @@ exports.ERR_CLIENT_VERSION_NEW=ERR_CLIENT_VERSION_NEW
 var ERR_CLIENT_VERSION_OLD="ERR_CLIENT_VERSION_OLD"
 exports.ERR_CLIENT_VERSION_OLD=ERR_CLIENT_VERSION_OLD
 exports.CURRENT_VERSION=0
-function WSClient(path){this.id=null
+function WSClient(path,client_app){this.id=null
 this.my_ids={}
 this.handlers={}
 this.socket=null
@@ -8831,28 +11438,33 @@ this.connected=false
 this.disconnected=false
 this.retry_scheduled=false
 this.retry_count=0
+this.retry_extra_delay=0
 this.disconnect_time=Date.now()
 this.last_receive_time=Date.now()
 this.idle_counter=0
 this.last_send_time=Date.now()
 this.connect_error=ERR_CONNECTING
+this.update_available=false
+this.client_app=client_app||"app"
 ackInitReceiver(this)
 if(path)this.path=path
 this.connect(false)
 this.onMsg("cack",this.onConnectAck.bind(this))
-this.onMsg("build",this.onBuildTimestamp.bind(this))
+this.onMsg("build",this.onBuildChange.bind(this))
 this.onMsg("error",this.onError.bind(this))}WSClient.prototype.logPacketDispatch=function(source,pak,buf_offs,msg){perfCounterAdd("ws."+msg)}
 WSClient.prototype.timeSinceDisconnect=function(){return Date.now()-this.disconnect_time}
-function getVersionUrlParams(){return"plat="+PLATFORM+"&ver="+exports.CURRENT_VERSION+"&build="+"1673321608019"}function jsonParseResponse(response){if(!response)return null
+function getVersionUrlParams(){return"plat="+platformGetID()+"&ver="+exports.CURRENT_VERSION+"&build="+"1776878226036"+"&sesuid="+session_uid}function jsonParseResponse(response){if(!response)return null
 if("<"===response.trim()[0])return null
 try{return JSON.parse(response)}catch(e){return null}}function whenServerReady(cb){var retry_count=0
 function doit(){fetch({url:getAPIPath()+"ready?"+getVersionUrlParams()},function(err,response){if(err){var response_data=jsonParseResponse(response)
 if("ERR_CLIENT_VERSION_OLD"!==(null==response_data?void 0:response_data.status)){++retry_count
 setTimeout(doit,min(retry_count*retry_count*100,15e3)*(.75+.5*random()))
-return}}cb()})}doit()}WSClient.prototype.onBuildTimestamp=function(build_timestamp){if(build_timestamp!=="1673321608019")if(this.on_build_timestamp_mismatch)this.on_build_timestamp_mismatch()
-else if(getAbilityReload()){console.error("App build mismatch (server: "+build_timestamp+", client: "+"1673321608019"+"), reloading")
+return}}cb()})}doit()}WSClient.prototype.onBuildChange=function(obj){if(obj.app!==this.client_app)return
+this.onBuildTimestamp(obj.ver)}
+WSClient.prototype.onBuildTimestamp=function(build_timestamp){if(build_timestamp!=="1776878226036")if(this.on_build_timestamp_mismatch)this.on_build_timestamp_mismatch()
+else if(getAbilityReloadUpdates()){console.error("App build mismatch (server: "+build_timestamp+", client: "+"1776878226036"+"), reloading")
 whenServerReady(function(){if(window.reloadSafe)window.reloadSafe()
-else document.location.reload()})}else console.warn("App build mismatch (server: "+build_timestamp+", client: "+"1673321608019"+"), ignoring")}
+else document.location.reload()})}else console.warn("App build mismatch (server: "+build_timestamp+", client: "+"1776878226036"+"), ignoring")}
 WSClient.prototype.onConnectAck=function(data,resp_func){var client=this
 client.connected=true
 client.connect_error=null
@@ -8862,12 +11474,14 @@ client.my_ids[data.id]=true
 errorReportSetDetails("client_id",client.id)
 client.secret=data.secret
 if(data.build)client.onBuildTimestamp(data.build)
-assert(client.handlers.connect)
+if(data.net_delay){netDelaySet(data.net_delay[0],data.net_delay[1])
+fetchDelaySet(data.net_delay[0],data.net_delay[1])}assert(client.handlers.connect)
 data.client_id=client.id
 client.handlers.connect(client,data)
 resp_func()}
-WSClient.prototype.pak=function(msg){return wscommon.wsPak(msg,null,this)}
-WSClient.prototype.send=function(msg,data,resp_func){wscommon.sendMessage.call(this,msg,data,resp_func)}
+WSClient.prototype.pak=function(msg,msg_debug_name){return wscommon.wsPak(msg,null,this,msg_debug_name)}
+WSClient.prototype.send=function(msg,data,msg_debug_name,resp_func){if(!verify("function"!==typeof msg_debug_name)){resp_func=msg_debug_name
+msg_debug_name=null}wscommon.sendMessage.call(this,msg,data,msg_debug_name,resp_func)}
 WSClient.prototype.onError=function(e){console.error("WSClient Error")
 console.error(e)
 if(!(e instanceof Error))e=new Error(e)
@@ -8875,7 +11489,7 @@ throw e}
 WSClient.prototype.onMsg=function(msg,cb){assert.ok(!this.handlers[msg])
 this.handlers[msg]=function wrappedCallback(client,data,resp_func){return cb(data,resp_func)}}
 WSClient.prototype.checkForNewAppBuild=function(){var _this=this
-if(!getAbilityReload())return
+if(!getAbilityReloadUpdates())return
 if(this.new_build_check_in_progress)return
 this.new_build_check_in_progress=true
 fetch({url:urlhash.getURLBase()+"app.ver.json",response_type:"json"},function(err,obj){_this.new_build_check_in_progress=false
@@ -8891,7 +11505,8 @@ this.checkForNewAppBuild()
 setTimeout(function(){assert(client.retry_scheduled)
 assert(!client.socket)
 client.retry_scheduled=false
-client.connect(true)},min(client.retry_count*client.retry_count*100,15e3)*(.75+.5*random()))}
+client.connect(true)},min(client.retry_count*client.retry_count*100,15e3)*(.75+.5*random())+this.retry_extra_delay)
+this.retry_extra_delay=0}
 WSClient.prototype.checkDisconnect=function(){if(this.connected&&1!==this.socket.readyState){this.on_close()
 assert(!this.connected)}}
 WSClient.prototype.connect=function(for_reconnect){var _this2=this
@@ -8902,12 +11517,12 @@ this.ready_check_in_progress=true
 fetch({url:getAPIPath()+"ready?"+getVersionUrlParams()},function(err,response){var response_data=jsonParseResponse(response)
 var status=null==response_data?void 0:response_data.status
 var redirect_environment=null==response_data?void 0:response_data.redirect_environment
-var update_available=null==response_data?void 0:response_data.update_available
-var should_reload=update_available&&getAbilityReload()
+_this2.update_available=null==response_data?void 0:response_data.update_available
+var should_reload=_this2.update_available&&getAbilityReloadUpdates()
 assert(_this2.ready_check_in_progress)
 _this2.ready_check_in_progress=false
 _this2.connect_error=ERR_CONNECTING
-if(!err&&!redirect_environment&&!should_reload){if(update_available);return void _this2.connectAfterReady(for_reconnect)}console.log("Server not ready, err="+err+", response="+response)
+if(!err&&!redirect_environment&&!should_reload){if(_this2.update_available);return void _this2.connectAfterReady(for_reconnect)}console.log("Server not ready, err="+err+", response="+response)
 if("ERR_RESTARTING"===status||"ERR_STARTUP"===status)client.connect_error=ERR_RESTARTING
 else if("ERR_CLIENT_VERSION_NEW"===status)client.connect_error=ERR_CLIENT_VERSION_NEW
 else if("ERR_CLIENT_VERSION_OLD"===status)client.connect_error=ERR_CLIENT_VERSION_OLD
@@ -8915,9 +11530,16 @@ if(redirect_environment)setCurrentEnvironment(redirect_environment)
 client.socket=null
 client.net_delayer=null
 _this2.retryConnection()})}
-WSClient.prototype.connectAfterReady=function(for_reconnect){var client=this
+var connect_url_params=""
+var connect_url_extra={}
+function wsclientSetExtraParam(key,value){if(!value)delete connect_url_extra[key]
+else connect_url_extra[key]=value
+var pairs=[]
+for(var walk in connect_url_extra)pairs.push(walk+"="+connect_url_extra[walk])
+if(pairs.length)connect_url_params="&"+pairs.join("&")
+else connect_url_params=""}WSClient.prototype.connectAfterReady=function(for_reconnect){var client=this
 var path=client.path||getAPIPath().replace(/^http/,"ws").replace(/api\/$/,"ws")
-path=path+"?"+getVersionUrlParams()+(for_reconnect&&client.id&&client.secret?"&reconnect="+client.id+"&secret="+client.secret:"")+"&sesuid="+session_uid
+path=path+"?"+getVersionUrlParams()+(for_reconnect&&client.id&&client.secret?"&reconnect="+client.id+"&secret="+client.secret:"")+connect_url_params
 var socket=new WebSocket(path)
 socket.binaryType="arraybuffer"
 client.socket=socket
@@ -8947,7 +11569,7 @@ var doPing=guard(function(){if(Date.now()-client.last_send_time>=wscommon.PING_T
 setTimeout(doPing,wscommon.PING_TIME/2)})
 setTimeout(doPing,wscommon.PING_TIME/2)}
 
-},{"../common/ack.js":62,"../common/perfcounters.js":72,"../common/wscommon.js":77,"./client_config.js":8,"./environments":14,"./error_report.js":15,"./fetch.js":17,"./urlhash.js":58,"assert":undefined}],62:[function(require,module,exports){
+},{"../common/ack.js":74,"../common/perfcounters.js":87,"../common/verify.js":94,"../common/wscommon.js":97,"./client_config.js":10,"./environments":17,"./error_report.js":18,"./fetch.js":20,"./urlhash.js":69,"assert":undefined}],74:[function(require,module,exports){
 "use strict"
 exports.ackHandleMessage=ackHandleMessage
 exports.ackInitReceiver=ackInitReceiver
@@ -8965,8 +11587,8 @@ receiver.responses_waiting=0}var ERR_FAILALL_DISCONNECT="ERR_FAILALL_DISCONNECT"
 var ACKFLAG_IS_RESP=8
 var ACKFLAG_ERR=16
 var ACKFLAG_DATA_JSON=32
-function ackWrapPakStart(pak,receiver,msg){var flags=0
-pak.ack_data={receiver:receiver}
+function ackWrapPakStart(pak,receiver,msg,msg_debug_name){var flags=0
+pak.ack_data={receiver:receiver,msg_dbg_name:msg_debug_name||msg}
 if("number"===typeof msg){flags|=ACKFLAG_IS_RESP
 pak.writeInt(msg)}else pak.writeAnsiString(msg)
 var resp_pak_id=receiver?++receiver.last_pak_id:0
@@ -8986,7 +11608,9 @@ var resp_pak_id=0
 if(resp_func&&false!==resp_func.expecting_response){resp_pak_id=pak.ack_data.resp_pak_id
 assert(resp_pak_id)
 assert(pak.ack_data.receiver)
-pak.ack_data.receiver.resp_cbs[resp_pak_id]=resp_func}else{pak.seek(pak.ack_data.resp_pak_id_offs)
+assert(pak.ack_data.msg_dbg_name)
+var ack_name="ack."+pak.ack_data.msg_dbg_name
+pak.ack_data.receiver.resp_cbs[resp_pak_id]={func:resp_func,ack_name:ack_name}}else{pak.seek(pak.ack_data.resp_pak_id_offs)
 pak.zeroInt()
 pak.seek(offs)}pak.updateFlags(flags)
 delete pak.ack_data
@@ -9001,10 +11625,14 @@ return{msg:msg,err:err,data:data,pak_id:pak_id}}function failAll(receiver,err){e
 var cbs=receiver.resp_cbs
 receiver.resp_cbs={}
 receiver.responses_waiting=0
-for(var pak_id in cbs)cbs[pak_id](err)}function ackHandleMessage(receiver,source,pak,send_func,pak_func,handle_func,filter_func){var pak_initial_offs=pak.getOffset()
+for(var pak_id in cbs)cbs[pak_id].func(err)}function ackHandleMessage(receiver,source,pak,send_func,pak_func,handle_func,filter_func){var pak_initial_offs=pak.getOffset()
 var _ackReadHeader=ackReadHeader(pak),err=_ackReadHeader.err,data=_ackReadHeader.data,msg=_ackReadHeader.msg,pak_id=_ackReadHeader.pak_id
+var msg_name
+if("number"===typeof msg){var pair=receiver.resp_cbs[msg]
+assert(!pair||pair.ack_name)
+if(pair&&pair.ack_name)msg_name=pair.ack_name
+else msg_name="ack"}else msg_name=msg
 if(receiver.logPacketDispatch){perfCounterAddValue("net.recv_bytes.total",pak.totalSize())
-var msg_name="number"===typeof msg?"ack":msg
 perfCounterAddValue("net.recv_bytes."+msg_name,pak.totalSize())
 receiver.logPacketDispatch(source,pak,pak_initial_offs,msg_name)}var now=Date.now()
 var expecting_response=Boolean(pak_id)
@@ -9015,9 +11643,9 @@ var start_time=now
 if(filter_func&&!filter_func(receiver,msg,data))return
 function preSendResp(err){assert(!sent_response,"Response function called twice")
 sent_response=true
-if(expecting_response){if(timeout_id){if("pending"!==timeout_id)clearTimeout(timeout_id)}else if(err===ERR_FAILALL_DISCONNECT);else(receiver.log?receiver:console).log("Response finally sent for "+msg+" after "+((Date.now()-start_time)/1e3).toFixed(1)+"s")
+if(expecting_response){if(timeout_id){if("pending"!==timeout_id)clearTimeout(timeout_id)}else if(err===ERR_FAILALL_DISCONNECT);else(receiver.log?receiver:console).log("Response finally sent for "+msg_name+" after "+((Date.now()-start_time)/1e3).toFixed(1)+"s")
 receiver.responses_waiting--}}function respFunc(err,resp_data,resp_func){preSendResp(err)
-if(!expecting_response){if(resp_func){receiver.onError("Sending a response to a packet ("+msg+") that did not expect one, but we are expecting a response")
+if(!expecting_response){if(resp_func&&false!==resp_func.expecting_response){receiver.onError("Sending a response to a packet ("+msg_name+") that did not expect one, but we are expecting a response")
 return}if(err)send_func("error",null,err,null)
 return}send_func(pak_id,err,resp_data,resp_func)}respFunc.expecting_response=expecting_response
 respFunc.pak=function(ref_pak){assert(expecting_response)
@@ -9030,15 +11658,57 @@ if("number"===typeof msg){var cb=receiver.resp_cbs[msg]
 if(!cb)return void receiver.onError("Received response to unknown packet with id "+msg+" from "+source)
 delete receiver.resp_cbs[msg]
 profilerStart("response")
-cb(err,data,respFunc)
+cb.func(err,data,respFunc)
 profilerStop("response")}else{if(!msg)return void receiver.onError("Received message with no .msg from "+source)
 profilerStart(msg)
 handle_func(msg,data,respFunc)
 profilerStop(msg)}if(expecting_response){receiver.responses_waiting++
 if(!sent_response&&!respFunc.suppress_timeout)timeout_id=setTimeout(function(){timeout_id=null
-if(!respFunc.suppress_timeout)(receiver.log?receiver:console).log("Response not sent for "+msg+" from "+source+" after "+((Date.now()-start_time)/1e3).toFixed(1)+"s")},15e3)}}
+if(!respFunc.suppress_timeout)(receiver.log?receiver:console).log("Response not sent for "+msg_name+" from "+source+" after "+((Date.now()-start_time)/1e3).toFixed(1)+"s")},15e3)}}
 
-},{"./packet.js":71,"./perfcounters.js":72,"assert":undefined}],63:[function(require,module,exports){
+},{"./packet.js":86,"./perfcounters.js":87,"assert":undefined}],75:[function(require,module,exports){
+"use strict"
+exports.ansi=void 0
+exports.padLeft=padLeft
+exports.padRight=padRight
+exports.wordWrap=wordWrap
+var ESC=""
+var ansi={bg:{}}
+exports.ansi=ansi;["black","red","green","yellow","blue","magenta","cyan","white"].forEach(function(color,idx){var fn=function fn(str){return ESC+"["+(30+idx)+"m"+str+ESC+"[0m"}
+fn.bright=function(str){return ESC+"["+(30+idx)+";1m"+str+ESC+"[0m"}
+ansi[color]=fn
+ansi.bg[color]=function(str){return ESC+"["+(40+idx)+"m"+str+ESC+"[0m"}})
+ansi.normal=function(str){return ESC+"[0m"+str}
+ansi.blink=function(str){return ESC+"[5m"+str+ESC+"[0m"}
+var strip_ansi=/\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g
+function padRight(str,width){var len=str.replace(strip_ansi,"").length
+if(len<width)str+=new Array(width-len+1).join(" ")
+return str}function padLeft(str,width){var len=str.replace(strip_ansi,"").length
+if(len<width)str=new Array(width-len+1).join(" ")+str
+return str}var match_ansi=/^\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/
+function wordWrap(text,w){var ret=[]
+var idx=0
+var line_len=0
+var in_control=false
+var control_ends=0
+var line_start=0
+var last_word_end=line_start
+var last_word_end_len=line_len
+for(;idx<text.length;++idx){var c=text[idx]
+if(""===c){var code=text.slice(idx).match(match_ansi)
+if(code){in_control=true
+control_ends=idx+code[0].length}}else if(in_control&&idx===control_ends)in_control=false
+if(!in_control)if("\n"===c){ret.push(text.slice(line_start,idx))
+last_word_end=line_start=idx+1
+last_word_end_len=line_len=0}else{if(" "===c){last_word_end=idx
+last_word_end_len=line_len}if(++line_len>w){ret.push(text.slice(line_start,last_word_end))
+line_start=last_word_end
+while(" "===text[line_start])++line_start
+last_word_end=line_start
+last_word_end_len=line_len=line_len-last_word_end_len+1}}}if(text.length!==line_start)ret.push(text.slice(line_start))
+return ret.join("\n")}
+
+},{}],76:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict"
 var floor=Math.floor
@@ -9071,7 +11741,7 @@ exports.base64CharTable=chr_table
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"buffer":undefined}],64:[function(require,module,exports){
+},{"buffer":undefined}],77:[function(require,module,exports){
 "use strict"
 exports.MAX_CLIENT_UPLOAD_SIZE=void 0
 exports.chunkedReceiverCleanup=chunkedReceiverCleanup
@@ -9173,142 +11843,193 @@ asyncParallelLimit(tasks,max_in_flight,next)},function finish(next){var pak=clie
 pak.writeInt(id)
 pak.send(next)}],function(err){cb(err,id)})}
 
-},{"./crc32.js":66,"./packet.js":71,"assert":undefined,"glov-async":undefined}],65:[function(require,module,exports){
+},{"./crc32.js":79,"./packet.js":86,"assert":undefined,"glov-async":undefined}],78:[function(require,module,exports){
 "use strict"
 exports.TYPE_STRING=exports.TYPE_INT=exports.TYPE_FLOAT=void 0
 exports.canonical=canonical
-exports.create=create
+exports.cmdParseCreate=cmdParseCreate
 exports.defaultHandler=defaultHandler
-var assert=require("assert")
-var _require=require("./util.js"),isInteger=_require.isInteger
-var _require2=require("./perfcounters.js"),perfCounterAdd=_require2.perfCounterAdd
-function canonical(cmd){return cmd.toLowerCase().replace(/[_.]/g,"")}var TYPE_INT=0
+exports.formatUsage=formatUsage
+var TYPE_INT=0
 exports.TYPE_INT=TYPE_INT
 var TYPE_FLOAT=1
 exports.TYPE_FLOAT=TYPE_FLOAT
 var TYPE_STRING=2
 exports.TYPE_STRING=TYPE_STRING
-var TYPE_NAME=["INTEGER","NUMBER","STRING"]
+exports.create=cmdParseCreate
+var assert=require("assert")
+var _perfcounters=require("./perfcounters")
+var perfCounterAdd=_perfcounters.perfCounterAdd
+var _util=require("./util")
+var isInteger=_util.isInteger
+function canonical(cmd){return cmd.toLowerCase().replace(/[_.]/g,"")}var TYPE_NAME=["INTEGER","NUMBER","STRING"]
 function defaultHandler(err,resp){if(err)console.error(err,resp)
-else console.info(resp)}function checkAccess(access,list){if(list)for(var ii=0;ii<list.length;++ii)if(!access||!access[list[ii]])return false
-return true}function formatUsage(usage,help,prefix_help){return!usage?void 0:prefix_help?help+"\n"+usage:help?String(usage).replace(/\$HELP/,help):String(usage)}function CmdParse(params){this.cmds={}
-this.cmds_for_complete=this.cmds
-this.was_not_found=false
-this.storage=params&&params.storage
-this.default_handler=defaultHandler
+else console.info(resp)}function _checkAccess(access,implied_access,list){if(list){if(!access)return false
+for(var ii=0;ii<list.length;++ii){var role=list[ii]
+if(access[role])return true
+for(var my_role in access){var extra=implied_access[my_role]
+if(extra&&extra[role])return true}}return false}return true}function formatUsage(cmd_data){var usage=cmd_data.usage,prefix_usage_with_help=cmd_data.prefix_usage_with_help,help=cmd_data.help
+return!usage?void 0:prefix_usage_with_help?help+"\n"+usage:help?String(usage).replace(/\$HELP/,String(help)):String(usage)}function formatRangeValue(type,value){var ret=String(value)
+if(type===TYPE_FLOAT&&!ret.includes("."))ret+=".00"
+return ret}function formatEnumValue(enum_lookup,value){if(enum_lookup)for(var _key in enum_lookup)if(enum_lookup[_key]===value)return _key
+return value}function lookupEnumValue(enum_lookup,str){var v=enum_lookup[str=str.toUpperCase()]
+if("number"===typeof v)return v
+var n=Number(str)
+if(Object.values(enum_lookup).includes(n))return n
+for(var _key2 in enum_lookup)if(_key2.startsWith(str))return enum_lookup[_key2]
+return null}var BOOLEAN_LOOKUP={OFF:0,ON:1}
+var CMD_STORAGE_PREFIX="cmd_parse_"
+var CmdParse=function(){function CmdParse(params){this.default_handler=defaultHandler
 this.last_access=null
-this.register({cmd:"cmd_list",func:this.cmdList.bind(this),access_show:["hidden"]})}CmdParse.prototype.cmdList=function(str,resp_func){if(!this.cmd_list){var list=this.cmd_list={}
-for(var cmd in this.cmds){var cmd_data=this.cmds[cmd]
-var access=[]
-if(cmd_data.access_show)access=access.concat(cmd_data.access_show)
-if(cmd_data.access_run)access=access.concat(cmd_data.access_run)
-if(-1!==access.indexOf("hidden"))continue
-var data={name:cmd_data.name,help:String(cmd_data.help)}
-if(cmd_data.usage)data.usage=formatUsage(cmd_data.usage,cmd_data.help,cmd_data.prefix_usage_with_help)
-if(access.length)data.access_show=access
-list[cmd]=data}}resp_func(null,this.cmd_list)}
-CmdParse.prototype.setDefaultHandler=function(fn){assert(this.default_handler===defaultHandler)
-this.default_handler=fn}
-CmdParse.prototype.checkAccess=function(access_list){return checkAccess(this.last_access,access_list)}
-CmdParse.prototype.handle=function(self,str,resp_func){resp_func=resp_func||this.default_handler
 this.was_not_found=false
+this.storage=void 0
+this.cmds=void 0
+this.cmds_for_complete=void 0
+this.implied_access=void 0
+this.last_cmd_data=void 0
+this.cmd_list=void 0
+this.cmds={}
+this.cmds_for_complete=this.cmds
+this.storage=params&&params.storage
+this.register({cmd:"cmd_list",func:this.cmdList.bind(this),access_show:["hidden"]})
+this.implied_access={sysadmin:{csr:1}}}var _proto=CmdParse.prototype
+_proto.cmdList=function cmdList(str,resp_func){if(!this.cmd_list){this.cmd_list={}
+var list=this.cmd_list
+for(var cmd in this.cmds){var _cmd_data$access_show,_cmd_data$access_run,_cmd_data$access_run2,_cmd_data$access_show2
+var cmd_data=this.cmds[cmd]
+if(null!=(_cmd_data$access_show=cmd_data.access_show)&&_cmd_data$access_show.includes("hidden"))continue
+if(null!=(_cmd_data$access_run=cmd_data.access_run)&&_cmd_data$access_run.includes("hidden"))continue
+var data={name:cmd_data.name,help:String(cmd_data.help)}
+if(cmd_data.usage)data.usage=formatUsage(cmd_data)
+if(null!=(_cmd_data$access_run2=cmd_data.access_run)&&_cmd_data$access_run2.length)data.access_run=cmd_data.access_run
+if(null!=(_cmd_data$access_show2=cmd_data.access_show)&&_cmd_data$access_show2.length)data.access_show=cmd_data.access_show
+list[cmd]=data}}resp_func(null,this.cmd_list)}
+_proto.setDefaultHandler=function setDefaultHandler(fn){assert(this.default_handler===defaultHandler)
+this.default_handler=fn}
+_proto.checkAccess=function checkAccess(access_list){return _checkAccess(this.last_access,this.implied_access,access_list)}
+_proto.handle=function handle(self,str,resp_func){resp_func=resp_func||this.default_handler
+this.was_not_found=false
+this.last_cmd_data=void 0
 var m=str.match(/^([^\s]+)(?:\s+(.*))?$/)
 if(!m){resp_func("Missing command")
 return true}var cmd=canonical(m[1])
 var cmd_data=this.cmds[cmd]
-this.last_access=self&&self.access
-if(cmd_data&&!checkAccess(this.last_access,cmd_data.access_run)){resp_func('Access denied: "'+m[1]+'"')
+this.last_access=self&&self.access||null
+if(cmd_data&&!this.checkAccess(cmd_data.access_run)){resp_func('Access denied: "'+m[1]+'"')
 return false}if(!cmd_data){this.was_not_found=true
 resp_func('Unknown command: "'+m[1]+'"')
-return this.was_not_found=false}perfCounterAdd("cmd."+cmd)
-cmd_data.fn.call(self,m[2]||"",resp_func)
+return this.was_not_found=false}perfCounterAdd("cmd."+cmd);(this.last_cmd_data=cmd_data).fn.call(self,m[2]||"",resp_func)
 return true}
-CmdParse.prototype.register=function(param){assert.equal(typeof param,"object")
-var cmd=param.cmd,func=param.func,help=param.help,usage=param.usage,prefix_usage_with_help=param.prefix_usage_with_help,access_show=param.access_show,access_run=param.access_run,store_data=param.store_data
+_proto.getLastSuccessfulCmdData=function getLastSuccessfulCmdData(){return this.last_cmd_data}
+_proto.exposeGlobal=function exposeGlobal(cmd,override){var _this=this
+if("undefined"===typeof window)return
+var func_name=cmd.replace(/_(.)/g,function(a,b){return b.toUpperCase()})
+if(window[func_name]&&!override)return
+window[func_name]=function(){var is_sync=true
+var sync_ret
+for(var _len=arguments.length,args=new Array(_len),_key3=0;_key3<_len;_key3++)args[_key3]=arguments[_key3]
+_this.handle(void 0,cmd+" "+args.join(" "),function(err,resp){if(err)if(is_sync&&!resp)sync_ret=err
+else console.error(err,resp)
+else if(is_sync)sync_ret=resp
+else console.info(resp)})
+is_sync=false
+return sync_ret}}
+_proto.register=function register(param){assert.equal(typeof param,"object")
+var cmd=param.cmd,func=param.func,help=param.help,usage=param.usage,prefix_usage_with_help=param.prefix_usage_with_help,access_show=param.access_show,access_run=param.access_run,store_data=param.store_data,override=param.override,expose_global=param.expose_global
 assert(cmd)
 assert(func,'Missing function for command "'+cmd+'"')
 var help_lower=String(help||"").toLowerCase()
 if(help_lower.includes("(admin)"))assert(access_run&&access_run.includes("sysadmin"))
+if(help_lower.includes("(csr)"))assert(access_run&&access_run.includes("csr"))
 if(help_lower.includes("(hidden)"))assert(access_show&&access_show.length)
 var canon=canonical(cmd)
-assert(!this.cmds[canon],'Duplicate commands registered as "'+canon+'"')
+assert(!this.cmds[canon]||override,'Duplicate commands registered as "'+canon+'"')
+if(void 0===expose_global)expose_global=!access_show&&!access_run
+if(expose_global)this.exposeGlobal(cmd,override)
 this.cmds[canon]={name:cmd,fn:func,help:help,usage:usage,prefix_usage_with_help:prefix_usage_with_help,access_show:access_show,access_run:access_run,store_data:store_data}}
-function formatRangeValue(type,value){var ret=String(value)
-if(type===TYPE_FLOAT&&!ret.includes("."))ret+=".00"
-return ret}var CMD_STORAGE_PREFIX="cmd_parse_"
-CmdParse.prototype.registerValue=function(cmd,param){var _this=this
+_proto.registerValue=function registerValue(cmd,param_in){var _this2=this
+var param=param_in
 assert(TYPE_NAME[param.type]||!param.set)
 assert(param.set||param.get)
 var label=param.label||cmd
 var store=param.store&&this.storage||false
+var enum_lookup=param.enum_lookup
+if(enum_lookup)assert.equal(param.type,TYPE_INT)
 var store_key=""+CMD_STORAGE_PREFIX+canonical(cmd)
 if(param.ver)store_key+="_"+param.ver
+var is_toggle=param.is_toggle
+if(is_toggle)assert(param.get&&param.set&&param.range)
 var store_data
-if(store){assert(param.set)
+if(store){assert(this.storage)
+assert(param.set)
 store_data={store_key:store_key,param:param}
 var init_value=this.storage.getJSON(store_key)
 if(void 0!==init_value){if(param.range){init_value=Number(init_value)
-if(!isFinite(init_value)||init_value<param.range[0]||init_value>param.range[1])init_value=void 0}if(void 0!==init_value)param.set(init_value)
-if(param.on_change)param.on_change(true)}}var fn=function fn(str,resp_func){function value(){resp_func(null,label+" = "+param.get())}function usage(){resp_func("Usage: /"+cmd+" "+TYPE_NAME[param.type])}if(!str)if(param.get&&param.set){var is_bool=param.type===TYPE_INT&&param.range&&0===param.range[0]&&1===param.range[1]
-var help=[label+":"]
-if(param.range)help.push("Valid range: ["+formatRangeValue(param.type,param.range[0])+"..."+formatRangeValue(param.type,param.range[1])+"]")
+if(!isFinite(init_value)||init_value<param.range[0]||init_value>param.range[1])init_value=void 0}if(void 0!==init_value){param.set(init_value)
+if(param.on_change)param.on_change(true)}}}if(!enum_lookup&&param.type===TYPE_INT&&param.range&&0===param.range[0]&&1===param.range[1])enum_lookup=BOOLEAN_LOOKUP
+var param_label=TYPE_NAME[param.type]
+if(enum_lookup)param_label=Object.keys(enum_lookup).join("|")
+var fn=function fn(str,resp_func){function value(){resp_func(null,label+" = **"+formatEnumValue(enum_lookup,param.get())+"**")}function usage(){resp_func("Usage: **/"+cmd+" "+param_label+"**")}if(!str&&is_toggle)if(param.get()===param.range[0])str=String(param.range[1])
+else str=String(param.range[0])
+if(!str)if(param.get&&param.set){var help=[label+":"]
+if(param.range&&!(enum_lookup&&param.type===TYPE_INT))help.push("Valid range: ["+formatRangeValue(param.type,param.range[0])+"..."+formatRangeValue(param.type,param.range[1])+"]")
 var cur_value=param.get()
-if(is_bool){help.push("To disable: /"+cmd+" 0")
-help.push("To enable: /"+cmd+" 1")}else{help.push("To change: /"+cmd+" NewValue")
-help.push("  example: /"+cmd+" "+(param.range?cur_value===param.range[0]?param.range[1]:param.range[0]:1))}var def_value=param.default_value
-if(void 0!==def_value)help.push("Default value = "+def_value+(is_bool?" ("+(def_value?"Enabled":"Disabled")+")":""))
-help.push("Current value = "+cur_value+(is_bool?" ("+(cur_value?"Enabled":"Disabled")+")":""))
+var value_example=param.range?cur_value===param.range[0]?param.range[1]:param.range[0]:1
+if(enum_lookup)value_example=Object.keys(enum_lookup)[0]
+help.push("To change: **/"+cmd+" "+param_label+"**")
+help.push("  example: **/"+cmd+" "+value_example+"**")
+var def_value=param.default_value
+if(void 0!==def_value)help.push("Default value = **"+formatEnumValue(enum_lookup,def_value)+"**")
+help.push("Current value = **"+formatEnumValue(enum_lookup,cur_value)+"**")
 return resp_func(null,help.join("\n"))}else if(param.get)return value()
 else return usage()
-if(!param.set)return resp_func("Usage: /"+cmd)
+if(!param.set)return resp_func("Usage: **/"+cmd+"**")
 var n=Number(str)
-if(param.range)if(n<param.range[0])n=param.range[0]
+if(enum_lookup){var n_test=lookupEnumValue(enum_lookup,str)
+if(null===n_test)return usage()
+n=n_test}if(param.range)if(n<param.range[0])n=param.range[0]
 else if(n>param.range[1])n=param.range[1]
 var store_value=n
 if(param.type===TYPE_INT){if(!isInteger(n))return usage()
 param.set(n)}else if(param.type===TYPE_FLOAT){if(!isFinite(n))return usage()
 param.set(n)}else{store_value=str
-param.set(str)}if(store)_this.storage.setJSON(store_key,store_value)
+param.set(str)}if(store)_this2.storage.setJSON(store_key,store_value)
 if(param.on_change)param.on_change(false)
 if(param.get)return value()
-else return resp_func(null,label+" udpated")}
-this.register({cmd:cmd,func:fn,help:param.help||(param.get&&param.set?'Set or display "'+label+'" value':param.set?'Set "'+label+'" value':'Display "'+label+'" value'),usage:param.usage||(param.get?'Display "'+label+'" value\n  Usage: /'+cmd+"\n":"")+(param.set?'Set "'+label+'" value\n  Usage: /'+cmd+" NewValue":""),prefix_usage_with_help:param.prefix_usage_with_help,access_show:param.access_show,access_run:param.access_run,store_data:store_data})}
-CmdParse.prototype.resetSettings=function(){var results=[]
+else return resp_func(null,label+" updated")}
+this.register({cmd:cmd,func:fn,help:param.help||(param.get&&param.set?"Set or display *"+label+"* value":param.set?"Set *"+label+"* value":"Display *"+label+"* value"),usage:param.usage||(param.get?(param.is_toggle?"Toggle":"Display")+" *"+label+"* value\n  Usage: **/"+cmd+"**\n":"")+(param.set?"Set *"+label+"* value\n  Usage: **/"+cmd+" "+param_label+"**":""),prefix_usage_with_help:param.prefix_usage_with_help,access_show:param.access_show,access_run:param.access_run,store_data:store_data})}
+_proto.resetSettings=function resetSettings(){assert(this.storage)
+var results=[]
 var all_saved_data=this.storage.localStorageExportAll(CMD_STORAGE_PREFIX)
 var count=0
-for(var key in all_saved_data){var value=all_saved_data[key]
-var cmd_name=key.slice(CMD_STORAGE_PREFIX.length)
+for(var _key4 in all_saved_data){var _value=all_saved_data[_key4]
+var cmd_name=_key4.slice(CMD_STORAGE_PREFIX.length)
 var version=void 0
 var _cmd_name$split=cmd_name.split("_")
 cmd_name=_cmd_name$split[0]
 version=_cmd_name$split[1]
 var cmd_data=this.cmds[cmd_name]
-if(!cmd_data){this.storage.set(key,void 0)
-results.push('Cleared unknown setting "'+cmd_name+'" = '+value);++count}else{var _store_data$param
-var name=cmd_data.name,store_data=cmd_data.store_data
+if(!cmd_data){this.storage.set(_key4,void 0)
+results.push('Cleared unknown setting "'+cmd_name+'" = '+_value);++count}else{var _store_data$param
+var _cmd_data=cmd_data,name=_cmd_data.name,store_data=_cmd_data.store_data
 var default_value=null==store_data?void 0:null==(_store_data$param=store_data.param)?void 0:_store_data$param.default_value
-if(store_data&&store_data.store_key!==key){this.storage.set(key,void 0)
-results.push('Cleared old setting "'+name+" (v"+(version||0)+')"');++count}else if(void 0!==default_value)if(JSON.stringify(default_value)===value)this.storage.set(key,void 0)
-else{this.storage.set(key,void 0)
-results.push('Cleared setting "'+name+'" = '+value+" (default = "+default_value+")");++count}else{this.storage.set(key,void 0)
-results.push('Cleared setting "'+name+'" = '+value);++count}}}if(results.length)results.push("Reset "+count+" setting(s)")
+if(store_data&&store_data.store_key!==_key4){this.storage.set(_key4,void 0)
+results.push('Cleared old setting "'+name+" (v"+(version||0)+')"');++count}else if(void 0!==default_value)if(JSON.stringify(default_value)===_value)this.storage.set(_key4,void 0)
+else{this.storage.set(_key4,void 0)
+results.push('Cleared setting "'+name+'" = '+_value+" (default = "+default_value+")");++count}else{this.storage.set(_key4,void 0)
+results.push('Cleared setting "'+name+'" = '+_value);++count}}}if(results.length)results.push("Reset "+count+" setting(s)")
 return results}
-function cmpCmd(a,b){if(a.cname<b.cname)return-1
-return 1}CmdParse.prototype.addServerCommands=function(new_cmds){var cmds=this.cmds_for_complete
+_proto.addServerCommands=function addServerCommands(new_cmds){var cmds=this.cmds_for_complete
 if(this.cmds_for_complete===this.cmds){cmds=this.cmds_for_complete={}
 for(var cname in this.cmds)cmds[cname]=this.cmds[cname]}for(var _cname in new_cmds)if(!cmds[_cname])cmds[_cname]=new_cmds[_cname]}
-CmdParse.prototype.autoComplete=function(str,access){var list=[]
-var first_tok=canonical((str=str.split(" "))[0])
-for(var cname in this.cmds_for_complete)if(1===str.length&&cname.slice(0,first_tok.length)===first_tok||str.length>1&&cname===first_tok){var cmd_data=this.cmds_for_complete[cname]
-if(checkAccess(access,cmd_data.access_show)&&checkAccess(access,cmd_data.access_run))list.push({cname:cname,cmd:cmd_data.name,help:String(cmd_data.help),usage:formatUsage(cmd_data.usage,cmd_data.help,cmd_data.prefix_usage_with_help)})}list.sort(cmpCmd)
-return list}
+return CmdParse}()
 CmdParse.prototype.canonical=canonical
 CmdParse.prototype.TYPE_INT=TYPE_INT
 CmdParse.prototype.TYPE_FLOAT=TYPE_FLOAT
 CmdParse.prototype.TYPE_STRING=TYPE_STRING
-function create(params){return new CmdParse(params)}
+function cmdParseCreate(params){return new CmdParse(params)}
 
-},{"./perfcounters.js":72,"./util.js":74,"assert":undefined}],66:[function(require,module,exports){
+},{"./perfcounters":87,"./util":93,"assert":undefined}],79:[function(require,module,exports){
 "use strict"
 var crc_table=new Array(256);(function(){for(var n=0;n<256;n++){var c=n
 for(var k=0;k<8;k++)if(1&c)c=-306674912^c>>>1
@@ -9317,9 +12038,44 @@ crc_table[n]=c}})()
 function update_crc(crc,buf,len){for(var n=0;n<len;n++)crc=crc_table[255&(crc^buf[n])]^crc>>>8
 return crc}function crc32(buf,len){return(4294967295^update_crc(4294967295,buf,len=len||buf.length))>>>0}module.exports=crc32
 module.exports.crc32=crc32
+function stringUtf8Encode(str){var c
+var n
+var utfbytes=[]
+for(n=0;n<str.length;++n)if((c=str.charCodeAt(n))<128)utfbytes.push(c)
+else if(c>127&&c<2048){utfbytes.push(c>>6|192)
+utfbytes.push(63&c|128)}else{utfbytes.push(c>>12|224)
+utfbytes.push(c>>6&63|128)
+utfbytes.push(63&c|128)}return utfbytes}function crc32string(str){var arr=stringUtf8Encode(str)
+return crc32(arr,arr.length)}module.exports.crc32string=crc32string
 
-},{}],67:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 "use strict"
+exports.dataError=dataError
+exports.dataErrorEx=dataErrorEx
+exports.dataErrorOnError=dataErrorOnError
+exports.dataErrorQueueClear=dataErrorQueueClear
+exports.dataErrorQueueEnable=dataErrorQueueEnable
+exports.dataErrorQueueGet=dataErrorQueueGet
+var assert=require("assert")
+var on_error=null
+var enabled=false
+var error_queue=[]
+var msgs_in_queue=Object.create(null)
+function dataErrorEx(err){if(!enabled)return
+if(err.per_frame){if(msgs_in_queue[err.msg])return
+msgs_in_queue[err.msg]=true}if(on_error)on_error(err)
+error_queue.push(err)
+if(error_queue.length>25){var removed=error_queue.splice(0,1)[0]
+if(removed.per_frame)delete msgs_in_queue[removed.msg]}}function dataError(msg){dataErrorEx({msg:msg})}function dataErrorQueueEnable(val){enabled=val}function dataErrorOnError(cb){assert(!on_error)
+on_error=cb}function dataErrorQueueGet(){return error_queue}function dataErrorQueueClear(){error_queue=[]
+msgs_in_queue=Object.create(null)}
+
+},{"assert":undefined}],81:[function(require,module,exports){
+"use strict"
+exports.dotPropDelete=dotPropDelete
+exports.dotPropGet=dotPropGet
+exports.dotPropHas=dotPropHas
+exports.dotPropSet=dotPropSet
 var _require=require("./util.js"),arrayToSet=_require.arrayToSet
 var disallowedKeys=arrayToSet(["__proto__","prototype","constructor"])
 function isObject(value){var type=typeof value
@@ -9329,65 +12085,88 @@ var parts=[]
 for(var i=0;i<pathArray.length;i++){var p=pathArray[i]
 while("\\"===p[p.length-1]&&void 0!==pathArray[i+1]){p=p.slice(0,-1)+"."
 p+=pathArray[++i]}parts.push(p)}if(!isValidPath(parts))return[]
-return parts}module.exports={get:function get(object,path,value){if(!isObject(object)||"string"!==typeof path)return void 0===value?object:value
+return parts}function dotPropGet(object,path,value){if(!isObject(object)||"string"!==typeof path)return void 0===value?object:value
 var pathArray=getPathSegments(path)
 if(0===pathArray.length)return value
 for(var i=0;i<pathArray.length;i++)if(void 0===(object=object[pathArray[i]])||null===object){if(i!==pathArray.length-1)return value
-break}return void 0===object?value:object},set:function set(object,path,value){if(!isObject(object)||"string"!==typeof path)return object
+break}return void 0===object?value:object}function dotPropSet(object,path,value){if(!isObject(object)||"string"!==typeof path)return object
 var root=object
 var pathArray=getPathSegments(path)
 for(var i=0;i<pathArray.length;i++){var p=pathArray[i]
 if(i===pathArray.length-1)object[p]=value
 else if(!isObject(object[p]))object[p]={}
-object=object[p]}return root},delete:function _delete(object,path){if(!isObject(object)||"string"!==typeof path)return false
+object=object[p]}return root}function dotPropDelete(object,path){if(!isObject(object)||"string"!==typeof path)return false
 var pathArray=getPathSegments(path)
 for(var i=0;i<pathArray.length;i++){var p=pathArray[i]
 if(i===pathArray.length-1){delete object[p]
-return true}if(!isObject(object=object[p]))return false}},has:function has(object,path){if(!isObject(object)||"string"!==typeof path)return false
+return true}if(!isObject(object=object[p]))return false}}function dotPropHas(object,path){if(!isObject(object)||"string"!==typeof path)return false
 var pathArray=getPathSegments(path)
 if(0===pathArray.length)return false
 for(var i=0;i<pathArray.length;i++)if(isObject(object)){if(!(pathArray[i]in object))return false
 object=object[pathArray[i]]}else return false
-return true}}
+return true}exports.get=dotPropGet
+exports.set=dotPropSet
+exports.delete=dotPropDelete
+exports.has=dotPropHas
 
-},{"./util.js":74}],68:[function(require,module,exports){
+},{"./util.js":93}],82:[function(require,module,exports){
 "use strict"
-exports.Platform=exports.PRESENCE_OFFLINE=exports.PRESENCE_INACTIVE=exports.PRESENCE_ACTIVE=exports.ID_PROVIDER_FB_INSTANT=exports.ID_PROVIDER_FB_GAMING=exports.ID_PROVIDER_APPLE=void 0
-exports.getPlatformValues=getPlatformValues
+exports.PRESENCE_OFFLINE_INACTIVE=exports.PRESENCE_OFFLINE=exports.PRESENCE_INACTIVE=exports.PRESENCE_ACTIVE=exports.CHAT_USER_FLAGS=exports.CHAT_FLAG_USERCHAT=exports.CHAT_FLAG_EMOTE=exports.CHAT_FLAG_DO_ECHO=void 0
 exports.getStringEnumValues=getStringEnumValues
 exports.isValidNumberEnumKey=isValidNumberEnumKey
-exports.isValidPlatform=isValidPlatform
 exports.isValidStringEnumKey=isValidStringEnumKey
 exports.isValidStringEnumValue=isValidStringEnumValue
+exports.presenceActive=presenceActive
+exports.presenceVisible=presenceVisible
 var PRESENCE_OFFLINE=0
 exports.PRESENCE_OFFLINE=PRESENCE_OFFLINE
 var PRESENCE_ACTIVE=1
 exports.PRESENCE_ACTIVE=PRESENCE_ACTIVE
 var PRESENCE_INACTIVE=2
 exports.PRESENCE_INACTIVE=PRESENCE_INACTIVE
-var ID_PROVIDER_APPLE="apl"
-exports.ID_PROVIDER_APPLE=ID_PROVIDER_APPLE
-var ID_PROVIDER_FB_GAMING="fbg"
-exports.ID_PROVIDER_FB_GAMING=ID_PROVIDER_FB_GAMING
-var ID_PROVIDER_FB_INSTANT="fbi"
-exports.ID_PROVIDER_FB_INSTANT=ID_PROVIDER_FB_INSTANT
-function getStringEnumValues(e){return Object.values(e)}function isValidNumberEnumKey(e,k){return"number"===typeof e[k]}function isValidStringEnumKey(e,k){return k in e}function isValidStringEnumValue(e,v){for(var key in e)if(e[key]===v)return true
-return false}var Platform;(function(Platform){Platform["Android"]="android"
-Platform["FBInstant"]="fbinstant"
-Platform["IOS"]="ios"
-Platform["Web"]="web"
-Platform["Yandex"]="yandex"})((exports.Platform=Platform)||(exports.Platform=Platform={}))
-function getPlatformValues(){return getStringEnumValues(Platform)}function isValidPlatform(v){return isValidStringEnumValue(Platform,v)}
+var PRESENCE_OFFLINE_INACTIVE=3
+exports.PRESENCE_OFFLINE_INACTIVE=PRESENCE_OFFLINE_INACTIVE
+function presenceActive(presence_value){return!(presence_value===PRESENCE_INACTIVE||presence_value===PRESENCE_OFFLINE_INACTIVE)}function presenceVisible(presence_value){return!(presence_value===PRESENCE_OFFLINE||presence_value===PRESENCE_OFFLINE_INACTIVE)}function getStringEnumValues(e){return Object.values(e)}function isValidNumberEnumKey(e,k){return"number"===typeof e[k]}function isValidStringEnumKey(e,k){return k in e}function isValidStringEnumValue(e,v){for(var key in e)if(e[key]===v)return true
+return false}var CHAT_FLAG_EMOTE=1
+exports.CHAT_FLAG_EMOTE=CHAT_FLAG_EMOTE
+var CHAT_FLAG_USERCHAT=2
+exports.CHAT_FLAG_USERCHAT=CHAT_FLAG_USERCHAT
+var CHAT_USER_FLAGS=CHAT_FLAG_EMOTE|CHAT_FLAG_USERCHAT
+exports.CHAT_USER_FLAGS=CHAT_USER_FLAGS
+var CHAT_FLAG_DO_ECHO=1<<31
+exports.CHAT_FLAG_DO_ECHO=CHAT_FLAG_DO_ECHO
 
-},{}],69:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
+"use strict"
+exports.ERR_UNCONFIRMED_EMAIL=exports.ERR_UNAUTHORIZED=exports.ERR_SERVER=exports.ERR_NO_USER_ID=exports.ERR_NOT_AVAILABLE=exports.ERR_INVALID_PROVIDER=exports.ERR_INVALID_DATA=exports.ERR_EMAIL_ALREADY_USED=void 0
+var ERR_INVALID_DATA="ERR_INVALID_DATA"
+exports.ERR_INVALID_DATA=ERR_INVALID_DATA
+var ERR_INVALID_PROVIDER="ERR_INVALID_PROVIDER"
+exports.ERR_INVALID_PROVIDER=ERR_INVALID_PROVIDER
+var ERR_UNAUTHORIZED="ERR_UNAUTHORIZED"
+exports.ERR_UNAUTHORIZED=ERR_UNAUTHORIZED
+var ERR_NO_USER_ID="ERR_NO_USER_ID"
+exports.ERR_NO_USER_ID=ERR_NO_USER_ID
+var ERR_UNCONFIRMED_EMAIL="ERR_UNCONFIRMED_EMAIL"
+exports.ERR_UNCONFIRMED_EMAIL=ERR_UNCONFIRMED_EMAIL
+var ERR_SERVER="ERR_SERVER"
+exports.ERR_SERVER=ERR_SERVER
+var ERR_EMAIL_ALREADY_USED="ERR_EMAIL_ALREADY_USED"
+exports.ERR_EMAIL_ALREADY_USED=ERR_EMAIL_ALREADY_USED
+var ERR_NOT_AVAILABLE="ERR_NOT_AVAILABLE"
+exports.ERR_NOT_AVAILABLE=ERR_NOT_AVAILABLE
+
+},{}],84:[function(require,module,exports){
 "use strict"
 exports.FriendStatus=void 0
-var FriendStatus;(function(FriendStatus){FriendStatus[FriendStatus["Added"]=1]="Added"
+var FriendStatus=function(FriendStatus){FriendStatus[FriendStatus["Added"]=1]="Added"
 FriendStatus[FriendStatus["AddedAuto"]=2]="AddedAuto"
 FriendStatus[FriendStatus["Removed"]=3]="Removed"
-FriendStatus[FriendStatus["Blocked"]=4]="Blocked"})((exports.FriendStatus=FriendStatus)||(exports.FriendStatus=FriendStatus={}))
+FriendStatus[FriendStatus["Blocked"]=4]="Blocked"
+return FriendStatus}({})
+exports.FriendStatus=FriendStatus
 
-},{}],70:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 "use strict"
 var assert=require("assert")
 function stringUtf8Encode(str){var c
@@ -9523,22 +12302,35 @@ b=addUnsigned(b,BB)
 c=addUnsigned(c,CC)
 d=addUnsigned(d,DD)}return(wordToHex(a)+wordToHex(b)+wordToHex(c)+wordToHex(d)).toLowerCase()}
 
-},{"assert":undefined}],71:[function(require,module,exports){
+},{"assert":undefined}],86:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict"
+exports.MAX_JS_INT64=exports.MAX_JS_INT53=void 0
 exports.packetBufPoolAlloc=packetBufPoolAlloc
 exports.packetBufPoolFree=packetBufPoolFree
 exports.packetDefaultFlags=packetDefaultFlags
 exports.packetEnableDebug=packetEnableDebug
+exports.packetReadIntFromBuffer=packetReadIntFromBuffer
+exports.packetSizeAnsiString=packetSizeAnsiString
+exports.packetSizeInt=packetSizeInt
 var PACKET_DEBUG=exports.PACKET_DEBUG=1
 var PACKET_RESERVED1=exports.PACKET_RESERVED1=2
 var PACKET_RESERVED2=exports.PACKET_RESERVED2=4
 var FLAG_PACKET_INTERNAL=PACKET_DEBUG|PACKET_RESERVED1|PACKET_RESERVED2
 var PACKET_UNOWNED_BUFFER=256
+var MAX_JS_INT64=0xfffffffffffff800
+exports.MAX_JS_INT64=MAX_JS_INT64
+var MAX_JS_INT53=9007199254740992
+exports.MAX_JS_INT53=MAX_JS_INT53
 var assert=require("assert")
+var _base=require("./base64")
+var base64Decode=_base.base64Decode
+var base64Encode=_base.base64Encode
+var _util=require("./util")
+var deprecate=_util.deprecate
+var isInteger=_util.isInteger
+var log2=_util.log2
 var max=Math.max
-var _require=require("./util.js"),deprecate=_require.deprecate,isInteger=_require.isInteger,log2=_require.log2
-var _require2=require("./base64.js"),base64Encode=_require2.base64Encode,base64Decode=_require2.base64Decode
 deprecate(exports,"default_flags")
 var FALSYS=[void 0,null,0,false,"",NaN]
 var PAK_BUF_DEFAULT_SIZE=1024
@@ -9654,7 +12446,13 @@ Packet.prototype.writeU8=function(v){assert(v>=0&&v<256)
 var offs=this.fit(1)
 this.buf.u8[offs]=v}
 Packet.prototype.readU8=function(){return this.buf.u8[this.advance(1)]}
-Packet.prototype.writeInt=function(v){assert(isInteger(v))
+function packetSizeInt(v){assert(isInteger(v))
+var neg=v<0?1:0
+if(neg)v=-v
+if(v<248){if(neg)return 2
+return 1}else if(v<65536)return 3
+else if(v<4294967296)return 5
+else return 9}Packet.prototype.writeInt=function(v){assert(isInteger(v))
 var offs=this.fit(9,true)
 var buf=this.buf
 var neg=v<0?1:0
@@ -9664,7 +12462,8 @@ buf.u8[offs++]=v}else if(v<65536){buf.u8[offs++]=248+neg
 buf.setUint16(offs,v,true)
 offs+=2}else if(v<4294967296){buf.u8[offs++]=250+neg
 buf.setUint32(offs,v,true)
-offs+=4}else{buf.u8[offs++]=252+neg
+offs+=4}else{assert(v<=MAX_JS_INT64)
+buf.u8[offs++]=252+neg
 var low_bits=v>>>0
 buf.setUint32(offs,low_bits,true)
 buf.setUint32(offs+=4,(v-low_bits)/4294967296,true)
@@ -9683,7 +12482,23 @@ case 255:zeroes=1
 break
 default:throw new Error("PKTERR_PACKED_INT")}while(zeroes){--zeroes
 this.buf.u8[this.buf_offs++]=0}}
-Packet.prototype.readInt=function(){var b1=this.buf.u8[this.advance(1)]
+function packetReadIntFromBuffer(buf,offs,buf_len){if(buf_len-offs<1)return null
+var b1=buf[offs++]
+if(b1<248)return{v:b1,offs:offs}
+var sign=1
+switch(b1){case 249:sign=-1
+case 248:if(buf_len-offs<2)return null
+return{v:sign*buf.readUInt16LE(offs),offs:offs+=2}
+case 251:sign=-1
+case 250:if(buf_len-offs<4)return null
+return{v:sign*buf.readUInt32LE(offs),offs:offs+=4}
+case 253:sign=-1
+case 252:if(buf_len-offs<8)return null
+var low_bits=buf.readUInt32LE(offs)
+return{v:sign*(4294967296*buf.readUInt32LE(offs+=4)+low_bits),offs:offs+=4}
+case 255:if(buf_len-offs<1)return null
+return{v:-buf[offs++],offs:offs}
+default:throw new Error("PKTERR_PACKED_INT")}}Packet.prototype.readInt=function(){var b1=this.buf.u8[this.advance(1)]
 if(b1<248)return b1
 var sign=1
 switch(b1){case 249:sign=-1
@@ -9754,7 +12569,7 @@ var buf=this.buf
 string_assembly.length=len
 for(var ii=0;ii<len;++ii)string_assembly[ii]=buf.u8[offs++]
 return String.fromCharCode.apply(void 0,string_assembly)}
-Packet.prototype.writeJSON=function(v){if(!v){var idx=FALSYS.indexOf(v)
+function packetSizeAnsiString(v){return packetSizeInt(v.length)+v.length}Packet.prototype.writeJSON=function(v){if(!v){var idx=FALSYS.indexOf(v)
 assert(-1!==idx)
 this.writeU8(idx+1)
 return}this.writeU8(0)
@@ -9773,6 +12588,8 @@ var offs=this.advance(len)
 if(do_copy)return this.buf.u8.slice(offs,offs+len)
 else{var buf=this.buf
 return new Uint8Array(buf.buffer,buf.byteOffset+offs,len)}}
+Packet.prototype.appendBuffer=function(v){if(v.length){var offs=this.fit(v.length)
+this.buf.u8.set(v,offs)}}
 Packet.prototype.writeBool=function(v){this.writeU8(v?1:0)}
 Packet.prototype.readBool=function(){return Boolean(this.readU8())}
 Packet.prototype.append=function(pak){assert.equal(this.flags&FLAG_PACKET_INTERNAL,pak.flags&FLAG_PACKET_INTERNAL)
@@ -9854,7 +12671,7 @@ PacketDebug.prototype[read]=function(param){var found_idx=this.pak.readU8()
 if(found_idx!==idx)assert(false,"PacketDebug error: Expected "+type+"("+idx+"), found "+types[found_idx]+"("+found_idx+")")
 return read_fn.call(this.pak,param)}})
 PacketDebug.prototype.zeroInt=function(){this.pak.writeU8(3)
-this.pak.zeroInt()};["ended","getBuffer","getBufferLen","getFlags","getInternalFlags","getOffset","getRefCount","makeReadable","pool","readFlags","ref","seek","setBuffer","setReadable","toJSON","totalSize","updateFlags","writeFlags"].forEach(function(fname){var fn=Packet.prototype[fname]
+this.pak.zeroInt()};["ended","getBuffer","getBufferLen","getFlags","getInternalFlags","getOffset","getRefCount","makeReadable","pool","readFlags","ref","seek","setBuffer","setReadable","toJSON","totalSize","updateFlags","writeFlags","appendBuffer"].forEach(function(fname){var fn=Packet.prototype[fname]
 PacketDebug.prototype[fname]=function(){return fn.apply(this.pak,arguments)}})
 PacketDebug.prototype.append=function(pak){assert(pak instanceof PacketDebug)
 this.pak.append(pak.pak)}
@@ -9891,7 +12708,7 @@ assert.equal(typeof flags,"number")
 if(need_copy){assert(buf_len)
 assert(buf.buffer instanceof ArrayBuffer)
 var pak=packetCreate(flags,buf_len)
-if(buf.byteLength!==buf_len)buf=Buffer.from(buf.buffer,0,buf_len)
+if(buf.byteLength!==buf_len)buf=Buffer.from(buf.buffer,buf.byteOffset,buf_len)
 pak.getBuffer().set(buf)
 pak.setReadable()
 return pak}else{assert(buf instanceof Uint8Array)
@@ -9913,25 +12730,144 @@ function isPacket(thing){return thing instanceof Packet||thing instanceof Packet
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./base64.js":63,"./util.js":74,"assert":undefined,"buffer":undefined}],72:[function(require,module,exports){
+},{"./base64":76,"./util":93,"assert":undefined,"buffer":undefined}],87:[function(require,module,exports){
 "use strict"
 exports.perfCounterAdd=perfCounterAdd
 exports.perfCounterAddValue=perfCounterAddValue
 exports.perfCounterHistory=perfCounterHistory
+exports.perfCounterSetBucketTime=perfCounterSetBucketTime
 exports.perfCounterTick=perfCounterTick
-var BUCKET_TIME=1e4
 var NUM_BUCKETS=5
 var counters={time_start:Date.now()}
 var hist=[counters]
-var countdown=BUCKET_TIME
-function perfCounterAdd(key){counters[key]=(counters[key]||0)+1}function perfCounterAddValue(key,value){counters[key]=(counters[key]||0)+value}function perfCounterTick(dt,log){if((countdown-=dt)<=0){countdown=BUCKET_TIME
+var bucket_time=1e4
+var countdown=bucket_time
+function perfCounterSetBucketTime(time){countdown=bucket_time=time}function perfCounterAdd(key){counters[key]=(counters[key]||0)+1}function perfCounterAddValue(key,value){counters[key]=(counters[key]||0)+value}function perfCounterTick(dt,log){if((countdown-=dt)<=0){countdown=bucket_time
 if(hist.length===NUM_BUCKETS)hist.splice(0,1)
 var now=Date.now()
 counters.time_end=now
 if(log)log(counters);(counters={}).time_start=now
 hist.push(counters)}}function perfCounterHistory(){return hist}
 
-},{}],73:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
+"use strict"
+exports.platformFallbackGet=platformFallbackGet
+exports.platformFallbackSet=platformFallbackSet
+exports.platformGetValidIDs=platformGetValidIDs
+exports.platformIsValid=platformIsValid
+exports.platformOverrideParameter=platformOverrideParameter
+exports.platformParameter=platformParameter
+exports.platformRegister=platformRegister
+var assert=require("assert")
+var platforms=Object.create(null)
+var too_late_to_register=false
+function platformRegister(id,def){assert(!too_late_to_register)
+assert(!platforms[id]||"web"===id)
+platforms[id]=def}var platform_fallback="web"
+function platformFallbackSet(fallback){platform_fallback=fallback}function platformFallbackGet(){return platform_fallback}function platformGetValidIDs(){return Object.keys(platforms)}function platformIsValid(v){too_late_to_register=true
+return Boolean("string"===typeof v&&platforms[v])}var parameter_overrides=Object.create(null)
+function platformParameter(platform,parameter){var override=parameter_overrides[parameter]
+if(void 0!==override)return override
+var platdef=platforms[platform]
+assert(platdef)
+return platdef[parameter]}function platformOverrideParameter(parameter,value){parameter_overrides[parameter]=value}platformRegister("web",{devmode:"auto",reload:true,reload_updates:true,random_creation_name:false,exit:false})
+
+},{"assert":undefined}],89:[function(require,module,exports){
+"use strict"
+exports.mashI53=mashI53
+exports.mashString=mashString
+exports.randCreate=randCreate
+exports.shuffleArray=shuffleArray
+function mashString(data){var n=4022871197
+for(var i=0;i<data.length;i++){var h=.02519603282416938*(n+=data.charCodeAt(i))
+h-=n=h>>>0
+n=(h*=n)>>>0
+n+=4294967296*(h-=n)}return n>>>0}function mashI53(data){var n=4022871197
+while(data){var byte=data%256
+data=(data-byte)/256
+var h=.02519603282416938*(n+=byte)
+h-=n=h>>>0
+n=(h*=n)>>>0
+n+=4294967296*(h-=n)}return 2.3283064365386963e-10*(n>>>0)}function Mash(){this.n=3228327880}Mash.prototype.mash=function(data){var n=this.n+data
+var h=.02519603282416938*n
+h-=n=h>>>0
+n=(h*=n)>>>0
+return 2.3283064365386963e-10*((this.n=n+=4294967296*(h-=n))>>>0)}
+function Alea(seed){this.reseed(seed)}Alea.prototype.reseed=function(seed){if(seed>=4294967296)seed=mashI53(seed)
+this.c=1
+var mash=new Mash
+this.s0=.3014581324532628
+this.s1=.2643220406025648
+this.s2=.7516536582261324
+this.s0-=mash.mash(seed)
+if(this.s0<0)this.s0+=1
+this.s1-=mash.mash(seed)
+if(this.s1<0)this.s1+=1
+this.s2-=mash.mash(seed)
+if(this.s2<0)this.s2+=1}
+Alea.prototype.step=function(){var t=2091639*this.s0+2.3283064365386963e-10*this.c
+this.s0=this.s1
+this.s1=this.s2
+return this.s2=t-(this.c=0|t)}
+Alea.prototype.uint32=function(){return 4294967296*this.step()}
+Alea.prototype.fract53=function(){return this.step()+11102230246251565e-32*(2097152*this.step()|0)}
+Alea.prototype.random=Alea.prototype.step
+Alea.prototype.range=function(range){return this.step()*range|0}
+Alea.prototype.floatBetween=function(a,b){return a+(b-a)*this.random()}
+Alea.prototype.exportState=function(){return[this.s0,this.s1,this.s2,this.c]}
+Alea.prototype.importState=function(i){this.s0=i[0]
+this.s1=i[1]
+this.s2=i[2]
+this.c=i[3]}
+function randCreate(seed){return new Alea(seed)}function shuffleArray(rand,arr){for(var ii=arr.length-1;ii>=1;--ii){var swap=rand.range(ii+1)
+var t=arr[ii]
+arr[ii]=arr[swap]
+arr[swap]=t}}
+
+},{}],90:[function(require,module,exports){
+"use strict"
+exports.randFastCreate=randFastCreate
+exports.randSimpleSpatial=randSimpleSpatial
+exports.randSpatial=randSpatial
+exports.randSpatialU32=randSpatialU32
+var imul=Math.imul
+function step2(seed){seed=seed>>>0||22329833666
+seed^=seed<<13
+seed^=seed>>>17
+seed^=seed<<5
+seed^=seed<<13
+seed^=seed>>>17
+return(seed^=seed<<5)>>>0}function RandSeed2(seed){this.seed=step2(seed)}RandSeed2.prototype.reseed=function(seed){this.seed=step2(seed)}
+RandSeed2.prototype.step=function(){var seed=this.seed
+seed^=seed<<13
+seed^=seed>>>17
+return(this.seed=(seed^=seed<<5)>>>0)-1}
+RandSeed2.prototype.uint32=RandSeed2.prototype.step
+RandSeed2.prototype.range=function(range){return this.step()*range*2.3283064376e-10|0}
+RandSeed2.prototype.random=function(){return 2.3283064376e-10*this.step()}
+RandSeed2.prototype.floatBetween=function(a,b){return a+(b-a)*this.random()}
+function randFastCreate(seed){return new RandSeed2(seed)}var RND_A=134775813
+var RND_B=1103515245
+function randSimpleSpatial(seed,x,y,z){return(((x^(y+=10327*z))*RND_A^seed+x)*(RND_B*x<<16^RND_B*y-RND_A)>>>0)/4294967295}var PRIME32_2=2246822519
+var PRIME32_3=3266489917
+var PRIME32_4=668265263
+var PRIME32_5=374761393
+function randSpatialU32(x,y,z,w){var h32=w+PRIME32_5+imul(x,PRIME32_3)
+h32=imul(h32<<17|h32>>>15,PRIME32_4)
+h32+=imul(y,PRIME32_3)
+h32=imul(h32<<17|h32>>>15,PRIME32_4)
+h32+=imul(z,PRIME32_3)
+h32=imul(h32<<17|h32>>>15,PRIME32_4)
+h32=imul(h32^h32>>>15,PRIME32_2)
+return((h32=imul(h32^h32>>>13,PRIME32_3))^h32>>>16)>>>0}function randSpatial(seed,x,y,z){return randSpatialU32(x,y,z,seed)/4294967295}
+
+},{}],91:[function(require,module,exports){
+"use strict"
+exports.FORMAT_PACK=1
+exports.FORMAT_PNG=2
+exports.TEXPACK_MAGIC=2403967826
+
+},{}],92:[function(require,module,exports){
 "use strict"
 var assert=require("assert")
 function EventEmitter(){this._listeners={}}module.exports=EventEmitter
@@ -9963,15 +12899,22 @@ elem.fn.apply(elem,args)
 if(elem.once)any_once=true}if(any_once)this._listeners[type]=arr.filter(filterNotOnce)
 return any}
 
-},{"assert":undefined}],74:[function(require,module,exports){
+},{"assert":undefined}],93:[function(require,module,exports){
 "use strict"
+exports.VALID_USER_ID_REGEX=exports.EMAIL_REGEX=void 0
 exports.arrayToSet=arrayToSet
+exports.asyncDictionaryGet=asyncDictionaryGet
 exports.callEach=callEach
+exports.callbackify=callbackify
+exports.capitalize=capitalize
 exports.clamp=clamp
 exports.cleanStringSplit=cleanStringSplit
 exports.cleanupStringArray=cleanupStringArray
 exports.clone=clone
 exports.cloneShallow=cloneShallow
+exports.cmpNumericSmart=cmpNumericSmart
+exports.damp=damp
+exports.dateToFileTimestamp=dateToFileTimestamp
 exports.dateToSafeLocaleString=dateToSafeLocaleString
 exports.deepAdd=deepAdd
 exports.deepEqual=deepEqual
@@ -9991,46 +12934,77 @@ exports.inherits=inherits
 exports.isInteger=isInteger
 exports.isPowerOfTwo=isPowerOfTwo
 exports.lerp=lerp
+exports.lerpAngle=lerpAngle
 exports.lineCircleIntersect=lineCircleIntersect
 exports.lineLineIntersect=lineLineIntersect
 exports.log2=log2
 exports.logdata=logdata
 exports.map01=map01
 exports.matchAll=matchAll
+exports.mdEscape=mdEscape
 exports.merge=merge
 exports.mix=mix
 exports.mod=mod
+exports.msToSS2020=msToSS2020
 exports.msToTimeString=msToTimeString
 exports.nearSame=nearSame
+exports.nearSameAngle=nearSameAngle
 exports.nextHighestPowerOfTwo=nextHighestPowerOfTwo
 exports.nop=nop
 exports.objectToSet=objectToSet
 exports.once=once
 exports.plural=plural
 exports.randomNot=randomNot
+exports.refclone=refclone
+exports.removeSymbols=removeSymbols
 exports.ridx=ridx
 exports.round100=round100
 exports.round1000=round1000
 exports.sanitize=sanitize
 exports.secondsSince2020=secondsSince2020
 exports.secondsToFriendlyString=secondsToFriendlyString
+exports.shortAngleDist=shortAngleDist
 exports.sign=sign
+exports.spiralPos=spiralPos
+exports.ss2020ToMS=ss2020ToMS
+exports.tail=tail
 exports.titleCase=titleCase
 exports.toArray=toArray
 exports.toNumber=toNumber
+exports.trimEnd=trimEnd
+exports.tweenBounceIn=tweenBounceIn
+exports.tweenBounceInOut=tweenBounceInOut
+exports.tweenBounceOut=tweenBounceOut
+exports.tweenElasticIn=tweenElasticIn
+exports.tweenElasticInOut=tweenElasticInOut
+exports.tweenElasticOut=tweenElasticOut
+exports.tweenExpoIn=tweenExpoIn
+exports.tweenExpoInOut=tweenExpoInOut
+exports.tweenExpoOut=tweenExpoOut
+exports.unpromisify=unpromisify
+exports.upper=upper
 var assert=require("assert")
-var abs=Math.abs,floor=Math.floor,min=Math.min,max=Math.max,random=Math.random,round=Math.round,pow=Math.pow,sqrt=Math.sqrt
+var PI=Math.PI,abs=Math.abs,ceil=Math.ceil,exp=Math.exp,floor=Math.floor,min=Math.min,max=Math.max,random=Math.random,round=Math.round,pow=Math.pow,sin=Math.sin,sqrt=Math.sqrt
+var TWO_PI=2*PI
+var EMAIL_REGEX=/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+exports.EMAIL_REGEX=EMAIL_REGEX
+var VALID_USER_ID_REGEX=/^(?:fb\$|[a-z0-9])[a-z0-9_]{1,32}$/
+exports.VALID_USER_ID_REGEX=VALID_USER_ID_REGEX
 function nop(){}function identity(a){return a}function once(fn){var called=false
 return function(){if(called)return
 called=true
 fn.apply(void 0,arguments)}}function empty(obj){for(var key in obj)return false
 return true}function easeInOut(v,a){var va=pow(v,a)
-return va/(va+pow(1-v,a))}function easeIn(v,a){return 2*easeInOut(.5*v,a)}function easeOut(v,a){return 2*easeInOut(.5+.5*v,a)-1}function clone(obj){if(!obj)return obj
-return JSON.parse(JSON.stringify(obj))}function merge(dest,src){for(var f in src)dest[f]=src[f]
-return dest}function has(obj,field){return Object.prototype.hasOwnProperty.call(obj,field)}function defaults(dest,src){for(var f in src)if(!has(dest,f))dest[f]=src[f]
-return dest}function defaultsDeep(dest,src){for(var f in src)if(!has(dest,f))dest[f]=src[f]
-else if("object"===typeof dest[f])defaultsDeep(dest[f],src[f])
-return dest}function cloneShallow(src){return merge({},src)}function deepEqual(a,b){if(Array.isArray(a)){if(!Array.isArray(b))return false
+return va/(va+pow(1-v,a))}function easeIn(v,a){return 2*easeInOut(.5*v,a)}function easeOut(v,a){return 2*easeInOut(.5+.5*v,a)-1}function tweenExpoIn(v){return 0===v?0:pow(2,10*v-10)}function tweenExpoOut(v){return 1===v?1:1-pow(2,-10*v)}function tweenExpoInOut(v){return 0===v?0:1===v?1:v<.5?.5*pow(2,20*v-10):1-.5*pow(2,-20*v+10)}function tweenElasticIn(v){return sin(PI/2*13*v)*pow(2,10*(v-1))}function tweenElasticOut(v){return sin(PI/2*-13*(v+1))*pow(2,-10*v)+1}function tweenElasticInOut(v){return v<.5?.5*sin(PI/2*13*(2*v))*pow(2,10*(2*v-1)):.5*(sin(PI/2*-13*(2*v-1+1))*pow(2,-10*(2*v-1))+2)}function tweenBounceOut(v){if(v<1/2.75)return 7.5625*v*v
+else if(v<2/2.75)return 7.5625*(v-=1.5/2.75)*v+.75
+else if(v<2.5/2.75)return 7.5625*(v-=2.25/2.75)*v+.9375
+else return 7.5625*(v-=2.625/2.75)*v+.984375}function tweenBounceIn(v){return 1-tweenBounceOut(1-v)}function tweenBounceInOut(v){return v<.5?(1-tweenBounceOut(1-2*v))/2:(1+tweenBounceOut(2*v-1))/2}function clone(obj){if(!obj)return obj
+return JSON.parse(JSON.stringify(obj))}function merge(dest,src){for(var _f in src)dest[_f]=src[_f]
+return dest}function has(obj,field){return Object.prototype.hasOwnProperty.call(obj,field)}function defaults(dest,src){for(var _f2 in src)if(!has(dest,_f2))dest[_f2]=src[_f2]
+return dest}function defaultsDeep(dest,src){for(var _f3 in src)if(!has(dest,_f3))dest[_f3]=src[_f3]
+else{var vd=dest[_f3]
+var vs=src[_f3]
+if("object"===typeof vd&&!Array.isArray(vd)&&"object"===typeof vs&&!Array.isArray(vs))defaultsDeep(vd,src[_f3])}return dest}function cloneShallow(src){return merge({},src)}function deepEqual(a,b){if(Array.isArray(a)){if(!Array.isArray(b))return false
 if(a.length!==b.length)return false
 for(var ii=0;ii<a.length;++ii)if(!deepEqual(a[ii],b[ii]))return false
 return true}else if("object"===typeof a){if("object"!==typeof b)return false
@@ -10039,10 +13013,25 @@ for(var key in a)if(!deepEqual(a[key],b[key]))return false
 for(var _key in b)if(void 0!==b[_key]&&void 0===a[_key])return false
 return true}return a===b}function deepAdd(dest,src){assert(dest&&src)
 for(var key in src){var value=src[key]
-if("object"===typeof value){var dest_sub=dest[key]=dest[key]||{}
+var dest_value=dest[key]
+if("object"===typeof value){assert(value)
+var dest_sub=dest[key]=dest_value||{}
 assert.equal(typeof dest_sub,"object")
-deepAdd(dest_sub,value)}else dest[key]=(dest[key]||0)+value}}function clamp(v,mn,mx){return min(max(mn,v),mx)}function lerp(a,v0,v1){return(1-a)*v0+a*v1}function mix(v0,v1,a){return(1-a)*v0+a*v1}function map01(number,in_min,in_max){return(number-in_min)/(in_max-in_min)}function sign(a){return a<0?-1:a>0?1:0}function mod(a,n){return(a%n+n)%n}function log2(val){for(var ii=1,jj=0;;ii<<=1,++jj)if(ii>=val)return jj}function ridx(arr,idx){arr[idx]=arr[arr.length-1]
-arr.pop()}function round100(a){return round(100*a)/100}function round1000(a){return round(1e3*a)/1e3}function fract(a){return a-floor(a)}function nearSame(a,b,tol){return abs(b-a)<=tol}function titleCase(str){return str.split(" ").map(function(word){return""+word[0].toUpperCase()+word.slice(1)}).join(" ")}var EPSILON=1e-5
+deepAdd(dest_sub,value)}else{if(!dest_value)dest_value=0
+assert("number"===typeof dest_value)
+assert("number"===typeof value)
+dest[key]=(dest_value||0)+value}}}function refclone(a,b){if("object"!==typeof b||!b)return b
+if(deepEqual(a,b))return a
+if(Array.isArray(b)){var _result=[]
+for(var i=0;i<b.length;i++)_result[i]=refclone(a&&a[i],b[i])
+return _result}var result={}
+for(var key in b)result[key]=refclone(a&&a[key],b[key])
+return result}function clamp(v,mn,mx){return min(max(mn,v),mx)}function lerp(a,v0,v1){return(1-a)*v0+a*v1}function shortAngleDist(a0,a1){var delta=(a1-a0)%TWO_PI
+return 2*delta%TWO_PI-delta}function lerpAngle(t,a0,a1){var r=a0+shortAngleDist(a0,a1)*t
+if(r<0)r+=TWO_PI
+return r}function damp(x,y,ms,dt){return lerp(1-exp(-(2.995733/ms)*dt),x,y)}function mix(v0,v1,a){return(1-a)*v0+a*v1}function map01(number,in_min,in_max){return(number-in_min)/(in_max-in_min)}function sign(a){return a<0?-1:a>0?1:0}function mod(a,n){return(a%n+n)%n}function log2(val){for(var ii=1,jj=0;;ii<<=1,++jj)if(ii>=val)return jj}function ridx(arr,idx){arr[idx]=arr[arr.length-1]
+arr.pop()}function tail(arr){if(!arr.length)return null
+return arr[arr.length-1]}function round100(a){return round(100*a)/100}function round1000(a){return round(1e3*a)/1e3}function fract(a){return a-floor(a)}function nearSame(a,b,tol){return abs(b-a)<=tol}function nearSameAngle(a,b,tol){return abs(shortAngleDist(a,b))<=tol}function titleCase(str){return str.split(" ").map(function(word){return""+word[0].toUpperCase()+word.slice(1)}).join(" ")}var EPSILON=1e-5
 function lineCircleIntersect(p1,p2,pCircle,radius){var dp=[p2[0]-p1[0],p2[1]-p1[1]]
 var a=dp[0]*dp[0]+dp[1]*dp[1]
 var b=2*(dp[0]*(p1[0]-pCircle[0])+dp[1]*(p1[1]-pCircle[1]))
@@ -10070,8 +13059,9 @@ for(var i=1;i<32;i<<=1)x|=x>>i
 return x+1}function logdata(data){if(void 0===data)return""
 var r=JSON.stringify(data)
 if(r.length<120)return r
-return r.slice(0,117)+"...("+r.length+")"}function isInteger(v){return"number"===typeof v&&isFinite(v)&&floor(v)===v}function toNumber(v){return Number(v)}function randomNot(not_value,max_value){var new_value
-do{new_value=floor(random()*max_value)}while(new_value===not_value)
+return r.slice(0,117)+"...("+r.length+")"}function isInteger(v){return"number"===typeof v&&isFinite(v)&&floor(v)===v}function toNumber(v){return Number(v)}function randomNot(not_value,min_value,max_value){var new_value
+var range=max_value-min_value
+do{new_value=floor(min_value+random()*range)}while(new_value===not_value)
 return new_value}function toArray(array_like){return Array.prototype.slice.call(array_like)}function arrayToSet(array){var ret=Object.create(null)
 for(var ii=0;ii<array.length;++ii)ret[array[ii]]=true
 return ret}function objectToSet(obj){return merge(Object.create(null),obj)}function matchAll(str,re){var ret=[]
@@ -10079,7 +13069,7 @@ var m
 do{if(m=re.exec(str))ret.push(m[1])}while(m)
 return ret}function callEach(arr,pre_clear){if(arr&&arr.length){for(var _len=arguments.length,args=new Array(_len>2?_len-2:0),_key3=2;_key3<_len;_key3++)args[_key3-2]=arguments[_key3]
 for(var ii=0;ii<arr.length;++ii)arr[ii].apply(arr,args)}}var sanitize_regex=/[\uD800-\uDFFF\x00-\x1F\x7F\u1D54\u1D55\u2000-\u200F\u205F-\u206F\uFE00]/g
-function sanitize(str){return(str||"").replace(sanitize_regex,"")}function plural(number,label){return label+(1===number?"":"s")}function secondsToFriendlyString(seconds,force_include_seconds){var days=floor(seconds/86400)
+function sanitize(str){return(str||"").replace(sanitize_regex,"")}function plural(number,label){return label+(1===number?"":"s")}function capitalize(s){return s[0].toUpperCase()+s.slice(1)}function upper(s){return s.toUpperCase()}function secondsToFriendlyString(seconds,force_include_seconds){var days=floor(seconds/86400)
 var hours=floor((seconds-=60*days*60*24)/3600)
 var minutes=floor((seconds-=60*hours*60)/60)
 seconds-=60*minutes
@@ -10089,22 +13079,60 @@ if(years){days-=floor(365.25*years)
 resp.push(years+" "+plural(years,"year"))}resp.push(days+" "+plural(days,"day"))}if(hours)resp.push(hours+" "+plural(hours,"hour"))
 if(minutes||!resp.length)resp.push(minutes+" "+plural(minutes,"minute"))
 if(force_include_seconds)resp.push(seconds+" "+plural(seconds,"second"))
-return resp.join(", ")}function secondsSince2020(){return floor(Date.now()/1e3)-1577836800}function dateToSafeLocaleString(date,date_only){var date_text
-try{date_text=date_only?date.toLocaleDateString():date.toLocaleString()}catch(e){console.error(e,"(Using toString as fallback)")
-date_text=date_only?date.toDateString():date.toString()}return date_text}function msToTimeString(duration,opts){var ms=duration%1e3
+return resp.join(", ")}function secondsSince2020(){return floor(Date.now()/1e3)-1577836800}function dateToSafeLocaleString(date,date_only,options){var date_text
+try{date_text=date_only?date.toLocaleDateString(void 0,options):date.toLocaleString(void 0,options)}catch(e){console.error(e,"(Using toString as fallback)")
+date_text=date_only?date.toDateString():date.toString()}return date_text}function dateToFileTimestamp(date){function pad(value){return""+(value<10?0:"")+value}return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate())+" "+pad(date.getHours())+"_"+pad(date.getMinutes())+"_"+pad(date.getSeconds())}function msToTimeString(duration,opts){var ms=duration%1e3
 var s
 var m
 var h
 h=(m=(s=duration-ms)-(s%=6e4))-(m%=36e5)
 m/=6e4
-return((h/=36e5)?h+":":"")+(h&&m<10?"0":"")+m+":"+((s/=1e3)<10?"0":"")+s+((opts=opts||{}).hide_ms?"":"."+(ms<10?"00":ms<100?"0":"")+ms)}var sw={}
-sw.am=sw.an=sw.and=sw.as=sw.at=sw.be=sw.by=sw.el=sw.for=sw.in=sw.is=sw.la=sw.las=sw.los=sw.of=sw.on=sw.or=sw.the=sw.that=sw.this=sw.to=sw.with=true
-function cleanupStringArray(string_array){return string_array.filter(function(s){return s.length>1&&s.length<=32&&!sw[s]})}function cleanStringSplit(string,pattern){return cleanupStringArray(sanitize(string).replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,"").replace(/\s{1,}/g," ").toLowerCase().split(pattern).map(function(s){return s.trim()}))}function eatPossiblePromise(p){if(p&&p.catch)p.catch(nop)}function errorString(e){var msg=String(e)
+return((h/=36e5)?h+":":"")+(h&&m<10?"0":"")+m+":"+((s/=1e3)<10?"0":"")+s+((opts=opts||{}).hide_ms?"":"."+(ms<10?"00":ms<100?"0":"")+ms)}function removeSymbols(string){return string.replace(/[.,/\\@#£!$%^&*;:<>{}|?=\-+_`'"~[\]()]/g,"").replace(/\s{1,}/g," ")}var sw=arrayToSet(["am","an","and","as","at","be","by","el","for","in","is","la","las","los","of","on","or","the","that","this","to","with"])
+function cleanupStringArray(string_array){return string_array.filter(function(s){return s.length>1&&s.length<=32&&!sw[s]})}function cleanStringSplit(string,pattern){return cleanupStringArray(removeSymbols(sanitize(string)).toLowerCase().split(pattern).map(function(s){return s.trim()}))}function eatPossiblePromise(p){if(p&&p.catch)p.catch(nop)}function errorString(e){var msg=String(e)
 if("[object Object]"===msg)try{msg=JSON.stringify(e)}catch(ignored){}if(e&&e.stack&&e.message)msg=String(e.message)
 return msg=msg.slice(0,600)}function deprecate(exports,field,replacement){Object.defineProperty(exports,field,{get:function get(){assert(false,field+" is deprecated, use "+replacement+" instead")
-return}})}
+return}})}var nextTick="undefined"!==typeof process?process.nextTick:"undefined"!==typeof window&&window.setImmediate?window.setImmediate:function(fn){return setTimeout(fn,1)}
+function callbackify(f){return function(){var _this=this
+var cb=arguments[arguments.length-1]
+assert.equal(typeof cb,"function")
+var args=Array.prototype.slice.call(arguments,0,-1)
+f.apply(this,args).then(function(result){if(cb){nextTick(cb.bind(_this,null,result))
+cb=null}}).catch(function(err){if(cb){nextTick(cb.bind(_this,err))
+cb=null}})}}function unpromisify(f){return function(){nextTick(f.apply.bind(f,this,arguments))}}function msToSS2020(milliseconds){return floor(milliseconds/1e3)-1577836800}function ss2020ToMS(ss2020){return 1e3*(ss2020+1577836800)}var whitespace_regex=/\s/
+function trimEnd(s){var idx=s.length
+while(idx>0&&s[idx-1].match(whitespace_regex))--idx
+return s.slice(0,idx)}function isDigit(c){return c>="0"&&c<="9"}var char_code_0="0".charCodeAt(0)
+function cmpNumericSmart(a,b){var ia=0
+var ib=0
+while(ia<a.length&&ib<b.length)if(isDigit(a[ia]))if(isDigit(b[ib])){var va=0
+while(isDigit(a[ia])){va*=10
+va+=a.charCodeAt(ia++)-char_code_0}var vb=0
+while(isDigit(b[ib])){vb*=10
+vb+=b.charCodeAt(ib++)-char_code_0}var d=va-vb
+if(d)return d}else return-1
+else if(isDigit(b[ib]))return 1
+else{var _d=a[ia].toLowerCase().charCodeAt(0)-b[ib].toLowerCase().charCodeAt(0)
+if(_d)return _d
+ia++
+ib++}if(ia<a.length)return 1
+else if(ib<b.length)return-1
+else return 0}function mdEscape(text){return text.replace(/([\\[*_])/g,"\\$1")}var async_dict_caches={}
+function asyncDictionaryGet(cache_in,key,get,cb){if("string"===typeof cache_in)cache_in=async_dict_caches[cache_in]=async_dict_caches[cache_in]||{}
+var cache=cache_in
+var elem=cache[key]
+if(elem){if(elem.in_flight)elem.in_flight.push(cb)
+else cb(elem.value)
+return}cache[key]=elem={in_flight:[cb]}
+get(key,function(value){elem.value=value
+callEach(elem.in_flight,elem.in_flight=void 0,value)})}function spiralPos(n){var k=ceil((sqrt(++n)-1)/2)
+var t=2*k+1
+var m=t*t
+if(n>=m- --t)return[k-(m-n),k?-k:0]
+if(n>=(m-=t)-t)return[-k,m-n-k]
+if(n>=(m-=t)-t)return[m-n-k,k]
+return[k,k-(m-n-t)]}
 
-},{"assert":undefined}],75:[function(require,module,exports){
+},{"assert":undefined}],94:[function(require,module,exports){
 "use strict"
 var should_throw=true
 function verify(exp,msg){if(!exp&&should_throw)throw new Error("Assertion failed"+(msg?": "+msg:""))
@@ -10112,16 +13140,21 @@ return exp}(function(_verify){_verify.ok=verify
 function equal(a,b){if(a===b)return true
 if(should_throw)throw new Error('Assertion failed: "'+a+'"==="'+b+'"')
 return false}_verify.equal=equal
-function dothrow(doit){should_throw=doit}_verify.dothrow=dothrow})(verify=verify||{})
+function dothrow(doit){should_throw=doit}_verify.dothrow=dothrow
+function shouldThrow(){return should_throw}_verify.shouldThrow=shouldThrow
+function unreachable(x){verify(false)
+return false}_verify.unreachable=unreachable})(verify=verify||{})
 module.exports=verify
 
-},{}],76:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 "use strict"
 exports.identity_mat4=exports.identity_mat3=exports.half_vec=void 0
 exports.ivec2=ivec2
 exports.ivec3=ivec3
 exports.m4TransformVec3=m4TransformVec3
-exports.unit_vec=exports.rovec4=exports.rovec3=exports.rovec2=exports.rovec1=exports.roivec3=exports.roivec2=exports.mat4=exports.mat3=void 0
+exports.mat4=exports.mat3=void 0
+exports.mat4isFinite=mat4isFinite
+exports.unit_vec=exports.rovec4=exports.rovec3=exports.rovec2=exports.rovec1=exports.roivec3=exports.roivec2=void 0
 exports.v2abs=v2abs
 exports.v2add=v2add
 exports.v2addScale=v2addScale
@@ -10132,12 +13165,17 @@ exports.v2distSq=v2distSq
 exports.v2div=v2div
 exports.v2dot=v2dot
 exports.v2floor=v2floor
+exports.v2iAdd=v2iAdd
+exports.v2iAddScale=v2iAddScale
 exports.v2iFloor=v2iFloor
 exports.v2iNormalize=v2iNormalize
 exports.v2iRound=v2iRound
+exports.v2iScale=v2iScale
 exports.v2length=v2length
 exports.v2lengthSq=v2lengthSq
 exports.v2lerp=v2lerp
+exports.v2linePointDist=v2linePointDist
+exports.v2manhattanDist=v2manhattanDist
 exports.v2mul=v2mul
 exports.v2normalize=v2normalize
 exports.v2round=v2round
@@ -10148,6 +13186,7 @@ exports.v2sub=v2sub
 exports.v3add=v3add
 exports.v3addScale=v3addScale
 exports.v3angle=v3angle
+exports.v3clone=v3clone
 exports.v3copy=v3copy
 exports.v3cross=v3cross
 exports.v3determinant=v3determinant
@@ -10157,6 +13196,7 @@ exports.v3div=v3div
 exports.v3dot=v3dot
 exports.v3floor=v3floor
 exports.v3iAdd=v3iAdd
+exports.v3iAddScale=v3iAddScale
 exports.v3iFloor=v3iFloor
 exports.v3iMax=v3iMax
 exports.v3iMin=v3iMin
@@ -10168,10 +13208,12 @@ exports.v3iSub=v3iSub
 exports.v3length=v3length
 exports.v3lengthSq=v3lengthSq
 exports.v3lerp=v3lerp
+exports.v3min=v3min
 exports.v3mul=v3mul
 exports.v3mulMat4=v3mulMat4
 exports.v3normalize=v3normalize
 exports.v3perspectiveProject=v3perspectiveProject
+exports.v3pointBoxDistSq=v3pointBoxDistSq
 exports.v3pow=v3pow
 exports.v3round=v3round
 exports.v3same=v3same
@@ -10181,6 +13223,7 @@ exports.v3set=v3set
 exports.v3sub=v3sub
 exports.v3zero=v3zero
 exports.v4add=v4add
+exports.v4addScale=v4addScale
 exports.v4clone=v4clone
 exports.v4copy=v4copy
 exports.v4dot=v4dot
@@ -10250,12 +13293,16 @@ function v2abs(out,a){out[0]=abs(a[0])
 out[1]=abs(a[1])
 return out}function v2add(out,a,b){out[0]=a[0]+b[0]
 out[1]=a[1]+b[1]
-return out}function v2addScale(out,a,b,s){out[0]=a[0]+b[0]*s
+return out}function v2iAdd(inout,a){inout[0]+=a[0]
+inout[1]+=a[1]
+return inout}function v2addScale(out,a,b,s){out[0]=a[0]+b[0]*s
 out[1]=a[1]+b[1]*s
-return out}function v2angle(a,b){var mag=sqrt((a[0]*a[0]+a[1]*a[1])*(b[0]*b[0]+b[1]*b[1]))
+return out}function v2iAddScale(inout,a,s){inout[0]+=a[0]*s
+inout[1]+=a[1]*s
+return inout}function v2angle(a,b){var mag=sqrt((a[0]*a[0]+a[1]*a[1])*(b[0]*b[0]+b[1]*b[1]))
 return acos(min(max(mag&&(a[0]*b[0]+a[1]*b[1])/mag,-1),1))}function v2copy(out,a){out[0]=a[0]
 out[1]=a[1]
-return out}function v2dist(a,b){return sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1]))}function v2distSq(a,b){return(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])}function v2div(out,a,b){out[0]=a[0]/b[0]
+return out}function v2dist(a,b){return sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1]))}function v2distSq(a,b){return(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])}function v2manhattanDist(a,b){return abs(a[0]-b[0])+abs(a[1]-b[1])}function v2div(out,a,b){out[0]=a[0]/b[0]
 out[1]=a[1]/b[1]
 return out}function v2dot(a,b){return a[0]*b[0]+a[1]*b[1]}function v2floor(out,a){out[0]=floor(a[0])
 out[1]=floor(a[1])
@@ -10278,11 +13325,21 @@ return out}function v2iRound(inout){inout[0]=round(inout[0])
 inout[1]=round(inout[1])
 return inout}function v2same(a,b){return a[0]===b[0]&&a[1]===b[1]}function v2scale(out,a,s){out[0]=a[0]*s
 out[1]=a[1]*s
-return out}function v2set(out,a,b){out[0]=a
+return out}function v2iScale(inout,s){inout[0]*=s
+inout[1]*=s
+return inout}function v2set(out,a,b){out[0]=a
 out[1]=b
 return out}function v2sub(out,a,b){out[0]=a[0]-b[0]
 out[1]=a[1]-b[1]
-return out}function v3add(out,a,b){out[0]=a[0]+b[0]
+return out}var v2temp=vec2()
+function v2linePointDist(p1,p2,test){v2sub(v2temp,p2,p1)
+var line_len_sq=v2lengthSq(v2temp)
+if(!line_len_sq)return v2dist(p1,test)
+var u=((test[0]-p1[0])*v2temp[0]+(test[1]-p1[1])*v2temp[1])/line_len_sq
+if(u<=0)return v2dist(p1,test)
+else if(u>=1)return v2dist(p2,test)
+v2addScale(v2temp,p1,v2temp,u)
+return v2dist(v2temp,test)}function v3add(out,a,b){out[0]=a[0]+b[0]
 out[1]=a[1]+b[1]
 out[2]=a[2]+b[2]
 return out}function v3iAdd(inout,b){inout[0]+=b[0]
@@ -10291,8 +13348,11 @@ inout[2]+=b[2]
 return inout}function v3addScale(out,a,b,s){out[0]=a[0]+b[0]*s
 out[1]=a[1]+b[1]*s
 out[2]=a[2]+b[2]*s
-return out}function v3angle(a,b){var mag=sqrt((a[0]*a[0]+a[1]*a[1]+a[2]*a[2])*(b[0]*b[0]+b[1]*b[1]+b[2]*b[2]))
-return acos(min(max(mag&&(a[0]*b[0]+a[1]*b[1]+a[2]*b[2])/mag,-1),1))}function v3copy(out,a){out[0]=a[0]
+return out}function v3iAddScale(inout,b,s){inout[0]+=b[0]*s
+inout[1]+=b[1]*s
+inout[2]+=b[2]*s
+return inout}function v3angle(a,b){var mag=sqrt((a[0]*a[0]+a[1]*a[1]+a[2]*a[2])*(b[0]*b[0]+b[1]*b[1]+b[2]*b[2]))
+return acos(min(max(mag&&(a[0]*b[0]+a[1]*b[1]+a[2]*b[2])/mag,-1),1))}function v3clone(a){return a.slice(0)}function v3copy(out,a){out[0]=a[0]
 out[1]=a[1]
 out[2]=a[2]
 return out}function v3cross(out,a,b){var a0=a[0]
@@ -10313,7 +13373,10 @@ var a12=c[1]
 var a20=a[2]
 var a21=b[2]
 var a22=c[2]
-return a00*(a22*a11-a12*a21)+a01*(-a22*a10+a12*a20)+a02*(a21*a10-a11*a20)}function v3distSq(a,b){return(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])}function v3dist(a,b){return sqrt(v3distSq(a,b))}function v3div(out,a,b){out[0]=a[0]/b[0]
+return a00*(a22*a11-a12*a21)+a01*(-a22*a10+a12*a20)+a02*(a21*a10-a11*a20)}function v3distSq(a,b){return(a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])}function v3dist(a,b){return sqrt(v3distSq(a,b))}function v3pointBoxDistSq(pt,boxpos,boxsize){var dx=pt[0]-boxpos[0]
+var dy=pt[1]-boxpos[1]
+var dz=pt[2]-boxpos[2]
+return(dx=dx<0?-dx:dx>boxsize[0]?dx-boxsize[0]:0)*dx+(dy=dy<0?-dy:dy>boxsize[1]?dy-boxsize[1]:0)*dy+(dz=dz<0?-dz:dz>boxsize[2]?dz-boxsize[2]:0)*dz}function v3div(out,a,b){out[0]=a[0]/b[0]
 out[1]=a[1]/b[1]
 out[2]=a[2]/b[2]
 return out}function v3dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]}function v3iFloor(inout){inout[0]=floor(inout[0])
@@ -10329,7 +13392,10 @@ out[2]=it*a[2]+t*b[2]
 return out}function v3iMax(inout,b){inout[0]=max(inout[0],b[0])
 inout[1]=max(inout[1],b[1])
 inout[2]=max(inout[2],b[2])
-return inout}function v3iMin(inout,b){inout[0]=min(inout[0],b[0])
+return inout}function v3min(out,a,b){out[0]=min(a[0],b[0])
+out[1]=min(a[1],b[1])
+out[2]=min(a[2],b[2])
+return out}function v3iMin(inout,b){inout[0]=min(inout[0],b[0])
 inout[1]=min(inout[1],b[1])
 inout[2]=min(inout[2],b[2])
 return inout}function v3mul(out,a,b){out[0]=a[0]*b[0]
@@ -10397,6 +13463,10 @@ return out}function v4add(out,a,b){out[0]=a[0]+b[0]
 out[1]=a[1]+b[1]
 out[2]=a[2]+b[2]
 out[3]=a[3]+b[3]
+return out}function v4addScale(out,a,b,s){out[0]=a[0]+b[0]*s
+out[1]=a[1]+b[1]*s
+out[2]=a[2]+b[2]*s
+out[3]=a[3]+b[3]*s
 return out}function v4clone(a){return a.slice(0)}function v4copy(out,a){out[0]=a[0]
 out[1]=a[1]
 out[2]=a[2]
@@ -10423,9 +13493,81 @@ out[1]=b
 out[2]=c
 out[3]=d
 return out}function v4zero(out){out[0]=out[1]=out[2]=out[3]=0
-return out}
+return out}function mat4isFinite(m){return isFinite(m[0])&&isFinite(m[1])&&isFinite(m[2])&&isFinite(m[3])&&isFinite(m[4])&&isFinite(m[5])&&isFinite(m[6])&&isFinite(m[7])&&isFinite(m[8])&&isFinite(m[9])&&isFinite(m[10])&&isFinite(m[11])&&isFinite(m[12])&&isFinite(m[13])&&isFinite(m[14])&&isFinite(m[15])}
 
-},{"gl-mat3/create":undefined,"gl-mat4/create":undefined}],77:[function(require,module,exports){
+},{"gl-mat3/create":undefined,"gl-mat4/create":undefined}],96:[function(require,module,exports){
+"use strict"
+exports.isProfane=isProfane
+exports.isReserved=isReserved
+exports.profanityCommonStartup=profanityCommonStartup
+exports.profanityFilterCommon=profanityFilterCommon
+exports.profanitySetReplacementChars=profanitySetReplacementChars
+exports.reservedStartup=reservedStartup
+var assert=require("assert")
+var max=Math.max
+var trans_src="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+"
+var trans_dst="4bcd3fgh1jk1mn0pqr57uvwxy24bcd3fgh1jk1mn0pqr57uvwxy201234567897"
+var trans_src_regex=/\S+/g
+var trans_lookup={}
+var unicode_replacement_chars={}
+function cannonizeCharacter(c){c=unicode_replacement_chars[c]||c
+return trans_lookup[c]||""}function canonize(str){return str.split("").map(cannonizeCharacter).join("")}function rot13(str){return str.split("").map(function(c){if((c=c.charCodeAt(0))>=97&&c<=122)c=97+(c-97+13)%26
+else if(c>=65&&c<=90)c=65+(c-65+13)%26
+return String.fromCharCode(c)}).join("")}var profanity={}
+var reserved={}
+var suffixes=["","s","s","in","ing","er","ers","ed","y"]
+var suffixes_canonized=["","5","35","1n","1ng","3r","3r5","3d","y"]
+var max_len=0
+var inited=false
+function profanityCommonStartup(filter_gkg,exceptions_txt){assert(!inited)
+inited=true
+for(var ii=0;ii<trans_src.length;++ii)trans_lookup[trans_src[ii]]=trans_dst[ii]
+var data=filter_gkg.split("\n").filter(function(a){return a})
+for(var _ii=0;_ii<data.length;++_ii){var s=rot13(data[_ii])
+var start_len=s.length
+s=canonize(s)
+assert.equal(start_len,s.length)
+for(var jj=0;jj<suffixes_canonized.length;++jj){var str=s+suffixes_canonized[jj]
+var existing=profanity[str]
+if(!existing||existing>jj){max_len=max(max_len,str.length)
+profanity[str]=jj+1}}}data=exceptions_txt.split("\n").filter(function(a){return a})
+for(var _ii2=0;_ii2<data.length;++_ii2)delete profanity[canonize(data[_ii2])]}function profanitySetReplacementChars(replacement_chars){assert(replacement_chars)
+for(var char_code_str in replacement_chars){var target=replacement_chars[char_code_str]
+target=String.fromCharCode(target)
+var source=String.fromCharCode(Number(char_code_str))
+if(" "===target)if(""!==source.trim()){console.log("Invalid whitespace replacement character: "+char_code_str)
+continue}unicode_replacement_chars[source]=target}}var reserved_substrings=[]
+function reservedStartup(reserved_txt,reserved_substrings_in){var data=reserved_txt.split("\n").filter(function(a){return a})
+for(var i=0;i<data.length;++i){var string=canonize(data[i])
+reserved[string]=1}for(var ii=0;ii<reserved_substrings_in.length;++ii)reserved_substrings.push(canonize(reserved_substrings_in[ii]))}var randWord
+function filterWord(word_src){if(word_src.length>=max_len)return word_src
+var is_uppercase=word_src[0].toUpperCase()===word_src[0]
+var word_canon=canonize(word_src)
+var suffix_idx=profanity[word_canon]
+if(!suffix_idx)return word_src;--suffix_idx
+var word=randWord()
+if(is_uppercase)word=word[0].toUpperCase()+word.slice(1)
+var suffix=suffixes[suffix_idx]
+if(word[word.length-1]===suffix[0])suffix=suffix.slice(1)
+if(word.endsWith("e")&&"i"===suffix[0])word=word.slice(0,-1)
+return word+=suffix}var is_profane
+function checkWord(word_src){if(word_src.length>=max_len)return
+if(profanity[canonize(word_src)])is_profane=true}function profanityFilterCommon(user_str,rand_word_fn){assert(inited)
+randWord=rand_word_fn
+return user_str.replace(trans_src_regex,filterWord)}function isProfane(user_str){assert(inited)
+is_profane=false
+user_str.replace(trans_src_regex,checkWord)
+return is_profane}var is_reserved
+function checkReserved(word_src){word_src=canonize(word_src)
+if(reserved[word_src])is_reserved=true
+for(var ii=0;ii<reserved_substrings.length;++ii)if(word_src.includes(reserved_substrings[ii]))is_reserved=true}function isReserved(user_str){assert(inited)
+is_reserved=false
+user_str.replace(trans_src_regex,checkReserved)
+var no_whitespace=canonize(user_str.replace(/[\s_.]/g,""))
+for(var ii=0;ii<reserved_substrings.length;++ii)if(no_whitespace.includes(reserved_substrings[ii]))is_reserved=true
+return is_reserved}
+
+},{"assert":undefined}],97:[function(require,module,exports){
 "use strict"
 exports.PING_TIME=exports.CONNECTION_TIMEOUT=void 0
 exports.netDelayGet=netDelayGet
@@ -10434,24 +13576,36 @@ exports.sendMessage=sendMessage
 exports.wsHandleMessage=wsHandleMessage
 exports.wsPak=wsPak
 exports.wsPakSendDest=wsPakSendDest
+exports.wsSetSendCB=wsSetSendCB
 exports.wsstats_out=exports.wsstats=void 0
 var wsstats={msgs:0,bytes:0}
 exports.wsstats=wsstats
 var wsstats_out={msgs:0,bytes:0}
 exports.wsstats_out=wsstats_out
-var ack=require("./ack.js")
 var assert=require("assert")
-var ackHandleMessage=ack.ackHandleMessage,ackReadHeader=ack.ackReadHeader,ackWrapPakStart=ack.ackWrapPakStart,ackWrapPakPayload=ack.ackWrapPakPayload,ackWrapPakFinish=ack.ackWrapPakFinish
+var _ack=require("./ack")
+var ackHandleMessage=_ack.ackHandleMessage
+var ackReadHeader=_ack.ackReadHeader
+var ackWrapPakFinish=_ack.ackWrapPakFinish
+var ackWrapPakPayload=_ack.ackWrapPakPayload
+var ackWrapPakStart=_ack.ackWrapPakStart
+var _packet=require("./packet")
+var isPacket=_packet.isPacket
+var packetCreate=_packet.packetCreate
+var packetDefaultFlags=_packet.packetDefaultFlags
+var packetFromBuffer=_packet.packetFromBuffer
+var _perfcounters=require("./perfcounters")
+var perfCounterAddValue=_perfcounters.perfCounterAddValue
 var random=Math.random,round=Math.round
-var _require=require("./packet.js"),isPacket=_require.isPacket,packetCreate=_require.packetCreate,packetDefaultFlags=_require.packetDefaultFlags,packetFromBuffer=_require.packetFromBuffer
-var _require2=require("./perfcounters.js"),perfCounterAddValue=_require2.perfCounterAddValue
 var CONNECTION_TIMEOUT=6e4
 var PING_TIME=(exports.CONNECTION_TIMEOUT=CONNECTION_TIMEOUT)/2
 exports.PING_TIME=PING_TIME
 var PAK_HEADER_SIZE=28
 var net_delay=0
 var net_delay_rand=0
-function socketSendInternal(client,buf,pak){if(client.ws_server)client.socket.send(buf,pak.pool.bind(pak))
+var send_cb=null
+function wsSetSendCB(cb){send_cb=cb}function socketSendInternal(client,buf,pak){if(send_cb)send_cb(buf)
+if(client.ws_server)client.socket.send(buf,pak.pool.bind(pak))
 else{client.socket.send(buf)
 pak.pool()}}function netDelaySet(delay,rand){if(void 0===delay){delay=100
 rand=50}if(delay)console.log("NetDelay: ON ("+delay+"+"+rand+")")
@@ -10503,15 +13657,15 @@ if(!client.log&&client.onError&&msg)client.onError("Attempting to send msg="+msg
 pak.pool()
 return}assert.equal(Boolean(resp_func&&false!==resp_func.expecting_response),Boolean(ack_resp_pkt_id))
 wsPakSendDest(client,pak)}function wsPakSend(err,resp_func){if("function"===typeof err&&!resp_func){resp_func=err
-err=null}wsPakSendFinish(this,err,resp_func)}function wsPak(msg,ref_pak,client){assert("string"===typeof msg||"number"===typeof msg)
+err=null}wsPakSendFinish(this,err,resp_func)}function wsPak(msg,ref_pak,client,msg_debug_name){assert("string"===typeof msg||"number"===typeof msg)
 var pak=packetCreate(ref_pak?ref_pak.getInternalFlags():packetDefaultFlags(),ref_pak?ref_pak.totalSize()+PAK_HEADER_SIZE:0)
 pak.writeFlags()
-ackWrapPakStart(pak,client,msg)
+ackWrapPakStart(pak,client,msg,msg_debug_name)
 pak.ws_data={msg:msg,client:client}
 pak.send=wsPakSend
-return pak}function sendMessageInternal(client,msg,err,data,resp_func){var pak=wsPak(msg,isPacket(data)?data:null,client)
+return pak}function sendMessageInternal(client,msg,err,data,msg_debug_name,resp_func){var pak=wsPak(msg,isPacket(data)?data:null,client,msg_debug_name)
 if(!err)ackWrapPakPayload(pak,data)
-pak.send(err,resp_func)}function sendMessage(msg,data,resp_func){sendMessageInternal(this,msg,null,data,resp_func)}function wsHandleMessage(client,buf,filter){++wsstats.msgs
+pak.send(err,resp_func)}function sendMessage(msg,data,msg_debug_name,resp_func){sendMessageInternal(this,msg,null,data,msg_debug_name,resp_func)}function wsHandleMessage(client,buf,filter){++wsstats.msgs
 var now=Date.now()
 var source=client.id?"client "+client.id:"server"
 if(!(buf instanceof Uint8Array)){(client.log?client:console).log("Received incorrect WebSocket data type from "+source+" ("+typeof buf+")")
@@ -10523,13 +13677,13 @@ pak.readFlags()
 client.last_receive_time=now
 client.idle_counter=0
 return void ackHandleMessage(client,source,pak,function sendFunc(msg,err,data,resp_func){if(resp_func&&!resp_func.expecting_response)resp_func=null
-sendMessageInternal(client,msg,err,data,resp_func)},function pakFunc(msg,ref_pak){return wsPak(msg,ref_pak,client)},function handleFunc(msg,data,resp_func){var handler=client.handlers[msg]
+sendMessageInternal(client,msg,err,data,null,resp_func)},function pakFunc(msg,ref_pak){return wsPak(msg,ref_pak,client)},function handleFunc(msg,data,resp_func){var handler=client.handlers[msg]
 if(!handler){var error_msg="No handler for message "+JSON.stringify(msg)+" from "+source
 console.error(error_msg,isPacket(data)?data.contents():data)
 if(client.onError)return client.onError(error_msg)
 return resp_func(error_msg)}return handler(client,data,resp_func)},filter)}
 
-},{"./ack.js":62,"./packet.js":71,"./perfcounters.js":72,"assert":undefined}]},{},[1])
+},{"./ack":74,"./packet":86,"./perfcounters":87,"assert":undefined}]},{},[1])
 
 
-//# sourceMappingURL=app.bundle.js.map
+//# sourceMappingURL=http://localhost:3000/app.bundle.js.map?ver=1776878226036
