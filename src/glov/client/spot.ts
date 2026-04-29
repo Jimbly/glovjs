@@ -158,6 +158,7 @@ export interface SpotParam extends Partial<SpotParamBase>, Box, SpotComputedFiel
   hook?: HookList;
   url?: string;
   internal?: boolean; // For links (spots with `url`): default `true`
+  allow_modal?: boolean; // For links (spots with `url`): default `false`
   // from TooltipBoxParam
   tooltip?: TooltipValue | null;
   tooltip_width?: number;
