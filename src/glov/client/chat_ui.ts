@@ -48,6 +48,7 @@ import {
   FontStyle,
   fontStyleAlpha,
   fontStyleColored,
+  fontStyleGetParam,
   Text,
 } from './font';
 import type { Box } from './geom_types';
@@ -343,6 +344,13 @@ let help_font_style_cmd = fontStyle(help_font_style, {
   outline_width: 0.5,
   outline_color: 0x000000FF,
 });
+export function chatUISetFontStyles(font_style: FontStyle, font_style_cmd?: FontStyle): void {
+  help_font_style = font_style;
+  help_font_style_cmd = font_style_cmd || fontStyle(help_font_style, {
+    outline_width: 0.5,
+    outline_color: fontStyleGetParam(help_font_style).color,
+  });
+}
 let help_rollover_color = vec4(0, 0, 0, 0.25);
 let help_rollover_color2 = vec4(0, 0, 0, 0.125);
 const TOOLTIP_MIN_PAGE_SIZE = 20;
