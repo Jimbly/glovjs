@@ -818,6 +818,10 @@ export function cmpNumericSmart(a: string, b: string): number {
   }
 }
 
+export function cmpNumberStrings(a: string, b: string): number {
+  return Number(a) - Number(b);
+}
+
 export function mdEscape(text: string): string {
   return text.replace(/([\\[*_])/g, '\\$1');
 }
