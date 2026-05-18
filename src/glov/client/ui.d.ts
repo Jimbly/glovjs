@@ -236,6 +236,7 @@ export type ButtonImageParam = ButtonImageParam1 | ButtonImageParam2;
 export function buttonShared(param: ButtonParam): ButtonRet;
 export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): void;
 export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotStateEnum): void;
+export function buttonSpotStateToButtonState(spot_state: SpotStateEnum): ButtonStateString;
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;
 export function buttonText(param: ButtonTextParam): ButtonRet | null;
 export function buttonImage(param: ButtonImageParam): ButtonRet | null;

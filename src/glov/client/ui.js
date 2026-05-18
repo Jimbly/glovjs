@@ -1251,6 +1251,10 @@ export function buttonSpotBackgroundDraw(param, spot_state) {
   profilerStopFunc();
 }
 
+export function buttonSpotStateToButtonState(spot_state) {
+  return SPOT_STATE_TO_UI_BUTTON_STATE[spot_state];
+}
+
 export function buttonTextDraw(param, state, focused) {
   profilerStartFunc();
   let patch_pad = buttonBackgroundDraw(param, state);
