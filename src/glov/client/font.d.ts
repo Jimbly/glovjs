@@ -29,6 +29,7 @@ export function fontStyleOutlined(base: FontStyle | null, outline_width: number,
 export function fontStyleBold(base: FontStyle | null, outline_width: number): FontStyle;
 
 export function fontStyleHash(style: FontStyle): number;
+export function fontStyleGetParam(style: FontStyle): FontStyleParam;
 
 export enum ALIGN {
   HLEFT,

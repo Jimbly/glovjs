@@ -264,6 +264,10 @@ export function fontStyleHash(style) {
   return style.hash;
 }
 
+export function fontStyleGetParam(style) {
+  return style;
+}
+
 
 let tech_params = null;
 let tech_params_dirty = false;
