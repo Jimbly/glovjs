@@ -189,7 +189,7 @@ const settings = require('./settings.js');
 const { soundResume } = require('./sound.js');
 const { spotMouseoverHook } = require('./spot.js');
 const { empty } = require('glov/common/util.js');
-const { vec2, v2add, v2copy, v2lengthSq, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
+const { vec2, v2add, v2copy, v2lengthSq, v2same, v2set, v2scale, v2sub } = require('glov/common/vmath.js');
 
 let pad_to_touch;
 
@@ -550,7 +550,9 @@ let last_abs_move = 0;
 let last_abs_move_time = 0;
 let last_move_x = 0;
 let last_move_y = 0;
+let seen_mousemove = false;
 function onMouseMove(event, no_stop, no_dom_if_leaving) {
+  seen_mousemove = true;
   renderNeeded();
   /// eventlog(event);
   // Don't block mouse button 3, that's the Back button
@@ -727,6 +729,7 @@ function onWheel(event) {
   }
 }
 
+let last_touch_pos = vec2();
 let touch_pos = vec2();
 let released_touch_id = 0;
 function onTouchChange(event) {
@@ -735,10 +738,6 @@ function onTouchChange(event) {
   // our canvas offscreen.  Should maybe have the canvas resize and use clientX
   // instead, but this works well enough.
   onUserInput();
-  if (!touch_mode) {
-    local_storage.setJSON('touch_mode', true);
-    touch_mode = true;
-  }
   if (pad_mode) {
     local_storage.setJSON('pad_mode', false);
     pad_mode = false;
@@ -835,6 +834,31 @@ function onTouchChange(event) {
     } else if (new_count > 1) {
       // multiple touches, release mouse_down without emitting click
       delete mouse_down[0];
+    }
+  }
+
+  if (first_valid_touch) {
+    // we're potentially not currently in touch mode, and we have some touch
+    //   event with a position
+    // Want to switch to touch mode if:
+    //   we get a touch event and have never seen a mousemove
+    //   or, we get two touch events at different locations, with no mousemove in between
+    // This should handle stylus input (sends both mousemove and touch events, but no clicks)
+    v2set(touch_pos, first_valid_touch.pageX, first_valid_touch.pageY);
+    if (!v2same(last_touch_pos, touch_pos)) {
+      // touch in a new position
+      if (seen_mousemove) {
+        // do not switch to touch mode
+        // clear flag and switch next time if it moves, but no mousemove event
+        seen_mousemove = false;
+      } else {
+        // switch to touch mode if we're not already
+        if (!touch_mode) {
+          local_storage.setJSON('touch_mode', true);
+          touch_mode = true;
+        }
+      }
+      v2copy(last_touch_pos, touch_pos);
     }
   }
 }
