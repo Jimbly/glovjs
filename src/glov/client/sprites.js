@@ -1055,6 +1055,13 @@ function Sprite(params) {
 }
 
 Sprite.prototype.getAspect = function () {
+  if (this.uidata) {
+    // images within atlases, etc
+    if (this.uidata.aspect && this.uidata.aspect.length === 1) {
+      return this.uidata.aspect[0];
+    }
+    return 1;
+  }
   let tex = this.texs[0];
   if (!tex) {
     return 1;
