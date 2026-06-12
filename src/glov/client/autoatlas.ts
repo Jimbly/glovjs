@@ -239,7 +239,9 @@ class AutoAtlasImp {
 
   applySwaps(): void {
     let dst_name = atlas_swaps[this.atlas_name];
-    let dst = dst_name && atlases[dst_name];
+    // some chance of infinite recursion here if looping swaps?
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    let dst = dst_name && autoAtlasGet(dst_name);
 
     let sprites_src = this.sprites;
     let texs_src = this.texs;
@@ -415,7 +417,9 @@ export function autoAtlas(atlas_name: string, img_name: string): SpriteWithUIDat
 
 export function autoAtlasSwap(src: string, dest: string): void {
   if (atlas_swaps[src] !== dest) {
-    autoAtlasGet(dest);
+    if (atlases[src]) {
+      autoAtlasGet(dest);
+    }
     if (dest === src || !dest) {
       delete atlas_swaps[src];
     } else {
