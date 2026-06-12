@@ -50,6 +50,14 @@ let load_count = 0;
 export function textureLoadCount() {
   return load_count;
 }
+
+let texture_stream_delay = 0;
+export function texturesDelayStreamingPostLoad() {
+  if (!textureLoadCount()) {
+    texture_stream_delay = 500;
+  }
+}
+
 let aniso = 4;
 let max_aniso = 0;
 let aniso_enum;
@@ -587,7 +595,13 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         let img = new Image();
         img.onload = function () {
           URL.revokeObjectURL(url_object);
-          done(null, img);
+          if (texture_stream_delay) {
+            setTimeout(function () {
+              done(null, img);
+            }, texture_stream_delay);
+          } else {
+            done(null, img);
+          }
         };
         img.onerror = function () {
           URL.revokeObjectURL(url_object);
@@ -626,7 +640,13 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
     let img = new Image();
     img.onload = function () {
-      done(null, img);
+      if (texture_stream_delay) {
+        setTimeout(function () {
+          done(null, img);
+        }, texture_stream_delay);
+      } else {
+        done(null, img);
+      }
     };
     img.onerror = function () {
       done('error', null);
@@ -663,7 +683,13 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         img_out.onload = function () {
           URL.revokeObjectURL(url_object);
           mipmaps[level] = img_out;
-          next();
+          if (texture_stream_delay) {
+            setTimeout(function () {
+              next();
+            }, texture_stream_delay);
+          } else {
+            next();
+          }
         };
         img_out.onerror = function () {
           URL.revokeObjectURL(url_object);
@@ -718,7 +744,13 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
     img_out.onload = function () {
       URL.revokeObjectURL(url_object);
-      next(null, img_out);
+      if (texture_stream_delay) {
+        setTimeout(function () {
+          next(null, img_out);
+        }, texture_stream_delay);
+      } else {
+        next(null, img_out);
+      }
     };
     img_out.onerror = function () {
       URL.revokeObjectURL(url_object);
