@@ -231,6 +231,12 @@ module.exports = function (opts) {
             delete config_data.tile_regex;
           }
         }
+        if (config_data.mask_color) {
+          if (!Array.isArray(config_data.mask_color) || config_data.mask_color.length !== 4) {
+            job.error(img_file, 'mask_color must be number[4]');
+            delete config_data.mask_color;
+          }
+        }
         atlas_data.config_data = config_data;
         continue;
       }
@@ -344,6 +350,8 @@ module.exports = function (opts) {
       const tile_regex = config_data?.tile_regex || null;
       const pad = config_data?.pad || 8;
       const max_tex_size = config_data?.max_tex_size || 1024;
+      // Default opaque black for additional channels, assume they're masks in the RGB channels
+      const mask_color = config_data?.mask_color || [0, 0, 0, 255];
 
       let file_keys = Object.keys(file_data);
       file_keys.sort(cmpFileKeys);
@@ -407,12 +415,11 @@ module.exports = function (opts) {
       for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
         let png = pngAllocTemp(width, height, `output:${name}`);
         if (ii > 0) {
-          // TODO: custom extra layer clear color?
-          // Default opaque black for additional channels, assume they're masks in the RGB channels
-          for (let yy = 0; yy < png.height; ++yy) {
-            for (let xx = 0; xx < png.width; ++xx) {
-              png.data[(yy * png.width + xx) * 4 + 3] = 255;
-            }
+          for (let idx = 0; idx < png.data.length;) {
+            png.data[idx++] = mask_color[0];
+            png.data[idx++] = mask_color[1];
+            png.data[idx++] = mask_color[2];
+            png.data[idx++] = mask_color[3];
           }
         }
         pngouts.push(png);
