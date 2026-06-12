@@ -34,6 +34,7 @@ type AutoAtlasBuildDataRoot = {
 export type SpriteWithUIData = WithRequired<Sprite, 'uidata'>;
 
 let load_opts: TSMap<TextureOptions> = {};
+let extra_textures: TSMap<Texture> = {};
 let hit_startup = false;
 
 const uidata_error: SpriteUIData = {
@@ -229,6 +230,9 @@ class AutoAtlasImp {
       for (let ii = 0; ii < texs.length; ++ii) {
         texs[ii].onLoad(this.checkLoaded.bind(this));
       }
+      if (extra_textures[atlas_name]) {
+        texs.push(extra_textures[atlas_name]);
+      }
       this.verifySprites(seen);
     });
   }
@@ -389,6 +393,16 @@ function autoAtlasGet(atlas_name: string): AutoAtlasImp {
     atlas = atlases[atlas_name] = new AutoAtlasImp(atlas_name);
   }
   return atlas;
+}
+
+export function autoAtlasBindExtraTexture(atlas_name: string, texture: Texture): void {
+  extra_textures[atlas_name] = texture;
+  if (atlases) {
+    let atlas = atlases[atlas_name];
+    if (atlas) {
+      atlas.texs.push(texture);
+    }
+  }
 }
 
 export function autoAtlasOnImage(atlas_name: string, cb: (img_name: string) => void): void {
