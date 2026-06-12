@@ -1452,6 +1452,16 @@ export function keyDown(keycode) {
   if (input_eaten_kb) {
     return 0;
   }
+
+  if (keycode === ANY) {
+    let r = 0;
+    for (let keycode2 in key_state_new) {
+      let ks = key_state_new[keycode2];
+      r += ks.down_time;
+    }
+    return r;
+  }
+
   let ks = key_state_new[keycode];
   if (!ks) {
     return 0;
@@ -1465,6 +1475,8 @@ export function keyDownEdge(keycode, opts) {
   if (input_eaten_kb) {
     return 0;
   }
+
+  assert(keycode !== ANY);
 
   if (opts && opts.in_event_cb) {
     in_event.on('keydown', keycode, opts.in_event_cb);
@@ -1483,6 +1495,19 @@ export function keyDownEdge(keycode, opts) {
 export function keyUpEdge(keycode, opts) {
   if (input_eaten_kb) {
     return 0;
+  }
+
+  if (keycode === ANY) {
+    assert(!opts || !opts.in_event_cb);
+    let r = 0;
+    for (let keycode2 in key_state_new) {
+      let ks = key_state_new[keycode2];
+      r += ks.up_edge;
+      if (!opts || !opts.peek) {
+        ks.up_edge = 0;
+      }
+    }
+    return r;
   }
 
   if (opts && opts.in_event_cb) {
@@ -1529,6 +1554,16 @@ function padButtonDownEdgeInternal(gpd, ps, padcode) {
   return 0;
 }
 function padButtonUpEdgeInternal(gpd, ps, padcode) {
+  if (padcode === ANY) {
+    let r = 0;
+    for (let ii = 0; ii < PAD.ANALOG_UP; ++ii) {
+      if (ps[ii] === UP_EDGE) {
+        delete ps[padcode];
+        r++;
+      }
+    }
+    return r;
+  }
   if (ps[padcode] === UP_EDGE) {
     delete ps[padcode];
     return 1;
