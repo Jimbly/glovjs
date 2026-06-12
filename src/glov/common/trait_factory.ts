@@ -222,7 +222,7 @@ function factory(${factory_param_names.join(',')}) {
           ` ${filename} and ${seen_typeids[type_id]}`);
       }
       seen_typeids[type_id] = filename;
-      let type_def = fs.getFile<TypeDef>(filename, 'jsobj');
+      let type_def = clone(fs.getFile<TypeDef>(filename, 'jsobj'));
       this.buildConstructor(filename, Ctor, type_id, type_def);
     }
 
@@ -231,7 +231,7 @@ function factory(${factory_param_names.join(',')}) {
         return;
       }
       let type_id = fileBaseName(filename);
-      let type_def = fs.getFile<TypeDef>(filename, 'jsobj');
+      let type_def = clone(fs.getFile<TypeDef>(filename, 'jsobj'));
       this.buildConstructor(filename, Ctor, type_id, type_def);
       reload_cb?.(type_id);
     });
