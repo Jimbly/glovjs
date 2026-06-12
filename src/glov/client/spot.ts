@@ -275,9 +275,15 @@ let last_frame_autofocus_spots: typeof frame_autofocus_spots = {};
 let pad_mode = false;
 let suppress_pad = false;
 let async_activate_key: string | null = null;
+// allow auto_focus to trigger a focus even in non-pad + non-touch mode, to telegraph keyboard selection
+let autofocus_non_pad = false;
 
 function isSubRect(area: SpotListElem): area is SpotSubInternal {
   return (area as SpotSubInternal).is_sub_rect;
+}
+
+export function spotSetAutofocusNonPad(value: boolean): void {
+  autofocus_non_pad = value;
 }
 
 export function spotPadMode(): boolean {
@@ -1219,7 +1225,7 @@ export function spotFocusCheck(param: SpotParam): SpotRet {
     if (!spotEntirelyObscured(param) || focused && focus_is_sticky) {
       frameSpotsPush(param);
       if (auto_focus) {
-        if (!focused && !last_frame_autofocus_spots[key] && pad_mode) {
+        if (!focused && !last_frame_autofocus_spots[key] && (pad_mode || autofocus_non_pad && !inputTouchMode())) {
           spotlog('auto_focus', key);
           // play no sound, etc, just silently steal focus
           spotFocusSetSilent(param);
