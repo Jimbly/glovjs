@@ -131,7 +131,7 @@ export function defaultsDeep<A, B>(dest: A, src: B): A & B {
     } else {
       let vd = (dest as DataObject)[f];
       let vs = src[f];
-      if (typeof vd === 'object' && !Array.isArray(vd) && typeof vs === 'object' && !Array.isArray(vs)) {
+      if (vd && typeof vd === 'object' && !Array.isArray(vd) && vs && typeof vs === 'object' && !Array.isArray(vs)) {
         defaultsDeep(vd, src[f]);
       }
     }
