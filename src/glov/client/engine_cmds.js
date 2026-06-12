@@ -193,3 +193,36 @@ cmd_parse.register({
   },
 });
 
+cmd_parse.register({
+  cmd: 'znear',
+  help: 'Sets/displays the near Z value',
+  func: function (str, resp_func) {
+    if (str) {
+      let value = Number(str);
+      if (isFinite(value)) {
+        if (value >= engine.ZFAR) {
+          return void resp_func('Must not exceed /zfar');
+        }
+        engine.setZRange(value, engine.ZFAR);
+      }
+    }
+    resp_func(null, `Z Range = [${engine.ZNEAR}...${engine.ZFAR}]`);
+  }
+});
+
+cmd_parse.register({
+  cmd: 'zfar',
+  help: 'Sets/displays the far Z value',
+  func: function (str, resp_func) {
+    if (str) {
+      let value = Number(str);
+      if (isFinite(value)) {
+        if (value <= engine.ZNEAR) {
+          return void resp_func('Must not subceed /znear');
+        }
+        engine.setZRange(engine.ZNEAR, value);
+      }
+    }
+    resp_func(null, `Z Range = [${engine.ZNEAR}...${engine.ZFAR}]`);
+  }
+});
