@@ -263,6 +263,7 @@ class MDBlockText implements MDLayoutBlock {
     if (!(param.align & ALIGN.HWRAP)) {
       text = text.replace(/\n/g, ' ');
     }
+    text = text.replace(/&nbsp;/g, '\xA0');
     if (param.align & ALIGN.HWRAP) {
       let line_x0 = cursor.x;
       // Adjust in case we're mid-line, or already inset
