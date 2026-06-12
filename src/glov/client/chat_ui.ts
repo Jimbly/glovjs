@@ -388,6 +388,9 @@ function drawHelpTooltip(param: {
   }
   let w = param.tooltip_width;
   let x = param.x;
+  if (x + w > camera2d.x1()) {
+    x = camera2d.x1() - w;
+  }
   let z = param.z || (Z.TOOLTIP + 5);
   let text_x = x + eff_tooltip_pad;
   let text_w = w - eff_tooltip_pad * 2;
