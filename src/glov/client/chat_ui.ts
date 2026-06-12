@@ -28,6 +28,7 @@ import {
   deprecate,
 } from 'glov/common/util';
 import {
+  ROVec4,
   v3copy,
   vec4,
 } from 'glov/common/vmath';
@@ -50,6 +51,7 @@ import {
   fontStyleColored,
   fontStyleGetParam,
   Text,
+  vec4ColorFromIntColor,
 } from './font';
 import type { Box } from './geom_types';
 import * as input from './input';
@@ -132,6 +134,8 @@ Z.CHAT_FOCUSED = Z.CHAT_FOCUSED || Z.CHAT;
 
 const color_user_rollover = vec4(1, 1, 1, 0.5);
 const color_same_user_rollover = vec4(1, 1, 1, 0.25);
+
+const default_background_color = vec4(0.3,0.3,0.3,0.8);
 
 const MAX_PER_STYLE_DEFAULT: TSMap<number> = {
   join_leave: 3,
@@ -340,6 +344,8 @@ function conciseDate(dt: Date): string {
 }
 
 let help_font_style = fontStyleColored(null, 0x000000ff);
+let help_rollover_color = vec4(0, 0, 0, 0.25);
+let help_rollover_color2 = vec4(0, 0, 0, 0.125);
 let help_font_style_cmd = fontStyle(help_font_style, {
   outline_width: 0.5,
   outline_color: 0x000000FF,
@@ -350,9 +356,11 @@ export function chatUISetFontStyles(font_style: FontStyle, font_style_cmd?: Font
     outline_width: 0.5,
     outline_color: fontStyleGetParam(help_font_style).color,
   });
+  // Use font color as background highlight color (default black)
+  vec4ColorFromIntColor(help_rollover_color, fontStyleGetParam(help_font_style).color);
+  help_rollover_color[3] = 0.25;
+  v3copy(help_rollover_color2, help_rollover_color);
 }
-let help_rollover_color = vec4(0, 0, 0, 0.25);
-let help_rollover_color2 = vec4(0, 0, 0, 0.125);
 const TOOLTIP_MIN_PAGE_SIZE = 20;
 let tooltip_page = 0;
 let tooltip_last = '';
@@ -699,6 +707,7 @@ export type ChatUIParam = {
   channel_join_message?: Text;
   max_per_style?: TSMap<number>;
 
+  background_color?: ROVec4 | null;
   inner_width_adjust?: number;
   border?: number;
   volume_join_leave?: number;
@@ -753,6 +762,7 @@ class ChatUI {
   private channel_join_message: Text | null;
   private max_per_style: TSMap<number>;
   private inner_width_adjust: number;
+  private background_color: ROVec4 | null;
   private border?: number;
   private volume_join_leave: number;
   private volume_in: number;
@@ -833,6 +843,7 @@ class ChatUI {
     this.w = params.w || engine.game_width / 2;
     this.h = params.h || engine.game_height / 2;
     this.inner_width_adjust = params.inner_width_adjust || 0;
+    this.background_color = params.background_color === undefined ? default_background_color : params.background_color;
     this.border = params.border || undefined;
     this.volume_join_leave = params.volume_join_leave || 0.15;
     this.volume_in = params.volume_in || 0.5;
@@ -1808,7 +1819,9 @@ class ChatUI {
     if (!anything_visible && (isMenuUp() || hide_light)) {
       return;
     }
-    drawRect(x0, y - border, x0 + outer_w, y1, z, [0.3,0.3,0.3,0.8]);
+    if (this.background_color) {
+      drawRect(x0, y - border, x0 + outer_w, y1, z, this.background_color);
+    }
   }
 
   setChannel(channel: ClientChannelWorker | null): void {
