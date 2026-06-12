@@ -4,6 +4,7 @@ const local_storage = require('glov/client/local_storage');
 local_storage.setStoragePrefix('glovjs-playground'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
+import { autoAtlas } from 'glov/client/autoatlas';
 import { platformParameterGet, platformSetRichPresence } from 'glov/client/client_config';
 import { editBox } from 'glov/client/edit_box';
 import * as engine from 'glov/client/engine';
@@ -127,7 +128,6 @@ const game_height = 240;
 type SpriteDict = {
   test: Sprite[];
   white: Sprite;
-  test_tint: Sprite;
   game_bg: Sprite;
   animation: SpriteAnimation;
 };
@@ -543,21 +543,13 @@ export function main(): void {
 
     sprites.white = spriteCreate({ url: 'white' });
 
-    sprites.test_tint = spriteCreate({
-      name: 'tinted',
-      ws: [16, 16, 16, 16],
-      hs: [16, 16, 16],
-      size: vec2(sprite_size, sprite_size),
-      layers: 2,
-      origin: vec2(0.5, 0.5),
-    });
     sprites.animation = spriteAnimationCreate({
       idle_left: {
-        frames: [0,1],
+        frames: ['left0','left1'],
         times: [200, 500],
       },
       idle_right: {
-        frames: [3,2],
+        frames: ['right0','right1'],
         times: [200, 500],
       },
     });
@@ -716,26 +708,28 @@ export function main(): void {
         scale: 0.25,
       });
     } else {
-      sprites.test_tint.drawDualTint({
+      autoAtlas('test', sprites.animation.getFrame(dt) as string).drawDualTint({
         x: test_character.x,
         y: test_character.y,
         z: Z.SPRITES,
+        w: sprite_size,
+        h: sprite_size,
         color: [1, 1, 0, 1],
         color1: [1, 0, 1, 1],
-        frame: sprites.animation.getFrame(dt),
       });
     }
 
     if (flagGet('4color')) {
-      sprites.test_tint.draw4Color({
+      autoAtlas('test', sprites.animation.getFrame(dt) as string).draw4Color({
         x: test_character.x,
         y: test_character.y + 64,
         z: Z.SPRITES,
+        w: sprite_size,
+        h: sprite_size,
         color_ul: [1, 0, 0, 1],
         color_ll: [0, 1, 0, 1],
         color_lr: [0, 0, 1, 1],
         color_ur: [1, 0, 1, 1],
-        frame: sprites.animation.getFrame(),
       });
     }
 
