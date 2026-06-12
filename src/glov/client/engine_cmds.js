@@ -4,6 +4,7 @@ import { cmd_parse } from './cmds';
 import * as engine from './engine';
 import { errorReportDetailsString } from './error_report';
 import { fetchDelaySet } from './fetch';
+import { localStorageClearAll } from './local_storage';
 import { netClient, netDisconnected } from './net';
 import { SEMANTIC } from './shaders';
 import { textureGetAll } from './textures';
@@ -170,3 +171,25 @@ cmd_parse.register({
     });
   },
 });
+
+cmd_parse.register({
+  cmd: 'local_storage_clear',
+  help: 'Clears all app-specific local storage, resetting all settings, wiping all saved games, etc',
+  func: function (str, resp_func) {
+    modalDialog({
+      title: 'Clear Local Storage',
+      text: 'This will delete all saved games and reset all settings and options to their default values.' +
+        '  Some settings may not take effect until you reload the page or restart the app.  Really continue?',
+      buttons: {
+        yes: function () {
+          localStorageClearAll();
+          resp_func(null, 'Storage cleared');
+        },
+        no: function () {
+          resp_func(null, 'Storage NOT cleared');
+        }
+      },
+    });
+  },
+});
+
