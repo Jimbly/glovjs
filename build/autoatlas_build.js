@@ -405,7 +405,17 @@ module.exports = function (opts) {
       height = max(1, nextHighestPowerOfTwo(height));
       let pngouts = [];
       for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
-        pngouts.push(pngAllocTemp(width, height, `output:${name}`));
+        let png = pngAllocTemp(width, height, `output:${name}`);
+        if (ii > 0) {
+          // TODO: custom extra layer clear color?
+          // Default opaque black for additional channels, assume they're masks in the RGB channels
+          for (let yy = 0; yy < png.height; ++yy) {
+            for (let xx = 0; xx < png.width; ++xx) {
+              png.data[(yy * png.width + xx) * 4 + 3] = 255;
+            }
+          }
+        }
+        pngouts.push(png);
       }
       runtime_data.w = width;
       runtime_data.h = height;
