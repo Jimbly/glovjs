@@ -234,7 +234,7 @@ export function framebufferStart(opts) {
     gl.disable(gl.SCISSOR_TEST);
   }
   if (clear && (!clear_all || clear_all_color)) {
-    if (clear_all_color && clear_color) {
+    if (clear_color) {
       gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
     }
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
