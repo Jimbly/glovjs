@@ -1,0 +1,5 @@
+---
+tile_res: 16
+tiles:
+  combo1: [0,0]
+  combo2: [1,0]
