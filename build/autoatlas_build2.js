@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const path = require('path');
+const { asyncEach } = require('glov-async');
 const gb = require('glov-build');
 const yaml = require('js-yaml');
 const { parse9Patch } = require('./9patch');
@@ -19,6 +20,8 @@ function nextHighestPowerOfTwo(x) {
 function cmpFileKeys(a, b) {
   return a.localeCompare(b, 'en', { numeric: true });
 }
+
+const regex_atlas_input = /^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/;
 
 let png_cache = [];
 let used_generation = 0;
@@ -168,184 +171,183 @@ module.exports = function (opts) {
   for (let ii = 0; ii < ignore_list.length; ++ii) {
     ignore[ignore_list[ii]] = true;
   }
-  let output_cache = {};
-  let input_png_cache = {};
-  function imgproc(job, done) {
-    let files = job.getFiles();
-    let changed_files = job.getFilesUpdated();
 
-    let count_png_read = 0;
-    let atlases = {};
-    let seen_png = {};
+  function listproc(job, done) {
+    let files = job.getFiles();
+
+    let lists = {};
     for (let ii = 0; ii < files.length; ++ii) {
       let img_file = files[ii];
-      let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/);
+      let m = img_file.relative.match(regex_atlas_input);
       let atlas_name = m[1].toLowerCase();
-      let img_name = m[2].toLowerCase();
-      let ext = m[3];
-      let atlas_data = atlases[atlas_name] = atlases[atlas_name] || { num_layers: 1, file_data: {}, dirty: false };
-      let is_dirty = changed_files.includes(img_file);
-      if (is_dirty) {
-        atlas_data.dirty = true;
-      }
-      if (ext[0] === 'y') {
-        if (img_name !== 'atlas') {
-          job.error(img_file, `Found unexpected yaml: "${img_file.relative}" (expected atlas.yaml or [image_name].yaml)`);
-          continue;
-        }
-        let config_data;
-        try {
-          config_data = yaml.load(img_file.contents.toString('utf8')) || {};
-        } catch (err) {
-          job.error(img_file, `Error parsing ${img_file.relative}: ${err}`);
-          continue;
-        }
-        if (config_data.pad && typeof config_data.pad !== 'number') {
-          job.error(img_file, `pad must be number, found ${JSON.stringify(config_data.pad)}`);
-          delete config_data.pad;
-        }
-        if (config_data.max_tex_size && typeof config_data.max_tex_size !== 'number') {
-          job.error(img_file, `max_tex_size must be number, found ${JSON.stringify(config_data.max_tex_size)}`);
-          delete config_data.max_tex_size;
-        }
-        if (config_data.tile_horiz_regex) {
-          try {
-            config_data.tile_horiz_regex = new RegExp(config_data.tile_horiz_regex);
-          } catch (err) {
-            job.error(img_file, `error parsing RegExp tile_horiz_regex: ${JSON.stringify(config_data.tile_horiz_regex)}: ${err}`);
-            delete config_data.tile_horiz_regex;
-          }
-        }
-        if (config_data.tile_vert_regex) {
-          try {
-            config_data.tile_vert_regex = new RegExp(config_data.tile_vert_regex);
-          } catch (err) {
-            job.error(img_file, `error parsing RegExp tile_vert_regex: ${JSON.stringify(config_data.tile_vert_regex)}: ${err}`);
-            delete config_data.tile_vert_regex;
-          }
-        }
-        if (config_data.tile_regex) {
-          try {
-            config_data.tile_regex = new RegExp(config_data.tile_regex);
-          } catch (err) {
-            job.error(img_file, `error parsing RegExp tile_regex: ${JSON.stringify(config_data.tile_regex)}: ${err}`);
-            delete config_data.tile_regex;
-          }
-        }
-        if (config_data.mask_color) {
-          if (!Array.isArray(config_data.mask_color) || config_data.mask_color.length !== 4) {
-            job.error(img_file, 'mask_color must be number[4]');
-            delete config_data.mask_color;
-          }
-        }
-        atlas_data.config_data = config_data;
-        continue;
-      }
-      seen_png[img_file.relative] = true;
-      let do_9patch = img_name.endsWith('.9');
-      if (do_9patch) {
-        img_name = img_name.slice(0, -2);
-      }
-      m = img_name.match(/^(.*)_(\d+)$/);
-      let idx = 0;
-      if (m) {
-        img_name = m[1];
-        idx = Number(m[2]);
-      }
-      atlas_data.num_layers = max(atlas_data.num_layers, idx + 1);
+      let list_data = lists[atlas_name] = lists[atlas_name] || [];
+      list_data.push(img_file.relative);
+    }
+    for (let key in lists) {
+      job.out({
+        relative: key,
+        contents: JSON.stringify(lists[key]),
+      });
+    }
+    done();
+  }
 
-      let img;
-      let ws;
-      let hs;
-      let padh;
-      let padv;
-      if (!is_dirty && input_png_cache[img_file.relative]) {
-        img = input_png_cache[img_file.relative];
-        ({ ws, hs, padh, padv } = img.cached_data);
-      } else {
-        let err;
-        ++count_png_read;
-        ({ err, img } = pngRead(img_file.contents));
+  function buildproc(prep_task_name, job, done) {
+
+    let list_file = job.getFile();
+    let user_data = job.getUserData();
+    let input_png_cache = user_data.input_png_cache = user_data.input_png_cache || {};
+
+    let atlas_name = list_file.relative;
+    let changed_files = job.getFilesUpdated();
+    let list = JSON.parse(list_file.contents.toString('utf8'));
+    let files = {};
+    asyncEach(list, function (name, next) {
+      job.depAdd(`${prep_task_name}:${name}`, function (err, depfile) {
         if (err) {
-          job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
+          return void next(err);
+        }
+        files[name] = depfile;
+        next();
+      });
+    }, function (err) {
+      if (err) {
+        return void done(err);
+      }
+
+      let png_read_count = 0;
+      let png_read_size = 0;
+      let num_layers = 1;
+      let file_data = {};
+      let config_data = null;
+      let seen_png = {};
+      for (let key in files) {
+        let img_file = files[key];
+        let m = img_file.relative.match(regex_atlas_input);
+        let atlas_name_test = m[1].toLowerCase();
+        assert.equal(atlas_name_test, atlas_name);
+        let img_name = m[2].toLowerCase();
+        let ext = m[3];
+        let is_dirty = changed_files.includes(img_file);
+        if (ext[0] === 'y') {
+          assert.equal(img_name, 'atlas'); // pruned in earlier tasks
+          try {
+            config_data = yaml.load(img_file.contents.toString('utf8')) || {};
+          } catch (err) {
+            job.error(img_file, `Error parsing ${img_file.relative}: ${err}`);
+            continue;
+          }
+          if (config_data.pad && typeof config_data.pad !== 'number') {
+            job.error(img_file, `pad must be number, found ${JSON.stringify(config_data.pad)}`);
+            delete config_data.pad;
+          }
+          if (config_data.max_tex_size && typeof config_data.max_tex_size !== 'number') {
+            job.error(img_file, `max_tex_size must be number, found ${JSON.stringify(config_data.max_tex_size)}`);
+            delete config_data.max_tex_size;
+          }
+          if (config_data.tile_horiz_regex) {
+            try {
+              config_data.tile_horiz_regex = new RegExp(config_data.tile_horiz_regex);
+            } catch (err) {
+              job.error(img_file, `error parsing RegExp tile_horiz_regex: ${JSON.stringify(config_data.tile_horiz_regex)}: ${err}`);
+              delete config_data.tile_horiz_regex;
+            }
+          }
+          if (config_data.tile_vert_regex) {
+            try {
+              config_data.tile_vert_regex = new RegExp(config_data.tile_vert_regex);
+            } catch (err) {
+              job.error(img_file, `error parsing RegExp tile_vert_regex: ${JSON.stringify(config_data.tile_vert_regex)}: ${err}`);
+              delete config_data.tile_vert_regex;
+            }
+          }
+          if (config_data.tile_regex) {
+            try {
+              config_data.tile_regex = new RegExp(config_data.tile_regex);
+            } catch (err) {
+              job.error(img_file, `error parsing RegExp tile_regex: ${JSON.stringify(config_data.tile_regex)}: ${err}`);
+              delete config_data.tile_regex;
+            }
+          }
+          if (config_data.mask_color) {
+            if (!Array.isArray(config_data.mask_color) || config_data.mask_color.length !== 4) {
+              job.error(img_file, 'mask_color must be number[4]');
+              delete config_data.mask_color;
+            }
+          }
           continue;
         }
-        ws = [img.width];
-        hs = [img.height];
-        img.source_name = img_file.relative;
-
+        seen_png[img_file.relative] = true;
+        let do_9patch = img_name.endsWith('.9');
         if (do_9patch) {
-          let ret = parse9Patch(job, img, img_name, idx !== 0);
-          ({ ws, hs, img } = ret);
-          if (idx === 0) {
-            ({ padh, padv } = ret);
+          img_name = img_name.slice(0, -2);
+        }
+        m = img_name.match(/^(.*)_(\d+)$/);
+        let idx = 0;
+        if (m) {
+          img_name = m[1];
+          idx = Number(m[2]);
+        }
+        num_layers = max(num_layers, idx + 1);
+
+        let img;
+        let ws;
+        let hs;
+        let padh;
+        let padv;
+        if (!is_dirty && input_png_cache[img_file.relative]) {
+          img = input_png_cache[img_file.relative];
+          ({ ws, hs, padh, padv } = img.cached_data);
+        } else {
+          let err;
+          ++png_read_count;
+          ({ err, img } = pngRead(img_file.contents));
+          if (err) {
+            job.error(img_file, `Error reading ${img_file.relative}: ${err}`);
+            continue;
+          }
+          png_read_size += img.width * img.height * 4;
+          ws = [img.width];
+          hs = [img.height];
+          img.source_name = img_file.relative;
+
+          if (do_9patch) {
+            let ret = parse9Patch(job, img, img_name, idx !== 0);
+            ({ ws, hs, img } = ret);
+            if (idx === 0) {
+              ({ padh, padv } = ret);
+            }
+          }
+          img.cached_data = {
+            ws,
+            hs,
+            padh,
+            padv,
+          };
+          input_png_cache[img_file.relative] = img;
+        }
+        let img_data = file_data[img_name] = file_data[img_name] || { imgs: [] };
+        if (idx === 0) {
+          img_data.ws = ws;
+          img_data.hs = hs;
+          if (padh) {
+            img_data.padh = padh;
+            img_data.padv = padv;
           }
         }
-        img.cached_data = {
-          ws,
-          hs,
-          padh,
-          padv,
-        };
-        input_png_cache[img_file.relative] = img;
+        img.filename = img_file.relative;
+        if (img_data.imgs[idx]) {
+          job.error('Two atlas source files map to the same image:' +
+            ` ${img.filename} and ${img_data.imgs[idx].filename}`);
+        }
+        img_data.imgs[idx] = img;
       }
-      let img_data = atlas_data.file_data[img_name] = atlas_data.file_data[img_name] || { imgs: [] };
-      if (idx === 0) {
-        img_data.ws = ws;
-        img_data.hs = hs;
-        if (padh) {
-          img_data.padh = padh;
-          img_data.padv = padv;
+
+      for (let key in input_png_cache) {
+        if (!seen_png[key]) {
+          delete input_png_cache[key];
         }
       }
-      img.filename = img_file.relative;
-      if (img_data.imgs[idx]) {
-        job.error('Two atlas source files map to the same image:' +
-          ` ${img.filename} and ${img_data.imgs[idx].filename}`);
-      }
-      img_data.imgs[idx] = img;
-    }
-
-    // Flag atlases as dirty for deleted files
-    for (let ii = 0; ii < changed_files.length; ++ii) {
-      let img_file = changed_files[ii];
-      if (!img_file.contents) {
-        let m = img_file.relative.match(/^(?:.*\/)?([^/]+)\/([^/]+)\.(png|ya?ml)$/);
-        let atlas_name = m[1].toLowerCase();
-        let atlas_data = atlases[atlas_name];
-        if (atlas_data) {
-          atlas_data.dirty = true;
-        }
-      }
-    }
-
-    for (let key in input_png_cache) {
-      if (!seen_png[key]) {
-        delete input_png_cache[key];
-      }
-    }
-
-    let atlas_keys = Object.keys(atlases);
-
-    if (!atlas_keys.length) {
-      // no error, just no atlases in this project, that's fine
-      return void done();
-    }
-
-    let seen = {};
-    function doAtlas(name) {
-      let atlas_data = atlases[name];
-      let { file_data, config_data, dirty } = atlas_data;
-      seen[name] = true;
-      if (!dirty) {
-        let cache = output_cache[name];
-        assert(cache);
-        for (let ii = 0; ii < cache.length; ++ii) {
-          job.out(cache[ii]);
-        }
-        return;
-      }
-      pngAllocTempReset();
 
       const tile_horiz_regex = config_data?.tile_horiz_regex || null;
       const tile_vert_regex = config_data?.tile_vert_regex || null;
@@ -363,8 +365,8 @@ module.exports = function (opts) {
         // name,
         tiles: [], // [name, x, y, ws, hs, padh, padv]
       };
-      if (atlas_data.num_layers > 1) {
-        runtime_data.layers = atlas_data.num_layers;
+      if (num_layers > 1) {
+        runtime_data.layers = num_layers;
       }
 
       // Check input
@@ -372,7 +374,7 @@ module.exports = function (opts) {
       let imgs_for_packing = [];
       for (let ii = 0; ii < file_keys_for_packing.length; ++ii) {
         let img_name = file_keys_for_packing[ii];
-        if (ignore[`${name}:${img_name}`]) {
+        if (ignore[`${atlas_name}:${img_name}`]) {
           continue;
         }
         let img_data = file_data[img_name];
@@ -380,7 +382,7 @@ module.exports = function (opts) {
         let img0 = imgs[0];
         if (!img0) {
           any_error = true;
-          job.error(`Image ${name}/${img_name} missing required base (_0) layer`);
+          job.error(`Image ${atlas_name}/${img_name} missing required base (_0) layer`);
           continue;
         }
         // Check all layers are the same size
@@ -391,119 +393,109 @@ module.exports = function (opts) {
               img.height !== img0.height
             ) {
               any_error = true;
-              job.error(`Image ${name}/${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
+              job.error(`Image ${atlas_name}/${img_name} layer ${idx} (${img.source_name}) resolution (${img.width}x${img.height})` +
                 ` does not match base layer (${img0.source_name}) resolution (${img0.width}x${img0.height})`);
             }
           }
         }
         if (img0.width + pad * 2 > max_tex_size) {
           any_error = true;
-          job.error(`Image ${name}/${img_name} resolution (${img0.width}x${img0.height})` +
+          job.error(`Image ${atlas_name}/${img_name} resolution (${img0.width}x${img0.height})` +
             ` is larger than max_tex_size of ${max_tex_size}`);
         }
         img_data.img_name = img_name;
         imgs_for_packing.push(img_data);
       }
-      if (any_error) {
-        return;
-      }
+      if (!any_error) {
+        let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
+        pngAllocTempReset();
 
-      let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
-
-      // Allocate actual images and copy into them
-      width = max(1, nextHighestPowerOfTwo(width));
-      height = max(1, nextHighestPowerOfTwo(height));
-      let pngouts = [];
-      for (let ii = 0; ii < atlas_data.num_layers; ++ii) {
-        let png = pngAllocTemp(width, height, `output:${name}`);
-        if (ii > 0) {
-          for (let idx = 0; idx < png.data.length;) {
-            png.data[idx++] = mask_color[0];
-            png.data[idx++] = mask_color[1];
-            png.data[idx++] = mask_color[2];
-            png.data[idx++] = mask_color[3];
+        // Allocate actual images and copy into them
+        width = max(1, nextHighestPowerOfTwo(width));
+        height = max(1, nextHighestPowerOfTwo(height));
+        let pngouts = [];
+        for (let ii = 0; ii < num_layers; ++ii) {
+          let png = pngAllocTemp(width, height, `output:${atlas_name}`);
+          if (ii > 0) {
+            for (let idx = 0; idx < png.data.length;) {
+              png.data[idx++] = mask_color[0];
+              png.data[idx++] = mask_color[1];
+              png.data[idx++] = mask_color[2];
+              png.data[idx++] = mask_color[3];
+            }
           }
+          pngouts.push(png);
         }
-        pngouts.push(png);
-      }
-      runtime_data.w = width;
-      runtime_data.h = height;
+        runtime_data.w = width;
+        runtime_data.h = height;
 
-      for (let ii = 0; ii < file_keys.length; ++ii) {
-        let img_name = file_keys[ii];
-        if (ignore[`${name}:${img_name}`]) {
-          continue;
-        }
-        let img_data = file_data[img_name];
-        let { imgs, x, y, ws, hs, padh, padv } = img_data;
-        let { width: imgw, height: imgh } = imgs[0];
-        let tuple = [img_name, x, y, ws, hs];
-        if (padh) {
-          tuple.push(padh, padv);
-        }
-        runtime_data.tiles.push(tuple);
-
-        for (let idx = 0; idx < imgs.length; ++idx) {
-          let img = imgs[idx];
-          if (!img) {
+        for (let ii = 0; ii < file_keys.length; ++ii) {
+          let img_name = file_keys[ii];
+          if (ignore[`${atlas_name}:${img_name}`]) {
             continue;
           }
-          let { data: outdata } = pngouts[idx];
-          let { data: indata } = img;
-          let clamp = !tile_regex?.test(img_name);
-          let clamp_vert = clamp && !tile_vert_regex?.test(img_name) || tile_regex && tile_horiz_regex?.test(img_name);
-          let clamp_horiz = clamp && !tile_horiz_regex?.test(img_name) || tile_regex && tile_vert_regex?.test(img_name);
-          for (let yy = -pad; yy < imgh + pad; ++yy) {
-            let yyy;
-            if (clamp_vert) {
-              yyy = yy < 0 ? 0 : yy >= imgh ? imgh - 1 : yy;
-            } else {
-              yyy = (yy + imgh) % imgh;
+          let img_data = file_data[img_name];
+          let { imgs, x, y, ws, hs, padh, padv } = img_data;
+          let { width: imgw, height: imgh } = imgs[0];
+          let tuple = [img_name, x, y, ws, hs];
+          if (padh) {
+            tuple.push(padh, padv);
+          }
+          runtime_data.tiles.push(tuple);
+
+          for (let idx = 0; idx < imgs.length; ++idx) {
+            let img = imgs[idx];
+            if (!img) {
+              continue;
             }
-            for (let xx = -pad; xx < imgw + pad; ++xx) {
-              let xxx;
-              if (clamp_horiz) {
-                xxx = xx < 0 ? 0 : xx >= imgw ? imgw - 1 : xx;
+            let { data: outdata } = pngouts[idx];
+            let { data: indata } = img;
+            let clamp = !tile_regex?.test(img_name);
+            let clamp_vert = clamp && !tile_vert_regex?.test(img_name) || tile_regex && tile_horiz_regex?.test(img_name);
+            let clamp_horiz = clamp && !tile_horiz_regex?.test(img_name) || tile_regex && tile_vert_regex?.test(img_name);
+            for (let yy = -pad; yy < imgh + pad; ++yy) {
+              let yyy;
+              if (clamp_vert) {
+                yyy = yy < 0 ? 0 : yy >= imgh ? imgh - 1 : yy;
               } else {
-                xxx = (xx + imgw) % imgw;
+                yyy = (yy + imgh) % imgh;
               }
-              for (let jj = 0; jj < 4; ++jj) {
-                outdata[(x + xx + (y + yy) * width) * 4 + jj] = indata[(xxx + yyy * imgw) * 4 + jj];
+              for (let xx = -pad; xx < imgw + pad; ++xx) {
+                let xxx;
+                if (clamp_horiz) {
+                  xxx = xx < 0 ? 0 : xx >= imgw ? imgw - 1 : xx;
+                } else {
+                  xxx = (xx + imgw) % imgw;
+                }
+                for (let jj = 0; jj < 4; ++jj) {
+                  outdata[(x + xx + (y + yy) * width) * 4 + jj] = indata[(xxx + yyy * imgw) * 4 + jj];
+                }
               }
             }
           }
         }
-      }
 
-      let out_list = [];
-      for (let idx = 0; idx < pngouts.length; ++idx) {
-        let pngout = pngouts[idx];
+        let out_list = [];
+        for (let idx = 0; idx < pngouts.length; ++idx) {
+          let pngout = pngouts[idx];
+          out_list.push({
+            relative: `client/img/atlas_${atlas_name}${num_layers > 1 ? `_${idx}` : ''}.png`,
+            contents: pngWrite(pngout),
+          });
+        }
         out_list.push({
-          relative: `client/img/atlas_${name}${atlas_data.num_layers > 1 ? `_${idx}` : ''}.png`,
-          contents: pngWrite(pngout),
+          relative: `client/${atlas_name}.auat`,
+          contents: JSON.stringify(runtime_data),
         });
+        for (let ii = 0; ii < out_list.length; ++ii) {
+          job.out(out_list[ii]);
+        }
+        pngAllocTempReset();
       }
-      out_list.push({
-        relative: `client/${name}.auat`,
-        contents: JSON.stringify(runtime_data),
-      });
-      for (let ii = 0; ii < out_list.length; ++ii) {
-        job.out(out_list[ii]);
-      }
-      output_cache[name] = out_list;
-      pngAllocTempReset();
-    }
 
-    for (let key in atlases) {
-      doAtlas(key);
-    }
-    for (let key in output_cache) {
-      if (!seen[key]) {
-        delete output_cache[key];
-      }
-    }
-    job.debug(`Read ${count_png_read} PNG files`);
-    done();
+      job.debug(`Read ${png_read_count} PNG files (${(png_read_size/1024/1024).toFixed(1)}MB)`);
+      done();
+    });
   }
 
   function prepproc(job, done) {
@@ -619,20 +611,39 @@ module.exports = function (opts) {
     name: prep_task_name,
   });
 
-  // Main task: combine an atlas per folder
-  return {
-    name,
+  // List task - just list all PNGs and atlas.yamls on disk without reading them, output the lists
+  let list_task_name = `${name}_list`;
+  gb.task({
     type: gb.ALL,
-    func: imgproc,
+    read: false,
+    func: listproc,
     input: [
       `${prep_task_name}:**`,
     ],
+    name: list_task_name,
     version: [
+      regex_atlas_input,
+    ]
+  });
+
+  // Build task: using the generated lists, load the configs and images, and combine an atlas per folder
+  return {
+    name,
+    type: gb.SINGLE,
+    func: buildproc.bind(null, prep_task_name),
+    input: [
+      `${list_task_name}:**`,
+    ],
+    deps: [
+      prep_task_name,
+    ],
+    version: [
+      buildproc,
       cmpFileKeys,
       parse9Patch,
-      opts,
       ignore,
       packSkyline,
+      regex_atlas_input,
     ],
   };
 };
