@@ -502,7 +502,7 @@ module.exports = function (opts) {
         delete output_cache[key];
       }
     }
-    job.debug(`Read ${count_png_read} PNG files`);
+    job.log(`Read ${count_png_read} PNG files`);
     done();
   }
 

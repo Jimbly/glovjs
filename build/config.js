@@ -151,6 +151,7 @@ module.exports = function (gb) {
       'client/atlases/**/*.yaml',
     ],
     autoatlas_ignore: ['someatlas:sometile'],
+    autoatlas_async_hashed: 0,
   };
   // eslint-disable-next-line n/global-require
   require('./config.project.js')(config, gb);

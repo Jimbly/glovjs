@@ -6,6 +6,7 @@ const { asyncEach } = require('glov-async');
 const gb = require('glov-build');
 const yaml = require('js-yaml');
 const { parse9Patch } = require('./9patch');
+const asyncHashed = require('./asynchashed.js');
 const { pngAlloc, pngRead, pngWrite } = require('./png');
 const { floor, max } = Math;
 
@@ -493,7 +494,7 @@ module.exports = function (opts) {
         pngAllocTempReset();
       }
 
-      job.debug(`Read ${png_read_count} PNG files (${(png_read_size/1024/1024).toFixed(1)}MB)`);
+      job.log(`Read ${png_read_count} PNG files (${(png_read_size/1024/1024).toFixed(1)}MB)`);
       done();
     });
   }
@@ -589,7 +590,7 @@ module.exports = function (opts) {
     });
   }
 
-  let { name, inputs, only_prep } = opts;
+  let { name, inputs, only_prep, async_hashed } = opts;
 
   // Prep task: for images with matching .yaml, split them up
   // Other images and atlas.yaml - just pass through
@@ -627,7 +628,7 @@ module.exports = function (opts) {
   });
 
   // Build task: using the generated lists, load the configs and images, and combine an atlas per folder
-  return {
+  let build_task = {
     name,
     type: gb.SINGLE,
     func: buildproc.bind(null, prep_task_name),
@@ -646,4 +647,9 @@ module.exports = function (opts) {
       regex_atlas_input,
     ],
   };
+  if (async_hashed && async_hashed > 1) {
+    return asyncHashed(async_hashed, build_task);
+  } else {
+    return build_task;
+  }
 };

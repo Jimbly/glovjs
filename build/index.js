@@ -248,6 +248,7 @@ gb.task({
     name: 'client_autoatlas_new',
     inputs: config.autoatlas_input,
     ignore: config.autoatlas_ignore,
+    async_hashed: config.autoatlas_async_hashed,
   }),
 });
 
