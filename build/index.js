@@ -21,6 +21,7 @@ const appBundle = require('./app-bundle.js');
 const assetHasherRewrite = require('./asset-hasher-rewrite.js');
 const assetHasher = require('./asset-hasher.js');
 const autoatlas = require('./autoatlas_build.js');
+const autoatlas2 = require('./autoatlas_build2.js');
 const autosound = require('./autosound.js');
 const compress = require('./compress.js');
 const eslint = require('./eslint.js');
@@ -236,10 +237,60 @@ gb.task({
 
 gb.task({
   ...autoatlas({
-    name: 'client_autoatlas',
+    name: 'client_autoatlas_old',
     inputs: config.autoatlas_input,
     ignore: config.autoatlas_ignore,
   }),
+});
+
+gb.task({
+  ...autoatlas2({
+    name: 'client_autoatlas_new',
+    inputs: config.autoatlas_input,
+    ignore: config.autoatlas_ignore,
+  }),
+});
+
+gb.task({
+  name: 'client_autoatlas',
+  type: gb.ALL,
+  input: [
+    'client_autoatlas_old:**',
+    'client_autoatlas_new:**',
+  ],
+  func: function (job, done) {
+    let files = job.getFiles();
+    let old_files = {};
+    let new_files = {};
+    for (let ii = 0; ii < files.length; ++ii) {
+      let file = files[ii];
+      if (file.bucket.endsWith('_old')) {
+        old_files[file.relative] = file.contents;
+      } else {
+        new_files[file.relative] = file.contents;
+      }
+    }
+    for (let key in new_files) {
+      let new_contents = new_files[key];
+      let old_contents = old_files[key];
+      if (!old_contents) {
+        job.error(`File ${key} exists in new but not in old`);
+      } else {
+        delete old_files[key];
+        if (old_contents.compare(new_contents) !== 0) {
+          job.error(`File ${key} mismatch`);
+        }
+      }
+      job.out({
+        relative: key,
+        contents: new_contents,
+      });
+    }
+    for (let key in old_files) {
+      job.error(`File ${key} exists in old but not in new`);
+    }
+    done();
+  }
 });
 
 gb.task({
