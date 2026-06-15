@@ -402,6 +402,8 @@ export function run(x: number, y: number, z: number): void {
         }
         let text = String(content.param?.text || content.key);
         return {
+          break_pre: false,
+          break_post: false,
           layout: (layout_param: MDLayoutCalcParam): MDDrawBlock[] => {
             let w = font.getStringWidth(null, layout_param.text_height, text) +
               layout_param.text_height * 0.25;

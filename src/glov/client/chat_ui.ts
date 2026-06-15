@@ -498,6 +498,8 @@ function urlKeyEscape(str: string): string {
 
 const NOT_WRAP = ~ALIGN.HWRAP;
 class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
+  break_pre = true;
+  break_post = true;
   msg_url: string;
   constructor(
     private url_label: string,
@@ -571,6 +573,8 @@ class MDRChatURL implements MDLayoutBlock, MDDrawBlock {
 }
 
 class MDRChatSource implements MDLayoutBlock, MDDrawBlock {
+  break_pre = false;
+  break_post = false;
   constructor(
     private msg: ChatMessageUser,
     private parent: ChatUI,

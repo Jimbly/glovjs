@@ -17,8 +17,8 @@ function treeToText(tree: MDASTNode[]): string {
       ret += `<${node.type}>${treeToText(node.content)}</${node.type}>`;
     } else if (node.type === 'renderable') {
       ret += `<${node.content.type}=${node.content.key}>`;
-    // } else {
-    //   ret += `<unknown:${node.type}>`;
+    } else {
+      ret += `<unknown:${(node as { type: string }).type}>`;
     }
   }
   return ret;

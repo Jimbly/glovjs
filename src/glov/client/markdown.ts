@@ -1,6 +1,6 @@
 import assert from 'assert';
 import type { TSMap, WithRequired } from 'glov/common/types';
-import { has } from 'glov/common/util';
+import { clone, has } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
   unit_vec,
@@ -30,6 +30,7 @@ import {
   markdown_default_font_styles,
   markdown_default_renderables,
   markdownLayoutFit,
+  markdownLayoutWrap,
   MarkdownRenderable,
 } from './markdown_renderables';
 import {
@@ -141,6 +142,26 @@ export type MDLayoutCalcParam = Required<MarkdownLayoutParam> & {
   };
 };
 
+function cloneLayoutCalcParam(param: MDLayoutCalcParam): MDLayoutCalcParam {
+  return {
+    // copy simple types
+    font_style_idx: param.font_style_idx,
+    w: param.w,
+    h: param.h,
+    text_height: param.text_height,
+    line_height: param.line_height,
+    indent: param.indent,
+    align: param.align,
+    // read-only members copied by reference:
+    font: param.font,
+    font_style: param.font_style,
+    font_styles: param.font_styles,
+    // clone modified members
+    font_style_stack: param.font_style_stack ? param.font_style_stack.slice(0) : undefined,
+    cursor: clone(param.cursor),
+  };
+}
+
 export type MDDrawParam = {
   x: number;
   y: number;
@@ -154,20 +175,118 @@ export interface MDDrawBlock {
 }
 
 export interface MDLayoutBlock {
+  break_pre: boolean;
+  break_post: boolean;
   layout(param: MDLayoutCalcParam): MDDrawBlock[];
 }
 
+function didBreak(prev: MDDrawBlock, next: MDDrawBlock): boolean {
+  return next.dims.x < prev.dims.x + prev.dims.w;
+}
+
+function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDDrawBlock[] {
+  let last_break_last_block = -1; // the index of the block that starts our non-breaking blob
+  let last_break_content_index = -1; // if that block is wrapped, the index we need to re-do layout() from
+  let saved_param = null;
+  let idx = 0;
+  let ret: MDDrawBlock[] = [];
+  let last_break_post = true;
+  let safety = 0;
+  function isStartOfLine(block: MDDrawBlock): boolean {
+    return block.dims.x === param.cursor.line_x0;
+  }
+  while (true) {
+    ++safety;
+    assert(safety - idx < 1000);
+    let elem = content[idx];
+    if (!elem) {
+      return ret;
+    }
+    let last_block = ret[ret.length - 1];
+    let last_is_start_of_line = last_block && isStartOfLine(last_block);
+    let new_blocks = elem.layout(param);
+    if (last_break_post || elem.break_pre) {
+      // break allowed before this element
+      if (new_blocks.length) {
+        ret = ret.concat(new_blocks);
+        let last_new_block = new_blocks[new_blocks.length - 1];
+        if (!elem.break_post && !isStartOfLine(last_new_block)) {
+          last_break_last_block = ret.length - 1;
+          last_break_content_index = idx + 1;
+          saved_param = cloneLayoutCalcParam(param);
+        } else {
+          last_break_last_block = -1;
+          last_break_content_index = -1;
+          saved_param = null;
+        }
+      } else {
+        if (!elem.break_post) {
+          // no blocks (possibly formatting, possibly whitespace)
+          last_break_last_block = -1;
+          last_break_content_index = idx;
+          saved_param = cloneLayoutCalcParam(param);
+        } else {
+          last_break_last_block = -1;
+          last_break_content_index = -1;
+          saved_param = null;
+        }
+      }
+      idx++;
+      last_break_post = elem.break_post;
+      continue;
+    }
+    // break not allowed between the last known block (if any) and this first block
+    if (!new_blocks.length) {
+      // no draw blocks, just continue
+      idx++;
+      last_break_post = elem.break_post;
+      continue;
+    }
+    assert(last_block);
+    let first_block = new_blocks[0];
+    assert(first_block);
+    let can_wrap = true;
+    if (last_break_content_index === -1) {
+      // but, this unbreakable sequence already started at the start of the line, let it slide
+      can_wrap = false;
+    }
+    if (!can_wrap || !didBreak(last_block, first_block)) {
+      // fine
+      ret = ret.concat(new_blocks);
+      idx++;
+      last_break_post = elem.break_post;
+      continue;
+    }
+    assert(!last_is_start_of_line);
+    assert(saved_param);
+    // wrap the last draw block, then try again
+    param = saved_param;
+    markdownLayoutWrap(param);
+    idx = last_break_content_index;
+    if (last_break_last_block !== -1) {
+      let block_to_wrap = ret[last_break_last_block];
+      ret = ret.slice(0, last_break_last_block + 1);
+      markdownLayoutFit(param, block_to_wrap.dims);
+      assert(isStartOfLine(block_to_wrap));
+      last_break_last_block = -1;
+      last_break_content_index = -1;
+      saved_param = null;
+    } else {
+      // there was no block, but possibly whitespace, let it continue from the start of the line
+    }
+  }
+}
+
 class MDBlockParagraph implements MDLayoutBlock {
+  break_pre = true;
+  break_post = true;
   private content: MDLayoutBlock[];
   constructor(content: MDASTNode[], param: MarkdownParseParam) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     this.content = mdASTToBlock(content, param);
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
-    let ret: MDDrawBlock[][] = [];
-    for (let ii = 0; ii < this.content.length; ++ii) {
-      ret.push(this.content[ii].layout(param));
-    }
+    let ret = layoutChildren(this.content, param);
     if (param.align & ALIGN.HWRAP) {
       if (param.cursor.x !== param.cursor.line_x0) {
         param.cursor.line_x0 = param.cursor.x = param.indent;
@@ -178,7 +297,7 @@ class MDBlockParagraph implements MDLayoutBlock {
       param.cursor.x += ceil(param.text_height * 0.25);
     }
 
-    return Array.prototype.concat.apply([], ret);
+    return ret;
   }
 }
 function createParagraph(content: MDASTNode[], param: MarkdownParseParam): MDBlockParagraph {
@@ -186,6 +305,8 @@ function createParagraph(content: MDASTNode[], param: MarkdownParseParam): MDBlo
 }
 
 class MDBlockBold implements MDLayoutBlock {
+  break_pre = false;
+  break_post = false;
   private content: MDLayoutBlock[];
   constructor(content: MDASTNode[], param: MarkdownParseParam) {
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
@@ -205,12 +326,9 @@ class MDBlockBold implements MDLayoutBlock {
     }
     param.font_style = bold_style;
 
-    let ret: MDDrawBlock[][] = [];
-    for (let ii = 0; ii < this.content.length; ++ii) {
-      ret.push(this.content[ii].layout(param));
-    }
+    let ret = layoutChildren(this.content, param);
     param.font_style = old_style;
-    return Array.prototype.concat.apply([], ret);
+    return ret;
   }
 }
 function createBold(content: MDASTNode[], param: MarkdownParseParam): MDBlockBold {
@@ -253,12 +371,20 @@ class MDDrawBlockText implements MDDrawBlock {
   }
 }
 
+function isBreakingSpace(c: string): boolean {
+  return c.trim() === '' && c !== '\xA0';
+}
+
 class MDBlockText implements MDLayoutBlock {
+  break_pre: boolean;
+  break_post: boolean;
   constructor(private content: string, param: MarkdownParseParam) {
+    this.break_pre = isBreakingSpace(content[0]);
+    this.break_post = isBreakingSpace(content.slice(-1));
   }
   layout(param: MDLayoutCalcParam): MDDrawBlock[] {
     let { cursor, line_height, text_height } = param;
-    let ret: MDDrawBlock[] = [];
+    let ret: MDDrawBlockText[] = [];
     let text = this.content;
     if (!(param.align & ALIGN.HWRAP)) {
       text = text.replace(/\n/g, ' ');
@@ -299,6 +425,29 @@ class MDBlockText implements MDLayoutBlock {
       if (ret.length) {
         let tail = ret[ret.length - 1];
         cursor.x = tail.dims.x + tail.dims.w;
+        // If possible, split this final block into a final word, for non-breaking purposes
+        let last_space = tail.dims.text.lastIndexOf(' ');
+        if (last_space !== -1) {
+          let first = tail.dims.text.slice(0, last_space + 1);
+          let second = tail.dims.text.slice(last_space + 1);
+          if (second) {
+            let first_w = param.font.getStringWidth(param.font_style, text_height, first);
+            let second_w = param.font.getStringWidth(param.font_style, text_height, second);
+            let tail_w = tail.dims.w;
+            tail.dims.text = first;
+            tail.dims.w = first_w / (first_w + second_w) * tail_w;
+            ret.push(new MDDrawBlockText({
+              font: tail.dims.font,
+              font_style: tail.dims.font_style,
+              x: tail.dims.x + tail.dims.w,
+              y: tail.dims.y,
+              h: tail.dims.h,
+              w: second_w / (first_w + second_w) * tail_w,
+              align: tail.dims.align,
+              text: second,
+            }));
+          }
+        }
       } else {
         // all whitespace, just advance cursor
         cursor.x += param.font.getStringWidth(param.font_style, text_height, text);
@@ -480,20 +629,16 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
   };
   let blocks = cache.parsed;
   assert(blocks);
-  let draw_blocks: MDDrawBlock[] = [];
   let maxx = 0;
   let miny = Infinity;
   let maxy = 0;
-  for (let ii = 0; ii < blocks.length; ++ii) {
-    let arr = blocks[ii].layout(calc_param);
-    for (let jj = 0; jj < arr.length; ++jj) {
-      let block = arr[jj];
-      let dims = block.dims;
-      maxx = max(maxx, dims.x + dims.w);
-      maxy = max(maxy, dims.y + dims.h);
-      miny = min(miny, dims.y);
-      draw_blocks.push(block);
-    }
+  let draw_blocks = layoutChildren(blocks, calc_param);
+  for (let jj = 0; jj < draw_blocks.length; ++jj) {
+    let block = draw_blocks[jj];
+    let dims = block.dims;
+    maxx = max(maxx, dims.x + dims.w);
+    maxy = max(maxy, dims.y + dims.h);
+    miny = min(miny, dims.y);
   }
   let bottom_pad = max(0, calc_param.cursor.line_y1 - maxy);
   if ((calc_param.align & (ALIGN.HRIGHT | ALIGN.HCENTER)) && draw_blocks.length) {
