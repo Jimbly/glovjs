@@ -230,7 +230,7 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
           // no blocks (possibly formatting, possibly whitespace)
           last_break_last_block = -1;
           last_break_ret_len = ret.length;
-          last_break_content_index = idx;
+          last_break_content_index = idx + 1;
           saved_param = cloneLayoutCalcParam(param);
         } else {
           last_break_last_block = -1;
