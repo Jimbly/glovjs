@@ -175,6 +175,25 @@ test(`=
 // 0123456
 // 78`);
 
+// should be hard wrap, but at least for now wraps later in the line
+test(`=
+0[c=red]1[c=green]2[c=blue]34567`,`
+012
+34567`);
+test(`=======
+a[c=green]a[/c]b[c=g]afffffff**ggggg**ffaa
+`, `
+aabafffffff
+gggggffaa
+`);
+test(`========
+Thing: a[c=green]a[/c]b[c=g]afffffff**ggggg**ffaa
+`, `
+Thing:
+aabafffffff
+gggggffaa
+`);
+
 test(`=====
 hi there`,`
  hi there
@@ -210,3 +229,13 @@ hiheeetrlog
 test(`========
 [c=hotkey]1[/c]) Load Character`,`
 1) Lad Caractr`, ALIGN.HCENTER | ALIGN.HFIT);
+
+test(`==============================================
+You have found a trap door with a keyhole labeled [c=cyan]10[/c].
+
+Unfortunately, you do not...
+`, `
+You have found a trap door with a keyhole labeled
+10.
+
+Unfortunately, you do not...`);

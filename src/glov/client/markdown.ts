@@ -30,6 +30,7 @@ import {
   markdown_default_font_styles,
   markdown_default_renderables,
   markdownLayoutFit,
+  markdownLayoutIsStartOfLine,
   markdownLayoutWrap,
   MarkdownRenderable,
 } from './markdown_renderables';
@@ -189,6 +190,7 @@ function didBreak(prev: MDDrawBlock, next: MDDrawBlock): boolean {
 
 function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDDrawBlock[] {
   let last_break_last_block = -1; // the index of the block that starts our non-breaking blob
+  let last_break_ret_len = -1; // if we wrap, where to slice `ret` down to
   let last_break_content_index = -1; // if that block is wrapped, the index we need to re-do layout() from
   let saved_param = null;
   let idx = 0;
@@ -215,6 +217,7 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
         let last_new_block = new_blocks[new_blocks.length - 1];
         if (!elem.break_post && !isStartOfLine(last_new_block)) {
           last_break_last_block = ret.length - 1;
+          last_break_ret_len = ret.length;
           last_break_content_index = idx + 1;
           saved_param = cloneLayoutCalcParam(param);
         } else {
@@ -223,9 +226,10 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
           saved_param = null;
         }
       } else {
-        if (!elem.break_post) {
+        if (!elem.break_post && !markdownLayoutIsStartOfLine(param)) {
           // no blocks (possibly formatting, possibly whitespace)
           last_break_last_block = -1;
+          last_break_ret_len = ret.length;
           last_break_content_index = idx;
           saved_param = cloneLayoutCalcParam(param);
         } else {
@@ -265,18 +269,18 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
     param = saved_param;
     markdownLayoutWrap(param);
     idx = last_break_content_index;
-    last_break_post = true;
+    ret = ret.slice(0, last_break_ret_len);
+    last_break_post = false;
     if (last_break_last_block !== -1) {
       let block_to_wrap = ret[last_break_last_block];
-      ret = ret.slice(0, last_break_last_block + 1);
       markdownLayoutFit(param, block_to_wrap.dims);
       assert(isStartOfLine(block_to_wrap));
-      last_break_last_block = -1;
-      last_break_content_index = -1;
-      saved_param = null;
     } else {
       // there was no block, but possibly whitespace, let it continue from the start of the line
     }
+    last_break_last_block = -1;
+    last_break_content_index = -1;
+    saved_param = null;
   }
 }
 
