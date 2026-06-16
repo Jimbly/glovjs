@@ -696,19 +696,17 @@ function markdownLayout(param: MarkdownStateCached & MarkdownLayoutParam): void 
     }
   }
   if (draw_blocks.length && (calc_param.align & (ALIGN.VCENTER | ALIGN.VBOTTOM))) {
-    if (verify(calc_param.h)) {
-      let yoffs = calc_param.h - maxy;
-      if (calc_param.align & ALIGN.VCENTER) {
-        yoffs -= miny;
-        yoffs *= 0.5;
-        if (calc_param.font.integral) {
-          yoffs = floor(yoffs);
-        }
+    let yoffs = calc_param.h - maxy;
+    if (calc_param.align & ALIGN.VCENTER) {
+      yoffs -= miny;
+      yoffs *= 0.5;
+      if (calc_param.font.integral) {
+        yoffs = floor(yoffs);
       }
-      for (let ii = 0; ii < draw_blocks.length; ++ii) {
-        let block = draw_blocks[ii];
-        block.dims.y += yoffs;
-      }
+    }
+    for (let ii = 0; ii < draw_blocks.length; ++ii) {
+      let block = draw_blocks[ii];
+      block.dims.y += yoffs;
     }
   }
   maxx = 0;
