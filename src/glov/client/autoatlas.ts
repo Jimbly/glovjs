@@ -299,6 +299,7 @@ class AutoAtlasImp {
       let tile_uvs = src_sprite.uvs as Vec4;
       v4copy(tile_uvs, dst_sprite.uvs as Vec4);
       src_sprite.uidata.rects = dst_sprite.uidata.rects;
+      src_sprite.uidata.aspect = dst_sprite.uidata.aspect;
       root_rects[tile_id] = tile_uvs;
       root_rects[tile_name] = tile_uvs;
 
