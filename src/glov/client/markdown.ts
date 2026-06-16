@@ -245,11 +245,10 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
       last_break_post = elem.break_post;
       continue;
     }
-    assert(last_block);
     let first_block = new_blocks[0];
     assert(first_block);
     let can_wrap = true;
-    if (last_break_content_index === -1) {
+    if (last_break_content_index === -1 || !last_block) {
       // but, this unbreakable sequence already started at the start of the line, let it slide
       can_wrap = false;
     }
@@ -266,6 +265,7 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
     param = saved_param;
     markdownLayoutWrap(param);
     idx = last_break_content_index;
+    last_break_post = true;
     if (last_break_last_block !== -1) {
       let block_to_wrap = ret[last_break_last_block];
       ret = ret.slice(0, last_break_last_block + 1);

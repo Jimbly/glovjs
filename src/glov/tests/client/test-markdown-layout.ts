@@ -83,7 +83,7 @@ function renderResult(cache: TestMDCache): string {
       for (let xx = 0; xx < dims.w; ++xx) {
         let c = dims.w >= text.length ? text[xx] || ' ' :
           text[Math.round(xx / dims.w * text.length)];
-        row[dims.x + xx] = c;
+        row[Math.round(dims.x + xx)] = c;
       }
     }
   }
@@ -205,3 +205,8 @@ hiheeetrlog
 // hiheeetrlog
 //    line
 // `, ALIGN.HWRAP | ALIGN.HCENTER | ALIGN.HFIT);
+
+// tests first element being non-breaking on both sides
+test(`========
+[c=hotkey]1[/c]) Load Character`,`
+1) Lad Caractr`, ALIGN.HCENTER | ALIGN.HFIT);
