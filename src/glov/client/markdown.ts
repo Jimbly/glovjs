@@ -111,6 +111,9 @@ type MDState = {
   cache: MDCache;
 };
 
+// exported just for unit tests
+export type TestMDCache = MDCache;
+
 export function markdownParseInvalidate(param: MarkdownStateParam): void {
   if (param.cache) {
     let state = param as MDState;
@@ -425,9 +428,10 @@ class MDBlockText implements MDLayoutBlock {
       if (ret.length) {
         let tail = ret[ret.length - 1];
         cursor.x = tail.dims.x + tail.dims.w;
-        // If possible, split this final block into a final word, for non-breaking purposes
+        // If possible, and if we don't already end with a breaking space, split
+        //   this final block into a final word, for non-breaking purposes.
         let last_space = tail.dims.text.lastIndexOf(' ');
-        if (last_space !== -1) {
+        if (last_space !== -1 && !this.break_post) {
           let first = tail.dims.text.slice(0, last_space + 1);
           let second = tail.dims.text.slice(last_space + 1);
           if (second) {

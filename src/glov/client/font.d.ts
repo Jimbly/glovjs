@@ -1,5 +1,6 @@
 import { Vec4 } from 'glov/common/vmath';
 import { LocalizableString } from './localization';
+import { Texture } from './sprites';
 
 type RGBA = number; // In the 0xRRGGBBAA format
 
@@ -68,8 +69,8 @@ interface FontDrawOpts {
   text: string | LocalizableString;
 }
 
-type FontLineWrapCallback = (x0: number, linenum: number, line: string, x1: number) => void;
-type Text = string | LocalizableString;
+export type FontLineWrapCallback = (x0: number, linenum: number, line: string, x1: number) => void;
+export type Text = string | LocalizableString;
 
 type StripOpts = { // default all to true if no `opts` option passed
   tab: boolean;
@@ -154,7 +155,10 @@ export interface Font {
   styleColored(base: FontStyle | null, color: RGBA): FontStyle;
 }
 
-export function fontCreate(font_info: unknown, texture_name: string): Font;
+export function fontCreate(font_info: unknown, texture_name: string | Texture): Font;
+
+// For unit tests
+export function fontTestInit(): void;
 
 // Legacy interfaces
 export function style(base: FontStyle | null, param: FontStyleParam): FontStyle;
