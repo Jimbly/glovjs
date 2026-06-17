@@ -1,6 +1,6 @@
 import assert from 'assert';
 import type { TSMap, WithRequired } from 'glov/common/types';
-import { clone, has } from 'glov/common/util';
+import { clone, has, merge } from 'glov/common/util';
 import verify from 'glov/common/verify';
 import {
   unit_vec,
@@ -208,7 +208,6 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
       return ret;
     }
     let last_block = ret[ret.length - 1];
-    let last_is_start_of_line = last_block && isStartOfLine(last_block);
     let new_blocks = elem.layout(param);
     if (last_break_post || elem.break_pre) {
       // break allowed before this element
@@ -263,10 +262,9 @@ function layoutChildren(content: MDLayoutBlock[], param: MDLayoutCalcParam): MDD
       last_break_post = elem.break_post;
       continue;
     }
-    assert(!last_is_start_of_line);
     assert(saved_param);
     // wrap the last draw block, then try again
-    param = saved_param;
+    merge(param, saved_param);
     markdownLayoutWrap(param);
     idx = last_break_content_index;
     ret = ret.slice(0, last_break_ret_len);

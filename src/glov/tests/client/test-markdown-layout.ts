@@ -1,4 +1,4 @@
-/* eslint import/order:off */
+/* eslint import/order:off, @stylistic/max-len:off */
 import 'glov/client/test'; // Must be first
 
 import assert from 'assert';
@@ -239,3 +239,33 @@ You have found a trap door with a keyhole labeled
 10.
 
 Unfortunately, you do not...`);
+
+// tests when the first block is at the start of the line, but a break has
+// happened between that first block and another block which is non-breaking
+test(`=================================================
+Due to [c=red]poor planning on your part[/c], you seem to have found yourself too deep to dig, and without enough [c=sp]Spell Points[/c] to cast a [c=cyan]Relocate[/c] or [c=cyan]Ascend[/c] spell.
+
+Since I'm so merciful, I will relocate you to another place!
+`, `
+Due to poor planning on your part, you seem to have
+found yourself too deep to dig, and without enough
+Spell Points to cast a Relocate or Ascend spell.
+
+Since I'm so merciful, I will relocate you to another
+place!`);
+
+// tests rewinding not affecting the layout state of the caller
+test(`===========
+This test wraps [c=red]on[/c] the first line. And then continues a paragraph for multiple lines.
+
+And then continues later.
+`, `
+This test wraps
+on the first
+line. And then
+continues a
+paragraph for
+multiple lines.
+
+And then
+continues later.`);
