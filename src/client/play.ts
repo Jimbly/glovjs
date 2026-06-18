@@ -1096,7 +1096,7 @@ export function playStartup(): void {
   crawlerEntityClientStartupEarly();
   let ent_factory = crawlerEntFactory<Entity>();
   aiTraitsClientStartup();
-  gameEntityTraitsCommonStartup(ent_factory);
+  gameEntityTraitsClientStartup(ent_factory);
   crawlerEntityTraitsClientStartup({
     name: 'EntityClient',
     Ctor: EntityClient,
