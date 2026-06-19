@@ -11,7 +11,7 @@ import { ALIGN, Font, FontStyle, Text } from './font';
 import { Box } from './geom_types';
 import { GlovSoundPlayOpts, SoundID, SoundLoadOpts } from './sound';
 import { SpotKeyable, SpotParam, SpotRet, SpotStateEnum } from './spot';
-import { Sprite, UISprite } from './sprites';
+import { BlendMode, Sprite, UISprite } from './sprites';
 import { UIStyle } from './uistyle';
 
 export type ColorSet = { _opaque: 'ColorSet' };
@@ -357,8 +357,6 @@ export function drawRect4Color(
   color_ll: ROVec4,
   color_lr: ROVec4,
 ): void;
-// TODO: import from sprites.js's types after conversion
-type BlendMode = 0 | 1 | 2; // BlendMode
 export function drawElipse(
   x0: number, y0: number,
   x1: number, y1: number,
