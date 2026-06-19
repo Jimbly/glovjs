@@ -113,6 +113,16 @@ export interface DrawHBoxParam extends UIBox {
 export function drawHBox(coords: DrawHBoxParam, s: Sprite, color?: ROVec4): void;
 export function drawVBox(coords: UIBox, s: Sprite, color?: ROVec4): void;
 export function drawBox(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): void;
+export type NinePatchPadX = {
+  x: number;
+  w: number;
+};
+export type NinePatchPadY = {
+  y: number;
+  h: number;
+};
+export type NinePatchPad = NinePatchPadX | NinePatchPadY | (NinePatchPadX & NinePatchPadY) | undefined;
+export function draw9Patch(coords: UIBox, s: Sprite, pixel_scale?: number, color?: ROVec4): NinePatchPad;
 export type UIBoxTiled = UIBox & {
   crop_last?: boolean; // otherwise, default, stretch the last
 };
@@ -234,7 +244,7 @@ export interface ButtonImageParam2 extends ButtonImageParamBase {
 }
 export type ButtonImageParam = ButtonImageParam1 | ButtonImageParam2;
 export function buttonShared(param: ButtonParam): ButtonRet;
-export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): void;
+export function buttonBackgroundDraw(param: ButtonParam, state: ButtonStateString): NinePatchPad;
 export function buttonSpotBackgroundDraw(param: ButtonParam, spot_state: SpotStateEnum): void;
 export function buttonSpotStateToButtonState(spot_state: SpotStateEnum): ButtonStateString;
 export function buttonTextDraw(param: ButtonTextParam, state: ButtonStateString, focused: boolean): void;

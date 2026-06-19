@@ -2,6 +2,7 @@ import { Vec4 } from 'glov/common/vmath';
 import { FontStyle, Text } from './font';
 import { ScrollAreaOpts } from './scroll_area';
 import { Sprite } from './sprites';
+import { NinePatchPad } from './ui';
 
 export type EngineStateFunc = (dt: number) => void;
 
@@ -51,8 +52,8 @@ export interface SelectionBoxDrawItemParams {
 }
 
 export type SelectionBoxDrawItemFunc = (params: SelectionBoxDrawItemParams) => void;
-export const selboxDefaultDrawItemBackground: SelectionBoxDrawItemFunc;
-export const selboxDefaultDrawItemText: SelectionBoxDrawItemFunc;
+export const selboxDefaultDrawItemBackground: (params: SelectionBoxDrawItemParams) => NinePatchPad;
+export const selboxDefaultDrawItemText: (params: SelectionBoxDrawItemParams, patch_pad?: NinePatchPad) => void;
 export const selboxDefaultDrawItem: SelectionBoxDrawItemFunc;
 
 export interface SelectionBoxDisplay {

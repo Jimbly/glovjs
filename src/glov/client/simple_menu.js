@@ -127,12 +127,12 @@ class GlovSimpleMenu {
         // slider_sound_release = this.sound_accept;
         let slider_width = sel_box.slider_w || 160;
         let slider_x = x + sel_box.width - slider_width - display.xpad;
-        let color = display.style_default.color_vec4;
+        let color = display.color_default;
         // if (display.style_default.color_mode == glov_font.COLOR_MODE.GRADIENT) {
         //   color = colorIntLerp(display.style_default.color_vec4, display.style_default.colorLR, 0.5);
         // }
         if (menu_item.disabled) {
-          color = display.style_disabled.color;
+          color = display.color_disabled;
         }
         menu_item.value = slider(menu_item.value, {
           x: slider_x,
