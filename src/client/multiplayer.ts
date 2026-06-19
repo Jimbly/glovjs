@@ -16,7 +16,7 @@ import {
   netSubs,
 } from 'glov/client/net';
 import * as net_position_manager from 'glov/client/net_position_manager';
-import * as particles from 'glov/client/particles';
+import { particlesPreloadData } from 'glov/client/particles';
 import 'glov/client/report'; // for command testing
 import { shaderCreate } from 'glov/client/shaders';
 import { socialInit } from 'glov/client/social';
@@ -132,7 +132,7 @@ export function main(): void {
 
   const sprite_size = 64;
   function initGraphics(): void {
-    particles.preloadParticleData(particle_data);
+    particlesPreloadData(particle_data);
 
     soundLoad('test');
 

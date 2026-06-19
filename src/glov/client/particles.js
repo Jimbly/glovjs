@@ -50,7 +50,7 @@ let def_fire = {
 };
 
 // Usage
-let system = glov_engine.glov_particles.createSystem(def_fire, [50, 50, Z.PARTICLES]);
+let system = particlesCreateSystem(def_fire, [50, 50, Z.PARTICLES]);
 system.updatePos(75, 75);
 system.killSoft(); // stops emitting and speeds up particles by kill_time_accel
 system.killHard(); // immediately stops drawing
@@ -65,6 +65,7 @@ const {
   vec2, v2copy, v2lerp, v2mul,
   vec3, vec4, v3add, v4copy, v4lerp, v4mul,
 } = require('glov/common/vmath.js');
+const { addAppPostTick } = require('./engine');
 const sprites = require('./sprites.js');
 const { textureLoad } = require('./textures.js');
 
@@ -73,7 +74,7 @@ const blend_map = {
   additive: sprites.BLEND_ADDITIVE,
 };
 
-export function preloadParticleData(particle_data) {
+export function particlesPreloadData(particle_data) {
   // Preload all referenced particle textures
   for (let key in particle_data.defs) {
     let def = particle_data.defs[key];
@@ -468,6 +469,16 @@ class ParticleManager {
   }
 }
 
-export function create() {
-  return new ParticleManager();
+let manager;
+function particlesTick(dt) {
+  manager.tick(dt);
+}
+
+export function particlesCreateSystem(defs, pos) {
+  return manager.createSystem(defs, pos);
+}
+
+export function particlesStartup() {
+  manager = new ParticleManager();
+  addAppPostTick(particlesTick);
 }

@@ -18,7 +18,7 @@ import {
   netInit,
   netSubs,
 } from 'glov/client/net';
-import * as particles from 'glov/client/particles';
+import { particlesPreloadData } from 'glov/client/particles';
 import { socialInit } from 'glov/client/social';
 import { spotSuppressPad } from 'glov/client/spot';
 import { Sprite, spriteCreate } from 'glov/client/sprites';
@@ -256,7 +256,7 @@ export function main(): void {
 
   const sprite_size = 48;
   function initGraphics(): void {
-    particles.preloadParticleData(particle_data);
+    particlesPreloadData(particle_data);
 
     sprite_entity = spriteCreate({
       name: 'entity',

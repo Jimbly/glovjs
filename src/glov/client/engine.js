@@ -107,7 +107,6 @@ const { profanityStartupLate } = require('./words/profanity.js');
 
 export let canvas;
 export let webgl2;
-export let glov_particles;
 
 export let width;
 export let height;
@@ -479,6 +478,11 @@ export function removeTickFunc(cb) {
     return true;
   }
   return false;
+}
+
+let app_post_tick_functions = [];
+export function addAppPostTick(cb) {
+  app_post_tick_functions.push(cb);
 }
 
 let pre_tick = [];
@@ -1189,7 +1193,10 @@ function tick(timestamp) {
 
   profilerStopStart('bottom');
   spotEndInput();
-  glov_particles.tick(dt); // *after* app_tick, so newly added/killed particles can be queued into the draw list
+  // *after* app_tick, so newly added/killed particles can be queued into the draw list
+  for (let ii = 0; ii < app_post_tick_functions.length; ++ii) {
+    app_post_tick_functions[ii](dt);
+  }
 
   if (had_3d_this_frame) {
     if (had_render_scale_3d_this_frame) {
@@ -1486,9 +1493,6 @@ export function startup(params) {
 
   window.addEventListener('blur', onBlur, false);
   window.addEventListener('focus', onFocus, false);
-
-  /* eslint-disable n/global-require */
-  glov_particles = require('./particles.js').create();
 
   if (is_pixely) {
     textureDefaultFilters(gl.NEAREST, gl.NEAREST);

@@ -29,7 +29,11 @@ import {
   padButtonDownEdge,
 } from 'glov/client/input';
 import { netInit } from 'glov/client/net';
-import * as particles from 'glov/client/particles';
+import {
+  particlesCreateSystem,
+  particlesPreloadData,
+  particlesStartup,
+} from 'glov/client/particles';
 import {
   scoreAlloc,
   scoreDebugFriendCode,
@@ -526,6 +530,8 @@ export function main(): void {
   }
   let font = engine.font;
 
+  particlesStartup();
+
   // const font = engine.font;
 
   // Perfect sizes for pixely modes
@@ -537,7 +543,7 @@ export function main(): void {
 
   const sprite_size = 64;
   function initGraphics(): void {
-    particles.preloadParticleData(particle_data);
+    particlesPreloadData(particle_data);
 
     soundLoad('test');
 
@@ -875,7 +881,7 @@ export function main(): void {
     if (flagGet('particles')) {
       if (getFrameTimestamp() - last_particles > 1000) {
         last_particles = getFrameTimestamp();
-        engine.glov_particles.createSystem(particle_data.defs.explosion,
+        particlesCreateSystem(particle_data.defs.explosion,
           //[test_character.x, test_character.y, Z.PARTICLES]
           [100 + Math.random() * 120, 100 + Math.random() * 140, Z.PARTICLES]
         );
