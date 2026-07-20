@@ -269,3 +269,16 @@ multiple lines.
 
 And then
 continues later.`);
+
+// This fails because the block at the layout level is is "second part",
+//   and we normally do wrapping within the text, but since the text did
+//   *not* wrap, and the layout level needs to wrap it, the whole
+//   block is wrapped.  Simplest fix would be to emit each word (or, at least,
+//   the last word) as separate blocks, but that has performance implications.
+// // test wrapping in the very end of a color block
+// test(`================
+// First part [c=cyan]second part[/c].
+// `, `
+// First part second
+// part.
+// `);
