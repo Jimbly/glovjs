@@ -282,3 +282,12 @@ continues later.`);
 // First part second
 // part.
 // `);
+
+// another similar one, with a more odd result (wraps a way-earlier-seeming block)
+// test(`=================================
+// You find the [c=cyan]Bottle of Essen Liquid[/c].
+// As you drink this legendary aaaaaaaa[c=green]test[/c]
+// `, `
+// You find the Bottle of Essen Liquid.
+// As you drink this legendary aaaaaaaatest
+// `);
