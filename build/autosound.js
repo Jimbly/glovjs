@@ -1,6 +1,6 @@
 const assert = require('assert');
 const path = require('path');
-const { asyncEach, asyncLimiter } = require('glov-async');
+const { asyncEach, asyncLimiter, asyncSeries } = require('glov-async');
 const gb = require('glov-build');
 
 const { max, min } = Math;
@@ -52,7 +52,7 @@ function steroToMono(channels) {
 
 module.exports = function (options) {
   options = options || {};
-  options.inputs = options.inputs || ['wav', 'mp3']; // priority order
+  options.inputs = options.inputs || ['wav', 'ogg', 'mp3']; // priority order
   options.outputs = options.outputs || ['ogg', 'mp3'];
   options.wav_max_size = options.wav_max_size || 512*1024;
   options.ogg_quality = options.ogg_quality || 0; // -1 ... 1
@@ -69,6 +69,8 @@ module.exports = function (options) {
   let mp3_decoder;
   let mp3_limiter;
   let VorbisEncoder;
+  let ogg_decoder;
+  let ogg_limiter;
   let lamejs;
   function autosoundInit(next) {
     if (all_exts.includes('wav')) {
@@ -83,19 +85,33 @@ module.exports = function (options) {
       // eslint-disable-next-line n/global-require
       lamejs = require('lamejs');
     }
-
-    if (options.inputs.includes('mp3')) {
-      mp3_limiter = asyncLimiter(1);
-      import('mpg123-decoder').then(function (mpg123_decoder) {
-        const { MPEGDecoder } = mpg123_decoder;
-        mp3_decoder = new MPEGDecoder();
-        mp3_decoder.ready.then(function () {
+    asyncSeries([
+      function (next) {
+        if (!options.inputs.includes('ogg')) {
+          return void next();
+        }
+        ogg_limiter = asyncLimiter(1);
+        import('@wasm-audio-decoders/ogg-vorbis').then(async function (lib) {
+          const { OggVorbisDecoder } = lib;
+          ogg_decoder = new OggVorbisDecoder();
+          await ogg_decoder.ready;
           next();
         });
-      });
-    } else {
-      next();
-    }
+      },
+      function (next) {
+        if (!options.inputs.includes('mp3')) {
+          return void next();
+        }
+        mp3_limiter = asyncLimiter(1);
+        import('mpg123-decoder').then(function (mpg123_decoder) {
+          const { MPEGDecoder } = mpg123_decoder;
+          mp3_decoder = new MPEGDecoder();
+          mp3_decoder.ready.then(function () {
+            next();
+          });
+        });
+      },
+    ], next);
   }
 
   function acquireMP3Decoder(next) {
@@ -158,15 +174,31 @@ module.exports = function (options) {
       function readInput(next) {
         if (my_ext === 'mp3') {
           acquireMP3Decoder(function () {
-            next(mp3_decoder.decode(file.contents));
+            next(null, mp3_decoder.decode(file.contents));
+          });
+        } else if (my_ext === 'ogg') {
+          ogg_limiter(function (release) {
+            function done2(err, decode_ret) {
+              function done3() {
+                release();
+                next(err, decode_ret);
+              }
+              ogg_decoder.reset().then(done3, done3);
+            }
+            ogg_decoder.decodeFile(file.contents).then(function (decode_ret) {
+              done2(null, decode_ret);
+            }, done2);
           });
         } else {
           assert.equal(my_ext, 'wav');
-          next(wav.decode(file.contents));
+          next(null, wav.decode(file.contents));
         }
       }
 
-      readInput(function (decode_ret) {
+      readInput(function (err, decode_ret) {
+        if (err) {
+          return void done(err);
+        }
         let channels = decode_ret.channelData;
         let nch = channels.length;
         let sample_rate = decode_ret.sampleRate;

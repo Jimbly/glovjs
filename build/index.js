@@ -622,7 +622,7 @@ gb.task({
   target: 'dev',
   ...gbcache({
     key: 'autosound',
-    version: 1,
+    version: 2,
   }, autosound(config.client_autosound_config)),
 });
 

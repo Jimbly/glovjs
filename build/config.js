@@ -36,13 +36,13 @@ module.exports = function (gb) {
       '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
     ],
     client_autosound: [
+      'client/sounds/**/*.ogg',
       'client/sounds/**/*.wav',
       'client/sounds/**/*.mp3',
     ],
     client_autosound_config: null, // default: wav to 512kb, mp3 at 128kbps, ogg
     client_static: [
       'client/**/*.webm',
-      'client/**/*.ogg',
       // 'client/**/*.png',
       'client/**/*.jpg',
       'client/**/*.glb',
