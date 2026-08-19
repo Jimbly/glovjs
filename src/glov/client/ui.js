@@ -196,7 +196,7 @@ export function getUIElemData(type, param, allocator) {
   let elem_data = by_type[key];
   if (!elem_data) {
     elem_data = by_type[key] = allocator ? allocator(param) : {};
-    uiElemAllocCheck();
+    // uiElemAllocCheck();
   }
   elem_data.frame_index = glov_engine.frame_index;
   return elem_data;
