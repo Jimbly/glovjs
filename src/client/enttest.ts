@@ -168,7 +168,7 @@ const SPEED = 0.2;
 let sprite_entity: Sprite;
 let sprite_game_bg: Sprite;
 
-const account_ui = createAccountUI();
+let account_ui: ReturnType<typeof createAccountUI>;
 let chat_ui: ReturnType<typeof chatUICreate>;
 
 let test_character = { pos: vec2(), rot: 0 };
@@ -217,6 +217,7 @@ export function main(): void {
     return;
   }
 
+  account_ui = createAccountUI();
   chat_ui = chatUICreate({ max_len: 1000 });
 
   entity_manager = clientEntityManagerCreate<EntityTestClient>({
