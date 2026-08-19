@@ -740,6 +740,7 @@ export type ChatUIParam = {
 export type ChatUIRunParam = Partial<{
   x: number;
   y: number;
+  w: number; // temporary override doesn't change ChatUI::w
   hide: boolean;
   hide_input: boolean; // if hide=false, hide unfocused text input anyway
   border: number;
@@ -750,7 +751,7 @@ export type ChatUIRunParam = Partial<{
 }>;
 
 class ChatUI {
-  private w: number;
+  readonly w: number;
   readonly h: number;
   private edit_text_entry: EditBox;
   channel: ClientChannelWorker | null = null;
@@ -1419,7 +1420,7 @@ class ChatUI {
     const y1 = y0 + this.h;
     let x = x0 + border;
     let y = y1;
-    let outer_w = this.w;
+    let outer_w = opts.w || this.w;
     let was_focused = this.isFocused();
     let z = this.z_override || (was_focused ? Z.CHAT_FOCUSED : Z.CHAT);
     this.z_override = null;
@@ -1790,7 +1791,7 @@ class ChatUI {
       viewport = {
         x,
         y: y - max_h,
-        w: this.w,
+        w: outer_w,
         h: max_h,
       };
       for (let ii = 0; ii < this.msgs.length; ++ii) {
