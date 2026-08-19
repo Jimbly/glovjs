@@ -26,7 +26,7 @@ import {
 } from 'glov/common/entity_base_common';
 import { Packet } from 'glov/common/packet';
 import { EventEmitter } from 'glov/common/tiny-events';
-import { DataObject, NetErrorCallback } from 'glov/common/types';
+import { DataObject, NetErrorCallback, Rec } from 'glov/common/types';
 import { ridx } from 'glov/common/util';
 import * as engine from './engine';
 import {
@@ -47,9 +47,12 @@ export type EntCreateFunc<
   Entity extends EntityBaseClient,
 > = (data: DataObject) => Entity;
 
+export type EntityIndexFn<Entity extends EntityBaseClient> = (ent: Entity) => string | number;
+
 interface ClientEntityManagerBaseOpts<Entity extends EntityBaseClient> {
   on_broadcast?: (data: EntityManagerEvent) => void;
   create_func: EntCreateFunc<Entity>;
+  indices?: EntityIndexFn<Entity>[];
 
   channel?: ClientChannelWorker;
 }
@@ -72,6 +75,9 @@ export interface ClientEntityManagerInterface<Entity extends EntityBaseClient=an
   tick(): void;
   checkNet(): boolean;
   isOnline(): boolean;
+
+  indexedGet(index: number, key: string | number): Rec<EntityID, Entity>;
+  indexUpdate(ent: Entity, remove?: boolean): void;
 
   // Online only
   actionSendQueued(
@@ -236,6 +242,12 @@ class ClientEntityManagerImpl<
     this.reinit(options);
 
     this.frame_wall_time = walltime();
+
+    if (options.indices) {
+      for (let ii = 0; ii < options.indices.length; ++ii) {
+        this.indexAdd(options.indices[ii]);
+      }
+    }
   }
 
   reinit(options: Partial<ClientEntityManagerBaseOpts<Entity>>): void {
@@ -846,6 +858,28 @@ class ClientEntityManagerImpl<
   setMyEntID(): void {
     assert(false, 'Offline only');
   }
+
+  indices: EntityIndexFn<Entity>[] = [];
+  indexAdd(indexer: EntityIndexFn<Entity>): number {
+    this.indices.push(indexer);
+    return this.indices.length - 1;
+  }
+  indexedGet(index: number, key: string | number): Rec<EntityID, Entity> {
+    // TODO: efficient implementation if needed online - just share code with offline manager?
+    let fn = this.indices[index];
+    let ret: Rec<EntityID, Entity> = {};
+    for (let ent_id in this.entities) {
+      let ent = this.entities[ent_id]!;
+      if (fn(ent) === key) {
+        ret[ent_id as unknown as EntityID] = ent;
+      }
+    }
+    return ret;
+  }
+  indexUpdate(ent: Entity, remove?: boolean): void {
+    // TODO: efficient implementation if needed online
+  }
+
 }
 
 export function clientEntityManagerCreate<Entity extends EntityBaseClient>(

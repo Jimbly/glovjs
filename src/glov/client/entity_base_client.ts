@@ -56,6 +56,7 @@ export class EntityBaseClient extends EntityBaseCommon {
   data_overrides: DataOverride[];
   fade: number | null;
   last_update_timestamp: number;
+  index_key: undefined | (string|number)[];
 
   constructor(data: EntityBaseDataCommon) {
     super(data);
@@ -271,6 +272,11 @@ export class EntityBaseClient extends EntityBaseCommon {
       }
     }
     return false;
+  }
+
+  // note: should not generally be called manually, use actions instead
+  indexUpdate(): void {
+    this.entity_manager.indexUpdate(this);
   }
 
   // Expected to be overridden by app

@@ -12,14 +12,14 @@ import {
   EntityManagerEvent,
 } from 'glov/common/entity_base_common';
 import { EventEmitter } from 'glov/common/tiny-events';
-import { DataObject, NetErrorCallback } from 'glov/common/types';
-import { callEach, ridx } from 'glov/common/util';
+import { DataObject, NetErrorCallback, Rec } from 'glov/common/types';
+import { callEach, deepEqual, ridx } from 'glov/common/util';
 import * as engine from './engine';
 import {
   ClientActionMessageParam,
   EntityBaseClient,
 } from './entity_base_client';
-import { ClientEntityManagerInterface } from './entity_manager_client';
+import { ClientEntityManagerInterface, EntityIndexFn } from './entity_manager_client';
 const walltime: () => number = require('./walltime.js');
 
 const { max, min, round } = Math;
@@ -31,6 +31,7 @@ export type EntCreateFunc<
 export interface OfflineEntityManagerOpts<Entity extends EntityBaseClient> {
   on_broadcast?: (data: EntityManagerEvent) => void;
   create_func: EntCreateFunc<Entity>;
+  indices?: EntityIndexFn<Entity>[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +69,12 @@ class OfflineEntityManagerImpl<
     this.reinit(options);
 
     this.frame_wall_time = walltime();
+
+    if (options.indices) {
+      for (let ii = 0; ii < options.indices.length; ++ii) {
+        this.indexAdd(options.indices[ii]);
+      }
+    }
   }
 
   reinit(options: Partial<OfflineEntityManagerOpts<Entity>>): void {
@@ -81,6 +88,9 @@ class OfflineEntityManagerImpl<
 
   private reinitInternal(): void {
     this.entities = {};
+    for (let ii = 0; ii < this.indexed_sets.length; ++ii) {
+      this.indexed_sets[ii] = {};
+    }
     this.fading_ents = [];
     this.my_ent_id = 0;
     this.received_ent_start = false;
@@ -92,8 +102,11 @@ class OfflineEntityManagerImpl<
   }
 
   private finalizeDelete(ent_id: EntityID): void {
+    let ent = this.entities[ent_id];
+    assert(ent);
     this.emit('ent_delete', ent_id);
     delete this.entities[ent_id];
+    this.indexUpdate(ent, true);
   }
 
   tick(): void {
@@ -296,10 +309,12 @@ class OfflineEntityManagerImpl<
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       new_ent.entity_manager = this as any; // HACK
       // Invalidate old ent
+      this.indexUpdate(ent, true);
       ent.id = 0;
       ent.entity_manager = null!;
       new_ent.onCreate(false);
       entities[ent_id_string] = new_ent;
+      this.indexUpdate(new_ent, false);
       ret.push(new_ent);
     }
     return ret;
@@ -314,6 +329,7 @@ class OfflineEntityManagerImpl<
     resp_func?: NetErrorCallback<unknown>,
   ): void {
     assert(action.data_assignments); // Otherwise, definitely won't do anything
+    this.indexUpdate(action.ent);
     this.action_queue.push(() => {
       let ent = action.ent;
       let data = ent.data as DataObject;
@@ -325,6 +341,7 @@ class OfflineEntityManagerImpl<
           dotPropSet(data, key, value);
         }
       }
+      this.indexUpdate(ent);
       this.emit('ent_update', ent.id);
       if (resp_func) {
         resp_func(null);
@@ -352,6 +369,7 @@ class OfflineEntityManagerImpl<
     // assert(!ent.is_player);
     // ent.fixupPostLoad();
     this.entities[ent.id] = ent;
+    this.indexUpdate(ent);
 
     let fade_in_time = ent.onCreate(true);
     if (fade_in_time) {
@@ -364,6 +382,68 @@ class OfflineEntityManagerImpl<
 
   addClientOnlyEntityFromSerialized(data: DataObject): Entity {
     assert(false, 'Online-only');
+  }
+
+  indices: EntityIndexFn<Entity>[] = [];
+  indexed_sets: Rec<string | number, Rec<EntityID, Entity>>[] = [];
+  indexAdd(indexer: EntityIndexFn<Entity>): number {
+    this.indices.push(indexer);
+    this.indexed_sets.push({});
+    return this.indices.length - 1;
+  }
+  indexedGetFast(index: number, key: string | number): Rec<EntityID, Entity> {
+    let set = this.indexed_sets[index];
+    return set[key] || {};
+  }
+  indexedGetSlow(index: number, key: string | number): Rec<EntityID, Entity> {
+    let fn = this.indices[index];
+    let ret: Rec<EntityID, Entity> = {};
+    for (let ent_id in this.entities) {
+      let ent = this.entities[ent_id]!;
+      if (fn(ent) === key) {
+        ret[ent_id as unknown as EntityID] = ent;
+      }
+    }
+    return ret;
+  }
+  indexedGetDebug(index: number, key: string | number): Rec<EntityID, Entity> {
+    let r1 = this.indexedGetFast(index, key);
+    let r2 = this.indexedGetSlow(index, key);
+    let keys1 = Object.keys(r1);
+    let keys2 = Object.keys(r2);
+    keys1.sort();
+    keys2.sort();
+    assert(deepEqual(keys1, keys2));
+    return r1;
+  }
+  indexedGet = engine.defines.INDEX ? this.indexedGetDebug : this.indexedGetFast;
+
+  indexUpdate(ent: Entity, remove?: boolean): void {
+    if (!ent.index_key) {
+      ent.index_key = [];
+    }
+    let ent_id = ent.id;
+    for (let ii = 0; ii < this.indices.length; ++ii) {
+      let fn = this.indices[ii];
+      let set = this.indexed_sets[ii];
+      let key = fn(ent);
+      let oldkey = ent.index_key[ii];
+      if (remove || oldkey !== key) {
+        if (oldkey !== undefined) {
+          if (set[oldkey]) {
+            delete set[oldkey][ent_id];
+          }
+        }
+        if (!remove) {
+          let subset = set[key];
+          if (!subset) {
+            set[key] = subset = {};
+          }
+          subset[ent_id] = ent;
+          ent.index_key[ii] = key;
+        }
+      }
+    }
   }
 }
 
