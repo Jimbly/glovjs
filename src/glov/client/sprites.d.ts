@@ -38,6 +38,7 @@ export interface Texture {
   ): void;
   setSamplerState(opts: TextureOptions): void;
   onLoad(cb: (tex: Texture) => void): void;
+  getTexSizeShaderParams(): { tex0_size: ROVec4 } & ShaderParams; // returns { tex0_size: [w, h, 1/w, 1/h] }
 }
 
 export type ShaderParams = TSMap<number[]|ROVec1|ROVec2|ROVec3|ROVec4>;

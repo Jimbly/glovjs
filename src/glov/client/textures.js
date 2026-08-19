@@ -27,6 +27,7 @@ import {
   nextHighestPowerOfTwo,
   ridx,
 } from 'glov/common/util';
+import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
 import * as engine from './engine';
 import { fetch } from './fetch';
@@ -268,6 +269,7 @@ Texture.prototype.updateGPUMem = function () {
   let diff = new_size - this.gpu_mem;
   engine.perf_state.gpu_mem.tex += diff;
   this.gpu_mem = diff;
+  this.tex_size_shader_params = null;
 };
 
 function bindForced(tex) {
@@ -285,6 +287,26 @@ export function textureFilterKey(params) {
   let force_mipmaps = params.force_mipmaps ? 1 : 0;
   return (((filter_min * 77 + filter_mag) * 77 + wrap_s) * 77 + wrap_t) * 77 + force_mipmaps;
 }
+
+let tex_size_shader_params_cache = {};
+function getTexSizeShaderParams(w, h) {
+  if (!tex_size_shader_params_cache[w]) {
+    tex_size_shader_params_cache[w] = {};
+  }
+  let row = tex_size_shader_params_cache[w];
+  if (!row[h]) {
+    row[h] = { tex0_size: vec4(w, h, 1/w, 1/h) };
+  }
+  return row[h];
+}
+
+Texture.prototype.getTexSizeShaderParams = function () {
+  let v = this.tex_size_shader_params;
+  if (!v) {
+    v = this.tex_size_shader_params = getTexSizeShaderParams(this.width, this.height);
+  }
+  return v;
+};
 
 Texture.prototype.setSamplerState = function (params) {
   let target = this.target;
