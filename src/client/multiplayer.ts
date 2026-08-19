@@ -4,6 +4,7 @@ import * as local_storage from 'glov/client/local_storage';
 local_storage.setStoragePrefix('glovjs-multiplayer'); // Before requiring anything else that might load from this
 
 import assert from 'assert';
+import { autoAtlas } from 'glov/client/autoatlas';
 import { chatUICreate } from 'glov/client/chat_ui';
 import { cmd_parse } from 'glov/client/cmds';
 import * as engine from 'glov/client/engine';
@@ -131,6 +132,7 @@ export function main(): void {
   const PAD = input.PAD;
 
   const sprite_size = 64;
+  const sprite_origin = vec2(0.5, 0.5);
   function initGraphics(): void {
     particlesPreloadData(particle_data);
 
@@ -141,23 +143,15 @@ export function main(): void {
     sprites.test = spriteCreate({
       name: 'test',
       size: vec2(sprite_size, sprite_size),
-      origin: vec2(0.5, 0.5),
-    });
-    sprites.test_tint = spriteCreate({
-      name: 'tinted',
-      ws: [16, 16, 16, 16],
-      hs: [16, 16, 16],
-      size: vec2(sprite_size, sprite_size),
-      layers: 2,
-      origin: vec2(0.5, 0.5),
+      origin: sprite_origin,
     });
     animation = spriteAnimationCreate({
       idle_left: {
-        frames: [0,1],
+        frames: ['left0','left1'],
         times: [200, 500],
       },
       idle_right: {
-        frames: [3,2],
+        frames: ['right0','right1'],
         times: [200, 500],
       },
     });
@@ -269,14 +263,17 @@ export function main(): void {
         },
       });
 
-      sprites.test_tint.drawDualTint({
+      autoAtlas('test', animation.getFrame(dt) as string).withSamplerState({
+        filter_mag: gl.NEAREST,
+      }).withOrigin(sprite_origin).drawDualTint({
         x: test_character.x,
         y: test_character.y,
+        w: sprite_size,
+        h: sprite_size,
         z: Z.SPRITES,
         rot: test_character.rot,
         color: [1, 1, 0, 1],
         color1: [1, 0, 1, 1],
-        frame: animation.getFrame(dt),
       });
 
       // Draw other users
