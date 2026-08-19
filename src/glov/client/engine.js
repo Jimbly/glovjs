@@ -40,6 +40,10 @@ const glov_font = require('./font.js');
 const { fontTick } = glov_font;
 const { framebufferStart, framebufferEndOfFrame } = require('./framebuffer.js');
 const { geomResetState, geomStartup } = require('./geom.js');
+const {
+  glDepthTest,
+  glScissorTest,
+} = require('./glstate');
 const input = require('./input.js');
 const { inputAllowAllEvents } = require('./input.js');
 const local_storage = require('./local_storage.js');
@@ -846,7 +850,7 @@ export function start3DRendering(opts) {
   }
   blendModeReset(true);
   gl.enable(gl.BLEND);
-  gl.enable(gl.DEPTH_TEST);
+  glDepthTest(true);
   gl.depthMask(true);
   let backbuffer_width = width_3d;
   let backbuffer_height = height_3d;
@@ -876,7 +880,7 @@ export function start3DRendering(opts) {
 
 function renderScaleFinish() {
   if (defines.NOCOPY) {
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     v4set(viewport, 0, 0, width, height);
     gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
   } else {
@@ -893,7 +897,7 @@ export function startSpriteRendering() {
   gl.disable(gl.CULL_FACE);
   blendModeReset(true);
   gl.enable(gl.BLEND);
-  gl.disable(gl.DEPTH_TEST);
+  glDepthTest(false);
   gl.depthMask(false);
   spriteDrawReset();
 }
@@ -942,16 +946,14 @@ function resetState() {
   blendModeReset(true);
   // gl.disable(gl.BLEND);
   gl.enable(gl.BLEND);
-  // gl.disable(gl.DEPTH_TEST);
-  gl.enable(gl.DEPTH_TEST);
+  glDepthTest(true);
   // gl.depthMask(false);
   gl.depthMask(true);
   // gl.disable(gl.CULL_FACE);
   gl.enable(gl.CULL_FACE);
   // gl.depthFunc(gl.GEQUAL);
   gl.depthFunc(gl.LEQUAL);
-  // gl.enable(gl.SCISSOR_TEST);
-  gl.disable(gl.SCISSOR_TEST);
+  glScissorTest(false);
   // gl.cullFace(gl.FRONT);
   gl.cullFace(gl.BACK);
   gl.viewport(0, 0, width, height);
@@ -1478,7 +1480,7 @@ export function startup(params) {
   render_pixel_perfect = params.pixel_perfect || 0;
 
   gl.depthFunc(gl.LEQUAL);
-  // gl.enable(gl.SCISSOR_TEST);
+  // glScissorTest(true);
   gl.cullFace(gl.BACK);
   gl.clearColor(0, 0.1, 0.2, 1);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); // Allow RGB texture data with non-mult-4 widths

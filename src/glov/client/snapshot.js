@@ -27,6 +27,10 @@ import { getFrameIndex } from './engine';
 import { framebufferCapture } from './framebuffer';
 import * as geom from './geom';
 import {
+  glDepthTest,
+  glScissorTest,
+} from './glstate';
+import {
   qRotateZ,
   qTransformVec3,
   quat,
@@ -67,7 +71,7 @@ export function viewportRenderPrepare(param) {
 
   blendModeSet(BLEND_ALPHA);
   gl.enable(gl.BLEND);
-  gl.enable(gl.DEPTH_TEST);
+  glDepthTest(true);
   gl.depthMask(true);
   gl.enable(gl.CULL_FACE);
 
@@ -79,7 +83,7 @@ export function viewportRenderPrepare(param) {
 
 export function viewportRenderFinish(param) {
   const { post } = param;
-  gl.disable(gl.SCISSOR_TEST);
+  glScissorTest(false);
   if (post) {
     post();
   }

@@ -36,6 +36,7 @@ const camera2d = require('./camera2d.js');
 const { dynGeomQueueSprite } = require('./dyn_geom.js');
 const engine = require('./engine.js');
 const geom = require('./geom.js');
+const { glScissorTest } = require('./glstate');
 const { cos, max, min, round, sin } = Math;
 const {
   textureCmpArray,
@@ -519,7 +520,7 @@ function clipCoordsDom(x, y, w, h) {
 let active_scissor = null;
 function scissorSet(scissor) {
   if (!active_scissor) {
-    gl.enable(gl.SCISSOR_TEST);
+    glScissorTest(true);
   }
   let [x, y, w, h] = scissor;
   if (!verify(w >= 0)) {
@@ -532,7 +533,7 @@ function scissorSet(scissor) {
   active_scissor = scissor;
 }
 function scisssorClear() {
-  gl.disable(gl.SCISSOR_TEST);
+  glScissorTest(false);
   active_scissor = null;
 }
 
@@ -845,7 +846,7 @@ function finishDraw() {
 
 export function spriteDrawReset() {
   if (active_scissor) {
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     active_scissor = null;
   }
 }

@@ -5,6 +5,7 @@ const { is_ios } = require('./browser.js');
 const { cmd_parse } = require('./cmds.js');
 const { applyCopy } = require('./effects.js');
 const engine = require('./engine.js');
+const { glScissorTest } = require('./glstate');
 const { renderWidth, renderHeight } = engine;
 const perf = require('./perf.js');
 const settings = require('./settings.js');
@@ -194,7 +195,7 @@ export function framebufferStart(opts) {
     } else if (clear_color) {
       gl.clearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
     }
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
     gl.clear(gl.COLOR_BUFFER_BIT | (need_depth ? gl.DEPTH_BUFFER_BIT : 0));
   }
   let need_scissor;
@@ -210,7 +211,7 @@ export function framebufferStart(opts) {
     need_scissor = width !== engine.width;
   }
   if (need_scissor) { // Note: previously `&& !settings.use_fbos`, but that seems wrong, why was it there?
-    gl.enable(gl.SCISSOR_TEST);
+    glScissorTest(true);
     let x;
     let y;
     let w;
@@ -231,7 +232,7 @@ export function framebufferStart(opts) {
     }
     gl.scissor(x, y, w, h);
   } else {
-    gl.disable(gl.SCISSOR_TEST);
+    glScissorTest(false);
   }
   if (clear && (!clear_all || clear_all_color)) {
     if (clear_color) {
