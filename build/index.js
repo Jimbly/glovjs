@@ -248,7 +248,7 @@ gb.task({
   input: config.client_png,
   ...gbcache({
     key: 'alphafix',
-    version: 1,
+    version: 3,
   }, alphafix(config.client_png_alphafix)),
 });
 

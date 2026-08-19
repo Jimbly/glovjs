@@ -21,13 +21,29 @@ function gbif(globs, fn) {
   };
 }
 
-module.exports = function (globs) {
+module.exports = function (config) {
+  assert(!Array.isArray(config)); // old style
+  let { globs, rules } = config;
+  rules = rules || {};
   function imgproc(job, done) {
     let file = job.getFile();
     let { err, img: pngin } = pngRead(file.contents);
     if (err) {
       return void done(err);
     }
+    let alpha_channel = 8; // bitmask
+    for (let key in rules) {
+      if (micromatch(file.relative, [key]).length) {
+        alpha_channel = rules[key];
+      }
+    }
+    let alpha_channels = [];
+    for (let ii = 0; ii < 4; ++ii) {
+      if (alpha_channel & (1 << ii)) {
+        alpha_channels.push(ii);
+      }
+    }
+
     let { width, height, data } = pngin;
     assert.equal(width * height * 4, data.length);
     let dim = width * height;
@@ -56,7 +72,15 @@ module.exports = function (globs) {
       }
     }
     for (let idx = 0; idx < dim; ++idx) {
-      if (data[idx*4 + 3]) {
+      let solid = false;
+      for (let ii = 0; ii < alpha_channels.length; ++ii) {
+        let offs = alpha_channels[ii];
+        if (data[idx*4 + offs]) {
+          solid = true;
+          break;
+        }
+      }
+      if (solid) {
         queued[idx] = 1;
         is_solid[idx] = 1;
         addNeighbors(idx);
@@ -87,40 +111,56 @@ module.exports = function (globs) {
       let r = 0;
       let g = 0;
       let b = 0;
+      let a = 0;
       if (x > 0 && is_solid[idx - 1]) {
         r += data[idx*4-4];
         g += data[idx*4-3];
         b += data[idx*4-2];
+        a += data[idx*4-1];
         c++;
       }
       if (x < width-1 && is_solid[idx + 1]) {
         r += data[idx*4+4];
         g += data[idx*4+5];
         b += data[idx*4+6];
+        a += data[idx*4+7];
         c++;
       }
       if (y > 0 && is_solid[idx - width]) {
         r += data[(idx-width)*4];
         g += data[(idx-width)*4+1];
         b += data[(idx-width)*4+2];
+        a += data[(idx-width)*4+3];
         c++;
       }
       if (y < height-1 && is_solid[idx + width]) {
         r += data[(idx+width)*4];
         g += data[(idx+width)*4+1];
         b += data[(idx+width)*4+2];
+        a += data[(idx+width)*4+3];
         c++;
       }
       assert(c);
       r = round(r/c);
       g = round(g/c);
       b = round(b/c);
-      diff ||= data[idx*4] !== r;
-      diff ||= data[idx*4+1] !== g;
-      diff ||= data[idx*4+2] !== b;
-      data[idx*4] = r;
-      data[idx*4+1] = g;
-      data[idx*4+2] = b;
+      a = round(a/c);
+      if (!(alpha_channel & 1)) {
+        diff ||= data[idx*4] !== r;
+        data[idx*4] = r;
+      }
+      if (!(alpha_channel & 2)) {
+        diff ||= data[idx*4+1] !== g;
+        data[idx*4+1] = g;
+      }
+      if (!(alpha_channel & 4)) {
+        diff ||= data[idx*4+2] !== b;
+        data[idx*4+2] = b;
+      }
+      if (!(alpha_channel & 8)) {
+        diff ||= data[idx*4+3] !== a;
+        data[idx*4+3] = a;
+      }
       addNeighbors(idx);
       solid_mark.push(idx);
     }
@@ -142,6 +182,7 @@ module.exports = function (globs) {
     func: gbif(globs, imgproc),
     version: [
       globs,
+      rules,
       imgproc,
     ],
   };

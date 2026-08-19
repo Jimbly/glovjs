@@ -30,11 +30,16 @@ module.exports = function (gb) {
       '!client/atlases/**',
       'client_autoatlas:**/*.png',
     ],
-    client_png_alphafix: [
-      '**',
-      '!client/spine/**/*.png', // Already has appropriate color channel
-      '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
-    ],
+    client_png_alphafix: {
+      globs: [
+        '**',
+        '!client/spine/**/*.png', // Already has appropriate color channel
+        '!client/img/font/*.png', // Should already be imagemin'd, do not bloat this
+      ],
+      rules: {
+      // '**/*_1.png': 3, // ex: treat the RED+GREEN channels as if they were an alpha channel
+      },
+    },
     client_autosound: [
       'client/sounds/**/*.ogg',
       'client/sounds/**/*.wav',
