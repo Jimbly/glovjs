@@ -836,6 +836,9 @@ export function start3DRendering(opts) {
   opts = opts || {};
   if (opts.width) {
     set3DRenderResolution(opts.width, opts.height);
+    if (opts.render_aspect) {
+      render_aspect = opts.render_aspect;
+    }
   } else if (!render_width) {
     set3DRenderResolution(width, height);
     // if rendering without a viewport, assume we want the FOV applied to the game aspect
