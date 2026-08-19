@@ -9,7 +9,12 @@ export const FADE = FADE_OUT + FADE_IN;
 import assert from 'assert';
 import type { ErrorCallback, TSMap } from 'glov/common/types';
 import { callEach, defaults, empty, merge, ridx } from 'glov/common/util';
-import type { ROVec3 } from 'glov/common/vmath';
+import {
+  JSVec3,
+  type ROVec3,
+  v3copy,
+  v3distSq,
+} from 'glov/common/vmath';
 import { is_firefox, is_itch_app } from './browser';
 import { cmd_parse } from './cmds';
 import { onEnterBackground, onExitBackground } from './engine';
@@ -215,15 +220,28 @@ export function soundOnLoadFail(cb: (base: string) => void): void {
   on_load_fail = cb;
 }
 
+let last_pos: JSVec3 = [0, 0, 0];
+let last_forward: JSVec3 = [0, 0, 0];
+let last_up: JSVec3 = [0, 0, 0];
 export function sound3DListener(param: {
   pos: ROVec3;
   forward?: ROVec3;
   up?: ROVec3;
 }): void {
   const { pos, forward, up } = param;
-  Howler.pos(pos[0], pos[1], pos[2]);
+  if (v3distSq(last_pos, pos) > 0.01) {
+    Howler.pos(pos[0], pos[1], pos[2]);
+    v3copy(last_pos, pos);
+  }
+
   if (forward && up) {
-    Howler.orientation(forward[0], forward[1], forward[2], up[0], up[1], up[2]);
+    if (v3distSq(last_forward, forward) > 0.01 ||
+      v3distSq(last_up, up) > 0.01
+    ) {
+      Howler.orientation(forward[0], forward[1], forward[2], up[0], up[1], up[2]);
+      v3copy(last_forward, forward);
+      v3copy(last_up, up);
+    }
   }
 }
 
