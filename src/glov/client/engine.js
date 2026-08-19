@@ -240,12 +240,16 @@ export function setGameDims(w, h) {
 
 // Didn't need this for a while, but got slow on iOS recently :(
 // Better when using FBOs for postprocessing now, though!
-const postprocessing_reset_version = '6';
-let postprocessing_allow_disable = true;
+// It's been a while since these iOS devices were common though, disabling this feature until proven needed again
+const postprocessing_reset_version = '7';
+let postprocessing_allow_disable = false;
 export let postprocessing = local_storage.get('glov_no_postprocessing') !== postprocessing_reset_version || true;
-export function postprocessNeverDisable() {
+export function postprocessNeverDisable() { // now the default
   postprocessing_allow_disable = false;
   postprocessing = true;
+}
+export function postprocessAutoDisable() {
+  postprocessing_allow_disable = true;
 }
 export function postprocessingAllow(allow) {
   if (postprocessing_allow_disable) {
