@@ -67,6 +67,7 @@ export interface SpotParamBase {
   // should retain focus even without mouseover)
   focus_steal: boolean;
   sticky_focus: boolean; // focus is not lost due to mouseover elsewhere
+  focus_upon_activation: boolean; // set focus if this spot is activated (e.g. on menus, not on toggle buttons)
   // optional map of SPOT_NAV_* to either:
   //   null: indicates the spot should not do navigation, but allow the caller to handle (sets param.out.nav)
   //   undefined: indicates navigation should target nothing (and those keys will not be consumed)
@@ -96,6 +97,7 @@ export const SPOT_DEFAULT = {
   hotpad: null,
   focus_steal: false,
   sticky_focus: false,
+  focus_upon_activation: false,
   custom_nav: null,
 };
 
@@ -1304,6 +1306,8 @@ export function spot(param: SpotParam): SpotRet {
   const touch_focuses = param.touch_focuses === undefined ? def.touch_focuses : param.touch_focuses;
   const focus_steal = param.focus_steal === undefined ? def.focus_steal : param.focus_steal;
   const custom_nav = param.custom_nav === undefined ? def.custom_nav : param.custom_nav;
+  const focus_upon_activation = param.focus_upon_activation === undefined ? def.focus_upon_activation :
+    param.focus_upon_activation;
 
   spotParamAddOut(param);
   let out = param.out;
@@ -1482,6 +1486,10 @@ export function spot(param: SpotParam): SpotRet {
     spotSignalRet(param);
     out.button = 0;
     out.pos = null;
+    if (allow_focus && focus_upon_activation) {
+      spotFocusSet(param, false, false, 'button_activate');
+      // don't do this, it triggers a 1-frame tooltip flicker: focused = true;
+    }
   }
 
   out.focused = focused;
