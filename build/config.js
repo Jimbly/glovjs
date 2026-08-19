@@ -40,7 +40,7 @@ module.exports = function (gb) {
       'client/sounds/**/*.wav',
       'client/sounds/**/*.mp3',
     ],
-    client_autosound_config: null, // default: wav to 512kb, mp3 at 128kbps, ogg
+    client_autosound_config: null, // default: inputs: wav,mp3,ogg outputs: mp3 at 128kbps, ogg
     client_static: [
       'client/**/*.webm',
       // 'client/**/*.png',
