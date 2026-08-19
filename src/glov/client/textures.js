@@ -121,6 +121,9 @@ export function textureGetAll() {
 export function textureWhite() {
   return textures.white;
 }
+export function textureZero() {
+  return textures.invisible;
+}
 export function textureError() {
   return textures.error;
 }

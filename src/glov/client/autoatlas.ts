@@ -19,7 +19,7 @@ import {
   Texture,
   TextureOptions,
 } from './sprites';
-import { textureError, textureLoad } from './textures';
+import { textureError, textureLoad, textureZero } from './textures';
 import { webFSGetFile, webFSOnReady } from './webfs';
 
 type AutoAtlasBuildData = [string, number, number, number[], number[], number[] | undefined, number[] | undefined];
@@ -34,7 +34,7 @@ type AutoAtlasBuildDataRoot = {
 export type SpriteWithUIData = WithRequired<Sprite, 'uidata'>;
 
 let load_opts: TSMap<TextureOptions> = {};
-let extra_textures: TSMap<Texture> = {};
+let extra_textures: TSMap<(Texture|undefined)[]> = {};
 let hit_startup = false;
 
 const uidata_error: SpriteUIData = {
@@ -230,8 +230,17 @@ class AutoAtlasImp {
       for (let ii = 0; ii < texs.length; ++ii) {
         texs[ii].onLoad(this.checkLoaded.bind(this));
       }
-      if (extra_textures[atlas_name]) {
-        texs.push(extra_textures[atlas_name]);
+      let extra_tex_list = extra_textures[atlas_name];
+      if (extra_tex_list) {
+        while (texs.length < extra_tex_list.length) {
+          texs.push(textureZero());
+        }
+        for (let ii = 0; ii < extra_tex_list.length; ++ii) {
+          let tex = extra_tex_list[ii];
+          if (tex) {
+            texs[ii] = tex;
+          }
+        }
       }
       this.verifySprites(seen);
     });
@@ -398,12 +407,16 @@ function autoAtlasGet(atlas_name: string): AutoAtlasImp {
   return atlas;
 }
 
-export function autoAtlasBindExtraTexture(atlas_name: string, texture: Texture): void {
-  extra_textures[atlas_name] = texture;
+export function autoAtlasBindExtraTexture(atlas_name: string, index: number, texture: Texture): void {
+  extra_textures[atlas_name] = extra_textures[atlas_name] || [];
+  extra_textures[atlas_name][index] = texture;
   if (atlases) {
     let atlas = atlases[atlas_name];
     if (atlas) {
-      atlas.texs.push(texture);
+      while (atlas.texs.length < index) {
+        atlas.texs.push(textureZero());
+      }
+      atlas.texs[index] = texture;
     }
   }
 }
