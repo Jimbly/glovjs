@@ -5,6 +5,7 @@ import assert from 'assert';
 import {
   TSMap,
 } from 'glov/common/types';
+import { merge } from 'glov/common/util';
 import {
   JSVec2,
   JSVec3,
@@ -114,6 +115,7 @@ export type ParticleDef = {
   accel?: Vec2or3ValueOrRange;
   rot?: ValueOrRange; // degrees
   rot_vel?: ValueOrRange; // degrees per second
+  hflip?: boolean; // randomly flip texture horizontally
   lifespan?: ValueOrRange; // milliseconds
   kill_time_accel?: number; // rate acceleration default: 1
 };
@@ -150,6 +152,7 @@ type ParticleDefNormalized = {
   accel: Vec3Range;
   rot: Range;
   rot_vel: Range;
+  hflip: boolean;
   lifespan: Range;
   kill_time_accel: Range;
 };
@@ -184,7 +187,8 @@ type ParticleSystemDefWithNormalization = ParticleSystemDef & {
 //////////////////////////////////////////////////////////////////////////
 // Implementation
 
-const { random } = Math;
+const { cos, min, PI, random, sin } = Math;
+const PIo180 = PI/180;
 
 const blend_map = {
   alpha: BLEND_ALPHA,
@@ -242,14 +246,15 @@ function normalizeParticle(
   if (!def.normalized) {
     let norm: ParticleDefNormalized = def.normalized = {
       blend: blend_map[def.blend] || BLEND_ALPHA,
-      texture: textureLoad({ url: def.texture ? `img/${def.texture}.png` : 'img/glov/util_circle.png' }),
+      texture: textureLoad({ url: def.texture ? `img/${def.texture}.png` : 'img/particles/circle64.png' }),
       color: normalizeValueVec(def.color || [1,1,1,1], 4),
       color_track: null,
       size: normalizeValueVec(def.size || [1,1], 2),
       size_track: null,
       accel: normalizeValueVec(def.accel || [0,0,0], 3),
       rot: normalizeValue(def.rot || 0),
-      rot_vel: normalizeValue(def.rot || 0),
+      rot_vel: normalizeValue(def.rot_vel || 0),
+      hflip: Boolean(def.hflip),
       lifespan: normalizeValue(def.lifespan || 1000),
       kill_time_accel: normalizeValue(def.kill_time_accel || 1),
     };
@@ -298,9 +303,9 @@ function normalizeEmitter(
   if (!def.normalized) {
     let emit_rate = normalizeValue(def.emit_rate || 10);
     // convert particles per second to ms per emission
-    let min = emit_rate[0];
-    let max = emit_rate[0] + emit_rate[1];
-    emit_rate = vec2(1000 / max, 1000 / min);
+    let minv = emit_rate[0];
+    let maxv = emit_rate[0] + emit_rate[1];
+    emit_rate = vec2(1000 / maxv, 1000 / minv);
     assert(emit_rate[0] > 1); // Not more than 1000 per second, that's ridic'.
     def.normalized = {
       part_idx: findParticle(part_map, def.particle),
@@ -366,6 +371,9 @@ type Particle = {
   vel: JSVec3;
   accel: JSVec3;
   color: JSVec4;
+  rot: number;
+  rot_vel: number;
+  hflip: boolean;
   kill_time_accel: number;
 };
 type PartSet = {
@@ -391,6 +399,7 @@ class ParticleSystem {
   age = 0;
   kill_hard = false;
   kill_soft = false;
+  killed = false;
   pos: Vec3;
   part_sets: PartSet[];
   emitters: Emitter[];
@@ -476,22 +485,47 @@ class ParticleSystem {
       }
     }
 
-    // TODO: let rot = part.rot + part.age * part.rot_vel;
+    let rot = part.rot + part.age * part.rot_vel;
 
-    // TODO: draw using:
-    //   rot
     let w = temp_size[0];
     let h = temp_size[1];
-    let x = part.pos[0] - w/2;
-    let y = part.pos[1] - h/2;
     let z = part.pos[2];
-    spriteQueueRaw4Color([def.texture],
-      x, y, temp_color, 0, 0,
-      x, y + h, temp_color, 0, 1,
-      x + w, y + h, temp_color, 1, 1,
-      x + w, y, temp_color, 1, 0,
-      z,
-      null, null, def.blend);
+    let u0 = part.hflip ? 1 : 0;
+    let u1 = part.hflip ? 0 : 1;
+    if (rot) {
+      let dx = w/2;
+      let dy = h/2;
+
+      let cosr = cos(rot);
+      let sinr = sin(rot);
+
+      let x1 = part.pos[0] - cosr * dx + sinr * dy;
+      let y1 = part.pos[1] - sinr * dx - cosr * dy;
+      let ch = cosr * h;
+      let cw = cosr * w;
+      let sh = sinr * h;
+      let sw = sinr * w;
+
+
+      spriteQueueRaw4Color([def.texture],
+        x1, y1, temp_color, u0, 0,
+        x1 - sh, y1 + ch, temp_color, u0, 1,
+        x1 + cw - sh, y1 + sw + ch, temp_color, u1, 1,
+        x1 + cw, y1 + sw, temp_color, u1, 0,
+        z,
+        null, null, def.blend);
+
+    } else {
+      let x = part.pos[0] - w/2;
+      let y = part.pos[1] - h/2;
+      spriteQueueRaw4Color([def.texture],
+        x, y, temp_color, u0, 0,
+        x, y + h, temp_color, u0, 1,
+        x + w, y + h, temp_color, u1, 1,
+        x + w, y, temp_color, u1, 0,
+        z,
+        null, null, def.blend);
+    }
 
     return false;
   }
@@ -516,15 +550,16 @@ class ParticleSystem {
     let pos = instValueVec(emitter_def.pos);
     v3add(pos, pos, this.pos);
     // PERFTODO: Make the whole Particle just a data[] Float32Array
-    let part = {
+    let part: Particle = {
       def,
       pos,
       color: instValueVec(def.color),
       size: instValueVec(def.size),
       vel: instValueVec(emitter_def.vel),
       accel: instValueVec(def.accel),
-      rot: instValue(def.rot),
-      rot_vel: instValue(def.rot_vel),
+      rot: instValue(def.rot)*PIo180,
+      rot_vel: instValue(def.rot_vel)*PIo180,
+      hflip: def.hflip ? random() > 0.5 : false,
       lifespan: instValue(def.lifespan),
       kill_time_accel: instValue(def.kill_time_accel),
       age: 0,
@@ -602,7 +637,6 @@ class ParticleSystem {
     }
   }
 }
-export type { ParticleSystem };
 
 class ParticleManager {
   systems: ParticleSystem[] = [];
@@ -613,9 +647,32 @@ class ParticleManager {
     return system;
   }
 
+  reload(olddef: ParticleSystemDef, newdef: ParticleSystemDef): void {
+    let norm = (olddef as ParticleSystemDefWithNormalization).normalized;
+    if (!norm) {
+      // never loaded?
+      return;
+    }
+    for (let ii = 0; ii < this.systems.length; ++ii) {
+      let oldsys = this.systems[ii];
+      if (oldsys.def === norm) {
+        let newsys = new ParticleSystem(this, newdef, oldsys.pos);
+        let t = oldsys.age;
+        while (t > 0) {
+          let dt = min(16, t);
+          newsys.tick(dt);
+          t -= dt;
+        }
+        merge(oldsys, newsys);
+      }
+    }
+  }
+
   tick(dt: number): void {
     for (let ii = this.systems.length - 1; ii >= 0; --ii) {
-      if (this.systems[ii].tick(dt)) {
+      let part = this.systems[ii];
+      if (part.tick(dt)) {
+        part.killed = true;
         this.systems[ii] = this.systems[this.systems.length - 1];
         this.systems.pop();
       }
@@ -623,6 +680,9 @@ class ParticleManager {
   }
 
   killAll(): void {
+    for (let ii = 0; ii < this.systems.length; ++ii) {
+      this.systems[ii].killed = true;
+    }
     this.systems = [];
   }
 
@@ -633,16 +693,20 @@ class ParticleManager {
   }
 }
 
-let manager: ParticleManager;
-function particlesTick(dt: number): void {
-  manager.tick(dt);
+export type { ParticleSystem, ParticleManager };
+
+// Self-managed API
+export function particlesCreateManager(): ParticleManager {
+  return new ParticleManager();
 }
 
+// System-managed API
+let manager: ParticleManager;
 export function particlesCreateSystem(defs: ParticleSystemDef, pos: ROVec3): ParticleSystem {
   return manager.createSystem(defs, pos);
 }
 
 export function particlesStartup(): void {
   manager = new ParticleManager();
-  addAppPostTick(particlesTick);
+  addAppPostTick(manager.tick.bind(manager));
 }
