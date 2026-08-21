@@ -126,26 +126,41 @@ module.exports = function () {
     });
   }
 
-  function astcWrite(astcmode, png_data, has_alpha, next) {
+  function astcWrite(astcmode, quality, png_data, has_alpha, next) {
     astcmode = (astcmode || '4x4').toLowerCase();
+    quality = [
+      null,
+      'astcveryfast',
+      'astcfast',
+      'astcmedium',
+      'astcthorough',
+      'astcexhaustive',
+    ][quality || 3];
     compressedWrite(png_data, {
       type: 'astc',
       compression: `ASTC_${astcmode}`,
       //  ASTC_4x4, ASTC_5x4, ASTC_5x5, ASTC_6x5, ASTC_6x6, ASTC_8x5, ASTC_8x6,
       //  ASTC_8x8, ASTC_10x5, ASTC_10x6, ASTC_10x8, ASTC_10x10, ASTC_12x10, ASTC_12x12,
-      quality: 'astcmedium',
-      // astcveryfast, astcfast, astcmedium, astcthorough, astcexhaustive,
+      quality,
     }, next);
   }
-  function dxtWrite(dxtmode, png_data, has_alpha, next) {
+  function dxtWrite(dxtmode, quality, png_data, has_alpha, next) {
     // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
     dxtmode = (dxtmode || 'auto').toUpperCase();
+    quality = [
+      null,
+      'superfast',
+      'fast',
+      'normal',
+      'better',
+      'uber',
+    ][quality || 3];
     let compression =
       (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
     compressedWrite(png_data, {
       type: 's3tc',
       compression,
-      quality: 'normal', // superfast,fast,normal,better,uber
+      quality,
     }, next);
   }
 
@@ -264,13 +279,13 @@ module.exports = function () {
           out_elem.txp_flags |= FORMAT_PNG;
         } else if (format === 'astc') {
           flags |= FORMAT_ASTC;
-          out_elem.writer = astcWrite.bind(null, texopt.astcmode);
+          out_elem.writer = astcWrite.bind(null, texopt.astcmode, texopt.quality);
           out_elem.ext = 'astc';
           out_elem.packext = 'txp-astc';
           out_elem.txp_flags |= FORMAT_ASTC;
         } else if (format === 'dxt') {
           flags |= FORMAT_DXT;
-          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode);
+          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode, texopt.quality);
           out_elem.ext = 'dxt';
           out_elem.packext = 'txp-dxt';
           out_elem.txp_flags |= FORMAT_DXT;

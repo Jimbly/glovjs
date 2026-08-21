@@ -545,6 +545,12 @@ function textureCompressionTest(): void {
   x += tex_w/2;
   tex_sprite.draw({
     x, y,
+    w: tex_w/4,
+    h: tex_w/4,
+  });
+  x += tex_w/4;
+  tex_sprite.draw({
+    x, y,
     w: tex_w/8,
     h: tex_w/8,
   });
