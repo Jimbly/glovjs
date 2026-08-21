@@ -70,8 +70,10 @@ module.exports = function () {
     check(ints[3], 0, 'glFormat - must be compressed texture');
     let gl_internal_format = ints[4]; // e.g. gl.COMPRESSED_RGBA_S3TC_DXT5_EXT
     let gl_base_internal_format = ints[5]; // gl.RGBA or gl.RGB
-    let tex_width = ints[6];
-    let tex_height = ints[7];
+    let tex_width = Math.max(1, ints[6]);
+    assert(tex_width);
+    let tex_height = Math.max(1, ints[7]);
+    assert(tex_height);
     check(ints[8], 0, 'pixelDepth - 3D texture not supported');
     check(ints[9], 0, 'numberOfArrayElements - 3D texture not supported');
     check(ints[10], 1, 'numberOfFaces - cube maps not supported');
@@ -124,10 +126,11 @@ module.exports = function () {
     });
   }
 
-  function astcWrite(png_data, has_alpha, next) {
+  function astcWrite(astcmode, png_data, has_alpha, next) {
+    astcmode = (astcmode || '4x4').toLowerCase();
     compressedWrite(png_data, {
       type: 'astc',
-      compression: 'ASTC_4x4',
+      compression: `ASTC_${astcmode}`,
       //  ASTC_4x4, ASTC_5x4, ASTC_5x5, ASTC_6x5, ASTC_6x6, ASTC_8x5, ASTC_8x6,
       //  ASTC_8x8, ASTC_10x5, ASTC_10x6, ASTC_10x8, ASTC_10x10, ASTC_12x10, ASTC_12x12,
       quality: 'astcmedium',
@@ -261,7 +264,7 @@ module.exports = function () {
           out_elem.txp_flags |= FORMAT_PNG;
         } else if (format === 'astc') {
           flags |= FORMAT_ASTC;
-          out_elem.writer = astcWrite;
+          out_elem.writer = astcWrite.bind(null, texopt.astcmode);
           out_elem.ext = 'astc';
           out_elem.packext = 'txp-astc';
           out_elem.txp_flags |= FORMAT_ASTC;

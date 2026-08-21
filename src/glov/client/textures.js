@@ -66,6 +66,7 @@ let aniso = 4;
 let max_aniso = 0;
 let aniso_enum;
 let dxt_supported = false;
+let astc_supported = false;
 
 let default_filter_min;
 let default_filter_mag;
@@ -428,10 +429,40 @@ const BYTES_PER_PIXEL_COMPRESSED = {
   0x83f1: 0.5, // RGBA_S3TC_DXT1
   0x83f2: 1, // RGBA_S3TC_DXT3
   0x83f3: 1, // RGBA_S3TC_DXT5
+  0x93B0: 8/8, // GL_COMPRESSED_RGBA_ASTC_4x4_KHR - ASTC 4×4 RGBA    8bpp
+  0x93D0: 8/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_4x4_KHR - ASTC 4×4 SRGB    8bpp
+  0x93B1: 6.4/8, // GL_COMPRESSED_RGBA_ASTC_5x4_KHR - ASTC 5×4 RGBA    6.4bpp
+  0x93D1: 6.4/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_5x4_KHR - ASTC 5×4 SRGB    6.4bpp
+  0x93B2: 5.1/8, // GL_COMPRESSED_RGBA_ASTC_5x5_KHR - ASTC 5×5 RGBA    5.1bpp
+  0x93D2: 5.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_5x5_KHR - ASTC 5×5 SRGB    5.1bpp
+  0x93B3: 4.3/8, // GL_COMPRESSED_RGBA_ASTC_6x5_KHR - ASTC 6×5 RGBA    4.3bpp
+  0x93D3: 4.3/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_6x5_KHR - ASTC 6×5 SRGB    4.3bpp
+  0x93B4: 3.6/8, // GL_COMPRESSED_RGBA_ASTC_6x6_KHR - ASTC 6×6 RGBA    3.6bpp
+  0x93D4: 3.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_6x6_KHR - ASTC 6×6 SRGB    3.6bpp
+  0x93B5: 3.2/8, // GL_COMPRESSED_RGBA_ASTC_8x5_KHR - ASTC 8×5 RGBA    3.2bpp
+  0x93D5: 3.2/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x5_KHR - ASTC 8×5 SRGB    3.2bpp
+  0x93B6: 2.7/8, // GL_COMPRESSED_RGBA_ASTC_8x6_KHR - ASTC 8×6 RGBA    2.7bpp
+  0x93D6: 2.7/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x6_KHR - ASTC 8×6 SRGB    2.7bpp
+  0x93B7: 2.0/8, // GL_COMPRESSED_RGBA_ASTC_8x8_KHR - ASTC 8×8 RGBA    2.0bpp
+  0x93D7: 2.0/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_8x8_KHR - ASTC 8×8 SRGB    2.0bpp
+  0x93B8: 2.6/8, // GL_COMPRESSED_RGBA_ASTC_10x5_KHR - ASTC 10×5 RGBA    2.6bpp
+  0x93D8: 2.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x5_KHR - ASTC 10×5 SRGB    2.6bpp
+  0x93B9: 2.1/8, // GL_COMPRESSED_RGBA_ASTC_10x6_KHR - ASTC 10×6 RGBA    2.1bpp
+  0x93D9: 2.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x6_KHR - ASTC 10×6 SRGB    2.1bpp
+  0x93BA: 1.6/8, // GL_COMPRESSED_RGBA_ASTC_10x8_KHR - ASTC 10×8 RGBA    1.6bpp
+  0x93DA: 1.6/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x8_KHR - ASTC 10×8 SRGB    1.6bpp
+  0x93BB: 1.3/8, // GL_COMPRESSED_RGBA_ASTC_10x10_KHR - ASTC 10×10 RGBA    1.3bpp
+  0x93DB: 1.3/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_10x10_KHR - ASTC 10×10 SRGB    1.3bpp
+  0x93BC: 1.1/8, // GL_COMPRESSED_RGBA_ASTC_12x10_KHR - ASTC 12×10 RGBA    1.1bpp
+  0x93DC: 1.1/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_12x10_KHR - ASTC 12×10 SRGB    1.1bpp
+  0x93BD: 0.9/8, // GL_COMPRESSED_RGBA_ASTC_12x12_KHR - ASTC 12×12 RGBA    0.9bpp
+  0x93DD: 0.9/8, // GL_COMPRESSED_SRGB_ALPHA8_ASTC_12x12_KHR   - ASTC 12×12 SRGB    0.9bpp
 };
 function bytesPerPixelFromCompressedFormat(fmt) {
   let ret = BYTES_PER_PIXEL_COMPRESSED[fmt];
-  assert(ret, fmt);
+  if (!ret) {
+    assert(ret, fmt.toString(16));
+  }
   return ret;
 }
 
@@ -470,6 +501,11 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       for (let level = 1; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
         gl.compressedTexImage2D(this.target, level, data.gl_internal_format, img.width, img.height, 0, img.data);
+        // let gl_err = gl.getError();
+        // if (gl_err) {
+        //   assert(false, `${gl_err}: ${level}/${per_mipmap_data.length} ` +
+        //     `${img.width}x${img.height} ${img.data.length}`);
+        // }
       }
       this.allowMipmaps(true);
     } else {
@@ -581,7 +617,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
     gl.generateMipmap(this.target);
     gl_err = gl.getError();
     if (gl_err) {
-      err = `GLError(${gl_err})`;
+      err = `generateMipmap:GLError(${gl_err})`;
     }
   }
   if (!err) {
@@ -689,6 +725,14 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
             url_use += '-dxt';
           } else {
             url_use = `${filename_no_ext}.dxt`;
+          }
+        }
+        if ((tflags & FORMAT_ASTC) && astc_supported) {
+          compressed_type = FORMAT_ASTC;
+          if (url_use.endsWith('.txp')) {
+            url_use += '-astc';
+          } else {
+            url_use = `${filename_no_ext}.astc`;
           }
         }
       }
@@ -1249,6 +1293,11 @@ export function textureSupportsDepth() {
   return depth_supported;
 }
 
+let texcomp_support;
+export function textureCompressionSupported() {
+  return texcomp_support;
+}
+
 export function textureStartup() {
 
   default_filter_min = gl.LINEAR_MIPMAP_LINEAR;
@@ -1291,10 +1340,12 @@ export function textureStartup() {
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
   }
 
+  texcomp_support = [];
   let ext_astc = gl.getExtension('WEBGL_compressed_texture_astc');
   if (ext_astc) {
     console.log('Supported ASTC profiles:', ext_astc.getSupportedProfiles());
-    // TODO: astc_supported = true;
+    texcomp_support.push('ASTC');
+    astc_supported = true;
   } else {
     console.log('ASTC not supported');
   }
@@ -1308,6 +1359,7 @@ export function textureStartup() {
       }
     }
     console.log(`DXT supported: ${keys.join()}`);
+    texcomp_support = texcomp_support.concat(keys);
     dxt_supported = true;
   } else {
     console.log('DXT not supported');

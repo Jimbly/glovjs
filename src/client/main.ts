@@ -65,7 +65,10 @@ import {
   spriteCreate,
   spriteQueueSprite,
 } from 'glov/client/sprites';
-import { textureLoad } from 'glov/client/textures';
+import {
+  textureCompressionSupported,
+  textureLoad,
+} from 'glov/client/textures';
 import * as transition from 'glov/client/transition';
 import {
   ButtonRet,
@@ -499,9 +502,16 @@ let tex_sprite = spriteCreate({ texs: [] });
 let tex_comp_mode = 0;
 const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
 function textureCompressionTest(): void {
-  let y = 10;
-  // let font = uiGetFont();
-  // let text_height = uiTextHeight();
+  let y = 2;
+  let font = uiGetFont();
+  let text_height = uiTextHeight();
+  y += font.draw({
+    text: `Supported texture compression: ${textureCompressionSupported().join(', ')}`,
+    color: 0x000000ff,
+    x: 2, y, w: game_width - 4,
+    size: text_height *0.75,
+    align: ALIGN.HWRAP,
+  }) + 2;
   let w = game_width / 2;
   let tex_w = w / 2;
   let x = 8;
@@ -527,6 +537,12 @@ function textureCompressionTest(): void {
     h: tex_w,
   });
   x += tex_w;
+  tex_sprite.draw({
+    x, y,
+    w: tex_w/2,
+    h: tex_w/2,
+  });
+  x += tex_w/2;
   tex_sprite.draw({
     x, y,
     w: tex_w/8,
