@@ -16,9 +16,12 @@ export const TEXTURE_FORMAT = {
 
 import * as assert from 'assert';
 import {
+  FORMAT_ASTC,
+  FORMAT_DXT,
   FORMAT_PACK,
   FORMAT_PNG,
   TEXPACK_MAGIC,
+  TEXPROC_COMPRESSED_HEADER,
 } from 'glov/common/texpack_common';
 import {
   callbackify,
@@ -62,6 +65,7 @@ export function texturesDelayStreamingPostLoad() {
 let aniso = 4;
 let max_aniso = 0;
 let aniso_enum;
+let dxt_supported = false;
 
 let default_filter_min;
 let default_filter_mag;
@@ -395,6 +399,18 @@ Texture.prototype.uploadPackedTexArrayWithMips = function uploadPackedTexArrayWi
   assert(!per_mipmap_data[level]);
 };
 
+const BYTES_PER_PIXEL_COMPRESSED = {
+  0x83f0: 0.5, // RGB_S3TC_DXT1
+  0x83f1: 0.5, // RGBA_S3TC_DXT1
+  0x83f2: 1, // RGBA_S3TC_DXT3
+  0x83f3: 1, // RGBA_S3TC_DXT5
+};
+function bytesPerPixelFromCompressedFormat(fmt) {
+  let ret = BYTES_PER_PIXEL_COMPRESSED[fmt];
+  assert(ret, fmt);
+  return ret;
+}
+
 Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) {
   profilerStart('Texture:updateData');
   assert(!this.destroyed);
@@ -417,7 +433,34 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
     gl.texImage2D(this.target, 0, this.format.internal_type, this.width, this.height, 0,
       this.format.internal_type, this.format.gl_type, null);
   }
-  if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
+  if (data.is_raw_data) {
+    assert(!np2);
+    assert(data.data instanceof Uint8Array);
+    this.format = {
+      internal_type: data.gl_base_internal_format,
+      count: bytesPerPixelFromCompressedFormat(data.gl_internal_format), // actually bytes-per-pixel
+      gl_type: data.gl_internal_format,
+    };
+    gl.compressedTexImage2D(this.target, 0, data.gl_internal_format, w, h, 0, data.data);
+    if (per_mipmap_data) {
+      for (let level = 1; level < per_mipmap_data.length; ++level) {
+        let img = per_mipmap_data[level];
+        gl.compressedTexImage2D(this.target, level, data.gl_internal_format, img.width, img.height, 0, img.data);
+      }
+    } else if (this.mipmaps) {
+      // Code below would work, if needed
+      assert(false, 'Packed, compressed texture being used with mipmaps, but none were provided');
+      this.mipmaps = false; // not provided, can't auto-generate them
+      this.setSamplerState({
+        filter_min: this.filter_min === gl.LINEAR_MIPMAP_LINEAR ? gl.LINEAR :
+          this.filter_min === gl.NEAREST_MIPMAP_NEAREST ? gl.NEAREST :
+          this.filter_min,
+        filter_mag: this.filter_mag,
+        wrap_s: this.wrap_s,
+        wrap_t: this.wrap_t,
+      });
+    }
+  } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
     assert(!this.is_cube);
@@ -461,7 +504,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
 
       this.uploadPackedTexArrayWithMips(per_mipmap_data, tile_w, num_images, data);
     } else if (this.is_array) {
-      assert(!per_mipmap_data); // not implemented
+      assert(!per_mipmap_data); // handled above
       let num_images = h / w;
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
@@ -496,6 +539,12 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         gl.texSubImage2D(this.target, 0, 0, 1, this.format.internal_type, this.format.gl_type, data);
       }
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
+    } else if (per_mipmap_data) {
+      for (let level = 0; level < per_mipmap_data.length; ++level) {
+        let img = per_mipmap_data[level];
+        gl.texImage2D(this.target, level, this.format.internal_type, this.format.internal_type,
+          this.format.gl_type, img);
+      }
     } else {
       assert(!per_mipmap_data); // not implemented
       gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
@@ -575,6 +624,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   assert(!tex.destroyed);
 
   let tflags;
+  let compressed_type;
   let load_gen = tex.load_gen = (tex.load_gen || 0) + 1;
   function tryLoad(next) {
     profilerStart('Texture:tryLoad');
@@ -591,6 +641,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     }
 
     tflags = 0;
+    compressed_type = 0;
 
     if (url_use.includes(':')) {
       url_use = locateAsset(removeHash(url_use));
@@ -610,10 +661,27 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         if (tflags & FORMAT_PACK) {
           url_use = `${filename_no_ext}.txp`;
         }
+        if ((tflags & FORMAT_DXT) && dxt_supported) {
+          compressed_type = FORMAT_DXT;
+          if (url_use.endsWith('.txp')) {
+            url_use += '-dxt';
+          } else {
+            url_use = `${filename_no_ext}.dxt`;
+          }
+        }
       }
 
-      if (webFSExists(png_name) && blobSupported()) {
+      if (webFSExists(url_use) && blobSupported()) {
         assert(!(tflags & FORMAT_PACK)); // not supported/tested, but should be trivial?
+
+        if (compressed_type) {
+          assert(false, 'untested, maybe works');
+          let view = webFSGetFile(png_name);
+          assert(view instanceof Uint8Array);
+          done(view.buffer);
+          profilerStop();
+          return;
+        }
 
         let view = webFSGetFile(png_name);
         let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
@@ -644,7 +712,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       url_use = `${urlhash.getURLBase()}${url_use}`;
     }
 
-    if (tflags & FORMAT_PACK) {
+    if ((tflags & FORMAT_PACK) || compressed_type) {
       fetch({
         url: url_use,
         response_type: 'arraybuffer',
@@ -679,6 +747,28 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     img.crossOrigin = 'anonymous';
     img.src = url_use;
     profilerStop();
+  }
+
+  // next(err, img)
+  function decodeCompressedImage(arraybuffer, offset, length, next) {
+    assert(arraybuffer instanceof ArrayBuffer);
+    let view = new DataView(arraybuffer, offset, length);
+    let header = view.getUint32(0, true);
+    if (header !== TEXPROC_COMPRESSED_HEADER) {
+      return void next('invalid header');
+    }
+    let gl_internal_format = view.getUint32(4, true);
+    let gl_base_internal_format = view.getUint32(8, true);
+    let width = view.getUint32(12, true);
+    let height = view.getUint32(16, true);
+    next(null, {
+      is_raw_data: true,
+      gl_internal_format,
+      gl_base_internal_format,
+      width,
+      height,
+      data: new Uint8Array(arraybuffer).subarray(offset + 20, offset + length),
+    });
   }
 
   function decodeTexturePack(arraybuffer, next) {
@@ -739,12 +829,20 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         img_out.src = src_str.join('');
       }
     }
+    function decodeLevelCompressed(level, offset, length, next) {
+      decodeCompressedImage(arraybuffer, offset, length, function (err, data) {
+        mipmaps[level] = data;
+        next(err);
+      });
+    }
     let data_offs = header_offs + num_images * 4;
     for (let level = 0; level < num_images; ++level) {
       let len = dv.getUint32(header_offs, true);
       header_offs += 4;
       if (txp_flags & FORMAT_PNG) {
         tasks.push(decodeLevelPNG.bind(null, level, data_offs, len));
+      } else if (txp_flags & (FORMAT_DXT | FORMAT_ASTC)) {
+        tasks.push(decodeLevelCompressed.bind(null, level, data_offs, len));
       } else {
         return void next(`TXP: Unknown format ${txp_flags}`);
       }
@@ -791,6 +889,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     }
     if (tflags & FORMAT_PACK) {
       return void decodeTexturePack(img, next);
+    }
+    if (compressed_type) {
+      return void decodeCompressedImage(img, 0, img.length, next);
     }
     let unpack_mips = tex.is_array && tex.packed_mips;
     if (img instanceof ArrayBuffer) {
@@ -1166,6 +1267,28 @@ export function textureStartup() {
   if (ext_anisotropic) {
     aniso_enum = ext_anisotropic.TEXTURE_MAX_ANISOTROPY_EXT;
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+  }
+
+  let ext_astc = gl.getExtension('WEBGL_compressed_texture_astc');
+  if (ext_astc) {
+    console.log('Supported ASTC profiles:', ext_astc.getSupportedProfiles());
+    // TODO: astc_supported = true;
+  } else {
+    console.log('ASTC not supported');
+  }
+  let ext_s3tc = gl.getExtension('WEBGL_compressed_texture_s3tc');
+  if (ext_s3tc) {
+    let keys = [];
+    for (let key in ext_s3tc) {
+      let m = key.match(/^COMPRESSED_(.*)_EXT$/);
+      if (m) {
+        keys.push(m[1]);
+      }
+    }
+    console.log(`DXT supported: ${keys.join()}`);
+    dxt_supported = true;
+  } else {
+    console.log('DXT not supported');
   }
 
   handle_error = textureLoad({

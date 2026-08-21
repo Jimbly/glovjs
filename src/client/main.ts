@@ -65,6 +65,7 @@ import {
   spriteCreate,
   spriteQueueSprite,
 } from 'glov/client/sprites';
+import { textureLoad } from 'glov/client/textures';
 import * as transition from 'glov/client/transition';
 import {
   ButtonRet,
@@ -493,6 +494,45 @@ function scoresTest(): void {
   });
 }
 
+
+let tex_sprite = spriteCreate({ texs: [] });
+let tex_comp_mode = 0;
+const TEX_COMP_MODES = ['compress', 'png', 'packed'];
+function textureCompressionTest(): void {
+  let y = 10;
+  // let font = uiGetFont();
+  // let text_height = uiTextHeight();
+  let w = game_width / 2;
+  let tex_w = w / 2;
+  let x = 8;
+  let button_w = w / 3;
+  if (buttonText({
+    text: `Mode: ${TEX_COMP_MODES[tex_comp_mode]}`,
+    x, y,
+    w: button_w,
+  })) {
+    tex_comp_mode = (tex_comp_mode + 1) % TEX_COMP_MODES.length;
+  }
+  x += button_w + 2;
+
+  let tex = textureLoad({
+    url: `img/texproc/256-${TEX_COMP_MODES[tex_comp_mode]}.png`,
+  });
+  tex_sprite.texs[0] = tex;
+  tex_sprite.draw({
+    x, y,
+    w: tex_w,
+    h: tex_w,
+  });
+  x += tex_w;
+  tex_sprite.draw({
+    x, y,
+    w: tex_w/8,
+    h: tex_w/8,
+  });
+
+}
+
 export function main(): void {
   if (platformParameterGet('reload_updates')) {
     // Enable auto-reload, etc
@@ -878,6 +918,10 @@ export function main(): void {
       flagToggle('spine');
     }
 
+    if (miniButton('TexComp', 'Toggles Texture Compression testing', flagGet('texcomp'))) {
+      flagToggle('texcomp');
+    }
+
     if (flagGet('particles')) {
       if (getFrameTimestamp() - last_particles > 1000) {
         last_particles = getFrameTimestamp();
@@ -890,6 +934,10 @@ export function main(): void {
 
     if (flagGet('perf_test')) {
       perfTestSprites();
+    }
+
+    if (flagGet('texcomp')) {
+      textureCompressionTest();
     }
 
     if (do_3d) {
