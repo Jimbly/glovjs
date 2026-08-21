@@ -27,7 +27,7 @@ module.exports = function () {
     let temp_dir = fs.realpathSync(os.tmpdir());
     return `${path.join(temp_dir, String(Math.random()).slice(2, 8))}.png`;
   }
-  function passThrough(png_data, next) {
+  function passThrough(png_data, has_alpha, next) {
     return next(null, png_data);
   }
 
@@ -124,7 +124,7 @@ module.exports = function () {
     });
   }
 
-  function astcWrite(png_data, next) {
+  function astcWrite(png_data, has_alpha, next) {
     compressedWrite(png_data, {
       type: 'astc',
       compression: 'ASTC_4x4',
@@ -134,10 +134,14 @@ module.exports = function () {
       // astcveryfast, astcfast, astcmedium, astcthorough, astcexhaustive,
     }, next);
   }
-  function dxtWrite(png_data, next) {
+  function dxtWrite(dxtmode, png_data, has_alpha, next) {
+    // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
+    dxtmode = (dxtmode || 'auto').toUpperCase();
+    let compression =
+      (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
     compressedWrite(png_data, {
       type: 's3tc',
-      compression: 'DXT1A', // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=similar
+      compression,
       quality: 'normal', // superfast,fast,normal,better,uber
     }, next);
   }
@@ -227,6 +231,11 @@ module.exports = function () {
       let flags = 0;
       if (texopt.packed_mipmaps) {
         flags |= FORMAT_PACK;
+      } else if (texopt.packed_mipmaps !== false && (
+        texopt.formats.includes('astc') || texopt.formats.includes('astc')
+      )) {
+        // a compressed format can never auto-generate mipmaps, so, pack them in here
+        flags |= FORMAT_PACK;
       }
       if (!flags && !texopt.formats) {
         // no valid options?  does nothing currently
@@ -258,7 +267,7 @@ module.exports = function () {
           out_elem.txp_flags |= FORMAT_ASTC;
         } else if (format === 'dxt') {
           flags |= FORMAT_DXT;
-          out_elem.writer = dxtWrite;
+          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode);
           out_elem.ext = 'dxt';
           out_elem.packext = 'txp-dxt';
           out_elem.txp_flags |= FORMAT_DXT;
@@ -277,7 +286,15 @@ module.exports = function () {
         return void done(err);
       }
 
-      if (texopt.packed_mipmaps) {
+      let has_alpha = false;
+      for (let ii = 3; ii < img.data.length; ii += 4) {
+        if (img.data[ii] !== 255) {
+          has_alpha = true;
+          break;
+        }
+      }
+
+      if (flags & FORMAT_PACK) {
         let is_array = filename.includes('.array.');
         let mipmaps;
         if (is_array) {
@@ -293,7 +310,7 @@ module.exports = function () {
       }
       asyncEachSeries(out_by_format, function (out_elem, next) {
         asyncEachSeries(subfiles, function (subfile, next, idx) {
-          out_elem.writer(subfile, function (err, outdata) {
+          out_elem.writer(subfile, has_alpha, function (err, outdata) {
             out_elem.out[idx] = outdata;
             next(err);
           });
@@ -337,6 +354,7 @@ module.exports = function () {
       texproc,
       findTexOpt,
       makeMipmapsArray,
+      module.exports,
     ],
   };
 };

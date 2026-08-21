@@ -3,9 +3,5 @@ formats:
 - png
 - astc
 - dxt
-packed_mipmaps: true
-
-# todo:
-#  choose DXT options
-#    client reload upon .dxt/.txp-dxt change
-#    maybe automatically use 1 if opaque, 3/5 otherwise?
+# packed_mipmaps: true # default=true if compressed
+# dxtmode: auto # default=auto; auto/dxt1/dxt1a/dxt3/dxt5

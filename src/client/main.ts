@@ -497,7 +497,7 @@ function scoresTest(): void {
 
 let tex_sprite = spriteCreate({ texs: [] });
 let tex_comp_mode = 0;
-const TEX_COMP_MODES = ['compress', 'png', 'packed'];
+const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
 function textureCompressionTest(): void {
   let y = 10;
   // let font = uiGetFont();
@@ -507,9 +507,11 @@ function textureCompressionTest(): void {
   let x = 8;
   let button_w = w / 3;
   if (buttonText({
-    text: `Mode: ${TEX_COMP_MODES[tex_comp_mode]}`,
+    text: `**M**ode: ${TEX_COMP_MODES[tex_comp_mode]}`,
+    markdown: true,
     x, y,
     w: button_w,
+    hotkey: KEYS.M,
   })) {
     tex_comp_mode = (tex_comp_mode + 1) % TEX_COMP_MODES.length;
   }

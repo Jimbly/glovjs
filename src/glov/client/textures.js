@@ -229,6 +229,7 @@ function Texture(params) {
   }
   this.handle = gl.createTexture();
   this.eff_handle = handle_loading;
+  this.mipmaps_allowed = true; // assume true until otherwise known
   this.setSamplerState(params);
   this.src_width = this.src_height = 1;
   this.width = this.height = 1;
@@ -316,15 +317,25 @@ Texture.prototype.setSamplerState = function (params) {
   let target = this.target;
   bindForced(this);
 
-  this.filter_min = params.filter_min || default_filter_min;
+  let filter_min = this.filter_min = params.filter_min || default_filter_min;
   this.filter_mag = params.filter_mag || default_filter_mag;
-  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, this.filter_min);
+
+  if (!this.mipmaps_allowed) {
+    if (filter_min === gl.LINEAR_MIPMAP_LINEAR) {
+      filter_min = gl.LINEAR;
+    } else if (filter_min === gl.NEAREST_MIPMAP_NEAREST) {
+      filter_min = gl.NEAREST;
+    }
+  }
+
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, filter_min);
   gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, this.filter_mag);
   this.wrap_s = params.wrap_s || gl.REPEAT;
   this.wrap_t = params.wrap_t || gl.REPEAT;
   gl.texParameteri(target, gl.TEXTURE_WRAP_S, this.wrap_s);
   gl.texParameteri(target, gl.TEXTURE_WRAP_T, this.wrap_t);
 
+  // set if mipmaps desired, may not exist
   this.mipmaps = this.filter_min >= 0x2700 && this.filter_min <= 0x2703 || // Probably gl.LINEAR_MIPMAP_LINEAR
     params.force_mipmaps;
 
@@ -335,6 +346,19 @@ Texture.prototype.setSamplerState = function (params) {
       gl.texParameterf(gl.TEXTURE_2D, aniso_enum, 1);
     }
   }
+};
+
+Texture.prototype.allowMipmaps = function (allow) {
+  if (this.mipmaps_allowed === allow) {
+    return;
+  }
+  this.mipmaps_allowed = allow;
+  this.setSamplerState({
+    filter_min: this.filter_min,
+    filter_mag: this.filter_mag,
+    wrap_s: this.wrap_s,
+    wrap_t: this.wrap_t,
+  });
 };
 
 // Texture.prototype.generateManualArrayMipmaps = function (img) {
@@ -447,18 +471,9 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         let img = per_mipmap_data[level];
         gl.compressedTexImage2D(this.target, level, data.gl_internal_format, img.width, img.height, 0, img.data);
       }
-    } else if (this.mipmaps) {
-      // Code below would work, if needed
-      assert(false, 'Packed, compressed texture being used with mipmaps, but none were provided');
-      this.mipmaps = false; // not provided, can't auto-generate them
-      this.setSamplerState({
-        filter_min: this.filter_min === gl.LINEAR_MIPMAP_LINEAR ? gl.LINEAR :
-          this.filter_min === gl.NEAREST_MIPMAP_NEAREST ? gl.NEAREST :
-          this.filter_min,
-        filter_mag: this.filter_mag,
-        wrap_s: this.wrap_s,
-        wrap_t: this.wrap_t,
-      });
+      this.allowMipmaps(true);
+    } else {
+      this.allowMipmaps(false);
     }
   } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
@@ -476,6 +491,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
         this.format.internal_type, this.format.gl_type, data);
     }
+    this.allowMipmaps(true); // can be auto-generated
   } else {
     // Ensure this is an Image or Canvas
     if (!data.width) {
@@ -497,12 +513,14 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         gl.texImage2D(gl[face.target], 0, this.format.internal_type, this.format.internal_type, this.format.gl_type,
           canvas);
       }
+      this.allowMipmaps(true); // can be auto-generated
     } else if (this.is_array && per_mipmap_data) {
       let tile_w = per_mipmap_data[0].width;
       assert(per_mipmap_data[0].height % tile_w === 0);
       let num_images = per_mipmap_data[0].height / tile_w;
 
       this.uploadPackedTexArrayWithMips(per_mipmap_data, tile_w, num_images, data);
+      this.allowMipmaps(true); // proided
     } else if (this.is_array) {
       assert(!per_mipmap_data); // handled above
       let num_images = h / w;
@@ -528,6 +546,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       //   did_mipmaps = true;
       // }
 
+      this.allowMipmaps(true); // can be auto-generated
     } else if (np2) {
       assert(!per_mipmap_data); // not implemented
       // Pad up to power of two
@@ -539,15 +558,18 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         gl.texSubImage2D(this.target, 0, 0, 1, this.format.internal_type, this.format.gl_type, data);
       }
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
+      this.allowMipmaps(true); // can be auto-generated
     } else if (per_mipmap_data) {
       for (let level = 0; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
         gl.texImage2D(this.target, level, this.format.internal_type, this.format.internal_type,
           this.format.gl_type, img);
       }
+      this.allowMipmaps(true); // provided
     } else {
       assert(!per_mipmap_data); // not implemented
       gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
+      this.allowMipmaps(true); // can be auto-generated
     }
   }
   let err = null;
@@ -555,7 +577,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
   if (gl_err) {
     err = `GLError(${gl_err})`;
   }
-  if (!err && this.mipmaps && !per_mipmap_data) {
+  if (!err && this.mipmaps && !per_mipmap_data && this.mipmaps_allowed) {
     gl.generateMipmap(this.target);
     gl_err = gl.getError();
     if (gl_err) {
@@ -891,7 +913,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return void decodeTexturePack(img, next);
     }
     if (compressed_type) {
-      return void decodeCompressedImage(img, 0, img.length, next);
+      return void decodeCompressedImage(img, 0, img.byteLength, next);
     }
     let unpack_mips = tex.is_array && tex.packed_mips;
     if (img instanceof ArrayBuffer) {
@@ -1346,7 +1368,11 @@ export function textureStartup() {
 
   filewatchOn('.png', textureReload);
   filewatchOn('.jpg', textureReload);
+  filewatchOn('.dxt', textureReload);
+  filewatchOn('.astc', textureReload);
   filewatchOn('.txp', textureReload);
+  filewatchOn('.txp-dxt', textureReload);
+  filewatchOn('.txp-astc', textureReload);
 }
 
 // Legacy API
