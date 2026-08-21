@@ -99,21 +99,36 @@ module.exports = function () {
     next(null, out);
   }
 
-  function compressedWrite(png_data, param, next) {
+  function compressedWrite(job, png_data, param, next) {
     let temp_file = tempPngName();
     let out_file = temp_file.replace(/\.png$/, '.ktx');
+    function cleanup() {
+      fs.unlink(temp_file, function () {
+        // ignore errors
+      });
+      fs.unlink(out_file, function () {
+        // ignore errors
+      });
+    }
     fs.writeFile(temp_file, png_data, function (err) {
       if (err) {
+        cleanup();
         return void next(err);
       }
 
+      let pack_start = Date.now();
       pack({
         ...param,
         input: temp_file,
         output: out_file,
         verbose: false,
       }).then(function () {
+        let dt = Date.now() - pack_start;
+        if (dt > 5000) {
+          job.log(`Texture compression (${param.type}) took ${(dt/1000).toFixed(1)}s`);
+        }
         fs.readFile(out_file, function (err, data) {
+          cleanup();
           if (err) {
             return void next(err);
           }
@@ -121,12 +136,13 @@ module.exports = function () {
           ktxToImages(param.compression, data, next);
         });
       }, function (err) {
+        cleanup();
         next(err);
       });
     });
   }
 
-  function astcWrite(astcmode, quality, png_data, has_alpha, next) {
+  function astcWrite(astcmode, quality, job, png_data, has_alpha, next) {
     astcmode = (astcmode || '4x4').toLowerCase();
     quality = [
       null,
@@ -136,15 +152,16 @@ module.exports = function () {
       'astcthorough',
       'astcexhaustive',
     ][quality || 3];
-    compressedWrite(png_data, {
+    compressedWrite(job, png_data, {
       type: 'astc',
       compression: `ASTC_${astcmode}`,
       //  ASTC_4x4, ASTC_5x4, ASTC_5x5, ASTC_6x5, ASTC_6x6, ASTC_8x5, ASTC_8x6,
       //  ASTC_8x8, ASTC_10x5, ASTC_10x6, ASTC_10x8, ASTC_10x10, ASTC_12x10, ASTC_12x12,
       quality,
+      flags: ['shh'],
     }, next);
   }
-  function dxtWrite(dxtmode, quality, png_data, has_alpha, next) {
+  function dxtWrite(dxtmode, quality, job, png_data, has_alpha, next) {
     // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
     dxtmode = (dxtmode || 'auto').toUpperCase();
     quality = [
@@ -157,7 +174,7 @@ module.exports = function () {
     ][quality || 3];
     let compression =
       (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
-    compressedWrite(png_data, {
+    compressedWrite(job, png_data, {
       type: 's3tc',
       compression,
       quality,
@@ -279,13 +296,13 @@ module.exports = function () {
           out_elem.txp_flags |= FORMAT_PNG;
         } else if (format === 'astc') {
           flags |= FORMAT_ASTC;
-          out_elem.writer = astcWrite.bind(null, texopt.astcmode, texopt.quality);
+          out_elem.writer = astcWrite.bind(null, texopt.astcmode, texopt.quality, job);
           out_elem.ext = 'astc';
           out_elem.packext = 'txp-astc';
           out_elem.txp_flags |= FORMAT_ASTC;
         } else if (format === 'dxt') {
           flags |= FORMAT_DXT;
-          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode, texopt.quality);
+          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode, texopt.quality, job);
           out_elem.ext = 'dxt';
           out_elem.packext = 'txp-dxt';
           out_elem.txp_flags |= FORMAT_DXT;
