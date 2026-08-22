@@ -255,11 +255,12 @@ function Texture(params) {
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
   if (params.data) {
-    let err = this.updateData(params.width, params.height, params.data);
-    if (err) {
-      shadersSetGLErrorReportDetails();
-      assert(false, `Error loading ${params.name}: ${err}`);
-    }
+    this.updateData(params.width, params.height, params.data, null, function (err) {
+      if (err) {
+        shadersSetGLErrorReportDetails();
+        assert(false, `Error loading ${params.name}: ${err}`);
+      }
+    });
   } else {
     // texture is not valid, do not leave bound
     unbindAll(this.target);
@@ -470,7 +471,8 @@ function bytesPerPixelFromCompressedFormat(fmt) {
   return ret;
 }
 
-Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) {
+Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, next) {
+  const tex = this;
   profilerStart('Texture:updateData');
   assert(!this.destroyed);
   bindForced(this);
@@ -479,10 +481,44 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
   this.src_height = h;
   this.width = w;
   this.height = h;
-  // clear the error flag(s) if there are any
-  for (let ii = 0; ii < 10 && gl.getError(); ++ii) {
-    // Error cleared with gl.getError()
+
+  function finish() {
+    let err = null;
+    profilerStart('getError (flush)');
+    let gl_err = gl.getError();
+    profilerStop();
+    if (gl_err) {
+      err = `GLError(${gl_err})`;
+    }
+    if (!err && tex.mipmaps && !per_mipmap_data && tex.mipmaps_allowed) {
+      profilerStart('generateMipmap');
+      gl.generateMipmap(tex.target);
+      profilerStopStart('generateMipmap-getError (flush)');
+      gl_err = gl.getError();
+      profilerStop();
+      if (gl_err) {
+        err = `generateMipmap:GLError(${gl_err})`;
+      }
+    }
+    if (!err) {
+      tex.updateGPUMem();
+      tex.eff_handle = tex.handle;
+      tex.loaded = true;
+
+      callEach(tex.on_load, tex.on_load = null, tex);
+    }
+    next(err);
   }
+
+  function clearGLErr() {
+    // clear the error flag(s) if there are any
+    for (let ii = 0; ii < 10 && gl.getError(); ++ii) {
+      // Error cleared with gl.getError()
+    }
+  }
+
+  clearGLErr();
+
   // Resize NP2 if this is not being used for a texture array, and it is not explicitly allowed (non-mipmapped, clamped)
   let np2 = (!isPowerOfTwo(w) || !isPowerOfTwo(h)) && !this.is_array && !this.is_cube &&
     !(!this.mipmaps && this.wrap_s === gl.CLAMP_TO_EDGE && this.wrap_t === gl.CLAMP_TO_EDGE);
@@ -529,6 +565,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       gl.compressedTexImage2D(this.target, 0, data.gl_internal_format, w, h, 0, data.data);
       this.allowMipmaps(false);
     }
+    finish();
   } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
@@ -552,11 +589,12 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       profilerStop();
     }
     this.allowMipmaps(true); // can be auto-generated
+    finish();
   } else {
     // Ensure this is an Image or Canvas
     if (!data.width) {
       profilerStop();
-      return `Missing width (${data.width}) ("${String(data).slice(0, 100)}")`;
+      return void next(`Missing width (${data.width}) ("${String(data).slice(0, 100)}")`);
     }
     if (this.is_cube) {
       assert(!per_mipmap_data); // not implemented
@@ -577,6 +615,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         profilerStop();
       }
       this.allowMipmaps(true); // can be auto-generated
+      finish();
     } else if (this.is_array && per_mipmap_data) {
       let tile_w = per_mipmap_data[0].width;
       assert(per_mipmap_data[0].height % tile_w === 0);
@@ -585,7 +624,8 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       profilerStart('texImage3D');
       this.uploadPackedTexArrayWithMips(per_mipmap_data, tile_w, num_images, data);
       profilerStop();
-      this.allowMipmaps(true); // proided
+      this.allowMipmaps(true); // provided
+      finish();
     } else if (this.is_array) {
       assert(!per_mipmap_data); // handled above
       let num_images = h / w;
@@ -614,6 +654,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       // }
 
       this.allowMipmaps(true); // can be auto-generated
+      finish();
     } else if (np2) {
       assert(!per_mipmap_data); // not implemented
       // Pad up to power of two
@@ -632,6 +673,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
       profilerStop();
       this.allowMipmaps(true); // can be auto-generated
+      finish();
     } else if (per_mipmap_data) {
       let leveloffs = 0;
       profilerStart('texImage2D');
@@ -650,6 +692,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       }
       profilerStop();
       this.allowMipmaps(true); // provided
+      finish();
     } else {
       assert(!per_mipmap_data); // not implemented
       if (data.width > max_texture_size || data.height > max_texture_size) {
@@ -670,35 +713,11 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         profilerStop();
       }
       this.allowMipmaps(true); // can be auto-generated
+      finish();
     }
-  }
-  let err = null;
-  profilerStart('getError (flush)');
-  let gl_err = gl.getError();
-  profilerStop();
-  if (gl_err) {
-    err = `GLError(${gl_err})`;
-  }
-  if (!err && this.mipmaps && !per_mipmap_data && this.mipmaps_allowed) {
-    profilerStart('generateMipmap');
-    gl.generateMipmap(this.target);
-    profilerStopStart('generateMipmap-getError (flush)');
-    gl_err = gl.getError();
-    profilerStop();
-    if (gl_err) {
-      err = `generateMipmap:GLError(${gl_err})`;
-    }
-  }
-  if (!err) {
-    this.updateGPUMem();
-    this.eff_handle = this.handle;
-    this.loaded = true;
-
-    callEach(this.on_load, this.on_load = null, this);
   }
 
   profilerStop();
-  return err;
 };
 
 Texture.prototype.onLoad = function (cb) {
@@ -1118,52 +1137,62 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         --load_count;
         return;
       }
+
+      function onError(err_details) {
+        let err_url = url_use_debug && url_use_debug.length > 200 ? `${url_use_debug.slice(0, 200)}...` : url_use_debug;
+        let err = `Error loading texture "${err_url}": ${err_details}`;
+        retries++;
+        if (retries > TEX_RETRY_COUNT) {
+          --load_count;
+          tex.eff_handle = handle_error;
+          tex.load_fail = true;
+          console.error(`${err}: ${err_details}, retries failed`);
+          if (tex.soft_error) {
+            tex.err = 'Load failed';
+          } else {
+            shadersSetGLErrorReportDetails();
+            assert(false, err);
+          }
+          return;
+        }
+        console.error(`${err}: ${err_details}, retrying... `);
+        setTimeout(tryLoad.bind(null, handleLoad), 100 * retries * retries);
+      }
+
       img = img_new;
       let err_details = '';
       if (err_prep) {
-        err_details = err_prep;
-      } else if (img) {
-        let err = tex.updateData(img.width, img.height, img, mipmaps);
+        return void onError(err_prep);
+      }
+      if (!img) {
+        return void onError('no img');
+      }
+      tex.updateData(img.width, img.height, img, mipmaps, function (err) {
         if (err) {
           err_details = String(err);
           // Samsung TV gets 1282 on texture arrays
           // Samsung Galaxy S6 gets 1281 on texture arrays
           // Note: Any failed image load (partial read of a bad png, etc) also results in 1281!
-          if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') && engine.webgl2 && !engine.DEBUG) {
+          if (tex.is_array && (err === 'GLError(1282)' || err === 'GLError(1281)') &&
+            engine.webgl2 && !engine.DEBUG
+          ) {
             localStorageSetJSON('webgl2_disable', {
               ua: navigator.userAgent,
               ts: Date.now(),
             });
-            console.error(`Error loading array texture "${url_use_debug}": ${err_details}, reloading without WebGL2..`);
+            console.error(`Error loading array texture "${url_use_debug}": ` +
+              `${err_details}, reloading without WebGL2..`);
             engine.reloadSafe();
             return;
           }
           if (!tex.for_reload) {
             retries = TEX_RETRY_COUNT; // do not retry this
           }
+          onError(err_details);
         } else {
           --load_count;
-          return;
         }
-      }
-      let err_url = url_use_debug && url_use_debug.length > 200 ? `${url_use_debug.slice(0, 200)}...` : url_use_debug;
-      let err = `Error loading texture "${err_url}": ${err_details}`;
-      retries++;
-      if (retries > TEX_RETRY_COUNT) {
-        --load_count;
-        tex.eff_handle = handle_error;
-        tex.load_fail = true;
-        console.error(`${err}: ${err_details}, retries failed`);
-        if (tex.soft_error) {
-          tex.err = 'Load failed';
-        } else {
-          shadersSetGLErrorReportDetails();
-          assert(false, err);
-        }
-        return;
-      }
-      console.error(`${err}: ${err_details}, retrying... `);
-      setTimeout(tryLoad.bind(null, handleLoad), 100 * retries * retries);
+      });
     });
   }
   tryLoad(handleLoad);
