@@ -29,6 +29,11 @@ module.exports = function (config) {
     zip: true,
   });
 
+  // Remove this exclusion
+  config.client_png = config.client_png.filter((a) => {
+    return a !== '!client/img/texproc/*.png';
+  });
+
   // Spine support
   // Note: Runtime requires a Spine license to use in any product.
   config.client_fsdata.push(

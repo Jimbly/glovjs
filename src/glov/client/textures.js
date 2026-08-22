@@ -247,6 +247,7 @@ function Texture(params) {
     auto_unload_textures.push(this);
   }
   this.load_filter = params.load_filter || null;
+  this.load_time_total = -1;
 
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
@@ -684,15 +685,17 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
   let tflags;
   let compressed_type;
   let load_gen = tex.load_gen = (tex.load_gen || 0) + 1;
+  let load_start_wall_time;
   function tryLoad(next) {
     profilerStart('Texture:tryLoad');
-
+    load_start_wall_time = Date.now();
     let url_use = url;
     let did_next = false;
     function done(err, img) {
       profilerStart('Texture:onload');
       if (!did_next) {
         did_next = true;
+        tex.load_time_total = Date.now() - load_start_wall_time;
         next(err, img, url_use);
       }
       profilerStop();

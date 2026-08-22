@@ -27,6 +27,7 @@ module.exports = function (gb) {
     client_css: ['client/**/*.css', '!client/sounds/Bfxr/**'],
     client_png: [
       'client/**/*.png',
+      '!client/img/texproc/*.png', // large example files from demo
       '!client/atlases/**',
       'client_autoatlas:**/*.png',
     ],

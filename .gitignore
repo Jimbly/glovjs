@@ -16,3 +16,4 @@ Bfxr
 config/*.json
 .DS_Store
 wsdebug.json
+src/client/img/texproc/8K-local*

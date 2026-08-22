@@ -91,6 +91,7 @@ import {
   uiTextHeight,
 } from 'glov/client/ui';
 import * as ui_test from 'glov/client/ui_test';
+import { webFSExists } from 'glov/client/webfs';
 import type { TSMap } from 'glov/common/types';
 import {
   clamp,
@@ -100,6 +101,7 @@ import {
   easeOut,
   identity,
   lerp,
+  mod,
   tweenBounceOut,
   tweenElasticIn,
   tweenElasticInOut,
@@ -144,9 +146,9 @@ let sprites: SpriteDict = {} as SpriteDict;
 const music_file = 'music_test.ogg';
 
 // Persistent flags system for testing parameters
-let flags: TSMap<boolean | string> = {};
+let flags: TSMap<boolean | string | number> = {};
 function flagGet<T=boolean>(key: string, dflt?: T): T;
-function flagGet(key: string, dflt?: boolean | string): boolean | string {
+function flagGet(key: string, dflt?: boolean | string | number): boolean | string | number {
   if (flags[key] === undefined) {
     flags[key] = local_storage.getJSON(`flag_${key}`, dflt) || false;
   }
@@ -156,7 +158,7 @@ function flagToggle(key: string): void {
   flags[key] = !flagGet(key);
   local_storage.setJSON(`flag_${key}`, flags[key]);
 }
-function flagSet(key: string, value: boolean | string): void {
+function flagSet(key: string, value: boolean | string | number): void {
   flags[key] = value;
   local_storage.setJSON(`flag_${key}`, flags[key]);
 }
@@ -497,11 +499,23 @@ function scoresTest(): void {
   });
 }
 
+function cmpNumber(a: number, b: number): number {
+  return a - b;
+}
 
 let tex_sprite = spriteCreate({ texs: [] });
-let tex_comp_mode = 0;
+let tex_comp_img = flagGet('tex_comp_img', 0) || 0;
+let tex_comp_mode = flagGet('tex_comp_mode', 0) || 0;
+let tex_comp_reload = flagGet('tex_comp_reload', false);
+let tex_comp_check_frame_counter = 0;
+let tex_comp_recent_stalls = 0;
+const TEX_COMP_CHECK_FRAME_RANGE = 10;
 const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
+const TEX_COMP_IMAGES = ['256', '8K'];
 function textureCompressionTest(): void {
+  if (webFSExists('img/texproc/8K-local-compress.tflag')) {
+    TEX_COMP_IMAGES[1] = '8K-local';
+  }
   let y = 2;
   let font = uiGetFont();
   let text_height = uiTextHeight();
@@ -516,20 +530,102 @@ function textureCompressionTest(): void {
   let tex_w = w / 2;
   let x = 8;
   let button_w = w / 3;
+  let yy = y;
+  let yadv = uiButtonHeight() + 2;
+  if (buttonText({
+    text: `Image: ${TEX_COMP_IMAGES[tex_comp_img]}`,
+    markdown: true,
+    x, y: yy,
+    w: button_w,
+    hotkey: KEYS.M,
+  })) {
+    tex_comp_img = (tex_comp_img + 1) % TEX_COMP_IMAGES.length;
+    flagSet('tex_comp_img', tex_comp_img);
+    if (tex_comp_reload) {
+      tex_sprite.texs[0].destroy();
+    }
+  }
+  yy += yadv;
   if (buttonText({
     text: `**M**ode: ${TEX_COMP_MODES[tex_comp_mode]}`,
     markdown: true,
-    x, y,
+    x, y: yy,
     w: button_w,
     hotkey: KEYS.M,
   })) {
     tex_comp_mode = (tex_comp_mode + 1) % TEX_COMP_MODES.length;
+    flagSet('tex_comp_mode', tex_comp_mode);
+    if (tex_comp_reload) {
+      tex_sprite.texs[0].destroy();
+    }
   }
-  x += button_w + 2;
+  yy += yadv;
+  if (buttonText({
+    text: `**R**eload: ${tex_comp_reload}`,
+    markdown: true,
+    x, y: yy,
+    w: button_w,
+    hotkey: KEYS.R,
+  })) {
+    tex_comp_reload = !tex_comp_reload;
+    flagSet('tex_comp_reload', tex_comp_reload);
+    if (tex_comp_reload) {
+      tex_sprite.texs[0].destroy();
+    }
+  }
+  yy += yadv;
+
+  if (tex_comp_check_frame_counter) {
+    if (!--tex_comp_check_frame_counter) {
+      let frames = engine.perf_state.fpsgraph.history;
+      let medians = [];
+      for (let offs = 0; offs < 2; ++offs) {
+        let values = [];
+        for (let ii = 0; ii < engine.PERF_HISTORY_SIZE; ++ii) {
+          values.push(frames[ii*2 + offs]);
+        }
+        values.sort(cmpNumber);
+        medians.push(values[floor(values.length / 2)]);
+      }
+      let m1 = ceil(medians[0] * 1.1);
+      let m2 = ceil(medians[1] * 1.1);
+      let stalls = 0;
+      let mx = TEX_COMP_CHECK_FRAME_RANGE + 2;
+      for (let ii = 0; ii < mx; ++ii) {
+        let frame_idx = mod(engine.perf_state.fpsgraph.index - mx - 1 + ii, engine.PERF_HISTORY_SIZE);
+        let v1 = frames[frame_idx*2];
+        let v2 = frames[frame_idx*2+1];
+        if (v2 > m2) {
+          // total frame stall larger than frame time, assume everything not in-tick is the stall
+          stalls += v2 - m1;
+        } else if (v1 > m1) {
+          // in-frame stall (unexpected)
+          stalls += v1 - m1;
+        }
+      }
+      tex_comp_recent_stalls = stalls;
+    }
+  }
 
   let tex = textureLoad({
-    url: `img/texproc/256-${TEX_COMP_MODES[tex_comp_mode]}.png`,
+    url: `img/texproc/${TEX_COMP_IMAGES[tex_comp_img]}-${TEX_COMP_MODES[tex_comp_mode]}.png`,
   });
+  if (!tex.loaded) {
+    tex.onLoad(function () {
+      tex_comp_check_frame_counter = TEX_COMP_CHECK_FRAME_RANGE;
+    });
+  }
+
+  font.draw({
+    text: `Texture load time: ${tex.load_time_total}\nStalls: ${ceil(tex_comp_recent_stalls)}`,
+    color: 0x000000ff,
+    x: 2, y: yy, w: game_width - 4,
+    size: text_height *0.75,
+    align: ALIGN.HWRAP,
+  });
+
+  x += button_w + 2;
+
   tex_sprite.texs[0] = tex;
   tex_sprite.draw({
     x, y,
