@@ -353,9 +353,10 @@ function fillUVs(tex, w, h, nozoom, uvs) {
       }
     } else if (zoom_level > 1) { // minification
       // need to apply this bias even with nearest filtering, not exactly sure why
-      let mipped_texels = zoom_level / 2;
-      ubias = vbias = 0.5 + mipped_texels;
-
+      // let mipped_texels = zoom_level / 2;
+      // ubias = vbias = 0.5 + mipped_texels;
+      ubias = 0.5 + (uvs[2] - uvs[0]) * tex.width / w / 2;
+      vbias = 0.5 + (uvs[3] - uvs[1]) * tex.height / h / 2;
     }
     if (uvs[0] > uvs[2]) {
       ubias *= -1;
