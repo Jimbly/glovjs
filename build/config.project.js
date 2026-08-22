@@ -33,6 +33,8 @@ module.exports = function (config) {
   config.client_png = config.client_png.filter((a) => {
     return a !== '!client/img/texproc/*.png';
   });
+  // Not using this currently
+  config.client_png.push('!client/img/texproc/32K*');
 
   // Spine support
   // Note: Runtime requires a Spine license to use in any product.

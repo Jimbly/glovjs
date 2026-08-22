@@ -15,6 +15,7 @@ export const TEXTURE_FORMAT = {
 };
 
 import * as assert from 'assert';
+import { dataError } from 'glov/common/data_error';
 import {
   FORMAT_ASTC,
   FORMAT_DXT,
@@ -45,7 +46,7 @@ import { shadersSetGLErrorReportDetails } from './shaders';
 import * as urlhash from './urlhash';
 import { webFSExists, webFSGetFile } from './webfs';
 
-const { floor } = Math;
+const { floor, min } = Math;
 
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 
@@ -64,6 +65,7 @@ export function texturesDelayStreamingPostLoad() {
 
 let aniso = 4;
 let max_aniso = 0;
+let max_texture_size = 1024;
 let aniso_enum;
 let dxt_supported = false;
 let astc_supported = false;
@@ -80,9 +82,9 @@ const cube_faces = [
   { target: 'TEXTURE_CUBE_MAP_POSITIVE_Z', pos: [2,1] },
 ];
 
-export function textureDefaultFilters(min, mag) {
-  default_filter_min = min;
-  default_filter_mag = mag;
+export function textureDefaultFilters(filter_min, filter_mag) {
+  default_filter_min = filter_min;
+  default_filter_mag = filter_mag;
 }
 
 export function textureDefaultIsNearest() {
@@ -248,6 +250,7 @@ function Texture(params) {
   }
   this.load_filter = params.load_filter || null;
   this.load_time_total = -1;
+  this.actual_url = '?';
 
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
 
@@ -497,11 +500,20 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       count: bytesPerPixelFromCompressedFormat(data.gl_internal_format), // actually bytes-per-pixel
       gl_type: data.gl_internal_format,
     };
-    gl.compressedTexImage2D(this.target, 0, data.gl_internal_format, w, h, 0, data.data);
     if (per_mipmap_data) {
-      for (let level = 1; level < per_mipmap_data.length; ++level) {
+      let leveloffs = 0;
+      for (let level = 0; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
-        gl.compressedTexImage2D(this.target, level, data.gl_internal_format, img.width, img.height, 0, img.data);
+        if (img.width > max_texture_size || img.height > max_texture_size) {
+          if (level === 0) {
+            dataError(`Texture ${this.url} (${img.width}x${img.height}) larger ` +
+              `than GL max texture size (${max_texture_size}) and has been resized`);
+          }
+          ++leveloffs;
+          continue;
+        }
+        gl.compressedTexImage2D(this.target, level - leveloffs,
+          data.gl_internal_format, img.width, img.height, 0, img.data);
         // let gl_err = gl.getError();
         // if (gl_err) {
         //   assert(false, `${gl_err}: ${level}/${per_mipmap_data.length} ` +
@@ -510,6 +522,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       }
       this.allowMipmaps(true);
     } else {
+      gl.compressedTexImage2D(this.target, 0, data.gl_internal_format, w, h, 0, data.data);
       this.allowMipmaps(false);
     }
   } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
@@ -597,15 +610,36 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
       this.allowMipmaps(true); // can be auto-generated
     } else if (per_mipmap_data) {
+      let leveloffs = 0;
       for (let level = 0; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
-        gl.texImage2D(this.target, level, this.format.internal_type, this.format.internal_type,
-          this.format.gl_type, img);
+        if (img.width > max_texture_size || img.height > max_texture_size) {
+          if (level === 0) {
+            dataError(`Texture ${this.url} (${img.width}x${img.height}) larger ` +
+              `than GL max texture size (${max_texture_size}) and has been resized`);
+          }
+          ++leveloffs;
+          continue;
+        }
+        gl.texImage2D(this.target, level - leveloffs, this.format.internal_type,
+          this.format.internal_type, this.format.gl_type, img);
       }
       this.allowMipmaps(true); // provided
     } else {
       assert(!per_mipmap_data); // not implemented
-      gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
+      if (data.width > max_texture_size || data.height > max_texture_size) {
+        dataError(`Texture ${this.url} (${data.width}x${data.height}) larger ` +
+          `than GL max texture size (${max_texture_size}) and has been resized`);
+        let canvas = document.createElement('canvas');
+        canvas.width = min(w, max_texture_size);
+        canvas.height = min(h, max_texture_size);
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(data, 0, 0, canvas.width, canvas.height);
+        gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type,
+          this.format.gl_type, canvas);
+      } else {
+        gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
+      }
       this.allowMipmaps(true); // can be auto-generated
     }
   }
@@ -739,6 +773,8 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
           }
         }
       }
+
+      tex.actual_url = url_use;
 
       if (webFSExists(url_use) && blobSupported()) {
         assert(!(tflags & FORMAT_PACK)); // not supported/tested, but should be trivial?
@@ -1342,6 +1378,8 @@ export function textureStartup() {
     aniso_enum = ext_anisotropic.TEXTURE_MAX_ANISOTROPY_EXT;
     aniso = max_aniso = gl.getParameter(ext_anisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
   }
+
+  max_texture_size = gl.getParameter(gl.MAX_TEXTURE_SIZE);
 
   texcomp_support = [];
   let ext_astc = gl.getExtension('WEBGL_compressed_texture_astc');

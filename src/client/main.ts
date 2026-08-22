@@ -617,7 +617,9 @@ function textureCompressionTest(): void {
   }
 
   font.draw({
-    text: `Texture load time: ${tex.load_time_total}\nStalls: ${ceil(tex_comp_recent_stalls)}`,
+    text: `${tex.actual_url.split('.').pop()}\n` +
+      `Texture load time: ${tex.load_time_total}\n` +
+      `Stalls: ${ceil(tex_comp_recent_stalls)}`,
     color: 0x000000ff,
     x: 2, y: yy, w: game_width - 4,
     size: text_height *0.75,
@@ -627,28 +629,29 @@ function textureCompressionTest(): void {
   x += button_w + 2;
 
   tex_sprite.texs[0] = tex;
+  let aspect = tex_sprite.getAspect();
   tex_sprite.draw({
     x, y,
     w: tex_w,
-    h: tex_w,
+    h: tex_w/aspect,
   });
   x += tex_w;
   tex_sprite.draw({
     x, y,
     w: tex_w/2,
-    h: tex_w/2,
+    h: tex_w/aspect/2,
   });
   x += tex_w/2;
   tex_sprite.draw({
     x, y,
     w: tex_w/4,
-    h: tex_w/4,
+    h: tex_w/aspect/4,
   });
   x += tex_w/4;
   tex_sprite.draw({
     x, y,
     w: tex_w/8,
-    h: tex_w/8,
+    h: tex_w/aspect/8,
   });
 
 }

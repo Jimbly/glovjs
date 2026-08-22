@@ -251,7 +251,7 @@ module.exports = function () {
           let src_chunkrow_size = chunk.width / 4 * chunk_size_bytes;
           let dst_chunkrow_size = file_data.width / 4 * chunk_size_bytes;
           for (let yy = 0; yy < chunk.height; yy+=4) {
-            let source_offs = yy/4 * src_chunkrow_size;
+            let source_offs = yy/4 * src_chunkrow_size + HEADER_SIZE;
             let target_offs = (chunk.y + yy)/4 * dst_chunkrow_size +
               chunk.x / 4 * chunk_size_bytes;
             src.copy(img, target_offs, source_offs, source_offs + src_chunkrow_size);
