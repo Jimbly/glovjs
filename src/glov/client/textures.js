@@ -34,7 +34,10 @@ import {
 import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
 import * as engine from './engine';
-import { postTick } from './engine';
+import {
+  isLoading,
+  postTick,
+} from './engine';
 import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import {
@@ -563,7 +566,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
     };
     let tasks = [];
     let size = this.width * this.height * bpp;
-    let do_sync = size <= ASYNC_TEXTURE_SIZE;
+    let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading();
     let total_levels = 1;
     let leveloffs = 0;
     let do_prealloc = engine.webgl2;
@@ -595,31 +598,31 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
     }
 
     function uploadLevel(level, img) {
-      if (do_sync) {
+      function doUploadFull() {
         profilerStart('compressedTexImage2D');
-        gl.compressedTexImage2D(tex.target, level,
-          data.gl_internal_format, img.width, img.height, 0, img.data);
+        if (tex.immutable_storage) {
+          gl.compressedTexSubImage2D(tex.target, level,
+            0, 0, img.width, img.height,
+            data.gl_internal_format, img.data);
+        } else {
+          gl.compressedTexImage2D(tex.target, level,
+            data.gl_internal_format, img.width, img.height, 0, img.data);
+        }
+        gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+        tex.eff_handle = tex.handle; // if it was using the loading handle, we have at least some good level now
         profilerStop();
+      }
+      if (do_sync) {
+        doUploadFull();
       } else {
         let level_size = img.width * img.height * bpp;
         if (level_size <= ASYNC_TEXTURE_SIZE || !engine.webgl2) {
           // this level is small enough, do all at once
           // or, WebGL1, we can't pre-allocate compressed textures, just do one mip layer at a time
           tasks.push(function () {
-            profilerStart('compressedTexImage2D');
-            if (tex.immutable_storage) {
-              gl.compressedTexSubImage2D(tex.target, level,
-                0, 0, img.width, img.height,
-                data.gl_internal_format, img.data);
-            } else {
-              gl.compressedTexImage2D(tex.target, level,
-                data.gl_internal_format, img.width, img.height, 0, img.data);
-            }
-            gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
-            tex.eff_handle = tex.handle;
-            profilerStop();
-            // if this didn't use up the whole quota, finish up the texture
-            return level_size < ASYNC_TEXTURE_SIZE;
+            doUploadFull();
+            // if this didn't use up the whole quota, keep going
+            return level_size < ASYNC_TEXTURE_SIZE * 0.5;
           });
         } else {
           // do full width (contiguous blocks)
