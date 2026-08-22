@@ -103,7 +103,7 @@
     "pngjs": "^6.0.0",
     "regexp-sourcemaps": "^1.0.1",
     "stream-to-array": "^2.3.0",
-    "texture-compressor": "^1.0.2",
+    "@jimbly/texture-compressor": "^1.0.0",
     "typescript": "5.8.2",
     "typescript-eslint": "^8.26.1",
     "uglify-js": "3.14.2",
