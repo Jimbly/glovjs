@@ -2,9 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { asyncEachSeries } = require('glov-async');
+const { pack } = require('@jimbly/texture-compressor');
+const { asyncEachSeries, asyncSeries } = require('glov-async');
 const gb = require('glov-build');
-const { pack } = require('texture-compressor/dist/cli/lib/index');
 const {
   FORMAT_ASTC,
   FORMAT_PACK,
@@ -20,18 +20,22 @@ const {
 } = require('./png.js');
 const { texPackMakeTXP } = require('./texpack');
 
-const { floor } = Math;
+const { max, min, floor, random } = Math;
 
 module.exports = function () {
   function tempPngName() {
     let temp_dir = fs.realpathSync(os.tmpdir());
-    return `${path.join(temp_dir, String(Math.random()).slice(2, 8))}.png`;
+    return `${path.join(temp_dir, `texproc-${String(random()).slice(2, 8)}`)}.png`;
   }
-  function passThrough(png_data, has_alpha, next) {
-    return next(null, png_data);
+  function passThrough(file_data, has_alpha, next) {
+    return next(null, file_data.data);
   }
 
-  function ktxToImages(debug, buf, next) {
+  const HEADER_OFFS_WIDTH = 12;
+  const HEADER_OFFS_HEIGHT = 16;
+  const HEADER_SIZE = 5*4;
+
+  function ktxToImages(debug, buf, orig_file_data, next) {
     const KTX_HEADER = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
     let idx = 0;
     for (let ii = 0; ii < KTX_HEADER.length; ++ii) {
@@ -70,10 +74,18 @@ module.exports = function () {
     check(ints[3], 0, 'glFormat - must be compressed texture');
     let gl_internal_format = ints[4]; // e.g. gl.COMPRESSED_RGBA_S3TC_DXT5_EXT
     let gl_base_internal_format = ints[5]; // gl.RGBA or gl.RGB
-    let tex_width = Math.max(1, ints[6]);
+    let tex_width = max(1, ints[6]);
     assert(tex_width);
-    let tex_height = Math.max(1, ints[7]);
+    let tex_height = max(1, ints[7]);
     assert(tex_height);
+    if (tex_width < orig_file_data.width ||
+      tex_width > orig_file_data.width + 12 ||
+      tex_height < orig_file_data.height ||
+      tex_height > orig_file_data.height + 12
+    ) {
+      check(tex_width, orig_file_data.width, 'encoded image not the expected size');
+      check(tex_height, orig_file_data.height, 'encoded image not the expected size');
+    }
     check(ints[8], 0, 'pixelDepth - 3D texture not supported');
     check(ints[9], 0, 'numberOfArrayElements - 3D texture not supported');
     check(ints[10], 1, 'numberOfFaces - cube maps not supported');
@@ -89,17 +101,17 @@ module.exports = function () {
     imgs.push(buf.slice(idx, idx + size));
     idx += (size + 3) & ~3;
     assert.equal(idx, buf.length);
-    let header = Buffer.alloc(4*5);
+    let header = Buffer.alloc(HEADER_SIZE);
     header.writeUInt32LE(TEXPROC_COMPRESSED_HEADER, 0);
     header.writeUInt32LE(gl_internal_format, 4);
     header.writeUInt32LE(gl_base_internal_format, 8);
-    header.writeUInt32LE(tex_width, 12);
-    header.writeUInt32LE(tex_height, 16);
+    header.writeUInt32LE(tex_width, HEADER_OFFS_WIDTH);
+    header.writeUInt32LE(tex_height, HEADER_OFFS_HEIGHT);
     let out = Buffer.concat([header, imgs[0]]);
     next(null, out);
   }
 
-  function compressedWrite(job, png_data, param, next) {
+  function compressedWrite(job, file_data, param, next) {
     let temp_file = tempPngName();
     let out_file = temp_file.replace(/\.png$/, '.ktx');
     function cleanup() {
@@ -110,7 +122,7 @@ module.exports = function () {
         // ignore errors
       });
     }
-    fs.writeFile(temp_file, png_data, function (err) {
+    fs.writeFile(temp_file, file_data.data, function (err) {
       if (err) {
         cleanup();
         return void next(err);
@@ -132,8 +144,8 @@ module.exports = function () {
           if (err) {
             return void next(err);
           }
-          // parse KTX data and return just the astc data
-          ktxToImages(param.compression, data, next);
+          // parse KTX data and return just the astc/dxt data
+          ktxToImages(param.compression, data, file_data, next);
         });
       }, function (err) {
         cleanup();
@@ -142,7 +154,7 @@ module.exports = function () {
     });
   }
 
-  function astcWrite(astcmode, quality, job, png_data, has_alpha, next) {
+  function astcWrite(astcmode, quality, job, file_data, has_alpha, next) {
     astcmode = (astcmode || '4x4').toLowerCase();
     quality = [
       null,
@@ -152,7 +164,7 @@ module.exports = function () {
       'astcthorough',
       'astcexhaustive',
     ][quality || 3];
-    compressedWrite(job, png_data, {
+    compressedWrite(job, file_data, {
       type: 'astc',
       compression: `ASTC_${astcmode}`,
       //  ASTC_4x4, ASTC_5x4, ASTC_5x5, ASTC_6x5, ASTC_6x6, ASTC_8x5, ASTC_8x6,
@@ -161,7 +173,7 @@ module.exports = function () {
       flags: ['shh'],
     }, next);
   }
-  function dxtWrite(dxtmode, quality, job, png_data, has_alpha, next) {
+  function dxtWrite(dxtmode, quality, job, file_data, has_alpha, next) {
     // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
     dxtmode = (dxtmode || 'auto').toUpperCase();
     quality = [
@@ -174,11 +186,86 @@ module.exports = function () {
     ][quality || 3];
     let compression =
       (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
-    compressedWrite(job, png_data, {
+
+    let compress_options = {
       type: 's3tc',
       compression,
       quality,
-    }, next);
+    };
+    if (file_data.width <= 4096 && file_data.height <= 4096) {
+      // works, just do it
+      compressedWrite(job, file_data, compress_options, next);
+      return;
+    }
+    // over 4K, `crunch` will not handle it, do it in chunks
+    assert(file_data.uncompressed);
+    let chunks = [];
+    for (let xx = 0; xx < file_data.width; xx += 4096) {
+      for (let yy = 0; yy < file_data.width; yy += 4096) {
+        chunks.push({
+          x: xx,
+          y: yy,
+          width: min(file_data.width - xx, 4096),
+          height: min(file_data.height - yy, 4096),
+        });
+      }
+    }
+    let png = pngAlloc({ width: 4096, height: 4096, byte_depth: 4 });
+    let img_data;
+    asyncSeries([
+      function (next) {
+        // compress each 4K chunk
+        asyncEachSeries(chunks, function (chunk, next) {
+          let src = file_data.uncompressed.data;
+          let dst = png.data;
+          let row_size = chunk.width * 4;
+          let src_stride = file_data.width * 4;
+          for (let yy = 0; yy < chunk.height; ++yy) {
+            let source_start = (chunk.y + yy) * src_stride;
+            src.copy(dst, yy * row_size, source_start, source_start + row_size);
+          }
+          png.width = chunk.width;
+          png.height = chunk.height;
+          compressedWrite(job, {
+            width: chunk.width,
+            height: chunk.height,
+            data: pngWrite(png),
+          }, compress_options, function (err, data) {
+            if (err) {
+              return void next(err);
+            }
+            chunk.compressed = data;
+            next();
+          });
+        }, next);
+      },
+      function (next) {
+        // combine into a single compressed chunk
+        let bpp = compression === 'DXT5' ? 8 : 4;
+        let chunk_size_bytes = bpp * 16 / 8;
+        let img = Buffer.alloc(file_data.width * file_data.height * bpp / 8);
+
+        chunks.forEach(function (chunk) {
+          let src = chunk.compressed;
+          let src_chunkrow_size = chunk.width / 4 * chunk_size_bytes;
+          let dst_chunkrow_size = file_data.width / 4 * chunk_size_bytes;
+          for (let yy = 0; yy < chunk.height; yy+=4) {
+            let source_offs = yy/4 * src_chunkrow_size;
+            let target_offs = (chunk.y + yy)/4 * dst_chunkrow_size +
+              chunk.x / 4 * chunk_size_bytes;
+            src.copy(img, target_offs, source_offs, source_offs + src_chunkrow_size);
+          }
+        });
+
+        let header = chunks[0].compressed.slice(0, HEADER_SIZE);
+        header.writeUInt32LE(file_data.width, HEADER_OFFS_WIDTH);
+        header.writeUInt32LE(file_data.height, HEADER_OFFS_HEIGHT);
+        img_data = Buffer.concat([header, img]);
+        next();
+      },
+    ], function (err) {
+      next(err, img_data);
+    });
   }
 
   function findTexOpt(job, base_name, next) {
@@ -277,8 +364,7 @@ module.exports = function () {
         return void done('Unknown texopt format: expected packed_mipmaps: true or formats');
       }
       let formats = texopt.formats || ['png'];
-      let subfiles = [];
-      subfiles.push(file.contents); // if we're doing packed mips, we always start with the base, as-is
+      let need_uncompressed = false;
       let out_by_format = [];
       for (let ii = 0; ii < formats.length; ++ii) {
         let format = formats[ii];
@@ -301,6 +387,7 @@ module.exports = function () {
           out_elem.packext = 'txp-astc';
           out_elem.txp_flags |= FORMAT_ASTC;
         } else if (format === 'dxt') {
+          need_uncompressed = true;
           flags |= FORMAT_DXT;
           out_elem.writer = dxtWrite.bind(null, texopt.dxtmode, texopt.quality, job);
           out_elem.ext = 'dxt';
@@ -321,6 +408,24 @@ module.exports = function () {
         return void done(err);
       }
 
+      if (flags & (FORMAT_DXT | FORMAT_ASTC)) {
+        if ((img.width % 4) || (img.height % 4)) {
+          return void done(`Compressed texture dimensions must be multiples of 4 (was ${img.width}x${img.height})`);
+        }
+      }
+
+      if (img.width <= 4096 && img.height <= 4096) {
+        need_uncompressed = false;
+      }
+
+      let subfile_data = [];
+      subfile_data.push({
+        width: img.width,
+        height: img.height,
+        data: file.contents,
+        uncompressed: need_uncompressed ? img : undefined,
+      });
+
       let has_alpha = false;
       for (let ii = 3; ii < img.data.length; ii += 4) {
         if (img.data[ii] !== 255) {
@@ -340,11 +445,17 @@ module.exports = function () {
           assert(mipmaps.length);
         }
         for (let ii = 0; ii < mipmaps.length; ++ii) {
-          subfiles.push(pngWrite(mipmaps[ii]));
+          let png = mipmaps[ii];
+          subfile_data.push({
+            width: png.width,
+            height: png.height,
+            data: pngWrite(png),
+            uncompressed: need_uncompressed ? png : undefined,
+          });
         }
       }
       asyncEachSeries(out_by_format, function (out_elem, next) {
-        asyncEachSeries(subfiles, function (subfile, next, idx) {
+        asyncEachSeries(subfile_data, function (subfile, next, idx) {
           out_elem.writer(subfile, has_alpha, function (err, outdata) {
             out_elem.out[idx] = outdata;
             next(err);
