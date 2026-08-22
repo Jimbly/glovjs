@@ -24,6 +24,7 @@ import {
   KEYS,
   mouseDownOverBounds,
   mouseOver,
+  mousePos,
   PAD,
   padButtonDown,
   padButtonDownEdge,
@@ -509,7 +510,7 @@ let tex_comp_mode = flagGet('tex_comp_mode', 0) || 0;
 let tex_comp_reload = flagGet('tex_comp_reload', false);
 let tex_comp_check_frame_counter = 0;
 let tex_comp_recent_stalls = 0;
-const TEX_COMP_CHECK_FRAME_RANGE = 10;
+const TEX_COMP_CHECK_FRAME_RANGE = 6;
 const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
 const TEX_COMP_IMAGES = ['256', '8K'];
 function textureCompressionTest(): void {
@@ -590,7 +591,7 @@ function textureCompressionTest(): void {
       let m1 = ceil(medians[0] * 1.1);
       let m2 = ceil(medians[1] * 1.1);
       let stalls = 0;
-      let mx = TEX_COMP_CHECK_FRAME_RANGE + 2;
+      let mx = engine.PERF_HISTORY_SIZE; // TEX_COMP_CHECK_FRAME_RANGE + 2;
       for (let ii = 0; ii < mx; ++ii) {
         let frame_idx = mod(engine.perf_state.fpsgraph.index - mx - 1 + ii, engine.PERF_HISTORY_SIZE);
         let v1 = frames[frame_idx*2];
@@ -635,6 +636,25 @@ function textureCompressionTest(): void {
     w: tex_w,
     h: tex_w/aspect,
   });
+  if (mouseOver({
+    x, y,
+    w: tex_w,
+    h: tex_w/aspect,
+  })) {
+    let pos = mousePos();
+    let u = (pos[0] - x) / tex_w;
+    let v = (pos[1] - y) / (tex_w/aspect);
+    let zoomsize = 64;
+    let zoomuv = 0.0125;
+    tex_sprite.draw({
+      x: pos[0] - zoomsize/2,
+      y: pos[1] - zoomsize/2,
+      w: zoomsize,
+      h: zoomsize,
+      z: Z.TOOLTIP,
+      uvs: [u-zoomuv, v-zoomuv/aspect, u+zoomuv, v+zoomuv/aspect],
+    });
+  }
   x += tex_w;
   tex_sprite.draw({
     x, y,
