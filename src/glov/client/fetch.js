@@ -94,8 +94,12 @@ export function fetch(params, cb) {
         }
         done(null, obj);
       } else if (response_type === 'arraybuffer') {
-        if (xhr.response) {
-          done(null, xhr.response);
+        profilerStart('access response');
+        // non-trivial amount of time (37% of compressed texture loading!)
+        let resp = xhr.response;
+        profilerStop();
+        if (resp) {
+          done(null, resp);
         } else {
           done('empty response');
         }

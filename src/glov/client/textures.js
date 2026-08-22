@@ -489,8 +489,10 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
   if (np2) {
     this.width = nextHighestPowerOfTwo(w);
     this.height = nextHighestPowerOfTwo(h);
+    profilerStart('texImage2D(null)');
     gl.texImage2D(this.target, 0, this.format.internal_type, this.width, this.height, 0,
       this.format.internal_type, this.format.gl_type, null);
+    profilerStop();
   }
   if (data.is_raw_data) {
     assert(!np2);
@@ -502,6 +504,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
     };
     if (per_mipmap_data) {
       let leveloffs = 0;
+      profilerStart('compressedTexImage2D');
       for (let level = 0; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
         if (img.width > max_texture_size || img.height > max_texture_size) {
@@ -520,6 +523,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         //     `${img.width}x${img.height} ${img.data.length}`);
         // }
       }
+      profilerStop();
       this.allowMipmaps(true);
     } else {
       gl.compressedTexImage2D(this.target, 0, data.gl_internal_format, w, h, 0, data.data);
@@ -531,15 +535,21 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
     assert(!this.is_cube);
     if (this.is_array) {
       let num_images = h / w; // assume square
+      profilerStart('texImage');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     } else if (np2) {
       // Could do multiple upload thing like below, but smarter, but we really shouldn't be doing this for
       // in-process generated images!
+      profilerStart('texSubImage2D');
       gl.texSubImage2D(this.target, 0, 0, 0, w, h, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     } else {
+      profilerStart('texImage2D');
       gl.texImage2D(this.target, 0, this.format.internal_type, w, h, 0,
         this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
     }
     this.allowMipmaps(true); // can be auto-generated
   } else {
@@ -558,10 +568,13 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       let ctx = canvas.getContext('2d');
       for (let ii = 0; ii < cube_faces.length; ++ii) {
         let face = cube_faces[ii];
+        profilerStart('drawImage');
         ctx.drawImage(data, face.pos[0] * tex_size, face.pos[1] * tex_size, tex_size, tex_size,
           0, 0, tex_size, tex_size);
+        profilerStopStart('texImage2D');
         gl.texImage2D(gl[face.target], 0, this.format.internal_type, this.format.internal_type, this.format.gl_type,
           canvas);
+        profilerStop();
       }
       this.allowMipmaps(true); // can be auto-generated
     } else if (this.is_array && per_mipmap_data) {
@@ -569,13 +582,17 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       assert(per_mipmap_data[0].height % tile_w === 0);
       let num_images = per_mipmap_data[0].height / tile_w;
 
+      profilerStart('texImage3D');
       this.uploadPackedTexArrayWithMips(per_mipmap_data, tile_w, num_images, data);
+      profilerStop();
       this.allowMipmaps(true); // proided
     } else if (this.is_array) {
       assert(!per_mipmap_data); // handled above
       let num_images = h / w;
+      profilerStart('texImage3D');
       gl.texImage3D(this.target, 0, this.format.internal_type, w, w,
         num_images, 0, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
 
       if (gl.getError()) {
         // Fix for Samsung devices (Chris's and Galaxy S8 on CrossBrowserTesting)
@@ -602,15 +619,22 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
       // Pad up to power of two
       // Duplicate right and bottom pixel row by sending image 3 times
       if (w !== this.width) {
+        profilerStart('texSubImage2D');
         gl.texSubImage2D(this.target, 0, 1, 0, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
       }
       if (h !== this.height) {
+        profilerStart('texSubImage2D');
         gl.texSubImage2D(this.target, 0, 0, 1, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
       }
+      profilerStart('texSubImage2D');
       gl.texSubImage2D(this.target, 0, 0, 0, this.format.internal_type, this.format.gl_type, data);
+      profilerStop();
       this.allowMipmaps(true); // can be auto-generated
     } else if (per_mipmap_data) {
       let leveloffs = 0;
+      profilerStart('texImage2D');
       for (let level = 0; level < per_mipmap_data.length; ++level) {
         let img = per_mipmap_data[level];
         if (img.width > max_texture_size || img.height > max_texture_size) {
@@ -624,10 +648,12 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         gl.texImage2D(this.target, level - leveloffs, this.format.internal_type,
           this.format.internal_type, this.format.gl_type, img);
       }
+      profilerStop();
       this.allowMipmaps(true); // provided
     } else {
       assert(!per_mipmap_data); // not implemented
       if (data.width > max_texture_size || data.height > max_texture_size) {
+        profilerStart('texture resize and upload');
         dataError(`Texture ${this.url} (${data.width}x${data.height}) larger ` +
           `than GL max texture size (${max_texture_size}) and has been resized`);
         let canvas = document.createElement('canvas');
@@ -637,20 +663,28 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data) 
         ctx.drawImage(data, 0, 0, canvas.width, canvas.height);
         gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type,
           this.format.gl_type, canvas);
+        profilerStop();
       } else {
+        profilerStart('texImage2D');
         gl.texImage2D(this.target, 0, this.format.internal_type, this.format.internal_type, this.format.gl_type, data);
+        profilerStop();
       }
       this.allowMipmaps(true); // can be auto-generated
     }
   }
   let err = null;
+  profilerStart('getError (flush)');
   let gl_err = gl.getError();
+  profilerStop();
   if (gl_err) {
     err = `GLError(${gl_err})`;
   }
   if (!err && this.mipmaps && !per_mipmap_data && this.mipmaps_allowed) {
+    profilerStart('generateMipmap');
     gl.generateMipmap(this.target);
+    profilerStopStart('generateMipmap-getError (flush)');
     gl_err = gl.getError();
+    profilerStop();
     if (gl_err) {
       err = `generateMipmap:GLError(${gl_err})`;
     }
@@ -730,7 +764,13 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       if (!did_next) {
         did_next = true;
         tex.load_time_total = Date.now() - load_start_wall_time;
-        next(err, img, url_use);
+        if (texture_stream_delay) {
+          setTimeout(function () {
+            next(err, img, url_use);
+          }, texture_stream_delay);
+        } else {
+          next(err, img, url_use);
+        }
       }
       profilerStop();
     }
@@ -793,13 +833,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         let img = new Image();
         img.onload = function () {
           URL.revokeObjectURL(url_object);
-          if (texture_stream_delay) {
-            setTimeout(function () {
-              done(null, img);
-            }, texture_stream_delay);
-          } else {
-            done(null, img);
-          }
+          done(null, img);
         };
         img.onerror = function () {
           URL.revokeObjectURL(url_object);
@@ -826,8 +860,18 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
 
-    if (is_external && blobSupported() && has_content_security_policy) {
-      // Use `fetch` to get around content security policy
+    if (blobSupported()) {
+      if (is_external && has_content_security_policy) {
+        // Use `fetch` to get around content security policy
+        fetch({
+          url: url_use,
+          response_type: 'arraybuffer',
+        }, done);
+        profilerStop();
+        return;
+      }
+
+      // Also, generally, use fetch + createImageBitmap to avoid main-thread stalls decoding the PNG
       fetch({
         url: url_use,
         response_type: 'arraybuffer',
@@ -836,15 +880,10 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
 
+    // Old browser (just IE?) fallback path
     let img = new Image();
     img.onload = function () {
-      if (texture_stream_delay) {
-        setTimeout(function () {
-          done(null, img);
-        }, texture_stream_delay);
-      } else {
-        done(null, img);
-      }
+      done(null, img);
     };
     img.onerror = function () {
       done('error', null);
@@ -903,13 +942,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         img_out.onload = function () {
           URL.revokeObjectURL(url_object);
           mipmaps[level] = img_out;
-          if (texture_stream_delay) {
-            setTimeout(function () {
-              next();
-            }, texture_stream_delay);
-          } else {
-            next();
-          }
+          next();
         };
         img_out.onerror = function () {
           URL.revokeObjectURL(url_object);
@@ -967,9 +1000,23 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
 
   function decodeFetchedImage(arraybuffer, next) {
     assert(arraybuffer instanceof ArrayBuffer);
-    let img_out = new Image();
     let view = new Uint8Array(arraybuffer);
-    let url_object = URL.createObjectURL(new Blob([view], { type: 'image/png' }));
+    let blob = new Blob([view], { type: 'image/png' });
+    if (true) { // this method doesn't stall the main thread as much
+      createImageBitmap(blob,
+        { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+        function (err, result) {
+          if (err) {
+            return void next(err);
+          }
+          next(null, result);
+        }
+      );
+
+      return;
+    }
+    let img_out = new Image();
+    let url_object = URL.createObjectURL(blob);
     img_out.onload = function () {
       URL.revokeObjectURL(url_object);
       if (texture_stream_delay) {
