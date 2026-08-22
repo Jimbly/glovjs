@@ -149,6 +149,7 @@ module.exports = function () {
         });
       }, function (err) {
         cleanup();
+        job.error(`Failure during ${param.type} compression: ${err}`);
         next(err);
       });
     });
@@ -201,7 +202,7 @@ module.exports = function () {
     assert(file_data.uncompressed);
     let chunks = [];
     for (let xx = 0; xx < file_data.width; xx += 4096) {
-      for (let yy = 0; yy < file_data.width; yy += 4096) {
+      for (let yy = 0; yy < file_data.height; yy += 4096) {
         chunks.push({
           x: xx,
           y: yy,
@@ -326,8 +327,8 @@ module.exports = function () {
     let last_h = height;
     let ret = [];
     while (last_w > 1) {
-      let next_w = floor(last_w/2);
-      let next_h = floor(last_h/2);
+      let next_w = max(1, floor(last_w/2));
+      let next_h = max(1, floor(last_h/2));
 
       let dest2 = pngAlloc({ width: next_w, height: next_h, byte_depth: 4 });
       ret.push(dest2);
