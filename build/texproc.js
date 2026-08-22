@@ -222,7 +222,7 @@ module.exports = function () {
           let row_size = chunk.width * 4;
           let src_stride = file_data.width * 4;
           for (let yy = 0; yy < chunk.height; ++yy) {
-            let source_start = (chunk.y + yy) * src_stride;
+            let source_start = (chunk.y + yy) * src_stride + chunk.x * 4;
             src.copy(dst, yy * row_size, source_start, source_start + row_size);
           }
           png.width = chunk.width;
