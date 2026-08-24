@@ -33,6 +33,7 @@ import {
 } from 'glov/common/util';
 import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
+import { is_firefox } from './browser';
 import * as engine from './engine';
 import {
   isLoading,
@@ -54,7 +55,7 @@ const { ceil, floor, min } = Math;
 
 const TEX_UNLOAD_TIME = 5 * 60 * 1000; // for textures loaded (each frame) with auto_unload: true
 
-const ASYNC_TEXTURE_SIZE = 1024*1024; // anything bigger than this many bytes gets cut into chunks uploaded each frame
+const ASYNC_TEXTURE_SIZE = 4*1024*1024; // anything bigger than this many bytes gets cut into chunks uploaded each frame
 
 const textures = {};
 let load_count = 0;
@@ -96,6 +97,8 @@ export function textureDefaultFilters(filter_min, filter_mag) {
 export function textureDefaultIsNearest() {
   return default_filter_mag === gl.NEAREST;
 }
+
+const createImageBitmap = callbackify(window.createImageBitmap);
 
 let bound_unit = null;
 let bound_tex = [];
@@ -561,19 +564,25 @@ function runUploadTasks(tex, base_level, per_mipmap_data, leveloffs, uploadLevel
     return void finish();
   }
   let task_idx = 0;
+  let waiting = false;
   function tick() {
     if (tex.destroyed) {
       // cancel uploading
       return void finish('texture destroyed while uploading');
     }
     bindForced(tex);
-    while (task_idx < tasks.length) {
-      let keep_going = tasks[task_idx++]();
+    function doneWaiting() {
+      assert(waiting);
+      waiting = false;
+    }
+    while (task_idx < tasks.length && !waiting) {
+      waiting = true;
+      let keep_going = tasks[task_idx++](doneWaiting);
       if (!keep_going) {
         break;
       }
     }
-    if (task_idx === tasks.length) {
+    if (task_idx === tasks.length && !waiting) {
       finish();
     } else {
       postTick({
@@ -620,8 +629,9 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
       if (level_size <= ASYNC_TEXTURE_SIZE || !do_prealloc) {
         // this level is small enough, do all at once
         // or, WebGL1, we can't pre-allocate compressed textures, just do one mip layer at a time
-        tasks.push(function () {
+        tasks.push(function (done) {
           doUploadFull();
+          done();
           // if this didn't use up the whole quota, keep going
           return level_size < ASYNC_TEXTURE_SIZE * 0.5;
         });
@@ -631,7 +641,7 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
         let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
         for (let yy = 0; yy < img.height; yy += chunk_h) {
           let yyy = yy;
-          tasks.push(function () {
+          tasks.push(function (done) {
             profilerStart('compressedTexSubImage2D');
             let eff_h = min(chunk_h, img.height - yyy);
             let dv = new DataView(
@@ -648,6 +658,7 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
                 tex.eff_handle = tex.handle;
               }
             }
+            done();
             profilerStop();
             return false;
           });
@@ -698,12 +709,52 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
     } else {
       let bpp = tex.format.count;
       let level_size = img.width * img.height * bpp;
-      // note: cannot split an IMG element into multiple uploads (no DOM way to maintain alpha)
-      tasks.push(function () {
-        doUploadFull();
-        // if this didn't use up the whole quota, keep going
-        return level_size < ASYNC_TEXTURE_SIZE * 0.5;
-      });
+
+      if (level_size <= ASYNC_TEXTURE_SIZE || !do_prealloc ||
+        // a blob source, which on Chrome at least causes a full image decode for each chunk
+        String(img.src).startsWith('blob') ||
+        // Firefox just getting weird GL crashes below
+        is_firefox
+      ) {
+        // this level is small enough, do all at once
+        tasks.push(function (done) {
+          doUploadFull();
+          done();
+          // if this didn't use up the whole quota, keep going
+          return level_size < ASYNC_TEXTURE_SIZE * 0.5;
+        });
+      } else {
+        // do full width (contiguous blocks)
+        let chunk_w = img.width;
+        let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
+        for (let yy = 0; yy < img.height; yy += chunk_h) {
+          let yyy = yy;
+          tasks.push(function (done) {
+            let eff_h = min(chunk_h, img.height - yyy);
+            createImageBitmap(img, 0, yyy, chunk_w, eff_h,
+              { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
+              function (err, result) {
+                if (err) {
+                  throw err;
+                }
+                profilerStart('texSubImage2D');
+                bindForced(tex);
+                gl.texSubImage2D(tex.target, level, 0, yyy,
+                  tex.format.internal_type, tex.format.gl_type, result);
+                if (yyy + eff_h === img.height) {
+                  if (engine.webgl2) {
+                    gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+                    tex.eff_handle = tex.handle;
+                  }
+                }
+                done();
+                profilerStop();
+              }
+            );
+            return false;
+          });
+        }
+      }
     }
   }
 
@@ -903,8 +954,6 @@ document.addEventListener('securitypolicyviolation', function () {
   localStorageSetJSON('has_csp', true);
   has_content_security_policy = true;
 });
-
-const createImageBitmap = callbackify(window.createImageBitmap);
 
 let blob_supported;
 function blobSupported() {
