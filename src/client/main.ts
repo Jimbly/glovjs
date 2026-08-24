@@ -510,6 +510,7 @@ let tex_comp_mode = flagGet('tex_comp_mode', 0) || 0;
 let tex_comp_reload = flagGet('tex_comp_reload', false);
 let tex_comp_check_frame_counter = 0;
 let tex_comp_recent_stalls = 0;
+let tex_comp_recent_worst_stall = 0;
 const TEX_COMP_CHECK_FRAME_RANGE = 6;
 const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
 const TEX_COMP_IMAGES = ['256', '8K'];
@@ -591,18 +592,22 @@ function textureCompressionTest(): void {
       let m1 = ceil(medians[0] * 1.1);
       let m2 = ceil(medians[1] * 1.1);
       let stalls = 0;
+      tex_comp_recent_worst_stall = 0;
       let mx = engine.PERF_HISTORY_SIZE; // TEX_COMP_CHECK_FRAME_RANGE + 2;
       for (let ii = 0; ii < mx; ++ii) {
         let frame_idx = mod(engine.perf_state.fpsgraph.index - mx - 1 + ii, engine.PERF_HISTORY_SIZE);
         let v1 = frames[frame_idx*2];
         let v2 = frames[frame_idx*2+1];
+        let stall = 0;
         if (v2 > m2) {
           // total frame stall larger than frame time, assume everything not in-tick is the stall
-          stalls += v2 - m1;
+          stall = v2 - m1;
         } else if (v1 > m1) {
           // in-frame stall (unexpected)
-          stalls += v1 - m1;
+          stall = v1 - m1;
         }
+        stalls += stall;
+        tex_comp_recent_worst_stall = max(tex_comp_recent_worst_stall, stall);
       }
       tex_comp_recent_stalls = stalls;
     }
@@ -620,7 +625,7 @@ function textureCompressionTest(): void {
   font.draw({
     text: `${tex.actual_url.split('.').pop()}\n` +
       `Texture load time: ${tex.load_time_total}\n` +
-      `Stalls: ${ceil(tex_comp_recent_stalls)}`,
+      `Stalls: ${ceil(tex_comp_recent_stalls)} / ${tex_comp_recent_worst_stall}`,
     color: 0x000000ff,
     x: 2, y: yy, w: game_width - 4,
     size: text_height *0.75,
