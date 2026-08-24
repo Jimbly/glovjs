@@ -256,6 +256,7 @@ function Texture(params) {
   }
   this.load_filter = params.load_filter || null;
   this.load_time_total = -1;
+  this.load_time_upload = -1;
   this.actual_url = '?';
 
   this.format = params.format || TEXTURE_FORMAT.RGBA8;
@@ -1336,7 +1337,9 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       if (!img) {
         return void onError('no img');
       }
+      let upload_start_wall_time = Date.now();
       tex.updateData(img.width, img.height, img, mipmaps, function (err) {
+        tex.load_time_upload = Date.now() - upload_start_wall_time;
         if (err) {
           err_details = String(err);
           // Samsung TV gets 1282 on texture arrays

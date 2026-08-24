@@ -539,7 +539,6 @@ function textureCompressionTest(): void {
     markdown: true,
     x, y: yy,
     w: button_w,
-    hotkey: KEYS.M,
   })) {
     tex_comp_img = (tex_comp_img + 1) % TEX_COMP_IMAGES.length;
     flagSet('tex_comp_img', tex_comp_img);
@@ -625,6 +624,7 @@ function textureCompressionTest(): void {
   font.draw({
     text: `${tex.actual_url.split('.').pop()}\n` +
       `Texture load time: ${tex.load_time_total}\n` +
+      `Texture upload time: ${tex.load_time_upload}\n` +
       `Stalls: ${ceil(tex_comp_recent_stalls)} / ${tex_comp_recent_worst_stall}`,
     color: 0x000000ff,
     x: 2, y: yy, w: game_width - 4,
