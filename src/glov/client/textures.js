@@ -496,6 +496,142 @@ Texture.prototype.texStorage = function (levels, gl_internal_format, width, heig
   this.immutable_storage = key;
 };
 
+function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
+  assert(data.is_raw_data);
+  let bpp = bytesPerPixelFromCompressedFormat(data.gl_internal_format);
+  tex.format = {
+    internal_type: data.gl_base_internal_format,
+    count: bpp, // actually bytes-per-pixel
+    gl_type: data.gl_internal_format,
+  };
+  let tasks = [];
+  let size = tex.width * tex.height * bpp;
+  let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading();
+  let total_levels = 1;
+  let leveloffs = 0;
+  let do_prealloc = engine.webgl2;
+  let base_level = data;
+  if (per_mipmap_data) {
+    for (let level = 0; level < per_mipmap_data.length; ++level) {
+      let img = per_mipmap_data[level];
+      if (img.width > max_texture_size || img.height > max_texture_size) {
+        if (level === 0) {
+          dataError(`Texture ${tex.url} (${img.width}x${img.height}) larger ` +
+            `than GL max texture size (${max_texture_size}) and has been resized`);
+        }
+        ++leveloffs;
+        continue;
+      }
+      total_levels = per_mipmap_data.length - leveloffs;
+      base_level = img;
+      break;
+    }
+  }
+  // if we downsampled, adjust width/height (for GPU mem calculations, but might confuse other logic?)
+  tex.width = base_level.width;
+  tex.height = base_level.height;
+
+  if (do_prealloc) {
+    profilerStart('pre-allocate');
+    tex.texStorage(total_levels, data.gl_internal_format, base_level.width, base_level.height);
+    profilerStop();
+  }
+
+  function uploadLevel(level, img) {
+    function doUploadFull() {
+      profilerStart('compressedTexImage2D');
+      if (tex.immutable_storage) {
+        gl.compressedTexSubImage2D(tex.target, level,
+          0, 0, img.width, img.height,
+          data.gl_internal_format, img.data);
+      } else {
+        gl.compressedTexImage2D(tex.target, level,
+          data.gl_internal_format, img.width, img.height, 0, img.data);
+      }
+      gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+      tex.eff_handle = tex.handle; // if it was using the loading handle, we have at least some good level now
+      profilerStop();
+    }
+    if (do_sync) {
+      doUploadFull();
+    } else {
+      let level_size = img.width * img.height * bpp;
+      if (level_size <= ASYNC_TEXTURE_SIZE || !engine.webgl2) {
+        // this level is small enough, do all at once
+        // or, WebGL1, we can't pre-allocate compressed textures, just do one mip layer at a time
+        tasks.push(function () {
+          doUploadFull();
+          // if this didn't use up the whole quota, keep going
+          return level_size < ASYNC_TEXTURE_SIZE * 0.5;
+        });
+      } else {
+        // do full width (contiguous blocks)
+        let chunk_w = img.width;
+        let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
+        for (let yy = 0; yy < img.height; yy += chunk_h) {
+          let yyy = yy;
+          tasks.push(function () {
+            profilerStart('compressedTexSubImage2D');
+            let eff_h = min(chunk_h, img.height - yyy);
+            let dv = new DataView(
+              img.data.buffer,
+              img.data.byteOffset + chunk_w * yyy * bpp,
+              chunk_w * eff_h * bpp
+            );
+            gl.compressedTexSubImage2D(tex.target, level,
+              0, yyy, chunk_w, eff_h,
+              data.gl_internal_format, dv);
+            if (yyy + eff_h === img.height) {
+              gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
+              tex.eff_handle = tex.handle;
+            }
+            profilerStop();
+            return false;
+          });
+        }
+      }
+    }
+  }
+
+  if (per_mipmap_data) {
+    for (let level = per_mipmap_data.length - 1; level >= leveloffs; --level) {
+      let img = per_mipmap_data[level];
+      uploadLevel(level - leveloffs, img);
+    }
+    tex.allowMipmaps(true);
+  } else {
+    uploadLevel(0, data);
+    tex.allowMipmaps(false);
+  }
+  if (!tasks.length) {
+    // was sync
+    return void finish();
+  }
+  let task_idx = 0;
+  function tick() {
+    if (tex.destroyed) {
+      // cancel uploading
+      return void finish('texture destroyed while uploading');
+    }
+    bindForced(tex);
+    while (task_idx < tasks.length) {
+      let keep_going = tasks[task_idx++]();
+      if (!keep_going) {
+        break;
+      }
+    }
+    if (task_idx === tasks.length) {
+      finish();
+    } else {
+      postTick({
+        inactive: true,
+        fn: tick,
+      });
+    }
+  }
+  tick();
+}
+
 Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, next) {
   const tex = this;
   profilerStart('Texture:updateData');
@@ -558,138 +694,7 @@ Texture.prototype.updateData = function updateData(w, h, data, per_mipmap_data, 
   if (data.is_raw_data) {
     assert(!np2);
     assert(data.data instanceof Uint8Array);
-    let bpp = bytesPerPixelFromCompressedFormat(data.gl_internal_format);
-    this.format = {
-      internal_type: data.gl_base_internal_format,
-      count: bpp, // actually bytes-per-pixel
-      gl_type: data.gl_internal_format,
-    };
-    let tasks = [];
-    let size = this.width * this.height * bpp;
-    let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading();
-    let total_levels = 1;
-    let leveloffs = 0;
-    let do_prealloc = engine.webgl2;
-    let base_level = data;
-    if (per_mipmap_data) {
-      for (let level = 0; level < per_mipmap_data.length; ++level) {
-        let img = per_mipmap_data[level];
-        if (img.width > max_texture_size || img.height > max_texture_size) {
-          if (level === 0) {
-            dataError(`Texture ${tex.url} (${img.width}x${img.height}) larger ` +
-              `than GL max texture size (${max_texture_size}) and has been resized`);
-          }
-          ++leveloffs;
-          continue;
-        }
-        total_levels = per_mipmap_data.length - leveloffs;
-        base_level = img;
-        break;
-      }
-    }
-    // if we downsampled, adjust width/height
-    this.width = base_level.width;
-    this.height = base_level.height;
-
-    if (do_prealloc) {
-      profilerStart('pre-allocate');
-      tex.texStorage(total_levels, data.gl_internal_format, base_level.width, base_level.height);
-      profilerStop();
-    }
-
-    function uploadLevel(level, img) {
-      function doUploadFull() {
-        profilerStart('compressedTexImage2D');
-        if (tex.immutable_storage) {
-          gl.compressedTexSubImage2D(tex.target, level,
-            0, 0, img.width, img.height,
-            data.gl_internal_format, img.data);
-        } else {
-          gl.compressedTexImage2D(tex.target, level,
-            data.gl_internal_format, img.width, img.height, 0, img.data);
-        }
-        gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
-        tex.eff_handle = tex.handle; // if it was using the loading handle, we have at least some good level now
-        profilerStop();
-      }
-      if (do_sync) {
-        doUploadFull();
-      } else {
-        let level_size = img.width * img.height * bpp;
-        if (level_size <= ASYNC_TEXTURE_SIZE || !engine.webgl2) {
-          // this level is small enough, do all at once
-          // or, WebGL1, we can't pre-allocate compressed textures, just do one mip layer at a time
-          tasks.push(function () {
-            doUploadFull();
-            // if this didn't use up the whole quota, keep going
-            return level_size < ASYNC_TEXTURE_SIZE * 0.5;
-          });
-        } else {
-          // do full width (contiguous blocks)
-          let chunk_w = img.width;
-          let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
-          for (let yy = 0; yy < img.height; yy += chunk_h) {
-            let yyy = yy;
-            tasks.push(function () {
-              profilerStart('compressedTexSubImage2D');
-              let eff_h = min(chunk_h, img.height - yyy);
-              let dv = new DataView(
-                img.data.buffer,
-                img.data.byteOffset + chunk_w * yyy * bpp,
-                chunk_w * eff_h * bpp
-              );
-              gl.compressedTexSubImage2D(tex.target, level,
-                0, yyy, chunk_w, eff_h,
-                data.gl_internal_format, dv);
-              if (yyy + eff_h === img.height) {
-                gl.texParameteri(tex.target, gl.TEXTURE_BASE_LEVEL, level);
-                tex.eff_handle = tex.handle;
-              }
-              profilerStop();
-              return false;
-            });
-          }
-        }
-      }
-    }
-
-    if (per_mipmap_data) {
-      for (let level = per_mipmap_data.length - 1; level >= leveloffs; --level) {
-        let img = per_mipmap_data[level];
-        uploadLevel(level - leveloffs, img);
-      }
-      tex.allowMipmaps(true);
-    } else {
-      uploadLevel(0, data);
-      tex.allowMipmaps(false);
-    }
-    if (!tasks.length) {
-      // was sync
-      return void finish();
-    }
-    let task_idx = 0;
-    function tick() {
-      if (tex.destroyed) {
-        // cancel uploading
-        return void finish('texture destroyed while uploading');
-      }
-      bindForced(tex);
-      while (task_idx < tasks.length) {
-        let keep_going = tasks[task_idx++]();
-        if (!keep_going) {
-          break;
-        }
-      }
-      if (task_idx === tasks.length) {
-        finish();
-      } else {
-        postTick({
-          inactive: true,
-          fn: tick,
-        });
-      }
-    }
-    tick();
+    uploadTextureCompressed(this, data, per_mipmap_data, finish);
   } else if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
     assert(!per_mipmap_data); // not implemented
     assert(data.length >= w * h * this.format.count);
