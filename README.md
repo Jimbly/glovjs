@@ -33,7 +33,7 @@ Feature demo is index.html (`main.js`), multiplayer demo (requires server) is th
 
 Notes:
 * The engine API (glov/*) is subject to change occasionally, it often changes with each Ludum Dare in which I use this engine ^_^, though it's been fairly stable for the last couple years.
-* To use MP3 audio files, convert all .wav to .mp3 at the end of development, call engine.startup with `{ sound: { ext_list: ['mp3', 'wav'] } }`
+* Any audio files (WAV, MP3, OGG) will automatically be converted into MP3+OGG for full browser compatibility
 * Before publishing a project, edit the meta tags in index.html, place a 1200x630px cover image for use on Facebook and Twitter shares.
 
 
