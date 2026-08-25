@@ -33,7 +33,7 @@ import {
 } from 'glov/common/util';
 import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
-import { is_firefox } from './browser';
+import { is_firefox, is_ios_safari } from './browser';
 import * as engine from './engine';
 import {
   isLoading,
@@ -714,7 +714,9 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
         // a blob source, which on Chrome at least causes a full image decode for each chunk
         String(img.src).startsWith('blob') ||
         // Firefox just getting weird GL crashes below
-        is_firefox
+        is_firefox ||
+        // iOS Safari gets out of mem crash or something
+        is_ios_safari
       ) {
         // this level is small enough, do all at once
         tasks.push(function (done) {
@@ -724,7 +726,9 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
           return level_size < ASYNC_TEXTURE_SIZE * 0.5;
         });
       } else {
-        // do full width (contiguous blocks)
+        // upload in chunks
+        // note: this seems to cause issues on everything other than Chrome, and in some (blob)
+        //   cases even causes problems on Chrome, maybe it's not worth it?
         let chunk_w = img.width;
         let chunk_h = (ceil(ASYNC_TEXTURE_SIZE / bpp / chunk_w) + 3) & ~3;
         for (let yy = 0; yy < img.height; yy += chunk_h) {
@@ -1034,20 +1038,19 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
         if (tflags & FORMAT_PACK) {
           url_use = `${filename_no_ext}.txp`;
         }
-        if ((tflags & FORMAT_DXT) && dxt_supported) {
-          compressed_type = FORMAT_DXT;
-          if (url_use.endsWith('.txp')) {
-            url_use += '-dxt';
-          } else {
-            url_use = `${filename_no_ext}.dxt`;
-          }
-        }
         if ((tflags & FORMAT_ASTC) && astc_supported) {
           compressed_type = FORMAT_ASTC;
           if (url_use.endsWith('.txp')) {
             url_use += '-astc';
           } else {
             url_use = `${filename_no_ext}.astc`;
+          }
+        } else if ((tflags & FORMAT_DXT) && dxt_supported) {
+          compressed_type = FORMAT_DXT;
+          if (url_use.endsWith('.txp')) {
+            url_use += '-dxt';
+          } else {
+            url_use = `${filename_no_ext}.dxt`;
           }
         }
       }
