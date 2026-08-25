@@ -512,7 +512,7 @@ let tex_comp_check_frame_counter = 0;
 let tex_comp_recent_stalls = 0;
 let tex_comp_recent_worst_stall = 0;
 const TEX_COMP_CHECK_FRAME_RANGE = 6;
-const TEX_COMP_MODES = ['compress', 'png'/*, 'packed'*/];
+const TEX_COMP_MODES = ['compress', 'png', 'packed'];
 const TEX_COMP_IMAGES = ['256', '8K'];
 function textureCompressionTest(): void {
   if (webFSExists('img/texproc/8K-local-compress.tflag')) {
