@@ -98,6 +98,7 @@ export function textureDefaultIsNearest() {
   return default_filter_mag === gl.NEAREST;
 }
 
+const supports_cib = Boolean(window.createImageBitmap); // iOS 12 at least doesn't
 const createImageBitmap = callbackify(window.createImageBitmap);
 
 let bound_unit = null;
@@ -716,7 +717,8 @@ function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
         // Firefox just getting weird GL crashes below
         is_firefox ||
         // iOS Safari gets out of mem crash or something
-        is_ios_safari
+        is_ios_safari ||
+        !supports_cib
       ) {
         // this level is small enough, do all at once
         tasks.push(function (done) {
@@ -1101,7 +1103,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       return;
     }
 
-    if (blobSupported()) {
+    if (blobSupported() && supports_cib) {
       if (is_external && has_content_security_policy) {
         // Use `fetch` to get around content security policy
         fetch({
@@ -1243,7 +1245,7 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
     assert(arraybuffer instanceof ArrayBuffer);
     let view = new Uint8Array(arraybuffer);
     let blob = new Blob([view], { type: 'image/png' });
-    if (true) { // this method doesn't stall the main thread as much
+    if (supports_cib) { // this method doesn't stall the main thread as much
       createImageBitmap(blob,
         { premultiplyAlpha: 'none', colorSpaceConversion: 'none' },
         function (err, result) {
