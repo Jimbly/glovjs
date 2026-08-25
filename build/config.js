@@ -75,6 +75,12 @@ module.exports = function (gb) {
       '!**/*.webm',
       '!**/*.js.map',
     ],
+    compress_files_dev: [ // compressed even in development mode
+      // 'client_texproc_output:**/*.txp-astc',
+      'client_texproc_output:**/*.txp-dxt',
+      // 'client_texproc_output:**/*.astc',
+      'client_texproc_output:**/*.dxt',
+    ],
     client_fsdata: [
       'client/shaders/**',
       'glov/client/shaders/**',

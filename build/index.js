@@ -626,6 +626,18 @@ gb.task({
   }, autosound(config.client_autosound_config)),
 });
 
+gb.task({
+  name: 'client_compress_dev',
+  input: config.compress_files_dev,
+  target: 'dev',
+  ...compress({
+    globs: ['**'],
+    passthrough: false,
+    brotli: false,
+  }),
+});
+
+
 let client_tasks = [
   ...config.extra_client_tasks,
   'client_autosound',
@@ -635,6 +647,7 @@ let client_tasks = [
   'client_fsdata',
   ...bundle_tasks,
   'client_html',
+  'client_compress_dev',
 ];
 
 let client_input_globs = client_tasks.map(addStarStar);
@@ -1094,7 +1107,10 @@ gb.task({
     ...config.extra_prod_inputs,
   ],
   target: 'prod',
-  ...compress(config.compress_files),
+  ...compress({
+    globs: config.compress_files,
+    passthrough: true,
+  }),
 });
 
 gb.task({
