@@ -81,7 +81,7 @@
     "glov-build-browserify": "1.0.10",
     "glov-build-cache": "1.1.0",
     "glov-build-concat": "1.0.14",
-    "glov-build-imagemin": "^1.0.0",
+    "glov-build-imagemin": "^1.0.1",
     "glov-build-preresolve": "1.2.0",
     "glov-build-sourcemap": "1.0.5",
     "gulp-if": "^3.0.0",
