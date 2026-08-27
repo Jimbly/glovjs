@@ -30,27 +30,37 @@ module.exports = function (opts) {
     let tasks = [];
     if (do_brotli) {
       tasks.push(function (next) {
-        brotliCompress(file.contents, function (err, buffer_br) {
-          if (!err) {
-            job.out({
-              relative: `${file.relative}.br`,
-              contents: buffer_br,
-            });
+        job.depAdd(`${file.bucket}:${file.relative}.br`, function (err, brfile) {
+          if (!err && brfile) {
+            return void next();
           }
-          next(err);
+          brotliCompress(file.contents, function (err, buffer_br) {
+            if (!err) {
+              job.out({
+                relative: `${file.relative}.br`,
+                contents: buffer_br,
+              });
+            }
+            next(err);
+          });
         });
       });
     }
     if (do_gzip) {
       tasks.push(function (next) {
-        gzip(file.contents, function (err, buffer_gz) {
-          if (!err) {
-            job.out({
-              relative: `${file.relative}.gz`,
-              contents: buffer_gz,
-            });
+        job.depAdd(`${file.bucket}:${file.relative}.gz`, function (err, gzfile) {
+          if (!err && gzfile) {
+            return void next();
           }
-          next(err);
+          gzip(file.contents, function (err, buffer_gz) {
+            if (!err) {
+              job.out({
+                relative: `${file.relative}.gz`,
+                contents: buffer_gz,
+              });
+            }
+            next(err);
+          });
         });
       });
     }
