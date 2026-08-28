@@ -1,3 +1,4 @@
+import assert from 'assert';
 import {
   DataError,
   dataErrorEx,
@@ -5,12 +6,12 @@ import {
   dataErrorQueueGet,
 } from 'glov/common/data_error';
 import { TSMap } from 'glov/common/types';
-import { plural } from 'glov/common/util';
+import { empty, plural } from 'glov/common/util';
 import { vec4 } from 'glov/common/vmath';
 import * as camera2d from './camera2d';
 import * as engine from './engine';
 import { renderNeeded } from './engine';
-import { fontStyleColored } from './font';
+import { ALIGN, fontStyleColored } from './font';
 import {
   netClient,
   netSubs,
@@ -41,6 +42,7 @@ type GBState = {
 };
 let gbstate: GBState | null = null;
 let server_error: string | null = null;
+let active_reloads: null | TSMap<string> = null;
 
 Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
 
@@ -61,18 +63,61 @@ function onDataErrors(err_list: DataError[]): void {
   renderNeeded();
 }
 
+export function buildUIActiveReload(key: string, msg: string | null): void {
+  if (!msg) {
+    if (active_reloads) {
+      delete active_reloads[key];
+    }
+    if (empty(active_reloads)) {
+      active_reloads = null;
+    }
+  } else {
+    if (!active_reloads) {
+      active_reloads = {};
+    }
+    active_reloads[key] = msg;
+  }
+}
+
 const PAD = 4;
 const color_panel = vec4(0,0,0,1);
+const color_panel_reload = vec4(0,0,0,0.5);
 const style_title = fontStyleColored(null, 0xFF2020ff);
 const style = fontStyleColored(null, 0xDDDDDDff);
 const style_task = fontStyleColored(null, 0x00DDDDff);
 const style_job = fontStyleColored(null, 0x2020FFff);
 const color_line = vec4(1,1,1,1);
+function activeReloadsTick(): void {
+  assert(active_reloads);
+
+  const font_height = uiTextHeight();
+  const w = camera2d.w() * 0.5;
+  const x0 = camera2d.x0() + (camera2d.w() - w) / 2;
+  const y0 = camera2d.y1() - PAD - font_height;
+  const font = uiGetFont();
+  const z = Z.BUILD_ERRORS;
+
+  font.draw({
+    x: x0, y: y0, z,
+    w, h: font_height,
+    align: ALIGN.HVCENTERFIT,
+    text: `Reloading: ${Object.values(active_reloads).join(', ')}`
+  });
+
+  panel({
+    x: x0 - PAD, y: y0 - PAD, z: z - 1,
+    w: w + PAD * 2, h: font_height + PAD * 2,
+    color: color_panel_reload,
+  });
+}
 // eslint-disable-next-line no-control-regex
 const strip_ansi = /\u001b\[(?:[0-9;]*)[0-9A-ORZcf-nqry=><]/g;
 let scroll_area: ScrollArea;
 function buildUITick(): void {
   let data_errors = dataErrorQueueGet();
+  if (active_reloads) {
+    activeReloadsTick();
+  }
   if (!gbstate && !server_error && !data_errors.length) {
     return;
   }

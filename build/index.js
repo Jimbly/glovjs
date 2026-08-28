@@ -79,6 +79,8 @@ const babel_plugins_base = [
 
 const babel_preset_typescript = ['@babel/preset-typescript', { allowDeclareFields: true }];
 
+let server_process_container = {};
+
 function copy(job, done) {
   job.out(job.getFile());
   done();
@@ -253,6 +255,46 @@ gb.task({
 });
 
 gb.task({
+  name: 'client_earlyreload_files',
+  input: [
+    'client_png:**',
+  ],
+  type: gb.SINGLE,
+  target: 'dev',
+  func: function (job, done) {
+    let file = job.getFile();
+    job.out({
+      relative: file.relative.replace('client/', 'client/.early/'),
+      contents: file.contents,
+    });
+    done();
+  }
+});
+gb.task({
+  name: 'client_earlyreload',
+  input: [
+    // for some reason :** ignores the files in .early? globs ignoring .*?
+    'client_earlyreload_files:client/.early/**',
+  ],
+  type: gb.ALL,
+  read: false,
+  version: Date.now(), // always runs once per process, needs to get initial list of all files (to discard)
+  func: function (job, done) {
+    let user_data = job.getUserData();
+    if (!user_data.inited) {
+      user_data.inited = true;
+      return void done();
+    }
+    let updated = job.getFilesUpdated();
+    updated = updated.map((a) => a.relative);
+    if (server_process_container.proc) {
+      server_process_container.proc.send({ type: 'file_change', paths: updated });
+    }
+    done();
+  }
+});
+
+gb.task({
   name: 'client_texopt',
   input: ['client/img/**/*.texopt'],
   ...yamlproc(),
@@ -411,8 +453,6 @@ gb.task({
   type: gb.SINGLE,
   func: copy,
 });
-
-let server_process_container = {};
 
 const WORKER_BAN_DEPS = {
   'Cannot reference window/document from WebWorkers': [
@@ -1138,6 +1178,7 @@ gb.task({
 gb.task({
   name: 'default',
   deps: [
+    'client_earlyreload',
     'build_deps',
     'run_server',
     'browser_sync',

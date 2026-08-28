@@ -17,3 +17,5 @@ config/*.json
 .DS_Store
 wsdebug.json
 src/client/img/texproc/8K-local*
+src/client/img/texproc/256-png-?.png
+src/client/img/texproc/256-swap.cmd

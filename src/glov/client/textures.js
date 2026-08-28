@@ -34,6 +34,7 @@ import {
 import { vec4 } from 'glov/common/vmath';
 import { asyncParallel, asyncSeries } from 'glov-async';
 import { is_firefox, is_ios_safari } from './browser';
+import { buildUIActiveReload } from './build_ui';
 import * as engine from './engine';
 import {
   isLoading,
@@ -494,8 +495,15 @@ Texture.prototype.texStorage = function (levels, gl_internal_format, width, heig
     // destroy and create a new texture
     unbindAll(this.target);
     gl.deleteTexture(this.handle);
+    if (this.eff_handle === this.handle) {
+      this.eff_handle = handle_loading;
+    }
     this.handle = gl.createTexture();
     bindForced(this);
+  }
+  if (levels === null) {
+    this.immutable_storage = null;
+    return;
   }
   gl.texStorage2D(this.target, levels, gl_internal_format, width, height);
   this.immutable_storage = key;
@@ -503,7 +511,7 @@ Texture.prototype.texStorage = function (levels, gl_internal_format, width, heig
 
 function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
   let size = tex.width * tex.height * tex.format.count;
-  let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading();
+  let do_sync = size <= ASYNC_TEXTURE_SIZE || isLoading() || tex.for_reload;
   let total_levels = 1;
   let leveloffs = 0;
   let do_prealloc = engine.webgl2 && is_compressed || !is_compressed;
@@ -533,6 +541,9 @@ function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
     if (is_compressed && engine.webgl2) {
       tex.texStorage(total_levels, data.gl_internal_format, base_level.width, base_level.height);
     } else {
+      if (tex.immutable_storage) {
+        tex.texStorage(null);
+      }
       for (let ii = 0; ii < total_levels; ++ii) {
         let img = ii === 0 ? base_level : per_mipmap_data[ii + leveloffs];
         gl.texImage2D(tex.target, ii, tex.format.internal_type, img.width, img.height, 0,
@@ -540,6 +551,10 @@ function uploadPrep(is_compressed, tex, data, per_mipmap_data) {
       }
     }
     profilerStop();
+  } else {
+    if (tex.immutable_storage) {
+      tex.texStorage(null);
+    }
   }
 
   return {
@@ -599,6 +614,7 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
   assert(data.is_raw_data);
   let bpp = bytesPerPixelFromCompressedFormat(data.gl_internal_format);
   tex.format = {
+    is_compressed: true,
     internal_type: data.gl_base_internal_format,
     count: bpp, // actually bytes-per-pixel
     gl_type: data.gl_internal_format,
@@ -669,7 +685,10 @@ function uploadTextureCompressed(tex, data, per_mipmap_data, finish) {
   }
 
   tex.allowMipmaps(Boolean(per_mipmap_data));
-  runUploadTasks(tex, base_level, per_mipmap_data, leveloffs, uploadLevel, finish);
+  runUploadTasks(tex, base_level, per_mipmap_data, leveloffs, uploadLevel, function (err) {
+    buildUIActiveReload('texcomp', null);
+    finish(err);
+  });
 }
 
 function uploadTextureImgOrCanvas(tex, data, per_mipmap_data, finish) {
@@ -1621,8 +1640,34 @@ function textureReload(filename) {
   for (let key in textures) {
     let tex = textures[key];
     if (tex.cname === cname && tex.url) {
+      if (tex.had_early_reload && filename.endsWith('.png')) {
+        // we, presumably, just reloaded this in the early pass already
+        continue;
+      }
       tex.for_reload = true;
       tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`, tex.load_filter);
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+function textureReloadEarly(filename) {
+  assert(filename.startsWith('.early/'));
+  let orig_name = filename.slice('.early/'.length);
+  let ret = false;
+  let cname = textureCname(orig_name);
+  for (let key in textures) {
+    let tex = textures[key];
+    if (tex.cname === cname && tex.url) {
+      tex.for_reload = true;
+      if (tex.format.is_compressed) {
+        buildUIActiveReload('texcomp', 'Compressing textures...');
+        tex.format = TEXTURE_FORMAT.RGBA8;
+        // real, compressed texture should get reloaded later
+      }
+      tex.had_early_reload = true;
+      tex.loadURL(`${filename}?rl=${Date.now()}`, tex.load_filter);
       ret = true;
     }
   }
@@ -1772,6 +1817,8 @@ export function textureStartup() {
   filewatchOn('.txp', textureReload);
   filewatchOn('.txp-dxt', textureReload);
   filewatchOn('.txp-astc', textureReload);
+
+  filewatchOn(/^.early\/.*.png/, textureReloadEarly);
 }
 
 // Legacy API
