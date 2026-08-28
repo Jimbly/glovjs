@@ -25,10 +25,12 @@ module.exports = function (config) {
   rules = rules || {};
   function imgproc(job, done) {
     let file = job.getFile();
-    let pngin = pngRead(file.contents);
-    // if (err) {
-    //   return void done(err);
-    // }
+    let pngin;
+    try {
+      pngin = pngRead(file.contents);
+    } catch (err) {
+      return void done(err);
+    }
     let alpha_channel = 8; // bitmask
     for (let key in rules) {
       if (micromatch(file.relative, [key]).length) {
