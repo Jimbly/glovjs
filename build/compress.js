@@ -4,7 +4,7 @@ const gb = require('glov-build');
 const micromatch = require('micromatch');
 
 module.exports = function (opts) {
-  let { globs, passthrough } = opts;
+  let { globs, passthrough, noexistcheck } = opts;
   let do_brotli = opts.brotli ?? true;
   let do_gzip = opts.gzip ?? true;
 
@@ -30,10 +30,7 @@ module.exports = function (opts) {
     let tasks = [];
     if (do_brotli) {
       tasks.push(function (next) {
-        job.depAdd(`${file.bucket}:${file.relative}.br`, function (err, brfile) {
-          if (!err && brfile) {
-            return void next();
-          }
+        function doit() {
           brotliCompress(file.contents, function (err, buffer_br) {
             if (!err) {
               job.out({
@@ -43,15 +40,22 @@ module.exports = function (opts) {
             }
             next(err);
           });
-        });
+        }
+        if (noexistcheck) {
+          doit();
+        } else {
+          job.depAdd(`${file.bucket}:${file.relative}.br`, function (err, brfile) {
+            if (!err && brfile) {
+              return void next();
+            }
+            doit();
+          });
+        }
       });
     }
     if (do_gzip) {
       tasks.push(function (next) {
-        job.depAdd(`${file.bucket}:${file.relative}.gz`, function (err, gzfile) {
-          if (!err && gzfile) {
-            return void next();
-          }
+        function doit() {
           gzip(file.contents, function (err, buffer_gz) {
             if (!err) {
               job.out({
@@ -61,7 +65,17 @@ module.exports = function (opts) {
             }
             next(err);
           });
-        });
+        }
+        if (noexistcheck) {
+          doit();
+        } else {
+          job.depAdd(`${file.bucket}:${file.relative}.gz`, function (err, gzfile) {
+            if (!err && gzfile) {
+              return void next();
+            }
+            doit();
+          });
+        }
       });
     }
     asyncParallel(tasks, done);

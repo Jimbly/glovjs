@@ -634,6 +634,7 @@ gb.task({
     globs: ['**'],
     passthrough: false,
     brotli: false,
+    noexistcheck: true,
   }),
 });
 
