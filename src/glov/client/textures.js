@@ -1634,24 +1634,6 @@ export function textureUnloadDynamic() {
   }
 }
 
-function textureReload(filename) {
-  let ret = false;
-  let cname = textureCname(filename);
-  for (let key in textures) {
-    let tex = textures[key];
-    if (tex.cname === cname && tex.url) {
-      if (tex.had_early_reload && filename.endsWith('.png')) {
-        // we, presumably, just reloaded this in the early pass already
-        continue;
-      }
-      tex.for_reload = true;
-      tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`, tex.load_filter);
-      ret = true;
-    }
-  }
-  return ret;
-}
-
 function textureReloadEarly(filename) {
   assert(filename.startsWith('.early/'));
   let orig_name = filename.slice('.early/'.length);
@@ -1668,6 +1650,27 @@ function textureReloadEarly(filename) {
       }
       tex.had_early_reload = true;
       tex.loadURL(`${filename}?rl=${Date.now()}`, tex.load_filter);
+      ret = true;
+    }
+  }
+  return ret;
+}
+
+function textureReload(filename) {
+  if (filename.startsWith('.early')) {
+    return textureReloadEarly(filename);
+  }
+  let ret = false;
+  let cname = textureCname(filename);
+  for (let key in textures) {
+    let tex = textures[key];
+    if (tex.cname === cname && tex.url) {
+      if (tex.had_early_reload && filename.endsWith('.png')) {
+        // we, presumably, just reloaded this in the early pass already
+        continue;
+      }
+      tex.for_reload = true;
+      tex.loadURL(`${removeHash(tex.url)}?rl=${Date.now()}`, tex.load_filter);
       ret = true;
     }
   }
@@ -1817,8 +1820,6 @@ export function textureStartup() {
   filewatchOn('.txp', textureReload);
   filewatchOn('.txp-dxt', textureReload);
   filewatchOn('.txp-astc', textureReload);
-
-  filewatchOn(/^.early\/.*.png/, textureReloadEarly);
 }
 
 // Legacy API
