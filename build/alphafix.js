@@ -1,8 +1,7 @@
 const assert = require('assert');
-const alphafix = require('alphafix');
+const { alphafix, pngRead, pngWrite } = require('alphafix');
 const gb = require('glov-build');
 const micromatch = require('micromatch');
-const { pngRead, pngWrite } = require('./png.js');
 
 // Photoshop writes pixels with 0 alpha but a bright white color, which causes
 // interpolation errors - instead spread the nearest non-alpha color.
@@ -26,10 +25,10 @@ module.exports = function (config) {
   rules = rules || {};
   function imgproc(job, done) {
     let file = job.getFile();
-    let { err, img: pngin } = pngRead(file.contents);
-    if (err) {
-      return void done(err);
-    }
+    let pngin = pngRead(file.contents);
+    // if (err) {
+    //   return void done(err);
+    // }
     let alpha_channel = 8; // bitmask
     for (let key in rules) {
       if (micromatch(file.relative, [key]).length) {
@@ -37,16 +36,19 @@ module.exports = function (config) {
       }
     }
 
-    alphafix({
+    let diff = alphafix({
       alpha_channel,
       image: pngin,
     });
 
-    let buffer = pngWrite(pngin);
-    job.out({
-      relative: file.relative,
-      contents: buffer,
-    });
+    if (diff) {
+      job.out({
+        relative: file.relative,
+        contents: pngWrite(pngin),
+      });
+    } else {
+      job.out(file);
+    }
     done();
   }
   return {
