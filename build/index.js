@@ -1203,14 +1203,21 @@ function sendGBState() {
 }
 server_process_container.on_change = sendGBState;
 let last_gbstate = '';
-gb.on('done', function () {
-  let debug_state = gb.getDebugState();
+function handleGBState(in_progress) {
+  let debug_state = gb.getDebugState() || {};
+  debug_state.in_progress = in_progress;
   let state_str = JSON.stringify(debug_state);
   if (state_str !== last_gbstate) {
     gbstate = { type: 'gbstate', state: debug_state };
     last_gbstate = state_str;
     sendGBState();
   }
+}
+gb.on('start', function () {
+  handleGBState(true);
+});
+gb.on('done', function () {
+  handleGBState(false);
 });
 
 gb.go();

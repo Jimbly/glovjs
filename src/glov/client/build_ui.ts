@@ -39,29 +39,13 @@ type GBState = {
   error_count?: number;
   warning_count?: number;
   tasks?: TSMap<GBStateTask>;
+  in_progress: boolean;
 };
 let gbstate: GBState | null = null;
 let server_error: string | null = null;
 let active_reloads: null | TSMap<string> = null;
 
 Z.BUILD_ERRORS = Z.BUILD_ERRORS || 9900;
-
-function onGBState(state: GBState): void {
-  gbstate = state;
-  renderNeeded();
-}
-
-function onServerError(err: string | null): void {
-  server_error = err;
-  renderNeeded();
-}
-
-function onDataErrors(err_list: DataError[]): void {
-  for (let ii = 0; ii < err_list.length; ++ii) {
-    dataErrorEx(err_list[ii]);
-  }
-  renderNeeded();
-}
 
 export function buildUIActiveReload(key: string, msg: string | null): void {
   if (!msg) {
@@ -77,6 +61,27 @@ export function buildUIActiveReload(key: string, msg: string | null): void {
     }
     active_reloads[key] = msg;
   }
+}
+
+function onGBState(state: GBState): void {
+  gbstate = state;
+  buildUIActiveReload('build', state && state.in_progress ? 'Building...' : null);
+  if (!state.warning_count && !state.error_count) {
+    gbstate = null;
+  }
+  renderNeeded();
+}
+
+function onServerError(err: string | null): void {
+  server_error = err;
+  renderNeeded();
+}
+
+function onDataErrors(err_list: DataError[]): void {
+  for (let ii = 0; ii < err_list.length; ++ii) {
+    dataErrorEx(err_list[ii]);
+  }
+  renderNeeded();
 }
 
 const PAD = 4;
@@ -101,7 +106,7 @@ function activeReloadsTick(): void {
     x: x0, y: y0, z,
     w, h: font_height,
     align: ALIGN.HVCENTERFIT,
-    text: `Reloading: ${Object.values(active_reloads).join(', ')}`
+    text: `Reloading: ${Object.values(active_reloads).join(' ')}`
   });
 
   panel({
