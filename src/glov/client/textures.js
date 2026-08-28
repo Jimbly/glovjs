@@ -1113,6 +1113,10 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       url_use = `${urlhash.getURLBase()}${url_use}`;
     }
 
+    if (tex.format.is_compressed && !compressed_type) {
+      tex.format = TEXTURE_FORMAT.RGBA8;
+    }
+
     if ((tflags & FORMAT_PACK) || compressed_type) {
       fetch({
         url: url_use,
