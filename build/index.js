@@ -258,6 +258,7 @@ gb.task({
   name: 'client_earlyreload_files',
   input: [
     'client_png:**',
+    'client_autoatlas:**.auat',
   ],
   type: gb.SINGLE,
   target: 'dev',

@@ -11,6 +11,7 @@ import {
   vec4,
 } from 'glov/common/vmath';
 import { engineStartupFunc } from './engine';
+import { fetch } from './fetch';
 import { filewatchOn } from './filewatch';
 import {
   Sprite,
@@ -101,9 +102,10 @@ class AutoAtlasImp {
   }
 
   atlas_data?: AutoAtlasBuildDataRoot;
-  doInit(): void {
+  doInit(atlas_data_override?: AutoAtlasBuildDataRoot): void {
     let { sprites, atlas_name, texs } = this;
-    let atlas_data = this.atlas_data = webFSGetFile(`${atlas_name}.auat`, 'jsobj') as AutoAtlasBuildDataRoot;
+    let atlas_data = this.atlas_data = atlas_data_override ||
+      webFSGetFile(`${atlas_name}.auat`, 'jsobj') as AutoAtlasBuildDataRoot;
     // Root default sprite, with frame-indexing
     let root_sprite = sprites.def = (sprites.def || this.prealloc());
     let root_rects = [] as unknown as Vec4[] & TSMap<Vec4>;
@@ -366,15 +368,8 @@ class AutoAtlasImp {
   }
 }
 
-function autoAtlasReload(filename: string): void {
-  filename = filename.slice(0, -5);
-  let atlas = atlases[filename];
-  if (!atlas) {
-    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
-    // will happen when doing git updates on atlases that are not currently active
-    return;
-  }
-  atlas.doInit();
+function doInitOnReload(atlas: AutoAtlasImp, filename: string, atlas_data_override?: AutoAtlasBuildDataRoot): void {
+  atlas.doInit(atlas_data_override);
   for (let key in atlas_swaps) {
     if (key === filename || atlas_swaps[key] === filename) {
       let other = atlases[key];
@@ -383,6 +378,40 @@ function autoAtlasReload(filename: string): void {
       }
     }
   }
+}
+
+function autoAtlasReloadEarly(filename: string): void {
+  let basename = filename.slice('.early/'.length);
+  basename = basename.slice(0, -5);
+  let atlas = atlases[basename];
+  if (!atlas) {
+    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
+    // will happen when doing git updates on atlases that are not currently active
+    return;
+  }
+  // It's not in WebFS yet, reload raw from .early/ endpoint
+  fetch({
+    url: filename,
+    response_type: 'json',
+  }, function (err: string | null, obj: AutoAtlasBuildDataRoot) {
+    if (!err) {
+      doInitOnReload(atlas, basename, obj);
+    }
+  });
+}
+
+function autoAtlasReload(filename: string): void {
+  if (filename.startsWith('.early/')) {
+    return autoAtlasReloadEarly(filename);
+  }
+  filename = filename.slice(0, -5);
+  let atlas = atlases[filename];
+  if (!atlas) {
+    // bundled in app, but not loaded? what a waste, but, I guess, maybe fine?
+    // will happen when doing git updates on atlases that are not currently active
+    return;
+  }
+  doInitOnReload(atlas, filename);
 }
 
 export function autoAtlasTextureOpts(atlas_name: string, opts: TextureOptions): void {
