@@ -8,7 +8,7 @@ const yaml = require('js-yaml');
 const { parse9Patch } = require('./9patch');
 const asyncHashed = require('./asynchashed.js');
 const { pngAlloc, pngRead, pngWrite } = require('./png');
-const { floor, max } = Math;
+const { ceil, floor, max, sqrt } = Math;
 
 function nextHighestPowerOfTwo(x) {
   --x;
@@ -354,7 +354,7 @@ module.exports = function (opts) {
       const tile_vert_regex = config_data?.tile_vert_regex || null;
       const tile_regex = config_data?.tile_regex || null;
       const pad = config_data?.pad || 8;
-      const max_tex_size = config_data?.max_tex_size || 1024;
+      let max_tex_size = config_data?.max_tex_size || 0;
       // Default opaque black for additional channels, assume they're masks in the RGB channels
       const mask_color = config_data?.mask_color || [0, 0, 0, 255];
 
@@ -373,6 +373,8 @@ module.exports = function (opts) {
       // Check input
       let any_error = false;
       let imgs_for_packing = [];
+      let max_img_size = 0;
+      let total_img_size = 0;
       for (let ii = 0; ii < file_keys_for_packing.length; ++ii) {
         let img_name = file_keys_for_packing[ii];
         if (ignore[`${atlas_name}:${img_name}`]) {
@@ -399,13 +401,20 @@ module.exports = function (opts) {
             }
           }
         }
-        if (img0.width + pad * 2 > max_tex_size) {
+        let w = img0.width + pad * 2;
+        let h = img0.height + pad * 2;
+        max_img_size = max(max_img_size, w);
+        total_img_size += w * h;
+        if (max_tex_size && img0.width + pad * 2 > max_tex_size) {
           any_error = true;
           job.error(`Image ${atlas_name}/${img_name} resolution (${img0.width}x${img0.height})` +
             ` is larger than max_tex_size of ${max_tex_size}`);
         }
         img_data.img_name = img_name;
         imgs_for_packing.push(img_data);
+      }
+      if (!max_tex_size) {
+        max_tex_size = nextHighestPowerOfTwo(max(max_img_size, ceil(sqrt(total_img_size * 1.25))));
       }
       if (!any_error) {
         let { width, height } = packSkyline(imgs_for_packing, pad, max_tex_size);
