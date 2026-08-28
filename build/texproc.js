@@ -356,7 +356,7 @@ module.exports = function () {
       if (texopt.packed_mipmaps) {
         flags |= FORMAT_PACK;
       } else if (texopt.packed_mipmaps !== false && (
-        texopt.formats.includes('astc') || texopt.formats.includes('astc')
+        texopt.formats && (texopt.formats.includes('astc') || texopt.formats.includes('astc'))
       )) {
         // a compressed format can never auto-generate mipmaps, so, pack them in here
         flags |= FORMAT_PACK;
