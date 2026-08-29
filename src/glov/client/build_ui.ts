@@ -66,7 +66,7 @@ export function buildUIActiveReload(key: string, msg: string | null): void {
 function onGBState(state: GBState): void {
   gbstate = state;
   buildUIActiveReload('build', state && state.in_progress ? 'Building...' : null);
-  if (!state.warning_count && !state.error_count) {
+  if (state && !state.warning_count && !state.error_count) {
     gbstate = null;
   }
   renderNeeded();
