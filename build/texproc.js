@@ -134,6 +134,7 @@ module.exports = function () {
         input: temp_file,
         output: out_file,
         square: 'no',
+        pot: 'no',
         verbose: false,
       }).then(function () {
         let dt = Date.now() - pack_start;
