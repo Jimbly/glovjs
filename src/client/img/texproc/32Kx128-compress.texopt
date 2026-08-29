@@ -1,9 +1,0 @@
----
-formats:
-- png
-# - astc - note: crashes the tool, ignoring for now
-- dxt
-packed_mipmaps: true # default=true if compressed
-# astcmode: 4x4 # 4x4,5x4,5x5,6x5,6x6,8x5,8x6,8x8,10x5,10x6,10x8,10x10,12x10,12x12
-# dxtmode: auto # auto/dxt1/dxt1a/dxt3/dxt5
-# quality: 3 # integers 1-5
