@@ -30,7 +30,7 @@ const json5 = require('./json5.js');
 const sourcemapRemap = require('./sourcemap-remap.js');
 const testRunner = require('./test-runner.js');
 const { texPackExtractPNG, texPackRecombinePNG } = require('./texpack.js');
-const texproc = require('./texproc.js');
+const { texproc, texoptFolders } = require('./texproc.js');
 const typescript = require('./typescript.js');
 const uglify = require('./uglify.js');
 const uglifyrc = require('./uglifyrc.js');
@@ -302,9 +302,21 @@ gb.task({
 });
 
 gb.task({
+  // outputs a single .texopt for each .png file, expanding folders.texopt to
+  //   be cache-friendly
+  name: 'texopt_folders',
+  input: [
+    'client_png:**',
+  ],
+  deps: ['client_texopt'],
+  read: false,
+  ...texoptFolders(),
+});
+
+gb.task({
   name: 'client_texproc',
   input: 'client_png:**',
-  deps: ['client_texopt'],
+  deps: ['texopt_folders'],
   ...texproc({
     format_exclude: config.astc_in_dev ? [] : ['astc'],
   }),
@@ -982,7 +994,7 @@ gb.task({
 gb.task({
   name: 'build.prod.texproc',
   input: 'client_png:**',
-  deps: ['client_texopt'],
+  deps: ['texopt_folders'],
   ...texproc({
     format_only: config.astc_in_dev ? undefined : ['astc'],
   }),

@@ -22,7 +22,63 @@ const { texPackMakeTXP } = require('./texpack');
 
 const { max, min, floor, random } = Math;
 
-module.exports = function (opts) {
+function texoptFolders() {
+  function texoptFoldersJob(job, done) {
+    let filename = job.getFile().relative;
+    let name_no_ext = filename.slice(0, -path.extname(filename).length);
+    function next(texopt) {
+      if (texopt) {
+        job.out({
+          relative: `${name_no_ext}.texopt`,
+          contents: JSON.stringify(texopt),
+        });
+      }
+      done();
+    }
+
+    let file_base_name = path.basename(name_no_ext);
+    function searchFolder(searchname) {
+      let folder = path.dirname(searchname);
+      if (!folder || folder === '.') {
+        return void next(null);
+      }
+      job.depAdd(`client_texopt:${folder}/folder.texopt`, function (err, file) {
+        if (!err && file) {
+          assert(file.contents);
+          let obj = JSON.parse(file.contents);
+          if (obj.rules) {
+            for (let key in obj.rules) {
+              if (file_base_name.match(new RegExp(`^(${key})$`))) {
+                return void next(obj.rules[key]);
+              }
+            }
+          } else {
+            return void next(obj);
+          }
+        }
+        searchFolder(folder);
+      });
+    }
+    job.depAdd(`client_texopt:${name_no_ext}.texopt`, function (err, file) {
+      if (!err && file) {
+        assert(file.contents);
+        let obj = JSON.parse(file.contents);
+        return void next(obj);
+      }
+      searchFolder(name_no_ext);
+    });
+  }
+  return {
+    type: gb.SINGLE,
+    func: texoptFoldersJob,
+    version: [
+      texoptFoldersJob,
+      texoptFolders,
+    ],
+  };
+}
+
+function texproc(opts) {
   const { format_exclude, format_only } = opts;
   function tempPngName() {
     let temp_dir = fs.realpathSync(os.tmpdir());
@@ -273,36 +329,13 @@ module.exports = function (opts) {
   }
 
   function findTexOpt(job, base_name, next) {
-    let file_base_name = path.basename(base_name);
-    function searchFolder(filename) {
-      let folder = path.dirname(filename);
-      if (!folder || folder === '.') {
-        return void next(null);
-      }
-      job.depAdd(`client_texopt:${folder}/folder.texopt`, function (err, file) {
-        if (!err && file) {
-          assert(file.contents);
-          let obj = JSON.parse(file.contents);
-          if (obj.rules) {
-            for (let key in obj.rules) {
-              if (file_base_name.match(new RegExp(`^(${key})$`))) {
-                return void next(obj.rules[key]);
-              }
-            }
-          } else {
-            return void next(obj);
-          }
-        }
-        searchFolder(folder);
-      });
-    }
-    job.depAdd(`client_texopt:${base_name}.texopt`, function (err, file) {
+    job.depAdd(`texopt_folders:${base_name}.texopt`, function (err, file) {
       if (!err && file) {
         assert(file.contents);
         let obj = JSON.parse(file.contents);
         return void next(obj);
       }
-      searchFolder(base_name);
+      next(null);
     });
   }
   function makeMipmapsArray(img) {
@@ -354,7 +387,7 @@ module.exports = function (opts) {
     }
     return ret;
   }
-  function texproc(job, done) {
+  function texprocJob(job, done) {
     let file = job.getFile();
     let filename = file.relative;
     let base_name = filename.slice(0, -path.extname(filename).length);
@@ -529,13 +562,18 @@ module.exports = function (opts) {
   }
   return {
     type: gb.SINGLE,
-    func: texproc,
+    func: texprocJob,
     version: [
       opts,
-      texproc,
+      texprocJob,
       findTexOpt,
       makeMipmapsArray,
-      module.exports,
+      texproc,
     ],
   };
+}
+
+module.exports = {
+  texoptFolders,
+  texproc,
 };
