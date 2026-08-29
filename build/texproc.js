@@ -272,6 +272,7 @@ module.exports = function () {
   }
 
   function findTexOpt(job, base_name, next) {
+    let file_base_name = path.basename(base_name);
     function searchFolder(filename) {
       let folder = path.dirname(filename);
       if (!folder || folder === '.') {
@@ -281,7 +282,15 @@ module.exports = function () {
         if (!err && file) {
           assert(file.contents);
           let obj = JSON.parse(file.contents);
-          return void next(obj);
+          if (obj.rules) {
+            for (let key in obj.rules) {
+              if (file_base_name.match(new RegExp(`^(${key})$`))) {
+                return void next(obj.rules[key]);
+              }
+            }
+          } else {
+            return void next(obj);
+          }
         }
         searchFolder(folder);
       });
