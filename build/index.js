@@ -305,7 +305,9 @@ gb.task({
   name: 'client_texproc',
   input: 'client_png:**',
   deps: ['client_texopt'],
-  ...texproc(),
+  ...texproc({
+    format_exclude: config.astc_in_dev ? [] : ['astc'],
+  }),
 });
 
 gb.task({
@@ -953,6 +955,7 @@ gb.task({
 //     -> combines all source pngs from source data, generated, combined, etc, does alpha fixing
 //   client_texproc - input of client_png
 //     -> based on .texopt settings, generates compressed and packed textures plus tflags
+//     -> skips generating ASTC at this point (prod-only, does later)
 //     -> passes through other png files
 //   client_texproc_output
 //     -> filters out the tflags and outputs all these to dev
@@ -965,6 +968,8 @@ gb.task({
 //     -> compresses all PNGs (either individuals or those extracted in previous task)
 //   build.prod.pngpack
 //     -> repacks PNGs to TXPs, passes through other pngs
+//   build.prod.texproc
+//     -> outputs prod-only compressed formats (ASTC) that are too slow for dev
 //   build.prod.texfinal
 //     -> gathers all final images needed for prod zip tasks an also outputs to prod:
 //       all outputs from build.prod.pngpack
@@ -973,6 +978,16 @@ gb.task({
 //         There are not yet any of these, all `texproc()` outputs are currently PNGs or PNG-containing TXPs
 //   build.prod.client_fsdata
 //     -> embeds any small textures appropriate for embedding (sourced from minified textures)
+
+gb.task({
+  name: 'build.prod.texproc',
+  input: 'client_png:**',
+  deps: ['client_texopt'],
+  ...texproc({
+    format_only: config.astc_in_dev ? undefined : ['astc'],
+  }),
+});
+
 
 gb.task({
   name: 'build.prod.texfinal',
@@ -984,6 +999,8 @@ gb.task({
     'client_texproc:!**/*.png',
     'client_texproc:!**/*.txp',
     'client_texproc:!**/*.tflag',
+    // all production-only compressed texture formats
+    'build.prod.texproc:**',
   ],
   type: gb.SINGLE,
   func: copy,

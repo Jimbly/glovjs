@@ -1037,6 +1037,11 @@ Texture.prototype.loadURL = function loadURL(url, filter) {
       profilerStart('Texture:onload');
       if (!did_next) {
         did_next = true;
+        if (url_use.endsWith('astc') && err) {
+          // presumably in development, we don't have these built by default, try again without
+          console.error(`Disabling ASTC support after failure loading: ${url_use}`);
+          astc_supported = null;
+        }
         tex.load_time_total = Date.now() - load_start_wall_time;
         if (texture_stream_delay) {
           setTimeout(function () {

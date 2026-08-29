@@ -1,6 +1,7 @@
 module.exports = function (gb) {
   let config = {
     asset_hashing: false, // Set to true if assets will be deployed via things like a write-once CDN with long caching
+    astc_in_dev: false, // Set to true if ASTC compression needs to be tested in development
     server_js_files: [
       '**/*.[jt]s',
       '!**/*.d.ts',
@@ -74,6 +75,7 @@ module.exports = function (gb) {
       '!**/*.ogg',
       '!**/*.webm',
       '!**/*.js.map',
+      '!**/*.gz', // at least: outputs from compress_files_dev
     ],
     compress_files_dev: [ // compressed even in development mode
       // 'client_texproc_output:**/*.txp-astc',

@@ -22,7 +22,8 @@ const { texPackMakeTXP } = require('./texpack');
 
 const { max, min, floor, random } = Math;
 
-module.exports = function () {
+module.exports = function (opts) {
+  const { format_exclude, format_only } = opts;
   function tempPngName() {
     let temp_dir = fs.realpathSync(os.tmpdir());
     return `${path.join(temp_dir, `texproc-${String(random()).slice(2, 8)}`)}.png`;
@@ -359,7 +360,9 @@ module.exports = function () {
     let base_name = filename.slice(0, -path.extname(filename).length);
     findTexOpt(job, base_name, function (texopt) {
       if (!texopt) {
-        job.out(file);
+        if (!format_only) {
+          job.out(file);
+        }
         return void done();
       }
       let flags = 0;
@@ -410,10 +413,29 @@ module.exports = function () {
         }
       }
 
-      job.out({
-        contents: JSON.stringify(flags),
-        relative: `${base_name}.tflag`,
-      });
+      if (!format_only) {
+        job.out({
+          contents: JSON.stringify(flags),
+          relative: `${base_name}.tflag`,
+        });
+      }
+
+      if (format_exclude || format_only) {
+        if (format_exclude) {
+          out_by_format = out_by_format.slice(0).filter(function (elem) {
+            return !format_exclude.includes(elem.format);
+          });
+        }
+        if (format_only) {
+          out_by_format = out_by_format.slice(0).filter(function (elem) {
+            return format_only.includes(elem.format);
+          });
+        }
+        if (!out_by_format.length) {
+          // all excluded
+          return void done();
+        }
+      }
 
       let { err, img } = pngRead(file.contents);
       if (err) {
@@ -509,6 +531,7 @@ module.exports = function () {
     type: gb.SINGLE,
     func: texproc,
     version: [
+      opts,
       texproc,
       findTexOpt,
       makeMipmapsArray,

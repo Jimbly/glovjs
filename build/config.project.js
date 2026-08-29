@@ -29,11 +29,13 @@ module.exports = function (config) {
     zip: true,
   });
 
-  // Remove this exclusion
+  // Change defaults for testing texture compression logic
+  // Remove the exclusion
   config.client_png = config.client_png.filter((a) => {
     return a !== '!client/img/texproc/*.png';
   });
-  // Not using this currently
+  config.astc_in_dev = true; // default off for perf reasons
+  // Not using these currently, though
   config.client_png.push('!client/img/texproc/32K*');
 
   // Spine support
