@@ -35,6 +35,7 @@ module.exports = function (config) {
     return a !== '!client/img/texproc/*.png';
   });
   config.astc_in_dev = true; // default off for perf reasons
+  // config.client_png.push('!client/img/texproc/8K*');
   // Not using these currently, though
   config.client_png.push('!client/img/texproc/32K*');
 

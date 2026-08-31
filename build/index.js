@@ -317,9 +317,12 @@ gb.task({
   name: 'client_texproc',
   input: 'client_png:**',
   deps: ['texopt_folders'],
-  ...texproc({
+  ...gbcache({
+    key: 'texproc',
+    version: 1,
+  }, texproc({
     format_exclude: config.astc_in_dev ? [] : ['astc'],
-  }),
+  })),
 });
 
 gb.task({
