@@ -371,7 +371,7 @@ function texproc(opts) {
     let last_w = width;
     let last_h = height;
     let ret = [];
-    while (last_w > 1) {
+    while (last_w > 1 || last_h > 1) {
       let next_w = max(1, floor(last_w/2));
       let next_h = max(1, floor(last_h/2));
 
