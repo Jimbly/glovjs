@@ -121,7 +121,7 @@ import {
 import * as particle_data from './particle_data';
 import { test3D } from './test_3d';
 
-const { ceil, cos, max, floor, PI, random, round, sin, sqrt } = Math;
+const { ceil, cos, max, floor, log2, PI, random, round, sin, sqrt } = Math;
 // TODO: Migrate to TypeScript
 type Spine = ReturnType<typeof spineCreate>;
 
@@ -512,7 +512,7 @@ let tex_comp_check_frame_counter = 0;
 let tex_comp_recent_stalls = 0;
 let tex_comp_recent_worst_stall = 0;
 const TEX_COMP_CHECK_FRAME_RANGE = 6;
-const TEX_COMP_MODES = ['compress', 'png', 'packed'];
+const TEX_COMP_MODES = ['compress', 'png', 'packed', 'crunch'];
 const TEX_COMP_IMAGES = ['256', '8K', 'np2'];
 function textureCompressionTest(): void {
   if (webFSExists('img/texproc/8K-local-compress.tflag')) {
@@ -554,7 +554,8 @@ function textureCompressionTest(): void {
     w: button_w,
     hotkey: KEYS.M,
   })) {
-    tex_comp_mode = (tex_comp_mode + 1) % TEX_COMP_MODES.length;
+    let delta = keyDown(KEYS.SHIFT) ? TEX_COMP_MODES.length - 1 : 1;
+    tex_comp_mode = (tex_comp_mode + delta) % TEX_COMP_MODES.length;
     flagSet('tex_comp_mode', tex_comp_mode);
     if (tex_comp_reload) {
       tex_sprite.texs[0].destroy();
@@ -652,7 +653,7 @@ function textureCompressionTest(): void {
     let u = (pos[0] - x) / tex_w;
     let v = (pos[1] - y) / (tex_w/aspect);
     let zoomsize = 64;
-    let zoomuv = 0.0125;
+    let zoomuv = 0.1625/log2(tex_w);
     tex_sprite.draw({
       x: pos[0] - zoomsize/2,
       y: pos[1] - zoomsize/2,
