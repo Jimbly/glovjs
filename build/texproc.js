@@ -2,9 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const parseDDS = require('@jimbly/parse-dds');
 const { pack } = require('@jimbly/texture-compressor');
 const { asyncEachSeries, asyncSeries } = require('glov-async');
 const gb = require('glov-build');
+const texconv = require('texconv');
 const {
   FORMAT_ASTC,
   FORMAT_PACK,
@@ -168,6 +170,50 @@ function texproc(opts) {
     next(null, out);
   }
 
+  function ddsToImages(compression, buf, orig_file_data, next) {
+    let u8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength).slice();
+    let dds = parseDDS(u8.buffer);
+    let gl_internal_format;
+    let gl_base_internal_format;
+    const GL_RGBA = 0x1908;
+    const GL_RGB = 0x1907;
+    switch (compression) {
+      case 'DXT1':
+        gl_internal_format = 0x83f0; // RGB_S3TC_DXT1
+        gl_base_internal_format = GL_RGB;
+        break;
+      case 'DXT1A':
+        gl_internal_format = 0x83f1; // RGBA_S3TC_DXT1
+        gl_base_internal_format = GL_RGBA;
+        break;
+      case 'DXT3':
+        gl_internal_format = 0x83f2; // RGBA_S3TC_DXT3
+        gl_base_internal_format = GL_RGBA;
+        break;
+      case 'DXT5':
+        gl_internal_format = 0x83f3; // RGBA_S3TC_DXT5
+        gl_base_internal_format = GL_RGBA;
+        break;
+      default:
+        return void next(`Unknown texture compression type ${compression}`);
+    }
+    assert.equal(dds.format, compression.toLowerCase());
+    assert.equal(dds.shape[0], orig_file_data.width);
+    assert.equal(dds.shape[1], orig_file_data.height);
+    assert.equal(dds.images.length, 1);
+    let imgdata = dds.images[0];
+    let body = u8.slice(imgdata.offset, imgdata.offset + imgdata.length);
+
+    let header = Buffer.alloc(HEADER_SIZE);
+    header.writeUInt32LE(TEXPROC_COMPRESSED_HEADER, 0);
+    header.writeUInt32LE(gl_internal_format, 4);
+    header.writeUInt32LE(gl_base_internal_format, 8);
+    header.writeUInt32LE(imgdata.shape[0], HEADER_OFFS_WIDTH);
+    header.writeUInt32LE(imgdata.shape[1], HEADER_OFFS_HEIGHT);
+    let out = Buffer.concat([header, body]);
+    next(null, out);
+  }
+
   function compressedWrite(job, file_data, param, next) {
     let temp_file = tempPngName();
     let out_file = temp_file.replace(/\.png$/, '.ktx');
@@ -233,7 +279,37 @@ function texproc(opts) {
       flags: ['shh'],
     }, next);
   }
-  function dxtWrite(dxtmode, quality, job, file_data, has_alpha, next) {
+  function dxtWrite(texopt, job, file_data, has_alpha, next) {
+    let { dxtmode } = texopt;
+    // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
+    dxtmode = (dxtmode || 'auto').toUpperCase();
+    // note: quality is ignored
+    let compression =
+      (dxtmode === 'AUTO') ? has_alpha ? 'DXT5' : 'DXT1' : dxtmode.toUpperCase();
+
+    let compress_options = {
+      in: file_data.data,
+      f: compression === 'DXT1A' ? 'DXT1' : compression,
+      ft: 'DDS',
+      m: 1, // no mipmaps
+    };
+
+    let pack_start = Date.now();
+    texconv(compress_options, function (err, dds_data) {
+      let dt = Date.now() - pack_start;
+      if (dt > 5000) {
+        job.log(`Texture compression (${compression}) took ${(dt/1000).toFixed(1)}s`);
+      }
+      if (err) {
+        return void next(err);
+      }
+      // parse DDS data and return just the dxt data
+      ddsToImages(compression, dds_data, file_data, next);
+    });
+  }
+
+  function dxtWriteCrunch(texopt, job, file_data, has_alpha, next) {
+    let { dxtmode, quality } = texopt;
     // DXT1 = no alpha; DXT1A = alpha cutout, 4bpp; DXT5 = 1+smoothalpha, 8bpp; DXT3=4-bit alpha
     dxtmode = (dxtmode || 'auto').toUpperCase();
     quality = [
@@ -252,6 +328,11 @@ function texproc(opts) {
       compression,
       quality,
     };
+    // if (cacheable) {
+    //   // produces deterministic output, but much slower
+    //   // Nope!  Sometimes even with this it does not produce identical outputs.
+    //   compress_options.flags = ['helperThreads 0'];
+    // }
     if (file_data.width <= 4096 && file_data.height <= 4096) {
       // works, just do it
       compressedWrite(job, file_data, compress_options, next);
@@ -437,7 +518,7 @@ function texproc(opts) {
         } else if (format === 'dxt') {
           need_uncompressed = true;
           flags |= FORMAT_DXT;
-          out_elem.writer = dxtWrite.bind(null, texopt.dxtmode, texopt.quality, job);
+          out_elem.writer = (texopt.crunch ? dxtWriteCrunch : dxtWrite).bind(null, texopt, job);
           out_elem.ext = 'dxt';
           out_elem.packext = 'txp-dxt';
           out_elem.txp_flags |= FORMAT_DXT;

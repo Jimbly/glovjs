@@ -319,7 +319,7 @@ gb.task({
   deps: ['texopt_folders'],
   ...gbcache({
     key: 'texproc',
-    version: 1,
+    version: 2,
   }, texproc({
     format_exclude: config.astc_in_dev ? [] : ['astc'],
   })),
