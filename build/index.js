@@ -999,7 +999,7 @@ gb.task({
   input: 'client_png:**',
   deps: ['texopt_folders'],
   ...texproc({
-    format_only: config.astc_in_dev ? undefined : ['astc'],
+    format_only: config.astc_in_dev ? [] : ['astc'],
   }),
 });
 
