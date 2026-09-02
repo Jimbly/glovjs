@@ -75,7 +75,7 @@ module.exports = function (filename) {
     'nodejs': '22.12.0', // also in package.json and eslint.config.mjs
     'glov-build': '1.0.56',
     'glov-build-browserify': '1.0.10',
-    'glov-build-cache': '1.1.1',
+    'glov-build-cache': '1.2.0',
     'glov-build-concat': '1.0.13',
     'glov-build-preresolve': '1.2.0',
     '@jimbly/howler': '0.1.10',

@@ -83,6 +83,7 @@ module.exports = function (gb) {
       // 'client_texproc_output:**/*.astc',
       'client_texproc_output:**/*.dxt',
     ],
+    texproc_gzexts: ['.dxt', '.astc', '.txp-dxt', '.txp-astc'],
     client_fsdata: [
       'client/shaders/**',
       'glov/client/shaders/**',

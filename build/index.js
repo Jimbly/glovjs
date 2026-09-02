@@ -320,6 +320,7 @@ gb.task({
   ...gbcache({
     key: 'texproc',
     version: 2,
+    gzexts: config.texproc_gzexts,
   }, texproc({
     format_exclude: config.astc_in_dev ? [] : ['astc'],
   })),
