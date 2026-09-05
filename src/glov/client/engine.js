@@ -176,6 +176,10 @@ export function disableRender(new_value) {
   }
 }
 
+export function isWebGL2() {
+  return webgl2;
+}
+
 let view_space_globals = [];
 export function addViewSpaceGlobal(name) {
   let ws_name = `${name}_ws`;
