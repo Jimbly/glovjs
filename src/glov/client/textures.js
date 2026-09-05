@@ -1865,3 +1865,5 @@ exports.createForDepthCapture = textureCreateForDepthCapture;
 exports.cname = textureCname;
 exports.findTexForReplacement = textureFindForReplacement;
 exports.textures = textures;
+
+window.glov_textures = exports;
